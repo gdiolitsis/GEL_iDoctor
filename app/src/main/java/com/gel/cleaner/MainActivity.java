@@ -45,7 +45,6 @@ implements GELCleaner.LogCallback {
 // =========================================================
 // STATE
 // =========================================================
-private boolean welcomeShown = false;
 
 private TextView welcomeTitle;
 private TextView welcomeMessage;
@@ -87,16 +86,25 @@ protected void onCreate(Bundle savedInstanceState) {
     setupDonate();
     setupButtons();
 
-    // ENTRY FLOW
-    SharedPreferences prefs = getSharedPreferences("gel_prefs", MODE_PRIVATE);
-    boolean welcomeShownPref = prefs.getBoolean("welcome_shown", false);
+    // ================= ENTRY FLOW =================
+    boolean forceWelcome =
+            getIntent().getBooleanExtra("force_welcome", false);
 
-    if (!welcomeShownPref && !isWelcomeDisabled()) {
+    SharedPreferences prefs =
+            getSharedPreferences("gel_prefs", MODE_PRIVATE);
+
+    boolean welcomeShownPref =
+            prefs.getBoolean("welcome_shown", false);
+
+    if (forceWelcome) {
+        showWelcomePopup();
+    }
+    else if (!welcomeShownPref && !isWelcomeDisabled()) {
         showWelcomePopup();
         prefs.edit().putBoolean("welcome_shown", true).apply();
     }
 
-    // APPLY PLATFORM UI
+    // ================= APPLY PLATFORM UI =================
     if ("apple".equals(getSavedPlatform())) {
         applyAppleModeUI();
     } else {
@@ -107,7 +115,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
     log("📱 Device ready", false);
 
-    // APP MANAGER
+    // ================= APP MANAGER =================
     View btnAppManager = findViewById(R.id.btnAppManager);
     if (btnAppManager != null) {
         btnAppManager.setOnClickListener(v -> {
@@ -125,12 +133,15 @@ protected void onCreate(Bundle savedInstanceState) {
         });
     }
 
-    // GUIDED OPTIMIZER
+    // ================= GUIDED OPTIMIZER =================
     View btnGuidedOptimizer = findViewById(R.id.btnGuidedOptimizer);
     if (btnGuidedOptimizer != null) {
         btnGuidedOptimizer.setOnClickListener(v -> {
             try {
-                startActivity(new Intent(MainActivity.this, GuidedOptimizerActivity.class));
+                startActivity(new Intent(
+                        MainActivity.this,
+                        GuidedOptimizerActivity.class
+                ));
             } catch (Exception e) {
                 Toast.makeText(
                         MainActivity.this,
@@ -144,16 +155,15 @@ protected void onCreate(Bundle savedInstanceState) {
 
 @Override
 protected void onPause() {
-super.onPause();
-try {
-AppTTS.stop();
-} catch (Throwable ignore) {}
+    super.onPause();
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
 }
 
 private void hardRestart() {
-Intent i = getIntent();
-finish();
-startActivity(i);
+    Intent i = getIntent();
+    i.putExtra("force_welcome", true);
+    finish();
+    startActivity(i);
 }
 
 // =========================================================
@@ -387,32 +397,32 @@ root.addView(buildMuteRow());
 // ================= LANGUAGE SPINNER =================
 Spinner langSpinner = new Spinner(MainActivity.this);
 
-ArrayAdapter < String > adapter =
-new ArrayAdapter < String > (
-MainActivity.this,
-android.R.layout.simple_spinner_item,
-new String[]{"EN", "GR"}
-) {
+ArrayAdapter<String> adapter =
+        new ArrayAdapter<String>(
+                MainActivity.this,
+                android.R.layout.simple_spinner_item,
+                new String[]{"EN", "GR"}
+        ) {
 
-@Override
-public View getView(int position, View convertView, ViewGroup parent) {
-TextView tv = (TextView) super.getView(position, convertView, parent);
-tv.setTypeface(null, Typeface.BOLD);
-tv.setGravity(Gravity.CENTER);
-tv.setTextColor(Color.WHITE);
-return tv;
-}
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                TextView tv = (TextView) super.getView(position, convertView, parent);
+                tv.setTypeface(null, Typeface.BOLD);
+                tv.setGravity(Gravity.CENTER);
+                tv.setTextColor(Color.WHITE);
+                return tv;
+            }
 
-@Override
-public View getDropDownView(int position, View convertView, ViewGroup parent) {
-TextView tv = (TextView) super.getDropDownView(position, convertView, parent);
-tv.setTypeface(null, Typeface.BOLD);
-tv.setGravity(Gravity.CENTER);
-tv.setTextColor(Color.BLACK);
-tv.setPadding(dp(14), dp(12), dp(14), dp(12));
-return tv;
-}
-};
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                TextView tv = (TextView) super.getDropDownView(position, convertView, parent);
+                tv.setTypeface(null, Typeface.BOLD);
+                tv.setGravity(Gravity.CENTER);
+                tv.setTextColor(Color.BLACK);
+                tv.setPadding(dp(14), dp(12), dp(14), dp(12));
+                return tv;
+            }
+        };
 
 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
@@ -420,36 +430,38 @@ langSpinner.setAdapter(adapter);
 langSpinner.setSelection(AppLang.isGreek(this) ? 1 : 0);
 
 langSpinner.setOnItemSelectedListener(
-new AdapterView.OnItemSelectedListener() {
+        new AdapterView.OnItemSelectedListener() {
 
-@Override
-public void onItemSelected(
-AdapterView<?> parent,
-View view,
-int position,
-long id
-) {
+            @Override
+            public void onItemSelected(
+                    AdapterView<?> parent,
+                    View view,
+                    int position,
+                    long id
+            ) {
 
-String newLang = (position == 0) ? "en" : "el";
+                String newLang = (position == 0) ? "en" : "el";
 
-if (!newLang.equals(LocaleHelper.getLang(MainActivity.this))) {
+                if (!newLang.equals(LocaleHelper.getLang(MainActivity.this))) {
 
-LocaleHelper.set(MainActivity.this, newLang);
+                    LocaleHelper.set(MainActivity.this, newLang);
 
-try { AppTTS.stop(); } catch (Throwable ignore) {}
+                    try { AppTTS.stop(); } catch (Throwable ignore) {}
 
-// 🔥 Hard restart activity (clean rebuild with new locale)
-Intent i = getIntent();
-finish();
-overridePendingTransition(0, 0);
-startActivity(i);
-overridePendingTransition(0, 0);
-}
-}
+                    // 🔥 Hard restart activity + force reopen welcome
+                    Intent i = getIntent();
+                    i.putExtra("force_welcome", true);
 
-@Override
-public void onNothingSelected(AdapterView<?> parent) {}
-}
+                    finish();
+                    overridePendingTransition(0, 0);
+                    startActivity(i);
+                    overridePendingTransition(0, 0);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        }
 );
 
 // ================= LANGUAGE BOX =================
