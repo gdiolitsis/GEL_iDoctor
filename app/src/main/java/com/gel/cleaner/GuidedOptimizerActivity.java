@@ -64,7 +64,7 @@ private void showIntroDialog(String titleText,
     Button skipBtn  = mkRedBtn(gr ? "Παράλειψη" : "Skip");
 
     startBtn.setOnClickListener(v -> startAction.run());
-    skipBtn.setOnClickListener(v -> finish());
+    skipBtn.setOnClickListener(v -> go(STEP_STORAGE));
 
     root.addView(startBtn);
     root.addView(skipBtn);
