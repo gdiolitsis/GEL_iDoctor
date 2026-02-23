@@ -6977,7 +6977,6 @@ private void lab8CameraHardwareCheck() {
             : "Camera capabilities summary:");
     logLine();
     appendHtml("<br>");
-}
 
 // ------------------------------------------------------------
 // Run test sequence (one camera at a time)
