@@ -27,24 +27,26 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     private boolean gr;
     private int step = 0;
 
-    private static final int STEP_STORAGE  = 0;
-    private static final int STEP_BATTERY  = 1;
-    private static final int STEP_DATA     = 2;
-    private static final int STEP_APPS     = 3;
-    private static final int STEP_CACHE    = 4;
-    private static final int STEP_QUEST    = 5;
-    private static final int STEP_LABS     = 6;
-    private static final int STEP_REMINDER = 7;
-    private static final int STEP_DONE     = 8;
+private static final int STEP_INTRO    = 0;
+private static final int STEP_STORAGE  = 1;
+private static final int STEP_BATTERY  = 2;
+private static final int STEP_DATA     = 3;
+private static final int STEP_APPS     = 4;
+private static final int STEP_CACHE    = 5;
+private static final int STEP_QUEST    = 6;
+private static final int STEP_LABS     = 7;
+private static final int STEP_REMINDER = 8;
+private static final int STEP_DONE     = 9;
 
     private final ArrayList<String> symptoms = new ArrayList<>();
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        gr = AppLang.isGreek(this);
-        go(STEP_STORAGE);
-    }
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    gr = AppLang.isGreek(this);
+    go(STEP_INTRO);
+}
+    
 
 private void showIntroDialog(String titleText,
                              String bodyText,
@@ -187,20 +189,20 @@ private void showIntroDialog(String titleText,
     showStepDialog(
             gr ? "ΒΗΜΑ 5 — Cache" : "STEP 5 — Cache",
             gr
-                    ? "Θα ανοίξει η λίστα εφαρμογών ταξινομημένη κατά «Μεγαλύτερη Cache».\n\n"
-                      + "Καθαρισε εφαρμογές με μεγάλη προσωρινή μνήμη, Η και ολες\n"
-                      + "Στην πρώτη ομάδα θα δεις τις εγκατεστημένες εφαρμογές χρηστη.\n"
-                      + "Στην δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος.\n"
-                      + "Η εκκαθάριση cache είναι ασφαλής και δεν διαγράφει προσωπικά δεδομένα.\n\n"
-                      + "Απόφυγε την εκκαθάριση δεδομένων εκτός αν γνωρίζεις τις συνέπειες.\n\n"
-                      + "Πάτησε «OK» όταν ολοκληρώσεις."
-                    : "The app list will open sorted by “Largest Cache”.\n\n"
-                      + "Clear apps with large temporary cache — or all of them if needed.\n"
-                      + "In the first group you will see installed user applications.\n"
-                      + "In the second group you will see system applications.\n"
-                      + "Clearing cache is safe and does not remove personal data.\n\n"
-                      + "Avoid clearing app data unless you understand the consequences.\n\n"
-                      + "Press “OK” when finished.",
+  ? "Θα ανοίξει η λίστα εφαρμογών ταξινομημένη κατά «Μεγαλύτερη Cache».\n\n"
+  + "Καθάρισε εφαρμογές με μεγάλη προσωρινή μνήμη — ή και όλες.\n"
+  + "Στην πρώτη ομάδα θα δεις τις εφαρμογές που έχεις εγκαταστήσει.\n"
+  + "Στη δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος.\n"
+  + "Η εκκαθάριση cache είναι ασφαλής και δεν διαγράφει προσωπικά δεδομένα.\n\n"
+  + "Απόφυγε την εκκαθάριση δεδομένων εκτός αν γνωρίζεις τις συνέπειες.\n\n"
+  + "Πάτησε «OK» όταν ολοκληρώσεις."
+: "The app list will open sorted by “Largest Cache”.\n\n"
+  + "Clear apps with large temporary cache — or all of them if needed.\n"
+  + "In the first group you will see apps you have installed.\n"
+  + "In the second group you will see system applications.\n"
+  + "Clearing cache is safe and does not remove personal data.\n\n"
+  + "Avoid clearing app data unless you understand the consequences.\n\n"
+  + "Press “OK” when finished.",
             this::openLargestCache
     );
     break;
