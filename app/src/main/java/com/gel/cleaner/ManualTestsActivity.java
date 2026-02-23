@@ -10170,7 +10170,7 @@ private void startLab13Monitor60s() {
 // ------------------------------------------------------------
 if (lab13StatusText != null) {
 
-    final boolean gr = AppLang.isGreek(this);
+    final boolean gr = AppLang.isGreek(ManualTestsActivity.this);
 
     if (!adapterStable) {
 
@@ -17672,8 +17672,6 @@ if (requestCode == REQ_LAB6_COLOR) {
 // ============================================================
 // LAB 7 — Rotation + Proximity Sensors
 // ============================================================
-
-final boolean gr = AppLang.isGreek(this);
 
 if (requestCode == 7007) {
 
