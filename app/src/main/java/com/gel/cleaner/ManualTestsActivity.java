@@ -12094,6 +12094,8 @@ private void lab16ThermalSnapshot() {
 // ============================================================
 private void lab17RunAuto() {
 
+    final boolean gr = AppLang.isGreek(this);
+    
 final String PREF = "GEL_DIAG";  
 
 // STRICT WINDOW: 2 hours  
@@ -12152,8 +12154,7 @@ hvLastTs > hvFirstTs &&
 // PRECHECK — SMART POPUP (STRICT)
 // ------------------------------------------------------------
 if (!(fresh14 && fresh15 && fresh16)) {
-
-    final boolean gr = AppLang.isGreek(this);
+  
     StringBuilder msg = new StringBuilder();
 
     // --------------------------------------------------------
@@ -12162,7 +12163,7 @@ if (!(fresh14 && fresh15 && fresh16)) {
     msg.append(
             gr
                     ? "Κατάσταση (απαιτούνται αποτελέσματα τελευταίων 2 ωρών):\n\n"
-                    : "Status (required within last 2 hours):\n\n"
+                    : "Status (results required within last 2 hours):\n\n"
     );
 
     // --------------------------------------------------------
