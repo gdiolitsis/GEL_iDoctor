@@ -9380,27 +9380,29 @@ private void lab12CallFunctionInterpretation() {
     // Internet context (IMS relevance)
     // ------------------------------------------------------------
     if (s.hasInternet) {
-        logLabelOkValue(
-                gr ? "Κατάσταση Σύνδεσης Internet"
-   : "Internet Context"
-                gr ? "ΔΙΑΘΕΣΙΜΗ (system routing)" : "AVAILABLE (system routing)"
-        );
-    } else {
-        logLabelWarnValue(
-                gr ? "Κατάσταση Σύνδεσης Internet"
-   : "Internet Context"
-                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ" : "NOT AVAILABLE"
-        );
-    }
+    logLabelOkValue(
+            gr ? "Κατάσταση Σύνδεσης Internet"
+               : "Internet Context",
+            gr ? "ΔΙΑΘΕΣΙΜΗ (system routing)"
+               : "AVAILABLE (system routing)"
+    );
+} else {
+    logLabelWarnValue(
+            gr ? "Κατάσταση Σύνδεσης Internet"
+               : "Internet Context",
+            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ"
+               : "NOT AVAILABLE"
+    );
+}
 
     if (s.hasInternet) {
-        logInfo(gr
+        logOk(gr
                 ? "Εντοπίστηκε ενεργό internet routing. "
                   + "Κλήσεις μέσω IMS (VoLTE / VoWiFi) μπορεί να υποστηρίζονται, ανάλογα με τον πάροχο."
                 : "Active internet routing detected. "
                   + "IMS-based calling (VoLTE / VoWiFi) may be supported depending on carrier configuration.");
     } else {
-        logInfo(gr
+        logOk(gr
                 ? "Δεν εντοπίστηκε ενεργό internet routing. "
                   + "Οι κλασικές κλήσεις μπορεί να λειτουργούν κανονικά, αν τις υποστηρίζει το δίκτυο."
                 : "No active internet routing detected. "
