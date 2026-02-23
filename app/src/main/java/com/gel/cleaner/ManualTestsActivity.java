@@ -17436,51 +17436,150 @@ protected void onActivityResult(int requestCode, int resultCode, @Nullable Inten
 // ============================================================
 // LAB 6 — TOUCH GRID
 // ============================================================
+
+final boolean gr = AppLang.isGreek(this);
+
 if (requestCode == REQ_LAB6_TOUCH) {
-	
-	final boolean gr = AppLang.isGreek(this);
 
     int total = TouchGridTestActivity.getTotalZones();
     int remaining = TouchGridTestActivity.getRemainingZones();
 
     appendHtml("<br>");
     logLine();
-    logSection("LAB 6 — Display / Touch");
+    logSection(gr ? "LAB 6 — Οθόνη / Αφή" : "LAB 6 — Display / Touch");
     logLine();
 
     if (resultCode == RESULT_OK) {
 
-        logLabelOkValue("Touch grid test", "Completed");
-        logLabelOkValue("Screen zones", "All zones responded");
-        logLabelOkValue("Dead zones", "Not detected");
+        logLabelOkValue(
+                gr ? "Έλεγχος αφής" : "Touch grid test",
+                gr ? "Ολοκληρώθηκε" : "Completed"
+        );
+
+        logLabelOkValue(
+                gr ? "Ζώνες οθόνης" : "Screen zones",
+                gr ? "Όλες οι ζώνες ανταποκρίθηκαν" : "All zones responded"
+        );
+
+        logLabelOkValue(
+                gr ? "Νεκρές ζώνες" : "Dead zones",
+                gr ? "Δεν εντοπίστηκαν" : "Not detected"
+        );
 
     } else {
 
-        logLabelWarnValue("Touch grid test", "Incomplete");
+        logLabelWarnValue(
+                gr ? "Έλεγχος αφής" : "Touch grid test",
+                gr ? "Μη ολοκληρωμένος" : "Incomplete"
+        );
+
         logLabelErrorValue(
-                "Unresponsive zones",
+                gr ? "Μη ανταποκρινόμενες ζώνες" : "Unresponsive zones",
                 remaining + " / " + total
         );
 
-        logInfo("Interpretation:");
+        logInfo(gr ? "Ερμηνεία:" : "Interpretation:");
+
         logLabelWarnValue(
-                "Possible cause",
-                "Localized digitizer dead zones"
+                gr ? "Πιθανή αιτία" : "Possible cause",
+                gr
+                        ? "Τοπικές νεκρές ζώνες digitizer"
+                        : "Localized digitizer dead zones"
         );
+
         logLabelOkValue(
-                "Recommendation",
-                "Manual re-test to confirm behavior"
+                gr ? "Σύσταση" : "Recommendation",
+                gr
+                        ? "Επαναλάβετε χειροκίνητα τον έλεγχο για επιβεβαίωση"
+                        : "Manual re-test to confirm behavior"
         );
     }
 
     appendHtml("<br>");
     logLabelOkValue(
-            "Next step",
-            "LAB 6 PRO — Display Color & Uniformity"
+            gr ? "Επόμενο βήμα" : "Next step",
+            gr
+                    ? "LAB 6 PRO — Χρώμα & Ομοιομορφία Οθόνης"
+                    : "LAB 6 PRO — Display Color & Uniformity"
     );
     logLine();
 
-    // AUTO-START LAB 6 PRO
+    startActivityForResult(
+            new Intent(this, DisplayProTestActivity.class),
+            REQ_LAB6_COLOR
+    );
+
+    return;
+}
+
+// ============================================================
+// LAB 6 — TOUCH GRID
+// ============================================================
+if (requestCode == REQ_LAB6_TOUCH) {
+
+    int total = TouchGridTestActivity.getTotalZones();
+    int remaining = TouchGridTestActivity.getRemainingZones();
+
+    appendHtml("<br>");
+    logLine();
+    logSection(gr ? "LAB 6 — Οθόνη / Αφή" : "LAB 6 — Display / Touch");
+    logLine();
+
+    if (resultCode == RESULT_OK) {
+
+        logLabelOkValue(
+                gr ? "Έλεγχος αφής" : "Touch grid test",
+                gr ? "Ολοκληρώθηκε" : "Completed"
+        );
+
+        logLabelOkValue(
+                gr ? "Ζώνες οθόνης" : "Screen zones",
+                gr ? "Όλες οι ζώνες ανταποκρίθηκαν" : "All zones responded"
+        );
+
+        logLabelOkValue(
+                gr ? "Νεκρές ζώνες" : "Dead zones",
+                gr ? "Δεν εντοπίστηκαν" : "Not detected"
+        );
+
+    } else {
+
+        logLabelWarnValue(
+                gr ? "Έλεγχος αφής" : "Touch grid test",
+                gr ? "Μη ολοκληρωμένος" : "Incomplete"
+        );
+
+        logLabelErrorValue(
+                gr ? "Μη ανταποκρινόμενες ζώνες" : "Unresponsive zones",
+                remaining + " / " + total
+        );
+
+        logInfo(gr ? "Ερμηνεία:" : "Interpretation:");
+
+        logLabelWarnValue(
+                gr ? "Πιθανή αιτία" : "Possible cause",
+                gr
+                        ? "Τοπικές νεκρές ζώνες digitizer"
+                        : "Localized digitizer dead zones"
+        );
+
+        logLabelOkValue(
+                gr ? "Σύσταση" : "Recommendation",
+                gr
+                        ? "Επαναλάβετε χειροκίνητα τον έλεγχο για επιβεβαίωση"
+                        : "Manual re-test to confirm behavior"
+        );
+    }
+
+    appendHtml("<br>");
+    logLabelOkValue(
+            gr ? "Επόμενο βήμα" : "Next step",
+            gr
+                    ? "LAB 6 PRO — Χρώμα & Ομοιομορφία Οθόνης"
+                    : "LAB 6 PRO — Display Color & Uniformity"
+    );
+    logLine();
+
     startActivityForResult(
             new Intent(this, DisplayProTestActivity.class),
             REQ_LAB6_COLOR
@@ -17497,16 +17596,16 @@ if (requestCode == REQ_LAB6_COLOR) {
 
         logLabelWarnValue(
                 "LAB 6 PRO",
-                "Canceled by user"
+                gr ? "Ακυρώθηκε από τον χρήστη" : "Canceled by user"
         );
+
         logLabelWarnValue(
-                "Visual inspection",
-                "Not performed"
+                gr ? "Οπτικός έλεγχος" : "Visual inspection",
+                gr ? "Δεν πραγματοποιήθηκε" : "Not performed"
         );
 
         appendHtml("<br>");
         logLine();
-
         enableSingleExportButton();
         return;
     }
@@ -17517,38 +17616,49 @@ if (requestCode == REQ_LAB6_COLOR) {
     if (!issues) {
 
         logLabelOkValue(
-                "Visual inspection",
-                "No visible artifacts reported"
+                gr ? "Οπτικός έλεγχος" : "Visual inspection",
+                gr ? "Δεν αναφέρθηκαν ανωμαλίες" : "No visible artifacts reported"
         );
+
         logLabelOkValue(
-                "Display uniformity",
+                gr ? "Ομοιομορφία οθόνης" : "Display uniformity",
                 "OK"
         );
+
         logLabelOkValue(
-                "Burn-in / banding",
-                "Not observed"
+                gr ? "Burn-in / banding" : "Burn-in / banding",
+                gr ? "Δεν παρατηρήθηκε" : "Not observed"
         );
 
     } else {
 
         logLabelWarnValue(
-                "Visual inspection",
-                "User reported visual anomalies"
+                gr ? "Οπτικός έλεγχος" : "Visual inspection",
+                gr ? "Αναφέρθηκαν οπτικές ανωμαλίες" : "User reported visual anomalies"
         );
 
-        logInfo("Possible findings:");
-        logLabelWarnValue("• Issue", "Burn-in / image retention");
-        logLabelWarnValue("• Issue", "Color banding / gradient steps");
-        logLabelWarnValue("• Issue", "Screen stains / mura / tint shift");
+        logInfo(gr ? "Πιθανά ευρήματα:" : "Possible findings:");
+
+        logLabelWarnValue("• Issue",
+                gr ? "Burn-in / αποτύπωση εικόνας" : "Burn-in / image retention");
+
+        logLabelWarnValue("• Issue",
+                gr ? "Color banding / διαβαθμίσεις" : "Color banding / gradient steps");
+
+        logLabelWarnValue("• Issue",
+                gr ? "Λεκέδες / mura / μετατόπιση χρώματος"
+                   : "Screen stains / mura / tint shift");
     }
 
     appendHtml("<br>");
-    logSection("LAB 6 — Final Result");
+    logSection(gr ? "LAB 6 — Τελικό Αποτέλεσμα" : "LAB 6 — Final Result");
     logLine();
 
     logLabelOkValue(
-            "Display test",
-            "Touch integrity and visual inspection completed"
+            gr ? "Έλεγχος οθόνης" : "Display test",
+            gr
+                    ? "Ολοκληρώθηκε έλεγχος αφής και οπτικής επιθεώρησης"
+                    : "Touch integrity and visual inspection completed"
     );
 
     appendHtml("<br>");
@@ -17562,24 +17672,38 @@ if (requestCode == REQ_LAB6_COLOR) {
 // ============================================================
 // LAB 7 — Rotation + Proximity Sensors
 // ============================================================
+
+final boolean gr = AppLang.isGreek(this);
+
 if (requestCode == 7007) {
-	
-	final boolean gr = AppLang.isGreek(this);
 
     appendHtml("<br>");
     logLine();
-    logSection("LAB 7 — Rotation & Proximity Sensors");
+    logSection(gr
+            ? "LAB 7 — Περιστροφή & Αισθητήρας Εγγύτητας"
+            : "LAB 7 — Rotation & Proximity Sensors");
     logLine();
 
     if (resultCode == RESULT_OK) {
 
-        logLabelOkValue("Rotation detection", "Detected via accelerometer");
-        logLabelOkValue("Orientation change", "Confirmed");
-        logLabelOkValue("Motion sensors", "Responding normally");
+        logLabelOkValue(
+                gr ? "Ανίχνευση περιστροφής" : "Rotation detection",
+                gr ? "Εντοπίστηκε μέσω επιταχυνσιόμετρου" : "Detected via accelerometer"
+        );
 
         logLabelOkValue(
-                "Next step",
-                "Proximity sensor test"
+                gr ? "Αλλαγή προσανατολισμού" : "Orientation change",
+                gr ? "Επιβεβαιώθηκε" : "Confirmed"
+        );
+
+        logLabelOkValue(
+                gr ? "Αισθητήρες κίνησης" : "Motion sensors",
+                gr ? "Λειτουργούν κανονικά" : "Responding normally"
+        );
+
+        logLabelOkValue(
+                gr ? "Επόμενο βήμα" : "Next step",
+                gr ? "Έλεγχος αισθητήρα εγγύτητας" : "Proximity sensor test"
         );
 
         // AUTO-START PROXIMITY TEST
@@ -17591,15 +17715,23 @@ if (requestCode == 7007) {
 
     } else {
 
-        logLabelErrorValue("Rotation detection", "Not detected");
-        logLabelWarnValue(
-                "Possible cause",
-                "Auto-rotate disabled or sensor malfunction"
+        logLabelErrorValue(
+                gr ? "Ανίχνευση περιστροφής" : "Rotation detection",
+                gr ? "Δεν εντοπίστηκε" : "Not detected"
         );
 
-       appendHtml("<br>");
-       logOk(gr ? "Το Lab 7 ολοκληρώθηκε. (rotation incomplete)" : "Lab 7 finished.  (rotation incomplete)");
-       logLine();
+        logLabelWarnValue(
+                gr ? "Πιθανή αιτία" : "Possible cause",
+                gr
+                        ? "Η αυτόματη περιστροφή είναι απενεργοποιημένη ή υπάρχει βλάβη αισθητήρα"
+                        : "Auto-rotate disabled or sensor malfunction"
+        );
+
+        appendHtml("<br>");
+        logOk(gr
+                ? "Το Lab 7 ολοκληρώθηκε (περιστροφή μη επιτυχής)."
+                : "Lab 7 finished (rotation incomplete).");
+        logLine();
 
         enableSingleExportButton();
         return;
@@ -17609,20 +17741,40 @@ if (requestCode == 7007) {
 // ============================================================
 // LAB 7 — PROXIMITY SENSOR
 // ============================================================
+
 if (requestCode == 8008) {
 
     if (resultCode == RESULT_OK) {
 
-        logLabelOkValue("Proximity sensor", "Responded correctly");
-        logLabelOkValue("Near / Far detection", "Confirmed");
-        logLabelOkValue("Screen behavior", "Turned off when sensor was covered");
+        logLabelOkValue(
+                gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
+                gr ? "Ανταποκρίθηκε σωστά" : "Responded correctly"
+        );
+
+        logLabelOkValue(
+                gr ? "Ανίχνευση Κοντά / Μακριά" : "Near / Far detection",
+                gr ? "Επιβεβαιώθηκε" : "Confirmed"
+        );
+
+        logLabelOkValue(
+                gr ? "Συμπεριφορά οθόνης" : "Screen behavior",
+                gr
+                        ? "Η οθόνη έκλεισε όταν καλύφθηκε ο αισθητήρας"
+                        : "Turned off when sensor was covered"
+        );
 
     } else {
 
-        logLabelErrorValue("Proximity sensor", "No response detected");
+        logLabelErrorValue(
+                gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
+                gr ? "Δεν εντοπίστηκε απόκριση" : "No response detected"
+        );
+
         logLabelWarnValue(
-                "Possible cause",
-                "Sensor obstruction or hardware fault"
+                gr ? "Πιθανή αιτία" : "Possible cause",
+                gr
+                        ? "Εμπόδιο στον αισθητήρα ή πιθανή βλάβη υλικού"
+                        : "Sensor obstruction or hardware fault"
         );
     }
 
