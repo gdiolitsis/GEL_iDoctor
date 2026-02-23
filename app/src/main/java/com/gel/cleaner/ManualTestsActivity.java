@@ -7860,150 +7860,150 @@ s.cm.openCamera(s.camId, new CameraDevice.StateCallback() {
 // LAB 8 — Stop + report stream sample
 // ============================================================
 private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
-	
-	final boolean gr = AppLang.isGreek(this);
+
+    final boolean gr = AppLang.isGreek(this);
 
     // ------------------------------------------------------------
-// Camera runtime results (AFTER sampling)
-// ------------------------------------------------------------
+    // Camera runtime results (AFTER sampling)
+    // ------------------------------------------------------------
+    long durMs = Math.max(1, SystemClock.elapsedRealtime() - s.sampleStartMs);
+    float fps = (s.frames * 1000f) / durMs;
 
-long durMs = Math.max(1, SystemClock.elapsedRealtime() - s.sampleStartMs);
-float fps = (s.frames * 1000f) / durMs;
-
-// Stream sampling
-logLabelValue(
-        gr ? "Δειγματοληψία ροής" : "Stream sampling",
-        "5s"
-);
-
-if (s.frames > 0)
-    logLabelOkValue(
-            gr ? "Καρέ" : "Frames",
-            String.valueOf(s.frames)
-    );
-else
-    logLabelErrorValue(
-            gr ? "Καρέ" : "Frames",
-            "0"
+    // Stream sampling
+    logLabelValue(
+            gr ? "Δειγματοληψία ροής" : "Stream sampling",
+            "5s"
     );
 
-if (fps >= 20f)
-    logLabelOkValue(
-            gr ? "FPS (εκτίμηση)" : "FPS (estimated)",
-            String.format(Locale.US, "%.1f", fps)
-    );
-else
-    logLabelWarnValue(
-            gr ? "FPS (εκτίμηση)" : "FPS (estimated)",
-            String.format(Locale.US, "%.1f", fps)
-    );
-
-if (s.droppedFrames == 0)
-    logLabelOkValue(
-            gr ? "Απώλειες καρέ / timeouts" : "Frame drops / timeouts",
-            "0"
-    );
-else
-    logLabelWarnValue(
-            gr ? "Απώλειες καρέ / timeouts" : "Frame drops / timeouts",
-            String.valueOf(s.droppedFrames)
-    );
-
-if (s.blackFrames == 0)
-    logLabelOkValue(
-            gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
-            "0"
-    );
-else {
-    logLabelWarnValue(
-            gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
-            String.valueOf(s.blackFrames)
-    );
-    overall.streamIssueCount++;
-}
-
-logLabelValue(
-        gr ? "Εύρος φωτεινότητας (min / max)" : "Luma range (min / max)",
-        s.minLuma + " / " + s.maxLuma
-);
-
-if (s.latencyCount > 0) {
-    long avg = s.latencySumMs / Math.max(1, s.latencyCount);
-
-    if (avg <= 250)
+    if (s.frames > 0)
         logLabelOkValue(
-                gr ? "Καθυστέρηση pipeline (μ.ο. ms)" : "Pipeline latency (avg ms)",
-                String.valueOf(avg)
-        );
-    else
-        logLabelWarnValue(
-                gr ? "Καθυστέρηση pipeline (μ.ο. ms)" : "Pipeline latency (avg ms)",
-                String.valueOf(avg)
-        );
-} else {
-    logLabelWarnValue(
-            gr ? "Καθυστέρηση pipeline (μ.ο. ms)" : "Pipeline latency (avg ms)",
-            gr ? "Μη διαθέσιμο" : "Not available"
-    );
-}
-
-if (s.cam.hasRaw)
-    logLabelOkValue(
-            gr ? "Υποστήριξη RAW" : "RAW support",
-            gr
-                    ? "ΝΑΙ — επαγγελματικές ασυμπίεστες φωτογραφίες"
-                    : "YES — professional uncompressed photos"
-    );
-else
-    logLabelWarnValue(
-            gr ? "Υποστήριξη RAW" : "RAW support",
-            gr
-                    ? "ΟΧΙ — μόνο JPEG"
-                    : "NO — professional uncompressed photos not supported (JPEG only)"
-    );
-
-// User confirmation
-if (s.userConfirmedPreview != null) {
-    if (s.userConfirmedPreview)
-        logLabelOkValue(
-                gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                gr ? "Η προεπισκόπηση ήταν ορατή" : "Live preview visible"
+                gr ? "Καρέ" : "Frames",
+                String.valueOf(s.frames)
         );
     else
         logLabelErrorValue(
-                gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                gr ? "Η προεπισκόπηση ΔΕΝ ήταν ορατή" : "Preview NOT visible"
+                gr ? "Καρέ" : "Frames",
+                "0"
         );
-}
 
-// ------------------------------------------------------------
-// Final verdict (per camera)
-// ------------------------------------------------------------
-boolean ok =
-        (s.frames > 0) &&
-        (s.blackFrames == 0) &&
-        (s.droppedFrames == 0) &&
-        (s.latencyCount == 0 || (s.latencySumMs / Math.max(1, s.latencyCount)) <= 250) &&
-        (s.userConfirmedPreview != null && s.userConfirmedPreview);
+    if (fps >= 20f)
+        logLabelOkValue(
+                gr ? "FPS (εκτίμηση)" : "FPS (estimated)",
+                String.format(Locale.US, "%.1f", fps)
+        );
+    else
+        logLabelWarnValue(
+                gr ? "FPS (εκτίμηση)" : "FPS (estimated)",
+                String.format(Locale.US, "%.1f", fps)
+        );
 
-s.verdictOk = ok;
+    if (s.droppedFrames == 0)
+        logLabelOkValue(
+                gr ? "Απώλειες καρέ / timeouts" : "Frame drops / timeouts",
+                "0"
+        );
+    else
+        logLabelWarnValue(
+                gr ? "Απώλειες καρέ / timeouts" : "Frame drops / timeouts",
+                String.valueOf(s.droppedFrames)
+        );
 
-if (ok) {
-    logLabelOkValue(
-            gr ? "Τελικό αποτέλεσμα" : "Verdict",
-            gr ? "OK — Η διαδρομή κάμερας λειτουργεί σωστά"
-               : "OK — Camera path operational"
+    if (s.blackFrames == 0)
+        logLabelOkValue(
+                gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
+                "0"
+        );
+    else {
+        logLabelWarnValue(
+                gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
+                String.valueOf(s.blackFrames)
+        );
+        overall.streamIssueCount++;
+    }
+
+    logLabelValue(
+            gr ? "Εύρος φωτεινότητας (min / max)" : "Luma range (min / max)",
+            s.minLuma + " / " + s.maxLuma
     );
-} else {
-    logLabelWarnValue(
-            gr ? "Τελικό αποτέλεσμα" : "Verdict",
-            gr ? "Εντοπίστηκαν θέματα — έλεγξε τα παραπάνω"
-               : "Issues detected — review above"
-    );
-}
 
-logLine();
-appendHtml("<br>");
+    if (s.latencyCount > 0) {
+        long avg = s.latencySumMs / Math.max(1, s.latencyCount);
+
+        if (avg <= 250)
+            logLabelOkValue(
+                    gr ? "Καθυστέρηση pipeline (μ.ο. ms)" : "Pipeline latency (avg ms)",
+                    String.valueOf(avg)
+            );
+        else
+            logLabelWarnValue(
+                    gr ? "Καθυστέρηση pipeline (μ.ο. ms)" : "Pipeline latency (avg ms)",
+                    String.valueOf(avg)
+            );
+    } else {
+        logLabelWarnValue(
+                gr ? "Καθυστέρηση pipeline (μ.ο. ms)" : "Pipeline latency (avg ms)",
+                gr ? "Μη διαθέσιμο" : "Not available"
+        );
+    }
+
+    if (s.cam != null && s.cam.hasRaw)
+        logLabelOkValue(
+                gr ? "Υποστήριξη RAW" : "RAW support",
+                gr
+                        ? "ΝΑΙ — επαγγελματικές ασυμπίεστες φωτογραφίες"
+                        : "YES — professional uncompressed photos"
+        );
+    else
+        logLabelWarnValue(
+                gr ? "Υποστήριξη RAW" : "RAW support",
+                gr
+                        ? "ΟΧΙ — μόνο JPEG"
+                        : "NO — professional uncompressed photos not supported (JPEG only)"
+        );
+
+    // User confirmation
+    if (s.userConfirmedPreview != null) {
+        if (s.userConfirmedPreview)
+            logLabelOkValue(
+                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
+                    gr ? "Η προεπισκόπηση ήταν ορατή" : "Live preview visible"
+            );
+        else
+            logLabelErrorValue(
+                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
+                    gr ? "Η προεπισκόπηση ΔΕΝ ήταν ορατή" : "Preview NOT visible"
+            );
+    }
+
+    // ------------------------------------------------------------
+    // Final verdict (per camera)
+    // ------------------------------------------------------------
+    boolean ok =
+            (s.frames > 0) &&
+            (s.blackFrames == 0) &&
+            (s.droppedFrames == 0) &&
+            (s.latencyCount == 0 || (s.latencySumMs / Math.max(1, s.latencyCount)) <= 250) &&
+            (s.userConfirmedPreview != null && s.userConfirmedPreview);
+
+    s.verdictOk = ok;
+
+    if (ok) {
+        logLabelOkValue(
+                gr ? "Τελικό αποτέλεσμα" : "Verdict",
+                gr ? "OK — Η διαδρομή κάμερας λειτουργεί σωστά"
+                   : "OK — Camera path operational"
+        );
+    } else {
+        logLabelWarnValue(
+                gr ? "Τελικό αποτέλεσμα" : "Verdict",
+                gr ? "Εντοπίστηκαν θέματα — έλεγξε τα παραπάνω"
+                   : "Issues detected — review above"
+        );
+    }
+
+    logLine();
+    appendHtml("<br>");
+} // ✅ ΤΕΛΟΣ lab8StopAndReportSample (αυτό έλειπε)
 
 // ============================================================
 // LAB 8 — Close session safely
@@ -8029,8 +8029,8 @@ private static class Lab8Cam {
     boolean hasDepth;
     Float focal;
     Size preview;
-    
-Lab8Session runtimeSession;
+
+    Lab8Session runtimeSession;
 }
 
 private static class Lab8Overall {
@@ -8068,7 +8068,6 @@ private static class Lab8Session {
     long lastFrameTsNs;
 
     Boolean userConfirmedPreview = null;
-
     boolean verdictOk = false;
 }
 
