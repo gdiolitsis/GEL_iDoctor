@@ -397,14 +397,37 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     }
 
     private void showDialog(View v) {
-        AlertDialog d = new AlertDialog.Builder(this)
-                .setView(v)
-                .setCancelable(false)
-                .create();
+    AlertDialog d = new AlertDialog.Builder(this)
+            .setView(v)
+            .setCancelable(false)
+            .create();
 
-        if (d.getWindow()!=null)
-            d.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    if (d.getWindow()!=null)
+        d.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
-        d.show();
-    }
+    d.show();
+}
+
+// 👇 ΒΑΖΕΙΣ ΕΔΩ ΤΗ ΜΕΘΟΔΟ
+private void showStepDialog(String titleText, String bodyText, Runnable openAction) {
+
+    LinearLayout root = buildBaseBox(titleText);
+
+    TextView body = new TextView(this);
+    body.setText(bodyText);
+    body.setTextColor(Color.WHITE);
+    body.setPadding(0,20,0,20);
+    root.addView(body);
+
+    Button openBtn = mkGreenBtn(gr ? "Άνοιγμα" : "Open");
+    Button okBtn = mkRedBtn("OK");
+
+    openBtn.setOnClickListener(v -> openAction.run());
+    okBtn.setOnClickListener(v -> go(step + 1));
+
+    root.addView(openBtn);
+    root.addView(okBtn);
+
+    showDialog(root);
+}
 }
