@@ -25,6 +25,7 @@ import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -323,6 +324,27 @@ protected void onResume() {
         new Thread(this::loadAllApps).start();
     }
 
+    if (guidedActive) {
+        advanceGuided();
+    }
+}
+
+@Override
+protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+
+    // 🔁 Επιστροφή από Usage Access
+    if (returnedFromUsageScreen) {
+        returnedFromUsageScreen = false;
+
+        if (hasUsageAccess()) {
+            new Thread(this::loadAllApps).start();
+        }
+
+        return;
+    }
+
+    // 🔁 Guided flow return
     if (guidedActive) {
         advanceGuided();
     }
@@ -663,9 +685,10 @@ continueBtn.setOnClickListener(v -> {
     try {
         Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
         intent.setData(Uri.parse("package:" + getPackageName()));
+        returnedFromUsageScreen = true;
         startActivity(intent);
     } catch (Throwable e) {
-        // Fallback
+        returnedFromUsageScreen = true;   // ✅ και εδώ
         startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
     }
 });
@@ -843,7 +866,7 @@ private void applyFiltersAndSort() {
             if (a == null || b == null) return 0;
 
             // 🔎 DEBUG (ΠΡΟΣΩΡΙΝΟ)
-            Log.d("SORT_DEBUG",
+            android.util.Log.d("SORT_DEBUG",
                     (a.label == null ? "null" : a.label) +
                     " | cache=" + a.cacheBytes +
                     " | %=" + a.cachePercent +
@@ -1227,4 +1250,16 @@ static class AppEntry {
     boolean isSystemHeader;
     String headerTitle;
 }
+
+// ============================================================
+// dp helper (safe fallback if parent doesn't provide)
+// ============================================================
+private int dp(int v) {
+    return (int) TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            v,
+            getResources().getDisplayMetrics()
+    );
 }
+
+} // ✅ END AppListActivity
