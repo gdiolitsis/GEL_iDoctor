@@ -128,7 +128,6 @@ boolean autoLargest = getIntent().getBooleanExtra("auto_largest_cache", false);
 if (autoLargest) {
     sortByCacheBiggest = true;
 
-    Button btnSortCache = findViewById(R.id.btnSortCache);
     if (btnSortCache != null) {
         btnSortCache.post(() -> {
             applyFiltersAndSort();
