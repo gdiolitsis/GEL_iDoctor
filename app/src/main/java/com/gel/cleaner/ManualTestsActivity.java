@@ -7607,14 +7607,14 @@ no.setOnClickListener(v -> {
 // LAB 8 — Start Camera2 preview + stream sampling
 // ============================================================
 private void lab8StartCamera2Session(
-
-final boolean gr = AppLang.isGreek(this);
-
         Lab8Session s,
         Lab8Overall overall,
         Runnable onSamplingDoneEnableButtons,
         Runnable onFail
 ) {
+
+    final boolean gr = AppLang.isGreek(this);
+    
     try {
         // Choose preview size
         Size ps = (s.cam != null && s.cam.preview != null) ? s.cam.preview : new Size(1280, 720);
@@ -7721,18 +7721,24 @@ final boolean gr = AppLang.isGreek(this);
             }
         }, new Handler(Looper.getMainLooper()));
 
-        // Open camera device
-        s.cm.openCamera(s.camId, new CameraDevice.StateCallback() {
-            @Override public void onOpened(CameraDevice camera) {
-                s.device = camera;
+// Open camera device
+s.cm.openCamera(s.camId, new CameraDevice.StateCallback() {
 
-                try {
-                    ArrayList<Surface> outs = new ArrayList<>();
-                    outs.add(previewSurface);
-                    outs.add(s.reader.getSurface());
+    @Override
+    public void onOpened(CameraDevice camera) {
+        s.device = camera;
 
-                    camera.createCaptureSession(outs, new CameraCaptureSession.StateCallback() {
-                        @Override public void onConfigured(CameraCaptureSession session) {
+        try {
+            ArrayList<Surface> outs = new ArrayList<>();
+            outs.add(previewSurface);
+            outs.add(s.reader.getSurface());
+
+            camera.createCaptureSession(
+                    outs,
+                    new CameraCaptureSession.StateCallback() {
+
+                        @Override
+                        public void onConfigured(CameraCaptureSession session) {
                             s.session = session;
 
                             try {
@@ -7743,91 +7749,100 @@ final boolean gr = AppLang.isGreek(this);
                                 rb.addTarget(s.reader.getSurface());
 
                                 try {
-                                    CameraCharacteristics cc = s.cm.getCameraCharacteristics(s.camId);
+                                    CameraCharacteristics cc =
+                                            s.cm.getCameraCharacteristics(s.camId);
                                     Range<Integer>[] ranges =
                                             cc.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+
                                     if (ranges != null && ranges.length > 0) {
                                         Range<Integer> best = ranges[0];
                                         for (Range<Integer> r : ranges) {
-                                            if (r.getUpper() >= 30 && r.getLower() >= 15) { best = r; break; }
+                                            if (r.getUpper() >= 30 && r.getLower() >= 15) {
+                                                best = r;
+                                                break;
+                                            }
                                         }
                                         rb.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, best);
                                     }
                                 } catch (Throwable ignore) {}
 
-                                rb.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
-                                rb.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                                rb.set(CaptureRequest.CONTROL_MODE,
+                                        CaptureRequest.CONTROL_MODE_AUTO);
+                                rb.set(CaptureRequest.CONTROL_AF_MODE,
+                                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
 
-                                session.setRepeatingRequest(rb.build(), null, new Handler(Looper.getMainLooper()));
+                                session.setRepeatingRequest(
+                                        rb.build(),
+                                        null,
+                                        new Handler(Looper.getMainLooper())
+                                );
 
                                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                                    try { lab8StopAndReportSample(s, overall); } catch (Throwable ignore) {}
+                                    try {
+                                        lab8StopAndReportSample(s, overall);
+                                    } catch (Throwable ignore) {}
                                     onSamplingDoneEnableButtons.run();
                                 }, 5000);
 
                             } catch (Throwable t) {
-                                logLabelErrorValue("Preview", "Failed to start repeating request");
+                                logLabelErrorValue(
+                                        "Preview",
+                                        gr
+                                                ? "Αποτυχία εκκίνησης επαναλαμβανόμενου αιτήματος"
+                                                : "Failed to start repeating request"
+                                );
                                 onFail.run();
                             }
                         }
 
-                        @Override public void onConfigureFailed(CameraCaptureSession session) {
-                            logLabelErrorValue("Preview", "Capture session configuration failed");
+                        @Override
+                        public void onConfigureFailed(CameraCaptureSession session) {
+                            logLabelErrorValue(
+                                    "Preview",
+                                    gr
+                                            ? "Αποτυχία διαμόρφωσης capture session"
+                                            : "Capture session configuration failed"
+                            );
                             onFail.run();
                         }
-                    }, new Handler(Looper.getMainLooper()));
 
-                } catch (Throwable t) {
-    logLabelErrorValue(
-            "Preview",
-            gr
-                    ? "Αποτυχία εκκίνησης επαναλαμβανόμενου αιτήματος"
-                    : "Failed to start repeating request"
-    );
-    onFail.run();
-}
+                    },
+                    new Handler(Looper.getMainLooper())
+            );
 
-@Override public void onConfigureFailed(CameraCaptureSession session) {
-    logLabelErrorValue(
-            "Preview",
-            gr
-                    ? "Αποτυχία διαμόρφωσης capture session"
-                    : "Capture session configuration failed"
-    );
-    onFail.run();
-}
-}, new Handler(Looper.getMainLooper()));
+        } catch (Throwable t) {
+            logLabelErrorValue(
+                    "Preview",
+                    gr
+                            ? "Αποτυχία δημιουργίας session"
+                            : "Session creation failed"
+            );
+            onFail.run();
+        }
+    }
 
-} catch (Throwable t) {
-    logLabelErrorValue(
-            "Preview",
-            gr
-                    ? "Αποτυχία δημιουργίας session"
-                    : "Session creation failed"
-    );
-    onFail.run();
-}
-}
+    @Override
+    public void onDisconnected(CameraDevice camera) {
+        logLabelWarnValue(
+                "Preview",
+                gr
+                        ? "Η κάμερα αποσυνδέθηκε κατά τη δειγματοληψία"
+                        : "Camera disconnected during sampling"
+        );
+        onFail.run();
+    }
 
-@Override public void onDisconnected(CameraDevice camera) {
-    logLabelWarnValue(
-            "Preview",
-            gr
-                    ? "Η κάμερα αποσυνδέθηκε κατά τη δειγματοληψία"
-                    : "Camera disconnected during sampling"
-    );
-    onFail.run();
-}
+    @Override
+    public void onError(CameraDevice camera, int error) {
+        logLabelErrorValue(
+                "Camera open",
+                gr
+                        ? "Σφάλμα ανοίγματος κάμερας (κωδικός " + error + ")"
+                        : "Camera open error (code " + error + ")"
+        );
+        onFail.run();
+    }
 
-@Override public void onError(CameraDevice camera, int error) {
-    logLabelErrorValue(
-            "Camera open",
-            gr
-                    ? "Σφάλμα ανοίγματος κάμερας (κωδικός " + error + ")"
-                    : "Camera open error (code " + error + ")"
-    );
-    onFail.run();
-}
 }, new Handler(Looper.getMainLooper()));
 
 } catch (Throwable t) {
