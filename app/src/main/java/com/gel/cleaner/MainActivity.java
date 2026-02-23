@@ -46,6 +46,8 @@ implements GELCleaner.LogCallback {
 // STATE
 // =========================================================
 
+private boolean welcomeShown = false;
+
 private TextView welcomeTitle;
 private TextView welcomeMessage;
 
