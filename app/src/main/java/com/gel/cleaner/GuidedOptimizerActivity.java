@@ -46,67 +46,164 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
         go(STEP_STORAGE);
     }
 
+private void showIntroDialog(String titleText,
+                             String bodyText,
+                             Runnable startAction) {
+
+    LinearLayout root = buildBaseBox(titleText);
+
+    TextView body = new TextView(this);
+    body.setText(bodyText);
+    body.setTextColor(Color.WHITE);
+    body.setPadding(0,20,0,20);
+    root.addView(body);
+
+    Button startBtn = mkGreenBtn(gr ? "Έναρξη" : "Start");
+    Button skipBtn  = mkRedBtn(gr ? "Παράλειψη" : "Skip");
+
+    startBtn.setOnClickListener(v -> startAction.run());
+    skipBtn.setOnClickListener(v -> finish());
+
+    root.addView(startBtn);
+    root.addView(skipBtn);
+
+    showDialog(root);
+}
+
     private void go(int s) {
         step = s;
 
         switch (step) {
+        	
+        case STEP_INTRO:
+    showIntroDialog(
+            gr ? "Έξυπνη Βελτιστοποίηση" : "Smart Optimization",
+            gr
+                    ? "Θα σε πάω στις σωστές ρυθμίσεις της συσκευής.\n\n"
+                      + "Ο στόχος είναι να κάνουμε τη συσκευή σου να λειτουργεί ομαλά και με ασφάλεια.\n\n"
+                      + "Εσύ κάνεις τις επιλογές — εγώ κρατάω το τιμόνι (χωρίς να πατάω γκάζι μόνος μου 😄).\n\n"
+                      + "Πάτα «Έναρξη» για να ξεκινήσουμε."
+                    : "I will guide you to the right system settings.\n\n"
+                      + "The goal is to help your device run smoothly and securely.\n\n"
+                      + "You make the choices — I simply steer (no autopilot 😄).\n\n"
+                      + "Press “Start” to begin.",
+            () -> go(STEP_STORAGE)
+    );
+    break;
 
             case STEP_STORAGE:
-                showStepDialog(
-                        gr ? "ΒΗΜΑ 1 — Αποθήκευση" : "STEP 1 — Storage",
-                        gr
-                                ? "Έλεγχος αποθήκευσης.\n\n"
-                                  + "Διέγραψε προσωρινά ή περιττά αρχεία.\n"
-                                  + "Πάτα OK όταν επιστρέψεις."
-                                : "Check storage.\n\n"
-                                  + "Remove temporary or unnecessary files.\n"
-                                  + "Press OK when back.",
-                        () -> open(Settings.ACTION_INTERNAL_STORAGE_SETTINGS)
-                );
-                break;
+    showStepDialog(
+            gr ? "ΒΗΜΑ 1 — Αποθήκευση" : "STEP 1 — Storage",
+            gr
+                    ? "Θα ανοίξουν οι ρυθμίσεις αποθήκευσης της συσκευής.\n\n"
+                      + "Χρησιμοποίησε τα διαθέσιμα εργαλεία καθαρισμού όπου χρειάζεται.\n"
+                      + "Συνήθως αρκεί η εκκαθάριση προσωρινής μνήμης (cache), προσωρινών δεδομένων και κατάλοιπων αρχείων.\n"
+                      + "Αυτές οι ενέργειες είναι ασφαλείς και δεν διαγράφουν προσωπικά δεδομένα.\n\n"
+                      + "ΠΡΟΣΟΧΗ: Η εκκαθάριση δεδομένων εφαρμογής διαγράφει ρυθμίσεις, αποθηκευμένους λογαριασμούς και offline περιεχόμενο.\n"
+                      + "Χρησιμοποίησέ την μόνο αν γνωρίζεις ακριβώς τι κάνεις.\n\n"
+                      + "Σε ορισμένες συσκευές η εφαρμογή μπορεί να κλείσει προσωρινά.\n\n"
+                      + "Μετά τον καθαρισμό, άνοιξε ξανά την εφαρμογή\n"
+                      + "και πάτησε «Παράλειψη» για να συνεχίσουμε στο επόμενο βήμα."
+                    : "The device storage settings will open.\n\n"
+                      + "Use the available cleaning tools where necessary.\n"
+                      + "In most cases, clearing temporary cache, temporary data and residual files is sufficient.\n"
+                      + "These actions are safe and do not remove personal data.\n\n"
+                      + "WARNING: Clearing app data removes settings, saved accounts and offline content.\n"
+                      + "Use it only if you fully understand the consequences.\n\n"
+                      + "On some devices the app may close temporarily.\n\n"
+                      + "After cleaning, reopen the app\n"
+                      + "and press “Skip” to continue to the next step.",
+            () -> open(Settings.ACTION_INTERNAL_STORAGE_SETTINGS)
+    );
+    break;
 
             case STEP_BATTERY:
-                showStepDialog(
-                        gr ? "ΒΗΜΑ 2 — Μπαταρία" : "STEP 2 — Battery",
-                        gr
-                                ? "Έλεγχος κατανάλωσης μπαταρίας.\n"
-                                  + "Δες ποιες εφαρμογές καταναλώνουν πολύ."
-                                : "Check battery usage.\n"
-                                  + "Review high usage apps.",
-                        () -> open(Settings.ACTION_BATTERY_SAVER_SETTINGS)
-                );
-                break;
+    showStepDialog(
+            gr ? "ΒΗΜΑ 2 — Μπαταρία" : "STEP 2 — Battery",
+            gr
+                    ? "Θα ανοίξουν οι ρυθμίσεις μπαταρίας.\n\n"
+                      + "Έλεγξε:\n"
+                      + "• Ποιες εφαρμογές καταναλώνουν ασυνήθιστα υψηλή ενέργεια\n"
+                      + "• Αν κάποια εφαρμογή λειτουργεί συνεχώς στο παρασκήνιο\n"
+                      + "• Αν χρειάζεται περιορισμός δραστηριότητας σε μη απαραίτητες εφαρμογές\n\n"
+                      + "Απόφυγε την απενεργοποίηση βασικών εφαρμογών συστήματος.\n\n"
+                      + "Πάτησε «OK» όταν επιστρέψεις, για να συνεχίσουμε στο επόμενο βήμα."
+                    : "Battery settings will open.\n\n"
+                      + "Check:\n"
+                      + "• Apps with unusually high power consumption\n"
+                      + "• Apps constantly running in the background\n"
+                      + "• Whether non-essential apps need activity restrictions\n\n"
+                      + "Avoid disabling core system applications.\n\n"
+                      + "Press “OK” when you return, to continue to the next step.",
+            () -> open(Settings.ACTION_BATTERY_SAVER_SETTINGS)
+    );
+    break;
 
             case STEP_DATA:
-                showStepDialog(
-                        gr ? "ΒΗΜΑ 3 — Δεδομένα" : "STEP 3 — Data Usage",
-                        gr
-                                ? "Έλεγχος χρήσης δεδομένων."
-                                : "Check data usage.",
-                        () -> open(Settings.ACTION_DATA_USAGE_SETTINGS)
-                );
-                break;
+    showStepDialog(
+            gr ? "ΒΗΜΑ 3 — Δεδομένα" : "STEP 3 — Data Usage",
+            gr
+                    ? "Θα ανοίξουν οι ρυθμίσεις χρήσης δεδομένων.\n\n"
+                      + "Έλεγξε:\n"
+                      + "• Ποιες εφαρμογές καταναλώνουν ασυνήθιστα πολλά δεδομένα\n"
+                      + "• Αν υπάρχει υπερβολική χρήση στο παρασκήνιο\n"
+                      + "• Αν χρειάζεται περιορισμός δεδομένων σε μη απαραίτητες εφαρμογές\n\n"
+                      + "Απέφυγε τον περιορισμό βασικών εφαρμογών συστήματος ή υπηρεσιών ασφαλείας.\n\n"
+                      + "Πάτησε «OK» όταν επιστρέψεις, για να συνεχίσουμε στο επόμενο βήμα."
+                    : "Data usage settings will open.\n\n"
+                      + "Check:\n"
+                      + "• Apps with unusually high data consumption\n"
+                      + "• Excessive background data usage\n"
+                      + "• Whether non-essential apps need data restrictions\n\n"
+                      + "Avoid restricting core system apps or security services.\n\n"
+                      + "Press “OK” when you return, to continue to the next step.",
+            () -> open(Settings.ACTION_DATA_USAGE_SETTINGS)
+    );
+    break;
 
             case STEP_APPS:
-                showStepDialog(
-                        gr ? "ΒΗΜΑ 4 — Εφαρμογές" : "STEP 4 — Apps",
-                        gr
-                                ? "Έλεγχος δικαιωμάτων και background apps."
-                                : "Check permissions and background apps.",
-                        () -> open(Settings.ACTION_APPLICATION_SETTINGS)
-                );
-                break;
+    showStepDialog(
+            gr ? "ΒΗΜΑ 4 — Εφαρμογές" : "STEP 4 — Apps",
+            gr
+                    ? "Θα ανοίξουν οι ρυθμίσεις εφαρμογών.\n\n"
+                      + "Έλεγξε:\n"
+                      + "• Ποιες εφαρμογές εκτελούνται συχνά στο παρασκήνιο\n"
+                      + "• Τα δικαιώματα που δεν είναι απαραίτητα (κάμερα, μικρόφωνο, τοποθεσία κ.λπ.)\n"
+                      + "• Ειδοποιήσεις που ενεργοποιούν συνεχώς τη συσκευή\n\n"
+                      + "Απέφυγε την απενεργοποίηση βασικών εφαρμογών συστήματος.\n\n"
+                      + "Πάτησε «OK» όταν επιστρέψεις, για να συνεχίσουμε στο επόμενο βήμα."
+                    : "App settings will open.\n\n"
+                      + "Check:\n"
+                      + "• Apps frequently running in the background\n"
+                      + "• Unnecessary permissions (camera, microphone, location, etc.)\n"
+                      + "• Notifications that constantly wake the device\n\n"
+                      + "Avoid disabling essential system applications.\n\n"
+                      + "Press “OK” when you return, to continue to the next step.",
+            () -> open(Settings.ACTION_APPLICATION_SETTINGS)
+    );
+    break;
 
             case STEP_CACHE:
-                showStepDialog(
-                        gr ? "ΒΗΜΑ 5 — Cache" : "STEP 5 — Cache",
-                        gr
-                                ? "Θα ανοίξει η λίστα εφαρμογών\n"
-                                  + "με ταξινόμηση Μεγαλύτερη Cache."
-                                : "App list will open sorted by Largest Cache.",
-                        this::openLargestCache
-                );
-                break;
+    showStepDialog(
+            gr ? "ΒΗΜΑ 5 — Cache" : "STEP 5 — Cache",
+            gr
+                    ? "Θα ανοίξει η λίστα εφαρμογών ταξινομημένη κατά «Μεγαλύτερη Cache».\n\n"
+                      + "Καθαρισε εφαρμογές με μεγάλη προσωρινή μνήμη, Η και ολες\n"
+                      + "Στην πρώτη ομάδα θα δεις τις εγκατεστημένες εφαρμογές χρηστη.\n"
+                      + "Στην δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος.\n"
+                      + "Η εκκαθάριση cache είναι ασφαλής και δεν διαγράφει προσωπικά δεδομένα.\n\n"
+                      + "Απόφυγε την εκκαθάριση δεδομένων εκτός αν γνωρίζεις τις συνέπειες.\n\n"
+                      + "Πάτησε «OK» όταν ολοκληρώσεις."
+                    : "The app list will open sorted by “Largest Cache”.\n\n"
+                      + "Clear apps with large temporary cache — or all of them if needed.\n"
+                      + "In the first group you will see installed user applications.\n"
+                      + "In the second group you will see system applications.\n"
+                      + "Clearing cache is safe and does not remove personal data.\n\n"
+                      + "Avoid clearing app data unless you understand the consequences.\n\n"
+                      + "Press “OK” when finished.",
+            this::openLargestCache
+    );
+    break;
 
             case STEP_QUEST:
                 showQuestionnaire();
@@ -409,7 +506,9 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
 }
 
 // 👇 ΒΑΖΕΙΣ ΕΔΩ ΤΗ ΜΕΘΟΔΟ
-private void showStepDialog(String titleText, String bodyText, Runnable openAction) {
+private void showStepDialog(String titleText,
+                            String bodyText,
+                            Runnable openAction) {
 
     LinearLayout root = buildBaseBox(titleText);
 
@@ -419,14 +518,30 @@ private void showStepDialog(String titleText, String bodyText, Runnable openActi
     body.setPadding(0,20,0,20);
     root.addView(body);
 
-    Button openBtn = mkGreenBtn(gr ? "Άνοιγμα" : "Open");
-    Button okBtn = mkRedBtn("OK");
+    // ⚫ Settings (black + gold + neon)
+    Button settingsBtn = new Button(this);
+    settingsBtn.setText(gr ? "Ρυθμίσεις" : "Settings");
+    settingsBtn.setTextColor(0xFF00FF7F);
 
-    openBtn.setOnClickListener(v -> openAction.run());
+    GradientDrawable settingsBg = new GradientDrawable();
+    settingsBg.setColor(0xFF000000);
+    settingsBg.setStroke(5, 0xFFFFD700);
+    settingsBg.setCornerRadius(25);
+    settingsBtn.setBackground(settingsBg);
+
+    settingsBtn.setOnClickListener(v -> openAction.run());
+
+    // 🟢 OK
+    Button okBtn = mkGreenBtn("OK");
     okBtn.setOnClickListener(v -> go(step + 1));
 
-    root.addView(openBtn);
+    // 🔴 Skip
+    Button skipBtn = mkRedBtn(gr ? "Παράλειψη" : "Skip");
+    skipBtn.setOnClickListener(v -> go(step + 1));
+
+    root.addView(settingsBtn);
     root.addView(okBtn);
+    root.addView(skipBtn);
 
     showDialog(root);
 }
