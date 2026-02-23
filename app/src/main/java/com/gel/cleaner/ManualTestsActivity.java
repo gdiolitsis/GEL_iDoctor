@@ -12646,6 +12646,8 @@ private void lab20UptimeHints() {
 private boolean lab21Running = false;
 
 private void lab21ScreenLock() {
+	
+	final boolean gr = AppLang.isGreek(this);
 
 // GUARD — avoid double-tap spam  
 if (lab21Running) {  
@@ -13036,6 +13038,8 @@ try { if (br != null) br.close(); } catch (Throwable ignore) {}
 LAB 22 — Security Patch + Play Protect (Realtime)
 ============================================================ */
 private void lab22SecurityPatchAndPlayProtect() {
+	
+	final boolean gr = AppLang.isGreek(this);
 
     appendHtml("<br>");
     logLine();
@@ -13199,6 +13203,8 @@ logLine();
 // ============================================================
 
 private void lab23DeveloperOptionsRisk() {
+	
+	final boolean gr = AppLang.isGreek(this);
 
     int risk = 0;
 boolean usbDebug = false;
@@ -13413,6 +13419,8 @@ return false;
 // GEL Universal Edition — NO external libs
 // ============================================================
 private void lab24RootSuspicion() {
+
+final boolean gr = AppLang.isGreek(this);
 
 appendHtml("<br>");  
 logLine();  
@@ -16005,6 +16013,8 @@ protected void onActivityResult(int requestCode, int resultCode, @Nullable Inten
 // LAB 6 — TOUCH GRID
 // ============================================================
 if (requestCode == REQ_LAB6_TOUCH) {
+	
+	final boolean gr = AppLang.isGreek(this);
 
     int total = TouchGridTestActivity.getTotalZones();
     int remaining = TouchGridTestActivity.getRemainingZones();
@@ -16129,6 +16139,8 @@ if (requestCode == REQ_LAB6_COLOR) {
 // LAB 7 — Rotation + Proximity Sensors
 // ============================================================
 if (requestCode == 7007) {
+	
+	final boolean gr = AppLang.isGreek(this);
 
     appendHtml("<br>");
     logLine();
