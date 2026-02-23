@@ -214,58 +214,59 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
         showDialog(root);
     }
 
-    // ============================================================
-    // TECHNICAL BUILDER
-    // ============================================================
-
     private String buildTechnicalRecommendationText(ArrayList<String> s) {
 
-        StringBuilder sb = new StringBuilder();
+    java.util.LinkedHashSet<String> labs = new java.util.LinkedHashSet<>();
 
-        if (s.contains("heat")) {
-            sb.append("• LAB 16 — Θερμικός έλεγχος\n");
-            sb.append("• LAB 14 — Για να δούμε την μπαταρία σου\n\n");
-        }
-
-        if (s.contains("charge")) {
-            sb.append("• LAB 15 — Έλεγχος φόρτισης\n");
-            sb.append("• LAB 14 — Έλεγχος μπαταρίας\n\n");
-        }
-
-        if (s.contains("lag")) {
-            sb.append("• LAB 19 — Απόδοση συστήματος\n");
-            sb.append("• LAB 26 — Ανάλυση επιπτώσεων εφαρμογών\n\n");
-        }
-
-        if (s.contains("crash")) {
-            sb.append("• LAB 25 — Crash Intelligence\n");
-            sb.append("• LAB 30 — Τεχνική αναφορά\n\n");
-        }
-
-        if (s.contains("data") || s.contains("wifi")) {
-            sb.append("• LAB 26 — Δίκτυο & background χρήση\n\n");
-        }
-
-        if (s.contains("camera")) {
-            sb.append("• LAB 8 — Camera Diagnostics\n\n");
-        }
-
-        if (s.contains("bluetooth")) {
-            sb.append("• LAB 5 — Bluetooth Check\n\n");
-        }
-
-        if (s.contains("sound")) {
-            sb.append("• LAB 1–4 — Audio Diagnostics\n\n");
-        }
-
-        if (s.contains("boot")) {
-            sb.append("• LAB 19 — Εκκίνηση & Απόδοση\n\n");
-        }
-
-        sb.append("• LAB 29 — Τελική σύνοψη υγείας\n");
-
-        return sb.toString();
+    if (s.contains("heat")) {
+        labs.add("LAB 16 — Θερμικός έλεγχος");
+        labs.add("LAB 14 — Έλεγχος μπαταρίας");
     }
+
+    if (s.contains("charge")) {
+        labs.add("LAB 15 — Έλεγχος φόρτισης");
+        labs.add("LAB 14 — Έλεγχος μπαταρίας");
+    }
+
+    if (s.contains("lag")) {
+        labs.add("LAB 19 — Απόδοση συστήματος");
+        labs.add("LAB 26 — Ανάλυση επιπτώσεων εφαρμογών");
+    }
+
+    if (s.contains("crash")) {
+        labs.add("LAB 25 — Crash Intelligence");
+        labs.add("LAB 30 — Τεχνική αναφορά");
+    }
+
+    if (s.contains("data") || s.contains("wifi")) {
+        labs.add("LAB 26 — Δίκτυο & background χρήση");
+    }
+
+    if (s.contains("camera")) {
+        labs.add("LAB 8 — Camera Diagnostics");
+    }
+
+    if (s.contains("bluetooth")) {
+        labs.add("LAB 5 — Bluetooth Check");
+    }
+
+    if (s.contains("sound")) {
+        labs.add("LAB 1–4 — Audio Diagnostics");
+    }
+
+    if (s.contains("boot")) {
+        labs.add("LAB 19 — Εκκίνηση & Απόδοση");
+    }
+
+    labs.add("LAB 29 — Τελική σύνοψη υγείας");
+
+    StringBuilder sb = new StringBuilder();
+    for (String l : labs) {
+        sb.append("• ").append(l).append("\n");
+    }
+
+    return sb.toString();
+}
 
     // ============================================================
     // REMINDER
