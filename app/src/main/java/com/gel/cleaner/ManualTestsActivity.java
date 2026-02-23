@@ -9114,7 +9114,6 @@ private void runWifiDeepScan(WifiManager wm) {
         : (gr ? "Δεν υπάρχει BOOT RECEIVER δηλωμένο"
               : "No BOOT-TIME RECEIVER declared")
 );
-                );
 
                 logLabelOkValue(
         gr ? "Συνολική Εκτίμηση" : "Assessment",
