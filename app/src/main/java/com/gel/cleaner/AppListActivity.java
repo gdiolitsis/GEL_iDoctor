@@ -1254,7 +1254,8 @@ static class AppEntry {
 // ============================================================
 // dp helper (safe fallback if parent doesn't provide)
 // ============================================================
-private int dp(int v) {
+@Override
+public int dp(int v) {
     return (int) TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP,
             v,
