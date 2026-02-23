@@ -121,6 +121,21 @@ public class AppListActivity extends GELAutoActivityHook {
         
 updateStartButtonUI();
 
+// ============================================================
+// AUTO LARGEST CACHE MODE (FROM GUIDED OPTIMIZER)
+// ============================================================
+boolean autoLargest = getIntent().getBooleanExtra("auto_largest_cache", false);
+if (autoLargest) {
+    sortByCacheBiggest = true;
+
+    Button btnSortCache = findViewById(R.id.btnSortCache);
+    if (btnSortCache != null) {
+        btnSortCache.post(() -> {
+            applyFiltersAndSort();
+        });
+    }
+}
+
         // Permission prompt (Usage Access = sizes)
         checkUsageAccessGate();
 
