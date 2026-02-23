@@ -219,48 +219,81 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     java.util.LinkedHashSet<String> labs = new java.util.LinkedHashSet<>();
 
     if (s.contains("heat")) {
-        labs.add("LAB 16 — Θερμικός έλεγχος");
-        labs.add("LAB 14 — Έλεγχος μπαταρίας");
+        labs.add(gr
+                ? "LAB 16 — Θερμικός έλεγχος"
+                : "LAB 16 — Thermal diagnostics");
+        labs.add(gr
+                ? "LAB 14 — Έλεγχος μπαταρίας"
+                : "LAB 14 — Battery health analysis");
     }
 
     if (s.contains("charge")) {
-        labs.add("LAB 15 — Έλεγχος φόρτισης");
-        labs.add("LAB 14 — Έλεγχος μπαταρίας");
+        labs.add(gr
+                ? "LAB 15 — Έλεγχος φόρτισης"
+                : "LAB 15 — Charging diagnostics");
+        labs.add(gr
+                ? "LAB 14 — Έλεγχος μπαταρίας"
+                : "LAB 14 — Battery health analysis");
     }
 
     if (s.contains("lag")) {
-        labs.add("LAB 19 — Απόδοση συστήματος");
-        labs.add("LAB 26 — Ανάλυση επιπτώσεων εφαρμογών");
+        labs.add(gr
+                ? "LAB 19 — Απόδοση συστήματος"
+                : "LAB 19 — System performance analysis");
+        labs.add(gr
+                ? "LAB 26 — Ανάλυση επιπτώσεων εφαρμογών"
+                : "LAB 26 — Installed apps impact analysis");
     }
 
     if (s.contains("crash")) {
-        labs.add("LAB 25 — Crash Intelligence");
-        labs.add("LAB 30 — Τεχνική αναφορά");
+        labs.add(gr
+                ? "LAB 25 — Ανάλυση κρασαρισμάτων"
+                : "LAB 25 — Crash intelligence analysis");
+        labs.add(gr
+                ? "LAB 30 — Τελική τεχνική αναφορά"
+                : "LAB 30 — Final technical report");
     }
 
     if (s.contains("data") || s.contains("wifi")) {
-        labs.add("LAB 26 — Δίκτυο & background χρήση");
+        labs.add(gr
+                ? "LAB 26 — Δίκτυο & background χρήση"
+                : "LAB 26 — Network & background activity analysis");
     }
 
     if (s.contains("camera")) {
-        labs.add("LAB 8 — Camera Diagnostics");
+        labs.add(gr
+                ? "LAB 8 — Διαγνωστικός έλεγχος κάμερας"
+                : "LAB 8 — Camera diagnostics");
     }
 
     if (s.contains("bluetooth")) {
-        labs.add("LAB 5 — Bluetooth Check");
+        labs.add(gr
+                ? "LAB 5 — Έλεγχος Bluetooth"
+                : "LAB 5 — Bluetooth diagnostics");
     }
 
     if (s.contains("sound")) {
-        labs.add("LAB 1–4 — Audio Diagnostics");
+        labs.add(gr
+                ? "LAB 1–4 — Διαγνωστικά ήχου"
+                : "LAB 1–4 — Audio diagnostics");
     }
 
     if (s.contains("boot")) {
-        labs.add("LAB 19 — Εκκίνηση & Απόδοση");
+        labs.add(gr
+                ? "LAB 19 — Εκκίνηση & Απόδοση"
+                : "LAB 19 — Boot & performance analysis");
     }
 
-    labs.add("LAB 29 — Τελική σύνοψη υγείας");
+    labs.add(gr
+            ? "LAB 29 — Τελική σύνοψη υγείας"
+            : "LAB 29 — Final health summary");
 
     StringBuilder sb = new StringBuilder();
+
+    sb.append(gr
+            ? "Προτείνονται τα εξής εργαστήρια:\n\n"
+            : "Recommended labs:\n\n");
+
     for (String l : labs) {
         sb.append("• ").append(l).append("\n");
     }
