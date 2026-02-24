@@ -447,7 +447,7 @@ private void setRoutingDialogHidden(String featureName, boolean value) {
                 () -> go(STEP_LABS)
         );
 
-        showDialog(root);
+        showCustomDialog(root);
     }
 
     // ============================================================
@@ -473,7 +473,7 @@ private void setRoutingDialogHidden(String featureName, boolean value) {
                 () -> go(STEP_REMINDER)
         );
 
-        showDialog(root);
+        showCustomDialog(root);
     }
 
     private String buildTechnicalRecommendationText(ArrayList<String> s) {
@@ -573,10 +573,10 @@ private void setRoutingDialogHidden(String featureName, boolean value) {
    : "If you're satisfied with the results, would you like regular reminders to run the same device inspection?"
         );
 
-        Button daily = mkGreenBtn(gr?"1 Ημέρα":"Daily");
+Button daily = mkGreenBtn(gr?"1 Ημέρα":"Daily");
 Button weekly = mkGreenBtn(gr?"1 Εβδομάδα":"Weekly");
-Button monthly = mkRedBtn(gr?"1 Μήνας":"Monthly");
-mkRedBtn(gr?"Παράλειψη":"Skip");
+Button monthly = mkGreenBtn(gr?"1 Μήνας":"Monthly");
+Button skip = mkRedBtn(gr?"Παράλειψη":"Skip");
 
 daily.setOnClickListener(v -> {
     OptimizerScheduler.enableReminder(this,1);
@@ -600,7 +600,7 @@ root.addView(weekly);
 root.addView(monthly);
 root.addView(skip);
 
-        showDialog(root);
+        showCustomDialog(root);
     }
 
     // ============================================================
