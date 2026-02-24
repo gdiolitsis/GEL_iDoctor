@@ -27,6 +27,8 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
 
     private boolean gr;
     private int step = 0;
+    
+    private static final String PREF_ROUTING_DIALOG = "routing_dialog_hidden_";
 
     private static final int STEP_INTRO    = 0;
     private static final int STEP_STORAGE  = 1;
@@ -47,6 +49,128 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
         gr = AppLang.isGreek(this);
         go(STEP_INTRO);
     }
+
+private void safeStartActivity(String featureName, String... actions) {
+
+    for (String action : actions) {
+        try {
+            startActivity(new Intent(action));
+            return;
+        } catch (Throwable ignore) {}
+    }
+
+    // Αν έχει απενεργοποιηθεί για αυτό το feature → άνοιξε κατευθείαν settings
+    if (isRoutingDialogHidden(featureName)) {
+        open(Settings.ACTION_SETTINGS);
+        return;
+    }
+
+    showRoutingInfoDialog(featureName);
+}
+
+private void showRoutingInfoDialog(String featureName) {
+
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(40,40,40,40);
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF000000);
+    bg.setCornerRadius(30);
+    bg.setStroke(5,0xFFFFD700);
+    root.setBackground(bg);
+
+    TextView title = new TextView(this);
+    title.setText(gr ? "Διαφορετική Δομή Ρυθμίσεων"
+                     : "Different Settings Structure");
+    title.setTextColor(Color.WHITE);
+    title.setTypeface(null, Typeface.BOLD);
+    title.setTextSize(18f);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(0,0,0,30);
+
+    TextView body = new TextView(this);
+body.setText(
+        gr
+                ? "Οι κατασκευαστές Android (Samsung, Xiaomi, Huawei κ.λπ.)\n"
+                  + "τροποποιούν συχνά τη δομή των ρυθμίσεων.\n\n"
+                  + "Αυτό σημαίνει ότι το ίδιο μενού μπορεί να βρίσκεται\n"
+                  + "σε διαφορετική τοποθεσία ανάλογα με τη συσκευή ή την έκδοση Android.\n\n"
+                  + "Η εφαρμογή προσπαθεί αυτόματα να εντοπίσει\n"
+                  + "το πιο σχετικό μενού για τη λειτουργία που επέλεξες.\n\n"
+                  + "Αν δεν είναι διαθέσιμο, ανοίγουμε τις γενικές ρυθμίσεις\n"
+                  + "ώστε να έχεις πάντα πρόσβαση."
+                : "Android manufacturers (Samsung, Xiaomi, Huawei, etc.)\n"
+                  + "often modify the internal structure of system settings.\n\n"
+                  + "This means the same menu may appear in different locations\n"
+                  + "depending on the device or Android version.\n\n"
+                  + "The app automatically attempts to locate\n"
+                  + "the most relevant menu for the feature you selected.\n\n"
+                  + "If a direct path is not available,\n"
+                  + "general settings are opened to ensure access."
+);
+    body.setTextColor(0xFF00FF7F);
+    body.setPadding(0,20,0,20);
+
+    CheckBox dontShow = new CheckBox(this);
+    dontShow.setText(gr ? "Να μην εμφανιστεί ξανά"
+                        : "Do not show again");
+    dontShow.setTextColor(Color.WHITE);
+
+    Button ok = new Button(this);
+    ok.setText("OK");
+    ok.setTextColor(Color.WHITE);
+
+    GradientDrawable d = new GradientDrawable();
+    d.setColor(0xFF00C853);
+    d.setStroke(5,0xFFFFD700);
+    d.setCornerRadius(25);
+    ok.setBackground(d);
+
+    ok.setOnClickListener(v -> {
+
+        if (dontShow.isChecked()) {
+            setRoutingDialogHidden(featureName, true);
+        }
+
+        try {
+            startActivity(new Intent(Settings.ACTION_SETTINGS));
+        } catch (Throwable ignore) {}
+    });
+
+    root.addView(title);
+    root.addView(body);
+    root.addView(dontShow);
+    root.addView(ok);
+
+    AlertDialog dialog = new AlertDialog.Builder(this)
+            .setView(root)
+            .setCancelable(false)
+            .create();
+
+    if (dialog.getWindow()!=null)
+        dialog.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT));
+
+    dialog.show();
+}
+
+    try {
+        startActivity(new Intent(Settings.ACTION_SETTINGS));
+    } catch (Throwable ignore) {}
+}
+
+private boolean isRoutingDialogHidden(String featureName) {
+    return getSharedPreferences("gel_prefs", MODE_PRIVATE)
+            .getBoolean(PREF_ROUTING_DIALOG + featureName, false);
+}
+
+private void setRoutingDialogHidden(String featureName, boolean value) {
+    getSharedPreferences("gel_prefs", MODE_PRIVATE)
+            .edit()
+            .putBoolean(PREF_ROUTING_DIALOG + featureName, value)
+            .apply();
+}
 
     // ============================================================
     // ROUTER
@@ -284,8 +408,8 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     private void showQuestionnaire() {
 
         LinearLayout root = buildBaseBox(
-                progressTitle(gr ? "Δήλωσε ό,τι παρατηρείς"
-                                 : "Select observed issues")
+                gr ? "Πρόσεξες τελευταία κάτι που σε προβλημάτισε στη συσκευή σου;"
+   : "Have you noticed anything unusual on your device recently?"
         );
 
         CheckBox heat = mkCheck(gr?"Υψηλή θερμοκρασία":"High temperature");
@@ -328,7 +452,7 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
                 () -> go(STEP_LABS)
         );
 
-        showCustomDialog(root);
+        showDialog(root);
     }
 
     // ============================================================
@@ -338,8 +462,8 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     private void showLabRecommendation() {
 
         LinearLayout root = buildBaseBox(
-                progressTitle(gr ? "Προτεινόμενα Εργαστήρια"
-                                 : "Recommended Labs")
+                gr ? "Για να ελέγξεις όσα μας ανέφερες, σου προτείνουμε να τρέξεις τα παρακάτω διαγνωστικά Εργαστήρια"
+   : "Based on what you reported, we recommend running the following diagnostic Labs"
         );
 
         TextView tv = new TextView(this);
@@ -354,106 +478,134 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
                 () -> go(STEP_REMINDER)
         );
 
-        showCustomDialog(root);
+        showDialog(root);
     }
 
     private String buildTechnicalRecommendationText(ArrayList<String> s) {
 
-        java.util.LinkedHashSet<String> labs = new java.util.LinkedHashSet<>();
+    java.util.LinkedHashSet<String> labs = new java.util.LinkedHashSet<>();
 
-        if (s.contains("heat")) {
-            labs.add(gr ? "LAB 16 — Θερμικός έλεγχος"
-                        : "LAB 16 — Thermal diagnostics");
-            labs.add(gr ? "LAB 14 — Έλεγχος μπαταρίας"
-                        : "LAB 14 — Battery health analysis");
-        }
-
-        if (s.contains("charge")) {
-            labs.add(gr ? "LAB 15 — Έλεγχος φόρτισης"
-                        : "LAB 15 — Charging diagnostics");
-            labs.add(gr ? "LAB 14 — Έλεγχος μπαταρίας"
-                        : "LAB 14 — Battery health analysis");
-        }
-
-        if (s.contains("lag")) {
-            labs.add(gr ? "LAB 19 — Απόδοση συστήματος"
-                        : "LAB 19 — System performance analysis");
-            labs.add(gr ? "LAB 26 — Ανάλυση επιπτώσεων εφαρμογών"
-                        : "LAB 26 — Installed apps impact analysis");
-        }
-
-        if (s.contains("crash")) {
-            labs.add(gr ? "LAB 25 — Ανάλυση κρασαρισμάτων"
-                        : "LAB 25 — Crash intelligence analysis");
-            labs.add(gr ? "LAB 30 — Τελική τεχνική αναφορά"
-                        : "LAB 30 — Final technical report");
-        }
-
-        if (s.contains("data") || s.contains("wifi")) {
-            labs.add(gr ? "LAB 26 — Δίκτυο & background χρήση"
-                        : "LAB 26 — Network & background activity analysis");
-        }
-
-        if (s.contains("camera")) {
-            labs.add(gr ? "LAB 8 — Διαγνωστικός έλεγχος κάμερας"
-                        : "LAB 8 — Camera diagnostics");
-        }
-
-        if (s.contains("bluetooth")) {
-            labs.add(gr ? "LAB 5 — Έλεγχος Bluetooth"
-                        : "LAB 5 — Bluetooth diagnostics");
-        }
-
-        if (s.contains("sound")) {
-            labs.add(gr ? "LAB 1–4 — Διαγνωστικά ήχου"
-                        : "LAB 1–4 — Audio diagnostics");
-        }
-
-        if (s.contains("boot")) {
-            labs.add(gr ? "LAB 19 — Εκκίνηση & Απόδοση"
-                        : "LAB 19 — Boot & performance analysis");
-        }
-
-        labs.add(gr ? "LAB 29 — Τελική σύνοψη υγείας"
-                    : "LAB 29 — Final health summary");
-
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(gr
-                ? "Προτείνονται τα εξής εργαστήρια:\n\n"
-                : "Recommended labs:\n\n");
-
-        for (String l : labs) {
-            sb.append("• ").append(l).append("\n");
-        }
-
-        return sb.toString();
+    if (s.contains("heat")) {
+        labs.add(gr
+                ? "LAB 16 — Θερμικός έλεγχος"
+                : "LAB 16 — Thermal diagnostics");
+        labs.add(gr
+                ? "LAB 14 — Έλεγχος μπαταρίας"
+                : "LAB 14 — Battery health analysis");
     }
+
+    if (s.contains("charge")) {
+        labs.add(gr
+                ? "LAB 15 — Έλεγχος φόρτισης"
+                : "LAB 15 — Charging diagnostics");
+        labs.add(gr
+                ? "LAB 14 — Έλεγχος μπαταρίας"
+                : "LAB 14 — Battery health analysis");
+    }
+
+    if (s.contains("lag")) {
+        labs.add(gr
+                ? "LAB 19 — Απόδοση συστήματος"
+                : "LAB 19 — System performance analysis");
+        labs.add(gr
+                ? "LAB 26 — Ανάλυση επιπτώσεων εφαρμογών"
+                : "LAB 26 — Installed apps impact analysis");
+    }
+
+    if (s.contains("crash")) {
+        labs.add(gr
+                ? "LAB 25 — Ανάλυση κρασαρισμάτων"
+                : "LAB 25 — Crash intelligence analysis");
+        labs.add(gr
+                ? "LAB 30 — Τελική τεχνική αναφορά"
+                : "LAB 30 — Final technical report");
+    }
+
+    if (s.contains("data") || s.contains("wifi")) {
+        labs.add(gr
+                ? "LAB 26 — Δίκτυο & background χρήση"
+                : "LAB 26 — Network & background activity analysis");
+    }
+
+    if (s.contains("camera")) {
+        labs.add(gr
+                ? "LAB 8 — Διαγνωστικός έλεγχος κάμερας"
+                : "LAB 8 — Camera diagnostics");
+    }
+
+    if (s.contains("bluetooth")) {
+        labs.add(gr
+                ? "LAB 5 — Έλεγχος Bluetooth"
+                : "LAB 5 — Bluetooth diagnostics");
+    }
+
+    if (s.contains("sound")) {
+        labs.add(gr
+                ? "LAB 1–4 — Διαγνωστικά ήχου"
+                : "LAB 1–4 — Audio diagnostics");
+    }
+
+    if (s.contains("boot")) {
+        labs.add(gr
+                ? "LAB 19 — Εκκίνηση & Απόδοση"
+                : "LAB 19 — Boot & performance analysis");
+    }
+
+    labs.add(gr
+            ? "LAB 29 — Τελική σύνοψη υγείας"
+            : "LAB 29 — Final health summary");
+
+    StringBuilder sb = new StringBuilder();
+
+    sb.append(gr
+            ? "Προτείνονται τα εξής εργαστήρια:\n\n"
+            : "Recommended labs:\n\n");
+
+    for (String l : labs) {
+        sb.append("• ").append(l).append("\n");
+    }
+
+    return sb.toString();
+}
 
     // ============================================================
     // REMINDER
     // ============================================================
 
     private void showReminder() {
-
         LinearLayout root = buildBaseBox(
-                progressTitle(gr ? "Θέλεις υπενθύμιση;"
-                                 : "Enable reminder?")
+                gr ? "Αν έμεινες ευχαριστημένος/η από το αποτέλεσμα, θα ήθελες να σου υπενθυμίζουμε τακτικά να κάνουμε την ίδια επιθεώρηση στη συσκευή σου;"
+   : "If you're satisfied with the results, would you like regular reminders to run the same device inspection?"
         );
 
         Button daily = mkGreenBtn(gr?"1 Ημέρα":"Daily");
-        Button weekly = mkGreenBtn(gr?"1 Εβδομάδα":"Weekly");
-        Button monthly = mkRedBtn(gr?"1 Μήνας":"Monthly");
+Button weekly = mkGreenBtn(gr?"1 Εβδομάδα":"Weekly");
+Button monthly = mkRedBtn(gr?"1 Μήνας":"Monthly");
+mkRedBtn(gr?"Παράλειψη":"Skip");
 
-        daily.setOnClickListener(v -> { OptimizerScheduler.enableReminder(this,1); finish(); });
-        weekly.setOnClickListener(v -> { OptimizerScheduler.enableReminder(this,7); finish(); });
-        monthly.setOnClickListener(v -> { OptimizerScheduler.enableReminder(this,30); finish(); });
+daily.setOnClickListener(v -> {
+    OptimizerScheduler.enableReminder(this,1);
+    finish();
+});
 
-        root.addView(daily);
-        root.addView(weekly);
-        root.addView(monthly);
+weekly.setOnClickListener(v -> {
+    OptimizerScheduler.enableReminder(this,7);
+    finish();
+});
 
-        showCustomDialog(root);
+monthly.setOnClickListener(v -> {
+    OptimizerScheduler.enableReminder(this,30);
+    finish();
+});
+
+skip.setOnClickListener(v -> finish());
+
+root.addView(daily);
+root.addView(weekly);
+root.addView(monthly);
+root.addView(skip);
+
+        showDialog(root);
     }
 
     // ============================================================
@@ -461,22 +613,29 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     // ============================================================
 
     private void openStorageSettings() {
-        try { startActivity(new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS)); return; } catch (Throwable ignore) {}
-        try { startActivity(new Intent(Settings.ACTION_MEMORY_CARD_SETTINGS)); return; } catch (Throwable ignore) {}
-        open(Settings.ACTION_SETTINGS);
-    }
+    safeStartActivity(
+            gr ? "Αποθήκευση" : "Storage",
+            Settings.ACTION_INTERNAL_STORAGE_SETTINGS,
+            Settings.ACTION_MEMORY_CARD_SETTINGS
+    );
+}
 
     private void openBatteryUsage() {
-        try { startActivity(new Intent(Settings.ACTION_BATTERY_USAGE_SETTINGS)); return; } catch (Throwable ignore) {}
-        try { startActivity(new Intent(Settings.ACTION_POWER_USAGE_SUMMARY)); return; } catch (Throwable ignore) {}
-        open(Settings.ACTION_SETTINGS);
-    }
+    safeStartActivity(
+            gr ? "Μπαταρία" : "Battery",
+            "android.settings.BATTERY_USAGE_SETTINGS",
+            "android.settings.POWER_USAGE_SUMMARY",
+            Settings.ACTION_BATTERY_SAVER_SETTINGS
+    );
+}
 
     private void openDataUsage() {
-        try { startActivity(new Intent(Settings.ACTION_DATA_USAGE_SETTINGS)); return; } catch (Throwable ignore) {}
-        try { startActivity(new Intent(Settings.ACTION_WIRELESS_SETTINGS)); return; } catch (Throwable ignore) {}
-        open(Settings.ACTION_SETTINGS);
-    }
+    safeStartActivity(
+            gr ? "Δεδομένα" : "Data Usage",
+            "android.settings.DATA_USAGE_SETTINGS",
+            Settings.ACTION_WIRELESS_SETTINGS
+    );
+}
 
     private void open(String action) {
         try { startActivity(new Intent(action)); } catch (Throwable ignore) {}
@@ -502,7 +661,7 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
 
         TextView tvBody = new TextView(this);
         tvBody.setText(body);
-        tvBody.setTextColor(Color.WHITE);
+        tvBody.setTextColor(0xFF00FF7F);
         tvBody.setPadding(0,20,0,20);
         root.addView(tvBody);
 
