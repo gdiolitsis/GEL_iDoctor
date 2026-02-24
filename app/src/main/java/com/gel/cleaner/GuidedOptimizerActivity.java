@@ -155,11 +155,6 @@ body.setText(
     dialog.show();
 }
 
-    try {
-        startActivity(new Intent(Settings.ACTION_SETTINGS));
-    } catch (Throwable ignore) {}
-}
-
 private boolean isRoutingDialogHidden(String featureName) {
     return getSharedPreferences("gel_prefs", MODE_PRIVATE)
             .getBoolean(PREF_ROUTING_DIALOG + featureName, false);
