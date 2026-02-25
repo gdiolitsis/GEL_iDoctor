@@ -115,11 +115,10 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     // ============================================================
 
     private void showStorage() {
-
+   
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 1 — Αποθήκευση" : "STEP 1 — Storage"),
                 gr
-                        gr
                         ? "Θα ανοίξουν οι ρυθμίσεις αποθήκευσης της συσκευής.\n\n"
                         + "Χρησιμοποίησε τα διαθέσιμα εργαλεία καθαρισμού όπου χρειάζεται.\n"
                         + "Συνήθως αρκεί η εκκαθάριση προσωρινής μνήμης (cache), προσωρινών δεδομένων και κατάλοιπων αρχείων.\n"
