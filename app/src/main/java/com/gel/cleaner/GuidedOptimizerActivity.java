@@ -1,5 +1,5 @@
 // GDiolitsis Engine Lab (GEL)
-// GuidedOptimizerActivity — FINAL COMPLETE PUBLIC VERSION
+// GuidedOptimizerActivity — FINAL STABLE VERSION
 
 package com.gel.cleaner;
 
@@ -22,16 +22,12 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 
 public final class GuidedOptimizerActivity extends AppCompatActivity {
 
     private boolean gr;
     private int step = 0;
-    private int batterySubStep = 0;
-    private int dataSubStep = 0;
-    private int appsSubStep = 0;
-    
-    private static final String PREF_ROUTING_DIALOG = "routing_dialog_hidden_";
 
     private static final int STEP_INTRO    = 0;
     private static final int STEP_STORAGE  = 1;
@@ -53,122 +49,21 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
         go(STEP_INTRO);
     }
 
-private void safeStartActivity(String featureName, String... actions) {
+    // ============================================================
+    // SAFE SETTINGS OPEN
+    // ============================================================
 
-    for (String action : actions) {
-        try {
-            startActivity(new Intent(action));
-            return;
-        } catch (Throwable ignore) {}
-    }
-
-    // Αν έχει απενεργοποιηθεί για αυτό το feature → άνοιξε κατευθείαν settings
-    if (isRoutingDialogHidden(featureName)) {
-        open(Settings.ACTION_SETTINGS);
-        return;
-    }
-
-    showRoutingInfoDialog(featureName);
-}
-
-private void showRoutingInfoDialog(String featureName) {
-
-    LinearLayout root = new LinearLayout(this);
-    root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(40,40,40,40);
-
-    GradientDrawable bg = new GradientDrawable();
-    bg.setColor(0xFF000000);
-    bg.setCornerRadius(30);
-    bg.setStroke(5,0xFFFFD700);
-    root.setBackground(bg);
-
-    TextView title = new TextView(this);
-    title.setText(gr ? "Διαφορετική Δομή Ρυθμίσεων"
-                     : "Different Settings Structure");
-    title.setTextColor(Color.WHITE);
-    title.setTypeface(null, Typeface.BOLD);
-    title.setTextSize(18f);
-    title.setGravity(Gravity.CENTER);
-    title.setPadding(0,0,0,30);
-
-    TextView body = new TextView(this);
-body.setText(
-        gr
-                ? "Οι κατασκευαστές Android (Samsung, Xiaomi, Huawei κ.λπ.)\n"
-                  + "τροποποιούν συχνά τη δομή των ρυθμίσεων.\n\n"
-                  + "Αυτό σημαίνει ότι το ίδιο μενού μπορεί να βρίσκεται\n"
-                  + "σε διαφορετική τοποθεσία ανάλογα με τη συσκευή ή την έκδοση Android.\n\n"
-                  + "Η εφαρμογή προσπαθεί αυτόματα να εντοπίσει\n"
-                  + "το πιο σχετικό μενού για τη λειτουργία που επέλεξες.\n\n"
-                  + "Αν δεν είναι διαθέσιμο, ανοίγουμε τις γενικές ρυθμίσεις\n"
-                  + "ώστε να έχεις πάντα πρόσβαση."
-                : "Android manufacturers (Samsung, Xiaomi, Huawei, etc.)\n"
-                  + "often modify the internal structure of system settings.\n\n"
-                  + "This means the same menu may appear in different locations\n"
-                  + "depending on the device or Android version.\n\n"
-                  + "The app automatically attempts to locate\n"
-                  + "the most relevant menu for the feature you selected.\n\n"
-                  + "If a direct path is not available,\n"
-                  + "general settings are opened to ensure access."
-);
-    body.setTextColor(0xFF00FF7F);
-    body.setPadding(0,20,0,20);
-
-    CheckBox dontShow = new CheckBox(this);
-    dontShow.setText(gr ? "Να μην εμφανιστεί ξανά"
-                        : "Do not show again");
-    dontShow.setTextColor(Color.WHITE);
-
-    Button ok = new Button(this);
-    ok.setText("OK");
-    ok.setTextColor(Color.WHITE);
-
-    GradientDrawable d = new GradientDrawable();
-    d.setColor(0xFF00C853);
-    d.setStroke(5,0xFFFFD700);
-    d.setCornerRadius(25);
-    ok.setBackground(d);
-
-    ok.setOnClickListener(v -> {
-
-        if (dontShow.isChecked()) {
-            setRoutingDialogHidden(featureName, true);
+    private void safeStartActivity(String... actions) {
+        for (String action : actions) {
+            try {
+                startActivity(new Intent(action));
+                return;
+            } catch (Throwable ignore) {}
         }
-
         try {
             startActivity(new Intent(Settings.ACTION_SETTINGS));
         } catch (Throwable ignore) {}
-    });
-
-    root.addView(title);
-    root.addView(body);
-    root.addView(dontShow);
-    root.addView(ok);
-
-    AlertDialog dialog = new AlertDialog.Builder(this)
-            .setView(root)
-            .setCancelable(false)
-            .create();
-
-    if (dialog.getWindow()!=null)
-        dialog.getWindow().setBackgroundDrawable(
-                new ColorDrawable(Color.TRANSPARENT));
-
-    dialog.show();
-}
-
-private boolean isRoutingDialogHidden(String featureName) {
-    return getSharedPreferences("gel_prefs", MODE_PRIVATE)
-            .getBoolean(PREF_ROUTING_DIALOG + featureName, false);
-}
-
-private void setRoutingDialogHidden(String featureName, boolean value) {
-    getSharedPreferences("gel_prefs", MODE_PRIVATE)
-            .edit()
-            .putBoolean(PREF_ROUTING_DIALOG + featureName, value)
-            .apply();
-}
+    }
 
     // ============================================================
     // ROUTER
@@ -178,46 +73,16 @@ private void setRoutingDialogHidden(String featureName, boolean value) {
         step = s;
 
         switch (step) {
-
-            case STEP_INTRO:
-                showIntro();
-                break;
-
-            case STEP_STORAGE:
-                showStorage();
-                break;
-
-            case STEP_BATTERY:
-                showBattery();
-                break;
-
-            case STEP_DATA:
-                showData();
-                break;
-
-            case STEP_APPS:
-                showApps();
-                break;
-
-            case STEP_CACHE:
-                showCache();
-                break;
-
-            case STEP_QUEST:
-                showQuestionnaire();
-                break;
-
-            case STEP_LABS:
-                showLabRecommendation();
-                break;
-
-            case STEP_REMINDER:
-                showReminder();
-                break;
-
-            case STEP_DONE:
-                finish();
-                break;
+            case STEP_INTRO: showIntro(); break;
+            case STEP_STORAGE: showStorage(); break;
+            case STEP_BATTERY: showBattery(); break;
+            case STEP_DATA: showData(); break;
+            case STEP_APPS: showApps(); break;
+            case STEP_CACHE: showCache(); break;
+            case STEP_QUEST: showQuestionnaire(); break;
+            case STEP_LABS: showLabRecommendation(); break;
+            case STEP_REMINDER: showReminder(); break;
+            case STEP_DONE: finish(); break;
         }
     }
 
@@ -229,7 +94,7 @@ private void setRoutingDialogHidden(String featureName, boolean value) {
 
         showDialog(
                 gr ? "Έξυπνη Βελτιστοποίηση"
-                   : "Smart Optimization",
+                        : "Smart Optimization",
                 gr
                         ? "Θα σε πάω στις σωστές ρυθμίσεις της συσκευής.\n\n"
                         + "Ο στόχος είναι να κάνουμε τη συσκευή σου να λειτουργεί ομαλά και με ασφάλεια.\n\n"
@@ -252,9 +117,9 @@ private void setRoutingDialogHidden(String featureName, boolean value) {
     private void showStorage() {
 
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 1 — Αποθήκευση"
-                                 : "STEP 1 — Storage"),
+                progressTitle(gr ? "ΒΗΜΑ 1 — Αποθήκευση" : "STEP 1 — Storage"),
                 gr
+                        gr
                         ? "Θα ανοίξουν οι ρυθμίσεις αποθήκευσης της συσκευής.\n\n"
                         + "Χρησιμοποίησε τα διαθέσιμα εργαλεία καθαρισμού όπου χρειάζεται.\n"
                         + "Συνήθως αρκεί η εκκαθάριση προσωρινής μνήμης (cache), προσωρινών δεδομένων και κατάλοιπων αρχείων.\n"
@@ -273,332 +138,91 @@ private void setRoutingDialogHidden(String featureName, boolean value) {
                         + "On some devices the app may close temporarily.\n\n"
                         + "After cleaning, reopen the app\n"
                         + "and press “OK” to continue.",
-                this::openStorageSettings,
+                () -> safeStartActivity(
+                        Settings.ACTION_INTERNAL_STORAGE_SETTINGS,
+                        Settings.ACTION_MEMORY_CARD_SETTINGS
+                ),
                 () -> go(STEP_BATTERY),
                 false
         );
     }
 
-// ============================================================
-// STEP 2 — BATTERY (SUB-FLOW)
-// ============================================================
+    // ============================================================
+    // STEP 2 — BATTERY
+    // ============================================================
 
-private void showBattery() {
-    batterySubStep = 0;
-    showBatteryFlow();
-}
+    private void showBattery() {
 
-private void showBatteryFlow() {
-
-    final String title =
-            progressTitle(gr ? "ΒΗΜΑ 2 — Μπαταρία"
-                             : "STEP 2 — Battery");
-
-    final String body;
-
-    switch (batterySubStep) {
-
-        case 0:
-            body = gr
-                    ? "Υπο-Βήμα 1/3\n\n"
-                    + "Θα ανοίξουν οι ρυθμίσεις χρήσης μπαταρίας.\n\n"
-                    + "Έλεγξε:\n"
-                    + "• Ποιες εφαρμογές καταναλώνουν ασυνήθιστα υψηλή ενέργεια\n"
-                    + "• Αν κάποια εφαρμογή εμφανίζεται συνεχώς ενεργή\n\n"
-                    + "Πάτησε «Ρυθμίσεις» και μετά επέστρεψε για «OK»."
-                    : "Sub-Step 1/3\n\n"
-                    + "Battery usage settings will open.\n\n"
-                    + "Check:\n"
-                    + "• Apps with unusually high power consumption\n"
-                    + "• Apps constantly active\n\n"
-                    + "Press “Settings”, then return and press “OK”.";
-            break;
-
-        case 1:
-            body = gr
-                    ? "Υπο-Βήμα 2/3\n\n"
-                    + "Θα ανοίξουμε τις ρυθμίσεις εξοικονόμησης ενέργειας.\n\n"
-                    + "Έλεγξε:\n"
-                    + "• Αν υπάρχει λειτουργία εξοικονόμησης ενεργή\n"
-                    + "• Αν χρειάζεται περιορισμός background δραστηριότητας\n\n"
-                    + "Πάτησε «Ρυθμίσεις», μετά «OK»."
-                    : "Sub-Step 2/3\n\n"
-                    + "Battery saver settings will open.\n\n"
-                    + "Check:\n"
-                    + "• Whether battery saver is active\n"
-                    + "• Background activity restrictions\n\n"
-                    + "Press “Settings”, then “OK”.";
-            break;
-
-        default:
-            body = gr
-                    ? "Υπο-Βήμα 3/3\n\n"
-                    + "Τελικός έλεγχος: Βελτιστοποίηση μπαταρίας εφαρμογών.\n\n"
-                    + "Έλεγξε ποιες εφαρμογές είναι «Χωρίς περιορισμό».\n"
-                    + "Απόφυγε αλλαγές σε βασικές εφαρμογές συστήματος.\n\n"
-                    + "Πάτησε «Ρυθμίσεις», μετά «OK» για να συνεχίσουμε."
-                    : "Sub-Step 3/3\n\n"
-                    + "Final check: App battery optimization.\n\n"
-                    + "Review apps marked as “Unrestricted”.\n"
-                    + "Avoid modifying core system apps.\n\n"
-                    + "Press “Settings”, then “OK” to continue.";
-            break;
+        showDialog(
+                progressTitle(gr ? "ΒΗΜΑ 2 — Μπαταρία" : "STEP 2 — Battery"),
+                gr
+                        ? "Θα ανοίξουν οι ρυθμίσεις μπαταρίας.\n\n"
+                        + "Έλεγξε εφαρμογές με υψηλή κατανάλωση και συνεχή λειτουργία στο παρασκήνιο.\n\n"
+                        + "Απόφυγε αλλαγές σε βασικές εφαρμογές συστήματος.\n\n"
+                        + "Επέστρεψε και πάτησε «OK»."
+                        : "Battery settings will open.\n\n"
+                        + "Check apps with high consumption and constant background activity.\n\n"
+                        + "Avoid modifying core system apps.\n\n"
+                        + "Return and press “OK”.",
+                () -> safeStartActivity(
+                        "android.settings.BATTERY_USAGE_SETTINGS",
+                        Settings.ACTION_BATTERY_SAVER_SETTINGS
+                ),
+                () -> go(STEP_DATA),
+                false
+        );
     }
-
-    showDialog(
-            title,
-            body,
-            this::openBatterySubStep,
-            this::advanceBatterySubStep,
-            false
-    );
-}
-
-private void advanceBatterySubStep() {
-    batterySubStep++;
-    if (batterySubStep < 3) showBatteryFlow();
-    else go(STEP_DATA);
-}
-
-private void openBatterySubStep() {
-
-    switch (batterySubStep) {
-
-        case 0:
-            safeStartActivity("battery_usage",
-                    "android.settings.BATTERY_USAGE_SETTINGS",
-                    Settings.ACTION_SETTINGS
-            );
-            break;
-
-        case 1:
-            safeStartActivity("battery_saver",
-                    Settings.ACTION_BATTERY_SAVER_SETTINGS,
-                    Settings.ACTION_SETTINGS
-            );
-            break;
-
-        default:
-            safeStartActivity("battery_optimization",
-                    "android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS",
-                    Settings.ACTION_SETTINGS
-            );
-            break;
-    }
-}
 
     // ============================================================
-// STEP 3 — DATA (SUB-FLOW)
-// ============================================================
+    // STEP 3 — DATA
+    // ============================================================
 
-private void showData() {
-    dataSubStep = 0;
-    showDataFlow();
-}
+    private void showData() {
 
-private void showDataFlow() {
-
-    final String title = progressTitle(gr ? "ΒΗΜΑ 3 — Δεδομένα" : "STEP 3 — Data Usage");
-
-    final String body;
-    switch (dataSubStep) {
-
-        case 0:
-            body = gr
-                    ? "Υπο-Βήμα 1/3\n\n"
-                    + "Θα ανοίξουν οι ρυθμίσεις χρήσης δεδομένων.\n\n"
-                    + "Έλεγξε:\n"
-                    + "• Ποιες εφαρμογές καταναλώνουν ασυνήθιστα πολλά δεδομένα\n"
-                    + "• Αν υπάρχει υπερβολική χρήση στο παρασκήνιο\n\n"
-                    + "Πάτησε «Ρυθμίσεις» για να ανοίξουμε το μενού.\n"
-                    + "Μετά επέστρεψε και πάτα «OK»."
-                    : "Sub-Step 1/3\n\n"
-                    + "Data usage settings will open.\n\n"
-                    + "Check:\n"
-                    + "• Apps with unusually high data consumption\n"
-                    + "• Excessive background data usage\n\n"
-                    + "Press “Settings” to open the menu.\n"
-                    + "Then come back and press “OK”.";
-            break;
-
-        case 1:
-            body = gr
-                    ? "Υπο-Βήμα 2/3\n\n"
-                    + "Θα ανοίξουμε εναλλακτικό μενού δικτύου (διαφέρει ανά ROM).\n\n"
-                    + "Έλεγξε:\n"
-                    + "• Περιορισμούς δεδομένων ανά εφαρμογή\n"
-                    + "• Background data\n\n"
-                    + "Πάτησε «Ρυθμίσεις» και μετά «OK»."
-                    : "Sub-Step 2/3\n\n"
-                    + "We will open an alternative network menu (varies by ROM).\n\n"
-                    + "Check:\n"
-                    + "• Per-app data restrictions\n"
-                    + "• Background data\n\n"
-                    + "Press “Settings”, then “OK”.";
-            break;
-
-        default:
-            body = gr
-                    ? "Υπο-Βήμα 3/3\n\n"
-                    + "Τελευταίο πέρασμα: γενικές ασύρματες ρυθμίσεις.\n\n"
-                    + "Απέφυγε τον περιορισμό βασικών υπηρεσιών συστήματος ή ασφάλειας.\n\n"
-                    + "Πάτησε «Ρυθμίσεις» και μετά «OK» για να συνεχίσουμε."
-                    : "Sub-Step 3/3\n\n"
-                    + "Final pass: general wireless settings.\n\n"
-                    + "Avoid restricting core system or security services.\n\n"
-                    + "Press “Settings”, then “OK” to continue.";
-            break;
+        showDialog(
+                progressTitle(gr ? "ΒΗΜΑ 3 — Δεδομένα" : "STEP 3 — Data Usage"),
+                gr
+                        ? "Θα ανοίξουν οι ρυθμίσεις δεδομένων.\n\n"
+                        + "Έλεγξε εφαρμογές με υπερβολική χρήση δεδομένων.\n\n"
+                        + "Περιόρισε μόνο μη απαραίτητες εφαρμογές.\n\n"
+                        + "Επέστρεψε και πάτησε «OK»."
+                        : "Data settings will open.\n\n"
+                        + "Check apps with excessive data usage.\n\n"
+                        + "Restrict only non-essential apps.\n\n"
+                        + "Return and press “OK”.",
+                () -> safeStartActivity(
+                        Settings.ACTION_DATA_USAGE_SETTINGS,
+                        Settings.ACTION_WIRELESS_SETTINGS
+                ),
+                () -> go(STEP_APPS),
+                false
+        );
     }
-
-    showDialog(
-            title,
-            body,
-            this::openDataSubStep,
-            this::advanceDataSubStep,
-            false
-    );
-}
-
-private void advanceDataSubStep() {
-    dataSubStep++;
-    if (dataSubStep < 3) showDataFlow();
-    else go(STEP_APPS);
-}
-
-private void openDataSubStep() {
-    switch (dataSubStep) {
-
-        case 0:
-            safeStartActivity("data_usage",
-                    Settings.ACTION_DATA_USAGE_SETTINGS,
-                    "android.settings.DATA_USAGE_SETTINGS",
-                    Settings.ACTION_WIRELESS_SETTINGS,
-                    Settings.ACTION_SETTINGS
-            );
-            break;
-
-        case 1:
-            safeStartActivity("network_operator",
-                    "android.settings.NETWORK_OPERATOR_SETTINGS",
-                    Settings.ACTION_WIRELESS_SETTINGS,
-                    Settings.ACTION_SETTINGS
-            );
-            break;
-
-        default:
-            safeStartActivity("wireless",
-                    Settings.ACTION_WIRELESS_SETTINGS,
-                    Settings.ACTION_SETTINGS
-            );
-            break;
-    }
-}
 
     // ============================================================
-// STEP 4 — APPS (SUB-FLOW)
-// ============================================================
+    // STEP 4 — APPS
+    // ============================================================
 
-private void showApps() {
-    appsSubStep = 0;
-    showAppsFlow();
-}
+    private void showApps() {
 
-private void showAppsFlow() {
-
-    final String title = progressTitle(gr ? "ΒΗΜΑ 4 — Εφαρμογές" : "STEP 4 — Apps");
-
-    final String body;
-    switch (appsSubStep) {
-
-        case 0:
-            body = gr
-                    ? "Υπο-Βήμα 1/3\n\n"
-                    + "Θα ανοίξουν οι ρυθμίσεις εφαρμογών.\n\n"
-                    + "Έλεγξε:\n"
-                    + "• Ποιες εφαρμογές τρέχουν συχνά στο παρασκήνιο\n"
-                    + "• Ποιες δεν χρησιμοποιείς\n\n"
-                    + "Πάτησε «Ρυθμίσεις», μετά επέστρεψε και πάτα «OK»."
-                    : "Sub-Step 1/3\n\n"
-                    + "App settings will open.\n\n"
-                    + "Check:\n"
-                    + "• Apps frequently running in the background\n"
-                    + "• Apps you rarely use\n\n"
-                    + "Press “Settings”, then come back and press “OK”.";
-            break;
-
-        case 1:
-            body = gr
-                    ? "Υπο-Βήμα 2/3\n\n"
-                    + "Θα ανοίξουμε ρυθμίσεις βελτιστοποίησης μπαταρίας.\n\n"
-                    + "Έλεγξε εφαρμογές που είναι «χωρίς περιορισμό» στο παρασκήνιο.\n"
-                    + "Μην πειράξεις βασικές εφαρμογές συστήματος.\n\n"
-                    + "Πάτησε «Ρυθμίσεις», μετά «OK»."
-                    : "Sub-Step 2/3\n\n"
-                    + "Battery optimization settings will open.\n\n"
-                    + "Check apps that are “unrestricted” in the background.\n"
-                    + "Avoid changing core system apps.\n\n"
-                    + "Press “Settings”, then “OK”.";
-            break;
-
-        default:
-            body = gr
-                    ? "Υπο-Βήμα 3/3\n\n"
-                    + "Τελικός έλεγχος: δικαιώματα & ειδοποιήσεις.\n\n"
-                    + "Δες αν κάποια εφαρμογή έχει άδειες που δεν χρειάζεται\n"
-                    + "(κάμερα, μικρόφωνο, τοποθεσία) ή σε «ξυπνάει» με ειδοποιήσεις.\n\n"
-                    + "Πάτησε «Ρυθμίσεις», μετά «OK» για να συνεχίσουμε."
-                    : "Sub-Step 3/3\n\n"
-                    + "Final check: permissions & notifications.\n\n"
-                    + "Review apps with unnecessary permissions\n"
-                    + "(camera, microphone, location) or noisy notifications.\n\n"
-                    + "Press “Settings”, then “OK” to continue.";
-            break;
+        showDialog(
+                progressTitle(gr ? "ΒΗΜΑ 4 — Εφαρμογές" : "STEP 4 — Apps"),
+                gr
+                        ? "Θα ανοίξουν οι ρυθμίσεις εφαρμογών.\n\n"
+                        + "Έλεγξε εφαρμογές που δεν χρησιμοποιείς και δικαιώματα που δεν χρειάζονται.\n\n"
+                        + "Μην απενεργοποιείς βασικές εφαρμογές συστήματος.\n\n"
+                        + "Επέστρεψε και πάτησε «OK»."
+                        : "App settings will open.\n\n"
+                        + "Review unused apps and unnecessary permissions.\n\n"
+                        + "Avoid disabling system apps.\n\n"
+                        + "Return and press “OK”.",
+                () -> safeStartActivity(
+                        Settings.ACTION_APPLICATION_SETTINGS
+                ),
+                () -> go(STEP_CACHE),
+                false
+        );
     }
-
-    showDialog(
-            title,
-            body,
-            this::openAppsSubStep,
-            this::advanceAppsSubStep,
-            false
-    );
-}
-
-private void advanceAppsSubStep() {
-    appsSubStep++;
-    if (appsSubStep < 3) showAppsFlow();
-    else go(STEP_CACHE);
-}
-
-private void openAppsSubStep() {
-    switch (appsSubStep) {
-
-        case 0:
-            safeStartActivity("apps_list",
-                    Settings.ACTION_APPLICATION_SETTINGS,
-                    "android.settings.MANAGE_APPLICATIONS_SETTINGS",
-                    Settings.ACTION_SETTINGS
-            );
-            break;
-
-        case 1:
-            safeStartActivity("battery_optimizations",
-                    "android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS",
-                    Settings.ACTION_BATTERY_SAVER_SETTINGS,
-                    Settings.ACTION_SETTINGS
-            );
-            break;
-
-        default:
-            // Δεν μπορούμε να ανοίξουμε permissions για συγκεκριμένο app χωρίς package,
-            // οπότε πάμε σε app settings και ο χρήστης διαλέγει app.
-            safeStartActivity("app_permissions",
-                    Settings.ACTION_APPLICATION_SETTINGS,
-                    Settings.ACTION_SETTINGS
-            );
-            break;
-    }
-}
 
     // ============================================================
     // STEP 5 — CACHE
@@ -607,8 +231,7 @@ private void openAppsSubStep() {
     private void showCache() {
 
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 5 — Cache"
-                                 : "STEP 5 — Cache"),
+                progressTitle(gr ? "ΒΗΜΑ 5 — Cache" : "STEP 5 — Cache"),
                 gr
                         ? "Θα ανοίξει η λίστα εφαρμογών ταξινομημένη κατά «Μεγαλύτερη Cache».\n\n"
                         + "Καθάρισε εφαρμογές με μεγάλη προσωρινή μνήμη — ή και όλες.\n"
