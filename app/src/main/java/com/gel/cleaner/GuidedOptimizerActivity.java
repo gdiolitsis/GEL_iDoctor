@@ -4,8 +4,12 @@
 package com.gel.cleaner;
 
 import android.app.AlertDialog;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
 import android.content.Intent;
 import android.graphics.Color;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
@@ -15,12 +19,14 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.ScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 
@@ -48,6 +54,36 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
         gr = AppLang.isGreek(this);
         go(STEP_INTRO);
     }
+
+private int dp(int v) {
+    return (int) android.util.TypedValue.applyDimension(
+            android.util.TypedValue.COMPLEX_UNIT_DIP,
+            v,
+            getResources().getDisplayMetrics()
+    );
+}
+
+private void addSection(
+        LinearLayout root,
+        String title,
+        String body,
+        int color) {
+
+    TextView t = new TextView(this);
+    t.setText(title);
+    t.setTextColor(color);
+    t.setTextSize(16f);
+    t.setTypeface(null, android.graphics.Typeface.BOLD);
+    t.setPadding(0, dp(12), 0, dp(6));
+    root.addView(t);
+
+    TextView b = new TextView(this);
+    b.setText(body);
+    b.setTextColor(android.graphics.Color.WHITE);
+    b.setTextSize(14f);
+    b.setPadding(0, 0, 0, dp(10));
+    root.addView(b);
+}
 
     // ============================================================
     // SAFE SETTINGS OPEN
