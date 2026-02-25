@@ -127,7 +127,8 @@ private void addSection(
     case STEP_REMINDER: showReminder(); break;
     case STEP_FINAL: showFinalVerdict(); break;
     case STEP_DONE: finish(); break;
-}
+    }
+} 
 
     // ============================================================
     // INTRO
