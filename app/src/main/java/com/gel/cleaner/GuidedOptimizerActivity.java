@@ -128,7 +128,7 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
                         + "Χρησιμοποίησέ την μόνο αν γνωρίζεις ακριβώς τι κάνεις.\n\n"
                         + "Σε ορισμένες συσκευές η εφαρμογή μπορεί να κλείσει προσωρινά.\n\n"
                         + "Μετά τον καθαρισμό, άνοιξε ξανά την εφαρμογή\n"
-                        + "και πάτησε «OK» για να συνεχίσουμε."
+                        + "και πάτησε OK για να συνεχίσουμε."
                         : "The device storage settings will open.\n\n"
                         + "Use the available cleaning tools where necessary.\n"
                         + "In most cases, clearing temporary cache, temporary data and residual files is sufficient.\n"
@@ -137,7 +137,7 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
                         + "Use it only if you fully understand the consequences.\n\n"
                         + "On some devices the app may close temporarily.\n\n"
                         + "After cleaning, reopen the app\n"
-                        + "and press “OK” to continue.",
+                        + "and press OK to continue.",
                 () -> safeStartActivity(
                         Settings.ACTION_INTERNAL_STORAGE_SETTINGS,
                         Settings.ACTION_MEMORY_CARD_SETTINGS
@@ -159,11 +159,11 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
                         ? "Θα ανοίξουν οι ρυθμίσεις μπαταρίας.\n\n"
                         + "Έλεγξε εφαρμογές με υψηλή κατανάλωση και συνεχή λειτουργία στο παρασκήνιο.\n\n"
                         + "Απόφυγε αλλαγές σε βασικές εφαρμογές συστήματος.\n\n"
-                        + "Επέστρεψε και πάτησε «OK»."
+                        + "Επέστρεψε και πάτησε OK για να συνεχίσουμε."
                         : "Battery settings will open.\n\n"
                         + "Check apps with high consumption and constant background activity.\n\n"
                         + "Avoid modifying core system apps.\n\n"
-                        + "Return and press “OK”.",
+                        + "Return and press OK to continue.",
                 () -> safeStartActivity(
                         "android.settings.BATTERY_USAGE_SETTINGS",
                         Settings.ACTION_BATTERY_SAVER_SETTINGS
@@ -185,11 +185,11 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
                         ? "Θα ανοίξουν οι ρυθμίσεις δεδομένων.\n\n"
                         + "Έλεγξε εφαρμογές με υπερβολική χρήση δεδομένων.\n\n"
                         + "Περιόρισε μόνο μη απαραίτητες εφαρμογές.\n\n"
-                        + "Επέστρεψε και πάτησε «OK»."
+                        + "Επέστρεψε και πάτησε OK για να συνεχίσουμε."
                         : "Data settings will open.\n\n"
                         + "Check apps with excessive data usage.\n\n"
                         + "Restrict only non-essential apps.\n\n"
-                        + "Return and press “OK”.",
+                        + "Return and press OK to continue.",
                 () -> safeStartActivity(
                         Settings.ACTION_DATA_USAGE_SETTINGS,
                         Settings.ACTION_WIRELESS_SETTINGS
@@ -211,11 +211,11 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
                         ? "Θα ανοίξουν οι ρυθμίσεις εφαρμογών.\n\n"
                         + "Έλεγξε εφαρμογές που δεν χρησιμοποιείς και δικαιώματα που δεν χρειάζονται.\n\n"
                         + "Μην απενεργοποιείς βασικές εφαρμογές συστήματος.\n\n"
-                        + "Επέστρεψε και πάτησε «OK»."
+                        + "Επέστρεψε και πάτησε OK για να συνεχίσουμε."
                         : "App settings will open.\n\n"
                         + "Review unused apps and unnecessary permissions.\n\n"
                         + "Avoid disabling system apps.\n\n"
-                        + "Return and press “OK”.",
+                        + "Return and press OK to continue.",
                 () -> safeStartActivity(
                         Settings.ACTION_APPLICATION_SETTINGS
                 ),
@@ -239,14 +239,14 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
                         + "Στη δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος.\n"
                         + "Η εκκαθάριση cache είναι ασφαλής και δεν διαγράφει προσωπικά δεδομένα.\n\n"
                         + "Απόφυγε την εκκαθάριση δεδομένων εκτός αν γνωρίζεις τις συνέπειες.\n\n"
-                        + "Πάτησε «OK» όταν ολοκληρώσεις."
+                        + "Πάτησε OK όταν ολοκληρώσεις."
                         : "The app list will open sorted by “Largest Cache”.\n\n"
                         + "Clear apps with large temporary cache — or all of them if needed.\n"
                         + "In the first group you will see apps you have installed.\n"
                         + "In the second group you will see system applications.\n"
                         + "Clearing cache is safe and does not remove personal data.\n\n"
                         + "Avoid clearing app data unless you understand the consequences.\n\n"
-                        + "Press “OK” when finished.",
+                        + "Press OK when finished.",
                 this::openLargestCache,
                 () -> go(STEP_QUEST),
                 false
