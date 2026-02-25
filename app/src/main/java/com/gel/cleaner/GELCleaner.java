@@ -64,8 +64,8 @@ public class GELCleaner {
         }
     }
 
-    // ============================================================
-// DEEP CLEAN (GLOBAL PRIMARY + OEM FALLBACK)
+// ============================================================
+// DEEP CLEAN (GLOBAL → DEVICE STORAGE → OEM)
 // ============================================================
 public static void deepClean(Context ctx, LogCallback cb) {
 
@@ -90,12 +90,29 @@ public static void deepClean(Context ctx, LogCallback cb) {
             ok(cb, "Άνοιξα Χώρο Αποθήκευσης (Global Path).");
             return;
 
-        } catch (Throwable t) {
-            warn(cb, "Global storage failed. Trying OEM cleaner...");
-        }
+        } catch (Throwable ignore) {}
 
         // --------------------------------------------------------
-        // 2️⃣ OEM CLEANER (FALLBACK)
+        // 2️⃣ DEVICE STORAGE SETTINGS (SECONDARY GLOBAL)
+        // --------------------------------------------------------
+        try {
+
+            Intent deviceStorage = new Intent(Settings.ACTION_DEVICE_STORAGE_SETTINGS);
+            deviceStorage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            if (DualPaneManager.isDualPaneActive(ctx)) {
+                DualPaneManager.openSide(ctx, deviceStorage);
+            } else {
+                ctx.startActivity(deviceStorage);
+            }
+
+            ok(cb, "Άνοιξα Device Storage Settings.");
+            return;
+
+        } catch (Throwable ignore) {}
+
+        // --------------------------------------------------------
+        // 3️⃣ OEM CLEANER (FALLBACK)
         // --------------------------------------------------------
         try {
 
