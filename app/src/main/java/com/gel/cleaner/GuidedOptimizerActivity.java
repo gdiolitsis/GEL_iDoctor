@@ -146,82 +146,971 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
         );
     }
 
-    // ============================================================
-    // STEP 2 — BATTERY
-    // ============================================================
+// ============================================================
+// STEP 2 — BATTERY INTELLIGENCE ENGINE (MODERATE + HEAVY ONLY)
+// ============================================================
 
-    private void showBattery() {
+private void showBattery() {
 
+    if (!hasUsageAccess()) {
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 2 — Μπαταρία" : "STEP 2 — Battery"),
+                progressTitle(gr ? "ΒΗΜΑ 2 — Ανάλυση Δραστηριότητας"
+                                 : "STEP 2 — Activity Analysis"),
                 gr
-                        ? "Θα ανοίξουν οι ρυθμίσεις μπαταρίας.\n\n"
-                        + "Έλεγξε εφαρμογές με υψηλή κατανάλωση και συνεχή λειτουργία στο παρασκήνιο.\n\n"
-                        + "Απόφυγε αλλαγές σε βασικές εφαρμογές συστήματος.\n\n"
-                        + "Επέστρεψε και πάτησε OK για να συνεχίσουμε."
-                        : "Battery settings will open.\n\n"
-                        + "Check apps with high consumption and constant background activity.\n\n"
-                        + "Avoid modifying core system apps.\n\n"
-                        + "Return and press OK to continue.",
-                () -> safeStartActivity(
-                        "android.settings.BATTERY_USAGE_SETTINGS",
-                        Settings.ACTION_BATTERY_SAVER_SETTINGS
-                ),
+                        ? "Για να αναλύσουμε τη δραστηριότητα εφαρμογών,\n"
+                        + "απαιτείται πρόσβαση Χρήσης Εφαρμογών.\n\n"
+                        + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL."
+                        : "To analyze app activity,\n"
+                        + "Usage Access permission is required.\n\n"
+                        + "Press Settings and enable it for GEL.",
+                () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)),
                 () -> go(STEP_DATA),
                 false
         );
+        return;
     }
 
-    // ============================================================
-    // STEP 3 — DATA
-    // ============================================================
+    long now = System.currentTimeMillis();
+    long start = now - (48L * 60 * 60 * 1000); // 48 hours window
 
-    private void showData() {
+    UsageStatsManager usm =
+            (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
 
+    List<UsageStats> stats =
+            usm.queryUsageStats(
+                    UsageStatsManager.INTERVAL_DAILY,
+                    start,
+                    now
+            );
+
+    if (stats == null || stats.isEmpty()) {
+        showStableDialog();
+        return;
+    }
+
+    PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+
+    ArrayList<AppRisk> heavyApps = new ArrayList<>();
+    ArrayList<AppRisk> moderateApps = new ArrayList<>();
+
+    for (UsageStats u : stats) {
+
+        long minutes = u.getTotalTimeInForeground() / 60000;
+        if (minutes < 1) continue;
+
+        String pkg = u.getPackageName();
+        if (pkg.equals(getPackageName())) continue;
+
+        boolean unrestricted = false;
+        try {
+            unrestricted = pm.isIgnoringBatteryOptimizations(pkg);
+        } catch (Throwable ignore) {}
+
+        int score;
+
+        if (minutes >= 120) score = 3;          // HEAVY
+        else if (minutes >= 45) score = 2;      // MODERATE
+        else score = 1;                         // LOW
+
+        if (unrestricted && score >= 2)
+            score++; // elevate if unrestricted
+
+        if (score >= 3)
+            heavyApps.add(new AppRisk(pkg, minutes, unrestricted));
+        else if (score == 2)
+            moderateApps.add(new AppRisk(pkg, minutes, unrestricted));
+    }
+
+    if (heavyApps.isEmpty() && moderateApps.isEmpty()) {
+        showStableDialog();
+        return;
+    }
+
+    ScrollView scroll = new ScrollView(this);
+
+    LinearLayout root = buildBaseBox(
+            gr ? "Battery Intelligence Report (48 ώρες)"
+               : "Battery Intelligence Report (48 hours)"
+    );
+
+    scroll.addView(root);
+
+    String verdict =
+            !heavyApps.isEmpty() ? "HEAVY"
+            : "MODERATE";
+
+    addEngineVerdict(root, verdict,
+            heavyApps.size(),
+            moderateApps.size());
+
+    addRecommendations(root, verdict);
+
+    if (!heavyApps.isEmpty()) {
+        addSection(
+                root,
+                gr ? "🔥 Υψηλή Δραστηριότητα"
+                   : "🔥 High Activity",
+                gr ? "Εφαρμογές με σημαντική επιβάρυνση."
+                   : "Apps with significant impact.",
+                0xFFFF5252
+        );
+        limitAndAdd(root, heavyApps);
+    }
+
+    if (!moderateApps.isEmpty()) {
+        addSection(
+                root,
+                gr ? "⚠️ Μέτρια Δραστηριότητα"
+                   : "⚠️ Moderate Activity",
+                gr ? "Εφαρμογές που αξίζουν έλεγχο."
+                   : "Apps worth reviewing.",
+                0xFFFFC107
+        );
+        limitAndAdd(root, moderateApps);
+    }
+
+    Button next = mkGreenBtn("OK");
+    next.setOnClickListener(v -> go(STEP_DATA));
+    root.addView(next);
+
+    showCustomDialog(scroll);
+}
+
+// ============================================================
+// STABLE STATE
+// ============================================================
+
+private void showStableDialog() {
+
+    showDialog(
+            progressTitle(gr ? "ΒΗΜΑ 2 — Ανάλυση"
+                             : "STEP 2 — Analysis"),
+            gr
+                    ? "Engine Verdict: STABLE\n\n"
+                    + "Δεν εντοπίστηκε ασυνήθιστη δραστηριότητα."
+                    : "Engine Verdict: STABLE\n\n"
+                    + "No abnormal activity detected.",
+            null,
+            () -> go(STEP_DATA),
+            false
+    );
+}
+
+// ============================================================
+// SUPPORTING STRUCTURES
+// ============================================================
+
+private static class AppRisk {
+    String packageName;
+    long minutes;
+    boolean unrestricted;
+
+    AppRisk(String p, long m, boolean u) {
+        packageName = p;
+        minutes = m;
+        unrestricted = u;
+    }
+}
+
+private boolean hasUsageAccess() {
+
+    UsageStatsManager usm =
+            (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+
+    long now = System.currentTimeMillis();
+
+    List<UsageStats> stats =
+            usm.queryUsageStats(
+                    UsageStatsManager.INTERVAL_DAILY,
+                    now - 1000 * 60,
+                    now
+            );
+
+    return stats != null && !stats.isEmpty();
+}
+
+private void addEngineVerdict(LinearLayout root,
+                              String verdict,
+                              int heavyCount,
+                              int moderateCount) {
+
+    TextView tv = new TextView(this);
+
+    int color =
+            verdict.equals("HEAVY") ? 0xFFFF5252 :
+            0xFFFFC107;
+
+    tv.setText(
+            "Engine Verdict: " + verdict + "\n\n"
+            + (gr ? "Υψηλή: " : "High: ") + heavyCount + "\n"
+            + (gr ? "Μέτρια: " : "Moderate: ") + moderateCount
+    );
+
+    tv.setTextColor(color);
+    tv.setTextSize(15f);
+    tv.setPadding(0,10,0,30);
+
+    root.addView(tv);
+}
+
+private void addRecommendations(LinearLayout root,
+                                String verdict) {
+
+    TextView tv = new TextView(this);
+
+    String rec;
+
+    if (verdict.equals("HEAVY")) {
+        rec = gr
+                ? "Προτείνεται περιορισμός background δραστηριότητας ή απεγκατάσταση μη απαραίτητων εφαρμογών."
+                : "Restrict background activity or uninstall unnecessary high-impact apps.";
+    } else {
+        rec = gr
+                ? "Έλεγξε τις εφαρμογές μέτριας δραστηριότητας."
+                : "Review moderate activity apps.";
+    }
+
+    tv.setText(rec);
+    tv.setTextColor(0xFFAAAAAA);
+    tv.setPadding(0,0,0,30);
+
+    root.addView(tv);
+}
+
+// ============================================================
+// STEP 3 — DATA INTELLIGENCE ENGINE (MODERATE + HEAVY ONLY)
+// ============================================================
+
+private void showData() {
+
+    // ✅ Needs Usage Access (for "rarely used but active" signal)
+    if (!hasUsageAccess()) {
+        showDialog(
+                progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
+                gr
+                        ? "Για να κάνουμε premium ανάλυση δεδομένων,\n"
+                        + "χρειαζόμαστε πρόσβαση Χρήσης Εφαρμογών.\n\n"
+                        + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL."
+                        : "To run premium data analysis,\n"
+                        + "Usage Access permission is required.\n\n"
+                        + "Press Settings and enable it for GEL.",
+                () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)),
+                () -> go(STEP_APPS),
+                false
+        );
+        return;
+    }
+
+    // ⏱ Window: 48 hours (as requested: 2–3 days max)
+    final long now = System.currentTimeMillis();
+    final long start = now - (48L * 60 * 60 * 1000);
+
+    // We'll try real per-app usage via NetworkStatsManager.
+    // If ROM blocks it → we fall back to Settings with your branded routing dialog.
+    final ArrayList<DataRisk> heavy = new ArrayList<>();
+    final ArrayList<DataRisk> moderate = new ArrayList<>();
+
+    boolean ok = false;
+
+    try {
+
+        final android.net.NetworkStatsManager nsm =
+                (android.net.NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
+
+        if (nsm != null) {
+
+            // We measure MOBILE + WIFI totals (if possible).
+            // MOBILE: may need subscriberId on some devices.
+            // WIFI: usually works without subscriberId.
+
+            final java.util.HashMap<String, Long> pkgBytes = new java.util.HashMap<>();
+
+            // -------------------------
+            // WIFI (summary)
+            // -------------------------
+            try {
+                android.net.NetworkTemplate wifiT =
+                        android.net.NetworkTemplate.buildTemplateWifiWildcard();
+
+                android.net.NetworkStats wifiStats =
+                        nsm.querySummary(wifiT, null, start, now);
+
+                android.net.NetworkStats.Bucket b = new android.net.NetworkStats.Bucket();
+
+                while (wifiStats != null && wifiStats.hasNextBucket()) {
+                    wifiStats.getNextBucket(b);
+                    int uid = b.getUid();
+                    long bytes = b.getRxBytes() + b.getTxBytes();
+                    if (bytes <= 0) continue;
+
+                    String[] pkgs;
+                    try { pkgs = getPackageManager().getPackagesForUid(uid); }
+                    catch (Throwable ignore) { pkgs = null; }
+
+                    if (pkgs == null || pkgs.length == 0) continue;
+
+                    for (String p : pkgs) {
+                        if (p == null) continue;
+                        if (p.equals(getPackageName())) continue;
+                        Long cur = pkgBytes.get(p);
+                        pkgBytes.put(p, (cur == null ? 0L : cur) + bytes);
+                    }
+                }
+
+                try { wifiStats.close(); } catch (Throwable ignore) {}
+
+            } catch (Throwable ignore) {}
+
+            // -------------------------
+            // MOBILE (summary)
+            // -------------------------
+            try {
+                String subId = null;
+
+                try {
+                    if (android.os.Build.VERSION.SDK_INT < 29) {
+                        // pre-Q often wants subscriberId; may be blocked by ROM
+                        android.telephony.TelephonyManager tm =
+                                (android.telephony.TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+                        if (tm != null) subId = tm.getSubscriberId();
+                    }
+                } catch (Throwable ignore2) {}
+
+                android.net.NetworkTemplate mobileT =
+                        android.net.NetworkTemplate.buildTemplateMobileAll(subId);
+
+                android.net.NetworkStats mobileStats =
+                        nsm.querySummary(mobileT, subId, start, now);
+
+                android.net.NetworkStats.Bucket b2 = new android.net.NetworkStats.Bucket();
+
+                while (mobileStats != null && mobileStats.hasNextBucket()) {
+                    mobileStats.getNextBucket(b2);
+                    int uid = b2.getUid();
+                    long bytes = b2.getRxBytes() + b2.getTxBytes();
+                    if (bytes <= 0) continue;
+
+                    String[] pkgs;
+                    try { pkgs = getPackageManager().getPackagesForUid(uid); }
+                    catch (Throwable ignore) { pkgs = null; }
+
+                    if (pkgs == null || pkgs.length == 0) continue;
+
+                    for (String p : pkgs) {
+                        if (p == null) continue;
+                        if (p.equals(getPackageName())) continue;
+                        Long cur = pkgBytes.get(p);
+                        pkgBytes.put(p, (cur == null ? 0L : cur) + bytes);
+                    }
+                }
+
+                try { mobileStats.close(); } catch (Throwable ignore) {}
+
+            } catch (Throwable ignore) {}
+
+            // If we managed to collect something meaningful
+            ok = !pkgBytes.isEmpty();
+
+            // Usage minutes (for "rarely used but active" heuristic)
+            java.util.HashMap<String, Long> fgMinutes = getForegroundMinutesMap(start, now);
+
+            // Thresholds (48h)
+            // HEAVY: >= 500MB
+            // MODERATE: >= 150MB
+            final long MOD_MB = 150;
+            final long HEAVY_MB = 500;
+
+            for (java.util.Map.Entry<String, Long> e : pkgBytes.entrySet()) {
+                String pkg = e.getKey();
+                long bytes = e.getValue() == null ? 0L : e.getValue();
+                if (bytes <= 0) continue;
+
+                long mb = bytes / (1024L * 1024L);
+                if (mb < MOD_MB) continue; // show only moderate+heavy
+
+                long mins = 0;
+                Long m = fgMinutes.get(pkg);
+                if (m != null) mins = m;
+
+                boolean rarelyUsedButActive = (mins <= 5 && mb >= MOD_MB);
+
+                int level = (mb >= HEAVY_MB) ? 3 : 2;
+
+                DataRisk r = new DataRisk(pkg, mb, mins, rarelyUsedButActive);
+
+                if (level >= 3) heavy.add(r);
+                else moderate.add(r);
+            }
+        }
+
+    } catch (Throwable t) {
+        ok = false;
+    }
+
+    if (!ok) {
+        // ROM blocked / no access → open global settings safely + branded dialog
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 3 — Δεδομένα" : "STEP 3 — Data Usage"),
                 gr
-                        ? "Θα ανοίξουν οι ρυθμίσεις δεδομένων.\n\n"
-                        + "Έλεγξε εφαρμογές με υπερβολική χρήση δεδομένων.\n\n"
-                        + "Περιόρισε μόνο μη απαραίτητες εφαρμογές.\n\n"
+                        ? "Θέλουμε να σου δείξουμε ποια apps «τρώνε» δεδομένα.\n\n"
+                        + "Σε ορισμένες ROM αυτό το μενού δεν επιτρέπει απευθείας ανάγνωση.\n"
+                        + "Θα ανοίξουμε τις ρυθμίσεις δεδομένων για να το δεις χειροκίνητα.\n\n"
                         + "Επέστρεψε και πάτησε OK για να συνεχίσουμε."
-                        : "Data settings will open.\n\n"
-                        + "Check apps with excessive data usage.\n\n"
-                        + "Restrict only non-essential apps.\n\n"
+                        : "We want to show you which apps consume the most data.\n\n"
+                        + "On some ROMs, direct access is restricted.\n"
+                        + "We will open data settings so you can review it manually.\n\n"
                         + "Return and press OK to continue.",
                 () -> safeStartActivity(
+                        "data_usage",
                         Settings.ACTION_DATA_USAGE_SETTINGS,
-                        Settings.ACTION_WIRELESS_SETTINGS
+                        "android.settings.DATA_USAGE_SETTINGS",
+                        Settings.ACTION_WIRELESS_SETTINGS,
+                        Settings.ACTION_SETTINGS
                 ),
                 () -> go(STEP_APPS),
                 false
         );
+        return;
     }
 
-    // ============================================================
-    // STEP 4 — APPS
-    // ============================================================
-
-    private void showApps() {
-
+    if (heavy.isEmpty() && moderate.isEmpty()) {
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 4 — Εφαρμογές" : "STEP 4 — Apps"),
+                progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
                 gr
-                        ? "Θα ανοίξουν οι ρυθμίσεις εφαρμογών.\n\n"
-                        + "Έλεγξε εφαρμογές που δεν χρησιμοποιείς και δικαιώματα που δεν χρειάζονται.\n\n"
-                        + "Μην απενεργοποιείς βασικές εφαρμογές συστήματος.\n\n"
-                        + "Επέστρεψε και πάτησε OK για να συνεχίσουμε."
-                        : "App settings will open.\n\n"
-                        + "Review unused apps and unnecessary permissions.\n\n"
-                        + "Avoid disabling system apps.\n\n"
-                        + "Return and press OK to continue.",
-                () -> safeStartActivity(
-                        Settings.ACTION_APPLICATION_SETTINGS
-                ),
-                () -> go(STEP_CACHE),
+                        ? "Engine Verdict: STABLE\n\n"
+                        + "Δεν βρέθηκαν εφαρμογές με ασυνήθιστη χρήση δεδομένων (48 ώρες)."
+                        : "Engine Verdict: STABLE\n\n"
+                        + "No apps with unusual data usage detected (48 hours).",
+                null,
+                () -> go(STEP_APPS),
                 false
         );
+        return;
     }
+
+    // Sort by MB desc
+    java.util.Comparator<DataRisk> cmp =
+            (a, b) -> Long.compare(b.mb, a.mb);
+
+    java.util.Collections.sort(heavy, cmp);
+    java.util.Collections.sort(moderate, cmp);
+
+    // UI
+    android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+    LinearLayout root = buildBaseBox(
+            gr ? "Data Intelligence Report (48 ώρες)"
+               : "Data Intelligence Report (48 hours)"
+    );
+    scroll.addView(root);
+
+    final String verdict = !heavy.isEmpty() ? "HEAVY" : "MODERATE";
+
+    addEngineVerdictData(root, verdict, heavy.size(), moderate.size());
+
+    // Explain what user is seeing (more explanatory)
+    TextView explain = new TextView(this);
+    explain.setText(
+            gr
+                    ? "Δείχνουμε μόνο εφαρμογές με Μέτρια ή Υψηλή χρήση δεδομένων.\n\n"
+                    + "• High Activity = μεγάλος όγκος δεδομένων\n"
+                    + "• 💤 Rarely Used but active = λίγη χρήση από εσένα, αλλά κατανάλωση δεδομένων\n\n"
+                    + "Πάτα σε μια εφαρμογή για ενέργειες."
+                    : "We show only apps with Moderate or Heavy data usage.\n\n"
+                    + "• High Activity = large data volume\n"
+                    + "• 💤 Rarely Used but active = you barely used it, but it consumed data\n\n"
+                    + "Tap an app for actions."
+    );
+    explain.setTextColor(0xFFAAAAAA);
+    explain.setPadding(0, 0, 0, 28);
+    root.addView(explain);
+
+    if (!heavy.isEmpty()) {
+        addSection(
+                root,
+                gr ? "🔥 High Activity" : "🔥 High Activity",
+                gr ? "Εφαρμογές με σημαντική κατανάλωση δεδομένων." : "Apps with significant data usage.",
+                0xFFFF5252
+        );
+        addDataRows(root, heavy);
+    }
+
+    if (!moderate.isEmpty()) {
+        addSection(
+                root,
+                gr ? "⚠️ Moderate Activity" : "⚠️ Moderate Activity",
+                gr ? "Εφαρμογές που αξίζουν έλεγχο." : "Apps worth reviewing.",
+                0xFFFFC107
+        );
+        addDataRows(root, moderate);
+    }
+
+    Button ok = mkGreenBtn("OK");
+    ok.setOnClickListener(v -> go(STEP_APPS));
+    root.addView(ok);
+
+    showCustomDialog(scroll);
+}
+
+// ============================================================
+// DATA RISK MODEL
+// ============================================================
+
+private static class DataRisk {
+    final String pkg;
+    final long mb;
+    final long fgMinutes;
+    final boolean rarelyUsedButActive;
+
+    DataRisk(String p, long m, long fg, boolean r) {
+        pkg = p;
+        mb = m;
+        fgMinutes = fg;
+        rarelyUsedButActive = r;
+    }
+}
+
+// ============================================================
+// FOREGROUND MINUTES MAP (for "rarely used but active")
+// ============================================================
+
+private java.util.HashMap<String, Long> getForegroundMinutesMap(long start, long end) {
+
+    java.util.HashMap<String, Long> map = new java.util.HashMap<>();
+
+    try {
+        android.app.usage.UsageStatsManager usm =
+                (android.app.usage.UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+
+        java.util.List<android.app.usage.UsageStats> stats =
+                usm.queryUsageStats(
+                        android.app.usage.UsageStatsManager.INTERVAL_DAILY,
+                        start,
+                        end
+                );
+
+        if (stats == null) return map;
+
+        for (android.app.usage.UsageStats u : stats) {
+            if (u == null) continue;
+            String pkg = u.getPackageName();
+            if (pkg == null) continue;
+            long mins = u.getTotalTimeInForeground() / 60000;
+            if (mins <= 0) continue;
+            Long cur = map.get(pkg);
+            map.put(pkg, (cur == null ? 0L : cur) + mins);
+        }
+
+    } catch (Throwable ignore) {}
+
+    return map;
+}
+
+// ============================================================
+// UI: ENGINE VERDICT + ROWS
+// ============================================================
+
+private void addEngineVerdictData(LinearLayout root,
+                                  String verdict,
+                                  int heavyCount,
+                                  int moderateCount) {
+
+    TextView tv = new TextView(this);
+
+    int color =
+            verdict.equals("HEAVY") ? 0xFFFF5252 :
+            0xFFFFC107;
+
+    tv.setText(
+            "Engine Verdict: " + verdict + "\n\n"
+            + (gr ? "High Activity: " : "High Activity: ") + heavyCount + "\n"
+            + (gr ? "Moderate Activity: " : "Moderate Activity: ") + moderateCount
+    );
+
+    tv.setTextColor(color);
+    tv.setTextSize(15f);
+    tv.setPadding(0, 10, 0, 22);
+
+    root.addView(tv);
+
+    TextView rec = new TextView(this);
+    rec.setText(
+            verdict.equals("HEAVY")
+                    ? (gr
+                        ? "Πρόταση: Περιόρισε δεδομένα στο παρασκήνιο ή απεγκατέστησε εφαρμογές που δεν χρειάζεσαι."
+                        : "Recommendation: Restrict background data or uninstall apps you don’t need.")
+                    : (gr
+                        ? "Πρόταση: Έλεγξε αν κάποιες εφαρμογές κάνουν ενημερώσεις/συγχρονισμό χωρίς λόγο."
+                        : "Recommendation: Check if apps sync/update unnecessarily.")
+    );
+    rec.setTextColor(0xFFAAAAAA);
+    rec.setPadding(0, 0, 0, 26);
+    root.addView(rec);
+}
+
+private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
+
+    final android.content.pm.PackageManager pm = getPackageManager();
+
+    int shown = 0;
+    for (DataRisk r : list) {
+
+        // Safety limit to avoid huge UI
+        if (++shown > 12) break;
+
+        String label = r.pkg;
+        try {
+            android.content.pm.ApplicationInfo ai = pm.getApplicationInfo(r.pkg, 0);
+            CharSequence cs = pm.getApplicationLabel(ai);
+            if (cs != null) label = cs.toString();
+        } catch (Throwable ignore) {}
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(0, 14, 0, 14);
+
+        TextView name = new TextView(this);
+        name.setText("• " + label);
+        name.setTextColor(Color.WHITE);
+        name.setTypeface(null, Typeface.BOLD);
+
+        TextView meta = new TextView(this);
+
+        String tag = r.rarelyUsedButActive
+                ? (gr ? "💤 Σπάνια χρήση αλλά ενεργή" : "💤 Rarely used but active")
+                : (gr ? "High Activity" : "High Activity");
+
+        meta.setText(
+                (gr ? "Δεδομένα: " : "Data: ") + r.mb + " MB"
+                + "  |  "
+                + (gr ? "Χρήση: " : "Use: ") + r.fgMinutes + (gr ? " λεπτά" : " min")
+                + "\n"
+                + tag
+        );
+        meta.setTextColor(0xFF00FF7F);
+        meta.setPadding(0, 8, 0, 10);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.CENTER);
+
+        Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
+        Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
+
+        restrict.setOnClickListener(v -> openAppDetails(r.pkg));
+        uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
+
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(dp(6), 0, dp(6), 0);
+
+        restrict.setLayoutParams(lp);
+        uninstall.setLayoutParams(lp);
+
+        btnRow.addView(restrict);
+        btnRow.addView(uninstall);
+
+        row.addView(name);
+        row.addView(meta);
+        row.addView(btnRow);
+
+        // divider
+        View div = new View(this);
+        div.setBackgroundColor(0xFF222222);
+        LinearLayout.LayoutParams dlp =
+                new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        dlp.setMargins(0, dp(14), 0, 0);
+        div.setLayoutParams(dlp);
+
+        row.addView(div);
+
+        root.addView(row);
+    }
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+
+private void openAppDetails(String pkg) {
+    try {
+        Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        i.setData(android.net.Uri.fromParts("package", pkg, null));
+        startActivity(i);
+    } catch (Throwable ignore) {
+        try { startActivity(new Intent(Settings.ACTION_APPLICATION_SETTINGS)); } catch (Throwable ignore2) {}
+    }
+}
+
+private void uninstallPkg(String pkg) {
+    try {
+        Intent i = new Intent(Intent.ACTION_DELETE);
+        i.setData(android.net.Uri.parse("package:" + pkg));
+        startActivity(i);
+    } catch (Throwable ignore) {
+        openAppDetails(pkg);
+    }
+}
+
+// ============================================================
+// STEP 4 — APPS INTELLIGENCE ENGINE (MODERATE + HEAVY ONLY)
+// ============================================================
+
+private void showApps() {
+
+    long now = System.currentTimeMillis();
+    long start = now - (48L * 60 * 60 * 1000);
+
+    ArrayList<AppAppRisk> heavy = new ArrayList<>();
+    ArrayList<AppAppRisk> moderate = new ArrayList<>();
+
+    try {
+
+        UsageStatsManager usm =
+                (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+
+        List<UsageStats> stats =
+                usm.queryUsageStats(
+                        UsageStatsManager.INTERVAL_DAILY,
+                        start,
+                        now
+                );
+
+        if (stats == null || stats.isEmpty()) {
+            showAppsStable();
+            return;
+        }
+
+        PackageManager pm = getPackageManager();
+
+        for (UsageStats u : stats) {
+
+            long minutes = u.getTotalTimeInForeground() / 60000;
+            if (minutes < 1) continue;
+
+            String pkg = u.getPackageName();
+            if (pkg.equals(getPackageName())) continue;
+
+            try {
+                ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
+
+                boolean isSystem =
+                        (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+
+                // Ignore core system
+                if (isSystem) continue;
+
+                int score;
+
+                if (minutes >= 120) score = 3;
+                else if (minutes >= 45) score = 2;
+                else score = 1;
+
+                AppAppRisk r = new AppAppRisk(pkg, minutes);
+
+                if (score >= 3)
+                    heavy.add(r);
+                else if (score == 2)
+                    moderate.add(r);
+
+            } catch (Throwable ignore) {}
+        }
+
+    } catch (Throwable ignore) {}
+
+    if (heavy.isEmpty() && moderate.isEmpty()) {
+        showAppsStable();
+        return;
+    }
+
+    ScrollView scroll = new ScrollView(this);
+
+    LinearLayout root = buildBaseBox(
+            gr ? "Apps Intelligence Report (48 ώρες)"
+               : "Apps Intelligence Report (48 hours)"
+    );
+
+    scroll.addView(root);
+
+    String verdict =
+            !heavy.isEmpty() ? "HEAVY"
+            : "MODERATE";
+
+    addAppsVerdict(root, verdict, heavy.size(), moderate.size());
+
+    TextView explain = new TextView(this);
+    explain.setText(
+            gr
+                    ? "Δείχνουμε εφαρμογές με σημαντική ή μέτρια δραστηριότητα.\n"
+                    + "Αν δεν είναι απαραίτητες, μπορείς να τις αφαιρέσεις."
+                    : "We show apps with significant or moderate activity.\n"
+                    + "If unnecessary, you may remove them."
+    );
+    explain.setTextColor(0xFFAAAAAA);
+    explain.setPadding(0,0,0,25);
+    root.addView(explain);
+
+    if (!heavy.isEmpty()) {
+        addSection(
+                root,
+                gr ? "🔥 Υψηλή Δραστηριότητα"
+                   : "🔥 High Activity",
+                gr ? "Εφαρμογές με έντονη χρήση."
+                   : "Apps with heavy usage.",
+                0xFFFF5252
+        );
+        addAppList(root, heavy);
+    }
+
+    if (!moderate.isEmpty()) {
+        addSection(
+                root,
+                gr ? "⚠️ Μέτρια Δραστηριότητα"
+                   : "⚠️ Moderate Activity",
+                gr ? "Εφαρμογές που αξίζουν έλεγχο."
+                   : "Apps worth reviewing.",
+                0xFFFFC107
+        );
+        addAppList(root, moderate);
+    }
+
+    Button next = mkGreenBtn("OK");
+    next.setOnClickListener(v -> go(STEP_CACHE));
+    root.addView(next);
+
+    showCustomDialog(scroll);
+}
+
+// ============================================================
+// APPS MODEL
+// ============================================================
+
+private static class AppAppRisk {
+    final String pkg;
+    final long minutes;
+
+    AppAppRisk(String p, long m) {
+        pkg = p;
+        minutes = m;
+    }
+}
+
+// ============================================================
+// STABLE
+// ============================================================
+
+private void showAppsStable() {
+
+    showDialog(
+            progressTitle(gr ? "ΒΗΜΑ 4 — Εφαρμογές"
+                             : "STEP 4 — Apps"),
+            gr
+                    ? "Engine Verdict: STABLE\n\n"
+                    + "Δεν βρέθηκαν εφαρμογές με υπερβολική δραστηριότητα."
+                    : "Engine Verdict: STABLE\n\n"
+                    + "No apps with abnormal activity detected.",
+            null,
+            () -> go(STEP_CACHE),
+            false
+    );
+}
+
+// ============================================================
+// VERDICT
+// ============================================================
+
+private void addAppsVerdict(LinearLayout root,
+                            String verdict,
+                            int heavy,
+                            int moderate) {
+
+    TextView tv = new TextView(this);
+
+    int color =
+            verdict.equals("HEAVY") ? 0xFFFF5252 :
+            0xFFFFC107;
+
+    tv.setText(
+            "Engine Verdict: " + verdict + "\n\n"
+            + (gr ? "High Activity: " : "High Activity: ") + heavy + "\n"
+            + (gr ? "Moderate Activity: " : "Moderate Activity: ") + moderate
+    );
+
+    tv.setTextColor(color);
+    tv.setTextSize(15f);
+    tv.setPadding(0,10,0,25);
+
+    root.addView(tv);
+}
+
+// ============================================================
+// LIST ROWS
+// ============================================================
+
+private void addAppList(LinearLayout root,
+                        List<AppAppRisk> list) {
+
+    PackageManager pm = getPackageManager();
+
+    int shown = 0;
+
+    for (AppAppRisk r : list) {
+
+        if (++shown > 12) break;
+
+        String label = r.pkg;
+
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(r.pkg, 0);
+            label = pm.getApplicationLabel(ai).toString();
+        } catch (Throwable ignore) {}
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(0,14,0,14);
+
+        TextView name = new TextView(this);
+        name.setText("• " + label);
+        name.setTextColor(Color.WHITE);
+        name.setTypeface(null, Typeface.BOLD);
+
+        TextView meta = new TextView(this);
+        meta.setText(
+                (gr ? "Χρήση: " : "Usage: ")
+                + r.minutes
+                + (gr ? " λεπτά (48h)" : " min (48h)")
+        );
+        meta.setTextColor(0xFF00FF7F);
+        meta.setPadding(0,6,0,12);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.CENTER);
+
+        Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
+        Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
+
+        details.setOnClickListener(v -> openAppDetails(r.pkg));
+        uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
+
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f);
+        lp.setMargins(dp(6),0,dp(6),0);
+
+        details.setLayoutParams(lp);
+        uninstall.setLayoutParams(lp);
+
+        btnRow.addView(details);
+        btnRow.addView(uninstall);
+
+        row.addView(name);
+        row.addView(meta);
+        row.addView(btnRow);
+
+        root.addView(row);
+    }
+}
 
     // ============================================================
     // STEP 5 — CACHE
@@ -232,7 +1121,7 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 5 — Cache" : "STEP 5 — Cache"),
                 gr
-                        ? "Θα ανοίξει η λίστα εφαρμογών ταξινομημένη κατά «Μεγαλύτερη Cache».\n\n"
+                        ? "Θα ανοίξει η λίστα εφαρμογών ταξινομημένη κατά «Μεγαλύτερη % Cache».\n\n"
                         + "Καθάρισε εφαρμογές με μεγάλη προσωρινή μνήμη — ή και όλες.\n"
                         + "Στην πρώτη ομάδα θα δεις τις εφαρμογές που έχεις εγκαταστήσει.\n"
                         + "Στη δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος.\n"
