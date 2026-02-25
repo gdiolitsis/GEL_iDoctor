@@ -161,7 +161,9 @@ public class AppListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
 
         h.size.setText("App: " + formatBytes(e.appBytes));
-        if (e.cacheBytes > 0 && e.appSizeBytes > 0) {
+
+// -------- CACHE TEXT + % --------
+if (e.cacheBytes > 0 && e.appSizeBytes > 0) {
 
     h.cache.setText(
             "Cache: " +
@@ -172,6 +174,15 @@ public class AppListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 } else {
 
     h.cache.setText("Cache: " + formatBytes(e.cacheBytes));
+}
+
+// -------- CACHE COLOR LOGIC --------
+if (e.cachePercent >= 50) {
+    h.cache.setTextColor(0xFFFF4444);   // Red = High ratio
+} else if (e.cachePercent >= 20) {
+    h.cache.setTextColor(0xFFFFD700);   // Gold = Medium
+} else {
+    h.cache.setTextColor(Color.WHITE);  // Normal
 }
 
         // ============================================================
