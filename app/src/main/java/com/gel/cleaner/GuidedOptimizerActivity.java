@@ -27,6 +27,9 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
 
     private boolean gr;
     private int step = 0;
+    private int batterySubStep = 0;
+    private int dataSubStep = 0;
+    private int appsSubStep = 0;
     
     private static final String PREF_ROUTING_DIALOG = "routing_dialog_hidden_";
 
