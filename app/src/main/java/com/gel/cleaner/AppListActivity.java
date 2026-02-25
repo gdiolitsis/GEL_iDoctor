@@ -974,9 +974,32 @@ private void applyFiltersAndSort() {
     // ============================================================
 
     private void refreshUI() {
-        adapter.submitList(new ArrayList<>(visible));
-        updateStats();   // 🔥 ΧΩΡΙΣ ΑΥΤΟ θα δείχνει 0
+
+    ArrayList<AppEntry> copy = new ArrayList<>();
+
+    for (AppEntry e : visible) {
+
+        AppEntry c = new AppEntry();
+
+        c.pkg = e.pkg;
+        c.label = e.label;
+        c.isSystem = e.isSystem;
+        c.selected = e.selected;
+        c.appBytes = e.appBytes;
+        c.cacheBytes = e.cacheBytes;
+        c.appSizeBytes = e.appSizeBytes;
+        c.cachePercent = e.cachePercent;
+        c.isHeader = e.isHeader;
+        c.isUserHeader = e.isUserHeader;
+        c.isSystemHeader = e.isSystemHeader;
+        c.headerTitle = e.headerTitle;
+
+        copy.add(c);
     }
+
+    adapter.submitList(copy);
+    updateStats();
+}
 
     private void updateStats() {
 
@@ -1065,6 +1088,24 @@ private void applyFiltersAndSort() {
         btnSelectSystem.setText(systemSelected ? getString(R.string.deselect_system_apps) : getString(R.string.select_system_apps));
 }
 
+// ============================================================
+// CLEAR ALL SELECTIONS
+// ============================================================
+private void clearSelections() {
+
+    for (AppEntry e : allApps) {
+        if (e != null) {
+            e.selected = false;
+        }
+    }
+
+    for (AppEntry e : visible) {
+        if (e != null) {
+            e.selected = false;
+        }
+    }
+}
+
     // ============================================================
     // GUIDED MODE
     // ============================================================
@@ -1094,8 +1135,16 @@ private void applyFiltersAndSort() {
 
 private void openNext() {
 
+    // ✅ FINISHED
     if (guidedIndex >= guidedQueue.size()) {
+
         guidedActive = false;
+
+        // 🔥 RESET SELECTION STATE
+        clearSelections();
+        refreshUI();
+        syncToggleStatesFromSelection();
+
         showGelDialog(
                 AppLang.isGreek(this)
                         ? "Η διαδικασία ολοκληρώθηκε."
