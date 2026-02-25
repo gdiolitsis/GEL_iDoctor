@@ -4,6 +4,8 @@
 package com.gel.cleaner;
 
 import android.app.AlertDialog;
+import android.app.usage.NetworkStatsManager;
+import android.app.usage.NetworkStats;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Intent;
@@ -13,6 +15,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.net.NetworkTemplate;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.Gravity;
@@ -89,6 +92,36 @@ private void addSection(
     b.setTextSize(14f);
     b.setPadding(0, 0, 0, dp(10));
     root.addView(b);
+}
+
+// ============================================================
+// LIMIT + ADD (APPS UI HELPER)
+// NOTE: Always return full code ready for copy-paste (no patch-only replies).
+// ============================================================
+private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
+
+    if (root == null || list == null || list.isEmpty()) return;
+
+    final int LIMIT = 12; // safety UI cap
+    int shown = 0;
+
+    for (AppRisk r : list) {
+        if (r == null) continue;
+        addAppRow(root, r);   // uses your existing row renderer
+        shown++;
+        if (shown >= LIMIT) break;
+    }
+
+    if (list.size() > LIMIT) {
+        TextView more = new TextView(this);
+        more.setText(gr
+                ? ("(+" + (list.size() - LIMIT) + " ακόμη)")
+                : ("(+" + (list.size() - LIMIT) + " more)"));
+        more.setTextColor(0xFFAAAAAA);
+        more.setPadding(0, dp(8), 0, dp(6));
+        more.setGravity(Gravity.CENTER);
+        root.addView(more);
+    }
 }
 
     // ============================================================
@@ -626,8 +659,8 @@ private void showData() {
 
     try {
 
-        final android.net.NetworkStatsManager nsm =
-                (android.net.NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
+        final NetworkStatsManager nsm =
+        (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
 
         if (nsm != null) {
 
@@ -644,10 +677,10 @@ private void showData() {
                 android.net.NetworkTemplate wifiT =
                         android.net.NetworkTemplate.buildTemplateWifiWildcard();
 
-                android.net.NetworkStats wifiStats =
-                        nsm.querySummary(wifiT, null, start, now);
+                NetworkStats wifiStats =
+        nsm.querySummary(wifiT, null, start, now);
 
-                android.net.NetworkStats.Bucket b = new android.net.NetworkStats.Bucket();
+NetworkStats.Bucket b = new NetworkStats.Bucket();
 
                 while (wifiStats != null && wifiStats.hasNextBucket()) {
                     wifiStats.getNextBucket(b);
@@ -691,10 +724,10 @@ private void showData() {
                 android.net.NetworkTemplate mobileT =
                         android.net.NetworkTemplate.buildTemplateMobileAll(subId);
 
-                android.net.NetworkStats mobileStats =
-                        nsm.querySummary(mobileT, subId, start, now);
+                NetworkStats mobileStats =
+        nsm.querySummary(mobileT, subId, start, now);
 
-                android.net.NetworkStats.Bucket b2 = new android.net.NetworkStats.Bucket();
+NetworkStats.Bucket b2 = new NetworkStats.Bucket();
 
                 while (mobileStats != null && mobileStats.hasNextBucket()) {
                     mobileStats.getNextBucket(b2);
@@ -1108,10 +1141,6 @@ private void showApps() {
             long hoursSinceUse = (now - lastUsed) / (1000 * 60 * 60);
 
             int launches = 0;
-            if (android.os.Build.VERSION.SDK_INT >= 28) {
-                try { launches = u.getAppLaunchCount(); }
-                catch (Throwable ignore) {}
-            }
 
             if (minutes < 1 && launches < 3) continue;
 
@@ -1256,11 +1285,7 @@ private void showInactiveApps() {
                     (now - lastUsed) / (1000L * 60 * 60 * 24);
 
             int launches = 0;
-            if (android.os.Build.VERSION.SDK_INT >= 28) {
-                try { launches = u.getAppLaunchCount(); }
-                catch (Throwable ignore) {}
-            }
-
+            
             if (days < 30) continue;
             if (launches > 5) continue;
 
