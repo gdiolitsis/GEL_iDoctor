@@ -65,18 +65,58 @@ public class GELCleaner {
     }
 
     // ============================================================
-    // DEEP CLEAN (OEM)
-    // ============================================================
-    public static void deepClean(Context ctx, LogCallback cb) {
-        initFoldableRuntime(ctx);
+// DEEP CLEAN (GLOBAL PRIMARY + OEM FALLBACK)
+// ============================================================
+public static void deepClean(Context ctx, LogCallback cb) {
+
+    initFoldableRuntime(ctx);
+
+    try {
+
+        // --------------------------------------------------------
+        // 1️⃣ GLOBAL STORAGE SCREEN (PRIMARY)
+        // --------------------------------------------------------
         try {
-            boolean launched = CleanLauncher.openDeepCleaner(ctx);
-            if (launched) ok(cb, "Device Deep Cleaner ενεργοποιήθηκε.");
-            else err(cb, "Δεν βρέθηκε deep cleaner στη συσκευή.");
-        } catch (Exception e) {
-            err(cb, "deepClean failed: " + e.getMessage());
+
+            Intent storage = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
+            storage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            if (DualPaneManager.isDualPaneActive(ctx)) {
+                DualPaneManager.openSide(ctx, storage);
+            } else {
+                ctx.startActivity(storage);
+            }
+
+            ok(cb, "Άνοιξα Χώρο Αποθήκευσης (Global Path).");
+            return;
+
+        } catch (Throwable t) {
+            warn(cb, "Global storage failed. Trying OEM cleaner...");
         }
+
+        // --------------------------------------------------------
+        // 2️⃣ OEM CLEANER (FALLBACK)
+        // --------------------------------------------------------
+        try {
+
+            boolean launched = CleanLauncher.openDeepCleaner(ctx);
+
+            if (launched) {
+                ok(cb, "Device Deep Cleaner ενεργοποιήθηκε.");
+                return;
+            }
+
+        } catch (Throwable ignore) {}
+
+        // --------------------------------------------------------
+        // ❌ NOTHING WORKED
+        // --------------------------------------------------------
+        err(cb, "Δεν βρέθηκε συμβατός καθαριστής στη συσκευή.");
+
+    } catch (Exception e) {
+        err(cb, "deepClean failed: " + e.getMessage());
     }
+}
 
     // ============================================================
     // APP CACHE
