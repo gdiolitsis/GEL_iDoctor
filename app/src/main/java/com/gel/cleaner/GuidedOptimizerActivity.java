@@ -34,17 +34,23 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
 
     private boolean gr;
     private int step = 0;
+    
+private String batteryVerdict = "STABLE";
+private String dataVerdict = "STABLE";
+private String appsVerdict = "STABLE";
 
     private static final int STEP_INTRO    = 0;
     private static final int STEP_STORAGE  = 1;
     private static final int STEP_BATTERY  = 2;
     private static final int STEP_DATA     = 3;
     private static final int STEP_APPS     = 4;
-    private static final int STEP_CACHE    = 5;
-    private static final int STEP_QUEST    = 6;
-    private static final int STEP_LABS     = 7;
-    private static final int STEP_REMINDER = 8;
-    private static final int STEP_DONE     = 9;
+    private static final int STEP_UNUSED = 5;
+    private static final int STEP_CACHE    = 6;
+    private static final int STEP_QUEST    = 7;
+    private static final int STEP_LABS     = 8;
+    private static final int STEP_REMINDER = 9;
+    private static final int STEP_DONE     = 10;
+    private static final int STEP_FINAL = 11;
 
     private final ArrayList<String> symptoms = new ArrayList<>();
 
@@ -109,18 +115,19 @@ private void addSection(
         step = s;
 
         switch (step) {
-            case STEP_INTRO: showIntro(); break;
-            case STEP_STORAGE: showStorage(); break;
-            case STEP_BATTERY: showBattery(); break;
-            case STEP_DATA: showData(); break;
-            case STEP_APPS: showApps(); break;
-            case STEP_CACHE: showCache(); break;
-            case STEP_QUEST: showQuestionnaire(); break;
-            case STEP_LABS: showLabRecommendation(); break;
-            case STEP_REMINDER: showReminder(); break;
-            case STEP_DONE: finish(); break;
-        }
-    }
+    case STEP_INTRO: showIntro(); break;
+    case STEP_STORAGE: showStorage(); break;
+    case STEP_BATTERY: showBattery(); break;
+    case STEP_DATA: showData(); break;
+    case STEP_APPS: showApps(); break;
+    case STEP_UNUSED: showInactiveApps(); break;
+    case STEP_CACHE: showCache(); break;
+    case STEP_QUEST: showQuestionnaire(); break;
+    case STEP_LABS: showLabRecommendation(); break;
+    case STEP_REMINDER: showReminder(); break;
+    case STEP_FINAL: showFinalVerdict(); break;
+    case STEP_DONE: finish(); break;
+}
 
     // ============================================================
     // INTRO
@@ -173,14 +180,63 @@ private void addSection(
                         + "On some devices the app may close temporarily.\n\n"
                         + "After cleaning, reopen the app\n"
                         + "and press OK to continue.",
-                () -> safeStartActivity(
-                        Settings.ACTION_INTERNAL_STORAGE_SETTINGS,
-                        Settings.ACTION_MEMORY_CARD_SETTINGS
-                ),
-                () -> go(STEP_BATTERY),
-                false
-        );
-    }
+                () -> {
+
+// --------------------------------------------------------
+// 1️⃣ DEVICE STORAGE (PRIMARY)
+// --------------------------------------------------------
+try {
+
+    Intent deviceStorage = new Intent(Settings.ACTION_DEVICE_STORAGE_SETTINGS);
+    deviceStorage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+    startActivity(deviceStorage);
+    return;
+
+} catch (Throwable ignore) {}
+
+
+// --------------------------------------------------------
+// 2️⃣ GLOBAL STORAGE (SECONDARY)
+// --------------------------------------------------------
+try {
+
+    Intent storage = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
+    storage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+    startActivity(storage);
+    return;
+
+} catch (Throwable ignore) {}
+
+
+// --------------------------------------------------------
+// 3️⃣ OEM CLEANER (FALLBACK)
+// --------------------------------------------------------
+try {
+
+    boolean launched = CleanLauncher.openDeepCleaner(this);
+
+    if (launched) return;
+
+} catch (Throwable ignore) {}
+
+                // --------------------------------------------------------
+                // 3️⃣ LAST RESORT
+                // --------------------------------------------------------
+                Toast.makeText(
+                        this,
+                        gr
+                                ? "Δεν βρέθηκε καθαριστής στη συσκευή."
+                                : "No compatible cleaner found.",
+                        Toast.LENGTH_SHORT
+                ).show();
+
+            },
+            () -> go(STEP_BATTERY),
+            false
+    );
+}
 
 // ============================================================
 // STEP 2 — BATTERY INTELLIGENCE ENGINE (MODERATE + HEAVY ONLY)
@@ -189,6 +245,9 @@ private void addSection(
 private void showBattery() {
 
     if (!hasUsageAccess()) {
+
+        batteryVerdict = "STABLE";
+
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 2 — Ανάλυση Δραστηριότητας"
                                  : "STEP 2 — Activity Analysis"),
@@ -220,6 +279,9 @@ private void showBattery() {
             );
 
     if (stats == null || stats.isEmpty()) {
+
+        batteryVerdict = "STABLE";
+
         showStableDialog();
         return;
     }
@@ -258,6 +320,9 @@ private void showBattery() {
     }
 
     if (heavyApps.isEmpty() && moderateApps.isEmpty()) {
+
+        batteryVerdict = "STABLE";
+
         showStableDialog();
         return;
     }
@@ -274,6 +339,8 @@ private void showBattery() {
     String verdict =
             !heavyApps.isEmpty() ? "HEAVY"
             : "MODERATE";
+
+    batteryVerdict = verdict;
 
     addEngineVerdict(root, verdict,
             heavyApps.size(),
@@ -330,6 +397,113 @@ private void showStableDialog() {
             () -> go(STEP_DATA),
             false
     );
+}
+
+private void showFinalVerdict() {
+
+    LinearLayout root = buildBaseBox(
+            gr ? "Τελική Αναφορά Συσκευής"
+               : "Final Device Report"
+    );
+
+    String finalVerdict = resolveFinalVerdict();
+
+    // ----------------------------
+    // Section Details
+    // ----------------------------
+
+    addFinalRow(root,
+            gr ? "Μπαταρία" : "Battery",
+            batteryVerdict);
+
+    addFinalRow(root,
+            gr ? "Δεδομένα" : "Data",
+            dataVerdict);
+
+    addFinalRow(root,
+            gr ? "Εφαρμογές" : "Apps",
+            appsVerdict);
+
+    // ----------------------------
+    // Divider
+    // ----------------------------
+
+    View div = new View(this);
+    div.setBackgroundColor(0xFF333333);
+    LinearLayout.LayoutParams dlp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(1));
+    dlp.setMargins(0, dp(20), 0, dp(20));
+    div.setLayoutParams(dlp);
+    root.addView(div);
+
+    // ----------------------------
+    // Final Status
+    // ----------------------------
+
+    TextView finalTv = new TextView(this);
+    finalTv.setText(
+            (gr ? "Συνολική Κατάσταση: "
+                : "Overall Status: ")
+            + finalVerdict
+    );
+
+    int color =
+            finalVerdict.equals("HEAVY") ? 0xFFFF5252 :
+            finalVerdict.equals("MODERATE") ? 0xFFFFC107 :
+            0xFF00C853;
+
+    finalTv.setTextColor(color);
+    finalTv.setTextSize(18f);
+    finalTv.setTypeface(null, Typeface.BOLD);
+    finalTv.setPadding(0, dp(10), 0, dp(25));
+
+    root.addView(finalTv);
+
+    Button done = mkGreenBtn("OK");
+    done.setOnClickListener(v -> finish());
+    root.addView(done);
+
+    showCustomDialog(root);
+}
+
+private String resolveFinalVerdict() {
+
+    if ("HEAVY".equals(batteryVerdict)
+            || "HEAVY".equals(dataVerdict)
+            || "HEAVY".equals(appsVerdict)) {
+
+        return "HEAVY";
+    }
+
+    if ("MODERATE".equals(batteryVerdict)
+            || "MODERATE".equals(dataVerdict)
+            || "MODERATE".equals(appsVerdict)) {
+
+        return "MODERATE";
+    }
+
+    return "STABLE";
+}
+
+private void addFinalRow(LinearLayout root,
+                         String label,
+                         String verdict) {
+
+    TextView tv = new TextView(this);
+
+    int color =
+            "HEAVY".equals(verdict) ? 0xFFFF5252 :
+            "MODERATE".equals(verdict) ? 0xFFFFC107 :
+            0xFF00C853;
+
+    tv.setText(label + ": " + verdict);
+    tv.setTextColor(color);
+    tv.setTextSize(16f);
+    tv.setPadding(0, dp(6), 0, dp(6));
+
+    root.addView(tv);
 }
 
 // ============================================================
@@ -421,6 +595,7 @@ private void showData() {
 
     // ✅ Needs Usage Access (for "rarely used but active" signal)
     if (!hasUsageAccess()) {
+    	dataVerdict = "STABLE"; 
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
                 gr
@@ -584,6 +759,7 @@ private void showData() {
     }
 
     if (!ok) {
+    	dataVerdict = "STABLE";
         // ROM blocked / no access → open global settings safely + branded dialog
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 3 — Δεδομένα" : "STEP 3 — Data Usage"),
@@ -610,6 +786,7 @@ private void showData() {
     }
 
     if (heavy.isEmpty() && moderate.isEmpty()) {
+    	dataVerdict = "STABLE";
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
                 gr
@@ -640,6 +817,7 @@ private void showData() {
     scroll.addView(root);
 
     final String verdict = !heavy.isEmpty() ? "HEAVY" : "MODERATE";
+    dataVerdict = verdict;   // 👈 ΠΡΟΣΘΗΚΗ
 
     addEngineVerdictData(root, verdict, heavy.size(), moderate.size());
 
@@ -920,32 +1098,63 @@ private void showApps() {
 
         for (UsageStats u : stats) {
 
-            long minutes = u.getTotalTimeInForeground() / 60000;
-            if (minutes < 1) continue;
-
             String pkg = u.getPackageName();
+            if (pkg == null) continue;
             if (pkg.equals(getPackageName())) continue;
 
-            try {
-                ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
+            long minutes = u.getTotalTimeInForeground() / 60000;
+            long lastUsed = u.getLastTimeUsed();
+            long hoursSinceUse = (now - lastUsed) / (1000 * 60 * 60);
 
+            int launches = 0;
+            if (android.os.Build.VERSION.SDK_INT >= 28) {
+                try { launches = u.getAppLaunchCount(); }
+                catch (Throwable ignore) {}
+            }
+
+            if (minutes < 1 && launches < 3) continue;
+
+            try {
+
+                ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
                 boolean isSystem =
                         (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
 
-                // Ignore core system
                 if (isSystem) continue;
 
-                int score;
+                // -------------------------------
+                // CLASSIFICATION LOGIC
+                // -------------------------------
+                String badge;
+                int level;
 
-                if (minutes >= 120) score = 3;
-                else if (minutes >= 45) score = 2;
-                else score = 1;
+                if (minutes >= 120 && hoursSinceUse <= 6) {
+                    badge = "🟥 Always Active";
+                    level = 3;
+                }
+                else if (minutes < 10 && launches >= 15) {
+                    badge = "💤 Rarely used but wakes often";
+                    level = 2;
+                }
+                else if (minutes >= 45) {
+                    badge = "🟨 Background Risk";
+                    level = 2;
+                }
+                else {
+                    continue;
+                }
 
-                AppAppRisk r = new AppAppRisk(pkg, minutes);
+                AppAppRisk r = new AppAppRisk(
+                        pkg,
+                        minutes,
+                        hoursSinceUse,
+                        launches,
+                        badge
+                );
 
-                if (score >= 3)
+                if (level >= 3)
                     heavy.add(r);
-                else if (score == 2)
+                else
                     moderate.add(r);
 
             } catch (Throwable ignore) {}
@@ -971,27 +1180,16 @@ private void showApps() {
             !heavy.isEmpty() ? "HEAVY"
             : "MODERATE";
 
-    addAppsVerdict(root, verdict, heavy.size(), moderate.size());
+    appsVerdict = verdict;
 
-    TextView explain = new TextView(this);
-    explain.setText(
-            gr
-                    ? "Δείχνουμε εφαρμογές με σημαντική ή μέτρια δραστηριότητα.\n"
-                    + "Αν δεν είναι απαραίτητες, μπορείς να τις αφαιρέσεις."
-                    : "We show apps with significant or moderate activity.\n"
-                    + "If unnecessary, you may remove them."
-    );
-    explain.setTextColor(0xFFAAAAAA);
-    explain.setPadding(0,0,0,25);
-    root.addView(explain);
+    addAppsVerdict(root, verdict, heavy.size(), moderate.size());
 
     if (!heavy.isEmpty()) {
         addSection(
                 root,
                 gr ? "🔥 Υψηλή Δραστηριότητα"
                    : "🔥 High Activity",
-                gr ? "Εφαρμογές με έντονη χρήση."
-                   : "Apps with heavy usage.",
+                "",
                 0xFFFF5252
         );
         addAppList(root, heavy);
@@ -1002,8 +1200,7 @@ private void showApps() {
                 root,
                 gr ? "⚠️ Μέτρια Δραστηριότητα"
                    : "⚠️ Moderate Activity",
-                gr ? "Εφαρμογές που αξίζουν έλεγχο."
-                   : "Apps worth reviewing.",
+                "",
                 0xFFFFC107
         );
         addAppList(root, moderate);
@@ -1016,6 +1213,171 @@ private void showApps() {
     showCustomDialog(scroll);
 }
 
+private void showInactiveApps() {
+
+    if (!hasUsageAccess()) {
+        go(STEP_CACHE);
+        return;
+    }
+
+    long now = System.currentTimeMillis();
+    long threshold = now - (30L * 24 * 60 * 60 * 1000); // 30 days
+
+    ArrayList<UnusedApp> unused = new ArrayList<>();
+
+    try {
+
+        UsageStatsManager usm =
+                (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+
+        List<UsageStats> stats =
+                usm.queryUsageStats(
+                        UsageStatsManager.INTERVAL_DAILY,
+                        threshold,
+                        now
+                );
+
+        if (stats == null || stats.isEmpty()) {
+            go(STEP_CACHE);
+            return;
+        }
+
+        PackageManager pm = getPackageManager();
+
+        for (UsageStats u : stats) {
+
+            String pkg = u.getPackageName();
+            if (pkg == null) continue;
+            if (pkg.equals(getPackageName())) continue;
+
+            long lastUsed = u.getLastTimeUsed();
+            long days =
+                    (now - lastUsed) / (1000L * 60 * 60 * 24);
+
+            int launches = 0;
+            if (android.os.Build.VERSION.SDK_INT >= 28) {
+                try { launches = u.getAppLaunchCount(); }
+                catch (Throwable ignore) {}
+            }
+
+            if (days < 30) continue;
+            if (launches > 5) continue;
+
+            try {
+                ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
+
+                boolean isSystem =
+                        (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+
+                if (isSystem) continue;
+
+                unused.add(new UnusedApp(pkg, days));
+
+            } catch (Throwable ignore) {}
+        }
+
+    } catch (Throwable ignore) {}
+
+    if (unused.isEmpty()) {
+        go(STEP_CACHE);
+        return;
+    }
+
+    ScrollView scroll = new ScrollView(this);
+
+    LinearLayout root = buildBaseBox(
+            gr ? "🕒 Εφαρμογές που δεν χρησιμοποιούνται"
+               : "🕒 Unused Applications"
+    );
+
+    scroll.addView(root);
+
+    TextView info = new TextView(this);
+    info.setText(
+            gr
+                    ? "Εφαρμογές που δεν έχουν χρησιμοποιηθεί >30 ημέρες.\n"
+                    + "Ενδέχεται να πιάνουν χώρο ή δικαιώματα."
+                    : "Apps not used for over 30 days.\n"
+                    + "They may occupy storage or hold permissions."
+    );
+    info.setTextColor(0xFFAAAAAA);
+    info.setPadding(0, 0, 0, 25);
+    root.addView(info);
+
+    PackageManager pm = getPackageManager();
+
+    for (UnusedApp r : unused) {
+
+        String label = r.pkg;
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(r.pkg, 0);
+            CharSequence cs = pm.getApplicationLabel(ai);
+            if (cs != null) label = cs.toString();
+        } catch (Throwable ignore) {}
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(0, 15, 0, 15);
+
+        TextView name = new TextView(this);
+        name.setText("• " + label);
+        name.setTextColor(Color.WHITE);
+        name.setTypeface(null, Typeface.BOLD);
+
+        TextView meta = new TextView(this);
+        meta.setText(
+                (gr ? "Τελευταία χρήση: " : "Last used: ")
+                + r.days
+                + (gr ? " ημέρες πριν" : " days ago")
+                + "\n💤 Inactive"
+        );
+        meta.setTextColor(0xFFFFC107);
+        meta.setPadding(0, 6, 0, 10);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
+        Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "View Details");
+
+        uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
+        details.setOnClickListener(v -> openAppDetails(r.pkg));
+
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(dp(6), 0, dp(6), 0);
+
+        uninstall.setLayoutParams(lp);
+        details.setLayoutParams(lp);
+
+        btnRow.addView(details);
+        btnRow.addView(uninstall);
+
+        row.addView(name);
+        row.addView(meta);
+        row.addView(btnRow);
+
+        root.addView(row);
+    }
+
+    Button next = mkGreenBtn("OK");
+    next.setOnClickListener(v -> go(STEP_CACHE));
+    root.addView(next);
+
+    showCustomDialog(scroll);
+}
+
+private static class UnusedApp {
+    final String pkg;
+    final long days;
+
+    UnusedApp(String p, long d) {
+        pkg = p;
+        days = d;
+    }
+}
+
 // ============================================================
 // APPS MODEL
 // ============================================================
@@ -1023,10 +1385,16 @@ private void showApps() {
 private static class AppAppRisk {
     final String pkg;
     final long minutes;
+    final long hoursSinceUse;
+    final int launches;
+    final String badge;
 
-    AppAppRisk(String p, long m) {
+    AppAppRisk(String p, long m, long h, int l, String b) {
         pkg = p;
         minutes = m;
+        hoursSinceUse = h;
+        launches = l;
+        badge = b;
     }
 }
 
@@ -1111,10 +1479,18 @@ private void addAppList(LinearLayout root,
 
         TextView meta = new TextView(this);
         meta.setText(
-                (gr ? "Χρήση: " : "Usage: ")
-                + r.minutes
-                + (gr ? " λεπτά (48h)" : " min (48h)")
-        );
+        (gr ? "Χρήση: " : "Usage: ")
+        + r.minutes
+        + (gr ? " λεπτά (48h)" : " min (48h)")
+        + "  |  "
+        + (gr ? "Τελευταία χρήση: " : "Last used: ")
+        + r.hoursSinceUse + "h"
+        + "  |  "
+        + (gr ? "Εκκινήσεις: " : "Launches: ")
+        + r.launches
+        + "\n"
+        + r.badge
+);
         meta.setTextColor(0xFF00FF7F);
         meta.setPadding(0,6,0,12);
 
@@ -1171,11 +1547,24 @@ private void addAppList(LinearLayout root,
                         + "Clearing cache is safe and does not remove personal data.\n\n"
                         + "Avoid clearing app data unless you understand the consequences.\n\n"
                         + "Press OK when finished.",
-                this::openLargestCache,
-                () -> go(STEP_QUEST),
-                false
-        );
-    }
+                () -> {
+                try {
+                    Intent i = new Intent(this, AppListActivity.class);
+                    i.putExtra("mode", "cache");
+                    startActivity(i);
+                } catch (Exception e) {
+                    Toast.makeText(
+                            this,
+                            gr ? "Δεν ήταν δυνατό να ανοίξει ο καθαριστής cache."
+                               : "Unable to open cache cleaner.",
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
+            },
+            () -> go(STEP_QUEST),
+            false
+    );
+}
 
     // ============================================================
     // QUESTIONNAIRE
@@ -1349,40 +1738,41 @@ private void addAppList(LinearLayout root,
     // ============================================================
 
     private void showReminder() {
-        LinearLayout root = buildBaseBox(
-                gr ? "Αν έμεινες ευχαριστημένος/η από το αποτέλεσμα, θα ήθελες να σου υπενθυμίζουμε τακτικά να κάνουμε την ίδια επιθεώρηση στη συσκευή σου;"
-   : "If you're satisfied with the results, would you like regular reminders to run the same device inspection?"
-        );
 
-Button daily = mkGreenBtn(gr?"1 Ημέρα":"Daily");
-Button weekly = mkGreenBtn(gr?"1 Εβδομάδα":"Weekly");
-Button monthly = mkGreenBtn(gr?"1 Μήνας":"Monthly");
-Button skip = mkRedBtn(gr?"Παράλειψη":"Skip");
+    LinearLayout root = buildBaseBox(
+            gr ? "Αν έμεινες ευχαριστημένος/η από το αποτέλεσμα, θα ήθελες να σου υπενθυμίζουμε τακτικά να κάνουμε την ίδια επιθεώρηση στη συσκευή σου;"
+               : "If you're satisfied with the results, would you like regular reminders to run the same device inspection?"
+    );
 
-daily.setOnClickListener(v -> {
+    Button daily = mkGreenBtn(gr ? "1 Ημέρα" : "Daily");
+    Button weekly = mkGreenBtn(gr ? "1 Εβδομάδα" : "Weekly");
+    Button monthly = mkGreenBtn(gr ? "1 Μήνας" : "Monthly");
+    Button skip = mkRedBtn(gr ? "Παράλειψη" : "Skip");
+
+    daily.setOnClickListener(v -> {
     OptimizerScheduler.enableReminder(this,1);
-    finish();
+    go(STEP_FINAL);
 });
 
 weekly.setOnClickListener(v -> {
     OptimizerScheduler.enableReminder(this,7);
-    finish();
+    go(STEP_FINAL);
 });
 
 monthly.setOnClickListener(v -> {
     OptimizerScheduler.enableReminder(this,30);
-    finish();
+    go(STEP_FINAL);
 });
 
-skip.setOnClickListener(v -> finish());
+skip.setOnClickListener(v -> go(STEP_FINAL));
 
-root.addView(daily);
-root.addView(weekly);
-root.addView(monthly);
-root.addView(skip);
+    root.addView(daily);
+    root.addView(weekly);
+    root.addView(monthly);
+    root.addView(skip);
 
-        showCustomDialog(root);
-    }
+    showCustomDialog(root);
+}
 
     // ============================================================
     // SETTINGS FALLBACKS
