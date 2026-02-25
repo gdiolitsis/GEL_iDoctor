@@ -161,7 +161,18 @@ public class AppListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
 
         h.size.setText("App: " + formatBytes(e.appBytes));
-        h.cache.setText("Cache: " + formatBytes(e.cacheBytes));
+        if (e.cacheBytes > 0 && e.appSizeBytes > 0) {
+
+    h.cache.setText(
+            "Cache: " +
+            formatBytes(e.cacheBytes) +
+            " (" + e.cachePercent + "%)"
+    );
+
+} else {
+
+    h.cache.setText("Cache: " + formatBytes(e.cacheBytes));
+}
 
         // ============================================================
         // ROOT PROTECTION LOGIC (ONLY HERE)
