@@ -89,22 +89,12 @@ protected void onCreate(Bundle savedInstanceState) {
     setupButtons();
 
     // ================= ENTRY FLOW =================
-    boolean forceWelcome =
-            getIntent().getBooleanExtra("force_welcome", false);
+boolean forceWelcome =
+        getIntent().getBooleanExtra("force_welcome", false);
 
-    SharedPreferences prefs =
-            getSharedPreferences("gel_prefs", MODE_PRIVATE);
-
-    boolean welcomeShownPref =
-            prefs.getBoolean("welcome_shown", false);
-
-    if (forceWelcome) {
-        showWelcomePopup();
-    }
-    else if (!welcomeShownPref && !isWelcomeDisabled()) {
-        showWelcomePopup();
-        prefs.edit().putBoolean("welcome_shown", true).apply();
-    }
+if (forceWelcome || !isWelcomeDisabled()) {
+    showWelcomePopup();
+}
 
     // ================= APPLY PLATFORM UI =================
     if ("apple".equals(getSavedPlatform())) {
@@ -862,17 +852,30 @@ startActivity(i);
 // DONATE
 // =========================================================
 private void setupDonate() {
-View b = findViewById(R.id.btnDonate);
-if (b != null) {
-b.setOnClickListener(v -> {
-try {
-startActivity(new Intent(Intent.ACTION_VIEW,
-Uri.parse("https://www.paypal.com/paypalme/gdiolitsis")));
-} catch (Exception e) {
-Toast.makeText(this,"Cannot open browser",Toast.LENGTH_SHORT).show();
-}
-});
-}
+
+    View b = findViewById(R.id.btnDonate);
+
+    if (b != null) {
+
+        b.setOnClickListener(v -> {
+
+            try {
+
+                startActivity(new Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=gdiolitsis@yahoo.com&currency_code=EUR")
+                ));
+
+            } catch (Exception e) {
+
+                Toast.makeText(
+                        this,
+                        "Cannot open browser",
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
+        });
+    }
 }
 
 // =========================================================
