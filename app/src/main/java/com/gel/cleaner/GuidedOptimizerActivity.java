@@ -4,8 +4,6 @@
 package com.gel.cleaner;
 
 import android.app.AlertDialog;
-import android.app.usage.NetworkStatsManager;
-import android.app.usage.NetworkStats;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Intent;
@@ -15,8 +13,8 @@ import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
-import android.net.NetworkTemplate;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
@@ -217,54 +215,42 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                 () -> {
 
 // --------------------------------------------------------
-// 1️⃣ DEVICE STORAGE (PRIMARY)
+// 1️⃣ DEVICE STORAGE (PRIMARY) — extra Android safety net
 // --------------------------------------------------------
 try {
-
-    Intent deviceStorage = new Intent(Settings.ACTION_DEVICE_STORAGE_SETTINGS);
+    Intent deviceStorage = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
     deviceStorage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
     startActivity(deviceStorage);
     return;
-
 } catch (Throwable ignore) {}
-
 
 // --------------------------------------------------------
 // 2️⃣ GLOBAL STORAGE (SECONDARY)
 // --------------------------------------------------------
 try {
-
     Intent storage = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
     storage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
     startActivity(storage);
     return;
-
 } catch (Throwable ignore) {}
-
 
 // --------------------------------------------------------
 // 3️⃣ OEM CLEANER (FALLBACK)
 // --------------------------------------------------------
 try {
-
     boolean launched = CleanLauncher.openDeepCleaner(this);
-
     if (launched) return;
-
 } catch (Throwable ignore) {}
 
-                // --------------------------------------------------------
-                // 3️⃣ LAST RESORT
-                // --------------------------------------------------------
-                Toast.makeText(
-                        this,
-                        gr
-                                ? "Δεν βρέθηκε καθαριστής στη συσκευή."
-                                : "No compatible cleaner found.",
-                        Toast.LENGTH_SHORT
-                ).show();
+// --------------------------------------------------------
+// 4️⃣ LAST RESORT
+// --------------------------------------------------------
+Toast.makeText(
+        this,
+        gr ? "Δεν βρέθηκε καθαριστής στη συσκευή."
+           : "No compatible cleaner found.",
+        Toast.LENGTH_SHORT
+).show();
 
             },
             () -> go(STEP_BATTERY),
@@ -629,7 +615,7 @@ private void showData() {
 
     // ✅ Needs Usage Access (for "rarely used but active" signal)
     if (!hasUsageAccess()) {
-    	dataVerdict = "STABLE"; 
+        dataVerdict = "STABLE";
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
                 gr
@@ -646,188 +632,108 @@ private void showData() {
         return;
     }
 
-    // ⏱ Window: 48 hours (as requested: 2–3 days max)
+    // ⏱ Window: 48 hours
     final long now = System.currentTimeMillis();
     final long start = now - (48L * 60 * 60 * 1000);
 
-    // We'll try real per-app usage via NetworkStatsManager.
-    // If ROM blocks it → we fall back to Settings with your branded routing dialog.
     final ArrayList<DataRisk> heavy = new ArrayList<>();
     final ArrayList<DataRisk> moderate = new ArrayList<>();
 
-    boolean ok = false;
-
     try {
 
-        final NetworkStatsManager nsm =
-        (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
+        UsageStatsManager usm =
+                (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
 
-        if (nsm != null) {
+        List<UsageStats> stats =
+                usm != null
+                        ? usm.queryUsageStats(
+                                UsageStatsManager.INTERVAL_DAILY,
+                                start,
+                                now
+                        )
+                        : null;
 
-            // We measure MOBILE + WIFI totals (if possible).
-            // MOBILE: may need subscriberId on some devices.
-            // WIFI: usually works without subscriberId.
+        if (stats == null || stats.isEmpty()) {
+            dataVerdict = "STABLE";
+            showDialog(
+                    progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
+                    gr
+                            ? "Engine Verdict: STABLE\n\n"
+                            + "Δεν υπάρχουν διαθέσιμα usage στοιχεία (48 ώρες)."
+                            : "Engine Verdict: STABLE\n\n"
+                            + "No usage stats available (48 hours).",
+                    null,
+                    () -> go(STEP_APPS),
+                    false
+            );
+            return;
+        }
 
-            final java.util.HashMap<String, Long> pkgBytes = new java.util.HashMap<>();
+        PackageManager pm = getPackageManager();
 
-            // -------------------------
-            // WIFI (summary)
-            // -------------------------
+        for (UsageStats u : stats) {
+
+            if (u == null) continue;
+
+            String pkg = u.getPackageName();
+            if (pkg == null) continue;
+            if (pkg.equals(getPackageName())) continue;
+
+            long minutes = 0;
+            try { minutes = u.getTotalTimeInForeground() / 60000L; }
+            catch (Throwable ignore) {}
+
+            if (minutes < 1) continue;
+
+            long lastUsed = 0;
+            try { lastUsed = u.getLastTimeUsed(); }
+            catch (Throwable ignore) {}
+
+            long hoursSinceUse = lastUsed > 0
+                    ? (now - lastUsed) / (1000L * 60 * 60)
+                    : 999999;
+
+            // skip core system apps (keep consistent with your apps flow)
             try {
-                android.net.NetworkTemplate wifiT =
-                        android.net.NetworkTemplate.buildTemplateWifiWildcard();
-
-                NetworkStats wifiStats =
-        nsm.querySummary(wifiT, null, start, now);
-
-NetworkStats.Bucket b = new NetworkStats.Bucket();
-
-                while (wifiStats != null && wifiStats.hasNextBucket()) {
-                    wifiStats.getNextBucket(b);
-                    int uid = b.getUid();
-                    long bytes = b.getRxBytes() + b.getTxBytes();
-                    if (bytes <= 0) continue;
-
-                    String[] pkgs;
-                    try { pkgs = getPackageManager().getPackagesForUid(uid); }
-                    catch (Throwable ignore) { pkgs = null; }
-
-                    if (pkgs == null || pkgs.length == 0) continue;
-
-                    for (String p : pkgs) {
-                        if (p == null) continue;
-                        if (p.equals(getPackageName())) continue;
-                        Long cur = pkgBytes.get(p);
-                        pkgBytes.put(p, (cur == null ? 0L : cur) + bytes);
-                    }
-                }
-
-                try { wifiStats.close(); } catch (Throwable ignore) {}
-
+                ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
+                boolean isSystem = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+                if (isSystem) continue;
             } catch (Throwable ignore) {}
 
-            // -------------------------
-            // MOBILE (summary)
-            // -------------------------
-            try {
-                String subId = null;
+            // ----------------------------------------------------
+            // HEURISTIC "DATA BEHAVIOUR" (no bytes, no lies)
+            // ----------------------------------------------------
+            // idea:
+            // - lots of foreground time => high activity
+            // - "rarely used but active": small minutes, but very recent last used (background-ish behaviour)
+            boolean rarelyUsedButActive =
+                    (minutes <= 5 && hoursSinceUse <= 12);
 
-                try {
-                    if (android.os.Build.VERSION.SDK_INT < 29) {
-                        // pre-Q often wants subscriberId; may be blocked by ROM
-                        android.telephony.TelephonyManager tm =
-                                (android.telephony.TelephonyManager) getSystemService(TELEPHONY_SERVICE);
-                        if (tm != null) subId = tm.getSubscriberId();
-                    }
-                } catch (Throwable ignore2) {}
+            long score =
+                    (minutes * 2)
+                    + (rarelyUsedButActive ? 30 : 0);
 
-                android.net.NetworkTemplate mobileT =
-                        android.net.NetworkTemplate.buildTemplateMobileAll(subId);
-
-                NetworkStats mobileStats =
-        nsm.querySummary(mobileT, subId, start, now);
-
-NetworkStats.Bucket b2 = new NetworkStats.Bucket();
-
-                while (mobileStats != null && mobileStats.hasNextBucket()) {
-                    mobileStats.getNextBucket(b2);
-                    int uid = b2.getUid();
-                    long bytes = b2.getRxBytes() + b2.getTxBytes();
-                    if (bytes <= 0) continue;
-
-                    String[] pkgs;
-                    try { pkgs = getPackageManager().getPackagesForUid(uid); }
-                    catch (Throwable ignore) { pkgs = null; }
-
-                    if (pkgs == null || pkgs.length == 0) continue;
-
-                    for (String p : pkgs) {
-                        if (p == null) continue;
-                        if (p.equals(getPackageName())) continue;
-                        Long cur = pkgBytes.get(p);
-                        pkgBytes.put(p, (cur == null ? 0L : cur) + bytes);
-                    }
-                }
-
-                try { mobileStats.close(); } catch (Throwable ignore) {}
-
-            } catch (Throwable ignore) {}
-
-            // If we managed to collect something meaningful
-            ok = !pkgBytes.isEmpty();
-
-            // Usage minutes (for "rarely used but active" heuristic)
-            java.util.HashMap<String, Long> fgMinutes = getForegroundMinutesMap(start, now);
-
-            // Thresholds (48h)
-            // HEAVY: >= 500MB
-            // MODERATE: >= 150MB
-            final long MOD_MB = 150;
-            final long HEAVY_MB = 500;
-
-            for (java.util.Map.Entry<String, Long> e : pkgBytes.entrySet()) {
-                String pkg = e.getKey();
-                long bytes = e.getValue() == null ? 0L : e.getValue();
-                if (bytes <= 0) continue;
-
-                long mb = bytes / (1024L * 1024L);
-                if (mb < MOD_MB) continue; // show only moderate+heavy
-
-                long mins = 0;
-                Long m = fgMinutes.get(pkg);
-                if (m != null) mins = m;
-
-                boolean rarelyUsedButActive = (mins <= 5 && mb >= MOD_MB);
-
-                int level = (mb >= HEAVY_MB) ? 3 : 2;
-
-                DataRisk r = new DataRisk(pkg, mb, mins, rarelyUsedButActive);
-
-                if (level >= 3) heavy.add(r);
-                else moderate.add(r);
+            // thresholds (tuned for 48h window)
+            // HEAVY: score >= 240  (ex: 120min foreground)
+            // MOD:   score >= 80
+            if (score >= 240) {
+                heavy.add(new DataRisk(pkg, score, minutes, hoursSinceUse, rarelyUsedButActive));
+            } else if (score >= 80) {
+                moderate.add(new DataRisk(pkg, score, minutes, hoursSinceUse, rarelyUsedButActive));
             }
         }
 
-    } catch (Throwable t) {
-        ok = false;
-    }
-
-    if (!ok) {
-    	dataVerdict = "STABLE";
-        // ROM blocked / no access → open global settings safely + branded dialog
-        showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 3 — Δεδομένα" : "STEP 3 — Data Usage"),
-                gr
-                        ? "Θέλουμε να σου δείξουμε ποια apps «τρώνε» δεδομένα.\n\n"
-                        + "Σε ορισμένες ROM αυτό το μενού δεν επιτρέπει απευθείας ανάγνωση.\n"
-                        + "Θα ανοίξουμε τις ρυθμίσεις δεδομένων για να το δεις χειροκίνητα.\n\n"
-                        + "Επέστρεψε και πάτησε OK για να συνεχίσουμε."
-                        : "We want to show you which apps consume the most data.\n\n"
-                        + "On some ROMs, direct access is restricted.\n"
-                        + "We will open data settings so you can review it manually.\n\n"
-                        + "Return and press OK to continue.",
-                () -> safeStartActivity(
-                        "data_usage",
-                        Settings.ACTION_DATA_USAGE_SETTINGS,
-                        "android.settings.DATA_USAGE_SETTINGS",
-                        Settings.ACTION_WIRELESS_SETTINGS,
-                        Settings.ACTION_SETTINGS
-                ),
-                () -> go(STEP_APPS),
-                false
-        );
-        return;
-    }
+    } catch (Throwable ignore) {}
 
     if (heavy.isEmpty() && moderate.isEmpty()) {
-    	dataVerdict = "STABLE";
+        dataVerdict = "STABLE";
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
                 gr
                         ? "Engine Verdict: STABLE\n\n"
-                        + "Δεν βρέθηκαν εφαρμογές με ασυνήθιστη χρήση δεδομένων (48 ώρες)."
+                        + "Δεν εντοπίστηκαν ύποπτες ή βαριές συμπεριφορές χρήσης (48 ώρες)."
                         : "Engine Verdict: STABLE\n\n"
-                        + "No apps with unusual data usage detected (48 hours).",
+                        + "No suspicious or heavy usage behaviour detected (48 hours).",
                 null,
                 () -> go(STEP_APPS),
                 false
@@ -835,37 +741,36 @@ NetworkStats.Bucket b2 = new NetworkStats.Bucket();
         return;
     }
 
-    // Sort by MB desc
+    // Sort by SCORE desc (stable + simple)
     java.util.Comparator<DataRisk> cmp =
-            (a, b) -> Long.compare(b.mb, a.mb);
+            (a, b) -> Long.compare(b.score, a.score);
 
     java.util.Collections.sort(heavy, cmp);
     java.util.Collections.sort(moderate, cmp);
 
     // UI
-    android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+    ScrollView scroll = new ScrollView(this);
     LinearLayout root = buildBaseBox(
-            gr ? "Data Intelligence Report (48 ώρες)"
-               : "Data Intelligence Report (48 hours)"
+            gr ? "Data Behaviour Intelligence (48 ώρες)"
+               : "Data Behaviour Intelligence (48 hours)"
     );
     scroll.addView(root);
 
     final String verdict = !heavy.isEmpty() ? "HEAVY" : "MODERATE";
-    dataVerdict = verdict;   // 👈 ΠΡΟΣΘΗΚΗ
+    dataVerdict = verdict;
 
     addEngineVerdictData(root, verdict, heavy.size(), moderate.size());
 
-    // Explain what user is seeing (more explanatory)
     TextView explain = new TextView(this);
     explain.setText(
             gr
-                    ? "Δείχνουμε μόνο εφαρμογές με Μέτρια ή Υψηλή χρήση δεδομένων.\n\n"
-                    + "• High Activity = μεγάλος όγκος δεδομένων\n"
-                    + "• 💤 Rarely Used but active = λίγη χρήση από εσένα, αλλά κατανάλωση δεδομένων\n\n"
+                    ? "Αυτή είναι behavioural ανάλυση (όχι MB).\n\n"
+                    + "• High Activity = πολλή χρήση εφαρμογής\n"
+                    + "• 💤 Rarely Used but active = λίγη χρήση από εσένα, αλλά πρόσφατη/ύποπτη δραστηριότητα\n\n"
                     + "Πάτα σε μια εφαρμογή για ενέργειες."
-                    : "We show only apps with Moderate or Heavy data usage.\n\n"
-                    + "• High Activity = large data volume\n"
-                    + "• 💤 Rarely Used but active = you barely used it, but it consumed data\n\n"
+                    : "This is behavioural analysis (not MB).\n\n"
+                    + "• High Activity = heavy app usage\n"
+                    + "• 💤 Rarely Used but active = you barely used it, but it shows recent/suspicious activity\n\n"
                     + "Tap an app for actions."
     );
     explain.setTextColor(0xFFAAAAAA);
@@ -876,7 +781,7 @@ NetworkStats.Bucket b2 = new NetworkStats.Bucket();
         addSection(
                 root,
                 gr ? "🔥 High Activity" : "🔥 High Activity",
-                gr ? "Εφαρμογές με σημαντική κατανάλωση δεδομένων." : "Apps with significant data usage.",
+                gr ? "Εφαρμογές με πολύ υψηλή δραστηριότητα." : "Apps with very high activity.",
                 0xFFFF5252
         );
         addDataRows(root, heavy);
@@ -892,71 +797,35 @@ NetworkStats.Bucket b2 = new NetworkStats.Bucket();
         addDataRows(root, moderate);
     }
 
-    Button ok = mkGreenBtn("OK");
-    ok.setOnClickListener(v -> go(STEP_APPS));
-    root.addView(ok);
+    Button okBtn = mkGreenBtn("OK");
+    okBtn.setOnClickListener(v -> go(STEP_APPS));
+    root.addView(okBtn);
 
     showCustomDialog(scroll);
 }
 
 // ============================================================
-// DATA RISK MODEL
+// DATA RISK MODEL (NO BYTES, SCORE ONLY)
 // ============================================================
-
 private static class DataRisk {
     final String pkg;
-    final long mb;
-    final long fgMinutes;
+    final long score;          // behavioural index
+    final long fgMinutes;      // foreground minutes in 48h
+    final long hoursSinceUse;  // hours since last used
     final boolean rarelyUsedButActive;
 
-    DataRisk(String p, long m, long fg, boolean r) {
+    DataRisk(String p, long s, long fg, long h, boolean r) {
         pkg = p;
-        mb = m;
+        score = s;
         fgMinutes = fg;
+        hoursSinceUse = h;
         rarelyUsedButActive = r;
     }
 }
 
 // ============================================================
-// FOREGROUND MINUTES MAP (for "rarely used but active")
+// UI: ENGINE VERDICT
 // ============================================================
-
-private java.util.HashMap<String, Long> getForegroundMinutesMap(long start, long end) {
-
-    java.util.HashMap<String, Long> map = new java.util.HashMap<>();
-
-    try {
-        android.app.usage.UsageStatsManager usm =
-                (android.app.usage.UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
-
-        java.util.List<android.app.usage.UsageStats> stats =
-                usm.queryUsageStats(
-                        android.app.usage.UsageStatsManager.INTERVAL_DAILY,
-                        start,
-                        end
-                );
-
-        if (stats == null) return map;
-
-        for (android.app.usage.UsageStats u : stats) {
-            if (u == null) continue;
-            String pkg = u.getPackageName();
-            if (pkg == null) continue;
-            long mins = u.getTotalTimeInForeground() / 60000;
-            if (mins <= 0) continue;
-            Long cur = map.get(pkg);
-            map.put(pkg, (cur == null ? 0L : cur) + mins);
-        }
-
-    } catch (Throwable ignore) {}
-
-    return map;
-}
-
-// ============================================================
-// UI: ENGINE VERDICT + ROWS
-// ============================================================
-
 private void addEngineVerdictData(LinearLayout root,
                                   String verdict,
                                   int heavyCount,
@@ -984,30 +853,32 @@ private void addEngineVerdictData(LinearLayout root,
     rec.setText(
             verdict.equals("HEAVY")
                     ? (gr
-                        ? "Πρόταση: Περιόρισε δεδομένα στο παρασκήνιο ή απεγκατέστησε εφαρμογές που δεν χρειάζεσαι."
-                        : "Recommendation: Restrict background data or uninstall apps you don’t need.")
+                    ? "Πρόταση: Έλεγξε background περιορισμούς και αφαίρεσε apps που δεν χρειάζεσαι."
+                    : "Recommendation: Review background limits and uninstall apps you don’t need.")
                     : (gr
-                        ? "Πρόταση: Έλεγξε αν κάποιες εφαρμογές κάνουν ενημερώσεις/συγχρονισμό χωρίς λόγο."
-                        : "Recommendation: Check if apps sync/update unnecessarily.")
+                    ? "Πρόταση: Έλεγξε αν κάποιες εφαρμογές συγχρονίζουν/τρέχουν χωρίς λόγο."
+                    : "Recommendation: Check if apps sync/run unnecessarily.")
     );
     rec.setTextColor(0xFFAAAAAA);
     rec.setPadding(0, 0, 0, 26);
     root.addView(rec);
 }
 
+// ============================================================
+// UI: ROWS
+// ============================================================
 private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
 
-    final android.content.pm.PackageManager pm = getPackageManager();
+    final PackageManager pm = getPackageManager();
 
     int shown = 0;
     for (DataRisk r : list) {
 
-        // Safety limit to avoid huge UI
         if (++shown > 12) break;
 
         String label = r.pkg;
         try {
-            android.content.pm.ApplicationInfo ai = pm.getApplicationInfo(r.pkg, 0);
+            ApplicationInfo ai = pm.getApplicationInfo(r.pkg, 0);
             CharSequence cs = pm.getApplicationLabel(ai);
             if (cs != null) label = cs.toString();
         } catch (Throwable ignore) {}
@@ -1028,12 +899,15 @@ private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
                 : (gr ? "High Activity" : "High Activity");
 
         meta.setText(
-                (gr ? "Δεδομένα: " : "Data: ") + r.mb + " MB"
-                + "  |  "
-                + (gr ? "Χρήση: " : "Use: ") + r.fgMinutes + (gr ? " λεπτά" : " min")
-                + "\n"
-                + tag
+                (gr ? "Δείκτης: " : "Index: ") + r.score
+                        + "  |  "
+                        + (gr ? "Χρήση: " : "Use: ") + r.fgMinutes + (gr ? " λεπτά (48h)" : " min (48h)")
+                        + "\n"
+                        + (gr ? "Τελευταία χρήση: " : "Last used: ") + r.hoursSinceUse + (gr ? " ώρες πριν" : "h ago")
+                        + "\n"
+                        + tag
         );
+
         meta.setTextColor(0xFF00FF7F);
         meta.setPadding(0, 8, 0, 10);
 
@@ -1041,27 +915,26 @@ private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
         btnRow.setGravity(Gravity.CENTER);
 
-        Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
+        Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
 
-        restrict.setOnClickListener(v -> openAppDetails(r.pkg));
+        details.setOnClickListener(v -> openAppDetails(r.pkg));
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
 
         LinearLayout.LayoutParams lp =
                 new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         lp.setMargins(dp(6), 0, dp(6), 0);
 
-        restrict.setLayoutParams(lp);
+        details.setLayoutParams(lp);
         uninstall.setLayoutParams(lp);
 
-        btnRow.addView(restrict);
+        btnRow.addView(details);
         btnRow.addView(uninstall);
 
         row.addView(name);
         row.addView(meta);
         row.addView(btnRow);
 
-        // divider
         View div = new View(this);
         div.setBackgroundColor(0xFF222222);
         LinearLayout.LayoutParams dlp =
