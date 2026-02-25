@@ -97,7 +97,7 @@ public static void deepClean(Context ctx, LogCallback cb) {
         // --------------------------------------------------------
         try {
 
-            Intent deviceStorage = new Intent(Settings.ACTION_DEVICE_STORAGE_SETTINGS);
+            Intent deviceStorage = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
             deviceStorage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
             if (DualPaneManager.isDualPaneActive(ctx)) {
