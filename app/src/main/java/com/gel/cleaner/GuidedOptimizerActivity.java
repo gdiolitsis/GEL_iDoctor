@@ -100,14 +100,19 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
 
     if (root == null || list == null || list.isEmpty()) return;
 
-    final int LIMIT = 12; // safety UI cap
+    final int LIMIT = 12;
     int shown = 0;
 
     for (AppRisk r : list) {
-        if (r == null) continue;
-        addAppRow(root, r);   // uses your existing row renderer
-        shown++;
-        if (shown >= LIMIT) break;
+
+        if (++shown > LIMIT) break;
+
+        // --- simple inline row ---
+        TextView tv = new TextView(this);
+        tv.setText("• " + r.packageName + "  (" + r.minutes + " min)");
+        tv.setTextColor(0xFF00FF7F);
+        tv.setPadding(0, dp(8), 0, dp(8));
+        root.addView(tv);
     }
 
     if (list.size() > LIMIT) {
