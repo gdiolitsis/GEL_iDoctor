@@ -54,6 +54,9 @@ private TextView welcomeMessage;
 private TextView txtLogs;
 private ScrollView scroll;
 
+private static final String PREFS_GEL = "gel_prefs";
+private static final String KEY_WELCOME_SHOWN = "welcome_shown";
+
 // =========================================================
 // PREFS
 // =========================================================
@@ -92,8 +95,14 @@ protected void onCreate(Bundle savedInstanceState) {
 boolean forceWelcome =
         getIntent().getBooleanExtra("force_welcome", false);
 
-if (forceWelcome || !isWelcomeDisabled()) {
-    showWelcomePopup();
+if (savedInstanceState == null) {
+
+    boolean forceWelcome =
+            getIntent().getBooleanExtra("force_welcome", false);
+
+    if (forceWelcome || !isWelcomeDisabled()) {
+        showWelcomePopup();
+    }
 }
 
     // ================= APPLY PLATFORM UI =================
