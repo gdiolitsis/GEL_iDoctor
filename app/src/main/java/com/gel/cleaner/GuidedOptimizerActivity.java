@@ -1900,8 +1900,6 @@ private void addBatteryAppList(LinearLayout root,
 
         if (++shown > 12) break;
 
-        String label = r.packageName;
-
         try {
             ApplicationInfo ai = pm.getApplicationInfo(r.packageName, 0);
             CharSequence cs = pm.getApplicationLabel(ai);
