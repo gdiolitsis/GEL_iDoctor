@@ -5,6 +5,8 @@ package com.gel.cleaner;
 
 import android.app.AlertDialog;
 import android.app.AppOpsManager;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
 import android.app.usage.StorageStats;
 import android.app.usage.StorageStatsManager;
 import android.content.Context;
