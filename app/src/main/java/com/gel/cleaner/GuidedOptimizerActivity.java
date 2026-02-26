@@ -55,27 +55,75 @@ private String appsVerdict = "STABLE";
     private static final int STEP_QUEST    = 7;
     private static final int STEP_LABS     = 8;
     private static final int STEP_REMINDER = 9;
-    private static final int STEP_DONE     = 10;
-    private static final int STEP_FINAL = 11;
+    private static final int STEP_FINAL = 10;
 
     private final ArrayList<String> symptoms = new ArrayList<>();
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        gr = AppLang.isGreek(this);
-        go(STEP_INTRO);
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+
+    gr = AppLang.isGreek(this);
+
+    // RESTORE CURRENT STEP (so we don't restart intro after returning / recreation)
+    if (savedInstanceState != null) {
+        step = savedInstanceState.getInt("gel_step", STEP_INTRO);
+        returnedFromUsageScreen = savedInstanceState.getBoolean("gel_returned_usage", false);
+
+        batteryVerdict = savedInstanceState.getString("gel_battery_verdict", "STABLE");
+        dataVerdict    = savedInstanceState.getString("gel_data_verdict", "STABLE");
+        appsVerdict    = savedInstanceState.getString("gel_apps_verdict", "STABLE");
+
+        ArrayList<String> s = savedInstanceState.getStringArrayList("gel_symptoms");
+        symptoms.clear();
+        if (s != null) symptoms.addAll(s);
+
+        // continue from where we left off
+        go(step);
+        return;
     }
-    
-    @Override
+
+    // FIRST LAUNCH ONLY
+    go(STEP_INTRO);
+}
+
+@Override
+protected void onSaveInstanceState(Bundle out) {
+    super.onSaveInstanceState(out);
+
+    out.putInt("gel_step", step);
+    out.putBoolean("gel_returned_usage", returnedFromUsageScreen);
+
+    out.putString("gel_battery_verdict", batteryVerdict);
+    out.putString("gel_data_verdict", dataVerdict);
+    out.putString("gel_apps_verdict", appsVerdict);
+
+    out.putStringArrayList("gel_symptoms", new ArrayList<>(symptoms));
+}
+
+@Override
 protected void onResume() {
     super.onResume();
 
+    // If we returned from Usage Access screen, just clear the flag.
+    // Do NOT restart flow here.
     if (returnedFromUsageScreen) {
         returnedFromUsageScreen = false;
+    }
+}
 
-        if (hasUsageAccess()) {
-        }
+// ============================================================
+// ✅ SYSTEM APP FILTER (DROP SYSTEM APPS FROM GUIDED LISTS)
+// Paste inside GuidedOptimizerActivity (anywhere in class scope)
+// ============================================================
+private boolean isSystemPkg(String pkg) {
+    if (pkg == null) return true;
+    try {
+        ApplicationInfo ai = getPackageManager().getApplicationInfo(pkg, 0);
+        return (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0
+                || (ai.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+    } catch (Throwable t) {
+        return true; // safest
     }
 }
 
@@ -189,7 +237,6 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
     case STEP_LABS: showLabRecommendation(); break;
     case STEP_REMINDER: showReminder(); break;
     case STEP_FINAL: showFinalVerdict(); break;
-    case STEP_DONE: finish(); break;
     }
 } 
 
@@ -348,6 +395,11 @@ if (stats == null || stats.isEmpty()) {
     return;
 }
 
+// ============================================================
+// ✅ BATTERY STEP — MERGE + FILTER (NO SYSTEM APPS)
+// Replace your whole "MERGE FG+BG ... suspiciousApps ... heavyApps/moderateApps" block with this
+// ============================================================
+
 // 🔽 MERGE FG + BG
 HashMap<String, Long> mergedFgMinutes = new HashMap<>();
 HashMap<String, Long> mergedBgMinutes = new HashMap<>();
@@ -360,10 +412,11 @@ for (UsageStats u : stats) {
     if (pkg == null) continue;
     if (pkg.equals(getPackageName())) continue;
 
+    // ✅ DROP SYSTEM APPS
+    if (isSystemPkg(pkg)) continue;
+
     long fg = 0L;
-    try {
-        fg = u.getTotalTimeInForeground() / 60000L;
-    } catch (Throwable ignore) {}
+    try { fg = u.getTotalTimeInForeground() / 60000L; } catch (Throwable ignore) {}
 
     long bg = 0L;
     try {
@@ -379,6 +432,28 @@ for (UsageStats u : stats) {
     mergedBgMinutes.put(pkg, (curBg == null ? 0L : curBg) + bg);
 }
 
+// ✅ Only 3rd-party suspicious apps
+ArrayList<AppRisk> suspiciousApps = new ArrayList<>();
+
+for (String pkg : mergedBgMinutes.keySet()) {
+
+    if (pkg == null) continue;
+    if (pkg.equals(getPackageName())) continue;
+
+    // ✅ DROP SYSTEM APPS (double safety)
+    if (isSystemPkg(pkg)) continue;
+
+    long fgMinutes = mergedFgMinutes.get(pkg) != null ? mergedFgMinutes.get(pkg) : 0L;
+    long bgMinutes = mergedBgMinutes.get(pkg) != null ? mergedBgMinutes.get(pkg) : 0L;
+
+    // ✅ RULE: only background without opening
+    boolean userOpened = fgMinutes > 0;
+    boolean bgNoOpen = (!userOpened && bgMinutes > 0);
+    if (!bgNoOpen) continue;
+
+    suspiciousApps.add(new AppRisk(pkg, bgMinutes, false));
+}
+
 PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
 
 ArrayList<AppRisk> heavyApps = new ArrayList<>();
@@ -389,39 +464,29 @@ for (String pkg : mergedBgMinutes.keySet()) {
     if (pkg == null) continue;
     if (pkg.equals(getPackageName())) continue;
 
-    long fgMinutes =
-            mergedFgMinutes.get(pkg) != null
-                    ? mergedFgMinutes.get(pkg)
-                    : 0L;
+    // ✅ DROP SYSTEM APPS
+    if (isSystemPkg(pkg)) continue;
 
-    long bgMinutes =
-            mergedBgMinutes.get(pkg) != null
-                    ? mergedBgMinutes.get(pkg)
-                    : 0L;
+    long fgMinutes = mergedFgMinutes.get(pkg) != null ? mergedFgMinutes.get(pkg) : 0L;
+    long bgMinutes = mergedBgMinutes.get(pkg) != null ? mergedBgMinutes.get(pkg) : 0L;
 
-    // ✅ ΚΑΝΟΝΑΣ: μόνο background χωρίς άνοιγμα
+    // ✅ RULE: only background without opening
     boolean userOpened = fgMinutes > 0;
     boolean bgNoOpen = (!userOpened && bgMinutes > 0);
     if (!bgNoOpen) continue;
 
     boolean unrestricted = false;
-    try {
-        unrestricted = pm != null && pm.isIgnoringBatteryOptimizations(pkg);
-    } catch (Throwable ignore) {}
+    try { unrestricted = pm != null && pm.isIgnoringBatteryOptimizations(pkg); } catch (Throwable ignore) {}
 
     int score;
-
     if (bgMinutes >= 120) score = 3;          // HEAVY
     else if (bgMinutes >= 45) score = 2;      // MODERATE
     else score = 1;                           // LOW
 
-    if (unrestricted && score >= 2)
-        score++; // elevate if unrestricted
+    if (unrestricted && score >= 2) score++;  // elevate if unrestricted
 
-    if (score >= 3)
-        heavyApps.add(new AppRisk(pkg, bgMinutes, unrestricted));
-    else if (score == 2)
-        moderateApps.add(new AppRisk(pkg, bgMinutes, unrestricted));
+    if (score >= 3) heavyApps.add(new AppRisk(pkg, bgMinutes, unrestricted));
+    else if (score == 2) moderateApps.add(new AppRisk(pkg, bgMinutes, unrestricted));
 }
 
 // ✅ STABLE
@@ -739,8 +804,8 @@ private void addRecommendations(LinearLayout root,
                 : "Restrict background activity or uninstall unnecessary high-impact apps.";
     } else {
         rec = gr
-                ? "Έλεγξε τις εφαρμογές μέτριας δραστηριότητας."
-                : "Review moderate activity apps.";
+                ? "Έλεγξε τις παρακάτω εφαρμογές."
+                : "Review listed apps.";
     }
 
     tv.setText(rec);
@@ -1769,8 +1834,8 @@ try {
 
 if (isSystem) {
     meta.append(gr
-        ? "  |  ⚙️ Εφαρμογή Συστήματος (Απαιτείται Root)"
-        : "  |  ⚙️ System App (Root required)");
+        ? "  |  ⚙️ Εφαρμογή Συστήματος."
+        : "  |  ⚙️ System App.");
 }
 
         meta.setTextColor(0xFF00FF7F);
@@ -1818,6 +1883,21 @@ private void addBatteryAppList(LinearLayout root,
 
     for (AppRisk r : list) {
 
+        if (r == null || r.packageName == null) continue;
+
+        // ✅ ΜΗΝ εμφανίζεις system apps
+        if (isSystemPkg(r.packageName)) continue;
+
+        if (++shown > 12) break;
+
+        String label = r.packageName;
+
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(r.packageName, 0);
+            CharSequence cs = pm.getApplicationLabel(ai);
+            if (cs != null) label = cs.toString();
+        } catch (Throwable ignore) {}
+
         if (++shown > 12) break;
 
         String label = r.packageName;
@@ -1860,8 +1940,8 @@ meta.setPadding(0, 6, 0, 12);
         
         if (isSystem) {
     meta.append(gr
-        ? "  |  ⚙️ Εφαρμογή Συστήματος (Απαιτείται Root)"
-        : "  |  ⚙️ System App (Root required)");
+        ? "  |  ⚙️ Εφαρμογή Συστήματος."
+        : "  |  ⚙️ System App.");
 }
 
         LinearLayout btnRow = new LinearLayout(this);
