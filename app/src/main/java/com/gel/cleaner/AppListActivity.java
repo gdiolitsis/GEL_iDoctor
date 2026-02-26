@@ -153,11 +153,11 @@ if (autoLargest) {
 
         // SORT (TOGGLE)
         if (btnSortCache != null) {
-            btnSortCache.setOnClickListener(v -> {
-                sortByCacheBiggest = !sortByCacheBiggest;
-                applyFiltersAndSort();
-            });
-        }
+    btnSortCache.setOnClickListener(v -> {
+        sortByCacheBiggest = true;
+        applyFiltersAndSort();
+    });
+}
 
 // GLOBAL SELECT (TOGGLE)
 if (btnSelectAll != null) {
