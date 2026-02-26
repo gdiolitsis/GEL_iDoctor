@@ -665,23 +665,39 @@ private void showData() {
 
     try {
 
-        UsageStatsManager usm =
-                (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+    UsageStatsManager usm =
+            (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
 
-        List<UsageStats> stats =
-        usm != null
-                ? usm.queryUsageStats(
-                        UsageStatsManager.INTERVAL_DAILY,
-                        start,
-                        now
-                )
-                : null;
+    List<UsageStats> stats =
+            usm != null
+                    ? usm.queryUsageStats(
+                            UsageStatsManager.INTERVAL_DAILY,
+                            start,
+                            now
+                    )
+                    : null;
 
-// 🔽 MERGE 48h DAILY BUCKETS
-HashMap<String, Long> mergedMinutes = new HashMap<>();
-HashMap<String, Long> mergedLastUsed = new HashMap<>();
+    if (stats == null || stats.isEmpty()) {
+        dataVerdict = "STABLE";
+        showDialog(
+                progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων"
+                                 : "STEP 3 — Data Analysis"),
+                gr
+                        ? "Engine Verdict: STABLE\n\n"
+                        + "Δεν υπάρχουν διαθέσιμα usage στοιχεία (48 ώρες)."
+                        : "Engine Verdict: STABLE\n\n"
+                        + "No usage stats available (48 hours).",
+                null,
+                () -> go(STEP_APPS),
+                false
+        );
+        return;
+    }
 
-if (stats != null) {
+    // 🔽 MERGE 48h DAILY BUCKETS
+    HashMap<String, Long> mergedMinutes = new HashMap<>();
+    HashMap<String, Long> mergedLastUsed = new HashMap<>();
+
     for (UsageStats u : stats) {
 
         if (u == null) continue;
@@ -701,70 +717,48 @@ if (stats != null) {
         }
     }
 
-        if (stats == null || stats.isEmpty()) {
-            dataVerdict = "STABLE";
-            showDialog(
-                    progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
-                    gr
-                            ? "Engine Verdict: STABLE\n\n"
-                            + "Δεν υπάρχουν διαθέσιμα usage στοιχεία (48 ώρες)."
-                            : "Engine Verdict: STABLE\n\n"
-                            + "No usage stats available (48 hours).",
-                    null,
-                    () -> go(STEP_APPS),
-                    false
-            );
-            return;
+    PackageManager pm = getPackageManager();
+
+    for (String pkg : mergedMinutes.keySet()) {
+
+        if (pkg == null) continue;
+        if (pkg.equals(getPackageName())) continue;
+
+        long minutes = mergedMinutes.get(pkg);
+        if (minutes < 1) continue;
+
+        Long lastObj = mergedLastUsed.get(pkg);
+        long lastUsed = lastObj != null ? lastObj : 0L;
+
+        long hoursSinceUse =
+                lastUsed > 0
+                        ? (now - lastUsed) / (1000L * 60 * 60)
+                        : 999999;
+
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
+            boolean isSystem =
+                    (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+            if (isSystem) continue;
+        } catch (Throwable ignore) {}
+
+        boolean rarelyUsedButActive =
+                (minutes <= 5 && hoursSinceUse <= 12);
+
+        long score =
+                (minutes * 2)
+                        + (rarelyUsedButActive ? 30 : 0);
+
+        if (score >= 240) {
+            heavy.add(new DataRisk(pkg, score, minutes,
+                    hoursSinceUse, rarelyUsedButActive));
+        } else if (score >= 80) {
+            moderate.add(new DataRisk(pkg, score, minutes,
+                    hoursSinceUse, rarelyUsedButActive));
         }
+    }
 
-        PackageManager pm = getPackageManager();
-
-        for (String pkg : mergedMinutes.keySet()) {
-
-    if (pkg == null) continue;
-    if (pkg.equals(getPackageName())) continue;
-
-    long minutes = mergedMinutes.get(pkg);
-    if (minutes < 1) continue;
-
-    Long lastObj = mergedLastUsed.get(pkg);
-    long lastUsed = lastObj != null ? lastObj : 0L;
-
-    long hoursSinceUse = lastUsed > 0
-            ? (now - lastUsed) / (1000L * 60 * 60)
-            : 999999;
-
-            // skip core system apps (keep consistent with your apps flow)
-            try {
-                ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
-                boolean isSystem = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-                if (isSystem) continue;
-            } catch (Throwable ignore) {}
-
-            // ----------------------------------------------------
-            // HEURISTIC "DATA BEHAVIOUR" (no bytes, no lies)
-            // ----------------------------------------------------
-            // idea:
-            // - lots of foreground time => high activity
-            // - "rarely used but active": small minutes, but very recent last used (background-ish behaviour)
-            boolean rarelyUsedButActive =
-                    (minutes <= 5 && hoursSinceUse <= 12);
-
-            long score =
-                    (minutes * 2)
-                    + (rarelyUsedButActive ? 30 : 0);
-
-            // thresholds (tuned for 48h window)
-            // HEAVY: score >= 240  (ex: 120min foreground)
-            // MOD:   score >= 80
-            if (score >= 240) {
-                heavy.add(new DataRisk(pkg, score, minutes, hoursSinceUse, rarelyUsedButActive));
-            } else if (score >= 80) {
-                moderate.add(new DataRisk(pkg, score, minutes, hoursSinceUse, rarelyUsedButActive));
-            }
-        }
-
-    } catch (Throwable ignore) {}
+} catch (Throwable ignore) {}
 
     if (heavy.isEmpty() && moderate.isEmpty()) {
         dataVerdict = "STABLE";
@@ -1251,6 +1245,7 @@ if (stats != null) {
                 lastUsedMap.put(pkg, last);
             }
         }
+    }
     }
 
         // ----------------------------------------------------
