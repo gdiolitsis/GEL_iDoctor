@@ -977,7 +977,7 @@ private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
         Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
         Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
-restrict.setOnClickListener(v -> openBatterySettings(r.packageName));
+restrict.setOnClickListener(v -> openBatterySettings(r.pkg);
 
         details.setOnClickListener(v -> openAppDetails(r.pkg));
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
@@ -1406,7 +1406,7 @@ if (stats != null) {
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
         Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
         Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
-restrict.setOnClickListener(v -> openBatterySettings(r.packageName));
+restrict.setOnClickListener(v -> openBatterySettings(r.pkg);
 
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
         details.setOnClickListener(v -> openAppDetails(r.pkg));
@@ -1573,7 +1573,7 @@ private void addAppList(LinearLayout root,
         Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
         Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
-restrict.setOnClickListener(v -> openBatterySettings(r.packageName));
+restrict.setOnClickListener(v -> openBatterySettings(r.pkg);
 
         details.setOnClickListener(v -> openAppDetails(r.pkg));
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
