@@ -348,8 +348,11 @@ private void showBattery() {
         batteryVerdict = "STABLE";
 
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 2 — Ανάλυση Δραστηριότητας"
-                                 : "STEP 2 — Activity Analysis"),
+        progressTitle(
+                gr
+                        ? "ΒΗΜΑ 2 — Κατανάλωση Μπαταρίας (48 ώρες)"
+                        : "STEP 2 — Battery Consumption (48 hours)"
+        ),
                 gr
                         ? "Για να αναλύσουμε τη δραστηριότητα εφαρμογών,\n"
                         + "απαιτείται πρόσβαση Χρήσης Εφαρμογών.\n\n"
@@ -499,13 +502,14 @@ if (heavyApps.isEmpty() && moderateApps.isEmpty()) {
     ScrollView scroll = new ScrollView(this);
 
     LinearLayout root = buildBaseBox(
-    progressTitle(
-        gr ? "ΒΗΜΑ 2 — Κατανάλωση Μπαταρίας (48 ώρες)"
-   : "STEP 2 — Battery Consumption (48 hours)"
-    )
+        progressTitle(
+                gr
+                        ? "ΒΗΜΑ 2 — Κατανάλωση Μπαταρίας (48 ώρες)"
+                        : "STEP 2 — Battery Consumption (48 hours)"
+        )
 );
 
-    scroll.addView(root);
+scroll.addView(root);
 
     boolean suspiciousBattery = false;
 boolean legitHeavyUse = false;
@@ -574,17 +578,20 @@ showCustomDialog(scroll);
 private void showStableDialog() {
 
     showDialog(
-            progressTitle(gr ? "ΒΗΜΑ 2 — Ανάλυση"
-                             : "STEP 2 — Analysis"),
-            gr
-                    ? "Engine Verdict: STABLE\n\n"
-                    + "Δεν εντοπίστηκε ασυνήθιστη δραστηριότητα."
-                    : "Engine Verdict: STABLE\n\n"
-                    + "No abnormal activity detected.",
-            null,
-            () -> go(STEP_DATA),
-            false
-    );
+        progressTitle(
+                gr
+                        ? "ΒΗΜΑ 2 — Κατανάλωση Μπαταρίας (48 ώρες)"
+                        : "STEP 2 — Battery Consumption (48 hours)"
+        ),
+        gr
+                ? "Engine Verdict: STABLE\n\n"
+                  + "Δεν εντοπίστηκε δραστηριότητα εφαρμογών στο παρασκήνιο, χωρίς να τις ανοίξεις (48 ώρες)."
+                : "Engine Verdict: STABLE\n\n"
+                  + "No background app activity without opening, was detected (48 hours).",
+        null,
+        () -> go(STEP_DATA),
+        false
+);
 }
 
 private void showFinalVerdict() {
@@ -825,8 +832,12 @@ private void showData() {
     if (!hasUsageAccess()) {
         dataVerdict = "STABLE";
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
-                gr
+                progressTitle(
+    gr
+        ? "ΒΗΜΑ 3 — Κατανάλωση Δεδομένων (48 ώρες)"
+        : "STEP 3 — Data Consumption (48 hours)"
+);
+   
                         ? "Για να κάνουμε premium ανάλυση δεδομένων,\n"
                         + "χρειαζόμαστε πρόσβαση Χρήσης Εφαρμογών.\n\n"
                         + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL."
@@ -864,19 +875,25 @@ private void showData() {
     if (stats == null || stats.isEmpty()) {
         dataVerdict = "STABLE";
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων"
-                                 : "STEP 3 — Data Analysis"),
+        progressTitle(
                 gr
-                        ? "Engine Verdict: STABLE\n\n"
-                        + "Δεν υπάρχουν διαθέσιμα usage στοιχεία (48 ώρες)."
-                        : "Engine Verdict: STABLE\n\n"
-                        + "No usage stats available (48 hours).",
-                null,
-                () -> go(STEP_APPS),
-                false
-        );
-        return;
-    }
+                        ? "ΒΗΜΑ 3 — Κατανάλωση Δεδομένων (48 ώρες)"
+                        : "STEP 3 — Data Consumption (48 hours)"
+        ),
+        gr
+                ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
+                  + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
+                  + "Engine Verdict: STABLE\n\n"
+                  + "Δεν υπάρχουν διαθέσιμα στοιχεία χρήσης (48 ώρες)."
+                : "Results refer to apps you did not open in the last 48 hours,\n"
+                  + "but showed background activity.\n\n"
+                  + "Engine Verdict: STABLE\n\n"
+                  + "No usage stats available (48 hours).",
+        null,
+        () -> go(STEP_APPS),
+        false
+);
+return;
 
 // 🔽 MERGE 48h DAILY BUCKETS
 HashMap<String, Long> mergedFgMinutes = new HashMap<>();
@@ -990,18 +1007,25 @@ try {
     if (heavy.isEmpty() && moderate.isEmpty()) {
         dataVerdict = "STABLE";
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
+        progressTitle(
                 gr
-                        ? "Engine Verdict: STABLE\n\n"
-    + "Δεν εντοπίστηκε ύποπτη ή βαριά δραστηριότητα χρήσης (48 ώρες)."
-: "Engine Verdict: STABLE\n\n"
-    + "No suspicious or heavy usage activity detected (48 hours).",
-                null,
-                () -> go(STEP_APPS),
-                false
-        );
-        return;
-    }
+                        ? "ΒΗΜΑ 3 — Κατανάλωση Δεδομένων (48 ώρες)"
+                        : "STEP 3 — Data Consumption (48 hours)"
+        ),
+        gr
+                ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
+                  + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
+                  + "Engine Verdict: STABLE\n\n"
+                  + "Δεν εντοπίστηκε ύποπτη ή βαριά δραστηριότητα χρήσης (48 ώρες)."
+                : "Results refer to apps you did not open in the last 48 hours,\n"
+                  + "but showed background activity.\n\n"
+                  + "Engine Verdict: STABLE\n\n"
+                  + "No suspicious or heavy usage activity detected (48 hours).",
+        null,
+        () -> go(STEP_APPS),
+        false
+);
+return;
 
     // Sort by SCORE desc (stable + simple)
     java.util.Comparator<DataRisk> cmp =
@@ -1059,20 +1083,52 @@ sectionTitle.setPadding(0, dp(12), 0, dp(10));
 root.addView(sectionTitle);
 
     TextView explain = new TextView(this);
-    explain.setText(
-            gr
-                    ? "Αυτή είναι ανάλυση συμπεριφοράς (όχι MB).\n\n"
-                    + "• High Activity = πολλή χρήση εφαρμογής\n"
-                    + "• 💤 Rarely Used but active = λίγη χρήση από εσένα, αλλά πρόσφατη δραστηριότητα\n\n"
-                    + "Πάτα σε μια εφαρμογή για ενέργειες."
-                    : "This is behavioural analysis (not MB).\n\n"
-                    + "• High Activity = heavy app usage\n"
-                    + "• 💤 Rarely Used but active = you barely used it, but it shows recent activity\n\n"
-                    + "Tap an app for actions."
-    );
-    explain.setTextColor(0xFFAAAAAA);
-    explain.setPadding(0, 0, 0, 28);
-    root.addView(explain);
+
+String fullText = gr
+        ? "Η ανάλυση βασίζεται σε δραστηριότητα στο παρασκήνιο (όχι MB).\n\n"
+        + "• High Activity = αυξημένη background δραστηριότητα\n"
+        + "• 💤 Σπάνια χρήση αλλά ενεργή = δεν άνοιξες την εφαρμογή,\n"
+        + "   αλλά παρουσίασε πρόσφατη δραστηριότητα\n\n"
+        + "Πάτα σε μια εφαρμογή για ενέργειες."
+        : "This analysis is based on background activity (not MB).\n\n"
+        + "• High Activity = elevated background activity\n"
+        + "• 💤 Rarely used but active = you did not open the app,\n"
+        + "   but it showed recent activity\n\n"
+        + "Tap an app for actions.";
+
+android.text.SpannableStringBuilder sb =
+        new android.text.SpannableStringBuilder(fullText);
+
+// Highlight labels
+String highLabel = "High Activity";
+String rareLabel = gr
+        ? "💤 Σπάνια χρήση αλλά ενεργή"
+        : "💤 Rarely used but active";
+
+int highStart = fullText.indexOf(highLabel);
+int rareStart = fullText.indexOf(rareLabel);
+
+if (highStart >= 0) {
+    int highEnd = highStart + highLabel.length();
+    sb.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+            highStart, highEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    sb.setSpan(new android.text.style.ForegroundColorSpan(0xFFFF5252),
+            highStart, highEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+}
+
+if (rareStart >= 0) {
+    int rareEnd = rareStart + rareLabel.length();
+    sb.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+            rareStart, rareEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    sb.setSpan(new android.text.style.ForegroundColorSpan(0xFFFFC107),
+            rareStart, rareEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+}
+
+explain.setText(sb);
+explain.setTextColor(0xFFAAAAAA);
+explain.setPadding(0, 0, 0, 28);
+
+root.addView(explain);
 
     if (!heavy.isEmpty()) {
         addSection(
@@ -1155,19 +1211,17 @@ private void addEngineVerdictData(LinearLayout root,
     root.addView(tv);
 
     TextView rec = new TextView(this);
-    rec.setText(
-            verdict.equals("HEAVY")
-                    ? (gr
-                    ? "Πρόταση: Έλεγξε background περιορισμούς και αφαίρεσε apps που δεν χρειάζεσαι."
-                    : "Recommendation: Review background limits and uninstall apps you don’t need.")
-                    : (gr
-                    ? "Πρόταση: Έλεγξε αν κάποιες εφαρμογές συγχρονίζουν/τρέχουν χωρίς λόγο."
-                    : "Recommendation: Check if apps sync/run unnecessarily.")
-    );
-    rec.setTextColor(0xFFAAAAAA);
-    rec.setPadding(0, 0, 0, 26);
-    root.addView(rec);
-}
+
+rec.setText(
+        gr
+                ? "Μπορείς να περιορίσεις τη δραστηριότητα στο παρασκήνιο αυτών των εφαρμογών ή να αφαιρέσεις όσες δεν χρειάζεσαι."
+                : "You can restrict background activity for these apps or remove those you don’t need."
+);
+
+rec.setTextColor(0xFFFFFFFF);
+rec.setPadding(0, 0, 0, 26);
+
+root.addView(rec);
 
 // ============================================================
 // UI: ROWS
@@ -1448,12 +1502,28 @@ if (heavy.isEmpty() && moderate.isEmpty()) {
 
     LinearLayout root = buildBaseBox(
         progressTitle(
-            gr ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
-   : "STEP 4 — App Activity (48 hours)"
+                gr
+                        ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
+                        : "STEP 4 — App Activity (48 hours)"
         )
 );
 
-    scroll.addView(root);
+scroll.addView(root);
+
+// 🔎 Explanation
+TextView explain = new TextView(this);
+explain.setText(
+        gr
+                ? "Τα αποτελέσματα αφορούν εφαρμογές που έτρεξαν στο παρασκήνιο\n"
+                  + "χωρίς να τις ανοίξεις τις τελευταίες 48 ώρες."
+                : "Results refer to apps that ran in the background\n"
+                  + "without you opening them in the last 48 hours."
+);
+
+explain.setTextColor(0xFFFFFFFF);  // λευκό
+explain.setPadding(0, dp(8), 0, dp(18));
+
+root.addView(explain);
 
 // ----------------------------------------------------
 // SMART VERDICT ENGINE (USER-AWARE)
@@ -1548,49 +1618,44 @@ if (stats != null) {
     }
     }
 
-        // ----------------------------------------------------
-        // 2️⃣ Iterate ALL installed apps
-        // ----------------------------------------------------
-        List<ApplicationInfo> installed =
-                pm.getInstalledApplications(0);
+// ----------------------------------------------------
+// 2️⃣ Iterate ALL installed apps
+// ----------------------------------------------------
+List<ApplicationInfo> installed =
+        pm.getInstalledApplications(0);
 
-        for (ApplicationInfo ai : installed) {
+for (ApplicationInfo ai : installed) {
 
-            String pkg = ai.packageName;
-            if (pkg == null) continue;
-            if (pkg.equals(getPackageName())) continue;
+    String pkg = ai.packageName;
+    if (pkg == null) continue;
+    if (pkg.equals(getPackageName())) continue;
 
-            // skip system apps
-            boolean isSystem =
-                    (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-            if (isSystem) continue;
+    // skip system apps
+    boolean isSystem =
+            (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+    if (isSystem) continue;
 
-            long installTime = 0;
-            try {
-                installTime =
-                        pm.getPackageInfo(pkg, 0).firstInstallTime;
-            } catch (Throwable ignore) {}
+    long lastUsed =
+            lastUsedMap.containsKey(pkg)
+                    ? lastUsedMap.get(pkg)
+                    : 0L;
 
-            long lastUsed =
-                    lastUsedMap.containsKey(pkg)
-                            ? lastUsedMap.get(pkg)
-                            : 0;
+    long installTime = 0L;
+    try {
+        installTime = pm.getPackageInfo(pkg, 0).firstInstallTime;
+    } catch (Throwable ignore) {}
 
-            long daysSinceUse;
+    long basis = lastUsed > 0L ? lastUsed : installTime;
 
-            if (lastUsed > 0) {
-                daysSinceUse =
-                        (now - lastUsed) / (1000L * 60 * 60 * 24);
-            } else {
-                // never used OR no recorded usage
-                daysSinceUse =
-                        (now - installTime) / (1000L * 60 * 60 * 24);
-            }
+    // Αν δεν έχουμε ούτε usage ούτε install time → skip
+    if (basis <= 0L) continue;
 
-            if (daysSinceUse >= 30) {
-                unused.add(new UnusedApp(pkg, daysSinceUse));
-            }
-        }
+    long daysSinceUse = (now - basis) / (1000L * 60 * 60 * 24);
+
+    if (daysSinceUse >= 30) {
+        unused.add(new UnusedApp(pkg, daysSinceUse));
+    }
+}
 
     } catch (Throwable ignore) {}
 
@@ -1619,16 +1684,18 @@ if (stats != null) {
     scroll.addView(root);
 
     TextView info = new TextView(this);
-    info.setText(
-            gr
-                    ? "Εφαρμογές που δεν έχουν χρησιμοποιηθεί >30 ημέρες.\n"
-                    + "Ενδέχεται να πιάνουν χώρο ή δικαιώματα."
-                    : "Apps not used for over 30 days.\n"
-                    + "They may occupy storage or hold permissions."
-    );
-    info.setTextColor(0xFFAAAAAA);
-    info.setPadding(0, 0, 0, 25);
-    root.addView(info);
+info.setText(
+        gr
+                ? "Εφαρμογές που δεν έχουν χρησιμοποιηθεί >30 ημέρες.\n"
+                  + "Ενδέχεται να πιάνουν χώρο ή δικαιώματα.\n\n"
+                  + "Συνιστάται η απεγκατάσταση όσων δεν χρειάζεσαι."
+                : "Apps not used for over 30 days.\n"
+                  + "They may occupy storage or hold permissions.\n\n"
+                  + "It is recommended to uninstall those you don’t need."
+);
+info.setTextColor(0xFFAAAAAA);
+info.setPadding(0, 0, 0, 25);
+root.addView(info);
 
     PackageManager pm = getPackageManager();
 
@@ -1998,17 +2065,17 @@ if (!isSystem) {
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 6 — Cache" : "STEP 6 — Cache"),
                 gr
-                        ? "Θα ανοίξει η λίστα εφαρμογών ταξινομημένη κατά «Μεγαλύτερη % Cache».\n\n"
+                        ? "Θα ανοίξει η λίστα εφαρμογών. Πάτησε ταξινόμηση κατά «Μεγαλύτερη % Cache».\n\n"
                         + "Καθάρισε εφαρμογές με μεγάλη προσωρινή μνήμη — ή και όλες.\n"
                         + "Στην πρώτη ομάδα θα δεις τις εφαρμογές που έχεις εγκαταστήσει.\n"
                         + "Στη δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος.\n"
                         + "Η εκκαθάριση cache είναι ασφαλής και δεν διαγράφει προσωπικά δεδομένα.\n\n"
                         + "Απόφυγε την εκκαθάριση δεδομένων εκτός αν γνωρίζεις τις συνέπειες.\n\n"
                         + "Πάτησε OK όταν ολοκληρώσεις."
-                        : "The app list will open sorted by “Largest Cache”.\n\n"
+                        : "The app list will open. Tap to sort by “Largest % Cache”.\n\n"
                         + "Clear apps with large temporary cache — or all of them if needed.\n"
-                        + "In the first group you will see apps you have installed.\n"
-                        + "In the second group you will see system applications.\n"
+                        + "In the first group you will see apps you installed.\n"
+                        + "In the second group you will see system apps.\n"
                         + "Clearing cache is safe and does not remove personal data.\n\n"
                         + "Avoid clearing app data unless you understand the consequences.\n\n"
                         + "Press OK when finished.",
