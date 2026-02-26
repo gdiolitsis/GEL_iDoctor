@@ -1104,11 +1104,10 @@ private void openAppDetails(String pkg) {
 
 private void uninstallPkg(String pkg) {
     try {
-        Intent i = new Intent(Intent.ACTION_DELETE);
-        i.setData(android.net.Uri.parse("package:" + pkg));
-        startActivity(i);
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.fromParts("package", pkg, null));
+        startActivity(intent);
     } catch (Throwable ignore) {
-        openAppDetails(pkg);
     }
 }
 
