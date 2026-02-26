@@ -1893,7 +1893,7 @@ if (!isSystem) {
     private void showCache() {
 
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 6 — Cache" : "STEP 6 — Cache")
+                progressTitle(gr ? "ΒΗΜΑ 6 — Cache" : "STEP 6 — Cache"),
                 gr
                         ? "Θα ανοίξει η λίστα εφαρμογών ταξινομημένη κατά «Μεγαλύτερη % Cache».\n\n"
                         + "Καθάρισε εφαρμογές με μεγάλη προσωρινή μνήμη — ή και όλες.\n"
