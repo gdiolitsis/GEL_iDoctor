@@ -165,24 +165,6 @@ private void hardRestart() {
 // HELPERS
 // =========================================================
 
-private boolean shouldShowWelcomeOnce() {
-    try {
-        return !getSharedPreferences(PREFS_GEL, MODE_PRIVATE)
-                .getBoolean(KEY_WELCOME_SHOWN, false);
-    } catch (Throwable ignore) {
-        return true;
-    }
-}
-
-private void markWelcomeShown() {
-    try {
-        getSharedPreferences(PREFS_GEL, MODE_PRIVATE)
-                .edit()
-                .putBoolean(KEY_WELCOME_SHOWN, true)
-                .apply();
-    } catch (Throwable ignore) {}
-}
-
 private LinearLayout buildMuteRow() {
     final boolean gr = AppLang.isGreek(this);
 
