@@ -544,9 +544,10 @@ private void showUninstallConfirmDialog() {
 
     if (!hasUsageAccess()) {
         showUsageAccessDialog();
+        return;   // ⛔ ΣΤΑΜΑΤΑΜΕ ΕΔΩ
     }
 
-    // ΠΑΝΤΑ φορτώνουμε λίστα
+    // Μόνο αν έχει permission
     new Thread(this::loadAllApps).start();
 }
 
@@ -715,27 +716,19 @@ skipBtn.setOnClickListener(v -> {
 
     private boolean hasUsageAccess() {
     try {
-        AppOpsManager appOps =
-                (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
-        if (appOps == null) return false;
+        UsageStatsManager usm =
+                (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
 
-        int mode;
+        long now = System.currentTimeMillis();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            mode = appOps.unsafeCheckOpNoThrow(
-                    AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    Process.myUid(),
-                    getPackageName()
-            );
-        } else {
-            mode = appOps.checkOpNoThrow(
-                    AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    Process.myUid(),
-                    getPackageName()
-            );
-        }
+        List<UsageStats> stats =
+                usm.queryUsageStats(
+                        UsageStatsManager.INTERVAL_DAILY,
+                        now - 1000 * 60,
+                        now
+                );
 
-        return mode == AppOpsManager.MODE_ALLOWED;
+        return stats != null && !stats.isEmpty();
 
     } catch (Throwable t) {
         return false;
