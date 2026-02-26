@@ -28,6 +28,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.List;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 
@@ -303,25 +304,20 @@ private void showBattery() {
                     now
             );
             
-            HashMap<String, Long> mergedMinutes = new HashMap<>();
-HashMap<String, Long> mergedLastUsed = new HashMap<>();
+HashMap<String, Long> mergedMinutes = new HashMap<>();
 
-for (String pkg : mergedMinutes.keySet()) {
+if (stats != null) {
+    for (UsageStats u : stats) {
 
-    if (u == null) continue;
+        if (u == null) continue;
 
-    String pkg = u.getPackageName();
-    if (pkg == null) continue;
+        String pkg = u.getPackageName();
+        if (pkg == null) continue;
 
-    long mins = u.getTotalTimeInForeground() / 60000L;
-    long last = u.getLastTimeUsed();
+        long mins = u.getTotalTimeInForeground() / 60000L;
 
-    Long cur = mergedMinutes.get(pkg);
-    mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
-
-    Long lastCur = mergedLastUsed.get(pkg);
-    if (lastCur == null || last > lastCur) {
-        mergedLastUsed.put(pkg, last);
+        Long cur = mergedMinutes.get(pkg);
+        mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
     }
 }
 
@@ -583,28 +579,6 @@ private boolean hasUsageAccess() {
                     now - 1000 * 60,
                     now
             );
-            
-            HashMap<String, Long> mergedMinutes = new HashMap<>();
-HashMap<String, Long> mergedLastUsed = new HashMap<>();
-
-for (String pkg : mergedMinutes.keySet()) {
-
-    if (u == null) continue;
-
-    String pkg = u.getPackageName();
-    if (pkg == null) continue;
-
-    long mins = u.getTotalTimeInForeground() / 60000L;
-    long last = u.getLastTimeUsed();
-
-    Long cur = mergedMinutes.get(pkg);
-    mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
-
-    Long lastCur = mergedLastUsed.get(pkg);
-    if (lastCur == null || last > lastCur) {
-        mergedLastUsed.put(pkg, last);
-    }
-}
 
     return stats != null && !stats.isEmpty();
 }
@@ -695,36 +669,37 @@ private void showData() {
                 (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
 
         List<UsageStats> stats =
-                usm != null
-                        ? usm.queryUsageStats(
-                                UsageStatsManager.INTERVAL_DAILY,
-                                start,
-                                now
-                        )
-                        
-                        HashMap<String, Long> mergedMinutes = new HashMap<>();
+        usm != null
+                ? usm.queryUsageStats(
+                        UsageStatsManager.INTERVAL_DAILY,
+                        start,
+                        now
+                )
+                : null;
+
+// 🔽 MERGE 48h DAILY BUCKETS
+HashMap<String, Long> mergedMinutes = new HashMap<>();
 HashMap<String, Long> mergedLastUsed = new HashMap<>();
 
-for (String pkg : mergedMinutes.keySet()) {
+if (stats != null) {
+    for (UsageStats u : stats) {
 
-    if (u == null) continue;
+        if (u == null) continue;
 
-    String pkg = u.getPackageName();
-    if (pkg == null) continue;
+        String pkg = u.getPackageName();
+        if (pkg == null) continue;
 
-    long mins = u.getTotalTimeInForeground() / 60000L;
-    long last = u.getLastTimeUsed();
+        long mins = u.getTotalTimeInForeground() / 60000L;
+        long last = u.getLastTimeUsed();
 
-    Long cur = mergedMinutes.get(pkg);
-    mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
+        Long cur = mergedMinutes.get(pkg);
+        mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
 
-    Long lastCur = mergedLastUsed.get(pkg);
-    if (lastCur == null || last > lastCur) {
-        mergedLastUsed.put(pkg, last);
+        Long lastCur = mergedLastUsed.get(pkg);
+        if (lastCur == null || last > lastCur) {
+            mergedLastUsed.put(pkg, last);
+        }
     }
-}
-                        
-                        : null;
 
         if (stats == null || stats.isEmpty()) {
             dataVerdict = "STABLE";
@@ -746,25 +721,18 @@ for (String pkg : mergedMinutes.keySet()) {
 
         for (String pkg : mergedMinutes.keySet()) {
 
-            if (u == null) continue;
+    if (pkg == null) continue;
+    if (pkg.equals(getPackageName())) continue;
 
-            String pkg = u.getPackageName();
-            if (pkg == null) continue;
-            if (pkg.equals(getPackageName())) continue;
+    long minutes = mergedMinutes.get(pkg);
+    if (minutes < 1) continue;
 
-            long minutes = 0;
-            try { minutes = u.getTotalTimeInForeground() / 60000L; }
-            catch (Throwable ignore) {}
+    Long lastObj = mergedLastUsed.get(pkg);
+    long lastUsed = lastObj != null ? lastObj : 0L;
 
-            if (minutes < 1) continue;
-
-            long lastUsed = 0;
-            try { lastUsed = u.getLastTimeUsed(); }
-            catch (Throwable ignore) {}
-
-            long hoursSinceUse = lastUsed > 0
-                    ? (now - lastUsed) / (1000L * 60 * 60)
-                    : 999999;
+    long hoursSinceUse = lastUsed > 0
+            ? (now - lastUsed) / (1000L * 60 * 60)
+            : 999999;
 
             // skip core system apps (keep consistent with your apps flow)
             try {
@@ -1077,38 +1045,40 @@ private void showApps() {
                 (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
 
         List<UsageStats> stats =
-                usm.queryUsageStats(
-                        UsageStatsManager.INTERVAL_DAILY,
-                        start,
-                        now
-                );
-                
-                HashMap<String, Long> mergedMinutes = new HashMap<>();
+        usm.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                start,
+                now
+        );
+
+HashMap<String, Long> mergedMinutes = new HashMap<>();
 HashMap<String, Long> mergedLastUsed = new HashMap<>();
 
-for (String pkg : mergedMinutes.keySet()) {
+if (stats != null) {
+    for (UsageStats u : stats) {
 
-    if (u == null) continue;
+        if (u == null) continue;
 
-    String pkg = u.getPackageName();
-    if (pkg == null) continue;
+        String pkg = u.getPackageName();
+        if (pkg == null) continue;
 
-    long mins = u.getTotalTimeInForeground() / 60000L;
-    long last = u.getLastTimeUsed();
+        long mins = u.getTotalTimeInForeground() / 60000L;
+        long last = u.getLastTimeUsed();
 
-    Long cur = mergedMinutes.get(pkg);
-    mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
+        Long cur = mergedMinutes.get(pkg);
+        mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
 
-    Long lastCur = mergedLastUsed.get(pkg);
-    if (lastCur == null || last > lastCur) {
-        mergedLastUsed.put(pkg, last);
+        Long lastCur = mergedLastUsed.get(pkg);
+        if (lastCur == null || last > lastCur) {
+            mergedLastUsed.put(pkg, last);
+        }
     }
 }
 
-        if (stats == null || stats.isEmpty()) {
-            showAppsStable();
-            return;
-        }
+if (stats == null || stats.isEmpty()) {
+    showAppsStable();
+    return;
+}
 
         PackageManager pm = getPackageManager();
 
@@ -1251,52 +1221,37 @@ private void showInactiveApps() {
 
         PackageManager pm = getPackageManager();
 
-        // ----------------------------------------------------
-        // 1️⃣ Build usage map (last used per pkg)
-        // ----------------------------------------------------
-        HashMap<String, Long> lastUsedMap = new HashMap<>();
+// ----------------------------------------------------
+// 1️⃣ Build lastUsedMap from UsageStats (max lastTimeUsed per pkg)
+// ----------------------------------------------------
+HashMap<String, Long> lastUsedMap = new HashMap<>();
 
-        List<UsageStats> stats =
-                usm.queryUsageStats(
-                        UsageStatsManager.INTERVAL_DAILY,
-                        threshold,
-                        now
-                );
-                
-                HashMap<String, Long> mergedMinutes = new HashMap<>();
-HashMap<String, Long> mergedLastUsed = new HashMap<>();
+List<UsageStats> stats =
+        usm.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                threshold,
+                now
+        );
 
-for (String pkg : mergedMinutes.keySet()) {
+if (stats != null) {
+    for (UsageStats u : stats) {
 
-    if (u == null) continue;
+        if (u == null) continue;
 
-    String pkg = u.getPackageName();
-    if (pkg == null) continue;
+        String pkg = u.getPackageName();
+        if (pkg == null) continue;
+        if (pkg.equals(getPackageName())) continue;
 
-    long mins = u.getTotalTimeInForeground() / 60000L;
-    long last = u.getLastTimeUsed();
+        long last = 0L;
+        try { last = u.getLastTimeUsed(); } catch (Throwable ignore) {}
 
-    Long cur = mergedMinutes.get(pkg);
-    mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
-
-    Long lastCur = mergedLastUsed.get(pkg);
-    if (lastCur == null || last > lastCur) {
-        mergedLastUsed.put(pkg, last);
-    }
-}
-
-        if (stats != null) {
-            for (String pkg : mergedMinutes.keySet()) {
-                if (u == null) continue;
-                String pkg = u.getPackageName();
-                if (pkg == null) continue;
-
-                long last = u.getLastTimeUsed();
-                if (last > 0) {
-                    lastUsedMap.put(pkg, last);
-                }
+        if (last > 0L) {
+            Long cur = lastUsedMap.get(pkg);
+            if (cur == null || last > cur) {
+                lastUsedMap.put(pkg, last);
             }
         }
+    }
 
         // ----------------------------------------------------
         // 2️⃣ Iterate ALL installed apps
@@ -1485,9 +1440,9 @@ private static class AppAppRisk {
 private void showAppsStable() {
 
     showDialog(
-            progressTitle(gr ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
-   : "STEP 4 — App Activity (48 hours)"
-            gr
+        progressTitle(gr ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
+           : "STEP 4 — App Activity (48 hours)"),
+        gr
                     ? "Engine Verdict: STABLE\n\n"
                     + "Δεν βρέθηκαν εφαρμογές με υπερβολική δραστηριότητα."
                     : "Engine Verdict: STABLE\n\n"
@@ -2026,7 +1981,7 @@ skip.setOnClickListener(v -> go(STEP_FINAL));
     }
 
     private String progressTitle(String title) {
-        int total = 5;
+        int total = 11;
         int current = step;
         return title + " (" + current + "/" + total + ")";
     }
