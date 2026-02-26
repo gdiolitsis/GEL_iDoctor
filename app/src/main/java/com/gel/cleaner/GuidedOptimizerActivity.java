@@ -220,22 +220,22 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                 () -> {
 
 // --------------------------------------------------------
-// 1️⃣ DEVICE STORAGE (PRIMARY) — extra Android safety net
-// --------------------------------------------------------
-try {
-    Intent deviceStorage = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
-    deviceStorage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-    startActivity(deviceStorage);
-    return;
-} catch (Throwable ignore) {}
-
-// --------------------------------------------------------
-// 2️⃣ GLOBAL STORAGE (SECONDARY)
+// 1️⃣ GLOBAL STORAGE (PRIMARY)
 // --------------------------------------------------------
 try {
     Intent storage = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
     storage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     startActivity(storage);
+    return;
+} catch (Throwable ignore) {}
+
+// --------------------------------------------------------
+// 2️⃣ DEVICE STORAGE (SECONDARY) — extra Android safety net
+// --------------------------------------------------------
+try {
+    Intent deviceStorage = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
+    deviceStorage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    startActivity(deviceStorage);
     return;
 } catch (Throwable ignore) {}
 
@@ -302,6 +302,28 @@ private void showBattery() {
                     start,
                     now
             );
+            
+            HashMap<String, Long> mergedMinutes = new HashMap<>();
+HashMap<String, Long> mergedLastUsed = new HashMap<>();
+
+for (String pkg : mergedMinutes.keySet()) {
+
+    if (u == null) continue;
+
+    String pkg = u.getPackageName();
+    if (pkg == null) continue;
+
+    long mins = u.getTotalTimeInForeground() / 60000L;
+    long last = u.getLastTimeUsed();
+
+    Long cur = mergedMinutes.get(pkg);
+    mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
+
+    Long lastCur = mergedLastUsed.get(pkg);
+    if (lastCur == null || last > lastCur) {
+        mergedLastUsed.put(pkg, last);
+    }
+}
 
     if (stats == null || stats.isEmpty()) {
 
@@ -316,12 +338,11 @@ private void showBattery() {
     ArrayList<AppRisk> heavyApps = new ArrayList<>();
     ArrayList<AppRisk> moderateApps = new ArrayList<>();
 
-    for (UsageStats u : stats) {
+    for (String pkg : mergedMinutes.keySet()) {
 
-        long minutes = u.getTotalTimeInForeground() / 60000;
+        long minutes = mergedMinutes.get(pkg);
         if (minutes < 1) continue;
 
-        String pkg = u.getPackageName();
         if (pkg.equals(getPackageName())) continue;
 
         boolean unrestricted = false;
@@ -355,9 +376,11 @@ private void showBattery() {
     ScrollView scroll = new ScrollView(this);
 
     LinearLayout root = buildBaseBox(
-            gr ? "Battery Intelligence Report (48 ώρες)"
-               : "Battery Intelligence Report (48 hours)"
-    );
+    progressTitle(
+        gr ? "ΒΗΜΑ 2 — Κατανάλωση Μπαταρίας (48 ώρες)"
+   : "STEP 2 — Battery Consumption (48 hours)"
+    )
+);
 
     scroll.addView(root);
 
@@ -560,6 +583,28 @@ private boolean hasUsageAccess() {
                     now - 1000 * 60,
                     now
             );
+            
+            HashMap<String, Long> mergedMinutes = new HashMap<>();
+HashMap<String, Long> mergedLastUsed = new HashMap<>();
+
+for (String pkg : mergedMinutes.keySet()) {
+
+    if (u == null) continue;
+
+    String pkg = u.getPackageName();
+    if (pkg == null) continue;
+
+    long mins = u.getTotalTimeInForeground() / 60000L;
+    long last = u.getLastTimeUsed();
+
+    Long cur = mergedMinutes.get(pkg);
+    mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
+
+    Long lastCur = mergedLastUsed.get(pkg);
+    if (lastCur == null || last > lastCur) {
+        mergedLastUsed.put(pkg, last);
+    }
+}
 
     return stats != null && !stats.isEmpty();
 }
@@ -656,6 +701,29 @@ private void showData() {
                                 start,
                                 now
                         )
+                        
+                        HashMap<String, Long> mergedMinutes = new HashMap<>();
+HashMap<String, Long> mergedLastUsed = new HashMap<>();
+
+for (String pkg : mergedMinutes.keySet()) {
+
+    if (u == null) continue;
+
+    String pkg = u.getPackageName();
+    if (pkg == null) continue;
+
+    long mins = u.getTotalTimeInForeground() / 60000L;
+    long last = u.getLastTimeUsed();
+
+    Long cur = mergedMinutes.get(pkg);
+    mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
+
+    Long lastCur = mergedLastUsed.get(pkg);
+    if (lastCur == null || last > lastCur) {
+        mergedLastUsed.put(pkg, last);
+    }
+}
+                        
                         : null;
 
         if (stats == null || stats.isEmpty()) {
@@ -676,7 +744,7 @@ private void showData() {
 
         PackageManager pm = getPackageManager();
 
-        for (UsageStats u : stats) {
+        for (String pkg : mergedMinutes.keySet()) {
 
             if (u == null) continue;
 
@@ -756,26 +824,40 @@ private void showData() {
     // UI
     ScrollView scroll = new ScrollView(this);
     LinearLayout root = buildBaseBox(
-            gr ? "Data Behaviour Intelligence (48 ώρες)"
-               : "Data Behaviour Intelligence (48 hours)"
-    );
+        progressTitle(
+            gr ? "ΒΗΜΑ 3 — Κατανάλωση Δεδομένων (48 ώρες)"
+   : "STEP 3 — Data Consumption (48 hours)"
+        )
+);
     scroll.addView(root);
 
     final String verdict = !heavy.isEmpty() ? "HEAVY" : "MODERATE";
     dataVerdict = verdict;
 
     addEngineVerdictData(root, verdict, heavy.size(), moderate.size());
+    
+    TextView sectionTitle = new TextView(this);
+sectionTitle.setText(
+        gr ? "Τι σημαίνουν τα αποτελέσματα"
+           : "What the results mean"
+);
+sectionTitle.setTextColor(0xFFFFD700); // GEL gold
+sectionTitle.setTypeface(null, Typeface.BOLD);
+sectionTitle.setTextSize(16f);
+sectionTitle.setPadding(0, dp(12), 0, dp(10));
+
+root.addView(sectionTitle);
 
     TextView explain = new TextView(this);
     explain.setText(
             gr
-                    ? "Αυτή είναι behavioural ανάλυση (όχι MB).\n\n"
+                    ? "Αυτή είναι ανάλυση συμπεριφοράς (όχι MB).\n\n"
                     + "• High Activity = πολλή χρήση εφαρμογής\n"
-                    + "• 💤 Rarely Used but active = λίγη χρήση από εσένα, αλλά πρόσφατη/ύποπτη δραστηριότητα\n\n"
+                    + "• 💤 Rarely Used but active = λίγη χρήση από εσένα, αλλά πρόσφατη δραστηριότητα\n\n"
                     + "Πάτα σε μια εφαρμογή για ενέργειες."
                     : "This is behavioural analysis (not MB).\n\n"
                     + "• High Activity = heavy app usage\n"
-                    + "• 💤 Rarely Used but active = you barely used it, but it shows recent/suspicious activity\n\n"
+                    + "• 💤 Rarely Used but active = you barely used it, but it shows recent activity\n\n"
                     + "Tap an app for actions."
     );
     explain.setTextColor(0xFFAAAAAA);
@@ -1000,6 +1082,28 @@ private void showApps() {
                         start,
                         now
                 );
+                
+                HashMap<String, Long> mergedMinutes = new HashMap<>();
+HashMap<String, Long> mergedLastUsed = new HashMap<>();
+
+for (String pkg : mergedMinutes.keySet()) {
+
+    if (u == null) continue;
+
+    String pkg = u.getPackageName();
+    if (pkg == null) continue;
+
+    long mins = u.getTotalTimeInForeground() / 60000L;
+    long last = u.getLastTimeUsed();
+
+    Long cur = mergedMinutes.get(pkg);
+    mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
+
+    Long lastCur = mergedLastUsed.get(pkg);
+    if (lastCur == null || last > lastCur) {
+        mergedLastUsed.put(pkg, last);
+    }
+}
 
         if (stats == null || stats.isEmpty()) {
             showAppsStable();
@@ -1008,27 +1112,32 @@ private void showApps() {
 
         PackageManager pm = getPackageManager();
 
-        for (UsageStats u : stats) {
+        for (String pkg : mergedMinutes.keySet()) {
 
-            String pkg = u.getPackageName();
-            if (pkg == null) continue;
-            if (pkg.equals(getPackageName())) continue;
+    if (pkg == null) continue;
+    if (pkg.equals(getPackageName())) continue;
 
-            long minutes = u.getTotalTimeInForeground() / 60000;
-            long lastUsed = u.getLastTimeUsed();
-            long hoursSinceUse = (now - lastUsed) / (1000 * 60 * 60);
+    long minutes = mergedMinutes.get(pkg);
 
-            int launches = 0;
+    Long lastObj = mergedLastUsed.get(pkg);
+    long lastUsed = lastObj != null ? lastObj : 0L;
 
-            if (minutes < 1 && launches < 3) continue;
+    long hoursSinceUse =
+            lastUsed > 0
+                    ? (now - lastUsed) / (1000L * 60 * 60)
+                    : 999999;
 
-            try {
+    int launches = 0;
 
-                ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
-                boolean isSystem =
-                        (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+    if (minutes < 1 && launches < 3) continue;
 
-                if (isSystem) continue;
+    try {
+
+        ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
+        boolean isSystem =
+                (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+
+        if (isSystem) continue;
 
                 // -------------------------------
                 // CLASSIFICATION LOGIC
@@ -1078,9 +1187,11 @@ private void showApps() {
     ScrollView scroll = new ScrollView(this);
 
     LinearLayout root = buildBaseBox(
-            gr ? "Apps Intelligence Report (48 ώρες)"
-               : "Apps Intelligence Report (48 hours)"
-    );
+        progressTitle(
+            gr ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
+   : "STEP 4 — App Activity (48 hours)"
+        )
+);
 
     scroll.addView(root);
 
@@ -1138,46 +1249,97 @@ private void showInactiveApps() {
         UsageStatsManager usm =
                 (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
 
+        PackageManager pm = getPackageManager();
+
+        // ----------------------------------------------------
+        // 1️⃣ Build usage map (last used per pkg)
+        // ----------------------------------------------------
+        HashMap<String, Long> lastUsedMap = new HashMap<>();
+
         List<UsageStats> stats =
                 usm.queryUsageStats(
                         UsageStatsManager.INTERVAL_DAILY,
                         threshold,
                         now
                 );
+                
+                HashMap<String, Long> mergedMinutes = new HashMap<>();
+HashMap<String, Long> mergedLastUsed = new HashMap<>();
 
-        if (stats == null || stats.isEmpty()) {
-            go(STEP_CACHE);
-            return;
+for (String pkg : mergedMinutes.keySet()) {
+
+    if (u == null) continue;
+
+    String pkg = u.getPackageName();
+    if (pkg == null) continue;
+
+    long mins = u.getTotalTimeInForeground() / 60000L;
+    long last = u.getLastTimeUsed();
+
+    Long cur = mergedMinutes.get(pkg);
+    mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
+
+    Long lastCur = mergedLastUsed.get(pkg);
+    if (lastCur == null || last > lastCur) {
+        mergedLastUsed.put(pkg, last);
+    }
+}
+
+        if (stats != null) {
+            for (String pkg : mergedMinutes.keySet()) {
+                if (u == null) continue;
+                String pkg = u.getPackageName();
+                if (pkg == null) continue;
+
+                long last = u.getLastTimeUsed();
+                if (last > 0) {
+                    lastUsedMap.put(pkg, last);
+                }
+            }
         }
 
-        PackageManager pm = getPackageManager();
+        // ----------------------------------------------------
+        // 2️⃣ Iterate ALL installed apps
+        // ----------------------------------------------------
+        List<ApplicationInfo> installed =
+                pm.getInstalledApplications(0);
 
-        for (UsageStats u : stats) {
+        for (ApplicationInfo ai : installed) {
 
-            String pkg = u.getPackageName();
+            String pkg = ai.packageName;
             if (pkg == null) continue;
             if (pkg.equals(getPackageName())) continue;
 
-            long lastUsed = u.getLastTimeUsed();
-            long days =
-                    (now - lastUsed) / (1000L * 60 * 60 * 24);
+            // skip system apps
+            boolean isSystem =
+                    (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+            if (isSystem) continue;
 
-            int launches = 0;
-            
-            if (days < 30) continue;
-            if (launches > 5) continue;
-
+            long installTime = 0;
             try {
-                ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
-
-                boolean isSystem =
-                        (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
-
-                if (isSystem) continue;
-
-                unused.add(new UnusedApp(pkg, days));
-
+                installTime =
+                        pm.getPackageInfo(pkg, 0).firstInstallTime;
             } catch (Throwable ignore) {}
+
+            long lastUsed =
+                    lastUsedMap.containsKey(pkg)
+                            ? lastUsedMap.get(pkg)
+                            : 0;
+
+            long daysSinceUse;
+
+            if (lastUsed > 0) {
+                daysSinceUse =
+                        (now - lastUsed) / (1000L * 60 * 60 * 24);
+            } else {
+                // never used OR no recorded usage
+                daysSinceUse =
+                        (now - installTime) / (1000L * 60 * 60 * 24);
+            }
+
+            if (daysSinceUse >= 30) {
+                unused.add(new UnusedApp(pkg, daysSinceUse));
+            }
         }
 
     } catch (Throwable ignore) {}
@@ -1186,12 +1348,22 @@ private void showInactiveApps() {
         go(STEP_CACHE);
         return;
     }
+    
+    java.util.Collections.sort(
+        unused,
+        (a, b) -> Long.compare(b.days, a.days)
+);
 
+    // ----------------------------------------------------
+    // UI
+    // ----------------------------------------------------
     ScrollView scroll = new ScrollView(this);
 
     LinearLayout root = buildBaseBox(
-            gr ? "🕒 Εφαρμογές που δεν χρησιμοποιούνται"
-               : "🕒 Unused Applications"
+            progressTitle(
+                    gr ? "ΒΗΜΑ 4 — Αδρανείς Εφαρμογές (30 ημέρες)"
+                       : "STEP 4 — Unused Applications (30 days)"
+            )
     );
 
     scroll.addView(root);
@@ -1230,10 +1402,11 @@ private void showInactiveApps() {
 
         TextView meta = new TextView(this);
         meta.setText(
-                (gr ? "Τελευταία χρήση: " : "Last used: ")
+                (gr ? "Χωρίς χρήση για "
+                    : "Unused for ")
                 + r.days
-                + (gr ? " ημέρες πριν" : " days ago")
-                + "\n💤 Inactive"
+                + (gr ? " ημέρες"
+                    : " days")
         );
         meta.setTextColor(0xFFFFC107);
         meta.setPadding(0, 6, 0, 10);
@@ -1242,14 +1415,17 @@ private void showInactiveApps() {
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
-        Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "View Details");
+        Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
 
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
         details.setOnClickListener(v -> openAppDetails(r.pkg));
 
         LinearLayout.LayoutParams lp =
-                new LinearLayout.LayoutParams(0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                );
         lp.setMargins(dp(6), 0, dp(6), 0);
 
         uninstall.setLayoutParams(lp);
@@ -1309,8 +1485,8 @@ private static class AppAppRisk {
 private void showAppsStable() {
 
     showDialog(
-            progressTitle(gr ? "ΒΗΜΑ 4 — Εφαρμογές"
-                             : "STEP 4 — Apps"),
+            progressTitle(gr ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
+   : "STEP 4 — App Activity (48 hours)"
             gr
                     ? "Engine Verdict: STABLE\n\n"
                     + "Δεν βρέθηκαν εφαρμογές με υπερβολική δραστηριότητα."
