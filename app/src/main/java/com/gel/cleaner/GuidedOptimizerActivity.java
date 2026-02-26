@@ -1031,6 +1031,7 @@ root.addView(sectionTitle);
 
     showCustomDialog(scroll);
 }
+}
 
 // ============================================================
 // DATA RISK MODEL (NO BYTES, SCORE ONLY)
