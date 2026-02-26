@@ -390,11 +390,34 @@ if (stats != null) {
 
     scroll.addView(root);
 
-    String verdict =
-            !heavyApps.isEmpty() ? "HEAVY"
-            : "MODERATE";
+    boolean suspiciousBattery = false;
+boolean legitHeavyUse = false;
 
-    batteryVerdict = verdict;
+for (AppRisk r : heavyApps) {
+
+    if (r.minutes >= 120 && r.unrestricted) {
+        suspiciousBattery = true;
+        break;
+    }
+
+    if (r.minutes >= 120) {
+        legitHeavyUse = true;
+    }
+}
+
+String verdict;
+
+if (suspiciousBattery) {
+    verdict = "HEAVY";
+}
+else if (legitHeavyUse || !moderateApps.isEmpty()) {
+    verdict = "MODERATE";
+}
+else {
+    verdict = "STABLE";
+}
+
+batteryVerdict = verdict;
 
     addEngineVerdict(root, verdict,
             heavyApps.size(),
@@ -803,8 +826,29 @@ private void showData() {
 );
     scroll.addView(root);
 
-    final String verdict = !heavy.isEmpty() ? "HEAVY" : "MODERATE";
-    dataVerdict = verdict;
+    boolean suspiciousData = false;
+
+for (DataRisk r : heavy) {
+
+    if (r.fgMinutes <= 5 && r.hoursSinceUse <= 12) {
+        suspiciousData = true;
+        break;
+    }
+}
+
+String verdict;
+
+if (suspiciousData) {
+    verdict = "HEAVY";
+}
+else if (!heavy.isEmpty() || !moderate.isEmpty()) {
+    verdict = "MODERATE";
+}
+else {
+    verdict = "STABLE";
+}
+
+dataVerdict = verdict;
 
     addEngineVerdictData(root, verdict, heavy.size(), moderate.size());
     
@@ -976,21 +1020,18 @@ private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
 
         Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
-        Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
-restrict.setOnClickListener(v -> openBatterySettings(r.pkg));
 
         details.setOnClickListener(v -> openAppDetails(r.pkg));
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
 
         LinearLayout.LayoutParams lp =
                 new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMargins(dp(6), 0, dp(6), 0);
-
+        lp.setMargins(dp(6), 0, dp(6), 0);        
+        
         details.setLayoutParams(lp);
         uninstall.setLayoutParams(lp);
 
         btnRow.addView(details);
-        btnRow.addView(restrict);
         btnRow.addView(uninstall);
 
         row.addView(name);
@@ -1198,13 +1239,47 @@ if (stats == null || stats.isEmpty()) {
 
     scroll.addView(root);
 
-    String verdict =
-            !heavy.isEmpty() ? "HEAVY"
-            : "MODERATE";
+// ----------------------------------------------------
+// SMART VERDICT ENGINE (USER-AWARE)
+// ----------------------------------------------------
 
-    appsVerdict = verdict;
+boolean suspicious = false;
+boolean heavyUserUse = false;
 
-    addAppsVerdict(root, verdict, heavy.size(), moderate.size());
+for (AppAppRisk r : heavy) {
+
+    // Suspicious: heavy but not user-driven
+    if (r.minutes >= 120 &&
+        r.hoursSinceUse <= 1 &&
+        r.launches == 0) {
+
+        suspicious = true;
+        break;
+    }
+
+    // Legit heavy user usage
+    if (r.minutes >= 120 &&
+        r.hoursSinceUse <= 2) {
+
+        heavyUserUse = true;
+    }
+}
+
+String verdict;
+
+if (suspicious) {
+    verdict = "HEAVY";
+}
+else if (heavyUserUse || !moderate.isEmpty()) {
+    verdict = "MODERATE";
+}
+else {
+    verdict = "STABLE";
+}
+
+appsVerdict = verdict;
+
+addAppsVerdict(root, verdict, heavy.size(), moderate.size());
 
     if (!heavy.isEmpty()) {
         addSection(
@@ -1405,8 +1480,6 @@ if (stats != null) {
 
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
         Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
-        Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
-restrict.setOnClickListener(v -> openBatterySettings(r.pkg));
 
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
         details.setOnClickListener(v -> openAppDetails(r.pkg));
@@ -1423,7 +1496,6 @@ restrict.setOnClickListener(v -> openBatterySettings(r.pkg));
         details.setLayoutParams(lp);
 
         btnRow.addView(details);
-        btnRow.addView(restrict);
         btnRow.addView(uninstall);
 
         row.addView(name);
@@ -1502,8 +1574,9 @@ private void addAppsVerdict(LinearLayout root,
     TextView tv = new TextView(this);
 
     int color =
-            verdict.equals("HEAVY") ? 0xFFFF5252 :
-            0xFFFFC107;
+        verdict.equals("HEAVY") ? 0xFFFF5252 :
+        verdict.equals("MODERATE") ? 0xFFFFC107 :
+        0xFF00C853;
 
     tv.setText(
             "Engine Verdict: " + verdict + "\n\n"
@@ -1539,6 +1612,12 @@ private void addAppList(LinearLayout root,
             ApplicationInfo ai = pm.getApplicationInfo(r.pkg, 0);
             label = pm.getApplicationLabel(ai).toString();
         } catch (Throwable ignore) {}
+        
+        boolean isSystem = false;
+try {
+    ApplicationInfo ai = pm.getApplicationInfo(r.pkg, 0);
+    isSystem = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+} catch (Throwable ignore) {}
 
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
@@ -1563,6 +1642,13 @@ private void addAppList(LinearLayout root,
         + "\n"
         + r.badge
 );
+
+if (isSystem) {
+    meta.append(gr
+        ? "  |  ⚙️ Εφαρμογή Συστήματος (Απαιτείται Root)"
+        : "  |  ⚙️ System App (Root required)");
+}
+
         meta.setTextColor(0xFF00FF7F);
         meta.setPadding(0,6,0,12);
 
@@ -1572,9 +1658,7 @@ private void addAppList(LinearLayout root,
 
         Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
-        Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
-restrict.setOnClickListener(v -> openBatterySettings(r.pkg));
-
+       
         details.setOnClickListener(v -> openAppDetails(r.pkg));
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
 
@@ -1588,8 +1672,10 @@ restrict.setOnClickListener(v -> openBatterySettings(r.pkg));
         uninstall.setLayoutParams(lp);
 
         btnRow.addView(details);
-        btnRow.addView(restrict);
-        btnRow.addView(uninstall);
+
+if (!isSystem) {
+    btnRow.addView(uninstall);
+}
 
         row.addView(name);
         row.addView(meta);
@@ -1617,6 +1703,12 @@ private void addBatteryAppList(LinearLayout root,
             CharSequence cs = pm.getApplicationLabel(ai);
             if (cs != null) label = cs.toString();
         } catch (Throwable ignore) {}
+        
+        boolean isSystem = false;
+try {
+    ApplicationInfo ai = pm.getApplicationInfo(r.packageName, 0);
+    isSystem = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+} catch (Throwable ignore) {}
 
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
@@ -1637,6 +1729,13 @@ private void addBatteryAppList(LinearLayout root,
                               : "  |  ⚠️ Battery unrestricted")
                         : "")
         );
+        
+        if (isSystem) {
+    meta.append(gr
+        ? "  |  ⚙️ Εφαρμογή Συστήματος (Απαιτείται Root)"
+        : "  |  ⚙️ System App (Root required)");
+}
+        
         meta.setTextColor(0xFF00FF7F);
         meta.setPadding(0, 6, 0, 12);
 
@@ -1646,8 +1745,6 @@ private void addBatteryAppList(LinearLayout root,
 
         Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
-        Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
-restrict.setOnClickListener(v -> openBatterySettings(r.packageName));
 
         details.setOnClickListener(v -> openAppDetails(r.packageName));
         uninstall.setOnClickListener(v -> uninstallPkg(r.packageName));
@@ -1664,8 +1761,10 @@ restrict.setOnClickListener(v -> openBatterySettings(r.packageName));
         uninstall.setLayoutParams(lp);
 
         btnRow.addView(details);
-        btnRow.addView(restrict);
-        btnRow.addView(uninstall);
+
+if (!isSystem) {
+    btnRow.addView(uninstall);
+}
 
         row.addView(name);
         row.addView(meta);
