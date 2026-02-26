@@ -379,60 +379,57 @@ for (UsageStats u : stats) {
     mergedBgMinutes.put(pkg, (curBg == null ? 0L : curBg) + bg);
 }
 
-ArrayList<AppRisk> suspiciousApps = new ArrayList<>();
+PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+
+ArrayList<AppRisk> heavyApps = new ArrayList<>();
+ArrayList<AppRisk> moderateApps = new ArrayList<>();
 
 for (String pkg : mergedBgMinutes.keySet()) {
 
-    long fgMinutes = mergedFgMinutes.get(pkg) != null ? mergedFgMinutes.get(pkg) : 0L;
-    long bgMinutes = mergedBgMinutes.get(pkg) != null ? mergedBgMinutes.get(pkg) : 0L;
+    if (pkg == null) continue;
+    if (pkg.equals(getPackageName())) continue;
 
-    boolean userOpened = fgMinutes > 0;
-    boolean bgNoOpen = (!userOpened && bgMinutes > 0);
+    long fgMinutes =
+            mergedFgMinutes.get(pkg) != null
+                    ? mergedFgMinutes.get(pkg)
+                    : 0L;
 
-    if (!bgNoOpen) continue;   // ✅ ΚΑΝΟΝΑΣ
-
-    suspiciousApps.add(new AppRisk(pkg, bgMinutes, false));
-}
-
-if (suspiciousApps.isEmpty()) {
-    batteryVerdict = "STABLE";
-    showStableDialog();
-    return;
-}
-
-    PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-
-    ArrayList<AppRisk> heavyApps = new ArrayList<>();
-    ArrayList<AppRisk> moderateApps = new ArrayList<>();
-
-    for (String pkg : mergedBgMinutes.keySet()) {
-
-    long minutes =
+    long bgMinutes =
             mergedBgMinutes.get(pkg) != null
                     ? mergedBgMinutes.get(pkg)
                     : 0L;
 
-        if (pkg.equals(getPackageName())) continue;
+    // ✅ ΚΑΝΟΝΑΣ: μόνο background χωρίς άνοιγμα
+    boolean userOpened = fgMinutes > 0;
+    boolean bgNoOpen = (!userOpened && bgMinutes > 0);
+    if (!bgNoOpen) continue;
 
-        boolean unrestricted = false;
-        try {
-            unrestricted = pm.isIgnoringBatteryOptimizations(pkg);
-        } catch (Throwable ignore) {}
+    boolean unrestricted = false;
+    try {
+        unrestricted = pm != null && pm.isIgnoringBatteryOptimizations(pkg);
+    } catch (Throwable ignore) {}
 
-        int score;
+    int score;
 
-        if (minutes >= 120) score = 3;          // HEAVY
-        else if (minutes >= 45) score = 2;      // MODERATE
-        else score = 1;                         // LOW
+    if (bgMinutes >= 120) score = 3;          // HEAVY
+    else if (bgMinutes >= 45) score = 2;      // MODERATE
+    else score = 1;                           // LOW
 
-        if (unrestricted && score >= 2)
-            score++; // elevate if unrestricted
+    if (unrestricted && score >= 2)
+        score++; // elevate if unrestricted
 
-        if (score >= 3)
-            heavyApps.add(new AppRisk(pkg, minutes, unrestricted));
-        else if (score == 2)
-            moderateApps.add(new AppRisk(pkg, minutes, unrestricted));
-    }
+    if (score >= 3)
+        heavyApps.add(new AppRisk(pkg, bgMinutes, unrestricted));
+    else if (score == 2)
+        moderateApps.add(new AppRisk(pkg, bgMinutes, unrestricted));
+}
+
+// ✅ STABLE
+if (heavyApps.isEmpty() && moderateApps.isEmpty()) {
+    batteryVerdict = "STABLE";
+    showStableDialog();
+    return;
+}
 
     ScrollView scroll = new ScrollView(this);
 
@@ -812,57 +809,70 @@ private void showData() {
         return;
     }
 
-    // 🔽 MERGE 48h DAILY BUCKETS
-    HashMap<String, Long> mergedFgMinutes = new HashMap<>();
+// 🔽 MERGE 48h DAILY BUCKETS
+HashMap<String, Long> mergedFgMinutes = new HashMap<>();
 HashMap<String, Long> mergedBgMinutes = new HashMap<>();
-HashMap<String, Long> mergedLastUsed = new HashMap<>();
+HashMap<String, Long> mergedLastUsed  = new HashMap<>();
 
-    for (UsageStats u : stats) {
+for (UsageStats u : stats) {
 
-        if (u == null) continue;
+    if (u == null) continue;
 
-        String pkg = u.getPackageName();
-        if (pkg == null) continue;
+    String pkg = u.getPackageName();
+    if (pkg == null) continue;
 
-        long fg = 0L;
-try { fg = u.getTotalTimeInForeground() / 60000L; } catch (Throwable ignore) {}
+    long fg = 0L;
+    try {
+        fg = u.getTotalTimeInForeground() / 60000L;
+    } catch (Throwable ignore) {}
 
-long bg = 0L;
-try {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        bg = u.getTotalTimeForegroundServiceUsed() / 60000L;
-    }
-} catch (Throwable ignore) {}
-
-long last = u.getLastTimeUsed();
-
-Long curFg = mergedFgMinutes.get(pkg);
-mergedFgMinutes.put(pkg, (curFg == null ? 0L : curFg) + fg);
-
-Long curBg = mergedBgMinutes.get(pkg);
-mergedBgMinutes.put(pkg, (curBg == null ? 0L : curBg) + bg);
-
-        Long lastCur = mergedLastUsed.get(pkg);
-        if (lastCur == null || last > lastCur) {
-            mergedLastUsed.put(pkg, last);
+    long bg = 0L;
+    try {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            bg = u.getTotalTimeForegroundServiceUsed() / 60000L;
         }
-    }
+    } catch (Throwable ignore) {}
 
-    PackageManager pm = getPackageManager();
+    long last = 0L;
+    try {
+        last = u.getLastTimeUsed();
+    } catch (Throwable ignore) {}
+
+    Long curFg = mergedFgMinutes.get(pkg);
+    mergedFgMinutes.put(pkg, (curFg == null ? 0L : curFg) + fg);
+
+    Long curBg = mergedBgMinutes.get(pkg);
+    mergedBgMinutes.put(pkg, (curBg == null ? 0L : curBg) + bg);
+
+    Long lastCur = mergedLastUsed.get(pkg);
+    if (lastCur == null || last > lastCur) {
+        mergedLastUsed.put(pkg, last);
+    }
+}
+
+PackageManager pm = getPackageManager();
+
+try {
 
     for (String pkg : mergedBgMinutes.keySet()) {
 
         if (pkg == null) continue;
         if (pkg.equals(getPackageName())) continue;
 
-        long fgMinutes = mergedFgMinutes.get(pkg) != null ? mergedFgMinutes.get(pkg) : 0L;
-long bgMinutes = mergedBgMinutes.get(pkg) != null ? mergedBgMinutes.get(pkg) : 0L;
+        long fgMinutes =
+                mergedFgMinutes.get(pkg) != null
+                        ? mergedFgMinutes.get(pkg)
+                        : 0L;
 
-boolean userOpened = fgMinutes > 0;
-boolean bgNoOpen = (!userOpened && bgMinutes > 0);
+        long bgMinutes =
+                mergedBgMinutes.get(pkg) != null
+                        ? mergedBgMinutes.get(pkg)
+                        : 0L;
 
-// Κρατάμε ΜΟΝΟ background χωρίς άνοιγμα
-if (!bgNoOpen) continue;
+        // ✅ ΚΑΝΟΝΑΣ: ΜΟΝΟ background χωρίς άνοιγμα
+        boolean userOpened = fgMinutes > 0;
+        boolean bgNoOpen   = (!userOpened && bgMinutes > 0);
+        if (!bgNoOpen) continue;
 
         Long lastObj = mergedLastUsed.get(pkg);
         long lastUsed = lastObj != null ? lastObj : 0L;
@@ -880,19 +890,31 @@ if (!bgNoOpen) continue;
         } catch (Throwable ignore) {}
 
         boolean rarelyUsedButActive =
-        (bgMinutes <= 5 && hoursSinceUse <= 12);
+                (bgMinutes <= 5 && hoursSinceUse <= 12);
 
-long score =
-        (bgMinutes * 2)
-                + (rarelyUsedButActive ? 30 : 0);
+        long score =
+                (bgMinutes * 2)
+                        + (rarelyUsedButActive ? 30 : 0);
 
-if (score >= 240) {
-    heavy.add(new DataRisk(pkg, score, bgMinutes,
-            hoursSinceUse, rarelyUsedButActive));
-} else if (score >= 80) {
-    moderate.add(new DataRisk(pkg, score, bgMinutes,
-            hoursSinceUse, rarelyUsedButActive));
-}
+        if (score >= 240) {
+            heavy.add(new DataRisk(
+                    pkg,
+                    score,
+                    bgMinutes,
+                    hoursSinceUse,
+                    rarelyUsedButActive
+            ));
+        }
+        else if (score >= 80) {
+            moderate.add(new DataRisk(
+                    pkg,
+                    score,
+                    bgMinutes,
+                    hoursSinceUse,
+                    rarelyUsedButActive
+            ));
+        }
+    }
 
 } catch (Throwable ignore) {}
 
@@ -1283,31 +1305,35 @@ if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
     return;
 }
 
-        PackageManager pm = getPackageManager();
+PackageManager pm = getPackageManager();
 
-        for (String pkg : mergedBgMinutes.keySet()) {
+for (String pkg : mergedBgMinutes.keySet()) {
 
     if (pkg == null) continue;
     if (pkg.equals(getPackageName())) continue;
 
-    long fgMinutes = mergedFgMinutes.containsKey(pkg) ? mergedFgMinutes.get(pkg) : 0L;
-long bgMinutes = mergedBgMinutes.containsKey(pkg) ? mergedBgMinutes.get(pkg) : 0L;
+    long fgMinutes =
+            mergedFgMinutes.containsKey(pkg)
+                    ? mergedFgMinutes.get(pkg)
+                    : 0L;
 
-Long lastObj = mergedLastUsed.get(pkg);
-long lastUsed = lastObj != null ? lastObj : 0L;
+    long bgMinutes =
+            mergedBgMinutes.containsKey(pkg)
+                    ? mergedBgMinutes.get(pkg)
+                    : 0L;
 
-long hoursSinceUse =
-        lastUsed > 0
-                ? (now - lastUsed) / (1000L * 60 * 60)
-                : 999999;
-                
-                
+    Long lastObj = mergedLastUsed.get(pkg);
+    long lastUsed = lastObj != null ? lastObj : 0L;
 
-boolean userOpened = fgMinutes > 0;
-boolean bgNoOpen = (!userOpened && bgMinutes > 0);
+    long hoursSinceUse =
+            lastUsed > 0
+                    ? (now - lastUsed) / (1000L * 60 * 60)
+                    : 999999;
 
-// Θέλουμε ΜΟΝΟ background χωρίς άνοιγμα
-if (!bgNoOpen) continue;
+    // ✅ ΜΟΝΟ background χωρίς άνοιγμα
+    boolean userOpened = fgMinutes > 0;
+    boolean bgNoOpen = (!userOpened && bgMinutes > 0);
+    if (!bgNoOpen) continue;
 
     try {
 
@@ -1317,34 +1343,33 @@ if (!bgNoOpen) continue;
 
         if (isSystem) continue;
 
-                // -------------------------------
-                // CLASSIFICATION LOGIC
-                // -------------------------------
-String badge;
-int level;
+        String badge;
+        int level;
 
-if (bgMinutes >= 60) {
-    badge = gr ? "🟥 Background χωρίς άνοιγμα" : "🟥 Background without opening";
-    level = 3;
-} else {
-    badge = gr ? "🟨 Background χωρίς άνοιγμα" : "🟨 Background without opening";
-    level = 2;
-}
-
-AppAppRisk r = new AppAppRisk(pkg, fgMinutes, bgMinutes, hoursSinceUse, badge);
-
-if (level >= 3) heavy.add(r);
-else moderate.add(r);
-
-            } catch (Throwable ignore) {}
+        if (bgMinutes >= 60) {
+            badge = gr ? "🟥 Background χωρίς άνοιγμα"
+                       : "🟥 Background without opening";
+            level = 3;
+        } else {
+            badge = gr ? "🟨 Background χωρίς άνοιγμα"
+                       : "🟨 Background without opening";
+            level = 2;
         }
 
-    } catch (Throwable ignore) {}
+        AppAppRisk r =
+                new AppAppRisk(pkg, fgMinutes, bgMinutes, hoursSinceUse, badge);
 
-    if (heavy.isEmpty() && moderate.isEmpty()) {
-        showAppsStable();
-        return;
-    }
+        if (level >= 3) heavy.add(r);
+        else moderate.add(r);
+
+    } catch (Throwable ignore) {}
+}
+
+// ✅ STABLE
+if (heavy.isEmpty() && moderate.isEmpty()) {
+    showAppsStable();
+    return;
+}
 
     ScrollView scroll = new ScrollView(this);
 
