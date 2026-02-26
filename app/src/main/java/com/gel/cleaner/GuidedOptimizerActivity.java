@@ -104,15 +104,25 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
     final int LIMIT = 12;
     int shown = 0;
 
+    PackageManager pm = getPackageManager();
+
     for (AppRisk r : list) {
 
         if (++shown > LIMIT) break;
 
-        // --- simple inline row ---
+        String label = r.packageName;
+
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(r.packageName, 0);
+            CharSequence cs = pm.getApplicationLabel(ai);
+            if (cs != null) label = cs.toString();
+        } catch (Throwable ignore) {}
+
         TextView tv = new TextView(this);
-        tv.setText("• " + r.packageName + "  (" + r.minutes + " min)");
+        tv.setText("• " + label + "  (" + r.minutes + " min)");
         tv.setTextColor(0xFF00FF7F);
         tv.setPadding(0, dp(8), 0, dp(8));
+
         root.addView(tv);
     }
 
@@ -285,7 +295,7 @@ private void showBattery() {
                         + "Usage Access permission is required.\n\n"
                         + "Press Settings and enable it for GEL.",
                 () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)),
-                () -> go(STEP_DATA),
+                () -> go(STEP_BATTERY),
                 false
         );
         return;
@@ -401,7 +411,7 @@ if (stats != null) {
                    : "Apps with significant impact.",
                 0xFFFF5252
         );
-        limitAndAdd(root, heavyApps);
+        addBatteryAppList(root, heavyApps);
     }
 
     if (!moderateApps.isEmpty()) {
@@ -413,7 +423,7 @@ if (stats != null) {
                    : "Apps worth reviewing.",
                 0xFFFFC107
         );
-        limitAndAdd(root, moderateApps);
+        addBatteryAppList(root, moderateApps);
     }
 
     Button next = mkGreenBtn("OK");
@@ -650,7 +660,7 @@ private void showData() {
                         + "Usage Access permission is required.\n\n"
                         + "Press Settings and enable it for GEL.",
                 () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)),
-                () -> go(STEP_APPS),
+                () -> go(STEP_DATA),
                 false
         );
         return;
@@ -966,6 +976,8 @@ private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
 
         Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
+        Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
+restrict.setOnClickListener(v -> openBatterySettings(r.packageName));
 
         details.setOnClickListener(v -> openAppDetails(r.pkg));
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
@@ -978,6 +990,7 @@ private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
         uninstall.setLayoutParams(lp);
 
         btnRow.addView(details);
+        btnRow.addView(restrict);
         btnRow.addView(uninstall);
 
         row.addView(name);
@@ -1002,13 +1015,19 @@ private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
 // ============================================================
 
 private void openAppDetails(String pkg) {
+
+    // 1️⃣ Main App Info (always works)
     try {
         Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
         i.setData(android.net.Uri.fromParts("package", pkg, null));
         startActivity(i);
-    } catch (Throwable ignore) {
-        try { startActivity(new Intent(Settings.ACTION_APPLICATION_SETTINGS)); } catch (Throwable ignore2) {}
-    }
+        return;
+    } catch (Throwable ignore) {}
+
+    // 2️⃣ Fallback
+    try {
+        startActivity(new Intent(Settings.ACTION_APPLICATION_SETTINGS));
+    } catch (Throwable ignore2) {}
 }
 
 private void uninstallPkg(String pkg) {
@@ -1019,6 +1038,26 @@ private void uninstallPkg(String pkg) {
     } catch (Throwable ignore) {
         openAppDetails(pkg);
     }
+}
+
+private void openBatterySettings(String pkg) {
+
+    // 1️⃣ Try direct app battery screen (OEM dependent)
+    try {
+        Intent i = new Intent("android.settings.APP_BATTERY_SETTINGS");
+        i.putExtra("package_name", pkg);
+        startActivity(i);
+        return;
+    } catch (Throwable ignore) {}
+
+    // 2️⃣ Fallback → general battery settings
+    try {
+        startActivity(new Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS));
+        return;
+    } catch (Throwable ignore2) {}
+
+    // 3️⃣ Last fallback → app info
+    openAppDetails(pkg);
 }
 
 // ============================================================
@@ -1190,7 +1229,7 @@ if (stats == null || stats.isEmpty()) {
     }
 
     Button next = mkGreenBtn("OK");
-    next.setOnClickListener(v -> go(STEP_CACHE));
+    next.setOnClickListener(v -> go(STEP_UNUSED));
     root.addView(next);
 
     showCustomDialog(scroll);
@@ -1366,6 +1405,8 @@ if (stats != null) {
 
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
         Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
+        Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
+restrict.setOnClickListener(v -> openBatterySettings(r.pkg));
 
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
         details.setOnClickListener(v -> openAppDetails(r.pkg));
@@ -1382,6 +1423,7 @@ if (stats != null) {
         details.setLayoutParams(lp);
 
         btnRow.addView(details);
+        btnRow.addView(restrict);
         btnRow.addView(uninstall);
 
         row.addView(name);
@@ -1443,7 +1485,7 @@ private void showAppsStable() {
                     : "Engine Verdict: STABLE\n\n"
                     + "No apps with abnormal activity detected.",
             null,
-            () -> go(STEP_CACHE),
+            () -> go(STEP_UNUSED),
             false
     );
 }
@@ -1530,6 +1572,8 @@ private void addAppList(LinearLayout root,
 
         Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
         Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
+        Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
+restrict.setOnClickListener(v -> openBatterySettings(r.pkg));
 
         details.setOnClickListener(v -> openAppDetails(r.pkg));
         uninstall.setOnClickListener(v -> uninstallPkg(r.pkg));
@@ -1544,11 +1588,100 @@ private void addAppList(LinearLayout root,
         uninstall.setLayoutParams(lp);
 
         btnRow.addView(details);
+        btnRow.addView(restrict);
         btnRow.addView(uninstall);
 
         row.addView(name);
         row.addView(meta);
         row.addView(btnRow);
+
+        root.addView(row);
+    }
+}
+
+private void addBatteryAppList(LinearLayout root,
+                               List<AppRisk> list) {
+
+    PackageManager pm = getPackageManager();
+
+    int shown = 0;
+
+    for (AppRisk r : list) {
+
+        if (++shown > 12) break;
+
+        String label = r.packageName;
+
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(r.packageName, 0);
+            CharSequence cs = pm.getApplicationLabel(ai);
+            if (cs != null) label = cs.toString();
+        } catch (Throwable ignore) {}
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(0, 14, 0, 14);
+
+        TextView name = new TextView(this);
+        name.setText("• " + label);
+        name.setTextColor(Color.WHITE);
+        name.setTypeface(null, Typeface.BOLD);
+
+        TextView meta = new TextView(this);
+        meta.setText(
+                (gr ? "Χρήση: " : "Usage: ")
+                        + r.minutes
+                        + (gr ? " λεπτά (48h)" : " min (48h)")
+                        + (r.unrestricted
+                        ? (gr ? "  |  ⚠️ Χωρίς περιορισμό μπαταρίας"
+                              : "  |  ⚠️ Battery unrestricted")
+                        : "")
+        );
+        meta.setTextColor(0xFF00FF7F);
+        meta.setPadding(0, 6, 0, 12);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.CENTER);
+
+        Button details = mkBlackGoldBtn(gr ? "Λεπτομέρειες" : "Details");
+        Button uninstall = mkRedBtn(gr ? "Απεγκατάσταση" : "Uninstall");
+        Button restrict = mkBlackGoldBtn(gr ? "Περιορισμός" : "Restrict");
+restrict.setOnClickListener(v -> openBatterySettings(r.pkg));
+
+        details.setOnClickListener(v -> openAppDetails(r.packageName));
+        uninstall.setOnClickListener(v -> uninstallPkg(r.packageName));
+
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                );
+        lp.setMargins(dp(6), 0, dp(6), 0);
+
+        details.setLayoutParams(lp);
+        uninstall.setLayoutParams(lp);
+
+        btnRow.addView(details);
+        btnRow.addView(restrict);
+        btnRow.addView(uninstall);
+
+        row.addView(name);
+        row.addView(meta);
+        row.addView(btnRow);
+
+        View div = new View(this);
+        div.setBackgroundColor(0xFF222222);
+        LinearLayout.LayoutParams dlp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(1)
+                );
+        dlp.setMargins(0, dp(14), 0, 0);
+        div.setLayoutParams(dlp);
+
+        row.addView(div);
 
         root.addView(row);
     }
@@ -1655,6 +1788,11 @@ private void addAppList(LinearLayout root,
     // ============================================================
 
     private void showLabRecommendation() {
+
+    if (symptoms == null || symptoms.isEmpty()) {
+        go(STEP_REMINDER);
+        return;
+    }
 
         LinearLayout root = buildBaseBox(
                 gr ? "Για να ελέγξεις όσα μας ανέφερες, σου προτείνουμε να τρέξεις τα παρακάτω διαγνωστικά Εργαστήρια"
@@ -1976,7 +2114,7 @@ skip.setOnClickListener(v -> go(STEP_FINAL));
     }
 
     private String progressTitle(String title) {
-        int total = 11;
+        int total = 5;
         int current = step;
         return title + " (" + current + "/" + total + ")";
     }
