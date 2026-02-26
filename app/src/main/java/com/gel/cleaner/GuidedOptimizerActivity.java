@@ -1417,10 +1417,14 @@ addAppsVerdict(root, verdict, heavy.size(), moderate.size());
     }
 
     Button next = mkGreenBtn("OK");
-    next.setOnClickListener(v -> go(STEP_UNUSED));
-    root.addView(next);
+next.setOnClickListener(v -> go(STEP_UNUSED));
+root.addView(next);
 
-    showCustomDialog(scroll);
+showCustomDialog(scroll);
+
+} catch (Throwable ignore) {
+}
+
 }
 
 private void showInactiveApps() {
