@@ -477,7 +477,7 @@ batteryVerdict = verdict;
 
     addRecommendations(root, verdict);
 
-    if (!suspiciousApps.isEmpty()) {
+    if (!heavyApps.isEmpty() || !moderateApps.isEmpty()) {
 
     addSection(
             root,
@@ -488,7 +488,11 @@ batteryVerdict = verdict;
             0xFFFFC107
     );
 
-    addBatteryAppList(root, suspiciousApps);
+    ArrayList<AppRisk> combined = new ArrayList<>();
+    combined.addAll(heavyApps);
+    combined.addAll(moderateApps);
+
+    addBatteryAppList(root, combined);
 }
 
     Button next = mkGreenBtn("OK");
