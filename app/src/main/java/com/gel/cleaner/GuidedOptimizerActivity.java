@@ -14,6 +14,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.provider.Settings;
@@ -879,20 +880,19 @@ if (!bgNoOpen) continue;
         } catch (Throwable ignore) {}
 
         boolean rarelyUsedButActive =
-                (minutes <= 5 && hoursSinceUse <= 12);
+        (bgMinutes <= 5 && hoursSinceUse <= 12);
 
-        long score =
-                (minutes * 2)
-                        + (rarelyUsedButActive ? 30 : 0);
+long score =
+        (bgMinutes * 2)
+                + (rarelyUsedButActive ? 30 : 0);
 
-        if (score >= 240) {
-            heavy.add(new DataRisk(pkg, score, minutes,
-                    hoursSinceUse, rarelyUsedButActive));
-        } else if (score >= 80) {
-            moderate.add(new DataRisk(pkg, score, minutes,
-                    hoursSinceUse, rarelyUsedButActive));
-        }
-    }
+if (score >= 240) {
+    heavy.add(new DataRisk(pkg, score, bgMinutes,
+            hoursSinceUse, rarelyUsedButActive));
+} else if (score >= 80) {
+    moderate.add(new DataRisk(pkg, score, bgMinutes,
+            hoursSinceUse, rarelyUsedButActive));
+}
 
 } catch (Throwable ignore) {}
 
@@ -1360,18 +1360,6 @@ else moderate.add(r);
 // ----------------------------------------------------
 // SMART VERDICT ENGINE (USER-AWARE)
 // ----------------------------------------------------
-
-for (AppAppRisk r : heavy) {
-    // heavy list εδώ είναι ήδη “background χωρίς άνοιγμα”
-    hasBgNoOpenHeavy = true;
-    break;
-}
-if (!hasBgNoOpenHeavy) {
-    for (AppAppRisk r : moderate) {
-        hasBgNoOpenModerate = true;
-        break;
-    }
-}
 
 String verdict = !heavy.isEmpty() ? "HEAVY" : "MODERATE";
 appsVerdict = verdict;
