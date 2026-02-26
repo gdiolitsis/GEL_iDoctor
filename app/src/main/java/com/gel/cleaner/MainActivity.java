@@ -54,9 +54,6 @@ private TextView welcomeMessage;
 private TextView txtLogs;
 private ScrollView scroll;
 
-private static final String PREFS_GEL = "gel_prefs";
-private static final String KEY_WELCOME_SHOWN = "welcome_shown";
-
 // =========================================================
 // PREFS
 // =========================================================
@@ -96,9 +93,6 @@ boolean forceWelcome =
         getIntent().getBooleanExtra("force_welcome", false);
 
 if (savedInstanceState == null) {
-
-    boolean forceWelcome =
-            getIntent().getBooleanExtra("force_welcome", false);
 
     if (forceWelcome || !isWelcomeDisabled()) {
         showWelcomePopup();
@@ -170,6 +164,24 @@ private void hardRestart() {
 // =========================================================
 // HELPERS
 // =========================================================
+
+private boolean shouldShowWelcomeOnce() {
+    try {
+        return !getSharedPreferences(PREFS_GEL, MODE_PRIVATE)
+                .getBoolean(KEY_WELCOME_SHOWN, false);
+    } catch (Throwable ignore) {
+        return true;
+    }
+}
+
+private void markWelcomeShown() {
+    try {
+        getSharedPreferences(PREFS_GEL, MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_WELCOME_SHOWN, true)
+                .apply();
+    } catch (Throwable ignore) {}
+}
 
 private LinearLayout buildMuteRow() {
     final boolean gr = AppLang.isGreek(this);
