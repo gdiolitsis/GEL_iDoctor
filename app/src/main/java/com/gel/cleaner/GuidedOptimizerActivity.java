@@ -37,6 +37,8 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     private boolean gr;
     private int step = 0;
     
+    private boolean returnedFromUsageScreen = false;
+    
 private String batteryVerdict = "STABLE";
 private String dataVerdict = "STABLE";
 private String appsVerdict = "STABLE";
@@ -62,6 +64,23 @@ private String appsVerdict = "STABLE";
         gr = AppLang.isGreek(this);
         go(STEP_INTRO);
     }
+    
+    @Override
+protected void onResume() {
+    super.onResume();
+
+    if (returnedFromUsageScreen) {
+        returnedFromUsageScreen = false;
+
+        if (hasUsageAccess()) {
+    go(currentStep);
+        }
+    }
+}
+
+private void continueCurrentStep() {
+    go(currentStep);
+}
 
 private int dp(int v) {
     return (int) android.util.TypedValue.applyDimension(
@@ -290,11 +309,23 @@ private void showBattery() {
                 gr
                         ? "Για να αναλύσουμε τη δραστηριότητα εφαρμογών,\n"
                         + "απαιτείται πρόσβαση Χρήσης Εφαρμογών.\n\n"
-                        + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL."
+                        + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL.\n\n"
+                        + "Όταν επιστρέψεις, πάτησε ΟΚ για να συνεχίσουμε."
                         : "To analyze app activity,\n"
                         + "Usage Access permission is required.\n\n"
-                        + "Press Settings and enable it for GEL.",
-                () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)),
+                        + "Press Settings and enable it for GEL.\n\n"
+                         + "When you return, press OK to continue.",
+                () -> {
+    try {
+        Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+        intent.setData(Uri.parse("package:" + getPackageName()));
+        returnedFromUsageScreen = true;
+        startActivity(intent);
+    } catch (Throwable e) {
+        returnedFromUsageScreen = true;
+        startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
+    }
+},
                 () -> go(STEP_BATTERY),
                 false
         );
