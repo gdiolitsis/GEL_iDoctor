@@ -332,49 +332,84 @@ private void showBattery() {
     long start = now - (48L * 60 * 60 * 1000); // 48 hours window
 
     UsageStatsManager usm =
-            (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+        (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
 
-    List<UsageStats> stats =
-            usm.queryUsageStats(
-                    UsageStatsManager.INTERVAL_DAILY,
-                    start,
-                    now
-            );
-            
-HashMap<String, Long> mergedMinutes = new HashMap<>();
+List<UsageStats> stats =
+        usm.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                start,
+                now
+        );
 
-if (stats != null) {
-    for (UsageStats u : stats) {
-
-        if (u == null) continue;
-
-        String pkg = u.getPackageName();
-        if (pkg == null) continue;
-
-        long mins = u.getTotalTimeInForeground() / 60000L;
-
-        Long cur = mergedMinutes.get(pkg);
-        mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
-    }
+if (stats == null || stats.isEmpty()) {
+    batteryVerdict = "STABLE";
+    showStableDialog();
+    return;
 }
 
-    if (stats == null || stats.isEmpty()) {
+// 🔽 MERGE FG + BG
+HashMap<String, Long> mergedFgMinutes = new HashMap<>();
+HashMap<String, Long> mergedBgMinutes = new HashMap<>();
 
-        batteryVerdict = "STABLE";
+for (UsageStats u : stats) {
 
-        showStableDialog();
-        return;
-    }
+    if (u == null) continue;
+
+    String pkg = u.getPackageName();
+    if (pkg == null) continue;
+    if (pkg.equals(getPackageName())) continue;
+
+    long fg = 0L;
+    try {
+        fg = u.getTotalTimeInForeground() / 60000L;
+    } catch (Throwable ignore) {}
+
+    long bg = 0L;
+    try {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            bg = u.getTotalTimeForegroundServiceUsed() / 60000L;
+        }
+    } catch (Throwable ignore) {}
+
+    Long curFg = mergedFgMinutes.get(pkg);
+    mergedFgMinutes.put(pkg, (curFg == null ? 0L : curFg) + fg);
+
+    Long curBg = mergedBgMinutes.get(pkg);
+    mergedBgMinutes.put(pkg, (curBg == null ? 0L : curBg) + bg);
+}
+
+ArrayList<AppRisk> suspiciousApps = new ArrayList<>();
+
+for (String pkg : mergedBgMinutes.keySet()) {
+
+    long fgMinutes = mergedFgMinutes.get(pkg) != null ? mergedFgMinutes.get(pkg) : 0L;
+    long bgMinutes = mergedBgMinutes.get(pkg) != null ? mergedBgMinutes.get(pkg) : 0L;
+
+    boolean userOpened = fgMinutes > 0;
+    boolean bgNoOpen = (!userOpened && bgMinutes > 0);
+
+    if (!bgNoOpen) continue;   // ✅ ΚΑΝΟΝΑΣ
+
+    suspiciousApps.add(new AppRisk(pkg, bgMinutes, false));
+}
+
+if (suspiciousApps.isEmpty()) {
+    batteryVerdict = "STABLE";
+    showStableDialog();
+    return;
+}
 
     PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
 
     ArrayList<AppRisk> heavyApps = new ArrayList<>();
     ArrayList<AppRisk> moderateApps = new ArrayList<>();
 
-    for (String pkg : mergedMinutes.keySet()) {
+    for (String pkg : mergedBgMinutes.keySet()) {
 
-        long minutes = mergedMinutes.get(pkg);
-        if (minutes < 1) continue;
+    long minutes =
+            mergedBgMinutes.get(pkg) != null
+                    ? mergedBgMinutes.get(pkg)
+                    : 0L;
 
         if (pkg.equals(getPackageName())) continue;
 
@@ -396,14 +431,6 @@ if (stats != null) {
             heavyApps.add(new AppRisk(pkg, minutes, unrestricted));
         else if (score == 2)
             moderateApps.add(new AppRisk(pkg, minutes, unrestricted));
-    }
-
-    if (heavyApps.isEmpty() && moderateApps.isEmpty()) {
-
-        batteryVerdict = "STABLE";
-
-        showStableDialog();
-        return;
     }
 
     ScrollView scroll = new ScrollView(this);
@@ -452,35 +479,25 @@ batteryVerdict = verdict;
 
     addRecommendations(root, verdict);
 
-    if (!heavyApps.isEmpty()) {
-        addSection(
-                root,
-                gr ? "🔥 Υψηλή Δραστηριότητα"
-                   : "🔥 High Activity",
-                gr ? "Εφαρμογές με σημαντική επιβάρυνση."
-                   : "Apps with significant impact.",
-                0xFFFF5252
-        );
-        addBatteryAppList(root, heavyApps);
-    }
+    if (!suspiciousApps.isEmpty()) {
 
-    if (!moderateApps.isEmpty()) {
-        addSection(
-                root,
-                gr ? "⚠️ Μέτρια Δραστηριότητα"
-                   : "⚠️ Moderate Activity",
-                gr ? "Εφαρμογές που αξίζουν έλεγχο."
-                   : "Apps worth reviewing.",
-                0xFFFFC107
-        );
-        addBatteryAppList(root, moderateApps);
-    }
+    addSection(
+            root,
+            gr ? "⚠️ Background Δραστηριότητα"
+               : "⚠️ Background Activity",
+            gr ? "Εφαρμογές που έτρεξαν χωρίς να τις ανοίξεις (48 ώρες)."
+               : "Apps that ran without being opened (48h).",
+            0xFFFFC107
+    );
+
+    addBatteryAppList(root, suspiciousApps);
+}
 
     Button next = mkGreenBtn("OK");
-    next.setOnClickListener(v -> go(STEP_DATA));
-    root.addView(next);
+next.setOnClickListener(v -> go(STEP_DATA));
+root.addView(next);
 
-    showCustomDialog(scroll);
+showCustomDialog(scroll);
 }
 
 // ============================================================
@@ -511,6 +528,20 @@ private void showFinalVerdict() {
     );
 
     String finalVerdict = resolveFinalVerdict();
+    
+    String displayText;
+
+switch (finalVerdict) {
+    case "HEAVY":
+        displayText = "🔴 High Background Activity Pattern";
+        break;
+    case "MODERATE":
+        displayText = "🟡 Background Activity Detected";
+        break;
+    default:
+        displayText = "🟢 CLEAN";
+        break;
+}
 
     // ----------------------------
     // Section Details
@@ -548,10 +579,24 @@ private void showFinalVerdict() {
 
     TextView finalTv = new TextView(this);
     finalTv.setText(
-            (gr ? "Συνολική Κατάσταση: "
-                : "Overall Status: ")
-            + finalVerdict
+        (gr ? "Συνολική Κατάσταση: "
+            : "Overall Status: ")
+        + displayText
+);
+
+if ("STABLE".equals(finalVerdict)) {
+
+    TextView cleanMsg = new TextView(this);
+    cleanMsg.setText(
+            gr
+                    ? "Δεν εντοπίστηκε ύποπτη background δραστηριότητα τις τελευταίες 48 ώρες."
+                    : "No suspicious background activity detected in the last 48 hours."
     );
+    cleanMsg.setTextColor(0xFFAAAAAA);
+    cleanMsg.setPadding(0, dp(6), 0, dp(18));
+
+    root.addView(cleanMsg);
+}
 
     int color =
             finalVerdict.equals("HEAVY") ? 0xFFFF5252 :
@@ -574,20 +619,28 @@ private void showFinalVerdict() {
 
 private String resolveFinalVerdict() {
 
-    if ("HEAVY".equals(batteryVerdict)
-            || "HEAVY".equals(dataVerdict)
-            || "HEAVY".equals(appsVerdict)) {
+    int heavyCount = 0;
+    int moderateCount = 0;
 
+    if ("HEAVY".equals(batteryVerdict)) heavyCount++;
+    if ("HEAVY".equals(dataVerdict)) heavyCount++;
+    if ("HEAVY".equals(appsVerdict)) heavyCount++;
+
+    if ("MODERATE".equals(batteryVerdict)) moderateCount++;
+    if ("MODERATE".equals(dataVerdict)) moderateCount++;
+    if ("MODERATE".equals(appsVerdict)) moderateCount++;
+
+    // 🔴 HEAVY μόνο αν 2+ steps είναι heavy
+    if (heavyCount >= 2) {
         return "HEAVY";
     }
 
-    if ("MODERATE".equals(batteryVerdict)
-            || "MODERATE".equals(dataVerdict)
-            || "MODERATE".equals(appsVerdict)) {
-
+    // 🟡 Αν υπάρχει έστω ένα moderate ή heavy
+    if (heavyCount == 1 || moderateCount >= 1) {
         return "MODERATE";
     }
 
+    // 🟢 Καθαρό
     return "STABLE";
 }
 
@@ -655,10 +708,14 @@ private void addEngineVerdict(LinearLayout root,
             0xFFFFC107;
 
     tv.setText(
-            "Engine Verdict: " + verdict + "\n\n"
-            + (gr ? "Υψηλή: " : "High: ") + heavyCount + "\n"
-            + (gr ? "Μέτρια: " : "Moderate: ") + moderateCount
-    );
+        "Engine Verdict: " + verdict + "\n\n"
+        + (gr ? "Υψηλή Background Δραστηριότητα: "
+              : "High Background Activity: ")
+        + heavyCount + "\n"
+        + (gr ? "Μέτρια Background Δραστηριότητα: "
+              : "Moderate Background Activity: ")
+        + moderateCount
+);
 
     tv.setTextColor(color);
     tv.setTextSize(15f);
@@ -755,8 +812,9 @@ private void showData() {
     }
 
     // 🔽 MERGE 48h DAILY BUCKETS
-    HashMap<String, Long> mergedMinutes = new HashMap<>();
-    HashMap<String, Long> mergedLastUsed = new HashMap<>();
+    HashMap<String, Long> mergedFgMinutes = new HashMap<>();
+HashMap<String, Long> mergedBgMinutes = new HashMap<>();
+HashMap<String, Long> mergedLastUsed = new HashMap<>();
 
     for (UsageStats u : stats) {
 
@@ -765,11 +823,23 @@ private void showData() {
         String pkg = u.getPackageName();
         if (pkg == null) continue;
 
-        long mins = u.getTotalTimeInForeground() / 60000L;
-        long last = u.getLastTimeUsed();
+        long fg = 0L;
+try { fg = u.getTotalTimeInForeground() / 60000L; } catch (Throwable ignore) {}
 
-        Long cur = mergedMinutes.get(pkg);
-        mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
+long bg = 0L;
+try {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        bg = u.getTotalTimeForegroundServiceUsed() / 60000L;
+    }
+} catch (Throwable ignore) {}
+
+long last = u.getLastTimeUsed();
+
+Long curFg = mergedFgMinutes.get(pkg);
+mergedFgMinutes.put(pkg, (curFg == null ? 0L : curFg) + fg);
+
+Long curBg = mergedBgMinutes.get(pkg);
+mergedBgMinutes.put(pkg, (curBg == null ? 0L : curBg) + bg);
 
         Long lastCur = mergedLastUsed.get(pkg);
         if (lastCur == null || last > lastCur) {
@@ -779,13 +849,19 @@ private void showData() {
 
     PackageManager pm = getPackageManager();
 
-    for (String pkg : mergedMinutes.keySet()) {
+    for (String pkg : mergedBgMinutes.keySet()) {
 
         if (pkg == null) continue;
         if (pkg.equals(getPackageName())) continue;
 
-        long minutes = mergedMinutes.get(pkg);
-        if (minutes < 1) continue;
+        long fgMinutes = mergedFgMinutes.get(pkg) != null ? mergedFgMinutes.get(pkg) : 0L;
+long bgMinutes = mergedBgMinutes.get(pkg) != null ? mergedBgMinutes.get(pkg) : 0L;
+
+boolean userOpened = fgMinutes > 0;
+boolean bgNoOpen = (!userOpened && bgMinutes > 0);
+
+// Κρατάμε ΜΟΝΟ background χωρίς άνοιγμα
+if (!bgNoOpen) continue;
 
         Long lastObj = mergedLastUsed.get(pkg);
         long lastUsed = lastObj != null ? lastObj : 0L;
@@ -826,9 +902,9 @@ private void showData() {
                 progressTitle(gr ? "ΒΗΜΑ 3 — Ανάλυση Δεδομένων" : "STEP 3 — Data Analysis"),
                 gr
                         ? "Engine Verdict: STABLE\n\n"
-                        + "Δεν εντοπίστηκαν ύποπτες ή βαριές συμπεριφορές χρήσης (48 ώρες)."
-                        : "Engine Verdict: STABLE\n\n"
-                        + "No suspicious or heavy usage behaviour detected (48 hours).",
+    + "Δεν εντοπίστηκε ύποπτη ή βαριά δραστηριότητα χρήσης (48 ώρες)."
+: "Engine Verdict: STABLE\n\n"
+    + "No suspicious or heavy usage activity detected (48 hours).",
                 null,
                 () -> go(STEP_APPS),
                 false
@@ -968,10 +1044,14 @@ private void addEngineVerdictData(LinearLayout root,
             0xFFFFC107;
 
     tv.setText(
-            "Engine Verdict: " + verdict + "\n\n"
-            + (gr ? "High Activity: " : "High Activity: ") + heavyCount + "\n"
-            + (gr ? "Moderate Activity: " : "Moderate Activity: ") + moderateCount
-    );
+        "Engine Verdict: " + verdict + "\n\n"
+        + (gr ? "Υψηλή Δραστηριότητα: "
+              : "High Activity: ")
+        + heavyCount + "\n"
+        + (gr ? "Μέτρια Δραστηριότητα: "
+              : "Moderate Activity: ")
+        + moderateCount
+);
 
     tv.setTextColor(color);
     tv.setTextSize(15f);
@@ -1151,8 +1231,9 @@ private void showApps() {
                 now
         );
 
-HashMap<String, Long> mergedMinutes = new HashMap<>();
-HashMap<String, Long> mergedLastUsed = new HashMap<>();
+HashMap<String, Long> mergedFgMinutes = new HashMap<>();
+HashMap<String, Long> mergedBgMinutes = new HashMap<>();
+HashMap<String, Long> mergedLastUsed  = new HashMap<>();
 
 if (stats != null) {
     for (UsageStats u : stats) {
@@ -1162,15 +1243,32 @@ if (stats != null) {
         String pkg = u.getPackageName();
         if (pkg == null) continue;
 
-        long mins = u.getTotalTimeInForeground() / 60000L;
-        long last = u.getLastTimeUsed();
+        long fgMins = 0L;
+try {
+    fgMins = u.getTotalTimeInForeground() / 60000L;
+} catch (Throwable ignore) {}
 
-        Long cur = mergedMinutes.get(pkg);
-        mergedMinutes.put(pkg, (cur == null ? 0L : cur) + mins);
+long bgMins = 0L;
+try {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+        bgMins = u.getTotalTimeForegroundServiceUsed() / 60000L;
+    }
+} catch (Throwable ignore) {}
 
-        Long lastCur = mergedLastUsed.get(pkg);
-        if (lastCur == null || last > lastCur) {
-            mergedLastUsed.put(pkg, last);
+long last = 0L;
+try {
+    last = u.getLastTimeUsed();
+} catch (Throwable ignore) {}
+
+Long curFg = mergedFgMinutes.get(pkg);
+mergedFgMinutes.put(pkg, (curFg == null ? 0L : curFg) + fgMins);
+
+Long curBg = mergedBgMinutes.get(pkg);
+mergedBgMinutes.put(pkg, (curBg == null ? 0L : curBg) + bgMins);
+
+Long lastCur = mergedLastUsed.get(pkg);
+if (lastCur == null || last > lastCur) {
+    mergedLastUsed.put(pkg, last);
         }
     }
 }
@@ -1180,26 +1278,36 @@ if (stats == null || stats.isEmpty()) {
     return;
 }
 
+if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
+    showAppsStable();
+    return;
+}
+
         PackageManager pm = getPackageManager();
 
-        for (String pkg : mergedMinutes.keySet()) {
+        for (String pkg : mergedBgMinutes.keySet()) {
 
     if (pkg == null) continue;
     if (pkg.equals(getPackageName())) continue;
 
-    long minutes = mergedMinutes.get(pkg);
+    long fgMinutes = mergedFgMinutes.containsKey(pkg) ? mergedFgMinutes.get(pkg) : 0L;
+long bgMinutes = mergedBgMinutes.containsKey(pkg) ? mergedBgMinutes.get(pkg) : 0L;
 
-    Long lastObj = mergedLastUsed.get(pkg);
-    long lastUsed = lastObj != null ? lastObj : 0L;
+Long lastObj = mergedLastUsed.get(pkg);
+long lastUsed = lastObj != null ? lastObj : 0L;
 
-    long hoursSinceUse =
-            lastUsed > 0
-                    ? (now - lastUsed) / (1000L * 60 * 60)
-                    : 999999;
+long hoursSinceUse =
+        lastUsed > 0
+                ? (now - lastUsed) / (1000L * 60 * 60)
+                : 999999;
+                
+                
 
-    int launches = 0;
+boolean userOpened = fgMinutes > 0;
+boolean bgNoOpen = (!userOpened && bgMinutes > 0);
 
-    if (minutes < 1 && launches < 3) continue;
+// Θέλουμε ΜΟΝΟ background χωρίς άνοιγμα
+if (!bgNoOpen) continue;
 
     try {
 
@@ -1212,37 +1320,21 @@ if (stats == null || stats.isEmpty()) {
                 // -------------------------------
                 // CLASSIFICATION LOGIC
                 // -------------------------------
-                String badge;
-                int level;
+String badge;
+int level;
 
-                if (minutes >= 120 && hoursSinceUse <= 6) {
-                    badge = "🟥 Always Active";
-                    level = 3;
-                }
-                else if (minutes < 10 && launches >= 15) {
-                    badge = "💤 Rarely used but wakes often";
-                    level = 2;
-                }
-                else if (minutes >= 45) {
-                    badge = "🟨 Background Risk";
-                    level = 2;
-                }
-                else {
-                    continue;
-                }
+if (bgMinutes >= 60) {
+    badge = gr ? "🟥 Background χωρίς άνοιγμα" : "🟥 Background without opening";
+    level = 3;
+} else {
+    badge = gr ? "🟨 Background χωρίς άνοιγμα" : "🟨 Background without opening";
+    level = 2;
+}
 
-                AppAppRisk r = new AppAppRisk(
-                        pkg,
-                        minutes,
-                        hoursSinceUse,
-                        launches,
-                        badge
-                );
+AppAppRisk r = new AppAppRisk(pkg, fgMinutes, bgMinutes, hoursSinceUse, badge);
 
-                if (level >= 3)
-                    heavy.add(r);
-                else
-                    moderate.add(r);
+if (level >= 3) heavy.add(r);
+else moderate.add(r);
 
             } catch (Throwable ignore) {}
         }
@@ -1269,42 +1361,20 @@ if (stats == null || stats.isEmpty()) {
 // SMART VERDICT ENGINE (USER-AWARE)
 // ----------------------------------------------------
 
-boolean suspicious = false;
-boolean heavyUserUse = false;
-
 for (AppAppRisk r : heavy) {
-
-    // Suspicious: heavy but not user-driven
-    if (r.minutes >= 120 &&
-        r.hoursSinceUse <= 1 &&
-        r.launches == 0) {
-
-        suspicious = true;
+    // heavy list εδώ είναι ήδη “background χωρίς άνοιγμα”
+    hasBgNoOpenHeavy = true;
+    break;
+}
+if (!hasBgNoOpenHeavy) {
+    for (AppAppRisk r : moderate) {
+        hasBgNoOpenModerate = true;
         break;
     }
-
-    // Legit heavy user usage
-    if (r.minutes >= 120 &&
-        r.hoursSinceUse <= 2) {
-
-        heavyUserUse = true;
-    }
 }
 
-String verdict;
-
-if (suspicious) {
-    verdict = "HEAVY";
-}
-else if (heavyUserUse || !moderate.isEmpty()) {
-    verdict = "MODERATE";
-}
-else {
-    verdict = "STABLE";
-}
-
+String verdict = !heavy.isEmpty() ? "HEAVY" : "MODERATE";
 appsVerdict = verdict;
-
 addAppsVerdict(root, verdict, heavy.size(), moderate.size());
 
     if (!heavy.isEmpty()) {
@@ -1451,9 +1521,9 @@ if (stats != null) {
 
     LinearLayout root = buildBaseBox(
             progressTitle(
-                    gr ? "ΒΗΜΑ 4 — Αδρανείς Εφαρμογές (30 ημέρες)"
-                       : "STEP 4 — Unused Applications (30 days)"
-            )
+    gr ? "ΒΗΜΑ 5 — Αδρανείς Εφαρμογές (30 ημέρες)"
+       : "STEP 5 — Unused Applications (30 days)"
+)
     );
 
     scroll.addView(root);
@@ -1554,16 +1624,16 @@ private static class UnusedApp {
 
 private static class AppAppRisk {
     final String pkg;
-    final long minutes;
+    final long fgMinutes;   // user opened (foreground UI)
+    final long bgMinutes;   // background via Foreground Service (Android 10+)
     final long hoursSinceUse;
-    final int launches;
     final String badge;
 
-    AppAppRisk(String p, long m, long h, int l, String b) {
+    AppAppRisk(String p, long fg, long bg, long h, String b) {
         pkg = p;
-        minutes = m;
+        fgMinutes = fg;
+        bgMinutes = bg;
         hoursSinceUse = h;
-        launches = l;
         badge = b;
     }
 }
@@ -1575,13 +1645,15 @@ private static class AppAppRisk {
 private void showAppsStable() {
 
     showDialog(
-        progressTitle(gr ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
-           : "STEP 4 — App Activity (48 hours)"),
-        gr
-                    ? "Engine Verdict: STABLE\n\n"
-                    + "Δεν βρέθηκαν εφαρμογές με υπερβολική δραστηριότητα."
-                    : "Engine Verdict: STABLE\n\n"
-                    + "No apps with abnormal activity detected.",
+            progressTitle(gr ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
+                    : "STEP 4 — App Activity (48 hours)"),
+            gr
+                    ? "🟢 Engine Verdict: STABLE\n\n"
+                    + "Καμμία εφαρμογή δεν είχε background δραστηριότητα\n"
+                    + "τις τελευταίες 48 ώρες."
+                    : "🟢 Engine Verdict: STABLE\n\n"
+                    + "No app showed background activity\n"
+                    + "in the last 48 hours.",
             null,
             () -> go(STEP_UNUSED),
             false
@@ -1605,10 +1677,14 @@ private void addAppsVerdict(LinearLayout root,
         0xFF00C853;
 
     tv.setText(
-            "Engine Verdict: " + verdict + "\n\n"
-            + (gr ? "High Activity: " : "High Activity: ") + heavy + "\n"
-            + (gr ? "Moderate Activity: " : "Moderate Activity: ") + moderate
-    );
+        "Engine Verdict: " + verdict + "\n\n"
+        + (gr ? "Υψηλή Background Δραστηριότητα: "
+              : "High Background Activity: ")
+        + heavy + "\n"
+        + (gr ? "Μέτρια Background Δραστηριότητα: "
+              : "Moderate Background Activity: ")
+        + moderate
+);
 
     tv.setTextColor(color);
     tv.setTextSize(15f);
@@ -1656,17 +1732,14 @@ try {
 
         TextView meta = new TextView(this);
         meta.setText(
-        (gr ? "Χρήση: " : "Usage: ")
-        + r.minutes
-        + (gr ? " λεπτά (48h)" : " min (48h)")
-        + "  |  "
-        + (gr ? "Τελευταία χρήση: " : "Last used: ")
-        + r.hoursSinceUse + "h"
-        + "  |  "
-        + (gr ? "Εκκινήσεις: " : "Launches: ")
-        + r.launches
-        + "\n"
-        + r.badge
+        (gr ? "BG: " : "BG: ")
+                + r.bgMinutes
+                + (gr ? " λεπτά (48h)" : " min (48h)")
+                + "  |  "
+                + (gr ? "Τελευταία χρήση: " : "Last used: ")
+                + r.hoursSinceUse + "h"
+                + "\n"
+                + r.badge
 );
 
 if (isSystem) {
@@ -1746,24 +1819,25 @@ try {
         name.setTypeface(null, Typeface.BOLD);
 
         TextView meta = new TextView(this);
-        meta.setText(
-                (gr ? "Χρήση: " : "Usage: ")
-                        + r.minutes
-                        + (gr ? " λεπτά (48h)" : " min (48h)")
-                        + (r.unrestricted
-                        ? (gr ? "  |  ⚠️ Χωρίς περιορισμό μπαταρίας"
-                              : "  |  ⚠️ Battery unrestricted")
-                        : "")
-        );
+
+meta.setText(
+        (gr ? "Χρήση: " : "Usage: ")
+                + r.minutes
+                + (gr ? " λεπτά (48h)" : " min (48h)")
+                + (r.unrestricted
+                ? (gr ? "  |  ⚠️ Χωρίς περιορισμό μπαταρίας"
+                      : "  |  ⚠️ Battery unrestricted")
+                : "")
+);
+
+meta.setTextColor(r.unrestricted ? 0xFFFFC107 : 0xFF00FF7F);
+meta.setPadding(0, 6, 0, 12);
         
         if (isSystem) {
     meta.append(gr
         ? "  |  ⚙️ Εφαρμογή Συστήματος (Απαιτείται Root)"
         : "  |  ⚙️ System App (Root required)");
 }
-        
-        meta.setTextColor(0xFF00FF7F);
-        meta.setPadding(0, 6, 0, 12);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -1819,7 +1893,7 @@ if (!isSystem) {
     private void showCache() {
 
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 5 — Cache" : "STEP 5 — Cache"),
+                progressTitle(gr ? "ΒΗΜΑ 6 — Cache" : "STEP 6 — Cache")
                 gr
                         ? "Θα ανοίξει η λίστα εφαρμογών ταξινομημένη κατά «Μεγαλύτερη % Cache».\n\n"
                         + "Καθάρισε εφαρμογές με μεγάλη προσωρινή μνήμη — ή και όλες.\n"
@@ -2239,7 +2313,7 @@ skip.setOnClickListener(v -> go(STEP_FINAL));
     }
 
     private String progressTitle(String title) {
-        int total = 5;
+        int total = 6;
         int current = step;
         return title + " (" + current + "/" + total + ")";
     }
