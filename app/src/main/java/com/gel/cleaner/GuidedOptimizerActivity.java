@@ -1030,7 +1030,10 @@ root.addView(sectionTitle);
     root.addView(okBtn);
 
     showCustomDialog(scroll);
+
+} catch (Throwable ignore) {
 }
+
 }
 
 // ============================================================
