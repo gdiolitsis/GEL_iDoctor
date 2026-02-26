@@ -78,10 +78,6 @@ protected void onResume() {
     }
 }
 
-private void continueCurrentStep() {
-    go(currentStep);
-}
-
 private int dp(int v) {
     return (int) android.util.TypedValue.applyDimension(
             android.util.TypedValue.COMPLEX_UNIT_DIP,
