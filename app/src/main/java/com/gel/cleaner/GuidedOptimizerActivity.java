@@ -832,22 +832,22 @@ private void showData() {
     if (!hasUsageAccess()) {
         dataVerdict = "STABLE";
         showDialog(
-                progressTitle(
-    gr
-        ? "ΒΗΜΑ 3 — Κατανάλωση Δεδομένων (48 ώρες)"
-        : "STEP 3 — Data Consumption (48 hours)"
+        progressTitle(
+                gr
+                        ? "ΒΗΜΑ 3 — Κατανάλωση Δεδομένων (48 ώρες)"
+                        : "STEP 3 — Data Consumption (48 hours)"
+        ),
+        gr
+                ? "Για να κάνουμε premium ανάλυση δεδομένων,\n"
+                  + "χρειαζόμαστε πρόσβαση Χρήσης Εφαρμογών.\n\n"
+                  + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL."
+                : "To run premium data analysis,\n"
+                  + "Usage Access permission is required.\n\n"
+                  + "Press Settings and enable it for GEL.",
+        () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)),
+        () -> go(STEP_DATA),
+        false
 );
-   
-                        ? "Για να κάνουμε premium ανάλυση δεδομένων,\n"
-                        + "χρειαζόμαστε πρόσβαση Χρήσης Εφαρμογών.\n\n"
-                        + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL."
-                        : "To run premium data analysis,\n"
-                        + "Usage Access permission is required.\n\n"
-                        + "Press Settings and enable it for GEL.",
-                () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)),
-                () -> go(STEP_DATA),
-                false
-        );
         return;
     }
 
@@ -894,6 +894,7 @@ private void showData() {
         false
 );
 return;
+}
 
 // 🔽 MERGE 48h DAILY BUCKETS
 HashMap<String, Long> mergedFgMinutes = new HashMap<>();
