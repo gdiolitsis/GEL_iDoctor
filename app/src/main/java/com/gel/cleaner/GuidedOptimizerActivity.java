@@ -2544,6 +2544,50 @@ private void addActionButtons(LinearLayout root, Runnable ok, Runnable skip) {
         c.setTextColor(Color.WHITE);
         return c;
     }
+    
+    // ============================================================
+// BASE DIALOG BOX (GEL STYLE)
+// ============================================================
+private LinearLayout buildBaseBox(String title) {
+
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(20), dp(20), dp(20), dp(20));
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF111111);
+    bg.setCornerRadius(dp(16));
+    bg.setStroke(dp(2), 0xFFFFD700);
+    root.setBackground(bg);
+
+    TextView tvTitle = new TextView(this);
+    tvTitle.setText(title);
+    tvTitle.setTextColor(0xFFFFD700);
+    tvTitle.setTextSize(18f);
+    tvTitle.setTypeface(null, Typeface.BOLD);
+    tvTitle.setPadding(0, 0, 0, dp(16));
+
+    root.addView(tvTitle);
+
+    return root;
+}
+
+// ============================================================
+// CUSTOM GEL DIALOG
+// ============================================================
+private void showCustomDialog(View v) {
+
+    AlertDialog dialog = new AlertDialog.Builder(this)
+            .setView(v)
+            .setCancelable(false)
+            .create();
+
+    dialog.getWindow().setBackgroundDrawable(
+            new ColorDrawable(Color.TRANSPARENT)
+    );
+
+    dialog.show();
+}
 
     private String progressTitle(String title) {
         int total = 6;
