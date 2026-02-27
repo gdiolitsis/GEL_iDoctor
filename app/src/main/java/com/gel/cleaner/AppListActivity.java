@@ -320,29 +320,25 @@ label.setText(
 protected void onResume() {
     super.onResume();
 
-    // 1️⃣ Αν μόλις γυρίσαμε από Usage screen
+    // 1️⃣ Επιστροφή από Usage screen
     if (returnedFromUsageScreen) {
         returnedFromUsageScreen = false;
 
         if (hasUsageAccess()) {
             new Thread(this::loadAllApps).start();
         }
-
-        return; // ⛔ ΜΗΝ συνεχίσεις άλλο
+        return;
     }
 
-    // 2️⃣ Κανονική ροή
-    if (!hasUsageAccess()) {
-        return; // ⛔ ΜΗΝ ξαναδείξεις dialog
-    }
-
+    // 2️⃣ Αν η λίστα δεν έχει φορτωθεί, φόρτωσέ την
     if (allApps.isEmpty()) {
         new Thread(this::loadAllApps).start();
     }
 
+    // 3️⃣ Guided flow (ΑΝΕΞΑΡΤΗΤΟ από Usage Access)
     if (guidedActive) {
-    showContinueGuidedDialog();
-}
+        showContinueGuidedDialog();
+    }
 }
 
 @Override
@@ -1286,16 +1282,11 @@ private void clearSelections() {
 
 private void openNext() {
 
-    // ✅ FINISHED
     if (guidedIndex >= guidedQueue.size()) {
-
         guidedActive = false;
-
-        // 🔥 RESET SELECTION STATE
         clearSelections();
         refreshUI();
         syncToggleStatesFromSelection();
-
         showGelDialog(
                 AppLang.isGreek(this)
                         ? "Η διαδικασία ολοκληρώθηκε."
@@ -1313,19 +1304,9 @@ private void openNext() {
     intent.setData(Uri.parse("package:" + pkg));
 
     try {
-
-        guidedIndex++;            // ✅ προχωράμε πρώτα index
-        startActivity(intent);    // ✅ μία μόνο φορά
-        showNextAppToast();       // ✅ ενημέρωση χρήστη
-
+        startActivity(intent);  // ❗ ΧΩΡΙΣ index++
+        showNextAppToast();
     } catch (Throwable t) {
-
-        showGelDialog(
-                AppLang.isGreek(this)
-                        ? "Αδυναμία ανοίγματος ρυθμίσεων."
-                        : "Cannot open settings."
-        );
-
         guidedIndex++;
         openNext();
     }
