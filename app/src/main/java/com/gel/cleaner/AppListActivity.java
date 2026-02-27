@@ -341,8 +341,8 @@ protected void onResume() {
     }
 
     if (guidedActive) {
-        advanceGuided();
-    }
+    showContinueGuidedDialog();
+}
 }
 
 @Override
@@ -526,16 +526,176 @@ private void updateStartButtonUI() {
 
 private void showUninstallConfirmDialog() {
 
-    boolean gr = AppLang.isGreek(this);
+    final boolean gr = AppLang.isGreek(this);
 
-    new AlertDialog.Builder(this)
-            .setTitle(gr ? "Επιβεβαίωση" : "Confirmation")
-            .setMessage(gr
-                    ? "Θέλεις να απεγκαταστήσεις τις επιλεγμένες εφαρμογές;"
-                    : "Do you want to uninstall the selected apps?")
-            .setPositiveButton(gr ? "ΝΑΙ" : "YES", (d, w) -> startGuided())
-            .setNegativeButton(gr ? "ΑΚΥΡΟ" : "CANCEL", null)
-            .show();
+    AlertDialog.Builder b =
+            new AlertDialog.Builder(
+                    this,
+                    android.R.style.Theme_Material_Dialog_NoActionBar
+            );
+
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(22), dp(20), dp(22), dp(18));
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF101010);
+    bg.setCornerRadius(dp(10));
+    bg.setStroke(dp(3), 0xFFFFD700);
+    root.setBackground(bg);
+
+    TextView title = new TextView(this);
+    title.setText(gr ? "Επιβεβαίωση" : "Confirmation");
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(18f);
+    title.setTypeface(null, Typeface.BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(0, 0, 0, dp(12));
+    root.addView(title);
+
+    TextView msg = new TextView(this);
+    msg.setText(gr
+            ? "Θέλεις να απεγκαταστήσεις τις επιλεγμένες εφαρμογές;"
+            : "Do you want to uninstall the selected apps?");
+    msg.setTextColor(0xFF39FF14);
+    msg.setTextSize(15f);
+    msg.setGravity(Gravity.CENTER);
+    msg.setPadding(0, 0, 0, dp(18));
+    root.addView(msg);
+
+    LinearLayout btnRow = new LinearLayout(this);
+    btnRow.setOrientation(LinearLayout.HORIZONTAL);
+    btnRow.setGravity(Gravity.CENTER);
+
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+            );
+    lp.setMargins(dp(8), 0, dp(8), 0);
+
+    Button cancelBtn = new Button(this);
+    cancelBtn.setText(gr ? "ΑΚΥΡΟ" : "CANCEL");
+    cancelBtn.setAllCaps(false);
+    cancelBtn.setTextColor(Color.WHITE);
+    cancelBtn.setLayoutParams(lp);
+
+    GradientDrawable cancelBg = new GradientDrawable();
+    cancelBg.setColor(0xFFC62828);
+    cancelBg.setCornerRadius(dp(10));
+    cancelBg.setStroke(dp(3), 0xFFFFD700);
+    cancelBtn.setBackground(cancelBg);
+
+    Button okBtn = new Button(this);
+    okBtn.setText(gr ? "ΝΑΙ" : "YES");
+    okBtn.setAllCaps(false);
+    okBtn.setTextColor(Color.BLACK);
+    okBtn.setLayoutParams(lp);
+
+    GradientDrawable okBg = new GradientDrawable();
+    okBg.setColor(0xFF39FF14);
+    okBg.setCornerRadius(dp(10));
+    okBg.setStroke(dp(3), 0xFFFFD700);
+    okBtn.setBackground(okBg);
+
+    btnRow.addView(cancelBtn);
+    btnRow.addView(okBtn);
+
+    root.addView(btnRow);
+
+    b.setView(root);
+    b.setCancelable(false);
+
+    AlertDialog d = b.create();
+
+    if (d.getWindow() != null) {
+        d.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT)
+        );
+    }
+
+    cancelBtn.setOnClickListener(v -> d.dismiss());
+    okBtn.setOnClickListener(v -> {
+        d.dismiss();
+        startGuided();
+    });
+
+    d.show();
+}
+
+private void showContinueGuidedDialog() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    AlertDialog.Builder b =
+            new AlertDialog.Builder(
+                    this,
+                    android.R.style.Theme_Material_Dialog_NoActionBar
+            );
+
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(22), dp(20), dp(22), dp(18));
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF101010);
+    bg.setCornerRadius(dp(10));
+    bg.setStroke(dp(3), 0xFFFFD700);
+    root.setBackground(bg);
+
+    TextView msg = new TextView(this);
+    msg.setText(gr
+            ? "Θέλεις να συνεχίσεις με την επόμενη εφαρμογή;"
+            : "Continue with next app?");
+    msg.setTextColor(Color.WHITE);
+    msg.setTextSize(16f);
+    msg.setGravity(Gravity.CENTER);
+    msg.setPadding(0, 0, 0, dp(18));
+    root.addView(msg);
+
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER);
+
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+    lp.setMargins(dp(8), 0, dp(8), 0);
+
+    Button stop = new Button(this);
+    stop.setText(gr ? "ΔΙΑΚΟΠΗ" : "STOP");
+    stop.setLayoutParams(lp);
+
+    Button cont = new Button(this);
+    cont.setText(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE");
+    cont.setLayoutParams(lp);
+
+    row.addView(stop);
+    row.addView(cont);
+    root.addView(row);
+
+    b.setView(root);
+    AlertDialog d = b.create();
+
+    if (d.getWindow() != null) {
+        d.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT));
+    }
+
+    stop.setOnClickListener(v -> {
+        guidedActive = false;
+        clearSelections();
+        refreshUI();
+        d.dismiss();
+    });
+
+    cont.setOnClickListener(v -> {
+        d.dismiss();
+        advanceGuided();
+    });
+
+    d.show();
 }
 
     // ============================================================
@@ -970,29 +1130,7 @@ private void applyFiltersAndSort() {
 
     private void refreshUI() {
 
-    ArrayList<AppEntry> copy = new ArrayList<>();
-
-    for (AppEntry e : visible) {
-
-        AppEntry c = new AppEntry();
-
-        c.pkg = e.pkg;
-        c.label = e.label;
-        c.isSystem = e.isSystem;
-        c.selected = e.selected;
-        c.appBytes = e.appBytes;
-        c.cacheBytes = e.cacheBytes;
-        c.appSizeBytes = e.appSizeBytes;
-        c.cachePercent = e.cachePercent;
-        c.isHeader = e.isHeader;
-        c.isUserHeader = e.isUserHeader;
-        c.isSystemHeader = e.isSystemHeader;
-        c.headerTitle = e.headerTitle;
-
-        copy.add(c);
-    }
-
-    adapter.submitList(copy);
+    adapter.submitList(new ArrayList<>(visible));
     updateStats();
 }
 
@@ -1176,10 +1314,9 @@ private void openNext() {
 }
 
     private void advanceGuided() {
-        if (!guidedActive) return;
-        guidedIndex++;
-        openNext();
-    }
+    if (!guidedActive) return;
+    openNext();
+}
 
 // ============================================================
 // GEL DIALOG (Dark-Gold + Neon Body)
