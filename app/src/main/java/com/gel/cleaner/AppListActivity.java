@@ -334,9 +334,20 @@ protected void onResume() {
     }
 
     // ✅ ΜΗΝ δείχνεις dialog αν τελείωσε
-    if (guidedActive && guidedIndex < guidedQueue.size()) {
+    if (guidedActive) {
+
+    // Αν υπάρχει μόνο μία εφαρμογή
+    if (guidedQueue.size() == 1) {
+        guidedIndex = guidedQueue.size();
+        openNext();   // θα μπει στο finish block
+        return;
+    }
+
+    // Κανονική ροή για 2+ εφαρμογές
+    if (guidedIndex < guidedQueue.size()) {
         showContinueGuidedDialog();
     }
+}
 }
 
 @Override
