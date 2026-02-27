@@ -356,6 +356,7 @@ private void showBattery() {
                 gr
                         ? "Για να αναλύσουμε τη δραστηριότητα εφαρμογών,\n"
                         + "απαιτείται πρόσβαση Χρήσης Εφαρμογών.\n\n"
+                        + "Καμία συλλογή προσωπικών δεδομένων δεν γίνεται με την παραχώρηση της Πρόσβασης Χρήσης.\n\n"
                         + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL.\n\n"
                         + "Όταν επιστρέψεις, πάτησε ΟΚ για να συνεχίσουμε."
                         : "To analyze app activity,\n"
@@ -552,8 +553,8 @@ batteryVerdict = verdict;
             root,
             gr ? "⚠️ Background Δραστηριότητα"
                : "⚠️ Background Activity",
-            gr ? "Εφαρμογές που έτρεξαν χωρίς να τις ανοίξεις (48 ώρες)."
-               : "Apps that ran without being opened (48h).",
+            gr ? "Εφαρμογές που έτρεξαν χωρίς να τις ανοίξεις τις τελευταίες 48 ώρες."
+               : "Apps that ran without being opened since last 48h.",
             0xFFFFC107
     );
 
@@ -584,10 +585,16 @@ private void showStableDialog() {
                         : "STEP 2 — Battery Consumption (48 hours)"
         ),
         gr
+                ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
+                  + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
+                : "Results refer to apps you did not open since last 48 hours,\n"
+                  + "but showed background activity.\n\n",
+        
+        gr
                 ? "Engine Verdict: STABLE\n\n"
-                  + "Δεν εντοπίστηκε δραστηριότητα εφαρμογών στο παρασκήνιο, χωρίς να τις ανοίξεις (48 ώρες)."
+                  + "Δεν εντοπίστηκε δραστηριότητα εφαρμογών στο παρασκήνιο, τις τελευταίες 48 ώρες."
                 : "Engine Verdict: STABLE\n\n"
-                  + "No background app activity without opening, was detected (48 hours).",
+                  + "No background app activity detected, since last 48 hours.",
         null,
         () -> go(STEP_DATA),
         false
@@ -607,13 +614,21 @@ private void showFinalVerdict() {
 
 switch (finalVerdict) {
     case "HEAVY":
-        displayText = "🔴 High Background Activity Pattern";
+        displayText = gr
+                ? "🔴 Εντοπίστηκε Υψηλή Δραστηριότητα στο Παρασκήνιο"
+                : "🔴 High Background Activity Detected";
         break;
+
     case "MODERATE":
-        displayText = "🟡 Background Activity Detected";
+        displayText = gr
+                ? "🟡 Εντοπίστηκε Δραστηριότητα στο Παρασκήνιο"
+                : "🟡 Background Activity Detected";
         break;
+
     default:
-        displayText = "🟢 CLEAN";
+        displayText = gr
+                ? "🟢 Δεν Εντοπίστηκε Δραστηριότητα στο Παρασκήνιο"
+                : "🟢 No Background Activity Detected";
         break;
 }
 
@@ -663,8 +678,8 @@ if ("STABLE".equals(finalVerdict)) {
     TextView cleanMsg = new TextView(this);
     cleanMsg.setText(
             gr
-                    ? "Δεν εντοπίστηκε ύποπτη background δραστηριότητα τις τελευταίες 48 ώρες."
-                    : "No suspicious background activity detected in the last 48 hours."
+                    ? "Δεν εντοπίστηκε δραστηριότητα στο παρασκήνιο τις τελευταίες 48 ώρες."
+                    : "No background activity detected in the last 48 hours."
     );
     cleanMsg.setTextColor(0xFFAAAAAA);
     cleanMsg.setPadding(0, dp(6), 0, dp(18));
@@ -783,10 +798,10 @@ private void addEngineVerdict(LinearLayout root,
 
     tv.setText(
         "Engine Verdict: " + verdict + "\n\n"
-        + (gr ? "Υψηλή Background Δραστηριότητα: "
+        + (gr ? "Υψηλή Δραστηριότητα στο παρασκήνιο: "
               : "High Background Activity: ")
         + heavyCount + "\n"
-        + (gr ? "Μέτρια Background Δραστηριότητα: "
+        + (gr ? "Μέτρια Δραστηριότητα στο παρασκήνιο: "
               : "Moderate Background Activity: ")
         + moderateCount
 );
@@ -807,8 +822,8 @@ private void addRecommendations(LinearLayout root,
 
     if (verdict.equals("HEAVY")) {
         rec = gr
-                ? "Προτείνεται περιορισμός background δραστηριότητας ή απεγκατάσταση μη απαραίτητων εφαρμογών."
-                : "Restrict background activity or uninstall unnecessary high-impact apps.";
+                ? "Προτείνεται περιορισμός δραστηριότητας παρασκηνίου, ή απεγκατάσταση μη απαραίτητων εφαρμογών."
+                : "It is recommended to restrict background activity, or uninstall unnecessary apps.";
     } else {
         rec = gr
                 ? "Έλεγξε τις παρακάτω εφαρμογές."
@@ -840,6 +855,7 @@ private void showData() {
         gr
                 ? "Για να κάνουμε premium ανάλυση δεδομένων,\n"
                   + "χρειαζόμαστε πρόσβαση Χρήσης Εφαρμογών.\n\n"
+                  + "Καμία συλλογή προσωπικών δεδομένων δεν γίνεται με την παραχώρηση της Πρόσβασης Χρήσης.\n\n"
                   + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL."
                 : "To run premium data analysis,\n"
                   + "Usage Access permission is required.\n\n"
@@ -884,11 +900,11 @@ private void showData() {
                 ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
                   + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
                   + "Engine Verdict: STABLE\n\n"
-                  + "Δεν υπάρχουν διαθέσιμα στοιχεία χρήσης (48 ώρες)."
-                : "Results refer to apps you did not open in the last 48 hours,\n"
+                  + "Δεν υπάρχουν διαθέσιμα στοιχεία χρήσης για τις τελευταίες 48 ώρες."
+                : "Results refer to apps you did not open since last 48 hours,\n"
                   + "but showed background activity.\n\n"
                   + "Engine Verdict: STABLE\n\n"
-                  + "No usage stats available (48 hours).",
+                  + "No usage stats available since last 48 hours.",
         null,
         () -> go(STEP_APPS),
         false
@@ -1017,11 +1033,11 @@ try {
                 ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
                   + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
                   + "Engine Verdict: STABLE\n\n"
-                  + "Δεν εντοπίστηκε ύποπτη ή βαριά δραστηριότητα χρήσης (48 ώρες)."
-                : "Results refer to apps you did not open in the last 48 hours,\n"
+                  + "Δεν εντοπίστηκε ύποπτη ή βαριά δραστηριότητα χρήσης τις τελευταίες 48 ώρες."
+                : "Results refer to apps you did not open since last 48 hours,\n"
                   + "but showed background activity.\n\n"
                   + "Engine Verdict: STABLE\n\n"
-                  + "No suspicious or heavy usage activity detected (48 hours).",
+                  + "No suspicious or heavy usage activity detected since last 48 hours.",
         null,
         () -> go(STEP_APPS),
         false
@@ -1088,21 +1104,23 @@ root.addView(sectionTitle);
 
 String fullText = gr
         ? "Η ανάλυση βασίζεται σε δραστηριότητα στο παρασκήνιο (όχι MB).\n\n"
-        + "• High Activity = αυξημένη background δραστηριότητα\n"
+        + "• High Activity = αυξημένη δραστηριότητα στο παρασκηνιο.\n"
         + "• 💤 Σπάνια χρήση αλλά ενεργή = δεν άνοιξες την εφαρμογή,\n"
-        + "   αλλά παρουσίασε πρόσφατη δραστηριότητα\n\n"
+        + "   αλλά παρουσίασε πρόσφατη δραστηριότητα στο παρασκήνιο.\n\n"
         + "Πάτα σε μια εφαρμογή για ενέργειες."
         : "This analysis is based on background activity (not MB).\n\n"
         + "• High Activity = elevated background activity\n"
         + "• 💤 Rarely used but active = you did not open the app,\n"
-        + "   but it showed recent activity\n\n"
+        + "   but it showed recent background activity\n\n"
         + "Tap an app for actions.";
 
 android.text.SpannableStringBuilder sb =
         new android.text.SpannableStringBuilder(fullText);
 
 // Highlight labels
-String highLabel = "High Activity";
+String highLabel = gr
+        ? "Υψηλή Δραστηριότητα"
+        : "High Activity";
 String rareLabel = gr
         ? "💤 Σπάνια χρήση αλλά ενεργή"
         : "💤 Rarely used but active";
@@ -1135,7 +1153,7 @@ root.addView(explain);
     if (!heavy.isEmpty()) {
         addSection(
                 root,
-                gr ? "🔥 High Activity" : "🔥 High Activity",
+                gr ? "🔥 Υψηλή Δραστηριότητα" : "🔥 High Activity",
                 gr ? "Εφαρμογές με πολύ υψηλή δραστηριότητα." : "Apps with very high activity.",
                 0xFFFF5252
         );
@@ -1145,7 +1163,7 @@ root.addView(explain);
     if (!moderate.isEmpty()) {
         addSection(
                 root,
-                gr ? "⚠️ Moderate Activity" : "⚠️ Moderate Activity",
+                gr ? "⚠️ Εφαρμογές με Μέτρια Δραστηριότητα" : "⚠️ Moderate Activity apps",
                 gr ? "Εφαρμογές που αξίζουν έλεγχο." : "Apps worth reviewing.",
                 0xFFFFC107
         );
@@ -1216,8 +1234,8 @@ private void addEngineVerdictData(LinearLayout root,
 
 rec.setText(
         gr
-                ? "Μπορείς να περιορίσεις τη δραστηριότητα στο παρασκήνιο αυτών των εφαρμογών ή να αφαιρέσεις όσες δεν χρειάζεσαι."
-                : "You can restrict background activity for these apps or remove those you don’t need."
+                ? "Μπορείς να περιορίσεις τη δραστηριότητα στο παρασκήνιο αυτών των εφαρμογών, ή να αφαιρέσεις όσες δεν χρειάζεσαι."
+                : "You can restrict background activity for these apps, or remove those you don’t need."
 );
 
 rec.setTextColor(0xFFFFFFFF);
@@ -1258,7 +1276,7 @@ private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
 
         String tag = r.rarelyUsedButActive
                 ? (gr ? "💤 Σπάνια χρήση αλλά ενεργή" : "💤 Rarely used but active")
-                : (gr ? "High Activity" : "High Activity");
+                : (gr ? "Υψηλή Δραστηριότητα" : "High Activity");
 
         meta.setText(
                 (gr ? "Δείκτης: " : "Index: ") + r.score
@@ -1481,8 +1499,8 @@ for (String pkg : mergedBgMinutes.keySet()) {
                        : "🟥 Background without opening";
             level = 3;
         } else {
-            badge = gr ? "🟨 Background χωρίς άνοιγμα"
-                       : "🟨 Background without opening";
+            badge = gr ? "🟨 Δραστηριότητα παρασκηνίου χωρίς άνοιγμα"
+                       : "🟨 Background activity without opening";
             level = 2;
         }
 
@@ -1532,31 +1550,40 @@ root.addView(explain);
 // SMART VERDICT ENGINE (USER-AWARE)
 // ----------------------------------------------------
 
-String verdict = !heavy.isEmpty() ? "HEAVY" : "MODERATE";
+String verdict;
+
+if (!heavy.isEmpty()) {
+    verdict = "HEAVY";
+} else if (!moderate.isEmpty()) {
+    verdict = "MODERATE";
+} else {
+    verdict = "STABLE";
+}
+
 appsVerdict = verdict;
 addAppsVerdict(root, verdict, heavy.size(), moderate.size());
 
-    if (!heavy.isEmpty()) {
-        addSection(
-                root,
-                gr ? "🔥 Υψηλή Δραστηριότητα"
-                   : "🔥 High Activity",
-                "",
-                0xFFFF5252
-        );
-        addAppList(root, heavy);
-    }
+if (!heavy.isEmpty()) {
+    addSection(
+            root,
+            gr ? "🔥 Υψηλή Δραστηριότητα"
+               : "🔥 High Activity",
+            "",
+            0xFFFF5252
+    );
+    addAppList(root, heavy);
+}
 
-    if (!moderate.isEmpty()) {
-        addSection(
-                root,
-                gr ? "⚠️ Μέτρια Δραστηριότητα"
-                   : "⚠️ Moderate Activity",
-                "",
-                0xFFFFC107
-        );
-        addAppList(root, moderate);
-    }
+if (!moderate.isEmpty()) {
+    addSection(
+            root,
+            gr ? "⚠️ Μέτρια Δραστηριότητα"
+               : "⚠️ Moderate Activity",
+            "",
+            0xFFFFC107
+    );
+    addAppList(root, moderate);
+}
 
     Button next = mkGreenBtn("OK");
 next.setOnClickListener(v -> go(STEP_UNUSED));
@@ -1805,15 +1832,15 @@ private static class AppAppRisk {
 private void showAppsStable() {
 
     showDialog(
-            progressTitle(gr ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
-                    : "STEP 4 — App Activity (48 hours)"),
+            progressTitle(gr ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών στο παρασκήνιο, τις τελευταίες 48 ώρες"
+                    : "STEP 4 — App Background Activity since last 48 hours)"),
             gr
                     ? "🟢 Engine Verdict: STABLE\n\n"
-                    + "Καμμία εφαρμογή δεν είχε background δραστηριότητα\n"
+                    + "Καμμία εφαρμογή δεν είχε δραστηριότητα στο παρασκήνιο,\n"
                     + "τις τελευταίες 48 ώρες."
                     : "🟢 Engine Verdict: STABLE\n\n"
                     + "No app showed background activity\n"
-                    + "in the last 48 hours.",
+                    + "since last 48 hours.",
             null,
             () -> go(STEP_UNUSED),
             false
@@ -1838,10 +1865,10 @@ private void addAppsVerdict(LinearLayout root,
 
     tv.setText(
         "Engine Verdict: " + verdict + "\n\n"
-        + (gr ? "Υψηλή Background Δραστηριότητα: "
+        + (gr ? "Υψηλή Δραστηριότητα στο παρασκήνιο: "
               : "High Background Activity: ")
         + heavy + "\n"
-        + (gr ? "Μέτρια Background Δραστηριότητα: "
+        + (gr ? "Μέτρια Δραστηριότητα στο παρασκήνιο: "
               : "Moderate Background Activity: ")
         + moderate
 );
@@ -2280,8 +2307,8 @@ if (!isSystem) {
     private void showReminder() {
 
     LinearLayout root = buildBaseBox(
-            gr ? "Αν έμεινες ευχαριστημένος/η από το αποτέλεσμα, θα ήθελες να σου υπενθυμίζουμε τακτικά να κάνουμε την ίδια επιθεώρηση στη συσκευή σου;"
-               : "If you're satisfied with the results, would you like regular reminders to run the same device inspection?"
+            gr ? "Αν έμεινες ευχαριστημένος/η από το αποτέλεσμα, θα ήθελες να σου υπενθυμίζουμε τακτικά, να κάνουμε την ίδια επιθεώρηση στη συσκευή σου;"
+               : "If you're satisfied with the results, would you like regular reminders, to run the same device inspection?"
     );
 
     Button daily = mkGreenBtn(gr ? "1 Ημέρα" : "Daily");
