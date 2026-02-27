@@ -1224,6 +1224,7 @@ rec.setTextColor(0xFFFFFFFF);
 rec.setPadding(0, 0, 0, 26);
 
 root.addView(rec);
+}
 
 // ============================================================
 // UI: ROWS
