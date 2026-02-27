@@ -281,7 +281,7 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                         + "Χρησιμοποίησέ την μόνο αν γνωρίζεις ακριβώς τι κάνεις.\n\n"
                         + "Σε ορισμένες συσκευές η εφαρμογή μπορεί να κλείσει προσωρινά.\n\n"
                         + "Μετά τον καθαρισμό, άνοιξε ξανά την εφαρμογή\n"
-                        + "και πάτησε OK για να συνεχίσουμε."
+                        + "και πάτησε OK για να συνεχίσουμε.\n\n"
                         : "The device storage settings will open.\n\n"
                         + "Use the available cleaning tools where necessary.\n"
                         + "In most cases, clearing temporary cache, temporary data and residual files is sufficient.\n"
@@ -290,7 +290,7 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                         + "Use it only if you fully understand the consequences.\n\n"
                         + "On some devices the app may close temporarily.\n\n"
                         + "After cleaning, reopen the app\n"
-                        + "and press OK to continue.",
+                        + "and press OK to continue.\n\n",
                 () -> {
 
 // --------------------------------------------------------
@@ -358,11 +358,11 @@ private void showBattery() {
                         + "απαιτείται πρόσβαση Χρήσης Εφαρμογών.\n\n"
                         + "Καμία συλλογή προσωπικών δεδομένων δεν γίνεται με την παραχώρηση της Πρόσβασης Χρήσης.\n\n"
                         + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL.\n\n"
-                        + "Όταν επιστρέψεις, πάτησε ΟΚ για να συνεχίσουμε."
+                        + "Όταν επιστρέψεις, πάτησε ΟΚ για να συνεχίσουμε.\n\n"
                         : "To analyze app activity,\n"
                         + "Usage Access permission is required.\n\n"
                         + "Press Settings and enable it for GEL.\n\n"
-                         + "When you return, press OK to continue.",
+                         + "When you return, press OK to continue.\n\n",
                 () -> {
     try {
         Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
@@ -554,7 +554,7 @@ batteryVerdict = verdict;
             gr ? "⚠️ Background Δραστηριότητα"
                : "⚠️ Background Activity",
             gr ? "Εφαρμογές που έτρεξαν χωρίς να τις ανοίξεις τις τελευταίες 48 ώρες."
-               : "Apps that ran without being opened since last 48h.",
+               : "Apps that ran without being opened in the last 48h.",
             0xFFFFC107
     );
 
@@ -579,26 +579,24 @@ showCustomDialog(scroll);
 private void showStableDialog() {
 
     showDialog(
-        progressTitle(
-                gr
-                        ? "ΒΗΜΑ 2 — Κατανάλωση Μπαταρίας (48 ώρες)"
-                        : "STEP 2 — Battery Consumption (48 hours)"
-        ),
-        gr
-                ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
-                  + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
-                : "Results refer to apps you did not open since last 48 hours,\n"
-                  + "but showed background activity.\n\n",
-        
-        gr
-                ? "Engine Verdict: STABLE\n\n"
-                  + "Δεν εντοπίστηκε δραστηριότητα εφαρμογών στο παρασκήνιο, τις τελευταίες 48 ώρες."
-                : "Engine Verdict: STABLE\n\n"
-                  + "No background app activity detected, since last 48 hours.",
-        null,
-        () -> go(STEP_DATA),
-        false
-);
+            progressTitle(
+                    gr
+                            ? "ΒΗΜΑ 2 — Κατανάλωση Μπαταρίας (48 ώρες)"
+                            : "STEP 2 — Battery Consumption (48 hours)"
+            ),
+            gr
+                    ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
+                      + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
+                      + "Engine Verdict: STABLE\n\n"
+                      + "Δεν εντοπίστηκε δραστηριότητα εφαρμογών στο παρασκήνιο, τις τελευταίες 48 ώρες."
+                    : "Results refer to apps you did not open in the last 48 hours,\n"
+                      + "but showed background activity.\n\n"
+                      + "Engine Verdict: STABLE\n\n"
+                      + "No background app activity detected in the last 48 hours.",
+            null,
+            () -> go(STEP_DATA),
+            false
+    );
 }
 
 private void showFinalVerdict() {
@@ -901,10 +899,10 @@ private void showData() {
                   + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
                   + "Engine Verdict: STABLE\n\n"
                   + "Δεν υπάρχουν διαθέσιμα στοιχεία χρήσης για τις τελευταίες 48 ώρες."
-                : "Results refer to apps you did not open since last 48 hours,\n"
+                : "Results refer to apps you did not open in the last 48 hours,\n"
                   + "but showed background activity.\n\n"
                   + "Engine Verdict: STABLE\n\n"
-                  + "No usage stats available since last 48 hours.",
+                  + "No usage stats available in the last 48 hours.",
         null,
         () -> go(STEP_APPS),
         false
@@ -1034,10 +1032,10 @@ try {
                   + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
                   + "Engine Verdict: STABLE\n\n"
                   + "Δεν εντοπίστηκε ύποπτη ή βαριά δραστηριότητα χρήσης τις τελευταίες 48 ώρες."
-                : "Results refer to apps you did not open since last 48 hours,\n"
+                : "Results refer to apps you did not open in the last 48 hours,\n"
                   + "but showed background activity.\n\n"
                   + "Engine Verdict: STABLE\n\n"
-                  + "No suspicious or heavy usage activity detected since last 48 hours.",
+                  + "No suspicious or heavy usage activity detected in the last 48 hours.",
         null,
         () -> go(STEP_APPS),
         false
@@ -1104,7 +1102,7 @@ root.addView(sectionTitle);
 
 String fullText = gr
         ? "Η ανάλυση βασίζεται σε δραστηριότητα στο παρασκήνιο (όχι MB).\n\n"
-        + "• High Activity = αυξημένη δραστηριότητα στο παρασκηνιο.\n"
+        + "• High Activity = αυξημένη δραστηριότητα στο παρασκήνιο.\n"
         + "• 💤 Σπάνια χρήση αλλά ενεργή = δεν άνοιξες την εφαρμογή,\n"
         + "   αλλά παρουσίασε πρόσφατη δραστηριότητα στο παρασκήνιο.\n\n"
         + "Πάτα σε μια εφαρμογή για ενέργειες."
@@ -1188,7 +1186,7 @@ private static class DataRisk {
     final String pkg;
     final long score;          // behavioural index
     final long fgMinutes;      // foreground minutes in 48h
-    final long hoursSinceUse;  // hours since last used
+    final long hoursSinceUse;  // hours in the last used
     final boolean rarelyUsedButActive;
 
     DataRisk(String p, long s, long fg, long h, boolean r) {
@@ -1596,6 +1594,10 @@ showCustomDialog(scroll);
 
 }
 
+// ----------------------------------------------------
+// STEP 6 - UNUSED APPS
+// ----------------------------------------------------
+
 private void showInactiveApps() {
 
     if (!hasUsageAccess()) {
@@ -1675,7 +1677,16 @@ for (ApplicationInfo ai : installed) {
         installTime = pm.getPackageInfo(pkg, 0).firstInstallTime;
     } catch (Throwable ignore) {}
 
-    long basis = lastUsed > 0L ? lastUsed : installTime;
+    long basis = 0L;
+
+if (lastUsed > 0L) {
+    basis = lastUsed;
+} else if (installTime > 0L && installTime <= now) {
+    basis = installTime;
+}
+
+// Αν δεν έχουμε έγκυρη βάση → skip
+if (basis <= 0L || basis > now) continue;
 
     // Αν δεν έχουμε ούτε usage ούτε install time → skip
     if (basis <= 0L) continue;
@@ -1789,8 +1800,18 @@ root.addView(info);
     }
 
     Button next = mkGreenBtn("OK");
-    next.setOnClickListener(v -> go(STEP_CACHE));
-    root.addView(next);
+next.setOnClickListener(v -> go(STEP_CACHE));
+root.addView(next);
+
+Button exitBtn = mkRedBtn(gr ? "Έξοδος" : "Exit");
+exitBtn.setOnClickListener(v -> {
+    Toast.makeText(this,
+            gr ? "Η βελτιστοποίηση διακόπηκε από τον χρηστη."
+               : "Optimization cancelled from user.",
+            Toast.LENGTH_SHORT).show();
+    finish();
+});
+root.addView(exitBtn);
 
     showCustomDialog(scroll);
 }
@@ -1833,14 +1854,14 @@ private void showAppsStable() {
 
     showDialog(
             progressTitle(gr ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών στο παρασκήνιο, τις τελευταίες 48 ώρες"
-                    : "STEP 4 — App Background Activity since last 48 hours)"),
+                    : "STEP 4 — App Background Activity in the last 48 hours)"),
             gr
                     ? "🟢 Engine Verdict: STABLE\n\n"
                     + "Καμμία εφαρμογή δεν είχε δραστηριότητα στο παρασκήνιο,\n"
                     + "τις τελευταίες 48 ώρες."
                     : "🟢 Engine Verdict: STABLE\n\n"
                     + "No app showed background activity\n"
-                    + "since last 48 hours.",
+                    + "in the last 48 hours.",
             null,
             () -> go(STEP_UNUSED),
             false
@@ -2087,7 +2108,7 @@ if (!isSystem) {
 }
 
     // ============================================================
-    // STEP 5 — CACHE
+    // STEP 6 — CACHE
     // ============================================================
 
     private void showCache() {
@@ -2101,14 +2122,14 @@ if (!isSystem) {
                         + "Στη δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος.\n"
                         + "Η εκκαθάριση cache είναι ασφαλής και δεν διαγράφει προσωπικά δεδομένα.\n\n"
                         + "Απόφυγε την εκκαθάριση δεδομένων εκτός αν γνωρίζεις τις συνέπειες.\n\n"
-                        + "Πάτησε OK όταν ολοκληρώσεις."
+                        + "Πάτησε OK όταν ολοκληρώσεις.\n\n"
                         : "The app list will open. Tap to sort by “Largest % Cache”.\n\n"
                         + "Clear apps with large temporary cache — or all of them if needed.\n"
                         + "In the first group you will see apps you installed.\n"
                         + "In the second group you will see system apps.\n"
                         + "Clearing cache is safe and does not remove personal data.\n\n"
                         + "Avoid clearing app data unless you understand the consequences.\n\n"
-                        + "Press OK when finished.",
+                        + "Press OK when finished.\n\n",
                 () -> {
                 try {
                     Intent i = new Intent(this, AppListActivity.class);
