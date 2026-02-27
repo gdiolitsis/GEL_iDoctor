@@ -745,6 +745,7 @@ appleBtn.setOnClickListener(v -> {
 
     recreate();
 });
+}
 
 // =========================================================
 // APPLE ENTRY POINT
