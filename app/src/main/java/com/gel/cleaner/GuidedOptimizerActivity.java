@@ -2203,36 +2203,70 @@ if (!isSystem) {
         showCustomDialog(root);
     }
 
-    // ============================================================
-    // LAB RECOMMENDATION
-    // ============================================================
-
-    private void showLabRecommendation() {
+// ============================================================
+// LAB RECOMMENDATION (FIXED FLOW: Labs / OK / Exit)
+// ============================================================
+private void showLabRecommendation() {
 
     if (symptoms == null || symptoms.isEmpty()) {
         go(STEP_REMINDER);
         return;
     }
 
-        LinearLayout root = buildBaseBox(
-                gr ? "Για να ελέγξεις όσα μας ανέφερες, σου προτείνουμε να τρέξεις τα παρακάτω διαγνωστικά Εργαστήρια"
-   : "Based on what you reported, we recommend running the following diagnostic Labs"
-        );
+    LinearLayout root = buildBaseBox(
+            gr
+                    ? "Για να ελέγξεις όσα μας ανέφερες, σου προτείνουμε να τρέξεις τα παρακάτω διαγνωστικά Εργαστήρια"
+                    : "Based on what you reported, we recommend running the following diagnostic Labs"
+    );
 
-        TextView tv = new TextView(this);
-        tv.setText(buildTechnicalRecommendationText(symptoms));
-        tv.setTextColor(0xFF00FF7F);
-        tv.setPadding(0,20,0,20);
+    TextView tv = new TextView(this);
+    tv.setText(buildTechnicalRecommendationText(symptoms));
+    tv.setTextColor(0xFF00FF7F);
+    tv.setPadding(0, dp(20), 0, dp(20));
+    root.addView(tv);
 
-        root.addView(tv);
+    // ------------------------------------------------------------
+    // 1) RUN LABS (BLACK / NEON GREEN) — same as Settings buttons
+    // ------------------------------------------------------------
+    Button labsBtn = mkBlackGoldBtn(gr ? "Εκτέλεση Εργαστηρίων" : "Run Labs");
+    labsBtn.setOnClickListener(v -> {
+        try {
+            startActivity(new Intent(this, ManualTestsActivity.class));
+        } catch (Throwable t) {
+            Toast.makeText(
+                    this,
+                    gr ? "Δεν ήταν δυνατό να ανοίξουν τα εργαστήρια."
+                       : "Unable to open labs.",
+                    Toast.LENGTH_SHORT
+            ).show();
+        }
+    });
+    root.addView(labsBtn);
 
-        addActionButtons(root,
-                () -> startActivity(new Intent(this, ManualTestsActivity.class)),
-                () -> go(STEP_REMINDER)
-        );
+    // ------------------------------------------------------------
+    // 2) OK (GREEN) — continue to next step (NOT labs)
+    // ------------------------------------------------------------
+    Button okBtn = mkGreenBtn("OK");
+    okBtn.setOnClickListener(v -> go(STEP_REMINDER));
+    root.addView(okBtn);
 
-        showCustomDialog(root);
-    }
+    // ------------------------------------------------------------
+    // 3) EXIT (RED)
+    // ------------------------------------------------------------
+    Button exitBtn = mkRedBtn(gr ? "Έξοδος" : "Exit");
+    exitBtn.setOnClickListener(v -> {
+        Toast.makeText(
+                this,
+                gr ? "Η βελτιστοποίηση διακόπηκε."
+                   : "Optimization cancelled.",
+                Toast.LENGTH_SHORT
+        ).show();
+        finish();
+    });
+    root.addView(exitBtn);
+
+    showCustomDialog(root);
+}
 
     private String buildTechnicalRecommendationText(ArrayList<String> s) {
 
@@ -2401,94 +2435,72 @@ skip.setOnClickListener(v -> go(STEP_FINAL));
         startActivity(i);
     }
 
-    // ============================================================
-    // DIALOG ENGINE
-    // ============================================================
+// ============================================================
+// CENTRAL LABEL (OK / SKIP) — used by ALL steps
+// ============================================================
+private String okSkipLabel(boolean isIntro) {
+    if (isIntro) return (gr ? "Έναρξη" : "Start");
+    return (gr ? "OK / ΠΑΡΑΛΕΙΨΗ" : "OK / SKIP");
+}
 
-    private void showDialog(String title,
-                            String body,
-                            Runnable settingsAction,
-                            Runnable okAction,
-                            boolean isIntro) {
+// ============================================================
+// DIALOG ENGINE (UPDATED)
+// ============================================================
+private void showDialog(String title,
+                        String body,
+                        Runnable settingsAction,
+                        Runnable okAction,
+                        boolean isIntro) {
 
-        LinearLayout root = buildBaseBox(title);
+    LinearLayout root = buildBaseBox(title);
 
-        TextView tvBody = new TextView(this);
-        tvBody.setText(body);
-        tvBody.setTextColor(0xFF00FF7F);
-        tvBody.setPadding(0,20,0,20);
-        root.addView(tvBody);
+    TextView tvBody = new TextView(this);
+    tvBody.setText(body);
+    tvBody.setTextColor(0xFF00FF7F);
+    tvBody.setPadding(0, 20, 0, 20);
+    root.addView(tvBody);
 
-        if (settingsAction != null) {
-            Button settingsBtn = mkBlackGoldBtn(gr?"Ρυθμίσεις":"Settings");
-            settingsBtn.setOnClickListener(v -> settingsAction.run());
-            root.addView(settingsBtn);
-        }
-
-        Button okBtn = mkGreenBtn(isIntro ? (gr?"Έναρξη":"Start") : "OK");
-        okBtn.setOnClickListener(v -> okAction.run());
-        root.addView(okBtn);
-
-        Button exitBtn = mkRedBtn(gr?"Έξοδος":"Exit");
-        exitBtn.setOnClickListener(v -> {
-            Toast.makeText(this,
-                    gr ? "Η βελτιστοποίηση διακόπηκε."
-                       : "Optimization cancelled.",
-                    Toast.LENGTH_SHORT).show();
-            finish();
-        });
-        root.addView(exitBtn);
-
-        showCustomDialog(root);
+    if (settingsAction != null) {
+        Button settingsBtn = mkBlackGoldBtn(gr ? "Ρυθμίσεις" : "Settings");
+        settingsBtn.setOnClickListener(v -> settingsAction.run());
+        root.addView(settingsBtn);
     }
 
-    private LinearLayout buildBaseBox(String titleText) {
+    // ✅ CENTRAL OK LABEL
+    Button okBtn = mkGreenBtn(okSkipLabel(isIntro));
+    okBtn.setOnClickListener(v -> okAction.run());
+    root.addView(okBtn);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(40,40,40,40);
+    Button exitBtn = mkRedBtn(gr ? "Έξοδος" : "Exit");
+    exitBtn.setOnClickListener(v -> {
+        Toast.makeText(this,
+                gr ? "Η βελτιστοποίηση διακόπηκε."
+                   : "Optimization cancelled.",
+                Toast.LENGTH_SHORT).show();
+        finish();
+    });
+    root.addView(exitBtn);
 
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xFF000000);
-        bg.setCornerRadius(30);
-        bg.setStroke(5,0xFFFFD700);
-        root.setBackground(bg);
+    showCustomDialog(root);
+}
 
-        TextView title = new TextView(this);
-        title.setText(titleText);
-        title.setTextColor(Color.WHITE);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setTextSize(18f);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0,0,0,30);
+// ============================================================
+// ACTION BUTTONS (UPDATED) — OK becomes OK/SKIP everywhere
+// ============================================================
+private void addActionButtons(LinearLayout root, Runnable ok, Runnable skip) {
 
-        root.addView(title);
-        return root;
-    }
+    // ✅ CENTRAL OK LABEL
+    Button okBtn = mkGreenBtn(okSkipLabel(false));
 
-    private void showCustomDialog(View v) {
-        AlertDialog d = new AlertDialog.Builder(this)
-                .setView(v)
-                .setCancelable(false)
-                .create();
+    // Keep Skip button as-is (used where you explicitly offer skip)
+    Button skipBtn = mkRedBtn(gr ? "Παράλειψη" : "Skip");
 
-        if (d.getWindow()!=null)
-            d.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    okBtn.setOnClickListener(v -> ok.run());
+    skipBtn.setOnClickListener(v -> skip.run());
 
-        d.show();
-    }
-
-    private void addActionButtons(LinearLayout root, Runnable ok, Runnable skip) {
-
-        Button okBtn = mkGreenBtn("OK");
-        Button skipBtn = mkRedBtn(gr?"Παράλειψη":"Skip");
-
-        okBtn.setOnClickListener(v -> ok.run());
-        skipBtn.setOnClickListener(v -> skip.run());
-
-        root.addView(okBtn);
-        root.addView(skipBtn);
-    }
+    root.addView(okBtn);
+    root.addView(skipBtn);
+}
 
     private Button mkGreenBtn(String t) {
         Button b = new Button(this);
