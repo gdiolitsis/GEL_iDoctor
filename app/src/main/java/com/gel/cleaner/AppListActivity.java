@@ -1152,7 +1152,7 @@ private void applyFiltersAndSort() {
     updateStats();
 }
 
-    private void updateStats() {
+    void updateStats() {
 
     List<AppEntry> allSnapshot = new ArrayList<>(allApps);
     List<AppEntry> visibleSnapshot = new ArrayList<>(visible);
@@ -1194,7 +1194,7 @@ private void applyFiltersAndSort() {
     // TOGGLE SYNC (prevents “select says deselect” mismatch)
     // ============================================================
 
-    private void syncToggleStatesFromSelection() {
+    void syncToggleStatesFromSelection() {
 
     List<AppEntry> snapshot = new ArrayList<>(visible);
 
