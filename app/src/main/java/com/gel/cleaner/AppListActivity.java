@@ -1296,9 +1296,7 @@ private void openNext() {
 
     String pkg = guidedQueue.get(guidedIndex);
 
-    Intent intent = isUninstallMode
-            ? new Intent(Intent.ACTION_DELETE)
-            : new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
 
     intent.setData(Uri.parse("package:" + pkg));
 
