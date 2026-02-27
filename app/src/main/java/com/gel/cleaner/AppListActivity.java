@@ -663,13 +663,32 @@ private void showContinueGuidedDialog() {
                     LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
     lp.setMargins(dp(8), 0, dp(8), 0);
 
-    Button stop = new Button(this);
-    stop.setText(gr ? "ΔΙΑΚΟΠΗ" : "STOP");
-    stop.setLayoutParams(lp);
+Button stop = new Button(this);
+stop.setText(gr ? "ΔΙΑΚΟΠΗ" : "STOP");
+stop.setAllCaps(false);
+stop.setTypeface(null, Typeface.BOLD);
+stop.setTextColor(Color.WHITE);
+stop.setLayoutParams(lp);
 
-    Button cont = new Button(this);
-    cont.setText(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE");
-    cont.setLayoutParams(lp);
+GradientDrawable stopBg = new GradientDrawable();
+stopBg.setColor(0xFFC62828); // GEL red
+stopBg.setCornerRadius(dp(10));
+stopBg.setStroke(dp(3), 0xFFFFD700);
+stop.setBackground(stopBg);
+
+
+Button cont = new Button(this);
+cont.setText(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE");
+cont.setAllCaps(false);
+cont.setTypeface(null, Typeface.BOLD);
+cont.setTextColor(Color.WHITE); // ⚠ ΛΕΥΚΑ ΓΡΑΜΜΑΤΑ
+cont.setLayoutParams(lp);
+
+GradientDrawable contBg = new GradientDrawable();
+contBg.setColor(0xFF00E676); // GEL neon green (ίδιο με usage dialog)
+contBg.setCornerRadius(dp(10));
+contBg.setStroke(dp(3), 0xFFFFD700);
+cont.setBackground(contBg);
 
     row.addView(stop);
     row.addView(cont);
@@ -706,10 +725,9 @@ private void showContinueGuidedDialog() {
 
     if (!hasUsageAccess()) {
         showUsageAccessDialog();
-        return;   // ⛔ ΣΤΑΜΑΤΑΜΕ ΕΔΩ
+        // ❗ ΔΕΝ σταματάμε εδώ
     }
 
-    // Μόνο αν έχει permission
     new Thread(this::loadAllApps).start();
 }
 
@@ -779,12 +797,12 @@ root.addView(buildMuteRow());
     btnRow.setGravity(Gravity.CENTER);
 
     LinearLayout.LayoutParams btnLp =
-            new LinearLayout.LayoutParams(
-                    0,
-                    dp(110),
-                    1f
-            );
-    btnLp.setMargins(dp(8), 0, dp(8), 0);
+        new LinearLayout.LayoutParams(
+                0,
+                dp(48),    // 👈 Κανονικό ύψος button
+                1f
+        );
+btnLp.setMargins(dp(8), dp(6), dp(8), dp(6));
 
     // -------- CONTINUE --------
     Button continueBtn = new Button(this);
