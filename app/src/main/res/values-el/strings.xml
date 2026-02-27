@@ -46,7 +46,7 @@
 <string name="search_app">Αναζήτηση εφαρμογής...</string>
 <string name="select_all">Επιλογή όλων</string>
 <string name="deselect_all">Αποεπιλογή όλων</string>
-<string name="largest_cache">Μεγαλύτερο % Cache</string>
+<string name="largest_cache">Μεγαλύτερο %% Cache</string>
 <string name="select_user_apps">Επιλογή εφαρμογών χρήστη</string>
 <string name="deselect_user_apps">Αποεπιλογή εφαρμογών χρήστη</string>
 <string name="select_system_apps">Επιλογή εφαρμογών συστήματος</string>
