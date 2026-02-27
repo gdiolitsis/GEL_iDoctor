@@ -1027,6 +1027,7 @@ try {
         false
 );
 return;
+}
 
     // Sort by SCORE desc (stable + simple)
     java.util.Comparator<DataRisk> cmp =
