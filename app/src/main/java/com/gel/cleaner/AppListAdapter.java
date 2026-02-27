@@ -194,24 +194,26 @@ if (e.cachePercent >= 50) {
 
         h.select.setOnCheckedChangeListener((b, checked) -> {
 
-            // If trying to select system app in uninstall mode without root
-            if (ctx instanceof AppListActivity) {
+    if (ctx instanceof AppListActivity) {
 
-                AppListActivity activity = (AppListActivity) ctx;
+        AppListActivity activity = (AppListActivity) ctx;
 
-                if (activity.isUninstallMode()
-                        && !activity.isDeviceRooted()
-                        && e.isSystem) {
+        if (activity.isUninstallMode()
+                && !activity.isDeviceRooted()
+                && e.isSystem) {
 
-                    // Block selection
-                    b.setChecked(false);
-                    activity.showRootRequiredDialog();
-                    return;
-                }
-            }
+            b.setChecked(false);
+            activity.showRootRequiredDialog();
+            return;
+        }
 
-            e.selected = checked;
-        });
+        e.selected = checked;
+
+        // 🔥 ΑΜΕΣΗ ΕΝΗΜΕΡΩΣΗ COUNTER
+        activity.syncToggleStatesFromSelection();
+        activity.updateStats();
+    }
+});
     }
 
     // ============================================================
