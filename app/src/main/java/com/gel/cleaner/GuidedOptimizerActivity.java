@@ -1799,19 +1799,10 @@ root.addView(info);
         root.addView(row);
     }
 
-    Button next = mkGreenBtn("OK");
-next.setOnClickListener(v -> go(STEP_CACHE));
-root.addView(next);
-
-Button exitBtn = mkRedBtn(gr ? "Έξοδος" : "Exit");
-exitBtn.setOnClickListener(v -> {
-    Toast.makeText(this,
-            gr ? "Η βελτιστοποίηση διακόπηκε από τον χρηστη."
-               : "Optimization cancelled from user.",
-            Toast.LENGTH_SHORT).show();
-    finish();
-});
-root.addView(exitBtn);
+addActionButtons(
+    root,
+    () -> go(STEP_CACHE)
+);
 
     showCustomDialog(scroll);
 }
@@ -2182,23 +2173,23 @@ if (!isSystem) {
         root.addView(boot);
         root.addView(wifi);
 
-        addActionButtons(root,
-                () -> {
-                    symptoms.clear();
-                    if (heat.isChecked()) symptoms.add("heat");
-                    if (crash.isChecked()) symptoms.add("crash");
-                    if (lag.isChecked()) symptoms.add("lag");
-                    if (charge.isChecked()) symptoms.add("charge");
-                    if (data.isChecked()) symptoms.add("data");
-                    if (camera.isChecked()) symptoms.add("camera");
-                    if (bluetooth.isChecked()) symptoms.add("bluetooth");
-                    if (sound.isChecked()) symptoms.add("sound");
-                    if (boot.isChecked()) symptoms.add("boot");
-                    if (wifi.isChecked()) symptoms.add("wifi");
-                    go(STEP_LABS);
-                },
-                () -> go(STEP_LABS)
-        );
+        addActionButtons(
+        root,
+        () -> {
+            symptoms.clear();
+            if (heat.isChecked()) symptoms.add("heat");
+            if (crash.isChecked()) symptoms.add("crash");
+            if (lag.isChecked()) symptoms.add("lag");
+            if (charge.isChecked()) symptoms.add("charge");
+            if (data.isChecked()) symptoms.add("data");
+            if (camera.isChecked()) symptoms.add("camera");
+            if (bluetooth.isChecked()) symptoms.add("bluetooth");
+            if (sound.isChecked()) symptoms.add("sound");
+            if (boot.isChecked()) symptoms.add("boot");
+            if (wifi.isChecked()) symptoms.add("wifi");
+            go(STEP_LABS);
+        }
+);
 
         showCustomDialog(root);
     }
@@ -2246,9 +2237,9 @@ private void showLabRecommendation() {
     // ------------------------------------------------------------
     // 2) OK (GREEN) — continue to next step (NOT labs)
     // ------------------------------------------------------------
-    Button okBtn = mkGreenBtn("OK");
+    Button okBtn = mkGreenBtn(okSkipLabel(false));
     okBtn.setOnClickListener(v -> go(STEP_REMINDER));
-    root.addView(okBtn);
+     root.addView(okBtn);
 
     // ------------------------------------------------------------
     // 3) EXIT (RED)
@@ -2485,21 +2476,25 @@ private void showDialog(String title,
 }
 
 // ============================================================
-// ACTION BUTTONS (UPDATED) — OK becomes OK/SKIP everywhere
+// ACTION BUTTONS — OK/SKIP + EXIT (MATCHES showDialog)
 // ============================================================
-private void addActionButtons(LinearLayout root, Runnable ok, Runnable skip) {
+private void addActionButtons(LinearLayout root, Runnable okAction) {
 
-    // ✅ CENTRAL OK LABEL
     Button okBtn = mkGreenBtn(okSkipLabel(false));
-
-    // Keep Skip button as-is (used where you explicitly offer skip)
-    Button skipBtn = mkRedBtn(gr ? "Παράλειψη" : "Skip");
-
-    okBtn.setOnClickListener(v -> ok.run());
-    skipBtn.setOnClickListener(v -> skip.run());
-
+    okBtn.setOnClickListener(v -> okAction.run());
     root.addView(okBtn);
-    root.addView(skipBtn);
+
+    Button exitBtn = mkRedBtn(gr ? "Έξοδος" : "Exit");
+    exitBtn.setOnClickListener(v -> {
+        Toast.makeText(
+                this,
+                gr ? "Η βελτιστοποίηση διακόπηκε."
+                   : "Optimization cancelled.",
+                Toast.LENGTH_SHORT
+        ).show();
+        finish();
+    });
+    root.addView(exitBtn);
 }
 
     private Button mkGreenBtn(String t) {
