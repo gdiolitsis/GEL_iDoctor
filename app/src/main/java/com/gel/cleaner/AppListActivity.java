@@ -320,7 +320,6 @@ label.setText(
 protected void onResume() {
     super.onResume();
 
-    // 1️⃣ Επιστροφή από Usage screen
     if (returnedFromUsageScreen) {
         returnedFromUsageScreen = false;
 
@@ -330,13 +329,11 @@ protected void onResume() {
         return;
     }
 
-    // 2️⃣ Αν η λίστα δεν έχει φορτωθεί, φόρτωσέ την
     if (allApps.isEmpty()) {
         new Thread(this::loadAllApps).start();
     }
 
-    // 3️⃣ Guided flow (ΑΝΕΞΑΡΤΗΤΟ από Usage Access)
-    if (guidedActive) {
+    if (guidedActive && guidedIndex < guidedQueue.size()) {
         showContinueGuidedDialog();
     }
 }
@@ -1283,17 +1280,23 @@ private void clearSelections() {
 private void openNext() {
 
     if (guidedIndex >= guidedQueue.size()) {
-        guidedActive = false;
-        clearSelections();
-        refreshUI();
-        syncToggleStatesFromSelection();
-        showGelDialog(
-                AppLang.isGreek(this)
-                        ? "Η διαδικασία ολοκληρώθηκε."
-                        : "Operation finished."
-        );
-        return;
-    }
+
+    guidedActive = false;
+    guidedQueue.clear();
+    guidedIndex = 0;
+
+    clearSelections();
+
+    applyFiltersAndSort();   // rebuild list properly
+
+    showGelDialog(
+            AppLang.isGreek(this)
+                    ? "Η διαδικασία ολοκληρώθηκε."
+                    : "Operation finished."
+    );
+
+    return;
+}
 
     String pkg = guidedQueue.get(guidedIndex);
 
