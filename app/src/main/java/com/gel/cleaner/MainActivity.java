@@ -92,9 +92,12 @@ protected void onCreate(Bundle savedInstanceState) {
 boolean forceWelcome =
         getIntent().getBooleanExtra("force_welcome", false);
 
+boolean skipWelcomeOnce =
+        getIntent().getBooleanExtra("skip_welcome_once", false);
+
 if (savedInstanceState == null) {
 
-    if (forceWelcome || !isWelcomeDisabled()) {
+    if (!skipWelcomeOnce && (forceWelcome || !isWelcomeDisabled())) {
         showWelcomePopup();
     }
 }
@@ -716,21 +719,15 @@ w.getDecorView().setPadding(dp(16), 0, dp(16), 0);
 // --------------------------------------------
 androidBtn.setOnClickListener(v -> {
 
-try { AppTTS.stop(); } catch (Throwable ignore) {}
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
 
-welcomeShown = false;
+    welcomeShown = false;
 
-savePlatform("android");
+    savePlatform("android");
 
-d.dismiss();
+    d.dismiss();
 
-if ("apple".equals(getSavedPlatform())) {
-applyAppleModeUI();
-} else {
-applyAndroidModeUI();
-}
-
-syncReturnButtonText();
+    recreate();
 });
 
 // --------------------------------------------
@@ -738,16 +735,16 @@ syncReturnButtonText();
 // --------------------------------------------
 appleBtn.setOnClickListener(v -> {
 
-try { AppTTS.stop(); } catch (Throwable ignore) {}
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
 
-welcomeShown = false;
+    welcomeShown = false;
 
-savePlatform("apple");
+    savePlatform("apple");
 
-d.dismiss();
-recreate();
+    d.dismiss();
+
+    recreate();
 });
-}
 
 // =========================================================
 // APPLE ENTRY POINT
@@ -842,13 +839,15 @@ if (bEN != null) bEN.setOnClickListener(v -> changeLang("en"));
 
 private void changeLang(String code) {
 
-if (code.equals(LocaleHelper.getLang(this))) return;
+    if (code.equals(LocaleHelper.getLang(this))) return;
 
-LocaleHelper.set(this, code);
+    LocaleHelper.set(this, code);
 
-Intent i = getIntent();
-finish();
-startActivity(i);
+    Intent i = getIntent();
+    i.putExtra("skip_welcome_once", true);
+
+    finish();
+    startActivity(i);
 }
 
 // =========================================================
