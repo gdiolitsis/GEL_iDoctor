@@ -62,6 +62,8 @@
 <string name="diagnostics">GEL Διάγνωση Συσκευής</string>
 <string name="diagnostics_android">GEL Διάγνωση Συσκευής</string>
 <string name="diagnostics_apple">GEL Διάγνωση Συσκευών Apple</string>
+<string name="return_to_android_en">ΕΠΙΣΤΡΟΦΗ ΣΕ ANDROID MODE</string>
+<string name="return_to_apple_en">ΕΠΙΣΤΡΟΦΗ ΣΕ APPLE MODE</string>
     
     <!-- Permissions -->
     <string name="toast_storage_access">Παραχώρησε πρόσβαση στα αρχεία για να συνεχίσεις</string>
