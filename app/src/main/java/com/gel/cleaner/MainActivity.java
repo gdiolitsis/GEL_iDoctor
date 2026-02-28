@@ -958,6 +958,19 @@ DiagnosisMenuActivity.class
 ));
 });
 
+    // ==========================
+    // RETURN PLATFORM  👇 ΒΑΛΕ ΤΟ ΕΔΩ
+    // ==========================
+    bind(R.id.btnReturnAndroid, () -> {
+
+        if (isAppleMode()) {
+            savePlatform("android");
+        } else {
+            savePlatform("apple");
+        }
+
+        recreate();
+    });
 }
 
 // =========================================================
