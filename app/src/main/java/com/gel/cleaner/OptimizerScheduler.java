@@ -8,6 +8,7 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.SystemClock;
 
 public final class OptimizerScheduler {
@@ -32,10 +33,6 @@ public final class OptimizerScheduler {
 
         schedule(c, daysInterval);
     }
-    SharedPreferences sp =
-        context.getSharedPreferences("gel_prefs", Context.MODE_PRIVATE);
-
-sp.edit().putBoolean("reminder_enabled", true).apply();
 
     public static void disableReminder(Context c) {
         if (c == null) return;
@@ -49,19 +46,31 @@ sp.edit().putBoolean("reminder_enabled", true).apply();
 
         cancel(c);
     }
-    SharedPreferences sp =
-        context.getSharedPreferences("gel_prefs", Context.MODE_PRIVATE);
 
-sp.edit().putBoolean("reminder_enabled", false).apply();
+    public static boolean isReminderEnabled(Context c) {
+        if (c == null) return false;
+
+        try {
+            return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .getBoolean(K_REMINDER_ENABLED, false);
+        } catch (Throwable ignore) {}
+
+        return false;
+    }
 
     public static void rescheduleIfEnabled(Context c) {
         if (c == null) return;
+
         boolean en = false;
         int days = 7;
 
         try {
-            en = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(K_REMINDER_ENABLED, false);
-            days = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(K_REMINDER_INTERVAL, 7);
+            SharedPreferences sp =
+                    c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+
+            en = sp.getBoolean(K_REMINDER_ENABLED, false);
+            days = sp.getInt(K_REMINDER_INTERVAL, 7);
+
         } catch (Throwable ignore) {}
 
         if (en) schedule(c, days);
@@ -83,12 +92,9 @@ sp.edit().putBoolean("reminder_enabled", false).apply();
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
 
-        // Start in ~2 hours (inexact, friendly)
         long first = SystemClock.elapsedRealtime() + (2L * 60L * 60L * 1000L);
 
-        try {
-            am.cancel(pi);
-        } catch (Throwable ignore) {}
+        try { am.cancel(pi); } catch (Throwable ignore) {}
 
         try {
             am.setInexactRepeating(
@@ -98,7 +104,6 @@ sp.edit().putBoolean("reminder_enabled", false).apply();
                     pi
             );
         } catch (Throwable ignore) {
-            // fallback one-shot
             try {
                 am.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, first, pi);
             } catch (Throwable ignored) {}
@@ -106,6 +111,7 @@ sp.edit().putBoolean("reminder_enabled", false).apply();
     }
 
     private static void cancel(Context c) {
+
         Intent i = new Intent(c, OptimizerReminderReceiver.class);
         PendingIntent pi = PendingIntent.getBroadcast(
                 c,
@@ -113,8 +119,10 @@ sp.edit().putBoolean("reminder_enabled", false).apply();
                 i,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
+
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
+
         try { am.cancel(pi); } catch (Throwable ignore) {}
     }
 }
