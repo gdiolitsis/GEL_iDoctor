@@ -1,25 +1,12 @@
 package com.gel.cleaner;
 
-import android.app.usage.StorageStats;
-import android.app.usage.StorageStatsManager;
 import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.os.Build;
-import android.os.Process;
 
 import androidx.annotation.NonNull;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
 public class OptimizerMiniScheduler extends Worker {
-
-    private static final String PREFS = "gel_prefs";
-    private static final String KEY_PULSE_ENABLED = "pulse_enabled";
-
-    private static final int CACHE_PERCENT_ALERT = 80;
 
     public OptimizerMiniScheduler(
             @NonNull Context context,
