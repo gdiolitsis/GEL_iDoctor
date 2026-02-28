@@ -87,6 +87,17 @@ protected void onCreate(Bundle savedInstanceState) {
     setupLangButtons();
     setupDonate();
     setupButtons();
+    
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED) {
+
+        requestPermissions(
+                new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
+                1001
+        );
+    }
+}
 
     // ================= ENTRY FLOW =================
 boolean forceWelcome =
@@ -148,6 +159,17 @@ if (savedInstanceState == null) {
                 ).show();
             }
         });
+    }
+}
+
+@Override
+public void onRequestPermissionsResult(int requestCode,
+                                       @NonNull String[] permissions,
+                                       @NonNull int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+    if (requestCode == 1001) {
+        // nothing else needed for now
     }
 }
 
