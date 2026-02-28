@@ -42,7 +42,6 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     private int step = 0;
     
     private boolean returnedFromUsageScreen = false;
-    
     private boolean returnedFromDnsScreen = false;
     
 private String batteryVerdict = "STABLE";
@@ -120,7 +119,9 @@ protected void onResume() {
     if (returnedFromDnsScreen) {
         returnedFromDnsScreen = false;
         go(STEP_QUEST);
+        return; // prevent double rendering
     }
+    go(step);
 }
 
 private void showDnsHowToDialog() {
@@ -321,22 +322,23 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
     // ============================================================
 
     private void go(int s) {
-        step = s;
+    step = s;
 
-        switch (step) {
-    case STEP_INTRO: showIntro(); break;
-    case STEP_STORAGE: showStorage(); break;
-    case STEP_BATTERY: showBattery(); break;
-    case STEP_DATA: showData(); break;
-    case STEP_APPS: showApps(); break;
-    case STEP_UNUSED: showInactiveApps(); break;
-    case STEP_CACHE: showCache(); break;
-    case STEP_QUEST: showQuestionnaire(); break;
-    case STEP_LABS: showLabRecommendation(); break;
-    case STEP_REMINDER: showReminder(); break;
-    case STEP_FINAL: showFinalVerdict(); break;
+    switch (step) {
+        case STEP_INTRO: showIntro(); break;
+        case STEP_STORAGE: showStorage(); break;
+        case STEP_BATTERY: showBattery(); break;
+        case STEP_DATA: showData(); break;
+        case STEP_APPS: showApps(); break;
+        case STEP_UNUSED: showInactiveApps(); break;
+        case STEP_CACHE: showCache(); break;
+        case STEP_DNS: showDnsStep(); break;   // 👈 ΑΥΤΟ ΕΛΕΙΠΕ
+        case STEP_QUEST: showQuestionnaire(); break;
+        case STEP_LABS: showLabRecommendation(); break;
+        case STEP_REMINDER: showReminder(); break;
+        case STEP_FINAL: showFinalVerdict(); break;
     }
-} 
+}
 
     // ============================================================
     // INTRO
@@ -2220,21 +2222,21 @@ if (!isSystem) {
                         + "Avoid clearing app data unless you understand the consequences.\n\n"
                         + "Press OK when finished.\n\n",
                 () -> {
-                try {
-                    Intent i = new Intent(this, AppListActivity.class);
-                    i.putExtra("mode", "cache");
-                    startActivity(i);
-                } catch (Exception e) {
-                    Toast.makeText(
-                            this,
-                            gr ? "Δεν ήταν δυνατό να ανοίξει ο καθαριστής cache."
-                               : "Unable to open cache cleaner.",
-                            Toast.LENGTH_SHORT
-                    ).show();
-                }
-            },
-            () -> go(STEP_DNS),
-            false
+    try {
+        Intent i = new Intent(this, AppListActivity.class);
+        i.putExtra("mode", "cache");
+        startActivity(i);
+    } catch (Exception e) {
+        Toast.makeText(
+                this,
+                gr ? "Δεν ήταν δυνατό να ανοίξει ο καθαριστής cache."
+                   : "Unable to open cache cleaner.",
+                Toast.LENGTH_SHORT
+        ).show();
+    }
+},
+() -> go(STEP_DNS),
+false
     );
 }
 
