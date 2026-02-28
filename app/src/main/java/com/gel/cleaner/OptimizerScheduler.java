@@ -32,6 +32,10 @@ public final class OptimizerScheduler {
 
         schedule(c, daysInterval);
     }
+    SharedPreferences sp =
+        context.getSharedPreferences("gel_prefs", Context.MODE_PRIVATE);
+
+sp.edit().putBoolean("reminder_enabled", true).apply();
 
     public static void disableReminder(Context c) {
         if (c == null) return;
@@ -45,6 +49,10 @@ public final class OptimizerScheduler {
 
         cancel(c);
     }
+    SharedPreferences sp =
+        context.getSharedPreferences("gel_prefs", Context.MODE_PRIVATE);
+
+sp.edit().putBoolean("reminder_enabled", false).apply();
 
     public static void rescheduleIfEnabled(Context c) {
         if (c == null) return;
