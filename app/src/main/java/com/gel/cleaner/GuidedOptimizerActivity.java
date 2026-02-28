@@ -79,12 +79,17 @@ private static final String KEY_PULSE_ENABLED = "pulse_enabled";
 @Override
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    
-    // TEST ALARM μία γραμμή 
-    OptimizerMiniPulseScheduler.enable(this);
+
+    // 🔥 IMMEDIATE TEST
+    WorkManager.getInstance(this)
+            .enqueue(
+                    new OneTimeWorkRequest.Builder(OptimizerMiniScheduler.class)
+                            .build()
+            );
+    // 🔥 ΤΕΛΟΣ IMMEDIATE TEST
 
     gr = AppLang.isGreek(this);
-
+}
     // RESTORE CURRENT STEP (so we don't restart intro after returning / recreation)
     if (savedInstanceState != null) {
         step = savedInstanceState.getInt("gel_step", STEP_INTRO);
