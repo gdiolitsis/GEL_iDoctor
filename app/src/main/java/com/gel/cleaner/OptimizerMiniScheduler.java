@@ -85,9 +85,8 @@ public Result doWork() {
     } catch (Throwable ignore) {}
 
     // --- Run probes ---
-    MiniHealthProbes.Result r =
-            MiniHealthProbes.run(ctx, cacheHigh);
-
+    OptimizerMiniHealthProbes.Result r =
+        OptimizerMiniHealthProbes.run(ctx, cacheHigh);
 // ----------------------
 // TEMP TEST MODE
 // ----------------------
