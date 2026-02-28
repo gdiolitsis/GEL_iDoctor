@@ -34,6 +34,10 @@ public class OptimizerMiniPulseScheduler {
         wm.cancelUniqueWork(WORK_21);
     }
 
+    public static void reschedule(Context context, int hour, String workName) {
+    scheduleAt(context, hour, workName);
+}
+
     // =========================================================
     // INTERNAL SCHEDULING
     // =========================================================
