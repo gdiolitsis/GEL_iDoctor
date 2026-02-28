@@ -46,16 +46,10 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     
     private boolean returnedFromUsageScreen = false;
     private boolean returnedFromDnsScreen = false;
-    
-    private boolean isSchedulerEnabled() {
-    SharedPreferences sp =
-            getSharedPreferences("gel_prefs", MODE_PRIVATE);
-    return sp.getBoolean("pulse_enabled", false);
-}
-    
-private String batteryVerdict = "STABLE";
-private String dataVerdict = "STABLE";
-private String appsVerdict = "STABLE";
+        
+    private String batteryVerdict = "STABLE";
+    private String dataVerdict = "STABLE";
+    private String appsVerdict = "STABLE";
 
     private static final int STEP_INTRO    = 0;
     private static final int STEP_STORAGE  = 1;
@@ -74,11 +68,11 @@ private String appsVerdict = "STABLE";
     private final ArrayList<String> symptoms = new ArrayList<>();
     private boolean pulseEnabled = false;
 
-private static final String PREFS = "gel_prefs";
-private static final String KEY_PULSE_ENABLED = "pulse_enabled";
-private static final String KEY_REMINDER_ENABLED = "reminder_enabled";
+    private static final String PREFS = "gel_prefs";
+    private static final String KEY_PULSE_ENABLED = "pulse_enabled";
+    private static final String KEY_REMINDER_ENABLED = "reminder_enabled";
     
-private boolean isSchedulerEnabled() {
+    private boolean isSchedulerEnabled() {
 
         SharedPreferences sp =
                 getSharedPreferences(PREFS, MODE_PRIVATE);
