@@ -44,6 +44,12 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     private boolean returnedFromUsageScreen = false;
     private boolean returnedFromDnsScreen = false;
     
+    private boolean isSchedulerEnabled() {
+    SharedPreferences sp =
+            getSharedPreferences("gel_prefs", MODE_PRIVATE);
+    return sp.getBoolean("pulse_enabled", false);
+}
+    
 private String batteryVerdict = "STABLE";
 private String dataVerdict = "STABLE";
 private String appsVerdict = "STABLE";
@@ -246,7 +252,7 @@ private void scheduleMiniPulse3xDaily() {
 
         androidx.work.PeriodicWorkRequest req =
                 new androidx.work.PeriodicWorkRequest.Builder(
-                        MiniPulseWorker.class,
+                        OptimizerMiniScheduler.class,
                         8, java.util.concurrent.TimeUnit.HOURS
                 )
                 .setConstraints(c)
