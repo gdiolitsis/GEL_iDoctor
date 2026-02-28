@@ -189,7 +189,11 @@ private void showDnsHowToDialog() {
     openBtn.setOnClickListener(v -> {
         try {
             returnedFromDnsScreen = true;
-            startActivity(new Intent(Settings.ACTION_PRIVATE_DNS_SETTINGS));
+            try {
+    startActivity(new Intent("android.settings.PRIVATE_DNS_SETTINGS"));
+} catch (Exception e) {
+    startActivity(new Intent(Settings.ACTION_SETTINGS));
+}
         } catch (Throwable t) {
             // αν αποτύχει, απλά προχώρα
             returnedFromDnsScreen = false;
