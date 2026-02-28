@@ -76,7 +76,23 @@ private String appsVerdict = "STABLE";
 
 private static final String PREFS = "gel_prefs";
 private static final String KEY_PULSE_ENABLED = "pulse_enabled";
+private static final String KEY_REMINDER_ENABLED = "reminder_enabled";
     
+private boolean isSchedulerEnabled() {
+
+        SharedPreferences sp =
+                getSharedPreferences(PREFS, MODE_PRIVATE);
+
+        return sp.getBoolean(KEY_REMINDER_ENABLED, false);
+    }
+
+    private boolean isMiniPulseEnabled() {
+
+        SharedPreferences sp =
+                getSharedPreferences("gel_prefs", MODE_PRIVATE);
+
+        return sp.getBoolean("pulse_enabled", false);
+    }
 
 @Override
 protected void onCreate(Bundle savedInstanceState) {
@@ -785,7 +801,6 @@ private void showFinalVerdict() {
     );
 
     String finalVerdict = resolveFinalVerdict();
-
     String displayText;
 
     switch (finalVerdict) {
@@ -808,29 +823,12 @@ private void showFinalVerdict() {
             break;
     }
 
-    // ----------------------------
     // Section Details
-    // ----------------------------
+    addFinalRow(root, gr ? "Μπαταρία" : "Battery", batteryVerdict, gr);
+    addFinalRow(root, gr ? "Δεδομένα" : "Data", dataVerdict, gr);
+    addFinalRow(root, gr ? "Εφαρμογές" : "Apps", appsVerdict, gr);
 
-    addFinalRow(root,
-            gr ? "Μπαταρία" : "Battery",
-            batteryVerdict,
-            gr);
-
-    addFinalRow(root,
-            gr ? "Δεδομένα" : "Data",
-            dataVerdict,
-            gr);
-
-    addFinalRow(root,
-            gr ? "Εφαρμογές" : "Apps",
-            appsVerdict,
-            gr);
-
-    // ----------------------------
     // Divider
-    // ----------------------------
-
     View div = new View(this);
     div.setBackgroundColor(0xFF333333);
     LinearLayout.LayoutParams dlp =
@@ -841,10 +839,7 @@ private void showFinalVerdict() {
     div.setLayoutParams(dlp);
     root.addView(div);
 
-    // ----------------------------
     // Overall Status
-    // ----------------------------
-
     TextView statusTv = new TextView(this);
 
     int color =
@@ -857,12 +852,9 @@ private void showFinalVerdict() {
     statusTv.setTextSize(18f);
     statusTv.setTypeface(null, Typeface.BOLD);
     statusTv.setPadding(0, dp(10), 0, dp(20));
-
     root.addView(statusTv);
 
-    // Stable explanation
     if ("STABLE".equals(finalVerdict)) {
-
         TextView cleanMsg = new TextView(this);
         cleanMsg.setText(
                 gr
@@ -871,38 +863,64 @@ private void showFinalVerdict() {
         );
         cleanMsg.setTextColor(0xFFAAAAAA);
         cleanMsg.setPadding(0, dp(6), 0, dp(18));
-
         root.addView(cleanMsg);
     }
 
-    // ----------------------------
-    // Scheduler Status
-    // ----------------------------
+    // ============================
+    // Automation Status Section
+    // ============================
 
-    TextView schedTv = new TextView(this);
-    schedTv.setText(
-            gr
-                    ? "Scheduler: " + (isSchedulerEnabled() ? "ΕΝΕΡΓΟΣ" : "ΑΝΕΝΕΡΓΟΣ")
-                    : "Scheduler: " + (isSchedulerEnabled() ? "ENABLED" : "DISABLED")
+    View schedDiv = new View(this);
+    schedDiv.setBackgroundColor(0xFF333333);
+    LinearLayout.LayoutParams sdlp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(1));
+    sdlp.setMargins(0, dp(15), 0, dp(15));
+    schedDiv.setLayoutParams(sdlp);
+    root.addView(schedDiv);
+
+    TextView schedTitle = new TextView(this);
+    schedTitle.setText(gr ? "Αυτοματοποιήσεις" : "Automation Status");
+    schedTitle.setTextColor(0xFFFFD700);
+    schedTitle.setTextSize(17f);
+    schedTitle.setTypeface(null, Typeface.BOLD);
+    schedTitle.setPadding(0, dp(4), 0, dp(10));
+    root.addView(schedTitle);
+
+    // Reminder Scheduler
+    boolean reminderOn = OptimizerScheduler.isReminderEnabled(this);
+
+    TextView reminderTv = new TextView(this);
+    reminderTv.setText(
+            (gr ? "Υπενθύμιση Επιθεώρησης: "
+                : "Inspection Reminder: ")
+            + (reminderOn
+                ? (gr ? "🟢 ΕΝΕΡΓΗ" : "🟢 ENABLED")
+                : (gr ? "🔴 ΑΝΕΝΕΡΓΗ" : "🔴 DISABLED"))
     );
-    schedTv.setTextColor(0xFFAAAAAA);
-    schedTv.setPadding(0, dp(4), 0, dp(4));
-    root.addView(schedTv);
+    reminderTv.setTextColor(reminderOn ? 0xFF00C853 : 0xFFFF5252);
+    reminderTv.setTextSize(15f);
+    reminderTv.setPadding(0, dp(6), 0, dp(6));
+    root.addView(reminderTv);
 
-    TextView miniTv = new TextView(this);
-    miniTv.setText(
-            gr
-                    ? "Mini Scheduler: " + (isPulseEnabled() ? "ΕΝΕΡΓΟΣ" : "ΑΝΕΝΕΡΓΟΣ")
-                    : "Mini Scheduler: " + (isPulseEnabled() ? "ENABLED" : "DISABLED")
+    // Mini Pulse
+    boolean miniOn = isMiniPulseEnabled();
+
+    TextView miniPulseTv = new TextView(this);
+    miniPulseTv.setText(
+            (gr ? "Mini Έλεγχος Παρασκηνίου: "
+                : "Mini Background Check: ")
+            + (miniOn
+                ? (gr ? "🟢 ΕΝΕΡΓΟΣ" : "🟢 ENABLED")
+                : (gr ? "🔴 ΑΝΕΝΕΡΓΟΣ" : "🔴 DISABLED"))
     );
-    miniTv.setTextColor(0xFFAAAAAA);
-    miniTv.setPadding(0, dp(4), 0, dp(20));
-    root.addView(miniTv);
+    miniPulseTv.setTextColor(miniOn ? 0xFF00C853 : 0xFFFF5252);
+    miniPulseTv.setTextSize(15f);
+    miniPulseTv.setPadding(0, dp(6), 0, dp(20));
+    root.addView(miniPulseTv);
 
-    // ----------------------------
-    // Done Button
-    // ----------------------------
-
+    // Done
     Button done = mkGreenBtn(gr ? "ΟΚ" : "OK");
     done.setOnClickListener(v -> finish());
     root.addView(done);
@@ -2637,7 +2655,10 @@ monthly.setOnClickListener(v -> {
     go(STEP_MINI_REMINDER);
 });
 
-skip.setOnClickListener(v -> go(STEP_MINI_REMINDER));
+skip.setOnClickListener(v -> {
+    OptimizerScheduler.disableReminder(this);
+    go(STEP_MINI_REMINDER);
+});
 
     root.addView(daily);
     root.addView(weekly);
