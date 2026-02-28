@@ -59,9 +59,15 @@ private String appsVerdict = "STABLE";
     private static final int STEP_QUEST    = 8;
     private static final int STEP_LABS     = 9;
     private static final int STEP_REMINDER = 10;
-    private static final int STEP_FINAL = 11;
+    private static final int STEP_MINI_REMINDER = 11;
+    private static final int STEP_FINAL = 12;
 
     private final ArrayList<String> symptoms = new ArrayList<>();
+    private boolean pulseEnabled = false;
+
+private static final String PREFS = "gel_prefs";
+private static final String KEY_PULSE_ENABLED = "pulse_enabled";
+    
 
 @Override
 protected void onCreate(Bundle savedInstanceState) {
@@ -218,6 +224,52 @@ private void showDnsHowToDialog() {
     showCustomDialog(root);
 }
 
+private void setPulseEnabled(boolean enabled) {
+    pulseEnabled = enabled;
+    getSharedPreferences(PREFS, MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_PULSE_ENABLED, enabled)
+            .apply();
+}
+
+private boolean isPulseEnabled() {
+    return getSharedPreferences(PREFS, MODE_PRIVATE)
+            .getBoolean(KEY_PULSE_ENABLED, false);
+}
+
+private void scheduleMiniPulse3xDaily() {
+    try {
+        androidx.work.Constraints c =
+                new androidx.work.Constraints.Builder()
+                        .setRequiresBatteryNotLow(false)
+                        .build();
+
+        androidx.work.PeriodicWorkRequest req =
+                new androidx.work.PeriodicWorkRequest.Builder(
+                        MiniPulseWorker.class,
+                        8, java.util.concurrent.TimeUnit.HOURS
+                )
+                .setConstraints(c)
+                .addTag("gel_mini_pulse")
+                .build();
+
+        androidx.work.WorkManager.getInstance(this)
+                .enqueueUniquePeriodicWork(
+                        "gel_mini_pulse",
+                        androidx.work.ExistingPeriodicWorkPolicy.REPLACE,
+                        req
+                );
+
+    } catch (Throwable ignore) {}
+}
+
+private void cancelMiniPulse() {
+    try {
+        androidx.work.WorkManager.getInstance(this)
+                .cancelUniqueWork("gel_mini_pulse");
+    } catch (Throwable ignore) {}
+}
+
 // ============================================================
 // ✅ SYSTEM APP FILTER (DROP SYSTEM APPS FROM GUIDED LISTS)
 // Paste inside GuidedOptimizerActivity (anywhere in class scope)
@@ -343,6 +395,7 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
         case STEP_QUEST: showQuestionnaire(); break;
         case STEP_LABS: showLabRecommendation(); break;
         case STEP_REMINDER: showReminder(); break;
+        case STEP_MINI_REMINDER: showMiniSchedulerPopup(); break;
         case STEP_FINAL: showFinalVerdict(); break;
     }
 }
@@ -708,34 +761,36 @@ private void showStableDialog() {
 
 private void showFinalVerdict() {
 
+    final boolean gr = AppLang.isGreek(this);
+
     LinearLayout root = buildBaseBox(
             gr ? "Τελική Αναφορά Συσκευής"
                : "Final Device Report"
     );
 
     String finalVerdict = resolveFinalVerdict();
-    
+
     String displayText;
 
-switch (finalVerdict) {
-    case "HEAVY":
-        displayText = gr
-                ? "🔴 Εντοπίστηκε Υψηλή Δραστηριότητα στο Παρασκήνιο.\n\n"
-                : "🔴 High Background Activity Detected.\n\n";
-        break;
+    switch (finalVerdict) {
+        case "HEAVY":
+            displayText = gr
+                    ? "🔴 Εντοπίστηκε Υψηλή Δραστηριότητα στο Παρασκήνιο."
+                    : "🔴 High Background Activity Detected.";
+            break;
 
-    case "MODERATE":
-        displayText = gr
-                ? "🟡 Εντοπίστηκε Δραστηριότητα στο Παρασκήνιο.\n\n"
-                : "🟡 Background Activity Detected.\n\n";
-        break;
+        case "MODERATE":
+            displayText = gr
+                    ? "🟡 Εντοπίστηκε Δραστηριότητα στο Παρασκήνιο."
+                    : "🟡 Background Activity Detected.";
+            break;
 
-    default:
-        displayText = gr
-                ? "🟢 Δεν Εντοπίστηκε Δραστηριότητα στο Παρασκήνιο.\n\n"
-                : "🟢 No Background Activity Detected.\n\n";
-        break;
-}
+        default:
+            displayText = gr
+                    ? "🟢 Δεν Εντοπίστηκε Δραστηριότητα στο Παρασκήνιο."
+                    : "🟢 No Background Activity Detected.";
+            break;
+    }
 
     // ----------------------------
     // Section Details
@@ -743,15 +798,18 @@ switch (finalVerdict) {
 
     addFinalRow(root,
             gr ? "Μπαταρία" : "Battery",
-            batteryVerdict);
+            batteryVerdict,
+            gr);
 
     addFinalRow(root,
             gr ? "Δεδομένα" : "Data",
-            dataVerdict);
+            dataVerdict,
+            gr);
 
     addFinalRow(root,
             gr ? "Εφαρμογές" : "Apps",
-            appsVerdict);
+            appsVerdict,
+            gr);
 
     // ----------------------------
     // Divider
@@ -768,48 +826,74 @@ switch (finalVerdict) {
     root.addView(div);
 
     // ----------------------------
-    // Final Status
+    // Overall Status
     // ----------------------------
 
-    TextView finalTv = new TextView(this);
-    finalTv.setText(
-        (gr ? "Συνολική Κατάσταση: "
-            : "Overall Status: ")
-        + displayText
-);
-
-if ("STABLE".equals(finalVerdict)) {
-
-    TextView cleanMsg = new TextView(this);
-    cleanMsg.setText(
-            gr
-                    ? "Δεν εντοπίστηκε δραστηριότητα στο παρασκήνιο τις τελευταίες 48 ώρες.\n\n"
-                    : "No background activity detected in the last 48 hours.\n\n"
-    );
-    cleanMsg.setTextColor(0xFFAAAAAA);
-    cleanMsg.setPadding(0, dp(6), 0, dp(18));
-
-    root.addView(cleanMsg);
-}
+    TextView statusTv = new TextView(this);
 
     int color =
             finalVerdict.equals("HEAVY") ? 0xFFFF5252 :
             finalVerdict.equals("MODERATE") ? 0xFFFFC107 :
             0xFF00C853;
 
-    finalTv.setTextColor(color);
-    finalTv.setTextSize(18f);
-    finalTv.setTypeface(null, Typeface.BOLD);
-    finalTv.setPadding(0, dp(10), 0, dp(25));
+    statusTv.setText(displayText);
+    statusTv.setTextColor(color);
+    statusTv.setTextSize(18f);
+    statusTv.setTypeface(null, Typeface.BOLD);
+    statusTv.setPadding(0, dp(10), 0, dp(20));
 
-    root.addView(finalTv);
+    root.addView(statusTv);
 
-    Button done = mkGreenBtn("OK");
+    // Stable explanation
+    if ("STABLE".equals(finalVerdict)) {
+
+        TextView cleanMsg = new TextView(this);
+        cleanMsg.setText(
+                gr
+                        ? "Δεν εντοπίστηκε δραστηριότητα στο παρασκήνιο τις τελευταίες 48 ώρες."
+                        : "No background activity detected in the last 48 hours."
+        );
+        cleanMsg.setTextColor(0xFFAAAAAA);
+        cleanMsg.setPadding(0, dp(6), 0, dp(18));
+
+        root.addView(cleanMsg);
+    }
+
+    // ----------------------------
+    // Scheduler Status
+    // ----------------------------
+
+    TextView schedTv = new TextView(this);
+    schedTv.setText(
+            gr
+                    ? "Scheduler: " + (isSchedulerEnabled() ? "ΕΝΕΡΓΟΣ" : "ΑΝΕΝΕΡΓΟΣ")
+                    : "Scheduler: " + (isSchedulerEnabled() ? "ENABLED" : "DISABLED")
+    );
+    schedTv.setTextColor(0xFFAAAAAA);
+    schedTv.setPadding(0, dp(4), 0, dp(4));
+    root.addView(schedTv);
+
+    TextView miniTv = new TextView(this);
+    miniTv.setText(
+            gr
+                    ? "Mini Scheduler: " + (isPulseEnabled() ? "ΕΝΕΡΓΟΣ" : "ΑΝΕΝΕΡΓΟΣ")
+                    : "Mini Scheduler: " + (isPulseEnabled() ? "ENABLED" : "DISABLED")
+    );
+    miniTv.setTextColor(0xFFAAAAAA);
+    miniTv.setPadding(0, dp(4), 0, dp(20));
+    root.addView(miniTv);
+
+    // ----------------------------
+    // Done Button
+    // ----------------------------
+
+    Button done = mkGreenBtn(gr ? "ΟΚ" : "OK");
     done.setOnClickListener(v -> finish());
     root.addView(done);
 
     showCustomDialog(root);
 }
+
 
 private String resolveFinalVerdict() {
 
@@ -824,32 +908,41 @@ private String resolveFinalVerdict() {
     if ("MODERATE".equals(dataVerdict)) moderateCount++;
     if ("MODERATE".equals(appsVerdict)) moderateCount++;
 
-    // 🔴 HEAVY μόνο αν 2+ steps είναι heavy
     if (heavyCount >= 2) {
         return "HEAVY";
     }
 
-    // 🟡 Αν υπάρχει έστω ένα moderate ή heavy
     if (heavyCount == 1 || moderateCount >= 1) {
         return "MODERATE";
     }
 
-    // 🟢 Καθαρό
     return "STABLE";
 }
 
+
 private void addFinalRow(LinearLayout root,
                          String label,
-                         String verdict) {
+                         String verdict,
+                         boolean gr) {
 
     TextView tv = new TextView(this);
+
+    String verdictText;
+
+    if ("HEAVY".equals(verdict)) {
+        verdictText = gr ? "Υψηλή" : "High";
+    } else if ("MODERATE".equals(verdict)) {
+        verdictText = gr ? "Μέτρια" : "Moderate";
+    } else {
+        verdictText = gr ? "Σταθερή" : "Stable";
+    }
 
     int color =
             "HEAVY".equals(verdict) ? 0xFFFF5252 :
             "MODERATE".equals(verdict) ? 0xFFFFC107 :
             0xFF00C853;
 
-    tv.setText(label + ": " + verdict);
+    tv.setText(label + ": " + verdictText);
     tv.setTextColor(color);
     tv.setTextSize(16f);
     tv.setPadding(0, dp(6), 0, dp(6));
@@ -2515,25 +2608,90 @@ private void showLabRecommendation() {
 
     daily.setOnClickListener(v -> {
     OptimizerScheduler.enableReminder(this,1);
-    go(STEP_FINAL);
+    go(STEP_MINI_REMINDER);
 });
 
 weekly.setOnClickListener(v -> {
     OptimizerScheduler.enableReminder(this,7);
-    go(STEP_FINAL);
+    go(STEP_MINI_REMINDER);
 });
 
 monthly.setOnClickListener(v -> {
     OptimizerScheduler.enableReminder(this,30);
-    go(STEP_FINAL);
+    go(STEP_MINI_REMINDER);
 });
 
-skip.setOnClickListener(v -> go(STEP_FINAL));
+skip.setOnClickListener(v -> go(STEP_MINI_REMINDER));
 
     root.addView(daily);
     root.addView(weekly);
     root.addView(monthly);
     root.addView(skip);
+
+    showCustomDialog(root);
+}
+
+private void showMiniSchedulerPopup() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    LinearLayout root = buildBaseBox(
+        gr ? "Mini Έλεγχος στο Παρασκήνιο"
+           : "Mini Background Check"
+    );
+
+    TextView body = new TextView(this);
+    body.setText(gr
+            ? "Θέλεις 3 φορές την ημέρα να κάνουμε έναν mini έλεγχο στο κινητό σου στο παρασκήνιο;\n\n"
+              + "Κάθε mini check θα διαρκεί λιγότερο από 1 δευτερόλεπτο.\n\n"
+              + "Θα παρακολουθούμε ενδείξεις όπως:\n"
+              + "• Υψηλή θερμοκρασία (όταν είναι διαθέσιμο)\n"
+              + "• Υπερβολική cache (> 80%)\n"
+              + "• Ύποπτη αστάθεια συστήματος (best-effort)\n\n"
+              + "Αν βρούμε κάτι, θα σου εμφανίσουμε ειδοποίηση με προτάσεις."
+            : "Would you like us to run a mini background check 3 times per day?\n\n"
+              + "Each mini check lasts under 1 second.\n\n"
+              + "We monitor signals such as:\n"
+              + "• High temperature (when available)\n"
+              + "• Excessive cache (> 80%)\n"
+              + "• Possible system instability (best-effort)\n\n"
+              + "If something is detected, we will notify you with recommendations."
+    );
+
+    body.setTextColor(0xFF00FF7F);
+    body.setPadding(0, dp(16), 0, dp(20));
+    root.addView(body);
+
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER);
+
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+    lp.setMargins(dp(8), 0, dp(8), 0);
+
+    Button noBtn = mkRedBtn(gr ? "ΟΧΙ" : "NO");
+    noBtn.setLayoutParams(lp);
+
+    Button yesBtn = mkGreenBtn(gr ? "ΝΑΙ" : "YES");
+    yesBtn.setLayoutParams(lp);
+
+    row.addView(noBtn);
+    row.addView(yesBtn);
+
+    root.addView(row);
+
+    noBtn.setOnClickListener(v -> {
+        setPulseEnabled(false);
+        cancelMiniPulse();
+        go(STEP_FINAL);  // συνεχίζουμε στο Questionnaire
+    });
+
+    yesBtn.setOnClickListener(v -> {
+        setPulseEnabled(true);
+        scheduleMiniPulse3xDaily();
+        go(STEP_FINAL);  // συνεχίζουμε στο Questionnaire
+    });
 
     showCustomDialog(root);
 }
