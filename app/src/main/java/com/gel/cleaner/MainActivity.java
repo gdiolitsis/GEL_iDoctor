@@ -212,12 +212,14 @@ private LinearLayout buildMuteRow() {
 }
 
 private void syncReturnButtonText() {
-Button b = findViewById(R.id.btnReturnAndroid);
-if (b != null) {
-b.setText("apple".equals(getSavedPlatform())
-? "RETURN TO ANDROID MODE"
-: "RETURN TO APPLE MODE");
-}
+    Button b = findViewById(R.id.btnReturnAndroid);
+    if (b != null) {
+        if ("apple".equals(getSavedPlatform())) {
+            b.setText(getString(R.string.return_android));
+        } else {
+            b.setText(getString(R.string.return_apple));
+        }
+    }
 }
 
 private boolean isWelcomeDisabled() {
