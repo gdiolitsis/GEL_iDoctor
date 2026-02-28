@@ -88,7 +88,6 @@ protected void onCreate(Bundle savedInstanceState) {
             );
 
     gr = AppLang.isGreek(this);
-}
 
     // RESTORE CURRENT STEP (so we don't restart intro after returning / recreation)
     if (savedInstanceState != null) {
