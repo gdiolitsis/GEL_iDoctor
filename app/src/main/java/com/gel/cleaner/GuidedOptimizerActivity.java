@@ -12,6 +12,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
