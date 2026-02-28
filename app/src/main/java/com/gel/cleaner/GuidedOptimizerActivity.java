@@ -8,6 +8,8 @@ import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Intent;
 import android.graphics.Color;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
@@ -41,6 +43,8 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     
     private boolean returnedFromUsageScreen = false;
     
+    private boolean returnedFromDnsScreen = false;
+    
 private String batteryVerdict = "STABLE";
 private String dataVerdict = "STABLE";
 private String appsVerdict = "STABLE";
@@ -52,10 +56,11 @@ private String appsVerdict = "STABLE";
     private static final int STEP_APPS     = 4;
     private static final int STEP_UNUSED = 5;
     private static final int STEP_CACHE    = 6;
-    private static final int STEP_QUEST    = 7;
-    private static final int STEP_LABS     = 8;
-    private static final int STEP_REMINDER = 9;
-    private static final int STEP_FINAL = 10;
+    private static final int STEP_DNS = 7;
+    private static final int STEP_QUEST    = 8;
+    private static final int STEP_LABS     = 9;
+    private static final int STEP_REMINDER = 10;
+    private static final int STEP_FINAL = 11;
 
     private final ArrayList<String> symptoms = new ArrayList<>();
 
@@ -110,6 +115,95 @@ protected void onResume() {
     if (returnedFromUsageScreen) {
         returnedFromUsageScreen = false;
     }
+
+    // If we returned from Private DNS screen, continue to Questionnaire.
+    if (returnedFromDnsScreen) {
+        returnedFromDnsScreen = false;
+        go(STEP_QUEST);
+    }
+}
+
+private void showDnsHowToDialog() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    LinearLayout root = buildBaseBox(
+            progressTitle(gr
+                    ? "ΒΗΜΑ 7 — Οδηγίες Private DNS"
+                    : "STEP 7 — Private DNS Instructions")
+    );
+
+    TextView steps = new TextView(this);
+    steps.setText(gr
+            ? "Copy-paste έτοιμο:\n\n"
+              + "1) Ρυθμίσεις\n"
+              + "2) Συνδέσεις ή Δίκτυο & Διαδίκτυο\n"
+              + "3) Περισσότερες ρυθμίσεις σύνδεσης → Ιδιωτικό DNS\n"
+              + "4) Όνομα παρόχου ιδιωτικού DNS\n"
+              + "5) Βάλε: dns.adguard.com  → Αποθήκευση\n"
+            : "Copy-paste ready:\n\n"
+              + "1) Settings\n"
+              + "2) Connections or Network & Internet\n"
+              + "3) More connection settings → Private DNS\n"
+              + "4) Private DNS provider hostname\n"
+              + "5) Enter: dns.adguard.com  → Save\n"
+    );
+    steps.setTextColor(0xFF00FF7F);
+    steps.setPadding(0, dp(14), 0, dp(18));
+    root.addView(steps);
+
+    // Hostname box (monospace look)
+    TextView host = new TextView(this);
+    host.setText("dns.adguard.com");
+    host.setTextColor(Color.WHITE);
+    host.setTextSize(18f);
+    host.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+    host.setGravity(Gravity.CENTER);
+    host.setPadding(dp(10), dp(12), dp(10), dp(12));
+
+    GradientDrawable boxBg = new GradientDrawable();
+    boxBg.setColor(0xFF111111);
+    boxBg.setCornerRadius(dp(10));
+    boxBg.setStroke(dp(3), 0xFFFFD700);
+    host.setBackground(boxBg);
+
+    root.addView(host);
+
+    // COPY button
+    Button copyBtn = mkGreenBtn(gr ? "ΑΝΤΙΓΡΑΦΗ" : "COPY");
+    copyBtn.setOnClickListener(v -> {
+        try {
+            ClipboardManager cb = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (cb != null) {
+                cb.setPrimaryClip(ClipData.newPlainText("dns", "dns.adguard.com"));
+                Toast.makeText(this,
+                        gr ? "Αντιγράφηκε: dns.adguard.com" : "Copied: dns.adguard.com",
+                        Toast.LENGTH_SHORT).show();
+            }
+        } catch (Throwable ignore) {}
+    });
+    root.addView(copyBtn);
+
+    // OPEN SETTINGS button
+    Button openBtn = mkGreenBtn(gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ" : "OPEN SETTINGS");
+    openBtn.setOnClickListener(v -> {
+        try {
+            returnedFromDnsScreen = true;
+            startActivity(new Intent(Settings.ACTION_PRIVATE_DNS_SETTINGS));
+        } catch (Throwable t) {
+            // αν αποτύχει, απλά προχώρα
+            returnedFromDnsScreen = false;
+            go(STEP_QUEST);
+        }
+    });
+    root.addView(openBtn);
+
+    // DONE button
+    Button doneBtn = mkRedBtn(gr ? "ΕΤΟΙΜΟ" : "DONE");
+    doneBtn.setOnClickListener(v -> go(STEP_QUEST));
+    root.addView(doneBtn);
+
+    showCustomDialog(root);
 }
 
 // ============================================================
@@ -2135,9 +2229,49 @@ if (!isSystem) {
                     ).show();
                 }
             },
-            () -> go(STEP_QUEST),
+            () -> go(STEP_DNS),
             false
     );
+}
+
+private void showDnsStep() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    LinearLayout root = buildBaseBox(
+            progressTitle(gr
+                    ? "ΒΗΜΑ 7 — Μπλοκάρισμα Διαφημίσεων"
+                    : "STEP 7 — Block Advertisements")
+    );
+
+    TextView body = new TextView(this);
+    body.setText(gr
+            ? "Θέλεις να ρυθμίσουμε τη συσκευή σου ώστε να μπλοκάρει "
+             + "τις διαφημίσεις από άλλες εφαρμογές και το ίντερνετ;\n"
+             + "χωρίς να χρειαστεί εγκατάσταση άλλης εφαρμογής;\n\n"
+             + "Θα βελτιωθεί πολύ η περιήγηση στις ιστοσελίδες, "
+             + "αφού θα μπλοκάρονται οι διαφημίσεις και τα αναδυόμενα παράθυρα."
+            : "Would you like to configure your device to block ads "
+             + "from other applications and the internet?\n"
+             + "without installing any additional application?\n\n"
+             + "Browsing will improve significantly, "
+             + "as advertisements and pop-up windows will be blocked."
+    );
+
+    body.setTextColor(0xFF00FF7F);
+    body.setPadding(0, dp(16), 0, dp(20));
+    root.addView(body);
+
+    Button yesBtn = mkGreenBtn(gr ? "ΝΑΙ" : "YES");
+    yesBtn.setOnClickListener(v -> showDnsHowToDialog());
+
+    Button noBtn = mkRedBtn(gr ? "ΟΧΙ" : "NO");
+    noBtn.setOnClickListener(v -> go(STEP_QUEST));
+
+    root.addView(yesBtn);
+    root.addView(noBtn);
+
+    showCustomDialog(root);
 }
 
     // ============================================================
@@ -2585,7 +2719,7 @@ private void showCustomDialog(View v) {
 }
 
     private String progressTitle(String title) {
-        int total = 6;
+        int total = 7;
         int current = step;
         return title + " (" + current + "/" + total + ")";
     }
