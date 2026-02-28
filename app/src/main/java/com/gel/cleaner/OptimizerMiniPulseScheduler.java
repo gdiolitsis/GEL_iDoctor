@@ -23,21 +23,23 @@ public class OptimizerMiniPulseScheduler {
     // =========================================================
 
     public static void enable(Context context) {
-        scheduleAt(context, 9, WORK_09);
-        scheduleAt(context, 15, WORK_15);
-        scheduleAt(context, 21, WORK_21);
+        Context appCtx = context.getApplicationContext();
+        scheduleAt(appCtx, 9, WORK_09);
+        scheduleAt(appCtx, 15, WORK_15);
+        scheduleAt(appCtx, 21, WORK_21);
     }
 
     public static void disable(Context context) {
-        WorkManager wm = WorkManager.getInstance(context);
+        Context appCtx = context.getApplicationContext();
+        WorkManager wm = WorkManager.getInstance(appCtx);
         wm.cancelUniqueWork(WORK_09);
         wm.cancelUniqueWork(WORK_15);
         wm.cancelUniqueWork(WORK_21);
     }
 
     public static void reschedule(Context context, int hour, String workName) {
-    scheduleAt(context, hour, workName);
-}
+        scheduleAt(context.getApplicationContext(), hour, workName);
+    }
 
     // =========================================================
     // INTERNAL SCHEDULING
@@ -52,27 +54,31 @@ public class OptimizerMiniPulseScheduler {
                 .build();
 
         OneTimeWorkRequest request =
-        new OneTimeWorkRequest.Builder(OptimizerMiniScheduler.class)
-                .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-                .setConstraints(constraints)
-                .setInputData(new androidx.work.Data.Builder()
-                        .putInt("hour", hour)
-                        .putString("workName", workName)
-                        .build())
-                .build();
+                new OneTimeWorkRequest.Builder(OptimizerMiniScheduler.class)
+                        .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                        .setConstraints(constraints)
+                        .setInputData(new Data.Builder()
+                                .putInt("hour", hour)
+                                .putString("workName", workName)
+                                .build())
+                        .build();
 
         WorkManager.getInstance(context)
-                .enqueueUniqueWork(workName,
+                .enqueueUniqueWork(
+                        workName,
                         ExistingWorkPolicy.REPLACE,
-                        request);
+                        request
+                );
     }
 
     private static long computeInitialDelay(int targetHour) {
 
         LocalDateTime now = LocalDateTime.now();
+
         LocalDateTime nextRun = now.withHour(targetHour)
                 .withMinute(0)
-                .withSecond(0);
+                .withSecond(0)
+                .withNano(0);
 
         if (now.isAfter(nextRun)) {
             nextRun = nextRun.plusDays(1);
