@@ -52,6 +52,9 @@ import java.util.Locale;
 public class AppListActivity extends GELAutoActivityHook {
 
     private RecyclerView recyclerView;
+    
+    private String lastOpenedPackage = null;
+    private int uninstallSuccessCount = 0;
 
     // STATS (FROM XML PANEL)
     private TextView txtStatsTotal;
@@ -342,6 +345,18 @@ protected void onResume() {
         openNext();   // θα μπει στο finish block
         return;
     }
+    
+// =====================================
+// UNINSTALL CHECK
+// =====================================
+if (isUninstallMode && lastOpenedPackage != null) {
+
+    if (!isPackageInstalled(lastOpenedPackage)) {
+        uninstallSuccessCount++;
+    }
+
+    lastOpenedPackage = null;
+}
 
     // Κανονική ροή για 2+ εφαρμογές
     if (guidedIndex < guidedQueue.size()) {
@@ -363,6 +378,15 @@ protected void onActivityResult(int requestCode, int resultCode, @Nullable Inten
         }
 
         return;
+    }
+}
+
+private boolean isPackageInstalled(String pkg) {
+    try {
+        getPackageManager().getPackageInfo(pkg, 0);
+        return true;
+    } catch (Exception e) {
+        return false;
     }
 }
 
@@ -1293,19 +1317,51 @@ private void openNext() {
     guidedIndex = 0;
 
     clearSelections();
+    applyFiltersAndSort();
 
-    applyFiltersAndSort();   // rebuild list properly
+    if (isUninstallMode) {
 
-    showGelDialog(
-            AppLang.isGreek(this)
-                    ? "Η διαδικασία ολοκληρώθηκε."
-                    : "Operation finished."
-    );
+        if (uninstallSuccessCount == 1) {
+
+            showGelDialog(
+                    AppLang.isGreek(this)
+                            ? "Η εφαρμογή απεγκαταστάθηκε επιτυχώς.\nΗ διαδικασία ολοκληρώθηκε."
+                            : "Application uninstalled successfully.\nOperation completed."
+            );
+
+        } else if (uninstallSuccessCount > 1) {
+
+            showGelDialog(
+                    AppLang.isGreek(this)
+                            ? uninstallSuccessCount + " εφαρμογές απεγκαταστάθηκαν επιτυχώς.\nΗ διαδικασία ολοκληρώθηκε."
+                            : uninstallSuccessCount + " applications were uninstalled successfully.\nOperation completed."
+            );
+
+        } else {
+
+            showGelDialog(
+                    AppLang.isGreek(this)
+                            ? "Η διαδικασία ολοκληρώθηκε χωρίς απεγκατάσταση εφαρμογών."
+                            : "Operation completed without uninstalling any applications."
+            );
+        }
+
+        uninstallSuccessCount = 0;
+
+    } else {
+
+        showGelDialog(
+                AppLang.isGreek(this)
+                        ? "Η διαδικασία ολοκληρώθηκε."
+                        : "Operation finished."
+        );
+    }
 
     return;
 }
 
     String pkg = guidedQueue.get(guidedIndex);
+    lastOpenedPackage = pkg;
 
     Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
 
