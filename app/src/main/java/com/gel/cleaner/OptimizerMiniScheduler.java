@@ -28,19 +28,105 @@ public class OptimizerMiniScheduler extends Worker {
 
     @NonNull
     @Override
-    public Result doWork() {
+public Result doWork() {
 
-        Context ctx = getApplicationContext();
+    Context ctx = getApplicationContext();
 
-        // -------------------------------------------------
-        // Respect user toggle
-        // -------------------------------------------------
-        SharedPreferences sp =
-                ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    SharedPreferences sp =
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
 
-        if (!sp.getBoolean(KEY_PULSE_ENABLED, false)) {
-            return Result.success();
+    if (!sp.getBoolean(KEY_PULSE_ENABLED, false)) {
+        return Result.success();
+    }
+
+    // --- Anti Spam (24h cooldown) ---
+    long lastNotify = sp.getLong("last_mini_notify", 0);
+    long now = System.currentTimeMillis();
+
+    if (now - lastNotify < 24L * 60L * 60L * 1000L) {
+        return Result.success();
+    }
+
+    // --- Cache check ---
+    boolean cacheHigh = false;
+
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+            StorageStatsManager ssm =
+                    (StorageStatsManager) ctx.getSystemService(Context.STORAGE_STATS_SERVICE);
+
+            if (ssm != null) {
+
+                StorageStats st = ssm.queryStatsForPackage(
+                        android.os.storage.StorageManager.UUID_DEFAULT,
+                        ctx.getPackageName(),
+                        android.os.UserHandle.getUserHandleForUid(Process.myUid())
+                );
+
+                if (st != null) {
+
+                    long appBytes = st.getAppBytes();
+                    long dataBytes = st.getDataBytes();
+                    long cacheBytes = st.getCacheBytes();
+
+                    long appSize = appBytes + dataBytes;
+
+                    int percent = (appSize > 0)
+                            ? (int) Math.round((cacheBytes * 100.0) / appSize)
+                            : 0;
+
+                    if (percent >= 85) {
+                        cacheHigh = true;
+                    }
+                }
+            }
         }
+    } catch (Throwable ignore) {}
+
+    // --- Run probes ---
+    MiniHealthProbes.Result r =
+            MiniHealthProbes.run(ctx, cacheHigh);
+
+// ----------------------
+// TEMP TEST MODE
+// ----------------------
+r.score = 2;
+// ----------------------
+
+    if (r.score < 2) {
+        return Result.success();
+    }
+
+    // --- Notify ---
+    boolean gr = AppLang.isGreek(ctx);
+
+    String title = gr
+            ? "Εντοπίστηκε ένδειξη επιβάρυνσης"
+            : "Device Health Signal";
+
+    String body = gr
+            ? "Παρατηρήθηκε αυξημένη δραστηριότητα στο σύστημα."
+            : "Increased system load detected.";
+
+    try {
+        NotificationCompat.Builder nb =
+                new NotificationCompat.Builder(ctx, "gel_default")
+                        .setSmallIcon(android.R.drawable.stat_notify_more)
+                        .setContentTitle(title)
+                        .setContentText(body)
+                        .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setAutoCancel(true);
+
+        NotificationManagerCompat.from(ctx).notify(19001, nb.build());
+
+        sp.edit().putLong("last_mini_notify", now).apply();
+
+    } catch (Throwable ignore) {}
+
+    return Result.success();
+}
 
         boolean cacheAlert = false;
 
