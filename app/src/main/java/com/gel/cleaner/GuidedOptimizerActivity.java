@@ -79,6 +79,9 @@ private static final String KEY_PULSE_ENABLED = "pulse_enabled";
 @Override
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    
+    // TEST ALARM μία γραμμή 
+    OptimizerMiniPulseScheduler.enable(this);
 
     gr = AppLang.isGreek(this);
 
