@@ -115,12 +115,13 @@ protected void onResume() {
         returnedFromUsageScreen = false;
     }
 
-    // If we returned from Private DNS screen, continue to Questionnaire.
+    // If we returned from Private DNS screen,
+    // just clear the flag and stay on the same step.
     if (returnedFromDnsScreen) {
         returnedFromDnsScreen = false;
-        go(STEP_QUEST);
-        return; // prevent double rendering
     }
+
+    // Re-render current step (no auto-advance)
     go(step);
 }
 
@@ -137,17 +138,23 @@ private void showDnsHowToDialog() {
     TextView steps = new TextView(this);
     steps.setText(gr
             ? "Copy-paste έτοιμο:\n\n"
-              + "1) Ρυθμίσεις\n"
-              + "2) Συνδέσεις ή Δίκτυο & Διαδίκτυο\n"
-              + "3) Περισσότερες ρυθμίσεις σύνδεσης → Ιδιωτικό DNS\n"
-              + "4) Όνομα παρόχου ιδιωτικού DNS\n"
-              + "5) Βάλε: dns.adguard.com  → Αποθήκευση\n"
+              + "Αντέγραψε το κείμενο που σου δίνω παρακάτω και πάτησε ρυθμισεις.\n"
+              + "Εάν ανοίξουν οι γενικές ρυθμίσεις συσκευής,\n"
+              + "ανάλογα με την συσκευή σου, ψάξε για\n\n"
+              + "1) Συνδέσεις, ή Δίκτυο & Διαδίκτυο, ή Σύνδεση και Κοινοποίηση.\n\n"
+              + "2) Περισσότερες ρυθμίσεις σύνδεσης, ή Προσωπικό/Ιδιωτικό DNS.\n\n"
+              + "3) Όνομα παρόχου Προσωπικού/Ιδιωτικού DNS\n\n"
+              + "4) Κάνε επικόλληση το κείμενο που αντέγραψες (dns.adguard.com)  → Αποθήκευση.\n\n"
+              + "Όταν επιστρέψεις πάτησε ΟΚ/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε .\n\n"
             : "Copy-paste ready:\n\n"
-              + "1) Settings\n"
-              + "2) Connections or Network & Internet\n"
-              + "3) More connection settings → Private DNS\n"
-              + "4) Private DNS provider hostname\n"
-              + "5) Enter: dns.adguard.com  → Save\n"
+  + "Copy the text provided below and tap Settings.\n"
+  + "If the general device settings screen opens,\n"
+  + "depending on your device, look for:\n\n"
+  + "1) Connections, or Network & Internet, or Connection & Sharing.\n\n"
+  + "2) More connection settings, or Private DNS.\n\n"
+  + "3) Private DNS provider hostname.\n\n"
+  + "4) Paste the copied text (dns.adguard.com)  → Save.\n\n"
+  + "When you return, press OK/SKIP to continue.\n\n"
     );
     steps.setTextColor(0xFF00FF7F);
     steps.setPadding(0, dp(14), 0, dp(18));
@@ -353,11 +360,11 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                         ? "Θα σε πάω στις σωστές ρυθμίσεις της συσκευής.\n\n"
                         + "Ο στόχος είναι να κάνουμε τη συσκευή σου να λειτουργεί ομαλά και με ασφάλεια.\n\n"
                         + "Εσύ κάνεις τις επιλογές — εγώ κρατάω το τιμόνι (χωρίς να πατάω γκάζι μόνος μου 😄).\n\n"
-                        + "Πάτα «Έναρξη» για να ξεκινήσουμε."
+                        + "Πάτα «Έναρξη» για να ξεκινήσουμε. \n\n"
                         : "I will guide you to the right system settings.\n\n"
                         + "The goal is to help your device run smoothly and securely.\n\n"
                         + "You make the choices — I simply steer (no autopilot 😄).\n\n"
-                        + "Press “Start” to begin.",
+                        + "Press “Start” to begin. \n\n",
                 null,
                 () -> go(STEP_STORAGE),
                 true
@@ -381,7 +388,7 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                         + "Χρησιμοποίησέ την μόνο αν γνωρίζεις ακριβώς τι κάνεις.\n\n"
                         + "Σε ορισμένες συσκευές η εφαρμογή μπορεί να κλείσει προσωρινά.\n\n"
                         + "Μετά τον καθαρισμό, άνοιξε ξανά την εφαρμογή\n"
-                        + "και πάτησε OK για να συνεχίσουμε.\n\n"
+                        + "και πάτησε OK/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε.\n\n"
                         : "The device storage settings will open.\n\n"
                         + "Use the available cleaning tools where necessary.\n"
                         + "In most cases, clearing temporary cache, temporary data and residual files is sufficient.\n"
@@ -390,7 +397,7 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                         + "Use it only if you fully understand the consequences.\n\n"
                         + "On some devices the app may close temporarily.\n\n"
                         + "After cleaning, reopen the app\n"
-                        + "and press OK to continue.\n\n",
+                        + "and press OK/SKIP to continue.\n\n",
                 () -> {
 
 // --------------------------------------------------------
@@ -458,11 +465,11 @@ private void showBattery() {
                         + "απαιτείται πρόσβαση Χρήσης Εφαρμογών.\n\n"
                         + "Καμία συλλογή προσωπικών δεδομένων δεν γίνεται με την παραχώρηση της Πρόσβασης Χρήσης.\n\n"
                         + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL.\n\n"
-                        + "Όταν επιστρέψεις, πάτησε ΟΚ για να συνεχίσουμε.\n\n"
+                        + "Όταν επιστρέψεις, πάτησε ΟΚ/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε.\n\n"
                         : "To analyze app activity,\n"
                         + "Usage Access permission is required.\n\n"
                         + "Press Settings and enable it for GEL.\n\n"
-                         + "When you return, press OK to continue.\n\n",
+                         + "When you return, press OK/SKIP to continue.\n\n",
                 () -> {
     try {
         Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
@@ -688,11 +695,11 @@ private void showStableDialog() {
                     ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
                       + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
                       + "Engine Verdict: STABLE\n\n"
-                      + "Δεν εντοπίστηκε δραστηριότητα εφαρμογών στο παρασκήνιο, τις τελευταίες 48 ώρες."
+                      + "Δεν εντοπίστηκε δραστηριότητα εφαρμογών στο παρασκήνιο, τις τελευταίες 48 ώρες.\n\n"
                     : "Results refer to apps you did not open in the last 48 hours,\n"
                       + "but showed background activity.\n\n"
                       + "Engine Verdict: STABLE\n\n"
-                      + "No background app activity detected in the last 48 hours.",
+                      + "No background app activity detected in the last 48 hours.\n\n",
             null,
             () -> go(STEP_DATA),
             false
@@ -713,20 +720,20 @@ private void showFinalVerdict() {
 switch (finalVerdict) {
     case "HEAVY":
         displayText = gr
-                ? "🔴 Εντοπίστηκε Υψηλή Δραστηριότητα στο Παρασκήνιο"
-                : "🔴 High Background Activity Detected";
+                ? "🔴 Εντοπίστηκε Υψηλή Δραστηριότητα στο Παρασκήνιο.\n\n"
+                : "🔴 High Background Activity Detected.\n\n";
         break;
 
     case "MODERATE":
         displayText = gr
-                ? "🟡 Εντοπίστηκε Δραστηριότητα στο Παρασκήνιο"
-                : "🟡 Background Activity Detected";
+                ? "🟡 Εντοπίστηκε Δραστηριότητα στο Παρασκήνιο.\n\n"
+                : "🟡 Background Activity Detected.\n\n";
         break;
 
     default:
         displayText = gr
-                ? "🟢 Δεν Εντοπίστηκε Δραστηριότητα στο Παρασκήνιο"
-                : "🟢 No Background Activity Detected";
+                ? "🟢 Δεν Εντοπίστηκε Δραστηριότητα στο Παρασκήνιο.\n\n"
+                : "🟢 No Background Activity Detected.\n\n";
         break;
 }
 
@@ -776,8 +783,8 @@ if ("STABLE".equals(finalVerdict)) {
     TextView cleanMsg = new TextView(this);
     cleanMsg.setText(
             gr
-                    ? "Δεν εντοπίστηκε δραστηριότητα στο παρασκήνιο τις τελευταίες 48 ώρες."
-                    : "No background activity detected in the last 48 hours."
+                    ? "Δεν εντοπίστηκε δραστηριότητα στο παρασκήνιο τις τελευταίες 48 ώρες.\n\n"
+                    : "No background activity detected in the last 48 hours.\n\n"
     );
     cleanMsg.setTextColor(0xFFAAAAAA);
     cleanMsg.setPadding(0, dp(6), 0, dp(18));
@@ -896,11 +903,11 @@ private void addEngineVerdict(LinearLayout root,
 
     tv.setText(
         "Engine Verdict: " + verdict + "\n\n"
-        + (gr ? "Υψηλή Δραστηριότητα στο παρασκήνιο: "
-              : "High Background Activity: ")
+        + (gr ? "Υψηλή Δραστηριότητα στο παρασκήνιο: \n\n"
+              : "High Background Activity: \n\n")
         + heavyCount + "\n"
-        + (gr ? "Μέτρια Δραστηριότητα στο παρασκήνιο: "
-              : "Moderate Background Activity: ")
+        + (gr ? "Μέτρια Δραστηριότητα στο παρασκήνιο: \n\n"
+              : "Moderate Background Activity: \n\n")
         + moderateCount
 );
 
@@ -920,12 +927,12 @@ private void addRecommendations(LinearLayout root,
 
     if (verdict.equals("HEAVY")) {
         rec = gr
-                ? "Προτείνεται περιορισμός δραστηριότητας παρασκηνίου, ή απεγκατάσταση μη απαραίτητων εφαρμογών."
-                : "It is recommended to restrict background activity, or uninstall unnecessary apps.";
+                ? "Προτείνεται περιορισμός δραστηριότητας παρασκηνίου, ή απεγκατάσταση μη απαραίτητων εφαρμογών. \n\n"
+                : "It is recommended to restrict background activity, or uninstall unnecessary apps. \n\n";
     } else {
         rec = gr
-                ? "Έλεγξε τις παρακάτω εφαρμογές."
-                : "Review listed apps.";
+                ? "Έλεγξε τις παρακάτω εφαρμογές. \n\n"
+                : "Review listed apps. \n\n";
     }
 
     tv.setText(rec);
@@ -954,10 +961,12 @@ private void showData() {
                 ? "Για να κάνουμε premium ανάλυση δεδομένων,\n"
                   + "χρειαζόμαστε πρόσβαση Χρήσης Εφαρμογών.\n\n"
                   + "Καμία συλλογή προσωπικών δεδομένων δεν γίνεται με την παραχώρηση της Πρόσβασης Χρήσης.\n\n"
-                  + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL."
+                  + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL. \n\n"
+                  + "Όταν επιστρέψεις πάτησε ΕΝΑΡΞΗ για να ξεκινήσουμε. \n\n"
                 : "To run premium data analysis,\n"
                   + "Usage Access permission is required.\n\n"
-                  + "Press Settings and enable it for GEL.",
+                  + "Press Settings and enable it for GEL. \n\n"
+                  + "Whene you return press START to continue.\n\n",
         () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)),
         () -> go(STEP_DATA),
         false
@@ -998,11 +1007,11 @@ private void showData() {
                 ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
                   + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
                   + "Engine Verdict: STABLE\n\n"
-                  + "Δεν υπάρχουν διαθέσιμα στοιχεία χρήσης για τις τελευταίες 48 ώρες."
+                  + "Δεν υπάρχουν διαθέσιμα στοιχεία χρήσης για τις τελευταίες 48 ώρες.\n\n"
                 : "Results refer to apps you did not open in the last 48 hours,\n"
                   + "but showed background activity.\n\n"
                   + "Engine Verdict: STABLE\n\n"
-                  + "No usage stats available in the last 48 hours.",
+                  + "No usage stats available in the last 48 hours.\n\n",
         null,
         () -> go(STEP_APPS),
         false
@@ -1131,11 +1140,11 @@ try {
                 ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
                   + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
                   + "Engine Verdict: STABLE\n\n"
-                  + "Δεν εντοπίστηκε ύποπτη ή βαριά δραστηριότητα χρήσης τις τελευταίες 48 ώρες."
+                  + "Δεν εντοπίστηκε ύποπτη ή βαριά δραστηριότητα χρήσης τις τελευταίες 48 ώρες.\n\n"
                 : "Results refer to apps you did not open in the last 48 hours,\n"
                   + "but showed background activity.\n\n"
                   + "Engine Verdict: STABLE\n\n"
-                  + "No suspicious or heavy usage activity detected in the last 48 hours.",
+                  + "No suspicious or heavy usage activity detected in the last 48 hours.\n\n",
         null,
         () -> go(STEP_APPS),
         false
@@ -1202,15 +1211,15 @@ root.addView(sectionTitle);
 
 String fullText = gr
         ? "Η ανάλυση βασίζεται σε δραστηριότητα στο παρασκήνιο (όχι MB).\n\n"
-        + "• High Activity = αυξημένη δραστηριότητα στο παρασκήνιο.\n"
+        + "• High Activity = αυξημένη δραστηριότητα στο παρασκήνιο.\n\n"
         + "• 💤 Σπάνια χρήση αλλά ενεργή = δεν άνοιξες την εφαρμογή,\n"
         + "   αλλά παρουσίασε πρόσφατη δραστηριότητα στο παρασκήνιο.\n\n"
-        + "Πάτα σε μια εφαρμογή για ενέργειες."
+        + "Πάτα σε μια εφαρμογή για ενέργειες.\n\n"
         : "This analysis is based on background activity (not MB).\n\n"
-        + "• High Activity = elevated background activity\n"
+        + "• High Activity = elevated background activity.\n\n"
         + "• 💤 Rarely used but active = you did not open the app,\n"
         + "   but it showed recent background activity\n\n"
-        + "Tap an app for actions.";
+        + "Tap an app for actions.\n\n";
 
 android.text.SpannableStringBuilder sb =
         new android.text.SpannableStringBuilder(fullText);
@@ -1314,12 +1323,12 @@ private void addEngineVerdictData(LinearLayout root,
 
     tv.setText(
         "Engine Verdict: " + verdict + "\n\n"
-        + (gr ? "Υψηλή Δραστηριότητα: "
-              : "High Activity: ")
-        + heavyCount + "\n"
-        + (gr ? "Μέτρια Δραστηριότητα: "
-              : "Moderate Activity: ")
-        + moderateCount
+        + (gr ? "Υψηλή Δραστηριότητα:\n\n"
+              : "High Activity:\n\n")
+        + heavyCount + "\n\n"
+        + (gr ? "Μέτρια Δραστηριότητα:\n\n"
+              : "Moderate Activity:\n\n")
+        + moderateCount + "\n\n"
 );
 
     tv.setTextColor(color);
@@ -1332,8 +1341,8 @@ private void addEngineVerdictData(LinearLayout root,
 
 rec.setText(
         gr
-                ? "Μπορείς να περιορίσεις τη δραστηριότητα στο παρασκήνιο αυτών των εφαρμογών, ή να αφαιρέσεις όσες δεν χρειάζεσαι."
-                : "You can restrict background activity for these apps, or remove those you don’t need."
+                ? "Μπορείς να περιορίσεις τη δραστηριότητα στο παρασκήνιο αυτών των εφαρμογών, ή να αφαιρέσεις όσες δεν χρειάζεσαι.\n\n"
+                : "You can restrict background activity for these apps, or remove those you don’t need.\n\n"
 );
 
 rec.setTextColor(0xFFFFFFFF);
@@ -1373,8 +1382,8 @@ private void addDataRows(LinearLayout root, java.util.List<DataRisk> list) {
         TextView meta = new TextView(this);
 
         String tag = r.rarelyUsedButActive
-                ? (gr ? "💤 Σπάνια χρήση αλλά ενεργή" : "💤 Rarely used but active")
-                : (gr ? "Υψηλή Δραστηριότητα" : "High Activity");
+                ? (gr ? "💤 Σπάνια χρήση αλλά ενεργή \n\n" : "💤 Rarely used but active \n\n")
+                : (gr ? "Υψηλή Δραστηριότητα" : "High Activity \n\n");
 
         meta.setText(
                 (gr ? "Δείκτης: " : "Index: ") + r.score
@@ -1593,12 +1602,12 @@ for (String pkg : mergedBgMinutes.keySet()) {
         int level;
 
         if (bgMinutes >= 60) {
-            badge = gr ? "🟥 Background χωρίς άνοιγμα"
-                       : "🟥 Background without opening";
+            badge = gr ? "🟥 Background χωρίς άνοιγμα \n\n"
+                       : "🟥 Background without opening \n\n";
             level = 3;
         } else {
-            badge = gr ? "🟨 Δραστηριότητα παρασκηνίου χωρίς άνοιγμα"
-                       : "🟨 Background activity without opening";
+            badge = gr ? "🟨 Δραστηριότητα παρασκηνίου χωρίς άνοιγμα \n\n"
+                       : "🟨 Background activity without opening \n\n";
             level = 2;
         }
 
@@ -1634,9 +1643,9 @@ TextView explain = new TextView(this);
 explain.setText(
         gr
                 ? "Τα αποτελέσματα αφορούν εφαρμογές που έτρεξαν στο παρασκήνιο\n"
-                  + "χωρίς να τις ανοίξεις τις τελευταίες 48 ώρες."
+                  + "χωρίς να τις ανοίξεις τις τελευταίες 48 ώρες. \n\n"
                 : "Results refer to apps that ran in the background\n"
-                  + "without you opening them in the last 48 hours."
+                  + "without you opening them in the last 48 hours. \n\n"
 );
 
 explain.setTextColor(0xFFFFFFFF);  // λευκό
@@ -1829,10 +1838,10 @@ info.setText(
         gr
                 ? "Εφαρμογές που δεν έχουν χρησιμοποιηθεί >30 ημέρες.\n"
                   + "Ενδέχεται να πιάνουν χώρο ή δικαιώματα.\n\n"
-                  + "Συνιστάται η απεγκατάσταση όσων δεν χρειάζεσαι."
+                  + "Συνιστάται η απεγκατάσταση όσων δεν χρειάζεσαι. \n\n"
                 : "Apps not used for over 30 days.\n"
                   + "They may occupy storage or hold permissions.\n\n"
-                  + "It is recommended to uninstall those you don’t need."
+                  + "It is recommended to uninstall those you don’t need. \n\n"
 );
 info.setTextColor(0xFFAAAAAA);
 info.setPadding(0, 0, 0, 25);
@@ -1949,10 +1958,10 @@ private void showAppsStable() {
             gr
                     ? "🟢 Engine Verdict: STABLE\n\n"
                     + "Καμμία εφαρμογή δεν είχε δραστηριότητα στο παρασκήνιο,\n"
-                    + "τις τελευταίες 48 ώρες."
+                    + "τις τελευταίες 48 ώρες. \n\n"
                     : "🟢 Engine Verdict: STABLE\n\n"
                     + "No app showed background activity\n"
-                    + "in the last 48 hours.",
+                    + "in the last 48 hours. \n\n",
             null,
             () -> go(STEP_UNUSED),
             false
@@ -1977,12 +1986,12 @@ private void addAppsVerdict(LinearLayout root,
 
     tv.setText(
         "Engine Verdict: " + verdict + "\n\n"
-        + (gr ? "Υψηλή Δραστηριότητα στο παρασκήνιο: "
-              : "High Background Activity: ")
-        + heavy + "\n"
-        + (gr ? "Μέτρια Δραστηριότητα στο παρασκήνιο: "
-              : "Moderate Background Activity: ")
-        + moderate
+        + (gr ? "Υψηλή Δραστηριότητα στο παρασκήνιο:\n\n"
+              : "High Background Activity:\n\n")
+        + heavy + "\n\n"
+        + (gr ? "Μέτρια Δραστηριότητα στο παρασκήνιο:\n\n"
+              : "Moderate Background Activity:\n\n")
+        + moderate + "\n\n"
 );
 
     tv.setTextColor(color);
@@ -2030,15 +2039,17 @@ try {
         name.setTypeface(null, Typeface.BOLD);
 
         TextView meta = new TextView(this);
-        meta.setText(
-        (gr ? "BG: " : "BG: ")
-                + r.bgMinutes
-                + (gr ? " λεπτά (48h)" : " min (48h)")
-                + "  |  "
-                + (gr ? "Τελευταία χρήση: " : "Last used: ")
-                + r.hoursSinceUse + "h"
-                + "\n"
-                + r.badge
+meta.setText(
+        (gr ? "Δραστηριότητα στο παρασκήνιο: \n\n"
+            : "Background Activity: \n\n")
+        + r.bgMinutes
+        + (gr ? " λεπτά (48h)" : " min (48h)")
+        + "  |  "
+        + (gr ? "Τελευταία χρήση: "
+              : "Last used: ")
+        + r.hoursSinceUse + "h"
+        + "\n"
+        + r.badge
 );
 
 if (isSystem) {
@@ -2133,7 +2144,7 @@ try {
         TextView meta = new TextView(this);
 
 meta.setText(
-        (gr ? "Χρήση: " : "Usage: ")
+        (gr ? "Χρήση: \n\n" : "Usage: \n\n")
                 + r.minutes
                 + (gr ? " λεπτά (48h)" : " min (48h)")
                 + (r.unrestricted
@@ -2208,19 +2219,19 @@ if (!isSystem) {
                 progressTitle(gr ? "ΒΗΜΑ 6 — Cache" : "STEP 6 — Cache"),
                 gr
                         ? "Θα ανοίξει η λίστα εφαρμογών. Πάτησε ταξινόμηση κατά «Μεγαλύτερη % Cache».\n\n"
-                        + "Καθάρισε εφαρμογές με μεγάλη προσωρινή μνήμη — ή και όλες.\n"
-                        + "Στην πρώτη ομάδα θα δεις τις εφαρμογές που έχεις εγκαταστήσει.\n"
-                        + "Στη δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος.\n"
-                        + "Η εκκαθάριση cache είναι ασφαλής και δεν διαγράφει προσωπικά δεδομένα.\n\n"
+                        + "Καθάρισε εφαρμογές με μεγάλη προσωρινή μνήμη — ή και όλες. \n\n"
+                        + "Στην πρώτη ομάδα θα δεις τις εφαρμογές που έχεις εγκαταστήσει. \n\n"
+                        + "Στη δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος. \n\n"
+                        + "Η εκκαθάριση cache είναι ασφαλής και δεν διαγράφει προσωπικά δεδομένα.\n"
                         + "Απόφυγε την εκκαθάριση δεδομένων εκτός αν γνωρίζεις τις συνέπειες.\n\n"
-                        + "Πάτησε OK όταν ολοκληρώσεις.\n\n"
+                        + "Πάτησε OK/ΠΑΡΑΛΕΙΨΗ όταν ολοκληρώσεις για να συνεχίσουμε.\n\n"
                         : "The app list will open. Tap to sort by “Largest % Cache”.\n\n"
-                        + "Clear apps with large temporary cache — or all of them if needed.\n"
-                        + "In the first group you will see apps you installed.\n"
-                        + "In the second group you will see system apps.\n"
-                        + "Clearing cache is safe and does not remove personal data.\n\n"
+                        + "Clear apps with large temporary cache — or all of them if needed. \n\n"
+                        + "In the first group you will see apps you installed. \n\n"
+                        + "In the second group you will see system apps. \n\n"
+                        + "Clearing cache is safe and does not remove personal data.\n"
                         + "Avoid clearing app data unless you understand the consequences.\n\n"
-                        + "Press OK when finished.\n\n",
+                        + "Press OK/SKIP when finished to continue.\n\n",
                 () -> {
     try {
         Intent i = new Intent(this, AppListActivity.class);
@@ -2229,8 +2240,8 @@ if (!isSystem) {
     } catch (Exception e) {
         Toast.makeText(
                 this,
-                gr ? "Δεν ήταν δυνατό να ανοίξει ο καθαριστής cache."
-                   : "Unable to open cache cleaner.",
+                gr ? "Δεν ήταν δυνατό να ανοίξει ο καθαριστής cache. \n\n"
+                   : "Unable to open cache cleaner. \n\n",
                 Toast.LENGTH_SHORT
         ).show();
     }
@@ -2256,12 +2267,12 @@ private void showDnsStep() {
              + "τις διαφημίσεις από άλλες εφαρμογές και το ίντερνετ;\n"
              + "χωρίς να χρειαστεί εγκατάσταση άλλης εφαρμογής;\n\n"
              + "Θα βελτιωθεί πολύ η περιήγηση στις ιστοσελίδες, "
-             + "αφού θα μπλοκάρονται οι διαφημίσεις και τα αναδυόμενα παράθυρα."
+             + "αφού θα μπλοκάρονται οι διαφημίσεις και τα αναδυόμενα παράθυρα. \n\n"
             : "Would you like to configure your device to block ads "
              + "from other applications and the internet?\n"
              + "without installing any additional application?\n\n"
              + "Browsing will improve significantly, "
-             + "as advertisements and pop-up windows will be blocked."
+             + "as advertisements and pop-up windows will be blocked. \n\n"
     );
 
     body.setTextColor(0xFF00FF7F);
@@ -2287,8 +2298,8 @@ private void showDnsStep() {
     private void showQuestionnaire() {
 
         LinearLayout root = buildBaseBox(
-                gr ? "Πρόσεξες τελευταία κάτι που σε προβλημάτισε στη συσκευή σου;"
-   : "Have you noticed anything unusual on your device recently?"
+                gr ? "Πρόσεξες τελευταία κάτι που σε προβλημάτισε στη συσκευή σου; \n\n"
+   : "Have you noticed anything unusual on your device recently? \n\n"
         );
 
         CheckBox heat = mkCheck(gr?"Υψηλή θερμοκρασία":"High temperature");
@@ -2300,7 +2311,7 @@ private void showDnsStep() {
         CheckBox bluetooth = mkCheck(gr?"Bluetooth πρόβλημα":"Bluetooth issues");
         CheckBox sound = mkCheck(gr?"Πρόβλημα ήχου":"Sound issues");
         CheckBox boot = mkCheck(gr?"Αργή εκκίνηση":"Slow boot");
-        CheckBox wifi = mkCheck(gr?"WiFi αστάθεια":"WiFi instability");
+        CheckBox wifi = mkCheck(gr?"WiFi αστάθεια":"WiFi instability \n\n");
 
         root.addView(heat);
         root.addView(crash);
@@ -2346,8 +2357,8 @@ private void showLabRecommendation() {
 
     LinearLayout root = buildBaseBox(
             gr
-                    ? "Για να ελέγξεις όσα μας ανέφερες, σου προτείνουμε να τρέξεις τα παρακάτω διαγνωστικά Εργαστήρια"
-                    : "Based on what you reported, we recommend running the following diagnostic Labs"
+                    ? "Για να ελέγξεις όσα μας ανέφερες, σου προτείνουμε να τρέξεις τα παρακάτω διαγνωστικά Εργαστήρια \n\n"
+                    : "Based on what you reported, we recommend running the following diagnostic Labs \n\n"
     );
 
     TextView tv = new TextView(this);
@@ -2366,8 +2377,8 @@ private void showLabRecommendation() {
         } catch (Throwable t) {
             Toast.makeText(
                     this,
-                    gr ? "Δεν ήταν δυνατό να ανοίξουν τα εργαστήρια."
-                       : "Unable to open labs.",
+                    gr ? "Δεν ήταν δυνατό να ανοίξουν τα εργαστήρια. \n\n"
+                       : "Unable to open labs. \n\n",
                     Toast.LENGTH_SHORT
             ).show();
         }
@@ -2493,8 +2504,8 @@ private void showLabRecommendation() {
     private void showReminder() {
 
     LinearLayout root = buildBaseBox(
-            gr ? "Αν έμεινες ευχαριστημένος/η από το αποτέλεσμα, θα ήθελες να σου υπενθυμίζουμε τακτικά, να κάνουμε την ίδια επιθεώρηση στη συσκευή σου;"
-               : "If you're satisfied with the results, would you like regular reminders, to run the same device inspection?"
+            gr ? "Αν έμεινες ευχαριστημένος/η από το αποτέλεσμα, θα ήθελες να σου υπενθυμίζουμε τακτικά, να κάνουμε την ίδια επιθεώρηση στη συσκευή σου; \n\n"
+               : "If you're satisfied with the results, would you like regular reminders, to run the same device inspection? \n\n"
     );
 
     Button daily = mkGreenBtn(gr ? "1 Ημέρα" : "Daily");
