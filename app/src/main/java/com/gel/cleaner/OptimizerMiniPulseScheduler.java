@@ -3,6 +3,7 @@ package com.gel.cleaner;
 import android.content.Context;
 
 import androidx.work.Constraints;
+import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
@@ -51,11 +52,14 @@ public class OptimizerMiniPulseScheduler {
                 .build();
 
         OneTimeWorkRequest request =
-                new OneTimeWorkRequest.Builder(OptimizerMiniScheduler.class)
-                        .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-                        .setConstraints(constraints)
-                        .addTag(workName)
-                        .build();
+        new OneTimeWorkRequest.Builder(OptimizerMiniScheduler.class)
+                .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                .setConstraints(constraints)
+                .setInputData(new androidx.work.Data.Builder()
+                        .putInt("hour", hour)
+                        .putString("workName", workName)
+                        .build())
+                .build();
 
         WorkManager.getInstance(context)
                 .enqueueUniqueWork(workName,
