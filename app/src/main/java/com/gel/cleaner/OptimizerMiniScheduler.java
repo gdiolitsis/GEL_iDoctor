@@ -32,6 +32,9 @@ public class OptimizerMiniScheduler extends Worker {
 
         Context ctx = getApplicationContext();
 
+        // -------------------------------------------------
+        // Respect user toggle
+        // -------------------------------------------------
         SharedPreferences sp =
                 ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
 
@@ -41,6 +44,9 @@ public class OptimizerMiniScheduler extends Worker {
 
         boolean cacheAlert = false;
 
+        // -------------------------------------------------
+        // Cache quick check (< 1 sec logic)
+        // -------------------------------------------------
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
@@ -75,30 +81,46 @@ public class OptimizerMiniScheduler extends Worker {
             }
         } catch (Throwable ignore) {}
 
-        if (!cacheAlert) return Result.success();
+        // -------------------------------------------------
+        // Notify only if needed
+        // -------------------------------------------------
+        if (cacheAlert) {
 
-        boolean gr = AppLang.isGreek(ctx);
+            boolean gr = AppLang.isGreek(ctx);
 
-        String title = gr
-                ? "Mini Έλεγχος"
-                : "Mini Check";
+            String title = gr
+                    ? "Mini Έλεγχος"
+                    : "Mini Check";
 
-        String body = gr
-                ? "Εντοπίστηκε υψηλή χρήση cache.\nΠάτησε για προτάσεις."
-                : "High cache usage detected.\nTap for recommendations.";
+            String body = gr
+                    ? "Εντοπίστηκε υψηλή χρήση cache.\nΠάτησε για προτάσεις."
+                    : "High cache usage detected.\nTap for recommendations.";
 
-        try {
-            NotificationCompat.Builder nb =
-                    new NotificationCompat.Builder(ctx, "gel_default")
-                            .setSmallIcon(android.R.drawable.stat_notify_more)
-                            .setContentTitle(title)
-                            .setContentText(body)
-                            .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
-                            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                            .setAutoCancel(true);
+            try {
+                NotificationCompat.Builder nb =
+                        new NotificationCompat.Builder(ctx, "gel_default")
+                                .setSmallIcon(android.R.drawable.stat_notify_more)
+                                .setContentTitle(title)
+                                .setContentText(body)
+                                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+                                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                                .setAutoCancel(true);
 
-            NotificationManagerCompat.from(ctx).notify(19001, nb.build());
-        } catch (Throwable ignore) {}
+                NotificationManagerCompat.from(ctx)
+                        .notify(19001, nb.build());
+
+            } catch (Throwable ignore) {}
+        }
+
+        // -------------------------------------------------
+        // 🔁 Self reschedule for same hour tomorrow
+        // -------------------------------------------------
+        int hour = getInputData().getInt("hour", -1);
+        String workName = getInputData().getString("workName");
+
+        if (hour != -1 && workName != null) {
+            OptimizerMiniPulseScheduler.reschedule(ctx, hour, workName);
+        }
 
         return Result.success();
     }
