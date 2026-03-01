@@ -2567,7 +2567,7 @@ private void showDevOptionsHowToDialog() {
     Button doneBtn = mkRedBtn(gr ? "ΕΤΟΙΜΟ" : "DONE");
     doneBtn.setOnClickListener(v -> go(STEP_REMINDER));
 
-    root.addView(settingsBtn);
+    root.addView(openBtn);
     root.addView(doneBtn);
 
     showCustomDialog(root);
