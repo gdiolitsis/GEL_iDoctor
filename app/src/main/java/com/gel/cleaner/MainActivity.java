@@ -8,6 +8,8 @@ import com.gel.cleaner.iphone.*;
 import com.gel.cleaner.base.*;
 
 import android.app.AppOpsManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.Manifest;
@@ -82,6 +84,25 @@ super.onResume();
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+    
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+    NotificationChannel channel =
+            new NotificationChannel(
+                    "gel_default",
+                    "GEL Health Alerts",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+
+    channel.setDescription("Device health & mini check notifications");
+
+    NotificationManager nm =
+            getSystemService(NotificationManager.class);
+
+    if (nm != null) {
+        nm.createNotificationChannel(channel);
+    }
+}
 
     txtLogs = findViewById(R.id.txtLogs);
     scroll = findViewById(R.id.scrollRoot);
