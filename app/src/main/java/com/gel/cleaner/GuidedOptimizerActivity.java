@@ -2614,8 +2614,15 @@ private void showDevOptionsHowToDialog() {
         CheckBox bluetooth = mkCheck(gr?"Bluetooth πρόβλημα":"Bluetooth issues");
         CheckBox sound = mkCheck(gr?"Πρόβλημα ήχου":"Sound issues");
         CheckBox boot = mkCheck(gr?"Αργή εκκίνηση":"Slow boot");
-        CheckBox wifi = mkCheck(gr?"WiFi αστάθεια":"WiFi instability");
-        appendHtml("<br>");
+        CheckBox wifi = mkCheck(gr ? "WiFi αστάθεια" : "WiFi instability");
+
+LinearLayout.LayoutParams p =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+p.setMargins(0, 0, 0, dp(20));   // ← απόσταση από τα κουμπιά
+wifi.setLayoutParams(p);
 
         root.addView(heat);
         root.addView(crash);
