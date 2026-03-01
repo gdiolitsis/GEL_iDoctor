@@ -3112,3 +3112,13 @@ private void showCustomDialog(View v) {
 
     currentDialog.show();
 }
+
+// ============================================================
+// PROGRESS TITLE
+// ============================================================
+private static final int TOTAL_STEPS = 8;  
+
+private String progressTitle(String title) {
+    return title + " (" + step + "/" + TOTAL_STEPS + ")";
+}
+}
