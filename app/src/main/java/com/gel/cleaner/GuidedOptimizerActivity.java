@@ -772,11 +772,13 @@ private void showStableDialog() {
             ),
             gr
                     ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
-                      + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
+                      + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο\n"
+                      + "αλλά καταναλώνοντας μπαταρία.\n\n"
                       + "Engine Verdict: STABLE\n\n"
                       + "Δεν εντοπίστηκε δραστηριότητα εφαρμογών στο παρασκήνιο, τις τελευταίες 48 ώρες.\n\n"
                     : "Results refer to apps you did not open in the last 48 hours,\n"
-                      + "but showed background activity.\n\n"
+                      + "but showed background activity,\n"
+                      + "consuming battery.\n\n"
                       + "Engine Verdict: STABLE\n\n"
                       + "No background app activity detected in the last 48 hours.\n\n",
             null,
@@ -1125,14 +1127,16 @@ private void showData() {
                         : "STEP 3 — Data Consumption (48 hours)"
         ),
         gr
-                ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
-                  + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
-                  + "Engine Verdict: STABLE\n\n"
-                  + "Δεν υπάρχουν διαθέσιμα στοιχεία χρήσης για τις τελευταίες 48 ώρες.\n\n"
-                : "Results refer to apps you did not open in the last 48 hours,\n"
-                  + "but showed background activity.\n\n"
-                  + "Engine Verdict: STABLE\n\n"
-                  + "No usage stats available in the last 48 hours.\n\n",
+  ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
+  + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο,\n"
+  + "καταναλώνοντας δεδομένα.\n\n"
+  + "Engine Verdict: STABLE\n\n"
+  + "Δεν υπάρχουν διαθέσιμα στοιχεία χρήσης για τις τελευταίες 48 ώρες.\n\n"
+: "Results refer to apps you did not open in the last 48 hours,\n"
+  + "but showed background activity,\n"
+  + "consuming data.\n\n"
+  + "Engine Verdict: STABLE\n\n"
+  + "No usage stats available in the last 48 hours.\n\n",
         null,
         () -> go(STEP_APPS),
         false
@@ -1259,11 +1263,13 @@ try {
         ),
         gr
                 ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
-                  + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο.\n\n"
+                  + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο,\n"
+                  + "καταναλώνοντας δεδομενα.\n\n"
                   + "Engine Verdict: STABLE\n\n"
                   + "Δεν εντοπίστηκε ύποπτη ή βαριά δραστηριότητα χρήσης τις τελευταίες 48 ώρες.\n\n"
                 : "Results refer to apps you did not open in the last 48 hours,\n"
-                  + "but showed background activity.\n\n"
+                  + "but showed background activity,\n"
+                  + "consuming data.\n\n"
                   + "Engine Verdict: STABLE\n\n"
                   + "No suspicious or heavy usage activity detected in the last 48 hours.\n\n",
         null,
@@ -2432,7 +2438,8 @@ private void showDnsStep() {
         CheckBox bluetooth = mkCheck(gr?"Bluetooth πρόβλημα":"Bluetooth issues");
         CheckBox sound = mkCheck(gr?"Πρόβλημα ήχου":"Sound issues");
         CheckBox boot = mkCheck(gr?"Αργή εκκίνηση":"Slow boot");
-        CheckBox wifi = mkCheck(gr?"WiFi αστάθεια":"WiFi instability \n\n");
+        CheckBox wifi = mkCheck(gr?"WiFi αστάθεια":"WiFi instability \n\n")
+        appendHtml("<br>");
 
         root.addView(heat);
         root.addView(crash);
@@ -2673,20 +2680,22 @@ private void showMiniSchedulerPopup() {
 
     TextView body = new TextView(this);
     body.setText(gr
-            ? "Θέλεις 3 φορές την ημέρα να κάνουμε έναν mini έλεγχο στο κινητό σου στο παρασκήνιο;\n\n"
-              + "Κάθε mini check θα διαρκεί λιγότερο από 1 δευτερόλεπτο.\n\n"
-              + "Θα παρακολουθούμε ενδείξεις όπως:\n"
-              + "• Υψηλή θερμοκρασία (όταν είναι διαθέσιμο)\n"
-              + "• Υπερβολική cache (> 80%)\n"
-              + "• Ύποπτη αστάθεια συστήματος (best-effort)\n\n"
-              + "Αν βρούμε κάτι, θα σου εμφανίσουμε ειδοποίηση με προτάσεις."
-            : "Would you like us to run a mini background check 3 times per day?\n\n"
-              + "Each mini check lasts under 1 second.\n\n"
-              + "We monitor signals such as:\n"
-              + "• High temperature (when available)\n"
-              + "• Excessive cache (> 80%)\n"
-              + "• Possible system instability (best-effort)\n\n"
-              + "If something is detected, we will notify you with recommendations."
+  ? "Θέλεις, 3 φορές την ημέρα να κάνουμε έναν mini έλεγχο στο κινητό σου στο παρασκήνιο;\n\n"
+  + "Κάθε mini check θα διαρκεί λιγότερο από 1 δευτερόλεπτο.\n\n"
+  + "Θα παρακολουθούμε ενδείξεις όπως:\n"
+  + "• Υψηλή θερμοκρασία (όταν είναι διαθέσιμο)\n"
+  + "• Υπερβολική cache (> 80%)\n"
+  + "• Ύποπτη αστάθεια συστήματος (best-effort)\n\n"
+  + "Αν εντοπίσουμε σημαντικές μεταβολές στη συσκευή σου,\n"
+  + "θα σου εμφανίσουμε σχετική ειδοποίηση με προτάσεις.\n\n"
+: "Would you like us to run a mini background check 3 times per day?\n\n"
+  + "Each mini check lasts under 1 second.\n\n"
+  + "We monitor signals such as:\n"
+  + "• High device temperature (when available)\n"
+  + "• Excessive cache usage (> 80%)\n"
+  + "• Possible system instability (best-effort detection)\n\n"
+  + "If we detect significant changes on your device,\n"
+  + "you will receive a notification with recommendations.\n\n"
     );
 
     body.setTextColor(0xFF00FF7F);
