@@ -44,6 +44,8 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     private boolean gr;
     private int step = 0;
     
+    private AlertDialog currentDialog;
+    
     private boolean returnedFromUsageScreen = false;
     private boolean returnedFromDnsScreen = false;
         
@@ -59,11 +61,12 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     private static final int STEP_UNUSED = 5;
     private static final int STEP_CACHE    = 6;
     private static final int STEP_DNS = 7;
-    private static final int STEP_QUEST    = 8;
-    private static final int STEP_LABS     = 9;
-    private static final int STEP_REMINDER = 10;
-    private static final int STEP_MINI_REMINDER = 11;
-    private static final int STEP_FINAL = 12;
+    private static final int STEP_DEV_OPTIONS = 8;
+    private static final int STEP_QUEST    = 9;
+    private static final int STEP_LABS     = 10;
+    private static final int STEP_REMINDER = 11;
+    private static final int STEP_MINI_REMINDER = 12;
+    private static final int STEP_FINAL = 13;
 
     private final ArrayList<String> symptoms = new ArrayList<>();
     private boolean pulseEnabled = false;
@@ -155,99 +158,6 @@ protected void onResume() {
 
     // Re-render current step (no auto-advance)
     go(step);
-}
-
-private void showDnsHowToDialog() {
-
-    final boolean gr = AppLang.isGreek(this);
-
-    LinearLayout root = buildBaseBox(
-            progressTitle(gr
-                    ? "ΒΗΜΑ 7 — Οδηγίες Private DNS"
-                    : "STEP 7 — Private DNS Instructions")
-    );
-
-    TextView steps = new TextView(this);
-    steps.setText(gr
-            ? "Copy-paste έτοιμο:\n\n"
-              + "Αντέγραψε το κείμενο που σου δίνω παρακάτω και πάτησε ρυθμισεις.\n"
-              + "Εάν ανοίξουν οι γενικές ρυθμίσεις συσκευής,\n"
-              + "ανάλογα με την συσκευή σου, ψάξε για\n\n"
-              + "1) Συνδέσεις, ή Δίκτυο & Διαδίκτυο, ή Σύνδεση και Κοινοποίηση.\n\n"
-              + "2) Περισσότερες ρυθμίσεις σύνδεσης, ή Προσωπικό/Ιδιωτικό DNS.\n\n"
-              + "3) Όνομα παρόχου Προσωπικού/Ιδιωτικού DNS\n\n"
-              + "4) Κάνε επικόλληση το κείμενο που αντέγραψες (dns.adguard.com)  → Αποθήκευση.\n\n"
-              + "Όταν επιστρέψεις πάτησε ΟΚ/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε .\n\n"
-            : "Copy-paste ready:\n\n"
-  + "Copy the text provided below and tap Settings.\n"
-  + "If the general device settings screen opens,\n"
-  + "depending on your device, look for:\n\n"
-  + "1) Connections, or Network & Internet, or Connection & Sharing.\n\n"
-  + "2) More connection settings, or Private DNS.\n\n"
-  + "3) Private DNS provider hostname.\n\n"
-  + "4) Paste the copied text (dns.adguard.com)  → Save.\n\n"
-  + "When you return, press OK/SKIP to continue.\n\n"
-    );
-    steps.setTextColor(0xFF00FF7F);
-    steps.setPadding(0, dp(14), 0, dp(18));
-    root.addView(steps);
-
-    // Hostname box (monospace look)
-    TextView host = new TextView(this);
-    host.setText("dns.adguard.com");
-    host.setTextColor(Color.WHITE);
-    host.setTextSize(18f);
-    host.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-    host.setGravity(Gravity.CENTER);
-    host.setPadding(dp(10), dp(12), dp(10), dp(12));
-
-    GradientDrawable boxBg = new GradientDrawable();
-    boxBg.setColor(0xFF111111);
-    boxBg.setCornerRadius(dp(10));
-    boxBg.setStroke(dp(3), 0xFFFFD700);
-    host.setBackground(boxBg);
-
-    root.addView(host);
-
-    // COPY button
-    Button copyBtn = mkGreenBtn(gr ? "ΑΝΤΙΓΡΑΦΗ" : "COPY");
-    copyBtn.setOnClickListener(v -> {
-        try {
-            ClipboardManager cb = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            if (cb != null) {
-                cb.setPrimaryClip(ClipData.newPlainText("dns", "dns.adguard.com"));
-                Toast.makeText(this,
-                        gr ? "Αντιγράφηκε: dns.adguard.com" : "Copied: dns.adguard.com",
-                        Toast.LENGTH_SHORT).show();
-            }
-        } catch (Throwable ignore) {}
-    });
-    root.addView(copyBtn);
-
-    // OPEN SETTINGS button
-    Button openBtn = mkGreenBtn(gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ" : "OPEN SETTINGS");
-    openBtn.setOnClickListener(v -> {
-        try {
-            returnedFromDnsScreen = true;
-            try {
-    startActivity(new Intent("android.settings.PRIVATE_DNS_SETTINGS"));
-} catch (Exception e) {
-    startActivity(new Intent(Settings.ACTION_SETTINGS));
-}
-        } catch (Throwable t) {
-            // αν αποτύχει, απλά προχώρα
-            returnedFromDnsScreen = false;
-            go(STEP_QUEST);
-        }
-    });
-    root.addView(openBtn);
-
-    // DONE button
-    Button doneBtn = mkRedBtn(gr ? "ΕΤΟΙΜΟ" : "DONE");
-    doneBtn.setOnClickListener(v -> go(STEP_QUEST));
-    root.addView(doneBtn);
-
-    showCustomDialog(root);
 }
 
 private void setPulseEnabled(boolean enabled) {
@@ -417,7 +327,8 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
         case STEP_APPS: showApps(); break;
         case STEP_UNUSED: showInactiveApps(); break;
         case STEP_CACHE: showCache(); break;
-        case STEP_DNS: showDnsStep(); break;   // 👈 ΑΥΤΟ ΕΛΕΙΠΕ
+        case STEP_DNS: showDnsStep(); break; 
+        case STEP_DEV_OPTIONS: showDevOptionsStep(); break;
         case STEP_QUEST: showQuestionnaire(); break;
         case STEP_LABS: showLabRecommendation(); break;
         case STEP_REMINDER: showReminder(); break;
@@ -2390,30 +2301,295 @@ private void showDnsStep() {
 
     TextView body = new TextView(this);
     body.setText(gr
-            ? "Θέλεις να ρυθμίσουμε τη συσκευή σου ώστε να μπλοκάρει "
-             + "τις διαφημίσεις από άλλες εφαρμογές και το ίντερνετ;\n"
-             + "χωρίς να χρειαστεί εγκατάσταση άλλης εφαρμογής;\n\n"
-             + "Θα βελτιωθεί πολύ η περιήγηση στις ιστοσελίδες, "
-             + "αφού θα μπλοκάρονται οι διαφημίσεις και τα αναδυόμενα παράθυρα. \n\n"
-            : "Would you like to configure your device to block ads "
-             + "from other applications and the internet?\n"
-             + "without installing any additional application?\n\n"
-             + "Browsing will improve significantly, "
-             + "as advertisements and pop-up windows will be blocked. \n\n"
+? "Θέλεις να ρυθμίσουμε τη συσκευή σου ώστε να μπλοκάρει "
+  + "τις διαφημίσεις από άλλες εφαρμογές και το διαδίκτυο,\n"
+  + "χωρίς να χρειαστεί εγκατάσταση άλλης εφαρμογής;\n\n"
+  + "Η περιήγηση θα βελτιωθεί αισθητά, "
+  + "καθώς θα μπλοκάρονται οι διαφημίσεις και τα αναδυόμενα παράθυρα.\n\n"
+  + "Όταν επιστρέψεις από τις ρυθμίσεις, πάτησε ΟΚ/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε.\n\n"
+: "Would you like to configure your device to block ads "
+  + "from other applications and the internet,\n"
+  + "without installing any additional app?\n\n"
+  + "Browsing will improve noticeably, "
+  + "as advertisements and pop-ups will be blocked.\n\n"
+  + "When you return from Settings, press OK/SKIP to continue.\n\n"
     );
 
     body.setTextColor(0xFF00FF7F);
     body.setPadding(0, dp(16), 0, dp(20));
     root.addView(body);
 
-    Button yesBtn = mkGreenBtn(gr ? "ΝΑΙ" : "YES");
-    yesBtn.setOnClickListener(v -> showDnsHowToDialog());
+    // 🔹 SETTINGS (Black / Gold style)
+Button settingsBtn = mkBlackGoldBtn(gr ? "ΡΥΘΜΙΣΕΙΣ" : "SETTINGS");
+settingsBtn.setOnClickListener(v -> {
+    try {
+        startActivity(new Intent(Settings.ACTION_WIRELESS_SETTINGS));
+    } catch (Throwable ignore) {}
+});
 
-    Button noBtn = mkRedBtn(gr ? "ΟΧΙ" : "NO");
-    noBtn.setOnClickListener(v -> go(STEP_QUEST));
+// 🔹 OK / SKIP
+Button okBtn = mkGreenBtn(okSkipLabel(false));
+okBtn.setOnClickListener(v -> go(STEP_DEV_OPTIONS));
 
-    root.addView(yesBtn);
-    root.addView(noBtn);
+// 🔹 EXIT
+Button exitBtn = mkRedBtn(gr ? "Έξοδος" : "Exit");
+exitBtn.setOnClickListener(v -> finish());
+
+root.addView(settingsBtn);
+root.addView(okBtn);
+root.addView(exitBtn);
+
+showCustomDialog(root);
+}
+
+private void showDnsHowToDialog() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    LinearLayout root = buildBaseBox(
+            progressTitle(gr
+                    ? "ΒΗΜΑ 7 — Οδηγίες Private DNS"
+                    : "STEP 7 — Private DNS Instructions")
+    );
+
+    TextView steps = new TextView(this);
+    steps.setText(gr
+            ? "Copy-paste έτοιμο:\n\n"
+              + "Αντέγραψε το κείμενο που σου δίνω παρακάτω και πάτησε ρυθμισεις.\n"
+              + "Εάν ανοίξουν οι γενικές ρυθμίσεις συσκευής,\n"
+              + "ανάλογα με την συσκευή σου, ψάξε για\n\n"
+              + "1) Συνδέσεις, ή Δίκτυο & Διαδίκτυο, ή Σύνδεση και Κοινοποίηση.\n\n"
+              + "2) Περισσότερες ρυθμίσεις σύνδεσης, ή Προσωπικό/Ιδιωτικό DNS.\n\n"
+              + "3) Όνομα παρόχου Προσωπικού/Ιδιωτικού DNS\n\n"
+              + "4) Κάνε επικόλληση το κείμενο που αντέγραψες (dns.adguard.com)  → Αποθήκευση.\n\n"
+              + "Όταν επιστρέψεις πάτησε ΟΚ/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε .\n\n"
+            : "Copy-paste ready:\n\n"
+  + "Copy the text provided below and tap Settings.\n"
+  + "If the general device settings screen opens,\n"
+  + "depending on your device, look for:\n\n"
+  + "1) Connections, or Network & Internet, or Connection & Sharing.\n\n"
+  + "2) More connection settings, or Private DNS.\n\n"
+  + "3) Private DNS provider hostname.\n\n"
+  + "4) Paste the copied text (dns.adguard.com)  → Save.\n\n"
+  + "When you return, press OK/SKIP to continue.\n\n"
+    );
+    steps.setTextColor(0xFF00FF7F);
+    steps.setPadding(0, dp(14), 0, dp(18));
+    root.addView(steps);
+
+    // Hostname box (monospace look)
+    TextView host = new TextView(this);
+    host.setText("dns.adguard.com");
+    host.setTextColor(Color.WHITE);
+    host.setTextSize(18f);
+    host.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+    host.setGravity(Gravity.CENTER);
+    host.setPadding(dp(10), dp(12), dp(10), dp(12));
+
+    GradientDrawable boxBg = new GradientDrawable();
+    boxBg.setColor(0xFF111111);
+    boxBg.setCornerRadius(dp(10));
+    boxBg.setStroke(dp(3), 0xFFFFD700);
+    host.setBackground(boxBg);
+
+    root.addView(host);
+
+    // COPY button
+    Button copyBtn = mkGreenBtn(gr ? "ΑΝΤΙΓΡΑΦΗ" : "COPY");
+    copyBtn.setOnClickListener(v -> {
+        try {
+            ClipboardManager cb = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (cb != null) {
+                cb.setPrimaryClip(ClipData.newPlainText("dns", "dns.adguard.com"));
+                Toast.makeText(this,
+                        gr ? "Αντιγράφηκε: dns.adguard.com" : "Copied: dns.adguard.com",
+                        Toast.LENGTH_SHORT).show();
+            }
+        } catch (Throwable ignore) {}
+    });
+    root.addView(copyBtn);
+
+    // OPEN SETTINGS button
+    Button openBtn = mkGreenBtn(gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ" : "OPEN SETTINGS");
+    openBtn.setOnClickListener(v -> {
+        try {
+            returnedFromDnsScreen = true;
+            try {
+    startActivity(new Intent("android.settings.PRIVATE_DNS_SETTINGS"));
+} catch (Exception e) {
+    startActivity(new Intent(Settings.ACTION_SETTINGS));
+}
+        } catch (Throwable t) {
+            // αν αποτύχει, απλά προχώρα
+            returnedFromDnsScreen = false;
+            go(STEP_QUEST);
+        }
+    });
+    root.addView(openBtn);
+
+    // DONE button
+    Button doneBtn = mkRedBtn(gr ? "ΕΤΟΙΜΟ" : "DONE");
+    doneBtn.setOnClickListener(v -> go(STEP_QUEST));
+    root.addView(doneBtn);
+
+    showCustomDialog(root);
+}
+
+private void showDevOptionsStep() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    LinearLayout root = buildBaseBox(
+            progressTitle(gr
+                    ? "ΒΗΜΑ 8 — Βελτίωση Απόκρισης"
+                    : "STEP 8 — Responsiveness Boost")
+    );
+
+    TextView body = new TextView(this);
+    body.setText(gr
+            ? "Θέλεις να βελτιώσουμε την ταχύτητα απόκρισης της συσκευής;\n\n"
+              + "Μπορούμε να μειώσουμε τη διάρκεια των system animations σε 0.5x.\n\n"
+              + "Θα παρατηρήσεις πιο γρήγορες μεταβάσεις μεταξύ οθονών και πιο άμεση απόκριση στο άνοιγμα εφαρμογών.\n\n"
+              + "Αν ανοίξουν οι γενικές ρυθμίσεις συσκευής,\n"
+              + "αναζήτησε Επιλογές προγραμματιστή.\n\n"
+              + "Όταν επιστρέψεις από τις ρυθμίσεις, πάτησε ΟΚ/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε.\n\n"
+            : "Would you like to improve device responsiveness?\n\n"
+              + "We can reduce system animation scales to 0.5x.\n\n"
+              + "You will notice faster transitions and quicker app opening animations.\n\n"
+              + "If general device settings open,\n"
+              + "look for Developer Options.\n\n"
+              + "When you return from Settings, press OK/SKIP to continue.\n\n"
+    );
+
+    body.setTextColor(0xFF00FF7F);
+    body.setPadding(0, dp(16), 0, dp(20));
+    root.addView(body);
+
+    // 🔹 SETTINGS (Black / Gold style)
+    Button settingsBtn = mkBlackGoldBtn(gr ? "ΡΥΘΜΙΣΕΙΣ" : "SETTINGS");
+    settingsBtn.setOnClickListener(v -> {
+        try {
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
+        } catch (Throwable ignore) {
+            try {
+                startActivity(new Intent(Settings.ACTION_SETTINGS));
+            } catch (Throwable ignored) {}
+        }
+    });
+
+    // 🔹 OK / SKIP
+    Button okBtn = mkGreenBtn(okSkipLabel(false));
+    okBtn.setOnClickListener(v -> go(STEP_REMINDER));
+
+    // 🔹 EXIT
+    Button exitBtn = mkRedBtn(gr ? "Έξοδος" : "Exit");
+    exitBtn.setOnClickListener(v -> finish());
+
+    root.addView(settingsBtn);
+    root.addView(okBtn);
+    root.addView(exitBtn);
+
+    showCustomDialog(root);
+}
+
+private void showDevOptionsHowToDialog() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    LinearLayout root = buildBaseBox(
+            gr ? "Ρύθμιση Επιλογών Προγραμματιστή"
+               : "Developer Options Setup"
+    );
+
+    TextView steps = new TextView(this);
+    steps.setText(gr
+"Βελτίωση απόκρισης συσκευής.\n\n"
++ "Πάτησε ΡΥΘΜΙΣΕΙΣ παρακάτω.\n\n"
++ "Ανάλογα με τη συσκευή σου, θα ανοίξουν είτε οι\n"
++ "Επιλογές Προγραμματιστή, είτε οι γενικές Ρυθμίσεις.\n\n"
++ "Αν ΔΕΝ βλέπεις Επιλογές Προγραμματιστή:\n\n"
++ "1) Αναζήτησε:\n"
++ "   • Πληροφορίες συσκευής, ή Σχετικά με το τηλέφωνο.\n"
++ "   • (Σε ορισμένες συσκευές εμφανίζεται ως About phone)\n\n"
++ "2) Βρες:\n"
++ "   • Αριθμός έκδοσης (Build number), ή\n"
++ "   • Έκδοση MIUI, ή\n"
++ "   • Έκδοση One UI, ή\n"
++ "   • Version number\n\n"
++ "3) Πάτησε 7 φορές επάνω στο αντίστοιχο πεδίο.\n"
++ "Θα εμφανιστεί μήνυμα ότι ενεργοποιήθηκαν οι Επιλογές Προγραμματιστή.\n\n"
++ "4) Πάτησε επιστροφή (Back) και εντόπισε:\n"
++ "   • Πρόσθετες ρυθμίσεις (MIUI) → Επιλογές προγραμματιστών, ή\n"
++ "   • Επιλογές προγραμματιστή, ή\n"
++ "   • Σύστημα → Επιλογές προγραμματιστή\n\n"
++ "Στη συνέχεια θα μειώσουμε τις κλίμακες κινήσεων σε 0.5x.\n\n"
++ "Ρύθμισε με τη σειρά:\n"
++ "1) Κλίμακα κινουμένων σχεδίων παραθύρων\n"
++ "   (Window animation scale)\n"
++ "2) Κλίμακα μετάβασης κινουμένων σχεδίων\n"
++ "   (Transition animation scale)\n"
++ "3) Κλίμακα διάρκειας κινουμένων σχεδίων\n"
++ "   (Animator duration scale)\n\n"
++ "Ρύθμισέ τα όλα σε 0.5x.\n\n"
++ "Η ρύθμιση είναι ασφαλής και πλήρως αναστρέψιμη.\n\n"
++ "Όταν επιστρέψεις πάτησε ΕΤΟΙΜΟ για να συνεχίσουμε.\n\n"             
+: "Improve device responsiveness.\n\n"
++ "Tap SETTINGS below.\n\n"
++ "Depending on your device, either\n"
++ "Developer Options or the general Settings screen will open.\n\n"
++ "If you do NOT see Developer Options:\n\n"
++ "1) Look for:\n"
++ "   • About phone, or\n"
++ "   • About device\n\n"
++ "2) Find:\n"
++ "   • Build number, or\n"
++ "   • MIUI version, or\n"
++ "   • One UI version, or\n"
++ "   • Version number\n\n"
++ "3) Tap the corresponding field 7 times.\n"
++ "A message will appear confirming that Developer Options are enabled.\n\n"
++ "4) Press Back and locate:\n"
++ "   • Additional settings (MIUI) → Developer options, or\n"
++ "   • Developer options, or\n"
++ "   • System → Developer options\n\n"
++ "Next, we will reduce animation scales to 0.5x.\n\n"
++ "Adjust in order:\n"
++ "1) Window animation scale\n"
++ "2) Transition animation scale\n"
++ "3) Animator duration scale\n\n"
++ "Set all three to 0.5x.\n\n"
++ "This setting is safe and fully reversible.\n\n"
++ "When you return, press DONE to continue.\n\n"
+    );
+
+    steps.setTextColor(0xFF00FF7F);
+    steps.setPadding(0, dp(14), 0, dp(18));
+    root.addView(steps);
+
+    // SETTINGS button (Black/Gold)
+    Button settingsBtn = mkBlackGoldBtn(gr ? "ΡΥΘΜΙΣΕΙΣ" : "SETTINGS");
+    settingsBtn.setOnClickListener(v -> {
+
+        boolean opened = false;
+
+        try {
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
+            opened = true;
+        } catch (Throwable ignore) {}
+
+        if (!opened) {
+            try {
+                startActivity(new Intent(Settings.ACTION_SETTINGS));
+            } catch (Throwable ignore) {}
+        }
+    });
+
+    // DONE button
+    Button doneBtn = mkRedBtn(gr ? "ΕΤΟΙΜΟ" : "DONE");
+    doneBtn.setOnClickListener(v -> go(STEP_REMINDER));
+
+    root.addView(settingsBtn);
+    root.addView(doneBtn);
 
     showCustomDialog(root);
 }
@@ -2921,21 +3097,18 @@ private LinearLayout buildBaseBox(String title) {
 // ============================================================
 private void showCustomDialog(View v) {
 
-    AlertDialog dialog = new AlertDialog.Builder(this)
+    if (currentDialog != null && currentDialog.isShowing()) {
+        currentDialog.dismiss();
+    }
+
+    currentDialog = new AlertDialog.Builder(this)
             .setView(v)
             .setCancelable(false)
             .create();
 
-    dialog.getWindow().setBackgroundDrawable(
+    currentDialog.getWindow().setBackgroundDrawable(
             new ColorDrawable(Color.TRANSPARENT)
     );
 
-    dialog.show();
-}
-
-    private String progressTitle(String title) {
-        int total = 7;
-        int current = step;
-        return title + " (" + current + "/" + total + ")";
-    }
+    currentDialog.show();
 }
