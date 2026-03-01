@@ -2262,6 +2262,7 @@ if (!isSystem) {
                         + "Στη δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος. \n\n"
                         + "Η εκκαθάριση cache είναι ασφαλής και δεν διαγράφει προσωπικά δεδομένα.\n"
                         + "Απόφυγε την εκκαθάριση δεδομένων εκτός αν γνωρίζεις τις συνέπειες.\n\n"
+                        + "Πατησε ΡΥΘΜΙΣΕΙΣ. Μετά,\n\n"
                         + "Πάτησε OK/ΠΑΡΑΛΕΙΨΗ όταν ολοκληρώσεις για να συνεχίσουμε.\n\n"
                         : "The app list will open. Tap to sort by “Largest % Cache”.\n\n"
                         + "Clear apps with large temporary cache — or all of them if needed. \n\n"
@@ -2269,6 +2270,7 @@ if (!isSystem) {
                         + "In the second group you will see system apps. \n\n"
                         + "Clearing cache is safe and does not remove personal data.\n"
                         + "Avoid clearing app data unless you understand the consequences.\n\n"
+                        + "Tap SETTINGS. Then,\n\n"
                         + "Press OK/SKIP when finished to continue.\n\n",
                 () -> {
     try {
@@ -2289,6 +2291,10 @@ false
     );
 }
 
+    // ============================================================
+    // STEP 7 — DNS
+    // ============================================================
+
 private void showDnsStep() {
 
     final boolean gr = AppLang.isGreek(this);
@@ -2306,38 +2312,27 @@ private void showDnsStep() {
   + "χωρίς να χρειαστεί εγκατάσταση άλλης εφαρμογής;\n\n"
   + "Η περιήγηση θα βελτιωθεί αισθητά, "
   + "καθώς θα μπλοκάρονται οι διαφημίσεις και τα αναδυόμενα παράθυρα.\n\n"
-  + "Όταν επιστρέψεις από τις ρυθμίσεις, πάτησε ΟΚ/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε.\n\n"
 : "Would you like to configure your device to block ads "
   + "from other applications and the internet,\n"
   + "without installing any additional app?\n\n"
   + "Browsing will improve noticeably, "
   + "as advertisements and pop-ups will be blocked.\n\n"
-  + "When you return from Settings, press OK/SKIP to continue.\n\n"
     );
 
     body.setTextColor(0xFF00FF7F);
     body.setPadding(0, dp(16), 0, dp(20));
     root.addView(body);
+    
+    // 🔹 YES
+Button yesBtn = mkGreenBtn(gr ? "ΝΑΙ" : "YES");
+yesBtn.setOnClickListener(v -> showDnsHowToDialog());
 
-    // 🔹 SETTINGS (Black / Gold style)
-Button settingsBtn = mkBlackGoldBtn(gr ? "ΡΥΘΜΙΣΕΙΣ" : "SETTINGS");
-settingsBtn.setOnClickListener(v -> {
-    try {
-        startActivity(new Intent(Settings.ACTION_WIRELESS_SETTINGS));
-    } catch (Throwable ignore) {}
-});
+// 🔹 NO
+Button noBtn = mkRedBtn(gr ? "ΟΧΙ" : "NO");
+noBtn.setOnClickListener(v -> go(STEP_DEV_OPTIONS));
 
-// 🔹 OK / SKIP
-Button okBtn = mkGreenBtn(okSkipLabel(false));
-okBtn.setOnClickListener(v -> go(STEP_DEV_OPTIONS));
-
-// 🔹 EXIT
-Button exitBtn = mkRedBtn(gr ? "Έξοδος" : "Exit");
-exitBtn.setOnClickListener(v -> finish());
-
-root.addView(settingsBtn);
-root.addView(okBtn);
-root.addView(exitBtn);
+root.addView(yesBtn);
+root.addView(noBtn);
 
 showCustomDialog(root);
 }
@@ -2355,23 +2350,23 @@ private void showDnsHowToDialog() {
     TextView steps = new TextView(this);
     steps.setText(gr
             ? "Copy-paste έτοιμο:\n\n"
-              + "Αντέγραψε το κείμενο που σου δίνω παρακάτω και πάτησε ρυθμισεις.\n"
+              + "Αντέγραψε το κείμενο που σου δίνω παρακάτω και πάτησε ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ.\n\n"
               + "Εάν ανοίξουν οι γενικές ρυθμίσεις συσκευής,\n"
               + "ανάλογα με την συσκευή σου, ψάξε για\n\n"
               + "1) Συνδέσεις, ή Δίκτυο & Διαδίκτυο, ή Σύνδεση και Κοινοποίηση.\n\n"
               + "2) Περισσότερες ρυθμίσεις σύνδεσης, ή Προσωπικό/Ιδιωτικό DNS.\n\n"
               + "3) Όνομα παρόχου Προσωπικού/Ιδιωτικού DNS\n\n"
               + "4) Κάνε επικόλληση το κείμενο που αντέγραψες (dns.adguard.com)  → Αποθήκευση.\n\n"
-              + "Όταν επιστρέψεις πάτησε ΟΚ/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε .\n\n"
+              + "Όταν επιστρέψεις πάτησε ΕΤΟΙΜΟ για να συνεχίσουμε .\n\n"
             : "Copy-paste ready:\n\n"
-  + "Copy the text provided below and tap Settings.\n"
+  + "Copy the text provided below and tap OPEN SETTINGS.\n\n"
   + "If the general device settings screen opens,\n"
   + "depending on your device, look for:\n\n"
   + "1) Connections, or Network & Internet, or Connection & Sharing.\n\n"
   + "2) More connection settings, or Private DNS.\n\n"
   + "3) Private DNS provider hostname.\n\n"
   + "4) Paste the copied text (dns.adguard.com)  → Save.\n\n"
-  + "When you return, press OK/SKIP to continue.\n\n"
+  + "When you return, press DONE to continue.\n\n"
     );
     steps.setTextColor(0xFF00FF7F);
     steps.setPadding(0, dp(14), 0, dp(18));
@@ -2429,11 +2424,15 @@ private void showDnsHowToDialog() {
 
     // DONE button
     Button doneBtn = mkRedBtn(gr ? "ΕΤΟΙΜΟ" : "DONE");
-    doneBtn.setOnClickListener(v -> go(STEP_QUEST));
+    doneBtn.setOnClickListener(v -> go(STEP_DEV_OPTIONS));
     root.addView(doneBtn);
 
     showCustomDialog(root);
 }
+
+    // ============================================================
+    // STEP 8 — DEVELOPMENT OPTIONS
+    // ============================================================
 
 private void showDevOptionsStep() {
 
@@ -2450,46 +2449,27 @@ private void showDevOptionsStep() {
             ? "Θέλεις να βελτιώσουμε την ταχύτητα απόκρισης της συσκευής;\n\n"
               + "Μπορούμε να μειώσουμε τη διάρκεια των system animations σε 0.5x.\n\n"
               + "Θα παρατηρήσεις πιο γρήγορες μεταβάσεις μεταξύ οθονών και πιο άμεση απόκριση στο άνοιγμα εφαρμογών.\n\n"
-              + "Αν ανοίξουν οι γενικές ρυθμίσεις συσκευής,\n"
-              + "αναζήτησε Επιλογές προγραμματιστή.\n\n"
-              + "Όταν επιστρέψεις από τις ρυθμίσεις, πάτησε ΟΚ/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε.\n\n"
             : "Would you like to improve device responsiveness?\n\n"
               + "We can reduce system animation scales to 0.5x.\n\n"
               + "You will notice faster transitions and quicker app opening animations.\n\n"
-              + "If general device settings open,\n"
-              + "look for Developer Options.\n\n"
-              + "When you return from Settings, press OK/SKIP to continue.\n\n"
     );
 
-    body.setTextColor(0xFF00FF7F);
-    body.setPadding(0, dp(16), 0, dp(20));
-    root.addView(body);
+body.setTextColor(0xFF00FF7F);
+body.setPadding(0, dp(16), 0, dp(20));
+root.addView(body);
 
-    // 🔹 SETTINGS (Black / Gold style)
-    Button settingsBtn = mkBlackGoldBtn(gr ? "ΡΥΘΜΙΣΕΙΣ" : "SETTINGS");
-    settingsBtn.setOnClickListener(v -> {
-        try {
-            startActivity(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
-        } catch (Throwable ignore) {
-            try {
-                startActivity(new Intent(Settings.ACTION_SETTINGS));
-            } catch (Throwable ignored) {}
-        }
-    });
+// 🔹 YES
+Button yesBtn = mkGreenBtn(gr ? "ΝΑΙ" : "YES");
+yesBtn.setOnClickListener(v -> showDevOptionsHowToDialog());
 
-    // 🔹 OK / SKIP
-    Button okBtn = mkGreenBtn(okSkipLabel(false));
-    okBtn.setOnClickListener(v -> go(STEP_REMINDER));
+// 🔹 NO
+Button noBtn = mkRedBtn(gr ? "ΟΧΙ" : "NO");
+noBtn.setOnClickListener(v -> go(STEP_REMINDER));
 
-    // 🔹 EXIT
-    Button exitBtn = mkRedBtn(gr ? "Έξοδος" : "Exit");
-    exitBtn.setOnClickListener(v -> finish());
+root.addView(yesBtn);
+root.addView(noBtn);
 
-    root.addView(settingsBtn);
-    root.addView(okBtn);
-    root.addView(exitBtn);
-
-    showCustomDialog(root);
+showCustomDialog(root);
 }
 
 private void showDevOptionsHowToDialog() {
@@ -2504,7 +2484,7 @@ private void showDevOptionsHowToDialog() {
     TextView steps = new TextView(this);
     steps.setText(gr
 ? "Βελτίωση απόκρισης συσκευής.\n\n"
-+ "Πάτησε ΡΥΘΜΙΣΕΙΣ παρακάτω.\n\n"
++ "Πάτησε ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ παρακάτω.\n\n"
 + "Ανάλογα με τη συσκευή σου, θα ανοίξουν είτε οι\n"
 + "Επιλογές Προγραμματιστή, είτε οι γενικές Ρυθμίσεις.\n\n"
 + "Αν ΔΕΝ βλέπεις Επιλογές Προγραμματιστή:\n\n"
@@ -2534,7 +2514,7 @@ private void showDevOptionsHowToDialog() {
 + "Η ρύθμιση είναι ασφαλής και πλήρως αναστρέψιμη.\n\n"
 + "Όταν επιστρέψεις πάτησε ΕΤΟΙΜΟ για να συνεχίσουμε.\n\n"             
 : "Improve device responsiveness.\n\n"
-+ "Tap SETTINGS below.\n\n"
++ "Tap OPEN SETTINGS below.\n\n"
 + "Depending on your device, either\n"
 + "Developer Options or the general Settings screen will open.\n\n"
 + "If you do NOT see Developer Options:\n\n"
@@ -2567,9 +2547,8 @@ private void showDevOptionsHowToDialog() {
     root.addView(steps);
 
     // SETTINGS button (Black/Gold)
-    Button settingsBtn = mkBlackGoldBtn(gr ? "ΡΥΘΜΙΣΕΙΣ" : "SETTINGS");
-    settingsBtn.setOnClickListener(v -> {
-
+    Button openBtn = mkGreenBtn(gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ" : "OPEN SETTINGS");
+    openBtn.setOnClickListener(v -> {
         boolean opened = false;
 
         try {
