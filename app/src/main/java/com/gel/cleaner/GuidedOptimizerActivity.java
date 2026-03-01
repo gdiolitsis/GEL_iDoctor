@@ -2945,7 +2945,7 @@ private void showMiniSchedulerPopup() {
 // ============================================================
 private String okSkipLabel(boolean isIntro) {
     if (isIntro) return (gr ? "Έναρξη" : "Start");
-    return (gr ? "OK / ΠΑΡΑΛΕΙΨΗ" : "OK / SKIP");
+    return (gr ? "OK / ΠΑΡΑΛΕΙΨΗ (Επόμενο Βήμα)" : "OK / SKIP (Next Step)");
 }
 
 // ============================================================
