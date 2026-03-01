@@ -350,11 +350,11 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                         ? "Θα σε πάω στις σωστές ρυθμίσεις της συσκευής.\n\n"
                         + "Ο στόχος είναι να κάνουμε τη συσκευή σου να λειτουργεί ομαλά και με ασφάλεια.\n\n"
                         + "Εσύ κάνεις τις επιλογές — εγώ κρατάω το τιμόνι (χωρίς να πατάω γκάζι μόνος μου 😄).\n\n"
-                        + "Πάτα «Έναρξη» για να ξεκινήσουμε. \n\n"
+                        + "Πάτα «ΈΝΑΡΞΗ» για να ξεκινήσουμε. \n\n"
                         : "I will guide you to the right system settings.\n\n"
                         + "The goal is to help your device run smoothly and securely.\n\n"
                         + "You make the choices — I simply steer (no autopilot 😄).\n\n"
-                        + "Press “Start” to begin. \n\n",
+                        + "Press “START” to begin. \n\n",
                 null,
                 () -> go(STEP_STORAGE),
                 true
@@ -370,7 +370,8 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 1 — Αποθήκευση" : "STEP 1 — Storage"),
                 gr
-                        ? "Θα ανοίξουν οι ρυθμίσεις αποθήκευσης της συσκευής.\n\n"
+                        ? "Πάτησε ΡΥΘΜΙΣΕΙΣ παρακατω.\n\n"
+                        + "Θα ανοίξουν οι ρυθμίσεις αποθήκευσης της συσκευής.\n\n"
                         + "Χρησιμοποίησε τα διαθέσιμα εργαλεία καθαρισμού όπου χρειάζεται.\n"
                         + "Συνήθως αρκεί η εκκαθάριση προσωρινής μνήμης (cache), προσωρινών δεδομένων και κατάλοιπων αρχείων.\n"
                         + "Αυτές οι ενέργειες είναι ασφαλείς και δεν διαγράφουν προσωπικά δεδομένα.\n\n"
@@ -379,7 +380,8 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                         + "Σε ορισμένες συσκευές η εφαρμογή μπορεί να κλείσει προσωρινά.\n\n"
                         + "Μετά τον καθαρισμό, άνοιξε ξανά την εφαρμογή\n"
                         + "και πάτησε OK/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε.\n\n"
-                        : "The device storage settings will open.\n\n"
+                        : "Tap SETTINGS below.\n\n"
+                        + "The device storage settings will open.\n\n"
                         + "Use the available cleaning tools where necessary.\n"
                         + "In most cases, clearing temporary cache, temporary data and residual files is sufficient.\n"
                         + "These actions are safe and do not remove personal data.\n\n"
@@ -387,7 +389,7 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                         + "Use it only if you fully understand the consequences.\n\n"
                         + "On some devices the app may close temporarily.\n\n"
                         + "After cleaning, reopen the app\n"
-                        + "and press OK/SKIP to continue.\n\n",
+                        + "and tap OK/SKIP to continue.\n\n",
                 () -> {
 
 // --------------------------------------------------------
@@ -453,13 +455,14 @@ private void showBattery() {
                 gr
                         ? "Για να αναλύσουμε τη δραστηριότητα εφαρμογών,\n"
                         + "απαιτείται πρόσβαση Χρήσης Εφαρμογών.\n\n"
-                        + "Καμία συλλογή προσωπικών δεδομένων δεν γίνεται με την παραχώρηση της Πρόσβασης Χρήσης.\n\n"
-                        + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL.\n\n"
+                       + "Πάτησε ΡΥΘΜΙΣΕΙΣ παρακάτω και ενεργοποίησε την για το GEL.\n\n"
+                        + "Καμία συλλογή προσωπικών δεδομένων δεν γίνεται με την παραχώρηση της Πρόσβασης Χρήσης.\n\n"                        
                         + "Όταν επιστρέψεις, πάτησε ΟΚ/ΠΑΡΑΛΕΙΨΗ για να συνεχίσουμε.\n\n"
                         : "To analyze app activity,\n"
-                        + "Usage Access permission is required.\n\n"
-                        + "Press Settings and enable it for GEL.\n\n"
-                         + "When you return, press OK/SKIP to continue.\n\n",
+                        + "Usage Access permission is required.\n\n" 
+                        + "Tap SETTINGS below and enable it for GEL.\n\n"      
+                        + "No personal data is collected when granting Usage Access permission.\n\n"
+                        + "When you return, press OK/SKIP to continue.\n\n",
                 () -> {
     try {
         Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
@@ -684,7 +687,7 @@ private void showStableDialog() {
             gr
                     ? "Τα αποτελέσματα αφορούν εφαρμογές που δεν άνοιξες τις τελευταίες 48 ώρες,\n"
                       + "αλλά παρουσίασαν δραστηριότητα στο παρασκήνιο\n"
-                      + "αλλά καταναλώνοντας μπαταρία.\n\n"
+                      + "καταναλώνοντας μπαταρία.\n\n"
                       + "Engine Verdict: STABLE\n\n"
                       + "Δεν εντοπίστηκε δραστηριότητα εφαρμογών στο παρασκήνιο, τις τελευταίες 48 ώρες.\n\n"
                     : "Results refer to apps you did not open in the last 48 hours,\n"
@@ -994,12 +997,13 @@ private void showData() {
         gr
                 ? "Για να κάνουμε premium ανάλυση δεδομένων,\n"
                   + "χρειαζόμαστε πρόσβαση Χρήσης Εφαρμογών.\n\n"
-                  + "Καμία συλλογή προσωπικών δεδομένων δεν γίνεται με την παραχώρηση της Πρόσβασης Χρήσης.\n\n"
-                  + "Πάτησε Ρυθμίσεις και ενεργοποίησε την άδεια για το GEL. \n\n"
+                  + "Πάτησε ΡΥΘΜΙΣΕΙΣ παρακάτω και ενεργοποίησε την για το GEL. \n\n"
+                  + "Καμία συλλογή προσωπικών δεδομένων δεν γίνεται με την παραχώρηση της Πρόσβασης Χρήσης.\n\n"                  
                   + "Όταν επιστρέψεις πάτησε ΕΝΑΡΞΗ για να ξεκινήσουμε. \n\n"
                 : "To run premium data analysis,\n"
                   + "Usage Access permission is required.\n\n"
-                  + "Press Settings and enable it for GEL. \n\n"
+                  + "Press SETTINGS below and enable it for GEL. \n\n"
+                  + "No personal data is collected when granting Usage Access permission."
                   + "Whene you return press START to continue.\n\n",
         () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)),
         () -> go(STEP_DATA),
@@ -2254,23 +2258,23 @@ if (!isSystem) {
     private void showCache() {
 
         showDialog(
-                progressTitle(gr ? "ΒΗΜΑ 6 — Cache" : "STEP 6 — Cache"),
+                progressTitle(gr ? "ΒΗΜΑ 6 — Καθαρισμός Προσωρινής Μνήμης Εφαρμογών" : "STEP 6 — App Cache Cleaning"),
                 gr
-                        ? "Θα ανοίξει η λίστα εφαρμογών. Πάτησε ταξινόμηση κατά «Μεγαλύτερη % Cache».\n\n"
+                        ? "Πατησε ΡΥΘΜΙΣΕΙΣ παρακάτω.\n\n"
+                        + "Θα ανοίξει η λίστα εφαρμογών. Πάτησε ταξινόμηση κατά «ΜΕΓΑΛΥΤΕΡΗ % CACHE».\n\n"
                         + "Καθάρισε εφαρμογές με μεγάλη προσωρινή μνήμη — ή και όλες. \n\n"
                         + "Στην πρώτη ομάδα θα δεις τις εφαρμογές που έχεις εγκαταστήσει. \n\n"
                         + "Στη δεύτερη ομάδα θα δεις τις εφαρμογές συστήματος. \n\n"
                         + "Η εκκαθάριση cache είναι ασφαλής και δεν διαγράφει προσωπικά δεδομένα.\n"
-                        + "Απόφυγε την εκκαθάριση δεδομένων εκτός αν γνωρίζεις τις συνέπειες.\n\n"
-                        + "Πατησε ΡΥΘΜΙΣΕΙΣ. Μετά,\n\n"
+                        + "Απόφυγε την εκκαθάριση δεδομένων εκτός αν γνωρίζεις τις συνέπειες.\n\n"        
                         + "Πάτησε OK/ΠΑΡΑΛΕΙΨΗ όταν ολοκληρώσεις για να συνεχίσουμε.\n\n"
-                        : "The app list will open. Tap to sort by “Largest % Cache”.\n\n"
+                        : "Tap SETTINGS below.\n\n"
+                        + "The app list will open. Tap to sort by “LARGEST % CACHE”.\n\n"
                         + "Clear apps with large temporary cache — or all of them if needed. \n\n"
                         + "In the first group you will see apps you installed. \n\n"
                         + "In the second group you will see system apps. \n\n"
                         + "Clearing cache is safe and does not remove personal data.\n"
                         + "Avoid clearing app data unless you understand the consequences.\n\n"
-                        + "Tap SETTINGS. Then,\n\n"
                         + "Press OK/SKIP when finished to continue.\n\n",
                 () -> {
     try {
@@ -2358,16 +2362,15 @@ private void showDnsHowToDialog() {
               + "3) Όνομα παρόχου Προσωπικού/Ιδιωτικού DNS\n\n"
               + "4) Κάνε επικόλληση το κείμενο που αντέγραψες (dns.adguard.com)  → Αποθήκευση.\n\n"
               + "Όταν επιστρέψεις πάτησε ΕΤΟΙΜΟ για να συνεχίσουμε .\n\n"
-            : "Copy-paste ready:\n\n"
-  + "Copy the text provided below and tap OPEN SETTINGS.\n\n"
-  + "If the general device settings screen opens,\n"
-  + "depending on your device, look for:\n\n"
-  + "1) Connections, or Network & Internet, or Connection & Sharing.\n\n"
-  + "2) More connection settings, or Private DNS.\n\n"
-  + "3) Private DNS provider hostname.\n\n"
-  + "4) Paste the copied text (dns.adguard.com)  → Save.\n\n"
-  + "When you return, press DONE to continue.\n\n"
-    );
+               : "Copy-paste ready:\n\n"
+              + "Copy the text provided below and tap OPEN SETTINGS.\n\n"
+              + "If the general device settings screen opens,\n"
+              + "depending on your device, look for:\n\n"
+              + "1) Connections, or Network & Internet, or Connection & Sharing.\n\n"
+              + "2) More connection settings, or Private DNS.\n\n"
+              + "3) Private DNS provider hostname.\n\n"
+              + "4) Paste the copied text (dns.adguard.com)  → Save.\n\n"
+              + "When you return, press DONE to continue.\n\n" );
     steps.setTextColor(0xFF00FF7F);
     steps.setPadding(0, dp(14), 0, dp(18));
     root.addView(steps);
