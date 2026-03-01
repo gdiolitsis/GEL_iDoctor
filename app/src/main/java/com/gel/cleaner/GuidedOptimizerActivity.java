@@ -70,6 +70,8 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
 
     private final ArrayList<String> symptoms = new ArrayList<>();
     private boolean pulseEnabled = false;
+    
+    private boolean returnedFromDevScreen = false;
 
     private static final String PREFS = "gel_prefs";
     private static final String KEY_PULSE_ENABLED = "pulse_enabled";
@@ -154,7 +156,15 @@ protected void onResume() {
     // just clear the flag and stay on the same step.
     if (returnedFromDnsScreen) {
         returnedFromDnsScreen = false;
+        showDnsHowToDialog();   // 👈 προσθήκη
+        return;                 // 👈 για να μην πέσει στο go(step)
     }
+    
+    if (returnedFromDevScreen) {
+    returnedFromDevScreen = false;
+    showDevOptionsHowToDialog();
+    return;
+}
 
     // Re-render current step (no auto-advance)
     go(step);
@@ -2479,10 +2489,34 @@ private void showDevOptionsHowToDialog() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    LinearLayout root = buildBaseBox(
-            gr ? "Ρύθμιση Επιλογών Προγραμματιστή"
-               : "Developer Options Setup"
+    LinearLayout container = buildBaseBox(
+            progressTitle(gr
+                    ? "ΒΗΜΑ 8 — Ρύθμιση Επιλογών Προγραμματιστή"
+                    : "STEP 8 — Developer Options Setup")
     );
+
+    container.setOrientation(LinearLayout.VERTICAL);
+
+    // =========================
+    // 1️⃣ SCROLLABLE CONTENT
+    // =========================
+    ScrollView scroll = new ScrollView(this);
+    scroll.setFillViewport(true);
+
+    LinearLayout content = new LinearLayout(this);
+    content.setOrientation(LinearLayout.VERTICAL);
+    content.setPadding(0, dp(6), 0, dp(6));
+
+    scroll.addView(content);
+
+    LinearLayout.LayoutParams scrollParams =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f   // 🔥 παίρνει όλο τον διαθέσιμο χώρο
+            );
+
+    container.addView(scroll, scrollParams);
 
     TextView steps = new TextView(this);
     steps.setText(gr
@@ -2547,11 +2581,15 @@ private void showDevOptionsHowToDialog() {
 
     steps.setTextColor(0xFF00FF7F);
     steps.setPadding(0, dp(14), 0, dp(18));
-    root.addView(steps);
 
-    // SETTINGS button (Black/Gold)
+    content.addView(steps);
+
+    // OPEN SETTINGS
     Button openBtn = mkGreenBtn(gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ" : "OPEN SETTINGS");
     openBtn.setOnClickListener(v -> {
+
+        returnedFromDevScreen = true;
+
         boolean opened = false;
 
         try {
@@ -2566,14 +2604,14 @@ private void showDevOptionsHowToDialog() {
         }
     });
 
-    // DONE button
+    // DONE
     Button doneBtn = mkRedBtn(gr ? "ΕΤΟΙΜΟ" : "DONE");
     doneBtn.setOnClickListener(v -> go(STEP_REMINDER));
 
-    root.addView(openBtn);
-    root.addView(doneBtn);
+    container.addView(openBtn);
+    container.addView(doneBtn);
 
-    showCustomDialog(root);
+    showCustomDialog(container);
 }
 
     // ============================================================
