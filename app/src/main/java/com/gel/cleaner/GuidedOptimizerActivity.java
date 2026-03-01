@@ -2503,7 +2503,7 @@ private void showDevOptionsHowToDialog() {
 
     TextView steps = new TextView(this);
     steps.setText(gr
-"Βελτίωση απόκρισης συσκευής.\n\n"
+? "Βελτίωση απόκρισης συσκευής.\n\n"
 + "Πάτησε ΡΥΘΜΙΣΕΙΣ παρακάτω.\n\n"
 + "Ανάλογα με τη συσκευή σου, θα ανοίξουν είτε οι\n"
 + "Επιλογές Προγραμματιστή, είτε οι γενικές Ρυθμίσεις.\n\n"
@@ -2614,7 +2614,7 @@ private void showDevOptionsHowToDialog() {
         CheckBox bluetooth = mkCheck(gr?"Bluetooth πρόβλημα":"Bluetooth issues");
         CheckBox sound = mkCheck(gr?"Πρόβλημα ήχου":"Sound issues");
         CheckBox boot = mkCheck(gr?"Αργή εκκίνηση":"Slow boot");
-        CheckBox wifi = mkCheck(gr?"WiFi αστάθεια":"WiFi instability \n\n")
+        CheckBox wifi = mkCheck(gr?"WiFi αστάθεια":"WiFi instability");
         appendHtml("<br>");
 
         root.addView(heat);
