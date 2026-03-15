@@ -14776,41 +14776,40 @@ lab14StopAllStress();
 restoreBrightnessAndKeepOn();
 
 appendHtml("<br>");
-            logOk(
-                    gr
-                            ? "Το Lab 14 ολοκληρώθηκε."
-                            : "Lab 14 finished."
-            );
-            logLine();
+logOk(
+        gr
+                ? "Το Lab 14 ολοκληρώθηκε."
+                : "Lab 14 finished."
+);
+logLine();
 
         });
 
-    }   // ← ΚΛΕΙΝΕΙ ΤΟ try ΤΟΥ THREAD
+    } catch (Throwable t) {   // ← catch του INNER try (μέσα στο thread)
 
-    }).start();
+        lab14StopAllStress();
+        restoreBrightnessAndKeepOn();
 
-} catch (Throwable t) {
+        try {
+            lab14CleanupUI();
+        } catch (Throwable ignore) {}
 
-    lab14StopAllStress();
-    restoreBrightnessAndKeepOn();
+        lab14Cancelled = true;
 
-    try {
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
+        logError(
+                gr
+                        ? "Σφάλμα LAB 14"
+                        : "LAB 14 error"
+        );
 
-    lab14Cancelled = true;
+    } finally {
 
-    logError(
-            gr
-                    ? "Σφάλμα LAB 14"
-                    : "LAB 14 error"
-    );
+        lab14Running = false;
 
-} finally {
+    }
 
-    lab14Running = false;
+}).start();   // ← κλείνει το thread
 
-}
 }
 
 // ============================================================
