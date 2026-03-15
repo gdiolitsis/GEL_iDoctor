@@ -14785,22 +14785,26 @@ logLine();
 
         });
 
-    } catch (Throwable t) {   // ← catch του INNER try (μέσα στο thread)
+    } catch (Throwable t) {
 
-        lab14StopAllStress();
-        restoreBrightnessAndKeepOn();
+        runOnUiThread(() -> {
 
-        try {
-            lab14CleanupUI();
-        } catch (Throwable ignore) {}
+            lab14StopAllStress();
+            restoreBrightnessAndKeepOn();
 
-        lab14Cancelled = true;
+            try {
+                lab14CleanupUI();
+            } catch (Throwable ignore) {}
 
-        logError(
-                gr
-                        ? "Σφάλμα LAB 14"
-                        : "LAB 14 error"
-        );
+            lab14Cancelled = true;
+
+            logError(
+                    gr
+                            ? "Σφάλμα LAB 14"
+                            : "LAB 14 error"
+            );
+
+        });
 
     } finally {
 
@@ -14808,8 +14812,30 @@ logLine();
 
     }
 
-}).start();   // ← κλείνει το thread
+}).start();
 
+} catch (Throwable t) {
+
+    lab14StopAllStress();
+    restoreBrightnessAndKeepOn();
+
+    try {
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    lab14Cancelled = true;
+
+    logError(
+            gr
+                    ? "Σφάλμα LAB 14"
+                    : "LAB 14 error"
+    );
+
+} finally {
+
+    lab14Running = false;
+
+}
 }
 
 // ============================================================
@@ -25138,5 +25164,4 @@ if (requestCode == 8008) {
 // ============================================================
 // END OF CLASS
 // ============================================================
-}
 }
