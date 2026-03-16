@@ -3450,59 +3450,6 @@ private void lab14LogPartialMode(
 }
 
 // ============================================================
-// LAB 14 — SYSTEM BATTERY PROTECTION CHECK
-// ============================================================
-private void Lab14BatteryProtectionCheck(
-        boolean gr,
-        boolean[] lab14_systemLimited,
-        boolean validDrain
-) {
-
-    appendHtml("<br>");
-    logLine();
-
-    logInfo(gr
-        ? "Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
-        : "Final check of battery protection by the system");
-
-    logLine();
-
-    boolean systemLimited = lab14_systemLimited[0];
-
-    if (systemLimited) {
-
-        logOk(gr
-                ? "Ενεργοποιήθηκε μηχανισμός προστασίας κατά τη δοκιμή."
-                : "Protection mechanism activated during stress.");
-
-        logOk(gr
-                ? "Το σύστημα περιόρισε την κατανάλωση για προστασία της συσκευής."
-                : "System limited power to protect the device.");
-
-    } else {
-
-        logWarn(gr
-                ? "Δεν ενεργοποιήθηκε μηχανισμός προστασίας υπό υψηλό φορτίο."
-                : "No protection mechanism detected under heavy load.");
-
-        logWarn(gr
-                ? "Πιθανό πρόβλημα λογισμικού ή θερμικής πολιτικής."
-                : "Possible software or thermal policy issue.");
-
-    }
-
-    if (!validDrain) {
-
-        logWarn(gr
-                ? "Η καταπόνηση δεν ήταν επαρκής για πλήρη έλεγχο."
-                : "Stress level not sufficient for full check.");
-
-    }
-
-    logLine();
-}
-
-// ============================================================
 // LAB 14B — CONDITIONS CHECK (SYSTEM PROTECTION TEST)
 // ============================================================
 private boolean checkLab14BConditions() {
@@ -4596,6 +4543,59 @@ private float getBatteryCurrentNowSafe() {
     } catch (Throwable ignore) {
         return Float.NaN;
     }
+}
+
+// ============================================================
+// LAB 14B — SYSTEM BATTERY PROTECTION CHECK
+// ============================================================
+private void Lab14BatteryProtectionCheck(
+        boolean gr,
+        boolean[] lab14_systemLimited,
+        boolean validDrain
+) {
+
+    appendHtml("<br>");
+    logLine();
+
+    logInfo(gr
+        ? "Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
+        : "Final check of battery protection by the system");
+
+    logLine();
+
+    boolean systemLimited = lab14_systemLimited[0];
+
+    if (systemLimited) {
+
+        logOk(gr
+                ? "Ενεργοποιήθηκε μηχανισμός προστασίας κατά τη δοκιμή."
+                : "Protection mechanism activated during stress.");
+
+        logOk(gr
+                ? "Το σύστημα περιόρισε την κατανάλωση για προστασία της συσκευής."
+                : "System limited power to protect the device.");
+
+    } else {
+
+        logWarn(gr
+                ? "Δεν ενεργοποιήθηκε μηχανισμός προστασίας υπό υψηλό φορτίο."
+                : "No protection mechanism detected under heavy load.");
+
+        logWarn(gr
+                ? "Πιθανό πρόβλημα λογισμικού ή θερμικής πολιτικής."
+                : "Possible software or thermal policy issue.");
+
+    }
+
+    if (!validDrain) {
+
+        logWarn(gr
+                ? "Η καταπόνηση δεν ήταν επαρκής για πλήρη έλεγχο."
+                : "Stress level not sufficient for full check.");
+
+    }
+
+    logLine();
 }
 
 // ------------------------------------------------------------
@@ -14848,16 +14848,6 @@ lab14LogReliabilitySummary(
         validDrainF,
         lab14_systemLimited,
         confF
-);
-
-// ------------------------------------------------
-// SYSTEM PROTECTION CHECK
-// ------------------------------------------------
-
-Lab14BatteryProtectionCheck(
-        gr,
-        lab14_systemLimited,
-        validDrainF
 );
 
 // ------------------------------------------------
