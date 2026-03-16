@@ -13226,21 +13226,15 @@ if (!Float.isNaN(pulseSag[0]) &&
 
                 ui.removeCallbacks(this);
 
-// ----------------------------------------------------
-// 6) STOP LOAD
-// ----------------------------------------------------
+// 6 STOP LOAD
 lab14StopAllStress();
-
-try {
-    lab14CleanupUI();
-} catch (Throwable ignore) {}
 
 if (lab14Cancelled) {
     return;
 }
 
-}   // ← ΚΛΕΙΝΕΙ ΤΟ run()
-}); // ← ΚΛΕΙΝΕΙ ΤΟ ui.post
+}   // ← run()
+}); // ← ui.post
 
 // ----------------------------------------------------
 // 7) POST-LOAD ANALYSIS THREAD
