@@ -16504,47 +16504,22 @@ if (!(fresh14 && fresh15 && fresh16 && fresh14b)) {
 // --------------------------------------------------------
 msg.append(gr ? "• LAB 14: " : "• LAB 14: ");
 
-int start = msg.length();
+if (!has14)
+    msg.append("<font color='#FF4444'>")
+       .append(gr ? "Απουσιάζει" : "Missing")
+       .append("</font>\n");
 
-if (!has14) {
-
-    msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
-
-    msg.setSpan(
-            new ForegroundColorSpan(red),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-
-}
-else if (!fresh14) {
-
-    msg.append(gr ? "Έληξε (" : "Expired (")
+else if (!fresh14)
+    msg.append("<font color='#FFA500'>")
+       .append(gr ? "Έληξε (" : "Expired (")
        .append(lab17_age(now - ts14))
-       .append(")\n");
+       .append(")</font>\n");
 
-    msg.setSpan(
-            new ForegroundColorSpan(red),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-
-}
-else {
-
-    msg.append("OK (")
+else
+    msg.append("<font color='#39FF14'>")
+       .append("OK (")
        .append(lab17_age(now - ts14))
-       .append(")\n");
-
-    msg.setSpan(
-            new ForegroundColorSpan(green),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-}
+       .append(")</font>\n");
 
 
 // --------------------------------------------------------
@@ -16552,47 +16527,22 @@ else {
 // --------------------------------------------------------
 msg.append(gr ? "• LAB 14B: " : "• LAB 14B: ");
 
-start = msg.length();
+if (!has14b)
+    msg.append("<font color='#FF4444'>")
+       .append(gr ? "Απουσιάζει" : "Missing")
+       .append("</font>\n");
 
-if (!has14b) {
-
-    msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
-
-    msg.setSpan(
-            new ForegroundColorSpan(red),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-
-}
-else if (!fresh14b) {
-
-    msg.append(gr ? "Έληξε (" : "Expired (")
+else if (!fresh14b)
+    msg.append("<font color='#FFA500'>")
+       .append(gr ? "Έληξε (" : "Expired (")
        .append(lab17_age(now - ts14b))
-       .append(")\n");
+       .append(")</font>\n");
 
-    msg.setSpan(
-            new ForegroundColorSpan(red),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-
-}
-else {
-
-    msg.append("OK (")
+else
+    msg.append("<font color='#39FF14'>")
+       .append("OK (")
        .append(lab17_age(now - ts14b))
-       .append(")\n");
-
-    msg.setSpan(
-            new ForegroundColorSpan(green),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-}
+       .append(")</font>\n");
 
 
 // --------------------------------------------------------
@@ -16600,47 +16550,22 @@ else {
 // --------------------------------------------------------
 msg.append(gr ? "• LAB 15: " : "• LAB 15: ");
 
-start = msg.length();
+if (!has15)
+    msg.append("<font color='#FF4444'>")
+       .append(gr ? "Απουσιάζει" : "Missing")
+       .append("</font>\n");
 
-if (!has15) {
-
-    msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
-
-    msg.setSpan(
-            new ForegroundColorSpan(red),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-
-}
-else if (!fresh15) {
-
-    msg.append(gr ? "Έληξε (" : "Expired (")
+else if (!fresh15)
+    msg.append("<font color='#FFA500'>")
+       .append(gr ? "Έληξε (" : "Expired (")
        .append(lab17_age(now - ts15))
-       .append(")\n");
+       .append(")</font>\n");
 
-    msg.setSpan(
-            new ForegroundColorSpan(red),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-
-}
-else {
-
-    msg.append("OK (")
+else
+    msg.append("<font color='#39FF14'>")
+       .append("OK (")
        .append(lab17_age(now - ts15))
-       .append(")\n");
-
-    msg.setSpan(
-            new ForegroundColorSpan(green),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-}
+       .append(")</font>\n");
 
 
 // --------------------------------------------------------
@@ -16648,47 +16573,22 @@ else {
 // --------------------------------------------------------
 msg.append(gr ? "• LAB 16: " : "• LAB 16: ");
 
-start = msg.length();
+if (!has16)
+    msg.append("<font color='#FF4444'>")
+       .append(gr ? "Απουσιάζει" : "Missing")
+       .append("</font>\n");
 
-if (!has16) {
-
-    msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
-
-    msg.setSpan(
-            new ForegroundColorSpan(red),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-
-}
-else if (!fresh16) {
-
-    msg.append(gr ? "Έληξε (" : "Expired (")
+else if (!fresh16)
+    msg.append("<font color='#FFA500'>")
+       .append(gr ? "Έληξε (" : "Expired (")
        .append(lab17_age(now - ts16))
-       .append(")\n");
+       .append(")</font>\n");
 
-    msg.setSpan(
-            new ForegroundColorSpan(red),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-
-}
-else {
-
-    msg.append("OK (")
+else
+    msg.append("<font color='#39FF14'>")
+       .append("OK (")
        .append(lab17_age(now - ts16))
-       .append(")\n");
-
-    msg.setSpan(
-            new ForegroundColorSpan(green),
-            start,
-            msg.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-}
+       .append(")</font>\n");
 
 msg.append("\n");
 
