@@ -3805,8 +3805,24 @@ private void lab14BProtectionTest() {
                                 ? "Δεν ανιχνεύθηκε περιορισμός ισχύος."
                                 : "No power limit detected.");
                     }
+                    
+// ------------------------------------------------------------
+// STORE LAB14B RESULT (for LAB17 / LAB30 / LAB31)
+// ------------------------------------------------------------
+try {
 
-                    logLine();
+    SharedPreferences p =
+            getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+
+    p.edit()
+            .putBoolean("lab14b_system_limited", systemLimitedF[0])
+            .putBoolean("lab14b_valid_drain", validDrainF)
+            .putLong("lab14b_ts", System.currentTimeMillis())
+            .apply();
+
+} catch (Throwable ignore) {}
+
+                    appendHtml("<br>");
                     logOk(gr
                             ? "Το LAB 14B ολοκληρώθηκε."
                             : "LAB 14B finished.");
@@ -16421,6 +16437,16 @@ final long  ts14         = p.getLong("lab14_last_ts", 0L);
 final boolean lab14Unstable =
 p.getBoolean("lab14_unstable_measurement", false);
 
+// LAB 14B results
+final boolean lab14bSystemLimited =
+        p.getBoolean("lab14b_system_limited", false);
+
+final boolean lab14bValidDrain =
+        p.getBoolean("lab14b_valid_drain", false);
+
+final long ts14b =
+        p.getLong("lab14b_ts", 0L);
+
 final int lab15Charge = p.getInt("lab15_charge_score", -1);
 final boolean lab15SystemLimited = p.getBoolean("lab15_system_limited", false);
 final String lab15StrengthLabel = p.getString("lab15_strength_label", null);
@@ -16434,10 +16460,15 @@ final long ts16 = p.getLong("lab16_last_ts", 0L);
 // PRESENCE + FRESHNESS CHECK  
 // ------------------------------------------------------------  
 final boolean has14 = (lab14Health >= 0f && ts14 > 0L);  
+final boolean has14b = (ts14b > 0L);
 final boolean has15 = (lab15Charge >= 0  && ts15 > 0L);  
 final boolean has16 = (lab16Thermal >= 0 && ts16 > 0L);  
 
-final boolean fresh14 = has14 && (now - ts14) <= WINDOW_MS;  
+final boolean fresh14b =
+        has14b && (now - ts14b) <= WINDOW_MS;
+
+final boolean fresh14 = has14 && (now - ts14) <= WINDOW_MS;
+  final boolean fresh14b = has14b && (now - ts14b) <= WINDOW_MS;
 final boolean fresh15 = has15 && (now - ts15) <= WINDOW_MS;  
 final boolean fresh16 = has16 && (now - ts16) <= WINDOW_MS;
 
@@ -16458,7 +16489,7 @@ hvLastTs > hvFirstTs &&
 // ------------------------------------------------------------
 // PRECHECK — SMART POPUP (STRICT)
 // ------------------------------------------------------------
-if (!(fresh14 && fresh15 && fresh16)) {
+if (!(fresh14 && fresh15 && fresh16 && fresh14b)) {
   
     StringBuilder msg = new StringBuilder();
 
@@ -16485,6 +16516,23 @@ if (!(fresh14 && fresh15 && fresh16)) {
         msg.append("OK (")
            .append(lab17_age(now - ts14))
            .append(")\n");
+           
+// --------------------------------------------------------
+// LAB 14B
+// --------------------------------------------------------
+msg.append(gr ? "• LAB 14B: " : "• LAB 14B: ");
+
+if (!has14b)
+    msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
+else if (!fresh14b)
+    msg.append(gr ? "Έληξε (" : "Expired (")
+       .append(lab17_age(now - ts14b))
+       .append(")\n");
+else
+    msg.append("OK (")
+       .append(lab17_age(now - ts14b))
+       .append(")\n");
+    
 
     // --------------------------------------------------------
     // LAB 15
@@ -16517,61 +16565,72 @@ if (!(fresh14 && fresh15 && fresh16)) {
            .append(")\n");
 
     msg.append("\n");
+    
 
     // --------------------------------------------------------
-    // SMART DECISION
-    // --------------------------------------------------------
-    if ((fresh14 && fresh15) && !fresh16) {
+// SMART DECISION
+// --------------------------------------------------------
+if ((fresh14 && fresh15 && fresh14b) && !fresh16) {
 
-        msg.append(
-                gr
-                        ? "Έχουν ολοκληρωθεί τα LAB 14 και LAB 15.\n"
-                          + "Εκτέλεσε ΜΟΝΟ το LAB 16 για να ολοκληρωθεί το σύνολο.\n"
-                        : "LAB 14 and LAB 15 are already completed.\n"
-                          + "Run ONLY LAB 16 to complete the set.\n"
-        );
-
-    } else if ((fresh14 && fresh16) && !fresh15) {
-
-        msg.append(
-                gr
-                        ? "Έχουν ολοκληρωθεί τα LAB 14 και LAB 16.\n"
-                          + "Εκτέλεσε ΜΟΝΟ το LAB 15 για να ολοκληρωθεί το σύνολο.\n"
-                        : "LAB 14 and LAB 16 are already completed.\n"
-                          + "Run ONLY LAB 15 to complete the set.\n"
-        );
-
-    } else if ((fresh15 && fresh16) && !fresh14) {
-
-        msg.append(
-                gr
-                        ? "Έχουν ολοκληρωθεί τα LAB 15 και LAB 16.\n"
-                          + "Εκτέλεσε ΜΟΝΟ το LAB 14 για να ολοκληρωθεί το σύνολο.\n"
-                        : "LAB 15 and LAB 16 are already completed.\n"
-                          + "Run ONLY LAB 14 to complete the set.\n"
-        );
-
-    } else {
-
-        msg.append(
-                gr
-                        ? "Για έγκυρο αποτέλεσμα, απαιτείται εκτέλεση των\n"
-                          + "LAB 14 + LAB 15 + LAB 16 μαζί.\n\n"
-                          + "Αιτία: απουσία ή/και λήξη αποτελεσμάτων.\n"
-                        : "To generate a valid result, run\n"
-                          + "LAB 14 + LAB 15 + LAB 16 together.\n\n"
-                          + "Reason: missing and/or expired results.\n"
-        );
-    }
-
-    lab17_showPopup(
+    msg.append(
             gr
-                    ? "LAB 17 — Έλεγχος Προϋποθέσεων"
-                    : "LAB 17 — Prerequisites Check",
-            msg.toString()
+                    ? "Έχουν ολοκληρωθεί τα LAB 14, 14B και LAB 15.\n"
+                      + "Εκτέλεσε ΜΟΝΟ το LAB 16 για να ολοκληρωθεί το σύνολο.\n"
+                    : "LAB 14, 14B and LAB 15 are already completed.\n"
+                      + "Run ONLY LAB 16 to complete the set.\n"
     );
-    return;
-}  
+
+} else if ((fresh14 && fresh16 && fresh14b) && !fresh15) {
+
+    msg.append(
+            gr
+                    ? "Έχουν ολοκληρωθεί τα LAB 14, 14B και LAB 16.\n"
+                      + "Εκτέλεσε ΜΟΝΟ το LAB 15 για να ολοκληρωθεί το σύνολο.\n"
+                    : "LAB 14, 14B and LAB 16 are already completed.\n"
+                      + "Run ONLY LAB 15 to complete the set.\n"
+    );
+
+} else if ((fresh15 && fresh16 && fresh14b) && !fresh14) {
+
+    msg.append(
+            gr
+                    ? "Έχουν ολοκληρωθεί τα LAB 15, 16 και LAB 14B.\n"
+                      + "Εκτέλεσε ΜΟΝΟ το LAB 14 για να ολοκληρωθεί το σύνολο.\n"
+                    : "LAB 15, 16 and LAB 14B are already completed.\n"
+                      + "Run ONLY LAB 14 to complete the set.\n"
+    );
+
+} else if ((fresh14 && fresh15 && fresh16) && !fresh14b) {
+
+    msg.append(
+            gr
+                    ? "Έχουν ολοκληρωθεί τα LAB 14, 15 και 16.\n"
+                      + "Εκτέλεσε ΜΟΝΟ το LAB 14B για να ολοκληρωθεί το σύνολο.\n"
+                    : "LAB 14, 15 and 16 are already completed.\n"
+                      + "Run ONLY LAB 14B to complete the set.\n"
+    );
+
+} else {
+
+    msg.append(
+            gr
+                    ? "Για έγκυρο αποτέλεσμα, απαιτείται εκτέλεση των\n"
+                      + "LAB 14 + LAB 14B + LAB 15 + LAB 16 μαζί.\n\n"
+                      + "Αιτία: απουσία ή/και λήξη αποτελεσμάτων.\n"
+                    : "To generate a valid result, run\n"
+                      + "LAB 14 + LAB 14B + LAB 15 + LAB 16 together.\n\n"
+                      + "Reason: missing and/or expired results.\n"
+    );
+}
+
+lab17_showPopup(
+        gr
+                ? "LAB 17 — Έλεγχος Προϋποθέσεων"
+                : "LAB 17 — Prerequisites Check",
+        msg.toString()
+);
+return;
+}
 
 // ------------------------------------------------------------
 // START LAB 17
@@ -16602,6 +16661,10 @@ try {
     // PENALTIES (LOCKED)  
     // ------------------------------------------------------------  
     int penaltyExtra = 0;  
+    
+    if (!lab14bSystemLimited && lab14bValidDrain) {
+    penaltyExtra += 12;
+}
 
     if (lab15Charge < 60 && lab15SystemLimited) penaltyExtra += 6;  
     else if (lab15Charge < 60) penaltyExtra += 12;  
@@ -16670,6 +16733,41 @@ logLabelOkValue(
                         : (gr ? "Μ/Δ" : "N/A"))
         )
 );
+
+// ================= LAB 14B =================
+
+logInfo(gr
+        ? "LAB 14B — Προστασία συστήματος"
+        : "LAB 14B — System protection");
+
+if (lab14bSystemLimited && lab14bValidDrain) {
+
+    logLabelOkValue(
+            gr ? "Κατάσταση" : "Status",
+            gr
+                    ? "Ενεργοποιήθηκε limiter"
+                    : "Limiter detected"
+    );
+
+} else if (lab14bValidDrain) {
+
+    logLabelWarnValue(
+            gr ? "Κατάσταση" : "Status",
+            gr
+                    ? "Δεν ενεργοποιήθηκε προστασία"
+                    : "No protection detected"
+    );
+
+} else {
+
+    logLabelWarnValue(
+            gr ? "Κατάσταση" : "Status",
+            gr
+                    ? "Μη έγκυρη μέτρηση"
+                    : "Invalid measurement"
+    );
+
+}
 
 logInfo(gr
         ? "LAB 15 — Φόρτιση"
@@ -22795,6 +22893,16 @@ boolean lab14CollapseRisk =
 
 boolean lab14SwellingRisk =
         p.getBoolean("lab14_swelling_risk", false);
+        
+ // LAB14B
+boolean lab14bSystemLimited =
+        p.getBoolean("lab14b_system_limited", false);
+
+boolean lab14bValidDrain =
+        p.getBoolean("lab14b_valid_drain", false);
+
+long ts14b =
+        p.getLong("lab14b_ts", 0L);
 
 // stability flags
 boolean pmicInstability =
@@ -22863,6 +22971,12 @@ boolean charging = isChargingNow();
 int batteryScore = scoreBattery(battTemp, battPct, charging);
 
 String batteryFlag = colorFlagFromScore(batteryScore);
+
+boolean limiterDetected =
+        lab14bSystemLimited && lab14bValidDrain;
+
+boolean limiterMissing =
+        !lab14bSystemLimited && lab14bValidDrain;
 
 // ------------------------------------------------------------
 // 3) STORAGE HEALTH
@@ -23037,6 +23151,120 @@ if (lab14CollapseRisk || lab14SwellingRisk || finalScore < 60) {
                     ? "Πιθανή υποβάθμιση μπαταρίας."
                     : "Possible battery degradation detected."
     );
+}
+
+// ------------------------------------------------------------
+// LAB14B — SYSTEM LIMITER ANALYSIS
+// ------------------------------------------------------------
+
+if (limiterDetected) {
+
+    logLabelOkValue(
+            gr ? "Limiter" : "Limiter",
+            gr
+                    ? "Ενεργοποιήθηκε προστασία συστήματος"
+                    : "System protection active"
+    );
+
+}
+
+else if (limiterMissing) {
+
+    logLabelWarnValue(
+            gr ? "Limiter" : "Limiter",
+            gr
+                    ? "Δεν ενεργοποιήθηκε προστασία"
+                    : "No protection detected"
+    );
+
+}
+
+// ------------------------------------------------------------
+// COMBINED ANALYSIS (LAB14B INTELLIGENCE)
+// ------------------------------------------------------------
+
+if (limiterDetected) {
+
+    if (batteryScore < 60 || lab14CollapseRisk) {
+
+        logLabelWarnValue(
+                gr ? "Αιτία" : "Cause",
+                gr
+                        ? "Περιορισμός λόγω κατάστασης μπαταρίας"
+                        : "Limiting caused by battery condition"
+        );
+    }
+
+    else if (thermalRunawayRisk) {
+
+        logLabelWarnValue(
+                gr ? "Αιτία" : "Cause",
+                gr
+                        ? "Περιορισμός λόγω θερμικής προστασίας"
+                        : "Limiting caused by thermal protection"
+        );
+    }
+
+    else if (pmicInstability) {
+
+        logLabelWarnValue(
+                gr ? "Αιτία" : "Cause",
+                gr
+                        ? "Πιθανός περιορισμός από PMIC"
+                        : "Possible PMIC power limiting"
+        );
+    }
+
+    else {
+
+        logLabelOkValue(
+                gr ? "Αιτία" : "Cause",
+                gr
+                        ? "Φυσιολογική ενεργοποίηση προστασίας"
+                        : "Normal protection behaviour"
+        );
+    }
+}
+
+else if (limiterMissing && lab14bValidDrain) {
+
+    logLabelErrorValue(
+            gr ? "Limiter" : "Limiter",
+            gr
+                    ? "Δεν ενεργοποιήθηκε προστασία υπό φορτίο"
+                    : "Protection not triggered under load"
+    );
+
+    if (batteryScore < 60 || lab14CollapseRisk) {
+
+        logLabelWarnValue(
+                gr ? "Πιθανή αιτία" : "Possible cause",
+                gr
+                        ? "Φθορά μπαταρίας"
+                        : "Battery degradation"
+        );
+    }
+
+    else if (pmicInstability) {
+
+        logLabelWarnValue(
+                gr ? "Πιθανή αιτία" : "Possible cause",
+                gr
+                        ? "Αστάθεια PMIC"
+                        : "PMIC instability"
+        );
+    }
+
+    else if (thermalRunawayRisk) {
+
+        logLabelWarnValue(
+                gr ? "Πιθανή αιτία" : "Possible cause",
+                gr
+                        ? "Ανεπαρκής θερμική προστασία"
+                        : "Thermal protection failure"
+        );
+    }
+
 }
 
 // ------------------------------------------------------------
@@ -24522,6 +24750,25 @@ private void lab31FinalSummary() {
     SharedPreferences p =
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
+    // ------------------------------------------------------------
+    // LAB14B READ
+    // ------------------------------------------------------------
+    boolean lab14bSystemLimited =
+            p.getBoolean("lab14b_system_limited", false);
+
+    boolean lab14bValidDrain =
+            p.getBoolean("lab14b_valid_drain", false);
+
+    long ts14b =
+            p.getLong("lab14b_ts", 0L);
+
+    boolean limiterDetected =
+            lab14bSystemLimited && lab14bValidDrain;
+
+    boolean limiterMissing =
+            !lab14bSystemLimited && lab14bValidDrain;
+
+
     appendHtml("<br>");
     logLine();
     logInfo(gr
@@ -24620,6 +24867,16 @@ private void lab31FinalSummary() {
     if (issuesDetected) {
         deviceScore -= 20f;
     }
+    
+    // LAB14B influence
+
+if (limiterMissing) {
+    deviceScore -= 8f;
+}
+
+if (limiterDetected && batteryScore < 60f) {
+    deviceScore -= 5f;
+}
 
     deviceScore += batteryContribution;
 
@@ -24844,6 +25101,14 @@ boolean lab14CollapseRisk =
 
 if (lab14CollapseRisk) dri -= 20;
 
+// LAB14B limiter influence
+
+if (limiterMissing)
+    dri -= 15;
+
+if (limiterDetected && batteryScore < 60)
+    dri -= 8;
+
 // manipulation suspicion (LAB28 + LAB29)
 if (manipulationScore >= 60)
     dri -= 20;
@@ -24865,6 +25130,33 @@ else if (dri >= 40)
     driLabel = gr ? "Υψηλός κίνδυνος προβλημάτων" : "High risk";
 else
     driLabel = gr ? "Ασταθής συσκευή" : "Unstable device";
+    
+// ------------------------------------------------------------
+// LAB14B STATUS
+// ------------------------------------------------------------
+
+if (limiterDetected) {
+
+    logLabelOkValue(
+            gr ? "Limiter"
+               : "Limiter",
+            gr
+                    ? "Ενεργοποιήθηκε προστασία συστήματος"
+                    : "System protection active"
+    );
+
+}
+else if (limiterMissing) {
+
+    logLabelWarnValue(
+            gr ? "Limiter"
+               : "Limiter",
+            gr
+                    ? "Δεν ενεργοποιήθηκε προστασία υπό φορτίο"
+                    : "Protection not triggered under load"
+    );
+
+}
 
 logLabelOkValue(
         gr ? "Δείκτης αξιοπιστίας συσκευής"
