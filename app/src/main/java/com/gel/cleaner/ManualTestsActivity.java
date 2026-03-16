@@ -4698,13 +4698,6 @@ private void logTempInline(String label, float c) {
     }
 }
 
-// ------------------------------------------------------------
-// GEL STYLE OUTPUT — ONE LINE PER SENSOR (BILINGUAL)
-// Label = white (log channel)
-// Value = colored by severity
-// ------------------------------------------------------------
-private void logTempInline(String label, float c) {
-
     final boolean gr = AppLang.isGreek(this);
 
     String base = String.format(
