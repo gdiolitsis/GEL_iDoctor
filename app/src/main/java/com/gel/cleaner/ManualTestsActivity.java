@@ -13388,40 +13388,38 @@ if (!Float.isNaN(voltageRecovery[0])) {
                             }
                         }
 
-                        // ----------------------------------------------------
-                        // ELECTRICAL ANALYSIS
-                        // ----------------------------------------------------
-                        float estimatedESR = Float.NaN;
+// ----------------------------------------------------
+// ELECTRICAL ANALYSIS
+// ----------------------------------------------------
+float estimatedESR = Float.NaN;
 
-                        if (!Float.isNaN(voltageStart) &&
-                            !Float.isNaN(voltageUnderLoad[0])) {
+if (!Float.isNaN(voltageStart) &&
+    !Float.isNaN(voltageUnderLoad[0])) {
 
-                            float sag = voltageStart - voltageUnderLoad[0];
+    float sag = voltageStart - voltageUnderLoad[0];
 
-                            float currentNow = getBatteryCurrentNowSafe();
+    float currentNow = getBatteryCurrentNowSafe();
 
-if (sag < 0.02f &&
-    !Float.isNaN(currentNow) &&
-    Math.abs(currentNow) < 200000f) {
+    if (sag < 0.02f &&
+        !Float.isNaN(currentNow) &&
+        Math.abs(currentNow) < 200000f) {
 
-    // very low sag + very low current → likely system limited
-    lab14_systemLimited[0] = true;
-    sag = 0f;
+        // very low sag + very low current → likely system limited
+        lab14_systemLimited[0] = true;
+        sag = 0f;
 
-}
+    }
 
-                            float sagFiltered = sag;
+    float sagFiltered = sag;
 
-                            if (!Float.isNaN(sagAvg[0])) {
-                                sagFiltered = (sag + sagAvg[0]) / 2f;
-                            }
-                            
-                            float currentNow = getBatteryCurrentNowSafe();
+    if (!Float.isNaN(sagAvg[0])) {
+        sagFiltered = (sag + sagAvg[0]) / 2f;
+    }
 
-                            if (!Float.isNaN(currentNow)) {
+    if (!Float.isNaN(currentNow)) {
 
-                                float currentAmp =
-                                        Math.abs(currentNow) / 1000000f;
+        float currentAmp =
+                Math.abs(currentNow) / 1000000f;
 
                                 if (currentAmp > 0.1f &&
                                     currentAmp < 6f) {
