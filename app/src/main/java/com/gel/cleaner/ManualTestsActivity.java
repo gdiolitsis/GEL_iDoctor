@@ -138,6 +138,8 @@ import android.provider.MediaStore;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.text.Html;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.Spannable;
