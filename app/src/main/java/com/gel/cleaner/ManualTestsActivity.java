@@ -13415,6 +13415,8 @@ if (sag < 0.02f &&
                             if (!Float.isNaN(sagAvg[0])) {
                                 sagFiltered = (sag + sagAvg[0]) / 2f;
                             }
+                            
+                            float currentNow = getBatteryCurrentNowSafe();
 
                             if (!Float.isNaN(currentNow)) {
 
