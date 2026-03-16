@@ -3008,8 +3008,11 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
 
     StringBuilder warn = new StringBuilder();
+boolean hasWarn = false;
 
 if (percent < 30 || percent > 70) {
+
+    hasWarn = true;
 
     warn.append(
             gr
@@ -3020,6 +3023,8 @@ if (percent < 30 || percent > 70) {
 
 if (chargingNow) {
 
+    hasWarn = true;
+
     warn.append(
             gr
                     ? "• Η συσκευή δεν πρέπει να φορτίζει\n"
@@ -3029,6 +3034,8 @@ if (chargingNow) {
 
 if (!Float.isNaN(tempC) && tempC >= 38f) {
 
+    hasWarn = true;
+
     warn.append(
             gr
                     ? "• Η θερμοκρασία είναι υψηλή για stress test\n"
@@ -3036,7 +3043,7 @@ if (!Float.isNaN(tempC) && tempC >= 38f) {
     );
 }
 
-if (warn.length() == 0) {
+if (!hasWarn) {
 
     warn.append(
             gr
@@ -3044,6 +3051,7 @@ if (warn.length() == 0) {
                     : "Conditions are OK for the test."
     );
 }
+
 
 final String txt =
         (gr ? "Μπαταρία: " : "Battery: ")
@@ -3063,13 +3071,51 @@ final String txt =
                         ? "Η συσκευή δεν φορτίζεται. Συνέχισε το τεστ."
                         : "Device is not charging. Continue to test"));
 
-    TextView msg = new TextView(this);
-    msg.setText(txt);
-    msg.setTextColor(0xFF39FF14);
-    msg.setTextSize(14.5f);
-    msg.setLineSpacing(0f, 1.2f);
 
-    root.addView(msg);
+
+SpannableStringBuilder sb = new SpannableStringBuilder();
+
+int green = 0xFF39FF14;
+int red   = 0xFFFF4444;
+
+
+// INFO → πάντα πράσινο
+
+int start = sb.length();
+
+sb.append(txt).append("\n\n");
+
+sb.setSpan(
+        new ForegroundColorSpan(green),
+        start,
+        sb.length(),
+        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+);
+
+
+// WARN / OK
+
+start = sb.length();
+
+sb.append(warn.toString());
+
+sb.setSpan(
+        new ForegroundColorSpan(
+                hasWarn ? red : green
+        ),
+        start,
+        sb.length(),
+        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+);
+
+
+TextView msg = new TextView(this);
+
+msg.setText(sb);
+msg.setTextSize(14.5f);
+msg.setLineSpacing(0f, 1.2f);
+
+root.addView(msg);
 
 
     // MUTE ROW
