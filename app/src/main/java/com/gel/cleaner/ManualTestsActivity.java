@@ -16499,70 +16499,198 @@ if (!(fresh14 && fresh15 && fresh16 && fresh14b)) {
                     : "Status (results required within last 2 hours):\n\n"
     );
 
-    // --------------------------------------------------------
-    // LAB 14
-    // --------------------------------------------------------
-    msg.append(gr ? "• LAB 14: " : "• LAB 14: ");
-    if (!has14)
-        msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
-    else if (!fresh14)
-        msg.append(gr ? "Έληξε (" : "Expired (")
-           .append(lab17_age(now - ts14))
-           .append(")\n");
-    else
-        msg.append("OK (")
-           .append(lab17_age(now - ts14))
-           .append(")\n");
-           
+// --------------------------------------------------------
+// LAB 14
+// --------------------------------------------------------
+msg.append(gr ? "• LAB 14: " : "• LAB 14: ");
+
+int start = msg.length();
+
+if (!has14) {
+
+    msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
+
+    msg.setSpan(
+            new ForegroundColorSpan(red),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+}
+else if (!fresh14) {
+
+    msg.append(gr ? "Έληξε (" : "Expired (")
+       .append(lab17_age(now - ts14))
+       .append(")\n");
+
+    msg.setSpan(
+            new ForegroundColorSpan(red),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+}
+else {
+
+    msg.append("OK (")
+       .append(lab17_age(now - ts14))
+       .append(")\n");
+
+    msg.setSpan(
+            new ForegroundColorSpan(green),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+}
+
+
 // --------------------------------------------------------
 // LAB 14B
 // --------------------------------------------------------
 msg.append(gr ? "• LAB 14B: " : "• LAB 14B: ");
 
-if (!has14b)
+start = msg.length();
+
+if (!has14b) {
+
     msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
-else if (!fresh14b)
+
+    msg.setSpan(
+            new ForegroundColorSpan(red),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+}
+else if (!fresh14b) {
+
     msg.append(gr ? "Έληξε (" : "Expired (")
        .append(lab17_age(now - ts14b))
        .append(")\n");
-else
+
+    msg.setSpan(
+            new ForegroundColorSpan(red),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+}
+else {
+
     msg.append("OK (")
        .append(lab17_age(now - ts14b))
        .append(")\n");
-    
 
-    // --------------------------------------------------------
-    // LAB 15
-    // --------------------------------------------------------
-    msg.append(gr ? "• LAB 15: " : "• LAB 15: ");
-    if (!has15)
-        msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
-    else if (!fresh15)
-        msg.append(gr ? "Έληξε (" : "Expired (")
-           .append(lab17_age(now - ts15))
-           .append(")\n");
-    else
-        msg.append("OK (")
-           .append(lab17_age(now - ts15))
-           .append(")\n");
+    msg.setSpan(
+            new ForegroundColorSpan(green),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+}
 
-    // --------------------------------------------------------
-    // LAB 16
-    // --------------------------------------------------------
-    msg.append(gr ? "• LAB 16: " : "• LAB 16: ");
-    if (!has16)
-        msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
-    else if (!fresh16)
-        msg.append(gr ? "Έληξε (" : "Expired (")
-           .append(lab17_age(now - ts16))
-           .append(")\n");
-    else
-        msg.append("OK (")
-           .append(lab17_age(now - ts16))
-           .append(")\n");
 
-    msg.append("\n");
-    
+// --------------------------------------------------------
+// LAB 15
+// --------------------------------------------------------
+msg.append(gr ? "• LAB 15: " : "• LAB 15: ");
+
+start = msg.length();
+
+if (!has15) {
+
+    msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
+
+    msg.setSpan(
+            new ForegroundColorSpan(red),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+}
+else if (!fresh15) {
+
+    msg.append(gr ? "Έληξε (" : "Expired (")
+       .append(lab17_age(now - ts15))
+       .append(")\n");
+
+    msg.setSpan(
+            new ForegroundColorSpan(red),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+}
+else {
+
+    msg.append("OK (")
+       .append(lab17_age(now - ts15))
+       .append(")\n");
+
+    msg.setSpan(
+            new ForegroundColorSpan(green),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+}
+
+
+// --------------------------------------------------------
+// LAB 16
+// --------------------------------------------------------
+msg.append(gr ? "• LAB 16: " : "• LAB 16: ");
+
+start = msg.length();
+
+if (!has16) {
+
+    msg.append(gr ? "Απουσιάζει\n" : "Missing\n");
+
+    msg.setSpan(
+            new ForegroundColorSpan(red),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+}
+else if (!fresh16) {
+
+    msg.append(gr ? "Έληξε (" : "Expired (")
+       .append(lab17_age(now - ts16))
+       .append(")\n");
+
+    msg.setSpan(
+            new ForegroundColorSpan(red),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+}
+else {
+
+    msg.append("OK (")
+       .append(lab17_age(now - ts16))
+       .append(")\n");
+
+    msg.setSpan(
+            new ForegroundColorSpan(green),
+            start,
+            msg.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+}
+
+msg.append("\n");
 
     // --------------------------------------------------------
 // SMART DECISION
@@ -17185,9 +17313,9 @@ private void lab17_showPopup(String titleText, String msgText) {
                     gr
                             ? "Πριν την εκτέλεση αυτού του εργαστηρίου, "
                               + "βεβαιώσου ότι έχουν ολοκληρωθεί τα LAB δεκατέσσερα, "
-                              + "δεκαπέντε και δεκαέξι."
+                              + "δεκατέσσερα βήτα, δεκαπέντε και δεκαέξι."
                             : "Before running this lab, please make sure that "
-                              + "LAB fourteen, LAB fifteen and LAB sixteen "
+                              + "LAB fourteen, Lab fourteen B, LAB fifteen and LAB sixteen "
                               + "have been completed.";
 
             AppTTS.ensureSpeak(this, speakText);
