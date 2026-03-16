@@ -15462,14 +15462,13 @@ private boolean isChargingNowSafe() {
 
         if (i == null) return false;
 
-        int status =
+        int plugged =
                 i.getIntExtra(
-                        BatteryManager.EXTRA_STATUS,
-                        -1
+                        BatteryManager.EXTRA_PLUGGED,
+                        0
                 );
 
-        return status == BatteryManager.BATTERY_STATUS_CHARGING
-                || status == BatteryManager.BATTERY_STATUS_FULL;
+        return plugged != 0;
 
     } catch (Throwable ignore) {}
 
