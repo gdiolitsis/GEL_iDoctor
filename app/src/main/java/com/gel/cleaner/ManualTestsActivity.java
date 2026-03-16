@@ -15406,6 +15406,34 @@ lab14Running = false;
 
 }
 
+// ------------------------------------------------------------
+// BATTERY CHARGING STATE HELPER (SAFE)
+// ------------------------------------------------------------
+private boolean isCharging() {
+
+    try {
+
+        IntentFilter f =
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+
+        Intent i = registerReceiver(null, f);
+
+        if (i == null) return false;
+
+        int status =
+                i.getIntExtra(
+                        BatteryManager.EXTRA_STATUS,
+                        -1
+                );
+
+        return status == BatteryManager.BATTERY_STATUS_CHARGING
+                || status == BatteryManager.BATTERY_STATUS_FULL;
+
+    } catch (Throwable ignore) {
+        return false;
+    }
+}
+
 //=============================================================
 // LAB 15 - Charging System Diagnostic (SMART)
 // FINAL / LOCKED — NO PATCHES — NO SIDE EFFECTS
