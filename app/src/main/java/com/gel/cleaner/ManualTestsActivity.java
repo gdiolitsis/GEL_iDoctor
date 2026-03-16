@@ -4419,37 +4419,37 @@ private void startMainStressPhase(
 private Thread memStressThread;
 
 private void startMemoryStress() {
-	
-	final boolean gr = AppLang.isGreek(this);
+
+    final boolean gr = AppLang.isGreek(this);
 
     memStressThread = new Thread(() -> {
 
         try {
 
-            byte[] buf = new byte[4 * 1024 * 1024]; // 4MB buffer
+            byte[] buf = new byte[4 * 1024 * 1024];
             Random r = new Random();
 
             while (lab14Running) {
 
-    // 🔴 CHECK CHARGING
-    
-    runOnUiThread(() -> {
+                if (isCharging()) {
 
-    logLine();
+                    runOnUiThread(() -> {
 
-        logError(gr
-                ? "Ανιχνεύθηκε φόρτιση κατά τη διάρκεια της δοκιμής."
-                : "Charging detected during test.");
+                        logLine();
 
-        logWarn(gr
-                ? "Αποσύνδεσε τον φορτιστή και εκτέλεσε το τεστ από την αρχή."
-                : "Disconnect charger and run the test again.");
+                        logError(gr
+                                ? "Ανιχνεύθηκε φόρτιση κατά τη διάρκεια της δοκιμής."
+                                : "Charging detected during test.");
 
-        logLine();
-    });
+                        logWarn(gr
+                                ? "Αποσύνδεσε τον φορτιστή και εκτέλεσε το τεστ από την αρχή."
+                                : "Disconnect charger and run the test again.");
 
-    return;
-    }
+                        logLine();
+                    });
+
+                    return;
+                }
 
                 for (int i = 0; i < buf.length; i += 64) {
                     buf[i] = (byte) r.nextInt(255);
@@ -4457,7 +4457,8 @@ private void startMemoryStress() {
 
             }
 
-        } catch (Throwable ignore) {}
+        } catch (Throwable ignore) {
+        }
 
     });
 
