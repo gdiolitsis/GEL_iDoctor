@@ -13398,16 +13398,14 @@ if (!Float.isNaN(voltageStart) &&
 
     float sag = voltageStart - voltageUnderLoad[0];
 
-    float currentNow = getBatteryCurrentNowSafe();
+    float currentNow = getBatteryCurrentNowSafe();   // ← ΕΔΩ
 
     if (sag < 0.02f &&
         !Float.isNaN(currentNow) &&
         Math.abs(currentNow) < 200000f) {
 
-        // very low sag + very low current → likely system limited
         lab14_systemLimited[0] = true;
         sag = 0f;
-
     }
 
     float sagFiltered = sag;
