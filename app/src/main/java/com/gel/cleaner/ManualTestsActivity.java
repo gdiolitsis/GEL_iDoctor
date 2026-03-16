@@ -4432,14 +4432,7 @@ private void startMemoryStress() {
             while (lab14Running) {
 
     // 🔴 CHECK CHARGING
-    if (isChargingNowSafe()) {
-
-    stopCpuBurn();
-    stopGpuStress();
-    stopMemoryStress();
-
-    lab14Running = false;
-
+    
     runOnUiThread(() -> {
 
     logLine();
@@ -15273,20 +15266,6 @@ private void lab14CleanupUI() {
     } catch (Throwable ignore) {}
 
     lab14Dialog = null;
-}
-
-// ============================================================
-// LAB 14 — HARD STOP ALL STRESS
-// ============================================================
-private void lab14StopAllStress() {
-
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-
-    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-
-    lab14Running = false;
 }
 
 // ============================================================
