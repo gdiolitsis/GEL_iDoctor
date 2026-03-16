@@ -12662,6 +12662,140 @@ final SharedPreferences p =
     }
 }
 
+// ============================================================
+// LAB 14 — UI CLEANUP HELPER
+// ============================================================
+private void lab14CleanupUI() {
+
+    ui.removeCallbacks(lab14VibrationLoop);
+
+    try {
+        if (lab14StressVideo != null) {
+
+            try { lab14StressVideo.suspend(); } catch (Throwable ignore) {}
+            try { lab14StressVideo.stopPlayback(); } catch (Throwable ignore) {}
+
+            ViewParent parent = lab14StressVideo.getParent();
+
+            if (parent instanceof ViewGroup) {
+                try {
+                    ((ViewGroup) parent).removeView(lab14StressVideo);
+                } catch (Throwable ignore) {}
+            }
+
+            lab14StressVideo = null;
+        }
+    } catch (Throwable ignore) {}
+
+    try {
+        if (lab14Dialog != null &&
+            lab14Dialog.isShowing()) {
+            lab14Dialog.dismiss();
+        }
+    } catch (Throwable ignore) {}
+
+    lab14Dialog = null;
+}
+
+// ============================================================
+
+private void lab14StopAllStress() {
+
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+
+    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+
+    lab14Running = false;
+}
+
+// ============================================================
+
+private long readCpuFreq() {
+
+    try {
+
+        java.io.File f =
+                new java.io.File(
+                        "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
+                );
+
+        if (!f.exists()) return -1;
+
+        java.io.BufferedReader br =
+                new java.io.BufferedReader(
+                        new java.io.FileReader(f)
+                );
+
+        String s = br.readLine();
+
+        br.close();
+
+        return Long.parseLong(s.trim());
+
+    } catch (Throwable ignore) {}
+
+    return -1;
+}
+
+// ============================================================
+
+private float readCpuTempSafe2() {
+
+    try {
+
+        java.io.File f =
+                new java.io.File(
+                        "/sys/class/thermal/thermal_zone0/temp"
+                );
+
+        if (!f.exists()) return Float.NaN;
+
+        java.io.BufferedReader br =
+                new java.io.BufferedReader(
+                        new java.io.FileReader(f)
+                );
+
+        String s = br.readLine();
+
+        br.close();
+
+        return Float.parseFloat(s) / 1000f;
+
+    } catch (Throwable ignore) {}
+
+    return Float.NaN;
+}
+
+// ============================================================
+
+private boolean isChargingNowSafe() {
+
+    try {
+
+        IntentFilter f =
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+
+        Intent i =
+                registerReceiver(null, f);
+
+        if (i == null) return false;
+
+        int status =
+                i.getIntExtra(
+                        BatteryManager.EXTRA_STATUS,
+                        -1
+                );
+
+        return status == BatteryManager.BATTERY_STATUS_CHARGING
+                || status == BatteryManager.BATTERY_STATUS_FULL;
+
+    } catch (Throwable ignore) {}
+
+    return false;
+}
+
 //=============================================================
 // LAB 15 - Charging System Diagnostic (SMART)
 // FINAL / LOCKED — NO PATCHES — NO SIDE EFFECTS
