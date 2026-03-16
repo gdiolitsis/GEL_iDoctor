@@ -4699,43 +4699,81 @@ private void logTempInline(String label, float c) {
 }
 
 // ------------------------------------------------------------
+// GEL STYLE OUTPUT — ONE LINE PER SENSOR (BILINGUAL)
+// Label = white (log channel)
+// Value = colored by severity
+// ------------------------------------------------------------
+private void logTempInline(String label, float c) {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    String base = String.format(
+            Locale.US,
+            "%s: %.1f°C",
+            label,
+            c
+    );
+
+    if (c < 45f) {
+
+        logOk(base + (gr ? " (ΦΥΣΙΟΛΟΓΙΚΗ)" : " (NORMAL)"));
+
+    }
+    else if (c < 55f) {
+
+        logWarn(base + (gr ? " (ΑΥΞΗΜΕΝΗ)" : " (WARM)"));
+
+    }
+    else {
+
+        logError(base + (gr ? " (ΥΠΕΡΘΕΡΜΑΝΣΗ)" : " (HOT)"));
+    }
+}
+
+// ------------------------------------------------------------
 // LAB 16 — Hidden / Non-displayed thermal safety check
 // ------------------------------------------------------------
 private boolean detectHiddenThermalAnomaly(float thresholdC) {
 
-try {  
-    File dir = new File("/sys/class/thermal");  
-    File[] zones = dir.listFiles(f -> f.getName().startsWith("thermal_zone"));  
-    if (zones == null) return false;  
+    try {
 
-    for (File z : zones) {  
-        try {  
-            String type = readSys(z, "type");  
-            String temp = readSys(z, "temp");  
-            if (type == null || temp == null) continue;  
+        File dir = new File("/sys/class/thermal");
+        File[] zones = dir.listFiles(f -> f.getName().startsWith("thermal_zone"));
+        if (zones == null) return false;
 
-            float c = Float.parseFloat(temp.trim()) / 1000f;  
-            if (c <= 0 || c > 120) continue;  
+        for (File z : zones) {
 
-            String t = type.toLowerCase(Locale.US);  
+            try {
 
-            if (t.contains("battery") ||  
-                t.contains("cpu") ||  
-                t.contains("gpu")) {  
-                continue;  
-            }  
+                String type = readSys(z, "type");
+                String temp = readSys(z, "temp");
 
-            // hidden / system sensor exceeded threshold  
-            if (c >= thresholdC) {  
-                return true;  
-            }  
+                if (type == null || temp == null) continue;
 
-        } catch (Throwable ignore) {}  
-    }  
-} catch (Throwable ignore) {}  
+                float c = Float.parseFloat(temp.trim()) / 1000f;
 
-return false;
+                if (c <= 0 || c > 120) continue;
 
+                String t = type.toLowerCase(Locale.US);
+
+                if (t.contains("battery") ||
+                        t.contains("cpu") ||
+                        t.contains("gpu")) {
+                    continue;
+                }
+
+                if (c >= thresholdC) {
+                    return true;
+                }
+
+            } catch (Throwable ignore) {
+            }
+        }
+
+    } catch (Throwable ignore) {
+    }
+
+    return false;
 }
 
 // ============================================================
