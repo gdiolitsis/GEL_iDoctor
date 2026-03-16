@@ -3070,8 +3070,8 @@ final String txt =
                         ? "Η συσκευή φορτίζεται. Αποσύνδεσε τον φορτιστή."
                         : "Device is charging. Disconnect the charger.")
                         : (gr
-                        ? "Η συσκευή δεν φορτίζεται. Συνέχισε το τεστ."
-                        : "Device is not charging. Continue to test"));
+                        ? "Η συσκευή δεν φορτίζεται."
+                        : "Device is not charging"));
 
 
 
@@ -3580,50 +3580,6 @@ private boolean checkLab14BConditions() {
         return false;
     }
 
-
-
-    // ----------------------------------------------------
-    // TEMPERATURE HIGH
-    // ----------------------------------------------------
-
-    if (!Float.isNaN(tempC) && tempC > 42f) {
-
-        logWarn(gr
-                ? "Η θερμοκρασία είναι υψηλή για έλεγχο προστασίας."
-                : "Temperature too high for protection test.");
-
-        logLabelErrorValue(
-                gr ? "Θερμοκρασία"
-                   : "Temperature",
-                String.format(Locale.US, "%.1f°C", tempC)
-        );
-
-        return false;
-    }
-
-
-
-    // ----------------------------------------------------
-    // TEMPERATURE LOW
-    // ----------------------------------------------------
-
-    if (!Float.isNaN(tempC) && tempC < 10f) {
-
-        logWarn(gr
-                ? "Η θερμοκρασία είναι πολύ χαμηλή."
-                : "Temperature too low.");
-
-        logLabelErrorValue(
-                gr ? "Θερμοκρασία"
-                   : "Temperature",
-                String.format(Locale.US, "%.1f°C", tempC)
-        );
-
-        return false;
-    }
-
-
-
     // ----------------------------------------------------
     // OK
     // ----------------------------------------------------
@@ -3948,74 +3904,142 @@ private void showLab14BAdvisory(Runnable onContinue) {
 
     LinearLayout root = buildGELPopupRoot(this);
 
-    // HEADER
-    root.addView(
-            buildPopupHeader(
-                    this,
-                    gr
-                            ? "Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
-                            : "Final check of battery protection by the system"
-            )
-    );
+// HEADER
+root.addView(
+        buildPopupHeader(
+                this,
+                gr
+                        ? "Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
+                        : "Final check of battery protection by the system"
+        )
+);
 
-    final String text =
+final String text =
+        gr
+                ? "Για τον έλεγχο προστασίας, φόρτισε τη συσκευή "
+                  + "στο 80–100% και άφησε τη συσκευή σε ηρεμία "
+                  + "πριν ξεκινήσει η δοκιμή.\n\n"
+                  + "Η δοκιμή ελέγχει αν το σύστημα περιορίζει "
+                  + "την κατανάλωση για προστασία της μπαταρίας."
+                : "For this test, charge the device "
+                  + "to 80–100% and let the phone stay idle "
+                  + "before starting.\n\n"
+                  + "This test checks if the system limits "
+                  + "power consumption to protect the battery.";
+
+
+int percent = getBatteryPercentSafe();
+boolean batteryOk = percent >= 80;
+
+
+SpannableStringBuilder sb = new SpannableStringBuilder();
+
+int green = 0xFF39FF14;
+int red   = 0xFFFF4444;
+
+
+// main text
+
+int start = sb.length();
+
+sb.append(text).append("\n\n");
+
+sb.setSpan(
+        new ForegroundColorSpan(green),
+        start,
+        sb.length(),
+        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+);
+
+
+// warning όταν <80
+
+if (!batteryOk) {
+
+    start = sb.length();
+
+    String warn =
             gr
-                    ? "Για τον έλεγχο προστασίας, φόρτισε τη συσκευή "
-                      + "στο 80–100% και άφησε τη συσκευή σε ηρεμία "
-                      + "πριν ξεκινήσει η δοκιμή.\n\n"
-                      + "Η δοκιμή ελέγχει αν το σύστημα περιορίζει "
-                      + "την κατανάλωση για προστασία της μπαταρίας."
-                    : "For this test, charge the device "
-                      + "to 80–100% and let the phone stay idle "
-                      + "before starting.\n\n"
-                      + "This test checks if the system limits "
-                      + "power consumption to protect the battery.";
+                    ? "⚠ Η μπαταρία είναι " + percent + "% (απαιτείται ≥80%)"
+                    : "⚠ Battery is " + percent + "% (≥80% required)";
 
-    TextView msg = new TextView(this);
-    msg.setText(text);
-    msg.setTextColor(0xFF39FF14);
-    msg.setTextSize(14.5f);
-    msg.setLineSpacing(0f, 1.2f);
+    sb.append(warn);
 
-    root.addView(msg);
+    sb.setSpan(
+            new ForegroundColorSpan(red),
+            start,
+            sb.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+}
 
-    // MUTE ROW
-    root.addView(buildMuteRow());
 
-    LinearLayout row = new LinearLayout(this);
-    row.setOrientation(LinearLayout.VERTICAL);
+TextView msg = new TextView(this);
 
-    Button btnContinue =
+msg.setText(sb);
+msg.setTextSize(14.5f);
+msg.setLineSpacing(0f, 1.2f);
+
+root.addView(msg);
+
+
+// MUTE ROW
+root.addView(buildMuteRow());
+
+
+LinearLayout row = new LinearLayout(this);
+row.setOrientation(LinearLayout.VERTICAL);
+
+
+Button btnContinue;
+
+if (batteryOk) {
+
+    btnContinue =
             gelButton(
                     this,
                     gr ? "Συνέχεια" : "Continue",
                     0xFF0B5D1E
             );
 
-    LinearLayout.LayoutParams lp =
-            new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(52)
+} else {
+
+    btnContinue =
+            gelButton(
+                    this,
+                    gr ? "Έξοδος (" + percent + "%)"
+                       : "Exit (" + percent + "%)",
+                    0xFF8B0000
             );
 
-    lp.setMargins(0, dp(14), 0, 0);
+}
 
-    btnContinue.setLayoutParams(lp);
 
-    row.addView(btnContinue);
-
-    root.addView(row);
-
-    b.setView(root);
-
-    AlertDialog dlg = b.create();
-
-    if (dlg.getWindow() != null)
-        dlg.getWindow().setBackgroundDrawable(
-                new ColorDrawable(Color.TRANSPARENT)
+LinearLayout.LayoutParams lp =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(52)
         );
 
-    dlg.show();
+lp.setMargins(0, dp(14), 0, 0);
+
+btnContinue.setLayoutParams(lp);
+
+row.addView(btnContinue);
+
+root.addView(row);
+
+
+b.setView(root);
+
+AlertDialog dlg = b.create();
+
+if (dlg.getWindow() != null)
+    dlg.getWindow().setBackgroundDrawable(
+            new ColorDrawable(Color.TRANSPARENT)
+    );
+
+dlg.show();
     
     // ============================
     // TTS (FINAL SAFE VERSION)
@@ -4038,14 +4062,21 @@ private void showLab14BAdvisory(Runnable onContinue) {
     // ============================
     btnContinue.setOnClickListener(v -> {
 
-        AppTTS.stop();
+    AppTTS.stop();
+
+    if (percent < 80) {
 
         dlg.dismiss();
+        return;
 
-        if (onContinue != null)
-            onContinue.run();
+    }
 
-    });
+    dlg.dismiss();
+
+    if (onContinue != null)
+        onContinue.run();
+
+});
 
 }
 
