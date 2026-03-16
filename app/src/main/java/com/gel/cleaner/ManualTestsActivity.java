@@ -4699,31 +4699,6 @@ private void logTempInline(String label, float c) {
     }
 }
 
-    final boolean gr = AppLang.isGreek(this);
-
-    String base = String.format(
-            Locale.US,
-            "%s: %.1f°C",
-            label,
-            c
-    );
-
-    if (c < 45f) {
-
-        logOk(base + (gr ? " (ΦΥΣΙΟΛΟΓΙΚΗ)" : " (NORMAL)"));
-
-    }
-    else if (c < 55f) {
-
-        logWarn(base + (gr ? " (ΑΥΞΗΜΕΝΗ)" : " (WARM)"));
-
-    }
-    else {
-
-        logError(base + (gr ? " (ΥΠΕΡΘΕΡΜΑΝΣΗ)" : " (HOT)"));
-    }
-}
-
 // ------------------------------------------------------------
 // LAB 16 — Hidden / Non-displayed thermal safety check
 // ------------------------------------------------------------
