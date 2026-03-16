@@ -13392,13 +13392,14 @@ if (!Float.isNaN(voltageRecovery[0])) {
 // ELECTRICAL ANALYSIS
 // ----------------------------------------------------
 float estimatedESR = Float.NaN;
+float currentNow = Float.NaN;   // ← ΒΑΛΕ ΑΥΤΟ
 
 if (!Float.isNaN(voltageStart) &&
     !Float.isNaN(voltageUnderLoad[0])) {
 
     float sag = voltageStart - voltageUnderLoad[0];
 
-    float currentNow = getBatteryCurrentNowSafe();   // ← ΕΔΩ
+    currentNow = getBatteryCurrentNowSafe();   // ← ΟΧΙ float εδώ
 
     if (sag < 0.02f &&
         !Float.isNaN(currentNow) &&
