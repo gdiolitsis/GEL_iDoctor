@@ -12578,6 +12578,17 @@ final SharedPreferences p =
 
         final int durationSec = LAB14_TOTAL_SECONDS;
         lastSelectedStressDurationSec = durationSec;
+        
+// 🔴 CHECK CHARGING
+if (isChargingNowSafe()) {
+
+    logError(gr
+            ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
+            : "Device must NOT be charging.");
+
+    lab14Running = false;
+    return;
+}
 
         // ------------------------------------------------------------
         // 1) INITIAL SNAPSHOT
@@ -12878,18 +12889,19 @@ root.addView(videoHolder);
         exitBtn.setLayoutParams(lpExit);
 
         exitBtn.setOnClickListener(v -> {
-    lab14Cancelled = true;
-    lab14StopAllStress();
-    restoreBrightnessAndKeepOn();   // ✅ ΠΡΟΣΘΗΚΗ
-    lab14CleanupUI();
-    lab14Running = false;
 
-            logWarn(
-                    gr
-                            ? "LAB 14 ακυρώθηκε από τον χρήστη."
-                            : "LAB 14 cancelled by user."
-            );
-        });
+    lab14Cancelled = true;
+
+    lab14StopAllStress();
+
+    lab14CleanupUI();
+
+    logWarn(
+            gr
+                    ? "LAB 14 ακυρώθηκε από τον χρήστη."
+                    : "LAB 14 cancelled by user."
+    );
+});
 
         root.addView(exitBtn);
 
@@ -12902,7 +12914,7 @@ root.addView(videoHolder);
         }
 
         lab14Dialog.show();
-
+        
         // ------------------------------------------------------------
         // 4) FAST BATTERY STRESS (45 sec) — BACKGROUND THREAD
         // ------------------------------------------------------------
@@ -14822,6 +14834,7 @@ logLine();
                     : "LAB 14 error"
     );
 }
+}
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
@@ -15369,6 +15382,21 @@ private boolean isChargingNowSafe() {
     } catch (Throwable ignore) {}
 
     return false;
+}
+
+// ============================================================
+// LAB 14 — HARD STOP ALL STRESS
+// ============================================================
+private void lab14StopAllStress() {
+
+try { stopCpuBurn(); } catch (Throwable ignore) {}  
+try { stopMemoryStress(); } catch (Throwable ignore) {}  
+try { stopGpuStress(); } catch (Throwable ignore) {}  
+
+try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}  
+
+lab14Running = false;
+
 }
 
 //=============================================================
