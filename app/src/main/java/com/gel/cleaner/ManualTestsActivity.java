@@ -13121,26 +13121,48 @@ if (!Float.isNaN(pulseSag[0]) &&
 
                 ui.removeCallbacks(this);
 
-                // ----------------------------------------------------
-                // 6) STOP LOAD
-                // ----------------------------------------------------
-                lab14StopAllStress();
+// ----------------------------------------------------
+// 6) STOP LOAD
+// ----------------------------------------------------
+lab14StopAllStress();
 
-                try {
-                    lab14CleanupUI();
-                } catch (Throwable ignore) {}
+try {
+    lab14CleanupUI();
+} catch (Throwable ignore) {}
 
-                if (lab14Cancelled) {
-                    return;
-                }
+if (lab14Cancelled) {
+    return;
+}
 
-                // ----------------------------------------------------
-                // 7) POST-LOAD ANALYSIS THREAD
-                // ---------------------------------------------------
+} catch (Throwable t) {
 
-    new Thread(() -> {
+    lab14StopAllStress();
+    restoreBrightnessAndKeepOn();
 
-        try {
+    try {
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    lab14Cancelled = true;
+
+    logError(
+            gr
+                    ? "Σφάλμα LAB 14"
+                    : "LAB 14 error"
+    );
+
+} finally {
+
+    lab14Running = false;
+
+}
+
+// ----------------------------------------------------
+// 7) POST-LOAD ANALYSIS THREAD
+// ----------------------------------------------------
+new Thread(() -> {
+
+    try {
 
                         // ----------------------------------------------------
                         // FAST STRESS ANALYSIS
@@ -14814,9 +14836,11 @@ logLine();
 
     }
 
-}).start();
+    }   // ← ΚΛΕΙΝΕΙ ΤΟ try ΤΟΥ THREAD
 
-}
+}).start();   // ← ΚΛΕΙΝΕΙ ΤΟ THREAD
+
+}   // ← ΚΛΕΙΝΕΙ ΤΗΝ ΜΕΘΟΔΟ
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
