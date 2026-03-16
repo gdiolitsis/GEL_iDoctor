@@ -12503,6 +12503,8 @@ private void lab14BatteryHealthStressTest() {
 // ============================================================
 private void lab14BatteryHealthStressTest_REAL() {
 
+try {
+
     final boolean gr = AppLang.isGreek(this);
 
     if (lab14Running) {
@@ -14807,31 +14809,32 @@ logLine();
 
     }
 
-}).start();   // ← κλείνει το POST-LOAD thread
+}).start();   // POST-LOAD THREAD END
 
 
-} catch (Throwable t) {
+    } catch (Throwable t) {
 
-    lab14StopAllStress();
-    restoreBrightnessAndKeepOn();
+        lab14StopAllStress();
+        restoreBrightnessAndKeepOn();
 
-    try {
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
+        try {
+            lab14CleanupUI();
+        } catch (Throwable ignore) {}
 
-    lab14Cancelled = true;
+        lab14Cancelled = true;
 
-    logError(
-            gr
-                    ? "Σφάλμα LAB 14"
-                    : "LAB 14 error"
-    );
+        logError(
+                gr
+                        ? "Σφάλμα LAB 14"
+                        : "LAB 14 error"
+        );
 
-} finally {
+    } finally {
 
-    lab14Running = false;
+        lab14Running = false;
 
-}
+    }
+
 }
 
 // ============================================================
