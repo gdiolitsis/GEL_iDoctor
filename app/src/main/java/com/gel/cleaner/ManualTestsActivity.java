@@ -16464,11 +16464,8 @@ final boolean has14b = (ts14b > 0L);
 final boolean has15 = (lab15Charge >= 0  && ts15 > 0L);  
 final boolean has16 = (lab16Thermal >= 0 && ts16 > 0L);  
 
-final boolean fresh14b =
-        has14b && (now - ts14b) <= WINDOW_MS;
-
 final boolean fresh14 = has14 && (now - ts14) <= WINDOW_MS;
-  final boolean fresh14b = has14b && (now - ts14b) <= WINDOW_MS;
+final boolean fresh14b = has14b && (now - ts14b) <= WINDOW_MS;
 final boolean fresh15 = has15 && (now - ts15) <= WINDOW_MS;  
 final boolean fresh16 = has16 && (now - ts16) <= WINDOW_MS;
 
