@@ -3280,12 +3280,13 @@ boolean ok =
 
     dlg.show();
 
-dlg.setOnDismissListener(d -> {
-    AppTTS.stop();
-});
-
 dlg.setOnCancelListener(d -> {
+
     AppTTS.stop();
+
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+
 });
 
     String introText =
@@ -3319,10 +3320,13 @@ final String speakTextFinal =
 
     cancel.setOnClickListener(v -> {
 
-        AppTTS.stop();
-        dlg.dismiss();
+    AppTTS.stop();
 
-    });
+    lab14PopupShown = false;   // ✅ FIX
+    lab14AdvisoryShown = false; // καλό να μπει
+
+    dlg.dismiss();
+});
 
 
     go.setOnClickListener(v -> {
@@ -12985,68 +12989,82 @@ AppTTS.stop();
 // ============================================================
 private void lab14BatteryHealthStressTest() {
 
-    // --------------------------------------------------
-    // PRE CHECK (όπως ήταν πριν)
-    // --------------------------------------------------
+    final boolean gr = AppLang.isGreek(this);
+
+    // ---------------------------------------
+    // HARD RESET FLOW FLAGS
+    // ---------------------------------------
+
+    if (lab14Running) {
+        return;
+    }
+
+    // IMPORTANT
+    lab14PopupShown = false;
+
+    // ---------------------------------------
+    // PRE CHECK (όπως πριν)
+    // ---------------------------------------
 
     int percent = getBatteryPercentSafe();
 
     float tempC = Float.NaN;
 
-try {
+    try {
 
-    IntentFilter f =
-            new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        IntentFilter f =
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
-    Intent i = registerReceiver(null, f);
+        Intent i = registerReceiver(null, f);
 
-    if (i != null) {
+        if (i != null) {
 
-        int t =
-                i.getIntExtra(
-                        BatteryManager.EXTRA_TEMPERATURE,
-                        -1
-                );
+            int t =
+                    i.getIntExtra(
+                            BatteryManager.EXTRA_TEMPERATURE,
+                            -1
+                    );
 
-        if (t > 0) tempC = t / 10f;
-    }
+            if (t > 0) tempC = t / 10f;
+        }
 
-} catch (Throwable ignore) {}
+    } catch (Throwable ignore) {}
 
     boolean charging = isChargingNowSafe();
 
+    // ---------------------------------------
+    // POPUP FLOW SAFE
+    // ---------------------------------------
 
-    // εδώ απλά διαβάζουμε τιμές ώστε να ενημερωθούν helpers
-    // πριν ανοίξει το popup (όπως παλιά)
+    if (!lab14PopupShown) {
 
-    // POPUP FLOW
+        lab14PopupShown = true;
 
-if (!lab14PopupShown) {
+        showLab14ConditionCheck(() -> {
 
-    lab14PopupShown = true;
+            if (!lab14AdvisoryShown) {
 
-    showLab14ConditionCheck(() -> {
+                lab14AdvisoryShown = true;
 
-        if (!lab14AdvisoryShown) {
+                showLab14PreTestAdvisory(() -> {
 
-            lab14AdvisoryShown = true;
+                    lab14BatteryHealthStressTest_REAL();
 
-            showLab14PreTestAdvisory(() -> {
+                });
+
+            } else {
 
                 lab14BatteryHealthStressTest_REAL();
 
-            });
+            }
 
-        } else {
+        });
 
-            lab14BatteryHealthStressTest_REAL();
+        return;
+    }
 
-        }
-
-    });
-
-    return;
-}
+    // fallback safety (δεν πρέπει να μπει εδώ)
+    lab14PopupShown = false;
 }
 
 // ============================================================
