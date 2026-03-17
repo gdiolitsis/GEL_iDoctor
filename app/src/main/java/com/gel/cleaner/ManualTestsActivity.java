@@ -316,6 +316,8 @@ public class ManualTestsActivity extends AppCompatActivity {
     private Lab14Engine lab14Engine;
     
     private volatile boolean lab14Cancelled = false;
+    private boolean lab14PopupShown = false;
+    private boolean lab14AdvisoryShown = false;
     
     private AlertDialog lab14Dialog;    
     
@@ -4817,7 +4819,7 @@ private void showLab15ConditionCheck(Runnable startAction) {
 
     info.setText(
         gr
-                ? "Για την εκτέλεση του τεστ, απαιτείται\n\n"
+                ? "Για την εκτέλεση του τεστ, απαιτείται\n"
                 + "η μπαταρία να είναι φορτισμένη μεταξύ 20% – 80%\n"
                 : "To run this test, the battery level must be\n\n"
                 + "between 20% – 80%\n"
@@ -13017,20 +13019,33 @@ try {
     // εδώ απλά διαβάζουμε τιμές ώστε να ενημερωθούν helpers
     // πριν ανοίξει το popup (όπως παλιά)
 
-    // --------------------------------------------------
     // POPUP FLOW
-    // --------------------------------------------------
+
+if (!lab14PopupShown) {
+
+    lab14PopupShown = true;
 
     showLab14ConditionCheck(() -> {
 
-        showLab14PreTestAdvisory(() -> {
+        if (!lab14AdvisoryShown) {
+
+            lab14AdvisoryShown = true;
+
+            showLab14PreTestAdvisory(() -> {
+
+                lab14BatteryHealthStressTest_REAL();
+
+            });
+
+        } else {
 
             lab14BatteryHealthStressTest_REAL();
 
-        });
+        }
 
     });
 
+    return;
 }
 
 // ============================================================
@@ -13052,10 +13067,15 @@ private void lab14BatteryHealthStressTest_REAL() {
         lab14Cancelled = false;
     }
 
-// RESET DIAGNOSTICS
-resetBatteryDiagnostics();
 
-final boolean[] variabilityDetected = { false };
+    // reset popup flag because test really starts now
+    lab14PopupShown = false;
+
+
+    // RESET DIAGNOSTICS
+    resetBatteryDiagnostics();
+
+    final boolean[] variabilityDetected = { false };
 
 // reset LAB14 state (fields)
 lab14Conf = null;
@@ -13703,7 +13723,11 @@ try {
     lab14CleanupUI();
 } catch (Throwable ignore) {}
 
+lab14PopupShown = false;
+lab14AdvisoryShown = false;
+
 if (lab14Cancelled) {
+    lab14PopupShown = false;
     return;
 }
 
