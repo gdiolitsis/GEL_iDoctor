@@ -13139,18 +13139,22 @@ if (!Float.isNaN(pulseSag[0]) &&
 
         }).start();
 
-        while (!lab14FastDone && !lab14Cancelled) {
-    SystemClock.sleep(50);
-}
-
 // ------------------------------------------------------------
 // 5) MAIN STRESS START
 // ------------------------------------------------------------
-        if (lab14Cancelled) {
-            lab14StopAllStress();
-            lab14CleanupUI();
+new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+
+    @Override
+    public void run() {
+
+        if (lab14Cancelled) return;
+
+        if (!lab14FastDone) {
+            new Handler(Looper.getMainLooper()).postDelayed(this, 100);
             return;
         }
+
+        // FAST finished → start main stress
 
         applyMaxBrightnessAndKeepOn();
 
@@ -13158,20 +13162,19 @@ if (!Float.isNaN(pulseSag[0]) &&
         startMemoryStress();
         startGpuStress();
 
-        // capture under-load voltage
         ui.postDelayed(() -> {
             if (lab14Cancelled || !lab14Running) return;
             voltageUnderLoad[0] = getBatteryVoltageFiltered();
         }, 5000);
 
-        // vibration loop
         ui.postDelayed(() -> {
             if (lab14Running && !lab14Cancelled) {
                 lab14VibrationLoop.run();
             }
         }, 1500);
 
-        // video loop
+        // ---------------- VIDEO ----------------
+
         try {
             lab14StressVideo.setVideoURI(
                     Uri.parse(
@@ -13190,6 +13193,8 @@ if (!Float.isNaN(pulseSag[0]) &&
 
         } catch (Throwable ignore) {}
 
+        // ---------------- DOTS ----------------
+
         final String[] dotFrames = {"•", "• •", "• • •"};
 
         ui.post(new Runnable() {
@@ -13197,58 +13202,85 @@ if (!Float.isNaN(pulseSag[0]) &&
             int dotStep = 0;
             int lastSeg = -1;
 
-                @Override
-public void run() {
+            @Override
+            public void run() {
 
-    if (lab14Cancelled ||
-        !lab14Running) {
-
-        ui.removeCallbacks(this);
-        return;
-    }
+                if (lab14Cancelled || !lab14Running) {
+                    ui.removeCallbacks(this);
+                    return;
+                }
 
                 long now = SystemClock.elapsedRealtime();
                 int elapsed = (int) ((now - t0) / 1000);
 
                 if (lab14DotsView != null) {
-                    lab14DotsView.setText(dotFrames[dotStep++ % dotFrames.length]);
+                    lab14DotsView.setText(
+                            dotFrames[dotStep++ % dotFrames.length]
+                    );
                 }
 
                 counterText.setText(
                         gr
-                                ? "Πρόοδος: " + Math.min(elapsed, durationSec) + " / " + durationSec + " δευτ."
-                                : "Progress: " + Math.min(elapsed, durationSec) + " / " + durationSec + " sec"
+                                ? "Πρόοδος: "
+                                + Math.min(elapsed, durationSec)
+                                + " / "
+                                + durationSec
+                                + " δευτ."
+                                : "Progress: "
+                                + Math.min(elapsed, durationSec)
+                                + " / "
+                                + durationSec
+                                + " sec"
                 );
 
                 int segSpan = Math.max(1, durationSec / 10);
                 int seg = Math.min(10, elapsed / segSpan);
 
                 if (seg != lastSeg) {
+
                     lastSeg = seg;
 
-                    for (int i = 0; i < progressBar.getChildCount(); i++) {
-                        progressBar.getChildAt(i).setBackgroundColor(
-                                i < seg ? 0xFF39FF14 : 0xFF333333
-                        );
+                    for (int i = 0;
+                         i < progressBar.getChildCount();
+                         i++) {
+
+                        progressBar.getChildAt(i)
+                                .setBackgroundColor(
+                                        i < seg
+                                                ? 0xFF39FF14
+                                                : 0xFF333333
+                                );
                     }
                 }
 
                 if (elapsed < durationSec) {
-                    ui.postDelayed(this, 1000);
-                    return;
-                }
 
-                ui.removeCallbacks(this);
+    ui.postDelayed(this, 1000);
+    return;
+}
 
-// 6 STOP LOAD
+ui.removeCallbacks(this);
+
+// ----------------------------------------------------
+// 6) STOP LOAD
+// ----------------------------------------------------
 lab14StopAllStress();
+
+try {
+    lab14CleanupUI();
+} catch (Throwable ignore) {}
 
 if (lab14Cancelled) {
     return;
 }
 
-}   // ← run()
-}); // ← ui.post
+}
+
+});
+
+}
+
+}, 100);
 
 // ----------------------------------------------------
 // 7) POST-LOAD ANALYSIS THREAD
