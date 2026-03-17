@@ -3284,9 +3284,6 @@ dlg.setOnCancelListener(d -> {
 
     AppTTS.stop();
 
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
-
 });
 
     String introText =
@@ -5001,6 +4998,7 @@ private void showLab15ConditionCheck(Runnable startAction) {
 
 
     dlg.setOnDismissListener(d -> AppTTS.stop());
+    
     dlg.setOnCancelListener(d -> AppTTS.stop());
 
 
