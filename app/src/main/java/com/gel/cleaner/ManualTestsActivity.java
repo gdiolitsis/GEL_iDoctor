@@ -16005,15 +16005,15 @@ private void lab15ChargingSystemSmart() {
     boolean badBat =
             percent < 20 || percent > 80;
 
+    if (!lab15Running) {
 
-    // ALWAYS show condition popup first
+        showLab15ConditionCheck(() -> {
+            lab15Running = true;
+            lab15ChargingSystemSmart();
+        });
 
-    showLab15ConditionCheck(() -> {
-        lab15ChargingSystemSmart();
-    });
-
-    return;
-
+        return;
+    }
 
     SharedPreferences p =
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
