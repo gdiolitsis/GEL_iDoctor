@@ -3504,11 +3504,11 @@ private boolean checkLab14BConditions() {
     logLine();
 
     logInfo(gr
-            ? "Έλεγχος συνθηκών για τεστ προστασίας συστήματος"
-            : "Checking conditions for system protection test");
+            ? "Lab 14B - Έλεγχος συνθηκών για τεστ προστασίας συστήματος"
+            : "Lab 14B - Checking conditions for system protection test");
 
     logLine();
-
+    appendHtml("<br>");
 
     // ----------------------------------------------------
     // BATTERY %
@@ -3536,8 +3536,7 @@ private boolean checkLab14BConditions() {
     logOk(gr
             ? "Οι συνθήκες είναι κατάλληλες."
             : "Conditions OK.");
-
-    logLine();
+            appendHtml("<br>");
 
     return true;
 }
@@ -3555,13 +3554,12 @@ private void lab14BProtectionTest() {
             return;
         }
 
-        logLine();
-
         logInfo(gr
                 ? "Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
                 : "Final check of battery protection by the system");
 
         logLine();
+        appendHtml("<br>");
 
         new Thread(() -> {
 
@@ -3604,11 +3602,11 @@ private void lab14BProtectionTest() {
                 cpuTempStart = readCpuTempSafe2();
 
                 runOnUiThread(() ->
-                        logInfo(gr
+                        logOk(gr
                                 ? "Εκτέλεση δοκιμής φορτίου..."
                                 : "Running load test...")
                 );
-
+                
                 try {
                     startCpuBurn_C_Mode();
                     startGpuStress();
@@ -4573,13 +4571,6 @@ private void Lab14BatteryProtectionCheck(
 ) {
 
     appendHtml("<br>");
-    logLine();
-
-    logInfo(gr
-        ? "Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
-        : "Final check of battery protection by the system");
-
-    logLine();
 
     boolean systemLimited = lab14_systemLimited[0];
 
@@ -4612,8 +4603,9 @@ private void Lab14BatteryProtectionCheck(
                 : "Stress level not sufficient for full check.");
 
     }
+    
+appendHtml("<br>");
 
-    logLine();
 }
 
 // ------------------------------------------------------------
