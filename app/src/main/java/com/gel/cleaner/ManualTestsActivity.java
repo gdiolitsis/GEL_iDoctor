@@ -13068,29 +13068,46 @@ private void lab14BatteryHealthStressTest_REAL() {
     // RESET STATE (πριν ξεκινήσει νέο run)
     // ---------------------------------------
 
-    lab14Cancelled = false;
-    lab14PopupShown = false;
+lab14Cancelled = false;
+lab14PopupShown = false;
 
-    lab14StartTime = 0L;
-    lab14EndTime = 0L;
+resetBatteryDiagnostics();
 
-    startPercent = -1;
-    endPercent = -1;
+collapseRisk[0] = false;
+swellingRisk[0] = false;
+calibrationDrift[0] = false;
+cellImbalanceRisk[0] = false;
 
-    sag1[0] = Float.NaN;
-    sag2[0] = Float.NaN;
-    sagAvg[0] = Float.NaN;
+lab14_systemLimited[0] = false;
 
-    collapseRisk[0] = false;
-    swellingRisk[0] = false;
-    calibrationDrift[0] = false;
-    cellImbalanceRisk[0] = false;
+sag1[0] = Float.NaN;
+sag2[0] = Float.NaN;
+sagAvg[0] = Float.NaN;
 
-    lab14_systemLimited[0] = false;
+vStart[0] = Float.NaN;
+vLoad1[0] = Float.NaN;
+vRecover[0] = Float.NaN;
+vLoad2[0] = Float.NaN;
 
-    resetBatteryDiagnostics();
+voltageRecovery[0] = Float.NaN;
+voltageRecoverySpeed[0] = Float.NaN;
+voltageStability[0] = Float.NaN;
 
-    final boolean[] variabilityDetected = { false };
+internalResistance[0] = Float.NaN;
+thermalImpedance[0] = Float.NaN;
+
+powerStabilityFactor[0] = Float.NaN;
+stressSignature[0] = Float.NaN;
+cellElasticityIndex[0] = Float.NaN;
+structuralIntegrityIndex[0] = Float.NaN;
+
+expectedPercent[0] = Float.NaN;
+percentDeviation[0] = Float.NaN;
+
+startBatteryTemp = Float.NaN;
+endBatteryTemp = Float.NaN;
+
+final boolean[] variabilityDetected = { false };
 
     // reset LAB14 state (fields)
 
