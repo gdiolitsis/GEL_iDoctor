@@ -15718,7 +15718,7 @@ root.addView(buildMuteRow());
 // ==========================
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-    if (popup.isShowing() && !AppTTS.isMuted(this)) {
+    if (!AppTTS.isMuted(this)) {
 
         AppTTS.ensureSpeak(this, text);
 
