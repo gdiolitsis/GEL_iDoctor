@@ -336,6 +336,8 @@ private String lab14AgingInterp = "N/A";
 
 private boolean lab14BatteryBehaviourWarning = false;
 
+private boolean lab15PopupShown = false;
+
     
     private final Runnable lab14VibrationLoop = new Runnable() {
     @Override
@@ -16005,18 +16007,17 @@ private void lab15ChargingSystemSmart() {
     boolean badBat =
             percent < 20 || percent > 80;
 
-    if (!lab15Running) {
+
+    if (!lab15Running && !lab15PopupShown) {
+
+        lab15PopupShown = true;
 
         showLab15ConditionCheck(() -> {
-            lab15Running = true;
             lab15ChargingSystemSmart();
         });
 
         return;
     }
-
-    SharedPreferences p =
-            getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
     if (lab15Running) {
         logWarn(gr
