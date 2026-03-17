@@ -3000,28 +3000,35 @@ private void showLab14ConditionCheck(Runnable startAction) {
     LinearLayout root = buildGELPopupRoot(this);
 
 
-    // HEADER
-    root.addView(
-            buildPopupHeader(
-                    this,
-                    gr
-                            ? "Έλεγχος συνθηκών LAB 14"
-                            : "LAB 14 Condition Check"
-            )
-    );
+// HEADER
+root.addView(
+        buildPopupHeader(
+                this,
+                gr
+                        ? "Έλεγχος συνθηκών LAB 14"
+                        : "LAB 14 Condition Check"
+        )
+);
 
-
-    StringBuilder warn = new StringBuilder();
+StringBuilder warn = new StringBuilder();
 boolean hasWarn = false;
 
-if (percent < 30 || percent > 70) {
+float cpuTemp = readCpuTempSafe();
+
+boolean badBat = percent < 30 || percent > 70;
+boolean badCpu = !Float.isNaN(cpuTemp) && cpuTemp >= 60f;
+
+
+// ---------------- WARN ----------------
+
+if (badBat) {
 
     hasWarn = true;
 
     warn.append(
             gr
-                    ? "• Η μπαταρία πρέπει να είναι φορτισμένη μεταξύ 30% και 70%\n"
-                    : "• Battery must be charged between 30% and 70%\n"
+                    ? "• Η μπαταρία πρέπει να είναι μεταξύ 30% και 70%\n"
+                    : "• Battery must be between 30% and 70%\n"
     );
 }
 
@@ -3036,14 +3043,14 @@ if (chargingNow) {
     );
 }
 
-if (!Float.isNaN(tempC) && tempC >= 38f) {
+if (badCpu) {
 
     hasWarn = true;
 
     warn.append(
             gr
-                    ? "• Η θερμοκρασία είναι υψηλή για stress test\n"
-                    : "• Temperature too high for stress test\n"
+                    ? "• Η θερμοκρασία CPU είναι υψηλή\n"
+                    : "• CPU temperature too high\n"
     );
 }
 
@@ -3051,56 +3058,105 @@ if (!hasWarn) {
 
     warn.append(
             gr
-                    ? "Οι συνθήκες είναι κατάλληλες για το τεστ."
-                    : "Conditions are OK for the test."
+                    ? "Οι συνθήκες είναι κατάλληλες"
+                    : "Conditions are OK"
     );
 }
 
 
-final String txt =
-        (gr ? "Μπαταρία: " : "Battery: ")
-                + percent + "%\n"
-                +
-                (gr ? "Θερμοκρασία: " : "Temperature: ")
-                + (Float.isNaN(tempC)
-                ? "N/A"
-                : String.format(Locale.US, "%.1f°C", tempC))
-                + "\n"
-                +
-                (chargingNow
-                        ? (gr
-                        ? "Η συσκευή φορτίζεται. Αποσύνδεσε τον φορτιστή."
-                        : "Device is charging. Disconnect the charger.")
-                        : (gr
-                        ? "Η συσκευή δεν φορτίζεται."
-                        : "Device is not charging"));
-
-
+// =========================
+// SPANNABLE TEXT
+// =========================
 
 SpannableStringBuilder sb = new SpannableStringBuilder();
 
+int white = 0xFFFFFFFF;
 int green = 0xFF39FF14;
 int red   = 0xFFFF4444;
 
+int start;
 
-// INFO → πάντα πράσινο
 
-int start = sb.length();
+// ---------- Battery ----------
 
-sb.append(txt).append("\n\n");
+String labelBat = gr ? "Μπαταρία: " : "Battery: ";
+String valueBat = percent + "%\n";
 
+start = sb.length();
+sb.append(labelBat);
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+start = sb.length();
+sb.append(valueBat);
 sb.setSpan(
-        new ForegroundColorSpan(green),
+        new ForegroundColorSpan(badBat ? red : green),
         start,
         sb.length(),
-        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        0
 );
 
 
-// WARN / OK
+// ---------- Battery temp ----------
+
+String labelTemp = gr ? "Θερμοκρασία μπαταρίας: " : "Battery temp: ";
+String valueTemp =
+        Float.isNaN(tempC)
+                ? "N/A\n"
+                : String.format(Locale.US, "%.1f°C\n", tempC);
+
+start = sb.length();
+sb.append(labelTemp);
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+start = sb.length();
+sb.append(valueTemp);
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+
+// ---------- CPU ----------
+
+String labelCpu = gr ? "CPU: " : "CPU: ";
+String valueCpu =
+        Float.isNaN(cpuTemp)
+                ? "N/A\n"
+                : String.format(Locale.US, "%.1f°C\n", cpuTemp);
+
+start = sb.length();
+sb.append(labelCpu);
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+start = sb.length();
+sb.append(valueCpu);
+sb.setSpan(
+        new ForegroundColorSpan(badCpu ? red : green),
+        start,
+        sb.length(),
+        0
+);
+
+
+// ---------- Charging ----------
+
+String chargeTxt =
+        chargingNow
+                ? (gr ? "Φορτίζει\n" : "Charging\n")
+                : (gr ? "Δεν φορτίζει\n" : "Not charging\n");
+
+start = sb.length();
+sb.append(chargeTxt);
+sb.setSpan(
+        new ForegroundColorSpan(chargingNow ? red : green),
+        start,
+        sb.length(),
+        0
+);
+
+
+// ---------- WARN / OK ----------
 
 start = sb.length();
 
+sb.append("\n");
 sb.append(warn.toString());
 
 sb.setSpan(
@@ -3109,9 +3165,11 @@ sb.setSpan(
         ),
         start,
         sb.length(),
-        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        0
 );
 
+
+// ---------- TEXTVIEW ----------
 
 TextView msg = new TextView(this);
 
@@ -12587,6 +12645,24 @@ AppTTS.stop();
 // LAB 14 — ENTRY (POPUP FLOW)
 // ============================================================
 private void lab14BatteryHealthStressTest() {
+
+    // --------------------------------------------------
+    // PRE CHECK (όπως ήταν πριν)
+    // --------------------------------------------------
+
+    int percent = getBatteryPercentSafe();
+
+    float tempC = getBatteryTempSafe();
+
+    boolean charging = isChargingNowSafe();
+
+
+    // εδώ απλά διαβάζουμε τιμές ώστε να ενημερωθούν helpers
+    // πριν ανοίξει το popup (όπως παλιά)
+
+    // --------------------------------------------------
+    // POPUP FLOW
+    // --------------------------------------------------
 
     showLab14ConditionCheck(() -> {
 
