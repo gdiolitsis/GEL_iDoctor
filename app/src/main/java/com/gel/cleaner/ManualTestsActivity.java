@@ -13181,9 +13181,6 @@ if (!Float.isNaN(pulseSag[0]) &&
             int dotStep = 0;
             int lastSeg = -1;
 
-            @Override
-            public void run() {
-
                 @Override
 public void run() {
 
