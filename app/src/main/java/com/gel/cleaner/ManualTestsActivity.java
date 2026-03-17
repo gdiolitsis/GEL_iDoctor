@@ -2993,11 +2993,14 @@ private void showLab14ConditionCheck(Runnable startAction) {
             !Float.isNaN(tempC) && tempC >= 38f;
 
 
-    boolean ok =
-            !chargingNow &&
-            !badBat &&
-            !badCpu &&
-            !badTemp;
+    boolean cpuOk =
+        Float.isNaN(cpuTemp) || cpuTemp < 60f;
+
+boolean ok =
+        !chargingNow &&
+        !badBat &&
+        !badTemp &&
+        cpuOk;
 
 
     AlertDialog.Builder b =
@@ -3076,7 +3079,7 @@ private void showLab14ConditionCheck(Runnable startAction) {
     }
 
 
-    if (badCpu) {
+    if (!Float.isNaN(cpuTemp) && badCpu) {
 
         hasWarn = true;
 
@@ -3273,8 +3276,27 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     dlg.show();
 
+dlg.setOnDismissListener(d -> {
+    AppTTS.stop();
+});
 
-    final String speakTextFinal = sb.toString();
+dlg.setOnCancelListener(d -> {
+    AppTTS.stop();
+});
+
+    String introText =
+        gr
+                ? "Για την εκτέλεση του τεστ απαιτούνται. "
+                + "Μπαταρία μεταξύ 30 και 70 τοις εκατό. "
+                + "Θερμοκρασία CPU κάτω από 60 βαθμούς. "
+                + "Η συσκευή να μην φορτίζει. "
+                : "Requirements for this test. "
+                + "Battery between 30 and 70 percent. "
+                + "CPU temperature below 60 degrees. "
+                + "Device must not be charging. ";
+
+final String speakTextFinal =
+        introText + " " + sb.toString();
 
 
     new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -4504,50 +4526,26 @@ private int getLab14RunCount() {
 // ------------------------------------------------------------
 private Float readCpuTempSafe() {
 
-    // ---- thermal zones ----
     try {
 
         Map<String, Float> zones = readThermalZones();
 
-        Float v = pickZone(zones, "cpu", "soc", "ap");
+        Float t = pickZone(
+                zones,
+                "cpu",
+                "soc",
+                "ap",
+                "cluster",
+                "little",
+                "big"
+        );
 
-        if (v != null && v > 10f && v < 120f)
-            return v;
+        if (t == null) return null;
 
-    } catch (Throwable ignore) {}
+        // reject impossible values
+        if (t < 10f || t > 90f) return null;
 
-
-    // ---- sysfs fallback ----
-    try {
-
-        for (int i = 0; i < 20; i++) {
-
-            java.io.File f =
-                    new java.io.File(
-                            "/sys/class/thermal/thermal_zone"
-                                    + i
-                                    + "/temp"
-                    );
-
-            if (!f.exists()) continue;
-
-            java.io.BufferedReader br =
-                    new java.io.BufferedReader(
-                            new java.io.FileReader(f)
-                    );
-
-            String s = br.readLine();
-            br.close();
-
-            if (s == null) continue;
-
-            float v = Float.parseFloat(s.trim());
-
-            if (v > 1000f) v /= 1000f;
-
-            if (v > 10f && v < 120f)
-                return v;
-        }
+        return t;
 
     } catch (Throwable ignore) {}
 
@@ -4556,50 +4554,22 @@ private Float readCpuTempSafe() {
 
 private Float readGpuTempSafe() {
 
-    // ---- thermal zones ----
     try {
 
         Map<String, Float> zones = readThermalZones();
 
-        Float v = pickZone(zones, "gpu", "gfx", "kgsl");
+        Float t = pickZone(
+                zones,
+                "gpu",
+                "kgsl",
+                "gfx"
+        );
 
-        if (v != null && v > 10f && v < 120f)
-            return v;
+        if (t == null) return null;
 
-    } catch (Throwable ignore) {}
+        if (t < 10f || t > 90f) return null;
 
-
-    // ---- fallback thermal_zone scan ----
-    try {
-
-        for (int i = 0; i < 20; i++) {
-
-            java.io.File f =
-                    new java.io.File(
-                            "/sys/class/thermal/thermal_zone"
-                                    + i
-                                    + "/temp"
-                    );
-
-            if (!f.exists()) continue;
-
-            java.io.BufferedReader br =
-                    new java.io.BufferedReader(
-                            new java.io.FileReader(f)
-                    );
-
-            String s = br.readLine();
-            br.close();
-
-            if (s == null) continue;
-
-            float v = Float.parseFloat(s.trim());
-
-            if (v > 1000f) v /= 1000f;
-
-            if (v > 10f && v < 120f)
-                return v;
-        }
+        return t;
 
     } catch (Throwable ignore) {}
 
@@ -4798,6 +4768,251 @@ private void Lab14BatteryProtectionCheck(
     
 appendHtml("<br>");
 
+}
+
+// ============================================================
+// LAB 15 — CONDITION CHECK POPUP (GEL STYLE)
+// ============================================================
+private void showLab15ConditionCheck(Runnable startAction) {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    int percent = getBatteryPercentSafe();
+
+    boolean badBat =
+            percent < 20 || percent > 80;
+
+    boolean ok =
+            !badBat;
+
+
+    AlertDialog.Builder b =
+            new AlertDialog.Builder(
+                    this,
+                    android.R.style.Theme_Material_Dialog_NoActionBar
+            );
+
+    b.setCancelable(true);
+
+    LinearLayout root = buildGELPopupRoot(this);
+
+
+    // HEADER
+
+    root.addView(
+            buildPopupHeader(
+                    this,
+                    gr
+                            ? "Έλεγχος συνθηκών LAB 15"
+                            : "LAB 15 Condition Check"
+            )
+    );
+
+
+    // INFO TEXT
+
+    TextView info = new TextView(this);
+
+    info.setText(
+        gr
+                ? "Για την εκτέλεση του τεστ, απαιτείται\n\n"
+                + "η μπαταρία να είναι φορτισμένη μεταξύ 20% – 80%\n"
+                : "To run this test, the battery level must be\n\n"
+                + "between 20% – 80%\n"
+);
+
+    info.setTextColor(0xFF39FF14);
+    info.setTextSize(14f);
+    info.setLineSpacing(0f, 1.2f);
+    info.setPadding(0, dp(8), 0, dp(6));
+
+    root.addView(info);
+
+
+    StringBuilder warn = new StringBuilder();
+    boolean hasWarn = false;
+
+
+    // WARN
+
+    if (badBat) {
+
+        hasWarn = true;
+
+        warn.append(
+                gr
+                        ? "• Η μπαταρία πρέπει να είναι μεταξύ 20% και 80%\n"
+                        : "• Battery must be between 20% and 80%\n"
+        );
+    }
+
+
+    if (!hasWarn) {
+
+        warn.append(
+                gr
+                        ? "Οι συνθήκες είναι κατάλληλες"
+                        : "Conditions are OK"
+        );
+    }
+
+
+    // =========================
+    // SPANNABLE
+    // =========================
+
+    SpannableStringBuilder sb = new SpannableStringBuilder();
+
+    int white = 0xFFFFFFFF;
+    int green = 0xFF39FF14;
+    int red   = 0xFFFF4444;
+
+    int start;
+
+
+    // Battery
+
+    start = sb.length();
+    sb.append(gr ? "Μπαταρία: " : "Battery: ");
+    sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+    start = sb.length();
+    sb.append(percent + "%\n");
+
+    sb.setSpan(
+            new ForegroundColorSpan(
+                    badBat ? red : green
+            ),
+            start,
+            sb.length(),
+            0
+    );
+
+
+    // WARN
+
+    start = sb.length();
+
+    sb.append("\n");
+    sb.append(warn.toString());
+
+    sb.setSpan(
+            new ForegroundColorSpan(
+                    hasWarn ? red : green
+            ),
+            start,
+            sb.length(),
+            0
+    );
+
+
+    TextView msg = new TextView(this);
+
+    msg.setText(sb);
+    msg.setTextSize(14.5f);
+    msg.setLineSpacing(0f, 1.2f);
+
+    root.addView(msg);
+
+
+    root.addView(buildMuteRow());
+
+
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+
+
+    Button cancel =
+            gelButton(
+                    this,
+                    gr ? "Ακύρωση" : "Cancel",
+                    0xFF8B0000
+            );
+
+    Button go =
+            gelButton(
+                    this,
+                    gr ? "Συνέχεια" : "Continue",
+                    0xFF0B5D1E
+            );
+
+
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    0,
+                    dp(48),
+                    1
+            );
+
+    lp.setMargins(dp(6), dp(18), dp(6), 0);
+
+    cancel.setLayoutParams(lp);
+    go.setLayoutParams(lp);
+
+    row.addView(cancel);
+
+    if (ok)
+        row.addView(go);
+
+    root.addView(row);
+
+
+    b.setView(root);
+
+    AlertDialog dlg = b.create();
+
+    if (dlg.getWindow() != null)
+        dlg.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT)
+        );
+
+    dlg.show();
+
+
+    final String speakTextFinal =
+            (gr
+                    ? "Έλεγχος συνθηκών. "
+                    + "Απαιτείται μπαταρία μεταξύ 20 και 80 τοις εκατό. "
+                    : "Condition check. "
+                    + "Battery must be between 20 and 80 percent. ")
+            + sb.toString();
+
+
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+        if (dlg.isShowing()
+                && !AppTTS.isMuted(this)) {
+
+            AppTTS.ensureSpeak(
+                    this,
+                    speakTextFinal
+            );
+        }
+
+    }, 120);
+
+
+    dlg.setOnDismissListener(d -> AppTTS.stop());
+    dlg.setOnCancelListener(d -> AppTTS.stop());
+
+
+    cancel.setOnClickListener(v -> {
+
+        AppTTS.stop();
+        dlg.dismiss();
+
+    });
+
+
+    go.setOnClickListener(v -> {
+
+        AppTTS.stop();
+        dlg.dismiss();
+
+        if (startAction != null)
+            startAction.run();
+
+    });
 }
 
 // ------------------------------------------------------------
@@ -15784,6 +15999,22 @@ private boolean isCharging() {
 private void lab15ChargingSystemSmart() {
 
     final boolean gr = AppLang.isGreek(this);
+
+    int percent = getBatteryPercentSafe();
+
+    boolean badBat =
+            percent < 20 || percent > 80;
+
+
+    // ALWAYS show condition popup first
+
+    showLab15ConditionCheck(() -> {
+        lab15ChargingSystemSmart();
+    });
+
+    return;
+
+
     SharedPreferences p =
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
@@ -15793,6 +16024,17 @@ private void lab15ChargingSystemSmart() {
                 : "LAB 15 already running.");
         return;
     }
+    
+    appendHtml("<br>");
+logLine();
+
+logInfo(
+        gr
+                ? "LAB 15 — Διαγνωστικός έλεγχος συστήματος φόρτισης"
+                : "LAB 15 — Charging system diagnostic"
+);
+
+logLine();
 
 // ================= FLAGS RESET =================
 
