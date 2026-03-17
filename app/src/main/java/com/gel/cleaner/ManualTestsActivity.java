@@ -12993,6 +12993,7 @@ root.addView(videoHolder);
         exitBtn.setOnClickListener(v -> {
 
     lab14Cancelled = true;
+    lab14Running = false;
 
     lab14StopAllStress();
 
@@ -13184,14 +13185,12 @@ if (!Float.isNaN(pulseSag[0]) &&
             public void run() {
 
                 if (lab14Cancelled ||
-                    !lab14Running ||
-                    isFinishing() ||
-                    lab14Dialog == null ||
-                    !lab14Dialog.isShowing()) {
+    !lab14Running ||
+    isFinishing()) {
 
-                    ui.removeCallbacks(this);
-                    return;
-                }
+    ui.removeCallbacks(this);
+    return;
+}
 
                 long now = SystemClock.elapsedRealtime();
                 int elapsed = (int) ((now - t0) / 1000);
@@ -14875,6 +14874,8 @@ logOk(
 );
 logLine();
 
+lab14Running = false;
+
         });
 
     } catch (Throwable t) {
@@ -15474,13 +15475,14 @@ private boolean isChargingNowSafe() {
 // ============================================================
 private void lab14StopAllStress() {
 
-try { stopCpuBurn(); } catch (Throwable ignore) {}  
-try { stopMemoryStress(); } catch (Throwable ignore) {}  
-try { stopGpuStress(); } catch (Throwable ignore) {}  
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
 
-try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}  
+    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
-lab14Running = false;
+    // ❌ ΜΗΝ το αλλάζεις εδώ
+    // lab14Running = false;
 
 }
 
