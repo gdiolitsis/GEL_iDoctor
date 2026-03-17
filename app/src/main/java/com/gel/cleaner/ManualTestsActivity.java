@@ -3243,20 +3243,31 @@ root.addView(msg);
 
     dlg.show();
 
+final boolean warnFinal = hasWarn;
+final String warnTextFinal = warn.toString();
+final boolean grFinal = gr;
 
-    // 🔊 TTS
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-        if (dlg.isShowing()
-                && !AppTTS.isMuted(this)) {
+// 🔊 TTS
+new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-            AppTTS.ensureSpeak(
-        this,
-        hasWarn ? warn.toString() : (gr ? "Οι συνθήκες είναι κατάλληλες" : "Conditions are OK")
-);
-        }
+    if (dlg.isShowing()
+            && !AppTTS.isMuted(this)) {
 
-    }, 120);
+        final String speakText =
+                warnFinal
+                        ? warnTextFinal
+                        : (grFinal
+                        ? "Οι συνθήκες είναι κατάλληλες"
+                        : "Conditions are OK");
+
+        AppTTS.ensureSpeak(
+                this,
+                speakText
+        );
+    }
+
+}, 120);
 
 
     cancel.setOnClickListener(v -> {
