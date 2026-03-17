@@ -15630,8 +15630,7 @@ if (batteryLevel > 80) {
     return;
 }
 
-TextView msg = new TextView(this);
-msg.setText(
+final String text =
         gr
                 ? "Σύνδεσε τον φορτιστή στη θύρα φόρτισης της συσκευής.\n\n"
                   + "Το σύστημα θα παρακολουθεί τη συμπεριφορά φόρτισης\n"
@@ -15642,9 +15641,11 @@ msg.setText(
                   + "The system will monitor charging behavior\n"
                   + "for the next 3 minutes.\n\n"
                   + "Please keep the device connected\n"
-                  + "during the entire test."
-);
-msg.setTextColor(0xFF39FF14); // GEL neon green
+                  + "during the entire test.";
+                  
+TextView msg = new TextView(this);
+msg.setText(text);
+msg.setTextColor(0xFF39FF14);
 msg.setTextSize(15f);
 msg.setGravity(Gravity.CENTER);
 msg.setLineSpacing(0f, 1.2f);
@@ -15712,21 +15713,18 @@ root.addView(lab15ProgressBar);
 // ---------------------------
 root.addView(buildMuteRow());
 
-// ---------------------------
-// TTS (ONLY IF NOT MUTED)
-// ---------------------------
-final String ttsText =
-        gr
-                ? "Σύνδεσε τον φορτιστή στη θύρα φόρτισης της συσκευής.\n\n"
-                  + "Το σύστημα θα παρακολουθεί τη συμπεριφορά φόρτισης,\n"
-                  + "για τα επόμενα 3 λεπτά.\n\n"
-                  + "Κράτησε τη συσκευή συνδεδεμένη\n"
-                  + "καθ’ όλη τη διάρκεια του τεστ."
-                : "Connect the charger to the device’s charging port.\n\n"
-                  + "The system will monitor charging behavior\n"
-                  + "for the next 3 minutes.\n\n"
-                  + "Please keep the device connected\n"
-                  + "during the entire test.";
+// ==========================
+// TTS — GLOBAL ENGINE
+// ==========================
+new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+    if (popup.isShowing() && !AppTTS.isMuted(this)) {
+
+        AppTTS.ensureSpeak(this, text);
+
+    }
+
+}, 120);
 
 // ============================================================
 // EXIT BUTTON (LAB 15 — GEL STYLE)
@@ -16264,7 +16262,6 @@ private void lab16ThermalSnapshot() {
 
     logInfo(gr ? "Θερμική σύνοψη:" : "Thermal summary:");
     logLine();
-    appendHtml("<br>");
 
     if (danger) {
 
@@ -16311,7 +16308,7 @@ private void lab16ThermalSnapshot() {
         if (peakTemp >= 55f) {
 
             logLabelErrorValue(
-                    gr ? "Μέγιστη" : "Peak",
+                    gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
                     peakText
             );
 
@@ -16325,7 +16322,7 @@ private void lab16ThermalSnapshot() {
         } else {
 
             logLabelOkValue(
-                    gr ? "Μέγιστη" : "Peak",
+                    gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
                     peakText
             );
         }
