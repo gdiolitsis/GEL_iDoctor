@@ -13047,6 +13047,7 @@ if (!lab14PopupShown) {
 
     return;
 }
+}
 
 // ============================================================
 // LAB 14 — Battery Health Stress Test
