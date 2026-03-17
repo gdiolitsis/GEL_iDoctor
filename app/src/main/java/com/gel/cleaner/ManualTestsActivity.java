@@ -13186,7 +13186,6 @@ if (!Float.isNaN(pulseSag[0]) &&
 
                 if (lab14Cancelled ||
     !lab14Running ||
-    isFinishing()) {
 
     ui.removeCallbacks(this);
     return;
