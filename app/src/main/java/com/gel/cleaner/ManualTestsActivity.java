@@ -3504,11 +3504,10 @@ private boolean checkLab14BConditions() {
     logLine();
 
     logInfo(gr
-            ? "Lab 14B - Έλεγχος συνθηκών για τεστ προστασίας συστήματος"
-            : "Lab 14B - Checking conditions for system protection test");
+            ? "LAB 14B - Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
+                : "LAB 14B - Final check of battery protection by the system");
 
     logLine();
-    appendHtml("<br>");
 
     // ----------------------------------------------------
     // BATTERY %
@@ -3536,7 +3535,6 @@ private boolean checkLab14BConditions() {
     logOk(gr
             ? "Οι συνθήκες είναι κατάλληλες."
             : "Conditions OK.");
-            appendHtml("<br>");
 
     return true;
 }
@@ -3554,11 +3552,6 @@ private void lab14BProtectionTest() {
             return;
         }
 
-        logInfo(gr
-                ? "Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
-                : "Final check of battery protection by the system");
-
-        logLine();
         appendHtml("<br>");
 
         new Thread(() -> {
@@ -16241,7 +16234,7 @@ private void lab16ThermalSnapshot() {
         }
     }
 
-    logLine();
+    appendHtml("<br>");
 
     // ------------------------------------------------------------
     // SUMMARY
@@ -16249,6 +16242,8 @@ private void lab16ThermalSnapshot() {
     boolean danger = peakTemp >= 55f;
 
     logInfo(gr ? "Θερμική σύνοψη:" : "Thermal summary:");
+    logLine();
+    appendHtml("<br>");
 
     if (danger) {
 
@@ -16284,10 +16279,6 @@ private void lab16ThermalSnapshot() {
     // ------------------------------------------------------------
     if (peakTemp > 0) {
 
-        logInfo(gr
-                ? "Μέγιστη θερμοκρασία που παρατηρήθηκε:"
-                : "Peak temperature observed:");
-
         String peakText = String.format(
                 Locale.US,
                 "%.1f°C %s %s",
@@ -16306,7 +16297,7 @@ private void lab16ThermalSnapshot() {
         } else if (peakTemp >= 45f) {
 
             logLabelWarnValue(
-                    gr ? "Μέγιστη" : "Peak",
+                    gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
                     peakText
             );
 
@@ -16386,10 +16377,8 @@ private void lab16ThermalSnapshot() {
                 .apply();
     } catch (Throwable ignore) {}
 
-    logInfo(gr ? "Δείκτης θερμικής συμπεριφοράς:" : "Thermal behaviour score:");
-
     logLabelOkValue(
-            gr ? "Βαθμολογία" : "Score",
+            gr ? "Βαθμολογία θερμικής συμπεριφοράς" : "Thermal behaviour score",
             String.format(Locale.US, "%d%%", thermalScore)
     );
 
