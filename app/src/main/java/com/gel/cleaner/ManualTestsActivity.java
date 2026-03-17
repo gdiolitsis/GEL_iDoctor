@@ -295,6 +295,8 @@ public class ManualTestsActivity extends AppCompatActivity {
 
     private AlertDialog lab14RunningDialog;
     
+    private volatile boolean lab14FastDone = false;
+    
     final boolean[] lab14_systemLimited = { false };
     
     private volatile boolean __cpuBurn = false;
@@ -13023,6 +13025,8 @@ root.addView(videoHolder);
         // ------------------------------------------------------------
         new Thread(() -> {
 
+    lab14FastDone = false;
+
             vStart[0] = getBatteryVoltageFiltered();
 
             startCpuBurn_C_Mode();
@@ -13124,12 +13128,18 @@ if (!Float.isNaN(pulseSag[0]) &&
                     cellImbalanceRisk[0] = true;
                 }
             }
+            
+            lab14FastDone = true;
 
         }).start();
 
-        // ------------------------------------------------------------
-        // 5) MAIN STRESS START
-        // ------------------------------------------------------------
+        while (!lab14FastDone && !lab14Cancelled) {
+    SystemClock.sleep(50);
+}
+
+// ------------------------------------------------------------
+// 5) MAIN STRESS START
+// ------------------------------------------------------------
         if (lab14Cancelled) {
             lab14StopAllStress();
             lab14CleanupUI();
