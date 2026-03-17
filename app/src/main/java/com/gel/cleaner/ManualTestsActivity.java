@@ -13057,71 +13057,46 @@ private void lab14BatteryHealthStressTest_REAL() {
 
     final boolean gr = AppLang.isGreek(this);
 
+    // --------------------------------------------------
+    // FORCE RESET STATE (για popup flow / restart / auto)
+    // --------------------------------------------------
+
     if (lab14Running) {
-        logWarn(gr
-                ? "Το LAB 14 εκτελείται ήδη."
-                : "LAB 14 already running.");
-        return;
-    }
 
-    // ---------------------------------------
-    // RESET STATE (πριν ξεκινήσει νέο run)
-    // ---------------------------------------
+    lab14StopAllStress();
 
-lab14Cancelled = false;
-lab14PopupShown = false;
+    try {
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
 
-resetBatteryDiagnostics();
+    lab14Running = false;
+    lab14Cancelled = false;
+}
 
-collapseRisk[0] = false;
-swellingRisk[0] = false;
-calibrationDrift[0] = false;
-cellImbalanceRisk[0] = false;
+    // --------------------------------------------------
+    // RESET FLAGS
+    // --------------------------------------------------
 
-lab14_systemLimited[0] = false;
+    lab14Cancelled = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
 
-sag1[0] = Float.NaN;
-sag2[0] = Float.NaN;
-sagAvg[0] = Float.NaN;
+    // --------------------------------------------------
+    // RESET DIAGNOSTICS
+    // --------------------------------------------------
 
-vStart[0] = Float.NaN;
-vLoad1[0] = Float.NaN;
-vRecover[0] = Float.NaN;
-vLoad2[0] = Float.NaN;
+    resetBatteryDiagnostics();
 
-voltageRecovery[0] = Float.NaN;
-voltageRecoverySpeed[0] = Float.NaN;
-voltageStability[0] = Float.NaN;
+    collapseRisk[0] = false;
+    swellingRisk[0] = false;
+    calibrationDrift[0] = false;
+    cellImbalanceRisk[0] = false;
 
-internalResistance[0] = Float.NaN;
-thermalImpedance[0] = Float.NaN;
+    lab14_systemLimited[0] = false;
 
-powerStabilityFactor[0] = Float.NaN;
-stressSignature[0] = Float.NaN;
-cellElasticityIndex[0] = Float.NaN;
-structuralIntegrityIndex[0] = Float.NaN;
-
-expectedPercent[0] = Float.NaN;
-percentDeviation[0] = Float.NaN;
-
-startBatteryTemp = Float.NaN;
-endBatteryTemp = Float.NaN;
-
-final boolean[] variabilityDetected = { false };
-
-    // reset LAB14 state (fields)
-
-    lab14Conf = null;
-    lab14AgingIndex = -1;
-    lab14AgingInterp = "N/A";
-    lab14BatteryBehaviourWarning = false;
-
-    final SharedPreferences p =
-            getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
-
-    // ---------------------------------------
-    // RESET METRICS
-    // ---------------------------------------
+    sag1[0] = Float.NaN;
+    sag2[0] = Float.NaN;
+    sagAvg[0] = Float.NaN;
 
     vStart[0] = Float.NaN;
     vLoad1[0] = Float.NaN;
@@ -13146,9 +13121,23 @@ final boolean[] variabilityDetected = { false };
     startBatteryTemp = Float.NaN;
     endBatteryTemp = Float.NaN;
 
-    // ---------------------------------------
-    // START FLAG (εδώ πρέπει!)
-    // ---------------------------------------
+    final boolean[] variabilityDetected = { false };
+
+    // --------------------------------------------------
+    // RESET ENGINE STATE
+    // --------------------------------------------------
+
+    lab14Conf = null;
+    lab14AgingIndex = -1;
+    lab14AgingInterp = "N/A";
+    lab14BatteryBehaviourWarning = false;
+
+    final SharedPreferences p =
+            getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+
+    // --------------------------------------------------
+    // START FLAG (μόνο εδώ!)
+    // --------------------------------------------------
 
     lab14Running = true;
 
