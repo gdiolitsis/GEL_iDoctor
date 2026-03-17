@@ -13064,43 +13064,47 @@ private void lab14BatteryHealthStressTest_REAL() {
         return;
     }
 
-    if (lab14Cancelled) {
-        lab14Cancelled = false;
-    }
+    // ---------------------------------------
+    // RESET STATE (πριν ξεκινήσει νέο run)
+    // ---------------------------------------
 
-
-    // reset popup flag because test really starts now
+    lab14Cancelled = false;
     lab14PopupShown = false;
 
+    lab14StartTime = 0L;
+    lab14EndTime = 0L;
 
-    // RESET DIAGNOSTICS
-    resetBatteryDiagnostics();
-
-    final boolean[] variabilityDetected = { false };
-
-// reset LAB14 state (fields)
-lab14Conf = null;
-lab14AgingIndex = -1;
-lab14AgingInterp = "N/A";
-lab14BatteryBehaviourWarning = false;
-
-final SharedPreferences p =
-        getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
-        
-    // ------------------------------------------------------------
-    // RESET RUNTIME FLAGS / METRICS
-    // ------------------------------------------------------------
-    collapseRisk[0] = false;
-    swellingRisk[0] = false;
-    calibrationDrift[0] = false;
-    cellImbalanceRisk[0] = false;
-    batteryBehaviourWarning = false;
-
-    lab14_systemLimited[0] = false;
+    startPercent = -1;
+    endPercent = -1;
 
     sag1[0] = Float.NaN;
     sag2[0] = Float.NaN;
     sagAvg[0] = Float.NaN;
+
+    collapseRisk[0] = false;
+    swellingRisk[0] = false;
+    calibrationDrift[0] = false;
+    cellImbalanceRisk[0] = false;
+
+    lab14_systemLimited[0] = false;
+
+    resetBatteryDiagnostics();
+
+    final boolean[] variabilityDetected = { false };
+
+    // reset LAB14 state (fields)
+
+    lab14Conf = null;
+    lab14AgingIndex = -1;
+    lab14AgingInterp = "N/A";
+    lab14BatteryBehaviourWarning = false;
+
+    final SharedPreferences p =
+            getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+
+    // ---------------------------------------
+    // RESET METRICS
+    // ---------------------------------------
 
     vStart[0] = Float.NaN;
     vLoad1[0] = Float.NaN;
@@ -13125,17 +13129,18 @@ final SharedPreferences p =
     startBatteryTemp = Float.NaN;
     endBatteryTemp = Float.NaN;
 
-    // ------------------------------------------------------------
-    // FLAGS
-    // ------------------------------------------------------------
-    lab14Cancelled = false;
+    // ---------------------------------------
+    // START FLAG (εδώ πρέπει!)
+    // ---------------------------------------
+
     lab14Running = true;
 
     applyMaxBrightnessAndKeepOn();
-    
-    // ------------------------------------------------------------
+
+    // ---------------------------------------
     // ENGINE
-    // ------------------------------------------------------------
+    // ---------------------------------------
+
     final Lab14Engine engine = new Lab14Engine(this);
 
     try {
