@@ -2982,11 +2982,22 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     } catch (Throwable ignore) {}
 
+    float cpuTemp = readCpuTempSafe();
+
+    boolean badBat = percent < 30 || percent > 70;
+
+    boolean badCpu =
+            !Float.isNaN(cpuTemp) && cpuTemp >= 60f;
+
+    boolean badTemp =
+            !Float.isNaN(tempC) && tempC >= 38f;
+
+
     boolean ok =
             !chargingNow &&
-            percent >= 30 &&
-            percent <= 70 &&
-            (Float.isNaN(tempC) || tempC < 38f);
+            !badBat &&
+            !badCpu &&
+            !badTemp;
 
 
     AlertDialog.Builder b =
@@ -3000,211 +3011,235 @@ private void showLab14ConditionCheck(Runnable startAction) {
     LinearLayout root = buildGELPopupRoot(this);
 
 
-// HEADER
-root.addView(
-        buildPopupHeader(
-                this,
+    // HEADER
+    root.addView(
+            buildPopupHeader(
+                    this,
+                    gr
+                            ? "Έλεγχος συνθηκών LAB 14"
+                            : "LAB 14 Condition Check"
+            )
+    );
+
+
+    // INFO TEXT
+
+    TextView info = new TextView(this);
+
+    info.setText(
+            gr
+                    ? "Για την εκτέλεση του τεστ απαιτούνται:\n\n"
+                    + "1) Μπαταρία μεταξύ 30% – 70%\n"
+                    + "2) Θερμοκρασία CPU κάτω από 60°C\n"
+                    + "3) Η συσκευή να μην φορτίζεται\n"
+                    : "Requirements for this test:\n\n"
+                    + "1) Battery between 30% – 70%\n"
+                    + "2) CPU temperature below 60°C\n"
+                    + "3) Device must not be charging\n"
+    );
+
+    info.setTextColor(0xFF39FF14);
+    info.setTextSize(14f);
+    info.setLineSpacing(0f, 1.2f);
+    info.setPadding(0, dp(8), 0, dp(6));
+
+    root.addView(info);
+
+
+    StringBuilder warn = new StringBuilder();
+    boolean hasWarn = false;
+
+
+    // WARN
+
+    if (badBat) {
+
+        hasWarn = true;
+
+        warn.append(
                 gr
-                        ? "Έλεγχος συνθηκών LAB 14"
-                        : "LAB 14 Condition Check"
-        )
-);
-
-StringBuilder warn = new StringBuilder();
-boolean hasWarn = false;
-
-float cpuTemp = readCpuTempSafe();
-
-boolean badBat = percent < 30 || percent > 70;
-boolean badCpu = !Float.isNaN(cpuTemp) && cpuTemp >= 60f;
+                        ? "• Η μπαταρία πρέπει να είναι μεταξύ 30% και 70%\n"
+                        : "• Battery must be between 30% and 70%\n"
+        );
+    }
 
 
-// ---------------- WARN ----------------
+    if (chargingNow) {
 
-if (badBat) {
+        hasWarn = true;
 
-    hasWarn = true;
+        warn.append(
+                gr
+                        ? "• Η συσκευή δεν πρέπει να φορτίζει\n"
+                        : "• Device must not be charging\n"
+        );
+    }
 
-    warn.append(
-            gr
-                    ? "• Η μπαταρία πρέπει να είναι μεταξύ 30% και 70%\n"
-                    : "• Battery must be between 30% and 70%\n"
+
+    if (badCpu) {
+
+        hasWarn = true;
+
+        warn.append(
+                gr
+                        ? "• Η θερμοκρασία CPU είναι υψηλή για την εκτέλεση του τεστ\n"
+                        : "• CPU temperature high for testing\n"
+        );
+    }
+
+
+    if (badTemp) {
+
+        hasWarn = true;
+
+        warn.append(
+                gr
+                        ? "• Η θερμοκρασία μπαταρίας είναι υψηλή\n"
+                        : "• Battery temperature high\n"
+        );
+    }
+
+
+    if (!hasWarn) {
+
+        warn.append(
+                gr
+                        ? "Οι συνθήκες είναι κατάλληλες"
+                        : "Conditions are OK"
+        );
+    }
+
+
+    // =========================
+    // SPANNABLE TEXT
+    // =========================
+
+    SpannableStringBuilder sb = new SpannableStringBuilder();
+
+    int white = 0xFFFFFFFF;
+    int green = 0xFF39FF14;
+    int red   = 0xFFFF4444;
+
+    int start;
+
+
+    // Battery
+
+    start = sb.length();
+    sb.append(gr ? "Μπαταρία: " : "Battery: ");
+    sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+    start = sb.length();
+    sb.append(percent + "%\n");
+    sb.setSpan(
+            new ForegroundColorSpan(badBat ? red : green),
+            start,
+            sb.length(),
+            0
     );
-}
 
-if (chargingNow) {
 
-    hasWarn = true;
+    // Battery temp
 
-    warn.append(
-            gr
-                    ? "• Η συσκευή δεν πρέπει να φορτίζει\n"
-                    : "• Device must not be charging\n"
+    start = sb.length();
+    sb.append(gr ? "Θερμοκρασία μπαταρίας: " : "Battery temp: ");
+    sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+    start = sb.length();
+    sb.append(
+            Float.isNaN(tempC)
+                    ? "N/A\n"
+                    : String.format(Locale.US, "%.1f°C\n", tempC)
     );
-}
 
-if (badCpu) {
-
-    hasWarn = true;
-
-    warn.append(
-            gr
-                    ? "• Η θερμοκρασία CPU είναι υψηλή\n"
-                    : "• CPU temperature too high\n"
+    sb.setSpan(
+            new ForegroundColorSpan(badTemp ? red : green),
+            start,
+            sb.length(),
+            0
     );
-}
 
-if (!hasWarn) {
 
-    warn.append(
-            gr
-                    ? "Οι συνθήκες είναι κατάλληλες"
-                    : "Conditions are OK"
+    // CPU
+
+    start = sb.length();
+    sb.append(gr ? "Θερμοκρασία CPU: " : "CPU temp: ");
+    sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+    start = sb.length();
+    sb.append(
+            Float.isNaN(cpuTemp)
+                    ? "N/A\n"
+                    : String.format(Locale.US, "%.1f°C\n", cpuTemp)
     );
-}
+
+    sb.setSpan(
+            new ForegroundColorSpan(badCpu ? red : green),
+            start,
+            sb.length(),
+            0
+    );
 
 
-// =========================
-// SPANNABLE TEXT
-// =========================
+    // Charging
 
-SpannableStringBuilder sb = new SpannableStringBuilder();
+    start = sb.length();
 
-int white = 0xFFFFFFFF;
-int green = 0xFF39FF14;
-int red   = 0xFFFF4444;
+    String chargeTxt =
+            chargingNow
+                    ? (gr ? "Φορτίζει\n" : "Charging\n")
+                    : (gr ? "Δεν φορτίζει\n" : "Not charging\n");
 
-int start;
+    sb.append(chargeTxt);
 
-
-// ---------- Battery ----------
-
-String labelBat = gr ? "Μπαταρία: " : "Battery: ";
-String valueBat = percent + "%\n";
-
-start = sb.length();
-sb.append(labelBat);
-sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
-
-start = sb.length();
-sb.append(valueBat);
-sb.setSpan(
-        new ForegroundColorSpan(badBat ? red : green),
-        start,
-        sb.length(),
-        0
-);
+    sb.setSpan(
+            new ForegroundColorSpan(
+                    chargingNow ? red : green
+            ),
+            start,
+            sb.length(),
+            0
+    );
 
 
-// ---------- Battery temp ----------
+    // WARN
 
-String labelTemp = gr ? "Θερμοκρασία μπαταρίας: " : "Battery temp: ";
-String valueTemp =
-        Float.isNaN(tempC)
-                ? "N/A\n"
-                : String.format(Locale.US, "%.1f°C\n", tempC);
+    start = sb.length();
 
-start = sb.length();
-sb.append(labelTemp);
-sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+    sb.append("\n");
+    sb.append(warn.toString());
 
-start = sb.length();
-sb.append(valueTemp);
-sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
-
-
-// ---------- CPU ----------
-
-String labelCpu = gr ? "CPU: " : "CPU: ";
-String valueCpu =
-        Float.isNaN(cpuTemp)
-                ? "N/A\n"
-                : String.format(Locale.US, "%.1f°C\n", cpuTemp);
-
-start = sb.length();
-sb.append(labelCpu);
-sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
-
-start = sb.length();
-sb.append(valueCpu);
-sb.setSpan(
-        new ForegroundColorSpan(badCpu ? red : green),
-        start,
-        sb.length(),
-        0
-);
+    sb.setSpan(
+            new ForegroundColorSpan(
+                    hasWarn ? red : green
+            ),
+            start,
+            sb.length(),
+            0
+    );
 
 
-// ---------- Charging ----------
+    TextView msg = new TextView(this);
 
-String chargeTxt =
-        chargingNow
-                ? (gr ? "Φορτίζει\n" : "Charging\n")
-                : (gr ? "Δεν φορτίζει\n" : "Not charging\n");
+    msg.setText(sb);
+    msg.setTextSize(14.5f);
+    msg.setLineSpacing(0f, 1.2f);
 
-start = sb.length();
-sb.append(chargeTxt);
-sb.setSpan(
-        new ForegroundColorSpan(chargingNow ? red : green),
-        start,
-        sb.length(),
-        0
-);
+    root.addView(msg);
 
 
-// ---------- WARN / OK ----------
-
-start = sb.length();
-
-sb.append("\n");
-sb.append(warn.toString());
-
-sb.setSpan(
-        new ForegroundColorSpan(
-                hasWarn ? red : green
-        ),
-        start,
-        sb.length(),
-        0
-);
-
-
-// ---------- TEXTVIEW ----------
-
-TextView msg = new TextView(this);
-
-msg.setText(sb);
-msg.setTextSize(14.5f);
-msg.setLineSpacing(0f, 1.2f);
-
-root.addView(msg);
-
-
-    // MUTE ROW
     root.addView(buildMuteRow());
 
 
-    LinearLayout row =
-            new LinearLayout(this);
-
-    row.setOrientation(
-            LinearLayout.HORIZONTAL
-    );
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
 
 
     Button cancel =
-            gelButton(
-                    this,
-                    gr ? "Ακύρωση" : "Cancel",
-                    0xFF8B0000
-            );
+            gelButton(this, gr ? "Ακύρωση" : "Cancel", 0xFF8B0000);
 
     Button go =
-            gelButton(
-                    this,
-                    gr ? "Συνέχεια" : "Continue",
-                    0xFF0B5D1E
-            );
+            gelButton(this, gr ? "Συνέχεια" : "Continue", 0xFF0B5D1E);
 
 
     LinearLayout.LayoutParams lp =
@@ -3214,12 +3249,7 @@ root.addView(msg);
                     1
             );
 
-    lp.setMargins(
-            dp(6),
-            dp(18),
-            dp(6),
-            0
-    );
+    lp.setMargins(dp(6), dp(18), dp(6), 0);
 
     cancel.setLayoutParams(lp);
     go.setLayoutParams(lp);
@@ -3243,31 +3273,22 @@ root.addView(msg);
 
     dlg.show();
 
-final boolean warnFinal = hasWarn;
-final String warnTextFinal = warn.toString();
-final boolean grFinal = gr;
+
+    final String speakTextFinal = sb.toString();
 
 
-// 🔊 TTS
-new Handler(Looper.getMainLooper()).postDelayed(() -> {
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-    if (dlg.isShowing()
-            && !AppTTS.isMuted(this)) {
+        if (dlg.isShowing()
+                && !AppTTS.isMuted(this)) {
 
-        final String speakText =
-                warnFinal
-                        ? warnTextFinal
-                        : (grFinal
-                        ? "Οι συνθήκες είναι κατάλληλες"
-                        : "Conditions are OK");
+            AppTTS.ensureSpeak(
+                    this,
+                    speakTextFinal
+            );
+        }
 
-        AppTTS.ensureSpeak(
-                this,
-                speakText
-        );
-    }
-
-}, 120);
+    }, 120);
 
 
     cancel.setOnClickListener(v -> {
