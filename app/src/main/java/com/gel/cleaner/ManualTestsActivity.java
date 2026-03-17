@@ -15652,7 +15652,7 @@ msg.setLineSpacing(0f, 1.2f);
 root.addView(msg);
 
 // ---------------------------
-// STATUS TEXT (GRAY / DYNAMIC)
+// STATUS TEXT (RED)
 // ---------------------------
 lab15StatusText = new TextView(this);
 lab15StatusText.setText(
@@ -15660,7 +15660,7 @@ lab15StatusText.setText(
                 ? "Αναμονή για σύνδεση φορτιστή…"
                 : "Waiting for charging connection…"
 );
-lab15StatusText.setTextColor(0xFFAAAAAA);
+lab15StatusText.setTextColor(0xFFFF4444);
 lab15StatusText.setTextSize(15f);
 lab15StatusText.setGravity(Gravity.CENTER);
 lab15StatusText.setPadding(0, dp(10), 0, 0);
