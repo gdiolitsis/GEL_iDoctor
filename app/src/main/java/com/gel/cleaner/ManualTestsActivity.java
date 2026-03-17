@@ -13184,12 +13184,15 @@ if (!Float.isNaN(pulseSag[0]) &&
             @Override
             public void run() {
 
-                if (lab14Cancelled ||
-    !lab14Running ||
+                @Override
+public void run() {
 
-    ui.removeCallbacks(this);
-    return;
-}
+    if (lab14Cancelled ||
+        !lab14Running) {
+
+        ui.removeCallbacks(this);
+        return;
+    }
 
                 long now = SystemClock.elapsedRealtime();
                 int elapsed = (int) ((now - t0) / 1000);
