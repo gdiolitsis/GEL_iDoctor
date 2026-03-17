@@ -3251,9 +3251,9 @@ root.addView(msg);
                 && !AppTTS.isMuted(this)) {
 
             AppTTS.ensureSpeak(
-                    this,
-                    txt
-            );
+        this,
+        hasWarn ? warn.toString() : (gr ? "Οι συνθήκες είναι κατάλληλες" : "Conditions are OK")
+);
         }
 
     }, 120);
