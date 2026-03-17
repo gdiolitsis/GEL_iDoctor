@@ -3873,20 +3873,21 @@ root.addView(
 final String text =
         gr
                 ? "Για τον έλεγχο προστασίας, φόρτισε τη συσκευή "
-                  + "στο 80–100% και άφησε τη συσκευή σε ηρεμία "
+                  + "στο 70–90% και άφησε τη συσκευή σε ηρεμία "
                   + "πριν ξεκινήσει η δοκιμή.\n\n"
                   + "Η δοκιμή ελέγχει αν το σύστημα περιορίζει "
                   + "την κατανάλωση για προστασία της μπαταρίας."
                 : "For this test, charge the device "
-                  + "to 80–100% and let the phone stay idle "
+                  + "to 70–90% and let the phone stay idle "
                   + "before starting.\n\n"
                   + "This test checks if the system limits "
                   + "power consumption to protect the battery.";
 
 
 int percent = getBatteryPercentSafe();
-boolean batteryOk = percent >= 80;
 
+boolean batteryOk =
+        percent >= 70 && percent <= 90;
 
 SpannableStringBuilder sb = new SpannableStringBuilder();
 
@@ -3908,18 +3909,38 @@ sb.setSpan(
 );
 
 
-// warning όταν <80
+// ----------------------------------------------------
+// BATTERY STATUS LINE
+// ----------------------------------------------------
 
-if (!batteryOk) {
+start = sb.length();
 
-    start = sb.length();
+String status;
 
-    String warn =
+if (batteryOk) {
+
+    status =
             gr
-                    ? "⚠ Η μπαταρία είναι " + percent + "% (απαιτείται ≥80%)"
-                    : "⚠ Battery is " + percent + "% (≥80% required)";
+                    ? "✓ Μπαταρία: " + percent + "% (OK 70–90%)"
+                    : "✓ Battery: " + percent + "% (OK 70–90%)";
 
-    sb.append(warn);
+    sb.append(status);
+
+    sb.setSpan(
+            new ForegroundColorSpan(green),
+            start,
+            sb.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+} else {
+
+    status =
+            gr
+                    ? "⚠ Μπαταρία: " + percent + "% (απαιτείται 70–90%)"
+                    : "⚠ Battery: " + percent + "% (70–90% required)";
+
+    sb.append(status);
 
     sb.setSpan(
             new ForegroundColorSpan(red),
