@@ -4471,19 +4471,107 @@ private int getLab14RunCount() {
 // CPU / GPU thermal helpers (SAFE, READ-ONLY)
 // ------------------------------------------------------------
 private Float readCpuTempSafe() {
-try {
-Map<String, Float> zones = readThermalZones();
-return pickZone(zones, "cpu", "soc", "ap");
-} catch (Throwable ignore) {}
-return null;
+
+    // ---- thermal zones ----
+    try {
+
+        Map<String, Float> zones = readThermalZones();
+
+        Float v = pickZone(zones, "cpu", "soc", "ap");
+
+        if (v != null && v > 10f && v < 120f)
+            return v;
+
+    } catch (Throwable ignore) {}
+
+
+    // ---- sysfs fallback ----
+    try {
+
+        for (int i = 0; i < 20; i++) {
+
+            java.io.File f =
+                    new java.io.File(
+                            "/sys/class/thermal/thermal_zone"
+                                    + i
+                                    + "/temp"
+                    );
+
+            if (!f.exists()) continue;
+
+            java.io.BufferedReader br =
+                    new java.io.BufferedReader(
+                            new java.io.FileReader(f)
+                    );
+
+            String s = br.readLine();
+            br.close();
+
+            if (s == null) continue;
+
+            float v = Float.parseFloat(s.trim());
+
+            if (v > 1000f) v /= 1000f;
+
+            if (v > 10f && v < 120f)
+                return v;
+        }
+
+    } catch (Throwable ignore) {}
+
+    return null;
 }
 
 private Float readGpuTempSafe() {
-try {
-Map<String, Float> zones = readThermalZones();
-return pickZone(zones, "gpu", "gfx", "kgsl");
-} catch (Throwable ignore) {}
-return null;
+
+    // ---- thermal zones ----
+    try {
+
+        Map<String, Float> zones = readThermalZones();
+
+        Float v = pickZone(zones, "gpu", "gfx", "kgsl");
+
+        if (v != null && v > 10f && v < 120f)
+            return v;
+
+    } catch (Throwable ignore) {}
+
+
+    // ---- fallback thermal_zone scan ----
+    try {
+
+        for (int i = 0; i < 20; i++) {
+
+            java.io.File f =
+                    new java.io.File(
+                            "/sys/class/thermal/thermal_zone"
+                                    + i
+                                    + "/temp"
+                    );
+
+            if (!f.exists()) continue;
+
+            java.io.BufferedReader br =
+                    new java.io.BufferedReader(
+                            new java.io.FileReader(f)
+                    );
+
+            String s = br.readLine();
+            br.close();
+
+            if (s == null) continue;
+
+            float v = Float.parseFloat(s.trim());
+
+            if (v > 1000f) v /= 1000f;
+
+            if (v > 10f && v < 120f)
+                return v;
+        }
+
+    } catch (Throwable ignore) {}
+
+    return null;
 }
 
 // ------------------------------------------------------------
@@ -12652,7 +12740,27 @@ private void lab14BatteryHealthStressTest() {
 
     int percent = getBatteryPercentSafe();
 
-    float tempC = getBatteryTempSafe();
+    float tempC = Float.NaN;
+
+try {
+
+    IntentFilter f =
+            new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+
+    Intent i = registerReceiver(null, f);
+
+    if (i != null) {
+
+        int t =
+                i.getIntExtra(
+                        BatteryManager.EXTRA_TEMPERATURE,
+                        -1
+                );
+
+        if (t > 0) tempC = t / 10f;
+    }
+
+} catch (Throwable ignore) {}
 
     boolean charging = isChargingNowSafe();
 
