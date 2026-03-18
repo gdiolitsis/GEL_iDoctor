@@ -383,7 +383,7 @@ private boolean lab15PopupShown = false;
 // BATTERY SCORE STATE
 // ============================================================
 private int batteryScore = 100;
-private boolean variabilityDetected = false;
+private boolean[] variabilityDetected = { false };
     
 // ============================================================  
 // LAB 14 — FLAGS / UI STATE (REQUIRED)  
@@ -13058,8 +13058,6 @@ private void lab14BatteryHealthStressTest_REAL() {
 
         startBatteryTemp = Float.NaN;
         endBatteryTemp = Float.NaN;
-
-        final boolean[] variabilityDetected = { false };
 
         // --------------------------------------------------
         // RESET ENGINE STATE
