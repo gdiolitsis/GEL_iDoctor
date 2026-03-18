@@ -4000,7 +4000,6 @@ final String text =
                   + "This test checks if the system limits "
                   + "power consumption to protect the battery.";
 
-
 int percent = getBatteryPercentSafe();
 
 boolean batteryOk =
@@ -4010,7 +4009,6 @@ SpannableStringBuilder sb = new SpannableStringBuilder();
 
 int green = 0xFF39FF14;
 int red   = 0xFFFF4444;
-
 
 // main text
 
@@ -4024,7 +4022,6 @@ sb.setSpan(
         sb.length(),
         Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
 );
-
 
 // ----------------------------------------------------
 // BATTERY STATUS LINE
@@ -4067,7 +4064,6 @@ if (batteryOk) {
     );
 }
 
-
 TextView msg = new TextView(this);
 
 msg.setText(sb);
@@ -4076,14 +4072,11 @@ msg.setLineSpacing(0f, 1.2f);
 
 root.addView(msg);
 
-
 // MUTE ROW
 root.addView(buildMuteRow());
 
-
 LinearLayout row = new LinearLayout(this);
 row.setOrientation(LinearLayout.VERTICAL);
-
 
 Button btnContinue;
 
@@ -4108,7 +4101,6 @@ if (batteryOk) {
 
 }
 
-
 LinearLayout.LayoutParams lp =
         new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -4123,7 +4115,6 @@ row.addView(btnContinue);
 
 root.addView(row);
 
-
 b.setView(root);
 
 AlertDialog dlg = b.create();
@@ -4134,35 +4125,61 @@ if (dlg.getWindow() != null)
     );
 
 dlg.show();
-    
-    // ============================
-    // TTS (FINAL SAFE VERSION)
-    // ============================
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-        if (!dlg.isShowing()) return;
+// ============================
+// CANCEL / BACK / OUTSIDE
+// ============================
 
-        AppTTS.stop();
-
-        if (!AppTTS.isMuted(this)) {
-            AppTTS.ensureSpeak(this, text);
-        }
-
-    }, 120);
-
-
-    // ============================
-    // CONTINUE
-    // ============================
-    btnContinue.setOnClickListener(v -> {
+dlg.setOnCancelListener(d -> {
 
     AppTTS.stop();
 
-    if (percent < 80) {
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+
+});
+
+// ============================
+// DISMISS (always stop TTS)
+// ============================
+
+dlg.setOnDismissListener(d -> {
+    AppTTS.stop();
+});
+
+// ============================
+// TTS (FINAL SAFE VERSION)
+// ============================
+
+new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+    if (!dlg.isShowing()) return;
+
+    AppTTS.stop();
+
+    if (!AppTTS.isMuted(this)) {
+        AppTTS.ensureSpeak(this, text);
+    }
+
+}, 120);
+
+// ============================
+// CONTINUE / EXIT
+// ============================
+
+btnContinue.setOnClickListener(v -> {
+
+    AppTTS.stop();
+
+    if (!batteryOk) {
+
+        lab14Running = false;
+        lab14PopupShown = false;
+        lab14AdvisoryShown = false;
 
         dlg.dismiss();
         return;
-
     }
 
     dlg.dismiss();
@@ -4171,8 +4188,6 @@ dlg.show();
         onContinue.run();
 
 });
-
-}
 
 // ------------------------------------------------------------
 // GPU COMPUTE STRESS (LAB14)
