@@ -17786,74 +17786,16 @@ private void lab18StorageSnapshot() {
         );
 
         // ------------------------------------------------------------
-        // MEMORY PRESSURE INDICATORS
-        // ------------------------------------------------------------
-        MemSnapshot snap = readMemSnapshotSafe();
-
-        long swapUsedKb = 0;
-        if (snap.swapTotalKb > 0 && snap.swapFreeKb >= 0) {
-            swapUsedKb = Math.max(0, snap.swapTotalKb - snap.swapFreeKb);
-        }
-
-        String pressureLevel = pressureLevel(
-                snap.memFreeKb,
-                snap.cachedKb,
-                swapUsedKb
-        );
-
-        String zramDep = zramDependency(swapUsedKb, total);
-        String humanPressure = humanPressureLabel(pressureLevel);
-
-        logLine();
-        logInfo(gr
-                ? "Δείκτες πίεσης μνήμης:"
-                : "Memory pressure indicators:");
-
-        logLabelOkValue(
-                gr ? "Πίεση μνήμης" : "Memory pressure",
-                humanPressure
-        );
-        logLabelOkValue(
-                gr ? "Επίπεδο πίεσης" : "Pressure level",
-                pressureLevel
-        );
-        logLabelOkValue(
-                "ZRAM dependency",
-                zramDep
-        );
-
-        if (swapUsedKb > 0) {
-            logLabelWarnValue(
-                    gr ? "Χρήση Swap" : "Swap used",
-                    humanBytes(swapUsedKb * 1024L)
-            );
-        }
-
-        if (snap.memFreeKb > 0) {
-            logLabelOkValue(
-                    "MemFree",
-                    humanBytes(snap.memFreeKb * 1024L)
-            );
-        }
-
-        if (snap.cachedKb > 0) {
-            logLabelOkValue(
-                    "Cached",
-                    humanBytes(snap.cachedKb * 1024L) +
-                            (gr ? " (επανακτήσιμη μνήμη)" : " (reclaimable)")
-            );
-        }
-
-        // ------------------------------------------------------------
         // PRESSURE LEVEL (HUMAN SCALE)
         // ------------------------------------------------------------
         boolean critical = pctFree < 7;
         boolean pressure = pctFree < 15;
 
-        logLine();
+        appendHtml("<br>");
         logInfo(gr
                 ? "Αξιολόγηση πίεσης αποθηκευτικού χώρου:"
                 : "Storage pressure assessment:");
+                logLine();
 
         if (critical) {
 
@@ -17922,10 +17864,11 @@ boolean controllerRisk = false;
 
 if (rooted) {
 
-    logLine();
+    appendHtml("<br>");
     logInfo(gr
             ? "Προχωρημένη ανάλυση αποθηκευτικού χώρου (root access):"
             : "Advanced storage analysis (root access):");
+            logLine();
 
     wearSignals = detectStorageWearSignals();
     boolean reservedPressure = pctFree < 12;
@@ -18188,8 +18131,9 @@ if (corruptionScore >= 60) {
         // ------------------------------------------------------------
         // FINAL HUMAN SUMMARY
         // ------------------------------------------------------------
-        logLine();
+        appendHtml("<br>");
         logInfo(gr ? "Σύνοψη αποθηκευτικού χώρου:" : "Storage summary:");
+        logLine();
 
         if (critical) {
             logLabelErrorValue(
@@ -18282,8 +18226,9 @@ private void lab19RamSnapshot() {
         // ------------------------------------------------------------
         // HUMAN INTERPRETATION
         // ------------------------------------------------------------
-        logLine();
+        appendHtml("<br>");
         logInfo(gr ? "Αξιολόγηση πίεσης RAM:" : "RAM pressure assessment:");
+        logLine();
 
         if (pctFree < 8) {
 
@@ -18363,10 +18308,11 @@ private void lab19RamSnapshot() {
             String zramDep =
                     zramDependency(swapUsedKb, total);
 
-            logLine();
+            appendHtml("<br>");
             logInfo(gr
                     ? "Δείκτες πίεσης μνήμης:"
                     : "Memory pressure indicators:");
+                    logLine();
 
             logLabelOkValue(
                     gr ? "Επίπεδο πίεσης" : "Pressure level",
@@ -18407,7 +18353,7 @@ private void lab19RamSnapshot() {
         // ------------------------------------------------------------
         if (mi.lowMemory) {
 
-            logLine();
+            appendHtml("<br>");
             logLabelWarnValue(
                     gr ? "Σήμα Android" : "Android signal",
                     gr ? "Αναφέρθηκε κατάσταση low-memory"
@@ -18427,10 +18373,11 @@ private void lab19RamSnapshot() {
 
         if (rooted) {
 
-            logLine();
+            appendHtml("<br>");
             logInfo(gr
                     ? "Προχωρημένη ανάλυση RAM (root access):"
                     : "Advanced RAM analysis (root access):");
+                    logLine();
 
             boolean zramActive = isZramActiveSafe();
             boolean swapActive = isSwapActiveSafe();
@@ -18519,8 +18466,9 @@ private void lab20UptimeHints() {
         // ----------------------------------------------------
         // HUMAN INTERPRETATION (NON-ROOT)
         // ----------------------------------------------------
-        logLine();
+        appendHtml("<br>");
         logInfo(gr ? "Αξιολόγηση uptime:" : "Uptime assessment:");
+        logLine();
 
         if (veryRecentReboot) {
 
@@ -18594,10 +18542,11 @@ private void lab20UptimeHints() {
         // ----------------------------------------------------
         if (isDeviceRooted()) {
 
-            logLine();
+            appendHtml("<br>");
             logInfo(gr
                     ? "Προχωρημένα σήματα uptime (root access):"
                     : "Advanced uptime signals (root access):");
+                    logLine();
 
             boolean lowMemoryPressure =
                     readLowMemoryKillCountSafe() < 5;
@@ -18676,8 +18625,9 @@ private void lab20UptimeHints() {
 // ----------------------------------------------------
 // SUMMARY (Structured / Color-coded)
 // ----------------------------------------------------
-logLine();
+appendHtml("<br>");
 logInfo(gr ? "Σύνοψη επανεκκινήσεων" : "Reboot summary");
+logLine();
 
 if (frequentReboots) {
 
@@ -18747,34 +18697,26 @@ try {
             lockedNow = km.isKeyguardLocked();
         } catch (Throwable ignore) {}
 
-        logInfo(gr 
-                ? "Ρύθμιση κλειδώματος οθόνης:" 
-                : "Screen lock configuration:");
-
         if (secure) {
             logLabelOkValue(
-                    gr ? "Διαπιστευτήριο" : "Credential",
+                    gr ? "Ρύθμιση κλειδώματος οθόνης" : "Screen lock configuration",
                     gr ? "Ρυθμισμένο (PIN / Μοτίβο / Κωδικός)"
                        : "Configured (PIN / Pattern / Password)"
             );
         } else {
             logLabelErrorValue(
-                    gr ? "Διαπιστευτήριο" : "Credential",
+                    gr ? "Ρύθμιση κλειδώματος οθόνης" : "Screen lock configuration",
                     gr ? "ΔΕΝ έχει ρυθμιστεί"
                        : "NOT configured"
             );
             logLabelWarnValue(
                     gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Φυσική πρόσβαση = πλήρης έκθεση δεδομένων"
-                       : "Physical access = full data exposure"
+                    gr ? "Φυσική πρόσβαση με πλήρη έκθεση δεδομένων"
+                       : "Physical access with full data exposure"
             );
         }
 
         if (secure) {
-
-            logInfo(gr 
-                    ? "Τρέχουσα κατάσταση κλειδώματος:" 
-                    : "Current lock state:");
 
             if (lockedNow) {
                 logLabelOkValue(
@@ -18885,8 +18827,6 @@ boolean hasKeystore = false;
 
 boolean root = isRootAvailable();
 
-logInfo(gr ? "Πρόσβαση Root:" : "Root access:");
-
 if (root) {
 
     logLabelOkValue(
@@ -18931,10 +18871,6 @@ if (root) {
 // LAB 21 — TRUST BOUNDARY AWARENESS  
 // ============================================================  
 
-logLine();
-logInfo(gr ? "Ανάλυση ορίου εμπιστοσύνης:" 
-           : "Trust boundary analysis:");
-
 if (secure) {
 
     logLabelOkValue(
@@ -18974,16 +18910,6 @@ logLabelOkValue(
                       : "Not available")
 );
 
-if (secure && !lockedNow) {
-
-    logLabelWarnValue(
-            gr ? "Ζωντανός κίνδυνος" 
-               : "Live risk",
-            gr ? "Ξεκλείδωτη συσκευή ΔΕΝ προστατεύεται από βιομετρικά"
-               : "Unlocked device is NOT protected by biometrics"
-    );
-}
-
 if (root) {
 
     if (hasGatekeeper || hasLockDb) {
@@ -19015,14 +18941,10 @@ if (!secure) risk += 70;
 if (secure && !lockedNow) risk += 10;
 if (secure && !biometricSupported) risk += 5;
 
-logLine();
-logInfo(gr ? "Δείκτης επίδρασης ασφάλειας:"
-           : "Security impact score:");
-
 if (risk >= 70) {
 
     logLabelErrorValue(
-            gr ? "Επίδραση" : "Impact",
+            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
             gr ? "ΥΨΗΛΗ (" + risk + "/100)"
                : "HIGH (" + risk + "/100)"
     );
@@ -19030,7 +18952,7 @@ if (risk >= 70) {
 } else if (risk >= 30) {
 
     logLabelWarnValue(
-            gr ? "Επίδραση" : "Impact",
+            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
             gr ? "ΜΕΤΡΙΑ (" + risk + "/100)"
                : "MEDIUM (" + risk + "/100)"
     );
@@ -19038,7 +18960,7 @@ if (risk >= 70) {
 } else {
 
     logLabelOkValue(
-            gr ? "Επίδραση" : "Impact",
+            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
             gr ? "ΧΑΜΗΛΗ (" + risk + "/100)"
                : "LOW (" + risk + "/100)"
     );
@@ -19049,9 +18971,11 @@ if (risk >= 70) {
 // ------------------------------------------------------------
 if (!secure) {
 
-    logLine();
+    appendHtml("<br>");
     logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
                : "Live biometric test:");
+               logLine();
+               
     logLabelWarnValue(
             gr ? "Κατάσταση" : "Status",
             gr ? "Παραλείφθηκε" : "Skipped"
@@ -19071,9 +18995,11 @@ if (!secure) {
 
 if (!biometricSupported) {
 
-    logLine();
+    appendHtml("<br>");
     logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
                : "Live biometric test:");
+               logLine();
+               
     logLabelWarnValue(
             gr ? "Κατάσταση" : "Status",
             gr ? "Δεν ξεκίνησε" : "Not started"
@@ -19100,9 +19026,11 @@ if (Build.VERSION.SDK_INT >= 28) {
 
     try {
 
-        logLine();
+        appendHtml("<br>");
         logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΑΙΣΘΗΤΗΡΑ"
                    : "LIVE SENSOR TEST");
+                   logLine();
+                   
         logLabelOkValue(
                 gr ? "Οδηγία" : "Instruction",
                 gr ? "Τοποθετήστε δάχτυλο / πρόσωπο για ταυτοποίηση ΤΩΡΑ"
@@ -19124,9 +19052,11 @@ if (Build.VERSION.SDK_INT >= 28) {
                     public void onAuthenticationSucceeded(
                             android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
 
-                        logLine();
+                        appendHtml("<br>");
                         logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
                                    : "LIVE BIOMETRIC TEST");
+                                   logLine ();
+                                   
                         logLabelOkValue(
                                 gr ? "Αποτέλεσμα" : "Result",
                                 "PASS"
@@ -19136,9 +19066,12 @@ if (Build.VERSION.SDK_INT >= 28) {
                                 gr ? "Αισθητήρας + ταυτοποίηση λειτουργούν σωστά"
                                    : "Biometric sensor + auth verified functional"
                         );
+appendHtml("<br>");
 
-                        logInfo(gr ? "Συσκευές με πολλαπλά βιομετρικά"
+                        logOk(gr ? "Συσκευές με πολλαπλά βιομετρικά"
                                    : "Multi-biometric devices");
+                                   logLine();
+                                   
                         logLabelWarnValue(
                                 gr ? "Σημείωση" : "Note",
                                 gr ? "Το Android ελέγχει ΕΝΑ βιομετρικό ανά εκτέλεση"
@@ -19164,9 +19097,11 @@ if (Build.VERSION.SDK_INT >= 28) {
                     @Override
                     public void onAuthenticationFailed() {
 
-                        logLine();
+                        appendHtml("<br>");
                         logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
                                    : "LIVE BIOMETRIC TEST");
+                                   logLine();
+                                   
                         logLabelErrorValue(
                                 gr ? "Αποτέλεσμα" : "Result",
                                 "FAIL"
@@ -19186,9 +19121,11 @@ if (Build.VERSION.SDK_INT >= 28) {
                     @Override
                     public void onAuthenticationError(int errorCode, CharSequence errString) {
 
-                        logLine();
+                        appendHtml("<br>");
                         logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
                                    : "LIVE BIOMETRIC TEST");
+                                   logLine();
+                                   
                         logLabelWarnValue(
                                 gr ? "Αποτέλεσμα" : "Result",
                                 gr ? "Μη επιβεβαιωμένο"
@@ -19228,9 +19165,11 @@ if (Build.VERSION.SDK_INT >= 28) {
                                 executor,
                                 (dialog, which) -> {
 
-                                    logLine();
+                                    appendHtml("<br>");
                                     logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
                                                : "LIVE BIOMETRIC TEST");
+                                               logLine();
+                                               
                                     logLabelWarnValue(
                                             gr ? "Αποτέλεσμα" : "Result",
                                             gr ? "Ακυρώθηκε από τον χρήστη"
@@ -19258,9 +19197,10 @@ if (Build.VERSION.SDK_INT >= 28) {
 
     } catch (Throwable e) {
 
-        logLine();
+        appendHtml("<br>");
         logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
                    : "Live biometric test");
+                   logLine();
         logLabelErrorValue(
                 gr ? "Κατάσταση" : "Status",
                 gr ? "Αποτυχία" : "Failed"
@@ -19278,9 +19218,11 @@ if (Build.VERSION.SDK_INT >= 28) {
 
 } else {
 
-    logLine();
+    appendHtml("<br>");
     logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
                : "Live biometric test:");
+               logLine();
+               
     logLabelWarnValue(
             gr ? "Κατάσταση" : "Status",
             gr ? "Δεν υποστηρίζεται"
@@ -19292,9 +19234,7 @@ if (Build.VERSION.SDK_INT >= 28) {
                : "BiometricPrompt framework not available on this Android version"
     );
 
-    logInfo(gr ? "Απαιτούμενη ενέργεια" : "Action required");
-    logLabelOkValue(
-            gr ? "Ενέργεια" : "Action",
+            gr ? "Απαιτούμενη ενέργεια" : "Action required",
             gr ? "Ελέγξτε τα βιομετρικά από τις ρυθμίσεις συστήματος κλειδώματος οθόνης και επανεκτελέστε το LAB 21"
                : "Test biometrics via system lock screen settings, then re-run LAB 21"
     );
