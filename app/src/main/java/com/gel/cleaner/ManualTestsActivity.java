@@ -13054,15 +13054,13 @@ if (!lab14PopupShown) {
             lab14AdvisoryShown = true;
 
             showLab14PreTestAdvisory(() -> {
-
-                lab14PopupShown = false;
+            	
                 lab14BatteryHealthStressTest_REAL();
 
             });
 
         } else {
 
-            lab14PopupShown = false;
             lab14BatteryHealthStressTest_REAL();
 
         }
@@ -13730,11 +13728,16 @@ try {
     lab14CleanupUI();
 } catch (Throwable ignore) {}
 
+lab14Running = false;
+
+// ----------------------------------------------------
+// FINAL RESET (για επόμενο run)
+// ----------------------------------------------------
 lab14PopupShown = false;
 lab14AdvisoryShown = false;
+lab14Cancelled = false;
 
 if (lab14Cancelled) {
-    lab14PopupShown = false;
     return;
 }
 
