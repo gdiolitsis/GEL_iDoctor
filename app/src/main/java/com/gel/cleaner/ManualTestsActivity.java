@@ -12983,86 +12983,13 @@ AppTTS.stop();
 }
 
 // ============================================================
-// LAB 14 — ENTRY (POPUP FLOW)
+// LAB 14 — ENTRY
 // ============================================================
 private void lab14BatteryHealthStressTest() {
 
-    final boolean gr = AppLang.isGreek(this);
+    if (lab14Running) return;
 
-    // ---------------------------------------
-    // HARD RESET FLOW FLAGS
-    // ---------------------------------------
-
-    if (lab14Running) {
-        return;
-    }
-
-    // IMPORTANT
-    lab14PopupShown = false;
-
-    // ---------------------------------------
-    // PRE CHECK (όπως πριν)
-    // ---------------------------------------
-
-    int percent = getBatteryPercentSafe();
-
-    float tempC = Float.NaN;
-
-    try {
-
-        IntentFilter f =
-                new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-
-        Intent i = registerReceiver(null, f);
-
-        if (i != null) {
-
-            int t =
-                    i.getIntExtra(
-                            BatteryManager.EXTRA_TEMPERATURE,
-                            -1
-                    );
-
-            if (t > 0) tempC = t / 10f;
-        }
-
-    } catch (Throwable ignore) {}
-
-    boolean charging = isChargingNowSafe();
-
-    // ---------------------------------------
-    // POPUP FLOW SAFE
-    // ---------------------------------------
-
-    if (!lab14PopupShown) {
-
-        lab14PopupShown = true;
-
-        showLab14ConditionCheck(() -> {
-
-            if (!lab14AdvisoryShown) {
-
-                lab14AdvisoryShown = true;
-
-                showLab14PreTestAdvisory(() -> {
-
-                    lab14BatteryHealthStressTest_REAL();
-
-                });
-
-            } else {
-
-                lab14BatteryHealthStressTest_REAL();
-
-            }
-
-        });
-
-        return;
-    }
-
-    // fallback safety (δεν πρέπει να μπει εδώ)
-    lab14PopupShown = false;
+    lab14BatteryHealthStressTest_REAL();
 }
 
 // ============================================================
@@ -13074,90 +13001,86 @@ private void lab14BatteryHealthStressTest_REAL() {
     final boolean gr = AppLang.isGreek(this);
 
     // --------------------------------------------------
-    // FORCE RESET STATE (για popup flow / restart / auto)
+    // FORCE RESET STATE (μόνο στο πρώτο start)
     // --------------------------------------------------
 
-    if (lab14Running) {
+    if (!lab14PopupShown && !lab14AdvisoryShown) {
 
-    lab14StopAllStress();
+        if (lab14Running) {
 
-    try {
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
+            lab14StopAllStress();
 
-    lab14Running = false;
-    lab14Cancelled = false;
-}
+            try {
+                lab14CleanupUI();
+            } catch (Throwable ignore) {}
 
-    // --------------------------------------------------
-    // RESET FLAGS
-    // --------------------------------------------------
+            lab14Running = false;
+        }
 
-    lab14Cancelled = false;
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
+        lab14Cancelled = false;
 
-    // --------------------------------------------------
-    // RESET DIAGNOSTICS
-    // --------------------------------------------------
+        // --------------------------------------------------
+        // RESET DIAGNOSTICS
+        // --------------------------------------------------
 
-    resetBatteryDiagnostics();
+        resetBatteryDiagnostics();
 
-    collapseRisk[0] = false;
-    swellingRisk[0] = false;
-    calibrationDrift[0] = false;
-    cellImbalanceRisk[0] = false;
+        collapseRisk[0] = false;
+        swellingRisk[0] = false;
+        calibrationDrift[0] = false;
+        cellImbalanceRisk[0] = false;
 
-    lab14_systemLimited[0] = false;
+        lab14_systemLimited[0] = false;
 
-    sag1[0] = Float.NaN;
-    sag2[0] = Float.NaN;
-    sagAvg[0] = Float.NaN;
+        sag1[0] = Float.NaN;
+        sag2[0] = Float.NaN;
+        sagAvg[0] = Float.NaN;
 
-    vStart[0] = Float.NaN;
-    vLoad1[0] = Float.NaN;
-    vRecover[0] = Float.NaN;
-    vLoad2[0] = Float.NaN;
+        vStart[0] = Float.NaN;
+        vLoad1[0] = Float.NaN;
+        vRecover[0] = Float.NaN;
+        vLoad2[0] = Float.NaN;
 
-    voltageRecovery[0] = Float.NaN;
-    voltageRecoverySpeed[0] = Float.NaN;
-    voltageStability[0] = Float.NaN;
+        voltageRecovery[0] = Float.NaN;
+        voltageRecoverySpeed[0] = Float.NaN;
+        voltageStability[0] = Float.NaN;
 
-    internalResistance[0] = Float.NaN;
-    thermalImpedance[0] = Float.NaN;
+        internalResistance[0] = Float.NaN;
+        thermalImpedance[0] = Float.NaN;
 
-    powerStabilityFactor[0] = Float.NaN;
-    stressSignature[0] = Float.NaN;
-    cellElasticityIndex[0] = Float.NaN;
-    structuralIntegrityIndex[0] = Float.NaN;
+        powerStabilityFactor[0] = Float.NaN;
+        stressSignature[0] = Float.NaN;
+        cellElasticityIndex[0] = Float.NaN;
+        structuralIntegrityIndex[0] = Float.NaN;
 
-    expectedPercent[0] = Float.NaN;
-    percentDeviation[0] = Float.NaN;
+        expectedPercent[0] = Float.NaN;
+        percentDeviation[0] = Float.NaN;
 
-    startBatteryTemp = Float.NaN;
-    endBatteryTemp = Float.NaN;
+        startBatteryTemp = Float.NaN;
+        endBatteryTemp = Float.NaN;
 
-    final boolean[] variabilityDetected = { false };
+        final boolean[] variabilityDetected = { false };
 
-    // --------------------------------------------------
-    // RESET ENGINE STATE
-    // --------------------------------------------------
+        // --------------------------------------------------
+        // RESET ENGINE STATE
+        // --------------------------------------------------
 
-    lab14Conf = null;
-    lab14AgingIndex = -1;
-    lab14AgingInterp = "N/A";
-    lab14BatteryBehaviourWarning = false;
+        lab14Conf = null;
+        lab14AgingIndex = -1;
+        lab14AgingInterp = "N/A";
+        lab14BatteryBehaviourWarning = false;
 
-    final SharedPreferences p =
-            getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+        final SharedPreferences p =
+                getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
-    // --------------------------------------------------
-    // START FLAG (μόνο εδώ!)
-    // --------------------------------------------------
+        // --------------------------------------------------
+        // START FLAG (μόνο στο πρώτο start)
+        // --------------------------------------------------
 
-    lab14Running = true;
+        lab14Running = true;
 
-    applyMaxBrightnessAndKeepOn();
+        applyMaxBrightnessAndKeepOn();
+    }
 
     // ---------------------------------------
     // ENGINE
@@ -13357,6 +13280,33 @@ if (isChargingNowSafe()) {
         );
 
         logLine();
+        
+        if (!lab14PopupShown) {
+
+    lab14PopupShown = true;
+
+    showLab14ConditionCheck(() -> {
+
+        if (!lab14AdvisoryShown) {
+
+            lab14AdvisoryShown = true;
+
+            showLab14PreTestAdvisory(() -> {
+
+                lab14BatteryHealthStressTest_REAL();
+
+            });
+
+        } else {
+
+            lab14BatteryHealthStressTest_REAL();
+
+        }
+
+    });
+
+    return;
+}
 
         // ------------------------------------------------------------
         // 3) MAIN DIALOG
