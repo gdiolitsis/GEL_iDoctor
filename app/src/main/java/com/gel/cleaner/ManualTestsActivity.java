@@ -13023,111 +13023,134 @@ AppTTS.stop();
 // ============================================================
 // LAB 14 — ENTRY
 // ============================================================
-private void lab14BatteryHealthStressTest() {
-
-    if (lab14Running) return;
-
-    lab14BatteryHealthStressTest_REAL();
-}
-
-// ============================================================
-// LAB 14 — Battery Health Stress Test
-// FINAL PRO / STABLE / CLEAN FLOW
-// ============================================================
 private void lab14BatteryHealthStressTest_REAL() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    // --------------------------------------------------
-    // FORCE RESET STATE (μόνο στο πρώτο start)
-    // --------------------------------------------------
 
-    if (!lab14PopupShown && !lab14AdvisoryShown) {
+// --------------------------------------------------
+// POPUP FIRST
+// --------------------------------------------------
 
-        if (lab14Running) {
+if (!lab14PopupShown) {
 
-            lab14StopAllStress();
+    lab14Running = false;
+    lab14Cancelled = false;
 
-            try {
-                lab14CleanupUI();
-            } catch (Throwable ignore) {}
+    lab14PopupShown = true;
 
-            lab14Running = false;
+    showLab14ConditionCheck(() -> {
+
+        if (!lab14AdvisoryShown) {
+
+            lab14AdvisoryShown = true;
+
+            showLab14PreTestAdvisory(() -> {
+
+                lab14PopupShown = false;
+                lab14BatteryHealthStressTest_REAL();
+
+            });
+
+        } else {
+
+            lab14PopupShown = false;
+            lab14BatteryHealthStressTest_REAL();
+
         }
 
-        lab14Cancelled = false;
+    });
 
-        // --------------------------------------------------
-        // RESET DIAGNOSTICS
-        // --------------------------------------------------
+    return;
+}
 
-        resetBatteryDiagnostics();
 
-        collapseRisk[0] = false;
-        swellingRisk[0] = false;
-        calibrationDrift[0] = false;
-        cellImbalanceRisk[0] = false;
+// --------------------------------------------------
+// RESET STATE (μόνο μετά το popup)
+// --------------------------------------------------
 
-        lab14_systemLimited[0] = false;
+if (!lab14Running) {
 
-        sag1[0] = Float.NaN;
-        sag2[0] = Float.NaN;
-        sagAvg[0] = Float.NaN;
+    lab14Cancelled = false;
 
-        vStart[0] = Float.NaN;
-        vLoad1[0] = Float.NaN;
-        vRecover[0] = Float.NaN;
-        vLoad2[0] = Float.NaN;
+    resetBatteryDiagnostics();
 
-        voltageRecovery[0] = Float.NaN;
-        voltageRecoverySpeed[0] = Float.NaN;
-        voltageStability[0] = Float.NaN;
+    collapseRisk[0] = false;
+    swellingRisk[0] = false;
+    calibrationDrift[0] = false;
+    cellImbalanceRisk[0] = false;
 
-        internalResistance[0] = Float.NaN;
-        thermalImpedance[0] = Float.NaN;
+    lab14_systemLimited[0] = false;
 
-        powerStabilityFactor[0] = Float.NaN;
-        stressSignature[0] = Float.NaN;
-        cellElasticityIndex[0] = Float.NaN;
-        structuralIntegrityIndex[0] = Float.NaN;
+    sag1[0] = Float.NaN;
+    sag2[0] = Float.NaN;
+    sagAvg[0] = Float.NaN;
 
-        expectedPercent[0] = Float.NaN;
-        percentDeviation[0] = Float.NaN;
+    vStart[0] = Float.NaN;
+    vLoad1[0] = Float.NaN;
+    vRecover[0] = Float.NaN;
+    vLoad2[0] = Float.NaN;
 
-        startBatteryTemp = Float.NaN;
-        endBatteryTemp = Float.NaN;
+    voltageRecovery[0] = Float.NaN;
+    voltageRecoverySpeed[0] = Float.NaN;
+    voltageStability[0] = Float.NaN;
 
-        // --------------------------------------------------
-        // RESET ENGINE STATE
-        // --------------------------------------------------
+    internalResistance[0] = Float.NaN;
+    thermalImpedance[0] = Float.NaN;
 
-        lab14Conf = null;
-        lab14AgingIndex = -1;
-        lab14AgingInterp = "N/A";
-        lab14BatteryBehaviourWarning = false;
+    powerStabilityFactor[0] = Float.NaN;
+    stressSignature[0] = Float.NaN;
+    cellElasticityIndex[0] = Float.NaN;
+    structuralIntegrityIndex[0] = Float.NaN;
 
-        final SharedPreferences p =
-                getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+    expectedPercent[0] = Float.NaN;
+    percentDeviation[0] = Float.NaN;
 
-        // --------------------------------------------------
-        // START FLAG (μόνο στο πρώτο start)
-        // --------------------------------------------------
+    startBatteryTemp = Float.NaN;
+    endBatteryTemp = Float.NaN;
 
-        lab14Running = true;
+    lab14Conf = null;
+    lab14AgingIndex = -1;
+    lab14AgingInterp = "N/A";
+    lab14BatteryBehaviourWarning = false;
+}
 
-        applyMaxBrightnessAndKeepOn();
-    }
 
-    // ---------------------------------------
-    // ENGINE
-    // ---------------------------------------
+// --------------------------------------------------
+// START FLAG
+// --------------------------------------------------
 
-    final Lab14Engine engine = new Lab14Engine(this);
+lab14Running = true;
+lab14Cancelled = false;
 
-    try {
+applyMaxBrightnessAndKeepOn();
 
-        final int durationSec = LAB14_TOTAL_SECONDS;
-        lastSelectedStressDurationSec = durationSec;
+
+// --------------------------------------------------
+// CHECK CHARGING
+// --------------------------------------------------
+
+if (isChargingNowSafe()) {
+
+    logError(gr
+            ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
+            : "Device must NOT be charging.");
+
+    lab14Running = false;
+    return;
+}
+
+
+// ---------------------------------------
+// ENGINE
+// ---------------------------------------
+
+final Lab14Engine engine = new Lab14Engine(this);
+
+try {
+
+    final int durationSec = LAB14_TOTAL_SECONDS;
+    lastSelectedStressDurationSec = durationSec;
 
         // ------------------------------------------------------------
         // 1) INITIAL SNAPSHOT
@@ -13305,52 +13328,7 @@ private void lab14BatteryHealthStressTest_REAL() {
         );
 
         logLine();
-        
-        if (!lab14PopupShown) {
-
-            lab14Running = false;
-            lab14Cancelled = false;
-
-            lab14PopupShown = true;
-
-            showLab14ConditionCheck(() -> {
-
-                if (!lab14AdvisoryShown) {
-
-                    lab14AdvisoryShown = true;
-
-                    showLab14PreTestAdvisory(() -> {
-
-                        lab14BatteryHealthStressTest_REAL();
-
-                    });
-
-                } else {
-
-                    lab14BatteryHealthStressTest_REAL();
-
-                }
-
-            });
-
-            return;
-        }
-
-        // SECOND PASS
-        lab14Running = true;
-        lab14Cancelled = false;
-
-        // 🔴 CHECK CHARGING AFTER POPUPS
-        if (isChargingNowSafe()) {
-
-            logError(gr
-                    ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
-                    : "Device must NOT be charging.");
-
-            lab14Running = false;
-            return;
-        }
-
+            
         // ------------------------------------------------------------
         // 3) MAIN DIALOG
         // ------------------------------------------------------------
