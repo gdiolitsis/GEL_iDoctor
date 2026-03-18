@@ -3886,35 +3886,56 @@ private void lab14BProtectionTest() {
                         );
                     }
 
-                    if (cpuThrottleF) {
-                        logWarn(gr
-                                ? "Ανιχνεύθηκε περιορισμός CPU."
-                                : "CPU throttling detected.");
-                    } else {
-                        logOk(gr
-                                ? "Δεν ανιχνεύθηκε περιορισμός CPU."
-                                : "No CPU throttling detected.");
-                    }
+// ------------------------------------------------
+// CPU LIMITER
+// ------------------------------------------------
 
-                    if (thermalLimitF) {
-                        logWarn(gr
-                                ? "Ανιχνεύθηκε θερμικός περιορισμός."
-                                : "Thermal limit detected.");
-                    } else {
-                        logOk(gr
-                                ? "Δεν ανιχνεύθηκε θερμικός περιορισμός."
-                                : "No thermal limit detected.");
-                    }
+if (cpuThrottleF) {
 
-                    if (powerLimitF) {
-                        logWarn(gr
-                                ? "Ανιχνεύθηκε περιορισμός ισχύος."
-                                : "Power limit detected.");
-                    } else {
-                        logOk(gr
-                                ? "Δεν ανιχνεύθηκε περιορισμός ισχύος."
-                                : "No power limit detected.");
-                    }
+    logOk(gr
+            ? "Ενεργοποιήθηκε περιορισμός CPU."
+            : "CPU limiter activated.");
+
+} else {
+
+    logWarn(gr
+            ? "Δεν ενεργοποιήθηκε περιορισμός CPU."
+            : "CPU limiter not detected.");
+}
+
+// ------------------------------------------------
+// THERMAL LIMITER
+// ------------------------------------------------
+
+if (thermalLimitF) {
+
+    logOk(gr
+            ? "Ενεργοποιήθηκε θερμική προστασία."
+            : "Thermal protection activated.");
+
+} else {
+
+    logWarn(gr
+            ? "Δεν ενεργοποιήθηκε θερμική προστασία."
+            : "Thermal limiter not detected.");
+}
+
+// ------------------------------------------------
+// POWER LIMITER
+// ------------------------------------------------
+
+if (powerLimitF) {
+
+    logOk(gr
+            ? "Ενεργοποιήθηκε περιορισμός ισχύος."
+            : "Power limiter activated.");
+
+} else {
+
+    logWarn(gr
+            ? "Δεν ενεργοποιήθηκε περιορισμός ισχύος."
+            : "Power limiter not detected.");
+}
                     
 // ------------------------------------------------------------
 // STORE LAB14B RESULT (for LAB17 / LAB30 / LAB31)
@@ -4757,38 +4778,39 @@ private void Lab14BatteryProtectionCheck(
 
     boolean systemLimited = lab14_systemLimited[0];
 
-    if (systemLimited) {
+// ------------------------------------------------
+// PROTECTION RESULT
+// ------------------------------------------------
 
-        logOk(gr
-                ? "Ενεργοποιήθηκε μηχανισμός προστασίας κατά τη δοκιμή."
-                : "Protection mechanism activated during stress.");
+if (systemLimited) {
 
-        logOk(gr
-                ? "Το σύστημα περιόρισε την κατανάλωση για προστασία της συσκευής."
-                : "System limited power to protect the device.");
+    logOk(gr
+            ? "Ενεργοποιήθηκε μηχανισμός προστασίας."
+            : "Protection mechanism activated.");
 
-    } else {
+    logOk(gr
+            ? "Το σύστημα περιόρισε την κατανάλωση για προστασία."
+            : "System limited current to protect the device.");
 
-        logWarn(gr
-                ? "Δεν ενεργοποιήθηκε μηχανισμός προστασίας υπό υψηλό φορτίο."
-                : "No protection mechanism detected under heavy load.");
+} else if (validDrain) {
 
-        logWarn(gr
-                ? "Πιθανό πρόβλημα λογισμικού ή θερμικής πολιτικής."
-                : "Possible software or thermal policy issue.");
+    logError(gr
+            ? "Δεν ενεργοποιήθηκε προστασία υπό υψηλό φορτίο."
+            : "Protection did not activate under heavy load.");
 
-    }
+    logWarn(gr
+            ? "Πιθανό πρόβλημα thermal / power policy."
+            : "Possible thermal / power policy issue.");
 
-    if (!validDrain) {
+} else {
 
-        logWarn(gr
-                ? "Η καταπόνηση δεν ήταν επαρκής για πλήρη έλεγχο."
-                : "Stress level not sufficient for full check.");
+    logWarn(gr
+            ? "Η καταπόνηση δεν ήταν επαρκής για πλήρη έλεγχο."
+            : "Stress not sufficient for full protection test.");
 
-    }
-    
+}
+
 appendHtml("<br>");
-
 }
 
 // ============================================================
