@@ -13280,6 +13280,8 @@ if (isChargingNowSafe()) {
         logLine();
         
         if (!lab14PopupShown) {
+        	
+        lab14Running = false;
 
     lab14PopupShown = true;
 
