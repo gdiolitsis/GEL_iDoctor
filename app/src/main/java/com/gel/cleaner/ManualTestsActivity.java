@@ -18058,6 +18058,7 @@ if (corruptionScore >= 60) {
                     : "No silent corruption indicators detected."
     );
 }
+}
 
         // ------------------------------------------------------------
         // FINAL HUMAN SUMMARY
