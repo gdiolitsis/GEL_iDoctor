@@ -13128,17 +13128,6 @@ private void lab14BatteryHealthStressTest_REAL() {
 
         final int durationSec = LAB14_TOTAL_SECONDS;
         lastSelectedStressDurationSec = durationSec;
-        
-// 🔴 CHECK CHARGING
-if (isChargingNowSafe()) {
-
-    logError(gr
-            ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
-            : "Device must NOT be charging.");
-
-    lab14Running = false;
-    return;
-}
 
         // ------------------------------------------------------------
         // 1) INITIAL SNAPSHOT
@@ -13319,35 +13308,48 @@ if (isChargingNowSafe()) {
         
         if (!lab14PopupShown) {
 
-    lab14Running = false;
+            lab14Running = false;
+            lab14Cancelled = false;
 
-    lab14PopupShown = true;
+            lab14PopupShown = true;
 
-    showLab14ConditionCheck(() -> {
+            showLab14ConditionCheck(() -> {
 
-        if (!lab14AdvisoryShown) {
+                if (!lab14AdvisoryShown) {
 
-            lab14AdvisoryShown = true;
+                    lab14AdvisoryShown = true;
 
-            showLab14PreTestAdvisory(() -> {
+                    showLab14PreTestAdvisory(() -> {
 
-                lab14BatteryHealthStressTest_REAL();
+                        lab14BatteryHealthStressTest_REAL();
+
+                    });
+
+                } else {
+
+                    lab14BatteryHealthStressTest_REAL();
+
+                }
 
             });
 
-        } else {
-
-            lab14BatteryHealthStressTest_REAL();
-
+            return;
         }
 
-    });
+        // SECOND PASS
+        lab14Running = true;
+        lab14Cancelled = false;
 
-    return;
-}
+        // 🔴 CHECK CHARGING AFTER POPUPS
+        if (isChargingNowSafe()) {
 
-// ✅ SECOND PASS AFTER POPUPS → re-arm running flag
-lab14Running = true;
+            logError(gr
+                    ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
+                    : "Device must NOT be charging.");
+
+            lab14Running = false;
+            return;
+        }
 
         // ------------------------------------------------------------
         // 3) MAIN DIALOG
