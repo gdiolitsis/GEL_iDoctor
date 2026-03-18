@@ -17885,16 +17885,10 @@ if (wearSignals)
 
 // secondary contextual signals
 if (reservedPressure)
-    nandScore += 10;
-
-if (swapUsedKb > 0)
-    nandScore += 10;
-
-if ("HIGH".equalsIgnoreCase(pressureLevel))
-    nandScore += 10;
+    nandScore += 15;
 
 if (pctFree < 5)
-    nandScore += 10;
+    nandScore += 25;
 
 // prevent false NAND diagnosis when wearSignals not present
 if (!wearSignals)
@@ -17929,36 +17923,28 @@ if (nandScore >= 70) {
     );
 }
 
+
 // ------------------------------------------------------------
 // STORAGE CONTROLLER INSTABILITY DETECTOR
 // ------------------------------------------------------------
-
 int controllerScore = 0;
 
-// υψηλή πίεση μνήμης + swap usage
-if ("HIGH".equalsIgnoreCase(pressureLevel))
-    controllerScore += 25;
-
-if (swapUsedKb > 0)
-    controllerScore += 15;
-
-// πολύ χαμηλός διαθέσιμος χώρος
 if (pctFree < 10)
-    controllerScore += 20;
+    controllerScore += 40;
 
-// storage wear indicators
-if (wearSignals)
-    controllerScore += 20;
-
-// έντονη πίεση συστήματος
 if (pctFree < 7)
-    controllerScore += 20;
+    controllerScore += 30;
+
+if (wearSignals)
+    controllerScore += 30;
 
 logLabelValue(
         gr ? "Δείκτης σταθερότητας controller"
            : "Storage controller stability index",
         controllerScore + "/100"
 );
+
+boolean controllerRisk = false;
 
 if (controllerScore >= 60) {
 
@@ -17983,31 +17969,21 @@ if (controllerScore >= 60) {
     );
 }
 
+
 // ------------------------------------------------------------
 // FILESYSTEM CORRUPTION EARLY DETECTOR
 // ------------------------------------------------------------
 boolean fsCorruptionRisk = false;
 int fsScore = 0;
 
-// έντονη πίεση αποθηκευτικού χώρου
 if (pctFree < 10)
+    fsScore += 40;
+
+if (pctFree < 7)
     fsScore += 30;
 
-// πολύ χαμηλός χώρος
-if (pctFree < 7)
-    fsScore += 20;
-
-// χρήση swap
-if (swapUsedKb > 0)
-    fsScore += 15;
-
-// υψηλή πίεση μνήμης
-if ("HIGH".equalsIgnoreCase(pressureLevel))
-    fsScore += 15;
-
-// ενδείξεις wear
 if (wearSignals)
-    fsScore += 20;
+    fsScore += 30;
 
 logLabelValue(
         gr ? "Δείκτης ακεραιότητας filesystem"
@@ -18038,66 +18014,21 @@ if (fsScore >= 60) {
     );
 }
 
-            if (wearSignals) {
-                logLabelWarnValue(
-                        gr ? "Ενδείξεις φθοράς" : "Wear indicators",
-                        gr ? "Εντοπίστηκαν (μακροχρόνια χρήση)"
-                           : "Detected (long-term usage)"
-                );
-                logLabelOkValue(
-                        gr ? "Σημείωση" : "Note",
-                        gr ? "Δεν υποδηλώνει άμεση αστοχία"
-                           : "Does not indicate imminent failure"
-                );
-            } else {
-                logLabelOkValue(
-                        gr ? "Ενδείξεις φθοράς" : "Wear indicators",
-                        gr ? "Δεν εντοπίστηκαν" : "Not detected"
-                );
-            }
 
-            if (reservedPressure) {
-                logLabelWarnValue(
-                        gr ? "Σύστημα εφεδρείας" : "System reserve",
-                        gr
-                                ? "Περιορισμένο — το Android ενδέχεται να περιορίσει background διεργασίες"
-                                : "Compressed — Android may limit background tasks"
-                );
-            }
-
-            logLabelOkValue(
-                    gr ? "Σύσταση" : "Recommendation",
-                    gr
-                            ? "Διατηρήστε τουλάχιστον 15% ελεύθερο χώρο για βέλτιστη απόδοση"
-                            : "Keep free storage above 15% for optimal performance"
-            );
-        }
-        
 // ------------------------------------------------------------
 // SILENT DATA CORRUPTION PREDICTOR
 // ------------------------------------------------------------
 boolean silentCorruptionRisk = false;
 int corruptionScore = 0;
 
-// χαμηλός ελεύθερος χώρος
 if (pctFree < 12)
-    corruptionScore += 20;
+    corruptionScore += 30;
 
-// έντονη πίεση μνήμης
-if ("HIGH".equalsIgnoreCase(pressureLevel))
-    corruptionScore += 20;
-
-// χρήση swap
-if (swapUsedKb > 0)
-    corruptionScore += 15;
-
-// ενδείξεις NAND wear
 if (wearSignals)
-    corruptionScore += 25;
+    corruptionScore += 35;
 
-// πιθανή αστάθεια controller
 if (controllerRisk)
-    corruptionScore += 20;
+    corruptionScore += 35;
 
 logLabelValue(
         gr ? "Δείκτης κινδύνου σιωπηλής αλλοίωσης δεδομένων"
