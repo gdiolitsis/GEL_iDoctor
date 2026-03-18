@@ -4188,6 +4188,7 @@ btnContinue.setOnClickListener(v -> {
         onContinue.run();
 
 });
+}
 
 // ------------------------------------------------------------
 // GPU COMPUTE STRESS (LAB14)
