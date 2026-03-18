@@ -19234,10 +19234,12 @@ appendHtml("<br>");
                : "BiometricPrompt framework not available on this Android version"
     );
 
-            gr ? "Απαιτούμενη ενέργεια" : "Action required",
-            gr ? "Ελέγξτε τα βιομετρικά από τις ρυθμίσεις συστήματος κλειδώματος οθόνης και επανεκτελέστε το LAB 21"
-               : "Test biometrics via system lock screen settings, then re-run LAB 21"
-    );
+            logLabelWarnValue(
+        gr ? "Απαιτούμενη ενέργεια" : "Action required",
+        gr
+                ? "Ελέγξτε τα βιομετρικά από τις ρυθμίσεις συστήματος κλειδώματος οθόνης και επανεκτελέστε το LAB 21"
+                : "Test biometrics via system lock screen settings, then re-run LAB 21"
+);
 
     logInfo("Note");
     logLabelOkValue(
