@@ -3630,11 +3630,11 @@ private boolean checkLab14BConditions() {
     // BATTERY %
     // ----------------------------------------------------
 
-    if (percent < 80) {
+    if (percent < 70 || percent > 90) {
 
         logWarn(gr
-                ? "Η μπαταρία πρέπει να είναι 80–100%."
-                : "Battery must be between 80–100%.");
+                ? "Η μπαταρία πρέπει να είναι 70–90%."
+                : "Battery must be between 70–90%.");
 
         logLabelErrorValue(
                 gr ? "Τρέχον επίπεδο"
