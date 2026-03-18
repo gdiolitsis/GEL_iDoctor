@@ -17944,8 +17944,6 @@ logLabelValue(
         controllerScore + "/100"
 );
 
-boolean controllerRisk = false;
-
 if (controllerScore >= 60) {
 
     controllerRisk = true;
