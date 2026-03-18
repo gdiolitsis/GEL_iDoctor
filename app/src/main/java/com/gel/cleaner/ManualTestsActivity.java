@@ -13023,6 +13023,14 @@ AppTTS.stop();
 // ============================================================
 // LAB 14 — ENTRY
 // ============================================================
+
+private void lab14BatteryHealthStressTest() {
+    lab14BatteryHealthStressTest_REAL();
+}
+
+// ============================================================
+// LAB 14 — Battery health stress test
+// ============================================================
 private void lab14BatteryHealthStressTest_REAL() {
 
     final boolean gr = AppLang.isGreek(this);
