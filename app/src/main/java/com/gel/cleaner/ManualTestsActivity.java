@@ -13296,8 +13296,8 @@ if (isChargingNowSafe()) {
         logLine();
         
         if (!lab14PopupShown) {
-        	
-        lab14Running = false;
+
+    lab14Running = false;
 
     lab14PopupShown = true;
 
@@ -13323,6 +13323,9 @@ if (isChargingNowSafe()) {
 
     return;
 }
+
+// ✅ SECOND PASS AFTER POPUPS → re-arm running flag
+lab14Running = true;
 
         // ------------------------------------------------------------
         // 3) MAIN DIALOG
