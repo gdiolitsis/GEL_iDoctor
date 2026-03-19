@@ -13121,7 +13121,6 @@ if (!lab14Running) {
     lab14BatteryBehaviourWarning = false;
 }
 
-
 // --------------------------------------------------
 // START FLAG
 // --------------------------------------------------
@@ -13495,7 +13494,9 @@ root.addView(videoHolder);
         // ------------------------------------------------------------
         new Thread(() -> {
 
-    lab14FastDone = false;
+    try {
+
+        lab14FastDone = false;
 
             vStart[0] = getBatteryVoltageFiltered();
 
@@ -13601,7 +13602,13 @@ if (!Float.isNaN(pulseSag[0]) &&
             
             lab14FastDone = true;
 
-        }).start();
+        } catch (Throwable t) {
+
+        runOnUiThread(() -> logError("LAB14 fast thread error"));
+
+    }
+
+}).start();
 
 // ------------------------------------------------------------
 // 5) MAIN STRESS START
@@ -15435,7 +15442,6 @@ lab14Running = false;
                     ? "Σφάλμα LAB 14"
                     : "LAB 14 error"
     );
-}
 }
 }
 
