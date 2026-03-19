@@ -16317,16 +16317,6 @@ if (lab15Dialog.getWindow() != null) {
 
 lab15Dialog.show();
 
-// ============================================================
-// LOGS
-// ============================================================
-appendHtml("<br>");
-logLine();
-logInfo(gr
-        ? "LAB 15 — Διάγνωση Συστήματος Φόρτισης (Smart)"
-        : "LAB 15 — Charging System Diagnostic (Smart)");
-logLine();
-
 // ================= CORE LOOP =================  
 final long[] startTs = { -1 };  
 final boolean[] wasCharging = { false };  
@@ -16477,10 +16467,9 @@ endBatteryTemp   = lab15BattTempEnd;
 // ------------------------------------------------------------
 // Battery temperature + thermal correlation
 // ------------------------------------------------------------
-logInfo(gr ? "Θερμοκρασία μπαταρίας:" : "Battery temperature:");
 
 logLabelOkValue(
-        gr ? "Τελική θερμοκρασία" : "End temperature",
+        gr ? "Τελική θερμοκρασία μπαταρίας" : "End battery temperature",
         String.format(Locale.US, "%.1f°C", lab15BattTempEnd)
 );
 
@@ -16498,14 +16487,10 @@ logLab15ThermalCorrelation(
 // ------------------------------------------------------------
 float dtCharge = lab15BattTempEnd - lab15BattTempStart;
 
-logInfo(gr
-        ? "Θερμική αξιολόγηση (κατά τη φόρτιση):"
-        : "Thermal verdict (charging):");
-
 if (lab15OverTempDuringCharge) {
 
     logLabelErrorValue(
-            gr ? "Θερμοκρασία" : "Temperature",
+            gr ? "Θερμοκρασία κατά την φορτιση" : "Temperature during charging",
             String.format(
                     Locale.US,
                     gr
@@ -16518,7 +16503,7 @@ if (lab15OverTempDuringCharge) {
 } else {
 
     logLabelOkValue(
-            gr ? "Θερμοκρασία" : "Temperature",
+            gr ? "Θερμοκρασία κατά την φορτιση" : "Temperature during charging",
             String.format(
                     Locale.US,
                     gr
@@ -16532,12 +16517,11 @@ if (lab15OverTempDuringCharge) {
 // ------------------------------------------------------------
 // Charging connection stability
 // ------------------------------------------------------------
-logInfo(gr ? "Σταθερότητα σύνδεσης φόρτισης:" : "Charging connection:");
 
 if (lab15FlapUnstable) {
 
     logLabelErrorValue(
-            gr ? "Σύνδεση" : "Connection",
+            gr ? "Σταθερότητα σύνδεσης φόρτισης" : "Charging connection stability",
             gr
                     ? "Ασταθής — εντοπίστηκε επαναλαμβανόμενο plug/unplug"
                     : "Unstable — plug/unplug behavior detected"
@@ -16546,7 +16530,7 @@ if (lab15FlapUnstable) {
 } else {
 
     logLabelOkValue(
-            gr ? "Σύνδεση" : "Connection",
+            gr ? "Σταθερότητα σύνδεσης φόρτισης" : "Charging connection stability",
             gr
                     ? "Σταθερή — δεν ανιχνεύθηκε μη φυσιολογική επανασύνδεση"
                     : "Stable — no abnormal reconnect behavior"
@@ -16581,8 +16565,6 @@ if (startMah > 0 && endInfo != null &&
             )
     );
 
-logInfo(gr ? "Ισχύς φόρτισης:" : "Charging strength:");
-
 // ------------------------------------------------------------
 // PMIC / CHARGING IC DIAGNOSTIC
 // ------------------------------------------------------------
@@ -16597,19 +16579,19 @@ if (lab15_strengthKnown && mahPerMin < 1 && !lab15FlapUnstable) {
 }
 
 if (mahPerMin >= 20.0) {
-    logLabelOkValue(gr ? "Ισχύς" : "Strength", gr ? "ΙΣΧΥΡΗ" : "STRONG");
+    logLabelOkValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΙΣΧΥΡΗ" : "STRONG");
     lab15_strengthWeak = false;
 
 } else if (mahPerMin >= 10.0) {
-    logLabelOkValue(gr ? "Ισχύς" : "Strength", gr ? "ΚΑΝΟΝΙΚΗ" : "NORMAL");
+    logLabelOkValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΚΑΝΟΝΙΚΗ" : "NORMAL");
     lab15_strengthWeak = false;
 
 } else if (mahPerMin >= 5.0) {
-    logLabelWarnValue(gr ? "Ισχύς" : "Strength", gr ? "ΜΕΤΡΙΑ" : "MODERATE");
+    logLabelWarnValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΜΕΤΡΙΑ" : "MODERATE");
     lab15_strengthWeak = true;
 
 } else {
-    logLabelErrorValue(gr ? "Ισχύς" : "Strength", gr ? "ΑΣΘΕΝΗΣ" : "WEAK");
+    logLabelErrorValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΑΣΘΕΝΗΣ" : "WEAK");
     lab15_strengthWeak = true;
 }
 
@@ -16642,7 +16624,10 @@ if (lab15_strengthKnown && mahPerMin < 6 && mahPerMin > 1 && !lab15OverTempDurin
 // ------------------------------------------------------------
 // FINAL LAB 15 DECISION
 // ------------------------------------------------------------
+
+appendHtml("<br>");
 logInfo(gr ? "Απόφαση LAB:" : "LAB decision:");
+logLine();
 
 if (!lab15OverTempDuringCharge && !lab15FlapUnstable && !lab15_strengthWeak) {
 
