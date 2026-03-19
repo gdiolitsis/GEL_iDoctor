@@ -23,6 +23,7 @@ public class iDoctorDeviceProfiles {
         public String batteryTempPath;
         public String batteryCyclePath;
         public String batteryResistancePath;
+        public String batteryVoltagePath = null;
 
         public String cpuTempPath;
         public String gpuTempPath;
