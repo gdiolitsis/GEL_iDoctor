@@ -13035,42 +13035,6 @@ private void lab14BatteryHealthStressTest_REAL() {
 
     final boolean gr = AppLang.isGreek(this);
 
-
-// --------------------------------------------------
-// POPUP FIRST
-// --------------------------------------------------
-
-if (!lab14PopupShown) {
-
-    lab14Running = false;
-    lab14Cancelled = false;
-
-    lab14PopupShown = true;
-
-    showLab14ConditionCheck(() -> {
-
-        if (!lab14AdvisoryShown) {
-
-            lab14AdvisoryShown = true;
-
-            showLab14PreTestAdvisory(() -> {
-            	
-                lab14BatteryHealthStressTest_REAL();
-
-            });
-
-        } else {
-
-            lab14BatteryHealthStressTest_REAL();
-
-        }
-
-    });
-
-    return;
-}
-
-
 // --------------------------------------------------
 // RESET STATE (μόνο μετά το popup)
 // --------------------------------------------------
@@ -13217,7 +13181,7 @@ try {
 
     final long t0 = SystemClock.elapsedRealtime();
 
-        // ------------------------------------------------------------
+    // ------------------------------------------------------------
     // 2) HEADER LOGS
     // ------------------------------------------------------------
     appendHtml("<br>");
@@ -13333,7 +13297,41 @@ try {
     );
 
     logLine();
-            
+    
+// --------------------------------------------------
+// POPUP FIRST
+// --------------------------------------------------
+
+if (!lab14PopupShown) {
+
+    lab14Running = false;
+    lab14Cancelled = false;
+
+    lab14PopupShown = true;
+
+    showLab14ConditionCheck(() -> {
+
+        if (!lab14AdvisoryShown) {
+
+            lab14AdvisoryShown = true;
+
+            showLab14PreTestAdvisory(() -> {
+            	
+                lab14BatteryHealthStressTest_REAL();
+
+            });
+
+        } else {
+
+            lab14BatteryHealthStressTest_REAL();
+
+        }
+
+    });
+
+    return;
+}
+
         // ------------------------------------------------------------
         // 3) MAIN DIALOG
         // ------------------------------------------------------------
