@@ -6,7 +6,6 @@
 package com.gel.cleaner;
 
 import com.gel.cleaner.base.*;
-import com.gel.cleaner.UIHelpers;
 
 import android.app.ActivityManager;
 import android.bluetooth.BluetoothAdapter;
@@ -57,6 +56,8 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
     private static final String NEON_GREEN = "#39FF14";
 
     private boolean isRooted = false;
+    
+    private iDoctorEngine engine;
 
     private GELFoldableDetector foldDetector;
     private GELFoldableUIManager foldUI;
@@ -88,9 +89,14 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_device_info_internal);
+        
+        engine = new iDoctorEngine(this);
 
-            UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
+isRooted = engine.isDeviceRooted();
+        
+        setContentView(R.layout.activity_device_info_internal);
+        
+        UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
         foldUI = new GELFoldableUIManager(this);
         foldDetector = new GELFoldableDetector(this, this);
@@ -534,8 +540,11 @@ private String buildAndroidInfo() {
 // ============================================================
 private String buildCpuInfo() {
 
+    iDoctorEngine.ThermalSnapshot ts =
+            engine.readThermalSnapshot();
+
     StringBuilder sb = new StringBuilder();
-    final String FMT = "%-10s : %s\n";   // 👈 ΤΟ ΜΥΣΤΙΚΟ ΤΗΣ ΣΤΟΙΧΙΣΗΣ
+    final String FMT = "%-10s : %s\n";
 
     // ------------------------------------------------------------------------
     // ABI
@@ -549,6 +558,7 @@ private String buildCpuInfo() {
     } else {
         abi.append(Build.CPU_ABI);
     }
+
     sb.append(String.format(Locale.US, FMT, "ABI", abi.toString()));
 
     // ------------------------------------------------------------------------
@@ -558,19 +568,44 @@ private String buildCpuInfo() {
     sb.append(String.format(Locale.US, FMT, "CPU Cores", cores));
 
     // ------------------------------------------------------------------------
-    // /proc/cpuinfo (selected lines)
+    // /proc/cpuinfo
     // ------------------------------------------------------------------------
     String cpuinfo = readTextFile("/proc/cpuinfo", 32 * 1024);
+
     if (cpuinfo != null && !cpuinfo.isEmpty()) {
+
         String[] lines = cpuinfo.split("\n");
+
         for (String line : lines) {
+
             String low = line.toLowerCase(Locale.US);
+
             if (low.startsWith("processor")) {
-                sb.append(String.format(Locale.US, FMT, "processor", line.split(":",2)[1].trim()));
+
+                sb.append(String.format(
+                        Locale.US,
+                        FMT,
+                        "processor",
+                        line.split(":", 2)[1].trim()
+                ));
+
             } else if (low.startsWith("model name")) {
-                sb.append(String.format(Locale.US, FMT, "model name", line.split(":",2)[1].trim()));
+
+                sb.append(String.format(
+                        Locale.US,
+                        FMT,
+                        "model name",
+                        line.split(":", 2)[1].trim()
+                ));
+
             } else if (low.startsWith("hardware")) {
-                sb.append(String.format(Locale.US, FMT, "hardware", line.split(":",2)[1].trim()));
+
+                sb.append(String.format(
+                        Locale.US,
+                        FMT,
+                        "hardware",
+                        line.split(":", 2)[1].trim()
+                ));
             }
         }
     }
@@ -578,46 +613,106 @@ private String buildCpuInfo() {
     // ------------------------------------------------------------------------
     // GOVERNOR
     // ------------------------------------------------------------------------
-    String gov = readSysString("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
+    String gov =
+            readSysString(
+                    "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+            );
+
     if (gov != null && !gov.isEmpty()) {
-        sb.append(String.format(Locale.US, FMT, "Governor", gov.trim()));
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Governor",
+                gov.trim()
+        ));
     }
 
     // ------------------------------------------------------------------------
     // FREQUENCIES
     // ------------------------------------------------------------------------
-    long curFreq = readSysLong("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
-    long minFreq = readSysLong("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq");
-    long maxFreq = readSysLong("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq");
+    long curFreq =
+            readSysLong(
+                    "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
+            );
+
+    long minFreq =
+            readSysLong(
+                    "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq"
+            );
+
+    long maxFreq =
+            readSysLong(
+                    "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq"
+            );
 
     if (curFreq > 0 || minFreq > 0 || maxFreq > 0) {
+
         StringBuilder freq = new StringBuilder();
-        if (curFreq > 0) freq.append("cur=").append(curFreq / 1000).append(" ");
-        if (minFreq > 0) freq.append("min=").append(minFreq / 1000).append(" ");
-        if (maxFreq > 0) freq.append("max=").append(maxFreq / 1000);
-        sb.append(String.format(Locale.US, FMT, "Freq (MHz)", freq.toString().trim()));
-    }
 
-    // ------------------------------------------------------------------------
-    // CLUSTER HINT
-    // ------------------------------------------------------------------------
-    String policy0 = readSysString("/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_min_freq");
-    String policy7 = readSysString("/sys/devices/system/cpu/cpufreq/policy7/cpuinfo_max_freq");
-    if ((policy0 != null && !policy0.isEmpty()) ||
-        (policy7 != null && !policy7.isEmpty())) {
-        sb.append(String.format(Locale.US, FMT, "Cluster", "big.LITTLE detected"));
-    }
+        if (curFreq > 0)
+            freq.append("cur=").append(curFreq / 1000).append(" ");
 
-    // ------------------------------------------------------------------------
-    // CPU CHIP TEMP (estimated)
-    // ------------------------------------------------------------------------
-    Double socTemp = getSocTempCpuAverage();
-    if (socTemp != null) {
+        if (minFreq > 0)
+            freq.append("min=").append(minFreq / 1000).append(" ");
+
+        if (maxFreq > 0)
+            freq.append("max=").append(maxFreq / 1000);
+
         sb.append(String.format(
                 Locale.US,
                 FMT,
-                "CPU CHIP",
-                String.format(Locale.US, "%.1f°C (estimated)", socTemp)
+                "Freq (MHz)",
+                freq.toString().trim()
+        ));
+    }
+
+    // ------------------------------------------------------------------------
+    // CLUSTER
+    // ------------------------------------------------------------------------
+    String policy0 =
+            readSysString(
+                    "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_min_freq"
+            );
+
+    String policy7 =
+            readSysString(
+                    "/sys/devices/system/cpu/cpufreq/policy7/cpuinfo_max_freq"
+            );
+
+    if ((policy0 != null && !policy0.isEmpty())
+            || (policy7 != null && !policy7.isEmpty())) {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Cluster",
+                "big.LITTLE detected"
+        ));
+    }
+
+    // ------------------------------------------------------------------------
+    // CPU TEMP FROM ENGINE
+    // ------------------------------------------------------------------------
+    if (ts != null && ts.cpu.valid) {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "CPU Temp",
+                String.format(
+                        Locale.US,
+                        "%.1f°C",
+                        ts.cpu.tempC
+                )
+        ));
+
+    } else {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "CPU Temp",
+                "N/A"
         ));
     }
 
@@ -625,34 +720,80 @@ private String buildCpuInfo() {
     // ROOT CPU DETAILS
     // ------------------------------------------------------------------------
     if (isRooted) {
+
         sb.append("\n[Root CPU tables]\n");
+
         boolean added = false;
 
         for (int i = 0; i < cores; i++) {
-            String base = "/sys/devices/system/cpu/cpu" + i + "/cpufreq/";
-            long rCur = readSysLong(base + "scaling_cur_freq");
-            long rMin = readSysLong(base + "cpuinfo_min_freq");
-            long rMax = readSysLong(base + "cpuinfo_max_freq");
+
+            String base =
+                    "/sys/devices/system/cpu/cpu"
+                            + i
+                            + "/cpufreq/";
+
+            long rCur =
+                    readSysLong(base + "scaling_cur_freq");
+
+            long rMin =
+                    readSysLong(base + "cpuinfo_min_freq");
+
+            long rMax =
+                    readSysLong(base + "cpuinfo_max_freq");
 
             if (rCur > 0 || rMin > 0 || rMax > 0) {
-                StringBuilder row = new StringBuilder();
-                if (rCur > 0) row.append("cur=").append(rCur / 1000).append("MHz ");
-                if (rMin > 0) row.append("min=").append(rMin / 1000).append("MHz ");
-                if (rMax > 0) row.append("max=").append(rMax / 1000).append("MHz");
 
-                sb.append(String.format(Locale.US, FMT, "cpu" + i, row.toString().trim()));
+                StringBuilder row =
+                        new StringBuilder();
+
+                if (rCur > 0)
+                    row.append("cur=")
+                            .append(rCur / 1000)
+                            .append("MHz ");
+
+                if (rMin > 0)
+                    row.append("min=")
+                            .append(rMin / 1000)
+                            .append("MHz ");
+
+                if (rMax > 0)
+                    row.append("max=")
+                            .append(rMax / 1000)
+                            .append("MHz");
+
+                sb.append(String.format(
+                        Locale.US,
+                        FMT,
+                        "cpu" + i,
+                        row.toString().trim()
+                ));
+
                 added = true;
             }
 
-            String avail = readSysString(base + "scaling_available_frequencies");
+            String avail =
+                    readSysString(
+                            base
+                                    + "scaling_available_frequencies"
+                    );
+
             if (avail != null && !avail.isEmpty()) {
-                sb.append(String.format(Locale.US, FMT, "cpu" + i + " avail", avail.trim()));
+
+                sb.append(String.format(
+                        Locale.US,
+                        FMT,
+                        "cpu" + i + " avail",
+                        avail.trim()
+                ));
+
                 added = true;
             }
         }
 
         if (!added) {
-            sb.append("Root CPU details not exposed by current kernel.\n");
+            sb.append(
+                    "Root CPU details not exposed by current kernel.\n"
+            );
         }
     }
 
@@ -664,77 +805,204 @@ private String buildCpuInfo() {
     // ============================================================
 
     private String buildGpuInfo() {
-        StringBuilder sb = new StringBuilder();
+
+    iDoctorEngine.ThermalSnapshot ts =
+            engine.readThermalSnapshot();
+
+    StringBuilder sb = new StringBuilder();
+    final String FMT = "%-12s : %s\n";
+
+    try {
+
+        ActivityManager am =
+                (ActivityManager) getSystemService(
+                        Context.ACTIVITY_SERVICE
+                );
+
+        if (am != null) {
+
+            ConfigurationInfo ci =
+                    am.getDeviceConfigurationInfo();
+
+            if (ci != null) {
+
+                sb.append(String.format(
+                        Locale.US,
+                        FMT,
+                        "OpenGL ES",
+                        ci.getGlEsVersion()
+                ));
+            }
+        }
+
+    } catch (Throwable ignore) { }
+
+    String egl = getProp("ro.hardware.egl");
+
+    if (egl != null && !egl.isEmpty()) {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "EGL HW",
+                egl
+        ));
+    }
+
+    String driver0 = getProp("ro.gfx.driver.0");
+
+    if (driver0 != null && !driver0.isEmpty()) {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "GPU Driver",
+                driver0
+        ));
+    }
+
+    String perf = getProp("ro.gpu.uv");
+
+    if (perf != null && !perf.isEmpty()) {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "GPU Mode",
+                perf
+        ));
+    }
+
+    // ---------------------------------------------------------
+    // GPU TEMP FROM ENGINE
+    // ---------------------------------------------------------
+
+    if (ts != null && ts.gpu.valid) {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "GPU Temp",
+                String.format(
+                        Locale.US,
+                        "%.1f°C",
+                        ts.gpu.tempC
+                )
+        ));
+
+    } else {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "GPU Temp",
+                "N/A"
+        ));
+    }
+
+    // ---------------------------------------------------------
+    // ROOT GPU TABLES
+    // ---------------------------------------------------------
+
+    boolean addedRootGpu = false;
+
+    if (isRooted) {
+
+        sb.append("\n[Root GPU tables]\n");
 
         try {
-            ActivityManager am =
-                    (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-            if (am != null) {
-                ConfigurationInfo ci = am.getDeviceConfigurationInfo();
-                if (ci != null) {
-                    sb.append("OpenGL ES     : ").append(ci.getGlEsVersion()).append("\n");
-                }
-            }
-        } catch (Throwable ignore) {
-        }
 
-        String egl = getProp("ro.hardware.egl");
-        if (egl != null && !egl.isEmpty()) {
-            sb.append("EGL HW        : ").append(egl).append("\n");
-        }
+            long cur =
+                    readSysLong(
+                            "/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq"
+                    );
 
-        String driver0 = getProp("ro.gfx.driver.0");
-        if (driver0 != null && !driver0.isEmpty()) {
-            sb.append("GPU Driver   : ").append(driver0).append("\n");
-        }
+            long min =
+                    readSysLong(
+                            "/sys/class/kgsl/kgsl-3d0/devfreq/min_freq"
+                    );
 
-        String perf = getProp("ro.gpu.uv");
-        if (perf != null && !perf.isEmpty()) {
-            sb.append("GPU Mode     : ").append(perf).append("\n");
-        }
+            long max =
+                    readSysLong(
+                            "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq"
+                    );
 
-        if (sb.length() == 0) {
-            sb.append("No GPU information available via system properties.\n");
-        }
+            if (cur > 0 || min > 0 || max > 0) {
 
-        // ROOT-EXTENDED GPU (KGSL / devfreq where available)
-        boolean addedRootGpu = false;
-        if (isRooted) {
-            sb.append("\n[Root GPU tables]\n");
-            try {
-                long cur = readSysLong("/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq");
-                long min = readSysLong("/sys/class/kgsl/kgsl-3d0/devfreq/min_freq");
-                long max = readSysLong("/sys/class/kgsl/kgsl-3d0/devfreq/max_freq");
-                if (cur > 0 || min > 0 || max > 0) {
-                    sb.append("Freq (MHz)   : ");
-                    if (cur > 0) sb.append("cur=").append(cur / 1000000).append(" ");
-                    if (min > 0) sb.append("min=").append(min / 1000000).append(" ");
-                    if (max > 0) sb.append("max=").append(max / 1000000);
-                    sb.append("\n");
-                    addedRootGpu = true;
-                }
+                StringBuilder row =
+                        new StringBuilder();
 
-                String avail = readSysString("/sys/class/kgsl/kgsl-3d0/devfreq/available_frequencies");
-                if (avail != null && !avail.isEmpty()) {
-                    sb.append("Avail Freq   : ").append(avail.trim()).append("\n");
-                    addedRootGpu = true;
-                }
+                if (cur > 0)
+                    row.append("cur=")
+                            .append(cur / 1000000)
+                            .append("MHz ");
 
-                String busy = readSysString("/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage");
-                if (busy != null && !busy.isEmpty()) {
-                    sb.append("Busy GPU     : ").append(busy.trim()).append(" %\n");
-                    addedRootGpu = true;
-                }
-            } catch (Throwable ignore) {
+                if (min > 0)
+                    row.append("min=")
+                            .append(min / 1000000)
+                            .append("MHz ");
+
+                if (max > 0)
+                    row.append("max=")
+                            .append(max / 1000000)
+                            .append("MHz");
+
+                sb.append(String.format(
+                        Locale.US,
+                        FMT,
+                        "Freq",
+                        row.toString().trim()
+                ));
+
+                addedRootGpu = true;
             }
 
-            if (!addedRootGpu) {
-                sb.append("Root GPU metrics not exposed by current driver.\n");
-            }
-        }
+            String avail =
+                    readSysString(
+                            "/sys/class/kgsl/kgsl-3d0/devfreq/available_frequencies"
+                    );
 
-        return sb.toString();
+            if (avail != null && !avail.isEmpty()) {
+
+                sb.append(String.format(
+                        Locale.US,
+                        FMT,
+                        "Avail Freq",
+                        avail.trim()
+                ));
+
+                addedRootGpu = true;
+            }
+
+            String busy =
+                    readSysString(
+                            "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage"
+                    );
+
+            if (busy != null && !busy.isEmpty()) {
+
+                sb.append(String.format(
+                        Locale.US,
+                        FMT,
+                        "Busy GPU",
+                        busy.trim() + " %"
+                ));
+
+                addedRootGpu = true;
+            }
+
+        } catch (Throwable ignore) { }
+
+        if (!addedRootGpu) {
+
+            sb.append(
+                    "Root GPU metrics not exposed by current driver.\n"
+            );
+        }
     }
+
+    return sb.toString();
+}
 
 // ============================================================================
 // THERMAL SENSORS — INTERNAL
@@ -742,96 +1010,159 @@ private String buildCpuInfo() {
 // ============================================================================
 private String buildThermalInternalReport() {
 
+    iDoctorEngine.ThermalSnapshot ts =
+            engine.readThermalSnapshot();
+
     StringBuilder sb = new StringBuilder();
 
     sb.append("THERMAL SENSORS (INTERNAL)\n");
     sb.append("──────────────────────────\n");
 
     File thermalDir = new File("/sys/class/thermal");
+
     if (!thermalDir.exists() || !thermalDir.isDirectory()) {
         sb.append("Thermal sensors not available on this device.\n");
         return sb.toString();
     }
 
-    File[] zones = thermalDir.listFiles((dir, name) -> name.startsWith("thermal_zone"));
+    File[] zones =
+            thermalDir.listFiles(
+                    (dir, name) -> name.startsWith("thermal_zone")
+            );
+
     if (zones == null || zones.length == 0) {
         sb.append("No thermal zones detected.\n");
         return sb.toString();
     }
 
-    Map<String, Float> maxTemps = new java.util.HashMap<>();
+    final String FMT = "%-18s : %5.1f°C  (%s)\n";
 
-    // ------------------------------------------------------------------------
-    // BASIC / HUMAN REPORT (ALL DEVICES)
-    // ------------------------------------------------------------------------
-    for (File zone : zones) {
-        try {
-            String type = readSysFile(zone, "type");
-            String tempRaw = readSysFile(zone, "temp");
-            if (type == null || tempRaw == null) continue;
+    // --------------------------------------------------------
+    // ENGINE VALUES (single source of truth)
+    // --------------------------------------------------------
 
-            float tempC = Float.parseFloat(tempRaw.trim()) / 1000f;
-            if (tempC <= -100f || tempC == 0f) continue;
+    if (ts != null && ts.cpu != null && ts.cpu.valid) {
 
-            String label = mapThermalType(type);
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "CPU",
+                ts.cpu.tempC,
+                thermalState(ts.cpu.tempC)
+        ));
 
-            boolean isInternal =
-                    label.contains("CPU") ||
-                    label.equals("GPU") ||
-                    label.equals("Battery") ||
-                    label.contains("Backlight") ||
-                    label.contains("DDR");
+    } else {
 
-            if (!isInternal) continue;
-
-            Float prev = maxTemps.get(label);
-            if (prev == null || tempC > prev) {
-                maxTemps.put(label, tempC);
-            }
-
-        } catch (Throwable ignore) {}
+        sb.append(String.format(
+                Locale.US,
+                "%-18s : %s\n",
+                "CPU",
+                "N/A"
+        ));
     }
 
-    final String FMT = "%-18s : %5.1f°C  (%s)\n";
-    String[] order = {
-            "CPU Core",
-            "CPU Cluster 0",
-            "CPU Cluster 1",
-            "GPU",
-            "DDR Memory",
-            "Battery",
-            "Backlight"
-    };
+    if (ts != null && ts.gpu != null && ts.gpu.valid) {
 
-    for (String key : order) {
-        Float t = maxTemps.get(key);
-        if (t != null) {
-            sb.append(String.format(
-                    Locale.US,
-                    FMT,
-                    key,
-                    t,
-                    thermalState(t)
-            ));
-        }
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "GPU",
+                ts.gpu.tempC,
+                thermalState(ts.gpu.tempC)
+        ));
+
+    } else {
+
+        sb.append(String.format(
+                Locale.US,
+                "%-18s : %s\n",
+                "GPU",
+                "N/A"
+        ));
+    }
+
+    if (ts != null && ts.battery != null && ts.battery.valid) {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Battery",
+                ts.battery.tempC,
+                thermalState(ts.battery.tempC)
+        ));
+
+    } else {
+
+        sb.append(String.format(
+                Locale.US,
+                "%-18s : %s\n",
+                "Battery",
+                "N/A"
+        ));
+    }
+
+    if (ts != null && ts.skin != null && ts.skin.valid) {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Skin",
+                ts.skin.tempC,
+                thermalState(ts.skin.tempC)
+        ));
+
+    }
+
+    if (ts != null && ts.pmic != null && ts.pmic.valid) {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "PMIC",
+                ts.pmic.tempC,
+                thermalState(ts.pmic.tempC)
+        ));
+
+    }
+
+    if (ts != null && ts.charger != null && ts.charger.valid) {
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Charger",
+                ts.charger.tempC,
+                thermalState(ts.charger.tempC)
+        ));
+
     }
 
     // ------------------------------------------------------------------------
     // ROOT SECTION — REAL KERNEL DATA
     // ------------------------------------------------------------------------
+
     if (isRooted) {
 
         sb.append("\nAdvanced Thermal (Root)\n");
         sb.append("──────────────────────\n");
 
-        // ---- Thermal Zones with Trip Points ----
         for (File zone : zones) {
-            try {
-                String type = readSysFile(zone, "type");
-                String tempRaw = readSysFile(zone, "temp");
-                if (type == null || tempRaw == null) continue;
 
-                float tempC = Float.parseFloat(tempRaw.trim()) / 1000f;
+            try {
+
+                String type =
+                        readSysFile(zone, "type");
+
+                String tempRaw =
+                        readSysFile(zone, "temp");
+
+                if (type == null || tempRaw == null)
+                    continue;
+
+                float tempC =
+                        Float.parseFloat(
+                                tempRaw.trim()
+                        ) / 1000f;
 
                 sb.append("\n")
                   .append(zone.getName())
@@ -840,66 +1171,59 @@ private String buildThermalInternalReport() {
                   .append("]\n");
 
                 sb.append("  Current Temp : ")
-                  .append(String.format(Locale.US, "%.1f°C", tempC))
+                  .append(String.format(
+                          Locale.US,
+                          "%.1f°C",
+                          tempC
+                  ))
                   .append("\n");
 
-                // trip points
                 for (int i = 0; i < 10; i++) {
-                    String tp = readSysFile(zone, "trip_point_" + i + "_temp");
-                    String tpType = readSysFile(zone, "trip_point_" + i + "_type");
-                    if (tp == null || tpType == null) break;
 
-                    float tpC = Float.parseFloat(tp.trim()) / 1000f;
+                    String tp =
+                            readSysFile(
+                                    zone,
+                                    "trip_point_" + i + "_temp"
+                            );
+
+                    String tpType =
+                            readSysFile(
+                                    zone,
+                                    "trip_point_" + i + "_type"
+                            );
+
+                    if (tp == null || tpType == null)
+                        break;
+
+                    float tpC =
+                            Float.parseFloat(
+                                    tp.trim()
+                            ) / 1000f;
+
                     sb.append("  Trip ")
                       .append(i)
                       .append(" (")
                       .append(tpType.trim())
                       .append(") : ")
-                      .append(String.format(Locale.US, "%.1f°C", tpC))
+                      .append(String.format(
+                              Locale.US,
+                              "%.1f°C",
+                              tpC
+                      ))
                       .append("\n");
                 }
 
             } catch (Throwable ignore) {}
         }
 
-        // ---- Cooling Devices ----
-        File[] cooling =
-                thermalDir.listFiles((d, n) -> n.startsWith("cooling_device"));
+    } else {
 
-        if (cooling != null && cooling.length > 0) {
-            sb.append("\nCooling Devices\n");
-            sb.append("────────────────\n");
-
-            for (File cd : cooling) {
-                try {
-                    String type = readSysFile(cd, "type");
-                    String cur = readSysFile(cd, "cur_state");
-                    String max = readSysFile(cd, "max_state");
-
-                    sb.append(cd.getName());
-                    if (type != null) sb.append(" [").append(type.trim()).append("]");
-                    sb.append("\n");
-
-                    if (cur != null && max != null) {
-                    sb.append("  State : ")
-                      .append(cur.trim())
-                      .append(" / ")
-                      .append(max.trim())
-                      .append("\n");
-                }
-
-            } catch (Throwable ignore) {}
-        }
+        sb.append(
+                "\nAdvanced Info: requires root access\n"
+        );
     }
 
-} else {
-    // --------------------------------------------------------------------
-    // ADVANCED ACCESS (INFO ONLY)
-    // --------------------------------------------------------------------
-    sb.append("\nAdvanced Info: For detailed thermal and cooling information, requires root access\n");
-}
-
-return sb.toString();
+    return sb.toString();
 }
 
     // ============================================================
@@ -910,10 +1234,15 @@ return sb.toString();
         StringBuilder sb = new StringBuilder();
 
         try {
-            boolean hasLevel = getPackageManager().hasSystemFeature(
-                    "android.hardware.vulkan.level");
-            boolean hasVersion = getPackageManager().hasSystemFeature(
-                    "android.hardware.vulkan.version");
+            boolean hasLevel =
+        getPackageManager().hasSystemFeature(
+                PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL
+        );
+
+boolean hasVersion =
+        getPackageManager().hasSystemFeature(
+                PackageManager.FEATURE_VULKAN_HARDWARE_VERSION
+        );
             sb.append("Feature Level : ").append(hasLevel ? "Yes" : "No").append("\n");
             sb.append("Feature Vers  : ").append(hasVersion ? "Yes" : "No").append("\n");
         } catch (Throwable ignore) {
@@ -1003,7 +1332,7 @@ if (meminfo != null && !meminfo.isEmpty()) {
                 if ("SwapTotal".equals(label)) label = "ZRAM SwapTotal";
                 if ("SwapFree".equals(label))  label = "ZRAM SwapFree";
 
-                long kb = parseKb(parts[1]);
+                long kb = parseKbSafe(parts[1]);
 
                 sb.append(padRight(label, 14))
                   .append(": ")
@@ -1391,6 +1720,14 @@ private String describeNetworkType(int type) {
     }
 }
 
+private long parseKbSafe(String s) {
+    try {
+        return parseKb(s);
+    } catch (Throwable e) {
+        return 0;
+    }
+}
+
 private String padRight(String s, int n) {
     if (s == null) s = "";
     if (s.length() >= n) return s;
@@ -1399,5 +1736,3 @@ private String padRight(String s, int n) {
     return sb.toString();
 }
 }
-
-
