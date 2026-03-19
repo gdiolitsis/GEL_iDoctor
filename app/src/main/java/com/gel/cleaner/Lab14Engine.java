@@ -16,25 +16,23 @@ public class Lab14Engine {
 
     public static class GelBatterySnapshot {
 
-    public int level;
+        public int level;
 
-    public float tempC;
-    public float temperature;
+        public float tempC;
+        public float temperature;
 
-    public long chargeNowMah;
-    public long chargeFullMah;
+        public long chargeNowMah;
+        public long chargeFullMah;
 
-    public int voltage;
+        public int voltage;
 
-    public String source;
+        public boolean charging;
+        public long cycleCount;
+        public boolean rooted;
 
-    // REQUIRED by ManualTestsActivity
+        public String source;
+    }
 
-    public boolean charging;
-    public long cycleCount;
-    public boolean rooted;
-
-}
     public GelBatterySnapshot readSnapshot() {
 
         GelBatterySnapshot s = new GelBatterySnapshot();
@@ -48,11 +46,19 @@ public class Lab14Engine {
 
                 s.level = b.level;
 
-                try { s.tempC = 0; } catch (Throwable ignore) {}
-try { s.temperature = 0; } catch (Throwable ignore) {}
-try { s.voltage = 0; } catch (Throwable ignore) {}
                 s.chargeNowMah = b.chargeNowMah;
                 s.chargeFullMah = b.chargeFullMah;
+
+                s.tempC = b.temperature;
+                s.temperature = b.temperature;
+
+                s.voltage = b.voltage;
+
+                s.charging = b.charging;
+
+                s.cycleCount = b.cycleCount;
+
+                s.rooted = engine.isRoot();
 
                 s.source = "iDoctorEngine";
 
@@ -68,29 +74,38 @@ try { s.voltage = 0; } catch (Throwable ignore) {}
     // =====================================================
 
     public enum ConfidenceTier {
-
         PRELIMINARY,
         MEDIUM,
         HIGH
-
     }
 
     public static class ConfidenceResult {
 
-    public ConfidenceTier tier = ConfidenceTier.PRELIMINARY;
+        public ConfidenceTier tier = ConfidenceTier.PRELIMINARY;
 
-    public int percent = 0;
+        public int percent = 0;
 
-    public int validRuns = 0;
-
-}
+        public int validRuns = 0;
+    }
 
     public ConfidenceResult computeConfidence() {
 
         ConfidenceResult r = new ConfidenceResult();
 
-        r.percent = 50;
-        r.tier = ConfidenceTier.MEDIUM;
+        try {
+
+            r.percent = engine.getConfidencePercent();
+
+            r.validRuns = engine.getValidRuns();
+
+            if (r.percent >= 70)
+                r.tier = ConfidenceTier.HIGH;
+            else if (r.percent >= 40)
+                r.tier = ConfidenceTier.MEDIUM;
+            else
+                r.tier = ConfidenceTier.PRELIMINARY;
+
+        } catch (Throwable ignore) {}
 
         return r;
     }
@@ -102,8 +117,8 @@ try { s.voltage = 0; } catch (Throwable ignore) {}
     public static class AgingResult {
 
         public int index;
-        public String description;
 
+        public String description;
     }
 
     public AgingResult computeAging(
@@ -116,8 +131,18 @@ try { s.voltage = 0; } catch (Throwable ignore) {}
 
         AgingResult a = new AgingResult();
 
-        a.index = 0;
-        a.description = "N/A";
+        try {
+
+            a.index = engine.computeAgingIndex(
+                    mahPerHour,
+                    duration,
+                    tempStart,
+                    tempEnd
+            );
+
+            a.description = engine.getAgingDescription();
+
+        } catch (Throwable ignore) {}
 
         return a;
     }
@@ -127,9 +152,15 @@ try { s.voltage = 0; } catch (Throwable ignore) {}
     // =====================================================
 
     public void saveDrainValue(double v) {
+        try {
+            engine.saveDrain(v);
+        } catch (Throwable ignore) {}
     }
 
     public void saveRun() {
+        try {
+            engine.saveRun();
+        } catch (Throwable ignore) {}
     }
 
 }
