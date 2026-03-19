@@ -15490,36 +15490,33 @@ lab14Running = false;
 
                     }).start();
                 }
-            }
-
         );
 
     } catch (Throwable t) {
 
-                runOnUiThread(() -> {
+        runOnUiThread(() -> {
 
-                    lab14StopAllStress();
-                    restoreBrightnessAndKeepOn();
+            lab14StopAllStress();
+            restoreBrightnessAndKeepOn();
 
-                    try {
-                        lab14CleanupUI();
-                    } catch (Throwable ignore) {}
+            try {
+                lab14CleanupUI();
+            } catch (Throwable ignore) {}
 
-                    lab14Cancelled = true;
-                    lab14Running = false;
-                    lab14PopupShown = false;
-                    lab14AdvisoryShown = false;
+            lab14Cancelled = true;
+            lab14Running = false;
+            lab14PopupShown = false;
+            lab14AdvisoryShown = false;
 
-                    logError(
-                            gr
-                                    ? "Σφάλμα LAB 14"
-                                    : "LAB 14 error"
-                    );
-                });
-            }
-        }
+            logError(
+                    gr
+                            ? "Σφάλμα LAB 14"
+                            : "LAB 14 error"
+            );
+        });
+    }
 
-    }, 100);
+}, 100);
 
 } catch (Throwable t) {
 
