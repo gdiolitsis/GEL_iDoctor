@@ -10,14 +10,24 @@ public class Lab14Engine {
         engine = new iDoctorEngine(ctx);
     }
 
-    // --------------------------------------------------
+    // =====================================================
     // SNAPSHOT
-    // --------------------------------------------------
+    // =====================================================
 
     public static class GelBatterySnapshot {
+
         public int level;
+
         public float tempC;
+        public float temperature;
+
+        public long chargeNowMah;
+        public long chargeFullMah;
+
         public int voltage;
+
+        public String source;
+
     }
 
     public GelBatterySnapshot readSnapshot() {
@@ -30,9 +40,19 @@ public class Lab14Engine {
                     engine.readBatterySnapshot();
 
             if (b != null) {
+
                 s.level = b.level;
+
                 s.tempC = b.tempC;
+                s.temperature = b.tempC;
+
                 s.voltage = b.voltage;
+
+                s.chargeNowMah = b.chargeNowMah;
+                s.chargeFullMah = b.chargeFullMah;
+
+                s.source = "iDoctorEngine";
+
             }
 
         } catch (Throwable ignore) {}
@@ -40,43 +60,71 @@ public class Lab14Engine {
         return s;
     }
 
-    // --------------------------------------------------
+    // =====================================================
     // CONFIDENCE
-    // --------------------------------------------------
+    // =====================================================
 
     public enum ConfidenceTier {
+
         PRELIMINARY,
         MEDIUM,
         HIGH
+
     }
 
     public static class ConfidenceResult {
+
         public ConfidenceTier tier = ConfidenceTier.PRELIMINARY;
+
+        public int percent = 0;
+
     }
 
-    public ConfidenceResult getConfidence() {
+    public ConfidenceResult computeConfidence() {
 
         ConfidenceResult r = new ConfidenceResult();
 
+        r.percent = 50;
         r.tier = ConfidenceTier.MEDIUM;
 
         return r;
     }
 
-    // --------------------------------------------------
+    // =====================================================
     // AGING
-    // --------------------------------------------------
+    // =====================================================
 
     public static class AgingResult {
-        public int percent;
+
+        public int index;
+        public String description;
+
     }
 
-    public AgingResult getAging() {
+    public AgingResult computeAging(
+            double mahPerHour,
+            ConfidenceResult conf,
+            long duration,
+            float tempStart,
+            float tempEnd
+    ) {
 
         AgingResult a = new AgingResult();
-        a.percent = 0;
+
+        a.index = 0;
+        a.description = "N/A";
 
         return a;
+    }
+
+    // =====================================================
+    // SAVE
+    // =====================================================
+
+    public void saveDrainValue(double v) {
+    }
+
+    public void saveRun() {
     }
 
 }
