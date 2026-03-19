@@ -13659,9 +13659,9 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
         // ---------------- DOTS ----------------
 
-        final String[] dotFrames = {"•", "• •", "• • •"};
-        
-        } catch (Throwable t) {
+final String[] dotFrames = {"•", "• •", "• • •"};
+
+} catch (Throwable t) {
 
     logError(
             gr
@@ -13673,7 +13673,8 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
     return;
 }
 
-        ui.post(new Runnable() {
+
+ui.post(new Runnable() {
 
             int dotStep = 0;
             int lastSeg = -1;
@@ -15400,42 +15401,34 @@ logLine();
 
 lab14Running = false;
 
-        });
+}).start();
 
-} catch (Throwable t) {
+        } catch (Throwable t) {
 
-    runOnUiThread(() -> {
+            runOnUiThread(() -> {
 
-        lab14StopAllStress();
-        restoreBrightnessAndKeepOn();
+                lab14StopAllStress();
+                restoreBrightnessAndKeepOn();
 
-        try {
-            lab14CleanupUI();
-        } catch (Throwable ignore) {}
+                try {
+                    lab14CleanupUI();
+                } catch (Throwable ignore) {}
 
-        lab14Cancelled = true;
+                lab14Cancelled = true;
 
-        logError(
-                gr
-                        ? "Σφάλμα LAB 14"
-                        : "LAB 14 error"
-        );
+                logError(
+                        gr
+                                ? "Σφάλμα LAB 14"
+                                : "LAB 14 error"
+                );
 
-    });
+            });
 
-}
+        }
 
-}).start();   // ← κλείνει POST-LOAD thread
-
-}
+    }
 
 });
-
-}
-
-}, 100);
-
-}
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
