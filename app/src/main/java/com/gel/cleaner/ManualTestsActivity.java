@@ -13748,14 +13748,6 @@ if (wasCancelled) {
     return;
 }
 
-}
-
-});
-
-}
-
-}, 100);
-
 // ----------------------------------------------------
 // 7) POST-LOAD ANALYSIS THREAD
 // ----------------------------------------------------
@@ -15397,53 +15389,38 @@ lab14Running = false;
 
         });
 
-    } catch (Throwable t) {
+} catch (Throwable t) {
 
-        runOnUiThread(() -> {
+    runOnUiThread(() -> {
 
-            lab14StopAllStress();
-            restoreBrightnessAndKeepOn();
+        lab14StopAllStress();
+        restoreBrightnessAndKeepOn();
 
-            try {
-                lab14CleanupUI();
-            } catch (Throwable ignore) {}
+        try {
+            lab14CleanupUI();
+        } catch (Throwable ignore) {}
 
-            lab14Cancelled = true;
+        lab14Cancelled = true;
 
-            logError(
-                    gr
-                            ? "Σφάλμα LAB 14"
-                            : "LAB 14 error"
-            );
+        logError(
+                gr
+                        ? "Σφάλμα LAB 14"
+                        : "LAB 14 error"
+        );
 
-        });
+    });
 
-    }
+}
 
 }).start();   // ← κλείνει POST-LOAD thread
 
-
-} catch (Throwable t) {   // ← αυτό είναι το try της μεθόδου
-
-    lab14StopAllStress();
-restoreBrightnessAndKeepOn();
-
-try {
-    lab14CleanupUI();
-} catch (Throwable ignore) {}
-
-lab14Cancelled = true;
-lab14Running = false;
-lab14PopupShown = false;
-lab14AdvisoryShown = false;
-
-logError(
-        gr
-                ? "Σφάλμα LAB 14"
-                : "LAB 14 error"
-);
 }
+
+});
+
 }
+
+}, 100);
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
