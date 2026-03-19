@@ -13463,7 +13463,12 @@ root.addView(videoHolder);
 
     lab14StopAllStress();
 
-    lab14CleanupUI();
+    try {
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
 
     logWarn(
             gr
@@ -13730,6 +13735,8 @@ try {
 
 lab14Running = false;
 
+boolean wasCancelled = lab14Cancelled;
+
 // ----------------------------------------------------
 // FINAL RESET (για επόμενο run)
 // ----------------------------------------------------
@@ -13737,7 +13744,7 @@ lab14PopupShown = false;
 lab14AdvisoryShown = false;
 lab14Cancelled = false;
 
-if (lab14Cancelled) {
+if (wasCancelled) {
     return;
 }
 
@@ -14444,8 +14451,6 @@ if (!Float.isNaN(cellElasticityIndex[0]) &&
 
     }
 }
-
-boolean lab14BatteryBehaviourWarning = false;
 
 // behaviour
 
@@ -15421,19 +15426,22 @@ lab14Running = false;
 } catch (Throwable t) {   // ← αυτό είναι το try της μεθόδου
 
     lab14StopAllStress();
-    restoreBrightnessAndKeepOn();
+restoreBrightnessAndKeepOn();
 
-    try {
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
+try {
+    lab14CleanupUI();
+} catch (Throwable ignore) {}
 
-    lab14Cancelled = true;
+lab14Cancelled = true;
+lab14Running = false;
+lab14PopupShown = false;
+lab14AdvisoryShown = false;
 
-    logError(
-            gr
-                    ? "Σφάλμα LAB 14"
-                    : "LAB 14 error"
-    );
+logError(
+        gr
+                ? "Σφάλμα LAB 14"
+                : "LAB 14 error"
+);
 }
 }
 
