@@ -2988,7 +2988,7 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     float cpuTemp = readCpuTempSafe();
 
-    boolean badBat = percent < 30 || percent > 70;
+    boolean badBat = percent < 15 || percent > 85;
 
     boolean badCpu =
             !Float.isNaN(cpuTemp) && cpuTemp >= 60f;
