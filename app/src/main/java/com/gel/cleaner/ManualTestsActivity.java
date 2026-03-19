@@ -13157,183 +13157,182 @@ try {
     final int durationSec = LAB14_TOTAL_SECONDS;
     lastSelectedStressDurationSec = durationSec;
 
+// ------------------------------------------------------------
+    // 1) INITIAL SNAPSHOT
+    // ------------------------------------------------------------
+    final Lab14Engine.GelBatterySnapshot snapStart =
+            engine.readSnapshot();
+
+    if (snapStart == null) {
+        logError(gr
+                ? "Αποτυχία ανάγνωσης δεδομένων μπαταρίας."
+                : "Battery snapshot failed.");
+        lab14Running = false;
+        return;
+    }
+
+    if (snapStart.chargeNowMah <= 0) {
+        logError(gr
+                ? "Μη διαθέσιμο charge counter."
+                : "Charge counter unavailable.");
+        lab14Running = false;
+        return;
+    }
+
+    if (snapStart.charging) {
+        logError(gr
+                ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
+                : "Device must NOT be charging.");
+        lab14Running = false;
+        return;
+    }
+
+    if (Float.isNaN(snapStart.temperature)) {
+        logWarn(gr
+                ? "Μη διαθέσιμη θερμοκρασία μπαταρίας."
+                : "Battery temperature unavailable.");
+    }
+
+    if (snapStart.chargeFullMah <= 0) {
+        logWarn(gr
+                ? "Μη διαθέσιμη πλήρης χωρητικότητα."
+                : "Full capacity unavailable.");
+    }
+
+    final long startMah = snapStart.chargeNowMah;
+    final long cycles = snapStart.cycleCount;
+    final float tempStart = snapStart.temperature;
+    final boolean rooted = snapStart.rooted;
+
+    final float voltageStart = getBatteryVoltageFiltered();
+    final int batteryPercent = getBatteryPercentSafe();
+
+    final Float cpuTempStart = readCpuTempSafe();
+    final Float gpuTempStart = readGpuTempSafe();
+
+    final long baselineFullMah =
+            snapStart.chargeFullMah > 0
+                    ? snapStart.chargeFullMah
+                    : -1;
+
+    final long t0 = SystemClock.elapsedRealtime();
+
         // ------------------------------------------------------------
-        // 1) INITIAL SNAPSHOT
-        // ------------------------------------------------------------
-        final Lab14Engine.GelBatterySnapshot snapStart =
-                engine.readSnapshot();
+    // 2) HEADER LOGS
+    // ------------------------------------------------------------
+    appendHtml("<br>");
+    logLine();
+    logInfo(gr
+            ? "LAB 14 — Δοκιμή Καταπόνησης & Υγείας Μπαταρίας"
+            : "LAB 14 — Battery Health Stress Test");
+    logLine();
 
-        if (snapStart == null) {
-            logError(gr
-                    ? "Αποτυχία ανάγνωσης δεδομένων μπαταρίας."
-                    : "Battery snapshot failed.");
-            lab14Running = false;
-            return;
-        }
+    logLabelOkValue(
+            gr ? "Λειτουργία" : "Mode",
+            rooted
+                    ? (gr ? "Προηγμένη (Root access)" : "Advanced (Rooted)")
+                    : (gr ? "Τυπική (Χωρίς Root)" : "Standard (Unrooted)")
+    );
 
-        if (snapStart.chargeNowMah <= 0) {
-            logError(gr
-                    ? "Μη διαθέσιμο charge counter."
-                    : "Charge counter unavailable.");
-            lab14Running = false;
-            return;
-        }
+    logLabelOkValue(
+            gr ? "Διάρκεια δοκιμής" : "Duration",
+            durationSec + (gr
+                    ? " δευτ. (εργαστηριακή λειτουργία)"
+                    : " sec (laboratory mode)")
+    );
 
-        if (snapStart.charging) {
-            logError(gr
-                    ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
-                    : "Device must NOT be charging.");
-            lab14Running = false;
-            return;
-        }
+    logLabelOkValue(
+            gr ? "Προφίλ καταπόνησης" : "Stress profile",
+            "Fast stress + GEL C Mode + vibration + video + memory bandwidth"
+    );
 
-        if (Float.isNaN(snapStart.temperature)) {
-            logWarn(gr
-                    ? "Μη διαθέσιμη θερμοκρασία μπαταρίας."
-                    : "Battery temperature unavailable.");
-        }
-
-        if (snapStart.chargeFullMah <= 0) {
-            logWarn(gr
-                    ? "Μη διαθέσιμη πλήρης χωρητικότητα."
-                    : "Full capacity unavailable.");
-        }
-
-        final long startMah = snapStart.chargeNowMah;
-        final long cycles = snapStart.cycleCount;
-        final float tempStart = snapStart.temperature;
-        final boolean rooted = snapStart.rooted;
-
-        final float voltageStart = getBatteryVoltageFiltered();
-        final int batteryPercent = getBatteryPercentSafe();
-
-        final Float cpuTempStart = readCpuTempSafe();
-        final Float gpuTempStart = readGpuTempSafe();
-
-        final long baselineFullMah =
-                snapStart.chargeFullMah > 0
-                        ? snapStart.chargeFullMah
-                        : -1;
-
-        final long t0 = SystemClock.elapsedRealtime();
-        
-
-        // ------------------------------------------------------------
-        // 2) HEADER LOGS
-        // ------------------------------------------------------------
-        appendHtml("<br>");
-        logLine();
-        logInfo(gr
-                ? "LAB 14 — Δοκιμή Καταπόνησης & Υγείας Μπαταρίας"
-                : "LAB 14 — Battery Health Stress Test");
-        logLine();
-
-        logLabelOkValue(
-                gr ? "Λειτουργία" : "Mode",
-                rooted
-                        ? (gr ? "Προηγμένη (Root access)" : "Advanced (Rooted)")
-                        : (gr ? "Τυπική (Χωρίς Root)" : "Standard (Unrooted)")
-        );
-
-        logLabelOkValue(
-                gr ? "Διάρκεια δοκιμής" : "Duration",
-                durationSec + (gr
-                        ? " δευτ. (εργαστηριακή λειτουργία)"
-                        : " sec (laboratory mode)")
-        );
-
-        logLabelOkValue(
-                gr ? "Προφίλ καταπόνησης" : "Stress profile",
-                "Fast stress + GEL C Mode + vibration + video + memory bandwidth"
-        );
-
-        logLabelOkValue(
-                gr ? "Αρχικές συνθήκες" : "Start conditions",
-                String.format(
-                        Locale.US,
-                        gr
-                                ? "φόρτιση=%d mAh, ποσοστό=%d%%, κατάσταση=Αποφόρτιση, θερμοκρασία=%.1f°C"
-                                : "charge=%d mAh, level=%d%%, status=Discharging, temp=%.1f°C",
-                        startMah,
-                        Math.max(0, batteryPercent),
-                        Float.isNaN(tempStart) ? 0f : tempStart
-                )
-        );
-
-        logLabelOkValue(
-                gr ? "Πηγή δεδομένων" : "Data source",
-                snapStart.source
-        );
-
-        if (baselineFullMah > 0) {
-            logLabelOkValue(
-                    gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
-                    baselineFullMah + (gr
-                            ? " mAh (από fuel-gauge counter)"
-                            : " mAh (counter-based)")
-            );
-        } else {
-            logLabelWarnValue(
-                    gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
+    logLabelOkValue(
+            gr ? "Αρχικές συνθήκες" : "Start conditions",
+            String.format(
+                    Locale.US,
                     gr
-                            ? "Μη διαθέσιμη (δεν εκτίθεται counter)"
-                            : "N/A (counter-based)"
-            );
-        }
+                            ? "φόρτιση=%d mAh, ποσοστό=%d%%, κατάσταση=Αποφόρτιση, θερμοκρασία=%.1f°C"
+                            : "charge=%d mAh, level=%d%%, status=Discharging, temp=%.1f°C",
+                    startMah,
+                    Math.max(0, batteryPercent),
+                    Float.isNaN(tempStart) ? 0f : tempStart
+            )
+    );
 
+    logLabelOkValue(
+            gr ? "Πηγή δεδομένων" : "Data source",
+            snapStart.source
+    );
+
+    if (baselineFullMah > 0) {
         logLabelOkValue(
-                gr ? "Κύκλοι φόρτισης" : "Cycle count",
-                cycles > 0
-                        ? String.valueOf(cycles)
-                        : (gr ? "Μη διαθέσιμο" : "N/A")
+                gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
+                baselineFullMah + (gr
+                        ? " mAh (από fuel-gauge counter)"
+                        : " mAh (counter-based)")
         );
-
-        logLabelOkValue(
-                gr ? "Κατάσταση οθόνης" : "Screen state",
+    } else {
+        logLabelWarnValue(
+                gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
                 gr
-                        ? "Φωτεινότητα στο ΜΕΓΙΣΤΟ, keep screen on ενεργό"
-                        : "Brightness forced to MAX, keep screen on active"
+                        ? "Μη διαθέσιμη (δεν εκτίθεται counter)"
+                        : "N/A (counter-based)"
         );
+    }
 
-        int cores = Runtime.getRuntime().availableProcessors();
+    logLabelOkValue(
+            gr ? "Κύκλοι φόρτισης" : "Cycle count",
+            cycles > 0
+                    ? String.valueOf(cycles)
+                    : (gr ? "Μη διαθέσιμο" : "N/A")
+    );
 
+    logLabelOkValue(
+            gr ? "Κατάσταση οθόνης" : "Screen state",
+            gr
+                    ? "Φωτεινότητα στο ΜΕΓΙΣΤΟ, keep screen on ενεργό"
+                    : "Brightness forced to MAX, keep screen on active"
+    );
+
+    int cores = Runtime.getRuntime().availableProcessors();
+
+    logLabelOkValue(
+            gr ? "Νήματα καταπόνησης CPU" : "CPU stress threads",
+            cores + (gr
+                    ? " (λογικοί πυρήνες=" + cores + ")"
+                    : " (cores=" + cores + ")")
+    );
+
+    if (cpuTempStart != null) {
         logLabelOkValue(
-                gr ? "Νήματα καταπόνησης CPU" : "CPU stress threads",
-                cores + (gr
-                        ? " (λογικοί πυρήνες=" + cores + ")"
-                        : " (cores=" + cores + ")")
+                gr ? "Θερμοκρασία CPU (έναρξη)" : "CPU temperature (start)",
+                String.format(Locale.US, "%.1f°C", cpuTempStart)
         );
+    } else {
+        logLabelWarnValue(
+                gr ? "Θερμοκρασία CPU (έναρξη)" : "CPU temperature (start)",
+                gr ? "Μη διαθέσιμη" : "N/A"
+        );
+    }
 
-        if (cpuTempStart != null) {
-            logLabelOkValue(
-                    gr ? "Θερμοκρασία CPU (έναρξη)" : "CPU temperature (start)",
-                    String.format(Locale.US, "%.1f°C", cpuTempStart)
-            );
-        } else {
-            logLabelWarnValue(
-                    gr ? "Θερμοκρασία CPU (έναρξη)" : "CPU temperature (start)",
-                    gr ? "Μη διαθέσιμη" : "N/A"
-            );
-        }
-
-        if (gpuTempStart != null) {
-            logLabelOkValue(
-                    gr ? "Θερμοκρασία GPU (έναρξη)" : "GPU temperature (start)",
-                    String.format(Locale.US, "%.1f°C", gpuTempStart)
-            );
-        } else {
-            logLabelWarnValue(
-                    gr ? "Θερμοκρασία GPU (έναρξη)" : "GPU temperature (start)",
-                    gr ? "Μη διαθέσιμη" : "N/A"
-            );
-        }
-
+    if (gpuTempStart != null) {
         logLabelOkValue(
-                gr ? "Παρακολουθούμενα θερμικά πεδία" : "Thermal domains",
-                "CPU / GPU / SKIN / PMIC / BATT"
+                gr ? "Θερμοκρασία GPU (έναρξη)" : "GPU temperature (start)",
+                String.format(Locale.US, "%.1f°C", gpuTempStart)
         );
+    } else {
+        logLabelWarnValue(
+                gr ? "Θερμοκρασία GPU (έναρξη)" : "GPU temperature (start)",
+                gr ? "Μη διαθέσιμη" : "N/A"
+        );
+    }
 
-        logLine();
+    logLabelOkValue(
+            gr ? "Παρακολουθούμενα θερμικά πεδία" : "Thermal domains",
+            "CPU / GPU / SKIN / PMIC / BATT"
+    );
+
+    logLine();
             
         // ------------------------------------------------------------
         // 3) MAIN DIALOG
@@ -13490,13 +13489,12 @@ root.addView(videoHolder);
         lab14Dialog.show();
         
         // ------------------------------------------------------------
-        // 4) FAST BATTERY STRESS (45 sec) — BACKGROUND THREAD
-        // ------------------------------------------------------------
-        new Thread(() -> {
+    // 4) FAST BATTERY STRESS (45 sec) — BACKGROUND THREAD
+    // ------------------------------------------------------------
+    new Thread(() -> {
+        try {
 
-    try {
-
-        lab14FastDone = false;
+            lab14FastDone = false;
 
             vStart[0] = getBatteryVoltageFiltered();
 
@@ -13733,60 +13731,59 @@ ui.post(new Runnable() {
 ui.removeCallbacks(this);
 
 // ----------------------------------------------------
-// 6) STOP LOAD
-// ----------------------------------------------------
-lab14StopAllStress();
+                        // 6) STOP LOAD
+                        // ----------------------------------------------------
+                        lab14StopAllStress();
 
-try {
-    lab14CleanupUI();
-} catch (Throwable ignore) {}
+                        try {
+                            lab14CleanupUI();
+                        } catch (Throwable ignore) {}
 
-lab14Running = false;
+                        lab14Running = false;
 
-boolean wasCancelled = lab14Cancelled;
-
-// ----------------------------------------------------
-// FINAL RESET (για επόμενο run)
-// ----------------------------------------------------
-lab14PopupShown = false;
-lab14AdvisoryShown = false;
-lab14Cancelled = false;
-
-if (wasCancelled) {
-    return;
-}
-
-// ----------------------------------------------------
-// 7) POST-LOAD ANALYSIS THREAD
-// ----------------------------------------------------
-new Thread(() -> {
-
-    try {
+                        boolean wasCancelled = lab14Cancelled;
 
                         // ----------------------------------------------------
-                        // FAST STRESS ANALYSIS
+                        // FINAL RESET (για επόμενο run)
                         // ----------------------------------------------------
-                        if (!Float.isNaN(vStart[0]) &&
-                            !Float.isNaN(vLoad1[0]) &&
-                            !Float.isNaN(vRecover[0]) &&
-                            !Float.isNaN(vLoad2[0])) {
+                        lab14PopupShown = false;
+                        lab14AdvisoryShown = false;
+                        lab14Cancelled = false;
 
-                            float variance =
-                                    Math.abs(vStart[0] - vLoad1[0])
-                                            + Math.abs(vRecover[0] - vLoad2[0]);
-
-                            float stability = 100f - variance * 120f;
-                            if (stability < 0f) stability = 0f;
-                            if (stability > 100f) stability = 100f;
-                            voltageStability[0] = stability;
+                        if (wasCancelled) {
+                            return;
                         }
 
-                        if (lab14Cancelled) return;
+                        // ----------------------------------------------------
+                        // 7) POST-LOAD ANALYSIS THREAD
+                        // ----------------------------------------------------
+                        new Thread(() -> {
 
-                        // force PMIC refresh
-                        SystemClock.sleep(1200);
+                            try {
 
-                        if (lab14Cancelled) return;
+                        // ----------------------------------------------------
+                                // FAST STRESS ANALYSIS
+                                // ----------------------------------------------------
+                                if (!Float.isNaN(vStart[0]) &&
+                                    !Float.isNaN(vLoad1[0]) &&
+                                    !Float.isNaN(vRecover[0]) &&
+                                    !Float.isNaN(vLoad2[0])) {
+
+                                    float variance =
+                                            Math.abs(vStart[0] - vLoad1[0])
+                                                    + Math.abs(vRecover[0] - vLoad2[0]);
+
+                                    float stability = 100f - variance * 120f;
+                                    if (stability < 0f) stability = 0f;
+                                    if (stability > 100f) stability = 100f;
+                                    voltageStability[0] = stability;
+                                }
+
+                                if (lab14Cancelled) return;
+
+                                SystemClock.sleep(1200);
+
+                                if (lab14Cancelled) return;
 
                         // ----------------------------------------------------
                         // FINAL SNAPSHOT
@@ -15379,21 +15376,47 @@ lab14LogReliabilitySummary(
 );
 
 // STOP
+                                    lab14StopAllStress();
+                                    restoreBrightnessAndKeepOn();
 
-lab14StopAllStress();
-restoreBrightnessAndKeepOn();
+                                    appendHtml("<br>");
+                                    logOk(
+                                            gr
+                                                    ? "Το Lab 14 ολοκληρώθηκε."
+                                                    : "Lab 14 finished."
+                                    );
+                                    logLine();
 
-appendHtml("<br>");
-logOk(
-        gr
-                ? "Το Lab 14 ολοκληρώθηκε."
-                : "Lab 14 finished."
-);
-logLine();
+                                    lab14Running = false;
+                                });
 
-lab14Running = false;
+                            } catch (Throwable t) {
 
-                }).start();
+                                runOnUiThread(() -> {
+
+                                    lab14StopAllStress();
+                                    restoreBrightnessAndKeepOn();
+
+                                    try {
+                                        lab14CleanupUI();
+                                    } catch (Throwable ignore) {}
+
+                                    lab14Cancelled = true;
+                                    lab14Running = false;
+                                    lab14PopupShown = false;
+                                    lab14AdvisoryShown = false;
+
+                                    logError(
+                                            gr
+                                                    ? "Σφάλμα LAB 14"
+                                                    : "LAB 14 error"
+                                    );
+                                });
+                            }
+
+                        }).start();
+                    }
+                });
 
             } catch (Throwable t) {
 
@@ -15416,10 +15439,9 @@ lab14Running = false;
                                     ? "Σφάλμα LAB 14"
                                     : "LAB 14 error"
                     );
-
                 });
-
             }
+        }
 
     }, 100);
 
@@ -15442,7 +15464,6 @@ lab14Running = false;
                     ? "Σφάλμα LAB 14"
                     : "LAB 14 error"
     );
-}
 }
 
 // ============================================================
