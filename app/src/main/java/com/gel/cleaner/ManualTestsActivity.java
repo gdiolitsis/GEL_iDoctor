@@ -15461,37 +15461,40 @@ logOk(
 logLine();
 
 lab14Running = false;
-                                });
 
-                            } catch (Throwable t) {
+                            });
 
-                                runOnUiThread(() -> {
+                        } catch (Throwable t) {
 
-                                    lab14StopAllStress();
-                                    restoreBrightnessAndKeepOn();
+                            runOnUiThread(() -> {
 
-                                    try {
-                                        lab14CleanupUI();
-                                    } catch (Throwable ignore) {}
+                                lab14StopAllStress();
+                                restoreBrightnessAndKeepOn();
 
-                                    lab14Cancelled = true;
-                                    lab14Running = false;
-                                    lab14PopupShown = false;
-                                    lab14AdvisoryShown = false;
+                                try {
+                                    lab14CleanupUI();
+                                } catch (Throwable ignore) {}
 
-                                    logError(
-                                            gr
-                                                    ? "Σφάλμα LAB 14"
-                                                    : "LAB 14 error"
-                                    );
-                                });
-                            }
+                                lab14Cancelled = true;
+                                lab14Running = false;
+                                lab14PopupShown = false;
+                                lab14AdvisoryShown = false;
 
-                        }).start();
-                    }
-                });
+                                logError(
+                                        gr
+                                                ? "Σφάλμα LAB 14"
+                                                : "LAB 14 error"
+                                );
+                            });
+                        }
 
-            } catch (Throwable t) {
+                    }).start();
+                }
+            }
+
+        );
+
+    } catch (Throwable t) {
 
                 runOnUiThread(() -> {
 
