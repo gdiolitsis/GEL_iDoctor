@@ -58,9 +58,14 @@ public final class iDoctorEngine {
 
     private final Context ctx;
 
+    private iDoctorDeviceProfiles.DeviceProfile profile;
+
     public iDoctorEngine(Context context) {
-        this.ctx = context.getApplicationContext();
-    }
+
+    this.ctx = context.getApplicationContext();
+
+    profile = iDoctorDeviceProfiles.detectProfile();
+}
 
     // ============================================================
     // GLOBAL SNAPSHOT
@@ -190,31 +195,65 @@ public final class iDoctorEngine {
             }
         } catch (Throwable ignore) { }
 
-        if (bi.rooted) {
-            bi.chargeDesignMah = normalizeMah(
-                    readSysLongRootAware("/sys/class/power_supply/battery/charge_full_design")
-            );
-            bi.chargeFullMah = normalizeMah(
-                    readSysLongRootAware("/sys/class/power_supply/battery/charge_full")
-            );
-            bi.chargeNowMah = normalizeMah(
-                    readSysLongRootAware("/sys/class/power_supply/battery/charge_now")
-            );
-            bi.cycleCount = readBatteryCycleCountRoot();
-            bi.internalResistance = readBatteryResistanceRoot();
+if (bi.rooted) {
 
-            long currentNow = readSysLongRootAware("/sys/class/power_supply/battery/current_now");
-            float currentMa = normalizeCurrentMa(currentNow);
-            if (!Float.isNaN(currentMa)) bi.currentMa = currentMa;
+    String designPath = readPathWithProfile(
+            "/sys/class/power_supply/battery/charge_full_design",
+            null
+    );
 
-            long voltageNow = readSysLongRootAware("/sys/class/power_supply/battery/voltage_now");
-            float voltageMv = normalizeVoltageMv(voltageNow);
-            if (!Float.isNaN(voltageMv)) bi.voltageMv = voltageMv;
+    bi.chargeDesignMah = normalizeMah(
+            readSysLongRootAware(designPath)
+    );
 
-            if (bi.chargeNowMah > 0 || bi.chargeFullMah > 0 || bi.chargeDesignMah > 0) {
-                bi.source = "OEM (root)";
-            }
-        }
+    String fullPath = readPathWithProfile(
+            "/sys/class/power_supply/battery/charge_full",
+            profile != null ? profile.batteryChargeFullPath : null
+    );
+
+    bi.chargeFullMah = normalizeMah(
+            readSysLongRootAware(fullPath)
+    );
+
+    String nowPath = readPathWithProfile(
+            "/sys/class/power_supply/battery/charge_now",
+            profile != null ? profile.batteryChargeNowPath : null
+    );
+
+    bi.chargeNowMah = normalizeMah(
+            readSysLongRootAware(nowPath)
+    );
+
+    bi.cycleCount = readBatteryCycleCountRoot();
+
+    bi.internalResistance = readBatteryResistanceRoot();
+
+    String currentPath = readPathWithProfile(
+            "/sys/class/power_supply/battery/current_now",
+            profile != null ? profile.batteryCurrentPath : null
+    );
+
+    long currentNow = readSysLongRootAware(currentPath);
+
+    float currentMa = normalizeCurrentMa(currentNow);
+
+    if (!Float.isNaN(currentMa)) bi.currentMa = currentMa;
+
+    String voltPath = readPathWithProfile(
+            "/sys/class/power_supply/battery/voltage_now",
+            profile != null ? profile.batteryVoltagePath : null
+    );
+
+    long voltageNow = readSysLongRootAware(voltPath);
+
+    float voltageMv = normalizeVoltageMv(voltageNow);
+
+    if (!Float.isNaN(voltageMv)) bi.voltageMv = voltageMv;
+
+    if (bi.chargeFullMah > 0 || bi.chargeDesignMah > 0) {
+        bi.source = "OEM (root)";
+    }
+}
 
         if (bi.chargeNowMah <= 0) {
             try {
@@ -315,6 +354,31 @@ public final class iDoctorEngine {
         out.charger = selectMax(out.all, ThermalGroup.CHARGER);
         out.modemMain = selectMax(out.all, ThermalGroup.MODEM_MAIN);
         out.modemAux = selectMax(out.all, ThermalGroup.MODEM_AUX);
+        
+// ------------------------------------------------------------
+// PROFILE FALLBACK (only if universal scan returned N/A)
+// ------------------------------------------------------------
+
+if (!out.cpu.valid) {
+    out.cpu = readThermalFromProfilePath(
+            profile != null ? profile.cpuTempPath : null,
+            "CPU"
+    );
+}
+
+if (!out.gpu.valid) {
+    out.gpu = readThermalFromProfilePath(
+            profile != null ? profile.gpuTempPath : null,
+            "GPU"
+    );
+}
+
+if (!out.battery.valid) {
+    out.battery = readThermalFromProfilePath(
+            profile != null ? profile.batteryTempPath : null,
+            "Battery"
+    );
+}
 
         out.coolingDevices = scanHardwareCoolingDevices();
         out.hardwareCoolingDeviceCount = out.coolingDevices.size();
@@ -1865,34 +1929,54 @@ public final class iDoctorEngine {
     }
 
     private long readBatteryCycleCountRoot() {
-        String[] paths = {
-                "/sys/class/power_supply/battery/cycle_count",
-                "/sys/class/power_supply/bms/cycle_count",
-                "/sys/class/power_supply/battery/bms/cycle_count",
-                "/sys/class/power_supply/battery/charge_cycles"
-        };
 
-        for (String p : paths) {
-            long v = readSysLongRootAware(p);
-            if (v > 0) return v;
-        }
-        return -1;
+    String[] paths = {
+            "/sys/class/power_supply/battery/cycle_count",
+            "/sys/class/power_supply/bms/cycle_count",
+            "/sys/class/power_supply/battery/bms/cycle_count",
+            "/sys/class/power_supply/battery/charge_cycles"
+    };
+
+    for (String p : paths) {
+        long v = readSysLongRootAware(p);
+        if (v > 0) return v;
     }
+
+    // PROFILE FALLBACK
+    if (profile != null && profile.batteryCyclePath != null) {
+
+        long v = readSysLongRootAware(profile.batteryCyclePath);
+
+        if (v > 0) return v;
+    }
+
+    return -1;
+}
 
     private long readBatteryResistanceRoot() {
-        String[] paths = {
-                "/sys/class/power_supply/battery/resistance",
-                "/sys/class/power_supply/battery/resistance_now",
-                "/sys/class/power_supply/bms/resistance",
-                "/sys/class/power_supply/maxfg/resistance"
-        };
 
-        for (String p : paths) {
-            long v = readSysLongRootAware(p);
-            if (v > 0) return v;
-        }
-        return -1;
+    String[] paths = {
+            "/sys/class/power_supply/battery/resistance",
+            "/sys/class/power_supply/battery/resistance_now",
+            "/sys/class/power_supply/bms/resistance",
+            "/sys/class/power_supply/maxfg/resistance"
+    };
+
+    for (String p : paths) {
+        long v = readSysLongRootAware(p);
+        if (v > 0) return v;
     }
+
+    // PROFILE FALLBACK
+    if (profile != null && profile.batteryResistancePath != null) {
+
+        long v = readSysLongRootAware(profile.batteryResistancePath);
+
+        if (v > 0) return v;
+    }
+
+    return -1;
+}
 
     private long normalizeMah(long raw) {
         if (raw <= 0) return -1;
@@ -2039,4 +2123,83 @@ public final class iDoctorEngine {
                 return "Unknown";
         }
     }
+    
+// ============================================================
+// PROFILE-AWARE THERMAL FALLBACK
+// ============================================================
+
+private ThermalReading readThermalFromProfilePath(
+        String profilePath,
+        String label
+) {
+
+    ThermalReading tr = new ThermalReading();
+
+    if (profile == null || profilePath == null || profilePath.trim().isEmpty())
+        return tr;
+
+    String raw = readSysTextRootAware(profilePath);
+    float c = normalizeTempC(raw);
+
+    if (Float.isNaN(c))
+        return tr;
+
+    tr.name = label != null ? label : "Profile Thermal";
+    tr.path = profilePath;
+    tr.source = "device_profile";
+    tr.tempC = c;
+    tr.valid = true;
+
+    return tr;
+}
+
+// ============================================================
+// PROFILE-AWARE BATTERY PATH
+// ============================================================
+
+private String readBatteryPathProfileAware(
+        String universalPath,
+        String profilePath
+) {
+
+    String v = readSysTextRootAware(universalPath);
+
+    if (v != null && !v.isEmpty())
+        return v;
+
+    if (profile != null && profilePath != null) {
+
+        v = readSysTextRootAware(profilePath);
+
+        if (v != null && !v.isEmpty())
+            return v;
+    }
+
+    return null;
+}
+    
+// ============================================================
+// PROFILE-AWARE READ
+// ============================================================
+
+private String readPathWithProfile(
+        String universal,
+        String profilePath
+) {
+
+    String v = readSysString(universal);
+
+    if (v != null && !v.isEmpty())
+        return v;
+
+    if (profile != null && profilePath != null) {
+
+        v = readSysString(profilePath);
+
+        if (v != null && !v.isEmpty())
+            return v;
+    }
+
+    return null;
+}
 }
