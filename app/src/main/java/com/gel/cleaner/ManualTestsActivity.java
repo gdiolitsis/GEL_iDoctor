@@ -13035,6 +13035,9 @@ private void lab14BatteryHealthStressTest_REAL() {
 
     final boolean gr = AppLang.isGreek(this);
     
+    validDrainF = false;
+    lab14_systemLimited[0] = false;
+    
     lab14Cancelled = false;
     lab14FastDone = false;
     lab14Running = true;
@@ -13491,50 +13494,87 @@ root.addView(videoHolder);
 
         lab14Dialog.show();
         
-    // ------------------------------------------------------------
-    // 4) FAST BATTERY STRESS (45 sec) — BACKGROUND THREAD
-    // ------------------------------------------------------------
-    new Thread(() -> {
-        try {
+// ------------------------------------------------------------
+// 4) FAST BATTERY STRESS (45 sec) — BACKGROUND THREAD
+// ------------------------------------------------------------
+new Thread(() -> {
+    try {
 
-            lab14FastDone = false;
+        lab14FastDone = false;
 
-            vStart[0] = getBatteryVoltageFiltered();
+        vStart[0] = getBatteryVoltageFiltered();
 
-            startCpuBurn_C_Mode();
-            SystemClock.sleep(15000);
+        // ---------------- LOAD 1 ----------------
 
-            if (lab14Cancelled) {
-                lab14StopAllStress();
-                return;
-            }
+        startCpuBurn_C_Mode();
 
-            SystemClock.sleep(250);
-            vLoad1[0] = getBatteryVoltageFiltered();
+        SystemClock.sleep(12000);
 
-            stopCpuBurn();
-            SystemClock.sleep(15000);
+        if (lab14Cancelled) {
+            lab14StopAllStress();
+            return;
+        }
 
-            if (lab14Cancelled) {
-                lab14StopAllStress();
-                return;
-            }
+        // give voltage time to settle
+        SystemClock.sleep(1200);
 
-            SystemClock.sleep(250);
-            vRecover[0] = getBatteryVoltageFiltered();
+        vLoad1[0] = getBatteryVoltageFiltered();
 
-            startCpuBurn_C_Mode();
-            SystemClock.sleep(15000);
+        SystemClock.sleep(300);
 
-            if (lab14Cancelled) {
-                lab14StopAllStress();
-                return;
-            }
+        stopCpuBurn();
 
-            SystemClock.sleep(250);
-            vLoad2[0] = getBatteryVoltageFiltered();
 
-            stopCpuBurn();
+        // ---------------- RECOVER ----------------
+
+        SystemClock.sleep(12000);
+
+        if (lab14Cancelled) {
+            lab14StopAllStress();
+            return;
+        }
+
+        // allow voltage to rise
+        SystemClock.sleep(1200);
+
+        vRecover[0] = getBatteryVoltageFiltered();
+
+
+        // ---------------- LOAD 2 ----------------
+
+        startCpuBurn_C_Mode();
+
+        SystemClock.sleep(12000);
+
+        if (lab14Cancelled) {
+            lab14StopAllStress();
+            return;
+        }
+
+        // wait for real drop
+        SystemClock.sleep(1200);
+
+        vLoad2[0] = getBatteryVoltageFiltered();
+
+        SystemClock.sleep(300);
+
+        stopCpuBurn();
+
+
+        // ---------------- DONE ----------------
+
+        lab14FastDone = true;
+
+    } catch (Throwable t) {
+
+        lab14FastDone = true;
+
+        runOnUiThread(() ->
+                logError("LAB14 fast thread error")
+        );
+    }
+
+}).start();
             
 // ----------------------------------------------------
 // PULSE LOAD TEST
@@ -14014,22 +14054,42 @@ if (!Float.isNaN(voltageRecovery[0])) {
 // ELECTRICAL ANALYSIS
 // ----------------------------------------------------
 float estimatedESR = Float.NaN;
-float currentNow = Float.NaN;   // ← ΒΑΛΕ ΑΥΤΟ
+float currentNow = Float.NaN;
 
 if (!Float.isNaN(voltageStart) &&
     !Float.isNaN(voltageUnderLoad[0])) {
 
     float sag = voltageStart - voltageUnderLoad[0];
 
-    currentNow = getBatteryCurrentNowSafe();   // ← ΟΧΙ float εδώ
+    currentNow = getBatteryCurrentNowSafe();
 
-    if (sag < 0.02f &&
-        !Float.isNaN(currentNow) &&
-        Math.abs(currentNow) < 200000f) {
+    // ---------------------------------------------
+    // LIMITER DETECTION (SAFE VERSION)
+    // ---------------------------------------------
 
-        lab14_systemLimited[0] = true;
-        sag = 0f;
+    if (!Float.isNaN(sag) &&
+        !Float.isNaN(currentNow)) {
+
+        float sagCheck = sag;
+
+        if (!Float.isNaN(sagAvg[0])) {
+            sagCheck = (sag + sagAvg[0]) / 2f;
+        }
+
+        float currentAbs = Math.abs(currentNow);
+
+        if (sagCheck < 0.015f &&
+            currentAbs < 150000f &&
+            drainMah < 2f) {
+
+            lab14_systemLimited[0] = true;
+
+        }
     }
+
+    // ---------------------------------------------
+    // SAG FILTER
+    // ---------------------------------------------
 
     float sagFiltered = sag;
 
@@ -14037,47 +14097,58 @@ if (!Float.isNaN(voltageStart) &&
         sagFiltered = (sag + sagAvg[0]) / 2f;
     }
 
+    // ---------------------------------------------
+    // ESR ESTIMATION
+    // ---------------------------------------------
+
     if (!Float.isNaN(currentNow)) {
 
         float currentAmp =
                 Math.abs(currentNow) / 1000000f;
 
-                                if (currentAmp > 0.1f &&
-                                    currentAmp < 6f) {
+        if (currentAmp > 0.1f &&
+            currentAmp < 6f &&
+            !lab14_systemLimited[0]) {
 
-                                    estimatedESR = sagFiltered / currentAmp;
+            estimatedESR = sagFiltered / currentAmp;
 
-                                    if (estimatedESR > 0.35f) {
-                                        estimatedESR = Float.NaN;
-                                    }
+            if (estimatedESR > 0.35f) {
+                estimatedESR = Float.NaN;
+            }
 
-                                    if (!Float.isNaN(estimatedESR)) {
-                                        internalResistance[0] = estimatedESR;
-                                    }
-                                }
-                            }
-                        }
+            if (!Float.isNaN(estimatedESR)) {
+                internalResistance[0] = estimatedESR;
+            }
+        }
+    }
+}
 
-                        float energyEfficiency = Float.NaN;
+// ----------------------------------------------------
+// ENERGY EFFICIENCY
+// ----------------------------------------------------
 
-                        if (validDrain &&
-                            !Float.isNaN(voltageStart) &&
-                            !Float.isNaN(voltageUnderLoad[0]) &&
-                            drainMah > 0 &&
-                            dtMs > 0) {
+float energyEfficiency = Float.NaN;
 
-                            float voltageDrop =
-                                    voltageStart - voltageUnderLoad[0];
+if (validDrain &&
+    !lab14_systemLimited[0] &&
+    !Float.isNaN(voltageStart) &&
+    !Float.isNaN(voltageUnderLoad[0]) &&
+    drainMah > 0 &&
+    dtMs > 0) {
 
-                            if (voltageDrop > 0.02f &&
-                                voltageDrop < 0.5f) {
+    float voltageDrop =
+            voltageStart - voltageUnderLoad[0];
 
-                                float drainRate =
-                                        (float) drainMah / (dtMs / 1000f);
+    if (voltageDrop > 0.02f &&
+        voltageDrop < 0.5f) {
 
-                                energyEfficiency = drainRate / voltageDrop;
-                            }
-                        }
+        float drainRate =
+                (float) drainMah / (dtMs / 1000f);
+
+        energyEfficiency =
+                drainRate / voltageDrop;
+    }
+}
                         
 // ----------------------------------------------------
 // CURRENT STABILITY CHECK
@@ -14645,240 +14716,238 @@ else if (health >= 60f)
 else
     lab14HealthLabel = "Degraded";
 
-                        // ----------------------------------------------------
-                        // FINAL SCORE
-                        // ----------------------------------------------------
-                        int finalScore = 100;
+// ----------------------------------------------------
+// FINAL SCORE (measurement-based only)
+// ----------------------------------------------------
 
-if (!validDrain) {
+int finalScore = 100;
 
-    if (lab14Conf != null && lab14Conf.percent >= 70)
-        finalScore = 75;
-    else
-        finalScore = 65;
 
-} else {
+// ----------------------------------------------------
+// DRAIN RATE (μόνο αν valid & όχι system limited)
+// ----------------------------------------------------
 
-                            if (drainPercentPerHour > 0) {
+if (validDrain && !lab14_systemLimited[0] && drainPercentPerHour > 0) {
 
-                                if (!lab14_systemLimited[0]) {
+    if (drainPercentPerHour >= 50)
+        finalScore -= 20;
+    else if (drainPercentPerHour >= 35)
+        finalScore -= 12;
+    else if (drainPercentPerHour >= 25)
+        finalScore -= 6;
+}
 
-                                    if (drainPercentPerHour >= 50)
-                                        finalScore -= 25;
-                                    else if (drainPercentPerHour >= 35)
-                                        finalScore -= 15;
-                                    else if (drainPercentPerHour >= 25)
-                                        finalScore -= 8;
 
-                                } else {
+// ----------------------------------------------------
+// TEMPERATURE ABSOLUTE
+// ----------------------------------------------------
 
-                                    if (drainPercentPerHour >= 50)
-                                        finalScore -= 5;
-                                    else if (drainPercentPerHour >= 35)
-                                        finalScore -= 3;
-                                    else if (drainPercentPerHour >= 25)
-                                        finalScore -= 2;
-                                }
-                            }
-                        }
+if (validDrain && !Float.isNaN(tempEnd)) {
 
-                        if (validDrain &&
-                            !Float.isNaN(tempEnd)) {
+    if (tempEnd >= 55f)
+        finalScore -= 25;
+    else if (tempEnd >= 48f)
+        finalScore -= 12;
+    else if (tempEnd >= 42f)
+        finalScore -= 6;
+}
 
-                            if (tempEnd >= 55f)
-                                finalScore -= 35;
-                            else if (tempEnd >= 45f)
-                                finalScore -= 18;
-                            else if (tempEnd >= 40f)
-                                finalScore -= 8;
-                        }
 
-                        if (validDrain &&
-                            !Float.isNaN(tempStart) &&
-                            !Float.isNaN(tempEnd)) {
+// ----------------------------------------------------
+// TEMPERATURE RISE
+// ----------------------------------------------------
 
-                            float rise = Math.max(0f, tempEnd - tempStart);
+if (validDrain &&
+    !Float.isNaN(tempStart) &&
+    !Float.isNaN(tempEnd)) {
 
-                            if (rise >= 12f)
-                                finalScore -= 18;
-                            else if (rise >= 8f)
-                                finalScore -= 10;
-                            else if (rise >= 5f)
-                                finalScore -= 5;
-                        }
+    float rise = Math.max(0f, tempEnd - tempStart);
 
-                        if (cycles > 0) {
-                            if (cycles >= 600)
-                                finalScore -= 20;
-                            else if (cycles >= 400)
-                                finalScore -= 12;
-                            else if (cycles >= 250)
-                                finalScore -= 6;
-                        }
+    if (rise >= 12f)
+        finalScore -= 12;
+    else if (rise >= 8f)
+        finalScore -= 6;
+}
 
-                        if (cpuTempEnd != null && validDrain) {
-                            if (cpuTempEnd >= 85f)
-                                finalScore -= 8;
-                            else if (cpuTempEnd >= 75f)
-                                finalScore -= 4;
-                        }
 
-                        if (gpuTempEnd != null && validDrain) {
-                            if (gpuTempEnd >= 80f)
-                                finalScore -= 6;
-                            else if (gpuTempEnd >= 70f)
-                                finalScore -= 3;
-                        }
+// ----------------------------------------------------
+// CYCLE COUNT
+// ----------------------------------------------------
 
-                        if (!Float.isNaN(internalResistance[0]) &&
-    !Float.isNaN(sagAvg[0]) &&
-    validDrain &&
+if (cycles > 0) {
+
+    if (cycles >= 700)
+        finalScore -= 15;
+    else if (cycles >= 500)
+        finalScore -= 10;
+    else if (cycles >= 300)
+        finalScore -= 5;
+}
+
+
+// ----------------------------------------------------
+// CPU / GPU TEMP (μόνο αν valid)
+// ----------------------------------------------------
+
+if (validDrain && cpuTempEnd != null) {
+
+    if (cpuTempEnd >= 85f)
+        finalScore -= 6;
+    else if (cpuTempEnd >= 75f)
+        finalScore -= 3;
+}
+
+if (validDrain && gpuTempEnd != null) {
+
+    if (gpuTempEnd >= 80f)
+        finalScore -= 5;
+    else if (gpuTempEnd >= 70f)
+        finalScore -= 3;
+}
+
+
+// ----------------------------------------------------
+// INTERNAL RESISTANCE
+// ----------------------------------------------------
+
+if (!Float.isNaN(internalResistance[0]) &&
     !lab14_systemLimited[0]) {
 
     if (internalResistance[0] >= 0.25f)
-        finalScore -= 15;
+        finalScore -= 12;
     else if (internalResistance[0] >= 0.18f)
-        finalScore -= 8;
-
+        finalScore -= 6;
 }
 
-                        if (collapseRisk[0] &&
-                            !lab14_systemLimited[0]) {
-                            finalScore -= 10;
-                        }
 
-                        if (swellingRisk[0]) {
-                            finalScore -= 10;
-                        }
-
-                        if (calibrationDrift[0]) {
-                            finalScore -= 5;
-                        }
-                        
 // ----------------------------------------------------
-// ADVANCED STRUCTURAL PENALTIES
+// STRUCTURAL FLAGS
+// ----------------------------------------------------
+
+if (collapseRisk[0] && !lab14_systemLimited[0])
+    finalScore -= 6;
+
+if (swellingRisk[0])
+    finalScore -= 6;
+
+if (calibrationDrift[0])
+    finalScore -= 4;
+
+
+// ----------------------------------------------------
+// ADVANCED METRICS
 // ----------------------------------------------------
 
 if (!Float.isNaN(cellElasticityIndex[0]) &&
     cellElasticityIndex[0] < 40f &&
     validDrain) {
 
-    finalScore -= 8;
-
+    finalScore -= 6;
 }
 
 if (!Float.isNaN(structuralIntegrityIndex[0]) &&
     structuralIntegrityIndex[0] < 50f &&
     validDrain) {
 
-    finalScore -= 8;
-
+    finalScore -= 6;
 }
 
 if (!Float.isNaN(powerStabilityFactor[0]) &&
     powerStabilityFactor[0] < 50f &&
     validDrain) {
 
-    finalScore -= 6;
-
+    finalScore -= 5;
 }
 
 if (!Float.isNaN(pulseScore[0]) &&
     pulseScore[0] < 50f &&
     validDrain) {
 
-    finalScore -= 6;
-
+    finalScore -= 5;
 }
 
 if (!Float.isNaN(pulseScore[0]) &&
     pulseScore[0] < 35f &&
     validDrain) {
 
-    finalScore -= 8;
-
+    finalScore -= 6;
 }
 
 if (!Float.isNaN(relaxScore[0]) &&
     relaxScore[0] < 6f &&
     validDrain) {
 
-    finalScore -= 6;
-
+    finalScore -= 5;
 }
 
 if (!Float.isNaN(relaxScore[0]) &&
     relaxScore[0] < 4f &&
     validDrain) {
 
-    finalScore -= 8;
-
+    finalScore -= 6;
 }
 
 if (!Float.isNaN(coulombDrift[0]) &&
-    coulombDrift[0] > 6f &&
+    coulombDrift[0] > 8f &&
     validDrain) {
 
     finalScore -= 5;
-
-}
-
-if (!Float.isNaN(coulombDrift[0]) &&
-    coulombDrift[0] > 10f &&
-    validDrain) {
-
-    finalScore -= 8;
-
 }
 
 if (!Float.isNaN(dualLoadScore[0]) &&
     dualLoadScore[0] < 60f &&
     validDrain) {
 
-    finalScore -= 6;
-
+    finalScore -= 5;
 }
 
-if (!Float.isNaN(dualLoadScore[0]) &&
-    dualLoadScore[0] < 45f &&
-    validDrain) {
 
-    finalScore -= 8;
+// ----------------------------------------------------
+// CLAMP
+// ----------------------------------------------------
 
-}
+if (finalScore < 0) finalScore = 0;
+if (finalScore > 100) finalScore = 100;
 
-                        if (finalScore < 0) finalScore = 0;
-                        if (finalScore > 100) finalScore = 100;
 
-                        String finalLabel;
+// ----------------------------------------------------
+// LABEL
+// ----------------------------------------------------
 
-                        if (!validDrain)
-                            finalLabel = "Informational";
-                        else if (finalScore >= 90)
-                            finalLabel = "Excellent";
-                        else if (finalScore >= 80)
-                            finalLabel = "Very good";
-                        else if (finalScore >= 70)
-                            finalLabel = "Good";
-                        else if (finalScore >= 60)
-                            finalLabel = "Normal";
-                        else
-                            finalLabel = "Weak";
+String finalLabel;
 
-                        String healthClass;
+if (!validDrain)
+    finalLabel = "Informational";
+else if (finalScore >= 90)
+    finalLabel = "Excellent";
+else if (finalScore >= 80)
+    finalLabel = "Very good";
+else if (finalScore >= 70)
+    finalLabel = "Good";
+else if (finalScore >= 60)
+    finalLabel = "Normal";
+else
+    finalLabel = "Weak";
 
-                        if (!validDrain)
-                            healthClass = "N/A";
-                        else if (finalScore >= 92)
-                            healthClass = "A+";
-                        else if (finalScore >= 85)
-                            healthClass = "A";
-                        else if (finalScore >= 75)
-                            healthClass = "B";
-                        else if (finalScore >= 60)
-                            healthClass = "C";
-                        else
-                            healthClass = "D";
+
+// ----------------------------------------------------
+// CLASS
+// ----------------------------------------------------
+
+String healthClass;
+
+if (!validDrain)
+    healthClass = "N/A";
+else if (finalScore >= 92)
+    healthClass = "A+";
+else if (finalScore >= 85)
+    healthClass = "A";
+else if (finalScore >= 75)
+    healthClass = "B";
+else if (finalScore >= 60)
+    healthClass = "C";
+else
+    healthClass = "D";
 
                         // ----------------------------------------------------
                         // CONFIDENCE
@@ -15758,32 +15827,32 @@ private void lab14LogFinalScore(
     logLine();
 
     String scoreText = String.format(
-            Locale.US,
-            "%d%% (%s)  •  Class %s",
-            finalScore,
-            finalLabel,
-            healthClass
-    );
+        Locale.US,
+        "%d%% (%s)  •  Class %s",
+        finalScore,
+        finalLabel,
+        healthClass
+);
 
-    if (finalScore >= 85) {
-        logLabelOkValue(
-                gr ? "Τελικός δείκτης υγείας μπαταρίας"
-                   : "Final battery health score",
-                scoreText
-        );
-    } else if (finalScore >= 65) {
-        logLabelWarnValue(
-                gr ? "Τελικός δείκτης υγείας μπαταρίας"
-                   : "Final battery health score",
-                scoreText
-        );
-    } else {
-        logLabelErrorValue(
-                gr ? "Τελικός δείκτης υγείας μπαταρίας"
-                   : "Final battery health score",
-                scoreText
-        );
-    }
+if (finalScore >= 85) {
+    logLabelOkValue(
+            gr ? "Τελικό αποτέλεσμα δοκιμής"
+               : "Final test score",
+            scoreText
+    );
+} else if (finalScore >= 65) {
+    logLabelWarnValue(
+            gr ? "Τελικό αποτέλεσμα δοκιμής"
+               : "Final test score",
+            scoreText
+    );
+} else {
+    logLabelErrorValue(
+            gr ? "Τελικό αποτέλεσμα δοκιμής"
+               : "Final test score",
+            scoreText
+    );
+}
 
     if (collapseRisk[0] && !lab14_systemLimited[0]) {
         logLabelWarnValue(
@@ -15972,7 +16041,9 @@ private float readCpuTempSafe2() {
     return Float.NaN;
 }
 
-private void incLab14RunCount() {
+private void incLab14RunCount(boolean valid) {
+
+    if (!valid) return;
 
     try {
 
