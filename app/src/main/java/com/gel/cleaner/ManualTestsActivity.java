@@ -13661,19 +13661,6 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
 final String[] dotFrames = {"•", "• •", "• • •"};
 
-} catch (Throwable t) {
-
-    logError(
-            gr
-                    ? "Σφάλμα αρχικοποίησης LAB 14"
-                    : "LAB 14 init error"
-    );
-
-    lab14Running = false;
-    return;
-}
-
-
 ui.post(new Runnable() {
 
             int dotStep = 0;
@@ -15384,24 +15371,46 @@ lab14LogReliabilitySummary(
         confF
 );
 
-// ------------------------------------------------
 // STOP
-// ------------------------------------------------
 
-lab14StopAllStress();
-restoreBrightnessAndKeepOn();
+                        lab14StopAllStress();
+                        restoreBrightnessAndKeepOn();
 
-appendHtml("<br>");
-logOk(
-        gr
-                ? "Το Lab 14 ολοκληρώθηκε."
-                : "Lab 14 finished."
-);
-logLine();
+                        appendHtml("<br>");
+                        logOk(
+                                gr
+                                        ? "Το Lab 14 ολοκληρώθηκε."
+                                        : "Lab 14 finished."
+                        );
+                        logLine();
 
-lab14Running = false;
+                        lab14Running = false;
 
-}).start();
+                    });
+
+                } catch (Throwable t) {
+
+                    runOnUiThread(() -> {
+
+                        lab14StopAllStress();
+                        restoreBrightnessAndKeepOn();
+
+                        try {
+                            lab14CleanupUI();
+                        } catch (Throwable ignore) {}
+
+                        lab14Cancelled = true;
+
+                        logError(
+                        gr
+                                ? "Σφάλμα LAB 14"
+                                : "LAB 14 error"
+
+                    });
+
+                }
+
+            }).start();
 
         } catch (Throwable t) {
 
