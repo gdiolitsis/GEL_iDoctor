@@ -13217,6 +13217,7 @@ try {
                         : -1;
 
         final long t0 = SystemClock.elapsedRealtime();
+        
 
         // ------------------------------------------------------------
         // 2) HEADER LOGS
@@ -13659,6 +13660,18 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
         // ---------------- DOTS ----------------
 
         final String[] dotFrames = {"•", "• •", "• • •"};
+        
+        } catch (Throwable t) {
+
+    logError(
+            gr
+                    ? "Σφάλμα αρχικοποίησης LAB 14"
+                    : "LAB 14 init error"
+    );
+
+    lab14Running = false;
+    return;
+}
 
         ui.post(new Runnable() {
 
