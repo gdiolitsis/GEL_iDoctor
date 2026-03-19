@@ -21,6 +21,8 @@ public class iDoctorDeviceProfiles {
         public String batteryChargeFullPath;
         public String batteryChargeNowPath;
         public String batteryTempPath;
+        public String batteryCyclePath;
+        public String batteryResistancePath;
 
         public String cpuTempPath;
         public String gpuTempPath;
@@ -94,27 +96,36 @@ public class iDoctorDeviceProfiles {
 
     private static DeviceProfile profileXiaomi() {
 
-        DeviceProfile p = new DeviceProfile();
+    DeviceProfile p = new DeviceProfile();
 
-        p.name = "XIAOMI";
+    p.name = "XIAOMI";
 
-        p.batteryChargeFullPath =
-                "/sys/class/power_supply/battery/charge_full";
+    p.batteryChargeFullPath =
+            "/sys/class/power_supply/battery/charge_full";
 
-        p.batteryChargeNowPath =
-                "/sys/class/power_supply/battery/charge_now";
+    p.batteryChargeNowPath =
+            "/sys/class/power_supply/battery/charge_now";
 
-        p.batteryTempPath =
-                "/sys/class/power_supply/battery/temp";
+    p.batteryTempPath =
+            "/sys/class/power_supply/battery/temp";
 
-        p.cpuTempPath =
-                "/sys/class/thermal/thermal_zone0/temp";
+    // NEW ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
 
-        p.gpuTempPath =
-                "/sys/class/thermal/thermal_zone1/temp";
+    p.batteryCyclePath =
+            "/sys/class/power_supply/battery/cycle_count";
 
-        return p;
-    }
+    p.batteryResistancePath = null;
+
+    p.batteryVoltagePath =
+            "/sys/class/power_supply/battery/voltage_now";
+
+    p.batteryCurrentPath =
+            "/sys/class/power_supply/battery/current_now";
+
+    // ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+
+    return p;
+}
 
     // ============================================================
     // SAMSUNG PROFILE
@@ -122,27 +133,34 @@ public class iDoctorDeviceProfiles {
 
     private static DeviceProfile profileSamsung() {
 
-        DeviceProfile p = new DeviceProfile();
+    DeviceProfile p = new DeviceProfile();
 
-        p.name = "SAMSUNG";
+    p.name = "SAMSUNG";
 
-        p.batteryChargeFullPath =
-                "/sys/class/power_supply/battery/batt_full_capacity";
+    p.batteryChargeFullPath =
+            "/sys/class/power_supply/battery/batt_full_capacity";
 
-        p.batteryChargeNowPath =
-                "/sys/class/power_supply/battery/charge_now";
+    p.batteryChargeNowPath =
+            "/sys/class/power_supply/battery/charge_now";
 
-        p.batteryTempPath =
-                "/sys/class/power_supply/battery/batt_temp";
+    p.batteryTempPath =
+            "/sys/class/power_supply/battery/batt_temp";
 
-        p.cpuTempPath =
-                "/sys/class/thermal/thermal_zone0/temp";
+    // NEW
 
-        p.gpuTempPath =
-                "/sys/class/thermal/thermal_zone1/temp";
+    p.batteryCyclePath =
+            "/sys/class/power_supply/battery/batt_cycle_count";
 
-        return p;
-    }
+    p.batteryResistancePath = null;
+
+    p.batteryVoltagePath =
+            "/sys/class/power_supply/battery/voltage_now";
+
+    p.batteryCurrentPath =
+            "/sys/class/power_supply/battery/current_now";
+
+    return p;
+}
 
     // ============================================================
     // QUALCOMM PROFILE
@@ -150,27 +168,34 @@ public class iDoctorDeviceProfiles {
 
     private static DeviceProfile profileQcom() {
 
-        DeviceProfile p = new DeviceProfile();
+    DeviceProfile p = new DeviceProfile();
 
-        p.name = "QCOM";
+    p.name = "QCOM";
 
-        p.batteryChargeFullPath =
-                "/sys/class/power_supply/bms/charge_full";
+    p.batteryChargeFullPath =
+            "/sys/class/power_supply/bms/charge_full";
 
-        p.batteryChargeNowPath =
-                "/sys/class/power_supply/bms/charge_now";
+    p.batteryChargeNowPath =
+            "/sys/class/power_supply/bms/charge_now";
 
-        p.batteryTempPath =
-                "/sys/class/power_supply/battery/temp";
+    p.batteryTempPath =
+            "/sys/class/power_supply/battery/temp";
 
-        p.cpuTempPath =
-                "/sys/class/thermal/thermal_zone0/temp";
+    // NEW
 
-        p.gpuTempPath =
-                "/sys/class/kgsl/kgsl-3d0/temp";
+    p.batteryCyclePath =
+            "/sys/class/power_supply/bms/cycle_count";
 
-        return p;
-    }
+    p.batteryResistancePath = null;
+
+    p.batteryVoltagePath =
+            "/sys/class/power_supply/bms/voltage_now";
+
+    p.batteryCurrentPath =
+            "/sys/class/power_supply/bms/current_now";
+
+    return p;
+}
 
     // ============================================================
     // MEDIATEK PROFILE
@@ -178,31 +203,113 @@ public class iDoctorDeviceProfiles {
 
     private static DeviceProfile profileMTK() {
 
-        DeviceProfile p = new DeviceProfile();
+    DeviceProfile p = new DeviceProfile();
 
-        p.name = "MTK";
+    p.name = "MTK";
 
-        p.batteryChargeFullPath =
-                "/sys/class/power_supply/battery/charge_full";
+    // charge
 
-        p.batteryChargeNowPath =
-                "/sys/class/power_supply/battery/charge_now";
+    p.batteryChargeFullPath =
+            "/sys/class/power_supply/battery/charge_full";
 
-        p.batteryTempPath =
-                "/sys/class/power_supply/battery/temp";
+    p.batteryChargeNowPath =
+            "/sys/class/power_supply/battery/charge_now";
 
-        p.cpuTempPath =
-                "/sys/class/thermal/thermal_zone0/temp";
+    // temp
 
-        p.gpuTempPath =
-                "/sys/class/thermal/thermal_zone1/temp";
+    p.batteryTempPath =
+            "/sys/class/power_supply/battery/temp";
 
-        return p;
-    }
+    // cycle
+
+    p.batteryCyclePath =
+            "/sys/class/power_supply/battery/cycle_count";
+
+    // resistance (rare on MTK)
+
+    p.batteryResistancePath = null;
+
+    // voltage
+
+    p.batteryVoltagePath =
+            "/sys/class/power_supply/battery/voltage_now";
+
+    // current
+
+    p.batteryCurrentPath =
+            "/sys/class/power_supply/battery/current_now";
+
+    // thermal fallback disabled
+
+    p.cpuTempPath = null;
+    p.gpuTempPath = null;
+
+    return p;
+}
 
     // ============================================================
     // HELPERS
     // ============================================================
+    
+// ============================================================
+// PROFILE RESOLVER
+// ============================================================
+
+public static DeviceProfile resolveProfile() {
+
+    String man = android.os.Build.MANUFACTURER;
+    String brand = android.os.Build.BRAND;
+    String hw = android.os.Build.HARDWARE;
+    String board = android.os.Build.BOARD;
+
+    if (man == null) man = "";
+    if (brand == null) brand = "";
+    if (hw == null) hw = "";
+    if (board == null) board = "";
+
+    man = man.toLowerCase();
+    brand = brand.toLowerCase();
+    hw = hw.toLowerCase();
+    board = board.toLowerCase();
+
+    // Xiaomi / Redmi / Poco
+
+    if (man.contains("xiaomi")
+            || brand.contains("xiaomi")
+            || brand.contains("redmi")
+            || brand.contains("poco")) {
+
+        return profileXiaomi();
+    }
+
+    // Samsung
+
+    if (man.contains("samsung")
+            || brand.contains("samsung")) {
+
+        return profileSamsung();
+    }
+
+    // MediaTek
+
+    if (hw.contains("mt")
+            || hw.contains("mediatek")
+            || board.contains("mt")) {
+
+        return profileMTK();
+    }
+
+    // Qualcomm
+
+    if (hw.contains("qcom")
+            || hw.contains("msm")
+            || hw.contains("sdm")) {
+
+        return profileQcom();
+    }
+
+    return null;
+}
 
     private static String safe(String s) {
         if (s == null) return "";
