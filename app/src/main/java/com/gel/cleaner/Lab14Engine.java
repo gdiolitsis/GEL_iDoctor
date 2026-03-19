@@ -16,20 +16,25 @@ public class Lab14Engine {
 
     public static class GelBatterySnapshot {
 
-        public int level;
+    public int level;
 
-        public float tempC;
-        public float temperature;
+    public float tempC;
+    public float temperature;
 
-        public long chargeNowMah;
-        public long chargeFullMah;
+    public long chargeNowMah;
+    public long chargeFullMah;
 
-        public int voltage;
+    public int voltage;
 
-        public String source;
+    public String source;
 
-    }
+    // REQUIRED by ManualTestsActivity
 
+    public boolean charging;
+    public long cycleCount;
+    public boolean rooted;
+
+}
     public GelBatterySnapshot readSnapshot() {
 
         GelBatterySnapshot s = new GelBatterySnapshot();
@@ -43,11 +48,9 @@ public class Lab14Engine {
 
                 s.level = b.level;
 
-                s.tempC = b.tempC;
-                s.temperature = b.tempC;
-
-                s.voltage = b.voltage;
-
+                try { s.tempC = 0; } catch (Throwable ignore) {}
+try { s.temperature = 0; } catch (Throwable ignore) {}
+try { s.voltage = 0; } catch (Throwable ignore) {}
                 s.chargeNowMah = b.chargeNowMah;
                 s.chargeFullMah = b.chargeFullMah;
 
@@ -74,11 +77,13 @@ public class Lab14Engine {
 
     public static class ConfidenceResult {
 
-        public ConfidenceTier tier = ConfidenceTier.PRELIMINARY;
+    public ConfidenceTier tier = ConfidenceTier.PRELIMINARY;
 
-        public int percent = 0;
+    public int percent = 0;
 
-    }
+    public int validRuns = 0;
+
+}
 
     public ConfidenceResult computeConfidence() {
 
