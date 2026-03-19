@@ -13615,6 +13615,7 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
     @Override
     public void run() {
+        try {
 
         if (lab14Cancelled) return;
 
@@ -15376,18 +15377,18 @@ lab14LogReliabilitySummary(
 );
 
 // STOP
-                                    lab14StopAllStress();
-                                    restoreBrightnessAndKeepOn();
+lab14StopAllStress();
+restoreBrightnessAndKeepOn();
 
-                                    appendHtml("<br>");
-                                    logOk(
-                                            gr
-                                                    ? "Το Lab 14 ολοκληρώθηκε."
-                                                    : "Lab 14 finished."
-                                    );
-                                    logLine();
+appendHtml("<br>");
+logOk(
+        gr
+                ? "Το Lab 14 ολοκληρώθηκε."
+                : "Lab 14 finished."
+);
+logLine();
 
-                                    lab14Running = false;
+lab14Running = false;
                                 });
 
                             } catch (Throwable t) {
