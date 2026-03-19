@@ -15402,9 +15402,10 @@ lab14LogReliabilitySummary(
                         lab14Cancelled = true;
 
                         logError(
-                        gr
-                                ? "Σφάλμα LAB 14"
-                                : "LAB 14 error"
+        gr
+                ? "Σφάλμα LAB 14"
+                : "LAB 14 error"
+);
 
                     });
 
