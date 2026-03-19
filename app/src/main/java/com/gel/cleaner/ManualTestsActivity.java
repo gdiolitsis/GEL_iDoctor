@@ -14724,10 +14724,10 @@ int finalScore = 100;
 
 
 // ----------------------------------------------------
-// DRAIN RATE (μόνο αν valid & όχι system limited)
+// DRAIN RATE
 // ----------------------------------------------------
 
-if (validDrain && !lab14_systemLimited[0] && drainPercentPerHour > 0) {
+if (validDrainF && !lab14_systemLimited[0] && drainPercentPerHour > 0) {
 
     if (drainPercentPerHour >= 50)
         finalScore -= 20;
@@ -14742,7 +14742,7 @@ if (validDrain && !lab14_systemLimited[0] && drainPercentPerHour > 0) {
 // TEMPERATURE ABSOLUTE
 // ----------------------------------------------------
 
-if (validDrain && !Float.isNaN(tempEnd)) {
+if (validDrainF && !Float.isNaN(tempEnd)) {
 
     if (tempEnd >= 55f)
         finalScore -= 25;
@@ -14757,7 +14757,7 @@ if (validDrain && !Float.isNaN(tempEnd)) {
 // TEMPERATURE RISE
 // ----------------------------------------------------
 
-if (validDrain &&
+if (validDrainF &&
     !Float.isNaN(tempStart) &&
     !Float.isNaN(tempEnd)) {
 
@@ -14771,7 +14771,7 @@ if (validDrain &&
 
 
 // ----------------------------------------------------
-// CYCLE COUNT
+// CYCLES
 // ----------------------------------------------------
 
 if (cycles > 0) {
@@ -14786,10 +14786,10 @@ if (cycles > 0) {
 
 
 // ----------------------------------------------------
-// CPU / GPU TEMP (μόνο αν valid)
+// CPU / GPU
 // ----------------------------------------------------
 
-if (validDrain && cpuTempEnd != null) {
+if (validDrainF && cpuTempEnd != null) {
 
     if (cpuTempEnd >= 85f)
         finalScore -= 6;
@@ -14797,7 +14797,7 @@ if (validDrain && cpuTempEnd != null) {
         finalScore -= 3;
 }
 
-if (validDrain && gpuTempEnd != null) {
+if (validDrainF && gpuTempEnd != null) {
 
     if (gpuTempEnd >= 80f)
         finalScore -= 5;
@@ -14821,7 +14821,7 @@ if (!Float.isNaN(internalResistance[0]) &&
 
 
 // ----------------------------------------------------
-// STRUCTURAL FLAGS
+// FLAGS
 // ----------------------------------------------------
 
 if (collapseRisk[0] && !lab14_systemLimited[0])
@@ -14835,68 +14835,68 @@ if (calibrationDrift[0])
 
 
 // ----------------------------------------------------
-// ADVANCED METRICS
+// ADVANCED
 // ----------------------------------------------------
 
 if (!Float.isNaN(cellElasticityIndex[0]) &&
     cellElasticityIndex[0] < 40f &&
-    validDrain) {
+    validDrainF) {
 
     finalScore -= 6;
 }
 
 if (!Float.isNaN(structuralIntegrityIndex[0]) &&
     structuralIntegrityIndex[0] < 50f &&
-    validDrain) {
+    validDrainF) {
 
     finalScore -= 6;
 }
 
 if (!Float.isNaN(powerStabilityFactor[0]) &&
     powerStabilityFactor[0] < 50f &&
-    validDrain) {
+    validDrainF) {
 
     finalScore -= 5;
 }
 
 if (!Float.isNaN(pulseScore[0]) &&
     pulseScore[0] < 50f &&
-    validDrain) {
+    validDrainF) {
 
     finalScore -= 5;
 }
 
 if (!Float.isNaN(pulseScore[0]) &&
     pulseScore[0] < 35f &&
-    validDrain) {
+    validDrainF) {
 
     finalScore -= 6;
 }
 
 if (!Float.isNaN(relaxScore[0]) &&
     relaxScore[0] < 6f &&
-    validDrain) {
+    validDrainF) {
 
     finalScore -= 5;
 }
 
 if (!Float.isNaN(relaxScore[0]) &&
     relaxScore[0] < 4f &&
-    validDrain) {
+    validDrainF) {
 
     finalScore -= 6;
 }
 
 if (!Float.isNaN(coulombDrift[0]) &&
     coulombDrift[0] > 8f &&
-    validDrain) {
+    validDrainF) {
 
     finalScore -= 5;
 }
 
 if (!Float.isNaN(dualLoadScore[0]) &&
     dualLoadScore[0] < 60f &&
-    validDrain) {
+    validDrainF) {
 
     finalScore -= 5;
 }
@@ -14916,7 +14916,7 @@ if (finalScore > 100) finalScore = 100;
 
 String finalLabel;
 
-if (!validDrain)
+if (!validDrainF)
     finalLabel = "Informational";
 else if (finalScore >= 90)
     finalLabel = "Excellent";
@@ -14936,7 +14936,7 @@ else
 
 String healthClass;
 
-if (!validDrain)
+if (!validDrainF)
     healthClass = "N/A";
 else if (finalScore >= 92)
     healthClass = "A+";
