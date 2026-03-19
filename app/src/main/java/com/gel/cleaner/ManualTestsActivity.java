@@ -13034,6 +13034,10 @@ private void lab14BatteryHealthStressTest() {
 private void lab14BatteryHealthStressTest_REAL() {
 
     final boolean gr = AppLang.isGreek(this);
+    
+    lab14Cancelled = false;
+    lab14FastDone = false;
+    lab14Running = true;
 
 // --------------------------------------------------
 // RESET STATE (μόνο μετά το popup)
@@ -13486,7 +13490,7 @@ root.addView(videoHolder);
 
         lab14Dialog.show();
         
-        // ------------------------------------------------------------
+    // ------------------------------------------------------------
     // 4) FAST BATTERY STRESS (45 sec) — BACKGROUND THREAD
     // ------------------------------------------------------------
     new Thread(() -> {
@@ -13596,13 +13600,17 @@ if (!Float.isNaN(pulseSag[0]) &&
                 }
             }
             
-            lab14FastDone = true;
+            stopCpuBurn();
 
-        } catch (Throwable t) {
+lab14FastDone = true;
 
-        runOnUiThread(() -> logError("LAB14 fast thread error"));
+} catch (Throwable t) {
 
-    }
+    lab14FastDone = true;
+
+    runOnUiThread(() -> logError("LAB14 fast thread error"));
+
+}
 
 }).start();
 
