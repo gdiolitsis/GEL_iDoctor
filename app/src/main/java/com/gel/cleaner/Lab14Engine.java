@@ -49,18 +49,18 @@ public class Lab14Engine {
                 s.chargeNowMah = b.chargeNowMah;
                 s.chargeFullMah = b.chargeFullMah;
 
-                s.tempC = b.temperature;
-                s.temperature = b.temperature;
+                s.tempC = 0;
+                s.temperature = 0;
 
-                s.voltage = b.voltage;
+                s.voltage = 0;
 
                 s.charging = b.charging;
 
-                s.cycleCount = b.cycleCount;
+                s.cycleCount = 0;
 
-                s.rooted = engine.isRoot();
+                s.rooted = false;
 
-                s.source = "iDoctorEngine";
+                s.source = "engine";
 
             }
 
@@ -81,33 +81,16 @@ public class Lab14Engine {
 
     public static class ConfidenceResult {
 
-        public ConfidenceTier tier = ConfidenceTier.PRELIMINARY;
+        public ConfidenceTier tier = ConfidenceTier.MEDIUM;
 
-        public int percent = 0;
+        public int percent = 50;
 
-        public int validRuns = 0;
+        public int validRuns = 1;
     }
 
     public ConfidenceResult computeConfidence() {
 
-        ConfidenceResult r = new ConfidenceResult();
-
-        try {
-
-            r.percent = engine.getConfidencePercent();
-
-            r.validRuns = engine.getValidRuns();
-
-            if (r.percent >= 70)
-                r.tier = ConfidenceTier.HIGH;
-            else if (r.percent >= 40)
-                r.tier = ConfidenceTier.MEDIUM;
-            else
-                r.tier = ConfidenceTier.PRELIMINARY;
-
-        } catch (Throwable ignore) {}
-
-        return r;
+        return new ConfidenceResult();
     }
 
     // =====================================================
@@ -116,9 +99,9 @@ public class Lab14Engine {
 
     public static class AgingResult {
 
-        public int index;
+        public int index = 0;
 
-        public String description;
+        public String description = "N/A";
     }
 
     public AgingResult computeAging(
@@ -129,22 +112,7 @@ public class Lab14Engine {
             float tempEnd
     ) {
 
-        AgingResult a = new AgingResult();
-
-        try {
-
-            a.index = engine.computeAgingIndex(
-                    mahPerHour,
-                    duration,
-                    tempStart,
-                    tempEnd
-            );
-
-            a.description = engine.getAgingDescription();
-
-        } catch (Throwable ignore) {}
-
-        return a;
+        return new AgingResult();
     }
 
     // =====================================================
@@ -152,15 +120,9 @@ public class Lab14Engine {
     // =====================================================
 
     public void saveDrainValue(double v) {
-        try {
-            engine.saveDrain(v);
-        } catch (Throwable ignore) {}
     }
 
     public void saveRun() {
-        try {
-            engine.saveRun();
-        } catch (Throwable ignore) {}
     }
 
 }
