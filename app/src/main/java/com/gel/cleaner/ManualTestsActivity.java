@@ -13186,9 +13186,12 @@ try {
     final long t0 = SystemClock.elapsedRealtime();
 
     // ------------------------------------------------------------
-    // 2) HEADER LOGS
+    // 2) HEADER LOGS - START CONDITIONS 
     // ------------------------------------------------------------
-    appendHtml("<br>");
+   
+if (!lab14PopupShown) {
+	
+ appendHtml("<br>");
     logLine();
     logInfo(gr
             ? "LAB 14 — Δοκιμή Καταπόνησης & Υγείας Μπαταρίας"
@@ -13305,8 +13308,6 @@ try {
 // --------------------------------------------------
 // POPUP FIRST
 // --------------------------------------------------
-
-if (!lab14PopupShown) {
 
     lab14Running = false;
     lab14Cancelled = false;
@@ -13617,6 +13618,7 @@ lab14FastDone = true;
 // ------------------------------------------------------------
 // 5) MAIN STRESS START
 // ------------------------------------------------------------
+
 new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
     @Override
@@ -13624,11 +13626,6 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
         try {
 
         if (lab14Cancelled) return;
-
-        if (!lab14FastDone) {
-            new Handler(Looper.getMainLooper()).postDelayed(this, 100);
-            return;
-        }
 
         // FAST finished → start main stress
 
@@ -13738,28 +13735,28 @@ ui.post(new Runnable() {
 ui.removeCallbacks(this);
 
 // ----------------------------------------------------
-                        // 6) STOP LOAD
-                        // ----------------------------------------------------
-                        lab14StopAllStress();
+// 6) STOP LOAD
+// ----------------------------------------------------
+lab14StopAllStress();
 
-                        try {
-                            lab14CleanupUI();
-                        } catch (Throwable ignore) {}
+try {
+    lab14CleanupUI();
+} catch (Throwable ignore) {}
 
-                        lab14Running = false;
+lab14Running = false;
 
-                        boolean wasCancelled = lab14Cancelled;
+boolean wasCancelled = lab14Cancelled;
 
-                        // ----------------------------------------------------
-                        // FINAL RESET (για επόμενο run)
-                        // ----------------------------------------------------
-                        lab14PopupShown = false;
-                        lab14AdvisoryShown = false;
-                        lab14Cancelled = false;
+// ----------------------------------------------------
+// FINAL RESET (για επόμενο run)
+// ----------------------------------------------------
+lab14PopupShown = false;
+lab14AdvisoryShown = false;
+lab14Cancelled = false;
 
-                        if (wasCancelled) {
-                            return;
-                        }
+if (wasCancelled) {
+    return;
+}
 
                         // ----------------------------------------------------
                         // 7) POST-LOAD ANALYSIS THREAD
