@@ -15373,18 +15373,18 @@ lab14LogReliabilitySummary(
 
 // STOP
 
-                        lab14StopAllStress();
-                        restoreBrightnessAndKeepOn();
+lab14StopAllStress();
+restoreBrightnessAndKeepOn();
 
-                        appendHtml("<br>");
-                        logOk(
-                                gr
-                                        ? "Το Lab 14 ολοκληρώθηκε."
-                                        : "Lab 14 finished."
-                        );
-                        logLine();
+appendHtml("<br>");
+logOk(
+        gr
+                ? "Το Lab 14 ολοκληρώθηκε."
+                : "Lab 14 finished."
+);
+logLine();
 
-                        lab14Running = false;
+lab14Running = false;
 
                     });
 
@@ -15402,10 +15402,10 @@ lab14LogReliabilitySummary(
                         lab14Cancelled = true;
 
                         logError(
-        gr
-                ? "Σφάλμα LAB 14"
-                : "LAB 14 error"
-);
+                                gr
+                                        ? "Σφάλμα LAB 14"
+                                        : "LAB 14 error"
+                        );
 
                     });
 
@@ -15434,7 +15434,7 @@ lab14LogReliabilitySummary(
 
             });
 
-        }
+        } 
 
     }
 
