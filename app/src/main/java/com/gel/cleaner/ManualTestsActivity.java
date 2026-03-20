@@ -15512,6 +15512,7 @@ lab14LogReliabilitySummary(
             }
 
         }
+        }
 
     }, 100);
 
