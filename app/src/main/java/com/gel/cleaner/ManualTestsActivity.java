@@ -13635,8 +13635,6 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                 }
             }, 1500);
 
-            // ---------------- VIDEO ----------------
-
             try {
 
                 lab14StressVideo.setVideoURI(
@@ -13656,14 +13654,7 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
             } catch (Throwable ignore) {}
 
-            // ---------------- DOTS ----------------
-
-            final String[] dotFrames = {"•", "• •", "• • •"};
-
             ui.post(new Runnable() {
-
-                int dotStep = 0;
-                int lastSeg = -1;
 
                 @Override
                 public void run() {
@@ -13683,7 +13674,7 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
                     ui.removeCallbacks(this);
 
-// STOP LOAD
+                    // STOP LOAD
 
                     lab14StopAllStress();
 
@@ -13699,29 +13690,24 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                     lab14AdvisoryShown = false;
                     lab14Cancelled = false;
 
-                    if (wasCancelled) {
-                        return;
-                    }
+                    if (wasCancelled) return;
 
-        lab14PostLoadAnalysis(
-        engine,
-        gr,
-        startMah,
-        baselineFullMah,
-        t0,
-        voltageStart,
-        batteryPercent,
-        cycles,
-        tempStart
-);
+                    lab14PostLoadAnalysis(
+                            engine,
+                            gr,
+                            startMah,
+                            baselineFullMah,
+                            t0,
+                            voltageStart,
+                            batteryPercent,
+                            cycles,
+                            tempStart
+                    );
+                }
 
-                }   // run()
+            });
 
-            });     // Runnable
-
-        }   // <<< ΛΕΙΠΕ ΑΥΤΟ (κλείνει το try του run)
-
-        catch (Throwable t) {
+        } catch (Throwable t) {
 
             lab14StopAllStress();
             restoreBrightnessAndKeepOn();
@@ -13756,7 +13742,6 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
     lab14Running = false;
     lab14PopupShown = false;
     lab14AdvisoryShown = false;
-}
 }
 
 // ============================================================
