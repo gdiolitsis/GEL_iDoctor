@@ -16002,6 +16002,9 @@ lab14LogReliabilitySummary(
 
 // STOP
 
+float vLoadNow = getBatteryVoltageFiltered();
+voltageUnderLoad[0] = vLoadNow;
+
 lab14StopAllStress();
 
 try {
