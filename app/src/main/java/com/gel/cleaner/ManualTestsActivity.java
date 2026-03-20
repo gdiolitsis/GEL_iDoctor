@@ -1335,11 +1335,9 @@ private float getBatteryVoltageFiltered() {
     float sum = 0f;
     int count = 0;
 
-    // ----------------------------------------------------
-    // DISCARD FIRST READ (PMIC refresh jitter)
-    // ----------------------------------------------------
+    // discard first read
     getBatteryVoltageSafe();
-    SystemClock.sleep(120);
+    SystemClock.sleep(300);
 
     for (int i = 0; i < 4; i++) {
 
@@ -1350,7 +1348,7 @@ private float getBatteryVoltageFiltered() {
             count++;
         }
 
-        SystemClock.sleep(120);
+        SystemClock.sleep(350);   // ← ΠΡΙΝ 120
     }
 
     if (count == 0)
@@ -4424,23 +4422,27 @@ logLabelOkValue(
 
     if (!validRun) {
 
-        logLabelWarnValue(
-                gr ? "Εμπιστοσύνη" : "Confidence",
-                gr
-                        ? "Ενδεικτική (τρέχουσα εκτέλεση μη έγκυρη)"
-                        : "Indicative (current run not valid)"
-        );
+    logLabelWarnValue(
+            gr ? "Εμπιστοσύνη" : "Confidence",
+            gr
+                    ? "Ενδεικτική (τρέχουσα εκτέλεση μη έγκυρη)"
+                    : "Indicative (current run not valid)"
+    );
 
-        logWarn(gr
-                ? "Η τρέχουσα εκτέλεση δεν καταχωρήθηκε ως έγκυρη."
-                : "Current run not valid.");
+    logWarn(gr
+            ? "Η τρέχουσα εκτέλεση δεν καταχωρήθηκε ως έγκυρη."
+            : "Current run not valid.");
+
+    if (runs < 3) {
 
         logWarn(gr
                 ? "Απαιτούνται 3 έγκυρες εκτελέσεις."
                 : "3 valid runs required.");
 
-        return;
     }
+
+    return;
+}
 
 // =====================================================
 // SKIP RUN COUNT IF CURRENT RUN LIMITED
@@ -4745,20 +4747,10 @@ private float getBatteryCurrentNowSafe() {
                         BatteryManager.BATTERY_PROPERTY_CURRENT_NOW
                 );
 
-        // invalid value
-        if (raw == Long.MIN_VALUE || raw == 0)
+        if (raw == Long.MIN_VALUE || raw == 0L)
             return Float.NaN;
 
-        float current = (float) raw;
-
-        // ----------------------------------------------------
-        // NORMALIZE UNITS (µA -> mA)
-        // ----------------------------------------------------
-        if (Math.abs(raw) > 10000L) {
-            current = current / 1000f;
-        }
-
-        return current;
+        return (float) raw;   // κρατάμε raw τιμή σε µA
 
     } catch (Throwable ignore) {
         return Float.NaN;
@@ -14472,7 +14464,7 @@ private void lab14PostLoadAnalysis(
 
                             float sagCheck = voltageStart - voltageUnderLoad[0];
 
-                            if (sagCheck > 0.02f && sagCheck < 0.45f) {
+                            if (sagCheck > 0.005f && sagCheck < 0.50f) {
                                 electricalValid = true;
                             }
                         }
