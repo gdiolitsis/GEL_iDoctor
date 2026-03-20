@@ -13757,6 +13757,7 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
     lab14PopupShown = false;
     lab14AdvisoryShown = false;
 }
+}
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
