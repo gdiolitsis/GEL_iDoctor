@@ -13116,7 +13116,6 @@ if (isChargingNowSafe()) {
     return;
 }
 
-
 // ---------------------------------------
 // ENGINE
 // ---------------------------------------
@@ -13617,138 +13616,117 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
     public void run() {
         try {
 
-        if (lab14Cancelled) return;
+            if (lab14Cancelled) return;
 
-        // FAST finished → start main stress
+            applyMaxBrightnessAndKeepOn();
 
-        applyMaxBrightnessAndKeepOn();
+            startCpuBurn_C_Mode();
+            startMemoryStress();
+            startGpuStress();
 
-        startCpuBurn_C_Mode();
-        startMemoryStress();
-        startGpuStress();
+            ui.postDelayed(() -> {
+                if (lab14Cancelled || !lab14Running) return;
+                voltageUnderLoad[0] = getBatteryVoltageFiltered();
+            }, 5000);
 
-        ui.postDelayed(() -> {
-            if (lab14Cancelled || !lab14Running) return;
-            voltageUnderLoad[0] = getBatteryVoltageFiltered();
-        }, 5000);
-
-        ui.postDelayed(() -> {
-            if (lab14Running && !lab14Cancelled) {
-                lab14VibrationLoop.run();
-            }
-        }, 1500);
-
-        // ---------------- VIDEO ----------------
-
-        try {
-            lab14StressVideo.setVideoURI(
-                    Uri.parse(
-                            "android.resource://"
-                                    + getPackageName()
-                                    + "/"
-                                    + R.raw.battery_stress_loop
-                    )
-            );
-
-            lab14StressVideo.setOnPreparedListener(mp -> {
-                mp.setLooping(true);
-                mp.setVolume(0f, 0f);
-                lab14StressVideo.start();
-            });
-
-        } catch (Throwable ignore) {}
-
-        // ---------------- DOTS ----------------
-
-final String[] dotFrames = {"•", "• •", "• • •"};
-
-ui.post(new Runnable() {
-
-            int dotStep = 0;
-            int lastSeg = -1;
-
-            @Override
-            public void run() {
-
-                if (lab14Cancelled || !lab14Running) {
-                    ui.removeCallbacks(this);
-                    return;
+            ui.postDelayed(() -> {
+                if (lab14Running && !lab14Cancelled) {
+                    lab14VibrationLoop.run();
                 }
+            }, 1500);
 
-                long now = SystemClock.elapsedRealtime();
-                int elapsed = (int) ((now - t0) / 1000);
+            // ---------------- VIDEO ----------------
 
-                if (lab14DotsView != null) {
-                    lab14DotsView.setText(
-                            dotFrames[dotStep++ % dotFrames.length]
-                    );
-                }
+            try {
 
-                counterText.setText(
-                        gr
-                                ? "Πρόοδος: "
-                                + Math.min(elapsed, durationSec)
-                                + " / "
-                                + durationSec
-                                + " δευτ."
-                                : "Progress: "
-                                + Math.min(elapsed, durationSec)
-                                + " / "
-                                + durationSec
-                                + " sec"
+                lab14StressVideo.setVideoURI(
+                        Uri.parse(
+                                "android.resource://"
+                                        + getPackageName()
+                                        + "/"
+                                        + R.raw.battery_stress_loop
+                        )
                 );
 
-                int segSpan = Math.max(1, durationSec / 10);
-                int seg = Math.min(10, elapsed / segSpan);
+                lab14StressVideo.setOnPreparedListener(mp -> {
+                    mp.setLooping(true);
+                    mp.setVolume(0f, 0f);
+                    lab14StressVideo.start();
+                });
 
-                if (seg != lastSeg) {
+            } catch (Throwable ignore) {}
 
-                    lastSeg = seg;
+            // ---------------- DOTS ----------------
 
-                    for (int i = 0;
-                         i < progressBar.getChildCount();
-                         i++) {
+            final String[] dotFrames = {"•", "• •", "• • •"};
 
-                        progressBar.getChildAt(i)
-                                .setBackgroundColor(
-                                        i < seg
-                                                ? 0xFF39FF14
-                                                : 0xFF333333
-                                );
+            ui.post(new Runnable() {
+
+                int dotStep = 0;
+                int lastSeg = -1;
+
+                @Override
+                public void run() {
+
+                    if (lab14Cancelled || !lab14Running) {
+                        ui.removeCallbacks(this);
+                        return;
                     }
+
+                    long now = SystemClock.elapsedRealtime();
+                    int elapsed = (int) ((now - t0) / 1000);
+
+                    if (elapsed < durationSec) {
+                        ui.postDelayed(this, 1000);
+                        return;
+                    }
+
+                    ui.removeCallbacks(this);
+
+                    // STOP LOAD
+
+                    lab14StopAllStress();
+
+                    try {
+                        lab14CleanupUI();
+                    } catch (Throwable ignore) {}
+
+                    lab14Running = false;
+
+                    boolean wasCancelled = lab14Cancelled;
+
+                    lab14PopupShown = false;
+                    lab14AdvisoryShown = false;
+                    lab14Cancelled = false;
+
+                    if (wasCancelled) {
+                        return;
+                    }
+
                 }
 
-                if (elapsed < durationSec) {
+            });
 
-    ui.postDelayed(this, 1000);
-    return;
-}
+        } catch (Throwable t) {
 
-ui.removeCallbacks(this);
+            lab14StopAllStress();
+            restoreBrightnessAndKeepOn();
 
-// ----------------------------------------------------
-// 6) STOP LOAD
-// ----------------------------------------------------
-lab14StopAllStress();
+            lab14Cancelled = true;
+            lab14Running = false;
+            lab14PopupShown = false;
+            lab14AdvisoryShown = false;
 
-try {
-    lab14CleanupUI();
-} catch (Throwable ignore) {}
+            logError(
+                    gr
+                            ? "Σφάλμα LAB 14"
+                            : "LAB 14 error"
+            );
+        }
 
-lab14Running = false;
+    }
 
-boolean wasCancelled = lab14Cancelled;
-
-// ----------------------------------------------------
-// FINAL RESET (για επόμενο run)
-// ----------------------------------------------------
-lab14PopupShown = false;
-lab14AdvisoryShown = false;
-lab14Cancelled = false;
-
-if (wasCancelled) {
-    return;
-}
+}, 1000);
 
                         // ----------------------------------------------------
                         // 7) POST-LOAD ANALYSIS THREAD
@@ -15419,124 +15397,7 @@ lab14LogReliabilitySummary(
 
                     if (wasCancelled) return;
 
-
-                    // ------------------------------------
-                    // POST THREAD
-                    // ------------------------------------
-
-                    new Thread(() -> {
-
-                        try {
-
-                            final Lab14Engine.GelBatterySnapshot snapEnd =
-                                    engine.readSnapshot();
-
-                            if (snapEnd == null) {
-                                return;
-                            }
-
-                            final long endMah =
-                                    snapEnd.chargeNowMah;
-
-                            final long dtMs =
-                                    Math.max(
-                                            1,
-                                            SystemClock.elapsedRealtime() - t0
-                                    );
-
-                            final long drainMah =
-                                    Math.max(
-                                            0,
-                                            startMah - endMah
-                                    );
-
-                            runOnUiThread(() -> {
-
-                                logOk(
-                                        gr
-                                                ? "Το Lab 14 ολοκληρώθηκε."
-                                                : "Lab 14 finished."
-                                );
-
-                                lab14StopAllStress();
-                                restoreBrightnessAndKeepOn();
-
-                            });
-
-                        }
-
-                        catch (Throwable t) {
-
-                            runOnUiThread(() -> {
-
-                                lab14StopAllStress();
-                                restoreBrightnessAndKeepOn();
-
-                                lab14Cancelled = true;
-                                lab14Running = false;
-                                lab14PopupShown = false;
-                                lab14AdvisoryShown = false;
-
-                                logError(
-                                        gr
-                                                ? "Σφάλμα LAB 14"
-                                                : "LAB 14 error"
-                                );
-
-                            });
-
-                        }
-
-                    }).start();
-
-                }, 1000);
-
-            }
-
-            catch (Throwable t) {
-
-                lab14StopAllStress();
-                restoreBrightnessAndKeepOn();
-
-                lab14Cancelled = true;
-                lab14Running = false;
-                lab14PopupShown = false;
-                lab14AdvisoryShown = false;
-
-                logError(
-                        gr
-                                ? "Σφάλμα LAB 14"
-                                : "LAB 14 error"
-                );
-
-            }
-
-        }
-        }
-
-    }, 100);
-
-catch (Throwable t) {
-
-    runOnUiThread(() -> {
-
-        lab14StopAllStress();
-        restoreBrightnessAndKeepOn();
-
-        lab14Cancelled = true;
-        lab14Running = false;
-        lab14PopupShown = false;
-        lab14AdvisoryShown = false;
-
-        logError(
-                gr
-                        ? "Σφάλμα LAB 14"
-                        : "LAB 14 error"
-        );
-
-    });
-
-}
+} 
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
