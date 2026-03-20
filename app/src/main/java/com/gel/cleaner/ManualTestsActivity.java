@@ -15449,9 +15449,7 @@ lab14Running = false;
 
             }, 100);
 
-}
-
-catch (Throwable t) {
+        } catch (Throwable t) {
 
             runOnUiThread(() -> {
 
@@ -15474,27 +15472,6 @@ catch (Throwable t) {
                 );
             });
         }
-
-    } catch (Throwable t) {
-
-        lab14StopAllStress();
-        restoreBrightnessAndKeepOn();
-
-        try {
-            lab14CleanupUI();
-        } catch (Throwable ignore) {}
-
-        lab14Cancelled = true;
-        lab14Running = false;
-        lab14PopupShown = false;
-        lab14AdvisoryShown = false;
-
-        logError(
-                gr
-                        ? "Σφάλμα LAB 14"
-                        : "LAB 14 error"
-        );
-    }
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
