@@ -13505,9 +13505,7 @@ new Thread(() -> {
         vStart[0] = getBatteryVoltageFiltered();
 
         // ---------------- LOAD 1 ----------------
-
         startCpuBurn_C_Mode();
-
         SystemClock.sleep(12000);
 
         if (lab14Cancelled) {
@@ -13515,18 +13513,13 @@ new Thread(() -> {
             return;
         }
 
-        // give voltage time to settle
         SystemClock.sleep(1200);
-
         vLoad1[0] = getBatteryVoltageFiltered();
 
         SystemClock.sleep(300);
-
         stopCpuBurn();
 
-
         // ---------------- RECOVER ----------------
-
         SystemClock.sleep(12000);
 
         if (lab14Cancelled) {
@@ -13534,16 +13527,11 @@ new Thread(() -> {
             return;
         }
 
-        // allow voltage to rise
         SystemClock.sleep(1200);
-
         vRecover[0] = getBatteryVoltageFiltered();
 
-
         // ---------------- LOAD 2 ----------------
-
         startCpuBurn_C_Mode();
-
         SystemClock.sleep(12000);
 
         if (lab14Cancelled) {
@@ -13551,21 +13539,68 @@ new Thread(() -> {
             return;
         }
 
-        // wait for real drop
         SystemClock.sleep(1200);
-
         vLoad2[0] = getBatteryVoltageFiltered();
 
         SystemClock.sleep(300);
-
         stopCpuBurn();
 
+        // ----------------------------------------------------
+        // PULSE LOAD TEST
+        // ----------------------------------------------------
+        float vBefore = getBatteryVoltageFiltered();
 
-        // ---------------- DONE ----------------
+        startCpuBurn_C_Mode();
+        SystemClock.sleep(3000);
 
+        float vPulse = getBatteryVoltageFiltered();
+
+        stopCpuBurn();
+        SystemClock.sleep(2000);
+
+        float vAfter = getBatteryVoltageFiltered();
+
+        if (!Float.isNaN(vBefore) && !Float.isNaN(vPulse)) {
+            pulseSag[0] = vBefore - vPulse;
+        }
+
+        if (!Float.isNaN(vAfter) && !Float.isNaN(vPulse)) {
+            pulseRecovery[0] = vAfter - vPulse;
+        }
+
+        if (!Float.isNaN(pulseSag[0]) &&
+            pulseSag[0] > 0f &&
+            !Float.isNaN(pulseRecovery[0])) {
+            pulseScore[0] = (pulseRecovery[0] / pulseSag[0]) * 100f;
+        }
+
+        if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad1[0])) {
+            sag1[0] = vStart[0] - vLoad1[0];
+        }
+
+        if (!Float.isNaN(vRecover[0]) && !Float.isNaN(vLoad2[0])) {
+            sag2[0] = vRecover[0] - vLoad2[0];
+        }
+
+        if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
+            sagAvg[0] = (sag1[0] + sag2[0]) / 2f;
+        }
+
+        if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
+            float sagDiff = Math.abs(sag1[0] - sag2[0]);
+            if (sagDiff > 0.05f) {
+                cellImbalanceRisk[0] = true;
+            }
+        }
+
+        stopCpuBurn();
         lab14FastDone = true;
 
     } catch (Throwable t) {
+
+        try {
+            stopCpuBurn();
+        } catch (Throwable ignore) {}
 
         lab14FastDone = true;
 
@@ -13573,88 +13608,8 @@ new Thread(() -> {
                 logError("LAB14 fast thread error")
         );
     }
-
 }).start();
             
-// ----------------------------------------------------
-// PULSE LOAD TEST
-// ----------------------------------------------------
-
-float vBefore = getBatteryVoltageFiltered();
-
-startCpuBurn_C_Mode();
-SystemClock.sleep(3000);
-
-float vPulse = getBatteryVoltageFiltered();
-
-stopCpuBurn();
-SystemClock.sleep(2000);
-
-float vAfter = getBatteryVoltageFiltered();
-
-if (!Float.isNaN(vBefore) &&
-    !Float.isNaN(vPulse)) {
-
-    pulseSag[0] = vBefore - vPulse;
-
-}
-
-if (!Float.isNaN(vAfter) &&
-    !Float.isNaN(vPulse)) {
-
-    pulseRecovery[0] = vAfter - vPulse;
-
-}
-
-if (!Float.isNaN(pulseSag[0]) &&
-    pulseSag[0] > 0f &&
-    !Float.isNaN(pulseRecovery[0])) {
-
-    pulseScore[0] =
-            (pulseRecovery[0] / pulseSag[0]) * 100f;
-
-}
-
-            if (!Float.isNaN(vStart[0]) &&
-                !Float.isNaN(vLoad1[0])) {
-                sag1[0] = vStart[0] - vLoad1[0];
-            }
-
-            if (!Float.isNaN(vRecover[0]) &&
-                !Float.isNaN(vLoad2[0])) {
-                sag2[0] = vRecover[0] - vLoad2[0];
-            }
-
-            if (!Float.isNaN(sag1[0]) &&
-                !Float.isNaN(sag2[0])) {
-                sagAvg[0] = (sag1[0] + sag2[0]) / 2f;
-            }
-
-            if (!Float.isNaN(sag1[0]) &&
-                !Float.isNaN(sag2[0])) {
-                	
-                float railDrop = Math.abs(sag1[0] - sag2[0]);
-
-                float sagDiff = Math.abs(sag1[0] - sag2[0]);
-                if (sagDiff > 0.05f) {
-                    cellImbalanceRisk[0] = true;
-                }
-            }
-            
-            stopCpuBurn();
-
-lab14FastDone = true;
-
-} catch (Throwable t) {
-
-    lab14FastDone = true;
-
-    runOnUiThread(() -> logError("LAB14 fast thread error"));
-
-}
-
-}).start();
-
 // ------------------------------------------------------------
 // 5) MAIN STRESS START
 // ------------------------------------------------------------
