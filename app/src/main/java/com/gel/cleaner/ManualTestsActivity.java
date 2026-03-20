@@ -15444,8 +15444,12 @@ lab14Running = false;
                         }
 
                     }).start();
-                }
-        );
+
+                }   // <-- closes Runnable run()
+
+            }       // <-- closes showLab14ConditionCheck lambda
+
+        );          // <-- closes showLab14ConditionCheck()
 
     } catch (Throwable t) {
 
@@ -15471,7 +15475,7 @@ lab14Running = false;
         });
     }
 
-}, 100);
+}, 100);   // <-- closes postDelayed
 
 } catch (Throwable t) {
 
@@ -15492,7 +15496,6 @@ lab14Running = false;
                     ? "Σφάλμα LAB 14"
                     : "LAB 14 error"
     );
-}
 }
 
 // ============================================================
