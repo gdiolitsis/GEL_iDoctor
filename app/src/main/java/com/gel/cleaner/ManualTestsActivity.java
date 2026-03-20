@@ -13127,7 +13127,7 @@ try {
 
     final int durationSec = LAB14_TOTAL_SECONDS;
     lastSelectedStressDurationSec = durationSec;
-
+    
 // ------------------------------------------------------------
     // 1) INITIAL SNAPSHOT
     // ------------------------------------------------------------
@@ -13308,36 +13308,33 @@ if (!lab14PopupShown) {
 
     logLine();
     
-// --------------------------------------------------
+// ------------------------------------------------------------
 // POPUP FIRST
-// --------------------------------------------------
+// ------------------------------------------------------------
 
-    lab14Running = false;
-    lab14Cancelled = false;
+lab14Running = false;
+lab14Cancelled = false;
+lab14PopupShown = true;
 
-    lab14PopupShown = true;
+showLab14ConditionCheck(() -> {
 
-    showLab14ConditionCheck(() -> {
+    if (!lab14AdvisoryShown) {
 
-        if (!lab14AdvisoryShown) {
+        lab14AdvisoryShown = true;
 
-            lab14AdvisoryShown = true;
-
-            showLab14PreTestAdvisory(() -> {
-            	
-                lab14BatteryHealthStressTest_REAL();
-
-            });
-
-        } else {
-
+        showLab14PreTestAdvisory(() -> {
             lab14BatteryHealthStressTest_REAL();
+        });
 
-        }
+    } else {
 
-    });
+        lab14BatteryHealthStressTest_REAL();
 
-    return;
+    }
+
+});
+
+return;
 }
 
         // ------------------------------------------------------------
@@ -14682,7 +14679,7 @@ int finalScore = 100;
 // DRAIN RATE
 // ----------------------------------------------------
 
-if (validDrainF && !lab14_systemLimited[0] && drainPercentPerHour > 0) {
+if (validDrain && !lab14_systemLimited[0] && drainPercentPerHour > 0) {
 
     if (drainPercentPerHour >= 50)
         finalScore -= 20;
@@ -14697,7 +14694,7 @@ if (validDrainF && !lab14_systemLimited[0] && drainPercentPerHour > 0) {
 // TEMPERATURE ABSOLUTE
 // ----------------------------------------------------
 
-if (validDrainF && !Float.isNaN(tempEnd)) {
+if (validDrain && !Float.isNaN(tempEnd)) {
 
     if (tempEnd >= 55f)
         finalScore -= 25;
@@ -14712,7 +14709,7 @@ if (validDrainF && !Float.isNaN(tempEnd)) {
 // TEMPERATURE RISE
 // ----------------------------------------------------
 
-if (validDrainF &&
+if (validDrain &&
     !Float.isNaN(tempStart) &&
     !Float.isNaN(tempEnd)) {
 
@@ -14744,7 +14741,7 @@ if (cycles > 0) {
 // CPU / GPU
 // ----------------------------------------------------
 
-if (validDrainF && cpuTempEnd != null) {
+if (validDrain && cpuTempEnd != null) {
 
     if (cpuTempEnd >= 85f)
         finalScore -= 6;
@@ -14752,7 +14749,7 @@ if (validDrainF && cpuTempEnd != null) {
         finalScore -= 3;
 }
 
-if (validDrainF && gpuTempEnd != null) {
+if (validDrain && gpuTempEnd != null) {
 
     if (gpuTempEnd >= 80f)
         finalScore -= 5;
@@ -14795,63 +14792,63 @@ if (calibrationDrift[0])
 
 if (!Float.isNaN(cellElasticityIndex[0]) &&
     cellElasticityIndex[0] < 40f &&
-    validDrainF) {
+    validDrain) {
 
     finalScore -= 6;
 }
 
 if (!Float.isNaN(structuralIntegrityIndex[0]) &&
     structuralIntegrityIndex[0] < 50f &&
-    validDrainF) {
+    validDrain) {
 
     finalScore -= 6;
 }
 
 if (!Float.isNaN(powerStabilityFactor[0]) &&
     powerStabilityFactor[0] < 50f &&
-    validDrainF) {
+    validDrain) {
 
     finalScore -= 5;
 }
 
 if (!Float.isNaN(pulseScore[0]) &&
     pulseScore[0] < 50f &&
-    validDrainF) {
+    validDrain) {
 
     finalScore -= 5;
 }
 
 if (!Float.isNaN(pulseScore[0]) &&
     pulseScore[0] < 35f &&
-    validDrainF) {
+    validDrain) {
 
     finalScore -= 6;
 }
 
 if (!Float.isNaN(relaxScore[0]) &&
     relaxScore[0] < 6f &&
-    validDrainF) {
+    validDrain) {
 
     finalScore -= 5;
 }
 
 if (!Float.isNaN(relaxScore[0]) &&
     relaxScore[0] < 4f &&
-    validDrainF) {
+    validDrain) {
 
     finalScore -= 6;
 }
 
 if (!Float.isNaN(coulombDrift[0]) &&
     coulombDrift[0] > 8f &&
-    validDrainF) {
+    validDrain) {
 
     finalScore -= 5;
 }
 
 if (!Float.isNaN(dualLoadScore[0]) &&
     dualLoadScore[0] < 60f &&
-    validDrainF) {
+    validDrain) {
 
     finalScore -= 5;
 }
@@ -14871,7 +14868,7 @@ if (finalScore > 100) finalScore = 100;
 
 String finalLabel;
 
-if (!validDrainF)
+if (!validDrain)
     finalLabel = "Informational";
 else if (finalScore >= 90)
     finalLabel = "Excellent";
@@ -14891,7 +14888,7 @@ else
 
 String healthClass;
 
-if (!validDrainF)
+if (!validDrain)
     healthClass = "N/A";
 else if (finalScore >= 92)
     healthClass = "A+";
@@ -15404,31 +15401,76 @@ lab14LogReliabilitySummary(
 );
 
 // STOP
-lab14StopAllStress();
-restoreBrightnessAndKeepOn();
 
-appendHtml("<br>");
-logOk(
-        gr
-                ? "Το Lab 14 ολοκληρώθηκε."
-                : "Lab 14 finished."
-);
-logLine();
+                    lab14StopAllStress();
 
-lab14Running = false;
+                    try {
+                        lab14CleanupUI();
+                    } catch (Throwable ignore) {}
+
+                    lab14Running = false;
+
+                    boolean wasCancelled =
+                            lab14Cancelled;
+
+                    lab14PopupShown = false;
+                    lab14AdvisoryShown = false;
+                    lab14Cancelled = false;
+
+                    if (wasCancelled) return;
+
+
+                    // ------------------------------------
+                    // POST THREAD
+                    // ------------------------------------
+
+                    new Thread(() -> {
+
+                        try {
+
+                            final Lab14Engine.GelBatterySnapshot snapEnd =
+                                    engine.readSnapshot();
+
+                            if (snapEnd == null) {
+                                return;
+                            }
+
+                            final long endMah =
+                                    snapEnd.chargeNowMah;
+
+                            final long dtMs =
+                                    Math.max(
+                                            1,
+                                            SystemClock.elapsedRealtime() - t0
+                                    );
+
+                            final long drainMah =
+                                    Math.max(
+                                            0,
+                                            startMah - endMah
+                                    );
+
+                            runOnUiThread(() -> {
+
+                                logOk(
+                                        gr
+                                                ? "Το Lab 14 ολοκληρώθηκε."
+                                                : "Lab 14 finished."
+                                );
+
+                                lab14StopAllStress();
+                                restoreBrightnessAndKeepOn();
 
                             });
 
-                        } catch (Throwable t) {
+                        }
+
+                        catch (Throwable t) {
 
                             runOnUiThread(() -> {
 
                                 lab14StopAllStress();
                                 restoreBrightnessAndKeepOn();
-
-                                try {
-                                    lab14CleanupUI();
-                                } catch (Throwable ignore) {}
 
                                 lab14Cancelled = true;
                                 lab14Running = false;
@@ -15440,28 +15482,21 @@ lab14Running = false;
                                                 ? "Σφάλμα LAB 14"
                                                 : "LAB 14 error"
                                 );
+
                             });
+
                         }
 
                     }).start();
 
-                }   // Runnable run()
+                }, 1000);
 
-            }, 100);
+            }
 
-        }
-        }
-
-        } catch (Throwable t) {
-
-            runOnUiThread(() -> {
+            catch (Throwable t) {
 
                 lab14StopAllStress();
                 restoreBrightnessAndKeepOn();
-
-                try {
-                    lab14CleanupUI();
-                } catch (Throwable ignore) {}
 
                 lab14Cancelled = true;
                 lab14Running = false;
@@ -15473,8 +15508,37 @@ lab14Running = false;
                                 ? "Σφάλμα LAB 14"
                                 : "LAB 14 error"
                 );
-            });
+
+            }
+
         }
+
+    }, 100);
+
+
+}
+
+catch (Throwable t) {
+
+    runOnUiThread(() -> {
+
+        lab14StopAllStress();
+        restoreBrightnessAndKeepOn();
+
+        lab14Cancelled = true;
+        lab14Running = false;
+        lab14PopupShown = false;
+        lab14AdvisoryShown = false;
+
+        logError(
+                gr
+                        ? "Σφάλμα LAB 14"
+                        : "LAB 14 error"
+        );
+
+    });
+
+}
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
