@@ -15515,9 +15515,6 @@ lab14LogReliabilitySummary(
 
     }, 100);
 
-
-}
-
 catch (Throwable t) {
 
     runOnUiThread(() -> {
