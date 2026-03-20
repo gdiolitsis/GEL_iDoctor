@@ -13614,6 +13614,7 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
     @Override
     public void run() {
+
         try {
 
             if (lab14Cancelled) return;
@@ -13623,36 +13624,6 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             startCpuBurn_C_Mode();
             startMemoryStress();
             startGpuStress();
-
-            ui.postDelayed(() -> {
-                if (lab14Cancelled || !lab14Running) return;
-                voltageUnderLoad[0] = getBatteryVoltageFiltered();
-            }, 5000);
-
-            ui.postDelayed(() -> {
-                if (lab14Running && !lab14Cancelled) {
-                    lab14VibrationLoop.run();
-                }
-            }, 1500);
-
-            try {
-
-                lab14StressVideo.setVideoURI(
-                        Uri.parse(
-                                "android.resource://"
-                                        + getPackageName()
-                                        + "/"
-                                        + R.raw.battery_stress_loop
-                        )
-                );
-
-                lab14StressVideo.setOnPreparedListener(mp -> {
-                    mp.setLooping(true);
-                    mp.setVolume(0f, 0f);
-                    lab14StressVideo.start();
-                });
-
-            } catch (Throwable ignore) {}
 
             ui.post(new Runnable() {
 
@@ -13673,8 +13644,6 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                     }
 
                     ui.removeCallbacks(this);
-
-                    // STOP LOAD
 
                     lab14StopAllStress();
 
@@ -13704,7 +13673,6 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                             tempStart
                     );
                 }
-
             });
 
         } catch (Throwable t) {
