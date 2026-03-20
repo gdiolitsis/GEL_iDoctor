@@ -13703,23 +13703,25 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                         return;
                     }
 
-                    lab14PostLoadAnalysis(
-                            engine,
-                            gr,
-                            startMah,
-                            baselineFullMah,
-                            t0,
-                            voltageStart,
-                            batteryPercent,
-                            cycles,
-                            tempStart
-                    );
+        lab14PostLoadAnalysis(
+        engine,
+        gr,
+        startMah,
+        baselineFullMah,
+        t0,
+        voltageStart,
+        batteryPercent,
+        cycles,
+        tempStart
+);
 
-                }
+                }   // run()
 
-            });
+            });     // Runnable
 
-        } catch (Throwable t) {
+        }   // <<< ΛΕΙΠΕ ΑΥΤΟ (κλείνει το try του run)
+
+        catch (Throwable t) {
 
             lab14StopAllStress();
             restoreBrightnessAndKeepOn();
@@ -13754,6 +13756,7 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
     lab14Running = false;
     lab14PopupShown = false;
     lab14AdvisoryShown = false;
+}
 }
 
 // ============================================================
