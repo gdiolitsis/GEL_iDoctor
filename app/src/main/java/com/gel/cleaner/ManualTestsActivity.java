@@ -13035,7 +13035,7 @@ private void lab14BatteryHealthStressTest_REAL() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    validDrainF = false;
+    validDrain = false;
     lab14_systemLimited[0] = false;
 
     lab14Cancelled = false;
@@ -15987,7 +15987,7 @@ e.apply();
 
 if (validDrainF && !lab14_systemLimited[0]) {
 
-    incLab14RunCount();
+    incLab14RunCount(validDrainF);
 
 } else {
 
