@@ -15447,9 +15447,11 @@ lab14Running = false;
 
                 }   // Runnable run()
 
-            }, 100);   // postDelayed
+            }, 100);
 
-        } catch (Throwable t) {
+}
+
+catch (Throwable t) {
 
             runOnUiThread(() -> {
 
