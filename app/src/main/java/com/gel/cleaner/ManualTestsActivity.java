@@ -13728,72 +13728,76 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
 }, 1000);
 
-                        // ----------------------------------------------------
-                        // 7) POST-LOAD ANALYSIS THREAD
-                        // ----------------------------------------------------
-                        new Thread(() -> {
+// ----------------------------------------------------
+// 7) POST-LOAD ANALYSIS
+// ----------------------------------------------------
 
-                            try {
+try {
 
-                        // ----------------------------------------------------
-                                // FAST STRESS ANALYSIS
-                                // ----------------------------------------------------
-                                if (!Float.isNaN(vStart[0]) &&
-                                    !Float.isNaN(vLoad1[0]) &&
-                                    !Float.isNaN(vRecover[0]) &&
-                                    !Float.isNaN(vLoad2[0])) {
+    // ----------------------------------------------------
+    // FAST STRESS ANALYSIS
+    // ----------------------------------------------------
+    if (!Float.isNaN(vStart[0]) &&
+        !Float.isNaN(vLoad1[0]) &&
+        !Float.isNaN(vRecover[0]) &&
+        !Float.isNaN(vLoad2[0])) {
 
-                                    float variance =
-                                            Math.abs(vStart[0] - vLoad1[0])
-                                                    + Math.abs(vRecover[0] - vLoad2[0]);
+        float variance =
+                Math.abs(vStart[0] - vLoad1[0])
+                        + Math.abs(vRecover[0] - vLoad2[0]);
 
-                                    float stability = 100f - variance * 120f;
-                                    if (stability < 0f) stability = 0f;
-                                    if (stability > 100f) stability = 100f;
-                                    voltageStability[0] = stability;
-                                }
+        float stability = 100f - variance * 120f;
 
-                                if (lab14Cancelled) return;
+        if (stability < 0f) stability = 0f;
+        if (stability > 100f) stability = 100f;
 
-                                SystemClock.sleep(1200);
+        voltageStability[0] = stability;
+    }
 
-                                if (lab14Cancelled) return;
+    if (lab14Cancelled) return;
 
-                        // ----------------------------------------------------
-                        // FINAL SNAPSHOT
-                        // ----------------------------------------------------
-                        final Lab14Engine.GelBatterySnapshot snapEnd =
-                                engine.readSnapshot();
+    SystemClock.sleep(1200);
 
-                        if (snapEnd == null) {
-                            runOnUiThread(() -> logError(gr
-                                    ? "Αποτυχία τελικής ανάγνωσης μπαταρίας."
-                                    : "Final battery snapshot failed."));
-                            return;
-                        }
+    if (lab14Cancelled) return;
 
-                        if (snapEnd.chargeNowMah <= 0) {
-                            runOnUiThread(() -> logWarn(gr
-                                    ? "Αδυναμία ανάγνωσης τελικού charge counter."
-                                    : "Unable to read final charge counter."));
-                            return;
-                        }
+    // ----------------------------------------------------
+    // FINAL SNAPSHOT
+    // ----------------------------------------------------
 
-                        final long endMah = snapEnd.chargeNowMah;
-                        final float tempEnd = snapEnd.temperature;
+    final Lab14Engine.GelBatterySnapshot snapEnd =
+            engine.readSnapshot();
 
-                        final Float cpuTempEnd = readCpuTempSafe();
-                        final Float gpuTempEnd = readGpuTempSafe();
+    if (snapEnd == null) {
+        logError(gr
+                ? "Αποτυχία τελικής ανάγνωσης μπαταρίας."
+                : "Final battery snapshot failed.");
+        return;
+    }
 
-                        final long dtMs =
-                                Math.max(1, SystemClock.elapsedRealtime() - t0);
+    if (snapEnd.chargeNowMah <= 0) {
+        logWarn(gr
+                ? "Αδυναμία ανάγνωσης τελικού charge counter."
+                : "Unable to read final charge counter.");
+        return;
+    }
 
-                        final long drainMah =
-                                Math.max(0, startMah - endMah);
+    final long endMah = snapEnd.chargeNowMah;
+    final float tempEnd = snapEnd.temperature;
 
-                        if (drainMah > 600) {
-                            variabilityDetected[0] = true;
-                        }
+    final Float cpuTempEnd = readCpuTempSafe();
+    final Float gpuTempEnd = readGpuTempSafe();
+
+    final long dtMs =
+            Math.max(
+                    1,
+                    SystemClock.elapsedRealtime() - t0
+            );
+
+    final long drainMah =
+            Math.max(
+                    0,
+                    startMah - endMah
+            );
 
                         // ----------------------------------------------------
                         // FUEL GAUGE CHECK
@@ -15380,24 +15384,61 @@ lab14LogReliabilitySummary(
 
 // STOP
 
-                    lab14StopAllStress();
+lab14StopAllStress();
 
-                    try {
-                        lab14CleanupUI();
-                    } catch (Throwable ignore) {}
+try {
+    lab14CleanupUI();
+} catch (Throwable ignore) {}
 
-                    lab14Running = false;
+lab14Running = false;
 
-                    boolean wasCancelled =
-                            lab14Cancelled;
+boolean wasCancelled = lab14Cancelled;
 
-                    lab14PopupShown = false;
-                    lab14AdvisoryShown = false;
-                    lab14Cancelled = false;
+lab14PopupShown = false;
+lab14AdvisoryShown = false;
+lab14Cancelled = false;
 
-                    if (wasCancelled) return;
+if (wasCancelled) return;
 
-} 
+}  // closes POST-LOAD try
+
+
+catch (Throwable t) {
+
+    lab14StopAllStress();
+    restoreBrightnessAndKeepOn();
+
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+
+    logError(
+            gr
+                    ? "Σφάλμα LAB 14"
+                    : "LAB 14 error"
+    );
+}
+
+
+// closes ENGINE try — NO LOG HERE
+
+} catch (Throwable t) {
+
+    lab14StopAllStress();
+
+    try {
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    restoreBrightnessAndKeepOn();
+
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+
+}
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
