@@ -13967,8 +13967,8 @@ if (lab14_systemLimited[0]) {
         );
     }
     
-    float startBatteryTemp = getBatteryTempEngineSafe();
-float endBatteryTemp   = getBatteryTempEngineSafe();
+startBatteryTemp = getBatteryTempEngineSafe();
+endBatteryTemp   = getBatteryTempEngineSafe();
 
 if (Float.isNaN(startBatteryTemp) || startBatteryTemp <= 0f)
     startBatteryTemp = tempStart;
@@ -15675,9 +15675,6 @@ else
                             confidenceLabel = "Moderate";
                         else
                             confidenceLabel = "Low";
-
-                        startBatteryTemp = tempStart;
-                        endBatteryTemp = tempEnd;
 
                         final float estimatedESRF = estimatedESR;
                         final float energyEfficiencyF = energyEfficiency;
@@ -22959,8 +22956,6 @@ private void lab29DeviceAuthenticity() {
 
     if (authenticityScore < 0)
         authenticityScore = 0;
-
-    String level;
 
     if (authenticityScore >= 90)
         level = gr ? "ΥΨΗΛΗ" : "HIGH";
