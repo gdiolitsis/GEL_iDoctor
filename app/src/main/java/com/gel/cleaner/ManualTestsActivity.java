@@ -13486,7 +13486,7 @@ private void lab14BatteryHealthStressTest_REAL() {
                     return;
                 }
 
-                SystemClock.sleep(1200);
+                SystemClock.sleep(500);
                 vLoad1[0] = getBatteryVoltageFiltered();
 
                 SystemClock.sleep(300);
@@ -13500,7 +13500,7 @@ private void lab14BatteryHealthStressTest_REAL() {
                     return;
                 }
 
-                SystemClock.sleep(1200);
+                SystemClock.sleep(800);
                 vRecover[0] = getBatteryVoltageFiltered();
 
                 // ---------------- LOAD 2 ----------------
@@ -13512,7 +13512,7 @@ private void lab14BatteryHealthStressTest_REAL() {
                     return;
                 }
 
-                SystemClock.sleep(1200);
+                SystemClock.sleep(500);
                 vLoad2[0] = getBatteryVoltageFiltered();
 
                 SystemClock.sleep(300);
@@ -13524,12 +13524,12 @@ private void lab14BatteryHealthStressTest_REAL() {
                 float vBefore = getBatteryVoltageFiltered();
 
                 startCpuBurn_C_Mode();
-                SystemClock.sleep(3000);
+                SystemClock.sleep(3500);
 
                 float vPulse = getBatteryVoltageFiltered();
 
                 stopCpuBurn();
-                SystemClock.sleep(2000);
+                SystemClock.sleep(800);
 
                 float vAfter = getBatteryVoltageFiltered();
 
@@ -13672,38 +13672,41 @@ public void run() {
         return;
     }
 
-    ui.removeCallbacks(this);
+ui.removeCallbacks(this);
 
-    voltageUnderLoad[0] = getBatteryVoltageFiltered();
-    SystemClock.sleep(350);
+voltageUnderLoad[0] = getBatteryVoltageFiltered();
+SystemClock.sleep(350);
 
-    lab14StopAllStress();
+lab14StopAllStress();
 
-    try {
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
+// ✅ πρώτα κάνουμε analysis (χρειάζεται UI ακόμα ενεργό)
+lab14PostLoadAnalysis(
+        engine,
+        gr,
+        startMah,
+        baselineFullMah,
+        t0,
+        voltageStart,
+        batteryPercent,
+        cycles,
+        tempStart
+);
 
-    lab14Running = false;
+// ✅ μετά καθαρίζουμε UI
+try {
+    lab14CleanupUI();
+} catch (Throwable ignore) {}
 
-    boolean wasCancelled = lab14Cancelled;
+lab14Running = false;
 
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
-    lab14Cancelled = false;
+boolean wasCancelled = lab14Cancelled;
 
-    if (wasCancelled) return;
+lab14PopupShown = false;
+lab14AdvisoryShown = false;
+lab14Cancelled = false;
 
-    lab14PostLoadAnalysis(
-            engine,
-            gr,
-            startMah,
-            baselineFullMah,
-            t0,
-            voltageStart,
-            batteryPercent,
-            cycles,
-            tempStart
-    );
+if (wasCancelled) return;
+
 }
                     });
 
@@ -14537,23 +14540,18 @@ if (validDrain &&
 // ----------------------------------------------------
 if (!Float.isNaN(voltageUnderLoad[0])) {
 
-    SystemClock.sleep(3000);
+    SystemClock.sleep(800);
 
     if (!lab14Cancelled) {
 
         float vr = getBatteryVoltageFiltered();
 
         if (!Float.isNaN(vr)) {
-
             voltageRecovery[0] =
                     Math.max(0f, vr - voltageUnderLoad[0]);
-
         }
-
     }
-
 }
-
 
 // ----------------------------------------------------
 // RELAXATION CURVE TEST
@@ -15610,35 +15608,45 @@ else
                                 }
                             }
 
-                            // fast stress result log
-                            if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
-                                logLabelValue(
-                                        gr ? "Γρήγορη δοκιμή καταπόνησης"
-                                           : "Fast stress test",
-                                        String.format(
-                                                Locale.US,
-                                                "Sag1=%.3fV | Sag2=%.3fV",
-                                                sag1[0],
-                                                sag2[0]
-                                        )
-                                );
+// fast stress result log
+if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
-                                if (sag1[0] > 0.35f || sag2[0] > 0.40f) {
-                                    logLabelWarnValue(
-                                            gr ? "Διάγνωση" : "Diagnosis",
-                                            gr
-                                                    ? "Έντονη πτώση τάσης — πιθανή φθορά κυψελών"
-                                                    : "Severe voltage sag — degraded battery cells"
-                                    );
-                                } else {
-                                    logLabelOkValue(
-                                            gr ? "Διάγνωση" : "Diagnosis",
-                                            gr
-                                                    ? "Δεν εντοπίστηκε ανωμαλία"
-                                                    : "No abnormal sag detected"
-                                    );
-                                }
-                            }
+    float s1 = sag1[0];
+    float s2 = sag2[0];
+
+    if (Math.abs(s1) < 0.005f) s1 = 0f;
+    if (Math.abs(s2) < 0.005f) s2 = 0f;
+
+    logLabelValue(
+            gr ? "Γρήγορη δοκιμή καταπόνησης"
+               : "Fast stress test",
+            String.format(
+                    Locale.US,
+                    "Sag1=%.3fV | Sag2=%.3fV",
+                    s1,
+                    s2
+            )
+    );
+
+    if (s1 > 0.35f || s2 > 0.40f) {
+
+        logLabelWarnValue(
+                gr ? "Διάγνωση" : "Diagnosis",
+                gr
+                        ? "Έντονη πτώση τάσης — πιθανή φθορά κυψελών"
+                        : "Severe voltage sag — degraded battery cells"
+        );
+
+    } else {
+
+        logLabelOkValue(
+                gr ? "Διάγνωση" : "Diagnosis",
+                gr
+                        ? "Δεν εντοπίστηκε ανωμαλία"
+                        : "No abnormal sag detected"
+        );
+    }
+}
 
                             // extra advanced result blocks
                             if (!Float.isNaN(powerStabilityFactor[0]) &&
