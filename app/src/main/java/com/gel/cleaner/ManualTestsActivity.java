@@ -6007,8 +6007,8 @@ private void showUsageAccessDialog() {
     btnRow.setGravity(Gravity.CENTER);
 
     LinearLayout.LayoutParams btnLp =
-            new LinearLayout.LayoutParams(0, dp(110), 1f);
-    btnLp.setMargins(dp(8), 0, dp(8), 0);
+            new LinearLayout.LayoutParams(0, dp(48), 1f);
+    btnLp.setMargins(dp(6), 4, dp(6), 4);
 
     Button continueBtn = new Button(this);
     continueBtn.setText(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE");
@@ -13175,7 +13175,31 @@ private void lab14BatteryHealthStressTest_REAL() {
         // ------------------------------------------------------------
         // 2) HEADER LOGS - START CONDITIONS
         // ------------------------------------------------------------
-        if (!lab14PopupShown) {
+      
+  if (!lab14PopupShown) {
+        	
+            lab14Running = false;
+            lab14Cancelled = false;
+            lab14PopupShown = true;
+
+            showLab14ConditionCheck(() -> {
+
+                if (!lab14AdvisoryShown) {
+
+                    lab14AdvisoryShown = true;
+
+                    showLab14PreTestAdvisory(() -> {
+                        lab14BatteryHealthStressTest_REAL();
+                    });
+
+                } else {
+
+                    lab14BatteryHealthStressTest_REAL();
+                }
+            });
+
+            return;
+        }
 
             appendHtml("<br>");
             logLine();
@@ -13290,32 +13314,6 @@ private void lab14BatteryHealthStressTest_REAL() {
             );
 
             logLine();
-
-            // ------------------------------------------------------------
-            // POPUP FIRST
-            // ------------------------------------------------------------
-            lab14Running = false;
-            lab14Cancelled = false;
-            lab14PopupShown = true;
-
-            showLab14ConditionCheck(() -> {
-
-                if (!lab14AdvisoryShown) {
-
-                    lab14AdvisoryShown = true;
-
-                    showLab14PreTestAdvisory(() -> {
-                        lab14BatteryHealthStressTest_REAL();
-                    });
-
-                } else {
-
-                    lab14BatteryHealthStressTest_REAL();
-                }
-            });
-
-            return;
-        }
 
         // ------------------------------------------------------------
         // 3) MAIN DIALOG
@@ -19530,6 +19528,13 @@ logLine();
 private void lab23DeveloperOptionsRisk() {
 	
 	final boolean gr = AppLang.isGreek(this);
+	
+	appendHtml("<br>");
+    logLine();
+    logInfo(gr 
+            ? "LAB 23 — Κίνδυνος από επιλογές Προγραμματιστή"
+            : "LAB 22 — Developer Options Risk");
+    logLine();
 
     int risk = 0;
     boolean usbDebug = false;
@@ -19542,13 +19547,10 @@ private void lab23DeveloperOptionsRisk() {
         );
         usbDebug = (adb == 1);
 
-        logInfo(gr ? "USB Debugging"
-                   : "USB Debugging");
-
         if (usbDebug) {
 
             logLabelWarnValue(
-                    gr ? "Κατάσταση" : "Status",
+                    gr ? "Κατάσταση USB Debugging" : "Status",
                     gr ? "ΕΝΕΡΓΟΠΟΙΗΜΕΝΟ"
                        : "ENABLED"
             );
@@ -19564,7 +19566,7 @@ private void lab23DeveloperOptionsRisk() {
         } else {
 
             logLabelOkValue(
-                    gr ? "Κατάσταση" : "Status",
+                    gr ? "Κατάσταση USB Debugging" : "Status",
                     gr ? "ΑΝΕΝΕΡΓΟ"
                        : "OFF"
             );
@@ -19594,13 +19596,10 @@ try {
     );
     devOpts = (dev == 1);
 
-    logInfo(gr ? "Επιλογές προγραμματιστή"
-               : "Developer options");
-
     if (devOpts) {
 
         logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
+                gr ? "Επιλογές προγραμματιστή" : "Developer options",
                 gr ? "ΕΝΕΡΓΟΠΟΙΗΜΕΝΕΣ"
                    : "ENABLED"
         );
@@ -19616,7 +19615,7 @@ try {
     } else {
 
         logLabelOkValue(
-                gr ? "Κατάσταση" : "Status",
+                gr ? "Επιλογές προγραμματιστή" : "Developer options",
                 gr ? "ΑΝΕΝΕΡΓΕΣ"
                    : "OFF"
         );
@@ -19638,13 +19637,10 @@ try {
 // ============================================================
 boolean adbWifi = isPortOpen(5555, 200);
 
-logInfo(gr ? "ADB μέσω Wi-Fi"
-           : "ADB over Wi-Fi");
-
 if (adbWifi) {
 
     logLabelErrorValue(
-            gr ? "Κατάσταση" : "Status",
+            gr ? "ADB μέσω Wi-Fi" : "ADB over Wi-Fi",
             gr ? "ΕΝΕΡΓΟ (θύρα 5555)"
                : "ACTIVE (port 5555)"
     );
@@ -19660,7 +19656,7 @@ if (adbWifi) {
 } else {
 
     logLabelOkValue(
-            gr ? "Κατάσταση" : "Status",
+            gr ? "ADB μέσω Wi-Fi" : "ADB over Wi-Fi",
             gr ? "ΑΝΕΝΕΡΓΟ"
                : "OFF"
     );
@@ -19674,13 +19670,10 @@ boolean adbPairing =
         isPortOpen(7460, 200) ||
         scanPairingPortRange();
 
-logInfo(gr ? "ADB σύζευξη / Ασύρματο debugging"
-           : "ADB pairing / wireless debugging");
-
 if (adbPairing) {
 
     logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
+            gr ? "ADB σύζευξη / Ασύρματο debugging" : "ADB pairing / wireless debugging",
             gr ? "ΕΝΕΡΓΟ"
                : "ACTIVE"
     );
@@ -19696,7 +19689,7 @@ if (adbPairing) {
 } else {
 
     logLabelOkValue(
-            gr ? "Κατάσταση" : "Status",
+            gr ? "ADB σύζευξη / Ασύρματο debugging" : "ADB pairing / wireless debugging",
             gr ? "ΑΝΕΝΕΡΓΟ"
                : "OFF"
     );
@@ -19713,28 +19706,26 @@ else if (risk <= 30)  level = gr ? "ΜΕΤΡΙΟ" : "MEDIUM";
 else if (risk <= 60)  level = gr ? "ΥΨΗΛΟ" : "HIGH";
 else                  level = gr ? "ΚΡΙΣΙΜΟ" : "CRITICAL";
 
-logLine();
-logInfo(gr ? "Δείκτης κινδύνου ασφάλειας"
-           : "Security risk score");
 
 if (risk >= 70) {
-
+	
+appendHtml("<br>");
     logLabelErrorValue(
-            gr ? "Βαθμολογία" : "Score",
+            gr ? "Δείκτης κινδύνου ασφάλειας" : "Security risk score",
             risk + "/100 (" + level + ")"
     );
 
 } else if (risk >= 30) {
 
     logLabelWarnValue(
-            gr ? "Βαθμολογία" : "Score",
+            gr ? "Δείκτης κινδύνου ασφάλειας" : "Security risk score",
             risk + "/100 (" + level + ")"
     );
 
 } else {
 
     logLabelOkValue(
-            gr ? "Βαθμολογία" : "Score",
+            gr ? "Δείκτης κινδύνου ασφάλειας" : "Security risk score",
             risk + "/100 (" + level + ")"
     );
 }
@@ -19742,9 +19733,10 @@ if (risk >= 70) {
 // ============================================================
 // 6) ACTION RECOMMENDATIONS
 // ============================================================
-logLine();
+appendHtml("<br>");
 logInfo(gr ? "Προτεινόμενες ενέργειες"
            : "Recommended actions");
+           logLine();
 
 if (usbDebug || devOpts) {
 
@@ -19760,13 +19752,12 @@ if (usbDebug || devOpts) {
                : "Turn OFF"
     );
 
-} else {
+    } else {
 
     logLabelOkValue(
-            gr ? "Ρυθμίσεις προγραμματιστή"
-               : "Developer settings",
-            gr ? "Ήδη ασφαλείς"
-               : "Already safe"
+            "USB Debugging",
+            gr ? "Απενεργοποιημένο"
+               : "Disabled"
     );
 }
 
@@ -20132,28 +20123,24 @@ if (magiskStealthFindings.isEmpty()) {
         logWarn("• " + s);
 }
 
-logInfo(gr ? "ΤΕΛΙΚΗ ΕΚΤΙΜΗΣΗ:"
-           : "FINAL VERDICT:");
-
 // ------------------------------------------------------------
 // RISK SCORE (colored VALUE only)
 // ------------------------------------------------------------
-logInfo(gr ? "ΤΕΛΙΚΗ ΕΚΤΙΜΗΣΗ:"
-           : "FINAL VERDICT:");
 
+appendHtml("<br>");
 if (risk >= 70) {
     logLabelErrorValue(
-            gr ? "Βαθμός κινδύνου" : "Risk score",
+            gr ? "Εκτιμιση κινδύνου" : "Risk netdict",
             risk + " / 100"
     );
 } else if (risk >= 35) {
     logLabelWarnValue(
-            gr ? "Βαθμός κινδύνου" : "Risk score",
+            gr ? "Εκτιμιση κινδύνου" : "Risk netdict",
             risk + " / 100"
     );
 } else {
     logLabelOkValue(
-            gr ? "Βαθμός κινδύνου" : "Risk score",
+            gr ? "Εκτιμιση κινδύνου" : "Risk netdict",
             risk + " / 100"
     );
 }
@@ -20161,13 +20148,11 @@ if (risk >= 70) {
 // ------------------------------------------------------------
 // STATUS (GEL LABEL/VALUE STYLE)
 // ------------------------------------------------------------
-logInfo(gr ? "Τελική κατάσταση:"
-           : "Final status:");
 
 if (risk >= 70 || suExec || pkgHit) {
 
     logLabelErrorValue(
-            gr ? "Κατάσταση" : "Status",
+            gr ? "Τελική κατάσταση" : "Final status",
             gr ? "ROOT / ΤΡΟΠΟΠΟΙΗΜΕΝΟ ΣΥΣΤΗΜΑ (υψηλή βεβαιότητα)"
                : "ROOTED / SYSTEM MODIFIED (high confidence)"
     );
@@ -20175,7 +20160,7 @@ if (risk >= 70 || suExec || pkgHit) {
 } else if (risk >= 35) {
 
     logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
+            gr ? "Τελική κατάσταση" : "Final status",
             gr ? "ΥΠΟΠΤΟ (πιθανό root / ξεκλείδωτος bootloader / custom ROM)"
                : "SUSPICIOUS (possible root / unlocked / custom ROM)"
     );
@@ -20183,7 +20168,7 @@ if (risk >= 70 || suExec || pkgHit) {
 } else {
 
     logLabelOkValue(
-            gr ? "Κατάσταση" : "Status",
+            gr ? "Τελική κατάσταση" : "Final status",
             gr ? "ΑΣΦΑΛΕΣ (δεν βρέθηκαν σημαντικές ενδείξεις τροποποίησης)"
                : "SAFE (no significant modification evidence)"
     );
@@ -20640,6 +20625,7 @@ if (crashDetected) {
     } catch (Throwable ignore) {
         break;
     }
+}
 }
 
     // ============================================================
@@ -22510,8 +22496,8 @@ private static class Lab28EvidenceReader {
 }
 
 // ============================================================
-// LAB 29 — Device Authenticity & Parts Integrity
-// TECHNICIAN MODE — NON-OEM COMPONENT INDICATORS
+// LAB 29 — Device Authenticity & Parts Integrity (SAFE MODE)
+// Only confirmed signals — no heuristics
 // ============================================================
 private void lab29DeviceAuthenticity() {
 
@@ -22520,7 +22506,6 @@ private void lab29DeviceAuthenticity() {
     SharedPreferences p =
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
-    // battery risk flags from LAB 14
     boolean lab14CollapseRisk =
             p.getBoolean("lab14_collapse_risk", false);
 
@@ -22530,209 +22515,108 @@ private void lab29DeviceAuthenticity() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 29 — Έλεγχος Γνησιότητας Συσκευής & Ακεραιότητας Εξαρτημάτων"
-            : "LAB 29 — Device Authenticity & Parts Integrity");
+            ? "LAB 29 — Έλεγχος Γνησιότητας Συσκευής & Ακεραιότητας"
+            : "LAB 29 — Device Authenticity & Integrity");
     logWarn(gr
-        ? "Λειτουργία τεχνικού — Έλεγχος πιθανών μη γνήσιων ανταλλακτικών."
-        : "Technician mode — possible non-OEM component detection.");
-logLine();
+            ? "SAFE MODE — εμφανίζονται μόνο επιβεβαιωμένα ευρήματα"
+            : "SAFE MODE — only confirmed findings are reported");
+    logLine();
 
-appendHtml("<br>");
+    appendHtml("<br>");
 
-if (!isDeviceRooted()) {
+    if (!isDeviceRooted()) {
 
-    logLabelWarnValue(
-            gr ? "Προχωρημένη επιβεβαίωση hardware"
-               : "Advanced hardware verification",
-            gr
-                    ? "Ορισμένοι έλεγχοι απαιτούν πρόσβαση root."
-                    : "Some authenticity checks require root access."
-    );
-
-}
+        logLabelWarnValue(
+                gr ? "Advanced verification"
+                        : "Advanced verification",
+                gr
+                        ? "Ορισμένοι έλεγχοι απαιτούν root"
+                        : "Some checks require root"
+        );
+    }
 
     int authenticityScore = 100;
 
-    boolean batterySuspicious = false;
-    boolean displaySuspicious = false;
-    boolean cameraSuspicious = false;
-    boolean fingerprintMismatch = false;
+    boolean moistureSuspicion = false;
 
     // ============================================================
-    // BATTERY CHECK
+    // BATTERY
     // ============================================================
+
     appendHtml("<br>");
-    logInfo(gr ? "Έλεγχος Μπαταρίας" : "Battery authenticity check");
+    logInfo(gr ? "Έλεγχος μπαταρίας" : "Battery check");
     logLine();
 
     int level = getBatteryPercentSafe();
     float voltage = getBatteryVoltageFiltered();
 
-    if (level < 0 || Float.isNaN(voltage) || voltage < 3000 || voltage > 5000) {
+    if (level < 0 || Float.isNaN(voltage)
+            || voltage < 2500
+            || voltage > 5500) {
 
-    batterySuspicious = true;
+        logLabelWarnValue(
+                gr ? "Μπαταρία" : "Battery",
+                gr
+                        ? "Ασυνήθιστες τιμές μέτρησης"
+                        : "Abnormal measurement values"
+        );
 
-    logLabelWarnValue(
-            gr ? "Μπαταρία"
-               : "Battery",
-            gr
-                    ? "Ασυνήθιστη συμπεριφορά μετρήσεων."
-                    : "Unusual battery measurement behaviour detected."
-    );
+        authenticityScore -= 10;
 
-    authenticityScore -= 10;
+    } else {
 
-} else {
-
-    logLabelOkValue(
-            gr ? "Μπαταρία"
-               : "Battery",
-            gr
-                    ? "Μετρήσεις φυσιολογικές."
-                    : "Battery metrics appear normal."
-    );
-}
+        logLabelOkValue(
+                gr ? "Μπαταρία" : "Battery",
+                gr
+                        ? "Μετρήσεις φυσιολογικές"
+                        : "Measurements normal"
+        );
+    }
 
     // ============================================================
-    // DISPLAY CHECK
+    // DISPLAY
     // ============================================================
+
     appendHtml("<br>");
-    logInfo(gr ? "Έλεγχος Οθόνης" : "Display authenticity check");
+    logInfo(gr ? "Έλεγχος οθόνης" : "Display check");
     logLine();
 
     Display display = getWindowManager().getDefaultDisplay();
 
-float refreshRate = 60f;
+    float refreshRate = 60f;
 
-if (display != null) {
-    refreshRate = display.getRefreshRate();
-}
+    if (display != null)
+        refreshRate = display.getRefreshRate();
 
     if (refreshRate < 30f) {
 
-    displaySuspicious = true;
-
-    logLabelWarnValue(
-            gr ? "Οθόνη"
-               : "Display",
-            gr
-                    ? "Ασυνήθιστος ρυθμός ανανέωσης."
-                    : "Unusual display refresh rate reported."
-    );
-
-    authenticityScore -= 5;
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Οθόνη"
-               : "Display",
-            String.format(Locale.US,
-                    gr
-                            ? "Ρυθμός ανανέωσης: %.1f Hz"
-                            : "Refresh rate: %.1f Hz",
-                    refreshRate));
-}
-
-// ------------------------------------------------------------
-// DISPLAY PANEL CONSISTENCY CHECK
-// ------------------------------------------------------------
-try {
-
-    DisplayMetrics dm = new DisplayMetrics();
-
-Display disp = getWindowManager().getDefaultDisplay();
-
-if (display != null) {
-    display.getMetrics(dm);
-}
-    
-// ------------------------------------------------------------
-// PHYSICAL SCREEN SIZE CONSISTENCY CHECK
-// ------------------------------------------------------------
-try {
-
-    int widthPx  = dm.widthPixels;
-    int heightPx = dm.heightPixels;
-
-    float xdpi = dm.xdpi;
-    float ydpi = dm.ydpi;
-
-    float widthInches  = widthPx / xdpi;
-    float heightInches = heightPx / ydpi;
-
-    double diagonal =
-            Math.sqrt(widthInches * widthInches +
-                      heightInches * heightInches);
-
-    logLabelValue(
-            gr ? "Εκτιμώμενο μέγεθος οθόνης"
-               : "Estimated screen size",
-            String.format(Locale.US, "%.2f\"", diagonal)
-    );
-
-    // abnormal panel size heuristic
-    if (diagonal < 3.5 || diagonal > 8.5) {
-
-        displaySuspicious = true;
-
         logLabelWarnValue(
-        gr ? "Συμβατότητα panel"
-           : "Display panel consistency",
-        gr
-                ? "Ασυνήθιστη αναλογία ανάλυσης και DPI. "
-                + "Μπορεί να οφείλεται σε αντικατάσταση οθόνης, "
-                + "λανθασμένο calibration ή ασύμβατο panel."
-                : "Unusual resolution / DPI combination detected. "
-                + "May indicate display replacement, incorrect calibration "
-                + "or incompatible panel."
-);
-
-        authenticityScore -= 5;
-
-    }
-
-} catch (Throwable ignore) {}
-
-    int width = dm.widthPixels;
-    int height = dm.heightPixels;
-    float density = dm.density;
-
-    logLabelValue(
-            gr ? "Ανάλυση οθόνης"
-               : "Display resolution",
-            width + " x " + height
-    );
-
-    logLabelValue(
-            gr ? "Πυκνότητα"
-               : "Display density",
-            String.format(Locale.US, "%.2f", density)
-    );
-
-    if (width < 800 || height < 800) {
-
-        displaySuspicious = true;
-
-        logLabelWarnValue(
-                gr ? "Panel ανάλυση"
-                   : "Display panel",
+                gr ? "Οθόνη" : "Display",
                 gr
-                        ? "Ασυνήθιστη ανάλυση οθόνης."
-                        : "Unusual display resolution detected."
+                        ? "Ασυνήθιστος ρυθμός ανανέωσης"
+                        : "Unusual refresh rate"
         );
 
         authenticityScore -= 5;
 
+    } else {
+
+        logLabelOkValue(
+                gr ? "Οθόνη" : "Display",
+                String.format(Locale.US,
+                        gr
+                                ? "Ρυθμός: %.1f Hz"
+                                : "Rate: %.1f Hz",
+                        refreshRate)
+        );
     }
 
-} catch (Throwable ignore) {}
+    // ============================================================
+    // CAMERA
+    // ============================================================
 
-    // ============================================================
-    // CAMERA CHECK
-    // ============================================================
     appendHtml("<br>");
-    logInfo(gr ? "Έλεγχος Κάμερας" : "Camera authenticity check");
+    logInfo(gr ? "Έλεγχος κάμερας" : "Camera check");
     logLine();
 
     boolean cameraAvailable =
@@ -22741,541 +22625,242 @@ try {
 
     if (!cameraAvailable) {
 
-    cameraSuspicious = true;
-
-    logLabelWarnValue(
-            gr ? "Κάμερα"
-               : "Camera",
-            gr
-                    ? "Η κάμερα δεν εντοπίστηκε από το σύστημα."
-                    : "Camera not detected by system."
-    );
-
-    authenticityScore -= 20;
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Κάμερα"
-               : "Camera",
-            gr
-                    ? "Το module κάμερας φαίνεται λειτουργικό."
-                    : "Camera module appears functional."
-    );
-}
-
-
-// ------------------------------------------------------------
-// CAMERA MODULE CONSISTENCY CHECK
-// ------------------------------------------------------------
-try {
-
-    CameraManager cm =
-            (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-
-    if (cm != null) {
-
-        String[] ids = cm.getCameraIdList();
-
-        int cameraCount = ids != null ? ids.length : 0;
-
-        logLabelValue(
-                gr ? "Αριθμός καμερών"
-                   : "Camera modules detected",
-                String.valueOf(cameraCount)
-        );
-
-        if (cameraCount == 0) {
-
-            cameraSuspicious = true;
-
-            logLabelWarnValue(
-                    gr ? "Υποσύστημα κάμερας"
-                       : "Camera subsystem",
-                    gr
-                            ? "Δεν εντοπίστηκαν modules κάμερας."
-                            : "No camera modules detected."
-            );
-
-            authenticityScore -= 15;
-
-        }
-
-    }
-
-} catch (Throwable ignore) {}
-
-// ------------------------------------------------------------
-// HARDWARE CAPABILITY MISMATCH DETECTION
-// ------------------------------------------------------------
-appendHtml("<br>");
-logInfo(gr ? "Έλεγχος συμβατότητας hardware"
-           : "Hardware capability verification");
-logLine();
-
-try {
-
-    PackageManager pm = getPackageManager();
-
-    boolean hasCamera =
-            pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY);
-
-    boolean hasFlash =
-            pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
-
-    boolean hasAutofocus =
-            pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_AUTOFOCUS);
-
-    boolean mismatch = false;
-
-    if (hasCamera && !cameraAvailable) {
-
-        mismatch = true;
-
         logLabelWarnValue(
-                gr ? "Camera capability"
-                   : "Camera capability",
+                gr ? "Κάμερα" : "Camera",
                 gr
-                        ? "Το σύστημα δηλώνει ύπαρξη κάμερας αλλά το module δεν ανιχνεύθηκε."
-                        : "System reports camera capability but module not detected."
+                        ? "Δεν εντοπίστηκε"
+                        : "Not detected"
         );
 
-    }
-
-    if (hasFlash && !pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
-
-        mismatch = true;
-
-        logLabelWarnValue(
-                gr ? "Flash capability"
-                   : "Flash capability",
-                gr
-                        ? "Ασυνέπεια στο hardware flash."
-                        : "Flash hardware inconsistency detected."
-        );
-
-    }
-
-    if (hasAutofocus && !pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_AUTOFOCUS)) {
-
-        mismatch = true;
-
-        logLabelWarnValue(
-                gr ? "Autofocus capability"
-                   : "Autofocus capability",
-                gr
-                        ? "Ασυνέπεια στο autofocus module."
-                        : "Autofocus capability mismatch detected."
-        );
-
-    }
-
-    if (!mismatch) {
-
-        logLabelOkValue(
-                gr ? "Συμβατότητα hardware"
-                   : "Hardware capability",
-                gr
-                        ? "Δεν εντοπίστηκαν ασυνέπειες hardware."
-                        : "No hardware capability mismatches detected."
-        );
+        authenticityScore -= 20;
 
     } else {
 
-        logLabelValue(
-                gr ? "Πιθανές αιτίες"
-                   : "Possible causes",
+        logLabelOkValue(
+                gr ? "Κάμερα" : "Camera",
                 gr
-                        ? "Αντικατάσταση module (κάμερα ή flash), λάθος firmware ή ασυμβατό hardware μετά από επισκευή."
-                        : "Camera or flash module replacement, incorrect firmware or incompatible hardware after repair."
+                        ? "Εντοπίστηκε"
+                        : "Detected"
         );
-
     }
 
-} catch (Throwable ignore) {}
-
-// ------------------------------------------------------------
-// SENSOR CALIBRATION ANOMALY DETECTION
-// ------------------------------------------------------------
-appendHtml("<br>");
-logInfo(gr ? "Έλεγχος βαθμονόμησης αισθητήρων"
-           : "Sensor calibration inspection");
-logLine();
-
-try {
-
-    SensorManager sm =
-            (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-
-    if (sm != null) {
-
-        Sensor proximity =
-                sm.getDefaultSensor(Sensor.TYPE_PROXIMITY);
-
-        Sensor light =
-                sm.getDefaultSensor(Sensor.TYPE_LIGHT);
-
-        Sensor accel =
-                sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-
-        boolean sensorSuspicious = false;
-
-        // ------------------------------------------------
-        // PROXIMITY SENSOR RANGE CHECK
-        // ------------------------------------------------
-        if (proximity != null) {
-
-            float range = proximity.getMaximumRange();
-
-            logLabelValue(
-                    gr ? "Proximity range"
-                       : "Proximity range",
-                    String.valueOf(range)
-            );
-
-            if (range < 1f || range > 10f) {
-
-                sensorSuspicious = true;
-
-                logLabelWarnValue(
-                        gr ? "Proximity αισθητήρας"
-                           : "Proximity sensor",
-                        gr
-                                ? "Ασυνήθιστη βαθμονόμηση proximity."
-                                : "Unusual proximity calibration detected."
-                );
-            }
-
-        }
-
-        // ------------------------------------------------
-        // LIGHT SENSOR RANGE CHECK
-        // ------------------------------------------------
-        if (light != null) {
-
-            float range = light.getMaximumRange();
-
-            logLabelValue(
-                    gr ? "Light sensor range"
-                       : "Light sensor range",
-                    String.valueOf(range)
-            );
-
-            if (range < 100) {
-
-                sensorSuspicious = true;
-
-                logLabelWarnValue(
-                        gr ? "Light αισθητήρας"
-                           : "Light sensor",
-                        gr
-                                ? "Περιορισμένο εύρος φωτεινότητας."
-                                : "Limited light sensor range detected."
-                );
-            }
-
-        }
-
-        // ------------------------------------------------
-        // ACCELEROMETER RANGE CHECK
-        // ------------------------------------------------
-        if (accel != null) {
-
-            float range = accel.getMaximumRange();
-
-            logLabelValue(
-                    gr ? "Accelerometer range"
-                       : "Accelerometer range",
-                    String.valueOf(range)
-            );
-
-            if (range < 5f) {
-
-                sensorSuspicious = true;
-
-                logLabelWarnValue(
-                        gr ? "Accelerometer"
-                           : "Accelerometer",
-                        gr
-                                ? "Ασυνήθιστο εύρος accelerometer."
-                                : "Unusual accelerometer calibration."
-                );
-            }
-
-        }
-
-// ------------------------------------------------
-// RESULT
-// ------------------------------------------------
-if (!sensorSuspicious) {
-
-    logLabelOkValue(
-            gr ? "Βαθμονόμηση αισθητήρων"
-               : "Sensor calibration",
-            gr
-                    ? "Δεν εντοπίστηκαν ασυνήθιστες τιμές."
-                    : "Sensor calibration appears normal."
-    );
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Βαθμονόμηση αισθητήρων"
-               : "Sensor calibration",
-            gr
-                    ? "Ανιχνεύθηκαν ασυνήθιστες τιμές βαθμονόμησης αισθητήρων."
-                    : "Unusual sensor calibration values detected."
-    );
-
-    logLabelValue(
-            gr ? "Πιθανές αιτίες"
-               : "Possible causes",
-            gr
-                    ? "Αλλαγή οθόνης, αντικατάσταση αισθητήρα ή ελλιπής βαθμονόμηση μετά από επισκευή."
-                    : "Display replacement, sensor replacement or incomplete calibration after repair."
-    );
-
-}
-}
-
-} catch (Throwable ignore) {}
-
     // ============================================================
-    // HARDWARE FINGERPRINT CHECK
+    // SENSORS (SAFE)
     // ============================================================
+
     appendHtml("<br>");
-    logInfo(gr ? "Έλεγχος Ταυτότητας Hardware"
-               : "Hardware fingerprint verification");
+    logInfo(gr ? "Έλεγχος αισθητήρων" : "Sensor check");
+    logLine();
+
+    try {
+
+        SensorManager sm =
+                (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+        if (sm != null) {
+
+            Sensor proximity =
+                    sm.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+
+            Sensor light =
+                    sm.getDefaultSensor(Sensor.TYPE_LIGHT);
+
+            Sensor accel =
+                    sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
+            boolean missing = false;
+
+            if (proximity == null) {
+                missing = true;
+                logLabelWarnValue(
+                        "Proximity",
+                        gr ? "Δεν εντοπίστηκε"
+                                : "Not detected"
+                );
+            }
+
+            if (light == null) {
+                missing = true;
+                logLabelWarnValue(
+                        "Light",
+                        gr ? "Δεν εντοπίστηκε"
+                                : "Not detected"
+                );
+            }
+
+            if (accel == null) {
+                missing = true;
+                logLabelWarnValue(
+                        "Accelerometer",
+                        gr ? "Δεν εντοπίστηκε"
+                                : "Not detected"
+                );
+            }
+
+            if (!missing) {
+
+                logLabelOkValue(
+                        gr ? "Αισθητήρες"
+                                : "Sensors",
+                        gr
+                                ? "Βασικοί αισθητήρες διαθέσιμοι"
+                                : "Core sensors available"
+                );
+            }
+        }
+
+    } catch (Throwable ignore) {}
+
+    // ============================================================
+    // FINGERPRINT
+    // ============================================================
+
+    appendHtml("<br>");
+    logInfo(gr ? "Ταυτότητα συστήματος" : "System identity");
     logLine();
 
     String fingerprint = Build.FINGERPRINT;
     String board = Build.BOARD;
     String hardware = Build.HARDWARE;
 
-    if (fingerprint == null || fingerprint.length() < 10 || fingerprint.contains("unknown")) {
-
-    fingerprintMismatch = true;
-
-    logLabelWarnValue(
-            gr ? "Ταυτότητα Hardware"
-               : "Hardware fingerprint",
-            gr
-                    ? "Ασυνήθιστο fingerprint συστήματος."
-                    : "Unusual system fingerprint detected."
-    );
-
-    authenticityScore -= 5;
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Fingerprint"
-               : "System fingerprint",
-            fingerprint);
-}
-
-    logLabelValue(
-            gr ? "Board"
-               : "Board",
-            board);
-
-    logLabelValue(
-            gr ? "Hardware"
-               : "Hardware",
-            hardware);
-            
-// ------------------------------------------------------------
-// HARDWARE FINGERPRINT CONSISTENCY ENGINE
-// ------------------------------------------------------------
-appendHtml("<br>");
-logInfo(gr ? "Έλεγχος συνέπειας ταυτότητας hardware"
-           : "Hardware fingerprint consistency");
-logLine();
-
-try {
-
-    boolean mismatch = false;
-
-    String model  = Build.MODEL;
-    String device = Build.DEVICE;
-    String brand  = Build.BRAND;
-    String product = Build.PRODUCT;
-
-    if (model == null || device == null || brand == null) {
-
-        mismatch = true;
+    if (fingerprint == null
+            || fingerprint.length() < 10
+            || fingerprint.contains("unknown")) {
 
         logLabelWarnValue(
-                gr ? "Ταυτότητα συσκευής"
-                   : "Device identity",
+                gr ? "Fingerprint"
+                        : "Fingerprint",
                 gr
-                        ? "Ελλιπή στοιχεία ταυτότητας συσκευής."
-                        : "Incomplete device identity information."
+                        ? "Ασυνήθιστη τιμή"
+                        : "Unusual value"
         );
 
-    }
+        authenticityScore -= 5;
 
-    if (model != null && device != null &&
-        !model.toLowerCase(Locale.US).contains(device.toLowerCase(Locale.US))) {
-
-        mismatch = true;
-
-        logLabelWarnValue(
-                gr ? "Συνέπεια μοντέλου"
-                   : "Model consistency",
-                gr
-                        ? "Ασυνήθιστη αντιστοίχιση model και device."
-                        : "Model / device combination appears unusual."
-        );
-
-    }
-
-    if (brand != null && product != null &&
-        !product.toLowerCase(Locale.US).contains(brand.toLowerCase(Locale.US))) {
-
-        logLabelWarnValue(
-                gr ? "Firmware ταυτότητα"
-                   : "Firmware identity",
-                gr
-                        ? "Το firmware δεν ταιριάζει πλήρως με το brand."
-                        : "Firmware identity differs from device brand."
-        );
-
-    }
-
-    if (!mismatch) {
+    } else {
 
         logLabelOkValue(
-                gr ? "Συνέπεια ταυτότητας hardware"
-                   : "Hardware identity consistency",
+                "Fingerprint",
+                fingerprint
+        );
+    }
+
+    logLabelValue(
+            "Board",
+            board
+    );
+
+    logLabelValue(
+            "Hardware",
+            hardware
+    );
+
+    // ============================================================
+    // FLAGS FROM OTHER LABS
+    // ============================================================
+
+    boolean sensorFlaps =
+            p.getBoolean("lab28_sensor_flaps", false);
+
+    boolean radioInstability =
+            p.getBoolean("lab28_radio_instability", false);
+
+    boolean thermalSpike =
+            p.getBoolean("lab28_thermal_spike", false);
+
+    boolean rebootPattern =
+            p.getBoolean("lab28_reboot_pattern", false);
+
+    boolean instabilityPattern =
+            p.getBoolean("lab28_instability_pattern", false);
+
+    int moistureScore = 0;
+
+    if (sensorFlaps) moistureScore += 20;
+    if (radioInstability) moistureScore += 20;
+    if (thermalSpike) moistureScore += 15;
+    if (rebootPattern) moistureScore += 15;
+    if (instabilityPattern) moistureScore += 20;
+
+    if (lab14CollapseRisk || lab14SwellingRisk)
+        moistureScore += 10;
+
+    appendHtml("<br>");
+
+    logLabelValue(
+            gr ? "Δείκτης υγρασίας"
+                    : "Moisture index",
+            moistureScore + "/100"
+    );
+
+    if (moistureScore >= 50) {
+
+        moistureSuspicion = true;
+
+        logLabelWarnValue(
+                gr ? "Πιθανή υγρασία"
+                        : "Possible moisture",
                 gr
-                        ? "Τα στοιχεία ταυτότητας φαίνονται συμβατά."
-                        : "Hardware identity values appear consistent."
+                        ? "Εντοπίστηκε μοτίβο αστάθειας"
+                        : "Instability pattern detected"
         );
 
     } else {
 
-        logLabelValue(
-                gr ? "Πιθανές αιτίες"
-                   : "Possible causes",
+        logLabelOkValue(
+                gr ? "Έλεγχος υγρασίας"
+                        : "Moisture",
                 gr
-                        ? "Αλλαγή μητρικής, τροποποιημένο firmware ή μη επίσημο ROM."
-                        : "Motherboard replacement, modified firmware or unofficial ROM."
+                        ? "Δεν υπάρχουν ενδείξεις"
+                        : "No indication"
         );
-
     }
 
-} catch (Throwable ignore) {}
-           
-// ------------------------------------------------------------
-// READ FLAGS FROM PREVIOUS LABS
-// ------------------------------------------------------------
-boolean sensorFlaps =
-        p.getBoolean("lab28_sensor_flaps", false);
-
-boolean radioInstability =
-        p.getBoolean("lab28_radio_instability", false);
-
-boolean thermalSpike =
-        p.getBoolean("lab28_thermal_spike", false);
-
-boolean rebootPattern =
-        p.getBoolean("lab28_reboot_pattern", false);
-
-boolean instabilityPattern =
-        p.getBoolean("lab28_instability_pattern", false);
-         
- // ------------------------------------------------------------
-// WATER DAMAGE INDICATOR (logic-based moisture detection)
-// ------------------------------------------------------------
-boolean moistureSuspicion = false;
-
-int moistureScore = 0;
-
-if (sensorFlaps) moistureScore += 20;
-if (radioInstability) moistureScore += 20;
-if (thermalSpike) moistureScore += 15;
-if (rebootPattern) moistureScore += 15;
-if (instabilityPattern) moistureScore += 20;
-
-if (lab14CollapseRisk || lab14SwellingRisk)
-    moistureScore += 10;
-
-logLabelValue(
-        gr ? "Δείκτης πιθανής υγρασίας"
-           : "Moisture risk index",
-        moistureScore + "/100"
-);
-
-if (moistureScore >= 50) {
-
-    moistureSuspicion = true;
-
-    logLabelWarnValue(
-            gr ? "Ένδειξη πιθανής υγρασίας"
-               : "Possible moisture exposure",
-            gr
-                    ? "Το σύστημα εντόπισε μοτίβο αστάθειας που συναντάται σε συσκευές με εισχώρηση υγρασίας."
-                    : "Instability pattern similar to moisture-affected devices detected."
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Έλεγχος υγρασίας"
-               : "Moisture inspection",
-            gr
-                    ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις υγρασίας."
-                    : "No strong moisture indicators detected."
-    );
-}
-            
-
     // ============================================================
-    // FINAL RESULT
+    // FINAL
     // ============================================================
+
     appendHtml("<br>");
     logLine();
 
     if (authenticityScore < 0)
-    authenticityScore = 0;
+        authenticityScore = 0;
 
-String authenticityLevel;
+    String level;
 
-if (authenticityScore >= 90)
-    authenticityLevel = gr ? "ΥΨΗΛΗ ΓΝΗΣΙΟΤΗΤΑ" : "HIGH AUTHENTICITY";
-else if (authenticityScore >= 70)
-    authenticityLevel = gr ? "ΠΙΘΑΝΗ ΑΝΤΙΚΑΤΑΣΤΑΣΗ" : "POSSIBLE REPLACEMENT";
-else
-    authenticityLevel = gr ? "ΥΨΗΛΗ ΠΙΘΑΝΟΤΗΤΑ ΜΗ ΓΝΗΣΙΩΝ ΜΕΡΩΝ"
-                           : "HIGH PROBABILITY OF NON-OEM PARTS";
+    if (authenticityScore >= 90)
+        level = gr ? "ΥΨΗΛΗ" : "HIGH";
+    else if (authenticityScore >= 70)
+        level = gr ? "ΜΕΤΡΙΑ" : "MEDIUM";
+    else
+        level = gr ? "ΧΑΜΗΛΗ" : "LOW";
 
-if (authenticityScore >= 70) {
+    if (authenticityScore >= 70) {
 
-    logLabelOkValue(
-            gr ? "Δείκτης Γνησιότητας Συσκευής"
-               : "Device authenticity score",
-            authenticityScore + "/100 (" + authenticityLevel + ")"
-    );
+        logLabelOkValue(
+                gr ? "Γνησιότητα"
+                        : "Authenticity",
+                authenticityScore + "/100 (" + level + ")"
+        );
 
-} else {
+    } else {
 
-    logLabelWarnValue(
-            gr ? "Δείκτης Γνησιότητας Συσκευής"
-               : "Device authenticity score",
-            authenticityScore + "/100 (" + authenticityLevel + ")"
-    );
-}
+        logLabelWarnValue(
+                gr ? "Γνησιότητα"
+                        : "Authenticity",
+                authenticityScore + "/100 (" + level + ")"
+        );
+    }
 
-p.edit()
-        .putBoolean("lab29_moisture_suspect", moistureSuspicion)
-        .apply();
+    p.edit()
+            .putBoolean("lab29_moisture_suspect", moistureSuspicion)
+            .apply();
 
-appendHtml("<br>");
-logOk(gr
-        ? "Το Lab 29 ολοκληρώθηκε."
-        : "Lab 29 finished.");
-logLine();
+    appendHtml("<br>");
+    logOk(gr
+            ? "Το Lab 29 ολοκληρώθηκε."
+            : "Lab 29 finished.");
+    logLine();
 }
 
 // ============================================================
