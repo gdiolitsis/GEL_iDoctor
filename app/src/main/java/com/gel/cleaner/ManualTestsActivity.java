@@ -20879,10 +20879,12 @@ logLine();
     appendHtml("<br>");
     logOk(gr ? "Το Lab 25 ολοκληρώθηκε." : "Lab 25 finished.");
     logLine();
-}   // end for tags
-}   // end if db != null
+} // end for tags
 
-} catch (Throwable ignored) {}
+        } // end if db != null
+
+    } catch (Throwable ignored) {
+    }
 
 } // END lab25CrashHistory()
 
