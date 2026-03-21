@@ -13970,12 +13970,6 @@ if (lab14_systemLimited[0]) {
 startBatteryTemp = getBatteryTempEngineSafe();
 endBatteryTemp   = getBatteryTempEngineSafe();
 
-if (Float.isNaN(startBatteryTemp) || startBatteryTemp <= 0f)
-    startBatteryTemp = tempStart;
-
-if (Float.isNaN(endBatteryTemp) || endBatteryTemp <= 0f)
-    endBatteryTemp = tempEnd;
-
     if (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp)) {
         float delta = endBatteryTemp - startBatteryTemp;
         logLabelValue(
@@ -22678,10 +22672,10 @@ private void lab29DeviceAuthenticity() {
     logInfo(gr ? "Έλεγχος μπαταρίας" : "Battery check");
     logLine();
 
-    int level = getBatteryPercentSafe();
+    int batteryLevel = getBatteryPercentSafe();
     float voltage = getBatteryVoltageFiltered();
 
-    if (level < 0 || Float.isNaN(voltage)
+    if (batteryLevel < 0 || Float.isNaN(voltage)
             || voltage < 2500
             || voltage > 5500) {
 
@@ -22957,12 +22951,14 @@ private void lab29DeviceAuthenticity() {
     if (authenticityScore < 0)
         authenticityScore = 0;
 
-    if (authenticityScore >= 90)
-        level = gr ? "ΥΨΗΛΗ" : "HIGH";
-    else if (authenticityScore >= 70)
-        level = gr ? "ΜΕΤΡΙΑ" : "MEDIUM";
-    else
-        level = gr ? "ΧΑΜΗΛΗ" : "LOW";
+String level;
+
+if (authenticityScore >= 90)
+    level = gr ? "ΥΨΗΛΗ" : "HIGH";
+else if (authenticityScore >= 70)
+    level = gr ? "ΜΕΤΡΙΑ" : "MEDIUM";
+else
+    level = gr ? "ΧΑΜΗΛΗ" : "LOW";
 
     if (authenticityScore >= 70) {
 
