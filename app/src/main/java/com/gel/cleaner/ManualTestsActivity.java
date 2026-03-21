@@ -13666,7 +13666,10 @@ if (Float.isNaN(tempStart) || tempStart <= 0f) {
         // ------------------------------------------------------------
         // 5) MAIN STRESS START
         // ------------------------------------------------------------
-        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+     
+final float tempStartFinal = tempStart;
+
+new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
             @Override
             public void run() {
@@ -13769,7 +13772,7 @@ lab14PostLoadAnalysis(
         voltageStart,
         batteryPercent,
         cycles,
-        tempStart
+        tempStartFinal
 );
 
 // ✅ μετά καθαρίζουμε UI
