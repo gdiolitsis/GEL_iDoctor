@@ -66,6 +66,7 @@ public class AppListActivity extends GELAutoActivityHook {
 
     private boolean returnedFromUsageScreen = false;
     private boolean isLoadingApps = false;
+    private boolean returnedFromAppSettings = false;
 
     private final List<AppEntry> allApps = new ArrayList<>();
     private final List<AppEntry> visible = new ArrayList<>();
@@ -327,6 +328,9 @@ label.setText(
 protected void onResume() {
     super.onResume();
 
+    // ===============================
+    // RETURN FROM USAGE ACCESS
+    // ===============================
     if (returnedFromUsageScreen) {
         returnedFromUsageScreen = false;
 
@@ -336,37 +340,65 @@ protected void onResume() {
         return;
     }
 
+    // ===============================
+    // RETURN FROM APP SETTINGS (CACHE CLEAR)
+    // ===============================
+    if (returnedFromAppSettings) {
+
+    returnedFromAppSettings = false;
+
+    if (lastOpenedPackage != null) {
+
+        new Thread(() -> {
+
+            refreshSingleApp(lastOpenedPackage);
+
+            runOnUiThread(() -> {
+                applyFiltersAndSort();
+            });
+
+        }).start();
+
+    } else {
+
+        new Thread(this::loadAllApps).start();
+
+    }
+
+    return;
+}
+
+    // ===============================
+    // FIRST LOAD
+    // ===============================
     if (allApps.isEmpty()) {
         new Thread(this::loadAllApps).start();
     }
 
-    // ✅ ΜΗΝ δείχνεις dialog αν τελείωσε
+    // ===============================
+    // GUIDED MODE
+    // ===============================
     if (guidedActive) {
 
-    // Αν υπάρχει μόνο μία εφαρμογή
-    if (guidedQueue.size() == 1) {
-        guidedIndex = guidedQueue.size();
-        openNext();   // θα μπει στο finish block
-        return;
-    }
-    
-// =====================================
-// UNINSTALL CHECK
-// =====================================
-if (isUninstallMode && lastOpenedPackage != null) {
+        if (guidedQueue.size() == 1) {
+            guidedIndex = guidedQueue.size();
+            openNext();
+            return;
+        }
 
-    if (!isPackageInstalled(lastOpenedPackage)) {
-        uninstallSuccessCount++;
-    }
+        if (isUninstallMode && lastOpenedPackage != null) {
 
-    lastOpenedPackage = null;
-}
+            if (!isPackageInstalled(lastOpenedPackage)) {
+                uninstallSuccessCount++;
+            }
 
-    // Κανονική ροή για 2+ εφαρμογές
-    if (guidedIndex < guidedQueue.size()) {
-        showContinueGuidedDialog();
+            lastOpenedPackage = null;
+        }
+
+        if (guidedIndex < guidedQueue.size()) {
+            showContinueGuidedDialog();
+        }
     }
-}
 }
 
 @Override
@@ -1031,6 +1063,22 @@ private void fillSizes(AppEntry e) {
     } catch (Throwable ignored) {}
 }
 
+private void refreshSingleApp(String pkg) {
+
+    if (pkg == null) return;
+
+    for (AppEntry e : allApps) {
+
+        if (e == null) continue;
+        if (!pkg.equals(e.pkg)) continue;
+
+        fillSizes(e);
+        break;
+    }
+
+    applyFiltersAndSort();
+}
+
 // ============================================================
 // FILTER + SORT (STABLE - NO DUPLICATES)
 // ============================================================
@@ -1369,15 +1417,21 @@ private void openNext() {
 
     Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
 
-    intent.setData(Uri.parse("package:" + pkg));
+intent.setData(Uri.parse("package:" + pkg));
 
-    try {
-        startActivity(intent);  // ❗ ΧΩΡΙΣ index++
-        showNextAppToast();
-    } catch (Throwable t) {
-        guidedIndex++;
-        openNext();
-    }
+try {
+
+    returnedFromAppSettings = true;   // ✅ ADD THIS
+
+    startActivity(intent);  // ❗ ΧΩΡΙΣ index++
+    showNextAppToast();
+
+} catch (Throwable t) {
+
+    guidedIndex++;
+    openNext();
+
+}
 }
 
     private void advanceGuided() {
