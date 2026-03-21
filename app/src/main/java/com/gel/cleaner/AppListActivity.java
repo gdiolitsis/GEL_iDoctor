@@ -332,47 +332,53 @@ protected void onResume() {
     // RETURN FROM USAGE ACCESS
     // ===============================
     if (returnedFromUsageScreen) {
+
         returnedFromUsageScreen = false;
 
         if (hasUsageAccess()) {
             new Thread(this::loadAllApps).start();
         }
+
         return;
     }
 
     // ===============================
-    // RETURN FROM APP SETTINGS (CACHE CLEAR)
+    // RETURN FROM APP SETTINGS (CACHE / UNINSTALL)
     // ===============================
     if (returnedFromAppSettings) {
 
-    returnedFromAppSettings = false;
+        returnedFromAppSettings = false;
 
-    if (lastOpenedPackage != null) {
-
-        new Thread(() -> {
+        if (lastOpenedPackage != null) {
 
             refreshSingleApp(lastOpenedPackage);
 
-            runOnUiThread(() -> {
-                applyFiltersAndSort();
-            });
+        } else {
 
-        }).start();
+            new Thread(this::loadAllApps).start();
 
-    } else {
+        }
 
-        new Thread(this::loadAllApps).start();
-
+        // ❗ ΔΕΝ κάνουμε return εδώ
     }
-
-    return;
-}
 
     // ===============================
     // FIRST LOAD
     // ===============================
     if (allApps.isEmpty()) {
         new Thread(this::loadAllApps).start();
+    }
+
+    // ===============================
+    // UNINSTALL CHECK
+    // ===============================
+    if (isUninstallMode && lastOpenedPackage != null) {
+
+        if (!isPackageInstalled(lastOpenedPackage)) {
+            uninstallSuccessCount++;
+        }
+
+        lastOpenedPackage = null;
     }
 
     // ===============================
@@ -384,15 +390,6 @@ protected void onResume() {
             guidedIndex = guidedQueue.size();
             openNext();
             return;
-        }
-
-        if (isUninstallMode && lastOpenedPackage != null) {
-
-            if (!isPackageInstalled(lastOpenedPackage)) {
-                uninstallSuccessCount++;
-            }
-
-            lastOpenedPackage = null;
         }
 
         if (guidedIndex < guidedQueue.size()) {
