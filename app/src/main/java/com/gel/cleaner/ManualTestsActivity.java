@@ -2565,16 +2565,25 @@ return raw;                          // already mAh
 // Battery temperature via iDoctorEngine (SAFE)
 // ------------------------------------------------------------
 private float getBatteryTempEngineSafe() {
+
     try {
 
-        float t = IdoctorEngine.getBatteryTempC(this);
+        iDoctorEngine eng = new iDoctorEngine(this);
 
-        if (Float.isNaN(t) || t <= 0f || t > 100f)
-            return Float.NaN;
+        Float t = eng.getBatteryTempUnified();
+
+        if (t == null) return Float.NaN;
+
+        if (Float.isNaN(t)) return Float.NaN;
+
+        if (t <= 0f) return Float.NaN;
+
+        if (t > 100f) return Float.NaN;
 
         return t;
 
     } catch (Throwable e) {
+
         return Float.NaN;
     }
 }
@@ -3617,32 +3626,6 @@ private void lab14LogPartialMode(
     logLine();
 }
 
-// ------------------------------------------------------------
-// Battery temperature via iDoctorEngine (SAFE)
-// ------------------------------------------------------------
-private float getBatteryTempEngineSafe() {
-
-    try {
-
-        float t = IdoctorEngine.getBatteryTempC(this);
-
-        if (Float.isNaN(t))
-            return Float.NaN;
-
-        if (t <= 0f)
-            return Float.NaN;
-
-        if (t > 100f)
-            return Float.NaN;
-
-        return t;
-
-    } catch (Throwable e) {
-
-        return Float.NaN;
-    }
-}
-
 // ============================================================
 // LAB 14B — CONDITIONS CHECK (SYSTEM PROTECTION TEST)
 // ============================================================
@@ -3667,29 +3650,6 @@ private boolean checkLab14BConditions() {
                 registerReceiver(null, f);
 
         if (i != null) {
-
-            // ----------------------------------------
-            // temperature via engine first
-            // ----------------------------------------
-
-            float tEngine = getBatteryTempEngineSafe();
-
-            if (!Float.isNaN(tEngine) && tEngine > 0f) {
-
-                tempC = tEngine;
-
-            } else {
-
-                int t =
-                        i.getIntExtra(
-                                BatteryManager.EXTRA_TEMPERATURE,
-                                -1
-                        );
-
-                if (t > 0) {
-                    tempC = t / 10f;
-                }
-            }
 
             // ----------------------------------------
             // charging state
