@@ -24121,7 +24121,7 @@ logLine();
 
 if (verdict.startsWith("🟢"))
     logLabelOkValue(gr ? "Αποτέλεσμα" : "Result", verdict);
-else if (verdict.startsWith("🟡"))
+else if (verdict.startsWith("??"))
     logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result", verdict);
 else
     logLabelErrorValue(gr ? "Αποτέλεσμα" : "Result", verdict);
