@@ -1335,20 +1335,19 @@ private float getBatteryVoltageFiltered() {
     float sum = 0f;
     int count = 0;
 
-    // discard first read
+    // discard first read (unstable)
     getBatteryVoltageSafe();
-    SystemClock.sleep(300);
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
 
         float v = getBatteryVoltageSafe();
 
-        if (!Float.isNaN(v)) {
+        if (!Float.isNaN(v) && v > 0f) {
             sum += v;
             count++;
         }
 
-        SystemClock.sleep(350);   // ← ΠΡΙΝ 120
+        SystemClock.sleep(40);   // μικρό delay για sag test
     }
 
     if (count == 0)
@@ -2563,21 +2562,56 @@ return raw;                          // already mAh
 }
 
 // ------------------------------------------------------------
+// Battery temperature via iDoctorEngine (SAFE)
+// ------------------------------------------------------------
+private float getBatteryTempEngineSafe() {
+    try {
+
+        float t = IdoctorEngine.getBatteryTempC(this);
+
+        if (Float.isNaN(t) || t <= 0f || t > 100f)
+            return Float.NaN;
+
+        return t;
+
+    } catch (Throwable e) {
+        return Float.NaN;
+    }
+}
+
+// ------------------------------------------------------------
 // Battery temperature — SAFE
 // ------------------------------------------------------------
 private float getBatteryTemperature() {
-try {
-Intent i = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-if (i == null) return 0f;
 
-int raw = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1);  
-    if (raw <= 0) return 0f;  
+    float t = getBatteryTempEngineSafe();
 
-    return raw / 10f; 
-} catch (Throwable t) {  
-    return 0f;  
-}
+    if (!Float.isNaN(t))
+        return t;
 
+    // fallback μόνο αν engine δεν δώσει τιμή
+    try {
+
+        Intent i = registerReceiver(
+                null,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        );
+
+        if (i == null) return 0f;
+
+        int raw =
+                i.getIntExtra(
+                        BatteryManager.EXTRA_TEMPERATURE,
+                        -1
+                );
+
+        if (raw <= 0) return 0f;
+
+        return raw / 10f;
+
+    } catch (Throwable e) {
+        return 0f;
+    }
 }
 
 // ------------------------------------------------------------
@@ -2960,27 +2994,44 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
         Intent i = registerReceiver(null, f);
 
-        if (i != null) {
+if (i != null) {
 
-            int t =
-                    i.getIntExtra(
-                            BatteryManager.EXTRA_TEMPERATURE,
-                            -1
-                    );
+    // ----------------------------------------
+    // temperature via engine first
+    // ----------------------------------------
 
-            if (t > 0)
-                tempC = t / 10f;
+    float tEngine = getBatteryTempEngineSafe();
 
-            int status =
-                    i.getIntExtra(
-                            BatteryManager.EXTRA_STATUS,
-                            -1
-                    );
+    if (!Float.isNaN(tEngine)) {
 
-            chargingNow =
-                    status == BatteryManager.BATTERY_STATUS_CHARGING
-                            || status == BatteryManager.BATTERY_STATUS_FULL;
-        }
+        tempC = tEngine;
+
+    } else {
+
+        int t =
+                i.getIntExtra(
+                        BatteryManager.EXTRA_TEMPERATURE,
+                        -1
+                );
+
+        if (t > 0)
+            tempC = t / 10f;
+    }
+
+    // ----------------------------------------
+    // charging state
+    // ----------------------------------------
+
+    int status =
+            i.getIntExtra(
+                    BatteryManager.EXTRA_STATUS,
+                    -1
+            );
+
+    chargingNow =
+            status == BatteryManager.BATTERY_STATUS_CHARGING
+                    || status == BatteryManager.BATTERY_STATUS_FULL;
+}
 
     } catch (Throwable ignore) {}
 
@@ -3566,6 +3617,32 @@ private void lab14LogPartialMode(
     logLine();
 }
 
+// ------------------------------------------------------------
+// Battery temperature via iDoctorEngine (SAFE)
+// ------------------------------------------------------------
+private float getBatteryTempEngineSafe() {
+
+    try {
+
+        float t = IdoctorEngine.getBatteryTempC(this);
+
+        if (Float.isNaN(t))
+            return Float.NaN;
+
+        if (t <= 0f)
+            return Float.NaN;
+
+        if (t > 100f)
+            return Float.NaN;
+
+        return t;
+
+    } catch (Throwable e) {
+
+        return Float.NaN;
+    }
+}
+
 // ============================================================
 // LAB 14B — CONDITIONS CHECK (SYSTEM PROTECTION TEST)
 // ============================================================
@@ -3591,14 +3668,32 @@ private boolean checkLab14BConditions() {
 
         if (i != null) {
 
-            int t =
-                    i.getIntExtra(
-                            BatteryManager.EXTRA_TEMPERATURE,
-                            -1
-                    );
+            // ----------------------------------------
+            // temperature via engine first
+            // ----------------------------------------
 
-            if (t > 0)
-                tempC = t / 10f;
+            float tEngine = getBatteryTempEngineSafe();
+
+            if (!Float.isNaN(tEngine) && tEngine > 0f) {
+
+                tempC = tEngine;
+
+            } else {
+
+                int t =
+                        i.getIntExtra(
+                                BatteryManager.EXTRA_TEMPERATURE,
+                                -1
+                        );
+
+                if (t > 0) {
+                    tempC = t / 10f;
+                }
+            }
+
+            // ----------------------------------------
+            // charging state
+            // ----------------------------------------
 
             int status =
                     i.getIntExtra(
@@ -3613,7 +3708,23 @@ private boolean checkLab14BConditions() {
 
     } catch (Throwable ignore) {}
 
+    // ============================================
+    // conditions
+    // ============================================
 
+    boolean badBat =
+            percent < 30 || percent > 70;
+
+    boolean badTemp =
+            !Float.isNaN(tempC) && tempC >= 38f;
+
+    boolean ok =
+            !chargingNow &&
+            !badBat &&
+            !badTemp;
+
+    return ok;
+}
 
     appendHtml("<br>");
     logLine();
@@ -3703,8 +3814,13 @@ private void lab14BProtectionTest() {
                 }
 
                 long startMah = start.chargeNowMah;
-                float tempStart = start.temperature;
-                float vStart = getBatteryVoltageFiltered();
+
+float tempStart = getBatteryTempEngineSafe();
+if (Float.isNaN(tempStart) || tempStart <= 0f) {
+    tempStart = start.temperature;
+}
+
+float vStart = getBatteryVoltageFiltered();
 
                 cpuFreqStart = readCpuFreq();
                 cpuTempStart = readCpuTempSafe2();
@@ -3746,8 +3862,13 @@ private void lab14BProtectionTest() {
                 }
 
                 long endMah = end.chargeNowMah;
-                float tempEnd = end.temperature;
-                float vEnd = getBatteryVoltageFiltered();
+
+float tempEnd = getBatteryTempEngineSafe();
+if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
+    tempEnd = end.temperature;
+}
+
+float vEnd = getBatteryVoltageFiltered();
 
                 cpuFreqEnd = readCpuFreq();
                 cpuTempEnd = readCpuTempSafe2();
@@ -13156,7 +13277,11 @@ private void lab14BatteryHealthStressTest_REAL() {
 
         final long startMah = snapStart.chargeNowMah;
         final long cycles = snapStart.cycleCount;
-        final float tempStart = snapStart.temperature;
+        float tempStart = getBatteryTempEngineSafe();
+
+if (Float.isNaN(tempStart) || tempStart <= 0f) {
+    tempStart = snapStart.temperature;
+}
         final boolean rooted = snapStart.rooted;
 
         final float voltageStart = getBatteryVoltageFiltered();
@@ -13884,6 +14009,15 @@ if (lab14_systemLimited[0]) {
                 String.format(Locale.US, "%.0f / 100", voltageStability)
         );
     }
+    
+    float startBatteryTemp = getBatteryTempEngineSafe();
+float endBatteryTemp   = getBatteryTempEngineSafe();
+
+if (Float.isNaN(startBatteryTemp) || startBatteryTemp <= 0f)
+    startBatteryTemp = tempStart;
+
+if (Float.isNaN(endBatteryTemp) || endBatteryTemp <= 0f)
+    endBatteryTemp = tempEnd;
 
     if (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp)) {
         float delta = endBatteryTemp - startBatteryTemp;
@@ -14404,7 +14538,11 @@ private void lab14PostLoadAnalysis(
     }
 
     final long endMah = snapEnd.chargeNowMah;
-    final float tempEnd = snapEnd.temperature;
+    float tempEnd = getBatteryTempEngineSafe();
+
+if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
+    tempEnd = snapEnd.temperature;
+}
 
     final Float cpuTempEnd = readCpuTempSafe();
     final Float gpuTempEnd = readGpuTempSafe();
@@ -14614,6 +14752,23 @@ if (!Float.isNaN(voltageStart) &&
 
     currentNow = getBatteryCurrentNowSafe();
 
+if (Float.isNaN(currentNow) ||
+    Math.abs(currentNow) < 50000f) {
+
+    // fallback estimation από drain
+
+    if (drainMah > 0 && dtMs > 0) {
+
+        float mahPerSec =
+                (float) drainMah / (dtMs / 1000f);
+
+        float currentEst =
+                mahPerSec * 3600f;   // mA
+
+        currentNow = currentEst * 1000f; // μA
+    }
+}
+
     // ---------------------------------------------
     // LIMITER DETECTION (SAFE VERSION)
     // ---------------------------------------------
@@ -14629,13 +14784,24 @@ if (!Float.isNaN(voltageStart) &&
 
         float currentAbs = Math.abs(currentNow);
 
-        if (sagCheck < 0.015f &&
-            currentAbs < 150000f &&
-            drainMah < 2f) {
+        if (!Float.isNaN(sagCheck) &&
+    !Float.isNaN(currentAbs)) {
 
-            lab14_systemLimited[0] = true;
+    boolean lowSag =
+            sagCheck < 0.010f;
 
-        }
+    boolean lowCurrent =
+            currentAbs < 80000f;
+
+    boolean noDrain =
+            drainMah < 1f;
+
+    if (lowSag && lowCurrent && noDrain) {
+
+        lab14_systemLimited[0] = true;
+
+    }
+}
     }
 
     // ---------------------------------------------
@@ -14657,9 +14823,9 @@ if (!Float.isNaN(voltageStart) &&
         float currentAmp =
                 Math.abs(currentNow) / 1000000f;
 
-        if (currentAmp > 0.1f &&
-            currentAmp < 6f &&
-            !lab14_systemLimited[0]) {
+        if (currentAmp > 0.05f &&
+    currentAmp < 8f &&
+    !lab14_systemLimited[0]) {
 
             estimatedESR = sagFiltered / currentAmp;
 
@@ -14830,6 +14996,17 @@ if (!Float.isNaN(thermalImpedance[0]) &&
 // HIGH TEMP UNDER LOAD CHECK
 // ----------------------------------------------------
 
+float tempNowEngine = getBatteryTempEngineSafe();
+
+if (!Float.isNaN(tempNowEngine) && tempNowEngine > 0f) {
+
+    if (Float.isNaN(tempStart)) {
+        tempStart = tempNowEngine;
+    }
+
+    tempEnd = tempNowEngine;
+}
+
 if (!Float.isNaN(tempStart) &&
     !Float.isNaN(tempEnd) &&
     !Float.isNaN(internalResistance[0]) &&
@@ -14846,7 +15023,6 @@ if (!Float.isNaN(tempStart) &&
 
     }
 }
-
 
 // ----------------------------------------------------
 // PULSE LOAD EVALUATION
