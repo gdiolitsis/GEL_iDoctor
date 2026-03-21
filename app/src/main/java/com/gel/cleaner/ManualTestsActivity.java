@@ -3708,6 +3708,15 @@ private boolean checkLab14BConditions() {
 
     } catch (Throwable ignore) {}
 
+    appendHtml("<br>");
+    logLine();
+
+    logInfo(gr
+            ? "LAB 14B - Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
+            : "LAB 14B - Final check of battery protection by the system");
+
+    logLine();
+
     // ============================================
     // conditions
     // ============================================
@@ -3722,18 +3731,6 @@ private boolean checkLab14BConditions() {
             !chargingNow &&
             !badBat &&
             !badTemp;
-
-    return ok;
-}
-
-    appendHtml("<br>");
-    logLine();
-
-    logInfo(gr
-            ? "LAB 14B - Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
-                : "LAB 14B - Final check of battery protection by the system");
-
-    logLine();
 
     // ----------------------------------------------------
     // BATTERY %
@@ -3762,7 +3759,7 @@ private boolean checkLab14BConditions() {
             ? "Οι συνθήκες είναι κατάλληλες."
             : "Conditions OK.");
 
-    return true;
+    return ok;
 }
 
 // ============================================================
