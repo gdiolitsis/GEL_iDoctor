@@ -13742,6 +13742,14 @@ if (Float.isNaN(tempStart) || tempStart <= 0f) {
         // ------------------------------------------------------------
         // 5) MAIN STRESS START
         // ------------------------------------------------------------
+        
+final long startMahF = startMah;
+final long baselineFullMahF = baselineFullMah;
+final long t0F = t0;
+final float voltageStartF = voltageStart;
+final int batteryPercentF = batteryPercent;
+final long cyclesF = cycles;
+final float tempStartF = tempStart;
      
 final float tempStartFinal = tempStart;
 
@@ -13846,13 +13854,13 @@ final Lab14Engine engine =
 lab14PostLoadAnalysis(
         engine,
         gr,
-        startMah,
-        baselineFullMah,
-        t0,
-        voltageStart,
-        batteryPercent,
-        cycles,
-        tempStart
+        startMahF,
+        baselineFullMahF,
+        t0F,
+        voltageStartF,
+        batteryPercentF,
+        cyclesF,
+        tempStartF
 );
 
 // ✅ μετά καθαρίζουμε UI
