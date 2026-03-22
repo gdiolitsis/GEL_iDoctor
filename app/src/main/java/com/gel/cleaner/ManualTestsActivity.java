@@ -1267,26 +1267,40 @@ private float getBatteryVoltageSafe() {
 
     try {
 
-        IntentFilter filter =
+        iDoctorEngine eng = iDoctorEngine.get(this);
+
+        float mv = eng.getBatteryVoltageUnified();
+
+        if (!Float.isNaN(mv) && mv > 0f)
+            return mv / 1000f;
+
+    } catch (Throwable ignore) {}
+
+    // fallback → BatteryManager
+
+    try {
+
+        IntentFilter f =
                 new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
-        Intent battery =
-                registerReceiver(null, filter);
+        Intent i =
+                registerReceiver(null, f);
 
-        if (battery == null)
+        if (i == null)
             return Float.NaN;
 
         int mv =
-                battery.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1);
+                i.getIntExtra(
+                        BatteryManager.EXTRA_VOLTAGE,
+                        -1
+                );
 
-        if (mv <= 0)
-            return Float.NaN;
+        if (mv > 0)
+            return mv / 1000f;
 
-        return mv / 1000f; // volts
+    } catch (Throwable ignore) {}
 
-    } catch (Throwable ignore) {
-        return Float.NaN;
-    }
+    return Float.NaN;
 }
 
 // ------------------------------------------------------------
@@ -2593,12 +2607,19 @@ private float getBatteryTempEngineSafe() {
 // ------------------------------------------------------------
 private float getBatteryTemperature() {
 
-    float t = getBatteryTempEngineSafe();
+    try {
 
-    if (!Float.isNaN(t))
-        return t;
+        iDoctorEngine eng = iDoctorEngine.get(this);
+
+        Float t = eng.getBatteryTempUnified();
+
+        if (t != null && !Float.isNaN(t))
+            return t;
+
+    } catch (Throwable ignore) {}
 
     // fallback μόνο αν engine δεν δώσει τιμή
+
     try {
 
         Intent i = registerReceiver(
@@ -2606,7 +2627,7 @@ private float getBatteryTemperature() {
                 new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         );
 
-        if (i == null) return 0f;
+        if (i == null) return Float.NaN;
 
         int raw =
                 i.getIntExtra(
@@ -2614,12 +2635,13 @@ private float getBatteryTemperature() {
                         -1
                 );
 
-        if (raw <= 0) return 0f;
+        if (raw <= 0) return Float.NaN;
 
         return raw / 10f;
 
-    } catch (Throwable e) {
-        return 0f;
+    } catch (Throwable ignore) {
+
+        return Float.NaN;
     }
 }
 
@@ -2627,39 +2649,93 @@ private float getBatteryTemperature() {
 // Battery % — SAFE
 // ------------------------------------------------------------
 private float getCurrentBatteryPercent() {
-try {
-Intent i = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-if (i == null) return -1f;
 
-int level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);  
-    int scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, -1);  
+    try {
 
-    if (level < 0 || scale <= 0) return -1f;  
-    return (level * 100f) / (float) scale;  
-} catch (Throwable t) {  
-    return -1f;  
-}
+        iDoctorEngine eng = iDoctorEngine.get(this);
 
+        iDoctorEngine.BatterySnapshot b =
+                eng.readBatterySnapshot();
+
+        if (b != null && b.level >= 0 && b.scale > 0) {
+
+            return (b.level * 100f) / (float) b.scale;
+        }
+
+    } catch (Throwable ignore) {}
+
+    // fallback μόνο αν engine δεν δώσει τιμή
+
+    try {
+
+        Intent i = registerReceiver(
+                null,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        );
+
+        if (i == null) return Float.NaN;
+
+        int level =
+                i.getIntExtra(
+                        BatteryManager.EXTRA_LEVEL,
+                        -1
+                );
+
+        int scale =
+                i.getIntExtra(
+                        BatteryManager.EXTRA_SCALE,
+                        -1
+                );
+
+        if (level < 0 || scale <= 0)
+            return Float.NaN;
+
+        return (level * 100f) / (float) scale;
+
+    } catch (Throwable ignore) {
+
+        return Float.NaN;
+    }
 }
 
 // ------------------------------------------------------------
 // Charging detection — SAFE (plugged based)
 // ------------------------------------------------------------
 private boolean isDeviceCharging() {
-try {
-Intent i = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-if (i == null) return false;
 
-int plugged = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);  
+    try {
 
-    return plugged == BatteryManager.BATTERY_PLUGGED_AC  
-            || plugged == BatteryManager.BATTERY_PLUGGED_USB  
-            || plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS;  
+        iDoctorEngine eng = iDoctorEngine.get(this);
 
-} catch (Throwable t) {  
-    return false;  
-}
+        return eng.isChargingNowUnified();
 
+    } catch (Throwable ignore) {}
+
+    // fallback μόνο αν engine δεν δώσει τιμή
+
+    try {
+
+        Intent i = registerReceiver(
+                null,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        );
+
+        if (i == null) return false;
+
+        int plugged =
+                i.getIntExtra(
+                        BatteryManager.EXTRA_PLUGGED,
+                        0
+                );
+
+        return plugged == BatteryManager.BATTERY_PLUGGED_AC
+                || plugged == BatteryManager.BATTERY_PLUGGED_USB
+                || plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS;
+
+    } catch (Throwable ignore) {
+
+        return false;
+    }
 }
 
 // ------------------------------------------------------------
@@ -2667,43 +2743,80 @@ int plugged = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
 // ------------------------------------------------------------
 private BatteryInfo getBatteryInfo() {
 
-BatteryInfo bi = new BatteryInfo();  
-bi.charging = isDeviceCharging();  
-bi.source = "BatteryManager";  
+    BatteryInfo bi = new BatteryInfo();
 
-try {  
-    BatteryManager bm =  
-            (BatteryManager) getSystemService(BATTERY_SERVICE);  
+    try {
 
-    if (bm == null) {  
-        bi.currentChargeMah = -1;  
-        bi.estimatedFullMah = -1;  
-        bi.source = "BatteryManager:N/A";  
-        return bi;  
-    }  
+        iDoctorEngine eng = iDoctorEngine.get(this);
 
-    // Charge counter
-    long cc_uAh =  
-            bm.getLongProperty(  
-                    BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER  
-            );  
+        bi.charging = eng.isChargingNowUnified();
 
-    bi.currentChargeMah = normalizeMah(cc_uAh);  
+        float chargeMah =
+                eng.getChargeNowMahUnified();
 
-    // SAFE FULL CAPACITY — NOT via CHARGE_FULL (API trap)  
-    bi.estimatedFullMah = -1; 
+        float fullMah =
+                eng.getChargeFullMahUnified();
 
-    if (bi.currentChargeMah <= 0)  
-        bi.currentChargeMah = -1;  
+        if (!Float.isNaN(chargeMah) && chargeMah > 0) {
+            bi.currentChargeMah = chargeMah;
+        } else {
+            bi.currentChargeMah = -1;
+        }
 
-} catch (Throwable t) {  
-    bi.currentChargeMah = -1;  
-    bi.estimatedFullMah = -1;  
-    bi.source = "BatteryManager:ERROR";  
-}  
+        if (!Float.isNaN(fullMah) && fullMah > 0) {
+            bi.estimatedFullMah = fullMah;
+        } else {
+            bi.estimatedFullMah = -1;
+        }
 
-return bi;
+        bi.source = "iDoctorEngine";
 
+        // αν engine έδωσε τιμές → τελείωσε
+        if (bi.currentChargeMah > 0)
+            return bi;
+
+    } catch (Throwable ignore) {}
+
+    // ----------------------------------------
+    // fallback → BatteryManager
+    // ----------------------------------------
+
+    bi.charging = isDeviceCharging();
+    bi.source = "BatteryManager";
+
+    try {
+
+        BatteryManager bm =
+                (BatteryManager) getSystemService(BATTERY_SERVICE);
+
+        if (bm == null) {
+
+            bi.currentChargeMah = -1;
+            bi.estimatedFullMah = -1;
+            bi.source = "BatteryManager:N/A";
+            return bi;
+        }
+
+        long cc_uAh =
+                bm.getLongProperty(
+                        BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER
+                );
+
+        bi.currentChargeMah = normalizeMah(cc_uAh);
+
+        bi.estimatedFullMah = -1;
+
+        if (bi.currentChargeMah <= 0)
+            bi.currentChargeMah = -1;
+
+    } catch (Throwable t) {
+
+        bi.currentChargeMah = -1;
+        bi.estimatedFullMah = -1;
+        bi.source = "BatteryManager:ERROR";
+    }
+
+    return bi;
 }
 
 // ============================================================
@@ -2991,58 +3104,11 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     final boolean gr = AppLang.isGreek(this);
 
-    int percent = getBatteryPercentSafe();
+    int percent = (int) getCurrentBatteryPercent();
 
-    float tempC = Float.NaN;
-    boolean chargingNow = false;
+    float tempC = getBatteryTemperature();
 
-    try {
-
-        IntentFilter f =
-                new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-
-        Intent i = registerReceiver(null, f);
-
-if (i != null) {
-
-    // ----------------------------------------
-    // temperature via engine first
-    // ----------------------------------------
-
-    float tEngine = getBatteryTempEngineSafe();
-
-    if (!Float.isNaN(tEngine)) {
-
-        tempC = tEngine;
-
-    } else {
-
-        int t =
-                i.getIntExtra(
-                        BatteryManager.EXTRA_TEMPERATURE,
-                        -1
-                );
-
-        if (t > 0)
-            tempC = t / 10f;
-    }
-
-    // ----------------------------------------
-    // charging state
-    // ----------------------------------------
-
-    int status =
-            i.getIntExtra(
-                    BatteryManager.EXTRA_STATUS,
-                    -1
-            );
-
-    chargingNow =
-            status == BatteryManager.BATTERY_STATUS_CHARGING
-                    || status == BatteryManager.BATTERY_STATUS_FULL;
-}
-
-    } catch (Throwable ignore) {}
+    boolean chargingNow = isDeviceCharging();
 
     float cpuTemp = readCpuTempSafe();
 
@@ -3054,15 +3120,14 @@ if (i != null) {
     boolean badTemp =
             !Float.isNaN(tempC) && tempC >= 38f;
 
-
     boolean cpuOk =
-        Float.isNaN(cpuTemp) || cpuTemp < 60f;
+            Float.isNaN(cpuTemp) || cpuTemp < 60f;
 
-boolean ok =
-        !chargingNow &&
-        !badBat &&
-        !badTemp &&
-        cpuOk;
+    boolean ok =
+            !chargingNow &&
+            !badBat &&
+            !badTemp &&
+            cpuOk;
 
 
     AlertDialog.Builder b =
@@ -3633,7 +3698,7 @@ private boolean checkLab14BConditions() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    int percent = getBatteryPercentSafe();
+    int percent = (int) getCurrentBatteryPercent();
 
     boolean chargingNow = false;
 
@@ -3641,30 +3706,17 @@ private boolean checkLab14BConditions() {
 
     try {
 
-        IntentFilter f =
-                new IntentFilter(
-                        Intent.ACTION_BATTERY_CHANGED
-                );
+        // ----------------------------------------
+        // charging via engine
+        // ----------------------------------------
 
-        Intent i =
-                registerReceiver(null, f);
+        chargingNow = isDeviceCharging();
 
-        if (i != null) {
+        // ----------------------------------------
+        // temperature via engine
+        // ----------------------------------------
 
-            // ----------------------------------------
-            // charging state
-            // ----------------------------------------
-
-            int status =
-                    i.getIntExtra(
-                            BatteryManager.EXTRA_STATUS,
-                            -1
-                    );
-
-            chargingNow =
-                    status == BatteryManager.BATTERY_STATUS_CHARGING
-                            || status == BatteryManager.BATTERY_STATUS_FULL;
-        }
+        tempC = getBatteryTemperature();
 
     } catch (Throwable ignore) {}
 
@@ -4022,10 +4074,11 @@ try {
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
     p.edit()
-            .putBoolean("lab14b_system_limited", systemLimitedF[0])
-            .putBoolean("lab14b_valid_drain", validDrainF)
-            .putLong("lab14b_ts", System.currentTimeMillis())
-            .apply();
+        .putBoolean("lab14b_system_limited", systemLimitedF[0])
+        .putBoolean("lab14b_valid_drain", validDrainF)
+        .putLong("lab14b_ts", System.currentTimeMillis())
+        .putLong("lab14b_elapsed", SystemClock.elapsedRealtime())
+        .apply();
 
 } catch (Throwable ignore) {}
 
@@ -4814,6 +4867,19 @@ private float getBatteryCurrentNowSafe() {
 
     try {
 
+        iDoctorEngine eng = iDoctorEngine.get(this);
+
+        float ma = eng.getBatteryCurrentNowUnified();
+
+        if (!Float.isNaN(ma))
+            return ma;
+
+    } catch (Throwable ignore) {}
+
+    // fallback μόνο αν engine δεν δώσει τιμή
+
+    try {
+
         BatteryManager bm =
                 (BatteryManager) getSystemService(BATTERY_SERVICE);
 
@@ -4828,9 +4894,10 @@ private float getBatteryCurrentNowSafe() {
         if (raw == Long.MIN_VALUE || raw == 0L)
             return Float.NaN;
 
-        return (float) raw;   // κρατάμε raw τιμή σε µA
+        return (float) raw;   // µA
 
     } catch (Throwable ignore) {
+
         return Float.NaN;
     }
 }
@@ -14361,6 +14428,16 @@ private boolean isChargingNowSafe() {
 
     try {
 
+        iDoctorEngine eng = iDoctorEngine.get(this);
+
+        return eng.isChargingNowUnified();
+
+    } catch (Throwable ignore) {}
+
+    // fallback μόνο αν engine δεν δώσει τιμή
+
+    try {
+
         IntentFilter f =
                 new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
@@ -14405,6 +14482,16 @@ private boolean isCharging() {
 
     try {
 
+        iDoctorEngine eng = iDoctorEngine.get(this);
+
+        return eng.isChargingNowUnified();
+
+    } catch (Throwable ignore) {}
+
+    // fallback μόνο αν engine αποτύχει
+
+    try {
+
         IntentFilter f =
                 new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
@@ -14422,6 +14509,7 @@ private boolean isCharging() {
                 || status == BatteryManager.BATTERY_STATUS_FULL;
 
     } catch (Throwable ignore) {
+
         return false;
     }
 }
@@ -14565,8 +14653,10 @@ if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
                             }
                         }
 
-                        final boolean validDrain =
-                                counterValid && electricalValid;
+                                final boolean validDrain =
+        drainMah > 0 &&
+        dtMs > 0 &&
+        (counterValid || electricalValid);
 
                         final double mahPerHour =
                                 (validDrain && dtMs > 0 && drainMah > 0)
@@ -14707,7 +14797,7 @@ if (!Float.isNaN(voltageStart) &&
     currentNow = getBatteryCurrentNowSafe();
 
 if (Float.isNaN(currentNow) ||
-    Math.abs(currentNow) < 50000f) {
+    Math.abs(currentNow) < 50f
 
     // fallback estimation από drain
 
@@ -14719,7 +14809,7 @@ if (Float.isNaN(currentNow) ||
         float currentEst =
                 mahPerSec * 3600f;   // mA
 
-        currentNow = currentEst * 1000f; // μA
+        currentNow = currentEst;   // ήδη mA
     }
 }
 
@@ -14745,7 +14835,7 @@ if (Float.isNaN(currentNow) ||
             sagCheck < 0.010f;
 
     boolean lowCurrent =
-            currentAbs < 80000f;
+            currentAbs < 80f;
 
     boolean noDrain =
             drainMah < 1f;
@@ -14775,7 +14865,7 @@ if (Float.isNaN(currentNow) ||
     if (!Float.isNaN(currentNow)) {
 
         float currentAmp =
-                Math.abs(currentNow) / 1000000f;
+                Math.abs(currentNow) / 1000f;
 
         if (currentAmp > 0.05f &&
     currentAmp < 8f &&
@@ -14865,7 +14955,7 @@ if (!Float.isNaN(c1) &&
                             if (!Float.isNaN(currentNow)) {
 
                                 float currentAmp =
-                                        Math.abs(currentNow) / 1000000f;
+                                        Math.abs(currentNow) / 1000f;
 
                                 if (currentAmp > 0.2f &&
                                     currentAmp < 6f) {
@@ -15244,14 +15334,17 @@ if (swellingScore >= 2 &&
 
 }
 
-                        // ----------------------------------------------------
-                        // SAVE RUN / CONFIDENCE
-                        // ----------------------------------------------------
-                        if (validDrain) {
-                            engine.saveDrainValue(mahPerHour);
-                        }
+// ----------------------------------------------------
+// SAVE RUN / CONFIDENCE
+// ----------------------------------------------------
 
-                        engine.saveRun();
+if (validDrain && !lab14_systemLimited[0]) {
+
+    engine.saveDrainValue(mahPerHour);
+
+    engine.saveRun();
+
+}
 
 Lab14Engine.ConfidenceResult newConf =
         engine.computeConfidence();
@@ -15277,14 +15370,24 @@ if (lab14Conf != null && lab14Conf.percent < 50) {
 // AGING
 // ----------------------------------------------------
 
-final Lab14Engine.AgingResult aging =
-        engine.computeAging(
-                mahPerHour,
-                lab14Conf,
-                cycles,
-                tempStart,
-                tempEnd
-        );
+Lab14Engine.AgingResult aging = null;
+
+if (validDrain &&
+    !lab14_systemLimited[0] &&
+    lab14Conf != null &&
+    mahPerHour > 0 &&
+    !Float.isNaN(tempStart) &&
+    !Float.isNaN(tempEnd)) {
+
+    aging =
+            engine.computeAging(
+                    mahPerHour,
+                    lab14Conf,
+                    cycles,
+                    tempStart,
+                    tempEnd
+            );
+}
 
 if (aging != null) {
 
@@ -16461,10 +16564,14 @@ final boolean[] wasCharging = { false };
 final long[] unplugTs = { -1 };  
 final String[] dotFrames = { "•", "• •", "• • •" };  
 
-final BatteryInfo startInfo = getBatteryInfo();  
-final long startMah =  
-        (startInfo != null && startInfo.currentChargeMah > 0)  
-                ? startInfo.currentChargeMah : -1;  
+final Lab14Engine.GelBatterySnapshot snapStart = engine.readSnapshot();
+
+if (snapStart == null) {
+    logError("Battery snapshot failed");
+    return;
+}
+
+final long startMah = snapStart.chargeNowMah;
 
 ui.post(new Runnable() {
 
@@ -24735,22 +24842,38 @@ return clampScore(s);
 // ------------------------- UTIL ----------------------------
 
 private boolean isChargingNow() {
-try {
-Intent i = registerReceiver(
-null,
-new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-);
-int status = (i != null)
-? i.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-: -1;
 
-return status == BatteryManager.BATTERY_STATUS_CHARGING  
-        || status == BatteryManager.BATTERY_STATUS_FULL;  
+    try {
 
-} catch (Throwable ignored) {  
-    return false;  
-}
+        iDoctorEngine eng = iDoctorEngine.get(this);
 
+        return eng.isChargingNowUnified();
+
+    } catch (Throwable ignore) {}
+
+    // fallback μόνο αν engine αποτύχει
+
+    try {
+
+        Intent i = registerReceiver(
+                null,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        );
+
+        int status = (i != null)
+                ? i.getIntExtra(
+                        BatteryManager.EXTRA_STATUS,
+                        -1
+                )
+                : -1;
+
+        return status == BatteryManager.BATTERY_STATUS_CHARGING
+                || status == BatteryManager.BATTERY_STATUS_FULL;
+
+    } catch (Throwable ignored) {
+
+        return false;
+    }
 }
 
 private float maxOf(Float a, Float b, Float c, Float d, float e) {
