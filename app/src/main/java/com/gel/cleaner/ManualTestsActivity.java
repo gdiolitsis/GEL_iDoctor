@@ -3862,8 +3862,11 @@ float vStart = getBatteryVoltageFiltered();
                     try { stopMemoryStress(); } catch (Throwable ignore) {}
                 }
 
-                Lab14Engine.GelBatterySnapshot end =
-                        engine.readSnapshot();
+                Lab14Engine engine =
+        new Lab14Engine(ManualTestsActivity.this);
+
+Lab14Engine.GelBatterySnapshot snap =
+        engine.readSnapshot();
 
                 if (end == null) {
                     runOnUiThread(() ->
@@ -3888,7 +3891,7 @@ float vEnd = getBatteryVoltageFiltered();
                 cpuFreqEnd = readCpuFreq();
                 cpuTempEnd = readCpuTempSafe2();
 
-                validDrain = (startMah - endMah) > 0;
+                validDrain = (start.chargeNowMah - endMah) > 0;
 
                 // ----------------------------------------------------
                 // SYSTEM LIMITER DETECTION
@@ -3940,7 +3943,7 @@ float vEnd = getBatteryVoltageFiltered();
                 final boolean validDrainF = validDrain;
                 final boolean[] systemLimitedF = systemLimited;
 
-                final long startMahF = startMah;
+                final long startMahF = start.chargeNowMah;
                 final long endMahF = endMah;
                 final float tempStartF = tempStart;
                 final float tempEndF = tempEnd;
