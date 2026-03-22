@@ -16564,6 +16564,8 @@ if (wasCancelled) return;
         lab14AdvisoryShown = false;
     }
 
+}
+
 //=============================================================
 // LAB 15 - Charging System Diagnostic (SMART)
 // FINAL / LOCKED — NO PATCHES — NO SIDE EFFECTS
