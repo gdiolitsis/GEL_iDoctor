@@ -2759,8 +2759,8 @@ float fullMah = Float.NaN;
 
 if (snap != null) {
 
-    chargeMah = snap.chargeNowMah;
-    fullMah   = snap.chargeFullMah;
+    chargeMah = snap.battery.chargeNowMah;
+    fullMah   = snap.battery.chargeFullMah;
 
 }
 
@@ -13266,10 +13266,10 @@ try {
     // ------------------------------------------------------------
     // 1) INITIAL SNAPSHOT
     // ------------------------------------------------------------
-    iDoctorEngine eng = iDoctorEngine.get(this);
+    final Lab14Engine engine = new Lab14Engine(this);
 
-    final Lab14Engine.GelBatterySnapshot snapStart =
-            eng.readSnapshot();
+final Lab14Engine.GelBatterySnapshot snapStart =
+        engine.readSnapshot();
 
     if (snapStart == null) {
         logError(gr
@@ -13838,6 +13838,11 @@ SystemClock.sleep(350);
 lab14StopAllStress();
 
 // ✅ πρώτα κάνουμε analysis (χρειάζεται UI ακόμα ενεργό)
+final Lab14Engine engine = new Lab14Engine(this);
+
+final Lab14Engine.GelBatterySnapshot snapStart =
+        engine.readSnapshot();
+
 lab14PostLoadAnalysis(
         engine,
         gr,
@@ -13847,7 +13852,7 @@ lab14PostLoadAnalysis(
         voltageStart,
         batteryPercent,
         cycles,
-        tempStartFinal
+        tempStart
 );
 
 // ✅ μετά καθαρίζουμε UI
@@ -16564,16 +16569,22 @@ if (lab15Dialog.getWindow() != null) {
 
 lab15Dialog.show();
 
-// ================= CORE LOOP =================  
-final long[] startTs = { -1 };  
-final boolean[] wasCharging = { false };  
-final long[] unplugTs = { -1 };  
-final String[] dotFrames = { "•", "• •", "• • •" };  
+iDoctorEngine eng = iDoctorEngine.get(this);
+
+iDoctorEngine.BatterySnapshot snapStart =
+        eng.readBatterySnapshot();
 
 if (snapStart == null) {
     logError("Battery snapshot failed");
     return;
 }
+
+// ================= CORE LOOP =================
+
+final long[] startTs = { -1 };
+final boolean[] wasCharging = { false };
+final long[] unplugTs = { -1 };
+final String[] dotFrames = { "•", "• •", "• • •" };
 
 final long startMah = snapStart.chargeNowMah;
 
