@@ -13961,40 +13961,40 @@ if (wasCancelled) return;
             }
         });
 
-            } catch (Throwable t) {
+        } catch (Throwable t) {
 
-                lab14StopAllStress();
-                restoreBrightnessAndKeepOn();
+            lab14StopAllStress();
+            restoreBrightnessAndKeepOn();
 
-                lab14Cancelled = true;
-                lab14Running = false;
-                lab14PopupShown = false;
-                lab14AdvisoryShown = false;
+            lab14Cancelled = true;
+            lab14Running = false;
+            lab14PopupShown = false;
+            lab14AdvisoryShown = false;
 
-                logError(
-                        gr
-                                ? "Σφάλμα LAB 14"
-                                : "LAB 14 error"
-                );
-            }
+            logError(
+                    gr
+                            ? "Σφάλμα LAB 14"
+                            : "LAB 14 error"
+            );
+        }
 
-        }, 1000);
+    }, 1000);
 
-    } catch (Throwable t) {
+} catch (Throwable t) {
 
-        lab14StopAllStress();
+    lab14StopAllStress();
 
-        try {
-            lab14CleanupUI();
-        } catch (Throwable ignore) {}
+    try {
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
 
-        restoreBrightnessAndKeepOn();
+    restoreBrightnessAndKeepOn();
 
-        lab14Cancelled = true;
-        lab14Running = false;
-        lab14PopupShown = false;
-        lab14AdvisoryShown = false;
-    }
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+}
 
 }
 
