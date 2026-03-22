@@ -13979,24 +13979,24 @@ if (wasCancelled) return;
 
         } catch (Throwable t) {
 
-            lab14StopAllStress();
-            restoreBrightnessAndKeepOn();
+    lab14StopAllStress();
+    restoreBrightnessAndKeepOn();
 
-            lab14Cancelled = true;
-            lab14Running = false;
-            lab14PopupShown = false;
-            lab14AdvisoryShown = false;
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
 
-            logError(
-                    gr
-                            ? "Σφάλμα LAB 14"
-                            : "LAB 14 error"
-            );
-        }
+    logError(
+            gr
+                    ? "Σφάλμα LAB 14"
+                    : "LAB 14 error"
+    );
+}
 
-            }   // ✅ κλείνει run()
+            }
 
-        }   // ✅ κλείνει Runnable
+        });
 
     }, 1000);
 
