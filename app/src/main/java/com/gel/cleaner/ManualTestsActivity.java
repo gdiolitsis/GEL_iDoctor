@@ -16551,6 +16551,8 @@ if (wasCancelled) return;
 
 }); 
 
+    }); 
+
     } catch (Throwable t) {
 
         lab14StopAllStress();
@@ -16566,8 +16568,6 @@ if (wasCancelled) return;
         lab14PopupShown = false;
         lab14AdvisoryShown = false;
     }
-
-}
 
 //=============================================================
 // LAB 15 - Charging System Diagnostic (SMART)
