@@ -2749,25 +2749,32 @@ private BatteryInfo getBatteryInfo() {
 
         iDoctorEngine eng = iDoctorEngine.get(this);
 
-        bi.charging = eng.isChargingNowUnified();
+bi.charging = eng.isChargingNowUnified();
 
-        float chargeMah =
-                eng.getChargeNowMahUnified();
+iDoctorEngine.FullSnapshot snap =
+        eng.readFullSnapshot();
 
-        float fullMah =
-                eng.getChargeFullMahUnified();
+float chargeMah = Float.NaN;
+float fullMah = Float.NaN;
+
+if (snap != null) {
+
+    chargeMah = snap.chargeNowMah;
+    fullMah   = snap.chargeFullMah;
+
+}
 
         if (!Float.isNaN(chargeMah) && chargeMah > 0) {
-            bi.currentChargeMah = chargeMah;
-        } else {
-            bi.currentChargeMah = -1;
-        }
+    bi.currentChargeMah = Math.round(chargeMah);
+} else {
+    bi.currentChargeMah = -1;
+}
 
-        if (!Float.isNaN(fullMah) && fullMah > 0) {
-            bi.estimatedFullMah = fullMah;
-        } else {
-            bi.estimatedFullMah = -1;
-        }
+if (!Float.isNaN(fullMah) && fullMah > 0) {
+    bi.estimatedFullMah = Math.round(fullMah);
+} else {
+    bi.estimatedFullMah = -1;
+}
 
         bi.source = "iDoctorEngine";
 
@@ -13247,27 +13254,30 @@ private void lab14BatteryHealthStressTest_REAL() {
     }
 
     // ---------------------------------------
-    // ENGINE
-    // ---------------------------------------
-    final Lab14Engine engine = new Lab14Engine(this);
+// ENGINE
+// ---------------------------------------
+final Lab14Engine lab14Engine = new Lab14Engine(this);
 
-    try {
+try {
 
-        final int durationSec = LAB14_TOTAL_SECONDS;
-        lastSelectedStressDurationSec = durationSec;
+    final int durationSec = LAB14_TOTAL_SECONDS;
+    lastSelectedStressDurationSec = durationSec;
 
-        // ------------------------------------------------------------
-        // 1) INITIAL SNAPSHOT
-        // ------------------------------------------------------------
-        final Lab14Engine.GelBatterySnapshot snapStart = engine.readSnapshot();
+    // ------------------------------------------------------------
+    // 1) INITIAL SNAPSHOT
+    // ------------------------------------------------------------
+    iDoctorEngine eng = iDoctorEngine.get(this);
 
-        if (snapStart == null) {
-            logError(gr
-                    ? "Αποτυχία ανάγνωσης δεδομένων μπαταρίας."
-                    : "Battery snapshot failed.");
-            lab14Running = false;
-            return;
-        }
+    final Lab14Engine.GelBatterySnapshot snapStart =
+            eng.readSnapshot();
+
+    if (snapStart == null) {
+        logError(gr
+                ? "Αποτυχία ανάγνωσης δεδομένων μπαταρίας."
+                : "Battery snapshot failed.");
+        lab14Running = false;
+        return;
+    }
 
         if (snapStart.chargeNowMah <= 0) {
             logError(gr
@@ -16559,8 +16569,6 @@ final long[] startTs = { -1 };
 final boolean[] wasCharging = { false };  
 final long[] unplugTs = { -1 };  
 final String[] dotFrames = { "•", "• •", "• • •" };  
-
-final Lab14Engine.GelBatterySnapshot snapStart = engine.readSnapshot();
 
 if (snapStart == null) {
     logError("Battery snapshot failed");
