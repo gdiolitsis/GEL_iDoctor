@@ -3862,19 +3862,17 @@ float vStart = getBatteryVoltageFiltered();
                     try { stopMemoryStress(); } catch (Throwable ignore) {}
                 }
 
-Lab14Engine engine =
-        new Lab14Engine(ManualTestsActivity.this);
+iDoctorEngine eng2 =
+        iDoctorEngine.get(ManualTestsActivity.this);
 
-Lab14Engine.GelBatterySnapshot end =
-        engine.readSnapshot();
+iDoctorEngine.FullSnapshot end =
+        eng2.readFullSnapshot();
 
 if (end == null) {
-    runOnUiThread(() ->
-            logError(
-                    gr
-                            ? "Αποτυχία τελικής ανάγνωσης μπαταρίας"
-                            : "Final battery read failed"
-            )
+    logError(
+            gr
+                    ? "Αποτυχία τελικής ανάγνωσης μπαταρίας"
+                    : "Final battery read failed"
     );
     return;
 }
@@ -3882,8 +3880,9 @@ if (end == null) {
 long endMah = end.chargeNowMah;
 
 float tempEnd = getBatteryTempEngineSafe();
+
 if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
-    tempEnd = end.temperature;
+    tempEnd = end.batteryTempC;
 }
 
 float vEnd = getBatteryVoltageFiltered();
@@ -13267,71 +13266,100 @@ try {
     final int durationSec = LAB14_TOTAL_SECONDS;
     lastSelectedStressDurationSec = durationSec;
 
-    // ------------------------------------------------------------
-    // 1) INITIAL SNAPSHOT
-    // ------------------------------------------------------------
-    final Lab14Engine engine = new Lab14Engine(this);
+// ------------------------------------------------------------
+// 1) INITIAL SNAPSHOT (iDoctorEngine)
+// ------------------------------------------------------------
 
-final Lab14Engine.GelBatterySnapshot snapStart =
-        engine.readSnapshot();
+iDoctorEngine eng =
+        iDoctorEngine.get(this);
 
-    if (snapStart == null) {
-        logError(gr
-                ? "Αποτυχία ανάγνωσης δεδομένων μπαταρίας."
-                : "Battery snapshot failed.");
-        lab14Running = false;
-        return;
-    }
+iDoctorEngine.FullSnapshot start =
+        eng.readFullSnapshot();
 
-        if (snapStart.chargeNowMah <= 0) {
-            logError(gr
-                    ? "Μη διαθέσιμο charge counter."
-                    : "Charge counter unavailable.");
-            lab14Running = false;
-            return;
-        }
+if (start == null) {
+    logError(gr
+            ? "Αποτυχία ανάγνωσης δεδομένων μπαταρίας"
+            : "Battery snapshot failed");
+    lab14Running = false;
+    return;
+}
 
-        if (snapStart.charging) {
-            logError(gr
-                    ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
-                    : "Device must NOT be charging.");
-            lab14Running = false;
-            return;
-        }
+if (start.chargeNowMah <= 0) {
+    logError(gr
+            ? "Μη διαθέσιμο charge counter"
+            : "Charge counter unavailable");
+    lab14Running = false;
+    return;
+}
 
-        if (Float.isNaN(snapStart.temperature)) {
-            logWarn(gr
-                    ? "Μη διαθέσιμη θερμοκρασία μπαταρίας."
-                    : "Battery temperature unavailable.");
-        }
+if (start.charging) {
+    logError(gr
+            ? "Η δοκιμή απαιτεί να μην φορτίζει"
+            : "Device must NOT be charging");
+    lab14Running = false;
+    return;
+}
 
-        if (snapStart.chargeFullMah <= 0) {
-            logWarn(gr
-                    ? "Μη διαθέσιμη πλήρης χωρητικότητα."
-                    : "Full capacity unavailable.");
-        }
+if (Float.isNaN(start.batteryTempC)) {
+    logWarn(gr
+            ? "Μη διαθέσιμη θερμοκρασία μπαταρίας"
+            : "Battery temperature unavailable");
+}
 
-        final long startMah = snapStart.chargeNowMah;
-        final long cycles = snapStart.cycleCount;
-        float tempStart = getBatteryTempEngineSafe();
+if (start.chargeFullMah <= 0) {
+    logWarn(gr
+            ? "Μη διαθέσιμη πλήρης χωρητικότητα"
+            : "Full capacity unavailable");
+}
+
+final long startMah = start.chargeNowMah;
+final long cycles = start.cycleCount;
+
+float tempStart = getBatteryTempEngineSafe();
 
 if (Float.isNaN(tempStart) || tempStart <= 0f) {
-    tempStart = snapStart.temperature;
+    tempStart = start.batteryTempC;
 }
-        final boolean rooted = snapStart.rooted;
 
-        final float voltageStart = getBatteryVoltageFiltered();
-        final int batteryPercent = getBatteryPercentSafe();
 
-        final Float cpuTempStart = readCpuTempSafe();
-        final Float gpuTempStart = readGpuTempSafe();
+// ----------------------------------------------------
+// VOLTAGE BASELINE
+// ----------------------------------------------------
 
-        final long baselineFullMah =
-                snapStart.chargeFullMah > 0
-                        ? snapStart.chargeFullMah
-                        : -1;
+float voltageStart = getBatteryVoltageFiltered();
 
-        final long t0 = SystemClock.elapsedRealtime();
+if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
+
+    if (start.battery != null &&
+        start.battery.voltageMv > 0) {
+
+        voltageStart = start.battery.voltageMv / 1000f;
+
+    } else {
+
+        iDoctorEngine engV =
+                iDoctorEngine.get(this);
+
+        iDoctorEngine.FullSnapshot snapV =
+                engV.readFullSnapshot();
+
+        if (snapV != null &&
+            snapV.battery != null &&
+            snapV.battery.voltageMv > 0) {
+
+            voltageStart = snapV.battery.voltageMv / 1000f;
+        }
+    }
+}
+
+final int batteryPercent = getBatteryPercentSafe();
+
+final long baselineFullMah =
+        start.battery.chargeFullMah > 0
+                ? start.battery.chargeFullMah
+                : -1;
+
+final long t0 = SystemClock.elapsedRealtime();
 
         // ------------------------------------------------------------
         // 2) HEADER LOGS - START CONDITIONS
@@ -13626,121 +13654,170 @@ if (Float.isNaN(tempStart) || tempStart <= 0f) {
 
         lab14Dialog.show();
 
-        // ------------------------------------------------------------
-        // 4) FAST BATTERY STRESS (45 sec) — BACKGROUND THREAD
-        // ------------------------------------------------------------
-        new Thread(() -> {
-            try {
+// ------------------------------------------------------------
+// 4) FAST BATTERY STRESS (45 sec) — BACKGROUND THREAD
+// ------------------------------------------------------------
+new Thread(() -> {
+    try {
 
-                lab14FastDone = false;
+        lab14FastDone = false;
 
-                vStart[0] = getBatteryVoltageFiltered();
+        vStart[0] = getBatteryVoltageFiltered();
 
-                // ---------------- LOAD 1 ----------------
-                startCpuBurn_C_Mode();
-                SystemClock.sleep(12000);
+        if (Float.isNaN(vStart[0]) || vStart[0] <= 0f) {
 
-                if (lab14Cancelled) {
-                    lab14StopAllStress();
-                    return;
-                }
+            iDoctorEngine engV =
+                    iDoctorEngine.get(ManualTestsActivity.this);
 
-                SystemClock.sleep(500);
-                vLoad1[0] = getBatteryVoltageFiltered();
+            iDoctorEngine.FullSnapshot snapV =
+                    engV.readFullSnapshot();
 
-                SystemClock.sleep(300);
-                stopCpuBurn();
+            if (snapV != null &&
+                snapV.battery != null &&
+                snapV.battery.voltageMv > 0) {
 
-                // ---------------- RECOVER ----------------
-                SystemClock.sleep(12000);
-
-                if (lab14Cancelled) {
-                    lab14StopAllStress();
-                    return;
-                }
-
-                SystemClock.sleep(800);
-                vRecover[0] = getBatteryVoltageFiltered();
-
-                // ---------------- LOAD 2 ----------------
-                startCpuBurn_C_Mode();
-                SystemClock.sleep(12000);
-
-                if (lab14Cancelled) {
-                    lab14StopAllStress();
-                    return;
-                }
-
-                SystemClock.sleep(500);
-                vLoad2[0] = getBatteryVoltageFiltered();
-
-                SystemClock.sleep(300);
-                stopCpuBurn();
-
-                // ----------------------------------------------------
-                // PULSE LOAD TEST
-                // ----------------------------------------------------
-                float vBefore = getBatteryVoltageFiltered();
-
-                startCpuBurn_C_Mode();
-                SystemClock.sleep(3500);
-
-                float vPulse = getBatteryVoltageFiltered();
-
-                stopCpuBurn();
-                SystemClock.sleep(800);
-
-                float vAfter = getBatteryVoltageFiltered();
-
-                if (!Float.isNaN(vBefore) && !Float.isNaN(vPulse)) {
-                    pulseSag[0] = vBefore - vPulse;
-                }
-
-                if (!Float.isNaN(vAfter) && !Float.isNaN(vPulse)) {
-                    pulseRecovery[0] = vAfter - vPulse;
-                }
-
-                if (!Float.isNaN(pulseSag[0]) &&
-                        pulseSag[0] > 0f &&
-                        !Float.isNaN(pulseRecovery[0])) {
-                    pulseScore[0] = (pulseRecovery[0] / pulseSag[0]) * 100f;
-                }
-
-                if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad1[0])) {
-                    sag1[0] = vStart[0] - vLoad1[0];
-                }
-
-                if (!Float.isNaN(vRecover[0]) && !Float.isNaN(vLoad2[0])) {
-                    sag2[0] = vRecover[0] - vLoad2[0];
-                }
-
-                if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
-                    sagAvg[0] = (sag1[0] + sag2[0]) / 2f;
-                }
-
-                if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
-                    float sagDiff = Math.abs(sag1[0] - sag2[0]);
-                    if (sagDiff > 0.05f) {
-                        cellImbalanceRisk[0] = true;
-                    }
-                }
-
-                stopCpuBurn();
-                lab14FastDone = true;
-
-            } catch (Throwable t) {
-
-                try {
-                    stopCpuBurn();
-                } catch (Throwable ignore) {}
-
-                lab14FastDone = true;
-
-                runOnUiThread(() ->
-                        logError("LAB14 fast thread error")
-                );
+                vStart[0] =
+                        snapV.battery.voltageMv / 1000f;
             }
-        }).start();
+        }
+
+        // ---------------- LOAD 1 ----------------
+
+        startCpuBurn_C_Mode();
+        SystemClock.sleep(12000);
+
+        if (lab14Cancelled) {
+            lab14StopAllStress();
+            return;
+        }
+
+        SystemClock.sleep(500);
+
+        vLoad1[0] = getBatteryVoltageFiltered();
+
+        if (Float.isNaN(vLoad1[0]) || vLoad1[0] <= 0f) {
+
+            iDoctorEngine engV =
+                    iDoctorEngine.get(ManualTestsActivity.this);
+
+            iDoctorEngine.FullSnapshot snapV =
+                    engV.readFullSnapshot();
+
+            if (snapV != null &&
+                snapV.battery != null &&
+                snapV.battery.voltageMv > 0) {
+
+                vLoad1[0] =
+                        snapV.battery.voltageMv / 1000f;
+            }
+        }
+
+        SystemClock.sleep(300);
+        stopCpuBurn();
+
+        // ---------------- RECOVER ----------------
+
+        SystemClock.sleep(12000);
+
+        if (lab14Cancelled) {
+            lab14StopAllStress();
+            return;
+        }
+
+        SystemClock.sleep(800);
+
+        vRecover[0] = getBatteryVoltageFiltered();
+
+        if (Float.isNaN(vRecover[0]) || vRecover[0] <= 0f) {
+
+            iDoctorEngine engV =
+                    iDoctorEngine.get(ManualTestsActivity.this);
+
+            iDoctorEngine.FullSnapshot snapV =
+                    engV.readFullSnapshot();
+
+            if (snapV != null &&
+                snapV.battery != null &&
+                snapV.battery.voltageMv > 0) {
+
+                vRecover[0] =
+                        snapV.battery.voltageMv / 1000f;
+            }
+        }
+
+        // ---------------- LOAD 2 ----------------
+
+        startCpuBurn_C_Mode();
+        SystemClock.sleep(12000);
+
+        if (lab14Cancelled) {
+            lab14StopAllStress();
+            return;
+        }
+
+        SystemClock.sleep(500);
+
+        vLoad2[0] = getBatteryVoltageFiltered();
+
+        if (Float.isNaN(vLoad2[0]) || vLoad2[0] <= 0f) {
+
+            iDoctorEngine engV =
+                    iDoctorEngine.get(ManualTestsActivity.this);
+
+            iDoctorEngine.FullSnapshot snapV =
+                    engV.readFullSnapshot();
+
+            if (snapV != null &&
+                snapV.battery != null &&
+                snapV.battery.voltageMv > 0) {
+
+                vLoad2[0] =
+                        snapV.battery.voltageMv / 1000f;
+            }
+        }
+
+        SystemClock.sleep(300);
+        stopCpuBurn();
+
+        // ---------------- SAG ----------------
+
+        if (!Float.isNaN(vStart[0]) &&
+            !Float.isNaN(vLoad1[0])) {
+
+            sag1[0] = vStart[0] - vLoad1[0];
+        }
+
+        if (!Float.isNaN(vRecover[0]) &&
+            !Float.isNaN(vLoad2[0])) {
+
+            sag2[0] = vRecover[0] - vLoad2[0];
+        }
+
+        if (!Float.isNaN(sag1[0]) &&
+            !Float.isNaN(sag2[0])) {
+
+            sagAvg[0] =
+                    (sag1[0] + sag2[0]) / 2f;
+        }
+
+        stopCpuBurn();
+
+        lab14FastDone = true;
+
+    } catch (Throwable t) {
+
+        try {
+            stopCpuBurn();
+        } catch (Throwable ignore) {}
+
+        lab14FastDone = true;
+
+        runOnUiThread(() ->
+                logError("LAB14 fast thread error")
+        );
+    }
+
+}).start();
 
         // ------------------------------------------------------------
         // 5) MAIN STRESS START
@@ -14721,7 +14798,7 @@ if (validDrain &&
     // COULOMB DRIFT TEST
     // ----------------------------------------------------
 
-    if (drainMah > 0) {
+    if (drainMah > 0 && baselineFullMah > 0) {
 
         float expectedDrainPercent =
                 (float) drainMah / (float) baselineFullMah * 100f;
@@ -14742,6 +14819,7 @@ if (validDrain &&
 // ----------------------------------------------------
 // VOLTAGE RECOVERY
 // ----------------------------------------------------
+
 if (!Float.isNaN(voltageUnderLoad[0])) {
 
     SystemClock.sleep(800);
@@ -14750,9 +14828,30 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
 
         float vr = getBatteryVoltageFiltered();
 
-        if (!Float.isNaN(vr)) {
+        if (Float.isNaN(vr) || vr <= 0f) {
+
+            iDoctorEngine engV =
+                    iDoctorEngine.get(ManualTestsActivity.this);
+
+            iDoctorEngine.FullSnapshot snapV =
+                    engV.readFullSnapshot();
+
+            if (snapV != null &&
+                snapV.battery != null &&
+                snapV.battery.voltageMv > 0) {
+
+                vr = snapV.battery.voltageMv / 1000f;
+            }
+        }
+
+        if (!Float.isNaN(vr) &&
+            !Float.isNaN(voltageUnderLoad[0])) {
+
             voltageRecovery[0] =
-                    Math.max(0f, vr - voltageUnderLoad[0]);
+                    Math.max(
+                            0f,
+                            vr - voltageUnderLoad[0]
+                    );
         }
     }
 }
@@ -14810,31 +14909,93 @@ if (!Float.isNaN(voltageRecovery[0])) {
 // ----------------------------------------------------
 // ELECTRICAL ANALYSIS
 // ----------------------------------------------------
+
 float estimatedESR = Float.NaN;
 float currentNow = Float.NaN;
+
+
+// ---------- FIX voltageUnderLoad ----------
+
+if (Float.isNaN(voltageUnderLoad[0]) || voltageUnderLoad[0] <= 0f) {
+
+    iDoctorEngine engV =
+            iDoctorEngine.get(ManualTestsActivity.this);
+
+    iDoctorEngine.FullSnapshot snapV =
+            engV.readFullSnapshot();
+
+    if (snapV != null &&
+        snapV.battery != null &&
+        snapV.battery.voltageMv > 0) {
+
+        voltageUnderLoad[0] =
+                snapV.battery.voltageMv / 1000f;
+    }
+}
+
+
+// ---------- FIX voltageStart ----------
+
+if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
+
+    iDoctorEngine engV =
+            iDoctorEngine.get(ManualTestsActivity.this);
+
+    iDoctorEngine.FullSnapshot snapV =
+            engV.readFullSnapshot();
+
+    if (snapV != null &&
+        snapV.battery != null &&
+        snapV.battery.voltageMv > 0) {
+
+        voltageStart =
+                snapV.battery.voltageMv / 1000f;
+    }
+}
+
+
+// ---------- MAIN CHECK ----------
 
 if (!Float.isNaN(voltageStart) &&
     !Float.isNaN(voltageUnderLoad[0])) {
 
     float sag = voltageStart - voltageUnderLoad[0];
 
+
+    // ---------- current fallback ----------
+
     currentNow = getBatteryCurrentNowSafe();
 
-if (Float.isNaN(currentNow) ||
-    Math.abs(currentNow) < 50f) {
+    if (Float.isNaN(currentNow) ||
+        Math.abs(currentNow) < 50f) {
 
-    // fallback estimation από drain
+        iDoctorEngine engC =
+                iDoctorEngine.get(ManualTestsActivity.this);
 
-    if (drainMah > 0 && dtMs > 0) {
+        iDoctorEngine.FullSnapshot snapC =
+                engC.readFullSnapshot();
+
+        if (snapC != null &&
+            snapC.battery != null &&
+            snapC.battery.currentNowMa != 0f) {
+
+            currentNow = snapC.battery.currentNowMa;
+        }
+    }
+
+
+    // ---------- drain fallback ----------
+
+    if ((Float.isNaN(currentNow) || Math.abs(currentNow) < 50f) &&
+        drainMah > 0 && dtMs > 0) {
 
         float mahPerSec =
                 (float) drainMah / (dtMs / 1000f);
 
-        float currentEst =
-                mahPerSec * 3600f;   // mA
-
-        currentNow = currentEst;   // ήδη mA
+        currentNow =
+                mahPerSec * 3600f;
     }
+
 }
 
     // ---------------------------------------------
@@ -14942,10 +15103,63 @@ if (validDrain &&
 float currentStability = Float.NaN;
 
 float c1 = getBatteryCurrentNowSafe();
+
+if (Float.isNaN(c1) || Math.abs(c1) < 50f) {
+
+    iDoctorEngine eng =
+            iDoctorEngine.get(ManualTestsActivity.this);
+
+    iDoctorEngine.FullSnapshot snap =
+            eng.readFullSnapshot();
+
+    if (snap != null &&
+        snap.battery != null &&
+        snap.battery.currentNowMa != 0f) {
+
+        c1 = snap.battery.currentNowMa;
+    }
+}
+
 SystemClock.sleep(400);
+
 float c2 = getBatteryCurrentNowSafe();
+
+if (Float.isNaN(c2) || Math.abs(c2) < 50f) {
+
+    iDoctorEngine eng =
+            iDoctorEngine.get(ManualTestsActivity.this);
+
+    iDoctorEngine.FullSnapshot snap =
+            eng.readFullSnapshot();
+
+    if (snap != null &&
+        snap.battery != null &&
+        snap.battery.currentNowMa != 0f) {
+
+        c2 = snap.battery.currentNowMa;
+    }
+}
+
 SystemClock.sleep(400);
+
 float c3 = getBatteryCurrentNowSafe();
+
+if (Float.isNaN(c3) || Math.abs(c3) < 50f) {
+
+    iDoctorEngine eng =
+            iDoctorEngine.get(ManualTestsActivity.this);
+
+    iDoctorEngine.FullSnapshot snap =
+            eng.readFullSnapshot();
+
+    if (snap != null &&
+        snap.battery != null &&
+        snap.battery.currentNowMa != 0f) {
+
+        c3 = snap.battery.currentNowMa;
+    }
+}
+
 
 if (!Float.isNaN(c1) &&
     !Float.isNaN(c2) &&
@@ -15096,7 +15310,7 @@ if (!Float.isNaN(tempStart) &&
 // PULSE LOAD EVALUATION
 // ----------------------------------------------------
 
-if (!Float.isNaN(pulseSag[0]) &&
+if (!Float.isNaN(για[0]) &&
     !Float.isNaN(pulseRecovery[0]) &&
     !Float.isNaN(pulseScore[0]) &&
     validDrain &&
@@ -15197,7 +15411,9 @@ if (!Float.isNaN(currentStability) &&
 // ----------------------------------------------------
 
 if (!Float.isNaN(sag1[0]) &&
-    !Float.isNaN(sag2[0])) {
+    !Float.isNaN(sag2[0]) &&
+    sag1[0] > 0f &&
+    sag2[0] > 0f) {
 
     dualLoadDiff[0] =
             Math.abs(sag1[0] - sag2[0]);
@@ -15268,7 +15484,8 @@ if (!Float.isNaN(sag1[0]) &&
 
 if (!Float.isNaN(internalResistance[0]) &&
     !Float.isNaN(voltageRecoverySpeed[0]) &&
-    !Float.isNaN(sagAvg[0])) {
+    !Float.isNaN(sagAvg[0]) &&
+    sagAvg[0] > 0f) {
 
     float rNorm =
             Math.min(1f, internalResistance[0] / 0.25f);
@@ -15441,6 +15658,59 @@ if (aging != null &&
     lab14AgingIndex = -1;
     lab14AgingInterp = "Insufficient data";
 
+}
+
+// ----------------------------------------------------
+// PULSE / RELAX FALLBACK (iDoctor based)
+// ----------------------------------------------------
+
+if (Float.isNaN(pulseSag[0]) ||
+    Float.isNaN(pulseScore[0]) ||
+    Float.isNaN(relaxScore[0])) {
+
+    iDoctorEngine eng =
+            iDoctorEngine.get(ManualTestsActivity.this);
+
+    iDoctorEngine.FullSnapshot snap1 =
+            eng.readFullSnapshot();
+
+    SystemClock.sleep(400);
+
+    iDoctorEngine.FullSnapshot snap2 =
+            eng.readFullSnapshot();
+
+    if (snap1 != null &&
+        snap2 != null &&
+        snap1.battery != null &&
+        snap2.battery != null) {
+
+        float v1 =
+                snap1.battery.voltageMv / 1000f;
+
+        float v2 =
+                snap2.battery.voltageMv / 1000f;
+
+        if (v1 > 0f && v2 > 0f) {
+
+            float diff = Math.abs(v2 - v1);
+
+            pulseSag[0] = diff;
+
+            pulseRecovery[0] = diff;
+
+            pulseScore[0] =
+                    Math.max(
+                            0f,
+                            100f - diff * 120f
+                    );
+
+            relaxScore[0] =
+                    Math.max(
+                            0f,
+                            10f - diff * 5f
+                    );
+        }
+    }
 }
 
 // ----------------------------------------------------
