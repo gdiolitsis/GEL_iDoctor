@@ -3862,24 +3862,24 @@ float vStart = getBatteryVoltageFiltered();
                     try { stopMemoryStress(); } catch (Throwable ignore) {}
                 }
 
-                Lab14Engine engine =
+Lab14Engine engine =
         new Lab14Engine(ManualTestsActivity.this);
 
-Lab14Engine.GelBatterySnapshot snap =
+Lab14Engine.GelBatterySnapshot end =
         engine.readSnapshot();
 
-                if (end == null) {
-                    runOnUiThread(() ->
-                            logError(
-                                    gr
-                                            ? "Αποτυχία τελικής ανάγνωσης μπαταρίας"
-                                            : "Final battery read failed"
-                            )
-                    );
-                    return;
-                }
+if (end == null) {
+    runOnUiThread(() ->
+            logError(
+                    gr
+                            ? "Αποτυχία τελικής ανάγνωσης μπαταρίας"
+                            : "Final battery read failed"
+            )
+    );
+    return;
+}
 
-                long endMah = end.chargeNowMah;
+long endMah = end.chargeNowMah;
 
 float tempEnd = getBatteryTempEngineSafe();
 if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
