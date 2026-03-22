@@ -3794,40 +3794,41 @@ private void lab14BProtectionTest() {
 
         appendHtml("<br>");
 
-        new Thread(() -> {
+new Thread(() -> {
 
-            boolean cpuThrottle = false;
-            boolean thermalLimit = false;
-            boolean powerLimit = false;
+    boolean cpuThrottle = false;
+    boolean thermalLimit = false;
+    boolean powerLimit = false;
 
-            long cpuFreqStart = -1L;
-            long cpuFreqEnd = -1L;
+    long cpuFreqStart = -1L;
+    long cpuFreqEnd = -1L;
 
-            float cpuTempStart = Float.NaN;
-            float cpuTempEnd = Float.NaN;
+    float cpuTempStart = Float.NaN;
+    float cpuTempEnd = Float.NaN;
 
-            boolean[] systemLimited = new boolean[]{ false };
-            boolean validDrain = false;
+    boolean[] systemLimited = new boolean[]{ false };
+    boolean validDrain = false;
 
-            try {
+    try {
 
-                Lab14Engine engine = new Lab14Engine(this);
+        Lab14Engine engineThread =
+                new Lab14Engine(ManualTestsActivity.this);
 
-                Lab14Engine.GelBatterySnapshot start =
-                        engine.readSnapshot();
+        Lab14Engine.GelBatterySnapshot start =
+                engineThread.readSnapshot();
 
-                if (start == null) {
-                    runOnUiThread(() ->
-                            logError(
-                                    gr
-                                            ? "Αποτυχία ανάγνωσης μπαταρίας"
-                                            : "Battery read failed"
-                            )
-                    );
-                    return;
-                }
+        if (start == null) {
+            runOnUiThread(() ->
+                    logError(
+                            gr
+                                    ? "Αποτυχία ανάγνωσης μπαταρίας"
+                                    : "Battery read failed"
+                    )
+            );
+            return;
+        }
 
-                long startMah = start.chargeNowMah;
+        long startMahThread = start.chargeNowMah;
 
 float tempStart = getBatteryTempEngineSafe();
 if (Float.isNaN(tempStart) || tempStart <= 0f) {
