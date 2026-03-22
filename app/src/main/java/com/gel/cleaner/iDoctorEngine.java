@@ -56,6 +56,17 @@ import java.util.Map;
 
 public final class iDoctorEngine {
 
+    private static iDoctorEngine instance;
+
+    public static synchronized iDoctorEngine get(Context ctx) {
+
+    if (instance == null) {
+        instance = new iDoctorEngine(ctx.getApplicationContext());
+    }
+
+    return instance;
+}
+
     private final Context ctx;
 
     private iDoctorDeviceProfiles.DeviceProfile profile;
