@@ -13253,7 +13253,7 @@ private void lab14BatteryHealthStressTest_REAL() {
         return;
     }
 
-    // ---------------------------------------
+// ---------------------------------------
 // ENGINE
 // ---------------------------------------
 final Lab14Engine lab14Engine = new Lab14Engine(this);
@@ -13837,11 +13837,10 @@ SystemClock.sleep(350);
 
 lab14StopAllStress();
 
-// ✅ πρώτα κάνουμε analysis (χρειάζεται UI ακόμα ενεργό)
-final Lab14Engine engine = new Lab14Engine(this);
+// πρώτα κάνουμε analysis
 
-final Lab14Engine.GelBatterySnapshot snapStart =
-        engine.readSnapshot();
+final Lab14Engine engine =
+        new Lab14Engine(ManualTestsActivity.this);
 
 lab14PostLoadAnalysis(
         engine,
