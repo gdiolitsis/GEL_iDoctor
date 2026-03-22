@@ -14953,10 +14953,12 @@ if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
 
 // ---------- MAIN CHECK ----------
 
+float sag = Float.NaN;
+
 if (!Float.isNaN(voltageStart) &&
     !Float.isNaN(voltageUnderLoad[0])) {
 
-    float sag = voltageStart - voltageUnderLoad[0];
+    sag = voltageStart - voltageUnderLoad[0];
 
 
     // ---------- current fallback ----------
@@ -15064,7 +15066,6 @@ if (!Float.isNaN(voltageStart) &&
             }
         }
     }
-}
 
 // ----------------------------------------------------
 // ENERGY EFFICIENCY
@@ -15111,7 +15112,7 @@ if (Float.isNaN(c1) || Math.abs(c1) < 50f) {
 
     if (snap != null &&
         snap.battery != null &&
-        snap.battery.currentNowMa != 0f) {
+        !Float.isNaN(snap.battery.currentMa) && snap.battery.currentMa != 0f) {
 
         c1 = snap.battery.currentNowMa;
     }
@@ -15131,7 +15132,7 @@ if (Float.isNaN(c2) || Math.abs(c2) < 50f) {
 
     if (snap != null &&
         snap.battery != null &&
-        snap.battery.currentNowMa != 0f) {
+        !Float.isNaN(snap.battery.currentMa) && snap.battery.currentMa != 0f) {
 
         c2 = snap.battery.currentNowMa;
     }
@@ -15151,7 +15152,7 @@ if (Float.isNaN(c3) || Math.abs(c3) < 50f) {
 
     if (snap != null &&
         snap.battery != null &&
-        snap.battery.currentNowMa != 0f) {
+        !Float.isNaN(snap.battery.currentMa) && snap.battery.currentMa != 0f) {
 
         c3 = snap.battery.currentNowMa;
     }
@@ -15307,7 +15308,7 @@ if (!Float.isNaN(tempStart) &&
 // PULSE LOAD EVALUATION
 // ----------------------------------------------------
 
-if (!Float.isNaN(για[0]) &&
+if (!Float.isNaN(pulseSag[0]) &&
     !Float.isNaN(pulseRecovery[0]) &&
     !Float.isNaN(pulseScore[0]) &&
     validDrain &&
@@ -16477,6 +16478,8 @@ if (!Float.isNaN(lab14HealthPercent)) {
 // ------------------------------------------------
 // SAVE (πάντα save για variance system)
 // ------------------------------------------------
+
+SharedPreferences p = getSharedPreferences(LAB14_PREFS, MODE_PRIVATE);
 
 lab14LogSave(
         gr,
