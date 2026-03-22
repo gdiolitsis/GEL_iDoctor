@@ -13833,6 +13833,22 @@ final float tempStartF = tempStart;
      
 final float tempStartFinal = tempStart;
 
+} catch (Throwable t) {
+
+    lab14StopAllStress();
+
+    try {
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    restoreBrightnessAndKeepOn();
+
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+}
+
 new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
             @Override
@@ -13979,24 +13995,6 @@ if (wasCancelled) return;
         }
 
     }, 1000);
-
-} catch (Throwable t) {
-
-    lab14StopAllStress();
-
-    try {
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
-
-    restoreBrightnessAndKeepOn();
-
-    lab14Cancelled = true;
-    lab14Running = false;
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
-}
-
-}
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
