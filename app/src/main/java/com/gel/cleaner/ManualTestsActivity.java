@@ -2582,7 +2582,7 @@ private float getBatteryTempEngineSafe() {
 
     try {
 
-        iDoctorEngine eng = new iDoctorEngine(this);
+        iDoctorEngine eng = iDoctorEngine.get(this);
 
         Float t = eng.getBatteryTempUnified();
 
@@ -2910,8 +2910,6 @@ return null;
 try { if (br != null) br.close(); } catch (Throwable ignore) {}
 }
 }
-
-
 
 // ------------------------------------------------------------
 // LAB 15 thermal correlation — BILINGUAL (LABEL WHITE, VALUES GREEN)
@@ -14797,7 +14795,7 @@ if (!Float.isNaN(voltageStart) &&
     currentNow = getBatteryCurrentNowSafe();
 
 if (Float.isNaN(currentNow) ||
-    Math.abs(currentNow) < 50f
+    Math.abs(currentNow) < 50f) {
 
     // fallback estimation από drain
 
@@ -16125,9 +16123,7 @@ lab14LogStressResult(
 // PARTIAL / FULL MODE DECISION
 // ------------------------------------------------
 
-boolean partial =
-        Float.isNaN(drainMahF) ||
-        drainMahF < 5;
+boolean partial = drainMahF < 5;
 
 if (partial) {
 
