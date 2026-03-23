@@ -16401,7 +16401,7 @@ final long startMahF2 = startMah;
 lab14LogStressResult(
         gr,
         sagAvg[0],
-        voltageStartF,
+        voltageStartF2,
         voltageUnderLoad[0],
         voltageRecovery[0],
         voltageRecoverySpeed[0],
@@ -16410,7 +16410,7 @@ lab14LogStressResult(
         estimatedESRF,
         thermalImpedance[0],
         energyEfficiencyF,
-        startMahF,
+        startMahF2,
         endMahF,
         drainMahF,
         dtMsF,
