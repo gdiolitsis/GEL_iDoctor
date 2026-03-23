@@ -14699,10 +14699,9 @@ if (!Float.isNaN(vStart[0]) &&
             
             if (snapEnd != null) {
 
-    logDebug(
-            "SNAP END | "
-            + "C=" + snapEnd.chargeNowMah
-            + " | T=" + snapEnd.temperature
+    logLabelValue(
+            "DBG",
+            "END C=" + snapEnd.chargeNowMah
     );
 
 }
@@ -14721,7 +14720,7 @@ if (!Float.isNaN(vStart[0]) &&
         return;
     }
     
-    logDebug(
+    logLabelValue("DBG",
         "END MAH = " + snapEnd.chargeNowMah
 );
 
@@ -14876,7 +14875,10 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
 
         float vr = getBatteryVoltageFiltered();
         
-        logDebug("VR = " + vr);
+        logLabelValue(
+        "DBG",
+        "VR=" + vr
+);
 
         if (Float.isNaN(vr) || vr <= 0f) {
 
@@ -14889,12 +14891,11 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
                     if (snapV != null &&
     snapV.battery != null) {
 
-    logDebug(
-            "FULL SNAP | "
-            + "V=" + snapV.battery.voltageMv
-            + " | I=" + snapV.battery.currentMa
-            + " | C=" + snapV.battery.chargeNowMah
-            + " | T=" + snapV.battery.temperature
+    logLabelValue(
+            "DBG",
+            "V=" + snapV.battery.voltageMv +
+            " I=" + snapV.battery.currentMa +
+            " C=" + snapV.battery.chargeNowMah
     );
 
 }
@@ -15029,7 +15030,10 @@ if (!Float.isNaN(voltageStart) &&
 
     currentNow = getBatteryCurrentNowSafe();
     
-    logDebug("CURRENT NOW = " + currentNow);
+    logLabelValue(
+        "DBG",
+        "CURRENT=" + currentNow
+);
 
     if (Float.isNaN(currentNow) ||
         Math.abs(currentNow) < 50f) {
@@ -15053,15 +15057,19 @@ if (!Float.isNaN(voltageStart) &&
     // ---------- drain fallback ----------
 
     if ((Float.isNaN(currentNow) || Math.abs(currentNow) < 50f) &&
-        drainMah > 0 && dtMs > 0) {
+    drainMah > 0 && dtMs > 0) {
 
-        float mahPerSec =
-                (float) drainMah / (dtMs / 1000f);
+    logLabelValue(
+            "DBG",
+            "drainMah=" + drainMah +
+            " dt=" + dtMs
+    );
 
-        currentNow =
-                mahPerSec * 3600f;
-    }
+    float mahPerSec =
+            (float) drainMah / (dtMs / 1000f);
 
+    currentNow =
+            mahPerSec * 3600f;
 }
 
     // ---------------------------------------------
