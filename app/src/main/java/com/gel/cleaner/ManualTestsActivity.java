@@ -16720,9 +16720,11 @@ lab14Cancelled = false;
 
 if (wasCancelled) return;
 
-});   // close runOnUiThread
+});  // close runOnUiThread
 
-} catch (Throwable t) {
+}    // ← ΚΛΕΙΝΕΙ ΤΟ try
+
+catch (Throwable t) {
 
     lab14StopAllStress();
 
@@ -16736,7 +16738,6 @@ if (wasCancelled) return;
     lab14Running = false;
     lab14PopupShown = false;
     lab14AdvisoryShown = false;
-
 }
 
 //=============================================================
