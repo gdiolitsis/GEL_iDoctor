@@ -2584,17 +2584,6 @@ private long readFuelGaugeValue(String file) {
     return -1;
 }
 
-private static iDoctorEngine instance;
-
-public static iDoctorEngine get(Context ctx) {
-
-    if (instance == null) {
-        instance = new iDoctorEngine(ctx.getApplicationContext());
-    }
-
-    return instance;
-}
-
 // ============================================================
 // DEBUG POWER SUPPLY DUMP
 // ============================================================
