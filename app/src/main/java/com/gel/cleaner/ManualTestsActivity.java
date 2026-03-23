@@ -8629,18 +8629,18 @@ private void playAnswerCheckWav() {
 // ============================================================
 // STAGE 4 — HUMAN CONFIRMATION (FINAL • COMPILE SAFE)
 // ============================================================
-private void showAnswerCheckConfirmation() {
-    
-final boolean gr = AppLang.isGreek(this);
+private void showAnswerCheckConfirmation(Runnable onAnswered) {
 
-    // 🔊 ΟΔΗΓΙΕΣ ΑΠΟ SPEAKER
-    AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
+    final boolean gr = AppLang.isGreek(this);
+
+    // 🔊 Speaker mode
+    AudioManager am =
+            (AudioManager) getSystemService(AUDIO_SERVICE);
+
     if (am != null) {
         try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
         try { am.setSpeakerphoneOn(true); } catch (Throwable ignore) {}
     }
-
-    final AtomicBoolean answered = new AtomicBoolean(false);
 
     runOnUiThread(() -> {
 
@@ -8649,6 +8649,7 @@ final boolean gr = AppLang.isGreek(this);
                         this,
                         android.R.style.Theme_Material_Dialog_NoActionBar
                 );
+
         b.setCancelable(false);
 
         LinearLayout root = new LinearLayout(this);
@@ -8662,13 +8663,18 @@ final boolean gr = AppLang.isGreek(this);
         root.setBackground(bg);
 
         TextView msg = new TextView(this);
-        msg.setText(gr
-                ? "Με άκουσες καθαρά; Τσέκαρε την απάντησή σου."
-                : "Did you hear me clearly? Check your answer.");
+
+        final String text =
+                gr
+                        ? "Με άκουσες καθαρά; Τσέκαρε την απάντησή σου."
+                        : "Did you hear me clearly? Check your answer.";
+
+        msg.setText(text);
         msg.setTextColor(0xFF39FF14);
         msg.setTextSize(15f);
         msg.setGravity(Gravity.CENTER);
         msg.setPadding(0, 0, 0, dp(18));
+
         root.addView(msg);
 
         LinearLayout btnRow = new LinearLayout(this);
@@ -8680,6 +8686,7 @@ final boolean gr = AppLang.isGreek(this);
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 );
+
         lp.setMargins(dp(12), dp(8), dp(12), dp(8));
 
         Button noBtn = new Button(this);
@@ -8691,6 +8698,7 @@ final boolean gr = AppLang.isGreek(this);
         noBg.setColor(0xFF8B0000);
         noBg.setCornerRadius(dp(10));
         noBg.setStroke(dp(3), 0xFFFFD700);
+
         noBtn.setBackground(noBg);
         noBtn.setLayoutParams(lp);
 
@@ -8703,52 +8711,88 @@ final boolean gr = AppLang.isGreek(this);
         yesBg.setColor(0xFF0B5F3B);
         yesBg.setCornerRadius(dp(10));
         yesBg.setStroke(dp(3), 0xFFFFD700);
+
         yesBtn.setBackground(yesBg);
         yesBtn.setLayoutParams(lp);
 
         btnRow.addView(noBtn);
         btnRow.addView(yesBtn);
+
         root.addView(btnRow);
 
         b.setView(root);
-b.setCancelable(false);
 
-final AlertDialog d = b.create();
+        final AlertDialog d = b.create();
 
-if (d.getWindow() != null) {
-    d.getWindow().setBackgroundDrawable(
-            new ColorDrawable(Color.TRANSPARENT)
-    );
+        if (d.getWindow() != null) {
+            d.getWindow().setBackgroundDrawable(
+                    new ColorDrawable(Color.TRANSPARENT)
+            );
+        }
+
+        d.setOnDismissListener(dialog -> {
+            try { AppTTS.stop(); } catch (Throwable ignore) {}
+        });
+
+        if (!isFinishing() && !isDestroyed()) {
+            d.show();
+        }
+
+        // 🔊 TTS (safe)
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+            if (!d.isShowing()) return;
+
+            try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+            if (!AppTTS.isMuted(this)) {
+
+                AppTTS.ensureSpeak(
+                        this,
+                        text
+                );
+            }
+
+        }, 300);
+
+        // NO
+        noBtn.setOnClickListener(v -> {
+
+            lastAnswerHeardClearly = false;
+
+            try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+            d.dismiss();
+
+            if (onAnswered != null)
+                onAnswered.run();
+        });
+
+        // YES
+        yesBtn.setOnClickListener(v -> {
+
+            lastAnswerHeardClearly = true;
+
+            try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+            d.dismiss();
+
+            if (onAnswered != null)
+                onAnswered.run();
+        });
+
+    });
 }
-
-// Σταματά TTS σε ΟΠΟΙΟΔΗΠΟΤΕ κλείσιμο
-d.setOnDismissListener(dialog -> {
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-});
-
-if (!isFinishing() && !isDestroyed()) {
-    d.show();
-}
-
-// NO
-noBtn.setOnClickListener(v -> {
-    lastAnswerHeardClearly = false;
-    answered.set(true);
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-    d.dismiss();
-});
-
-// YES
-yesBtn.setOnClickListener(v -> {
-    lastAnswerHeardClearly = true;   // ✅ ΣΩΣΤΟ
-    answered.set(true);
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-    d.dismiss();
-});
 
 // 🔊 TTS μετά το show
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (d.isShowing() && !AppTTS.isMuted(this)) {
+
+    if (!d.isShowing()) return;
+
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+    if (!AppTTS.isMuted(this)) {
+
         AppTTS.ensureSpeak(
                 this,
                 gr
@@ -8756,21 +8800,8 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         : "Did you hear me clearly? Check your answer."
         );
     }
-}, 500);
-});
 
-    // ==========================
-    // WAIT FOR USER ANSWER (BACKGROUND)
-    // ==========================
-    long waitUntil = SystemClock.uptimeMillis() + 8000;
-    while (!answered.get() && SystemClock.uptimeMillis() < waitUntil) {
-        SystemClock.sleep(50);
-    }
-
-    if (!answered.get()) {
-        lastAnswerHeardClearly = false;
-    }
-}
+}, 300);
 
 /* ============================================================
    LAB 5 — Vibration Motor Test
@@ -25574,39 +25605,28 @@ logInfo(gr
         : "Device evaluation");
 logLine();
 
+if (batteryScore >= 0 || batteryHealth >= 0) {
 
-if (batteryScore >= 0) {
+    float finalHealth;
 
-    // REAL HEALTH %
     if (batteryHealth >= 0f) {
-
-        logLabelValue(
-                gr ? "Πραγματική υγεία μπαταρίας"
-                   : "Battery real health",
-                String.format(
-                        Locale.US,
-                        "%.0f%%",
-                        batteryHealth
-                )
-        );
-
+        finalHealth = batteryHealth;
+    } else {
+        finalHealth = batteryScore;
     }
 
-    // LAB14 SCORE
     logLabelValue(
-            gr ? "Υγεία μπαταρίας (LAB 14)"
-               : "Battery health (LAB 14)",
+            gr ? "Υγεία μπαταρίας"
+               : "Battery health",
             String.format(
                     Locale.US,
                     "%.0f%%",
-                    batteryScore
+                    finalHealth
             )
     );
 
-    // CONTRIBUTION
-    logLabelValue(
-            gr ? "Συμβολή μπαταρίας"
-               : "Battery contribution",
+    // contribution
+    
             String.format(
                     Locale.US,
                     "%.1f / 20",
@@ -25614,7 +25634,6 @@ if (batteryScore >= 0) {
             )
     );
 }
-
 
 logLabelOkValue(
         gr ? "Συνολική βαθμολογία συσκευής"
