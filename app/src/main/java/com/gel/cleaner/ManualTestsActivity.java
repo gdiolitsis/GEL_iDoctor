@@ -3877,12 +3877,15 @@ if (end == null) {
     return;
 }
 
-long endMah = end.chargeNowMah;
+long endMah = end.battery.chargeNowMah;
 
 float tempEnd = getBatteryTempEngineSafe();
 
 if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
-    tempEnd = end.batteryTempC;
+    float t = getBatteryTempEngineSafe();
+if (!Float.isNaN(t)) {
+    tempEnd = t;
+}
 }
 
 float vEnd = getBatteryVoltageFiltered();
@@ -13300,7 +13303,7 @@ if (isChargingNowSafe()) {
     return;
 }
 
-if (Float.isNaN(start.battery.temperature)) {
+if (Float.isNaN(start.battery.batteryTempC)) {
     logWarn(gr
             ? "Μη διαθέσιμη θερμοκρασία μπαταρίας"
             : "Battery temperature unavailable");
@@ -13318,7 +13321,7 @@ final long cycles = start.battery.cycleCount;
 float tempStart = getBatteryTempEngineSafe();
 
 if (Float.isNaN(tempStart) || tempStart <= 0f) {
-    tempStart = start.battery.temperature;
+    tempStart = start.battery.batteryTempC;
 }
 
 // ----------------------------------------------------
