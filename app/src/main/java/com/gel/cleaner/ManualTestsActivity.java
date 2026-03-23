@@ -15023,18 +15023,12 @@ if (!Float.isNaN(voltageStart) &&
 
     if ((Float.isNaN(currentNow) || Math.abs(currentNow) < 50f) &&
     drainMah > 0 && dtMs > 0) {
-    
+
     float mahPerSec =
             (float) drainMah / (dtMs / 1000f);
 
     currentNow =
             mahPerSec * 3600f;
-
-    logLabelValue(
-            "DBG",
-            "fallbackCurrent=" + currentNow
-    );
-
 }
 
     // ---------------------------------------------
