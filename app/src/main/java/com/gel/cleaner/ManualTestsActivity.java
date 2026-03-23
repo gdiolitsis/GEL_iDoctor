@@ -8735,73 +8735,54 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
         });
 
         if (!isFinishing() && !isDestroyed()) {
-            d.show();
-        }
-
-        // 🔊 TTS (safe)
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-
-            if (!d.isShowing()) return;
-
-            try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-            if (!AppTTS.isMuted(this)) {
-
-                AppTTS.ensureSpeak(
-                        this,
-                        text
-                );
-            }
-
-        }, 300);
-
-        // NO
-        noBtn.setOnClickListener(v -> {
-
-            lastAnswerHeardClearly = false;
-
-            try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-            d.dismiss();
-
-            if (onAnswered != null)
-                onAnswered.run();
-        });
-
-        // YES
-        yesBtn.setOnClickListener(v -> {
-
-            lastAnswerHeardClearly = true;
-
-            try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-            d.dismiss();
-
-            if (onAnswered != null)
-                onAnswered.run();
-        });
-
-    });
+    d.show();
 }
 
-// 🔊 TTS μετά το show
+// 🔊 TTS (safe)
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
     if (!d.isShowing()) return;
 
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 
-    if (!AppTTS.isMuted(this)) {
+    if (!AppTTS.isMuted(ManualTestsActivity.this)) {
 
         AppTTS.ensureSpeak(
-                this,
-                gr
-                        ? "Με άκουσες καθαρά; Τσέκαρε την απάντησή σου."
-                        : "Did you hear me clearly? Check your answer."
+                ManualTestsActivity.this,
+                text
         );
     }
 
 }, 300);
+
+// NO
+noBtn.setOnClickListener(v -> {
+
+    lastAnswerHeardClearly = false;
+
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+    d.dismiss();
+
+    if (onAnswered != null)
+        onAnswered.run();
+});
+
+// YES
+yesBtn.setOnClickListener(v -> {
+
+    lastAnswerHeardClearly = true;
+
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+    d.dismiss();
+
+    if (onAnswered != null)
+        onAnswered.run();
+});
+
+});
+}
 
 /* ============================================================
    LAB 5 — Vibration Motor Test
