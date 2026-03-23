@@ -16394,6 +16394,10 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
                             }
 
 // main pipeline
+
+final float voltageStartF2 = voltageStart;
+final long startMahF2 = startMah;
+
 lab14LogStressResult(
         gr,
         sagAvg[0],
