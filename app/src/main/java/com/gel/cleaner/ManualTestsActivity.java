@@ -13235,26 +13235,26 @@ private void lab14BatteryHealthStressTest_REAL() {
         lab14BatteryBehaviourWarning = false;
     }
 
-    // --------------------------------------------------
-    // START FLAG
-    // --------------------------------------------------
-    lab14Running = true;
-    lab14Cancelled = false;
+// --------------------------------------------------
+// START FLAG
+// --------------------------------------------------
+lab14Running = true;
+lab14Cancelled = false;
 
-    applyMaxBrightnessAndKeepOn();
+applyMaxBrightnessAndKeepOn();
 
-    // --------------------------------------------------
-    // CHECK CHARGING
-    // --------------------------------------------------
-    if (isChargingNowSafe()) {
+// --------------------------------------------------
+// CHECK CHARGING
+// --------------------------------------------------
+if (isChargingNowSafe()) {
 
-        logError(gr
-                ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
-                : "Device must NOT be charging.");
+    logError(gr
+            ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
+            : "Device must NOT be charging.");
 
-        lab14Running = false;
-        return;
-    }
+    lab14Running = false;
+    return;
+}
 
 // ---------------------------------------
 // ENGINE
@@ -13284,7 +13284,7 @@ if (start == null) {
     return;
 }
 
-if (start.chargeNowMah <= 0) {
+if (start.battery.chargeNowMah <= 0) {
     logError(gr
             ? "Μη διαθέσιμο charge counter"
             : "Charge counter unavailable");
@@ -13292,7 +13292,7 @@ if (start.chargeNowMah <= 0) {
     return;
 }
 
-if (start.charging) {
+if (isChargingNowSafe()) {
     logError(gr
             ? "Η δοκιμή απαιτεί να μην φορτίζει"
             : "Device must NOT be charging");
@@ -13300,27 +13300,26 @@ if (start.charging) {
     return;
 }
 
-if (Float.isNaN(start.batteryTempC)) {
+if (Float.isNaN(start.battery.temperature)) {
     logWarn(gr
             ? "Μη διαθέσιμη θερμοκρασία μπαταρίας"
             : "Battery temperature unavailable");
 }
 
-if (start.chargeFullMah <= 0) {
+if (start.battery.chargeFullMah <= 0) {
     logWarn(gr
             ? "Μη διαθέσιμη πλήρης χωρητικότητα"
             : "Full capacity unavailable");
 }
 
-final long startMah = start.chargeNowMah;
-final long cycles = start.cycleCount;
+final long startMah = start.battery.chargeNowMah;
+final long cycles = start.battery.cycleCount;
 
 float tempStart = getBatteryTempEngineSafe();
 
 if (Float.isNaN(tempStart) || tempStart <= 0f) {
-    tempStart = start.batteryTempC;
+    tempStart = start.battery.temperature;
 }
-
 
 // ----------------------------------------------------
 // VOLTAGE BASELINE
@@ -13361,6 +13360,10 @@ final long baselineFullMah =
 
 final long t0 = SystemClock.elapsedRealtime();
 
+boolean rooted = eng.isDeviceRooted();
+Float cpuTempStart = readCpuTempSafe();
+Float gpuTempStart = readGpuTempSafe();
+
         // ------------------------------------------------------------
         // 2) HEADER LOGS - START CONDITIONS
         // ------------------------------------------------------------
@@ -13389,6 +13392,7 @@ final long t0 = SystemClock.elapsedRealtime();
 
             return;
         }
+        
 
             appendHtml("<br>");
             logLine();
@@ -14975,11 +14979,12 @@ if (!Float.isNaN(voltageStart) &&
                 engC.readFullSnapshot();
 
         if (snapC != null &&
-            snapC.battery != null &&
-            snapC.battery.currentNowMa != 0f) {
+    snapC.battery != null &&
+    !Float.isNaN(snapC.battery.currentMa) &&
+    snapC.battery.currentMa != 0f) {
 
-            currentNow = snapC.battery.currentNowMa;
-        }
+    currentNow = snapC.battery.currentMa;
+}
     }
 
 
@@ -15114,7 +15119,7 @@ if (Float.isNaN(c1) || Math.abs(c1) < 50f) {
         snap.battery != null &&
         !Float.isNaN(snap.battery.currentMa) && snap.battery.currentMa != 0f) {
 
-        c1 = snap.battery.currentNowMa;
+        c1 = snap.battery.currentMa;
     }
 }
 
@@ -15134,7 +15139,7 @@ if (Float.isNaN(c2) || Math.abs(c2) < 50f) {
         snap.battery != null &&
         !Float.isNaN(snap.battery.currentMa) && snap.battery.currentMa != 0f) {
 
-        c2 = snap.battery.currentNowMa;
+        c2 = snap.battery.currentMa;
     }
 }
 
@@ -15154,7 +15159,7 @@ if (Float.isNaN(c3) || Math.abs(c3) < 50f) {
         snap.battery != null &&
         !Float.isNaN(snap.battery.currentMa) && snap.battery.currentMa != 0f) {
 
-        c3 = snap.battery.currentNowMa;
+        c3 = snap.battery.currentMa;
     }
 }
 
