@@ -56,16 +56,42 @@ import java.util.Map;
 
 public final class iDoctorEngine {
 
+    private static iDoctorEngine instance;
+
     private final Context ctx;
 
     private iDoctorDeviceProfiles.DeviceProfile profile;
 
+
+    // -------------------------------------------------
+    // SINGLETON GET
+    // -------------------------------------------------
+
+    public static iDoctorEngine get(Context context) {
+
+        if (instance == null) {
+
+            instance =
+                    new iDoctorEngine(
+                            context.getApplicationContext()
+                    );
+        }
+
+        return instance;
+    }
+
+
+    // -------------------------------------------------
+    // CONSTRUCTOR
+    // -------------------------------------------------
+
     public iDoctorEngine(Context context) {
 
-    this.ctx = context.getApplicationContext();
+        this.ctx = context.getApplicationContext();
 
-    profile = iDoctorDeviceProfiles.detectProfile();
-}
+        profile =
+                iDoctorDeviceProfiles.detectProfile();
+    }
 
     // ============================================================
     // GLOBAL SNAPSHOT
@@ -2419,33 +2445,6 @@ private String resolveFuelGaugeNode() {
     return null;
 }
 
-private long readFuelGaugeValue(String file) {
-
-    String node =
-            resolveFuelGaugeNode();
-
-    if (node != null) {
-
-        long v =
-                readSysLongRootAware(
-                        node + "/" + file
-                );
-
-        if (v > 0)
-            return v;
-    }
-
-    // fallback → scan all nodes
-
-    long auto =
-            readBatteryValueAuto(file);
-
-    if (auto > 0)
-        return auto;
-
-    return -1;
-}
-
 // ============================================================
 // SYSFS POWER SUPPLY SCAN
 // ============================================================
@@ -2488,36 +2487,6 @@ private String[] getPowerSupplyNodes() {
     } catch (Throwable ignore) {}
 
     return null;
-}
-
-// ============================================================
-// AUTO READ FROM ANY POWER NODE
-// ============================================================
-
-private long readBatteryValueAuto(String file) {
-
-    String[] nodes =
-            getPowerSupplyNodes();
-
-    if (nodes == null)
-        return -1;
-
-    for (String n : nodes) {
-
-        try {
-
-            long v =
-                    readSysLongRootAware(
-                            n + "/" + file
-                    );
-
-            if (v > 0)
-                return v;
-
-        } catch (Throwable ignore) {}
-    }
-
-    return -1;
 }
 
 // ============================================================
@@ -2615,7 +2584,16 @@ private long readFuelGaugeValue(String file) {
     return -1;
 }
 
+private static iDoctorEngine instance;
 
+public static iDoctorEngine get(Context ctx) {
+
+    if (instance == null) {
+        instance = new iDoctorEngine(ctx.getApplicationContext());
+    }
+
+    return instance;
+}
 
 // ============================================================
 // DEBUG POWER SUPPLY DUMP
