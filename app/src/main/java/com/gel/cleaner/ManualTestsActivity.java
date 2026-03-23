@@ -15070,6 +15070,12 @@ if (!Float.isNaN(voltageStart) &&
 
     currentNow =
             mahPerSec * 3600f;
+
+    logLabelValue(
+            "DBG",
+            "fallbackCurrent=" + currentNow
+    );
+
 }
 
     // ---------------------------------------------
@@ -16714,23 +16720,22 @@ lab14Cancelled = false;
 
 if (wasCancelled) return;
 
-}); 
+});   // close runOnUiThread
 
-    } catch (Throwable t) {
+} catch (Throwable t) {
 
-        lab14StopAllStress();
+    lab14StopAllStress();
 
-        try {
-            lab14CleanupUI();
-        } catch (Throwable ignore) {}
+    try {
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
 
-        restoreBrightnessAndKeepOn();
+    restoreBrightnessAndKeepOn();
 
-        lab14Cancelled = true;
-        lab14Running = false;
-        lab14PopupShown = false;
-        lab14AdvisoryShown = false;
-    }
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
 
 }
 
