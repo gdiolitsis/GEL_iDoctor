@@ -25606,14 +25606,6 @@ if (batteryScore >= 0 || batteryHealth >= 0) {
             )
     );
 
-    // contribution
-    
-            String.format(
-                    Locale.US,
-                    "%.1f / 20",
-                    batteryContribution
-            )
-    );
 }
 
 logLabelOkValue(
