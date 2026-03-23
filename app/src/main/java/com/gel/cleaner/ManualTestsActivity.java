@@ -7899,6 +7899,7 @@ if (bottomOk && topOk) {
 private volatile boolean lastAnswerHeardClearly = false;
 
 private void lab4MicPro() {
+	
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -8439,38 +8440,6 @@ runOnUiThread(() -> {
     }
 });
 
-// ==========================
-// WAIT WITH TIMEOUT (MAX 4s)
-// ==========================
-long maxWait = SystemClock.uptimeMillis() + 4000;
-
-while (AppTTS.isSpeaking()
-        && SystemClock.uptimeMillis() < maxWait) {
-
-    SystemClock.sleep(80);
-}
-
-// μικρό grace delay
-SystemClock.sleep(250);
-
-// Κλείσιμο dialog
-runOnUiThread(() -> {
-    try {
-        AlertDialog dlg = dialogRef.get();
-        if (dlg != null && dlg.isShowing()) {
-            dlg.dismiss();
-        }
-    } catch (Throwable ignore) {}
-});
-
-// 🔁 Επιστροφή σε call earpiece
-routeToCallEarpiece();
-
-// ====================================================
-            // STAGE 3 — WAV (EARPIECE ONLY)
-            // ====================================================
-            playAnswerCheckWav();
-
         } catch (Throwable t) {
 
             appendHtml("<br>");
@@ -8710,18 +8679,23 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 // NO
 noBtn.setOnClickListener(v -> {
 
+    if (!d.isShowing()) return;
+
     lastAnswerHeardClearly = false;
 
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 
     d.dismiss();
 
-    if (onAnswered != null)
+    if (onAnswered != null) {
         onAnswered.run();
+    }
 });
 
 // YES
 yesBtn.setOnClickListener(v -> {
+
+    if (!d.isShowing()) return;
 
     lastAnswerHeardClearly = true;
 
@@ -8729,8 +8703,9 @@ yesBtn.setOnClickListener(v -> {
 
     d.dismiss();
 
-    if (onAnswered != null)
+    if (onAnswered != null) {
         onAnswered.run();
+    }
 });
 
 });
