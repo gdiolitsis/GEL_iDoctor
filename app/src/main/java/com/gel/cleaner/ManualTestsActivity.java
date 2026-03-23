@@ -15123,6 +15123,7 @@ if (!Float.isNaN(currentNow) &&
         }
     }
 }
+}
 
 // ----------------------------------------------------
 // ENERGY EFFICIENCY
@@ -15242,31 +15243,33 @@ if (!Float.isNaN(c1) &&
     }
 }
 
-                        if (!Float.isNaN(tempStart) &&
-                            !Float.isNaN(tempEnd)) {                           
+// ----------------------------------------------------
+// THERMAL IMPEDANCE
+// ----------------------------------------------------
 
-                            if (!Float.isNaN(currentNow)) {
+if (!Float.isNaN(tempStart) &&
+    !Float.isNaN(tempEnd) &&
+    !Float.isNaN(currentNow)) {
 
-                                float currentAmp =
-                                        Math.abs(currentNow) / 1000f;
+    float currentAmp =
+            Math.abs(currentNow) / 1000f;
 
-                                if (currentAmp > 0.2f &&
-                                    currentAmp < 6f) {
+    if (currentAmp > 0.2f &&
+        currentAmp < 6f) {
 
-                                    float tempRise =
-                                            Math.max(0f, tempEnd - tempStart);
+        float tempRise =
+                Math.max(0f, tempEnd - tempStart);
 
-                                    if (tempRise > 0.2f) {
+        if (tempRise > 0.2f) {
 
-                                        float ti = tempRise / currentAmp;
+            float ti = tempRise / currentAmp;
 
-                                        if (ti > 0f && ti < 40f) {
-                                            thermalImpedance[0] = ti;
-                                        }
-                                    }
-                                }
-                            }
-                        }
+            if (ti > 0f && ti < 40f) {
+                thermalImpedance[0] = ti;
+            }
+        }
+    }
+}
 
 // ----------------------------------------------------
 // ADVANCED DETECTORS
