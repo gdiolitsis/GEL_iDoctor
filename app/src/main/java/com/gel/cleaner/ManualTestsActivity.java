@@ -16093,6 +16093,8 @@ else
                         final int finalScoreF = finalScore;
                         final String finalLabelF = finalLabel;
                         final String healthClassF = healthClass;
+                        final float voltageStartFinal = voltageStart;
+                        final long startMahFinal = startMah;
                         
                         runOnUiThread(() -> {
 
