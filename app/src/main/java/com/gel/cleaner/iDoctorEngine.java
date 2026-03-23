@@ -56,17 +56,6 @@ import java.util.Map;
 
 public final class iDoctorEngine {
 
-    private static iDoctorEngine instance;
-
-    public static synchronized iDoctorEngine get(Context ctx) {
-
-    if (instance == null) {
-        instance = new iDoctorEngine(ctx.getApplicationContext());
-    }
-
-    return instance;
-}
-
     private final Context ctx;
 
     private iDoctorDeviceProfiles.DeviceProfile profile;
@@ -150,14 +139,21 @@ public final class iDoctorEngine {
     }
 
     public BatterySnapshot readBatterySnapshot() {
-        BatterySnapshot bi = new BatterySnapshot();
-        bi.rooted = isDeviceRooted();
 
-        try {
-            Intent i = ctx.registerReceiver(
-                    null,
-                    new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-            );
+    BatterySnapshot bi = new BatterySnapshot();
+
+    bi.rooted = isDeviceRooted();
+
+    if (bi.rooted) {
+        debugDumpPowerSupply();
+    }
+
+    try {
+
+        Intent i = ctx.registerReceiver(
+                null,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        );
 
             if (i != null) {
                 bi.level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
@@ -208,89 +204,249 @@ public final class iDoctorEngine {
 
 if (bi.rooted) {
 
-    String designPath = readPathWithProfile(
-            "/sys/class/power_supply/battery/charge_full_design",
-            null
-    );
+    String[] designPaths = {
 
-    bi.chargeDesignMah = normalizeMah(
-            readSysLongRootAware(designPath)
-    );
+        "/sys/class/power_supply/battery/charge_full_design",
+        "/sys/class/power_supply/bms/charge_full_design",
+        "/sys/class/power_supply/maxfg/charge_full_design"
+};
 
-    String fullPath = readPathWithProfile(
-            "/sys/class/power_supply/battery/charge_full",
-            profile != null ? profile.batteryChargeFullPath : null
-    );
+long designRaw =
+        readBatteryValueMulti(designPaths);
 
-    bi.chargeFullMah = normalizeMah(
-            readSysLongRootAware(fullPath)
-    );
+bi.chargeDesignMah =
+        normalizeMah(designRaw);
 
-    String nowPath = readPathWithProfile(
-            "/sys/class/power_supply/battery/charge_now",
-            profile != null ? profile.batteryChargeNowPath : null
-    );
+    String[] fullPaths = {
 
-    bi.chargeNowMah = normalizeMah(
-            readSysLongRootAware(nowPath)
-    );
+        "/sys/class/power_supply/battery/charge_full",
+        "/sys/class/power_supply/bms/charge_full",
+        "/sys/class/power_supply/maxfg/charge_full",
+        "/sys/class/power_supply/fg/charge_full",
+
+        profile != null
+                ? profile.batteryChargeFullPath
+                : null
+};
+
+// -----------------------------------------
+// CHARGE FULL (fuel gauge + multi fallback)
+// -----------------------------------------
+
+long fullRaw =
+        readFuelGaugeValue("charge_full");
+
+if (fullRaw <= 0) {
+
+    fullRaw =
+            readBatteryValueMulti(
+                    fullPaths
+            );
+}
+
+bi.chargeFullMah =
+        normalizeMah(fullRaw);
+
+    String[] nowPaths = {
+
+        "/sys/class/power_supply/battery/charge_now",
+        "/sys/class/power_supply/bms/charge_now",
+        "/sys/class/power_supply/maxfg/charge_now",
+        "/sys/class/power_supply/fg/charge_now",
+
+        profile != null
+                ? profile.batteryChargeNowPath
+                : null
+};
+
+// -----------------------------------------
+// CHARGE NOW (fuel gauge + multi fallback)
+// -----------------------------------------
+
+long nowRaw =
+        readFuelGaugeValue("charge_now");
+
+if (nowRaw <= 0) {
+
+    nowRaw =
+            readBatteryValueMulti(
+                    nowPaths
+            );
+}
+
+bi.chargeNowMah =
+        normalizeMah(nowRaw);
 
     bi.cycleCount = readBatteryCycleCountRoot();
 
     bi.internalResistance = readBatteryResistanceRoot();
 
-    String currentPath = readPathWithProfile(
-            "/sys/class/power_supply/battery/current_now",
-            profile != null ? profile.batteryCurrentPath : null
-    );
+    String[] currentPaths = {
 
-    long currentNow = readSysLongRootAware(currentPath);
+        "/sys/class/power_supply/battery/current_now",
+        "/sys/class/power_supply/bms/current_now",
+        "/sys/class/power_supply/maxfg/current_now",
+        "/sys/class/power_supply/fg/current_now",
 
-    float currentMa = normalizeCurrentMa(currentNow);
+        profile != null
+                ? profile.batteryCurrentPath
+                : null
+};
 
-    if (!Float.isNaN(currentMa)) bi.currentMa = currentMa;
+// -----------------------------------------
+// CURRENT READ (fuel gauge + multi fallback)
+// -----------------------------------------
 
-    String voltPath = readPathWithProfile(
-            "/sys/class/power_supply/battery/voltage_now",
-            profile != null ? profile.batteryVoltagePath : null
-    );
+long currentNow =
+        readFuelGaugeValue("current_now");
 
-    long voltageNow = readSysLongRootAware(voltPath);
+if (currentNow == 0) {
 
-    float voltageMv = normalizeVoltageMv(voltageNow);
-
-    if (!Float.isNaN(voltageMv)) bi.voltageMv = voltageMv;
-
-    if (bi.chargeFullMah > 0 || bi.chargeDesignMah > 0) {
-        bi.source = "OEM (root)";
-    }
+    currentNow =
+            readBatteryValueMulti(
+                    currentPaths
+            );
 }
 
-        if (bi.chargeNowMah <= 0) {
-            try {
-                BatteryManager bm =
-                        (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
+float currentMa =
+        normalizeCurrentMa(currentNow);
 
-                if (bm != null) {
-                    long cc = normalizeMah(
-                            bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
+if (!Float.isNaN(currentMa))
+    bi.currentMa = currentMa;
+
+    String[] voltPaths = {
+
+        "/sys/class/power_supply/battery/voltage_now",
+        "/sys/class/power_supply/bms/voltage_now",
+        "/sys/class/power_supply/maxfg/voltage_now",
+        "/sys/class/power_supply/fg/voltage_now",
+
+        profile != null
+                ? profile.batteryVoltagePath
+                : null
+};
+
+// -----------------------------------------
+// VOLTAGE READ (fuel gauge + multi fallback)
+// -----------------------------------------
+
+long voltageNow =
+        readFuelGaugeValue("voltage_now");
+
+if (voltageNow <= 0) {
+
+    voltageNow =
+            readBatteryValueMulti(
+                    voltPaths
+            );
+}
+
+float voltageMv =
+        normalizeVoltageMv(voltageNow);
+
+if (!Float.isNaN(voltageMv))
+    bi.voltageMv = voltageMv;
+
+
+// -----------------------------------------
+
+if (bi.chargeFullMah > 0 ||
+    bi.chargeDesignMah > 0) {
+
+    bi.source = "OEM (root)";
+}
+
+}
+
+if (bi.chargeNowMah <= 0) {
+        	
+// -----------------------------------------
+// TEMP READ (fuel gauge + multi fallback)
+// -----------------------------------------
+
+if (Float.isNaN(bi.batteryTempC) ||
+    bi.batteryTempC <= 0f) {
+
+    String[] tempPaths = {
+
+            "/sys/class/power_supply/battery/temp",
+            "/sys/class/power_supply/bms/temp",
+            "/sys/class/power_supply/maxfg/temp",
+
+            profile != null
+                    ? profile.batteryTempPath
+                    : null
+    };
+
+    long tempRaw =
+            readFuelGaugeValue("temp");
+
+    if (tempRaw <= 0) {
+
+        tempRaw =
+                readBatteryValueMulti(
+                        tempPaths
+                );
+    }
+
+    if (tempRaw > 0) {
+
+        float tempC =
+                normalizeTempC(
+                        String.valueOf(tempRaw)
+                );
+
+        if (!Float.isNaN(tempC))
+            bi.batteryTempC = tempC;
+    }
+}
+        	
+// --------------------------------------------------
+// FALLBACK VOLTAGE / CURRENT / TEMP (no root)
+// --------------------------------------------------
+
+try {
+
+    BatteryManager bm =
+            (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
+
+    if (bm != null) {
+
+        if (Float.isNaN(bi.voltageMv) || bi.voltageMv <= 0) {
+
+            Intent i = ctx.registerReceiver(
+                    null,
+                    new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+            );
+
+            if (i != null) {
+
+                int v = i.getIntExtra(
+                        BatteryManager.EXTRA_VOLTAGE,
+                        -1
+                );
+
+                if (v > 0)
+                    bi.voltageMv = v;
+            }
+        }
+
+        if (Float.isNaN(bi.currentMa)) {
+
+            long cur =
+                    bm.getLongProperty(
+                            BatteryManager.BATTERY_PROPERTY_CURRENT_NOW
                     );
-                    if (cc > 0) {
-                        bi.chargeNowMah = cc;
-                        bi.source = "Charge Counter";
 
-                        if (bi.level > 0) {
-                            long est = (long) (cc / (bi.level / 100f));
-                            if (est > 0) bi.chargeFullMah = est;
-                        }
-                    }
+            float ma = normalizeCurrentMa(cur);
 
-                    float current = normalizeCurrentMa(
-                            bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
-                    );
-                    if (!Float.isNaN(current)) bi.currentMa = current;
-                }
-            } catch (Throwable ignore) { }
+            if (!Float.isNaN(ma))
+                bi.currentMa = ma;
+        }
+
+    }
+
+} catch (Throwable ignore) { }
         }
 
         return bi;
@@ -1942,23 +2098,27 @@ if (!out.battery.valid) {
     private long readBatteryCycleCountRoot() {
 
     String[] paths = {
-            "/sys/class/power_supply/battery/cycle_count",
-            "/sys/class/power_supply/bms/cycle_count",
-            "/sys/class/power_supply/battery/bms/cycle_count",
-            "/sys/class/power_supply/battery/charge_cycles"
-    };
+
+        "/sys/class/power_supply/battery/cycle_count",
+        "/sys/class/power_supply/bms/cycle_count",
+        "/sys/class/power_supply/maxfg/cycle_count",
+        "/sys/class/power_supply/fg/cycle_count",
+
+        profile != null
+                ? profile.batteryCyclePath
+                : null
+};
 
     for (String p : paths) {
-        long v = readSysLongRootAware(p);
-        if (v > 0) return v;
-    }
 
-    // PROFILE FALLBACK
-    if (profile != null && profile.batteryCyclePath != null) {
+        if (p == null)
+            continue;
 
-        long v = readSysLongRootAware(profile.batteryCyclePath);
+        long v =
+                readSysLongRootAware(p);
 
-        if (v > 0) return v;
+        if (v > 0)
+            return v;
     }
 
     return -1;
@@ -2213,4 +2373,300 @@ private String readPathWithProfile(
 
     return null;
 }
+
+// ============================================================
+// FUEL GAUGE RESOLVER
+// ============================================================
+
+private String fuelGaugeNode = null;
+
+private String resolveFuelGaugeNode() {
+
+    if (fuelGaugeNode != null)
+        return fuelGaugeNode;
+
+    String[] nodes = {
+
+            "/sys/class/power_supply/battery",
+            "/sys/class/power_supply/bms",
+            "/sys/class/power_supply/maxfg",
+            "/sys/class/power_supply/fg"
+    };
+
+    for (String n : nodes) {
+
+        try {
+
+            File f = new File(n + "/voltage_now");
+
+            if (f.exists()) {
+
+                long v =
+                        readSysLongRootAware(
+                                n + "/voltage_now"
+                        );
+
+                if (v > 0) {
+
+                    fuelGaugeNode = n;
+                    return fuelGaugeNode;
+                }
+            }
+
+        } catch (Throwable ignore) {}
+    }
+
+    return null;
+}
+
+private long readFuelGaugeValue(String file) {
+
+    String node =
+            resolveFuelGaugeNode();
+
+    if (node != null) {
+
+        long v =
+                readSysLongRootAware(
+                        node + "/" + file
+                );
+
+        if (v > 0)
+            return v;
+    }
+
+    // fallback → scan all nodes
+
+    long auto =
+            readBatteryValueAuto(file);
+
+    if (auto > 0)
+        return auto;
+
+    return -1;
+}
+
+// ============================================================
+// SYSFS POWER SUPPLY SCAN
+// ============================================================
+
+private String[] cachedPowerNodes;
+
+private String[] getPowerSupplyNodes() {
+
+    if (cachedPowerNodes != null)
+        return cachedPowerNodes;
+
+    try {
+
+        File dir =
+                new File("/sys/class/power_supply");
+
+        File[] list = dir.listFiles();
+
+        if (list == null)
+            return null;
+
+        ArrayList<String> nodes =
+                new ArrayList<>();
+
+        for (File f : list) {
+
+            if (f == null)
+                continue;
+
+            String p = f.getAbsolutePath();
+
+            nodes.add(p);
+        }
+
+        cachedPowerNodes =
+                nodes.toArray(new String[0]);
+
+        return cachedPowerNodes;
+
+    } catch (Throwable ignore) {}
+
+    return null;
+}
+
+// ============================================================
+// AUTO READ FROM ANY POWER NODE
+// ============================================================
+
+private long readBatteryValueAuto(String file) {
+
+    String[] nodes =
+            getPowerSupplyNodes();
+
+    if (nodes == null)
+        return -1;
+
+    for (String n : nodes) {
+
+        try {
+
+            long v =
+                    readSysLongRootAware(
+                            n + "/" + file
+                    );
+
+            if (v > 0)
+                return v;
+
+        } catch (Throwable ignore) {}
+    }
+
+    return -1;
+}
+
+// ============================================================
+// MULTI PATH BATTERY READ
+// ============================================================
+
+private long readBatteryValueMulti(String[] paths) {
+
+    if (paths == null)
+        return -1;
+
+    for (String p : paths) {
+
+        if (p == null)
+            continue;
+
+        long v = readSysLongRootAware(p);
+
+        if (v > 0)
+            return v;
+    }
+
+    return -1;
+}
+
+// ============================================================
+// AUTO READ FROM ANY POWER NODE
+// ============================================================
+
+private long readBatteryValueAuto(String file) {
+
+    try {
+
+        File dir =
+                new File("/sys/class/power_supply");
+
+        File[] list = dir.listFiles();
+
+        if (list == null)
+            return -1;
+
+        for (File f : list) {
+
+            if (f == null)
+                continue;
+
+            try {
+
+                String path =
+                        f.getAbsolutePath()
+                        + "/" + file;
+
+                long v =
+                        readSysLongRootAware(path);
+
+                if (v > 0)
+                    return v;
+
+            } catch (Throwable ignore) {}
+        }
+
+    } catch (Throwable ignore) {}
+
+    return -1;
+}
+
+// ============================================================
+// FUEL GAUGE READ (node + auto scan)
+// ============================================================
+
+private long readFuelGaugeValue(String file) {
+
+    String node =
+            resolveFuelGaugeNode();
+
+    if (node != null) {
+
+        long v =
+                readSysLongRootAware(
+                        node + "/" + file
+                );
+
+        if (v > 0)
+            return v;
+    }
+
+    // fallback → scan all nodes
+
+    long auto =
+            readBatteryValueAuto(file);
+
+    if (auto > 0)
+        return auto;
+
+    return -1;
+}
+
+
+
+// ============================================================
+// DEBUG POWER SUPPLY DUMP
+// ============================================================
+
+public void debugDumpPowerSupply() {
+
+    try {
+
+        String[] nodes =
+                getPowerSupplyNodes();
+
+        if (nodes == null)
+            return;
+
+        for (String n : nodes) {
+
+            log("PS NODE: " + n);
+
+            String[] files = {
+
+                    "voltage_now",
+                    "current_now",
+                    "charge_now",
+                    "charge_full",
+                    "temp",
+                    "cycle_count",
+                    "capacity",
+                    "status"
+            };
+
+            for (String f : files) {
+
+                try {
+
+                    long v =
+                            readSysLongRootAware(
+                                    n + "/" + f
+                            );
+
+                    log("   " + f + " = " + v);
+
+                } catch (Throwable ignore) {}
+            }
+        }
+
+    } catch (Throwable ignore) {}
+}
+
+private void log(String s) {
+    android.util.Log.d("iDoctorEngine", s);
+}
+
 }
