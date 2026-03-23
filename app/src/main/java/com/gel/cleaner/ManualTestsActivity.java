@@ -14696,6 +14696,16 @@ if (!Float.isNaN(vStart[0]) &&
 
     final Lab14Engine.GelBatterySnapshot snapEnd =
             engine.readSnapshot();
+            
+            if (snapEnd != null) {
+
+    logDebug(
+            "SNAP END | "
+            + "C=" + snapEnd.chargeNowMah
+            + " | T=" + snapEnd.temperature
+    );
+
+}
 
     if (snapEnd == null) {
         logError(gr
@@ -14710,6 +14720,10 @@ if (!Float.isNaN(vStart[0]) &&
                 : "Unable to read final charge counter.");
         return;
     }
+    
+    logDebug(
+        "END MAH = " + snapEnd.chargeNowMah
+);
 
     final long endMah = snapEnd.chargeNowMah;
     float tempEnd = getBatteryTempEngineSafe();
@@ -14861,6 +14875,8 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
     if (!lab14Cancelled) {
 
         float vr = getBatteryVoltageFiltered();
+        
+        logDebug("VR = " + vr);
 
         if (Float.isNaN(vr) || vr <= 0f) {
 
@@ -14869,6 +14885,19 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
 
             iDoctorEngine.FullSnapshot snapV =
                     engV.readFullSnapshot();
+                    
+                    if (snapV != null &&
+    snapV.battery != null) {
+
+    logDebug(
+            "FULL SNAP | "
+            + "V=" + snapV.battery.voltageMv
+            + " | I=" + snapV.battery.currentMa
+            + " | C=" + snapV.battery.chargeNowMah
+            + " | T=" + snapV.battery.temperature
+    );
+
+}
 
             if (snapV != null &&
                 snapV.battery != null &&
@@ -14999,6 +15028,8 @@ if (!Float.isNaN(voltageStart) &&
     // ---------- current fallback ----------
 
     currentNow = getBatteryCurrentNowSafe();
+    
+    logDebug("CURRENT NOW = " + currentNow);
 
     if (Float.isNaN(currentNow) ||
         Math.abs(currentNow) < 50f) {
