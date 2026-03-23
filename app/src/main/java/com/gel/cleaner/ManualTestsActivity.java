@@ -8623,7 +8623,9 @@ private void playAnswerCheckWav() {
 
     // ❗ ΔΕΝ αλλάζουμε route εδώ
     // συνεχίζουμε με confirmation
-    showAnswerCheckConfirmation();
+    showAnswerCheckConfirmation(() -> {
+
+});
 }
 
 // ============================================================
