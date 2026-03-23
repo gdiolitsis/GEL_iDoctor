@@ -8471,60 +8471,6 @@ routeToCallEarpiece();
             // ====================================================
             playAnswerCheckWav();
 
-            // ====================================================
-            // RESULT — EARPIECE
-            // ====================================================
-            appendHtml("<br>");
-            logInfo(gr ? "LAB 4 PRO — Ποιότητα συνομιλίας ακουστικού" : "LAB 4 PRO — Earpiece Call quality");
-            logLine();
-
-            if (lastAnswerHeardClearly) {
-
-                logLabelOkValue(
-                        gr ? "Αποτέλεσμα" : "Result",
-                        gr
-                                ? "Σύμφωνα με τη δήλωση χρήστη, το ακουστικό αποδίδει καθαρό ήχο."
-                                : "According to the user's declaration, the earpiece delivers clear audio."
-                );
-
-                logLabelOkValue(
-                        gr ? "Σημείωση" : "Note",
-                        gr
-                                ? "Αν παρουσιαστούν προβλήματα σε πραγματικές συνομιλίες, "
-                                + "ενδέχεται να οφείλονται στο δίκτυο, στον codec ή "
-                                + "στο μικρόφωνο / ακουστικό της άλλης συσκευής."
-                                : "If issues occur during real calls, they may be related to network conditions, "
-                                + "codec selection, or the microphone / earpiece of the other party."
-                );
-
-            } else {
-
-                logLabelWarnValue(
-                        gr ? "Αποτέλεσμα" : "Result",
-                        gr
-                                ? "Σύμφωνα με τη δήλωση χρήστη, ο ήχος από το ακουστικό δεν ήταν καθαρός."
-                                : "According to the user's declaration, the earpiece audio was not clear."
-                );
-
-                logLabelWarnValue(
-        gr ? "Πιθανές αιτίες" : "Possible causes",
-        gr
-                ? "Χαμηλή στάθμη έντασης, βουλωμένο ακουστικό, "
-                  + "προστατευτικό οθόνης, θέση συσκευής, ή πραγματική βλάβη ακουστικού."
-                : "Low volume level, obstructed earpiece, "
-                  + "screen protector interference, device position, or actual earpiece hardware issue."
-);
-            }
-
-            logLine();
-
-            appendHtml("<br>");
-            logOk(gr ? "Το Lab 4 ολοκληρώθηκε." : "Lab 4 finished.");
-            logLine();
-
-            runOnUiThread(this::enableSingleExportButton);
-            cancelled.set(true);
-
         } catch (Throwable t) {
 
             appendHtml("<br>");
@@ -8623,7 +8569,11 @@ private void playAnswerCheckWav() {
 
     // ❗ ΔΕΝ αλλάζουμε route εδώ
     // συνεχίζουμε με confirmation
-    showAnswerCheckConfirmation(() -> {
+    AppTTS.stop();
+
+showAnswerCheckConfirmation(() -> {
+
+    lab4ResultEarpiece();
 
 });
 }
@@ -8745,7 +8695,7 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
     if (!d.isShowing()) return;
 
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
+    AppTTS.stop();   // ← ΠΡΟΣΘΗΚΗ
 
     if (!AppTTS.isMuted(ManualTestsActivity.this)) {
 
@@ -8784,6 +8734,44 @@ yesBtn.setOnClickListener(v -> {
 });
 
 });
+}
+
+private void lab4ResultEarpiece() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    appendHtml("<br>");
+    logInfo(gr ? "LAB 4 PRO — Ποιότητα συνομιλίας ακουστικού"
+               : "LAB 4 PRO — Earpiece Call quality");
+    logLine();
+
+    if (lastAnswerHeardClearly) {
+
+        logLabelOkValue(
+                gr ? "Αποτέλεσμα" : "Result",
+                gr
+                        ? "Σύμφωνα με τη δήλωση χρήστη, το ακουστικό αποδίδει καθαρό ήχο."
+                        : "According to the user's declaration, the earpiece delivers clear audio."
+        );
+
+    } else {
+
+        logLabelWarnValue(
+                gr ? "Αποτέλεσμα" : "Result",
+                gr
+                        ? "Σύμφωνα με τη δήλωση χρήστη, ο ήχος δεν ήταν καθαρός."
+                        : "According to the user's declaration, the earpiece audio was not clear."
+        );
+    }
+
+    logLine();
+
+    appendHtml("<br>");
+    logOk(gr ? "Το Lab 4 ολοκληρώθηκε."
+             : "Lab 4 finished.");
+    logLine();
+
+    runOnUiThread(this::enableSingleExportButton);
 }
 
 /* ============================================================
