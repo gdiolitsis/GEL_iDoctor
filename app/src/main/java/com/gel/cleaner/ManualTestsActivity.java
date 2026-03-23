@@ -13935,17 +13935,17 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                     final Lab14Engine engine =
                             new Lab14Engine(ManualTestsActivity.this);
 
-                    lab14PostLoadAnalysis(
-                            engine,
-                            gr,
-                            startMahF,
-                            baselineFullMahF,
-                            t0F,
-                            voltageStartF,
-                            batteryPercentF,
-                            cyclesF,
-                            tempStartF
-                    );
+        lab14PostLoadAnalysis(
+        engine,
+        gr,
+        startMahF,
+        baselineFullMahF,
+        t0F,
+        voltageStartF,
+        batteryPercentF,
+        cyclesF,
+        tempStartF
+);
 
                     try {
                         lab14CleanupUI();
