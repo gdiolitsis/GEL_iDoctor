@@ -3807,10 +3807,6 @@ private void lab14BProtectionTest() {
 
     showLab14BAdvisory(() -> {
 
-        if (!checkLab14BConditions()) {
-            return;
-        }
-
         appendHtml("<br>");
 
 new Thread(() -> {
@@ -4215,8 +4211,8 @@ if (batteryOk) {
 
     status =
             gr
-                    ? "✓ Μπαταρία: " + percent + "% (OK 70–90%)"
-                    : "✓ Battery: " + percent + "% (OK 70–90%)";
+                    ? "✓ Μπαταρία: " + percent + "% (OK Συνέχισε)"
+                    : "✓ Battery: " + percent + "% (OK Continue)";
 
     sb.append(status);
 
@@ -4339,7 +4335,14 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
     AppTTS.stop();
 
     if (!AppTTS.isMuted(this)) {
-        AppTTS.ensureSpeak(this, text);
+
+        String speakText =
+                text + ". " + status;
+
+        AppTTS.ensureSpeak(
+                ManualTestsActivity.this,
+                speakText
+        );
     }
 
 }, 120);
