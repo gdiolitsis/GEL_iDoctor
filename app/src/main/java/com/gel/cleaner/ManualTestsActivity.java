@@ -14696,16 +14696,7 @@ if (!Float.isNaN(vStart[0]) &&
 
     final Lab14Engine.GelBatterySnapshot snapEnd =
             engine.readSnapshot();
-            
-            if (snapEnd != null) {
-
-    logLabelValue(
-            "DBG",
-            "END C=" + snapEnd.chargeNowMah
-    );
-
-}
-
+                        
     if (snapEnd == null) {
         logError(gr
                 ? "Αποτυχία τελικής ανάγνωσης μπαταρίας."
@@ -14720,10 +14711,6 @@ if (!Float.isNaN(vStart[0]) &&
         return;
     }
     
-    logLabelValue("DBG",
-        "END MAH = " + snapEnd.chargeNowMah
-);
-
     final long endMah = snapEnd.chargeNowMah;
     float tempEnd = getBatteryTempEngineSafe();
 
@@ -14873,12 +14860,7 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
 
     if (!lab14Cancelled) {
 
-        float vr = getBatteryVoltageFiltered();
-        
-        logLabelValue(
-        "DBG",
-        "VR=" + vr
-);
+        float vr = getBatteryVoltageFiltered();        
 
         if (Float.isNaN(vr) || vr <= 0f) {
 
@@ -14887,19 +14869,7 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
 
             iDoctorEngine.FullSnapshot snapV =
                     engV.readFullSnapshot();
-                    
-                    if (snapV != null &&
-    snapV.battery != null) {
-
-    logLabelValue(
-            "DBG",
-            "V=" + snapV.battery.voltageMv +
-            " I=" + snapV.battery.currentMa +
-            " C=" + snapV.battery.chargeNowMah
-    );
-
-}
-
+                                        
             if (snapV != null &&
                 snapV.battery != null &&
                 snapV.battery.voltageMv > 0) {
@@ -15029,11 +14999,6 @@ if (!Float.isNaN(voltageStart) &&
     // ---------- current fallback ----------
 
     currentNow = getBatteryCurrentNowSafe();
-    
-    logLabelValue(
-        "DBG",
-        "CURRENT=" + currentNow
-);
 
     if (Float.isNaN(currentNow) ||
         Math.abs(currentNow) < 50f) {
@@ -15058,13 +15023,7 @@ if (!Float.isNaN(voltageStart) &&
 
     if ((Float.isNaN(currentNow) || Math.abs(currentNow) < 50f) &&
     drainMah > 0 && dtMs > 0) {
-
-    logLabelValue(
-            "DBG",
-            "drainMah=" + drainMah +
-            " dt=" + dtMs
-    );
-
+    
     float mahPerSec =
             (float) drainMah / (dtMs / 1000f);
 
@@ -16720,24 +16679,24 @@ lab14Cancelled = false;
 
 if (wasCancelled) return;
 
-});  // close runOnUiThread
+});
 
-}    // ← ΚΛΕΙΝΕΙ ΤΟ try
+} catch (Throwable t) {  
 
-catch (Throwable t) {
+    lab14StopAllStress();  
 
-    lab14StopAllStress();
+    try {  
+        lab14CleanupUI();  
+    } catch (Throwable ignore) {}  
 
-    try {
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
+    restoreBrightnessAndKeepOn();  
 
-    restoreBrightnessAndKeepOn();
+    lab14Cancelled = true;  
+    lab14Running = false;  
+    lab14PopupShown = false;  
+    lab14AdvisoryShown = false;  
+}
 
-    lab14Cancelled = true;
-    lab14Running = false;
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
 }
 
 //=============================================================
