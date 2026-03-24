@@ -3818,6 +3818,9 @@ private void lab14BProtectionTest() {
     showLab14BAdvisory(() -> {
 
         appendHtml("<br>");
+        
+        int startPercent = -1;
+        long startMahThread = -1;
 
 new Thread(() -> {
 
