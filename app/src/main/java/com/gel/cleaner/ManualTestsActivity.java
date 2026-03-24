@@ -13682,7 +13682,7 @@ new Thread(() -> {
 
         lab14FastDone = false;
 
-        vStart[0] = getBatteryVoltageFiltered();
+        vStart[0] = readStableBatteryVoltage();
 
         if (Float.isNaN(vStart[0]) || vStart[0] <= 0f) {
 
@@ -13713,7 +13713,7 @@ new Thread(() -> {
 
         SystemClock.sleep(500);
 
-        vLoad1[0] = getBatteryVoltageFiltered();
+        vLoad1[0] = readStableBatteryVoltage();
 
         if (Float.isNaN(vLoad1[0]) || vLoad1[0] <= 0f) {
 
@@ -13746,7 +13746,7 @@ new Thread(() -> {
 
         SystemClock.sleep(800);
 
-        vRecover[0] = getBatteryVoltageFiltered();
+        vRecover[0] = readStableBatteryVoltage();
 
         if (Float.isNaN(vRecover[0]) || vRecover[0] <= 0f) {
 
@@ -13777,7 +13777,7 @@ new Thread(() -> {
 
         SystemClock.sleep(500);
 
-        vLoad2[0] = getBatteryVoltageFiltered();
+        vLoad2[0] = readStableBatteryVoltage();
 
         if (Float.isNaN(vLoad2[0]) || vLoad2[0] <= 0f) {
 
@@ -13870,7 +13870,7 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
             ui.postDelayed(() -> {
                 if (lab14Cancelled || !lab14Running) return;
-                voltageUnderLoad[0] = getBatteryVoltageFiltered();
+                voltageUnderLoad[0] = readStableBatteryVoltage();
             }, 5000);
 
             ui.postDelayed(() -> {
@@ -13940,7 +13940,7 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 
                     ui.removeCallbacks(this);
 
-                    voltageUnderLoad[0] = getBatteryVoltageFiltered();
+                    voltageUnderLoad[0] = readStableBatteryVoltage();
                     SystemClock.sleep(350);
 
                     lab14StopAllStress();
@@ -16819,6 +16819,51 @@ private long estimateDrainFallback(
     if (percent <= 0) return 0;
 
     return percent * 10L;
+}
+
+private float readStableBatteryVoltage() {
+
+    float sum = 0f;
+    int ok = 0;
+
+    for (int i = 0; i < 3; i++) {
+
+        float v = getBatteryVoltageFiltered();
+
+        if (Float.isNaN(v) || v <= 0f) {
+
+            try {
+                iDoctorEngine eng =
+                        iDoctorEngine.get(ManualTestsActivity.this);
+
+                iDoctorEngine.FullSnapshot snap =
+                        eng.readFullSnapshot();
+
+                if (snap != null &&
+                    snap.battery != null &&
+                    snap.battery.voltageMv > 0) {
+
+                    v = snap.battery.voltageMv / 1000f;
+                }
+
+            } catch (Throwable ignore) {}
+        }
+
+        if (!Float.isNaN(v) && v > 0f) {
+            sum += v;
+            ok++;
+        }
+
+        if (i < 2) {
+            SystemClock.sleep(180);
+        }
+    }
+
+    if (ok > 0) {
+        return sum / ok;
+    }
+
+    return Float.NaN;
 }
 
 //=============================================================
