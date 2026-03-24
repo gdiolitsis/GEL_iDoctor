@@ -14759,13 +14759,13 @@ if (hasStartCounter && hasEndCounter) {
 // ----------------------------------------------------
 
 else if (hasFullCap &&
-        startPercent >= 0 &&
-        startPercent <= 100 &&
+        start.level >= 0 &&
+        start.level <= 100 &&
         snapEnd.level >= 0 &&
         snapEnd.level <= 100) {
 
     float percentDiff =
-            startPercent - snapEnd.level;
+            start.level - snapEnd.level;
 
     if (percentDiff > 0) {
 
