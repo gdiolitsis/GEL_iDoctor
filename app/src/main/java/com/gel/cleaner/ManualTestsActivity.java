@@ -3852,6 +3852,8 @@ new Thread(() -> {
             );
             return;
         }
+        
+        int startPercent = start.level;
 
         long startMahThread = start.chargeNowMah;
 
@@ -3971,7 +3973,7 @@ float vEnd = getBatteryVoltageFiltered();
                 final boolean[] systemLimitedF = systemLimited;
 
                 final long startMahF = start.chargeNowMah;
-                final long endMahF = snapEnd.chargeNowMah;
+                final long endMahF = endMah;
                 final float tempStartF = tempStart;
                 final float tempEndF = tempEnd;
                 final float vStartF = vStart;
@@ -14680,8 +14682,6 @@ if (!Float.isNaN(vStart[0]) &&
 
     if (lab14Cancelled) return;
     
-    int startPercent = start.level;
-
 // ----------------------------------------------------
 // FINAL SNAPSHOT
 // ----------------------------------------------------
@@ -16312,7 +16312,7 @@ else
 
                         final float estimatedESRF = estimatedESR;
                         final float energyEfficiencyF = energyEfficiency;
-                        final long endMahF = snapEnd.chargeNowMah;
+                        final long endMahF = endMah;
                         final float tempEndF = tempEnd;
                         final long dtMsF = dtMs;
                         final long drainMahF = drainMah;
@@ -16812,6 +16812,17 @@ if (wasCancelled) return;
     lab14AdvisoryShown = false;  
 }
 
+}
+
+private long estimateDrainFallback(
+        int percent,
+        int voltage,
+        long dtMs
+) {
+
+    if (percent <= 0) return 0;
+
+    return percent * 10L;
 }
 
 //=============================================================
