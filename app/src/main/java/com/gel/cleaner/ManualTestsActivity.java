@@ -13230,7 +13230,7 @@ private void lab14BatteryHealthStressTest_REAL() {
     // --------------------------------------------------
     // RESET STATE (μόνο μετά το popup)
     // --------------------------------------------------
-    if (!lab14Running) {
+    if (!lab14Running && !lab14PopupShown) {
 
         lab14Cancelled = false;
 
@@ -13409,30 +13409,30 @@ Float gpuTempStart = readGpuTempSafe();
         // 2) HEADER LOGS - START CONDITIONS
         // ------------------------------------------------------------
       
-  if (!lab14PopupShown) {
-        	
-            lab14Running = false;
-            lab14Cancelled = false;
-            lab14PopupShown = true;
+  if (!lab14PopupShown && !lab14Running) {
 
-            showLab14ConditionCheck(() -> {
+    lab14Running = false;
+    lab14Cancelled = false;
+    lab14PopupShown = true;
 
-                if (!lab14AdvisoryShown) {
+    showLab14ConditionCheck(() -> {
 
-                    lab14AdvisoryShown = true;
+        if (!lab14AdvisoryShown) {
 
-                    showLab14PreTestAdvisory(() -> {
-                        lab14BatteryHealthStressTest_REAL();
-                    });
+            lab14AdvisoryShown = true;
 
-                } else {
-
-                    lab14BatteryHealthStressTest_REAL();
-                }
+            showLab14PreTestAdvisory(() -> {
+                lab14BatteryHealthStressTest_REAL();
             });
 
-            return;
+        } else {
+
+            lab14BatteryHealthStressTest_REAL();
         }
+    });
+
+    return;
+}
         
 
             appendHtml("<br>");
@@ -13698,7 +13698,10 @@ Float gpuTempStart = readGpuTempSafe();
                     .setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
 
-        lab14Dialog.show();
+lab14Dialog.show();
+
+lab14Running = true;
+lab14Cancelled = false;
 
 startLab14ProgressLoop();
 startLab14FastThread();
