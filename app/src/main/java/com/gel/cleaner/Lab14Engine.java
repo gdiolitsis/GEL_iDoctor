@@ -52,7 +52,7 @@ if (b != null) {
     s.tempC = b.batteryTempC;
     s.temperature = b.batteryTempC;
 
-    s.voltage = b.voltageMv;
+    s.voltage = (int) b.voltageMv;
 
     s.charging = b.charging;
 
