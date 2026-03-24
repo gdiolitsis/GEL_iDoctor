@@ -240,6 +240,9 @@ public class ManualTestsActivity extends AppCompatActivity {
 
 }
 
+private int startPercent = -1;
+private long startMahThread = -1;
+
     // ============================================================
     // BATTERY STRESS DIAGNOSTIC STATE (shared between labs)
     // ============================================================
@@ -3812,9 +3815,6 @@ private boolean checkLab14BConditions() {
 // LAB 14B — SYSTEM BATTERY PROTECTION TEST
 // ============================================================
 private void lab14BProtectionTest() {
-	
-	int startPercent;
-    long startMahThread;
 
     final boolean gr = AppLang.isGreek(this);
 
