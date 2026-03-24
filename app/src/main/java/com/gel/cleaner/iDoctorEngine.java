@@ -397,16 +397,6 @@ if (bi.chargeFullMah <= 0) {
     }
 }
 
-// profile fallback
-
-if (bi.chargeFullMah <= 0 &&
-    profile != null &&
-    profile.batteryCapacityMah > 0) {
-
-    bi.chargeFullMah = profile.batteryCapacityMah;
-    bi.source = "profile";
-}
-
 // counter estimate fallback
 
 if (bi.chargeFullMah <= 0 &&
