@@ -40,29 +40,29 @@ public class Lab14Engine {
         try {
 
             iDoctorEngine.BatterySnapshot b =
-                    engine.readBatterySnapshot();
+        engine.readBatterySnapshot();
 
-            if (b != null) {
+if (b != null) {
 
-                s.level = b.level;
+    s.level = b.level;
 
-                s.chargeNowMah = b.chargeNowMah;
-                s.chargeFullMah = b.chargeFullMah;
+    s.chargeNowMah = b.chargeNowMah;
+    s.chargeFullMah = b.chargeFullMah;
 
-                s.tempC = 0;
-                s.temperature = 0;
+    s.tempC = b.temperatureC;
+    s.temperature = b.temperatureC;
 
-                s.voltage = 0;
+    s.voltage = b.voltageMv;
 
-                s.charging = b.charging;
+    s.charging = b.charging;
 
-                s.cycleCount = 0;
+    s.cycleCount = b.cycleCount;
 
-                s.rooted = false;
+    s.rooted = b.rooted;
 
-                s.source = "engine";
+    s.source = b.source;
 
-            }
+}
 
         } catch (Throwable ignore) {}
 
