@@ -384,6 +384,51 @@ if (bi.chargeFullMah > 0 ||
 
 }
 
+// --------------------------------------------------
+// FULL CAPACITY FALLBACK (unified)
+// --------------------------------------------------
+
+if (bi.chargeFullMah <= 0) {
+
+    if (bi.chargeDesignMah > 0) {
+
+        bi.chargeFullMah = bi.chargeDesignMah;
+        bi.source = "design";
+    }
+}
+
+// profile fallback
+
+if (bi.chargeFullMah <= 0 &&
+    profile != null &&
+    profile.batteryCapacityMah > 0) {
+
+    bi.chargeFullMah = profile.batteryCapacityMah;
+    bi.source = "profile";
+}
+
+// counter estimate fallback
+
+if (bi.chargeFullMah <= 0 &&
+    bi.chargeNowMah > 0 &&
+    bi.level > 0) {
+
+    try {
+
+        float pct =
+                bi.level / 100f;
+
+        if (pct > 0.05f) {
+
+            bi.chargeFullMah =
+                    (long) (bi.chargeNowMah / pct);
+
+            bi.source = "counter_estimate";
+        }
+
+    } catch (Throwable ignore) {}
+}
+
 if (bi.chargeNowMah <= 0) {
 
     try {
