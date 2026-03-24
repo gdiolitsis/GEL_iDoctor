@@ -14132,17 +14132,32 @@ private void startLab14ProgressLoop() {
 
             long now = SystemClock.elapsedRealtime();
 
-            // ---------------- FAST UI ----------------
+            // ================= FAST =================
 
             if (lab14FastPhase) {
 
+                int fastElapsed =
+                        (int)((now - lab14FastStartTime) / 1000);
+
+                if (fastElapsed < 0) fastElapsed = 0;
+
+                if (fastElapsed > lab14FastDurationSec)
+                    fastElapsed = lab14FastDurationSec;
+
                 counterText.setText(
-                        gr ? "Fast test..." : "Fast test..."
+                        gr
+                                ? "Γρήγορος έλεγχος σταθερότητας\n"
+                                + fastElapsed + " / "
+                                + lab14FastDurationSec + " sec"
+                                : "Fast stability test\n"
+                                + fastElapsed + " / "
+                                + lab14FastDurationSec + " sec"
                 );
 
                 if (lab14DotsView != null) {
 
-                    int frame = (int)((now / 500) % 3);
+                    int frame =
+                            (int)((now / 400) % 3);
 
                     if (frame == 0) {
                         lab14DotsView.setText("•");
@@ -14157,9 +14172,10 @@ private void startLab14ProgressLoop() {
                 return;
             }
 
-            // ---------------- MAIN UI ----------------
+            // ================= MAIN =================
 
-            int elapsed = (int)((now - t0) / 1000);
+            int elapsed =
+                    (int)((now - t0) / 1000);
 
             if (elapsed < durationSec) {
 
@@ -14171,7 +14187,8 @@ private void startLab14ProgressLoop() {
 
                 if (lab14DotsView != null) {
 
-                    int frame = elapsed % 3;
+                    int frame =
+                            elapsed % 3;
 
                     if (frame == 0) {
                         lab14DotsView.setText("•");
