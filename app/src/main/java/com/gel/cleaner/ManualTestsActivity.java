@@ -247,6 +247,27 @@ private boolean lab14FastPhase = false;
 private long lab14FastStartTime = 0;
 private int lab14FastDurationSec = 45;
 
+// ============================================================
+// LAB14 SHARED STATE
+// ============================================================
+
+private TextView counterText;
+
+private int durationSec;
+
+private boolean gr;
+
+private long startMah;
+private long baselineFullMah;
+private long t0;
+private float voltageStart;
+private int batteryPercent;
+private long cycles;
+private float tempStart;
+
+private volatile boolean lab14FastPhase;
+private volatile boolean lab14FastDone;
+
     // ============================================================
     // BATTERY STRESS DIAGNOSTIC STATE (shared between labs)
     // ============================================================
@@ -1109,6 +1130,7 @@ protected void onPause() {
     } catch (Throwable ignore) {}
 
     try {
+    	counterText = null;
         lab14StopAllStress();
         lab14CleanupUI();
     } catch (Throwable ignore) {}
@@ -1150,6 +1172,7 @@ protected void onDestroy() {
     } catch (Throwable ignore) {}
 
     try {
+    	counterText = null;
         lab14CleanupUI();
     } catch (Throwable ignore) {}
 
@@ -1171,11 +1194,12 @@ protected void onDestroy() {
 public void onBackPressed() {
 
     try {
-        lab14Cancelled = true;
-        lab14StopAllStress();
-        restoreBrightnessAndKeepOn();   // ✅ ΠΡΟΣΘΗΚΗ
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
+    lab14Cancelled = true;
+    counterText = null;
+    lab14StopAllStress();
+    restoreBrightnessAndKeepOn();
+    lab14CleanupUI();
+} catch (Throwable ignore) {}
 
     super.onBackPressed();
 }
@@ -3117,6 +3141,7 @@ private void lab14CancelStress() {
     } catch (Throwable ignore) {}
 
     try {
+    	counterText = null;
         lab14CleanupUI();
     } catch (Throwable ignore) {}
 
@@ -3863,7 +3888,7 @@ new Thread(() -> {
         startPercent = start.level;
         startMahThread = start.chargeNowMah;
         
-float tempStart = getBatteryTempEngineSafe();
+tempStart = getBatteryTempEngineSafe();
 if (Float.isNaN(tempStart) || tempStart <= 0f) {
     tempStart = start.temperature;
 }
@@ -13198,7 +13223,7 @@ private void lab14BatteryHealthStressTest() {
 // ============================================================
 private void lab14BatteryHealthStressTest_REAL() {
 
-    final boolean gr = AppLang.isGreek(this);
+    gr = AppLang.isGreek(this);
 
     validDrain = false;
     lab14_systemLimited[0] = false;
@@ -13258,7 +13283,7 @@ private void lab14BatteryHealthStressTest_REAL() {
 // --------------------------------------------------
 // START FLAG
 // --------------------------------------------------
-lab14Running = true;
+
 lab14Cancelled = false;
 
 applyMaxBrightnessAndKeepOn();
@@ -13283,7 +13308,7 @@ final Lab14Engine lab14Engine = new Lab14Engine(this);
 
 try {
 
-    final int durationSec = LAB14_TOTAL_SECONDS;
+    durationSec = LAB14_TOTAL_SECONDS;
     lastSelectedStressDurationSec = durationSec;
 
 // ------------------------------------------------------------
@@ -13332,10 +13357,10 @@ if (start.battery.chargeFullMah <= 0) {
             : "Full capacity unavailable");
 }
 
-final long startMah = start.battery.chargeNowMah;
-final long cycles = start.battery.cycleCount;
+startMah = start.battery.chargeNowMah;
+cycles = start.battery.cycleCount;
 
-float tempStart = getBatteryTempEngineSafe();
+tempStart = getBatteryTempEngineSafe();
 
 if (Float.isNaN(tempStart) || tempStart <= 0f) {
     tempStart = start.battery.batteryTempC;
@@ -13345,7 +13370,7 @@ if (Float.isNaN(tempStart) || tempStart <= 0f) {
 // VOLTAGE BASELINE
 // ----------------------------------------------------
 
-float voltageStart = getBatteryVoltageFiltered();
+voltageStart = getBatteryVoltageFiltered();
 
 if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
 
@@ -13371,14 +13396,14 @@ if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
     }
 }
 
-final int batteryPercent = getBatteryPercentSafe();
+batteryPercent = getBatteryPercentSafe();
 
-final long baselineFullMah =
+baselineFullMah =
         start.battery.chargeFullMah > 0
                 ? start.battery.chargeFullMah
                 : -1;
 
-final long t0 = SystemClock.elapsedRealtime();
+t0 = SystemClock.elapsedRealtime();
 
 boolean rooted = eng.isDeviceRooted();
 Float cpuTempStart = readCpuTempSafe();
@@ -13579,7 +13604,7 @@ Float gpuTempStart = readGpuTempSafe();
         lab14DotsView.setGravity(Gravity.CENTER);
         root.addView(lab14DotsView);
 
-        final TextView counterText = new TextView(this);
+        counterText = new TextView(this);
         counterText.setText(
                 gr
                         ? "Πρόοδος: 0 / " + durationSec + " δευτ."
@@ -13653,6 +13678,7 @@ Float gpuTempStart = readGpuTempSafe();
             lab14StopAllStress();
 
             try {
+            	counterText = null;
                 lab14CleanupUI();
             } catch (Throwable ignore) {}
 
@@ -13678,8 +13704,8 @@ Float gpuTempStart = readGpuTempSafe();
 
         lab14Dialog.show();
 
-lab14Running = true;
 startLab14ProgressLoop();
+startLab14FastThread();
 
 // ------------------------------------------------------------
 // 4) FAST BATTERY STRESS (45 sec) — BACKGROUND THREAD
@@ -13849,233 +13875,6 @@ lab14FastPhase = false;
     }
 
 }).start();
-
-        // ------------------------------------------------------------
-        // 5) MAIN STRESS START
-        // ------------------------------------------------------------
-        
-final long startMahF = startMah;
-final long baselineFullMahF = baselineFullMah;
-final long t0F = t0;
-final float voltageStartF = voltageStart;
-final int batteryPercentF = batteryPercent;
-final long cyclesF = cycles;
-final float tempStartF = tempStart;
-     
-final float tempStartFinal = tempStart;
-
-// wait fast stress to finish
-
-new Thread(() -> {
-
-    long waitStart = SystemClock.elapsedRealtime();
-
-    while (!lab14FastDone) {
-
-        SystemClock.sleep(200);
-
-        // safety timeout 20 sec
-
-        if (SystemClock.elapsedRealtime() - waitStart > 20000) {
-            break;
-        }
-    }
-
-    runOnUiThread(() -> {
-
-    t0 = SystemClock.elapsedRealtime();
-
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-
-        if (lab14Cancelled) return;
-
-        applyMaxBrightnessAndKeepOn();
-
-        startCpuBurn_C_Mode();
-        startMemoryStress();
-        startGpuStress();
-
-        ui.postDelayed(() -> {
-            if (lab14Cancelled || !lab14Running) return;
-            voltageUnderLoad[0] = readStableBatteryVoltage();
-        }, 5000);
-
-        ui.postDelayed(() -> {
-            if (lab14Running && !lab14Cancelled) {
-                lab14VibrationLoop.run();
-            }
-        }, 1500);
-
-        try {
-
-            lab14StressVideo.setVideoURI(
-                    Uri.parse(
-                            "android.resource://"
-                                    + getPackageName()
-                                    + "/"
-                                    + R.raw.battery_stress_loop
-                    )
-            );
-
-            lab14StressVideo.setOnPreparedListener(mp -> {
-                mp.setLooping(true);
-                mp.setVolume(0f, 0f);
-                lab14StressVideo.start();
-            });
-
-        } catch (Throwable ignore) {}
-
-    }, 1000);
-
-});
-
-}).start();
-
-} catch (Throwable t) {
-
-    lab14StopAllStress();
-    restoreBrightnessAndKeepOn();
-
-    lab14Cancelled = true;
-    lab14Running = false;
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
-
-    logError(
-            gr
-                    ? "Σφάλμα LAB 14"
-                    : "LAB 14 error"
-    );
-}
-
-}
-
-private void startLab14ProgressLoop() {
-
-    ui.post(new Runnable() {
-
-        @Override
-        public void run() {
-
-            if (lab14Cancelled || !lab14Running) {
-                ui.removeCallbacks(this);
-                return;
-            }
-
-            long now = SystemClock.elapsedRealtime();
-
-            // ================= FAST =================
-
-            if (lab14FastPhase) {
-
-                int fastElapsed =
-                        (int)((now - lab14FastStartTime) / 1000);
-
-                if (fastElapsed < 0) fastElapsed = 0;
-
-                if (fastElapsed > lab14FastDurationSec)
-                    fastElapsed = lab14FastDurationSec;
-
-                counterText.setText(
-                        gr
-                                ? "Γρήγορος έλεγχος σταθερότητας\n"
-                                + fastElapsed + " / "
-                                + lab14FastDurationSec + " sec"
-                                : "Fast stability test\n"
-                                + fastElapsed + " / "
-                                + lab14FastDurationSec + " sec"
-                );
-
-                if (lab14DotsView != null) {
-
-                    int frame =
-                            (int)((now / 400) % 3);
-
-                    if (frame == 0) {
-                        lab14DotsView.setText("•");
-                    } else if (frame == 1) {
-                        lab14DotsView.setText("• •");
-                    } else {
-                        lab14DotsView.setText("• • •");
-                    }
-                }
-
-                ui.postDelayed(this, 300);
-                return;
-            }
-
-            // ================= MAIN =================
-
-            int elapsed =
-                    (int)((now - t0) / 1000);
-
-            if (elapsed < durationSec) {
-
-                counterText.setText(
-                        gr
-                                ? "Πρόοδος: " + elapsed + " / " + durationSec + " δευτ."
-                                : "Progress: " + elapsed + " / " + durationSec + " sec"
-                );
-
-                if (lab14DotsView != null) {
-
-                    int frame = elapsed % 3;
-
-                    if (frame == 0) {
-                        lab14DotsView.setText("•");
-                    } else if (frame == 1) {
-                        lab14DotsView.setText("• •");
-                    } else {
-                        lab14DotsView.setText("• • •");
-                    }
-                }
-
-                ui.postDelayed(this, 1000);
-                return;
-            }
-
-            // ================= END =================
-
-            ui.removeCallbacks(this);
-
-            voltageUnderLoad[0] =
-                    readStableBatteryVoltage();
-
-            SystemClock.sleep(350);
-
-            lab14StopAllStress();
-
-            final Lab14Engine engine =
-                    new Lab14Engine(ManualTestsActivity.this);
-
-            lab14PostLoadAnalysis(
-                    engine,
-                    gr,
-                    startMahF,
-                    baselineFullMahF,
-                    t0F,
-                    voltageStartF,
-                    batteryPercentF,
-                    cyclesF,
-                    tempStartF
-            );
-
-            try {
-                lab14CleanupUI();
-            } catch (Throwable ignore) {}
-
-            lab14Running = false;
-
-            boolean wasCancelled = lab14Cancelled;
-
-            lab14PopupShown = false;
-            lab14AdvisoryShown = false;
-            lab14Cancelled = false;
-
-            if (wasCancelled) return;
-        }
-    });
-}
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT
@@ -14647,12 +14446,9 @@ private void lab14StopAllStress() {
     try { stopCpuBurn(); } catch (Throwable ignore) {}
     try { stopMemoryStress(); } catch (Throwable ignore) {}
     try { stopGpuStress(); } catch (Throwable ignore) {}
-
     try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
-    // ❌ ΜΗΝ το αλλάζεις εδώ
     // lab14Running = false;
-
 }
 
 // ------------------------------------------------------------
@@ -14740,11 +14536,19 @@ if (!Float.isNaN(vStart[0]) &&
     }
 }
         
-    if (lab14Cancelled) return;
+    if (lab14Cancelled) {
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    return;
+}
 
     SystemClock.sleep(1200);
 
-    if (lab14Cancelled) return;
+    if (lab14Cancelled) {
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    return;
+}
     
 // ----------------------------------------------------
 // FINAL SNAPSHOT
@@ -16839,6 +16643,7 @@ lab14LogReliabilitySummary(
 lab14StopAllStress();
 
 try {
+	counterText = null;
 lab14CleanupUI();
 } catch (Throwable ignore) {}
 
@@ -16859,6 +16664,7 @@ if (wasCancelled) return;
     lab14StopAllStress();  
 
     try {  
+    	counterText = null;
         lab14CleanupUI();  
     } catch (Throwable ignore) {}  
 
@@ -16926,6 +16732,247 @@ private float readStableBatteryVoltage() {
     }
 
     return Float.NaN;
+}
+
+private void startLab14FastThread() {
+
+    new Thread(() -> {
+
+        try {
+
+            lab14FastDone = false;
+            lab14FastPhase = true;
+            lab14FastStartTime =
+                    SystemClock.elapsedRealtime();
+
+vStart[0] = readStableBatteryVoltage();
+
+if (lab14Cancelled) {
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    stopCpuBurn();
+    return;
+}
+
+startCpuBurn_C_Mode();
+
+if (lab14Cancelled) {
+    stopCpuBurn();
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    return;
+}
+
+SystemClock.sleep(12000);
+
+if (lab14Cancelled) {
+    stopCpuBurn();
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    return;
+}
+
+vLoad1[0] = readStableBatteryVoltage();
+
+stopCpuBurn();
+
+if (lab14Cancelled) {
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    return;
+}
+
+SystemClock.sleep(12000);
+
+if (lab14Cancelled) {
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    return;
+}
+
+vRecover[0] = readStableBatteryVoltage();
+
+if (lab14Cancelled) {
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    return;
+}
+
+startCpuBurn_C_Mode();
+
+if (lab14Cancelled) {
+    stopCpuBurn();
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    return;
+}
+
+SystemClock.sleep(12000);
+
+if (lab14Cancelled) {
+    stopCpuBurn();
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    return;
+}
+
+vLoad2[0] = readStableBatteryVoltage();
+
+stopCpuBurn();
+
+lab14FastDone = true;
+lab14FastPhase = false;
+
+            if (!Float.isNaN(vStart[0]) &&
+                !Float.isNaN(vLoad1[0])) {
+
+                sag1[0] = vStart[0] - vLoad1[0];
+            }
+
+            if (!Float.isNaN(vRecover[0]) &&
+                !Float.isNaN(vLoad2[0])) {
+
+                sag2[0] = vRecover[0] - vLoad2[0];
+            }
+
+            if (!Float.isNaN(sag1[0]) &&
+                !Float.isNaN(sag2[0])) {
+
+                sagAvg[0] =
+                        (sag1[0] + sag2[0]) / 2f;
+            }
+
+            lab14FastDone = true;
+            lab14FastPhase = false;
+           
+            if (!lab14Cancelled && lab14Running) {
+    startLab14MainStress();
+}
+
+        } catch (Throwable t) {
+
+            lab14FastDone = true;
+            lab14FastPhase = false;
+        }
+
+    }).start();
+}
+
+private void startLab14MainStress() {
+	
+	if (!lab14Running || lab14Cancelled) return;
+
+    runOnUiThread(() -> {
+
+        t0 = SystemClock.elapsedRealtime();
+
+        applyMaxBrightnessAndKeepOn();
+
+        startCpuBurn_C_Mode();
+        startMemoryStress();
+        startGpuStress();
+
+        try {
+
+            lab14StressVideo.setVideoURI(
+                    Uri.parse(
+                            "android.resource://"
+                                    + getPackageName()
+                                    + "/"
+                                    + R.raw.battery_stress_loop
+                    )
+            );
+
+            lab14StressVideo.setOnPreparedListener(mp -> {
+
+                mp.setLooping(true);
+                mp.setVolume(0f, 0f);
+                lab14StressVideo.start();
+            });
+
+        } catch (Throwable ignore) {}
+
+    });
+}
+
+private void startLab14ProgressLoop() {
+	
+	if (counterText == null) return;
+
+    ui.post(new Runnable() {
+
+        @Override
+        public void run() {
+        	
+        if (counterText == null) {
+    ui.removeCallbacks(this);
+    return;
+}
+
+            if (lab14Cancelled || !lab14Running) {
+                ui.removeCallbacks(this);
+                return;
+            }
+
+            long now =
+                    SystemClock.elapsedRealtime();
+
+            if (lab14FastPhase) {
+
+                int fastElapsed =
+                        (int)((now - lab14FastStartTime)/1000);
+
+                counterText.setText(
+                        "Fast test " + fastElapsed
+                );
+
+                ui.postDelayed(this, 300);
+                return;
+            }
+
+            int elapsed =
+                    (int)((now - t0)/1000);
+
+            if (elapsed < durationSec) {
+
+                counterText.setText(
+                        "Progress "
+                                + elapsed
+                                + " / "
+                                + durationSec
+                );
+
+                ui.postDelayed(this, 1000);
+                return;
+            }
+
+ui.removeCallbacks(this);
+
+lab14StopAllStress();
+
+if (!lab14Running) return;
+
+final Lab14Engine engine =
+        new Lab14Engine(ManualTestsActivity.this);
+        
+        if (!lab14Running) return;
+lab14Running = false;
+
+lab14PostLoadAnalysis(
+        engine,
+        gr,
+        startMah,
+        baselineFullMah,
+        t0,
+        voltageStart,
+        batteryPercent,
+        cycles,
+        tempStart
+);
+
+            lab14Running = false;
+        }
+    });
 }
 
 //=============================================================
