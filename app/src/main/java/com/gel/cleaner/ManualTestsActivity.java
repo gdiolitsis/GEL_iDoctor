@@ -243,6 +243,10 @@ public class ManualTestsActivity extends AppCompatActivity {
 private int startPercent = -1;
 private long startMahThread = -1;
 
+private boolean lab14FastPhase = false;
+private long lab14FastStartTime = 0;
+private int lab14FastDurationSec = 45;
+
     // ============================================================
     // BATTERY STRESS DIAGNOSTIC STATE (shared between labs)
     // ============================================================
@@ -13674,6 +13678,9 @@ Float gpuTempStart = readGpuTempSafe();
 
         lab14Dialog.show();
 
+lab14Running = true;
+startLab14ProgressLoop();
+
 // ------------------------------------------------------------
 // 4) FAST BATTERY STRESS (45 sec) — BACKGROUND THREAD
 // ------------------------------------------------------------
@@ -13681,6 +13688,8 @@ new Thread(() -> {
     try {
 
         lab14FastDone = false;
+lab14FastPhase = true;
+lab14FastStartTime = SystemClock.elapsedRealtime();
 
         vStart[0] = readStableBatteryVoltage();
 
@@ -13822,7 +13831,8 @@ new Thread(() -> {
 
         stopCpuBurn();
 
-        lab14FastDone = true;
+lab14FastDone = true;
+lab14FastPhase = false;
 
     } catch (Throwable t) {
 
@@ -13831,6 +13841,7 @@ new Thread(() -> {
         } catch (Throwable ignore) {}
 
         lab14FastDone = true;
+        lab14FastPhase = false;
 
         runOnUiThread(() ->
                 logError("LAB14 fast thread error")
@@ -13853,31 +13864,64 @@ final float tempStartF = tempStart;
      
 final float tempStartFinal = tempStart;
 
-new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+// wait fast stress to finish
 
-    @Override
-    public void run() {
+new Thread(() -> {
 
-        try {
+    long waitStart = SystemClock.elapsedRealtime();
 
-            if (lab14Cancelled) return;
+    while (!lab14FastDone) {
 
-            applyMaxBrightnessAndKeepOn();
+        SystemClock.sleep(200);
 
-            startCpuBurn_C_Mode();
-            startMemoryStress();
-            startGpuStress();
+        // safety timeout 20 sec
 
-            ui.postDelayed(() -> {
-                if (lab14Cancelled || !lab14Running) return;
-                voltageUnderLoad[0] = readStableBatteryVoltage();
-            }, 5000);
+        if (SystemClock.elapsedRealtime() - waitStart > 20000) {
+            break;
+        }
+    }
 
-            ui.postDelayed(() -> {
-                if (lab14Running && !lab14Cancelled) {
-                    lab14VibrationLoop.run();
-                }
-            }, 1500);
+    runOnUiThread(() -> startLab14MainStress());
+
+}).start();
+
+private void startLab14MainStress() {
+
+    t0 = SystemClock.elapsedRealtime();
+
+    final long startMahF = startMah;
+    final long baselineFullMahF = baselineFullMah;
+    final long t0F = t0;
+    final float voltageStartF = voltageStart;
+    final int batteryPercentF = batteryPercent;
+    final long cyclesF = cycles;
+    final float tempStartF = tempStart;
+
+    new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+
+        @Override
+        public void run() {
+
+            try {
+
+                if (lab14Cancelled) return;
+
+                applyMaxBrightnessAndKeepOn();
+
+                startCpuBurn_C_Mode();
+                startMemoryStress();
+                startGpuStress();
+
+                ui.postDelayed(() -> {
+                    if (lab14Cancelled || !lab14Running) return;
+                    voltageUnderLoad[0] = readStableBatteryVoltage();
+                }, 5000);
+
+                ui.postDelayed(() -> {
+                    if (lab14Running && !lab14Cancelled) {
+                        lab14VibrationLoop.run();
+                    }
+                }, 1500);
 
             try {
                 lab14StressVideo.setVideoURI(
@@ -13908,6 +13952,65 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                     }
 
                     long now = SystemClock.elapsedRealtime();
+                    
+if (lab14FastPhase) {
+
+    long now = SystemClock.elapsedRealtime();
+
+    int fastElapsed =
+            (int) ((now - lab14FastStartTime) / 1000);
+
+    if (fastElapsed < 0) fastElapsed = 0;
+
+    if (fastElapsed > lab14FastDurationSec)
+        fastElapsed = lab14FastDurationSec;
+
+    counterText.setText(
+            gr
+                    ? "Γρήγορος έλεγχος σταθερότητας\n"
+                    + fastElapsed + " / "
+                    + lab14FastDurationSec + " sec"
+                    : "Fast stability test\n"
+                    + fastElapsed + " / "
+                    + lab14FastDurationSec + " sec"
+    );
+
+    if (lab14DotsView != null) {
+
+        int frame =
+                (int) ((now / 400) % 3);
+
+        if (frame == 0) {
+            lab14DotsView.setText("•");
+        } else if (frame == 1) {
+            lab14DotsView.setText("• •");
+        } else {
+            lab14DotsView.setText("• • •");
+        }
+    }
+
+    ui.postDelayed(this, 300);
+    return;
+}
+
+    if (lab14DotsView != null) {
+
+        int frame =
+                (int) ((now / 500) % 3);
+
+        if (frame == 0) {
+            lab14DotsView.setText("•");
+        } else if (frame == 1) {
+            lab14DotsView.setText("• •");
+        } else {
+            lab14DotsView.setText("• • •");
+        }
+    }
+
+    ui.postDelayed(this, 300);
+    return;
+}
+                    
                     int elapsed = (int) ((now - t0) / 1000);
 
                     if (elapsed < durationSec) {
@@ -14013,6 +14116,77 @@ new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
     );
 }
 
+}
+
+private void startLab14ProgressLoop() {
+
+    ui.post(new Runnable() {
+
+        @Override
+        public void run() {
+
+            if (lab14Cancelled || !lab14Running) {
+                ui.removeCallbacks(this);
+                return;
+            }
+
+            long now = SystemClock.elapsedRealtime();
+
+            // ---------------- FAST UI ----------------
+
+            if (lab14FastPhase) {
+
+                counterText.setText(
+                        gr ? "Fast test..." : "Fast test..."
+                );
+
+                if (lab14DotsView != null) {
+
+                    int frame = (int)((now / 500) % 3);
+
+                    if (frame == 0) {
+                        lab14DotsView.setText("•");
+                    } else if (frame == 1) {
+                        lab14DotsView.setText("• •");
+                    } else {
+                        lab14DotsView.setText("• • •");
+                    }
+                }
+
+                ui.postDelayed(this, 300);
+                return;
+            }
+
+            // ---------------- MAIN UI ----------------
+
+            int elapsed = (int)((now - t0) / 1000);
+
+            if (elapsed < durationSec) {
+
+                counterText.setText(
+                        gr
+                                ? "Πρόοδος: " + elapsed + " / " + durationSec + " δευτ."
+                                : "Progress: " + elapsed + " / " + durationSec + " sec"
+                );
+
+                if (lab14DotsView != null) {
+
+                    int frame = elapsed % 3;
+
+                    if (frame == 0) {
+                        lab14DotsView.setText("•");
+                    } else if (frame == 1) {
+                        lab14DotsView.setText("• •");
+                    } else {
+                        lab14DotsView.setText("• • •");
+                    }
+                }
+
+                ui.postDelayed(this, 1000);
+                return;
+            }
+        }
+    });
 }
 
 // ============================================================
