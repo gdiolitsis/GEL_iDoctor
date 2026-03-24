@@ -498,7 +498,6 @@ try {
     }
 
 } catch (Throwable ignore) { }
-        }
 
         return bi;
     }
