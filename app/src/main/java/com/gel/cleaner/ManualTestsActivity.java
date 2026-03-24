@@ -3812,6 +3812,9 @@ private boolean checkLab14BConditions() {
 // LAB 14B — SYSTEM BATTERY PROTECTION TEST
 // ============================================================
 private void lab14BProtectionTest() {
+	
+	int startPercent = -1;
+    long startMahThread = -1;
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -3827,8 +3830,6 @@ new Thread(() -> {
     boolean cpuThrottle = false;
     boolean thermalLimit = false;
     boolean powerLimit = false;
-    int startPercent = -1;
-    long startMahThread = -1;
 
     long cpuFreqStart = -1L;
     long cpuFreqEnd = -1L;
