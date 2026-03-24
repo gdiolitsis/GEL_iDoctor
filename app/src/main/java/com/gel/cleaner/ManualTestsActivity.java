@@ -3971,7 +3971,7 @@ float vEnd = getBatteryVoltageFiltered();
                 final boolean[] systemLimitedF = systemLimited;
 
                 final long startMahF = start.chargeNowMah;
-                final long endMahF = endMah;
+                final long endMahF = snapEnd.chargeNowMah;
                 final float tempStartF = tempStart;
                 final float tempEndF = tempEnd;
                 final float vStartF = vStart;
@@ -14679,6 +14679,8 @@ if (!Float.isNaN(vStart[0]) &&
     SystemClock.sleep(1200);
 
     if (lab14Cancelled) return;
+    
+    int startPercent = start.level;
 
 // ----------------------------------------------------
 // FINAL SNAPSHOT
@@ -14785,7 +14787,7 @@ else if (snapEnd.source != null &&
 
     drainMah =
             estimateDrainFallback(
-                    snapEnd.percent,
+                    snapEnd.level,
                     snapEnd.voltage,
                     dtMs
             );
@@ -14802,7 +14804,7 @@ else {
 
     drainMah =
             estimateDrainFallback(
-                    snapEnd.percent,
+                    snapEnd.level,
                     snapEnd.voltage,
                     dtMs
             );
@@ -16310,7 +16312,7 @@ else
 
                         final float estimatedESRF = estimatedESR;
                         final float energyEfficiencyF = energyEfficiency;
-                        final long endMahF = endMah;
+                        final long endMahF = snapEnd.chargeNowMah;
                         final float tempEndF = tempEnd;
                         final long dtMsF = dtMs;
                         final long drainMahF = drainMah;
