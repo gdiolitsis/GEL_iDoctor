@@ -14758,16 +14758,11 @@ if (hasStartCounter && hasEndCounter) {
 // FULLCAP MODE
 // ----------------------------------------------------
 
-else if (hasFullCap &&
-        start.level >= 0 &&
-        start.level <= 100 &&
-        snapEnd.level >= 0 &&
-        snapEnd.level <= 100) {
+else if (hasFullCap) {
 
-    float percentDiff =
-            start.level - snapEnd.level;
+    float percentDiff = 0f;
 
-    if (percentDiff > 0) {
+    if (percentDiff > 0f) {
 
         drainMah =
                 Math.round(
@@ -14778,7 +14773,6 @@ else if (hasFullCap &&
         drainMode = DrainMode.FULLCAP;
     }
 }
-
 
 // ----------------------------------------------------
 // BATTERY MANAGER / FUEL GAUGE MODE
