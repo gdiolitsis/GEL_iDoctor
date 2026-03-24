@@ -229,6 +229,16 @@ import java.util.Set;
 public class ManualTestsActivity extends AppCompatActivity {
 	
 	private AlertDialog progressDialog;
+	
+	private enum DrainMode {
+
+    COUNTER,
+    FULLCAP,
+    FUEL_GAUGE,
+    BATTERY_MANAGER,
+    FALLBACK
+
+}
 
     // ============================================================
     // BATTERY STRESS DIAGNOSTIC STATE (shared between labs)
@@ -14670,48 +14680,174 @@ if (!Float.isNaN(vStart[0]) &&
 
     if (lab14Cancelled) return;
 
-    // ----------------------------------------------------
-    // FINAL SNAPSHOT
-    // ----------------------------------------------------
+// ----------------------------------------------------
+// FINAL SNAPSHOT
+// ----------------------------------------------------
 
-    final Lab14Engine.GelBatterySnapshot snapEnd =
-            engine.readSnapshot();
-                        
-    if (snapEnd == null) {
-        logError(gr
-                ? "Αποτυχία τελικής ανάγνωσης μπαταρίας."
-                : "Final battery snapshot failed.");
-        return;
-    }
+final Lab14Engine.GelBatterySnapshot snapEnd =
+        engine.readSnapshot();
 
-    if (snapEnd.chargeNowMah <= 0) {
-        logWarn(gr
-                ? "Αδυναμία ανάγνωσης τελικού charge counter."
-                : "Unable to read final charge counter.");
-        return;
-    }
-    
-    final long endMah = snapEnd.chargeNowMah;
-    float tempEnd = getBatteryTempEngineSafe();
+if (snapEnd == null) {
+
+    logError(gr
+            ? "Αποτυχία τελικής ανάγνωσης μπαταρίας."
+            : "Final battery snapshot failed.");
+
+    return;
+}
+
+
+float tempEnd = getBatteryTempEngineSafe();
 
 if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
     tempEnd = snapEnd.temperature;
 }
 
-    final Float cpuTempEnd = readCpuTempSafe();
-    final Float gpuTempEnd = readGpuTempSafe();
+final Float cpuTempEnd = readCpuTempSafe();
+final Float gpuTempEnd = readGpuTempSafe();
 
-    final long dtMs =
-            Math.max(
-                    1,
-                    SystemClock.elapsedRealtime() - t0
-            );
 
-    final long drainMah =
+final long dtMs =
+        Math.max(
+                1,
+                SystemClock.elapsedRealtime() - t0
+        );
+
+
+// ====================================================
+// DRAIN MODES
+// ====================================================
+
+boolean hasStartCounter =
+        startMah > 0;
+
+boolean hasEndCounter =
+        snapEnd.chargeNowMah > 0;
+
+boolean hasFullCap =
+        snapEnd.chargeFullMah > 0;
+
+
+long drainMah = 0;
+
+DrainMode drainMode =
+        DrainMode.FALLBACK;
+
+
+// ----------------------------------------------------
+// COUNTER MODE
+// ----------------------------------------------------
+
+if (hasStartCounter && hasEndCounter) {
+
+    drainMah =
             Math.max(
                     0,
-                    startMah - endMah
+                    startMah - snapEnd.chargeNowMah
             );
+
+    drainMode = DrainMode.COUNTER;
+}
+
+
+// ----------------------------------------------------
+// FULLCAP MODE
+// ----------------------------------------------------
+
+else if (hasFullCap &&
+        startPercent >= 0 &&
+        startPercent <= 100 &&
+        snapEnd.level >= 0 &&
+        snapEnd.level <= 100) {
+
+    float percentDiff =
+            startPercent - snapEnd.level;
+
+    if (percentDiff > 0) {
+
+        drainMah =
+                Math.round(
+                        (percentDiff / 100f)
+                        * snapEnd.chargeFullMah
+                );
+
+        drainMode = DrainMode.FULLCAP;
+    }
+}
+
+
+// ----------------------------------------------------
+// BATTERY MANAGER / FUEL GAUGE MODE
+// ----------------------------------------------------
+
+else if (snapEnd.source != null &&
+        !snapEnd.source.isEmpty()) {
+
+    drainMah =
+            estimateDrainFallback(
+                    snapEnd.percent,
+                    snapEnd.voltage,
+                    dtMs
+            );
+
+    drainMode = DrainMode.BATTERY_MANAGER;
+}
+
+
+// ----------------------------------------------------
+// FALLBACK MODE
+// ----------------------------------------------------
+
+else {
+
+    drainMah =
+            estimateDrainFallback(
+                    snapEnd.percent,
+                    snapEnd.voltage,
+                    dtMs
+            );
+
+    drainMode = DrainMode.FALLBACK;
+}
+
+
+// ====================================================
+// MODE LOG
+// ====================================================
+
+switch (drainMode) {
+
+    case COUNTER:
+
+        logOk(gr
+                ? "Mode: Counter"
+                : "Mode: Counter");
+        break;
+
+
+    case FULLCAP:
+
+        logWarn(gr
+                ? "Mode: FullCap"
+                : "Mode: FullCap");
+        break;
+
+
+    case BATTERY_MANAGER:
+
+        logWarn(gr
+                ? "Mode: BatteryManager"
+                : "Mode: BatteryManager");
+        break;
+
+
+    case FALLBACK:
+
+        logWarn(gr
+                ? "Mode: Fallback"
+                : "Mode: Fallback");
+        break;
+}
 
                         // ----------------------------------------------------
                         // FUEL GAUGE CHECK
