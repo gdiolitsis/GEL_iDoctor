@@ -3824,6 +3824,8 @@ new Thread(() -> {
     boolean cpuThrottle = false;
     boolean thermalLimit = false;
     boolean powerLimit = false;
+    int startPercent = -1;
+    long startMahThread = -1;
 
     long cpuFreqStart = -1L;
     long cpuFreqEnd = -1L;
@@ -3853,9 +3855,9 @@ new Thread(() -> {
             return;
         }
         
-        int startPercent = start.level;
+        startPercent = start.level;
 
-        long startMahThread = start.chargeNowMah;
+        startMahThread = start.chargeNowMah;
 
 float tempStart = getBatteryTempEngineSafe();
 if (Float.isNaN(tempStart) || tempStart <= 0f) {
@@ -14688,7 +14690,7 @@ if (!Float.isNaN(vStart[0]) &&
 
 final Lab14Engine.GelBatterySnapshot snapEnd =
         engine.readSnapshot();
-
+        
 if (snapEnd == null) {
 
     logError(gr
@@ -14698,7 +14700,7 @@ if (snapEnd == null) {
     return;
 }
 
-
+final long endMah = snapEnd.chargeNowMah;
 float tempEnd = getBatteryTempEngineSafe();
 
 if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
