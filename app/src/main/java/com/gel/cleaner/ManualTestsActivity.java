@@ -13885,6 +13885,77 @@ new Thread(() -> {
 
 }).start();
 
+
+private void startLab14ProgressLoop() {
+
+    ui.post(new Runnable() {
+
+        @Override
+        public void run() {
+
+            if (lab14Cancelled || !lab14Running) {
+                ui.removeCallbacks(this);
+                return;
+            }
+
+            long now = SystemClock.elapsedRealtime();
+
+            // ================= FAST =================
+
+            if (lab14FastPhase) {
+
+                int fastElapsed =
+                        (int)((now - lab14FastStartTime) / 1000);
+
+                if (fastElapsed < 0) fastElapsed = 0;
+
+                if (fastElapsed > lab14FastDurationSec)
+                    fastElapsed = lab14FastDurationSec;
+
+                counterText.setText(
+                        gr
+                                ? "Γρήγορος έλεγχος σταθερότητας\n"
+                                + fastElapsed + " / "
+                                + lab14FastDurationSec + " sec"
+                                : "Fast stability test\n"
+                                + fastElapsed + " / "
+                                + lab14FastDurationSec + " sec"
+                );
+
+            // ================= MAIN =================
+
+            int elapsed =
+                    (int)((now - t0) / 1000);
+
+            if (elapsed < durationSec) {
+
+                counterText.setText(
+                        gr
+                                ? "Πρόοδος: " + elapsed + " / " + durationSec + " δευτ."
+                                : "Progress: " + elapsed + " / " + durationSec + " sec"
+                );
+
+                if (lab14DotsView != null) {
+
+                    int frame =
+                            elapsed % 3;
+
+                    if (frame == 0) {
+                        lab14DotsView.setText("•");
+                    } else if (frame == 1) {
+                        lab14DotsView.setText("• •");
+                    } else {
+                        lab14DotsView.setText("• • •");
+                    }
+                }
+
+                ui.postDelayed(this, 1000);
+                return;
+            }
+        }
+    });
+}
+
 private void startLab14MainStress() {
 
     t0 = SystemClock.elapsedRealtime();
@@ -14062,76 +14133,6 @@ private void startLab14MainStress() {
         }
 
     }, 1000);
-}
-
-private void startLab14ProgressLoop() {
-
-    ui.post(new Runnable() {
-
-        @Override
-        public void run() {
-
-            if (lab14Cancelled || !lab14Running) {
-                ui.removeCallbacks(this);
-                return;
-            }
-
-            long now = SystemClock.elapsedRealtime();
-
-            // ================= FAST =================
-
-            if (lab14FastPhase) {
-
-                int fastElapsed =
-                        (int)((now - lab14FastStartTime) / 1000);
-
-                if (fastElapsed < 0) fastElapsed = 0;
-
-                if (fastElapsed > lab14FastDurationSec)
-                    fastElapsed = lab14FastDurationSec;
-
-                counterText.setText(
-                        gr
-                                ? "Γρήγορος έλεγχος σταθερότητας\n"
-                                + fastElapsed + " / "
-                                + lab14FastDurationSec + " sec"
-                                : "Fast stability test\n"
-                                + fastElapsed + " / "
-                                + lab14FastDurationSec + " sec"
-                );
-
-            // ================= MAIN =================
-
-            int elapsed =
-                    (int)((now - t0) / 1000);
-
-            if (elapsed < durationSec) {
-
-                counterText.setText(
-                        gr
-                                ? "Πρόοδος: " + elapsed + " / " + durationSec + " δευτ."
-                                : "Progress: " + elapsed + " / " + durationSec + " sec"
-                );
-
-                if (lab14DotsView != null) {
-
-                    int frame =
-                            elapsed % 3;
-
-                    if (frame == 0) {
-                        lab14DotsView.setText("•");
-                    } else if (frame == 1) {
-                        lab14DotsView.setText("• •");
-                    } else {
-                        lab14DotsView.setText("• • •");
-                    }
-                }
-
-                ui.postDelayed(this, 1000);
-                return;
-            }
-        }
-    });
 }
 
 // ============================================================
