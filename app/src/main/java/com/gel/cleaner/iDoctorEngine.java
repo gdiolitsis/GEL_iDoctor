@@ -385,6 +385,31 @@ if (bi.chargeFullMah > 0 ||
 }
 
 if (bi.chargeNowMah <= 0) {
+
+    try {
+
+        BatteryManager bm =
+                (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
+
+        if (bm != null) {
+
+            long cc =
+                    bm.getLongProperty(
+                            BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER
+                    );
+
+            if (cc > 0) {
+
+                bi.chargeNowMah =
+                        normalizeMah(cc);
+
+                bi.source = "BatteryManager";
+            }
+        }
+
+    } catch (Throwable ignore) {}
+
+}
         	
 // -----------------------------------------
 // TEMP READ (fuel gauge + multi fallback)
