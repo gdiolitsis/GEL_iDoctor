@@ -260,13 +260,9 @@ private boolean gr;
 private long startMah;
 private long baselineFullMah;
 private long t0;
-private float voltageStart;
 private int batteryPercent;
 private long cycles;
 private float tempStart;
-
-private volatile boolean lab14FastPhase;
-private volatile boolean lab14FastDone;
 
     // ============================================================
     // BATTERY STRESS DIAGNOSTIC STATE (shared between labs)
