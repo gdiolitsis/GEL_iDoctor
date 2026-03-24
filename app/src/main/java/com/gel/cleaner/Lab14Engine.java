@@ -49,8 +49,8 @@ if (b != null) {
     s.chargeNowMah = b.chargeNowMah;
     s.chargeFullMah = b.chargeFullMah;
 
-    s.tempC = b.temperatureC;
-    s.temperature = b.temperatureC;
+    s.tempC = b.batteryTempC;
+    s.temperature = b.batteryTempC;
 
     s.voltage = b.voltageMv;
 
