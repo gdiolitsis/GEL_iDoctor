@@ -13885,6 +13885,24 @@ new Thread(() -> {
 
 }).start();
 
+} catch (Throwable t) {
+
+    lab14StopAllStress();
+    restoreBrightnessAndKeepOn();
+
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+
+    logError(
+            gr
+                    ? "Σφάλμα LAB 14"
+                    : "LAB 14 error"
+    );
+}
+
+}
 
 private void startLab14ProgressLoop() {
 
@@ -13922,6 +13940,24 @@ private void startLab14ProgressLoop() {
                                 + lab14FastDurationSec + " sec"
                 );
 
+                if (lab14DotsView != null) {
+
+                    int frame =
+                            (int)((now / 400) % 3);
+
+                    if (frame == 0) {
+                        lab14DotsView.setText("•");
+                    } else if (frame == 1) {
+                        lab14DotsView.setText("• •");
+                    } else {
+                        lab14DotsView.setText("• • •");
+                    }
+                }
+
+                ui.postDelayed(this, 300);
+                return;
+            }
+
             // ================= MAIN =================
 
             int elapsed =
@@ -13937,8 +13973,7 @@ private void startLab14ProgressLoop() {
 
                 if (lab14DotsView != null) {
 
-                    int frame =
-                            elapsed % 3;
+                    int frame = elapsed % 3;
 
                     if (frame == 0) {
                         lab14DotsView.setText("•");
