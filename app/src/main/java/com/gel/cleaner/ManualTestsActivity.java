@@ -3813,17 +3813,14 @@ private boolean checkLab14BConditions() {
 // ============================================================
 private void lab14BProtectionTest() {
 	
-	int startPercent = -1;
-    long startMahThread = -1;
+	int startPercent;
+    long startMahThread;
 
     final boolean gr = AppLang.isGreek(this);
 
     showLab14BAdvisory(() -> {
 
         appendHtml("<br>");
-        
-        int startPercent = -1;
-        long startMahThread = -1;
 
 new Thread(() -> {
 
@@ -3860,9 +3857,8 @@ new Thread(() -> {
         }
         
         startPercent = start.level;
-
         startMahThread = start.chargeNowMah;
-
+        
 float tempStart = getBatteryTempEngineSafe();
 if (Float.isNaN(tempStart) || tempStart <= 0f) {
     tempStart = start.temperature;
