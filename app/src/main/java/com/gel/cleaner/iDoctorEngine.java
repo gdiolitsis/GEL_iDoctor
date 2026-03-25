@@ -144,6 +144,7 @@ public final class iDoctorEngine {
     // BATTERY
     // ============================================================
     public static final class BatterySnapshot {
+    	public int sohPercent = -1;
         public int level = -1;
         public int scale = -1;
         public boolean charging = false;
@@ -163,6 +164,40 @@ public final class iDoctorEngine {
         public boolean rooted = false;
         public String source = "N/A";
     }
+    
+    private static final String PREFS_BATTERY = "battery_prefs";
+    private static final String KEY_MODEL_CAP = "model_capacity";
+
+    private long getStoredModelCapacity() {
+
+    try {
+
+        return ctx
+                .getSharedPreferences(
+                        PREFS_BATTERY,
+                        Context.MODE_PRIVATE
+                )
+                .getLong(KEY_MODEL_CAP, -1);
+
+    } catch (Throwable ignore) {}
+
+    return -1;
+}
+
+private void saveModelCapacity(long v) {
+
+    try {
+
+        ctx.getSharedPreferences(
+                PREFS_BATTERY,
+                Context.MODE_PRIVATE
+        )
+        .edit()
+        .putLong(KEY_MODEL_CAP, v)
+        .apply();
+
+    } catch (Throwable ignore) {}
+}
 
     public BatterySnapshot readBatterySnapshot() {
 
@@ -397,27 +432,9 @@ if (bi.chargeFullMah <= 0) {
     }
 }
 
-// counter estimate fallback
-
-if (bi.chargeFullMah <= 0 &&
-    bi.chargeNowMah > 0 &&
-    bi.level > 0) {
-
-    try {
-
-        float pct =
-                bi.level / 100f;
-
-        if (pct > 0.05f) {
-
-            bi.chargeFullMah =
-                    (long) (bi.chargeNowMah / pct);
-
-            bi.source = "counter_estimate";
-        }
-
-    } catch (Throwable ignore) {}
-}
+// --------------------------------------------------
+// CHARGE COUNTER FALLBACK (BatteryManager)
+// --------------------------------------------------
 
 if (bi.chargeNowMah <= 0) {
 
@@ -443,7 +460,61 @@ if (bi.chargeNowMah <= 0) {
         }
 
     } catch (Throwable ignore) {}
+}
 
+
+// --------------------------------------------------
+// COUNTER → FULL ESTIMATE (safe)
+// --------------------------------------------------
+
+if (bi.chargeFullMah <= 0 &&
+    bi.chargeNowMah > 0 &&
+    bi.level > 0) {
+
+    try {
+
+        float pct =
+                bi.level / 100f;
+
+        if (pct > 0.10f && pct <= 1f) {
+
+            long est =
+                    (long) (bi.chargeNowMah / pct);
+
+            if (est > 500 &&
+                est < 15000) {
+
+                bi.chargeFullMah = est;
+                bi.source = "counter_estimate";
+            }
+        }
+
+    } catch (Throwable ignore) {}
+}
+
+// --------------------------------------------------
+// DESIGN FALLBACK
+// --------------------------------------------------
+
+if (bi.chargeFullMah <= 0 &&
+    bi.chargeDesignMah > 0) {
+
+    bi.chargeFullMah = bi.chargeDesignMah;
+    bi.source = "design";
+}
+
+// --------------------------------------------------
+// MODEL CAPACITY (LAST FALLBACK ONLY)
+// --------------------------------------------------
+
+long modelCap =
+        getStoredModelCapacity();
+
+if (bi.chargeFullMah <= 0 &&
+    modelCap > 0) {
+
+    bi.chargeFullMah = modelCap;
+    bi.source = "model_capacity";
 }
         	
 // -----------------------------------------
@@ -533,6 +604,37 @@ try {
     }
 
 } catch (Throwable ignore) { }
+
+if (bi.source == null ||
+    bi.source.equals("N/A")) {
+
+    if (bi.rooted)
+        bi.source = "OEM (root)";
+    else
+        bi.source = "BatteryManager";
+}
+
+// --------------------------------------------------
+// SOH CALC
+// --------------------------------------------------
+
+if (bi.chargeDesignMah > 0 &&
+    bi.chargeFullMah > 0) {
+
+    try {
+
+        int soh =
+                (int) Math.round(
+                        (bi.chargeFullMah * 100.0)
+                                / bi.chargeDesignMah
+                );
+
+        if (soh > 0 && soh < 200) {
+            bi.sohPercent = soh;
+        }
+
+    } catch (Throwable ignore) {}
+}
 
         return bi;
     }
@@ -1861,6 +1963,56 @@ if (!out.battery.valid) {
             return "";
         }
     }
+    
+    public long getBestFullCapacityMah() {
+
+    BatterySnapshot b =
+            readBatterySnapshot();
+
+    long model =
+            getStoredModelCapacity();
+
+    if (model > 0)
+        return model;
+
+    if (b.chargeFullMah > 0)
+        return b.chargeFullMah;
+
+    if (b.chargeDesignMah > 0)
+        return b.chargeDesignMah;
+
+    if (b.chargeNowMah > 0 &&
+        b.level > 5) {
+
+        return (long)(
+                b.chargeNowMah /
+                (b.level / 100f)
+        );
+    }
+
+    return -1;
+}
+
+public int getBatterySOH() {
+
+    BatterySnapshot b =
+            readBatterySnapshot();
+
+    long design =
+            b.chargeDesignMah;
+
+    long full =
+            getBestFullCapacityMah();
+
+    if (design <= 0 ||
+        full <= 0)
+        return -1;
+
+    return (int)Math.round(
+            (full * 100.0) /
+            design
+    );
+}
 
     // ============================================================
     // ROOT-AWARE HELPERS
