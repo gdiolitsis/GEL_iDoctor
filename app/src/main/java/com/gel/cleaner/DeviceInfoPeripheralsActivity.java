@@ -1312,17 +1312,8 @@ private String buildBatteryInfo() {
         sb.append(String.format(
                 Locale.US,
                 "%s : %d mAh\n",
-                padKey("Estimated full"),
+                padKey("Estimated full capacity"),
                 snap.battery.chargeFullMah
-        ));
-    }
-
-    if (modelCap > 0) {
-        sb.append(String.format(
-                Locale.US,
-                "%s : %d mAh\n",
-                padKey("Model capacity"),
-                modelCap
         ));
     }
 
@@ -1332,6 +1323,15 @@ private String buildBatteryInfo() {
             padKey("Source"),
             snap.battery.source != null ? snap.battery.source : "N/A"
     ));
+    
+    if (modelCap > 0) {
+        sb.append(String.format(
+                Locale.US,
+                "%s : %d mAh\n",
+                padKey("Declared capacity"),
+                modelCap
+        ));
+    }
 
     // --------------------------------------------------
     // ROOT / OEM
