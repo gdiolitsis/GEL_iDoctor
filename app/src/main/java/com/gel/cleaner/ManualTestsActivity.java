@@ -16555,8 +16555,6 @@ if (wasCancelled) return;
     lab14AdvisoryShown = false;  
 }
 
-}
-
 private long estimateDrainFallback(
         int percent,
         int voltage,
