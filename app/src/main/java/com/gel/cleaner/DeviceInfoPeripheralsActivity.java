@@ -1263,141 +1263,210 @@ private String buildBatteryInfo() {
 
     StringBuilder sb = new StringBuilder();
 
-    // --------------------------------------------------
-    // BASIC
-    // --------------------------------------------------
+// --------------------------------------------------
+// BASIC
+// --------------------------------------------------
+
+sb.append(String.format(
+        Locale.US,
+        "%s : %s\n",
+        padKey("Level"),
+        snap.battery.level >= 0 ? snap.battery.level + "%" : "N/A"
+));
+
+sb.append(String.format(
+        Locale.US,
+        "%s : %s\n",
+        padKey("Status"),
+        snap.battery.status != null ? snap.battery.status : "N/A"
+));
+
+sb.append(String.format(
+        Locale.US,
+        "%s : %s\n",
+        padKey("Charging source"),
+        snap.battery.chargingSource != null
+                ? snap.battery.chargingSource
+                : "N/A"
+));
+
+sb.append(String.format(
+        Locale.US,
+        "%s : %.1f°C\n",
+        padKey("Temp"),
+        snap.battery.batteryTempC
+));
+
+
+// --------------------------------------------------
+// VOLTAGE / CURRENT
+// --------------------------------------------------
+
+if (snap.battery.voltageMv > 0) {
 
     sb.append(String.format(
             Locale.US,
-            "%s : %s\n",
-            padKey("Level"),
-            snap.battery.level >= 0 ? snap.battery.level + "%" : "N/A"
-    ));
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %s\n",
-            padKey("Status"),
-            snap.battery.status != null ? snap.battery.status : "N/A"
-    ));
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %s\n",
-            padKey("Charging source"),
-            snap.battery.chargingSource != null ? snap.battery.chargingSource : "N/A"
-    ));
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %.1f°C\n\n",
-            padKey("Temp"),
-            snap.battery.batteryTempC
-    ));
-
-    // --------------------------------------------------
-    // CHARGE DATA
-    // --------------------------------------------------
-
-    if (snap.battery.chargeNowMah > 0) {
-        sb.append(String.format(
-                Locale.US,
-                "%s : %d mAh\n",
-                padKey("Current charge"),
-                snap.battery.chargeNowMah
-        ));
-    }
-
-    if (snap.battery.chargeFullMah > 0) {
-        sb.append(String.format(
-                Locale.US,
-                "%s : %d mAh\n",
-                padKey("Estimated capacity"),
-                snap.battery.chargeFullMah
-        ));
-    }
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %s\n",
-            padKey("Source"),
-            snap.battery.source != null ? snap.battery.source : "N/A"
-    ));
-    
-    if (modelCap > 0) {
-        sb.append(String.format(
-                Locale.US,
-                "%s : %d mAh\n",
-                padKey("Declared capacity"),
-                modelCap
-        ));
-    }
-
-    // --------------------------------------------------
-    // ROOT / OEM
-    // --------------------------------------------------
-
-    if (snap.battery.chargeDesignMah > 0 ||
-        snap.battery.cycleCount > 0 ||
-        snap.battery.internalResistance > 0) {
-
-        sb.append("\n");
-        sb.append("=== ROOT BATTERY DATA ===\n");
-
-        if (snap.battery.chargeDesignMah > 0) {
-
-            sb.append(String.format(
-                    Locale.US,
-                    "%s : %d mAh\n",
-                    padKey("Design capacity"),
-                    snap.battery.chargeDesignMah
-            ));
-        }
-
-        if (snap.battery.sohPercent > 0) {
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %d %%\n",
-            padKey("SOH"),
-            snap.battery.sohPercent
+            "%s : %.3f V\n",
+            padKey("Voltage"),
+            snap.battery.voltageMv / 1000f
     ));
 }
 
-        if (snap.battery.cycleCount > 0) {
+if (snap.battery.currentMa != 0) {
 
-            sb.append(String.format(
-                    Locale.US,
-                    "%s : %d\n",
-                    padKey("Cycle count"),
-                    snap.battery.cycleCount
-            ));
+    sb.append(String.format(
+            Locale.US,
+            "%s : %d mA\n",
+            padKey("Current"),
+            snap.battery.currentMa
+    ));
+}
+
+
+// --------------------------------------------------
+// CHARGE DATA
+// --------------------------------------------------
+
+if (snap.battery.chargeNowMah > 0) {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %d mAh\n",
+            padKey("Current charge"),
+            snap.battery.chargeNowMah
+    ));
+}
+
+if (snap.battery.chargeFullMah > 0) {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %d mAh\n",
+            padKey("Estimated capacity"),
+            snap.battery.chargeFullMah
+    ));
+}
+
+sb.append(String.format(
+        Locale.US,
+        "%s : %s\n",
+        padKey("Source"),
+        snap.battery.source != null
+                ? snap.battery.source
+                : "N/A"
+));
+
+if (modelCap > 0) {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %d mAh\n",
+            padKey("Declared capacity"),
+            modelCap
+    ));
+}
+
+
+// --------------------------------------------------
+// INTERNAL RESISTANCE (fuel gauge OR calculated)
+// --------------------------------------------------
+
+float irValue = snap.battery.internalResistance;
+
+if (irValue <= 0) {
+
+    float v1 = getBatteryVoltageFiltered();
+    float i1 = getBatteryCurrentNowSafe();
+
+    if (!Float.isNaN(v1)
+            && !Float.isNaN(i1)
+            && Math.abs(i1) > 50f) {
+
+        SystemClock.sleep(200);
+
+        float v2 = getBatteryVoltageFiltered();
+
+        if (!Float.isNaN(v2)) {
+
+            float dv = Math.abs(v1 - v2);
+            float ia = Math.abs(i1) / 1000f;
+
+            if (ia > 0.05f && dv > 0.002f) {
+
+                float esr = dv / ia;
+
+                if (esr > 0f && esr < 0.5f) {
+
+                    irValue = esr * 1000f;
+                }
+            }
         }
+    }
+}
 
-        if (snap.battery.internalResistance > 0) {
+if (irValue > 0) {
 
-            sb.append(String.format(
-                    Locale.US,
-                    "%s : %d mΩ\n",
-                    padKey("Internal resistance"),
-                    snap.battery.internalResistance
-            ));
-        }
+    sb.append(String.format(
+            Locale.US,
+            "%s : %.0f mΩ\n",
+            padKey("Internal resistance"),
+            irValue
+    ));
+}
 
-    } else {
 
-        sb.append("\n");
+// --------------------------------------------------
+// ROOT / OEM
+// --------------------------------------------------
+
+if (snap.battery.chargeDesignMah > 0
+        || snap.battery.cycleCount > 0
+        || snap.battery.sohPercent > 0) {
+
+    sb.append("\n");
+    sb.append("=== ROOT BATTERY DATA ===\n");
+
+    if (snap.battery.chargeDesignMah > 0) {
 
         sb.append(String.format(
                 Locale.US,
-                "%s : %s\n",
-                padKey("Lifecycle"),
-                "Requires root access"
+                "%s : %d mAh\n",
+                padKey("Design capacity"),
+                snap.battery.chargeDesignMah
         ));
     }
 
-    return sb.toString();
+    if (snap.battery.sohPercent > 0) {
+
+        sb.append(String.format(
+                Locale.US,
+                "%s : %d %%\n",
+                padKey("SOH"),
+                snap.battery.sohPercent
+        ));
+    }
+
+    if (snap.battery.cycleCount > 0) {
+
+        sb.append(String.format(
+                Locale.US,
+                "%s : %d\n",
+                padKey("Cycle count"),
+                snap.battery.cycleCount
+        ));
+    }
+
+} else {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Lifecycle"),
+            "OEM data not available"
+    ));
 }
+
+return sb.toString();
 
 // ===================================================================
 // REFRESH VIEW
