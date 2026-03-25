@@ -4020,10 +4020,10 @@ if (!Float.isNaN(vStart)
 
                     // βασικό συμπέρασμα protection
                     Lab14BatteryProtectionCheck(
-                            gr,
-                            systemLimitedF,
-                            validDrainF
-                    );
+        gr,
+        new boolean[]{ systemLimitedF },
+        validDrainF
+);
 
                     // ------------------------------------------------
                     // PRO DETAILS
@@ -4145,7 +4145,7 @@ try {
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
     p.edit()
-        .putBoolean("lab14b_system_limited", systemLimitedF[0])
+        .putBoolean("lab14b_system_limited", systemLimitedF)
         .putBoolean("lab14b_valid_drain", validDrainF)
         .putLong("lab14b_ts", System.currentTimeMillis())
         .putLong("lab14b_elapsed", SystemClock.elapsedRealtime())
@@ -15867,6 +15867,12 @@ if (cycles > 0) {
 
 }
 
+// ----------------------------------------------------
+// THERMAL PEAK READ
+// ----------------------------------------------------
+
+float cpuTempPeak = readCpuTempSafe();
+float gpuTempPeak = Float.NaN;
 
 // ----------------------------------------------------
 // CPU / GPU
@@ -18239,6 +18245,22 @@ private void lab17RunAuto() {
                     thermalDanger ||
                     chargingWeakOrThrottled ||
                     (lab14Health < 70f);
+                    
+String lab14AgingLabel;
+
+if (lab14Aging >= 0) {
+
+    lab14AgingLabel = gr
+            ? "Δείκτης γήρανσης"
+            : "Aging index";
+
+} else {
+
+    lab14AgingLabel = gr
+            ? "Δείκτης γήρανσης"
+            : "Aging index";
+
+}
 
             ui.post(() -> {
 
