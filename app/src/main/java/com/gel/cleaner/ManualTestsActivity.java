@@ -16796,24 +16796,24 @@ if (lab14FastPhase) {
     int fastElapsed =
         (int)((now - lab14FastStartTime)/1000);
 
-if (fastElapsed > 45)
-    fastElapsed = 45;
+    if (fastElapsed > 45)
+        fastElapsed = 45;
 
-counterText.setText(
-        gr
-        ? "Προθέρμανση καταπόνησης "
-            + fastElapsed
-            + " / 45"
-        : "Stress warm-up "
-            + fastElapsed
-            + " / 45"
-);
+    counterText.setText(
+            gr
+            ? "Προθέρμανση καταπόνησης "
+                + fastElapsed
+                + " / 45"
+            : "Stress warm-up "
+                + fastElapsed
+                + " / 45"
+    );
 
     // ✅ FAST BAR (uses main bar)
-if (lab14MainBar != null) {
+    if (lab14MainBar != null) {
 
-    int segCount =
-            lab14MainBar.getChildCount();
+        int segCount =
+                lab14MainBar.getChildCount();
 
         float ratio =
                 Math.min(
@@ -16827,12 +16827,12 @@ if (lab14MainBar != null) {
         for (int i = 0; i < segCount; i++) {
 
             View seg =
-                    lab14FastBar.getChildAt(i);
+                    lab14MainBar.getChildAt(i);
 
             if (i < active) {
-                seg.setBackgroundColor(0xFFFFAA00);
+                seg.setBackgroundColor(0xFF39FF14);
             } else {
-                seg.setBackgroundColor(0xFF444444);
+                seg.setBackgroundColor(0xFF333333);
             }
         }
     }
