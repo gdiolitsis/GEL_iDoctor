@@ -16539,23 +16539,25 @@ lab14Cancelled = false;
 
 if (wasCancelled) return;
 
+});   // ← ΚΛΕΙΝΕΙ runOnUiThread
+
+} catch (Throwable t) {
+
+    lab14StopAllStress();
+
+    try {
+        counterText = null;
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    restoreBrightnessAndKeepOn();
+
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
 }
 
-} catch (Throwable t) {  
-
-    lab14StopAllStress();  
-
-    try {  
-    	counterText = null;
-        lab14CleanupUI();  
-    } catch (Throwable ignore) {}  
-
-    restoreBrightnessAndKeepOn();  
-
-    lab14Cancelled = true;  
-    lab14Running = false;  
-    lab14PopupShown = false;  
-    lab14AdvisoryShown = false;  
 }
 
 private long estimateDrainFallback(
