@@ -34,39 +34,71 @@ public class iDoctorDeviceProfiles {
 
     public static DeviceProfile detectProfile() {
 
-        String manufacturer = safe(Build.MANUFACTURER);
-        String brand = safe(Build.BRAND);
-        String hardware = safe(Build.HARDWARE);
+    String manufacturer = safe(Build.MANUFACTURER);
+    String brand = safe(Build.BRAND);
+    String hardware = safe(Build.HARDWARE);
 
-        if (manufacturer.contains("xiaomi")
-                || brand.contains("xiaomi")
-                || brand.contains("redmi")
-                || brand.contains("poco")) {
+    if (manufacturer.contains("xiaomi")
+            || brand.contains("redmi")
+            || brand.contains("poco")) {
 
-            return profileXiaomi();
-        }
-
-        if (manufacturer.contains("samsung")) {
-
-            return profileSamsung();
-        }
-
-        if (hardware.contains("qcom")
-                || hardware.contains("qualcomm")
-                || hardware.contains("msm")
-                || hardware.contains("sdm")) {
-
-            return profileQcom();
-        }
-
-        if (hardware.contains("mt")
-                || hardware.contains("mediatek")) {
-
-            return profileMTK();
-        }
-
-        return null;
+        return profileXiaomi();
     }
+
+    if (manufacturer.contains("samsung")) {
+
+        return profileSamsung();
+    }
+
+    if (hardware.contains("qcom")
+            || hardware.contains("qualcomm")
+            || hardware.contains("msm")
+            || hardware.contains("sdm")) {
+
+        return profileQcom();
+    }
+
+    if (hardware.contains("mt")
+            || hardware.contains("mediatek")) {
+
+        return profileMTK();
+    }
+
+    return profileGeneric();   // ✅ ΜΟΝΟ ΕΔΩ
+}
+
+    private static DeviceProfile profileGeneric() {
+
+    DeviceProfile p = new DeviceProfile();
+
+    p.name = "GENERIC";
+
+    p.batteryChargeFullPath =
+            "/sys/class/power_supply/battery/charge_full";
+
+    p.batteryChargeNowPath =
+            "/sys/class/power_supply/battery/charge_now";
+
+    p.batteryTempPath =
+            "/sys/class/power_supply/battery/temp";
+
+    p.batteryVoltagePath =
+            "/sys/class/power_supply/battery/voltage_now";
+
+    p.batteryCurrentPath =
+            "/sys/class/power_supply/battery/current_now";
+
+    p.batteryCyclePath =
+            "/sys/class/power_supply/battery/cycle_count";
+
+    p.cpuTempPath =
+            "/sys/class/thermal/thermal_zone0/temp";
+
+    p.gpuTempPath =
+            "/sys/class/thermal/thermal_zone1/temp";
+
+    return p;
+}
 
     // ============================================================
     // XIAOMI
@@ -122,7 +154,7 @@ public class iDoctorDeviceProfiles {
         p.name = "SAMSUNG";
 
         p.batteryChargeFullPath =
-                "/sys/class/power_supply/battery/batt_full_capacity";
+        "/sys/class/power_supply/battery/charge_full";
 
         p.batteryChargeNowPath =
                 "/sys/class/power_supply/battery/charge_now";
