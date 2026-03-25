@@ -263,6 +263,8 @@ private long t0;
 private int batteryPercent;
 private long cycles;
 private float tempStart;
+private float lab14TempPeak = Float.NaN;
+
 
 private long lab14RecoveryTimeMs = 0;
 
@@ -3941,35 +3943,34 @@ long endMah = end.battery.chargeNowMah;
 float tempEnd = getBatteryTempEngineSafe();
 
 if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
-    float t = getBatteryTempEngineSafe();
-if (!Float.isNaN(t)) {
-    tempEnd = t;
-}
+    tempEnd = end.battery.batteryTempC;
 }
 
 float vEnd = getBatteryVoltageFiltered();
 
-                cpuFreqEnd = readCpuFreq();
-                cpuTempEnd = readCpuTempSafe2();
+cpuFreqEnd = readCpuFreq();
+cpuTempEnd = readCpuTempSafe2();
 
-                validDrain = (start.chargeNowMah - endMah) > 0;
+validDrain = start.chargeNowMah > 0
+        && endMah > 0
+        && (start.chargeNowMah - endMah) > 0;
 
-                // ----------------------------------------------------
-                // SYSTEM LIMITER DETECTION
-                // ----------------------------------------------------
-                if (!Float.isNaN(tempStart)
-                        && !Float.isNaN(tempEnd)
-                        && (tempEnd - tempStart) < 1.0f) {
+// ----------------------------------------------------
+// SYSTEM LIMITER DETECTION
+// ----------------------------------------------------
+if (!Float.isNaN(tempStart)
+        && !Float.isNaN(tempEnd)
+        && (tempEnd - tempStart) < 1.0f) {
 
-                    systemLimited[0] = true;
-                }
+    systemLimited[0] = true;
+}
 
-                if (!Float.isNaN(vStart)
-                        && !Float.isNaN(vEnd)
-                        && vEnd > (vStart - 0.01f)) {
+if (!Float.isNaN(vStart)
+        && !Float.isNaN(vEnd)
+        && vEnd > (vStart - 0.01f)) {
 
-                    systemLimited[0] = true;
-                }
+    systemLimited[0] = true;
+}
 
                 // ----------------------------------------------------
                 // CPU THROTTLE DETECTION
@@ -4002,7 +4003,7 @@ float vEnd = getBatteryVoltageFiltered();
                 final boolean thermalLimitF = thermalLimit;
                 final boolean powerLimitF = powerLimit;
                 final boolean validDrainF = validDrain;
-                final boolean[] systemLimitedF = systemLimited;
+                final boolean systemLimitedF = systemLimited[0];
 
                 final long startMahF = start.chargeNowMah;
                 final long endMahF = endMah;
@@ -4597,32 +4598,7 @@ if (tier != null) {
     }
 }
 
-logLabelOkValue(
-        gr ? "Στατιστική συνέπεια"
-           : "Run consistency",
-        String.format(
-                Locale.US,
-                "%d%% (%d runs, %s)",
-                consistency,
-                validRunsForConsistency,
-                tierLabel
-        )
-);
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Στατιστική συνέπεια"
-                   : "Run consistency",
-                gr
-                        ? "Ανεπαρκή δεδομένα"
-                        : "Insufficient data"
-        );
-
-    }
-
     logLine();
-
 
     // =====================================================
     // CURRENT RUN INVALID
@@ -13363,6 +13339,7 @@ startMah = start.battery.chargeNowMah;
 cycles = start.battery.cycleCount;
 
 tempStart = getBatteryTempEngineSafe();
+lab14TempPeak = tempStart;
 
 if (Float.isNaN(tempStart) || tempStart <= 0f) {
     tempStart = start.battery.batteryTempC;
@@ -13878,13 +13855,18 @@ if (lab14_systemLimited[0]) {
         );
     }
 
-    if (!Float.isNaN(voltageRecoverySpeed)) {
-        logLabelValue(
-                gr ? "Ταχύτητα ανάκαμψης"
-                   : "Recovery speed",
-                String.format(Locale.US, "%.4f V/sec", voltageRecoverySpeed)
-        );
-    }
+    if (!Float.isNaN(voltageRecoverySpeed[0])) {
+
+    logLabelValue(
+            gr ? "Ταχύτητα ανάκαμψης"
+               : "Recovery speed",
+            String.format(
+                    Locale.US,
+                    "%.4f V/sec",
+                    voltageRecoverySpeed[0]
+            )
+    );
+}
 
     if (!Float.isNaN(voltageStability)) {
         logLabelValue(
@@ -13965,21 +13947,20 @@ private void lab14LogAging(
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "Γήρανση μπαταρίας"
-            : "Battery aging");
-    logLine();
+        ? "Γήρανση μπαταρίας"
+        : "Battery aging");
+logLine();
 
-    if (agingIndex >= 0) {
-        logLabelOkValue(
-                gr ? "Δείκτης γήρανσης μπαταρίας"
-                   : "Battery aging index",
-                String.format(
-                        Locale.US,
-                        "%d / 100 — %s",
-                        agingIndex,
-                        agingInterp
-                )
-        );
+if (agingIndex >= 0) {
+
+    logLabelOkValue(
+            gr ? "Δείκτης γήρανσης μπαταρίας"
+               : "Battery aging",
+            agingInterp + " (" + agingIndex + ")"
+    );
+
+}
+
     } else {
         logLabelWarnValue(
                 gr ? "Δείκτης γήρανσης μπαταρίας"
@@ -13997,27 +13978,11 @@ private void lab14LogAging(
         );
     } else {
         logLabelWarnValue(
-                gr ? "Ανάλυση γήρανσης"
-                   : "Aging analysis",
-                gr ? "Μη διαθέσιμη"
-                   : "Unavailable"
-        );
-    }
-
-    if (!Float.isNaN(monthsTo70) && agingIndex >= 0) {
-        logLabelValue(
-                gr ? "Εκτίμηση διάρκειας ζωής"
-                   : "Estimated lifespan",
-                String.format(
-                        Locale.US,
-                        gr
-                                ? "%.0f μήνες μέχρι ~70%%"
-                                : "%.0f months until ~70%%",
-                        monthsTo70
-                )
-        );
-    }
-}
+        gr ? "Ανάλυση γήρανσης"
+           : "Aging analysis",
+        gr ? "Μη διαθέσιμη"
+           : "Unavailable"
+);
 
 // ============================================================
 // LAB 14 — LOG FINAL SCORE
@@ -14041,31 +14006,37 @@ private void lab14LogFinalScore(
     logLine();
 
     String scoreText = String.format(
-        Locale.US,
-        "%d%% (%s)  •  Class %s",
-        finalScore,
-        finalLabel,
-        healthClass
-);
+            Locale.US,
+            "%s (%d)  •  Class %s",
+            finalLabel,
+            finalScore,
+            healthClass
+    );
 
-if (finalScore >= 85) {
-    logLabelOkValue(
-            gr ? "Τελικό αποτέλεσμα δοκιμής"
-               : "Final test score",
-            scoreText
-    );
-} else if (finalScore >= 65) {
-    logLabelWarnValue(
-            gr ? "Τελικό αποτέλεσμα δοκιμής"
-               : "Final test score",
-            scoreText
-    );
-} else {
-    logLabelErrorValue(
-            gr ? "Τελικό αποτέλεσμα δοκιμής"
-               : "Final test score",
-            scoreText
-    );
+    if (finalScore >= 85) {
+
+        logLabelOkValue(
+                gr ? "Τελικό αποτέλεσμα δοκιμής"
+                   : "Final test result",
+                scoreText
+        );
+
+    } else if (finalScore >= 65) {
+
+        logLabelWarnValue(
+                gr ? "Τελικό αποτέλεσμα δοκιμής"
+                   : "Final test result",
+                scoreText
+        );
+
+    } else {
+
+        logLabelErrorValue(
+                gr ? "Τελικό αποτέλεσμα δοκιμής"
+                   : "Final test result",
+                scoreText
+        );
+    }
 }
 
     if (collapseRisk[0] && !lab14_systemLimited[0]) {
@@ -14448,6 +14419,20 @@ if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
     tempEnd = snapEnd.temperature;
 }
 
+float tempPeak = tempEnd;
+
+if (!Float.isNaN(lab14TempPeak)) {
+    tempPeak = lab14TempPeak;
+}
+
+float thermalChange = Float.NaN;
+
+if (!Float.isNaN(tempStart) &&
+    !Float.isNaN(tempPeak)) {
+
+    thermalChange = tempPeak - tempStart;
+}
+
 final Float cpuTempEnd = readCpuTempSafe();
 final Float gpuTempEnd = readGpuTempSafe();
 
@@ -14782,6 +14767,8 @@ if (!Float.isNaN(voltageRecovery[0])) {
 // ----------------------------------------------------
 // RECOVERY SPEED (real time)
 // ----------------------------------------------------
+voltageRecoverySpeed[0] = Float.NaN;
+
 if (!Float.isNaN(vLoad1[0]) &&
     !Float.isNaN(vRecover[0]) &&
     lab14RecoveryTimeMs > 0) {
@@ -14792,9 +14779,18 @@ if (!Float.isNaN(vLoad1[0]) &&
     float restSec =
             lab14RecoveryTimeMs / 1000f;
 
-    if (restSec > 0f) {
-        voltageRecoverySpeed[0] =
+    if (recoveryDelta < 0f) {
+        recoveryDelta = 0f;
+    }
+
+    if (restSec > 0f && recoveryDelta > 0.0005f) {
+
+        float speed =
                 recoveryDelta / restSec;
+
+        if (speed > 0f && speed < 1f) {
+            voltageRecoverySpeed[0] = speed;
+        }
     }
 }
 
@@ -15108,7 +15104,7 @@ if (!Float.isNaN(c1) &&
 // ----------------------------------------------------
 
 if (!Float.isNaN(tempStart) &&
-    !Float.isNaN(tempEnd) &&
+    !Float.isNaN(tempPeak) &&
     !Float.isNaN(currentNow)) {
 
     float currentAmp =
@@ -15118,7 +15114,7 @@ if (!Float.isNaN(tempStart) &&
         currentAmp < 6f) {
 
         float tempRise =
-                Math.max(0f, tempEnd - tempStart);
+        Math.max(0f, tempPeak - tempStart);
 
         if (tempRise > 0.2f) {
 
@@ -15183,9 +15179,11 @@ if (validDrain &&
     !lab14_systemLimited[0] &&
     !Float.isNaN(internalResistance[0]) &&
     !Float.isNaN(tempStart) &&
-    !Float.isNaN(tempEnd)) {
+    !Float.isNaN(tempPeak)) {
 
-    float tempRise = tempEnd - tempStart;
+    float tempRise =
+            tempPeak - tempStart;
+}
 
     boolean realESR =
             internalResistance[0] > 0.15f &&
@@ -15221,20 +15219,27 @@ float tempNowEngine = getBatteryTempEngineSafe();
 if (!Float.isNaN(tempNowEngine) && tempNowEngine > 0f) {
 
     if (Float.isNaN(tempStart)) {
-        tempStart = tempNowEngine;
-    }
+    tempStart = tempNowEngine;
+}
 
-    tempEnd = tempNowEngine;
+if (!Float.isNaN(tempNowEngine)) {
+
+    if (Float.isNaN(lab14TempPeak) ||
+        tempNowEngine > lab14TempPeak) {
+
+        lab14TempPeak = tempNowEngine;
+    }
+}
 }
 
 if (!Float.isNaN(tempStart) &&
-    !Float.isNaN(tempEnd) &&
+    !Float.isNaN(tempPeak) &&
     !Float.isNaN(internalResistance[0]) &&
     validDrain &&
     !lab14_systemLimited[0]) {
 
     float tempRise =
-            tempEnd - tempStart;
+            tempPeak - tempStart;
 
     if (tempRise > 6f &&
         internalResistance[0] < 0.15f) {
@@ -15258,12 +15263,16 @@ if (!Float.isNaN(pulseSag[0]) &&
         swellingScore++;
     }
 
-    if (pulseScore[0] < 50f) {
-        collapseRisk[0] = true;
-    }
-
     if (pulseScore[0] < 40f) {
+
+        collapseRisk[0] = true;
         swellingScore++;
+
+    }
+    else if (pulseScore[0] < 50f) {
+
+        collapseRisk[0] = true;
+
     }
 
 }
@@ -15591,7 +15600,7 @@ if (validDrain &&
     lab14Conf != null &&
     mahPerHour > 0 &&
     !Float.isNaN(tempStart) &&
-    !Float.isNaN(tempEnd)) {
+    !Float.isNaN(tempPeak)) {
 
     aging =
             engine.computeAging(
@@ -15599,7 +15608,7 @@ if (validDrain &&
                     lab14Conf,
                     cycles,
                     tempStart,
-                    tempEnd
+                    tempPeak
             );
 }
 
@@ -15719,10 +15728,14 @@ if (!Float.isNaN(relaxScore[0])) {
 
 }
 
-if (!Float.isNaN(pulseScore[0])) {
+if (!Float.isNaN(pulseScore[0]) &&
+    validDrain &&
+    !lab14_systemLimited[0]) {
 
-    if (pulseScore[0] < 50f)
+    if (pulseScore[0] < 40f)
         health -= 12f;
+    else if (pulseScore[0] < 50f)
+        health -= 8f;
 
 }
 
@@ -15751,11 +15764,11 @@ if (cycles > 0) {
 
 }
 
-if (!Float.isNaN(tempEnd)) {
+if (!Float.isNaN(tempPeak)) {
 
-    if (tempEnd > 50f)
+    if (tempPeak > 50f)
         health -= 10f;
-    else if (tempEnd > 45f)
+    else if (tempPeak > 45f)
         health -= 5f;
 
 }
@@ -15775,6 +15788,7 @@ else if (health >= 60f)
     lab14HealthLabel = "Worn";
 else
     lab14HealthLabel = "Degraded";
+
 
 // ----------------------------------------------------
 // FINAL SCORE (measurement-based only)
@@ -15802,13 +15816,13 @@ if (validDrain && !lab14_systemLimited[0] && drainPercentPerHour > 0) {
 // TEMPERATURE ABSOLUTE
 // ----------------------------------------------------
 
-if (validDrain && !Float.isNaN(tempEnd)) {
+if (validDrain && !Float.isNaN(tempPeak)) {
 
-    if (tempEnd >= 55f)
+    if (tempPeak >= 55f)
         finalScore -= 25;
-    else if (tempEnd >= 48f)
+    else if (tempPeak >= 48f)
         finalScore -= 12;
-    else if (tempEnd >= 42f)
+    else if (tempPeak >= 42f)
         finalScore -= 6;
 }
 
@@ -15819,9 +15833,9 @@ if (validDrain && !Float.isNaN(tempEnd)) {
 
 if (validDrain &&
     !Float.isNaN(tempStart) &&
-    !Float.isNaN(tempEnd)) {
+    !Float.isNaN(tempPeak)) {
 
-    float rise = Math.max(0f, tempEnd - tempStart);
+    float rise = Math.max(0f, tempPeak - tempStart);
 
     if (rise >= 12f)
         finalScore -= 12;
@@ -15842,6 +15856,7 @@ if (cycles > 0) {
         finalScore -= 10;
     else if (cycles >= 300)
         finalScore -= 5;
+
 }
 
 
@@ -15849,20 +15864,22 @@ if (cycles > 0) {
 // CPU / GPU
 // ----------------------------------------------------
 
-if (validDrain && cpuTempEnd != null) {
+if (validDrain && !Float.isNaN(cpuTempPeak)) {
 
-    if (cpuTempEnd >= 85f)
+    if (cpuTempPeak >= 85f)
         finalScore -= 6;
-    else if (cpuTempEnd >= 75f)
+    else if (cpuTempPeak >= 75f)
         finalScore -= 3;
+
 }
 
-if (validDrain && gpuTempEnd != null) {
+if (validDrain && !Float.isNaN(gpuTempPeak)) {
 
-    if (gpuTempEnd >= 80f)
+    if (gpuTempPeak >= 80f)
         finalScore -= 5;
-    else if (gpuTempEnd >= 70f)
+    else if (gpuTempPeak >= 70f)
         finalScore -= 3;
+
 }
 
 
@@ -15877,6 +15894,7 @@ if (!Float.isNaN(internalResistance[0]) &&
         finalScore -= 12;
     else if (internalResistance[0] >= 0.18f)
         finalScore -= 6;
+
 }
 
 
@@ -15887,7 +15905,7 @@ if (!Float.isNaN(internalResistance[0]) &&
 if (collapseRisk[0] && !lab14_systemLimited[0])
     finalScore -= 6;
 
-if (swellingRisk[0])
+if (swellingRisk[0] && !lab14_systemLimited[0])
     finalScore -= 6;
 
 if (calibrationDrift[0])
@@ -15900,66 +15918,51 @@ if (calibrationDrift[0])
 
 if (!Float.isNaN(cellElasticityIndex[0]) &&
     cellElasticityIndex[0] < 40f &&
-    validDrain) {
-
+    validDrain)
     finalScore -= 6;
-}
 
 if (!Float.isNaN(structuralIntegrityIndex[0]) &&
     structuralIntegrityIndex[0] < 50f &&
-    validDrain) {
-
+    validDrain)
     finalScore -= 6;
-}
 
 if (!Float.isNaN(powerStabilityFactor[0]) &&
     powerStabilityFactor[0] < 50f &&
-    validDrain) {
-
+    validDrain)
     finalScore -= 5;
+
+
+// pulse FIX
+if (!Float.isNaN(pulseScore[0]) && validDrain) {
+
+    if (pulseScore[0] < 35f)
+        finalScore -= 6;
+    else if (pulseScore[0] < 50f)
+        finalScore -= 5;
+
 }
 
-if (!Float.isNaN(pulseScore[0]) &&
-    pulseScore[0] < 50f &&
-    validDrain) {
 
-    finalScore -= 5;
+// relax FIX
+if (!Float.isNaN(relaxScore[0]) && validDrain) {
+
+    if (relaxScore[0] < 4f)
+        finalScore -= 6;
+    else if (relaxScore[0] < 6f)
+        finalScore -= 5;
+
 }
 
-if (!Float.isNaN(pulseScore[0]) &&
-    pulseScore[0] < 35f &&
-    validDrain) {
-
-    finalScore -= 6;
-}
-
-if (!Float.isNaN(relaxScore[0]) &&
-    relaxScore[0] < 6f &&
-    validDrain) {
-
-    finalScore -= 5;
-}
-
-if (!Float.isNaN(relaxScore[0]) &&
-    relaxScore[0] < 4f &&
-    validDrain) {
-
-    finalScore -= 6;
-}
 
 if (!Float.isNaN(coulombDrift[0]) &&
     coulombDrift[0] > 8f &&
-    validDrain) {
-
+    validDrain)
     finalScore -= 5;
-}
 
 if (!Float.isNaN(dualLoadScore[0]) &&
     dualLoadScore[0] < 60f &&
-    validDrain) {
-
+    validDrain)
     finalScore -= 5;
-}
 
 
 // ----------------------------------------------------
@@ -16009,68 +16012,86 @@ else if (finalScore >= 60)
 else
     healthClass = "D";
 
-                        // ----------------------------------------------------
-                        // CONFIDENCE
-                        // ----------------------------------------------------
-                        float measurementConfidence = 100f;
+// ----------------------------------------------------
+// CONFIDENCE
+// ----------------------------------------------------
 
-                        if (Float.isNaN(vStart[0]) ||
-                            Float.isNaN(vLoad1[0]) ||
-                            Float.isNaN(vRecover[0])) {
-                            measurementConfidence -= 20f;
-                        }
+float measurementConfidence = 100f;
 
-                        if (Float.isNaN(sagAvg[0]))
-                            measurementConfidence -= 15f;
+if (!lab14_systemLimited[0]) {
 
-                        if (Float.isNaN(internalResistance[0]))
-                            measurementConfidence -= 15f;
+    if (Float.isNaN(vStart[0]) ||
+        Float.isNaN(vLoad1[0]) ||
+        Float.isNaN(vRecover[0])) {
+        measurementConfidence -= 20f;
+    }
 
-                        if (Float.isNaN(voltageRecovery[0]))
-                            measurementConfidence -= 10f;
+    if (Float.isNaN(sagAvg[0]))
+        measurementConfidence -= 15f;
 
-                        if (Float.isNaN(tempStart) ||
-                            Float.isNaN(tempEnd))
-                            measurementConfidence -= 10f;
+    if (Float.isNaN(internalResistance[0]))
+        measurementConfidence -= 15f;
 
-                        if (Float.isNaN(voltageRecoverySpeed[0]))
-                            measurementConfidence -= 5f;
+    if (Float.isNaN(voltageRecovery[0]))
+        measurementConfidence -= 10f;
 
-                        if (measurementConfidence < 0f)
-                            measurementConfidence = 0f;
-                        if (measurementConfidence > 100f)
-                            measurementConfidence = 100f;
+    if (Float.isNaN(tempStart) ||
+        Float.isNaN(tempPeak))
+        measurementConfidence -= 10f;
 
-                        String confidenceLabel;
+    if (Float.isNaN(voltageRecoverySpeed[0]))
+        measurementConfidence -= 5f;
 
-                        if (measurementConfidence >= 90f)
-                            confidenceLabel = "Very high";
-                        else if (measurementConfidence >= 75f)
-                            confidenceLabel = "High";
-                        else if (measurementConfidence >= 60f)
-                            confidenceLabel = "Moderate";
-                        else
-                            confidenceLabel = "Low";
+}
+
+if (measurementConfidence < 0f)
+    measurementConfidence = 0f;
+
+if (measurementConfidence > 100f)
+    measurementConfidence = 100f;
+
+String confidenceLabel;
+
+if (measurementConfidence >= 90f)
+    confidenceLabel = "Very high";
+else if (measurementConfidence >= 75f)
+    confidenceLabel = "High";
+else if (measurementConfidence >= 60f)
+    confidenceLabel = "Moderate";
+else
+    confidenceLabel = "Low";
 
                         final float estimatedESRF = estimatedESR;
-                        final float energyEfficiencyF = energyEfficiency;
-                        final long endMahF = endMah;
-                        final float tempEndF = tempEnd;
-                        final long dtMsF = dtMs;
-                        final long drainMahF = drainMah;
-                        final boolean validDrainF = validDrain;
-                        final double mahPerHourF = mahPerHour;
-                        final double drainPercentPerHourF = drainPercentPerHour;           
-                        final Lab14Engine.AgingResult agingF = aging;
-                        final Lab14Engine.ConfidenceResult confF = lab14Conf;
-                        final int agingIndexF = lab14AgingIndex;
-                        final String agingInterpF = lab14AgingInterp;
-                        final boolean batteryBehaviourWarningF = lab14BatteryBehaviourWarning;
-                        final int finalScoreF = finalScore;
-                        final String finalLabelF = finalLabel;
-                        final String healthClassF = healthClass;
-                        final float voltageStartFinal = voltageStart;
-                        final long startMahFinal = startMah;
+final float energyEfficiencyF = energyEfficiency;
+
+final long endMahF = endMah;
+
+final float tempEndF = tempEnd;
+final float tempPeakF = tempPeak;   // ✅ ADD THIS
+
+final long dtMsF = dtMs;
+final long drainMahF = drainMah;
+
+final boolean validDrainF = validDrain;
+
+final double mahPerHourF = mahPerHour;
+final double drainPercentPerHourF = drainPercentPerHour;
+
+final Lab14Engine.AgingResult agingF = aging;
+final Lab14Engine.ConfidenceResult confF = lab14Conf;
+
+final int agingIndexF = lab14AgingIndex;
+final String agingInterpF = lab14AgingInterp;
+
+final boolean batteryBehaviourWarningF =
+        lab14BatteryBehaviourWarning;
+
+final int finalScoreF = finalScore;
+final String finalLabelF = finalLabel;
+final String healthClassF = healthClass;
+
+final float voltageStartFinal = voltageStart;
+final long startMahFinal = startMah;
                         
                         runOnUiThread(() -> {
 
@@ -16172,26 +16193,26 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
                                 if (powerStabilityFactor[0] >= 70) {
                                     logLabelOkValue(
-                                            gr ? "Σταθερότητα παροχής ισχύος"
-                                               : "Power stability factor",
-                                            String.format(
-                                                    Locale.US,
-                                                    "%.0f / 100 (%s)",
-                                                    powerStabilityFactor[0],
-                                                    pLabel
-                                            )
-                                    );
+        gr ? "Σταθερότητα παροχής ισχύος"
+           : "Power stability factor",
+        String.format(
+                Locale.US,
+                "%s (%.0f)",
+                pLabel,
+                powerStabilityFactor[0]
+        )
+);
                                 } else {
                                     logLabelWarnValue(
-                                            gr ? "Σταθερότητα παροχής ισχύος"
-                                               : "Power stability factor",
-                                            String.format(
-                                                    Locale.US,
-                                                    "%.0f / 100 (%s)",
-                                                    powerStabilityFactor[0],
-                                                    pLabel
-                                            )
-                                    );
+        gr ? "Σταθερότητα παροχής ισχύος"
+           : "Power stability factor",
+        String.format(
+                Locale.US,
+                "%s (%.0f)",
+                pLabel,
+                powerStabilityFactor[0]
+        )
+);
                                 }
                             }
 
@@ -16212,26 +16233,26 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
                                 if (stressSignature[0] >= 70) {
                                     logLabelOkValue(
-                                            gr ? "Υπογραφή καταπόνησης μπαταρίας"
-                                               : "Battery stress signature",
-                                            String.format(
-                                                    Locale.US,
-                                                    "%.0f / 100 (%s)",
-                                                    stressSignature[0],
-                                                    sLabel
-                                            )
-                                    );
+        gr ? "Υπογραφή καταπόνησης μπαταρίας"
+           : "Battery stress signature",
+        String.format(
+                Locale.US,
+                "%s (%.0f)",
+                sLabel,
+                stressSignature[0]
+        )
+);
                                 } else {
                                     logLabelWarnValue(
-                                            gr ? "Υπογραφή καταπόνησης μπαταρίας"
-                                               : "Battery stress signature",
-                                            String.format(
-                                                    Locale.US,
-                                                    "%.0f / 100 (%s)",
-                                                    stressSignature[0],
-                                                    sLabel
-                                            )
-                                    );
+        gr ? "Υπογραφή καταπόνησης μπαταρίας"
+           : "Battery stress signature",
+        String.format(
+                Locale.US,
+                "%s (%.0f)",
+                sLabel,
+                stressSignature[0]
+        )
+);
                                 }
                             }
 
@@ -16252,26 +16273,26 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
                                 if (cellElasticityIndex[0] >= 70) {
                                     logLabelOkValue(
-                                            gr ? "Δείκτης ελαστικότητας κυψελών"
-                                               : "Cell elasticity index",
-                                            String.format(
-                                                    Locale.US,
-                                                    "%.0f / 100 (%s)",
-                                                    cellElasticityIndex[0],
-                                                    eLabel
-                                            )
-                                    );
+        gr ? "Δείκτης ελαστικότητας κυψελών"
+           : "Cell elasticity index",
+        String.format(
+                Locale.US,
+                "%s (%.0f)",
+                eLabel,
+                cellElasticityIndex[0]
+        )
+);
                                 } else {
                                     logLabelWarnValue(
-                                            gr ? "Δείκτης ελαστικότητας κυψελών"
-                                               : "Cell elasticity index",
-                                            String.format(
-                                                    Locale.US,
-                                                    "%.0f / 100 (%s)",
-                                                    cellElasticityIndex[0],
-                                                    eLabel
-                                            )
-                                    );
+        gr ? "Δείκτης ελαστικότητας κυψελών"
+           : "Cell elasticity index",
+        String.format(
+                Locale.US,
+                "%s (%.0f)",
+                eLabel,
+                cellElasticityIndex[0]
+        )
+);
                                 }
                             }
 
@@ -16300,26 +16321,26 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
                                 if (structuralIntegrityIndex[0] >= 70f) {
                                     logLabelOkValue(
-                                            gr ? "Δομική ακεραιότητα μπαταρίας"
-                                               : "Battery structural integrity",
-                                            String.format(
-                                                    Locale.US,
-                                                    "%.0f / 100 (%s)",
-                                                    structuralIntegrityIndex[0],
-                                                    siLabel
-                                            )
-                                    );
+        gr ? "Δομική ακεραιότητα μπαταρίας"
+           : "Battery structural integrity",
+        String.format(
+                Locale.US,
+                "%s (%.0f)",
+                siLabel,
+                structuralIntegrityIndex[0]
+        )
+);
                                 } else {
                                     logLabelWarnValue(
-                                            gr ? "Δομική ακεραιότητα μπαταρίας"
-                                               : "Battery structural integrity",
-                                            String.format(
-                                                    Locale.US,
-                                                    "%.0f / 100 (%s)",
-                                                    structuralIntegrityIndex[0],
-                                                    siLabel
-                                            )
-                                    );
+        gr ? "Δομική ακεραιότητα μπαταρίας"
+           : "Battery structural integrity",
+        String.format(
+                Locale.US,
+                "%s (%.0f)",
+                siLabel,
+                structuralIntegrityIndex[0]
+        )
+);
                                 }
                             } else {
                                 logLabelWarnValue(
@@ -16434,7 +16455,7 @@ if (partial) {
     }
     
 // ------------------------------------------------
-// HEALTH %
+// HEALTH
 // ------------------------------------------------
 
 if (!Float.isNaN(lab14HealthPercent)) {
@@ -16444,12 +16465,11 @@ if (!Float.isNaN(lab14HealthPercent)) {
                : "Battery health",
             String.format(
                     Locale.US,
-                    "%.0f%% (%s)",
-                    lab14HealthPercent,
-                    lab14HealthLabel
+                    "%s (%.0f)",
+                    lab14HealthLabel,
+                    lab14HealthPercent
             )
     );
-
 }
 
     lab14LogFinalScore(
@@ -16678,18 +16698,28 @@ private void startLab14FastThread() {
                 return;
             }
 
-            // -------------------------
-            // LOAD 2
-            // -------------------------
+// LOAD 2
 
-            startCpuBurn_C_Mode();
+startCpuBurn_C_Mode();
 
-            SystemClock.sleep(12000);
-            SystemClock.sleep(400);
+SystemClock.sleep(12000);
 
-            vLoad2[0] = readStableBatteryVoltage();
+// extra settle time
+SystemClock.sleep(800);
 
-            stopCpuBurn();
+float v2a = readStableBatteryVoltage();
+
+SystemClock.sleep(300);
+
+float v2b = readStableBatteryVoltage();
+
+if (!Float.isNaN(v2a) && !Float.isNaN(v2b)) {
+    vLoad2[0] = (v2a + v2b) / 2f;
+} else {
+    vLoad2[0] = readStableBatteryVoltage();
+}
+
+stopCpuBurn();
 
             // -------------------------
             // SAG
@@ -16790,6 +16820,18 @@ private void startLab14ProgressLoop() {
             }
 
             long now = SystemClock.elapsedRealtime();
+            
+// ✅ THERMAL PEAK TRACKING
+    float tNow = getBatteryTempEngineSafe();
+
+    if (!Float.isNaN(tNow)) {
+
+        if (Float.isNaN(lab14TempPeak) ||
+            tNow > lab14TempPeak) {
+
+            lab14TempPeak = tNow;
+        }
+    }
 
             // =========================
             // FAST PHASE
@@ -17365,10 +17407,20 @@ if (elapsed < LAB15_TOTAL_SECONDS) {
 }
 
 // ================= FINAL =================
+
 lab15Finished = true;
 lab15Running  = false;
 
-lab15BattTempEnd = getBatteryTemperature();
+float tempNow = getBatteryTemperature();
+
+if (!Float.isNaN(tempNow)) {
+    lab15BattTempEnd = tempNow;
+}
+
+// fallback αν δεν πήραμε end
+if (Float.isNaN(lab15BattTempEnd)) {
+    lab15BattTempEnd = lab15BattTempPeak;
+}
 
 startBatteryTemp = lab15BattTempStart;
 endBatteryTemp   = lab15BattTempEnd;
@@ -17385,6 +17437,7 @@ logLabelOkValue(
 // ------------------------------------------------------------
 // Thermal correlation analysis
 // ------------------------------------------------------------
+
 logLab15ThermalCorrelation(
         lab15BattTempStart,
         lab15BattTempPeak,
@@ -17394,12 +17447,21 @@ logLab15ThermalCorrelation(
 // ------------------------------------------------------------
 // Thermal verdict
 // ------------------------------------------------------------
-float dtCharge = lab15BattTempEnd - lab15BattTempStart;
+
+float tempRef = lab15BattTempEnd;
+
+if (!Float.isNaN(lab15BattTempPeak)) {
+    tempRef = lab15BattTempPeak;
+}
+
+float dtCharge =
+        tempRef - lab15BattTempStart;
 
 if (lab15OverTempDuringCharge) {
 
     logLabelErrorValue(
-            gr ? "Θερμοκρασία κατά την φορτιση" : "Temperature during charging",
+            gr ? "Θερμοκρασία κατά την φορτιση"
+               : "Temperature during charging",
             String.format(
                     Locale.US,
                     gr
@@ -17412,7 +17474,8 @@ if (lab15OverTempDuringCharge) {
 } else {
 
     logLabelOkValue(
-            gr ? "Θερμοκρασία κατά την φορτιση" : "Temperature during charging",
+            gr ? "Θερμοκρασία κατά την φορτιση"
+               : "Temperature during charging",
             String.format(
                     Locale.US,
                     gr
@@ -17822,10 +17885,25 @@ private void lab16ThermalSnapshot() {
                 .apply();
     } catch (Throwable ignore) {}
 
-    logLabelOkValue(
-            gr ? "Βαθμολογία θερμικής συμπεριφοράς" : "Thermal behaviour score",
-            String.format(Locale.US, "%d%%", thermalScore)
-    );
+    String tLabel;
+
+if (thermalScore >= 80)
+    tLabel = gr ? "Φυσιολογική" : "Normal";
+else if (thermalScore >= 60)
+    tLabel = gr ? "Μέτρια" : "Moderate";
+else
+    tLabel = gr ? "Υψηλή" : "High";
+
+logLabelOkValue(
+        gr ? "Αξιολόγηση θερμικής συμπεριφοράς"
+           : "Thermal behaviour rating",
+        String.format(
+                Locale.US,
+                "%s (%d)",
+                tLabel,
+                thermalScore
+        )
+);
 
     boolean thermalSpikesDetected = thermalDanger;
 
@@ -18156,25 +18234,39 @@ private void lab17RunAuto() {
 
             ui.post(() -> {
 
-                // ================= SUMMARY =================
-                logLine();
-                logInfo(gr
-                        ? "LAB 14 — Υγεία μπαταρίας"
-                        : "LAB 14 — Battery health");
+// ================= SUMMARY =================
+logLine();
+logInfo(gr
+        ? "LAB 14 — Υγεία μπαταρίας"
+        : "LAB 14 — Battery health");
 
-                logLabelOkValue(
-                        gr ? "Υγεία" : "Health",
-                        String.format(
-                                Locale.US,
-                                gr
-                                        ? "%.0f%% | Δείκτης γήρανσης: %s"
-                                        : "%.0f%% | Aging index: %s",
-                                lab14Health,
-                                (lab14Aging >= 0
-                                        ? lab14Aging + "/100"
-                                        : (gr ? "Μ/Δ" : "N/A"))
-                        )
-                );
+String agingText;
+
+if (lab14Aging >= 0) {
+
+    agingText = String.format(
+            Locale.US,
+            "%s (%d)",
+            lab14AgingLabel,
+            lab14Aging
+    );
+
+} else {
+
+    agingText = gr ? "Μ/Δ" : "N/A";
+}
+
+logLabelOkValue(
+        gr ? "Υγεία" : "Health",
+        String.format(
+                Locale.US,
+                "%s (%.0f) | %s: %s",
+                lab14HealthLabel,
+                lab14Health,
+                gr ? "Γήρανση" : "Aging",
+                agingText
+        )
+);
 
                 // ================= LAB 14B =================
                 logInfo(gr
@@ -18246,31 +18338,48 @@ private void lab17RunAuto() {
                     );
                 }
 
-                logInfo(gr
-                        ? "LAB 16 — Θερμική συμπεριφορά"
-                        : "LAB 16 — Thermal behaviour");
+logInfo(gr
+        ? "LAB 16 — Θερμική συμπεριφορά"
+        : "LAB 16 — Thermal behaviour");
 
-                if (lab16Thermal >= 75) {
+String thermalLabel;
 
-                    logLabelOkValue(
-                            gr ? "Θερμική βαθμολογία" : "Thermal score",
-                            lab16Thermal + "%"
-                    );
+if (lab16Thermal >= 85) {
 
-                } else if (lab16Thermal >= 60) {
+    thermalLabel = gr ? "Άριστη" : "Excellent";
 
-                    logLabelWarnValue(
-                            gr ? "Θερμική βαθμολογία" : "Thermal score",
-                            lab16Thermal + "%"
-                    );
+    logLabelOkValue(
+            gr ? "Θερμική κατάσταση" : "Thermal",
+            thermalLabel + " (" + lab16Thermal + ")"
+    );
 
-                } else {
+} else if (lab16Thermal >= 70) {
 
-                    logLabelErrorValue(
-                            gr ? "Θερμική βαθμολογία" : "Thermal score",
-                            lab16Thermal + "%"
-                    );
-                }
+    thermalLabel = gr ? "Καλή" : "Good";
+
+    logLabelOkValue(
+            gr ? "Θερμική κατάσταση" : "Thermal",
+            thermalLabel + " (" + lab16Thermal + ")"
+    );
+
+} else if (lab16Thermal >= 55) {
+
+    thermalLabel = gr ? "Μέτρια" : "Moderate";
+
+    logLabelWarnValue(
+            gr ? "Θερμική κατάσταση" : "Thermal",
+            thermalLabel + " (" + lab16Thermal + ")"
+    );
+
+} else {
+
+    thermalLabel = gr ? "Κακή" : "Poor";
+
+    logLabelErrorValue(
+            gr ? "Θερμική κατάσταση" : "Thermal",
+            thermalLabel + " (" + lab16Thermal + ")"
+    );
+}
 
                 // ================= ANALYSIS =================
                 if (lab15SystemLimited) {
@@ -18347,33 +18456,40 @@ private void lab17RunAuto() {
                     }
                 }
 
-                // ================= FINAL SCORE =================
-                logLine();
-                logInfo(gr
-                        ? "Τελικός Δείκτης Αξιοπιστίας Μπαταρίας"
-                        : "Final Battery Reliability Score");
+// ================= FINAL SCORE =================
+logLine();
+logInfo(gr
+        ? "Τελικός Δείκτης Αξιοπιστίας Μπαταρίας"
+        : "Final Battery Reliability Score");
 
-                if (fFinalScore >= 80) {
+String finalText = String.format(
+        Locale.US,
+        "%s (%d)",
+        fCategory,
+        fFinalScore
+);
 
-                    logLabelOkValue(
-                            gr ? "Βαθμολογία" : "Score",
-                            String.format(Locale.US, "%d%% (%s)", fFinalScore, fCategory)
-                    );
+if (fFinalScore >= 80) {
 
-                } else if (fFinalScore >= 60) {
+    logLabelOkValue(
+            gr ? "Κατάσταση" : "Status",
+            finalText
+    );
 
-                    logLabelWarnValue(
-                            gr ? "Βαθμολογία" : "Score",
-                            String.format(Locale.US, "%d%% (%s)", fFinalScore, fCategory)
-                    );
+} else if (fFinalScore >= 60) {
 
-                } else {
+    logLabelWarnValue(
+            gr ? "Κατάσταση" : "Status",
+            finalText
+    );
 
-                    logLabelErrorValue(
-                            gr ? "Βαθμολογία" : "Score",
-                            String.format(Locale.US, "%d%% (%s)", fFinalScore, fCategory)
-                    );
-                }
+} else {
+
+    logLabelErrorValue(
+            gr ? "Κατάσταση" : "Status",
+            finalText
+    );
+}
 
                 // ================= DIAGNOSIS =================
                 logLine();
@@ -21670,16 +21786,41 @@ private void lab25CrashHistory() {
         );
 
     appendHtml("<br>");
-    logInfo(gr ? "Δείκτης Ρίσκου Σταθερότητας"
-               : "Stability risk score");
-    logLine();
+    logInfo(gr
+        ? "Δείκτης Ρίσκου Σταθερότητας"
+        : "Stability risk score");
 
-    if (risk >= 60)
-        logLabelErrorValue("Risk", risk + "%");
-    else if (risk >= 30)
-        logLabelWarnValue("Risk", risk + "%");
-    else
-        logLabelOkValue("Risk", risk + "%");
+logLine();
+
+String riskLabel;
+
+if (risk >= 70) {
+
+    riskLabel = gr ? "Υψηλό" : "High";
+
+    logLabelErrorValue(
+            gr ? "Ρίσκο" : "Risk",
+            riskLabel + " (" + risk + ")"
+    );
+
+} else if (risk >= 40) {
+
+    riskLabel = gr ? "Μέτριο" : "Moderate";
+
+    logLabelWarnValue(
+            gr ? "Ρίσκο" : "Risk",
+            riskLabel + " (" + risk + ")"
+    );
+
+} else {
+
+    riskLabel = gr ? "Χαμηλό" : "Low";
+
+    logLabelOkValue(
+            gr ? "Ρίσκο" : "Risk",
+            riskLabel + " (" + risk + ")"
+    );
+}
 
     logLabelOkValue(
         gr ? "Σημείωση" : "Note",
@@ -22552,15 +22693,39 @@ appendHtml("<br>");
     // ============================================================
     // PRIVACY RISK SCORE
     // ============================================================
-    logInfo(gr ? "Δείκτης Ρίσκου Ιδιωτικότητας" : "Privacy Risk Score");
+    logInfo(gr
+        ? "Δείκτης Ρίσκου Ιδιωτικότητας"
+        : "Privacy risk score");
 
-    if (riskPct >= 70) {
-        logLabelErrorValue(gr ? "Ρίσκο" : "Risk", riskPct + "%");
-    } else if (riskPct >= 30) {
-        logLabelWarnValue(gr ? "Ρίσκο" : "Risk", riskPct + "%");
-    } else {
-        logLabelOkValue(gr ? "Ρίσκο" : "Risk", riskPct + "%");
-    }
+String riskLabel;
+
+if (riskPct >= 70) {
+
+    riskLabel = gr ? "Υψηλό" : "High";
+
+    logLabelErrorValue(
+            gr ? "Ρίσκο" : "Risk",
+            riskLabel + " (" + riskPct + ")"
+    );
+
+} else if (riskPct >= 30) {
+
+    riskLabel = gr ? "Μέτριο" : "Moderate";
+
+    logLabelWarnValue(
+            gr ? "Ρίσκο" : "Risk",
+            riskLabel + " (" + riskPct + ")"
+    );
+
+} else {
+
+    riskLabel = gr ? "Χαμηλό" : "Low";
+
+    logLabelOkValue(
+            gr ? "Ρίσκο" : "Risk",
+            riskLabel + " (" + riskPct + ")"
+    );
+}
 
     // ============================================================
     // TOP OFFENDERS
@@ -24334,11 +24499,21 @@ logLabelValue(
 
 if (rootConfidence > 0) {
 
+    String confLabel;
+
+    if (rootConfidence >= 75)
+        confLabel = gr ? "Υψηλή" : "High";
+    else if (rootConfidence >= 40)
+        confLabel = gr ? "Μέτρια" : "Moderate";
+    else
+        confLabel = gr ? "Χαμηλή" : "Low";
+
     logLabelValue(
-            gr ? "Βαθμός βεβαιότητας"
+            gr ? "Βεβαιότητα"
                : "Confidence",
-            rootConfidence + "%"
+            confLabel + " (" + rootConfidence + ")"
     );
+}
 
 } else {
 
@@ -24360,13 +24535,26 @@ int reliabilityScore = 100 - adjustedRisk;
 if (rootConfidence > 0) {
 
     int weightedConfidence =
-            (int)Math.round(rootConfidence * (reliabilityScore / 100.0));
+            (int) Math.round(
+                    rootConfidence *
+                    (reliabilityScore / 100.0)
+            );
+
+    String confLabel;
+
+    if (weightedConfidence >= 75)
+        confLabel = gr ? "Υψηλή" : "High";
+    else if (weightedConfidence >= 40)
+        confLabel = gr ? "Μέτρια" : "Moderate";
+    else
+        confLabel = gr ? "Χαμηλή" : "Low";
 
     logLabelValue(
             gr ? "Σταθμισμένη βεβαιότητα"
                : "Weighted confidence",
-            weightedConfidence + "%"
+            confLabel + " (" + weightedConfidence + ")"
     );
+}
 
     if (weightedConfidence >= 80) {
 
@@ -24688,7 +24876,10 @@ appendHtml("<br>");
 logInfo(gr ? "Θερμικά" : "Thermals");
 logLine();
 
-logLabelOkValue(gr ? "Κατάσταση" : "Status", thermalFlag + " " + thermalScore + "%");
+logLabelOkValue(
+        gr ? "Κατάσταση" : "Status",
+        thermalFlag + " (" + thermalScore + ")"
+);
 
 if (zones == null || zones.isEmpty()) {
     logLabelWarnValue(
@@ -24697,6 +24888,8 @@ if (zones == null || zones.isEmpty()) {
                     ? "Δεν είναι αναγνώσιμες θερμικές ζώνες — Μόνο θερμοκρασία μπαταρίας (" + fmt1(battTemp) + "°C)"
                     : "No thermal zones readable — Battery temp only (" + fmt1(battTemp) + "°C)"
     );
+}
+
 } else {
     logLabelOkValue(gr ? "Ζώνες" : "Zones", String.valueOf(zones.size()));
     logLabelOkValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
@@ -24714,7 +24907,10 @@ appendHtml("<br>");
 logInfo(gr ? "Μπαταρία" : "Battery");
 logLine();
 
-logLabelOkValue(gr ? "Κατάσταση" : "Status", batteryFlag + " " + batteryScore + "%");
+logLabelOkValue(
+        gr ? "Κατάσταση" : "Status",
+        batteryFlag + " (" + batteryScore + ")"
+);
 
 logLabelOkValue(
         gr ? "Στοιχεία" : "State",
@@ -24729,7 +24925,10 @@ appendHtml("<br>");
 logInfo(gr ? "Αποθήκευση" : "Storage");
 logLine();
 
-logLabelOkValue(gr ? "Κατάσταση" : "Status", storageFlag + " " + storageScore + "%");
+logLabelOkValue(
+        gr ? "Κατάσταση" : "Status",
+        storageFlag + " (" + storageScore + ")"
+);
 
 logLabelOkValue(
         gr ? "Χρήση" : "Usage",
@@ -24742,7 +24941,10 @@ appendHtml("<br>");
 logInfo(gr ? "Αποτύπωμα Εφαρμογών" : "Apps footprint");
 logLine();
 
-logLabelOkValue(gr ? "Κατάσταση" : "Status", appsFlag + " " + appsScore + "%");
+logLabelOkValue(
+        gr ? "Κατάσταση" : "Status",
+        appsFlag + " (" + appsScore + ")"
+);
 
 logLabelOkValue(
         gr ? "Μετρήσεις" : "Counts",
@@ -24755,7 +24957,10 @@ appendHtml("<br>");
 logInfo("RAM");
 logLine();
 
-logLabelOkValue(gr ? "Κατάσταση" : "Status", ramFlag + " " + ramScore + "%");
+logLabelOkValue(
+        gr ? "Κατάσταση" : "Status",
+        ramFlag + " (" + ramScore + ")"
+);
 
 logLabelOkValue(
         gr ? "Ελεύθερη" : "Free",
@@ -24767,9 +24972,15 @@ appendHtml("<br>");
 logInfo(gr ? "Σταθερότητα / Χρόνος λειτουργίας" : "Stability / Uptime");
 logLine();
 
-logLabelOkValue(gr ? "Κατάσταση" : "Status", stabilityFlag + " " + stabilityScore + "%");
+logLabelOkValue(
+        gr ? "Κατάσταση" : "Status",
+        stabilityFlag + " (" + stabilityScore + ")"
+);
 
-logLabelOkValue(gr ? "Χρόνος λειτουργίας" : "Uptime", formatUptime(upMs));
+logLabelOkValue(
+        gr ? "Χρόνος λειτουργίας" : "Uptime",
+        formatUptime(upMs)
+);
 
 if (upMs < 2 * 60 * 60 * 1000L) {
     logLabelWarnValue(
@@ -24791,12 +25002,21 @@ appendHtml("<br>");
 logInfo(gr ? "Ασφάλεια" : "Security");
 logLine();
 
-logLabelOkValue(gr ? "Κατάσταση" : "Status", securityFlag + " " + securityScore + "%");
+logLabelOkValue(
+        gr ? "Κατάσταση" : "Status",
+        securityFlag + " (" + securityScore + ")"
+);
 
-logLabelOkValue(gr ? "Κλείδωμα συσκευής" : "Secure lock", String.valueOf(sec.lockSecure));
+logLabelOkValue(
+        gr ? "Κλείδωμα συσκευής" : "Secure lock",
+        String.valueOf(sec.lockSecure)
+);
+
 logLabelOkValue(
         gr ? "Ενημέρωση ασφαλείας" : "Patch level",
-        sec.securityPatch == null ? (gr ? "Άγνωστο" : "Unknown") : sec.securityPatch
+        sec.securityPatch == null
+                ? (gr ? "Άγνωστο" : "Unknown")
+                : sec.securityPatch
 );
 
 logLabelOkValue(
@@ -24816,7 +25036,10 @@ appendHtml("<br>");
 logInfo(gr ? "Ιδιωτικότητα" : "Privacy");
 logLine();
 
-logLabelOkValue(gr ? "Κατάσταση" : "Status", privacyFlag + " " + privacyScore + "%");
+logLabelOkValue(
+        gr ? "Κατάσταση" : "Status",
+        privacyFlag + " (" + privacyScore + ")"
+);
 
 logLabelOkValue(
         gr ? "Επικίνδυνες άδειες" : "Dangerous permissions",
@@ -24845,7 +25068,8 @@ logLine();
 
 logLabelOkValue(
         gr ? "Υγεία συσκευής" : "Device health",
-        deviceHealthScore + "% " + colorFlagFromScore(deviceHealthScore)
+        colorFlagFromScore(deviceHealthScore)
+                + " (" + deviceHealthScore + ")"
 );
 
 String deviceClass;
@@ -24865,17 +25089,20 @@ logLabelValue(
 
 logLabelOkValue(
         gr ? "Απόδοση" : "Performance",
-        performanceScore + "% " + colorFlagFromScore(performanceScore)
+        colorFlagFromScore(performanceScore)
+                + " (" + performanceScore + ")"
 );
 
 logLabelOkValue(
         gr ? "Ασφάλεια" : "Security",
-        securityScore + "% " + securityFlag
+        securityFlag
+                + " (" + securityScore + ")"
 );
 
 logLabelOkValue(
         gr ? "Ιδιωτικότητα" : "Privacy",
-        privacyScore + "% " + privacyFlag
+        privacyFlag
+                + " (" + privacyScore + ")"
 );
 
 String verdict =
@@ -24976,12 +25203,19 @@ else if (runCount >= 3)
 else
     reliabilityIndex = 50;
 
-logLabelValue(
+logLabelOkValue(
         gr ? "Αξιοπιστία διάγνωσης"
            : "Diagnosis reliability",
-        reliabilityIndex + "% (" +
-                (gr ? "εκτελέσεις: " : "runs: ") +
-                runCount + ")"
+        (reliabilityIndex >= 80
+                ? (gr ? "Υψηλή" : "High")
+                : reliabilityIndex >= 50
+                    ? (gr ? "Μέτρια" : "Moderate")
+                    : (gr ? "Χαμηλή" : "Low"))
+        + " (" + reliabilityIndex +
+        ", " +
+        (gr ? "εκτελέσεις: " : "runs: ") +
+        runCount +
+        ")"
 );
 
 if (runCount < 3) {
@@ -25759,14 +25993,14 @@ private void lab31FinalSummary() {
 
     float batteryContribution = 0f;
 
-    if (batteryScore >= 0) {
-        batteryContribution = batteryScore * 0.20f;
-    }
+    if (batteryScore >= 0 && batteryScore <= 100) {
+    batteryContribution = batteryScore * 0.20f;
+}
 
     // ------------------------------------------------------------
     // 5) DEVICE BASE SCORE
     // ------------------------------------------------------------
-    float deviceScore = 80f;
+    float deviceScore = 70f;
 
     if (issuesDetected) {
         deviceScore -= 20f;
@@ -25825,25 +26059,17 @@ if (batteryScore >= 0 || batteryHealth >= 0) {
     logLabelValue(
             gr ? "Υγεία μπαταρίας"
                : "Battery health",
-            String.format(
-                    Locale.US,
-                    "%.0f%%",
-                    finalHealth
-            )
+            colorFlagFromScore((int) finalHealth)
+                    + " (" + (int) finalHealth + ")"
     );
-
 }
 
 logLabelOkValue(
         gr ? "Συνολική βαθμολογία συσκευής"
-           : "Device overall score",
-        String.format(
-                Locale.US,
-                "%.0f / 100",
-                deviceScore
-        )
+           : "Device overall",
+        colorFlagFromScore((int) deviceScore)
+                + " (" + (int) deviceScore + ")"
 );
-
 
 logLabelOkValue(
         gr ? "Κατηγορία συσκευής"
@@ -25911,7 +26137,7 @@ if (manipulationScore >= 35) {
     logLabelWarnValue(
             gr ? "Δείκτης παρέμβασης συσκευής"
                : "Device manipulation suspicion index",
-            manipulationScore + "/100 (" + manipulationLabel + ")"
+            manipulationLabel + " (" + manipulationScore + ")"
     );
 
 } else {
@@ -26044,13 +26270,8 @@ else if (limiterMissing) {
 
 logLabelOkValue(
         gr ? "Δείκτης αξιοπιστίας συσκευής"
-           : "Device reliability index",
-        String.format(
-                Locale.US,
-                "%.0f / 100 (%s)",
-                dri,
-                driLabel
-        )
+           : "Device reliability",
+        driLabel + " (" + (int)dri + ")"
 );
 
     // ------------------------------------------------------------
