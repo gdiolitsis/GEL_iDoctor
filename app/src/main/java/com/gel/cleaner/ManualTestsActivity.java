@@ -17038,7 +17038,6 @@ root.addView(title);
 // MAIN MESSAGE (NEON GREEN)
 // ---------------------------
 
-{
 int batteryLevel = getBatteryPercentSafe();
 
 if (batteryLevel > 80) {
