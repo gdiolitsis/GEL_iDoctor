@@ -3875,7 +3875,7 @@ new Thread(() -> {
                 new Lab14Engine(ManualTestsActivity.this);
 
         Lab14Engine.GelBatterySnapshot start =
-                engineThread.readSnapshot();
+        lab14Engine.readSnapshot();
 
         if (start == null) {
             runOnUiThread(() ->
@@ -14403,8 +14403,8 @@ if (!Float.isNaN(vStart[0]) &&
 // FINAL SNAPSHOT
 // ----------------------------------------------------
 
-final Lab14Engine.GelBatterySnapshot snapEnd =
-        engine.readSnapshot();
+Lab14Engine.GelBatterySnapshot snapEnd =
+        lab14Engine.readSnapshot();
         
 if (snapEnd == null) {
 
