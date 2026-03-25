@@ -1405,9 +1405,8 @@ if (modelCap > 0) {
     ));
 }
 
-
 // --------------------------------------------------
-// INTERNAL RESISTANCE (fuel gauge OR calculated)
+// INTERNAL RESISTANCE
 // --------------------------------------------------
 
 float irValue = snap.battery.internalResistance;
@@ -1421,8 +1420,6 @@ if (irValue <= 0) {
             && !Float.isNaN(i1)
             && Math.abs(i1) > 50f) {
 
-        SystemClock.sleep(200);
-
         float v2 = getBatteryVoltageFiltered();
 
         if (!Float.isNaN(v2)) {
@@ -1435,7 +1432,6 @@ if (irValue <= 0) {
                 float esr = dv / ia;
 
                 if (esr > 0f && esr < 0.5f) {
-
                     irValue = esr * 1000f;
                 }
             }
@@ -1452,7 +1448,6 @@ if (irValue > 0) {
             irValue
     ));
 }
-
 
 // --------------------------------------------------
 // ROOT / OEM
