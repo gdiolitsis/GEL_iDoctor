@@ -16538,8 +16538,6 @@ lab14Cancelled = false;
 
 if (wasCancelled) return;
 
-}
-
 } catch (Throwable t) {  
 
     lab14StopAllStress();  
