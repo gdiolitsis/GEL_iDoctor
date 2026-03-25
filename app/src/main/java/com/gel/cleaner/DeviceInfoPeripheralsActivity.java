@@ -1409,44 +1409,26 @@ if (modelCap > 0) {
 // INTERNAL RESISTANCE
 // --------------------------------------------------
 
-float irValue = snap.battery.internalResistance;
-
-if (irValue <= 0) {
-
-    float v1 = getBatteryVoltageFiltered();
-    float i1 = getBatteryCurrentNowSafe();
-
-    if (!Float.isNaN(v1)
-            && !Float.isNaN(i1)
-            && Math.abs(i1) > 50f) {
-
-        float v2 = getBatteryVoltageFiltered();
-
-        if (!Float.isNaN(v2)) {
-
-            float dv = Math.abs(v1 - v2);
-            float ia = Math.abs(i1) / 1000f;
-
-            if (ia > 0.05f && dv > 0.002f) {
-
-                float esr = dv / ia;
-
-                if (esr > 0f && esr < 0.5f) {
-                    irValue = esr * 1000f;
-                }
-            }
-        }
-    }
-}
+long irValue = snap.battery.internalResistance;
 
 if (irValue > 0) {
 
     sb.append(String.format(
             Locale.US,
-            "%s : %.0f mΩ\n",
+            "%s : %d mΩ\n",
             padKey("Internal resistance"),
             irValue
     ));
+
+} else {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Internal resistance"),
+            "Not available"
+    ));
+
 }
 
 // --------------------------------------------------
