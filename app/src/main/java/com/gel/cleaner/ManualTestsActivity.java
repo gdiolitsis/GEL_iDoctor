@@ -16809,11 +16809,11 @@ counterText.setText(
             + " / 45"
 );
 
-    // ✅ FAST BAR
-    if (lab14FastBar != null) {
+    // ✅ FAST BAR (uses main bar)
+if (lab14MainBar != null) {
 
-        int segCount =
-                lab14FastBar.getChildCount();
+    int segCount =
+            lab14MainBar.getChildCount();
 
         float ratio =
                 Math.min(
@@ -16847,11 +16847,17 @@ int elapsed =
 if (elapsed < durationSec) {
 
     counterText.setText(
-            "Progress "
-                    + elapsed
-                    + " / "
-                    + durationSec
+            gr
+                    ? "Πρόοδος Stress Test "
+                        + elapsed
+                        + " / "
+                        + durationSec
+                    : "Stress Test Progress "
+                        + elapsed
+                        + " / "
+                        + durationSec
     );
+}
 
     // ✅ MAIN BAR
     if (lab14MainBar != null) {
