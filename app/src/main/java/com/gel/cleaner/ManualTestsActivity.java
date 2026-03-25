@@ -24520,7 +24520,6 @@ if (rootConfidence > 0) {
                : "Confidence",
             confLabel + " (" + rootConfidence + ")"
     );
-}
 
 } else {
 
