@@ -1312,7 +1312,7 @@ private String buildBatteryInfo() {
         sb.append(String.format(
                 Locale.US,
                 "%s : %d mAh\n",
-                padKey("Estimated full capacity"),
+                padKey("Estimated capacity"),
                 snap.battery.chargeFullMah
         ));
     }
