@@ -144,8 +144,6 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-import com.gel.cleaner.UIHelpers;
-
 import java.util.List;
 import java.util.Set;
 
@@ -279,8 +277,8 @@ super.attachBaseContext(LocaleHelper.apply(base));
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_device_info_peripherals);
-
-        UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
+    
+    UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
     // ✅ ROOT FLAG — MUST BE HERE
     isRooted = isDeviceRooted();
@@ -1331,63 +1329,147 @@ private BatteryInfo getBatteryInfo() {
 // ===================================================================
 private String buildBatteryInfo() {
 
-    BatteryInfo bi = getBatteryInfo();
-    if (bi == null) bi = new BatteryInfo();
+    iDoctorBatteryEngine.BatterySnapshot bi =
+            iDoctorBatteryEngine.read(this);
+
+    if (bi == null)
+        return "Battery info not available";
 
     long modelCap = getStoredModelCapacity();
 
     StringBuilder sb = new StringBuilder();
 
-    sb.append(String.format(Locale.US, "%s : %s\n", padKey("Level"),
-            bi.level >= 0 ? bi.level + "%" : "N/A"));
-    sb.append(String.format(Locale.US, "%s : %s\n", padKey("Status"), bi.status));
-    sb.append(String.format(Locale.US, "%s : %s\n", padKey("Charging source"), bi.chargingSource));
-    sb.append(String.format(Locale.US, "%s : %.1f°C\n\n", padKey("Temp"), bi.temperature));
+    // --------------------------------------------------
+    // BASIC
+    // --------------------------------------------------
 
-    if (bi.currentChargeMah > 0)
-        sb.append(String.format(Locale.US, "%s : %d mAh\n",
-                padKey("Current charge"), bi.currentChargeMah));
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Level"),
+            bi.level >= 0 ? bi.level + "%" : "N/A"
+    ));
 
-    if (bi.estimatedFullMah > 0)
-        sb.append(String.format(Locale.US, "%s : %d mAh\n",
-                padKey("Estimated full"), bi.estimatedFullMah));
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Status"),
+            bi.status != null ? bi.status : "N/A"
+    ));
 
-    if (modelCap > 0)
-        sb.append(String.format(Locale.US, "%s : %d mAh\n",
-                padKey("Model capacity"), modelCap));
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Charging source"),
+            bi.plug != null ? bi.plug : "N/A"
+    ));
 
-    sb.append(String.format(Locale.US, "%s : %s\n",
-            padKey("Source"), bi.source));
+    sb.append(String.format(
+            Locale.US,
+            "%s : %.1f°C\n\n",
+            padKey("Temp"),
+            bi.temperature
+    ));
 
-    // ---------- ROOT PRO SECTION ----------
-    if (bi.rootedData) {
+    // --------------------------------------------------
+    // CHARGE DATA
+    // --------------------------------------------------
+
+    if (bi.chargeNowMah > 0) {
+        sb.append(String.format(
+                Locale.US,
+                "%s : %d mAh\n",
+                padKey("Current charge"),
+                bi.chargeNowMah
+        ));
+    }
+
+    if (bi.chargeFullMah > 0) {
+        sb.append(String.format(
+                Locale.US,
+                "%s : %d mAh\n",
+                padKey("Estimated full"),
+                bi.chargeFullMah
+        ));
+    }
+
+    if (modelCap > 0) {
+        sb.append(String.format(
+                Locale.US,
+                "%s : %d mAh\n",
+                padKey("Model capacity"),
+                modelCap
+        ));
+    }
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Source"),
+            bi.source != null ? bi.source : "N/A"
+    ));
+
+    // --------------------------------------------------
+    // ROOT / OEM
+    // --------------------------------------------------
+
+    if (bi.designMah > 0 ||
+        bi.cycleCount > 0 ||
+        bi.resistanceMohm > 0) {
 
         sb.append("\n");
         sb.append("=== ROOT BATTERY DATA ===\n");
 
-        if (bi.designFullMah > 0)
-            sb.append(String.format(Locale.US,
-                    "%s : %d mAh\n", padKey("Design capacity"), bi.designFullMah));
+        if (bi.designMah > 0) {
 
-        if (bi.designFullMah > 0 && bi.estimatedFullMah > 0) {
-            int soh = (int) Math.round(
-                    (bi.estimatedFullMah * 100.0) / bi.designFullMah);
-            sb.append(String.format(Locale.US,
-                    "%s : %d %%\n", padKey("SOH (raw)"), soh));
+            sb.append(String.format(
+                    Locale.US,
+                    "%s : %d mAh\n",
+                    padKey("Design capacity"),
+                    bi.designMah
+            ));
         }
 
-        if (bi.cycleCount > 0)
-            sb.append(String.format(Locale.US,
-                    "%s : %d\n", padKey("Cycle count"), bi.cycleCount));
+        if (bi.sohPercent > 0) {
 
-        if (bi.internalResistance > 0)
-            sb.append(String.format(Locale.US,
-                    "%s : %d mΩ\n", padKey("Internal resistance"), bi.internalResistance));
-    }
-    else {
+    sb.append(String.format(
+            Locale.US,
+            "%s : %d %%\n",
+            padKey("SOH"),
+            bi.sohPercent
+    ));
+}
+
+        if (bi.cycleCount > 0) {
+
+            sb.append(String.format(
+                    Locale.US,
+                    "%s : %d\n",
+                    padKey("Cycle count"),
+                    bi.cycleCount
+            ));
+        }
+
+        if (bi.resistanceMohm > 0) {
+
+            sb.append(String.format(
+                    Locale.US,
+                    "%s : %d mΩ\n",
+                    padKey("Internal resistance"),
+                    bi.resistanceMohm
+            ));
+        }
+
+    } else {
+
         sb.append("\n");
-        sb.append(String.format(Locale.US,
-                "%s : %s\n", padKey("Lifecycle"), "Requires root access"));
+
+        sb.append(String.format(
+                Locale.US,
+                "%s : %s\n",
+                padKey("Lifecycle"),
+                "Requires root access"
+        ));
     }
 
     return sb.toString();
@@ -3645,5 +3727,3 @@ private void animateCollapse(TextView v) {
 
 // 🔥 END OF CLASS
 }
-
-
