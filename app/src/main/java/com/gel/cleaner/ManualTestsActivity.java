@@ -24561,7 +24561,6 @@ if (rootConfidence > 0) {
                : "Weighted confidence",
             confLabel + " (" + weightedConfidence + ")"
     );
-}
 
     if (weightedConfidence >= 80) {
 
@@ -24594,7 +24593,6 @@ if (rootConfidence > 0) {
         );
 
     }
-
 }
 
 // ------------------------------------------------------------
