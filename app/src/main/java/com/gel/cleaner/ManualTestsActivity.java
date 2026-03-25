@@ -24889,15 +24889,16 @@ logLabelOkValue(
 );
 
 if (zones == null || zones.isEmpty()) {
+
     logLabelWarnValue(
             gr ? "Ζώνες" : "Zones",
             gr
                     ? "Δεν είναι αναγνώσιμες θερμικές ζώνες — Μόνο θερμοκρασία μπαταρίας (" + fmt1(battTemp) + "°C)"
                     : "No thermal zones readable — Battery temp only (" + fmt1(battTemp) + "°C)"
     );
-}
 
 } else {
+
     logLabelOkValue(gr ? "Ζώνες" : "Zones", String.valueOf(zones.size()));
     logLabelOkValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
     logLabelOkValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
