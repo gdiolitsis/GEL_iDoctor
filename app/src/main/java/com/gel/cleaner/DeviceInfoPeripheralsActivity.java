@@ -1352,16 +1352,15 @@ if (snap.battery.voltageMv > 0) {
     ));
 }
 
-if (snap.battery.currentMa != 0) {
+if (!Float.isNaN(snap.battery.currentMa)) {
 
     sb.append(String.format(
             Locale.US,
-            "%s : %d mA\n",
+            "%s : %.0f mA\n",
             padKey("Current"),
             snap.battery.currentMa
     ));
 }
-
 
 // --------------------------------------------------
 // CHARGE DATA
