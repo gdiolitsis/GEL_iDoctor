@@ -13621,8 +13621,8 @@ Float gpuTempStart = readGpuTempSafe();
         counterText = new TextView(this);
         counterText.setText(
                 gr
-                        ? "Πρόοδος: 0 / " + durationSec + " δευτ."
-                        : "Progress: 0 / " + durationSec + " sec"
+                        ? "Πρόοδος Stress Test: 0 / " + durationSec + " δευτ."
+                        : "Stress Test Progress: 0 / " + durationSec + " sec"
         );
         counterText.setTextColor(0xFF39FF14);
         counterText.setGravity(Gravity.CENTER);
@@ -13649,31 +13649,6 @@ Float gpuTempStart = readGpuTempSafe();
         lab14StressVideo.setLayoutParams(vLp);
         videoHolder.addView(lab14StressVideo);
         root.addView(videoHolder);
-
-// FAST BAR
-lab14FastBar = new LinearLayout(this);
-lab14FastBar.setOrientation(LinearLayout.HORIZONTAL);
-
-for (int i = 0; i < 6; i++) {
-
-    View seg = new View(this);
-
-    LinearLayout.LayoutParams lp =
-            new LinearLayout.LayoutParams(
-                    0,
-                    dp(8),
-                    1f
-            );
-
-    lp.setMargins(dp(2),0,dp(2),0);
-
-    seg.setLayoutParams(lp);
-    seg.setBackgroundColor(0xFF444444);
-
-    lab14FastBar.addView(seg);
-}
-
-root.addView(lab14FastBar);
 
 // MAIN BAR
 lab14MainBar = new LinearLayout(this);
@@ -16738,18 +16713,21 @@ private void startLab14FastThread() {
                         (sag1[0] + sag2[0]) / 2f;
             }
 
-            lab14FastDone = true;
-            lab14FastPhase = false;
+lab14FastDone = true;
+lab14FastPhase = false;
 
-            if (!lab14Cancelled && lab14Running) {
-                startLab14MainStress();
-            }
+if (!lab14Cancelled && lab14Running) {
 
-        } catch (Throwable t) {
+    resetLab14Bar();
 
-            lab14FastDone = true;
-            lab14FastPhase = false;
-        }
+    startLab14MainStress();
+}
+
+} catch (Throwable t) {
+
+    lab14FastDone = true;
+    lab14FastPhase = false;
+}
 
     }).start();
 }
@@ -16823,10 +16801,10 @@ if (fastElapsed > 45)
 
 counterText.setText(
         gr
-        ? "Γρήγορο τεστ "
+        ? "Προθέρμανση καταπόνησης "
             + fastElapsed
             + " / 45"
-        : "Fast "
+        : "Stress warm-up "
             + fastElapsed
             + " / 45"
 );
@@ -16935,6 +16913,18 @@ lab14PostLoadAnalysis(
             lab14Running = false;
         }
     });
+}
+
+private void resetLab14Bar() {
+
+    if (lab14MainBar == null) return;
+
+    for (int i = 0; i < lab14MainBar.getChildCount(); i++) {
+
+        View v = lab14MainBar.getChildAt(i);
+        v.setBackgroundColor(0xFF333333);
+
+    }
 }
 
 //=============================================================
