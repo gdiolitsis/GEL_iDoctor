@@ -13947,21 +13947,20 @@ private void lab14LogAging(
     appendHtml("<br>");
     logLine();
     logInfo(gr
-        ? "Γήρανση μπαταρίας"
-        : "Battery aging");
-logLine();
+            ? "Γήρανση μπαταρίας"
+            : "Battery aging");
+    logLine();
 
-if (agingIndex >= 0) {
+    if (agingIndex >= 0) {
 
-    logLabelOkValue(
-            gr ? "Δείκτης γήρανσης μπαταρίας"
-               : "Battery aging",
-            agingInterp + " (" + agingIndex + ")"
-    );
-
-}
+        logLabelOkValue(
+                gr ? "Δείκτης γήρανσης μπαταρίας"
+                   : "Battery aging",
+                agingInterp + " (" + agingIndex + ")"
+        );
 
     } else {
+
         logLabelWarnValue(
                 gr ? "Δείκτης γήρανσης μπαταρίας"
                    : "Battery aging index",
@@ -13971,18 +13970,23 @@ if (agingIndex >= 0) {
     }
 
     if (aging != null && aging.description != null) {
+
         logLabelValue(
                 gr ? "Ανάλυση γήρανσης"
                    : "Aging analysis",
                 aging.description
         );
+
     } else {
+
         logLabelWarnValue(
-        gr ? "Ανάλυση γήρανσης"
-           : "Aging analysis",
-        gr ? "Μη διαθέσιμη"
-           : "Unavailable"
-);
+                gr ? "Ανάλυση γήρανσης"
+                   : "Aging analysis",
+                gr ? "Μη διαθέσιμη"
+                   : "Unavailable"
+        );
+    }
+}
 
 // ============================================================
 // LAB 14 — LOG FINAL SCORE
