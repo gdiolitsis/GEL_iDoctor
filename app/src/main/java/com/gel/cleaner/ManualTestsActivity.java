@@ -16766,153 +16766,157 @@ private void startLab14MainStress() {
 }
 
 private void startLab14ProgressLoop() {
-	
-	if (counterText == null) return;
+
+    if (counterText == null) return;
 
     ui.post(new Runnable() {
 
         @Override
         public void run() {
-        	
-        if (counterText == null) {
-    ui.removeCallbacks(this);
-    return;
-}
+
+            if (counterText == null) {
+                ui.removeCallbacks(this);
+                return;
+            }
 
             if (lab14Cancelled || !lab14Running) {
                 ui.removeCallbacks(this);
                 return;
             }
 
-            long now =
-                    SystemClock.elapsedRealtime();
+            long now = SystemClock.elapsedRealtime();
 
-if (lab14FastPhase) {
+            // =========================
+            // FAST PHASE
+            // =========================
 
-    int fastElapsed =
-        (int)((now - lab14FastStartTime)/1000);
+            if (lab14FastPhase) {
 
-    if (fastElapsed > 45)
-        fastElapsed = 45;
+                int fastElapsed =
+                        (int) ((now - lab14FastStartTime) / 1000);
 
-    counterText.setText(
-            gr
-            ? "Προθέρμανση καταπόνησης "
-                + fastElapsed
-                + " / 45"
-            : "Stress warm-up "
-                + fastElapsed
-                + " / 45"
-    );
+                if (fastElapsed > 45)
+                    fastElapsed = 45;
 
-    // ✅ FAST BAR (uses main bar)
-    if (lab14MainBar != null) {
-
-        int segCount =
-                lab14MainBar.getChildCount();
-
-        float ratio =
-                Math.min(
-                        1f,
-                        fastElapsed / 45f
+                counterText.setText(
+                        gr
+                                ? "Προθέρμανση καταπόνησης "
+                                + fastElapsed + " / 45"
+                                : "Stress warm-up "
+                                + fastElapsed + " / 45"
                 );
 
-        int active =
-                (int)(ratio * segCount);
+                if (lab14MainBar != null) {
 
-        for (int i = 0; i < segCount; i++) {
+                    int segCount =
+                            lab14MainBar.getChildCount();
 
-            View seg =
-                    lab14MainBar.getChildAt(i);
+                    float ratio =
+                            Math.min(
+                                    1f,
+                                    fastElapsed / 45f
+                            );
 
-            if (i < active) {
-                seg.setBackgroundColor(0xFF39FF14);
-            } else {
-                seg.setBackgroundColor(0xFF333333);
+                    int active =
+                            (int) (ratio * segCount);
+
+                    for (int i = 0; i < segCount; i++) {
+
+                        View seg =
+                                lab14MainBar.getChildAt(i);
+
+                        if (i < active) {
+                            seg.setBackgroundColor(0xFF39FF14);
+                        } else {
+                            seg.setBackgroundColor(0xFF333333);
+                        }
+                    }
+                }
+
+                ui.postDelayed(this, 300);
+                return;
             }
-        }
-    }
 
-    ui.postDelayed(this, 300);
-    return;
-}
+            // =========================
+            // MAIN PHASE
+            // =========================
 
-int elapsed =
-        (int)((now - t0)/1000);
+            int elapsed =
+                    (int) ((now - t0) / 1000);
 
-if (elapsed < durationSec) {
+            if (elapsed < durationSec) {
 
-    counterText.setText(
-            gr
-                    ? "Πρόοδος Stress Test "
-                        + elapsed
-                        + " / "
-                        + durationSec
-                    : "Stress Test Progress "
-                        + elapsed
-                        + " / "
-                        + durationSec
-    );
-}
-
-    // ✅ MAIN BAR
-    if (lab14MainBar != null) {
-
-        int segCount =
-                lab14MainBar.getChildCount();
-
-        float ratio =
-                Math.min(
-                        1f,
-                        elapsed /
-                        (float) durationSec
+                counterText.setText(
+                        gr
+                                ? "Πρόοδος Stress Test "
+                                + elapsed + " / "
+                                + durationSec
+                                : "Stress Test Progress "
+                                + elapsed + " / "
+                                + durationSec
                 );
 
-        int active =
-                (int)(ratio * segCount);
+                if (lab14MainBar != null) {
 
-        for (int i = 0; i < segCount; i++) {
+                    int segCount =
+                            lab14MainBar.getChildCount();
 
-            View seg =
-                    lab14MainBar.getChildAt(i);
+                    float ratio =
+                            Math.min(
+                                    1f,
+                                    elapsed /
+                                    (float) durationSec
+                            );
 
-            if (i < active) {
-                seg.setBackgroundColor(0xFF39FF14);
-            } else {
-                seg.setBackgroundColor(0xFF333333);
+                    int active =
+                            (int) (ratio * segCount);
+
+                    for (int i = 0; i < segCount; i++) {
+
+                        View seg =
+                                lab14MainBar.getChildAt(i);
+
+                        if (i < active) {
+                            seg.setBackgroundColor(0xFF39FF14);
+                        } else {
+                            seg.setBackgroundColor(0xFF333333);
+                        }
+                    }
+                }
+
+                ui.postDelayed(this, 1000);
+                return;
             }
-        }
-    }
 
-    ui.postDelayed(this, 1000);
-    return;
-}
+            // =========================
+            // FINISH
+            // =========================
 
-ui.removeCallbacks(this);
+            ui.removeCallbacks(this);
 
-lab14StopAllStress();
+            lab14StopAllStress();
 
-if (!lab14Running) return;
+            if (!lab14Running) return;
 
-final Lab14Engine engine =
-        new Lab14Engine(ManualTestsActivity.this);
-        
-        if (!lab14Running) return;
-lab14Running = false;
+            final Lab14Engine engine =
+                    new Lab14Engine(ManualTestsActivity.this);
 
-lab14PostLoadAnalysis(
-        engine,
-        gr,
-        startMah,
-        baselineFullMah,
-        t0,
-        voltageStart,
-        batteryPercent,
-        cycles,
-        tempStart
-);
+            if (!lab14Running) return;
 
             lab14Running = false;
+
+            lab14PostLoadAnalysis(
+                    engine,
+                    gr,
+                    startMah,
+                    baselineFullMah,
+                    t0,
+                    voltageStart,
+                    batteryPercent,
+                    cycles,
+                    tempStart
+            );
+        }
     });
 }
 
