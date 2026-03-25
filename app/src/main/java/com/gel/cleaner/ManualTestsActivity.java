@@ -13855,7 +13855,7 @@ if (lab14_systemLimited[0]) {
         );
     }
 
-    if (!Float.isNaN(voltageRecoverySpeed[0])) {
+    if (!Float.isNaN(voltageRecoverySpeed)) {
 
     logLabelValue(
             gr ? "Ταχύτητα ανάκαμψης"
@@ -13863,7 +13863,7 @@ if (lab14_systemLimited[0]) {
             String.format(
                     Locale.US,
                     "%.4f V/sec",
-                    voltageRecoverySpeed[0]
+                    voltageRecoverySpeed
             )
     );
 }
@@ -14041,7 +14041,6 @@ private void lab14LogFinalScore(
                 scoreText
         );
     }
-}
 
     if (collapseRisk[0] && !lab14_systemLimited[0]) {
         logLabelWarnValue(
@@ -14069,17 +14068,16 @@ private void lab14LogFinalScore(
         );
     }
 
-        if (lab14_systemLimited[0]) {
-
-    logLabelWarnValue(
-            gr ? "Περιορισμός συστήματος"
-               : "System limited",
-            gr
-                    ? "Το BMS περιόρισε το ρεύμα — μικρότερη αξιοπιστία"
-                    : "BMS current limiting detected"
-    );
-}
+    if (lab14_systemLimited[0]) {
+        logLabelWarnValue(
+                gr ? "Περιορισμός συστήματος"
+                   : "System limited",
+                gr
+                        ? "Το BMS περιόρισε το ρεύμα — μικρότερη αξιοπιστία"
+                        : "BMS current limiting detected"
+        );
     }
+}
 
 // ============================================================
 // LAB 14 — LOG SAVE
@@ -14412,6 +14410,14 @@ if (snapEnd == null) {
     logError(gr
             ? "Αποτυχία τελικής ανάγνωσης μπαταρίας."
             : "Final battery snapshot failed.");
+
+    lab14StopAllStress();
+
+    try {
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    lab14Running = false;
 
     return;
 }
@@ -15187,7 +15193,6 @@ if (validDrain &&
 
     float tempRise =
             tempPeak - tempStart;
-}
 
     boolean realESR =
             internalResistance[0] > 0.15f &&
@@ -15198,9 +15203,7 @@ if (validDrain &&
             tempRise < 25f;
 
     if (realESR && realTemp) {
-
         swellingScore++;
-
     }
 }
 
