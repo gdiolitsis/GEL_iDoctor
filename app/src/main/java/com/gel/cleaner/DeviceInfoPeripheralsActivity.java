@@ -568,6 +568,46 @@ private TelephonySnapshot getTelephonySnapshot() {
     return s;
 }
 
+private float getBatteryVoltageFiltered() {
+
+    try {
+
+        iDoctorEngine eng =
+                iDoctorEngine.get(this);
+
+        iDoctorEngine.FullSnapshot s =
+                eng.readFullSnapshot();
+
+        if (s != null && s.battery != null) {
+
+            if (s.battery.voltageMv > 0)
+                return s.battery.voltageMv / 1000f;
+
+        }
+
+    } catch (Throwable ignore) {}
+
+    return Float.NaN;
+}
+
+private float getBatteryCurrentNowSafe() {
+
+    try {
+
+        iDoctorEngine eng =
+                iDoctorEngine.get(this);
+
+        iDoctorEngine.FullSnapshot s =
+                eng.readFullSnapshot();
+
+        if (s != null && s.battery != null)
+            return s.battery.currentMa;
+
+    } catch (Throwable ignore) {}
+
+    return Float.NaN;
+}
+
 // ============================================================
 //  PERMISSION CALLBACK — FINAL CLEAN VERSION
 // ============================================================
