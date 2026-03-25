@@ -1285,14 +1285,14 @@ private String buildBatteryInfo() {
             Locale.US,
             "%s : %s\n",
             padKey("Charging source"),
-            snap.battery.plug != null ? snap.battery.plug : "N/A"
+            snap.battery.chargingSource != null ? snap.battery.chargingSource : "N/A"
     ));
 
     sb.append(String.format(
             Locale.US,
             "%s : %.1f°C\n\n",
             padKey("Temp"),
-            snap.battery.temperature
+            snap.battery.batteryTempC
     ));
 
     // --------------------------------------------------
@@ -1337,20 +1337,20 @@ private String buildBatteryInfo() {
     // ROOT / OEM
     // --------------------------------------------------
 
-    if (snap.battery.designMah > 0 ||
+    if (snap.battery.chargeDesignMah > 0 ||
         snap.battery.cycleCount > 0 ||
-        snap.battery.resistanceMohm > 0) {
+        snap.battery.internalResistance > 0) {
 
         sb.append("\n");
         sb.append("=== ROOT BATTERY DATA ===\n");
 
-        if (snap.battery.designMah > 0) {
+        if (snap.battery.chargeDesignMah > 0) {
 
             sb.append(String.format(
                     Locale.US,
                     "%s : %d mAh\n",
                     padKey("Design capacity"),
-                    snap.battery.designMah
+                    snap.battery.chargeDesignMah
             ));
         }
 
@@ -1374,13 +1374,13 @@ private String buildBatteryInfo() {
             ));
         }
 
-        if (snap.battery.resistanceMohm > 0) {
+        if (snap.battery.internalResistance > 0) {
 
             sb.append(String.format(
                     Locale.US,
                     "%s : %d mΩ\n",
                     padKey("Internal resistance"),
-                    snap.battery.resistanceMohm
+                    snap.battery.internalResistance
             ));
         }
 
