@@ -17038,6 +17038,7 @@ root.addView(title);
 // MAIN MESSAGE (NEON GREEN)
 // ---------------------------
 
+{
 int batteryLevel = getBatteryPercentSafe();
 
 if (batteryLevel > 80) {
@@ -17058,6 +17059,7 @@ if (batteryLevel > 80) {
     lab15Running = false;
     lab15Finished = true;
     return;
+}
 }
 
 final String text =
