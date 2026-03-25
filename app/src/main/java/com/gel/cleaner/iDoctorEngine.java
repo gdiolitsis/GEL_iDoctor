@@ -55,6 +55,15 @@ import java.util.Locale;
 import java.util.Map;
 
 public final class iDoctorEngine {
+	private long lastInternalResistanceMilliOhm = -1;
+
+public void setInternalResistanceMilliOhm(long v) {
+    lastInternalResistanceMilliOhm = v;
+}
+
+public long getInternalResistanceMilliOhm() {
+    return lastInternalResistanceMilliOhm;
+}
 
     private static iDoctorEngine instance;
 
@@ -341,6 +350,10 @@ bi.chargeNowMah =
     bi.cycleCount = readBatteryCycleCountRoot();
 
     bi.internalResistance = readBatteryResistanceRoot();
+    
+    if (lastInternalResistanceMilliOhm > 0) {
+    bi.internalResistance = lastInternalResistanceMilliOhm;
+}
 
     String[] currentPaths = {
 
