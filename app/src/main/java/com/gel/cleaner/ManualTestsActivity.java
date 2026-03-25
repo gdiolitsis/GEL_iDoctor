@@ -264,6 +264,11 @@ private int batteryPercent;
 private long cycles;
 private float tempStart;
 
+private long lab14RecoveryTimeMs = 0;
+
+private LinearLayout lab14FastBar;
+private LinearLayout lab14MainBar;
+
     // ============================================================
     // BATTERY STRESS DIAGNOSTIC STATE (shared between labs)
     // ============================================================
@@ -13227,54 +13232,55 @@ private void lab14BatteryHealthStressTest_REAL() {
     lab14Cancelled = false;
     lab14FastDone = false;
 
-    // --------------------------------------------------
-    // RESET STATE (μόνο μετά το popup)
-    // --------------------------------------------------
-    if (!lab14Running && !lab14PopupShown) {
+// RESET STATE (μόνο μετά το popup)
+if (!lab14Running && !lab14PopupShown) {
 
-        lab14Cancelled = false;
+    lab14Cancelled = false;
 
-        resetBatteryDiagnostics();
+    resetBatteryDiagnostics();
 
-        collapseRisk[0] = false;
-        swellingRisk[0] = false;
-        calibrationDrift[0] = false;
-        cellImbalanceRisk[0] = false;
+    collapseRisk[0] = false;
+    swellingRisk[0] = false;
+    calibrationDrift[0] = false;
+    cellImbalanceRisk[0] = false;
 
-        lab14_systemLimited[0] = false;
+    lab14_systemLimited[0] = false;
 
-        sag1[0] = Float.NaN;
-        sag2[0] = Float.NaN;
-        sagAvg[0] = Float.NaN;
+    sag1[0] = Float.NaN;
+    sag2[0] = Float.NaN;
+    sagAvg[0] = Float.NaN;
 
-        vStart[0] = Float.NaN;
-        vLoad1[0] = Float.NaN;
-        vRecover[0] = Float.NaN;
-        vLoad2[0] = Float.NaN;
+    vStart[0] = Float.NaN;
+    vLoad1[0] = Float.NaN;
+    vRecover[0] = Float.NaN;
+    vLoad2[0] = Float.NaN;
 
-        voltageRecovery[0] = Float.NaN;
-        voltageRecoverySpeed[0] = Float.NaN;
-        voltageStability[0] = Float.NaN;
+    voltageRecovery[0] = Float.NaN;
+    voltageRecoverySpeed[0] = Float.NaN;
+    voltageStability[0] = Float.NaN;
 
-        internalResistance[0] = Float.NaN;
-        thermalImpedance[0] = Float.NaN;
+    internalResistance[0] = Float.NaN;
+    thermalImpedance[0] = Float.NaN;
 
-        powerStabilityFactor[0] = Float.NaN;
-        stressSignature[0] = Float.NaN;
-        cellElasticityIndex[0] = Float.NaN;
-        structuralIntegrityIndex[0] = Float.NaN;
+    powerStabilityFactor[0] = Float.NaN;
+    stressSignature[0] = Float.NaN;
+    cellElasticityIndex[0] = Float.NaN;
+    structuralIntegrityIndex[0] = Float.NaN;
 
-        expectedPercent[0] = Float.NaN;
-        percentDeviation[0] = Float.NaN;
+    expectedPercent[0] = Float.NaN;
+    percentDeviation[0] = Float.NaN;
 
-        startBatteryTemp = Float.NaN;
-        endBatteryTemp = Float.NaN;
+    startBatteryTemp = Float.NaN;
+    endBatteryTemp = Float.NaN;
 
-        lab14Conf = null;
-        lab14AgingIndex = -1;
-        lab14AgingInterp = "N/A";
-        lab14BatteryBehaviourWarning = false;
-    }
+    lab14Conf = null;
+    lab14AgingIndex = -1;
+    lab14AgingInterp = "N/A";
+    lab14BatteryBehaviourWarning = false;
+
+    // ✅ LAST — μετά από όλα
+    startBatteryTemp = getBatteryTempEngineSafe();
+}
 
 // --------------------------------------------------
 // START FLAG
@@ -13632,20 +13638,55 @@ Float gpuTempStart = readGpuTempSafe();
         videoHolder.addView(lab14StressVideo);
         root.addView(videoHolder);
 
-        final LinearLayout progressBar = new LinearLayout(this);
-        progressBar.setOrientation(LinearLayout.HORIZONTAL);
-        progressBar.setGravity(Gravity.CENTER);
+// FAST BAR
+lab14FastBar = new LinearLayout(this);
+lab14FastBar.setOrientation(LinearLayout.HORIZONTAL);
 
-        for (int i = 0; i < 10; i++) {
-            View seg = new View(this);
-            LinearLayout.LayoutParams lp =
-                    new LinearLayout.LayoutParams(0, dp(10), 1f);
-            lp.setMargins(dp(3), 0, dp(3), 0);
-            seg.setLayoutParams(lp);
-            seg.setBackgroundColor(0xFF333333);
-            progressBar.addView(seg);
-        }
-        root.addView(progressBar);
+for (int i = 0; i < 6; i++) {
+
+    View seg = new View(this);
+
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    0,
+                    dp(8),
+                    1f
+            );
+
+    lp.setMargins(dp(2),0,dp(2),0);
+
+    seg.setLayoutParams(lp);
+    seg.setBackgroundColor(0xFF444444);
+
+    lab14FastBar.addView(seg);
+}
+
+root.addView(lab14FastBar);
+
+// MAIN BAR
+lab14MainBar = new LinearLayout(this);
+lab14MainBar.setOrientation(LinearLayout.HORIZONTAL);
+
+for (int i = 0; i < 12; i++) {
+
+    View seg = new View(this);
+
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    0,
+                    dp(10),
+                    1f
+            );
+
+    lp.setMargins(dp(2),0,dp(2),0);
+
+    seg.setLayoutParams(lp);
+    seg.setBackgroundColor(0xFF333333);
+
+    lab14MainBar.addView(seg);
+}
+
+root.addView(lab14MainBar);
 
         Button exitBtn = new Button(this);
         exitBtn.setText(gr ? "Έξοδος τεστ" : "Exit test");
@@ -13865,9 +13906,6 @@ if (lab14_systemLimited[0]) {
         );
     }
     
-startBatteryTemp = getBatteryTempEngineSafe();
-endBatteryTemp   = getBatteryTempEngineSafe();
-
     if (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp)) {
         float delta = endBatteryTemp - startBatteryTemp;
         logLabelValue(
@@ -14753,19 +14791,24 @@ if (!Float.isNaN(voltageRecovery[0])) {
     }
 }
 
-                        // ----------------------------------------------------
-                        // RECOVERY SPEED
-                        // ----------------------------------------------------
-                        if (!Float.isNaN(vLoad1[0]) &&
-                            !Float.isNaN(vRecover[0])) {
+// ----------------------------------------------------
+// RECOVERY SPEED (real time)
+// ----------------------------------------------------
+if (!Float.isNaN(vLoad1[0]) &&
+    !Float.isNaN(vRecover[0]) &&
+    lab14RecoveryTimeMs > 0) {
 
-                            float recoveryDelta = vRecover[0] - vLoad1[0];
-                            float restSec = 15f;
+    float recoveryDelta =
+            vRecover[0] - vLoad1[0];
 
-                            if (restSec > 0f) {
-                                voltageRecoverySpeed[0] = recoveryDelta / restSec;
-                            }
-                        }
+    float restSec =
+            lab14RecoveryTimeMs / 1000f;
+
+    if (restSec > 0f) {
+        voltageRecoverySpeed[0] =
+                recoveryDelta / restSec;
+    }
+}
 
 // ----------------------------------------------------
 // ELECTRICAL ANALYSIS
@@ -16342,6 +16385,8 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
 // main pipeline
 
+endBatteryTemp = getBatteryTempEngineSafe();
+
 lab14LogStressResult(
         gr,
         sagAvg[0],
@@ -16594,6 +16639,7 @@ private void startLab14FastThread() {
             lab14FastStartTime =
                     SystemClock.elapsedRealtime();
 
+SystemClock.sleep(500);
 vStart[0] = readStableBatteryVoltage();
 
 if (lab14Cancelled) {
@@ -16621,6 +16667,9 @@ if (lab14Cancelled) {
     return;
 }
 
+SystemClock.sleep(12000);
+SystemClock.sleep(400);
+
 vLoad1[0] = readStableBatteryVoltage();
 
 stopCpuBurn();
@@ -16639,7 +16688,17 @@ if (lab14Cancelled) {
     return;
 }
 
+long tRecoverStart =
+        SystemClock.elapsedRealtime();
+
+SystemClock.sleep(12000);
+SystemClock.sleep(600);
+
 vRecover[0] = readStableBatteryVoltage();
+
+lab14RecoveryTimeMs =
+        SystemClock.elapsedRealtime()
+                - tRecoverStart;
 
 if (lab14Cancelled) {
     lab14FastDone = true;
@@ -16665,36 +16724,36 @@ if (lab14Cancelled) {
     return;
 }
 
+SystemClock.sleep(12000);
+SystemClock.sleep(400);
+
 vLoad2[0] = readStableBatteryVoltage();
 
 stopCpuBurn();
 
+if (!Float.isNaN(vStart[0]) &&
+    !Float.isNaN(vLoad1[0])) {
+
+    sag1[0] = vStart[0] - vLoad1[0];
+}
+
+if (!Float.isNaN(vRecover[0]) &&
+    !Float.isNaN(vLoad2[0])) {
+
+    sag2[0] = vRecover[0] - vLoad2[0];
+}
+
+if (!Float.isNaN(sag1[0]) &&
+    !Float.isNaN(sag2[0])) {
+
+    sagAvg[0] =
+            (sag1[0] + sag2[0]) / 2f;
+}
+
 lab14FastDone = true;
 lab14FastPhase = false;
 
-            if (!Float.isNaN(vStart[0]) &&
-                !Float.isNaN(vLoad1[0])) {
-
-                sag1[0] = vStart[0] - vLoad1[0];
-            }
-
-            if (!Float.isNaN(vRecover[0]) &&
-                !Float.isNaN(vLoad2[0])) {
-
-                sag2[0] = vRecover[0] - vLoad2[0];
-            }
-
-            if (!Float.isNaN(sag1[0]) &&
-                !Float.isNaN(sag2[0])) {
-
-                sagAvg[0] =
-                        (sag1[0] + sag2[0]) / 2f;
-            }
-
-            lab14FastDone = true;
-            lab14FastPhase = false;
-           
-            if (!lab14Cancelled && lab14Running) {
+if (!lab14Cancelled && lab14Running) {
     startLab14MainStress();
 }
 
@@ -16766,34 +16825,100 @@ private void startLab14ProgressLoop() {
             long now =
                     SystemClock.elapsedRealtime();
 
-            if (lab14FastPhase) {
+if (lab14FastPhase) {
 
-                int fastElapsed =
-                        (int)((now - lab14FastStartTime)/1000);
+    int fastElapsed =
+        (int)((now - lab14FastStartTime)/1000);
 
-                counterText.setText(
-                        "Fast test " + fastElapsed
+if (fastElapsed > 45)
+    fastElapsed = 45;
+
+counterText.setText(
+        gr
+        ? "Γρήγορο τεστ "
+            + fastElapsed
+            + " / 45"
+        : "Fast "
+            + fastElapsed
+            + " / 45"
+);
+
+    // ✅ FAST BAR
+    if (lab14FastBar != null) {
+
+        int segCount =
+                lab14FastBar.getChildCount();
+
+        float ratio =
+                Math.min(
+                        1f,
+                        fastElapsed / 45f
                 );
 
-                ui.postDelayed(this, 300);
-                return;
+        int active =
+                (int)(ratio * segCount);
+
+        for (int i = 0; i < segCount; i++) {
+
+            View seg =
+                    lab14FastBar.getChildAt(i);
+
+            if (i < active) {
+                seg.setBackgroundColor(0xFFFFAA00);
+            } else {
+                seg.setBackgroundColor(0xFF444444);
             }
+        }
+    }
 
-            int elapsed =
-                    (int)((now - t0)/1000);
+    ui.postDelayed(this, 300);
+    return;
+}
 
-            if (elapsed < durationSec) {
+int elapsed =
+        (int)((now - t0)/1000);
 
-                counterText.setText(
-                        "Progress "
-                                + elapsed
-                                + " / "
-                                + durationSec
+if (elapsed < durationSec) {
+
+    counterText.setText(
+            "Progress "
+                    + elapsed
+                    + " / "
+                    + durationSec
+    );
+
+    // ✅ MAIN BAR
+    if (lab14MainBar != null) {
+
+        int segCount =
+                lab14MainBar.getChildCount();
+
+        float ratio =
+                Math.min(
+                        1f,
+                        elapsed /
+                        (float) durationSec
                 );
 
-                ui.postDelayed(this, 1000);
-                return;
+        int active =
+                (int)(ratio * segCount);
+
+        for (int i = 0; i < segCount; i++) {
+
+            View seg =
+                    lab14MainBar.getChildAt(i);
+
+            if (i < active) {
+                seg.setBackgroundColor(0xFF39FF14);
+            } else {
+                seg.setBackgroundColor(0xFF333333);
             }
+        }
+    }
+
+    ui.postDelayed(this, 1000);
+    return;
+}
 
 ui.removeCallbacks(this);
 
