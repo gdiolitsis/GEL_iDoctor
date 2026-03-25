@@ -1257,64 +1257,64 @@ private BatteryInfo getBatteryInfo() {
         Intent i = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         if (i != null) {
 
-            bi.level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-            bi.scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            snap.battery.level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            snap.battery.scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
 
             switch (i.getIntExtra(BatteryManager.EXTRA_STATUS, -1)) {
-                case BatteryManager.BATTERY_STATUS_CHARGING:     bi.status = "Charging"; break;
-                case BatteryManager.BATTERY_STATUS_DISCHARGING:  bi.status = "Discharging"; break;
-                case BatteryManager.BATTERY_STATUS_FULL:         bi.status = "Full"; break;
-                case BatteryManager.BATTERY_STATUS_NOT_CHARGING: bi.status = "Not charging"; break;
-                default:                                         bi.status = "Unknown";
+                case BatteryManager.BATTERY_STATUS_CHARGING:     snap.battery.status = "Charging"; break;
+                case BatteryManager.BATTERY_STATUS_DISCHARGING:  snap.battery.status = "Discharging"; break;
+                case BatteryManager.BATTERY_STATUS_FULL:         snap.battery.status = "Full"; break;
+                case BatteryManager.BATTERY_STATUS_NOT_CHARGING: snap.battery.status = "Not charging"; break;
+                default:                                         snap.battery.status = "Unknown";
             }
 
             int plug = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
-            if (plug == BatteryManager.BATTERY_PLUGGED_USB)          bi.chargingSource = "USB";
-            else if (plug == BatteryManager.BATTERY_PLUGGED_AC)      bi.chargingSource = "AC";
-            else if (plug == BatteryManager.BATTERY_PLUGGED_WIRELESS)bi.chargingSource = "Wireless";
-            else                                                     bi.chargingSource = "Battery";
+            if (plug == BatteryManager.BATTERY_PLUGGED_USB)          snap.battery.chargingSource = "USB";
+            else if (plug == BatteryManager.BATTERY_PLUGGED_AC)      snap.battery.chargingSource = "AC";
+            else if (plug == BatteryManager.BATTERY_PLUGGED_WIRELESS)snap.battery.chargingSource = "Wireless";
+            else                                                     snap.battery.chargingSource = "Battery";
 
             int temp = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1);
-            if (temp > 0) bi.temperature = temp / 10f;
+            if (temp > 0) snap.battery.temperature = temp / 10f;
         }
     } catch (Throwable ignore) {}
 
     // ---------- 2) ROOT OEM / BMS DATA ----------
     if (isDeviceRooted()) {
 
-        bi.rootedData = true;
+        snap.battery.rootedData = true;
 
-        bi.designFullMah = normalizeMah(readSysLongRootAware(
+        snap.battery.designFullMah = normalizeMah(readSysLongRootAware(
                 "/sys/class/power_supply/battery/charge_full_design"));
 
-        bi.estimatedFullMah = normalizeMah(readSysLongRootAware(
+        snap.battery.estimatedFullMah = normalizeMah(readSysLongRootAware(
                 "/sys/class/power_supply/battery/charge_full"));
 
-        bi.currentChargeMah = normalizeMah(readSysLongRootAware(
+        snap.battery.currentChargeMah = normalizeMah(readSysLongRootAware(
                 "/sys/class/power_supply/battery/charge_now"));
 
-        bi.cycleCount = readSysLongRootAware(
+        snap.battery.cycleCount = readSysLongRootAware(
                 "/sys/class/power_supply/battery/cycle_count");
 
-        bi.internalResistance = readSysLongRootAware(
+        snap.battery.internalResistance = readSysLongRootAware(
                 "/sys/class/power_supply/battery/resistance");
 
-        if (bi.estimatedFullMah > 0) bi.source = "OEM (root)";
+        if (snap.battery.estimatedFullMah > 0) snap.battery.source = "OEM (root)";
     }
 
     // ---------- 3) CHARGE COUNTER FALLBACK ----------
-    if (bi.currentChargeMah <= 0) {
+    if (snap.battery.currentChargeMah <= 0) {
         try {
             BatteryManager bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
             if (bm != null) {
                 long cc = normalizeMah(
                         bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER));
                 if (cc > 0) {
-                    bi.currentChargeMah = cc;
-                    bi.source = "Charge Counter";
-                    if (bi.level > 0) {
-                        long est = (long) (cc / (bi.level / 100f));
-                        if (est > 0) bi.estimatedFullMah = est;
+                    snap.battery.currentChargeMah = cc;
+                    snap.battery.source = "Charge Counter";
+                    if (snap.battery.level > 0) {
+                        long est = (long) (cc / (snap.battery.level / 100f));
+                        if (est > 0) snap.battery.estimatedFullMah = est;
                     }
                 }
             }
@@ -1329,10 +1329,13 @@ private BatteryInfo getBatteryInfo() {
 // ===================================================================
 private String buildBatteryInfo() {
 
-    iDoctorBatteryEngine.BatterySnapshot bi =
-            iDoctorBatteryEngine.read(this);
+    iDoctorEngine eng =
+            iDoctorEngine.get(this);
 
-    if (bi == null)
+    iDoctorEngine.FullSnapshot snap =
+            eng.readFullSnapshot();
+
+    if (snap == null || snap.battery == null)
         return "Battery info not available";
 
     long modelCap = getStoredModelCapacity();
@@ -1347,49 +1350,49 @@ private String buildBatteryInfo() {
             Locale.US,
             "%s : %s\n",
             padKey("Level"),
-            bi.level >= 0 ? bi.level + "%" : "N/A"
+            snap.battery.level >= 0 ? snap.battery.level + "%" : "N/A"
     ));
 
     sb.append(String.format(
             Locale.US,
             "%s : %s\n",
             padKey("Status"),
-            bi.status != null ? bi.status : "N/A"
+            snap.battery.status != null ? snap.battery.status : "N/A"
     ));
 
     sb.append(String.format(
             Locale.US,
             "%s : %s\n",
             padKey("Charging source"),
-            bi.plug != null ? bi.plug : "N/A"
+            snap.battery.plug != null ? snap.battery.plug : "N/A"
     ));
 
     sb.append(String.format(
             Locale.US,
             "%s : %.1f°C\n\n",
             padKey("Temp"),
-            bi.temperature
+            snap.battery.temperature
     ));
 
     // --------------------------------------------------
     // CHARGE DATA
     // --------------------------------------------------
 
-    if (bi.chargeNowMah > 0) {
+    if (snap.battery.chargeNowMah > 0) {
         sb.append(String.format(
                 Locale.US,
                 "%s : %d mAh\n",
                 padKey("Current charge"),
-                bi.chargeNowMah
+                snap.battery.chargeNowMah
         ));
     }
 
-    if (bi.chargeFullMah > 0) {
+    if (snap.battery.chargeFullMah > 0) {
         sb.append(String.format(
                 Locale.US,
                 "%s : %d mAh\n",
                 padKey("Estimated full"),
-                bi.chargeFullMah
+                snap.battery.chargeFullMah
         ));
     }
 
@@ -1406,57 +1409,57 @@ private String buildBatteryInfo() {
             Locale.US,
             "%s : %s\n",
             padKey("Source"),
-            bi.source != null ? bi.source : "N/A"
+            snap.battery.source != null ? snap.battery.source : "N/A"
     ));
 
     // --------------------------------------------------
     // ROOT / OEM
     // --------------------------------------------------
 
-    if (bi.designMah > 0 ||
-        bi.cycleCount > 0 ||
-        bi.resistanceMohm > 0) {
+    if (snap.battery.designMah > 0 ||
+        snap.battery.cycleCount > 0 ||
+        snap.battery.resistanceMohm > 0) {
 
         sb.append("\n");
         sb.append("=== ROOT BATTERY DATA ===\n");
 
-        if (bi.designMah > 0) {
+        if (snap.battery.designMah > 0) {
 
             sb.append(String.format(
                     Locale.US,
                     "%s : %d mAh\n",
                     padKey("Design capacity"),
-                    bi.designMah
+                    snap.battery.designMah
             ));
         }
 
-        if (bi.sohPercent > 0) {
+        if (snap.battery.sohPercent > 0) {
 
     sb.append(String.format(
             Locale.US,
             "%s : %d %%\n",
             padKey("SOH"),
-            bi.sohPercent
+            snap.battery.sohPercent
     ));
 }
 
-        if (bi.cycleCount > 0) {
+        if (snap.battery.cycleCount > 0) {
 
             sb.append(String.format(
                     Locale.US,
                     "%s : %d\n",
                     padKey("Cycle count"),
-                    bi.cycleCount
+                    snap.battery.cycleCount
             ));
         }
 
-        if (bi.resistanceMohm > 0) {
+        if (snap.battery.resistanceMohm > 0) {
 
             sb.append(String.format(
                     Locale.US,
                     "%s : %d mΩ\n",
                     padKey("Internal resistance"),
-                    bi.resistanceMohm
+                    snap.battery.resistanceMohm
             ));
         }
 
