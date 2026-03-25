@@ -1467,6 +1467,7 @@ if (snap.battery.chargeDesignMah > 0
 }
 
 return sb.toString();
+}
 
 // ===================================================================
 // REFRESH VIEW
