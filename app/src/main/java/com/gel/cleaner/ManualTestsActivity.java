@@ -13734,7 +13734,8 @@ lab14Cancelled = false;
 startLab14ProgressLoop();
 startLab14FastThread();
 
-} catch (Throwable t) {
+} 
+catch (Throwable t) {
 
     lab14StopAllStress();
     restoreBrightnessAndKeepOn();
@@ -16537,6 +16538,8 @@ lab14AdvisoryShown = false;
 lab14Cancelled = false;
 
 if (wasCancelled) return;
+
+}
 
 } catch (Throwable t) {  
 
