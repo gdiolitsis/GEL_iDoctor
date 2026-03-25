@@ -13400,10 +13400,22 @@ if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
 
 batteryPercent = getBatteryPercentSafe();
 
-baselineFullMah =
-        start.battery.chargeFullMah > 0
-                ? start.battery.chargeFullMah
-                : -1;
+baselineFullMah = -1;
+startMah = -1;
+
+if (start != null && start.battery != null) {
+
+    if (start.battery.chargeFullMah > 0) {
+        baselineFullMah = start.battery.chargeFullMah;
+
+    } else if (start.battery.chargeDesignMah > 0) {
+        baselineFullMah = start.battery.chargeDesignMah;
+    }
+
+    if (start.battery.chargeNowMah > 0) {
+        startMah = start.battery.chargeNowMah;
+    }
+}
 
 t0 = SystemClock.elapsedRealtime();
 
@@ -16639,123 +16651,99 @@ private void startLab14FastThread() {
             lab14FastStartTime =
                     SystemClock.elapsedRealtime();
 
-SystemClock.sleep(500);
-vStart[0] = readStableBatteryVoltage();
+            SystemClock.sleep(500);
+            vStart[0] = readStableBatteryVoltage();
 
-if (lab14Cancelled) {
-    lab14FastDone = true;
-    lab14FastPhase = false;
-    stopCpuBurn();
-    return;
-}
+            if (lab14Cancelled) {
+                lab14FastDone = true;
+                lab14FastPhase = false;
+                stopCpuBurn();
+                return;
+            }
 
-startCpuBurn_C_Mode();
+            // -------------------------
+            // LOAD 1
+            // -------------------------
 
-if (lab14Cancelled) {
-    stopCpuBurn();
-    lab14FastDone = true;
-    lab14FastPhase = false;
-    return;
-}
+            startCpuBurn_C_Mode();
 
-SystemClock.sleep(12000);
+            SystemClock.sleep(12000);
+            SystemClock.sleep(400);
 
-if (lab14Cancelled) {
-    stopCpuBurn();
-    lab14FastDone = true;
-    lab14FastPhase = false;
-    return;
-}
+            vLoad1[0] = readStableBatteryVoltage();
 
-SystemClock.sleep(12000);
-SystemClock.sleep(400);
+            stopCpuBurn();
 
-vLoad1[0] = readStableBatteryVoltage();
+            if (lab14Cancelled) {
+                lab14FastDone = true;
+                lab14FastPhase = false;
+                return;
+            }
 
-stopCpuBurn();
+            // -------------------------
+            // RECOVER
+            // -------------------------
 
-if (lab14Cancelled) {
-    lab14FastDone = true;
-    lab14FastPhase = false;
-    return;
-}
+            long tRecoverStart =
+                    SystemClock.elapsedRealtime();
 
-SystemClock.sleep(12000);
+            SystemClock.sleep(12000);
+            SystemClock.sleep(600);
 
-if (lab14Cancelled) {
-    lab14FastDone = true;
-    lab14FastPhase = false;
-    return;
-}
+            vRecover[0] = readStableBatteryVoltage();
 
-long tRecoverStart =
-        SystemClock.elapsedRealtime();
+            lab14RecoveryTimeMs =
+                    SystemClock.elapsedRealtime()
+                            - tRecoverStart;
 
-SystemClock.sleep(12000);
-SystemClock.sleep(600);
+            if (lab14Cancelled) {
+                lab14FastDone = true;
+                lab14FastPhase = false;
+                return;
+            }
 
-vRecover[0] = readStableBatteryVoltage();
+            // -------------------------
+            // LOAD 2
+            // -------------------------
 
-lab14RecoveryTimeMs =
-        SystemClock.elapsedRealtime()
-                - tRecoverStart;
+            startCpuBurn_C_Mode();
 
-if (lab14Cancelled) {
-    lab14FastDone = true;
-    lab14FastPhase = false;
-    return;
-}
+            SystemClock.sleep(12000);
+            SystemClock.sleep(400);
 
-startCpuBurn_C_Mode();
+            vLoad2[0] = readStableBatteryVoltage();
 
-if (lab14Cancelled) {
-    stopCpuBurn();
-    lab14FastDone = true;
-    lab14FastPhase = false;
-    return;
-}
+            stopCpuBurn();
 
-SystemClock.sleep(12000);
+            // -------------------------
+            // SAG
+            // -------------------------
 
-if (lab14Cancelled) {
-    stopCpuBurn();
-    lab14FastDone = true;
-    lab14FastPhase = false;
-    return;
-}
+            if (!Float.isNaN(vStart[0]) &&
+                !Float.isNaN(vLoad1[0])) {
 
-SystemClock.sleep(12000);
-SystemClock.sleep(400);
+                sag1[0] = vStart[0] - vLoad1[0];
+            }
 
-vLoad2[0] = readStableBatteryVoltage();
+            if (!Float.isNaN(vRecover[0]) &&
+                !Float.isNaN(vLoad2[0])) {
 
-stopCpuBurn();
+                sag2[0] = vRecover[0] - vLoad2[0];
+            }
 
-if (!Float.isNaN(vStart[0]) &&
-    !Float.isNaN(vLoad1[0])) {
+            if (!Float.isNaN(sag1[0]) &&
+                !Float.isNaN(sag2[0])) {
 
-    sag1[0] = vStart[0] - vLoad1[0];
-}
+                sagAvg[0] =
+                        (sag1[0] + sag2[0]) / 2f;
+            }
 
-if (!Float.isNaN(vRecover[0]) &&
-    !Float.isNaN(vLoad2[0])) {
+            lab14FastDone = true;
+            lab14FastPhase = false;
 
-    sag2[0] = vRecover[0] - vLoad2[0];
-}
-
-if (!Float.isNaN(sag1[0]) &&
-    !Float.isNaN(sag2[0])) {
-
-    sagAvg[0] =
-            (sag1[0] + sag2[0]) / 2f;
-}
-
-lab14FastDone = true;
-lab14FastPhase = false;
-
-if (!lab14Cancelled && lab14Running) {
-    startLab14MainStress();
-}
+            if (!lab14Cancelled && lab14Running) {
+                startLab14MainStress();
+            }
 
         } catch (Throwable t) {
 
