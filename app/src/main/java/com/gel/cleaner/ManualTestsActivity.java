@@ -271,6 +271,16 @@ private long lab14RecoveryTimeMs = 0;
 private LinearLayout lab14FastBar;
 private LinearLayout lab14MainBar;
 
+// ===============================
+// LAB14 extra metrics (needed by analysis)
+// ===============================
+
+private float currentStability = Float.NaN;
+private float recoveryRatio = Float.NaN;
+private float energyEfficiency = Float.NaN;
+
+private int swellingScore = 0;
+
     // ============================================================
     // BATTERY STRESS DIAGNOSTIC STATE (shared between labs)
     // ============================================================
@@ -14832,14 +14842,14 @@ float c1 = lab14Current();
 
 if (Float.isNaN(c1) || Math.abs(c1) < 50f) {
 
-    iDoctorEngine.FullSnapshot snap =
+    iDoctorEngine.BatterySnapshot snap =
             lab14Snapshot();
 
     if (snap != null &&
-        snap.battery != null &&
-        !Float.isNaN(snap.battery.currentMa) && snap.battery.currentMa != 0f) {
+        !Float.isNaN(snap.currentMa) &&
+        snap.currentMa != 0f) {
 
-        c1 = snap.battery.currentMa;
+        c1 = snap.currentMa;
     }
 }
 
@@ -14849,14 +14859,14 @@ float c2 = lab14Current();
 
 if (Float.isNaN(c2) || Math.abs(c2) < 50f) {
 
-    iDoctorEngine.FullSnapshot snap =
+    iDoctorEngine.BatterySnapshot snap =
             lab14Snapshot();
 
     if (snap != null &&
-        snap.battery != null &&
-        !Float.isNaN(snap.battery.currentMa) && snap.battery.currentMa != 0f) {
+        !Float.isNaN(snap.currentMa) &&
+        snap.currentMa != 0f) {
 
-        c2 = snap.battery.currentMa;
+        c2 = snap.currentMa;
     }
 }
 
@@ -14866,14 +14876,14 @@ float c3 = lab14Current();
 
 if (Float.isNaN(c3) || Math.abs(c3) < 50f) {
 
-    iDoctorEngine.FullSnapshot snap =
+    iDoctorEngine.BatterySnapshot snap =
             lab14Snapshot();
 
     if (snap != null &&
-        snap.battery != null &&
-        !Float.isNaN(snap.battery.currentMa) && snap.battery.currentMa != 0f) {
+        !Float.isNaN(snap.currentMa) &&
+        snap.currentMa != 0f) {
 
-        c3 = snap.battery.currentMa;
+        c3 = snap.currentMa;
     }
 }
 
@@ -15390,14 +15400,14 @@ if (swellingScore >= 2 &&
 
 if (validDrain && !lab14_systemLimited[0]) {
 
-    idoctor.saveDrainValue(mahPerHour);
+    engine.saveDrainValue(mahPerHour);
 
-    idoctor.saveRun();
+    engine.saveRun();
 
 }
 
 Lab14Engine.ConfidenceResult newConf =
-        idoctor.computeConfidence();
+        engine.computeConfidence();
 
 if (newConf != null) {
     lab14Conf = newConf;
@@ -15455,13 +15465,13 @@ if (agingInputOk) {
         confOk) {
 
         aging =
-                idoctor.computeAging(
-                        mahPerHour,
-                        lab14Conf,
-                        cycles,
-                        tempStart,
-                        tempPeak
-                );
+        engine.computeAging(
+                mahPerHour,
+                lab14Conf,
+                cycles,
+                tempStart,
+                tempPeak
+        );
     }
 }
 
@@ -15520,26 +15530,22 @@ if (Float.isNaN(pulseSag[0]) ||
     Float.isNaN(pulseScore[0]) ||
     Float.isNaN(relaxScore[0])) {
 
-    iDoctorEngine.FullSnapshot snap1 =
-            lab14Snapshot();
+    iDoctorEngine.BatterySnapshot snap1 =
+        lab14Snapshot();
 
-    SystemClock.sleep(600);
+iDoctorEngine.BatterySnapshot snap2 =
+        lab14Snapshot();
 
-    iDoctorEngine.FullSnapshot snap2 =
-            lab14Snapshot();
+if (snap1 != null &&
+    snap2 != null &&
+    snap1.voltageMv > 0 &&
+    snap2.voltageMv > 0) {
 
-    if (snap1 != null &&
-        snap2 != null &&
-        snap1.battery != null &&
-        snap2.battery != null &&
-        snap1.battery.voltageMv > 0 &&
-        snap2.battery.voltageMv > 0) {
+    float v1 =
+            snap1.voltageMv / 1000f;
 
-        float v1 =
-                snap1.battery.voltageMv / 1000f;
-
-        float v2 =
-                snap2.battery.voltageMv / 1000f;
+    float v2 =
+            snap2.voltageMv / 1000f;
 
         float diff =
                 Math.abs(v2 - v1);
@@ -17062,7 +17068,7 @@ private float lab14Voltage() {
     return Float.NaN;
 }
 
-private iDoctorEngine.FullSnapshot lab14Snapshot() {
+private iDoctorEngine.BatterySnapshot lab14Snapshot() {
 
     try {
 
