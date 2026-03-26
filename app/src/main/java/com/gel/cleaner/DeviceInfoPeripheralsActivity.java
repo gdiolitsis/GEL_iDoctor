@@ -1330,6 +1330,65 @@ sb.append(String.format(
                 : "N/A"
 ));
 
+if (!Float.isNaN(snap.battery.currentMa)) {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %.0f mA\n",
+            padKey("Current"),
+            snap.battery.currentMa
+    ));
+}
+
+if (snap.battery.chargeNowMah > 0) {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %d mAh\n",
+            padKey("Current charge"),
+            snap.battery.chargeNowMah
+    ));
+}
+
+sb.append(String.format(
+        Locale.US,
+        "%s : %s\n",
+        padKey("Source"),
+        snap.battery.source != null
+                ? snap.battery.source
+                : "N/A"
+));
+
+if (snap.battery.chargeFullMah > 0) {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %d mAh\n",
+            padKey("Estimated capacity"),
+            snap.battery.chargeFullMah
+    ));
+}
+
+if (modelCap > 0) {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %d mAh\n",
+            padKey("Declared capacity"),
+            modelCap
+    ));
+}
+
+if (snap.battery.voltageMv > 0) {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %.3f V\n",
+            padKey("Voltage"),
+            snap.battery.voltageMv / 1000f
+    ));
+}
+
 if (!Float.isNaN(snap.battery.batteryTempC)) {
 
     sb.append(String.format(
@@ -1346,73 +1405,6 @@ if (!Float.isNaN(snap.battery.batteryTempC)) {
             "%s : %s\n",
             padKey("Temp"),
             "N/A"
-    ));
-}
-
-// --------------------------------------------------
-// VOLTAGE / CURRENT
-// --------------------------------------------------
-
-if (snap.battery.voltageMv > 0) {
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %.3f V\n",
-            padKey("Voltage"),
-            snap.battery.voltageMv / 1000f
-    ));
-}
-
-if (!Float.isNaN(snap.battery.currentMa)) {
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %.0f mA\n",
-            padKey("Current"),
-            snap.battery.currentMa
-    ));
-}
-
-// --------------------------------------------------
-// CHARGE DATA
-// --------------------------------------------------
-
-if (snap.battery.chargeNowMah > 0) {
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %d mAh\n",
-            padKey("Current charge"),
-            snap.battery.chargeNowMah
-    ));
-}
-
-if (snap.battery.chargeFullMah > 0) {
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %d mAh\n",
-            padKey("Estimated capacity"),
-            snap.battery.chargeFullMah
-    ));
-}
-
-sb.append(String.format(
-        Locale.US,
-        "%s : %s\n",
-        padKey("Source"),
-        snap.battery.source != null
-                ? snap.battery.source
-                : "N/A"
-));
-
-if (modelCap > 0) {
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %d mAh\n",
-            padKey("Declared capacity"),
-            modelCap
     ));
 }
 
