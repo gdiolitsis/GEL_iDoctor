@@ -14987,20 +14987,16 @@ if (!Float.isNaN(currentNow) &&
             estimatedESR = esr;
             internalResistance[0] = esr;
 
-            try {
+            iDoctorEngine engIR =
+                    iDoctorEngine.get(ManualTestsActivity.this);
 
-                iDoctorEngine engIR =
-                        iDoctorEngine.get(ManualTestsActivity.this);
+            long irMilli =
+                    (long)(esr * 1000f);
 
-                long irMilli =
-                        (long)(esr * 1000f);
-
-                engIR.setInternalResistanceMilliOhm(irMilli);
-
-            } catch (Throwable ignore) {}
-
+            engIR.setInternalResistanceMilliOhm(irMilli);
         }
     }
+}
 }
 
 // ----------------------------------------------------
