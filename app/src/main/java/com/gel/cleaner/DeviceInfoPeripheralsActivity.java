@@ -573,7 +573,7 @@ private float getBatteryVoltageFiltered() {
     try {
 
         iDoctorEngine eng =
-                iDoctorEngine.get(this);
+                iDoctorEngine.get(getApplicationContext());
 
         iDoctorEngine.FullSnapshot s =
                 eng.readFullSnapshot();
@@ -595,7 +595,7 @@ private float getBatteryCurrentNowSafe() {
     try {
 
         iDoctorEngine eng =
-                iDoctorEngine.get(this);
+                iDoctorEngine.get(getApplicationContext());
 
         iDoctorEngine.FullSnapshot s =
                 eng.readFullSnapshot();
@@ -1291,7 +1291,7 @@ private long readSysLongRootAware(String path) {
 private String buildBatteryInfo() {
 
     iDoctorEngine eng =
-            iDoctorEngine.get(this);
+            iDoctorEngine.get(getApplicationContext());
 
     iDoctorEngine.FullSnapshot snap =
             eng.readFullSnapshot();
@@ -1330,13 +1330,24 @@ sb.append(String.format(
                 : "N/A"
 ));
 
-sb.append(String.format(
-        Locale.US,
-        "%s : %.1f°C\n",
-        padKey("Temp"),
-        snap.battery.batteryTempC
-));
+if (!Float.isNaN(snap.battery.batteryTempC)) {
 
+    sb.append(String.format(
+            Locale.US,
+            "%s : %.1f°C\n",
+            padKey("Temp"),
+            snap.battery.batteryTempC
+    ));
+
+} else {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Temp"),
+            "N/A"
+    ));
+}
 
 // --------------------------------------------------
 // VOLTAGE / CURRENT
