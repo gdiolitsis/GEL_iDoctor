@@ -450,6 +450,21 @@ boolean charging = false;
 
 String source = "Unknown";
 
+private static class BatteryInfo {
+
+    int level = -1;
+    float temperature = Float.NaN;
+    String status = "Unknown";
+
+    long currentChargeMah = -1;
+
+    // ✅ missing fields
+    boolean charging = false;
+    String source = "Unknown";
+    long estimatedFullMah = -1;
+
+}
+
 // ============================================================  
 // Battery stress internals  
 // ============================================================  
@@ -682,21 +697,6 @@ private static class PrivacySnapshot {
     int userAppsWithSms;  
     int totalUserAppsChecked;  
 }  
-
-private static class BatteryInfo {
-
-    int level = -1;
-    float temperature = Float.NaN;
-    String status = "Unknown";
-
-    long currentChargeMah = -1;
-
-    // ✅ missing fields
-    boolean charging = false;
-    String source = "Unknown";
-    long estimatedFullMah = -1;
-
-}
 
 // ============================================================  
 // CORE UI  
@@ -1092,274 +1092,22 @@ if (!serviceLogInit) {
 
 }  // onCreate ENDS HERE
 
-
-private boolean ensurePermissions(String[] permissions, Runnable afterGranted) {
-
-    List<String> missing = new ArrayList<>();
-
-    for (String p : permissions) {
-        if (ContextCompat.checkSelfPermission(this, p)
-                != PackageManager.PERMISSION_GRANTED) {
-            missing.add(p);
-        }
-    }
-
-    if (missing.isEmpty()) {
-        return true;
-    }
-
-    pendingAfterPermission = afterGranted;
-
-    ActivityCompat.requestPermissions(
-            this,
-            missing.toArray(new String[0]),
-            REQ_CORE_PERMS
-    );
-
-    return false;
-}
-
-
-// ============================================================
-// onPause
-// ============================================================
-@Override
-protected void onPause() {
-
-    try {
-        lab3WaitingUser = false;
-        stopLab3Tone();
-        restoreLab3Audio();
-    } catch (Throwable ignore) {}
-
-    try {
-    	counterText = null;
-        lab14StopAllStress();
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
-
-    try {
-        if (tts != null && tts[0] != null) {
-            tts[0].stop();
-        }
-    } catch (Throwable ignore) {}
-
-    super.onPause();
-}
-
-
-// ============================================================
-// onDestroy
-// ============================================================
-@Override
-protected void onDestroy() {
-
-    try {
-        if (ui != null) {
-            ui.removeCallbacksAndMessages(null);
-        }
-    } catch (Throwable ignore) {}
-
-    try {
-        unregisterReceiver(lab13BtReceiver);
-    } catch (Throwable ignore) {}
-
-    try {
-        if (lab14DotsView != null) {
-            lab14DotsView.removeCallbacks(null);
-        }
-    } catch (Throwable ignore) {}
-
-    try {
-        lab14StopAllStress();
-    } catch (Throwable ignore) {}
-
-    try {
-    	counterText = null;
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
-
-    try {
-        if (tts != null && tts[0] != null) {
-            tts[0].stop();
-            tts[0].shutdown();
-        }
-    } catch (Throwable ignore) {}
-
-    super.onDestroy();
-}
-
-
-// ============================================================
-// BACK
-// ============================================================
-@Override
-public void onBackPressed() {
-
-    try {
-    lab14Cancelled = true;
-    counterText = null;
-    lab14StopAllStress();
-    restoreBrightnessAndKeepOn();
-    lab14CleanupUI();
-} catch (Throwable ignore) {}
-
-    super.onBackPressed();
-}
-
-// ============================================================
-// GLOBAL TTS INIT — ONE TIME ONLY (SAFE)
-// ============================================================
-private void initTTS() {
-
-    if (tts[0] != null) return;
-
-    tts[0] = new TextToSpeech(this, status -> {
-
-        if (status == TextToSpeech.SUCCESS && tts[0] != null) {
-
-            Locale locale = AppLang.isGreek(this)
-                    ? new Locale("el", "GR")
-                    : Locale.US;
-
-            int res = tts[0].setLanguage(locale);
-
-            if (res == TextToSpeech.LANG_MISSING_DATA
-                    || res == TextToSpeech.LANG_NOT_SUPPORTED) {
-
-                tts[0].setLanguage(Locale.US);
-            }
-
-            ttsReady[0] = true;
-
-            if (pendingTtsText != null) {
-                tts[0].speak(
-                        pendingTtsText,
-                        TextToSpeech.QUEUE_FLUSH,
-                        null,
-                        "GEL_TTS_PENDING"
-                );
-                pendingTtsText = null;
-            }
-        }
-    });
-}
-
-// ============================================================  
-// GEL legacy aliases (LOCKED)  
-// ============================================================  
-private void logYellow(String msg) { logWarn(msg); }  
-private void logGreen(String msg)  { logOk(msg); }  
-private void logRed(String msg)    { logError(msg); }  
-
-private void logSection(String msg) {  
-logInfo(msg); 
-
-}
-
-// ============================================================
-// RESET BATTERY DIAGNOSTIC STATE
-// ============================================================
-private void resetBatteryDiagnostics() {
-
-    vStart[0] = Float.NaN;
-    vLoad1[0] = Float.NaN;
-    vRecover[0] = Float.NaN;
-    vLoad2[0] = Float.NaN;
-
-    sag1[0] = Float.NaN;
-    sag2[0] = Float.NaN;
-    sagAvg[0] = Float.NaN;
-    pulseSag[0] = Float.NaN;
-    pulseRecovery[0] = Float.NaN;
-    pulseScore[0] = Float.NaN;
-
-    voltageUnderLoad[0] = Float.NaN;
-    voltageRecovery[0] = Float.NaN;
-    voltageStability[0] = Float.NaN;
-    internalResistance[0] = Float.NaN;
-
-    voltageRecoverySpeed[0] = Float.NaN;
-    relaxV1[0] = Float.NaN;
-    relaxV2[0] = Float.NaN;
-    relaxV3[0] = Float.NaN;
-    relaxScore[0] = Float.NaN;
-    cellElasticityIndex[0] = Float.NaN;
-    thermalImpedance[0] = Float.NaN;
-    powerStabilityFactor[0] = Float.NaN;
-    stressSignature[0] = Float.NaN;
-    structuralIntegrityIndex[0] = Float.NaN;
-
-    estimatedESR = Float.NaN;
-
-    collapseRisk[0] = false;
-    swellingRisk[0] = false;
-    calibrationDrift[0] = false;
-    cellImbalanceRisk[0] = false;
-    batteryFailureRisk[0] = false;
-
-    batterySOH[0] = Float.NaN;
-
-    expectedPercent[0] = Float.NaN;
-    percentDeviation[0] = Float.NaN;
-}
-
-// ============================================================
+ // ============================================================
 // BATTERY VOLTAGE HELPER (SAFE)
 // ============================================================
 private float getBatteryVoltageSafe() {
 
-    // -------- iDoctor unified --------
     try {
 
-        iDoctorEngine eng = iDoctorEngine.get(this);
+        iDoctorEngine engine =
+                iDoctorEngine.get(ManualTestsActivity.this);
 
-        float mv = eng.getBatteryVoltageUnified();
+        float mv =
+                engine.readBatteryVoltageMvStable(3, 10);
 
-        if (!Float.isNaN(mv) && mv > 0f)
+        if (!Float.isNaN(mv) && mv > 0f) {
             return mv / 1000f;
-
-    } catch (Throwable ignore) {}
-
-
-    // -------- snapshot fallback (IMPORTANT) --------
-    try {
-
-        iDoctorEngine eng = iDoctorEngine.get(this);
-
-        iDoctorEngine.FullSnapshot snap =
-                eng.readFullSnapshot();
-
-        if (snap != null &&
-            snap.battery != null &&
-            snap.battery.voltageMv > 0) {
-
-            return snap.battery.voltageMv / 1000f;
         }
-
-    } catch (Throwable ignore) {}
-
-
-    // -------- ACTION_BATTERY_CHANGED --------
-    try {
-
-        IntentFilter f =
-                new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-
-        Intent i =
-                registerReceiver(null, f);
-
-        if (i == null)
-            return Float.NaN;
-
-        int mv =
-                i.getIntExtra(
-                        BatteryManager.EXTRA_VOLTAGE,
-                        -1
-                );
-
-        if (mv > 0)
-            return mv / 1000f;
 
     } catch (Throwable ignore) {}
 
@@ -1369,6 +1117,9 @@ private float getBatteryVoltageSafe() {
 // ------------------------------------------------------------
 // BATTERY PERCENT (SAFE)
 // ------------------------------------------------------------
+
+// ⚠ NOT FOR LAB14 (uses ACTION_BATTERY_CHANGED)
+
 private int getBatteryPercentSafe() {
 
     try {
@@ -1409,1225 +1160,22 @@ private int getBatteryPercentSafe() {
 // ============================================================
 private float getBatteryVoltageFiltered() {
 
-    float sum = 0f;
-    int count = 0;
+    try {
 
-    // discard first read (unstable)
-    getBatteryVoltageSafe();
+        iDoctorEngine engine =
+                iDoctorEngine.get(ManualTestsActivity.this);
 
-    for (int i = 0; i < 5; i++) {
+        float mv =
+                engine.readBatteryVoltageMvStable(5, 20);
 
-        float v = getBatteryVoltageSafe();
-
-        if (!Float.isNaN(v) && v > 0f) {
-            sum += v;
-            count++;
+        if (!Float.isNaN(mv) && mv > 0f) {
+            return mv / 1000f;
         }
 
-        SystemClock.sleep(40);   // μικρό delay για sag test
-    }
-
-    if (count == 0)
-        return Float.NaN;
-
-    return sum / count;
-}
-
-// ============================================================  
-// UI HELPERS (GEL LOCKED)  
-// ============================================================  
-private LinearLayout makeSectionBody() {  
-    LinearLayout body = new LinearLayout(this);  
-    body.setOrientation(LinearLayout.VERTICAL);  
-    body.setVisibility(View.GONE);  
-    body.setPadding(0, dp(4), 0, dp(4));  
-
-    allSectionBodies.add(body);  
-    return body;  
-}  
-
-private Button makeSectionHeader(String text, LinearLayout bodyToToggle) {  
-    Button b = new Button(this);  
-    allSectionHeaders.add(b);  
-
-    b.setText(text);  
-    b.setAllCaps(false);  
-    b.setTextSize(15f);  
-    b.setTextColor(0xFF39FF14); // neon green  
-    b.setBackgroundResource(R.drawable.gel_btn_outline_selector);  
-
-    LinearLayout.LayoutParams lp =  
-            new LinearLayout.LayoutParams(  
-                    LinearLayout.LayoutParams.MATCH_PARENT,  
-                    LinearLayout.LayoutParams.WRAP_CONTENT  
-            );  
-    lp.setMargins(0, dp(6), 0, dp(4));  
-    b.setLayoutParams(lp);  
-    b.setGravity(Gravity.CENTER);  
-
-    b.setOnClickListener(v -> {  
-        boolean willOpen = bodyToToggle.getVisibility() != View.VISIBLE;  
-
-        // close ALL sections  
-        for (LinearLayout body : allSectionBodies) {  
-            body.setVisibility(View.GONE);  
-        }  
-
-        if (willOpen) {  
-            bodyToToggle.setVisibility(View.VISIBLE);  
-            scroll.post(() -> scroll.smoothScrollTo(0, b.getTop()));  
-        }  
-    });  
-
-    return b;  
-}  
-
-private Button makeTestButton(String text, Runnable action) {  
-Button b = new Button(this);  
-b.setText(text);  
-b.setAllCaps(false);  
-b.setTextSize(14f);  
-b.setTextColor(0xFFFFFFFF);  
-b.setBackgroundResource(R.drawable.gel_btn_outline_selector);  
-
-LinearLayout.LayoutParams lp =
-        new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-lp.setMargins(0, dp(4), 0, dp(4));
-b.setLayoutParams(lp);
-
-b.setMinHeight(dp(48));
-
-b.setSingleLine(false);
-b.setMaxLines(2);
-b.setEllipsize(null);
-
-b.setGravity(Gravity.CENTER);
-b.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-
-b.setOnClickListener(v -> action.run());
-return b;
-}
-
-private Button makeTestButtonRedGold(String text, Runnable action) {  
-Button b = new Button(this);  
-b.setText(text);  
-b.setAllCaps(false);  
-b.setTextSize(14f);  
-b.setTextColor(0xFFFFFFFF);  
-b.setTypeface(null, Typeface.BOLD);  
-
-GradientDrawable bg = new GradientDrawable();  
-bg.setColor(0xFF8B0000);  
-bg.setCornerRadius(dp(10));  
-bg.setStroke(dp(3), 0xFFFFD700);  
-b.setBackground(bg);  
-
-LinearLayout.LayoutParams lp =  
-        new LinearLayout.LayoutParams(  
-                LinearLayout.LayoutParams.MATCH_PARENT,  
-                dp(52)  
-        );  
-lp.setMargins(0, dp(6), 0, dp(6));  
-b.setLayoutParams(lp);  
-b.setGravity(Gravity.CENTER);  
-
-b.setOnClickListener(v -> action.run());  
-return b;
-
-}
-
-// ============================================================
-// WIFI / NETWORK HELPERS — REQUIRED
-// ============================================================
-
-private String cleanSsid(String raw) {
-if (raw == null) return "Unknown";
-
-raw = raw.trim();  
-
-if (raw.equalsIgnoreCase("<unknown ssid>") ||  
-    raw.equalsIgnoreCase("unknown ssid"))  
-    return "Unknown";  
-
-if (raw.startsWith("\"") && raw.endsWith("\"") && raw.length() > 1)  
-    return raw.substring(1, raw.length() - 1);  
-
-return raw;
-
-}
-
-private String ipToStr(int ip) {
-return (ip & 0xFF) + "." +
-((ip >> 8) & 0xFF) + "." +
-((ip >> 16) & 0xFF) + "." +
-((ip >> 24) & 0xFF);
-}
-
-// ============================================================
-// LAB 3 — User Confirmation Dialog (Earpiece)
-// FINAL — GEL Dark/Gold + Neon Green + TTS + Mute
-// ============================================================
-private void askUserEarpieceConfirmation() {
-
-    runOnUiThread(() -> {
-
-        if (lab3WaitingUser) return;
-        lab3WaitingUser = true;
-
-        final boolean gr = AppLang.isGreek(this);
-
-        AlertDialog.Builder b =
-                new AlertDialog.Builder(
-                        ManualTestsActivity.this,
-                        android.R.style.Theme_Material_Dialog_NoActionBar
-                );
-        b.setCancelable(false);
-
-        // ==========================
-        // ROOT
-        // ==========================
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(28), dp(24), dp(28), dp(22));
-        root.setMinimumWidth(dp(300));
-
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xFF101010);
-        bg.setCornerRadius(dp(10));
-        bg.setStroke(dp(4), 0xFFFFD700);
-        root.setBackground(bg);
-
-        // ==========================
-        // TITLE (WHITE)
-        // ==========================
-        TextView title = new TextView(this);
-        title.setText(gr ? "LAB 3 — Επιβεβαίωση" : "LAB 3 — Confirmation");
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(17f);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, 0, 0, dp(14));
-        root.addView(title);
-
-        // ==========================
-        // MESSAGE (NEON GREEN)
-        // ==========================
-        TextView msg = new TextView(this);
-        msg.setText(
-                gr
-                        ? "Άκουσες καθαρά τους ήχους\nαπό το ακουστικό;"
-                        : "Did you hear the tones\nclearly from the earpiece?"
-        );
-        msg.setTextColor(0xFF39FF14); // GEL neon green
-        msg.setTextSize(15f);
-        msg.setGravity(Gravity.CENTER);
-        msg.setLineSpacing(0f, 1.2f);
-        msg.setPadding(0, 0, 0, dp(18));
-        root.addView(msg);
-
-// ==========================
-// MUTE ROW (UNIFIED — AppTTS HELPER)
-// ==========================
-root.addView(buildMuteRow());
-
-        // ---------- BUTTON ROW ----------
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setGravity(Gravity.CENTER);
-
-        LinearLayout.LayoutParams btnLp =
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                );
-        btnLp.setMargins(dp(12), dp(8), dp(12), dp(8));
-
-        // ---------- NO ----------
-        Button noBtn = new Button(this);
-        noBtn.setText(gr ? "ΟΧΙ" : "NO");
-        noBtn.setAllCaps(false);
-        noBtn.setTextColor(Color.WHITE);
-
-        GradientDrawable noBg = new GradientDrawable();
-        noBg.setColor(0xFF8B0000);
-        noBg.setCornerRadius(dp(10));
-        noBg.setStroke(dp(3), 0xFFFFD700);
-        noBtn.setBackground(noBg);
-        noBtn.setLayoutParams(btnLp);
-
-        // ---------- YES ----------
-        Button yesBtn = new Button(this);
-        yesBtn.setText(gr ? "ΝΑΙ" : "YES");
-        yesBtn.setAllCaps(false);
-        yesBtn.setTextColor(Color.WHITE);
-
-        GradientDrawable yesBg = new GradientDrawable();
-        yesBg.setColor(0xFF0B5F3B);
-        yesBg.setCornerRadius(dp(10));
-        yesBg.setStroke(dp(3), 0xFFFFD700);
-        yesBtn.setBackground(yesBg);
-        yesBtn.setLayoutParams(btnLp);
-
-// ---------- ADD ----------
-btnRow.addView(noBtn);
-btnRow.addView(yesBtn);
-root.addView(btnRow);
-
-b.setView(root);
-b.setCancelable(false);
-
-final AlertDialog d = b.create();
-
-if (d.getWindow() != null) {
-    d.getWindow().setBackgroundDrawable(
-            new ColorDrawable(Color.TRANSPARENT)
-    );
-}
-
-// ------------------------------------------------------------
-// STOP TTS ON ANY DISMISS
-// ------------------------------------------------------------
-d.setOnDismissListener(dialog -> {
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-});
-
-// ------------------------------------------------------------
-// BACK KEY — STOP TTS + RESTORE AUDIO
-// ------------------------------------------------------------
-d.setOnKeyListener((dialog, keyCode, event) -> {
-    if (keyCode == KeyEvent.KEYCODE_BACK
-            && event.getAction() == KeyEvent.ACTION_UP) {
-
-        try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-        lab3WaitingUser = false;
-        restoreLab3Audio();
-        dialog.dismiss();
-        return true;
-    }
-    return false;
-});
-
-if (!isFinishing() && !isDestroyed()) {
-    d.show();
-
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-        if (d.isShowing()
-                && !isFinishing()
-                && !isDestroyed()
-                && !AppTTS.isMuted(this)) {
-
-            AppTTS.ensureSpeak(
-                    this,
-                    gr
-                            ? "Άκουσες καθαρά τους ήχους από το ακουστικό;"
-                            : "Did you hear the tones clearly from the earpiece?"
-            );
-        }
-    }, 400);
-}
-
-// ------------------------------------------------------------
-// YES ACTION (PASS)
-// ------------------------------------------------------------
-yesBtn.setOnClickListener(v -> {
-
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-    lab3WaitingUser = false;
-
-    logLabelOkValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr
-                    ? "Ο χρήστης επιβεβαίωσε καθαρή αναπαραγωγή ήχου"
-                    : "User confirmed audio playback"
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 3 ολοκληρώθηκε." : "Lab 3 finished.");
-    logLine();
-
-    restoreLab3Audio();
-    d.dismiss();
-});
-
-// ------------------------------------------------------------
-// NO ACTION (FAIL)
-// ------------------------------------------------------------
-noBtn.setOnClickListener(v -> {
-
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-    lab3WaitingUser = false;
-
-    logLabelErrorValue(
-            gr ? "LAB 3 — Ακουστικό" : "LAB 3 — Earpiece",
-            gr
-                    ? "Ο χρήστης ΔΕΝ άκουσε τους ήχους"
-                    : "User did NOT hear tones"
-    );
-
-    logLabelWarnValue(
-            gr ? "Πιθανό πρόβλημα" : "Possible issue",
-            gr
-                    ? "Πιθανή βλάβη ακουστικού ή πρόβλημα δρομολόγησης ήχου"
-                    : "Earpiece failure or audio routing problem"
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 3 ολοκληρώθηκε." : "Lab 3 finished.");
-    logLine();
-
-    restoreLab3Audio();
-    d.dismiss();
-});
-
-    });
-} 
-
-// ============================================================
-// LAB 3 — STATE / HELPERS (LOCKED)
-// ============================================================
-
-private void routeToCallEarpiece() {
-    try {
-        AudioManager am =
-                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        if (am == null) return;
-
-        am.stopBluetoothSco();
-        am.setBluetoothScoOn(false);
-        am.setSpeakerphoneOn(false);
-        am.setMicrophoneMute(false);
-        am.setMode(AudioManager.MODE_IN_COMMUNICATION);
     } catch (Throwable ignore) {}
+
+    return Float.NaN;
 }
-
-private void routeToEarpiecePlayback() {
-    try {
-        AudioManager am =
-                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        if (am == null) return;
-
-        am.stopBluetoothSco();
-        am.setBluetoothScoOn(false);
-        am.setSpeakerphoneOn(false);
-        am.setMode(AudioManager.MODE_NORMAL);
-    } catch (Throwable ignore) {}
-}
-
-private ToneGenerator lab3Tone;
-
-/**
- * HARD restore for LAB 3
- * One single source of truth.
- * Used on success / cancel / exception.
- */
- 
-private void restoreLab3Audio() {
-    try {
-        AudioManager am =
-                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-
-        if (am == null) return;   // 🔒 safety
-
-        resetAudioAfterLab3(
-                am,
-                lab3OldMode,
-                lab3OldSpeaker,
-                lab3OldMicMute
-        );
-
-    } catch (Throwable ignore) {}
-}
-
-/**
- * Plays a short earpiece beep using VOICE_CALL stream.
- * Earpiece-only, OEM safe.
- */
-private void playEarpieceBeep() {
-
-    int sampleRate = 8000;
-    int durationMs = 400;
-    int samples = sampleRate * durationMs / 1000;
-
-    short[] buffer = new short[samples];
-    double freq = 1000.0;
-
-    for (int i = 0; i < samples; i++) {
-        buffer[i] = (short)
-                (Math.sin(2 * Math.PI * i * freq / sampleRate) * 32767);
-    }
-
-    AudioTrack track = new AudioTrack(
-            AudioManager.STREAM_VOICE_CALL,
-            sampleRate,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            buffer.length * 2,
-            AudioTrack.MODE_STATIC
-    );
-
-    try {
-        track.write(buffer, 0, buffer.length);
-        track.play();
-        SystemClock.sleep(durationMs + 100);
-    } finally {
-        try { track.stop(); } catch (Throwable ignore) {}
-        try { track.release(); } catch (Throwable ignore) {}
-    }
-}
-
-/**
- * Optional tone stop helper (defensive).
- */
-private void stopLab3Tone() {
-    try {
-        if (lab3Tone != null) {
-            lab3Tone.stopTone();
-            lab3Tone.release();
-        }
-    } catch (Throwable ignore) {}
-    lab3Tone = null;
-}
-
-// ============================================================
-// LAB 3 — HARD AUDIO RESET (SINGLE SOURCE OF TRUTH)
-// ============================================================
-private void resetAudioAfterLab3(
-        AudioManager am,
-        int oldMode,
-        boolean oldSpeaker,
-        boolean oldMicMute
-) {
-    if (am == null) return;
-
-    try {
-        try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-        try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-
-        // Force clean baseline
-        try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
-        try { am.setSpeakerphoneOn(oldSpeaker); } catch (Throwable ignore) {}
-        try { am.setMicrophoneMute(oldMicMute); } catch (Throwable ignore) {}
-
-        SystemClock.sleep(120);
-
-    } catch (Throwable ignore) {}
-}
-
-// ============================================================
-// HARD AUDIO NORMALIZE — BEFORE MIC CAPTURE (MANDATORY)
-// ============================================================
-private void hardNormalizeAudioForMic() {
-
-    try {
-        AudioManager am =
-                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-
-        if (am == null) return;
-
-        try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-        try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-
-        try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
-        try { am.setSpeakerphoneOn(false); } catch (Throwable ignore) {}
-
-        // 🔴 ΤΟ ΣΗΜΑΝΤΙΚΟ
-        try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
-
-        SystemClock.sleep(300);
-
-    } catch (Throwable ignore) {}
-}
-
-// ============================================================
-// HELPERS REQUIRED BY LAB 4 PRO (STRICT – DO NOT TOUCH)
-// ============================================================
-
-private AlertDialog buildInfoDialog(
-        String titleText,
-        String messageText,
-        AtomicBoolean cancelled,
-        AtomicReference<AlertDialog> dialogRef
-) {
-    AlertDialog.Builder b =
-            new AlertDialog.Builder(
-                    this,
-                    android.R.style.Theme_Material_Dialog_NoActionBar
-            );
-    b.setCancelable(false);
-
-    LinearLayout root = new LinearLayout(this);
-    root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(dp(26), dp(24), dp(26), dp(22));
-
-    GradientDrawable bg = new GradientDrawable();
-    bg.setColor(0xFF000000);
-    bg.setCornerRadius(dp(10));
-    bg.setStroke(dp(3), 0xFFFFD700);
-    root.setBackground(bg);
-
-    TextView title = new TextView(this);
-    title.setText(titleText);
-    title.setTextColor(Color.WHITE);
-    title.setTextSize(17f);
-    title.setTypeface(null, Typeface.BOLD);
-    title.setGravity(Gravity.CENTER);
-    title.setPadding(0, 0, 0, dp(14));
-    root.addView(title);
-
-    TextView msg = new TextView(this);
-    msg.setText(messageText);
-    msg.setTextColor(0xFF39FF14);
-    msg.setTextSize(14.5f);
-    msg.setGravity(Gravity.CENTER);
-    msg.setPadding(0, 0, 0, dp(16));
-    root.addView(msg);
-
-    Button exit = new Button(this);
-    exit.setAllCaps(false);
-    exit.setText(AppLang.isGreek(this) ? "ΕΞΟΔΟΣ ΤΕΣΤ" : "EXIT TEST");
-    exit.setTextColor(Color.WHITE);
-
-    GradientDrawable exitBg = new GradientDrawable();
-    exitBg.setColor(0xFF8B0000);
-    exitBg.setCornerRadius(dp(10));
-    exitBg.setStroke(dp(3), 0xFFFFD700);
-    exit.setBackground(exitBg);
-
-    exit.setOnClickListener(v -> {
-        cancelled.set(true);
-        try { AppTTS.stop(); } catch (Throwable ignore) {}
-        try {
-            AlertDialog d = dialogRef.get();
-            if (d != null) d.dismiss();
-        } catch (Throwable ignore) {}
-    });
-
-    root.addView(exit);
-
-b.setView(root);
-b.setCancelable(false);
-
-final AlertDialog d = b.create();
-
-if (d.getWindow() != null) {
-    d.getWindow().setBackgroundDrawable(
-            new ColorDrawable(Color.TRANSPARENT)
-    );
-}
-
-// 🔴 ΣΗΜΑΝΤΙΚΟ — ΔΗΛΩΝΟΥΜΕ ΤΟ DIALOG ΣΤΟ REF
-dialogRef.set(d);
-
-// Stop TTS on ANY dismiss
-d.setOnDismissListener(dialog -> {
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-});
-
-// Back key handling
-d.setOnKeyListener((dialog, keyCode, event) -> {
-    if (keyCode == KeyEvent.KEYCODE_BACK &&
-        event.getAction() == KeyEvent.ACTION_UP) {
-
-        cancelled.set(true);
-        try { AppTTS.stop(); } catch (Throwable ignore) {}
-        dialog.dismiss();
-        return true;
-    }
-    return false;
-});
-
-if (!isFinishing() && !isDestroyed()) {
-    d.show();
-}
-
-return d;
-}
-
-private void forceSpeaker(AudioManager am) {
-    if (am == null) return;
-    try {
-        am.stopBluetoothSco();
-        am.setBluetoothScoOn(false);
-        am.setMicrophoneMute(false);
-        am.setMode(AudioManager.MODE_NORMAL);
-        am.setSpeakerphoneOn(true);
-        SystemClock.sleep(120);
-    } catch (Throwable ignore) {}
-}
-
-private void dismiss(AtomicReference<AlertDialog> ref) {
-    try {
-        AlertDialog d = ref.get();
-        if (d != null) d.dismiss();
-    } catch (Throwable ignore) {}
-}
-
-private int getWorkingMicSource() {
-    SharedPreferences sp = getSharedPreferences("gel_audio_profile", MODE_PRIVATE);
-    return sp.getInt("mic_source", MediaRecorder.AudioSource.VOICE_COMMUNICATION);
-}
-
-// ============================================================
-// HUMAN VOICE DETECTION — FULLY SELF-CONTAINED (NO ENGINE)
-// Adaptive AudioSource scan — WORKS ON REAL DEVICES
-// ============================================================
-
-// ====================================================
-// AUDIO SOURCES — CLASS LEVEL (LOCKED)
-// ====================================================
-private static final int[] AUDIO_SOURCES = new int[] {
-        MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-        MediaRecorder.AudioSource.VOICE_RECOGNITION,
-        MediaRecorder.AudioSource.MIC,
-        MediaRecorder.AudioSource.DEFAULT,
-        MediaRecorder.AudioSource.CAMCORDER,
-        MediaRecorder.AudioSource.UNPROCESSED
-};
-
-private boolean detectHumanVoiceAdaptive(boolean gr) {
-
-    final int SR = 44100;
-    final int CHANNEL = AudioFormat.CHANNEL_IN_MONO;
-    final int FORMAT = AudioFormat.ENCODING_PCM_16BIT;
-
-    final int STEP_MS = 100;
-    final long WINDOW_MS = 5000;
-
-    for (int source : AUDIO_SOURCES) {
-
-        AudioRecord ar = null;
-
-        try {
-            int minBuf = AudioRecord.getMinBufferSize(SR, CHANNEL, FORMAT);
-            if (minBuf <= 0) continue;
-
-            ar = new AudioRecord(
-                    source,
-                    SR,
-                    CHANNEL,
-                    FORMAT,
-                    minBuf * 2
-            );
-
-            if (ar.getState() != AudioRecord.STATE_INITIALIZED) continue;
-
-            ar.startRecording();
-SystemClock.sleep(250);
-
-// 👇 ΠΡΩΤΑ buffer
-short[] buf = new short[1024];
-            
-// =============================
-// BASELINE — SILENCE
-// =============================
-long noiseSum = 0;
-int noiseFrames = 0;
-
-for (int i = 0; i < 5; i++) {
-    int n = ar.read(buf, 0, buf.length);
-    if (n <= 0) continue;
-
-    long sumSq = 0;
-    for (int j = 0; j < n; j++) {
-        int v = Math.abs(buf[j]);
-        sumSq += (long) v * v;
-    }
-
-    double rms = Math.sqrt((double) sumSq / n);
-    noiseSum += rms;
-    noiseFrames++;
-
-    SystemClock.sleep(100);
-}
-
-double noiseFloor = noiseFrames > 0
-        ? noiseSum / noiseFrames
-        : 0;
-
-            long until = SystemClock.uptimeMillis() + WINDOW_MS;
-            long voicedMs = 0;
-
-            while (SystemClock.uptimeMillis() < until) {
-
-                int n = ar.read(buf, 0, buf.length);
-                if (n <= 0) {
-                    SystemClock.sleep(STEP_MS);
-                    continue;
-                }
-
-                long sumSq = 0;
-                int peak = 0;
-
-                for (int i = 0; i < n; i++) {
-                    int v = Math.abs(buf[i]);
-                    peak = Math.max(peak, v);
-                    sumSq += (long) v * v;
-                }
-
-                double rms = Math.sqrt((double) sumSq / n);
-
-                boolean rmsOk  = rms > noiseFloor * 2.2;
-boolean peakOk = peak > 2500;
-
-                if (rmsOk && peakOk) {
-                    voicedMs += STEP_MS;
-                } else {
-                    voicedMs = Math.max(0, voicedMs - STEP_MS); // decay
-                }
-
-                if (voicedMs >= 800) {
-
-                    saveWorkingMicSource(source);
-
-                    logOk(gr
-                            ? "Φωνή ανιχνεύθηκε."
-                            : "Voice detected.");
-
-                    logInfo(gr
-                            ? "Πηγή ήχου: " + source
-                            : "Audio source: " + source);
-
-                    return true;
-                }
-
-                SystemClock.sleep(STEP_MS);
-            }
-
-        } catch (Throwable ignore) {
-
-        } finally {
-            try {
-                if (ar != null) {
-                    ar.stop();
-                    ar.release();
-                }
-            } catch (Throwable ignore) {}
-        }
-    }
-
-    logLabelErrorValue(
-            gr ? "Κατάσταση" : "Status",
-            gr
-                    ? "Δεν ανιχνεύθηκε ανθρώπινη φωνή με καμία πηγή."
-                    : "Human voice not detected with any audio source."
-    );
-
-    return false;
-}
-
-// ============================================================
-// PERSISTENCE
-// ============================================================
-private void saveWorkingMicSource(int source) {
-    getSharedPreferences("gel_audio_profile", MODE_PRIVATE)
-            .edit()
-            .putInt("mic_source", source)
-            .apply();
-}
-
-// ============================================================
-// LAB 8.1 — HUMAN SUMMARY HELPERS
-// ============================================================
-
-private static class CameraHumanSummary {
-    String photoQuality;          // "9 MP photos (very good)"
-    String professionalPhotos;    // "RAW uncompressed photos supported"
-    String videoQuality;          // "4K (very high)" / "Full HD (high)"
-    String videoSmoothness;
-    String slowMotion;
-    String stabilization;
-    String manualMode;
-    String flash;
-    String realLifeUse;
-    String verdict;
-}
-
-private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
-
-    CameraHumanSummary h = new CameraHumanSummary();
-
-    // ------------------------------------------------------------
-    // CAPS
-    // ------------------------------------------------------------
-    boolean hasRaw = false;
-    boolean manual = false;
-
-    int[] caps = cc.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
-    if (caps != null) {
-        for (int c : caps) {
-            if (c == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)
-                hasRaw = true;
-            if (c == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)
-                manual = true;
-        }
-    }
-
-    h.manualMode = manual ? "Supported" : "Not supported";
-
-    // ------------------------------------------------------------
-    // PHOTO QUALITY (MP)
-    // ------------------------------------------------------------
-    StreamConfigurationMap map =
-            cc.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-
-    Size maxPhoto = null;
-    if (map != null) {
-        Size[] photos = map.getOutputSizes(ImageFormat.JPEG);
-        if (photos != null && photos.length > 0) {
-            maxPhoto = photos[0];
-            for (Size s : photos) {
-                long a = (long) s.getWidth() * s.getHeight();
-                long b = (long) maxPhoto.getWidth() * maxPhoto.getHeight();
-                if (a > b) maxPhoto = s;
-            }
-        }
-    }
-
-    if (maxPhoto != null) {
-        int mp = (maxPhoto.getWidth() * maxPhoto.getHeight()) / 1_000_000;
-        h.photoQuality = mp + " MP photos (very good)";
-    } else {
-        h.photoQuality = "Standard photos";
-    }
-
-// ------------------------------------------------------------
-// PROFESSIONAL PHOTOS (RAW)
-// ------------------------------------------------------------
-final boolean gr = AppLang.isGreek(this);
-
-h.professionalPhotos = hasRaw
-        ? (gr
-            ? "Υποστηρίζεται λήψη RAW (ασυμπίεστων) φωτογραφιών"
-            : "RAW (uncompressed) photo capture supported")
-        : (gr
-            ? "Δεν υποστηρίζεται RAW (μόνο JPEG)"
-            : "RAW not supported (JPEG only)");
-
-    // ------------------------------------------------------------
-    // VIDEO QUALITY
-    // ------------------------------------------------------------
-    int maxWidth = 0;
-    if (map != null) {
-        Size[] vids = map.getOutputSizes(MediaRecorder.class);
-        if (vids != null) {
-            for (Size s : vids)
-                maxWidth = Math.max(maxWidth, s.getWidth());
-        }
-    }
-
-    if (maxWidth >= 3840)
-        h.videoQuality = "4K (very high)";
-    else if (maxWidth >= 1920)
-        h.videoQuality = "Full HD (high)";
-    else
-        h.videoQuality = "HD (basic)";
-
-// ------------------------------------------------------------
-// FPS / SMOOTHNESS / SLOW MOTION
-// ------------------------------------------------------------
-int maxFps = 0;
-Range<Integer>[] fpsRanges =
-        cc.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
-
-if (fpsRanges != null) {
-    for (Range<Integer> r : fpsRanges) {
-        if (r != null && r.getUpper() != null)
-            maxFps = Math.max(maxFps, r.getUpper());
-    }
-}
-
-if (maxFps >= 120) {
-
-    h.videoSmoothness = gr
-            ? "Πολύ ομαλή κίνηση (έως " + maxFps + " FPS)"
-            : "Very smooth motion (up to " + maxFps + " FPS)";
-
-    h.slowMotion = gr
-            ? "Υποστηρίζεται αργή κίνηση (Slow Motion)"
-            : "Slow motion supported";
-
-} else if (maxFps >= 60) {
-
-    h.videoSmoothness = gr
-            ? "Ομαλή κίνηση (έως " + maxFps + " FPS)"
-            : "Smooth motion (up to " + maxFps + " FPS)";
-
-    h.slowMotion = gr
-            ? "Περιορισμένη υποστήριξη slow motion"
-            : "Limited slow motion support";
-
-} else if (maxFps >= 30) {
-
-    h.videoSmoothness = gr
-            ? "Κανονική ομαλότητα βίντεο (30 FPS)"
-            : "Standard smoothness (30 FPS)";
-
-    h.slowMotion = gr
-            ? "Δεν υποστηρίζεται slow motion"
-            : "Slow motion not supported";
-
-} else {
-
-    h.videoSmoothness = gr
-            ? "Βασική απόδοση βίντεο"
-            : "Basic video performance";
-
-    h.slowMotion = gr
-            ? "Δεν υποστηρίζεται slow motion"
-            : "Slow motion not supported";
-}
-
-// ------------------------------------------------------------
-// STABILIZATION
-// ------------------------------------------------------------
-boolean stab = false;
-int[] stabModes =
-        cc.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES);
-
-if (stabModes != null) {
-    for (int m : stabModes) {
-        if (m == CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON) {
-            stab = true;
-            break;
-        }
-    }
-}
-
-h.stabilization = stab
-        ? (gr ? "Υποστηρίζεται ηλεκτρονική σταθεροποίηση (EIS)"
-              : "Electronic stabilization (EIS) supported")
-        : (gr ? "Δεν υποστηρίζεται σταθεροποίηση βίντεο"
-              : "Video stabilization not supported");
-
-// ------------------------------------------------------------
-// FLASH
-// ------------------------------------------------------------
-Boolean flashAvail = cc.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
-
-h.flash = Boolean.TRUE.equals(flashAvail)
-        ? (gr ? "Διαθέσιμο φλας"
-              : "Flash available")
-        : (gr ? "Δεν υπάρχει φλας"
-              : "Flash not available");
-
-// ------------------------------------------------------------
-// REAL LIFE USE
-// ------------------------------------------------------------
-if (maxFps >= 60 && stab) {
-
-    h.realLifeUse = gr
-            ? "Κατάλληλη για καθημερινή χρήση και σκηνές με κίνηση."
-            : "Suitable for everyday use and moving scenes.";
-
-} else if (maxFps >= 30) {
-
-    h.realLifeUse = gr
-            ? "Κατάλληλη για καθημερινή χρήση και κοινωνικά δίκτυα."
-            : "Suitable for daily use and social media.";
-
-} else {
-
-    h.realLifeUse = gr
-            ? "Βασική χρήση χωρίς απαιτήσεις."
-            : "Basic usage only.";
-}
-
-// ------------------------------------------------------------
-// FINAL VERDICT
-// ------------------------------------------------------------
-if (hasRaw && maxFps >= 60) {
-
-    h.verdict = gr
-            ? "Καλή κάμερα για καθημερινή χρήση και λήψεις RAW. "
-              + "Δεν προορίζεται για επαγγελματική παραγωγή βίντεο."
-            : "Good camera for daily use and RAW photography. "
-              + "Not intended for professional video production.";
-
-} else {
-
-    h.verdict = gr
-            ? "Επαρκής κάμερα για βασική καθημερινή χρήση."
-            : "Decent camera for basic daily use.";
-}
-
-return h;
-}
-
-// ============================================================
-// TELEPHONY SNAPSHOT (SAFE / INFO ONLY)
-// ============================================================
-private TelephonySnapshot getTelephonySnapshot() {
-
-TelephonySnapshot s = new TelephonySnapshot();  
-
-try {  
-    s.airplaneOn = Settings.Global.getInt(  
-            getContentResolver(),  
-            Settings.Global.AIRPLANE_MODE_ON, 0  
-    ) == 1;  
-} catch (Throwable ignored) {}  
-
-TelephonyManager tm =  
-        (TelephonyManager) getSystemService(TELEPHONY_SERVICE);  
-
-if (tm != null) {  
-    try {  
-        s.simState = tm.getSimState();  
-        s.simReady = (s.simState == TelephonyManager.SIM_STATE_READY);  
-    } catch (Throwable ignored) {}  
-
-    try {  
-        ServiceState ss = tm.getServiceState();  
-        if (ss != null) {  
-            s.serviceState = ss.getState();  
-            s.inService =  
-                    (s.serviceState == ServiceState.STATE_IN_SERVICE);  
-        }  
-    } catch (Throwable ignored) {}  
-
-    try {  
-        s.dataState = tm.getDataState();  
-    } catch (Throwable ignored) {}  
-}  
-
-ConnectivityManager cm =  
-        (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);  
-
-if (cm != null) {  
-    try {  
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {  
-            Network n = cm.getActiveNetwork();  
-            NetworkCapabilities caps =  
-                    cm.getNetworkCapabilities(n);  
-            s.hasInternet =  
-                    caps != null &&  
-                    caps.hasCapability(  
-                            NetworkCapabilities.NET_CAPABILITY_INTERNET  
-                    );  
-        }  
-    } catch (Throwable ignored) {}  
-}  
-
-return s;
-
-}
-
-// ============================================================
-// LOGGING — GEL CANONICAL (UI + SERVICE REPORT)
-// ============================================================
-private void appendHtml(String html) {
-    ui.post(() -> {
-        CharSequence cur = txtLog.getText();
-        CharSequence add = Html.fromHtml(html + "<br>");
-        txtLog.setText(TextUtils.concat(cur, add));
-        scroll.post(() -> scroll.fullScroll(ScrollView.FOCUS_DOWN));
-    });
-}
-
-private void logInfo(String msg) {
-    appendHtml("• " + escape(msg));
-    GELServiceLog.logInfo(msg);
-}
-
-private void logOk(String msg) {
-    appendHtml("<font color='#39FF14'>✔ " + escape(msg) + "</font>");
-    GELServiceLog.logOk(msg);
-}
-
-private void logWarn(String msg) {
-    appendHtml("<font color='#FFD966'>⚠ " + escape(msg) + "</font>");
-    GELServiceLog.logWarn(msg);
-}
-
-private void logError(String msg) {
-    appendHtml("<font color='#FF5555'>✖ " + escape(msg) + "</font>");
-    GELServiceLog.logError(msg);
-}
-
-private void logLine() {
-    appendHtml("--------------------------------------------------");
-    GELServiceLog.logLine();
-}
-
-// ------------------------------------------------------------
-// SAFE ESCAPE FOR UI ONLY (SERVICE LOG STORES RAW TEXT)
-// ------------------------------------------------------------
-
-private int dp(int v) {
-float d = getResources().getDisplayMetrics().density;
-return (int) (v * d + 0.5f);
-}
-
-
-
-private View space(int w) {
-    View v = new View(this);
-    v.setLayoutParams(new LinearLayout.LayoutParams(w, 1));
-    return v;
-}
-
-// ============================================================
-// FORMAT HELPERS
-// ============================================================
-private String humanBytes(long bytes) {
-if (bytes <= 0) return "0 B";
-float kb = bytes / 1024f;
-if (kb < 1024) return String.format(Locale.US, "%.1f KB", kb);
-float mb = kb / 1024f;
-if (mb < 1024) return String.format(Locale.US, "%.1f MB", mb);
-float gb = mb / 1024f;
-return String.format(Locale.US, "%.2f GB", gb);
-}
-
-private String formatUptime(long ms) {
-long s = ms / 1000;
-long d = s / (24 * 3600);
-s %= (24 * 3600);
-long h = s / 3600;
-s %= 3600;
-long m = s / 60;
-return String.format(Locale.US, "%dd %dh %dm", d, h, m);
-}
-
-// ============================================================
-// NETWORK HELPERS — USED BY LAB 10
-// ============================================================
-
-private float tcpLatencyMs(String host, int port, int timeoutMs) {
-long t0 = SystemClock.elapsedRealtime();
-Socket s = new Socket();
-try {
-s.connect(new InetSocketAddress(host, port), timeoutMs);
-long t1 = SystemClock.elapsedRealtime();
-return (t1 - t0);
-} catch (Exception e) {
-return -1f;
-} finally {
-try { s.close(); } catch (Exception ignored) {}
-}
-}
-
-private float dnsResolveMs(String host) {
-long t0 = SystemClock.elapsedRealtime();
-try {
-InetAddress.getByName(host);
-long t1 = SystemClock.elapsedRealtime();
-return (t1 - t0);
-} catch (Exception e) {
-return -1f;
-}
-}
-
-// ============================================================
-// GEL BATTERY + LAB15 SUPPORT — REQUIRED (RESTORE MISSING SYMBOLS)
-// KEEP THIS BLOCK INSIDE ManualTestsActivity (helpers area)
-// ============================================================
 
 // ------------------------------------------------------------
 // NORMALIZE mAh / Î¼Ah (shared)
@@ -2668,6 +1216,9 @@ private float getBatteryTempEngineSafe() {
 // ------------------------------------------------------------
 // Battery temperature — SAFE
 // ------------------------------------------------------------
+
+// ⚠ NOT FOR LAB14 (fallback source)
+
 private float getBatteryTemperature() {
 
     try {
@@ -2711,6 +1262,9 @@ private float getBatteryTemperature() {
 // ------------------------------------------------------------
 // Battery % — SAFE
 // ------------------------------------------------------------
+
+// ⚠ NOT FOR LAB14 CORE (use lab14BatteryPercent)
+
 private float getCurrentBatteryPercent() {
 
     try {
@@ -2762,93 +1316,57 @@ private float getCurrentBatteryPercent() {
 }
 
 // ------------------------------------------------------------
-// Charging detection — SAFE (plugged based)
-// ------------------------------------------------------------
-private boolean isDeviceCharging() {
-
-    try {
-
-        iDoctorEngine eng = iDoctorEngine.get(this);
-
-        return eng.isChargingNowUnified();
-
-    } catch (Throwable ignore) {}
-
-    // fallback μόνο αν engine δεν δώσει τιμή
-
-    try {
-
-        Intent i = registerReceiver(
-                null,
-                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        );
-
-        if (i == null) return false;
-
-        int plugged =
-                i.getIntExtra(
-                        BatteryManager.EXTRA_PLUGGED,
-                        0
-                );
-
-        return plugged == BatteryManager.BATTERY_PLUGGED_AC
-                || plugged == BatteryManager.BATTERY_PLUGGED_USB
-                || plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS;
-
-    } catch (Throwable ignore) {
-
-        return false;
-    }
-}
-
-// ------------------------------------------------------------
 // BatteryInfo snapshot — SAFE (BatteryManager properties)
 // ------------------------------------------------------------
+
+// ⚠ NOT FOR LAB14 (BatteryManager fallback)
+
 private BatteryInfo getBatteryInfo() {
 
     BatteryInfo bi = new BatteryInfo();
 
     try {
 
-        iDoctorEngine eng = iDoctorEngine.get(this);
+        iDoctorEngine engine =
+                iDoctorEngine.get(ManualTestsActivity.this);
 
-bi.charging = eng.isChargingNowUnified();
+        bi.charging =
+                engine.isChargingNowUnified();
 
-iDoctorEngine.FullSnapshot snap =
-        eng.readFullSnapshot();
+        iDoctorEngine.BatterySnapshot snap =
+                engine.readBatterySnapshotLab();
 
-float chargeMah = Float.NaN;
-float fullMah = Float.NaN;
+        float chargeMah = Float.NaN;
+        float fullMah = Float.NaN;
 
-if (snap != null) {
+        if (snap != null) {
 
-    chargeMah = snap.battery.chargeNowMah;
-    fullMah   = snap.battery.chargeFullMah;
+            chargeMah = snap.chargeNowMah;
+            fullMah   = snap.chargeFullMah;
 
-}
+        }
 
         if (!Float.isNaN(chargeMah) && chargeMah > 0) {
-    bi.currentChargeMah = Math.round(chargeMah);
-} else {
-    bi.currentChargeMah = -1;
-}
+            bi.currentChargeMah = Math.round(chargeMah);
+        } else {
+            bi.currentChargeMah = -1;
+        }
 
-if (!Float.isNaN(fullMah) && fullMah > 0) {
-    bi.estimatedFullMah = Math.round(fullMah);
-} else {
-    bi.estimatedFullMah = -1;
-}
+        if (!Float.isNaN(fullMah) && fullMah > 0) {
+            bi.estimatedFullMah = Math.round(fullMah);
+        } else {
+            bi.estimatedFullMah = -1;
+        }
 
-        bi.source = "iDoctorEngine";
+        bi.source = "iDoctorEngineLocked";
 
-        // αν engine έδωσε τιμές → τελείωσε
         if (bi.currentChargeMah > 0)
             return bi;
 
     } catch (Throwable ignore) {}
 
     // ----------------------------------------
-    // fallback → BatteryManager
+    // fallback → BatteryManager (LAST)
     // ----------------------------------------
 
     bi.charging = isDeviceCharging();
@@ -2887,245 +1405,6 @@ if (!Float.isNaN(fullMah) && fullMah > 0) {
     }
 
     return bi;
-}
-
-// ============================================================
-// THERMAL HELPERS — System thermal zones (no libs, best-effort)
-// Used by CPU/GPU/Skin/PMIC temp readers
-// ============================================================
-private Map<String, Float> readThermalZones() {
-
-Map<String, Float> out = new HashMap<>();  
-
-try {  
-    File base = new File("/sys/class/thermal");  
-    File[] zones = base.listFiles(new FileFilter() {  
-        @Override public boolean accept(File f) {  
-            return f != null && f.isDirectory() && f.getName().startsWith("thermal_zone");  
-        }  
-    });  
-
-    if (zones == null) return out;  
-
-    for (File z : zones) {  
-        try {  
-            String type = safeReadOneLine(new File(z, "type"));  
-            String temp = safeReadOneLine(new File(z, "temp"));  
-
-            if (type == null || temp == null) continue;  
-
-            type = type.trim().toLowerCase(Locale.US);  
-            temp = temp.trim();  
-
-            // temp is usually in millidegrees (e.g. 42000), sometimes in degrees (42)  
-            float t;  
-            try {  
-                long v = Long.parseLong(temp.replaceAll("[^0-9\\-]", ""));  
-                t = (Math.abs(v) >= 1000) ? (v / 1000f) : (float) v;  
-            } catch (Throwable ignore) {  
-                continue;  
-            }  
-
-            // keep best (highest) reading if duplicate type keys appear  
-            if (!out.containsKey(type) || out.get(type) < t) out.put(type, t);  
-
-        } catch (Throwable ignore) {}  
-    }  
-
-} catch (Throwable ignore) {}  
-
-return out;
-
-}
-
-private Float pickZone(Map<String, Float> zones, String... keys) {
-if (zones == null || zones.isEmpty() || keys == null || keys.length == 0) return null;
-
-// normalize search keys  
-List<String> k = new ArrayList<>();  
-for (String s : keys) {  
-    if (s != null && !s.trim().isEmpty()) k.add(s.trim().toLowerCase(Locale.US));  
-}  
-if (k.isEmpty()) return null;  
-
-// best match strategy: first key hit in type string  
-Float best = null;  
-
-for (Map.Entry<String, Float> e : zones.entrySet()) {  
-    String type = e.getKey();  
-    Float val = e.getValue();  
-    if (type == null || val == null) continue;  
-
-    for (String kk : k) {  
-        if (type.contains(kk)) {  
-            // prefer higher temp (more indicative of active hotspot)  
-            if (best == null || val > best) best = val;  
-            break;  
-        }  
-    }  
-}  
-
-return best;
-
-}
-
-private String safeReadOneLine(File f) {
-BufferedReader br = null;
-try {
-br = new BufferedReader(new FileReader(f));
-return br.readLine();
-} catch (Throwable t) {
-return null;
-} finally {
-try { if (br != null) br.close(); } catch (Throwable ignore) {}
-}
-}
-
-// ------------------------------------------------------------
-// LAB 15 thermal correlation — BILINGUAL (LABEL WHITE, VALUES GREEN)
-// ------------------------------------------------------------
-private void logLab15ThermalCorrelation(
-        float battTempStart,
-        float battTempPeak,
-        float battTempEnd
-) {
-
-    final boolean gr = AppLang.isGreek(this);
-
-    String label = gr
-            ? "Θερμική συσχέτιση (κατά τη φόρτιση): "
-            : "Thermal correlation (during charging): ";
-
-    String values = String.format(
-            Locale.US,
-            gr
-                    ? "αρχή %.1f°C → μέγιστο %.1f°C → τέλος %.1f°C"
-                    : "start %.1f°C → peak %.1f°C → end %.1f°C",
-            battTempStart,
-            (Float.isNaN(battTempPeak) ? battTempEnd : battTempPeak),
-            battTempEnd
-    );
-
-    // fallback: no UI
-    if (txtLog == null) {
-        logInfo(label + values);
-        return;
-    }
-
-    // UI — label white, values green
-    SpannableString sp = new SpannableString(label + values);
-
-    // label = white
-    sp.setSpan(
-            new ForegroundColorSpan(0xFFFFFFFF),
-            0,
-            label.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-
-    // values = green
-    sp.setSpan(
-            new ForegroundColorSpan(0xFF39FF14),
-            label.length(),
-            sp.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
-
-    txtLog.append(sp);
-    txtLog.append("\n");
-}
-
-// ------------------------------------------------------------
-// Health checkbox map — BILINGUAL (LAB 14/17 use)
-// ------------------------------------------------------------
-private void printHealthCheckboxMap(String decision) {
-
-    final boolean gr = AppLang.isGreek(this);
-
-    String d = (decision == null) ? "" : decision.trim();
-
-    logLine();
-
-    boolean strong = "Strong".equalsIgnoreCase(d);
-    boolean normal = "Normal".equalsIgnoreCase(d);
-    boolean weak   = "Weak".equalsIgnoreCase(d);
-
-    String strongTxt = gr ? "Ισχυρή" : "Strong";
-    String normalTxt = gr ? "Κανονική" : "Normal";
-    String weakTxt   = gr ? "Αδύναμη"  : "Weak";
-
-    appendHtml((strong ? "✔ " : "• ") +
-            "<font color='#FFFFFF'>" + strongTxt + "</font>");
-
-    appendHtml((normal ? "✔ " : "• ") +
-            "<font color='#FFFFFF'>" + normalTxt + "</font>");
-
-    appendHtml((weak ? "✔ " : "• ") +
-            "<font color='#FFFFFF'>" + weakTxt + "</font>");
-
-    if (strong)
-        logOk(gr ? "Χάρτης Υγείας: Ισχυρή" : "Health Map: Strong");
-    else if (normal)
-        logWarn(gr ? "Χάρτης Υγείας: Κανονική" : "Health Map: Normal");
-    else if (weak)
-        logError(gr ? "Χάρτης Υγείας: Αδύναμη" : "Health Map: Weak");
-    else
-        logInfo(gr ? "Χάρτης Υγείας: Πληροφοριακό"
-                   : "Health Map: Informational");
-}
-
-// ============================================================
-// MISSING SYMBOLS PATCH — REQUIRED FOR LAB 14 + LAB 15
-// Put this block INSIDE ManualTestsActivity (helpers area)
-// ============================================================
-
-// ------------------------------------------------------------
-// BACKWARD COMPATIBILITY — DO NOT REMOVE (yet)
-// ------------------------------------------------------------
-private void logLabelValue(String label, String value) {
-    logOk(label, value);
-}
-
-// ------------------------------------------------------------
-// logLabelOkValue — white label, green value
-// ------------------------------------------------------------
-private void logLabelOkValue(String label, String value) {
-    appendHtml(
-            escape(label) + ": " +
-            "<font color='#39FF14'>" + escape(value) + "</font>"
-    );
-}
-
-// ------------------------------------------------------------
-// logLabelWarnValue — white label, yellow value
-// ------------------------------------------------------------
-private void logLabelWarnValue(String label, String value) {
-    appendHtml(
-            escape(label) + ": " +
-            "<font color='#FFD700'>" + escape(value) + "</font>"
-    );
-}
-
-// ------------------------------------------------------------
-// logLabelErrorValue — white label, red value
-// ------------------------------------------------------------
-private void logLabelErrorValue(String label, String value) {
-    appendHtml(
-            escape(label) + ": " +
-            "<font color='#FF5555'>" + escape(value) + "</font>"
-    );
-}
-
-private void logOk(String label, String value) {
-    logLabelOkValue(label, value);
-}
-
-private void logWarn(String label, String value) {
-    logLabelWarnValue(label, value);
-}
-
-private void logError(String label, String value) {
-    logLabelErrorValue(label, value);
 }
 
 // ============================================================
@@ -3307,8 +1586,7 @@ private void showLab14ConditionCheck(Runnable startAction) {
                         : "Conditions are OK"
         );
     }
-
-
+    
     // =========================
     // SPANNABLE TEXT
     // =========================
@@ -4573,38 +2851,45 @@ if (conf != null) {
     tier = conf.tier;
 }
 
-    if (consistency >= 0 && validRunsForConsistency >= 2) {
+    // =====================================================
+// CONSISTENCY / TIER (only if >=2 runs)
+// =====================================================
 
-        String tierLabel = "";
+if (consistency >= 0 && validRunsForConsistency >= 2) {
 
-if (tier != null) {
+    String tierLabel = "";
 
-    switch (tier) {
+    if (tier != null) {
 
-        case PRELIMINARY:
-            tierLabel = gr ? "Προκαταρκτική" : "Preliminary";
-            break;
+        switch (tier) {
 
-        case MEDIUM:
-            tierLabel = gr ? "Μεσαία" : "Medium";
-            break;
+            case PRELIMINARY:
+                tierLabel = gr ? "Προκαταρκτική" : "Preliminary";
+                break;
 
-        case HIGH:
-            tierLabel = gr ? "Υψηλή" : "High";
-            break;
+            case MEDIUM:
+                tierLabel = gr ? "Μεσαία" : "Medium";
+                break;
 
-        default:
-            tierLabel = gr ? "Άγνωστη" : "Unknown";
+            case HIGH:
+                tierLabel = gr ? "Υψηλή" : "High";
+                break;
+
+            default:
+                tierLabel = gr ? "Άγνωστη" : "Unknown";
+        }
     }
+
 }
 
-    logLine();
+logLine();
 
-    // =====================================================
-    // CURRENT RUN INVALID
-    // =====================================================
 
-    if (!validRun) {
+// =====================================================
+// CURRENT RUN INVALID
+// =====================================================
+
+if (!validRun) {
 
     logLabelWarnValue(
             gr ? "Εμπιστοσύνη" : "Confidence",
@@ -4628,15 +2913,18 @@ if (tier != null) {
     return;
 }
 
+
 // =====================================================
 // SKIP RUN COUNT IF CURRENT RUN LIMITED
 // =====================================================
 
 if (lab14_systemLimited[0]) {
+
     logWarn(gr
             ? "Η εκτέλεση επηρεάστηκε από limiter."
             : "Run affected by limiter.");
 }
+
 
 // =====================================================
 // RUN COUNT CONFIDENCE
@@ -4644,48 +2932,50 @@ if (lab14_systemLimited[0]) {
 
 if (runs <= 0) {
 
-        logLabelWarnValue(
-                gr ? "Εμπιστοσύνη" : "Confidence",
-                gr ? "Δεν υπάρχει ακόμη έγκυρη εκτέλεση"
-                   : "No valid run yet"
-        );
+    logLabelWarnValue(
+            gr ? "Εμπιστοσύνη" : "Confidence",
+            gr ? "Δεν υπάρχει ακόμη έγκυρη εκτέλεση"
+               : "No valid run yet"
+    );
 
-        logWarn(gr
-        ? "Απαιτούνται 3 έγκυρες εκτελέσεις, σε διαφορετικές ημέρες με παρόμοιες συνθήκες."
-        : "3 valid runs required, on different days under similar conditions.");
+    logWarn(gr
+            ? "Απαιτούνται 3 έγκυρες εκτελέσεις, σε διαφορετικές ημέρες με παρόμοιες συνθήκες."
+            : "3 valid runs required, on different days under similar conditions.");
 
-        return;
-    }
+    return;
+}
 
-    else if (runs == 1) {
 
-        logLabelWarnValue(
-                gr ? "Εμπιστοσύνη" : "Confidence",
-                gr ? "Προκαταρκτική (1 έγκυρη εκτέλεση)"
-                   : "Preliminary (1 valid run)"
-        );
+else if (runs == 1) {
 
-        logWarn(gr
-        ? "Απαιτούνται ακόμα 2 έγκυρες εκτελέσεις, σε διαφορετικές ημέρες με παρόμοιες συνθήκες."
-        : "2 more valid runs required, on different days under similar conditions.");
+    logLabelWarnValue(
+            gr ? "Εμπιστοσύνη" : "Confidence",
+            gr ? "Προκαταρκτική (1 έγκυρη εκτέλεση)"
+               : "Preliminary (1 valid run)"
+    );
 
-        return;
-    }
+    logWarn(gr
+            ? "Απαιτούνται ακόμα 2 έγκυρες εκτελέσεις, σε διαφορετικές ημέρες με παρόμοιες συνθήκες."
+            : "2 more valid runs required, on different days under similar conditions.");
 
-    else if (runs == 2) {
+    return;
+}
 
-        logLabelWarnValue(
-                gr ? "Εμπιστοσύνη" : "Confidence",
-                gr ? "Μεσαία (2 έγκυρες εκτελέσεις)"
-                   : "Medium (2 valid runs)"
-        );
 
-        logWarn(gr
-        ? "Απαιτείται 1 ακόμα έγκυρη εκτελεση, σε διαφορετική ημέρα με παρόμοιες συνθήκες."
-        : "1 more valid run required, on different day under similar conditions.");
+else if (runs == 2) {
 
-        return;
-    }
+    logLabelWarnValue(
+            gr ? "Εμπιστοσύνη" : "Confidence",
+            gr ? "Μεσαία (2 έγκυρες εκτελέσεις)"
+               : "Medium (2 valid runs)"
+    );
+
+    logWarn(gr
+            ? "Απαιτείται 1 ακόμα έγκυρη εκτελεση, σε διαφορετική ημέρα με παρόμοιες συνθήκες."
+            : "1 more valid run required, on different day under similar conditions.");
+
+    return;
+}
 
 
 // =====================================================
@@ -5002,6 +3292,1664 @@ if (systemLimited) {
 }
 
 appendHtml("<br>");
+}
+
+// ---------------- LAB 14 ----------------
+private float getLastLab14HealthScore() {
+try {
+
+return p.getFloat("lab14_health_score", -1f);  
+} catch (Throwable t) {  
+    return -1f;  
+}
+
+}
+
+private int getLastLab14AgingIndex() {
+try {
+
+return p.getInt("lab14_aging_index", -1);  
+} catch (Throwable t) {  
+    return -1;  
+}
+
+}
+
+private boolean hasValidLab14() {
+return getLastLab14HealthScore() >= 0;
+}
+
+
+private boolean ensurePermissions(String[] permissions, Runnable afterGranted) {
+
+    List<String> missing = new ArrayList<>();
+
+    for (String p : permissions) {
+        if (ContextCompat.checkSelfPermission(this, p)
+                != PackageManager.PERMISSION_GRANTED) {
+            missing.add(p);
+        }
+    }
+
+    if (missing.isEmpty()) {
+        return true;
+    }
+
+    pendingAfterPermission = afterGranted;
+
+    ActivityCompat.requestPermissions(
+            this,
+            missing.toArray(new String[0]),
+            REQ_CORE_PERMS
+    );
+
+    return false;
+}
+
+
+// ============================================================
+// onPause
+// ============================================================
+@Override
+protected void onPause() {
+
+    try {
+        lab3WaitingUser = false;
+        stopLab3Tone();
+        restoreLab3Audio();
+    } catch (Throwable ignore) {}
+
+    try {
+    	counterText = null;
+        lab14StopAllStress();
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    try {
+        if (tts != null && tts[0] != null) {
+            tts[0].stop();
+        }
+    } catch (Throwable ignore) {}
+
+    super.onPause();
+}
+
+
+// ============================================================
+// onDestroy
+// ============================================================
+@Override
+protected void onDestroy() {
+
+    try {
+        if (ui != null) {
+            ui.removeCallbacksAndMessages(null);
+        }
+    } catch (Throwable ignore) {}
+
+    try {
+        unregisterReceiver(lab13BtReceiver);
+    } catch (Throwable ignore) {}
+
+    try {
+        if (lab14DotsView != null) {
+            lab14DotsView.removeCallbacks(null);
+        }
+    } catch (Throwable ignore) {}
+
+    try {
+        lab14StopAllStress();
+    } catch (Throwable ignore) {}
+
+    try {
+    	counterText = null;
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    try {
+        if (tts != null && tts[0] != null) {
+            tts[0].stop();
+            tts[0].shutdown();
+        }
+    } catch (Throwable ignore) {}
+
+    super.onDestroy();
+}
+
+
+// ============================================================
+// BACK
+// ============================================================
+@Override
+public void onBackPressed() {
+
+    try {
+    lab14Cancelled = true;
+    counterText = null;
+    lab14StopAllStress();
+    restoreBrightnessAndKeepOn();
+    lab14CleanupUI();
+} catch (Throwable ignore) {}
+
+    super.onBackPressed();
+}
+
+// ============================================================
+// GLOBAL TTS INIT — ONE TIME ONLY (SAFE)
+// ============================================================
+private void initTTS() {
+
+    if (tts[0] != null) return;
+
+    tts[0] = new TextToSpeech(this, status -> {
+
+        if (status == TextToSpeech.SUCCESS && tts[0] != null) {
+
+            Locale locale = AppLang.isGreek(this)
+                    ? new Locale("el", "GR")
+                    : Locale.US;
+
+            int res = tts[0].setLanguage(locale);
+
+            if (res == TextToSpeech.LANG_MISSING_DATA
+                    || res == TextToSpeech.LANG_NOT_SUPPORTED) {
+
+                tts[0].setLanguage(Locale.US);
+            }
+
+            ttsReady[0] = true;
+
+            if (pendingTtsText != null) {
+                tts[0].speak(
+                        pendingTtsText,
+                        TextToSpeech.QUEUE_FLUSH,
+                        null,
+                        "GEL_TTS_PENDING"
+                );
+                pendingTtsText = null;
+            }
+        }
+    });
+}
+
+// ============================================================  
+// GEL legacy aliases (LOCKED)  
+// ============================================================  
+private void logYellow(String msg) { logWarn(msg); }  
+private void logGreen(String msg)  { logOk(msg); }  
+private void logRed(String msg)    { logError(msg); }  
+
+private void logSection(String msg) {  
+logInfo(msg); 
+
+}
+
+// ============================================================  
+// UI HELPERS (GEL LOCKED)  
+// ============================================================  
+private LinearLayout makeSectionBody() {  
+    LinearLayout body = new LinearLayout(this);  
+    body.setOrientation(LinearLayout.VERTICAL);  
+    body.setVisibility(View.GONE);  
+    body.setPadding(0, dp(4), 0, dp(4));  
+
+    allSectionBodies.add(body);  
+    return body;  
+}  
+
+private Button makeSectionHeader(String text, LinearLayout bodyToToggle) {  
+    Button b = new Button(this);  
+    allSectionHeaders.add(b);  
+
+    b.setText(text);  
+    b.setAllCaps(false);  
+    b.setTextSize(15f);  
+    b.setTextColor(0xFF39FF14); // neon green  
+    b.setBackgroundResource(R.drawable.gel_btn_outline_selector);  
+
+    LinearLayout.LayoutParams lp =  
+            new LinearLayout.LayoutParams(  
+                    LinearLayout.LayoutParams.MATCH_PARENT,  
+                    LinearLayout.LayoutParams.WRAP_CONTENT  
+            );  
+    lp.setMargins(0, dp(6), 0, dp(4));  
+    b.setLayoutParams(lp);  
+    b.setGravity(Gravity.CENTER);  
+
+    b.setOnClickListener(v -> {  
+        boolean willOpen = bodyToToggle.getVisibility() != View.VISIBLE;  
+
+        // close ALL sections  
+        for (LinearLayout body : allSectionBodies) {  
+            body.setVisibility(View.GONE);  
+        }  
+
+        if (willOpen) {  
+            bodyToToggle.setVisibility(View.VISIBLE);  
+            scroll.post(() -> scroll.smoothScrollTo(0, b.getTop()));  
+        }  
+    });  
+
+    return b;  
+}  
+
+private Button makeTestButton(String text, Runnable action) {  
+Button b = new Button(this);  
+b.setText(text);  
+b.setAllCaps(false);  
+b.setTextSize(14f);  
+b.setTextColor(0xFFFFFFFF);  
+b.setBackgroundResource(R.drawable.gel_btn_outline_selector);  
+
+LinearLayout.LayoutParams lp =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+lp.setMargins(0, dp(4), 0, dp(4));
+b.setLayoutParams(lp);
+
+b.setMinHeight(dp(48));
+
+b.setSingleLine(false);
+b.setMaxLines(2);
+b.setEllipsize(null);
+
+b.setGravity(Gravity.CENTER);
+b.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+
+b.setOnClickListener(v -> action.run());
+return b;
+}
+
+private Button makeTestButtonRedGold(String text, Runnable action) {  
+Button b = new Button(this);  
+b.setText(text);  
+b.setAllCaps(false);  
+b.setTextSize(14f);  
+b.setTextColor(0xFFFFFFFF);  
+b.setTypeface(null, Typeface.BOLD);  
+
+GradientDrawable bg = new GradientDrawable();  
+bg.setColor(0xFF8B0000);  
+bg.setCornerRadius(dp(10));  
+bg.setStroke(dp(3), 0xFFFFD700);  
+b.setBackground(bg);  
+
+LinearLayout.LayoutParams lp =  
+        new LinearLayout.LayoutParams(  
+                LinearLayout.LayoutParams.MATCH_PARENT,  
+                dp(52)  
+        );  
+lp.setMargins(0, dp(6), 0, dp(6));  
+b.setLayoutParams(lp);  
+b.setGravity(Gravity.CENTER);  
+
+b.setOnClickListener(v -> action.run());  
+return b;
+
+}
+
+// ============================================================
+// WIFI / NETWORK HELPERS — REQUIRED
+// ============================================================
+
+private String cleanSsid(String raw) {
+if (raw == null) return "Unknown";
+
+raw = raw.trim();  
+
+if (raw.equalsIgnoreCase("<unknown ssid>") ||  
+    raw.equalsIgnoreCase("unknown ssid"))  
+    return "Unknown";  
+
+if (raw.startsWith("\"") && raw.endsWith("\"") && raw.length() > 1)  
+    return raw.substring(1, raw.length() - 1);  
+
+return raw;
+
+}
+
+private String ipToStr(int ip) {
+return (ip & 0xFF) + "." +
+((ip >> 8) & 0xFF) + "." +
+((ip >> 16) & 0xFF) + "." +
+((ip >> 24) & 0xFF);
+}
+
+// ============================================================
+// LAB 3 — User Confirmation Dialog (Earpiece)
+// FINAL — GEL Dark/Gold + Neon Green + TTS + Mute
+// ============================================================
+private void askUserEarpieceConfirmation() {
+
+    runOnUiThread(() -> {
+
+        if (lab3WaitingUser) return;
+        lab3WaitingUser = true;
+
+        final boolean gr = AppLang.isGreek(this);
+
+        AlertDialog.Builder b =
+                new AlertDialog.Builder(
+                        ManualTestsActivity.this,
+                        android.R.style.Theme_Material_Dialog_NoActionBar
+                );
+        b.setCancelable(false);
+
+        // ==========================
+        // ROOT
+        // ==========================
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(28), dp(24), dp(28), dp(22));
+        root.setMinimumWidth(dp(300));
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF101010);
+        bg.setCornerRadius(dp(10));
+        bg.setStroke(dp(4), 0xFFFFD700);
+        root.setBackground(bg);
+
+        // ==========================
+        // TITLE (WHITE)
+        // ==========================
+        TextView title = new TextView(this);
+        title.setText(gr ? "LAB 3 — Επιβεβαίωση" : "LAB 3 — Confirmation");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(17f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, 0, 0, dp(14));
+        root.addView(title);
+
+        // ==========================
+        // MESSAGE (NEON GREEN)
+        // ==========================
+        TextView msg = new TextView(this);
+        msg.setText(
+                gr
+                        ? "Άκουσες καθαρά τους ήχους\nαπό το ακουστικό;"
+                        : "Did you hear the tones\nclearly from the earpiece?"
+        );
+        msg.setTextColor(0xFF39FF14); // GEL neon green
+        msg.setTextSize(15f);
+        msg.setGravity(Gravity.CENTER);
+        msg.setLineSpacing(0f, 1.2f);
+        msg.setPadding(0, 0, 0, dp(18));
+        root.addView(msg);
+
+// ==========================
+// MUTE ROW (UNIFIED — AppTTS HELPER)
+// ==========================
+root.addView(buildMuteRow());
+
+        // ---------- BUTTON ROW ----------
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.CENTER);
+
+        LinearLayout.LayoutParams btnLp =
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+        btnLp.setMargins(dp(12), dp(8), dp(12), dp(8));
+
+        // ---------- NO ----------
+        Button noBtn = new Button(this);
+        noBtn.setText(gr ? "ΟΧΙ" : "NO");
+        noBtn.setAllCaps(false);
+        noBtn.setTextColor(Color.WHITE);
+
+        GradientDrawable noBg = new GradientDrawable();
+        noBg.setColor(0xFF8B0000);
+        noBg.setCornerRadius(dp(10));
+        noBg.setStroke(dp(3), 0xFFFFD700);
+        noBtn.setBackground(noBg);
+        noBtn.setLayoutParams(btnLp);
+
+        // ---------- YES ----------
+        Button yesBtn = new Button(this);
+        yesBtn.setText(gr ? "ΝΑΙ" : "YES");
+        yesBtn.setAllCaps(false);
+        yesBtn.setTextColor(Color.WHITE);
+
+        GradientDrawable yesBg = new GradientDrawable();
+        yesBg.setColor(0xFF0B5F3B);
+        yesBg.setCornerRadius(dp(10));
+        yesBg.setStroke(dp(3), 0xFFFFD700);
+        yesBtn.setBackground(yesBg);
+        yesBtn.setLayoutParams(btnLp);
+
+// ---------- ADD ----------
+btnRow.addView(noBtn);
+btnRow.addView(yesBtn);
+root.addView(btnRow);
+
+b.setView(root);
+b.setCancelable(false);
+
+final AlertDialog d = b.create();
+
+if (d.getWindow() != null) {
+    d.getWindow().setBackgroundDrawable(
+            new ColorDrawable(Color.TRANSPARENT)
+    );
+}
+
+// ------------------------------------------------------------
+// STOP TTS ON ANY DISMISS
+// ------------------------------------------------------------
+d.setOnDismissListener(dialog -> {
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+});
+
+// ------------------------------------------------------------
+// BACK KEY — STOP TTS + RESTORE AUDIO
+// ------------------------------------------------------------
+d.setOnKeyListener((dialog, keyCode, event) -> {
+    if (keyCode == KeyEvent.KEYCODE_BACK
+            && event.getAction() == KeyEvent.ACTION_UP) {
+
+        try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+        lab3WaitingUser = false;
+        restoreLab3Audio();
+        dialog.dismiss();
+        return true;
+    }
+    return false;
+});
+
+if (!isFinishing() && !isDestroyed()) {
+    d.show();
+
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        if (d.isShowing()
+                && !isFinishing()
+                && !isDestroyed()
+                && !AppTTS.isMuted(this)) {
+
+            AppTTS.ensureSpeak(
+                    this,
+                    gr
+                            ? "Άκουσες καθαρά τους ήχους από το ακουστικό;"
+                            : "Did you hear the tones clearly from the earpiece?"
+            );
+        }
+    }, 400);
+}
+
+// ------------------------------------------------------------
+// YES ACTION (PASS)
+// ------------------------------------------------------------
+yesBtn.setOnClickListener(v -> {
+
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+    lab3WaitingUser = false;
+
+    logLabelOkValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr
+                    ? "Ο χρήστης επιβεβαίωσε καθαρή αναπαραγωγή ήχου"
+                    : "User confirmed audio playback"
+    );
+
+    appendHtml("<br>");
+    logOk(gr ? "Το Lab 3 ολοκληρώθηκε." : "Lab 3 finished.");
+    logLine();
+
+    restoreLab3Audio();
+    d.dismiss();
+});
+
+// ------------------------------------------------------------
+// NO ACTION (FAIL)
+// ------------------------------------------------------------
+noBtn.setOnClickListener(v -> {
+
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+    lab3WaitingUser = false;
+
+    logLabelErrorValue(
+            gr ? "LAB 3 — Ακουστικό" : "LAB 3 — Earpiece",
+            gr
+                    ? "Ο χρήστης ΔΕΝ άκουσε τους ήχους"
+                    : "User did NOT hear tones"
+    );
+
+    logLabelWarnValue(
+            gr ? "Πιθανό πρόβλημα" : "Possible issue",
+            gr
+                    ? "Πιθανή βλάβη ακουστικού ή πρόβλημα δρομολόγησης ήχου"
+                    : "Earpiece failure or audio routing problem"
+    );
+
+    appendHtml("<br>");
+    logOk(gr ? "Το Lab 3 ολοκληρώθηκε." : "Lab 3 finished.");
+    logLine();
+
+    restoreLab3Audio();
+    d.dismiss();
+});
+
+    });
+} 
+
+// ============================================================
+// LAB 3 — STATE / HELPERS (LOCKED)
+// ============================================================
+
+private void routeToCallEarpiece() {
+    try {
+        AudioManager am =
+                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (am == null) return;
+
+        am.stopBluetoothSco();
+        am.setBluetoothScoOn(false);
+        am.setSpeakerphoneOn(false);
+        am.setMicrophoneMute(false);
+        am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+    } catch (Throwable ignore) {}
+}
+
+private void routeToEarpiecePlayback() {
+    try {
+        AudioManager am =
+                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (am == null) return;
+
+        am.stopBluetoothSco();
+        am.setBluetoothScoOn(false);
+        am.setSpeakerphoneOn(false);
+        am.setMode(AudioManager.MODE_NORMAL);
+    } catch (Throwable ignore) {}
+}
+
+private ToneGenerator lab3Tone;
+
+/**
+ * HARD restore for LAB 3
+ * One single source of truth.
+ * Used on success / cancel / exception.
+ */
+ 
+private void restoreLab3Audio() {
+    try {
+        AudioManager am =
+                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
+        if (am == null) return;   // 🔒 safety
+
+        resetAudioAfterLab3(
+                am,
+                lab3OldMode,
+                lab3OldSpeaker,
+                lab3OldMicMute
+        );
+
+    } catch (Throwable ignore) {}
+}
+
+/**
+ * Plays a short earpiece beep using VOICE_CALL stream.
+ * Earpiece-only, OEM safe.
+ */
+private void playEarpieceBeep() {
+
+    int sampleRate = 8000;
+    int durationMs = 400;
+    int samples = sampleRate * durationMs / 1000;
+
+    short[] buffer = new short[samples];
+    double freq = 1000.0;
+
+    for (int i = 0; i < samples; i++) {
+        buffer[i] = (short)
+                (Math.sin(2 * Math.PI * i * freq / sampleRate) * 32767);
+    }
+
+    AudioTrack track = new AudioTrack(
+            AudioManager.STREAM_VOICE_CALL,
+            sampleRate,
+            AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            buffer.length * 2,
+            AudioTrack.MODE_STATIC
+    );
+
+    try {
+        track.write(buffer, 0, buffer.length);
+        track.play();
+        SystemClock.sleep(durationMs + 100);
+    } finally {
+        try { track.stop(); } catch (Throwable ignore) {}
+        try { track.release(); } catch (Throwable ignore) {}
+    }
+}
+
+/**
+ * Optional tone stop helper (defensive).
+ */
+private void stopLab3Tone() {
+    try {
+        if (lab3Tone != null) {
+            lab3Tone.stopTone();
+            lab3Tone.release();
+        }
+    } catch (Throwable ignore) {}
+    lab3Tone = null;
+}
+
+// ============================================================
+// LAB 3 — HARD AUDIO RESET (SINGLE SOURCE OF TRUTH)
+// ============================================================
+private void resetAudioAfterLab3(
+        AudioManager am,
+        int oldMode,
+        boolean oldSpeaker,
+        boolean oldMicMute
+) {
+    if (am == null) return;
+
+    try {
+        try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
+        try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
+
+        // Force clean baseline
+        try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
+        try { am.setSpeakerphoneOn(oldSpeaker); } catch (Throwable ignore) {}
+        try { am.setMicrophoneMute(oldMicMute); } catch (Throwable ignore) {}
+
+        SystemClock.sleep(120);
+
+    } catch (Throwable ignore) {}
+}
+
+// ============================================================
+// HARD AUDIO NORMALIZE — BEFORE MIC CAPTURE (MANDATORY)
+// ============================================================
+private void hardNormalizeAudioForMic() {
+
+    try {
+        AudioManager am =
+                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
+        if (am == null) return;
+
+        try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
+        try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
+
+        try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
+        try { am.setSpeakerphoneOn(false); } catch (Throwable ignore) {}
+
+        // 🔴 ΤΟ ΣΗΜΑΝΤΙΚΟ
+        try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
+
+        SystemClock.sleep(300);
+
+    } catch (Throwable ignore) {}
+}
+
+// ============================================================
+// HELPERS REQUIRED BY LAB 4 PRO (STRICT – DO NOT TOUCH)
+// ============================================================
+
+private AlertDialog buildInfoDialog(
+        String titleText,
+        String messageText,
+        AtomicBoolean cancelled,
+        AtomicReference<AlertDialog> dialogRef
+) {
+    AlertDialog.Builder b =
+            new AlertDialog.Builder(
+                    this,
+                    android.R.style.Theme_Material_Dialog_NoActionBar
+            );
+    b.setCancelable(false);
+
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(26), dp(24), dp(26), dp(22));
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF000000);
+    bg.setCornerRadius(dp(10));
+    bg.setStroke(dp(3), 0xFFFFD700);
+    root.setBackground(bg);
+
+    TextView title = new TextView(this);
+    title.setText(titleText);
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(17f);
+    title.setTypeface(null, Typeface.BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(0, 0, 0, dp(14));
+    root.addView(title);
+
+    TextView msg = new TextView(this);
+    msg.setText(messageText);
+    msg.setTextColor(0xFF39FF14);
+    msg.setTextSize(14.5f);
+    msg.setGravity(Gravity.CENTER);
+    msg.setPadding(0, 0, 0, dp(16));
+    root.addView(msg);
+
+    Button exit = new Button(this);
+    exit.setAllCaps(false);
+    exit.setText(AppLang.isGreek(this) ? "ΕΞΟΔΟΣ ΤΕΣΤ" : "EXIT TEST");
+    exit.setTextColor(Color.WHITE);
+
+    GradientDrawable exitBg = new GradientDrawable();
+    exitBg.setColor(0xFF8B0000);
+    exitBg.setCornerRadius(dp(10));
+    exitBg.setStroke(dp(3), 0xFFFFD700);
+    exit.setBackground(exitBg);
+
+    exit.setOnClickListener(v -> {
+        cancelled.set(true);
+        try { AppTTS.stop(); } catch (Throwable ignore) {}
+        try {
+            AlertDialog d = dialogRef.get();
+            if (d != null) d.dismiss();
+        } catch (Throwable ignore) {}
+    });
+
+    root.addView(exit);
+
+b.setView(root);
+b.setCancelable(false);
+
+final AlertDialog d = b.create();
+
+if (d.getWindow() != null) {
+    d.getWindow().setBackgroundDrawable(
+            new ColorDrawable(Color.TRANSPARENT)
+    );
+}
+
+// 🔴 ΣΗΜΑΝΤΙΚΟ — ΔΗΛΩΝΟΥΜΕ ΤΟ DIALOG ΣΤΟ REF
+dialogRef.set(d);
+
+// Stop TTS on ANY dismiss
+d.setOnDismissListener(dialog -> {
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+});
+
+// Back key handling
+d.setOnKeyListener((dialog, keyCode, event) -> {
+    if (keyCode == KeyEvent.KEYCODE_BACK &&
+        event.getAction() == KeyEvent.ACTION_UP) {
+
+        cancelled.set(true);
+        try { AppTTS.stop(); } catch (Throwable ignore) {}
+        dialog.dismiss();
+        return true;
+    }
+    return false;
+});
+
+if (!isFinishing() && !isDestroyed()) {
+    d.show();
+}
+
+return d;
+}
+
+private void forceSpeaker(AudioManager am) {
+    if (am == null) return;
+    try {
+        am.stopBluetoothSco();
+        am.setBluetoothScoOn(false);
+        am.setMicrophoneMute(false);
+        am.setMode(AudioManager.MODE_NORMAL);
+        am.setSpeakerphoneOn(true);
+        SystemClock.sleep(120);
+    } catch (Throwable ignore) {}
+}
+
+private void dismiss(AtomicReference<AlertDialog> ref) {
+    try {
+        AlertDialog d = ref.get();
+        if (d != null) d.dismiss();
+    } catch (Throwable ignore) {}
+}
+
+private int getWorkingMicSource() {
+    SharedPreferences sp = getSharedPreferences("gel_audio_profile", MODE_PRIVATE);
+    return sp.getInt("mic_source", MediaRecorder.AudioSource.VOICE_COMMUNICATION);
+}
+
+// ============================================================
+// HUMAN VOICE DETECTION — FULLY SELF-CONTAINED (NO ENGINE)
+// Adaptive AudioSource scan — WORKS ON REAL DEVICES
+// ============================================================
+
+// ====================================================
+// AUDIO SOURCES — CLASS LEVEL (LOCKED)
+// ====================================================
+private static final int[] AUDIO_SOURCES = new int[] {
+        MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+        MediaRecorder.AudioSource.VOICE_RECOGNITION,
+        MediaRecorder.AudioSource.MIC,
+        MediaRecorder.AudioSource.DEFAULT,
+        MediaRecorder.AudioSource.CAMCORDER,
+        MediaRecorder.AudioSource.UNPROCESSED
+};
+
+private boolean detectHumanVoiceAdaptive(boolean gr) {
+
+    final int SR = 44100;
+    final int CHANNEL = AudioFormat.CHANNEL_IN_MONO;
+    final int FORMAT = AudioFormat.ENCODING_PCM_16BIT;
+
+    final int STEP_MS = 100;
+    final long WINDOW_MS = 5000;
+
+    for (int source : AUDIO_SOURCES) {
+
+        AudioRecord ar = null;
+
+        try {
+            int minBuf = AudioRecord.getMinBufferSize(SR, CHANNEL, FORMAT);
+            if (minBuf <= 0) continue;
+
+            ar = new AudioRecord(
+                    source,
+                    SR,
+                    CHANNEL,
+                    FORMAT,
+                    minBuf * 2
+            );
+
+            if (ar.getState() != AudioRecord.STATE_INITIALIZED) continue;
+
+            ar.startRecording();
+SystemClock.sleep(250);
+
+// 👇 ΠΡΩΤΑ buffer
+short[] buf = new short[1024];
+            
+// =============================
+// BASELINE — SILENCE
+// =============================
+long noiseSum = 0;
+int noiseFrames = 0;
+
+for (int i = 0; i < 5; i++) {
+    int n = ar.read(buf, 0, buf.length);
+    if (n <= 0) continue;
+
+    long sumSq = 0;
+    for (int j = 0; j < n; j++) {
+        int v = Math.abs(buf[j]);
+        sumSq += (long) v * v;
+    }
+
+    double rms = Math.sqrt((double) sumSq / n);
+    noiseSum += rms;
+    noiseFrames++;
+
+    SystemClock.sleep(100);
+}
+
+double noiseFloor = noiseFrames > 0
+        ? noiseSum / noiseFrames
+        : 0;
+
+            long until = SystemClock.uptimeMillis() + WINDOW_MS;
+            long voicedMs = 0;
+
+            while (SystemClock.uptimeMillis() < until) {
+
+                int n = ar.read(buf, 0, buf.length);
+                if (n <= 0) {
+                    SystemClock.sleep(STEP_MS);
+                    continue;
+                }
+
+                long sumSq = 0;
+                int peak = 0;
+
+                for (int i = 0; i < n; i++) {
+                    int v = Math.abs(buf[i]);
+                    peak = Math.max(peak, v);
+                    sumSq += (long) v * v;
+                }
+
+                double rms = Math.sqrt((double) sumSq / n);
+
+                boolean rmsOk  = rms > noiseFloor * 2.2;
+boolean peakOk = peak > 2500;
+
+                if (rmsOk && peakOk) {
+                    voicedMs += STEP_MS;
+                } else {
+                    voicedMs = Math.max(0, voicedMs - STEP_MS); // decay
+                }
+
+                if (voicedMs >= 800) {
+
+                    saveWorkingMicSource(source);
+
+                    logOk(gr
+                            ? "Φωνή ανιχνεύθηκε."
+                            : "Voice detected.");
+
+                    logInfo(gr
+                            ? "Πηγή ήχου: " + source
+                            : "Audio source: " + source);
+
+                    return true;
+                }
+
+                SystemClock.sleep(STEP_MS);
+            }
+
+        } catch (Throwable ignore) {
+
+        } finally {
+            try {
+                if (ar != null) {
+                    ar.stop();
+                    ar.release();
+                }
+            } catch (Throwable ignore) {}
+        }
+    }
+
+    logLabelErrorValue(
+            gr ? "Κατάσταση" : "Status",
+            gr
+                    ? "Δεν ανιχνεύθηκε ανθρώπινη φωνή με καμία πηγή."
+                    : "Human voice not detected with any audio source."
+    );
+
+    return false;
+}
+
+// ============================================================
+// PERSISTENCE
+// ============================================================
+private void saveWorkingMicSource(int source) {
+    getSharedPreferences("gel_audio_profile", MODE_PRIVATE)
+            .edit()
+            .putInt("mic_source", source)
+            .apply();
+}
+
+// ============================================================
+// LAB 8.1 — HUMAN SUMMARY HELPERS
+// ============================================================
+
+private static class CameraHumanSummary {
+    String photoQuality;          // "9 MP photos (very good)"
+    String professionalPhotos;    // "RAW uncompressed photos supported"
+    String videoQuality;          // "4K (very high)" / "Full HD (high)"
+    String videoSmoothness;
+    String slowMotion;
+    String stabilization;
+    String manualMode;
+    String flash;
+    String realLifeUse;
+    String verdict;
+}
+
+private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
+
+    CameraHumanSummary h = new CameraHumanSummary();
+
+    // ------------------------------------------------------------
+    // CAPS
+    // ------------------------------------------------------------
+    boolean hasRaw = false;
+    boolean manual = false;
+
+    int[] caps = cc.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+    if (caps != null) {
+        for (int c : caps) {
+            if (c == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)
+                hasRaw = true;
+            if (c == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)
+                manual = true;
+        }
+    }
+
+    h.manualMode = manual ? "Supported" : "Not supported";
+
+    // ------------------------------------------------------------
+    // PHOTO QUALITY (MP)
+    // ------------------------------------------------------------
+    StreamConfigurationMap map =
+            cc.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
+    Size maxPhoto = null;
+    if (map != null) {
+        Size[] photos = map.getOutputSizes(ImageFormat.JPEG);
+        if (photos != null && photos.length > 0) {
+            maxPhoto = photos[0];
+            for (Size s : photos) {
+                long a = (long) s.getWidth() * s.getHeight();
+                long b = (long) maxPhoto.getWidth() * maxPhoto.getHeight();
+                if (a > b) maxPhoto = s;
+            }
+        }
+    }
+
+    if (maxPhoto != null) {
+        int mp = (maxPhoto.getWidth() * maxPhoto.getHeight()) / 1_000_000;
+        h.photoQuality = mp + " MP photos (very good)";
+    } else {
+        h.photoQuality = "Standard photos";
+    }
+
+// ------------------------------------------------------------
+// PROFESSIONAL PHOTOS (RAW)
+// ------------------------------------------------------------
+final boolean gr = AppLang.isGreek(this);
+
+h.professionalPhotos = hasRaw
+        ? (gr
+            ? "Υποστηρίζεται λήψη RAW (ασυμπίεστων) φωτογραφιών"
+            : "RAW (uncompressed) photo capture supported")
+        : (gr
+            ? "Δεν υποστηρίζεται RAW (μόνο JPEG)"
+            : "RAW not supported (JPEG only)");
+
+    // ------------------------------------------------------------
+    // VIDEO QUALITY
+    // ------------------------------------------------------------
+    int maxWidth = 0;
+    if (map != null) {
+        Size[] vids = map.getOutputSizes(MediaRecorder.class);
+        if (vids != null) {
+            for (Size s : vids)
+                maxWidth = Math.max(maxWidth, s.getWidth());
+        }
+    }
+
+    if (maxWidth >= 3840)
+        h.videoQuality = "4K (very high)";
+    else if (maxWidth >= 1920)
+        h.videoQuality = "Full HD (high)";
+    else
+        h.videoQuality = "HD (basic)";
+
+// ------------------------------------------------------------
+// FPS / SMOOTHNESS / SLOW MOTION
+// ------------------------------------------------------------
+int maxFps = 0;
+Range<Integer>[] fpsRanges =
+        cc.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+
+if (fpsRanges != null) {
+    for (Range<Integer> r : fpsRanges) {
+        if (r != null && r.getUpper() != null)
+            maxFps = Math.max(maxFps, r.getUpper());
+    }
+}
+
+if (maxFps >= 120) {
+
+    h.videoSmoothness = gr
+            ? "Πολύ ομαλή κίνηση (έως " + maxFps + " FPS)"
+            : "Very smooth motion (up to " + maxFps + " FPS)";
+
+    h.slowMotion = gr
+            ? "Υποστηρίζεται αργή κίνηση (Slow Motion)"
+            : "Slow motion supported";
+
+} else if (maxFps >= 60) {
+
+    h.videoSmoothness = gr
+            ? "Ομαλή κίνηση (έως " + maxFps + " FPS)"
+            : "Smooth motion (up to " + maxFps + " FPS)";
+
+    h.slowMotion = gr
+            ? "Περιορισμένη υποστήριξη slow motion"
+            : "Limited slow motion support";
+
+} else if (maxFps >= 30) {
+
+    h.videoSmoothness = gr
+            ? "Κανονική ομαλότητα βίντεο (30 FPS)"
+            : "Standard smoothness (30 FPS)";
+
+    h.slowMotion = gr
+            ? "Δεν υποστηρίζεται slow motion"
+            : "Slow motion not supported";
+
+} else {
+
+    h.videoSmoothness = gr
+            ? "Βασική απόδοση βίντεο"
+            : "Basic video performance";
+
+    h.slowMotion = gr
+            ? "Δεν υποστηρίζεται slow motion"
+            : "Slow motion not supported";
+}
+
+// ------------------------------------------------------------
+// STABILIZATION
+// ------------------------------------------------------------
+boolean stab = false;
+int[] stabModes =
+        cc.get(CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES);
+
+if (stabModes != null) {
+    for (int m : stabModes) {
+        if (m == CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_ON) {
+            stab = true;
+            break;
+        }
+    }
+}
+
+h.stabilization = stab
+        ? (gr ? "Υποστηρίζεται ηλεκτρονική σταθεροποίηση (EIS)"
+              : "Electronic stabilization (EIS) supported")
+        : (gr ? "Δεν υποστηρίζεται σταθεροποίηση βίντεο"
+              : "Video stabilization not supported");
+
+// ------------------------------------------------------------
+// FLASH
+// ------------------------------------------------------------
+Boolean flashAvail = cc.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
+
+h.flash = Boolean.TRUE.equals(flashAvail)
+        ? (gr ? "Διαθέσιμο φλας"
+              : "Flash available")
+        : (gr ? "Δεν υπάρχει φλας"
+              : "Flash not available");
+
+// ------------------------------------------------------------
+// REAL LIFE USE
+// ------------------------------------------------------------
+if (maxFps >= 60 && stab) {
+
+    h.realLifeUse = gr
+            ? "Κατάλληλη για καθημερινή χρήση και σκηνές με κίνηση."
+            : "Suitable for everyday use and moving scenes.";
+
+} else if (maxFps >= 30) {
+
+    h.realLifeUse = gr
+            ? "Κατάλληλη για καθημερινή χρήση και κοινωνικά δίκτυα."
+            : "Suitable for daily use and social media.";
+
+} else {
+
+    h.realLifeUse = gr
+            ? "Βασική χρήση χωρίς απαιτήσεις."
+            : "Basic usage only.";
+}
+
+// ------------------------------------------------------------
+// FINAL VERDICT
+// ------------------------------------------------------------
+if (hasRaw && maxFps >= 60) {
+
+    h.verdict = gr
+            ? "Καλή κάμερα για καθημερινή χρήση και λήψεις RAW. "
+              + "Δεν προορίζεται για επαγγελματική παραγωγή βίντεο."
+            : "Good camera for daily use and RAW photography. "
+              + "Not intended for professional video production.";
+
+} else {
+
+    h.verdict = gr
+            ? "Επαρκής κάμερα για βασική καθημερινή χρήση."
+            : "Decent camera for basic daily use.";
+}
+
+return h;
+}
+
+// ============================================================
+// TELEPHONY SNAPSHOT (SAFE / INFO ONLY)
+// ============================================================
+private TelephonySnapshot getTelephonySnapshot() {
+
+TelephonySnapshot s = new TelephonySnapshot();  
+
+try {  
+    s.airplaneOn = Settings.Global.getInt(  
+            getContentResolver(),  
+            Settings.Global.AIRPLANE_MODE_ON, 0  
+    ) == 1;  
+} catch (Throwable ignored) {}  
+
+TelephonyManager tm =  
+        (TelephonyManager) getSystemService(TELEPHONY_SERVICE);  
+
+if (tm != null) {  
+    try {  
+        s.simState = tm.getSimState();  
+        s.simReady = (s.simState == TelephonyManager.SIM_STATE_READY);  
+    } catch (Throwable ignored) {}  
+
+    try {  
+        ServiceState ss = tm.getServiceState();  
+        if (ss != null) {  
+            s.serviceState = ss.getState();  
+            s.inService =  
+                    (s.serviceState == ServiceState.STATE_IN_SERVICE);  
+        }  
+    } catch (Throwable ignored) {}  
+
+    try {  
+        s.dataState = tm.getDataState();  
+    } catch (Throwable ignored) {}  
+}  
+
+ConnectivityManager cm =  
+        (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);  
+
+if (cm != null) {  
+    try {  
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {  
+            Network n = cm.getActiveNetwork();  
+            NetworkCapabilities caps =  
+                    cm.getNetworkCapabilities(n);  
+            s.hasInternet =  
+                    caps != null &&  
+                    caps.hasCapability(  
+                            NetworkCapabilities.NET_CAPABILITY_INTERNET  
+                    );  
+        }  
+    } catch (Throwable ignored) {}  
+}  
+
+return s;
+
+}
+
+// ============================================================
+// LOGGING — GEL CANONICAL (UI + SERVICE REPORT)
+// ============================================================
+private void appendHtml(String html) {
+    ui.post(() -> {
+        CharSequence cur = txtLog.getText();
+        CharSequence add = Html.fromHtml(html + "<br>");
+        txtLog.setText(TextUtils.concat(cur, add));
+        scroll.post(() -> scroll.fullScroll(ScrollView.FOCUS_DOWN));
+    });
+}
+
+private void logInfo(String msg) {
+    appendHtml("• " + escape(msg));
+    GELServiceLog.logInfo(msg);
+}
+
+private void logOk(String msg) {
+    appendHtml("<font color='#39FF14'>✔ " + escape(msg) + "</font>");
+    GELServiceLog.logOk(msg);
+}
+
+private void logWarn(String msg) {
+    appendHtml("<font color='#FFD966'>⚠ " + escape(msg) + "</font>");
+    GELServiceLog.logWarn(msg);
+}
+
+private void logError(String msg) {
+    appendHtml("<font color='#FF5555'>✖ " + escape(msg) + "</font>");
+    GELServiceLog.logError(msg);
+}
+
+private void logLine() {
+    appendHtml("--------------------------------------------------");
+    GELServiceLog.logLine();
+}
+
+// ------------------------------------------------------------
+// SAFE ESCAPE FOR UI ONLY (SERVICE LOG STORES RAW TEXT)
+// ------------------------------------------------------------
+
+private int dp(int v) {
+float d = getResources().getDisplayMetrics().density;
+return (int) (v * d + 0.5f);
+}
+
+private View space(int w) {
+    View v = new View(this);
+    v.setLayoutParams(new LinearLayout.LayoutParams(w, 1));
+    return v;
+}
+
+// ============================================================
+// FORMAT HELPERS
+// ============================================================
+private String humanBytes(long bytes) {
+if (bytes <= 0) return "0 B";
+float kb = bytes / 1024f;
+if (kb < 1024) return String.format(Locale.US, "%.1f KB", kb);
+float mb = kb / 1024f;
+if (mb < 1024) return String.format(Locale.US, "%.1f MB", mb);
+float gb = mb / 1024f;
+return String.format(Locale.US, "%.2f GB", gb);
+}
+
+private String formatUptime(long ms) {
+long s = ms / 1000;
+long d = s / (24 * 3600);
+s %= (24 * 3600);
+long h = s / 3600;
+s %= 3600;
+long m = s / 60;
+return String.format(Locale.US, "%dd %dh %dm", d, h, m);
+}
+
+// ============================================================
+// NETWORK HELPERS — USED BY LAB 10
+// ============================================================
+
+private float tcpLatencyMs(String host, int port, int timeoutMs) {
+long t0 = SystemClock.elapsedRealtime();
+Socket s = new Socket();
+try {
+s.connect(new InetSocketAddress(host, port), timeoutMs);
+long t1 = SystemClock.elapsedRealtime();
+return (t1 - t0);
+} catch (Exception e) {
+return -1f;
+} finally {
+try { s.close(); } catch (Exception ignored) {}
+}
+}
+
+private float dnsResolveMs(String host) {
+long t0 = SystemClock.elapsedRealtime();
+try {
+InetAddress.getByName(host);
+long t1 = SystemClock.elapsedRealtime();
+return (t1 - t0);
+} catch (Exception e) {
+return -1f;
+}
+}
+
+// ------------------------------------------------------------
+// Charging detection — SAFE (plugged based)
+// ------------------------------------------------------------
+private boolean isDeviceCharging() {
+
+    try {
+
+        iDoctorEngine eng = iDoctorEngine.get(this);
+
+        return eng.isChargingNowUnified();
+
+    } catch (Throwable ignore) {}
+
+    // fallback μόνο αν engine δεν δώσει τιμή
+
+    try {
+
+        Intent i = registerReceiver(
+                null,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        );
+
+        if (i == null) return false;
+
+        int plugged =
+                i.getIntExtra(
+                        BatteryManager.EXTRA_PLUGGED,
+                        0
+                );
+
+        return plugged == BatteryManager.BATTERY_PLUGGED_AC
+                || plugged == BatteryManager.BATTERY_PLUGGED_USB
+                || plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS;
+
+    } catch (Throwable ignore) {
+
+        return false;
+    }
+}
+
+// ============================================================
+// THERMAL HELPERS — System thermal zones (no libs, best-effort)
+// Used by CPU/GPU/Skin/PMIC temp readers
+// ============================================================
+private Map<String, Float> readThermalZones() {
+
+Map<String, Float> out = new HashMap<>();  
+
+try {  
+    File base = new File("/sys/class/thermal");  
+    File[] zones = base.listFiles(new FileFilter() {  
+        @Override public boolean accept(File f) {  
+            return f != null && f.isDirectory() && f.getName().startsWith("thermal_zone");  
+        }  
+    });  
+
+    if (zones == null) return out;  
+
+    for (File z : zones) {  
+        try {  
+            String type = safeReadOneLine(new File(z, "type"));  
+            String temp = safeReadOneLine(new File(z, "temp"));  
+
+            if (type == null || temp == null) continue;  
+
+            type = type.trim().toLowerCase(Locale.US);  
+            temp = temp.trim();  
+
+            // temp is usually in millidegrees (e.g. 42000), sometimes in degrees (42)  
+            float t;  
+            try {  
+                long v = Long.parseLong(temp.replaceAll("[^0-9\\-]", ""));  
+                t = (Math.abs(v) >= 1000) ? (v / 1000f) : (float) v;  
+            } catch (Throwable ignore) {  
+                continue;  
+            }  
+
+            // keep best (highest) reading if duplicate type keys appear  
+            if (!out.containsKey(type) || out.get(type) < t) out.put(type, t);  
+
+        } catch (Throwable ignore) {}  
+    }  
+
+} catch (Throwable ignore) {}  
+
+return out;
+
+}
+
+private Float pickZone(Map<String, Float> zones, String... keys) {
+if (zones == null || zones.isEmpty() || keys == null || keys.length == 0) return null;
+
+// normalize search keys  
+List<String> k = new ArrayList<>();  
+for (String s : keys) {  
+    if (s != null && !s.trim().isEmpty()) k.add(s.trim().toLowerCase(Locale.US));  
+}  
+if (k.isEmpty()) return null;  
+
+// best match strategy: first key hit in type string  
+Float best = null;  
+
+for (Map.Entry<String, Float> e : zones.entrySet()) {  
+    String type = e.getKey();  
+    Float val = e.getValue();  
+    if (type == null || val == null) continue;  
+
+    for (String kk : k) {  
+        if (type.contains(kk)) {  
+            // prefer higher temp (more indicative of active hotspot)  
+            if (best == null || val > best) best = val;  
+            break;  
+        }  
+    }  
+}  
+
+return best;
+
+}
+
+private String safeReadOneLine(File f) {
+BufferedReader br = null;
+try {
+br = new BufferedReader(new FileReader(f));
+return br.readLine();
+} catch (Throwable t) {
+return null;
+} finally {
+try { if (br != null) br.close(); } catch (Throwable ignore) {}
+}
+}
+
+// ------------------------------------------------------------
+// LAB 15 thermal correlation — BILINGUAL (LABEL WHITE, VALUES GREEN)
+// ------------------------------------------------------------
+private void logLab15ThermalCorrelation(
+        float battTempStart,
+        float battTempPeak,
+        float battTempEnd
+) {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    String label = gr
+            ? "Θερμική συσχέτιση (κατά τη φόρτιση): "
+            : "Thermal correlation (during charging): ";
+
+    String values = String.format(
+            Locale.US,
+            gr
+                    ? "αρχή %.1f°C → μέγιστο %.1f°C → τέλος %.1f°C"
+                    : "start %.1f°C → peak %.1f°C → end %.1f°C",
+            battTempStart,
+            (Float.isNaN(battTempPeak) ? battTempEnd : battTempPeak),
+            battTempEnd
+    );
+
+    // fallback: no UI
+    if (txtLog == null) {
+        logInfo(label + values);
+        return;
+    }
+
+    // UI — label white, values green
+    SpannableString sp = new SpannableString(label + values);
+
+    // label = white
+    sp.setSpan(
+            new ForegroundColorSpan(0xFFFFFFFF),
+            0,
+            label.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+    // values = green
+    sp.setSpan(
+            new ForegroundColorSpan(0xFF39FF14),
+            label.length(),
+            sp.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+    txtLog.append(sp);
+    txtLog.append("\n");
+}
+
+// ------------------------------------------------------------
+// Health checkbox map — BILINGUAL (LAB 14/17 use)
+// ------------------------------------------------------------
+private void printHealthCheckboxMap(String decision) {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    String d = (decision == null) ? "" : decision.trim();
+
+    logLine();
+
+    boolean strong = "Strong".equalsIgnoreCase(d);
+    boolean normal = "Normal".equalsIgnoreCase(d);
+    boolean weak   = "Weak".equalsIgnoreCase(d);
+
+    String strongTxt = gr ? "Ισχυρή" : "Strong";
+    String normalTxt = gr ? "Κανονική" : "Normal";
+    String weakTxt   = gr ? "Αδύναμη"  : "Weak";
+
+    appendHtml((strong ? "✔ " : "• ") +
+            "<font color='#FFFFFF'>" + strongTxt + "</font>");
+
+    appendHtml((normal ? "✔ " : "• ") +
+            "<font color='#FFFFFF'>" + normalTxt + "</font>");
+
+    appendHtml((weak ? "✔ " : "• ") +
+            "<font color='#FFFFFF'>" + weakTxt + "</font>");
+
+    if (strong)
+        logOk(gr ? "Χάρτης Υγείας: Ισχυρή" : "Health Map: Strong");
+    else if (normal)
+        logWarn(gr ? "Χάρτης Υγείας: Κανονική" : "Health Map: Normal");
+    else if (weak)
+        logError(gr ? "Χάρτης Υγείας: Αδύναμη" : "Health Map: Weak");
+    else
+        logInfo(gr ? "Χάρτης Υγείας: Πληροφοριακό"
+                   : "Health Map: Informational");
+}
+
+// ============================================================
+// MISSING SYMBOLS PATCH — REQUIRED FOR LAB 14 + LAB 15
+// Put this block INSIDE ManualTestsActivity (helpers area)
+// ============================================================
+
+// ------------------------------------------------------------
+// BACKWARD COMPATIBILITY — DO NOT REMOVE (yet)
+// ------------------------------------------------------------
+private void logLabelValue(String label, String value) {
+    logOk(label, value);
+}
+
+// ------------------------------------------------------------
+// logLabelOkValue — white label, green value
+// ------------------------------------------------------------
+private void logLabelOkValue(String label, String value) {
+    appendHtml(
+            escape(label) + ": " +
+            "<font color='#39FF14'>" + escape(value) + "</font>"
+    );
+}
+
+// ------------------------------------------------------------
+// logLabelWarnValue — white label, yellow value
+// ------------------------------------------------------------
+private void logLabelWarnValue(String label, String value) {
+    appendHtml(
+            escape(label) + ": " +
+            "<font color='#FFD700'>" + escape(value) + "</font>"
+    );
+}
+
+// ------------------------------------------------------------
+// logLabelErrorValue — white label, red value
+// ------------------------------------------------------------
+private void logLabelErrorValue(String label, String value) {
+    appendHtml(
+            escape(label) + ": " +
+            "<font color='#FF5555'>" + escape(value) + "</font>"
+    );
+}
+
+private void logOk(String label, String value) {
+    logLabelOkValue(label, value);
+}
+
+private void logWarn(String label, String value) {
+    logLabelWarnValue(label, value);
+}
+
+private void logError(String label, String value) {
+    logLabelErrorValue(label, value);
 }
 
 // ============================================================
@@ -5504,34 +5452,9 @@ return p.getString("lab15_strength_label", null);
 }
 
 // ============================================================
-// REQUIRED HELPERS — LAB 14 / 15 / 16 / 17
+// REQUIRED HELPERS — LAB 15 / 16 / 17
 // SAFE STUBS • SHARED PREF BASED • GEL EDITION
 // ============================================================
-
-// ---------------- LAB 14 ----------------
-private float getLastLab14HealthScore() {
-try {
-
-return p.getFloat("lab14_health_score", -1f);  
-} catch (Throwable t) {  
-    return -1f;  
-}
-
-}
-
-private int getLastLab14AgingIndex() {
-try {
-
-return p.getInt("lab14_aging_index", -1);  
-} catch (Throwable t) {  
-    return -1;  
-}
-
-}
-
-private boolean hasValidLab14() {
-return getLastLab14HealthScore() >= 0;
-}
 
 // ---------------- LAB 15 ----------------
 private int getLastLab15ChargeScore() {
@@ -13200,6 +13123,9 @@ private void lab14BatteryHealthStressTest() {
 // LAB 14 — Battery health stress test
 // ============================================================
 private void lab14BatteryHealthStressTest_REAL() {
+	
+final iDoctorEngine idoctor =
+        iDoctorEngine.get(ManualTestsActivity.this);
 
     gr = AppLang.isGreek(this);
 
@@ -13256,7 +13182,9 @@ if (!lab14Running && !lab14PopupShown) {
     lab14BatteryBehaviourWarning = false;
 
     // ✅ LAST — μετά από όλα
-    startBatteryTemp = getBatteryTempEngineSafe();
+    Float t0 = idoctor.getBatteryTempUnified();
+startBatteryTemp =
+        t0 != null ? t0 : Float.NaN;
 }
 
 // --------------------------------------------------
@@ -13291,14 +13219,11 @@ try {
     lastSelectedStressDurationSec = durationSec;
 
 // ------------------------------------------------------------
-// 1) INITIAL SNAPSHOT (iDoctorEngine)
+// 1) INITIAL SNAPSHOT (LOCKED iDoctorEngine)
 // ------------------------------------------------------------
 
-iDoctorEngine eng =
-        iDoctorEngine.get(this);
-
-iDoctorEngine.FullSnapshot start =
-        eng.readFullSnapshot();
+iDoctorEngine.BatterySnapshot start =
+        idoctor.readBatterySnapshotLab();
 
 if (start == null) {
     logError(gr
@@ -13308,7 +13233,7 @@ if (start == null) {
     return;
 }
 
-if (start.battery.chargeNowMah <= 0) {
+if (start.chargeNowMah <= 0) {
     logError(gr
             ? "Μη διαθέσιμο charge counter"
             : "Charge counter unavailable");
@@ -13324,55 +13249,42 @@ if (isChargingNowSafe()) {
     return;
 }
 
-if (Float.isNaN(start.battery.batteryTempC)) {
+if (Float.isNaN(start.batteryTempC)) {
     logWarn(gr
             ? "Μη διαθέσιμη θερμοκρασία μπαταρίας"
             : "Battery temperature unavailable");
 }
 
-if (start.battery.chargeFullMah <= 0) {
+if (start.chargeFullMah <= 0 && start.chargeDesignMah <= 0) {
     logWarn(gr
             ? "Μη διαθέσιμη πλήρης χωρητικότητα"
             : "Full capacity unavailable");
 }
 
-startMah = start.battery.chargeNowMah;
-cycles = start.battery.cycleCount;
+startMah = start.chargeNowMah;
+cycles = start.cycleCount;
 
-tempStart = getBatteryTempEngineSafe();
+Float tStart0 = idoctor.getBatteryTempUnified();
+tempStart = (tStart0 != null) ? tStart0 : Float.NaN;
 lab14TempPeak = tempStart;
 
 if (Float.isNaN(tempStart) || tempStart <= 0f) {
-    tempStart = start.battery.batteryTempC;
+    tempStart = start.batteryTempC;
 }
 
 // ----------------------------------------------------
 // VOLTAGE BASELINE
 // ----------------------------------------------------
 
-voltageStart = getBatteryVoltageFiltered();
+voltageStart = lab14Voltage();
 
 if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
 
-    if (start.battery != null &&
-        start.battery.voltageMv > 0) {
+    float vStartMv =
+            idoctor.readBatteryVoltageMvStable(5, 20);
 
-        voltageStart = start.battery.voltageMv / 1000f;
-
-    } else {
-
-        iDoctorEngine engV =
-                iDoctorEngine.get(this);
-
-        iDoctorEngine.FullSnapshot snapV =
-                engV.readFullSnapshot();
-
-        if (snapV != null &&
-            snapV.battery != null &&
-            snapV.battery.voltageMv > 0) {
-
-            voltageStart = snapV.battery.voltageMv / 1000f;
-        }
+    if (!Float.isNaN(vStartMv) && vStartMv > 0f) {
+        voltageStart = vStartMv / 1000f;
     }
 }
 
@@ -13381,23 +13293,20 @@ batteryPercent = getBatteryPercentSafe();
 baselineFullMah = -1;
 startMah = -1;
 
-if (start != null && start.battery != null) {
+if (start.chargeFullMah > 0) {
+    baselineFullMah = start.chargeFullMah;
 
-    if (start.battery.chargeFullMah > 0) {
-        baselineFullMah = start.battery.chargeFullMah;
+} else if (start.chargeDesignMah > 0) {
+    baselineFullMah = start.chargeDesignMah;
+}
 
-    } else if (start.battery.chargeDesignMah > 0) {
-        baselineFullMah = start.battery.chargeDesignMah;
-    }
-
-    if (start.battery.chargeNowMah > 0) {
-        startMah = start.battery.chargeNowMah;
-    }
+if (start.chargeNowMah > 0) {
+    startMah = start.chargeNowMah;
 }
 
 t0 = SystemClock.elapsedRealtime();
 
-boolean rooted = eng.isDeviceRooted();
+boolean rooted = idoctor.isDeviceRooted();
 Float cpuTempStart = readCpuTempSafe();
 Float gpuTempStart = readGpuTempSafe();
 
@@ -13472,7 +13381,7 @@ Float gpuTempStart = readGpuTempSafe();
 
             logLabelOkValue(
         gr ? "Πηγή δεδομένων" : "Data source",
-        start.battery.source
+        start.source
 );
 
             if (baselineFullMah > 0) {
@@ -14256,9 +14165,10 @@ private boolean isChargingNowSafe() {
 
     try {
 
-        iDoctorEngine eng = iDoctorEngine.get(this);
+        iDoctorEngine idoctor =
+        iDoctorEngine.get(ManualTestsActivity.this);
 
-        return eng.isChargingNowUnified();
+return idoctor.isChargingNowUnified();
 
     } catch (Throwable ignore) {}
 
@@ -14307,9 +14217,9 @@ private boolean isCharging() {
 
     try {
 
-        iDoctorEngine eng = iDoctorEngine.get(this);
+        iDoctorEngine idoctor = iDoctorEngine.get(this);
 
-        return eng.isChargingNowUnified();
+        return idoctor.isChargingNowUnified();
 
     } catch (Throwable ignore) {}
 
@@ -14339,7 +14249,135 @@ private boolean isCharging() {
     }
 }
 
+private boolean lab14DetectLimiter(
+        float vStart,
+        float vLoad,
+        long startMah,
+        long endMah,
+        float tempStart,
+        float tempEnd,
+        float currentNow,
+        long dtMs
+) {
+
+    if (dtMs < 15000) {
+        return false;
+    }
+
+    float sag = Float.NaN;
+    long drain = -1;
+    float tempRise = Float.NaN;
+    float current = Float.NaN;
+
+    if (!Float.isNaN(vStart) &&
+        !Float.isNaN(vLoad)) {
+
+        sag = vStart - vLoad;
+    }
+
+    if (startMah > 0 &&
+        endMah > 0) {
+
+        drain = startMah - endMah;
+    }
+
+    if (!Float.isNaN(tempStart) &&
+        !Float.isNaN(tempEnd)) {
+
+        tempRise = tempEnd - tempStart;
+    }
+
+    if (!Float.isNaN(currentNow)) {
+
+        current = Math.abs(currentNow);
+    }
+
+    boolean lowSag =
+            !Float.isNaN(sag) &&
+            sag >= 0f &&
+            sag < 0.012f;
+
+    boolean lowDrain =
+            drain >= 0 &&
+            drain < 2;
+
+    boolean lowTemp =
+            !Float.isNaN(tempRise) &&
+            tempRise >= 0f &&
+            tempRise < 0.7f;
+
+    boolean lowCurrent =
+            !Float.isNaN(current) &&
+            current < 120f;
+
+    // ------------------------
+    // HARD LIMIT
+    // ------------------------
+
+    if (lowSag &&
+        lowDrain &&
+        lowCurrent) {
+
+        return true;
+    }
+
+    // ------------------------
+    // SAG + CURRENT
+    // ------------------------
+
+    if (lowSag &&
+        lowCurrent) {
+
+        return true;
+    }
+
+    // ------------------------
+    // SAG + DRAIN
+    // ------------------------
+
+    if (lowSag &&
+        lowDrain) {
+
+        return true;
+    }
+
+    // ------------------------
+    // CURRENT + DRAIN
+    // ------------------------
+
+    if (lowCurrent &&
+        lowDrain) {
+
+        return true;
+    }
+
+    // ------------------------
+    // THERMAL LIMIT
+    // ------------------------
+
+    if (lowCurrent &&
+        lowTemp &&
+        dtMs > 20000) {
+
+        return true;
+    }
+
+    // ------------------------
+    // fallback flags
+    // ------------------------
+
+    int flags = 0;
+
+    if (lowSag) flags++;
+    if (lowDrain) flags++;
+    if (lowTemp) flags++;
+    if (lowCurrent) flags++;
+
+    return flags >= 3;
+}
+
 private void lab14PostLoadAnalysis(
+
         Lab14Engine engine,
         boolean gr,
         long startMah,
@@ -14351,10 +14389,13 @@ private void lab14PostLoadAnalysis(
         float tempStart
 ) {
 
+final iDoctorEngine idoctor =
+        iDoctorEngine.get(ManualTestsActivity.this);
+
     try {
 
 // ----------------------------------------------------
-// 7) POST-LOAD ANALYSIS
+// 7) POSTLOAD ANALYSIS
 // ----------------------------------------------------
 
 // ----------------------------------------------------
@@ -14400,12 +14441,12 @@ if (!Float.isNaN(vStart[0]) &&
 }
     
 // ----------------------------------------------------
-// FINAL SNAPSHOT
+// FINAL SNAPSHOT (LOCKED ENGINE)
 // ----------------------------------------------------
 
-Lab14Engine.GelBatterySnapshot snapEnd =
-        lab14Engine.readSnapshot();
-        
+iDoctorEngine.BatterySnapshot snapEnd =
+        idoctor.readBatterySnapshotLab();
+
 if (snapEnd == null) {
 
     logError(gr
@@ -14424,7 +14465,12 @@ if (snapEnd == null) {
 }
 
 final long endMah = snapEnd.chargeNowMah;
-float tempEnd = getBatteryTempEngineSafe();
+
+Float tObj =
+        idoctor.getBatteryTempUnified();
+
+float tempEnd =
+        tObj != null ? tObj : Float.NaN;
 
 if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
     tempEnd = snapEnd.temperature;
@@ -14447,7 +14493,6 @@ if (!Float.isNaN(tempStart) &&
 final Float cpuTempEnd = readCpuTempSafe();
 final Float gpuTempEnd = readGpuTempSafe();
 
-
 final long dtMs =
         Math.max(
                 1,
@@ -14456,7 +14501,7 @@ final long dtMs =
 
 
 // ====================================================
-// DRAIN MODES
+// DRAIN
 // ====================================================
 
 boolean hasStartCounter =
@@ -14468,71 +14513,27 @@ boolean hasEndCounter =
 boolean hasFullCap =
         snapEnd.chargeFullMah > 0;
 
-
 long drainMah = 0;
 
 DrainMode drainMode =
         DrainMode.FALLBACK;
 
-
-// ----------------------------------------------------
-// COUNTER MODE
-// ----------------------------------------------------
-
 if (hasStartCounter && hasEndCounter) {
 
-    drainMah =
-            Math.max(
-                    0,
-                    startMah - snapEnd.chargeNowMah
-            );
+    long d =
+            startMah - snapEnd.chargeNowMah;
+
+    if (d < 0) d = 0;
+
+    // reject unrealistic drain
+    if (d > 2000) {
+        d = 0;
+    }
+
+    drainMah = d;
 
     drainMode = DrainMode.COUNTER;
 }
-
-
-// ----------------------------------------------------
-// FULLCAP MODE
-// ----------------------------------------------------
-
-else if (hasFullCap) {
-
-    float percentDiff = 0f;
-
-    if (percentDiff > 0f) {
-
-        drainMah =
-                Math.round(
-                        (percentDiff / 100f)
-                        * snapEnd.chargeFullMah
-                );
-
-        drainMode = DrainMode.FULLCAP;
-    }
-}
-
-// ----------------------------------------------------
-// BATTERY MANAGER / FUEL GAUGE MODE
-// ----------------------------------------------------
-
-else if (snapEnd.source != null &&
-        !snapEnd.source.isEmpty()) {
-
-    drainMah =
-            estimateDrainFallback(
-                    snapEnd.level,
-                    snapEnd.voltage,
-                    dtMs
-            );
-
-    drainMode = DrainMode.BATTERY_MANAGER;
-}
-
-
-// ----------------------------------------------------
-// FALLBACK MODE
-// ----------------------------------------------------
-
 else {
 
     drainMah =
@@ -14545,165 +14546,63 @@ else {
     drainMode = DrainMode.FALLBACK;
 }
 
+// ----------------------------
+// limiter correction
+// ----------------------------
 
-// ====================================================
-// MODE LOG
-// ====================================================
+if (lab14_systemLimited[0]) {
 
-switch (drainMode) {
-
-    case COUNTER:
-
-        logOk(gr
-                ? "Mode: Counter"
-                : "Mode: Counter");
-        break;
-
-
-    case FULLCAP:
-
-        logWarn(gr
-                ? "Mode: FullCap"
-                : "Mode: FullCap");
-        break;
-
-
-    case BATTERY_MANAGER:
-
-        logWarn(gr
-                ? "Mode: BatteryManager"
-                : "Mode: BatteryManager");
-        break;
-
-
-    case FALLBACK:
-
-        logWarn(gr
-                ? "Mode: Fallback"
-                : "Mode: Fallback");
-        break;
+    if (drainMah < 3) {
+        drainMah = 0;
+    }
 }
 
-                        // ----------------------------------------------------
-                        // FUEL GAUGE CHECK
-                        // ----------------------------------------------------
-                        long testSec = dtMs / 1000;
+// ----------------------------
+// time normalization guard
+// ----------------------------
 
-                        boolean lowDrain =
-                                drainMah < 10 &&
-                                testSec > 20;
+if (dtMs < 10000) {
 
-                        if (lowDrain) {
-                            variabilityDetected[0] = true;
-                        }
-
-                        // ----------------------------------------------------
-                        // CAPACITY VALIDATION
-                        // ----------------------------------------------------
-                        final boolean unrealisticCapacity;
-                        if (baselineFullMah > 0 && drainMah > 0) {
-
-                            float drainRatio =
-                                    (float) drainMah / (float) baselineFullMah;
-
-                            float testSecF = dtMs / 1000f;
-
-                            unrealisticCapacity =
-                                    testSecF > 20f &&
-                                    drainRatio > 0.15f;
-                        } else {
-                            unrealisticCapacity = false;
-                        }
-
-                        // ----------------------------------------------------
-                        // VALIDATION
-                        // ----------------------------------------------------
-                        boolean counterValid =
-                                drainMah > 0 &&
-                                (baselineFullMah <= 0 ||
-                                 drainMah <= (long) (baselineFullMah * 0.30));
-
-                        boolean electricalValid = false;
-
-                        if (!Float.isNaN(voltageStart) &&
-                            !Float.isNaN(voltageUnderLoad[0]) &&
-                            voltageUnderLoad[0] > 0) {
-
-                            float sagCheck = voltageStart - voltageUnderLoad[0];
-
-                            if (sagCheck > 0.005f && sagCheck < 0.50f) {
-                                electricalValid = true;
-                            }
-                        }
-
-                                final boolean validDrain =
-    dtMs > 0 &&
-    (
-        drainMah > 0 ||
-        electricalValid ||
-        !Float.isNaN(voltageRecovery[0])
-    );
-
-                        final double mahPerHour =
-                                (validDrain && dtMs > 0 && drainMah > 0)
-                                        ? (drainMah * 3600000.0) / dtMs
-                                        : -1;
-
-                        double drainPercentPerHour = -1;
-
-                        if (validDrain &&
-                            baselineFullMah > 0 &&
-                            mahPerHour > 0) {
-
-                            drainPercentPerHour =
-                                    (mahPerHour / (double) baselineFullMah) * 100.0;
-                        }
-
-// ----------------------------------------------------
-// CALIBRATION DRIFT
-// ----------------------------------------------------
-if (validDrain &&
-    baselineFullMah > 0 &&
-    startMah > 0 &&
-    batteryPercent >= 0 &&
-    batteryPercent <= 100) {
-
-    expectedPercent[0] =
-            (float) startMah / (float) baselineFullMah * 100f;
-
-    percentDeviation[0] =
-            Math.abs(expectedPercent[0] - batteryPercent);
-
-    if (percentDeviation[0] > 18f) {
-        calibrationDrift[0] = true;
-    }
-
-
-    // ----------------------------------------------------
-    // COULOMB DRIFT TEST
-    // ----------------------------------------------------
-
-    if (drainMah > 0 && baselineFullMah > 0) {
-
-        float expectedDrainPercent =
-                (float) drainMah / (float) baselineFullMah * 100f;
-
-        coulombExpected[0] =
-                expectedDrainPercent;
-
-        coulombDrift[0] =
-                Math.abs(
-                        expectedDrainPercent -
-                        percentDeviation[0]
-                );
-
-    }
-
+    drainMah = 0;
 }
 
-// ----------------------------------------------------
-// VOLTAGE RECOVERY (STABLE)
-// ----------------------------------------------------
+// ----------------------------
+// safety clamp
+// ----------------------------
+
+if (drainMah < 0) drainMah = 0;
+if (drainMah > 5000) drainMah = 0;
+
+// ----------------------------
+// drain validity
+// ----------------------------
+
+boolean validDrain = drainMah > 0 && dtMs > 0;
+
+// ----------------------------
+// drain rate mAh/h
+// ----------------------------
+
+double mahPerHour = 0;
+
+if (drainMah > 0 && dtMs > 0) {
+    mahPerHour = (drainMah * 3600000.0) / dtMs;
+}
+
+// ----------------------------
+// normalized drain %/h
+// ----------------------------
+
+double drainPercentPerHour = 0;
+
+if (baselineFullMah > 0 && mahPerHour > 0) {
+    drainPercentPerHour =
+            (mahPerHour / baselineFullMah) * 100.0;
+}
+
+// ====================================================
+// VOLTAGE RECOVERY
+// ====================================================
 
 if (!Float.isNaN(voltageUnderLoad[0])) {
 
@@ -14711,26 +14610,12 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
 
     if (!lab14Cancelled) {
 
-        float vr = getBatteryVoltageFiltered();        
+        float vrMv =
+                idoctor.readBatteryVoltageMvStable(5, 20);
 
-        if (Float.isNaN(vr) || vr <= 0f) {
+        if (!Float.isNaN(vrMv) && vrMv > 0f) {
 
-            iDoctorEngine engV =
-                    iDoctorEngine.get(ManualTestsActivity.this);
-
-            iDoctorEngine.FullSnapshot snapV =
-                    engV.readFullSnapshot();
-                                        
-            if (snapV != null &&
-                snapV.battery != null &&
-                snapV.battery.voltageMv > 0) {
-
-                vr = snapV.battery.voltageMv / 1000f;
-            }
-        }
-
-        if (!Float.isNaN(vr) &&
-            !Float.isNaN(voltageUnderLoad[0])) {
+            float vr = vrMv / 1000f;
 
             float rec = vr - voltageUnderLoad[0];
 
@@ -14741,73 +14626,10 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
     }
 }
 
-// ----------------------------------------------------
-// RELAXATION CURVE TEST (STABLE)
-// ----------------------------------------------------
 
-if (!Float.isNaN(voltageRecovery[0])) {
-
-    SystemClock.sleep(1200);
-    relaxV1[0] = getBatteryVoltageFiltered();
-
-    SystemClock.sleep(1200);
-    relaxV2[0] = getBatteryVoltageFiltered();
-
-    SystemClock.sleep(1200);
-    relaxV3[0] = getBatteryVoltageFiltered();
-
-    if (!Float.isNaN(relaxV1[0]) &&
-        !Float.isNaN(relaxV3[0]) &&
-        !Float.isNaN(voltageUnderLoad[0])) {
-
-        float rise =
-                relaxV3[0] - voltageUnderLoad[0];
-
-        float span =
-                Math.abs(voltageUnderLoad[0]);
-
-        if (span > 0f &&
-            Math.abs(rise) > 0.002f) {
-
-            relaxScore[0] =
-                    (rise / span) * 100f;
-        }
-    }
-}
-
-// ----------------------------------------------------
-// RECOVERY SPEED (real time)
-// ----------------------------------------------------
-voltageRecoverySpeed[0] = Float.NaN;
-
-if (!Float.isNaN(vLoad1[0]) &&
-    !Float.isNaN(vRecover[0]) &&
-    lab14RecoveryTimeMs > 0) {
-
-    float recoveryDelta =
-            vRecover[0] - vLoad1[0];
-
-    float restSec =
-            lab14RecoveryTimeMs / 1000f;
-
-    if (recoveryDelta < 0f) {
-        recoveryDelta = 0f;
-    }
-
-    if (restSec > 0f && recoveryDelta > 0.0005f) {
-
-        float speed =
-                recoveryDelta / restSec;
-
-        if (speed > 0f && speed < 1f) {
-            voltageRecoverySpeed[0] = speed;
-        }
-    }
-}
-
-// ----------------------------------------------------
+// ====================================================
 // ELECTRICAL ANALYSIS
-// ----------------------------------------------------
+// ====================================================
 
 float estimatedESR = Float.NaN;
 float currentNow = Float.NaN;
@@ -14815,40 +14637,32 @@ float currentNow = Float.NaN;
 
 // ---------- FIX voltageUnderLoad ----------
 
-if (Float.isNaN(voltageUnderLoad[0]) || voltageUnderLoad[0] <= 0f) {
+if (Float.isNaN(voltageUnderLoad[0]) ||
+    voltageUnderLoad[0] <= 0f) {
 
-    iDoctorEngine engV =
-            iDoctorEngine.get(ManualTestsActivity.this);
+    float vLoadMv =
+            idoctor.readBatteryVoltageMvStable(5, 20);
 
-    iDoctorEngine.FullSnapshot snapV =
-            engV.readFullSnapshot();
-
-    if (snapV != null &&
-        snapV.battery != null &&
-        snapV.battery.voltageMv > 0) {
+    if (!Float.isNaN(vLoadMv) && vLoadMv > 0f) {
 
         voltageUnderLoad[0] =
-                snapV.battery.voltageMv / 1000f;
+                vLoadMv / 1000f;
     }
 }
 
 
 // ---------- FIX voltageStart ----------
 
-if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
+if (Float.isNaN(voltageStart) ||
+    voltageStart <= 0f) {
 
-    iDoctorEngine engV =
-            iDoctorEngine.get(ManualTestsActivity.this);
+    float vStartMv =
+            idoctor.readBatteryVoltageMvStable(5, 20);
 
-    iDoctorEngine.FullSnapshot snapV =
-            engV.readFullSnapshot();
-
-    if (snapV != null &&
-        snapV.battery != null &&
-        snapV.battery.voltageMv > 0) {
+    if (!Float.isNaN(vStartMv) && vStartMv > 0f) {
 
         voltageStart =
-                snapV.battery.voltageMv / 1000f;
+                vStartMv / 1000f;
     }
 }
 
@@ -14860,47 +14674,26 @@ float sag = Float.NaN;
 if (!Float.isNaN(voltageStart) &&
     !Float.isNaN(voltageUnderLoad[0])) {
 
-    sag = voltageStart - voltageUnderLoad[0];
-
-
-    // ---------- current fallback ----------
-
-    currentNow = getBatteryCurrentNowSafe();
-
-    if (Float.isNaN(currentNow) ||
-        Math.abs(currentNow) < 50f) {
-
-        iDoctorEngine engC =
-                iDoctorEngine.get(ManualTestsActivity.this);
-
-        iDoctorEngine.FullSnapshot snapC =
-                engC.readFullSnapshot();
-
-        if (snapC != null &&
-    snapC.battery != null &&
-    !Float.isNaN(snapC.battery.currentMa) &&
-    snapC.battery.currentMa != 0f) {
-
-    currentNow = snapC.battery.currentMa;
-}
-    }
-
-
-    // ---------- drain fallback ----------
-
-    if ((Float.isNaN(currentNow) || Math.abs(currentNow) < 50f) &&
-    drainMah > 0 && dtMs > 0) {
-
-    float mahPerSec =
-            (float) drainMah / (dtMs / 1000f);
+    sag =
+            voltageStart - voltageUnderLoad[0];
 
     currentNow =
-            mahPerSec * 3600f;
-}
+            idoctor.readBatteryCurrentMaStable(5, 20);
 
-    // ---------------------------------------------
-    // LIMITER DETECTION (SAFE VERSION)
-    // ---------------------------------------------
+
+    if ((Float.isNaN(currentNow) ||
+         Math.abs(currentNow) < 50f) &&
+        drainMah > 0 &&
+        dtMs > 0) {
+
+        float mahPerSec =
+                (float) drainMah /
+                (dtMs / 1000f);
+
+        currentNow =
+                mahPerSec * 3600f;
+    }
+
 
     if (!Float.isNaN(sag) &&
         !Float.isNaN(currentNow)) {
@@ -14908,95 +14701,99 @@ if (!Float.isNaN(voltageStart) &&
         float sagCheck = sag;
 
         if (!Float.isNaN(sagAvg[0])) {
-            sagCheck = (sag + sagAvg[0]) / 2f;
+            sagCheck =
+                    (sag + sagAvg[0]) / 2f;
         }
 
-        float currentAbs = Math.abs(currentNow);
+        float currentAbs =
+                Math.abs(currentNow);
 
-        if (!Float.isNaN(sagCheck) &&
-    !Float.isNaN(currentAbs)) {
+        boolean lowSag =
+                sagCheck < 0.010f;
 
-    boolean lowSag =
-            sagCheck < 0.010f;
+        boolean lowCurrent =
+                currentAbs < 80f;
 
-    boolean lowCurrent =
-            currentAbs < 80f;
+        boolean noDrain =
+                drainMah < 1f;
 
-    boolean noDrain =
-            drainMah < 1f;
+        if (lowSag &&
+    lowCurrent &&
+    noDrain) {
 
-    if (lowSag && lowCurrent && noDrain) {
-
-        lab14_systemLimited[0] = true;
-
-    }
+    lab14_systemLimited[0] =
+            lab14DetectLimiter(
+                    voltageStart,
+                    voltageUnderLoad[0],
+                    startMah,
+                    endMah,
+                    tempStart,
+                    tempEnd,
+                    currentNow,
+                    dtMs
+            );
 }
     }
 
-    // ---------------------------------------------
-    // SAG FILTER
-    // ---------------------------------------------
 
     float sagFiltered = sag;
 
-if (!Float.isNaN(sagAvg[0])) {
-    sagFiltered = (sag + sagAvg[0]) / 2f;
-}
+    if (!Float.isNaN(sagAvg[0])) {
+        sagFiltered =
+                (sag + sagAvg[0]) / 2f;
+    }
 
-// reject fake sag
-if (!Float.isNaN(sagFiltered) &&
-    sagFiltered < 0.005f) {
+    if (!Float.isNaN(sagFiltered) &&
+        sagFiltered < 0.005f) {
 
-    sagFiltered = Float.NaN;
-}
+        sagFiltered = Float.NaN;
+    }
 
-// ---------------------------------------------
-// ESR ESTIMATION (SAFE / CLEAN)
-// ---------------------------------------------
 
-if (!Float.isNaN(currentNow) &&
+    if (!lab14_systemLimited[0] &&
+    !Float.isNaN(currentNow) &&
     !Float.isNaN(sagFiltered)) {
 
     float currentAmp =
             Math.abs(currentNow) / 1000f;
 
-    if (sagFiltered <= 0.005f)
-        sagFiltered = Float.NaN;
+    float sagCheck = sagFiltered;
 
-    if (!Float.isNaN(sagFiltered) &&
-        sagFiltered > 0.6f)
-        sagFiltered = Float.NaN;
+    // reject fake sag
+    if (sagCheck < 0.005f)
+        sagCheck = Float.NaN;
 
-    if (!Float.isNaN(sagFiltered) &&
-        currentAmp > 0.05f &&
-        currentAmp < 8f &&
-        !lab14_systemLimited[0]) {
+    if (!Float.isNaN(sagCheck) &&
+        currentAmp > 0.10f &&
+        currentAmp < 6f) {
+        
+        float sagUse = sagCheck;
+
+if (!Float.isNaN(sagAvg[0]) &&
+    sagAvg[0] > 0.005f) {
+
+    sagUse =
+            (sagCheck + sagAvg[0]) / 2f;
+}
 
         float esr =
-                sagFiltered / currentAmp;
+                sagCheck / currentAmp;
 
-        if (esr <= 0f)
-            esr = Float.NaN;
-
-        if (!Float.isNaN(esr) &&
-            esr > 0.35f)
-            esr = Float.NaN;
-
-        if (!Float.isNaN(esr)) {
+        // realistic phone battery range
+        if (esr > 0.01f &&
+            esr < 0.40f) {
 
             estimatedESR = esr;
             internalResistance[0] = esr;
 
-            iDoctorEngine engIR =
-                    iDoctorEngine.get(ManualTestsActivity.this);
-
             long irMilli =
-                    (long)(esr * 1000f);
+                    (long) (esr * 1000f);
 
-            engIR.setInternalResistanceMilliOhm(irMilli);
+            idoctor.setInternalResistanceMilliOhm(
+                    irMilli
+            );
         }
     }
-}
 }
 
 // ----------------------------------------------------
@@ -15032,15 +14829,12 @@ if (validDrain &&
 
 float currentStability = Float.NaN;
 
-float c1 = getBatteryCurrentNowSafe();
+float c1 = lab14Current();
 
 if (Float.isNaN(c1) || Math.abs(c1) < 50f) {
 
-    iDoctorEngine eng =
-            iDoctorEngine.get(ManualTestsActivity.this);
-
     iDoctorEngine.FullSnapshot snap =
-            eng.readFullSnapshot();
+            lab14Snapshot();
 
     if (snap != null &&
         snap.battery != null &&
@@ -15052,15 +14846,12 @@ if (Float.isNaN(c1) || Math.abs(c1) < 50f) {
 
 SystemClock.sleep(400);
 
-float c2 = getBatteryCurrentNowSafe();
+float c2 = lab14Current();
 
 if (Float.isNaN(c2) || Math.abs(c2) < 50f) {
 
-    iDoctorEngine eng =
-            iDoctorEngine.get(ManualTestsActivity.this);
-
     iDoctorEngine.FullSnapshot snap =
-            eng.readFullSnapshot();
+            lab14Snapshot();
 
     if (snap != null &&
         snap.battery != null &&
@@ -15072,15 +14863,12 @@ if (Float.isNaN(c2) || Math.abs(c2) < 50f) {
 
 SystemClock.sleep(400);
 
-float c3 = getBatteryCurrentNowSafe();
+float c3 = lab14Current();
 
 if (Float.isNaN(c3) || Math.abs(c3) < 50f) {
 
-    iDoctorEngine eng =
-            iDoctorEngine.get(ManualTestsActivity.this);
-
     iDoctorEngine.FullSnapshot snap =
-            eng.readFullSnapshot();
+            lab14Snapshot();
 
     if (snap != null &&
         snap.battery != null &&
@@ -15121,26 +14909,31 @@ if (!Float.isNaN(c1) &&
 // THERMAL IMPEDANCE
 // ----------------------------------------------------
 
-if (!Float.isNaN(tempStart) &&
+if (!lab14_systemLimited[0] &&
+    !Float.isNaN(tempStart) &&
     !Float.isNaN(tempPeak) &&
     !Float.isNaN(currentNow)) {
 
     float currentAmp =
             Math.abs(currentNow) / 1000f;
 
-    if (currentAmp > 0.2f &&
-        currentAmp < 6f) {
+    float tempRise =
+            Math.max(0f, tempPeak - tempStart);
 
-        float tempRise =
-        Math.max(0f, tempPeak - tempStart);
+    // reject fake values
+    if (currentAmp > 0.3f &&
+        currentAmp < 6f &&
+        tempRise > 0.3f &&
+        tempRise < 40f) {
 
-        if (tempRise > 0.2f) {
+        float ti =
+                tempRise / currentAmp;
 
-            float ti = tempRise / currentAmp;
+        // realistic phone range
+        if (ti > 0.1f &&
+            ti < 35f) {
 
-            if (ti > 0f && ti < 40f) {
-                thermalImpedance[0] = ti;
-            }
+            thermalImpedance[0] = ti;
         }
     }
 }
@@ -15219,10 +15012,14 @@ if (validDrain &&
 // thermal impedance
 
 if (!Float.isNaN(thermalImpedance[0]) &&
-    thermalImpedance[0] > 0.15f) {
+    validDrain &&
+    !lab14_systemLimited[0]) {
 
-    swellingScore++;
+    if (thermalImpedance[0] > 0.25f)
+        swellingScore++;
 
+    if (thermalImpedance[0] > 0.40f)
+        swellingScore++;
 }
 
 // ----------------------------------------------------
@@ -15334,17 +15131,27 @@ if (!Float.isNaN(coulombDrift[0]) &&
 
 // sag diff (STABLE)
 
-if (!Float.isNaN(sag1[0]) &&
-    !Float.isNaN(sag2[0])) {
+float sagDiff = Float.NaN;
 
-    float sagDiff =
+if (!Float.isNaN(sag1[0]) &&
+    !Float.isNaN(sag2[0]) &&
+    !lab14_systemLimited[0]) {
+
+    sagDiff =
             Math.abs(sag1[0] - sag2[0]);
 
-    if (sagDiff > 0.05f) {
+    if (sagDiff > 0.10f) {
+
+        cellImbalanceRisk[0] = true;
+        swellingScore++;
+        collapseRisk[0] = true;
+
+    } else if (sagDiff > 0.06f) {
 
         cellImbalanceRisk[0] = true;
         swellingScore++;
     }
+}
 
     // reject fake identical sag
     if (sagDiff < 0.002f) {
@@ -15356,14 +15163,20 @@ if (!Float.isNaN(sag1[0]) &&
         float norm =
                 Math.min(1f, sagDiff / 0.25f);
 
-        powerStabilityFactor[0] =
-                Math.max(
-                        0f,
-                        Math.min(
-                                100f,
-                                (1f - norm) * 100f
-                        )
-                );
+        float base =
+        (1f - norm) * 100f;
+
+if (!Float.isNaN(sagAvg[0]) &&
+    sagAvg[0] > 0.20f) {
+
+    base -= 10f;
+}
+
+powerStabilityFactor[0] =
+        Math.max(
+                0f,
+                Math.min(100f, base)
+        );
     }
 }
 
@@ -15578,14 +15391,14 @@ if (swellingScore >= 2 &&
 
 if (validDrain && !lab14_systemLimited[0]) {
 
-    engine.saveDrainValue(mahPerHour);
+    idoctor.saveDrainValue(mahPerHour);
 
-    engine.saveRun();
+    idoctor.saveRun();
 
 }
 
 Lab14Engine.ConfidenceResult newConf =
-        engine.computeConfidence();
+        idoctor.computeConfidence();
 
 if (newConf != null) {
     lab14Conf = newConf;
@@ -15610,21 +15423,47 @@ if (lab14Conf != null && lab14Conf.percent < 50) {
 
 Lab14Engine.AgingResult aging = null;
 
-if (validDrain &&
-    !lab14_systemLimited[0] &&
-    lab14Conf != null &&
-    mahPerHour > 0 &&
-    !Float.isNaN(tempStart) &&
-    !Float.isNaN(tempPeak)) {
+boolean agingInputOk =
+        validDrain &&
+        !lab14_systemLimited[0] &&
+        lab14Conf != null &&
+        mahPerHour > 0 &&
+        !Float.isNaN(tempStart) &&
+        !Float.isNaN(tempPeak);
 
-    aging =
-            engine.computeAging(
-                    mahPerHour,
-                    lab14Conf,
-                    cycles,
-                    tempStart,
-                    tempPeak
-            );
+if (agingInputOk) {
+
+    float tempRise =
+            Math.max(0f, tempPeak - tempStart);
+
+    boolean tempOk =
+            tempPeak < 58f &&
+            tempRise < 18f;
+
+    boolean drainOk =
+            mahPerHour >= 20 &&
+            mahPerHour < 6000;
+
+    boolean cycleOk =
+            cycles <= 0 || cycles < 3000;
+
+    boolean confOk =
+            lab14Conf.percent >= 45;
+
+    if (tempOk &&
+        drainOk &&
+        cycleOk &&
+        confOk) {
+
+        aging =
+                idoctor.computeAging(
+                        mahPerHour,
+                        lab14Conf,
+                        cycles,
+                        tempStart,
+                        tempPeak
+                );
+    }
 }
 
 if (aging != null) {
@@ -15637,7 +15476,9 @@ if (aging != null) {
 if (aging != null &&
     lab14AgingIndex >= 0 &&
     lab14Conf != null &&
-    lab14Conf.percent >= 60) {
+    lab14Conf.percent >= 45 &&
+    validDrain &&
+    !lab14_systemLimited[0]) {
 
     if (lab14AgingIndex < 20)
         lab14AgingInterp = "Excellent";
@@ -15650,11 +15491,26 @@ if (aging != null &&
     else
         lab14AgingInterp = "Severe";
 
+} else if (lab14_systemLimited[0]) {
+
+    lab14AgingIndex = -1;
+    lab14AgingInterp = "System limited";
+
+} else if (!validDrain) {
+
+    lab14AgingIndex = -1;
+    lab14AgingInterp = "Invalid drain";
+
+} else if (lab14Conf != null &&
+           lab14Conf.percent < 45) {
+
+    lab14AgingIndex = -1;
+    lab14AgingInterp = "Low confidence";
+
 } else {
 
     lab14AgingIndex = -1;
     lab14AgingInterp = "Insufficient data";
-
 }
 
 // ----------------------------------------------------
@@ -15665,16 +15521,13 @@ if (Float.isNaN(pulseSag[0]) ||
     Float.isNaN(pulseScore[0]) ||
     Float.isNaN(relaxScore[0])) {
 
-    iDoctorEngine eng =
-            iDoctorEngine.get(ManualTestsActivity.this);
-
     iDoctorEngine.FullSnapshot snap1 =
-            eng.readFullSnapshot();
+            lab14Snapshot();
 
     SystemClock.sleep(600);
 
     iDoctorEngine.FullSnapshot snap2 =
-            eng.readFullSnapshot();
+            lab14Snapshot();
 
     if (snap1 != null &&
         snap2 != null &&
@@ -15841,6 +15694,15 @@ if (validDrain && !Float.isNaN(tempPeak)) {
         finalScore -= 6;
 }
 
+if (!Float.isNaN(thermalImpedance[0]) &&
+    validDrain &&
+    !lab14_systemLimited[0]) {
+
+    if (thermalImpedance[0] > 0.40f)
+        finalScore -= 8;
+    else if (thermalImpedance[0] > 0.25f)
+        finalScore -= 4;
+}
 
 // ----------------------------------------------------
 // TEMPERATURE RISE
@@ -16039,31 +15901,91 @@ else
 
 float measurementConfidence = 100f;
 
-if (!lab14_systemLimited[0]) {
+// ----------------------------
+// limiter penalty
+// ----------------------------
 
-    if (Float.isNaN(vStart[0]) ||
-        Float.isNaN(vLoad1[0]) ||
-        Float.isNaN(vRecover[0])) {
-        measurementConfidence -= 20f;
-    }
-
-    if (Float.isNaN(sagAvg[0]))
-        measurementConfidence -= 15f;
-
-    if (Float.isNaN(internalResistance[0]))
-        measurementConfidence -= 15f;
-
-    if (Float.isNaN(voltageRecovery[0]))
-        measurementConfidence -= 10f;
-
-    if (Float.isNaN(tempStart) ||
-        Float.isNaN(tempPeak))
-        measurementConfidence -= 10f;
-
-    if (Float.isNaN(voltageRecoverySpeed[0]))
-        measurementConfidence -= 5f;
-
+if (lab14_systemLimited[0]) {
+    measurementConfidence -= 35f;
 }
+
+// ----------------------------
+// missing voltage data
+// ----------------------------
+
+if (Float.isNaN(vStart[0]) ||
+    Float.isNaN(vLoad1[0]) ||
+    Float.isNaN(vRecover[0]) ||
+    Float.isNaN(vLoad2[0])) {
+
+    measurementConfidence -= 20f;
+}
+
+// ----------------------------
+// sag
+// ----------------------------
+
+if (Float.isNaN(sagAvg[0]) ||
+    sagAvg[0] < 0.005f) {
+
+    measurementConfidence -= 15f;
+}
+
+// ----------------------------
+// ESR
+// ----------------------------
+
+if (Float.isNaN(internalResistance[0])) {
+    measurementConfidence -= 15f;
+}
+
+// ----------------------------
+// recovery
+// ----------------------------
+
+if (Float.isNaN(voltageRecovery[0])) {
+    measurementConfidence -= 10f;
+}
+
+// ----------------------------
+// temperature
+// ----------------------------
+
+if (Float.isNaN(tempStart) ||
+    Float.isNaN(tempPeak)) {
+
+    measurementConfidence -= 10f;
+}
+
+// ----------------------------
+// current stability
+// ----------------------------
+
+if (Float.isNaN(currentStability) ||
+    currentStability < 40f) {
+
+    measurementConfidence -= 10f;
+}
+
+// ----------------------------
+// drain validity
+// ----------------------------
+
+if (!validDrain) {
+    measurementConfidence -= 20f;
+}
+
+// ----------------------------
+// time check
+// ----------------------------
+
+if (dtMs < 15000) {
+    measurementConfidence -= 20f;
+}
+
+// ----------------------------
+// clamp
+// ----------------------------
 
 if (measurementConfidence < 0f)
     measurementConfidence = 0f;
@@ -16093,6 +16015,8 @@ final float tempPeakF = tempPeak;   // ✅ ADD THIS
 final long dtMsF = dtMs;
 final long drainMahF = drainMah;
 
+boolean lowDrain = drainMah < 2;
+
 final boolean validDrainF = validDrain;
 
 final double mahPerHourF = mahPerHour;
@@ -16113,6 +16037,15 @@ final String healthClassF = healthClass;
 
 final float voltageStartFinal = voltageStart;
 final long startMahFinal = startMah;
+
+boolean unrealisticCapacity = false;
+
+if (baselineFullMah > 0 && drainMah > 0) {
+
+    if (drainMah > baselineFullMah * 0.5f) {
+        unrealisticCapacity = true;
+    }
+}
                         
                         runOnUiThread(() -> {
 
@@ -16614,33 +16547,21 @@ private long estimateDrainFallback(
 
 private float readStableBatteryVoltage() {
 
+    iDoctorEngine idoctor =
+            iDoctorEngine.get(ManualTestsActivity.this);
+
     float sum = 0f;
     int ok = 0;
 
     for (int i = 0; i < 3; i++) {
 
-        float v = getBatteryVoltageFiltered();
+        float vMv =
+                idoctor.readBatteryVoltageMvStable(2, 10);
 
-        if (Float.isNaN(v) || v <= 0f) {
+        if (!Float.isNaN(vMv) && vMv > 0f) {
 
-            try {
-                iDoctorEngine eng =
-                        iDoctorEngine.get(ManualTestsActivity.this);
+            float v = vMv / 1000f;
 
-                iDoctorEngine.FullSnapshot snap =
-                        eng.readFullSnapshot();
-
-                if (snap != null &&
-                    snap.battery != null &&
-                    snap.battery.voltageMv > 0) {
-
-                    v = snap.battery.voltageMv / 1000f;
-                }
-
-            } catch (Throwable ignore) {}
-        }
-
-        if (!Float.isNaN(v) && v > 0f) {
             sum += v;
             ok++;
         }
@@ -16759,11 +16680,28 @@ stopCpuBurn();
             }
 
             if (!Float.isNaN(sag1[0]) &&
-                !Float.isNaN(sag2[0])) {
+    !Float.isNaN(sag2[0])) {
 
-                sagAvg[0] =
-                        (sag1[0] + sag2[0]) / 2f;
-            }
+    float s1 = sag1[0];
+    float s2 = sag2[0];
+
+    if (Math.abs(s1) < 0.005f) s1 = Float.NaN;
+    if (Math.abs(s2) < 0.005f) s2 = Float.NaN;
+
+    if (!Float.isNaN(s1) &&
+        !Float.isNaN(s2)) {
+
+        sagAvg[0] = (s1 + s2) / 2f;
+
+    } else if (!Float.isNaN(s1)) {
+
+        sagAvg[0] = s1;
+
+    } else if (!Float.isNaN(s2)) {
+
+        sagAvg[0] = s2;
+    }
+}
 
 lab14FastDone = true;
 lab14FastPhase = false;
@@ -16843,7 +16781,14 @@ private void startLab14ProgressLoop() {
             long now = SystemClock.elapsedRealtime();
             
 // ✅ THERMAL PEAK TRACKING
-    float tNow = getBatteryTempEngineSafe();
+    iDoctorEngine idoctor =
+        iDoctorEngine.get(ManualTestsActivity.this);
+
+Float tObj =
+        idoctor.getBatteryTempUnified();
+
+float tNow =
+        tObj != null ? tObj : Float.NaN;
 
     if (!Float.isNaN(tNow)) {
 
@@ -16998,6 +16943,156 @@ private void resetLab14Bar() {
         v.setBackgroundColor(0xFF333333);
 
     }
+}
+
+// ============================================================
+// RESET BATTERY DIAGNOSTIC STATE
+// ============================================================
+private void resetBatteryDiagnostics() {
+
+    vStart[0] = Float.NaN;
+    vLoad1[0] = Float.NaN;
+    vRecover[0] = Float.NaN;
+    vLoad2[0] = Float.NaN;
+
+    sag1[0] = Float.NaN;
+    sag2[0] = Float.NaN;
+    sagAvg[0] = Float.NaN;
+    pulseSag[0] = Float.NaN;
+    pulseRecovery[0] = Float.NaN;
+    pulseScore[0] = Float.NaN;
+
+    voltageUnderLoad[0] = Float.NaN;
+    voltageRecovery[0] = Float.NaN;
+    voltageStability[0] = Float.NaN;
+    internalResistance[0] = Float.NaN;
+
+    voltageRecoverySpeed[0] = Float.NaN;
+    relaxV1[0] = Float.NaN;
+    relaxV2[0] = Float.NaN;
+    relaxV3[0] = Float.NaN;
+    relaxScore[0] = Float.NaN;
+    cellElasticityIndex[0] = Float.NaN;
+    thermalImpedance[0] = Float.NaN;
+    powerStabilityFactor[0] = Float.NaN;
+    stressSignature[0] = Float.NaN;
+    structuralIntegrityIndex[0] = Float.NaN;
+
+    estimatedESR = Float.NaN;
+
+    collapseRisk[0] = false;
+    swellingRisk[0] = false;
+    calibrationDrift[0] = false;
+    cellImbalanceRisk[0] = false;
+    batteryFailureRisk[0] = false;
+
+    batterySOH[0] = Float.NaN;
+
+    expectedPercent[0] = Float.NaN;
+    percentDeviation[0] = Float.NaN;
+}
+
+// ============================================================
+// LAB14 — BATTERY % (LOCKED SOURCE)
+// ============================================================
+private float lab14BatteryPercent() {
+
+    try {
+
+        iDoctorEngine idoctor =
+                iDoctorEngine.get(ManualTestsActivity.this);
+
+        iDoctorEngine.BatterySnapshot snap =
+                idoctor.readBatterySnapshotLab();
+
+        if (snap != null &&
+            snap.level >= 0 &&
+            snap.scale > 0) {
+
+            return (snap.level * 100f) /
+                   (float) snap.scale;
+        }
+
+    } catch (Throwable ignore) {}
+
+    return Float.NaN;
+}
+
+// ============================================================
+// LAB14 — BATTERY TEMP (LOCKED)
+// ============================================================
+private float lab14BatteryTemp() {
+
+    try {
+
+        iDoctorEngine idoctor =
+                iDoctorEngine.get(ManualTestsActivity.this);
+
+        Float t = idoctor.getBatteryTempUnified();
+
+        if (t == null) return Float.NaN;
+
+        if (Float.isNaN(t)) return Float.NaN;
+
+        if (t <= 0f) return Float.NaN;
+
+        if (t > 100f) return Float.NaN;
+
+        return t;
+
+    } catch (Throwable ignore) {}
+
+    return Float.NaN;
+}
+
+private float lab14Voltage() {
+
+    try {
+
+        iDoctorEngine idoctor =
+                iDoctorEngine.get(ManualTestsActivity.this);
+
+        float mv =
+                idoctor.readBatteryVoltageMvStable(3, 10);
+
+        if (!Float.isNaN(mv) && mv > 0f)
+            return mv / 1000f;
+
+    } catch (Throwable ignore) {}
+
+    return Float.NaN;
+}
+
+private iDoctorEngine.FullSnapshot lab14Snapshot() {
+
+    try {
+
+        iDoctorEngine idoctor =
+                iDoctorEngine.get(ManualTestsActivity.this);
+
+        return idoctor.readBatterySnapshotLab();
+
+    } catch (Throwable ignore) {}
+
+    return null;
+}
+
+private float lab14Current() {
+
+    try {
+
+        iDoctorEngine idoctor =
+                iDoctorEngine.get(ManualTestsActivity.this);
+
+        float ma =
+                idoctor.getBatteryCurrentNowUnified();
+
+        if (!Float.isNaN(ma))
+            return ma;
+
+    } catch (Throwable ignore) {}
+
+    return Float.NaN;
 }
 
 //=============================================================
