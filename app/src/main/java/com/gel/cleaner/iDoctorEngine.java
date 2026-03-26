@@ -56,6 +56,20 @@ import java.util.Map;
 
 public final class iDoctorEngine {
 	private long lastInternalResistanceMilliOhm = -1;
+	
+// ============================================================
+// LAB BATTERY SOURCE LOCK
+// Mode C = OEM locked if available, else BatteryManager locked
+// ============================================================
+
+private enum BatteryReadMode {
+    OEM_LOCKED,
+    BATTERY_MANAGER_LOCKED
+}
+
+private volatile BatteryReadMode lockedBatteryMode = null;
+private volatile String lockedPowerNode = null;
+private volatile boolean batteryModeResolved = false;
 
 public void setInternalResistanceMilliOhm(long v) {
     lastInternalResistanceMilliOhm = v;
@@ -214,247 +228,223 @@ private void saveModelCapacity(long v) {
 
     bi.rooted = isDeviceRooted();
 
-    if (bi.rooted) {
-        debugDumpPowerSupply();
-    }
-
     try {
-
         Intent i = ctx.registerReceiver(
                 null,
                 new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         );
 
-            if (i != null) {
-                bi.level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-                bi.scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+        if (i != null) {
+            bi.level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            bi.scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
 
-                int status = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-                switch (status) {
-                    case BatteryManager.BATTERY_STATUS_CHARGING:
-                        bi.status = "Charging";
-                        break;
-                    case BatteryManager.BATTERY_STATUS_DISCHARGING:
-                        bi.status = "Discharging";
-                        break;
-                    case BatteryManager.BATTERY_STATUS_FULL:
-                        bi.status = "Full";
-                        break;
-                    case BatteryManager.BATTERY_STATUS_NOT_CHARGING:
-                        bi.status = "Not charging";
-                        break;
-                    default:
-                        bi.status = "Unknown";
-                        break;
-                }
-
-                int plug = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
-                bi.charging =
-                        plug == BatteryManager.BATTERY_PLUGGED_USB
-                                || plug == BatteryManager.BATTERY_PLUGGED_AC
-                                || plug == BatteryManager.BATTERY_PLUGGED_WIRELESS;
-
-                if (plug == BatteryManager.BATTERY_PLUGGED_USB) {
-                    bi.chargingSource = "USB";
-                } else if (plug == BatteryManager.BATTERY_PLUGGED_AC) {
-                    bi.chargingSource = "AC";
-                } else if (plug == BatteryManager.BATTERY_PLUGGED_WIRELESS) {
-                    bi.chargingSource = "Wireless";
-                } else {
-                    bi.chargingSource = "Battery";
-                }
-
-                int rawTemp = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1);
-                if (rawTemp > 0) bi.batteryTempC = rawTemp / 10f;
-
-                int volt = i.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1);
-                if (volt > 0) bi.voltageMv = volt;
+            int status = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+            switch (status) {
+                case BatteryManager.BATTERY_STATUS_CHARGING:
+                    bi.status = "Charging";
+                    break;
+                case BatteryManager.BATTERY_STATUS_DISCHARGING:
+                    bi.status = "Discharging";
+                    break;
+                case BatteryManager.BATTERY_STATUS_FULL:
+                    bi.status = "Full";
+                    break;
+                case BatteryManager.BATTERY_STATUS_NOT_CHARGING:
+                    bi.status = "Not charging";
+                    break;
+                default:
+                    bi.status = "Unknown";
+                    break;
             }
-        } catch (Throwable ignore) { }
 
-if (bi.rooted) {
+            int plug = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+            bi.charging =
+                    plug == BatteryManager.BATTERY_PLUGGED_USB
+                            || plug == BatteryManager.BATTERY_PLUGGED_AC
+                            || plug == BatteryManager.BATTERY_PLUGGED_WIRELESS;
 
-    String[] designPaths = {
+            if (plug == BatteryManager.BATTERY_PLUGGED_USB) {
+                bi.chargingSource = "USB";
+            } else if (plug == BatteryManager.BATTERY_PLUGGED_AC) {
+                bi.chargingSource = "AC";
+            } else if (plug == BatteryManager.BATTERY_PLUGGED_WIRELESS) {
+                bi.chargingSource = "Wireless";
+            } else {
+                bi.chargingSource = "Battery";
+            }
 
-        "/sys/class/power_supply/battery/charge_full_design",
-        "/sys/class/power_supply/bms/charge_full_design",
-        "/sys/class/power_supply/maxfg/charge_full_design"
-};
+            int rawTemp = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1);
+            if (rawTemp > 0) bi.batteryTempC = rawTemp / 10f;
 
-long designRaw =
-        readBatteryValueMulti(designPaths);
+            int volt = i.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1);
+            if (volt > 0) bi.voltageMv = volt;
+        }
+    } catch (Throwable ignore) { }
 
-bi.chargeDesignMah =
-        normalizeMah(designRaw);
+    resolveBatteryModeOnce();
 
-    String[] fullPaths = {
-
-        "/sys/class/power_supply/battery/charge_full",
-        "/sys/class/power_supply/bms/charge_full",
-        "/sys/class/power_supply/maxfg/charge_full",
-        "/sys/class/power_supply/fg/charge_full",
-
-        profile != null
-                ? profile.batteryChargeFullPath
-                : null
-};
-
-// -----------------------------------------
-// CHARGE FULL (fuel gauge + multi fallback)
-// -----------------------------------------
-
-long fullRaw =
-        readFuelGaugeValue("charge_full");
-
-if (fullRaw <= 0) {
-
-    fullRaw =
-            readBatteryValueMulti(
-                    fullPaths
-            );
-}
-
-bi.chargeFullMah =
-        normalizeMah(fullRaw);
-
-    String[] nowPaths = {
-
-        "/sys/class/power_supply/battery/charge_now",
-        "/sys/class/power_supply/bms/charge_now",
-        "/sys/class/power_supply/maxfg/charge_now",
-        "/sys/class/power_supply/fg/charge_now",
-
-        profile != null
-                ? profile.batteryChargeNowPath
-                : null
-};
-
-// -----------------------------------------
-// CHARGE NOW (fuel gauge + multi fallback)
-// -----------------------------------------
-
-long nowRaw =
-        readFuelGaugeValue("charge_now");
-
-if (nowRaw <= 0) {
-
-    nowRaw =
-            readBatteryValueMulti(
-                    nowPaths
-            );
-}
-
-bi.chargeNowMah =
-        normalizeMah(nowRaw);
-
-    bi.cycleCount = readBatteryCycleCountRoot();
-
-    bi.internalResistance = readBatteryResistanceRoot();
-
-if (bi.internalResistance <= 0 &&
-    lastInternalResistanceMilliOhm > 0) {
-
-    bi.internalResistance = lastInternalResistanceMilliOhm;
-}
-
-    String[] currentPaths = {
-
-        "/sys/class/power_supply/battery/current_now",
-        "/sys/class/power_supply/bms/current_now",
-        "/sys/class/power_supply/maxfg/current_now",
-        "/sys/class/power_supply/fg/current_now",
-
-        profile != null
-                ? profile.batteryCurrentPath
-                : null
-};
-
-// -----------------------------------------
-// CURRENT READ (fuel gauge + multi fallback)
-// -----------------------------------------
-
-long currentNow =
-        readFuelGaugeValue("current_now");
-
-if (currentNow == 0) {
-
-    currentNow =
-            readBatteryValueMulti(
-                    currentPaths
-            );
-}
-
-float currentMa =
-        normalizeCurrentMa(currentNow);
-
-if (!Float.isNaN(currentMa))
-    bi.currentMa = currentMa;
-
-    String[] voltPaths = {
-
-        "/sys/class/power_supply/battery/voltage_now",
-        "/sys/class/power_supply/bms/voltage_now",
-        "/sys/class/power_supply/maxfg/voltage_now",
-        "/sys/class/power_supply/fg/voltage_now",
-
-        profile != null
-                ? profile.batteryVoltagePath
-                : null
-};
-
-// -----------------------------------------
-// VOLTAGE READ (fuel gauge + multi fallback)
-// -----------------------------------------
-
-long voltageNow =
-        readFuelGaugeValue("voltage_now");
-
-if (voltageNow <= 0) {
-
-    voltageNow =
-            readBatteryValueMulti(
-                    voltPaths
-            );
-}
-
-float voltageMv =
-        normalizeVoltageMv(voltageNow);
-
-if (!Float.isNaN(voltageMv))
-    bi.voltageMv = voltageMv;
-
-
-// -----------------------------------------
-
-if (bi.chargeFullMah > 0 ||
-    bi.chargeDesignMah > 0) {
-
-    bi.source = "OEM (root)";
-}
-
-}
-
-// --------------------------------------------------
-// FULL CAPACITY FALLBACK (unified)
-// --------------------------------------------------
-
-if (bi.chargeFullMah <= 0) {
-
-    if (bi.chargeDesignMah > 0) {
-
-        bi.chargeFullMah = bi.chargeDesignMah;
-        bi.source = "design";
+    if (lockedBatteryMode == BatteryReadMode.OEM_LOCKED) {
+        readBatterySnapshotFromLockedOem(bi);
+    } else {
+        readBatterySnapshotFromBatteryManagerLocked(bi);
     }
+
+    if (bi.internalResistance <= 0 &&
+        lastInternalResistanceMilliOhm > 0) {
+
+        bi.internalResistance = lastInternalResistanceMilliOhm;
+    }
+
+    if (bi.chargeFullMah <= 0 && bi.chargeDesignMah > 0) {
+        bi.chargeFullMah = bi.chargeDesignMah;
+    }
+
+    long modelCap = getStoredModelCapacity();
+    if (bi.chargeFullMah <= 0 && modelCap > 0) {
+        bi.chargeFullMah = modelCap;
+        if (bi.source == null || "N/A".equals(bi.source)) {
+            bi.source = "model_capacity";
+        }
+    }
+
+    if (bi.source == null || bi.source.trim().isEmpty()) {
+        bi.source = lockedBatteryMode == BatteryReadMode.OEM_LOCKED
+                ? "OEM_LOCKED"
+                : "BATTERY_MANAGER_LOCKED";
+    }
+
+    if (bi.chargeDesignMah > 0 && bi.chargeFullMah > 0) {
+        try {
+            int soh =
+                    (int) Math.round(
+                            (bi.chargeFullMah * 100.0)
+                                    / bi.chargeDesignMah
+                    );
+
+            if (soh > 0 && soh < 200) {
+                bi.sohPercent = soh;
+            }
+        } catch (Throwable ignore) {}
+    }
+
+    return bi;
 }
 
-// --------------------------------------------------
-// CHARGE COUNTER FALLBACK (BatteryManager)
-// --------------------------------------------------
+// ============================================================
+// LOCK BATTERY MODE ONCE
+// Mode C = OEM locked if available, else BatteryManager locked
+// ============================================================
 
-if (bi.chargeNowMah <= 0) {
+private synchronized void resolveBatteryModeOnce() {
+
+    if (batteryModeResolved) return;
+
+    lockedPowerNode = null;
+    lockedBatteryMode = BatteryReadMode.BATTERY_MANAGER_LOCKED;
+
+    String node = resolveLockedOemBatteryNode();
+
+    if (node != null && !node.trim().isEmpty()) {
+        lockedPowerNode = node;
+        lockedBatteryMode = BatteryReadMode.OEM_LOCKED;
+    }
+
+    batteryModeResolved = true;
+}
+
+private String resolveLockedOemBatteryNode() {
+
+    String[] preferred = {
+            "/sys/class/power_supply/battery",
+            "/sys/class/power_supply/bms",
+            "/sys/class/power_supply/maxfg",
+            "/sys/class/power_supply/fg"
+    };
+
+    for (String n : preferred) {
+        if (isValidBatteryNode(n)) return n;
+    }
+
+    String[] autoNodes = getPowerSupplyNodes();
+
+    if (autoNodes != null) {
+        for (String n : autoNodes) {
+            if (isValidBatteryNode(n)) return n;
+        }
+    }
+
+    return null;
+}
+
+private boolean isValidBatteryNode(String node) {
+
+    if (node == null || node.trim().isEmpty())
+        return false;
 
     try {
+        long v = readSysLongRootAware(node + "/voltage_now");
+        long cNow = readSysLongRootAware(node + "/charge_now");
+        long cur = readSysLongRootAware(node + "/current_now");
 
+        if (v > 0) return true;
+        if (cNow > 0) return true;
+        return cur != 0;
+    } catch (Throwable ignore) {}
+
+    return false;
+}
+
+private void readBatterySnapshotFromLockedOem(BatterySnapshot bi) {
+
+    final String node = lockedPowerNode;
+
+    if (node == null || node.trim().isEmpty()) {
+        readBatterySnapshotFromBatteryManagerLocked(bi);
+        return;
+    }
+
+    try {
+        long fullRaw = readSysLongRootAware(node + "/charge_full");
+        long nowRaw = readSysLongRootAware(node + "/charge_now");
+        long designRaw = readSysLongRootAware(node + "/charge_full_design");
+        long currentRaw = readSysLongRootAware(node + "/current_now");
+        long voltageRaw = readSysLongRootAware(node + "/voltage_now");
+        long tempRaw = readSysLongRootAware(node + "/temp");
+        long cycleRaw = readSysLongRootAware(node + "/cycle_count");
+        long resRaw = readSysLongRootAware(node + "/resistance");
+
+        long fullMah = normalizeMah(fullRaw);
+        long nowMah = normalizeMah(nowRaw);
+        long designMah = normalizeMah(designRaw);
+        float currentMa = normalizeCurrentMa(currentRaw);
+        float voltageMv = normalizeVoltageMv(voltageRaw);
+        float tempC = normalizeTempC(String.valueOf(tempRaw));
+
+        if (fullMah > 0) bi.chargeFullMah = fullMah;
+        if (nowMah > 0) bi.chargeNowMah = nowMah;
+        if (designMah > 0) bi.chargeDesignMah = designMah;
+        if (!Float.isNaN(currentMa)) bi.currentMa = currentMa;
+        if (!Float.isNaN(voltageMv)) bi.voltageMv = voltageMv;
+        if (!Float.isNaN(tempC)) bi.batteryTempC = tempC;
+        if (cycleRaw > 0) bi.cycleCount = cycleRaw;
+        if (resRaw > 0) bi.internalResistance = resRaw;
+
+        if (bi.internalResistance <= 0 &&
+            lastInternalResistanceMilliOhm > 0) {
+
+            bi.internalResistance = lastInternalResistanceMilliOhm;
+        }
+
+        bi.source = "OEM_LOCKED";
+    } catch (Throwable ignore) {}
+
+    // Fallback ONLY for missing individual fields, not source switching
+    fillBatteryFieldsFromBatteryManagerOnlyIfMissing(bi);
+}
+
+private void readBatterySnapshotFromBatteryManagerLocked(BatterySnapshot bi) {
+
+    try {
         BatteryManager bm =
                 (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
 
@@ -465,222 +455,274 @@ if (bi.chargeNowMah <= 0) {
                             BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER
                     );
 
-            if (cc > 0) {
-
-                bi.chargeNowMah =
-                        normalizeMah(cc);
-
-                bi.source = "BatteryManager";
-            }
-        }
-
-    } catch (Throwable ignore) {}
-}
-
-
-// --------------------------------------------------
-// COUNTER → FULL ESTIMATE (safe)
-// --------------------------------------------------
-
-if (bi.chargeFullMah <= 0 &&
-    bi.chargeNowMah > 0 &&
-    bi.level > 0) {
-
-    try {
-
-        float pct =
-                bi.level / 100f;
-
-        if (pct > 0.10f && pct <= 1f) {
-
-            long est =
-                    (long) (bi.chargeNowMah / pct);
-
-            if (est > 500 &&
-                est < 15000) {
-
-                bi.chargeFullMah = est;
-                bi.source = "counter_estimate";
-            }
-        }
-
-    } catch (Throwable ignore) {}
-}
-
-// --------------------------------------------------
-// DESIGN FALLBACK
-// --------------------------------------------------
-
-if (bi.chargeFullMah <= 0 &&
-    bi.chargeDesignMah > 0) {
-
-    bi.chargeFullMah = bi.chargeDesignMah;
-    bi.source = "design";
-}
-
-// --------------------------------------------------
-// MODEL CAPACITY (LAST FALLBACK ONLY)
-// --------------------------------------------------
-
-long modelCap =
-        getStoredModelCapacity();
-
-if (bi.chargeFullMah <= 0 &&
-    modelCap > 0) {
-
-    bi.chargeFullMah = modelCap;
-    bi.source = "model_capacity";
-}
-        	
-// -----------------------------------------
-// TEMP READ (fuel gauge + multi fallback)
-// -----------------------------------------
-
-if (Float.isNaN(bi.batteryTempC) ||
-    bi.batteryTempC <= 0f) {
-
-    String[] tempPaths = {
-
-            "/sys/class/power_supply/battery/temp",
-            "/sys/class/power_supply/bms/temp",
-            "/sys/class/power_supply/maxfg/temp",
-
-            profile != null
-                    ? profile.batteryTempPath
-                    : null
-    };
-
-    long tempRaw =
-            readFuelGaugeValue("temp");
-
-    if (tempRaw <= 0) {
-
-        tempRaw =
-                readBatteryValueMulti(
-                        tempPaths
-                );
-    }
-
-    if (tempRaw > 0) {
-
-        float tempC =
-                normalizeTempC(
-                        String.valueOf(tempRaw)
-                );
-
-        if (!Float.isNaN(tempC))
-            bi.batteryTempC = tempC;
-    }
-}
-        	
-// --------------------------------------------------
-// FALLBACK VOLTAGE / CURRENT / TEMP (no root)
-// --------------------------------------------------
-
-try {
-
-    BatteryManager bm =
-            (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
-
-    if (bm != null) {
-
-        if (Float.isNaN(bi.voltageMv) || bi.voltageMv <= 0) {
-
-            Intent i = ctx.registerReceiver(
-                    null,
-                    new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-            );
-
-            if (i != null) {
-
-                int v = i.getIntExtra(
-                        BatteryManager.EXTRA_VOLTAGE,
-                        -1
-                );
-
-                if (v > 0)
-                    bi.voltageMv = v;
-            }
-        }
-
-        if (Float.isNaN(bi.currentMa)) {
-
             long cur =
                     bm.getLongProperty(
                             BatteryManager.BATTERY_PROPERTY_CURRENT_NOW
                     );
 
-            float ma = normalizeCurrentMa(cur);
+            long cap =
+                    bm.getLongProperty(
+                            BatteryManager.BATTERY_PROPERTY_CAPACITY
+                    );
 
-            if (!Float.isNaN(ma))
-                bi.currentMa = ma;
+            long chargeNowMah = normalizeMah(cc);
+            float currentMa = normalizeCurrentMa(cur);
+
+            if (chargeNowMah > 0) bi.chargeNowMah = chargeNowMah;
+            if (!Float.isNaN(currentMa)) bi.currentMa = currentMa;
+
+            if (cap > 0 && cap <= 100) {
+                bi.level = (int) cap;
+            }
         }
+    } catch (Throwable ignore) {}
 
+    fillBatteryFieldsFromBatteryManagerOnlyIfMissing(bi);
+
+    // Full / design capacity in BatteryManager mode:
+    // allow only stored model capacity or design path if explicitly available
+    if (bi.chargeDesignMah <= 0) {
+        long design = readBatteryDesignCapacityBestEffort();
+        if (design > 0) {
+            bi.chargeDesignMah = design;
+        }
     }
 
-} catch (Throwable ignore) { }
+    long modelCap = getStoredModelCapacity();
+    if (bi.chargeFullMah <= 0 && modelCap > 0) {
+        bi.chargeFullMah = modelCap;
+    }
 
-if (bi.source == null ||
-    bi.source.equals("N/A")) {
-
-    if (bi.rooted)
-        bi.source = "OEM (root)";
-    else
-        bi.source = "BatteryManager";
+    bi.source = "BATTERY_MANAGER_LOCKED";
 }
 
-// --------------------------------------------------
-// SOH CALC
-// --------------------------------------------------
-
-if (bi.chargeDesignMah > 0 &&
-    bi.chargeFullMah > 0) {
+private void fillBatteryFieldsFromBatteryManagerOnlyIfMissing(BatterySnapshot bi) {
 
     try {
+        Intent i = ctx.registerReceiver(
+                null,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        );
 
-        int soh =
-                (int) Math.round(
-                        (bi.chargeFullMah * 100.0)
-                                / bi.chargeDesignMah
-                );
+        if (i != null) {
 
-        if (soh > 0 && soh < 200) {
-            bi.sohPercent = soh;
+            if (bi.level <= 0) {
+                bi.level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            }
+
+            if (bi.scale <= 0) {
+                bi.scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            }
+
+            int status = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+            switch (status) {
+                case BatteryManager.BATTERY_STATUS_CHARGING:
+                    bi.status = "Charging";
+                    break;
+                case BatteryManager.BATTERY_STATUS_DISCHARGING:
+                    bi.status = "Discharging";
+                    break;
+                case BatteryManager.BATTERY_STATUS_FULL:
+                    bi.status = "Full";
+                    break;
+                case BatteryManager.BATTERY_STATUS_NOT_CHARGING:
+                    bi.status = "Not charging";
+                    break;
+                default:
+                    if (bi.status == null || bi.status.equals("N/A")) {
+                        bi.status = "Unknown";
+                    }
+                    break;
+            }
+
+            int plug = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+            bi.charging =
+                    plug == BatteryManager.BATTERY_PLUGGED_USB
+                            || plug == BatteryManager.BATTERY_PLUGGED_AC
+                            || plug == BatteryManager.BATTERY_PLUGGED_WIRELESS;
+
+            if (plug == BatteryManager.BATTERY_PLUGGED_USB) {
+                bi.chargingSource = "USB";
+            } else if (plug == BatteryManager.BATTERY_PLUGGED_AC) {
+                bi.chargingSource = "AC";
+            } else if (plug == BatteryManager.BATTERY_PLUGGED_WIRELESS) {
+                bi.chargingSource = "Wireless";
+            } else {
+                bi.chargingSource = "Battery";
+            }
+
+            if (Float.isNaN(bi.batteryTempC) || bi.batteryTempC <= 0f) {
+                int rawTemp = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1);
+                if (rawTemp > 0) bi.batteryTempC = rawTemp / 10f;
+            }
+
+            if (Float.isNaN(bi.voltageMv) || bi.voltageMv <= 0f) {
+                int volt = i.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1);
+                if (volt > 0) bi.voltageMv = volt;
+            }
         }
-
     } catch (Throwable ignore) {}
 }
 
-// -----------------------------------------
-// ENGINE FALLBACK IR (LAB14)
-// -----------------------------------------
+private long readBatteryDesignCapacityBestEffort() {
 
-if (bi.internalResistance <= 0 &&
-    lastInternalResistanceMilliOhm > 0) {
+    String[] paths = {
+            "/sys/class/power_supply/battery/charge_full_design",
+            "/sys/class/power_supply/bms/charge_full_design",
+            "/sys/class/power_supply/maxfg/charge_full_design",
+            "/sys/class/power_supply/fg/charge_full_design",
 
-    bi.internalResistance =
-            lastInternalResistanceMilliOhm;
+            profile != null ? profile.batteryChargeFullPath : null
+    };
+
+    long raw = readBatteryValueMulti(paths);
+    long design = normalizeMah(raw);
+
+    if (design > 0) return design;
+
+    return -1;
 }
 
-        return bi;
+// ============================================================
+// LAB-SAFE BATTERY READS
+// Locked source only
+// ============================================================
+
+public BatterySnapshot readBatterySnapshotLab() {
+    resolveBatteryModeOnce();
+    return readBatterySnapshot();
+}
+
+public float readBatteryVoltageMvStable(int samples, long sleepMs) {
+
+    resolveBatteryModeOnce();
+
+    float sum = 0f;
+    int ok = 0;
+
+    int count = Math.max(1, samples);
+
+    for (int i = 0; i < count; i++) {
+
+        BatterySnapshot b = readBatterySnapshotLab();
+
+        if (b != null &&
+            !Float.isNaN(b.voltageMv) &&
+            b.voltageMv > 0f) {
+
+            sum += b.voltageMv;
+            ok++;
+        }
+
+        if (i < count - 1 && sleepMs > 0) {
+            try { Thread.sleep(sleepMs); } catch (Throwable ignore) {}
+        }
     }
+
+    return ok > 0 ? (sum / ok) : Float.NaN;
+}
+
+public float readBatteryCurrentMaStable(int samples, long sleepMs) {
+
+    resolveBatteryModeOnce();
+
+    float sum = 0f;
+    int ok = 0;
+
+    int count = Math.max(1, samples);
+
+    for (int i = 0; i < count; i++) {
+
+        BatterySnapshot b = readBatterySnapshotLab();
+
+        if (b != null &&
+            !Float.isNaN(b.currentMa) &&
+            b.currentMa != 0f) {
+
+            sum += b.currentMa;
+            ok++;
+        }
+
+        if (i < count - 1 && sleepMs > 0) {
+            try { Thread.sleep(sleepMs); } catch (Throwable ignore) {}
+        }
+    }
+
+    return ok > 0 ? (sum / ok) : Float.NaN;
+}
+
+public long readChargeNowMahStable(int samples, long sleepMs) {
+
+    resolveBatteryModeOnce();
+
+    long sum = 0L;
+    int ok = 0;
+
+    int count = Math.max(1, samples);
+
+    for (int i = 0; i < count; i++) {
+
+        BatterySnapshot b = readBatterySnapshotLab();
+
+        if (b != null && b.chargeNowMah > 0) {
+            sum += b.chargeNowMah;
+            ok++;
+        }
+
+        if (i < count - 1 && sleepMs > 0) {
+            try { Thread.sleep(sleepMs); } catch (Throwable ignore) {}
+        }
+    }
+
+    return ok > 0 ? (sum / ok) : -1L;
+}
+
+public long readChargeFullMahStable(int samples, long sleepMs) {
+
+    resolveBatteryModeOnce();
+
+    long sum = 0L;
+    int ok = 0;
+
+    int count = Math.max(1, samples);
+
+    for (int i = 0; i < count; i++) {
+
+        BatterySnapshot b = readBatterySnapshotLab();
+
+        if (b != null && b.chargeFullMah > 0) {
+            sum += b.chargeFullMah;
+            ok++;
+        }
+
+        if (i < count - 1 && sleepMs > 0) {
+            try { Thread.sleep(sleepMs); } catch (Throwable ignore) {}
+        }
+    }
+
+    return ok > 0 ? (sum / ok) : -1L;
+}
 
     public boolean isChargingNowUnified() {
-        return readBatterySnapshot().charging;
-    }
+    resolveBatteryModeOnce();
+    return readBatterySnapshot().charging;
+}
 
     public Float getBatteryTempUnified() {
-        BatterySnapshot s = readBatterySnapshot();
-        return Float.isNaN(s.batteryTempC) ? null : s.batteryTempC;
-    }
+    resolveBatteryModeOnce();
+    BatterySnapshot s = readBatterySnapshot();
+    return Float.isNaN(s.batteryTempC) ? null : s.batteryTempC;
+}
 
-    public float getBatteryVoltageUnified() {
-        return readBatterySnapshot().voltageMv;
-    }
+public float getBatteryVoltageUnified() {
+    resolveBatteryModeOnce();
+    return readBatterySnapshot().voltageMv;
+}
 
-    public float getBatteryCurrentNowUnified() {
-        return readBatterySnapshot().currentMa;
-    }
+public float getBatteryCurrentNowUnified() {
+    resolveBatteryModeOnce();
+    return readBatterySnapshot().currentMa;
+}
 
     // ============================================================
     // THERMAL
@@ -2645,38 +2687,13 @@ private String fuelGaugeNode = null;
 
 private String resolveFuelGaugeNode() {
 
-    if (fuelGaugeNode != null)
-        return fuelGaugeNode;
+    resolveBatteryModeOnce();
 
-    String[] nodes = {
+    if (lockedBatteryMode == BatteryReadMode.OEM_LOCKED &&
+        lockedPowerNode != null &&
+        !lockedPowerNode.trim().isEmpty()) {
 
-            "/sys/class/power_supply/battery",
-            "/sys/class/power_supply/bms",
-            "/sys/class/power_supply/maxfg",
-            "/sys/class/power_supply/fg"
-    };
-
-    for (String n : nodes) {
-
-        try {
-
-            File f = new File(n + "/voltage_now");
-
-            if (f.exists()) {
-
-                long v =
-                        readSysLongRootAware(
-                                n + "/voltage_now"
-                        );
-
-                if (v > 0) {
-
-                    fuelGaugeNode = n;
-                    return fuelGaugeNode;
-                }
-            }
-
-        } catch (Throwable ignore) {}
+        return lockedPowerNode;
     }
 
     return null;
