@@ -350,8 +350,10 @@ bi.chargeNowMah =
     bi.cycleCount = readBatteryCycleCountRoot();
 
     bi.internalResistance = readBatteryResistanceRoot();
-    
-    if (lastInternalResistanceMilliOhm > 0) {
+
+if (bi.internalResistance <= 0 &&
+    lastInternalResistanceMilliOhm > 0) {
+
     bi.internalResistance = lastInternalResistanceMilliOhm;
 }
 
@@ -647,6 +649,17 @@ if (bi.chargeDesignMah > 0 &&
         }
 
     } catch (Throwable ignore) {}
+}
+
+// -----------------------------------------
+// ENGINE FALLBACK IR (LAB14)
+// -----------------------------------------
+
+if (bi.internalResistance <= 0 &&
+    lastInternalResistanceMilliOhm > 0) {
+
+    bi.internalResistance =
+            lastInternalResistanceMilliOhm;
 }
 
         return bi;
