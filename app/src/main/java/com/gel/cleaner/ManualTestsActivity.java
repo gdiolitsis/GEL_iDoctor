@@ -16049,8 +16049,13 @@ if (baselineFullMah > 0 && drainMah > 0) {
         unrealisticCapacity = true;
     }
 }
-                        
-                        runOnUiThread(() -> {
+
+final boolean unrealCapFinal = unrealisticCapacity;
+final boolean lowDrainFinal = lowDrain;
+final long baselineFullFinal = baselineFullMah;
+final float drainMahFFinal = drainMahF;
+
+runOnUiThread(() -> {
 
                             // extra warnings from validation
                             if (drainMahF > 600) {
@@ -16062,7 +16067,7 @@ if (baselineFullMah > 0 && drainMah > 0) {
                                 );
                             }
 
-                            if (lowDrain) {
+                            if (lowDrainFinal) {
                                 logLabelWarnValue(
                                         gr ? "Αξιοπιστία fuel-gauge"
                                            : "Fuel gauge reliability",
@@ -16072,8 +16077,8 @@ if (baselineFullMah > 0 && drainMah > 0) {
                                 );
                             }
 
-                            if (baselineFullMah > 0 && drainMahF > 0) {
-                                if (unrealisticCapacity) {
+                            if (baselineFullFinal > 0 && drainMahFFinal > 0) {
+                                if (unrealCapFinal) {
                                     logLabelWarnValue(
                                             gr ? "Έλεγχος δηλωμένης χωρητικότητας"
                                                : "Declared capacity check",
