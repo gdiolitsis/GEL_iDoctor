@@ -14960,11 +14960,9 @@ if (!Float.isNaN(currentNow) &&
     float currentAmp =
             Math.abs(currentNow) / 1000f;
 
-    // reject invalid sag
     if (sagFiltered <= 0.005f)
         sagFiltered = Float.NaN;
 
-    // reject unrealistic sag
     if (!Float.isNaN(sagFiltered) &&
         sagFiltered > 0.6f)
         sagFiltered = Float.NaN;
@@ -14985,19 +14983,24 @@ if (!Float.isNaN(currentNow) &&
             esr = Float.NaN;
 
         if (!Float.isNaN(esr)) {
+
             estimatedESR = esr;
             internalResistance[0] = esr;
 
-iDoctorEngine engIR =
-        iDoctorEngine.get(ManualTestsActivity.this);
+            try {
 
-long irMilli =
-        (long)(esr * 1000f);
+                iDoctorEngine engIR =
+                        iDoctorEngine.get(ManualTestsActivity.this);
 
-engIR.setInternalResistanceMilliOhm(irMilli);
+                long irMilli =
+                        (long)(esr * 1000f);
+
+                engIR.setInternalResistanceMilliOhm(irMilli);
+
+            } catch (Throwable ignore) {}
+
         }
     }
-}
 }
 
 // ----------------------------------------------------
