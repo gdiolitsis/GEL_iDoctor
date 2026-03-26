@@ -1409,32 +1409,6 @@ if (!Float.isNaN(snap.battery.batteryTempC)) {
 }
 
 // --------------------------------------------------
-// INTERNAL RESISTANCE
-// --------------------------------------------------
-
-long irValue = snap.battery.internalResistance;
-
-if (irValue > 0) {
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %d mΩ\n",
-            padKey("Internal resistance"),
-            irValue
-    ));
-
-} else {
-
-    sb.append(String.format(
-            Locale.US,
-            "%s : %s\n",
-            padKey("Internal resistance"),
-            "Not available"
-    ));
-
-}
-
-// --------------------------------------------------
 // ROOT / OEM
 // --------------------------------------------------
 
