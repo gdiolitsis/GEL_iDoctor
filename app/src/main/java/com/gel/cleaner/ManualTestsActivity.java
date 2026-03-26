@@ -14473,7 +14473,16 @@ if (snapEnd == null) {
     return;
 }
 
+// ----------------------------
+// charge
+// ----------------------------
+
 final long endMah = snapEnd.chargeNowMah;
+
+
+// ----------------------------
+// temperature (engine first)
+// ----------------------------
 
 Float tObj =
         idoctor.getBatteryTempUnified();
@@ -14482,14 +14491,26 @@ float tempEnd =
         tObj != null ? tObj : Float.NaN;
 
 if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
-    tempEnd = snapEnd.temperature;
+
+    tempEnd = snapEnd.temperatureC;
 }
+
+
+// ----------------------------
+// peak temp
+// ----------------------------
 
 float tempPeak = tempEnd;
 
 if (!Float.isNaN(lab14TempPeak)) {
+
     tempPeak = lab14TempPeak;
 }
+
+
+// ----------------------------
+// thermal delta
+// ----------------------------
 
 float thermalChange = Float.NaN;
 
@@ -14499,15 +14520,24 @@ if (!Float.isNaN(tempStart) &&
     thermalChange = tempPeak - tempStart;
 }
 
+
+// ----------------------------
+// CPU / GPU temps (info only)
+// ----------------------------
+
 final Float cpuTempEnd = readCpuTempSafe();
 final Float gpuTempEnd = readGpuTempSafe();
+
+
+// ----------------------------
+// elapsed time
+// ----------------------------
 
 final long dtMs =
         Math.max(
                 1,
                 SystemClock.elapsedRealtime() - t0
         );
-
 
 // ====================================================
 // DRAIN
@@ -14548,7 +14578,7 @@ else {
     drainMah =
             estimateDrainFallback(
                     snapEnd.level,
-                    snapEnd.voltage,
+                    snapEnd.voltageMv / 1000f,
                     dtMs
             );
 
