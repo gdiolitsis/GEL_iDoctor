@@ -278,6 +278,34 @@ protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_device_info_peripherals);
     
+    new Thread(() -> {
+
+    final String system = buildSystemInfo();
+    final String android = buildAndroidInfo();
+    final String cpu = buildCpuInfo();
+    final String gpu = buildGpuInfo();
+    final String thermal = buildThermalInternalReport();
+    final String vulkan = buildVulkanInfo();
+    final String ram = buildRamInfo();
+    final String storage = buildStorageInfo();
+    final String connectivity = buildConnectivityInfo();
+
+    runOnUiThread(() -> {
+
+        setNeonSectionText(txtSystemContent, system);
+        setNeonSectionText(txtAndroidContent, android);
+        setNeonSectionText(txtCpuContent, cpu);
+        setNeonSectionText(txtGpuContent, gpu);
+        setNeonSectionText(txtThermalContent, thermal);
+        setNeonSectionText(txtVulkanContent, vulkan);
+        setNeonSectionText(txtRamContent, ram);
+        setNeonSectionText(txtStorageContent, storage);
+        setNeonSectionText(txtConnectivityContent, connectivity);
+
+    });
+
+}).start();
+    
     UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
     // ✅ ROOT FLAG — MUST BE HERE
@@ -1388,15 +1416,20 @@ if (currentCharge > 0) {
 }
 
 // --------------------------------------------------
-// ESTIMATED CAPACITY (STRICT + CHECKS)
+// ESTIMATED CAPACITY (REAL + FALLBACK GEL)
 // --------------------------------------------------
 
 long estimatedCapacity = -1;
+String capacitySource = "no_counter";
+
+// -------------------------
+// PRIMARY (REAL COUNTER)
+// -------------------------
 
 boolean hasCounter =
-        snap.battery.chargeNowMah > 0 && hasValidLevel;
+        snap.battery.chargeNowMah > 0 &&
+        hasValidLevel;
 
-// PRIMARY — from real counter
 if (hasCounter) {
 
     estimatedCapacity =
@@ -1404,19 +1437,21 @@ if (hasCounter) {
                     snap.battery.chargeNowMah /
                     (snap.battery.level / 100f)
             );
+
+    capacitySource = "counter_calculated";
 }
 
-// --------------------------------------------------
-// SANITY CHECK (reject impossible values)
-// --------------------------------------------------
+// -------------------------
+// SANITY CHECK
+// -------------------------
 
 if (estimatedCapacity > 15000 || estimatedCapacity < 500) {
     estimatedCapacity = -1;
 }
 
-// --------------------------------------------------
-// CONSISTENCY CHECK (counter vs capacity)
-// --------------------------------------------------
+// -------------------------
+// CONSISTENCY CHECK
+// -------------------------
 
 if (hasCounter && snap.battery.chargeFullMah > 0) {
 
@@ -1429,6 +1464,28 @@ if (hasCounter && snap.battery.chargeFullMah > 0) {
 
     if (diff > expected * 0.25f) {
         estimatedCapacity = -1;
+    }
+}
+
+// --------------------------------------------------
+// 🔥 FALLBACK (OEM LOCK / NO COUNTER)
+// --------------------------------------------------
+
+if (estimatedCapacity <= 0 && hasValidLevel) {
+
+    // χρησιμοποιούμε declared capacity αν υπάρχει
+    if (snap.battery.designCapacityMah > 0) {
+
+        estimatedCapacity = snap.battery.designCapacityMah;
+        capacitySource = "design_capacity";
+
+    } else {
+
+        // last fallback (heuristic)
+        estimatedCapacity =
+                (long)(snap.battery.level * 50); // ~3000–5000 range
+
+        capacitySource = "heuristic_estimate";
     }
 }
 
@@ -1449,7 +1506,7 @@ if (estimatedCapacity > 0) {
             Locale.US,
             "%s : %s\n",
             padKey("Capacity source"),
-            "counter_calculated"
+            capacitySource
     ));
 
 } else {
@@ -1465,7 +1522,7 @@ if (estimatedCapacity > 0) {
             Locale.US,
             "%s : %s\n",
             padKey("Capacity source"),
-            "no_counter"
+            "unavailable"
     ));
 }
 
