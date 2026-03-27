@@ -1388,7 +1388,7 @@ if (currentCharge > 0) {
 }
 
 // --------------------------------------------------
-// ESTIMATED CAPACITY (STRICT CALCULATION)
+// ESTIMATED CAPACITY (STRICT + CHECKS)
 // --------------------------------------------------
 
 long estimatedCapacity = -1;
@@ -1396,7 +1396,7 @@ long estimatedCapacity = -1;
 boolean hasCounter =
         snap.battery.chargeNowMah > 0 && hasValidLevel;
 
-// ONLY from real counter
+// PRIMARY — from real counter
 if (hasCounter) {
 
     estimatedCapacity =
@@ -1406,7 +1406,36 @@ if (hasCounter) {
             );
 }
 
+// --------------------------------------------------
+// SANITY CHECK (reject impossible values)
+// --------------------------------------------------
+
+if (estimatedCapacity > 15000 || estimatedCapacity < 500) {
+    estimatedCapacity = -1;
+}
+
+// --------------------------------------------------
+// CONSISTENCY CHECK (counter vs capacity)
+// --------------------------------------------------
+
+if (hasCounter && snap.battery.chargeFullMah > 0) {
+
+    float expected =
+            snap.battery.chargeFullMah *
+            (snap.battery.level / 100f);
+
+    float diff =
+            Math.abs(expected - snap.battery.chargeNowMah);
+
+    if (diff > expected * 0.25f) {
+        estimatedCapacity = -1;
+    }
+}
+
+// --------------------------------------------------
 // OUTPUT
+// --------------------------------------------------
+
 if (estimatedCapacity > 0) {
 
     sb.append(String.format(
