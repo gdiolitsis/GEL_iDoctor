@@ -1341,31 +1341,63 @@ if (!Float.isNaN(snap.battery.currentMa)) {
 }
 
 // --------------------------------------------------
-// CURRENT CHARGE
+// CURRENT CHARGE (STRICT)
 // --------------------------------------------------
 
+long currentCharge = -1;
+String currentSource = "N/A";
+
+boolean hasValidLevel =
+        snap.battery.level > 0 && snap.battery.level <= 100;
+
+// LEVEL 1 — real fuel gauge
 if (snap.battery.chargeNowMah > 0) {
+
+    currentCharge = snap.battery.chargeNowMah;
+    currentSource = "hardware_counter";
+}
+
+// LEVEL 2 — derived from real full capacity
+else if (snap.battery.chargeFullMah > 0 && hasValidLevel) {
+
+    currentCharge =
+            (long)(
+                    snap.battery.chargeFullMah *
+                    (snap.battery.level / 100f)
+            );
+
+    currentSource = "capacity_based";
+}
+
+// OUTPUT
+if (currentCharge > 0) {
 
     sb.append(String.format(
             Locale.US,
             "%s : %d mAh\n",
             padKey("Current charge"),
-            snap.battery.chargeNowMah
+            currentCharge
+    ));
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Charge source"),
+            currentSource
     ));
 }
 
 // --------------------------------------------------
-// ESTIMATED CAPACITY (counter-based)
+// ESTIMATED CAPACITY (STRICT CALCULATION)
 // --------------------------------------------------
 
 long estimatedCapacity = -1;
 
-// ----------------------------------------
-// PRIMARY (charge counter)
-// ----------------------------------------
+boolean hasCounter =
+        snap.battery.chargeNowMah > 0 && hasValidLevel;
 
-if (snap.battery.chargeNowMah > 0 &&
-    snap.battery.level > 5) {
+// ONLY from real counter
+if (hasCounter) {
 
     estimatedCapacity =
             (long)(
@@ -1374,17 +1406,7 @@ if (snap.battery.chargeNowMah > 0 &&
             );
 }
 
-// ----------------------------------------
-// FALLBACK (model-based estimation)
-// ----------------------------------------
-
-if (estimatedCapacity <= 0 &&
-    modelCap > 0 &&
-    snap.battery.level > 5) {
-
-    estimatedCapacity = modelCap;
-}
-
+// OUTPUT
 if (estimatedCapacity > 0) {
 
     sb.append(String.format(
@@ -1392,6 +1414,29 @@ if (estimatedCapacity > 0) {
             "%s : %d mAh\n",
             padKey("Estimated capacity"),
             estimatedCapacity
+    ));
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Capacity source"),
+            "counter_calculated"
+    ));
+
+} else {
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Estimated capacity"),
+            "N/A"
+    ));
+
+    sb.append(String.format(
+            Locale.US,
+            "%s : %s\n",
+            padKey("Capacity source"),
+            "no_counter"
     ));
 }
 
