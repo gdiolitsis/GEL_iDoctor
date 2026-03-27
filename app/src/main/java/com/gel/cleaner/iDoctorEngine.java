@@ -402,11 +402,16 @@ if (hasCounter) {
     bi.reason = "Battery telemetry blocked by OEM/kernel";
 }
 
-// -------------------------
-// EXTRA FLAG (OPTIONAL)
-// -------------------------
+// --------------------------------------------------
+// SOURCE TAGGING (SAFE)
+// --------------------------------------------------
 
-if (!hasCounter && !hasFull) {
+if (gotCounterFromSysfs) {
+
+    bi.source = "SYSFS_COUNTER";
+
+} else if (!hasCounter && !hasFull) {
+
     bi.source = "NO_COUNTER_AVAILABLE";
 }
 
@@ -416,16 +421,12 @@ if (!hasCounter && !hasFull) {
 
 bi.noBatteryAccess = !hasCounter && !hasFull;
 
+// --------------------------------------------------
+// RETURN (ΠΑΝΤΑ ΤΕΛΕΥΤΑΙΟ)
+// --------------------------------------------------
+
 return bi;
 }
-
-// --------------------------------------------------
-// SOURCE TAGGING (SAFE)
-// --------------------------------------------------
-
-if (gotCounterFromSysfs) {
-
-    bi.source = "SYSFS_COUNTER";
 
 } else if (bi.chargeNowMah <= 0) {
 
