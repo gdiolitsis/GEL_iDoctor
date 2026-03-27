@@ -56,11 +56,7 @@ import java.util.Map;
 
 public final class iDoctorEngine {
 	private long lastInternalResistanceMilliOhm = -1;
-	
-	bi.noBatteryAccess =
-        bi.chargeNowMah <= 0 &&
-        bi.chargeFullMah <= 0;
-	
+
 // ============================================================
 // LAB BATTERY SOURCE LOCK
 // Mode C = OEM locked if available, else BatteryManager locked
@@ -414,7 +410,13 @@ if (!hasCounter && !hasFull) {
     bi.source = "NO_COUNTER_AVAILABLE";
 }
 
-    return bi;
+// --------------------------------------------------
+// BATTERY ACCESS FLAG
+// --------------------------------------------------
+
+bi.noBatteryAccess = !hasCounter && !hasFull;
+
+return bi;
 }
 
 // --------------------------------------------------
