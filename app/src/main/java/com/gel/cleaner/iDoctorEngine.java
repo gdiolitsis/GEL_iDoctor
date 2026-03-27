@@ -439,7 +439,7 @@ if (bi.chargeNowMah <= 0 && bi.chargeFullMah <= 0) {
 return bi;
 }
 
-private long readSysLong(String path) {
+public long readSysLong(String path)
     try {
         BufferedReader br = new BufferedReader(new FileReader(path));
         String line = br.readLine();
