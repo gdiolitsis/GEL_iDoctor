@@ -300,6 +300,8 @@ private void saveModelCapacity(long v) {
 // 🔥 HARD FALLBACK — SYSFS BATTERY READ (CRITICAL)
 // --------------------------------------------------
 
+boolean gotCounterFromSysfs = false;
+
 if (bi.chargeNowMah <= 0) {
 
     long rawNow = readSysLong("/sys/class/power_supply/battery/charge_now");
@@ -314,6 +316,7 @@ if (bi.chargeNowMah <= 0) {
         if (rawNow > 100000) rawNow = rawNow / 1000;
 
         bi.chargeNowMah = rawNow;
+        gotCounterFromSysfs = true;
     }
 }
 
@@ -333,36 +336,36 @@ if (bi.chargeFullMah <= 0) {
     }
 }
 
-    if (bi.internalResistance <= 0 &&
-        lastInternalResistanceMilliOhm > 0) {
+if (bi.internalResistance <= 0 &&
+    lastInternalResistanceMilliOhm > 0) {
 
-        bi.internalResistance = lastInternalResistanceMilliOhm;
-    }
+    bi.internalResistance = lastInternalResistanceMilliOhm;
+}
 
-    if (bi.chargeFullMah <= 0 && bi.chargeDesignMah > 0) {
-        bi.chargeFullMah = bi.chargeDesignMah;
-    }
+if (bi.chargeFullMah <= 0 && bi.chargeDesignMah > 0) {
+    bi.chargeFullMah = bi.chargeDesignMah;
+}
 
-    if (bi.source == null || bi.source.trim().isEmpty()) {
-        bi.source = lockedBatteryMode == BatteryReadMode.OEM_LOCKED
-                ? "OEM_LOCKED"
-                : "BATTERY_MANAGER_LOCKED";
-    }
+if (bi.source == null || bi.source.trim().isEmpty()) {
+    bi.source = lockedBatteryMode == BatteryReadMode.OEM_LOCKED
+            ? "OEM_LOCKED"
+            : "BATTERY_MANAGER_LOCKED";
+}
 
-    if (bi.chargeDesignMah > 0 && bi.chargeFullMah > 0) {
-        try {
-            int soh =
-                    (int) Math.round(
-                            (bi.chargeFullMah * 100.0)
-                                    / bi.chargeDesignMah
-                    );
+if (bi.chargeDesignMah > 0 && bi.chargeFullMah > 0) {
+    try {
+        int soh =
+                (int) Math.round(
+                        (bi.chargeFullMah * 100.0)
+                                / bi.chargeDesignMah
+                );
 
-            if (soh > 0 && soh < 200) {
-                bi.sohPercent = soh;
-            }
-        } catch (Throwable ignore) {}
-    }
-    
+        if (soh > 0 && soh < 200) {
+            bi.sohPercent = soh;
+        }
+    } catch (Throwable ignore) {}
+}
+
 // --------------------------------------------------
 // 🔥 GEL BATTERY ACCESS CLASSIFIER (ENGINE)
 // --------------------------------------------------
