@@ -2126,16 +2126,6 @@ if (!out.battery.valid) {
         }
     }
 
-    public long readSysLong(String path) {
-        String s = readSysString(path);
-        if (s == null || s.isEmpty()) return -1;
-        try {
-            return Long.parseLong(s.trim());
-        } catch (Throwable ignore) {
-            return -1;
-        }
-    }
-
     public String getProp(String key) {
         try {
             Process p = Runtime.getRuntime().exec(new String[]{"getprop", key});
