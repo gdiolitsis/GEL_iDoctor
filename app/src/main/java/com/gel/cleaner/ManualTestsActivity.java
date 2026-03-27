@@ -13137,6 +13137,9 @@ final iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
 
     gr = AppLang.isGreek(this);
+    
+    final Lab14Engine lab14Engine =
+        new Lab14Engine(this);
 
     validDrain = false;
     lab14_systemLimited[0] = false;
@@ -13318,6 +13321,8 @@ t0 = SystemClock.elapsedRealtime();
 boolean rooted = idoctor.isDeviceRooted();
 Float cpuTempStart = readCpuTempSafe();
 Float gpuTempStart = readGpuTempSafe();
+
+lab14Engine.startDrainSession();
 
         // ------------------------------------------------------------
         // 2) HEADER LOGS - START CONDITIONS
@@ -14507,71 +14512,43 @@ final long dtMs =
                 1,
                 SystemClock.elapsedRealtime() - t0
         );
+        
+Lab14Engine.DrainSession drainSession =
+        engine.endDrainSession();
+
+Lab14Engine.DrainResult drainResult =
+        engine.computeDrain(drainSession);
 
 // ====================================================
-// DRAIN
+// DRAIN (ENGINE-BASED)
 // ====================================================
-
-boolean hasStartCounter =
-        startMah > 0;
-
-boolean hasEndCounter =
-        snapEnd.chargeNowMah > 0;
-
-boolean hasFullCap =
-        snapEnd.chargeFullMah > 0;
 
 long drainMah = 0;
+double mahPerHour = 0;
+double drainPercentPerHour = 0;
+boolean validDrain = false;
 
-DrainMode drainMode =
-        DrainMode.FALLBACK;
+if (drainResult != null && drainResult.valid) {
 
-if (hasStartCounter && hasEndCounter) {
+    drainMah = (long) Math.max(0, Math.round(drainResult.drainMah));
+    mahPerHour = Math.max(0, drainResult.mahPerHour);
+    validDrain = drainMah > 0 && mahPerHour > 0;
 
-    long d =
-            startMah - snapEnd.chargeNowMah;
-
-    if (d < 0) d = 0;
-
-    // reject unrealistic drain
-    if (d > 2000) {
-        d = 0;
+    if (baselineFullMah > 0 && mahPerHour > 0) {
+        drainPercentPerHour =
+                (mahPerHour / baselineFullMah) * 100.0;
     }
-
-    drainMah = d;
-
-    drainMode = DrainMode.COUNTER;
-}
-else {
-
-drainMah =
-        estimateDrainFallback(
-                snapEnd.level,
-                (int) snapEnd.voltageMv,
-                dtMs
-        );
-
-    drainMode = DrainMode.FALLBACK;
 }
 
 // ----------------------------
 // limiter correction
 // ----------------------------
 
-if (lab14_systemLimited[0]) {
-
-    if (drainMah < 3) {
-        drainMah = 0;
-    }
-}
-
-// ----------------------------
-// time normalization guard
-// ----------------------------
-
-if (dtMs < 10000) {
-
+if (lab14_systemLimited[0] && drainMah < 3) {
     drainMah = 0;
+    mahPerHour = 0;
+    drainPercentPerHour = 0;
+    validDrain = false;
 }
 
 // ----------------------------
@@ -14579,33 +14556,11 @@ if (dtMs < 10000) {
 // ----------------------------
 
 if (drainMah < 0) drainMah = 0;
-if (drainMah > 5000) drainMah = 0;
-
-// ----------------------------
-// drain validity
-// ----------------------------
-
-boolean validDrain = drainMah > 0 && dtMs > 0;
-
-// ----------------------------
-// drain rate mAh/h
-// ----------------------------
-
-double mahPerHour = 0;
-
-if (drainMah > 0 && dtMs > 0) {
-    mahPerHour = (drainMah * 3600000.0) / dtMs;
-}
-
-// ----------------------------
-// normalized drain %/h
-// ----------------------------
-
-double drainPercentPerHour = 0;
-
-if (baselineFullMah > 0 && mahPerHour > 0) {
-    drainPercentPerHour =
-            (mahPerHour / baselineFullMah) * 100.0;
+if (drainMah > 5000) {
+    drainMah = 0;
+    mahPerHour = 0;
+    drainPercentPerHour = 0;
+    validDrain = false;
 }
 
 // ====================================================
