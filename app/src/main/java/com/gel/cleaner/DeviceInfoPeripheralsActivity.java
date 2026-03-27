@@ -1398,9 +1398,6 @@ String capacitySource = "no_counter";
 // PRIMARY (REAL COUNTER)
 // -------------------------
 
-boolean hasValidLevel =
-        snap.battery.level > 0 && snap.battery.level <= 100;
-
 boolean hasCounter =
         snap.battery.chargeNowMah > 0 &&
         hasValidLevel;
