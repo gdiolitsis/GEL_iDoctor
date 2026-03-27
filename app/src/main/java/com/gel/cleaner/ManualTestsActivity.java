@@ -13223,7 +13223,6 @@ if (isChargingNowSafe()) {
 // ---------------------------------------
 // ENGINE
 // ---------------------------------------
-final Lab14Engine lab14Engine = new Lab14Engine(this);
 
 try {
 
