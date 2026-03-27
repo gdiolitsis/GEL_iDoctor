@@ -1388,7 +1388,7 @@ if (currentCharge > 0) {
 }
 
 // --------------------------------------------------
-// ESTIMATED CAPACITY (REAL + FALLBACK GEL)
+// ESTIMATED CAPACITY (REAL + GEL STRICT)
 // --------------------------------------------------
 
 long estimatedCapacity = -1;
@@ -1397,6 +1397,9 @@ String capacitySource = "no_counter";
 // -------------------------
 // PRIMARY (REAL COUNTER)
 // -------------------------
+
+boolean hasValidLevel =
+        snap.battery.level > 0 && snap.battery.level <= 100;
 
 boolean hasCounter =
         snap.battery.chargeNowMah > 0 &&
@@ -1419,6 +1422,7 @@ if (hasCounter) {
 
 if (estimatedCapacity > 15000 || estimatedCapacity < 500) {
     estimatedCapacity = -1;
+    capacitySource = "invalid_range";
 }
 
 // -------------------------
@@ -1436,29 +1440,18 @@ if (hasCounter && snap.battery.chargeFullMah > 0) {
 
     if (diff > expected * 0.25f) {
         estimatedCapacity = -1;
+        capacitySource = "inconsistent_counter";
     }
 }
 
 // --------------------------------------------------
-// 🔥 FALLBACK (OEM LOCK / NO COUNTER)
+// 🔥 FALLBACK (STRICT HARDWARE ONLY)
 // --------------------------------------------------
 
 if (estimatedCapacity <= 0 && hasValidLevel) {
 
-    // χρησιμοποιούμε declared capacity αν υπάρχει
-    if (snap.battery.designCapacityMah > 0) {
-
-        estimatedCapacity = snap.battery.designCapacityMah;
-        capacitySource = "design_capacity";
-
-    } else {
-
-        // last fallback (heuristic)
-        estimatedCapacity =
-                (long)(snap.battery.level * 50); // ~3000–5000 range
-
-        capacitySource = "heuristic_estimate";
-    }
+    estimatedCapacity = -1;
+    capacitySource = "unavailable_no_counter";
 }
 
 // --------------------------------------------------
@@ -1494,7 +1487,7 @@ if (estimatedCapacity > 0) {
             Locale.US,
             "%s : %s\n",
             padKey("Capacity source"),
-            "unavailable"
+            capacitySource
     ));
 }
 
