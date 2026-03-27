@@ -1,6 +1,6 @@
 // GDiolitsis Engine Lab (GEL) — Author & Developer
-// DeviceInfoInternalActivity.java — GEL INTERNAL PRO v9.0
-// Full Report + Soft Expand v3.0 + Neon Values + Root Fallback + Root-Extended Internals + Stealth Masking
+// DeviceInfoInternalActivity.java — GEL INTERNAL PRO v10.0
+// Full Engine-Based Edition + Soft Expand v3.0 + Neon Values + Root Fallback + Root-Extended Internals + Stealth Masking
 // NOTE: Δουλεύω ΠΑΝΩ στο τελευταίο αρχείο σου — χωρίς αλλαγές σε UI / XML.
 
 package com.gel.cleaner;
@@ -8,26 +8,16 @@ package com.gel.cleaner;
 import com.gel.cleaner.base.*;
 
 import android.app.ActivityManager;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothManager;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.content.pm.ConfigurationInfo;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
-import android.nfc.NfcAdapter;
-import android.nfc.NfcManager;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.StatFs;
 import android.provider.Settings;
-import android.telephony.TelephonyManager;
 import android.telephony.ServiceState;
-import android.util.DisplayMetrics;
+import android.telephony.TelephonyManager;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.TextView;
@@ -44,12 +34,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.util.Locale;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.LinkedHashMap;
 
 public class DeviceInfoInternalActivity extends GELAutoActivityHook
         implements GELFoldableCallback {
@@ -57,7 +41,7 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
     private static final String NEON_GREEN = "#39FF14";
 
     private boolean isRooted = false;
-    
+
     private iDoctorEngine engine;
 
     private GELFoldableDetector foldDetector;
@@ -65,22 +49,6 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
 
     private TextView[] allContents;
     private TextView[] allIcons;
-
-    // ============================================================
-    // TELEPHONY SNAPSHOT — GEL SINGLE SOURCE OF TRUTH
-    // ============================================================
-    private static class TelephonySnapshot {
-
-        boolean airplaneOn = false;
-
-        int simState = TelephonyManager.SIM_STATE_UNKNOWN;
-        boolean simReady = false;
-
-        int serviceState = ServiceState.STATE_OUT_OF_SERVICE;
-        boolean inService = false;
-
-        int dataState = TelephonyManager.DATA_UNKNOWN;
-    }
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -90,23 +58,23 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        engine = new iDoctorEngine(this);
 
-isRooted = engine.isDeviceRooted();
-        
+        engine = iDoctorEngine.get(this);
+        isRooted = engine.isDeviceRooted();
+
         setContentView(R.layout.activity_device_info_internal);
-        
+
         UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
         foldUI = new GELFoldableUIManager(this);
         foldDetector = new GELFoldableDetector(this, this);
 
         TextView title = findViewById(R.id.txtTitleDevice);
-        if (title != null)
+        if (title != null) {
             title.setText(getString(R.string.phone_info_internal));
+        }
 
-        // CONTENT (ONLY IDs THAT EXIST IN CLEAN XML)
+        // CONTENT
         TextView txtSystemContent       = findViewById(R.id.txtSystemContent);
         TextView txtAndroidContent      = findViewById(R.id.txtAndroidContent);
         TextView txtCpuContent          = findViewById(R.id.txtCpuContent);
@@ -117,7 +85,7 @@ isRooted = engine.isDeviceRooted();
         TextView txtStorageContent      = findViewById(R.id.txtStorageContent);
         TextView txtConnectivityContent = findViewById(R.id.txtConnectivityContent);
 
-        // ICONS (ONLY IDs THAT EXIST IN CLEAN XML)
+        // ICONS
         TextView iconSystem       = findViewById(R.id.iconSystemToggle);
         TextView iconAndroid      = findViewById(R.id.iconAndroidToggle);
         TextView iconCpu          = findViewById(R.id.iconCpuToggle);
@@ -139,29 +107,36 @@ isRooted = engine.isDeviceRooted();
                 iconVulkan, iconRam, iconStorage, iconConnectivity
         };
 
-        // ============================================================
-        // CONTENT BUILD (values in neon green via spans)
-        // ============================================================
-        if (txtSystemContent != null)
+        // CONTENT BUILD
+        if (txtSystemContent != null) {
             setNeonSectionText(txtSystemContent, buildSystemInfo());
-        if (txtAndroidContent != null)
+        }
+        if (txtAndroidContent != null) {
             setNeonSectionText(txtAndroidContent, buildAndroidInfo());
-        if (txtCpuContent != null)
+        }
+        if (txtCpuContent != null) {
             setNeonSectionText(txtCpuContent, buildCpuInfo());
-        if (txtGpuContent != null)
+        }
+        if (txtGpuContent != null) {
             setNeonSectionText(txtGpuContent, buildGpuInfo());
-        if (txtThermalContent != null)
+        }
+        if (txtThermalContent != null) {
             setNeonSectionText(txtThermalContent, buildThermalInternalReport());
-        if (txtVulkanContent != null)
+        }
+        if (txtVulkanContent != null) {
             setNeonSectionText(txtVulkanContent, buildVulkanInfo());
-        if (txtRamContent != null)
+        }
+        if (txtRamContent != null) {
             setNeonSectionText(txtRamContent, buildRamInfo());
-        if (txtStorageContent != null)
+        }
+        if (txtStorageContent != null) {
             setNeonSectionText(txtStorageContent, buildStorageInfo());
-        if (txtConnectivityContent != null)
+        }
+        if (txtConnectivityContent != null) {
             setNeonSectionText(txtConnectivityContent, buildConnectivityInfo());
+        }
 
-        // EXPANDERS (ONLY HEADERS THAT EXIST IN CLEAN XML)
+        // EXPANDERS
         setupSection(findViewById(R.id.headerSystem), txtSystemContent, iconSystem);
         setupSection(findViewById(R.id.headerAndroid), txtAndroidContent, iconAndroid);
         setupSection(findViewById(R.id.headerCpu), txtCpuContent, iconCpu);
@@ -171,79 +146,6 @@ isRooted = engine.isDeviceRooted();
         setupSection(findViewById(R.id.headerRam), txtRamContent, iconRam);
         setupSection(findViewById(R.id.headerStorage), txtStorageContent, iconStorage);
         setupSection(findViewById(R.id.headerConnectivity), txtConnectivityContent, iconConnectivity);
-    }
-
-    // ============================================================
-    // CONNECTIVITY INFO — SNAPSHOT BASED
-    // ============================================================
-    private String buildConnectivityInfo() {
-
-        TelephonySnapshot s = getTelephonySnapshot();
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("Airplane Mode: ").append(s.airplaneOn ? "ON" : "OFF").append("\n");
-
-        sb.append("SIM State: ");
-        switch (s.simState) {
-            case TelephonyManager.SIM_STATE_READY: sb.append("READY"); break;
-            case TelephonyManager.SIM_STATE_ABSENT: sb.append("ABSENT"); break;
-            case TelephonyManager.SIM_STATE_PIN_REQUIRED: sb.append("PIN REQUIRED"); break;
-            case TelephonyManager.SIM_STATE_PUK_REQUIRED: sb.append("PUK REQUIRED"); break;
-            case TelephonyManager.SIM_STATE_NETWORK_LOCKED: sb.append("NETWORK LOCKED"); break;
-            default: sb.append("UNKNOWN"); break;
-        }
-        sb.append("\n");
-
-        sb.append("Mobile Service: ")
-                .append(s.inService ? "IN SERVICE" : "OUT OF SERVICE")
-                .append("\n");
-
-        sb.append("Mobile Data: ");
-        switch (s.dataState) {
-            case TelephonyManager.DATA_CONNECTED: sb.append("CONNECTED"); break;
-            case TelephonyManager.DATA_CONNECTING: sb.append("CONNECTING"); break;
-            case TelephonyManager.DATA_DISCONNECTED: sb.append("DISCONNECTED"); break;
-            default: sb.append("UNKNOWN"); break;
-        }
-
-        return sb.toString();
-    }
-
-    private TelephonySnapshot getTelephonySnapshot() {
-
-        TelephonySnapshot s = new TelephonySnapshot();
-
-        try {
-            s.airplaneOn = Settings.Global.getInt(
-                    getContentResolver(),
-                    Settings.Global.AIRPLANE_MODE_ON, 0
-            ) == 1;
-        } catch (Exception ignored) {}
-
-        TelephonyManager tm =
-                (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
-
-        if (tm != null) {
-
-            try {
-                s.simState = tm.getSimState();
-                s.simReady = (s.simState == TelephonyManager.SIM_STATE_READY);
-            } catch (Exception ignored) {}
-
-            try {
-                ServiceState ss = tm.getServiceState();
-                if (ss != null) {
-                    s.serviceState = ss.getState();
-                    s.inService = (s.serviceState == ServiceState.STATE_IN_SERVICE);
-                }
-            } catch (Exception ignored) {}
-
-            try {
-                s.dataState = tm.getDataState();
-            } catch (Exception ignored) {}
-        }
-
-        return s;
     }
 
     @Override
@@ -267,7 +169,7 @@ isRooted = engine.isDeviceRooted();
     }
 
     // ============================================================
-    // EXPANDER LOGIC WITH ANIMATION (GEL Expand Engine v3.0 — FIXED)
+    // EXPANDER LOGIC WITH ANIMATION
     // ============================================================
 
     private void setupSection(View header, final TextView content, final TextView icon) {
@@ -277,7 +179,6 @@ isRooted = engine.isDeviceRooted();
 
     private void toggleSection(TextView targetContent, TextView targetIcon) {
 
-        // Close all other sections
         for (int i = 0; i < allContents.length; i++) {
             TextView c = allContents[i];
             TextView ic = allIcons[i];
@@ -290,7 +191,6 @@ isRooted = engine.isDeviceRooted();
             }
         }
 
-        // Toggle only selected section
         if (targetContent.getVisibility() == View.VISIBLE) {
             animateCollapse(targetContent);
             targetIcon.setText("＋");
@@ -301,8 +201,6 @@ isRooted = engine.isDeviceRooted();
     }
 
     private void animateExpand(final View v) {
-
-        // SAFE POST-MEASURE FIX — prevents auto-collapse on Android 11–14
         v.post(() -> {
             v.measure(
                     View.MeasureSpec.makeMeasureSpec(((View) v.getParent()).getWidth(), View.MeasureSpec.EXACTLY),
@@ -347,7 +245,7 @@ isRooted = engine.isDeviceRooted();
     }
 
     // ============================================================
-    // NEON VALUE COLOR ENGINE (only values, not labels)
+    // NEON VALUE COLOR ENGINE
     // ============================================================
 
     private void setNeonSectionText(TextView tv, String text) {
@@ -358,25 +256,26 @@ isRooted = engine.isDeviceRooted();
 
     private CharSequence applyNeonToValues(String text) {
         SpannableStringBuilder ssb = new SpannableStringBuilder(text);
-        String[] lines = text.split("\n", -1); // keep empty lines
+        String[] lines = text.split("\n", -1);
         int offset = 0;
         boolean previousLabelOnly = false;
 
         for (String line : lines) {
             int len = line.length();
+
             if (len > 0) {
                 int colonIdx = line.indexOf(':');
+
                 if (colonIdx >= 0) {
-                    // Label-only line (ends with ':')
                     if (colonIdx == len - 1) {
                         previousLabelOnly = true;
                     } else {
-                        // Color from first non-space after ':' to end of line
                         int valueStart = offset + colonIdx + 1;
                         while (valueStart < offset + len &&
                                 Character.isWhitespace(line.charAt(valueStart - offset))) {
                             valueStart++;
                         }
+
                         int valueEnd = offset + len;
                         if (valueStart < valueEnd) {
                             ssb.setSpan(
@@ -389,15 +288,16 @@ isRooted = engine.isDeviceRooted();
                         previousLabelOnly = false;
                     }
                 } else if (previousLabelOnly) {
-                    // Entire line is a value for the previous label-only line
                     int valueStart = offset;
                     int valueEnd = offset + len;
+
                     ssb.setSpan(
                             new ForegroundColorSpan(Color.parseColor(NEON_GREEN)),
                             valueStart,
                             valueEnd,
                             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                     );
+
                     previousLabelOnly = false;
                 } else {
                     previousLabelOnly = false;
@@ -406,547 +306,484 @@ isRooted = engine.isDeviceRooted();
                 previousLabelOnly = false;
             }
 
-            offset += len + 1; // +1 for '\n'
+            offset += len + 1;
         }
 
         return ssb;
     }
 
     // ============================================================
-    // SECTION BUILDERS — FULL PRO + ROOT EXTENDED + STEALTH
+    // CONNECTIVITY INFO — FULL ENGINE-BASED
     // ============================================================
 
+    private String buildConnectivityInfo() {
+
+        iDoctorEngine.ConnectivitySnapshot c =
+                engine.readConnectivitySnapshot();
+
+        iDoctorEngine.TelephonySnapshot t =
+                engine.readTelephonySnapshot();
+
+        StringBuilder sb = new StringBuilder();
+        final String FMT = "%-16s : %s\n";
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Airplane Mode",
+                t.airplaneOn ? "ON" : "OFF"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "SIM State",
+                describeSimState(t.simState)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Mobile Service",
+                t.inService ? "IN SERVICE" : "OUT OF SERVICE"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Mobile Data",
+                describeDataState(t.dataState)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Phone Type",
+                safeStr(t.phoneType)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Data Network",
+                safeStr(t.dataNetwork)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Carrier",
+                safeStr(t.carrier)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Country ISO",
+                safeStr(t.countryIso)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Operator Code",
+                safeStr(t.operatorCode)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Roaming",
+                t.roaming ? "Yes" : "No"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Signal Level",
+                t.signalLevel >= 0 ? String.valueOf(t.signalLevel) : "N/A"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "5G NR",
+                t.nr5gActive ? "Active" : "No"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Active SIMs",
+                t.activeSimCount > 0 ? String.valueOf(t.activeSimCount) : "N/A"
+        ));
+
+        if (t.sims != null && !t.sims.isEmpty()) {
+            sb.append("\nSIM Entries:\n");
+            for (iDoctorEngine.SimEntry sim : t.sims) {
+                if (sim == null) continue;
+                sb.append("  slot")
+                  .append(sim.slot)
+                  .append(" : ")
+                  .append(safeStr(sim.carrier))
+                  .append("\n");
+            }
+        }
+
+        sb.append("\n=== Wireless ===\n\n");
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Wi-Fi Supported",
+                c.wifiSupported ? "Yes" : "No"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Wi-Fi Enabled",
+                c.wifiEnabled ? "Yes" : "No"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "SSID",
+                safeStr(c.ssid)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Wi-Fi Band",
+                safeStr(c.wifiBand)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Wi-Fi Standard",
+                safeStr(c.wifiStandard)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Link Speed",
+                c.linkSpeedMbps > 0 ? c.linkSpeedMbps + " Mbps" : "N/A"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "RSSI",
+                c.rssiDbm != -1 ? c.rssiDbm + " dBm" : "N/A"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Frequency",
+                c.frequencyMhz > 0 ? c.frequencyMhz + " MHz" : "N/A"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Wi-Fi MAC",
+                safeStr(c.wifiMac)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Bluetooth",
+                c.bluetoothSupported ? "Supported" : "Not supported"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "Bluetooth State",
+                safeStr(c.bluetoothState)
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "BLE",
+                c.bleSupported ? "Supported" : "Not supported"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "NFC",
+                c.nfcSupported ? "Supported" : "Not supported"
+        ));
+
+        sb.append(String.format(
+                Locale.US,
+                FMT,
+                "NFC Enabled",
+                c.nfcEnabled ? "Yes" : "No"
+        ));
+
+        return sb.toString();
+    }
+
     // ============================================================
-    // System Info
+    // System Info — ENGINE-BASED
     // ============================================================
 
     private String buildSystemInfo() {
+
+        iDoctorEngine.SystemSnapshot s =
+                engine.readSystemSnapshot();
+
         StringBuilder sb = new StringBuilder();
+        final String FMT = "%-13s : %s\n";
 
-        sb.append("Manufacturer : ").append(Build.MANUFACTURER).append("\n");
-        sb.append("Brand        : ").append(Build.BRAND).append("\n");
-        sb.append("Model        : ").append(Build.MODEL).append("\n");
-        sb.append("Device       : ").append(Build.DEVICE).append("\n");
-        sb.append("Product      : ").append(Build.PRODUCT).append("\n");
-        sb.append("Hardware     : ").append(Build.HARDWARE).append("\n");
-        sb.append("Board        : ").append(Build.BOARD).append("\n");
-        sb.append("Bootloader   : ").append(Build.BOOTLOADER).append("\n\n");
+        sb.append(String.format(Locale.US, FMT, "Manufacturer", safeStr(s.manufacturer)));
+        sb.append(String.format(Locale.US, FMT, "Brand",        safeStr(s.brand)));
+        sb.append(String.format(Locale.US, FMT, "Model",        safeStr(s.model)));
+        sb.append(String.format(Locale.US, FMT, "Device",       safeStr(s.device)));
+        sb.append(String.format(Locale.US, FMT, "Product",      safeStr(s.product)));
+        sb.append(String.format(Locale.US, FMT, "Hardware",     safeStr(s.hardware)));
+        sb.append(String.format(Locale.US, FMT, "Board",        safeStr(s.board)));
+        sb.append(String.format(Locale.US, FMT, "Bootloader",   safeStr(s.bootloader)));
 
-        sb.append("=== System Fingerprint ===\n\n");
-        sb.append(Build.FINGERPRINT).append("\n\n");
-        
-        String androidId = "";
-        try {
-            androidId = Settings.Secure.getString(
-                    getContentResolver(), Settings.Secure.ANDROID_ID);
-        } catch (Throwable ignore) {
-        }
-        if (androidId != null) {
-            sb.append("Android ID   : ").append(androidId).append("\n");
-        }
+        sb.append("\n=== System Fingerprint ===\n\n");
+        sb.append(safeStr(s.fingerprint)).append("\n\n");
 
-        sb.append("Device Type  : ");
-        if (getResources().getConfiguration().smallestScreenWidthDp >= 600) {
-            sb.append("Tablet\n");
-        } else {
-            sb.append("Phone\n");
-        }
+        sb.append(String.format(Locale.US, FMT, "Android ID",  safeStr(s.androidId)));
+        sb.append(String.format(Locale.US, FMT, "Device Type", safeStr(s.deviceType)));
+        sb.append(String.format(Locale.US, FMT, "Region",      safeStr(s.region)));
+        sb.append(String.format(Locale.US, FMT, "Vendor Name", safeStr(s.vendorName)));
 
-        String region = getProp("ro.product.locale.region");
-        if (region != null && !region.isEmpty()) {
-            sb.append("Region       : ").append(region).append("\n");
+        if (!isBlank(s.vbState)) {
+            sb.append(String.format(Locale.US, FMT, "VB State", safeStr(s.vbState)));
         }
-
-        String vendor = getProp("ro.product.vendor.name");
-        if (vendor != null && !vendor.isEmpty()) {
-            sb.append("Vendor Name  : ").append(vendor).append("\n");
+        if (!isBlank(s.vbDevice)) {
+            sb.append(String.format(Locale.US, FMT, "VB Device", safeStr(s.vbDevice)));
         }
-
-        // Root-extended boot / verified state (props are readable even without su on many devices)
-        String vbState = getProp("ro.boot.verifiedbootstate");
-        if (vbState != null && !vbState.isEmpty()) {
-            sb.append("VB State     : ").append(vbState).append("\n");
-        }
-        String vbDevice = getProp("ro.boot.vbmeta.device_state");
-        if (vbDevice != null && !vbDevice.isEmpty()) {
-            sb.append("VB Device    : ").append(vbDevice).append("\n");
-        }
-        String flashLock = getProp("ro.boot.flash.locked");
-        if (flashLock != null && !flashLock.isEmpty()) {
-            sb.append("Flash Lock   : ").append(flashLock).append("\n");
+        if (!isBlank(s.flashLock)) {
+            sb.append(String.format(Locale.US, FMT, "Flash Lock", safeStr(s.flashLock)));
         }
 
         return sb.toString();
     }
 
-// ============================================================
-// Android Build Info
-// ============================================================
-private String buildAndroidInfo() {
-    StringBuilder sb = new StringBuilder();
+    // ============================================================
+    // Android Build Info — ENGINE-BASED
+    // ============================================================
 
-    // ------------------------------------------------------------
-    // ANDROID CORE
-    // ------------------------------------------------------------
-    sb.append("Android        : ")
-      .append(Build.VERSION.RELEASE)
-      .append(" (SDK ")
-      .append(Build.VERSION.SDK_INT)
-      .append(")\n");
+    private String buildAndroidInfo() {
 
-    if (Build.VERSION.SECURITY_PATCH != null) {
-        sb.append("Security Patch : ")
-          .append(Build.VERSION.SECURITY_PATCH)
-          .append("\n");
-    }
+        iDoctorEngine.AndroidSnapshot a =
+                engine.readAndroidSnapshot();
 
-    sb.append("Build ID       : ").append(Build.ID).append("\n");
-    sb.append("Build Type     : ").append(Build.TYPE).append("\n");
-    sb.append("Build Tags     : ").append(Build.TAGS).append("\n");
-    sb.append("Incremental    : ").append(Build.VERSION.INCREMENTAL).append("\n");
-
-    // ------------------------------------------------------------
-    // BASEBAND
-    // ------------------------------------------------------------
-    sb.append("\n=== Baseband ===\n\n");
-
-    String baseband = Build.getRadioVersion();
-    if (baseband != null && !baseband.isEmpty()) {
-        sb.append("Release        : ")
-          .append(baseband)
-          .append("\n");
-    }
-
-    // ------------------------------------------------------------
-    // VENDOR / OEM
-    // ------------------------------------------------------------
-    sb.append("\n=== Vendor Release ===\n\n");
-
-    String miui = getProp("ro.miui.ui.version.name");
-    if (miui != null && !miui.isEmpty()) {
-        sb.append("MIUI           : ")
-          .append(miui)
-          .append("\n");
-    } else if (Build.VERSION.BASE_OS != null && !Build.VERSION.BASE_OS.isEmpty()) {
-        sb.append("Base OS        : ")
-          .append(Build.VERSION.BASE_OS)
-          .append("\n");
-    }
-
-    return sb.toString();
-}
-
-// ============================================================
-// CPU Info
-// ============================================================
-private String buildCpuInfo() {
-
-    iDoctorEngine.ThermalSnapshot ts =
-            engine.readThermalSnapshot();
-
-    StringBuilder sb = new StringBuilder();
-    final String FMT = "%-10s : %s\n";
-
-    // ------------------------------------------------------------------------
-    // ABI
-    // ------------------------------------------------------------------------
-    StringBuilder abi = new StringBuilder();
-    if (Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0) {
-        for (int i = 0; i < Build.SUPPORTED_ABIS.length; i++) {
-            if (i > 0) abi.append(", ");
-            abi.append(Build.SUPPORTED_ABIS[i]);
-        }
-    } else {
-        abi.append(Build.CPU_ABI);
-    }
-
-    sb.append(String.format(Locale.US, FMT, "ABI", abi.toString()));
-
-    // ------------------------------------------------------------------------
-    // CPU CORES
-    // ------------------------------------------------------------------------
-    int cores = Runtime.getRuntime().availableProcessors();
-    sb.append(String.format(Locale.US, FMT, "CPU Cores", cores));
-
-    // ------------------------------------------------------------------------
-    // /proc/cpuinfo
-    // ------------------------------------------------------------------------
-    String cpuinfo = readTextFile("/proc/cpuinfo", 32 * 1024);
-
-    if (cpuinfo != null && !cpuinfo.isEmpty()) {
-
-        String[] lines = cpuinfo.split("\n");
-
-        for (String line : lines) {
-
-            String low = line.toLowerCase(Locale.US);
-
-            if (low.startsWith("processor")) {
-
-                sb.append(String.format(
-                        Locale.US,
-                        FMT,
-                        "processor",
-                        line.split(":", 2)[1].trim()
-                ));
-
-            } else if (low.startsWith("model name")) {
-
-                sb.append(String.format(
-                        Locale.US,
-                        FMT,
-                        "model name",
-                        line.split(":", 2)[1].trim()
-                ));
-
-            } else if (low.startsWith("hardware")) {
-
-                sb.append(String.format(
-                        Locale.US,
-                        FMT,
-                        "hardware",
-                        line.split(":", 2)[1].trim()
-                ));
-            }
-        }
-    }
-
-    // ------------------------------------------------------------------------
-    // GOVERNOR
-    // ------------------------------------------------------------------------
-    String gov =
-            readSysString(
-                    "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
-            );
-
-    if (gov != null && !gov.isEmpty()) {
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "Governor",
-                gov.trim()
-        ));
-    }
-
-    // ------------------------------------------------------------------------
-    // FREQUENCIES
-    // ------------------------------------------------------------------------
-    long curFreq =
-            readSysLong(
-                    "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
-            );
-
-    long minFreq =
-            readSysLong(
-                    "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq"
-            );
-
-    long maxFreq =
-            readSysLong(
-                    "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq"
-            );
-
-    if (curFreq > 0 || minFreq > 0 || maxFreq > 0) {
-
-        StringBuilder freq = new StringBuilder();
-
-        if (curFreq > 0)
-            freq.append("cur=").append(curFreq / 1000).append(" ");
-
-        if (minFreq > 0)
-            freq.append("min=").append(minFreq / 1000).append(" ");
-
-        if (maxFreq > 0)
-            freq.append("max=").append(maxFreq / 1000);
+        StringBuilder sb = new StringBuilder();
+        final String FMT = "%-15s : %s\n";
 
         sb.append(String.format(
                 Locale.US,
                 FMT,
-                "Freq (MHz)",
-                freq.toString().trim()
-        ));
-    }
-
-    // ------------------------------------------------------------------------
-    // CLUSTER
-    // ------------------------------------------------------------------------
-    String policy0 =
-            readSysString(
-                    "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_min_freq"
-            );
-
-    String policy7 =
-            readSysString(
-                    "/sys/devices/system/cpu/cpufreq/policy7/cpuinfo_max_freq"
-            );
-
-    if ((policy0 != null && !policy0.isEmpty())
-            || (policy7 != null && !policy7.isEmpty())) {
-
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "Cluster",
-                "big.LITTLE detected"
-        ));
-    }
-
-    // ------------------------------------------------------------------------
-    // CPU TEMP FROM ENGINE
-    // ------------------------------------------------------------------------
-    if (ts != null && ts.cpu.valid) {
-
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "CPU Temp",
-                String.format(
-                        Locale.US,
-                        "%.1f°C",
-                        ts.cpu.tempC
-                )
+                "Android",
+                safeStr(a.release) + " (SDK " + a.sdk + ")"
         ));
 
-    } else {
+        sb.append(String.format(Locale.US, FMT, "Security Patch", safeStr(a.securityPatch)));
+        sb.append(String.format(Locale.US, FMT, "Build ID",       safeStr(a.buildId)));
+        sb.append(String.format(Locale.US, FMT, "Build Type",     safeStr(a.buildType)));
+        sb.append(String.format(Locale.US, FMT, "Build Tags",     safeStr(a.buildTags)));
+        sb.append(String.format(Locale.US, FMT, "Incremental",    safeStr(a.incremental)));
 
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "CPU Temp",
-                "N/A"
-        ));
+        sb.append("\n=== Baseband ===\n\n");
+        sb.append(String.format(Locale.US, FMT, "Release", safeStr(a.baseband)));
+
+        sb.append("\n=== Vendor Release ===\n\n");
+        sb.append(String.format(Locale.US, FMT, "Vendor", safeStr(a.vendorRelease)));
+
+        return sb.toString();
     }
-
-    // ------------------------------------------------------------------------
-    // ROOT CPU DETAILS
-    // ------------------------------------------------------------------------
-    if (isRooted) {
-
-        sb.append("\n[Root CPU tables]\n");
-
-        boolean added = false;
-
-        for (int i = 0; i < cores; i++) {
-
-            String base =
-                    "/sys/devices/system/cpu/cpu"
-                            + i
-                            + "/cpufreq/";
-
-            long rCur =
-                    readSysLong(base + "scaling_cur_freq");
-
-            long rMin =
-                    readSysLong(base + "cpuinfo_min_freq");
-
-            long rMax =
-                    readSysLong(base + "cpuinfo_max_freq");
-
-            if (rCur > 0 || rMin > 0 || rMax > 0) {
-
-                StringBuilder row =
-                        new StringBuilder();
-
-                if (rCur > 0)
-                    row.append("cur=")
-                            .append(rCur / 1000)
-                            .append("MHz ");
-
-                if (rMin > 0)
-                    row.append("min=")
-                            .append(rMin / 1000)
-                            .append("MHz ");
-
-                if (rMax > 0)
-                    row.append("max=")
-                            .append(rMax / 1000)
-                            .append("MHz");
-
-                sb.append(String.format(
-                        Locale.US,
-                        FMT,
-                        "cpu" + i,
-                        row.toString().trim()
-                ));
-
-                added = true;
-            }
-
-            String avail =
-                    readSysString(
-                            base
-                                    + "scaling_available_frequencies"
-                    );
-
-            if (avail != null && !avail.isEmpty()) {
-
-                sb.append(String.format(
-                        Locale.US,
-                        FMT,
-                        "cpu" + i + " avail",
-                        avail.trim()
-                ));
-
-                added = true;
-            }
-        }
-
-        if (!added) {
-            sb.append(
-                    "Root CPU details not exposed by current kernel.\n"
-            );
-        }
-    }
-
-    return sb.toString();
-}
 
     // ============================================================
-    // Gpu Info
+    // CPU Info — ENGINE-BASED
+    // ============================================================
+
+    private String buildCpuInfo() {
+
+        iDoctorEngine.CpuSnapshot cpu =
+                engine.readCpuSnapshot();
+
+        iDoctorEngine.ThermalSnapshot ts =
+                engine.readThermalSnapshot();
+
+        StringBuilder sb = new StringBuilder();
+        final String FMT = "%-12s : %s\n";
+
+        sb.append(String.format(Locale.US, FMT, "ABI", safeStr(cpu.abi)));
+        sb.append(String.format(Locale.US, FMT, "CPU Cores", String.valueOf(cpu.cores)));
+
+        if (!isBlank(cpu.modelName) && !"N/A".equals(cpu.modelName)) {
+            sb.append(String.format(Locale.US, FMT, "model name", cpu.modelName));
+        }
+
+        if (!isBlank(cpu.hardware) && !"N/A".equals(cpu.hardware)) {
+            sb.append(String.format(Locale.US, FMT, "hardware", cpu.hardware));
+        }
+
+        if (!isBlank(cpu.governor) && !"N/A".equals(cpu.governor)) {
+            sb.append(String.format(Locale.US, FMT, "Governor", cpu.governor));
+        }
+
+        if (cpu.currentFreqKHz > 0 || cpu.minFreqKHz > 0 || cpu.maxFreqKHz > 0) {
+
+            StringBuilder freq = new StringBuilder();
+
+            if (cpu.currentFreqKHz > 0) {
+                freq.append("cur=").append(cpu.currentFreqKHz / 1000).append(" ");
+            }
+            if (cpu.minFreqKHz > 0) {
+                freq.append("min=").append(cpu.minFreqKHz / 1000).append(" ");
+            }
+            if (cpu.maxFreqKHz > 0) {
+                freq.append("max=").append(cpu.maxFreqKHz / 1000);
+            }
+
+            sb.append(String.format(
+                    Locale.US,
+                    FMT,
+                    "Freq (MHz)",
+                    freq.toString().trim()
+            ));
+        }
+
+        if (cpu.coreFreqs != null && cpu.coreFreqs.size() >= 2) {
+            sb.append(String.format(
+                    Locale.US,
+                    FMT,
+                    "Cluster",
+                    "big.LITTLE / multi-cluster detected"
+            ));
+        }
+
+        if (ts != null && ts.cpu != null && ts.cpu.valid) {
+            sb.append(String.format(
+                    Locale.US,
+                    FMT,
+                    "CPU Temp",
+                    String.format(Locale.US, "%.1f°C", ts.cpu.tempC)
+            ));
+        } else {
+            sb.append(String.format(Locale.US, FMT, "CPU Temp", "N/A"));
+        }
+
+        if (isRooted) {
+
+            sb.append("\n[Root CPU tables]\n");
+
+            boolean added = false;
+
+            if (cpu.coreFreqs != null) {
+                for (iDoctorEngine.CoreFreq cf : cpu.coreFreqs) {
+                    if (cf == null) continue;
+
+                    StringBuilder row = new StringBuilder();
+
+                    if (cf.currentFreqKHz > 0) {
+                        row.append("cur=").append(cf.currentFreqKHz / 1000).append("MHz ");
+                    }
+                    if (cf.minFreqKHz > 0) {
+                        row.append("min=").append(cf.minFreqKHz / 1000).append("MHz ");
+                    }
+                    if (cf.maxFreqKHz > 0) {
+                        row.append("max=").append(cf.maxFreqKHz / 1000).append("MHz");
+                    }
+
+                    if (row.length() > 0) {
+                        sb.append(String.format(
+                                Locale.US,
+                                FMT,
+                                "cpu" + cf.coreIndex,
+                                row.toString().trim()
+                        ));
+                        added = true;
+                    }
+                }
+            }
+
+            if (!added) {
+                sb.append("Root CPU details not exposed by current kernel.\n");
+            }
+        }
+
+        return sb.toString();
+    }
+
+    // ============================================================
+    // GPU Info — ENGINE-BASED
     // ============================================================
 
     private String buildGpuInfo() {
 
-    iDoctorEngine.ThermalSnapshot ts =
-            engine.readThermalSnapshot();
+        iDoctorEngine.GpuSnapshot gpu =
+                engine.readGpuSnapshot();
 
-    StringBuilder sb = new StringBuilder();
-    final String FMT = "%-12s : %s\n";
+        iDoctorEngine.ThermalSnapshot ts =
+                engine.readThermalSnapshot();
 
-    try {
+        StringBuilder sb = new StringBuilder();
+        final String FMT = "%-12s : %s\n";
 
-        ActivityManager am =
-                (ActivityManager) getSystemService(
-                        Context.ACTIVITY_SERVICE
-                );
-
-        if (am != null) {
-
-            ConfigurationInfo ci =
-                    am.getDeviceConfigurationInfo();
-
-            if (ci != null) {
-
-                sb.append(String.format(
-                        Locale.US,
-                        FMT,
-                        "OpenGL ES",
-                        ci.getGlEsVersion()
-                ));
-            }
+        if (!isBlank(gpu.openGlEsVersion) && !"N/A".equals(gpu.openGlEsVersion)) {
+            sb.append(String.format(Locale.US, FMT, "OpenGL ES", gpu.openGlEsVersion));
         }
 
-    } catch (Throwable ignore) { }
+        if (!isBlank(gpu.eglHardware) && !"N/A".equals(gpu.eglHardware)) {
+            sb.append(String.format(Locale.US, FMT, "EGL HW", gpu.eglHardware));
+        }
 
-    String egl = getProp("ro.hardware.egl");
+        if (!isBlank(gpu.driver) && !"N/A".equals(gpu.driver)) {
+            sb.append(String.format(Locale.US, FMT, "GPU Driver", gpu.driver));
+        }
 
-    if (egl != null && !egl.isEmpty()) {
+        if (!isBlank(gpu.gpuName) && !"N/A".equals(gpu.gpuName)) {
+            sb.append(String.format(Locale.US, FMT, "GPU Name", gpu.gpuName));
+        }
 
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "EGL HW",
-                egl
-        ));
-    }
+        if (ts != null && ts.gpu != null && ts.gpu.valid) {
+            sb.append(String.format(
+                    Locale.US,
+                    FMT,
+                    "GPU Temp",
+                    String.format(Locale.US, "%.1f°C", ts.gpu.tempC)
+            ));
+        } else {
+            sb.append(String.format(Locale.US, FMT, "GPU Temp", "N/A"));
+        }
 
-    String driver0 = getProp("ro.gfx.driver.0");
+        if (isRooted) {
 
-    if (driver0 != null && !driver0.isEmpty()) {
+            sb.append("\n[Root GPU tables]\n");
 
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "GPU Driver",
-                driver0
-        ));
-    }
+            boolean addedRootGpu = false;
 
-    String perf = getProp("ro.gpu.uv");
+            if (gpu.currentFreqHz > 0 || gpu.minFreqHz > 0 || gpu.maxFreqHz > 0) {
 
-    if (perf != null && !perf.isEmpty()) {
+                StringBuilder row = new StringBuilder();
 
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "GPU Mode",
-                perf
-        ));
-    }
-
-    // ---------------------------------------------------------
-    // GPU TEMP FROM ENGINE
-    // ---------------------------------------------------------
-
-    if (ts != null && ts.gpu.valid) {
-
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "GPU Temp",
-                String.format(
-                        Locale.US,
-                        "%.1f°C",
-                        ts.gpu.tempC
-                )
-        ));
-
-    } else {
-
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "GPU Temp",
-                "N/A"
-        ));
-    }
-
-    // ---------------------------------------------------------
-    // ROOT GPU TABLES
-    // ---------------------------------------------------------
-
-    boolean addedRootGpu = false;
-
-    if (isRooted) {
-
-        sb.append("\n[Root GPU tables]\n");
-
-        try {
-
-            long cur =
-                    readSysLong(
-                            "/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq"
-                    );
-
-            long min =
-                    readSysLong(
-                            "/sys/class/kgsl/kgsl-3d0/devfreq/min_freq"
-                    );
-
-            long max =
-                    readSysLong(
-                            "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq"
-                    );
-
-            if (cur > 0 || min > 0 || max > 0) {
-
-                StringBuilder row =
-                        new StringBuilder();
-
-                if (cur > 0)
-                    row.append("cur=")
-                            .append(cur / 1000000)
-                            .append("MHz ");
-
-                if (min > 0)
-                    row.append("min=")
-                            .append(min / 1000000)
-                            .append("MHz ");
-
-                if (max > 0)
-                    row.append("max=")
-                            .append(max / 1000000)
-                            .append("MHz");
+                if (gpu.currentFreqHz > 0) {
+                    row.append("cur=").append(gpu.currentFreqHz / 1000000).append("MHz ");
+                }
+                if (gpu.minFreqHz > 0) {
+                    row.append("min=").append(gpu.minFreqHz / 1000000).append("MHz ");
+                }
+                if (gpu.maxFreqHz > 0) {
+                    row.append("max=").append(gpu.maxFreqHz / 1000000).append("MHz");
+                }
 
                 sb.append(String.format(
                         Locale.US,
@@ -958,274 +795,154 @@ private String buildCpuInfo() {
                 addedRootGpu = true;
             }
 
-            String avail =
-                    readSysString(
-                            "/sys/class/kgsl/kgsl-3d0/devfreq/available_frequencies"
-                    );
-
-            if (avail != null && !avail.isEmpty()) {
-
-                sb.append(String.format(
-                        Locale.US,
-                        FMT,
-                        "Avail Freq",
-                        avail.trim()
-                ));
-
-                addedRootGpu = true;
-            }
-
-            String busy =
-                    readSysString(
-                            "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage"
-                    );
-
+            String busy = readSysString("/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage");
             if (busy != null && !busy.isEmpty()) {
-
-                sb.append(String.format(
-                        Locale.US,
-                        FMT,
-                        "Busy GPU",
-                        busy.trim() + " %"
-                ));
-
+                sb.append(String.format(Locale.US, FMT, "Busy GPU", busy.trim() + " %"));
                 addedRootGpu = true;
             }
 
-        } catch (Throwable ignore) { }
+            String avail = readSysString("/sys/class/kgsl/kgsl-3d0/devfreq/available_frequencies");
+            if (avail != null && !avail.isEmpty()) {
+                sb.append(String.format(Locale.US, FMT, "Avail Freq", avail.trim()));
+                addedRootGpu = true;
+            }
 
-        if (!addedRootGpu) {
-
-            sb.append(
-                    "Root GPU metrics not exposed by current driver.\n"
-            );
+            if (!addedRootGpu) {
+                sb.append("Root GPU metrics not exposed by current driver.\n");
+            }
         }
-    }
 
-    return sb.toString();
-}
-
-// ============================================================================
-// THERMAL SENSORS — INTERNAL
-// Human Readable • Internal-Only • Aggregated • GEL Edition
-// ============================================================================
-private String buildThermalInternalReport() {
-
-    iDoctorEngine.ThermalSnapshot ts =
-            engine.readThermalSnapshot();
-
-    StringBuilder sb = new StringBuilder();
-
-    sb.append("THERMAL SENSORS (INTERNAL)\n");
-    sb.append("──────────────────────────\n");
-
-    File thermalDir = new File("/sys/class/thermal");
-
-    if (!thermalDir.exists() || !thermalDir.isDirectory()) {
-        sb.append("Thermal sensors not available on this device.\n");
         return sb.toString();
     }
 
-    File[] zones =
-            thermalDir.listFiles(
-                    (dir, name) -> name.startsWith("thermal_zone")
-            );
+    // ============================================================
+    // THERMAL SENSORS — INTERNAL
+    // ============================================================
 
-    if (zones == null || zones.length == 0) {
-        sb.append("No thermal zones detected.\n");
-        return sb.toString();
-    }
+    private String buildThermalInternalReport() {
 
-    final String FMT = "%-18s : %5.1f°C  (%s)\n";
+        iDoctorEngine.ThermalSnapshot ts =
+                engine.readThermalSnapshot();
 
-    // --------------------------------------------------------
-    // ENGINE VALUES (single source of truth)
-    // --------------------------------------------------------
+        StringBuilder sb = new StringBuilder();
 
-    if (ts != null && ts.cpu != null && ts.cpu.valid) {
+        sb.append("THERMAL SENSORS (INTERNAL)\n");
+        sb.append("──────────────────────────\n");
 
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "CPU",
-                ts.cpu.tempC,
-                thermalState(ts.cpu.tempC)
-        ));
+        final String FMT = "%-18s : %5.1f°C  (%s)\n";
 
-    } else {
+        if (ts == null) {
+            sb.append("Thermal sensors not available on this device.\n");
+            return sb.toString();
+        }
 
-        sb.append(String.format(
-                Locale.US,
-                "%-18s : %s\n",
-                "CPU",
-                "N/A"
-        ));
-    }
+        if (ts.cpu != null && ts.cpu.valid) {
+            sb.append(String.format(Locale.US, FMT, "CPU", ts.cpu.tempC, thermalState(ts.cpu.tempC)));
+        } else {
+            sb.append(String.format(Locale.US, "%-18s : %s\n", "CPU", "N/A"));
+        }
 
-    if (ts != null && ts.gpu != null && ts.gpu.valid) {
+        if (ts.gpu != null && ts.gpu.valid) {
+            sb.append(String.format(Locale.US, FMT, "GPU", ts.gpu.tempC, thermalState(ts.gpu.tempC)));
+        } else {
+            sb.append(String.format(Locale.US, "%-18s : %s\n", "GPU", "N/A"));
+        }
 
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "GPU",
-                ts.gpu.tempC,
-                thermalState(ts.gpu.tempC)
-        ));
+        if (ts.battery != null && ts.battery.valid) {
+            sb.append(String.format(Locale.US, FMT, "Battery", ts.battery.tempC, thermalState(ts.battery.tempC)));
+        } else {
+            sb.append(String.format(Locale.US, "%-18s : %s\n", "Battery", "N/A"));
+        }
 
-    } else {
+        if (ts.skin != null && ts.skin.valid) {
+            sb.append(String.format(Locale.US, FMT, "Skin", ts.skin.tempC, thermalState(ts.skin.tempC)));
+        }
 
-        sb.append(String.format(
-                Locale.US,
-                "%-18s : %s\n",
-                "GPU",
-                "N/A"
-        ));
-    }
+        if (ts.pmic != null && ts.pmic.valid) {
+            sb.append(String.format(Locale.US, FMT, "PMIC", ts.pmic.tempC, thermalState(ts.pmic.tempC)));
+        }
 
-    if (ts != null && ts.battery != null && ts.battery.valid) {
+        if (ts.charger != null && ts.charger.valid) {
+            sb.append(String.format(Locale.US, FMT, "Charger", ts.charger.tempC, thermalState(ts.charger.tempC)));
+        }
 
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "Battery",
-                ts.battery.tempC,
-                thermalState(ts.battery.tempC)
-        ));
+        if (ts.modemMain != null && ts.modemMain.valid) {
+            sb.append(String.format(Locale.US, FMT, "Modem Main", ts.modemMain.tempC, thermalState(ts.modemMain.tempC)));
+        }
 
-    } else {
+        if (ts.modemAux != null && ts.modemAux.valid) {
+            sb.append(String.format(Locale.US, FMT, "Modem Aux", ts.modemAux.tempC, thermalState(ts.modemAux.tempC)));
+        }
 
-        sb.append(String.format(
-                Locale.US,
-                "%-18s : %s\n",
-                "Battery",
-                "N/A"
-        ));
-    }
+        sb.append("\n");
+        sb.append("Thermal Zones        : ").append(ts.thermalZoneCount).append("\n");
+        sb.append("Cooling Devices      : ").append(ts.hardwareCoolingDeviceCount).append("\n");
 
-    if (ts != null && ts.skin != null && ts.skin.valid) {
+        if (ts.coolingDevices != null && !ts.coolingDevices.isEmpty()) {
+            sb.append("\nHardware Cooling:\n");
+            for (String cd : ts.coolingDevices) {
+                sb.append("  ").append(cd).append("\n");
+            }
+        } else {
+            sb.append("\nHardware Cooling:\n");
+            sb.append("  No hardware cooling devices found (passive cooling only)\n");
+        }
 
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "Skin",
-                ts.skin.tempC,
-                thermalState(ts.skin.tempC)
-        ));
+        if (isRooted) {
 
-    }
+            File thermalDir = new File("/sys/class/thermal");
+            File[] zones = thermalDir.listFiles((dir, name) -> name.startsWith("thermal_zone"));
 
-    if (ts != null && ts.pmic != null && ts.pmic.valid) {
+            if (zones != null && zones.length > 0) {
 
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "PMIC",
-                ts.pmic.tempC,
-                thermalState(ts.pmic.tempC)
-        ));
+                sb.append("\nAdvanced Thermal (Root)\n");
+                sb.append("──────────────────────\n");
 
-    }
+                for (File zone : zones) {
+                    try {
+                        String type = readSysFile(zone, "type");
+                        String tempRaw = readSysFile(zone, "temp");
 
-    if (ts != null && ts.charger != null && ts.charger.valid) {
+                        if (type == null || tempRaw == null) continue;
 
-        sb.append(String.format(
-                Locale.US,
-                FMT,
-                "Charger",
-                ts.charger.tempC,
-                thermalState(ts.charger.tempC)
-        ));
+                        float tempC = Float.parseFloat(tempRaw.trim()) / 1000f;
 
-    }
+                        sb.append("\n")
+                          .append(zone.getName())
+                          .append(" [")
+                          .append(type.trim())
+                          .append("]\n");
 
-    // ------------------------------------------------------------------------
-    // ROOT SECTION — REAL KERNEL DATA
-    // ------------------------------------------------------------------------
+                        sb.append("  Current Temp : ")
+                          .append(String.format(Locale.US, "%.1f°C", tempC))
+                          .append("\n");
 
-    if (isRooted) {
+                        for (int i = 0; i < 10; i++) {
+                            String tp = readSysFile(zone, "trip_point_" + i + "_temp");
+                            String tpType = readSysFile(zone, "trip_point_" + i + "_type");
 
-        sb.append("\nAdvanced Thermal (Root)\n");
-        sb.append("──────────────────────\n");
+                            if (tp == null || tpType == null) break;
 
-        for (File zone : zones) {
+                            float tpC = Float.parseFloat(tp.trim()) / 1000f;
 
-            try {
-
-                String type =
-                        readSysFile(zone, "type");
-
-                String tempRaw =
-                        readSysFile(zone, "temp");
-
-                if (type == null || tempRaw == null)
-                    continue;
-
-                float tempC =
-                        Float.parseFloat(
-                                tempRaw.trim()
-                        ) / 1000f;
-
-                sb.append("\n")
-                  .append(zone.getName())
-                  .append(" [")
-                  .append(type.trim())
-                  .append("]\n");
-
-                sb.append("  Current Temp : ")
-                  .append(String.format(
-                          Locale.US,
-                          "%.1f°C",
-                          tempC
-                  ))
-                  .append("\n");
-
-                for (int i = 0; i < 10; i++) {
-
-                    String tp =
-                            readSysFile(
-                                    zone,
-                                    "trip_point_" + i + "_temp"
-                            );
-
-                    String tpType =
-                            readSysFile(
-                                    zone,
-                                    "trip_point_" + i + "_type"
-                            );
-
-                    if (tp == null || tpType == null)
-                        break;
-
-                    float tpC =
-                            Float.parseFloat(
-                                    tp.trim()
-                            ) / 1000f;
-
-                    sb.append("  Trip ")
-                      .append(i)
-                      .append(" (")
-                      .append(tpType.trim())
-                      .append(") : ")
-                      .append(String.format(
-                              Locale.US,
-                              "%.1f°C",
-                              tpC
-                      ))
-                      .append("\n");
+                            sb.append("  Trip ")
+                              .append(i)
+                              .append(" (")
+                              .append(tpType.trim())
+                              .append(") : ")
+                              .append(String.format(Locale.US, "%.1f°C", tpC))
+                              .append("\n");
+                        }
+                    } catch (Throwable ignore) {}
                 }
+            }
 
-            } catch (Throwable ignore) {}
+        } else {
+            sb.append("\nAdvanced Info: requires root access\n");
         }
 
-    } else {
-
-        sb.append(
-                "\nAdvanced Info: requires root access\n"
-        );
+        return sb.toString();
     }
-
-    return sb.toString();
-}
 
     // ============================================================
     // Vulkan Info
@@ -1235,19 +952,17 @@ private String buildThermalInternalReport() {
         StringBuilder sb = new StringBuilder();
 
         try {
-            boolean hasLevel =
-        getPackageManager().hasSystemFeature(
-                PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL
-        );
+            boolean hasLevel = getPackageManager().hasSystemFeature(
+                    PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL
+            );
 
-boolean hasVersion =
-        getPackageManager().hasSystemFeature(
-                PackageManager.FEATURE_VULKAN_HARDWARE_VERSION
-        );
+            boolean hasVersion = getPackageManager().hasSystemFeature(
+                    PackageManager.FEATURE_VULKAN_HARDWARE_VERSION
+            );
+
             sb.append("Feature Level : ").append(hasLevel ? "Yes" : "No").append("\n");
             sb.append("Feature Vers  : ").append(hasVersion ? "Yes" : "No").append("\n");
-        } catch (Throwable ignore) {
-        }
+        } catch (Throwable ignore) {}
 
         String hw = getProp("ro.hardware.vulkan");
         if (hw != null && !hw.isEmpty()) {
@@ -1271,160 +986,340 @@ boolean hasVersion =
         return sb.toString();
     }
 
-// ============================================================
-// RAM Info
-// ============================================================
-private String buildRamInfo() {
-    StringBuilder sb = new StringBuilder();
+    // ============================================================
+    // RAM Info — ENGINE-BASED
+    // ============================================================
 
-    // ------------------------------------------------------------
-    // RAM Info (Framework) — LEAVE AS IS (MB)
-    // ------------------------------------------------------------
-    try {
-        ActivityManager am =
-                (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+    private String buildRamInfo() {
 
-        if (am != null) {
-            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
-            am.getMemoryInfo(mi);
+        iDoctorEngine.MemorySnapshot m =
+                engine.readMemorySnapshot();
 
-            long totalMb = mi.totalMem / (1024 * 1024);
-            long availMb = mi.availMem / (1024 * 1024);
-            long usedMb  = totalMb - availMb;
+        StringBuilder sb = new StringBuilder();
 
-            sb.append(padRight("Total RAM", 14)).append(": ")
-              .append(totalMb).append(" MB\n");
-            sb.append(padRight("Used RAM", 14)).append(": ")
-              .append(usedMb).append(" MB\n");
-            sb.append(padRight("Free RAM", 14)).append(": ")
-              .append(availMb).append(" MB\n");
-            sb.append(padRight("Low Memory", 14)).append(": ")
-              .append(mi.lowMemory ? "Yes" : "No").append("\n");
-            sb.append(padRight("Threshold", 14)).append(": ")
-              .append(mi.threshold / (1024 * 1024)).append(" MB\n");
-        }
-    } catch (Throwable ignore) {}
+        sb.append(padRight("Total RAM", 14)).append(": ")
+          .append(m.totalRamMb >= 0 ? m.totalRamMb + " MB" : "N/A")
+          .append("\n");
 
-// ------------------------------------------------------------
-// /proc/meminfo (core) — CONVERT TO MB (Buffers stays kB)
-// ------------------------------------------------------------
-String meminfo = readTextFile("/proc/meminfo", 8 * 1024);
-if (meminfo != null && !meminfo.isEmpty()) {
+        sb.append(padRight("Used RAM", 14)).append(": ")
+          .append(m.usedRamMb >= 0 ? m.usedRamMb + " MB" : "N/A")
+          .append("\n");
 
-    sb.append("\n/proc/meminfo (core):\n\n");
+        sb.append(padRight("Free RAM", 14)).append(": ")
+          .append(m.freeRamMb >= 0 ? m.freeRamMb + " MB" : "N/A")
+          .append("\n");
 
-    String[] lines = meminfo.split("\n");
-    for (String line : lines) {
+        sb.append(padRight("Low Memory", 14)).append(": ")
+          .append(m.lowMemory ? "Yes" : "No")
+          .append("\n");
 
-        if (line.startsWith("MemTotal:")
-                || line.startsWith("MemFree:")
-                || line.startsWith("Cached:")
-                || line.startsWith("Active:")
-                || line.startsWith("Inactive:")
-                || line.startsWith("SwapTotal:")
-                || line.startsWith("SwapFree:")) {
+        sb.append(padRight("Threshold", 14)).append(": ")
+          .append(m.thresholdMb >= 0 ? m.thresholdMb + " MB" : "N/A")
+          .append("\n");
 
-            String[] parts = line.split(":");
-            if (parts.length == 2) {
+        sb.append("\n/proc/meminfo (core):\n\n");
 
-                String label = parts[0].replace(":", "").trim();
+        appendKbAsMb(sb, "MemTotal", m.memTotalKb);
+        appendKbAsMb(sb, "MemFree", m.memFreeKb);
+        appendKbAsMb(sb, "Cached", m.cachedKb);
+        appendKbAsMb(sb, "Active", m.activeKb);
+        appendKbAsMb(sb, "Inactive", m.inactiveKb);
+        appendKbAsMb(sb, "ZRAM SwapTotal", m.swapTotalKb);
+        appendKbAsMb(sb, "ZRAM SwapFree", m.swapFreeKb);
 
-                // Rename Swap -> ZRAM Swap
-                if ("SwapTotal".equals(label)) label = "ZRAM SwapTotal";
-                if ("SwapFree".equals(label))  label = "ZRAM SwapFree";
+        sb.append(padRight("Buffers", 14)).append(": ")
+          .append(m.buffersKb >= 0 ? m.buffersKb + " kB" : "N/A")
+          .append("\n");
 
-                long kb = parseKbSafe(parts[1]);
+        boolean zramActive = m.swapTotalKb > 0;
 
-                sb.append(padRight(label, 14))
-                  .append(": ")
-                  .append(kb / 1024)
-                  .append(" MB\n");
-            }
+        sb.append(padRight("ZRAM Status", 14)).append(": ")
+          .append(zramActive ? "Active" : "Not active")
+          .append("\n");
+
+        if (!isRooted) {
+            sb.append(padRight("ZRAM Details", 14))
+              .append(": Requires Root access\n");
         }
 
-        // Buffers — stay in kB
-        if (line.startsWith("Buffers:")) {
-            String[] parts = line.split(":");
-            if (parts.length == 2) {
-                sb.append(padRight("Buffers", 14))
-                  .append(": ")
-                  .append(parts[1].trim())
-                  .append("\n");
-            }
-        }
+        return sb.toString();
     }
-}
 
-    // ------------------------------------------------------------
-    // ZRAM (advanced)
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
-// ZRAM STATUS + DETAILS
-// ------------------------------------------------------------
+    // ============================================================
+    // STORAGE Info — ENGINE-BASED
+    // ============================================================
 
-// Detect if swap is active (non-root safe)
-boolean zramActive = false;
-try {
-    String meminfo2 = readTextFile("/proc/meminfo", 4 * 1024);
-    if (meminfo2 != null) {
-        for (String l : meminfo2.split("\n")) {
-            if (l.startsWith("SwapTotal:")) {
-                long kb = parseKb(l);
-                if (kb > 0) zramActive = true;
-                break;
-            }
-        }
-    }
-} catch (Throwable ignore) {}
+    private String buildStorageInfo() {
 
-sb.append(padRight("ZRAM Status", 14))
-  .append(": ")
-  .append(zramActive ? "Active" : "Not active")
-  .append("\n");
+        iDoctorEngine.StorageSnapshot s =
+                engine.readStorageSnapshot();
 
-if (!isRooted) {
-    sb.append(padRight("ZRAM Details", 14))
-      .append(": Requires Root access\n");
-}
+        StringBuilder sb = new StringBuilder();
 
-    return sb.toString();
-}
-
-// ------------------------------------------------------------
-// Helper
-// ------------------------------------------------------------
-private long parseKb(String raw) {
-    try {
-        return Long.parseLong(raw.replaceAll("[^0-9]", ""));
-    } catch (Throwable t) {
-        return 0;
-    }
-}
- 
-// ============================================================
-// STORAGE Info
-// ============================================================
-private String buildStorageInfo() {
-    StringBuilder sb = new StringBuilder();
-
-    try {
-        File internal = Environment.getDataDirectory();
-        appendStorageBlock(sb, "Internal", internal);
-
-        File ext = Environment.getExternalStorageDirectory();
-        if (ext != null && ext.exists()) {
-            appendStorageBlock(sb, "External (primary)", ext);
-        }
-    } catch (Throwable ignore) {}
-
-    // ------------------------------------------------------------
-    // CORE MOUNTS
-    // ------------------------------------------------------------
-    String mounts = readTextFile("/proc/mounts", 32 * 1024);
-    if (mounts != null && !mounts.isEmpty()) {
+        appendStorageBlockEngine(sb, s.internal);
+        appendStorageBlockEngine(sb, s.externalPrimary);
 
         sb.append("\n=== Core Mounts ===\n\n");
+        if (!isBlank(s.mounts) && !"N/A".equals(s.mounts)) {
+            appendInterestingMounts(sb, s.mounts);
+        } else {
+            sb.append("  Not exposed by this device.\n");
+        }
 
+        sb.append("\n=== Partitions ===\n\n");
+        if (!isBlank(s.partitions) && !"N/A".equals(s.partitions)) {
+            sb.append(s.partitions.trim()).append("\n");
+        } else {
+            sb.append("  Not exposed by this device.\n");
+        }
+
+        if (sb.length() == 0) {
+            sb.append("Unable to read storage information.\n");
+        }
+
+        return sb.toString();
+    }
+
+    // ============================================================
+    // SoC Temperature — CPU average (non-root, safe)
+    // ============================================================
+
+    private Double getSocTempCpuAverage() {
+        try {
+            File dir = new File("/sys/class/thermal");
+            if (!dir.exists() || !dir.isDirectory()) return null;
+
+            File[] zones = dir.listFiles();
+            if (zones == null) return null;
+
+            double sum = 0;
+            int count = 0;
+
+            for (File z : zones) {
+                if (!z.getName().startsWith("thermal_zone")) continue;
+
+                String type = readSysString(z.getAbsolutePath() + "/type");
+                if (type == null) continue;
+
+                String low = type.toLowerCase(Locale.US);
+                if (!low.contains("cpu")) continue;
+
+                long t = readSysLong(z.getAbsolutePath() + "/temp");
+                if (t <= 0) continue;
+
+                double c = (t > 1000) ? t / 1000.0 : t / 10.0;
+                sum += c;
+                count++;
+            }
+
+            if (count == 0) return null;
+            return sum / count;
+
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    // ============================================================
+    // THERMAL HELPERS — INTERNAL
+    // ============================================================
+
+    private String readSysFile(File base, String name) {
+        if (base == null) return null;
+        File f = new File(base, name);
+        if (!f.exists()) return null;
+
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader(f));
+            String line = br.readLine();
+            return line != null ? line.trim() : null;
+        } catch (Throwable ignore) {
+            return null;
+        } finally {
+            try {
+                if (br != null) br.close();
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private String thermalState(float tempC) {
+        if (tempC < 30f) return "COOL";
+        if (tempC < 45f) return "NORMAL";
+        if (tempC < 60f) return "WARM";
+        if (tempC < 75f) return "HOT";
+        return "CRITICAL";
+    }
+
+    private String mapThermalType(String type) {
+
+        if (type == null) return "";
+
+        String t = type.toLowerCase(Locale.US);
+
+        if (t.contains("battery_therm") || t.contains("batt_therm")) return "Battery Shell";
+        if (t.contains("battery")) return "Battery";
+        if (t.matches(".*cpu[-_]?0.*")) return "CPU Cluster 0";
+        if (t.matches(".*cpu[-_]?1.*")) return "CPU Cluster 1";
+        if (t.contains("cpu")) return "CPU Core";
+        if (t.contains("gpu")) return "GPU";
+        if (t.contains("soc")) return "SoC";
+        if (t.contains("skin")) return "Device Skin";
+        if (t.contains("backlight")) return "Backlight";
+        if (t.contains("ddr")) return "DDR Memory";
+        if (t.contains("mem")) return "Memory";
+
+        return type;
+    }
+
+    // ============================================================
+    // GENERIC HELPERS
+    // ============================================================
+
+    private String readTextFile(String path, int maxLen) {
+        BufferedReader br = null;
+        try {
+            File f = new File(path);
+            if (!f.exists()) return null;
+
+            br = new BufferedReader(new FileReader(f));
+            StringBuilder sb = new StringBuilder();
+            char[] buf = new char[1024];
+            int read;
+
+            while ((read = br.read(buf)) > 0 && sb.length() < maxLen) {
+                sb.append(buf, 0, read);
+            }
+
+            return sb.toString();
+
+        } catch (Throwable ignore) {
+            return null;
+
+        } finally {
+            try {
+                if (br != null) br.close();
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private String readSysString(String path) {
+        BufferedReader br = null;
+        try {
+            File f = new File(path);
+            if (!f.exists()) return null;
+
+            br = new BufferedReader(new FileReader(f));
+            String line = br.readLine();
+            return line != null ? line.trim() : null;
+
+        } catch (Throwable ignore) {
+            return null;
+
+        } finally {
+            try {
+                if (br != null) br.close();
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private long readSysLong(String path) {
+        String s = readSysString(path);
+        if (s == null || s.isEmpty()) return -1;
+        try {
+            return Long.parseLong(s);
+        } catch (Throwable ignore) {
+            return -1;
+        }
+    }
+
+    private String getProp(String key) {
+        try {
+            Process p = Runtime.getRuntime().exec(new String[]{"getprop", key});
+            BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String line = br.readLine();
+            br.close();
+            return line != null ? line.trim() : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private long parseKb(String raw) {
+        try {
+            return Long.parseLong(raw.replaceAll("[^0-9]", ""));
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    private long parseKbSafe(String s) {
+        try {
+            return parseKb(s);
+        } catch (Throwable e) {
+            return 0;
+        }
+    }
+
+    private String padRight(String s, int n) {
+        if (s == null) s = "";
+        if (s.length() >= n) return s;
+        StringBuilder sb = new StringBuilder(s);
+        while (sb.length() < n) sb.append(' ');
+        return sb.toString();
+    }
+
+    private String safeStr(String s) {
+        return (s == null || s.trim().isEmpty()) ? "N/A" : s.trim();
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private String describeSimState(int simState) {
+        switch (simState) {
+            case TelephonyManager.SIM_STATE_READY: return "READY";
+            case TelephonyManager.SIM_STATE_ABSENT: return "ABSENT";
+            case TelephonyManager.SIM_STATE_PIN_REQUIRED: return "PIN REQUIRED";
+            case TelephonyManager.SIM_STATE_PUK_REQUIRED: return "PUK REQUIRED";
+            case TelephonyManager.SIM_STATE_NETWORK_LOCKED: return "NETWORK LOCKED";
+            default: return "UNKNOWN";
+        }
+    }
+
+    private String describeDataState(int dataState) {
+        switch (dataState) {
+            case TelephonyManager.DATA_CONNECTED: return "CONNECTED";
+            case TelephonyManager.DATA_CONNECTING: return "CONNECTING";
+            case TelephonyManager.DATA_DISCONNECTED: return "DISCONNECTED";
+            default: return "UNKNOWN";
+        }
+    }
+
+    private void appendKbAsMb(StringBuilder sb, String label, long kb) {
+        sb.append(padRight(label, 14)).append(": ")
+          .append(kb >= 0 ? (kb / 1024) + " MB" : "N/A")
+          .append("\n");
+    }
+
+    private void appendStorageBlockEngine(StringBuilder sb, iDoctorEngine.StorageBlock block) {
+        if (block == null) return;
+        if (isBlank(block.label) || "N/A".equals(block.label)) return;
+        if (block.totalGb < 0 && block.usedGb < 0 && block.freeGb < 0) return;
+
+        sb.append(block.label).append(":\n");
+        sb.append("  ").append(padRight("Path", 10))
+          .append(": ").append(safeStr(block.path)).append("\n");
+        sb.append("  ").append(padRight("Total", 10))
+          .append(": ").append(block.totalGb >= 0 ? block.totalGb + " GB" : "N/A").append("\n");
+        sb.append("  ").append(padRight("Used", 10))
+          .append(": ").append(block.usedGb >= 0 ? block.usedGb + " GB" : "N/A").append("\n");
+        sb.append("  ").append(padRight("Free", 10))
+          .append(": ").append(block.freeGb >= 0 ? block.freeGb + " GB" : "N/A").append("\n\n");
+    }
+
+    private void appendInterestingMounts(StringBuilder sb, String mounts) {
         String[] lines = mounts.split("\n");
         String[] interesting = {
                 "/", "/system", "/vendor", "/product",
@@ -1437,6 +1332,7 @@ private String buildStorageInfo() {
 
             String mountPoint = parts[1];
             boolean hit = false;
+
             for (String it : interesting) {
                 if (mountPoint.equals(it)) {
                     hit = true;
@@ -1448,292 +1344,11 @@ private String buildStorageInfo() {
                 sb.append("  ")
                   .append(padRight(mountPoint, 10))
                   .append(": ")
-                  .append(parts[2])          // fs type
+                  .append(parts[2])
                   .append(" (")
-                  .append(parts[0])          // device
+                  .append(parts[0])
                   .append(")\n");
             }
         }
-
-    } else {
-        sb.append("\n=== Core Mounts ===\n\n");
-        sb.append("  Not exposed by this device.\n");
     }
-
-    // ------------------------------------------------------------
-    // PARTITIONS SNAPSHOT
-    // ------------------------------------------------------------
-    String parts = readTextFile("/proc/partitions", 8 * 1024);
-    if (parts != null && !parts.isEmpty()) {
-        sb.append("\n=== Partitions ===\n\n");
-        sb.append(parts.trim()).append("\n");
-    } else {
-        sb.append("\n=== Partitions ===\n\n");
-        sb.append("  Not exposed by this device.\n");
-    }
-
-    if (sb.length() == 0) {
-        sb.append("Unable to read storage information.\n");
-    }
-
-    return sb.toString();
-}
-
-private void appendStorageBlock(StringBuilder sb, String label, File path) {
-    try {
-        StatFs stat = new StatFs(path.getAbsolutePath());
-
-        long blockSize, totalBlocks, availBlocks;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            blockSize   = stat.getBlockSizeLong();
-            totalBlocks = stat.getBlockCountLong();
-            availBlocks = stat.getAvailableBlocksLong();
-        } else {
-            blockSize   = stat.getBlockSize();
-            totalBlocks = stat.getBlockCount();
-            availBlocks = stat.getAvailableBlocks();
-        }
-
-        long totalBytes = blockSize * totalBlocks;
-        long availBytes = blockSize * availBlocks;
-        long usedBytes  = totalBytes - availBytes;
-
-        long totalGb = totalBytes / (1024 * 1024 * 1024);
-        long usedGb  = usedBytes  / (1024 * 1024 * 1024);
-        long freeGb  = availBytes / (1024 * 1024 * 1024);
-
-        sb.append(label).append(":\n");
-        sb.append("  ").append(padRight("Path", 10))
-          .append(": ").append(path.getAbsolutePath()).append("\n");
-        sb.append("  ").append(padRight("Total", 10))
-          .append(": ").append(totalGb).append(" GB\n");
-        sb.append("  ").append(padRight("Used", 10))
-          .append(": ").append(usedGb).append(" GB\n");
-        sb.append("  ").append(padRight("Free", 10))
-          .append(": ").append(freeGb).append(" GB\n\n");
-
-    } catch (Throwable ignore) {}
-}
-
-// ============================================================
-// SoC Temperature — CPU average (non-root, safe)
-// ============================================================
-private Double getSocTempCpuAverage() {
-    try {
-        File dir = new File("/sys/class/thermal");
-        if (!dir.exists() || !dir.isDirectory()) return null;
-
-        File[] zones = dir.listFiles();
-        if (zones == null) return null;
-
-        double sum = 0;
-        int count = 0;
-
-        for (File z : zones) {
-            if (!z.getName().startsWith("thermal_zone")) continue;
-
-            String type = readSysString(z.getAbsolutePath() + "/type");
-            if (type == null) continue;
-
-            String low = type.toLowerCase(java.util.Locale.US);
-            if (!low.contains("cpu")) continue;
-
-            long t = readSysLong(z.getAbsolutePath() + "/temp");
-            if (t <= 0) continue;
-
-            double c = (t > 1000) ? t / 1000.0 : t / 10.0;
-            sum += c;
-            count++;
-        }
-
-        if (count == 0) return null;
-        return sum / count;
-
-    } catch (Throwable ignore) {
-        return null;
-    }
-}
-
-// ============================================================
-// THERMAL HELPERS — INTERNAL
-// ============================================================
-
-private String readSysFile(File base, String name) {
-    if (base == null) return null;
-    File f = new File(base, name);
-    if (!f.exists()) return null;
-
-    BufferedReader br = null;
-    try {
-        br = new BufferedReader(new FileReader(f));
-        String line = br.readLine();
-        return line != null ? line.trim() : null;
-    } catch (Throwable ignore) {
-        return null;
-    } finally {
-        try {
-            if (br != null) br.close();
-        } catch (Exception ignored) {}
-    }
-}
-
-private String thermalState(float tempC) {
-    if (tempC < 30f) return "COOL";
-    if (tempC < 45f) return "NORMAL";
-    if (tempC < 60f) return "WARM";
-    if (tempC < 75f) return "HOT";
-    return "CRITICAL";
-}
-
-private String mapThermalType(String type) {
-
-    if (type == null) return "";
-
-    String t = type.toLowerCase(Locale.US);
-
-    // Battery
-    if (t.contains("battery_therm") || t.contains("batt_therm"))
-        return "Battery Shell";
-    if (t.contains("battery"))
-        return "Battery";
-
-    // CPU
-    if (t.matches(".*cpu[-_]?0.*"))
-        return "CPU Cluster 0";
-    if (t.matches(".*cpu[-_]?1.*"))
-        return "CPU Cluster 1";
-    if (t.contains("cpu"))
-        return "CPU Core";
-
-    // Main silicon
-    if (t.contains("gpu"))
-        return "GPU";
-    if (t.contains("soc"))
-        return "SoC";
-
-    // Surface / internal
-    if (t.contains("skin"))
-        return "Device Skin";
-    if (t.contains("backlight"))
-        return "Backlight";
-
-    // Memory
-    if (t.contains("ddr"))
-        return "DDR Memory";
-    if (t.contains("mem"))
-        return "Memory";
-
-    // fallback
-    return type;
-}
-
-// ============================================================
-// GENERIC HELPERS (NON-ROOT)
-// ============================================================
-
-private String readTextFile(String path, int maxLen) {
-    BufferedReader br = null;
-    try {
-        File f = new File(path);
-        if (!f.exists()) return null;
-
-        br = new BufferedReader(new FileReader(f));
-        StringBuilder sb = new StringBuilder();
-        char[] buf = new char[1024];
-        int read;
-
-        while ((read = br.read(buf)) > 0 && sb.length() < maxLen) {
-            sb.append(buf, 0, read);
-        }
-        return sb.toString();
-
-    } catch (Throwable ignore) {
-        return null;
-
-    } finally {
-        try {
-            if (br != null) br.close();
-        } catch (Exception ignored) {}
-    }
-}
-
-private String readSysString(String path) {
-    BufferedReader br = null;
-    try {
-        File f = new File(path);
-        if (!f.exists()) return null;
-
-        br = new BufferedReader(new FileReader(f));
-        String line = br.readLine();
-        return line != null ? line.trim() : null;
-
-    } catch (Throwable ignore) {
-        return null;
-
-    } finally {
-        try {
-            if (br != null) br.close();
-        } catch (Exception ignored) {}
-    }
-}
-
-private long readSysLong(String path) {
-    String s = readSysString(path);
-    if (s == null || s.isEmpty()) return -1;
-    try {
-        return Long.parseLong(s);
-    } catch (Throwable ignore) {
-        return -1;
-    }
-}
-
-private String getProp(String key) {
-    try {
-        Process p = Runtime.getRuntime().exec(new String[]{"getprop", key});
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader(p.getInputStream()));
-        String line = br.readLine();
-        br.close();
-        return line != null ? line.trim() : "";
-    } catch (Exception e) {
-        return "";
-    }
-}
-
-private String describeWifiBand(int freq) {
-    if (freq >= 2400 && freq < 2500) return "2.4 GHz";
-    if (freq >= 4900 && freq < 5900) return "5 GHz";
-    if (freq >= 5925 && freq < 7125) return "6 GHz";
-    return "Unknown";
-}
-
-private String describeNetworkType(int type) {
-    switch (type) {
-        case TelephonyManager.NETWORK_TYPE_GPRS:   return "2G (GPRS)";
-        case TelephonyManager.NETWORK_TYPE_EDGE:   return "2G (EDGE)";
-        case TelephonyManager.NETWORK_TYPE_UMTS:   return "3G (UMTS)";
-        case TelephonyManager.NETWORK_TYPE_HSDPA:  return "3G (HSDPA)";
-        case TelephonyManager.NETWORK_TYPE_HSUPA:  return "3G (HSUPA)";
-        case TelephonyManager.NETWORK_TYPE_HSPA:   return "3G (HSPA)";
-        case TelephonyManager.NETWORK_TYPE_LTE:    return "4G (LTE)";
-        case TelephonyManager.NETWORK_TYPE_NR:     return "5G (NR)";
-        default: return "Unknown";
-    }
-}
-
-private long parseKbSafe(String s) {
-    try {
-        return parseKb(s);
-    } catch (Throwable e) {
-        return 0;
-    }
-}
-
-private String padRight(String s, int n) {
-    if (s == null) s = "";
-    if (s.length() >= n) return s;
-    StringBuilder sb = new StringBuilder(s);
-    while (sb.length() < n) sb.append(' ');
-    return sb.toString();
-}
 }
