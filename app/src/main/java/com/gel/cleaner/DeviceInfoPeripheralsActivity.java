@@ -1360,6 +1360,10 @@ if (snap.battery.chargeNowMah > 0) {
 
 long estimatedCapacity = -1;
 
+// ----------------------------------------
+// PRIMARY (charge counter)
+// ----------------------------------------
+
 if (snap.battery.chargeNowMah > 0 &&
     snap.battery.level > 5) {
 
@@ -1368,6 +1372,17 @@ if (snap.battery.chargeNowMah > 0 &&
                     snap.battery.chargeNowMah /
                     (snap.battery.level / 100f)
             );
+}
+
+// ----------------------------------------
+// FALLBACK (model-based estimation)
+// ----------------------------------------
+
+if (estimatedCapacity <= 0 &&
+    modelCap > 0 &&
+    snap.battery.level > 5) {
+
+    estimatedCapacity = modelCap;
 }
 
 if (estimatedCapacity > 0) {
