@@ -1304,7 +1304,7 @@ private String buildBatteryInfo() {
     StringBuilder sb = new StringBuilder();
 
 // --------------------------------------------------
-// BASIC
+// BASIC (FINAL - GEL CLEAN)
 // --------------------------------------------------
 
 sb.append(String.format(
@@ -1340,6 +1340,10 @@ if (!Float.isNaN(snap.battery.currentMa)) {
     ));
 }
 
+// --------------------------------------------------
+// CURRENT CHARGE
+// --------------------------------------------------
+
 if (snap.battery.chargeNowMah > 0) {
 
     sb.append(String.format(
@@ -1350,24 +1354,35 @@ if (snap.battery.chargeNowMah > 0) {
     ));
 }
 
-sb.append(String.format(
-        Locale.US,
-        "%s : %s\n",
-        padKey("Source"),
-        snap.battery.source != null
-                ? snap.battery.source
-                : "N/A"
-));
+// --------------------------------------------------
+// ESTIMATED CAPACITY (counter-based)
+// --------------------------------------------------
 
-if (snap.battery.chargeFullMah > 0) {
+long estimatedCapacity = -1;
+
+if (snap.battery.chargeNowMah > 0 &&
+    snap.battery.level > 5) {
+
+    estimatedCapacity =
+            (long)(
+                    snap.battery.chargeNowMah /
+                    (snap.battery.level / 100f)
+            );
+}
+
+if (estimatedCapacity > 0) {
 
     sb.append(String.format(
             Locale.US,
             "%s : %d mAh\n",
             padKey("Estimated capacity"),
-            snap.battery.chargeFullMah
+            estimatedCapacity
     ));
 }
+
+// --------------------------------------------------
+// DECLARED CAPACITY (model)
+// --------------------------------------------------
 
 if (modelCap > 0) {
 
@@ -1379,6 +1394,10 @@ if (modelCap > 0) {
     ));
 }
 
+// --------------------------------------------------
+// VOLTAGE
+// --------------------------------------------------
+
 if (snap.battery.voltageMv > 0) {
 
     sb.append(String.format(
@@ -1388,6 +1407,10 @@ if (snap.battery.voltageMv > 0) {
             snap.battery.voltageMv / 1000f
     ));
 }
+
+// --------------------------------------------------
+// TEMPERATURE
+// --------------------------------------------------
 
 if (!Float.isNaN(snap.battery.batteryTempC)) {
 
@@ -1407,6 +1430,28 @@ if (!Float.isNaN(snap.battery.batteryTempC)) {
             "N/A"
     ));
 }
+
+// --------------------------------------------------
+// SOURCE (FINAL - ALWAYS SHOWN)
+// --------------------------------------------------
+
+String finalSource;
+
+if (estimatedCapacity > 0) {
+    finalSource = "counter_estimate";
+} else {
+    finalSource =
+            snap.battery.source != null
+                    ? snap.battery.source
+                    : "N/A";
+}
+
+sb.append(String.format(
+        Locale.US,
+        "%s : %s\n",
+        padKey("Source"),
+        finalSource
+));
 
 // --------------------------------------------------
 // ROOT / OEM
