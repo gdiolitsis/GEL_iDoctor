@@ -1268,7 +1268,7 @@ private long normalizeMah(long raw) {
 private long readSysLongRootAware(String path) {
     try {
         iDoctorEngine eng = iDoctorEngine.get(getApplicationContext());
-        long v = eng.readSysLong(path);
+        long v = eng.readSysLongSafe(path);
         if (v > 0) return v;
     } catch (Throwable ignore) {}
 
