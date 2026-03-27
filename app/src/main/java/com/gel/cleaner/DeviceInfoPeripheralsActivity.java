@@ -3391,18 +3391,7 @@ private String buildSecurityFlagsInfo() {
         }
     }
 
-    private long readSysLong(String path) {
-        String s = readSysString(path);
-        if (s == null || s.isEmpty()) return -1;
-
-        try {
-            return Long.parseLong(s);
-        } catch (Throwable ignore) {
-            return -1;
-        }
-    }
-
-    private String getProp(String key) {
+     private String getProp(String key) {
         try {
             Process p = Runtime.getRuntime().exec(new String[]{"getprop", key});
             BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
@@ -3877,16 +3866,6 @@ private void handleSettingsClick(Context ctx, String path) {
 private void animateCollapse(TextView v) {
     if (v == null) return;
     v.setVisibility(View.GONE);
-}
-
-// ============================================================
-// NEON UI HELPERS (PERIPHERALS)
-// ============================================================
-
-private void setNeonSectionText(TextView tv, String text) {
-    if (tv == null) return;
-    if (text == null) text = "";
-    tv.setText(applyNeonToValues(text));
 }
 
 private CharSequence applyNeonToValues(String text) {
