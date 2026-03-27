@@ -14589,7 +14589,7 @@ if (drainResult != null && drainResult.valid) {
 // validation
 boolean validCounter =
         lab14ChargeSamples.size() >= 10 &&
-        deltaMah >= 20;
+        lab14DeltaMah >= 20;
 
 // frozen check
 boolean frozen = true;
@@ -14610,7 +14610,7 @@ if (lab14ChargeSamples.size() > 1) {
 boolean samplingValid =
         validCounter &&
         !frozen &&
-        deltaMah > 0;
+        lab14DeltaMah > 0;
 
 // αν engine ΔΕΝ έδωσε valid → χρησιμοποιείς sampling
 if (!validDrain && samplingValid) {
@@ -14618,8 +14618,8 @@ if (!validDrain && samplingValid) {
 }
 
 // fallback AFTER validation
-if (drainMah <= 0 && deltaMah > 0) {
-    drainMah = deltaMah;
+if (drainMah <= 0 && lab14DeltaMah > 0) {
+    drainMah = lab14DeltaMah;
 }
 
 // ----------------------------
@@ -17697,10 +17697,10 @@ if (startMah > 0 && endInfo != null &&
 
     lab15_strengthKnown = true;
 
-    long deltaMah = endInfo.currentChargeMah - startMah;
-    long dtMs     = Math.max(1, SystemClock.elapsedRealtime() - startTs[0]);
-    double minutes = dtMs / 60000.0;
-    double mahPerMin = (minutes > 0) ? (deltaMah / minutes) : -1;
+    long deltaMah = lab14DeltaMah;
+long dtMs = Math.max(1, SystemClock.elapsedRealtime() - startTs[0]);
+double minutes = dtMs / 60000.0;
+double mahPerMin = (minutes > 0) ? (lab14DeltaMah / minutes) : -1;
 
     logLabelOkValue(
             gr ? "Είσοδος φόρτισης" : "Charging input",
@@ -17709,7 +17709,7 @@ if (startMah > 0 && endInfo != null &&
                     gr
                             ? "+%d mAh σε %.1f λεπτά (%.1f mAh/min)"
                             : "+%d mAh in %.1f min (%.1f mAh/min)",
-                    deltaMah,
+                    lab14DeltaMah,
                     minutes,
                     mahPerMin
             )
