@@ -237,6 +237,10 @@ private void saveModelCapacity(long v) {
 
     bi.rooted = isDeviceRooted();
 
+    // --------------------------------------------------
+    // 🔹 BASIC BATTERY INFO (BatteryManager intent)
+    // --------------------------------------------------
+
     try {
         Intent i = ctx.registerReceiver(
                 null,
@@ -244,6 +248,7 @@ private void saveModelCapacity(long v) {
         );
 
         if (i != null) {
+
             bi.level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
             bi.scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
 
@@ -267,6 +272,7 @@ private void saveModelCapacity(long v) {
             }
 
             int plug = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+
             bi.charging =
                     plug == BatteryManager.BATTERY_PLUGGED_USB
                             || plug == BatteryManager.BATTERY_PLUGGED_AC
@@ -288,190 +294,164 @@ private void saveModelCapacity(long v) {
             int volt = i.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1);
             if (volt > 0) bi.voltageMv = volt;
         }
-    } catch (Throwable ignore) { }
 
-    resolveBatteryModeOnce();
-
-    if (lockedBatteryMode == BatteryReadMode.OEM_LOCKED) {
-        readBatterySnapshotFromLockedOem(bi);
-    } else {
-        readBatterySnapshotFromBatteryManagerLocked(bi);
-    }
-    
-// --------------------------------------------------
-// 🔥 HARD FALLBACK — SYSFS BATTERY READ (CRITICAL)
-// --------------------------------------------------
-
-boolean gotCounterFromSysfs = false;
-
-if (bi.chargeNowMah <= 0) {
-
-    long rawNow = readSysLongSafe(
-            "/sys/class/power_supply/battery/charge_now",
-            "/sys/class/power_supply/battery/energy_now"
-    );
-
-    if (rawNow > 0) {
-
-        // convert μAh → mAh
-        if (rawNow > 100000) rawNow = rawNow / 1000;
-
-        bi.chargeNowMah = rawNow;
-        gotCounterFromSysfs = true;
-    }
-}
-
-if (bi.chargeFullMah <= 0) {
-
-    long rawFull = readSysLongSafe(
-            "/sys/class/power_supply/battery/charge_full",
-            "/sys/class/power_supply/battery/energy_full"
-    );
-
-    if (rawFull > 0) {
-
-        if (rawFull > 100000) rawFull = rawFull / 1000;
-
-        bi.chargeFullMah = rawFull;
-    }
-}
-
-if (bi.internalResistance <= 0 &&
-    lastInternalResistanceMilliOhm > 0) {
-
-    bi.internalResistance = lastInternalResistanceMilliOhm;
-}
-
-if (bi.chargeFullMah <= 0 && bi.chargeDesignMah > 0) {
-    bi.chargeFullMah = bi.chargeDesignMah;
-}
-
-// DEFAULT SOURCE (μόνο αν δεν έχει οριστεί ήδη)
-if (bi.source == null || bi.source.trim().isEmpty()) {
-
-    bi.source = lockedBatteryMode == BatteryReadMode.OEM_LOCKED
-            ? "OEM_LOCKED"
-            : "BATTERY_MANAGER_LOCKED";
-}
-
-if (bi.chargeDesignMah > 0 && bi.chargeFullMah > 0) {
-    try {
-        int soh =
-                (int) Math.round(
-                        (bi.chargeFullMah * 100.0)
-                                / bi.chargeDesignMah
-                );
-
-        if (soh > 0 && soh < 200) {
-            bi.sohPercent = soh;
-        }
     } catch (Throwable ignore) {}
-}
 
-// --------------------------------------------------
-// 🔥 GEL ACCURACY CLASSIFIER
-// --------------------------------------------------
+    // --------------------------------------------------
+    // 🔥 STEP 1 — BatteryManager PROPERTIES (PRIMARY)
+    // --------------------------------------------------
 
-boolean hasCounter = bi.chargeNowMah > 0;
-boolean hasFull = bi.chargeFullMah > 0;
-boolean hasLevel = bi.level >= 0 && bi.level <= 100;
+    try {
 
-// -------------------------
-// FREEZE DETECTION
-// -------------------------
+        BatteryManager bm =
+                (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
 
-boolean frozenCounter = false;
+        if (bm != null) {
 
-if (hasCounter) {
+            long cc =
+                    bm.getLongProperty(
+                            BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER
+                    );
 
-    long prev = lastChargeNowMah;
-    long curr = bi.chargeNowMah;
+            long cur =
+                    bm.getLongProperty(
+                            BatteryManager.BATTERY_PROPERTY_CURRENT_NOW
+                    );
 
-    if (prev > 0) {
+            long cap =
+                    bm.getLongProperty(
+                            BatteryManager.BATTERY_PROPERTY_CAPACITY
+                    );
 
-        long diff = Math.abs(curr - prev);
+            long nowMah = normalizeMah(cc);
+            float currentMa = normalizeCurrentMa(cur);
 
-        if (diff < 2) {
-            frozenCounter = true;
+            if (nowMah > 0 && bi.chargeNowMah <= 0) {
+                bi.chargeNowMah = nowMah;
+            }
+
+            if (!Float.isNaN(currentMa)) {
+                bi.currentMa = currentMa;
+            }
+
+            if (cap > 0 && cap <= 100 && bi.level <= 0) {
+                bi.level = (int) cap;
+            }
+        }
+
+    } catch (Throwable ignore) {}
+
+    // --------------------------------------------------
+    // 🔥 STEP 2 — OEM / SYSFS (SECONDARY)
+    // --------------------------------------------------
+
+    boolean gotCounterFromSysfs = false;
+
+    if (bi.chargeNowMah <= 0) {
+
+        long rawNow = readSysLongSafe(
+                "/sys/class/power_supply/battery/charge_now",
+                "/sys/class/power_supply/battery/energy_now"
+        );
+
+        if (rawNow > 0) {
+
+            bi.chargeNowMah = rawNow;
+            gotCounterFromSysfs = true;
         }
     }
 
-    lastChargeNowMah = curr;
-}
+    if (bi.chargeFullMah <= 0) {
 
-// -------------------------
-// INVALID CHECK
-// -------------------------
+        long rawFull = readSysLongSafe(
+                "/sys/class/power_supply/battery/charge_full",
+                "/sys/class/power_supply/battery/energy_full"
+        );
 
-boolean invalidRange =
-        bi.chargeNowMah > 30000 ||
-        bi.chargeFullMah > 30000;
+        if (rawFull > 0) {
+            bi.chargeFullMah = rawFull;
+        }
+    }
 
-// -------------------------
-// CLASSIFICATION
-// -------------------------
+    // --------------------------------------------------
+    // 🔥 STEP 3 — FALLBACK LOGIC
+    // --------------------------------------------------
 
-if (hasCounter && !frozenCounter && !invalidRange) {
+    if (bi.internalResistance <= 0 &&
+        lastInternalResistanceMilliOhm > 0) {
 
-    bi.telemetryStatus = "AVAILABLE";
-    bi.mode = "FULL_ACCESS";
-    bi.confidence = "HIGH";
-    bi.reason = "Live hardware counter OK";
+        bi.internalResistance = lastInternalResistanceMilliOhm;
+    }
 
-} else if (hasCounter && frozenCounter) {
+    if (bi.chargeFullMah <= 0 && bi.chargeDesignMah > 0) {
+        bi.chargeFullMah = bi.chargeDesignMah;
+    }
 
-    bi.telemetryStatus = "LIMITED";
-    bi.mode = "PARTIAL_ACCESS";
-    bi.confidence = "LOW";
-    bi.reason = "Counter frozen (no real-time update)";
+    if (bi.source == null || bi.source.trim().isEmpty()) {
+        bi.source = gotCounterFromSysfs
+                ? "SYSFS_COUNTER"
+                : "BATTERY_MANAGER";
+    }
 
-} else if (hasFull && hasLevel) {
+    // --------------------------------------------------
+    // 🔥 SOH
+    // --------------------------------------------------
 
-    bi.telemetryStatus = "LIMITED";
-    bi.mode = "PARTIAL_ACCESS";
-    bi.confidence = "MEDIUM";
-    bi.reason = "Derived from capacity (no direct counter)";
+    if (bi.chargeDesignMah > 0 && bi.chargeFullMah > 0) {
+        try {
+            int soh =
+                    (int) Math.round(
+                            (bi.chargeFullMah * 100.0)
+                                    / bi.chargeDesignMah
+                    );
 
-} else {
+            if (soh > 0 && soh < 200) {
+                bi.sohPercent = soh;
+            }
+        } catch (Throwable ignore) {}
+    }
 
-    bi.telemetryStatus = "BLOCKED";
-    bi.mode = "RESTRICTED";
-    bi.confidence = "LOW";
-    bi.reason = "Battery telemetry blocked by OEM/kernel";
-}
+    // --------------------------------------------------
+    // 🔥 CLASSIFICATION (CLEAN)
+    // --------------------------------------------------
 
-// --------------------------------------------------
-// SOURCE TAGGING (SAFE)
-// --------------------------------------------------
+    boolean hasCounter = bi.chargeNowMah > 0;
+    boolean hasFull = bi.chargeFullMah > 0;
+    boolean hasLevel = bi.level > 0 && bi.level <= 100;
 
-if (gotCounterFromSysfs) {
+    if (hasCounter) {
 
-    bi.source = "SYSFS_COUNTER";
+        bi.telemetryStatus = "AVAILABLE";
+        bi.mode = "FULL_ACCESS";
+        bi.confidence = "HIGH";
+        bi.reason = "Hardware counter available";
 
-} else if (!hasCounter && !hasFull) {
+    } else if (hasFull && hasLevel) {
 
-    bi.source = "NO_COUNTER_AVAILABLE";
-}
+        bi.telemetryStatus = "LIMITED";
+        bi.mode = "PARTIAL_ACCESS";
+        bi.confidence = "MEDIUM";
+        bi.reason = "Derived from capacity";
 
-// --------------------------------------------------
-// BATTERY ACCESS FLAG
-// --------------------------------------------------
+    } else {
 
-bi.noBatteryAccess = !hasCounter && !hasFull;
+        bi.telemetryStatus = "BLOCKED";
+        bi.mode = "RESTRICTED";
+        bi.confidence = "LOW";
+        bi.reason = "OEM restriction";
+    }
 
-// --------------------------------------------------
-// FINAL SAFETY (IMPORTANT FIX)
-// --------------------------------------------------
+    bi.noBatteryAccess = !hasCounter && !hasFull;
 
-if (bi.chargeNowMah <= 0 && bi.chargeFullMah <= 0) {
-    bi.source = "NO_COUNTER_AVAILABLE";
-}
+    if (!hasCounter && !hasFull) {
+        bi.source = "NO_COUNTER_AVAILABLE";
+    }
 
-// --------------------------------------------------
-// RETURN
-// --------------------------------------------------
+    // --------------------------------------------------
+    // 🔥 RETURN
+    // --------------------------------------------------
 
-return bi;
+    return bi;
 }
 
 // ============================================================
