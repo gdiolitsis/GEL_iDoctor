@@ -247,6 +247,11 @@ private boolean lab14FastPhase = false;
 private long lab14FastStartTime = 0;
 private int lab14FastDurationSec = 45;
 
+private final List<Long> lab14ChargeSamples = new ArrayList<>();
+
+private long lab14MinCharge = Long.MAX_VALUE;
+private long lab14MaxCharge = Long.MIN_VALUE;
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -13153,6 +13158,10 @@ if (!lab14Running && !lab14PopupShown) {
     lab14Cancelled = false;
 
     resetBatteryDiagnostics();
+    
+    lab14ChargeSamples.clear();
+    lab14MinCharge = Long.MAX_VALUE;
+    lab14MaxCharge = Long.MIN_VALUE;
 
     collapseRisk[0] = false;
     swellingRisk[0] = false;
@@ -13304,6 +13313,25 @@ batteryPercent = getBatteryPercentSafe();
 baselineFullMah = -1;
 startMah = -1;
 
+// 1. direct from hardware (best)
+if (start.chargeFullMah > 0) {
+    baselineFullMah = start.chargeFullMah;
+
+// 2. design capacity (ok fallback)
+} else if (start.chargeDesignMah > 0) {
+    baselineFullMah = start.chargeDesignMah;
+
+// 3. 🔥 NEW: counter-based estimation (SAFE fallback)
+} else if (start.chargeNowMah > 0 && batteryPercent > 5) {
+
+    baselineFullMah =
+            (long) (start.chargeNowMah / (batteryPercent / 100.0f));
+}
+
+if (start.chargeNowMah > 0) {
+    startMah = start.chargeNowMah;
+}
+
 if (start.chargeFullMah > 0) {
     baselineFullMah = start.chargeFullMah;
 
@@ -13408,8 +13436,8 @@ lab14Engine.startDrainSession();
                 logLabelWarnValue(
                         gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
                         gr
-                                ? "Μη διαθέσιμη (δεν εκτίθεται counter)"
-                                : "N/A (counter-based)"
+                                ? "Μη διαθέσιμη (Μη διαθέσιμη (δεν εκτίθεται πλήρης χωρητικότητα από το σύστημα)"
+                                : "N/A (counter not exposed by device)"
                 );
             }
 
@@ -13809,17 +13837,26 @@ if (lab14_systemLimited[0]) {
     }
 
     logLabelValue(
-            gr ? "Συμπεριφορά μπαταρίας"
-               : "Battery behaviour",
-            String.format(
-                    Locale.US,
-                    "Start=%d | End=%d | Drop=%d | %.1fs",
-                    startMah,
-                    endMah,
-                    Math.max(0, drainMah),
-                    dtMs / 1000.0
-            )
-    );
+        gr ? "Συμπεριφορά μπαταρίας"
+           : "Battery behaviour",
+        String.format(
+                Locale.US,
+                "Start=%d mAh | End=%d mAh | Consumption=%d mAh | %.1fs",
+                startMah,
+                endMah,
+                Math.max(0, drainMah),
+                dtMs / 1000.0
+        )
+);
+
+logDebug(String.format(
+        Locale.US,
+        "Δ=%d | samples=%d | min=%d | max=%d",
+        deltaMah,
+        lab14ChargeSamples.size(),
+        lab14MinCharge,
+        lab14MaxCharge
+));
 
     if (validDrain) {
         logLabelOkValue(
@@ -14479,6 +14516,15 @@ if (snapEnd == null) {
 
 final long endMah = snapEnd.chargeNowMah;
 
+long deltaMah = 0;
+
+if (lab14MinCharge < Long.MAX_VALUE &&
+    lab14MaxCharge > 0 &&
+    lab14MaxCharge > lab14MinCharge) {
+
+    deltaMah = lab14MaxCharge - lab14MinCharge;
+}
+
 Float tObj =
         idoctor.getBatteryTempUnified();
 
@@ -14537,6 +14583,41 @@ if (drainResult != null && drainResult.valid) {
         drainPercentPerHour =
                 (mahPerHour / baselineFullMah) * 100.0;
     }
+}
+// validation
+boolean validCounter =
+        lab14ChargeSamples.size() >= 10 &&
+        deltaMah >= 20;
+
+// frozen check
+boolean frozen = true;
+
+if (lab14ChargeSamples.size() > 1) {
+
+    long first = lab14ChargeSamples.get(0);
+
+    for (int i = 1; i < lab14ChargeSamples.size(); i++) {
+        if (!lab14ChargeSamples.get(i).equals(first)) {
+            frozen = false;
+            break;
+        }
+    }
+}
+
+// apply validation
+boolean samplingValid =
+        validCounter &&
+        !frozen &&
+        deltaMah > 0;
+
+// αν engine ΔΕΝ έδωσε valid → χρησιμοποιείς sampling
+if (!validDrain && samplingValid) {
+    validDrain = true;
+}
+
+// fallback AFTER validation
+if (drainMah <= 0 && deltaMah > 0) {
+    drainMah = deltaMah;
 }
 
 // ----------------------------
@@ -16818,6 +16899,25 @@ float tNow =
 
             int elapsed =
                     (int) ((now - t0) / 1000);
+                    
+            try {
+    iDoctorEngine idoctor =
+        iDoctorEngine.get(ManualTestsActivity.this);
+
+    iDoctorEngine.BatterySnapshot snap =
+            idoctor.readBatterySnapshotLab();
+
+    if (snap != null && snap.chargeNowMah > 0) {
+
+        long c = snap.chargeNowMah;
+
+        lab14ChargeSamples.add(c);
+
+        if (c < lab14MinCharge) lab14MinCharge = c;
+        if (c > lab14MaxCharge) lab14MaxCharge = c;
+    }
+
+} catch (Throwable ignore) {}
 
             if (elapsed < durationSec) {
 
