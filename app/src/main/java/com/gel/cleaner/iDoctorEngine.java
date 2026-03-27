@@ -79,6 +79,8 @@ public long getInternalResistanceMilliOhm() {
     return lastInternalResistanceMilliOhm;
 }
 
+private long lastChargeNowMah = -1;
+
     private static iDoctorEngine instance;
 
     private final Context ctx;
@@ -304,11 +306,10 @@ boolean gotCounterFromSysfs = false;
 
 if (bi.chargeNowMah <= 0) {
 
-    long rawNow = readSysLong("/sys/class/power_supply/battery/charge_now");
-
-    if (rawNow <= 0) {
-        rawNow = readSysLong("/sys/class/power_supply/battery/energy_now");
-    }
+    long rawNow = readSysLongSafe(
+            "/sys/class/power_supply/battery/charge_now",
+            "/sys/class/power_supply/battery/energy_now"
+    );
 
     if (rawNow > 0) {
 
@@ -322,11 +323,10 @@ if (bi.chargeNowMah <= 0) {
 
 if (bi.chargeFullMah <= 0) {
 
-    long rawFull = readSysLong("/sys/class/power_supply/battery/charge_full");
-
-    if (rawFull <= 0) {
-        rawFull = readSysLong("/sys/class/power_supply/battery/energy_full");
-    }
+    long rawFull = readSysLongSafe(
+            "/sys/class/power_supply/battery/charge_full",
+            "/sys/class/power_supply/battery/energy_full"
+    );
 
     if (rawFull > 0) {
 
@@ -346,7 +346,9 @@ if (bi.chargeFullMah <= 0 && bi.chargeDesignMah > 0) {
     bi.chargeFullMah = bi.chargeDesignMah;
 }
 
+// DEFAULT SOURCE (μόνο αν δεν έχει οριστεί ήδη)
 if (bi.source == null || bi.source.trim().isEmpty()) {
+
     bi.source = lockedBatteryMode == BatteryReadMode.OEM_LOCKED
             ? "OEM_LOCKED"
             : "BATTERY_MANAGER_LOCKED";
@@ -367,35 +369,68 @@ if (bi.chargeDesignMah > 0 && bi.chargeFullMah > 0) {
 }
 
 // --------------------------------------------------
-// 🔥 GEL BATTERY ACCESS CLASSIFIER (ENGINE)
+// 🔥 GEL ACCURACY CLASSIFIER
 // --------------------------------------------------
 
-boolean hasCounter =
-        bi.chargeNowMah > 0;
+boolean hasCounter = bi.chargeNowMah > 0;
+boolean hasFull = bi.chargeFullMah > 0;
+boolean hasLevel = bi.level >= 0 && bi.level <= 100;
 
-boolean hasFull =
-        bi.chargeFullMah > 0;
+// -------------------------
+// FREEZE DETECTION
+// -------------------------
 
-boolean hasLevel =
-        bi.level > 0 && bi.level <= 100;
+boolean frozenCounter = false;
+
+if (hasCounter) {
+
+    long prev = lastChargeNowMah;
+    long curr = bi.chargeNowMah;
+
+    if (prev > 0) {
+
+        long diff = Math.abs(curr - prev);
+
+        if (diff < 2) {
+            frozenCounter = true;
+        }
+    }
+
+    lastChargeNowMah = curr;
+}
+
+// -------------------------
+// INVALID CHECK
+// -------------------------
+
+boolean invalidRange =
+        bi.chargeNowMah > 30000 ||
+        bi.chargeFullMah > 30000;
 
 // -------------------------
 // CLASSIFICATION
 // -------------------------
 
-if (hasCounter) {
+if (hasCounter && !frozenCounter && !invalidRange) {
 
     bi.telemetryStatus = "AVAILABLE";
     bi.mode = "FULL_ACCESS";
     bi.confidence = "HIGH";
-    bi.reason = "Hardware charge counter accessible";
+    bi.reason = "Live hardware counter OK";
+
+} else if (hasCounter && frozenCounter) {
+
+    bi.telemetryStatus = "LIMITED";
+    bi.mode = "PARTIAL_ACCESS";
+    bi.confidence = "LOW";
+    bi.reason = "Counter frozen (no real-time update)";
 
 } else if (hasFull && hasLevel) {
 
     bi.telemetryStatus = "LIMITED";
     bi.mode = "PARTIAL_ACCESS";
     bi.confidence = "MEDIUM";
-    bi.reason = "Derived from full capacity (no direct counter)";
+    bi.reason = "Derived from capacity (no direct counter)";
 
 } else {
 
@@ -437,17 +472,6 @@ if (bi.chargeNowMah <= 0 && bi.chargeFullMah <= 0) {
 // --------------------------------------------------
 
 return bi;
-}
-
-public long readSysLong(String path)
-    try {
-        BufferedReader br = new BufferedReader(new FileReader(path));
-        String line = br.readLine();
-        br.close();
-        return line != null ? Long.parseLong(line.trim()) : -1;
-    } catch (Throwable t) {
-        return -1;
-    }
 }
 
 // ============================================================
@@ -502,9 +526,9 @@ private boolean isValidBatteryNode(String node) {
         return false;
 
     try {
-        long v = readSysLongRootAware(node + "/voltage_now");
-        long cNow = readSysLongRootAware(node + "/charge_now");
-        long cur = readSysLongRootAware(node + "/current_now");
+        long v = readSysLongSafe(node + "/voltage_now");
+        long cNow = readSysLongSafe(node + "/charge_now");
+        long cur = readSysLongSafe(node + "/current_now");
 
         if (v > 0) return true;
         if (cNow > 0) return true;
@@ -524,14 +548,14 @@ private void readBatterySnapshotFromLockedOem(BatterySnapshot bi) {
     }
 
     try {
-        long fullRaw = readSysLongRootAware(node + "/charge_full");
-        long nowRaw = readSysLongRootAware(node + "/charge_now");
-        long designRaw = readSysLongRootAware(node + "/charge_full_design");
-        long currentRaw = readSysLongRootAware(node + "/current_now");
-        long voltageRaw = readSysLongRootAware(node + "/voltage_now");
-        long tempRaw = readSysLongRootAware(node + "/temp");
-        long cycleRaw = readSysLongRootAware(node + "/cycle_count");
-        long resRaw = readSysLongRootAware(node + "/resistance");
+        long fullRaw = readSysLongSafe(node + "/charge_full");
+        long nowRaw = readSysLongSafe(node + "/charge_now");
+        long designRaw = readSysLongSafe(node + "/charge_full_design");
+        long currentRaw = readSysLongSafe(node + "/current_now");
+        long voltageRaw = readSysLongSafe(node + "/voltage_now");
+        long tempRaw = readSysLongSafe(node + "/temp");
+        long cycleRaw = readSysLongSafe(node + "/cycle_count");
+        long resRaw = readSysLongSafe(node + "/resistance");
 
         long fullMah = normalizeMah(fullRaw);
         long nowMah = normalizeMah(nowRaw);
@@ -1000,18 +1024,18 @@ if (!out.battery.valid) {
                 "N/A"
         );
 
-        s.currentFreqKHz = readSysLong("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
-        s.minFreqKHz = readSysLong("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq");
-        s.maxFreqKHz = readSysLong("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq");
+        s.currentFreqKHz = readSysLongSafe("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
+        s.minFreqKHz = readSysLongSafe("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq");
+        s.maxFreqKHz = readSysLongSafe("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq");
 
         for (int i = 0; i < Math.max(1, s.cores); i++) {
             CoreFreq cf = new CoreFreq();
             cf.coreIndex = i;
 
             String base = "/sys/devices/system/cpu/cpu" + i + "/cpufreq/";
-            cf.currentFreqKHz = readSysLong(base + "scaling_cur_freq");
-            cf.minFreqKHz = readSysLong(base + "cpuinfo_min_freq");
-            cf.maxFreqKHz = readSysLong(base + "cpuinfo_max_freq");
+            cf.currentFreqKHz = readSysLongSafe(base + "scaling_cur_freq");
+            cf.minFreqKHz = readSysLongSafe(base + "cpuinfo_min_freq");
+            cf.maxFreqKHz = readSysLongSafe(base + "cpuinfo_max_freq");
 
             if (cf.currentFreqKHz > 0 || cf.minFreqKHz > 0 || cf.maxFreqKHz > 0) {
                 s.coreFreqs.add(cf);
@@ -1059,9 +1083,9 @@ if (!out.battery.valid) {
                 "N/A"
         );
 
-        s.currentFreqHz = readSysLong("/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq");
-        s.minFreqHz = readSysLong("/sys/class/kgsl/kgsl-3d0/devfreq/min_freq");
-        s.maxFreqHz = readSysLong("/sys/class/kgsl/kgsl-3d0/devfreq/max_freq");
+        s.currentFreqHz = readSysLongSafe("/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq");
+        s.minFreqHz = readSysLongSafe("/sys/class/kgsl/kgsl-3d0/devfreq/min_freq");
+        s.maxFreqHz = readSysLongSafe("/sys/class/kgsl/kgsl-3d0/devfreq/max_freq");
 
         s.gpuTempC = getGpuTempUnified();
 
@@ -2209,15 +2233,39 @@ public int getBatterySOH() {
     }
 
     public long readSysLongRootAware(String path) {
-        String s = readSysTextRootAware(path);
-        if (s == null || s.isEmpty()) return -1;
+    String s = readSysTextRootAware(path);
+    if (s == null || s.isEmpty()) return -1;
 
-        try {
-            return Long.parseLong(s.replaceAll("[^0-9\\-]", ""));
-        } catch (Throwable ignore) {
-            return -1;
+    try {
+        return Long.parseLong(s.replaceAll("[^0-9\\-]", ""));
+    } catch (Throwable ignore) {
+        return -1;
+    }
+}
+    
+    public long readSysLongSafe(String... paths) {
+
+    if (paths == null || paths.length == 0)
+        return -1;
+
+    for (String p : paths) {
+
+        if (p == null || p.trim().isEmpty())
+            continue;
+
+        long v = readSysLongRootAware(p);
+
+        if (v > 0) {
+
+            if (v > 100000) v = v / 1000;
+
+            if (v > 0 && v < 30000)
+                return v;
         }
     }
+
+    return -1;
+}
 
     // ============================================================
     // INTERNAL HELPERS
@@ -2519,7 +2567,7 @@ public int getBatterySOH() {
             continue;
 
         long v =
-                readSysLongRootAware(p);
+                readSysLongSafe(p);
 
         if (v > 0)
             return v;
@@ -2538,14 +2586,14 @@ public int getBatterySOH() {
     };
 
     for (String p : paths) {
-        long v = readSysLongRootAware(p);
+        long v = readSysLongSafe(p);
         if (v > 0) return v;
     }
 
     // PROFILE FALLBACK
     if (profile != null && profile.batteryResistancePath != null) {
 
-        long v = readSysLongRootAware(profile.batteryResistancePath);
+        long v = readSysLongSafe(profile.batteryResistancePath);
 
         if (v > 0) return v;
     }
@@ -2856,7 +2904,7 @@ private long readBatteryValueMulti(String[] paths) {
         if (p == null)
             continue;
 
-        long v = readSysLongRootAware(p);
+        long v = readSysLongSafe(p);
 
         if (v > 0)
             return v;
@@ -2893,7 +2941,7 @@ private long readBatteryValueAuto(String file) {
                         + "/" + file;
 
                 long v =
-                        readSysLongRootAware(path);
+                        readSysLongSafe(path);
 
                 if (v > 0)
                     return v;
@@ -2918,7 +2966,7 @@ private long readFuelGaugeValue(String file) {
     if (node != null) {
 
         long v =
-                readSysLongRootAware(
+                readSysLongSafe(
                         node + "/" + file
                 );
 
@@ -2972,7 +3020,7 @@ public void debugDumpPowerSupply() {
                 try {
 
                     long v =
-                            readSysLongRootAware(
+                            readSysLongSafe(
                                     n + "/" + f
                             );
 
