@@ -1612,8 +1612,21 @@ if (snap.battery.chargeDesignMah > 0
     ));
 }
 
-return sb.toString();
+// --------------------------------------------------
+// 🔥 SMART USER MESSAGE (ONLY IF BLOCKED)
+// --------------------------------------------------
+
+if (snap != null &&
+    snap.battery != null &&
+    "RESTRICTED".equals(snap.battery.mode)) {
+
+    sb.append("\n");
+
+    sb.append("⚠️ This device restricts battery telemetry.\n");
+    sb.append("For accurate diagnostics, set your battery capacity manually.\n");
 }
+
+return sb.toString();
 
 // ===================================================================
 // REFRESH VIEW
@@ -3863,6 +3876,106 @@ private void handleSettingsClick(Context ctx, String path) {
 private void animateCollapse(TextView v) {
     if (v == null) return;
     v.setVisibility(View.GONE);
+}
+
+// ============================================================
+// NEON UI HELPERS (PERIPHERALS)
+// ============================================================
+
+private void setNeonSectionText(TextView tv, String text) {
+    if (tv == null) return;
+    if (text == null) text = "";
+    tv.setText(applyNeonToValues(text));
+}
+
+private CharSequence applyNeonToValues(String text) {
+
+    SpannableStringBuilder ssb = new SpannableStringBuilder(text);
+
+    String[] lines = text.split("\n", -1);
+
+    int offset = 0;
+    boolean previousLabelOnly = false;
+
+    for (String line : lines) {
+
+        int len = line.length();
+
+        if (len > 0) {
+
+            int colonIdx = line.indexOf(':');
+
+            if (colonIdx >= 0) {
+
+                if (colonIdx == len - 1) {
+
+                    previousLabelOnly = true;
+
+                } else {
+
+                    int valueStart = offset + colonIdx + 1;
+
+                    while (valueStart < offset + len &&
+                           Character.isWhitespace(line.charAt(valueStart - offset))) {
+                        valueStart++;
+                    }
+
+                    int valueEnd = offset + len;
+
+                    if (valueStart < valueEnd) {
+
+                        ssb.setSpan(
+                                new ForegroundColorSpan(getValueColor(line)),
+                                valueStart,
+                                valueEnd,
+                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        );
+                    }
+
+                    previousLabelOnly = false;
+                }
+
+            } else if (previousLabelOnly) {
+
+                ssb.setSpan(
+                        new ForegroundColorSpan(getValueColor(line)),
+                        offset,
+                        offset + len,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                );
+
+                previousLabelOnly = false;
+            }
+
+        } else {
+            previousLabelOnly = false;
+        }
+
+        offset += len + 1;
+    }
+
+    return ssb;
+}
+
+private int getValueColor(String line) {
+
+    String l = line.toLowerCase(Locale.US);
+
+    if (l.contains("blocked") ||
+        l.contains("restricted") ||
+        l.contains("no_counter") ||
+        l.contains("unavailable")) {
+
+        return Color.parseColor("#FF3B30"); // 🔴
+    }
+
+    if (l.contains("warning") ||
+        l.contains("medium")) {
+
+        return Color.parseColor("#FF9500"); // 🟡
+    }
+
+    return Color.parseColor("#39FF14"); // 🟢
 }
 
 // 🔥 END OF CLASS
