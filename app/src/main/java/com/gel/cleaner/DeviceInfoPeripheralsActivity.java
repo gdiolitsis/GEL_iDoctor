@@ -277,35 +277,7 @@ super.attachBaseContext(LocaleHelper.apply(base));
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_device_info_peripherals);
-    
-    new Thread(() -> {
-
-    final String system = buildSystemInfo();
-    final String android = buildAndroidInfo();
-    final String cpu = buildCpuInfo();
-    final String gpu = buildGpuInfo();
-    final String thermal = buildThermalInternalReport();
-    final String vulkan = buildVulkanInfo();
-    final String ram = buildRamInfo();
-    final String storage = buildStorageInfo();
-    final String connectivity = buildConnectivityInfo();
-
-    runOnUiThread(() -> {
-
-        setNeonSectionText(txtSystemContent, system);
-        setNeonSectionText(txtAndroidContent, android);
-        setNeonSectionText(txtCpuContent, cpu);
-        setNeonSectionText(txtGpuContent, gpu);
-        setNeonSectionText(txtThermalContent, thermal);
-        setNeonSectionText(txtVulkanContent, vulkan);
-        setNeonSectionText(txtRamContent, ram);
-        setNeonSectionText(txtStorageContent, storage);
-        setNeonSectionText(txtConnectivityContent, connectivity);
-
-    });
-
-}).start();
-    
+        
     UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
     // ✅ ROOT FLAG — MUST BE HERE
