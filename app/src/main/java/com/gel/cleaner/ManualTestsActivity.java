@@ -252,6 +252,8 @@ private final List<Long> lab14ChargeSamples = new ArrayList<>();
 private long lab14MinCharge = Long.MAX_VALUE;
 private long lab14MaxCharge = Long.MIN_VALUE;
 
+private long lab14DeltaMah = 0;
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -13849,10 +13851,10 @@ if (lab14_systemLimited[0]) {
         )
 );
 
-logDebug(String.format(
+Log.d("LAB14_DEBUG", String.format(
         Locale.US,
         "Δ=%d | samples=%d | min=%d | max=%d",
-        deltaMah,
+        lab14DeltaMah,
         lab14ChargeSamples.size(),
         lab14MinCharge,
         lab14MaxCharge
@@ -14516,13 +14518,13 @@ if (snapEnd == null) {
 
 final long endMah = snapEnd.chargeNowMah;
 
-long deltaMah = 0;
+lab14DeltaMah = 0;
 
 if (lab14MinCharge < Long.MAX_VALUE &&
     lab14MaxCharge > 0 &&
     lab14MaxCharge > lab14MinCharge) {
 
-    deltaMah = lab14MaxCharge - lab14MinCharge;
+    lab14DeltaMah = lab14MaxCharge - lab14MinCharge;
 }
 
 Float tObj =
@@ -16901,9 +16903,7 @@ float tNow =
                     (int) ((now - t0) / 1000);
                     
             try {
-    iDoctorEngine idoctor =
-        iDoctorEngine.get(ManualTestsActivity.this);
-
+    
     iDoctorEngine.BatterySnapshot snap =
             idoctor.readBatterySnapshotLab();
 
