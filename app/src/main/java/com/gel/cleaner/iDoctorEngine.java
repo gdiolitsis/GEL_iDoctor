@@ -425,16 +425,18 @@ if (gotCounterFromSysfs) {
 bi.noBatteryAccess = !hasCounter && !hasFull;
 
 // --------------------------------------------------
-// RETURN (ΠΑΝΤΑ ΤΕΛΕΥΤΑΙΟ)
+// FINAL SAFETY (IMPORTANT FIX)
+// --------------------------------------------------
+
+if (bi.chargeNowMah <= 0 && bi.chargeFullMah <= 0) {
+    bi.source = "NO_COUNTER_AVAILABLE";
+}
+
+// --------------------------------------------------
+// RETURN
 // --------------------------------------------------
 
 return bi;
-}
-
-} else if (bi.chargeNowMah <= 0) {
-
-    // ΔΕΝ βρήκαμε τίποτα
-    bi.source = "NO_COUNTER_AVAILABLE";
 }
 
 private long readSysLong(String path) {
