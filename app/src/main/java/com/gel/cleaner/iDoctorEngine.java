@@ -57,6 +57,10 @@ import java.util.Map;
 public final class iDoctorEngine {
 	private long lastInternalResistanceMilliOhm = -1;
 	
+	bi.noBatteryAccess =
+        bi.chargeNowMah <= 0 &&
+        bi.chargeFullMah <= 0;
+	
 // ============================================================
 // LAB BATTERY SOURCE LOCK
 // Mode C = OEM locked if available, else BatteryManager locked
@@ -167,26 +171,33 @@ public long getInternalResistanceMilliOhm() {
     // BATTERY
     // ============================================================
     public static final class BatterySnapshot {
-    	public int sohPercent = -1;
-        public int level = -1;
-        public int scale = -1;
-        public boolean charging = false;
-        public String chargingSource = "N/A";
-        public String status = "N/A";
+    public int sohPercent = -1;
+    public int level = -1;
+    public int scale = -1;
+    public boolean charging = false;
+    public String chargingSource = "N/A";
+    public String status = "N/A";
 
-        public float batteryTempC = Float.NaN;
-        public float voltageMv = Float.NaN;
-        public float currentMa = Float.NaN;
+    public float batteryTempC = Float.NaN;
+    public float voltageMv = Float.NaN;
+    public float currentMa = Float.NaN;
 
-        public long chargeNowMah = -1;
-        public long chargeFullMah = -1;
-        public long chargeDesignMah = -1;
-        public long cycleCount = -1;
-        public long internalResistance = -1;
+    public long chargeNowMah = -1;
+    public long chargeFullMah = -1;
+    public long chargeDesignMah = -1;
+    public long cycleCount = -1;
+    public long internalResistance = -1;
 
-        public boolean rooted = false;
-        public String source = "N/A";
-    }
+    public boolean rooted = false;
+    public String source = "N/A";
+
+    // GEL Battery Access Classifier
+    public boolean noBatteryAccess = false;
+    public String mode = "UNKNOWN";              // FULL_ACCESS / PARTIAL_ACCESS / RESTRICTED
+    public String telemetryStatus = "UNKNOWN";   // OK / PARTIAL / BLOCKED
+    public String confidence = "UNKNOWN";        // HIGH / MEDIUM / LOW
+    public String reason = "N/A";
+}
     
     private static final String PREFS_BATTERY = "battery_prefs";
     private static final String KEY_MODEL_CAP = "model_capacity";
@@ -288,6 +299,43 @@ private void saveModelCapacity(long v) {
     } else {
         readBatterySnapshotFromBatteryManagerLocked(bi);
     }
+    
+// --------------------------------------------------
+// 🔥 HARD FALLBACK — SYSFS BATTERY READ (CRITICAL)
+// --------------------------------------------------
+
+if (bi.chargeNowMah <= 0) {
+
+    long rawNow = readSysLong("/sys/class/power_supply/battery/charge_now");
+
+    if (rawNow <= 0) {
+        rawNow = readSysLong("/sys/class/power_supply/battery/energy_now");
+    }
+
+    if (rawNow > 0) {
+
+        // convert μAh → mAh
+        if (rawNow > 100000) rawNow = rawNow / 1000;
+
+        bi.chargeNowMah = rawNow;
+    }
+}
+
+if (bi.chargeFullMah <= 0) {
+
+    long rawFull = readSysLong("/sys/class/power_supply/battery/charge_full");
+
+    if (rawFull <= 0) {
+        rawFull = readSysLong("/sys/class/power_supply/battery/energy_full");
+    }
+
+    if (rawFull > 0) {
+
+        if (rawFull > 100000) rawFull = rawFull / 1000;
+
+        bi.chargeFullMah = rawFull;
+    }
+}
 
     if (bi.internalResistance <= 0 &&
         lastInternalResistanceMilliOhm > 0) {
@@ -318,8 +366,80 @@ private void saveModelCapacity(long v) {
             }
         } catch (Throwable ignore) {}
     }
+    
+// --------------------------------------------------
+// 🔥 GEL BATTERY ACCESS CLASSIFIER (ENGINE)
+// --------------------------------------------------
+
+boolean hasCounter =
+        bi.chargeNowMah > 0;
+
+boolean hasFull =
+        bi.chargeFullMah > 0;
+
+boolean hasLevel =
+        bi.level > 0 && bi.level <= 100;
+
+// -------------------------
+// CLASSIFICATION
+// -------------------------
+
+if (hasCounter) {
+
+    bi.telemetryStatus = "AVAILABLE";
+    bi.mode = "FULL_ACCESS";
+    bi.confidence = "HIGH";
+    bi.reason = "Hardware charge counter accessible";
+
+} else if (hasFull && hasLevel) {
+
+    bi.telemetryStatus = "LIMITED";
+    bi.mode = "PARTIAL_ACCESS";
+    bi.confidence = "MEDIUM";
+    bi.reason = "Derived from full capacity (no direct counter)";
+
+} else {
+
+    bi.telemetryStatus = "BLOCKED";
+    bi.mode = "RESTRICTED";
+    bi.confidence = "LOW";
+    bi.reason = "Battery telemetry blocked by OEM/kernel";
+}
+
+// -------------------------
+// EXTRA FLAG (OPTIONAL)
+// -------------------------
+
+if (!hasCounter && !hasFull) {
+    bi.source = "NO_COUNTER_AVAILABLE";
+}
 
     return bi;
+}
+
+// --------------------------------------------------
+// SOURCE TAGGING (SAFE)
+// --------------------------------------------------
+
+if (gotCounterFromSysfs) {
+
+    bi.source = "SYSFS_COUNTER";
+
+} else if (bi.chargeNowMah <= 0) {
+
+    // ΔΕΝ βρήκαμε τίποτα
+    bi.source = "NO_COUNTER_AVAILABLE";
+}
+
+private long readSysLong(String path) {
+    try {
+        BufferedReader br = new BufferedReader(new FileReader(path));
+        String line = br.readLine();
+        br.close();
+        return line != null ? Long.parseLong(line.trim()) : -1;
+    } catch (Throwable t) {
+        return -1;
+    }
 }
 
 // ============================================================
@@ -1967,6 +2087,7 @@ if (!out.battery.valid) {
             while ((read = br.read(buf)) > 0 && sb.length() < maxLen) {
                 sb.append(buf, 0, read);
             }
+                       
             return sb.toString();
 
         } catch (Throwable ignore) {
