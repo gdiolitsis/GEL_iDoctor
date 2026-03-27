@@ -299,14 +299,6 @@ private void saveModelCapacity(long v) {
         bi.chargeFullMah = bi.chargeDesignMah;
     }
 
-    long modelCap = getStoredModelCapacity();
-    if (bi.chargeFullMah <= 0 && modelCap > 0) {
-        bi.chargeFullMah = modelCap;
-        if (bi.source == null || "N/A".equals(bi.source)) {
-            bi.source = "model_capacity";
-        }
-    }
-
     if (bi.source == null || bi.source.trim().isEmpty()) {
         bi.source = lockedBatteryMode == BatteryReadMode.OEM_LOCKED
                 ? "OEM_LOCKED"
@@ -486,11 +478,6 @@ private void readBatterySnapshotFromBatteryManagerLocked(BatterySnapshot bi) {
         if (design > 0) {
             bi.chargeDesignMah = design;
         }
-    }
-
-    long modelCap = getStoredModelCapacity();
-    if (bi.chargeFullMah <= 0 && modelCap > 0) {
-        bi.chargeFullMah = modelCap;
     }
 
     bi.source = "BATTERY_MANAGER_LOCKED";
@@ -2034,14 +2021,7 @@ if (!out.battery.valid) {
     
     public long getBestFullCapacityMah() {
 
-    BatterySnapshot b =
-            readBatterySnapshot();
-
-    long model =
-            getStoredModelCapacity();
-
-    if (model > 0)
-        return model;
+    BatterySnapshot b = readBatterySnapshot();
 
     if (b.chargeFullMah > 0)
         return b.chargeFullMah;
@@ -2052,7 +2032,7 @@ if (!out.battery.valid) {
     if (b.chargeNowMah > 0 &&
         b.level > 5) {
 
-        return (long)(
+        return (long) (
                 b.chargeNowMah /
                 (b.level / 100f)
         );
