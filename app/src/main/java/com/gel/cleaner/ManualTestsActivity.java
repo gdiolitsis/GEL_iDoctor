@@ -1134,9 +1134,13 @@ if (!serviceLogInit) {
 }  // onCreate ENDS HERE
 
 private void scrollLogToBottom() {
-    if (logScroll != null) {
-        logScroll.post(() -> logScroll.fullScroll(View.FOCUS_DOWN));
-    }
+    if (logScroll == null) return;
+
+    logScroll.post(() -> {
+        try {
+            logScroll.fullScroll(View.FOCUS_DOWN);
+        } catch (Throwable ignore) {}
+    });
 }
 
  // ============================================================
@@ -4623,37 +4627,37 @@ private void appendHtml(String html) {
         CharSequence cur = txtLog.getText();
         CharSequence add = Html.fromHtml(html + "<br>");
         txtLog.setText(TextUtils.concat(cur, add));
-        scroll.post(() -> scroll.fullScroll(ScrollView.FOCUS_DOWN));
     });
 }
 
 private void logInfo(String msg) {
     appendHtml("• " + escape(msg));
-    scrollLogToBottom();
     GELServiceLog.logInfo(msg);
+    scrollLogToBottom();
 }
 
 private void logOk(String msg) {
     appendHtml("<font color='#39FF14'>✔ " + escape(msg) + "</font>");
-    scrollLogToBottom();
     GELServiceLog.logOk(msg);
+    scrollLogToBottom();
 }
 
 private void logWarn(String msg) {
     appendHtml("<font color='#FFD966'>⚠ " + escape(msg) + "</font>");
-    scrollLogToBottom();
     GELServiceLog.logWarn(msg);
+    scrollLogToBottom();
 }
 
 private void logError(String msg) {
     appendHtml("<font color='#FF5555'>✖ " + escape(msg) + "</font>");
-    scrollLogToBottom();
     GELServiceLog.logError(msg);
+    scrollLogToBottom();
 }
 
 private void logLine() {
     appendHtml("--------------------------------------------------");
     GELServiceLog.logLine();
+    scrollLogToBottom();
 }
 
 // ------------------------------------------------------------
