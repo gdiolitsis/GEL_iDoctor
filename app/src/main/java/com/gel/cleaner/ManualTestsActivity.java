@@ -243,6 +243,7 @@ public class ManualTestsActivity extends AppCompatActivity {
 
 private ScrollView labsScroll;
 private ScrollView logScroll;
+private Button btnExport;
 
 private int startPercent = -1;
 private long startMahThread = -1;
@@ -1082,7 +1083,7 @@ body7.addView(makeTestButton(
 // ============================================================
 // EXPORT SERVICE REPORT BUTTON (LOCKED HEIGHT)
 // ============================================================
-Button btnExport = new Button(this);
+btnExport = new Button(this);
 btnExport.setText(getString(R.string.export_report_title));
 btnExport.setAllCaps(false);
 btnExport.setTextColor(0xFFFFFFFF);
