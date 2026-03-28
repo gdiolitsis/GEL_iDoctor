@@ -240,6 +240,8 @@ public class ManualTestsActivity extends AppCompatActivity {
 
 }
 
+private ScrollView logScroll;
+
 private int startPercent = -1;
 private long startMahThread = -1;
 
@@ -760,24 +762,51 @@ protected void onCreate(Bundle savedInstanceState) {
 
     initTTS();
 
+// ============================================================
+    // ROOT
     // ============================================================
-    // ROOT SCROLL + LAYOUT
-    // ============================================================
-    scroll = new ScrollView(this);
-    scroll.setFillViewport(true);
-
     LinearLayout root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
-    int pad = dp(16);
-    root.setPadding(pad, pad, pad, pad);
+    root.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.MATCH_PARENT
+    ));
     root.setBackgroundColor(0xFF101010);
 
-    scroll.addView(root);
-    setContentView(scroll);
-    
+    setContentView(root);
+
+    // =======================
+    // LABS SCROLL
+    // =======================
+    ScrollView labsScroll = new ScrollView(this);
+labsScroll.setFillViewport(true);
+labsScroll.setLayoutParams(new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        0,
+        2f
+));
+
+    LinearLayout labsContainer = new LinearLayout(this);
+    labsContainer.setOrientation(LinearLayout.VERTICAL);
+    labsContainer.setPadding(dp(16), dp(16), dp(16), dp(16));
+
+    labsScroll.addView(labsContainer);
+
+// =======================
+// LOG SCROLL
+// =======================
+logScroll = new ScrollView(this);
+logScroll.setLayoutParams(new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        0,
+        3f
+));
+
     UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
-    // ============================================================
+    final boolean gr = AppLang.isGreek(this);
+    
+// ============================================================
     // TITLE
     // ============================================================
     TextView title = new TextView(this);
@@ -786,50 +815,39 @@ protected void onCreate(Bundle savedInstanceState) {
     title.setTextColor(0xFFFFD700);
     title.setGravity(Gravity.CENTER_HORIZONTAL);
     title.setPadding(0, 0, 0, dp(6));
-    root.addView(title);
+    labsContainer.addView(title);
 
-    // ============================================================
-    // SUBTITLE
-    // ============================================================
     TextView sub = new TextView(this);
     sub.setText(getString(R.string.manual_hospital_sub));
     sub.setTextSize(13f);
     sub.setTextColor(0xFF39FF14);
     sub.setGravity(Gravity.CENTER_HORIZONTAL);
     sub.setPadding(0, 0, 0, dp(12));
-    root.addView(sub);
+    labsContainer.addView(sub);
 
-    // ============================================================
-    // SECTION TITLE
-    // ============================================================
     TextView sec1 = new TextView(this);
     sec1.setText(getString(R.string.manual_section1));
     sec1.setTextSize(17f);
     sec1.setTextColor(0xFFFFD700);
     sec1.setGravity(Gravity.CENTER_HORIZONTAL);
     sec1.setPadding(0, dp(10), 0, dp(6));
-    root.addView(sec1);
+    labsContainer.addView(sec1);
 
-    // ------------------------------------------------------------
-    // DOTS (running indicator)
-    // ------------------------------------------------------------
     lab14DotsView = new TextView(this);
     lab14DotsView.setText("•");
     lab14DotsView.setTextSize(22f);
     lab14DotsView.setTextColor(0xFF39FF14);
     lab14DotsView.setPadding(0, dp(6), 0, dp(10));
     lab14DotsView.setGravity(Gravity.CENTER_HORIZONTAL);
-    root.addView(lab14DotsView);
-    
-final boolean gr = AppLang.isGreek(this);
+    labsContainer.addView(lab14DotsView);
 
     // ============================================================  
     // SECTION 1: AUDIO & VIBRATION — LABS 1-5  
     // ============================================================  
     LinearLayout body1 = makeSectionBody();  
     Button header1 = makeSectionHeader(getString(R.string.manual_cat_1), body1);  
-    root.addView(header1);  
-    root.addView(body1);  
+    labsContainer.addView(header1);
+    labsContainer.addView(body1);
 
     body1.addView(makeTestButton(
         gr ? "1. Δοκιμή Τόνου Ηχείου"
@@ -861,8 +879,8 @@ body1.addView(makeTestButton(
     // ============================================================  
     LinearLayout body2 = makeSectionBody();  
     Button header2 = makeSectionHeader(getString(R.string.manual_cat_2), body2);  
-    root.addView(header2);  
-    root.addView(body2);  
+    labsContainer.addView(header2);  
+    labsContainer.addView(body2);  
 
     body2.addView(makeTestButton(
         gr ? "6. Έλεγχος Οθόνης / Αφής"
@@ -889,8 +907,8 @@ body2.addView(makeTestButton(
     // ============================================================  
     LinearLayout body3 = makeSectionBody();  
     Button header3 = makeSectionHeader(getString(R.string.manual_cat_3), body3);  
-    root.addView(header3);  
-    root.addView(body3);  
+    labsContainer.addView(header3);  
+    labsContainer.addView(body3);  
 
     body3.addView(makeTestButton(
         gr ? "10. Έλεγχος Wi-Fi"
@@ -917,8 +935,8 @@ body3.addView(makeTestButton(
     // ============================================================  
     LinearLayout body4 = makeSectionBody();  
     Button header4 = makeSectionHeader(getString(R.string.manual_cat_4), body4);  
-    root.addView(header4);  
-    root.addView(body4);  
+    labsContainer.addView(header4);  
+    labsContainer.addView(body4);  
 
     body4.addView(makeTestButtonRedGold(
         gr ? "14. Δοκιμή Καταπόνησης Υγείας Μπαταρίας"
@@ -956,8 +974,8 @@ body4.addView(makeTestButtonGreenGold(
     // ============================================================  
     LinearLayout body5 = makeSectionBody();  
     Button header5 = makeSectionHeader(getString(R.string.manual_cat_5), body5);  
-    root.addView(header5);  
-    root.addView(body5);  
+    labsContainer.addView(header5);  
+    labsContainer.addView(body5);  
       
     body5.addView(makeTestButton(
         gr ? "18. Έλεγχος Υγείας Αποθηκευτικού Χώρου"
@@ -979,8 +997,8 @@ body5.addView(makeTestButton(
     // ============================================================  
     LinearLayout body6 = makeSectionBody();  
     Button header6 = makeSectionHeader(getString(R.string.manual_cat_6), body6);  
-    root.addView(header6);  
-    root.addView(body6);  
+    labsContainer.addView(header6);  
+    labsContainer.addView(body6);  
 
     body6.addView(makeTestButton(
         gr ? "21. Κλείδωμα Οθόνης / Βιομετρικά"
@@ -1007,8 +1025,8 @@ body6.addView(makeTestButton(
     // ============================================================  
     LinearLayout body7 = makeSectionBody();  
     Button header7 = makeSectionHeader(getString(R.string.manual_cat_7), body7);  
-    root.addView(header7);  
-    root.addView(body7);  
+    labsContainer.addView(header7);  
+    labsContainer.addView(body7);  
 
         body7.addView(makeTestButton(
         gr ? "25. Ιστορικό Κρασαρισμάτων / Παγώματος"
@@ -1052,9 +1070,10 @@ body7.addView(makeTestButton(
     txtLog.setTextSize(13f);  
     txtLog.setTextColor(0xFFEEEEEE);  
     txtLog.setPadding(0, dp(16), 0, dp(8));  
-    txtLog.setMovementMethod(new ScrollingMovementMethod());  
     txtLog.setText(Html.fromHtml("<b>" + getString(R.string.manual_log_title) + "</b><br>"));  
-    root.addView(txtLog);
+    txtLog.setMovementMethod(new ScrollingMovementMethod());
+   
+    logScroll.addView(txtLog);
 
 // ============================================================
 // EXPORT SERVICE REPORT BUTTON (LOCKED HEIGHT)
@@ -1065,7 +1084,7 @@ btnExport.setAllCaps(false);
 btnExport.setTextColor(0xFFFFFFFF);
 btnExport.setBackgroundResource(R.drawable.gel_btn_outline_selector);
 
-//  OVERRIDE THEME / DRAWABLE
+// OVERRIDE THEME / DRAWABLE
 btnExport.setMinHeight(0);
 btnExport.setMinimumHeight(0);
 btnExport.setPadding(dp(16), dp(14), dp(16), dp(14));
@@ -1082,7 +1101,12 @@ btnExport.setOnClickListener(v ->
 startActivity(new Intent(this, ServiceReportActivity.class))
 );
 
-root.addView(btnExport);
+    // ============================================================
+    // FINAL STRUCTURE
+    // ============================================================
+    root.addView(labsScroll);
+    root.addView(logScroll);
+    root.addView(btnExport);
 
 // ============================================================
 // SERVICE LOG — INIT (Android Manual Tests)
@@ -1108,6 +1132,12 @@ if (!serviceLogInit) {
 }
 
 }  // onCreate ENDS HERE
+
+private void scrollLogToBottom() {
+    if (logScroll != null) {
+        logScroll.post(() -> logScroll.fullScroll(View.FOCUS_DOWN));
+    }
+}
 
  // ============================================================
 // BATTERY VOLTAGE HELPER (SAFE)
@@ -4599,21 +4629,25 @@ private void appendHtml(String html) {
 
 private void logInfo(String msg) {
     appendHtml("• " + escape(msg));
+    scrollLogToBottom();
     GELServiceLog.logInfo(msg);
 }
 
 private void logOk(String msg) {
     appendHtml("<font color='#39FF14'>✔ " + escape(msg) + "</font>");
+    scrollLogToBottom();
     GELServiceLog.logOk(msg);
 }
 
 private void logWarn(String msg) {
     appendHtml("<font color='#FFD966'>⚠ " + escape(msg) + "</font>");
+    scrollLogToBottom();
     GELServiceLog.logWarn(msg);
 }
 
 private void logError(String msg) {
     appendHtml("<font color='#FF5555'>✖ " + escape(msg) + "</font>");
+    scrollLogToBottom();
     GELServiceLog.logError(msg);
 }
 
