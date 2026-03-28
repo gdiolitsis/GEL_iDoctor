@@ -1093,24 +1093,26 @@ btnExport.setMinHeight(0);
 btnExport.setMinimumHeight(0);
 btnExport.setPadding(dp(16), dp(14), dp(16), dp(14));
 
-LinearLayout.LayoutParams lpExp =
-new LinearLayout.LayoutParams(
-LinearLayout.LayoutParams.MATCH_PARENT,
-LinearLayout.LayoutParams.WRAP_CONTENT
-);
-lpExp.setMargins(dp(8), dp(16), dp(8), dp(24));
+FrameLayout.LayoutParams lpExp =
+        new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+
+// 👉 κάθεται ΠΑΝΩ από το log panel
+lpExp.gravity = Gravity.BOTTOM;
+
+// 👉 offset = ύψος log + margin
+lpExp.bottomMargin = dp(180) + dp(12);
+
+lpExp.leftMargin = dp(8);
+lpExp.rightMargin = dp(8);
+
 btnExport.setLayoutParams(lpExp);
 
 btnExport.setOnClickListener(v ->
 startActivity(new Intent(this, ServiceReportActivity.class))
 );
-
-    // ============================================================
-    // FINAL STRUCTURE
-    // ============================================================
-    root.addView(labsScroll);
-    root.addView(logScroll);
-    root.addView(btnExport);
 
 // ============================================================
 // SERVICE LOG — INIT (Android Manual Tests)
@@ -1142,11 +1144,11 @@ private void expandLogPanel() {
 
     runOnUiThread(() -> {
         try {
-            LinearLayout.LayoutParams lp =
-                    (LinearLayout.LayoutParams) logScroll.getLayoutParams();
+            FrameLayout.LayoutParams lp =
+                    (FrameLayout.LayoutParams) logScroll.getLayoutParams();
 
-            lp.height = 0;
-            lp.weight = 3f;
+            lp.height = dp(300); // μεγάλο log panel
+            lp.gravity = Gravity.BOTTOM;
 
             logScroll.setLayoutParams(lp);
 
@@ -1157,11 +1159,16 @@ private void expandLogPanel() {
 private void collapseLogPanel() {
     if (logScroll == null) return;
 
-    LinearLayout.LayoutParams lp =
-            (LinearLayout.LayoutParams) logScroll.getLayoutParams();
+    try {
+        FrameLayout.LayoutParams lp =
+                (FrameLayout.LayoutParams) logScroll.getLayoutParams();
 
-    lp.weight = 1.5f;   // μικραίνει
-    logScroll.setLayoutParams(lp);
+        lp.height = dp(120); // μικρό panel
+        lp.gravity = Gravity.BOTTOM;
+
+        logScroll.setLayoutParams(lp);
+
+    } catch (Throwable ignore) {}
 }
 
 private void scrollLogToBottom() {
@@ -1172,6 +1179,15 @@ private void scrollLogToBottom() {
             logScroll.fullScroll(View.FOCUS_DOWN);
         } catch (Throwable ignore) {}
     });
+}
+
+private void updateExportPosition(int logHeightDp) {
+    FrameLayout.LayoutParams lp =
+            (FrameLayout.LayoutParams) btnExport.getLayoutParams();
+
+    lp.bottomMargin = dp(logHeightDp) + dp(12);
+
+    btnExport.setLayoutParams(lp);
 }
 
  // ============================================================
@@ -4690,25 +4706,37 @@ private void appendHtml(String html) {
 private void logInfo(String msg) {
     appendHtml("• " + escape(msg));
     GELServiceLog.logInfo(msg);
-    expandLogPanel();   // 👈 AUTO EXPAND
+
+    expandLogPanel();
+    updateExportPosition(300); 
+    scrollLogToBottom();
 }
 
 private void logOk(String msg) {
     appendHtml("<font color='#39FF14'>✔ " + escape(msg) + "</font>");
     GELServiceLog.logOk(msg);
+
     expandLogPanel();
+    updateExportPosition(300);
+    scrollLogToBottom();
 }
 
 private void logWarn(String msg) {
     appendHtml("<font color='#FFD966'>⚠ " + escape(msg) + "</font>");
     GELServiceLog.logWarn(msg);
+
     expandLogPanel();
+    updateExportPosition(300);
+    scrollLogToBottom();
 }
 
 private void logError(String msg) {
     appendHtml("<font color='#FF5555'>✖ " + escape(msg) + "</font>");
     GELServiceLog.logError(msg);
+
     expandLogPanel();
+    updateExportPosition(300);
+    scrollLogToBottom();
 }
 
 private void logLine() {
