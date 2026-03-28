@@ -750,80 +750,112 @@ protected void attachBaseContext(Context base) {
 @Override
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    
+
     lab14Engine = new Lab14Engine(this);
 
-    // SAFETY GUARD
     new Handler(Looper.getMainLooper()).postDelayed(() -> {
         if (isFinishing() || isDestroyed()) return;
     }, 120);
 
     prefs = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
     p = prefs;
-
     ui = new Handler(Looper.getMainLooper());
 
     initTTS();
 
-// ============================================================
+    // ============================================================
     // ROOT
     // ============================================================
     FrameLayout root = new FrameLayout(this);
-setContentView(root);
+    setContentView(root);
 
-// =======================
-// LABS (FULL SCREEN)
-// =======================
-labsScroll = new ScrollView(this);
+    // ============================================================
+    // LABS (FULL SCREEN)
+    // ============================================================
+    labsScroll = new ScrollView(this);
+    labsScroll.setFillViewport(true);
 
-FrameLayout.LayoutParams labsParams = new FrameLayout.LayoutParams(
-        FrameLayout.LayoutParams.MATCH_PARENT,
-        FrameLayout.LayoutParams.MATCH_PARENT
-);
+    FrameLayout.LayoutParams labsParams =
+            new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            );
+    labsScroll.setLayoutParams(labsParams);
 
-labsScroll.setLayoutParams(labsParams);
+    LinearLayout labsContainer = new LinearLayout(this);
+    labsContainer.setOrientation(LinearLayout.VERTICAL);
+    labsContainer.setPadding(dp(16), dp(16), dp(16), dp(16));
+    labsScroll.addView(labsContainer);
 
-LinearLayout labsContainer = new LinearLayout(this);
-labsContainer.setOrientation(LinearLayout.VERTICAL);
-labsContainer.setPadding(dp(16), dp(16), dp(16), dp(16));
+    // ============================================================
+    // LOG (BOTTOM OVERLAY)
+    // ============================================================
+    logScroll = new ScrollView(this);
+    logScroll.setFillViewport(true);
+    logScroll.setBackgroundColor(0xEE000000);
 
-labsScroll.addView(labsContainer);
-root.addView(labsScroll);
+    FrameLayout.LayoutParams logParams =
+            new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    dp(180)
+            );
+    logParams.gravity = Gravity.BOTTOM;
+    logScroll.setLayoutParams(logParams);
 
-// =======================
-// LOG (BOTTOM OVERLAY)
-// =======================
-logScroll = new ScrollView(this);
+    LinearLayout logContainer = new LinearLayout(this);
+    logContainer.setOrientation(LinearLayout.VERTICAL);
 
-FrameLayout.LayoutParams logParams = new FrameLayout.LayoutParams(
-        FrameLayout.LayoutParams.MATCH_PARENT,
-        dp(180)
-);
-logParams.gravity = Gravity.BOTTOM;
+    txtLog = new TextView(this);
+    txtLog.setTextSize(13f);
+    txtLog.setTextColor(0xFFFFFFFF);
+    txtLog.setPadding(dp(12), dp(12), dp(12), dp(12));
+    txtLog.setMovementMethod(new ScrollingMovementMethod());
+    txtLog.setText(Html.fromHtml("<b>" + getString(R.string.manual_log_title) + "</b><br>"));
 
-logScroll.setLayoutParams(logParams);
-logScroll.setBackgroundColor(0xEE000000);
+    logContainer.addView(txtLog);
+    logScroll.addView(logContainer);
+    logScroll.setVisibility(View.GONE);
 
-LinearLayout logContainer = new LinearLayout(this);
-logContainer.setOrientation(LinearLayout.VERTICAL);
+    // ============================================================
+    // EXPORT SERVICE REPORT BUTTON
+    // ============================================================
+    btnExport = new Button(this);
+    btnExport.setText(getString(R.string.export_report_title));
+    btnExport.setAllCaps(false);
+    btnExport.setTextColor(0xFFFFFFFF);
+    btnExport.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+    btnExport.setMinHeight(0);
+    btnExport.setMinimumHeight(0);
+    btnExport.setPadding(dp(16), dp(14), dp(16), dp(14));
 
-txtLog = new TextView(this);
-txtLog.setTextSize(13f);
-txtLog.setTextColor(0xFFFFFFFF);
-txtLog.setMovementMethod(new ScrollingMovementMethod());
+    FrameLayout.LayoutParams btnParams =
+            new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+    btnParams.gravity = Gravity.BOTTOM;
+    btnParams.bottomMargin = dp(180) + dp(12);
+    btnParams.leftMargin = dp(8);
+    btnParams.rightMargin = dp(8);
+    btnExport.setLayoutParams(btnParams);
 
-logContainer.addView(txtLog);
-logScroll.addView(logContainer);
+    btnExport.setOnClickListener(v ->
+            startActivity(new Intent(this, ServiceReportActivity.class))
+    );
 
-logScroll.setVisibility(View.GONE);
+    // ============================================================
+    // ADD TO ROOT
+    // ============================================================
+    root.addView(labsScroll);
+    root.addView(logScroll);
+    root.addView(btnExport);
+    btnExport.bringToFront();
 
-root.addView(logScroll);
+    UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
-UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
+    final boolean gr = AppLang.isGreek(this);
 
-final boolean gr = AppLang.isGreek(this);
-    
-// ============================================================
+    // ============================================================
     // TITLE
     // ============================================================
     TextView title = new TextView(this);
@@ -858,286 +890,230 @@ final boolean gr = AppLang.isGreek(this);
     lab14DotsView.setGravity(Gravity.CENTER_HORIZONTAL);
     labsContainer.addView(lab14DotsView);
 
-    // ============================================================  
-    // SECTION 1: AUDIO & VIBRATION — LABS 1-5  
-    // ============================================================  
-    LinearLayout body1 = makeSectionBody();  
-    Button header1 = makeSectionHeader(getString(R.string.manual_cat_1), body1);  
+    // ============================================================
+    // SECTION 1: AUDIO & VIBRATION — LABS 1-5
+    // ============================================================
+    LinearLayout body1 = makeSectionBody();
+    Button header1 = makeSectionHeader(getString(R.string.manual_cat_1), body1);
     labsContainer.addView(header1);
     labsContainer.addView(body1);
 
     body1.addView(makeTestButton(
-        gr ? "1. Δοκιμή Τόνου Ηχείου"
-           : "1. Speaker Tone Test",
-        this::lab1SpeakerTone));
+            gr ? "1. Δοκιμή Τόνου Ηχείου" : "1. Speaker Tone Test",
+            this::lab1SpeakerTone));
 
-body1.addView(makeTestButton(
-        gr ? "2. Έλεγχος Συχνοτήτων Ηχείου"
-           : "2. Speaker Frequency Sweep Test",
-        this::lab2SpeakerSweep));
+    body1.addView(makeTestButton(
+            gr ? "2. Έλεγχος Συχνοτήτων Ηχείου" : "2. Speaker Frequency Sweep Test",
+            this::lab2SpeakerSweep));
 
-body1.addView(makeTestButton(
-        gr ? "3. Έλεγχος Ακουστικού Κλήσης"
-           : "3. Earpiece Call Check",
-        this::lab3EarpieceManual));
+    body1.addView(makeTestButton(
+            gr ? "3. Έλεγχος Ακουστικού Κλήσης" : "3. Earpiece Call Check",
+            this::lab3EarpieceManual));
 
-body1.addView(makeTestButton(
-        gr ? "4. Έλεγχος Ποιότητας Κλήσης Μικροφώνου / Ακουστικού"
-           : "4. Microphone / Earpiece Call Quality Check",
-        this::lab4MicManual));
+    body1.addView(makeTestButton(
+            gr ? "4. Έλεγχος Ποιότητας Κλήσης Μικροφώνου / Ακουστικού"
+               : "4. Microphone / Earpiece Call Quality Check",
+            this::lab4MicManual));
 
-body1.addView(makeTestButton(
-        gr ? "5. Δοκιμή Δόνησης"
-           : "5. Vibration Motor Test",
-        this::lab5Vibration));
+    body1.addView(makeTestButton(
+            gr ? "5. Δοκιμή Δόνησης" : "5. Vibration Motor Test",
+            this::lab5Vibration));
 
-    // ============================================================  
-    // SECTION 2: DISPLAY & SENSORS — LABS 6 - 9  
-    // ============================================================  
-    LinearLayout body2 = makeSectionBody();  
-    Button header2 = makeSectionHeader(getString(R.string.manual_cat_2), body2);  
-    labsContainer.addView(header2);  
-    labsContainer.addView(body2);  
+    // ============================================================
+    // SECTION 2: DISPLAY & SENSORS — LABS 6-9
+    // ============================================================
+    LinearLayout body2 = makeSectionBody();
+    Button header2 = makeSectionHeader(getString(R.string.manual_cat_2), body2);
+    labsContainer.addView(header2);
+    labsContainer.addView(body2);
 
     body2.addView(makeTestButton(
-        gr ? "6. Έλεγχος Οθόνης / Αφής"
-           : "6. Display / Touch Inspection",
-        this::lab6DisplayTouch));
+            gr ? "6. Έλεγχος Οθόνης / Αφής" : "6. Display / Touch Inspection",
+            this::lab6DisplayTouch));
 
-body2.addView(makeTestButton(
-        gr ? "7. Ελεγχος Περιστροφής & Αισθητήρα Εγγύτητας"
-           : "7. Rotation & Proximity Sensors Check",
-        this::lab7RotationAndProximityManual));
+    body2.addView(makeTestButton(
+            gr ? "7. Ελεγχος Περιστροφής & Αισθητήρα Εγγύτητας"
+               : "7. Rotation & Proximity Sensors Check",
+            this::lab7RotationAndProximityManual));
 
-body2.addView(makeTestButton(
-        gr ? "8. Ελεγχος Hardware Καμερας & Preview Path"
-           : "8. Camera Hardware & Preview Path Check",
-        this::lab8CameraHardwareCheck));
+    body2.addView(makeTestButton(
+            gr ? "8. Ελεγχος Hardware Καμερας & Preview Path"
+               : "8. Camera Hardware & Preview Path Check",
+            this::lab8CameraHardwareCheck));
 
-body2.addView(makeTestButton(
-        gr ? "9. Έλεγχος Αισθητήρων"
-           : "9. Sensors Check",
-        this::lab9SensorsCheck));
+    body2.addView(makeTestButton(
+            gr ? "9. Έλεγχος Αισθητήρων" : "9. Sensors Check",
+            this::lab9SensorsCheck));
 
-    // ============================================================  
-    // SECTION 3: WIRELESS & CONNECTIVITY — LABS 10 - 13  
-    // ============================================================  
-    LinearLayout body3 = makeSectionBody();  
-    Button header3 = makeSectionHeader(getString(R.string.manual_cat_3), body3);  
-    labsContainer.addView(header3);  
-    labsContainer.addView(body3);  
+    // ============================================================
+    // SECTION 3: WIRELESS & CONNECTIVITY — LABS 10-13
+    // ============================================================
+    LinearLayout body3 = makeSectionBody();
+    Button header3 = makeSectionHeader(getString(R.string.manual_cat_3), body3);
+    labsContainer.addView(header3);
+    labsContainer.addView(body3);
 
     body3.addView(makeTestButton(
-        gr ? "10. Έλεγχος Wi-Fi"
-           : "10. Wi-Fi Connection Check",
-        this::lab10WifiConnectivityCheck));
+            gr ? "10. Έλεγχος Wi-Fi" : "10. Wi-Fi Connection Check",
+            this::lab10WifiConnectivityCheck));
 
-body3.addView(makeTestButton(
-        gr ? "11. Διάγνωση Δικτύου Κινητού"
-           : "11. Mobile Network Diagnostic",
-        this::lab11MobileDataDiagnostic));
+    body3.addView(makeTestButton(
+            gr ? "11. Διάγνωση Δικτύου Κινητού" : "11. Mobile Network Diagnostic",
+            this::lab11MobileDataDiagnostic));
 
-body3.addView(makeTestButton(
-        gr ? "12. Ανάλυση Τηλεφωνικής Λειτουργίας"
-           : "12. Telephony Function Analysis",
-        this::lab12CallFunctionInterpretation));
+    body3.addView(makeTestButton(
+            gr ? "12. Ανάλυση Τηλεφωνικής Λειτουργίας"
+               : "12. Telephony Function Analysis",
+            this::lab12CallFunctionInterpretation));
 
-body3.addView(makeTestButton(
-        gr ? "13. Έλεγχος Σύνδεσης Bluetooth"
-           : "13. Bluetooth Connectivity Check",
-        this::lab13BluetoothConnectivityCheck));
-    
-    // ============================================================  
-    // SECTION 4: BATTERY & THERMAL — LABS 14 - 17  
-    // ============================================================  
-    LinearLayout body4 = makeSectionBody();  
-    Button header4 = makeSectionHeader(getString(R.string.manual_cat_4), body4);  
-    labsContainer.addView(header4);  
-    labsContainer.addView(body4);  
+    body3.addView(makeTestButton(
+            gr ? "13. Έλεγχος Σύνδεσης Bluetooth" : "13. Bluetooth Connectivity Check",
+            this::lab13BluetoothConnectivityCheck));
+
+    // ============================================================
+    // SECTION 4: BATTERY & THERMAL — LABS 14-17
+    // ============================================================
+    LinearLayout body4 = makeSectionBody();
+    Button header4 = makeSectionHeader(getString(R.string.manual_cat_4), body4);
+    labsContainer.addView(header4);
+    labsContainer.addView(body4);
 
     body4.addView(makeTestButtonRedGold(
-        gr ? "14. Δοκιμή Καταπόνησης Υγείας Μπαταρίας"
-           : "14. Battery Health Stress Test",
-        this::lab14BatteryHealthStressTest
-));
+            gr ? "14. Δοκιμή Καταπόνησης Υγείας Μπαταρίας"
+               : "14. Battery Health Stress Test",
+            this::lab14BatteryHealthStressTest));
 
-body4.addView(makeTestButtonRedGold(
-        gr
-                ? "14B. Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
-                : "14B. Final check of battery protection by the system",
-        this::lab14BProtectionTest
-));
+    body4.addView(makeTestButtonRedGold(
+            gr ? "14B. Τελικός έλεγχος προστασίας μπαταρίας από το σύστημα"
+               : "14B. Final check of battery protection by the system",
+            this::lab14BProtectionTest));
 
-body4.addView(makeTestButton(
-        gr ? "15. Διαγνωστικός Έλεγχος Συστήματος Φόρτισης (Smart)"
-           : "15. Charging System Diagnostic (Smart)",
-        this::lab15ChargingSystemSmart
-));
+    body4.addView(makeTestButton(
+            gr ? "15. Διαγνωστικός Έλεγχος Συστήματος Φόρτισης (Smart)"
+               : "15. Charging System Diagnostic (Smart)",
+            this::lab15ChargingSystemSmart));
 
-body4.addView(makeTestButton(
-        gr ? "16. Στιγμιότυπο Θερμικών Αισθητήρων"
-           : "16. Thermal Sensors Snapshot",
-        this::lab16ThermalSnapshot
-));
+    body4.addView(makeTestButton(
+            gr ? "16. Στιγμιότυπο Θερμικών Αισθητήρων"
+               : "16. Thermal Sensors Snapshot",
+            this::lab16ThermalSnapshot));
 
-body4.addView(makeTestButtonGreenGold(
-        gr ? "17. Ευφυής Ανάλυση Υγείας Συστήματος"
-           : "17. Intelligent System Health Analysis",
-        this::lab17RunAuto
-));
+    body4.addView(makeTestButtonGreenGold(
+            gr ? "17. Ευφυής Ανάλυση Υγείας Συστήματος"
+               : "17. Intelligent System Health Analysis",
+            this::lab17RunAuto));
 
-    // ============================================================  
-    // SECTION 5: STORAGE & PERFORMANCE — LABS 18 - 20  
-    // ============================================================  
-    LinearLayout body5 = makeSectionBody();  
-    Button header5 = makeSectionHeader(getString(R.string.manual_cat_5), body5);  
-    labsContainer.addView(header5);  
-    labsContainer.addView(body5);  
-      
+    // ============================================================
+    // SECTION 5: STORAGE & PERFORMANCE — LABS 18-20
+    // ============================================================
+    LinearLayout body5 = makeSectionBody();
+    Button header5 = makeSectionHeader(getString(R.string.manual_cat_5), body5);
+    labsContainer.addView(header5);
+    labsContainer.addView(body5);
+
     body5.addView(makeTestButton(
-        gr ? "18. Έλεγχος Υγείας Αποθηκευτικού Χώρου"
-           : "18. Storage Health Inspection",
-        this::lab18StorageSnapshot));
+            gr ? "18. Έλεγχος Υγείας Αποθηκευτικού Χώρου"
+               : "18. Storage Health Inspection",
+            this::lab18StorageSnapshot));
 
-body5.addView(makeTestButton(
-        gr ? "19. Ανάλυση Πίεσης Μνήμης & Σταθερότητας"
-           : "19. Memory Pressure & Stability Analysis",
-        this::lab19RamSnapshot));
+    body5.addView(makeTestButton(
+            gr ? "19. Ανάλυση Πίεσης Μνήμης & Σταθερότητας"
+               : "19. Memory Pressure & Stability Analysis",
+            this::lab19RamSnapshot));
 
-body5.addView(makeTestButton(
-        gr ? "20. Ανάλυση Uptime & Προτύπων Επανεκκίνησης"
-           : "20. Uptime & Reboot Pattern Analysis",
-        this::lab20UptimeHints)); 
- 
-    // ============================================================  
-    // SECTION 6: SECURITY & SYSTEM HEALTH — LABS 21 - 24  
-    // ============================================================  
-    LinearLayout body6 = makeSectionBody();  
-    Button header6 = makeSectionHeader(getString(R.string.manual_cat_6), body6);  
-    labsContainer.addView(header6);  
-    labsContainer.addView(body6);  
+    body5.addView(makeTestButton(
+            gr ? "20. Ανάλυση Uptime & Προτύπων Επανεκκίνησης"
+               : "20. Uptime & Reboot Pattern Analysis",
+            this::lab20UptimeHints));
+
+    // ============================================================
+    // SECTION 6: SECURITY & SYSTEM HEALTH — LABS 21-24
+    // ============================================================
+    LinearLayout body6 = makeSectionBody();
+    Button header6 = makeSectionHeader(getString(R.string.manual_cat_6), body6);
+    labsContainer.addView(header6);
+    labsContainer.addView(body6);
 
     body6.addView(makeTestButton(
-        gr ? "21. Κλείδωμα Οθόνης / Βιομετρικά"
-           : "21. Screen Lock / Biometrics",
-        this::lab21ScreenLock));
+            gr ? "21. Κλείδωμα Οθόνης / Βιομετρικά"
+               : "21. Screen Lock / Biometrics",
+            this::lab21ScreenLock));
 
-body6.addView(makeTestButton(
-        gr ? "22. Έλεγχος Ενημέρωσης Ασφαλείας"
-           : "22. Security Patch Check",
-        this::lab22SecurityPatchAndPlayProtect));
+    body6.addView(makeTestButton(
+            gr ? "22. Έλεγχος Ενημέρωσης Ασφαλείας"
+               : "22. Security Patch Check",
+            this::lab22SecurityPatchAndPlayProtect));
 
-body6.addView(makeTestButton(
-        gr ? "23. Κίνδυνος από Επιλογές Προγραμματιστή"
-           : "23. Developer Options Risk",
-        this::lab23DeveloperOptionsRisk));
+    body6.addView(makeTestButton(
+            gr ? "23. Κίνδυνος από Επιλογές Προγραμματιστή"
+               : "23. Developer Options Risk",
+            this::lab23DeveloperOptionsRisk));
 
-body6.addView(makeTestButton(
-        gr ? "24. Ένδειξη Root / Ξεκλείδωτου Bootloader"
-           : "24. Root / Bootloader Suspicion",
-        this::lab24RootSuspicion));
+    body6.addView(makeTestButton(
+            gr ? "24. Ένδειξη Root / Ξεκλείδωτου Bootloader"
+               : "24. Root / Bootloader Suspicion",
+            this::lab24RootSuspicion));
 
-    // ============================================================  
-    // SECTION 7: ADVANCED / LOGS — LABS 25 - 30 
-    // ============================================================  
-    LinearLayout body7 = makeSectionBody();  
-    Button header7 = makeSectionHeader(getString(R.string.manual_cat_7), body7);  
-    labsContainer.addView(header7);  
-    labsContainer.addView(body7);  
+    // ============================================================
+    // SECTION 7: ADVANCED / LOGS — LABS 25-31
+    // ============================================================
+    LinearLayout body7 = makeSectionBody();
+    Button header7 = makeSectionHeader(getString(R.string.manual_cat_7), body7);
+    labsContainer.addView(header7);
+    labsContainer.addView(body7);
 
-        body7.addView(makeTestButton(
-        gr ? "25. Ιστορικό Κρασαρισμάτων / Παγώματος"
-           : "25. Crash / Freeze History",
-        this::lab25CrashHistory));
+    body7.addView(makeTestButton(
+            gr ? "25. Ιστορικό Κρασαρισμάτων / Παγώματος"
+               : "25. Crash / Freeze History",
+            this::lab25CrashHistory));
 
-body7.addView(makeTestButton(
-        gr ? "26. Ανάλυση Επιπτώσεων Εγκατεστημένων Εφαρμογών"
-           : "26. Installed Applications Impact Analysis",
-        this::lab26AppsFootprint));
+    body7.addView(makeTestButton(
+            gr ? "26. Ανάλυση Επιπτώσεων Εγκατεστημένων Εφαρμογών"
+               : "26. Installed Applications Impact Analysis",
+            this::lab26AppsFootprint));
 
-body7.addView(makeTestButton(
-        gr ? "27. Δικαιώματα Εφαρμογών & Απόρρητο"
-           : "27. App Permissions & Privacy",
-        this::lab27PermissionsPrivacy));
+    body7.addView(makeTestButton(
+            gr ? "27. Δικαιώματα Εφαρμογών & Απόρρητο"
+               : "27. App Permissions & Privacy",
+            this::lab27PermissionsPrivacy));
 
-body7.addView(makeTestButton(
-        gr ? "28. Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων\nΥποψία Κόλλησης / Υγρασίας (Βάσει Συμπτωμάτων)"
-           : "28. Hardware Stability & Interconnect Integrity\nSolder / Moisture Indicators (SYMPTOM-BASED)",
-        this::lab28HardwareStability)); 
-        
-body7.addView(makeTestButton(
-        gr ? "29. Έλεγχος Γνησιότητας Συσκευής & Ανταλλακτικών\nΠιθανή Αντικατάσταση Μερών"
-           : "29. Device Authenticity & Parts Verification\nPossible Non-OEM Components",
-        this::lab29DeviceAuthenticity));
+    body7.addView(makeTestButton(
+            gr ? "28. Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων\nΥποψία Κόλλησης / Υγρασίας (Βάσει Συμπτωμάτων)"
+               : "28. Hardware Stability & Interconnect Integrity\nSolder / Moisture Indicators (SYMPTOM-BASED)",
+            this::lab28HardwareStability));
 
-body7.addView(makeTestButton(
-        gr ? "30. Σύνοψη Βαθμολογιών Συσκευής"
-           : "30. DEVICE SCORES Summary",
-        this::lab30CombineFindings));
+    body7.addView(makeTestButton(
+            gr ? "29. Έλεγχος Γνησιότητας Συσκευής & Ανταλλακτικών\nΠιθανή Αντικατάσταση Μερών"
+               : "29. Device Authenticity & Parts Verification\nPossible Non-OEM Components",
+            this::lab29DeviceAuthenticity));
 
-body7.addView(makeTestButton(
-        gr ? "31. Τελική Τεχνική Αναφορά"
-           : "31. FINAL TECH SUMMARY",
-        this::lab31FinalSummary));
+    body7.addView(makeTestButton(
+            gr ? "30. Σύνοψη Βαθμολογιών Συσκευής"
+               : "30. DEVICE SCORES Summary",
+            this::lab30CombineFindings));
 
-// ============================================================
-// EXPORT SERVICE REPORT BUTTON (LOCKED HEIGHT)
-// ============================================================
-btnExport = new Button(this);
-btnExport.setText(getString(R.string.export_report_title));
-btnExport.setAllCaps(false);
-btnExport.setTextColor(0xFFFFFFFF);
-btnExport.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+    body7.addView(makeTestButton(
+            gr ? "31. Τελική Τεχνική Αναφορά"
+               : "31. FINAL TECH SUMMARY",
+            this::lab31FinalSummary));
 
-// OVERRIDE THEME / DRAWABLE
-btnExport.setMinHeight(0);
-btnExport.setMinimumHeight(0);
-btnExport.setPadding(dp(16), dp(14), dp(16), dp(14));
-
-FrameLayout.LayoutParams lpExp =
-        new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
+    if (!serviceLogInit) {
+        GELServiceLog.section(
+                gr
+                        ? "Χειροκίνητοι Έλεγχοι Android — Διαγνωστικά Υλικού"
+                        : "Android Manual Tests — Hardware Diagnostics"
         );
 
-// 👉 κάθεται ΠΑΝΩ από το log panel
-lpExp.gravity = Gravity.BOTTOM;
+        logLine();
 
-// 👉 offset = ύψος log + margin
-lpExp.bottomMargin = dp(180) + dp(12);
+        logInfo(
+                gr
+                        ? "Έναρξη χειροκίνητων διαγνωστικών ελέγχων συσκευής."
+                        : getString(R.string.manual_log_desc)
+        );
 
-lpExp.leftMargin = dp(8);
-lpExp.rightMargin = dp(8);
-
-btnExport.setLayoutParams(lpExp);
-
-btnExport.setOnClickListener(v ->
-startActivity(new Intent(this, ServiceReportActivity.class))
-);
-
-// ============================================================
-// SERVICE LOG — INIT (Android Manual Tests)
-// ============================================================
-
-if (!serviceLogInit) {
-
-    GELServiceLog.section(
-            gr
-                    ? "Χειροκίνητοι Έλεγχοι Android — Διαγνωστικά Υλικού"
-                    : "Android Manual Tests — Hardware Diagnostics"
-    );
-
-    logLine();
-
-    logInfo(
-            gr
-                    ? "Έναρξη χειροκίνητων διαγνωστικών ελέγχων συσκευής."
-                    : getString(R.string.manual_log_desc)
-    );
-
-    serviceLogInit = true;
-}
-
+        serviceLogInit = true;
+    }
 }  // onCreate ENDS HERE
 
 private void expandLogPanel() {
