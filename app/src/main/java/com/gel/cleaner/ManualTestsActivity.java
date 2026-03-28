@@ -26618,25 +26618,12 @@ logLabelOkValue(
 // ============================================================
 private void enableSingleExportButton() {
 
-ui.post(() -> {  
-    View rootView = scroll.getChildAt(0);  
-    if (!(rootView instanceof LinearLayout)) return;  
+    ui.post(() -> {
+        if (btnExport == null) return;
 
-    LinearLayout root = (LinearLayout) rootView;  
-
-    for (int i = 0; i < root.getChildCount(); i++) {  
-        View v = root.getChildAt(i);  
-
-        if (v instanceof Button) {  
-            Button b = (Button) v;  
-
-            if ("Export Service Report".contentEquals(b.getText())) {  
-                b.setEnabled(true);  
-                b.setAlpha(1f);  
-            }  
-        }  
-    }  
-});
+        btnExport.setEnabled(true);
+        btnExport.setAlpha(1f);
+    });
 
 }
 
