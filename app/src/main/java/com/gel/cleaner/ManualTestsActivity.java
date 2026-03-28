@@ -834,7 +834,7 @@ protected void onCreate(Bundle savedInstanceState) {
                     FrameLayout.LayoutParams.WRAP_CONTENT
             );
     btnParams.gravity = Gravity.BOTTOM;
-    btnParams.bottomMargin = dp(180) + dp(12);
+    btnParams.bottomMargin = dp(12);
     btnParams.leftMargin = dp(8);
     btnParams.rightMargin = dp(8);
     btnExport.setLayoutParams(btnParams);
