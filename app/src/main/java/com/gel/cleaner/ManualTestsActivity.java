@@ -766,46 +766,60 @@ protected void onCreate(Bundle savedInstanceState) {
 // ============================================================
     // ROOT
     // ============================================================
-    LinearLayout root = new LinearLayout(this);
-    root.setOrientation(LinearLayout.VERTICAL);
-    root.setLayoutParams(new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.MATCH_PARENT
-    ));
-    root.setBackgroundColor(0xFF101010);
-
-    setContentView(root);
+    FrameLayout root = new FrameLayout(this);
+setContentView(root);
 
 // =======================
-// LABS SCROLL
+// LABS (FULL SCREEN)
 // =======================
 labsScroll = new ScrollView(this);
-labsScroll.setFillViewport(true);
-labsScroll.setLayoutParams(new LinearLayout.LayoutParams(
-        LinearLayout.LayoutParams.MATCH_PARENT,
-        0,
-        2f
-));
+
+FrameLayout.LayoutParams labsParams = new FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.MATCH_PARENT,
+        FrameLayout.LayoutParams.MATCH_PARENT
+);
+
+labsScroll.setLayoutParams(labsParams);
 
 LinearLayout labsContainer = new LinearLayout(this);
 labsContainer.setOrientation(LinearLayout.VERTICAL);
 labsContainer.setPadding(dp(16), dp(16), dp(16), dp(16));
 
 labsScroll.addView(labsContainer);
+root.addView(labsScroll);
 
 // =======================
-// LOG SCROLL
+// LOG (BOTTOM OVERLAY)
 // =======================
 logScroll = new ScrollView(this);
-logScroll.setLayoutParams(new LinearLayout.LayoutParams(
-        LinearLayout.LayoutParams.MATCH_PARENT,
-        0,
-        3f
-));
 
-    UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
+FrameLayout.LayoutParams logParams = new FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.MATCH_PARENT,
+        dp(180)
+);
+logParams.gravity = Gravity.BOTTOM;
 
-    final boolean gr = AppLang.isGreek(this);
+logScroll.setLayoutParams(logParams);
+logScroll.setBackgroundColor(0xEE000000);
+
+LinearLayout logContainer = new LinearLayout(this);
+logContainer.setOrientation(LinearLayout.VERTICAL);
+
+txtLog = new TextView(this);
+txtLog.setTextSize(13f);
+txtLog.setTextColor(0xFFFFFFFF);
+txtLog.setMovementMethod(new ScrollingMovementMethod());
+
+logContainer.addView(txtLog);
+logScroll.addView(logContainer);
+
+logScroll.setVisibility(View.GONE);
+
+root.addView(logScroll);
+
+UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
+
+final boolean gr = AppLang.isGreek(this);
     
 // ============================================================
     // TITLE
@@ -1064,18 +1078,6 @@ body7.addView(makeTestButton(
            : "31. FINAL TECH SUMMARY",
         this::lab31FinalSummary));
 
-    // ============================================================  
-    // LOG AREA  
-    // ============================================================  
-txtLog = new TextView(this);
-txtLog.setTextSize(13f);
-txtLog.setTextColor(0xFFEEEEEE);
-txtLog.setPadding(0, dp(16), 0, dp(8));
-txtLog.setMovementMethod(new ScrollingMovementMethod());
-txtLog.setText(Html.fromHtml("<b>" + getString(R.string.manual_log_title) + "</b><br>"));
-
-logScroll.addView(txtLog);
-
 // ============================================================
 // EXPORT SERVICE REPORT BUTTON (LOCKED HEIGHT)
 // ============================================================
@@ -1137,11 +1139,18 @@ if (!serviceLogInit) {
 private void expandLogPanel() {
     if (logScroll == null) return;
 
-    LinearLayout.LayoutParams lp =
-            (LinearLayout.LayoutParams) logScroll.getLayoutParams();
+    runOnUiThread(() -> {
+        try {
+            LinearLayout.LayoutParams lp =
+                    (LinearLayout.LayoutParams) logScroll.getLayoutParams();
 
-    lp.weight = 3f;   // μεγαλώνει
-    logScroll.setLayoutParams(lp);
+            lp.height = 0;
+            lp.weight = 3f;
+
+            logScroll.setLayoutParams(lp);
+
+        } catch (Throwable ignore) {}
+    });
 }
 
 private void collapseLogPanel() {
@@ -4658,11 +4667,8 @@ return s;
 // ============================================================
 private void appendHtml(String html) {
     ui.post(() -> {
-        if (txtLog == null) return;
-
         CharSequence cur = txtLog.getText();
         CharSequence add = Html.fromHtml(html + "<br>");
-
         txtLog.setText(TextUtils.concat(cur, add));
 
         // AUTO SCROLL (SAFE)
