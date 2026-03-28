@@ -240,6 +240,7 @@ public class ManualTestsActivity extends AppCompatActivity {
 
 }
 
+private ScrollView labsScroll;
 private ScrollView logScroll;
 
 private int startPercent = -1;
@@ -776,14 +777,14 @@ protected void onCreate(Bundle savedInstanceState) {
     setContentView(root);
 
 // =======================
-// LABS SCROLL (MAIN AREA)
+// LABS SCROLL
 // =======================
 labsScroll = new ScrollView(this);
 labsScroll.setFillViewport(true);
 labsScroll.setLayoutParams(new LinearLayout.LayoutParams(
         LinearLayout.LayoutParams.MATCH_PARENT,
         0,
-        3f   // 👈 περισσότερο χώρο
+        2f
 ));
 
 LinearLayout labsContainer = new LinearLayout(this);
@@ -793,13 +794,13 @@ labsContainer.setPadding(dp(16), dp(16), dp(16), dp(16));
 labsScroll.addView(labsContainer);
 
 // =======================
-// LOG SCROLL (BOTTOM PANEL)
+// LOG SCROLL
 // =======================
 logScroll = new ScrollView(this);
 logScroll.setLayoutParams(new LinearLayout.LayoutParams(
         LinearLayout.LayoutParams.MATCH_PARENT,
         0,
-        1.5f   // 👈 μικρό panel
+        3f
 ));
 
     UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
@@ -3600,16 +3601,20 @@ private Button makeSectionHeader(String text, LinearLayout bodyToToggle) {
         if (willOpen) {
             bodyToToggle.setVisibility(View.VISIBLE);
 
-            // ✅ SAFE SCROLL (using labsScroll, όχι scroll)
-            if (labsScroll != null) {
-                labsScroll.post(() ->
-                        labsScroll.smoothScrollTo(0, b.getTop())
-                );
-            }
-        }
+            // ✅ SAFE SCROLL
+if (labsScroll != null) {
+    labsScroll.post(() -> {
+        try {
+            int y = b.getTop() - dp(12);
+            if (y < 0) y = 0;
+            labsScroll.smoothScrollTo(0, y);
+        } catch (Throwable ignore) {}
     });
+}
+    }
+});
 
-    return b;
+return b;
 }
 
 private Button makeTestButton(String text, Runnable action) {  
