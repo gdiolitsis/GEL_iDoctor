@@ -775,31 +775,31 @@ protected void onCreate(Bundle savedInstanceState) {
 
     setContentView(root);
 
-    // =======================
-    // LABS SCROLL
-    // =======================
-    ScrollView labsScroll = new ScrollView(this);
+// =======================
+// LABS SCROLL (MAIN AREA)
+// =======================
+labsScroll = new ScrollView(this);
 labsScroll.setFillViewport(true);
 labsScroll.setLayoutParams(new LinearLayout.LayoutParams(
         LinearLayout.LayoutParams.MATCH_PARENT,
         0,
-        2f
+        3f   // 👈 περισσότερο χώρο
 ));
 
-    LinearLayout labsContainer = new LinearLayout(this);
-    labsContainer.setOrientation(LinearLayout.VERTICAL);
-    labsContainer.setPadding(dp(16), dp(16), dp(16), dp(16));
+LinearLayout labsContainer = new LinearLayout(this);
+labsContainer.setOrientation(LinearLayout.VERTICAL);
+labsContainer.setPadding(dp(16), dp(16), dp(16), dp(16));
 
-    labsScroll.addView(labsContainer);
+labsScroll.addView(labsContainer);
 
 // =======================
-// LOG SCROLL
+// LOG SCROLL (BOTTOM PANEL)
 // =======================
 logScroll = new ScrollView(this);
 logScroll.setLayoutParams(new LinearLayout.LayoutParams(
         LinearLayout.LayoutParams.MATCH_PARENT,
         0,
-        3f
+        1.5f   // 👈 μικρό panel
 ));
 
     UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
@@ -1066,14 +1066,14 @@ body7.addView(makeTestButton(
     // ============================================================  
     // LOG AREA  
     // ============================================================  
-    txtLog = new TextView(this);  
-    txtLog.setTextSize(13f);  
-    txtLog.setTextColor(0xFFEEEEEE);  
-    txtLog.setPadding(0, dp(16), 0, dp(8));  
-    txtLog.setText(Html.fromHtml("<b>" + getString(R.string.manual_log_title) + "</b><br>"));  
-    txtLog.setMovementMethod(new ScrollingMovementMethod());
-   
-    logScroll.addView(txtLog);
+txtLog = new TextView(this);
+txtLog.setTextSize(13f);
+txtLog.setTextColor(0xFFEEEEEE);
+txtLog.setPadding(0, dp(16), 0, dp(8));
+txtLog.setMovementMethod(new ScrollingMovementMethod());
+txtLog.setText(Html.fromHtml("<b>" + getString(R.string.manual_log_title) + "</b><br>"));
+
+logScroll.addView(txtLog);
 
 // ============================================================
 // EXPORT SERVICE REPORT BUTTON (LOCKED HEIGHT)
@@ -1132,6 +1132,26 @@ if (!serviceLogInit) {
 }
 
 }  // onCreate ENDS HERE
+
+private void expandLogPanel() {
+    if (logScroll == null) return;
+
+    LinearLayout.LayoutParams lp =
+            (LinearLayout.LayoutParams) logScroll.getLayoutParams();
+
+    lp.weight = 3f;   // μεγαλώνει
+    logScroll.setLayoutParams(lp);
+}
+
+private void collapseLogPanel() {
+    if (logScroll == null) return;
+
+    LinearLayout.LayoutParams lp =
+            (LinearLayout.LayoutParams) logScroll.getLayoutParams();
+
+    lp.weight = 1.5f;   // μικραίνει
+    logScroll.setLayoutParams(lp);
+}
 
 private void scrollLogToBottom() {
     if (logScroll == null) return;
@@ -3547,41 +3567,50 @@ private LinearLayout makeSectionBody() {
     return body;  
 }  
 
-private Button makeSectionHeader(String text, LinearLayout bodyToToggle) {  
-    Button b = new Button(this);  
-    allSectionHeaders.add(b);  
+private Button makeSectionHeader(String text, LinearLayout bodyToToggle) {
+    Button b = new Button(this);
+    allSectionHeaders.add(b);
 
-    b.setText(text);  
-    b.setAllCaps(false);  
-    b.setTextSize(15f);  
-    b.setTextColor(0xFF39FF14); // neon green  
-    b.setBackgroundResource(R.drawable.gel_btn_outline_selector);  
+    b.setText(text);
+    b.setAllCaps(false);
+    b.setTextSize(15f);
+    b.setTextColor(0xFF39FF14);
+    b.setBackgroundResource(R.drawable.gel_btn_outline_selector);
 
-    LinearLayout.LayoutParams lp =  
-            new LinearLayout.LayoutParams(  
-                    LinearLayout.LayoutParams.MATCH_PARENT,  
-                    LinearLayout.LayoutParams.WRAP_CONTENT  
-            );  
-    lp.setMargins(0, dp(6), 0, dp(4));  
-    b.setLayoutParams(lp);  
-    b.setGravity(Gravity.CENTER);  
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+    lp.setMargins(0, dp(6), 0, dp(4));
+    b.setLayoutParams(lp);
+    b.setGravity(Gravity.CENTER);
 
-    b.setOnClickListener(v -> {  
-        boolean willOpen = bodyToToggle.getVisibility() != View.VISIBLE;  
+    b.setOnClickListener(v -> {
 
-        // close ALL sections  
-        for (LinearLayout body : allSectionBodies) {  
-            body.setVisibility(View.GONE);  
-        }  
+        if (bodyToToggle == null) return; // safety
 
-        if (willOpen) {  
-            bodyToToggle.setVisibility(View.VISIBLE);  
-            scroll.post(() -> scroll.smoothScrollTo(0, b.getTop()));  
-        }  
-    });  
+        boolean willOpen = bodyToToggle.getVisibility() != View.VISIBLE;
 
-    return b;  
-}  
+        // close ALL
+        for (LinearLayout body : allSectionBodies) {
+            body.setVisibility(View.GONE);
+        }
+
+        if (willOpen) {
+            bodyToToggle.setVisibility(View.VISIBLE);
+
+            // ✅ SAFE SCROLL (using labsScroll, όχι scroll)
+            if (labsScroll != null) {
+                labsScroll.post(() ->
+                        labsScroll.smoothScrollTo(0, b.getTop())
+                );
+            }
+        }
+    });
+
+    return b;
+}
 
 private Button makeTestButton(String text, Runnable action) {  
 Button b = new Button(this);  
@@ -4624,34 +4653,50 @@ return s;
 // ============================================================
 private void appendHtml(String html) {
     ui.post(() -> {
+        if (txtLog == null) return;
+
         CharSequence cur = txtLog.getText();
         CharSequence add = Html.fromHtml(html + "<br>");
+
         txtLog.setText(TextUtils.concat(cur, add));
+
+        // AUTO SCROLL (SAFE)
+        if (logScroll != null) {
+            logScroll.post(() -> {
+                try {
+                    logScroll.fullScroll(View.FOCUS_DOWN);
+                } catch (Throwable ignore) {}
+            });
+        }
     });
 }
+
+// =====================================================
+// LOG METHODS
+// =====================================================
 
 private void logInfo(String msg) {
     appendHtml("• " + escape(msg));
     GELServiceLog.logInfo(msg);
-    scrollLogToBottom();
+    expandLogPanel();   // 👈 AUTO EXPAND
 }
 
 private void logOk(String msg) {
     appendHtml("<font color='#39FF14'>✔ " + escape(msg) + "</font>");
     GELServiceLog.logOk(msg);
-    scrollLogToBottom();
+    expandLogPanel();
 }
 
 private void logWarn(String msg) {
     appendHtml("<font color='#FFD966'>⚠ " + escape(msg) + "</font>");
     GELServiceLog.logWarn(msg);
-    scrollLogToBottom();
+    expandLogPanel();
 }
 
 private void logError(String msg) {
     appendHtml("<font color='#FF5555'>✖ " + escape(msg) + "</font>");
     GELServiceLog.logError(msg);
-    scrollLogToBottom();
+    expandLogPanel();
 }
 
 private void logLine() {
