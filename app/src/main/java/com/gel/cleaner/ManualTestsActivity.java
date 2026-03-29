@@ -16817,10 +16817,13 @@ appendLog("CHECK", String.format(
         validDrainF
 ));
 
-double safeDrain = drainPercentPerHourF;
+final double safeDrainFinal;
 
-if (Double.isNaN(safeDrain) || safeDrain < 0)
-    safeDrain = 0;
+if (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0) {
+    safeDrainFinal = 0;
+} else {
+    safeDrainFinal = drainPercentPerHour;
+}
 
 // 🔽 CALL
 lab14LogStressResult(
@@ -16840,7 +16843,7 @@ lab14LogStressResult(
         drainMahF,
         dtMsF,
         mahPerHourF,
-        safeDrain,
+        safeDrainFinal,
         validDrainF,
         startBatteryTemp,
         endBatteryTemp,
