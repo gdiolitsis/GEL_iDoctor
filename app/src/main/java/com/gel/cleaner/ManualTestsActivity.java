@@ -14263,59 +14263,59 @@ private void lab14LogAging(
     try {
 
         float sag = (!Float.isNaN(voltageStart) && !Float.isNaN(voltageUnderLoad[0]))
-        ? (voltageStart - voltageUnderLoad[0])
-        : Float.NaN;
+                ? (voltageStart - voltageUnderLoad[0])
+                : Float.NaN;
 
         float rMilli = (!Float.isNaN(internalResistance[0]))
-        ? internalResistance[0] * 1000f
-        : Float.NaN;
+                ? internalResistance[0] * 1000f
+                : Float.NaN;
 
         float score = 0f;
 
         // ================= SAG =================
         if (!Float.isNaN(sag)) {
-            if (sag > 0.20f) score += 40;
-            else if (sag > 0.12f) score += 25;
-            else if (sag > 0.07f) score += 10;
+            if (sag > 0.20f) score += 40f;
+            else if (sag > 0.12f) score += 25f;
+            else if (sag > 0.07f) score += 10f;
         }
 
-// ================= RESISTANCE =================
-if (!Float.isNaN(rMilli)) {
-    if (rMilli > 200f) {
-        score += 40f;
-    } else if (rMilli > 150f) {
-        score += 25f;
-    } else if (rMilli > 100f) {
-        score += 10f;
-    }
-}
+        // ================= SAFE DRAIN =================
+        final double safeDrain =
+                (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0.0)
+                        ? 0.0
+                        : drainPercentPerHour;
 
-// ================= SAFE DRAIN =================
-final double safeDrain =
-        (Double.isNaN(drainInput) || drainInput < 0.0)
-                ? 0.0
-                : drainInput;
+        // 🔥 LOG
+        logLabelValue(
+                gr ? "Ρυθμός αποφόρτισης (ένδειξη φθοράς)"
+                   : "Drain (aging signal)",
+                String.format(Locale.US, "%.1f%%/h", safeDrain)
+        );
 
-// 🔥 LOG (πάντα εμφανίζεται)
-logLabelValue(
-        gr ? "Ρυθμός αποφόρτισης (ένδειξη φθοράς)"
-           : "Drain (aging signal)",
-        String.format(Locale.US, "%.1f%%/h", safeDrain)
-);
+        // ================= DRAIN → AGING SCORE =================
+        if (safeDrain > 45.0) {
+            score += 15f;
+        } else if (safeDrain > 35.0) {
+            score += 8f;
+        }
 
-// ================= DRAIN → AGING SCORE =================
-if (safeDrain > 45.0) {
-    score += 15f;
-} else if (safeDrain > 35.0) {
-    score += 8f;
-}
+        // ================= RESISTANCE =================
+        if (!Float.isNaN(rMilli)) {
+            if (rMilli > 200f) {
+                score += 40f;
+            } else if (rMilli > 150f) {
+                score += 25f;
+            } else if (rMilli > 100f) {
+                score += 10f;
+            }
+        }
 
-// ================= FINALIZE =================
-if (score > 100f) score = 100f;
+        // ================= FINAL =================
+        if (score > 100f) score = 100f;
 
-computedAging = score;
+        computedAging = score;
 
-} catch (Throwable ignore) {}
+    } catch (Throwable ignore) {}
 
     // =====================================================
     // OUTPUT
@@ -14368,6 +14368,7 @@ computedAging = score;
                    : "Insufficient data"
         );
     }
+}
 
     // ================= DESCRIPTION =================
     if (aging != null && aging.description != null) {
