@@ -17002,6 +17002,7 @@ if (wasCancelled) return;
 
 });   // ← ΚΛΕΙΝΕΙ runOnUiThread
 
+// ✅ ΚΛΕΙΝΕΙ ΣΩΣΤΑ ΤΟ try ΠΡΙΝ ΤΟ catch
 } catch (Throwable t) {
 
     lab14StopAllStress();
@@ -17017,8 +17018,6 @@ if (wasCancelled) return;
     lab14Running = false;
     lab14PopupShown = false;
     lab14AdvisoryShown = false;
-}
-
 }
 
 private long estimateDrainFallback(
