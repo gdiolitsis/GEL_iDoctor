@@ -17000,12 +17000,7 @@ lab14Cancelled = false;
 
 if (wasCancelled) return;
 
-});   // ← ΚΛΕΙΝΕΙ runOnUiThread
-
-// 🔥 ΚΛΕΙΝΟΥΜΕ ΣΙΓΟΥΡΑ ΟΛΑ ΤΑ ΑΝΟΙΧΤΑ BLOCKS
-}
-}
-catch (Throwable t) {
+} catch (Throwable t) {
 
     lab14StopAllStress();
 
@@ -17021,6 +17016,12 @@ catch (Throwable t) {
     lab14PopupShown = false;
     lab14AdvisoryShown = false;
 }
+
+runOnUiThread(() -> {
+	
+});
+
+} 
 
 private long estimateDrainFallback(
         int percent,
