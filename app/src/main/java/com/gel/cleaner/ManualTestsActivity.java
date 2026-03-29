@@ -3620,33 +3620,39 @@ if (labsScroll != null) {
 return b;
 }
 
-private Button makeTestButton(String text, Runnable action) {  
-Button b = new Button(this);  
-b.setText(text);  
-b.setAllCaps(false);  
-b.setTextSize(14f);  
-b.setTextColor(0xFFFFFFFF);  
-b.setBackgroundResource(R.drawable.gel_btn_outline_selector);  
+private Button makeTestButton(String text, Runnable action) {
 
-LinearLayout.LayoutParams lp =
-        new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-lp.setMargins(0, dp(4), 0, dp(4));
-b.setLayoutParams(lp);
+    Button b = new Button(this);
 
-b.setMinHeight(dp(48));
+    b.setText(text);
+    b.setAllCaps(false);
+    b.setTextSize(14f);
+    b.setTextColor(0xFFFFFFFF);
+    b.setBackgroundResource(R.drawable.gel_btn_outline_selector);
 
-b.setSingleLine(false);
-b.setMaxLines(2);
-b.setEllipsize(null);
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
 
-b.setGravity(Gravity.CENTER);
-b.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+    lp.setMargins(0, dp(4), 0, dp(4));
+    b.setLayoutParams(lp);
 
-b.setOnClickListener(v -> action.run());
-return b;
+    b.setMinHeight(dp(48));
+
+    b.setSingleLine(false);
+    b.setMaxLines(2);
+    b.setEllipsize(null);
+
+    b.setGravity(Gravity.CENTER);
+    b.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+
+    b.setOnClickListener(v -> {
+        if (action != null) action.run();   // 👈 safe
+    });
+
+    return b;
 }
 
 private Button makeTestButtonRedGold(String text, Runnable action) {  
