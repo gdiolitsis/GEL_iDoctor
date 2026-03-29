@@ -1160,15 +1160,6 @@ private void scrollLogToBottom() {
     });
 }
 
-private void updateExportPosition(int logHeightDp) {
-    FrameLayout.LayoutParams lp =
-            (FrameLayout.LayoutParams) btnExport.getLayoutParams();
-
-    lp.bottomMargin = dp(logHeightDp) + dp(12);
-
-    btnExport.setLayoutParams(lp);
-}
-
  // ============================================================
 // BATTERY VOLTAGE HELPER (SAFE)
 // ============================================================
@@ -4693,7 +4684,6 @@ private void logInfo(String msg) {
     GELServiceLog.logInfo(msg);
 
     expandLogPanel();
-    updateExportPosition(300); 
     scrollLogToBottom();
 }
 
@@ -4702,7 +4692,6 @@ private void logOk(String msg) {
     GELServiceLog.logOk(msg);
 
     expandLogPanel();
-    updateExportPosition(300);
     scrollLogToBottom();
 }
 
@@ -4711,7 +4700,6 @@ private void logWarn(String msg) {
     GELServiceLog.logWarn(msg);
 
     expandLogPanel();
-    updateExportPosition(300);
     scrollLogToBottom();
 }
 
@@ -4720,7 +4708,6 @@ private void logError(String msg) {
     GELServiceLog.logError(msg);
 
     expandLogPanel();
-    updateExportPosition(300);
     scrollLogToBottom();
 }
 
