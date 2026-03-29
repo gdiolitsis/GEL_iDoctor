@@ -17022,6 +17022,7 @@ lab14Cancelled = false;
     lab14PopupShown = false;
     lab14AdvisoryShown = false;
 }
+}
 
 private long estimateDrainFallback(
         int percent,
