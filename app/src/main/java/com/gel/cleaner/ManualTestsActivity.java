@@ -833,11 +833,14 @@ protected void onCreate(Bundle savedInstanceState) {
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.WRAP_CONTENT
             );
-    btnParams.gravity = Gravity.BOTTOM;
-    btnParams.bottomMargin = dp(12);
-    btnParams.leftMargin = dp(8);
-    btnParams.rightMargin = dp(8);
-    btnExport.setLayoutParams(btnParams);
+    LinearLayout.LayoutParams lpBtn =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+
+lpBtn.setMargins(0, dp(16), 0, dp(16));
+btnExport.setLayoutParams(lpBtn);
 
     btnExport.setOnClickListener(v ->
             startActivity(new Intent(this, ServiceReportActivity.class))
@@ -848,8 +851,7 @@ protected void onCreate(Bundle savedInstanceState) {
     // ============================================================
     root.addView(labsScroll);
     root.addView(logScroll);
-    root.addView(btnExport);
-    btnExport.bringToFront();
+    labsContainer.addView(btnExport);
 
     UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
