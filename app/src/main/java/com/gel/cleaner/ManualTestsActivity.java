@@ -16987,6 +16987,8 @@ lab14LogReliabilitySummary(
         confF
 );
 
+}); // 🔴 ΚΛΕΙΝΕΙ ΤΟ runOnUiThread
+
 // ------------------------------------------------
 // STOP
 // ------------------------------------------------
@@ -16999,8 +17001,6 @@ try {
 } catch (Throwable ignore) {}
 
 lab14Running = false;
-
-boolean wasCancelled = lab14Cancelled;
 
 lab14PopupShown = false;
 lab14AdvisoryShown = false;
