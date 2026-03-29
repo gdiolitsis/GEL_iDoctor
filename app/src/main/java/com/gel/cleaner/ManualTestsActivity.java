@@ -1125,10 +1125,10 @@ btnExport.setLayoutParams(lpBtn);
 private void updateExportPosition(int logHeightDp) {
     if (btnExport == null) return;
 
-    FrameLayout.LayoutParams lp =
-            (FrameLayout.LayoutParams) btnExport.getLayoutParams();
+    ViewGroup.MarginLayoutParams lp =
+            (ViewGroup.MarginLayoutParams) btnExport.getLayoutParams();
 
-    lp.bottomMargin = dp(logHeightDp + 12); // πάνω από log panel
+    lp.bottomMargin = dp(logHeightDp + 12);
     btnExport.setLayoutParams(lp);
 }
 
