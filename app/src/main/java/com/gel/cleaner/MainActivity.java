@@ -308,10 +308,15 @@ msg.setText(
 
 private void showContactDeveloperDialog() {
 
-    final EditText input = new EditText(this);
-    input.setHint("Write your message...");
-    input.setMinLines(3);
-    input.setTextColor(0xFFFFFFFF);
+    EditText input = new EditText(this);
+input.setHint("Write your message...");
+input.setMinLines(3);
+
+// 🔥 GEL STYLE
+input.setTextColor(Color.WHITE);
+input.setHintTextColor(0xFFAAAAAA);
+input.setBackgroundColor(Color.BLACK);
+input.setPadding(dp(12), dp(12), dp(12), dp(12));
 
     new AlertDialog.Builder(this)
             .setTitle("Contact Developer")
