@@ -15668,7 +15668,6 @@ powerStabilityFactor[0] =
                 Math.min(100f, base)
         );
     }
-}
 
 if (!Float.isNaN(currentStability) &&
     currentStability > 0f &&
@@ -16839,7 +16838,7 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
 // main pipeline
 
-endBatteryTemp = getBatteryTempEngineSafe();
+final float endBatteryTemp = getBatteryTempEngineSafe();
 
 // 🔽 SAFE + DEBUG
 appendLog("CHECK", String.format(
@@ -16849,10 +16848,11 @@ appendLog("CHECK", String.format(
         validDrainF
 ));
 
+// 🔽 SAFE FINAL (IMPORTANT: use F version)
 final double safeDrainFinal =
-        (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0)
+        (Double.isNaN(drainPercentPerHourF) || drainPercentPerHourF < 0)
                 ? 0
-                : drainPercentPerHour;
+                : drainPercentPerHourF;
 
 // 🔽 CALL
 lab14LogStressResult(
