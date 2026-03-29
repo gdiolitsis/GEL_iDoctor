@@ -1164,7 +1164,7 @@ private void showLabsAndLogs() {
         LinearLayout.LayoutParams lp =
                 (LinearLayout.LayoutParams) logScroll.getLayoutParams();
 
-        lp.height = dp(300);
+        lp.height = dp(200);
         lp.weight = 0f;
         logScroll.setLayoutParams(lp);
     }
