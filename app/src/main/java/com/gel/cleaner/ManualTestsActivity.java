@@ -814,7 +814,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
     logContainer.addView(txtLog);
     logScroll.addView(logContainer);
-    logScroll.setVisibility(View.GONE);
+    logScroll.setVisibility(View.VISIBLE);
 
     // ============================================================
     // EXPORT SERVICE REPORT BUTTON
@@ -852,6 +852,10 @@ btnExport.setLayoutParams(lpBtn);
     root.addView(labsScroll);
     root.addView(logScroll);
     labsContainer.addView(btnExport);
+    
+    expandLogPanel();
+    scrollLogToBottom();
+    updateExportPosition(180);
 
     UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
@@ -1117,6 +1121,16 @@ btnExport.setLayoutParams(lpBtn);
         serviceLogInit = true;
     }
 }  // onCreate ENDS HERE
+
+private void appendLog(String txt) {
+    runOnUiThread(() -> {
+        if (txtLog != null) {
+            CharSequence current = txtLog.getText();
+            String updated = current + "<br>" + txt;
+            txtLog.setText(Html.fromHtml(updated));
+        }
+    });
+}
 
 private void expandLogPanel() {
     if (logScroll == null) return;
@@ -13946,7 +13960,7 @@ if (lab14_systemLimited[0]) {
         )
 );
 
-Log.d("LAB14_DEBUG", String.format(
+appendLog("LAB14_DEBUG", String.format(
         Locale.US,
         "Δ=%d | samples=%d | min=%d | max=%d",
         lab14DeltaMah,
