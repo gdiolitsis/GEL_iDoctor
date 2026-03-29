@@ -15528,8 +15528,9 @@ if (!Float.isNaN(tempStart) &&
 
         swellingScore++;
 
+        }
     }
-}
+} 
 
 // ----------------------------------------------------
 // PULSE LOAD EVALUATION
@@ -17001,7 +17002,6 @@ if (wasCancelled) return;
 
 });   // ← ΚΛΕΙΝΕΙ runOnUiThread
 
-}
 } catch (Throwable t) {
 
     lab14StopAllStress();
