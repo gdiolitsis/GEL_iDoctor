@@ -241,6 +241,10 @@ public class ManualTestsActivity extends AppCompatActivity {
 
 }
 
+private float startY = 0;
+private float endY = 0;
+private static final int SWIPE_THRESHOLD = 180;
+
 private ScrollView labsScroll;
 private ScrollView logScroll;
 private Button btnExport;
@@ -855,6 +859,32 @@ scrollLogToBottom();
 UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
 final boolean gr = AppLang.isGreek(this);
+
+logScroll.setOnTouchListener((v, event) -> {
+    switch (event.getAction()) {
+
+        case MotionEvent.ACTION_DOWN:
+            startY = event.getY();
+            break;
+
+        case MotionEvent.ACTION_UP:
+            endY = event.getY();
+            float diff = endY - startY;
+
+            if (Math.abs(diff) > SWIPE_THRESHOLD) {
+
+                if (diff < 0) {
+                    // 🔼 SWIPE UP → FULL LOGS
+                    showLogsFullScreen();
+                } else {
+                    // 🔽 SWIPE DOWN → BACK
+                    showLabsAndLogs();
+                }
+            }
+            break;
+    }
+    return false; // ❗ δεν μπλοκάρει το scroll
+});
 
     // ============================================================
     // TITLE
