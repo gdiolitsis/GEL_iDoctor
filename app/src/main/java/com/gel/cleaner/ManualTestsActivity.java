@@ -15206,8 +15206,6 @@ if (!Float.isNaN(voltageStart) &&
                     dtMs
             );
 }
-    }
-
 
     float sagFiltered = sag;
 
