@@ -14811,7 +14811,6 @@ private boolean lab14DetectLimiter(
     // ------------------------
     // HARD LIMIT
     // ------------------------
-
     if (lowSag &&
         lowDrain &&
         lowCurrent) {
@@ -14822,7 +14821,6 @@ private boolean lab14DetectLimiter(
     // ------------------------
     // SAG + CURRENT
     // ------------------------
-
     if (lowSag &&
         lowCurrent) {
 
@@ -14832,7 +14830,6 @@ private boolean lab14DetectLimiter(
     // ------------------------
     // SAG + DRAIN
     // ------------------------
-
     if (lowSag &&
         lowDrain) {
 
@@ -14842,7 +14839,6 @@ private boolean lab14DetectLimiter(
     // ------------------------
     // CURRENT + DRAIN
     // ------------------------
-
     if (lowCurrent &&
         lowDrain) {
 
@@ -14852,7 +14848,6 @@ private boolean lab14DetectLimiter(
     // ------------------------
     // THERMAL LIMIT
     // ------------------------
-
     if (lowCurrent &&
         lowTemp &&
         dtMs > 20000) {
@@ -14861,9 +14856,8 @@ private boolean lab14DetectLimiter(
     }
 
     // ------------------------
-    // fallback flags
+    // FALLBACK FLAGS
     // ------------------------
-
     int flags = 0;
 
     if (lowSag) flags++;
