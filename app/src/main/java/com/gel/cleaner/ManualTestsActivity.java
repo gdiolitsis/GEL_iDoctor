@@ -15508,35 +15508,31 @@ float tempNowEngine = getBatteryTempEngineSafe();
 if (!Float.isNaN(tempNowEngine) && tempNowEngine > 0f) {
 
     if (Float.isNaN(tempStart)) {
-    tempStart = tempNowEngine;
-}
-
-if (!Float.isNaN(tempNowEngine)) {
+        tempStart = tempNowEngine;
+    }
 
     if (Float.isNaN(lab14TempPeak) ||
         tempNowEngine > lab14TempPeak) {
 
         lab14TempPeak = tempNowEngine;
     }
-}
 
-if (!Float.isNaN(tempStart) &&
-    !Float.isNaN(tempPeak) &&
-    !Float.isNaN(internalResistance[0]) &&
-    validDrain &&
-    !lab14_systemLimited[0]) {
+    if (!Float.isNaN(tempStart) &&
+        !Float.isNaN(tempPeak) &&
+        !Float.isNaN(internalResistance[0]) &&
+        validDrain &&
+        !lab14_systemLimited[0]) {
 
-    float tempRise =
-            tempPeak - tempStart;
+        float tempRise =
+                tempPeak - tempStart;
 
-    if (tempRise > 6f &&
-        internalResistance[0] < 0.15f) {
+        if (tempRise > 6f &&
+            internalResistance[0] < 0.15f) {
 
-        swellingScore++;
-
+            swellingScore++;
         }
     }
-} 
+}
 
 // ----------------------------------------------------
 // PULSE LOAD EVALUATION
