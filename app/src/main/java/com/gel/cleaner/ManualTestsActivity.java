@@ -14279,36 +14279,43 @@ private void lab14LogAging(
             else if (sag > 0.07f) score += 10;
         }
 
-        // ================= RESISTANCE =================
-        if (!Float.isNaN(rMilli)) {
-            if (rMilli > 200) score += 40;
-            else if (rMilli > 150) score += 25;
-            else if (rMilli > 100) score += 10;
-        }
+// ================= RESISTANCE =================
+if (!Float.isNaN(rMilli)) {
+    if (rMilli > 200f) {
+        score += 40f;
+    } else if (rMilli > 150f) {
+        score += 25f;
+    } else if (rMilli > 100f) {
+        score += 10f;
+    }
+}
 
-        final double safeDrain =
-        (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0)
-                ? 0
-                : drainPercentPerHour;
+// ================= SAFE DRAIN =================
+final double safeDrain =
+        (Double.isNaN(drainInput) || drainInput < 0.0)
+                ? 0.0
+                : drainInput;
 
-// 🔥 LOG
+// 🔥 LOG (πάντα εμφανίζεται)
 logLabelValue(
         gr ? "Ρυθμός αποφόρτισης (ένδειξη φθοράς)"
            : "Drain (aging signal)",
         String.format(Locale.US, "%.1f%%/h", safeDrain)
 );
 
-// χρησιμοποιείς το ήδη υπάρχον score
-if (safeDrain > 45)
-    score += 15;
-else if (safeDrain > 35)
-    score += 8;
+// ================= DRAIN → AGING SCORE =================
+if (safeDrain > 45.0) {
+    score += 15f;
+} else if (safeDrain > 35.0) {
+    score += 8f;
+}
 
-        if (score > 100f) score = 100f;
+// ================= FINALIZE =================
+if (score > 100f) score = 100f;
 
-        computedAging = score;
+computedAging = score;
 
-    } catch (Throwable ignore) {}
+} catch (Throwable ignore) {}
 
     // =====================================================
     // OUTPUT
