@@ -7,6 +7,7 @@ package com.gel.cleaner;
 import com.gel.cleaner.iphone.*;
 import com.gel.cleaner.base.*;
 
+import android.app.AlertDialog;
 import android.app.AppOpsManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -40,7 +41,9 @@ import android.widget.*;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.Toast;
 import android.widget.TextView;
+import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -77,17 +80,27 @@ private ScrollView scroll;
 public boolean onCreateOptionsMenu(Menu menu) {
     // ⚙ settings icon (always visible)
     menu.add(0, 1001, 0, "")
-            .setIcon(R.drawable.ic_settings)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        .setIcon(R.drawable.ic_settings)
+        .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+
+// 🔽 CONTACT BUTTON
+menu.add(0, 1002, 1, "Contact")
+        .setIcon(R.drawable.ic_contact_gel)
+        .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
     return true;
 }
 
 @Override
 public boolean onOptionsItemSelected(MenuItem item) {
     if (item.getItemId() == 1001) {
-        showSettingsDialog();
-        return true;
-    }
+    showSettingsDialog();
+    return true;
+}
+
+if (item.getItemId() == 1002) {
+    showContactDeveloperDialog();
+    return true;
+}
     return super.onOptionsItemSelected(item);
 }
 
@@ -292,6 +305,42 @@ msg.setText(
         + "Panic logs contain the same diagnostic information "
         + "for any Apple device, whether it is an iPhone or an iPad."
 );
+}
+
+private void showContactDeveloperDialog() {
+
+    final EditText input = new EditText(this);
+    input.setHint("Write your message...");
+    input.setMinLines(3);
+    input.setTextColor(0xFFFFFFFF);
+
+    new AlertDialog.Builder(this)
+            .setTitle("Contact Developer")
+            .setView(input)
+            .setPositiveButton("Send", (dialog, which) -> {
+
+                String message = input.getText().toString().trim();
+
+                if (message.isEmpty()) return;
+
+                Intent intent = new Intent(Intent.ACTION_SENDTO);
+                intent.setData(Uri.parse("mailto:"));
+                intent.putExtra(Intent.EXTRA_EMAIL,
+                        new String[]{"gdiolitsis@yahoo.com"});
+                intent.putExtra(Intent.EXTRA_SUBJECT,
+                        "GEL iDoctor Feedback");
+                intent.putExtra(Intent.EXTRA_TEXT, message);
+
+                try {
+                    startActivity(intent);
+                } catch (Exception e) {
+                    Toast.makeText(this,
+                            "No email app found",
+                            Toast.LENGTH_SHORT).show();
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
 }
 
 @Override
