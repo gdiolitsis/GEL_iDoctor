@@ -16841,7 +16841,6 @@ lab14LogStressResult(
         dtMsF,
         mahPerHourF,
         safeDrain,
-        drainPercentPerHourF,
         validDrainF,
         startBatteryTemp,
         endBatteryTemp,
