@@ -763,100 +763,98 @@ protected void onCreate(Bundle savedInstanceState) {
 
     initTTS();
 
-    // ============================================================
-    // ROOT
-    // ============================================================
-    FrameLayout root = new FrameLayout(this);
-    setContentView(root);
+// ============================================================
+// ROOT (VERTICAL - NO OVERLAY)
+// ============================================================
+LinearLayout root = new LinearLayout(this);
+root.setOrientation(LinearLayout.VERTICAL);
+setContentView(root);
 
-    // ============================================================
-    // LABS (FULL SCREEN)
-    // ============================================================
-    labsScroll = new ScrollView(this);
-    labsScroll.setFillViewport(true);
+// ============================================================
+// LABS (TOP - SCROLLABLE, FLEX)
+// ============================================================
+labsScroll = new ScrollView(this);
+labsScroll.setFillViewport(true);
 
-    FrameLayout.LayoutParams labsParams =
-            new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-            );
-    labsScroll.setLayoutParams(labsParams);
+LinearLayout.LayoutParams labsParams =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f // 🔥 παίρνει όλο τον διαθέσιμο χώρο
+        );
+labsScroll.setLayoutParams(labsParams);
 
-    LinearLayout labsContainer = new LinearLayout(this);
-    labsContainer.setOrientation(LinearLayout.VERTICAL);
-    labsContainer.setPadding(dp(16), dp(16), dp(16), dp(200));
-    labsScroll.addView(labsContainer);
+LinearLayout labsContainer = new LinearLayout(this);
+labsContainer.setOrientation(LinearLayout.VERTICAL);
+labsContainer.setPadding(dp(16), dp(16), dp(16), dp(16));
 
-    // ============================================================
-    // LOG (BOTTOM OVERLAY)
-    // ============================================================
-    logScroll = new ScrollView(this);
-    logScroll.setFillViewport(true);
-    logScroll.setBackgroundColor(0xEE000000);
+labsScroll.addView(labsContainer);
 
-    FrameLayout.LayoutParams logParams =
-            new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    dp(180)
-            );
-    logParams.gravity = Gravity.BOTTOM;
-    logScroll.setLayoutParams(logParams);
+// ============================================================
+// LOG AREA (BOTTOM - INDEPENDENT SCROLL)
+// ============================================================
+logScroll = new ScrollView(this);
+logScroll.setFillViewport(true);
+logScroll.setBackgroundColor(0xEE000000);
 
-    LinearLayout logContainer = new LinearLayout(this);
-    logContainer.setOrientation(LinearLayout.VERTICAL);
+LinearLayout.LayoutParams logParams =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(250) // σταθερό ύψος, μεγάλο και scrollable
+        );
+logScroll.setLayoutParams(logParams);
 
-    txtLog = new TextView(this);
-    txtLog.setTextSize(13f);
-    txtLog.setTextColor(0xFFFFFFFF);
-    txtLog.setPadding(dp(12), dp(12), dp(12), dp(12));
-    txtLog.setMovementMethod(new ScrollingMovementMethod());
-    txtLog.setText(Html.fromHtml("<b>" + getString(R.string.manual_log_title) + "</b><br>"));
+LinearLayout logContainer = new LinearLayout(this);
+logContainer.setOrientation(LinearLayout.VERTICAL);
 
-    logContainer.addView(txtLog);
-    logScroll.addView(logContainer);
-    logScroll.setVisibility(View.VISIBLE);
+txtLog = new TextView(this);
+txtLog.setTextSize(13f);
+txtLog.setTextColor(0xFFFFFFFF);
+txtLog.setPadding(dp(12), dp(12), dp(12), dp(12));
+txtLog.setText(Html.fromHtml(
+        "<b>" + getString(R.string.manual_log_title) + "</b><br>"
+));
 
-    // ============================================================
-    // EXPORT SERVICE REPORT BUTTON
-    // ============================================================
-    btnExport = new Button(this);
-    btnExport.setText(getString(R.string.export_report_title));
-    btnExport.setAllCaps(false);
-    btnExport.setTextColor(0xFFFFFFFF);
-    btnExport.setBackgroundResource(R.drawable.gel_btn_outline_selector);
-    btnExport.setMinHeight(0);
-    btnExport.setMinimumHeight(0);
-    btnExport.setPadding(dp(16), dp(14), dp(16), dp(14));
+logContainer.addView(txtLog);
+logScroll.addView(logContainer);
 
-    FrameLayout.LayoutParams btnParams =
-        new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
+// ============================================================
+// EXPORT BUTTON (BOTTOM)
+// ============================================================
+btnExport = new Button(this);
+btnExport.setText(getString(R.string.export_report_title));
+btnExport.setAllCaps(false);
+btnExport.setTextColor(0xFFFFFFFF);
+btnExport.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+btnExport.setPadding(dp(16), dp(14), dp(16), dp(14));
+
+LinearLayout.LayoutParams btnParams =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
         );
 
-btnParams.gravity = Gravity.BOTTOM;
-btnParams.setMargins(dp(12), dp(12), dp(12), dp(200)); // πάνω από log
-
+btnParams.setMargins(dp(12), dp(8), dp(12), dp(12));
 btnExport.setLayoutParams(btnParams);
 
-    btnExport.setOnClickListener(v ->
-            startActivity(new Intent(this, ServiceReportActivity.class))
-    );
+btnExport.setOnClickListener(v ->
+        startActivity(new Intent(this, ServiceReportActivity.class))
+);
 
-    // ============================================================
-    // ADD TO ROOT
-    // ============================================================
-    root.addView(labsScroll);
-    root.addView(logScroll);
-    root.addView(btnExport);
-    
-    expandLogPanel();
-    scrollLogToBottom();
-    updateExportPosition(180);
+// ============================================================
+// ADD ORDER (CRITICAL)
+// ============================================================
+root.addView(labsScroll);
+root.addView(logScroll);
+root.addView(btnExport);
 
-    UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
+// ============================================================
+// INIT
+// ============================================================
+scrollLogToBottom();
+UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
-    final boolean gr = AppLang.isGreek(this);
+final boolean gr = AppLang.isGreek(this);
 
     // ============================================================
     // TITLE
