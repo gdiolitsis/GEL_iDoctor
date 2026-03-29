@@ -17002,8 +17002,10 @@ if (wasCancelled) return;
 
 });   // ← ΚΛΕΙΝΕΙ runOnUiThread
 
-// ✅ ΚΛΕΙΝΕΙ ΣΩΣΤΑ ΤΟ try ΠΡΙΝ ΤΟ catch
-} catch (Throwable t) {
+// 🔥 ΚΛΕΙΝΟΥΜΕ ΣΙΓΟΥΡΑ ΟΛΑ ΤΑ ΑΝΟΙΧΤΑ BLOCKS
+}
+}
+catch (Throwable t) {
 
     lab14StopAllStress();
 
