@@ -14097,8 +14097,6 @@ if (!Float.isNaN(resistanceCheckMilliOhm)) {
     );
 }
 
-        String sagLabel;
-
         if (sag < 0.05f) sagLabel = "Excellent";
         else if (sag < 0.12f) sagLabel = "Normal";
         else if (sag < 0.20f) sagLabel = "Weak";
@@ -14240,6 +14238,7 @@ private void lab14LogAging(
         String agingInterp,
         Lab14Engine.AgingResult aging,
         float monthsTo70
+        double drainPercentPerHour
 ) {
 
     appendHtml("<br>");
@@ -14253,13 +14252,13 @@ private void lab14LogAging(
 
     try {
 
-        float sag = (!Float.isNaN(voltageStart) && !Float.isNaN(voltageUnderLoad))
-                ? (voltageStart - voltageUnderLoad)
-                : Float.NaN;
+        float sag = (!Float.isNaN(voltageStart) && !Float.isNaN(voltageUnderLoad[0]))
+        ? (voltageStart - voltageUnderLoad[0])
+        : Float.NaN;
 
-        float rMilli = (!Float.isNaN(internalResistance))
-                ? internalResistance * 1000f
-                : Float.NaN;
+        float rMilli = (!Float.isNaN(internalResistance[0]))
+        ? internalResistance[0] * 1000f
+        : Float.NaN;
 
         float score = 0f;
 
@@ -16810,6 +16809,20 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
 endBatteryTemp = getBatteryTempEngineSafe();
 
+// 🔽 SAFE + DEBUG
+appendLog("CHECK", String.format(
+        Locale.US,
+        "drain=%.2f%%/h valid=%s",
+        drainPercentPerHourF,
+        validDrainF
+));
+
+double safeDrain = drainPercentPerHourF;
+
+if (Double.isNaN(safeDrain) || safeDrain < 0)
+    safeDrain = 0;
+
+// 🔽 CALL
 lab14LogStressResult(
         gr,
         sagAvg[0],
@@ -16827,6 +16840,7 @@ lab14LogStressResult(
         drainMahF,
         dtMsF,
         mahPerHourF,
+        safeDrain,
         drainPercentPerHourF,
         validDrainF,
         startBatteryTemp,
@@ -16855,12 +16869,13 @@ if (partial) {
 } else {
 
     lab14LogAging(
-            gr,
-            agingIndexF,
-            agingInterpF,
-            agingF,
-            Float.NaN
-    );
+        gr,
+        agingIndexF,
+        agingInterpF,
+        agingF,
+        Float.NaN,
+        drainPercentPerHour
+);
 
     if (lab14_systemLimited[0]) {
         logWarn(gr
