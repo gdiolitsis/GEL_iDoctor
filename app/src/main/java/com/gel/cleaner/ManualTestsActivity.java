@@ -14272,34 +14272,29 @@ private void lab14LogAging(
 
         float score = 0f;
 
-        // ================= SAG =================
         if (!Float.isNaN(sag)) {
             if (sag > 0.20f) score += 40f;
             else if (sag > 0.12f) score += 25f;
             else if (sag > 0.07f) score += 10f;
         }
 
-        // ================= SAFE DRAIN =================
         final double safeDrain =
                 (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0.0)
                         ? 0.0
                         : drainPercentPerHour;
 
-        // 🔥 LOG
         logLabelValue(
                 gr ? "Ρυθμός αποφόρτισης (ένδειξη φθοράς)"
                    : "Drain (aging signal)",
                 String.format(Locale.US, "%.1f%%/h", safeDrain)
         );
 
-        // ================= DRAIN → AGING SCORE =================
         if (safeDrain > 45.0) {
             score += 15f;
         } else if (safeDrain > 35.0) {
             score += 8f;
         }
 
-        // ================= RESISTANCE =================
         if (!Float.isNaN(rMilli)) {
             if (rMilli > 200f) {
                 score += 40f;
@@ -14310,16 +14305,10 @@ private void lab14LogAging(
             }
         }
 
-        // ================= FINAL =================
         if (score > 100f) score = 100f;
-
         computedAging = score;
 
     } catch (Throwable ignore) {}
-
-    // =====================================================
-    // OUTPUT
-    // =====================================================
 
     if (agingIndex >= 0) {
 
@@ -14368,7 +14357,6 @@ private void lab14LogAging(
                    : "Insufficient data"
         );
     }
-}
 
     // ================= DESCRIPTION =================
     if (aging != null && aging.description != null) {
