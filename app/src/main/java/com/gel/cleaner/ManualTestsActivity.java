@@ -784,7 +784,7 @@ protected void onCreate(Bundle savedInstanceState) {
 
     LinearLayout labsContainer = new LinearLayout(this);
     labsContainer.setOrientation(LinearLayout.VERTICAL);
-    labsContainer.setPadding(dp(16), dp(16), dp(16), dp(16));
+    labsContainer.setPadding(dp(16), dp(16), dp(16), dp(200));
     labsScroll.addView(labsContainer);
 
     // ============================================================
@@ -829,18 +829,15 @@ protected void onCreate(Bundle savedInstanceState) {
     btnExport.setPadding(dp(16), dp(14), dp(16), dp(14));
 
     FrameLayout.LayoutParams btnParams =
-            new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT
-            );
-    LinearLayout.LayoutParams lpBtn =
-        new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+        new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
         );
 
-lpBtn.setMargins(0, dp(16), 0, dp(16));
-btnExport.setLayoutParams(lpBtn);
+btnParams.gravity = Gravity.BOTTOM;
+btnParams.setMargins(dp(12), dp(12), dp(12), dp(200)); // πάνω από log
+
+btnExport.setLayoutParams(btnParams);
 
     btnExport.setOnClickListener(v ->
             startActivity(new Intent(this, ServiceReportActivity.class))
@@ -851,7 +848,7 @@ btnExport.setLayoutParams(lpBtn);
     // ============================================================
     root.addView(labsScroll);
     root.addView(logScroll);
-    labsContainer.addView(btnExport);
+    root.addView(btnExport);
     
     expandLogPanel();
     scrollLogToBottom();
