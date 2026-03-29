@@ -14201,13 +14201,23 @@ if (validDrain) {
             String.format(Locale.US, "%.0f mAh/h", drainRateMahPerHour)
     );
 
-    if (drainPercentPerHour > 0) {
-        logLabelValue(
-                gr ? "Κανονικοποιημένη αποφόρτιση"
-                   : "Normalized drain",
-                String.format(Locale.US, "%.1f%%/h", drainPercentPerHour)
-        );
-    }
+    if (validDrain && !Double.isNaN(drainPercentPerHour)) {
+
+    logLabelValue(
+            gr ? "Κανονικοποιημένη αποφόρτιση"
+               : "Normalized drain",
+            String.format(Locale.US, "%.1f%%/h", drainPercentPerHour)
+    );
+
+} else {
+
+    logLabelWarnValue(
+            gr ? "Κανονικοποιημένη αποφόρτιση"
+               : "Normalized drain",
+            gr ? "Μη διαθέσιμο"
+               : "Not available"
+    );
+}
 
 } else {
 
@@ -14276,9 +14286,25 @@ private void lab14LogAging(
             else if (rMilli > 100) score += 10;
         }
 
-        // ================= DRAIN =================
-        if (drainPercentPerHour > 40) score += 15;
-        else if (drainPercentPerHour > 30) score += 8;
+        final double safeDrain =
+        (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0)
+                ? 0
+                : drainPercentPerHour;
+
+// 🔥 LOG (πάντα να φαίνεται)
+logLabelValue(
+        gr ? "Ρυθμός αποφόρτισης (ένδειξη φθοράς)"
+           : "Drain (aging signal)",
+        String.format(Locale.US, "%.1f%%/h", safeDrain)
+);
+
+float score = 0f;
+
+// ================= DRAIN =================
+if (safeDrain > 45)
+    score += 15;
+else if (safeDrain > 35)
+    score += 8;
 
         if (score > 100f) score = 100f;
 
@@ -16817,13 +16843,10 @@ appendLog("CHECK", String.format(
         validDrainF
 ));
 
-final double safeDrainFinal;
-
-if (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0) {
-    safeDrainFinal = 0;
-} else {
-    safeDrainFinal = drainPercentPerHour;
-}
+final double safeDrainFinal =
+        (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0)
+                ? 0
+                : drainPercentPerHour;
 
 // 🔽 CALL
 lab14LogStressResult(
