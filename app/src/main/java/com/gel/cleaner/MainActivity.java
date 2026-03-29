@@ -391,23 +391,30 @@ private void showContactDeveloperDialog() {
     btnSend.setOnClickListener(v -> {
 
         String message = input.getText().toString().trim();
-        if (message.isEmpty()) return;
+if (message.isEmpty()) return;
 
-        Intent intent = new Intent(Intent.ACTION_SENDTO);
-        intent.setData(Uri.parse("mailto:"));
-        intent.putExtra(Intent.EXTRA_EMAIL,
-                new String[]{"gdiolitsis@yahoo.com"});
-        intent.putExtra(Intent.EXTRA_SUBJECT,
-                "GEL iDoctor Feedback");
-        intent.putExtra(Intent.EXTRA_TEXT, message);
+Intent intent = new Intent(Intent.ACTION_SENDTO);
+intent.setData(Uri.parse("mailto:"));
 
-        try {
-            startActivity(intent);
-        } catch (Exception e) {
-            Toast.makeText(this,
-                    "No email app found",
-                    Toast.LENGTH_SHORT).show();
-        }
+intent.putExtra(Intent.EXTRA_EMAIL,
+        new String[]{"gdiolitsis@yahoo.com"});
+
+intent.putExtra(Intent.EXTRA_SUBJECT,
+        "GEL iDoctor • " + android.os.Build.MODEL);
+
+// 🔥 BUILD FULL REPORT
+String fullReport = buildSupportReport(message);
+
+intent.putExtra(Intent.EXTRA_TEXT, fullReport);
+
+// 🔥 OPEN EMAIL APP
+try {
+    startActivity(intent);
+} catch (Exception e) {
+    Toast.makeText(this,
+            "No email app found",
+            Toast.LENGTH_SHORT).show();
+}
 
         dlg.dismiss();
     });
@@ -419,6 +426,45 @@ private void showContactDeveloperDialog() {
         dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
     }
 }
+
+private String buildSupportReport(String userMsg) {
+
+    StringBuilder sb = new StringBuilder();
+
+    sb.append("=== GEL iDoctor Support Report ===\n\n");
+
+// ================= USER MESSAGE =================
+sb.append("----- USER MESSAGE -----\n");
+sb.append(userMsg).append("\n\n");
+
+// ================= DEVICE INFO =================
+sb.append("----- DEVICE -----\n");
+sb.append("Model: ").append(android.os.Build.MODEL).append("\n");
+sb.append("Brand: ").append(android.os.Build.BRAND).append("\n");
+sb.append("Android: ").append(android.os.Build.VERSION.RELEASE).append("\n");
+sb.append("SDK: ").append(android.os.Build.VERSION.SDK_INT).append("\n\n");
+
+// ================= APP STATE =================
+sb.append("----- APP -----\n");
+sb.append("Version: 1.0\n\n");
+
+// ================= LOGS =================
+sb.append("----- LOGS -----\n");
+
+try {
+    String logs = GELServiceLog.getAll();
+    if (logs != null && !logs.trim().isEmpty()) {
+        sb.append(logs);
+    } else {
+        sb.append("No logs available\n");
+    }
+} catch (Throwable ignore) {
+    sb.append("Logs unavailable\n");
+}
+
+sb.append("\n\n----- END OF REPORT -----\n");
+
+return sb.toString();
 
 @Override
 public void log(String msg, boolean isError) {
