@@ -16899,7 +16899,7 @@ if (partial) {
         agingInterpF,
         agingF,
         Float.NaN,
-        drainPercentPerHour
+        drainPercentPerHourF
 );
 
     if (lab14_systemLimited[0]) {
