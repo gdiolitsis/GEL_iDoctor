@@ -17001,6 +17001,7 @@ if (wasCancelled) return;
 
 });   // ← ΚΛΕΙΝΕΙ runOnUiThread
 
+}
 } catch (Throwable t) {
 
     lab14StopAllStress();
