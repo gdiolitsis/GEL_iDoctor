@@ -308,43 +308,116 @@ msg.setText(
 
 private void showContactDeveloperDialog() {
 
-    EditText input = new EditText(this);
-input.setHint("Write your message...");
-input.setMinLines(3);
+    final boolean gr = AppLang.isGreek(this);
 
-// 🔥 GEL STYLE
-input.setTextColor(Color.WHITE);
-input.setHintTextColor(0xFFAAAAAA);
-input.setBackgroundColor(Color.BLACK);
-input.setPadding(dp(12), dp(12), dp(12), dp(12));
+    // ================= ROOT (GEL BOX) =================
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    box.setPadding(dp(18), dp(16), dp(18), dp(12));
 
-    new AlertDialog.Builder(this)
-            .setTitle("Contact Developer")
-            .setView(input)
-            .setPositiveButton("Send", (dialog, which) -> {
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF000000); // μαύρο
+    bg.setCornerRadius(dp(14));
+    bg.setStroke(dp(3), 0xFFFFD700); // χρυσό
+    box.setBackground(bg);
 
-                String message = input.getText().toString().trim();
+    // ================= TITLE =================
+    TextView title = new TextView(this);
+    title.setText(gr ? "Επικοινωνία με προγραμματιστή" : "Contact Developer");
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(16f);
+    title.setTypeface(Typeface.DEFAULT_BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(0, 0, 0, dp(10));
+    box.addView(title);
 
-                if (message.isEmpty()) return;
+    // ================= INPUT =================
+    final EditText input = new EditText(this);
+    input.setHint(gr ? "Γράψε μήνυμα..." : "Write your message...");
+    input.setMinLines(4);
+    input.setTextColor(Color.WHITE);
+    input.setHintTextColor(0xFFAAAAAA);
+    input.setPadding(dp(12), dp(12), dp(12), dp(12));
 
-                Intent intent = new Intent(Intent.ACTION_SENDTO);
-                intent.setData(Uri.parse("mailto:"));
-                intent.putExtra(Intent.EXTRA_EMAIL,
-                        new String[]{"gdiolitsis@yahoo.com"});
-                intent.putExtra(Intent.EXTRA_SUBJECT,
-                        "GEL iDoctor Feedback");
-                intent.putExtra(Intent.EXTRA_TEXT, message);
+    GradientDrawable inputBg = new GradientDrawable();
+    inputBg.setColor(0xFF000000);
+    inputBg.setCornerRadius(dp(10));
+    inputBg.setStroke(dp(2), 0xFFFFD700);
+    input.setBackground(inputBg);
 
-                try {
-                    startActivity(intent);
-                } catch (Exception e) {
-                    Toast.makeText(this,
-                            "No email app found",
-                            Toast.LENGTH_SHORT).show();
-                }
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
+    LinearLayout.LayoutParams lpInput =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+    lpInput.setMargins(0, 0, 0, dp(12));
+
+    box.addView(input, lpInput);
+
+    // ================= BUTTONS =================
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    row.setGravity(Gravity.CENTER);
+
+    Button btnCancel = new Button(this);
+    btnCancel.setText(gr ? "Άκυρο" : "Cancel");
+    btnCancel.setTextColor(Color.WHITE);
+    btnCancel.setAllCaps(false);
+    btnCancel.setBackground(makeGelBtn(0xFFAA1111));
+
+    Button btnSend = new Button(this);
+    btnSend.setText("Send");
+    btnSend.setTextColor(Color.WHITE);
+    btnSend.setAllCaps(false);
+    btnSend.setBackground(makeGelBtn(0xFF00FF7F));
+
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(0, dp(90), 1f);
+    lp.setMargins(dp(6), 0, dp(6), 0);
+
+    row.addView(btnCancel, lp);
+    row.addView(btnSend, lp);
+
+    box.addView(row);
+
+    // ================= DIALOG =================
+    AlertDialog dlg = new AlertDialog.Builder(this)
+            .setView(box)
+            .setCancelable(true)
+            .create();
+
+    btnCancel.setOnClickListener(v -> dlg.dismiss());
+
+    btnSend.setOnClickListener(v -> {
+
+        String message = input.getText().toString().trim();
+        if (message.isEmpty()) return;
+
+        Intent intent = new Intent(Intent.ACTION_SENDTO);
+        intent.setData(Uri.parse("mailto:"));
+        intent.putExtra(Intent.EXTRA_EMAIL,
+                new String[]{"gdiolitsis@yahoo.com"});
+        intent.putExtra(Intent.EXTRA_SUBJECT,
+                "GEL iDoctor Feedback");
+        intent.putExtra(Intent.EXTRA_TEXT, message);
+
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this,
+                    "No email app found",
+                    Toast.LENGTH_SHORT).show();
+        }
+
+        dlg.dismiss();
+    });
+
+    dlg.show();
+
+    // 🔥 ΚΑΝΕ ΤΟ BACKGROUND FULL TRANSPARENT (για να φανεί το box σωστά)
+    if (dlg.getWindow() != null) {
+        dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    }
 }
 
 @Override
