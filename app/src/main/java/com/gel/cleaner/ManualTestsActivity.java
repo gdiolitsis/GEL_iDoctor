@@ -152,6 +152,7 @@ import android.util.TypedValue;
 import android.util.Range;
 import android.util.Size;
 import android.view.Display;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.KeyEvent;
 import android.view.TextureView;
@@ -905,14 +906,6 @@ logScroll.setOnTouchListener((v, event) -> {
     sub.setPadding(0, 0, 0, dp(12));
     labsContainer.addView(sub);
 
-    TextView sec1 = new TextView(this);
-    sec1.setText(getString(R.string.manual_section1));
-    sec1.setTextSize(17f);
-    sec1.setTextColor(0xFFFFD700);
-    sec1.setGravity(Gravity.CENTER_HORIZONTAL);
-    sec1.setPadding(0, dp(10), 0, dp(6));
-    labsContainer.addView(sec1);
-
     lab14DotsView = new TextView(this);
     lab14DotsView.setText("•");
     lab14DotsView.setTextSize(22f);
@@ -1146,6 +1139,36 @@ logScroll.setOnTouchListener((v, event) -> {
         serviceLogInit = true;
     }
 }  // onCreate ENDS HERE
+
+private void showLogsFullScreen() {
+    if (labsScroll != null) {
+        labsScroll.setVisibility(View.GONE);
+    }
+
+    if (logScroll != null) {
+        LinearLayout.LayoutParams lp =
+                (LinearLayout.LayoutParams) logScroll.getLayoutParams();
+
+        lp.height = 0;
+        lp.weight = 1f;
+        logScroll.setLayoutParams(lp);
+    }
+}
+
+private void showLabsAndLogs() {
+    if (labsScroll != null) {
+        labsScroll.setVisibility(View.VISIBLE);
+    }
+
+    if (logScroll != null) {
+        LinearLayout.LayoutParams lp =
+                (LinearLayout.LayoutParams) logScroll.getLayoutParams();
+
+        lp.height = dp(300);
+        lp.weight = 0f;
+        logScroll.setLayoutParams(lp);
+    }
+}
 
 private void updateExportPosition(int logHeightDp) {
     if (btnExport == null) return;
