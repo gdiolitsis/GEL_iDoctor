@@ -14933,16 +14933,22 @@ if (snapEnd == null) {
             ? "Αποτυχία τελικής ανάγνωσης μπαταρίας."
             : "Final battery snapshot failed.");
 
+    // 🔴 STOP σωστά
     lab14StopAllStress();
 
     try {
+        counterText = null;
         lab14CleanupUI();
     } catch (Throwable ignore) {}
 
     lab14Running = false;
 
-    return;
+    return; // εδώ επιτρέπεται (hard failure)
 }
+
+// ----------------------------------------------------
+// DATA (ΠΡΙΝ το STOP)
+// ----------------------------------------------------
 
 final long endMah = snapEnd.chargeNowMah;
 
@@ -14955,11 +14961,9 @@ if (lab14MinCharge < Long.MAX_VALUE &&
     lab14DeltaMah = lab14MaxCharge - lab14MinCharge;
 }
 
-Float tObj =
-        idoctor.getBatteryTempUnified();
+Float tObj = idoctor.getBatteryTempUnified();
 
-float tempEnd =
-        tObj != null ? tObj : Float.NaN;
+float tempEnd = (tObj != null) ? tObj : Float.NaN;
 
 if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
     tempEnd = snapEnd.batteryTempC;
@@ -14983,11 +14987,13 @@ final Float cpuTempEnd = readCpuTempSafe();
 final Float gpuTempEnd = readGpuTempSafe();
 
 final long dtMs =
-        Math.max(
-                1,
-                SystemClock.elapsedRealtime() - t0
-        );
-        
+        Math.max(1, SystemClock.elapsedRealtime() - t0);
+
+
+// ----------------------------------------------------
+// ENGINE DRAIN
+// ----------------------------------------------------
+
 Lab14Engine.DrainSession drainSession =
         engine.endDrainSession();
 
@@ -15020,7 +15026,7 @@ boolean validCounter =
         lab14DeltaMah >= 20;
 
 // frozen check
-boolean frozen = true;
+boolean frozen = lab14ChargeSamples.size() <= 1;
 
 if (lab14ChargeSamples.size() > 1) {
 
@@ -16981,13 +16987,15 @@ lab14LogReliabilitySummary(
         confF
 );
 
+// ------------------------------------------------
 // STOP
+// ------------------------------------------------
 
 lab14StopAllStress();
 
 try {
-	counterText = null;
-lab14CleanupUI();
+    counterText = null;
+    lab14CleanupUI();
 } catch (Throwable ignore) {}
 
 lab14Running = false;
@@ -16997,8 +17005,6 @@ boolean wasCancelled = lab14Cancelled;
 lab14PopupShown = false;
 lab14AdvisoryShown = false;
 lab14Cancelled = false;
-
-if (wasCancelled) return;
 
 } catch (Throwable t) {
 
@@ -17016,12 +17022,6 @@ if (wasCancelled) return;
     lab14PopupShown = false;
     lab14AdvisoryShown = false;
 }
-
-runOnUiThread(() -> {
-	
-});
-
-} 
 
 private long estimateDrainFallback(
         int percent,
@@ -17101,11 +17101,11 @@ private void startLab14FastThread() {
 
             stopCpuBurn();
 
-            if (lab14Cancelled) {
-                lab14FastDone = true;
-                lab14FastPhase = false;
-                return;
-            }
+if (lab14Cancelled) {
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    lab14Cancelled = true;
+}
 
             // -------------------------
             // RECOVER
