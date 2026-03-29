@@ -7,7 +7,6 @@ package com.gel.cleaner;
 import com.gel.cleaner.iphone.*;
 import com.gel.cleaner.base.*;
 
-import android.app.AlertDialog;
 import android.app.AppOpsManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
