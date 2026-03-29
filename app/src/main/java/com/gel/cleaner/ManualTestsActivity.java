@@ -1122,14 +1122,43 @@ btnExport.setLayoutParams(lpBtn);
     }
 }  // onCreate ENDS HERE
 
+private void updateExportPosition(int logHeightDp) {
+    if (btnExport == null) return;
+
+    FrameLayout.LayoutParams lp =
+            (FrameLayout.LayoutParams) btnExport.getLayoutParams();
+
+    lp.bottomMargin = dp(logHeightDp + 12); // πάνω από log panel
+    btnExport.setLayoutParams(lp);
+}
+
 private void appendLog(String txt) {
     runOnUiThread(() -> {
-        if (txtLog != null) {
-            CharSequence current = txtLog.getText();
-            String updated = current + "<br>" + txt;
-            txtLog.setText(Html.fromHtml(updated));
+        if (txtLog == null) return;
+
+        String existing = txtLog.getText().toString();
+
+        String updated;
+        if (existing.isEmpty()) {
+            updated = txt;
+        } else {
+            updated = existing + "<br>" + safe(txt);
+        }
+
+        txtLog.setText(Html.fromHtml(updated));
+
+        if (logScroll != null) {
+            logScroll.post(() -> logScroll.fullScroll(View.FOCUS_DOWN));
         }
     });
+}
+
+private void appendLog(String tag, String msg) {
+    appendLog("[" + tag + "] " + msg);
+}
+
+private String safe(String s) {
+    return s == null ? "" : s.replace("<", "&lt;").replace(">", "&gt;");
 }
 
 private void expandLogPanel() {
