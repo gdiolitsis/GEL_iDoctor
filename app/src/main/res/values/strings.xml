@@ -200,9 +200,6 @@ and then export the report.
 Professional service tools.\nEach manual lab writes detailed results below (OK / WARN / ERROR)\nand is included in the final Service Report.
 </string>
 
-    <!-- SECTION HEADER -->
-    <string name="manual_section1">SECTION 1 — System &amp; Hardware Tests</string>
-
    <!-- 7 CATEGORIES -->
     <string name="manual_cat_1">Audio &amp; Vibration — Manual Labs 1–5</string>
     <string name="manual_cat_2">Display &amp; Sensors — Manual Labs 6–9</string>
