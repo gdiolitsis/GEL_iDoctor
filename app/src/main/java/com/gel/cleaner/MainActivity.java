@@ -465,6 +465,7 @@ try {
 sb.append("\n\n----- END OF REPORT -----\n");
 
 return sb.toString();
+}
 
 @Override
 public void log(String msg, boolean isError) {
