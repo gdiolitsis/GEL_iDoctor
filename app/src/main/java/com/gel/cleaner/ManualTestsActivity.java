@@ -1102,8 +1102,8 @@ logScroll.setOnTouchListener((v, event) -> {
             this::lab27PermissionsPrivacy));
 
     body7.addView(makeTestButton(
-            gr ? "28. Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων\nΥποψία Κόλλησης / Υγρασίας (Βάσει Συμπτωμάτων)"
-               : "28. Hardware Stability & Interconnect Integrity\nSolder / Moisture Indicators (SYMPTOM-BASED)",
+            gr ? "28. Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων\nΥποψία Κόλλησης / (Βάσει Συμπτωμάτων)"
+               : "28. Hardware Stability & Interconnect Integrity\nSolder / (SYMPTOM-BASED)",
             this::lab28HardwareStability));
 
     body7.addView(makeTestButton(
@@ -1184,19 +1184,11 @@ private void appendLog(String txt) {
     runOnUiThread(() -> {
         if (txtLog == null) return;
 
-        String existing = txtLog.getText().toString();
-
-        String updated;
-        if (existing.isEmpty()) {
-            updated = txt;
-        } else {
-            updated = existing + "<br>" + safe(txt);
-        }
-
-        txtLog.setText(Html.fromHtml(updated));
+        txtLog.append("\n" + txt);
 
         if (logScroll != null) {
-            logScroll.post(() -> logScroll.fullScroll(View.FOCUS_DOWN));
+            logScroll.post(() ->
+                    logScroll.fullScroll(View.FOCUS_DOWN));
         }
     });
 }
@@ -13950,10 +13942,160 @@ if (lab14_systemLimited[0]) {
     if (!Float.isNaN(voltageStart) &&
         !Float.isNaN(voltageUnderLoad)) {
 
-        float sag = voltageStart - voltageUnderLoad;
+// =====================================================
+// SAG + ENGINEERING ANALYSIS
+// =====================================================
 
-        if (sag < 0.015f)
-            sag = 0f;
+float sag = voltageStart - voltageUnderLoad;
+
+// 🔥 SAFETY
+if (sag < 0f) sag = 0f;
+
+// 🔥 NOISE FILTER (0.2%)
+float noiseThreshold = voltageStart * 0.002f;
+if (sag < noiseThreshold) sag = 0f;
+
+// 🔥 DEBUG
+appendLog("LAB14_SAG", String.format(
+        Locale.US,
+        "start=%.3fV load=%.3fV sag=%.4fV (thr=%.4f)",
+        voltageStart,
+        voltageUnderLoad,
+        (voltageStart - voltageUnderLoad),
+        noiseThreshold
+));
+
+// =====================================================
+// BATTERY LEVEL (IMPORTANT FOR DYNAMIC ANALYSIS)
+// =====================================================
+int level = getBatteryPercentSafe();
+
+// =====================================================
+// DYNAMIC SAG THRESHOLDS
+// =====================================================
+float excellentThr, normalThr, weakThr;
+
+if (level >= 70) {
+    excellentThr = 0.04f;
+    normalThr    = 0.09f;
+    weakThr      = 0.15f;
+}
+else if (level >= 40) {
+    excellentThr = 0.05f;
+    normalThr    = 0.11f;
+    weakThr      = 0.18f;
+}
+else {
+    excellentThr = 0.06f;
+    normalThr    = 0.13f;
+    weakThr      = 0.22f;
+}
+
+// =====================================================
+// SAG CLASSIFICATION
+// =====================================================
+String sagLabel;
+
+if (sag < excellentThr)
+    sagLabel = "Excellent";
+else if (sag < normalThr)
+    sagLabel = "Normal";
+else if (sag < weakThr)
+    sagLabel = "Weak";
+else
+    sagLabel = "Severe";
+
+// =====================================================
+// POWER CAPABILITY (ENGINEERING MODE)
+// =====================================================
+// P ≈ V * I  → εδώ προσεγγίζουμε μέσω sag + drain
+
+float powerMilliWatt = Float.NaN;
+
+if (!Float.isNaN(voltageUnderLoad) &&
+    drainMah > 0 &&
+    dtMs > 0) {
+
+    // mA
+    float current =
+            (float) (drainMah * 3600000.0 / dtMs);
+
+    // mW
+    powerMilliWatt =
+            voltageUnderLoad * current;
+}
+
+// =====================================================
+// INTERNAL RESISTANCE CROSS-CHECK
+// =====================================================
+float resistanceCheckMilliOhm = Float.NaN;
+
+if (sag > 0 &&
+    drainMah > 0 &&
+    dtMs > 0) {
+
+    float current =
+            (float) (drainMah * 3600000.0 / dtMs);
+
+    if (current > 10f) { // avoid noise
+        resistanceCheckMilliOhm =
+                (sag / current) * 1000f;
+    }
+}
+
+// =====================================================
+// LOGGING
+// =====================================================
+
+logLabelValue(
+        gr ? "Πτώση τάσης υπό φορτίο"
+           : "Voltage sag under load",
+        String.format(
+                Locale.US,
+                "%.3f V (%s, %d%%)",
+                sag,
+                sagLabel,
+                level
+        )
+);
+
+// 🔥 POWER OUTPUT
+if (!Float.isNaN(powerMilliWatt)) {
+
+    String powerLabel;
+
+    if (powerMilliWatt > 8000)
+        powerLabel = "High";
+    else if (powerMilliWatt > 4000)
+        powerLabel = "Normal";
+    else
+        powerLabel = "Low";
+
+    logLabelValue(
+            gr ? "Ικανότητα ισχύος"
+               : "Power capability",
+            String.format(
+                    Locale.US,
+                    "%.0f mW (%s)",
+                    powerMilliWatt,
+                    powerLabel
+            )
+    );
+}
+
+// 🔥 RESISTANCE CHECK (REAL)
+if (!Float.isNaN(resistanceCheckMilliOhm)) {
+
+    logLabelValue(
+            gr ? "Εκτίμηση αντίστασης (dynamic)"
+               : "Dynamic resistance estimate",
+            String.format(
+                    Locale.US,
+                    "%.0f mΩ",
+                    resistanceCheckMilliOhm
+            )
+    );
+}
 
         String sagLabel;
 
@@ -14046,30 +14188,38 @@ appendLog("LAB14_DEBUG", String.format(
         lab14MaxCharge
 ));
 
-    if (validDrain) {
-        logLabelOkValue(
-                gr ? "Ρυθμός αποφόρτισης"
-                   : "Drain rate",
-                String.format(Locale.US, "%.0f mAh/h", mahPerHour)
-        );
+double drainRateMahPerHour = 0.0;
 
-        if (drainPercentPerHour > 0) {
-            logLabelValue(
-                    gr ? "Κανονικοποιημένη αποφόρτιση"
-                       : "Normalized drain",
-                    String.format(Locale.US, "%.1f%%/h", drainPercentPerHour)
-            );
-        }
+if (drainMah > 0 && dtMs > 0) {
+    drainRateMahPerHour =
+            (drainMah * 3600000.0) / dtMs;
+}
 
-    } else {
+if (validDrain) {
 
-        logLabelWarnValue(
-                gr ? "Ρυθμός αποφόρτισης"
-                   : "Drain rate",
-                gr ? "Μη έγκυρο"
-                   : "Invalid"
+    logLabelOkValue(
+            gr ? "Ρυθμός αποφόρτισης"
+               : "Drain rate",
+            String.format(Locale.US, "%.0f mAh/h", drainRateMahPerHour)
+    );
+
+    if (drainPercentPerHour > 0) {
+        logLabelValue(
+                gr ? "Κανονικοποιημένη αποφόρτιση"
+                   : "Normalized drain",
+                String.format(Locale.US, "%.1f%%/h", drainPercentPerHour)
         );
     }
+
+} else {
+
+    logLabelWarnValue(
+            gr ? "Ρυθμός αποφόρτισης"
+               : "Drain rate",
+            gr ? "Μη έγκυρο"
+               : "Invalid"
+    );
+}
 
     if (!Float.isNaN(energyEfficiency)) {
         logLabelValue(
@@ -14099,39 +14249,112 @@ private void lab14LogAging(
             : "Battery aging");
     logLine();
 
+    float computedAging = -1f;
+
+    try {
+
+        float sag = (!Float.isNaN(voltageStart) && !Float.isNaN(voltageUnderLoad))
+                ? (voltageStart - voltageUnderLoad)
+                : Float.NaN;
+
+        float rMilli = (!Float.isNaN(internalResistance))
+                ? internalResistance * 1000f
+                : Float.NaN;
+
+        float score = 0f;
+
+        // ================= SAG =================
+        if (!Float.isNaN(sag)) {
+            if (sag > 0.20f) score += 40;
+            else if (sag > 0.12f) score += 25;
+            else if (sag > 0.07f) score += 10;
+        }
+
+        // ================= RESISTANCE =================
+        if (!Float.isNaN(rMilli)) {
+            if (rMilli > 200) score += 40;
+            else if (rMilli > 150) score += 25;
+            else if (rMilli > 100) score += 10;
+        }
+
+        // ================= DRAIN =================
+        if (drainPercentPerHour > 40) score += 15;
+        else if (drainPercentPerHour > 30) score += 8;
+
+        if (score > 100f) score = 100f;
+
+        computedAging = score;
+
+    } catch (Throwable ignore) {}
+
+    // =====================================================
+    // OUTPUT
+    // =====================================================
+
     if (agingIndex >= 0) {
 
         logLabelOkValue(
-                gr ? "Δείκτης γήρανσης μπαταρίας"
-                   : "Battery aging",
+                gr ? "Δείκτης γήρανσης"
+                   : "Battery aging index",
                 agingInterp + " (" + agingIndex + ")"
+        );
+
+    } else if (computedAging >= 0f) {
+
+        float health = 100f - computedAging;
+
+        String label;
+
+        if (computedAging < 10)
+            label = gr ? "Σαν καινούρια" : "Like new";
+        else if (computedAging < 25)
+            label = gr ? "Ελαφρά φθορά" : "Light wear";
+        else if (computedAging < 45)
+            label = gr ? "Μέτρια φθορά" : "Moderate wear";
+        else
+            label = gr ? "Σημαντική φθορά" : "Heavy wear";
+
+        logLabelOkValue(
+                gr ? "Φθορά μπαταρίας"
+                   : "Battery aging",
+                String.format(Locale.US, "%.0f%% (%s)",
+                        computedAging,
+                        label)
+        );
+
+        logLabelValue(
+                gr ? "Υγεία μπαταρίας"
+                   : "Battery health",
+                String.format(Locale.US, "%.0f%%",
+                        health)
         );
 
     } else {
 
         logLabelWarnValue(
-                gr ? "Δείκτης γήρανσης μπαταρίας"
+                gr ? "Δείκτης γήρανσης"
                    : "Battery aging index",
                 gr ? "Ανεπαρκή δεδομένα"
                    : "Insufficient data"
         );
     }
 
+    // ================= DESCRIPTION =================
     if (aging != null && aging.description != null) {
 
         logLabelValue(
-                gr ? "Ανάλυση γήρανσης"
-                   : "Aging analysis",
+                gr ? "Ανάλυση"
+                   : "Analysis",
                 aging.description
         );
+    }
 
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Ανάλυση γήρανσης"
-                   : "Aging analysis",
-                gr ? "Μη διαθέσιμη"
-                   : "Unavailable"
+    // ================= LIFE ESTIMATE =================
+    if (monthsTo70 > 0) {
+        logLabelValue(
+                gr ? "Εκτίμηση ζωής έως 70%"
+                   : "Estimated life to 70%",
+                String.format(Locale.US, "%.1f months", monthsTo70)
         );
     }
 }
@@ -14168,61 +14391,67 @@ private void lab14LogFinalScore(
     if (finalScore >= 85) {
 
         logLabelOkValue(
-                gr ? "Τελικό αποτέλεσμα δοκιμής"
-                   : "Final test result",
+                gr ? "Αποτέλεσμα δοκιμής"
+                   : "Test result",
                 scoreText
         );
 
     } else if (finalScore >= 65) {
 
         logLabelWarnValue(
-                gr ? "Τελικό αποτέλεσμα δοκιμής"
-                   : "Final test result",
+                gr ? "Αποτέλεσμα δοκιμής"
+                   : "Test result",
                 scoreText
         );
 
     } else {
 
         logLabelErrorValue(
-                gr ? "Τελικό αποτέλεσμα δοκιμής"
-                   : "Final test result",
+                gr ? "Αποτέλεσμα δοκιμής"
+                   : "Test result",
                 scoreText
         );
     }
 
-    if (collapseRisk[0] && !lab14_systemLimited[0]) {
-        logLabelWarnValue(
-                gr ? "Κίνδυνος κατάρρευσης"
-                   : "Collapse risk",
-                gr ? "Υψηλός" : "High"
-        );
-    }
+    // =====================================================
+    // 🔥 ALWAYS SHOW ALL CHECKS (NO MISSING LOGS)
+    // =====================================================
 
-    if (swellingRisk[0] && !lab14_systemLimited[0]) {
-        logLabelWarnValue(
-                gr ? "Πιθανή διόγκωση"
-                   : "Swelling risk",
-                gr ? "Εντοπίστηκαν ενδείξεις"
-                   : "Indicators detected"
-        );
-    }
+    // COLLAPSE
+    logLabelValue(
+            gr ? "Κατάρρευση τάσης"
+               : "Voltage collapse",
+            collapseRisk[0]
+                    ? (gr ? "Υψηλός κίνδυνος" : "High risk")
+                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
+    );
 
-    if (calibrationDrift[0]) {
-        logLabelWarnValue(
-                gr ? "Απόκλιση βαθμονόμησης"
-                   : "Calibration drift",
-                gr ? "Εντοπίστηκε"
-                   : "Detected"
-        );
-    }
+    // SWELLING
+    logLabelValue(
+            gr ? "Διόγκωση μπαταρίας"
+               : "Battery swelling",
+            swellingRisk[0]
+                    ? (gr ? "Εντοπίστηκαν ενδείξεις" : "Indicators detected")
+                    : (gr ? "Δεν εντοπίστηκαν ενδείξεις" : "No indicators detected")
+    );
 
+    // CALIBRATION
+    logLabelValue(
+            gr ? "Απόκλιση βαθμονόμησης"
+               : "Calibration drift",
+            calibrationDrift[0]
+                    ? (gr ? "Εντοπίστηκε" : "Detected")
+                    : (gr ? "Κανονική" : "Normal")
+    );
+
+    // SYSTEM LIMIT
     if (lab14_systemLimited[0]) {
         logLabelWarnValue(
                 gr ? "Περιορισμός συστήματος"
-                   : "System limited",
+                   : "System limitation",
                 gr
-                        ? "Το BMS περιόρισε το ρεύμα — μικρότερη αξιοπιστία"
-                        : "BMS current limiting detected"
+                        ? "Το BMS περιόρισε το ρεύμα — μειωμένη αξιοπιστία"
+                        : "BMS current limiting detected — reduced accuracy"
         );
     }
 }
@@ -15053,7 +15282,7 @@ if (validDrain &&
                 drainRate / voltageDrop;
     }
 }
-                        
+
 // ----------------------------------------------------
 // CURRENT STABILITY CHECK
 // ----------------------------------------------------
@@ -23759,45 +23988,6 @@ if (hiddenScore >= 60) {
 }
 
     // ============================================================
-    // MOISTURE EXPOSURE INDICATOR
-    // ============================================================
-    boolean moistureIndicator = false;
-    int moistureSignals = 0;
-
-    if (sensorFlaps) moistureSignals++;
-    if (signalDrops) moistureSignals++;
-    if (powerGlitches > 0) moistureSignals++;
-
-    if (thermalSpikes && ev.thermalOnlyDuringCharging)
-        moistureSignals++;
-
-    if (moistureSignals >= 2)
-        moistureIndicator = true;
-
-    appendHtml("<br>");
-
-    if (moistureIndicator) {
-
-        logLabelWarnValue(
-                gr ? "Ένδειξη πιθανής υγρασίας"
-                   : "Possible moisture exposure",
-                gr
-                        ? "Εντοπίστηκε μοτίβο συμπτωμάτων που σχετίζεται με υγρασία."
-                        : "Symptom pattern consistent with moisture exposure detected."
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Ένδειξη υγρασίας"
-                   : "Moisture exposure",
-                gr
-                        ? "Δεν εντοπίστηκαν σαφή σημάδια."
-                        : "No clear moisture indicators."
-        );
-    }
-
-    // ============================================================
     // STAGE D — FINAL CONFIDENCE
     // ============================================================
     int finalScore = symptomScore;
@@ -23973,8 +24163,6 @@ private void lab29DeviceAuthenticity() {
     }
 
     int authenticityScore = 100;
-
-    boolean moistureSuspicion = false;
 
     // ============================================================
     // BATTERY
@@ -24211,47 +24399,18 @@ private void lab29DeviceAuthenticity() {
     boolean instabilityPattern =
             p.getBoolean("lab28_instability_pattern", false);
 
-    int moistureScore = 0;
+int instabilityScore = 0;
 
-    if (sensorFlaps) moistureScore += 20;
-    if (radioInstability) moistureScore += 20;
-    if (thermalSpike) moistureScore += 15;
-    if (rebootPattern) moistureScore += 15;
-    if (instabilityPattern) moistureScore += 20;
+if (sensorFlaps) instabilityScore += 20;
+if (radioInstability) instabilityScore += 20;
+if (thermalSpike) instabilityScore += 15;
+if (rebootPattern) instabilityScore += 15;
+if (instabilityPattern) instabilityScore += 20;
 
-    if (lab14CollapseRisk || lab14SwellingRisk)
-        moistureScore += 10;
+if (lab14CollapseRisk || lab14SwellingRisk)
+    instabilityScore += 10;
 
     appendHtml("<br>");
-
-    logLabelValue(
-            gr ? "Δείκτης υγρασίας"
-                    : "Moisture index",
-            moistureScore + "/100"
-    );
-
-    if (moistureScore >= 50) {
-
-        moistureSuspicion = true;
-
-        logLabelWarnValue(
-                gr ? "Πιθανή υγρασία"
-                        : "Possible moisture",
-                gr
-                        ? "Εντοπίστηκε μοτίβο αστάθειας"
-                        : "Instability pattern detected"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Έλεγχος υγρασίας"
-                        : "Moisture",
-                gr
-                        ? "Δεν υπάρχουν ενδείξεις"
-                        : "No indication"
-        );
-    }
 
     // ============================================================
     // FINAL
@@ -24288,10 +24447,6 @@ else
                 authenticityScore + "/100 (" + level + ")"
         );
     }
-
-    p.edit()
-            .putBoolean("lab29_moisture_suspect", moistureSuspicion)
-            .apply();
 
     appendHtml("<br>");
     logOk(gr
@@ -24456,8 +24611,6 @@ String privacyFlag = colorFlagFromScore(privacyScore);
 // ------------------------------------------------------------
 // 9) AUTHENTICITY / REPAIR INDICATORS (LAB 29)
 // ------------------------------------------------------------
-boolean moistureDetected =
-        p.getBoolean("lab29_moisture_detected", false);
 
 boolean nonOemParts =
         p.getBoolean("lab29_non_oem_parts", false);
@@ -24474,13 +24627,6 @@ boolean batteryReplaced =
 appendHtml("<br>");
 logInfo(gr ? "Αυθεντικότητα / Επισκευές" : "Authenticity / Repairs");
 logLine();
-
-if (moistureDetected)
-    logLabelWarnValue(
-            gr ? "Υγρασία" : "Moisture",
-            gr ? "Ενδείξεις εισχώρησης υγρασίας"
-               : "Moisture ingress indicators detected"
-    );
 
 if (nonOemParts)
     logLabelWarnValue(
@@ -24510,8 +24656,7 @@ if (batteryReplaced)
                : "Battery replacement indicators detected"
     );
 
-if (!moistureDetected &&
-    !nonOemParts &&
+if (!nonOemParts &&
     !displayReplaced &&
     !cameraReplaced &&
     !batteryReplaced) {
@@ -25108,15 +25253,8 @@ logLine();
 
 boolean certificateWarning = false;
 
-// authenticity flags
-boolean moistureSuspect =
-        p.getBoolean("lab29_moisture_suspect", false);
-
 // instability indicators
 if (lab14CollapseRisk || lab14SwellingRisk)
-    certificateWarning = true;
-
-if (moistureSuspect)
     certificateWarning = true;
 
 if (hardwareRiskScore >= 60)
@@ -26467,9 +26605,6 @@ int manipulationScore = 0;
 boolean hwInstability =
         p.getBoolean("lab29_instability_pattern", false);
 
-boolean moistureIndicators =
-        p.getBoolean("lab29_moisture_indicators", false);
-
 // LAB30 authenticity indicators
 boolean nonOemParts =
         p.getBoolean("lab30_non_oem_parts", false);
@@ -26485,7 +26620,6 @@ boolean batteryReplaced =
 
 // scoring
 if (hwInstability) manipulationScore += 20;
-if (moistureIndicators) manipulationScore += 25;
 if (nonOemParts) manipulationScore += 20;
 if (displayReplaced) manipulationScore += 10;
 if (cameraReplaced) manipulationScore += 10;
