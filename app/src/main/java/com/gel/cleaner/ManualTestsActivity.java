@@ -14291,16 +14291,14 @@ private void lab14LogAging(
                 ? 0
                 : drainPercentPerHour;
 
-// 🔥 LOG (πάντα να φαίνεται)
+// 🔥 LOG
 logLabelValue(
         gr ? "Ρυθμός αποφόρτισης (ένδειξη φθοράς)"
            : "Drain (aging signal)",
         String.format(Locale.US, "%.1f%%/h", safeDrain)
 );
 
-float score = 0f;
-
-// ================= DRAIN =================
+// χρησιμοποιείς το ήδη υπάρχον score
 if (safeDrain > 45)
     score += 15;
 else if (safeDrain > 35)
