@@ -15206,6 +15206,7 @@ if (!Float.isNaN(voltageStart) &&
                     dtMs
             );
 }
+}
 
     float sagFiltered = sag;
 
@@ -15511,7 +15512,6 @@ if (!Float.isNaN(tempNowEngine)) {
 
         lab14TempPeak = tempNowEngine;
     }
-}
 }
 
 if (!Float.isNaN(tempStart) &&
