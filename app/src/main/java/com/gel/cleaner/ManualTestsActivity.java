@@ -15171,90 +15171,92 @@ if (!Float.isNaN(voltageStart) &&
 
 
     if (!Float.isNaN(sag) &&
-    !Float.isNaN(currentNow)) {
+        !Float.isNaN(currentNow)) {
 
-    float sagCheck = sag;
+        float sagCheck = sag;
 
-    if (!Float.isNaN(sagAvg[0])) {
-        sagCheck =
-                (sag + sagAvg[0]) / 2f;
-    }
+        if (!Float.isNaN(sagAvg[0])) {
+            sagCheck =
+                    (sag + sagAvg[0]) / 2f;
+        }
 
-    float currentAbs =
-            Math.abs(currentNow);
+        float currentAbs =
+                Math.abs(currentNow);
 
-    boolean lowSag =
-            sagCheck < 0.010f;
+        boolean lowSag =
+                sagCheck < 0.010f;
 
-    boolean lowCurrent =
-            currentAbs < 80f;
+        boolean lowCurrent =
+                currentAbs < 80f;
 
-    boolean noDrain =
-            drainMah < 1f;
+        boolean noDrain =
+                drainMah < 1f;
 
-    if (lowSag &&
-        lowCurrent &&
-        noDrain) {
+        if (lowSag &&
+            lowCurrent &&
+            noDrain) {
 
-        lab14_systemLimited[0] =
-                lab14DetectLimiter(
-                        voltageStart,
-                        voltageUnderLoad[0],
-                        startMah,
-                        endMah,
-                        tempStart,
-                        tempEnd,
-                        currentNow,
-                        dtMs
-                );
-    }
-    
-    float sagFiltered = sag;
+            lab14_systemLimited[0] =
+                    lab14DetectLimiter(
+                            voltageStart,
+                            voltageUnderLoad[0],
+                            startMah,
+                            endMah,
+                            tempStart,
+                            tempEnd,
+                            currentNow,
+                            dtMs
+                    );
+        }
 
-    if (!Float.isNaN(sagAvg[0])) {
-        sagFiltered =
-                (sag + sagAvg[0]) / 2f;
-    }
+        float sagFiltered = sag;
 
-    if (!Float.isNaN(sagFiltered) &&
-        sagFiltered < 0.005f) {
+        if (!Float.isNaN(sagAvg[0])) {
+            sagFiltered =
+                    (sag + sagAvg[0]) / 2f;
+        }
 
-        sagFiltered = Float.NaN;
-    }
+        if (!Float.isNaN(sagFiltered) &&
+            sagFiltered < 0.005f) {
 
-    if (!lab14_systemLimited[0] &&
-        !Float.isNaN(currentNow) &&
-        !Float.isNaN(sagFiltered)) {
+            sagFiltered = Float.NaN;
+        }
 
-        float currentAmp =
-                Math.abs(currentNow) / 1000f;
+        if (!lab14_systemLimited[0] &&
+            !Float.isNaN(currentNow) &&
+            !Float.isNaN(sagFiltered)) {
 
-        float sagCheck2 = sagFiltered;
+            float currentAmp =
+                    Math.abs(currentNow) / 1000f;
 
-        if (sagCheck2 < 0.005f)
-            sagCheck2 = Float.NaN;
+            float sagCheck2 = sagFiltered;
 
-        if (!Float.isNaN(sagCheck2) &&
-            currentAmp > 0.10f &&
-            currentAmp < 6f) {
+            if (sagCheck2 < 0.005f)
+                sagCheck2 = Float.NaN;
 
-            float esr =
-                    sagCheck2 / currentAmp;
+            if (!Float.isNaN(sagCheck2) &&
+                currentAmp > 0.10f &&
+                currentAmp < 6f) {
 
-            if (esr > 0.01f &&
-                esr < 0.40f) {
+                float esr =
+                        sagCheck2 / currentAmp;
 
-                estimatedESR = esr;
-                internalResistance[0] = esr;
+                if (esr > 0.01f &&
+                    esr < 0.40f) {
 
-                long irMilli =
-                        (long) (esr * 1000f);
+                    estimatedESR = esr;
+                    internalResistance[0] = esr;
 
-                idoctor.setInternalResistanceMilliOhm(irMilli);
+                    long irMilli =
+                            (long) (esr * 1000f);
+
+                    idoctor.setInternalResistanceMilliOhm(irMilli);
+                }
             }
         }
-    }
-}
+    } // ✅ ΚΛΕΙΝΕΙ ΤΟ if(!Float.isNaN(sag) && !Float.isNaN(currentNow))
+
+} // ✅ ΚΛΕΙΝΕΙ ΤΟ MAIN if(voltageStart & voltageUnderLoad)
 
 // ----------------------------------------------------
 // ENERGY EFFICIENCY
