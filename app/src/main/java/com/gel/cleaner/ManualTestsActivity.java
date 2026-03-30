@@ -16985,22 +16985,34 @@ lab14Running = false;
 lab14PopupShown = false;
 lab14AdvisoryShown = false;
 
-lab14FastDone = true;
-lab14FastPhase = false;
+} catch (Throwable t) {
 
+    lab14StopAllStress();
+
+    try {
+        counterText = null;
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    restoreBrightnessAndKeepOn();
+
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+
+} finally {
+
+    lab14FastDone = true;
+    lab14FastPhase = false;
 }
 
-private long estimateDrainFallback(
-        int percent,
-        int voltage,
-        long dtMs
-) {
+} // 🔴 ΚΛΕΙΝΕΙ ΤΟ METHOD lab14PostLoadAnalysis
 
-    if (percent <= 0) return 0;
 
-    return percent * 10L;
-}
-
+// ============================================================
+// STABLE VOLTAGE READ
+// ============================================================
 private float readStableBatteryVoltage() {
 
     iDoctorEngine idoctor =
@@ -17034,6 +17046,10 @@ private float readStableBatteryVoltage() {
     return Float.NaN;
 }
 
+
+// ============================================================
+// FAST THREAD
+// ============================================================
 private void startLab14FastThread() {
 
     new Thread(() -> {
@@ -17068,11 +17084,11 @@ private void startLab14FastThread() {
 
             stopCpuBurn();
 
-if (lab14Cancelled) {
-    lab14FastDone = true;
-    lab14FastPhase = false;
-    lab14Cancelled = true;
-}
+            if (lab14Cancelled) {
+                lab14FastDone = true;
+                lab14FastPhase = false;
+                return;
+            }
 
             // -------------------------
             // RECOVER
