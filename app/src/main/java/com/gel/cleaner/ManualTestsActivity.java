@@ -15004,7 +15004,7 @@ Lab14Engine.DrainResult drainResult =
 long drainMah = 0;
 double mahPerHour = 0;
 double drainPercentPerHour = 0;
-boolean validDrain = false;
+validDrain = false;
 
 if (drainResult != null && drainResult.valid) {
 
