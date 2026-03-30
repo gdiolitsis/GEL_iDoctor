@@ -14701,18 +14701,16 @@ private void lab14StopAllStress() {
 // ------------------------------------------------------------
 private boolean isCharging() {
 
+    // PRIMARY (engine)
     try {
-
         iDoctorEngine idoctor = iDoctorEngine.get(this);
-
         return idoctor.isChargingNowUnified();
+    } catch (Throwable ignore) {
+        // fallback συνεχίζει
+    }
 
-    } catch (Throwable ignore) {}
-
-    // fallback μόνο αν engine αποτύχει
-
+    // FALLBACK (system intent)
     try {
-
         IntentFilter f =
                 new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
@@ -14730,7 +14728,6 @@ private boolean isCharging() {
                 || status == BatteryManager.BATTERY_STATUS_FULL;
 
     } catch (Throwable ignore) {
-
         return false;
     }
 }
