@@ -13842,8 +13842,7 @@ lab14Cancelled = false;
 startLab14ProgressLoop();
 startLab14FastThread();
 
-} 
-catch (Throwable t) {
+} catch (Throwable t) {
 
     lab14StopAllStress();
     restoreBrightnessAndKeepOn();
@@ -14851,6 +14850,7 @@ private boolean lab14DetectLimiter(
     if (lowCurrent) flags++;
 
     return flags >= 3;
+}
 }
 
 private void lab14PostLoadAnalysis(
