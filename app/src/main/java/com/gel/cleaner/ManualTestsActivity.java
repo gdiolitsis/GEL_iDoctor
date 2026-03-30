@@ -15704,8 +15704,8 @@ if (validDrain &&
     !Float.isNaN(sag2[0]) &&
     !Float.isNaN(voltageRecovery[0])) {
 
-    float sagDiff =
-            Math.abs(sag1[0] - sag2[0]);
+    sagDiff =
+        Math.abs(sag1[0] - sag2[0]);
 
     float sagNorm =
             Math.min(1f, sagDiff / 0.25f);
