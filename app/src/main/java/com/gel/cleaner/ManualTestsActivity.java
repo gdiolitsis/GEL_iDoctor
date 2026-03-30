@@ -14851,7 +14851,6 @@ private boolean lab14DetectLimiter(
 
     return flags >= 3;
 }
-}
 
 private void lab14PostLoadAnalysis(
 
@@ -15172,45 +15171,44 @@ if (!Float.isNaN(voltageStart) &&
 
 
     if (!Float.isNaN(sag) &&
-        !Float.isNaN(currentNow)) {
+    !Float.isNaN(currentNow)) {
 
-        float sagCheck = sag;
+    float sagCheck = sag;
 
-        if (!Float.isNaN(sagAvg[0])) {
-            sagCheck =
-                    (sag + sagAvg[0]) / 2f;
-        }
+    if (!Float.isNaN(sagAvg[0])) {
+        sagCheck =
+                (sag + sagAvg[0]) / 2f;
+    }
 
-        float currentAbs =
-                Math.abs(currentNow);
+    float currentAbs =
+            Math.abs(currentNow);
 
-        boolean lowSag =
-                sagCheck < 0.010f;
+    boolean lowSag =
+            sagCheck < 0.010f;
 
-        boolean lowCurrent =
-                currentAbs < 80f;
+    boolean lowCurrent =
+            currentAbs < 80f;
 
-        boolean noDrain =
-                drainMah < 1f;
+    boolean noDrain =
+            drainMah < 1f;
 
-        if (lowSag &&
-    lowCurrent &&
-    noDrain) {
+    if (lowSag &&
+        lowCurrent &&
+        noDrain) {
 
-    lab14_systemLimited[0] =
-            lab14DetectLimiter(
-                    voltageStart,
-                    voltageUnderLoad[0],
-                    startMah,
-                    endMah,
-                    tempStart,
-                    tempEnd,
-                    currentNow,
-                    dtMs
-            );
-}
-}
-
+        lab14_systemLimited[0] =
+                lab14DetectLimiter(
+                        voltageStart,
+                        voltageUnderLoad[0],
+                        startMah,
+                        endMah,
+                        tempStart,
+                        tempEnd,
+                        currentNow,
+                        dtMs
+                );
+    }
+    
     float sagFiltered = sag;
 
     if (!Float.isNaN(sagAvg[0])) {
@@ -15224,49 +15222,36 @@ if (!Float.isNaN(voltageStart) &&
         sagFiltered = Float.NaN;
     }
 
-
     if (!lab14_systemLimited[0] &&
-    !Float.isNaN(currentNow) &&
-    !Float.isNaN(sagFiltered)) {
+        !Float.isNaN(currentNow) &&
+        !Float.isNaN(sagFiltered)) {
 
-    float currentAmp =
-            Math.abs(currentNow) / 1000f;
+        float currentAmp =
+                Math.abs(currentNow) / 1000f;
 
-    float sagCheck = sagFiltered;
+        float sagCheck2 = sagFiltered;
 
-    // reject fake sag
-    if (sagCheck < 0.005f)
-        sagCheck = Float.NaN;
+        if (sagCheck2 < 0.005f)
+            sagCheck2 = Float.NaN;
 
-    if (!Float.isNaN(sagCheck) &&
-        currentAmp > 0.10f &&
-        currentAmp < 6f) {
-        
-        float sagUse = sagCheck;
+        if (!Float.isNaN(sagCheck2) &&
+            currentAmp > 0.10f &&
+            currentAmp < 6f) {
 
-if (!Float.isNaN(sagAvg[0]) &&
-    sagAvg[0] > 0.005f) {
+            float esr =
+                    sagCheck2 / currentAmp;
 
-    sagUse =
-            (sagCheck + sagAvg[0]) / 2f;
-}
+            if (esr > 0.01f &&
+                esr < 0.40f) {
 
-        float esr =
-                sagCheck / currentAmp;
+                estimatedESR = esr;
+                internalResistance[0] = esr;
 
-        // realistic phone battery range
-        if (esr > 0.01f &&
-            esr < 0.40f) {
+                long irMilli =
+                        (long) (esr * 1000f);
 
-            estimatedESR = esr;
-            internalResistance[0] = esr;
-
-            long irMilli =
-                    (long) (esr * 1000f);
-
-            idoctor.setInternalResistanceMilliOhm(
-                    irMilli
-            );
+                idoctor.setInternalResistanceMilliOhm(irMilli);
+            }
         }
     }
 }
