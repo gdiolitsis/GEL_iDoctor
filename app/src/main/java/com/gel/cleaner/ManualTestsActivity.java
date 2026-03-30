@@ -16965,10 +16965,10 @@ lab14LogReliabilitySummary(
         confF
 );
 
-}); // 🔴 ΚΛΕΙΝΕΙ ΤΟ runOnUiThread
+}); // runOnUiThread
 
 // ------------------------------------------------
-// STOP
+// STOP (NORMAL EXIT)
 // ------------------------------------------------
 
 lab14StopAllStress();
@@ -16985,7 +16985,15 @@ lab14Running = false;
 lab14PopupShown = false;
 lab14AdvisoryShown = false;
 
+// ------------------------------------------------
+// END TRY
+// ------------------------------------------------
+
 } catch (Throwable t) {
+
+    // ------------------------------------------------
+    // STOP (ERROR EXIT)
+// ------------------------------------------------
 
     lab14StopAllStress();
 
@@ -17007,8 +17015,7 @@ lab14AdvisoryShown = false;
     lab14FastPhase = false;
 }
 
-} // 🔴 ΚΛΕΙΝΕΙ ΤΟ METHOD lab14PostLoadAnalysis
-
+} // 🔴 ΑΥΤΟ ΕΛΕΙΠΕ
 
 // ============================================================
 // STABLE VOLTAGE READ
