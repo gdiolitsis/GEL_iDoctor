@@ -16978,31 +16978,16 @@ try {
     lab14CleanupUI();
 } catch (Throwable ignore) {}
 
+restoreBrightnessAndKeepOn();
+
+lab14Cancelled = false;
 lab14Running = false;
 lab14PopupShown = false;
 lab14AdvisoryShown = false;
-lab14Cancelled = false;
 
-catch (Throwable t) {
+lab14FastDone = true;
+lab14FastPhase = false;
 
-    lab14StopAllStress();
-
-    try {
-        counterText = null;
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
-
-    restoreBrightnessAndKeepOn();
-
-    lab14Cancelled = true;
-    lab14Running = false;
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
-
-} finally {
-
-    lab14FastDone = true;
-    lab14FastPhase = false;
 }
 
 private long estimateDrainFallback(
