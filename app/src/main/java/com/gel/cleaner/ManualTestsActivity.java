@@ -1622,13 +1622,6 @@ private void showLab14ConditionCheck(Runnable startAction) {
     boolean cpuOk =
             Float.isNaN(cpuTemp) || cpuTemp < 60f;
 
-    boolean ok =
-            !chargingNow &&
-            !badBat &&
-            !badTemp &&
-            cpuOk;
-
-
     AlertDialog.Builder b =
             new AlertDialog.Builder(
                     this,
@@ -2232,7 +2225,7 @@ private boolean checkLab14BConditions() {
     // ============================================
 
     boolean badBat =
-            percent < 30 || percent > 70;
+        percent < 70 || percent > 90;
 
     boolean badTemp =
             !Float.isNaN(tempC) && tempC >= 38f;
@@ -2245,31 +2238,49 @@ private boolean checkLab14BConditions() {
     // ----------------------------------------------------
     // BATTERY %
     // ----------------------------------------------------
+    
+    if (badBat) {
 
-    if (percent < 70 || percent > 90) {
+    logWarn(gr
+            ? "Η μπαταρία πρέπει να είναι 70–90%."
+            : "Battery must be between 70–90%.");
 
-        logWarn(gr
-                ? "Η μπαταρία πρέπει να είναι 70–90%."
-                : "Battery must be between 70–90%.");
+    logLabelErrorValue(
+            gr ? "Τρέχον επίπεδο"
+               : "Current level",
+            percent + "%"
+    );
 
-        logLabelErrorValue(
-                gr ? "Τρέχον επίπεδο"
-                   : "Current level",
-                percent + "%"
-        );
+    return false;
+}
 
-        return false;
-    }
+if (chargingNow) {
 
-    // ----------------------------------------------------
-    // OK
-    // ----------------------------------------------------
+    logWarn(gr
+            ? "Η συσκευή φορτίζει."
+            : "Device is charging.");
 
-    logOk(gr
-            ? "Οι συνθήκες είναι κατάλληλες."
-            : "Conditions OK.");
+    return false;
+}
 
-    return ok;
+if (badTemp) {
+
+    logWarn(gr
+            ? "Υψηλή θερμοκρασία."
+            : "High temperature.");
+
+    return false;
+}
+
+// ----------------------------------------------------
+// OK
+// ----------------------------------------------------
+
+logOk(gr
+        ? "Οι συνθήκες είναι κατάλληλες."
+        : "Conditions OK.");
+
+return true;
 }
 
 // ============================================================
@@ -2282,52 +2293,52 @@ private void lab14BProtectionTest() {
     showLab14BAdvisory(() -> {
 
         appendHtml("<br>");
-        
-        startLab14BPopup(300000); // 5 min
 
-new Thread(() -> {
+        startLab14BPopup(300000);
 
-    boolean cpuThrottle = false;
-    boolean thermalLimit = false;
-    boolean powerLimit = false;
+        new Thread(() -> {
 
-    long cpuFreqStart = -1L;
-    long cpuFreqEnd = -1L;
+            boolean cpuThrottle = false;
+            boolean thermalLimit = false;
+            boolean powerLimit = false;
 
-    float cpuTempStart = Float.NaN;
-    float cpuTempEnd = Float.NaN;
+            long cpuFreqStart = -1L;
+            long cpuFreqEnd = -1L;
 
-    boolean[] systemLimited = new boolean[]{ false };
-    boolean validDrain = false;
+            float cpuTempStart = Float.NaN;
+            float cpuTempEnd = Float.NaN;
 
-    try {
+            boolean[] systemLimited = new boolean[]{ false };
+            boolean validDrain = false;
 
-        Lab14Engine engineThread =
-                new Lab14Engine(ManualTestsActivity.this);
+            try {
 
-        Lab14Engine.GelBatterySnapshot start =
-        lab14Engine.readSnapshot();
+                Lab14Engine engineThread =
+                        new Lab14Engine(ManualTestsActivity.this);
 
-        if (start == null) {
-            runOnUiThread(() ->
-                    logError(
-                            gr
-                                    ? "Αποτυχία ανάγνωσης μπαταρίας"
-                                    : "Battery read failed"
-                    )
-            );
-            return;
-        }
-        
-        startPercent = start.level;
-        startMahThread = start.chargeNowMah;
-        
-tempStart = getBatteryTempEngineSafe();
-if (Float.isNaN(tempStart) || tempStart <= 0f) {
-    tempStart = start.temperature;
-}
+                Lab14Engine.GelBatterySnapshot start =
+                        engineThread.readSnapshot();
 
-float vStart = getBatteryVoltageFiltered();
+                if (start == null) {
+                    runOnUiThread(() ->
+                            logError(
+                                    gr
+                                            ? "Αποτυχία ανάγνωσης μπαταρίας"
+                                            : "Battery read failed"
+                            )
+                    );
+                    return;
+                }
+
+                startPercent = start.level;
+                startMahThread = start.chargeNowMah;
+
+                tempStart = getBatteryTempEngineSafe();
+                if (Float.isNaN(tempStart) || tempStart <= 0f) {
+                    tempStart = start.temperature;
+                }
+
+                float vStart = getBatteryVoltageFiltered();
 
                 cpuFreqStart = readCpuFreq();
                 cpuTempStart = readCpuTempSafe2();
@@ -2337,97 +2348,89 @@ float vStart = getBatteryVoltageFiltered();
                                 ? "Εκτέλεση δοκιμής φορτίου..."
                                 : "Running load test...")
                 );
-                
+
                 try {
-                	
+
                     startCpuBurn_C_Mode();
                     startGpuStress();
                     startMemoryStress();
 
-long phaseStart = SystemClock.elapsedRealtime();
-boolean hardPhase = true;
+                    long phaseStart = SystemClock.elapsedRealtime();
+                    boolean hardPhase = true;
 
-while (!lab14Cancelled) {
+                    while (!lab14Cancelled && !Thread.currentThread().isInterrupted()) {
 
-    long elapsed =
-            SystemClock.elapsedRealtime() - phaseStart;
+                        long elapsed =
+                                SystemClock.elapsedRealtime() - phaseStart;
 
-    // ----------------------------------
-    // SWITCH → HARD → SOFT
-    // ----------------------------------
+                        final long elapsedF = elapsed;
 
-    if (elapsed > 60_000 && hardPhase) {
+                        runOnUiThread(() -> {
 
-        hardPhase = false;
+                            float progress =
+                                    Math.min(1f, elapsedF / 300000f);
 
-        runOnUiThread(() ->
-        
-                logWarn(gr
-                        ? "Μετάβαση σε ήπια φάση"
-                        : "Switching to soft phase")
-        );
+                            updateLab14Progress(progress);
 
-        // 🔻 ΜΕΙΩΝΕ LOAD
-        try { stopCpuBurn(); } catch (Throwable ignore) {}
-        try { stopGpuStress(); } catch (Throwable ignore) {}
-        try { stopMemoryStress(); } catch (Throwable ignore) {}
-    }
+                            updateLab14Timer(
+                                    Math.max(0, (int) ((300000 - elapsedF) / 1000))
+                            );
 
-    // ----------------------------------
-    // HARD PHASE
-    // ----------------------------------
+                        });
 
-    if (hardPhase) {
+                        if (elapsed > 60_000 && hardPhase) {
 
-        startCpuBurn_C_Mode();
-        startGpuStress();
-        startMemoryStress();
+                            hardPhase = false;
 
-    }
+                            runOnUiThread(() ->
+                                    logWarn(gr
+                                            ? "Μετάβαση σε ήπια φάση"
+                                            : "Switching to soft phase")
+                            );
 
-    // ----------------------------------
-    // SOFT PHASE
-    // ----------------------------------
+                            try { stopCpuBurn(); } catch (Throwable ignore) {}
+                            try { stopGpuStress(); } catch (Throwable ignore) {}
+                            try { stopMemoryStress(); } catch (Throwable ignore) {}
+                        }
 
-    else {
+                        if (hardPhase) {
 
-    // 🔻 πάντα καθαρίζεις πριν αλλάξεις load
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
+                            startCpuBurn_C_Mode();
+                            startGpuStress();
+                            startMemoryStress();
+                        } else {
 
-    float cpuTemp = readCpuTempSafe2();
+                            try { stopCpuBurn(); } catch (Throwable ignore) {}
+                            try { stopGpuStress(); } catch (Throwable ignore) {}
+                            try { stopMemoryStress(); } catch (Throwable ignore) {}
 
-    if (!Float.isNaN(cpuTemp)) {
+                            float cpuTemp = readCpuTempSafe2();
 
-        if (cpuTemp < 45f) {
+                            if (!Float.isNaN(cpuTemp)) {
 
-            startCpuBurn_C_Mode();
+                                if (cpuTemp < 45f) {
 
-        } else if (cpuTemp < 55f) {
+                                    startCpuBurn_C_Mode();
 
-            startCpuBurn_Light(); // 🧊 light
+                                } else if (cpuTemp < 55f) {
 
-        } else {
+                                    startCpuBurn_Light();
 
-            // 🛑 αφήνεις CPU να “αναπνεύσει”
-            runOnUiThread(() ->
-                    logWarn(gr
-                            ? "Υψηλή θερμοκρασία — μείωση φόρτου"
-                            : "High temperature — reducing load")
-            );
-        }
-    }
-}
+                                } else {
 
-    // ----------------------------------
-    // TOTAL TIME = 5 MIN
-    // ----------------------------------
+                                    runOnUiThread(() ->
+                                            logWarn(gr
+                                                    ? "Υψηλή θερμοκρασία — μείωση φόρτου"
+                                                    : "High temperature — reducing load")
+                                    );
+                                }
+                            }
+                        }
 
-    if (elapsed > 300_000) break;
+                        if (elapsed > 300_000) break;
 
-    SystemClock.sleep(500);
-}
+                        SystemClock.sleep(500);
+                    }
 
                 } catch (Throwable ignore) {
 
@@ -2438,67 +2441,58 @@ while (!lab14Cancelled) {
                     try { stopMemoryStress(); } catch (Throwable ignore) {}
                 }
 
-iDoctorEngine eng2 =
-        iDoctorEngine.get(ManualTestsActivity.this);
+                iDoctorEngine eng2 =
+                        iDoctorEngine.get(ManualTestsActivity.this);
 
-iDoctorEngine.FullSnapshot end =
-        eng2.readFullSnapshot();
+                iDoctorEngine.FullSnapshot end =
+                        eng2.readFullSnapshot();
 
-if (end == null) {
-    logError(
-            gr
-                    ? "Αποτυχία τελικής ανάγνωσης μπαταρίας"
-                    : "Final battery read failed"
-    );
-    return;
-}
+                if (end == null) {
+                    logError(
+                            gr
+                                    ? "Αποτυχία τελικής ανάγνωσης μπαταρίας"
+                                    : "Final battery read failed"
+                    );
+                    return;
+                }
 
-long endMah = end.battery.chargeNowMah;
+                long endMah = end.battery.chargeNowMah;
 
-float tempEnd = getBatteryTempEngineSafe();
+                float tempEnd = getBatteryTempEngineSafe();
 
-if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
-    tempEnd = end.battery.batteryTempC;
-}
+                if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
+                    tempEnd = end.battery.batteryTempC;
+                }
 
-float vEnd = getBatteryVoltageFiltered();
+                float vEnd = getBatteryVoltageFiltered();
 
-cpuFreqEnd = readCpuFreq();
-cpuTempEnd = readCpuTempSafe2();
+                cpuFreqEnd = readCpuFreq();
+                cpuTempEnd = readCpuTempSafe2();
 
-validDrain = start.chargeNowMah > 0
-        && endMah > 0
-        && (start.chargeNowMah - endMah) > 0;
+                validDrain = start.chargeNowMah > 0
+                        && endMah > 0
+                        && (start.chargeNowMah - endMah) > 0;
 
-// ----------------------------------------------------
-// SYSTEM LIMITER DETECTION
-// ----------------------------------------------------
-if (!Float.isNaN(tempStart)
-        && !Float.isNaN(tempEnd)
-        && (tempEnd - tempStart) < 1.0f) {
+                if (!Float.isNaN(tempStart)
+                        && !Float.isNaN(tempEnd)
+                        && (tempEnd - tempStart) < 1.0f) {
 
-    systemLimited[0] = true;
-}
+                    systemLimited[0] = true;
+                }
 
-if (!Float.isNaN(vStart)
-        && !Float.isNaN(vEnd)
-        && vEnd > (vStart - 0.01f)) {
+                if (!Float.isNaN(vStart)
+                        && !Float.isNaN(vEnd)
+                        && vEnd > (vStart - 0.01f)) {
 
-    systemLimited[0] = true;
-}
+                    systemLimited[0] = true;
+                }
 
-                // ----------------------------------------------------
-                // CPU THROTTLE DETECTION
-                // ----------------------------------------------------
                 if (cpuFreqStart > 0L && cpuFreqEnd > 0L) {
                     if (cpuFreqEnd < (long) (cpuFreqStart * 0.7)) {
                         cpuThrottle = true;
                     }
                 }
 
-                // ----------------------------------------------------
-                // THERMAL LIMIT DETECTION
-                // ----------------------------------------------------
                 if (!Float.isNaN(cpuTempStart)
                         && !Float.isNaN(cpuTempEnd)) {
 
@@ -2507,9 +2501,6 @@ if (!Float.isNaN(vStart)
                     }
                 }
 
-                // ----------------------------------------------------
-                // POWER LIMIT DETECTION
-                // ----------------------------------------------------
                 if (validDrain && systemLimited[0]) {
                     powerLimit = true;
                 }
@@ -2531,18 +2522,20 @@ if (!Float.isNaN(vStart)
                 final float cpuTempStartF = cpuTempStart;
                 final float cpuTempEndF = cpuTempEnd;
 
+                lab14Cancelled = true;
+
                 runOnUiThread(() -> {
 
-                    // βασικό συμπέρασμα protection
-                    Lab14BatteryProtectionCheck(
-        gr,
-        new boolean[]{ systemLimitedF },
-        validDrainF
-);
+                    hideLab14Popup();
 
-                    // ------------------------------------------------
+                    // RESULT
+                    Lab14BatteryProtectionCheck(
+                            gr,
+                            new boolean[]{ systemLimitedF },
+                            validDrainF
+                    );
+
                     // PRO DETAILS
-                    // ------------------------------------------------
                     logLabelValue(
                             gr ? "Μεταβολή φόρτισης" : "Charge delta",
                             String.format(
@@ -2576,100 +2569,35 @@ if (!Float.isNaN(vStart)
                         );
                     }
 
-                    if (cpuFreqStartF > 0L && cpuFreqEndF > 0L) {
-                        logLabelValue(
-                                gr ? "Συχνότητα CPU" : "CPU frequency",
-                                String.format(
-                                        Locale.US,
-                                        "%d → %d",
-                                        cpuFreqStartF,
-                                        cpuFreqEndF
-                                )
-                        );
+                    if (cpuThrottleF) {
+                        logOk(gr
+                                ? "Ενεργοποιήθηκε περιορισμός CPU."
+                                : "CPU limiter activated.");
+                    } else {
+                        logWarn(gr
+                                ? "Δεν ενεργοποιήθηκε περιορισμός CPU."
+                                : "CPU limiter not detected.");
                     }
 
-                    if (!Float.isNaN(cpuTempStartF) && !Float.isNaN(cpuTempEndF)) {
-                        logLabelValue(
-                                gr ? "Θερμοκρασία CPU" : "CPU temperature",
-                                String.format(
-                                        Locale.US,
-                                        "%.1f°C → %.1f°C",
-                                        cpuTempStartF,
-                                        cpuTempEndF
-                                )
-                        );
+                    if (thermalLimitF) {
+                        logOk(gr
+                                ? "Ενεργοποιήθηκε θερμική προστασία."
+                                : "Thermal protection activated.");
+                    } else {
+                        logWarn(gr
+                                ? "Δεν ενεργοποιήθηκε θερμική προστασία."
+                                : "Thermal limiter not detected.");
                     }
 
-// ------------------------------------------------
-// CPU LIMITER
-// ------------------------------------------------
-
-if (cpuThrottleF) {
-
-    logOk(gr
-            ? "Ενεργοποιήθηκε περιορισμός CPU."
-            : "CPU limiter activated.");
-
-} else {
-
-    logWarn(gr
-            ? "Δεν ενεργοποιήθηκε περιορισμός CPU."
-            : "CPU limiter not detected.");
-}
-
-// ------------------------------------------------
-// THERMAL LIMITER
-// ------------------------------------------------
-
-if (thermalLimitF) {
-
-    logOk(gr
-            ? "Ενεργοποιήθηκε θερμική προστασία."
-            : "Thermal protection activated.");
-
-} else {
-
-    logWarn(gr
-            ? "Δεν ενεργοποιήθηκε θερμική προστασία."
-            : "Thermal limiter not detected.");
-}
-
-// ------------------------------------------------
-// POWER LIMITER
-// ------------------------------------------------
-
-if (powerLimitF) {
-
-    logOk(gr
-            ? "Ενεργοποιήθηκε περιορισμός ισχύος."
-            : "Power limiter activated.");
-
-} else {
-
-    logWarn(gr
-            ? "Δεν ενεργοποιήθηκε περιορισμός ισχύος."
-            : "Power limiter not detected.");
-}
-
-// 🔴 END OF 14B TEST
-lab14Cancelled = true;
-                    
-// ------------------------------------------------------------
-// STORE LAB14B RESULT (for LAB17 / LAB30 / LAB31)
-// ------------------------------------------------------------
-try {
-
-    SharedPreferences p =
-            getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
-
-    p.edit()
-        .putBoolean("lab14b_system_limited", systemLimitedF)
-        .putBoolean("lab14b_valid_drain", validDrainF)
-        .putLong("lab14b_ts", System.currentTimeMillis())
-        .putLong("lab14b_elapsed", SystemClock.elapsedRealtime())
-        .apply();
-
-} catch (Throwable ignore) {}
+                    if (powerLimitF) {
+                        logOk(gr
+                                ? "Ενεργοποιήθηκε περιορισμός ισχύος."
+                                : "Power limiter activated.");
+                    } else {
+                        logWarn(gr
+                                ? "Δεν ενεργοποιήθηκε περιορισμός ισχύος."
+                                : "Power limiter not detected.");
+                    }
 
                     appendHtml("<br>");
                     logOk(gr
@@ -2680,17 +2608,22 @@ try {
 
             } catch (Throwable t) {
 
+                lab14Cancelled = true;
+
                 try { stopCpuBurn(); } catch (Throwable ignore) {}
                 try { stopGpuStress(); } catch (Throwable ignore) {}
                 try { stopMemoryStress(); } catch (Throwable ignore) {}
 
-                runOnUiThread(() ->
-                        logError(
-                                gr
-                                        ? "Σφάλμα test"
-                                        : "Test error"
-                        )
-                );
+                runOnUiThread(() -> {
+
+                    hideLab14Popup();
+
+                    logError(
+                            gr
+                                    ? "Σφάλμα test"
+                                    : "Test error"
+                    );
+                });
             }
 
         }).start();
@@ -2698,6 +2631,7 @@ try {
     });
 
 }
+
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (FINAL GEL STYLE)
@@ -2948,9 +2882,9 @@ private void startCpuBurnLimitedThreads(int threads) {
 
         new Thread(() -> {
 
-            while (!lab14Cancelled) {
-                double x = Math.sin(System.nanoTime());
-            }
+            while (!lab14Cancelled && !Thread.currentThread().isInterrupted()) {
+    double x = Math.sin(System.nanoTime());
+}
 
         }).start();
     }
@@ -2962,71 +2896,39 @@ private void startLab14BPopup(long durationMs) {
 
     final boolean gr = AppLang.isGreek(this);
 
-    // ----------------------------------
-    // HEADER
-    // ----------------------------------
-    runOnUiThread(() -> {
+    // 🔹 δείχνεις το ίδιο popup του LAB14
+    runOnUiThread(() -> showLab14Popup());
 
-        appendHtml("<br>");
-        logLine();
-
-        logInfo(
-                gr
-                        ? "LAB 14B — Δοκιμή προστασίας μπαταρίας"
-                        : "LAB 14B — Battery protection test"
-        );
-
-        logLine();
-    });
-
-    // ----------------------------------
-    // LOOP THREAD
-    // ----------------------------------
     new Thread(() -> {
 
         long start = SystemClock.elapsedRealtime();
 
-        while (!lab14Cancelled) {
+        while (!lab14Cancelled && !Thread.currentThread().isInterrupted()) {
 
             long elapsed =
                     SystemClock.elapsedRealtime() - start;
 
             final long elapsedF = elapsed;
-            final int secondsF =
-                    (int) ((durationMs - elapsed) / 1000);
 
-            // ----------------------------------
-            // UPDATE ~1 φορά το δευτερόλεπτο
-            // ----------------------------------
-            if (elapsed % 1000 < 500) {
+            runOnUiThread(() -> {
 
-                runOnUiThread(() -> {
+                float progress =
+                        Math.min(1f, elapsedF / (float) durationMs);
 
-                    logLabelValue(
-                            gr ? "Πρόοδος δοκιμής" : "Test progress",
-                            String.format(
-                                    Locale.US,
-                                    "%d / %d sec",
-                                    (int) (elapsedF / 1000),
-                                    (int) (durationMs / 1000)
-                            )
-                    );
+                updateLab14Progress(progress);
 
-                    appendLog(
-                            "TIMER",
-                            secondsF + "s"
-                    );
+                updateLab14Timer(
+                        Math.max(0, (int) ((durationMs - elapsedF) / 1000))
+                );
+            });
 
-                });
-            }
-
-            // ----------------------------------
-            // EXIT
-            // ----------------------------------
             if (elapsed >= durationMs) break;
 
             SystemClock.sleep(500);
         }
+
+        // 🔴 κλείσιμο popup αν δεν έχει ήδη κλείσει
+        runOnUiThread(() -> hideLab14Popup());
 
     }).start();
 }
