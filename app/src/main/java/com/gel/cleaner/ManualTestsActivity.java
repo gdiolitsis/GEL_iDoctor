@@ -2391,7 +2391,10 @@ while (!lab14Cancelled) {
 
     else {
 
-        startCpuBurn_Light(); // 👉 πρέπει να έχεις light mode
+        // SOFT phase → μόνο CPU
+startCpuBurn_C_Mode();
+stopGpuStress();
+stopMemoryStress();
     }
 
     // ----------------------------------
@@ -2918,16 +2921,28 @@ private void startLab14BPopup(long durationMs) {
 
     lab14Cancelled = false;
 
+    final boolean gr = AppLang.isGreek(this);
+
+    // ----------------------------------
+    // HEADER
+    // ----------------------------------
     runOnUiThread(() -> {
 
-        showLab14PopupUI( // 👉 ΧΡΗΣΙΜΟΠΟΙΕΙΣ το ίδιο UI του 14
-                AppLang.isGreek(this)
-                        ? "Δοκιμή προστασίας μπαταρίας (14B)"
-                        : "Battery protection test (14B)"
+        appendHtml("<br>");
+        logLine();
+
+        logInfo(
+                gr
+                        ? "LAB 14B — Δοκιμή προστασίας μπαταρίας"
+                        : "LAB 14B — Battery protection test"
         );
 
+        logLine();
     });
 
+    // ----------------------------------
+    // LOOP THREAD
+    // ----------------------------------
     new Thread(() -> {
 
         long start = SystemClock.elapsedRealtime();
@@ -2937,28 +2952,42 @@ private void startLab14BPopup(long durationMs) {
             long elapsed =
                     SystemClock.elapsedRealtime() - start;
 
-            float progress =
-                    Math.min(1f, (float) elapsed / durationMs);
-
-            int secondsLeft =
+            final long elapsedF = elapsed;
+            final int secondsF =
                     (int) ((durationMs - elapsed) / 1000);
 
-            runOnUiThread(() -> {
+            // ----------------------------------
+            // UPDATE ~1 φορά το δευτερόλεπτο
+            // ----------------------------------
+            if (elapsed % 1000 < 500) {
 
-                updateLab14Progress(progress); // ίδιο progress bar
+                runOnUiThread(() -> {
 
-                updateLab14Timer(
-                        secondsLeft
-                );
+                    logLabelValue(
+                            gr ? "Πρόοδος δοκιμής" : "Test progress",
+                            String.format(
+                                    Locale.US,
+                                    "%d / %d sec",
+                                    (int) (elapsedF / 1000),
+                                    (int) (durationMs / 1000)
+                            )
+                    );
 
-            });
+                    appendLog(
+                            "TIMER",
+                            secondsF + "s"
+                    );
 
+                });
+            }
+
+            // ----------------------------------
+            // EXIT
+            // ----------------------------------
             if (elapsed >= durationMs) break;
 
             SystemClock.sleep(500);
         }
-
-        runOnUiThread(() -> hideLab14PopupUI());
 
     }).start();
 }
