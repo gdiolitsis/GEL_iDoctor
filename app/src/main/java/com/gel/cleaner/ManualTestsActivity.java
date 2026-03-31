@@ -2282,6 +2282,8 @@ private void lab14BProtectionTest() {
     showLab14BAdvisory(() -> {
 
         appendHtml("<br>");
+        
+        startLab14BPopup(300000); // 5 min
 
 new Thread(() -> {
 
@@ -2337,11 +2339,69 @@ float vStart = getBatteryVoltageFiltered();
                 );
                 
                 try {
+                	
                     startCpuBurn_C_Mode();
                     startGpuStress();
                     startMemoryStress();
 
-                    SystemClock.sleep(20000);
+long phaseStart = SystemClock.elapsedRealtime();
+boolean hardPhase = true;
+
+while (!lab14Cancelled) {
+
+    long elapsed =
+            SystemClock.elapsedRealtime() - phaseStart;
+
+    // ----------------------------------
+    // SWITCH → HARD → SOFT
+    // ----------------------------------
+
+    if (elapsed > 60_000 && hardPhase) {
+
+        hardPhase = false;
+
+        runOnUiThread(() ->
+        
+                logWarn(gr
+                        ? "Μετάβαση σε ήπια φάση"
+                        : "Switching to soft phase")
+        );
+
+        // 🔻 ΜΕΙΩΝΕ LOAD
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+    }
+
+    // ----------------------------------
+    // HARD PHASE
+    // ----------------------------------
+
+    if (hardPhase) {
+
+        startCpuBurn_C_Mode();
+        startGpuStress();
+        startMemoryStress();
+
+    }
+
+    // ----------------------------------
+    // SOFT PHASE
+    // ----------------------------------
+
+    else {
+
+        startCpuBurn_Light(); // 👉 πρέπει να έχεις light mode
+    }
+
+    // ----------------------------------
+    // TOTAL TIME = 5 MIN
+    // ----------------------------------
+
+    if (elapsed > 300_000) break;
+
+    SystemClock.sleep(500);
+}
 
                 } catch (Throwable ignore) {
 
@@ -2564,6 +2624,9 @@ if (powerLimitF) {
             ? "Δεν ενεργοποιήθηκε περιορισμός ισχύος."
             : "Power limiter not detected.");
 }
+
+// 🔴 END OF 14B TEST
+lab14Cancelled = true;
                     
 // ------------------------------------------------------------
 // STORE LAB14B RESULT (for LAB17 / LAB30 / LAB31)
@@ -2845,6 +2908,59 @@ btnContinue.setOnClickListener(v -> {
         onContinue.run();
 
 });
+}
+
+private void startCpuBurn_Light() {
+    startCpuBurnLimitedThreads(1); // ή 2 threads max
+}
+
+private void startLab14BPopup(long durationMs) {
+
+    lab14Cancelled = false;
+
+    runOnUiThread(() -> {
+
+        showLab14PopupUI( // 👉 ΧΡΗΣΙΜΟΠΟΙΕΙΣ το ίδιο UI του 14
+                AppLang.isGreek(this)
+                        ? "Δοκιμή προστασίας μπαταρίας (14B)"
+                        : "Battery protection test (14B)"
+        );
+
+    });
+
+    new Thread(() -> {
+
+        long start = SystemClock.elapsedRealtime();
+
+        while (!lab14Cancelled) {
+
+            long elapsed =
+                    SystemClock.elapsedRealtime() - start;
+
+            float progress =
+                    Math.min(1f, (float) elapsed / durationMs);
+
+            int secondsLeft =
+                    (int) ((durationMs - elapsed) / 1000);
+
+            runOnUiThread(() -> {
+
+                updateLab14Progress(progress); // ίδιο progress bar
+
+                updateLab14Timer(
+                        secondsLeft
+                );
+
+            });
+
+            if (elapsed >= durationMs) break;
+
+            SystemClock.sleep(500);
+        }
+
+        runOnUiThread(() -> hideLab14PopupUI());
+
+    }).start();
 }
 
 // ------------------------------------------------------------
