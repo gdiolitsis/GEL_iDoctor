@@ -2186,9 +2186,6 @@ private void lab14LogPartialMode(
 // ============================================================
 // LAB 14B — CONDITIONS CHECK (SYSTEM PROTECTION TEST)
 // ============================================================
-// ============================================================
-// LAB 14B — CONDITIONS CHECK (SYSTEM PROTECTION TEST)
-// ============================================================
 private boolean checkLab14BConditions() {
 
     final boolean gr = AppLang.isGreek(this);
@@ -2287,6 +2284,9 @@ private boolean checkLab14BConditions() {
 // 1 min hard stress  -> protection check
 // 4 min soft stress  -> battery duration estimate
 // ============================================================
+// ============================================================
+// LAB 14B — SYSTEM BATTERY PROTECTION TEST
+// ============================================================
 private void lab14BProtectionTest() {
 
     final boolean gr = AppLang.isGreek(this);
@@ -2322,7 +2322,6 @@ private void lab14BProtectionTest() {
                     idoctor.readBatterySnapshotLab();
 
             if (snap0 == null || snap0.chargeNowMah <= 0) {
-
                 logError(gr
                         ? "Αποτυχία αρχικής ανάγνωσης μπαταρίας"
                         : "Initial battery snapshot failed");
@@ -2349,7 +2348,6 @@ private void lab14BProtectionTest() {
             startVolt[0] = getBatteryVoltageFiltered();
 
         } catch (Throwable t) {
-
             logError(gr
                     ? "Αποτυχία αρχικής προετοιμασίας LAB 14B"
                     : "LAB 14B initial setup failed");
@@ -2362,7 +2360,7 @@ private void lab14BProtectionTest() {
         lab14BatteryHealthStressTest_REAL();
 
         // ------------------------------------------------------------
-        // SNAPSHOT στο 1ο λεπτό = τέλος hard / αρχή soft
+        // SNAPSHOT στο 1ο λεπτό
         // ------------------------------------------------------------
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
@@ -2385,10 +2383,10 @@ private void lab14BProtectionTest() {
 
             } catch (Throwable ignore) {}
 
-        }, 60000); // 1 λεπτό hard
+        }, 60000);
 
         // ------------------------------------------------------------
-        // ΤΕΛΙΚΟ RESULT στο τέλος των 5 λεπτών
+        // FINAL RESULT
         // ------------------------------------------------------------
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
@@ -2398,11 +2396,9 @@ private void lab14BProtectionTest() {
                         idoctor.readBatterySnapshotLab();
 
                 if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
-
                     logError(gr
                             ? "Αποτυχία τελικής ανάγνωσης LAB 14B"
                             : "LAB 14B final snapshot failed");
-                    isLab14BMode = false;
                     return;
                 }
 
@@ -2415,97 +2411,28 @@ private void lab14BProtectionTest() {
 
                 endVolt[0] = getBatteryVoltageFiltered();
 
-                // ----------------------------------------------------
-                // PROTECTION RESULT (1 λεπτό hard)
-                // ----------------------------------------------------
-                long hardDeltaMah = -1L;
-                if (startMah[0] > 0 && softStartMah[0] > 0) {
-                    hardDeltaMah = Math.max(0L, startMah[0] - softStartMah[0]);
-                }
+                // =========================
+                // CALCULATIONS
+                // =========================
 
-                float hardVoltDrop = Float.NaN;
-                if (!Float.isNaN(startVolt[0]) && !Float.isNaN(softStartVolt[0])) {
-                    hardVoltDrop = startVolt[0] - softStartVolt[0];
-                }
-
-                float hardTempRise = Float.NaN;
-                if (!Float.isNaN(startTemp[0]) && !Float.isNaN(softStartTemp[0])) {
-                    hardTempRise = softStartTemp[0] - startTemp[0];
-                }
-
-                boolean cpuProtectionDetected =
-                        !Float.isNaN(hardTempRise) && hardTempRise >= 3.0f;
-
-                boolean thermalProtectionDetected =
-                        !Float.isNaN(hardTempRise) && hardTempRise >= 5.0f;
-
-                boolean powerLimiterDetected =
-                        (hardDeltaMah >= 0 && hardDeltaMah <= 15)
-                                || (!Float.isNaN(hardVoltDrop) && hardVoltDrop < 0.02f);
-
-                boolean systemProtectionDetected =
-                        cpuProtectionDetected
-                                || thermalProtectionDetected
-                                || powerLimiterDetected
-                                || lab14_systemLimited[0];
-
-                // ----------------------------------------------------
-                // BATTERY DURATION RESULT (4 λεπτά soft)
-                // ----------------------------------------------------
                 long softDeltaMah = -1L;
                 if (softStartMah[0] > 0 && endMah[0] > 0) {
                     softDeltaMah = Math.max(0L, softStartMah[0] - endMah[0]);
                 }
 
-                float estimatedHours = Float.NaN;
                 float perHour = Float.NaN;
+                float estimatedHours = Float.NaN;
 
                 if (softDeltaMah > 0 && baselineMah[0] > 0) {
-
-                    float softMinutes = 4f;
-
-                    perHour = (softDeltaMah / softMinutes) * 60f;
-
+                    perHour = (softDeltaMah / 4f) * 60f;
                     if (perHour > 0f) {
                         estimatedHours = baselineMah[0] / perHour;
                     }
                 }
 
-                // ----------------------------------------------------
+                // =========================
                 // LOGS
-                // ----------------------------------------------------
-                appendHtml("<br>");
-                logLine();
-
-                logOk(gr
-                        ? "Αποτέλεσμα προστασίας συστήματος"
-                        : "System protection result");
-
-                logLine();
-
-                logLabelValue(
-                        gr ? "CPU προστασία" : "CPU protection",
-                        cpuProtectionDetected ? (gr ? "ΝΑΙ" : "YES")
-                                              : (gr ? "ΟΧΙ" : "NO")
-                );
-
-                logLabelValue(
-                        gr ? "Θερμική προστασία" : "Thermal protection",
-                        thermalProtectionDetected ? (gr ? "ΝΑΙ" : "YES")
-                                                  : (gr ? "ΟΧΙ" : "NO")
-                );
-
-                logLabelValue(
-                        gr ? "Περιορισμός ισχύος" : "Power limiter",
-                        powerLimiterDetected ? (gr ? "ΝΑΙ" : "YES")
-                                             : (gr ? "ΟΧΙ" : "NO")
-                );
-
-                logLabelValue(
-                        gr ? "Γενική προστασία συστήματος" : "System protection",
-                        systemProtectionDetected ? (gr ? "ΕΝΕΡΓΗ" : "ACTIVE")
-                                                 : (gr ? "ΔΕΝ ΑΝΙΧΝΕΥΘΗΚΕ" : "NOT DETECTED")
-                );
+                // =========================
 
                 appendHtml("<br>");
                 logLine();
@@ -2516,82 +2443,23 @@ private void lab14BProtectionTest() {
 
                 logLine();
 
-                if (softDeltaMah > 0 && !Float.isNaN(perHour) && !Float.isNaN(estimatedHours)) {
+                if (!Float.isNaN(perHour) && !Float.isNaN(estimatedHours)) {
 
                     logLabelValue(
-                            gr ? "Κατανάλωση soft χρήσης" : "Soft usage consumption",
-                            String.format(
-                                    Locale.US,
-                                    "%.0f mAh/h",
-                                    perHour
-                            )
+                            gr ? "Κατανάλωση" : "Consumption",
+                            String.format(Locale.US, "%.0f mAh/h", perHour)
                     );
 
                     logLabelValue(
-                            gr ? "Εκτιμώμενη διάρκεια" : "Estimated duration",
-                            String.format(
-                                    Locale.US,
-                                    "%.1f %s",
-                                    estimatedHours,
-                                    gr ? "ώρες" : "hours"
-                            )
+                            gr ? "Διάρκεια" : "Duration",
+                            String.format(Locale.US, "%.1f ώρες", estimatedHours)
                     );
 
                 } else {
 
                     logWarn(gr
-                            ? "Δεν κατέστη δυνατή η εκτίμηση διάρκειας."
-                            : "Battery duration estimation unavailable.");
-                }
-
-                // ----------------------------------------------------
-                // EXTRA INFO (μόνο αφού εκπληρωθεί ο βασικός σκοπός)
-                // ----------------------------------------------------
-                appendHtml("<br>");
-                logLine();
-
-                logOk(gr
-                        ? "Επιπλέον πληροφορίες"
-                        : "Additional information");
-
-                logLine();
-
-                if (!Float.isNaN(hardVoltDrop)) {
-                    logLabelValue(
-                            gr ? "Πτώση τάσης στο hard λεπτό" : "Hard-minute voltage drop",
-                            String.format(Locale.US, "%.3f V", hardVoltDrop)
-                    );
-                }
-
-                if (!Float.isNaN(hardTempRise)) {
-                    logLabelValue(
-                            gr ? "Άνοδος θερμοκρασίας στο hard λεπτό" : "Hard-minute temperature rise",
-                            String.format(Locale.US, "%.1f°C", hardTempRise)
-                    );
-                }
-
-                if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
-                    logLabelValue(
-                            gr ? "Συνολική μεταβολή θερμοκρασίας" : "Total temperature change",
-                            String.format(
-                                    Locale.US,
-                                    "%.1f°C → %.1f°C",
-                                    startTemp[0],
-                                    endTemp[0]
-                            )
-                    );
-                }
-
-                if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
-                    logLabelValue(
-                            gr ? "Συνολική μεταβολή τάσης" : "Total voltage change",
-                            String.format(
-                                    Locale.US,
-                                    "%.3f V → %.3f V",
-                                    startVolt[0],
-                                    endVolt[0]
-                            )
-                    );
+                            ? "Αδυναμία εκτίμησης"
+                            : "Estimation failed");
                 }
 
                 logLine();
@@ -2607,10 +2475,9 @@ private void lab14BProtectionTest() {
                 isLab14BMode = false;
             }
 
-        }, 310000); // 5 λεπτά + μικρό buffer
+        }, 310000);
 
     });
-
 }
 
 // ============================================================
