@@ -2391,11 +2391,34 @@ while (!lab14Cancelled) {
 
     else {
 
-        // SOFT phase → μόνο CPU
-startCpuBurn_C_Mode();
-stopGpuStress();
-stopMemoryStress();
+    // 🔻 πάντα καθαρίζεις πριν αλλάξεις load
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+
+    float cpuTemp = readCpuTempSafe2();
+
+    if (!Float.isNaN(cpuTemp)) {
+
+        if (cpuTemp < 45f) {
+
+            startCpuBurn(); // ⚡ medium
+
+        } else if (cpuTemp < 55f) {
+
+            startCpuBurn_Light(); // 🧊 light
+
+        } else {
+
+            // 🛑 αφήνεις CPU να “αναπνεύσει”
+            runOnUiThread(() ->
+                    logWarn(gr
+                            ? "Υψηλή θερμοκρασία — μείωση φόρτου"
+                            : "High temperature — reducing load")
+            );
+        }
     }
+}
 
     // ----------------------------------
     // TOTAL TIME = 5 MIN
@@ -2915,6 +2938,22 @@ btnContinue.setOnClickListener(v -> {
 
 private void startCpuBurn_Light() {
     startCpuBurnLimitedThreads(1); // ή 2 threads max
+}
+
+private void startCpuBurnLimitedThreads(int threads) {
+
+    stopCpuBurn();
+
+    for (int i = 0; i < threads; i++) {
+
+        new Thread(() -> {
+
+            while (!lab14Cancelled) {
+                double x = Math.sin(System.nanoTime());
+            }
+
+        }).start();
+    }
 }
 
 private void startLab14BPopup(long durationMs) {
