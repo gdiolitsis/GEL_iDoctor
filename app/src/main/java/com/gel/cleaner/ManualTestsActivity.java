@@ -2059,36 +2059,31 @@ btnContinue.setOnClickListener(v -> {
 
     AppTTS.stop();
 
-    boolean conditionsOk = true;
-
     int percent = getBatteryPercentSafe();
     float temp = getBatteryTemperature();
     float cpu = readCpuTempSafe();
+    boolean charging = isDeviceCharging();
 
-    if (percent < 30 || percent > 70)
-        conditionsOk = false;
+    boolean conditionsOk =
+            percent >= 30 && percent <= 70
+            && (Float.isNaN(temp) || temp < 38f)
+            && (Float.isNaN(cpu) || cpu < 60f)
+            && !charging;
 
-    if (!Float.isNaN(temp) && temp >= 38f)
-        conditionsOk = false;
-
-    if (!Float.isNaN(cpu) && cpu >= 60f)
-        conditionsOk = false;
-
-    if (isDeviceCharging())
-        conditionsOk = false;
-
-    // ❌ ΜΠΛΟΚΑΡΕ το Continue
+    // ❌ BLOCK
     if (!conditionsOk) {
 
-    logWarn(AppLang.isGreek(this)
-            ? "Οι συνθήκες δεν είναι κατάλληλες — δεν μπορεί να ξεκινήσει η δοκιμή"
-            : "Conditions not valid — test cannot start");
+        logWarn(AppLang.isGreek(this)
+                ? "Οι συνθήκες δεν είναι κατάλληλες — το test μπλοκαρίστηκε"
+                : "Conditions not valid — test blocked");
 
-    lab14Running = false;     // 🔥 CRITICAL
-    lab14Cancelled = false;   // 🔥 reset
+        // 🔥 reset flags (CRITICAL για να μην ξεκινήσει από αλλού)
+        lab14Running = false;
+        lab14PopupShown = false;
+        lab14AdvisoryShown = false;
 
-    return;
-}
+        return; // STOP εδώ
+    }
 
     dlg.dismiss();
 
@@ -2731,25 +2726,22 @@ private void showLab14BAdvisory(Runnable onContinue) {
 
     btnContinue.setOnClickListener(v -> {
 
-        AppTTS.stop();
+    AppTTS.stop();
 
-        if (!batteryOk) {
+    if (!batteryOk) {
 
-            lab14Running = false;
-            lab14PopupShown = false;
-            lab14AdvisoryShown = false;
+        logWarn(AppLang.isGreek(this)
+                ? "Η μπαταρία πρέπει να είναι 70–90% για να συνεχίσεις"
+                : "Battery must be between 70–90% to continue");
 
-            dlg.dismiss();
-            return;
-        }
+        return; // 🔥 ΜΗΝ κλείνεις dialog
+    }
 
-        dlg.dismiss();
+    dlg.dismiss();
 
-        if (onContinue != null)
-            onContinue.run();
-
-    });
-}
+    if (onContinue != null)
+        onContinue.run();
+});
 
 private void startCpuBurn_Light() {
     startCpuBurnLimitedThreads(1); // ή 2 threads max
@@ -13484,34 +13476,28 @@ lab14Engine.startDrainSession();
 
         if (!isLab14BMode && !lab14PopupShown && !lab14Running) {
 
-    lab14Cancelled = false;
-    lab14PopupShown = true;
+            lab14Running = false;
+            lab14Cancelled = false;
+            lab14PopupShown = true;
 
-    showLab14ConditionCheck(() -> {
+            showLab14ConditionCheck(() -> {
 
-        if (!lab14AdvisoryShown) {
+                if (!lab14AdvisoryShown) {
 
-            lab14AdvisoryShown = true;
+                    lab14AdvisoryShown = true;
 
-            showLab14PreTestAdvisory(() -> {
+                    showLab14PreTestAdvisory(() -> {
+                        lab14BatteryHealthStressTest_REAL();
+                    });
 
-                lab14Running = true;
-                lab14Cancelled = false;
+                } else {
 
-                lab14BatteryHealthStressTest_REAL();
+                    lab14BatteryHealthStressTest_REAL();
+                }
             });
 
-        } else {
-
-            lab14Running = true;
-            lab14Cancelled = false;
-
-            lab14BatteryHealthStressTest_REAL();
+            return;
         }
-    });
-
-    return;
-}
 
         appendHtml("<br>");
         logLine();
