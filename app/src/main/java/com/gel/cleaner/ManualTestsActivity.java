@@ -2742,6 +2742,7 @@ private void showLab14BAdvisory(Runnable onContinue) {
     if (onContinue != null)
         onContinue.run();
 });
+}
 
 private void startCpuBurn_Light() {
     startCpuBurnLimitedThreads(1); // ή 2 threads max
