@@ -2288,329 +2288,16 @@ private void lab14BProtectionTest() {
 
         appendHtml("<br>");
 
-        startLab14BPopup(300000);
-
-        new Thread(() -> {
-
-            boolean cpuThrottle = false;
-            boolean thermalLimit = false;
-            boolean powerLimit = false;
-
-            long cpuFreqStart = -1L;
-            long cpuFreqEnd = -1L;
-
-            float cpuTempStart = Float.NaN;
-            float cpuTempEnd = Float.NaN;
-
-            boolean[] systemLimited = new boolean[]{ false };
-            boolean validDrain = false;
-
-            try {
-
-                Lab14Engine engineThread =
-                        new Lab14Engine(ManualTestsActivity.this);
-
-                Lab14Engine.GelBatterySnapshot start =
-                        engineThread.readSnapshot();
-
-                if (start == null) {
-                    runOnUiThread(() ->
-                            logError(
-                                    gr
-                                            ? "Αποτυχία ανάγνωσης μπαταρίας"
-                                            : "Battery read failed"
-                            )
-                    );
-                    return;
-                }
-
-                startPercent = start.level;
-                startMahThread = start.chargeNowMah;
-
-                tempStart = getBatteryTempEngineSafe();
-                if (Float.isNaN(tempStart) || tempStart <= 0f) {
-                    tempStart = start.temperature;
-                }
-
-                float vStart = getBatteryVoltageFiltered();
-
-                cpuFreqStart = readCpuFreq();
-                cpuTempStart = readCpuTempSafe2();
-
-                runOnUiThread(() ->
-                        logOk(gr
-                                ? "Εκτέλεση δοκιμής φορτίου..."
-                                : "Running load test...")
-                );
-
-                try {
-
-                    startCpuBurn_C_Mode();
-                    startGpuStress();
-                    startMemoryStress();
-
-                    long phaseStart = SystemClock.elapsedRealtime();
-                    boolean hardPhase = true;
-
-                    while (!lab14Cancelled && !Thread.currentThread().isInterrupted()) {
-
-                        long elapsed =
-                                SystemClock.elapsedRealtime() - phaseStart;
-
-                        final long elapsedF = elapsed;
-
-                        if (elapsed > 60_000 && hardPhase) {
-
-                            hardPhase = false;
-
-                            runOnUiThread(() ->
-                                    logWarn(gr
-                                            ? "Μετάβαση σε ήπια φάση"
-                                            : "Switching to soft phase")
-                            );
-
-                            try { stopCpuBurn(); } catch (Throwable ignore) {}
-                            try { stopGpuStress(); } catch (Throwable ignore) {}
-                            try { stopMemoryStress(); } catch (Throwable ignore) {}
-                        }
-
-                        if (hardPhase) {
-
-                            startCpuBurn_C_Mode();
-                            startGpuStress();
-                            startMemoryStress();
-                        } else {
-
-                            try { stopCpuBurn(); } catch (Throwable ignore) {}
-                            try { stopGpuStress(); } catch (Throwable ignore) {}
-                            try { stopMemoryStress(); } catch (Throwable ignore) {}
-
-                            float cpuTemp = readCpuTempSafe2();
-
-                            if (!Float.isNaN(cpuTemp)) {
-
-                                if (cpuTemp < 45f) {
-
-                                    startCpuBurn_C_Mode();
-
-                                } else if (cpuTemp < 55f) {
-
-                                    startCpuBurn_Light();
-
-                                } else {
-
-                                    runOnUiThread(() ->
-                                            logWarn(gr
-                                                    ? "Υψηλή θερμοκρασία — μείωση φόρτου"
-                                                    : "High temperature — reducing load")
-                                    );
-                                }
-                            }
-                        }
-
-                        if (elapsed > 300_000) break;
-
-                        SystemClock.sleep(500);
-                    }
-
-                } catch (Throwable ignore) {
-
-                } finally {
-
-                    try { stopCpuBurn(); } catch (Throwable ignore) {}
-                    try { stopGpuStress(); } catch (Throwable ignore) {}
-                    try { stopMemoryStress(); } catch (Throwable ignore) {}
-                }
-
-                iDoctorEngine eng2 =
-                        iDoctorEngine.get(ManualTestsActivity.this);
-
-                iDoctorEngine.FullSnapshot end =
-                        eng2.readFullSnapshot();
-
-                if (end == null) {
-                    logError(
-                            gr
-                                    ? "Αποτυχία τελικής ανάγνωσης μπαταρίας"
-                                    : "Final battery read failed"
-                    );
-                    return;
-                }
-
-                long endMah = end.battery.chargeNowMah;
-
-                float tempEnd = getBatteryTempEngineSafe();
-
-                if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
-                    tempEnd = end.battery.batteryTempC;
-                }
-
-                float vEnd = getBatteryVoltageFiltered();
-
-                cpuFreqEnd = readCpuFreq();
-                cpuTempEnd = readCpuTempSafe2();
-
-                validDrain = start.chargeNowMah > 0
-                        && endMah > 0
-                        && (start.chargeNowMah - endMah) > 0;
-
-                if (!Float.isNaN(tempStart)
-                        && !Float.isNaN(tempEnd)
-                        && (tempEnd - tempStart) < 1.0f) {
-
-                    systemLimited[0] = true;
-                }
-
-                if (!Float.isNaN(vStart)
-                        && !Float.isNaN(vEnd)
-                        && vEnd > (vStart - 0.01f)) {
-
-                    systemLimited[0] = true;
-                }
-
-                if (cpuFreqStart > 0L && cpuFreqEnd > 0L) {
-                    if (cpuFreqEnd < (long) (cpuFreqStart * 0.7)) {
-                        cpuThrottle = true;
-                    }
-                }
-
-                if (!Float.isNaN(cpuTempStart)
-                        && !Float.isNaN(cpuTempEnd)) {
-
-                    if (cpuTempEnd > cpuTempStart + 8f) {
-                        thermalLimit = true;
-                    }
-                }
-
-                if (validDrain && systemLimited[0]) {
-                    powerLimit = true;
-                }
-
-                final boolean cpuThrottleF = cpuThrottle;
-                final boolean thermalLimitF = thermalLimit;
-                final boolean powerLimitF = powerLimit;
-                final boolean validDrainF = validDrain;
-                final boolean systemLimitedF = systemLimited[0];
-
-                final long startMahF = start.chargeNowMah;
-                final long endMahF = endMah;
-                final float tempStartF = tempStart;
-                final float tempEndF = tempEnd;
-                final float vStartF = vStart;
-                final float vEndF = vEnd;
-                final long cpuFreqStartF = cpuFreqStart;
-                final long cpuFreqEndF = cpuFreqEnd;
-                final float cpuTempStartF = cpuTempStart;
-                final float cpuTempEndF = cpuTempEnd;
-
-                lab14Cancelled = true;
-
-runOnUiThread(() -> {
-
-    // RESULT
-    Lab14BatteryProtectionCheck(
-            gr,
-            new boolean[]{ systemLimitedF },
-            validDrainF
-    );
-
-    // PRO DETAILS
-    logLabelValue(
-            gr ? "Μεταβολή φόρτισης" : "Charge delta",
-            String.format(
-                    Locale.US,
-                    "%d mAh",
-                    Math.max(0L, startMahF - endMahF)
-            )
-    );
-
-    if (!Float.isNaN(vStartF) && !Float.isNaN(vEndF)) {
-        logLabelValue(
-                gr ? "Μεταβολή τάσης" : "Voltage delta",
-                String.format(
-                        Locale.US,
-                        "%.3f V → %.3f V",
-                        vStartF,
-                        vEndF
-                )
-        );
-    }
-
-    if (!Float.isNaN(tempStartF) && !Float.isNaN(tempEndF)) {
-        logLabelValue(
-                gr ? "Μεταβολή θερμοκρασίας μπαταρίας" : "Battery temperature delta",
-                String.format(
-                        Locale.US,
-                        "%.1f°C → %.1f°C",
-                        tempStartF,
-                        tempEndF
-                )
-        );
-    }
-
-    if (cpuThrottleF) {
-        logOk(gr
-                ? "Ενεργοποιήθηκε περιορισμός CPU."
-                : "CPU limiter activated.");
-    } else {
-        logWarn(gr
-                ? "Δεν ενεργοποιήθηκε περιορισμός CPU."
-                : "CPU limiter not detected.");
-    }
-
-    if (thermalLimitF) {
-        logOk(gr
-                ? "Ενεργοποιήθηκε θερμική προστασία."
-                : "Thermal protection activated.");
-    } else {
-        logWarn(gr
-                ? "Δεν ενεργοποιήθηκε θερμική προστασία."
-                : "Thermal limiter not detected.");
-    }
-
-    if (powerLimitF) {
-        logOk(gr
-                ? "Ενεργοποιήθηκε περιορισμός ισχύος."
-                : "Power limiter activated.");
-    } else {
-        logWarn(gr
-                ? "Δεν ενεργοποιήθηκε περιορισμός ισχύος."
-                : "Power limiter not detected.");
-    }
-
-    appendHtml("<br>");
-    logOk(gr
-            ? "Το LAB 14B ολοκληρώθηκε."
-            : "LAB 14B finished.");
-    logLine();
-});
-               
-            } catch (Throwable t) {
-
-    lab14Cancelled = true;
-
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
-
-    runOnUiThread(() -> {
-
-        logError(
-                gr
-                        ? "Σφάλμα test"
-                        : "Test error"
-        );
+        // ✔ safety check
+        if (!checkLab14BConditions()) {
+            return;
+        }
+
+        // 🔥 SAME ENGINE AS LAB14
+        lab14BatteryHealthStressTest_REAL();
 
     });
-
 }
-
-        }).start();
-
-    });
-
-}
-
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (FINAL GEL STYLE)
@@ -13720,172 +13407,13 @@ lab14Engine.startDrainSession();
 
             logLine();
 
-        // ------------------------------------------------------------
-        // 3) MAIN DIALOG
-        // ------------------------------------------------------------
-        AlertDialog.Builder b =
-                new AlertDialog.Builder(
-                        ManualTestsActivity.this,
-                        android.R.style.Theme_Material_Dialog_NoActionBar
-                );
-        b.setCancelable(false);
+// ------------------------------------------------------------
+// 3) MAIN DIALOG
+// ------------------------------------------------------------
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24), dp(20), dp(24), dp(18));
+applyMaxBrightnessAndKeepOn();   // 🔥 ΒΑΛΕ ΑΥΤΟ
 
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xFF101010);
-        bg.setCornerRadius(dp(10));
-        bg.setStroke(dp(4), 0xFFFFD700);
-        root.setBackground(bg);
-
-        TextView title = new TextView(this);
-        title.setText(
-                gr
-                        ? "LAB 14 — Δοκιμή Καταπόνησης Υγείας Μπαταρίας"
-                        : "LAB 14 — Battery Health Stress Test"
-        );
-        title.setTextColor(0xFFFFFFFF);
-        title.setTextSize(18f);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setGravity(Gravity.CENTER);
-        title.setPadding(0, 0, 0, dp(12));
-        root.addView(title);
-
-        final TextView statusText = new TextView(this);
-        statusText.setText(
-                gr
-                        ? "Η δοκιμή βρίσκεται σε εξέλιξη…"
-                        : "Stress test running…"
-        );
-        statusText.setTextColor(0xFF39FF14);
-        statusText.setTextSize(15f);
-        statusText.setGravity(Gravity.CENTER);
-        root.addView(statusText);
-
-        lab14DotsView = new TextView(this);
-        lab14DotsView.setText("•");
-        lab14DotsView.setTextColor(0xFF39FF14);
-        lab14DotsView.setTextSize(22f);
-        lab14DotsView.setGravity(Gravity.CENTER);
-        root.addView(lab14DotsView);
-
-        counterText = new TextView(this);
-        counterText.setText(
-                gr
-                        ? "Πρόοδος Stress Test: 0 / " + durationSec + " δευτ."
-                        : "Stress Test Progress: 0 / " + durationSec + " sec"
-        );
-        counterText.setTextColor(0xFF39FF14);
-        counterText.setGravity(Gravity.CENTER);
-        root.addView(counterText);
-
-        lab14StressVideo = new VideoView(this);
-
-        LinearLayout videoHolder = new LinearLayout(this);
-        videoHolder.setOrientation(LinearLayout.VERTICAL);
-        videoHolder.setGravity(Gravity.CENTER);
-
-        LinearLayout.LayoutParams holderLp =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
-
-        holderLp.setMargins(0, dp(10), 0, dp(10));
-        videoHolder.setLayoutParams(holderLp);
-
-        LinearLayout.LayoutParams vLp =
-                new LinearLayout.LayoutParams(dp(220), dp(120));
-        vLp.gravity = Gravity.CENTER;
-        lab14StressVideo.setLayoutParams(vLp);
-        videoHolder.addView(lab14StressVideo);
-        root.addView(videoHolder);
-
-// MAIN BAR
-lab14MainBar = new LinearLayout(this);
-lab14MainBar.setOrientation(LinearLayout.HORIZONTAL);
-
-for (int i = 0; i < 12; i++) {
-
-    View seg = new View(this);
-
-    LinearLayout.LayoutParams lp =
-            new LinearLayout.LayoutParams(
-                    0,
-                    dp(10),
-                    1f
-            );
-
-    lp.setMargins(dp(2),0,dp(2),0);
-
-    seg.setLayoutParams(lp);
-    seg.setBackgroundColor(0xFF333333);
-
-    lab14MainBar.addView(seg);
-}
-
-root.addView(lab14MainBar);
-
-        Button exitBtn = new Button(this);
-        exitBtn.setText(gr ? "Έξοδος τεστ" : "Exit test");
-        exitBtn.setAllCaps(false);
-        exitBtn.setTextColor(0xFFFFFFFF);
-        exitBtn.setTypeface(null, Typeface.BOLD);
-
-        GradientDrawable exitBg = new GradientDrawable();
-        exitBg.setColor(0xFF8B0000);
-        exitBg.setCornerRadius(dp(10));
-        exitBg.setStroke(dp(3), 0xFFFFD700);
-        exitBtn.setBackground(exitBg);
-
-        LinearLayout.LayoutParams lpExit =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(52)
-                );
-        lpExit.setMargins(0, dp(14), 0, 0);
-        exitBtn.setLayoutParams(lpExit);
-
-        exitBtn.setOnClickListener(v -> {
-            lab14Cancelled = true;
-            lab14Running = false;
-
-            lab14StopAllStress();
-
-            try {
-            	counterText = null;
-                lab14CleanupUI();
-            } catch (Throwable ignore) {}
-
-            lab14PopupShown = false;
-            lab14AdvisoryShown = false;
-
-            logWarn(
-                    gr
-                            ? "LAB 14 ακυρώθηκε από τον χρήστη."
-                            : "LAB 14 cancelled by user."
-            );
-        });
-
-        root.addView(exitBtn);
-
-        b.setView(root);
-        lab14Dialog = b.create();
-
-        if (lab14Dialog.getWindow() != null) {
-            lab14Dialog.getWindow()
-                    .setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-lab14Dialog.show();
-
-lab14Running = true;
-lab14Cancelled = false;
-
-startLab14ProgressLoop();
-startLab14FastThread();
+startLab14SharedUI(durationSec, gr);
 
 } catch (Throwable t) {
 
@@ -17636,6 +17164,135 @@ private float lab14Current() {
     } catch (Throwable ignore) {}
 
     return Float.NaN;
+}
+
+private void startLab14SharedUI(long durationSec, boolean gr) {
+
+    AlertDialog.Builder b =
+            new AlertDialog.Builder(
+                    ManualTestsActivity.this,
+                    android.R.style.Theme_Material_Dialog_NoActionBar
+            );
+    b.setCancelable(false);
+
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(24), dp(20), dp(24), dp(18));
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF101010);
+    bg.setCornerRadius(dp(10));
+    bg.setStroke(dp(4), 0xFFFFD700);
+    root.setBackground(bg);
+
+    TextView title = new TextView(this);
+    title.setText(
+            gr
+                    ? "LAB 14 — Δοκιμή Καταπόνησης Υγείας Μπαταρίας"
+                    : "LAB 14 — Battery Health Stress Test"
+    );
+    title.setTextColor(0xFFFFFFFF);
+    title.setTextSize(18f);
+    title.setTypeface(null, Typeface.BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(0, 0, 0, dp(12));
+    root.addView(title);
+
+    final TextView statusText = new TextView(this);
+    statusText.setText(
+            gr
+                    ? "Η δοκιμή βρίσκεται σε εξέλιξη…"
+                    : "Stress test running…"
+    );
+    statusText.setTextColor(0xFF39FF14);
+    statusText.setTextSize(15f);
+    statusText.setGravity(Gravity.CENTER);
+    root.addView(statusText);
+
+    lab14DotsView = new TextView(this);
+    lab14DotsView.setText("•");
+    lab14DotsView.setTextColor(0xFF39FF14);
+    lab14DotsView.setTextSize(22f);
+    lab14DotsView.setGravity(Gravity.CENTER);
+    root.addView(lab14DotsView);
+
+    counterText = new TextView(this);
+    counterText.setText(
+            gr
+                    ? "Πρόοδος Stress Test: 0 / " + durationSec + " δευτ."
+                    : "Stress Test Progress: 0 / " + durationSec + " sec"
+    );
+    counterText.setTextColor(0xFF39FF14);
+    counterText.setGravity(Gravity.CENTER);
+    root.addView(counterText);
+
+    lab14StressVideo = new VideoView(this);
+
+    LinearLayout videoHolder = new LinearLayout(this);
+    videoHolder.setOrientation(LinearLayout.VERTICAL);
+    videoHolder.setGravity(Gravity.CENTER);
+
+    LinearLayout.LayoutParams vLp =
+            new LinearLayout.LayoutParams(dp(220), dp(120));
+    vLp.gravity = Gravity.CENTER;
+
+    lab14StressVideo.setLayoutParams(vLp);
+    videoHolder.addView(lab14StressVideo);
+    root.addView(videoHolder);
+
+    lab14MainBar = new LinearLayout(this);
+    lab14MainBar.setOrientation(LinearLayout.HORIZONTAL);
+
+    for (int i = 0; i < 12; i++) {
+
+        View seg = new View(this);
+
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(0, dp(10), 1f);
+
+        lp.setMargins(dp(2),0,dp(2),0);
+
+        seg.setLayoutParams(lp);
+        seg.setBackgroundColor(0xFF333333);
+
+        lab14MainBar.addView(seg);
+    }
+
+    root.addView(lab14MainBar);
+
+    Button exitBtn = new Button(this);
+    exitBtn.setText(gr ? "Έξοδος τεστ" : "Exit test");
+
+    exitBtn.setOnClickListener(v -> {
+
+        lab14Cancelled = true;
+        lab14Running = false;
+
+        lab14StopAllStress();
+
+        try {
+            lab14CleanupUI();
+        } catch (Throwable ignore) {}
+
+    });
+
+    root.addView(exitBtn);
+
+    b.setView(root);
+    lab14Dialog = b.create();
+
+    if (lab14Dialog.getWindow() != null) {
+        lab14Dialog.getWindow()
+                .setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    }
+
+    lab14Dialog.show();
+
+    lab14Running = true;
+    lab14Cancelled = false;
+
+    startLab14ProgressLoop();
+    startLab14FastThread();
 }
 
 //=============================================================
