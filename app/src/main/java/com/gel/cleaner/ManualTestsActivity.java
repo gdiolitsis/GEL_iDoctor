@@ -2402,7 +2402,7 @@ while (!lab14Cancelled) {
 
         if (cpuTemp < 45f) {
 
-            startCpuBurn(); // ⚡ medium
+            startCpuBurn_C_Mode();
 
         } else if (cpuTemp < 55f) {
 
