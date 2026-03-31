@@ -2080,12 +2080,15 @@ btnContinue.setOnClickListener(v -> {
     // ❌ ΜΠΛΟΚΑΡΕ το Continue
     if (!conditionsOk) {
 
-        logWarn(AppLang.isGreek(this)
-                ? "Οι συνθήκες δεν είναι κατάλληλες — δεν μπορεί να ξεκινήσει η δοκιμή"
-                : "Conditions not valid — test cannot start");
+    logWarn(AppLang.isGreek(this)
+            ? "Οι συνθήκες δεν είναι κατάλληλες — δεν μπορεί να ξεκινήσει η δοκιμή"
+            : "Conditions not valid — test cannot start");
 
-        return;
-    }
+    lab14Running = false;     // 🔥 CRITICAL
+    lab14Cancelled = false;   // 🔥 reset
+
+    return;
+}
 
     dlg.dismiss();
 
