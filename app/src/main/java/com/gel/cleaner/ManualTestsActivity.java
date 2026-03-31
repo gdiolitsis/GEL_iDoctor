@@ -2058,6 +2058,35 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 btnContinue.setOnClickListener(v -> {
 
     AppTTS.stop();
+
+    boolean conditionsOk = true;
+
+    int percent = getBatteryPercentSafe();
+    float temp = getBatteryTemperature();
+    float cpu = readCpuTempSafe();
+
+    if (percent < 30 || percent > 70)
+        conditionsOk = false;
+
+    if (!Float.isNaN(temp) && temp >= 38f)
+        conditionsOk = false;
+
+    if (!Float.isNaN(cpu) && cpu >= 60f)
+        conditionsOk = false;
+
+    if (isDeviceCharging())
+        conditionsOk = false;
+
+    // ❌ ΜΠΛΟΚΑΡΕ το Continue
+    if (!conditionsOk) {
+
+        logWarn(AppLang.isGreek(this)
+                ? "Οι συνθήκες δεν είναι κατάλληλες — δεν μπορεί να ξεκινήσει η δοκιμή"
+                : "Conditions not valid — test cannot start");
+
+        return;
+    }
+
     dlg.dismiss();
 
     if (onContinue != null)
@@ -2074,6 +2103,7 @@ btnRestart.setOnClickListener(v -> {
     } catch (Throwable ignore) {}
 
     try {
+    	
         finishAffinity();
     } catch (Throwable ignore) {}
 
