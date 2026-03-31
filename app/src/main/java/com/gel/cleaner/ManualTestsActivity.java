@@ -17469,8 +17469,21 @@ private void startLab14SharedUI(long durationSec, boolean gr) {
 
     root.addView(lab14MainBar);
 
-    Button exitBtn = new Button(this);
-    exitBtn.setText(gr ? "Έξοδος τεστ" : "Exit test");
+    Button exitBtn =
+        gelButton(
+                this,
+                gr ? "Έξοδος τεστ" : "Exit test",
+                0xFF8B0000
+        );
+
+LinearLayout.LayoutParams btnLp =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(52)
+        );
+
+btnLp.setMargins(0, dp(14), 0, 0);
+exitBtn.setLayoutParams(btnLp);
 
     exitBtn.setOnClickListener(v -> {
 
