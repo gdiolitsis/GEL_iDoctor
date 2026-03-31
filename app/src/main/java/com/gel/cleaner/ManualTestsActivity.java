@@ -13618,7 +13618,7 @@ lab14Engine.startDrainSession();
         // 3) MAIN DIALOG
         // ------------------------------------------------------------
 
-        applyMaxBrightnessAndKeepOn()
+        applyMaxBrightnessAndKeepOn();
         
         lab14Running = true;
 
