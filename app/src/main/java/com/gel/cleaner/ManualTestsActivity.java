@@ -13445,178 +13445,173 @@ Float gpuTempStart = readGpuTempSafe();
 
 lab14Engine.startDrainSession();
 
-        // ------------------------------------------------------------
+// ------------------------------------------------------------
         // 2) HEADER LOGS - START CONDITIONS
         // ------------------------------------------------------------
-      
-  if (!isLab14BMode && !lab14PopupShown && !lab14Running) {
 
-    lab14Running = false;
-    lab14Cancelled = false;
-    lab14PopupShown = true;
+        if (!isLab14BMode && !lab14PopupShown && !lab14Running) {
 
-    if (!isLab14BMode) {
-    showLab14ConditionCheck(() -> {
-    	}
-    	
+            lab14Running = false;
+            lab14Cancelled = false;
+            lab14PopupShown = true;
 
-        if (!lab14AdvisoryShown) {
+            showLab14ConditionCheck(() -> {
 
-            lab14AdvisoryShown = true;
+                if (!lab14AdvisoryShown) {
 
-            if (!isLab14BMode) {
-    showLab14PreTestAdvisory(() -> {
-                lab14BatteryHealthStressTest_REAL();
+                    lab14AdvisoryShown = true;
+
+                    showLab14PreTestAdvisory(() -> {
+                        lab14BatteryHealthStressTest_REAL();
+                    });
+
+                } else {
+
+                    lab14BatteryHealthStressTest_REAL();
+                }
             });
 
-        } else {
-
-            lab14BatteryHealthStressTest_REAL();
+            return;
         }
-    });
 
-    return;
-}
-        
+        appendHtml("<br>");
+        logLine();
+        logInfo(gr
+                ? "LAB 14 — Δοκιμή Καταπόνησης & Υγείας Μπαταρίας"
+                : "LAB 14 — Battery Health Stress Test");
+        logLine();
 
-            appendHtml("<br>");
-            logLine();
-            logInfo(gr
-                    ? "LAB 14 — Δοκιμή Καταπόνησης & Υγείας Μπαταρίας"
-                    : "LAB 14 — Battery Health Stress Test");
-            logLine();
+        logLabelOkValue(
+                gr ? "Λειτουργία" : "Mode",
+                rooted
+                        ? (gr ? "Προηγμένη (Root access)" : "Advanced (Rooted)")
+                        : (gr ? "Τυπική (Χωρίς Root)" : "Standard (Unrooted)")
+        );
 
-            logLabelOkValue(
-                    gr ? "Λειτουργία" : "Mode",
-                    rooted
-                            ? (gr ? "Προηγμένη (Root access)" : "Advanced (Rooted)")
-                            : (gr ? "Τυπική (Χωρίς Root)" : "Standard (Unrooted)")
-            );
+        logLabelOkValue(
+                gr ? "Διάρκεια δοκιμής" : "Duration",
+                durationSec + (gr
+                        ? " δευτ. (εργαστηριακή λειτουργία)"
+                        : " sec (laboratory mode)")
+        );
 
-            logLabelOkValue(
-                    gr ? "Διάρκεια δοκιμής" : "Duration",
-                    durationSec + (gr
-                            ? " δευτ. (εργαστηριακή λειτουργία)"
-                            : " sec (laboratory mode)")
-            );
+        logLabelOkValue(
+                gr ? "Προφίλ καταπόνησης" : "Stress profile",
+                "Fast stress + GEL C Mode + vibration + video + memory bandwidth"
+        );
 
-            logLabelOkValue(
-                    gr ? "Προφίλ καταπόνησης" : "Stress profile",
-                    "Fast stress + GEL C Mode + vibration + video + memory bandwidth"
-            );
-
-            logLabelOkValue(
-                    gr ? "Αρχικές συνθήκες" : "Start conditions",
-                    String.format(
-                            Locale.US,
-                            gr
-                                    ? "φόρτιση=%d mAh, ποσοστό=%d%%, κατάσταση=Αποφόρτιση, θερμοκρασία=%.1f°C"
-                                    : "charge=%d mAh, level=%d%%, status=Discharging, temp=%.1f°C",
-                            startMah,
-                            Math.max(0, batteryPercent),
-                            Float.isNaN(tempStart) ? 0f : tempStart
-                    )
-            );
-
-            logLabelOkValue(
-        gr ? "Πηγή δεδομένων" : "Data source",
-        start.source
-);
-
-            if (baselineFullMah > 0) {
-                logLabelOkValue(
-                        gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
-                        baselineFullMah + (gr
-                                ? " mAh (από fuel-gauge counter)"
-                                : " mAh (counter-based)")
-                );
-            } else {
-                logLabelWarnValue(
-                        gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
+        logLabelOkValue(
+                gr ? "Αρχικές συνθήκες" : "Start conditions",
+                String.format(
+                        Locale.US,
                         gr
-                                ? "Μη διαθέσιμη (Μη διαθέσιμη (δεν εκτίθεται πλήρης χωρητικότητα από το σύστημα)"
-                                : "N/A (counter not exposed by device)"
-                );
-            }
+                                ? "φόρτιση=%d mAh, ποσοστό=%d%%, κατάσταση=Αποφόρτιση, θερμοκρασία=%.1f°C"
+                                : "charge=%d mAh, level=%d%%, status=Discharging, temp=%.1f°C",
+                        startMah,
+                        Math.max(0, batteryPercent),
+                        Float.isNaN(tempStart) ? 0f : tempStart
+                )
+        );
 
+        logLabelOkValue(
+                gr ? "Πηγή δεδομένων" : "Data source",
+                start.source
+        );
+
+        if (baselineFullMah > 0) {
             logLabelOkValue(
-                    gr ? "Κύκλοι φόρτισης" : "Cycle count",
-                    cycles > 0
-                            ? String.valueOf(cycles)
-                            : (gr ? "Μη διαθέσιμο" : "N/A")
+                    gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
+                    baselineFullMah + (gr
+                            ? " mAh (από fuel-gauge counter)"
+                            : " mAh (counter-based)")
             );
-
-            logLabelOkValue(
-                    gr ? "Κατάσταση οθόνης" : "Screen state",
+        } else {
+            logLabelWarnValue(
+                    gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
                     gr
-                            ? "Φωτεινότητα στο ΜΕΓΙΣΤΟ, keep screen on ενεργό"
-                            : "Brightness forced to MAX, keep screen on active"
+                            ? "Μη διαθέσιμη (δεν εκτίθεται πλήρης χωρητικότητα από το σύστημα)"
+                            : "N/A (counter not exposed by device)"
             );
+        }
 
-            int cores = Runtime.getRuntime().availableProcessors();
+        logLabelOkValue(
+                gr ? "Κύκλοι φόρτισης" : "Cycle count",
+                cycles > 0
+                        ? String.valueOf(cycles)
+                        : (gr ? "Μη διαθέσιμο" : "N/A")
+        );
 
+        logLabelOkValue(
+                gr ? "Κατάσταση οθόνης" : "Screen state",
+                gr
+                        ? "Φωτεινότητα στο ΜΕΓΙΣΤΟ, keep screen on ενεργό"
+                        : "Brightness forced to MAX, keep screen on active"
+        );
+
+        int cores = Runtime.getRuntime().availableProcessors();
+
+        logLabelOkValue(
+                gr ? "Νήματα καταπόνησης CPU" : "CPU stress threads",
+                cores + (gr
+                        ? " (λογικοί πυρήνες=" + cores + ")"
+                        : " (cores=" + cores + ")")
+        );
+
+        if (cpuTempStart != null) {
             logLabelOkValue(
-                    gr ? "Νήματα καταπόνησης CPU" : "CPU stress threads",
-                    cores + (gr
-                            ? " (λογικοί πυρήνες=" + cores + ")"
-                            : " (cores=" + cores + ")")
+                    gr ? "Θερμοκρασία CPU (έναρξη)" : "CPU temperature (start)",
+                    String.format(Locale.US, "%.1f°C", cpuTempStart)
             );
+        } else {
+            logLabelWarnValue(
+                    gr ? "Θερμοκρασία CPU (έναρξη)" : "CPU temperature (start)",
+                    gr ? "Μη διαθέσιμη" : "N/A"
+            );
+        }
 
-            if (cpuTempStart != null) {
-                logLabelOkValue(
-                        gr ? "Θερμοκρασία CPU (έναρξη)" : "CPU temperature (start)",
-                        String.format(Locale.US, "%.1f°C", cpuTempStart)
-                );
-            } else {
-                logLabelWarnValue(
-                        gr ? "Θερμοκρασία CPU (έναρξη)" : "CPU temperature (start)",
-                        gr ? "Μη διαθέσιμη" : "N/A"
-                );
-            }
-
-            if (gpuTempStart != null) {
-                logLabelOkValue(
-                        gr ? "Θερμοκρασία GPU (έναρξη)" : "GPU temperature (start)",
-                        String.format(Locale.US, "%.1f°C", gpuTempStart)
-                );
-            } else {
-                logLabelWarnValue(
-                        gr ? "Θερμοκρασία GPU (έναρξη)" : "GPU temperature (start)",
-                        gr ? "Μη διαθέσιμη" : "N/A"
-                );
-            }
-
+        if (gpuTempStart != null) {
             logLabelOkValue(
-                    gr ? "Παρακολουθούμενα θερμικά πεδία" : "Thermal domains",
-                    "CPU / GPU / SKIN / PMIC / BATT"
+                    gr ? "Θερμοκρασία GPU (έναρξη)" : "GPU temperature (start)",
+                    String.format(Locale.US, "%.1f°C", gpuTempStart)
             );
+        } else {
+            logLabelWarnValue(
+                    gr ? "Θερμοκρασία GPU (έναρξη)" : "GPU temperature (start)",
+                    gr ? "Μη διαθέσιμη" : "N/A"
+            );
+        }
 
-            logLine();
+        logLabelOkValue(
+                gr ? "Παρακολουθούμενα θερμικά πεδία" : "Thermal domains",
+                "CPU / GPU / SKIN / PMIC / BATT"
+        );
 
-// ------------------------------------------------------------
-// 3) MAIN DIALOG
-// ------------------------------------------------------------
+        logLine();
 
-applyMaxBrightnessAndKeepOn();   // 🔥 ΒΑΛΕ ΑΥΤΟ
+        // ------------------------------------------------------------
+        // 3) MAIN DIALOG
+        // ------------------------------------------------------------
 
-startLab14SharedUI(durationSec, gr);
+        applyMaxBrightnessAndKeepOn();
 
-} catch (Throwable t) {
+        startLab14SharedUI(durationSec, gr);
 
-    lab14StopAllStress();
-    restoreBrightnessAndKeepOn();
+    } catch (Throwable t) {
 
-    lab14Cancelled = true;
-    lab14Running = false;
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
+        lab14StopAllStress();
+        restoreBrightnessAndKeepOn();
 
-    logError(
-            gr
-                    ? "Σφάλμα LAB 14"
-                    : "LAB 14 error"
-    );
-}
+        lab14Cancelled = true;
+        lab14Running = false;
+        lab14PopupShown = false;
+        lab14AdvisoryShown = false;
+
+        logError(
+                gr
+                        ? "Σφάλμα LAB 14"
+                        : "LAB 14 error"
+        );
+    }
 
 }
 
