@@ -13484,28 +13484,34 @@ lab14Engine.startDrainSession();
 
         if (!isLab14BMode && !lab14PopupShown && !lab14Running) {
 
-            lab14Running = false;
-            lab14Cancelled = false;
-            lab14PopupShown = true;
+    lab14Cancelled = false;
+    lab14PopupShown = true;
 
-            showLab14ConditionCheck(() -> {
+    showLab14ConditionCheck(() -> {
 
-                if (!lab14AdvisoryShown) {
+        if (!lab14AdvisoryShown) {
 
-                    lab14AdvisoryShown = true;
+            lab14AdvisoryShown = true;
 
-                    showLab14PreTestAdvisory(() -> {
-                        lab14BatteryHealthStressTest_REAL();
-                    });
+            showLab14PreTestAdvisory(() -> {
 
-                } else {
+                lab14Running = true;
+                lab14Cancelled = false;
 
-                    lab14BatteryHealthStressTest_REAL();
-                }
+                lab14BatteryHealthStressTest_REAL();
             });
 
-            return;
+        } else {
+
+            lab14Running = true;
+            lab14Cancelled = false;
+
+            lab14BatteryHealthStressTest_REAL();
         }
+    });
+
+    return;
+}
 
         appendHtml("<br>");
         logLine();
