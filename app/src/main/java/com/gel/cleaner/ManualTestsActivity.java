@@ -4789,11 +4789,20 @@ return s;
 // ============================================================
 private void appendHtml(String html) {
     ui.post(() -> {
-        CharSequence cur = txtLog.getText();
-        CharSequence add = Html.fromHtml(html + "<br>");
-        txtLog.setText(TextUtils.concat(cur, add));
 
-        // AUTO SCROLL (SAFE)
+        String current = txtLog.getText().toString();
+
+        // 🔥 IMPORTANT: ΜΗΝ προσθέτεις πάντα <br>
+        // το αφήνουμε στον caller (εσύ ήδη το κάνεις παντού)
+        String updated = current + html;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            txtLog.setText(Html.fromHtml(updated, Html.FROM_HTML_MODE_LEGACY));
+        } else {
+            txtLog.setText(Html.fromHtml(updated));
+        }
+
+        // AUTO SCROLL
         if (logScroll != null) {
             logScroll.post(() -> {
                 try {
@@ -13364,10 +13373,6 @@ private void lab14BatteryHealthStressTest() {
 // ============================================================
 private void lab14BatteryHealthStressTest_REAL() {
 
-	if (!isLab14BMode) {
-    isLab14BMode = false;
-}
-	
 final iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
 
@@ -13988,16 +13993,6 @@ if (!Float.isNaN(resistanceCheckMilliOhm)) {
     );
 }
 
-        if (sag < 0.05f) sagLabel = "Excellent";
-        else if (sag < 0.12f) sagLabel = "Normal";
-        else if (sag < 0.20f) sagLabel = "Weak";
-        else sagLabel = "Severe";
-
-        logLabelValue(
-                gr ? "Πτώση τάσης υπό φορτίο"
-                   : "Voltage sag under load",
-                String.format(Locale.US, "%.3f V (%s)", sag, sagLabel)
-        );
     }
 
     if (!Float.isNaN(internalResistance)) {
@@ -16976,14 +16971,18 @@ private void startLab14FastThread() {
             // LOAD 1
             // -------------------------
 
-            startCpuBurn_C_Mode();
+startCpuBurn_C_Mode();
+startMemoryStress();
+startGpuStress();
 
-            SystemClock.sleep(12000);
-            SystemClock.sleep(400);
+SystemClock.sleep(12000);
+SystemClock.sleep(400);
 
-            vLoad1[0] = readStableBatteryVoltage();
+vLoad1[0] = readStableBatteryVoltage();
 
-            stopCpuBurn();
+stopCpuBurn();
+stopMemoryStress();
+stopGpuStress();
 
             if (lab14Cancelled) {
                 lab14FastDone = true;
@@ -17016,6 +17015,8 @@ private void startLab14FastThread() {
 // LOAD 2
 
 startCpuBurn_C_Mode();
+startMemoryStress();
+startGpuStress();
 
 SystemClock.sleep(12000);
 
@@ -17035,6 +17036,8 @@ if (!Float.isNaN(v2a) && !Float.isNaN(v2b)) {
 }
 
 stopCpuBurn();
+stopMemoryStress();
+stopGpuStress();
 
             // -------------------------
             // SAG
@@ -17058,8 +17061,8 @@ stopCpuBurn();
     float s1 = sag1[0];
     float s2 = sag2[0];
 
-    if (Math.abs(s1) < 0.005f) s1 = Float.NaN;
-    if (Math.abs(s2) < 0.005f) s2 = Float.NaN;
+    if (Math.abs(s1) < 0.002f) s1 = Float.NaN;
+if (Math.abs(s2) < 0.002f) s2 = Float.NaN;
 
     if (!Float.isNaN(s1) &&
         !Float.isNaN(s2)) {
