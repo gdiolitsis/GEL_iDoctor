@@ -4792,9 +4792,8 @@ private void appendHtml(String html) {
 
         String current = txtLog.getText().toString();
 
-        // 🔥 IMPORTANT: ΜΗΝ προσθέτεις πάντα <br>
-        // το αφήνουμε στον caller (εσύ ήδη το κάνεις παντού)
-        String updated = current + html;
+        // 🔥 ALWAYS newline εδώ
+        String updated = current + html + "<br>";
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             txtLog.setText(Html.fromHtml(updated, Html.FROM_HTML_MODE_LEGACY));
@@ -4802,7 +4801,6 @@ private void appendHtml(String html) {
             txtLog.setText(Html.fromHtml(updated));
         }
 
-        // AUTO SCROLL
         if (logScroll != null) {
             logScroll.post(() -> {
                 try {
