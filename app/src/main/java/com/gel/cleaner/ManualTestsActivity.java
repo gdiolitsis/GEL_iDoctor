@@ -4796,19 +4796,27 @@ return s;
 // ============================================================
 private void appendHtml(String html) {
     ui.post(() -> {
-        try {
-            Spanned add;
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                add = Html.fromHtml(html + "<br>", Html.FROM_HTML_MODE_LEGACY);
-            } else {
-                add = Html.fromHtml(html + "<br>");
-            }
+        if (txtLog == null) return;
 
-            txtLog.append(add);   // 🔥 κρατάει το formatting
-        } catch (Throwable ignore) {}
+        CharSequence cur = txtLog.getText();
 
-        // AUTO SCROLL
+        // normalize manual <br>
+        if (html == null) html = "";
+
+        String clean = html.trim();
+
+        // αν ήδη είναι κενό line → ΜΗΝ διπλασιάζεις
+        if (clean.equals("<br>")) {
+            clean = "<br>";
+        } else if (!clean.endsWith("<br>")) {
+            clean = clean + "<br>";
+        }
+
+        CharSequence add = Html.fromHtml(clean);
+
+        txtLog.setText(TextUtils.concat(cur, add));
+
         if (logScroll != null) {
             logScroll.post(() -> {
                 try {
@@ -5171,7 +5179,7 @@ private void logLabelValue(String label, String value) {
 private void logLabelOkValue(String label, String value) {
     appendHtml(
             escape(label) + ": " +
-            "<font color='#39FF14'>" + escape(value) + "</font><br>"
+            "<font color='#39FF14'>" + escape(value) + "</font>"
     );
 }
 
@@ -5181,7 +5189,7 @@ private void logLabelOkValue(String label, String value) {
 private void logLabelWarnValue(String label, String value) {
     appendHtml(
             escape(label) + ": " +
-            "<font color='#FFD700'>" + escape(value) + "</font><br>"
+            "<font color='#FFD700'>" + escape(value) + "</font>"
     );
 }
 
@@ -5191,7 +5199,7 @@ private void logLabelWarnValue(String label, String value) {
 private void logLabelErrorValue(String label, String value) {
     appendHtml(
             escape(label) + ": " +
-            "<font color='#FF5555'>" + escape(value) + "</font><br>"
+            "<font color='#FF5555'>" + escape(value) + "</font>"
     );
 }
 
