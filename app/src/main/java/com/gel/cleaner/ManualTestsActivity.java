@@ -13364,7 +13364,9 @@ private void lab14BatteryHealthStressTest() {
 // ============================================================
 private void lab14BatteryHealthStressTest_REAL() {
 
-	isLab14BMode = false;
+	if (!isLab14BMode) {
+    isLab14BMode = false;
+}
 	
 final iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
