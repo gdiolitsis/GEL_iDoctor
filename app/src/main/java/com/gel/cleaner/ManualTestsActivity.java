@@ -4795,18 +4795,18 @@ return s;
 // LOGGING — GEL CANONICAL (UI + SERVICE REPORT)
 // ============================================================
 private void appendHtml(String html) {
+
+    final String safeHtml = (html == null) ? "" : html;
+
     ui.post(() -> {
 
         if (txtLog == null) return;
 
         CharSequence cur = txtLog.getText();
 
-        // normalize manual <br>
-        if (html == null) html = "";
+        String clean = safeHtml.trim();
 
-        String clean = html.trim();
-
-        // αν ήδη είναι κενό line → ΜΗΝ διπλασιάζεις
+        // αποφυγή διπλών <br>
         if (clean.equals("<br>")) {
             clean = "<br>";
         } else if (!clean.endsWith("<br>")) {
