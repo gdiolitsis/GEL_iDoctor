@@ -818,9 +818,16 @@ txtLog = new TextView(this);
 txtLog.setTextSize(13f);
 txtLog.setTextColor(0xFFFFFFFF);
 txtLog.setPadding(dp(12), dp(12), dp(12), dp(12));
-txtLog.setText(Html.fromHtml(
-        "<b>" + getString(R.string.manual_log_title) + "</b><br>"
-));
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+    txtLog.setText(Html.fromHtml(
+            "<b>" + getString(R.string.manual_log_title) + "</b><br>",
+            Html.FROM_HTML_MODE_LEGACY
+    ));
+} else {
+    txtLog.setText(Html.fromHtml(
+            "<b>" + getString(R.string.manual_log_title) + "</b><br>"
+    ));
+}
 
 logContainer.addView(txtLog);
 logScroll.addView(logContainer);
@@ -4789,18 +4796,19 @@ return s;
 // ============================================================
 private void appendHtml(String html) {
     ui.post(() -> {
+        try {
+            Spanned add;
 
-        String current = txtLog.getText().toString();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                add = Html.fromHtml(html + "<br>", Html.FROM_HTML_MODE_LEGACY);
+            } else {
+                add = Html.fromHtml(html + "<br>");
+            }
 
-        // 🔥 ALWAYS newline εδώ
-        String updated = current + html + "<br>";
+            txtLog.append(add);   // 🔥 κρατάει το formatting
+        } catch (Throwable ignore) {}
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            txtLog.setText(Html.fromHtml(updated, Html.FROM_HTML_MODE_LEGACY));
-        } else {
-            txtLog.setText(Html.fromHtml(updated));
-        }
-
+        // AUTO SCROLL
         if (logScroll != null) {
             logScroll.post(() -> {
                 try {
@@ -5163,7 +5171,7 @@ private void logLabelValue(String label, String value) {
 private void logLabelOkValue(String label, String value) {
     appendHtml(
             escape(label) + ": " +
-            "<font color='#39FF14'>" + escape(value) + "</font>"
+            "<font color='#39FF14'>" + escape(value) + "</font><br>"
     );
 }
 
@@ -5173,7 +5181,7 @@ private void logLabelOkValue(String label, String value) {
 private void logLabelWarnValue(String label, String value) {
     appendHtml(
             escape(label) + ": " +
-            "<font color='#FFD700'>" + escape(value) + "</font>"
+            "<font color='#FFD700'>" + escape(value) + "</font><br>"
     );
 }
 
@@ -5183,7 +5191,7 @@ private void logLabelWarnValue(String label, String value) {
 private void logLabelErrorValue(String label, String value) {
     appendHtml(
             escape(label) + ": " +
-            "<font color='#FF5555'>" + escape(value) + "</font>"
+            "<font color='#FF5555'>" + escape(value) + "</font><br>"
     );
 }
 
