@@ -17009,6 +17009,10 @@ runOnUiThread(() -> {
 
 });
 
+final boolean collapseRiskF = collapseRisk[0];
+final boolean systemLimitedF = lab14_systemLimited[0];
+final boolean smartSwellingF = smartSwelling;
+
 runOnUiThread(() -> {
 
     // ------------------------------------------------
@@ -17037,7 +17041,7 @@ runOnUiThread(() -> {
                 drainPercentPerHourF
         );
 
-        if (lab14_systemLimited[0]) {
+        if (systemLimitedF) {
             logWarn(gr
                     ? "Η μέτρηση έγινε με περιορισμό από το σύστημα. Το αποτέλεσμα είναι ενδεικτικό."
                     : "System limiter detected. Result is indicative.");
@@ -17084,7 +17088,7 @@ float tempDelta =
                 finalLabelF,
                 healthClassF,
                 collapseRisk,
-                smartSwelling,
+                smartSwellingF,
                 calibrationDrift,
                 lab14_systemLimited
         );
@@ -17100,7 +17104,7 @@ float tempDelta =
                 p,
                 variabilityDetected,
                 collapseRisk,
-                smartSwelling,
+                smartSwellingF,
                 calibrationDrift,
                 false,
                 finalScoreF,
@@ -17122,7 +17126,7 @@ float tempDelta =
         // RUN COUNT
         // ------------------------------------------------
 
-        if (validDrainF && !lab14_systemLimited[0]) {
+        if (validDrainF && !systemLimitedF) {
 
             incLab14RunCount(validDrainF);
 
