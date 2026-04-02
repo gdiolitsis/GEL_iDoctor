@@ -16687,8 +16687,8 @@ if (drainMahFinalLong > 600) {
         );
     }
 
-    if (baselineFullFinal > 0 && drainMahFinalLong > 0)
-        if (unrealCapFinal) {
+    if (baselineFullFinal > 0 && drainMahFinalLong > 0) {
+    if (unrealCapFinal) {
             logLabelWarnValue(
                     gr ? "Έλεγχος δηλωμένης χωρητικότητας"
                        : "Declared capacity check",
@@ -16703,9 +16703,9 @@ if (drainMahFinalLong > 600) {
                     gr
                             ? "Η δηλωμένη χωρητικότητα φαίνεται ρεαλιστική."
                             : "Declared battery capacity appears realistic."
-            );
-        }
+        );
     }
+}
 
 // ------------------------------------------------
     // FAST STRESS
@@ -17060,23 +17060,6 @@ runOnUiThread(() -> {
                     )
             );
         }
-
-        // TEMP DELTA (GLOBAL)
-float tempDelta =
-        (!Float.isNaN(tempStart) && !Float.isNaN(tempPeak))
-                ? (tempPeak - tempStart)
-                : Float.NaN;
-
-// SAFE RESISTANCE (mΩ)
-float rMilli =
-        !Float.isNaN(internalResistance[0])
-                ? internalResistance[0] * 1000f
-                : Float.NaN;
-
-// reject invalid values
-if (!Float.isNaN(rMilli) && (rMilli < 1f || rMilli > 400f)) {
-    rMilli = Float.NaN;
-}
 
         // FINAL SCORE
         lab14LogFinalScore(
