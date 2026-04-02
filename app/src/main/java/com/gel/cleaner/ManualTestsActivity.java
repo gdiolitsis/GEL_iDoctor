@@ -3116,7 +3116,10 @@ public void run() {
 
     ui.postDelayed(this, 1000);
     }
-});
+
+});  // ✅ ui.post
+
+}   // ✅ ΜΕΘΟΔΟΣ startLab14BProgressLoop
 
 // ------------------------------------------------------------
 // GPU COMPUTE STRESS (LAB14)
