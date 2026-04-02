@@ -16748,13 +16748,12 @@ if (!Float.isNaN(lab14HealthPercent)) {
 }
 
 // TEMP DELTA
-float tempDelta =
+tempDelta =
         (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
                 ? (endBatteryTemp - startBatteryTemp)
                 : Float.NaN;
 
-// SAFE RESISTANCE (mΩ)
-float rMilli =
+rMilli =
         !Float.isNaN(internalResistance[0])
                 ? internalResistance[0] * 1000f
                 : Float.NaN;
