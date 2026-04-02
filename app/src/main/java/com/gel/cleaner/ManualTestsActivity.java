@@ -6640,7 +6640,7 @@ SharedPreferences p =
 boolean lab14CollapseRisk =
         p.getBoolean("lab14_collapse_risk", false);
 
-boolean lab14SwellingRisk =
+boolean lab14SwellingSuspected =
         p.getBoolean("lab14_swelling_risk", false);
 
     final boolean gr = AppLang.isGreek(this);
@@ -13412,7 +13412,6 @@ if (!lab14Running && !lab14PopupShown) {
     lab14MaxCharge = Long.MIN_VALUE;
 
     collapseRisk[0] = false;
-    swellingRisk[0] = false;
     calibrationDrift[0] = false;
     cellImbalanceRisk[0] = false;
 
@@ -15258,8 +15257,6 @@ if (!Float.isNaN(voltageRecovery[0]) &&
             voltageRecovery[0] / sagAvg[0];
 }
 
-swellingRisk[0] = false;
-
 // collapse detector (STABLE)
 
 if (validDrain &&
@@ -15670,16 +15667,6 @@ if (!Float.isNaN(recoveryRatio) &&
 
 }
 
-// final swelling decision
-
-if (swellingScore >= 2 &&
-    validDrain &&
-    !lab14_systemLimited[0]) {
-
-    swellingRisk[0] = true;
-
-}
-
 // ----------------------------------------------------
 // SAVE RUN / CONFIDENCE
 // ----------------------------------------------------
@@ -16056,7 +16043,6 @@ if (validDrain && !Float.isNaN(gpuTempPeak)) {
 
 }
 
-
 // ----------------------------------------------------
 // INTERNAL RESISTANCE
 // ----------------------------------------------------
@@ -16071,20 +16057,18 @@ if (!Float.isNaN(internalResistance[0]) &&
 
 }
 
-
 // ----------------------------------------------------
-// FLAGS
+// FLAGS (UPDATED)
 // ----------------------------------------------------
 
 if (collapseRisk[0] && !lab14_systemLimited[0])
     finalScore -= 6;
 
-if (swellingRisk[0] && !lab14_systemLimited[0])
+if (smartSwelling && !lab14_systemLimited[0])
     finalScore -= 6;
 
 if (calibrationDrift[0])
     finalScore -= 4;
-
 
 // ----------------------------------------------------
 // ADVANCED
@@ -17326,7 +17310,6 @@ private void resetBatteryDiagnostics() {
     estimatedESR = Float.NaN;
 
     collapseRisk[0] = false;
-    swellingRisk[0] = false;
     calibrationDrift[0] = false;
     cellImbalanceRisk[0] = false;
     batteryFailureRisk[0] = false;
@@ -24335,8 +24318,8 @@ private void lab29DeviceAuthenticity() {
     boolean lab14CollapseRisk =
             p.getBoolean("lab14_collapse_risk", false);
 
-    boolean lab14SwellingRisk =
-            p.getBoolean("lab14_swelling_risk", false);
+    boolean lab14SwellingSuspected =
+        p.getBoolean("lab14_swelling_risk", false);
 
     appendHtml("<br>");
     logLine();
@@ -24606,7 +24589,7 @@ if (thermalSpike) instabilityScore += 15;
 if (rebootPattern) instabilityScore += 15;
 if (instabilityPattern) instabilityScore += 20;
 
-if (lab14CollapseRisk || lab14SwellingRisk)
+if (lab14CollapseRisk || lab14SwellingSuspected)
     instabilityScore += 10;
 
     appendHtml("<br>");
@@ -24678,7 +24661,7 @@ float finalScore =
 boolean lab14CollapseRisk =
         p.getBoolean("lab14_collapse_risk", false);
 
-boolean lab14SwellingRisk =
+boolean lab14SwellingSuspected =
         p.getBoolean("lab14_swelling_risk", false);
         
  // LAB14B
@@ -24872,11 +24855,13 @@ if (!nonOemParts &&
 // ------------------------------------------------------------
 int hardwareRiskScore = 0;
 
-// battery risks
+// battery risks (UPDATED)
+
 if (lab14CollapseRisk)
     hardwareRiskScore += 20;
-else if (lab14SwellingRisk)
-    hardwareRiskScore += 15;
+
+if (lab14SwellingSuspected)
+    hardwareRiskScore += 10;
 
 // storage risks
 if (nandRisk)
@@ -24915,18 +24900,30 @@ logInfo(gr
 boolean faultDetected = false;
 
 // ------------------------------------------------------------
-// BATTERY
+// BATTERY (UPDATED)
 // ------------------------------------------------------------
-if (lab14CollapseRisk || lab14SwellingRisk || finalScore < 60) {
+if (lab14CollapseRisk || finalScore < 60 || lab14SwellingSuspected) {
 
     faultDetected = true;
 
+    String msg;
+
+    if (lab14CollapseRisk || finalScore < 60) {
+
+        msg = gr
+                ? "Πιθανή υποβάθμιση μπαταρίας."
+                : "Possible battery degradation detected.";
+
+    } else {
+
+        msg = gr
+                ? "Πιθανές ενδείξεις φθοράς μπαταρίας."
+                : "Possible signs of battery wear.";
+    }
+
     logLabelWarnValue(
-            gr ? "Μπαταρία"
-               : "Battery",
-            gr
-                    ? "Πιθανή υποβάθμιση μπαταρίας."
-                    : "Possible battery degradation detected."
+            gr ? "Μπαταρία" : "Battery",
+            msg
     );
 }
 
@@ -25146,19 +25143,31 @@ String rootCause = gr ? "Δεν εντοπίστηκε σαφής αιτία"
 int rootConfidence = 0;
 
 // ------------------------------------------------------------
-// BATTERY ROOT CAUSE
+// BATTERY ROOT CAUSE (UPDATED)
 // ------------------------------------------------------------
-if (lab14CollapseRisk || lab14SwellingRisk || finalScore < 60) {
+if (lab14CollapseRisk || finalScore < 60 || lab14SwellingSuspected) {
 
     rootCause = gr
             ? "Υποβάθμιση μπαταρίας"
             : "Battery degradation";
 
-    rootConfidence = 80;
+    // 🔥 BASE CONFIDENCE
+    rootConfidence = 70;
 
-    if (lab14CollapseRisk && lab14SwellingRisk) {
-        rootConfidence = 90;
-    }
+    // 🔴 STRONG SIGNALS
+    if (lab14CollapseRisk)
+        rootConfidence += 15;
+
+    if (finalScore < 50)
+        rootConfidence += 10;
+
+    // 🟡 WEAK SIGNAL (swelling)
+    if (lab14SwellingSuspected)
+        rootConfidence += 5;
+
+    // cap
+    if (rootConfidence > 95)
+        rootConfidence = 95;
 }
 
 // ------------------------------------------------------------
@@ -25346,14 +25355,29 @@ if (hardwareRiskScore >= 60) {
 }
 
 // ------------------------------------------------------------
-// FALSE POSITIVE GUARD ENGINE
+// FALSE POSITIVE GUARD ENGINE (UPDATED)
 // ------------------------------------------------------------
 int riskSignals = 0;
 
-if (lab14CollapseRisk || lab14SwellingRisk) riskSignals++;
+// BATTERY
+if (lab14CollapseRisk) {
+    riskSignals++;
+}
+else if (lab14SwellingSuspected &&
+        (nandRisk || controllerRisk || thermalRunawayRisk || pmicInstability || sensorBusInstability)) {
+    riskSignals++;
+}
+
+// STORAGE
 if (nandRisk || controllerRisk) riskSignals++;
+
+// THERMAL
 if (thermalRunawayRisk) riskSignals++;
+
+// PMIC
 if (pmicInstability) riskSignals++;
+
+// SENSOR BUS
 if (sensorBusInstability) riskSignals++;
 
 if (riskSignals <= 1) {
@@ -25452,10 +25476,15 @@ logLine();
 
 boolean certificateWarning = false;
 
-// instability indicators
-if (lab14CollapseRisk || lab14SwellingRisk)
+// 🔴 collapse = immediate warning
+if (lab14CollapseRisk)
     certificateWarning = true;
 
+// 🟡 swelling = μόνο αν συνοδεύεται από risk
+if (lab14SwellingSuspected && hardwareRiskScore >= 40)
+    certificateWarning = true;
+
+// 🔥 system-wide condition
 if (hardwareRiskScore >= 60)
     certificateWarning = true;
 
@@ -26900,10 +26929,12 @@ boolean thermalIssue =
 if (thermalIssue) dri -= 15;
 
 // swelling
-boolean lab14SwellingRisk =
+boolean lab14SwellingSuspected =
         p.getBoolean("lab14_swelling_risk", false);
 
-if (lab14SwellingRisk) dri -= 15;
+// 🟡 weaker penalty
+if (lab14SwellingSuspected && dri < 80)
+    dri -= 6;
 
 // root risk
 boolean rooted =
