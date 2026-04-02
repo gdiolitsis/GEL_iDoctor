@@ -14172,14 +14172,6 @@ if (sag > 0 &&
         resistanceCheckMilliOhm = Float.NaN;
 }
 
-// =====================================================
-// TEMP DELTA (for later use)
-// =====================================================
-float tempDelta =
-        (!Float.isNaN(startBatteryTempFinal) && !Float.isNaN(endBatteryTempFinal))
-                ? (endBatteryTempFinal - startBatteryTempFinal)
-                : Float.NaN;
-        
         // =====================================================
         // FINAL LOGGING
         // =====================================================
@@ -14411,7 +14403,7 @@ private void lab14LogAging(
                 ? (voltageStart - voltageUnderLoad[0])
                 : Float.NaN;
 
-        float rMilli = (!Float.isNaN(internalResistance[0]))
+        rMilli = (!Float.isNaN(internalResistance[0]))
                 ? internalResistance[0] * 1000f
                 : Float.NaN;
 
@@ -16233,7 +16225,6 @@ float tempDelta =
                 ? (tempPeak - tempStart)
                 : Float.NaN;
 
-// SAFE RESISTANCE (mΩ)
 float rMilli =
         !Float.isNaN(internalResistance[0])
                 ? internalResistance[0] * 1000f
@@ -16672,10 +16663,12 @@ runOnUiThread(() -> {
             validDrainF
     ));
 
-    // ------------------------------------------------
-    // WARNINGS
-    // ------------------------------------------------
-    if (drainMahFFinal > 600) {
+    final long drainMahFinalLong = (long) drainMahFFinal;
+
+// ------------------------------------------------
+// WARNINGS
+// ------------------------------------------------
+if (drainMahFinalLong > 600) {
         logLabelWarnValue(
                 gr ? "Ανωμαλία μέτρησης κατανάλωσης"
                    : "Drain measurement anomaly",
@@ -16694,7 +16687,7 @@ runOnUiThread(() -> {
         );
     }
 
-    if (baselineFullFinal > 0 && drainMahFFinal > 0) {
+    if (baselineFullFinal > 0 && drainMahFinalLong > 0)
         if (unrealCapFinal) {
             logLabelWarnValue(
                     gr ? "Έλεγχος δηλωμένης χωρητικότητας"
@@ -16998,7 +16991,7 @@ runOnUiThread(() -> {
             energyEfficiencyF,
             startMahFinal,
             endMahF,
-            drainMahFFinal,          // ✅ FIX
+            drainMahFinalLong,
             dtMsF,
             mahPerHourF,
             safeDrainFinal,
@@ -17017,8 +17010,7 @@ runOnUiThread(() -> {
 
     final boolean collapseRiskF = collapseRisk[0];
     final boolean systemLimitedF = lab14_systemLimited[0];
-    final boolean smartSwellingF = smartSwelling;
-
+    
     // ------------------------------------------------
     // PARTIAL / FULL MODE DECISION
     // ------------------------------------------------
@@ -17069,21 +17061,22 @@ runOnUiThread(() -> {
             );
         }
 
-        // TEMP DELTA
+        // TEMP DELTA (GLOBAL)
 float tempDelta =
-        (!Float.isNaN(startBatteryTempFinal) && !Float.isNaN(endBatteryTempFinal))
-                ? (endBatteryTempFinal - startBatteryTempFinal)
+        (!Float.isNaN(tempStart) && !Float.isNaN(tempPeak))
+                ? (tempPeak - tempStart)
                 : Float.NaN;
 
-        float rMilli =
-                !Float.isNaN(internalResistance[0])
-                        ? internalResistance[0] * 1000f
-                        : Float.NaN;
+// SAFE RESISTANCE (mΩ)
+float rMilli =
+        !Float.isNaN(internalResistance[0])
+                ? internalResistance[0] * 1000f
+                : Float.NaN;
 
-        // reject invalid values
-        if (!Float.isNaN(rMilli) && (rMilli < 1f || rMilli > 400f)) {
-            rMilli = Float.NaN;
-        }
+// reject invalid values
+if (!Float.isNaN(rMilli) && (rMilli < 1f || rMilli > 400f)) {
+    rMilli = Float.NaN;
+}
 
         // FINAL SCORE
         lab14LogFinalScore(
