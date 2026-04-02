@@ -17019,143 +17019,143 @@ runOnUiThread(() -> {
 
 });
 
-// ------------------------------------------------
-// PARTIAL / FULL MODE DECISION
-// ------------------------------------------------
+runOnUiThread(() -> {
 
-boolean partial = drainMahF < 5;
+    // ------------------------------------------------
+    // PARTIAL / FULL MODE DECISION
+    // ------------------------------------------------
 
-if (partial) {
+    boolean partial = drainMahF < 5;
 
-    lab14LogPartialMode(
-            gr,
-            lab14_systemLimited,
-            validDrainF,
-            confF
-    );
+    if (partial) {
 
-} else {
+        lab14LogPartialMode(
+                gr,
+                lab14_systemLimited,
+                validDrainF,
+                confF
+        );
 
-    lab14LogAging(
-        gr,
-        agingIndexF,
-        agingInterpF,
-        agingF,
-        Float.NaN,
-        drainPercentPerHourF
-);
+    } else {
 
-    if (lab14_systemLimited[0]) {
-        logWarn(gr
-                ? "Η μέτρηση έγινε με περιορισμό από το σύστημα. Το αποτέλεσμα είναι ενδεικτικό."
-                : "System limiter detected. Result is indicative.");
+        lab14LogAging(
+                gr,
+                agingIndexF,
+                agingInterpF,
+                agingF,
+                Float.NaN,
+                drainPercentPerHourF
+        );
+
+        if (lab14_systemLimited[0]) {
+            logWarn(gr
+                    ? "Η μέτρηση έγινε με περιορισμό από το σύστημα. Το αποτέλεσμα είναι ενδεικτικό."
+                    : "System limiter detected. Result is indicative.");
+        }
+
+        // ------------------------------------------------
+        // HEALTH
+        // ------------------------------------------------
+
+        if (!Float.isNaN(lab14HealthPercent)) {
+
+            logLabelValue(
+                    gr ? "Υγεία μπαταρίας"
+                       : "Battery health",
+                    String.format(
+                            Locale.US,
+                            "%s (%.0f)",
+                            lab14HealthLabel,
+                            lab14HealthPercent
+                    )
+            );
+        }
+
+        // TEMP DELTA
+        float tempDelta =
+                (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
+                        ? (endBatteryTemp - startBatteryTemp)
+                        : Float.NaN;
+
+        float rMilli =
+                !Float.isNaN(internalResistance[0])
+                        ? internalResistance[0] * 1000f
+                        : Float.NaN;
+
+        // reject invalid values
+        if (!Float.isNaN(rMilli) && (rMilli < 1f || rMilli > 400f)) {
+            rMilli = Float.NaN;
+        }
+
+        // FINAL SCORE
+        lab14LogFinalScore(
+                gr,
+                finalScoreF,
+                finalLabelF,
+                healthClassF,
+                collapseRisk,
+                smartSwelling,
+                calibrationDrift,
+                lab14_systemLimited
+        );
+
+        // ------------------------------------------------
+        // SAVE
+        // ------------------------------------------------
+
+        SharedPreferences p = getSharedPreferences(LAB14_PREFS, MODE_PRIVATE);
+
+        lab14LogSave(
+                gr,
+                p,
+                variabilityDetected,
+                collapseRisk,
+                smartSwelling,
+                calibrationDrift,
+                false,
+                finalScoreF,
+                agingIndexF,
+                partial,
+                lab14_systemLimited
+        );
+
+        SharedPreferences.Editor e = p.edit();
+
+        e.putFloat(
+                "lab14_health_percent",
+                lab14HealthPercent
+        );
+
+        e.apply();
+
+        // ------------------------------------------------
+        // RUN COUNT
+        // ------------------------------------------------
+
+        if (validDrainF && !lab14_systemLimited[0]) {
+
+            incLab14RunCount(validDrainF);
+
+        } else {
+
+            logWarn(gr
+                    ? "Η εκτέλεση δεν μετρήθηκε λόγω περιορισμού ή μη έγκυρων δεδομένων."
+                    : "Run not counted due to limiter or invalid data.");
+        }
+
+        // ------------------------------------------------
+        // RELIABILITY SUMMARY
+        // ------------------------------------------------
+
+        lab14LogReliabilitySummary(
+                gr,
+                validDrainF,
+                lab14_systemLimited,
+                confF
+        );
     }
-    
-// ------------------------------------------------
-// HEALTH
-// ------------------------------------------------
 
-if (!Float.isNaN(lab14HealthPercent)) {
-
-    logLabelValue(
-            gr ? "Υγεία μπαταρίας"
-               : "Battery health",
-            String.format(
-                    Locale.US,
-                    "%s (%.0f)",
-                    lab14HealthLabel,
-                    lab14HealthPercent
-            )
-    );
-}
-
-// TEMP DELTA
-tempDelta =
-        (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
-                ? (endBatteryTemp - startBatteryTemp)
-                : Float.NaN;
-
-rMilli =
-        !Float.isNaN(internalResistance[0])
-                ? internalResistance[0] * 1000f
-                : Float.NaN;
-
-// reject invalid values
-if (!Float.isNaN(rMilli) && (rMilli < 1f || rMilli > 400f)) {
-    rMilli = Float.NaN;
-}
-
-// CALL
-lab14LogFinalScore(
-        gr,
-        finalScoreF,
-        finalLabelF,
-        healthClassF,
-        collapseRisk,
-        smartSwelling,
-        calibrationDrift,
-        lab14_systemLimited
-);
-
-// ------------------------------------------------
-// SAVE (πάντα save για variance system)
-// ------------------------------------------------
-
-SharedPreferences p = getSharedPreferences(LAB14_PREFS, MODE_PRIVATE);
-
-lab14LogSave(
-        gr,
-        p,
-        variabilityDetected,
-        collapseRisk,
-        smartSwelling,
-        calibrationDrift,
-        false,
-        finalScoreF,
-        agingIndexF,
-        partial,
-        lab14_systemLimited
-);
-
-SharedPreferences.Editor e = p.edit();
-
-e.putFloat(
-        "lab14_health_percent",
-        lab14HealthPercent
-);
-
-e.apply();
-
-// ------------------------------------------------
-// RUN COUNT (πρέπει πριν από reliability/confidence)
-// ------------------------------------------------
-
-if (validDrainF && !lab14_systemLimited[0]) {
-
-    incLab14RunCount(validDrainF);
-
-} else {
-
-    logWarn(gr
-            ? "Η εκτέλεση δεν μετρήθηκε λόγω περιορισμού ή μη έγκυρων δεδομένων."
-            : "Run not counted due to limiter or invalid data.");
-
-}
-
-// ------------------------------------------------
-// RELIABILITY SUMMARY (uses runCount)
-// ------------------------------------------------
-
-lab14LogReliabilitySummary(
-        gr,
-        validDrainF,
-        lab14_systemLimited,
-        confF
-);
-
-} // ✅ ΚΛΕΙΝΕΙ ΤΟ ELSE
-
-}); // runOnUiThread
+});
 
 // ------------------------------------------------
 // STOP (NORMAL EXIT)
@@ -17204,8 +17204,6 @@ lab14AdvisoryShown = false;
     lab14FastDone = true;
     lab14FastPhase = false;
 }
-
-} // 🔴 ΑΥΤΟ ΕΛΕΙΠΕ
 
 // ============================================================
 // STABLE VOLTAGE READ
