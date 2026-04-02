@@ -3115,7 +3115,8 @@ public void run() {
     }
 
     ui.postDelayed(this, 1000);
-}
+    }
+});
 
 // ------------------------------------------------------------
 // GPU COMPUTE STRESS (LAB14)
