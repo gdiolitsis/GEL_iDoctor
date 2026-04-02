@@ -13815,7 +13815,6 @@ if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
 batteryPercent = getBatteryPercentSafe();
 
 baselineFullMah = -1;
-startMah = -1;
 
 // 1. direct from hardware (best)
 if (start.chargeFullMah > 0) {
@@ -13830,17 +13829,6 @@ if (start.chargeFullMah > 0) {
 
     baselineFullMah =
             (long) (start.chargeNowMah / (batteryPercent / 100.0f));
-}
-
-if (start.chargeNowMah > 0) {
-    startMah = start.chargeNowMah;
-}
-
-if (start.chargeFullMah > 0) {
-    baselineFullMah = start.chargeFullMah;
-
-} else if (start.chargeDesignMah > 0) {
-    baselineFullMah = start.chargeDesignMah;
 }
 
 if (start.chargeNowMah > 0) {
@@ -14184,8 +14172,8 @@ if (sag > 0 &&
 // TEMP DELTA (for later use)
 // =====================================================
 float tempDelta =
-        (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
-                ? (endBatteryTemp - startBatteryTemp)
+        (!Float.isNaN(startBatteryTempFinal) && !Float.isNaN(endBatteryTempFinal))
+                ? (endBatteryTempFinal - startBatteryTempFinal)
                 : Float.NaN;
         
         // =====================================================
@@ -14274,21 +14262,21 @@ float tempDelta =
         }
 
         // THERMAL
-        if (!Float.isNaN(startBatteryTemp) &&
-            !Float.isNaN(endBatteryTemp)) {
+if (!Float.isNaN(startBatteryTempFinal) &&
+    !Float.isNaN(endBatteryTempFinal)) {
 
-            float delta = endBatteryTemp - startBatteryTemp;
+    float delta = endBatteryTempFinal - startBatteryTempFinal;
 
-            String tempLabel =
-                    delta < 3 ? "Normal" :
-                    delta < 8 ? "Warm" : "High";
+    String tempLabel =
+            delta < 3 ? "Normal" :
+            delta < 8 ? "Warm" : "High";
 
-            logLabelValue(
-                    gr ? "Θερμική μεταβολή"
-                       : "Thermal change",
-                    String.format(Locale.US, "%.1f°C (%s)", delta, tempLabel)
-            );
-        }
+    logLabelValue(
+            gr ? "Θερμική μεταβολή"
+               : "Thermal change",
+            String.format(Locale.US, "%.1f°C (%s)", delta, tempLabel)
+    );
+}
 
         // BEHAVIOUR
         logLabelValue(
@@ -16660,6 +16648,9 @@ final float drainMahFFinal = drainMahF;
 
 final boolean smartSwellingF = smartSwelling;
 
+final float startBatteryTempFinal = startBatteryTemp;
+final float endBatteryTempFinal = endBatteryTemp;
+
 runOnUiThread(() -> {
 
     // ------------------------------------------------
@@ -16983,7 +16974,7 @@ runOnUiThread(() -> {
    // ------------------------------------------------
     // MAIN CALL (FIXED)
     // ------------------------------------------------
-    final float endBatteryTemp = getBatteryTempEngineSafe();
+    final float endBatteryTempFinal = getBatteryTempEngineSafe();
 
     final double safeDrainFinal =
             (Double.isNaN(drainPercentPerHourF) || drainPercentPerHourF < 0)
@@ -17009,8 +17000,8 @@ runOnUiThread(() -> {
             mahPerHourF,
             safeDrainFinal,
             validDrainF,
-            startBatteryTemp,
-            endBatteryTemp,
+            startBatteryTempFinal,
+            endBatteryTempFinal,
             lab14_systemLimited,
             collapseRisk,
             smartSwellingF,          // ✅ FIX
@@ -17072,10 +17063,10 @@ runOnUiThread(() -> {
         }
 
         // TEMP DELTA
-        float tempDelta =
-                (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
-                        ? (endBatteryTemp - startBatteryTemp)
-                        : Float.NaN;
+float tempDelta =
+        (!Float.isNaN(startBatteryTempFinal) && !Float.isNaN(endBatteryTempFinal))
+                ? (endBatteryTempFinal - startBatteryTempFinal)
+                : Float.NaN;
 
         float rMilli =
                 !Float.isNaN(internalResistance[0])
@@ -18754,6 +18745,9 @@ if (Float.isNaN(lab15BattTempEnd)) {
 
 startBatteryTemp = lab15BattTempStart;
 endBatteryTemp   = lab15BattTempEnd;
+
+final float startBatteryTempFinal = startBatteryTemp;
+final float endBatteryTempFinal   = endBatteryTemp;
 
 // ------------------------------------------------------------
 // Battery temperature + thermal correlation
