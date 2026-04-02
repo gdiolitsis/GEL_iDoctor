@@ -16832,6 +16832,8 @@ lab14LogReliabilitySummary(
         confF
 );
 
+} // ✅ ΚΛΕΙΝΕΙ ΤΟ ELSE
+
 }); // runOnUiThread
 
 // ------------------------------------------------
