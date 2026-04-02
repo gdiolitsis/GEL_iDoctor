@@ -17636,8 +17636,7 @@ updateLab14LiveStats();
                     tempStart
             );
         }
-    }
-});
+    });
 }
 
 private void resetLab14Bar() {
