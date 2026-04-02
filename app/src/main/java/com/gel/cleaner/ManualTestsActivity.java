@@ -14258,8 +14258,10 @@ if (sag > 0 &&
         }
 
         // THERMAL
-if (!Float.isNaN(startBatteryTempFinal) &&
-    !Float.isNaN(endBatteryTempFinal)) {
+if (!Float.isNaN(tempStart) &&
+    !Float.isNaN(tempPeak)) {
+
+    float delta = tempPeak - tempStart;
 
     float delta = endBatteryTempFinal - startBatteryTempFinal;
 
@@ -14336,7 +14338,7 @@ String riskSummary = computeRiskSummary(
         gr,
         sag,
         resistanceCheckMilliOhm,
-        tempDelta,
+        (tempPeak - tempStart),
         drainPercentPerHour,
         collapseRisk[0],
         smartSwelling,
@@ -14402,6 +14404,8 @@ private void lab14LogAging(
         float sag = (!Float.isNaN(voltageStart) && !Float.isNaN(voltageUnderLoad[0]))
                 ? (voltageStart - voltageUnderLoad[0])
                 : Float.NaN;
+                
+                float rMilli = Float.NaN;
 
         rMilli = (!Float.isNaN(internalResistance[0]))
                 ? internalResistance[0] * 1000f
