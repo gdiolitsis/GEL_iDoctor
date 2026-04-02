@@ -17204,6 +17204,7 @@ lab14AdvisoryShown = false;
     lab14FastDone = true;
     lab14FastPhase = false;
 }
+}
 
 // ============================================================
 // STABLE VOLTAGE READ
