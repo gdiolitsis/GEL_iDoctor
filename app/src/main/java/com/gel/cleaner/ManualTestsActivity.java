@@ -257,6 +257,16 @@ private boolean lab14FastPhase = false;
 private long lab14FastStartTime = 0;
 private int lab14FastDurationSec = 45;
 
+private long lab14EndTime = 0;
+
+private TextView lab14LiveStats;
+
+private int lab14WeakLoadCounter = 0;
+
+private int lab14RestartAttempts = 0;
+
+private boolean lab14BoostActive = false;
+
 private final List<Long> lab14ChargeSamples = new ArrayList<>();
 
 private long lab14MinCharge = Long.MAX_VALUE;
@@ -414,30 +424,36 @@ private boolean lab15PopupShown = false;
     @Override
     public void run() {
 
-        if (!lab14Running) return;
-
         try {
-            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+
+            if (!lab14Running || lab14Cancelled) {
+                return; // stop clean
+            }
+
+            Vibrator vib =
+                    (Vibrator) getSystemService(VIBRATOR_SERVICE);
 
             if (vib != null && vib.hasVibrator()) {
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vib.vibrate(
                             VibrationEffect.createOneShot(
-                                    80,
+                                    120, // πιο αισθητό
                                     VibrationEffect.DEFAULT_AMPLITUDE
                             )
                     );
                 } else {
-                    vib.vibrate(80);
+                    vib.vibrate(120);
                 }
             }
 
         } catch (Throwable ignore) {}
 
-        ui.postDelayed(this, 1500);
+        // 🔥 πιο γρήγορο loop (αλλιώς φαίνεται νεκρό)
+        ui.postDelayed(this, 400);
     }
 };
+
 // ------------------------------------------------------------
 // LAB14 GPU STRESS
 // ------------------------------------------------------------
@@ -2093,8 +2109,17 @@ btnContinue.setOnClickListener(v -> {
 
     dlg.dismiss();
 
-    if (onContinue != null)
-        onContinue.run();
+    if (onContinue != null) {
+
+    if (!checkLab14BConditions()) {
+        logWarn(gr
+                ? "Οι συνθήκες άλλαξαν — το τεστ ακυρώθηκε"
+                : "Conditions changed — test aborted");
+        return;
+    }
+
+    onContinue.run();
+}
 });
 
 // RESTART
@@ -2361,6 +2386,11 @@ private void lab14BProtectionTest() {
             startVolt[0] = getBatteryVoltageFiltered();
 
             isLab14BMode = true;
+
+lab14Cancelled = false;
+lab14Running = true;
+
+startLab14BPopup(300);
 
             logLine();
             logOk(gr
@@ -2774,91 +2804,98 @@ private void showLab14BAdvisory(Runnable onContinue) {
 
     root.addView(buildMuteRow());
 
-    LinearLayout row = new LinearLayout(this);
-    row.setOrientation(LinearLayout.VERTICAL);
+ LinearLayout row = new LinearLayout(this);
+row.setOrientation(LinearLayout.VERTICAL);
 
-    Button btnContinue;
+LinearLayout.LayoutParams lp =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(52)
+        );
 
-    if (batteryOk) {
-        btnContinue =
-                gelButton(
-                        this,
-                        gr ? "Συνέχεια" : "Continue",
-                        0xFF0B5D1E
-                );
-    } else {
-        btnContinue =
-                gelButton(
-                        this,
-                        gr ? "Έξοδος (" + percent + "%)"
-                                : "Exit (" + percent + "%)",
-                        0xFF8B0000
-                );
-    }
+lp.setMargins(0, dp(14), 0, 0);
 
-    LinearLayout.LayoutParams lp =
-            new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(52)
+// 🔥 ΕΝΑ κουμπί (Continue ή Cancel)
+Button btnAction;
+
+if (batteryOk) {
+    btnAction =
+            gelButton(
+                    this,
+                    gr ? "Συνέχεια" : "Continue",
+                    0xFF0B5D1E
             );
+} else {
+    btnAction =
+            gelButton(
+                    this,
+                    gr ? "Ακύρωση" : "Cancel",
+                    0xFF8B0000
+            );
+}
 
-    lp.setMargins(0, dp(14), 0, 0);
-    btnContinue.setLayoutParams(lp);
+btnAction.setLayoutParams(lp);
 
-    row.addView(btnContinue);
-    root.addView(row);
+row.addView(btnAction);
+root.addView(row);
 
-    b.setView(root);
+b.setView(root);
 
-    AlertDialog dlg = b.create();
+AlertDialog dlg = b.create();
 
-    if (dlg.getWindow() != null) {
-        dlg.getWindow().setBackgroundDrawable(
-                new ColorDrawable(Color.TRANSPARENT)
+if (dlg.getWindow() != null) {
+    dlg.getWindow().setBackgroundDrawable(
+            new ColorDrawable(Color.TRANSPARENT)
+    );
+}
+
+dlg.show();
+
+dlg.setOnCancelListener(d -> AppTTS.stop());
+dlg.setOnDismissListener(d -> AppTTS.stop());
+
+// 🔊 TTS
+new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+    if (!dlg.isShowing()) return;
+
+    AppTTS.stop();
+
+    if (!AppTTS.isMuted(this)) {
+        String speakText = text + ". " + status;
+        AppTTS.ensureSpeak(
+                ManualTestsActivity.this,
+                speakText
         );
     }
 
-    dlg.show();
+}, 120L);
 
-    dlg.setOnCancelListener(d -> AppTTS.stop());
-    dlg.setOnDismissListener(d -> AppTTS.stop());
+// 🔥 CLICK LOGIC
+btnAction.setOnClickListener(v -> {
 
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+    AppTTS.stop();
 
-        if (!dlg.isShowing()) return;
+    if (!batteryOk) {
+        dlg.dismiss(); // μόνο κλείνει
+        return;
+    }
 
-        AppTTS.stop();
+    dlg.dismiss();
 
-        if (!AppTTS.isMuted(this)) {
-            String speakText = text + ". " + status;
-            AppTTS.ensureSpeak(
-                    ManualTestsActivity.this,
-                    speakText
-            );
-        }
+    if (onContinue != null) {
 
-    }, 120L);
+    if (!checkLab14BConditions()) {
+        logWarn(gr
+                ? "Οι συνθήκες άλλαξαν — το τεστ ακυρώθηκε"
+                : "Conditions changed — test aborted");
+        return;
+    }
 
-    btnContinue.setOnClickListener(v -> {
-
-        AppTTS.stop();
-
-        if (!batteryOk) {
-
-            logWarn(AppLang.isGreek(this)
-                    ? "Η μπαταρία πρέπει να είναι 70–90% για να συνεχίσεις"
-                    : "Battery must be between 70–90% to continue");
-
-            return;
-        }
-
-        dlg.dismiss();
-
-        if (onContinue != null) {
-            onContinue.run();
-        }
-    });
+    onContinue.run();
 }
+});
+} // 🔴 ΚΛΕΙΝΕΙ showLab14BAdvisory
 
 private void startCpuBurn_Light() {
     startCpuBurnLimitedThreads(1);
@@ -2878,25 +2915,206 @@ private void startCpuBurnLimitedThreads(int threads) {
     }
 }
 
-private void startLab14BPopup(long durationMs) {
+private void startLab14BPopup(long durationSec) {
 
+    final boolean gr = AppLang.isGreek(this);
+
+    AlertDialog.Builder b =
+            new AlertDialog.Builder(
+                    ManualTestsActivity.this,
+                    android.R.style.Theme_Material_Dialog_NoActionBar
+            );
+
+    b.setCancelable(false);
+
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(24), dp(20), dp(24), dp(18));
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF101010);
+    bg.setCornerRadius(dp(10));
+    bg.setStroke(dp(4), 0xFFFFD700);
+    root.setBackground(bg);
+
+    // TITLE
+    TextView title = new TextView(this);
+    title.setText(gr
+            ? "LAB 14B — Έλεγχος προστασίας συστήματος"
+            : "LAB 14B — System Protection Test");
+    title.setTextColor(0xFFFFFFFF);
+    title.setTextSize(18f);
+    title.setTypeface(null, Typeface.BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(0, 0, 0, dp(12));
+    root.addView(title);
+
+    // STATUS
+    TextView statusText = new TextView(this);
+    statusText.setText(gr ? "HARD stress..." : "HARD stress...");
+    statusText.setTextColor(0xFF39FF14);
+    statusText.setGravity(Gravity.CENTER);
+    root.addView(statusText);
+
+    // COUNTER
+    counterText = new TextView(this);
+    counterText.setText("0 / " + durationSec);
+    counterText.setTextColor(0xFF39FF14);
+    counterText.setGravity(Gravity.CENTER);
+    root.addView(counterText);
+
+    // LIVE STATS
+    lab14LiveStats = new TextView(this);
+    lab14LiveStats.setTextColor(0xFF39FF14);
+    lab14LiveStats.setTextSize(12f);
+    lab14LiveStats.setPadding(0, dp(10), 0, dp(6));
+    lab14LiveStats.setText("Initializing...");
+    root.addView(lab14LiveStats);
+
+    // VIDEO
+    lab14StressVideo = new VideoView(this);
+    lab14StressVideo.setZOrderOnTop(true); // 🔴 ΕΔΩ
+    LinearLayout.LayoutParams vLp =
+            new LinearLayout.LayoutParams(dp(220), dp(120));
+    vLp.gravity = Gravity.CENTER;
+    lab14StressVideo.setLayoutParams(vLp);
+    root.addView(lab14StressVideo);
+
+    // BAR
+    lab14MainBar = new LinearLayout(this);
+    lab14MainBar.setOrientation(LinearLayout.HORIZONTAL);
+
+    for (int i = 0; i < 12; i++) {
+        View seg = new View(this);
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(0, dp(10), 1f);
+        lp.setMargins(dp(2), 0, dp(2), 0);
+        seg.setLayoutParams(lp);
+        seg.setBackgroundColor(0xFF333333);
+        lab14MainBar.addView(seg);
+    }
+
+    root.addView(lab14MainBar);
+
+    // EXIT
+    Button exitBtn = gelButton(
+            this,
+            gr ? "Έξοδος τεστ" : "Exit test",
+            0xFF8B0000
+    );
+
+    exitBtn.setOnClickListener(v -> {
+        lab14Cancelled = true;
+        lab14Running = false;
+        lab14StopAllStress();
+        try { lab14CleanupUI(); } catch (Throwable ignore) {}
+    });
+
+    root.addView(exitBtn);
+
+    b.setView(root);
+
+    lab14Dialog = b.create();
+
+    if (lab14Dialog.getWindow() != null) {
+        lab14Dialog.getWindow()
+                .setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    }
+    
+    lab14Running = true;
     lab14Cancelled = false;
 
-    new Thread(() -> {
+    lab14Dialog.show();
 
-        long start = SystemClock.elapsedRealtime();
+// 🔥 VIDEO START (SAFE)
+lab14StressVideo.post(() -> {
+    try {
+        Uri uri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.battery_stress_loop);
+        lab14StressVideo.setVideoURI(uri);
+        lab14StressVideo.setOnPreparedListener(mp -> {
+            mp.setLooping(true);
+            lab14StressVideo.start();
+        });
+    } catch (Throwable ignore) {}
+});
 
-        while (!lab14Cancelled && !Thread.currentThread().isInterrupted()) {
+// 🔥 LOOP
+startLab14BProgressLoop(statusText, durationSec, gr);
 
-            long elapsed =
-                    SystemClock.elapsedRealtime() - start;
+} // 🔴 ΚΛΕΙΝΕΙ ΤΟ startLab14BPopup
 
-            if (elapsed >= durationMs) break;
+private void startLab14BProgressLoop(TextView statusText, long durationSec, boolean gr) {
 
-            SystemClock.sleep(500);
+    t0 = SystemClock.elapsedRealtime();
+
+    ui.post(new Runnable() {
+
+@Override
+public void run() {
+
+    if (!lab14Running || lab14Cancelled) return;
+
+    long now = SystemClock.elapsedRealtime();
+    int elapsed = (int) ((now - t0) / 1000);
+
+    // 🔴 MID-TEST BATTERY PROTECTION (CRITICAL - FIRST)
+    int currentPercent = getBatteryPercentSafe();
+
+    if (currentPercent < 70) {
+
+        logWarn(gr
+                ? "Η μπαταρία έπεσε κάτω από 70% — το τεστ διακόπτεται"
+                : "Battery dropped below 70% — test aborted");
+
+        lab14Cancelled = true;
+        lab14Running = false;
+
+        lab14StopAllStress();
+
+        try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+        try { lab14CleanupUI(); } catch (Throwable ignore) {}
+
+        return;
+    }
+
+    // 🔥 PHASE SWITCH
+    if (elapsed < 60) {
+
+        statusText.setText(gr
+                ? "HARD stress (μέγιστο φορτίο)"
+                : "HARD stress (max load)");
+
+    } else {
+
+        statusText.setText(gr
+                ? "SOFT stress (ελαφρύ φορτίο)"
+                : "SOFT stress (light load)");
+    }
+
+    // COUNTER
+    counterText.setText(elapsed + " / " + durationSec);
+
+    // PROGRESS BAR
+    if (lab14MainBar != null) {
+
+        int segCount = lab14MainBar.getChildCount();
+        int active = (int) ((elapsed / (float) durationSec) * segCount);
+
+        for (int i = 0; i < segCount; i++) {
+            View seg = lab14MainBar.getChildAt(i);
+            seg.setBackgroundColor(i < active ? 0xFF39FF14 : 0xFF333333);
         }
+    }
 
-    }).start();
+    // LIVE STATS
+    updateLab14LiveStats();
+
+    if (elapsed >= durationSec) {
+        lab14StopAllStress();
+        return;
+    }
+
+    ui.postDelayed(this, 1000);
 }
 
 // ------------------------------------------------------------
@@ -3555,27 +3773,48 @@ private boolean ensurePermissions(String[] permissions, Runnable afterGranted) {
 @Override
 protected void onPause() {
 
+    super.onPause();
+
+    // =========================
+    // LAB 3
+    // =========================
     try {
         lab3WaitingUser = false;
         stopLab3Tone();
         restoreLab3Audio();
     } catch (Throwable ignore) {}
 
+    // =========================
+    // LAB 14 / 14B
+    // =========================
     try {
-    	counterText = null;
+
+        if (lab14Running) {
+
+            logWarn(AppLang.isGreek(this)
+                    ? "Το τεστ διακόπηκε (background)"
+                    : "Test aborted (background)");
+
+            lab14Cancelled = true;
+            lab14Running = false;
+        }
+
+        counterText = null;
+
         lab14StopAllStress();
         lab14CleanupUI();
+
     } catch (Throwable ignore) {}
 
+    // =========================
+    // TTS
+    // =========================
     try {
         if (tts != null && tts[0] != null) {
             tts[0].stop();
         }
     } catch (Throwable ignore) {}
-
-    super.onPause();
 }
-
 
 // ============================================================
 // onDestroy
@@ -3599,15 +3838,23 @@ protected void onDestroy() {
         }
     } catch (Throwable ignore) {}
 
+    // =========================
+    // LAB 14 / 14B (CRITICAL)
+    // =========================
     try {
+        lab14Cancelled = true;
+        lab14Running = false;
         lab14StopAllStress();
     } catch (Throwable ignore) {}
 
     try {
-    	counterText = null;
+        counterText = null;
         lab14CleanupUI();
     } catch (Throwable ignore) {}
 
+    // =========================
+    // TTS
+    // =========================
     try {
         if (tts != null && tts[0] != null) {
             tts[0].stop();
@@ -3618,7 +3865,6 @@ protected void onDestroy() {
     super.onDestroy();
 }
 
-
 // ============================================================
 // BACK
 // ============================================================
@@ -3626,14 +3872,31 @@ protected void onDestroy() {
 public void onBackPressed() {
 
     try {
-    lab14Cancelled = true;
-    counterText = null;
-    lab14StopAllStress();
-    restoreBrightnessAndKeepOn();
-    lab14CleanupUI();
-} catch (Throwable ignore) {}
+        lab14Cancelled = true;
+        lab14Running = false;
+        counterText = null;
+
+        lab14StopAllStress();
+        restoreBrightnessAndKeepOn();
+        lab14CleanupUI();
+
+    } catch (Throwable ignore) {}
 
     super.onBackPressed();
+}
+
+@Override
+protected void onStop() {
+    super.onStop();
+
+    if (lab14Running) {
+        lab14Cancelled = true;
+        lab14Running = false;
+
+        lab14StopAllStress();
+
+        try { lab14CleanupUI(); } catch (Throwable ignore) {}
+    }
 }
 
 // ============================================================
@@ -13730,32 +13993,57 @@ lab14Engine.startDrainSession();
 
         logLine();
 
-        // ------------------------------------------------------------
-        // 3) MAIN DIALOG
-        // ------------------------------------------------------------
+// ------------------------------------------------------------
+// 3) MAIN DIALOG (FINAL - FIXED)
+// ------------------------------------------------------------
 
-        applyMaxBrightnessAndKeepOn();
-        
-        lab14Running = true;
+applyMaxBrightnessAndKeepOn();
 
-        startLab14SharedUI(durationSec, gr);
+// 🔴 STATE
+lab14Running = true;
+lab14Cancelled = false;
+lab14BoostActive = false;
+appendLog("BOOST RESET", "OK");
 
-    } catch (Throwable t) {
+// 🔴 TIMERS (CRITICAL για 300sec)
+t0 = SystemClock.elapsedRealtime();
+lab14EndTime = t0 + (durationSec * 1000L);
 
-        lab14StopAllStress();
-        restoreBrightnessAndKeepOn();
+// 🔴 START VIBRATION LOOP
+ui.removeCallbacks(lab14VibrationLoop);
+ui.post(lab14VibrationLoop);
 
-        lab14Cancelled = true;
-        lab14Running = false;
-        lab14PopupShown = false;
-        lab14AdvisoryShown = false;
+// 🔴 START UI
+startLab14SharedUI(durationSec, gr);
 
-        logError(
-                gr
-                        ? "Σφάλμα LAB 14"
-                        : "LAB 14 error"
-        );
-    }
+// 🔴 START REAL STRESS (ΑΝ ΔΕΝ ΥΠΑΡΧΕΙ → ΔΕΝ ΚΑΝΕΙ ΤΕΣΤ)
+startLab14MainStress();
+
+// 🔴 START PROGRESS ENGINE
+startLab14ProgressLoop();
+
+} catch (Throwable t) {
+
+    // 🔴 STOP vibration FIRST
+    try {
+        ui.removeCallbacks(lab14VibrationLoop);
+    } catch (Throwable ignore) {}
+
+    // 🔴 STOP EVERYTHING
+    lab14StopAllStress();
+
+    // 🔴 STATE RESET
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+
+    logError(
+            gr
+                    ? "Σφάλμα LAB 14"
+                    : "LAB 14 error"
+    );
+}
 
 }
 
@@ -14515,12 +14803,30 @@ return idoctor.isChargingNowUnified();
 // ============================================================
 private void lab14StopAllStress() {
 
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+    try {
 
-    // lab14Running = false;
+        if (ui != null) {
+            ui.removeCallbacks(lab14VibrationLoop);
+        }
+
+        try {
+            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            if (vib != null) vib.cancel();
+        } catch (Throwable ignore) {}
+
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+
+        try {
+            if (lab14StressVideo != null) {
+                lab14StressVideo.stopPlayback();
+            }
+        } catch (Throwable ignore) {}
+
+        try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+
+    } catch (Throwable ignore) {}
 }
 
 // ------------------------------------------------------------
@@ -16352,87 +16658,108 @@ final boolean lowDrainFinal = lowDrain;
 final long baselineFullFinal = baselineFullMah;
 final float drainMahFFinal = drainMahF;
 
+final boolean smartSwellingF = smartSwelling;
+
 runOnUiThread(() -> {
 
-                            // extra warnings from validation
-                            if (drainMahF > 600) {
-                                logLabelWarnValue(
-                                        gr ? "Ανωμαλία μέτρησης κατανάλωσης"
-                                           : "Drain measurement anomaly",
-                                        gr ? "Μη ρεαλιστική τιμή κατανάλωσης."
-                                           : "Unrealistic battery drain detected."
-                                );
-                            }
+    // ------------------------------------------------
+    // DEBUG (SAFE)
+    // ------------------------------------------------
+    final double safeDrainDbg =
+            (Double.isNaN(drainPercentPerHourF) || drainPercentPerHourF < 0)
+                    ? 0
+                    : drainPercentPerHourF;
 
-                            if (lowDrainFinal) {
-                                logLabelWarnValue(
-                                        gr ? "Αξιοπιστία fuel-gauge"
-                                           : "Fuel gauge reliability",
-                                        gr
-                                                ? "Ο μετρητής φορτίου δεν ενημερώθηκε αξιόπιστα."
-                                                : "Charge counter did not update reliably."
-                                );
-                            }
+    appendLog("CHECK", String.format(
+            Locale.US,
+            "drain=%.2f%%/h valid=%s",
+            safeDrainDbg,
+            validDrainF
+    ));
 
-                            if (baselineFullFinal > 0 && drainMahFFinal > 0) {
-                                if (unrealCapFinal) {
-                                    logLabelWarnValue(
-                                            gr ? "Έλεγχος δηλωμένης χωρητικότητας"
-                                               : "Declared capacity check",
-                                            gr
-                                                    ? "Η δηλωμένη χωρητικότητα πιθανόν δεν είναι ρεαλιστική."
-                                                    : "Declared battery capacity may be unrealistic."
-                                    );
-                                } else {
-                                    logLabelOkValue(
-                                            gr ? "Έλεγχος δηλωμένης χωρητικότητας"
-                                               : "Declared capacity check",
-                                            gr
-                                                    ? "Η δηλωμένη χωρητικότητα φαίνεται ρεαλιστική."
-                                                    : "Declared battery capacity appears realistic."
-                                    );
-                                }
-                            }
-
-// fast stress result log
-if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
-
-    float s1 = sag1[0];
-    float s2 = sag2[0];
-
-    if (Math.abs(s1) < 0.005f) s1 = 0f;
-    if (Math.abs(s2) < 0.005f) s2 = 0f;
-
-    logLabelValue(
-            gr ? "Γρήγορη δοκιμή καταπόνησης"
-               : "Fast stress test",
-            String.format(
-                    Locale.US,
-                    "Sag1=%.3fV | Sag2=%.3fV",
-                    s1,
-                    s2
-            )
-    );
-
-    if (s1 > 0.35f || s2 > 0.40f) {
-
+    // ------------------------------------------------
+    // WARNINGS
+    // ------------------------------------------------
+    if (drainMahFFinal > 600) {
         logLabelWarnValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Έντονη πτώση τάσης — πιθανή φθορά κυψελών"
-                        : "Severe voltage sag — degraded battery cells"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Δεν εντοπίστηκε ανωμαλία"
-                        : "No abnormal sag detected"
+                gr ? "Ανωμαλία μέτρησης κατανάλωσης"
+                   : "Drain measurement anomaly",
+                gr ? "Μη ρεαλιστική τιμή κατανάλωσης."
+                   : "Unrealistic battery drain detected."
         );
     }
-}
+
+    if (lowDrainFinal) {
+        logLabelWarnValue(
+                gr ? "Αξιοπιστία fuel-gauge"
+                   : "Fuel gauge reliability",
+                gr
+                        ? "Ο μετρητής φορτίου δεν ενημερώθηκε αξιόπιστα."
+                        : "Charge counter did not update reliably."
+        );
+    }
+
+    if (baselineFullFinal > 0 && drainMahFFinal > 0) {
+        if (unrealCapFinal) {
+            logLabelWarnValue(
+                    gr ? "Έλεγχος δηλωμένης χωρητικότητας"
+                       : "Declared capacity check",
+                    gr
+                            ? "Η δηλωμένη χωρητικότητα πιθανόν δεν είναι ρεαλιστική."
+                            : "Declared battery capacity may be unrealistic."
+            );
+        } else {
+            logLabelOkValue(
+                    gr ? "Έλεγχος δηλωμένης χωρητικότητας"
+                       : "Declared capacity check",
+                    gr
+                            ? "Η δηλωμένη χωρητικότητα φαίνεται ρεαλιστική."
+                            : "Declared battery capacity appears realistic."
+            );
+        }
+    }
+
+// ------------------------------------------------
+    // FAST STRESS
+    // ------------------------------------------------
+    if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
+
+        float s1 = sag1[0];
+        float s2 = sag2[0];
+
+        if (Math.abs(s1) < 0.005f) s1 = 0f;
+        if (Math.abs(s2) < 0.005f) s2 = 0f;
+
+        logLabelValue(
+                gr ? "Γρήγορη δοκιμή καταπόνησης"
+                   : "Fast stress test",
+                String.format(
+                        Locale.US,
+                        "Sag1=%.3fV | Sag2=%.3fV",
+                        s1,
+                        s2
+                )
+        );
+
+        if (s1 > 0.35f || s2 > 0.40f) {
+
+            logLabelWarnValue(
+                    gr ? "Διάγνωση" : "Diagnosis",
+                    gr
+                            ? "Έντονη πτώση τάσης — πιθανή φθορά κυψελών"
+                            : "Severe voltage sag — degraded battery cells"
+            );
+
+        } else {
+
+            logLabelOkValue(
+                    gr ? "Διάγνωση" : "Diagnosis",
+                    gr
+                            ? "Δεν εντοπίστηκε ανωμαλία"
+                            : "No abnormal sag detected"
+            );
+        }
+    }
 
                             // extra advanced result blocks
                             if (!Float.isNaN(powerStabilityFactor[0]) &&
@@ -16653,49 +16980,44 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
 // main pipeline
 
-final float endBatteryTemp = getBatteryTempEngineSafe();
+   // ------------------------------------------------
+    // MAIN CALL (FIXED)
+    // ------------------------------------------------
+    final float endBatteryTemp = getBatteryTempEngineSafe();
 
-// 🔽 SAFE + DEBUG
-appendLog("CHECK", String.format(
-        Locale.US,
-        "drain=%.2f%%/h valid=%s",
-        drainPercentPerHourF,
-        validDrainF
-));
+    final double safeDrainFinal =
+            (Double.isNaN(drainPercentPerHourF) || drainPercentPerHourF < 0)
+                    ? 0
+                    : drainPercentPerHourF;
 
-// 🔽 SAFE FINAL (IMPORTANT: use F version)
-final double safeDrainFinal =
-        (Double.isNaN(drainPercentPerHourF) || drainPercentPerHourF < 0)
-                ? 0
-                : drainPercentPerHourF;
+    lab14LogStressResult(
+            gr,
+            sagAvg[0],
+            voltageStartFinal,
+            voltageUnderLoad[0],
+            voltageRecovery[0],
+            voltageRecoverySpeed[0],
+            voltageStability[0],
+            internalResistance[0],
+            estimatedESRF,
+            thermalImpedance[0],
+            energyEfficiencyF,
+            startMahFinal,
+            endMahF,
+            drainMahFFinal,          // ✅ FIX
+            dtMsF,
+            mahPerHourF,
+            safeDrainFinal,
+            validDrainF,
+            startBatteryTemp,
+            endBatteryTemp,
+            lab14_systemLimited,
+            collapseRisk,
+            smartSwellingF,          // ✅ FIX
+            calibrationDrift
+    );
 
-// 🔽 CALL
-lab14LogStressResult(
-        gr,
-        sagAvg[0],
-        voltageStartFinal,
-        voltageUnderLoad[0],
-        voltageRecovery[0],
-        voltageRecoverySpeed[0],
-        voltageStability[0],
-        internalResistance[0],
-        estimatedESRF,
-        thermalImpedance[0],
-        energyEfficiencyF,
-        startMahFinal,
-        endMahF,
-        drainMahF,
-        dtMsF,
-        mahPerHourF,
-        safeDrainFinal,
-        validDrainF,
-        startBatteryTemp,
-        endBatteryTemp,
-        lab14_systemLimited,
-        collapseRisk,
-        smartSwelling,
-        calibrationDrift
-);
+});
 
 // ------------------------------------------------
 // PARTIAL / FULL MODE DECISION
@@ -17078,12 +17400,14 @@ if (!lab14Cancelled && lab14Running) {
 }
 
 private void startLab14MainStress() {
-	
-	if (!lab14Running || lab14Cancelled) return;
+
+    if (!lab14Running || lab14Cancelled) return;
+
+    // 🔴 ENGINE TIMER (βάζεις ΕΔΩ)
+    t0 = SystemClock.elapsedRealtime();
+    lab14EndTime = t0 + (durationSec * 1000L);
 
     runOnUiThread(() -> {
-
-        t0 = SystemClock.elapsedRealtime();
 
         applyMaxBrightnessAndKeepOn();
 
@@ -17134,6 +17458,20 @@ private void startLab14ProgressLoop() {
             }
 
             long now = SystemClock.elapsedRealtime();
+
+// 🔴 FAILSAFE ENGINE CONTROL (ΜΠΑΙΝΕΙ ΕΔΩ)
+if (lab14EndTime > 0 && now >= lab14EndTime) {
+
+    ui.removeCallbacks(this);
+
+    lab14Running = false;
+
+    runOnUiThread(() -> {
+        lab14StopAllStress();
+    });
+
+    return;
+}
             
 // ✅ THERMAL PEAK TRACKING
     iDoctorEngine idoctor =
@@ -17153,6 +17491,9 @@ float tNow =
             lab14TempPeak = tNow;
         }
     }
+    
+    // 🔥 LIVE UPDATE
+updateLab14LiveStats();
 
             // =========================
             // FAST PHASE
@@ -17525,6 +17866,16 @@ private void startLab14SharedUI(long durationSec, boolean gr) {
     counterText.setTextColor(0xFF39FF14);
     counterText.setGravity(Gravity.CENTER);
     root.addView(counterText);
+    
+    lab14LiveStats = new TextView(this);
+
+lab14LiveStats.setTextColor(0xFF39FF14);
+lab14LiveStats.setTextSize(12f);
+lab14LiveStats.setPadding(0, dp(10), 0, dp(6));
+
+lab14LiveStats.setText("Initializing...");
+
+root.addView(lab14LiveStats);
 
     lab14StressVideo = new VideoView(this);
 
@@ -17592,23 +17943,25 @@ exitBtn.setLayoutParams(btnLp);
     root.addView(exitBtn);
 
     b.setView(root);
-    lab14Dialog = b.create();
+lab14Dialog = b.create();
 
-    if (lab14Dialog.getWindow() != null) {
-        lab14Dialog.getWindow()
-                .setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-    }
+if (lab14Dialog.getWindow() != null) {
+    lab14Dialog.getWindow()
+            .setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+}
 
-    if (!isLab14BMode) {
+if (!isLab14BMode) {
     lab14Dialog.show();
 }
 
-    lab14Running = true;
-    lab14Cancelled = false;
+// ❌ ΔΕΝ ξαναβάζουμε flags εδώ
 
-    if (!isLab14BMode) {
-    startLab14ProgressLoop();
-    startLab14FastThread();
+// 🔴 START FLOWS (UI ONLY εδώ)
+if (!isLab14BMode) {
+
+    startLab14FastThread();      // fast sag phase
+    startLab14ProgressLoop();    // timer + UI
+
 }
 }
 
@@ -17795,6 +18148,166 @@ private String computeRiskSummary(
         return gr ? "ΠΡΟΕΙΔΟΠΟΙΗΣΗ" : "WARNING";
     else
         return gr ? "ΑΣΦΑΛΕΣ" : "SAFE";
+}
+
+private void updateLab14LiveStats() {
+
+    try {
+
+        iDoctorEngine idoctor =
+                iDoctorEngine.get(ManualTestsActivity.this);
+
+        Float battTemp = idoctor.getBatteryTempUnified();
+        Float cpuTemp = readCpuTempSafe();
+
+        long drainNow = 0;
+
+        if (lab14MaxCharge > 0 && lab14MinCharge < Long.MAX_VALUE) {
+            drainNow = Math.max(0, lab14MaxCharge - lab14MinCharge);
+        }
+
+        double drainPerHour = Double.NaN;
+
+        long now = SystemClock.elapsedRealtime();
+        long dt = now - t0;
+
+        if (dt > 5000 && drainNow > 0) {
+            drainPerHour = (drainNow * 3600000.0) / dt;
+        }
+
+        String status;
+
+        if (!lab14Running) {
+            status = "STOPPED";
+        } else if (lab14_systemLimited[0]) {
+            status = "LIMITED ⚠";
+        } else if (drainPerHour > 50) {
+            status = "HIGH LOAD 🔥";
+        } else if (drainPerHour > 20) {
+            status = "NORMAL LOAD";
+        } else {
+            status = "WEAK LOAD ⚠";
+        }
+        
+// 🔥 FAKE TEST DETECTION
+boolean weakLoad =
+        Double.isNaN(drainPerHour) ||
+        drainPerHour < 10;
+
+if (weakLoad) {
+    lab14WeakLoadCounter++;
+} else {
+    lab14WeakLoadCounter = 0;
+}
+
+// 🔍 BOOST FAIL DEBUG
+if (lab14BoostActive && weakLoad && lab14WeakLoadCounter == 2) {
+    appendLog("BOOST FAIL", "Still weak load");
+}
+
+// 🔥 BOOST MODE (SAFE)
+if (!lab14BoostActive &&
+    lab14WeakLoadCounter >= 2 &&
+    lab14Running &&
+    !lab14Cancelled) {
+
+    lab14BoostActive = true;
+
+    appendLog("BOOST", "Activating max stress");
+
+    runOnUiThread(() -> {
+
+        // 🔴 DOUBLE CHECK (thread safety)
+        if (!lab14Running || lab14Cancelled) return;
+
+        try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
+        try { startGpuStress(); } catch (Throwable ignore) {}
+        try { startMemoryStress(); } catch (Throwable ignore) {}
+
+        try {
+            if (lab14StressVideo != null) {
+
+                if (!lab14StressVideo.isPlaying()) {
+                    lab14StressVideo.start();
+                }
+            }
+        } catch (Throwable ignore) {}
+
+    });
+}
+
+// 🔍 DEBUG (σωστό σημείο)
+if (lab14WeakLoadCounter > 0) {
+    appendLog("WEAK COUNT", String.valueOf(lab14WeakLoadCounter));
+}
+
+// 🔴 AUTO ABORT
+if (lab14WeakLoadCounter >= 5) {
+
+    lab14WeakLoadCounter = 0;
+
+    // 🔴 AUTO RESTART (max 1 φορά)
+    if (lab14RestartAttempts < 1) {
+
+    lab14RestartAttempts++;
+
+    appendLog("AUTO", "Restarting stress test...");
+
+    runOnUiThread(() -> {
+
+        lab14Running = false;
+        lab14Cancelled = true;
+        lab14BoostActive = false;
+
+        try {
+            ui.removeCallbacks(lab14VibrationLoop);
+        } catch (Throwable ignore) {}
+
+        lab14WeakLoadCounter = 0;
+
+        lab14StopAllStress();
+
+        ui.postDelayed(() -> {
+            lab14BatteryHealthStressTest_REAL();
+        }, 800);
+    });
+
+    return;
+}
+
+    // 🔴 FINAL FAIL
+    runOnUiThread(() -> {
+
+        logError(
+                gr
+                        ? "Αποτυχία καταπόνησης — δεν ανιχνεύθηκε φορτίο"
+                        : "Stress test failed — no load detected"
+        );
+
+        lab14Cancelled = true;
+        lab14Running = false;
+
+        lab14StopAllStress();
+    });
+
+    return;
+}
+
+        String txt = String.format(
+                Locale.US,
+                "CPU: %s°C\nBAT: %s°C\nDrain: %d mAh\nRate: %s\nStatus: %s",
+                cpuTemp != null ? String.format("%.1f", cpuTemp) : "N/A",
+                battTemp != null ? String.format("%.1f", battTemp) : "N/A",
+                drainNow,
+                Double.isNaN(drainPerHour)
+                        ? "N/A"
+                        : String.format("%.0f mAh/h", drainPerHour),
+                status
+        );
+
+        lab14LiveStats.setText(txt);
+
+    } catch (Throwable ignore) {}
 }
 
 //=============================================================
