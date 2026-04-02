@@ -16649,7 +16649,7 @@ final float drainMahFFinal = drainMahF;
 final boolean smartSwellingF = smartSwelling;
 
 final float startBatteryTempFinal = startBatteryTemp;
-final float endBatteryTempFinal = endBatteryTemp;
+final float endBatteryTempFinal = getBatteryTempEngineSafe();
 
 runOnUiThread(() -> {
 
@@ -16974,8 +16974,7 @@ runOnUiThread(() -> {
    // ------------------------------------------------
     // MAIN CALL (FIXED)
     // ------------------------------------------------
-    final float endBatteryTempFinal = getBatteryTempEngineSafe();
-
+   
     final double safeDrainFinal =
             (Double.isNaN(drainPercentPerHourF) || drainPercentPerHourF < 0)
                     ? 0
