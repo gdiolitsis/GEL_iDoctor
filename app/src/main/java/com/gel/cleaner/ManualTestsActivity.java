@@ -13872,48 +13872,34 @@ private void lab14LogStressResult(
                     voltageUnderLoad * estimatedCurrentMa;
         }
 
-        // =====================================================
-        // DYNAMIC RESISTANCE
-        // =====================================================
-        float resistanceCheckMilliOhm = Float.NaN;
-
-        if (sag > 0 &&
-            !Float.isNaN(estimatedCurrentMa) &&
-            estimatedCurrentMa > 50f &&
-            sag > 0.002f) {
-
-            resistanceCheckMilliOhm =
-                    (sag / estimatedCurrentMa) * 1000f;
-
-            if (resistanceCheckMilliOhm < 1f)
-                resistanceCheckMilliOhm = 1f;
-
-            if (resistanceCheckMilliOhm > 300f)
-                resistanceCheckMilliOhm = Float.NaN;
-        }
-        
 // =====================================================
-// SMART SWELLING DETECTION
+// DYNAMIC RESISTANCE
 // =====================================================
+float resistanceCheckMilliOhm = Float.NaN;
 
-float tempDelta = (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
-        ? (endBatteryTemp - startBatteryTemp)
-        : Float.NaN;
+if (sag > 0 &&
+    !Float.isNaN(estimatedCurrentMa) &&
+    estimatedCurrentMa > 50f &&
+    sag > 0.002f) {
 
-boolean smartSwelling =
-        detectSwellingSmart(
-                sag,
-                tempDelta,
-                estimatedCurrentMa,
-                resistanceCheckMilliOhm,
-                drainPercentPerHour
-        );
+    resistanceCheckMilliOhm =
+            (sag / estimatedCurrentMa) * 1000f;
 
-// 🔥 HARD FILTER
-if (sag < 0.06f) {
-    smartSwelling = false;
+    if (resistanceCheckMilliOhm < 1f)
+        resistanceCheckMilliOhm = 1f;
+
+    if (resistanceCheckMilliOhm > 300f)
+        resistanceCheckMilliOhm = Float.NaN;
 }
 
+// =====================================================
+// TEMP DELTA (for later use)
+// =====================================================
+float tempDelta =
+        (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
+                ? (endBatteryTemp - startBatteryTemp)
+                : Float.NaN;
+        
         // =====================================================
         // FINAL LOGGING
         // =====================================================
@@ -14066,6 +14052,10 @@ if (sag < 0.06f) {
             );
         }
         
+// =====================================================
+// RISK SUMMARY
+// =====================================================
+
 // =====================================================
 // RISK SUMMARY
 // =====================================================
@@ -15935,6 +15925,41 @@ else if (health >= 60f)
 else
     lab14HealthLabel = "Degraded";
 
+// ------------------------------------------------
+// SMART SWELLING (GLOBAL - πριν scoring)
+// ------------------------------------------------
+
+// TEMP DELTA
+float tempDelta =
+        (!Float.isNaN(tempStart) && !Float.isNaN(tempPeak))
+                ? (tempPeak - tempStart)
+                : Float.NaN;
+
+// SAFE RESISTANCE (mΩ)
+float rMilli =
+        !Float.isNaN(internalResistance[0])
+                ? internalResistance[0] * 1000f
+                : Float.NaN;
+
+// reject invalid values
+if (!Float.isNaN(rMilli) && (rMilli < 1f || rMilli > 400f)) {
+    rMilli = Float.NaN;
+}
+
+// SMART SWELLING (ONE SOURCE OF TRUTH)
+boolean smartSwelling =
+        detectSwellingSmart(
+                sagAvg[0],
+                tempDelta,
+                currentNow,
+                rMilli,
+                drainPercentPerHour
+        );
+
+// HARD FILTER
+if (!Float.isNaN(sagAvg[0]) && sagAvg[0] < 0.06f) {
+    smartSwelling = false;
+}
 
 // ----------------------------------------------------
 // FINAL SCORE (measurement-based only)
@@ -16722,17 +16747,34 @@ if (!Float.isNaN(lab14HealthPercent)) {
     );
 }
 
-    lab14LogFinalScore(
-            gr,
-            finalScoreF,
-            finalLabelF,
-            healthClassF,
-            collapseRisk,
-            smartSwelling,
-            calibrationDrift,
-            lab14_systemLimited
-    );
+// TEMP DELTA
+float tempDelta =
+        (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
+                ? (endBatteryTemp - startBatteryTemp)
+                : Float.NaN;
+
+// SAFE RESISTANCE (mΩ)
+float rMilli =
+        !Float.isNaN(internalResistance[0])
+                ? internalResistance[0] * 1000f
+                : Float.NaN;
+
+// reject invalid values
+if (!Float.isNaN(rMilli) && (rMilli < 1f || rMilli > 400f)) {
+    rMilli = Float.NaN;
 }
+
+// CALL
+lab14LogFinalScore(
+        gr,
+        finalScoreF,
+        finalLabelF,
+        healthClassF,
+        collapseRisk,
+        smartSwelling,
+        calibrationDrift,
+        lab14_systemLimited
+);
 
 // ------------------------------------------------
 // SAVE (πάντα save για variance system)
