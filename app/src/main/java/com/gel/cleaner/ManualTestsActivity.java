@@ -16598,7 +16598,7 @@ else if (measurementConfidence >= 60f)
 else
     confidenceLabel = "Low";
 
-                        final float estimatedESRF = estimatedESR;
+final float estimatedESRF = estimatedESR;
 final float energyEfficiencyF = energyEfficiency;
 
 final long endMahF = endMah;
@@ -17636,7 +17636,8 @@ updateLab14LiveStats();
                     tempStart
             );
         }
-    });
+    }
+});
 }
 
 private void resetLab14Bar() {
