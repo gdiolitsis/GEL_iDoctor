@@ -17009,11 +17009,11 @@ runOnUiThread(() -> {
 
 });
 
-final boolean collapseRiskF = collapseRisk[0];
-final boolean systemLimitedF = lab14_systemLimited[0];
-final boolean smartSwellingF = smartSwelling;
-
 runOnUiThread(() -> {
+
+    final boolean collapseRiskF = collapseRisk[0];
+    final boolean systemLimitedF = lab14_systemLimited[0];
+    final boolean smartSwellingF = smartSwelling;
 
     // ------------------------------------------------
     // PARTIAL / FULL MODE DECISION
