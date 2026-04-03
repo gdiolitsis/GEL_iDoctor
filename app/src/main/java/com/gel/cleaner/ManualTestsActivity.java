@@ -14262,9 +14262,9 @@ if (!Float.isNaN(tempStart) &&
     !Float.isNaN(lab14TempPeak)) {
 
     float delta =
-        (!Float.isNaN(startBatteryTempFinal) &&
-         !Float.isNaN(endBatteryTempFinal))
-                ? (endBatteryTempFinal - startBatteryTempFinal)
+        (!Float.isNaN(tempStart) &&
+         !Float.isNaN(lab14TempPeak))
+                ? (lab14TempPeak - tempStart)
                 : Float.NaN;
 
     String tempLabel =
@@ -18728,7 +18728,7 @@ startBatteryTemp = lab15BattTempStart;
 endBatteryTemp   = lab15BattTempEnd;
 
 final float startBatteryTempFinal = startBatteryTemp;
-final float endBatteryTempFinal   = endBatteryTemp;
+final float endBatteryTempFinal   = getBatteryTempEngineSafe();
 
 // ------------------------------------------------------------
 // Battery temperature + thermal correlation
