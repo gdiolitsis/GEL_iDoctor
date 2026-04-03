@@ -15617,6 +15617,9 @@ if (!Float.isNaN(tempNowEngine) && tempNowEngine > 0f) {
 
         lab14TempPeak = tempNowEngine;
     }
+    
+    float tempRise =
+        lab14TempPeak - tempStart;
 
     if (!Float.isNaN(tempStart) &&
         !Float.isNaN(lab14TempPeak) &&
