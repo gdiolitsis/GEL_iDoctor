@@ -2588,124 +2588,124 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         // ------------------------------------------------
         // LOGS
         // ------------------------------------------------
-appendHtml("<br>");
+        appendHtml("<br>");
 
-logOk(gr
-        ? "Αποτέλεσμα προστασίας συστήματος"
-        : "System protection result");
+        logOk(gr
+                ? "Αποτέλεσμα προστασίας συστήματος"
+                : "System protection result");
 
-logLine();
+        logLine();
 
-logLabelValue(
-        gr ? "CPU προστασία" : "CPU throttle",
-        cpuThrottle ? (gr ? "ΝΑΙ" : "YES")
-                    : (gr ? "ΟΧΙ" : "NO")
-);
+        logLabelValue(
+                gr ? "CPU προστασία" : "CPU throttle",
+                cpuThrottle ? (gr ? "ΝΑΙ" : "YES")
+                            : (gr ? "ΟΧΙ" : "NO")
+        );
 
-logLabelValue(
-        gr ? "Θερμική προστασία" : "Thermal throttle",
-        thermalThrottle ? (gr ? "ΝΑΙ" : "YES")
-                        : (gr ? "ΟΧΙ" : "NO")
-);
+        logLabelValue(
+                gr ? "Θερμική προστασία" : "Thermal throttle",
+                thermalThrottle ? (gr ? "ΝΑΙ" : "YES")
+                                : (gr ? "ΟΧΙ" : "NO")
+        );
 
-logLabelValue(
-        gr ? "Περιορισμός ισχύος" : "Power limiter",
-        powerThrottle ? (gr ? "ΝΑΙ" : "YES")
-                      : (gr ? "ΟΧΙ" : "NO")
-);
+        logLabelValue(
+                gr ? "Περιορισμός ισχύος" : "Power limiter",
+                powerThrottle ? (gr ? "ΝΑΙ" : "YES")
+                              : (gr ? "ΟΧΙ" : "NO")
+        );
 
-logLabelValue(
-        gr ? "Γενική προστασία συστήματος" : "System protection",
-        systemProtectionDetected ? (gr ? "ΕΝΕΡΓΗ" : "ACTIVE")
-                                 : (gr ? "ΔΕΝ ΑΝΙΧΝΕΥΘΗΚΕ" : "NOT DETECTED")
-);
+        logLabelValue(
+                gr ? "Γενική προστασία συστήματος" : "System protection",
+                systemProtectionDetected ? (gr ? "ΕΝΕΡΓΗ" : "ACTIVE")
+                                         : (gr ? "ΔΕΝ ΑΝΙΧΝΕΥΘΗΚΕ" : "NOT DETECTED")
+        );
 
-appendHtml("<br>");
+        appendHtml("<br>");
 
-logOk(gr
-        ? "Επιπλέον πληροφορίες"
-        : "Additional information");
+        logOk(gr
+                ? "Επιπλέον πληροφορίες"
+                : "Additional information");
 
-logLine();
+        logLine();
 
-if (hardDeltaMah >= 0) {
-    logLabelValue(
-            gr ? "Κατανάλωση hard λεπτού" : "Hard minute drain",
-            hardDeltaMah + " mAh"
-    );
-}
+        if (hardDeltaMah >= 0) {
+            logLabelValue(
+                    gr ? "Κατανάλωση hard λεπτού" : "Hard minute drain",
+                    hardDeltaMah + " mAh"
+            );
+        }
 
-if (!Float.isNaN(sag)) {
-    logLabelValue(
-            gr ? "Πτώση τάσης" : "Voltage sag",
-            String.format(Locale.US, "%.3f V", sag)
-    );
-}
+        if (!Float.isNaN(sag)) {
+            logLabelValue(
+                    gr ? "Πτώση τάσης" : "Voltage sag",
+                    String.format(Locale.US, "%.3f V", sag)
+            );
+        }
 
-if (!Float.isNaN(tempRise)) {
-    logLabelValue(
-            gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
-            String.format(Locale.US, "%.1f°C", tempRise)
-    );
-}
+        if (!Float.isNaN(tempRise)) {
+            logLabelValue(
+                    gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
+                    String.format(Locale.US, "%.1f°C", tempRise)
+            );
+        }
 
-if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
-    logLabelValue(
-            gr ? "Συνολική μεταβολή θερμοκρασίας" : "Total temperature change",
-            String.format(
-                    Locale.US,
-                    "%.1f°C → %.1f°C",
-                    startTemp[0],
-                    endTemp[0]
-            )
-    );
-}
+        if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
+            logLabelValue(
+                    gr ? "Συνολική μεταβολή θερμοκρασίας" : "Total temperature change",
+                    String.format(
+                            Locale.US,
+                            "%.1f°C → %.1f°C",
+                            startTemp[0],
+                            endTemp[0]
+                    )
+            );
+        }
 
-if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
-    logLabelValue(
-            gr ? "Συνολική μεταβολή τάσης" : "Total voltage change",
-            String.format(
-                    Locale.US,
-                    "%.3f V → %.3f V",
-                    startVolt[0],
-                    endVolt[0]
-            )
-    );
-}
+        if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
+            logLabelValue(
+                    gr ? "Συνολική μεταβολή τάσης" : "Total voltage change",
+                    String.format(
+                            Locale.US,
+                            "%.3f V → %.3f V",
+                            startVolt[0],
+                            endVolt[0]
+                    )
+            );
+        }
 
-appendHtml("<br>");
+        appendHtml("<br>");
 
-logOk(gr
-        ? "Εκτίμηση διάρκειας μπαταρίας"
-        : "Estimated battery duration");
+        logOk(gr
+                ? "Εκτίμηση διάρκειας μπαταρίας"
+                : "Estimated battery duration");
 
-logLine();
+        logLine();
 
-if (!Float.isNaN(perHour) && !Float.isNaN(estimatedHours)) {
+        if (!Float.isNaN(perHour) && !Float.isNaN(estimatedHours)) {
 
-    logLabelValue(
-            gr ? "Κατανάλωση soft χρήσης" : "Soft usage consumption",
-            String.format(Locale.US, "%.0f mAh/h", perHour)
-    );
+            logLabelValue(
+                    gr ? "Κατανάλωση soft χρήσης" : "Soft usage consumption",
+                    String.format(Locale.US, "%.0f mAh/h", perHour)
+            );
 
-    logLabelValue(
-            gr ? "Εκτιμώμενη διάρκεια" : "Estimated duration",
-            String.format(
-                    Locale.US,
-                    "%.1f %s",
-                    estimatedHours,
-                    gr ? "ώρες" : "hours"
-            )
-    );
+            logLabelValue(
+                    gr ? "Εκτιμώμενη διάρκεια" : "Estimated duration",
+                    String.format(
+                            Locale.US,
+                            "%.1f %s",
+                            estimatedHours,
+                            gr ? "ώρες" : "hours"
+                    )
+            );
 
-} else {
+        } else {
 
-    logWarn(gr
-            ? "Αδυναμία εκτίμησης διάρκειας"
-            : "Estimation failed");
-}
+            logWarn(gr
+                    ? "Αδυναμία εκτίμησης διάρκειας"
+                    : "Estimation failed");
+        }
 
-                } catch (Throwable t) {
+    } catch (Throwable t) {
 
         logError(gr
                 ? "Σφάλμα τελικής ανάλυσης LAB 14B"
