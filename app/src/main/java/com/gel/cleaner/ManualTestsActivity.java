@@ -14259,11 +14259,13 @@ if (sag > 0 &&
 
         // THERMAL
 if (!Float.isNaN(tempStart) &&
-    !Float.isNaN(tempPeak)) {
+    !Float.isNaN(lab14TempPeak)) {
 
-    float delta = tempPeak - tempStart;
-
-    float delta = endBatteryTempFinal - startBatteryTempFinal;
+    float delta =
+        (!Float.isNaN(startBatteryTempFinal) &&
+         !Float.isNaN(endBatteryTempFinal))
+                ? (endBatteryTempFinal - startBatteryTempFinal)
+                : Float.NaN;
 
     String tempLabel =
             delta < 3 ? "Normal" :
@@ -14338,7 +14340,7 @@ String riskSummary = computeRiskSummary(
         gr,
         sag,
         resistanceCheckMilliOhm,
-        (tempPeak - tempStart),
+        (lab14TempPeak - tempStart),
         drainPercentPerHour,
         collapseRisk[0],
         smartSwelling,
@@ -15087,18 +15089,14 @@ if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
     tempEnd = snapEnd.batteryTempC;
 }
 
-float tempPeak = tempEnd;
-
-if (!Float.isNaN(lab14TempPeak)) {
-    tempPeak = lab14TempPeak;
-}
+lab14TempPeak;
 
 float thermalChange = Float.NaN;
 
 if (!Float.isNaN(tempStart) &&
-    !Float.isNaN(tempPeak)) {
+    !Float.isNaN(lab14TempPeak)) {
 
-    thermalChange = tempPeak - tempStart;
+    thermalChange = lab14TempPeak - tempStart;
 }
 
 final Float cpuTempEnd = readCpuTempSafe();
@@ -15494,14 +15492,14 @@ if (!Float.isNaN(c1) &&
 
 if (!lab14_systemLimited[0] &&
     !Float.isNaN(tempStart) &&
-    !Float.isNaN(tempPeak) &&
+    !Float.isNaN(lab14TempPeak) &&
     !Float.isNaN(currentNow)) {
 
     float currentAmp =
             Math.abs(currentNow) / 1000f;
 
     float tempRise =
-            Math.max(0f, tempPeak - tempStart);
+            Math.max(0f, lab14TempPeak - tempStart);
 
     // reject fake values
     if (currentAmp > 0.3f &&
@@ -15571,10 +15569,10 @@ if (validDrain &&
     !lab14_systemLimited[0] &&
     !Float.isNaN(internalResistance[0]) &&
     !Float.isNaN(tempStart) &&
-    !Float.isNaN(tempPeak)) {
+    !Float.isNaN(lab14TempPeak)) {
 
     float tempRise =
-            tempPeak - tempStart;
+            lab14TempPeak - tempStart;
 
     boolean realESR =
             internalResistance[0] > 0.15f &&
@@ -15588,7 +15586,6 @@ if (validDrain &&
         swellingScore++;
     }
 }
-
 
 // thermal impedance
 
@@ -15622,14 +15619,11 @@ if (!Float.isNaN(tempNowEngine) && tempNowEngine > 0f) {
     }
 
     if (!Float.isNaN(tempStart) &&
-        !Float.isNaN(tempPeak) &&
+        !Float.isNaN(lab14TempPeak) &&
         !Float.isNaN(internalResistance[0]) &&
         validDrain &&
         !lab14_systemLimited[0]) {
-
-        float tempRise =
-                tempPeak - tempStart;
-
+        
         if (tempRise > 6f &&
             internalResistance[0] < 0.15f) {
 
@@ -15995,15 +15989,15 @@ boolean agingInputOk =
         lab14Conf != null &&
         mahPerHour > 0 &&
         !Float.isNaN(tempStart) &&
-        !Float.isNaN(tempPeak);
+        !Float.isNaN(lab14TempPeak);
 
 if (agingInputOk) {
 
     float tempRise =
-            Math.max(0f, tempPeak - tempStart);
+            Math.max(0f, lab14TempPeak - tempStart);
 
     boolean tempOk =
-            tempPeak < 58f &&
+            lab14TempPeak < 58f &&
             tempRise < 18f;
 
     boolean drainOk =
@@ -16027,7 +16021,7 @@ if (agingInputOk) {
                 lab14Conf,
                 cycles,
                 tempStart,
-                tempPeak
+                lab14TempPeak
         );
     }
 }
@@ -16194,11 +16188,11 @@ if (cycles > 0) {
 
 }
 
-if (!Float.isNaN(tempPeak)) {
+if (!Float.isNaN(lab14TempPeak)) {
 
-    if (tempPeak > 50f)
+    if (lab14TempPeak > 50f)
         health -= 10f;
-    else if (tempPeak > 45f)
+    else if (lab14TempPeak > 45f)
         health -= 5f;
 
 }
@@ -16225,8 +16219,8 @@ else
 
 // TEMP DELTA
 float tempDelta =
-        (!Float.isNaN(tempStart) && !Float.isNaN(tempPeak))
-                ? (tempPeak - tempStart)
+        (!Float.isNaN(tempStart) && !Float.isNaN(lab14TempPeak))
+                ? (lab14TempPeak - tempStart)
                 : Float.NaN;
 
 float rMilli =
@@ -16280,13 +16274,13 @@ if (validDrain && !lab14_systemLimited[0] && drainPercentPerHour > 0) {
 // TEMPERATURE ABSOLUTE
 // ----------------------------------------------------
 
-if (validDrain && !Float.isNaN(tempPeak)) {
+if (validDrain && !Float.isNaN(lab14TempPeak)) {
 
-    if (tempPeak >= 55f)
+    if (lab14TempPeak >= 55f)
         finalScore -= 25;
-    else if (tempPeak >= 48f)
+    else if (lab14TempPeak >= 48f)
         finalScore -= 12;
-    else if (tempPeak >= 42f)
+    else if (lab14TempPeak >= 42f)
         finalScore -= 6;
 }
 
@@ -16306,9 +16300,9 @@ if (!Float.isNaN(thermalImpedance[0]) &&
 
 if (validDrain &&
     !Float.isNaN(tempStart) &&
-    !Float.isNaN(tempPeak)) {
+    !Float.isNaN(lab14TempPeak)) {
 
-    float rise = Math.max(0f, tempPeak - tempStart);
+    float rise = Math.max(0f, lab14TempPeak - tempStart);
 
     if (rise >= 12f)
         finalScore -= 12;
@@ -16545,7 +16539,7 @@ if (Float.isNaN(voltageRecovery[0])) {
 // ----------------------------
 
 if (Float.isNaN(tempStart) ||
-    Float.isNaN(tempPeak)) {
+    Float.isNaN(lab14TempPeak)) {
 
     measurementConfidence -= 10f;
 }
@@ -16603,7 +16597,7 @@ final float energyEfficiencyF = energyEfficiency;
 final long endMahF = endMah;
 
 final float tempEndF = tempEnd;
-final float tempPeakF = tempPeak;   // ✅ ADD THIS
+final float tempPeakF = lab14TempPeak;
 
 final long dtMsF = dtMs;
 final long drainMahF = drainMah;
