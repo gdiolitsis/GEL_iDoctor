@@ -292,8 +292,12 @@ private long cycles;
 private float tempStart;
 private float lab14TempPeak = Float.NaN;
 
+private int lab14OptimalThreads = 0;
 
 private long lab14RecoveryTimeMs = 0;
+
+private GLSurfaceView lab14GLView;
+private Lab14GpuRenderer lab14GpuRenderer;
 
 private LinearLayout lab14FastBar;
 private LinearLayout lab14MainBar;
@@ -2385,10 +2389,13 @@ private void lab14BProtectionTest() {
 
             startVolt[0] = getBatteryVoltageFiltered();
 
-            isLab14BMode = true;
+isLab14BMode = true;
 
 lab14Cancelled = false;
 lab14Running = true;
+
+// 🔥 CALIBRATION (ΕΔΩ)
+calibrateLoad();
 
 startLab14BPopup(300);
 
@@ -2406,9 +2413,11 @@ startLab14BPopup(300);
             // --------------------------------------------------------
             // HARD START (0 -> 60s)
             // --------------------------------------------------------
+            appendLog("CALIB", "Threads=" + lab14OptimalThreads);
+            
             startCpuBurn_C_Mode();
             startMemoryStress();
-            startGpuStress();
+            startGpuStress();    
 
             // --------------------------------------------------------
             // AFTER 60s -> SNAPSHOT + SWITCH TO SOFT
@@ -2500,166 +2509,185 @@ startLab14BPopup(300);
                         hardTempRise = softStartTemp[0] - startTemp[0];
                     }
 
-                    boolean cpuProtectionDetected =
-                            !Float.isNaN(hardTempRise) && hardTempRise >= 3.0f;
+boolean thermalThrottle = false;
+boolean powerThrottle = false;
+boolean cpuThrottle = false;
 
-                    boolean thermalProtectionDetected =
-                            !Float.isNaN(hardTempRise) && hardTempRise >= 5.0f;
+// 🔥 TEMP RISE
+float tempRise =
+        (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0]))
+                ? (endTemp[0] - startTemp[0])
+                : Float.NaN;
 
-                    boolean powerLimiterDetected =
-                            (hardDeltaMah >= 0 && hardDeltaMah <= 15)
-                                    || (!Float.isNaN(hardVoltDrop) && hardVoltDrop < 0.02f);
+// 🔥 VOLTAGE SAG
+float sag =
+        (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0]))
+                ? (startVolt[0] - endVolt[0])
+                : Float.NaN;
 
-                    boolean systemProtectionDetected =
-                            cpuProtectionDetected
-                                    || thermalProtectionDetected
-                                    || powerLimiterDetected;
+// 🔥 POWER LIMIT
+if (hardDeltaMah >= 0 && hardDeltaMah < 10) {
+    powerThrottle = true;
+}
 
-                    // ------------------------------------------------
-                    // SOFT RESULT (1 -> 5 min)
-                    // ------------------------------------------------
-                    long softDeltaMah = -1L;
-                    if (softStartMah[0] > 0 && endMah[0] > 0) {
-                        softDeltaMah = Math.max(0L, softStartMah[0] - endMah[0]);
-                    }
+// 🔥 THERMAL
+if (!Float.isNaN(tempRise) && tempRise > 5f) {
+    thermalThrottle = true;
+}
 
-                    float perHour = Float.NaN;
-                    float estimatedHours = Float.NaN;
+// 🔥 CPU THROTTLE
+if (!Float.isNaN(voltageStability[0]) && voltageStability[0] < 40f) {
+    cpuThrottle = true;
+}
 
-                    if (softDeltaMah > 0 && baselineMah[0] > 0) {
+boolean systemProtectionDetected =
+        thermalThrottle || powerThrottle || cpuThrottle;
 
-                        float softMinutes = 4f;
-                        perHour = (softDeltaMah / softMinutes) * 60f;
+// ------------------------------------------------
+// SOFT RESULT (1 -> 5 min)
+// ------------------------------------------------
+long softDeltaMah = -1L;
+if (softStartMah[0] > 0 && endMah[0] > 0) {
+    softDeltaMah = Math.max(0L, softStartMah[0] - endMah[0]);
+}
 
-                        if (perHour > 0f) {
-                            estimatedHours = baselineMah[0] / perHour;
-                        }
-                    }
+float perHour = Float.NaN;
+float estimatedHours = Float.NaN;
 
-                    // ------------------------------------------------
-                    // LOGS
-                    // ------------------------------------------------
-                    appendHtml("<br>");
-                    logLine();
+if (softDeltaMah > 0 && baselineMah[0] > 0) {
 
-                    logOk(gr
-                            ? "Αποτέλεσμα προστασίας συστήματος"
-                            : "System protection result");
+    float softMinutes = 4f;
+    perHour = (softDeltaMah / softMinutes) * 60f;
 
-                    logLine();
+    if (perHour > 0f) {
+        estimatedHours = baselineMah[0] / perHour;
+    }
+}
 
-                    logLabelValue(
-                            gr ? "CPU προστασία" : "CPU protection",
-                            cpuProtectionDetected ? (gr ? "ΝΑΙ" : "YES")
-                                                  : (gr ? "ΟΧΙ" : "NO")
-                    );
+// ------------------------------------------------
+// LOGS
+// ------------------------------------------------
+appendHtml("<br>");
+logLine();
 
-                    logLabelValue(
-                            gr ? "Θερμική προστασία" : "Thermal protection",
-                            thermalProtectionDetected ? (gr ? "ΝΑΙ" : "YES")
-                                                      : (gr ? "ΟΧΙ" : "NO")
-                    );
+logOk(gr
+        ? "Αποτέλεσμα προστασίας συστήματος"
+        : "System protection result");
 
-                    logLabelValue(
-                            gr ? "Περιορισμός ισχύος" : "Power limiter",
-                            powerLimiterDetected ? (gr ? "ΝΑΙ" : "YES")
-                                                 : (gr ? "ΟΧΙ" : "NO")
-                    );
+logLine();
 
-                    logLabelValue(
-                            gr ? "Γενική προστασία συστήματος" : "System protection",
-                            systemProtectionDetected ? (gr ? "ΕΝΕΡΓΗ" : "ACTIVE")
-                                                     : (gr ? "ΔΕΝ ΑΝΙΧΝΕΥΘΗΚΕ" : "NOT DETECTED")
-                    );
+logLabelValue(
+        gr ? "CPU προστασία" : "CPU throttle",
+        cpuThrottle ? (gr ? "ΝΑΙ" : "YES")
+                    : (gr ? "ΟΧΙ" : "NO")
+);
 
-                    appendHtml("<br>");
-                    logLine();
+logLabelValue(
+        gr ? "Θερμική προστασία" : "Thermal throttle",
+        thermalThrottle ? (gr ? "ΝΑΙ" : "YES")
+                        : (gr ? "ΟΧΙ" : "NO")
+);
 
-                    logOk(gr
-                            ? "Εκτίμηση διάρκειας μπαταρίας"
-                            : "Estimated battery duration");
+logLabelValue(
+        gr ? "Περιορισμός ισχύος" : "Power limiter",
+        powerThrottle ? (gr ? "ΝΑΙ" : "YES")
+                      : (gr ? "ΟΧΙ" : "NO")
+);
 
-                    logLine();
+logLabelValue(
+        gr ? "Γενική προστασία συστήματος" : "System protection",
+        systemProtectionDetected ? (gr ? "ΕΝΕΡΓΗ" : "ACTIVE")
+                                 : (gr ? "ΔΕΝ ΑΝΙΧΝΕΥΘΗΚΕ" : "NOT DETECTED")
+);
 
-                    if (!Float.isNaN(perHour) && !Float.isNaN(estimatedHours)) {
+appendHtml("<br>");
+logLine();
 
-                        logLabelValue(
-                                gr ? "Κατανάλωση soft χρήσης" : "Soft usage consumption",
-                                String.format(Locale.US, "%.0f mAh/h", perHour)
-                        );
+logOk(gr
+        ? "Εκτίμηση διάρκειας μπαταρίας"
+        : "Estimated battery duration");
 
-                        logLabelValue(
-                                gr ? "Εκτιμώμενη διάρκεια" : "Estimated duration",
-                                String.format(
-                                        Locale.US,
-                                        "%.1f %s",
-                                        estimatedHours,
-                                        gr ? "ώρες" : "hours"
-                                )
-                        );
+logLine();
 
-                    } else {
+if (!Float.isNaN(perHour) && !Float.isNaN(estimatedHours)) {
 
-                        logWarn(gr
-                                ? "Αδυναμία εκτίμησης διάρκειας"
-                                : "Estimation failed");
-                    }
+    logLabelValue(
+            gr ? "Κατανάλωση soft χρήσης" : "Soft usage consumption",
+            String.format(Locale.US, "%.0f mAh/h", perHour)
+    );
 
-                    appendHtml("<br>");
-                    logLine();
+    logLabelValue(
+            gr ? "Εκτιμώμενη διάρκεια" : "Estimated duration",
+            String.format(
+                    Locale.US,
+                    "%.1f %s",
+                    estimatedHours,
+                    gr ? "ώρες" : "hours"
+            )
+    );
 
-                    logOk(gr
-                            ? "Επιπλέον πληροφορίες"
-                            : "Additional information");
+} else {
 
-                    logLine();
+    logWarn(gr
+            ? "Αδυναμία εκτίμησης διάρκειας"
+            : "Estimation failed");
+}
 
-                    if (hardDeltaMah >= 0) {
-                        logLabelValue(
-                                gr ? "Κατανάλωση hard λεπτού" : "Hard minute drain",
-                                hardDeltaMah + " mAh"
-                        );
-                    }
+appendHtml("<br>");
+logLine();
 
-                    if (!Float.isNaN(hardVoltDrop)) {
-                        logLabelValue(
-                                gr ? "Πτώση τάσης στο hard λεπτό" : "Hard-minute voltage drop",
-                                String.format(Locale.US, "%.3f V", hardVoltDrop)
-                        );
-                    }
+logOk(gr
+        ? "Επιπλέον πληροφορίες"
+        : "Additional information");
 
-                    if (!Float.isNaN(hardTempRise)) {
-                        logLabelValue(
-                                gr ? "Άνοδος θερμοκρασίας στο hard λεπτό" : "Hard-minute temperature rise",
-                                String.format(Locale.US, "%.1f°C", hardTempRise)
-                        );
-                    }
+logLine();
 
-                    if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
-                        logLabelValue(
-                                gr ? "Συνολική μεταβολή θερμοκρασίας" : "Total temperature change",
-                                String.format(
-                                        Locale.US,
-                                        "%.1f°C → %.1f°C",
-                                        startTemp[0],
-                                        endTemp[0]
-                                )
-                        );
-                    }
+if (hardDeltaMah >= 0) {
+    logLabelValue(
+            gr ? "Κατανάλωση hard λεπτού" : "Hard minute drain",
+            hardDeltaMah + " mAh"
+    );
+}
 
-                    if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
-                        logLabelValue(
-                                gr ? "Συνολική μεταβολή τάσης" : "Total voltage change",
-                                String.format(
-                                        Locale.US,
-                                        "%.3f V → %.3f V",
-                                        startVolt[0],
-                                        endVolt[0]
-                                )
-                        );
-                    }
+if (!Float.isNaN(sag)) {
+    logLabelValue(
+            gr ? "Πτώση τάσης" : "Voltage sag",
+            String.format(Locale.US, "%.3f V", sag)
+    );
+}
 
-                    logLine();
+if (!Float.isNaN(tempRise)) {
+    logLabelValue(
+            gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
+            String.format(Locale.US, "%.1f°C", tempRise)
+    );
+}
+
+if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
+    logLabelValue(
+            gr ? "Συνολική μεταβολή θερμοκρασίας" : "Total temperature change",
+            String.format(
+                    Locale.US,
+                    "%.1f°C → %.1f°C",
+                    startTemp[0],
+                    endTemp[0]
+            )
+    );
+}
+
+if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
+    logLabelValue(
+            gr ? "Συνολική μεταβολή τάσης" : "Total voltage change",
+            String.format(
+                    Locale.US,
+                    "%.3f V → %.3f V",
+                    startVolt[0],
+                    endVolt[0]
+            )
+    );
+}
+
+logLine();
 
                 } catch (Throwable t) {
 
@@ -3126,38 +3154,37 @@ public void run() {
 // ------------------------------------------------------------
 private void startGpuStress() {
 
-    lab14GpuRunning = true;
+    runOnUiThread(() -> {
 
-    lab14GpuThread = new Thread(() -> {
+        if (lab14GLView != null) return;
 
-        float x = 0f;
+        lab14GLView = new GLSurfaceView(this);
+        lab14GLView.setEGLContextClientVersion(2);
 
-        while (lab14GpuRunning) {
+        lab14GpuRenderer = new Lab14GpuRenderer();
+        lab14GLView.setRenderer(lab14GpuRenderer);
 
-            // fake heavy compute
-            for (int i = 0; i < 200000; i++) {
-                x += Math.sin(i) * Math.cos(i);
-            }
+        lab14GLView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
-            if (x > 1e8) x = 0f;
-        }
-
+        FrameLayout root = findViewById(android.R.id.content);
+        root.addView(lab14GLView,
+                new FrameLayout.LayoutParams(1, 1)); // 🔥 invisible αλλά GPU active
     });
-
-    lab14GpuThread.setPriority(Thread.MAX_PRIORITY);
-    lab14GpuThread.start();
 }
 
 private void stopGpuStress() {
 
-    lab14GpuRunning = false;
+    runOnUiThread(() -> {
 
-    try {
-        if (lab14GpuThread != null)
-            lab14GpuThread.join(200);
-    } catch (Throwable ignore) {}
+        if (lab14GpuRenderer != null) {
+            lab14GpuRenderer.stop();
+        }
 
-    lab14GpuThread = null;
+        if (lab14GLView != null) {
+            ((ViewGroup) lab14GLView.getParent()).removeView(lab14GLView);
+            lab14GLView = null;
+        }
+    });
 }
 
 // ===================================================================
@@ -3525,23 +3552,34 @@ private Float readGpuTempSafe() {
 
 private void startCpuBurn_C_Mode() {
 
-    __cpuBurn = true;
-    new Thread(() -> {
+    stopCpuBurn();
 
-        try {
+    // 🔥 αν έχει γίνει calibration → χρησιμοποίησε το
+    int threads = lab14OptimalThreads > 0
+            ? lab14OptimalThreads
+            : Runtime.getRuntime().availableProcessors();
 
-            while (__cpuBurn) {
-                double x = 0;
-                for (int i = 0; i < 100000; i++) {
-                    x += Math.sqrt(i);
+    for (int i = 0; i < threads; i++) {
+
+        new Thread(() -> {
+
+            while (lab14Running &&
+                   !lab14Cancelled &&
+                   !Thread.currentThread().isInterrupted()) {
+
+                // 🔥 πιο βαριά πράξη (καλύτερο load)
+                double x = Math.sin(System.nanoTime()) *
+                           Math.cos(System.nanoTime()) *
+                           Math.tan(System.nanoTime());
+
+                // anti-optimization
+                if (x == 123456.789) {
+                    appendLog("CPU", "keep alive");
                 }
-
             }
 
-        } catch (Throwable ignore) {}
-
-    }, "LAB-CPU-BURN").start();
-
+        }).start();
+    }
 }
 
 private void startMainStressPhase(
@@ -3573,11 +3611,16 @@ private void startMemoryStress() {
 
         try {
 
-            byte[] buf = new byte[4 * 1024 * 1024];
+            // 🔥 μεγαλύτερο buffer + multi-buffer για bandwidth
+            int size = 16 * 1024 * 1024; // 16MB
+            byte[] buf1 = new byte[size];
+            byte[] buf2 = new byte[size];
+
             Random r = new Random();
 
-            while (lab14Running) {
+            while (lab14Running && !lab14Cancelled) {
 
+                // 🔴 charging protection (κρατάμε το δικό σου)
                 if (isCharging()) {
 
                     runOnUiThread(() -> {
@@ -3598,18 +3641,33 @@ private void startMemoryStress() {
                     return;
                 }
 
-                for (int i = 0; i < buf.length; i += 64) {
-                    buf[i] = (byte) r.nextInt(255);
+                // 🔥 WRITE PASS (heavy)
+                for (int i = 0; i < size; i++) {
+                    buf1[i] = (byte) r.nextInt(255);
                 }
 
+                // 🔥 COPY PASS (memory bandwidth killer)
+                System.arraycopy(buf1, 0, buf2, 0, size);
+
+                // 🔥 READ PASS (force cache miss)
+                long sum = 0;
+                for (int i = 0; i < size; i++) {
+                    sum += buf2[i];
+                }
+
+                // anti-optimization
+                if (sum == 123456789) {
+                    appendLog("MEM", "keep alive");
+                }
             }
 
-        } catch (Throwable ignore) {
-        }
+        } catch (Throwable ignore) {}
 
     });
 
-    memStressThread.setPriority(Thread.NORM_PRIORITY);
+    // 🔥 πιο aggressive priority
+    memStressThread.setPriority(Thread.MAX_PRIORITY);
+
     memStressThread.start();
 }
 
@@ -13997,6 +14055,46 @@ lab14Cancelled = false;
 lab14BoostActive = false;
 appendLog("BOOST RESET", "OK");
 
+private int lab14OptimalThreads = 1;
+
+private void calibrateLoad() {
+
+    int cores = Runtime.getRuntime().availableProcessors();
+
+    double bestScore = 0;
+    int bestThreads = 1;
+
+    for (int t = 1; t <= cores; t++) {
+
+        stopCpuBurn();
+
+        startCpuBurnLimitedThreads(t);
+
+        SystemClock.sleep(3000);
+
+        float cpuTemp = readCpuTempSafe();
+        Float battTemp = iDoctorEngine
+                .get(this)
+                .getBatteryTempUnified();
+
+        double score = 0;
+
+        if (cpuTemp > 0) score += cpuTemp;
+        if (battTemp != null) score += battTemp;
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestThreads = t;
+        }
+    }
+
+    stopCpuBurn();
+
+    lab14OptimalThreads = bestThreads;
+
+    appendLog("CALIB", "Threads=" + bestThreads);
+}
+
 // 🔴 TIMERS (CRITICAL για 300sec)
 t0 = SystemClock.elapsedRealtime();
 lab14EndTime = t0 + (durationSec * 1000L);
@@ -18249,20 +18347,52 @@ if (lab14WeakLoadCounter >= 5) {
     return;
 }
 
-    // 🔴 FINAL FAIL
-    runOnUiThread(() -> {
+// 🔴 FALLBACK (αντί για FAIL)
+runOnUiThread(() -> {
 
-        logError(
-                gr
-                        ? "Αποτυχία καταπόνησης — δεν ανιχνεύθηκε φορτίο"
-                        : "Stress test failed — no load detected"
-        );
+    appendLog("FALLBACK",
+            gr
+                    ? "Ενεργοποίηση προσαρμοσμένου φορτίου"
+                    : "Switching to adaptive load");
 
-        lab14Cancelled = true;
-        lab14Running = false;
+    lab14BoostActive = false;
 
-        lab14StopAllStress();
-    });
+    // reset counter για να μην ξαναμπεί αμέσως
+    lab14WeakLoadCounter = 0;
+
+    // 🔴 STOP heavy stress
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+
+    // 🔥 START adaptive stress (σταθερό φορτίο)
+    try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
+    try { startMemoryStress(); } catch (Throwable ignore) {}
+
+    // optional GPU retry
+    try { startGpuStress(); } catch (Throwable ignore) {}
+
+});
+
+    // 🔴 STOP
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+
+    try { lab14StopAllStress(); } catch (Throwable ignore) {}
+    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+
+    // 🔴 CLEAN UI
+    try { lab14CleanupUI(); } catch (Throwable ignore) {}
+
+    // 🔴 DISMISS DIALOG (ΚΛΕΙΔΙ)
+    try {
+        if (lab14Dialog != null && lab14Dialog.isShowing()) {
+            lab14Dialog.dismiss();
+        }
+    } catch (Throwable ignore) {}
+
+});
 
     return;
 }
@@ -18282,6 +18412,40 @@ if (lab14WeakLoadCounter >= 5) {
         lab14LiveStats.setText(txt);
 
     } catch (Throwable ignore) {}
+}
+
+private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
+
+    private volatile boolean running = true;
+
+    public void stop() {
+        running = false;
+    }
+
+    @Override
+    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
+        GLES20.glClearColor(0f, 0f, 0f, 1f);
+    }
+
+    @Override
+    public void onSurfaceChanged(GL10 gl, int width, int height) {
+        GLES20.glViewport(0, 0, width, height);
+    }
+
+    @Override
+    public void onDrawFrame(GL10 gl) {
+
+        if (!running) return;
+
+        // 🔥 HEAVY GPU LOOP
+        for (int i = 0; i < 5000; i++) {
+            float x = (float) Math.sin(System.nanoTime());
+            float y = (float) Math.cos(System.nanoTime());
+
+            GLES20.glClearColor(x, y, x * y, 1f);
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+        }
+    }
 }
 
 //=============================================================
