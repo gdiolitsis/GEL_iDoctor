@@ -18353,8 +18353,6 @@ runOnUiThread(() -> {
         }
     } catch (Throwable ignore) {}
 
-});
-
     return;
 }
 
