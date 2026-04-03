@@ -118,6 +118,9 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.opengl.*;
+import android.opengl.GLES20;
+import android.opengl.GLSurfaceView;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -227,6 +230,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import javax.microedition.khronos.opengles.GL10;
+import javax.microedition.khronos.egl.EGLConfig;
 
 public class ManualTestsActivity extends AppCompatActivity {
 	
