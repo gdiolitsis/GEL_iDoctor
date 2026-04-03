@@ -2399,30 +2399,31 @@ isLab14BMode = true;
 lab14Cancelled = false;
 lab14Running = true;
 
-// 🔥 CALIBRATION (ΕΔΩ)
-calibrateLoad();
-
 startLab14BPopup(300);
 
-            logLine();
-            logOk(gr
-                    ? "LAB 14B ξεκίνησε"
-                    : "LAB 14B started");
-            logLabelValue(
-                    gr ? "Φάση" : "Phase",
-                    gr ? "1 λεπτό HARD stress" : "1 minute HARD stress"
-            );
+logLine();
+logOk(gr
+        ? "LAB 14B ξεκίνησε"
+        : "LAB 14B started");
+logLabelValue(
+        gr ? "Φάση" : "Phase",
+        gr ? "1 λεπτό HARD stress" : "1 minute HARD stress"
+);
 
-            applyMaxBrightnessAndKeepOn();
+applyMaxBrightnessAndKeepOn();
 
-            // --------------------------------------------------------
-            // HARD START (0 -> 60s)
-            // --------------------------------------------------------
-            appendLog("CALIB", "Threads=" + lab14OptimalThreads);
-            
-            startCpuBurn_C_Mode();
-            startMemoryStress();
-            startGpuStress();    
+// --------------------------------------------------------
+// HARD START (0 -> 60s)
+// --------------------------------------------------------
+appendLog("CALIB", "Threads=" + lab14OptimalThreads);
+
+new Thread(() -> {
+    try {
+        startCpuBurn_C_Mode();
+        startMemoryStress();
+        startGpuStress();
+    } catch (Throwable ignore) {}
+}).start();
 
             // --------------------------------------------------------
             // AFTER 60s -> SNAPSHOT + SWITCH TO SOFT
