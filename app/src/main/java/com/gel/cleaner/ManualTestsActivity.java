@@ -2000,14 +2000,14 @@ private void showLab14PreTestAdvisory(Runnable onContinue) {
     LinearLayout root = buildGELPopupRoot(this);
 
     // HEADER (TITLE ONLY)
-root.addView(
-        buildPopupHeader(
-                this,
-                gr
-                        ? "Δοκιμή Καταπόνησης Μπαταρίας — Προειδοποίηση"
-                        : "Battery Stress Test — Pre-Test Check"
-        )
-);
+    root.addView(
+            buildPopupHeader(
+                    this,
+                    gr
+                            ? "Δοκιμή Καταπόνησης Μπαταρίας — Προειδοποίηση"
+                            : "Battery Stress Test — Pre-Test Check"
+            )
+    );
 
     final String text =
             gr
@@ -2028,128 +2028,115 @@ root.addView(
     msg.setTextSize(14.5f);
     msg.setLineSpacing(0f, 1.2f);
     root.addView(msg);
-    
-// MUTE ROW (CHECKBOX)
-root.addView(buildMuteRow());
+
+    // MUTE ROW (CHECKBOX)
+    root.addView(buildMuteRow());
 
     LinearLayout row = new LinearLayout(this);
-row.setOrientation(LinearLayout.VERTICAL);
+    row.setOrientation(LinearLayout.VERTICAL);
 
-Button btnRestart = gelButton(
-        this,
-        gr ? "Έξοδος για επανεκκίνηση" : "Exit for restart",
-        0xFF8B0000
-);
-
-Button btnContinue = gelButton(
-        this,
-        gr ? "Συνέχεια παρόλα αυτά"
-           : "Continue anyway",
-        0xFF0B5D1E
-);
-
-
-LinearLayout.LayoutParams lp =
-        new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(52)
-        );
-
-lp.setMargins(0, dp(14), 0, 0);
-
-btnRestart.setLayoutParams(lp);
-btnContinue.setLayoutParams(lp);
-
-row.addView(btnRestart);
-row.addView(btnContinue);
-
-root.addView(row);
-
-
-b.setView(root);
-
-AlertDialog dlg = b.create();
-
-if (dlg.getWindow() != null)
-    dlg.getWindow().setBackgroundDrawable(
-            new ColorDrawable(Color.TRANSPARENT)
+    Button btnRestart = gelButton(
+            this,
+            gr ? "Έξοδος για επανεκκίνηση" : "Exit for restart",
+            0xFF8B0000
     );
 
-dlg.show();
+    Button btnContinue = gelButton(
+            this,
+            gr ? "Συνέχεια παρόλα αυτά"
+               : "Continue anyway",
+            0xFF0B5D1E
+    );
 
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(52)
+            );
 
-// 🔊 TTS
-new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (dlg.isShowing() && !AppTTS.isMuted(this)) {
-        AppTTS.ensureSpeak(this, text);
-    }
-}, 120);
+    lp.setMargins(0, dp(14), 0, 0);
 
-// CONTINUE
-btnContinue.setOnClickListener(v -> {
+    btnRestart.setLayoutParams(lp);
+    btnContinue.setLayoutParams(lp);
 
-    AppTTS.stop();
+    row.addView(btnRestart);
+    row.addView(btnContinue);
 
-    int percent = getBatteryPercentSafe();
-    float temp = getBatteryTemperature();
-    float cpu = readCpuTempSafe();
-    boolean charging = isDeviceCharging();
+    root.addView(row);
 
-    boolean conditionsOk =
-            percent >= 30 && percent <= 70
-            && (Float.isNaN(temp) || temp < 38f)
-            && (Float.isNaN(cpu) || cpu < 60f)
-            && !charging;
+    b.setView(root);
 
-    // ❌ BLOCK
-    if (!conditionsOk) {
+    AlertDialog dlg = b.create();
 
-        logWarn(AppLang.isGreek(this)
-                ? "Οι συνθήκες δεν είναι κατάλληλες — το test μπλοκαρίστηκε"
-                : "Conditions not valid — test blocked");
-
-        // 🔥 reset flags (CRITICAL για να μην ξεκινήσει από αλλού)
-        lab14Running = false;
-        lab14PopupShown = false;
-        lab14AdvisoryShown = false;
-
-        return; // STOP εδώ
+    if (dlg.getWindow() != null) {
+        dlg.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT)
+        );
     }
 
-    dlg.dismiss();
+    dlg.show();
 
-    if (onContinue != null) {
+    // 🔊 TTS
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        if (dlg.isShowing() && !AppTTS.isMuted(this)) {
+            AppTTS.ensureSpeak(this, text);
+        }
+    }, 120);
 
-    if (!checkLab14BConditions()) {
-        logWarn(gr
-                ? "Οι συνθήκες άλλαξαν — το τεστ ακυρώθηκε"
-                : "Conditions changed — test aborted");
-        return;
-    }
+    // CONTINUE
+    btnContinue.setOnClickListener(v -> {
 
-    onContinue.run();
-}
-});
+        AppTTS.stop();
 
-// RESTART
-btnRestart.setOnClickListener(v -> {
+        int percent = getBatteryPercentSafe();
+        float temp = getBatteryTemperature();
+        float cpu = readCpuTempSafe();
+        boolean charging = isDeviceCharging();
 
-    AppTTS.stop();
+        boolean conditionsOk =
+                percent >= 30 && percent <= 70
+                && (Float.isNaN(temp) || temp < 38f)
+                && (Float.isNaN(cpu) || cpu < 60f)
+                && !charging;
 
-    try {
+        if (!conditionsOk) {
+
+            logWarn(AppLang.isGreek(this)
+                    ? "Οι συνθήκες δεν είναι κατάλληλες — το test μπλοκαρίστηκε"
+                    : "Conditions not valid — test blocked");
+
+            // reset flags
+            lab14Running = false;
+            lab14PopupShown = false;
+            lab14AdvisoryShown = false;
+
+            return;
+        }
+
         dlg.dismiss();
-    } catch (Throwable ignore) {}
 
-    try {
-    	
-        finishAffinity();
-    } catch (Throwable ignore) {}
+        if (onContinue != null) {
+            onContinue.run();
+        }
+    });
 
-    try {
-        System.exit(0);
-    } catch (Throwable ignore) {}
+    // RESTART
+    btnRestart.setOnClickListener(v -> {
 
-});
+        AppTTS.stop();
+
+        try {
+            dlg.dismiss();
+        } catch (Throwable ignore) {}
+
+        try {
+            finishAffinity();
+        } catch (Throwable ignore) {}
+
+        try {
+            System.exit(0);
+        } catch (Throwable ignore) {}
+    });
 }
 
 // ------------------------------------------------------------
@@ -2594,9 +2581,13 @@ if (softDeltaMah > 0 && baselineMah[0] > 0) {
     }
 }
 
-// ------------------------------------------------
-// LOGS
-// ------------------------------------------------
+new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+    try {
+
+        // ------------------------------------------------
+        // LOGS
+        // ------------------------------------------------
 appendHtml("<br>");
 
 logOk(gr
@@ -2716,23 +2707,23 @@ if (!Float.isNaN(perHour) && !Float.isNaN(estimatedHours)) {
 
                 } catch (Throwable t) {
 
-                    logError(gr
-                            ? "Σφάλμα τελικής ανάλυσης LAB 14B"
-                            : "LAB 14B final analysis error");
+        logError(gr
+                ? "Σφάλμα τελικής ανάλυσης LAB 14B"
+                : "LAB 14B final analysis error");
 
-                } finally {
+    } finally {
 
-                    try { stopCpuBurn(); } catch (Throwable ignore) {}
-                    try { stopMemoryStress(); } catch (Throwable ignore) {}
-                    try { stopGpuStress(); } catch (Throwable ignore) {}
-                    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+        try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
-                    lab14Cancelled = false;
-                    lab14Running = false;
-                    isLab14BMode = false;
-                }
+        lab14Cancelled = false;
+        lab14Running = false;
+        isLab14BMode = false;
+    }
 
-            }, 300000L);
+}, 300000L);
 
         } catch (Throwable t) {
 
