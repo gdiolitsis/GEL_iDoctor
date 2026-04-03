@@ -3145,75 +3145,69 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
 
     ui.post(new Runnable() {
 
-@Override
-public void run() {
+        @Override
+        public void run() {
 
-    if (!lab14Running || lab14Cancelled) return;
+            if (!lab14Running || lab14Cancelled) return;
 
-    long now = SystemClock.elapsedRealtime();
-    int elapsed = (int) ((now - t0) / 1000);
+            long now = SystemClock.elapsedRealtime();
+            int elapsed = (int) ((now - t0) / 1000);
 
-    // 🔴 MID-TEST BATTERY PROTECTION (CRITICAL - FIRST)
-    int currentPercent = getBatteryPercentSafe();
+            int currentPercent = getBatteryPercentSafe();
 
-    if (currentPercent < 70) {
+            if (currentPercent < 70) {
 
-        logWarn(gr
-                ? "Η μπαταρία έπεσε κάτω από 70% — το τεστ διακόπτεται"
-                : "Battery dropped below 70% — test aborted");
+                logWarn(gr
+                        ? "Η μπαταρία έπεσε κάτω από 70% — το τεστ διακόπτεται"
+                        : "Battery dropped below 70% — test aborted");
 
-        lab14Cancelled = true;
-        lab14Running = false;
+                lab14Cancelled = true;
+                lab14Running = false;
 
-        lab14StopAllStress();
+                lab14StopAllStress();
 
-        try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-        try { lab14CleanupUI(); } catch (Throwable ignore) {}
+                try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+                try { lab14CleanupUI(); } catch (Throwable ignore) {}
 
-        return;
-    }
+                return;
+            }
 
-    // 🔥 PHASE SWITCH
-    if (elapsed < 60) {
+            if (elapsed < 60) {
 
-        statusText.setText(gr
-                ? "HARD stress (μέγιστο φορτίο)"
-                : "HARD stress (max load)");
+                statusText.setText(gr
+                        ? "HARD stress (μέγιστο φορτίο)"
+                        : "HARD stress (max load)");
 
-    } else {
+            } else {
 
-        statusText.setText(gr
-                ? "SOFT stress (ελαφρύ φορτίο)"
-                : "SOFT stress (light load)");
-    }
+                statusText.setText(gr
+                        ? "SOFT stress (ελαφρύ φορτίο)"
+                        : "SOFT stress (light load)");
+            }
 
-    // COUNTER
-    counterText.setText(elapsed + " / " + durationSec);
+            counterText.setText(elapsed + " / " + durationSec);
 
-    // PROGRESS BAR
-    if (lab14MainBar != null) {
+            if (lab14MainBar != null) {
 
-        int segCount = lab14MainBar.getChildCount();
-        int active = (int) ((elapsed / (float) durationSec) * segCount);
+                int segCount = lab14MainBar.getChildCount();
+                int active = (int) ((elapsed / (float) durationSec) * segCount);
 
-        for (int i = 0; i < segCount; i++) {
-            View seg = lab14MainBar.getChildAt(i);
-            seg.setBackgroundColor(i < active ? 0xFF39FF14 : 0xFF333333);
+                for (int i = 0; i < segCount; i++) {
+                    View seg = lab14MainBar.getChildAt(i);
+                    seg.setBackgroundColor(i < active ? 0xFF39FF14 : 0xFF333333);
+                }
+            }
+
+            updateLab14LiveStats();
+
+            if (elapsed >= durationSec) {
+                lab14StopAllStress();
+                return;
+            }
+
+            ui.postDelayed(this, 1000);
         }
-    }
-
-    // LIVE STATS
-    updateLab14LiveStats();
-
-    if (elapsed >= durationSec) {
-        lab14StopAllStress();
-        return;
-    }
-
-    ui.postDelayed(this, 1000);
-    }
-
-});
+    });
 }
 
 // ------------------------------------------------------------
