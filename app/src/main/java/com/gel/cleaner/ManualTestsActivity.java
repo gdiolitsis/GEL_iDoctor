@@ -15089,7 +15089,7 @@ if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
     tempEnd = snapEnd.batteryTempC;
 }
 
-lab14TempPeak;
+float tempPeak = lab14TempPeak;
 
 float thermalChange = Float.NaN;
 
