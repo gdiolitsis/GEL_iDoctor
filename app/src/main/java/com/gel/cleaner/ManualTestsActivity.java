@@ -18572,7 +18572,6 @@ if (batteryLevel > 80) {
     lab15Running = false;
     lab15Finished = true;
     return;
-}
 
 final String text =
         gr
