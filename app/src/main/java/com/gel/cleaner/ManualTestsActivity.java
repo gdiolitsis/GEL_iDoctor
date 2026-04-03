@@ -297,7 +297,6 @@ private long cycles;
 private float tempStart;
 private float lab14TempPeak = Float.NaN;
 
-private int lab14OptimalThreads = 0;
 private int lab14OptimalThreads = 1;
 
 private long lab14RecoveryTimeMs = 0;
