@@ -18341,7 +18341,7 @@ if (lab14WeakLoadCounter > 0) {
 }
 
 // 🔴 AUTO ABORT
-if (!isLab14BMode && lab14WeakLoadCounter >= 5)
+if (!isLab14BMode && lab14WeakLoadCounter >= 5) {
 
     lab14WeakLoadCounter = 0;
 
