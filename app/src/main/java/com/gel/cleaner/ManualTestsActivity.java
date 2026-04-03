@@ -3213,7 +3213,8 @@ public void run() {
     ui.postDelayed(this, 1000);
     }
 
-}); // ✅ κλείνει Runnable + post
+});
+}
 
 // ------------------------------------------------------------
 // GPU COMPUTE STRESS (LAB14)
