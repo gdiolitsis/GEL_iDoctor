@@ -293,6 +293,7 @@ private float tempStart;
 private float lab14TempPeak = Float.NaN;
 
 private int lab14OptimalThreads = 0;
+private int lab14OptimalThreads = 1;
 
 private long lab14RecoveryTimeMs = 0;
 
@@ -14055,45 +14056,7 @@ lab14Cancelled = false;
 lab14BoostActive = false;
 appendLog("BOOST RESET", "OK");
 
-private int lab14OptimalThreads = 1;
-
-private void calibrateLoad() {
-
-    int cores = Runtime.getRuntime().availableProcessors();
-
-    double bestScore = 0;
-    int bestThreads = 1;
-
-    for (int t = 1; t <= cores; t++) {
-
-        stopCpuBurn();
-
-        startCpuBurnLimitedThreads(t);
-
-        SystemClock.sleep(3000);
-
-        float cpuTemp = readCpuTempSafe();
-        Float battTemp = iDoctorEngine
-                .get(this)
-                .getBatteryTempUnified();
-
-        double score = 0;
-
-        if (cpuTemp > 0) score += cpuTemp;
-        if (battTemp != null) score += battTemp;
-
-        if (score > bestScore) {
-            bestScore = score;
-            bestThreads = t;
-        }
-    }
-
-    stopCpuBurn();
-
-    lab14OptimalThreads = bestThreads;
-
-    appendLog("CALIB", "Threads=" + bestThreads);
-}
+calibrateLoad();
 
 // 🔴 TIMERS (CRITICAL για 300sec)
 t0 = SystemClock.elapsedRealtime();
@@ -14355,15 +14318,11 @@ if (sag > 0 &&
             );
         }
 
-        // THERMAL
-if (!Float.isNaN(tempStart) &&
-    !Float.isNaN(lab14TempPeak)) {
+// THERMAL
+if (!Float.isNaN(startBatteryTemp) &&
+    !Float.isNaN(endBatteryTemp)) {
 
-    float delta =
-        (!Float.isNaN(tempStart) &&
-         !Float.isNaN(lab14TempPeak))
-                ? (lab14TempPeak - tempStart)
-                : Float.NaN;
+    float delta = endBatteryTemp - startBatteryTemp;
 
     String tempLabel =
             delta < 3 ? "Normal" :
@@ -14438,7 +14397,9 @@ String riskSummary = computeRiskSummary(
         gr,
         sag,
         resistanceCheckMilliOhm,
-        (lab14TempPeak - tempStart),
+        (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
+                ? (endBatteryTemp - startBatteryTemp)
+                : Float.NaN,
         drainPercentPerHour,
         collapseRisk[0],
         smartSwelling,
@@ -18446,6 +18407,44 @@ private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
         }
     }
+}
+
+private void calibrateLoad() {
+
+    int cores = Runtime.getRuntime().availableProcessors();
+
+    double bestScore = 0;
+    int bestThreads = 1;
+
+    for (int t = 1; t <= cores; t++) {
+
+        stopCpuBurn();
+
+        startCpuBurnLimitedThreads(t);
+
+        SystemClock.sleep(3000);
+
+        float cpuTemp = readCpuTempSafe();
+        Float battTemp = iDoctorEngine
+                .get(this)
+                .getBatteryTempUnified();
+
+        double score = 0;
+
+        if (cpuTemp > 0) score += cpuTemp;
+        if (battTemp != null) score += battTemp;
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestThreads = t;
+        }
+    }
+
+    stopCpuBurn();
+
+    lab14OptimalThreads = bestThreads;
+
+    appendLog("CALIB", "Threads=" + bestThreads);
 }
 
 //=============================================================
