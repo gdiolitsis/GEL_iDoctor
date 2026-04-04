@@ -18296,8 +18296,29 @@ if (weakLoad) {
     lab14WeakLoadCounter = 0;
 }
 
+// 🔴 LAB14B ΔΕΝ επιτρέπεται weak load
+if (isLab14BMode && lab14WeakLoadCounter >= 3) {
+
+    logError(gr
+        ? "Ανεπαρκές φορτίο — το test ακυρώθηκε"
+        : "Insufficient load — test aborted");
+
+    lab14Cancelled = true;
+    lab14Running = false;
+
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+
+    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+    try { lab14CleanupUI(); } catch (Throwable ignore) {}
+
+    return;
+}
+
 // 🔍 DEBUG
-if (lab14WeakLoadCounter > 0) {
+// 🔴 LOG μόνο μέχρι 3 φορές
+if (lab14WeakLoadCounter <= 3 && lab14WeakLoadCounter > 0) {
     appendLog("WEAK COUNT", String.valueOf(lab14WeakLoadCounter));
 }
 
