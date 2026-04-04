@@ -2732,7 +2732,11 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
     }
 
-}, 60000L); // ✅ ΕΔΩ ΚΛΕΙΝΕΙ ΤΟ OUTER
+}, 60000L);
+
+    });
+
+}
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (FINAL GEL STYLE)
