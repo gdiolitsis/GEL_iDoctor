@@ -284,6 +284,7 @@ private long lab14DeltaMah = 0;
 private long lab14LastGpuAdjustTs = 0L;
 private int lab14GpuMinLevel = 1;
 private int lab14GpuMaxLevel = 4;
+private boolean lab14WeakLoad = false;
 
 // ============================================================
 // LAB14 SHARED STATE
@@ -3199,7 +3200,11 @@ private void startGpuStress() {
 
     runOnUiThread(() -> {
 
-        if (lab14GLView != null) return;
+        // 🔁 αν υπάρχει ήδη → απλά resume
+        if (lab14GLView != null) {
+            try { lab14GLView.onResume(); } catch (Throwable ignore) {}
+            return;
+        }
 
         lab14GLView = new GLSurfaceView(this);
         lab14GLView.setEGLContextClientVersion(2);
@@ -3210,8 +3215,13 @@ private void startGpuStress() {
         lab14GLView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
         FrameLayout root = findViewById(android.R.id.content);
-        root.addView(lab14GLView,
-                new FrameLayout.LayoutParams(1, 1)); // 🔥 invisible αλλά GPU active
+
+        root.addView(
+                lab14GLView,
+                new FrameLayout.LayoutParams(1, 1) // 🔥 invisible αλλά GPU active
+        );
+
+        try { lab14GLView.onResume(); } catch (Throwable ignore) {}
     });
 }
 
@@ -3219,14 +3229,24 @@ private void stopGpuStress() {
 
     runOnUiThread(() -> {
 
-        if (lab14GpuRenderer != null) {
-            lab14GpuRenderer.stop();
-        }
+        try {
+            if (lab14GpuRenderer != null) {
+                lab14GpuRenderer.stop();
+            }
+        } catch (Throwable ignore) {}
 
-        if (lab14GLView != null) {
-            ((ViewGroup) lab14GLView.getParent()).removeView(lab14GLView);
-            lab14GLView = null;
-        }
+        try {
+            if (lab14GLView != null) {
+                lab14GLView.onPause();
+
+                ViewParent p = lab14GLView.getParent();
+                if (p instanceof ViewGroup) {
+                    ((ViewGroup) p).removeView(lab14GLView);
+                }
+
+                lab14GLView = null;
+            }
+        } catch (Throwable ignore) {}
     });
 }
 
@@ -18507,7 +18527,7 @@ rebalanceLab14GpuLive(
 
 // debounce (σωστό ήδη)
 if (weakLoad) {
-    lab14WeakLoadCounter++;
+    lab14WeakLoadCounter = Math.min(1000, lab14WeakLoadCounter + 1);
 } else {
     lab14WeakLoadCounter = Math.max(0, lab14WeakLoadCounter - 1);
 }
@@ -18843,8 +18863,8 @@ private void calibrateGpuLoadZeroRisk() {
 private void startGpuStressLevel(int level) {
 
     try {
-        if (gpuRenderer != null) {
-            gpuRenderer.setIntensity(level);
+        if (lab14GpuRenderer != null) {
+            lab14GpuRenderer.setIntensity(level);
         }
     } catch (Throwable ignore) {}
 
@@ -18888,8 +18908,8 @@ private void rebalanceLab14GpuLive(
     lab14LastGpuAdjustTs = now;
 
     try {
-        if (gpuRenderer != null) {
-            gpuRenderer.setIntensity(newLevel);
+        if (lab14GpuRenderer != null) {
+            lab14GpuRenderer.setIntensity(newLevel);
         }
     } catch (Throwable ignore) {}
 
