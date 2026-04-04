@@ -13866,10 +13866,10 @@ if (isChargingNowSafe()) {
 }
 
 // --------------------------------------------------
-// CALIBRATION (ONLY LAB 14)
+// ZERO-RISK CALIBRATION (LAB14 ONLY)
 // --------------------------------------------------
 if (!isLab14BMode && lab14OptimalThreads <= 0) {
-    calibrateLoadSafe();
+    calibrateLoadZeroRisk();
 }
 
 // ---------------------------------------
@@ -14074,14 +14074,17 @@ lab14Engine.startDrainSession();
                         : "Brightness forced to MAX, keep screen on active"
         );
 
-        int cores = Runtime.getRuntime().availableProcessors();
+        int cpuThreadsToUse =
+        !isLab14BMode
+                ? (lab14OptimalThreads > 0 ? lab14OptimalThreads : 3)
+                : Runtime.getRuntime().availableProcessors();
 
-        logLabelOkValue(
-                gr ? "Νήματα καταπόνησης CPU" : "CPU stress threads",
-                cores + (gr
-                        ? " (λογικοί πυρήνες=" + cores + ")"
-                        : " (cores=" + cores + ")")
-        );
+logLabelOkValue(
+        gr ? "Νήματα καταπόνησης CPU" : "CPU stress threads",
+        cpuThreadsToUse + (gr
+                ? " (λογικοί πυρήνες=" + Runtime.getRuntime().availableProcessors() + ")"
+                : " (cores=" + Runtime.getRuntime().availableProcessors() + ")")
+);
 
         if (cpuTempStart != null) {
             logLabelOkValue(
@@ -17373,7 +17376,7 @@ private void startLab14FastThread() {
             // LOAD 1
             // -------------------------
 
-startCpuBurn_C_Mode();
+startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
 startMemoryStress();
 startGpuStress();
 
@@ -17416,7 +17419,7 @@ stopGpuStress();
 
 // LOAD 2
 
-startCpuBurn_C_Mode();
+startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
 startMemoryStress();
 startGpuStress();
 
@@ -17512,9 +17515,16 @@ private void startLab14MainStress() {
 
         applyMaxBrightnessAndKeepOn();
 
-        startCpuBurn_C_Mode();
-        startMemoryStress();
-        startGpuStress();
+        if (!isLab14BMode) {
+    // LAB14 → adaptive threads
+    startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
+} else {
+    // LAB14B → fixed stress
+    startCpuBurn_C_Mode();
+}
+
+startMemoryStress();
+startGpuStress();
 
         try {
 
@@ -18270,11 +18280,13 @@ private void updateLab14LiveStats() {
         double drainPerHour = Double.NaN;
 
         long now = SystemClock.elapsedRealtime();
-        long dt = now - t0;
+long dt = now - t0;
 
-        if (dt > 5000 && drainNow > 0) {
-            drainPerHour = (drainNow * 3600000.0) / dt;
-        }
+int elapsed = (int) ((now - t0) / 1000);
+
+if (dt > 5000 && drainNow > 0) {
+    drainPerHour = (drainNow * 3600000.0) / dt;
+}
 
         String status;
 
@@ -18291,33 +18303,59 @@ private void updateLab14LiveStats() {
         }
         
 // ----------------------------------------------------
-// 🔴 GEL LOAD DETECTOR v2.0 — ADAPTIVE DEVICE CLASS
-// FINAL STABLE FOR LAB 14B
+// 🔴 GEL LOAD DETECTOR v2.1 — ENGINE COMPATIBLE
 // ----------------------------------------------------
 
-// elapsed = seconds from test start
+// elapsed υπάρχει ήδη στο loop σου
 boolean earlyPhase = elapsed < 25;
 boolean inHardPhase = elapsed < 60;
 
 // ----------------------------------------------------
-// 1) SAFE METRICS
+// 1) ENGINE SNAPSHOT (αντί για custom methods)
 // ----------------------------------------------------
-float cpuUsage = getCpuUsagePercentSafe();     // 0..100
-double currentMa = estimatedCurrentMa;        // mA
-float batTemp = getBatteryTempSafe();         // °C
+iDoctorEngine.BatterySnapshot snap =
+        idoctor.readBatterySnapshotLab();
 
+double currentMa =
+        snap != null ? snap.currentMa : Double.NaN;
+
+float batTemp =
+        snap != null ? snap.batteryTempC : Float.NaN;
+
+// thermal delta με σωστό variable
 float thermalDelta = Float.NaN;
-if (!Float.isNaN(lab14StartTemp) && !Float.isNaN(batTemp)) {
-    thermalDelta = batTemp - lab14StartTemp;
+if (!Float.isNaN(startBatteryTemp) && !Float.isNaN(batTemp)) {
+    thermalDelta = batTemp - startBatteryTemp;
 }
 
-// optional support metric
+// κρατάς το υπάρχον σου
 double drain = drainPerHour;
 
+boolean systemLimitedNow =
+        detectLab14SystemLimiter(
+                elapsed,
+                currentMa,
+                drainPerHour,
+                startBatteryTemp,
+                batTemp
+        );
+
+if (systemLimitedNow) {
+
+    if (!lab14_systemLimited[0]) {
+        appendLog("LIMITER",
+                gr
+                        ? "Πιθανός περιορισμός από BMS / thermal / power policy"
+                        : "Possible BMS / thermal / power policy limiting detected");
+    }
+
+    lab14_systemLimited[0] = true;
+}
+
 // ----------------------------------------------------
-// 2) DEVICE CLASS DETECTION
+// 2) DEVICE CLASS (μένει ίδιο)
 // ----------------------------------------------------
-int deviceClass; // 0=low, 1=mid, 2=flagship
+int deviceClass;
 
 int cores = Runtime.getRuntime().availableProcessors();
 long totalRamMb = -1L;
@@ -18336,17 +18374,17 @@ boolean highRam = totalRamMb >= 6000;
 boolean midRam  = totalRamMb >= 3500;
 
 if (highCpu && highRam) {
-    deviceClass = 2; // flagship
+    deviceClass = 2;
 } else if (cores >= 6 && midRam) {
-    deviceClass = 1; // mid-range
+    deviceClass = 1;
 } else {
-    deviceClass = 0; // low-end
+    deviceClass = 0;
 }
 
 // ----------------------------------------------------
-// 3) ADAPTIVE THRESHOLDS
+// 3) ADAPTIVE THRESHOLDS (ίδιο)
 // ----------------------------------------------------
-float cpuMin;
+float cpuMin;       // ❌ ΔΕΝ το χρησιμοποιούμε πλέον
 double currentMin;
 float thermalMin;
 double drainMin;
@@ -18354,24 +18392,21 @@ int scoreAbortThreshold;
 
 switch (deviceClass) {
 
-    case 2: // flagship
-        cpuMin = 58f;
+    case 2:
         currentMin = 180.0;
         thermalMin = 0.7f;
         drainMin = 14.0;
         scoreAbortThreshold = 6;
         break;
 
-    case 1: // mid-range
-        cpuMin = 50f;
+    case 1:
         currentMin = 130.0;
         thermalMin = 0.5f;
         drainMin = 10.0;
         scoreAbortThreshold = 6;
         break;
 
-    default: // low-end
-        cpuMin = 42f;
+    default:
         currentMin = 90.0;
         thermalMin = 0.3f;
         drainMin = 7.0;
@@ -18380,42 +18415,41 @@ switch (deviceClass) {
 }
 
 // ----------------------------------------------------
-// 4) SIGNALS
+// 4) SIGNALS (ΧΩΡΙΣ cpuUsage)
 // ----------------------------------------------------
-boolean cpuLoad =
-        !Float.isNaN(cpuUsage) && cpuUsage >= cpuMin;
-
 boolean currentLoad =
-        !Double.isNaN(currentMa) && currentMa >= currentMin;
+        !Double.isNaN(currentMa) &&
+        Math.abs(currentMa) >= currentMin &&
+        Math.abs(currentMa) > 20; // avoid noise
 
 boolean thermalLoad =
-        !Float.isNaN(thermalDelta) && thermalDelta >= thermalMin;
+        !Float.isNaN(thermalDelta) &&
+        thermalDelta >= thermalMin &&
+        thermalDelta < 10f; // anti-glitch
 
 boolean drainLoad =
-        !Double.isNaN(drain) && drain >= drainMin;
+        !Double.isNaN(drain) &&
+        drain >= drainMin;
 
 // ----------------------------------------------------
 // 5) FUSED SCORE
 // ----------------------------------------------------
 int loadScore = 0;
 
-if (cpuLoad) loadScore += 2;
 if (currentLoad) loadScore += 2;
 if (thermalLoad) loadScore += 1;
 if (drainLoad) loadScore += 1;
 
-// Strong confirmation
 boolean realLoad = loadScore >= 2;
 
 // ----------------------------------------------------
 // 6) SMART WEAK LOAD
 // ----------------------------------------------------
 boolean weakLoad =
-        isLab14BMode &&
         !earlyPhase &&
         !realLoad;
 
-// Debounce
+// debounce (σωστό ήδη)
 if (weakLoad) {
     lab14WeakLoadCounter++;
 } else {
@@ -18424,7 +18458,6 @@ if (weakLoad) {
 
 // ----------------------------------------------------
 // 7) FINAL ABORT LOGIC
-// NEVER abort during HARD phase
 // ----------------------------------------------------
 if (isLab14BMode
         && !inHardPhase
@@ -18437,9 +18470,7 @@ if (isLab14BMode
     lab14Cancelled = true;
     lab14Running = false;
 
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    lab14StopAllStress();
 
     try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
     try { lab14CleanupUI(); } catch (Throwable ignore) {}
@@ -18448,7 +18479,7 @@ if (isLab14BMode
 }
 
 // ----------------------------------------------------
-// 8) DEBUG LOG
+// 8) DEBUG LOG (χωρίς logDebug)
 // ----------------------------------------------------
 if (lab14WeakLoadCounter <= 3) {
 
@@ -18456,16 +18487,14 @@ if (lab14WeakLoadCounter <= 3) {
             deviceClass == 2 ? "FLAGSHIP" :
             deviceClass == 1 ? "MID" : "LOW";
 
-    String dbg =
-            "LOAD CHECK → class:" + cls +
-            " | CPU:" + (Float.isNaN(cpuUsage) ? "NaN" : ((int) cpuUsage + "%")) +
-            " | mA:" + (Double.isNaN(currentMa) ? "NaN" : ((int) currentMa + "")) +
-            " | ΔT:" + (Float.isNaN(thermalDelta) ? "NaN" : String.format(java.util.Locale.US, "%.2f", thermalDelta)) +
-            " | drain/h:" + (Double.isNaN(drain) ? "NaN" : String.format(java.util.Locale.US, "%.1f", drain)) +
-            " | score:" + loadScore +
-            " | weakCount:" + lab14WeakLoadCounter;
-
-    logDebug(dbg);
+    appendLog("LOAD",
+            "class:" + cls +
+            " mA:" + (Double.isNaN(currentMa) ? "N/A" : (int) currentMa) +
+            " ΔT:" + (Float.isNaN(thermalDelta) ? "N/A" :
+            String.format(java.util.Locale.US, "%.2f", thermalDelta)) +
+            " drain:" + (Double.isNaN(drain) ? "N/A" :
+            String.format(java.util.Locale.US, "%.1f", drain)) +
+            " score:" + loadScore);
 }
 
 // ========================================================
@@ -18609,56 +18638,74 @@ private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
     }
 }
 
-private void calibrateLoadSafe() {
+private boolean detectLab14SystemLimiter(
+        int elapsed,
+        double currentMa,
+        double drainPerHour,
+        float startBatteryTemp,
+        float battTempNow
+) {
+    // Μόνο στο LAB14B και μόνο αφού περάσει λίγο χρόνος
+    if (!isLab14BMode) return false;
+    if (elapsed < 35) return false;
 
-    if (lab14Running) return; // 🔴 guard
+    boolean lowCurrent =
+            !Double.isNaN(currentMa) &&
+            Math.abs(currentMa) < 90.0;
+
+    boolean lowDrain =
+            !Double.isNaN(drainPerHour) &&
+            drainPerHour < 6.0;
+
+    boolean lowThermalRise =
+            !Float.isNaN(startBatteryTemp) &&
+            !Float.isNaN(battTempNow) &&
+            (battTempNow - startBatteryTemp) < 0.35f;
+
+    // Αν όλα δείχνουν "τρέχει stress αλλά το σύστημα δεν αφήνει ρεύμα"
+    return lowCurrent && lowDrain && lowThermalRise;
+}
+
+private void calibrateLoadZeroRisk() {
+
+    if (lab14Running || lab14Cancelled) return;
 
     int cores = Runtime.getRuntime().availableProcessors();
+    long totalRamMb = -1L;
 
-    double bestScore = -1;
-    int bestThreads = 1;
-
-    float baseCpuTemp = readCpuTempSafe();
-    Float baseBattTemp = iDoctorEngine
-            .get(this)
-            .getBatteryTempUnified();
-
-    for (int t = 1; t <= cores; t++) {
-
-        try { stopCpuBurn(); } catch (Throwable ignore) {}
-
-        startCpuBurnLimitedThreads(t);
-
-        SystemClock.sleep(5000); // πιο safe
-
-        float cpuTemp = readCpuTempSafe();
-        Float battTemp = iDoctorEngine
-                .get(this)
-                .getBatteryTempUnified();
-
-        float cpuDelta =
-                (!Float.isNaN(cpuTemp) && !Float.isNaN(baseCpuTemp))
-                        ? (cpuTemp - baseCpuTemp)
-                        : 0f;
-
-        float battDelta =
-                (battTemp != null && baseBattTemp != null)
-                        ? (battTemp - baseBattTemp)
-                        : 0f;
-
-        double score = cpuDelta * 2.0 + battDelta;
-
-        if (score > bestScore) {
-            bestScore = score;
-            bestThreads = t;
+    try {
+        ActivityManager am =
+                (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        if (am != null) {
+            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+            am.getMemoryInfo(mi);
+            totalRamMb = mi.totalMem / (1024L * 1024L);
         }
+    } catch (Throwable ignore) {}
+
+    int threads;
+
+    // ultra-safe profiling
+    if (cores <= 4 || (totalRamMb > 0 && totalRamMb < 3000)) {
+        threads = 2;          // low-end
+    } else if (cores <= 6 || (totalRamMb > 0 && totalRamMb < 5000)) {
+        threads = 3;          // mid-range
+    } else if (cores <= 8 || (totalRamMb > 0 && totalRamMb < 8000)) {
+        threads = 4;          // upper mid
+    } else {
+        threads = 5;          // flagship safe cap
     }
 
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    // extra safety
+    if (threads < 2) threads = 2;
+    if (threads > 5) threads = 5;
 
-    lab14OptimalThreads = bestThreads;
+    lab14OptimalThreads = threads;
 
-    appendLog("CALIB", "Threads=" + bestThreads);
+    appendLog("CALIB",
+            "Zero-risk threads=" + threads +
+            " | cores=" + cores +
+            " | ram=" + (totalRamMb > 0 ? totalRamMb + "MB" : "N/A"));
 }
 
 //=============================================================
