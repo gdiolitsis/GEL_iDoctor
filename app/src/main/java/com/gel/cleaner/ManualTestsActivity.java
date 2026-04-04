@@ -2706,27 +2706,33 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
     } catch (Throwable t) {
 
-            logError(gr
-                    ? "Σφάλμα τελικής ανάλυσης LAB 14B"
-                    : "LAB 14B final analysis error");
+                logError(gr
+                        ? "Σφάλμα τελικής ανάλυσης LAB 14B"
+                        : "LAB 14B final analysis error");
 
-        } finally {
+            } finally {
 
-            try { stopCpuBurn(); } catch (Throwable ignore) {}
-            try { stopMemoryStress(); } catch (Throwable ignore) {}
-            try { stopGpuStress(); } catch (Throwable ignore) {}
-            try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+                try { stopCpuBurn(); } catch (Throwable ignore) {}
+                try { stopMemoryStress(); } catch (Throwable ignore) {}
+                try { stopGpuStress(); } catch (Throwable ignore) {}
+                try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
-            lab14Cancelled = false;
-            lab14Running = false;
-            isLab14BMode = false;
-        }
+                lab14Cancelled = false;
+                lab14Running = false;
+                isLab14BMode = false;
+            }
 
-    }, 300000L);
+        }, 300000L); // ✅ ΕΔΩ ΚΛΕΙΝΕΙ ΤΟ INNER
 
-}, 60000L);
+    } catch (Throwable t) {
 
-}); // 🔴 ΑΥΤΟ ΕΛΕΙΠΕ
+        logError(gr
+                ? "Σφάλμα snapshot LAB 14B"
+                : "LAB 14B snapshot error");
+
+    }
+
+}, 60000L); // ✅ ΕΔΩ ΚΛΕΙΝΕΙ ΤΟ OUTER
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (FINAL GEL STYLE)
