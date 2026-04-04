@@ -17548,30 +17548,29 @@ private void startLab14MainStress() {
 
     if (!lab14Running || lab14Cancelled) return;
 
-// 🔴 ENGINE TIMER (βάζεις ΕΔΩ)
-t0 = SystemClock.elapsedRealtime();
-lab14EndTime = t0 + (durationSec * 1000L);
+    // 🔴 ENGINE TIMER
+    t0 = SystemClock.elapsedRealtime();
+    lab14EndTime = t0 + (durationSec * 1000L);
 
-runOnUiThread(() -> {
+    runOnUiThread(() -> {
 
-    applyMaxBrightnessAndKeepOn();
+        applyMaxBrightnessAndKeepOn();
 
-    if (!isLab14BMode) {
-        // LAB14 → adaptive threads
-        startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
-    } else {
-        // LAB14B → fixed stress
-        startCpuBurn_C_Mode();
-    }
+        if (!isLab14BMode) {
+            // LAB14 → adaptive threads
+            startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
+        } else {
+            // LAB14B → fixed stress
+            startCpuBurn_C_Mode();
+        }
 
-    startMemoryStress();
+        startMemoryStress();
 
-    startGpuStressLevel(
-            lab14GpuIntensity > 0
-                    ? lab14GpuIntensity
-                    : (isLab14BMode ? 3 : 2)
-    );
-});
+        startGpuStressLevel(
+                lab14GpuIntensity > 0
+                        ? lab14GpuIntensity
+                        : (isLab14BMode ? 3 : 2)
+        );
 
         try {
 
@@ -17585,14 +17584,12 @@ runOnUiThread(() -> {
             );
 
             lab14StressVideo.setOnPreparedListener(mp -> {
-
                 mp.setLooping(true);
                 mp.setVolume(0f, 0f);
                 lab14StressVideo.start();
             });
 
         } catch (Throwable ignore) {}
-
     });
 }
 
