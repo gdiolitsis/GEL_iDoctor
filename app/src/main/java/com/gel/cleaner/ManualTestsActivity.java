@@ -2342,9 +2342,7 @@ private void lab14BProtectionTest() {
     showLab14BAdvisory(() -> {
 
         appendHtml("<br>");
-
-        try {
-
+        
             if (!checkLab14BConditions()) {
                 isLab14BMode = false;
                 return;
@@ -2724,22 +2722,7 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
     }
 
 }, 300000L);
-
-        } catch (Throwable t) {
-
-            try { stopCpuBurn(); } catch (Throwable ignore) {}
-            try { stopMemoryStress(); } catch (Throwable ignore) {}
-            try { stopGpuStress(); } catch (Throwable ignore) {}
-            try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-
-            lab14Cancelled = false;
-            lab14Running = false;
-            isLab14BMode = false;
-
-            logError(gr
-                    ? "Αποτυχία προετοιμασίας LAB 14B"
-                    : "LAB 14B setup failed");
-        }
+       
     });
 }
 
