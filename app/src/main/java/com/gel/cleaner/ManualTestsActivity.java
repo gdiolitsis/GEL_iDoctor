@@ -286,6 +286,9 @@ private int lab14GpuMinLevel = 1;
 private int lab14GpuMaxLevel = 4;
 private boolean lab14WeakLoad = false;
 
+private int lab14CpuThreadsCurrent = 0;
+private long lab14LastCpuAdjustTs = 0L;
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -17575,6 +17578,8 @@ private void startLab14MainStress() {
     runOnUiThread(() -> {
 
         applyMaxBrightnessAndKeepOn();
+        lab14CpuThreadsCurrent =
+            lab14OptimalThreads > 0 ? lab14OptimalThreads : 3;
 
         if (!isLab14BMode) {
             // LAB14 → adaptive threads
@@ -18506,26 +18511,29 @@ if (drainLoad) loadScore += 1;
 
 boolean realLoad = loadScore >= 2;
 
-rebalanceLab14GpuLive(
-        weakLoad,
-        thermalDelta,
-        lab14_systemLimited[0]
-);
-
 // ----------------------------------------------------
 // 6) SMART WEAK LOAD
 // ----------------------------------------------------
 boolean weakLoad =
         !earlyPhase &&
         !realLoad;
-        
+
+lab14WeakLoad = weakLoad;
+
+// ✅ ΕΝΑ σημείο ΜΟΝΟ
 rebalanceLab14GpuLive(
         weakLoad,
         thermalDelta,
         lab14_systemLimited[0]
 );
 
-// debounce (σωστό ήδη)
+rebalanceLab14CpuLive(
+        weakLoad,
+        thermalDelta,
+        lab14_systemLimited[0]
+);
+
+// debounce
 if (weakLoad) {
     lab14WeakLoadCounter = Math.min(1000, lab14WeakLoadCounter + 1);
 } else {
@@ -18883,6 +18891,7 @@ private void rebalanceLab14GpuLive(
 
     long now = SystemClock.elapsedRealtime();
 
+    // debounce
     if (now - lab14LastGpuAdjustTs < 8000) return;
 
     int oldLevel = lab14GpuIntensity;
@@ -18894,13 +18903,31 @@ private void rebalanceLab14GpuLive(
     boolean veryHighThermal =
             !Float.isNaN(thermalDelta) && thermalDelta >= 10f;
 
+    // 🔴 PRIORITY 1: limiter / overheating
     if (systemLimited || veryHighThermal) {
-        newLevel = Math.max(lab14GpuMinLevel, oldLevel - 1);
-    } else if (weakLoad) {
-        newLevel = Math.min(lab14GpuMaxLevel, oldLevel + 1);
-    } else if (!Float.isNaN(thermalDelta) && thermalDelta < 3f) {
-        newLevel = Math.min(lab14GpuMaxLevel, oldLevel + 1);
+
+        newLevel = oldLevel - 1;
+
     }
+    // 🔴 PRIORITY 2: weak load → boost
+    else if (weakLoad) {
+
+        newLevel = oldLevel + 1;
+
+    }
+    // 🔴 PRIORITY 3: thermal tuning
+    else if (!Float.isNaN(thermalDelta)) {
+
+        if (thermalDelta < 3f) {
+            newLevel = oldLevel + 1;
+        } else if (thermalDelta > 6f) {
+            newLevel = oldLevel - 1;
+        }
+    }
+
+    // ✅ CLAMP (CRITICAL)
+    newLevel = Math.max(lab14GpuMinLevel,
+            Math.min(lab14GpuMaxLevel, newLevel));
 
     if (newLevel == oldLevel) return;
 
@@ -18914,7 +18941,74 @@ private void rebalanceLab14GpuLive(
     } catch (Throwable ignore) {}
 
     appendLog("GPU LIVE",
-            "level " + oldLevel + " -> " + newLevel);
+            "level " + oldLevel + " -> " + newLevel +
+            " ΔT=" + (Float.isNaN(thermalDelta)
+                ? "N/A"
+                : String.format(Locale.US, "%.1f", thermalDelta)) +
+            (systemLimited ? " LIMITED" : ""));
+}
+
+private void rebalanceLab14CpuLive(
+        boolean weakLoad,
+        float thermalDelta,
+        boolean systemLimited
+) {
+
+    if (!lab14Running || lab14Cancelled) return;
+    if (isLab14BMode) return;
+    if (lab14BoostActive) return;
+
+    long now = SystemClock.elapsedRealtime();
+
+    if (now - lab14LastCpuAdjustTs < 8000) return;
+
+    int oldThreads = lab14CpuThreadsCurrent > 0
+            ? lab14CpuThreadsCurrent
+            : (lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
+
+    int newThreads = oldThreads;
+
+    boolean veryHot =
+            !Float.isNaN(thermalDelta) && thermalDelta >= 10f;
+
+    // 🔴 limiter / overheating
+    if (systemLimited || veryHot) {
+
+        newThreads = oldThreads - 1;
+
+    }
+    // 🔴 weak → ανεβάζουμε
+    else if (weakLoad) {
+
+        newThreads = oldThreads + 1;
+
+    }
+    // 🔴 fine tuning
+    else if (!Float.isNaN(thermalDelta)) {
+
+        if (thermalDelta < 3f) {
+            newThreads = oldThreads + 1;
+        } else if (thermalDelta > 6f) {
+            newThreads = oldThreads - 1;
+        }
+    }
+
+    // 🔒 clamp (μην ξεφύγει)
+    newThreads = Math.max(1,
+            Math.min(Runtime.getRuntime().availableProcessors(), newThreads));
+
+    if (newThreads == oldThreads) return;
+
+    lab14CpuThreadsCurrent = newThreads;
+    lab14LastCpuAdjustTs = now;
+
+    try {
+        stopCpuBurn();
+        startCpuBurnLimitedThreads(newThreads);
+    } catch (Throwable ignore) {}
+
+    appendLog("CPU LIVE",
+            "threads " + oldThreads + " -> " + newThreads);
 }
 
 //=============================================================
