@@ -2944,20 +2944,46 @@ private void showLab14BAdvisory(Runnable onContinue) {
 }
 
 private void startCpuBurn_Light() {
-    startCpuBurnLimitedThreads(1);
+
+    int cores = Runtime.getRuntime().availableProcessors();
+
+    // 🔥 ποτέ κάτω από 2, ποτέ 1
+    int threads = Math.max(2, cores / 2);
+
+    startCpuBurnLimitedThreads(threads);
 }
 
 private void startCpuBurnLimitedThreads(int threads) {
 
     stopCpuBurn();
 
+    // 🔥 safety clamp
+    int cores = Runtime.getRuntime().availableProcessors();
+
+    if (threads <= 0) threads = cores;
+
+    // 🔥 HARD περίπτωση (αν ζητηθεί full load)
+    if (threads > cores) {
+        threads = cores + 2; // μικρό overdrive
+    }
+
+    appendLog("CPU",
+            "Threads=" + threads + " / Cores=" + cores);
+
     for (int i = 0; i < threads; i++) {
 
         new Thread(() -> {
+
+            // 🔥 tight loop για πραγματικό load
             while (!lab14Cancelled && !Thread.currentThread().isInterrupted()) {
-                double x = Math.sin(System.nanoTime());
+
+                double x = 0;
+                for (int j = 0; j < 1000; j++) {
+                    x += Math.sqrt(j * System.nanoTime());
+                }
             }
-        }).start();
+
+        }, "LAB14_CPU_" + i).start();
     }
 }
 
@@ -3565,27 +3591,54 @@ private void startCpuBurn_C_Mode() {
 
     stopCpuBurn();
 
-    // 🔥 αν έχει γίνει calibration → χρησιμοποίησε το
-    int threads = lab14OptimalThreads > 0
-            ? lab14OptimalThreads
-            : Runtime.getRuntime().availableProcessors();
+    final int maxCores = Runtime.getRuntime().availableProcessors();
 
-    for (int i = 0; i < threads; i++) {
+    // 🔴 ξεκινάμε full load
+    final int[] activeThreads = { maxCores };
+
+    for (int i = 0; i < maxCores; i++) {
+
+        final int threadIndex = i;
 
         new Thread(() -> {
+
+            long lastAdjust = System.currentTimeMillis();
 
             while (lab14Running &&
                    !lab14Cancelled &&
                    !Thread.currentThread().isInterrupted()) {
 
-                // 🔥 πιο βαριά πράξη (καλύτερο load)
+                // 🔴 dynamic participation
+                if (threadIndex >= activeThreads[0]) {
+                    try { Thread.sleep(20); } catch (Throwable ignore) {}
+                    continue;
+                }
+
+                // 🔥 heavy compute
                 double x = Math.sin(System.nanoTime()) *
                            Math.cos(System.nanoTime()) *
-                           Math.tan(System.nanoTime());
+                           Math.sqrt(System.nanoTime());
 
-                // anti-optimization
                 if (x == 123456.789) {
                     appendLog("CPU", "keep alive");
+                }
+
+                // 🔴 κάθε 2 sec → προσαρμογή load
+                if (System.currentTimeMillis() - lastAdjust > 2000) {
+
+                    float temp = readCpuTempSafe();
+
+                    if (!Float.isNaN(temp)) {
+
+                        if (temp > 60f && activeThreads[0] > 1) {
+                            activeThreads[0]--; // 🔻 ρίξε load
+                        }
+                        else if (temp < 50f && activeThreads[0] < maxCores) {
+                            activeThreads[0]++; // 🔺 ανέβα load
+                        }
+                    }
+
+                    lastAdjust = System.currentTimeMillis();
                 }
             }
 
@@ -18243,12 +18296,19 @@ if (weakLoad) {
     lab14WeakLoadCounter = 0;
 }
 
+// 🔍 DEBUG
+if (lab14WeakLoadCounter > 0) {
+    appendLog("WEAK COUNT", String.valueOf(lab14WeakLoadCounter));
+}
+
 // 🔍 BOOST FAIL DEBUG
 if (lab14BoostActive && weakLoad && lab14WeakLoadCounter == 2) {
     appendLog("BOOST FAIL", "Still weak load");
 }
 
-// 🔥 BOOST MODE (SAFE)
+// ========================================================
+// 🔥 BOOST MODE
+// ========================================================
 if (!isLab14BMode &&
     !lab14BoostActive &&
     lab14WeakLoadCounter >= 2 &&
@@ -18261,7 +18321,6 @@ if (!isLab14BMode &&
 
     runOnUiThread(() -> {
 
-        // 🔴 DOUBLE CHECK (thread safety)
         if (!lab14Running || lab14Cancelled) return;
 
         try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
@@ -18269,100 +18328,70 @@ if (!isLab14BMode &&
         try { startMemoryStress(); } catch (Throwable ignore) {}
 
         try {
-            if (lab14StressVideo != null) {
-
-                if (!lab14StressVideo.isPlaying()) {
-                    lab14StressVideo.start();
-                }
+            if (lab14StressVideo != null && !lab14StressVideo.isPlaying()) {
+                lab14StressVideo.start();
             }
         } catch (Throwable ignore) {}
 
-    });
-}
-
-// 🔍 DEBUG (σωστό σημείο)
-if (lab14WeakLoadCounter > 0) {
-    appendLog("WEAK COUNT", String.valueOf(lab14WeakLoadCounter));
-}
-
-// 🔴 AUTO ABORT
-if (!isLab14BMode && lab14WeakLoadCounter >= 5) {
-
-    lab14WeakLoadCounter = 0;
-
-    // 🔴 AUTO RESTART (max 1 φορά)
-    if (lab14RestartAttempts < 1) {
-
-    lab14RestartAttempts++;
-
-    appendLog("AUTO", "Restarting stress test...");
-
-    runOnUiThread(() -> {
-
-        lab14Running = false;
-        lab14Cancelled = true;
-        lab14BoostActive = false;
-
-        try {
-            ui.removeCallbacks(lab14VibrationLoop);
-        } catch (Throwable ignore) {}
-
-        lab14WeakLoadCounter = 0;
-
-        lab14StopAllStress();
-
-        ui.postDelayed(() -> {
-            lab14BatteryHealthStressTest_REAL();
-        }, 800);
     });
 
     return;
 }
 
-// 🔴 FALLBACK (αντί για FAIL)
-runOnUiThread(() -> {
+// ========================================================
+// 🔴 AUTO RESTART (1 φορά)
+// ========================================================
+if (!isLab14BMode && lab14WeakLoadCounter >= 5) {
 
-    appendLog("FALLBACK",
-            gr
-                    ? "Ενεργοποίηση προσαρμοσμένου φορτίου"
-                    : "Switching to adaptive load");
-
-    lab14BoostActive = false;
-
-    // reset counter για να μην ξαναμπεί αμέσως
     lab14WeakLoadCounter = 0;
 
-    // 🔴 STOP heavy stress
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    if (lab14RestartAttempts < 1) {
 
-    // 🔥 START adaptive stress (σταθερό φορτίο)
-    try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
-    try { startMemoryStress(); } catch (Throwable ignore) {}
+        lab14RestartAttempts++;
 
-    // optional GPU retry
-    try { startGpuStress(); } catch (Throwable ignore) {}
+        appendLog("AUTO", "Restarting stress test...");
 
-});
+        runOnUiThread(() -> {
 
-    // 🔴 STOP
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
+            lab14Running = false;
+            lab14Cancelled = true;
+            lab14BoostActive = false;
 
-    try { lab14StopAllStress(); } catch (Throwable ignore) {}
-    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+            try { ui.removeCallbacks(lab14VibrationLoop); } catch (Throwable ignore) {}
 
-    // 🔴 CLEAN UI
-    try { lab14CleanupUI(); } catch (Throwable ignore) {}
+            lab14StopAllStress();
 
-    // 🔴 DISMISS DIALOG (ΚΛΕΙΔΙ)
-    try {
-        if (lab14Dialog != null && lab14Dialog.isShowing()) {
-            lab14Dialog.dismiss();
-        }
-    } catch (Throwable ignore) {}
+            ui.postDelayed(() -> {
+                lab14BatteryHealthStressTest_REAL();
+            }, 800);
+        });
+
+        return;
+    }
+
+    // ========================================================
+    // 🔴 FALLBACK (τελευταίο επίπεδο)
+    // ========================================================
+    runOnUiThread(() -> {
+
+        appendLog("FALLBACK",
+                gr
+                        ? "Ενεργοποίηση προσαρμοσμένου φορτίου"
+                        : "Switching to adaptive load");
+
+        lab14BoostActive = false;
+        lab14WeakLoadCounter = 0;
+
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+
+        // 🔥 adaptive load (ΟΧΙ 1 thread)
+        try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
+        try { startMemoryStress(); } catch (Throwable ignore) {}
+        try { startGpuStress(); } catch (Throwable ignore) {}
+
+    });
 
     return;
 }
@@ -18431,7 +18460,7 @@ private void calibrateLoad() {
 
         startCpuBurnLimitedThreads(t);
 
-        SystemClock.sleep(3000);
+        SystemClock.sleep(6000);
 
         float cpuTemp = readCpuTempSafe();
         Float battTemp = iDoctorEngine
