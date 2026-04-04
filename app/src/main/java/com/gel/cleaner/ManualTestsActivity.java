@@ -272,12 +272,18 @@ private int lab14RestartAttempts = 0;
 
 private boolean lab14BoostActive = false;
 
+private int lab14GpuIntensity = 0;
+
 private final List<Long> lab14ChargeSamples = new ArrayList<>();
 
 private long lab14MinCharge = Long.MAX_VALUE;
 private long lab14MaxCharge = Long.MIN_VALUE;
 
 private long lab14DeltaMah = 0;
+
+private long lab14LastGpuAdjustTs = 0L;
+private int lab14GpuMinLevel = 1;
+private int lab14GpuMaxLevel = 4;
 
 // ============================================================
 // LAB14 SHARED STATE
@@ -2430,7 +2436,7 @@ new Thread(() -> {
     try {
         startCpuBurn_C_Mode();
         startMemoryStress();
-        startGpuStress();
+        startGpuStressLevel(lab14GpuIntensity > 0 ? lab14GpuIntensity : 2);
     } catch (Throwable ignore) {}
 }).start();
 
@@ -13777,6 +13783,7 @@ private void lab14BatteryHealthStressTest_REAL() {
 
 final iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
+ 
 
     gr = AppLang.isGreek(this);
     
@@ -13795,17 +13802,35 @@ if (!lab14Running && !lab14PopupShown) {
     lab14Cancelled = false;
 
     resetBatteryDiagnostics();
-    
+
+    // -------------------------
+    // 🔴 RUNTIME STATE (ΕΔΩ μπαίνει)
+    // -------------------------
+    lab14WeakLoadCounter = 0;
+    lab14RestartAttempts = 0;
+    lab14BoostActive = false;
+
+    lab14LastGpuAdjustTs = 0L; // ✅ ΣΩΣΤΟ ΣΗΜΕΙΟ
+
+    // -------------------------
+    // DATA BUFFERS
+    // -------------------------
     lab14ChargeSamples.clear();
     lab14MinCharge = Long.MAX_VALUE;
     lab14MaxCharge = Long.MIN_VALUE;
 
+    // -------------------------
+    // FLAGS
+    // -------------------------
     collapseRisk[0] = false;
     calibrationDrift[0] = false;
     cellImbalanceRisk[0] = false;
 
     lab14_systemLimited[0] = false;
 
+    // -------------------------
+    // SAG / VOLTAGE
+    // -------------------------
     sag1[0] = Float.NaN;
     sag2[0] = Float.NaN;
     sagAvg[0] = Float.NaN;
@@ -13819,6 +13844,9 @@ if (!lab14Running && !lab14PopupShown) {
     voltageRecoverySpeed[0] = Float.NaN;
     voltageStability[0] = Float.NaN;
 
+    // -------------------------
+    // METRICS
+    // -------------------------
     internalResistance[0] = Float.NaN;
     thermalImpedance[0] = Float.NaN;
 
@@ -13830,18 +13858,25 @@ if (!lab14Running && !lab14PopupShown) {
     expectedPercent[0] = Float.NaN;
     percentDeviation[0] = Float.NaN;
 
+    // -------------------------
+    // TEMP
+    // -------------------------
     startBatteryTemp = Float.NaN;
     endBatteryTemp = Float.NaN;
 
+    // -------------------------
+    // RESULT STATE
+    // -------------------------
     lab14Conf = null;
     lab14AgingIndex = -1;
     lab14AgingInterp = "N/A";
     lab14BatteryBehaviourWarning = false;
 
-    // ✅ LAST — μετά από όλα
+    // -------------------------
+    // ✅ LAST — baseline temp
+    // -------------------------
     Float t0 = idoctor.getBatteryTempUnified();
-startBatteryTemp =
-        t0 != null ? t0 : Float.NaN;
+    startBatteryTemp = t0 != null ? t0 : Float.NaN;
 }
 
 // --------------------------------------------------
@@ -13868,8 +13903,14 @@ if (isChargingNowSafe()) {
 // --------------------------------------------------
 // ZERO-RISK CALIBRATION (LAB14 ONLY)
 // --------------------------------------------------
+// CPU
 if (!isLab14BMode && lab14OptimalThreads <= 0) {
     calibrateLoadZeroRisk();
+}
+
+// GPU
+if (!isLab14BMode && lab14GpuIntensity <= 0) {
+    calibrateGpuLoadZeroRisk();
 }
 
 // ---------------------------------------
@@ -17378,7 +17419,7 @@ private void startLab14FastThread() {
 
 startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
 startMemoryStress();
-startGpuStress();
+startGpuStressLevel(lab14GpuIntensity > 0 ? lab14GpuIntensity : 2);
 
 SystemClock.sleep(12000);
 SystemClock.sleep(400);
@@ -17421,7 +17462,7 @@ stopGpuStress();
 
 startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
 startMemoryStress();
-startGpuStress();
+startGpuStressLevel(lab14GpuIntensity > 0 ? lab14GpuIntensity : 2);
 
 SystemClock.sleep(12000);
 
@@ -17507,24 +17548,30 @@ private void startLab14MainStress() {
 
     if (!lab14Running || lab14Cancelled) return;
 
-    // 🔴 ENGINE TIMER (βάζεις ΕΔΩ)
-    t0 = SystemClock.elapsedRealtime();
-    lab14EndTime = t0 + (durationSec * 1000L);
+// 🔴 ENGINE TIMER (βάζεις ΕΔΩ)
+t0 = SystemClock.elapsedRealtime();
+lab14EndTime = t0 + (durationSec * 1000L);
 
-    runOnUiThread(() -> {
+runOnUiThread(() -> {
 
-        applyMaxBrightnessAndKeepOn();
+    applyMaxBrightnessAndKeepOn();
 
-        if (!isLab14BMode) {
-    // LAB14 → adaptive threads
-    startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
-} else {
-    // LAB14B → fixed stress
-    startCpuBurn_C_Mode();
-}
+    if (!isLab14BMode) {
+        // LAB14 → adaptive threads
+        startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
+    } else {
+        // LAB14B → fixed stress
+        startCpuBurn_C_Mode();
+    }
 
-startMemoryStress();
-startGpuStress();
+    startMemoryStress();
+
+    startGpuStressLevel(
+            lab14GpuIntensity > 0
+                    ? lab14GpuIntensity
+                    : (isLab14BMode ? 3 : 2)
+    );
+});
 
         try {
 
@@ -18442,12 +18489,24 @@ if (drainLoad) loadScore += 1;
 
 boolean realLoad = loadScore >= 2;
 
+rebalanceLab14GpuLive(
+        weakLoad,
+        thermalDelta,
+        lab14_systemLimited[0]
+);
+
 // ----------------------------------------------------
 // 6) SMART WEAK LOAD
 // ----------------------------------------------------
 boolean weakLoad =
         !earlyPhase &&
         !realLoad;
+        
+rebalanceLab14GpuLive(
+        weakLoad,
+        thermalDelta,
+        lab14_systemLimited[0]
+);
 
 // debounce (σωστό ήδη)
 if (weakLoad) {
@@ -18515,7 +18574,7 @@ if (!isLab14BMode &&
         if (!lab14Running || lab14Cancelled) return;
 
         try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
-        try { startGpuStress(); } catch (Throwable ignore) {}
+        try { startGpuStressLevel(4); } catch (Throwable ignore) {}
         try { startMemoryStress(); } catch (Throwable ignore) {}
 
         try {
@@ -18560,31 +18619,31 @@ if (!isLab14BMode && lab14WeakLoadCounter >= 5) {
         return;
     }
 
-    // ========================================================
-    // 🔴 FALLBACK (τελευταίο επίπεδο)
-    // ========================================================
-    runOnUiThread(() -> {
+// ========================================================
+// 🔴 FALLBACK (τελευταίο επίπεδο)
+// ========================================================
+runOnUiThread(() -> {
 
-        appendLog("FALLBACK",
-                gr
-                        ? "Ενεργοποίηση προσαρμοσμένου φορτίου"
-                        : "Switching to adaptive load");
+    appendLog("FALLBACK",
+            gr
+                    ? "Ενεργοποίηση προσαρμοσμένου φορτίου"
+                    : "Switching to adaptive load");
 
-        lab14BoostActive = false;
-        lab14WeakLoadCounter = 0;
+    lab14BoostActive = false;
+    lab14WeakLoadCounter = 0;
 
-        try { stopCpuBurn(); } catch (Throwable ignore) {}
-        try { stopGpuStress(); } catch (Throwable ignore) {}
-        try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
 
-        // 🔥 adaptive load (ΟΧΙ 1 thread)
-        try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
-        try { startMemoryStress(); } catch (Throwable ignore) {}
-        try { startGpuStress(); } catch (Throwable ignore) {}
+    // 🔥 adaptive load (ΟΧΙ 1 thread)
+    try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
+    try { startMemoryStress(); } catch (Throwable ignore) {}
+    try { startGpuStressLevel(2); } catch (Throwable ignore) {}
 
-    });
+});
 
-    return;
+return;
 }
 
         String txt = String.format(
@@ -18607,9 +18666,14 @@ if (!isLab14BMode && lab14WeakLoadCounter >= 5) {
 private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
 
     private volatile boolean running = true;
+    private volatile int intensity = 1;
 
     public void stop() {
         running = false;
+    }
+
+    public void setIntensity(int i) {
+        intensity = Math.max(1, Math.min(5, i));
     }
 
     @Override
@@ -18627,8 +18691,9 @@ private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
 
         if (!running) return;
 
-        // 🔥 HEAVY GPU LOOP
-        for (int i = 0; i < 5000; i++) {
+        // 🔥 HEAVY GPU LOOP (scalable)
+        for (int i = 0; i < 5000 * intensity; i++) {
+
             float x = (float) Math.sin(System.nanoTime());
             float y = (float) Math.cos(System.nanoTime());
 
@@ -18706,6 +18771,133 @@ private void calibrateLoadZeroRisk() {
             "Zero-risk threads=" + threads +
             " | cores=" + cores +
             " | ram=" + (totalRamMb > 0 ? totalRamMb + "MB" : "N/A"));
+}
+
+private void calibrateGpuLoadSafe() {
+
+    if (lab14Running || lab14Cancelled) return;
+
+    int[] levels = {1, 2, 3, 4};
+
+    float baseTemp = readGpuTempSafe();
+
+    float bestDelta = -1f;
+    int bestLevel = 1;
+
+    for (int lvl : levels) {
+
+        if (lab14Cancelled) break;
+
+        stopGpuStress();
+        SystemClock.sleep(500);
+
+        startGpuStressLevel(lvl);
+
+        SystemClock.sleep(4000);
+
+        float t = readGpuTempSafe();
+
+        float delta =
+                (!Float.isNaN(t) && !Float.isNaN(baseTemp))
+                        ? (t - baseTemp)
+                        : 0f;
+
+        if (delta > bestDelta) {
+            bestDelta = delta;
+            bestLevel = lvl;
+        }
+    }
+
+    stopGpuStress();
+
+    lab14GpuIntensity = bestLevel;
+
+    appendLog("GPU CALIB",
+            "level=" + bestLevel +
+            " ΔT=" + String.format(java.util.Locale.US, "%.2f", bestDelta));
+}
+
+private void calibrateGpuLoadZeroRisk() {
+
+    int cores = Runtime.getRuntime().availableProcessors();
+
+    int level;
+
+    if (cores <= 4) {
+        level = 1;
+    } else if (cores <= 6) {
+        level = 2;
+    } else if (cores <= 8) {
+        level = 3;
+    } else {
+        level = 3; // safety cap
+    }
+
+    if (level < 1) level = 1;
+    if (level > 4) level = 4;
+
+    lab14GpuIntensity = level;
+
+    appendLog("GPU CALIB",
+            "zero-risk level=" + level +
+            " cores=" + cores);
+}
+
+private void startGpuStressLevel(int level) {
+
+    try {
+        if (gpuRenderer != null) {
+            gpuRenderer.setIntensity(level);
+        }
+    } catch (Throwable ignore) {}
+
+    startGpuStress(); // άστο όπως είναι
+}
+
+private void rebalanceLab14GpuLive(
+        boolean weakLoad,
+        float thermalDelta,
+        boolean systemLimited
+) {
+    if (!lab14Running || lab14Cancelled) return;
+    if (isLab14BMode) return;
+    if (lab14BoostActive) return;
+    if (lab14GpuIntensity <= 0) return;
+
+    long now = SystemClock.elapsedRealtime();
+
+    if (now - lab14LastGpuAdjustTs < 8000) return;
+
+    int oldLevel = lab14GpuIntensity;
+    int newLevel = oldLevel;
+
+    boolean highThermal =
+            !Float.isNaN(thermalDelta) && thermalDelta >= 8f;
+
+    boolean veryHighThermal =
+            !Float.isNaN(thermalDelta) && thermalDelta >= 10f;
+
+    if (systemLimited || veryHighThermal) {
+        newLevel = Math.max(lab14GpuMinLevel, oldLevel - 1);
+    } else if (weakLoad) {
+        newLevel = Math.min(lab14GpuMaxLevel, oldLevel + 1);
+    } else if (!Float.isNaN(thermalDelta) && thermalDelta < 3f) {
+        newLevel = Math.min(lab14GpuMaxLevel, oldLevel + 1);
+    }
+
+    if (newLevel == oldLevel) return;
+
+    lab14GpuIntensity = newLevel;
+    lab14LastGpuAdjustTs = now;
+
+    try {
+        if (gpuRenderer != null) {
+            gpuRenderer.setIntensity(newLevel);
+        }
+    } catch (Throwable ignore) {}
+
+    appendLog("GPU LIVE",
+            "level " + oldLevel + " -> " + newLevel);
 }
 
 //=============================================================
