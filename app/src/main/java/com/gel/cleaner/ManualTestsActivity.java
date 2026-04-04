@@ -2480,31 +2480,32 @@ new Thread(() -> {
             // --------------------------------------------------------
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-                try {
+    try {
 
-                    stopCpuBurn();
-                    stopMemoryStress();
-                    stopGpuStress();
+        stopCpuBurn();
+        stopMemoryStress();
+        stopGpuStress();
 
-                    iDoctorEngine.BatterySnapshot snapEnd =
-                            idoctor.readBatterySnapshotLab();
+        iDoctorEngine.BatterySnapshot snapEnd =
+                idoctor.readBatterySnapshotLab();
 
-                    if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
+        if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
 
-                        logError(gr
-                                ? "Αποτυχία τελικής ανάγνωσης LAB 14B"
-                                : "LAB 14B final snapshot failed");
-                        return;
-                    }
+            logError(gr
+                    ? "Αποτυχία τελικής ανάγνωσης LAB 14B"
+                    : "LAB 14B final snapshot failed");
 
-                    endMah[0] = snapEnd.chargeNowMah;
+            return;
+        }
 
-                    endTemp[0] = getBatteryTemperature();
-                    if (Float.isNaN(endTemp[0]) || endTemp[0] <= 0f) {
-                        endTemp[0] = snapEnd.batteryTempC;
-                    }
+        endMah[0] = snapEnd.chargeNowMah;
 
-                    endVolt[0] = getBatteryVoltageFiltered();
+        endTemp[0] = getBatteryTemperature();
+        if (Float.isNaN(endTemp[0]) || endTemp[0] <= 0f) {
+            endTemp[0] = snapEnd.batteryTempC;
+        }
+
+        endVolt[0] = getBatteryVoltageFiltered();
 
                     // ------------------------------------------------
                     // HARD RESULT (0 -> 1 min)
@@ -2705,26 +2706,25 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
     } catch (Throwable t) {
 
-        logError(gr
-                ? "Σφάλμα τελικής ανάλυσης LAB 14B"
-                : "LAB 14B final analysis error");
+            logError(gr
+                    ? "Σφάλμα τελικής ανάλυσης LAB 14B"
+                    : "LAB 14B final analysis error");
 
-    } finally {
+        } finally {
 
-        try { stopCpuBurn(); } catch (Throwable ignore) {}
-        try { stopMemoryStress(); } catch (Throwable ignore) {}
-        try { stopGpuStress(); } catch (Throwable ignore) {}
-        try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+            try { stopCpuBurn(); } catch (Throwable ignore) {}
+            try { stopMemoryStress(); } catch (Throwable ignore) {}
+            try { stopGpuStress(); } catch (Throwable ignore) {}
+            try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
-        lab14Cancelled = false;
-        lab14Running = false;
-        isLab14BMode = false;
-    }
+            lab14Cancelled = false;
+            lab14Running = false;
+            isLab14BMode = false;
+        }
 
-}, 300000L);
-       
-    });
-}
+    }, 300000L);
+
+}, 60000L);
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (FINAL GEL STYLE)
