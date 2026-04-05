@@ -289,6 +289,8 @@ private boolean lab14WeakLoad = false;
 private int lab14CpuThreadsCurrent = 0;
 private long lab14LastCpuAdjustTs = 0L;
 
+private long lab14LastLiveLogTs = 0;
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -701,9 +703,9 @@ private Button lab15ExitBtn;
 private TextView lab15CounterText;
 
 // LAB 15 — Thermal Correlation
-private float lab15BattTempStart = Float.NaN;
-private float lab15BattTempPeak  = Float.NaN;
-private float lab15BattTempEnd   = Float.NaN;
+private float lab15batTempStart = Float.NaN;
+private float lab15batTempPeak  = Float.NaN;
+private float lab15batTempEnd   = Float.NaN;
 // LAB 15 / LAB 16 thermal aliases (keep legacy names)
 private float startBatteryTemp = Float.NaN;
 private float endBatteryTemp   = Float.NaN;
@@ -5516,9 +5518,9 @@ try { if (br != null) br.close(); } catch (Throwable ignore) {}
 // LAB 15 thermal correlation — BILINGUAL (LABEL WHITE, VALUES GREEN)
 // ------------------------------------------------------------
 private void logLab15ThermalCorrelation(
-        float battTempStart,
-        float battTempPeak,
-        float battTempEnd
+        float batTempStart,
+        float batTempPeak,
+        float batTempEnd
 ) {
 
     final boolean gr = AppLang.isGreek(this);
@@ -5532,9 +5534,9 @@ private void logLab15ThermalCorrelation(
             gr
                     ? "αρχή %.1f°C → μέγιστο %.1f°C → τέλος %.1f°C"
                     : "start %.1f°C → peak %.1f°C → end %.1f°C",
-            battTempStart,
-            (Float.isNaN(battTempPeak) ? battTempEnd : battTempPeak),
-            battTempEnd
+            batTempStart,
+            (Float.isNaN(batTempPeak) ? batTempEnd : batTempPeak),
+            batTempEnd
     );
 
     // fallback: no UI
@@ -18422,13 +18424,17 @@ private void updateLab14LiveStats() {
 
     try {
 
-        iDoctorEngine idoctor =
-                iDoctorEngine.get(ManualTestsActivity.this);
+iDoctorEngine idoctor =
+        iDoctorEngine.get(ManualTestsActivity.this);
 
-        long now = SystemClock.elapsedRealtime();
-        long dt = now - t0;
+Float cpuTemp = readCpuTempSafe();
+Float batTemp = idoctor.getBatteryTempUnified();
+batteryPercent = getBatteryPercentSafe();
 
-        int elapsed = (int) (dt / 1000);
+long now = SystemClock.elapsedRealtime();
+long dt = now - t0;
+
+int elapsed = (int) (dt / 1000);
 
         // ----------------------------------------------------
         // 🔴 TIME FLAGS
@@ -18436,22 +18442,44 @@ private void updateLab14LiveStats() {
         boolean earlyPhase = elapsed < 25;
         boolean inHardPhase = elapsed < 60;
 
-        // ----------------------------------------------------
-        // 🔴 ENGINE SNAPSHOT
-        // ----------------------------------------------------
-        iDoctorEngine.BatterySnapshot snap =
-                idoctor.readBatterySnapshotLab();
+// ----------------------------------------------------
+// 🔴 ENGINE SIGNALS (CLEAN - FILTERED — FINAL)
+// ----------------------------------------------------
+double currentMa = lab14Current();
 
-        double currentMa =
-                snap != null ? snap.currentMa : Double.NaN;
+// 🔴 Battery temp (safe)
+float batTemp = lab14BatteryTemp();
+if (Float.isNaN(batTemp) || batTemp <= 0f || batTemp > 100f) {
+    batTemp = Float.NaN;
+}
 
-        float batTemp =
-                snap != null ? snap.batteryTempC : Float.NaN;
+// 🔴 Battery percent (safe)
+float battPct = (float) getBatteryPercentSafe();
 
-        float thermalDelta = Float.NaN;
-        if (!Float.isNaN(startBatteryTemp) && !Float.isNaN(batTemp)) {
-            thermalDelta = batTemp - startBatteryTemp;
-        }
+if (battPct < 0f || battPct > 100f) {
+    battPct = Float.NaN;
+}
+
+// 🔴 Charging state
+boolean charging = isChargingNow();
+
+// 🔴 Battery score (CORE SIGNAL)
+int batteryScore = scoreBattery(batTemp, battPct, charging);
+
+// 🔴 Thermal delta (safe)
+float thermalDelta = Float.NaN;
+if (!Float.isNaN(startBatteryTemp) &&
+    !Float.isNaN(batTemp) &&
+    startBatteryTemp > 0f &&
+    batTemp > 0f) {
+
+    thermalDelta = batTemp - startBatteryTemp;
+
+    // anti-glitch clamp
+    if (Math.abs(thermalDelta) > 20f) {
+        thermalDelta = Float.NaN;
+    }
+}
 
         // ----------------------------------------------------
         // 🔴 DRAIN
@@ -18574,15 +18602,15 @@ boolean currentLoad =
 
         boolean realLoad = loadScore >= 2;
 
-        boolean weakLoad =
+boolean weakLoad =
         isLab14BMode
-        ? !realLoad
-        : (!earlyPhase && !realLoad);
+        ? (!realLoad || batteryScore < 50)
+        : (!earlyPhase && (!realLoad || batteryScore < 50));
 
-        lab14WeakLoad = weakLoad;
+lab14WeakLoad = weakLoad;
 
 // ----------------------------------------------------
-// 🔥 BOOST (FIXED — 14 + 14B)
+// 🔥 BOOST (FIXED — 14 + 14B + battery-aware)
 // ----------------------------------------------------
 if (!lab14BoostActive &&
     lab14Running &&
@@ -18596,10 +18624,10 @@ if (!lab14BoostActive &&
         shouldBoost = true;
 
     } else {
-        // 🧠 14 → smart boost
+        // 🧠 14 → smart + battery-aware
         shouldBoost =
                 !earlyPhase &&
-                loadScore <= 1 &&
+                (loadScore <= 1 || batteryScore < 60) &&
                 elapsed >= 6;
     }
 
@@ -18610,7 +18638,7 @@ if (!lab14BoostActive &&
         appendLog("BOOST",
                 isLab14BMode
                         ? "Forced boost (14B)"
-                        : "Early boost");
+                        : "Early boost (battery-aware)");
 
         runOnUiThread(() -> {
 
@@ -18620,6 +18648,11 @@ if (!lab14BoostActive &&
             try { startGpuStressLevel(4); } catch (Throwable ignore) {}
             try { startMemoryStress(); } catch (Throwable ignore) {}
 
+            // 🔥 extra push αν battery δυνατή
+            if (!isLab14BMode && batteryScore >= 80) {
+                try { startGpuStressLevel(5); } catch (Throwable ignore) {}
+            }
+
         });
     }
 }
@@ -18628,10 +18661,10 @@ if (!lab14BoostActive &&
         // 🔴 COUNTER (STABLE ✔)
         // ----------------------------------------------------
         if (weakLoad) {
-            lab14WeakLoadCounter = Math.min(1000, lab14WeakLoadCounter + 1);
-        } else {
-            lab14WeakLoadCounter = Math.max(0, lab14WeakLoadCounter - 1);
-        }
+    lab14WeakLoadCounter = Math.min(1000, lab14WeakLoadCounter + 1);
+} else {
+    lab14WeakLoadCounter = Math.max(0, lab14WeakLoadCounter - 2);
+}
 
         // ----------------------------------------------------
         // 🔴 REBALANCE (ΜΟΝΟ εκτός early ✔)
@@ -18687,7 +18720,8 @@ if (nowTs - lab14LastLiveLogTs > 4000) {
     appendLog("LIVE",
             "status=" + status +
             " weak=" + lab14WeakLoad +
-            " score=" + loadScore);
+            " score=" + loadScore +
+            " batt=" + batteryScore);
 }
 
 // ----------------------------------------------------
@@ -18821,7 +18855,7 @@ private boolean detectLab14SystemLimiter(
         double currentMa,
         double drainPerHour,
         float startBatteryTemp,
-        float battTempNow
+        float batTempNow
 ) {
     // Μόνο στο LAB14B και μόνο αφού περάσει λίγο χρόνος
     if (!isLab14BMode) return false;
@@ -18837,8 +18871,8 @@ private boolean detectLab14SystemLimiter(
 
     boolean lowThermalRise =
             !Float.isNaN(startBatteryTemp) &&
-            !Float.isNaN(battTempNow) &&
-            (battTempNow - startBatteryTemp) < 0.35f;
+            !Float.isNaN(batTempNow) &&
+            (batTempNow - startBatteryTemp) < 0.35f;
 
     // Αν όλα δείχνουν "τρέχει stress αλλά το σύστημα δεν αφήνει ρεύμα"
     return lowCurrent && lowDrain && lowThermalRise;
@@ -19178,9 +19212,9 @@ lab15Finished = false;
 lab15FlapUnstable = false;
 lab15OverTempDuringCharge = false;
 
-lab15BattTempStart = Float.NaN;
-lab15BattTempPeak  = Float.NaN;
-lab15BattTempEnd   = Float.NaN;
+lab15batTempStart = Float.NaN;
+lab15batTempPeak  = Float.NaN;
+lab15batTempEnd   = Float.NaN;
 
 // reset LAB 15 charging strength state (FIELDS)
 lab15_strengthKnown = false;
@@ -19460,8 +19494,8 @@ if (chargingNow) {
         wasCharging[0] = true;
         startTs[0] = now;
 
-        lab15BattTempStart = getBatteryTemperature();
-        lab15BattTempPeak  = lab15BattTempStart;
+        lab15batTempStart = getBatteryTemperature();
+        lab15batTempPeak  = lab15batTempStart;
 
         lab15StatusText.setText(gr
                 ? "Ανιχνεύθηκε κατάσταση φόρτισης."
@@ -19521,8 +19555,8 @@ if (chargingNow) {
 if (chargingNow) {
     float t = getBatteryTemperature();
     if (t > 0) {
-        if (Float.isNaN(lab15BattTempPeak) || t > lab15BattTempPeak)
-            lab15BattTempPeak = t;
+        if (Float.isNaN(lab15batTempPeak) || t > lab15batTempPeak)
+            lab15batTempPeak = t;
         if (t >= 45f) lab15OverTempDuringCharge = true;
     }
 }
@@ -19564,16 +19598,16 @@ lab15Running  = false;
 float tempNow = getBatteryTemperature();
 
 if (!Float.isNaN(tempNow)) {
-    lab15BattTempEnd = tempNow;
+    lab15batTempEnd = tempNow;
 }
 
 // fallback αν δεν πήραμε end
-if (Float.isNaN(lab15BattTempEnd)) {
-    lab15BattTempEnd = lab15BattTempPeak;
+if (Float.isNaN(lab15batTempEnd)) {
+    lab15batTempEnd = lab15batTempPeak;
 }
 
-startBatteryTemp = lab15BattTempStart;
-endBatteryTemp   = lab15BattTempEnd;
+startBatteryTemp = lab15batTempStart;
+endBatteryTemp   = lab15batTempEnd;
 
 final float startBatteryTempFinal = startBatteryTemp;
 final float endBatteryTempFinal   = getBatteryTempEngineSafe();
@@ -19584,7 +19618,7 @@ final float endBatteryTempFinal   = getBatteryTempEngineSafe();
 
 logLabelOkValue(
         gr ? "Τελική θερμοκρασία μπαταρίας" : "End battery temperature",
-        String.format(Locale.US, "%.1f°C", lab15BattTempEnd)
+        String.format(Locale.US, "%.1f°C", lab15batTempEnd)
 );
 
 // ------------------------------------------------------------
@@ -19592,23 +19626,23 @@ logLabelOkValue(
 // ------------------------------------------------------------
 
 logLab15ThermalCorrelation(
-        lab15BattTempStart,
-        lab15BattTempPeak,
-        lab15BattTempEnd
+        lab15batTempStart,
+        lab15batTempPeak,
+        lab15batTempEnd
 );
 
 // ------------------------------------------------------------
 // Thermal verdict
 // ------------------------------------------------------------
 
-float tempRef = lab15BattTempEnd;
+float tempRef = lab15batTempEnd;
 
-if (!Float.isNaN(lab15BattTempPeak)) {
-    tempRef = lab15BattTempPeak;
+if (!Float.isNaN(lab15batTempPeak)) {
+    tempRef = lab15batTempPeak;
 }
 
 float dtCharge =
-        tempRef - lab15BattTempStart;
+        tempRef - lab15batTempStart;
 
 if (lab15OverTempDuringCharge) {
 
@@ -26095,7 +26129,7 @@ boolean thermalRunawayRisk =
 // ------------------------------------------------------------
 Map<String, Float> zones = null;
 try { zones = readThermalZones(); } catch (Throwable ignored) {}
-float battTemp = getBatteryTemperature();
+Float batTemp = idoctor.getBatteryTempUnified();
 
 Float cpu  = null, gpu = null, skin = null, pmic = null;
 if (zones != null && !zones.isEmpty()) {
@@ -26105,8 +26139,8 @@ skin = pickZone(zones, "skin", "xo-therm", "shell", "surface");
 pmic = pickZone(zones, "pmic", "pmic-therm", "power-thermal", "charger", "chg");
 }
 
-float maxThermal = maxOf(cpu, gpu, skin, pmic, battTemp);
-float avgThermal = avgOf(cpu, gpu, skin, pmic, battTemp);
+float maxThermal = maxOf(cpu, gpu, skin, pmic, batTemp);
+float avgThermal = avgOf(cpu, gpu, skin, pmic, batTemp);
 
 int thermalScore = scoreThermals(maxThermal, avgThermal);
 String thermalFlag = colorFlagFromScore(thermalScore);
@@ -26114,9 +26148,13 @@ String thermalFlag = colorFlagFromScore(thermalScore);
 // ------------------------------------------------------------
 // 2) BATTERY HEALTH (light auto inference)
 // ------------------------------------------------------------
-float battPct = getCurrentBatteryPercent();
 boolean charging = isChargingNow();
-int batteryScore = scoreBattery(battTemp, battPct, charging);
+
+int batteryScore = scoreBattery(
+        batTemp,
+        (float) batteryPercent,
+        charging
+);
 
 String batteryFlag = colorFlagFromScore(batteryScore);
 
@@ -27007,8 +27045,8 @@ if (zones == null || zones.isEmpty()) {
     logLabelWarnValue(
             gr ? "Ζώνες" : "Zones",
             gr
-                    ? "Δεν είναι αναγνώσιμες θερμικές ζώνες — Μόνο θερμοκρασία μπαταρίας (" + fmt1(battTemp) + "°C)"
-                    : "No thermal zones readable — Battery temp only (" + fmt1(battTemp) + "°C)"
+                    ? "Δεν είναι αναγνώσιμες θερμικές ζώνες — Μόνο θερμοκρασία μπαταρίας (" + fmt1(batTemp) + "°C)"
+                    : "No thermal zones readable — Battery temp only (" + fmt1(batTemp) + "°C)"
     );
 
 } else {
@@ -27022,7 +27060,7 @@ if (zones == null || zones.isEmpty()) {
     if (pmic != null) logLabelOkValue("PMIC", fmt1(pmic) + "°C");
     if (skin != null) logLabelOkValue(gr ? "Επιφάνεια" : "Skin", fmt1(skin) + "°C");
 
-    logLabelOkValue(gr ? "Μπαταρία" : "Battery", fmt1(battTemp) + "°C");
+    logLabelOkValue(gr ? "Μπαταρία" : "Battery", fmt1(batTemp) + "°C");
 }
 
 appendHtml("<br>");
@@ -27037,8 +27075,8 @@ logLabelOkValue(
 logLabelOkValue(
         gr ? "Στοιχεία" : "State",
         (gr ? "Επίπεδο=" : "Level=") +
-        (battPct >= 0 ? fmt1(battPct) + "%" : (gr ? "Άγνωστο" : "Unknown")) +
-        " | Temp=" + fmt1(battTemp) + "°C" +
+        (batteryPercent >= 0 ? fmt1((float) batteryPercent) + "%" : (gr ? "Άγνωστο" : "Unknown")) +
+        " | Temp=" + fmt1(batTemp) + "°C" +
         " | " + (gr ? "Φόρτιση=" : "Charging=") +
         (charging ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No"))
 );
@@ -27751,35 +27789,61 @@ return clampScore(s);
 
 }
 
-private int scoreBattery(float battTemp, float battPct, boolean charging) {
-int s = 100;
+private int scoreBattery(float batTemp, float battPct, boolean charging) {
 
-if (battTemp >= 55) s -= 55;
-else if (battTemp >= 45) s -= 30;
-else if (battTemp >= 40) s -= 15;
+    int s = 100;
 
-if (!charging && battPct >= 0) {
-if (battPct < 15) s -= 25;
-else if (battPct < 30) s -= 10;
+    // 🔴 TEMP (safe)
+    if (!Float.isNaN(batTemp)) {
+
+        if (batTemp >= 55f) s -= 55;
+        else if (batTemp >= 45f) s -= 30;
+        else if (batTemp >= 40f) s -= 15;
+    }
+
+    // 🔴 PERCENT (μόνο αν valid ΚΑΙ δεν φορτίζει)
+if (!charging && !Float.isNaN(battPct)) {
+
+    if (battPct < 15f) s -= 25;
+    else if (battPct < 30f) s -= 10;
 }
 
-return clampScore(s);
-
+    return clampScore(s);
 }
 
 private int scoreStorage(int pctFree, long totalBytes) {
-int s = 100;
-if (pctFree < 5) s -= 60;
-else if (pctFree < 10) s -= 40;
-else if (pctFree < 15) s -= 25;
-else if (pctFree < 20) s -= 10;
 
-// tiny storage penalty (<32GB)
-long gb = totalBytes / (1024L * 1024L * 1024L);
-if (gb > 0 && gb < 32) s -= 10;
+    int s = 100;
 
-return clampScore(s);
+    // 🔴 invalid data guard
+    if (pctFree < 0 || pctFree > 100) {
+        return 50; // neutral fallback
+    }
 
+    // 🔴 free space impact
+    if (pctFree < 5) {
+        s -= 60;
+    } else if (pctFree < 10) {
+        s -= 40;
+    } else if (pctFree < 15) {
+        s -= 25;
+    } else if (pctFree < 20) {
+        s -= 10;
+    }
+
+    // 🔴 very small storage penalty (low-end devices)
+    if (totalBytes > 0) {
+
+        long gb = totalBytes / (1024L * 1024L * 1024L);
+
+        if (gb <= 32) {
+            s -= 10;
+        } else if (gb <= 64) {
+            s -= 5;
+        }
+    }
+
+    return clampScore(s);
 }
 
 private int scoreApps(int userApps, int totalApps) {
