@@ -2463,13 +2463,24 @@ applyMaxBrightnessAndKeepOn();
 // --------------------------------------------------------
 // HARD START (0 -> 60s)
 // --------------------------------------------------------
-appendLog("CALIB", "Threads=" + lab14OptimalThreads);
+// --------------------------------------------------------
+// 🔥 HARD FORCE START (REAL MAX LOAD)
+// --------------------------------------------------------
+appendLog("BOOST", "FORCE HARD START (14B)");
+
+int cores = Runtime.getRuntime().availableProcessors();
 
 new Thread(() -> {
     try {
-        startCpuBurn_C_Mode();
+        // 🔥 FULL CPU (όχι C_Mode)
+        startCpuBurnLimitedThreads(cores);
+
+        // 🔥 RAM
         startMemoryStress();
-        startGpuStressLevel(lab14GpuIntensity > 0 ? lab14GpuIntensity : 2);
+
+        // 🔥 GPU MAX
+        startGpuStressLevel(4);
+
     } catch (Throwable ignore) {}
 }).start();
 
@@ -18706,13 +18717,16 @@ if (!lab14BoostActive &&
         // ----------------------------------------------------
         // 🔴 STATUS
         // ----------------------------------------------------
-        String status;
+        
+boolean earlyPhaseActive = !isLab14BMode && earlyPhase;
+
+String status;
 
 if (!lab14Running) {
     status = "STOPPED";
 } else if (lab14_systemLimited[0]) {
     status = "LIMITED ⚠";
-} else if (earlyPhase) {
+} else if (earlyPhaseActive) {
     status = "WARMING UP...";
 } else if (loadScore >= 3) {
     status = "HIGH LOAD 🔥";
