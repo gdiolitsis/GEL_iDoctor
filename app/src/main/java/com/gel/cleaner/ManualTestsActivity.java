@@ -18521,14 +18521,15 @@ private void updateLab14LiveStats() {
         }
 
         // ----------------------------------------------------
-        // 🔴 LOAD SIGNALS
+        // 🔴 LOAD SIGNALS (ANTI-NOISE FIX ✔)
         // ----------------------------------------------------
         double absMa = Math.abs(currentMa);
 
         boolean currentLoad =
                 !Double.isNaN(currentMa) &&
                 absMa >= currentMin &&
-                absMa >= 80;
+                absMa >= 80 &&
+                absMa >= 50; // 🔥 anti-noise
 
         boolean thermalLoad =
                 !Float.isNaN(thermalDelta) &&
@@ -18575,23 +18576,24 @@ private void updateLab14LiveStats() {
                 try { startMemoryStress(); } catch (Throwable ignore) {}
             });
 
-            return;
         }
 
         // ----------------------------------------------------
-        // 🔴 COUNTER (ΜΕΤΑ BOOST ✔)
+        // 🔴 COUNTER (STABLE ✔)
         // ----------------------------------------------------
         if (weakLoad) {
-            lab14WeakLoadCounter++;
+            lab14WeakLoadCounter = Math.min(1000, lab14WeakLoadCounter + 1);
         } else {
             lab14WeakLoadCounter = Math.max(0, lab14WeakLoadCounter - 1);
         }
 
         // ----------------------------------------------------
-        // 🔴 REBALANCE
+        // 🔴 REBALANCE (ΜΟΝΟ εκτός early ✔)
         // ----------------------------------------------------
-        rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
-        rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+        if (!earlyPhase) {
+            rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+            rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+        }
 
         // ----------------------------------------------------
         // 🔴 LAB14B ABORT
@@ -18628,6 +18630,11 @@ private void updateLab14LiveStats() {
         } else {
             status = "WEAK LOAD ⚠";
         }
+        
+        appendLog("LIVE",
+        "status=" + status +
+        " weak=" + lab14WeakLoad +
+        " score=" + loadScore);
 
         // ----------------------------------------------------
         // 🔴 UI
@@ -18640,8 +18647,6 @@ private void updateLab14LiveStats() {
 
     } catch (Throwable ignore) {}
 }
-
-
 
 private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
 
@@ -18915,7 +18920,10 @@ private void rebalanceLab14CpuLive(
 
     long now = SystemClock.elapsedRealtime();
 
+    // 🔴 COOLDOWN (anti-spam αλλαγές)
     if (now - lab14LastCpuAdjustTs < 8000) return;
+
+    int cores = Runtime.getRuntime().availableProcessors();
 
     int oldThreads = lab14CpuThreadsCurrent > 0
             ? lab14CpuThreadsCurrent
@@ -18926,34 +18934,57 @@ private void rebalanceLab14CpuLive(
     boolean veryHot =
             !Float.isNaN(thermalDelta) && thermalDelta >= 10f;
 
-    // 🔴 limiter / overheating
+    // ----------------------------------------------------
+    // 🔴 HARD LIMIT (προτεραιότητα)
+    // ----------------------------------------------------
     if (systemLimited || veryHot) {
 
         newThreads = oldThreads - 1;
 
     }
-    // 🔴 weak → ανεβάζουμε
+    // ----------------------------------------------------
+    // 🔴 WEAK LOAD (με hysteresis)
+    // ----------------------------------------------------
     else if (weakLoad) {
 
-        newThreads = oldThreads + 1;
+        // ❗ ΜΗΝ ανεβάζεις αν δεν είναι σταθερό weak
+        if (lab14WeakLoadCounter >= 2) {
+            newThreads = oldThreads + 1;
+        } else {
+            return;
+        }
 
     }
-    // 🔴 fine tuning
+    // ----------------------------------------------------
+    // 🔴 FINE TUNING (ήρεμο, όχι νευρικό)
+    // ----------------------------------------------------
     else if (!Float.isNaN(thermalDelta)) {
 
-        if (thermalDelta < 3f) {
+        // χαμηλό load → ανεβάζουμε
+        if (thermalDelta < 2.5f) {
             newThreads = oldThreads + 1;
-        } else if (thermalDelta > 6f) {
+        }
+        // ανεβαίνει θερμοκρασία → κατεβάζουμε
+        else if (thermalDelta > 7f) {
             newThreads = oldThreads - 1;
+        }
+        // 🔴 DEAD ZONE → τίποτα
+        else {
+            return;
         }
     }
 
-    // 🔒 clamp (μην ξεφύγει)
-    newThreads = Math.max(1,
-            Math.min(Runtime.getRuntime().availableProcessors(), newThreads));
+    // ----------------------------------------------------
+    // 🔒 CLAMP
+    // ----------------------------------------------------
+    newThreads = Math.max(1, Math.min(cores, newThreads));
 
+    // 🔴 ΜΗΝ κάνεις restart άδικα
     if (newThreads == oldThreads) return;
 
+    // ----------------------------------------------------
+    // 🔴 APPLY
+    // ----------------------------------------------------
     lab14CpuThreadsCurrent = newThreads;
     lab14LastCpuAdjustTs = now;
 
@@ -18963,7 +18994,10 @@ private void rebalanceLab14CpuLive(
     } catch (Throwable ignore) {}
 
     appendLog("CPU LIVE",
-            "threads " + oldThreads + " -> " + newThreads);
+            "threads " + oldThreads + " -> " + newThreads +
+            " ΔT=" + (Float.isNaN(thermalDelta)
+                    ? "N/A"
+                    : String.format(java.util.Locale.US, "%.2f", thermalDelta)));
 }
 
 //=============================================================
