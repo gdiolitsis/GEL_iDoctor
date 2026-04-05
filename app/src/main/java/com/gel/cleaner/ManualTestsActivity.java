@@ -18428,8 +18428,6 @@ iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
 
 Float cpuTemp = readCpuTempSafe();
-Float batTemp = idoctor.getBatteryTempUnified();
-batteryPercent = getBatteryPercentSafe();
 
 long now = SystemClock.elapsedRealtime();
 long dt = now - t0;
@@ -19104,62 +19102,79 @@ private void rebalanceLab14CpuLive(
         newThreads = oldThreads - 1;
 
     }
-    // ----------------------------------------------------
-    // 🔴 WEAK LOAD (με hysteresis)
-    // ----------------------------------------------------
-    else if (weakLoad) {
+// ----------------------------------------------------
+// 🔴 WEAK LOAD (με hysteresis + faster escalation)
+// ----------------------------------------------------
+else if (weakLoad) {
 
-        // ❗ ΜΗΝ ανεβάζεις αν δεν είναι σταθερό weak
-        if (lab14WeakLoadCounter >= 2) {
-            newThreads = oldThreads + 1;
+    // ❗ ΜΗΝ ανεβάζεις αν δεν είναι σταθερό weak
+    if (lab14WeakLoadCounter >= 2) {
+
+        // 🔥 πιο επιθετικό ramp όταν είμαστε χαμηλά
+        if (oldThreads <= 2) {
+            newThreads = oldThreads + 2;
         } else {
-            return;
-        }
-
-    }
-    // ----------------------------------------------------
-    // 🔴 FINE TUNING (ήρεμο, όχι νευρικό)
-    // ----------------------------------------------------
-    else if (!Float.isNaN(thermalDelta)) {
-
-        // χαμηλό load → ανεβάζουμε
-        if (thermalDelta < 2.5f) {
             newThreads = oldThreads + 1;
         }
-        // ανεβαίνει θερμοκρασία → κατεβάζουμε
-        else if (thermalDelta > 7f) {
-            newThreads = oldThreads - 1;
-        }
-        // 🔴 DEAD ZONE → τίποτα
-        else {
-            return;
-        }
+
+    } else {
+        return;
     }
 
-    // ----------------------------------------------------
-    // 🔒 CLAMP
-    // ----------------------------------------------------
-    newThreads = Math.max(1, Math.min(cores, newThreads));
+}
+// ----------------------------------------------------
+// 🔴 FINE TUNING (ήρεμο, όχι νευρικό)
+// ----------------------------------------------------
+else if (!Float.isNaN(thermalDelta)) {
 
-    // 🔴 ΜΗΝ κάνεις restart άδικα
-    if (newThreads == oldThreads) return;
+    // χαμηλό load → ανεβάζουμε
+    if (thermalDelta < 2.5f) {
+        newThreads = oldThreads + 1;
+    }
+    // ανεβαίνει θερμοκρασία → κατεβάζουμε
+    else if (thermalDelta > 7f) {
+        newThreads = oldThreads - 1;
+    }
+    // 🔴 DEAD ZONE → τίποτα
+    else {
+        return;
+    }
+}
 
-    // ----------------------------------------------------
-    // 🔴 APPLY
-    // ----------------------------------------------------
-    lab14CpuThreadsCurrent = newThreads;
-    lab14LastCpuAdjustTs = now;
+// ----------------------------------------------------
+// 🔒 CLAMP
+// ----------------------------------------------------
+newThreads = Math.max(1, Math.min(cores, newThreads));
 
-    try {
-        stopCpuBurn();
-        startCpuBurnLimitedThreads(newThreads);
-    } catch (Throwable ignore) {}
+// 🔥 HARD FLOOR για δυνατό load
+int minThreads = Math.max(2, cores / 3);
 
-    appendLog("CPU LIVE",
-            "threads " + oldThreads + " -> " + newThreads +
-            " ΔT=" + (Float.isNaN(thermalDelta)
-                    ? "N/A"
-                    : String.format(java.util.Locale.US, "%.2f", thermalDelta)));
+if (!systemLimited &&
+    !Float.isNaN(thermalDelta) &&
+    thermalDelta < 6f) {
+
+    newThreads = Math.max(newThreads, minThreads);
+}
+
+// 🔴 ΜΗΝ κάνεις restart άδικα
+if (newThreads == oldThreads) return;
+
+// ----------------------------------------------------
+// 🔴 APPLY
+// ----------------------------------------------------
+lab14CpuThreadsCurrent = newThreads;
+lab14LastCpuAdjustTs = now;
+
+try {
+    stopCpuBurn();
+    startCpuBurnLimitedThreads(newThreads);
+} catch (Throwable ignore) {}
+
+appendLog("CPU LIVE",
+        "threads " + oldThreads + " -> " + newThreads +
+        " ΔT=" + (Float.isNaN(thermalDelta)
+                ? "N/A"
+                : String.format(java.util.Locale.US, "%.2f", thermalDelta)));
 }
 
 //=============================================================
@@ -26129,7 +26144,12 @@ boolean thermalRunawayRisk =
 // ------------------------------------------------------------
 Map<String, Float> zones = null;
 try { zones = readThermalZones(); } catch (Throwable ignored) {}
-Float batTemp = idoctor.getBatteryTempUnified();
+
+float batTemp = lab14BatteryTemp();
+
+if (Float.isNaN(batTemp) || batTemp <= 0f || batTemp > 100f) {
+    batTemp = Float.NaN;
+}
 
 Float cpu  = null, gpu = null, skin = null, pmic = null;
 if (zones != null && !zones.isEmpty()) {
