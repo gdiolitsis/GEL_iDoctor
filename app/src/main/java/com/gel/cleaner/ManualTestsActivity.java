@@ -2996,33 +2996,47 @@ private void startCpuBurnLimitedThreads(int threads) {
 
     stopCpuBurn();
 
-    // 🔥 safety clamp
     int cores = Runtime.getRuntime().availableProcessors();
 
     if (threads <= 0) threads = cores;
 
-    // 🔥 HARD περίπτωση (αν ζητηθεί full load)
-    if (threads > cores) {
-        threads = cores + 2; // μικρό overdrive
-    }
+    // ❌ κόψε το overdrive > cores (scheduler thrash)
+    threads = Math.min(threads, cores);
 
     appendLog("CPU",
             "Threads=" + threads + " / Cores=" + cores);
 
     for (int i = 0; i < threads; i++) {
 
-        new Thread(() -> {
+        Thread t = new Thread(() -> {
 
-            // 🔥 tight loop για πραγματικό load
+            // 🔥 HEAVY + MIXED workload (CPU friendly, όχι μόνο sqrt)
+            double acc = 0;
+
             while (!lab14Cancelled && !Thread.currentThread().isInterrupted()) {
 
-                double x = 0;
-                for (int j = 0; j < 1000; j++) {
-                    x += Math.sqrt(j * System.nanoTime());
+                long now = System.nanoTime();
+
+                // 🔥 math + integer + branching → καλύτερο utilization
+                for (int j = 1; j < 10000; j++) {
+
+                    acc += Math.sqrt(j * now);
+
+                    acc *= 1.0000001;
+
+                    if ((j & 7) == 0) {
+                        acc -= Math.log(j + 1);
+                    }
                 }
+
+                // 🔒 anti-optimization (να μη στο πετάξει ο JIT)
+                if (acc > 1e12) acc = 0;
             }
 
-        }, "LAB14_CPU_" + i).start();
+        }, "LAB14_CPU_" + i);
+
+        t.setPriority(Thread.MAX_PRIORITY);
+        t.start();
     }
 }
 
@@ -18990,13 +19004,33 @@ private void calibrateGpuLoadZeroRisk() {
 
 private void startGpuStressLevel(int level) {
 
-    try {
-        if (lab14GpuRenderer != null) {
-            lab14GpuRenderer.setIntensity(level);
-        }
-    } catch (Throwable ignore) {}
+    stopGpuStress();
 
-    startGpuStress(); // άστο όπως είναι
+    final int target = Math.max(3, level); // 🔥 ποτέ κάτω από 3
+
+    Thread t = new Thread(() -> {
+
+        while (!lab14Cancelled && !Thread.currentThread().isInterrupted()) {
+
+            // 🔥 HEAVY fake GPU workload (CPU-bound but GPU-like patterns)
+            for (int i = 0; i < target * 4000; i++) {
+
+                double x = i;
+
+                x = Math.sin(x) * Math.cos(x);
+                x = Math.tan(x) * Math.sqrt(x + 1);
+
+                // 🔥 texture-like pattern
+                x = x * x * 0.00001;
+
+                if (x > 1e6) x = 0;
+            }
+        }
+
+    }, "LAB14_GPU");
+
+    t.setPriority(Thread.MAX_PRIORITY);
+    t.start();
 }
 
 private void rebalanceLab14GpuLive(
@@ -19075,106 +19109,71 @@ private void rebalanceLab14CpuLive(
 ) {
 
     if (!lab14Running || lab14Cancelled) return;
-    if (isLab14BMode) return;
-    if (lab14BoostActive) return;
 
     long now = SystemClock.elapsedRealtime();
 
-    // 🔴 COOLDOWN (anti-spam αλλαγές)
-    if (now - lab14LastCpuAdjustTs < 8000) return;
+    // 🔴 cooldown (κρατάμε σταθερότητα)
+    if (now - lab14LastCpuAdjustTs < 6000) return;
 
     int cores = Runtime.getRuntime().availableProcessors();
 
     int oldThreads = lab14CpuThreadsCurrent > 0
             ? lab14CpuThreadsCurrent
-            : (lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
+            : Math.max(2, cores / 2);
 
     int newThreads = oldThreads;
 
-    boolean veryHot =
-            !Float.isNaN(thermalDelta) && thermalDelta >= 10f;
+    boolean hot =
+            !Float.isNaN(thermalDelta) && thermalDelta >= 8f;
 
     // ----------------------------------------------------
-    // 🔴 HARD LIMIT (προτεραιότητα)
+    // 🔴 SAFETY (πάντα πρώτα)
     // ----------------------------------------------------
-    if (systemLimited || veryHot) {
+    if (systemLimited || hot) {
 
         newThreads = oldThreads - 1;
-
-    }
-// ----------------------------------------------------
-// 🔴 WEAK LOAD (με hysteresis + faster escalation)
-// ----------------------------------------------------
-else if (weakLoad) {
-
-    // ❗ ΜΗΝ ανεβάζεις αν δεν είναι σταθερό weak
-    if (lab14WeakLoadCounter >= 2) {
-
-        // 🔥 πιο επιθετικό ramp όταν είμαστε χαμηλά
-        if (oldThreads <= 2) {
-            newThreads = oldThreads + 2;
-        } else {
-            newThreads = oldThreads + 1;
-        }
-
-    } else {
-        return;
     }
 
-}
-// ----------------------------------------------------
-// 🔴 FINE TUNING (ήρεμο, όχι νευρικό)
-// ----------------------------------------------------
-else if (!Float.isNaN(thermalDelta)) {
-
-    // χαμηλό load → ανεβάζουμε
-    if (thermalDelta < 2.5f) {
-        newThreads = oldThreads + 1;
-    }
-    // ανεβαίνει θερμοκρασία → κατεβάζουμε
-    else if (thermalDelta > 7f) {
-        newThreads = oldThreads - 1;
-    }
-    // 🔴 DEAD ZONE → τίποτα
+    // ----------------------------------------------------
+    // 🔴 LOAD CONTROL (simple & effective)
+    // ----------------------------------------------------
     else {
-        return;
+
+        if (weakLoad) {
+            newThreads = oldThreads + 1;
+        } else {
+            newThreads = oldThreads; // steady
+        }
     }
-}
 
-// ----------------------------------------------------
-// 🔒 CLAMP
-// ----------------------------------------------------
-newThreads = Math.max(1, Math.min(cores, newThreads));
+    // ----------------------------------------------------
+    // 🔒 CLAMP
+    // ----------------------------------------------------
+    newThreads = Math.max(1, Math.min(cores, newThreads));
 
-// 🔥 HARD FLOOR για δυνατό load
-int minThreads = Math.max(2, cores / 3);
-
-if (!systemLimited &&
-    !Float.isNaN(thermalDelta) &&
-    thermalDelta < 6f) {
-
+    // 🔴 minimum floor (να μην πέφτει πολύ)
+    int minThreads = Math.max(2, cores / 3);
     newThreads = Math.max(newThreads, minThreads);
-}
 
-// 🔴 ΜΗΝ κάνεις restart άδικα
-if (newThreads == oldThreads) return;
+    // 🔴 no-op check
+    if (newThreads == oldThreads) return;
 
-// ----------------------------------------------------
-// 🔴 APPLY
-// ----------------------------------------------------
-lab14CpuThreadsCurrent = newThreads;
-lab14LastCpuAdjustTs = now;
+    // ----------------------------------------------------
+    // 🔴 APPLY
+    // ----------------------------------------------------
+    lab14CpuThreadsCurrent = newThreads;
+    lab14LastCpuAdjustTs = now;
 
-try {
-    stopCpuBurn();
-    startCpuBurnLimitedThreads(newThreads);
-} catch (Throwable ignore) {}
+    try {
+        stopCpuBurn();
+        startCpuBurnLimitedThreads(newThreads);
+    } catch (Throwable ignore) {}
 
-appendLog("CPU LIVE",
-        "threads " + oldThreads + " -> " + newThreads +
-        " ΔT=" + (Float.isNaN(thermalDelta)
-                ? "N/A"
-                : String.format(java.util.Locale.US, "%.2f", thermalDelta)));
+    appendLog("CPU",
+            "threads " + oldThreads + " → " + newThreads +
+            " ΔT=" + (Float.isNaN(thermalDelta)
+                    ? "N/A"
+                    : String.format(java.util.Locale.US, "%.2f", thermalDelta)));
 }
 
 //=============================================================
