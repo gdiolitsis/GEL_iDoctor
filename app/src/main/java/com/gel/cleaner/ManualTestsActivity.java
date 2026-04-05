@@ -1778,133 +1778,126 @@ private void showLab14ConditionCheck(Runnable startAction) {
     // SPANNABLE TEXT
     // =========================
 
-    SpannableStringBuilder sb = new SpannableStringBuilder();
+SpannableStringBuilder sb = new SpannableStringBuilder();
 
-    int white = 0xFFFFFFFF;
-    int green = 0xFF39FF14;
-    int red   = 0xFFFF4444;
+int white = 0xFFFFFFFF;
+int green = 0xFF39FF14;
+int red   = 0xFFFF4444;
 
-    int start;
+int start;
 
+// Battery
+start = sb.length();
+sb.append(gr ? "Μπαταρία: " : "Battery: ");
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
 
-    // Battery
+start = sb.length();
+sb.append(percent + "%\n");
+sb.setSpan(
+        new ForegroundColorSpan(badBat ? red : green),
+        start,
+        sb.length(),
+        0
+);
 
-    start = sb.length();
-    sb.append(gr ? "Μπαταρία: " : "Battery: ");
-    sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+// Battery temp
+start = sb.length();
+sb.append(gr ? "Θερμοκρασία μπαταρίας: " : "Battery temp: ");
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
 
-    start = sb.length();
-    sb.append(percent + "%\n");
-    sb.setSpan(
-            new ForegroundColorSpan(badBat ? red : green),
-            start,
-            sb.length(),
-            0
-    );
+start = sb.length();
+sb.append(
+        Float.isNaN(tempC)
+                ? "N/A\n"
+                : String.format(Locale.US, "%.1f°C\n", tempC)
+);
 
+sb.setSpan(
+        new ForegroundColorSpan(badTemp ? red : green),
+        start,
+        sb.length(),
+        0
+);
 
-    // Battery temp
+// CPU
+start = sb.length();
+sb.append(gr ? "Θερμοκρασία CPU: " : "CPU temp: ");
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
 
-    start = sb.length();
-    sb.append(gr ? "Θερμοκρασία μπαταρίας: " : "Battery temp: ");
-    sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+start = sb.length();
+sb.append(
+        Float.isNaN(cpuTemp)
+                ? "N/A\n"
+                : String.format(Locale.US, "%.1f°C\n", cpuTemp)
+);
 
-    start = sb.length();
-    sb.append(
-            Float.isNaN(tempC)
-                    ? "N/A\n"
-                    : String.format(Locale.US, "%.1f°C\n", tempC)
-    );
+sb.setSpan(
+        new ForegroundColorSpan(badCpu ? red : green),
+        start,
+        sb.length(),
+        0
+);
 
-    sb.setSpan(
-            new ForegroundColorSpan(badTemp ? red : green),
-            start,
-            sb.length(),
-            0
-    );
+// Charging
+start = sb.length();
 
+String chargeTxt =
+        chargingNow
+                ? (gr ? "Φορτίζει\n" : "Charging\n")
+                : (gr ? "Δεν φορτίζει\n" : "Not charging\n");
 
-    // CPU
+sb.append(chargeTxt);
 
-    start = sb.length();
-    sb.append(gr ? "Θερμοκρασία CPU: " : "CPU temp: ");
-    sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+sb.setSpan(
+        new ForegroundColorSpan(chargingNow ? red : green),
+        start,
+        sb.length(),
+        0
+);
 
-    start = sb.length();
-    sb.append(
-            Float.isNaN(cpuTemp)
-                    ? "N/A\n"
-                    : String.format(Locale.US, "%.1f°C\n", cpuTemp)
-    );
+// WARN
+start = sb.length();
 
-    sb.setSpan(
-            new ForegroundColorSpan(badCpu ? red : green),
-            start,
-            sb.length(),
-            0
-    );
+sb.append("\n");
+sb.append(warn.toString());
 
+sb.setSpan(
+        new ForegroundColorSpan(hasWarn ? red : green),
+        start,
+        sb.length(),
+        0
+);
 
-    // Charging
+// TextView
+TextView msg = new TextView(this);
+msg.setText(sb);
+msg.setTextSize(14.5f);
+msg.setLineSpacing(0f, 1.2f);
 
-    start = sb.length();
+root.addView(msg);
 
-    String chargeTxt =
-            chargingNow
-                    ? (gr ? "Φορτίζει\n" : "Charging\n")
-                    : (gr ? "Δεν φορτίζει\n" : "Not charging\n");
+// Mute row
+root.addView(buildMuteRow());
 
-    sb.append(chargeTxt);
+boolean allGood =
+        !badBat &&
+        !badCpu &&
+        !badTemp &&
+        !chargingNow;
 
-    sb.setSpan(
-            new ForegroundColorSpan(
-                    chargingNow ? red : green
-            ),
-            start,
-            sb.length(),
-            0
-    );
+LinearLayout row = new LinearLayout(this);
+row.setOrientation(LinearLayout.HORIZONTAL);
 
+Button cancel =
+        gelButton(this, gr ? "Ακύρωση" : "Cancel", 0xFF8B0000);
 
-    // WARN
+Button go =
+        gelButton(this, gr ? "Συνέχεια" : "Continue", 0xFF0B5D1E);
 
-    start = sb.length();
-
-    sb.append("\n");
-    sb.append(warn.toString());
-
-    sb.setSpan(
-            new ForegroundColorSpan(
-                    hasWarn ? red : green
-            ),
-            start,
-            sb.length(),
-            0
-    );
-
-
-    TextView msg = new TextView(this);
-
-    msg.setText(sb);
-    msg.setTextSize(14.5f);
-    msg.setLineSpacing(0f, 1.2f);
-
-    root.addView(msg);
-
-
-    root.addView(buildMuteRow());
-
-
-    LinearLayout row = new LinearLayout(this);
-    row.setOrientation(LinearLayout.HORIZONTAL);
-
-
-    Button cancel =
-            gelButton(this, gr ? "Ακύρωση" : "Cancel", 0xFF8B0000);
-
-    Button go =
-            gelButton(this, gr ? "Συνέχεια" : "Continue", 0xFF0B5D1E);
-
+// ----------------------------------------------------
+// 🔴 LAYOUT LOGIC
+// ----------------------------------------------------
+if (allGood) {
 
     LinearLayout.LayoutParams lp =
             new LinearLayout.LayoutParams(
@@ -1919,27 +1912,61 @@ private void showLab14ConditionCheck(Runnable startAction) {
     go.setLayoutParams(lp);
 
     row.addView(cancel);
+    row.addView(go);
 
-        row.addView(go);
+} else {
 
-    root.addView(row);
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(48)
+            );
 
+    lp.setMargins(dp(6), dp(18), dp(6), 0);
 
-    b.setView(root);
+    cancel.setLayoutParams(lp);
 
-    AlertDialog dlg = b.create();
+    row.addView(cancel);
+}
 
-    if (dlg.getWindow() != null)
-        dlg.getWindow().setBackgroundDrawable(
-                new ColorDrawable(Color.TRANSPARENT)
-        );
+root.addView(row);
 
-    dlg.show();
+// ----------------------------------------------------
+// 🔴 DIALOG
+// ----------------------------------------------------
+b.setView(root);
+
+final AlertDialog dlg = b.create();
+
+if (dlg.getWindow() != null) {
+    dlg.getWindow().setBackgroundDrawable(
+            new ColorDrawable(Color.TRANSPARENT)
+    );
+}
+
+dlg.show();
+
+// ----------------------------------------------------
+// 🔴 ACTIONS
+// ----------------------------------------------------
+cancel.setOnClickListener(v -> {
+    AppTTS.stop();
+    dlg.dismiss();
+});
+
+if (allGood) {
+    go.setOnClickListener(v -> {
+        AppTTS.stop();
+        dlg.dismiss();
+
+        if (startAction != null) {
+            startAction.run();
+        }
+    });
+}
 
 dlg.setOnCancelListener(d -> {
-
     AppTTS.stop();
-
 });
 
     String introText =
@@ -2821,8 +2848,8 @@ private void showLab14BAdvisory(Runnable onContinue) {
 
         chargingStatus =
                 gr
-                        ? "✓ Η συσκευή δεν φορτίζεται (OK Συνέχισε)"
-                        : "✓ Device not charging (OK Continue)";
+                        ? "✓ Η συσκευή δεν φορτίζεται"
+                        : "✓ Device not charging";
 
         sb.append(chargingStatus);
 
@@ -2837,8 +2864,8 @@ private void showLab14BAdvisory(Runnable onContinue) {
 
         chargingStatus =
                 gr
-                        ? "✖ Η συσκευή φορτίζεται (ΕΞΟΔΟΣ)"
-                        : "✖ Device is charging (EXIT)";
+                        ? "✖ Η συσκευή φορτίζεται"
+                        : "✖ Device is charging";
 
         sb.append(chargingStatus);
 
