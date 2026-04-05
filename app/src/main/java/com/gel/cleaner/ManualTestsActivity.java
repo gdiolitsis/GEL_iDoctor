@@ -18576,34 +18576,54 @@ private void updateLab14LiveStats() {
         boolean realLoad = loadScore >= 2;
 
         boolean weakLoad =
-                !earlyPhase &&
-                !realLoad;
+        isLab14BMode
+        ? !realLoad
+        : (!earlyPhase && !realLoad);
 
         lab14WeakLoad = weakLoad;
 
-        // ----------------------------------------------------
-        // 🔥 BOOST (ΠΡΙΝ COUNTER ✔)
-        // ----------------------------------------------------
-        if (!lab14BoostActive &&
-            !isLab14BMode &&
-            lab14Running &&
-            !lab14Cancelled &&
-            !lab14_systemLimited[0] &&
-            !earlyPhase &&
-            loadScore <= 1 &&
-            elapsed >= 6) {
+// ----------------------------------------------------
+// 🔥 BOOST (FIXED — 14 + 14B)
+// ----------------------------------------------------
+if (!lab14BoostActive &&
+    lab14Running &&
+    !lab14Cancelled &&
+    !lab14_systemLimited[0]) {
 
-            lab14BoostActive = true;
+    boolean shouldBoost;
 
-            appendLog("BOOST", "Early boost");
+    if (isLab14BMode) {
+        // 💣 14B → ALWAYS force boost ASAP
+        shouldBoost = true;
 
-            runOnUiThread(() -> {
-                try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
-                try { startGpuStressLevel(4); } catch (Throwable ignore) {}
-                try { startMemoryStress(); } catch (Throwable ignore) {}
-            });
+    } else {
+        // 🧠 14 → smart boost
+        shouldBoost =
+                !earlyPhase &&
+                loadScore <= 1 &&
+                elapsed >= 6;
+    }
 
-        }
+    if (shouldBoost) {
+
+        lab14BoostActive = true;
+
+        appendLog("BOOST",
+                isLab14BMode
+                        ? "Forced boost (14B)"
+                        : "Early boost");
+
+        runOnUiThread(() -> {
+
+            if (!lab14Running || lab14Cancelled) return;
+
+            try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
+            try { startGpuStressLevel(4); } catch (Throwable ignore) {}
+            try { startMemoryStress(); } catch (Throwable ignore) {}
+
+        });
+    }
+}
 
         // ----------------------------------------------------
         // 🔴 COUNTER (STABLE ✔)
@@ -18648,7 +18668,7 @@ private void updateLab14LiveStats() {
             status = "STOPPED";
         } else if (lab14_systemLimited[0]) {
             status = "LIMITED ⚠";
-        } else if (earlyPhase) {
+        } else if (!isLab14BMode && earlyPhase) {
             status = "WARMING UP...";
         } else if (loadScore >= 3) {
             status = "HIGH LOAD 🔥";
