@@ -2460,6 +2460,11 @@ logLabelValue(
 
 applyMaxBrightnessAndKeepOn();
 
+// 🔒 FORCE SCREEN ON (CRITICAL)
+getWindow().addFlags(
+        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+);
+
 // --------------------------------------------------------
 // HARD START (0 -> 60s)
 // --------------------------------------------------------
@@ -18504,20 +18509,40 @@ if (!Float.isNaN(startBatteryTemp) &&
     }
 }
 
-        // ----------------------------------------------------
-        // 🔴 DRAIN
-        // ----------------------------------------------------
-        long drainNow = 0;
+// ----------------------------------------------------
+// 🔴 DRAIN (FIXED — 14 + 14B)
+// ----------------------------------------------------
+long drainNow;
 
-        if (lab14MaxCharge > 0 && lab14MinCharge < Long.MAX_VALUE) {
-            drainNow = Math.max(0, lab14MaxCharge - lab14MinCharge);
-        }
+if (isLab14BMode) {
 
-        double drainPerHour = Double.NaN;
+    // 🔥 direct real-time drain (14B)
+    iDoctorEngine.BatterySnapshot snapNow = lab14Snapshot();
 
-        if (dt > 10000 && drainNow > 0) {
-            drainPerHour = (drainNow * 3600000.0) / dt;
-        }
+    if (snapNow != null && snapNow.chargeNowMah > 0 && startMah[0] > 0) {
+        drainNow = Math.max(0, startMah[0] - snapNow.chargeNowMah);
+    } else {
+        drainNow = 0;
+    }
+
+} else {
+
+    // 🔁 legacy logic (LAB14)
+    if (lab14MaxCharge > 0 && lab14MinCharge < Long.MAX_VALUE) {
+        drainNow = Math.max(0, lab14MaxCharge - lab14MinCharge);
+    } else {
+        drainNow = 0;
+    }
+}
+
+// ----------------------------------------------------
+// 🔴 RATE
+// ----------------------------------------------------
+double drainPerHour = Double.NaN;
+
+if (dt > 10000 && drainNow > 0) {
+    drainPerHour = (drainNow * 3600000.0) / dt;
+}
 
         // ----------------------------------------------------
         // 🔴 LIMITER DETECTION
@@ -18692,9 +18717,10 @@ if (!lab14BoostActive &&
         // ----------------------------------------------------
         // 🔴 REBALANCE (ΜΟΝΟ εκτός early ✔)
         // ----------------------------------------------------
-        if (!earlyPhase) {
-            rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
-            rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+        if (!earlyPhase && !isLab14BMode) {
+    rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+    rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+}
         }
 
         // ----------------------------------------------------
@@ -18726,6 +18752,8 @@ if (!lab14Running) {
     status = "STOPPED";
 } else if (lab14_systemLimited[0]) {
     status = "LIMITED ⚠";
+} else if (isLab14BMode) {
+    status = "HARD LOAD 🔥";
 } else if (earlyPhaseActive) {
     status = "WARMING UP...";
 } else if (loadScore >= 3) {
