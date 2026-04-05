@@ -17578,8 +17578,16 @@ private void startLab14MainStress() {
     runOnUiThread(() -> {
 
         applyMaxBrightnessAndKeepOn();
-        lab14CpuThreadsCurrent =
-            lab14OptimalThreads > 0 ? lab14OptimalThreads : 3;
+        int cores = Runtime.getRuntime().availableProcessors();
+
+int startThreads = Math.max(2, cores / 2);
+
+// clamp safety
+if (startThreads > 6) startThreads = 6;
+
+lab14CpuThreadsCurrent = startThreads;
+
+startCpuBurnLimitedThreads(startThreads);
 
         if (!isLab14BMode) {
             // LAB14 → adaptive threads
@@ -17675,11 +17683,64 @@ float tNow =
     // 🔥 LIVE UPDATE
 updateLab14LiveStats();
 
-            // =========================
-            // FAST PHASE
-            // =========================
+// ========================================================
+// 🔴 AUTO RESTART (1 φορά)
+// ========================================================
+if (!isLab14BMode && lab14WeakLoadCounter >= 5) {
 
-            if (lab14FastPhase) {
+    lab14WeakLoadCounter = 0;
+
+    if (lab14RestartAttempts < 1) {
+
+        lab14RestartAttempts++;
+
+        appendLog("AUTO", "Restarting stress test...");
+
+        runOnUiThread(() -> {
+
+            lab14Running = false;
+            lab14Cancelled = true;
+            lab14BoostActive = false;
+
+            try { ui.removeCallbacks(lab14VibrationLoop); } catch (Throwable ignore) {}
+
+            lab14StopAllStress();
+
+            ui.postDelayed(() -> {
+                lab14BatteryHealthStressTest_REAL();
+            }, 800);
+        });
+
+        return;
+    }
+
+    // ========================================================
+    // 🔴 FALLBACK
+    // ========================================================
+    runOnUiThread(() -> {
+
+        appendLog("FALLBACK", "Switching to adaptive load");
+
+        lab14BoostActive = false;
+        lab14WeakLoadCounter = 0;
+
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+
+        try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
+        try { startMemoryStress(); } catch (Throwable ignore) {}
+        try { startGpuStressLevel(2); } catch (Throwable ignore) {}
+
+    });
+
+    return;
+}
+
+// =========================
+// FAST PHASE
+// =========================
+if (lab14FastPhase) {
 
                 int fastElapsed =
                         (int) ((now - lab14FastStartTime) / 1000);
@@ -18337,9 +18398,37 @@ private void updateLab14LiveStats() {
         iDoctorEngine idoctor =
                 iDoctorEngine.get(ManualTestsActivity.this);
 
-        Float battTemp = idoctor.getBatteryTempUnified();
-        Float cpuTemp = readCpuTempSafe();
+        long now = SystemClock.elapsedRealtime();
+        long dt = now - t0;
 
+        int elapsed = (int) (dt / 1000);
+
+        // ----------------------------------------------------
+        // 🔴 TIME FLAGS
+        // ----------------------------------------------------
+        boolean earlyPhase = elapsed < 25;
+        boolean inHardPhase = elapsed < 60;
+
+        // ----------------------------------------------------
+        // 🔴 ENGINE SNAPSHOT
+        // ----------------------------------------------------
+        iDoctorEngine.BatterySnapshot snap =
+                idoctor.readBatterySnapshotLab();
+
+        double currentMa =
+                snap != null ? snap.currentMa : Double.NaN;
+
+        float batTemp =
+                snap != null ? snap.batteryTempC : Float.NaN;
+
+        float thermalDelta = Float.NaN;
+        if (!Float.isNaN(startBatteryTemp) && !Float.isNaN(batTemp)) {
+            thermalDelta = batTemp - startBatteryTemp;
+        }
+
+        // ----------------------------------------------------
+        // 🔴 DRAIN
+        // ----------------------------------------------------
         long drainNow = 0;
 
         if (lab14MaxCharge > 0 && lab14MinCharge < Long.MAX_VALUE) {
@@ -18348,345 +18437,211 @@ private void updateLab14LiveStats() {
 
         double drainPerHour = Double.NaN;
 
-        long now = SystemClock.elapsedRealtime();
-long dt = now - t0;
+        if (dt > 10000 && drainNow > 0) {
+            drainPerHour = (drainNow * 3600000.0) / dt;
+        }
 
-int elapsed = (int) ((now - t0) / 1000);
+        // ----------------------------------------------------
+        // 🔴 LIMITER DETECTION
+        // ----------------------------------------------------
+        boolean systemLimitedNow =
+                detectLab14SystemLimiter(
+                        elapsed,
+                        currentMa,
+                        drainPerHour,
+                        startBatteryTemp,
+                        batTemp
+                );
 
-if (dt > 5000 && drainNow > 0) {
-    drainPerHour = (drainNow * 3600000.0) / dt;
-}
+        if (systemLimitedNow) {
 
+            if (!lab14_systemLimited[0]) {
+                appendLog("LIMITER", "System limiting detected");
+            }
+
+            lab14_systemLimited[0] = true;
+        }
+
+        // ----------------------------------------------------
+        // 🔴 DEVICE CLASS
+        // ----------------------------------------------------
+        int cores = Runtime.getRuntime().availableProcessors();
+
+        long totalRamMb = -1L;
+
+        try {
+            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            if (am != null) {
+                ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+                am.getMemoryInfo(mi);
+                totalRamMb = mi.totalMem / (1024L * 1024L);
+            }
+        } catch (Throwable ignore) {}
+
+        int deviceClass;
+
+        if (cores >= 8 && totalRamMb >= 6000) {
+            deviceClass = 2;
+        } else if (cores >= 6 && totalRamMb >= 3500) {
+            deviceClass = 1;
+        } else {
+            deviceClass = 0;
+        }
+
+        // ----------------------------------------------------
+        // 🔴 THRESHOLDS
+        // ----------------------------------------------------
+        double currentMin;
+        float thermalMin;
+        double drainMin;
+        int scoreAbortThreshold;
+
+        switch (deviceClass) {
+
+            case 2:
+                currentMin = 180;
+                thermalMin = 0.7f;
+                drainMin = 14;
+                scoreAbortThreshold = 6;
+                break;
+
+            case 1:
+                currentMin = 130;
+                thermalMin = 0.5f;
+                drainMin = 10;
+                scoreAbortThreshold = 6;
+                break;
+
+            default:
+                currentMin = 90;
+                thermalMin = 0.3f;
+                drainMin = 7;
+                scoreAbortThreshold = 7;
+                break;
+        }
+
+        // ----------------------------------------------------
+        // 🔴 LOAD SIGNALS
+        // ----------------------------------------------------
+        double absMa = Math.abs(currentMa);
+
+        boolean currentLoad =
+                !Double.isNaN(currentMa) &&
+                absMa >= currentMin &&
+                absMa >= 80;
+
+        boolean thermalLoad =
+                !Float.isNaN(thermalDelta) &&
+                thermalDelta >= thermalMin &&
+                thermalDelta < 10f;
+
+        boolean drainLoad =
+                !Double.isNaN(drainPerHour) &&
+                drainPerHour >= drainMin;
+
+        int loadScore = 0;
+
+        if (currentLoad) loadScore += 2;
+        if (thermalLoad) loadScore += 1;
+        if (drainLoad) loadScore += 1;
+
+        boolean realLoad = loadScore >= 2;
+
+        boolean weakLoad =
+                !earlyPhase &&
+                !realLoad;
+
+        lab14WeakLoad = weakLoad;
+
+        // ----------------------------------------------------
+        // 🔥 BOOST (ΠΡΙΝ COUNTER ✔)
+        // ----------------------------------------------------
+        if (!lab14BoostActive &&
+            !isLab14BMode &&
+            lab14Running &&
+            !lab14Cancelled &&
+            !lab14_systemLimited[0] &&
+            !earlyPhase &&
+            loadScore <= 1 &&
+            elapsed >= 6) {
+
+            lab14BoostActive = true;
+
+            appendLog("BOOST", "Early boost");
+
+            runOnUiThread(() -> {
+                try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
+                try { startGpuStressLevel(4); } catch (Throwable ignore) {}
+                try { startMemoryStress(); } catch (Throwable ignore) {}
+            });
+
+            return;
+        }
+
+        // ----------------------------------------------------
+        // 🔴 COUNTER (ΜΕΤΑ BOOST ✔)
+        // ----------------------------------------------------
+        if (weakLoad) {
+            lab14WeakLoadCounter++;
+        } else {
+            lab14WeakLoadCounter = Math.max(0, lab14WeakLoadCounter - 1);
+        }
+
+        // ----------------------------------------------------
+        // 🔴 REBALANCE
+        // ----------------------------------------------------
+        rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+        rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+
+        // ----------------------------------------------------
+        // 🔴 LAB14B ABORT
+        // ----------------------------------------------------
+        if (isLab14BMode &&
+            !inHardPhase &&
+            lab14WeakLoadCounter >= scoreAbortThreshold) {
+
+            logError("Insufficient load — test aborted");
+
+            lab14Cancelled = true;
+            lab14Running = false;
+
+            lab14StopAllStress();
+
+            return;
+        }
+
+        // ----------------------------------------------------
+        // 🔴 STATUS
+        // ----------------------------------------------------
         String status;
 
         if (!lab14Running) {
             status = "STOPPED";
         } else if (lab14_systemLimited[0]) {
             status = "LIMITED ⚠";
-        } else if (drainPerHour > 50) {
+        } else if (earlyPhase) {
+            status = "WARMING UP...";
+        } else if (loadScore >= 3) {
             status = "HIGH LOAD 🔥";
-        } else if (drainPerHour > 20) {
+        } else if (loadScore >= 2) {
             status = "NORMAL LOAD";
         } else {
             status = "WEAK LOAD ⚠";
         }
-        
-// ----------------------------------------------------
-// 🔴 GEL LOAD DETECTOR v2.1 — ENGINE COMPATIBLE
-// ----------------------------------------------------
 
-// elapsed υπάρχει ήδη στο loop σου
-boolean earlyPhase = elapsed < 25;
-boolean inHardPhase = elapsed < 60;
-
-// ----------------------------------------------------
-// 1) ENGINE SNAPSHOT (αντί για custom methods)
-// ----------------------------------------------------
-iDoctorEngine.BatterySnapshot snap =
-        idoctor.readBatterySnapshotLab();
-
-double currentMa =
-        snap != null ? snap.currentMa : Double.NaN;
-
-float batTemp =
-        snap != null ? snap.batteryTempC : Float.NaN;
-
-// thermal delta με σωστό variable
-float thermalDelta = Float.NaN;
-if (!Float.isNaN(startBatteryTemp) && !Float.isNaN(batTemp)) {
-    thermalDelta = batTemp - startBatteryTemp;
-}
-
-// κρατάς το υπάρχον σου
-double drain = drainPerHour;
-
-boolean systemLimitedNow =
-        detectLab14SystemLimiter(
-                elapsed,
-                currentMa,
-                drainPerHour,
-                startBatteryTemp,
-                batTemp
+        // ----------------------------------------------------
+        // 🔴 UI
+        // ----------------------------------------------------
+        lab14LiveStats.setText(
+                "Drain: " + drainNow +
+                "\nRate: " + (Double.isNaN(drainPerHour) ? "N/A" : (int) drainPerHour + " mAh/h") +
+                "\nStatus: " + status
         );
-
-if (systemLimitedNow) {
-
-    if (!lab14_systemLimited[0]) {
-        appendLog("LIMITER",
-                gr
-                        ? "Πιθανός περιορισμός από BMS / thermal / power policy"
-                        : "Possible BMS / thermal / power policy limiting detected");
-    }
-
-    lab14_systemLimited[0] = true;
-}
-
-// ----------------------------------------------------
-// 2) DEVICE CLASS (μένει ίδιο)
-// ----------------------------------------------------
-int deviceClass;
-
-int cores = Runtime.getRuntime().availableProcessors();
-long totalRamMb = -1L;
-
-try {
-    ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-    if (am != null) {
-        ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
-        am.getMemoryInfo(mi);
-        totalRamMb = mi.totalMem / (1024L * 1024L);
-    }
-} catch (Throwable ignore) {}
-
-boolean highCpu = cores >= 8;
-boolean highRam = totalRamMb >= 6000;
-boolean midRam  = totalRamMb >= 3500;
-
-if (highCpu && highRam) {
-    deviceClass = 2;
-} else if (cores >= 6 && midRam) {
-    deviceClass = 1;
-} else {
-    deviceClass = 0;
-}
-
-// ----------------------------------------------------
-// 3) ADAPTIVE THRESHOLDS (ίδιο)
-// ----------------------------------------------------
-float cpuMin;       // ❌ ΔΕΝ το χρησιμοποιούμε πλέον
-double currentMin;
-float thermalMin;
-double drainMin;
-int scoreAbortThreshold;
-
-switch (deviceClass) {
-
-    case 2:
-        currentMin = 180.0;
-        thermalMin = 0.7f;
-        drainMin = 14.0;
-        scoreAbortThreshold = 6;
-        break;
-
-    case 1:
-        currentMin = 130.0;
-        thermalMin = 0.5f;
-        drainMin = 10.0;
-        scoreAbortThreshold = 6;
-        break;
-
-    default:
-        currentMin = 90.0;
-        thermalMin = 0.3f;
-        drainMin = 7.0;
-        scoreAbortThreshold = 7;
-        break;
-}
-
-// ----------------------------------------------------
-// 4) SIGNALS (ΧΩΡΙΣ cpuUsage)
-// ----------------------------------------------------
-boolean currentLoad =
-        !Double.isNaN(currentMa) &&
-        Math.abs(currentMa) >= currentMin &&
-        Math.abs(currentMa) > 20; // avoid noise
-
-boolean thermalLoad =
-        !Float.isNaN(thermalDelta) &&
-        thermalDelta >= thermalMin &&
-        thermalDelta < 10f; // anti-glitch
-
-boolean drainLoad =
-        !Double.isNaN(drain) &&
-        drain >= drainMin;
-
-// ----------------------------------------------------
-// 5) FUSED SCORE
-// ----------------------------------------------------
-int loadScore = 0;
-
-if (currentLoad) loadScore += 2;
-if (thermalLoad) loadScore += 1;
-if (drainLoad) loadScore += 1;
-
-boolean realLoad = loadScore >= 2;
-
-// ----------------------------------------------------
-// 6) SMART WEAK LOAD
-// ----------------------------------------------------
-boolean weakLoad =
-        !earlyPhase &&
-        !realLoad;
-
-lab14WeakLoad = weakLoad;
-
-// ✅ ΕΝΑ σημείο ΜΟΝΟ
-rebalanceLab14GpuLive(
-        weakLoad,
-        thermalDelta,
-        lab14_systemLimited[0]
-);
-
-rebalanceLab14CpuLive(
-        weakLoad,
-        thermalDelta,
-        lab14_systemLimited[0]
-);
-
-// debounce
-if (weakLoad) {
-    lab14WeakLoadCounter = Math.min(1000, lab14WeakLoadCounter + 1);
-} else {
-    lab14WeakLoadCounter = Math.max(0, lab14WeakLoadCounter - 1);
-}
-
-// ----------------------------------------------------
-// 7) FINAL ABORT LOGIC
-// ----------------------------------------------------
-if (isLab14BMode
-        && !inHardPhase
-        && lab14WeakLoadCounter >= scoreAbortThreshold) {
-
-    logError(gr
-            ? "Ανεπαρκές πραγματικό φορτίο — το test ακυρώθηκε"
-            : "Insufficient real load — test aborted");
-
-    lab14Cancelled = true;
-    lab14Running = false;
-
-    lab14StopAllStress();
-
-    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-    try { lab14CleanupUI(); } catch (Throwable ignore) {}
-
-    return;
-}
-
-// ----------------------------------------------------
-// 8) DEBUG LOG (χωρίς logDebug)
-// ----------------------------------------------------
-if (lab14WeakLoadCounter <= 3) {
-
-    String cls =
-            deviceClass == 2 ? "FLAGSHIP" :
-            deviceClass == 1 ? "MID" : "LOW";
-
-    appendLog("LOAD",
-            "class:" + cls +
-            " mA:" + (Double.isNaN(currentMa) ? "N/A" : (int) currentMa) +
-            " ΔT:" + (Float.isNaN(thermalDelta) ? "N/A" :
-            String.format(java.util.Locale.US, "%.2f", thermalDelta)) +
-            " drain:" + (Double.isNaN(drain) ? "N/A" :
-            String.format(java.util.Locale.US, "%.1f", drain)) +
-            " score:" + loadScore);
-}
-
-// ========================================================
-// 🔥 BOOST MODE
-// ========================================================
-if (!isLab14BMode &&
-    !lab14BoostActive &&
-    lab14WeakLoadCounter >= 2 &&
-    lab14Running &&
-    !lab14Cancelled) {
-
-    lab14BoostActive = true;
-
-    appendLog("BOOST", "Activating max stress");
-
-    runOnUiThread(() -> {
-
-        if (!lab14Running || lab14Cancelled) return;
-
-        try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
-        try { startGpuStressLevel(4); } catch (Throwable ignore) {}
-        try { startMemoryStress(); } catch (Throwable ignore) {}
-
-        try {
-            if (lab14StressVideo != null && !lab14StressVideo.isPlaying()) {
-                lab14StressVideo.start();
-            }
-        } catch (Throwable ignore) {}
-
-    });
-
-    return;
-}
-
-// ========================================================
-// 🔴 AUTO RESTART (1 φορά)
-// ========================================================
-if (!isLab14BMode && lab14WeakLoadCounter >= 5) {
-
-    lab14WeakLoadCounter = 0;
-
-    if (lab14RestartAttempts < 1) {
-
-        lab14RestartAttempts++;
-
-        appendLog("AUTO", "Restarting stress test...");
-
-        runOnUiThread(() -> {
-
-            lab14Running = false;
-            lab14Cancelled = true;
-            lab14BoostActive = false;
-
-            try { ui.removeCallbacks(lab14VibrationLoop); } catch (Throwable ignore) {}
-
-            lab14StopAllStress();
-
-            ui.postDelayed(() -> {
-                lab14BatteryHealthStressTest_REAL();
-            }, 800);
-        });
-
-        return;
-    }
-
-// ========================================================
-// 🔴 FALLBACK (τελευταίο επίπεδο)
-// ========================================================
-runOnUiThread(() -> {
-
-    appendLog("FALLBACK",
-            gr
-                    ? "Ενεργοποίηση προσαρμοσμένου φορτίου"
-                    : "Switching to adaptive load");
-
-    lab14BoostActive = false;
-    lab14WeakLoadCounter = 0;
-
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
-
-    // 🔥 adaptive load (ΟΧΙ 1 thread)
-    try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
-    try { startMemoryStress(); } catch (Throwable ignore) {}
-    try { startGpuStressLevel(2); } catch (Throwable ignore) {}
-
-});
-
-return;
-}
-
-        String txt = String.format(
-                Locale.US,
-                "CPU: %s°C\nBAT: %s°C\nDrain: %d mAh\nRate: %s\nStatus: %s",
-                cpuTemp != null ? String.format("%.1f", cpuTemp) : "N/A",
-                battTemp != null ? String.format("%.1f", battTemp) : "N/A",
-                drainNow,
-                Double.isNaN(drainPerHour)
-                        ? "N/A"
-                        : String.format("%.0f mAh/h", drainPerHour),
-                status
-        );
-
-        lab14LiveStats.setText(txt);
 
     } catch (Throwable ignore) {}
 }
+
+
 
 private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
 
