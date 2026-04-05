@@ -18526,7 +18526,7 @@ private void updateLab14LiveStats() {
         switch (deviceClass) {
 
             case 2:
-                currentMin = 180;
+                currentMin = 140;
                 thermalMin = 0.7f;
                 drainMin = 14;
                 scoreAbortThreshold = 6;
@@ -18552,11 +18552,10 @@ private void updateLab14LiveStats() {
         // ----------------------------------------------------
         double absMa = Math.abs(currentMa);
 
-        boolean currentLoad =
-                !Double.isNaN(currentMa) &&
-                absMa >= currentMin &&
-                absMa >= 80 &&
-                absMa >= 50; // 🔥 anti-noise
+boolean currentLoad =
+        !Double.isNaN(currentMa) &&
+        absMa >= currentMin &&
+        absMa > 20; // anti-noise μόνο
 
         boolean thermalLoad =
                 !Float.isNaN(thermalDelta) &&
@@ -18664,33 +18663,115 @@ if (!lab14BoostActive &&
         // ----------------------------------------------------
         String status;
 
-        if (!lab14Running) {
-            status = "STOPPED";
-        } else if (lab14_systemLimited[0]) {
-            status = "LIMITED ⚠";
-        } else if (!isLab14BMode && earlyPhase) {
-            status = "WARMING UP...";
-        } else if (loadScore >= 3) {
-            status = "HIGH LOAD 🔥";
-        } else if (loadScore >= 2) {
-            status = "NORMAL LOAD";
-        } else {
-            status = "WEAK LOAD ⚠";
-        }
-        
-        appendLog("LIVE",
-        "status=" + status +
-        " weak=" + lab14WeakLoad +
-        " score=" + loadScore);
+if (!lab14Running) {
+    status = "STOPPED";
+} else if (lab14_systemLimited[0]) {
+    status = "LIMITED ⚠";
+} else if (earlyPhase) {
+    status = "WARMING UP...";
+} else if (loadScore >= 3) {
+    status = "HIGH LOAD 🔥";
+} else if (loadScore >= 2) {
+    status = "NORMAL LOAD";
+} else {
+    status = "WEAK LOAD ⚠";
+}
 
-        // ----------------------------------------------------
-        // 🔴 UI
-        // ----------------------------------------------------
-        lab14LiveStats.setText(
-                "Drain: " + drainNow +
-                "\nRate: " + (Double.isNaN(drainPerHour) ? "N/A" : (int) drainPerHour + " mAh/h") +
-                "\nStatus: " + status
-        );
+// 🔴 throttled log (ΜΕΣΑ ΣΤΟ ΙΔΙΟ BLOCK)
+long nowTs = SystemClock.elapsedRealtime();
+
+if (nowTs - lab14LastLiveLogTs > 4000) {
+
+    lab14LastLiveLogTs = nowTs;
+
+    appendLog("LIVE",
+            "status=" + status +
+            " weak=" + lab14WeakLoad +
+            " score=" + loadScore);
+}
+
+// ----------------------------------------------------
+// 🔴 UI (FULL METRICS RESTORED)
+// ----------------------------------------------------
+SpannableStringBuilder sb = new SpannableStringBuilder();
+
+int white = 0xFFFFFFFF;
+int neon  = 0xFF39FF14;
+int red   = 0xFFFF4444;
+int orange = 0xFFFFA500;
+int cyan = 0xFF00BFFF;
+
+int start;
+
+// CPU
+start = sb.length();
+sb.append("CPU: ");
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+start = sb.length();
+sb.append(Float.isNaN(cpuTemp)
+        ? "N/A\n"
+        : String.format(Locale.US, "%.1f°C\n", cpuTemp));
+sb.setSpan(new ForegroundColorSpan(neon), start, sb.length(), 0);
+
+// BAT
+start = sb.length();
+sb.append("BAT: ");
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+start = sb.length();
+sb.append(Float.isNaN(batTemp)
+        ? "N/A\n"
+        : String.format(Locale.US, "%.1f°C\n", batTemp));
+sb.setSpan(new ForegroundColorSpan(neon), start, sb.length(), 0);
+
+// Drain
+start = sb.length();
+sb.append("Drain: ");
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+start = sb.length();
+sb.append(drainNow + "\n");
+sb.setSpan(new ForegroundColorSpan(neon), start, sb.length(), 0);
+
+// Rate
+start = sb.length();
+sb.append("Rate: ");
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+start = sb.length();
+sb.append(Double.isNaN(drainPerHour)
+        ? "N/A\n"
+        : (int) drainPerHour + " mAh/h\n");
+sb.setSpan(new ForegroundColorSpan(neon), start, sb.length(), 0);
+
+// STATUS
+start = sb.length();
+sb.append("Status: ");
+sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
+
+start = sb.length();
+sb.append(status);
+
+int statusColor;
+
+if ("HIGH LOAD 🔥".equals(status)) {
+    statusColor = neon;
+} else if ("NORMAL LOAD".equals(status)) {
+    statusColor = cyan;
+} else if ("WARMING UP...".equals(status)) {
+    statusColor = orange;
+} else if ("LIMITED ⚠".equals(status)) {
+    statusColor = red;
+} else if ("WEAK LOAD ⚠".equals(status)) {
+    statusColor = red;
+} else {
+    statusColor = white;
+}
+
+sb.setSpan(new ForegroundColorSpan(statusColor), start, sb.length(), 0);
+
+lab14LiveStats.setText(sb);
 
     } catch (Throwable ignore) {}
 }
