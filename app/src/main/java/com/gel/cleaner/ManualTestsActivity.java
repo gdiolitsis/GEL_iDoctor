@@ -18612,12 +18612,12 @@ boolean currentLoad =
         if (thermalLoad) loadScore += 1;
         if (drainLoad) loadScore += 1;
 
-        boolean realLoad = loadScore >= 2;
+        boolean realLoad = loadScore >= 3;
 
 boolean weakLoad =
         isLab14BMode
-        ? (!realLoad || batteryScore < 50)
-        : (!earlyPhase && (!realLoad || batteryScore < 50));
+        ? (loadScore <= 2 || batteryScore < 45)
+        : (!earlyPhase && (loadScore <= 1 || batteryScore < 45));
 
 lab14WeakLoad = weakLoad;
 
