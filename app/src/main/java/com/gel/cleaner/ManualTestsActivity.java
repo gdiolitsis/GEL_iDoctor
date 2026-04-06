@@ -18602,6 +18602,8 @@ private String computeRiskSummary(
 }
 
 private void updateLab14LiveStats() {
+	
+	int cores = Runtime.getRuntime().availableProcessors();
 
     try {
 
@@ -18649,7 +18651,6 @@ if (isLab14BMode && inHardPhase && !lab14SoftPhaseStarted) {
     try { stopGpuStress(); } catch (Throwable ignore) {}
     try { stopMemoryStress(); } catch (Throwable ignore) {}
 
-    int cores = Runtime.getRuntime().availableProcessors();
     int softThreads = Math.max(1, cores / 3);
 
     // CPU (SOFT)
@@ -18762,7 +18763,6 @@ if (systemLimitedNow) {
 // ----------------------------------------------------
 // 🔴 DEVICE CLASS
 // ----------------------------------------------------
-int cores = Runtime.getRuntime().availableProcessors(); // ✅ FIX (declare)
 
 long totalRamMb = -1L;
 
@@ -18902,7 +18902,6 @@ if (!lab14BoostActive &&
 
                     if (lab14FastPhase) return;
 
-                    int cores = Runtime.getRuntime().availableProcessors();
                     int threads = Math.max(2, cores / 2);
 
                     startCpuBurnLimitedThreads(threads);
