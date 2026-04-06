@@ -18779,7 +18779,7 @@ if (lab14ElapsedMs > 3000) { // μετά τα 3 sec
     } else {
 
         // fallback → δείξε current
-        double currentMa = lab14Current();
+        currentMa = lab14Current();
 
         if (!Double.isNaN(currentMa)) {
             drainPerHour = Math.abs(currentMa);
