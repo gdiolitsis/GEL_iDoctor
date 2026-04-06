@@ -18638,8 +18638,10 @@ int elapsed = (int) (lab14ElapsedMs / 1000);
 if (isLab14BMode && inHardPhase && !lab14SoftPhaseStarted) {
 
     lab14SoftPhaseStarted = true;
-    inHardPhase = false;          // ✅ CRITICAL
     lab14BoostActive = false;
+
+    // ❗ ΜΗΝ πειράζεις εδώ το inHardPhase (είναι derived από elapsed)
+    // inHardPhase = false; ❌ REMOVE
 
     appendLog("PHASE", "Switching to SOFT phase");
 
@@ -18656,7 +18658,7 @@ if (isLab14BMode && inHardPhase && !lab14SoftPhaseStarted) {
     // GPU (LOW)
     try { startGpuStressLevel(1); } catch (Throwable ignore) {}
 
-    // MEMORY stays (optional, ok)
+    // MEMORY
     try { startMemoryStress(); } catch (Throwable ignore) {}
 }
 
@@ -18673,18 +18675,17 @@ if (Float.isNaN(batTemp) || batTemp <= 0f || batTemp > 100f) {
 
 // 🔴 Battery percent (safe)
 float battPct = (float) getBatteryPercentSafe();
-
 if (battPct < 0f || battPct > 100f) {
     battPct = Float.NaN;
 }
 
-// ?? Charging state
+// 🔴 Charging state
 boolean charging = isChargingNow();
 
-// 🔴 Battery score (CORE SIGNAL)
+// 🔴 Battery score
 int batteryScore = scoreBattery(batTemp, battPct, charging);
 
-// 🔴 Thermal delta (safe)
+// 🔴 Thermal delta
 float thermalDelta = Float.NaN;
 if (!Float.isNaN(startBatteryTemp) &&
     !Float.isNaN(batTemp) &&
@@ -18693,14 +18694,13 @@ if (!Float.isNaN(startBatteryTemp) &&
 
     thermalDelta = batTemp - startBatteryTemp;
 
-    // anti-glitch clamp
     if (Math.abs(thermalDelta) > 20f) {
         thermalDelta = Float.NaN;
     }
 }
 
 // ----------------------------------------------------
-// 🔴 DRAIN (FIXED — 14 + 14B)
+// 🔴 DRAIN
 // ----------------------------------------------------
 long drainNow;
 
@@ -18738,52 +18738,52 @@ if (lab14ElapsedMs > 10000 && drainNow > 0) {
     drainPerHour = (drainNow * 3600000.0) / lab14ElapsedMs;
 }
 
-        // ----------------------------------------------------
-        // 🔴 LIMITER DETECTION
-        // ----------------------------------------------------
-        boolean systemLimitedNow =
-                detectLab14SystemLimiter(
-                        elapsed,
-                        currentMa,
-                        drainPerHour,
-                        startBatteryTemp,
-                        batTemp
-                );
+// ----------------------------------------------------
+// 🔴 LIMITER DETECTION
+// ----------------------------------------------------
+boolean systemLimitedNow =
+        detectLab14SystemLimiter(
+                elapsed,
+                currentMa,
+                drainPerHour,
+                startBatteryTemp,
+                batTemp
+        );
 
-        if (systemLimitedNow) {
+if (systemLimitedNow) {
 
-            if (!lab14_systemLimited[0]) {
-                appendLog("LIMITER", "System limiting detected");
-            }
+    if (!lab14_systemLimited[0]) {
+        appendLog("LIMITER", "System limiting detected");
+    }
 
-            lab14_systemLimited[0] = true;
-        }
+    lab14_systemLimited[0] = true;
+}
 
-        // ----------------------------------------------------
-        // 🔴 DEVICE CLASS
-        // ----------------------------------------------------
-        cores = Runtime.getRuntime().availableProcessors();
+// ----------------------------------------------------
+// 🔴 DEVICE CLASS
+// ----------------------------------------------------
+int cores = Runtime.getRuntime().availableProcessors(); // ✅ FIX (declare)
 
-        long totalRamMb = -1L;
+long totalRamMb = -1L;
 
-        try {
-            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-            if (am != null) {
-                ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
-                am.getMemoryInfo(mi);
-                totalRamMb = mi.totalMem / (1024L * 1024L);
-            }
-        } catch (Throwable ignore) {}
+try {
+    ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+    if (am != null) {
+        ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+        am.getMemoryInfo(mi);
+        totalRamMb = mi.totalMem / (1024L * 1024L);
+    }
+} catch (Throwable ignore) {}
 
-        int deviceClass;
+int deviceClass;
 
-        if (cores >= 8 && totalRamMb >= 6000) {
-            deviceClass = 2;
-        } else if (cores >= 6 && totalRamMb >= 3500) {
-            deviceClass = 1;
-        } else {
-            deviceClass = 0;
-        }
+if (cores >= 8 && totalRamMb >= 6000) {
+    deviceClass = 2;
+} else if (cores >= 6 && totalRamMb >= 3500) {
+    deviceClass = 1;
+} else {
+    deviceClass = 0;
+}
 
         // ----------------------------------------------------
         // 🔴 THRESHOLDS
