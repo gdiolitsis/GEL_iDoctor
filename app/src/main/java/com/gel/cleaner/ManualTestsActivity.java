@@ -18815,27 +18815,6 @@ if (lab14ElapsedMs > 3000) { // μετά τα 3 sec
 }
 
 // ----------------------------------------------------
-// 🔴 LIMITER DETECTION
-// ----------------------------------------------------
-boolean systemLimitedNow =
-        detectLab14SystemLimiter(
-                elapsed,
-                currentMa,
-                drainPerHour,
-                startBatteryTemp,
-                batTemp
-        );
-
-if (systemLimitedNow) {
-
-    if (!lab14_systemLimited[0]) {
-        appendLog("LIMITER", "System limiting detected");
-    }
-
-    lab14_systemLimited[0] = true;
-}
-
-// ----------------------------------------------------
 // 🔴 DEVICE CLASS
 // ----------------------------------------------------
 
@@ -19298,33 +19277,6 @@ private boolean detectLab14SystemLimiter(
 
     // Αν όλα δείχνουν "τρέχει stress αλλά το σύστημα δεν αφήνει ρεύμα"
     return lowCurrent && lowDrain && lowThermalRise;
-}
-
-boolean limiterNow =
-        detectLab14SystemLimiter(
-                elapsed,
-                currentMa,
-                drainPerHour,
-                startBatteryTemp,
-                batTempNow
-        );
-
-// 🔴 SMOOTHING (ANTI-FALSE POSITIVE)
-if (limiterNow) {
-    lab14LimiterScore++;
-} else {
-    lab14LimiterScore = Math.max(0, lab14LimiterScore - 1);
-}
-
-// 🔴 LATCH (CONFIRMATION)
-if (lab14LimiterScore >= 4) {
-
-    if (!lab14LimiterLatched) {
-        appendLog("LIMITER", "BMS/system limiting confirmed");
-    }
-
-    lab14LimiterLatched = true;
-    lab14_systemLimited[0] = true;
 }
 
 private void calibrateLoadZeroRisk() {
