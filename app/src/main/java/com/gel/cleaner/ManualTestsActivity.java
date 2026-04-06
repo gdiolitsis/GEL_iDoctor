@@ -18693,7 +18693,7 @@ int elapsed = (int) (lab14ElapsedMs / 1000);
 // ----------------------------------------------------
 // 🔴 HARD → SOFT TRANSITION (FINAL FIX)
 // ----------------------------------------------------
-if (isLab14BMode && elapsed >= 60 && !lab14SoftPhaseStarted)
+if (isLab14BMode && elapsed >= 60 && !lab14SoftPhaseStarted) {
 
     lab14SoftPhaseStarted = true;
     lab14BoostActive = false;
@@ -19218,7 +19218,8 @@ sb.setSpan(new ForegroundColorSpan(statusColor), start, sb.length(), 0);
 
 lab14LiveStats.setText(sb);
 
-    } catch (Throwable ignore) {}
+} catch (Throwable ignore) {
+}
 }
 
 private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
@@ -29289,4 +29290,4 @@ if (requestCode == 8008) {
 // ============================================================
 // END OF CLASS
 // ============================================================
-}
+}p
