@@ -18512,27 +18512,37 @@ if (!Float.isNaN(startBatteryTemp) &&
 // ----------------------------------------------------
 // 🔴 DRAIN (FIXED — 14 + 14B)
 // ----------------------------------------------------
+// ----------------------------------------------------
+// 🔴 DRAIN (FIXED — 14 + 14B)
+// ----------------------------------------------------
 long drainNow;
 
 if (isLab14BMode) {
 
-    // 🔥 direct real-time drain (14B)
     iDoctorEngine.BatterySnapshot snapNow = lab14Snapshot();
 
-    if (snapNow != null && snapNow.chargeNowMah > 0 && startMah[0] > 0) {
-        drainNow = Math.max(0, startMah[0] - snapNow.chargeNowMah);
+    if (snapNow != null && snapNow.chargeNowMah > 0 && startMah > 0) {
+        drainNow = Math.max(0, startMah - snapNow.chargeNowMah);
     } else {
         drainNow = 0;
     }
 
 } else {
 
-    // 🔁 legacy logic (LAB14)
     if (lab14MaxCharge > 0 && lab14MinCharge < Long.MAX_VALUE) {
         drainNow = Math.max(0, lab14MaxCharge - lab14MinCharge);
     } else {
         drainNow = 0;
     }
+}
+
+// ----------------------------------------------------
+// 🔴 RATE
+// ----------------------------------------------------
+double drainPerHour = Double.NaN;
+
+if (dt > 10000 && drainNow > 0) {
+    drainPerHour = (drainNow * 3600000.0) / dt;
 }
 
 // ----------------------------------------------------
