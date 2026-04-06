@@ -2566,6 +2566,12 @@ try { startGpuStressLevel(1); } catch (Throwable ignore) {}
 // MEMORY (OFF για realism)
 try { stopMemoryStress(); } catch (Throwable ignore) {}
 
+} catch (Throwable t) {
+    logError(gr
+            ? "Σφάλμα μετάβασης HARD → SOFT"
+            : "Error switching HARD → SOFT");
+}
+
 }, 60000L);
 
             // --------------------------------------------------------
