@@ -2535,48 +2535,37 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
         softStartVolt[0] = getBatteryVoltageFiltered();
 
-stopCpuBurn();
-stopMemoryStress();
-stopGpuStress();
+        stopCpuBurn();
+        stopMemoryStress();
+        stopGpuStress();
 
-// 🔴 RESET BOOST (CRITICAL)
-lab14BoostActive = false;
+        lab14BoostActive = false;
 
-logLabelValue(
-        gr ? "Φάση" : "Phase",
-        gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
-);
+        logLabelValue(
+                gr ? "Φάση" : "Phase",
+                gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
+        );
 
-// ----------------------------------------------------
-// 🌿 SOFT PROFILE (REAL USAGE)
-// ----------------------------------------------------
+        int cores = Runtime.getRuntime().availableProcessors();
+        int softThreads = Math.max(1, cores / 3);
 
-int cores = Runtime.getRuntime().availableProcessors();
-int softThreads = Math.max(1, cores / 3);
+        try { startCpuBurnLimitedThreads(softThreads); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+        try { startGpuStressLevel(1); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
 
-// CPU (FIXED ❗)
-try {
-    startCpuBurnLimitedThreads(softThreads);
-} catch (Throwable ignore) {}
+    } catch (Throwable t) {
 
-// GPU (FIXED ❗)
-try { stopGpuStress(); } catch (Throwable ignore) {}
-try { startGpuStressLevel(1); } catch (Throwable ignore) {}
-
-// MEMORY (OFF για realism)
-try { stopMemoryStress(); } catch (Throwable ignore) {}
-
-} catch (Throwable t) {
-    logError(gr
-            ? "Σφάλμα μετάβασης HARD → SOFT"
-            : "Error switching HARD → SOFT");
-}
+        logError(gr
+                ? "Σφάλμα μετάβασης HARD → SOFT"
+                : "Error switching HARD → SOFT");
+    }
 
 }, 60000L);
 
-            // --------------------------------------------------------
-            // AFTER 300s -> FINAL SNAPSHOT + ANALYSIS
-            // --------------------------------------------------------
+// --------------------------------------------------------
+// AFTER 300s -> FINAL SNAPSHOT + ANALYSIS
+// --------------------------------------------------------
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
     try {
@@ -2606,7 +2595,6 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
         endVolt[0] = getBatteryVoltageFiltered();
 
-        // ---------------- HARD ----------------
         long hardDeltaMah = -1L;
         if (startMah[0] > 0 && softStartMah[0] > 0) {
             hardDeltaMah = Math.max(0L, startMah[0] - softStartMah[0]);
@@ -2626,33 +2614,27 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         ? (startVolt[0] - endVolt[0])
                         : Float.NaN;
 
-// ----------------------------------------------------
-// 🔴 PROTECTION DETECTION (TUNED + SAFE)
-// ----------------------------------------------------
-if (hardDeltaMah > 0 && hardDeltaMah < 15) {
-    powerThrottle = true;
-}
+        if (hardDeltaMah > 0 && hardDeltaMah < 15) {
+            powerThrottle = true;
+        }
 
-if (!Float.isNaN(tempRise) &&
-    tempRise > 3f &&
-    !Float.isNaN(sag) &&
-    sag > 0.01f) {
+        if (!Float.isNaN(tempRise) &&
+                tempRise > 3f &&
+                !Float.isNaN(sag) &&
+                sag > 0.01f) {
+            thermalThrottle = true;
+        }
 
-    thermalThrottle = true;
-}
-
-if (!Float.isNaN(voltageStability[0]) &&
-    voltageStability[0] < 50f &&
-    !Float.isNaN(sag) &&
-    sag > 0.02f) {
-
-    cpuThrottle = true;
-}
+        if (!Float.isNaN(voltageStability[0]) &&
+                voltageStability[0] < 50f &&
+                !Float.isNaN(sag) &&
+                sag > 0.02f) {
+            cpuThrottle = true;
+        }
 
         boolean systemProtectionDetected =
                 thermalThrottle || powerThrottle || cpuThrottle;
 
-        // ---------------- SOFT ----------------
         long softDeltaMah = -1L;
         if (softStartMah[0] > 0 && endMah[0] > 0) {
             softDeltaMah = Math.max(0L, softStartMah[0] - endMah[0]);
@@ -2663,133 +2645,119 @@ if (!Float.isNaN(voltageStability[0]) &&
 
         if (softDeltaMah > 0 && baselineMah[0] > 0) {
 
-    float softMinutes = 4f;
+            float softMinutes = 4f;
+            perHour = (softDeltaMah / softMinutes) * 60f;
 
-    perHour = (softDeltaMah / softMinutes) * 60f;
+            if (perHour < 50f) {
+                perHour = 50f;
+            }
 
-    // 🔴 clamp για μικρά values
-    if (perHour < 50f) {
-        perHour = 50f;
-    }
+            estimatedHours = baselineMah[0] / perHour;
 
-    estimatedHours = baselineMah[0] / perHour;
+        } else if (baselineMah[0] > 0) {
 
-} else if (baselineMah[0] > 0) {
+            perHour = 200f;
+            estimatedHours = baselineMah[0] / perHour;
+        }
 
-    // 🔴 FALLBACK estimation (αν δεν έχουμε drain)
-    perHour = 200f; // safe default consumption
-    estimatedHours = baselineMah[0] / perHour;
-
-}
-
-        // 🔴 FINAL COPIES (FIX)
         final boolean f_cpuThrottle = cpuThrottle;
         final boolean f_thermalThrottle = thermalThrottle;
         final boolean f_powerThrottle = powerThrottle;
         final boolean f_systemProtectionDetected = systemProtectionDetected;
 
         final long f_hardDeltaMah = hardDeltaMah;
-
         final float f_sag = sag;
         final float f_tempRise = tempRise;
-
         final float f_perHour = perHour;
         final float f_estimatedHours = estimatedHours;
 
-        // =========================================================
-        // INNER HANDLER
-        // =========================================================
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        appendHtml("<br>");
 
-            try {
+        logOk(gr
+                ? "Αποτέλεσμα προστασίας συστήματος"
+                : "System protection result");
 
-                appendHtml("<br>");
+        logLine();
 
-                logOk(gr
-                        ? "Αποτέλεσμα προστασίας συστήματος"
-                        : "System protection result");
+        logLabelValue(
+                gr ? "CPU προστασία" : "CPU throttle",
+                f_cpuThrottle ? (gr ? "ΝΑΙ" : "YES")
+                        : (gr ? "ΟΧΙ" : "NO")
+        );
 
-                logLine();
+        logLabelValue(
+                gr ? "Θερμική προστασία" : "Thermal throttle",
+                f_thermalThrottle ? (gr ? "ΝΑΙ" : "YES")
+                        : (gr ? "ΟΧΙ" : "NO")
+        );
 
-                logLabelValue(
-                        gr ? "CPU προστασία" : "CPU throttle",
-                        f_cpuThrottle ? (gr ? "ΝΑΙ" : "YES")
-                                      : (gr ? "ΟΧΙ" : "NO")
-                );
+        logLabelValue(
+                gr ? "Περιορισμός ισχύος" : "Power limiter",
+                f_powerThrottle ? (gr ? "ΝΑΙ" : "YES")
+                        : (gr ? "ΟΧΙ" : "NO")
+        );
 
-                logLabelValue(
-                        gr ? "Θερμική προστασία" : "Thermal throttle",
-                        f_thermalThrottle ? (gr ? "ΝΑΙ" : "YES")
-                                          : (gr ? "ΟΧΙ" : "NO")
-                );
+        logLabelValue(
+                gr ? "Γενική προστασία συστήματος" : "System protection",
+                f_systemProtectionDetected
+                        ? (gr ? "ΕΝΕΡΓΗ" : "ACTIVE")
+                        : (gr ? "ΔΕΝ ΑΝΙΧΝΕΥΘΗΚΕ" : "NOT DETECTED")
+        );
 
-                logLabelValue(
-                        gr ? "Περιορισμός ισχύος" : "Power limiter",
-                        f_powerThrottle ? (gr ? "ΝΑΙ" : "YES")
-                                        : (gr ? "ΟΧΙ" : "NO")
-                );
+        appendHtml("<br>");
+        logOk(gr ? "Επιπλέον πληροφορίες" : "Additional information");
+        logLine();
 
-                logLabelValue(
-                        gr ? "Γενική προστασία συστήματος" : "System protection",
-                        f_systemProtectionDetected
-                                ? (gr ? "ΕΝΕΡΓΗ" : "ACTIVE")
-                                : (gr ? "ΔΕΝ ΑΝΙΧΝΕΥΘΗΚΕ" : "NOT DETECTED")
-                );
+        if (f_hardDeltaMah >= 0) {
+            logLabelValue(
+                    gr ? "Κατανάλωση hard λεπτού" : "Hard minute drain",
+                    f_hardDeltaMah + " mAh"
+            );
+        }
 
-                appendHtml("<br>");
-                logOk(gr ? "Επιπλέον πληροφορίες" : "Additional information");
-                logLine();
+        if (!Float.isNaN(f_sag)) {
+            logLabelValue(
+                    gr ? "Πτώση τάσης" : "Voltage sag",
+                    String.format(Locale.US, "%.3f V", f_sag)
+            );
+        }
 
-                if (f_hardDeltaMah >= 0) {
-                    logLabelValue(
-                            gr ? "Κατανάλωση hard λεπτού" : "Hard minute drain",
-                            f_hardDeltaMah + " mAh"
-                    );
-                }
+        if (!Float.isNaN(f_tempRise)) {
+            logLabelValue(
+                    gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
+                    String.format(Locale.US, "%.1f°C", f_tempRise)
+            );
+        }
 
-                if (!Float.isNaN(f_sag)) {
-                    logLabelValue(
-                            gr ? "Πτώση τάσης" : "Voltage sag",
-                            String.format(Locale.US, "%.3f V", f_sag)
-                    );
-                }
+        appendHtml("<br>");
+        logOk(gr ? "Εκτίμηση διάρκειας μπαταρίας" : "Estimated battery duration");
+        logLine();
 
-                if (!Float.isNaN(f_tempRise)) {
-                    logLabelValue(
-                            gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
-                            String.format(Locale.US, "%.1f°C", f_tempRise)
-                    );
-                }
+        if (!Float.isNaN(f_perHour) && !Float.isNaN(f_estimatedHours)) {
 
-                appendHtml("<br>");
-                logOk(gr ? "Εκτίμηση διάρκειας μπαταρίας" : "Estimated battery duration");
-                logLine();
+            logLabelValue(
+                    gr ? "Κατανάλωση soft χρήσης" : "Soft usage consumption",
+                    String.format(Locale.US, "%.0f mAh/h", f_perHour)
+            );
 
-                if (!Float.isNaN(f_perHour) && !Float.isNaN(f_estimatedHours)) {
+            logLabelValue(
+                    gr ? "Εκτιμώμενη διάρκεια" : "Estimated duration",
+                    String.format(
+                            Locale.US,
+                            "%.1f %s",
+                            f_estimatedHours,
+                            gr ? "ώρες" : "hours"
+                    )
+            );
 
-                    logLabelValue(
-                            gr ? "Κατανάλωση soft χρήσης" : "Soft usage consumption",
-                            String.format(Locale.US, "%.0f mAh/h", f_perHour)
-                    );
+        } else {
 
-                    logLabelValue(
-                            gr ? "Εκτιμώμενη διάρκεια" : "Estimated duration",
-                            String.format(
-                                    Locale.US,
-                                    "%.1f %s",
-                                    f_estimatedHours,
-                                    gr ? "ώρες" : "hours"
-                            )
-                    );
+            logWarn(gr
+                    ? "Αδυναμία εκτίμησης διάρκειας"
+                    : "Estimation failed");
+        }
 
-                } else {
-
-                    logWarn(gr
-                            ? "Αδυναμία εκτίμησης διάρκειας"
-                            : "Estimation failed");
-                }
-
-            } catch (Throwable t) {
+    } catch (Throwable t) {
 
         logError(gr
                 ? "Σφάλμα τελικής ανάλυσης LAB 14B"
@@ -2813,13 +2781,7 @@ if (!Float.isNaN(voltageStability[0]) &&
         lab14ElapsedMs = 0;
     }
 
-}, 240000L);
-
-}, 60000L);
-
-    });
-
-}
+}, 300000L);
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (FINAL GEL STYLE)
