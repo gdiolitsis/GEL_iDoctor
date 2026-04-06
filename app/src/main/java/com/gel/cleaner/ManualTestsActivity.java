@@ -17903,6 +17903,7 @@ runOnUiThread(() -> {
 });
 
 return;
+}
 
 // =========================
 // FAST PHASE
