@@ -18588,7 +18588,7 @@ if (battPct < 0f || battPct > 100f) {
     battPct = Float.NaN;
 }
 
-// 🔴 Charging state
+// ?? Charging state
 boolean charging = isChargingNow();
 
 // 🔴 Battery score (CORE SIGNAL)
