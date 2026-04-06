@@ -423,6 +423,7 @@ private boolean lab14SoftPhaseStarted = false;
     private volatile boolean lab14Cancelled = false;
     private boolean lab14PopupShown = false;
     private boolean lab14AdvisoryShown = false;
+    private volatile boolean lab14MainPhase = false;
     
     private AlertDialog lab14Dialog;    
     
