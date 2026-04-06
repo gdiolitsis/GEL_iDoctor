@@ -295,6 +295,9 @@ private long lab14LastLiveLogTs = 0;
 private long lab14LastTick = 0;
 private long lab14ElapsedMs = 0;
 
+private int lastDisplayedSecond = 0;
+private long lastSnapshotTs = 0;
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -2460,13 +2463,17 @@ isLab14BMode = true;
 lab14Cancelled = false;
 lab14Running = true;
 
-// 🔴 RESET FLAGS (CRITICAL)
+// 🔴 RESET FLAGS
 lab14BoostActive = false;
 lab14SoftPhaseStarted = false;
 
-// 🔴 RESET TIMER (CRITICAL FIX — no jumps)
-lab14LastTick = 0;
+// 🔴 PHASE INIT
+lab14FastPhase = false;
+lab14MainPhase = true;
+
+// 🔴 TIMER FIX
 lab14ElapsedMs = 0;
+lab14LastTick = SystemClock.elapsedRealtime();
 
 startLab14BPopup(300);
 
@@ -3279,6 +3286,13 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
 
             long now = SystemClock.elapsedRealtime();
             int elapsed = (int) ((now - t0) / 1000);
+
+// clamp για να μην πηδάει μπροστά
+if (elapsed > lastDisplayedSecond + 1) {
+    elapsed = lastDisplayedSecond + 1;
+}
+
+lastDisplayedSecond = elapsed;
 
             int currentPercent = getBatteryPercentSafe();
 
@@ -18004,22 +18018,32 @@ if (lab14FastPhase) {
             int elapsed =
                     (int) ((now - t0) / 1000);
                     
-            try {
-    
-    iDoctorEngine.BatterySnapshot snap =
-            idoctor.readBatterySnapshotLab();
+// ----------------------------------------------------
+// 🔴 SNAPSHOT (THROTTLED)
+// ----------------------------------------------------
+long nowTs = SystemClock.elapsedRealtime();
 
-    if (snap != null && snap.chargeNowMah > 0) {
+if (nowTs - lastSnapshotTs > 1500) {
 
-        long c = snap.chargeNowMah;
+    lastSnapshotTs = nowTs;
 
-        lab14ChargeSamples.add(c);
+    try {
 
-        if (c < lab14MinCharge) lab14MinCharge = c;
-        if (c > lab14MaxCharge) lab14MaxCharge = c;
-    }
+        iDoctorEngine.BatterySnapshot snap =
+                idoctor.readBatterySnapshotLab();
 
-} catch (Throwable ignore) {}
+        if (snap != null && snap.chargeNowMah > 0) {
+
+            long c = snap.chargeNowMah;
+
+            lab14ChargeSamples.add(c);
+
+            if (c < lab14MinCharge) lab14MinCharge = c;
+            if (c > lab14MaxCharge) lab14MaxCharge = c;
+        }
+
+    } catch (Throwable ignore) {}
+}
 
             if (elapsed < durationSec) {
 
@@ -18624,8 +18648,12 @@ long delta = now - lab14LastTick;
 if (delta < 0) delta = 0;
 if (delta > 1500) delta = 1000;
 
+// 🔴 ΤΟ ΚΡΙΣΙΜΟ ΠΟΥ ΣΟΥ ΛΕΙΠΕ
+lab14ElapsedMs += delta;
+
 lab14LastTick = now;
 
+// ✅ σωστό elapsed
 int elapsed = (int) (lab14ElapsedMs / 1000);
 
         // ----------------------------------------------------
@@ -18642,25 +18670,31 @@ if (isLab14BMode && inHardPhase && !lab14SoftPhaseStarted) {
     lab14SoftPhaseStarted = true;
     lab14BoostActive = false;
 
-    // ❗ ΜΗΝ πειράζεις εδώ το inHardPhase (είναι derived από elapsed)
-    // inHardPhase = false; ❌ REMOVE
-
     appendLog("PHASE", "Switching to SOFT phase");
 
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    // 🔥 ΜΕΤΑΦΟΡΑ ΕΚΤΟΣ UI THREAD
+    new Thread(() -> {
 
-    int softThreads = Math.max(1, cores / 3);
+        try {
 
-    // CPU (SOFT)
-    try { startCpuBurnLimitedThreads(softThreads); } catch (Throwable ignore) {}
+            stopCpuBurn();
+            stopGpuStress();
+            stopMemoryStress();
 
-    // GPU (LOW)
-    try { startGpuStressLevel(1); } catch (Throwable ignore) {}
+            int softThreads = Math.max(1, cores / 3);
 
-    // MEMORY
-    try { startMemoryStress(); } catch (Throwable ignore) {}
+            // CPU (SOFT)
+            startCpuBurnLimitedThreads(softThreads);
+
+            // GPU (LOW)
+            startGpuStressLevel(1);
+
+            // MEMORY
+            startMemoryStress();
+
+        } catch (Throwable ignore) {}
+
+    }).start();
 }
 
 // ----------------------------------------------------
@@ -18731,12 +18765,26 @@ if (isLab14BMode) {
 }
 
 // ----------------------------------------------------
-// 🔴 RATE
+// 🔴 RATE (SIMPLE & STABLE)
 // ----------------------------------------------------
-double drainPerHour = Double.NaN;
+double drainPerHour = 0;
 
-if (lab14ElapsedMs > 10000 && drainNow > 0) {
-    drainPerHour = (drainNow * 3600000.0) / lab14ElapsedMs;
+if (lab14ElapsedMs > 3000) { // μετά τα 3 sec
+
+    if (drainNow > 0) {
+
+        drainPerHour =
+                (drainNow * 3600000.0) / lab14ElapsedMs;
+
+    } else {
+
+        // fallback → δείξε current
+        double currentMa = lab14Current();
+
+        if (!Double.isNaN(currentMa)) {
+            drainPerHour = Math.abs(currentMa);
+        }
+    }
 }
 
 // ----------------------------------------------------
@@ -18817,42 +18865,56 @@ if (cores >= 8 && totalRamMb >= 6000) {
                 break;
         }
 
-        // ----------------------------------------------------
-        // 🔴 LOAD SIGNALS (ANTI-NOISE FIX ✔)
-        // ----------------------------------------------------
-        double absMa = Math.abs(currentMa);
+// ----------------------------------------------------
+// 🔴 LOAD SIGNALS (FINAL — CLEAN & STABLE)
+// ----------------------------------------------------
+double absMa = Math.abs(currentMa);
 
 boolean currentLoad =
         !Double.isNaN(currentMa) &&
         absMa >= currentMin &&
-        absMa > 20; // anti-noise μόνο
+        absMa > 20; // anti-noise
 
-        boolean thermalLoad =
-                !Float.isNaN(thermalDelta) &&
-                thermalDelta >= thermalMin &&
-                thermalDelta < 10f;
+boolean thermalLoad =
+        !Float.isNaN(thermalDelta) &&
+        thermalDelta >= thermalMin &&
+        thermalDelta < 10f;
 
-        boolean drainLoad =
-                !Double.isNaN(drainPerHour) &&
-                drainPerHour >= drainMin;
+boolean drainLoad =
+        !Double.isNaN(drainPerHour) &&
+        drainPerHour >= drainMin;
 
-        int loadScore = 0;
+// ----------------------------------------------------
+// 🔴 SCORE
+// ----------------------------------------------------
+int loadScore = 0;
 
-        if (currentLoad) loadScore += 2;
-        if (thermalLoad) loadScore += 1;
-        if (drainLoad) loadScore += 1;
+// 🔴 CPU = PRIMARY SIGNAL
+boolean cpuFull =
+        lab14CpuThreadsCurrent >= cores - 1;
 
-        boolean realLoad = loadScore >= 3;
+if (cpuFull) loadScore += 2;
+
+// 🔴 electrical signals
+if (currentLoad) loadScore += 2;
+if (thermalLoad) loadScore += 1;
+if (drainLoad) loadScore += 1;
+
+// ----------------------------------------------------
+// 🔴 FINAL FLAGS
+// ----------------------------------------------------
+boolean realLoad =
+        (loadScore >= 3) || cpuFull;
 
 boolean weakLoad =
         isLab14BMode
-        ? (loadScore <= 2 || batteryScore < 45)
-        : (!earlyPhase && (loadScore <= 1 || batteryScore < 45));
+        ? (loadScore <= 1 && !cpuFull)
+        : (!earlyPhase && (loadScore <= 1 && !cpuFull));
 
 lab14WeakLoad = weakLoad;
 
 // ----------------------------------------------------
-// 🔥 BOOST (FIXED — 14 + 14B + battery-aware)
+// 🔥 BOOST (FIXED — NON-BLOCKING)
 // ----------------------------------------------------
 if (!lab14BoostActive &&
     lab14Running &&
@@ -18884,11 +18946,12 @@ if (!lab14BoostActive &&
                         ? "FORCE HARD BOOST (14B)"
                         : "Adaptive boost (battery-aware)");
 
-        runOnUiThread(() -> {
-
-            if (!lab14Running || lab14Cancelled) return;
+        // 🔥 ΜΕΤΑΦΟΡΑ ΕΚΤΟΣ UI THREAD
+        new Thread(() -> {
 
             try {
+
+                if (!lab14Running || lab14Cancelled) return;
 
                 if (isLab14BMode) {
 
@@ -18915,7 +18978,7 @@ if (!lab14BoostActive &&
 
             } catch (Throwable ignore) {}
 
-        });
+        }).start();
     }
 }
 
@@ -18977,9 +19040,9 @@ if (!lab14Running) {
 } else if (isLab14BMode) {
 
     if (inHardPhase) {
-        status = "HARD LOAD 🔥";
+        status = realLoad ? "HARD LOAD 🔥" : "LOW HARD LOAD ⚠";
     } else {
-        status = "SOFT LOAD 🌿";
+        status = realLoad ? "SOFT LOAD 🌿" : "WEAK SOFT LOAD ⚠";
     }
 
 } else if (lab14FastPhase) {
@@ -18988,7 +19051,7 @@ if (!lab14Running) {
 
 } else if (lab14MainPhase) {
 
-    status = "STRESS TEST 🔥";
+    status = realLoad ? "STRESS TEST 🔥" : "LOW STRESS ⚠";
 
 } else if (loadScore >= 3) {
 
@@ -26868,7 +26931,7 @@ if (lab14CollapseRisk || finalScore < 60 || lab14SwellingSuspected) {
             ? "Υποβάθμιση μπαταρίας"
             : "Battery degradation";
 
-    // 🔥 BASE CONFIDENCE
+    // ?? BASE CONFIDENCE
     rootConfidence = 70;
 
     // 🔴 STRONG SIGNALS
