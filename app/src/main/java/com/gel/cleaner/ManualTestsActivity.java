@@ -2424,6 +2424,8 @@ private void lab14BProtectionTest() {
             }
 
             startMah[0] = snap0.chargeNowMah;
+            
+            this.startMah = snap0.chargeNowMah;
 
             if (snap0.chargeFullMah > 0) {
                 baselineMah[0] = snap0.chargeFullMah;
@@ -18512,20 +18514,25 @@ if (!Float.isNaN(startBatteryTemp) &&
 // ----------------------------------------------------
 // 🔴 DRAIN (FIXED — 14 + 14B)
 // ----------------------------------------------------
-// ----------------------------------------------------
-// 🔴 DRAIN (FIXED — 14 + 14B)
-// ----------------------------------------------------
 long drainNow;
 
 if (isLab14BMode) {
 
-    iDoctorEngine.BatterySnapshot snapNow = lab14Snapshot();
+    iDoctorEngine.BatterySnapshot snapNow =
+            iDoctorEngine.get(ManualTestsActivity.this)
+                    .readBatterySnapshotLab();
 
-    if (snapNow != null && snapNow.chargeNowMah > 0 && startMah > 0) {
-        drainNow = Math.max(0, startMah - snapNow.chargeNowMah);
+    if (snapNow != null &&
+        snapNow.chargeNowMah > 0 &&
+        startMah > 0) {
+
+        drainNow = Math.max(0L, startMah - snapNow.chargeNowMah);
+
     } else {
         drainNow = 0;
     }
+
+}
 
 } else {
 
@@ -18723,22 +18730,29 @@ if (!lab14BoostActive &&
     rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
 }
 
-        // ----------------------------------------------------
-        // 🔴 LAB14B ABORT
-        // ----------------------------------------------------
-        if (isLab14BMode &&
-            !inHardPhase &&
-            lab14WeakLoadCounter >= scoreAbortThreshold) {
+// ----------------------------------------------------
+// 🔴 LAB14B ABORT (DISABLED FOR SOFT PHASE)
+// ----------------------------------------------------
+if (isLab14BMode) {
+    // ❌ δεν κάνουμε abort στο 14B λόγω weak load
+} else if (lab14WeakLoadCounter >= scoreAbortThreshold) {
+    
+    logError(gr
+        ? "Ανεπαρκές φορτίο — το test ακυρώθηκε"
+        : "Insufficient load — test aborted");
 
-            logError("Insufficient load — test aborted");
+    lab14Cancelled = true;
+    lab14Running = false;
 
-            lab14Cancelled = true;
-            lab14Running = false;
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
 
-            lab14StopAllStress();
+    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+    try { lab14CleanupUI(); } catch (Throwable ignore) {}
 
-            return;
-        }
+    return;
+}
 
         // ----------------------------------------------------
         // 🔴 STATUS
