@@ -922,14 +922,22 @@ logScroll.setOnTouchListener((v, event) -> {
                 if (diff < 0) {
                     // 🔼 SWIPE UP → FULL LOGS
                     showLogsFullScreen();
+
                 } else {
-                    // 🔽 SWIPE DOWN → BACK
-                    showLabsAndLogs();
+                    // 🔽 SWIPE DOWN → BACK (ΜΟΝΟ αν είμαστε TOP)
+
+                    boolean atTop =
+                            logScroll != null &&
+                            !logScroll.canScrollVertically(-1);
+
+                    if (atTop) {
+                        showLabsAndLogs();
+                    }
                 }
             }
             break;
     }
-    return false; // ❗ δεν μπλοκάρει το scroll
+    return false; // ❗ αφήνει το scroll να δουλεύει κανονικά
 });
 
     // ============================================================
