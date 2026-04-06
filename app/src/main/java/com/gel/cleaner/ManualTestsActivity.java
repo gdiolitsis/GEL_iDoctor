@@ -2526,7 +2526,12 @@ new Thread(() -> {
                             gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
                     );
 
-                    startCpuBurn_Light();
+                    startCpuBurnLimitedThreads(
+        Math.max(2, Runtime.getRuntime().availableProcessors() / 3)
+);
+
+// 🔹 ελαφρύ GPU για real usage
+try { startGpuStressLevel(1); } catch (Throwable ignore) {}
 
                 } catch (Throwable ignore) {}
 
@@ -2584,9 +2589,28 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         ? (startVolt[0] - endVolt[0])
                         : Float.NaN;
 
-        if (hardDeltaMah >= 0 && hardDeltaMah < 10) powerThrottle = true;
-        if (!Float.isNaN(tempRise) && tempRise > 5f) thermalThrottle = true;
-        if (!Float.isNaN(voltageStability[0]) && voltageStability[0] < 40f) cpuThrottle = true;
+// ----------------------------------------------------
+// 🔴 PROTECTION DETECTION (TUNED + SAFE)
+// ----------------------------------------------------
+if (hardDeltaMah > 0 && hardDeltaMah < 15) {
+    powerThrottle = true;
+}
+
+if (!Float.isNaN(tempRise) &&
+    tempRise > 3f &&
+    !Float.isNaN(sag) &&
+    sag > 0.01f) {
+
+    thermalThrottle = true;
+}
+
+if (!Float.isNaN(voltageStability[0]) &&
+    voltageStability[0] < 50f &&
+    !Float.isNaN(sag) &&
+    sag > 0.02f) {
+
+    cpuThrottle = true;
+}
 
         boolean systemProtectionDetected =
                 thermalThrottle || powerThrottle || cpuThrottle;
@@ -2600,7 +2624,7 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         float perHour = Float.NaN;
         float estimatedHours = Float.NaN;
 
-        if (softDeltaMah > 0 && baselineMah[0] > 0) {
+        if (softDeltaMah >= 5 && baselineMah[0] > 0) {
             float softMinutes = 4f;
             perHour = (softDeltaMah / softMinutes) * 60f;
 
@@ -2734,7 +2758,7 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 isLab14BMode = false;
             }
 
-        }, 300000L);
+        }, 240000L);
 
     } catch (Throwable t) {
 
@@ -18673,12 +18697,17 @@ if (!lab14BoostActive &&
 
     boolean shouldBoost;
 
+    // ----------------------------------------------------
+    // 🔥 BOOST LOGIC (FIXED — 14 + 14B)
+    // ----------------------------------------------------
     if (isLab14BMode) {
-        // 💣 14B → ALWAYS force boost ASAP
-        shouldBoost = true;
+
+        // 🔴 14B → boost ΜΟΝΟ στο HARD phase
+        shouldBoost = inHardPhase;
 
     } else {
-        // 🧠 14 → smart + battery-aware
+
+        // 🧠 14 → smart boost
         shouldBoost =
                 !earlyPhase &&
                 (loadScore <= 1 || batteryScore < 60) &&
@@ -18691,7 +18720,7 @@ if (!lab14BoostActive &&
 
         appendLog("BOOST",
                 isLab14BMode
-                        ? "Forced boost (14B)"
+                        ? "FORCE HARD BOOST (14B)"
                         : "Early boost (battery-aware)");
 
         runOnUiThread(() -> {
@@ -18702,7 +18731,7 @@ if (!lab14BoostActive &&
             try { startGpuStressLevel(4); } catch (Throwable ignore) {}
             try { startMemoryStress(); } catch (Throwable ignore) {}
 
-            // 🔥 extra push αν battery δυνατή
+            // 🔥 extra push (μόνο για LAB14)
             if (!isLab14BMode && batteryScore >= 80) {
                 try { startGpuStressLevel(5); } catch (Throwable ignore) {}
             }
