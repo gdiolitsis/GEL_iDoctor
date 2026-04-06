@@ -17538,6 +17538,7 @@ private void startLab14FastThread() {
 
             lab14FastDone = false;
             lab14FastPhase = true;
+            lab14MainPhase = false; // ✅ FIX
             lab14FastStartTime =
                     SystemClock.elapsedRealtime();
 
@@ -17555,18 +17556,23 @@ private void startLab14FastThread() {
             // LOAD 1
             // -------------------------
 
-startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
-startMemoryStress();
-startGpuStressLevel(lab14GpuIntensity > 0 ? lab14GpuIntensity : 2);
+            int cores = Runtime.getRuntime().availableProcessors();
+            int threads = (lab14OptimalThreads > 0)
+                    ? lab14OptimalThreads
+                    : Math.max(2, cores / 2);
 
-SystemClock.sleep(12000);
-SystemClock.sleep(400);
+            startCpuBurnLimitedThreads(threads);
+            startMemoryStress();
+            startGpuStressLevel(lab14GpuIntensity > 0 ? lab14GpuIntensity : 2);
 
-vLoad1[0] = readStableBatteryVoltage();
+            SystemClock.sleep(12000);
+            SystemClock.sleep(400);
 
-stopCpuBurn();
-stopMemoryStress();
-stopGpuStress();
+            vLoad1[0] = readStableBatteryVoltage();
+
+            stopCpuBurn();
+            stopMemoryStress();
+            stopGpuStress();
 
             if (lab14Cancelled) {
                 lab14FastDone = true;
@@ -17596,32 +17602,32 @@ stopGpuStress();
                 return;
             }
 
-// LOAD 2
+            // -------------------------
+            // LOAD 2
+            // -------------------------
 
-startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
-startMemoryStress();
-startGpuStressLevel(lab14GpuIntensity > 0 ? lab14GpuIntensity : 2);
+            startCpuBurnLimitedThreads(threads);
+            startMemoryStress();
+            startGpuStressLevel(lab14GpuIntensity > 0 ? lab14GpuIntensity : 2);
 
-SystemClock.sleep(12000);
+            SystemClock.sleep(12000);
+            SystemClock.sleep(800);
 
-// extra settle time
-SystemClock.sleep(800);
+            float v2a = readStableBatteryVoltage();
 
-float v2a = readStableBatteryVoltage();
+            SystemClock.sleep(300);
 
-SystemClock.sleep(300);
+            float v2b = readStableBatteryVoltage();
 
-float v2b = readStableBatteryVoltage();
+            if (!Float.isNaN(v2a) && !Float.isNaN(v2b)) {
+                vLoad2[0] = (v2a + v2b) / 2f;
+            } else {
+                vLoad2[0] = readStableBatteryVoltage();
+            }
 
-if (!Float.isNaN(v2a) && !Float.isNaN(v2b)) {
-    vLoad2[0] = (v2a + v2b) / 2f;
-} else {
-    vLoad2[0] = readStableBatteryVoltage();
-}
-
-stopCpuBurn();
-stopMemoryStress();
-stopGpuStress();
+            stopCpuBurn();
+            stopMemoryStress();
+            stopGpuStress();
 
             // -------------------------
             // SAG
@@ -17640,51 +17646,55 @@ stopGpuStress();
             }
 
             if (!Float.isNaN(sag1[0]) &&
-    !Float.isNaN(sag2[0])) {
+                !Float.isNaN(sag2[0])) {
 
-    float s1 = sag1[0];
-    float s2 = sag2[0];
+                float s1 = sag1[0];
+                float s2 = sag2[0];
 
-    if (Math.abs(s1) < 0.002f) s1 = Float.NaN;
-if (Math.abs(s2) < 0.002f) s2 = Float.NaN;
+                if (Math.abs(s1) < 0.002f) s1 = Float.NaN;
+                if (Math.abs(s2) < 0.002f) s2 = Float.NaN;
 
-    if (!Float.isNaN(s1) &&
-        !Float.isNaN(s2)) {
+                if (!Float.isNaN(s1) && !Float.isNaN(s2)) {
+                    sagAvg[0] = (s1 + s2) / 2f;
+                } else if (!Float.isNaN(s1)) {
+                    sagAvg[0] = s1;
+                } else if (!Float.isNaN(s2)) {
+                    sagAvg[0] = s2;
+                }
+            }
 
-        sagAvg[0] = (s1 + s2) / 2f;
+            // ✅ PHASE SWITCH (CRITICAL FIX)
+            lab14FastDone = true;
+            lab14FastPhase = false;
+            lab14MainPhase = true;
 
-    } else if (!Float.isNaN(s1)) {
+            if (!lab14Cancelled && lab14Running) {
 
-        sagAvg[0] = s1;
+                resetLab14Bar();
+                startLab14MainStress();
+            }
 
-    } else if (!Float.isNaN(s2)) {
+        } catch (Throwable t) {
 
-        sagAvg[0] = s2;
-    }
-}
-
-lab14FastDone = true;
-lab14FastPhase = false;
-
-if (!lab14Cancelled && lab14Running) {
-
-    resetLab14Bar();
-
-    startLab14MainStress();
-}
-
-} catch (Throwable t) {
-
-    lab14FastDone = true;
-    lab14FastPhase = false;
-}
+            lab14FastDone = true;
+            lab14FastPhase = false;
+            lab14MainPhase = false;
+        }
 
     }).start();
 }
 
+
+// ============================================================
+// MAIN STRESS
+// ============================================================
 private void startLab14MainStress() {
 
     if (!lab14Running || lab14Cancelled) return;
+
+    // 🔴 PHASE FIX
+    lab14FastPhase = false;
+    lab14MainPhase = true;
 
     // 🔴 ENGINE TIMER
     t0 = SystemClock.elapsedRealtime();
@@ -17693,22 +17703,22 @@ private void startLab14MainStress() {
     runOnUiThread(() -> {
 
         applyMaxBrightnessAndKeepOn();
+
         int cores = Runtime.getRuntime().availableProcessors();
 
-int startThreads = Math.max(2, cores / 2);
+        int startThreads = (lab14OptimalThreads > 0)
+                ? lab14OptimalThreads
+                : Math.max(2, cores / 2);
 
-// clamp safety
-if (startThreads > 6) startThreads = 6;
+        if (startThreads > 6) startThreads = 6;
 
-lab14CpuThreadsCurrent = startThreads;
+        lab14CpuThreadsCurrent = startThreads;
 
-if (!isLab14BMode) {
-    startCpuBurnLimitedThreads(
-        lab14OptimalThreads > 0 ? lab14OptimalThreads : 3
-    );
-} else {
-    startCpuBurn_C_Mode();
-}
+        if (!isLab14BMode) {
+            startCpuBurnLimitedThreads(startThreads); // ✅ FIX (όχι 3)
+        } else {
+            startCpuBurn_C_Mode();
+        }
 
         startMemoryStress();
 
