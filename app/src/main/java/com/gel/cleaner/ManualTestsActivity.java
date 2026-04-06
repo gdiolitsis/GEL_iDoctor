@@ -14021,7 +14021,6 @@ private void lab14BatteryHealthStressTest_REAL() {
 
     // 🔴 RESET DATA (buffers / min-max / samples)
     resetBatteryDiagnostics();
-}
 
     // -------------------------
     // 🔴 RUNTIME STATE (ΕΔΩ μπαίνει)
