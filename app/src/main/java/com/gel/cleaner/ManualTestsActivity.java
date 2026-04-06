@@ -14632,10 +14632,6 @@ if (!Float.isNaN(startBatteryTemp) &&
                     String.format(Locale.US, "%.0f mAh/V", energyEfficiency)
             );
         }
-        
-// =====================================================
-// RISK SUMMARY
-// =====================================================
 
 // =====================================================
 // RISK SUMMARY
@@ -17315,8 +17311,6 @@ if (drainMahFinalLong > 600) {
     );
 
 });
-
-runOnUiThread(() -> {
 
     final boolean collapseRiskF = collapseRisk[0];
     final boolean systemLimitedF = lab14_systemLimited[0];
