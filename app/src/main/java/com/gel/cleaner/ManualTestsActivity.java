@@ -285,6 +285,7 @@ private long lab14LastGpuAdjustTs = 0L;
 private int lab14GpuMinLevel = 1;
 private int lab14GpuMaxLevel = 4;
 private boolean lab14WeakLoad = false;
+private boolean inHardPhase = false;
 
 private int lab14CpuThreadsCurrent = 0;
 private long lab14LastCpuAdjustTs = 0L;
@@ -3761,7 +3762,6 @@ private Float readGpuTempSafe() {
 // ============================================================
 
 private final List<Thread> cpuThreads = new ArrayList<>();
-private volatile boolean cpuBurnRunning = false;
 
 private void startCpuBurn_C_Mode() {
 
@@ -18630,7 +18630,7 @@ int elapsed = (int) (lab14ElapsedMs / 1000);
         // 🔴 TIME FLAGS
         // ----------------------------------------------------
         boolean earlyPhase = elapsed < 25;
-        boolean inHardPhase = elapsed < 60;
+        inHardPhase = elapsed < 60;
         
 // ----------------------------------------------------
 // 🔴 HARD → SOFT TRANSITION (FINAL FIX)
@@ -18762,7 +18762,7 @@ if (lab14ElapsedMs > 10000 && drainNow > 0) {
         // ----------------------------------------------------
         // 🔴 DEVICE CLASS
         // ----------------------------------------------------
-        int cores = Runtime.getRuntime().availableProcessors();
+        cores = Runtime.getRuntime().availableProcessors();
 
         long totalRamMb = -1L;
 
