@@ -334,6 +334,8 @@ private int swellingScore = 0;
 
 private boolean isLab14BMode = false;
 
+private boolean lab14SoftPhaseStarted = false;
+
     // ============================================================
     // BATTERY STRESS DIAGNOSTIC STATE (shared between labs)
     // ============================================================
@@ -2398,14 +2400,6 @@ private void lab14BProtectionTest() {
                 return;
             }
 
-            lab14Cancelled = false;
-            lab14Running = true;
-            lab14PopupShown = false;
-            lab14AdvisoryShown = false;
-            
-            lab14LastTick = 0;
-            lab14ElapsedMs = 0;
-
             final iDoctorEngine idoctor =
                     iDoctorEngine.get(ManualTestsActivity.this);
 
@@ -2463,12 +2457,22 @@ isLab14BMode = true;
 lab14Cancelled = false;
 lab14Running = true;
 
+// 🔴 RESET FLAGS (CRITICAL)
+lab14BoostActive = false;
+lab14SoftPhaseStarted = false;
+
+// 🔴 RESET TIMER (CRITICAL FIX — no jumps)
+lab14LastTick = 0;
+lab14ElapsedMs = 0;
+
 startLab14BPopup(300);
 
 logLine();
+
 logOk(gr
         ? "LAB 14B ξεκίνησε"
         : "LAB 14B started");
+
 logLabelValue(
         gr ? "Φάση" : "Phase",
         gr ? "1 λεπτό HARD stress" : "1 minute HARD stress"
@@ -2531,37 +2535,36 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
         softStartVolt[0] = getBatteryVoltageFiltered();
 
-        stopCpuBurn();
-        stopMemoryStress();
-        stopGpuStress();
+stopCpuBurn();
+stopMemoryStress();
+stopGpuStress();
 
-        // 🔴 RESET BOOST (CRITICAL)
-        lab14BoostActive = false;
+// 🔴 RESET BOOST (CRITICAL)
+lab14BoostActive = false;
 
-        logLabelValue(
-                gr ? "Φάση" : "Phase",
-                gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
-        );
+logLabelValue(
+        gr ? "Φάση" : "Phase",
+        gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
+);
 
-        // ----------------------------------------------------
-        // 🌿 SOFT PROFILE (REAL USAGE)
-        // ----------------------------------------------------
-        int cores = Runtime.getRuntime().availableProcessors();
-        int softThreads = Math.max(1, cores / 3);
+// ----------------------------------------------------
+// 🌿 SOFT PROFILE (REAL USAGE)
+// ----------------------------------------------------
 
-        try {
-            startCpuBurnLimitedThreads(softThreads);
-        } catch (Throwable ignore) {}
+int cores = Runtime.getRuntime().availableProcessors();
+int softThreads = Math.max(1, cores / 3);
 
-        try {
-            startGpuStressLevel(1);
-        } catch (Throwable ignore) {}
+// CPU (FIXED ❗)
+try {
+    startCpuBurnLimitedThreads(softThreads);
+} catch (Throwable ignore) {}
 
-        try {
-            stopMemoryStress();
-        } catch (Throwable ignore) {}
+// GPU (FIXED ❗)
+try { stopGpuStress(); } catch (Throwable ignore) {}
+try { startGpuStressLevel(1); } catch (Throwable ignore) {}
 
-    } catch (Throwable ignore) {}
+// MEMORY (OFF για realism)
+try { stopMemoryStress(); } catch (Throwable ignore) {}
 
 }, 60000L);
 
@@ -2786,17 +2789,25 @@ if (!Float.isNaN(voltageStability[0]) &&
                         ? "Σφάλμα τελικής ανάλυσης LAB 14B"
                         : "LAB 14B final analysis error");
 
-            } finally {
+} finally {
 
-                try { stopCpuBurn(); } catch (Throwable ignore) {}
-                try { stopMemoryStress(); } catch (Throwable ignore) {}
-                try { stopGpuStress(); } catch (Throwable ignore) {}
-                try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
-                lab14Cancelled = false;
-                lab14Running = false;
-                isLab14BMode = false;
-            }
+    lab14Cancelled = false;
+    lab14Running = false;
+    isLab14BMode = false;
+
+    // 🔴 RESET FLAGS (CRITICAL)
+    lab14BoostActive = false;
+    lab14SoftPhaseStarted = false;
+
+    // 🔴 RESET TIMER (avoid carry-over)
+    lab14LastTick = 0;
+    lab14ElapsedMs = 0;
+}
 
         }, 240000L);
 
@@ -3223,15 +3234,23 @@ private void startLab14BPopup(long durationSec) {
 
     lab14Dialog = b.create();
 
-    if (lab14Dialog.getWindow() != null) {
-        lab14Dialog.getWindow()
-                .setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-    }
-    
-    lab14Running = true;
-    lab14Cancelled = false;
+if (lab14Dialog.getWindow() != null) {
+    lab14Dialog.getWindow()
+            .setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+}
 
-    lab14Dialog.show();
+// 🔴 RESET STATE (CRITICAL — πριν ξεκινήσει το test)
+lab14BoostActive = false;
+lab14SoftPhaseStarted = false;
+
+// 🔴 RESET TIMER
+lab14LastTick = 0;
+lab14ElapsedMs = 0;
+
+lab14Running = true;
+lab14Cancelled = false;
+
+lab14Dialog.show();
 
 // 🔥 VIDEO START (SAFE)
 lab14StressVideo.post(() -> {
@@ -13943,15 +13962,8 @@ private void lab14BatteryHealthStressTest_REAL() {
     lab14Cancelled = false;
     lab14FastDone = false;
 
-    // 🔴 TIMER RESET (CRITICAL — ΠΑΝΤΑ στο start)
-    lab14LastTick = 0;
-    lab14ElapsedMs = 0;
-
-    // RESET STATE (μόνο μετά το popup)
+    // RESET μόνο data
     if (!lab14Running && !lab14PopupShown) {
-
-        lab14Cancelled = false;
-
         resetBatteryDiagnostics();
     }
 }
@@ -14317,15 +14329,21 @@ logLabelOkValue(
 
 applyMaxBrightnessAndKeepOn();
 
-// 🔴 STATE
+// 🔴 STATE (FULL RESET)
 lab14Running = true;
 lab14Cancelled = false;
 lab14BoostActive = false;
-appendLog("BOOST RESET", "OK");
+lab14SoftPhaseStarted = false;
 
-// 🔴 TIMERS (CRITICAL για 300sec)
+// 🔴 TIMER RESET (CRITICAL — new timing system)
+lab14LastTick = 0;
+lab14ElapsedMs = 0;
+
+// 🔴 LEGACY TIMER (κρατάμε για compatibility)
 t0 = SystemClock.elapsedRealtime();
 lab14EndTime = t0 + (durationSec * 1000L);
+
+appendLog("BOOST RESET", "OK");
 
 // 🔴 START VIBRATION LOOP
 ui.removeCallbacks(lab14VibrationLoop);
@@ -14334,7 +14352,7 @@ ui.post(lab14VibrationLoop);
 // 🔴 START UI
 startLab14SharedUI(durationSec, gr);
 
-// 🔴 START REAL STRESS (ΑΝ ΔΕΝ ΥΠΑΡΧΕΙ → ΔΕΝ ΚΑΝΕΙ ΤΕΣΤ)
+// 🔴 START REAL STRESS
 startLab14MainStress();
 
 // 🔴 START PROGRESS ENGINE
@@ -14350,11 +14368,17 @@ startLab14ProgressLoop();
     // 🔴 STOP EVERYTHING
     lab14StopAllStress();
 
-    // 🔴 STATE RESET
-    lab14Cancelled = true;
-    lab14Running = false;
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
+// 🔴 STATE RESET
+lab14Cancelled = true;
+lab14Running = false;
+lab14PopupShown = false;
+lab14AdvisoryShown = false;
+
+// 🔴 EXTRA RESET (CRITICAL)
+lab14BoostActive = false;
+lab14SoftPhaseStarted = false;
+lab14LastTick = 0;
+lab14ElapsedMs = 0;
 
     logError(
             gr
@@ -17474,6 +17498,14 @@ lab14Running = false;
 lab14PopupShown = false;
 lab14AdvisoryShown = false;
 
+// 🔴 RESET FLAGS (CRITICAL)
+lab14BoostActive = false;
+lab14SoftPhaseStarted = false;
+
+// 🔴 RESET TIMER (CRITICAL)
+lab14LastTick = 0;
+lab14ElapsedMs = 0;
+
 // ------------------------------------------------
 // END TRY
 // ------------------------------------------------
@@ -17844,28 +17876,33 @@ if (!isLab14BMode && lab14WeakLoadCounter >= 5) {
         return;
     }
 
-    // ========================================================
-    // 🔴 FALLBACK
-    // ========================================================
-    runOnUiThread(() -> {
+// ========================================================
+// 🔴 FALLBACK (ADAPTIVE — FIXED)
+// ========================================================
+runOnUiThread(() -> {
 
-        appendLog("FALLBACK", "Switching to adaptive load");
+    appendLog("FALLBACK", "Switching to adaptive load");
 
-        lab14BoostActive = false;
-        lab14WeakLoadCounter = 0;
+    lab14BoostActive = false;
+    lab14WeakLoadCounter = 0;
 
-        try { stopCpuBurn(); } catch (Throwable ignore) {}
-        try { stopGpuStress(); } catch (Throwable ignore) {}
-        try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
 
-        try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
-        try { startMemoryStress(); } catch (Throwable ignore) {}
-        try { startGpuStressLevel(2); } catch (Throwable ignore) {}
+    int cores = Runtime.getRuntime().availableProcessors();
+    int threads = Math.max(1, cores / 2); // λίγο πιο δυνατό από soft
 
-    });
+    // CPU (μεσαίο load)
+    try { startCpuBurnLimitedThreads(threads); } catch (Throwable ignore) {}
 
-    return;
-}
+    // GPU (light-medium)
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { startGpuStressLevel(1); } catch (Throwable ignore) {}
+
+});
+
+return;
 
 // =========================
 // FAST PHASE
@@ -18556,8 +18593,9 @@ int elapsed = (int) (lab14ElapsedMs / 1000);
 // ----------------------------------------------------
 // 🔴 HARD → SOFT TRANSITION (CRITICAL FIX)
 // ----------------------------------------------------
-if (isLab14BMode && !inHardPhase && lab14BoostActive) {
+if (isLab14BMode && !inHardPhase && !lab14SoftPhaseStarted) {
 
+    lab14SoftPhaseStarted = true;
     lab14BoostActive = false;
 
     appendLog("PHASE", "Switching to SOFT phase");
@@ -18566,10 +18604,15 @@ if (isLab14BMode && !inHardPhase && lab14BoostActive) {
     try { stopGpuStress(); } catch (Throwable ignore) {}
     try { stopMemoryStress(); } catch (Throwable ignore) {}
 
-    // 🔽 ξεκινάμε LIGHT load
-    try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
-    try { startGpuStressLevel(1); } catch (Throwable ignore) {}
+    int cores = Runtime.getRuntime().availableProcessors();
+    int softThreads = Math.max(1, cores / 3);
 
+    // CPU
+    try { startCpuBurnLimitedThreads(softThreads); } catch (Throwable ignore) {}
+
+    // GPU (CRITICAL FIX)
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { startGpuStressLevel(1); } catch (Throwable ignore) {}
 }
 
 // ----------------------------------------------------
@@ -18646,8 +18689,8 @@ if (isLab14BMode) {
 // ----------------------------------------------------
 double drainPerHour = Double.NaN;
 
-if (dt > 10000 && drainNow > 0) {
-    drainPerHour = (drainNow * 3600000.0) / dt;
+if (lab14ElapsedMs > 10000 && drainNow > 0) {
+    drainPerHour = (drainNow * 3600000.0) / lab14ElapsedMs;
 }
 
         // ----------------------------------------------------
