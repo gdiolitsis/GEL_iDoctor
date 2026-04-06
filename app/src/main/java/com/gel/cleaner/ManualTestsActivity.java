@@ -18721,7 +18721,6 @@ if (!lab14BoostActive &&
     rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
     rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
 }
-        }
 
         // ----------------------------------------------------
         // 🔴 LAB14B ABORT
