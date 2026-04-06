@@ -291,6 +291,9 @@ private long lab14LastCpuAdjustTs = 0L;
 
 private long lab14LastLiveLogTs = 0;
 
+private long lab14LastTick = 0;
+private long lab14ElapsedMs = 0;
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -2399,6 +2402,9 @@ private void lab14BProtectionTest() {
             lab14Running = true;
             lab14PopupShown = false;
             lab14AdvisoryShown = false;
+            
+            lab14LastTick = 0;
+            lab14ElapsedMs = 0;
 
             final iDoctorEngine idoctor =
                     iDoctorEngine.get(ManualTestsActivity.this);
@@ -2499,51 +2505,65 @@ new Thread(() -> {
     } catch (Throwable ignore) {}
 }).start();
 
-            // --------------------------------------------------------
-            // AFTER 60s -> SNAPSHOT + SWITCH TO SOFT
-            // --------------------------------------------------------
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+// --------------------------------------------------------
+// AFTER 60s -> SNAPSHOT + SWITCH TO SOFT
+// --------------------------------------------------------
+new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-                if (!isLab14BMode || lab14Cancelled) {
-                    return;
-                }
+    if (!isLab14BMode || lab14Cancelled) {
+        return;
+    }
 
-                try {
+    try {
 
-                    iDoctorEngine.BatterySnapshot snap1 =
-                            idoctor.readBatterySnapshotLab();
+        iDoctorEngine.BatterySnapshot snap1 =
+                idoctor.readBatterySnapshotLab();
 
-                    if (snap1 != null && snap1.chargeNowMah > 0) {
-                        softStartMah[0] = snap1.chargeNowMah;
-                    }
+        if (snap1 != null && snap1.chargeNowMah > 0) {
+            softStartMah[0] = snap1.chargeNowMah;
+        }
 
-                    softStartTemp[0] = getBatteryTemperature();
-                    if ((Float.isNaN(softStartTemp[0]) || softStartTemp[0] <= 0f)
-                            && snap1 != null) {
-                        softStartTemp[0] = snap1.batteryTempC;
-                    }
+        softStartTemp[0] = getBatteryTemperature();
+        if ((Float.isNaN(softStartTemp[0]) || softStartTemp[0] <= 0f)
+                && snap1 != null) {
+            softStartTemp[0] = snap1.batteryTempC;
+        }
 
-                    softStartVolt[0] = getBatteryVoltageFiltered();
+        softStartVolt[0] = getBatteryVoltageFiltered();
 
-                    stopCpuBurn();
-                    stopMemoryStress();
-                    stopGpuStress();
+        stopCpuBurn();
+        stopMemoryStress();
+        stopGpuStress();
 
-                    logLabelValue(
-                            gr ? "Φάση" : "Phase",
-                            gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
-                    );
+        // 🔴 RESET BOOST (CRITICAL)
+        lab14BoostActive = false;
 
-                    startCpuBurnLimitedThreads(
-        Math.max(2, Runtime.getRuntime().availableProcessors() / 3)
-);
+        logLabelValue(
+                gr ? "Φάση" : "Phase",
+                gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
+        );
 
-// 🔹 ελαφρύ GPU για real usage
-try { startGpuStressLevel(1); } catch (Throwable ignore) {}
+        // ----------------------------------------------------
+        // 🌿 SOFT PROFILE (REAL USAGE)
+        // ----------------------------------------------------
+        int cores = Runtime.getRuntime().availableProcessors();
+        int softThreads = Math.max(1, cores / 3);
 
-                } catch (Throwable ignore) {}
+        try {
+            startCpuBurnLimitedThreads(softThreads);
+        } catch (Throwable ignore) {}
 
-            }, 60000L);
+        try {
+            startGpuStressLevel(1);
+        } catch (Throwable ignore) {}
+
+        try {
+            stopMemoryStress();
+        } catch (Throwable ignore) {}
+
+    } catch (Throwable ignore) {}
+
+}, 60000L);
 
             // --------------------------------------------------------
             // AFTER 300s -> FINAL SNAPSHOT + ANALYSIS
@@ -2632,14 +2652,26 @@ if (!Float.isNaN(voltageStability[0]) &&
         float perHour = Float.NaN;
         float estimatedHours = Float.NaN;
 
-        if (softDeltaMah >= 5 && baselineMah[0] > 0) {
-            float softMinutes = 4f;
-            perHour = (softDeltaMah / softMinutes) * 60f;
+        if (softDeltaMah > 0 && baselineMah[0] > 0) {
 
-            if (perHour > 0f) {
-                estimatedHours = baselineMah[0] / perHour;
-            }
-        }
+    float softMinutes = 4f;
+
+    perHour = (softDeltaMah / softMinutes) * 60f;
+
+    // 🔴 clamp για μικρά values
+    if (perHour < 50f) {
+        perHour = 50f;
+    }
+
+    estimatedHours = baselineMah[0] / perHour;
+
+} else if (baselineMah[0] > 0) {
+
+    // 🔴 FALLBACK estimation (αν δεν έχουμε drain)
+    perHour = 200f; // safe default consumption
+    estimatedHours = baselineMah[0] / perHour;
+
+}
 
         // 🔴 FINAL COPIES (FIX)
         final boolean f_cpuThrottle = cpuThrottle;
@@ -13897,14 +13929,13 @@ private void lab14BatteryHealthStressTest() {
 // ============================================================
 private void lab14BatteryHealthStressTest_REAL() {
 
-final iDoctorEngine idoctor =
-        iDoctorEngine.get(ManualTestsActivity.this);
- 
+    final iDoctorEngine idoctor =
+            iDoctorEngine.get(ManualTestsActivity.this);
 
     gr = AppLang.isGreek(this);
-    
+
     final Lab14Engine lab14Engine =
-        new Lab14Engine(this);
+            new Lab14Engine(this);
 
     validDrain = false;
     lab14_systemLimited[0] = false;
@@ -13912,12 +13943,18 @@ final iDoctorEngine idoctor =
     lab14Cancelled = false;
     lab14FastDone = false;
 
-// RESET STATE (μόνο μετά το popup)
-if (!lab14Running && !lab14PopupShown) {
+    // 🔴 TIMER RESET (CRITICAL — ΠΑΝΤΑ στο start)
+    lab14LastTick = 0;
+    lab14ElapsedMs = 0;
 
-    lab14Cancelled = false;
+    // RESET STATE (μόνο μετά το popup)
+    if (!lab14Running && !lab14PopupShown) {
 
-    resetBatteryDiagnostics();
+        lab14Cancelled = false;
+
+        resetBatteryDiagnostics();
+    }
+}
 
     // -------------------------
     // 🔴 RUNTIME STATE (ΕΔΩ μπαίνει)
@@ -18494,15 +18531,46 @@ iDoctorEngine idoctor =
 Float cpuTemp = readCpuTempSafe();
 
 long now = SystemClock.elapsedRealtime();
-long dt = now - t0;
 
-int elapsed = (int) (dt / 1000);
+if (lab14LastTick == 0) {
+    lab14LastTick = now;
+}
+
+long delta = now - lab14LastTick;
+
+// clamp για να μην πηδάει
+if (delta < 0) delta = 0;
+if (delta > 1500) delta = 1000;
+
+lab14ElapsedMs += delta;
+lab14LastTick = now;
+
+int elapsed = (int) (lab14ElapsedMs / 1000);
 
         // ----------------------------------------------------
         // 🔴 TIME FLAGS
         // ----------------------------------------------------
         boolean earlyPhase = elapsed < 25;
         boolean inHardPhase = elapsed < 60;
+        
+// ----------------------------------------------------
+// 🔴 HARD → SOFT TRANSITION (CRITICAL FIX)
+// ----------------------------------------------------
+if (isLab14BMode && !inHardPhase && lab14BoostActive) {
+
+    lab14BoostActive = false;
+
+    appendLog("PHASE", "Switching to SOFT phase");
+
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+
+    // 🔽 ξεκινάμε LIGHT load
+    try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
+    try { startGpuStressLevel(1); } catch (Throwable ignore) {}
+
+}
 
 // ----------------------------------------------------
 // 🔴 ENGINE SIGNALS (CLEAN - FILTERED — FINAL)
@@ -18802,7 +18870,13 @@ if (!lab14Running) {
 } else if (lab14_systemLimited[0]) {
     status = "LIMITED ⚠";
 } else if (isLab14BMode) {
-    status = "HARD LOAD 🔥";
+
+    if (inHardPhase) {
+        status = "HARD LOAD 🔥";
+    } else {
+        status = "SOFT LOAD 🌿";
+    }
+
 } else if (earlyPhaseActive) {
     status = "WARMING UP...";
 } else if (loadScore >= 3) {
