@@ -3047,6 +3047,11 @@ private void startCpuBurn_Light() {
     startCpuBurnLimitedThreads(threads);
 }
 
+// ============================================================
+// CPU STRESS ENGINE (STABLE GEL VERSION)
+// ============================================================
+private final List<Thread> lab14CpuThreads = new ArrayList<>();
+
 private void startCpuBurnLimitedThreads(int threads) {
 
     stopCpuBurn();
@@ -3055,7 +3060,7 @@ private void startCpuBurnLimitedThreads(int threads) {
 
     if (threads <= 0) threads = cores;
 
-    // ❌ κόψε το overdrive > cores (scheduler thrash)
+    // clamp
     threads = Math.min(threads, cores);
 
     appendLog("CPU",
@@ -3065,34 +3070,60 @@ private void startCpuBurnLimitedThreads(int threads) {
 
         Thread t = new Thread(() -> {
 
-            // 🔥 HEAVY + MIXED workload (CPU friendly, όχι μόνο sqrt)
             double acc = 0;
 
-            while (!lab14Cancelled && !Thread.currentThread().isInterrupted()) {
+            try {
 
-                long now = System.nanoTime();
+                while (lab14Running && !lab14Cancelled &&
+                        !Thread.currentThread().isInterrupted()) {
 
-                // 🔥 math + integer + branching → καλύτερο utilization
-                for (int j = 1; j < 10000; j++) {
+                    long now = System.nanoTime();
 
-                    acc += Math.sqrt(j * now);
+                    // 🔥 HEAVY MIXED LOAD
+                    for (int j = 1; j < 15000; j++) {
 
-                    acc *= 1.0000001;
+                        acc += Math.sqrt(j * now);
+                        acc *= 1.0000001;
 
-                    if ((j & 7) == 0) {
-                        acc -= Math.log(j + 1);
+                        if ((j & 7) == 0) {
+                            acc -= Math.log(j + 1);
+                        }
+                    }
+
+                    // anti-JIT optimization
+                    if (acc > 1e12) acc = 0;
+
+                    // ⚠️ tiny yield για scheduler stability
+                    if ((now & 3) == 0) {
+                        Thread.yield();
                     }
                 }
 
-                // 🔒 anti-optimization (να μη στο πετάξει ο JIT)
-                if (acc > 1e12) acc = 0;
-            }
+            } catch (Throwable ignore) {}
 
         }, "LAB14_CPU_" + i);
 
-        t.setPriority(Thread.MAX_PRIORITY);
+        // ⚠️ καλύτερο από MAX_PRIORITY (πιο stable)
+        t.setPriority(Thread.NORM_PRIORITY + 1);
+
+        lab14CpuThreads.add(t);
         t.start();
     }
+}
+
+
+// ============================================================
+// STOP CPU (CRITICAL FIX)
+// ============================================================
+private void stopCpuBurn() {
+
+    for (Thread t : lab14CpuThreads) {
+        try {
+            t.interrupt();
+        } catch (Throwable ignore) {}
+    }
+
+    lab14CpuThreads.clear();
 }
 
 private void startLab14BPopup(long durationSec) {
@@ -3879,10 +3910,6 @@ private void stopMemoryStress() {
         }
     } catch (Throwable ignore) {}
 
-}
-
-private void stopCpuBurn() {
-__cpuBurn = false;
 }
 
 // ============================================================
@@ -17540,6 +17567,7 @@ private void startLab14FastThread() {
             lab14FastDone = false;
             lab14FastPhase = true;
             lab14MainPhase = false; // ✅ FIX
+            earlyPhase = true;
             lab14FastStartTime =
                     SystemClock.elapsedRealtime();
 
@@ -17685,7 +17713,6 @@ private void startLab14FastThread() {
     }).start();
 }
 
-
 // ============================================================
 // MAIN STRESS
 // ============================================================
@@ -17696,31 +17723,47 @@ private void startLab14MainStress() {
     // 🔴 PHASE FIX
     lab14FastPhase = false;
     lab14MainPhase = true;
+    earlyPhase = false;
 
     // 🔴 ENGINE TIMER
     t0 = SystemClock.elapsedRealtime();
     lab14EndTime = t0 + (durationSec * 1000L);
 
+    // =========================================================
+    // 🔥 CPU STRESS (BACKGROUND THREAD - CRITICAL FIX)
+    // =========================================================
+    new Thread(() -> {
+        try {
+
+            int cores = Runtime.getRuntime().availableProcessors();
+
+            int threads = (lab14OptimalThreads > 0)
+                    ? lab14OptimalThreads
+                    : Math.max(2, cores / 2);
+
+            if (threads > 6) threads = 6;
+
+            lab14CpuThreadsCurrent = threads;
+
+            if (!isLab14BMode) {
+                startCpuBurnLimitedThreads(threads); // ✅ FULL LOAD FIX
+            } else {
+                startCpuBurn_C_Mode();
+            }
+
+        } catch (Throwable ignore) {}
+
+    }).start();
+
+
+    // =========================================================
+    // 🟡 UI THREAD (μόνο UI + light ops)
+    // =========================================================
     runOnUiThread(() -> {
 
         applyMaxBrightnessAndKeepOn();
 
-        int cores = Runtime.getRuntime().availableProcessors();
-
-        int startThreads = (lab14OptimalThreads > 0)
-                ? lab14OptimalThreads
-                : Math.max(2, cores / 2);
-
-        if (startThreads > 6) startThreads = 6;
-
-        lab14CpuThreadsCurrent = startThreads;
-
-        if (!isLab14BMode) {
-            startCpuBurnLimitedThreads(startThreads); // ✅ FIX (όχι 3)
-        } else {
-            startCpuBurn_C_Mode();
-        }
-
+        // RAM + GPU μπορούν να μείνουν εδώ (δεν μπλοκάρουν UI σοβαρά)
         startMemoryStress();
 
         startGpuStressLevel(
@@ -18866,14 +18909,21 @@ if (isLab14BMode) {
         // 🔴 STATUS
         // ----------------------------------------------------
         
-boolean earlyPhaseActive = !isLab14BMode && earlyPhase;
-
 String status;
 
+boolean earlyPhaseActive =
+        !isLab14BMode &&
+        lab14FastPhase &&
+        !lab14MainPhase;
+
 if (!lab14Running) {
+
     status = "STOPPED";
+
 } else if (lab14_systemLimited[0]) {
+
     status = "LIMITED ⚠";
+
 } else if (isLab14BMode) {
 
     if (inHardPhase) {
@@ -18883,12 +18933,23 @@ if (!lab14Running) {
     }
 
 } else if (earlyPhaseActive) {
+
     status = "WARMING UP...";
+
+} else if (lab14MainPhase) {
+
+    status = "STRESS TEST 🔥";
+
 } else if (loadScore >= 3) {
+
     status = "HIGH LOAD 🔥";
+
 } else if (loadScore >= 2) {
+
     status = "NORMAL LOAD";
+
 } else {
+
     status = "WEAK LOAD ⚠";
 }
 
