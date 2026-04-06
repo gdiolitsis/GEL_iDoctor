@@ -2520,12 +2520,13 @@ new Thread(() -> {
     try {
         // 🔥 FULL CPU (όχι C_Mode)
         startCpuBurnLimitedThreads(cores);
+        startCpuBurn_C_Mode();
 
         // 🔥 RAM
         startMemoryStress();
 
         // 🔥 GPU MAX
-        startGpuStressLevel(4);
+        startGpuStressLevel(5);
 
     } catch (Throwable ignore) {}
 }).start();
@@ -18692,7 +18693,7 @@ int elapsed = (int) (lab14ElapsedMs / 1000);
 // ----------------------------------------------------
 // 🔴 HARD → SOFT TRANSITION (FINAL FIX)
 // ----------------------------------------------------
-if (isLab14BMode && inHardPhase && !lab14SoftPhaseStarted) {
+if (isLab14BMode && elapsed >= 60 && !lab14SoftPhaseStarted)
 
     lab14SoftPhaseStarted = true;
     lab14BoostActive = false;
@@ -19026,12 +19027,21 @@ if (isLab14BMode) {
     lab14WeakLoadCounter = Math.max(0, lab14WeakLoadCounter - 2);
 }
 
-        // ----------------------------------------------------
-        // 🔴 REBALANCE (ΜΟΝΟ εκτός early ✔)
-        // ----------------------------------------------------
-        if (!earlyPhase && !isLab14BMode) {
+// ----------------------------------------------------
+// 🔴 REBALANCE (SAFE — NO INTERFERENCE IN 14B HARD)
+// ----------------------------------------------------
+if (!earlyPhase && !isLab14BMode) {
+
+    // normal LAB14 only
     rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
     rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+
+} else if (isLab14BMode && !inHardPhase) {
+
+    // LAB14B → επιτρέπεται ΜΟΝΟ στο SOFT phase
+    rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+    rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
+
 }
 
 // ----------------------------------------------------
@@ -19497,12 +19507,14 @@ private void rebalanceLab14CpuLive(
         boolean systemLimited
 ) {
 
+    // 🔴 HARD LOCK (14B)
+    if (isLab14BMode && inHardPhase) return;
+
     if (!lab14Running || lab14Cancelled) return;
-    if (isLab14BMode) return; // 🔥 FIX
 
     long now = SystemClock.elapsedRealtime();
 
-    // 🔴 cooldown (κρατάμε σταθερότητα)
+    // 🔴 cooldown
     if (now - lab14LastCpuAdjustTs < 6000) return;
 
     int cores = Runtime.getRuntime().availableProcessors();
