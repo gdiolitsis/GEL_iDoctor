@@ -401,6 +401,7 @@ private boolean lab14SoftPhaseStarted = false;
     private AlertDialog lab14RunningDialog;
     
     private volatile boolean lab14FastDone = false;
+    private volatile boolean earlyPhase = false;
     
     final boolean[] lab14_systemLimited = { false };
     
@@ -17566,8 +17567,7 @@ private void startLab14FastThread() {
 
             lab14FastDone = false;
             lab14FastPhase = true;
-            lab14MainPhase = false; // ✅ FIX
-            earlyPhase = true;
+            lab14MainPhase = false; 
             lab14FastStartTime =
                     SystemClock.elapsedRealtime();
 
@@ -17723,7 +17723,6 @@ private void startLab14MainStress() {
     // 🔴 PHASE FIX
     lab14FastPhase = false;
     lab14MainPhase = true;
-    earlyPhase = false;
 
     // 🔴 ENGINE TIMER
     t0 = SystemClock.elapsedRealtime();
@@ -18905,16 +18904,11 @@ if (isLab14BMode) {
     return;
 }
 
-        // ----------------------------------------------------
-        // 🔴 STATUS
-        // ----------------------------------------------------
-        
-String status;
+// ----------------------------------------------------
+// 🔴 STATUS (FINAL CLEAN)
+// ----------------------------------------------------
 
-boolean earlyPhaseActive =
-        !isLab14BMode &&
-        lab14FastPhase &&
-        !lab14MainPhase;
+String status;
 
 if (!lab14Running) {
 
@@ -18932,7 +18926,7 @@ if (!lab14Running) {
         status = "SOFT LOAD 🌿";
     }
 
-} else if (earlyPhaseActive) {
+} else if (lab14FastPhase) {
 
     status = "WARMING UP...";
 
