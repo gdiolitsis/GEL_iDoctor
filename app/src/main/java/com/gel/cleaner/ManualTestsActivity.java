@@ -18532,8 +18532,6 @@ if (isLab14BMode) {
         drainNow = 0;
     }
 
-}
-
 } else {
 
     if (lab14MaxCharge > 0 && lab14MinCharge < Long.MAX_VALUE) {
@@ -19165,6 +19163,7 @@ private void rebalanceLab14CpuLive(
 ) {
 
     if (!lab14Running || lab14Cancelled) return;
+    if (isLab14BMode) return; // 🔥 FIX
 
     long now = SystemClock.elapsedRealtime();
 
