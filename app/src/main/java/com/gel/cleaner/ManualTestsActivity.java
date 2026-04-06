@@ -17011,7 +17011,6 @@ if (drainMahFinalLong > 600) {
                             : "Declared battery capacity appears realistic."
         );
     }
-}
 
 // ------------------------------------------------
     // FAST STRESS
