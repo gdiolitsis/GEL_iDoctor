@@ -3118,13 +3118,15 @@ private void startCpuBurnLimitedThreads(int threads) {
 // ============================================================
 private void stopCpuBurn() {
 
-    for (Thread t : lab14CpuThreads) {
+    cpuBurnRunning = false;
+
+    for (Thread t : cpuThreads) {
         try {
             t.interrupt();
         } catch (Throwable ignore) {}
     }
 
-    lab14CpuThreads.clear();
+    cpuThreads.clear();
 }
 
 private void startLab14BPopup(long durationSec) {
@@ -3754,24 +3756,33 @@ private Float readGpuTempSafe() {
 // CPU stress (controlled) — used by LAB 14/17
 // ------------------------------------------------------------
 
+// ============================================================
+// 🔥 CPU BURN C_MODE (STABLE + CONTROLLED)
+// ============================================================
+
+private final List<Thread> cpuThreads = new ArrayList<>();
+private volatile boolean cpuBurnRunning = false;
+
 private void startCpuBurn_C_Mode() {
 
-    stopCpuBurn();
+    stopCpuBurn(); // 🔴 clean start
+
+    cpuBurnRunning = true;
 
     final int maxCores = Runtime.getRuntime().availableProcessors();
 
-    // 🔴 ξεκινάμε full load
     final int[] activeThreads = { maxCores };
 
     for (int i = 0; i < maxCores; i++) {
 
         final int threadIndex = i;
 
-        new Thread(() -> {
+        Thread t = new Thread(() -> {
 
             long lastAdjust = System.currentTimeMillis();
 
-            while (lab14Running &&
+            while (cpuBurnRunning &&
+                   lab14Running &&
                    !lab14Cancelled &&
                    !Thread.currentThread().isInterrupted()) {
 
@@ -3781,16 +3792,24 @@ private void startCpuBurn_C_Mode() {
                     continue;
                 }
 
-                // 🔥 heavy compute
-                double x = Math.sin(System.nanoTime()) *
-                           Math.cos(System.nanoTime()) *
-                           Math.sqrt(System.nanoTime());
+                // 🔥 heavy compute (stable)
+                double acc = 0;
 
-                if (x == 123456.789) {
-                    appendLog("CPU", "keep alive");
+                long now = System.nanoTime();
+
+                for (int j = 1; j < 8000; j++) {
+                    acc += Math.sqrt(j * now);
+                    acc *= 1.0000001;
+
+                    if ((j & 7) == 0) {
+                        acc -= Math.log(j + 1);
+                    }
                 }
 
-                // 🔴 κάθε 2 sec → προσαρμογή load
+                // anti-optimization
+                if (acc > 1e12) acc = 0;
+
+                // 🔴 adaptive every 2 sec
                 if (System.currentTimeMillis() - lastAdjust > 2000) {
 
                     float temp = readCpuTempSafe();
@@ -3798,10 +3817,10 @@ private void startCpuBurn_C_Mode() {
                     if (!Float.isNaN(temp)) {
 
                         if (temp > 60f && activeThreads[0] > 1) {
-                            activeThreads[0]--; // 🔻 ρίξε load
+                            activeThreads[0]--;
                         }
                         else if (temp < 50f && activeThreads[0] < maxCores) {
-                            activeThreads[0]++; // 🔺 ανέβα load
+                            activeThreads[0]++;
                         }
                     }
 
@@ -3809,7 +3828,12 @@ private void startCpuBurn_C_Mode() {
                 }
             }
 
-        }).start();
+        }, "LAB14_CMODE_" + i);
+
+        t.setPriority(Thread.MAX_PRIORITY);
+
+        cpuThreads.add(t);
+        t.start();
     }
 }
 
@@ -17728,32 +17752,46 @@ private void startLab14MainStress() {
     t0 = SystemClock.elapsedRealtime();
     lab14EndTime = t0 + (durationSec * 1000L);
 
-    // =========================================================
-    // 🔥 CPU STRESS (BACKGROUND THREAD - CRITICAL FIX)
-    // =========================================================
-    new Thread(() -> {
-        try {
+// =========================================================
+// 🔥 CPU STRESS (BACKGROUND THREAD - FIXED)
+// =========================================================
+new Thread(() -> {
+    try {
 
-            int cores = Runtime.getRuntime().availableProcessors();
+        int cores = Runtime.getRuntime().availableProcessors();
 
-            int threads = (lab14OptimalThreads > 0)
-                    ? lab14OptimalThreads
-                    : Math.max(2, cores / 2);
+        int threads = (lab14OptimalThreads > 0)
+                ? lab14OptimalThreads
+                : Math.max(2, cores / 2);
 
-            if (threads > 6) threads = 6;
+        if (threads > 6) threads = 6;
 
-            lab14CpuThreadsCurrent = threads;
+        lab14CpuThreadsCurrent = threads;
 
-            if (!isLab14BMode) {
-                startCpuBurnLimitedThreads(threads); // ✅ FULL LOAD FIX
-            } else {
+        if (!isLab14BMode) {
+
+            // 🔵 LAB14 NORMAL
+            startCpuBurnLimitedThreads(threads);
+
+        } else {
+
+            if (inHardPhase) {
+
+                // 🔴 HARD PHASE
                 startCpuBurn_C_Mode();
+
+            } else {
+
+                // 🌿 SOFT PHASE
+                int softThreads = Math.max(1, cores / 3);
+
+                startCpuBurnLimitedThreads(softThreads);
             }
+        }
 
-        } catch (Throwable ignore) {}
+    } catch (Throwable ignore) {}
 
-    }).start();
-
+}).start();
 
     // =========================================================
     // 🟡 UI THREAD (μόνο UI + light ops)
@@ -18595,11 +18633,12 @@ int elapsed = (int) (lab14ElapsedMs / 1000);
         boolean inHardPhase = elapsed < 60;
         
 // ----------------------------------------------------
-// 🔴 HARD → SOFT TRANSITION (CRITICAL FIX)
+// 🔴 HARD → SOFT TRANSITION (FINAL FIX)
 // ----------------------------------------------------
-if (isLab14BMode && !inHardPhase && !lab14SoftPhaseStarted) {
+if (isLab14BMode && inHardPhase && !lab14SoftPhaseStarted) {
 
     lab14SoftPhaseStarted = true;
+    inHardPhase = false;          // ✅ CRITICAL
     lab14BoostActive = false;
 
     appendLog("PHASE", "Switching to SOFT phase");
@@ -18611,12 +18650,14 @@ if (isLab14BMode && !inHardPhase && !lab14SoftPhaseStarted) {
     int cores = Runtime.getRuntime().availableProcessors();
     int softThreads = Math.max(1, cores / 3);
 
-    // CPU
+    // CPU (SOFT)
     try { startCpuBurnLimitedThreads(softThreads); } catch (Throwable ignore) {}
 
-    // GPU (CRITICAL FIX)
-    try { stopGpuStress(); } catch (Throwable ignore) {}
+    // GPU (LOW)
     try { startGpuStressLevel(1); } catch (Throwable ignore) {}
+
+    // MEMORY stays (optional, ok)
+    try { startMemoryStress(); } catch (Throwable ignore) {}
 }
 
 // ----------------------------------------------------
@@ -18820,47 +18861,75 @@ if (!lab14BoostActive &&
 
     boolean shouldBoost;
 
-    // ----------------------------------------------------
-    // 🔥 BOOST LOGIC (FIXED — 14 + 14B)
-    // ----------------------------------------------------
-    if (isLab14BMode) {
+// ----------------------------------------------------
+// 🔥 BOOST LOGIC (FINAL — HARD SAFE + NO OVERRIDE)
+// ----------------------------------------------------
 
-        // 🔴 14B → boost ΜΟΝΟ στο HARD phase
-        shouldBoost = inHardPhase;
+boolean shouldBoost;
 
-    } else {
+if (isLab14BMode) {
 
-        // 🧠 14 → smart boost
-        shouldBoost =
-                !earlyPhase &&
-                (loadScore <= 1 || batteryScore < 60) &&
-                elapsed >= 6;
-    }
+    // 🔴 14B → boost ΜΟΝΟ στο HARD και μόνο μία φορά
+    shouldBoost =
+            inHardPhase &&
+            !lab14BoostActive;
 
-    if (shouldBoost) {
+} else {
 
-        lab14BoostActive = true;
+    // 🧠 LAB14 → boost μόνο μετά το fast phase
+    shouldBoost =
+            !lab14FastPhase &&
+            (loadScore <= 1 || batteryScore < 60) &&
+            elapsed >= 6;
+}
 
-        appendLog("BOOST",
-                isLab14BMode
-                        ? "FORCE HARD BOOST (14B)"
-                        : "Early boost (battery-aware)");
+if (shouldBoost) {
 
-        runOnUiThread(() -> {
+    lab14BoostActive = true;
 
-            if (!lab14Running || lab14Cancelled) return;
+    appendLog("BOOST",
+            isLab14BMode
+                    ? "FORCE HARD BOOST (14B)"
+                    : "Adaptive boost (battery-aware)");
 
-            try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
-            try { startGpuStressLevel(4); } catch (Throwable ignore) {}
-            try { startMemoryStress(); } catch (Throwable ignore) {}
+    runOnUiThread(() -> {
 
-            // 🔥 extra push (μόνο για LAB14)
-            if (!isLab14BMode && batteryScore >= 80) {
-                try { startGpuStressLevel(5); } catch (Throwable ignore) {}
+        if (!lab14Running || lab14Cancelled) return;
+
+        try {
+
+            if (isLab14BMode) {
+
+                // ❗ CRITICAL: ΠΟΤΕ boost εκτός HARD
+                if (!inHardPhase) return;
+
+                // 🔴 HARD BOOST (14B)
+                startCpuBurn_C_Mode();
+                startGpuStressLevel(4);
+                startMemoryStress();
+
+            } else {
+
+                // ❗ CRITICAL: ΜΗΝ boostάρεις μέσα στο fast phase
+                if (lab14FastPhase) return;
+
+                int cores = Runtime.getRuntime().availableProcessors();
+                int threads = Math.max(2, cores / 2);
+
+                // 🔵 NORMAL BOOST (LAB14)
+                startCpuBurnLimitedThreads(threads);
+                startGpuStressLevel(4);
+                startMemoryStress();
+
+                // extra push μόνο αν αντέχει
+                if (batteryScore >= 80) {
+                    startGpuStressLevel(5);
+                }
             }
 
-        });
-    }
+        } catch (Throwable ignore) {}
+
+    });
 }
 
         // ----------------------------------------------------
