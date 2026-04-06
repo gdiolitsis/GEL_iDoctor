@@ -18861,75 +18861,63 @@ if (!lab14BoostActive &&
 
     boolean shouldBoost;
 
-// ----------------------------------------------------
-// 🔥 BOOST LOGIC (FINAL — HARD SAFE + NO OVERRIDE)
-// ----------------------------------------------------
+    if (isLab14BMode) {
 
-boolean shouldBoost;
+        shouldBoost =
+                inHardPhase &&
+                !lab14BoostActive;
 
-if (isLab14BMode) {
+    } else {
 
-    // 🔴 14B → boost ΜΟΝΟ στο HARD και μόνο μία φορά
-    shouldBoost =
-            inHardPhase &&
-            !lab14BoostActive;
+        shouldBoost =
+                !lab14FastPhase &&
+                (loadScore <= 1 || batteryScore < 60) &&
+                elapsed >= 6;
+    }
 
-} else {
+    if (shouldBoost) {
 
-    // 🧠 LAB14 → boost μόνο μετά το fast phase
-    shouldBoost =
-            !lab14FastPhase &&
-            (loadScore <= 1 || batteryScore < 60) &&
-            elapsed >= 6;
-}
+        lab14BoostActive = true;
 
-if (shouldBoost) {
+        appendLog("BOOST",
+                isLab14BMode
+                        ? "FORCE HARD BOOST (14B)"
+                        : "Adaptive boost (battery-aware)");
 
-    lab14BoostActive = true;
+        runOnUiThread(() -> {
 
-    appendLog("BOOST",
-            isLab14BMode
-                    ? "FORCE HARD BOOST (14B)"
-                    : "Adaptive boost (battery-aware)");
+            if (!lab14Running || lab14Cancelled) return;
 
-    runOnUiThread(() -> {
+            try {
 
-        if (!lab14Running || lab14Cancelled) return;
+                if (isLab14BMode) {
 
-        try {
+                    if (!inHardPhase) return;
 
-            if (isLab14BMode) {
+                    startCpuBurn_C_Mode();
+                    startGpuStressLevel(4);
+                    startMemoryStress();
 
-                // ❗ CRITICAL: ΠΟΤΕ boost εκτός HARD
-                if (!inHardPhase) return;
+                } else {
 
-                // 🔴 HARD BOOST (14B)
-                startCpuBurn_C_Mode();
-                startGpuStressLevel(4);
-                startMemoryStress();
+                    if (lab14FastPhase) return;
 
-            } else {
+                    int cores = Runtime.getRuntime().availableProcessors();
+                    int threads = Math.max(2, cores / 2);
 
-                // ❗ CRITICAL: ΜΗΝ boostάρεις μέσα στο fast phase
-                if (lab14FastPhase) return;
+                    startCpuBurnLimitedThreads(threads);
+                    startGpuStressLevel(4);
+                    startMemoryStress();
 
-                int cores = Runtime.getRuntime().availableProcessors();
-                int threads = Math.max(2, cores / 2);
-
-                // 🔵 NORMAL BOOST (LAB14)
-                startCpuBurnLimitedThreads(threads);
-                startGpuStressLevel(4);
-                startMemoryStress();
-
-                // extra push μόνο αν αντέχει
-                if (batteryScore >= 80) {
-                    startGpuStressLevel(5);
+                    if (batteryScore >= 80) {
+                        startGpuStressLevel(5);
+                    }
                 }
-            }
 
-        } catch (Throwable ignore) {}
+            } catch (Throwable ignore) {}
 
-    });
+        });
+    }
 }
 
         // ----------------------------------------------------
