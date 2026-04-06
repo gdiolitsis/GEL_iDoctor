@@ -13966,7 +13966,6 @@ private void lab14BatteryHealthStressTest_REAL() {
     if (!lab14Running && !lab14PopupShown) {
         resetBatteryDiagnostics();
     }
-}
 
     // -------------------------
     // 🔴 RUNTIME STATE (ΕΔΩ μπαίνει)
@@ -14037,12 +14036,13 @@ private void lab14BatteryHealthStressTest_REAL() {
     lab14AgingInterp = "N/A";
     lab14BatteryBehaviourWarning = false;
 
-    // -------------------------
-    // ✅ LAST — baseline temp
-    // -------------------------
-    Float t0 = idoctor.getBatteryTempUnified();
-    startBatteryTemp = t0 != null ? t0 : Float.NaN;
-}
+// -------------------------
+// ✅ LAST — baseline temp
+// -------------------------
+Float temp0 = idoctor.getBatteryTempUnified();
+startBatteryTemp = (temp0 != null && !Float.isNaN(temp0))
+        ? temp0
+        : Float.NaN;
 
 // --------------------------------------------------
 // START FLAG
@@ -14339,7 +14339,7 @@ lab14SoftPhaseStarted = false;
 lab14LastTick = 0;
 lab14ElapsedMs = 0;
 
-// 🔴 LEGACY TIMER (κρατάμε για compatibility)
+// 🔴 LEGACY TIMER
 t0 = SystemClock.elapsedRealtime();
 lab14EndTime = t0 + (durationSec * 1000L);
 
@@ -14351,9 +14351,6 @@ ui.post(lab14VibrationLoop);
 
 // 🔴 START UI
 startLab14SharedUI(durationSec, gr);
-
-// 🔴 START REAL STRESS
-startLab14MainStress();
 
 // 🔴 START PROGRESS ENGINE
 startLab14ProgressLoop();
@@ -15262,7 +15259,7 @@ private boolean lab14DetectLimiter(
 
     boolean lowCurrent =
             !Float.isNaN(current) &&
-            current < 120f;
+            current < 90f;
 
     // ------------------------
     // HARD LIMIT
@@ -15717,6 +15714,8 @@ if (!Float.isNaN(voltageStart) &&
 
                     long irMilli =
                             (long) (esr * 1000f);
+                            
+if (validDrain && !lab14_systemLimited[0]) {
 
                     idoctor.setInternalResistanceMilliOhm(irMilli);
                 }
@@ -17749,15 +17748,13 @@ if (startThreads > 6) startThreads = 6;
 
 lab14CpuThreadsCurrent = startThreads;
 
-startCpuBurnLimitedThreads(startThreads);
-
-        if (!isLab14BMode) {
-            // LAB14 → adaptive threads
-            startCpuBurnLimitedThreads(lab14OptimalThreads > 0 ? lab14OptimalThreads : 3);
-        } else {
-            // LAB14B → fixed stress
-            startCpuBurn_C_Mode();
-        }
+if (!isLab14BMode) {
+    startCpuBurnLimitedThreads(
+        lab14OptimalThreads > 0 ? lab14OptimalThreads : 3
+    );
+} else {
+    startCpuBurn_C_Mode();
+}
 
         startMemoryStress();
 
@@ -18580,7 +18577,6 @@ long delta = now - lab14LastTick;
 if (delta < 0) delta = 0;
 if (delta > 1500) delta = 1000;
 
-lab14ElapsedMs += delta;
 lab14LastTick = now;
 
 int elapsed = (int) (lab14ElapsedMs / 1000);
@@ -18882,7 +18878,7 @@ if (!lab14BoostActive &&
 // ----------------------------------------------------
 if (isLab14BMode) {
     // ❌ δεν κάνουμε abort στο 14B λόγω weak load
-} else if (lab14WeakLoadCounter >= scoreAbortThreshold) {
+} else if (lab14WeakLoadCounter >= scoreAbortThreshold + 2) {
     
     logError(gr
         ? "Ανεπαρκές φορτίο — το test ακυρώθηκε"
