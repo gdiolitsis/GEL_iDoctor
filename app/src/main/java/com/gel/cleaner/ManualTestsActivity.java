@@ -2791,39 +2791,29 @@ if (!Float.isNaN(voltageStability[0]) &&
 
             } catch (Throwable t) {
 
-                logError(gr
-                        ? "Σφάλμα τελικής ανάλυσης LAB 14B"
-                        : "LAB 14B final analysis error");
-
-} finally {
-
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-
-    lab14Cancelled = false;
-    lab14Running = false;
-    isLab14BMode = false;
-
-    // 🔴 RESET FLAGS (CRITICAL)
-    lab14BoostActive = false;
-    lab14SoftPhaseStarted = false;
-
-    // 🔴 RESET TIMER (avoid carry-over)
-    lab14LastTick = 0;
-    lab14ElapsedMs = 0;
-}
-
-        }, 240000L);
-
-    } catch (Throwable t) {
-
         logError(gr
-                ? "Σφάλμα snapshot LAB 14B"
-                : "LAB 14B snapshot error");
+                ? "Σφάλμα τελικής ανάλυσης LAB 14B"
+                : "LAB 14B final analysis error");
 
+    } finally {
+
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+        try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+
+        lab14Cancelled = false;
+        lab14Running = false;
+        isLab14BMode = false;
+
+        lab14BoostActive = false;
+        lab14SoftPhaseStarted = false;
+
+        lab14LastTick = 0;
+        lab14ElapsedMs = 0;
     }
+
+}, 240000L);
 
 }, 60000L);
 
