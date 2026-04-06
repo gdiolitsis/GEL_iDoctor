@@ -17310,8 +17310,6 @@ if (drainMahFinalLong > 600) {
             calibrationDrift
     );
 
-});
-
     final boolean collapseRiskF = collapseRisk[0];
     final boolean systemLimitedF = lab14_systemLimited[0];
     
