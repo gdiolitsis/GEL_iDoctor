@@ -298,6 +298,11 @@ private long lab14ElapsedMs = 0;
 private int lastDisplayedSecond = 0;
 private long lastSnapshotTs = 0;
 
+private String lastLiveStatus = "";
+
+private int lab14LimiterScore = 0;
+private boolean lab14LimiterLatched = false;
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -2402,9 +2407,13 @@ private void lab14BProtectionTest() {
         appendHtml("<br>");
         
             if (!checkLab14BConditions()) {
-                isLab14BMode = false;
-                return;
-            }
+    isLab14BMode = false;
+    return;
+}
+
+// 🔴 RESET LIMITER (CRITICAL — πάντα στην αρχή)
+lab14LimiterScore = 0;
+lab14LimiterLatched = false;
 
             final iDoctorEngine idoctor =
                     iDoctorEngine.get(ManualTestsActivity.this);
@@ -2434,6 +2443,8 @@ private void lab14BProtectionTest() {
 
                 lab14Running = false;
                 isLab14BMode = false;
+                lab14LimiterScore = 0;
+                lab14LimiterLatched = false;
                 return;
             }
 
@@ -3128,13 +3139,13 @@ private void stopCpuBurn() {
 
     cpuBurnRunning = false;
 
-    for (Thread t : cpuThreads) {
+    for (Thread t : lab14CpuThreads) {
         try {
             t.interrupt();
         } catch (Throwable ignore) {}
     }
 
-    cpuThreads.clear();
+    lab14CpuThreads.clear();
 }
 
 private void startLab14BPopup(long durationSec) {
@@ -3282,71 +3293,84 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
         @Override
         public void run() {
 
-            if (!lab14Running || lab14Cancelled) return;
+            try {
 
-            long now = SystemClock.elapsedRealtime();
-            int elapsed = (int) ((now - t0) / 1000);
-
-// clamp για να μην πηδάει μπροστά
-if (elapsed > lastDisplayedSecond + 1) {
-    elapsed = lastDisplayedSecond + 1;
-}
-
-lastDisplayedSecond = elapsed;
-
-            int currentPercent = getBatteryPercentSafe();
-
-            if (currentPercent < 70) {
-
-                logWarn(gr
-                        ? "Η μπαταρία έπεσε κάτω από 70% — το τεστ διακόπτεται"
-                        : "Battery dropped below 70% — test aborted");
-
-                lab14Cancelled = true;
-                lab14Running = false;
-
-                lab14StopAllStress();
-
-                try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-                try { lab14CleanupUI(); } catch (Throwable ignore) {}
-
-                return;
-            }
-
-            if (elapsed < 60) {
-
-                statusText.setText(gr
-                        ? "HARD stress (μέγιστο φορτίο)"
-                        : "HARD stress (max load)");
-
-            } else {
-
-                statusText.setText(gr
-                        ? "SOFT stress (ελαφρύ φορτίο)"
-                        : "SOFT stress (light load)");
-            }
-
-            counterText.setText(elapsed + " / " + durationSec);
-
-            if (lab14MainBar != null) {
-
-                int segCount = lab14MainBar.getChildCount();
-                int active = (int) ((elapsed / (float) durationSec) * segCount);
-
-                for (int i = 0; i < segCount; i++) {
-                    View seg = lab14MainBar.getChildAt(i);
-                    seg.setBackgroundColor(i < active ? 0xFF39FF14 : 0xFF333333);
+                if (!lab14Running || lab14Cancelled) {
+                    return;
                 }
+
+                long now = SystemClock.elapsedRealtime();
+                int elapsed = (int) ((now - t0) / 1000);
+
+                // clamp για να μην πηδάει μπροστά
+                if (elapsed > lastDisplayedSecond + 1) {
+                    elapsed = lastDisplayedSecond + 1;
+                }
+
+                lastDisplayedSecond = elapsed;
+
+                int currentPercent = getBatteryPercentSafe();
+
+                if (currentPercent < 70) {
+
+                    logWarn(gr
+                            ? "Η μπαταρία έπεσε κάτω από 70% — το τεστ διακόπτεται"
+                            : "Battery dropped below 70% — test aborted");
+
+                    lab14Cancelled = true;
+                    lab14Running = false;
+
+                    lab14StopAllStress();
+
+                    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+                    try { lab14CleanupUI(); } catch (Throwable ignore) {}
+
+                    return;
+                }
+
+                if (elapsed < 60) {
+                    statusText.setText(gr
+                            ? "HARD stress (μέγιστο φορτίο)"
+                            : "HARD stress (max load)");
+                } else {
+                    statusText.setText(gr
+                            ? "SOFT stress (ελαφρύ φορτίο)"
+                            : "SOFT stress (light load)");
+                }
+
+                if (counterText != null) {
+                    counterText.setText(elapsed + " / " + durationSec);
+                }
+
+                if (lab14MainBar != null) {
+
+                    int segCount = lab14MainBar.getChildCount();
+                    int active = (int) ((elapsed / (float) durationSec) * segCount);
+
+                    for (int i = 0; i < segCount; i++) {
+                        View seg = lab14MainBar.getChildAt(i);
+                        if (seg != null) {
+                            seg.setBackgroundColor(i < active ? 0xFF39FF14 : 0xFF333333);
+                        }
+                    }
+                }
+
+                updateLab14LiveStats();
+
+                if (elapsed >= durationSec) {
+                    lab14StopAllStress();
+                    return;
+                }
+
+            } catch (Throwable t) {
+
+                appendLog("LAB14B_LOOP", "Progress loop error: " + t.getClass().getSimpleName());
+
             }
 
-            updateLab14LiveStats();
-
-            if (elapsed >= durationSec) {
-                lab14StopAllStress();
-                return;
+            if (lab14Running && !lab14Cancelled) {
+                ui.postDelayed(this, 1000);
             }
-
-            ui.postDelayed(this, 1000);
         }
     });
 }
@@ -13984,16 +14008,20 @@ private void lab14BatteryHealthStressTest_REAL() {
     final Lab14Engine lab14Engine =
             new Lab14Engine(this);
 
+    // 🔴 RESET CORE STATE (CRITICAL — ALWAYS CLEAN RUN)
     validDrain = false;
+
     lab14_systemLimited[0] = false;
 
     lab14Cancelled = false;
     lab14FastDone = false;
 
-    // RESET μόνο data
-    if (!lab14Running && !lab14PopupShown) {
-        resetBatteryDiagnostics();
-    }
+    lab14LimiterScore = 0;
+    lab14LimiterLatched = false;
+
+    // 🔴 RESET DATA (buffers / min-max / samples)
+    resetBatteryDiagnostics();
+}
 
     // -------------------------
     // 🔴 RUNTIME STATE (ΕΔΩ μπαίνει)
@@ -18901,6 +18929,34 @@ if (thermalLoad) loadScore += 1;
 if (drainLoad) loadScore += 1;
 
 // ----------------------------------------------------
+// 🔴 LIMITER DETECTION (REAL — STABLE)
+// ----------------------------------------------------
+boolean limiterNow =
+        detectRealTimeLimiter(
+                cpuFull,
+                currentMa,
+                drainPerHour,
+                thermalDelta,
+                charging
+        );
+
+if (limiterNow) {
+    lab14LimiterScore++;
+} else {
+    lab14LimiterScore = Math.max(0, lab14LimiterScore - 1);
+}
+
+if (lab14LimiterScore >= 4) {
+
+    if (!lab14LimiterLatched) {
+        appendLog("LIMITER", "BMS/system limiting confirmed");
+    }
+
+    lab14LimiterLatched = true;
+    lab14_systemLimited[0] = true;
+}
+
+// ----------------------------------------------------
 // 🔴 FINAL FLAGS
 // ----------------------------------------------------
 boolean realLoad =
@@ -18908,8 +18964,8 @@ boolean realLoad =
 
 boolean weakLoad =
         isLab14BMode
-        ? (loadScore <= 1 && !cpuFull)
-        : (!earlyPhase && (loadScore <= 1 && !cpuFull));
+        ? (loadScore <= 0 && lab14CpuThreadsCurrent < cores / 2)
+        : (!earlyPhase && (loadScore <= 1 && lab14CpuThreadsCurrent < cores - 1));
 
 lab14WeakLoad = weakLoad;
 
@@ -18923,11 +18979,12 @@ if (!lab14BoostActive &&
 
     boolean shouldBoost;
 
-    if (isLab14BMode) {
+if (isLab14BMode) {
 
-        shouldBoost =
-                inHardPhase &&
-                !lab14BoostActive;
+    shouldBoost =
+            inHardPhase &&
+            !lab14SoftPhaseStarted &&   // 🔴 CRITICAL FIX
+            !lab14BoostActive;
 
     } else {
 
@@ -19000,12 +19057,10 @@ if (!lab14BoostActive &&
 }
 
 // ----------------------------------------------------
-// 🔴 LAB14B ABORT (DISABLED FOR SOFT PHASE)
+// 🔴 LAB14B ABORT (SAFE FIX — NO ABORT IN 14B)
 // ----------------------------------------------------
-if (isLab14BMode) {
-    // ❌ δεν κάνουμε abort στο 14B λόγω weak load
-} else if (lab14WeakLoadCounter >= scoreAbortThreshold + 2) {
-    
+if (!isLab14BMode && lab14WeakLoadCounter >= scoreAbortThreshold + 2) {
+
     logError(gr
         ? "Ανεπαρκές φορτίο — το test ακυρώθηκε"
         : "Insufficient load — test aborted");
@@ -19029,7 +19084,11 @@ if (isLab14BMode) {
 
 String status;
 
-if (!lab14Running) {
+if (lab14LimiterLatched) {
+
+    status = "LIMITED ⚠";
+
+} else if (!lab14Running) {
 
     status = "STOPPED";
 
@@ -19040,18 +19099,21 @@ if (!lab14Running) {
 } else if (isLab14BMode) {
 
     if (inHardPhase) {
-        status = realLoad ? "HARD LOAD 🔥" : "LOW HARD LOAD ⚠";
+
+        status = (loadScore >= 3)
+                ? "HARD LOAD 🔥"
+                : "LOW HARD LOAD ⚠";
+
     } else {
-        status = realLoad ? "SOFT LOAD 🌿" : "WEAK SOFT LOAD ⚠";
+
+        status = (loadScore >= 2)
+                ? "SOFT LOAD 🌿"
+                : "WEAK SOFT ⚠";
     }
 
 } else if (lab14FastPhase) {
 
     status = "WARMING UP...";
-
-} else if (lab14MainPhase) {
-
-    status = realLoad ? "STRESS TEST 🔥" : "LOW STRESS ⚠";
 
 } else if (loadScore >= 3) {
 
@@ -19073,11 +19135,16 @@ if (nowTs - lab14LastLiveLogTs > 4000) {
 
     lab14LastLiveLogTs = nowTs;
 
-    appendLog("LIVE",
-            "status=" + status +
-            " weak=" + lab14WeakLoad +
-            " score=" + loadScore +
-            " batt=" + batteryScore);
+    String liveMsg =
+        "status=" + status +
+        " weak=" + weakLoad +
+        " score=" + loadScore +
+        " batt=" + battPct;
+
+if (!liveMsg.equals(lastLiveStatus)) {
+    appendLog("LIVE", liveMsg);
+    lastLiveStatus = liveMsg;
+}
 }
 
 // ----------------------------------------------------
@@ -19232,6 +19299,33 @@ private boolean detectLab14SystemLimiter(
 
     // Αν όλα δείχνουν "τρέχει stress αλλά το σύστημα δεν αφήνει ρεύμα"
     return lowCurrent && lowDrain && lowThermalRise;
+}
+
+boolean limiterNow =
+        detectLab14SystemLimiter(
+                elapsed,
+                currentMa,
+                drainPerHour,
+                startBatteryTemp,
+                batTempNow
+        );
+
+// 🔴 SMOOTHING (ANTI-FALSE POSITIVE)
+if (limiterNow) {
+    lab14LimiterScore++;
+} else {
+    lab14LimiterScore = Math.max(0, lab14LimiterScore - 1);
+}
+
+// 🔴 LATCH (CONFIRMATION)
+if (lab14LimiterScore >= 4) {
+
+    if (!lab14LimiterLatched) {
+        appendLog("LIMITER", "BMS/system limiting confirmed");
+    }
+
+    lab14LimiterLatched = true;
+    lab14_systemLimited[0] = true;
 }
 
 private void calibrateLoadZeroRisk() {
@@ -19496,7 +19590,7 @@ private void rebalanceLab14CpuLive(
     // ----------------------------------------------------
     newThreads = Math.max(1, Math.min(cores, newThreads));
 
-    // 🔴 minimum floor (να μην πέφτει πολύ)
+    // ?? minimum floor (να μην πέφτει πολύ)
     int minThreads = Math.max(2, cores / 3);
     newThreads = Math.max(newThreads, minThreads);
 
@@ -19519,6 +19613,38 @@ private void rebalanceLab14CpuLive(
             " ΔT=" + (Float.isNaN(thermalDelta)
                     ? "N/A"
                     : String.format(java.util.Locale.US, "%.2f", thermalDelta)));
+}
+
+private boolean detectRealTimeLimiter(
+        boolean cpuFull,
+        double currentMa,
+        double drainPerHour,
+        float thermalDelta,
+        boolean charging
+) {
+    if (charging) return false;
+    if (!cpuFull) return false;
+
+    boolean lowCurrent =
+            !Double.isNaN(currentMa) &&
+            Math.abs(currentMa) < 250;
+
+    boolean lowDrain =
+            !Double.isNaN(drainPerHour) &&
+            drainPerHour > 0 &&
+            drainPerHour < 400;
+
+    boolean lowThermal =
+            !Float.isNaN(thermalDelta) &&
+            thermalDelta >= 0f &&
+            thermalDelta < 0.8f;
+
+    int hits = 0;
+    if (lowCurrent) hits++;
+    if (lowDrain) hits++;
+    if (lowThermal) hits++;
+
+    return hits >= 2;
 }
 
 //=============================================================
