@@ -2546,7 +2546,6 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
         );
 
-        int cores = Runtime.getRuntime().availableProcessors();
         int softThreads = Math.max(1, cores / 3);
 
         try { startCpuBurnLimitedThreads(softThreads); } catch (Throwable ignore) {}
