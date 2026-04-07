@@ -18071,6 +18071,59 @@ if (nowTs - lastSnapshotTs > 1500) {
                 idoctor.readBatterySnapshotLab();
 
         if (snap != null && snap.chargeNowMah > 0) {
+        	
+// ----------------------------------------------------
+// 🔴 FAST SAG SAMPLING (REAL-TIME — FIXED)
+// ----------------------------------------------------
+if (Float.isNaN(vStart[0])) {
+
+    float v = lab14Voltage();
+
+    if (!Float.isNaN(v) && v > 0f) {
+        vStart[0] = v;
+    }
+}
+else if (Float.isNaN(vLoad1[0])) {
+
+    float v = lab14Voltage();
+
+    if (!Float.isNaN(v) && v > 0f) {
+        vLoad1[0] = v;
+    }
+}
+else if (Float.isNaN(vRecover[0])) {
+
+    float v = lab14Voltage();
+
+    if (!Float.isNaN(v) && v > 0f) {
+        vRecover[0] = v;
+    }
+}
+else if (Float.isNaN(vLoad2[0])) {
+
+    float v = lab14Voltage();
+
+    if (!Float.isNaN(v) && v > 0f) {
+        vLoad2[0] = v;
+    }
+}
+
+
+// ----------------------------------------------------
+// 🔴 SNAPSHOT (THROTTLED) — CHARGE + VOLTAGE
+// ----------------------------------------------------
+long nowTs = SystemClock.elapsedRealtime();
+
+if (nowTs - lastSnapshotTs > 1500) {
+
+    lastSnapshotTs = nowTs;
+
+    try {
+
+        iDoctorEngine.BatterySnapshot snap =
+                idoctor.readBatterySnapshotLab();
+
+        if (snap != null && snap.chargeNowMah > 0) {
 
             // -----------------------------
             // 🔴 CHARGE SAMPLING
@@ -18083,7 +18136,7 @@ if (nowTs - lastSnapshotTs > 1500) {
             if (c > lab14MaxCharge) lab14MaxCharge = c;
 
             // -----------------------------
-            // 🔴 VOLTAGE UNDER LOAD (CRITICAL FIX)
+            // 🔴 VOLTAGE UNDER LOAD (LOWEST)
             // -----------------------------
             float vNow = snap.voltageMv > 0
                     ? snap.voltageMv / 1000f
@@ -18091,7 +18144,6 @@ if (nowTs - lastSnapshotTs > 1500) {
 
             if (!Float.isNaN(vNow)) {
 
-                // κρατάμε το LOWEST voltage (real stress)
                 if (Float.isNaN(voltageUnderLoad[0]) ||
                     vNow < voltageUnderLoad[0]) {
 
@@ -18103,49 +18155,158 @@ if (nowTs - lastSnapshotTs > 1500) {
     } catch (Throwable ignore) {}
 }
 
-            if (elapsed < durationSec) {
 
-                counterText.setText(
-                        gr
-                                ? "Πρόοδος Stress Test "
-                                + elapsed + " / "
-                                + durationSec
-                                : "Stress Test Progress "
-                                + elapsed + " / "
-                                + durationSec
-                );
+// ----------------------------------------------------
+// 🔴 UI / PROGRESS
+// ----------------------------------------------------
+if (elapsed < durationSec) {
 
-                if (lab14MainBar != null) {
+    counterText.setText(
+            gr
+                    ? "Πρόοδος Stress Test " + elapsed + " / " + durationSec
+                    : "Stress Test Progress " + elapsed + " / " + durationSec
+    );
 
-                    int segCount =
-                            lab14MainBar.getChildCount();
+    if (lab14MainBar != null) {
 
-                    float ratio =
-                            Math.min(
-                                    1f,
-                                    elapsed /
-                                    (float) durationSec
-                            );
+        int segCount = lab14MainBar.getChildCount();
 
-                    int active =
-                            (int) (ratio * segCount);
+        float ratio = Math.min(1f, elapsed / (float) durationSec);
 
-                    for (int i = 0; i < segCount; i++) {
+        int active = (int) (ratio * segCount);
 
-                        View seg =
-                                lab14MainBar.getChildAt(i);
+        for (int i = 0; i < segCount; i++) {
 
-                        if (i < active) {
-                            seg.setBackgroundColor(0xFF39FF14);
-                        } else {
-                            seg.setBackgroundColor(0xFF333333);
-                        }
-                    }
-                }
+            View seg = lab14MainBar.getChildAt(i);
 
-                ui.postDelayed(this, 1000);
-                return;
+            if (i < active) {
+                seg.setBackgroundColor(0xFF39FF14);
+            } else {
+                seg.setBackgroundColor(0xFF333333);
             }
+        }
+    }
+
+    ui.postDelayed(this, 1000);
+    return;
+}// ----------------------------------------------------
+// 🔴 FAST SAG SAMPLING (REAL-TIME — FIXED)
+// ----------------------------------------------------
+if (Float.isNaN(vStart[0])) {
+
+    float v = lab14Voltage();
+
+    if (!Float.isNaN(v) && v > 0f) {
+        vStart[0] = v;
+    }
+}
+else if (Float.isNaN(vLoad1[0])) {
+
+    float v = lab14Voltage();
+
+    if (!Float.isNaN(v) && v > 0f) {
+        vLoad1[0] = v;
+    }
+}
+else if (Float.isNaN(vRecover[0])) {
+
+    float v = lab14Voltage();
+
+    if (!Float.isNaN(v) && v > 0f) {
+        vRecover[0] = v;
+    }
+}
+else if (Float.isNaN(vLoad2[0])) {
+
+    float v = lab14Voltage();
+
+    if (!Float.isNaN(v) && v > 0f) {
+        vLoad2[0] = v;
+    }
+}
+
+
+// ----------------------------------------------------
+// 🔴 SNAPSHOT (THROTTLED) — CHARGE + VOLTAGE
+// ----------------------------------------------------
+long nowTs = SystemClock.elapsedRealtime();
+
+if (nowTs - lastSnapshotTs > 1500) {
+
+    lastSnapshotTs = nowTs;
+
+    try {
+
+        iDoctorEngine.BatterySnapshot snap =
+                idoctor.readBatterySnapshotLab();
+
+        if (snap != null && snap.chargeNowMah > 0) {
+
+            // -----------------------------
+            // 🔴 CHARGE SAMPLING
+            // -----------------------------
+            long c = snap.chargeNowMah;
+
+            lab14ChargeSamples.add(c);
+
+            if (c < lab14MinCharge) lab14MinCharge = c;
+            if (c > lab14MaxCharge) lab14MaxCharge = c;
+
+            // -----------------------------
+            // 🔴 VOLTAGE UNDER LOAD (LOWEST)
+            // -----------------------------
+            float vNow = snap.voltageMv > 0
+                    ? snap.voltageMv / 1000f
+                    : Float.NaN;
+
+            if (!Float.isNaN(vNow)) {
+
+                if (Float.isNaN(voltageUnderLoad[0]) ||
+                    vNow < voltageUnderLoad[0]) {
+
+                    voltageUnderLoad[0] = vNow;
+                }
+            }
+        }
+
+    } catch (Throwable ignore) {}
+}
+
+
+// ----------------------------------------------------
+// 🔴 UI / PROGRESS
+// ----------------------------------------------------
+if (elapsed < durationSec) {
+
+    counterText.setText(
+            gr
+                    ? "Πρόοδος Stress Test " + elapsed + " / " + durationSec
+                    : "Stress Test Progress " + elapsed + " / " + durationSec
+    );
+
+    if (lab14MainBar != null) {
+
+        int segCount = lab14MainBar.getChildCount();
+
+        float ratio = Math.min(1f, elapsed / (float) durationSec);
+
+        int active = (int) (ratio * segCount);
+
+        for (int i = 0; i < segCount; i++) {
+
+            View seg = lab14MainBar.getChildAt(i);
+
+            if (i < active) {
+                seg.setBackgroundColor(0xFF39FF14);
+            } else {
+                seg.setBackgroundColor(0xFF333333);
+            }
+        }
+    }
+
+    ui.postDelayed(this, 1000);
+    return;
+}
 
             // =========================
             // FINISH
