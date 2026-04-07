@@ -19219,6 +19219,7 @@ lab14LiveStats.setText(sb);
 
 } catch (Throwable ignore) {
 }
+}
 
 private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
 
