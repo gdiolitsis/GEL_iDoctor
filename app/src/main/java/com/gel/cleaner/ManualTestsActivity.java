@@ -2404,12 +2404,7 @@ private void lab14BProtectionTest() {
 
     showLab14BAdvisory(() -> {
 
-        appendHtml("<br>");
-        
-            if (!checkLab14BConditions()) {
-    isLab14BMode = false;
-    return;
-}
+        appendHtml("<br>");        
 
 // 🔴 RESET LIMITER (CRITICAL — πάντα στην αρχή)
 lab14LimiterScore = 0;
