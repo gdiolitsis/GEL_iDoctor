@@ -18659,8 +18659,8 @@ private void updateLab14LiveStats() {
 
     try {
 
-iDoctorEngine idoctor =
-        iDoctorEngine.get(ManualTestsActivity.this);
+    iDoctorEngine idoctor =
+            iDoctorEngine.get(ManualTestsActivity.this);
 
 Float cpuTemp = readCpuTempSafe();
 
