@@ -18057,7 +18057,7 @@ if (lab14FastPhase) {
                     (int) ((now - t0) / 1000);
                     
 // ----------------------------------------------------
-// 🔴 SNAPSHOT (THROTTLED)
+// 🔴 SNAPSHOT (THROTTLED) — FIXED (CHARGE + VOLTAGE)
 // ----------------------------------------------------
 long nowTs = SystemClock.elapsedRealtime();
 
@@ -18072,12 +18072,32 @@ if (nowTs - lastSnapshotTs > 1500) {
 
         if (snap != null && snap.chargeNowMah > 0) {
 
+            // -----------------------------
+            // 🔴 CHARGE SAMPLING
+            // -----------------------------
             long c = snap.chargeNowMah;
 
             lab14ChargeSamples.add(c);
 
             if (c < lab14MinCharge) lab14MinCharge = c;
             if (c > lab14MaxCharge) lab14MaxCharge = c;
+
+            // -----------------------------
+            // 🔴 VOLTAGE UNDER LOAD (CRITICAL FIX)
+            // -----------------------------
+            float vNow = snap.voltageMv > 0
+                    ? snap.voltageMv / 1000f
+                    : Float.NaN;
+
+            if (!Float.isNaN(vNow)) {
+
+                // κρατάμε το LOWEST voltage (real stress)
+                if (Float.isNaN(voltageUnderLoad[0]) ||
+                    vNow < voltageUnderLoad[0]) {
+
+                    voltageUnderLoad[0] = vNow;
+                }
+            }
         }
 
     } catch (Throwable ignore) {}
