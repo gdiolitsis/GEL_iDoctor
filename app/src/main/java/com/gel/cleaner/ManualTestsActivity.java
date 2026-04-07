@@ -18958,12 +18958,12 @@ if (!lab14BoostActive &&
 
     boolean shouldBoost;
 
-if (isLab14BMode) {
+    if (isLab14BMode) {
 
-    shouldBoost =
-            inHardPhase &&
-            !lab14SoftPhaseStarted &&   // 🔴 CRITICAL FIX
-            !lab14BoostActive;
+        shouldBoost =
+                inHardPhase &&
+                !lab14SoftPhaseStarted &&
+                !lab14BoostActive;
 
     } else {
 
@@ -18982,7 +18982,6 @@ if (isLab14BMode) {
                         ? "FORCE HARD BOOST (14B)"
                         : "Adaptive boost (battery-aware)");
 
-        // 🔥 ΜΕΤΑΦΟΡΑ ΕΚΤΟΣ UI THREAD
         new Thread(() -> {
 
             try {
@@ -19219,7 +19218,6 @@ sb.setSpan(new ForegroundColorSpan(statusColor), start, sb.length(), 0);
 lab14LiveStats.setText(sb);
 
 } catch (Throwable ignore) {
-}
 }
 
 private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
@@ -29290,4 +29288,4 @@ if (requestCode == 8008) {
 // ============================================================
 // END OF CLASS
 // ============================================================
-}p
+}
