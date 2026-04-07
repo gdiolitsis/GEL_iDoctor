@@ -17893,11 +17893,26 @@ if (lab14EndTime > 0 && now >= lab14EndTime) {
 
     ui.removeCallbacks(this);
 
+    lab14StopAllStress();
+
+    if (!lab14Running) return;
+
+    final Lab14Engine engine =
+            new Lab14Engine(ManualTestsActivity.this);
+
     lab14Running = false;
 
-    runOnUiThread(() -> {
-        lab14StopAllStress();
-    });
+    lab14PostLoadAnalysis(
+            engine,
+            gr,
+            startMah,
+            baselineFullMah,
+            t0,
+            voltageStart,
+            batteryPercent,
+            cycles,
+            tempStart
+    );
 
     return;
 }
@@ -18649,6 +18664,31 @@ private String computeRiskSummary(
 }
 
 private void updateLab14LiveStats() {
+
+// 🔴 HARD STOP FAILSAFE (CRITICAL)
+if (isLab14BMode && lab14Running && elapsed >= 300) {
+
+    appendLog("FORCE END", "Failsafe trigger");
+
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+
+    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+
+    lab14Running = false;
+    lab14Cancelled = false;
+    isLab14BMode = false;
+
+    // 👉 CALL FINAL LOGIC εδώ αν χρειάζεται
+    runOnUiThread(() -> {
+        try {
+            lab14CleanupUI();
+        } catch (Throwable ignore) {}
+    });
+
+    return;
+}
 	
 	int cores = Runtime.getRuntime().availableProcessors();
 
