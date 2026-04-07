@@ -18666,7 +18666,7 @@ private String computeRiskSummary(
 private void updateLab14LiveStats() {
 
 // 🔴 HARD STOP FAILSAFE (CRITICAL)
-if (isLab14BMode && lab14Running && elapsed >= 300) {
+if (isLab14BMode && lab14Running && lab14ElapsedMs >= 300000) {
 
     appendLog("FORCE END", "Failsafe trigger");
 
