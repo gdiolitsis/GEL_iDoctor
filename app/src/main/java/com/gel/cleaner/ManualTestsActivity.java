@@ -14553,8 +14553,7 @@ String sagLabel =
         // =====================================================
         // POWER
         // =====================================================
-        float powerMilliWatt = Float.NaN;
-
+        
         if (!Float.isNaN(estimatedCurrentMa) &&
             estimatedCurrentMa > 0f) {
 
@@ -15059,10 +15058,6 @@ private void lab14LogAging(
 
     try {
 
-        float sag = (!Float.isNaN(voltageStart) && !Float.isNaN(voltageUnderLoad[0]))
-                ? (voltageStart - voltageUnderLoad[0])
-                : Float.NaN;
-                
                 float rMilli = Float.NaN;
 
         rMilli = (!Float.isNaN(internalResistance[0]))
@@ -15084,17 +15079,6 @@ else if (rMilli < 140)
     agingLabel = gr ? "Μέτρια φθορά" : "Moderate wear";
 else
     agingLabel = gr ? "Έντονη φθορά" : "Heavy wear";
-        }
-
-        // fallback αν δεν έχουμε resistance
-        if (agingLabel == null && !Float.isNaN(sag)) {
-
-            if (sag < 0.05f)
-                agingLabel = gr ? "Καλή κατάσταση" : "Good condition";
-            else if (sag < 0.12f)
-                agingLabel = gr ? "Μέτρια φθορά" : "Moderate wear";
-            else
-                agingLabel = gr ? "Έντονη φθορά" : "Heavy wear";
         }
 
         // drain signal
