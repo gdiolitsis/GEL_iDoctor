@@ -17892,7 +17892,7 @@ if (batteryBehaviourWarningF) {
                 agingInterpF,
                 agingF,
                 Float.NaN,
-                drainPercentPerHourF
+                drainPercentPerHourF,
                 internalResistance
         );
 
