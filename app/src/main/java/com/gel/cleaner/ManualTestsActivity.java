@@ -16157,7 +16157,7 @@ if (validDrain && !lab14_systemLimited[0]) {
         }
     } // ✅ ΚΛΕΙΝΕΙ ΤΟ if(!Float.isNaN(sag) && !Float.isNaN(currentNow))
 
-} // ✅ ΚΛΕΙΝΕΙ ΤΟ MAIN if(voltageStart & voltageUnderLoad)ΕΙ ΤΟ MAIN if(voltageStart & voltageUnderLoad)
+} // ✅ ΚΛΕΙΝΕΙ ΤΟ MAIN if(voltageStart & voltageUnderLoad)
 
 // ----------------------------------------------------
 // ENERGY EFFICIENCY
