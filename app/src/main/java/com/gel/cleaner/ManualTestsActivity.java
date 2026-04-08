@@ -14485,6 +14485,8 @@ private void lab14LogStressResult(
                : "LAB 14 — Stress result");
     logLine();
 
+float powerMilliWatt = Float.NaN;
+
     // =====================================================
     // LIMITER CHECK
     // =====================================================
@@ -14965,7 +14967,7 @@ String powerText = (Float.isNaN(powerMilliWatt) || powerMilliWatt <= 0f)
         ? "N/A"
         : String.format(Locale.US, "%.0f mW", powerMilliWatt);
 
-String sagText = Float.isNaN(sag)
+String sagTextFinal = Float.isNaN(sag)
         ? "N/A"
         : String.format(Locale.US, "%.3f V", sag);
 
@@ -14993,7 +14995,7 @@ String summary = String.format(
         batteryTruth,
         sagLabel,
         powerText,
-        sagText,
+        sagTextFinal,
         tempText,
         drainText
 );
@@ -17838,31 +17840,31 @@ if (batteryBehaviourWarningF) {
                     : drainPercentPerHourF;
 
     lab14LogStressResult(
-            gr,
-            sagAvg[0],
-            voltageStartFinal,
-            voltageUnderLoad[0],
-            voltageRecovery[0],
-            voltageRecoverySpeed[0],
-            voltageStability[0],
-            internalResistance[0],
-            estimatedESRF,
-            thermalImpedance[0],
-            energyEfficiencyF,
-            startMahFinal,
-            endMahF,
-            drainMahFinalLong,
-            dtMsF,
-            mahPerHourF,
-            safeDrainFinal,
-            validDrainF,
-            startBatteryTempFinal,
-            endBatteryTempFinal,
-            lab14_systemLimited,
-            collapseRisk,
-            smartSwellingF,          // ✅ FIX
-            calibrationDrift
-    );
+        gr,
+        sagAvg,
+        voltageStartFinal,
+        voltageUnderLoad[0],
+        voltageRecovery,
+        voltageRecoverySpeed,
+        voltageStability[0],
+        internalResistance,
+        estimatedESRF,
+        thermalImpedance[0],
+        energyEfficiencyF,
+        startMahFinal,
+        endMahF,
+        drainMahFinalLong,
+        dtMsF,
+        mahPerHourF,
+        safeDrainFinal,
+        validDrainF,
+        startBatteryTempFinal,
+        endBatteryTempFinal,
+        lab14_systemLimited,
+        collapseRisk,
+        smartSwellingF,
+        calibrationDrift
+);
 
     final boolean collapseRiskF = collapseRisk[0];
     final boolean systemLimitedF = lab14_systemLimited[0];
@@ -17891,6 +17893,7 @@ if (batteryBehaviourWarningF) {
                 agingF,
                 Float.NaN,
                 drainPercentPerHourF
+                internalResistance
         );
 
         if (systemLimitedF) {
