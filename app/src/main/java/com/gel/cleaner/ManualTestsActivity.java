@@ -15710,10 +15710,8 @@ if (snapEnd == null) {
 // =====================================================
 // 🔴 POWER CALC (POSTLOAD)
 // =====================================================
-long dtMs = System.currentTimeMillis() - t0;
-if (dtMs <= 0) dtMs = 1;
-
-float powerMilliWatt = Float.NaN;
+long dtMs =
+        Math.max(1, SystemClock.elapsedRealtime() - t0);
 
 float estimatedCurrentMa =
         estimateDynamicCurrentMilliAmp(drainMah, dtMs);
@@ -15760,10 +15758,6 @@ if (!Float.isNaN(tempStart) &&
 
 final Float cpuTempEnd = readCpuTempSafe();
 final Float gpuTempEnd = readGpuTempSafe();
-
-final long dtMs =
-        Math.max(1, SystemClock.elapsedRealtime() - t0);
-
 
 // ----------------------------------------------------
 // ENGINE DRAIN
