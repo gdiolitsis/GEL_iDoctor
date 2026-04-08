@@ -307,6 +307,8 @@ private float lab14CpuFreqPeak = 0f;
 
 private String riskSeverity = "SAFE";
 
+private int cores = Runtime.getRuntime().availableProcessors();
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -3062,7 +3064,7 @@ private void startCpuBurn_Light() {
     final int cores = Runtime.getRuntime().availableProcessors();
 
     // 🔥 ποτέ κάτω από 2, ποτέ 1
-    int threads = Math.max(2, coresLocal / 2);
+    int threads = Math.max(2, cores / 2);
 
     startCpuBurnLimitedThreads(threads);
 }
@@ -19465,6 +19467,7 @@ if (!lab14BoostActive &&
 
                     if (lab14FastPhase) return;
 
+                    final int coresLocal = Runtime.getRuntime().availableProcessors();
                     int threads = Math.max(2, coresLocal / 2);
 
                     startCpuBurnLimitedThreads(threads);
