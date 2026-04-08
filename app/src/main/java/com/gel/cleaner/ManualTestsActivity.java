@@ -14679,7 +14679,7 @@ else if (
 // =====================================================
 // 🔴 OVERALL SEVERITY
 // =====================================================
-if ("OK".equals(severity)) {
+if ("OK".equals(riskSeverity)) {
 
     logLabelOkValue(
             gr ? "Συνολική κατάσταση"
@@ -14688,7 +14688,7 @@ if ("OK".equals(severity)) {
                : "Normal operation"
     );
 
-} else if ("WARNING".equals(severity)) {
+} else if ("WARNING".equals(riskSeverity)) {
 
     logLabelWarnValue(
             gr ? "Συνολική κατάσταση"
@@ -15003,11 +15003,11 @@ else {
 
 String riskLabel = gr ? "Συνολικός κίνδυνος" : "Overall risk";
 
-if ("CRITICAL".equals(severity)) {
+if ("CRITICAL".equals(riskSeverity)) {
 
     logLabelErrorValue(riskLabel, riskSummary);
 
-} else if ("WARNING".equals(severity)) {
+} else if ("WARNING".equals(riskSeverity)) {
 
     logLabelWarnValue(riskLabel, riskSummary);
 
@@ -15022,7 +15022,7 @@ if ("CRITICAL".equals(severity)) {
 String recommendation;
 
 // CRITICAL
-if ("CRITICAL".equals(severity) ||
+if ("CRITICAL".equals(riskSeverity) ||
     collapseRisk[0] ||
     smartSwelling) {
 
@@ -15032,7 +15032,7 @@ if ("CRITICAL".equals(severity) ||
 }
 
 // WARNING + calibration
-else if ("WARNING".equals(severity) && calibrationDrift[0]) {
+else if ("WARNING".equals(riskSeverity) && calibrationDrift[0]) {
 
     recommendation = gr
             ? "Συνιστάται πλήρης κύκλος φόρτισης για επαναβαθμονόμηση και επανέλεγχος."
@@ -15040,7 +15040,7 @@ else if ("WARNING".equals(severity) && calibrationDrift[0]) {
 }
 
 // WARNING only
-else if ("WARNING".equals(severity) ||
+else if ("WARNING".equals(riskSeverity) ||
          "Weak".equals(batteryTruth)) {
 
     recommendation = gr
@@ -15070,11 +15070,11 @@ else {
 
 String recLabel = gr ? "Σύσταση" : "Recommendation";
 
-if ("CRITICAL".equals(severity)) {
+if ("CRITICAL".equals(riskSeverity)) {
 
     logLabelErrorValue(recLabel, recommendation);
 
-} else if ("WARNING".equals(severity) || calibrationDrift[0]) {
+} else if ("WARNING".equals(riskSeverity) || calibrationDrift[0]) {
 
     logLabelWarnValue(recLabel, recommendation);
 
@@ -15112,11 +15112,11 @@ String summary = String.format(
 
 String summaryLabel = gr ? "Σύνοψη" : "Summary";
 
-if ("CRITICAL".equals(severity)) {
+if ("CRITICAL".equals(riskSeverity)) {
 
     logLabelErrorValue(summaryLabel, summary);
 
-} else if ("WARNING".equals(severity)) {
+} else if ("WARNING".equals(riskSeverity)) {
 
     logLabelWarnValue(summaryLabel, summary);
 
@@ -17243,10 +17243,10 @@ if (!validDrain) {
         finalLabel = "Weak";
 
     // 🔴 severity override ONLY if valid
-    if ("CRITICAL".equals(severity)) {
+    if ("CRITICAL".equals(riskSeverity)) {
         finalLabel = "Weak";
     }
-    else if ("WARNING".equals(severity)) {
+    else if ("WARNING".equals(riskSeverity)) {
         finalLabel = "Normal";
     }
 }
