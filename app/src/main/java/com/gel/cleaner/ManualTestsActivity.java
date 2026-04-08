@@ -14985,14 +14985,19 @@ severity = computeRiskSummary(
 // 🔴 normalized label (GR / EN)
 String riskSummary;
 
+String severity = computeRiskSummary(...);
+
 if ("CRITICAL".equals(severity)) {
     riskSummary = gr ? "ΚΡΙΣΙΜΟ" : "CRITICAL";
 }
 else if ("WARNING".equals(severity)) {
     riskSummary = gr ? "ΠΡΟΕΙΔΟΠΟΙΗΣΗ" : "WARNING";
 }
-else {
+else if ("SAFE".equals(severity)) {
     riskSummary = gr ? "ΑΣΦΑΛΕΣ" : "SAFE";
+}
+else {
+    riskSummary = gr ? "ΑΓΝΩΣΤΟ" : "UNKNOWN";
 }
 
 // =====================================================
@@ -17769,7 +17774,7 @@ if (drainMahFinalLong > 600) {
             voltageRecovery[0],
             voltageRecoverySpeed[0],
             voltageStability[0],
-            internalResistance[0],
+            internalResistance,
             estimatedESRF,
             thermalImpedance[0],
             energyEfficiencyF,
@@ -19150,7 +19155,7 @@ if (isLab14BMode &&
             stopGpuStress();
             stopMemoryStress();
 
-            int cores = Runtime.getRuntime().availableProcessors();
+            cores = Runtime.getRuntime().availableProcessors();
             int softThreads = Math.max(1, cores / 3);
 
             // CPU (SOFT)
