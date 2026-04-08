@@ -15632,6 +15632,8 @@ private void lab14PostLoadAnalysis(
 final iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
 
+float powerMilliWatt = Float.NaN;
+
     try {
 
 // ----------------------------------------------------
@@ -15708,7 +15710,7 @@ if (snapEnd == null) {
 // =====================================================
 // 🔴 POWER CALC (POSTLOAD)
 // =====================================================
-dtMs = System.currentTimeMillis() - t0;
+long dtMs = System.currentTimeMillis() - t0;
 if (dtMs <= 0) dtMs = 1;
 
 float powerMilliWatt = Float.NaN;
