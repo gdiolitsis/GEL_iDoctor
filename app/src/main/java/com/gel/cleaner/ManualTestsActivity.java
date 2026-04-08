@@ -14964,9 +14964,10 @@ if (!Float.isNaN(energyEfficiency)) {
 }
 
 // =====================================================
-// RISK SUMMARY (BASE)
+// RISK SUMMARY (CLEAN FIX — SINGLE SOURCE)
 // =====================================================
-String riskSummary = computeRiskSummary(
+
+String severity = computeRiskSummary(
         gr,
         sag,
         resistanceCheckMilliOhm,
@@ -14979,9 +14980,9 @@ String riskSummary = computeRiskSummary(
         calibrationDrift[0]
 );
 
-// ----------------------------------------------------
-// 🔴 ALIGN RISK WITH SEVERITY (CRITICAL FIX)
-// ----------------------------------------------------
+// 🔴 normalized label (GR / EN)
+String riskSummary;
+
 if ("CRITICAL".equals(severity)) {
     riskSummary = gr ? "ΚΡΙΣΙΜΟ" : "CRITICAL";
 }
@@ -14995,19 +14996,20 @@ else {
 // =====================================================
 // FINAL RISK LOGGING
 // =====================================================
+
 String riskLabel = gr ? "Συνολικός κίνδυνος" : "Overall risk";
 
-if ("SAFE".equalsIgnoreCase(riskSummary) || "ΑΣΦΑΛΕΣ".equalsIgnoreCase(riskSummary)) {
+if ("CRITICAL".equals(severity)) {
 
-    logLabelOkValue(riskLabel, riskSummary);
+    logLabelErrorValue(riskLabel, riskSummary);
 
-} else if ("WARNING".equalsIgnoreCase(riskSummary) || "ΠΡΟΕΙΔΟΠΟΙΗΣΗ".equalsIgnoreCase(riskSummary)) {
+} else if ("WARNING".equals(severity)) {
 
     logLabelWarnValue(riskLabel, riskSummary);
 
 } else {
 
-    logLabelErrorValue(riskLabel, riskSummary);
+    logLabelOkValue(riskLabel, riskSummary);
 }
 
 // =====================================================
@@ -15059,29 +15061,22 @@ else {
 }
 
 // =====================================================
-// 🔴 RECOMMENDATION OUTPUT
+// 🔴 RECOMMENDATION OUTPUT (CLEAN)
 // =====================================================
+
+String recLabel = gr ? "Σύσταση" : "Recommendation";
+
 if ("CRITICAL".equals(severity)) {
 
-    logLabelErrorValue(
-            gr ? "Σύσταση" : "Recommendation",
-            recommendation
-    );
+    logLabelErrorValue(recLabel, recommendation);
 
-} else if ("WARNING".equals(severity) ||
-           calibrationDrift[0]) {
+} else if ("WARNING".equals(severity) || calibrationDrift[0]) {
 
-    logLabelWarnValue(
-            gr ? "Σύσταση" : "Recommendation",
-            recommendation
-    );
+    logLabelWarnValue(recLabel, recommendation);
 
 } else {
 
-    logLabelOkValue(
-            gr ? "Σύσταση" : "Recommendation",
-            recommendation
-    );
+    logLabelOkValue(recLabel, recommendation);
 }
 
 // =====================================================
@@ -15109,27 +15104,21 @@ String summary = String.format(
                 : 0f
 );
 
-// 🔴 COLOR BASED ON SEVERITY
+// 🔴 COLOR BASED ON SEVERITY (CLEAN)
+
+String summaryLabel = gr ? "Σύνοψη" : "Summary";
+
 if ("CRITICAL".equals(severity)) {
 
-    logLabelErrorValue(
-            gr ? "Σύνοψη" : "Summary",
-            summary
-    );
+    logLabelErrorValue(summaryLabel, summary);
 
 } else if ("WARNING".equals(severity)) {
 
-    logLabelWarnValue(
-            gr ? "Σύνοψη" : "Summary",
-            summary
-    );
+    logLabelWarnValue(summaryLabel, summary);
 
 } else {
 
-    logLabelOkValue(
-            gr ? "Σύνοψη" : "Summary",
-            summary
-    );
+    logLabelOkValue(summaryLabel, summary);
 }
 
         // =====================================================
@@ -15251,14 +15240,6 @@ else
                 String.format(Locale.US, "%.1f months", monthsTo70)
         );
     }
-}
-
-// 🔴 inject severity into final label (soft override)
-if ("CRITICAL".equals(severity)) {
-    finalLabel = "Weak";
-}
-else if ("WARNING".equals(severity)) {
-    finalLabel = "Normal";
 }
 
 // ============================================================
@@ -17231,19 +17212,31 @@ if (finalScore > 100) finalScore = 100;
 
 String finalLabel;
 
-if (!validDrain)
-    finalLabel = "Informational";
-else if (finalScore >= 90)
-    finalLabel = "Excellent";
-else if (finalScore >= 80)
-    finalLabel = "Very good";
-else if (finalScore >= 70)
-    finalLabel = "Good";
-else if (finalScore >= 60)
-    finalLabel = "Normal";
-else
-    finalLabel = "Weak";
+if (!validDrain) {
 
+    finalLabel = "Informational";
+
+} else {
+
+    if (finalScore >= 90)
+        finalLabel = "Excellent";
+    else if (finalScore >= 80)
+        finalLabel = "Very good";
+    else if (finalScore >= 70)
+        finalLabel = "Good";
+    else if (finalScore >= 60)
+        finalLabel = "Normal";
+    else
+        finalLabel = "Weak";
+
+    // 🔴 severity override ONLY if valid
+    if ("CRITICAL".equals(severity)) {
+        finalLabel = "Weak";
+    }
+    else if ("WARNING".equals(severity)) {
+        finalLabel = "Normal";
+    }
+}
 
 // ----------------------------------------------------
 // CLASS
