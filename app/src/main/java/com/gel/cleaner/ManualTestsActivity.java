@@ -14969,7 +14969,7 @@ if (!Float.isNaN(energyEfficiency)) {
 // RISK SUMMARY (CLEAN FIX — SINGLE SOURCE)
 // =====================================================
 
-severity = computeRiskSummary(
+String riskSeverity = computeRiskSummary(
         gr,
         sag,
         resistanceCheckMilliOhm,
@@ -14982,16 +14982,15 @@ severity = computeRiskSummary(
         calibrationDrift[0]
 );
 
-// 🔴 normalized label (GR / EN)
 String riskSummary;
 
-if ("CRITICAL".equals(severity)) {
+if ("CRITICAL".equals(riskSeverity)) {
     riskSummary = gr ? "ΚΡΙΣΙΜΟ" : "CRITICAL";
 }
-else if ("WARNING".equals(severity)) {
+else if ("WARNING".equals(riskSeverity)) {
     riskSummary = gr ? "ΠΡΟΕΙΔΟΠΟΙΗΣΗ" : "WARNING";
 }
-else if ("SAFE".equals(severity)) {
+else if ("SAFE".equals(riskSeverity)) {
     riskSummary = gr ? "ΑΣΦΑΛΕΣ" : "SAFE";
 }
 else {
