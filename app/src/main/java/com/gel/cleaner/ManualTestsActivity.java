@@ -17405,24 +17405,20 @@ if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
         );
     }
 }
-
-                            // extra advanced result blocks
-                            
+                           
 // =====================================================
 // 🔴 COMPUTE POWER STABILITY (REAL)
 // =====================================================
-final float powerMilliWattFinal = powerMilliWatt;
-
 float psf = Float.NaN;
 
-if (!Float.isNaN(powerMilliWattFinal) && powerMilliWattFinal > 0f) {
+if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
 
     float base;
 
     // βασική εκτίμηση από power
-    if (powerMilliWattFinal >= 6000f) base = 95f;
-    else if (powerMilliWattFinal >= 4000f) base = 85f;
-    else if (powerMilliWattFinal >= 2500f) base = 70f;
+    if (powerMilliWatt >= 6000f) base = 95f;
+    else if (powerMilliWatt >= 4000f) base = 85f;
+    else if (powerMilliWatt >= 2500f) base = 70f;
     else base = 50f;
 
     // sag penalty
@@ -17440,7 +17436,7 @@ if (!Float.isNaN(powerMilliWattFinal) && powerMilliWattFinal > 0f) {
         else if (drainPercentPerHourF > 30) base -= 8f;
     }
 
-    // recovery penalty (δεν κρατάει load)
+    // recovery penalty
     if (!Float.isNaN(voltageRecovery[0]) && voltageRecovery[0] < 0.04f) {
         base -= 10f;
     }
@@ -17449,6 +17445,7 @@ if (!Float.isNaN(powerMilliWattFinal) && powerMilliWattFinal > 0f) {
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
 
+    psf = base;
     powerStabilityFactor[0] = base;
 }
                             
