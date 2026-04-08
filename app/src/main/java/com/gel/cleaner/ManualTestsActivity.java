@@ -15633,8 +15633,6 @@ final iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
 
 float powerMilliWatt = Float.NaN;
-final float[] powerMilliWattRef = {Float.NaN};
-final boolean[] smartSwellingRef = {smartSwelling};
 
     try {
 
