@@ -15720,7 +15720,7 @@ if (!Float.isNaN(vLoad2[0]) &&
     !Float.isNaN(estimatedCurrentMa) &&
     estimatedCurrentMa > 50f) {
 
-    powerMilliWattRef[0] = vLoad2[0] * estimatedCurrentMa;
+    powerMilliWatt = vLoad2[0] * estimatedCurrentMa;
 }
 
 // ----------------------------------------------------
