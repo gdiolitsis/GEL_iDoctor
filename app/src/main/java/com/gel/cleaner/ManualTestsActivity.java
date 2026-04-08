@@ -16145,19 +16145,17 @@ if (!Float.isNaN(voltageStart) &&
                     estimatedESR = esr;
                     internalResistance[0] = esr;
 
-                    long irMilli =
-                            (long) (esr * 1000f);
-                            
-if (validDrain && !lab14_systemLimited[0]) {
+                    long irMilli = (long) (esr * 1000f);
 
-                    idoctor.setInternalResistanceMilliOhm(irMilli);
-                }
+if (validDrain && !lab14_systemLimited[0]) {
+    idoctor.setInternalResistanceMilliOhm(irMilli);
+}
                 }
             }
         }
-    } // ✅ ΚΛΕΙΝΕΙ ΤΟ if(!Float.isNaN(sag) && !Float.isNaN(currentNow))
+    }
 
-} // ✅ ΚΛΕΙΝΕΙ ΤΟ MAIN if(voltageStart & voltageUnderLoad)
+}
 
 // ----------------------------------------------------
 // ENERGY EFFICIENCY
@@ -17941,8 +17939,8 @@ lab14ElapsedMs = 0;
 
 } catch (Throwable t) {
 
-    // ------------------------------------------------
-    // STOP (ERROR EXIT)
+// ------------------------------------------------
+// STOP (ERROR EXIT)
 // ------------------------------------------------
 
     lab14StopAllStress();
@@ -18322,11 +18320,15 @@ float tNow =
         }
     }
     
-    // 🔥 LIVE UPDATE
+// 🔥 LIVE UPDATE
 updateLab14LiveStats();
 
+// ✅ SINGLE elapsed
+int elapsed =
+        (int) ((now - t0) / 1000);
+
 // ========================================================
-// 🔴 AUTO RESTART (1 φορά)
+// 🔴 AUTO RESTART
 // ========================================================
 if (!isLab14BMode &&
     elapsed > 20 &&
@@ -18340,35 +18342,32 @@ if (!isLab14BMode &&
 
         appendLog("AUTO", "Restarting stress test...");
 
-        runOnUiThread(() -> {
+        lab14Running = false;
+        lab14Cancelled = true;
+        lab14BoostActive = false;
 
-            if (!lab14Running) return;
+        try { ui.removeCallbacks(lab14VibrationLoop); } catch (Throwable ignore) {}
 
-            lab14Running = false;
-            lab14Cancelled = true;
-            lab14BoostActive = false;
+        lab14StopAllStress();
 
-            try { ui.removeCallbacks(lab14VibrationLoop); } catch (Throwable ignore) {}
-
-            lab14StopAllStress();
-
-            ui.postDelayed(() -> {
-                lab14BatteryHealthStressTest_REAL();
-            }, 800);
-        });
+        ui.postDelayed(() -> {
+            lab14BatteryHealthStressTest_REAL();
+        }, 800);
 
         return;
     }
 }
 
 // ========================================================
-// 🔴 FALLBACK (ADAPTIVE — FIXED)
+// 🔴 FALLBACK
 // ========================================================
-runOnUiThread(() -> {
+if (lab14WeakLoadCounter >= 5 &&
+    !lab14BoostActive &&
+    !lab14_systemLimited[0]) {
 
     appendLog("FALLBACK", "Switching to adaptive load");
 
-    lab14BoostActive = false;
+    lab14BoostActive = true;
     lab14WeakLoadCounter = 0;
 
     try { stopCpuBurn(); } catch (Throwable ignore) {}
@@ -18376,18 +18375,12 @@ runOnUiThread(() -> {
     try { stopMemoryStress(); } catch (Throwable ignore) {}
 
     int cores = Runtime.getRuntime().availableProcessors();
-    int threads = Math.max(1, cores / 2); // λίγο πιο δυνατό από soft
+    int threads = Math.max(1, cores / 2);
 
-    // CPU (μεσαίο load)
     try { startCpuBurnLimitedThreads(threads); } catch (Throwable ignore) {}
-
-    // GPU (light-medium)
-    try { stopGpuStress(); } catch (Throwable ignore) {}
     try { startGpuStressLevel(1); } catch (Throwable ignore) {}
 
-});
-
-return;
+    return;
 }
 
 // =========================
@@ -18395,57 +18388,43 @@ return;
 // =========================
 if (lab14FastPhase) {
 
-                int fastElapsed =
-                        (int) ((now - lab14FastStartTime) / 1000);
+    int fastElapsed =
+            (int) ((now - lab14FastStartTime) / 1000);
 
-                if (fastElapsed > 45)
-                    fastElapsed = 45;
+    if (fastElapsed > 45)
+        fastElapsed = 45;
 
-                counterText.setText(
-                        gr
-                                ? "Προθέρμανση καταπόνησης "
-                                + fastElapsed + " / 45"
-                                : "Stress warm-up "
-                                + fastElapsed + " / 45"
-                );
+    counterText.setText(
+            gr
+                    ? "Προθέρμανση καταπόνησης " + fastElapsed + " / 45"
+                    : "Stress warm-up " + fastElapsed + " / 45"
+    );
 
-                if (lab14MainBar != null) {
+    if (lab14MainBar != null) {
 
-                    int segCount =
-                            lab14MainBar.getChildCount();
+        int segCount = lab14MainBar.getChildCount();
 
-                    float ratio =
-                            Math.min(
-                                    1f,
-                                    fastElapsed / 45f
-                            );
+        float ratio = Math.min(1f, fastElapsed / 45f);
 
-                    int active =
-                            (int) (ratio * segCount);
+        int active = (int) (ratio * segCount);
 
-                    for (int i = 0; i < segCount; i++) {
+        for (int i = 0; i < segCount; i++) {
 
-                        View seg =
-                                lab14MainBar.getChildAt(i);
+            View seg = lab14MainBar.getChildAt(i);
 
-                        if (i < active) {
-                            seg.setBackgroundColor(0xFF39FF14);
-                        } else {
-                            seg.setBackgroundColor(0xFF333333);
-                        }
-                    }
-                }
+            seg.setBackgroundColor(
+                    i < active ? 0xFF39FF14 : 0xFF333333
+            );
+        }
+    }
 
-                ui.postDelayed(this, 300);
-                return;
-            }
+    ui.postDelayed(this, 300);
+    return;
+}
 
 // =========================
 // MAIN PHASE
 // =========================
-
-int elapsed =
-        (int) ((now - t0) / 1000);
 
 // ----------------------------------------------------
 // 🔴 SNAPSHOT (THROTTLED) — SINGLE CLEAN BLOCK
@@ -19555,7 +19534,7 @@ if (!isLab14BMode &&
 // ----------------------------------------------------
 long freq = readCpuFreq();
 
-boolean cpuFull = false;
+cpuFull = false;
 
 if (freq > 0) {
 
