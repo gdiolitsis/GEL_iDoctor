@@ -15633,6 +15633,8 @@ final iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
 
 float powerMilliWatt = Float.NaN;
+final float[] powerMilliWattRef = {Float.NaN};
+final boolean[] smartSwellingRef = {smartSwelling};
 
     try {
 
@@ -15720,7 +15722,7 @@ if (!Float.isNaN(vLoad2[0]) &&
     !Float.isNaN(estimatedCurrentMa) &&
     estimatedCurrentMa > 50f) {
 
-    powerMilliWatt = vLoad2[0] * estimatedCurrentMa;
+    powerMilliWattRef[0] = vLoad2[0] * estimatedCurrentMa;
 }
 
 // ----------------------------------------------------
@@ -17411,14 +17413,14 @@ if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
 // =====================================================
 float psf = Float.NaN;
 
-if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
+if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 0f) {
 
     float base;
 
     // βασική εκτίμηση από power
-    if (powerMilliWatt >= 6000f) base = 95f;
-    else if (powerMilliWatt >= 4000f) base = 85f;
-    else if (powerMilliWatt >= 2500f) base = 70f;
+    if (powerMilliWattRef[0] >= 6000f) base = 95f;
+    else if (powerMilliWattRef[0] >= 4000f) base = 85f;
+    else if (powerMilliWattRef[0] >= 2500f) base = 70f;
     else base = 50f;
 
     // sag penalty
@@ -17514,7 +17516,7 @@ if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
     }
 
     // power penalty (χαμηλό load = unreliable)
-    if (!Float.isNaN(powerMilliWatt) && powerMilliWatt < 2500f) {
+    if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] < 2500f) {
         base -= 15f;
     }
 
@@ -17676,7 +17678,7 @@ if (collapseRisk[0]) {
     structuralIntegrityIndex[0] = 30f;
 }
 
-if (smartSwelling) {
+if (smartSwellingRef[0]) {
     structuralIntegrityIndex[0] = 20f;
 }
 
