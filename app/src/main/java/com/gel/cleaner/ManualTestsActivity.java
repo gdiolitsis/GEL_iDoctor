@@ -17316,6 +17316,8 @@ final boolean smartSwellingF = smartSwelling;
 final float startBatteryTempFinal = startBatteryTemp;
 final float endBatteryTempFinal = getBatteryTempEngineSafe();
 
+final float[] powerMilliWattRef = {powerMilliWatt};
+
 runOnUiThread(() -> {
 
     final long drainMahFinalLong = (long) drainMahFFinal;
@@ -17678,7 +17680,7 @@ if (collapseRisk[0]) {
     structuralIntegrityIndex[0] = 30f;
 }
 
-if (smartSwellingRef[0]) {
+if (smartSwellingF) {
     structuralIntegrityIndex[0] = 20f;
 }
 
