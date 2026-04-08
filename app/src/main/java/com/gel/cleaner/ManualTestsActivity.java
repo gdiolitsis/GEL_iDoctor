@@ -15693,7 +15693,6 @@ if (snapEnd == null) {
             ? "Αποτυχία τελικής ανάγνωσης μπαταρίας."
             : "Final battery snapshot failed.");
 
-    // 🔴 STOP σωστά
     lab14StopAllStress();
 
     try {
@@ -15703,7 +15702,22 @@ if (snapEnd == null) {
 
     lab14Running = false;
 
-    return; // εδώ επιτρέπεται (hard failure)
+    return;
+}
+
+// =====================================================
+// 🔴 POWER CALC (POSTLOAD)
+// =====================================================
+float powerMilliWatt = Float.NaN;
+
+float estimatedCurrentMa =
+        estimateDynamicCurrentMilliAmp(drainMah, dtMs);
+
+if (!Float.isNaN(vLoad2[0]) &&
+    !Float.isNaN(estimatedCurrentMa) &&
+    estimatedCurrentMa > 50f) {
+
+    powerMilliWatt = vLoad2[0] * estimatedCurrentMa;
 }
 
 // ----------------------------------------------------
