@@ -2513,7 +2513,7 @@ getWindow().addFlags(
 // --------------------------------------------------------
 appendLog("BOOST", "FORCE HARD START (14B)");
 
-int cores = Runtime.getRuntime().availableProcessors();
+final int cores = Runtime.getRuntime().availableProcessors();
 
 new Thread(() -> {
     try {
@@ -3059,10 +3059,10 @@ private void showLab14BAdvisory(Runnable onContinue) {
 
 private void startCpuBurn_Light() {
 
-    int cores = Runtime.getRuntime().availableProcessors();
+    final int cores = Runtime.getRuntime().availableProcessors();
 
     // 🔥 ποτέ κάτω από 2, ποτέ 1
-    int threads = Math.max(2, cores / 2);
+    int threads = Math.max(2, coresLocal / 2);
 
     startCpuBurnLimitedThreads(threads);
 }
@@ -3076,7 +3076,7 @@ private void startCpuBurnLimitedThreads(int threads) {
 
     stopCpuBurn();
 
-    int cores = Runtime.getRuntime().availableProcessors();
+    final int cores = Runtime.getRuntime().availableProcessors();
 
     if (threads <= 0) threads = cores;
 
@@ -18037,7 +18037,7 @@ private void startLab14FastThread() {
             // LOAD 1
             // -------------------------
 
-            int cores = Runtime.getRuntime().availableProcessors();
+            final int cores = Runtime.getRuntime().availableProcessors();
             int threads = (lab14OptimalThreads > 0)
                     ? lab14OptimalThreads
                     : Math.max(2, cores / 2);
@@ -18186,7 +18186,7 @@ private void startLab14MainStress() {
 new Thread(() -> {
     try {
 
-        int cores = Runtime.getRuntime().availableProcessors();
+        final int cores = Runtime.getRuntime().availableProcessors();
 
         int threads = (lab14OptimalThreads > 0)
                 ? lab14OptimalThreads
@@ -18381,7 +18381,7 @@ if (lab14WeakLoadCounter >= 5 &&
     try { stopGpuStress(); } catch (Throwable ignore) {}
     try { stopMemoryStress(); } catch (Throwable ignore) {}
 
-    int cores = Runtime.getRuntime().availableProcessors();
+    final int cores = Runtime.getRuntime().availableProcessors();
     int threads = Math.max(1, cores / 2);
 
     try { startCpuBurnLimitedThreads(threads); } catch (Throwable ignore) {}
@@ -19096,7 +19096,7 @@ if (isLab14BMode && lab14Running && lab14ElapsedMs >= 300000) {
     return;
 }
 	
-	int cores = Runtime.getRuntime().availableProcessors();
+	final int cores = Runtime.getRuntime().availableProcessors();
 
     try {
 
@@ -19153,8 +19153,8 @@ if (isLab14BMode &&
             stopGpuStress();
             stopMemoryStress();
 
-            cores = Runtime.getRuntime().availableProcessors();
-            int softThreads = Math.max(1, cores / 3);
+            final int coresLocal = Runtime.getRuntime().availableProcessors();
+            int softThreads = Math.max(1, coresLocal / 3);
 
             // CPU (SOFT)
             startCpuBurnLimitedThreads(softThreads);
@@ -19465,7 +19465,7 @@ if (!lab14BoostActive &&
 
                     if (lab14FastPhase) return;
 
-                    int threads = Math.max(2, cores / 2);
+                    int threads = Math.max(2, coresLocal / 2);
 
                     startCpuBurnLimitedThreads(threads);
                     startGpuStressLevel(4);
@@ -19789,7 +19789,7 @@ private void calibrateLoadZeroRisk() {
 
     if (lab14Running || lab14Cancelled) return;
 
-    int cores = Runtime.getRuntime().availableProcessors();
+    final int cores = Runtime.getRuntime().availableProcessors();
     long totalRamMb = -1L;
 
     try {
@@ -19873,7 +19873,7 @@ private void calibrateGpuLoadSafe() {
 
 private void calibrateGpuLoadZeroRisk() {
 
-    int cores = Runtime.getRuntime().availableProcessors();
+    final int cores = Runtime.getRuntime().availableProcessors();
 
     int level;
 
@@ -20013,7 +20013,7 @@ private void rebalanceLab14CpuLive(
     // 🔴 cooldown
     if (now - lab14LastCpuAdjustTs < 6000) return;
 
-    int cores = Runtime.getRuntime().availableProcessors();
+    final int cores = Runtime.getRuntime().availableProcessors();
 
     int oldThreads = lab14CpuThreadsCurrent > 0
             ? lab14CpuThreadsCurrent
