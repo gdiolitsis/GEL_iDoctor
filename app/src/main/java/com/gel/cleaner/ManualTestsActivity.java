@@ -14985,8 +14985,6 @@ severity = computeRiskSummary(
 // 🔴 normalized label (GR / EN)
 String riskSummary;
 
-String severity = computeRiskSummary(...);
-
 if ("CRITICAL".equals(severity)) {
     riskSummary = gr ? "ΚΡΙΣΙΜΟ" : "CRITICAL";
 }
