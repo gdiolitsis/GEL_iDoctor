@@ -305,6 +305,8 @@ private boolean lab14LimiterLatched = false;
 
 private float lab14CpuFreqPeak = 0f;
 
+private String riskSeverity = "SAFE";
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -14652,7 +14654,6 @@ if (!Float.isNaN(voltageRecovery)) {
 // =====================================================
 // 🔴 SEVERITY SYSTEM (GEL)
 // =====================================================
-String severity = "OK";
 
 // CRITICAL conditions
 if (collapseRisk[0] ||
@@ -14969,7 +14970,7 @@ if (!Float.isNaN(energyEfficiency)) {
 // RISK SUMMARY (CLEAN FIX — SINGLE SOURCE)
 // =====================================================
 
-String riskSeverity = computeRiskSummary(
+riskSeverity = computeRiskSummary(
         gr,
         sag,
         resistanceCheckMilliOhm,
