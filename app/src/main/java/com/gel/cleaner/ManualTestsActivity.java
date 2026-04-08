@@ -14662,7 +14662,7 @@ if (collapseRisk[0] ||
     (!Float.isNaN(internalResistance[0]) && internalResistance[0] > 0.30f) ||
     (!Float.isNaN(voltageRecovery) && voltageRecovery < 0.02f)) {
 
-    severity = "CRITICAL";
+    riskSeverity = "CRITICAL";
 }
 
 // WARNING conditions
@@ -14674,7 +14674,7 @@ else if (
     (!Float.isNaN(endBatteryTemp) && endBatteryTemp > 45f)
 ) {
 
-    severity = "WARNING";
+    riskSeverity = "WARNING";
 }
 
 // =====================================================
@@ -15097,7 +15097,7 @@ String summary = String.format(
         ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %.0f mW\nΠτώση τάσης: %.3f V\nΘερμική μεταβολή: %.1f°C\nΑποφόρτιση: %.0f mAh/h"
         : "Status: %s\nBehaviour: %s\nPower: %.0f mW\nVoltage sag: %.3f V\nThermal delta: %.1f°C\nDrain: %.0f mAh/h",
 
-        severity,
+        riskSeverity,
         batteryTruth,
         Float.isNaN(powerMilliWatt) ? 0f : powerMilliWatt,
         Float.isNaN(sag) ? 0f : sag,
