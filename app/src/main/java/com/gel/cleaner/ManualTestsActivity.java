@@ -303,6 +303,8 @@ private String lastLiveStatus = "";
 private int lab14LimiterScore = 0;
 private boolean lab14LimiterLatched = false;
 
+private float lab14CpuFreqPeak = 0f;
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -14454,7 +14456,7 @@ private void lab14LogStressResult(
         float voltageRecovery,
         float voltageRecoverySpeed,
         float voltageStability,
-        float internalResistance,
+        float[] internalResistance,
         float estimatedESR,
         float thermalImpedance,
         float energyEfficiency,
@@ -14967,7 +14969,7 @@ if (!Float.isNaN(energyEfficiency)) {
 // RISK SUMMARY (CLEAN FIX — SINGLE SOURCE)
 // =====================================================
 
-String severity = computeRiskSummary(
+severity = computeRiskSummary(
         gr,
         sag,
         resistanceCheckMilliOhm,
@@ -16128,8 +16130,17 @@ if (!Float.isNaN(voltageStart) &&
 
                     long irMilli = (long) (esr * 1000f);
 
-if (validDrain && !lab14_systemLimited[0]) {
+if (validDrain && !lab14_systemLimited[0] && !Float.isNaN(esr)) {
+
+    // Store to iDoctor (mΩ)
     idoctor.setInternalResistanceMilliOhm(irMilli);
+
+    // Sync local array (convert mΩ → Ω)
+    if (irMilli > 0) {
+        internalResistance[0] = irMilli / 1000f;
+    } else {
+        internalResistance[0] = Float.NaN;
+    }
 }
                 }
             }
