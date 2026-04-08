@@ -305,8 +305,6 @@ private boolean lab14LimiterLatched = false;
 
 private float lab14CpuFreqPeak = 0f;
 
-private String riskSeverity = "SAFE";
-
 private int cores = Runtime.getRuntime().availableProcessors();
 
 // ============================================================
@@ -14530,7 +14528,7 @@ private void lab14LogStressResult(
 float sag = voltageStart - voltageUnderLoad;
 if (sag < 0f) sag = 0f;
 
-float noiseThreshold = 0.003f;
+float noiseThreshold = 0.005f;
 if (sag < noiseThreshold) sag = 0f;
 
 int level = batteryPercent;
@@ -14572,21 +14570,15 @@ String sagLabel =
 // ----------------------------------------------------
 // 🔴 SAG VALIDATION (REAL LOAD QUALITY)
 // ----------------------------------------------------
-boolean sagValid = true;
-
 if (!Float.isNaN(powerMilliWatt)) {
 
     if (powerMilliWatt < 2000f) {
-        sagValid = false;
-    }
-}
 
-if (!sagValid) {
-
-    if ("Excellent".equals(sagLabel)) {
-        sagLabel = "Normal";
-    } else if ("Normal".equals(sagLabel)) {
-        sagLabel = "Weak";
+        if ("Excellent".equals(sagLabel)) {
+            sagLabel = "Normal";
+        } else if ("Normal".equals(sagLabel)) {
+            sagLabel = "Weak";
+        }
     }
 }
 
@@ -14603,8 +14595,8 @@ if (sag > 0 &&
     resistanceCheckMilliOhm =
             (sag / estimatedCurrentMa) * 1000f;
 
-    if (resistanceCheckMilliOhm < 1f)
-        resistanceCheckMilliOhm = 1f;
+    if (resistanceCheckMilliOhm < 5f)
+        resistanceCheckMilliOhm = Float.NaN;
 
     if (resistanceCheckMilliOhm > 300f)
         resistanceCheckMilliOhm = Float.NaN;
@@ -14651,63 +14643,6 @@ if (!Float.isNaN(voltageRecovery)) {
             batteryTruth = "Normal";
         }
     }
-}
-
-// =====================================================
-// 🔴 SEVERITY SYSTEM (GEL)
-// =====================================================
-
-// CRITICAL conditions
-if (collapseRisk[0] ||
-    smartSwelling ||
-    (validDrain && drainPercentPerHour > 50) ||
-    (!Float.isNaN(internalResistance[0]) && internalResistance[0] > 0.30f) ||
-    (!Float.isNaN(voltageRecovery) && voltageRecovery < 0.02f)) {
-
-    riskSeverity = "CRITICAL";
-}
-
-// WARNING conditions
-else if (
-    "Weak".equals(batteryTruth) ||
-    (validDrain && drainPercentPerHour > 30) ||
-    (!Float.isNaN(internalResistance[0]) && internalResistance[0] > 0.18f) ||
-    (!Float.isNaN(voltageRecovery) && voltageRecovery < 0.05f) ||
-    (!Float.isNaN(endBatteryTemp) && endBatteryTemp > 45f)
-) {
-
-    riskSeverity = "WARNING";
-}
-
-// =====================================================
-// 🔴 OVERALL SEVERITY
-// =====================================================
-if ("OK".equals(riskSeverity)) {
-
-    logLabelOkValue(
-            gr ? "Συνολική κατάσταση"
-               : "Overall status",
-            gr ? "Κανονική λειτουργία"
-               : "Normal operation"
-    );
-
-} else if ("WARNING".equals(riskSeverity)) {
-
-    logLabelWarnValue(
-            gr ? "Συνολική κατάσταση"
-               : "Overall status",
-            gr ? "Μέτρια επιβάρυνση"
-               : "Moderate stress detected"
-    );
-
-} else {
-
-    logLabelErrorValue(
-            gr ? "Συνολική κατάσταση"
-               : "Overall status",
-            gr ? "Κρίσιμη κατάσταση"
-               : "Critical condition detected"
-    );
 }
 
 // =====================================================
@@ -14768,7 +14703,6 @@ if ("Excellent".equals(batteryTruth)) {
     );
 }
 
-
 // -----------------------------
 // 🔴 POWER OUTPUT (DYNAMIC COLOR)
 // -----------------------------
@@ -14821,7 +14755,6 @@ if (!Float.isNaN(powerMilliWatt)) {
     );
 }
 
-
 // -----------------------------
 // 🔴 RESISTANCE (RAW)
 // -----------------------------
@@ -14832,7 +14765,6 @@ if (!Float.isNaN(resistanceCheckMilliOhm)) {
             String.format(Locale.US, "%.1f mΩ", resistanceCheckMilliOhm)
     );
 }
-
 
 // -----------------------------
 // 🔴 RECOVERY (RAW)
@@ -14860,7 +14792,6 @@ if (!Float.isNaN(voltageStability)) {
             String.format(Locale.US, "%.0f / 100", voltageStability)
     );
 }
-
 
 // -----------------------------
 // 🔴 THERMAL (DYNAMIC COLOR)
@@ -14907,7 +14838,6 @@ if (!Float.isNaN(startBatteryTemp) &&
     }
 }
 
-
 // -----------------------------
 // 🔴 BEHAVIOUR (INFO)
 // -----------------------------
@@ -14923,7 +14853,6 @@ logLabelValue(
                 dtMs / 1000.0
         )
 );
-
 
 // -----------------------------
 // 🔴 DRAIN (ALREADY CORRECT)
@@ -14969,89 +14898,27 @@ if (!Float.isNaN(energyEfficiency)) {
 }
 
 // =====================================================
-// RISK SUMMARY (CLEAN FIX — SINGLE SOURCE)
-// =====================================================
-
-riskSeverity = computeRiskSummary(
-        gr,
-        sag,
-        resistanceCheckMilliOhm,
-        (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
-                ? (endBatteryTemp - startBatteryTemp)
-                : Float.NaN,
-        drainPercentPerHour,
-        collapseRisk[0],
-        smartSwelling,
-        calibrationDrift[0]
-);
-
-String riskSummary;
-
-if ("CRITICAL".equals(riskSeverity)) {
-    riskSummary = gr ? "ΚΡΙΣΙΜΟ" : "CRITICAL";
-}
-else if ("WARNING".equals(riskSeverity)) {
-    riskSummary = gr ? "ΠΡΟΕΙΔΟΠΟΙΗΣΗ" : "WARNING";
-}
-else if ("SAFE".equals(riskSeverity)) {
-    riskSummary = gr ? "ΑΣΦΑΛΕΣ" : "SAFE";
-}
-else {
-    riskSummary = gr ? "ΑΓΝΩΣΤΟ" : "UNKNOWN";
-}
-
-// =====================================================
-// FINAL RISK LOGGING
-// =====================================================
-
-String riskLabel = gr ? "Συνολικός κίνδυνος" : "Overall risk";
-
-if ("CRITICAL".equals(riskSeverity)) {
-
-    logLabelErrorValue(riskLabel, riskSummary);
-
-} else if ("WARNING".equals(riskSeverity)) {
-
-    logLabelWarnValue(riskLabel, riskSummary);
-
-} else {
-
-    logLabelOkValue(riskLabel, riskSummary);
-}
-
-// =====================================================
 // 🔴 RECOMMENDATION ENGINE (GEL)
 // =====================================================
 String recommendation;
 
-// CRITICAL
-if ("CRITICAL".equals(riskSeverity) ||
-    collapseRisk[0] ||
-    smartSwelling) {
+// 🔴 HARD FAIL
+if (collapseRisk[0] || smartSwelling) {
 
     recommendation = gr
             ? "Συνιστάται τεχνικός έλεγχος ή έλεγχος μπαταρίας σύντομα."
             : "Battery service or technical inspection is recommended soon.";
 }
 
-// WARNING + calibration
-else if ("WARNING".equals(riskSeverity) && calibrationDrift[0]) {
-
-    recommendation = gr
-            ? "Συνιστάται πλήρης κύκλος φόρτισης για επαναβαθμονόμηση και επανέλεγχος."
-            : "A full charge cycle and retest are recommended for recalibration.";
-}
-
-// WARNING only
-else if ("WARNING".equals(riskSeverity) ||
-         "Weak".equals(batteryTruth)) {
+// 🔴 WEAK BEHAVIOUR
+else if ("Weak".equals(batteryTruth)) {
 
     recommendation = gr
             ? "Συνιστάται παρακολούθηση της συμπεριφοράς της μπαταρίας και επανέλεγχος."
             : "Battery behaviour should be monitored and retested.";
 }
 
-// SAFE but drift
+// 🔴 CALIBRATION ONLY
 else if (calibrationDrift[0]) {
 
     recommendation = gr
@@ -15059,7 +14926,7 @@ else if (calibrationDrift[0]) {
             : "Battery appears functional, but recalibration is recommended.";
 }
 
-// OK
+// 🔴 OK
 else {
 
     recommendation = gr
@@ -15073,11 +14940,11 @@ else {
 
 String recLabel = gr ? "Σύσταση" : "Recommendation";
 
-if ("CRITICAL".equals(riskSeverity)) {
+if (collapseRisk[0] || smartSwelling) {
 
     logLabelErrorValue(recLabel, recommendation);
 
-} else if ("WARNING".equals(riskSeverity) || calibrationDrift[0]) {
+} else if ("Weak".equals(batteryTruth) || calibrationDrift[0]) {
 
     logLabelWarnValue(recLabel, recommendation);
 
@@ -15086,12 +14953,7 @@ if ("CRITICAL".equals(riskSeverity)) {
     logLabelOkValue(recLabel, recommendation);
 }
 
-// =====================================================
-// 🔴 FINAL SUMMARY (EXPORT FRIENDLY)
-// =====================================================
-appendHtml("<br>");
-logInfo(gr ? "Σύνοψη διάγνωσης" : "Diagnostic summary");
-logLine();
+// 🔴 FINAL SUMMARY (FIX DUPLICATE)
 
 String summary = String.format(
         Locale.US,
@@ -15099,8 +14961,8 @@ String summary = String.format(
         ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %.0f mW\nΠτώση τάσης: %.3f V\nΘερμική μεταβολή: %.1f°C\nΑποφόρτιση: %.0f mAh/h"
         : "Status: %s\nBehaviour: %s\nPower: %.0f mW\nVoltage sag: %.3f V\nThermal delta: %.1f°C\nDrain: %.0f mAh/h",
 
-        riskSeverity,
         batteryTruth,
+        sagLabel,   // 🔴 FIX εδώ
         Float.isNaN(powerMilliWatt) ? 0f : powerMilliWatt,
         Float.isNaN(sag) ? 0f : sag,
         (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
@@ -15115,17 +14977,17 @@ String summary = String.format(
 
 String summaryLabel = gr ? "Σύνοψη" : "Summary";
 
-if ("CRITICAL".equals(riskSeverity)) {
+if ("Excellent".equals(batteryTruth)) {
 
-    logLabelErrorValue(summaryLabel, summary);
+    logLabelOkValue(summaryLabel, summary);
 
-} else if ("WARNING".equals(riskSeverity)) {
+} else if ("Normal".equals(batteryTruth)) {
 
-    logLabelWarnValue(summaryLabel, summary);
+    logLabelValue(summaryLabel, summary);
 
 } else {
 
-    logLabelOkValue(summaryLabel, summary);
+    logLabelWarnValue(summaryLabel, summary);
 }
 
         // =====================================================
@@ -15157,7 +15019,8 @@ private void lab14LogAging(
         String agingInterp,
         Lab14Engine.AgingResult aging,
         float monthsTo70,
-        double drainPercentPerHour
+        double drainPercentPerHour,
+        float[] internalResistance
 ) {
 
     appendHtml("<br>");
@@ -16103,10 +15966,10 @@ if (!Float.isNaN(voltageStart) &&
         }
 
         if (!Float.isNaN(sagFiltered) &&
-            sagFiltered < 0.005f) {
+    sagFiltered < 0.002f) {
 
-            sagFiltered = Float.NaN;
-        }
+    sagFiltered = Float.NaN;
+}
 
         if (!lab14_systemLimited[0] &&
             !Float.isNaN(currentNow) &&
@@ -17244,14 +17107,6 @@ if (!validDrain) {
         finalLabel = "Normal";
     else
         finalLabel = "Weak";
-
-    // 🔴 severity override ONLY if valid
-    if ("CRITICAL".equals(riskSeverity)) {
-        finalLabel = "Weak";
-    }
-    else if ("WARNING".equals(riskSeverity)) {
-        finalLabel = "Normal";
-    }
 }
 
 // ----------------------------------------------------
@@ -17437,21 +17292,6 @@ final float endBatteryTempFinal = getBatteryTempEngineSafe();
 
 runOnUiThread(() -> {
 
-    // ------------------------------------------------
-    // DEBUG (SAFE)
-    // ------------------------------------------------
-    final double safeDrainDbg =
-            (Double.isNaN(drainPercentPerHourF) || drainPercentPerHourF < 0)
-                    ? 0
-                    : drainPercentPerHourF;
-
-    appendLog("CHECK", String.format(
-            Locale.US,
-            "drain=%.2f%%/h valid=%s",
-            safeDrainDbg,
-            validDrainF
-    ));
-
     final long drainMahFinalLong = (long) drainMahFFinal;
 
 // ------------------------------------------------
@@ -17497,48 +17337,95 @@ if (drainMahFinalLong > 600) {
 }
 
 // ------------------------------------------------
-    // FAST STRESS
-    // ------------------------------------------------
-    if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
+// FAST STRESS
+// ------------------------------------------------
+if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
 
-        float s1 = sag1[0];
-        float s2 = sag2[0];
+    float s1 = sag1[0];
+    float s2 = sag2[0];
 
-        if (Math.abs(s1) < 0.005f) s1 = 0f;
-        if (Math.abs(s2) < 0.005f) s2 = 0f;
+    if (Math.abs(s1) < 0.002f) s1 = Float.NaN;
+    if (Math.abs(s2) < 0.002f) s2 = Float.NaN;
 
-        logLabelValue(
-                gr ? "Γρήγορη δοκιμή καταπόνησης"
-                   : "Fast stress test",
-                String.format(
-                        Locale.US,
-                        "Sag1=%.3fV | Sag2=%.3fV",
-                        s1,
-                        s2
-                )
+    String sag1Text = Float.isNaN(s1)
+            ? "N/A"
+            : String.format(Locale.US, "%.3f V", s1);
+
+    String sag2Text = Float.isNaN(s2)
+            ? "N/A"
+            : String.format(Locale.US, "%.3f V", s2);
+
+    logLabelValue(
+            gr ? "Γρήγορη δοκιμή καταπόνησης"
+               : "Fast stress test",
+            "Sag1=" + sag1Text + " | Sag2=" + sag2Text
+    );
+
+    if ((!Float.isNaN(s1) && s1 > 0.35f) ||
+        (!Float.isNaN(s2) && s2 > 0.40f)) {
+
+        logLabelWarnValue(
+                gr ? "Διάγνωση" : "Diagnosis",
+                gr
+                        ? "Έντονη πτώση τάσης — πιθανή φθορά κυψελών"
+                        : "Severe voltage sag — degraded battery cells"
         );
 
-        if (s1 > 0.35f || s2 > 0.40f) {
+    } else {
 
-            logLabelWarnValue(
-                    gr ? "Διάγνωση" : "Diagnosis",
-                    gr
-                            ? "Έντονη πτώση τάσης — πιθανή φθορά κυψελών"
-                            : "Severe voltage sag — degraded battery cells"
-            );
-
-        } else {
-
-            logLabelOkValue(
-                    gr ? "Διάγνωση" : "Diagnosis",
-                    gr
-                            ? "Δεν εντοπίστηκε ανωμαλία"
-                            : "No abnormal sag detected"
-            );
-        }
+        logLabelOkValue(
+                gr ? "Διάγνωση" : "Diagnosis",
+                gr
+                        ? "Δεν εντοπίστηκε ανωμαλία"
+                        : "No abnormal sag detected"
+        );
     }
+}
 
                             // extra advanced result blocks
+                            
+// =====================================================
+// 🔴 COMPUTE POWER STABILITY (REAL)
+// =====================================================
+float psf = Float.NaN;
+
+if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
+
+    float base;
+
+    // βασική εκτίμηση από power
+    if (powerMilliWatt >= 6000f) base = 95f;
+    else if (powerMilliWatt >= 4000f) base = 85f;
+    else if (powerMilliWatt >= 2500f) base = 70f;
+    else base = 50f;
+
+    // sag penalty
+    if (!Float.isNaN(sagAvg)) {
+
+        if (sagAvg > 0.15f) base -= 25f;
+        else if (sagAvg > 0.10f) base -= 15f;
+        else if (sagAvg > 0.06f) base -= 8f;
+    }
+
+    // drain penalty (unstable discharge)
+    if (validDrainF && !Double.isNaN(drainPercentPerHourF)) {
+
+        if (drainPercentPerHourF > 45) base -= 15f;
+        else if (drainPercentPerHourF > 30) base -= 8f;
+    }
+
+    // recovery penalty (δεν κρατάει load)
+    if (!Float.isNaN(voltageRecovery) && voltageRecovery < 0.04f) {
+        base -= 10f;
+    }
+
+    // clamp
+    if (base > 100f) base = 100f;
+    if (base < 0f) base = 0f;
+
+    powerStabilityFactor[0] = base;
+}
+                            
                             if (!Float.isNaN(powerStabilityFactor[0]) &&
                                 validDrainF &&
                                 !lab14_systemLimited[0]) {
@@ -17578,6 +17465,42 @@ if (drainMahFinalLong > 600) {
 );
                                 }
                             }
+                            
+// =====================================================
+// 🔴 COMPUTE STRESS SIGNATURE (STABLE)
+// =====================================================
+float ss = Float.NaN;
+
+if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+
+    // base από sag
+    float base = 100f - (sagAvg * 700f);
+
+    // clamp
+    if (base > 100f) base = 100f;
+    if (base < 0f) base = 0f;
+
+    // recovery penalty
+    if (!Float.isNaN(voltageRecovery)) {
+
+        if (voltageRecovery < 0.03f) {
+            base -= 20f;
+        } else if (voltageRecovery < 0.06f) {
+            base -= 10f;
+        }
+    }
+
+    // power penalty (χαμηλό load = unreliable)
+    if (!Float.isNaN(powerMilliWatt) && powerMilliWatt < 2500f) {
+        base -= 15f;
+    }
+
+    // clamp again
+    if (base > 100f) base = 100f;
+    if (base < 0f) base = 0f;
+
+    stressSignature[0] = base;
+}
 
                             if (!Float.isNaN(stressSignature[0]) &&
                                 validDrainF &&
@@ -17618,6 +17541,45 @@ if (drainMahFinalLong > 600) {
 );
                                 }
                             }
+                            
+// =====================================================
+// 🔴 COMPUTE CELL ELASTICITY INDEX (REALISTIC)
+// =====================================================
+float cei = Float.NaN;
+
+if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+
+    float base = 100f - (sagAvg * 900f);
+
+    if (base > 100f) base = 100f;
+    if (base < 0f) base = 0f;
+
+    // recovery boost / penalty
+    if (!Float.isNaN(voltageRecovery)) {
+
+        if (voltageRecovery > 0.08f) {
+            base += 10f;
+        } else if (voltageRecovery < 0.03f) {
+            base -= 25f;
+        } else if (voltageRecovery < 0.05f) {
+            base -= 10f;
+        }
+    }
+
+    // recovery speed matters
+    if (!Float.isNaN(voltageRecoverySpeed)) {
+
+        if (voltageRecoverySpeed < 0.002f) {
+            base -= 10f;
+        }
+    }
+
+    // clamp
+    if (base > 100f) base = 100f;
+    if (base < 0f) base = 0f;
+
+    cellElasticityIndex[0] = base;
+}
 
                             if (!Float.isNaN(cellElasticityIndex[0]) &&
                                 validDrainF &&
@@ -17658,104 +17620,188 @@ if (drainMahFinalLong > 600) {
 );
                                 }
                             }
+                            
+// =====================================================
+// 🔴 COMPUTE STRUCTURAL INDEX (INSERT HERE)
+// =====================================================
+                            
+float sii = Float.NaN;
 
-                            if (!Float.isNaN(structuralIntegrityIndex[0]) &&
-                                validDrainF &&
-                                !lab14_systemLimited[0]) {
+if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
 
-                                String siLabel;
+    float base = 100f - (sagAvg * 800f);
 
-                                if (structuralIntegrityIndex[0] >= 85f)
-                                    siLabel = gr
-                                            ? "Εξαιρετική δομική ακεραιότητα"
-                                            : "Excellent structural integrity";
-                                else if (structuralIntegrityIndex[0] >= 70f)
-                                    siLabel = gr
-                                            ? "Καλή δομική κατάσταση"
-                                            : "Good structural condition";
-                                else if (structuralIntegrityIndex[0] >= 50f)
-                                    siLabel = gr
-                                            ? "Μέτρια δομική φθορά"
-                                            : "Moderate structural wear";
-                                else
-                                    siLabel = gr
-                                            ? "Πιθανή εσωτερική υποβάθμιση"
-                                            : "Possible internal degradation";
+    if (base > 100f) base = 100f;
+    if (base < 0f) base = 0f;
 
-                                if (structuralIntegrityIndex[0] >= 70f) {
-                                    logLabelOkValue(
-        gr ? "Δομική ακεραιότητα μπαταρίας"
-           : "Battery structural integrity",
-        String.format(
-                Locale.US,
-                "%s (%.0f)",
-                siLabel,
-                structuralIntegrityIndex[0]
-        )
-);
-                                } else {
-                                    logLabelWarnValue(
-        gr ? "Δομική ακεραιότητα μπαταρίας"
-           : "Battery structural integrity",
-        String.format(
-                Locale.US,
-                "%s (%.0f)",
-                siLabel,
-                structuralIntegrityIndex[0]
-        )
-);
-                                }
-                            } else {
-                                logLabelWarnValue(
-                                        gr ? "Δομική ακεραιότητα μπαταρίας"
-                                           : "Battery structural integrity",
-                                        gr
-                                                ? "Μη διαθέσιμο ή περιορισμένο από το σύστημα"
-                                                : "Unavailable or system-limited"
-                                );
-                            }
+    if (!Float.isNaN(stressSignature[0])) {
+        base = (base + stressSignature[0]) / 2f;
+    }
 
-                            if (!Float.isNaN(sag1[0]) &&
-                                !Float.isNaN(sag2[0])) {
+    if (!Float.isNaN(cellElasticityIndex[0])) {
+        base = (base + cellElasticityIndex[0]) / 2f;
+    }
 
-                                if (cellImbalanceRisk[0]) {
-                                    logLabelWarnValue(
-                                            gr ? "Ισορροπία κυψελών μπαταρίας"
-                                               : "Battery cell balance",
-                                            gr
-                                                    ? "Εντοπίστηκε πιθανή ασυμμετρία κυψελών"
-                                                    : "Possible lithium cell imbalance detected"
-                                    );
-                                } else {
-                                    logLabelOkValue(
-                                            gr ? "Ισορροπία κυψελών μπαταρίας"
-                                               : "Battery cell balance",
-                                            gr
-                                                    ? "Δεν εντοπίστηκε ανισορροπία"
-                                                    : "No imbalance detected"
-                                    );
-                                }
-                            }
+    if (base > 100f) base = 100f;
+    if (base < 0f) base = 0f;
 
-                            if (batteryBehaviourWarningF) {
-                                logLabelWarnValue(
-                                        gr ? "Συμπεριφορά μπαταρίας"
-                                           : "Battery behaviour",
-                                        gr
-                                                ? "Ασυνήθιστη ηλεκτρική συμπεριφορά κατά τη φόρτιση / εκφόρτιση"
-                                                : "Abnormal electrical behaviour detected during load / recovery"
-                                );
-                            } else {
-                                logLabelOkValue(
-                                        gr ? "Συμπεριφορά μπαταρίας"
-                                           : "Battery behaviour",
-                                        gr
-                                                ? "Η συμπεριφορά φαίνεται φυσιολογική"
-                                                : "Electrical behaviour appears normal"
-                                );
-                            }
+    structuralIntegrityIndex[0] = base;
+}
 
-// main pipeline
+// 🔴 HARD OVERRIDES
+if (collapseRisk[0]) {
+    structuralIntegrityIndex[0] = 30f;
+}
+
+if (smartSwelling) {
+    structuralIntegrityIndex[0] = 20f;
+}
+
+// =====================================================
+// 🔴 STRUCTURAL INTEGRITY (FIXED + FALLBACK)
+// =====================================================
+if (!Float.isNaN(structuralIntegrityIndex[0]) &&
+    !lab14_systemLimited[0]) {
+
+    String siLabel;
+
+    if (structuralIntegrityIndex[0] >= 85f)
+        siLabel = gr
+                ? "Εξαιρετική δομική ακεραιότητα"
+                : "Excellent structural integrity";
+    else if (structuralIntegrityIndex[0] >= 70f)
+        siLabel = gr
+                ? "Καλή δομική κατάσταση"
+                : "Good structural condition";
+    else if (structuralIntegrityIndex[0] >= 50f)
+        siLabel = gr
+                ? "Μέτρια δομική φθορά"
+                : "Moderate structural wear";
+    else
+        siLabel = gr
+                ? "Πιθανή εσωτερική υποβάθμιση"
+                : "Possible internal degradation";
+
+    if (structuralIntegrityIndex[0] >= 70f) {
+
+        logLabelOkValue(
+                gr ? "Δομική ακεραιότητα μπαταρίας"
+                   : "Battery structural integrity",
+                String.format(
+                        Locale.US,
+                        "%s (%.0f)",
+                        siLabel,
+                        structuralIntegrityIndex[0]
+                )
+        );
+
+    } else {
+
+        logLabelWarnValue(
+                gr ? "Δομική ακεραιότητα μπαταρίας"
+                   : "Battery structural integrity",
+                String.format(
+                        Locale.US,
+                        "%s (%.0f)",
+                        siLabel,
+                        structuralIntegrityIndex[0]
+                )
+        );
+    }
+
+} else {
+
+    // 🔴 FALLBACK από SAG (critical fix)
+    if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
+
+        float s = !Float.isNaN(sag1[0]) ? sag1[0] : sag2[0];
+
+        String siFallback;
+
+        if (s < 0.05f) {
+            siFallback = gr
+                    ? "Καλή δομική σταθερότητα"
+                    : "Good structural integrity";
+        } else if (s < 0.12f) {
+            siFallback = gr
+                    ? "Μέτρια δομική κατάσταση"
+                    : "Moderate structural condition";
+        } else {
+            siFallback = gr
+                    ? "Πιθανή φθορά κυψελών"
+                    : "Possible cell degradation";
+        }
+
+        logLabelValue(
+                gr ? "Δομική ακεραιότητα μπαταρίας"
+                   : "Battery structural integrity",
+                siFallback
+        );
+
+    } else {
+
+        logLabelWarnValue(
+                gr ? "Δομική ακεραιότητα μπαταρίας"
+                   : "Battery structural integrity",
+                gr
+                        ? "Ανεπαρκή δεδομένα"
+                        : "Insufficient data"
+        );
+    }
+}
+
+
+// =====================================================
+// 🔴 CELL BALANCE (FIXED CONDITION)
+// =====================================================
+if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
+
+    if (cellImbalanceRisk[0]) {
+
+        logLabelWarnValue(
+                gr ? "Ισορροπία κυψελών μπαταρίας"
+                   : "Battery cell balance",
+                gr
+                        ? "Εντοπίστηκε πιθανή ασυμμετρία κυψελών"
+                        : "Possible lithium cell imbalance detected"
+        );
+
+    } else {
+
+        logLabelOkValue(
+                gr ? "Ισορροπία κυψελών μπαταρίας"
+                   : "Battery cell balance",
+                gr
+                        ? "Δεν εντοπίστηκε ανισορροπία"
+                        : "No imbalance detected"
+        );
+    }
+}
+
+
+// =====================================================
+// 🔴 BATTERY BEHAVIOUR
+// =====================================================
+if (batteryBehaviourWarningF) {
+
+    logLabelWarnValue(
+            gr ? "Συμπεριφορά μπαταρίας"
+               : "Battery behaviour",
+            gr
+                    ? "Ασυνήθιστη ηλεκτρική συμπεριφορά κατά τη φόρτιση / εκφόρτιση"
+                    : "Abnormal electrical behaviour detected during load / recovery"
+    );
+
+} else {
+
+    logLabelOkValue(
+            gr ? "Συμπεριφορά μπαταρίας"
+               : "Battery behaviour",
+            gr
+                    ? "Η συμπεριφορά φαίνεται φυσιολογική"
+                    : "Electrical behaviour appears normal"
+    );
+}
 
    // ------------------------------------------------
     // MAIN CALL (FIXED)
