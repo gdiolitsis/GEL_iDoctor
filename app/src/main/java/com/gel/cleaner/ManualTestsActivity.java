@@ -14452,11 +14452,11 @@ lab14ElapsedMs = 0;
 // ============================================================
 private void lab14LogStressResult(
         boolean gr,
-        float sagAvg,
+        float[] sagAvg,
         float voltageStart,
         float voltageUnderLoad,
-        float voltageRecovery,
-        float voltageRecoverySpeed,
+        float[] voltageRecovery,
+        float[] voltageRecoverySpeed,
         float voltageStability,
         float[] internalResistance,
         float estimatedESR,
@@ -14514,11 +14514,11 @@ private void lab14LogStressResult(
     // =====================================================
     // FAST SAG
     // =====================================================
-    if (!Float.isNaN(sagAvg)) {
+    if (!Float.isNaN(sagAvg[0])) {
         logLabelValue(
                 gr ? "Γρήγορη καταπόνηση (μέσο sag)"
                    : "Fast stress (avg sag)",
-                String.format(Locale.US, "%.3f V", sagAvg)
+                String.format(Locale.US, "%.3f V", sagAvg[0])
         );
     }
 
@@ -14561,6 +14561,7 @@ String sagLabel =
         }
         
         if (!Float.isNaN(powerMilliWatt) &&
+    powerMilliWatt > 0f &&
     powerMilliWatt < 2500f &&
     "Excellent".equals(sagLabel)) {
 
@@ -14570,7 +14571,7 @@ String sagLabel =
 // ----------------------------------------------------
 // 🔴 SAG VALIDATION (REAL LOAD QUALITY)
 // ----------------------------------------------------
-if (!Float.isNaN(powerMilliWatt)) {
+if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
 
     if (powerMilliWatt < 2000f) {
 
@@ -14595,7 +14596,7 @@ if (sag > 0 &&
     resistanceCheckMilliOhm =
             (sag / estimatedCurrentMa) * 1000f;
 
-    if (resistanceCheckMilliOhm < 5f)
+    if (resistanceCheckMilliOhm < 1f)
         resistanceCheckMilliOhm = Float.NaN;
 
     if (resistanceCheckMilliOhm > 300f)
@@ -14627,9 +14628,9 @@ if (!Float.isNaN(resistanceCheckMilliOhm)) {
 }
 
 // recovery (αν υπάρχει)
-if (!Float.isNaN(voltageRecovery)) {
+if (!Float.isNaN(voltageRecovery[0])) {
 
-    if (voltageRecovery < 0.03f) {
+    if (voltageRecovery[0] < 0.03f) {
 
         if ("Excellent".equals(batteryTruth)) {
             batteryTruth = "Normal";
@@ -14637,7 +14638,7 @@ if (!Float.isNaN(voltageRecovery)) {
             batteryTruth = "Weak";
         }
 
-    } else if (voltageRecovery < 0.06f) {
+    } else if (voltageRecovery[0] < 0.06f) {
 
         if ("Excellent".equals(batteryTruth)) {
             batteryTruth = "Normal";
@@ -14706,13 +14707,16 @@ if ("Excellent".equals(batteryTruth)) {
 // -----------------------------
 // 🔴 POWER OUTPUT (DYNAMIC COLOR)
 // -----------------------------
-if (!Float.isNaN(powerMilliWatt)) {
+if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 500f) {
 
     String powerLabel =
             powerMilliWatt >= 6000f ? "High" :
             powerMilliWatt >= 3000f ? "Normal" : "Low";
 
-    if ("Excellent".equals(sagLabel) && powerMilliWatt < 3000f) {
+    if ("Excellent".equals(sagLabel) &&
+        powerMilliWatt > 0f &&
+        powerMilliWatt < 3000f) {
+
         powerLabel = "Normal";
     }
 
@@ -14750,8 +14754,8 @@ if (!Float.isNaN(powerMilliWatt)) {
     logLabelWarnValue(
             gr ? "Ικανότητα ισχύος"
                : "Power capability",
-            gr ? "Μη διαθέσιμο"
-               : "Unavailable"
+            gr ? "Μη αξιόπιστη μέτρηση"
+               : "Unreliable measurement"
     );
 }
 
@@ -14769,19 +14773,19 @@ if (!Float.isNaN(resistanceCheckMilliOhm)) {
 // -----------------------------
 // 🔴 RECOVERY (RAW)
 // -----------------------------
-if (!Float.isNaN(voltageRecovery)) {
+if (!Float.isNaN(voltageRecovery[0])) {
     logLabelValue(
             gr ? "Ανάκαμψη τάσης"
                : "Voltage recovery",
-            String.format(Locale.US, "%.3f V", voltageRecovery)
+            String.format(Locale.US, "%.3f V", voltageRecovery[0])
     );
 }
 
-if (!Float.isNaN(voltageRecoverySpeed)) {
+if (!Float.isNaN(voltageRecoverySpeed[0])) {
     logLabelValue(
             gr ? "Ταχύτητα ανάκαμψης"
                : "Recovery speed",
-            String.format(Locale.US, "%.4f V/sec", voltageRecoverySpeed)
+            String.format(Locale.US, "%.4f V/sec", voltageRecoverySpeed[0])
     );
 }
 
@@ -14953,24 +14957,45 @@ if (collapseRisk[0] || smartSwelling) {
     logLabelOkValue(recLabel, recommendation);
 }
 
-// 🔴 FINAL SUMMARY (FIX DUPLICATE)
+// =====================================================
+// 🔴 FORMAT LAYER
+// =====================================================
+
+String powerText = (Float.isNaN(powerMilliWatt) || powerMilliWatt <= 0f)
+        ? "N/A"
+        : String.format(Locale.US, "%.0f mW", powerMilliWatt);
+
+String sagText = Float.isNaN(sag)
+        ? "N/A"
+        : String.format(Locale.US, "%.3f V", sag);
+
+String tempText =
+        (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
+                ? String.format(Locale.US, "%.1f°C", (endBatteryTemp - startBatteryTemp))
+                : "N/A";
+
+String drainText =
+        (validDrain && dtMs > 0)
+                ? String.format(Locale.US, "%.0f mAh/h", (drainMah * 3600000.0 / dtMs))
+                : "N/A";
+
+
+// =====================================================
+// 🔴 FINAL SUMMARY (FIXED)
+// =====================================================
 
 String summary = String.format(
         Locale.US,
         gr
-        ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %.0f mW\nΠτώση τάσης: %.3f V\nΘερμική μεταβολή: %.1f°C\nΑποφόρτιση: %.0f mAh/h"
-        : "Status: %s\nBehaviour: %s\nPower: %.0f mW\nVoltage sag: %.3f V\nThermal delta: %.1f°C\nDrain: %.0f mAh/h",
+        ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %s\nΠτώση τάσης: %s\nΘερμική μεταβολή: %s\nΑποφόρτιση: %s"
+        : "Status: %s\nBehaviour: %s\nPower: %s\nVoltage sag: %s\nThermal delta: %s\nDrain: %s",
 
         batteryTruth,
-        sagLabel,   // 🔴 FIX εδώ
-        Float.isNaN(powerMilliWatt) ? 0f : powerMilliWatt,
-        Float.isNaN(sag) ? 0f : sag,
-        (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
-                ? (endBatteryTemp - startBatteryTemp)
-                : 0f,
-        (validDrain && dtMs > 0)
-                ? (drainMah * 3600000.0 / dtMs)
-                : 0f
+        sagLabel,
+        powerText,
+        sagText,
+        tempText,
+        drainText
 );
 
 // 🔴 COLOR BASED ON SEVERITY (CLEAN)
@@ -17400,11 +17425,11 @@ if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
     else base = 50f;
 
     // sag penalty
-    if (!Float.isNaN(sagAvg)) {
+    if (!Float.isNaN(sagAvg[0])) {
 
-        if (sagAvg > 0.15f) base -= 25f;
-        else if (sagAvg > 0.10f) base -= 15f;
-        else if (sagAvg > 0.06f) base -= 8f;
+        if (sagAvg[0] > 0.15f) base -= 25f;
+        else if (sagAvg[0] > 0.10f) base -= 15f;
+        else if (sagAvg[0] > 0.06f) base -= 8f;
     }
 
     // drain penalty (unstable discharge)
@@ -17415,7 +17440,7 @@ if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
     }
 
     // recovery penalty (δεν κρατάει load)
-    if (!Float.isNaN(voltageRecovery) && voltageRecovery < 0.04f) {
+    if (!Float.isNaN(voltageRecovery[0]) && voltageRecovery[0] < 0.04f) {
         base -= 10f;
     }
 
@@ -17471,21 +17496,21 @@ if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
 // =====================================================
 float ss = Float.NaN;
 
-if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
 
     // base από sag
-    float base = 100f - (sagAvg * 700f);
+    float base = 100f - (sagAvg[0] * 700f);
 
     // clamp
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
 
     // recovery penalty
-    if (!Float.isNaN(voltageRecovery)) {
+    if (!Float.isNaN(voltageRecovery[0])) {
 
-        if (voltageRecovery < 0.03f) {
+        if (voltageRecovery[0] < 0.03f) {
             base -= 20f;
-        } else if (voltageRecovery < 0.06f) {
+        } else if (voltageRecovery[0] < 0.06f) {
             base -= 10f;
         }
     }
@@ -17547,29 +17572,29 @@ if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
 // =====================================================
 float cei = Float.NaN;
 
-if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
 
-    float base = 100f - (sagAvg * 900f);
+    float base = 100f - (sagAvg[0] * 900f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
 
     // recovery boost / penalty
-    if (!Float.isNaN(voltageRecovery)) {
+    if (!Float.isNaN(voltageRecovery[0])) {
 
-        if (voltageRecovery > 0.08f) {
+        if (voltageRecovery[0] > 0.08f) {
             base += 10f;
-        } else if (voltageRecovery < 0.03f) {
+        } else if (voltageRecovery[0] < 0.03f) {
             base -= 25f;
-        } else if (voltageRecovery < 0.05f) {
+        } else if (voltageRecovery[0] < 0.05f) {
             base -= 10f;
         }
     }
 
     // recovery speed matters
-    if (!Float.isNaN(voltageRecoverySpeed)) {
+    if (!Float.isNaN(voltageRecoverySpeed[0])) {
 
-        if (voltageRecoverySpeed < 0.002f) {
+        if (voltageRecoverySpeed[0] < 0.002f) {
             base -= 10f;
         }
     }
@@ -17627,9 +17652,9 @@ if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
                             
 float sii = Float.NaN;
 
-if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
 
-    float base = 100f - (sagAvg * 800f);
+    float base = 100f - (sagAvg[0] * 800f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
@@ -17820,7 +17845,7 @@ if (batteryBehaviourWarningF) {
             voltageRecovery[0],
             voltageRecoverySpeed[0],
             voltageStability[0],
-            internalResistance,
+            internalResistance[0],
             estimatedESRF,
             thermalImpedance[0],
             energyEfficiencyF,
