@@ -3281,16 +3281,22 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
                     return;
                 }
 
-                long now = SystemClock.elapsedRealtime();
-                int elapsed = (int) ((now - t0) / 1000);
+long now = SystemClock.elapsedRealtime();
 
-                // clamp για να μην πηδάει μπροστά
-                if (elapsed > lastDisplayedSecond + 1) {
-                    elapsed = lastDisplayedSecond + 1;
-                }
+// πραγματικός χρόνος
+int realElapsed = (int) ((now - t0) / 1000);
 
-                lastDisplayedSecond = elapsed;
-                
+// 🔴 smooth step (χωρίς lag accumulation)
+if (realElapsed > lastDisplayedSecond) {
+    lastDisplayedSecond++;
+}
+
+int elapsed = lastDisplayedSecond;
+
+// clamp
+if (elapsed < 0) elapsed = 0;
+if (elapsed > durationSec) elapsed = (int) durationSec;
+
                 if (elapsed < 60) {
                     statusText.setText(gr
                             ? "HARD stress (μέγιστο φορτίο)"
@@ -18442,7 +18448,7 @@ if (lab14FastPhase) {
 
         float ratio = Math.min(1f, fastElapsed / 45f);
 
-        int active = (int) (ratio * segCount);
+        int active = (int) Math.ceil(ratio * segCount);
 
         for (int i = 0; i < segCount; i++) {
 
@@ -18546,7 +18552,7 @@ if (elapsed < durationSec) {
 
         float ratio = Math.min(1f, elapsed / (float) durationSec);
 
-        int active = (int) (ratio * segCount);
+        int active = (int) Math.ceil(ratio * segCount);
 
         for (int i = 0; i < segCount; i++) {
 
