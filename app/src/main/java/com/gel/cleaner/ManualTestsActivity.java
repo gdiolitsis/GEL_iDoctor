@@ -19563,17 +19563,11 @@ if (inHardPhase && elapsed >= 20) {
 }
 
 // ----------------------------------------------------
-// 🔴 REBALANCE (SAFE — NO INTERFERENCE IN 14B HARD)
+// 🔴 REBALANCE (SAFE — NO INTERFERENCE IN 14B)
 // ----------------------------------------------------
-if (!earlyPhase && !isLab14BMode) {
+if (!isLab14BMode) {
 
     // normal LAB14 only
-    rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
-    rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
-
-} else if (isLab14BMode && lab14SoftPhaseStarted) {
-
-    // LAB14B → επιτρέπεται ΜΟΝΟ στο SOFT phase
     rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
     rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
 
