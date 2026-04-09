@@ -19148,7 +19148,11 @@ private String computeRiskSummary(
 private void updateLab14LiveStats() {
 
 // 🔴 HARD STOP FAILSAFE (CRITICAL)
-if (isLab14BMode && lab14Running && elapsed >= 300)
+long now = SystemClock.elapsedRealtime();
+int elapsed = (int) ((now - t0) / 1000);
+
+// 🔴 HARD STOP FAILSAFE
+if (isLab14BMode && lab14Running && elapsed >= 300) {
 
     appendLog("FORCE END", "Failsafe trigger");
 
@@ -19162,7 +19166,6 @@ if (isLab14BMode && lab14Running && elapsed >= 300)
     lab14Cancelled = false;
     isLab14BMode = false;
 
-    // 👉 CALL FINAL LOGIC εδώ αν χρειάζεται
     runOnUiThread(() -> {
         try {
             lab14CleanupUI();
@@ -19180,19 +19183,6 @@ if (isLab14BMode && lab14Running && elapsed >= 300)
             iDoctorEngine.get(ManualTestsActivity.this);
 
 Float cpuTemp = readCpuTempSafe();
-
-long now = SystemClock.elapsedRealtime();
-
-// 🔴 use REAL test start time (t0 from popup loop)
-int elapsed = (int) ((now - t0) / 1000);
-
-// 🔴 ΤΟ ΚΡΙΣΙΜΟ ΠΟΥ ΣΟΥ ΛΕΙΠΕ
-lab14ElapsedMs += delta;
-
-lab14LastTick = now;
-
-// ✅ σωστό elapsed
-int elapsed = (int) (lab14ElapsedMs / 1000);
 
 // ----------------------------------------------------
 // 🔴 TIME FLAGS
