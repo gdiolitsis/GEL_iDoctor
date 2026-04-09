@@ -19301,12 +19301,12 @@ if (isLab14BMode) {
 // ----------------------------------------------------
 double drainPerHour = 0;
 
-if (elapsed > 3)
+if (elapsed > 3) {
 
     if (drainNow > 0) {
 
         drainPerHour =
-        (drainNow * 3600.0) / elapsed;
+                (drainNow * 3600.0) / elapsed;
 
     } else {
 
