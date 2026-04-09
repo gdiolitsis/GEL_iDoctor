@@ -3112,10 +3112,6 @@ private void startCpuBurnLimitedThreads(int threads) {
                     // anti-JIT optimization
                     if (acc > 1e12) acc = 0;
 
-                    // ⚠️ tiny yield για scheduler stability
-                    if ((now & 3) == 0) {
-                        Thread.yield();
-                    }
                 }
 
             } catch (Throwable ignore) {}
@@ -3123,7 +3119,7 @@ private void startCpuBurnLimitedThreads(int threads) {
         }, "LAB14_CPU_" + i);
 
         // ⚠️ καλύτερο από MAX_PRIORITY (πιο stable)
-        t.setPriority(Thread.NORM_PRIORITY + 1);
+        t.setPriority(Thread.MAX_PRIORITY);
 
         lab14CpuThreads.add(t);
         t.start();
@@ -19152,6 +19148,8 @@ int elapsed = (int) ((now - t0) / 1000);
 
 // 🔴 HARD STOP FAILSAFE
 if (isLab14BMode && lab14Running && elapsed >= 300) {
+	
+	appendLog("TIME", "FINAL END at " + elapsed + " sec");
 
     appendLog("FORCE END", "Failsafe trigger");
 
@@ -19197,6 +19195,9 @@ inHardPhase = hardPhase;
 if (isLab14BMode &&
     !lab14SoftPhaseStarted &&
     elapsed >= 60) {
+
+    // 🔴 ADD THIS
+    appendLog("TIME", "HARD->SOFT at " + elapsed + " sec");
 
     lab14SoftPhaseStarted = true;   // 🔴 LOCK FIRST
     lab14BoostActive = false;
