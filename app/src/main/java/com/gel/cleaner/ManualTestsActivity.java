@@ -17344,6 +17344,8 @@ if (drainMahFinalLong > 600) {
 
     if (baselineFullFinal > 0 && drainMahFinalLong > 0) {
     if (unrealCapFinal) {
+    	
+    	appendHtml("<br>");
             logLabelWarnValue(
                     gr ? "Έλεγχος δηλωμένης χωρητικότητας"
                        : "Declared capacity check",
@@ -19146,7 +19148,7 @@ private String computeRiskSummary(
 private void updateLab14LiveStats() {
 
 // 🔴 HARD STOP FAILSAFE (CRITICAL)
-if (isLab14BMode && lab14Running && lab14ElapsedMs >= 300000) {
+if (isLab14BMode && lab14Running && elapsed >= 300)
 
     appendLog("FORCE END", "Failsafe trigger");
 
@@ -19181,15 +19183,8 @@ Float cpuTemp = readCpuTempSafe();
 
 long now = SystemClock.elapsedRealtime();
 
-if (lab14LastTick == 0) {
-    lab14LastTick = now;
-}
-
-long delta = now - lab14LastTick;
-
-// clamp για να μην πηδάει
-if (delta < 0) delta = 0;
-if (delta > 1500) delta = 1000;
+// 🔴 use REAL test start time (t0 from popup loop)
+int elapsed = (int) ((now - t0) / 1000);
 
 // 🔴 ΤΟ ΚΡΙΣΙΜΟ ΠΟΥ ΣΟΥ ΛΕΙΠΕ
 lab14ElapsedMs += delta;
@@ -19316,12 +19311,12 @@ if (isLab14BMode) {
 // ----------------------------------------------------
 double drainPerHour = 0;
 
-if (lab14ElapsedMs > 3000) { // μετά τα 3 sec
+if (elapsed > 3)
 
     if (drainNow > 0) {
 
         drainPerHour =
-                (drainNow * 3600000.0) / lab14ElapsedMs;
+        (drainNow * 3600.0) / elapsed;
 
     } else {
 
