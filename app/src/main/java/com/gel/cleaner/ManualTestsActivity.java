@@ -2519,8 +2519,7 @@ new Thread(() -> {
     try {
         // 🔥 FULL CPU (όχι C_Mode)
         startCpuBurnLimitedThreads(cores);
-        startCpuBurn_C_Mode();
-
+        
         // 🔥 RAM
         startMemoryStress();
 
