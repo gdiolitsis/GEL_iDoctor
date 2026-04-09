@@ -19473,24 +19473,29 @@ if (isLab14BMode) {
 lab14WeakLoad = weakLoad;
 
 // ----------------------------------------------------
-// 🔥 BOOST (FIXED — NON-BLOCKING)
+// 🔥 BOOST (HARD-LOCKED — LAB14B SAFE)
 // ----------------------------------------------------
+
 if (!lab14BoostActive &&
     lab14Running &&
     !lab14Cancelled &&
     !lab14_systemLimited[0]) {
 
-    boolean shouldBoost;
+    boolean shouldBoost = false;
 
     if (isLab14BMode) {
 
-        shouldBoost =
-                inHardPhase &&
-                !lab14SoftPhaseStarted &&
-                !lab14BoostActive;
+        // 🔴 HARD phase → ΚΑΝΕ ΤΙΠΟΤΑ (FULL LOCK)
+        if (!lab14SoftPhaseStarted) {
+            shouldBoost = false;
+        } else {
+            // 🟢 SOFT phase μόνο
+            shouldBoost = true;
+        }
 
     } else {
 
+        // 🔵 NORMAL LAB14 LOGIC
         shouldBoost =
                 !lab14FastPhase &&
                 (loadScore <= 1 || batteryScore < 60) &&
@@ -19503,7 +19508,7 @@ if (!lab14BoostActive &&
 
         appendLog("BOOST",
                 isLab14BMode
-                        ? "FORCE HARD BOOST (14B)"
+                        ? "SOFT BOOST (14B)"
                         : "Adaptive boost (battery-aware)");
 
         new Thread(() -> {
@@ -19514,14 +19519,17 @@ if (!lab14BoostActive &&
 
                 if (isLab14BMode) {
 
-                    if (!inHardPhase) return;
+                    // 🟢 SOFT ONLY (controlled load)
+                    final int coresLocal = Runtime.getRuntime().availableProcessors();
+                    int threads = Math.max(1, coresLocal / 3);
 
-                    startCpuBurn_C_Mode();
-                    startGpuStressLevel(4);
+                    startCpuBurnLimitedThreads(threads);
+                    startGpuStressLevel(1);
                     startMemoryStress();
 
                 } else {
 
+                    // 🔵 NORMAL LAB14
                     if (lab14FastPhase) return;
 
                     final int coresLocal = Runtime.getRuntime().availableProcessors();
@@ -19563,7 +19571,7 @@ if (!earlyPhase && !isLab14BMode) {
     rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
     rebalanceLab14CpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
 
-} else if (isLab14BMode && !inHardPhase) {
+} else if (isLab14BMode && lab14SoftPhaseStarted) {
 
     // LAB14B → επιτρέπεται ΜΟΝΟ στο SOFT phase
     rebalanceLab14GpuLive(weakLoad, thermalDelta, lab14_systemLimited[0]);
