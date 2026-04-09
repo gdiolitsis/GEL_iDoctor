@@ -292,9 +292,6 @@ private long lab14LastCpuAdjustTs = 0L;
 
 private long lab14LastLiveLogTs = 0;
 
-private long lab14LastTick = 0;
-private long lab14ElapsedMs = 0;
-
 private int lastDisplayedSecond = 0;
 private long lastSnapshotTs = 0;
 
@@ -2481,10 +2478,6 @@ lab14SoftPhaseStarted = false;
 lab14FastPhase = false;
 lab14MainPhase = true;
 
-// 🔴 TIMER FIX
-lab14ElapsedMs = 0;
-lab14LastTick = SystemClock.elapsedRealtime();
-
 startLab14BPopup(300);
 
 logLine();
@@ -2796,8 +2789,6 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         lab14BoostActive = false;
         lab14SoftPhaseStarted = false;
 
-        lab14LastTick = 0;
-        lab14ElapsedMs = 0;
     }
 
 }, 300000L);
@@ -3253,10 +3244,6 @@ if (lab14Dialog.getWindow() != null) {
 lab14BoostActive = false;
 lab14SoftPhaseStarted = false;
 
-// 🔴 RESET TIMER
-lab14LastTick = 0;
-lab14ElapsedMs = 0;
-
 lab14Running = true;
 lab14Cancelled = false;
 
@@ -3303,26 +3290,7 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
                 }
 
                 lastDisplayedSecond = elapsed;
-
-                int currentPercent = getBatteryPercentSafe();
-
-                if (currentPercent < 70) {
-
-                    logWarn(gr
-                            ? "Η μπαταρία έπεσε κάτω από 70% — το τεστ διακόπτεται"
-                            : "Battery dropped below 70% — test aborted");
-
-                    lab14Cancelled = true;
-                    lab14Running = false;
-
-                    lab14StopAllStress();
-
-                    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-                    try { lab14CleanupUI(); } catch (Throwable ignore) {}
-
-                    return;
-                }
-
+                
                 if (elapsed < 60) {
                     statusText.setText(gr
                             ? "HARD stress (μέγιστο φορτίο)"
@@ -14391,10 +14359,6 @@ lab14Cancelled = false;
 lab14BoostActive = false;
 lab14SoftPhaseStarted = false;
 
-// 🔴 TIMER RESET (CRITICAL — new timing system)
-lab14LastTick = 0;
-lab14ElapsedMs = 0;
-
 // 🔴 LEGACY TIMER
 t0 = SystemClock.elapsedRealtime();
 lab14EndTime = t0 + (durationSec * 1000L);
@@ -14430,8 +14394,6 @@ lab14AdvisoryShown = false;
 // 🔴 EXTRA RESET (CRITICAL)
 lab14BoostActive = false;
 lab14SoftPhaseStarted = false;
-lab14LastTick = 0;
-lab14ElapsedMs = 0;
 
     logError(
             gr
@@ -18006,10 +17968,6 @@ lab14AdvisoryShown = false;
 // 🔴 RESET FLAGS (CRITICAL)
 lab14BoostActive = false;
 lab14SoftPhaseStarted = false;
-
-// 🔴 RESET TIMER (CRITICAL)
-lab14LastTick = 0;
-lab14ElapsedMs = 0;
 
 // ------------------------------------------------
 // END TRY
