@@ -40,7 +40,6 @@ public class ServiceReportActivity extends AppCompatActivity {
     private AppCompatButton btnHtml;
 
     private ProgressBar exportProgress;
-}
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -118,30 +117,20 @@ public class ServiceReportActivity extends AppCompatActivity {
         exportProgress.setLayoutParams(lpProg);
 
         // ACTIONS
-        btnTxt.setOnClickListener(v -> {
+btnTxt.setOnClickListener(v -> {
     lockExportUI(true);
 
     new Thread(() -> {
-
         exportTxtToPdf();
-
         runOnUiThread(() -> lockExportUI(false));
-
     }).start();
 });
 
 btnHtml.setOnClickListener(v -> {
-
     lockExportUI(true);
 
-    runOnUiThread(() -> {
+    GELServiceReportPdf.export(this);
 
-        GELServiceReportPdf.export(this);
-
-        lockExportUI(false);
-        updatePreview();
-
-    });
 });
 
         btnRow.addView(line);
@@ -410,13 +399,17 @@ if (outDir == null) {
 
 File out = new File(outDir, "GEL_Service_Report.pdf");
 
-            FileOutputStream fos = new FileOutputStream(out);
-            pdf.writeTo(fos);
-            fos.close();
-            pdf.close();
+FileOutputStream fos = new FileOutputStream(out);
+pdf.writeTo(fos);
+fos.close();
+pdf.close();
 
 runOnUiThread(() -> {
     Toast.makeText(this, "PDF saved.", Toast.LENGTH_LONG).show();
+
+    // 🔥 unlock UI
+    lockExportUI(false);
+
     updatePreview();
 });
 
@@ -424,6 +417,9 @@ runOnUiThread(() -> {
 
     runOnUiThread(() -> {
         Toast.makeText(this, "PDF ERROR: " + e.getMessage(), Toast.LENGTH_LONG).show();
+
+        // 🔥 unlock UI ακόμα και σε error
+        lockExportUI(false);
     });
 
     e.printStackTrace();
