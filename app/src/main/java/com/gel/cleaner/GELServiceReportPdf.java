@@ -36,8 +36,11 @@ public final class GELServiceReportPdf {
     // ENTRY
     // ============================================================
     public static void export(Context ctx) {
+public static void export(Context ctx) {
 
-        if (ctx == null) return;
+    if (ctx == null) return;
+
+    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
 
         String raw = GELServiceLog.getAll();
 
@@ -71,7 +74,9 @@ public final class GELServiceReportPdf {
         });
 
         wv.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
-    }
+
+    });
+}
 
     // ============================================================
     // HTML BUILDER (🔥 COLORS + STRUCTURE)
