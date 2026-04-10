@@ -428,6 +428,7 @@ runOnUiThread(() -> {
 
     e.printStackTrace();
 }
+}
             
     private PdfDocument.Page startPage(PdfDocument pdf, int num) {
         return pdf.startPage(
