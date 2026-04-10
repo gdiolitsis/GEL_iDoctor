@@ -164,6 +164,21 @@ public class GELServiceLog {
         return LOG.length() == 0;
     }
 
+// ============================================================
+// UNIVERSAL ADD (for PDF sync / external usage)
+// ============================================================
+public static synchronized void add(String line) {
+    if (line == null || line.trim().isEmpty()) return;
+
+    String clean = sanitize(line);
+
+    // plain
+    addPlain(clean);
+
+    // html (neutral white)
+    addHtml("<font color='#FFFFFF'>" + escape(clean) + "</font>");
+}
+
     // ============================================================
     // BACKWARD COMPATIBILITY
     // ============================================================
