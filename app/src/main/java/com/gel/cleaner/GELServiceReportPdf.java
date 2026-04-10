@@ -118,7 +118,7 @@ public final class GELServiceReportPdf {
                 ".footer{margin-top:32px;font-size:11px;color:#888;}" +
                 "</style></head><body>" +
 
-                "<h1>Service Diagnostic Report</h1>" +
+                "<h1>Service Diagnostic Report / Αναφορά Διάγνωσης</h1>" +
                 "<div style='color:#AAA;'>GDiolitsis Engine Lab (GEL)</div>" +
                 "<div style='color:#AAA;'>Generated: " +
                 new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date()) +
