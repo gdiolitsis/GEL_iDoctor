@@ -3288,7 +3288,16 @@ int realElapsed = (int) ((now - t0) / 1000);
 
 // 🔴 smooth step (χωρίς lag accumulation)
 if (realElapsed > lastDisplayedSecond) {
-    lastDisplayedSecond++;
+
+    int diff = realElapsed - lastDisplayedSecond;
+
+    if (diff > 2) {
+        // 🔴 αν έχει μείνει πολύ πίσω → sync άμεσα
+        lastDisplayedSecond = realElapsed;
+    } else {
+        // 🟢 normal step
+        lastDisplayedSecond++;
+    }
 }
 
 int elapsed = lastDisplayedSecond;
