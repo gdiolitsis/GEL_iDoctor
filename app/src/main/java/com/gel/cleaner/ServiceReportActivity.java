@@ -95,7 +95,7 @@ public class ServiceReportActivity extends AppCompatActivity {
 
         try {
             String text = GELServiceLog.getAll();
-            String[] lines = text.split("\n");
+            String[] lines = text.split("\\n+");
 
             PdfDocument pdf = new PdfDocument();
 
