@@ -387,6 +387,7 @@ public class ServiceReportActivity extends AppCompatActivity {
             pdf.close();
 
             runOnUiThread(() -> onExportSuccess("PDF saved."));
+            GELServiceLog.clear();
         } catch (Exception e) {
             runOnUiThread(() -> {
                 Toast.makeText(this, "PDF ERROR: " + e.getMessage(), Toast.LENGTH_LONG).show();
