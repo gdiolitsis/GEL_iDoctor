@@ -11,8 +11,6 @@ import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -130,18 +128,20 @@ public class ServiceReportActivity extends AppCompatActivity {
     }).start();
 });
 
-        btnHtml.setOnClickListener(v -> {
+btnHtml.setOnClickListener(v -> {
+
     lockExportUI(true);
 
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-        GELServiceReportPdf.export(this);
+    new Thread(() -> {
 
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        GELServiceReportPdf.export(this);   // 🔥 ΜΟΝΟ ΑΥΤΟ
+
+        runOnUiThread(() -> {
             lockExportUI(false);
-            updatePreview(); // 👈 ΕΔΩ ΜΠΑΙΝΕΙ
-        }, 1200);
+            updatePreview();
+        });
 
-    }, 100);
+    }).start();
 });
 
         btnRow.addView(line);
@@ -418,11 +418,16 @@ runOnUiThread(() -> {
     Toast.makeText(this, "PDF saved.", Toast.LENGTH_LONG).show();
     updatePreview();
 });
+
+} catch (Exception e) {
+
+    runOnUiThread(() -> {
+        Toast.makeText(this, "PDF ERROR: " + e.getMessage(), Toast.LENGTH_LONG).show();
+    });
+
+    e.printStackTrace();
+}
             
-        } catch (Throwable t) {
-            runOnUiThread(() ->
-        Toast.makeText(this, "PDF error: " + t.getMessage(), Toast.LENGTH_LONG).show()
-);
         }
     }
 
