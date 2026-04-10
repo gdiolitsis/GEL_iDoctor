@@ -293,6 +293,7 @@ for (String sub : subLines) {
     drawLineWithColoredEmoji(canvas, sub, marginX, y, textPaint, emojiPaint);
     y += lineHeight;
 }
+}
             
 // ==================================================
 // REPAIR SUMMARY
