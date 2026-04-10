@@ -511,81 +511,84 @@ private int drawReportHeader(
     // BASIC INFO (μόνο πρώτη σελίδα)
     if (isFirstPage) {
 
-    String dateLine = "Date / Ημερομηνία: " +
-            java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
+        String dateLine = "Date / Ημερομηνία: " +
+                java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
 
-    String deviceLine = "Device / Συσκευή: " +
-            android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
+        String deviceLine = "Device / Συσκευή: " +
+                android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
 
-    String osLine = "Android / Έκδοση: " +
-            android.os.Build.VERSION.RELEASE +
-            " (API " + android.os.Build.VERSION.SDK_INT + ")";
+        String osLine = "Android / Έκδοση: " +
+                android.os.Build.VERSION.RELEASE +
+                " (API " + android.os.Build.VERSION.SDK_INT + ")";
 
-    c.drawText(dateLine, x, y, text); y += 16;
-    c.drawText(deviceLine, x, y, text); y += 16;
-    c.drawText(osLine, x, y, text); y += 22;
-
-    // ==========================================
-    // DEVICE INTAKE CONDITION
-    // ==========================================
-
-    Paint sectionTitle = new Paint(text);
-    sectionTitle.setFakeBoldText(true);
-
-    c.drawText("Device intake condition / Κατάσταση παραλαβής συσκευής", x, y, sectionTitle);
-    y += 18;
-
-    String[] intakeLines = new String[]{
-            "Screen (cracked/scratched) / Οθόνη (σπασμένη/γρατζουνισμένη)",
-            "Back cover / Πίσω καπάκι",
-            "Frame / Πλαίσιο",
-            "Camera lens / Φακός κάμερας",
-            "Charging port / Θύρα φόρτισης",
-            "Buttons / Κουμπιά",
-            "Speaker / Microphone / Ηχείο / Μικρόφωνο",
-            "Water signs / Ενδείξεις υγρασίας",
-            "Battery condition / Κατάσταση μπαταρίας"
-    };
-
-    Paint boxPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    boxPaint.setStyle(Paint.Style.STROKE);
-    boxPaint.setStrokeWidth(1.5f);
-
-    for (String s : intakeLines) {
-
-        int boxSize = 10;
-
-        // OK
-        c.drawRect(x, y - 9, x + boxSize, y + 1, boxPaint);
-        c.drawText(" OK", x + boxSize + 4, y, text);
-
-        // DAMAGED
-        int dmgX = x + 80;
-        c.drawRect(dmgX, y - 9, dmgX + boxSize, y + 1, boxPaint);
-        c.drawText(" DAMAGED", dmgX + boxSize + 4, y, text);
-
-        // label
-        c.drawText("— " + s, x + 170, y, text);
-
+        c.drawText(dateLine, x, y, text);
         y += 16;
-    }
 
-    y += 24;
+        c.drawText(deviceLine, x, y, text);
+        y += 16;
 
-    // ==========================================
-    // NOTES SECTION
-    // ==========================================
+        c.drawText(osLine, x, y, text);
+        y += 22;
 
-    c.drawText("Notes / Παρατηρήσεις:", x, y, sectionTitle);
-    y += 20;
+        // ==========================================
+        // DEVICE INTAKE CONDITION
+        // ==========================================
+        Paint sectionTitle = new Paint(text);
+        sectionTitle.setFakeBoldText(true);
 
-    for (int i = 0; i < 3; i++) {
-        c.drawLine(x, y, x + 450, y, text);
+        c.drawText("Device intake condition / Κατάσταση παραλαβής συσκευής", x, y, sectionTitle);
+        y += 18;
+
+        String[] intakeLines = new String[]{
+                "Screen (cracked/scratched) / Οθόνη (σπασμένη/γρατζουνισμένη)",
+                "Back cover / Πίσω καπάκι",
+                "Frame / Πλαίσιο",
+                "Camera lens / Φακός κάμερας",
+                "Charging port / Θύρα φόρτισης",
+                "Buttons / Κουμπιά",
+                "Speaker / Microphone / Ηχείο / Μικρόφωνο",
+                "Water signs / Ενδείξεις υγρασίας",
+                "Battery condition / Κατάσταση μπαταρίας"
+        };
+
+        Paint boxPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        boxPaint.setStyle(Paint.Style.STROKE);
+        boxPaint.setStrokeWidth(1.5f);
+
+        for (String s : intakeLines) {
+
+            int boxSize = 10;
+
+            // OK
+            c.drawRect(x, y - 9, x + boxSize, y + 1, boxPaint);
+            c.drawText(" OK", x + boxSize + 4, y, text);
+
+            // DAMAGED
+            int dmgX = x + 80;
+            c.drawRect(dmgX, y - 9, dmgX + boxSize, y + 1, boxPaint);
+            c.drawText(" DAMAGED", dmgX + boxSize + 4, y, text);
+
+            // label
+            c.drawText("— " + s, x + 170, y, text);
+
+            y += 16;
+        }
+
+        y += 24;
+
+        // ==========================================
+        // NOTES SECTION
+        // ==========================================
+        c.drawText("Notes / Παρατηρήσεις:", x, y, sectionTitle);
         y += 20;
-    }
 
-    y += 10;
-}
+        for (int i = 0; i < 3; i++) {
+            c.drawLine(x, y, x + 450, y, text);
+            y += 20;
+        }
+
+        y += 10;
+    }
 
     return y;
 }
