@@ -5713,6 +5713,7 @@ txtLog.append("\n");
 
 // 🔥 PDF SYNC
 GELServiceLog.add(sp.toString());
+}
 
 // ------------------------------------------------------------
 // Health checkbox map — BILINGUAL (LAB 14/17 use)
