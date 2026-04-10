@@ -146,7 +146,7 @@ public final class GELServiceReportPdf {
         );
         wv.layout(0, 0, W, wv.getMeasuredHeight());
 
-        int contentHeight = (int) Math.ceil(wv.getContentHeight() * wv.getScale());
+        int contentHeight = (int) Math.ceil(wv.getMeasuredHeight());
 
         PdfDocument pdf = new PdfDocument();
 
