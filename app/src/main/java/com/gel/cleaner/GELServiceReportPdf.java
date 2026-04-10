@@ -112,7 +112,7 @@ public final class GELServiceReportPdf {
         return "<!DOCTYPE html><html><head>" +
                 "<meta charset='utf-8'/>" +
                 "<style>" +
-                "body{background:#0F0F0F;color:#EAEAEA;font-family:monospace;font-size:12px;margin:24px;}" +
+                "body{background:#FFFFFF;color:#111111;font-family:monospace;font-size:12px;margin:24px;}" +
                 "h1{color:#FFD700;font-size:22px;}" +
                 "h2{margin-top:18px;}" +
                 ".footer{margin-top:32px;font-size:11px;color:#888;}" +
@@ -127,8 +127,8 @@ public final class GELServiceReportPdf {
                 body +
 
                 "<div class='footer'><hr>" +
-                "Technician Signature: ___________________________<br>" +
-                "Company Stamp: _________________________________" +
+                "Technician Signature / Υπογραφή Τεχνικού: ___________________________<br>" +
+                "Company Stamp / Σφραγίδα: _________________________________" +
                 "</div></body></html>";
     }
 
