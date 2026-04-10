@@ -905,12 +905,10 @@ btnParams.setMargins(dp(12), dp(8), dp(12), dp(12));
 btnExport.setLayoutParams(btnParams);
 
 btnExport.setOnClickListener(v -> {
-
-    Intent i = new Intent(this, ServiceReportActivity.class);
+    Intent i = new Intent(this, MainActivity.class);
+    i.putExtra("open_service_menu", true);
+    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
     startActivity(i);
-
-    // 🔥 καθάρισε logs μετά το άνοιγμα
-    GELServiceLog.clear();
 });
 
 // ============================================================
