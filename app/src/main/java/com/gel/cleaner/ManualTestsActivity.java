@@ -1254,9 +1254,10 @@ private void appendLog(String txt) {
     runOnUiThread(() -> {
         if (txtLog == null) return;
 
-        txtLog.append("\n" + txt);
+        txtLog.append(txt);
+        txtLog.append("\n");
 
-        // 🔥 CRITICAL FIX — sync UI → PDF
+        // 🔥 GLOBAL LOG PIPELINE
         GELServiceLog.add(txt);
 
         if (logScroll != null) {
@@ -5707,12 +5708,8 @@ sp.setSpan(
         Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
 );
 
-// UI
-txtLog.append(sp);
-txtLog.append("\n");
-
-// 🔥 PDF SYNC
-GELServiceLog.add(sp.toString());
+// ✅ ONE PIPELINE
+appendStyledLog(sp);
 }
 
 // ------------------------------------------------------------
