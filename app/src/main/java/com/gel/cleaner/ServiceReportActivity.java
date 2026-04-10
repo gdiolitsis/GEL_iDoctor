@@ -258,9 +258,41 @@ int y = drawReportHeader(
 );
                 }
 
-                drawLineWithColoredEmoji(canvas, cleanLine, marginX, y, textPaint, emojiPaint);
-                y += lineHeight;
-            }
+String formatted = formatPdfLine(cleanLine);
+
+// split γιατί βάζουμε extra \n
+String[] subLines = formatted.split("\\n");
+
+for (String sub : subLines) {
+
+    if (sub.trim().isEmpty()) {
+        y += lineHeight / 2;
+        continue;
+    }
+
+    if (y > PAGE_HEIGHT - 60) {
+
+        drawPageFooter(canvas, pageNum);
+        pdf.finishPage(page);
+
+        page = startPage(pdf, ++pageNum);
+        canvas = page.getCanvas();
+        canvas.drawColor(Color.WHITE);
+
+        y = drawReportHeader(
+                canvas,
+                marginX,
+                40,
+                titlePaint,
+                subtitlePaint,
+                textPaint,
+                false
+        );
+    }
+
+    drawLineWithColoredEmoji(canvas, sub, marginX, y, textPaint, emojiPaint);
+    y += lineHeight;
+}
             
 // ==================================================
 // REPAIR SUMMARY
@@ -565,6 +597,44 @@ private void drawPageFooter(Canvas canvas, int pageNum) {
             PAGE_HEIGHT - 20,
             footerPaint
     );
+}
+
+// ==========================================================
+// GEL PDF FORMAT ENGINE — FINAL
+// ==========================================================
+
+private String formatPdfLine(String line) {
+
+    if (line == null) return "";
+
+    line = line.trim();
+
+    // SECTION (LAB / INFO)
+    if (line.startsWith("i ")) {
+        return "\n" + line + "\n";
+    }
+
+    // RESULT LINE
+    if (line.startsWith("✔") || line.startsWith("⚠") || line.startsWith("✖")) {
+        return "\n" + line;
+    }
+
+    // LABEL: VALUE alignment
+    if (line.contains(":")) {
+
+        String[] parts = line.split(":", 2);
+
+        String label = parts[0].trim();
+        String value = parts.length > 1 ? parts[1].trim() : "";
+
+        return padRight(label, 28) + ": " + value;
+    }
+
+    return line;
+}
+
+private String padRight(String s, int n) {
+    return String.format("%-" + n + "s", s);
 }
 
 }
