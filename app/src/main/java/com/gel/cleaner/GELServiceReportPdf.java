@@ -13,6 +13,8 @@ import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.view.View;
 import android.webkit.WebView;
@@ -33,58 +35,56 @@ public final class GELServiceReportPdf {
     private GELServiceReportPdf() {}
 
     // ============================================================
-    // ENTRY
+    // ENTRY (FIXED — MAIN THREAD SAFE)
     // ============================================================
     public static void export(Context ctx) {
-public static void export(Context ctx) {
 
-    if (ctx == null) return;
+        if (ctx == null) return;
 
-    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+        new Handler(Looper.getMainLooper()).post(() -> {
 
-        String raw = GELServiceLog.getAll();
+            String raw = GELServiceLog.getAll();
 
-        if (raw == null || raw.trim().isEmpty()) {
-            Toast.makeText(ctx, "No service data to export.", Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        String html = buildHtml(raw);
-
-        WebView wv = new WebView(ctx);
-        wv.setVisibility(View.GONE);
-        wv.getSettings().setJavaScriptEnabled(false);
-
-        wv.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-
-                view.postDelayed(() -> {
-                    try {
-                        createPdf(ctx, view);
-                    } catch (Throwable t) {
-                        Toast.makeText(ctx,
-                                "PDF error: " + t.getMessage(),
-                                Toast.LENGTH_LONG).show();
-                    } finally {
-                        cleanup(view);
-                    }
-                }, 200);
+            if (raw == null || raw.trim().isEmpty()) {
+                Toast.makeText(ctx, "No service data to export.", Toast.LENGTH_LONG).show();
+                return;
             }
+
+            String html = buildHtml(raw);
+
+            WebView wv = new WebView(ctx);
+            wv.setVisibility(View.GONE);
+            wv.getSettings().setJavaScriptEnabled(false);
+
+            wv.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageFinished(WebView view, String url) {
+
+                    view.postDelayed(() -> {
+                        try {
+                            createPdf(ctx, view);
+                        } catch (Throwable t) {
+                            Toast.makeText(ctx,
+                                    "PDF error: " + t.getMessage(),
+                                    Toast.LENGTH_LONG).show();
+                        } finally {
+                            cleanup(view);
+                        }
+                    }, 200);
+                }
+            });
+
+            wv.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
+
         });
-
-        wv.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
-
-    });
-}
+    }
 
     // ============================================================
-    // HTML BUILDER (🔥 COLORS + STRUCTURE)
+    // HTML BUILDER
     // ============================================================
     private static String buildHtml(String raw) {
 
         StringBuilder body = new StringBuilder();
-
         String[] lines = raw.split("\\n");
 
         for (String line : lines) {
@@ -94,51 +94,41 @@ public static void export(Context ctx) {
                     .replace("<", "&lt;")
                     .replace(">", "&gt;");
 
-            if (line.startsWith("✔")) {
+            if (line.startsWith("✔"))
                 body.append("<div style='color:#00FF88;'>").append(safe).append("</div>");
-            }
-            else if (line.startsWith("⚠")) {
+            else if (line.startsWith("⚠"))
                 body.append("<div style='color:#FFA500;'>").append(safe).append("</div>");
-            }
-            else if (line.startsWith("✖")) {
+            else if (line.startsWith("✖"))
                 body.append("<div style='color:#FF4444;'>").append(safe).append("</div>");
-            }
-            else if (line.startsWith("ℹ")) {
+            else if (line.startsWith("ℹ"))
                 body.append("<div style='color:#33AAFF;'>").append(safe).append("</div>");
-            }
-            else if (line.startsWith("i ")) {
+            else if (line.startsWith("i "))
                 body.append("<h2 style='color:#7FC8FF;'>").append(safe).append("</h2>");
-            }
-            else {
+            else
                 body.append("<div>").append(safe).append("</div>");
-            }
         }
 
         return "<!DOCTYPE html><html><head>" +
                 "<meta charset='utf-8'/>" +
                 "<style>" +
-                "body{background:#FFFFFF;color:#111111;font-family:monospace;font-size:12px;margin:24px;}" +
+                "body{background:#FFFFFF;color:#111;font-family:monospace;font-size:12px;margin:24px;}" +
                 "h1{color:#FFD700;font-size:22px;}" +
-                "h2{margin-top:18px;}" +
-                ".footer{margin-top:32px;font-size:11px;color:#888;}" +
                 "</style></head><body>" +
 
-                "<h1>Service Diagnostic Report / Αναφορά Διάγνωσης</h1>" +
-                "<div style='color:#AAA;'>GDiolitsis Engine Lab (GEL)</div>" +
-                "<div style='color:#AAA;'>Generated: " +
+                "<h1>Service Diagnostic Report</h1>" +
+                "<div>GDiolitsis Engine Lab (GEL)</div>" +
+                "<div>" +
                 new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date()) +
                 "</div><hr>" +
 
                 body +
 
-                "<div class='footer'><hr>" +
-                "Technician Signature / Υπογραφή Τεχνικού: ___________________________<br>" +
-                "Company Stamp / Σφραγίδα: _________________________________" +
-                "</div></body></html>";
+                "<hr>Signature: ___________________________" +
+                "</body></html>";
     }
 
     // ============================================================
-    // PDF CORE (MULTI PAGE)
+    // PDF CORE
     // ============================================================
     private static void createPdf(Context ctx, WebView wv) throws Exception {
 
@@ -151,7 +141,7 @@ public static void export(Context ctx) {
         );
         wv.layout(0, 0, W, wv.getMeasuredHeight());
 
-        int contentHeight = (int) Math.ceil(wv.getMeasuredHeight());
+        int contentHeight = wv.getMeasuredHeight();
 
         PdfDocument pdf = new PdfDocument();
 
@@ -168,21 +158,9 @@ public static void export(Context ctx) {
 
             c.save();
             c.translate(0, -y);
-
-            try {
-                Bitmap logo = BitmapFactory.decodeResource(
-                        ctx.getResources(), R.drawable.gel_logo);
-
-                if (logo != null) {
-                    Bitmap scaled = Bitmap.createScaledBitmap(logo, 48, 48, true);
-                    c.drawBitmap(scaled, 24, 20, null);
-                }
-            } catch (Throwable ignore) {}
-
-            c.translate(0, 80);
             wv.draw(c);
-
             c.restore();
+
             pdf.finishPage(p);
 
             y += H;
@@ -249,10 +227,6 @@ public static void export(Context ctx) {
     // ============================================================
     private static void cleanup(WebView v) {
         try {
-            v.stopLoading();
-            v.loadUrl("about:blank");
-            v.clearHistory();
-            v.removeAllViews();
             v.destroy();
         } catch (Throwable ignore) {}
     }
