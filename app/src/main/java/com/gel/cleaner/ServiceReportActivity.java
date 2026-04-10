@@ -58,9 +58,7 @@ public class ServiceReportActivity extends AppCompatActivity {
         txtPreview = new TextView(this);
         txtPreview.setTextColor(0xFFFFFFFF);
         txtPreview.setTextSize(13f);
-        txtPreview.setText(
-                GELServiceLog.getAll().replaceAll("\\n{3,}", "\n\n")
-        );
+        updatePreview();
         root.addView(txtPreview);
 
         // ==========================================================
@@ -149,6 +147,12 @@ public class ServiceReportActivity extends AppCompatActivity {
 
         UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
     }
+    
+    @Override
+protected void onResume() {
+    super.onResume();
+    updatePreview();
+}
 
     private void lockExportUI(boolean lock) {
 
@@ -234,10 +238,7 @@ public class ServiceReportActivity extends AppCompatActivity {
             pdf.close();
 
             Toast.makeText(this, "PDF saved.", Toast.LENGTH_LONG).show();
-
-            GELServiceLog.clear();
-            txtPreview.setText("");
-
+            
         } catch (Throwable t) {
             Toast.makeText(this, "PDF error: " + t.getMessage(), Toast.LENGTH_LONG).show();
         }
@@ -276,4 +277,19 @@ public class ServiceReportActivity extends AppCompatActivity {
 
         canvas.drawText(rest, dx, y, textPaint);
     }
+}
+
+private void updatePreview() {
+    if (txtPreview == null) return;
+
+    String data = GELServiceLog.getAll();
+
+    if (data == null || data.trim().isEmpty()) {
+        txtPreview.setText("No logs available.");
+        return;
+    }
+
+    txtPreview.setText(
+            data.replaceAll("\\n{3,}", "\n\n")
+    );
 }
