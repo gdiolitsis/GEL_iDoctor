@@ -3286,18 +3286,17 @@ long now = SystemClock.elapsedRealtime();
 // πραγματικός χρόνος
 int realElapsed = (int) ((now - t0) / 1000);
 
-// 🔴 smooth step (χωρίς lag accumulation)
-if (realElapsed > lastDisplayedSecond) {
+// 🔴 smooth display (χωρίς jumps)
+if (lastDisplayedSecond < realElapsed) {
 
-    int diff = realElapsed - lastDisplayedSecond;
+    // max 1 step per frame
+    lastDisplayedSecond++;
 
-    if (diff > 2) {
-        // 🔴 αν έχει μείνει πολύ πίσω → sync άμεσα
-        lastDisplayedSecond = realElapsed;
-    } else {
-        // 🟢 normal step
-        lastDisplayedSecond++;
-    }
+}
+
+// 🔴 safety sync (μόνο αν ξεφύγει ΠΟΛΥ)
+if (realElapsed - lastDisplayedSecond > 5) {
+    lastDisplayedSecond = realElapsed - 2; // soft catch-up
 }
 
 int elapsed = lastDisplayedSecond;
