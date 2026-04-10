@@ -1,11 +1,5 @@
 // GDiolitsis Engine Lab (GEL) — Author & Developer
-// GELServiceReportPdf — HTML → PDF ENGINE (COLORED, MULTI-PAGE)
-// ============================================================
-// • Παίρνει HTML από GELServiceLog
-// • Φτιάχνει κανονικό PDF αρχείο
-// • Υποστηρίζει χρώματα, sections, headers
-// • Δεν μπλέκεται με UI — μόνο export logic
-// ============================================================
+// FINAL — HTML → PDF ENGINE (COLORED • MULTI-PAGE • STABLE)
 
 package com.gel.cleaner;
 
@@ -38,201 +32,176 @@ public final class GELServiceReportPdf {
 
     private GELServiceReportPdf() {}
 
-// ============================================================
-// PUBLIC ENTRY
-// ============================================================
-public static void export(Context ctx) {
+    // ============================================================
+    // ENTRY
+    // ============================================================
+    public static void export(Context ctx) {
 
-    if (ctx == null) return;
+        if (ctx == null) return;
 
-    if (GELServiceLog.isEmpty()) {
-        Toast.makeText(ctx, "No service data to export.", Toast.LENGTH_LONG).show();
-        return;
+        String raw = GELServiceLog.getAll();
+
+        if (raw == null || raw.trim().isEmpty()) {
+            Toast.makeText(ctx, "No service data to export.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String html = buildHtml(raw);
+
+        WebView wv = new WebView(ctx);
+        wv.setVisibility(View.GONE);
+        wv.getSettings().setJavaScriptEnabled(false);
+
+        wv.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+
+                view.postDelayed(() -> {
+                    try {
+                        createPdf(ctx, view);
+                    } catch (Throwable t) {
+                        Toast.makeText(ctx,
+                                "PDF error: " + t.getMessage(),
+                                Toast.LENGTH_LONG).show();
+                    } finally {
+                        cleanup(view);
+                    }
+                }, 200);
+            }
+        });
+
+        wv.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
     }
 
-    WebView engine = new WebView(ctx);
-    engine.setVisibility(View.GONE);
-    engine.getSettings().setJavaScriptEnabled(false);
+    // ============================================================
+    // HTML BUILDER (🔥 COLORS + STRUCTURE)
+    // ============================================================
+    private static String buildHtml(String raw) {
 
-    String htmlBody = GELServiceLog.getHtml();
-    String fullHtml = buildFullHtml(htmlBody);
+        StringBuilder body = new StringBuilder();
 
-    engine.setWebViewClient(new WebViewClient() {
-        @Override
-        public void onPageFinished(WebView view, String url) {
+        String[] lines = raw.split("\\n");
 
-            view.postDelayed(() -> {
-                try {
-                    // -------------------------------
-                    // CORE EXPORT
-                    // -------------------------------
-                    createPdfFromWebView(ctx, view);
+        for (String line : lines) {
 
-                } catch (Throwable t) {
+            String safe = line
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;");
 
-                    Toast.makeText(ctx,
-                            "PDF export error: " + t.getMessage(),
-                            Toast.LENGTH_LONG).show();
-
-                } finally {
-
-                    // -------------------------------
-                    // 🧹 CLEANUP — MEMORY SAFE
-                    // -------------------------------
-                    view.post(() -> {
-                        try {
-                            view.stopLoading();
-                            view.loadUrl("about:blank");
-                            view.clearHistory();
-                            view.removeAllViews();
-                            view.destroy();
-                        } catch (Throwable ignore) {}
-                    });
-                }
-
-            }, 200);
+            if (line.startsWith("✔")) {
+                body.append("<div style='color:#00FF88;'>").append(safe).append("</div>");
+            }
+            else if (line.startsWith("⚠")) {
+                body.append("<div style='color:#FFA500;'>").append(safe).append("</div>");
+            }
+            else if (line.startsWith("✖")) {
+                body.append("<div style='color:#FF4444;'>").append(safe).append("</div>");
+            }
+            else if (line.startsWith("ℹ")) {
+                body.append("<div style='color:#33AAFF;'>").append(safe).append("</div>");
+            }
+            else if (line.startsWith("i ")) {
+                body.append("<h2 style='color:#7FC8FF;'>").append(safe).append("</h2>");
+            }
+            else {
+                body.append("<div>").append(safe).append("</div>");
+            }
         }
-    });
 
-    engine.loadDataWithBaseURL(
-            null,
-            fullHtml,
-            "text/html",
-            "utf-8",
-            null
-    );
-}
-
-    // ============================================================
-    // HTML TEMPLATE — FULL REPORT
-    // ============================================================
-    private static String buildFullHtml(String body) {
-
-        String header =
-                "<!DOCTYPE html><html><head>" +
+        return "<!DOCTYPE html><html><head>" +
                 "<meta charset='utf-8'/>" +
-                "<meta name='viewport' content='width=device-width, initial-scale=1'/>" +
                 "<style>" +
-                "body{background:#0F0F0F;color:#EAEAEA;font-family:monospace;font-size:12px;line-height:1.4;margin:24px;}" +
-                "h1{color:#FFD700;font-size:22px;margin-bottom:6px;}" +
-                "h2{color:#7FC8FF;font-size:15px;margin-top:18px;}" +
-                "hr{border:0;border-top:1px solid #333;margin:14px 0;}" +
-                "b{color:#FFFFFF;}" +
-                ".tech{color:#AAAAAA;font-size:11px;margin-top:4px;}" +
+                "body{background:#0F0F0F;color:#EAEAEA;font-family:monospace;font-size:12px;margin:24px;}" +
+                "h1{color:#FFD700;font-size:22px;}" +
+                "h2{margin-top:18px;}" +
                 ".footer{margin-top:32px;font-size:11px;color:#888;}" +
-                "</style>" +
-                "</head><body>";
+                "</style></head><body>" +
 
-        String cover =
                 "<h1>Service Diagnostic Report</h1>" +
-                "<div class='tech'>GDiolitsis Engine Lab (GEL) — Author & Developer</div>" +
-                "<div class='tech'>Generated: " +
+                "<div style='color:#AAA;'>GDiolitsis Engine Lab (GEL)</div>" +
+                "<div style='color:#AAA;'>Generated: " +
                 new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date()) +
-                "</div>" +
-                "<hr>" +
-                "<h2>FINAL TECHNICIAN REPORT</h2>" +
-                "<hr>";
+                "</div><hr>" +
 
-        String footer =
-                "<div class='footer'>" +
-                "<hr>" +
+                body +
+
+                "<div class='footer'><hr>" +
                 "Technician Signature: ___________________________<br>" +
                 "Company Stamp: _________________________________" +
-                "</div>" +
-                "</body></html>";
-
-        return header + cover + body + footer;
+                "</div></body></html>";
     }
 
     // ============================================================
-    // CORE: WEBVIEW → PDF (MULTI-PAGE)
+    // PDF CORE (MULTI PAGE)
     // ============================================================
-    private static void createPdfFromWebView(Context ctx, WebView wv) throws Exception {
+    private static void createPdf(Context ctx, WebView wv) throws Exception {
 
-        final int pageWidth  = 595;  // A4
-        final int pageHeight = 842;
+        final int W = 595;
+        final int H = 842;
 
         wv.measure(
-                View.MeasureSpec.makeMeasureSpec(pageWidth, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(W, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         );
-        wv.layout(0, 0, pageWidth, wv.getMeasuredHeight());
+        wv.layout(0, 0, W, wv.getMeasuredHeight());
 
-        int contentHeight =
-                (int) Math.ceil(wv.getContentHeight() * wv.getScale());
-
-        if (contentHeight <= 0)
-            contentHeight = Math.max(wv.getMeasuredHeight(), pageHeight);
+        int contentHeight = (int) Math.ceil(wv.getContentHeight() * wv.getScale());
 
         PdfDocument pdf = new PdfDocument();
 
-        int yOffset = 0;
-        int pageNum = 1;
+        int y = 0;
+        int page = 1;
 
-        while (yOffset < contentHeight) {
+        while (y < contentHeight) {
 
-            PdfDocument.PageInfo info =
-                    new PdfDocument.PageInfo.Builder(
-                            pageWidth, pageHeight, pageNum
-                    ).create();
+            PdfDocument.Page p = pdf.startPage(
+                    new PdfDocument.PageInfo.Builder(W, H, page).create()
+            );
 
-            PdfDocument.Page page = pdf.startPage(info);
-            Canvas canvas = page.getCanvas();
+            Canvas c = p.getCanvas();
 
-            canvas.save();
-            canvas.translate(0, -yOffset);
+            c.save();
+            c.translate(0, -y);
 
-            // ----------------------------------------------------
-            // LOGO ON EVERY PAGE
-            // ----------------------------------------------------
             try {
                 Bitmap logo = BitmapFactory.decodeResource(
                         ctx.getResources(), R.drawable.gel_logo);
 
                 if (logo != null) {
                     Bitmap scaled = Bitmap.createScaledBitmap(logo, 48, 48, true);
-                    canvas.drawBitmap(scaled, 24, 20, null);
+                    c.drawBitmap(scaled, 24, 20, null);
                 }
             } catch (Throwable ignore) {}
 
-            // αφήνουμε χώρο για header
-            canvas.translate(0, 80);
+            c.translate(0, 80);
+            wv.draw(c);
 
-            wv.draw(canvas);
-            canvas.restore();
+            c.restore();
+            pdf.finishPage(p);
 
-            pdf.finishPage(page);
-
-            yOffset += pageHeight;
-            pageNum++;
+            y += H;
+            page++;
         }
 
-        String ts =
-                new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
-                        .format(new Date());
+        String name = "GEL_Report_" +
+                new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()) +
+                ".pdf";
 
-        String fileName = "GEL_Service_Report_" + ts + ".pdf";
-
-        Uri saved = savePdf(ctx, fileName, pdf);
+        save(ctx, name, pdf);
 
         pdf.close();
 
-        if (saved != null)
-            Toast.makeText(ctx, "PDF saved: " + fileName, Toast.LENGTH_LONG).show();
-        else
-            Toast.makeText(ctx, "PDF saved.", Toast.LENGTH_LONG).show();
+        Toast.makeText(ctx, "PDF saved: " + name, Toast.LENGTH_LONG).show();
     }
 
     // ============================================================
-    // SAVE → DOWNLOADS (STABLE, NO PERMISSION HELL)
+    // SAVE
     // ============================================================
     @Nullable
-    private static Uri savePdf(Context ctx,
-                               String fileName,
-                               PdfDocument pdf) throws Exception {
+    private static Uri save(Context ctx, String fileName, PdfDocument pdf) throws Exception {
 
         OutputStream os = null;
-        Uri uri = null;
 
         try {
             if (Build.VERSION.SDK_INT >= 29) {
@@ -240,44 +209,46 @@ public static void export(Context ctx) {
                 ContentValues cv = new ContentValues();
                 cv.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
                 cv.put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
-                cv.put(MediaStore.MediaColumns.RELATIVE_PATH,
-                        Environment.DIRECTORY_DOWNLOADS);
+                cv.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
 
                 ContentResolver cr = ctx.getContentResolver();
-                uri = cr.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
-
-                if (uri == null)
-                    throw new Exception("MediaStore insert failed.");
+                Uri uri = cr.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
 
                 os = cr.openOutputStream(uri);
-                if (os == null)
-                    throw new Exception("OutputStream null.");
-
                 pdf.writeTo(os);
+
                 return uri;
 
             } else {
 
-                File dir =
-                        Environment.getExternalStoragePublicDirectory(
-                                Environment.DIRECTORY_DOWNLOADS);
+                File dir = Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_DOWNLOADS);
 
                 if (!dir.exists()) dir.mkdirs();
 
-                File out = new File(dir, fileName);
+                File file = new File(dir, fileName);
 
-                os = new FileOutputStream(out);
+                os = new FileOutputStream(file);
                 pdf.writeTo(os);
-
-                Toast.makeText(ctx,
-                        "PDF saved in: " + out.getAbsolutePath(),
-                        Toast.LENGTH_LONG).show();
-
-                return null;
             }
 
         } finally {
-            try { if (os != null) os.close(); } catch (Exception ignore) {}
+            if (os != null) os.close();
         }
+
+        return null;
+    }
+
+    // ============================================================
+    // CLEANUP
+    // ============================================================
+    private static void cleanup(WebView v) {
+        try {
+            v.stopLoading();
+            v.loadUrl("about:blank");
+            v.clearHistory();
+            v.removeAllViews();
+            v.destroy();
+        } catch (Throwable ignore) {}
     }
 }
