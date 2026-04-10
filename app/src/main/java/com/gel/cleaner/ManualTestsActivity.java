@@ -1271,6 +1271,23 @@ private void appendLog(String tag, String msg) {
     appendLog("[" + tag + "] " + msg);
 }
 
+private void appendStyledLog(CharSequence text) {
+    runOnUiThread(() -> {
+        if (txtLog == null || text == null) return;
+
+        txtLog.append(text);
+        txtLog.append("\n");
+
+        // 🔥 PDF SYNC
+        GELServiceLog.add(text.toString());
+
+        if (logScroll != null) {
+            logScroll.post(() ->
+                    logScroll.fullScroll(View.FOCUS_DOWN));
+        }
+    });
+}
+
 private String safe(String s) {
     return s == null ? "" : s.replace("<", "&lt;").replace(">", "&gt;");
 }
