@@ -1,6 +1,5 @@
 // GDiolitsis Engine Lab (GEL) — Author & Developer
-// ServiceReportActivity — TXT → PDF (FINAL HEADER + FOOTER EDITION)
-// --------------------------------------------------------------
+// ServiceReportActivity — FINAL (TXT + HTML + FIXED PDF ENGINE)
 
 package com.gel.cleaner;
 
@@ -12,7 +11,12 @@ import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.Gravity;
+import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,7 +32,7 @@ import java.io.FileOutputStream;
 
 public class ServiceReportActivity extends AppCompatActivity {
 
-    private static final int PAGE_WIDTH  = 595;  // A4
+    private static final int PAGE_WIDTH  = 595;
     private static final int PAGE_HEIGHT = 842;
 
     private TextView txtPreview;
@@ -54,109 +58,91 @@ public class ServiceReportActivity extends AppCompatActivity {
         txtPreview = new TextView(this);
         txtPreview.setTextColor(0xFFFFFFFF);
         txtPreview.setTextSize(13f);
-        txtPreview.setText(GELServiceLog.getAll());
+        txtPreview.setText(
+                GELServiceLog.getAll().replaceAll("\\n{3,}", "\n\n")
+        );
         root.addView(txtPreview);
 
-// ==========================================================
-// BUTTON ROW (TXT + HTML + LOADING)
-// ==========================================================
-LinearLayout btnRow = new LinearLayout(this);
-btnRow.setOrientation(LinearLayout.VERTICAL);
+        // ==========================================================
+        // BUTTON ROW
+        // ==========================================================
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.VERTICAL);
 
-LinearLayout.LayoutParams rowParams =
-        new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-rowParams.topMargin = 32;
-btnRow.setLayoutParams(rowParams);
+        LinearLayout line = new LinearLayout(this);
+        line.setOrientation(LinearLayout.HORIZONTAL);
 
-// ---------------------------
-// BUTTON LINE
-// ---------------------------
-LinearLayout line = new LinearLayout(this);
-line.setOrientation(LinearLayout.HORIZONTAL);
+        // TXT BUTTON
+        btnTxt = new AppCompatButton(this);
+        btnTxt.setText("TXT PDF");
+        btnTxt.setAllCaps(false);
+        btnTxt.setTextColor(0xFFFFFFFF);
+        btnTxt.setBackgroundResource(R.drawable.gel_btn_outline);
 
-// TXT
-btnTxt = new AppCompatButton(this);
-btnTxt.setText("TXT PDF");
-btnTxt.setAllCaps(false);
-btnTxt.setTextColor(0xFFFFFFFF);
-btnTxt.setBackgroundResource(R.drawable.gel_btn_outline);
+        LinearLayout.LayoutParams lpTxt =
+                new LinearLayout.LayoutParams(0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
 
-LinearLayout.LayoutParams lpTxt =
-        new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        lpTxt.setMargins(0, 0, 8, 0);
+        btnTxt.setLayoutParams(lpTxt);
+        btnTxt.setPadding(0, 28, 0, 28);
 
-lpTxt.setMargins(0, 0, 8, 0);
-btnTxt.setLayoutParams(lpTxt);
-btnTxt.setPadding(0, 28, 0, 28);
+        // HTML BUTTON
+        btnHtml = new AppCompatButton(this);
+        btnHtml.setText("HTML PDF");
+        btnHtml.setAllCaps(false);
+        btnHtml.setTextColor(0xFFFFFFFF);
+        btnHtml.setBackgroundResource(R.drawable.gel_btn_outline);
 
-// HTML
-btnHtml = new AppCompatButton(this);
-btnHtml.setText("HTML PDF");
-btnHtml.setAllCaps(false);
-btnHtml.setTextColor(0xFFFFFFFF);
-btnHtml.setBackgroundResource(R.drawable.gel_btn_outline);
+        LinearLayout.LayoutParams lpHtml =
+                new LinearLayout.LayoutParams(0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
 
-LinearLayout.LayoutParams lpHtml =
-        new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        lpHtml.setMargins(8, 0, 0, 0);
+        btnHtml.setLayoutParams(lpHtml);
+        btnHtml.setPadding(0, 28, 0, 28);
 
-lpHtml.setMargins(8, 0, 0, 0);
-btnHtml.setLayoutParams(lpHtml);
-btnHtml.setPadding(0, 28, 0, 28);
+        line.addView(btnTxt);
+        line.addView(btnHtml);
 
-line.addView(btnTxt);
-line.addView(btnHtml);
+        // PROGRESS
+        exportProgress = new ProgressBar(this);
+        exportProgress.setIndeterminate(true);
+        exportProgress.setVisibility(View.GONE);
 
-// ---------------------------
-// PROGRESS BAR
-// ---------------------------
-exportProgress = new ProgressBar(this);
-exportProgress.setIndeterminate(true);
-exportProgress.setVisibility(View.GONE);
+        LinearLayout.LayoutParams lpProg =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+        lpProg.topMargin = 20;
+        lpProg.gravity = Gravity.CENTER;
+        exportProgress.setLayoutParams(lpProg);
 
-LinearLayout.LayoutParams lpProg =
-        new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-lpProg.topMargin = 20;
-lpProg.gravity = Gravity.CENTER;
-exportProgress.setLayoutParams(lpProg);
-
-// ---------------------------
-// ACTIONS
-// ---------------------------
-btnTxt.setOnClickListener(v -> {
-    lockExportUI(true);
-    exportTxtToPdf();
-    lockExportUI(false);
-});
-
-btnHtml.setOnClickListener(v -> {
-    lockExportUI(true);
-
-    // delay για smooth UI
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-        GELServiceReportPdf.export(this);
-
-        // unlock με delay (WebView render time)
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        // ACTIONS
+        btnTxt.setOnClickListener(v -> {
+            lockExportUI(true);
+            exportTxtToPdf();
             lockExportUI(false);
-        }, 1200);
+        });
 
-    }, 100);
-});
+        btnHtml.setOnClickListener(v -> {
+            lockExportUI(true);
 
-// ---------------------------
-// ADD
-// ---------------------------
-btnRow.addView(line);
-btnRow.addView(exportProgress);
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                GELServiceReportPdf.export(this);
 
-root.addView(btnRow);
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    lockExportUI(false);
+                }, 1200);
+
+            }, 100);
+        });
+
+        btnRow.addView(line);
+        btnRow.addView(exportProgress);
+
+        root.addView(btnRow);
 
         scroll.addView(root);
         setContentView(scroll);
@@ -166,23 +152,23 @@ root.addView(btnRow);
 
     private void lockExportUI(boolean lock) {
 
-    if (btnTxt != null) {
-        btnTxt.setEnabled(!lock);
-        btnTxt.setAlpha(lock ? 0.5f : 1f);
-    }
+        if (btnTxt != null) {
+            btnTxt.setEnabled(!lock);
+            btnTxt.setAlpha(lock ? 0.5f : 1f);
+        }
 
-    if (btnHtml != null) {
-        btnHtml.setEnabled(!lock);
-        btnHtml.setAlpha(lock ? 0.5f : 1f);
-    }
+        if (btnHtml != null) {
+            btnHtml.setEnabled(!lock);
+            btnHtml.setAlpha(lock ? 0.5f : 1f);
+        }
 
-    if (exportProgress != null) {
-        exportProgress.setVisibility(lock ? View.VISIBLE : View.GONE);
+        if (exportProgress != null) {
+            exportProgress.setVisibility(lock ? View.VISIBLE : View.GONE);
+        }
     }
-}
 
     // ==========================================================
-    // CORE — TXT → PDF
+    // TXT PDF ENGINE (FIXED)
     // ==========================================================
     private void exportTxtToPdf() {
 
@@ -204,22 +190,8 @@ root.addView(btnRow);
             Paint emojiPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             emojiPaint.setTextSize(12f);
 
-            Paint titlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            titlePaint.setTextSize(14f);
-            titlePaint.setColor(Color.BLACK);
-            titlePaint.setFakeBoldText(true);
-
-            Paint subtitlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            subtitlePaint.setTextSize(11f);
-            subtitlePaint.setColor(Color.BLACK);
-
-            Paint footerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            footerPaint.setTextSize(11f);
-            footerPaint.setColor(Color.BLACK);
-            footerPaint.setFakeBoldText(true);
-
             int marginX = 32;
-            int y;
+            int y = 80;
             int lineHeight = 18;
             int pageNum = 1;
 
@@ -227,208 +199,57 @@ root.addView(btnRow);
             Canvas canvas = page.getCanvas();
             canvas.drawColor(Color.WHITE);
 
-            // HEADER πρώτη σελίδα
-            y = drawReportHeader(canvas, marginX, 40,
-        titlePaint, subtitlePaint, textPaint,
-        pageNum == 1);
-
             for (String line : lines) {
 
-                if (y > PAGE_HEIGHT - 80) {
-                    pdf.finishPage(page);
+                String cleanLine = (line == null) ? "" : line.trim();
 
-                    pageNum++;
-                    page = startPage(pdf, pageNum);
-                    canvas = page.getCanvas();
-                    canvas.drawColor(Color.WHITE);
-
-                    y = drawReportHeader(canvas, marginX, 40,
-        titlePaint, subtitlePaint, textPaint,
-        pageNum == 1);
+                if (cleanLine.isEmpty()) {
+                    y += lineHeight / 2;
+                    continue;
                 }
 
-                drawLineWithColoredEmoji(canvas, line, marginX, y, textPaint, emojiPaint);
+                if (y > PAGE_HEIGHT - 60) {
+                    pdf.finishPage(page);
+                    page = startPage(pdf, ++pageNum);
+                    canvas = page.getCanvas();
+                    canvas.drawColor(Color.WHITE);
+                    y = 80;
+                }
+
+                drawLineWithColoredEmoji(canvas, cleanLine, marginX, y, textPaint, emojiPaint);
                 y += lineHeight;
             }
 
-            // ==================================================
-            // FOOTER
-            // ==================================================
-            if (y > PAGE_HEIGHT - 120) {
-                pdf.finishPage(page);
-                pageNum++;
-                page = startPage(pdf, pageNum);
-                canvas = page.getCanvas();
-                canvas.drawColor(Color.WHITE);
-                y = 80;
-            }
-
-            y += 40;
-            canvas.drawText("— End of Report —", marginX, y, footerPaint);
-            y += 30;
-            canvas.drawText("Technician Signature: ________________________________", marginX, y, textPaint);
-
             pdf.finishPage(page);
 
-            File outDir =
-        Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOWNLOADS);
-if (outDir == null) {
-    outDir = getFilesDir();
-}
-            if (!outDir.exists()) outDir.mkdirs();
-
-            String fileName = "GEL_Service_Report.pdf";
-            File out = new File(outDir, fileName);
+            File out = new File(
+                    Environment.getExternalStoragePublicDirectory(
+                            Environment.DIRECTORY_DOWNLOADS),
+                    "GEL_Service_Report.pdf"
+            );
 
             FileOutputStream fos = new FileOutputStream(out);
             pdf.writeTo(fos);
             fos.close();
             pdf.close();
-            
-            android.media.MediaScannerConnection.scanFile(
-        this,
-        new String[]{ out.getAbsolutePath() },
-        new String[]{ "application/pdf" },
-        null
-);
 
-            Toast.makeText(this,
-                    "PDF saved: Downloads/" + fileName,
-                    Toast.LENGTH_LONG).show();
-                    // ✅ RESET SERVICE LOG
-GELServiceLog.clear();
+            Toast.makeText(this, "PDF saved.", Toast.LENGTH_LONG).show();
 
-// ✅ RESET PREVIEW
-txtPreview.setText("");
+            GELServiceLog.clear();
+            txtPreview.setText("");
 
         } catch (Throwable t) {
-            Toast.makeText(this,
-                    "PDF error: " + t.getMessage(),
-                    Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "PDF error: " + t.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
     private PdfDocument.Page startPage(PdfDocument pdf, int num) {
-        PdfDocument.PageInfo info =
+        return pdf.startPage(
                 new PdfDocument.PageInfo.Builder(
-                        PAGE_WIDTH, PAGE_HEIGHT, num).create();
-        return pdf.startPage(info);
+                        PAGE_WIDTH, PAGE_HEIGHT, num).create()
+        );
     }
 
-// ==========================================================
-// REPORT HEADER — DAMAGE CHECK ONLY ON FIRST PAGE
-// ==========================================================
-private int drawReportHeader(
-        Canvas c,
-        int x,
-        int startY,
-        Paint title,
-        Paint subtitle,
-        Paint text,
-        boolean isFirstPage) {
-
-    int y = startY;
-
-    // --------------------------------------------------
-    // LOGO
-    // --------------------------------------------------
-    if (gelLogo != null) {
-        Bitmap scaled = Bitmap.createScaledBitmap(gelLogo, 52, 52, true);
-        c.drawBitmap(scaled, x, y, null);
-    }
-
-    // κατεβάζουμε το περιεχόμενο
-    y += 70;
-
-    // --------------------------------------------------
-    // TITLE
-    // --------------------------------------------------
-    c.drawText("GEL Service Report/ Αναφορά Service", x, y, title);
-    y += 20;
-
-    c.drawText("GDiolitsis Engine Lab (GEL) — Author & Developer",
-            x, y, subtitle);
-    y += 26;
-
-    // --------------------------------------------------
-    // BASIC INFO
-    // --------------------------------------------------
-    if (isFirstPage) {
-    String dateLine   = "Date / Ημερομηνία:  " +
-            java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
-    String deviceLine = "Device / Συσκευή:  " +
-            android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
-    String osLine;
-if ("apple".equals(
-        getSharedPreferences("gel_prefs", MODE_PRIVATE)
-                .getString("platform_mode", "android"))) {
-
-    osLine = "Apple device diagnostics (panic logs analysis)";
-} else {
-    osLine = "Android:  " +
-            android.os.Build.VERSION.RELEASE +
-            " (API " + android.os.Build.VERSION.SDK_INT + ")";
-}
-
-    c.drawText(dateLine, x, y, text);    y += 16;
-    c.drawText(deviceLine, x, y, text); y += 16;
-    c.drawText(osLine, x, y, text);     y += 22;
-
-    // --------------------------------------------------
-    // DAMAGE CHECK — ΜΟΝΟ ΣΤΗΝ 1η ΣΕΛΙΔΑ
-    // --------------------------------------------------
-
-        Paint sectionTitle = new Paint(text);
-        sectionTitle.setFakeBoldText(true);
-
-        c.drawText("Damage check / Έλεγχος Ζημιών", x, y, sectionTitle);
-        y += 18;
-
-        String[] damageLines = new String[]{
-                "Dead pixels / Καμμένα pixels",
-                "Burn-in / Καμμένα σημεία",
-                "Touch issues / Πρόβλημα αφής",
-                "Camera issues / Πρόβλημα κάμερας",
-                "Speaker issues / Πρόβλημα ηχείου",
-                "Microphone issues / Πρόβλημα μικροφώνου",
-                "Battery swelling / Φούσκωμα μπαταρίας",
-                "Charging port / Θύρα φόρτισης"
-        };
-
-        Paint boxPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        boxPaint.setStyle(Paint.Style.STROKE);
-        boxPaint.setStrokeWidth(1.5f);
-
-        for (String s : damageLines) {
-
-            int boxSize = 10;
-
-            // □ YES
-            c.drawRect(x, y - 9, x + boxSize, y + 1, boxPaint);
-            c.drawText(" YES", x + boxSize + 4, y, text);
-
-            // □ NO
-            int noX = x + 70;
-            c.drawRect(noX, y - 9, noX + boxSize, y + 1, boxPaint);
-            c.drawText(" NO", noX + boxSize + 4, y, text);
-
-            // περιγραφή
-            c.drawText("— " + s, x + 140, y, text);
-
-            y += 16;
-        }
-
-        // κενό πριν τα labs
-        y += 24;
-    }
-
-    return y;
-}
-
-    // ==========================================================
-    // DRAW LINE WITH COLORED EMOJI
-    // ==========================================================
     private void drawLineWithColoredEmoji(
             Canvas canvas,
             String line,
@@ -437,10 +258,8 @@ if ("apple".equals(
             Paint textPaint,
             Paint emojiPaint) {
 
-        if (line == null || line.isEmpty()) return;
-
         String emoji = null;
-        String rest  = line;
+        String rest = line;
 
         if (line.startsWith("ℹ")) { emoji = "ℹ"; emojiPaint.setColor(0xFF1E90FF); }
         else if (line.startsWith("✔")) { emoji = "✔"; emojiPaint.setColor(0xFF00AA00); }
