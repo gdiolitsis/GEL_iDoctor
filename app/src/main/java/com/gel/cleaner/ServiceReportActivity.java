@@ -116,21 +116,48 @@ public class ServiceReportActivity extends AppCompatActivity {
         lpProg.gravity = Gravity.CENTER;
         exportProgress.setLayoutParams(lpProg);
 
-        // ACTIONS
-btnTxt.setOnClickListener(v -> {
-    lockExportUI(true);
+// ==========================================================
+// ACTIONS — FINAL CLEAN VERSION
+// ==========================================================
 
-    new Thread(() -> {
-        exportTxtToPdf();
-        runOnUiThread(() -> lockExportUI(false));
-    }).start();
+// TXT
+btnTxt.setOnClickListener(v -> {
+
+    String report = validateExport();
+    if (report == null) return;
+
+    if (GELServiceLog.isEmpty()) {
+        Toast.makeText(this,
+                "Nothing to export. Run a lab first.",
+                Toast.LENGTH_SHORT
+        ).show();
+        updatePreview();
+        lockExportUI(false);
+        return;
+    }
+
+    lockExportUI(true);
+    exportTxtToPdf();
 });
 
+
+// HTML
 btnHtml.setOnClickListener(v -> {
+
+    String report = validateExport();
+    if (report == null) return;
+
+    if (GELServiceLog.isEmpty()) {
+        Toast.makeText(this,
+                "Nothing to export. Run a lab first.",
+                Toast.LENGTH_LONG
+        ).show();
+        lockExportUI(false);
+        return;
+    }
+
     lockExportUI(true);
-
-    GELServiceReportPdf.export(this);
-
+    exportHtmlPdf(report);
 });
 
         btnRow.addView(line);
@@ -177,6 +204,7 @@ if (GELServiceLog.isEmpty()) {
     runOnUiThread(() -> {
         Toast.makeText(this, "Nothing to export.", Toast.LENGTH_SHORT).show();
         updatePreview();
+        lockExportUI(false); // 🔥 βάλε το και εδώ
     });
 
     return;
@@ -640,4 +668,25 @@ private String padRight(String s, int n) {
     return String.format("%-" + n + "s", s);
 }
 
+private String validateExport() {
+
+    String report = txtPreview.getText().toString();
+
+    if (report == null
+            || report.trim().isEmpty()
+            || report.contains("No logs available")) {
+
+        if (exportProgress != null)
+            exportProgress.setVisibility(View.GONE);
+
+        Toast.makeText(this,
+                "Nothing to export. Run a lab first.",
+                Toast.LENGTH_LONG
+        ).show();
+
+        return null;
+    }
+
+    return report;
+}
 }
