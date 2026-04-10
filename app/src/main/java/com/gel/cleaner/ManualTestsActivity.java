@@ -904,9 +904,14 @@ LinearLayout.LayoutParams btnParams =
 btnParams.setMargins(dp(12), dp(8), dp(12), dp(12));
 btnExport.setLayoutParams(btnParams);
 
-btnExport.setOnClickListener(v ->
-        startActivity(new Intent(this, ServiceReportActivity.class))
-);
+btnExport.setOnClickListener(v -> {
+
+    Intent i = new Intent(this, MainActivity.class);
+    i.putExtra("open_service_menu", true);
+    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+    startActivity(i);
+});
 
 // ============================================================
 // ADD ORDER (CRITICAL)
@@ -4241,6 +4246,11 @@ protected void onStop() {
         lab14StopAllStress();
 
         try { lab14CleanupUI(); } catch (Throwable ignore) {}
+    }
+
+    // 🔥 RESET LOGS ΜΟΝΟ ΟΤΑΝ ΦΕΥΓΕΙΣ
+    if (isFinishing()) {
+        GELServiceLog.clear();
     }
 }
 
