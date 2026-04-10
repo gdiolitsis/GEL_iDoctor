@@ -614,129 +614,184 @@ private void exportHtmlPdf(String report) {
     webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
 }
 
-    private String buildHtmlReport(String report) {
-        String[] lines = report.split("\\n");
+private String buildHtmlReport(String report) {
 
-        StringBuilder body = new StringBuilder();
+    String[] lines = report.split("\\n");
+    StringBuilder body = new StringBuilder();
 
-        body.append("<div class='header'>");
-        body.append("<div class='title'>GEL Service Report / Αναφορά Service</div>");
-        body.append("<div class='subtitle'>GDiolitsis Engine Lab (GEL) — Author & Developer</div>");
-        body.append("<div class='meta'>Date / Ημερομηνία: ")
-                .append(escapeHtml(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date())))
-                .append("</div>");
-        body.append("<div class='meta'>Device / Συσκευή: ")
-                .append(escapeHtml(android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL))
-                .append("</div>");
-        body.append("<div class='meta'>Android / Έκδοση: ")
-                .append(escapeHtml(android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")"))
-                .append("</div>");
-        body.append("</div>");
+    // =========================================================
+    // HEADER (PRODUCTION GEL STYLE)
+    // =========================================================
+    body.append("<div class='header'>");
 
-        for (String raw : lines) {
-            String line = raw == null ? "" : raw.trim();
-            if (line.isEmpty()) {
-                body.append("<div class='space'></div>");
-                continue;
-            }
+    // LEFT
+    body.append("<div class='header-left'>");
+    body.append("<img class='logo' src='file:///android_res/drawable/gel_logo.png'/>");
 
-            String escaped = escapeHtml(line);
+    body.append("<div class='header-text'>");
+    body.append("<div class='title'>GEL Service Report / Αναφορά Service</div>");
+    body.append("<div class='subtitle'>GDiolitsis Engine Lab (GEL) — Author & Developer</div>");
+    body.append("</div>");
 
-            if (line.startsWith("✔")) {
-                body.append("<div class='ok'>").append(escaped).append("</div>");
-            } else if (line.startsWith("⚠")) {
-                body.append("<div class='warn'>").append(escaped).append("</div>");
-            } else if (line.startsWith("✖")) {
-                body.append("<div class='err'>").append(escaped).append("</div>");
-            } else if (line.startsWith("ℹ") || line.startsWith("i ")) {
-                body.append("<div class='info'>").append(escaped).append("</div>");
-            } else if (line.contains(":")) {
-                String[] parts = line.split(":", 2);
-                String label = escapeHtml(parts[0].trim());
-                String value = parts.length > 1 ? escapeHtml(parts[1].trim()) : "";
-                body.append("<div class='row'><span class='label'>")
-                        .append(label)
-                        .append(":</span> <span class='value'>")
-                        .append(value)
-                        .append("</span></div>");
-            } else {
-                body.append("<div class='plain'>").append(escaped).append("</div>");
-            }
+    body.append("</div>");
+
+    // RIGHT
+    body.append("<div class='header-meta'>");
+
+    body.append("Date / Ημερομηνία:<br>");
+    body.append(escapeHtml(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date())));
+    body.append("<br><br>");
+
+    body.append("Device / Συσκευή:<br>");
+    body.append(escapeHtml(android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL));
+    body.append("<br><br>");
+
+    body.append("Android / Έκδοση:<br>");
+    body.append(escapeHtml(android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")"));
+
+    body.append("</div>");
+    body.append("</div>");
+
+    // =========================================================
+    // BODY LOGS
+    // =========================================================
+    for (String raw : lines) {
+
+        String line = raw == null ? "" : raw.trim();
+
+        if (line.isEmpty()) {
+            body.append("<div class='space'></div>");
+            continue;
         }
 
-        body.append("<div class='section-title'>Repair Summary / Τι επισκευάστηκε</div>");
-        body.append("<div class='line'></div><div class='line'></div><div class='line'></div><div class='line'></div>");
+        String escaped = escapeHtml(line);
 
-        body.append("<div class='section-title'>Additional Notes / Επιπλέον παρατηρήσεις</div>");
-        body.append("<div class='line'></div><div class='line'></div><div class='line'></div>");
+        if (line.startsWith("✔")) {
+            body.append("<div class='ok'>").append(escaped).append("</div>");
+        }
+        else if (line.startsWith("⚠")) {
+            body.append("<div class='warn'>").append(escaped).append("</div>");
+        }
+        else if (line.startsWith("✖")) {
+            body.append("<div class='err'>").append(escaped).append("</div>");
+        }
+        else if (line.startsWith("ℹ") || line.startsWith("i ")) {
+            body.append("<div class='info'>").append(escaped).append("</div>");
+        }
+        else if (line.contains(":")) {
 
-        body.append("<div class='signatures'>");
+            String[] parts = line.split(":", 2);
 
-// ROW 1 — NAMES
-body.append("<div class='sig-row'>");
+            String label = escapeHtml(parts[0].trim());
+            String value = parts.length > 1 ? escapeHtml(parts[1].trim()) : "";
 
-body.append("<div class='sig-block'>");
-body.append("<div class='sig-line'></div>");
-body.append("<div class='sig-label'>Technician Name / Όνομα τεχνικού</div>");
-body.append("</div>");
-
-body.append("<div class='sig-block'>");
-body.append("<div class='sig-line'></div>");
-body.append("<div class='sig-label'>Customer Name / Όνομα πελάτη</div>");
-body.append("</div>");
-
-body.append("</div>");
-
-// ROW 2 — SIGNATURES
-body.append("<div class='sig-row'>");
-
-body.append("<div class='sig-block'>");
-body.append("<div class='sig-line'></div>");
-body.append("<div class='sig-label'>Signature / Υπογραφή</div>");
-body.append("</div>");
-
-body.append("<div class='sig-block'>");
-body.append("<div class='sig-line'></div>");
-body.append("<div class='sig-label'>Signature / Υπογραφή</div>");
-body.append("</div>");
-
-body.append("</div>");
-
-// DATE FULL WIDTH
-body.append("<div class='sig-block-full'>");
-body.append("<div class='sig-line'></div>");
-body.append("<div class='sig-label'>Date / Ημερομηνία</div>");
-body.append("</div>");
-
-body.append("</div>");
-
-        return "<html><head><meta charset='utf-8'/>"
-                + "<style>"
-                + "body{font-family:monospace;background:#ffffff;color:#111111;padding:24px;margin:0;font-size:13px;line-height:1.45;}"
-                + ".header{margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid #d6d6d6;}"
-                + ".title{font-size:20px;font-weight:700;color:#000000;margin-bottom:6px;}"
-                + ".subtitle{font-size:12px;color:#444444;margin-bottom:10px;}"
-                + ".meta{font-size:12px;color:#222222;margin-bottom:4px;}"
-                + ".ok{color:#0b8f2d;font-weight:700;margin:6px 0;}"
-                + ".warn{color:#d98200;font-weight:700;margin:6px 0;}"
-                + ".err{color:#b00020;font-weight:700;margin:6px 0;}"
-                + ".info{color:#1565c0;font-weight:700;margin:6px 0;}"
-                + ".plain{color:#111111;margin:4px 0;white-space:pre-wrap;word-wrap:break-word;}"
-                + ".row{margin:4px 0;white-space:pre-wrap;word-wrap:break-word;}"
-                + ".label{font-weight:700;color:#000000;}"
-                + ".value{color:#222222;}"
-                + ".space{height:10px;}"
-                + ".section-title{margin-top:22px;margin-bottom:10px;font-weight:700;font-size:15px;color:#000000;}"
-                + ".line{height:22px;border-bottom:1px solid #333333;}"
-                + ".signatures{margin-top:26px;}"
-                + ".sig-block{display:inline-block;width:48%;vertical-align:top;margin-bottom:20px;}"
-                + ".sig-block-full{width:100%;margin-top:8px;}"
-                + ".sig-label{font-weight:700;color:#000000;margin-bottom:10px;}"
-                + ".sig-line{height:18px;border-bottom:1px solid #333333;}"
-                + "</style></head><body>"
-                + body
-                + "</body></html>";
+            body.append("<div class='row'><span class='label'>")
+                    .append(label)
+                    .append(":</span> <span class='value'>")
+                    .append(value)
+                    .append("</span></div>");
+        }
+        else {
+            body.append("<div class='plain'>").append(escaped).append("</div>");
+        }
     }
+
+    // =========================================================
+    // SECTIONS
+    // =========================================================
+    body.append("<div class='section-title'>Repair Summary / Τι επισκευάστηκε</div>");
+    body.append("<div class='line'></div><div class='line'></div><div class='line'></div><div class='line'></div>");
+
+    body.append("<div class='section-title'>Additional Notes / Επιπλέον παρατηρήσεις</div>");
+    body.append("<div class='line'></div><div class='line'></div><div class='line'></div>");
+
+    // =========================================================
+    // SIGNATURES
+    // =========================================================
+    body.append("<div class='signatures'>");
+
+    // NAMES
+    body.append("<div class='sig-row'>");
+
+    body.append("<div class='sig-block'>");
+    body.append("<div class='sig-line'></div>");
+    body.append("<div class='sig-label'>Technician Name / Όνομα τεχνικού</div>");
+    body.append("</div>");
+
+    body.append("<div class='sig-block'>");
+    body.append("<div class='sig-line'></div>");
+    body.append("<div class='sig-label'>Customer Name / Όνομα πελάτη</div>");
+    body.append("</div>");
+
+    body.append("</div>");
+
+    // SIGNATURES
+    body.append("<div class='sig-row'>");
+
+    body.append("<div class='sig-block'>");
+    body.append("<div class='sig-line'></div>");
+    body.append("<div class='sig-label'>Signature / Υπογραφή</div>");
+    body.append("</div>");
+
+    body.append("<div class='sig-block'>");
+    body.append("<div class='sig-line'></div>");
+    body.append("<div class='sig-label'>Signature / Υπογραφή</div>");
+    body.append("</div>");
+
+    body.append("</div>");
+
+    // DATE
+    body.append("<div class='sig-block-full'>");
+    body.append("<div class='sig-line'></div>");
+    body.append("<div class='sig-label'>Date / Ημερομηνία</div>");
+    body.append("</div>");
+
+    body.append("</div>");
+
+    // =========================================================
+    // FINAL HTML
+    // =========================================================
+    return "<html><head><meta charset='utf-8'/>"
+            + "<style>"
+
+            + "body{font-family:monospace;background:#ffffff;color:#111;padding:24px;margin:0;font-size:13px;line-height:1.45;}"
+
+            // HEADER
+            + ".header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid #d4af37;}"
+            + ".header-left{display:flex;align-items:center;gap:14px;}"
+            + ".logo{width:52px;height:52px;}"
+            + ".header-text{display:flex;flex-direction:column;}"
+            + ".title{font-size:18px;font-weight:700;color:#000;margin-bottom:4px;}"
+            + ".subtitle{font-size:12px;color:#444;}"
+            + ".header-meta{font-size:11px;color:#222;text-align:right;line-height:1.4;}"
+
+            // LOGS
+            + ".ok{color:#0b8f2d;font-weight:700;margin:6px 0;}"
+            + ".warn{color:#d98200;font-weight:700;margin:6px 0;}"
+            + ".err{color:#b00020;font-weight:700;margin:6px 0;}"
+            + ".info{color:#1565c0;font-weight:700;margin:6px 0;}"
+            + ".plain{margin:4px 0;white-space:pre-wrap;}"
+            + ".row{margin:4px 0;}"
+            + ".label{font-weight:700;color:#000;}"
+            + ".value{color:#222;}"
+            + ".space{height:10px;}"
+
+            // SECTIONS
+            + ".section-title{margin-top:22px;margin-bottom:10px;font-weight:700;font-size:15px;}"
+            + ".line{height:22px;border-bottom:1px solid #333;}"
+
+            // SIGNATURES
+            + ".signatures{margin-top:40px;}"
+            + ".sig-row{display:flex;justify-content:space-between;gap:40px;margin-bottom:40px;}"
+            + ".sig-block{width:45%;}"
+            + ".sig-block-full{width:60%;margin-top:30px;}"
+            + ".sig-line{border-bottom:2px solid #000;height:40px;margin-bottom:6px;}"
+            + ".sig-label{font-size:11px;color:#333;}"
+
+            + "</style></head><body>"
+            + body
+            + "</body></html>";
+}
 
     private void onExportSuccess(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
