@@ -3281,30 +3281,16 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
                     return;
                 }
 
-long now = SystemClock.elapsedRealtime();
+                long now = SystemClock.elapsedRealtime();
 
-// πραγματικός χρόνος
-int realElapsed = (int) ((now - t0) / 1000);
+                // 🔴 REAL TIME
+                int elapsed = (int) ((now - t0) / 1000);
 
-// 🔴 smooth display (χωρίς jumps)
-if (lastDisplayedSecond < realElapsed) {
+                // 🔴 CLAMP
+                if (elapsed < 0) elapsed = 0;
+                if (elapsed > durationSec) elapsed = (int) durationSec;
 
-    // max 1 step per frame
-    lastDisplayedSecond++;
-
-}
-
-// 🔴 safety sync (μόνο αν ξεφύγει ΠΟΛΥ)
-if (realElapsed - lastDisplayedSecond > 5) {
-    lastDisplayedSecond = realElapsed - 2; // soft catch-up
-}
-
-int elapsed = lastDisplayedSecond;
-
-// clamp
-if (elapsed < 0) elapsed = 0;
-if (elapsed > durationSec) elapsed = (int) durationSec;
-
+                // 🔴 PHASE
                 if (elapsed < 60) {
                     statusText.setText(gr
                             ? "HARD stress (μέγιστο φορτίο)"
@@ -3315,19 +3301,28 @@ if (elapsed > durationSec) elapsed = (int) durationSec;
                             : "SOFT stress (light load)");
                 }
 
+                // 🔴 COUNTER
                 if (counterText != null) {
                     counterText.setText(elapsed + " / " + durationSec);
                 }
 
+                // 🔴 PROGRESS BAR (fixed)
                 if (lab14MainBar != null) {
 
                     int segCount = lab14MainBar.getChildCount();
-                    int active = (int) ((elapsed / (float) durationSec) * segCount);
+
+                    float ratio = Math.min(1f, elapsed / (float) durationSec);
+
+                    int active = (int) Math.ceil(ratio * segCount);
 
                     for (int i = 0; i < segCount; i++) {
+
                         View seg = lab14MainBar.getChildAt(i);
+
                         if (seg != null) {
-                            seg.setBackgroundColor(i < active ? 0xFF39FF14 : 0xFF333333);
+                            seg.setBackgroundColor(
+                                    i < active ? 0xFF39FF14 : 0xFF333333
+                            );
                         }
                     }
                 }
@@ -3345,8 +3340,9 @@ if (elapsed > durationSec) elapsed = (int) durationSec;
 
             }
 
+            // 🔴 FAST REFRESH (NO SKIPS)
             if (lab14Running && !lab14Cancelled) {
-                ui.postDelayed(this, 1000);
+                ui.postDelayed(this, 200);
             }
         }
     });
