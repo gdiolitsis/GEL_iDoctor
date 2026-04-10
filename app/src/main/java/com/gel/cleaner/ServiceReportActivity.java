@@ -119,23 +119,30 @@ public class ServiceReportActivity extends AppCompatActivity {
 
         // ACTIONS
         btnTxt.setOnClickListener(v -> {
-            lockExportUI(true);
-            exportTxtToPdf();
-            lockExportUI(false);
-        });
+    lockExportUI(true);
+
+    new Thread(() -> {
+
+        exportTxtToPdf();
+
+        runOnUiThread(() -> lockExportUI(false));
+
+    }).start();
+});
 
         btnHtml.setOnClickListener(v -> {
-            lockExportUI(true);
+    lockExportUI(true);
 
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                GELServiceReportPdf.export(this);
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        GELServiceReportPdf.export(this);
 
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    lockExportUI(false);
-                }, 1200);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            lockExportUI(false);
+            updatePreview(); // 👈 ΕΔΩ ΜΠΑΙΝΕΙ
+        }, 1200);
 
-            }, 100);
-        });
+    }, 100);
+});
 
         btnRow.addView(line);
         btnRow.addView(exportProgress);
@@ -176,10 +183,15 @@ protected void onResume() {
     // ==========================================================
     private void exportTxtToPdf() {
 
-        if (GELServiceLog.isEmpty()) {
-            Toast.makeText(this, "Nothing to export.", Toast.LENGTH_SHORT).show();
-            return;
-        }
+if (GELServiceLog.isEmpty()) {
+
+    runOnUiThread(() -> {
+        Toast.makeText(this, "Nothing to export.", Toast.LENGTH_SHORT).show();
+        updatePreview();
+    });
+
+    return;
+}
 
         try {
             String text = GELServiceLog.getAll();
@@ -194,14 +206,30 @@ protected void onResume() {
             Paint emojiPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             emojiPaint.setTextSize(12f);
 
-            int marginX = 32;
-            int y = 80;
-            int lineHeight = 18;
-            int pageNum = 1;
+int marginX = 32;
+int lineHeight = 18;
+int pageNum = 1;
 
-            PdfDocument.Page page = startPage(pdf, pageNum);
-            Canvas canvas = page.getCanvas();
-            canvas.drawColor(Color.WHITE);
+PdfDocument.Page page = startPage(pdf, pageNum);
+Canvas canvas = page.getCanvas();
+canvas.drawColor(Color.WHITE);
+
+Paint titlePaint = new Paint(textPaint);
+titlePaint.setTextSize(14f);
+titlePaint.setFakeBoldText(true);
+
+Paint subtitlePaint = new Paint(textPaint);
+subtitlePaint.setTextSize(11f);
+
+int y = drawReportHeader(
+        canvas,
+        marginX,
+        40,
+        titlePaint,
+        subtitlePaint,
+        textPaint,
+        true
+);
 
             for (String line : lines) {
 
@@ -213,34 +241,156 @@ protected void onResume() {
                 }
 
                 if (y > PAGE_HEIGHT - 60) {
+                
+                drawPageFooter(canvas, pageNum);
                     pdf.finishPage(page);
                     page = startPage(pdf, ++pageNum);
                     canvas = page.getCanvas();
                     canvas.drawColor(Color.WHITE);
-                    y = 80;
+                    y = drawReportHeader(
+        canvas,
+        marginX,
+        40,
+        titlePaint,
+        subtitlePaint,
+        textPaint,
+        false
+);
                 }
 
                 drawLineWithColoredEmoji(canvas, cleanLine, marginX, y, textPaint, emojiPaint);
                 y += lineHeight;
             }
+            
+// ==================================================
+// REPAIR SUMMARY
+// ==================================================
+if (y > PAGE_HEIGHT - 180) {
 
+drawPageFooter(canvas, pageNum);
+    pdf.finishPage(page);
+
+    page = startPage(pdf, ++pageNum);
+    canvas = page.getCanvas();
+    canvas.drawColor(Color.WHITE);
+
+    y = drawReportHeader(
+        canvas,
+        marginX,
+        40,
+        titlePaint,
+        subtitlePaint,
+        textPaint,
+        false
+);
+}
+
+Paint sectionTitle2 = new Paint(textPaint);
+sectionTitle2.setFakeBoldText(true);
+
+y += 30;
+
+canvas.drawText("Repair Summary / Τι επισκευάστηκε", marginX, y, sectionTitle2);
+y += 20;
+
+// Lines
+for (int i = 0; i < 4; i++) {
+    canvas.drawLine(marginX, y, marginX + 450, y, textPaint);
+    y += 22;
+}
+
+y += 10;
+
+// Additional Notes
+canvas.drawText("Additional Notes / Επιπλέον παρατηρήσεις", marginX, y, sectionTitle2);
+y += 20;
+
+for (int i = 0; i < 3; i++) {
+    canvas.drawLine(marginX, y, marginX + 450, y, textPaint);
+    y += 22;
+}
+
+y += 10;
+            
+// ==================================================
+// SIGNATURE SECTION (TECH LEFT / CUSTOMER RIGHT)
+// ==================================================
+if (y > PAGE_HEIGHT - 160) {
+
+drawPageFooter(canvas, pageNum);
+    pdf.finishPage(page);
+
+    page = startPage(pdf, ++pageNum);
+    canvas = page.getCanvas();
+    canvas.drawColor(Color.WHITE);
+
+    y = drawReportHeader(
+        canvas,
+        marginX,
+        40,
+        titlePaint,
+        subtitlePaint,
+        textPaint,
+        false
+);
+}
+
+y += 40;
+
+int rightX = marginX + 300;
+
+// -------- LEFT (TECHNICIAN) --------
+canvas.drawText("Technician Name / Όνομα τεχνικού:", marginX, y, textPaint);
+canvas.drawLine(marginX, y + 15, marginX + 250, y + 15, textPaint);
+
+y += 30;
+
+canvas.drawText("Signature / Υπογραφή:", marginX, y, textPaint);
+canvas.drawLine(marginX, y + 15, marginX + 250, y + 15, textPaint);
+
+// -------- RIGHT (CUSTOMER) --------
+int yRight = y - 30; // ευθυγράμμιση με αρχή technician
+
+canvas.drawText("Customer Name / Όνομα πελάτη:", rightX, yRight, textPaint);
+canvas.drawLine(rightX, yRight + 15, rightX + 250, yRight + 15, textPaint);
+
+yRight += 30;
+
+canvas.drawText("Signature / Υπογραφή:", rightX, yRight, textPaint);
+canvas.drawLine(rightX, yRight + 15, rightX + 250, yRight + 15, textPaint);
+
+// -------- DATE (CENTER κάτω) --------
+y += 50;
+
+canvas.drawText("Date / Ημερομηνία:", marginX, y, textPaint);
+canvas.drawLine(marginX + 140, y + 15, marginX + 280, y + 15, textPaint);
+
+            drawPageFooter(canvas, pageNum);
             pdf.finishPage(page);
 
-            File out = new File(
-                    Environment.getExternalStoragePublicDirectory(
-                            Environment.DIRECTORY_DOWNLOADS),
-                    "GEL_Service_Report.pdf"
-            );
+            File outDir = Environment.getExternalStoragePublicDirectory(
+        Environment.DIRECTORY_DOWNLOADS);
+
+if (outDir == null) {
+    outDir = getExternalFilesDir(null);
+}
+
+File out = new File(outDir, "GEL_Service_Report.pdf");
 
             FileOutputStream fos = new FileOutputStream(out);
             pdf.writeTo(fos);
             fos.close();
             pdf.close();
 
-            Toast.makeText(this, "PDF saved.", Toast.LENGTH_LONG).show();
+runOnUiThread(() -> {
+    Toast.makeText(this, "PDF saved.", Toast.LENGTH_LONG).show();
+    updatePreview();
+});
             
         } catch (Throwable t) {
-            Toast.makeText(this, "PDF error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+            runOnUiThread(() ->
+        Toast.makeText(this, "PDF error: " + t.getMessage(), Toast.LENGTH_LONG).show()
+);
         }
     }
 
@@ -277,7 +427,6 @@ protected void onResume() {
 
         canvas.drawText(rest, dx, y, textPaint);
     }
-}
 
 private void updatePreview() {
     if (txtPreview == null) return;
@@ -292,4 +441,130 @@ private void updatePreview() {
     txtPreview.setText(
             data.replaceAll("\\n{3,}", "\n\n")
     );
+}
+
+private int drawReportHeader(
+        Canvas c,
+        int x,
+        int startY,
+        Paint title,
+        Paint subtitle,
+        Paint text,
+        boolean isFirstPage) {
+
+    int y = startY;
+
+    // LOGO
+    if (gelLogo != null) {
+        Bitmap scaled = Bitmap.createScaledBitmap(gelLogo, 52, 52, true);
+        c.drawBitmap(scaled, x, y, null);
+    }
+
+    y += 70;
+
+    // TITLE
+    c.drawText("GEL Service Report / Αναφορά Service", x, y, title);
+    y += 20;
+
+    c.drawText("GDiolitsis Engine Lab (GEL) — Author & Developer",
+            x, y, subtitle);
+    y += 26;
+
+    // BASIC INFO (μόνο πρώτη σελίδα)
+    if (isFirstPage) {
+
+    String dateLine = "Date / Ημερομηνία: " +
+            java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
+
+    String deviceLine = "Device / Συσκευή: " +
+            android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
+
+    String osLine = "Android / Έκδοση: " +
+            android.os.Build.VERSION.RELEASE +
+            " (API " + android.os.Build.VERSION.SDK_INT + ")";
+
+    c.drawText(dateLine, x, y, text); y += 16;
+    c.drawText(deviceLine, x, y, text); y += 16;
+    c.drawText(osLine, x, y, text); y += 22;
+
+    // ==========================================
+    // DEVICE INTAKE CONDITION
+    // ==========================================
+
+    Paint sectionTitle = new Paint(text);
+    sectionTitle.setFakeBoldText(true);
+
+    c.drawText("Device intake condition / Κατάσταση παραλαβής συσκευής", x, y, sectionTitle);
+    y += 18;
+
+    String[] intakeLines = new String[]{
+            "Screen (cracked/scratched) / Οθόνη (σπασμένη/γρατζουνισμένη)",
+            "Back cover / Πίσω καπάκι",
+            "Frame / Πλαίσιο",
+            "Camera lens / Φακός κάμερας",
+            "Charging port / Θύρα φόρτισης",
+            "Buttons / Κουμπιά",
+            "Speaker / Microphone / Ηχείο / Μικρόφωνο",
+            "Water signs / Ενδείξεις υγρασίας",
+            "Battery condition / Κατάσταση μπαταρίας"
+    };
+
+    Paint boxPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    boxPaint.setStyle(Paint.Style.STROKE);
+    boxPaint.setStrokeWidth(1.5f);
+
+    for (String s : intakeLines) {
+
+        int boxSize = 10;
+
+        // OK
+        c.drawRect(x, y - 9, x + boxSize, y + 1, boxPaint);
+        c.drawText(" OK", x + boxSize + 4, y, text);
+
+        // DAMAGED
+        int dmgX = x + 80;
+        c.drawRect(dmgX, y - 9, dmgX + boxSize, y + 1, boxPaint);
+        c.drawText(" DAMAGED", dmgX + boxSize + 4, y, text);
+
+        // label
+        c.drawText("— " + s, x + 170, y, text);
+
+        y += 16;
+    }
+
+    y += 24;
+
+    // ==========================================
+    // NOTES SECTION
+    // ==========================================
+
+    c.drawText("Notes / Παρατηρήσεις:", x, y, sectionTitle);
+    y += 20;
+
+    for (int i = 0; i < 3; i++) {
+        c.drawLine(x, y, x + 450, y, text);
+        y += 20;
+    }
+
+    y += 10;
+}
+
+    return y;
+}
+
+private void drawPageFooter(Canvas canvas, int pageNum) {
+
+    Paint footerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    footerPaint.setTextSize(10f);
+    footerPaint.setColor(Color.DKGRAY);
+    footerPaint.setTextAlign(Paint.Align.CENTER);
+
+    canvas.drawText(
+            "GEL Service Report — Page " + pageNum,
+            PAGE_WIDTH / 2f,
+            PAGE_HEIGHT - 20,
+            footerPaint
+    );
+}
+
 }
