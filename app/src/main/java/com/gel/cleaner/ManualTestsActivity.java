@@ -5435,45 +5435,106 @@ private void appendHtml(String html) {
 }
 
 // =====================================================
-// LOG METHODS
+// LOG METHODS — FINAL (UI + PDF SYNC)
 // =====================================================
 
+// ---------------- CORE ----------------
+private void logLabel(String label, String value, String color) {
+
+    appendHtml(
+            escape(label) + ": " +
+            "<font color='" + color + "'>" + escape(value) + "</font>"
+    );
+
+    // 🔥 PDF
+    GELServiceLog.add(label + ": " + value);
+}
+
+// ---------------- SIMPLE ----------------
 private void logInfo(String msg) {
+    if (msg == null) return;
+
     appendHtml("• " + escape(msg));
-    GELServiceLog.logInfo(msg);
+    GELServiceLog.add("ℹ " + msg);
 
     expandLogPanel();
     scrollLogToBottom();
 }
 
 private void logOk(String msg) {
+    if (msg == null) return;
+
     appendHtml("<font color='#39FF14'>✔ " + escape(msg) + "</font>");
-    GELServiceLog.logOk(msg);
+    GELServiceLog.add("✔ " + msg);
 
     expandLogPanel();
     scrollLogToBottom();
 }
 
 private void logWarn(String msg) {
+    if (msg == null) return;
+
     appendHtml("<font color='#FFD966'>⚠ " + escape(msg) + "</font>");
-    GELServiceLog.logWarn(msg);
+    GELServiceLog.add("⚠ " + msg);
 
     expandLogPanel();
     scrollLogToBottom();
 }
 
 private void logError(String msg) {
+    if (msg == null) return;
+
     appendHtml("<font color='#FF5555'>✖ " + escape(msg) + "</font>");
-    GELServiceLog.logError(msg);
+    GELServiceLog.add("✖ " + msg);
 
     expandLogPanel();
     scrollLogToBottom();
 }
 
 private void logLine() {
-    appendHtml("--------------------------------------------------");
-    GELServiceLog.logLine();
+    String line = "--------------------------------------------------";
+
+    appendHtml(line);
+    GELServiceLog.add(line);
+
     scrollLogToBottom();
+}
+
+// ---------------- LABEL VALUE ----------------
+private void logLabelOkValue(String label, String value) {
+    logLabel(label, value, "#39FF14");
+    expandLogPanel();
+    scrollLogToBottom();
+}
+
+private void logLabelWarnValue(String label, String value) {
+    logLabel(label, value, "#FFD700");
+    expandLogPanel();
+    scrollLogToBottom();
+}
+
+private void logLabelErrorValue(String label, String value) {
+    logLabel(label, value, "#FF5555");
+    expandLogPanel();
+    scrollLogToBottom();
+}
+
+// ---------------- COMPATIBILITY ----------------
+private void logLabelValue(String label, String value) {
+    logLabelOkValue(label, value);
+}
+
+// ---------------- OVERLOADS ----------------
+private void logOk(String label, String value) {
+    logLabelOkValue(label, value);
+}
+
+private void logWarn(String label, String value) {
+    logLabelWarnValue(label, value);
+}
+
+private void logError(String label, String value) {
+    logLabelErrorValue(label, value);
 }
 
 // ------------------------------------------------------------
@@ -5766,60 +5827,6 @@ private void printHealthCheckboxMap(String decision) {
     else
         logInfo(gr ? "Χάρτης Υγείας: Πληροφοριακό"
                    : "Health Map: Informational");
-}
-
-// ============================================================
-// MISSING SYMBOLS PATCH — REQUIRED FOR LAB 14 + LAB 15
-// Put this block INSIDE ManualTestsActivity (helpers area)
-// ============================================================
-
-// ------------------------------------------------------------
-// BACKWARD COMPATIBILITY — DO NOT REMOVE (yet)
-// ------------------------------------------------------------
-private void logLabelValue(String label, String value) {
-    logOk(label, value);
-}
-
-// ------------------------------------------------------------
-// logLabelOkValue — white label, green value
-// ------------------------------------------------------------
-private void logLabelOkValue(String label, String value) {
-    appendHtml(
-            escape(label) + ": " +
-            "<font color='#39FF14'>" + escape(value) + "</font>"
-    );
-}
-
-// ------------------------------------------------------------
-// logLabelWarnValue — white label, yellow value
-// ------------------------------------------------------------
-private void logLabelWarnValue(String label, String value) {
-    appendHtml(
-            escape(label) + ": " +
-            "<font color='#FFD700'>" + escape(value) + "</font>"
-    );
-}
-
-// ------------------------------------------------------------
-// logLabelErrorValue — white label, red value
-// ------------------------------------------------------------
-private void logLabelErrorValue(String label, String value) {
-    appendHtml(
-            escape(label) + ": " +
-            "<font color='#FF5555'>" + escape(value) + "</font>"
-    );
-}
-
-private void logOk(String label, String value) {
-    logLabelOkValue(label, value);
-}
-
-private void logWarn(String label, String value) {
-    logLabelWarnValue(label, value);
-}
-
-private void logError(String label, String value) {
-    logLabelErrorValue(label, value);
 }
 
 // ============================================================
