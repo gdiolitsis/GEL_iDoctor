@@ -1256,6 +1256,9 @@ private void appendLog(String txt) {
 
         txtLog.append("\n" + txt);
 
+        // 🔥 CRITICAL FIX — sync UI → PDF
+        GELServiceLog.add(txt);
+
         if (logScroll != null) {
             logScroll.post(() ->
                     logScroll.fullScroll(View.FOCUS_DOWN));
@@ -5696,17 +5699,20 @@ private void logLab15ThermalCorrelation(
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
     );
 
-    // values = green
-    sp.setSpan(
-            new ForegroundColorSpan(0xFF39FF14),
-            label.length(),
-            sp.length(),
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-    );
+// values = green
+sp.setSpan(
+        new ForegroundColorSpan(0xFF39FF14),
+        label.length(),
+        sp.length(),
+        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+);
 
-    txtLog.append(sp);
-    txtLog.append("\n");
-}
+// UI
+txtLog.append(sp);
+txtLog.append("\n");
+
+// 🔥 PDF SYNC
+GELServiceLog.add(sp.toString());
 
 // ------------------------------------------------------------
 // Health checkbox map — BILINGUAL (LAB 14/17 use)
