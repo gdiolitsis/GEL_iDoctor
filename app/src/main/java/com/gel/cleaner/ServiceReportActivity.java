@@ -386,115 +386,233 @@ public class ServiceReportActivity extends AppCompatActivity {
             fos.close();
             pdf.close();
 
-            runOnUiThread(() -> onExportSuccess("PDF saved."));
-            GELServiceLog.clear();
-        } catch (Exception e) {
             runOnUiThread(() -> {
-                Toast.makeText(this, "PDF ERROR: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                lockExportUI(false);
-            });
-            e.printStackTrace();
-        }
+
+    boolean gr = AppLang.isGreek(this);
+
+    String successMsg = gr
+            ? "Το PDF αποθηκεύτηκε στα Downloads."
+            : "PDF saved to Downloads.";
+
+    onExportSuccess(successMsg);
+});
+
+// 🔥 καθαρισμός logs ΜΕΤΑ το success
+GELServiceLog.clear();
+
+} catch (Exception e) {
+
+    runOnUiThread(() -> {
+
+        boolean gr = AppLang.isGreek(this);
+
+        String errorMsg = gr
+                ? "Σφάλμα κατά την εξαγωγή PDF: " + e.getMessage()
+                : "PDF ERROR: " + e.getMessage();
+
+        Toast.makeText(
+                this,
+                errorMsg,
+                Toast.LENGTH_LONG
+        ).show();
+
+        lockExportUI(false);
+    });
+
+    e.printStackTrace();
+}
     }
 
     // ==========================================================
     // HTML PDF ENGINE — MULTI PAGE + COLORED
     // ==========================================================
-    private void exportHtmlPdf(String report) {
+private void exportHtmlPdf(String report) {
 
-        if (report == null || report.trim().isEmpty()) {
-            Toast.makeText(this, "Nothing to export.", Toast.LENGTH_SHORT).show();
-            lockExportUI(false);
-            return;
-        }
+    android.webkit.WebView webView = new android.webkit.WebView(this);
+    webView.getSettings().setJavaScriptEnabled(false);
 
-        try {
-            final WebView webView = new WebView(this);
-            webView.setBackgroundColor(Color.WHITE);
-            webView.getSettings().setJavaScriptEnabled(false);
-            webView.getSettings().setAllowFileAccess(false);
-            webView.getSettings().setDomStorageEnabled(false);
+    String html = "<html><head>"
 
-            int contentWidth = PAGE_WIDTH - (PAGE_MARGIN * 2);
-            webView.layout(0, 0, contentWidth, PAGE_HEIGHT);
+            + "<style>"
 
-            String html = buildHtmlReport(report);
+            // =========================
+            // BASE
+            // =========================
+            + "body { font-family: sans-serif; font-size:12px; padding:24px; page-break-inside: avoid; }"
 
-            webView.setWebViewClient(new WebViewClient() {
-                @Override
-                public void onPageFinished(WebView view, String url) {
-                    view.postDelayed(() -> {
-                        try {
-                            int contentHeightPx = (int) Math.ceil(view.getContentHeight() * view.getScale());
-                            if (contentHeightPx <= 0) {
-                                throw new IllegalStateException("HTML content height is zero");
-                            }
+            // =========================
+            // HEADER (LOGO LEFT / TEXT RIGHT)
+            // =========================
+            + ".header { display:flex; align-items:center; gap:16px; margin-bottom:20px; }"
+            + ".header img { width:52px; height:52px; }"
+            + ".header-text { display:flex; flex-direction:column; }"
+            + ".header-title { font-size:16px; font-weight:bold; }"
+            + ".header-sub { font-size:11px; color:#444; }"
 
-                            PdfDocument pdf = new PdfDocument();
+            // =========================
+            // SIGNATURES
+            // =========================
+            + ".signatures { margin-top:40px; page-break-inside: avoid; }"
+            + ".sig-row { display:flex; justify-content:space-between; gap:40px; margin-bottom:40px; page-break-inside: avoid; }"
+            + ".sig-block { width:45%; page-break-inside: avoid; }"
+            + ".sig-block-full { width:60%; margin-top:30px; }"
+            + ".sig-line { border-bottom:2px solid #000; height:40px; margin-bottom:6px; }"
+            + ".sig-label { font-size:11px; color:#333; }"
 
-                            int usablePageHeight = PAGE_HEIGHT - FOOTER_SPACE;
-                            int currentTop = 0;
-                            int pageNum = 1;
+            + "</style>"
 
-                            while (currentTop < contentHeightPx) {
-                                PdfDocument.Page page = pdf.startPage(
-                                        new PdfDocument.PageInfo.Builder(
-                                                PAGE_WIDTH,
-                                                PAGE_HEIGHT,
-                                                pageNum
-                                        ).create()
-                                );
+            + "</head><body>"
 
-                                Canvas canvas = page.getCanvas();
-                                canvas.drawColor(Color.WHITE);
+            // =========================
+            // HEADER
+            // =========================
+            + "<div class='header'>"
+            + "<img src='file:///android_res/drawable/gel_logo.png' />"
+            + "<div class='header-text'>"
+            + "<div class='header-title'>GEL Service Report / Αναφορά Service</div>"
+            + "<div class='header-sub'>GDiolitsis Engine Lab (GEL) — Author & Developer</div>"
+            + "</div>"
+            + "</div>"
 
-                                canvas.save();
-                                canvas.translate(PAGE_MARGIN, -currentTop);
-                                view.draw(canvas);
-                                canvas.restore();
+            // =========================
+            // REPORT CONTENT
+            // =========================
+            + report.replace("\n", "<br>")
 
-                                drawPageFooter(canvas, pageNum);
+            // =========================
+            // SIGNATURES BLOCK
+            // =========================
+            + "<div class='signatures'>"
 
-                                pdf.finishPage(page);
+            + "<div class='sig-row'>"
 
-                                currentTop += usablePageHeight;
-                                pageNum++;
-                            }
+            + "<div class='sig-block'>"
+            + "<div class='sig-line'></div>"
+            + "<div class='sig-label'>Technician Name / Όνομα τεχνικού</div>"
+            + "</div>"
 
-                            File out = getOutputFile("GEL_Service_Report_HTML.pdf");
-                            FileOutputStream fos = new FileOutputStream(out);
-                            pdf.writeTo(fos);
-                            fos.close();
-                            pdf.close();
+            + "<div class='sig-block'>"
+            + "<div class='sig-line'></div>"
+            + "<div class='sig-label'>Customer Name / Όνομα πελάτη</div>"
+            + "</div>"
 
-                            runOnUiThread(() -> onExportSuccess("HTML PDF saved."));
-                        } catch (Exception e) {
-                            runOnUiThread(() -> {
-                                Toast.makeText(ServiceReportActivity.this,
-                                        "HTML PDF ERROR: " + e.getMessage(),
-                                        Toast.LENGTH_LONG).show();
-                                lockExportUI(false);
-                            });
-                            e.printStackTrace();
-                        } finally {
-                            try {
-                                webView.destroy();
-                            } catch (Throwable ignore) {}
-                        }
-                    }, 500);
+            + "</div>"
+
+            + "<div class='sig-row'>"
+
+            + "<div class='sig-block'>"
+            + "<div class='sig-line'></div>"
+            + "<div class='sig-label'>Signature / Υπογραφή</div>"
+            + "</div>"
+
+            + "<div class='sig-block'>"
+            + "<div class='sig-line'></div>"
+            + "<div class='sig-label'>Signature / Υπογραφή</div>"
+            + "</div>"
+
+            + "</div>"
+
+            + "<div class='sig-block-full'>"
+            + "<div class='sig-line'></div>"
+            + "<div class='sig-label'>Date / Ημερομηνία</div>"
+            + "</div>"
+
+            + "</div>"
+
+            + "</body></html>";
+
+    webView.setVisibility(View.INVISIBLE);
+}
+
+    webView.setWebViewClient(new android.webkit.WebViewClient() {
+        @Override
+        public void onPageFinished(android.webkit.WebView view, String url) {
+
+            try {
+
+                PdfDocument pdf = new PdfDocument();
+
+                PdfDocument.Page page = pdf.startPage(
+                        new PdfDocument.PageInfo.Builder(
+                                PAGE_WIDTH,
+                                PAGE_HEIGHT,
+                                1
+                        ).create()
+                );
+
+                Canvas canvas = page.getCanvas();
+                canvas.drawColor(Color.WHITE);
+
+                view.measure(
+                        View.MeasureSpec.makeMeasureSpec(PAGE_WIDTH, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(PAGE_HEIGHT, View.MeasureSpec.EXACTLY)
+                );
+
+                view.layout(0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+                view.draw(canvas);
+
+                pdf.finishPage(page);
+
+                File outDir = Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_DOWNLOADS
+                );
+
+                if (outDir == null) {
+                    outDir = getExternalFilesDir(null);
                 }
-            });
 
-            webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+                File out = new File(outDir, "GEL_Service_Report_HTML.pdf");
 
-        } catch (Exception e) {
-            Toast.makeText(this,
-                    "HTML ENGINE ERROR: " + e.getMessage(),
-                    Toast.LENGTH_LONG).show();
-            lockExportUI(false);
-            e.printStackTrace();
+                FileOutputStream fos = new FileOutputStream(out);
+                pdf.writeTo(fos);
+                fos.close();
+                pdf.close();
+
+                // ✅ SUCCESS
+                runOnUiThread(() -> {
+
+                    boolean gr = AppLang.isGreek(ServiceReportActivity.this);
+
+                    String msg = gr
+                            ? "Το HTML PDF αποθηκεύτηκε στα Downloads."
+                            : "HTML PDF saved to Downloads.";
+
+                    Toast.makeText(
+                            ServiceReportActivity.this,
+                            msg,
+                            Toast.LENGTH_LONG
+                    ).show();
+
+                    lockExportUI(false);
+                });
+
+            } catch (Exception e) {
+
+                // ❌ ERROR
+                runOnUiThread(() -> {
+
+                    boolean gr = AppLang.isGreek(ServiceReportActivity.this);
+
+                    String msg = gr
+                            ? "Σφάλμα κατά την εξαγωγή HTML PDF."
+                            : "Error exporting HTML PDF.";
+
+                    Toast.makeText(
+                            ServiceReportActivity.this,
+                            msg,
+                            Toast.LENGTH_LONG
+                    ).show();
+
+                    lockExportUI(false);
+                });
+
+                e.printStackTrace();
+            }
         }
-    }
+    });
+
+    webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+}
 
     private String buildHtmlReport(String report) {
         String[] lines = report.split("\\n");
@@ -553,12 +671,44 @@ public class ServiceReportActivity extends AppCompatActivity {
         body.append("<div class='line'></div><div class='line'></div><div class='line'></div>");
 
         body.append("<div class='signatures'>");
-        body.append("<div class='sig-block'><div class='sig-label'>Technician Name / Όνομα τεχνικού:</div><div class='sig-line'></div></div>");
-        body.append("<div class='sig-block'><div class='sig-label'>Customer Name / Όνομα πελάτη:</div><div class='sig-line'></div></div>");
-        body.append("<div class='sig-block'><div class='sig-label'>Signature / Υπογραφή:</div><div class='sig-line'></div></div>");
-        body.append("<div class='sig-block'><div class='sig-label'>Signature / Υπογραφή:</div><div class='sig-line'></div></div>");
-        body.append("<div class='sig-block-full'><div class='sig-label'>Date / Ημερομηνία:</div><div class='sig-line'></div></div>");
-        body.append("</div>");
+
+// ROW 1 — NAMES
+body.append("<div class='sig-row'>");
+
+body.append("<div class='sig-block'>");
+body.append("<div class='sig-line'></div>");
+body.append("<div class='sig-label'>Technician Name / Όνομα τεχνικού</div>");
+body.append("</div>");
+
+body.append("<div class='sig-block'>");
+body.append("<div class='sig-line'></div>");
+body.append("<div class='sig-label'>Customer Name / Όνομα πελάτη</div>");
+body.append("</div>");
+
+body.append("</div>");
+
+// ROW 2 — SIGNATURES
+body.append("<div class='sig-row'>");
+
+body.append("<div class='sig-block'>");
+body.append("<div class='sig-line'></div>");
+body.append("<div class='sig-label'>Signature / Υπογραφή</div>");
+body.append("</div>");
+
+body.append("<div class='sig-block'>");
+body.append("<div class='sig-line'></div>");
+body.append("<div class='sig-label'>Signature / Υπογραφή</div>");
+body.append("</div>");
+
+body.append("</div>");
+
+// DATE FULL WIDTH
+body.append("<div class='sig-block-full'>");
+body.append("<div class='sig-line'></div>");
+body.append("<div class='sig-label'>Date / Ημερομηνία</div>");
+body.append("</div>");
+
+body.append("</div>");
 
         return "<html><head><meta charset='utf-8'/>"
                 + "<style>"
