@@ -30,7 +30,7 @@ import java.io.FileOutputStream;
 
 public class ServiceReportActivity extends AppCompatActivity {
 
-    private static final int PAGE_WIDTH  = 595;
+    private static final int PAGE_WIDTH = 595;
     private static final int PAGE_HEIGHT = 842;
 
     private TextView txtPreview;
@@ -38,7 +38,9 @@ public class ServiceReportActivity extends AppCompatActivity {
 
     private AppCompatButton btnTxt;
     private AppCompatButton btnHtml;
+
     private ProgressBar exportProgress;
+}
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -132,16 +134,14 @@ btnHtml.setOnClickListener(v -> {
 
     lockExportUI(true);
 
-    new Thread(() -> {
+    runOnUiThread(() -> {
 
-        GELServiceReportPdf.export(this);   // 🔥 ΜΟΝΟ ΑΥΤΟ
+        GELServiceReportPdf.export(this);
 
-        runOnUiThread(() -> {
-            lockExportUI(false);
-            updatePreview();
-        });
+        lockExportUI(false);
+        updatePreview();
 
-    }).start();
+    });
 });
 
         btnRow.addView(line);
