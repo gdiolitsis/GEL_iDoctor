@@ -2,16 +2,20 @@
 // ServiceReportActivity — FINAL STABLE (TXT PDF + HTML PDF + MULTI-PAGE + COLORED)
 
 package com.gel.cleaner;
-
-import android.content.Context;
+import android.content.ContentValues;
+import android.content.ContentResolver;
+import android.content.Context
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.view.Gravity;
 import android.view.View;
 import android.webkit.WebView;
@@ -26,7 +30,9 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.OutputStream;
 import java.io.FileOutputStream;
 
 public class ServiceReportActivity extends AppCompatActivity {
@@ -381,11 +387,12 @@ public class ServiceReportActivity extends AppCompatActivity {
             drawPageFooter(canvas, pageNum);
             pdf.finishPage(page);
 
-            File out = getOutputFile("GEL_Service_Report.pdf");
-            FileOutputStream fos = new FileOutputStream(out);
-            pdf.writeTo(fos);
-            fos.close();
-            pdf.close();
+ByteArrayOutputStream bos = new ByteArrayOutputStream();
+pdf.writeTo(bos);
+pdf.close();
+
+Uri uri = savePdfToDownloads("GEL_Service_Report.pdf", bos.toByteArray());
+sharePdf(uri);
 
             runOnUiThread(() -> {
 
@@ -695,16 +702,15 @@ private String buildHtmlReport(String report) {
     }
 
     private File getOutputFile(String name) {
-        File outDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOWNLOADS
-        );
 
-        if (outDir == null) {
-            outDir = getExternalFilesDir(null);
-        }
+    File outDir = new File(getExternalFilesDir(null), "GEL_Reports");
 
-        return new File(outDir, name);
+    if (!outDir.exists()) {
+        outDir.mkdirs();
     }
+
+    return new File(outDir, name);
+}
 
     private PdfDocument.Page startPage(PdfDocument pdf, int num) {
         return pdf.startPage(
@@ -921,6 +927,65 @@ private String buildHtmlReport(String report) {
 
         return report;
     }
+    
+    private Uri savePdfToDownloads(String fileName, byte[] data) throws Exception {
+
+    ContentValues values = new ContentValues();
+    values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+    values.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
+    values.put(MediaStore.Downloads.IS_PENDING, 1);
+
+    ContentResolver resolver = getContentResolver();
+
+    Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+
+    if (uri == null) {
+        throw new Exception("MediaStore insert failed");
+    }
+
+    OutputStream out = resolver.openOutputStream(uri);
+
+    if (out == null) {
+        throw new Exception("OutputStream null");
+    }
+
+    out.write(data);
+    out.flush();
+    out.close();
+
+    values.clear();
+    values.put(MediaStore.Downloads.IS_PENDING, 0);
+    resolver.update(uri, values, null, null);
+
+    // 🔥 FORCE VISIBILITY (για όλες τις συσκευές)
+    try {
+        MediaScannerConnection.scanFile(
+                this,
+                new String[]{fileName},
+                new String[]{"application/pdf"},
+                null
+        );
+    } catch (Throwable ignore) {}
+
+    return uri;
+}
+
+private void sharePdf(Uri uri) {
+
+    if (uri == null) return;
+
+    Intent intent = new Intent(Intent.ACTION_SEND);
+    intent.setType("application/pdf");
+    intent.putExtra(Intent.EXTRA_STREAM, uri);
+    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+    try {
+    startActivity(Intent.createChooser(intent,
+            gr ? "Αποστολή αναφοράς μέσω..." : "Send report via..."));
+} catch (Throwable t) {
+        Toast.makeText(this, "No app available to share PDF", Toast.LENGTH_SHORT).show();
+    }
+}
 
     private String escapeHtml(String s) {
         if (s == null) return "";
