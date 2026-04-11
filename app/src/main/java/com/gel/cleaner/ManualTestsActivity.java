@@ -319,8 +319,27 @@ private long baselineFullMah;
 private long t0;
 private int batteryPercent;
 private long cycles;
-private float tempStart;
+
 private float lab14TempPeak = Float.NaN;
+
+// ==========================================================
+// 🔥 LAB 14 — DETECTION FIELDS (GEL CORE)
+// ==========================================================
+
+// CPU
+private int[] freqStart;
+
+// Thermal
+private float tempStart;
+
+// Voltage
+private float voltStart;
+
+// Current (estimate ή sensor)
+private float currentStart;
+
+// Performance (optional αλλά χρήσιμο)
+private long perfStart;
 
 private int lab14OptimalThreads = 1;
 
@@ -2519,6 +2538,22 @@ getWindow().addFlags(
         WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
 );
 
+
+// --------------------------------------------------------
+// 📊 BASELINE SNAPSHOT (START OF HARD)
+// --------------------------------------------------------
+
+freqStart = getCurrentCpuFreq();
+
+tempStart = getBatteryTemperature();
+
+voltStart = getBatteryVoltageFiltered();
+
+currentStart = estimateCurrentNow(); // αν δεν έχεις sensor
+
+perfStart = SystemClock.elapsedRealtime();
+
+
 // --------------------------------------------------------
 // 🔥 HARD START (0 -> 60s) — HARD CORE PROTECTION TRIGGER
 // --------------------------------------------------------
@@ -2615,9 +2650,6 @@ ui.postDelayed(() -> {
 
 }, 40000L);
 
-// 🔥 LOOP
-startLab14BProgressLoop(statusText, durationSec, gr);
-
 // --------------------------------------------------------
 // 🔻 AFTER 60s -> SNAPSHOT + SWITCH TO SOFT (LOCKED)
 // --------------------------------------------------------
@@ -2638,22 +2670,103 @@ ui.postDelayed(() -> {
             softStartMah[0] = snap1.chargeNowMah;
         }
 
-        softStartTemp[0] = getBatteryTemperature();
-        if ((Float.isNaN(softStartTemp[0]) || softStartTemp[0] <= 0f)
-                && snap1 != null) {
-            softStartTemp[0] = snap1.batteryTempC;
+        float tempNow = getBatteryTemperature();
+        if ((Float.isNaN(tempNow) || tempNow <= 0f) && snap1 != null) {
+            tempNow = snap1.batteryTempC;
         }
 
-        softStartVolt[0] = getBatteryVoltageFiltered();
+        float voltNow = getBatteryVoltageFiltered();
+        float currentNow = estimateCurrentNow();
 
+        // αποθήκευση soft start snapshot
+        softStartTemp[0] = tempNow;
+        softStartVolt[0] = voltNow;
+
+        // --------------------------------------------------
+        // 🔥 DETECTION
+        // --------------------------------------------------
+        boolean cpuThrottle =
+                detectCpuThrottle(freqStart, getCurrentCpuFreq());
+
+        boolean thermalThrottle =
+                detectThermalThrottle(tempStart, tempNow);
+
+        boolean powerLimiter =
+                detectPowerLimiter(
+                        voltStart,
+                        voltNow,
+                        currentStart,
+                        currentNow
+                );
+
+        boolean protection =
+                detectSystemProtection(
+                        cpuThrottle,
+                        thermalThrottle,
+                        powerLimiter
+                );
+
+        // --------------------------------------------------
+        // 📊 LOG RESULTS
+        // --------------------------------------------------
+        if (cpuThrottle) {
+            logLabelOkValue(
+                    gr ? "CPU προστασία" : "CPU throttle",
+                    gr ? "ΝΑΙ" : "YES"
+            );
+        } else {
+            logLabelWarnValue(
+                    gr ? "CPU προστασία" : "CPU throttle",
+                    gr ? "ΟΧΙ" : "NO"
+            );
+        }
+
+        if (thermalThrottle) {
+            logLabelOkValue(
+                    gr ? "Θερμική προστασία" : "Thermal throttle",
+                    gr ? "ΝΑΙ" : "YES"
+            );
+        } else {
+            logLabelWarnValue(
+                    gr ? "Θερμική προστασία" : "Thermal throttle",
+                    gr ? "ΟΧΙ" : "NO"
+            );
+        }
+
+        if (powerLimiter) {
+            logLabelOkValue(
+                    gr ? "Περιορισμός ισχύος" : "Power limiter",
+                    gr ? "ΝΑΙ" : "YES"
+            );
+        } else {
+            logLabelWarnValue(
+                    gr ? "Περιορισμός ισχύος" : "Power limiter",
+                    gr ? "ΟΧΙ" : "NO"
+            );
+        }
+
+        if (!protection) {
+            logWarn(gr
+                    ? "Δεν ενεργοποιήθηκε προστασία συστήματος"
+                    : "No protection triggered");
+        } else {
+            logOk(gr
+                    ? "Ανιχνεύθηκε προστασία συστήματος"
+                    : "System protection detected");
+        }
+
+        // --------------------------------------------------
         // 🔴 ⛔ STOP HARD CORE ENGINE
+        // --------------------------------------------------
         lab14BoostActive = false;
 
         try { stopCpuBurn(); } catch (Throwable ignore) {}
         try { stopMemoryStress(); } catch (Throwable ignore) {}
         try { stopGpuStress(); } catch (Throwable ignore) {}
 
+        // --------------------------------------------------
         // ⚖️ START SOFT
+        // --------------------------------------------------
         logLabelValue(
                 gr ? "Φάση" : "Phase",
                 gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
@@ -3171,6 +3284,88 @@ private void showLab14BAdvisory(Runnable onContinue) {
     });
 }
 
+// ==========================================================
+// 🔥 LAB 14B — PROTECTION DETECTION HELPERS (GEL CORE)
+// ==========================================================
+
+// ----------------------------------------------------------
+// CPU THROTTLE DETECTION
+// ----------------------------------------------------------
+private boolean detectCpuThrottle(int[] freqStart, int[] freqNow) {
+
+    if (freqStart == null || freqNow == null) return false;
+
+    int drops = 0;
+
+    for (int i = 0; i < Math.min(freqStart.length, freqNow.length); i++) {
+
+        if (freqStart[i] > 0 && freqNow[i] > 0) {
+
+            float ratio = freqNow[i] / (float) freqStart[i];
+
+            if (ratio < 0.75f) {
+                drops++;
+            }
+        }
+    }
+
+    return drops >= Math.max(1, freqStart.length / 3);
+}
+
+
+// ----------------------------------------------------------
+// THERMAL THROTTLE DETECTION
+// ----------------------------------------------------------
+private boolean detectThermalThrottle(float tempStart, float tempNow) {
+
+    float delta = tempNow - tempStart;
+
+    // υψηλή θερμοκρασία + plateau
+    return (tempNow > 42f && delta < 1.5f);
+}
+
+
+// ----------------------------------------------------------
+// POWER LIMITER DETECTION
+// ----------------------------------------------------------
+private boolean detectPowerLimiter(
+        float voltageStart,
+        float voltageNow,
+        float currentStart,
+        float currentNow
+) {
+
+    float vDrop = voltageStart - voltageNow;
+    float cDrop = currentStart - currentNow;
+
+    return (vDrop > 0.15f && cDrop > 100f);
+}
+
+
+// ----------------------------------------------------------
+// PERFORMANCE DROP DETECTION
+// ----------------------------------------------------------
+private boolean detectPerformanceDrop(long tStart, long tNow) {
+
+    if (tStart <= 0 || tNow <= 0) return false;
+
+    float ratio = tNow / (float) tStart;
+
+    return ratio > 1.5f;
+}
+
+
+// ----------------------------------------------------------
+// SYSTEM PROTECTION (MASTER FLAG)
+// ----------------------------------------------------------
+private boolean detectSystemProtection(
+        boolean cpuThrottle,
+        boolean thermalThrottle,
+        boolean powerLimiter
+) {
+    return cpuThrottle || thermalThrottle || powerLimiter;
+}
+
 private void startCpuBurn_Light() {
 
     final int cores = Runtime.getRuntime().availableProcessors();
@@ -3179,6 +3374,70 @@ private void startCpuBurn_Light() {
     int threads = Math.max(2, cores / 2);
 
     startCpuBurnLimitedThreads(threads);
+}
+
+// ==========================================================
+// 🔥 CPU FREQUENCY (SAFE READER)
+// ==========================================================
+private int[] getCurrentCpuFreq() {
+
+    try {
+
+        int cores = Runtime.getRuntime().availableProcessors();
+        int[] freqs = new int[cores];
+
+        for (int i = 0; i < cores; i++) {
+
+            String path = "/sys/devices/system/cpu/cpu" + i + "/cpufreq/scaling_cur_freq";
+
+            try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(path))) {
+
+                String line = br.readLine();
+
+                if (line != null) {
+                    freqs[i] = Integer.parseInt(line.trim());
+                } else {
+                    freqs[i] = 0;
+                }
+
+            } catch (Throwable e) {
+                freqs[i] = 0; // fallback
+            }
+        }
+
+        return freqs;
+
+    } catch (Throwable e) {
+        return null;
+    }
+}
+
+// ==========================================================
+// 🔥 CURRENT ESTIMATION (NO SENSOR REQUIRED)
+// ==========================================================
+private float estimateCurrentNow() {
+
+    try {
+
+        android.os.BatteryManager bm =
+                (android.os.BatteryManager) getSystemService(BATTERY_SERVICE);
+
+        if (bm == null) return 0f;
+
+        int currentMicroA = bm.getIntProperty(
+                android.os.BatteryManager.BATTERY_PROPERTY_CURRENT_NOW
+        );
+
+        if (currentMicroA == Integer.MIN_VALUE) {
+            return 0f;
+        }
+
+        // convert μA → mA
+        return currentMicroA / 1000f;
+
+    } catch (Throwable e) {
+        return 0f;
+    }
 }
 
 // ============================================================
