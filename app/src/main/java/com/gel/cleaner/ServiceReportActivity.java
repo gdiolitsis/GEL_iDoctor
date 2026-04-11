@@ -444,6 +444,9 @@ private void exportHtmlPdf(String report) {
 
             try {
 
+                android.print.PrintManager printManager =
+                        (android.print.PrintManager) getSystemService(Context.PRINT_SERVICE);
+
                 android.print.PrintDocumentAdapter adapter =
                         view.createPrintDocumentAdapter("GEL_Service_Report");
 
@@ -454,92 +457,29 @@ private void exportHtmlPdf(String report) {
                                 .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS)
                                 .build();
 
-                File outDir = Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_DOWNLOADS
+                // 🔥 αυτό κάνει όλη τη δουλειά (NO manual callbacks)
+                printManager.print(
+                        "GEL_Service_Report",
+                        adapter,
+                        attributes
                 );
 
-                if (outDir == null) {
-                    outDir = getExternalFilesDir(null);
-                }
+                runOnUiThread(() -> {
 
-                File out = new File(outDir, "GEL_Service_Report_HTML.pdf");
+                    boolean gr = AppLang.isGreek(ServiceReportActivity.this);
 
-                android.os.ParcelFileDescriptor pfd =
-                        android.os.ParcelFileDescriptor.open(
-                                out,
-                                android.os.ParcelFileDescriptor.MODE_CREATE |
-                                android.os.ParcelFileDescriptor.MODE_WRITE_ONLY
-                        );
-
-                adapter.onLayout(
-                        null,
-                        attributes,
-                        null,
-                        new android.print.PrintDocumentAdapter.LayoutResultCallback() {
-                            @Override
-                            public void onLayoutFinished(
-                                    android.print.PrintDocumentInfo info,
-                                    boolean changed
-                            ) {
-                                super.onLayoutFinished(info, changed);
-                            }
-                        },
-                        null
-                );
-
-                adapter.onWrite(
-                        new android.print.PageRange[]{android.print.PageRange.ALL_PAGES},
-                        pfd,
-                        null,
-                        new android.print.PrintDocumentAdapter.WriteResultCallback() {
-
-                            @Override
-                            public void onWriteFinished(android.print.PageRange[] pages) {
-
-                                try { pfd.close(); } catch (Exception ignore) {}
-
-                                runOnUiThread(() -> {
-
-                                    boolean gr = AppLang.isGreek(ServiceReportActivity.this);
-
-                                    String msg = gr
-                                            ? "Το HTML PDF αποθηκεύτηκε στα Downloads."
+                    String msg = gr
+                            ? "Το HTML PDF αποθηκεύτηκε στα Downloads."
                                             : "HTML PDF saved to Downloads.";
 
-                                    Toast.makeText(
-                                            ServiceReportActivity.this,
-                                            msg,
-                                            Toast.LENGTH_LONG
-                                    ).show();
+                    Toast.makeText(
+                            ServiceReportActivity.this,
+                            msg,
+                            Toast.LENGTH_LONG
+                    ).show();
 
-                                    lockExportUI(false);
-                                });
-                            }
-
-                            @Override
-                            public void onWriteFailed(CharSequence error) {
-
-                                try { pfd.close(); } catch (Exception ignore) {}
-
-                                runOnUiThread(() -> {
-
-                                    boolean gr = AppLang.isGreek(ServiceReportActivity.this);
-
-                                    String msg = gr
-                                            ? "Σφάλμα κατά την εξαγωγή PDF."
-                                            : "Error exporting PDF.";
-
-                                    Toast.makeText(
-                                            ServiceReportActivity.this,
-                                            msg,
-                                            Toast.LENGTH_LONG
-                                    ).show();
-
-                                    lockExportUI(false);
-                                });
-                            }
-                        }
-                );
+                    lockExportUI(false);
+                });
 
             } catch (Exception e) {
 
