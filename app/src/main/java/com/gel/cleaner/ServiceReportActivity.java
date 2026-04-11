@@ -4,7 +4,7 @@
 package com.gel.cleaner;
 import android.content.ContentValues;
 import android.content.ContentResolver;
-import android.content.Context
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
