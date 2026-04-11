@@ -2588,7 +2588,10 @@ private void lab14BBatteryDurationTest() {
                                 ? (startVolt[0] - endVolt[0])
                                 : Float.NaN;
 
-long usedMah = drain > 0 ? drain : drainNow;
+long usedMah = drain;
+if (usedMah <= 0 && softDeltaMah > 0) {
+    usedMah = softDeltaMah;
+}
 
 float perHour = Float.NaN;
 float estimatedHours = Float.NaN;
