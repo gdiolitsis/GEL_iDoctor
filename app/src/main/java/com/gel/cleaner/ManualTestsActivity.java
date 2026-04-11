@@ -1229,6 +1229,57 @@ logScroll.setOnTouchListener((v, event) -> {
     }
 }  // onCreate ENDS HERE
 
+// ============================================================
+// CPU STRESS HELPERS (REQUIRED BY OTHER LABS) NOT for 14B
+// ============================================================
+
+private final List<Thread> lab14CpuThreads = new ArrayList<>();
+
+private void startCpuBurnLimitedThreads(int threads) {
+
+    stopCpuBurn();
+
+    final int cores = Runtime.getRuntime().availableProcessors();
+
+    if (threads <= 0) threads = cores;
+    threads = Math.min(threads, cores);
+
+    for (int i = 0; i < threads; i++) {
+
+        Thread t = new Thread(() -> {
+
+            try {
+
+                while (lab14Running && !lab14Cancelled &&
+                        !Thread.currentThread().isInterrupted()) {
+
+                    for (int j = 0; j < 10000; j++) {
+                        Math.sqrt(j * Math.random());
+                    }
+
+                }
+
+            } catch (Throwable ignore) {}
+
+        });
+
+        t.setPriority(Thread.MAX_PRIORITY);
+        lab14CpuThreads.add(t);
+        t.start();
+    }
+}
+
+private void stopCpuBurn() {
+
+    for (Thread t : lab14CpuThreads) {
+        try {
+            t.interrupt();
+        } catch (Throwable ignore) {}
+    }
+
+    lab14CpuThreads.clear();
+}
+
 private void showLogsFullScreen() {
     if (labsScroll != null) {
         labsScroll.setVisibility(View.GONE);
