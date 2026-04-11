@@ -2520,7 +2520,7 @@ getWindow().addFlags(
 );
 
 // --------------------------------------------------------
-// 🔥 HARD START (0 -> 60s) — ADAPTIVE OVERLOAD (FINAL LOCKED)
+// 🔥 HARD START (0 -> 60s) — ADAPTIVE OVERLOAD (FIXED)
 // --------------------------------------------------------
 
 lab14Running = true;
@@ -2528,24 +2528,20 @@ lab14Cancelled = false;
 
 appendLog("BOOST", "FORCE HARD START (14B)");
 
-final int cores = Runtime.getRuntime().availableProcessors();
-
 // 🔴 LEVEL 1 (0–20s)
-final int hardThreads = cores * 2;
-
 new Thread(() -> {
     try {
 
-        // 🔥 CPU — FULL
-        startCpuBurn_C_Mode(hardThreads);
+        // 🔥 CPU
+        startCpuBurn_C_Mode();
 
-        // 🔥 MEMORY — HEAVY
-        startMemoryStress(0.8f);
+        // 🔥 MEMORY
+        startMemoryStress();
 
-        // 🔥 GPU — MAX
+        // 🔥 GPU
         startGpuStressLevel(5);
 
-        // 🔥 CPU SPIKE LOOP (CRITICAL)
+        // 🔥 SPIKE LOOP
         for (int i = 0; i < 1000000 && lab14Running; i++) {
             Math.sqrt(i * Math.random());
         }
@@ -2564,11 +2560,11 @@ ui.postDelayed(() -> {
 
     try {
 
-        startCpuBurn_C_Mode(cores * 3);
-        startMemoryStress(0.9f);
+        // 🔥 επανα-trigger για extra πίεση
+        startCpuBurn_C_Mode();
+        startMemoryStress();
         startGpuStressLevel(5);
 
-        // 🔥 EXTRA SPIKE
         for (int i = 0; i < 1500000 && lab14Running; i++) {
             Math.sqrt(i * Math.random());
         }
@@ -2578,7 +2574,7 @@ ui.postDelayed(() -> {
 }, 20000);
 
 
-// 🔴 LEVEL 3 (40s — MAX FORCE)
+// 🔴 LEVEL 3 (40s)
 ui.postDelayed(() -> {
 
     if (!lab14Running || lab14Cancelled) return;
@@ -2587,11 +2583,10 @@ ui.postDelayed(() -> {
 
     try {
 
-        startCpuBurn_C_Mode(cores * 4);
-        startMemoryStress(0.95f);
+        startCpuBurn_C_Mode();
+        startMemoryStress();
         startGpuStressLevel(6);
 
-        // 🔥 FINAL SPIKE (HEAVY)
         for (int i = 0; i < 2000000 && lab14Running; i++) {
             Math.sqrt(i * Math.random());
         }
@@ -2601,7 +2596,7 @@ ui.postDelayed(() -> {
 }, 40000);
 
 
-// 🔴 PROGRESS LOOP (TIME SYNC)
+// 🔴 PROGRESS LOOP
 startLab14BProgressLoop(statusText, durationSec, gr);
 
 // --------------------------------------------------------
@@ -3368,7 +3363,7 @@ lab14Cancelled = false;
 
 lab14Dialog.show();
 
-// 🔥 VIDEO START (SAFE)
+// 🔥 VIDEO
 lab14StressVideo.post(() -> {
     try {
         Uri uri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.battery_stress_loop);
@@ -3380,9 +3375,8 @@ lab14StressVideo.post(() -> {
     } catch (Throwable ignore) {}
 });
 
-// 🔴 RESET STATE
-lab14Running = true;
-lab14Cancelled = false;
+// 🔥 HARD START (CRITICAL)
+startLab14BHardPhase();
 
 // 🔥 LOOP
 startLab14BProgressLoop(statusText, durationSec, gr);
@@ -3436,7 +3430,7 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
 
                     float ratio = Math.min(1f, elapsed / (float) durationSec);
 
-                    int active = (int) (ratio * segCount);
+                    int active = (int) Math.floor(ratio * segCount);
 
                     for (int i = 0; i < segCount; i++) {
 
@@ -18684,7 +18678,7 @@ if (lab14FastPhase) {
 
         float ratio = Math.min(1f, fastElapsed / 45f);
 
-        int active = (int) (ratio * segCount);
+        int active = (int) Math.floor(ratio * segCount);
 
         for (int i = 0; i < segCount; i++) {
 
@@ -18788,7 +18782,7 @@ if (elapsed < durationSec) {
 
         float ratio = Math.min(1f, elapsed / (float) durationSec);
 
-        int active = (int) (ratio * segCount);
+        int active = (int) Math.floor(ratio * segCount);
 
         for (int i = 0; i < segCount; i++) {
 
