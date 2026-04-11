@@ -3,6 +3,7 @@
 
 package com.gel.cleaner;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -431,187 +432,132 @@ private void exportHtmlPdf(String report) {
     android.webkit.WebView webView = new android.webkit.WebView(this);
     webView.getSettings().setJavaScriptEnabled(false);
 
-    String html = "<html><head>"
-
-            + "<style>"
-
-            // =========================
-            // BASE
-            // =========================
-            + "body { font-family: sans-serif; font-size:12px; padding:24px; page-break-inside: avoid; }"
-
-            // =========================
-            // HEADER (LOGO LEFT / TEXT RIGHT)
-            // =========================
-            + ".header { display:flex; align-items:center; gap:16px; margin-bottom:20px; }"
-            + ".header img { width:52px; height:52px; }"
-            + ".header-text { display:flex; flex-direction:column; }"
-            + ".header-title { font-size:16px; font-weight:bold; }"
-            + ".header-sub { font-size:11px; color:#444; }"
-
-            // =========================
-            // SIGNATURES
-            // =========================
-            + ".signatures { margin-top:40px; page-break-inside: avoid; }"
-            + ".sig-row { display:flex; justify-content:space-between; gap:40px; margin-bottom:40px; page-break-inside: avoid; }"
-            + ".sig-block { width:45%; page-break-inside: avoid; }"
-            + ".sig-block-full { width:60%; margin-top:30px; }"
-            + ".sig-line { border-bottom:2px solid #000; height:40px; margin-bottom:6px; }"
-            + ".sig-label { font-size:11px; color:#333; }"
-
-            + "</style>"
-
-            + "</head><body>"
-
-            // =========================
-            // HEADER
-            // =========================
-            + "<div class='header'>"
-            + "<img src='file:///android_res/drawable/gel_logo.png' />"
-            + "<div class='header-text'>"
-            + "<div class='header-title'>GEL Service Report / Αναφορά Service</div>"
-            + "<div class='header-sub'>GDiolitsis Engine Lab (GEL) — Author & Developer</div>"
-            + "</div>"
-            + "</div>"
-
-            // =========================
-            // REPORT CONTENT
-            // =========================
-            + report.replace("\n", "<br>")
-
-            // =========================
-            // SIGNATURES BLOCK
-            // =========================
-            + "<div class='signatures'>"
-
-            + "<div class='sig-row'>"
-
-            + "<div class='sig-block'>"
-            + "<div class='sig-line'></div>"
-            + "<div class='sig-label'>Technician Name / Όνομα τεχνικού</div>"
-            + "</div>"
-
-            + "<div class='sig-block'>"
-            + "<div class='sig-line'></div>"
-            + "<div class='sig-label'>Customer Name / Όνομα πελάτη</div>"
-            + "</div>"
-
-            + "</div>"
-
-            + "<div class='sig-row'>"
-
-            + "<div class='sig-block'>"
-            + "<div class='sig-line'></div>"
-            + "<div class='sig-label'>Signature / Υπογραφή</div>"
-            + "</div>"
-
-            + "<div class='sig-block'>"
-            + "<div class='sig-line'></div>"
-            + "<div class='sig-label'>Signature / Υπογραφή</div>"
-            + "</div>"
-
-            + "</div>"
-
-            + "<div class='sig-block-full'>"
-            + "<div class='sig-line'></div>"
-            + "<div class='sig-label'>Date / Ημερομηνία</div>"
-            + "</div>"
-
-            + "</div>"
-
-            + "</body></html>";
+String html = buildHtmlReport(report);
 
     webView.setVisibility(View.INVISIBLE);
-}
+webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 
-    webView.setWebViewClient(new android.webkit.WebViewClient() {
-        @Override
-        public void onPageFinished(android.webkit.WebView view, String url) {
+webView.setWebViewClient(new WebViewClient() {
 
-            try {
+    @Override
+    public void onPageFinished(android.webkit.WebView view, String url) {
 
-                PdfDocument pdf = new PdfDocument();
+        try {
 
-                PdfDocument.Page page = pdf.startPage(
-                        new PdfDocument.PageInfo.Builder(
-                                PAGE_WIDTH,
-                                PAGE_HEIGHT,
-                                1
-                        ).create()
-                );
+            android.print.PrintDocumentAdapter adapter =
+                    view.createPrintDocumentAdapter("GEL_Service_Report");
 
-                Canvas canvas = page.getCanvas();
-                canvas.drawColor(Color.WHITE);
+            android.print.PrintAttributes attributes =
+                    new android.print.PrintAttributes.Builder()
+                            .setMediaSize(android.print.PrintAttributes.MediaSize.ISO_A4)
+                            .setResolution(new android.print.PrintAttributes.Resolution("pdf", "pdf", 300, 300))
+                            .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS)
+                            .build();
 
-                view.measure(
-                        View.MeasureSpec.makeMeasureSpec(PAGE_WIDTH, View.MeasureSpec.EXACTLY),
-                        View.MeasureSpec.makeMeasureSpec(PAGE_HEIGHT, View.MeasureSpec.EXACTLY)
-                );
+            File outDir = Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOWNLOADS
+            );
 
-                view.layout(0, 0, PAGE_WIDTH, PAGE_HEIGHT);
-                view.draw(canvas);
-
-                pdf.finishPage(page);
-
-                File outDir = Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_DOWNLOADS
-                );
-
-                if (outDir == null) {
-                    outDir = getExternalFilesDir(null);
-                }
-
-                File out = new File(outDir, "GEL_Service_Report_HTML.pdf");
-
-                FileOutputStream fos = new FileOutputStream(out);
-                pdf.writeTo(fos);
-                fos.close();
-                pdf.close();
-
-                // ✅ SUCCESS
-                runOnUiThread(() -> {
-
-                    boolean gr = AppLang.isGreek(ServiceReportActivity.this);
-
-                    String msg = gr
-                            ? "Το HTML PDF αποθηκεύτηκε στα Downloads."
-                            : "HTML PDF saved to Downloads.";
-
-                    Toast.makeText(
-                            ServiceReportActivity.this,
-                            msg,
-                            Toast.LENGTH_LONG
-                    ).show();
-
-                    lockExportUI(false);
-                });
-
-            } catch (Exception e) {
-
-                // ❌ ERROR
-                runOnUiThread(() -> {
-
-                    boolean gr = AppLang.isGreek(ServiceReportActivity.this);
-
-                    String msg = gr
-                            ? "Σφάλμα κατά την εξαγωγή HTML PDF."
-                            : "Error exporting HTML PDF.";
-
-                    Toast.makeText(
-                            ServiceReportActivity.this,
-                            msg,
-                            Toast.LENGTH_LONG
-                    ).show();
-
-                    lockExportUI(false);
-                });
-
-                e.printStackTrace();
+            if (outDir == null) {
+                outDir = getExternalFilesDir(null);
             }
-        }
-    });
 
-    webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+            File out = new File(outDir, "GEL_Service_Report_HTML.pdf");
+
+            android.os.ParcelFileDescriptor pfd =
+                    android.os.ParcelFileDescriptor.open(
+                            out,
+                            android.os.ParcelFileDescriptor.MODE_CREATE |
+                            android.os.ParcelFileDescriptor.MODE_WRITE_ONLY
+                    );
+
+            adapter.onLayout(
+                    null,
+                    attributes,
+                    null,
+                    new android.print.PrintDocumentAdapter.LayoutResultCallback() {},
+                    null
+            );
+
+            adapter.onWrite(
+                    new android.print.PageRange[]{android.print.PageRange.ALL_PAGES},
+                    pfd,
+                    null,
+                    new android.print.PrintDocumentAdapter.WriteResultCallback() {
+
+                        @Override
+                        public void onWriteFinished(android.print.PageRange[] pages) {
+                        	
+                        try { pfd.close(); } catch (Exception ignore) {}
+
+                            runOnUiThread(() -> {
+
+                                boolean gr = AppLang.isGreek(ServiceReportActivity.this);
+
+                                String msg = gr
+                                        ? "Το HTML PDF αποθηκεύτηκε στα Downloads."
+                                        : "HTML PDF saved to Downloads.";
+
+                                Toast.makeText(
+                                        ServiceReportActivity.this,
+                                        msg,
+                                        Toast.LENGTH_LONG
+                                ).show();
+
+                                lockExportUI(false);
+                            });
+                        }
+
+                        @Override
+                        public void onWriteFailed(CharSequence error) {
+                        	
+                        try { pfd.close(); } catch (Exception ignore) {}
+
+                            runOnUiThread(() -> {
+
+                                boolean gr = AppLang.isGreek(ServiceReportActivity.this);
+
+                                String msg = gr
+                                        ? "Σφάλμα κατά την εξαγωγή PDF."
+                                        : "Error exporting PDF.";
+
+                                Toast.makeText(
+                                        ServiceReportActivity.this,
+                                        msg,
+                                        Toast.LENGTH_LONG
+                                ).show();
+
+                                lockExportUI(false);
+                            });
+                        }
+                    }
+            );
+
+        } catch (Exception e) {
+
+            runOnUiThread(() -> {
+
+                boolean gr = AppLang.isGreek(ServiceReportActivity.this);
+
+                String msg = gr
+                        ? "Σφάλμα κατά την εξαγωγή PDF."
+                        : "Error exporting PDF.";
+
+                Toast.makeText(
+                        ServiceReportActivity.this,
+                        msg,
+                        Toast.LENGTH_LONG
+                ).show();
+
+                lockExportUI(false);
+            });
+
+            e.printStackTrace();
+        }
+    }
+});
+
+webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
 }
 
 private String buildHtmlReport(String report) {
