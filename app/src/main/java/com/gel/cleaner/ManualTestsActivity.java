@@ -2810,10 +2810,10 @@ private void showLab14BAdvisory(Runnable onContinue) {
     row.setOrientation(LinearLayout.VERTICAL);
 
     LinearLayout.LayoutParams lp =
-            new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(52)
-            );
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
 
     lp.setMargins(0, dp(14), 0, 0);
 
@@ -3087,14 +3087,22 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
 
                 if (elapsed >= durationSec) {
 
-                    lab14Running = false;
+    lab14Running = false;
 
-                    ui.post(() -> {
-                        lab14StopAllStress();
-                    });
+    ui.post(() -> {
 
-                    return;
-                }
+        lab14StopAllStress();
+
+        try {
+            if (lab14Dialog != null && lab14Dialog.isShowing()) {
+                lab14Dialog.dismiss();
+            }
+        } catch (Throwable ignore) {}
+
+    });
+
+    return;
+}
 
             } catch (Throwable t) {
 
@@ -19015,53 +19023,12 @@ if (isLab14BMode && lab14Running && elapsed >= 300) {
 Float cpuTemp = readCpuTempSafe();
 
 // ----------------------------------------------------
-// 🔴 TIME FLAGS
+// 🔴 TIME FLAGS (SOFT ONLY)
 // ----------------------------------------------------
 boolean earlyPhase = elapsed < 25;
-boolean hardPhase = elapsed < 60;
 
-inHardPhase = hardPhase;
+inHardPhase = false;
         
-// ----------------------------------------------------
-// 🔴 HARD → SOFT TRANSITION (LOCKED — FINAL)
-// ----------------------------------------------------
-if (isLab14BMode &&
-    !lab14SoftPhaseStarted &&
-    elapsed >= 60) {
-
-    // 🔴 ADD THIS
-    appendLog("TIME", "HARD->SOFT at " + elapsed + " sec");
-
-    lab14SoftPhaseStarted = true;   // 🔴 LOCK FIRST
-    lab14BoostActive = false;
-
-    appendLog("PHASE", "Switching to SOFT phase");
-
-    new Thread(() -> {
-
-        try {
-
-            stopCpuBurn();
-            stopGpuStress();
-            stopMemoryStress();
-
-            final int coresLocal = Runtime.getRuntime().availableProcessors();
-            int softThreads = Math.max(1, coresLocal / 3);
-
-            // CPU (SOFT)
-            startCpuBurnLimitedThreads(softThreads);
-
-            // GPU (LOW)
-            startGpuStressLevel(1);
-
-            // MEMORY
-            startMemoryStress();
-
-        } catch (Throwable ignore) {}
-
-    }).start();
-}
-
 // ----------------------------------------------------
 // 🔴 ENGINE SIGNALS (CLEAN - FILTERED — FINAL)
 // ----------------------------------------------------
@@ -19476,18 +19443,9 @@ if (lab14LimiterLatched) {
 
 } else if (isLab14BMode) {
 
-    if (inHardPhase) {
-
-        status = (loadScore >= 3)
-                ? "HARD LOAD 🔥"
-                : "LOW HARD LOAD ⚠";
-
-    } else {
-
-        status = (loadScore >= 2)
-                ? "SOFT LOAD 🌿"
-                : "WEAK SOFT ⚠";
-    }
+    status = (loadScore >= 2)
+            ? "SOFT LOAD 🌿"
+            : "WEAK LOAD ⚠";
 
 } else if (lab14FastPhase) {
 
