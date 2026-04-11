@@ -12,6 +12,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -971,6 +972,8 @@ private String buildHtmlReport(String report) {
 }
 
 private void sharePdf(Uri uri) {
+	
+	boolean gr = AppLang.isGreek(this);
 
     if (uri == null) return;
 
