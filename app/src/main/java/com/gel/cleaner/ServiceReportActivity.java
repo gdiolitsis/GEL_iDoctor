@@ -75,65 +75,76 @@ public class ServiceReportActivity extends AppCompatActivity {
         LinearLayout line = new LinearLayout(this);
         line.setOrientation(LinearLayout.HORIZONTAL);
 
-        btnTxt = new AppCompatButton(this);
-        btnTxt.setText("TXT PDF");
-        btnTxt.setAllCaps(false);
-        btnTxt.setTextColor(0xFFFFFFFF);
-        btnTxt.setBackgroundResource(R.drawable.gel_btn_outline);
+btnTxt = new AppCompatButton(this);
+btnHtml = new AppCompatButton(this);
 
-        LinearLayout.LayoutParams lpTxt =
-                new LinearLayout.LayoutParams(0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        lpTxt.setMargins(0, 0, 8, 0);
-        btnTxt.setLayoutParams(lpTxt);
-        btnTxt.setPadding(0, 28, 0, 28);
+// 🔴 TEXT (AFTER BOTH BUTTONS CREATED)
+if (AppLang.isGreek(this)) {
+    btnTxt.setText("TXT PDF (Αποθήκευση & Κοινοποίηση)");
+    btnHtml.setText("HTML PDF (Αποθήκευση)");
+} else {
+    btnTxt.setText("TXT PDF (Save & Share)");
+    btnHtml.setText("HTML PDF (Save)");
+}
 
-        btnHtml = new AppCompatButton(this);
-        btnHtml.setText("HTML PDF");
-        btnHtml.setAllCaps(false);
-        btnHtml.setTextColor(0xFFFFFFFF);
-        btnHtml.setBackgroundResource(R.drawable.gel_btn_outline);
+// 🔴 TXT BUTTON STYLE
+btnTxt.setAllCaps(false);
+btnTxt.setTextColor(0xFFFFFFFF);
+btnTxt.setBackgroundResource(R.drawable.gel_btn_outline);
 
-        LinearLayout.LayoutParams lpHtml =
-                new LinearLayout.LayoutParams(0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        lpHtml.setMargins(8, 0, 0, 0);
-        btnHtml.setLayoutParams(lpHtml);
-        btnHtml.setPadding(0, 28, 0, 28);
+LinearLayout.LayoutParams lpTxt =
+        new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+lpTxt.setMargins(0, 0, 8, 0);
+btnTxt.setLayoutParams(lpTxt);
+btnTxt.setPadding(0, 28, 0, 28);
 
-        line.addView(btnTxt);
-        line.addView(btnHtml);
+// 🔴 HTML BUTTON STYLE
+btnHtml.setAllCaps(false);
+btnHtml.setTextColor(0xFFFFFFFF);
+btnHtml.setBackgroundResource(R.drawable.gel_btn_outline);
 
-        exportProgress = new ProgressBar(this);
-        exportProgress.setIndeterminate(true);
-        exportProgress.setVisibility(View.GONE);
+LinearLayout.LayoutParams lpHtml =
+        new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+lpHtml.setMargins(8, 0, 0, 0);
+btnHtml.setLayoutParams(lpHtml);
+btnHtml.setPadding(0, 28, 0, 28);
 
-        LinearLayout.LayoutParams lpProg =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
-        lpProg.topMargin = 20;
-        lpProg.gravity = Gravity.CENTER;
-        exportProgress.setLayoutParams(lpProg);
+line.addView(btnTxt);
+line.addView(btnHtml);
 
-        btnTxt.setOnClickListener(v -> {
-            String report = validateExport();
-            if (report == null) return;
+exportProgress = new ProgressBar(this);
+exportProgress.setIndeterminate(true);
+exportProgress.setVisibility(View.GONE);
 
-            if (GELServiceLog.isEmpty()) {
-                Toast.makeText(this,
-                        "Nothing to export. Run a lab first.",
-                        Toast.LENGTH_SHORT
-                ).show();
-                updatePreview();
-                lockExportUI(false);
-                return;
-            }
+LinearLayout.LayoutParams lpProg =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+lpProg.topMargin = 20;
+lpProg.gravity = Gravity.CENTER;
+exportProgress.setLayoutParams(lpProg);
 
-            lockExportUI(true);
-            exportTxtToPdf();
-        });
+// 🔴 TXT ACTION
+btnTxt.setOnClickListener(v -> {
+    String report = validateExport();
+    if (report == null) return;
+
+    if (GELServiceLog.isEmpty()) {
+        Toast.makeText(this,
+                "Nothing to export. Run a lab first.",
+                Toast.LENGTH_SHORT
+        ).show();
+        updatePreview();
+        lockExportUI(false);
+        return;
+    }
+
+    lockExportUI(true);
+    exportTxtToPdf();
+});
 
         btnHtml.setOnClickListener(v -> {
             String report = validateExport();
@@ -144,9 +155,10 @@ public class ServiceReportActivity extends AppCompatActivity {
                         "Nothing to export. Run a lab first.",
                         Toast.LENGTH_LONG
                 ).show();
-                lockExportUI(false);
-                return;
-            }
+        updatePreview();
+        lockExportUI(false);
+        return;
+    }
 
             lockExportUI(true);
             exportHtmlPdf(report);
