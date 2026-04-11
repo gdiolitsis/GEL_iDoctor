@@ -2588,12 +2588,21 @@ private void lab14BBatteryDurationTest() {
                                 ? (startVolt[0] - endVolt[0])
                                 : Float.NaN;
 
-                float perHour = (drain / 5f) * 60f;
+long usedMah = drain > 0 ? drain : drainNow;
 
-                float estimatedHours = Float.NaN;
-                if (baselineMah[0] > 0 && perHour > 0) {
-                    estimatedHours = baselineMah[0] / perHour;
-                }
+float perHour = Float.NaN;
+float estimatedHours = Float.NaN;
+
+if (usedMah > 0 && baselineMah[0] > 0) {
+
+    perHour = (usedMah / 5f) * 60f;
+
+    if (perHour < 50f) {
+        perHour = 50f; // 🔴 stability floor
+    }
+
+    estimatedHours = baselineMah[0] / perHour;
+}
 
                 appendHtml("<br>");
 
@@ -2657,15 +2666,25 @@ private void lab14BBatteryDurationTest() {
 
             } finally {
 
-                try { stopCpuBurn(); } catch (Throwable ignore) {}
-                try { stopMemoryStress(); } catch (Throwable ignore) {}
-                try { stopGpuStress(); } catch (Throwable ignore) {}
-                try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
-                lab14Cancelled = false;
-                lab14Running = false;
-                isLab14BMode = false;
-            }
+    lab14Cancelled = false;
+    lab14Running = false;
+    isLab14BMode = false;
+
+    // 🔴 ADD THIS (FIX POPUP)
+    runOnUiThread(() -> {
+        try {
+            if (lab14Dialog != null && lab14Dialog.isShowing()) {
+    lab14Dialog.dismiss();
+    lab14Dialog = null; // optional cleanup
+}
+        } catch (Throwable ignore) {}
+    });
+}
 
         }, 300000L);
 
@@ -2914,7 +2933,7 @@ private void startLab14BPopup(long durationSec) {
 
     LinearLayout root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(dp(24), dp(20), dp(24), dp(18));
+    root.setPadding(dp(24), dp(20), dp(24), dp(28));
 
     GradientDrawable bg = new GradientDrawable();
     bg.setColor(0xFF101010);
@@ -3011,6 +3030,14 @@ private void startLab14BPopup(long durationSec) {
     lab14Cancelled = false;
 
     lab14Dialog.show();
+
+if (lab14Dialog.getWindow() != null) {
+
+    int width = (int) (getResources().getDisplayMetrics().widthPixels * 0.92);
+    int height = (int) (getResources().getDisplayMetrics().heightPixels * 0.85);
+
+    lab14Dialog.getWindow().setLayout(width, height);
+}
 
     // 🔥 VIDEO
     lab14StressVideo.post(() -> {
