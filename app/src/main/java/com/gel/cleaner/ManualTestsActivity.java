@@ -2520,83 +2520,102 @@ getWindow().addFlags(
 );
 
 // --------------------------------------------------------
-// 🔥 HARD START (0 -> 60s) — ADAPTIVE OVERLOAD (FIXED)
+// 🔥 HARD START (0 -> 60s) — HARD CORE PROTECTION TRIGGER
 // --------------------------------------------------------
 
 lab14Running = true;
 lab14Cancelled = false;
+lab14BoostActive = true;
 
-appendLog("BOOST", "FORCE HARD START (14B)");
+appendLog("BOOST", "HARD CORE START (14B)");
 
-// 🔴 LEVEL 1 (0–20s)
+applyMaxBrightnessAndKeepOn();
+
+try {
+    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+} catch (Throwable ignore) {}
+
+final int cores = Runtime.getRuntime().availableProcessors();
+
+// 🔥 BASE LOAD
 new Thread(() -> {
     try {
-
-        // 🔥 CPU
         startCpuBurn_C_Mode();
-
-        // 🔥 MEMORY
-        startMemoryStress();
-
-        // 🔥 GPU
-        startGpuStressLevel(5);
-
-        // 🔥 SPIKE LOOP
-        for (int i = 0; i < 1000000 && lab14Running; i++) {
-            Math.sqrt(i * Math.random());
-        }
-
     } catch (Throwable ignore) {}
-
 }).start();
 
+new Thread(() -> {
+    try {
+        startMemoryStress();
+    } catch (Throwable ignore) {}
+}).start();
 
-// 🔴 LEVEL 2 (20s)
+new Thread(() -> {
+    try {
+        startGpuStressLevel(5);
+    } catch (Throwable ignore) {}
+}).start();
+
+// 🔥 CHAOS CPU/SCHEDULER LOAD
+for (int t = 0; t < Math.max(4, cores * 2); t++) {
+    new Thread(() -> {
+        try {
+            while (lab14Running && !lab14Cancelled && lab14BoostActive) {
+                for (int i = 0; i < 1200000; i++) {
+                    Math.sqrt(i * Math.random());
+                }
+            }
+        } catch (Throwable ignore) {}
+    }).start();
+}
+
+// 🔥 ESCALATION L2 @ 20s
 ui.postDelayed(() -> {
 
-    if (!lab14Running || lab14Cancelled) return;
+    if (!lab14Running || lab14Cancelled || !lab14BoostActive) return;
 
     appendLog("BOOST", "ESCALATE L2");
 
-    try {
+    try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
+    try { startMemoryStress(); } catch (Throwable ignore) {}
+    try { startGpuStressLevel(5); } catch (Throwable ignore) {}
 
-        // 🔥 επανα-trigger για extra πίεση
-        startCpuBurn_C_Mode();
-        startMemoryStress();
-        startGpuStressLevel(5);
+    for (int t = 0; t < Math.max(2, cores); t++) {
+        new Thread(() -> {
+            try {
+                for (int i = 0; i < 1800000 && lab14Running && !lab14Cancelled && lab14BoostActive; i++) {
+                    Math.sqrt(i * Math.random());
+                }
+            } catch (Throwable ignore) {}
+        }).start();
+    }
 
-        for (int i = 0; i < 1500000 && lab14Running; i++) {
-            Math.sqrt(i * Math.random());
-        }
+}, 20000L);
 
-    } catch (Throwable ignore) {}
-
-}, 20000);
-
-
-// 🔴 LEVEL 3 (40s)
+// 🔥 ESCALATION L3 @ 40s
 ui.postDelayed(() -> {
 
-    if (!lab14Running || lab14Cancelled) return;
+    if (!lab14Running || lab14Cancelled || !lab14BoostActive) return;
 
     appendLog("BOOST", "ESCALATE L3 (MAX)");
 
-    try {
+    try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
+    try { startMemoryStress(); } catch (Throwable ignore) {}
+    try { startGpuStressLevel(6); } catch (Throwable ignore) {}
 
-        startCpuBurn_C_Mode();
-        startMemoryStress();
-        startGpuStressLevel(6);
+    for (int t = 0; t < Math.max(4, cores * 2); t++) {
+        new Thread(() -> {
+            try {
+                for (int i = 0; i < 2500000 && lab14Running && !lab14Cancelled && lab14BoostActive; i++) {
+                    Math.sqrt(i * Math.random());
+                }
+            } catch (Throwable ignore) {}
+        }).start();
+    }
 
-        for (int i = 0; i < 2000000 && lab14Running; i++) {
-            Math.sqrt(i * Math.random());
-        }
+}, 40000L);
 
-    } catch (Throwable ignore) {}
-
-}, 40000);
-
-
-// 🔴 PROGRESS LOOP
+// 🔥 LOOP
 startLab14BProgressLoop(statusText, durationSec, gr);
 
 // --------------------------------------------------------
@@ -2611,9 +2630,7 @@ ui.postDelayed(() -> {
 
     try {
 
-        // -----------------------------
         // 📊 SNAPSHOT (END OF HARD)
-        // -----------------------------
         iDoctorEngine.BatterySnapshot snap1 =
                 idoctor.readBatterySnapshotLab();
 
@@ -2629,29 +2646,22 @@ ui.postDelayed(() -> {
 
         softStartVolt[0] = getBatteryVoltageFiltered();
 
-        // -----------------------------
-        // 🛑 STOP HARD LOAD (CRITICAL)
-        // -----------------------------
+        // 🔴 ⛔ STOP HARD CORE ENGINE
+        lab14BoostActive = false;
+
         try { stopCpuBurn(); } catch (Throwable ignore) {}
         try { stopMemoryStress(); } catch (Throwable ignore) {}
         try { stopGpuStress(); } catch (Throwable ignore) {}
 
-        lab14BoostActive = false;
-
-        // -----------------------------
-        // ⚖️ START SOFT LOAD (REAL DAILY USE)
-        // -----------------------------
+        // ⚖️ START SOFT
         logLabelValue(
                 gr ? "Φάση" : "Phase",
                 gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
         );
 
-        // ✅ Balanced daily usage
-        int softThreads = Math.max(1, cores / 2);
-
-        try { startCpuBurnLimitedThreads(softThreads); } catch (Throwable ignore) {}
-        try { startMemoryStress(0.2f); } catch (Throwable ignore) {}   // ~20% RAM
-        try { startGpuStressLevel(1); } catch (Throwable ignore) {}    // light GPU
+        try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
+        try { startMemoryStress(); } catch (Throwable ignore) {}
+        try { startGpuStressLevel(2); } catch (Throwable ignore) {}
 
     } catch (Throwable t) {
 
@@ -3374,9 +3384,6 @@ lab14StressVideo.post(() -> {
         });
     } catch (Throwable ignore) {}
 });
-
-// 🔥 HARD START (CRITICAL)
-startLab14BHardPhase();
 
 // 🔥 LOOP
 startLab14BProgressLoop(statusText, durationSec, gr);
