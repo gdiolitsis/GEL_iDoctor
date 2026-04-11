@@ -2520,40 +2520,105 @@ getWindow().addFlags(
 );
 
 // --------------------------------------------------------
-// HARD START (0 -> 60s)
+// 🔥 HARD START (0 -> 60s) — ADAPTIVE OVERLOAD (FINAL LOCKED)
 // --------------------------------------------------------
-// --------------------------------------------------------
-// 🔥 HARD FORCE START (REAL MAX LOAD)
-// --------------------------------------------------------
+
+lab14Running = true;
+lab14Cancelled = false;
+
 appendLog("BOOST", "FORCE HARD START (14B)");
 
 final int cores = Runtime.getRuntime().availableProcessors();
 
+// 🔴 LEVEL 1 (0–20s)
+final int hardThreads = cores * 2;
+
 new Thread(() -> {
     try {
-        // 🔥 FULL CPU (όχι C_Mode)
-        startCpuBurnLimitedThreads(cores);
-        
-        // 🔥 RAM
-        startMemoryStress();
 
-        // 🔥 GPU MAX
+        // 🔥 CPU — FULL
+        startCpuBurn_C_Mode(hardThreads);
+
+        // 🔥 MEMORY — HEAVY
+        startMemoryStress(0.8f);
+
+        // 🔥 GPU — MAX
         startGpuStressLevel(5);
 
+        // 🔥 CPU SPIKE LOOP (CRITICAL)
+        for (int i = 0; i < 1000000 && lab14Running; i++) {
+            Math.sqrt(i * Math.random());
+        }
+
     } catch (Throwable ignore) {}
+
 }).start();
 
-// --------------------------------------------------------
-// AFTER 60s -> SNAPSHOT + SWITCH TO SOFT
-// --------------------------------------------------------
-new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-    if (!isLab14BMode || lab14Cancelled) {
-        return;
-    }
+// 🔴 LEVEL 2 (20s)
+ui.postDelayed(() -> {
+
+    if (!lab14Running || lab14Cancelled) return;
+
+    appendLog("BOOST", "ESCALATE L2");
 
     try {
 
+        startCpuBurn_C_Mode(cores * 3);
+        startMemoryStress(0.9f);
+        startGpuStressLevel(5);
+
+        // 🔥 EXTRA SPIKE
+        for (int i = 0; i < 1500000 && lab14Running; i++) {
+            Math.sqrt(i * Math.random());
+        }
+
+    } catch (Throwable ignore) {}
+
+}, 20000);
+
+
+// 🔴 LEVEL 3 (40s — MAX FORCE)
+ui.postDelayed(() -> {
+
+    if (!lab14Running || lab14Cancelled) return;
+
+    appendLog("BOOST", "ESCALATE L3 (MAX)");
+
+    try {
+
+        startCpuBurn_C_Mode(cores * 4);
+        startMemoryStress(0.95f);
+        startGpuStressLevel(6);
+
+        // 🔥 FINAL SPIKE (HEAVY)
+        for (int i = 0; i < 2000000 && lab14Running; i++) {
+            Math.sqrt(i * Math.random());
+        }
+
+    } catch (Throwable ignore) {}
+
+}, 40000);
+
+
+// 🔴 PROGRESS LOOP (TIME SYNC)
+startLab14BProgressLoop(statusText, durationSec, gr);
+
+// --------------------------------------------------------
+// 🔻 AFTER 60s -> SNAPSHOT + SWITCH TO SOFT (LOCKED)
+// --------------------------------------------------------
+ui.postDelayed(() -> {
+
+    // 🔴 GUARD
+    if (!lab14Running || lab14Cancelled || !isLab14BMode) return;
+
+    appendLog("PHASE", "SWITCH HARD → SOFT");
+
+    try {
+
+        // -----------------------------
+        // 📊 SNAPSHOT (END OF HARD)
+        // -----------------------------
         iDoctorEngine.BatterySnapshot snap1 =
                 idoctor.readBatterySnapshotLab();
 
@@ -2569,23 +2634,29 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
         softStartVolt[0] = getBatteryVoltageFiltered();
 
-        stopCpuBurn();
-        stopMemoryStress();
-        stopGpuStress();
+        // -----------------------------
+        // 🛑 STOP HARD LOAD (CRITICAL)
+        // -----------------------------
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
 
         lab14BoostActive = false;
 
+        // -----------------------------
+        // ⚖️ START SOFT LOAD (REAL DAILY USE)
+        // -----------------------------
         logLabelValue(
                 gr ? "Φάση" : "Phase",
                 gr ? "4 λεπτά SOFT stress" : "4 minutes SOFT stress"
         );
 
-        int softThreads = Math.max(1, cores / 3);
+        // ✅ Balanced daily usage
+        int softThreads = Math.max(1, cores / 2);
 
         try { startCpuBurnLimitedThreads(softThreads); } catch (Throwable ignore) {}
-        try { stopGpuStress(); } catch (Throwable ignore) {}
-        try { startGpuStressLevel(1); } catch (Throwable ignore) {}
-        try { stopMemoryStress(); } catch (Throwable ignore) {}
+        try { startMemoryStress(0.2f); } catch (Throwable ignore) {}   // ~20% RAM
+        try { startGpuStressLevel(1); } catch (Throwable ignore) {}    // light GPU
 
     } catch (Throwable t) {
 
@@ -2706,36 +2777,63 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
         appendHtml("<br>");
 
-        logOk(gr
-                ? "Αποτέλεσμα προστασίας συστήματος"
-                : "System protection result");
+logOk(gr
+        ? "Αποτέλεσμα προστασίας συστήματος"
+        : "System protection result");
 
-        logLine();
+logLine();
 
-        logLabelValue(
-                gr ? "CPU προστασία" : "CPU throttle",
-                f_cpuThrottle ? (gr ? "ΝΑΙ" : "YES")
-                        : (gr ? "ΟΧΙ" : "NO")
-        );
+// CPU
+if (f_cpuThrottle) {
+    logLabelOkValue(
+            gr ? "CPU προστασία" : "CPU throttle",
+            gr ? "ΝΑΙ" : "YES"
+    );
+} else {
+    logLabelWarnValue(
+            gr ? "CPU προστασία" : "CPU throttle",
+            gr ? "ΟΧΙ" : "NO"
+    );
+}
 
-        logLabelValue(
-                gr ? "Θερμική προστασία" : "Thermal throttle",
-                f_thermalThrottle ? (gr ? "ΝΑΙ" : "YES")
-                        : (gr ? "ΟΧΙ" : "NO")
-        );
+// THERMAL
+if (f_thermalThrottle) {
+    logLabelOkValue(
+            gr ? "Θερμική προστασία" : "Thermal throttle",
+            gr ? "ΝΑΙ" : "YES"
+    );
+} else {
+    logLabelWarnValue(
+            gr ? "Θερμική προστασία" : "Thermal throttle",
+            gr ? "ΟΧΙ" : "NO"
+    );
+}
 
-        logLabelValue(
-                gr ? "Περιορισμός ισχύος" : "Power limiter",
-                f_powerThrottle ? (gr ? "ΝΑΙ" : "YES")
-                        : (gr ? "ΟΧΙ" : "NO")
-        );
+// POWER
+if (f_powerThrottle) {
+    logLabelOkValue(
+            gr ? "Περιορισμός ισχύος" : "Power limiter",
+            gr ? "ΝΑΙ" : "YES"
+    );
+} else {
+    logLabelWarnValue(
+            gr ? "Περιορισμός ισχύος" : "Power limiter",
+            gr ? "ΟΧΙ" : "NO"
+    );
+}
 
-        logLabelValue(
-                gr ? "Γενική προστασία συστήματος" : "System protection",
-                f_systemProtectionDetected
-                        ? (gr ? "ΕΝΕΡΓΗ" : "ACTIVE")
-                        : (gr ? "ΔΕΝ ΑΝΙΧΝΕΥΘΗΚΕ" : "NOT DETECTED")
-        );
+// SYSTEM PROTECTION (ανεστραμμένη λογική)
+if (f_systemProtectionDetected) {
+    logLabelOkValue(
+            gr ? "Γενική προστασία συστήματος" : "System protection",
+            gr ? "ΕΝΕΡΓΗ" : "ACTIVE"
+    );
+} else {
+    logLabelWarnValue(
+            gr ? "Γενική προστασία συστήματος" : "System protection",
+            gr ? "ΔΕΝ ΑΝΙΧΝΕΥΘΗΚΕ" : "NOT DETECTED"
+    );
+}
 
         appendHtml("<br>");
         logOk(gr ? "Επιπλέον πληροφορίες" : "Additional information");
@@ -3282,6 +3380,10 @@ lab14StressVideo.post(() -> {
     } catch (Throwable ignore) {}
 });
 
+// 🔴 RESET STATE
+lab14Running = true;
+lab14Cancelled = false;
+
 // 🔥 LOOP
 startLab14BProgressLoop(statusText, durationSec, gr);
 
@@ -3334,7 +3436,7 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
 
                     float ratio = Math.min(1f, elapsed / (float) durationSec);
 
-                    int active = (int) Math.ceil(ratio * segCount);
+                    int active = (int) (ratio * segCount);
 
                     for (int i = 0; i < segCount; i++) {
 
@@ -3350,10 +3452,16 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
 
                 updateLab14LiveStats();
 
-                if (elapsed >= durationSec) {
-                    lab14StopAllStress();
-                    return;
-                }
+if (elapsed >= durationSec) {
+
+    lab14Running = false;
+
+    ui.post(() -> {
+        lab14StopAllStress();
+    });
+
+    return;
+}
 
             } catch (Throwable t) {
 
@@ -12817,12 +12925,95 @@ if (!s.inService) {
                 gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "NOT AVAILABLE");
     }
 
-    // ------------------------------------------------------------
-    // Laboratory conclusion
-    // ------------------------------------------------------------
-    logOk(gr
-            ? "Έγινε συλλογή εργαστηριακού snapshot. Δεν βγαίνει λειτουργικό συμπέρασμα."
-            : "Laboratory snapshot collected. No functional verdict inferred.");
+// ------------------------------------------------------------
+// VERDICT ENGINE (GEL)
+// ------------------------------------------------------------
+
+boolean hasSim = s.simReady;
+boolean inService = s.inService;
+boolean dataConnected = s.dataState == TelephonyManager.DATA_CONNECTED;
+boolean hasInternet = s.hasInternet;
+
+String verdict;
+String recommendation;
+
+// =====================
+// CASE 1 — FULL OK
+// =====================
+if (hasSim && (inService || hasInternet)) {
+
+    verdict = gr
+            ? "Το δίκτυο λειτουργεί κανονικά."
+            : "Network is operating normally.";
+
+    recommendation = gr
+            ? "Δεν απαιτείται ενέργεια."
+            : "No action required.";
+}
+
+// =====================
+// CASE 2 — NO INTERNET
+// =====================
+else if (!hasInternet) {
+
+    verdict = gr
+            ? "Δεν υπάρχει πρόσβαση στο διαδίκτυο."
+            : "No internet access detected.";
+
+    recommendation = gr
+            ? "Έλεγχος Wi-Fi ή ενεργοποίηση δεδομένων κινητής."
+            : "Check Wi-Fi or enable mobile data.";
+}
+
+// =====================
+// CASE 3 — NO SERVICE
+// =====================
+else if (hasSim && !inService) {
+
+    verdict = gr
+            ? "Η SIM είναι ενεργή αλλά δεν υπάρχει υπηρεσία δικτύου."
+            : "SIM is ready but no network service.";
+
+    recommendation = gr
+            ? "Μετακινηθείτε σε περιοχή με σήμα ή ελέγξτε τον πάροχο."
+            : "Move to better signal area or check carrier.";
+}
+
+// =====================
+// CASE 4 — DATA OFF
+// =====================
+else if (hasSim && !dataConnected) {
+
+    verdict = gr
+            ? "Τα δεδομένα κινητής είναι απενεργοποιημένα."
+            : "Mobile data is disabled.";
+
+    recommendation = gr
+            ? "Ενεργοποιήστε mobile data αν απαιτείται."
+            : "Enable mobile data if needed.";
+}
+
+// =====================
+// FALLBACK
+// =====================
+else {
+
+    verdict = gr
+            ? "Μερική κατάσταση δικτύου."
+            : "Partial network state.";
+
+    recommendation = gr
+            ? "Ελέγξτε SIM, δεδομένα και σήμα."
+            : "Check SIM, data and signal.";
+}
+
+// ------------------------------------------------------------
+// OUTPUT (NO DUPLICATES)
+// ------------------------------------------------------------
+appendHtml("<br>");
+
+logLabelValue(gr ? "Συμπέρασμα" : "Verdict", verdict);
+logLabelValue(gr ? "Πρόταση" : "Recommendation", recommendation);
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 11 ολοκληρώθηκε." : "Lab 11 finished.");
@@ -15434,6 +15625,12 @@ return idoctor.isChargingNowUnified();
 // LAB 14 — HARD STOP ALL STRESS
 // ============================================================
 private void lab14StopAllStress() {
+
+    // 🔴 GUARD (ΑΠΟΦΥΓΗ ΔΙΠΛΟΥ STOP)
+    if (!lab14Running) return;
+
+    // 🔴 κλείδωσε state
+    lab14Running = false;
 
     try {
 
@@ -18487,7 +18684,7 @@ if (lab14FastPhase) {
 
         float ratio = Math.min(1f, fastElapsed / 45f);
 
-        int active = (int) Math.ceil(ratio * segCount);
+        int active = (int) (ratio * segCount);
 
         for (int i = 0; i < segCount; i++) {
 
@@ -18591,7 +18788,7 @@ if (elapsed < durationSec) {
 
         float ratio = Math.min(1f, elapsed / (float) durationSec);
 
-        int active = (int) Math.ceil(ratio * segCount);
+        int active = (int) (ratio * segCount);
 
         for (int i = 0; i < segCount; i++) {
 
