@@ -2666,77 +2666,6 @@ if (!Float.isNaN(perHour) && perHour > 0f && baselineMah[0] > 0) {
     estimatedHours = Float.NaN;
 }
 
-float lightUsage = Float.NaN;
-float normalUsage = Float.NaN;
-float heavyUsage = Float.NaN;
-
-if (!Float.isNaN(estimatedHours)) {
-
-    normalUsage = estimatedHours;
-    lightUsage = estimatedHours * 1.4f;
-    heavyUsage = estimatedHours * 0.6f;
-
-    logLabelValue(
-        gr ? "Με ελαφριά χρήση" : "Light usage",
-        String.format(Locale.US, "%.1f %s",
-                lightUsage, gr ? "ώρες" : "hours")
-);
-
-logLabelValue(
-        gr ? "Με κανονική χρήση" : "Normal usage",
-        String.format(Locale.US, "%.1f %s",
-                normalUsage, gr ? "ώρες" : "hours")
-);
-
-logLabelValue(
-        gr ? "Με βαριά χρήση" : "Heavy usage",
-        String.format(Locale.US, "%.1f %s",
-                heavyUsage, gr ? "ώρες" : "hours")
-);
-}
-
-float battPct = (float) getBatteryPercentSafe();
-
-if (!Float.isNaN(estimatedHours) && battPct > 0f) {
-
-    float factor = battPct / 100f;
-
-    float lightRemaining = estimatedHours * 1.4f * factor;
-    float normalRemaining = estimatedHours * factor;
-    float heavyRemaining = estimatedHours * 0.6f * factor;
-
-    logLine();
-
-    logOk(gr
-            ? "Εκτίμηση υπόλοιπου χρόνου"
-            : "Remaining time estimation");
-
-    logLine();
-
-    logLabelValue(
-            gr ? "Μπαταρία" : "Battery",
-            String.format(Locale.US, "%.0f%%", battPct)
-    );
-
-    logLabelValue(
-            gr ? "Με ελαφριά χρήση" : "Light usage",
-            String.format(Locale.US, "%.1f %s",
-                    lightRemaining, gr ? "ώρες" : "hours")
-    );
-
-    logLabelValue(
-            gr ? "Με κανονική χρήση" : "Normal usage",
-            String.format(Locale.US, "%.1f %s",
-                    normalRemaining, gr ? "ώρες" : "hours")
-    );
-
-    logLabelValue(
-            gr ? "Με βαριά χρήση" : "Heavy usage",
-            String.format(Locale.US, "%.1f %s",
-                    heavyRemaining, gr ? "ώρες" : "hours")
-    );
-}
-
 // ------------------------------------------------
 // THERMAL / VOLTAGE
 // ------------------------------------------------
@@ -2800,8 +2729,8 @@ if (!Float.isNaN(voltDrop)) {
 appendHtml("<br>");
 
                 logOk(gr
-                        ? "Εκτίμηση διάρκειας μπαταρίας"
-                        : "Estimated battery duration");
+                        ? "Εκτίμηση πλήρους διάρκειας μπαταρίας"
+                        : "Estimated full battery duration");
 
                 logLine();
 
@@ -2829,6 +2758,77 @@ appendHtml("<br>");
                 logError(gr
                         ? "Σφάλμα ανάλυσης"
                         : "Analysis error");
+                        
+float lightUsage = Float.NaN;
+float normalUsage = Float.NaN;
+float heavyUsage = Float.NaN;
+
+if (!Float.isNaN(estimatedHours)) {
+
+    normalUsage = estimatedHours;
+    lightUsage = estimatedHours * 1.4f;
+    heavyUsage = estimatedHours * 0.6f;
+
+    logLabelValue(
+            gr ? "Με ελαφριά χρήση" : "Light usage",
+            String.format(Locale.US, "%.1f %s",
+                    lightUsage, gr ? "ώρες" : "hours")
+    );
+
+    logLabelValue(
+            gr ? "Με κανονική χρήση" : "Normal usage",
+            String.format(Locale.US, "%.1f %s",
+                    normalUsage, gr ? "ώρες" : "hours")
+    );
+
+    logLabelValue(
+            gr ? "Με βαριά χρήση" : "Heavy usage",
+            String.format(Locale.US, "%.1f %s",
+                    heavyUsage, gr ? "ώρες" : "hours")
+    );
+}
+
+float battPct = (float) getBatteryPercentSafe();
+
+if (!Float.isNaN(estimatedHours) && battPct > 0f) {
+
+    float factor = battPct / 100f;
+
+    float lightRemaining = estimatedHours * 1.4f * factor;
+    float normalRemaining = estimatedHours * factor;
+    float heavyRemaining = estimatedHours * 0.6f * factor;
+
+    appendHtml("<br>");
+
+    logOk(gr
+            ? "Εκτίμηση υπόλοιπου χρόνου"
+            : "Remaining time estimation");
+
+    logLine();
+
+    logLabelValue(
+            gr ? "Μπαταρία" : "Battery",
+            String.format(Locale.US, "%.0f%%", battPct)
+    );
+
+    logLabelValue(
+            gr ? "Με ελαφριά χρήση" : "Light usage",
+            String.format(Locale.US, "%.1f %s",
+                    lightRemaining, gr ? "ώρες" : "hours")
+    );
+
+    logLabelValue(
+            gr ? "Με κανονική χρήση" : "Normal usage",
+            String.format(Locale.US, "%.1f %s",
+                    normalRemaining, gr ? "ώρες" : "hours")
+    );
+
+    logLabelValue(
+            gr ? "Με βαριά χρήση" : "Heavy usage",
+            String.format(Locale.US, "%.1f %s",
+                    heavyRemaining, gr ? "ώρες" : "hours")
+    );
+}
 
             } finally {
 
