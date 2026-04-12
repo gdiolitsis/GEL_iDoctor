@@ -2666,6 +2666,35 @@ if (!Float.isNaN(perHour) && perHour > 0f && baselineMah[0] > 0) {
     estimatedHours = Float.NaN;
 }
 
+float lightUsage = Float.NaN;
+float normalUsage = Float.NaN;
+float heavyUsage = Float.NaN;
+
+if (!Float.isNaN(estimatedHours)) {
+
+    normalUsage = estimatedHours;
+    lightUsage = estimatedHours * 1.4f;
+    heavyUsage = estimatedHours * 0.6f;
+
+    logLabelValue(
+        gr ? "Με ελαφριά χρήση" : "Light usage",
+        String.format(Locale.US, "%.1f %s",
+                lightUsage, gr ? "ώρες" : "hours")
+);
+
+logLabelValue(
+        gr ? "Με κανονική χρήση" : "Normal usage",
+        String.format(Locale.US, "%.1f %s",
+                normalUsage, gr ? "ώρες" : "hours")
+);
+
+logLabelValue(
+        gr ? "Με βαριά χρήση" : "Heavy usage",
+        String.format(Locale.US, "%.1f %s",
+                heavyUsage, gr ? "ώρες" : "hours")
+);
+}
+
 // ------------------------------------------------
 // THERMAL / VOLTAGE
 // ------------------------------------------------
@@ -4694,7 +4723,7 @@ private void hardNormalizeAudioForMic() {
         try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
         try { am.setSpeakerphoneOn(false); } catch (Throwable ignore) {}
 
-        // 🔴 ΤΟ ΣΗΜΑΝΤΙΚΟ
+        // ?? ΤΟ ΣΗΜΑΝΤΙΚΟ
         try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
 
         SystemClock.sleep(300);
