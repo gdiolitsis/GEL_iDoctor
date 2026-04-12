@@ -2593,12 +2593,34 @@ long usedMah = Math.max(0L, drain);
 float perHour = Float.NaN;
 float estimatedHours = Float.NaN;
 
+// ----------------------------------------------------
+// 🔴 PRIMARY (REAL DRAIN)
+// ----------------------------------------------------
 if (usedMah > 0 && baselineMah[0] > 0) {
 
     perHour = (usedMah / 5f) * 60f;
 
+} else {
+
+    // ------------------------------------------------
+    // 🔴 FALLBACK (CURRENT BASED)
+    // ------------------------------------------------
+    double currentMa = lab14Current();
+
+    if (!Double.isNaN(currentMa) && currentMa > 50) {
+
+        perHour = (float) Math.abs(currentMa);
+
+    }
+}
+
+// ----------------------------------------------------
+// 🔴 FINAL ESTIMATION
+// ----------------------------------------------------
+if (!Float.isNaN(perHour) && baselineMah[0] > 0) {
+
     if (perHour < 50f) {
-        perHour = 50f; // 🔴 stability floor
+        perHour = 50f;
     }
 
     estimatedHours = baselineMah[0] / perHour;
