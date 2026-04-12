@@ -2752,13 +2752,11 @@ appendHtml("<br>");
                             ? "Αδυναμία εκτίμησης διάρκειας"
                             : "Estimation failed");
                 }
-
-            } catch (Throwable t) {
-
-                logError(gr
-                        ? "Σφάλμα ανάλυσης"
-                        : "Analysis error");
-                        
+                
+                appendHtml("<br>");
+logOk(gr ? "Σενάρια χρήσης" : "Usage scenarios");
+logLine();
+                
 float lightUsage = Float.NaN;
 float normalUsage = Float.NaN;
 float heavyUsage = Float.NaN;
@@ -2830,6 +2828,12 @@ if (!Float.isNaN(estimatedHours) && battPct > 0f) {
     );
 }
 
+            } catch (Throwable t) {
+
+                logError(gr
+                        ? "Σφάλμα ανάλυσης"
+                        : "Analysis error");
+                        
             } finally {
 
     try { stopCpuBurn(); } catch (Throwable ignore) {}
