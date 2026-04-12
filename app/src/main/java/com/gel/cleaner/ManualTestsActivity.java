@@ -304,6 +304,9 @@ private float lab14CpuFreqPeak = 0f;
 
 private int cores = Runtime.getRuntime().availableProcessors();
 
+private long lab14B_startMah = -1L;
+private long lab14B_endMah = -1L;
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -2498,92 +2501,105 @@ private void lab14BBatteryDurationTest() {
             return;
         }
 
-        startMah[0] = snap0.chargeNowMah;
+startMah[0] = snap0.chargeNowMah;
 
-        if (snap0.chargeFullMah > 0) {
-            baselineMah[0] = snap0.chargeFullMah;
-        } else if (snap0.chargeDesignMah > 0) {
-            baselineMah[0] = snap0.chargeDesignMah;
-        }
-
-        startTemp[0] = getBatteryTemperature();
-        if (Float.isNaN(startTemp[0]) || startTemp[0] <= 0f) {
-            startTemp[0] = snap0.batteryTempC;
-        }
-
-        startVolt[0] = getBatteryVoltageFiltered();
-
-        isLab14BMode = true;
-        lab14Cancelled = false;
-        lab14Running = true;
-
-        startLab14BPopup(300); // 5 λεπτά
-
-        logLine();
-
-        logOk(gr
-                ? "LAB 14B ξεκίνησε"
-                : "LAB 14B started");
-
-        logLabelValue(
-                gr ? "Λειτουργία" : "Mode",
-                gr ? "Προσομοίωση καθημερινής χρήσης (5 λεπτά)"
-                   : "Real usage simulation (5 minutes)"
-        );
-
-        applyMaxBrightnessAndKeepOn();
-
-        getWindow().addFlags(
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-        );
-
-        // --------------------------------------------------------
-        // ⚖️ SOFT LOAD ONLY
-        // --------------------------------------------------------
-        try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
-        try { startMemoryStress(); } catch (Throwable ignore) {}
-        try { startGpuStressLevel(2); } catch (Throwable ignore) {}
-
-        // --------------------------------------------------------
-        // AFTER 300s -> FINAL SNAPSHOT + ANALYSIS
-        // --------------------------------------------------------
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-
-            try {
-
-                stopCpuBurn();
-                stopMemoryStress();
-                stopGpuStress();
-
-                iDoctorEngine.BatterySnapshot snapEnd =
-                        idoctor.readBatterySnapshotLab();
-
-                if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
-
-                    logError(gr
-                            ? "Αποτυχία τελικής ανάγνωσης"
-                            : "Final snapshot failed");
-
-                    return;
-                }
-
-                endMah[0] = snapEnd.chargeNowMah;
-
-                endTemp[0] = getBatteryTemperature();
-                if (Float.isNaN(endTemp[0]) || endTemp[0] <= 0f) {
-                    endTemp[0] = snapEnd.batteryTempC;
-                }
-
-                endVolt[0] = getBatteryVoltageFiltered();
-
-long drain = -1L;
-
-// 🔴 ΠΡΟΣΤΑΤΕΥΜΕΝΟ: χρησιμοποιούμε ΜΟΝΟ soft phase (όχι συνολικό)
-if (softStartMah[0] > 0 && endMah[0] > 0) {
-    drain = Math.max(0L, softStartMah[0] - endMah[0]);
+if (snap0.chargeFullMah > 0) {
+    baselineMah[0] = snap0.chargeFullMah;
+} else if (snap0.chargeDesignMah > 0) {
+    baselineMah[0] = snap0.chargeDesignMah;
 }
 
+startTemp[0] = getBatteryTemperature();
+if (Float.isNaN(startTemp[0]) || startTemp[0] <= 0f) {
+    startTemp[0] = snap0.batteryTempC;
+}
+
+startVolt[0] = getBatteryVoltageFiltered();
+
+isLab14BMode = true;
+lab14Cancelled = false;
+lab14Running = true;
+
+startLab14BPopup(300); // 5 λεπτά
+
+logLine();
+
+logOk(gr
+        ? "LAB 14B ξεκίνησε"
+        : "LAB 14B started");
+
+logLabelValue(
+        gr ? "Λειτουργία" : "Mode",
+        gr ? "Προσομοίωση καθημερινής χρήσης (5 λεπτά)"
+           : "Real usage simulation (5 minutes)"
+);
+
+applyMaxBrightnessAndKeepOn();
+
+getWindow().addFlags(
+        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+);
+
+// --------------------------------------------------------
+// ⚖️ SOFT LOAD ONLY
+// --------------------------------------------------------
+try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
+try { startMemoryStress(); } catch (Throwable ignore) {}
+try { startGpuStressLevel(2); } catch (Throwable ignore) {}
+
+// --------------------------------------------------------
+// AFTER 300s -> FINAL SNAPSHOT + ANALYSIS
+// --------------------------------------------------------
+new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+    try {
+
+        stopCpuBurn();
+        stopMemoryStress();
+        stopGpuStress();
+
+        iDoctorEngine.BatterySnapshot snapEnd =
+                idoctor.readBatterySnapshotLab();
+
+        if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
+
+            logError(gr
+                    ? "Αποτυχία τελικής ανάγνωσης"
+                    : "Final snapshot failed");
+
+            return;
+        }
+
+        endMah[0] = snapEnd.chargeNowMah;
+
+        endTemp[0] = getBatteryTemperature();
+        if (Float.isNaN(endTemp[0]) || endTemp[0] <= 0f) {
+            endTemp[0] = snapEnd.batteryTempC;
+        }
+
+        endVolt[0] = getBatteryVoltageFiltered();
+
+// ------------------------------------------------
+// 🔴 REAL DRAIN + AUTO SWITCH
+// ------------------------------------------------
+long drain = -1L;
+
+boolean hasChargeCounter =
+        startMah[0] > 0 && endMah[0] > 0;
+
 double liveCurrentMa = lab14Current();
+
+boolean fakeCounter = false;
+
+if (hasChargeCounter) {
+
+    drain = Math.max(0L, startMah[0] - endMah[0]);
+
+    // 🔴 FAKE DETECTION
+    if (drain == 0 && Math.abs(liveCurrentMa) > 150) {
+        fakeCounter = true;
+    }
+}
 
 float perHour = Float.NaN;
 float estimatedHours = Float.NaN;
@@ -2591,20 +2607,20 @@ float estimatedHours = Float.NaN;
 if (baselineMah[0] > 0) {
 
     // ------------------------------------------------
-    // 1️⃣ REAL mAh DRAIN (BEST — SOFT ONLY)
+    // 1️⃣ REAL DRAIN (ONLY if VALID)
     // ------------------------------------------------
-    if (drain > 0) {
+    if (drain > 0 && !fakeCounter) {
 
-        float softMinutes = 4f;
-        perHour = (drain / softMinutes) * 60f;
+        perHour = (drain / 5f) * 60f;
     }
 
     // ------------------------------------------------
-    // 2️⃣ CURRENT-BASED (VALID FALLBACK)
+    // 2️⃣ AUTO SWITCH → CURRENT
     // ------------------------------------------------
     else if (!Double.isNaN(liveCurrentMa) && Math.abs(liveCurrentMa) >= 50d) {
 
         perHour = (float) Math.abs(liveCurrentMa);
+
     }
 }
 
@@ -2614,7 +2630,7 @@ if (baselineMah[0] > 0) {
 if (!Float.isNaN(perHour) && perHour > 0 && baselineMah[0] > 0) {
 
     if (perHour < 50f) {
-        perHour = 50f; // 🔴 stability floor
+        perHour = 50f; // stability floor
     }
 
     estimatedHours = baselineMah[0] / perHour;
@@ -2636,32 +2652,51 @@ if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
 
 appendHtml("<br>");
 
-                logOk(gr
-                        ? "Αποτελέσματα κατανάλωσης"
-                        : "Battery usage results");
+logOk(gr
+        ? "Αποτελέσματα κατανάλωσης"
+        : "Battery usage results");
 
-                logLine();
+logLine();
 
-                logLabelValue(
-                        gr ? "Κατανάλωση" : "Consumption",
-                        String.format(Locale.US, "%.0f mAh/h", perHour)
-                );
+if (fakeCounter) {
 
-                if (!Float.isNaN(tempRise)) {
-                    logLabelValue(
-                            gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
-                            String.format(Locale.US, "%.1f°C", tempRise)
-                    );
-                }
+    logWarn(gr
+        ? "Ο αισθητήρας charge counter φαίνεται μη αξιόπιστος — γίνεται χρήση εκτίμησης βάσει ρεύματος"
+        : "Charge counter appears unreliable — switched to current-based estimation");
+}
 
-                if (!Float.isNaN(voltDrop)) {
-                    logLabelValue(
-                            gr ? "Πτώση τάσης" : "Voltage drop",
-                            String.format(Locale.US, "%.3f V", voltDrop)
-                    );
-                }
+// 🔴 SAFE OUTPUT
+if (!Float.isNaN(perHour)) {
 
-                appendHtml("<br>");
+    logLabelValue(
+            gr ? "Κατανάλωση" : "Consumption",
+            String.format(Locale.US, "%.0f mAh/h", perHour)
+    );
+
+} else {
+
+    logWarn(gr
+            ? "Αδυναμία υπολογισμού κατανάλωσης"
+            : "Unable to calculate consumption");
+}
+
+// 🔴 THERMAL
+if (!Float.isNaN(tempRise)) {
+    logLabelValue(
+            gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
+            String.format(Locale.US, "%.1f°C", tempRise)
+    );
+}
+
+// 🔴 VOLTAGE
+if (!Float.isNaN(voltDrop)) {
+    logLabelValue(
+            gr ? "Πτώση τάσης" : "Voltage drop",
+            String.format(Locale.US, "%.3f V", voltDrop)
+    );
+}
+
+appendHtml("<br>");
 
                 logOk(gr
                         ? "Εκτίμηση διάρκειας μπαταρίας"
