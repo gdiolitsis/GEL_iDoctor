@@ -306,6 +306,8 @@ private int cores = Runtime.getRuntime().availableProcessors();
 
 private long lab14B_startMah = -1L;
 private long lab14B_endMah = -1L;
+double rateSum = 0;
+int rateSamples = 0;
 
 // ============================================================
 // LAB14 SHARED STATE
@@ -2520,6 +2522,10 @@ isLab14BMode = true;
 lab14Cancelled = false;
 lab14Running = true;
 
+// 🔴 RESET RATE AVERAGE
+rateSum = 0;
+rateSamples = 0;
+
 startLab14BPopup(300); // 5 λεπτά
 
 logLine();
@@ -2595,43 +2601,52 @@ if (hasChargeCounter) {
 
     drain = Math.max(0L, startMah[0] - endMah[0]);
 
-    // 🔴 FAKE DETECTION
-    if (drain == 0 && Math.abs(liveCurrentMa) > 150) {
-        fakeCounter = true;
-    }
+// 🔴 FAKE DETECTION
+if (drain == 0 && Math.abs(liveCurrentMa) > 150) {
+    fakeCounter = true;
 }
 
 float perHour = Float.NaN;
 float estimatedHours = Float.NaN;
 
-if (baselineMah[0] > 0) {
+// ------------------------------------------------
+// 🔴 PRIMARY → AVERAGE RATE (REAL DATA)
+// ------------------------------------------------
+if (rateSamples >= 5) { // 🔴 όχι απλά >0
+
+    perHour = (float) (rateSum / rateSamples);
+
+} else {
 
     // ------------------------------------------------
-    // 1️⃣ REAL DRAIN (ONLY if VALID)
+    // 🔴 FALLBACK → OLD LOGIC
     // ------------------------------------------------
-    if (drain > 0 && !fakeCounter) {
+    if (baselineMah[0] > 0) {
 
-        perHour = (drain / 5f) * 60f;
+        if (drain > 0 && !fakeCounter) {
+
+            perHour = (drain / 5f) * 60f;
+
+        } else if (!Double.isNaN(liveCurrentMa) && Math.abs(liveCurrentMa) >= 50d) {
+
+            perHour = (float) Math.abs(liveCurrentMa);
+        }
     }
+}
 
-    // ------------------------------------------------
-    // 2️⃣ AUTO SWITCH → CURRENT
-    // ------------------------------------------------
-    else if (!Double.isNaN(liveCurrentMa) && Math.abs(liveCurrentMa) >= 50d) {
+// ------------------------------------------------
+// 🔴 SANITY CLAMP (CRITICAL)
+// ------------------------------------------------
+if (!Float.isNaN(perHour)) {
 
-        perHour = (float) Math.abs(liveCurrentMa);
-
-    }
+    if (perHour < 50f) perHour = 50f;
+    if (perHour > 5000f) perHour = 5000f; // 🔴 anti-bug spike
 }
 
 // ------------------------------------------------
 // FINAL ESTIMATION
 // ------------------------------------------------
-if (!Float.isNaN(perHour) && perHour > 0 && baselineMah[0] > 0) {
-
-    if (perHour < 50f) {
-        perHour = 50f; // stability floor
-    }
+if (!Float.isNaN(perHour) && baselineMah[0] > 0) {
 
     estimatedHours = baselineMah[0] / perHour;
 }
@@ -19202,11 +19217,24 @@ if (elapsed > 3) {
 
     } else {
 
-        // fallback → δείξε current
+        // fallback → current
         currentMa = lab14Current();
 
-        if (!Double.isNaN(currentMa)) {
+        if (!Double.isNaN(currentMa) && Math.abs(currentMa) >= 50d) {
             drainPerHour = Math.abs(currentMa);
+        }
+    }
+
+    // ----------------------------------------------------
+    // 🔴 COLLECT AVERAGE (CRITICAL)
+    // ----------------------------------------------------
+    if (!Double.isNaN(drainPerHour) && drainPerHour > 0) {
+
+        // optional filter → κόβει spikes
+        if (drainPerHour < 5000) {
+
+            rateSum += drainPerHour;
+            rateSamples++;
         }
     }
 }
@@ -19608,15 +19636,6 @@ start = sb.length();
 sb.append(Float.isNaN(batTemp)
         ? "N/A\n"
         : String.format(Locale.US, "%.1f°C\n", batTemp));
-sb.setSpan(new ForegroundColorSpan(neon), start, sb.length(), 0);
-
-// Drain
-start = sb.length();
-sb.append("Drain: ");
-sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
-
-start = sb.length();
-sb.append(drainNow + "\n");
 sb.setSpan(new ForegroundColorSpan(neon), start, sb.length(), 0);
 
 // Rate
