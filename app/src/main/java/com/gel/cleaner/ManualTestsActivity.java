@@ -2828,6 +2828,41 @@ if (!Float.isNaN(estimatedHours) && battPct > 0f) {
     );
 }
 
+// ------------------------------------------------------------
+// 🔴 SAFE VALUES (ANTI-NaN)
+// ------------------------------------------------------------
+float safePerHour = Float.isNaN(perHour) ? -1f : perHour;
+float safeEstimated = Float.isNaN(estimatedHours) ? -1f : estimatedHours;
+
+float safeLight = Float.isNaN(lightUsage) ? -1f : lightUsage;
+float safeNormal = Float.isNaN(normalUsage) ? -1f : normalUsage;
+float safeHeavy = Float.isNaN(heavyUsage) ? -1f : heavyUsage;
+
+float safeRemLight = Float.isNaN(lightRemaining) ? -1f : lightRemaining;
+float safeRemNormal = Float.isNaN(normalRemaining) ? -1f : normalRemaining;
+float safeRemHeavy = Float.isNaN(heavyRemaining) ? -1f : heavyRemaining;
+
+appendHtml("<br>");
+
+// ------------------------------------------------------------
+// 🔴 SAVE LAB 14B RESULTS (CRITICAL)
+// ------------------------------------------------------------
+try {
+	
+    getSharedPreferences("GEL_DIAG", MODE_PRIVATE)
+            .edit()
+            .putFloat("lab14b_consumption_per_hour", safePerHour)
+            .putFloat("lab14b_estimated_hours", safeEstimated)
+            .putFloat("lab14b_light_hours", safeLight)
+            .putFloat("lab14b_normal_hours", safeNormal)
+            .putFloat("lab14b_heavy_hours", safeHeavy)
+            .putFloat("lab14b_remaining_light", safeRemLight)
+            .putFloat("lab14b_remaining_normal", safeRemNormal)
+            .putFloat("lab14b_remaining_heavy", safeRemHeavy)
+            .putLong("lab14b_ts", System.currentTimeMillis())
+            .apply();
+} catch (Throwable ignore) {}
+
             } catch (Throwable t) {
 
                 logError(gr
@@ -21131,14 +21166,32 @@ private void lab17RunAuto() {
             p.getBoolean("lab14_unstable_measurement", false);
 
     // LAB 14B results
-    final boolean lab14bSystemLimited =
-            p.getBoolean("lab14b_system_limited", false);
+final float lab14bConsumptionPerHour =
+        p.getFloat("lab14b_consumption_per_hour", -1f);
 
-    final boolean lab14bValidDrain =
-            p.getBoolean("lab14b_valid_drain", false);
+final float lab14bEstimatedHours =
+        p.getFloat("lab14b_estimated_hours", -1f);
 
-    final long ts14b =
-            p.getLong("lab14b_ts", 0L);
+final float lab14bLightHours =
+        p.getFloat("lab14b_light_hours", -1f);
+
+final float lab14bNormalHours =
+        p.getFloat("lab14b_normal_hours", -1f);
+
+final float lab14bHeavyHours =
+        p.getFloat("lab14b_heavy_hours", -1f);
+
+final float lab14bRemainingLight =
+        p.getFloat("lab14b_remaining_light", -1f);
+
+final float lab14bRemainingNormal =
+        p.getFloat("lab14b_remaining_normal", -1f);
+
+final float lab14bRemainingHeavy =
+        p.getFloat("lab14b_remaining_heavy", -1f);
+
+final long ts14b =
+        p.getLong("lab14b_ts", 0L);
 
     // LAB 15
     final int lab15Charge = p.getInt("lab15_charge_score", -1);
@@ -21158,7 +21211,10 @@ private void lab17RunAuto() {
     // PRESENCE + FRESHNESS CHECK
     // ------------------------------------------------------------
     final boolean has14 = (lab14Health >= 0f && ts14 > 0L);
-    final boolean has14b = (ts14b > 0L);
+    final boolean has14b =
+        (lab14bConsumptionPerHour > 0f) &&
+        (lab14bEstimatedHours > 0f) &&
+        (ts14b > 0L);
     final boolean has15 = (lab15Charge >= 0 && ts15 > 0L);
     final boolean has16 = (lab16Thermal >= 0 && ts16 > 0L);
 
@@ -21368,14 +21424,40 @@ private void lab17RunAuto() {
             );
             baseScore = Math.max(0, Math.min(100, baseScore));
 
-            // ------------------------------------------------------------
-            // PENALTIES
-            // ------------------------------------------------------------
-            int penaltyExtra = 0;
+// ------------------------------------------------------------
+// PENALTIES
+// ------------------------------------------------------------
+int penaltyExtra = 0;
 
-            if (!lab14bSystemLimited && lab14bValidDrain) {
-                penaltyExtra += 12;
-            }
+// 🔴 VALIDATION 14B (CRITICAL)
+boolean valid14b =
+        lab14bEstimatedHours > 0f;
+
+if (!valid14b) {
+    penaltyExtra += 10;
+}
+
+// ------------------------------------------------------------
+// LAB14B PENALTIES (μόνο αν valid)
+// ------------------------------------------------------------
+if (valid14b) {
+
+    if (lab14bEstimatedHours < 3f) {
+        penaltyExtra += 14;
+    } else if (lab14bEstimatedHours < 5f) {
+        penaltyExtra += 8;
+    } else if (lab14bEstimatedHours < 7f) {
+        penaltyExtra += 3;
+    }
+
+    if (lab14bConsumptionPerHour > 1500f) {
+        penaltyExtra += 10;
+    } else if (lab14bConsumptionPerHour > 1200f) {
+        penaltyExtra += 6;
+    } else if (lab14bConsumptionPerHour > 1000f) {
+        penaltyExtra += 3;
+    }
+}
 
             if (lab15Charge < 60 && lab15SystemLimited) penaltyExtra += 6;
             else if (lab15Charge < 60) penaltyExtra += 12;
@@ -21397,7 +21479,7 @@ private void lab17RunAuto() {
                     "Weak";
 
             final int fFinalScore = finalScore;
-            final int fPenaltyExtra = penaltyExtra;
+            
             final String fCategory = category;
 
             final boolean thermalDanger =
@@ -21469,38 +21551,85 @@ logLabelOkValue(
         )
 );
 
-                // ================= LAB 14B =================
-                logInfo(gr
-                        ? "LAB 14B — Προστασία συστήματος"
-                        : "LAB 14B — System protection");
+// ================= LAB 14B =================
+logInfo(gr
+        ? "LAB 14B — Κατανάλωση και διάρκεια μπαταρίας"
+        : "LAB 14B — Battery consumption and duration");
 
-                if (lab14bSystemLimited && lab14bValidDrain) {
+if (lab14bEstimatedHours >= 6f) {
 
-                    logLabelOkValue(
-                            gr ? "Κατάσταση" : "Status",
-                            gr
-                                    ? "Ενεργοποιήθηκε limiter"
-                                    : "Limiter detected"
-                    );
+    logLabelOkValue(
+            gr ? "Αυτονομία" : "Battery duration",
+            String.format(
+                    Locale.US,
+                    gr
+                            ? "Καλή (%.1f ώρες)"
+                            : "Good (%.1f hours)",
+                    lab14bEstimatedHours
+            )
+    );
 
-                } else if (lab14bValidDrain) {
+} else if (lab14bEstimatedHours >= 4f) {
 
-                    logLabelWarnValue(
-                            gr ? "Κατάσταση" : "Status",
-                            gr
-                                    ? "Δεν ενεργοποιήθηκε προστασία"
-                                    : "No protection detected"
-                    );
+    logLabelWarnValue(
+            gr ? "Αυτονομία" : "Battery duration",
+            String.format(
+                    Locale.US,
+                    gr
+                            ? "Μέτρια (%.1f ώρες)"
+                            : "Moderate (%.1f hours)",
+                    lab14bEstimatedHours
+            )
+    );
 
-                } else {
+} else if (lab14bEstimatedHours > 0f) {
 
-                    logLabelWarnValue(
-                            gr ? "Κατάσταση" : "Status",
-                            gr
-                                    ? "Μη έγκυρη μέτρηση"
-                                    : "Invalid measurement"
-                    );
-                }
+    logLabelErrorValue(
+            gr ? "Αυτονομία" : "Battery duration",
+            String.format(
+                    Locale.US,
+                    gr
+                            ? "Χαμηλή (%.1f ώρες)"
+                            : "Low (%.1f hours)",
+                    lab14bEstimatedHours
+            )
+    );
+
+} else {
+
+    logLabelWarnValue(
+            gr ? "Κατάσταση" : "Status",
+            gr ? "Μη διαθέσιμα δεδομένα" : "Data unavailable"
+    );
+}
+
+if (lab14bConsumptionPerHour > 0f) {
+    logLabelValue(
+            gr ? "Κατανάλωση" : "Consumption",
+            String.format(Locale.US, "%.0f mAh/h", lab14bConsumptionPerHour)
+    );
+}
+
+appendHtml("<br>");
+
+logOk(
+        gr ? "Εκτίμηση υπόλοιπου χρόνου"
+           : "Remaining time estimation"
+);
+
+logLine();
+
+if (lab14bRemainingNormal > 0f) {
+    logLabelValue(
+            gr ? "Με κανονική χρήση" : "Normal usage",
+            String.format(
+                    Locale.US,
+                    "%.1f %s",
+                    lab14bRemainingNormal,
+                    gr ? "ώρες" : "hours"
+            )
+    );
+}
 
                 logInfo(gr
                         ? "LAB 15 — Φόρτιση"
@@ -21692,9 +21821,53 @@ if (fFinalScore >= 80) {
     );
 }
 
-                // ================= DIAGNOSIS =================
-                logLine();
-                logInfo(gr ? "Διάγνωση" : "Diagnosis");
+// ================= DIAGNOSIS =================
+appendHtml("<br>");
+logInfo(gr ? "Διάγνωση" : "Diagnosis");
+logLine();
+
+// ------------------------------------------------------------
+// 🔴 CROSS-LAB INSIGHT (SINGLE DECISION)
+// ------------------------------------------------------------
+if (lab14Health >= 80f && lab14bEstimatedHours > 0f && lab14bEstimatedHours < 4f) {
+
+    logLabelWarnValue(
+            gr ? "Παρατήρηση" : "Observation",
+            gr
+                    ? "Η μπαταρία είναι σε καλή κατάσταση, αλλά η συνολική κατανάλωση συστήματος φαίνεται αυξημένη"
+                    : "Battery health is good, but overall system consumption appears elevated"
+    );
+
+} else if (lab14Health < 70f && lab14bEstimatedHours >= 5f) {
+
+    logLabelOkValue(
+            gr ? "Παρατήρηση" : "Observation",
+            gr
+                    ? "Υπάρχουν ενδείξεις φθοράς, αλλά η αυτονομία παραμένει σε φυσιολογικά επίπεδα"
+                    : "Aging indicators detected, but real-world autonomy remains within normal range"
+    );
+
+} else if (lab14bConsumptionPerHour > 1300f && lab16Thermal < 65) {
+
+    logLabelWarnValue(
+            gr ? "Παρατήρηση" : "Observation",
+            gr
+                    ? "Η αυξημένη κατανάλωση ενδέχεται να σχετίζεται με θερμική επιβάρυνση"
+                    : "Elevated consumption may be influenced by thermal conditions"
+    );
+
+} else if (lab14Health >= 80f &&
+           lab14bEstimatedHours >= 5f &&
+           lab16Thermal >= 70 &&
+           lab15Charge >= 70) {
+
+    logLabelOkValue(
+            gr ? "Συμπέρασμα" : "Conclusion",
+            gr
+                    ? "Τα αποτελέσματα είναι συνεπή μεταξύ των δοκιμών"
+                    : "Results are consistent across tests"
+    );
+}
 
                 if (lab14Unstable) {
 
@@ -27075,11 +27248,14 @@ boolean lab14SwellingSuspected =
         p.getBoolean("lab14_swelling_risk", false);
         
  // LAB14B
-boolean lab14bSystemLimited =
-        p.getBoolean("lab14b_system_limited", false);
+float lab14bConsumptionPerHour =
+        p.getFloat("lab14b_consumption_per_hour", -1f);
 
-boolean lab14bValidDrain =
-        p.getBoolean("lab14b_valid_drain", false);
+float lab14bEstimatedHours =
+        p.getFloat("lab14b_estimated_hours", -1f);
+
+float lab14bRemainingNormal =
+        p.getFloat("lab14b_remaining_normal", -1f);
 
 long ts14b =
         p.getLong("lab14b_ts", 0L);
@@ -27161,11 +27337,22 @@ int batteryScore = scoreBattery(
 
 String batteryFlag = colorFlagFromScore(batteryScore);
 
-boolean limiterDetected =
-        lab14bSystemLimited && lab14bValidDrain;
+boolean batteryRuntimeWeak =
+        lab14bEstimatedHours > 0f &&
+        lab14bEstimatedHours < 4f;
 
-boolean limiterMissing =
-        !lab14bSystemLimited && lab14bValidDrain;
+boolean batteryRuntimeModerate =
+        lab14bEstimatedHours >= 4f &&
+        lab14bEstimatedHours < 6f;
+
+boolean batteryRuntimeGood =
+        lab14bEstimatedHours >= 6f;
+
+boolean batteryConsumptionHigh =
+        lab14bConsumptionPerHour > 1200f;
+
+boolean batteryConsumptionVeryHigh =
+        lab14bConsumptionPerHour > 1500f;
 
 // ------------------------------------------------------------
 // 3) STORAGE HEALTH
@@ -27347,85 +27534,34 @@ if (lab14CollapseRisk || finalScore < 60 || lab14SwellingSuspected) {
 }
 
 // ------------------------------------------------------------
-// LAB14B — SYSTEM LIMITER ANALYSIS
+// LAB14B — REAL USAGE ANALYSIS
 // ------------------------------------------------------------
 
-if (limiterDetected) {
+boolean batteryRuntimeWeak =
+        lab14bEstimatedHours > 0f &&
+        lab14bEstimatedHours < 4f;
 
-    logLabelOkValue(
-            gr ? "Limiter" : "Limiter",
-            gr
-                    ? "Ενεργοποιήθηκε προστασία συστήματος"
-                    : "System protection active"
-    );
+boolean batteryRuntimeModerate =
+        lab14bEstimatedHours >= 4f &&
+        lab14bEstimatedHours < 6f;
 
-}
+boolean batteryConsumptionHigh =
+        lab14bConsumptionPerHour > 1200f;
 
-else if (limiterMissing) {
+boolean batteryConsumptionVeryHigh =
+        lab14bConsumptionPerHour > 1500f;
+
+// ------------------------------------------------------------
+// ANALYSIS
+// ------------------------------------------------------------
+
+if (batteryRuntimeWeak) {
 
     logLabelWarnValue(
-            gr ? "Limiter" : "Limiter",
+            gr ? "Αυτονομία" : "Battery runtime",
             gr
-                    ? "Δεν ενεργοποιήθηκε προστασία"
-                    : "No protection detected"
-    );
-
-}
-
-// ------------------------------------------------------------
-// COMBINED ANALYSIS (LAB14B INTELLIGENCE)
-// ------------------------------------------------------------
-
-if (limiterDetected) {
-
-    if (batteryScore < 60 || lab14CollapseRisk) {
-
-        logLabelWarnValue(
-                gr ? "Αιτία" : "Cause",
-                gr
-                        ? "Περιορισμός λόγω κατάστασης μπαταρίας"
-                        : "Limiting caused by battery condition"
-        );
-    }
-
-    else if (thermalRunawayRisk) {
-
-        logLabelWarnValue(
-                gr ? "Αιτία" : "Cause",
-                gr
-                        ? "Περιορισμός λόγω θερμικής προστασίας"
-                        : "Limiting caused by thermal protection"
-        );
-    }
-
-    else if (pmicInstability) {
-
-        logLabelWarnValue(
-                gr ? "Αιτία" : "Cause",
-                gr
-                        ? "Πιθανός περιορισμός από PMIC"
-                        : "Possible PMIC power limiting"
-        );
-    }
-
-    else {
-
-        logLabelOkValue(
-                gr ? "Αιτία" : "Cause",
-                gr
-                        ? "Φυσιολογική ενεργοποίηση προστασίας"
-                        : "Normal protection behaviour"
-        );
-    }
-}
-
-else if (limiterMissing && lab14bValidDrain) {
-
-    logLabelErrorValue(
-            gr ? "Limiter" : "Limiter",
-            gr
-                    ? "Δεν ενεργοποιήθηκε προστασία υπό φορτίο"
-                    : "Protection not triggered under load"
+                    ? "Χαμηλή διάρκεια σε πραγματική χρήση"
+                    : "Low real-world battery duration"
     );
 
     if (batteryScore < 60 || lab14CollapseRisk) {
@@ -27433,12 +27569,34 @@ else if (limiterMissing && lab14bValidDrain) {
         logLabelWarnValue(
                 gr ? "Πιθανή αιτία" : "Possible cause",
                 gr
-                        ? "Φθορά μπαταρίας"
-                        : "Battery degradation"
+                        ? "Φθορά ή μειωμένη χωρητικότητα μπαταρίας"
+                        : "Battery degradation or reduced capacity"
         );
     }
 
-    else if (pmicInstability) {
+    else if (thermalRunawayRisk) {
+
+        logLabelWarnValue(
+                gr ? "Πιθανή αιτία" : "Possible cause",
+                gr
+                        ? "Θερμική καταπόνηση"
+                        : "Thermal stress"
+        );
+    }
+}
+
+// ------------------------------------------------------------
+
+if (batteryConsumptionVeryHigh) {
+
+    logLabelErrorValue(
+            gr ? "Κατανάλωση" : "Consumption",
+            gr
+                    ? "Πολύ υψηλή κατανάλωση ενέργειας"
+                    : "Very high power consumption"
+    );
+
+    if (pmicInstability) {
 
         logLabelWarnValue(
                 gr ? "Πιθανή αιτία" : "Possible cause",
@@ -27447,17 +27605,18 @@ else if (limiterMissing && lab14bValidDrain) {
                         : "PMIC instability"
         );
     }
+}
 
-    else if (thermalRunawayRisk) {
+// ------------------------------------------------------------
 
-        logLabelWarnValue(
-                gr ? "Πιθανή αιτία" : "Possible cause",
-                gr
-                        ? "Ανεπαρκής θερμική προστασία"
-                        : "Thermal protection failure"
-        );
-    }
+if (batteryRuntimeModerate && batteryConsumptionHigh) {
 
+    logLabelWarnValue(
+            gr ? "Συμπεριφορά" : "Behaviour",
+            gr
+                    ? "Μέτρια αυτονομία με αυξημένη κατανάλωση"
+                    : "Moderate runtime with elevated consumption"
+    );
 }
 
 // ------------------------------------------------------------
@@ -29077,24 +29236,20 @@ private void lab31FinalSummary() {
     SharedPreferences p =
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
-    // ------------------------------------------------------------
-    // LAB14B READ
-    // ------------------------------------------------------------
-    boolean lab14bSystemLimited =
-            p.getBoolean("lab14b_system_limited", false);
+// ------------------------------------------------------------
+// LAB14B READ (NEW)
+// ------------------------------------------------------------
+float lab14bConsumptionPerHour =
+        p.getFloat("lab14b_consumption_per_hour", -1f);
 
-    boolean lab14bValidDrain =
-            p.getBoolean("lab14b_valid_drain", false);
+float lab14bEstimatedHours =
+        p.getFloat("lab14b_estimated_hours", -1f);
 
-    long ts14b =
-            p.getLong("lab14b_ts", 0L);
+float lab14bRemainingNormal =
+        p.getFloat("lab14b_remaining_normal", -1f);
 
-    boolean limiterDetected =
-            lab14bSystemLimited && lab14bValidDrain;
-
-    boolean limiterMissing =
-            !lab14bSystemLimited && lab14bValidDrain;
-
+long ts14b =
+        p.getLong("lab14b_ts", 0L);
 
     appendHtml("<br>");
     logLine();
