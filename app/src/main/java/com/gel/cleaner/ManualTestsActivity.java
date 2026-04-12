@@ -2695,6 +2695,48 @@ logLabelValue(
 );
 }
 
+float battPct = (float) getBatteryPercentSafe();
+
+if (!Float.isNaN(estimatedHours) && battPct > 0f) {
+
+    float factor = battPct / 100f;
+
+    float lightRemaining = estimatedHours * 1.4f * factor;
+    float normalRemaining = estimatedHours * factor;
+    float heavyRemaining = estimatedHours * 0.6f * factor;
+
+    logLine();
+
+    logOk(gr
+            ? "Εκτίμηση υπόλοιπου χρόνου"
+            : "Remaining time estimation");
+
+    logLine();
+
+    logLabelValue(
+            gr ? "Μπαταρία" : "Battery",
+            String.format(Locale.US, "%.0f%%", battPct)
+    );
+
+    logLabelValue(
+            gr ? "Με ελαφριά χρήση" : "Light usage",
+            String.format(Locale.US, "%.1f %s",
+                    lightRemaining, gr ? "ώρες" : "hours")
+    );
+
+    logLabelValue(
+            gr ? "Με κανονική χρήση" : "Normal usage",
+            String.format(Locale.US, "%.1f %s",
+                    normalRemaining, gr ? "ώρες" : "hours")
+    );
+
+    logLabelValue(
+            gr ? "Με βαριά χρήση" : "Heavy usage",
+            String.format(Locale.US, "%.1f %s",
+                    heavyRemaining, gr ? "ώρες" : "hours")
+    );
+}
+
 // ------------------------------------------------
 // THERMAL / VOLTAGE
 // ------------------------------------------------
