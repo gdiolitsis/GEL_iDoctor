@@ -2578,46 +2578,37 @@ private void lab14BBatteryDurationTest() {
 
                 long drain = Math.max(0L, startMah[0] - endMah[0]);
 
-                float tempRise =
-                        (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0]))
-                                ? (endTemp[0] - startTemp[0])
-                                : Float.NaN;
-
-                float voltDrop =
-                        (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0]))
-                                ? (startVolt[0] - endVolt[0])
-                                : Float.NaN;
-
-long usedMah = Math.max(0L, drain);
+double liveCurrentMa = lab14Current();
 
 float perHour = Float.NaN;
 float estimatedHours = Float.NaN;
 
-// ----------------------------------------------------
-// 🔴 PRIMARY (REAL DRAIN)
-// ----------------------------------------------------
-if (usedMah > 0 && baselineMah[0] > 0) {
-
-    perHour = (usedMah / 5f) * 60f;
-
-} else {
+if (baselineMah[0] > 0) {
 
     // ------------------------------------------------
-    // 🔴 FALLBACK (CURRENT BASED)
+    // 1️⃣ REAL mAh DRAIN (BEST)
     // ------------------------------------------------
-    double currentMa = lab14Current();
+    if (drain > 0) {
 
-    if (!Double.isNaN(currentMa) && currentMa > 50) {
-
-        perHour = (float) Math.abs(currentMa);
+        perHour = (drain / 5f) * 60f;
 
     }
+
+    // ------------------------------------------------
+    // 2️⃣ CURRENT-BASED (VALID FALLBACK)
+    // ------------------------------------------------
+    else if (!Double.isNaN(liveCurrentMa) && Math.abs(liveCurrentMa) >= 50d) {
+
+        perHour = (float) Math.abs(liveCurrentMa);
+
+    }
+
 }
 
-// ----------------------------------------------------
-// 🔴 FINAL ESTIMATION
-// ----------------------------------------------------
-if (!Float.isNaN(perHour) && baselineMah[0] > 0) {
+// ------------------------------------------------
+// FINAL ESTIMATION
+// ------------------------------------------------
+if (!Float.isNaN(perHour) && perHour > 0 && baselineMah[0] > 0) {
 
     if (perHour < 50f) {
         perHour = 50f;
