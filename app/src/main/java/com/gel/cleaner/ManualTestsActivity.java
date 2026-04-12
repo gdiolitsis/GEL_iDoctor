@@ -2506,9 +2506,19 @@ private void lab14BBatteryDurationTest() {
 startMah[0] = snap0.chargeNowMah;
 
 if (snap0.chargeFullMah > 0) {
+
     baselineMah[0] = snap0.chargeFullMah;
+
 } else if (snap0.chargeDesignMah > 0) {
+
     baselineMah[0] = snap0.chargeDesignMah;
+
+} else {
+
+    int p = Math.max(1, getBatteryPercentSafe());
+
+    baselineMah[0] =
+            (long) (snap0.chargeNowMah / (p / 100.0f));
 }
 
 startTemp[0] = getBatteryTemperature();
@@ -2647,9 +2657,13 @@ if (!Float.isNaN(perHour)) {
 // ------------------------------------------------
 // FINAL ESTIMATION
 // ------------------------------------------------
-if (!Float.isNaN(perHour) && baselineMah[0] > 0) {
+if (!Float.isNaN(perHour) && perHour > 0f && baselineMah[0] > 0) {
 
     estimatedHours = baselineMah[0] / perHour;
+
+} else {
+
+    estimatedHours = Float.NaN;
 }
 
 // ------------------------------------------------
