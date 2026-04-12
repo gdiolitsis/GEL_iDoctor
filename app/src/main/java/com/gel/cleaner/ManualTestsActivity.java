@@ -2840,7 +2840,6 @@ if (!Float.isNaN(estimatedHours) && battPct > 0f) {
             String.format(Locale.US, "%.1f %s",
                     heavyRemaining, gr ? "ώρες" : "hours")
     );
-}
 
 // ------------------------------------------------------------
 // 🔴 SAFE VALUES (ANTI-NaN)
