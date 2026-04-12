@@ -2576,7 +2576,12 @@ private void lab14BBatteryDurationTest() {
 
                 endVolt[0] = getBatteryVoltageFiltered();
 
-                long drain = Math.max(0L, startMah[0] - endMah[0]);
+long drain = -1L;
+
+// 🔴 ΠΡΟΣΤΑΤΕΥΜΕΝΟ: χρησιμοποιούμε ΜΟΝΟ soft phase (όχι συνολικό)
+if (softStartMah[0] > 0 && endMah[0] > 0) {
+    drain = Math.max(0L, softStartMah[0] - endMah[0]);
+}
 
 double liveCurrentMa = lab14Current();
 
@@ -2586,12 +2591,12 @@ float estimatedHours = Float.NaN;
 if (baselineMah[0] > 0) {
 
     // ------------------------------------------------
-    // 1️⃣ REAL mAh DRAIN (BEST)
+    // 1️⃣ REAL mAh DRAIN (BEST — SOFT ONLY)
     // ------------------------------------------------
     if (drain > 0) {
 
-        perHour = (drain / 5f) * 60f;
-
+        float softMinutes = 4f;
+        perHour = (drain / softMinutes) * 60f;
     }
 
     // ------------------------------------------------
@@ -2600,9 +2605,7 @@ if (baselineMah[0] > 0) {
     else if (!Double.isNaN(liveCurrentMa) && Math.abs(liveCurrentMa) >= 50d) {
 
         perHour = (float) Math.abs(liveCurrentMa);
-
     }
-
 }
 
 // ------------------------------------------------
@@ -2611,13 +2614,27 @@ if (baselineMah[0] > 0) {
 if (!Float.isNaN(perHour) && perHour > 0 && baselineMah[0] > 0) {
 
     if (perHour < 50f) {
-        perHour = 50f;
+        perHour = 50f; // 🔴 stability floor
     }
 
     estimatedHours = baselineMah[0] / perHour;
 }
 
-                appendHtml("<br>");
+// ------------------------------------------------
+// THERMAL / VOLTAGE
+// ------------------------------------------------
+float tempRise = Float.NaN;
+float voltDrop = Float.NaN;
+
+if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
+    tempRise = endTemp[0] - startTemp[0];
+}
+
+if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
+    voltDrop = startVolt[0] - endVolt[0];
+}
+
+appendHtml("<br>");
 
                 logOk(gr
                         ? "Αποτελέσματα κατανάλωσης"
