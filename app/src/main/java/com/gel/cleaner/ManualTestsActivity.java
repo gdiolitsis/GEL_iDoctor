@@ -2761,29 +2761,38 @@ float lightUsage = Float.NaN;
 float normalUsage = Float.NaN;
 float heavyUsage = Float.NaN;
 
-if (!Float.isNaN(estimatedHours)) {
+if (!Float.isNaN(estimatedHours) && estimatedHours > 0f) {
 
     normalUsage = estimatedHours;
     lightUsage = estimatedHours * 1.4f;
     heavyUsage = estimatedHours * 0.6f;
 
-    logLabelValue(
-            gr ? "Με ελαφριά χρήση" : "Light usage",
-            String.format(Locale.US, "%.1f %s",
-                    lightUsage, gr ? "ώρες" : "hours")
+    String lightStr = String.format(
+            Locale.US, "%.1f %s",
+            lightUsage, gr ? "ώρες" : "hours"
     );
 
-    logLabelValue(
-            gr ? "Με κανονική χρήση" : "Normal usage",
-            String.format(Locale.US, "%.1f %s",
-                    normalUsage, gr ? "ώρες" : "hours")
+    String normalStr = String.format(
+            Locale.US, "%.1f %s",
+            normalUsage, gr ? "ώρες" : "hours"
     );
 
-    logLabelValue(
-            gr ? "Με βαριά χρήση" : "Heavy usage",
-            String.format(Locale.US, "%.1f %s",
-                    heavyUsage, gr ? "ώρες" : "hours")
+    String heavyStr = String.format(
+            Locale.US, "%.1f %s",
+            heavyUsage, gr ? "ώρες" : "hours"
     );
+
+    logLabelValue(gr ? "Με ελαφριά χρήση" : "Light usage", lightStr);
+    logLabelValue(gr ? "Με κανονική χρήση" : "Normal usage", normalStr);
+    logLabelValue(gr ? "Με βαριά χρήση" : "Heavy usage", heavyStr);
+
+} else {
+
+    String na = gr ? "Μ/Δ" : "N/A";
+
+    logLabelValue(gr ? "Με ελαφριά χρήση" : "Light usage", na);
+    logLabelValue(gr ? "Με κανονική χρήση" : "Normal usage", na);
+    logLabelValue(gr ? "Με βαριά χρήση" : "Heavy usage", na);
 }
 
 float battPct = (float) getBatteryPercentSafe();
@@ -2839,9 +2848,9 @@ if (!Float.isNaN(estimatedHours) && battPct > 0f) {
 float safePerHour = Float.isNaN(perHour) ? -1f : perHour;
 float safeEstimated = Float.isNaN(estimatedHours) ? -1f : estimatedHours;
 
-float safeLight = Float.isNaN(lightUsage) ? -1f : lightUsage;
-float safeNormal = Float.isNaN(normalUsage) ? -1f : normalUsage;
-float safeHeavy = Float.isNaN(heavyUsage) ? -1f : heavyUsage;
+float safeLight = Float.isNaN(lightRemaining) ? -1f : lightRemaining;
+float safeNormal = Float.isNaN(normalRemaining) ? -1f : normalRemaining;
+float safeHeavy = Float.isNaN(heavyRemaining) ? -1f : heavyRemaining;
 
 float safeRemLight = Float.isNaN(lightRemaining) ? -1f : lightRemaining;
 float safeRemNormal = Float.isNaN(normalRemaining) ? -1f : normalRemaining;
