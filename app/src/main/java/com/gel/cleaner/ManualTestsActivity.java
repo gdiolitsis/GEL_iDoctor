@@ -2788,15 +2788,20 @@ if (!Float.isNaN(estimatedHours)) {
 
 float battPct = (float) getBatteryPercentSafe();
 
+float lightRemaining = Float.NaN;
+float normalRemaining = Float.NaN;
+float heavyRemaining = Float.NaN;
+
 if (!Float.isNaN(estimatedHours) && battPct > 0f) {
 
     float factor = battPct / 100f;
 
-    float lightRemaining = estimatedHours * 1.4f * factor;
-    float normalRemaining = estimatedHours * factor;
-    float heavyRemaining = estimatedHours * 0.6f * factor;
+    lightRemaining = estimatedHours * 1.4f * factor;
+    normalRemaining = estimatedHours * factor;
+    heavyRemaining = estimatedHours * 0.6f * factor;
 
     appendHtml("<br>");
+}
 
     logOk(gr
             ? "Εκτίμηση υπόλοιπου χρόνου"
@@ -2841,8 +2846,6 @@ float safeHeavy = Float.isNaN(heavyUsage) ? -1f : heavyUsage;
 float safeRemLight = Float.isNaN(lightRemaining) ? -1f : lightRemaining;
 float safeRemNormal = Float.isNaN(normalRemaining) ? -1f : normalRemaining;
 float safeRemHeavy = Float.isNaN(heavyRemaining) ? -1f : heavyRemaining;
-
-appendHtml("<br>");
 
 // ------------------------------------------------------------
 // 🔴 SAVE LAB 14B RESULTS (CRITICAL)
@@ -21466,12 +21469,16 @@ if (valid14b) {
             else if (lab16Thermal < 75) penaltyExtra += 5;
 
             if (lab14Aging >= 0) {
-                if (lab14Aging >= 70) penaltyExtra += 10;
-                else if (lab14Aging >= 50) penaltyExtra += 6;
-                else if (lab14Aging >= 30) penaltyExtra += 3;
-            }
+    if (lab14Aging >= 70) penaltyExtra += 10;
+    else if (lab14Aging >= 50) penaltyExtra += 6;
+    else if (lab14Aging >= 30) penaltyExtra += 3;
+}
 
-            int finalScore = Math.max(0, Math.min(100, baseScore - penaltyExtra));
+// 🔴 FREEZE VALUE
+final int fPenaltyExtra = penaltyExtra;
+
+// 🔴 USE SAME VARIABLE
+int finalScore = Math.max(0, Math.min(100, baseScore - fPenaltyExtra));
 
             String category =
                     (finalScore >= 85) ? "Strong" :
@@ -27534,24 +27541,6 @@ if (lab14CollapseRisk || finalScore < 60 || lab14SwellingSuspected) {
 }
 
 // ------------------------------------------------------------
-// LAB14B — REAL USAGE ANALYSIS
-// ------------------------------------------------------------
-
-boolean batteryRuntimeWeak =
-        lab14bEstimatedHours > 0f &&
-        lab14bEstimatedHours < 4f;
-
-boolean batteryRuntimeModerate =
-        lab14bEstimatedHours >= 4f &&
-        lab14bEstimatedHours < 6f;
-
-boolean batteryConsumptionHigh =
-        lab14bConsumptionPerHour > 1200f;
-
-boolean batteryConsumptionVeryHigh =
-        lab14bConsumptionPerHour > 1500f;
-
-// ------------------------------------------------------------
 // ANALYSIS
 // ------------------------------------------------------------
 
@@ -29352,14 +29341,6 @@ long ts14b =
     
     // LAB14B influence
 
-if (limiterMissing) {
-    deviceScore -= 8f;
-}
-
-if (limiterDetected && batteryScore < 60f) {
-    deviceScore -= 5f;
-}
-
     deviceScore += batteryContribution;
 
     if (deviceScore > 100f) deviceScore = 100f;
@@ -29555,12 +29536,6 @@ if (lab14CollapseRisk) dri -= 20;
 
 // LAB14B limiter influence
 
-if (limiterMissing)
-    dri -= 15;
-
-if (limiterDetected && batteryScore < 60)
-    dri -= 8;
-
 // manipulation suspicion (LAB28 + LAB29)
 if (manipulationScore >= 60)
     dri -= 20;
@@ -29582,39 +29557,6 @@ else if (dri >= 40)
     driLabel = gr ? "Υψηλός κίνδυνος προβλημάτων" : "High risk";
 else
     driLabel = gr ? "Ασταθής συσκευή" : "Unstable device";
-    
-// ------------------------------------------------------------
-// LAB14B STATUS
-// ------------------------------------------------------------
-
-if (limiterDetected) {
-
-    logLabelOkValue(
-            gr ? "Limiter"
-               : "Limiter",
-            gr
-                    ? "Ενεργοποιήθηκε προστασία συστήματος"
-                    : "System protection active"
-    );
-
-}
-else if (limiterMissing) {
-
-    logLabelWarnValue(
-            gr ? "Limiter"
-               : "Limiter",
-            gr
-                    ? "Δεν ενεργοποιήθηκε προστασία υπό φορτίο"
-                    : "Protection not triggered under load"
-    );
-
-}
-
-logLabelOkValue(
-        gr ? "Δείκτης αξιοπιστίας συσκευής"
-           : "Device reliability",
-        driLabel + " (" + (int)dri + ")"
-);
 
     // ------------------------------------------------------------
     // 8) EXPORT NOTE
