@@ -2605,6 +2605,7 @@ if (hasChargeCounter) {
 if (drain == 0 && Math.abs(liveCurrentMa) > 150) {
     fakeCounter = true;
 }
+}
 
 float perHour = Float.NaN;
 float estimatedHours = Float.NaN;
@@ -19638,9 +19639,9 @@ sb.append(Float.isNaN(batTemp)
         : String.format(Locale.US, "%.1f°C\n", batTemp));
 sb.setSpan(new ForegroundColorSpan(neon), start, sb.length(), 0);
 
-// Rate
+// Consumption
 start = sb.length();
-sb.append("Rate: ");
+sb.append("Consumption: ");
 sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
 
 start = sb.length();
