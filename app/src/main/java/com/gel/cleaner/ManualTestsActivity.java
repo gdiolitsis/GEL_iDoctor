@@ -18437,10 +18437,6 @@ float tNow =
 // 🔥 LIVE UPDATE
 updateLab14LiveStats();
 
-// ✅ SINGLE elapsed
-int elapsed =
-        (int) ((now - t0) / 1000);
-
 // ========================================================
 // 🔴 AUTO RESTART
 // ========================================================
