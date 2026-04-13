@@ -18386,14 +18386,14 @@ private void startLab14ProgressLoop() {
 
             long now = SystemClock.elapsedRealtime();
 
-// 🔴 FAILSAFE ENGINE CONTROL (ΜΠΑΙΝΕΙ ΕΔΩ)
-if (lab14EndTime > 0 && now >= lab14EndTime) {
+// 🔴 FAILSAFE ENGINE CONTROL (CORRECT)
+int elapsed = (int) ((now - t0) / 1000);
+
+if (elapsed >= durationSec) {
 
     ui.removeCallbacks(this);
 
     lab14StopAllStress();
-
-    if (!lab14Running) return;
 
     final Lab14Engine engine =
             new Lab14Engine(ManualTestsActivity.this);
@@ -18608,7 +18608,7 @@ if (nowTs - lastSnapshotTs > 1500) {
 }
 
 // 🔴 FAILSAFE FINISH (TIME-BASED ONLY)
-if (lab14EndTime > 0 && now >= lab14EndTime) {
+if (elapsed >= durationSec) {
 
     ui.removeCallbacks(this);
 
