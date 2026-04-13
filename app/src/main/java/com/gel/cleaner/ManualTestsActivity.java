@@ -4003,54 +4003,6 @@ private float getBatteryCurrentNowSafe() {
     }
 }
 
-// ============================================================
-// LAB 14B — SYSTEM BATTERY PROTECTION CHECK
-// ============================================================
-private void Lab14BatteryProtectionCheck(
-        boolean gr,
-        boolean[] lab14_systemLimited,
-        boolean validDrain
-) {
-
-    appendHtml("<br>");
-
-    boolean systemLimited = lab14_systemLimited[0];
-
-// ------------------------------------------------
-// PROTECTION RESULT
-// ------------------------------------------------
-
-if (systemLimited) {
-
-    logOk(gr
-            ? "Ενεργοποιήθηκε μηχανισμός προστασίας."
-            : "Protection mechanism activated.");
-
-    logOk(gr
-            ? "Το σύστημα περιόρισε την κατανάλωση για προστασία."
-            : "System limited current to protect the device.");
-
-} else if (validDrain) {
-
-    logError(gr
-            ? "Δεν ενεργοποιήθηκε προστασία υπό υψηλό φορτίο."
-            : "Protection did not activate under heavy load.");
-
-    logWarn(gr
-            ? "Πιθανό πρόβλημα thermal / power policy."
-            : "Possible thermal / power policy issue.");
-
-} else {
-
-    logWarn(gr
-            ? "Η καταπόνηση δεν ήταν επαρκής για πλήρη έλεγχο."
-            : "Stress not sufficient for full protection test.");
-
-}
-
-appendHtml("<br>");
-}
-
 // ---------------- LAB 14 ----------------
 private float getLastLab14HealthScore() {
 try {
@@ -18694,28 +18646,26 @@ if (elapsed < durationSec) {
 // FINISH
 // =========================
 
-ui.removeCallbacks(this);
+            ui.removeCallbacks(this);
 
-lab14StopAllStress();
+            lab14StopAllStress();
 
-if (!lab14Running) return;
+            final Lab14Engine engine =
+                    new Lab14Engine(ManualTestsActivity.this);
 
-final Lab14Engine engine =
-        new Lab14Engine(ManualTestsActivity.this);
+            lab14Running = false;
 
-lab14Running = false;
-
-lab14PostLoadAnalysis(
-        engine,
-        gr,
-        startMah,
-        baselineFullMah,
-        t0,
-        voltageStart,
-        batteryPercent,
-        cycles,
-        tempStart
-);
+            lab14PostLoadAnalysis(
+                    engine,
+                    gr,
+                    startMah,
+                    baselineFullMah,
+                    t0,
+                    voltageStart,
+                    batteryPercent,
+                    cycles,
+                    tempStart
+            );
         }
     });
 }
