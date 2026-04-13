@@ -66,6 +66,8 @@ implements GELCleaner.LogCallback {
 
 private boolean welcomeShown = false;
 
+private boolean welcomePopupActive = false;
+
 private TextView welcomeTitle;
 private TextView welcomeMessage;
 
@@ -1129,21 +1131,22 @@ if (d.getWindow() != null) {
     );
 }
 
+// 🔴 FLAG (μία φορά μόνο)
+welcomePopupActive = true;
+
 d.setOnDismissListener(dialog -> {
+    welcomePopupActive = false;
     try { AppTTS.stop(); } catch (Throwable ignore) {}
     welcomeShown = false;
 });
 
 d.setOnCancelListener(dialog -> {
+    welcomePopupActive = false;
     try { AppTTS.stop(); } catch (Throwable ignore) {}
     welcomeShown = false;
 });
 
 d.setOnShowListener(dialog -> {
-
-    if (!AppTTS.isMuted(MainActivity.this) && welcomeShown) {
-        speakWelcomeTTS();
-    }
 
     Window w = d.getWindow();
     if (w != null) {
@@ -1152,6 +1155,17 @@ d.setOnShowListener(dialog -> {
                 (int)(getResources().getDisplayMetrics().heightPixels * 0.85)
         );
     }
+
+    // 🔴 SAFE TTS
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+        if (!welcomePopupActive) return;
+        if (AppTTS.isMuted(MainActivity.this)) return;
+        if (!welcomeShown) return;
+
+        speakWelcomeTTS();
+
+    }, 120);
 });
 
 d.show();
