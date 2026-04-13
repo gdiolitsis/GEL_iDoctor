@@ -18642,34 +18642,6 @@ if (elapsed < durationSec) {
     return;
 }
 
-// =========================
-// FINISH
-// =========================
-
-            ui.removeCallbacks(this);
-
-            lab14StopAllStress();
-
-            final Lab14Engine engine =
-                    new Lab14Engine(ManualTestsActivity.this);
-
-            lab14Running = false;
-
-            lab14PostLoadAnalysis(
-                    engine,
-                    gr,
-                    startMah,
-                    baselineFullMah,
-                    t0,
-                    voltageStart,
-                    batteryPercent,
-                    cycles,
-                    tempStart
-            );
-        }
-    });
-}
-
 private void resetLab14Bar() {
 
     if (lab14MainBar == null) return;
