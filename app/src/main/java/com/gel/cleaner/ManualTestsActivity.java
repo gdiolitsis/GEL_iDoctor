@@ -18642,6 +18642,42 @@ if (elapsed < durationSec) {
     return;
 }
 
+// =========================
+// 🔴 FAILSAFE FINISH (TIME-BASED ONLY)
+// =========================
+if (lab14EndTime > 0 && now >= lab14EndTime) {
+
+    ui.removeCallbacks(this);
+
+    lab14StopAllStress();
+
+    final Lab14Engine engine =
+            new Lab14Engine(ManualTestsActivity.this);
+
+    lab14Running = false;
+
+    lab14PostLoadAnalysis(
+            engine,
+            gr,
+            startMah,
+            baselineFullMah,
+            t0,
+            voltageStart,
+            batteryPercent,
+            cycles,
+            tempStart
+    );
+
+    return;
+}
+
+ui.postDelayed(this, 300);
+        }
+    });
+}
+
+private void resetLab14Bar() {
+
 private void resetLab14Bar() {
 
     if (lab14MainBar == null) return;
