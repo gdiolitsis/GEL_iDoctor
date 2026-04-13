@@ -18607,44 +18607,7 @@ if (nowTs - lastSnapshotTs > 1500) {
     } catch (Throwable ignore) {}
 }
 
-// ----------------------------------------------------
-// 🔴 UI / PROGRESS
-// ----------------------------------------------------
-if (elapsed < durationSec) {
-
-    counterText.setText(
-            gr
-                    ? "Πρόοδος Stress Test " + elapsed + " / " + durationSec
-                    : "Stress Test Progress " + elapsed + " / " + durationSec
-    );
-
-    if (lab14MainBar != null) {
-
-        int segCount = lab14MainBar.getChildCount();
-
-        float ratio = Math.min(1f, elapsed / (float) durationSec);
-
-        int active = (int) Math.floor(ratio * segCount);
-
-        for (int i = 0; i < segCount; i++) {
-
-            View seg = lab14MainBar.getChildAt(i);
-
-            if (i < active) {
-                seg.setBackgroundColor(0xFF39FF14);
-            } else {
-                seg.setBackgroundColor(0xFF333333);
-            }
-        }
-    }
-
-    ui.postDelayed(this, 1000);
-    return;
-}
-
-// =========================
 // 🔴 FAILSAFE FINISH (TIME-BASED ONLY)
-// =========================
 if (lab14EndTime > 0 && now >= lab14EndTime) {
 
     ui.removeCallbacks(this);
@@ -18671,12 +18634,41 @@ if (lab14EndTime > 0 && now >= lab14EndTime) {
     return;
 }
 
-ui.postDelayed(this, 300);
+// ----------------------------------------------------
+// 🔴 UI / PROGRESS
+// ----------------------------------------------------
+if (elapsed < durationSec) {
+
+    counterText.setText(
+            gr
+                    ? "Πρόοδος Stress Test " + elapsed + " / " + durationSec
+                    : "Stress Test Progress " + elapsed + " / " + durationSec
+    );
+
+    if (lab14MainBar != null) {
+
+        int segCount = lab14MainBar.getChildCount();
+
+        float ratio = Math.min(1f, elapsed / (float) durationSec);
+
+        int active = (int) Math.floor(ratio * segCount);
+
+        for (int i = 0; i < segCount; i++) {
+            View seg = lab14MainBar.getChildAt(i);
+            seg.setBackgroundColor(
+                    i < active ? 0xFF39FF14 : 0xFF333333
+            );
         }
-    });
+    }
+
+    ui.postDelayed(this, 1000);
+    return;
 }
 
-private void resetLab14Bar() {
+ui.postDelayed(this, 300);
+        }   // 🔴 τέλος run()
+    });     // 🔴 τέλος ui.post(new Runnable(){})
+}           // 🔴 τέλος startLab14ProgressLoop()
 
 private void resetLab14Bar() {
 
