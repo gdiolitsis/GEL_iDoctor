@@ -22119,11 +22119,15 @@ private void lab17_showPopup(String titleText, String msgText) {
 
     popup.show();
 
-    // TTS
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-        if (popup.isShowing() && !AppTTS.isMuted(this)) {
+// 🔴 FIX: STOP TTS ON BACK / DISMISS
+popup.setOnDismissListener(d -> AppTTS.stop());
+popup.setOnCancelListener(d -> AppTTS.stop());
 
-            String speakText =
+// TTS
+new Handler(Looper.getMainLooper()).postDelayed(() -> {
+    if (popup.isShowing() && !AppTTS.isMuted(this)) {
+
+        String speakText =
                     gr
                             ? "Δεν πληρούνται οι προϋποθέσεις για το LAB δεκαεπτά. "
                               + "Απαιτούνται πρόσφατα αποτελέσματα από τα LAB δεκατέσσερα, "
