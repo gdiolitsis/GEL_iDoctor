@@ -18387,7 +18387,6 @@ private void startLab14ProgressLoop() {
             long now = SystemClock.elapsedRealtime();
 
 // 🔴 FAILSAFE ENGINE CONTROL (CORRECT)
-int elapsed = (int) ((now - t0) / 1000);
 
 if (elapsed >= durationSec) {
 
