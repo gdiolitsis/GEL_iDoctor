@@ -15671,60 +15671,49 @@ float powerMilliWatt = Float.NaN;
 
     try {
 
-// ----------------------------------------------------
-// 7) POSTLOAD ANALYSIS
-// ----------------------------------------------------
+// 🔴 CRITICAL VALIDATION — SAG DATA REQUIRED
+boolean hasSagData =
+        sag1 != null && sag2 != null &&
+        sag1.length > 0 && sag2.length > 0 &&
+        !Float.isNaN(sag1[0]) &&
+        !Float.isNaN(sag2[0]);
 
-// ----------------------------------------------------
-// FAST STRESS ANALYSIS (STABLE)
-// ----------------------------------------------------
-if (!Float.isNaN(vStart[0]) &&
-    !Float.isNaN(vLoad1[0]) &&
-    !Float.isNaN(vRecover[0]) &&
-    !Float.isNaN(vLoad2[0])) {
+if (!hasSagData) {
 
-    float variance =
-            Math.abs(vStart[0] - vLoad1[0])
-          + Math.abs(vRecover[0] - vLoad2[0]);
+    logLine();
 
-    // reject fake stability
-    if (variance < 0.003f) {
+    logWarn(gr
+            ? "Ανεπαρκή δεδομένα καταπόνησης (Sag measurements missing)"
+            : "Insufficient stress data (Sag measurements missing)");
 
-        voltageStability[0] = Float.NaN;
+    logWarn(gr
+            ? "Δεν είναι δυνατή η εξαγωγή αξιόπιστου συμπεράσματος"
+            : "Unable to produce reliable diagnosis");
 
-    } else {
+    logLine();
 
-        float stability = 100f - variance * 120f;
+    lab14Running = false;
 
-        if (stability < 0f) stability = 0f;
-        if (stability > 100f) stability = 100f;
-
-        voltageStability[0] = stability;
-    }
-}
-        
-    if (lab14Cancelled) {
-    lab14FastDone = true;
-    lab14FastPhase = false;
     return;
 }
 
-    SystemClock.sleep(1200);
+// 🔴 CANCEL CHECK
+if (lab14Cancelled) {
 
-    if (lab14Cancelled) {
     lab14FastDone = true;
     lab14FastPhase = false;
+
+    lab14StopAllStress(); // 🔴 IMPORTANT
+    lab14Running = false;
+
     return;
 }
-    
-// ----------------------------------------------------
-// FINAL SNAPSHOT (LOCKED ENGINE)
-// ----------------------------------------------------
 
+// 🔴 FINAL SNAPSHOT
 iDoctorEngine.BatterySnapshot snapEnd =
         idoctor.readBatterySnapshotLab();
 
-if (snapEnd == null) {
+if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
 
     logError(gr
             ? "Αποτυχία τελικής ανάγνωσης μπαταρίας."
@@ -15740,22 +15729,6 @@ if (snapEnd == null) {
     lab14Running = false;
 
     return;
-}
-
-// =====================================================
-// 🔴 POWER CALC (POSTLOAD)
-// =====================================================
-long dtMs =
-        Math.max(1, SystemClock.elapsedRealtime() - t0);
-
-float estimatedCurrentMa =
-        estimateDynamicCurrentMilliAmp(drainMah, dtMs);
-
-if (!Float.isNaN(vLoad2[0]) &&
-    !Float.isNaN(estimatedCurrentMa) &&
-    estimatedCurrentMa > 50f) {
-
-    powerMilliWatt = vLoad2[0] * estimatedCurrentMa;
 }
 
 // ----------------------------------------------------
@@ -15781,8 +15754,6 @@ if (Float.isNaN(tempEnd) || tempEnd <= 0f) {
     tempEnd = snapEnd.batteryTempC;
 }
 
-float tempPeak = lab14TempPeak;
-
 float thermalChange = Float.NaN;
 
 if (!Float.isNaN(tempStart) &&
@@ -15791,8 +15762,11 @@ if (!Float.isNaN(tempStart) &&
     thermalChange = lab14TempPeak - tempStart;
 }
 
-final Float cpuTempEnd = readCpuTempSafe();
-final Float gpuTempEnd = readGpuTempSafe();
+// =====================================================
+// 🔴 TIME BASE (CRITICAL FIX)
+// =====================================================
+long dtMs =
+        Math.max(1, SystemClock.elapsedRealtime() - t0);
 
 // ----------------------------------------------------
 // ENGINE DRAIN
@@ -15852,7 +15826,21 @@ boolean samplingValid =
 
 // αν engine ΔΕΝ έδωσε valid → χρησιμοποιείς sampling
 if (!validDrain && samplingValid) {
+
     validDrain = true;
+
+    if (dtMs > 0 && lab14DeltaMah > 0) {
+
+        float mahPerSec =
+                (float) lab14DeltaMah / (dtMs / 1000f);
+
+        mahPerHour = mahPerSec * 3600.0;
+
+        if (baselineFullMah > 0) {
+            drainPercentPerHour =
+                    (mahPerHour / baselineFullMah) * 100.0;
+        }
+    }
 }
 
 // fallback AFTER validation
@@ -15883,13 +15871,36 @@ if (drainMah > 5000) {
     validDrain = false;
 }
 
+// =====================================================
+// 🔴 POWER CALC (POSTLOAD)
+// =====================================================
+
+float estimatedCurrentMa =
+        estimateDynamicCurrentMilliAmp(drainMah, dtMs);
+
+if (!Float.isNaN(vLoad2[0]) &&
+    !Float.isNaN(estimatedCurrentMa) &&
+    estimatedCurrentMa > 50f &&
+    estimatedCurrentMa < 10000f) {
+
+    float vForPower = vLoad2[0];
+
+    // 🔴 stabilize voltage (avoid spikes)
+    if (!Float.isNaN(voltageUnderLoad[0]) &&
+        voltageUnderLoad[0] > 0f) {
+
+        vForPower =
+                (vLoad2[0] + voltageUnderLoad[0]) / 2f;
+    }
+
+    powerMilliWatt = vForPower * estimatedCurrentMa;
+}
+
 // ====================================================
 // VOLTAGE RECOVERY
 // ====================================================
 
 if (!Float.isNaN(voltageUnderLoad[0])) {
-
-    SystemClock.sleep(1200);
 
     if (!lab14Cancelled) {
 
@@ -15914,7 +15925,6 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
 // ELECTRICAL ANALYSIS
 // ====================================================
 
-float estimatedESR = Float.NaN;
 float currentNow = Float.NaN;
 
 
@@ -16047,28 +16057,35 @@ if (!Float.isNaN(voltageStart) &&
                 currentAmp < 6f) {
 
                 float esr =
-                        sagCheck2 / currentAmp;
+        sagCheck2 / currentAmp;
 
-                if (esr > 0.01f &&
-                    esr < 0.40f) {
+if (esr > 0.01f && esr < 0.40f) {
 
-                    estimatedESR = esr;
-                    internalResistance[0] = esr;
+    internalResistance[0] = esr;
 
-                    long irMilli = (long) (esr * 1000f);
+    if (validDrain && !lab14_systemLimited[0]) {
 
-if (validDrain && !lab14_systemLimited[0] && !Float.isNaN(esr)) {
+        // 🔴 REJECT FAKE ULTRA-LOW ESR
+        if (internalResistance[0] < 0.015f) {
 
-    // Store to iDoctor (mΩ)
-    idoctor.setInternalResistanceMilliOhm(irMilli);
+            internalResistance[0] = Float.NaN;
+            idoctor.setInternalResistanceMilliOhm(0);
 
-    // Sync local array (convert mΩ → Ω)
-    if (irMilli > 0) {
-        internalResistance[0] = irMilli / 1000f;
-    } else {
-        internalResistance[0] = Float.NaN;
+        } else {
+
+            long irMilli = (long) (internalResistance[0] * 1000f);
+            idoctor.setInternalResistanceMilliOhm(irMilli);
+        }
+    }
+
+} else {
+
+    // ❌ ΜΗΝ ΣΒΗΝΕΙΣ πάντα — μόνο αν είσαι σε valid flow
+    if (validDrain && !lab14_systemLimited[0]) {
+        idoctor.setInternalResistanceMilliOhm(0);
     }
 }
+
                 }
             }
         }
@@ -16124,8 +16141,6 @@ if (Float.isNaN(c1) || Math.abs(c1) < 50f) {
     }
 }
 
-SystemClock.sleep(400);
-
 float c2 = lab14Current();
 
 if (Float.isNaN(c2) || Math.abs(c2) < 50f) {
@@ -16140,8 +16155,6 @@ if (Float.isNaN(c2) || Math.abs(c2) < 50f) {
         c2 = snap.currentMa;
     }
 }
-
-SystemClock.sleep(400);
 
 float c3 = lab14Current();
 
@@ -16426,9 +16439,8 @@ if (!Float.isNaN(sag1[0]) &&
 }
 
     // reject fake identical sag
-    if (sagDiff < 0.002f) {
-
-        powerStabilityFactor[0] = Float.NaN;
+    if (Float.isNaN(sagDiff) || sagDiff < 0.002f) {
+    powerStabilityFactor[0] = Float.NaN;
 
     } else {
 
@@ -16510,7 +16522,7 @@ if (!Float.isNaN(dualLoadScore[0]) &&
 }
 
 // stress signature (SAFE)
-if (sagAvg[0] < 0.005f)
+if (!Float.isNaN(sagAvg[0]) && sagAvg[0] < 0.005f)
     sagAvg[0] = Float.NaN;
 
 if (validDrain &&
@@ -16949,6 +16961,15 @@ if (!Float.isNaN(sagAvg[0]) && sagAvg[0] < 0.06f) {
     smartSwelling = false;
 }
 
+if (!validDrain && Float.isNaN(internalResistance[0])) {
+
+    logWarn(gr
+            ? "Ανεπαρκή δεδομένα για πλήρη ανάλυση"
+            : "Insufficient data for full analysis");
+
+    variabilityDetected[0] = true;
+}
+
 // ----------------------------------------------------
 // FINAL SCORE (measurement-based only)
 // ----------------------------------------------------
@@ -17205,7 +17226,7 @@ if (lab14_systemLimited[0]) {
 // missing voltage data
 // ----------------------------
 
-if (Float.isNaN(vStart[0]) ||
+if (Float.isNaN(voltageStart) ||
     Float.isNaN(vLoad1[0]) ||
     Float.isNaN(vRecover[0]) ||
     Float.isNaN(vLoad2[0])) {
@@ -17285,29 +17306,19 @@ if (measurementConfidence < 0f)
 if (measurementConfidence > 100f)
     measurementConfidence = 100f;
 
-String confidenceLabel;
-
-if (measurementConfidence >= 90f)
-    confidenceLabel = "Very high";
-else if (measurementConfidence >= 75f)
-    confidenceLabel = "High";
-else if (measurementConfidence >= 60f)
-    confidenceLabel = "Moderate";
-else
-    confidenceLabel = "Low";
-
-final float estimatedESRF = estimatedESR;
+final float estimatedESRF = internalResistance[0];
 final float energyEfficiencyF = energyEfficiency;
 
 final long endMahF = endMah;
 
 final float tempEndF = tempEnd;
-final float tempPeakF = lab14TempPeak;
 
 final long dtMsF = dtMs;
 final long drainMahF = drainMah;
 
-boolean lowDrain = drainMah < 2;
+boolean lowDrain = drainMah < 3;
+boolean partialMode = drainMah < 5;
+final boolean partialModeFinal = partialMode;
 
 final boolean validDrainF = validDrain;
 
@@ -17346,8 +17357,8 @@ final float drainMahFFinal = drainMahF;
 
 final boolean smartSwellingF = smartSwelling;
 
-final float startBatteryTempFinal = startBatteryTemp;
-final float endBatteryTempFinal = getBatteryTempEngineSafe();
+final float startBatteryTempFinal = tempStart;
+final float endBatteryTempFinal = tempEnd;
 
 final float[] powerMilliWattRef = {powerMilliWatt};
 
@@ -17402,7 +17413,7 @@ if (drainMahFinalLong > 600) {
 // ------------------------------------------------
 // FAST STRESS
 // ------------------------------------------------
-if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
+if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
     float s1 = sag1[0];
     float s2 = sag2[0];
@@ -17448,9 +17459,8 @@ if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
 // =====================================================
 // 🔴 COMPUTE POWER STABILITY (REAL)
 // =====================================================
-float psf = Float.NaN;
 
-if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 0f) {
+if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 500f) {
 
     float base;
 
@@ -17484,8 +17494,10 @@ if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 0f) {
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
 
-    psf = base;
-    powerStabilityFactor[0] = base;
+    powerStabilityFactor[0] =
+        Float.isNaN(powerStabilityFactor[0])
+        ? base
+        : Math.min(powerStabilityFactor[0], base);
 }
                             
                             if (!Float.isNaN(powerStabilityFactor[0]) &&
@@ -17531,7 +17543,6 @@ if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 0f) {
 // =====================================================
 // 🔴 COMPUTE STRESS SIGNATURE (STABLE)
 // =====================================================
-float ss = Float.NaN;
 
 if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
 
@@ -17607,7 +17618,6 @@ if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
 // =====================================================
 // 🔴 COMPUTE CELL ELASTICITY INDEX (REALISTIC)
 // =====================================================
-float cei = Float.NaN;
 
 if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
 
@@ -17686,8 +17696,6 @@ if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
 // =====================================================
 // 🔴 COMPUTE STRUCTURAL INDEX (INSERT HERE)
 // =====================================================
-                            
-float sii = Float.NaN;
 
 if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
 
@@ -17715,7 +17723,7 @@ if (collapseRisk[0]) {
     structuralIntegrityIndex[0] = 30f;
 }
 
-if (smartSwellingF) {
+if (smartSwelling) {
     structuralIntegrityIndex[0] = 20f;
 }
 
@@ -17774,9 +17782,9 @@ if (!Float.isNaN(structuralIntegrityIndex[0]) &&
 } else {
 
     // 🔴 FALLBACK από SAG (critical fix)
-    if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
+if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
-        float s = !Float.isNaN(sag1[0]) ? sag1[0] : sag2[0];
+    float s = Math.max(sag1[0], sag2[0]);
 
         String siFallback;
 
@@ -17816,7 +17824,7 @@ if (!Float.isNaN(structuralIntegrityIndex[0]) &&
 // =====================================================
 // 🔴 CELL BALANCE (FIXED CONDITION)
 // =====================================================
-if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
+if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
     if (cellImbalanceRisk[0]) {
 
@@ -17901,14 +17909,13 @@ if (batteryBehaviourWarningF) {
         calibrationDrift
 );
 
-    final boolean collapseRiskF = collapseRisk[0];
     final boolean systemLimitedF = lab14_systemLimited[0];
     
     // ------------------------------------------------
     // PARTIAL / FULL MODE DECISION
     // ------------------------------------------------
 
-    boolean partial = drainMahF < 5;
+    boolean partial = partialModeFinal;
 
     if (partial) {
 
