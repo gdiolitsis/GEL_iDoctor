@@ -17360,7 +17360,6 @@ final float endBatteryTempFinal = tempEnd;
 
 final float[] powerMilliWattRef = {powerMilliWatt};
 
-final boolean smartSwellingF = smartSwelling;
 runOnUiThread(() -> {
 
     final long drainMahFinalLong = (long) drainMahFFinal;
@@ -17849,7 +17848,7 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 
 
 // =====================================================
-// 🔴 BATTERY BEHAVIOUR
+// ?? BATTERY BEHAVIOUR
 // =====================================================
 if (batteryBehaviourWarningF) {
 
