@@ -3803,7 +3803,8 @@ private void startCpuBurn_C_Mode() {
 
         Thread t = new Thread(() -> {
 
-            long lastAdjust = System.currentTimeMillis();
+            final long t0 = System.currentTimeMillis(); // 🔴 BOOST TIMER FIX
+            long lastAdjust = t0;
 
             while (cpuBurnRunning &&
                    lab14Running &&
@@ -3816,12 +3817,11 @@ private void startCpuBurn_C_Mode() {
                     continue;
                 }
 
-                // 🔥 heavy compute (stable)
+                // 🔥 heavy compute (BOOSTED)
                 double acc = 0;
-
                 long now = System.nanoTime();
 
-                for (int j = 1; j < 8000; j++) {
+                for (int j = 1; j < 16000; j++) { // 🔴 πιο δυνατό load
                     acc += Math.sqrt(j * now);
                     acc *= 1.0000001;
 
@@ -3833,22 +3833,36 @@ private void startCpuBurn_C_Mode() {
                 // anti-optimization
                 if (acc > 1e12) acc = 0;
 
-                // 🔴 adaptive every 2 sec
-                if (System.currentTimeMillis() - lastAdjust > 2000) {
+                // =====================================================
+                // 🔴 BOOST + ADAPTIVE CONTROL
+                // =====================================================
 
-                    float temp = readCpuTempSafe();
+                long nowMs = System.currentTimeMillis();
 
-                    if (!Float.isNaN(temp)) {
+                // 🔥 FULL LOAD για τα πρώτα 8s
+                if (nowMs - t0 < 8000) {
 
-                        if (temp > 60f && activeThreads[0] > 1) {
-                            activeThreads[0]--;
+                    activeThreads[0] = maxCores;
+
+                } else {
+
+                    // 🔴 adaptive κάθε 2 sec
+                    if (nowMs - lastAdjust > 2000) {
+
+                        float temp = readCpuTempSafe();
+
+                        if (!Float.isNaN(temp)) {
+
+                            if (temp > 65f && activeThreads[0] > 2) {
+                                activeThreads[0]--;
+                            }
+                            else if (temp < 55f && activeThreads[0] < maxCores) {
+                                activeThreads[0]++;
+                            }
                         }
-                        else if (temp < 50f && activeThreads[0] < maxCores) {
-                            activeThreads[0]++;
-                        }
+
+                        lastAdjust = nowMs;
                     }
-
-                    lastAdjust = System.currentTimeMillis();
                 }
             }
 
