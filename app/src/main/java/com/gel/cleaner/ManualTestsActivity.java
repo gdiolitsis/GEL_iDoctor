@@ -18305,8 +18305,15 @@ private void startLab14MainStress() {
 
             if (!isLab14BMode) {
 
-                // 🔵 NORMAL LAB14 → FULL LOAD
-                startCpuBurnLimitedThreads(threads);
+// 🔴 BOOST PHASE (κρατάει το warming ζωντανό)
+startCpuBurn_C_Mode();
+
+SystemClock.sleep(6000); // 6 sec boost
+
+stopCpuBurn();
+
+// 🔵 NORMAL LOAD
+startCpuBurnLimitedThreads(threads);
 
             } else {
 
