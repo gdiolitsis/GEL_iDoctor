@@ -20162,17 +20162,26 @@ private void runFastSagCapture(
     sag1Ref[0] = Float.NaN;
     sag2Ref[0] = Float.NaN;
 
-    // 1) baseline πριν το spike
+    // ----------------------------------------------------
+    // BASELINE
+    // ----------------------------------------------------
     iDoctorEngine.BatterySnapshot s0 = idoctor.readBatterySnapshotLab();
+
     if (s0 != null && s0.voltageMv > 0) {
         voltageStartRef[0] = s0.voltageMv / 1000f;
     }
 
-    // fallback baseline αν λείπει snapshot
     if (Float.isNaN(voltageStartRef[0])) {
-        float vb = getBatteryVoltageFiltered();
+        float vb = lab14Voltage();
         if (!Float.isNaN(vb) && vb > 0f) {
             voltageStartRef[0] = vb;
+        }
+    }
+
+    if (Float.isNaN(voltageStartRef[0])) {
+        float vb2 = readStableBatteryVoltage();
+        if (!Float.isNaN(vb2) && vb2 > 0f) {
+            voltageStartRef[0] = vb2;
         }
     }
 
@@ -20183,124 +20192,192 @@ private void runFastSagCapture(
         return;
     }
 
-    // 2) άμεσο full spike load
-    stopCpuBurn();
-    cpuBurnRunning = true;
-    lab14Running = true;
-    lab14Cancelled = false;
+    if (lab14Cancelled || !lab14Running) {
+        return;
+    }
 
-    final int maxCores = Math.max(1, Runtime.getRuntime().availableProcessors());
-    startCpuBurn_FullImmediate(maxCores);
+    // ----------------------------------------------------
+    // LOAD 1
+    // ----------------------------------------------------
+    final int cores = Math.max(1, Runtime.getRuntime().availableProcessors());
+    int threads = (lab14OptimalThreads > 0)
+            ? lab14OptimalThreads
+            : Math.max(2, cores / 2);
 
-    try {
-        // GPU / vibration / video πρέπει να ξεκινάνε πριν από την πρώτη λήψη φορτίου
-        startGpuStressLevel3();
-    } catch (Throwable ignore) {}
+    startCpuBurnLimitedThreads(threads);
+    startMemoryStress();
+    startGpuStressLevel(lab14GpuIntensity > 0 ? lab14GpuIntensity : 2);
 
-    try {
-        startMemoryBandwidthStress();
-    } catch (Throwable ignore) {}
-
-    try {
-        startVibrationStress();
-    } catch (Throwable ignore) {}
-
-    try {
-        startVideoStress();
-    } catch (Throwable ignore) {}
-
-    // 3) ultra-fast sampling για να μην χάνεται το peak
-    sleepSilently(80);
+    SystemClock.sleep(2500);
+    SystemClock.sleep(200);
 
     iDoctorEngine.BatterySnapshot s1 = idoctor.readBatterySnapshotLab();
+
     if (s1 != null && s1.voltageMv > 0) {
         vLoad1Ref[0] = s1.voltageMv / 1000f;
     }
+
     if (Float.isNaN(vLoad1Ref[0])) {
-        float v1 = getBatteryVoltageFiltered();
-        if (!Float.isNaN(v1) && v1 > 0f) vLoad1Ref[0] = v1;
+        float v1 = lab14Voltage();
+        if (!Float.isNaN(v1) && v1 > 0f) {
+            vLoad1Ref[0] = v1;
+        }
     }
 
-    sleepSilently(220);
-
-    iDoctorEngine.BatterySnapshot s2 = idoctor.readBatterySnapshotLab();
-    if (s2 != null && s2.voltageMv > 0) {
-        vLoad2Ref[0] = s2.voltageMv / 1000f;
-    }
-    if (Float.isNaN(vLoad2Ref[0])) {
-        float v2 = getBatteryVoltageFiltered();
-        if (!Float.isNaN(v2) && v2 > 0f) vLoad2Ref[0] = v2;
+    if (Float.isNaN(vLoad1Ref[0])) {
+        float v1b = readStableBatteryVoltage();
+        if (!Float.isNaN(v1b) && v1b > 0f) {
+            vLoad1Ref[0] = v1b;
+        }
     }
 
-    // 4) recover sample
-    stopGpuStress();
-    stopMemoryBandwidthStress();
-    stopVibrationStress();
-    stopVideoStress();
     stopCpuBurn();
+    stopMemoryStress();
+    stopGpuStress();
 
-    sleepSilently(180);
+    if (lab14Cancelled || !lab14Running) {
+        return;
+    }
+
+    // ----------------------------------------------------
+    // RECOVER
+    // ----------------------------------------------------
+    long tRecoverStart = SystemClock.elapsedRealtime();
+
+    SystemClock.sleep(1800);
+    SystemClock.sleep(200);
 
     iDoctorEngine.BatterySnapshot sr = idoctor.readBatterySnapshotLab();
+
     if (sr != null && sr.voltageMv > 0) {
         vRecoverRef[0] = sr.voltageMv / 1000f;
     }
+
     if (Float.isNaN(vRecoverRef[0])) {
-        float vr = getBatteryVoltageFiltered();
-        if (!Float.isNaN(vr) && vr > 0f) vRecoverRef[0] = vr;
+        float vr = lab14Voltage();
+        if (!Float.isNaN(vr) && vr > 0f) {
+            vRecoverRef[0] = vr;
+        }
     }
 
-    // 5) primary sag
-    if (!Float.isNaN(voltageStartRef[0]) && !Float.isNaN(vLoad1Ref[0])) {
+    if (Float.isNaN(vRecoverRef[0])) {
+        float vr2 = readStableBatteryVoltage();
+        if (!Float.isNaN(vr2) && vr2 > 0f) {
+            vRecoverRef[0] = vr2;
+        }
+    }
+
+    lab14RecoveryTimeMs =
+            SystemClock.elapsedRealtime() - tRecoverStart;
+
+    if (lab14Cancelled || !lab14Running) {
+        return;
+    }
+
+    // ----------------------------------------------------
+    // LOAD 2
+    // ----------------------------------------------------
+    startCpuBurnLimitedThreads(threads);
+    startMemoryStress();
+    startGpuStressLevel(lab14GpuIntensity > 0 ? lab14GpuIntensity : 2);
+
+    SystemClock.sleep(2500);
+    SystemClock.sleep(250);
+
+    float v2a = Float.NaN;
+    float v2b = Float.NaN;
+
+    iDoctorEngine.BatterySnapshot s2a = idoctor.readBatterySnapshotLab();
+    if (s2a != null && s2a.voltageMv > 0) {
+        v2a = s2a.voltageMv / 1000f;
+    }
+    if (Float.isNaN(v2a)) {
+        v2a = lab14Voltage();
+    }
+    if (Float.isNaN(v2a)) {
+        v2a = readStableBatteryVoltage();
+    }
+
+    SystemClock.sleep(180);
+
+    iDoctorEngine.BatterySnapshot s2b = idoctor.readBatterySnapshotLab();
+    if (s2b != null && s2b.voltageMv > 0) {
+        v2b = s2b.voltageMv / 1000f;
+    }
+    if (Float.isNaN(v2b)) {
+        v2b = lab14Voltage();
+    }
+    if (Float.isNaN(v2b)) {
+        v2b = readStableBatteryVoltage();
+    }
+
+    if (!Float.isNaN(v2a) && !Float.isNaN(v2b)) {
+        vLoad2Ref[0] = (v2a + v2b) / 2f;
+    } else if (!Float.isNaN(v2a)) {
+        vLoad2Ref[0] = v2a;
+    } else if (!Float.isNaN(v2b)) {
+        vLoad2Ref[0] = v2b;
+    }
+
+    stopCpuBurn();
+    stopMemoryStress();
+    stopGpuStress();
+
+    // ----------------------------------------------------
+    // SAG
+    // ----------------------------------------------------
+    if (!Float.isNaN(voltageStartRef[0]) &&
+        !Float.isNaN(vLoad1Ref[0])) {
+
         sag1Ref[0] = Math.max(0f, voltageStartRef[0] - vLoad1Ref[0]);
     }
 
-    if (!Float.isNaN(voltageStartRef[0]) && !Float.isNaN(vLoad2Ref[0])) {
-        sag2Ref[0] = Math.max(0f, voltageStartRef[0] - vLoad2Ref[0]);
+    if (!Float.isNaN(vRecoverRef[0]) &&
+        !Float.isNaN(vLoad2Ref[0])) {
+
+        sag2Ref[0] = Math.max(0f, vRecoverRef[0] - vLoad2Ref[0]);
     }
 
-    // 6) fail-safe fallback για να μην μένει N/A
+    // fail-safe fallback
     if (Float.isNaN(sag1Ref[0]) || sag1Ref[0] <= 0f) {
-        float fallbackLoad =
-                !Float.isNaN(vLoad2Ref[0]) ? vLoad2Ref[0] :
-                (!Float.isNaN(vLoad1Ref[0]) ? vLoad1Ref[0] : Float.NaN);
-
-        if (!Float.isNaN(fallbackLoad)) {
-            sag1Ref[0] = Math.max(0f, voltageStartRef[0] - fallbackLoad);
+        if (!Float.isNaN(voltageStartRef[0]) && !Float.isNaN(vLoad2Ref[0])) {
+            sag1Ref[0] = Math.max(0f, voltageStartRef[0] - vLoad2Ref[0]);
         }
     }
 
     if (Float.isNaN(sag2Ref[0]) || sag2Ref[0] <= 0f) {
-        if (!Float.isNaN(vRecoverRef[0]) && !Float.isNaN(vLoad2Ref[0])) {
-            sag2Ref[0] = Math.max(0f, vRecoverRef[0] - vLoad2Ref[0]);
-        } else if (!Float.isNaN(sag1Ref[0])) {
+        if (!Float.isNaN(sag1Ref[0])) {
             sag2Ref[0] = sag1Ref[0];
         }
     }
 
-    // 7) power estimate
+    // ----------------------------------------------------
+    // POWER
+    // ----------------------------------------------------
     float loadVolt =
             !Float.isNaN(vLoad2Ref[0]) ? vLoad2Ref[0] :
             (!Float.isNaN(vLoad1Ref[0]) ? vLoad1Ref[0] : Float.NaN);
 
-    if (!Float.isNaN(loadVolt)
-            && estimatedCurrentMaRef != null
-            && estimatedCurrentMaRef[0] > 50f) {
+    if (!Float.isNaN(loadVolt) &&
+        estimatedCurrentMaRef != null &&
+        !Float.isNaN(estimatedCurrentMaRef[0]) &&
+        estimatedCurrentMaRef[0] > 50f) {
+
         powerMilliWattRef[0] = loadVolt * estimatedCurrentMaRef[0];
+
     } else {
         powerMilliWattRef[0] = Float.NaN;
     }
 
-    // 8) debug
     appendLog(String.format(
             Locale.US,
             "[FAST SAG] Vstart=%.3f V | Vload1=%.3f V | Vload2=%.3f V | Vrec=%.3f V | Sag1=%.3f V | Sag2=%.3f V",
-            voltageOrNaN(voltageStartRef[0]),
-            voltageOrNaN(vLoad1Ref[0]),
-            voltageOrNaN(vLoad2Ref[0]),
-            voltageOrNaN(vRecoverRef[0]),
-            voltageOrNaN(sag1Ref[0]),
-            voltageOrNaN(sag2Ref[0])
+            Float.isNaN(voltageStartRef[0]) ? -1f : voltageStartRef[0],
+            Float.isNaN(vLoad1Ref[0]) ? -1f : vLoad1Ref[0],
+            Float.isNaN(vLoad2Ref[0]) ? -1f : vLoad2Ref[0],
+            Float.isNaN(vRecoverRef[0]) ? -1f : vRecoverRef[0],
+            Float.isNaN(sag1Ref[0]) ? -1f : sag1Ref[0],
+            Float.isNaN(sag2Ref[0]) ? -1f : sag2Ref[0]
     ));
 }
 
