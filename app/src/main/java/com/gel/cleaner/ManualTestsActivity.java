@@ -18277,63 +18277,72 @@ private void startLab14MainStress() {
     t0 = SystemClock.elapsedRealtime();
     lab14EndTime = t0 + (durationSec * 1000L);
 
-// =========================================================
-// 🔥 CPU STRESS (BACKGROUND THREAD - FIXED)
-// =========================================================
-new Thread(() -> {
-    try {
+    // =========================================================
+    // 🔥 CPU STRESS (BACKGROUND THREAD)
+    // =========================================================
+    new Thread(() -> {
+        try {
 
-        final int cores = Runtime.getRuntime().availableProcessors();
+            final int cores = Runtime.getRuntime().availableProcessors();
 
-        int threads = (lab14OptimalThreads > 0)
-                ? lab14OptimalThreads
-                : Math.max(2, cores / 2);
+            int threads = (lab14OptimalThreads > 0)
+                    ? lab14OptimalThreads
+                    : Math.max(2, cores);
 
-        if (threads > 6) threads = 6;
+            if (!isLab14BMode) {
 
-        lab14CpuThreadsCurrent = threads;
-
-        if (!isLab14BMode) {
-
-            // 🔵 LAB14 NORMAL
-            startCpuBurnLimitedThreads(threads);
-
-        } else {
-
-            if (inHardPhase) {
-
-                // 🔴 HARD PHASE
-                startCpuBurn_C_Mode();
+                // 🔵 NORMAL LAB14 → FULL LOAD
+                startCpuBurnLimitedThreads(threads);
 
             } else {
 
-                // 🌿 SOFT PHASE
-                int softThreads = Math.max(1, cores / 3);
+                if (inHardPhase) {
 
-                startCpuBurnLimitedThreads(softThreads);
+                    // 🔴 HARD PHASE → MAX
+                    startCpuBurn_C_Mode();
+
+                } else {
+
+                    // 🌿 SOFT PHASE
+                    int softThreads = Math.max(1, cores / 2);
+                    startCpuBurnLimitedThreads(softThreads);
+                }
             }
-        }
 
-    } catch (Throwable ignore) {}
+        } catch (Throwable ignore) {}
 
-}).start();
+    }).start();
 
     // =========================================================
-    // 🟡 UI THREAD (μόνο UI + light ops)
+    // 🟡 UI THREAD (FULL STACK LOAD)
     // =========================================================
     runOnUiThread(() -> {
 
         applyMaxBrightnessAndKeepOn();
 
-        // RAM + GPU μπορούν να μείνουν εδώ (δεν μπλοκάρουν UI σοβαρά)
+        // 🔴 MEMORY (base)
         startMemoryStress();
 
-        startGpuStressLevel(
-                lab14GpuIntensity > 0
-                        ? lab14GpuIntensity
-                        : (isLab14BMode ? 3 : 2)
-        );
+        // 🔴 MEMORY BANDWIDTH (CRITICAL)
+        try {
+            startMemoryBandwidthStress();
+        } catch (Throwable ignore) {}
 
+        // 🔴 GPU (FORCE HIGH)
+        try {
+            startGpuStressLevel(
+                    lab14GpuIntensity > 0
+                            ? Math.max(3, lab14GpuIntensity)
+                            : 3
+            );
+        } catch (Throwable ignore) {}
+
+        // 🔴 VIBRATION LOAD (adds real drain)
+        try {
+            startVibrationStress();
+        } catch (Throwable ignore) {}
+
+        // 🔴 VIDEO LOAD (GPU + decoder + screen)
         try {
 
             lab14StressVideo.setVideoURI(
