@@ -15488,21 +15488,35 @@ private void lab14StopAllStress() {
             ui.removeCallbacks(lab14VibrationLoop);
         }
 
+        // 🔴 VIBRATOR (system)
         try {
             Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
             if (vib != null) vib.cancel();
         } catch (Throwable ignore) {}
 
+        // 🔴 CPU
         try { stopCpuBurn(); } catch (Throwable ignore) {}
+
+        // 🔴 MEMORY
         try { stopMemoryStress(); } catch (Throwable ignore) {}
+
+        // 🔴 MEMORY BANDWIDTH (ΝΕΟ - ΥΠΟΧΡΕΩΤΙΚΟ)
+        try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+
+        // 🔴 GPU
         try { stopGpuStress(); } catch (Throwable ignore) {}
 
+        // 🔴 VIBRATION THREAD (ΝΕΟ - ΥΠΟΧΡΕΩΤΙΚΟ)
+        try { stopVibrationStress(); } catch (Throwable ignore) {}
+
+        // 🔴 VIDEO
         try {
             if (lab14StressVideo != null) {
                 lab14StressVideo.stopPlayback();
             }
         } catch (Throwable ignore) {}
 
+        // 🔴 SCREEN STATE
         try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
     } catch (Throwable ignore) {}
@@ -20432,6 +20446,99 @@ private void sleepSilently(long ms) {
 
 private float voltageOrNaN(float v) {
     return Float.isNaN(v) ? -1f : v;
+}
+
+// =====================================================
+// 🔴 MEMORY BANDWIDTH STRESS
+// =====================================================
+private volatile boolean memBandwidthRunning = false;
+private Thread memBandwidthThread;
+
+private void startMemoryBandwidthStress() {
+
+    stopMemoryBandwidthStress();
+
+    memBandwidthRunning = true;
+
+    memBandwidthThread = new Thread(() -> {
+        try {
+
+            final int size = 8 * 1024 * 1024; // 8MB blocks
+            byte[] src = new byte[size];
+            byte[] dst = new byte[size];
+
+            while (memBandwidthRunning &&
+                   lab14Running &&
+                   !lab14Cancelled) {
+
+                System.arraycopy(src, 0, dst, 0, size);
+                System.arraycopy(dst, 0, src, 0, size);
+            }
+
+        } catch (Throwable ignore) {}
+    });
+
+    memBandwidthThread.setPriority(Thread.MAX_PRIORITY);
+    memBandwidthThread.start();
+}
+
+private void stopMemoryBandwidthStress() {
+
+    memBandwidthRunning = false;
+
+    if (memBandwidthThread != null) {
+        try {
+            memBandwidthThread.interrupt();
+        } catch (Throwable ignore) {}
+        memBandwidthThread = null;
+    }
+}
+
+// =====================================================
+// 🔴 VIBRATION STRESS
+// =====================================================
+private volatile boolean vibrationRunning = false;
+private android.os.Vibrator vibrator;
+
+private void startVibrationStress() {
+
+    stopVibrationStress();
+
+    try {
+        vibrator = (android.os.Vibrator)
+                getSystemService(VIBRATOR_SERVICE);
+
+        if (vibrator == null || !vibrator.hasVibrator())
+            return;
+
+        vibrationRunning = true;
+
+        new Thread(() -> {
+            try {
+
+                while (vibrationRunning &&
+                       lab14Running &&
+                       !lab14Cancelled) {
+
+                    vibrator.vibrate(200);
+                    SystemClock.sleep(250);
+                }
+
+            } catch (Throwable ignore) {}
+        }).start();
+
+    } catch (Throwable ignore) {}
+}
+
+private void stopVibrationStress() {
+
+    vibrationRunning = false;
+
+    try {
+        if (vibrator != null) {
+            vibrator.cancel();
+        }
+    } catch (Throwable ignore) {}
 }
 
 //=============================================================
