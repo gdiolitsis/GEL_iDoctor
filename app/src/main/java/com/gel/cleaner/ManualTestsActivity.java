@@ -18301,7 +18301,7 @@ private void startLab14MainStress() {
 
             int threads = (lab14OptimalThreads > 0)
                     ? lab14OptimalThreads
-                    : Math.max(2, cores);
+                    : Math.max(2, cores - 2);
 
             if (!isLab14BMode) {
 
