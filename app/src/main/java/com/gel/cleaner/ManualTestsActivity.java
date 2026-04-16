@@ -18963,22 +18963,21 @@ private float estimateDynamicCurrentMilliAmp(
         }
     }
 
-    // -------------------------------------------------
-    // 2) Fallback: average current from drain / time
-    // -------------------------------------------------
-    if (Float.isNaN(currentMa)) {
-        if (res.drainMah > 0 && res.durationMs > 0) {
-            currentMa =
-                    (float) (res.drainMah * 3600000.0 / res.durationMs)
+// -------------------------------------------------
+// 2) Fallback: average current from drain / time
+// -------------------------------------------------
+if (Float.isNaN(currentMa)) {
+    if (res.drainMah > 0 && res.durationMs > 0) {
+        currentMa =
+                (float) (res.drainMah * 3600000.0 / res.durationMs);
 
-            if (currentMa < 50f || currentMa > 12000f) {
-                currentMa = Float.NaN;
-            }
+        if (currentMa < 50f || currentMa > 12000f) {
+            currentMa = Float.NaN;
         }
     }
-
-    return currentMa;
 }
+
+return currentMa;
 
 // =====================================================
 // SMART SWELLING DETECTION (FALSE POSITIVE KILLER)
