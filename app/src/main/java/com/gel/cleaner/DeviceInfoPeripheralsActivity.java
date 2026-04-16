@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 // ============================================================
 // ANDROID CORE
@@ -494,6 +496,15 @@ private String buildSection(String title, Map<String, String> data) {
     }
 
     return sb.toString();
+}
+
+private String formatThermalLineClean(ThermalGroupReading t) {
+    if (t == null || !t.valid) return "N/A";
+
+    return String.format(Locale.US,
+            "%.1f°C (%s)",
+            t.tempC,
+            thermalState(t.tempC));
 }
 
 // ============================================================
