@@ -14554,7 +14554,7 @@ private void lab14LogStressResult(
         boolean[] lab14_systemLimited,
         boolean[] collapseRisk,
         boolean smartSwelling,
-        boolean[] calibrationDrift,
+        boolean[] calibrationDrift
 ) {
 
     boolean DEBUG_MODE = false;
