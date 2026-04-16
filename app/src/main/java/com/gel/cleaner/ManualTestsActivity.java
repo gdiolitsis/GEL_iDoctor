@@ -15006,8 +15006,8 @@ logLabelValue(
                 "Start=%d mAh | End=%d mAh | Δ=%d mAh | %.1fs",
                 startMah,
                 endMah,
-                Math.max(0, drainMah),
-                dtMs / 1000.0
+                Math.max(0, res.drainMah),
+                res.durationMs / 1000.0
         )
 );
 
@@ -15210,92 +15210,6 @@ if ("Excellent".equals(res.label) ||
 }
 
 // ============================================================
-// LAB 14 — LOG AGING (GEL VERSION)
-// ============================================================
-private void lab14LogAging(
-        boolean gr,
-        int agingIndex,
-        String agingInterp,
-        Lab14Engine.AgingResult aging,
-        float monthsTo70,
-        float[] internalResistance
-) {
-
-    appendHtml("<br>");
-    logLine();
-    logInfo(gr ? "Κατάσταση φθοράς" : "Battery wear");
-    logLine();
-
-    String agingLabel = null;
-
-    try {
-
-                float rMilli = Float.NaN;
-
-        rMilli = (!Float.isNaN(internalResistance[0]))
-                ? internalResistance[0] * 1000f
-                : Float.NaN;
-
-        double safeDrain =
-                (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0.0)
-                        ? 0.0
-                        : drainPercentPerHour;
-
-        if (!Float.isNaN(rMilli)) {
-
-            if (rMilli < 50)
-    agingLabel = gr ? "Εξαιρετική κατάσταση" : "Excellent condition";
-else if (rMilli < 90)
-    agingLabel = gr ? "Μικρή φθορά" : "Minor wear";
-else if (rMilli < 140)
-    agingLabel = gr ? "Μέτρια φθορά" : "Moderate wear";
-else
-    agingLabel = gr ? "Έντονη φθορά" : "Heavy wear";
-        }
-
-        // drain signal
-        if (safeDrain > 40.0) {
-            agingLabel = gr ? "Αυξημένη φθορά" : "Accelerated wear";
-        }
-
-    } catch (Throwable ignore) {}
-
-    if (agingLabel != null) {
-
-        logLabelValue(
-                gr ? "Κατάσταση φθοράς" : "Wear condition",
-                agingLabel
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση φθοράς" : "Wear condition",
-                gr ? "Ανεπαρκή δεδομένα" : "Insufficient data"
-        );
-    }
-
-    // DESCRIPTION
-    if (aging != null && aging.description != null) {
-
-        logLabelValue(
-                gr ? "Ανάλυση" : "Analysis",
-                aging.description
-        );
-    }
-
-    // LIFE ESTIMATE
-    if (monthsTo70 > 0) {
-
-        logLabelValue(
-                gr ? "Εκτίμηση ζωής έως 70%"
-                   : "Estimated life to 70%",
-                String.format(Locale.US, "%.1f months", monthsTo70)
-        );
-    }
-}
-
-// ============================================================
 // LAB 14 — LOG FINAL RESULT (GEL VERSION)
 // ============================================================
 private void lab14LogFinalScore(
@@ -15402,8 +15316,6 @@ private void lab14LogSave(
         boolean smartSwelling,
         boolean[] calibrationDrift,
         boolean batteryAuthenticitySuspicion,
-        int finalScore,
-        int agingIndex,
         boolean partial,
         boolean[] lab14_systemLimited
 ) {
@@ -15415,15 +15327,13 @@ private void lab14LogSave(
 if (!partial && !lab14_systemLimited[0]) {
 
     p.edit()
-            .putBoolean("lab14_unstable_measurement", variabilityDetected[0])
-            .putBoolean("lab14_collapse_risk", collapseRisk[0])
-            .putBoolean("lab14_swelling_risk", smartSwelling)
-            .putBoolean("lab14_calibration_drift", calibrationDrift[0])
-            .putBoolean("lab14_battery_auth_suspect", batteryAuthenticitySuspicion)
-            .putFloat("lab14_health_score", finalScore)
-            .putInt("lab14_aging_index", agingIndex)
-            .putLong("lab14_last_ts", System.currentTimeMillis())
-            .apply();
+        .putBoolean("lab14_unstable_measurement", variabilityDetected[0])
+        .putBoolean("lab14_collapse_risk", collapseRisk[0])
+        .putBoolean("lab14_swelling_risk", smartSwelling)
+        .putBoolean("lab14_calibration_drift", calibrationDrift[0])
+        .putBoolean("lab14_battery_auth_suspect", batteryAuthenticitySuspicion)
+        .putLong("lab14_last_ts", System.currentTimeMillis())
+        .apply();
 
     logLabelOkValue(
             gr ? "Αποθήκευση αποτελέσματος"
@@ -16878,9 +16788,9 @@ if (agingInputOk) {
             lab14Conf.percent >= 45;
 
     if (tempOk &&
-        drainOk &&
-        cycleOk &&
-        confOk) {
+    drainOk &&
+    cycleOk &&
+    confOk) {
 
         aging =
         engine.computeAging(
@@ -17543,8 +17453,8 @@ if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 500f) {
     // drain penalty (unstable discharge)
     if (validDrain && !Double.isNaN(drainPercentPerHour)) {
 
-        if (drainPercentPerHourF > 45) base -= 15f;
-        else if (drainPercentPerHourF > 30) base -= 8f;
+        if (res.drainPercentPerHour > 45) base -= 15f;
+        else if (res.drainPercentPerHour > 30) base -= 8f;
     }
 
     // recovery penalty
@@ -17914,7 +17824,7 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 // =====================================================
 // ?? BATTERY BEHAVIOUR
 // =====================================================
-if (batteryBehaviourWarningF) {
+if (res.batteryBehaviourWarning) {
 
     logLabelWarnValue(
             gr ? "Συμπεριφορά μπαταρίας"
@@ -17954,9 +17864,9 @@ if (batteryBehaviourWarningF) {
     voltageRecoverySpeed,
     voltageStability[0],
     internalResistance,
-    estimatedESRF,
+    estimatedESR,
     thermalImpedance[0],
-    energyEfficiencyF,
+    energyEfficiency,
     startMahFinal,
     endMah,
     lab14_systemLimited,
@@ -17977,19 +17887,7 @@ if (batteryBehaviourWarningF) {
                 gr,
                 lab14_systemLimited,
                 validDrain,
-                conf
-        );
-
-    } else {
-
-        lab14LogAging(
-                gr,
-                agingIndex,
-                agingInterp,
-                aging,
-                Float.NaN,
-                drainPercentPerHourF,
-                internalResistance
+                lab14Conf
         );
 
         if (systemLimited) {
@@ -17997,6 +17895,7 @@ if (batteryBehaviourWarningF) {
                     ? "Η μέτρηση έγινε με περιορισμό από το σύστημα. Το αποτέλεσμα είναι ενδεικτικό."
                     : "System limiter detected. Result is indicative.");
         }
+}
 
         // ------------------------------------------------
         // HEALTH
@@ -18018,7 +17917,7 @@ lab14LogFinalScore(
 
         SharedPreferences p = getSharedPreferences(LAB14_PREFS, MODE_PRIVATE);
 
-        lab14LogSave(
+lab14LogSave(
     gr,
     p,
     variabilityDetected,
@@ -18026,8 +17925,6 @@ lab14LogFinalScore(
     smartSwelling,
     calibrationDrift,
     false,
-    finalScore,
-    lab14AgingIndex,
     partial,
     lab14_systemLimited
 );
@@ -18064,7 +17961,7 @@ lab14LogFinalScore(
                 gr,
                 validDrain,
                 lab14_systemLimited,
-                conf
+                lab14Conf
         );
     }
 
@@ -19072,9 +18969,9 @@ private float estimateDynamicCurrentMilliAmp(
     // 2) Fallback: average current from drain / time
     // -------------------------------------------------
     if (Float.isNaN(currentMa)) {
-        if (drainMah > 0 && dtMs > 0) {
+        if (res.drainMah > 0 && res.durationMs > 0) {
             currentMa =
-                    (float) (drainMah * 3600000.0 / dtMs);
+                    (float) (res.drainMah * 3600000.0 / res.durationMs)
 
             if (currentMa < 50f || currentMa > 12000f) {
                 currentMa = Float.NaN;
@@ -19177,7 +19074,7 @@ private String computeRiskSummary(
     // DRAIN
     // =====================================================
 
-    if (!Double.isNaN(drainPercentPerHour)) {
+    if (!Double.isNaN(res.drainPercentPerHour)) {
         if (drainPercentPerHour > 45.0) score += 2;
         else if (drainPercentPerHour > 35.0) score += 1;
     }
@@ -27674,8 +27571,6 @@ boolean silentCorruptionRisk =
         p.getBoolean("lab27_silent_corruption_risk", false);
 
 // battery data
-int agingIndex =
-        p.getInt("lab14_aging_index", -1);
 
 float finalScore =
         p.getFloat("lab14_health_score", Float.NaN);
@@ -28890,11 +28785,6 @@ if (prevRisk >= 0) {
             (prevBattery - finalScore) > 8)
         trendDetected = true;
 
-    int agingDiff = agingIndex - prevAging;
-
-    if (prevAging >= 0 && agingIndex >= 0 && agingDiff > 10)
-        trendDetected = true;
-
     logLabelValue(
             gr ? "Σύγκριση προηγούμενης διάγνωσης"
                : "Previous diagnosis comparison",
@@ -28989,7 +28879,6 @@ if (runCount < 3) {
 history.edit()
         .putInt("hw_last_risk", hardwareRiskScore)
         .putFloat("hw_last_battery_health", finalScore)
-        .putInt("hw_last_aging_index", agingIndex)
         .putBoolean("hw_last_nand_risk", nandRisk)
         .putBoolean("hw_last_controller_risk", controllerRisk)
         .putBoolean("hw_last_thermal_risk", thermalRunawayRisk)
@@ -29015,7 +28904,8 @@ boolean diagnosticConflict = false;
 int conflictScore = 0;
 
 // Battery healthy but PMIC instability
-if (finalScore >= 80 && agingIndex < 70 && lab14CollapseRisk) {
+if (("Excellent".equals(res.label) || "Good".equals(res.label))
+        && lab14CollapseRisk) {
 
     diagnosticConflict = true;
     conflictScore += 30;
