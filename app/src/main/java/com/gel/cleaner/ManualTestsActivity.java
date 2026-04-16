@@ -17958,12 +17958,12 @@ lab14LogSave(
         // ------------------------------------------------
 
         lab14LogReliabilitySummary(
-        gr,
-        validDrain,
-        lab14_systemLimited,
-        lab14Conf
+    gr,
+    validDrain,
+    lab14_systemLimited,
+    lab14Conf
 );
-}
+});
 
 // ------------------------------------------------
 // STOP (NORMAL EXIT)
