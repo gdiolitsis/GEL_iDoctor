@@ -309,6 +309,27 @@ private long lab14B_endMah = -1L;
 double rateSum = 0;
 int rateSamples = 0;
 
+public static class Lab14Result {
+
+    public boolean validDrain;
+    public boolean systemLimited;
+
+    public double drainPercentPerHour;
+    public double mahPerHour;
+
+    public long drainMah;
+    public long durationMs;
+
+    public float tempStart;
+    public float tempEnd;
+
+    public float powerMw;
+
+    public boolean batteryBehaviourWarning;
+
+    public String label; // 🔴 FINAL LABEL ONLY
+}
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -15048,19 +15069,19 @@ if (!Float.isNaN(energyEfficiency)) {
 // =====================================================
 String recommendation;
 
-if ("Unknown".equals(finalLabel)) {
+if ("Unknown".equals(batteryTruth)) {
 
     recommendation = gr
             ? "Ανεπαρκή δεδομένα για αξιόπιστη διάγνωση."
             : "Insufficient data for reliable diagnosis.";
 
-} else if ("Critical".equals(finalLabel)) {
+} else if ("Critical".equals(batteryTruth)) {
 
     recommendation = gr
             ? "Συνιστάται άμεσος τεχνικός έλεγχος της μπαταρίας."
             : "Immediate battery service inspection is recommended.";
 
-} else if ("Weak".equals(finalLabel)) {
+} else if ("Weak".equals(batteryTruth)) {
 
     recommendation = gr
             ? "Συνιστάται παρακολούθηση της συμπεριφοράς της μπαταρίας και επανέλεγχος."
@@ -15085,7 +15106,7 @@ if ("Unknown".equals(finalLabel)) {
 
 String recLabel = gr ? "Σύσταση" : "Recommendation";
 
-if ("Critical".equals(finalLabel)) {
+if ("Critical".equals(batteryTruth)) {
 
     logLabelErrorValue(recLabel, recommendation);
 
@@ -15129,7 +15150,7 @@ String drainText =
 
 String summary;
 
-if ("Unknown".equals(finalLabel)) {
+if ("Unknown".equals(batteryTruth)) {
 
     summary = gr
             ? "Ανεπαρκή δεδομένα για διάγνωση."
@@ -15143,8 +15164,8 @@ if ("Unknown".equals(finalLabel)) {
             ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %s\nΠτώση τάσης: %s\nΘερμική μεταβολή: %s\nΑποφόρτιση: %s"
             : "Status: %s\nBehaviour: %s\nPower: %s\nVoltage sag: %s\nThermal delta: %s\nDrain: %s",
 
-            finalLabel,
-            finalLabel,
+            batteryTruth,
+            batteryTruth,
             powerText,
             sagTextFinal,
             tempText,
@@ -15156,18 +15177,18 @@ if ("Unknown".equals(finalLabel)) {
 
 String summaryLabel = gr ? "Σύνοψη" : "Summary";
 
-if ("Excellent".equals(finalLabel) ||
-    "Good".equals(finalLabel) ||
-    "Normal".equals(finalLabel)) {
+if ("Excellent".equals(batteryTruth) ||
+    "Good".equals(batteryTruth) ||
+    "Normal".equals(batteryTruth)) {
 
     logLabelOkValue(summaryLabel, summary);
 
-} else if ("Weak".equals(finalLabel) ||
-           "Unknown".equals(finalLabel)) {
+} else if ("Weak".equals(batteryTruth) ||
+           "Unknown".equals(batteryTruth)) {
 
     logLabelWarnValue(summaryLabel, summary);
 
-} else if ("Critical".equals(finalLabel)) {
+} else if ("Critical".equals(batteryTruth)) {
 
     logLabelErrorValue(summaryLabel, summary);
 
@@ -15301,33 +15322,31 @@ private void lab14LogFinalScore(
     logLine();
 
     String condLabel = gr ? "Κατάσταση μπαταρίας" : "Battery condition";
-    String label = finalLabel != null ? finalLabel.toLowerCase() : "";
 
-    if (label.contains("excellent") ||
-        label.contains("good") ||
-        label.contains("normal") ||
-        label.contains("άριστη") ||
-        label.contains("καλή") ||
-        label.contains("φυσιολογ")) {
+// 🔴 STRICT COLOR MAPPING (FINAL)
 
-        logLabelOkValue(condLabel, finalLabel);
+if ("Excellent".equals(batteryTruth) ||
+    "Good".equals(finalLabel) ||
+    "Normal".equals(finalLabel)) {
 
-    } else if (label.contains("weak") ||
-               label.contains("μέτρια")) {
+    logLabelOkValue(condLabel, finalLabel);
 
-        logLabelWarnValue(condLabel, finalLabel);
+} else if ("Weak".equals(finalLabel)) {
 
-    } else if (label.contains("critical") ||
-               label.contains("severe") ||
-               label.contains("έντονη")) {
+    logLabelWarnValue(condLabel, finalLabel);
 
-        logLabelErrorValue(condLabel, finalLabel);
+} else if ("Critical".equals(finalLabel)) {
 
-    } else {
+    logLabelErrorValue(condLabel, finalLabel);
 
-        logLabelValue(condLabel, finalLabel);
-    }
+} else {
 
+    logLabelValue(condLabel, finalLabel);
+}
+
+    // ----------------------------------------------------
+    // COLLAPSE
+    // ----------------------------------------------------
     logLabelValue(
             gr ? "Κατάρρευση τάσης" : "Voltage collapse",
             collapseRisk[0]
@@ -15335,6 +15354,9 @@ private void lab14LogFinalScore(
                     : (gr ? "Δεν εντοπίστηκε" : "Not detected")
     );
 
+    // ----------------------------------------------------
+    // SWELLING
+    // ----------------------------------------------------
     if (smartSwelling) {
 
         logLabelWarnValue(
@@ -15354,6 +15376,9 @@ private void lab14LogFinalScore(
         );
     }
 
+    // ----------------------------------------------------
+    // CALIBRATION
+    // ----------------------------------------------------
     logLabelValue(
             gr ? "Απόκλιση βαθμονόμησης" : "Calibration drift",
             calibrationDrift[0]
@@ -15361,6 +15386,9 @@ private void lab14LogFinalScore(
                     : (gr ? "Κανονική" : "Normal")
     );
 
+    // ----------------------------------------------------
+    // SYSTEM LIMIT
+    // ----------------------------------------------------
     if (lab14_systemLimited[0]) {
 
         logLabelWarnValue(
@@ -17300,46 +17328,41 @@ if (finalScore < 0) finalScore = 0;
 if (finalScore > 100) finalScore = 100;
 
 
-// ----------------------------------------------------
-// FINAL LABEL (ONE SOURCE OF TRUTH)
-// ----------------------------------------------------
+if (!res.validDrain || "Unknown".equals(batteryTruth)) {
 
-String finalLabel;
-
-if (!validDrain || "Unknown".equals(batteryTruth)) {
-
-    finalLabel = "Unknown";
+    res.label = "Unknown";
 
 } else {
 
-    finalLabel = batteryTruth;
+    res.label = batteryTruth;
 
     // hard downgrade
     if (collapseRisk[0]) {
-        finalLabel = downgradeBatteryTruth(finalLabel);
+        res.label = downgradeBatteryTruth(res.label);
     }
 
     if (smartSwelling) {
-        finalLabel = downgradeBatteryTruth(finalLabel);
+        res.label = downgradeBatteryTruth(res.label);
     }
 
     // soft downgrade
     if (calibrationDrift[0]) {
-        if ("Excellent".equals(finalLabel) || "Good".equals(finalLabel)) {
-            finalLabel = downgradeBatteryTruth(finalLabel);
+        if ("Excellent".equals(res.label) || "Good".equals(res.label)) {
+            res.label = downgradeBatteryTruth(res.label);
         }
     }
 
     if (!Float.isNaN(powerStabilityFactor[0]) &&
         powerStabilityFactor[0] < 60f) {
-        if ("Excellent".equals(finalLabel) || "Good".equals(finalLabel)) {
-            finalLabel = downgradeBatteryTruth(finalLabel);
+
+        if ("Excellent".equals(res.label) || "Good".equals(res.label)) {
+            res.label = downgradeBatteryTruth(res.label);
         }
     }
 
-    if (lab14BatteryBehaviourWarning) {
-        if ("Excellent".equals(finalLabel) || "Good".equals(finalLabel)) {
-            finalLabel = downgradeBatteryTruth(finalLabel);
+    if (res.batteryBehaviourWarning) {
+        if ("Excellent".equals(res.label) || "Good".equals(res.label)) {
+            res.label = downgradeBatteryTruth(res.label);
         }
     }
 }
@@ -17349,8 +17372,6 @@ if (!validDrain || "Unknown".equals(batteryTruth)) {
 // ----------------------------------------------------
 
 String healthClass = "N/A";
-
-final String finalLabelF = finalLabel;
 
 final float voltageStartFinal = voltageStart;
 final long startMahFinal = startMah;
@@ -17375,6 +17396,24 @@ final float startBatteryTempFinal = tempStart;
 final float endBatteryTempFinal = tempEnd;
 
 final float[] powerMilliWattRef = {powerMilliWatt};
+
+Lab14Result res = new Lab14Result();
+
+res.validDrain = validDrain;
+res.systemLimited = lab14_systemLimited[0];
+
+res.drainPercentPerHour = drainPercentPerHour;
+res.mahPerHour = mahPerHour;
+
+res.drainMah = drainMah;
+res.durationMs = dtMs;
+
+res.tempStart = tempStart;
+res.tempEnd = tempEnd;
+
+res.powerMw = powerMilliWatt;
+
+res.batteryBehaviourWarning = lab14BatteryBehaviourWarning;
 
 runOnUiThread(() -> {
 
@@ -17509,7 +17548,7 @@ if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 500f) {
     }
 
     // drain penalty (unstable discharge)
-    if (validDrainF && !Double.isNaN(drainPercentPerHourF)) {
+    if (validDrain && !Double.isNaN(drainPercentPerHour)) {
 
         if (drainPercentPerHourF > 45) base -= 15f;
         else if (drainPercentPerHourF > 30) base -= 8f;
@@ -17530,9 +17569,9 @@ if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 500f) {
         : Math.min(powerStabilityFactor[0], base);
 }
                             
-                            if (!Float.isNaN(powerStabilityFactor[0]) &&
-                                validDrainF &&
-                                !lab14_systemLimited[0]) {
+if (!Float.isNaN(powerStabilityFactor[0]) &&
+    validDrain &&
+    !lab14_systemLimited[0]) {
 
                                 String pLabel;
 
@@ -17605,9 +17644,9 @@ if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
     stressSignature[0] = base;
 }
 
-                            if (!Float.isNaN(stressSignature[0]) &&
-                                validDrainF &&
-                                !lab14_systemLimited[0]) {
+if (!Float.isNaN(stressSignature[0]) &&
+    validDrain &&
+    !lab14_systemLimited[0]) {
 
                                 String sLabel;
 
@@ -17684,7 +17723,7 @@ if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
 }
 
                             if (!Float.isNaN(cellElasticityIndex[0]) &&
-                                validDrainF &&
+                                validDrain &&
                                 !lab14_systemLimited[0]) {
 
                                 String eLabel;
@@ -17907,68 +17946,66 @@ if (batteryBehaviourWarningF) {
     // MAIN CALL (FIXED)
     // ------------------------------------------------
    
-    final double safeDrainFinal =
-            (Double.isNaN(drainPercentPerHourF) || drainPercentPerHourF < 0)
-                    ? 0
-                    : drainPercentPerHourF;
+    double safeDrain =
+        (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0)
+                ? 0
+                : drainPercentPerHour;
 
     lab14LogStressResult(
-        gr,
-        sagAvg,
-        voltageStartFinal,
-        voltageUnderLoad[0],
-        voltageRecovery,
-        voltageRecoverySpeed,
-        voltageStability[0],
-        internalResistance,
-        estimatedESRF,
-        thermalImpedance[0],
-        energyEfficiencyF,
-        startMahFinal,
-        endMahF,
-        drainMahFinalLong,
-        dtMsF,
-        mahPerHourF,
-        safeDrainFinal,
-        validDrainF,
-        startBatteryTempFinal,
-        endBatteryTempFinal,
-        lab14_systemLimited,
-        collapseRisk,
-        smartSwellingF,
-        calibrationDrift
+    gr,
+    sagAvg,
+    voltageStart,
+    voltageUnderLoad[0],
+    voltageRecovery,
+    voltageRecoverySpeed,
+    voltageStability[0],
+    internalResistance,
+    estimatedESR,
+    thermalImpedance[0],
+    energyEfficiency,
+    startMah,
+    endMah,
+    drainMah,
+    dtMs,
+    mahPerHour,
+    safeDrain,
+    validDrain,
+    tempStart,
+    tempEnd,
+    lab14_systemLimited,
+    collapseRisk,
+    smartSwelling,
+    calibrationDrift
 );
 
-    final boolean systemLimitedF = lab14_systemLimited[0];
-    
     // ------------------------------------------------
     // PARTIAL / FULL MODE DECISION
     // ------------------------------------------------
 
-    boolean partial = partialModeFinal;
+    boolean partial = (drainMah < 5);
 
     if (partial) {
 
         lab14LogPartialMode(
                 gr,
                 lab14_systemLimited,
-                validDrainF,
-                confF
+                validDrain,
+                conf
         );
 
     } else {
 
         lab14LogAging(
                 gr,
-                agingIndexF,
-                agingInterpF,
-                agingF,
+                agingIndex,
+                agingInterp,
+                aging,
                 Float.NaN,
                 drainPercentPerHourF,
                 internalResistance
         );
 
-        if (systemLimitedF) {
+        if (systemLimited) {
             logWarn(gr
                     ? "Η μέτρηση έγινε με περιορισμό από το σύστημα. Το αποτέλεσμα είναι ενδεικτικό."
                     : "System limiter detected. Result is indicative.");
@@ -17979,13 +18016,13 @@ if (batteryBehaviourWarningF) {
         // ------------------------------------------------
 
         // FINAL SCORE
-        lab14LogFinalScore(
-        gr,
-        finalLabelF,
-        collapseRisk,
-        smartSwellingF,
-        calibrationDrift,
-        lab14_systemLimited
+lab14LogFinalScore(
+    gr,
+    res.label,
+    collapseRisk,
+    smartSwelling,
+    calibrationDrift,
+    lab14_systemLimited
 );
 
         // ------------------------------------------------
@@ -17995,18 +18032,18 @@ if (batteryBehaviourWarningF) {
         SharedPreferences p = getSharedPreferences(LAB14_PREFS, MODE_PRIVATE);
 
         lab14LogSave(
-                gr,
-                p,
-                variabilityDetected,
-                collapseRisk,
-                smartSwellingF,
-                calibrationDrift,
-                false,
-                finalScoreF,
-                agingIndexF,
-                partial,
-                lab14_systemLimited
-        );
+    gr,
+    p,
+    variabilityDetected,
+    collapseRisk,
+    smartSwelling,
+    calibrationDrift,
+    false,
+    finalScore,
+    lab14AgingIndex,
+    partial,
+    lab14_systemLimited
+);
 
         SharedPreferences.Editor e = p.edit();
 
@@ -18021,9 +18058,9 @@ if (batteryBehaviourWarningF) {
         // RUN COUNT
         // ------------------------------------------------
 
-        if (validDrainF && !systemLimitedF) {
+        if (validDrain && !lab14_systemLimited[0]) {
 
-            incLab14RunCount(validDrainF);
+            incLab14RunCount(validDrain);
 
         } else {
 
@@ -18038,9 +18075,9 @@ if (batteryBehaviourWarningF) {
 
         lab14LogReliabilitySummary(
                 gr,
-                validDrainF,
+                validDrain,
                 lab14_systemLimited,
-                confF
+                conf
         );
     }
 
@@ -20603,6 +20640,27 @@ private int getBatteryTruthColorMode(String label) {
         default:
             return 0; // neutral
     }
+}
+
+private static class Lab14Result {
+
+    String label;
+
+    boolean validDrain;
+    boolean systemLimited;
+
+    double drainPercentPerHour;
+    double mahPerHour;
+
+    long drainMah;
+    long durationMs;
+
+    float tempStart;
+    float tempEnd;
+
+    float powerMw;
+
+    boolean batteryBehaviourWarning;
 }
 
 //=============================================================
