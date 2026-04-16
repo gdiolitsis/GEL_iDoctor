@@ -17558,6 +17558,11 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
     String sag2Text = Float.isNaN(s2)
             ? "N/A"
             : String.format(Locale.US, "%.3f V", s2);
+            
+boolean sagValid = !(
+    (Float.isNaN(sag1[0]) || sag1[0] <= 0.005f) &&
+    (Float.isNaN(sag2[0]) || sag2[0] <= 0.005f)
+);
 
     if (!sagValid) {
 
