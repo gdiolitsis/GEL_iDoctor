@@ -14650,6 +14650,17 @@ if (sag > 0 &&
         resistanceCheckMilliOhm = Float.NaN;
 }
 
+boolean sagValid;
+
+if ((Float.isNaN(sag1[0]) || sag1[0] <= 0.005f) &&
+    (Float.isNaN(sag2[0]) || sag2[0] <= 0.005f)) {
+
+    sagValid = false;
+
+} else {
+    sagValid = true;
+}
+
 // ----------------------------------------------------
 // 🔴 BATTERY TRUTH (FINAL ENGINE)
 // ----------------------------------------------------
@@ -14738,15 +14749,6 @@ if (!Float.isNaN(voltageRecovery[0])) {
 // -----------------------------
 // 🔴 SAG + CELL BEHAVIOUR
 // -----------------------------
-
-boolean sagValid = true;
-
-// 🔴 χρησιμοποιούμε τα fast sag values
-if ((Float.isNaN(sag1Ref[0]) || sag1Ref[0] <= 0.005f) &&
-    (Float.isNaN(sag2Ref[0]) || sag2Ref[0] <= 0.005f)) {
-
-    sagValid = false;
-}
 
 String sagText;
 
@@ -17557,14 +17559,6 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
             ? "N/A"
             : String.format(Locale.US, "%.3f V", s2);
 
-boolean sagValid = true;
-
-if ((Float.isNaN(sag1Ref[0]) || sag1Ref[0] <= 0.005f) &&
-    (Float.isNaN(sag2Ref[0]) || sag2Ref[0] <= 0.005f)) {
-
-    sagValid = false;
-}
-
     if (!sagValid) {
 
     logLabelWarnValue(
@@ -20300,8 +20294,8 @@ private void runFastSagCapture(
         final float[] vLoad1Ref,
         final float[] vRecoverRef,
         final float[] vLoad2Ref,
-        final float[] sag1Ref,
-        final float[] sag2Ref,
+        final float[] sag1,
+        final float[] sag2,
         final float[] powerMilliWattRef,
         final float[] estimatedCurrentMaRef
 ) {
@@ -20310,8 +20304,8 @@ private void runFastSagCapture(
     vLoad1Ref[0] = Float.NaN;
     vRecoverRef[0] = Float.NaN;
     vLoad2Ref[0] = Float.NaN;
-    sag1Ref[0] = Float.NaN;
-    sag2Ref[0] = Float.NaN;
+    sag1[0] = Float.NaN;
+    sag2[0] = Float.NaN;
 
     // ----------------------------------------------------
     // BASELINE
@@ -20480,25 +20474,25 @@ private void runFastSagCapture(
     if (!Float.isNaN(voltageStartRef[0]) &&
         !Float.isNaN(vLoad1Ref[0])) {
 
-        sag1Ref[0] = Math.max(0f, voltageStartRef[0] - vLoad1Ref[0]);
+        sag1[0] = Math.max(0f, voltageStartRef[0] - vLoad1Ref[0]);
     }
 
     if (!Float.isNaN(vRecoverRef[0]) &&
         !Float.isNaN(vLoad2Ref[0])) {
 
-        sag2Ref[0] = Math.max(0f, vRecoverRef[0] - vLoad2Ref[0]);
+        sag2[0] = Math.max(0f, vRecoverRef[0] - vLoad2Ref[0]);
     }
 
     // fail-safe fallback
-    if (Float.isNaN(sag1Ref[0]) || sag1Ref[0] <= 0f) {
+    if (Float.isNaN(sag1[0]) || sag1[0] <= 0f) {
         if (!Float.isNaN(voltageStartRef[0]) && !Float.isNaN(vLoad2Ref[0])) {
-            sag1Ref[0] = Math.max(0f, voltageStartRef[0] - vLoad2Ref[0]);
+            sag1[0] = Math.max(0f, voltageStartRef[0] - vLoad2Ref[0]);
         }
     }
 
-    if (Float.isNaN(sag2Ref[0]) || sag2Ref[0] <= 0f) {
-        if (!Float.isNaN(sag1Ref[0])) {
-            sag2Ref[0] = sag1Ref[0];
+    if (Float.isNaN(sag2[0]) || sag2[0] <= 0f) {
+        if (!Float.isNaN(sag1[0])) {
+            sag2[0] = sag1[0];
         }
     }
 
@@ -20527,8 +20521,8 @@ private void runFastSagCapture(
             Float.isNaN(vLoad1Ref[0]) ? -1f : vLoad1Ref[0],
             Float.isNaN(vLoad2Ref[0]) ? -1f : vLoad2Ref[0],
             Float.isNaN(vRecoverRef[0]) ? -1f : vRecoverRef[0],
-            Float.isNaN(sag1Ref[0]) ? -1f : sag1Ref[0],
-            Float.isNaN(sag2Ref[0]) ? -1f : sag2Ref[0]
+            Float.isNaN(sag1[0]) ? -1f : sag1[0],
+            Float.isNaN(sag2[0]) ? -1f : sag2[0]
     ));
 }
 
