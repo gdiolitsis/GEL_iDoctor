@@ -57,6 +57,7 @@ import android.provider.Settings;
 // ============================================================
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.ImageFormat;
 import android.text.Html;
 import android.text.InputType;
 import android.text.Spannable;
@@ -69,6 +70,8 @@ import android.text.style.StyleSpan;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
+import android.util.Size;
+import android.util.Range;
 import android.view.Display;
 import android.view.View;
 import android.view.WindowManager;
@@ -123,6 +126,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.hardware.camera2.params.StreamConfigurationMap;
 
 // ============================================================
 // ANDROID LOCATION / NFC / TELEPHONY
@@ -470,6 +474,35 @@ setupSection(findViewById(R.id.headerOtherPeripherals), txtOtherPeripherals, ico
 }
 
 // 🔥 END onCreate()
+
+private void appendAccessInstructions(StringBuilder sb, String type) {
+    if (sb == null) return;
+
+    sb.append("\n");
+    sb.append("Access Info       : ");
+
+    switch (type) {
+        case "camera":
+            sb.append("Camera permission required\n");
+            sb.append("Settings → Apps → Permissions → Camera\n");
+            break;
+
+        case "sensors":
+            sb.append("Sensor access is system managed\n");
+            break;
+
+        default:
+            sb.append("Additional permissions may be required\n");
+    }
+}
+
+private String thermalState(float tempC) {
+    if (tempC < 30f) return "COOL";
+    if (tempC < 45f) return "NORMAL";
+    if (tempC < 60f) return "WARM";
+    if (tempC < 75f) return "HOT";
+    return "CRITICAL";
+}
 
 private String buildSection(String title, Map<String, String> data) {
 
