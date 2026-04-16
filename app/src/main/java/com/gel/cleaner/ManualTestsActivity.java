@@ -14651,45 +14651,83 @@ if (sag > 0 &&
 }
 
 // ----------------------------------------------------
-// 🔴 BATTERY TRUTH (FUSION)
+// 🔴 BATTERY TRUTH (FINAL ENGINE)
 // ----------------------------------------------------
-String batteryTruth = sagLabel;
+String batteryTruth;
 
-// resistance (αν υπάρχει)
-if (!Float.isNaN(resistanceCheckMilliOhm)) {
+if (!sagValid) {
 
-    if (resistanceCheckMilliOhm > 180f) {
+    batteryTruth = "Unknown";
 
-        if ("Excellent".equals(batteryTruth)) {
-            batteryTruth = "Normal";
-        } else if ("Normal".equals(batteryTruth)) {
-            batteryTruth = "Weak";
+} else {
+
+    // 🔴 BASE (μόνο sag)
+    if (sag <= 0.05f) {
+        batteryTruth = "Excellent";
+    } else if (sag <= 0.10f) {
+        batteryTruth = "Good";
+    } else if (sag <= 0.18f) {
+        batteryTruth = "Normal";
+    } else if (sag <= 0.30f) {
+        batteryTruth = "Weak";
+    } else {
+        batteryTruth = "Critical";
+    }
+
+    // ----------------------------------------------------
+    // 🔴 RESISTANCE modifier
+    // ----------------------------------------------------
+    if (!Float.isNaN(resistanceCheckMilliOhm)) {
+
+        if (resistanceCheckMilliOhm > 180f) {
+            batteryTruth = downgrade(batteryTruth);
         }
+        else if (resistanceCheckMilliOhm > 120f) {
+            if ("Excellent".equals(batteryTruth)) {
+                batteryTruth = downgrade(batteryTruth);
+            }
+        }
+    }
 
-    } else if (resistanceCheckMilliOhm > 120f) {
+    // ----------------------------------------------------
+    // 🔴 RECOVERY modifier
+    // ----------------------------------------------------
+    if (!Float.isNaN(voltageRecovery[0])) {
 
-        if ("Excellent".equals(batteryTruth)) {
-            batteryTruth = "Normal";
+        if (voltageRecovery[0] < 0.03f) {
+            batteryTruth = downgrade(batteryTruth);
+        }
+        else if (voltageRecovery[0] < 0.06f) {
+            if ("Excellent".equals(batteryTruth)) {
+                batteryTruth = downgrade(batteryTruth);
+            }
         }
     }
 }
 
-// recovery (αν υπάρχει)
+// ----------------------------------------------------
+// 🔻 DOWNGRADE ENGINE (STRICT)
+// ----------------------------------------------------
+
+if (!Float.isNaN(resistanceCheckMilliOhm)) {
+
+    if (resistanceCheckMilliOhm > 180f) {
+        batteryTruth = downgradeBatteryLevel(batteryTruth);
+    }
+
+    if (resistanceCheckMilliOhm > 240f) {
+        batteryTruth = downgradeBatteryLevel(batteryTruth);
+    }
+}
+
 if (!Float.isNaN(voltageRecovery[0])) {
 
     if (voltageRecovery[0] < 0.03f) {
+        batteryTruth = downgradeBatteryLevel(batteryTruth);
+    }
 
-        if ("Excellent".equals(batteryTruth)) {
-            batteryTruth = "Normal";
-        } else if ("Normal".equals(batteryTruth)) {
-            batteryTruth = "Weak";
-        }
-
-    } else if (voltageRecovery[0] < 0.06f) {
-
-        if ("Excellent".equals(batteryTruth)) {
-            batteryTruth = "Normal";
-        }
+    if (voltageRecovery[0] < 0.015f) {
+        batteryTruth = downgradeBatteryLevel(batteryTruth);
     }
 }
 
@@ -14700,55 +14738,110 @@ if (!Float.isNaN(voltageRecovery[0])) {
 // -----------------------------
 // 🔴 SAG + CELL BEHAVIOUR
 // -----------------------------
-String sagText = String.format(
-        Locale.US,
-        "%.3f V (%s, %d%%)",
-        sag,
-        batteryTruth,
-        level
-);
 
-if ("Excellent".equals(batteryTruth)) {
+boolean sagValid = true;
 
-    logLabelOkValue(
+// 🔴 χρησιμοποιούμε τα fast sag values
+if ((Float.isNaN(sag1Ref[0]) || sag1Ref[0] <= 0.005f) &&
+    (Float.isNaN(sag2Ref[0]) || sag2Ref[0] <= 0.005f)) {
+
+    sagValid = false;
+}
+
+String sagText;
+
+if (!sagValid) {
+
+    sagText = gr ? "Μη μετρήσιμη" : "Not measurable";
+
+    logLabelWarnValue(
             gr ? "Πτώση τάσης υπό φορτίο"
                : "Voltage sag under load",
             sagText
     );
 
-    logLabelOkValue(
+    logLabelWarnValue(
             gr ? "Συνολική συμπεριφορά στοιχείου"
                : "Cell behaviour",
-            batteryTruth
-    );
-
-} else if ("Normal".equals(batteryTruth)) {
-
-    logLabelValue(
-            gr ? "Πτώση τάσης υπό φορτίο"
-               : "Voltage sag under load",
-            sagText
-    );
-
-    logLabelValue(
-            gr ? "Συνολική συμπεριφορά στοιχείου"
-               : "Cell behaviour",
-            batteryTruth
+            gr ? "Άγνωστη (δεν μετρήθηκε sag)"
+               : "Unknown (sag not measurable)"
     );
 
 } else {
 
-    logLabelWarnValue(
-            gr ? "Πτώση τάσης υπό φορτίο"
-               : "Voltage sag under load",
-            sagText
+    sagText = String.format(
+            Locale.US,
+            "%.3f V (%s, %d%%)",
+            sag,
+            batteryTruth,
+            level
     );
 
-    logLabelWarnValue(
-            gr ? "Συνολική συμπεριφορά στοιχείου"
-               : "Cell behaviour",
-            batteryTruth
-    );
+    // 🔴 GREEN ZONE (healthy)
+    if ("Excellent".equals(batteryTruth) ||
+        "Good".equals(batteryTruth) ||
+        "Normal".equals(batteryTruth)) {
+
+        logLabelOkValue(
+                gr ? "Πτώση τάσης υπό φορτίο"
+                   : "Voltage sag under load",
+                sagText
+        );
+
+        logLabelOkValue(
+                gr ? "Συνολική συμπεριφορά στοιχείου"
+                   : "Cell behaviour",
+                batteryTruth
+        );
+
+    }
+    // 🟠 WARNING
+    else if ("Weak".equals(batteryTruth)) {
+
+        logLabelWarnValue(
+                gr ? "Πτώση τάσης υπό φορτίο"
+                   : "Voltage sag under load",
+                sagText
+        );
+
+        logLabelWarnValue(
+                gr ? "Συνολική συμπεριφορά στοιχείου"
+                   : "Cell behaviour",
+                batteryTruth
+        );
+
+    }
+    // 🔴 CRITICAL
+    else if ("Critical".equals(batteryTruth)) {
+
+        logLabelErrorValue(
+                gr ? "Πτώση τάσης υπό φορτίο"
+                   : "Voltage sag under load",
+                sagText
+        );
+
+        logLabelErrorValue(
+                gr ? "Συνολική συμπεριφορά στοιχείου"
+                   : "Cell behaviour",
+                batteryTruth
+        );
+
+    }
+    // fallback
+    else {
+
+        logLabelValue(
+                gr ? "Πτώση τάσης υπό φορτίο"
+                   : "Voltage sag under load",
+                sagText
+        );
+
+        logLabelValue(
+                gr ? "Συνολική συμπεριφορά στοιχείου"
+                   : "Cell behaviour",
+                batteryTruth
+        );
+    }
 }
 
 // -----------------------------
@@ -15028,7 +15121,7 @@ String drainText =
 
 
 // =====================================================
-// 🔴 FINAL SUMMARY (FIXED)
+// 🔴 FINAL SUMMARY (CLEAN — NO CONFLICT)
 // =====================================================
 
 String summary = String.format(
@@ -15037,29 +15130,35 @@ String summary = String.format(
         ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %s\nΠτώση τάσης: %s\nΘερμική μεταβολή: %s\nΑποφόρτιση: %s"
         : "Status: %s\nBehaviour: %s\nPower: %s\nVoltage sag: %s\nThermal delta: %s\nDrain: %s",
 
-        batteryTruth,
-        sagLabel,
+        batteryTruth,   // 🔴 MAIN TRUTH
+        batteryTruth,   // 🔴 SAME — no contradictions
         powerText,
         sagTextFinal,
         tempText,
         drainText
 );
 
-// 🔴 COLOR BASED ON SEVERITY (CLEAN)
+// 🔴 COLOR BASED ON SEVERITY (FINAL)
 
 String summaryLabel = gr ? "Σύνοψη" : "Summary";
 
-if ("Excellent".equals(batteryTruth)) {
+if ("Excellent".equals(batteryTruth) ||
+    "Good".equals(batteryTruth) ||
+    "Normal".equals(batteryTruth)) {
 
     logLabelOkValue(summaryLabel, summary);
 
-} else if ("Normal".equals(batteryTruth)) {
+} else if ("Weak".equals(batteryTruth)) {
 
-    logLabelValue(summaryLabel, summary);
+    logLabelWarnValue(summaryLabel, summary);
+
+} else if ("Critical".equals(batteryTruth)) {
+
+    logLabelErrorValue(summaryLabel, summary);
 
 } else {
 
-    logLabelWarnValue(summaryLabel, summary);
+    logLabelValue(summaryLabel, summary);
 }
 
         // =====================================================
@@ -17458,11 +17557,30 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
             ? "N/A"
             : String.format(Locale.US, "%.3f V", s2);
 
+boolean sagValid = true;
+
+if ((Float.isNaN(sag1Ref[0]) || sag1Ref[0] <= 0.005f) &&
+    (Float.isNaN(sag2Ref[0]) || sag2Ref[0] <= 0.005f)) {
+
+    sagValid = false;
+}
+
+    if (!sagValid) {
+
+    logLabelWarnValue(
+            gr ? "Γρήγορη δοκιμή καταπόνησης"
+               : "Fast stress test",
+            gr ? "Μη μετρήσιμη" : "Not measurable"
+    );
+
+} else {
+
     logLabelValue(
             gr ? "Γρήγορη δοκιμή καταπόνησης"
                : "Fast stress test",
             "Sag1=" + sag1Text + " | Sag2=" + sag2Text
     );
+}
 
     if ((!Float.isNaN(s1) && s1 > 0.35f) ||
         (!Float.isNaN(s2) && s2 > 0.40f)) {
@@ -20549,6 +20667,44 @@ private void stopVibrationStress() {
             vibrator.cancel();
         }
     } catch (Throwable ignore) {}
+}
+
+private String downgradeBatteryLevel(String level) {
+
+    if (level == null) return "Unknown";
+
+    switch (level) {
+        case "Excellent": return "Good";
+        case "Good":      return "Normal";
+        case "Normal":    return "Weak";
+        case "Weak":      return "Critical";
+        default:          return level;
+    }
+}
+
+private String classifySag(float sag) {
+
+    if (Float.isNaN(sag)) return "Unknown";
+
+    if (sag <= 0.05f) return "Excellent";
+    if (sag <= 0.10f) return "Good";
+    if (sag <= 0.18f) return "Normal";
+    if (sag <= 0.30f) return "Weak";
+
+    return "Critical";
+}
+
+private String downgrade(String label) {
+
+    if (label == null) return "Unknown";
+
+    switch (label) {
+        case "Excellent": return "Good";
+        case "Good":      return "Normal";
+        case "Normal":    return "Weak";
+        case "Weak":      return "Critical";
+        default:          return label;
+    }
 }
 
 //=============================================================
