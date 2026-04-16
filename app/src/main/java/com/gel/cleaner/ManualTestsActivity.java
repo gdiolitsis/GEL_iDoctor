@@ -15048,32 +15048,31 @@ if (!Float.isNaN(energyEfficiency)) {
 // =====================================================
 String recommendation;
 
-// 🔴 HARD FAIL
-if (collapseRisk[0] || smartSwelling) {
+if ("Unknown".equals(finalLabel)) {
 
     recommendation = gr
-            ? "Συνιστάται τεχνικός έλεγχος ή έλεγχος μπαταρίας σύντομα."
-            : "Battery service or technical inspection is recommended soon.";
-}
+            ? "Ανεπαρκή δεδομένα για αξιόπιστη διάγνωση."
+            : "Insufficient data for reliable diagnosis.";
 
-// 🔴 WEAK BEHAVIOUR
-else if ("Weak".equals(batteryTruth)) {
+} else if ("Critical".equals(finalLabel)) {
+
+    recommendation = gr
+            ? "Συνιστάται άμεσος τεχνικός έλεγχος της μπαταρίας."
+            : "Immediate battery service inspection is recommended.";
+
+} else if ("Weak".equals(finalLabel)) {
 
     recommendation = gr
             ? "Συνιστάται παρακολούθηση της συμπεριφοράς της μπαταρίας και επανέλεγχος."
             : "Battery behaviour should be monitored and retested.";
-}
 
-// 🔴 CALIBRATION ONLY
-else if (calibrationDrift[0]) {
+} else if (calibrationDrift[0]) {
 
     recommendation = gr
             ? "Η μπαταρία φαίνεται λειτουργική, αλλά προτείνεται επαναβαθμονόμηση."
             : "Battery appears functional, but recalibration is recommended.";
-}
 
-// 🔴 OK
-else {
+} else {
 
     recommendation = gr
             ? "Η μπαταρία φαίνεται να λειτουργεί φυσιολογικά."
@@ -15086,11 +15085,13 @@ else {
 
 String recLabel = gr ? "Σύσταση" : "Recommendation";
 
-if (collapseRisk[0] || smartSwelling) {
+if ("Critical".equals(finalLabel)) {
 
     logLabelErrorValue(recLabel, recommendation);
 
-} else if ("Weak".equals(batteryTruth) || calibrationDrift[0]) {
+} else if ("Weak".equals(finalLabel) ||
+           "Unknown".equals(finalLabel) ||
+           calibrationDrift[0]) {
 
     logLabelWarnValue(recLabel, recommendation);
 
@@ -15126,35 +15127,47 @@ String drainText =
 // 🔴 FINAL SUMMARY (CLEAN — NO CONFLICT)
 // =====================================================
 
-String summary = String.format(
-        Locale.US,
-        gr
-        ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %s\nΠτώση τάσης: %s\nΘερμική μεταβολή: %s\nΑποφόρτιση: %s"
-        : "Status: %s\nBehaviour: %s\nPower: %s\nVoltage sag: %s\nThermal delta: %s\nDrain: %s",
+String summary;
 
-        batteryTruth,   // 🔴 MAIN TRUTH
-        batteryTruth,   // 🔴 SAME — no contradictions
-        powerText,
-        sagTextFinal,
-        tempText,
-        drainText
-);
+if ("Unknown".equals(finalLabel)) {
+
+    summary = gr
+            ? "Ανεπαρκή δεδομένα για διάγνωση."
+            : "Insufficient data for diagnosis.";
+
+} else {
+
+    summary = String.format(
+            Locale.US,
+            gr
+            ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %s\nΠτώση τάσης: %s\nΘερμική μεταβολή: %s\nΑποφόρτιση: %s"
+            : "Status: %s\nBehaviour: %s\nPower: %s\nVoltage sag: %s\nThermal delta: %s\nDrain: %s",
+
+            finalLabel,
+            finalLabel,
+            powerText,
+            sagTextFinal,
+            tempText,
+            drainText
+    );
+}
 
 // 🔴 COLOR BASED ON SEVERITY (FINAL)
 
 String summaryLabel = gr ? "Σύνοψη" : "Summary";
 
-if ("Excellent".equals(batteryTruth) ||
-    "Good".equals(batteryTruth) ||
-    "Normal".equals(batteryTruth)) {
+if ("Excellent".equals(finalLabel) ||
+    "Good".equals(finalLabel) ||
+    "Normal".equals(finalLabel)) {
 
     logLabelOkValue(summaryLabel, summary);
 
-} else if ("Weak".equals(batteryTruth)) {
+} else if ("Weak".equals(finalLabel) ||
+           "Unknown".equals(finalLabel)) {
 
     logLabelWarnValue(summaryLabel, summary);
 
-} else if ("Critical".equals(batteryTruth)) {
+} else if ("Critical".equals(finalLabel)) {
 
     logLabelErrorValue(summaryLabel, summary);
 
@@ -15275,9 +15288,7 @@ else
 // ============================================================
 private void lab14LogFinalScore(
         boolean gr,
-        int finalScore,
         String finalLabel,
-        String healthClass,
         boolean[] collapseRisk,
         boolean smartSwelling,
         boolean[] calibrationDrift,
@@ -15289,34 +15300,34 @@ private void lab14LogFinalScore(
     logInfo(gr ? "Τελικό αποτέλεσμα" : "Final result");
     logLine();
 
-    // =====================================================
-    // VERDICT (χωρίς αριθμούς)
-    // =====================================================
     String condLabel = gr ? "Κατάσταση μπαταρίας" : "Battery condition";
+    String label = finalLabel != null ? finalLabel.toLowerCase() : "";
 
-// 🔥 COLOR MAPPING (UPDATED)
-if (finalLabel.contains("Excellent") ||
-    finalLabel.contains("Άριστη") ||
-    finalLabel.contains("Normal") ||
-    finalLabel.contains("Κανονική")) {
+    if (label.contains("excellent") ||
+        label.contains("good") ||
+        label.contains("normal") ||
+        label.contains("άριστη") ||
+        label.contains("καλή") ||
+        label.contains("φυσιολογ")) {
 
-    logLabelOkValue(condLabel, finalLabel);
+        logLabelOkValue(condLabel, finalLabel);
 
-} else if (finalLabel.contains("Wear") ||
-           finalLabel.contains("φθορά")) {
+    } else if (label.contains("weak") ||
+               label.contains("μέτρια")) {
 
-    logLabelWarnValue(condLabel, finalLabel);
+        logLabelWarnValue(condLabel, finalLabel);
 
-} else {
+    } else if (label.contains("critical") ||
+               label.contains("severe") ||
+               label.contains("έντονη")) {
 
-    logLabelErrorValue(condLabel, finalLabel);
-}
+        logLabelErrorValue(condLabel, finalLabel);
 
-    // =====================================================
-    // CHECKS
-    // =====================================================
+    } else {
 
-    // COLLAPSE
+        logLabelValue(condLabel, finalLabel);
+    }
+
     logLabelValue(
             gr ? "Κατάρρευση τάσης" : "Voltage collapse",
             collapseRisk[0]
@@ -15324,29 +15335,25 @@ if (finalLabel.contains("Excellent") ||
                     : (gr ? "Δεν εντοπίστηκε" : "Not detected")
     );
 
-    // SMART SWELLING OUTPUT
-if (smartSwelling) {
+    if (smartSwelling) {
 
-    logLabelWarnValue(
-            gr ? "Διόγκωση μπαταρίας"
-               : "Battery swelling",
-            gr
-                    ? "Πιθανές ενδείξεις — απαιτείται έλεγχος"
-                    : "Possible indicators — verification recommended"
-    );
+        logLabelWarnValue(
+                gr ? "Διόγκωση μπαταρίας" : "Battery swelling",
+                gr
+                        ? "Πιθανές ενδείξεις — απαιτείται έλεγχος"
+                        : "Possible indicators — verification recommended"
+        );
 
-} else {
+    } else {
 
-    logLabelValue(
-            gr ? "Διόγκωση μπαταρίας"
-               : "Battery swelling",
-            gr
-                    ? "Δεν εντοπίστηκαν αξιόπιστες ενδείξεις"
-                    : "No reliable indicators detected"
-    );
-}
+        logLabelValue(
+                gr ? "Διόγκωση μπαταρίας" : "Battery swelling",
+                gr
+                        ? "Δεν εντοπίστηκαν αξιόπιστες ενδείξεις"
+                        : "No reliable indicators detected"
+        );
+    }
 
-    // CALIBRATION
     logLabelValue(
             gr ? "Απόκλιση βαθμονόμησης" : "Calibration drift",
             calibrationDrift[0]
@@ -15354,12 +15361,10 @@ if (smartSwelling) {
                     : (gr ? "Κανονική" : "Normal")
     );
 
-    // SYSTEM LIMIT
     if (lab14_systemLimited[0]) {
 
         logLabelWarnValue(
-                gr ? "Περιορισμός συστήματος"
-                   : "System limitation",
+                gr ? "Περιορισμός συστήματος" : "System limitation",
                 gr
                         ? "Το BMS περιόρισε το ρεύμα — μειωμένη αξιοπιστία"
                         : "BMS current limiting detected — reduced accuracy"
@@ -17296,177 +17301,56 @@ if (finalScore > 100) finalScore = 100;
 
 
 // ----------------------------------------------------
-// LABEL
+// FINAL LABEL (ONE SOURCE OF TRUTH)
 // ----------------------------------------------------
 
 String finalLabel;
 
-if (!validDrain) {
+if (!validDrain || "Unknown".equals(batteryTruth)) {
 
-    finalLabel = "Informational";
+    finalLabel = "Unknown";
 
 } else {
 
-    if (finalScore >= 90)
-        finalLabel = "Excellent";
-    else if (finalScore >= 80)
-        finalLabel = "Very good";
-    else if (finalScore >= 70)
-        finalLabel = "Good";
-    else if (finalScore >= 60)
-        finalLabel = "Normal";
-    else
-        finalLabel = "Weak";
+    finalLabel = batteryTruth;
+
+    // hard downgrade
+    if (collapseRisk[0]) {
+        finalLabel = downgradeBatteryTruth(finalLabel);
+    }
+
+    if (smartSwelling) {
+        finalLabel = downgradeBatteryTruth(finalLabel);
+    }
+
+    // soft downgrade
+    if (calibrationDrift[0]) {
+        if ("Excellent".equals(finalLabel) || "Good".equals(finalLabel)) {
+            finalLabel = downgradeBatteryTruth(finalLabel);
+        }
+    }
+
+    if (!Float.isNaN(powerStabilityFactor[0]) &&
+        powerStabilityFactor[0] < 60f) {
+        if ("Excellent".equals(finalLabel) || "Good".equals(finalLabel)) {
+            finalLabel = downgradeBatteryTruth(finalLabel);
+        }
+    }
+
+    if (lab14BatteryBehaviourWarning) {
+        if ("Excellent".equals(finalLabel) || "Good".equals(finalLabel)) {
+            finalLabel = downgradeBatteryTruth(finalLabel);
+        }
+    }
 }
 
 // ----------------------------------------------------
-// CLASS
+// LEGACY COMPAT (κρατάμε compile-safe προσωρινά)
 // ----------------------------------------------------
 
-String healthClass;
+String healthClass = "N/A";
 
-if (!validDrain)
-    healthClass = "N/A";
-else if (finalScore >= 92)
-    healthClass = "A+";
-else if (finalScore >= 85)
-    healthClass = "A";
-else if (finalScore >= 75)
-    healthClass = "B";
-else if (finalScore >= 60)
-    healthClass = "C";
-else
-    healthClass = "D";
-
-// ----------------------------------------------------
-// CONFIDENCE
-// ----------------------------------------------------
-
-float measurementConfidence = 100f;
-
-// ----------------------------
-// limiter penalty
-// ----------------------------
-
-if (lab14_systemLimited[0]) {
-    measurementConfidence -= 35f;
-}
-
-// ----------------------------
-// missing voltage data
-// ----------------------------
-
-if (Float.isNaN(voltageStart) ||
-    Float.isNaN(vLoad1[0]) ||
-    Float.isNaN(vRecover[0]) ||
-    Float.isNaN(vLoad2[0])) {
-
-    measurementConfidence -= 20f;
-}
-
-// ----------------------------
-// sag
-// ----------------------------
-
-if (Float.isNaN(sagAvg[0]) ||
-    sagAvg[0] < 0.005f) {
-
-    measurementConfidence -= 15f;
-}
-
-// ----------------------------
-// ESR
-// ----------------------------
-
-if (Float.isNaN(internalResistance[0])) {
-    measurementConfidence -= 15f;
-}
-
-// ----------------------------
-// recovery
-// ----------------------------
-
-if (Float.isNaN(voltageRecovery[0])) {
-    measurementConfidence -= 10f;
-}
-
-// ----------------------------
-// temperature
-// ----------------------------
-
-if (Float.isNaN(tempStart) ||
-    Float.isNaN(lab14TempPeak)) {
-
-    measurementConfidence -= 10f;
-}
-
-// ----------------------------
-// current stability
-// ----------------------------
-
-if (Float.isNaN(currentStability) ||
-    currentStability < 40f) {
-
-    measurementConfidence -= 10f;
-}
-
-// ----------------------------
-// drain validity
-// ----------------------------
-
-if (!validDrain) {
-    measurementConfidence -= 20f;
-}
-
-// ----------------------------
-// time check
-// ----------------------------
-
-if (dtMs < 15000) {
-    measurementConfidence -= 20f;
-}
-
-// ----------------------------
-// clamp
-// ----------------------------
-
-if (measurementConfidence < 0f)
-    measurementConfidence = 0f;
-
-if (measurementConfidence > 100f)
-    measurementConfidence = 100f;
-
-final float estimatedESRF = internalResistance[0];
-final float energyEfficiencyF = energyEfficiency;
-
-final long endMahF = endMah;
-
-final float tempEndF = tempEnd;
-
-final long dtMsF = dtMs;
-final long drainMahF = drainMah;
-
-boolean lowDrain = drainMah < 3;
-boolean partialMode = drainMah < 5;
-final boolean partialModeFinal = partialMode;
-
-final boolean validDrainF = validDrain;
-
-final double mahPerHourF = mahPerHour;
-final double drainPercentPerHourF = drainPercentPerHour;
-
-final Lab14Engine.AgingResult agingF = aging;
-final Lab14Engine.ConfidenceResult confF = lab14Conf;
-
-final int agingIndexF = lab14AgingIndex;
-final String agingInterpF = lab14AgingInterp;
-
-final boolean batteryBehaviourWarningF =
-        lab14BatteryBehaviourWarning;
-
-final int finalScoreF = finalScore;
 final String finalLabelF = finalLabel;
-final String healthClassF = healthClass;
 
 final float voltageStartFinal = voltageStart;
 final long startMahFinal = startMah;
@@ -18094,31 +17978,15 @@ if (batteryBehaviourWarningF) {
         // HEALTH
         // ------------------------------------------------
 
-        if (!Float.isNaN(lab14HealthPercent)) {
-
-            logLabelValue(
-                    gr ? "Υγεία μπαταρίας"
-                       : "Battery health",
-                    String.format(
-                            Locale.US,
-                            "%s (%.0f)",
-                            lab14HealthLabel,
-                            lab14HealthPercent
-                    )
-            );
-        }
-
         // FINAL SCORE
         lab14LogFinalScore(
-                gr,
-                finalScoreF,
-                finalLabelF,
-                healthClassF,
-                collapseRisk,
-                smartSwellingF,
-                calibrationDrift,
-                lab14_systemLimited
-        );
+        gr,
+        finalLabelF,
+        collapseRisk,
+        smartSwellingF,
+        calibrationDrift,
+        lab14_systemLimited
+);
 
         // ------------------------------------------------
         // SAVE
@@ -20703,6 +20571,37 @@ private String downgrade(String label) {
         case "Normal":    return "Weak";
         case "Weak":      return "Critical";
         default:          return label;
+    }
+}
+
+private String downgradeBatteryTruth(String label) {
+
+    if (label == null) return "Unknown";
+
+    switch (label) {
+        case "Excellent": return "Good";
+        case "Good":      return "Normal";
+        case "Normal":    return "Weak";
+        case "Weak":      return "Critical";
+        default:          return label;
+    }
+}
+
+private int getBatteryTruthColorMode(String label) {
+
+    if (label == null) return 0;
+
+    switch (label) {
+        case "Excellent":
+        case "Good":
+        case "Normal":
+            return 1; // green
+        case "Weak":
+            return 2; // warn
+        case "Critical":
+            return 3; // error
+        default:
+            return 0; // neutral
     }
 }
 
@@ -29650,7 +29549,7 @@ return s;
 
 private String colorFlagFromScore(int s) {
 
-    if (s >= 80) return "🟢";
+    if (s >= 80) return "??";
     if (s >= 55) return "🟡";
     return "🔴";
 }
