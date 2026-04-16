@@ -14555,7 +14555,6 @@ private void lab14LogStressResult(
         boolean[] collapseRisk,
         boolean smartSwelling,
         boolean[] calibrationDrift,
-        String res.label
 ) {
 
     boolean DEBUG_MODE = false;
@@ -14654,15 +14653,6 @@ if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
                     voltageUnderLoad * estimatedCurrentMa;
         }
         
-if (!Float.isNaN(powerMilliWatt) &&
-    powerMilliWatt > 0f &&
-    powerMilliWatt < 2500f) {
-
-    if ("Excellent".equals(batteryTruth)) {
-        batteryTruth = downgradeBatteryLevel(batteryTruth);
-    }
-}
-
 // ----------------------------------------------------
 // 🔴 SAG VALIDATION (REAL LOAD QUALITY)
 // ----------------------------------------------------
@@ -14707,6 +14697,16 @@ boolean sagValid =
 // ----------------------------------------------------
 String batteryTruth;
 
+if (!Float.isNaN(powerMilliWatt) &&
+    powerMilliWatt > 0f &&
+    powerMilliWatt < 2500f) {
+
+    if ("Excellent".equals(batteryTruth)) {
+        batteryTruth = downgradeBatteryLevel(batteryTruth);
+    }
+}
+
+
 if (!sagValid && (Float.isNaN(powerMilliWatt) || powerMilliWatt < 500f)) {
 
     batteryTruth = "Unknown";
@@ -14750,6 +14750,7 @@ if (!Float.isNaN(voltageRecovery[0])) {
     if (voltageRecovery[0] < 0.015f) {
         batteryTruth = downgradeBatteryLevel(batteryTruth);
     }
+}
 }
 
 // =====================================================
