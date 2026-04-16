@@ -197,7 +197,7 @@ and then export the report.
 
     <!-- SUBTITLE -->
     <string name="manual_hospital_sub">
-Professional service tools.\nEach manual lab writes detailed results below (OK / WARN / ERROR)\nand is included in the final Service Report.
+Professional service tools.\nEach manual lab writes detailed results\nand is included in the final Service Report.
 </string>
 
    <!-- 7 CATEGORIES -->
