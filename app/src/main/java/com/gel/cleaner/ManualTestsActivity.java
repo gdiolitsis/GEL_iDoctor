@@ -947,6 +947,9 @@ UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
 final boolean gr = AppLang.isGreek(this);
 
+// 🔴 DEFAULT STATE FIX (σαν swipe down)
+logScroll.post(() -> showLabsAndLogs());
+
 logScroll.setOnTouchListener((v, event) -> {
     switch (event.getAction()) {
 
@@ -978,7 +981,7 @@ logScroll.setOnTouchListener((v, event) -> {
             }
             break;
     }
-    return false; // ❗ αφήνει το scroll να δουλεύει κανονικά
+    return false;
 });
 
     // ============================================================
