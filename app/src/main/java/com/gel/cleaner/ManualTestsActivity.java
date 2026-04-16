@@ -18978,6 +18978,7 @@ if (Float.isNaN(currentMa)) {
 }
 
 return currentMa;
+}
 
 // =====================================================
 // SMART SWELLING DETECTION (FALSE POSITIVE KILLER)
