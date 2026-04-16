@@ -330,6 +330,27 @@ public static class Lab14Result {
     public String label; // 🔴 FINAL LABEL ONLY
 }
 
+private static class Lab14Result {
+
+    String label;
+
+    boolean validDrain;
+    boolean systemLimited;
+
+    double drainPercentPerHour;
+    double mahPerHour;
+
+    long drainMah;
+    long durationMs;
+
+    float tempStart;
+    float tempEnd;
+
+    float powerMw;
+
+    boolean batteryBehaviourWarning;
+}
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -2368,7 +2389,6 @@ if (__oldBrightness >= 0) {
 private void lab14LogPartialMode(
         boolean gr,
         boolean[] lab14_systemLimited,
-        boolean validDrain,
         Lab14Engine.ConfidenceResult conf
 ) {
 
@@ -3454,7 +3474,6 @@ private static final String KEY_LAB14_LAST_DRAIN_3 = "lab14_drain_3";
 
 private void lab14LogReliabilitySummary(
         boolean gr,
-        boolean validDrain,
         boolean[] lab14_systemLimited,
         Lab14Engine.ConfidenceResult conf
 ) {
@@ -14519,6 +14538,7 @@ lab14SoftPhaseStarted = false;
 // ============================================================
 private void lab14LogStressResult(
         boolean gr,
+        Lab14Result res,
         float[] sagAvg,
         float voltageStart,
         float voltageUnderLoad,
@@ -14530,18 +14550,12 @@ private void lab14LogStressResult(
         float thermalImpedance,
         float energyEfficiency,
         long startMah,
-        long endMah,
-        long drainMah,
-        long dtMs,
-        double mahPerHour,
-        double drainPercentPerHour,
-        boolean validDrain,
-        float startBatteryTemp,
-        float endBatteryTemp,
+        long endMah,        
         boolean[] lab14_systemLimited,
         boolean[] collapseRisk,
         boolean smartSwelling,
-        boolean[] calibrationDrift
+        boolean[] calibrationDrift,
+        String res.label
 ) {
 
     boolean DEBUG_MODE = false;
@@ -14606,10 +14620,22 @@ float excellentThr = level >= 70 ? 0.04f : level >= 40 ? 0.05f : 0.06f;
 float normalThr    = level >= 70 ? 0.09f : level >= 40 ? 0.11f : 0.13f;
 float weakThr      = level >= 70 ? 0.15f : level >= 40 ? 0.18f : 0.22f;
 
-String sagLabel =
-        sag < excellentThr ? "Excellent" :
-        sag < normalThr    ? "Normal" :
-        sag < weakThr      ? "Weak" : "Severe";
+// 🔴 LOAD ADJUSTMENT (power-aware thresholds)
+
+if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
+
+    if (powerMilliWatt < 2000f) {
+
+        excellentThr += 0.02f;
+        normalThr    += 0.03f;
+        weakThr      += 0.04f;
+
+    } else if (powerMilliWatt < 3000f) {
+
+        excellentThr += 0.01f;
+        normalThr    += 0.02f;
+    }
+}
 
         // =====================================================
         // CURRENT
@@ -14628,12 +14654,13 @@ String sagLabel =
                     voltageUnderLoad * estimatedCurrentMa;
         }
         
-        if (!Float.isNaN(powerMilliWatt) &&
+if (!Float.isNaN(powerMilliWatt) &&
     powerMilliWatt > 0f &&
-    powerMilliWatt < 2500f &&
-    "Excellent".equals(sagLabel)) {
+    powerMilliWatt < 2500f) {
 
-    sagLabel = "Normal";
+    if ("Excellent".equals(batteryTruth)) {
+        batteryTruth = downgradeBatteryLevel(batteryTruth);
+    }
 }
 
 // ----------------------------------------------------
@@ -14643,10 +14670,10 @@ if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
 
     if (powerMilliWatt < 2000f) {
 
-        if ("Excellent".equals(sagLabel)) {
-            sagLabel = "Normal";
-        } else if ("Normal".equals(sagLabel)) {
-            sagLabel = "Weak";
+        if ("Excellent".equals(batteryTruth)) {
+            batteryTruth = downgradeBatteryLevel(batteryTruth);
+        } else if ("Normal".equals(batteryTruth)) {
+            batteryTruth = downgradeBatteryLevel(batteryTruth);
         }
     }
 }
@@ -14671,23 +14698,16 @@ if (sag > 0 &&
         resistanceCheckMilliOhm = Float.NaN;
 }
 
-boolean sagValid;
-
-if ((Float.isNaN(sag1[0]) || sag1[0] <= 0.005f) &&
-    (Float.isNaN(sag2[0]) || sag2[0] <= 0.005f)) {
-
-    sagValid = false;
-
-} else {
-    sagValid = true;
-}
+boolean sagValid =
+        !Float.isNaN(sag) &&
+        sag > 0.005f;
 
 // ----------------------------------------------------
 // 🔴 BATTERY TRUTH (FINAL ENGINE)
 // ----------------------------------------------------
 String batteryTruth;
 
-if (!sagValid) {
+if (!sagValid && (Float.isNaN(powerMilliWatt) || powerMilliWatt < 500f)) {
 
     batteryTruth = "Unknown";
 
@@ -14705,37 +14725,6 @@ if (!sagValid) {
     } else {
         batteryTruth = "Critical";
     }
-
-    // ----------------------------------------------------
-    // 🔴 RESISTANCE modifier
-    // ----------------------------------------------------
-    if (!Float.isNaN(resistanceCheckMilliOhm)) {
-
-        if (resistanceCheckMilliOhm > 180f) {
-            batteryTruth = downgrade(batteryTruth);
-        }
-        else if (resistanceCheckMilliOhm > 120f) {
-            if ("Excellent".equals(batteryTruth)) {
-                batteryTruth = downgrade(batteryTruth);
-            }
-        }
-    }
-
-    // ----------------------------------------------------
-    // 🔴 RECOVERY modifier
-    // ----------------------------------------------------
-    if (!Float.isNaN(voltageRecovery[0])) {
-
-        if (voltageRecovery[0] < 0.03f) {
-            batteryTruth = downgrade(batteryTruth);
-        }
-        else if (voltageRecovery[0] < 0.06f) {
-            if ("Excellent".equals(batteryTruth)) {
-                batteryTruth = downgrade(batteryTruth);
-            }
-        }
-    }
-}
 
 // ----------------------------------------------------
 // 🔻 DOWNGRADE ENGINE (STRICT)
@@ -14870,17 +14859,17 @@ if (!sagValid) {
 // -----------------------------
 // 🔴 POWER OUTPUT (DYNAMIC COLOR)
 // -----------------------------
-if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 500f) {
+if (!Float.isNaN(res.powerMw) && res.powerMw > 500f) {
 
     String powerLabel =
-            powerMilliWatt >= 6000f ? "High" :
-            powerMilliWatt >= 3000f ? "Normal" : "Low";
+            res.powerMw >= 6000f ? "High" :
+            res.powerMw >= 3000f ? "Normal" : "Low";
 
-    if ("Excellent".equals(sagLabel) &&
-        powerMilliWatt > 0f &&
-        powerMilliWatt < 3000f) {
+    if ("Excellent".equals(batteryTruth) &&
+    powerMilliWatt > 0f &&
+    powerMilliWatt < 3000f) {
 
-        powerLabel = "Normal";
+    powerLabel = "Normal";
     }
 
     String powerText = String.format(
@@ -14963,10 +14952,10 @@ if (!Float.isNaN(voltageStability)) {
 // -----------------------------
 // 🔴 THERMAL (DYNAMIC COLOR)
 // -----------------------------
-if (!Float.isNaN(startBatteryTemp) &&
-    !Float.isNaN(endBatteryTemp)) {
+if (!Float.isNaN(res.tempStart) &&
+    !Float.isNaN(res.tempEnd)) {
 
-    float delta = endBatteryTemp - startBatteryTemp;
+    float delta = res.tempEnd - res.tempStart;
 
     String tempLabel =
             delta < 3 ? "Normal" :
@@ -15024,9 +15013,9 @@ logLabelValue(
 // -----------------------------
 // 🔴 DRAIN (ALREADY CORRECT)
 // -----------------------------
-if (validDrain && dtMs > 0) {
+if (res.validDrain && res.durationMs > 0) {
 
-    double rate = (drainMah * 3600000.0) / dtMs;
+    double rate = (res.drainMah * 3600000.0) / res.durationMs;
 
     logLabelOkValue(
             gr ? "Ρυθμός αποφόρτισης"
@@ -15034,11 +15023,11 @@ if (validDrain && dtMs > 0) {
             String.format(Locale.US, "%.0f mAh/h", rate)
     );
 
-    if (!Double.isNaN(drainPercentPerHour)) {
+    if (!Double.isNaN(res.drainPercentPerHour)) {
         logLabelValue(
                 gr ? "Κανονικοποιημένη αποφόρτιση"
                    : "Normalized drain",
-                String.format(Locale.US, "%.1f%%/h", drainPercentPerHour)
+                String.format(Locale.US, "%.1f%%/h", res.drainPercentPerHour)
         );
     }
 
@@ -15069,19 +15058,19 @@ if (!Float.isNaN(energyEfficiency)) {
 // =====================================================
 String recommendation;
 
-if ("Unknown".equals(batteryTruth)) {
+if ("Unknown".equals(res.label)) {
 
     recommendation = gr
             ? "Ανεπαρκή δεδομένα για αξιόπιστη διάγνωση."
             : "Insufficient data for reliable diagnosis.";
 
-} else if ("Critical".equals(batteryTruth)) {
+} else if ("Critical".equals(res.label)) {
 
     recommendation = gr
             ? "Συνιστάται άμεσος τεχνικός έλεγχος της μπαταρίας."
             : "Immediate battery service inspection is recommended.";
 
-} else if ("Weak".equals(batteryTruth)) {
+} else if ("Weak".equals(res.label)) {
 
     recommendation = gr
             ? "Συνιστάται παρακολούθηση της συμπεριφοράς της μπαταρίας και επανέλεγχος."
@@ -15106,12 +15095,12 @@ if ("Unknown".equals(batteryTruth)) {
 
 String recLabel = gr ? "Σύσταση" : "Recommendation";
 
-if ("Critical".equals(batteryTruth)) {
+if ("Critical".equals(res.label)) {
 
     logLabelErrorValue(recLabel, recommendation);
 
-} else if ("Weak".equals(finalLabel) ||
-           "Unknown".equals(finalLabel) ||
+} else if ("Weak".equals(res.label) ||
+           "Unknown".equals(res.label) ||
            calibrationDrift[0]) {
 
     logLabelWarnValue(recLabel, recommendation);
@@ -15125,22 +15114,24 @@ if ("Critical".equals(batteryTruth)) {
 // 🔴 FORMAT LAYER
 // =====================================================
 
-String powerText = (Float.isNaN(powerMilliWatt) || powerMilliWatt <= 0f)
+String powerText = (Float.isNaN(res.powerMw) || res.powerMw <= 0f)
         ? "N/A"
-        : String.format(Locale.US, "%.0f mW", powerMilliWatt);
+        : String.format(Locale.US, "%.0f mW", res.powerMw);
 
 String sagTextFinal = Float.isNaN(sag)
         ? "N/A"
         : String.format(Locale.US, "%.3f V", sag);
 
 String tempText =
-        (!Float.isNaN(startBatteryTemp) && !Float.isNaN(endBatteryTemp))
-                ? String.format(Locale.US, "%.1f°C", (endBatteryTemp - startBatteryTemp))
+        (!Float.isNaN(res.tempStart) && !Float.isNaN(res.tempEnd))
+                ? String.format(Locale.US, "%.1f°C",
+                        (res.tempEnd - res.tempStart))
                 : "N/A";
 
 String drainText =
-        (validDrain && dtMs > 0)
-                ? String.format(Locale.US, "%.0f mAh/h", (drainMah * 3600000.0 / dtMs))
+        (res.validDrain && res.durationMs > 0)
+                ? String.format(Locale.US, "%.0f mAh/h",
+        (res.drainMah * 3600000.0 / res.durationMs))
                 : "N/A";
 
 
@@ -15150,7 +15141,7 @@ String drainText =
 
 String summary;
 
-if ("Unknown".equals(batteryTruth)) {
+if ("Unknown".equals(res.label)) {
 
     summary = gr
             ? "Ανεπαρκή δεδομένα για διάγνωση."
@@ -15164,8 +15155,8 @@ if ("Unknown".equals(batteryTruth)) {
             ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %s\nΠτώση τάσης: %s\nΘερμική μεταβολή: %s\nΑποφόρτιση: %s"
             : "Status: %s\nBehaviour: %s\nPower: %s\nVoltage sag: %s\nThermal delta: %s\nDrain: %s",
 
-            batteryTruth,
-            batteryTruth,
+            res.label,
+            res.label,
             powerText,
             sagTextFinal,
             tempText,
@@ -15177,18 +15168,18 @@ if ("Unknown".equals(batteryTruth)) {
 
 String summaryLabel = gr ? "Σύνοψη" : "Summary";
 
-if ("Excellent".equals(batteryTruth) ||
-    "Good".equals(batteryTruth) ||
-    "Normal".equals(batteryTruth)) {
+if ("Excellent".equals(res.label) ||
+    "Good".equals(res.label) ||
+    "Normal".equals(res.label)) {
 
     logLabelOkValue(summaryLabel, summary);
 
-} else if ("Weak".equals(batteryTruth) ||
-           "Unknown".equals(batteryTruth)) {
+} else if ("Weak".equals(res.label) ||
+           "Unknown".equals(res.label)) {
 
     logLabelWarnValue(summaryLabel, summary);
 
-} else if ("Critical".equals(batteryTruth)) {
+} else if ("Critical".equals(res.label)) {
 
     logLabelErrorValue(summaryLabel, summary);
 
@@ -15226,7 +15217,6 @@ private void lab14LogAging(
         String agingInterp,
         Lab14Engine.AgingResult aging,
         float monthsTo70,
-        double drainPercentPerHour,
         float[] internalResistance
 ) {
 
@@ -15309,7 +15299,7 @@ else
 // ============================================================
 private void lab14LogFinalScore(
         boolean gr,
-        String finalLabel,
+        String res.label,
         boolean[] collapseRisk,
         boolean smartSwelling,
         boolean[] calibrationDrift,
@@ -15326,22 +15316,22 @@ private void lab14LogFinalScore(
 // 🔴 STRICT COLOR MAPPING (FINAL)
 
 if ("Excellent".equals(batteryTruth) ||
-    "Good".equals(finalLabel) ||
-    "Normal".equals(finalLabel)) {
+    "Good".equals(res.label) ||
+    "Normal".equals(res.label)) {
 
-    logLabelOkValue(condLabel, finalLabel);
+    logLabelOkValue(condLabel, res.label);
 
-} else if ("Weak".equals(finalLabel)) {
+} else if ("Weak".equals(res.label)) {
 
-    logLabelWarnValue(condLabel, finalLabel);
+    logLabelWarnValue(condLabel, res.label);
 
-} else if ("Critical".equals(finalLabel)) {
+} else if ("Critical".equals(res.label)) {
 
-    logLabelErrorValue(condLabel, finalLabel);
+    logLabelErrorValue(condLabel, res.label);
 
 } else {
 
-    logLabelValue(condLabel, finalLabel);
+    logLabelValue(condLabel, res.label);
 }
 
     // ----------------------------------------------------
@@ -17415,6 +17405,8 @@ res.powerMw = powerMilliWatt;
 
 res.batteryBehaviourWarning = lab14BatteryBehaviourWarning;
 
+res.label = res.label;
+
 runOnUiThread(() -> {
 
     final long drainMahFinalLong = (long) drainMahFFinal;
@@ -17953,25 +17945,19 @@ if (batteryBehaviourWarningF) {
 
     lab14LogStressResult(
     gr,
+    res,
     sagAvg,
-    voltageStart,
+    voltageStartFinal,
     voltageUnderLoad[0],
     voltageRecovery,
     voltageRecoverySpeed,
     voltageStability[0],
     internalResistance,
-    estimatedESR,
+    estimatedESRF,
     thermalImpedance[0],
-    energyEfficiency,
-    startMah,
+    energyEfficiencyF,
+    startMahFinal,
     endMah,
-    drainMah,
-    dtMs,
-    mahPerHour,
-    safeDrain,
-    validDrain,
-    tempStart,
-    tempEnd,
     lab14_systemLimited,
     collapseRisk,
     smartSwelling,
@@ -19038,8 +19024,7 @@ if (!isLab14BMode) {
 // Επιστρέφει mA
 // =====================================================
 private float estimateDynamicCurrentMilliAmp(
-        long drainMah,
-        long dtMs
+        
 ) {
     float currentMa = Float.NaN;
 
@@ -19148,7 +19133,6 @@ private String computeRiskSummary(
         float sag,
         float rdyn,
         float tempDelta,
-        double drainPercentPerHour,
         boolean collapseRisk,
         boolean smartSwelling,
         boolean calibrationDrift
@@ -19852,7 +19836,6 @@ private boolean detectLab14SystemLimiter(
         int elapsed,
         double currentMa,
         double drainPerHour,
-        float startBatteryTemp,
         float batTempNow
 ) {
     // Μόνο στο LAB14B και μόνο αφού περάσει λίγο χρόνος
@@ -20640,27 +20623,6 @@ private int getBatteryTruthColorMode(String label) {
         default:
             return 0; // neutral
     }
-}
-
-private static class Lab14Result {
-
-    String label;
-
-    boolean validDrain;
-    boolean systemLimited;
-
-    double drainPercentPerHour;
-    double mahPerHour;
-
-    long drainMah;
-    long durationMs;
-
-    float tempStart;
-    float tempEnd;
-
-    float powerMw;
-
-    boolean batteryBehaviourWarning;
 }
 
 //=============================================================
