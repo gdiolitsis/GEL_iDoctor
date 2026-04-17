@@ -14508,9 +14508,6 @@ startLab14ProgressLoop();
 }
 
 // ============================================================
-// LAB 14 — LOG STRESS RESULT (FULL + FIXED)
-// ============================================================
-// ============================================================
 // LAB 14 — LOG STRESS RESULT (CLEAN + FIXED)
 // ============================================================
 private void lab14LogStressResult(
@@ -14628,7 +14625,7 @@ private void lab14LogStressResult(
                 res.powerMw >= 6000f ? "High" :
                 res.powerMw >= 3000f ? "Normal" : "Low";
 
-        String powerText = String.format(
+        String powerTextLocal = String.format(
                 Locale.US,
                 "%.0f mW (%s)",
                 res.powerMw,
@@ -14639,21 +14636,21 @@ private void lab14LogStressResult(
 
             logLabelOkValue(
                     gr ? "Ικανότητα ισχύος" : "Power capability",
-                    powerText
+                    powerTextLocal
             );
 
         } else if ("Normal".equals(powerLabel)) {
 
             logLabelValue(
                     gr ? "Ικανότητα ισχύος" : "Power capability",
-                    powerText
+                    powerTextLocal
             );
 
         } else {
 
             logLabelWarnValue(
                     gr ? "Ικανότητα ισχύος" : "Power capability",
-                    powerText
+                    powerTextLocal
             );
         }
 
@@ -14704,19 +14701,21 @@ private void lab14LogStressResult(
     // =====================================================
     // 🔴 THERMAL
     // =====================================================
+    float deltaTemp = Float.NaN;
+
     if (!Float.isNaN(res.tempStart) &&
         !Float.isNaN(res.tempEnd)) {
 
-        float delta = res.tempEnd - res.tempStart;
+        deltaTemp = res.tempEnd - res.tempStart;
 
         String tempLabel =
-                delta < 3 ? "Normal" :
-                delta < 8 ? "Warm" : "High";
+                deltaTemp < 3 ? "Normal" :
+                deltaTemp < 8 ? "Warm" : "High";
 
-        String tempText = String.format(
+        String tempTextLocal = String.format(
                 Locale.US,
                 "%.1f°C (%s)",
-                delta,
+                deltaTemp,
                 tempLabel
         );
 
@@ -14725,7 +14724,7 @@ private void lab14LogStressResult(
             logLabelWarnValue(
                     gr ? "Θερμική μεταβολή"
                        : "Thermal change",
-                    tempText
+                    tempTextLocal
             );
 
         } else if ("Warm".equals(tempLabel)) {
@@ -14733,7 +14732,7 @@ private void lab14LogStressResult(
             logLabelValue(
                     gr ? "Θερμική μεταβολή"
                        : "Thermal change",
-                    tempText
+                    tempTextLocal
             );
 
         } else {
@@ -14741,7 +14740,7 @@ private void lab14LogStressResult(
             logLabelOkValue(
                     gr ? "Θερμική μεταβολή"
                        : "Thermal change",
-                    tempText
+                    tempTextLocal
             );
         }
     }
@@ -14749,15 +14748,17 @@ private void lab14LogStressResult(
     // =====================================================
     // 🔴 DRAIN
     // =====================================================
+    double drainRate = Double.NaN;
+
     if (res.validDrain && res.durationMs > 0) {
 
-        double rate =
+        drainRate =
                 (res.drainMah * 3600000.0) / res.durationMs;
 
         logLabelOkValue(
                 gr ? "Ρυθμός αποφόρτισης"
                    : "Drain rate",
-                String.format(Locale.US, "%.0f mAh/h", rate)
+                String.format(Locale.US, "%.0f mAh/h", drainRate)
         );
 
     } else {
@@ -14781,135 +14782,127 @@ private void lab14LogStressResult(
         );
     }
 
-        // =====================================================
-        // 🔴 RECOMMENDATION ENGINE (GEL)
-        // =====================================================
-        String recommendation;
+    // =====================================================
+    // 🔴 RECOMMENDATION ENGINE (FULL)
+    // =====================================================
+    String recommendation;
 
-        if ("Unknown".equals(res.label)) {
+    if ("Unknown".equals(res.label)) {
 
-            recommendation = gr
-                    ? "Ανεπαρκή δεδομένα για αξιόπιστη διάγνωση."
-                    : "Insufficient data for reliable diagnosis.";
+        recommendation = gr
+                ? "Ανεπαρκή δεδομένα για αξιόπιστη διάγνωση."
+                : "Insufficient data for reliable diagnosis.";
 
-        } else if ("Critical".equals(res.label)) {
+    } else if ("Critical".equals(res.label)) {
 
-            recommendation = gr
-                    ? "Συνιστάται άμεσος τεχνικός έλεγχος της μπαταρίας."
-                    : "Immediate battery service inspection is recommended.";
+        recommendation = gr
+                ? "Συνιστάται άμεσος τεχνικός έλεγχος της μπαταρίας."
+                : "Immediate battery service inspection is recommended.";
 
-        } else if ("Weak".equals(res.label)) {
+    } else if ("Weak".equals(res.label)) {
 
-            recommendation = gr
-                    ? "Συνιστάται παρακολούθηση της συμπεριφοράς της μπαταρίας και επανέλεγχος."
-                    : "Battery behaviour should be monitored and retested.";
+        recommendation = gr
+                ? "Συνιστάται παρακολούθηση της συμπεριφοράς της μπαταρίας και επανέλεγχος."
+                : "Battery behaviour should be monitored and retested.";
 
-        } else if (calibrationDrift[0]) {
+    } else if (calibrationDrift[0]) {
 
-            recommendation = gr
-                    ? "Η μπαταρία φαίνεται λειτουργική, αλλά προτείνεται επαναβαθμονόμηση."
-                    : "Battery appears functional, but recalibration is recommended.";
+        recommendation = gr
+                ? "Η μπαταρία φαίνεται λειτουργική, αλλά προτείνεται επαναβαθμονόμηση."
+                : "Battery appears functional, but recalibration is recommended.";
 
-        } else {
+    } else {
 
-            recommendation = gr
-                    ? "Η μπαταρία φαίνεται να λειτουργεί φυσιολογικά."
-                    : "Battery appears to operate normally.";
-        }
+        recommendation = gr
+                ? "Η μπαταρία φαίνεται να λειτουργεί φυσιολογικά."
+                : "Battery appears to operate normally.";
+    }
 
-        // =====================================================
-        // 🔴 RECOMMENDATION OUTPUT (CLEAN)
-        // =====================================================
-        String recLabel = gr ? "Σύσταση" : "Recommendation";
+    String recLabel = gr ? "Σύσταση" : "Recommendation";
 
-        if ("Critical".equals(res.label)) {
+    if ("Critical".equals(res.label)) {
+        logLabelErrorValue(recLabel, recommendation);
+    } else if ("Weak".equals(res.label) ||
+            "Unknown".equals(res.label) ||
+            calibrationDrift[0]) {
+        logLabelWarnValue(recLabel, recommendation);
+    } else {
+        logLabelOkValue(recLabel, recommendation);
+    }
 
-            logLabelErrorValue(recLabel, recommendation);
+// =====================================================
+// 🔴 FORMAT LAYER
+// =====================================================
+String powerTextFinal = (Float.isNaN(res.powerMw) || res.powerMw <= 0f)
+        ? "N/A"
+        : String.format(Locale.US, "%.0f mW", res.powerMw);
 
-        } else if ("Weak".equals(res.label) ||
-                "Unknown".equals(res.label) ||
-                calibrationDrift[0]) {
+String sagTextFinal = Float.isNaN(sag)
+        ? "N/A"
+        : String.format(Locale.US, "%.3f V", sag);
 
-            logLabelWarnValue(recLabel, recommendation);
+String tempTextFinal =
+        (!Float.isNaN(res.tempStart) && !Float.isNaN(res.tempEnd))
+                ? String.format(Locale.US, "%.1f°C",
+                (res.tempEnd - res.tempStart))
+                : "N/A";
 
-        } else {
+String drainTextFinal =
+        (res.validDrain && res.durationMs > 0)
+                ? String.format(Locale.US, "%.0f mAh/h",
+                (res.drainMah * 3600000.0 / res.durationMs))
+                : "N/A";
 
-            logLabelOkValue(recLabel, recommendation);
-        }
+// =====================================================
+// 🔴 FINAL SUMMARY
+// =====================================================
+String summary;
 
-        // =====================================================
-        // 🔴 FORMAT LAYER
-        // =====================================================
-        String powerText = (Float.isNaN(res.powerMw) || res.powerMw <= 0f)
-                ? "N/A"
-                : String.format(Locale.US, "%.0f mW", res.powerMw);
+if ("Unknown".equals(res.label)) {
 
-        String sagTextFinal = Float.isNaN(sag)
-                ? "N/A"
-                : String.format(Locale.US, "%.3f V", sag);
+    summary = gr
+            ? "Ανεπαρκή δεδομένα για διάγνωση."
+            : "Insufficient data for diagnosis.";
 
-        String tempText =
-                (!Float.isNaN(res.tempStart) && !Float.isNaN(res.tempEnd))
-                        ? String.format(Locale.US, "%.1f°C",
-                        (res.tempEnd - res.tempStart))
-                        : "N/A";
+} else {
 
-        String drainText =
-                (res.validDrain && res.durationMs > 0)
-                        ? String.format(Locale.US, "%.0f mAh/h",
-                        (res.drainMah * 3600000.0 / res.durationMs))
-                        : "N/A";
+    summary = String.format(
+            Locale.US,
+            gr
+                    ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %s\nΠτώση τάσης: %s\nΘερμική μεταβολή: %s\nΑποφόρτιση: %s"
+                    : "Status: %s\nBehaviour: %s\nPower: %s\nVoltage sag: %s\nThermal delta: %s\nDrain: %s",
 
-        // =====================================================
-        // 🔴 FINAL SUMMARY
-        // =====================================================
-        String summary;
+            res.label,
+            res.label,
+            powerTextFinal,
+            sagTextFinal,
+            tempTextFinal,
+            drainTextFinal
+    );
+}
 
-        if ("Unknown".equals(res.label)) {
+// 🔴 COLOR BASED ON SEVERITY (FINAL)
+String summaryLabel = gr ? "Σύνοψη" : "Summary";
 
-            summary = gr
-                    ? "Ανεπαρκή δεδομένα για διάγνωση."
-                    : "Insufficient data for diagnosis.";
+if ("Excellent".equals(res.label) ||
+        "Good".equals(res.label) ||
+        "Normal".equals(res.label)) {
 
-        } else {
+    logLabelOkValue(summaryLabel, summary);
 
-            summary = String.format(
-                    Locale.US,
-                    gr
-                            ? "Κατάσταση: %s\nΣυμπεριφορά: %s\nΙσχύς: %s\nΠτώση τάσης: %s\nΘερμική μεταβολή: %s\nΑποφόρτιση: %s"
-                            : "Status: %s\nBehaviour: %s\nPower: %s\nVoltage sag: %s\nThermal delta: %s\nDrain: %s",
+} else if ("Weak".equals(res.label) ||
+        "Unknown".equals(res.label)) {
 
-                    res.label,
-                    res.label,
-                    powerText,
-                    sagTextFinal,
-                    tempText,
-                    drainText
-            );
-        }
+    logLabelWarnValue(summaryLabel, summary);
 
-        // 🔴 COLOR BASED ON SEVERITY (FINAL)
-        String summaryLabel = gr ? "Σύνοψη" : "Summary";
+} else if ("Critical".equals(res.label)) {
 
-        if ("Excellent".equals(res.label) ||
-                "Good".equals(res.label) ||
-                "Normal".equals(res.label)) {
+    logLabelErrorValue(summaryLabel, summary);
 
-            logLabelOkValue(summaryLabel, summary);
+} else {
 
-        } else if ("Weak".equals(res.label) ||
-                "Unknown".equals(res.label)) {
-
-            logLabelWarnValue(summaryLabel, summary);
-
-        } else if ("Critical".equals(res.label)) {
-
-            logLabelErrorValue(summaryLabel, summary);
-
-        } else {
-
-            logLabelValue(summaryLabel, summary);
-        }
+    logLabelValue(summaryLabel, summary);
+}
 
 // =====================================================
 // DEBUG (OPTIONAL)
@@ -14956,7 +14949,6 @@ if (DEBUG_MODE) {
                     )
     );
 }
-    }
 
 // ============================================================
 // LAB 14 — LOG FINAL RESULT (GEL VERSION)
