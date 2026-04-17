@@ -818,14 +818,6 @@ private static class SecuritySnapshot {
     String securityPatch;  
 }  
 
-private static class PrivacySnapshot {  
-    int userAppsWithLocation;  
-    int userAppsWithMic;  
-    int userAppsWithCamera;  
-    int userAppsWithSms;  
-    int totalUserAppsChecked;  
-}  
-
 // ============================================================  
 // CORE UI  
 // ============================================================  
@@ -15882,28 +15874,27 @@ if (lab14_systemLimited[0]) {
 
 float sagFiltered = Float.NaN;
 
-        sagFiltered = sag;
+// 🔹 Υπολογισμός
+sagFiltered = sag;
 
-        if (!Float.isNaN(sagAvg[0])) {
-            sagFiltered =
-                    (sag + sagAvg[0]) / 2f;
-        }
+if (!Float.isNaN(sagAvg[0])) {
+    sagFiltered = (sag + sagAvg[0]) / 2f;
+}
 
-        if (!Float.isNaN(sagFiltered) &&
+if (!Float.isNaN(sagFiltered) &&
     sagFiltered < 0.002f) {
 
     sagFiltered = Float.NaN;
 }
-}
 
-        if (!lab14_systemLimited[0] &&
-            !Float.isNaN(currentNow) &&
-            !Float.isNaN(sagFiltered)) {
+// 🔹 ΧΡΗΣΗ (ίδιο scope!)
+if (!lab14_systemLimited[0] &&
+    !Float.isNaN(currentNow) &&
+    !Float.isNaN(sagFiltered)) {
 
-            float currentAmp =
-                    Math.abs(currentNow) / 1000f;
+    float currentAmp = Math.abs(currentNow) / 1000f;
 
-            float sagCheck2 = sagFiltered;
+    float sagCheck2 = sagFiltered;
 
             if (sagCheck2 < 0.005f) {
     sagCheck2 = Float.NaN;
