@@ -14640,7 +14640,7 @@ if (!Float.isNaN(powerMilliWatt) && powerMilliWatt > 0f) {
         // CURRENT
         // =====================================================
         float estimatedCurrentMa =
-                estimateDynamicCurrentMilliAmp(drainMah, dtMs);
+        estimateDynamicCurrentMilliAmp(drainMah, dtMs);
 
         // =====================================================
         // POWER
@@ -17230,6 +17230,7 @@ if (!Float.isNaN(dualLoadScore[0]) &&
 if (finalScore < 0) finalScore = 0;
 if (finalScore > 100) finalScore = 100;
 
+String batteryTruth = "Unknown";
 
 if (!res.validDrain || "Unknown".equals(batteryTruth)) {
 
@@ -18929,7 +18930,8 @@ if (!isLab14BMode) {
 // Επιστρέφει mA
 // =====================================================
 private float estimateDynamicCurrentMilliAmp(
-        
+        long drainMah,
+        long durationMs
 ) {
     float currentMa = Float.NaN;
 
@@ -18944,49 +18946,43 @@ private float estimateDynamicCurrentMilliAmp(
             int rawNow =
                     bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
 
-            // Συνήθως:
-            // microampere (μA), με αρνητικό πρόσημο στην αποφόρτιση
-            // αλλά σε κάποιες συσκευές είναι mA ή άλλη κλίμακα
             if (rawNow != Integer.MIN_VALUE && rawNow != 0) {
                 float absRaw = Math.abs((float) rawNow);
 
-                // heuristic normalization
                 if (absRaw > 100000f) {
-                    // likely μA -> mA
                     currentMa = absRaw / 1000f;
                 } else if (absRaw > 1000f) {
-                    // still likely μA on smaller values
                     currentMa = absRaw / 1000f;
                 } else {
-                    // likely already mA
                     currentMa = absRaw;
                 }
             }
         }
     } catch (Throwable ignore) {}
 
-    // sanity filter για mobile
+    // sanity filter
     if (!Float.isNaN(currentMa)) {
         if (currentMa < 50f || currentMa > 12000f) {
             currentMa = Float.NaN;
         }
     }
 
-// -------------------------------------------------
-// 2) Fallback: average current from drain / time
-// -------------------------------------------------
-if (Float.isNaN(currentMa)) {
-    if (res.drainMah > 0 && res.durationMs > 0) {
-        currentMa =
-                (float) (res.drainMah * 3600000.0 / res.durationMs);
+    // -------------------------------------------------
+    // 2) Fallback: average current from drain / time
+    // -------------------------------------------------
+    if (Float.isNaN(currentMa)) {
+        if (drainMah > 0 && durationMs > 0) {
 
-        if (currentMa < 50f || currentMa > 12000f) {
-            currentMa = Float.NaN;
+            currentMa =
+                    (float) (drainMah * 3600000.0 / durationMs);
+
+            if (currentMa < 50f || currentMa > 12000f) {
+                currentMa = Float.NaN;
+            }
         }
     }
-}
 
-return currentMa;
+    return currentMa;
 }
 
 // =====================================================
@@ -19015,7 +19011,7 @@ private boolean detectSwellingSmart(
         score++;
 
     // 4. High drain (instability)
-    if (!Double.isNaN(res.drainPercentPerHour) && res.drainPercentPerHour > 40.0)
+    if (!Double.isNaN(drainPercentPerHour) && drainPercentPerHour > 40.0)
     score++;
 
     // 5. Current stress (optional)
@@ -28911,8 +28907,8 @@ boolean diagnosticConflict = false;
 int conflictScore = 0;
 
 // Battery healthy but PMIC instability
-if (("Excellent".equals(res.label) || "Good".equals(res.label))
-        && lab14CollapseRisk) {
+if (("Excellent".equals(label) || "Good".equals(label))
+        && collapseRisk[0]) {
 
     diagnosticConflict = true;
     conflictScore += 30;
