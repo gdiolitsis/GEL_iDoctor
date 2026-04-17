@@ -72,8 +72,12 @@ public static final class PrivacySnapshot {
 
     public long lastUpdateMs;
 
-}
+	public int userAppsWithLocation;
+    public int userAppsWithMic;
+    public int userAppsWithCamera;
+    public int userAppsWithSms;
 
+}
 // ============================================================
 // LAB BATTERY SOURCE LOCK
 // Mode C = OEM locked if available, else BatteryManager locked
