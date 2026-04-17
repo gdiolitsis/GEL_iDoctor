@@ -14823,7 +14823,6 @@ private void lab14LogStressResult(
                 String.format(Locale.US, "%.0f mAh/V", energyEfficiency)
         );
     }
-}
 
         // =====================================================
         // 🔴 RECOMMENDATION ENGINE (GEL)
