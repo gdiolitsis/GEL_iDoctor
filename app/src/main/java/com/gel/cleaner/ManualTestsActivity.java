@@ -15891,6 +15891,7 @@ if (lab14_systemLimited[0]) {
 
     sagFiltered = Float.NaN;
 }
+}
 
         if (!lab14_systemLimited[0] &&
             !Float.isNaN(currentNow) &&
