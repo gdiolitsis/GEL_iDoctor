@@ -330,25 +330,6 @@ public static class Lab14Result {
     public String label; // 🔴 FINAL LABEL ONLY
 }
 
-    String label;
-
-    boolean validDrain;
-    boolean systemLimited;
-
-    double drainPercentPerHour;
-    double mahPerHour;
-
-    long drainMah;
-    long durationMs;
-
-    float tempStart;
-    float tempEnd;
-
-    float powerMw;
-
-    boolean batteryBehaviourWarning;
-}
-
 private static final boolean DEBUG_MODE = false;
 
 // ============================================================
