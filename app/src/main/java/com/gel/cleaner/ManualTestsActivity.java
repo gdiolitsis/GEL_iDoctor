@@ -190,6 +190,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import com.gel.cleaner.UIHelpers;
+import com.gel.cleaner.iDoctorEngine;
 
 // ============================================================
 // JAVA — IO / NET
@@ -14986,7 +14987,7 @@ private void lab14LogFinalScore(
 String condLabel = gr ? "Κατάσταση μπαταρίας" : "Battery condition";
 
 // 🔴 SAFE LABEL (null protection)
-String lbl = (res != null && res.label != null) ? res.label : "Unknown";
+String lbl = (label != null) ? label : "Unknown";
 
 // 🔴 FINAL OUTPUT
 if ("Excellent".equals(lbl) ||
@@ -15879,7 +15880,9 @@ if (lab14_systemLimited[0]) {
     drainPercentPerHour = 0;
 }
 
-        float sagFiltered = sag;
+float sagFiltered = Float.NaN;
+
+        sagFiltered = sag;
 
         if (!Float.isNaN(sagAvg[0])) {
             sagFiltered =
@@ -28486,7 +28489,7 @@ boolean diagnosticConflict = false;
 int conflictScore = 0;
 
 // Battery healthy but PMIC instability
-if (("Excellent".equals(label) || "Good".equals(label))
+if (("Excellent".equals(lbl) || "Good".equals(lbl))
         && collapseRisk[0]) {
 
     diagnosticConflict = true;
