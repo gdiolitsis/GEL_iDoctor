@@ -15901,8 +15901,9 @@ if (lab14_systemLimited[0]) {
 
             float sagCheck2 = sagFiltered;
 
-            if (sagCheck2 < 0.005f)
-                sagCheck2 = Float.NaN;
+            if (sagCheck2 < 0.005f) {
+    sagCheck2 = Float.NaN;
+}
 
             if (!Float.isNaN(sagCheck2) &&
                 currentAmp > 0.10f &&
@@ -15941,7 +15942,6 @@ if (esr > 0.01f && esr < 0.40f) {
                 }
             }
         }
-    }
 
 // ----------------------------------------------------
 // ENERGY EFFICIENCY
