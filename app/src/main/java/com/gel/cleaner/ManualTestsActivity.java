@@ -15481,19 +15481,6 @@ private boolean lab14DetectLimiter(
     return false;
 }
 
-    // ------------------------
-    // FALLBACK SCORE SYSTEM
-    // ------------------------
-    int flags = 0;
-
-    if (lowSag) flags++;
-    if (lowDrain) flags++;
-    if (lowTemp) flags++;
-    if (lowCurrent) flags++;
-
-    return flags >= 3;
-}
-
 private void lab14PostLoadAnalysis(
 
         Lab14Engine engine,
