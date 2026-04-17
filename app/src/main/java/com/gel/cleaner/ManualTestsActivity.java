@@ -17745,9 +17745,34 @@ lab14SoftPhaseStarted = false;
 
 } finally {
 
-    // ------------------------------------------------
-    // FINAL STATE (ALWAYS)
-    // ------------------------------------------------
+// ------------------------------------------------
+// FINAL STATE (ALWAYS)
+// ------------------------------------------------
+
+lab14FastDone = true;
+lab14FastPhase = false;
+
+// safety reset
+lab14BoostActive = false;
+lab14SoftPhaseStarted = false;
+
+} catch (Throwable t) {
+
+    lab14StopAllStress();
+
+    try {
+        counterText = null;
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    restoreBrightnessAndKeepOn();
+
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+
+} finally {
 
     lab14FastDone = true;
     lab14FastPhase = false;
@@ -17755,6 +17780,9 @@ lab14SoftPhaseStarted = false;
     // safety reset
     lab14BoostActive = false;
     lab14SoftPhaseStarted = false;
+}
+
+}).start();
 }
 
 // ============================================================
