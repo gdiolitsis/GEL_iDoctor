@@ -57,6 +57,23 @@ import java.util.Map;
 public final class iDoctorEngine {
 	private long lastInternalResistanceMilliOhm = -1;
 
+public static final class PrivacySnapshot {
+
+    public boolean micActive;
+    public boolean cameraActive;
+    public boolean locationActive;
+
+    public boolean vpnActive;
+    public boolean adbEnabled;
+
+    public boolean mockLocationEnabled;
+
+    public int suspiciousApps;
+
+    public long lastUpdateMs;
+
+}
+
 // ============================================================
 // LAB BATTERY SOURCE LOCK
 // Mode C = OEM locked if available, else BatteryManager locked
