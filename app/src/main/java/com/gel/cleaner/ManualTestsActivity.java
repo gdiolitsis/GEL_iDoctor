@@ -15719,8 +15719,6 @@ private boolean lab14DetectLimiter(
 
 private void lab14PostLoadAnalysis(
 
-Lab14Result res = new Lab14Result();
-
         Lab14Engine engine,
         boolean gr,
         long startMah,
@@ -15731,6 +15729,8 @@ Lab14Result res = new Lab14Result();
         long cycles,
         float tempStart
 ) {
+	
+	Lab14Result res = new Lab14Result();
 
 final iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
