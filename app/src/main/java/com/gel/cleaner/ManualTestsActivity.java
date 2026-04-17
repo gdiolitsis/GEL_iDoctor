@@ -1770,6 +1770,19 @@ private BatteryInfo getBatteryInfo() {
 }
 
 // ============================================================
+// 🔴 BATTERY INFO MODEL (LOCAL SAFE)
+// ============================================================
+private static class BatteryInfo {
+
+    boolean charging = false;
+
+    long currentChargeMah = -1;
+    long estimatedFullMah = -1;
+
+    String source = "unknown";
+}
+
+// ============================================================
 // LAB 14 — CANCEL HELPER
 // ============================================================
 private void lab14CancelStress() {
@@ -14775,21 +14788,6 @@ private void lab14LogStressResult(
     }
 
     // =====================================================
-    // 🔴 BEHAVIOUR
-    // =====================================================
-    logLabelValue(
-            gr ? "Συμπεριφορά μπαταρίας"
-               : "Battery behaviour",
-            String.format(
-                    Locale.US,
-                    "Start=%d mAh | End=%d mAh | Δ=%d mAh",
-                    startMah,
-                    endMah,
-                    Math.max(0, res.drainMah)
-            )
-    );
-
-    // =====================================================
     // 🔴 DRAIN
     // =====================================================
     if (res.validDrain && res.durationMs > 0) {
@@ -14954,25 +14952,51 @@ private void lab14LogStressResult(
             logLabelValue(summaryLabel, summary);
         }
 
-        // =====================================================
-        // DEBUG (OPTIONAL)
-        // =====================================================
-        if (DEBUG_MODE) {
+// =====================================================
+// DEBUG (OPTIONAL)
+// =====================================================
+if (DEBUG_MODE) {
 
-            appendHtml("<br>");
-            logInfo("DEBUG");
-            logLine();
+    appendHtml("<br>");
+    logInfo("DEBUG");
+    logLine();
 
-            logLabelValue("Sag", String.format(Locale.US, "%.4f V", sag));
-            logLabelValue("Current", String.format(Locale.US, "%.0f mA", estimatedCurrentMa));
-            logLabelValue("Power", String.format(Locale.US, "%.0f mW", powerMilliWatt));
-            logLabelValue(
-                    "Rdyn",
-                    Float.isNaN(resistanceCheckMilliOhm)
-                            ? "N/A"
-                            : String.format(Locale.US, "%.1f mΩ", resistanceCheckMilliOhm)
-            );
-        }
+    logLabelValue(
+            "Sag",
+            Float.isNaN(sag)
+                    ? "N/A"
+                    : String.format(Locale.US, "%.4f V", sag)
+    );
+
+    logLabelValue(
+            "Current",
+            (res.validDrain && res.durationMs > 0)
+                    ? String.format(
+                            Locale.US,
+                            "%.0f mA",
+                            (res.drainMah * 3600000.0 / res.durationMs)
+                    )
+                    : "N/A"
+    );
+
+    logLabelValue(
+            "Power",
+            Float.isNaN(res.powerMw)
+                    ? "N/A"
+                    : String.format(Locale.US, "%.0f mW", res.powerMw)
+    );
+
+    logLabelValue(
+            "Rdyn",
+            Float.isNaN(internalResistance[0])
+                    ? "N/A"
+                    : String.format(
+                            Locale.US,
+                            "%.1f mΩ",
+                            internalResistance[0] * 1000f
+                    )
+    );
+}
     }
 
 // ============================================================
@@ -15724,15 +15748,9 @@ if (!Float.isNaN(vLoad2[0]) &&
     estimatedCurrentMa > 50f &&
     estimatedCurrentMa < 10000f) {
 
-    float vForPower = vLoad2[0];
-
-    // 🔴 stabilize voltage (avoid spikes)
-    if (!Float.isNaN(voltageUnderLoad[0]) &&
-        voltageUnderLoad[0] > 0f) {
-
-        vForPower =
-                (vLoad2[0] + voltageUnderLoad[0]) / 2f;
-    }
+    float vForPower = Float.isNaN(voltageUnderLoad[0])
+        ? vLoad2[0]
+        : Math.min(vLoad2[0], voltageUnderLoad[0]);
 
     powerMilliWatt = vForPower * estimatedCurrentMa;
 }
@@ -17626,7 +17644,9 @@ if (res.batteryBehaviourWarning) {
     // ------------------------------------------------
 
     boolean partial =
-        (drainMah < 5 || dtMs < 20000 || !validDrain);
+        !validDrain ||
+        dtMs < 20000 ||
+        (drainMah < 5 && !lab14_systemLimited[0]);
 
     if (partial) {
 
