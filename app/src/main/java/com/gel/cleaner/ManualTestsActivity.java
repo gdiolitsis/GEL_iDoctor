@@ -18397,18 +18397,6 @@ private void resetBatteryDiagnostics() {
     percentDeviation[0] = Float.NaN;
 }
 
-// ----------------------------------------------------
-// 🔴 STATE RESET (CRITICAL)
-// ----------------------------------------------------
-lab14LimiterScore = 0;
-lab14LimiterLatched = false;
-
-lab14WeakLoadCounter = 0;
-lab14BoostActive = false;
-lab14RestartAttempts = 0;
-
-lab14TempPeak = Float.NaN;
-
 // ============================================================
 // LAB14 — BATTERY % (LOCKED SOURCE)
 // ============================================================
@@ -18667,6 +18655,8 @@ if (!isLab14BMode) {
 
 // 🔴 START FLOWS (UI ONLY εδώ)
 if (!isLab14BMode) {
+	
+	resetLab14RuntimeState();
 
     startLab14FastThread();      // fast sag phase
     startLab14ProgressLoop();    // timer + UI
@@ -20182,6 +20172,18 @@ private void stopFastStressSafe() {
     try { stopCpuBurn(); } catch (Throwable ignore) {}
     try { stopMemoryStress(); } catch (Throwable ignore) {}
     try { stopGpuStress(); } catch (Throwable ignore) {}
+}
+
+private void resetLab14RuntimeState() {
+
+    lab14LimiterScore = 0;
+    lab14LimiterLatched = false;
+
+    lab14WeakLoadCounter = 0;
+    lab14BoostActive = false;
+    lab14RestartAttempts = 0;
+
+    lab14TempPeak = Float.NaN;
 }
 
 //=============================================================
