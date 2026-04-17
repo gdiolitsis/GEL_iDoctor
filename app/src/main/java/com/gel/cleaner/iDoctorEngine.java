@@ -142,6 +142,7 @@ private long lastChargeNowMah = -1;
         public boolean rooted;
         public BatterySnapshot battery = new BatterySnapshot();
         public ThermalSnapshot thermal = new ThermalSnapshot();
+		public PrivacySnapshot privacy = new PrivacySnapshot();
         public CpuSnapshot cpu = new CpuSnapshot();
         public GpuSnapshot gpu = new GpuSnapshot();
         public MemorySnapshot memory = new MemorySnapshot();
