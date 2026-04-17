@@ -15719,6 +15719,8 @@ private boolean lab14DetectLimiter(
 
 private void lab14PostLoadAnalysis(
 
+Lab14Result res = new Lab14Result();
+
         Lab14Engine engine,
         boolean gr,
         long startMah,
@@ -17302,9 +17304,6 @@ final float startBatteryTempFinal = tempStart;
 final float endBatteryTempFinal = tempEnd;
 
 final float[] powerMilliWattRef = {powerMilliWatt};
-
-Lab14Result res = new Lab14Result();
-boolean lowDrain = drainMah < 3;
 
 // ------------------------------------------------
 // POPULATE RESULT
