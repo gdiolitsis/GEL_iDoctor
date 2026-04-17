@@ -17906,49 +17906,46 @@ if (!Float.isNaN(vStart[0]) &&
 
         float ratio = recovered / totalDrop;
 
-        // 🔴 clamp + sanitize
         if (!Float.isNaN(ratio) && ratio >= 0f) {
 
             voltageStability[0] =
-                    Math.max(
-                            0f,
-                            Math.min(100f, ratio * 100f)
-                    );
+                    Math.max(0f, Math.min(100f, ratio * 100f));
         }
     }
 }
 
-            if (lab14Cancelled || !lab14Running) {
-                lab14FastDone = true;
-                lab14FastPhase = false;
-                lab14MainPhase = false;
-                try { stopCpuBurn(); } catch (Throwable ignore) {}
-                try { stopMemoryStress(); } catch (Throwable ignore) {}
-                try { stopGpuStress(); } catch (Throwable ignore) {}
-                return;
-            }
+if (lab14Cancelled || !lab14Running) {
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    lab14MainPhase = false;
 
-            lab14FastDone = true;
-            lab14FastPhase = false;
-            lab14MainPhase = true;
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
 
-            if (!lab14Cancelled && lab14Running) {
-                resetLab14Bar();
-                startLab14MainStress();
-            }
+    return;
+}
 
-        } catch (Throwable t) {
+lab14FastDone = true;
+lab14FastPhase = false;
+lab14MainPhase = true;
 
-            try { stopCpuBurn(); } catch (Throwable ignore) {}
-            try { stopMemoryStress(); } catch (Throwable ignore) {}
-            try { stopGpuStress(); } catch (Throwable ignore) {}
+if (!lab14Cancelled && lab14Running) {
+    try {
+        resetLab14Bar();
+        startLab14MainStress();
+    } catch (Throwable t) {
 
-            lab14FastDone = true;
-            lab14FastPhase = false;
-            lab14MainPhase = false;
-        }
+        logError("LAB14 MAIN START FAIL: " + t.getMessage());
 
-    }).start();
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+
+        lab14FastDone = true;
+        lab14FastPhase = false;
+        lab14MainPhase = false;
+    }
 }
 
 // ============================================================
