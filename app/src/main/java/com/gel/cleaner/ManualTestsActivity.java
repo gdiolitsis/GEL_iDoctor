@@ -17280,16 +17280,21 @@ final long startMahFinal = startMah;
 boolean unrealisticCapacity = false;
 
 if (baselineFullMah > 0 && drainMah > 0) {
-
     if (drainMah > baselineFullMah * 0.5f) {
         unrealisticCapacity = true;
     }
 }
 
 final boolean unrealCapFinal = unrealisticCapacity;
+
+// 🔴 FIX 1
+boolean lowDrain = drainMah < 3;
 final boolean lowDrainFinal = lowDrain;
+
 final long baselineFullFinal = baselineFullMah;
-final float drainMahFFinal = drainMahF;
+
+// 🔴 FIX 2
+final float drainMahFFinal = (float) drainMah;
 
 final boolean smartSwellingF = smartSwelling;
 
@@ -17299,7 +17304,11 @@ final float endBatteryTempFinal = tempEnd;
 final float[] powerMilliWattRef = {powerMilliWatt};
 
 Lab14Result res = new Lab14Result();
+boolean lowDrain = drainMah < 3;
 
+// ------------------------------------------------
+// POPULATE RESULT
+// ------------------------------------------------
 res.validDrain = validDrain;
 res.systemLimited = lab14_systemLimited[0];
 
@@ -17316,7 +17325,10 @@ res.powerMw = powerMilliWatt;
 
 res.batteryBehaviourWarning = lab14BatteryBehaviourWarning;
 
-res.label = res.label;
+// 🔴 FIX 3 (μην το αφήνεις έτσι)
+res.label = "Unknown"; // ή ό,τι default έχεις
+
+// ------------------------------------------------
 
 runOnUiThread(() -> {
 
@@ -17451,7 +17463,7 @@ if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 500f) {
     }
 
     // drain penalty (unstable discharge)
-    if (validDrain && !Double.isNaN(drainPercentPerHour)) {
+    if (validDrain && !Double.isNaN(res.drainPercentPerHour)) {
 
         if (res.drainPercentPerHour > 45) base -= 15f;
         else if (res.drainPercentPerHour > 30) base -= 8f;
@@ -17850,9 +17862,9 @@ if (res.batteryBehaviourWarning) {
     // ------------------------------------------------
    
     double safeDrain =
-        (Double.isNaN(drainPercentPerHour) || drainPercentPerHour < 0)
+        (Double.isNaN(res.drainPercentPerHour) || res.drainPercentPerHour < 0)
                 ? 0
-                : drainPercentPerHour;
+                : res.drainPercentPerHour;
 
     lab14LogStressResult(
     gr,
@@ -17886,11 +17898,10 @@ if (res.batteryBehaviourWarning) {
         lab14LogPartialMode(
                 gr,
                 lab14_systemLimited,
-                validDrain,
                 lab14Conf
         );
 
-        if (systemLimited) {
+        if (lab14_systemLimited[0]) {
             logWarn(gr
                     ? "Η μέτρηση έγινε με περιορισμό από το σύστημα. Το αποτέλεσμα είναι ενδεικτικό."
                     : "System limiter detected. Result is indicative.");
@@ -17959,7 +17970,6 @@ lab14LogSave(
 
         lab14LogReliabilitySummary(
     gr,
-    validDrain,
     lab14_systemLimited,
     lab14Conf
 );
@@ -19006,8 +19016,8 @@ private boolean detectSwellingSmart(
         score++;
 
     // 4. High drain (instability)
-    if (!Double.isNaN(drainPercentPerHour) && drainPercentPerHour > 40.0)
-        score++;
+    if (!Double.isNaN(res.drainPercentPerHour) && res.drainPercentPerHour > 40.0)
+    score++;
 
     // 5. Current stress (optional)
     if (!Float.isNaN(estimatedCurrentMa) && estimatedCurrentMa > 2500f)
@@ -19073,8 +19083,8 @@ private String computeRiskSummary(
     // =====================================================
 
     if (!Double.isNaN(res.drainPercentPerHour)) {
-        if (drainPercentPerHour > 45.0) score += 2;
-        else if (drainPercentPerHour > 35.0) score += 1;
+        if (res.drainPercentPerHour > 45.0) score += 2;
+        else if (res.drainPercentPerHour > 35.0) score += 1;
     }
 
     // =====================================================
