@@ -18953,6 +18953,7 @@ if (elapsed > 3) {
             drainPerHour = Math.abs(currentMa);
         }
     }
+ }
 
     // ----------------------------------------------------
     // 🔴 COLLECT AVERAGE (CRITICAL)
