@@ -330,8 +330,6 @@ public static class Lab14Result {
     public String label; // 🔴 FINAL LABEL ONLY
 }
 
-private static class Lab14Result {
-
     String label;
 
     boolean validDrain;
@@ -350,6 +348,8 @@ private static class Lab14Result {
 
     boolean batteryBehaviourWarning;
 }
+
+private static final boolean DEBUG_MODE = false;
 
 // ============================================================
 // LAB14 SHARED STATE
@@ -606,11 +606,9 @@ private static class BatteryInfo {
 
     long currentChargeMah = -1;
 
-    // ✅ missing fields
     boolean charging = false;
     String source = "Unknown";
     long estimatedFullMah = -1;
-
 }
 
 // ============================================================  
@@ -1767,19 +1765,6 @@ private BatteryInfo getBatteryInfo() {
     }
 
     return bi;
-}
-
-// ============================================================
-// 🔴 BATTERY INFO MODEL (LOCAL SAFE)
-// ============================================================
-private static class BatteryInfo {
-
-    boolean charging = false;
-
-    long currentChargeMah = -1;
-    long estimatedFullMah = -1;
-
-    String source = "unknown";
 }
 
 // ============================================================
@@ -15017,27 +15002,30 @@ private void lab14LogFinalScore(
     logInfo(gr ? "Τελικό αποτέλεσμα" : "Final result");
     logLine();
 
-    String condLabel = gr ? "Κατάσταση μπαταρίας" : "Battery condition";
+String condLabel = gr ? "Κατάσταση μπαταρίας" : "Battery condition";
 
-    // 🔴 USE FINAL LABEL (NOT GLOBAL)
-    if ("Excellent".equals(label) ||
-        "Good".equals(label) ||
-        "Normal".equals(label)) {
+// 🔴 SAFE LABEL (null protection)
+String lbl = (res != null && res.label != null) ? res.label : "Unknown";
 
-        logLabelOkValue(condLabel, label);
+// 🔴 FINAL OUTPUT
+if ("Excellent".equals(lbl) ||
+    "Good".equals(lbl) ||
+    "Normal".equals(lbl)) {
 
-    } else if ("Weak".equals(label)) {
+    logLabelOkValue(condLabel, lbl);
 
-        logLabelWarnValue(condLabel, label);
+} else if ("Weak".equals(lbl)) {
 
-    } else if ("Critical".equals(label)) {
+    logLabelWarnValue(condLabel, lbl);
 
-        logLabelErrorValue(condLabel, label);
+} else if ("Critical".equals(lbl)) {
 
-    } else {
+    logLabelErrorValue(condLabel, lbl);
 
-        logLabelValue(condLabel, label);
-    }
+} else {
+
+    logLabelValue(condLabel, lbl);
+}
 
     // ----------------------------------------------------
     // COLLAPSE
@@ -17843,6 +17831,9 @@ private void startLab14FastThread() {
                 try { stopGpuStress(); } catch (Throwable ignore) {}
                 return;
             }
+            
+            final float[] powerMilliWattRef = { Float.NaN };
+            final float[] estimatedCurrentMaRef = { Float.NaN };
 
             runFastSagCapture(
                     gr,
@@ -18788,21 +18779,6 @@ private boolean detectSwellingSmart(
     return score >= 3;
 }
 
-// =====================================================
-// CRITICAL RISK SUMMARY (GEL)
-// =====================================================
-private String computeRiskSummary(
-        boolean gr,
-        float sag,
-        float rdyn,
-        float tempDelta,
-        boolean collapseRisk,
-        boolean smartSwelling,
-        boolean calibrationDrift
-) {
-
-    int score = 0;
-
     // =====================================================
     // HARD RISKS (βαριά signals)
     // =====================================================
@@ -18833,15 +18809,6 @@ private String computeRiskSummary(
     if (!Float.isNaN(tempDelta)) {
         if (tempDelta > 10f) score += 2;
         else if (tempDelta > 6f) score += 1;
-    }
-
-    // =====================================================
-    // DRAIN
-    // =====================================================
-
-    if (!Double.isNaN(drainPercentPerHour)) {
-        if (drainPercentPerHour > 45.0) score += 2;
-        else if (drainPercentPerHour > 35.0) score += 1;
     }
 
     // =====================================================
@@ -29060,7 +29027,7 @@ return clampScore(s);
 
 }
 
-private int scorePrivacy(PrivacySnapshot pr) {
+private int scorePrivacy(iDoctorEngine.PrivacySnapshot pr) {
 int s = 100;
 
 // weighted dangerous perms on user apps
