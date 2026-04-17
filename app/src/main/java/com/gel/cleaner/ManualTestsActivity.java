@@ -16797,7 +16797,7 @@ if (!Float.isNaN(rMilli) && (rMilli < 1f || rMilli > 400f)) {
 }
 
 // SMART SWELLING (ONE SOURCE OF TRUTH)
-boolean smartSwelling =
+=
         detectSwellingSmart(
                 sagAvg[0],
                 tempDelta,
@@ -18760,56 +18760,6 @@ private boolean detectSwellingSmart(
     return score >= 3;
 }
 
-    // =====================================================
-    // HARD RISKS (βαριά signals)
-    // =====================================================
-
-    if (collapseRisk) score += 3;
-    if (smartSwelling) score += 3;
-
-    // =====================================================
-    // ELECTRICAL
-    // =====================================================
-
-    if (!Float.isNaN(sag)) {
-        if (sag > 0.18f) score += 3;
-        else if (sag > 0.12f) score += 2;
-        else if (sag > 0.08f) score += 1;
-    }
-
-    if (!Float.isNaN(rdyn)) {
-        if (rdyn > 150f) score += 3;
-        else if (rdyn > 100f) score += 2;
-        else if (rdyn > 70f) score += 1;
-    }
-
-    // =====================================================
-    // THERMAL
-    // =====================================================
-
-    if (!Float.isNaN(tempDelta)) {
-        if (tempDelta > 10f) score += 2;
-        else if (tempDelta > 6f) score += 1;
-    }
-
-    // =====================================================
-    // CALIBRATION (minor signal)
-    // =====================================================
-
-    if (calibrationDrift) score += 1;
-
-    // =====================================================
-    // FINAL CLASSIFICATION
-    // =====================================================
-
-    if (score >= 6)
-        return gr ? "ΚΡΙΣΙΜΟ" : "CRITICAL";
-    else if (score >= 3)
-        return gr ? "ΠΡΟΕΙΔΟΠΟΙΗΣΗ" : "WARNING";
-    else
-        return gr ? "ΑΣΦΑΛΕΣ" : "SAFE";
-}
-
 private void updateLab14LiveStats() {
 
 // 🔴 HARD STOP FAILSAFE (CRITICAL)
@@ -18967,7 +18917,6 @@ if (elapsed > 3) {
             rateSamples++;
         }
     }
-}
 
 // ----------------------------------------------------
 // 🔴 DEVICE CLASS
