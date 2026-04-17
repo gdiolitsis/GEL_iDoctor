@@ -16797,7 +16797,7 @@ if (!Float.isNaN(rMilli) && (rMilli < 1f || rMilli > 400f)) {
 }
 
 // SMART SWELLING (ONE SOURCE OF TRUTH)
-=
+boolean smartSwelling =
         detectSwellingSmart(
                 sagAvg[0],
                 tempDelta,
