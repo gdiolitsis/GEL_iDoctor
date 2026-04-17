@@ -14974,7 +14974,6 @@ private void lab14LogStressResult(
             );
         }
     }
-}
 
 // ============================================================
 // LAB 14 — LOG FINAL RESULT (GEL VERSION)
