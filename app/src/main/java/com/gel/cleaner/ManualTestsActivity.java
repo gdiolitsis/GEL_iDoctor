@@ -17571,31 +17571,6 @@ if (res.batteryBehaviourWarning) {
     );
 }
 
-   // ------------------------------------------------
-    // MAIN CALL (FIXED)
-    // ------------------------------------------------
-   
-    lab14LogStressResult(
-    gr,
-    res,
-    sagAvg,
-    voltageStartFinal,
-    voltageUnderLoad[0],
-    voltageRecovery,
-    voltageRecoverySpeed,
-    voltageStability[0],
-    internalResistance,
-    estimatedESR,
-    thermalImpedance[0],
-    energyEfficiency,
-    startMahFinal,
-    endMah,
-    lab14_systemLimited,
-    collapseRisk,
-    smartSwelling,
-    calibrationDrift
-);
-
     // ------------------------------------------------
     // PARTIAL / FULL MODE DECISION
     // ------------------------------------------------
