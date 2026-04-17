@@ -17723,9 +17723,11 @@ lab14SoftPhaseStarted = false;
 
 } catch (Throwable t) {
 
-// ------------------------------------------------
-// STOP (ERROR EXIT)
-// ------------------------------------------------
+    logError("LAB14 CRASH: " + t.getMessage());
+
+    // ------------------------------------------------
+    // STOP (ERROR EXIT)
+    // ------------------------------------------------
 
     lab14StopAllStress();
 
@@ -17743,9 +17745,16 @@ lab14SoftPhaseStarted = false;
 
 } finally {
 
+    // ------------------------------------------------
+    // FINAL STATE (ALWAYS)
+    // ------------------------------------------------
+
     lab14FastDone = true;
     lab14FastPhase = false;
-}
+
+    // safety reset
+    lab14BoostActive = false;
+    lab14SoftPhaseStarted = false;
 }
 
 // ============================================================
