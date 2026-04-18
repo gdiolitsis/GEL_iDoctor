@@ -352,6 +352,8 @@ private static class PrivacySnapshot {
 // μέσα στο iDoctorEngine.PrivacySnapshot
 int totalUserAppsChecked = 0;
 
+private String lab14LastLabel = "Unknown";
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -14991,11 +14993,8 @@ private void lab14LogFinalScore(
 String condLabel = gr ? "Κατάσταση μπαταρίας" : "Battery condition";
 
 // 🔴 SAFE LABEL (LAB14 RESULT)
-String lbl = (res != null && res.label != null)
-        ? res.label
-        : "Unknown";
+String lbl = lab14LastLabel;
 
-// 🔴 FINAL OUTPUT
 if ("Excellent".equals(lbl) ||
     "Good".equals(lbl) ||
     "Normal".equals(lbl)) {
@@ -17009,6 +17008,8 @@ if (!validDrain || lab14_systemLimited[0]) {
 // =====================================================
 
 res.label = batteryTruth;
+
+lab14LastLabel = (res.label != null) ? res.label : "Unknown";
 
 // ----------------------------------------------------
 // LEGACY COMPAT (κρατάμε compile-safe προσωρινά)
