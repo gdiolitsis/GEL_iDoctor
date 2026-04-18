@@ -15503,12 +15503,13 @@ float powerMilliWatt = Float.NaN;
 
     try {
     	
-// 🔴 DEBUG (πριν το validation)
-logDebug("SAG1=" + (sag1 != null ? sag1[0] : "null") +
-         " | SAG2=" + (sag2 != null ? sag2[0] : "null"));
+logLine();
+logInfo("DEBUG SAG1=" + (sag1 != null ? sag1[0] : "null") +
+        " | SAG2=" + (sag2 != null ? sag2[0] : "null"));
 
-logDebug("Vstart=" + voltageStart +
-         " | Vload=" + voltageUnderLoad[0]);
+logInfo("DEBUG Vstart=" + voltageStart +
+        " | Vload=" + voltageUnderLoad[0]);
+logLine();
 
 // 🔴 CRITICAL VALIDATION — SAG DATA REQUIRED
 boolean hasSagData =
