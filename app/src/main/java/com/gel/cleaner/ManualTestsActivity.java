@@ -332,6 +332,12 @@ public static class Lab14Result {
 }
 
 private static final boolean DEBUG_MODE = false;
+private static class PrivacySnapshot {
+    boolean micActive;
+    boolean cameraActive;
+    boolean locationActive;
+    boolean vpnActive;
+}
 
 // ============================================================
 // LAB14 SHARED STATE
@@ -28475,6 +28481,11 @@ logLine();
 logInfo(gr
         ? "Έλεγχος συνέπειας διαγνωστικών αποτελεσμάτων:"
         : "Diagnostic consistency check:");
+
+// 🔴 SAFE LABEL SOURCE
+String lbl = (res != null && res.label != null)
+        ? res.label
+        : "Unknown";
 
 boolean diagnosticConflict = false;
 int conflictScore = 0;
