@@ -333,10 +333,20 @@ public static class Lab14Result {
 
 private static final boolean DEBUG_MODE = false;
 private static class PrivacySnapshot {
+
+    // υπάρχοντα (μην τα πειράξεις)
     boolean micActive;
     boolean cameraActive;
     boolean locationActive;
     boolean vpnActive;
+
+    // 🔴 ΠΡΟΣΘΗΚΗ (απαραίτητα για compile)
+    int totalUserAppsChecked = 0;
+
+    int userAppsWithLocation = 0;
+    int userAppsWithMic = 0;
+    int userAppsWithCamera = 0;
+    int userAppsWithSms = 0;
 }
 
 // ============================================================
@@ -28483,9 +28493,7 @@ logInfo(gr
         : "Diagnostic consistency check:");
 
 // 🔴 SAFE LABEL SOURCE
-String lbl = (res != null && res.label != null)
-        ? res.label
-        : "Unknown";
+String lbl = batteryTruth != null ? batteryTruth : "Unknown";
 
 boolean diagnosticConflict = false;
 int conflictScore = 0;
