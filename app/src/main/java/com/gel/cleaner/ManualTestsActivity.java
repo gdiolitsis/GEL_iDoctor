@@ -20115,6 +20115,20 @@ private void resetLab14RuntimeState() {
     lab14TempPeak = Float.NaN;
 }
 
+private iDoctorEngine.PrivacySnapshot convertToEnginePrivacy(PrivacySnapshot p) {
+
+    iDoctorEngine.PrivacySnapshot out =
+            new iDoctorEngine.PrivacySnapshot();
+
+    out.totalUserAppsChecked = p.totalUserAppsChecked;
+    out.userAppsWithLocation = p.userAppsWithLocation;
+    out.userAppsWithMic = p.userAppsWithMic;
+    out.userAppsWithCamera = p.userAppsWithCamera;
+    out.userAppsWithSms = p.userAppsWithSms;
+
+    return out;
+}
+
 //=============================================================
 // LAB 15 - Charging System Diagnostic (SMART)
 // FINAL / LOCKED — NO PATCHES — NO SIDE EFFECTS
@@ -27319,7 +27333,7 @@ String securityFlag = colorFlagFromScore(securityScore);
 // 8) PRIVACY (dangerous granted perms to user apps)
 // ------------------------------------------------------------
 PrivacySnapshot pr = readPrivacySnapshot();
-int privacyScore = scorePrivacy(pr);
+int privacyScore = scorePrivacy(convertToEnginePrivacy(pr));
 String privacyFlag = colorFlagFromScore(privacyScore);
 
 // ------------------------------------------------------------
@@ -28491,9 +28505,6 @@ logLine();
 logInfo(gr
         ? "Έλεγχος συνέπειας διαγνωστικών αποτελεσμάτων:"
         : "Diagnostic consistency check:");
-
-// 🔴 SAFE LABEL SOURCE
-String lbl = batteryTruth != null ? batteryTruth : "Unknown";
 
 boolean diagnosticConflict = false;
 int conflictScore = 0;
