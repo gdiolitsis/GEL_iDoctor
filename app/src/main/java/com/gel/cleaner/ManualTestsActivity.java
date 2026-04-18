@@ -2569,6 +2569,13 @@ isLab14BMode = true;
 lab14Cancelled = false;
 lab14Running = true;
 
+// 🔴 FORCE SOFT PROFILE (CRITICAL)
+lab14BoostActive = false;
+lab14SoftPhaseStarted = true;
+inHardPhase = false;
+lab14FastPhase = false;
+lab14MainPhase = false;
+
 // 🔴 RESET RATE AVERAGE
 rateSum = 0;
 rateSamples = 0;
@@ -2587,18 +2594,126 @@ logLabelValue(
            : "Real usage simulation (5 minutes)"
 );
 
-applyMaxBrightnessAndKeepOn();
-
-getWindow().addFlags(
-        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-);
+try {
+    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+} catch (Throwable ignore) {}
 
 // --------------------------------------------------------
-// ⚖️ SOFT LOAD ONLY
+// 🌿 REAL DAILY-USAGE LOAD (LOCKED SOFT PROFILE)
 // --------------------------------------------------------
-try { startCpuBurn_C_Mode(); } catch (Throwable ignore) {}
-try { startMemoryStress(); } catch (Throwable ignore) {}
-try { startGpuStressLevel(2); } catch (Throwable ignore) {}
+
+// ποτέ full burn στο 14B
+try { stopCpuBurn(); } catch (Throwable ignore) {}
+try { stopMemoryStress(); } catch (Throwable ignore) {}
+try { stopGpuStress(); } catch (Throwable ignore) {}
+try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+try { stopVibrationStress(); } catch (Throwable ignore) {}
+
+// --------------------------------------------------------
+// 🎬 VIDEO SETUP (NO AUTO PLAY)
+// --------------------------------------------------------
+try {
+    if (lab14StressVideo != null) {
+
+        lab14StressVideo.setVideoURI(
+                Uri.parse(
+                        "android.resource://"
+                                + getPackageName()
+                                + "/"
+                                + R.raw.battery_stress_loop
+                )
+        );
+
+        lab14StressVideo.setOnPreparedListener(mp -> {
+            mp.setLooping(false);     // 🔴 ΟΧΙ loop
+            mp.setVolume(0f, 0f);
+        });
+    }
+} catch (Throwable ignore) {}
+
+// --------------------------------------------------------
+// 🌿 HUMAN USAGE SIMULATION (STABLE & SAFE)
+// --------------------------------------------------------
+
+final Handler usageHandler = new Handler(Looper.getMainLooper());
+
+final long startTs = SystemClock.elapsedRealtime();
+
+final Runnable usageLoop = new Runnable() {
+    @Override
+    public void run() {
+
+        if (!lab14Running || lab14Cancelled) return;
+
+        long elapsed = SystemClock.elapsedRealtime() - startTs;
+
+        // κάθε ~15–25s αλλάζει behaviour
+        long nextDelay = 15000 + (long)(Math.random() * 10000);
+
+        int mode = (int)(Math.random() * 4);
+
+        try {
+
+            switch (mode) {
+
+                // -------------------------
+                // IDLE (real standby)
+                // -------------------------
+                case 0:
+                    try {
+                        if (lab14StressVideo != null) {
+                            lab14StressVideo.pause();
+                            lab14StressVideo.seekTo(0);
+                        }
+                    } catch (Throwable ignore) {}
+                    break;
+
+                // -------------------------
+                // LIGHT INTERACTION (scroll/UI)
+                // -------------------------
+                case 1:
+                    simulateUiInteraction();
+                    break;
+
+                // -------------------------
+                // VIDEO BURST (controlled)
+                // -------------------------
+                case 2:
+                    try {
+                        if (lab14StressVideo != null) {
+
+                            // reset πριν start (anti overlap)
+                            lab14StressVideo.pause();
+                            lab14StressVideo.seekTo(0);
+
+                            lab14StressVideo.start();
+
+                            usageHandler.postDelayed(() -> {
+                                try {
+                                    lab14StressVideo.pause();
+                                    lab14StressVideo.seekTo(0);
+                                } catch (Throwable ignore) {}
+                            }, 15000); // 15s burst
+                        }
+                    } catch (Throwable ignore) {}
+                    break;
+
+                // -------------------------
+                // SHORT CPU BURST
+                // -------------------------
+                case 3:
+                    simulateShortCpuBurst();
+                    break;
+            }
+
+        } catch (Throwable ignore) {}
+
+        usageHandler.postDelayed(this, nextDelay);
+    }
+};
+
+// start loop
+usageHandler.postDelayed(usageLoop, 5000);
 
 // --------------------------------------------------------
 // AFTER 300s -> FINAL SNAPSHOT + ANALYSIS
@@ -2921,6 +3036,10 @@ try {
     try { stopMemoryStress(); } catch (Throwable ignore) {}
     try { stopGpuStress(); } catch (Throwable ignore) {}
     try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+    
+    try {
+    usageHandler.removeCallbacksAndMessages(null);
+    } catch (Throwable ignore) {}
 
     lab14Cancelled = false;
     lab14Running = false;
@@ -3394,6 +3513,23 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
             }
         }
     });
+}
+
+private void simulateUiInteraction() {
+    try {
+        if (lab14StressVideo != null && lab14StressVideo.isPlaying()) {
+            lab14StressVideo.pause();
+        }
+    } catch (Throwable ignore) {}
+}
+
+private void simulateShortCpuBurst() {
+    new Thread(() -> {
+        long t = SystemClock.elapsedRealtime();
+        while (SystemClock.elapsedRealtime() - t < 1500) {
+            Math.sqrt(Math.random());
+        }
+    }).start();
 }
 
 // ------------------------------------------------------------
