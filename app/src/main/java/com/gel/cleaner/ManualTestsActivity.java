@@ -15922,7 +15922,6 @@ if (esr > 0.01f && esr < 0.40f) {
 
 } else {
 
-    // ❌ ΜΗΝ ΣΒΗΝΕΙΣ πάντα — μόνο αν είσαι σε valid flow
     if (validDrain && !lab14_systemLimited[0]) {
         idoctor.setInternalResistanceMilliOhm(0);
     }
@@ -15931,6 +15930,8 @@ if (esr > 0.01f && esr < 0.40f) {
                 }
             }
         }
+    }
+}
 
 // ----------------------------------------------------
 // ENERGY EFFICIENCY
