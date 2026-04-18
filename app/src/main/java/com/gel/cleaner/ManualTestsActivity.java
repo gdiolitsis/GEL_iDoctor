@@ -349,6 +349,9 @@ private static class PrivacySnapshot {
     int userAppsWithSms = 0;
 }
 
+// μέσα στο iDoctorEngine.PrivacySnapshot
+int totalUserAppsChecked = 0;
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -14987,8 +14990,10 @@ private void lab14LogFinalScore(
 
 String condLabel = gr ? "Κατάσταση μπαταρίας" : "Battery condition";
 
-// 🔴 SAFE LABEL (null protection)
-String lbl = (label != null) ? label : "Unknown";
+// 🔴 SAFE LABEL (LAB14 RESULT)
+String lbl = (res != null && res.label != null)
+        ? res.label
+        : "Unknown";
 
 // 🔴 FINAL OUTPUT
 if ("Excellent".equals(lbl) ||
@@ -20120,7 +20125,6 @@ private iDoctorEngine.PrivacySnapshot convertToEnginePrivacy(PrivacySnapshot p) 
     iDoctorEngine.PrivacySnapshot out =
             new iDoctorEngine.PrivacySnapshot();
 
-    out.totalUserAppsChecked = p.totalUserAppsChecked;
     out.userAppsWithLocation = p.userAppsWithLocation;
     out.userAppsWithMic = p.userAppsWithMic;
     out.userAppsWithCamera = p.userAppsWithCamera;
@@ -28509,9 +28513,8 @@ logInfo(gr
 boolean diagnosticConflict = false;
 int conflictScore = 0;
 
-// Battery healthy but PMIC instability
-if (("Excellent".equals(lbl) || "Good".equals(lbl))
-        && collapseRisk[0]) {
+// Battery instability (real signal)
+if (collapseRisk[0]) {
 
     diagnosticConflict = true;
     conflictScore += 30;
