@@ -17723,6 +17723,7 @@ lab14SoftPhaseStarted = false;
     lab14BoostActive = false;
     lab14SoftPhaseStarted = false;
 }
+}
 
 // ============================================================
 // STABLE VOLTAGE READ
