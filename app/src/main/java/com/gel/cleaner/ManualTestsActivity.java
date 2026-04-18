@@ -15460,7 +15460,8 @@ private boolean lab14DetectLimiter(
     return false;
 }
 
-private void lab14PostLoadAnalysis(
+
+ void lab14PostLoadAnalysis(
 
         Lab14Engine engine,
         boolean gr,
@@ -17725,8 +17726,6 @@ lab14SoftPhaseStarted = false;
     lab14SoftPhaseStarted = false;
 }
 
-}).start();
-
 // ============================================================
 // STABLE VOLTAGE READ
 // ============================================================
@@ -17918,6 +17917,30 @@ if (!lab14Cancelled && lab14Running) {
     }
 }
 
+// 🔴 ΕΔΩ ΜΠΑΙΝΕΙ ΤΟ FIX
+} catch (Throwable t) {
+
+    logError("LAB14 FAST CRASH: " + t.getMessage());
+
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    lab14MainPhase = false;
+
+} finally {
+
+lab14FastDone = true;
+lab14FastPhase = false;
+lab14MainPhase = false;
+
+}
+
+}).start();
+}
+
 // ============================================================
 // MAIN STRESS
 // ============================================================
@@ -18005,27 +18028,28 @@ startCpuBurnLimitedThreads(threads);
             startVibrationStress();
         } catch (Throwable ignore) {}
 
-        // 🔴 VIDEO LOAD (GPU + decoder + screen)
-        try {
-        	
-        if (lab14StressVideo != null)
+// 🔴 VIDEO LOAD (GPU + decoder + screen)
+try {
 
-            lab14StressVideo.setVideoURI(
-                    Uri.parse(
-                            "android.resource://"
-                                    + getPackageName()
-                                    + "/"
-                                    + R.raw.battery_stress_loop
-                    )
-            );
+    if (lab14StressVideo != null) {
 
-            lab14StressVideo.setOnPreparedListener(mp -> {
-                mp.setLooping(true);
-                mp.setVolume(0f, 0f);
-                lab14StressVideo.start();
-            });
+        lab14StressVideo.setVideoURI(
+                Uri.parse(
+                        "android.resource://"
+                                + getPackageName()
+                                + "/"
+                                + R.raw.battery_stress_loop
+                )
+        );
 
-        } catch (Throwable ignore) {}
+        lab14StressVideo.setOnPreparedListener(mp -> {
+            mp.setLooping(true);
+            mp.setVolume(0f, 0f);
+            lab14StressVideo.start();
+        });
+    }
+
+} catch (Throwable ignore) {}
     });
 }
 
@@ -18716,8 +18740,9 @@ private boolean detectSwellingSmart(
         score++;
 
     // 4. High drain (instability)
-    if (!Double.isNaN(drainPercentPerHour) && drainPercentPerHour > 40.0)
+    if (!Double.isNaN(drainPercentPerHour) && drainPercentPerHour > 40.0) {
     score++;
+}
 
     // 5. Current stress (optional)
     if (!Float.isNaN(estimatedCurrentMa) && estimatedCurrentMa > 2500f)
