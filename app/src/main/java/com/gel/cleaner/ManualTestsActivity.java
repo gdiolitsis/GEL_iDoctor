@@ -15906,7 +15906,6 @@ if (!lab14_systemLimited[0] &&
 
             if (validDrain && !lab14_systemLimited[0]) {
 
-                // 🔴 REJECT FAKE ULTRA-LOW ESR
                 if (internalResistance[0] < 0.015f) {
 
                     internalResistance[0] = Float.NaN;
@@ -15927,6 +15926,9 @@ if (!lab14_systemLimited[0] &&
         }
     }
 }
+
+} // closes: if (!Float.isNaN(sag) && !Float.isNaN(currentNow))
+} // closes: if (!Float.isNaN(voltageStart) && !Float.isNaN(voltageUnderLoad[0]))
 
 // ----------------------------------------------------
 // ENERGY EFFICIENCY
