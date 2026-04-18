@@ -15890,44 +15890,39 @@ if (!lab14_systemLimited[0] &&
 
     float sagCheck2 = sagFiltered;
 
-            if (sagCheck2 < 0.005f) {
-    sagCheck2 = Float.NaN;
-}
+    if (sagCheck2 < 0.005f) {
+        sagCheck2 = Float.NaN;
+    }
 
-            if (!Float.isNaN(sagCheck2) &&
-                currentAmp > 0.10f &&
-                currentAmp < 6f) {
+    if (!Float.isNaN(sagCheck2) &&
+        currentAmp > 0.10f &&
+        currentAmp < 6f) {
 
-                float esr =
-        sagCheck2 / currentAmp;
+        float esr = sagCheck2 / currentAmp;
 
-if (esr > 0.01f && esr < 0.40f) {
+        if (esr > 0.01f && esr < 0.40f) {
 
-    internalResistance[0] = esr;
+            internalResistance[0] = esr;
 
-    if (validDrain && !lab14_systemLimited[0]) {
+            if (validDrain && !lab14_systemLimited[0]) {
 
-        // 🔴 REJECT FAKE ULTRA-LOW ESR
-        if (internalResistance[0] < 0.015f) {
+                // 🔴 REJECT FAKE ULTRA-LOW ESR
+                if (internalResistance[0] < 0.015f) {
 
-            internalResistance[0] = Float.NaN;
-            idoctor.setInternalResistanceMilliOhm(0);
+                    internalResistance[0] = Float.NaN;
+                    idoctor.setInternalResistanceMilliOhm(0);
+
+                } else {
+
+                    long irMilli = (long) (internalResistance[0] * 1000f);
+                    idoctor.setInternalResistanceMilliOhm(irMilli);
+                }
+            }
 
         } else {
 
-            long irMilli = (long) (internalResistance[0] * 1000f);
-            idoctor.setInternalResistanceMilliOhm(irMilli);
-        }
-    }
-
-} else {
-
-    if (validDrain && !lab14_systemLimited[0]) {
-        idoctor.setInternalResistanceMilliOhm(0);
-    }
-}
-
-                }
+            if (validDrain && !lab14_systemLimited[0]) {
+                idoctor.setInternalResistanceMilliOhm(0);
             }
         }
     }
