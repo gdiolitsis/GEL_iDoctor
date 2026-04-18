@@ -17065,6 +17065,10 @@ res.batteryBehaviourWarning = lab14BatteryBehaviourWarning;
 
 final float[] powerMilliWattRef = { powerMilliWatt };
 
+final long dtMsFinal = dtMs;
+final long drainMahFinal = drainMah;
+final boolean smartSwellingFinal = smartSwelling;
+
 runOnUiThread(() -> {
 
     final long drainMahFinalLong = (long) drainMahFFinal;
@@ -17597,9 +17601,9 @@ if (res.batteryBehaviourWarning) {
     // ------------------------------------------------
 
     boolean partial =
-        !validDrain ||
-        dtMs < 20000 ||
-        (drainMah < 5 && !lab14_systemLimited[0]);
+    !validDrain ||
+    dtMsFinal < 20000 ||
+    (drainMahFinal < 5 && !lab14_systemLimited[0]);
 
     if (partial) {
 
@@ -17626,7 +17630,7 @@ lab14LogFinalScore(
     res.label,
     res.powerMw,
     collapseRisk,
-    smartSwelling,
+    smartSwellingFinal,
     calibrationDrift,
     lab14_systemLimited
 );
@@ -17642,7 +17646,7 @@ lab14LogSave(
     p,
     variabilityDetected,
     collapseRisk,
-    smartSwelling,
+    smartSwellingFinal,
     calibrationDrift,
     false,
     partial,
