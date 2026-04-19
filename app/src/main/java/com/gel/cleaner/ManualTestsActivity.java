@@ -354,6 +354,8 @@ int totalUserAppsChecked = 0;
 
 private String lab14LastLabel = "Unknown";
 
+float[] voltageUnderLoad = { Float.NaN };
+
 // ============================================================
 // LAB14 SHARED STATE
 // ============================================================
@@ -14271,22 +14273,24 @@ resetBatteryDiagnostics();
     cellImbalanceRisk[0] = false;
 
     lab14_systemLimited[0] = false;
-
+    
     // -------------------------
-    // SAG / VOLTAGE
-    // -------------------------
-    sag1[0] = Float.NaN;
-    sag2[0] = Float.NaN;
-    sagAvg[0] = Float.NaN;
+// SAG / VOLTAGE
+// -------------------------
+sag1[0] = Float.NaN;
+sag2[0] = Float.NaN;
+sagAvg[0] = Float.NaN;
 
-    vStart[0] = Float.NaN;
-    vLoad1[0] = Float.NaN;
-    vRecover[0] = Float.NaN;
-    vLoad2[0] = Float.NaN;
+vStart[0] = Float.NaN;
+vLoad1[0] = Float.NaN;
+vRecover[0] = Float.NaN;
+vLoad2[0] = Float.NaN;
 
-    voltageRecovery[0] = Float.NaN;
-    voltageRecoverySpeed[0] = Float.NaN;
-    voltageStability[0] = Float.NaN;
+voltageUnderLoad[0] = Float.NaN;
+
+voltageRecovery[0] = Float.NaN;
+voltageRecoverySpeed[0] = Float.NaN;
+voltageStability[0] = Float.NaN;
 
     // -------------------------
     // METRICS
@@ -14324,10 +14328,18 @@ startBatteryTemp = (temp0 != null && !Float.isNaN(temp0))
         ? temp0
         : Float.NaN;
 
+// -------------------------
+// ✅ BASELINE VOLTAGE
+// -------------------------
+voltageStart = getBatteryVoltageFiltered();
+
+if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
+    voltageStart = Float.NaN;
+}
+
 // --------------------------------------------------
 // START FLAG
 // --------------------------------------------------
-
 lab14Cancelled = false;
 
 applyMaxBrightnessAndKeepOn();
@@ -14714,21 +14726,51 @@ private void lab14LogStressResult(
         return;
     }
 
-    // =====================================================
-    // 🔴 SAG
-    // =====================================================
-    float sag = Float.NaN;
+// ====================================================
+// 🔴 FINAL SAG CALCULATION (MAIN PHASE — STABLE)
+// ====================================================
 
-    if (!Float.isNaN(voltageStart) &&
-        !Float.isNaN(voltageUnderLoad)) {
+float finalSag = Float.NaN;
 
-        sag = voltageStart - voltageUnderLoad;
+// 🔴 PRIMARY: main phase sag (REAL)
+if (!Float.isNaN(voltageStart) &&
+    !Float.isNaN(voltageUnderLoad[0])) {
 
-        if (sag < 0f) sag = 0f;
-        if (sag < 0.005f) sag = Float.NaN;
+    float tmp = voltageStart - voltageUnderLoad[0];
+
+    if (tmp > 0.005f && tmp < 1.0f) {
+        finalSag = tmp;
     }
+}
 
-    boolean sagValid = !Float.isNaN(sag);
+// 🔴 FALLBACK: fast phase (ONLY if main failed)
+if (Float.isNaN(finalSag) &&
+    !Float.isNaN(sagAvg[0]) &&
+    sagAvg[0] > 0.005f &&
+    sagAvg[0] < 1.0f) {
+
+    finalSag = sagAvg[0];
+}
+
+// ====================================================
+// 🔴 USE THIS EVERYWHERE BELOW
+// ====================================================
+
+float sagCheck = finalSag;
+float sagFiltered = finalSag;
+
+// ====================================================
+// 🔴 DEBUG (OPTIONAL — κράτα το για τώρα)
+// ====================================================
+logLine();
+logWarn("DEBUG FINAL SAG");
+logWarn("voltageStart=" + voltageStart);
+logWarn("voltageUnderLoad=" + voltageUnderLoad[0]);
+logWarn("sagAvg=" + sagAvg[0]);
+logWarn("finalSag=" + finalSag);
+logLine();
+
+    boolean sagValid = !Float.isNaN(finalSag);
 
     if (!sagValid) {
 
@@ -14741,11 +14783,11 @@ private void lab14LogStressResult(
     } else {
 
         String sagText = String.format(
-                Locale.US,
-                "%.3f V (%s)",
-                sag,
-                res.label
-        );
+        Locale.US,
+        "%.3f V (%s)",
+        finalSag,
+        res.label
+);
 
         if ("Critical".equals(res.label)) {
 
@@ -15522,29 +15564,51 @@ private boolean lab14DetectLimiter(
         return false;
     }
 
-    // ----------------------------------------------------
-    // 🔴 DERIVED VALUES
-    // ----------------------------------------------------
-    float sag = Float.NaN;
-    long drain = -1;
-    float tempRise = Float.NaN;
-    float current = Float.NaN;
+// ----------------------------------------------------
+// 🔴 DERIVED VALUES (FINAL — STABLE)
+// ----------------------------------------------------
 
-    if (!Float.isNaN(vStart) && !Float.isNaN(vLoad)) {
-        sag = vStart - vLoad;
-    }
+float sag = finalSag;   // 🔴 SINGLE SOURCE OF TRUTH
+long drain = -1;
+float tempRise = Float.NaN;
+float current = Float.NaN;
 
-    if (startMah > 0 && endMah > 0) {
-        drain = startMah - endMah;
-    }
+// ----------------------------------------------------
+// 🔴 DRAIN
+// ----------------------------------------------------
+if (startMah > 0 && endMah > 0) {
 
-    if (!Float.isNaN(tempStart) && !Float.isNaN(tempEnd)) {
-        tempRise = tempEnd - tempStart;
-    }
+    long d = startMah - endMah;
 
-    if (!Float.isNaN(currentNow)) {
-        current = Math.abs(currentNow);
+    if (d >= 0 && d < 10000) {   // sanity
+        drain = d;
     }
+}
+
+// ----------------------------------------------------
+// 🔴 TEMPERATURE RISE
+// ----------------------------------------------------
+if (!Float.isNaN(tempStart) &&
+    !Float.isNaN(tempEnd)) {
+
+    float t = tempEnd - tempStart;
+
+    if (t > -5f && t < 30f) {   // avoid garbage spikes
+        tempRise = t;
+    }
+}
+
+// ----------------------------------------------------
+// 🔴 CURRENT
+// ----------------------------------------------------
+if (!Float.isNaN(currentNow)) {
+
+    float c = Math.abs(currentNow);
+
+    if (c > 10f && c < 20000f) {   // valid range
+        current = c;
+    }
+}
 
     // ----------------------------------------------------
     // 🔴 NORMALIZATION (reject noise)
@@ -15899,97 +15963,74 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
     }
 }
 
-
 // ====================================================
-// ELECTRICAL ANALYSIS
+// ELECTRICAL ANALYSIS (FINAL CLEAN)
 // ====================================================
 
 float currentNow = Float.NaN;
 
-
-// ---------- FIX voltageUnderLoad ----------
-
-if (Float.isNaN(voltageUnderLoad[0]) ||
-    voltageUnderLoad[0] <= 0f) {
-
-    float vLoadMv =
-            idoctor.readBatteryVoltageMvStable(5, 20);
-
-    if (!Float.isNaN(vLoadMv) && vLoadMv > 0f) {
-
-        voltageUnderLoad[0] =
-                vLoadMv / 1000f;
-    }
-}
-
-
-// ---------- FIX voltageStart ----------
-
-if (Float.isNaN(voltageStart) ||
-    voltageStart <= 0f) {
-
-    float vStartMv =
-            idoctor.readBatteryVoltageMvStable(5, 20);
-
-    if (!Float.isNaN(vStartMv) && vStartMv > 0f) {
-
-        voltageStart =
-                vStartMv / 1000f;
-    }
-}
-
-
-// ---------- MAIN CHECK ----------
-
-float sag = Float.NaN;
+// ----------------------------------------------------
+// 🔴 FINAL SAG (ONLY SOURCE)
+// ----------------------------------------------------
+float finalSag = Float.NaN;
 
 if (!Float.isNaN(voltageStart) &&
     !Float.isNaN(voltageUnderLoad[0])) {
 
-    sag =
-            voltageStart - voltageUnderLoad[0];
+    float tmp = voltageStart - voltageUnderLoad[0];
 
-    currentNow =
-            idoctor.readBatteryCurrentMaStable(5, 20);
-
-
-    if ((Float.isNaN(currentNow) ||
-         Math.abs(currentNow) < 50f) &&
-        drainMah > 0 &&
-        dtMs > 0) {
-
-        float mahPerSec =
-                (float) drainMah /
-                (dtMs / 1000f);
-
-        currentNow =
-                mahPerSec * 3600f;
+    if (tmp > 0.005f && tmp < 1.0f) {
+        finalSag = tmp;
     }
-
-
-    if (!Float.isNaN(sag) &&
-        !Float.isNaN(currentNow)) {
-
-float sagCheck = sag;
-
-if (!Float.isNaN(sagAvg[0])) {
-    sagCheck = (sag + sagAvg[0]) / 2f;
 }
 
-float currentAbs = Math.abs(currentNow);
+// fallback μόνο αν δεν υπάρχει main
+if (Float.isNaN(finalSag) &&
+    !Float.isNaN(sagAvg[0]) &&
+    sagAvg[0] > 0.005f &&
+    sagAvg[0] < 1.0f) {
 
-boolean lowSag =
-        !Float.isNaN(sagCheck) &&
-        sagCheck >= 0f &&
-        sagCheck < 0.010f;
+    finalSag = sagAvg[0];
+}
 
-boolean lowCurrent =
-        !Float.isNaN(currentAbs) &&
-        currentAbs < 100f;
+// ----------------------------------------------------
+// 🔴 CURRENT
+// ----------------------------------------------------
+currentNow = idoctor.readBatteryCurrentMaStable(5, 20);
 
-boolean lowDrain =
-        drainMah >= 0 &&
-        drainMah < 2f;
+if ((Float.isNaN(currentNow) ||
+     Math.abs(currentNow) < 50f) &&
+    drainMah > 0 &&
+    dtMs > 0) {
+
+    float mahPerSec =
+            (float) drainMah /
+            (dtMs / 1000f);
+
+    currentNow = mahPerSec * 3600f;
+}
+
+// ----------------------------------------------------
+// 🔴 MAIN CHECK (NO sag, ONLY finalSag)
+// ----------------------------------------------------
+if (!Float.isNaN(finalSag) &&
+    !Float.isNaN(currentNow)) {
+
+    float sagCheck = finalSag;
+
+    float currentAbs = Math.abs(currentNow);
+
+    boolean lowSag =
+            sagCheck >= 0f &&
+            sagCheck < 0.010f;
+
+    boolean lowCurrent =
+            !Float.isNaN(currentAbs) &&
+            currentAbs < 100f;
+
+    boolean lowDrain =
+            drainMah >= 0 &&
+            drainMah < 2f;
 
 // ----------------------------------------------------
 // 🔴 MULTI-FLAG LOGIC (ANTI FALSE POSITIVES)
@@ -16033,7 +16074,7 @@ if (lab14_systemLimited[0]) {
 float sagFiltered = Float.NaN;
 
 // 🔹 Υπολογισμός
-sagFiltered = sag;
+sagFiltered = finalSag;
 
 if (!Float.isNaN(sagAvg[0])) {
     sagFiltered = (sag + sagAvg[0]) / 2f;
@@ -18342,7 +18383,7 @@ private void startLab14ProgressLoop() {
             int elapsed = (int) ((now - t0) / 1000);
 
             // =====================================================
-            // 🔴 FINAL END (CRITICAL FIX — NO FREEZE EVER AGAIN)
+            // 🔴 FINAL END (NO FREEZE)
             // =====================================================
             if (elapsed >= durationSec) {
 
@@ -18352,7 +18393,7 @@ private void startLab14ProgressLoop() {
 
                 try { lab14StopAllStress(); } catch (Throwable ignore) {}
 
-                // 🔴 FORCE UI CLEANUP
+                // 🔴 FORCE UI CLOSE
                 runOnUiThread(() -> {
                     try {
                         if (lab14Dialog != null && lab14Dialog.isShowing()) {
@@ -18426,7 +18467,7 @@ private void startLab14ProgressLoop() {
             }
 
             // =====================================================
-            // 🔴 SNAPSHOT (SAFE THROTTLED)
+            // 🔴 SNAPSHOT (CRITICAL FIX — REAL LOWEST VOLTAGE)
             // =====================================================
             if (now - lastSnapshotTs > 1500) {
 
@@ -18448,16 +18489,18 @@ private void startLab14ProgressLoop() {
 
                         if (!Float.isNaN(vNow)) {
 
-                            if (Float.isNaN(vStart[0])) vStart[0] = vNow;
-                            else if (Float.isNaN(vLoad1[0])) vLoad1[0] = vNow;
-                            else if (Float.isNaN(vRecover[0])) vRecover[0] = vNow;
-                            else if (Float.isNaN(vLoad2[0])) vLoad2[0] = vNow;
-
+                            // 🔴 LOWEST VOLTAGE TRACK (KEY FOR SAG)
                             if (Float.isNaN(voltageUnderLoad[0]) ||
                                 vNow < voltageUnderLoad[0]) {
 
                                 voltageUnderLoad[0] = vNow;
                             }
+
+                            // 🔴 OPTIONAL FAST CAPTURE
+                            if (Float.isNaN(vStart[0])) vStart[0] = vNow;
+                            else if (Float.isNaN(vLoad1[0])) vLoad1[0] = vNow;
+                            else if (Float.isNaN(vRecover[0])) vRecover[0] = vNow;
+                            else if (Float.isNaN(vLoad2[0])) vLoad2[0] = vNow;
                         }
 
                         long c = snap.chargeNowMah;
@@ -19920,9 +19963,7 @@ private void runFastSagCapture(
 
     try {
 
-        // ----------------------------------------------------
-        // 🔴 HARD RESET
-        // ----------------------------------------------------
+        // 🔴 RESET LOAD
         try { stopCpuBurn(); } catch (Throwable ignore) {}
         try { stopGpuStress(); } catch (Throwable ignore) {}
         try { stopMemoryStress(); } catch (Throwable ignore) {}
@@ -19931,129 +19972,35 @@ private void runFastSagCapture(
 
         SystemClock.sleep(800);
 
-        // ----------------------------------------------------
-        // 🔴 BASELINE (TRUE IDLE)
-        // ----------------------------------------------------
+        // 🔴 BASELINE ONLY (IDLE VOLTAGE)
         float v0 = getBatteryVoltageFiltered();
 
         if (!Float.isNaN(v0) && v0 > 3.0f && v0 < 5.0f) {
             vStart[0] = v0;
         }
 
-        // δώσε χρόνο να «κάτσει» το baseline
+        // 🔴 OPTIONAL RECOVERY SAMPLE
         SystemClock.sleep(1200);
 
-        // ----------------------------------------------------
-        // 🔥 LOAD PHASE 1 (STEADY, όχι spike)
-        // ----------------------------------------------------
-        try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
-        try { startGpuStressLevel(1); } catch (Throwable ignore) {}
+        float vRec = getBatteryVoltageFiltered();
 
-        // πρώτη σταθεροποίηση φορτίου
-        SystemClock.sleep(2500);
-
-        float lv1 = getBatteryVoltageFiltered();
-        if (!Float.isNaN(lv1) && lv1 > 3.0f && lv1 < 5.0f) {
-            vLoad1[0] = lv1;
+        if (!Float.isNaN(vRec) && vRec > 3.0f && vRec < 5.0f) {
+            vRecover[0] = vRec;
         }
 
-        // κράτα το ίδιο steady load λίγο ακόμα
-        SystemClock.sleep(2500);
-
-        float lv2 = getBatteryVoltageFiltered();
-        if (!Float.isNaN(lv2) && lv2 > 3.0f && lv2 < 5.0f) {
-            vLoad2[0] = lv2;
-        }
-
-        // ----------------------------------------------------
-        // 🔴 CURRENT SAMPLE UNDER LOAD
-        // ----------------------------------------------------
-        float currentNow = idoctor.getBatteryCurrentNowUnified();
-
-        if (!Float.isNaN(currentNow) &&
-                Math.abs(currentNow) > 80f &&
-                Math.abs(currentNow) < 10000f) {
-            estimatedCurrentMaRef[0] = Math.abs(currentNow);
-        }
-
-        // ----------------------------------------------------
-        // 🔴 STOP LOAD
-        // ----------------------------------------------------
-        try { stopGpuStress(); } catch (Throwable ignore) {}
-        try { stopCpuBurn(); } catch (Throwable ignore) {}
-
-        // ----------------------------------------------------
-        // 🔴 RECOVERY PHASE
-        // ----------------------------------------------------
-        SystemClock.sleep(2000);
-
-        float vr = getBatteryVoltageFiltered();
-        if (!Float.isNaN(vr) && vr > 3.0f && vr < 5.0f) {
-            vRecover[0] = vr;
-        }
-
-        // ----------------------------------------------------
         // 🔴 DEBUG
-        // ----------------------------------------------------
         logLine();
-        logWarn("DEBUG SAG CAPTURE");
+        logWarn("FAST BASELINE CAPTURE");
         logWarn("vStart=" + vStart[0]);
-        logWarn("vLoad1=" + vLoad1[0]);
-        logWarn("vLoad2=" + vLoad2[0]);
         logWarn("vRecover=" + vRecover[0]);
-        logWarn("current=" + estimatedCurrentMaRef[0]);
         logLine();
-
-        // ----------------------------------------------------
-        // 🔴 SAG 1
-        // ----------------------------------------------------
-        float s1 = Float.NaN;
-        if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad1[0])) {
-            float tmp = vStart[0] - vLoad1[0];
-            if (tmp > 0.010f && tmp < 1.0f) {
-                s1 = tmp;
-            }
-        }
-
-        // ----------------------------------------------------
-        // 🔴 SAG 2
-        // ----------------------------------------------------
-        float s2 = Float.NaN;
-        if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad2[0])) {
-            float tmp = vStart[0] - vLoad2[0];
-            if (tmp > 0.010f && tmp < 1.0f) {
-                s2 = tmp;
-            }
-        }
-
-        // ----------------------------------------------------
-        // 🔴 FINAL ASSIGN
-        // ----------------------------------------------------
-        if (!Float.isNaN(s1)) sag1[0] = s1;
-        if (!Float.isNaN(s2)) sag2[0] = s2;
-
-        // ----------------------------------------------------
-        // 🔴 POWER
-        // ----------------------------------------------------
-        if (!Float.isNaN(vLoad2[0]) &&
-                !Float.isNaN(estimatedCurrentMaRef[0])) {
-
-            float power = vLoad2[0] * estimatedCurrentMaRef[0];
-
-            if (power > 500f && power < 20000f) {
-                powerMilliWattRef[0] = power;
-            }
-        }
 
     } catch (Throwable t) {
 
-        logError("FAST SAG ERROR: " + t.getMessage());
+        logError("FAST BASELINE ERROR: " + t.getMessage());
 
         try { stopCpuBurn(); } catch (Throwable ignore) {}
         try { stopGpuStress(); } catch (Throwable ignore) {}
-        try { stopMemoryStress(); } catch (Throwable ignore) {}
-        try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
-        try { stopVibrationStress(); } catch (Throwable ignore) {}
     }
 }
 
@@ -26523,25 +26470,25 @@ if ((powerGlitches > 1 && thermalSpikes) || powerGlitches > 3) {
 
 
 // ----------------------------------------------------
-// PMIC / FUEL GAUGE STABILITY CHECK
+// PMIC / FUEL GAUGE STABILITY CHECK (FINAL)
 // ----------------------------------------------------
 
 if (validDrain &&
-    !Float.isNaN(voltageStart) &&
+    !Float.isNaN(finalSag) &&
     !Float.isNaN(voltageUnderLoad[0]) &&
     !Float.isNaN(voltageRecovery[0])) {
 
-    float sag = voltageStart - voltageUnderLoad[0];
+    float sag = finalSag;   // 🔴 USE FINAL SAG ONLY
 
     // ignore micro sag noise
     if (sag < 0.015f)
         sag = 0f;
 
     float recoveryDelta =
-        voltageRecovery[0] - voltageUnderLoad[0];
+            voltageRecovery[0] - voltageUnderLoad[0];
 
-float electricalNoise =
-        Math.abs(sag - recoveryDelta);
+    float electricalNoise =
+            Math.abs(sag - recoveryDelta);
 
     // abnormal voltage behaviour
     if (electricalNoise > 0.20f)
