@@ -17958,6 +17958,10 @@ private void startLab14FastThread() {
 
             final float[] powerMilliWattRef = { Float.NaN };
             final float[] estimatedCurrentMaRef = { Float.NaN };
+            
+            // 🔴 MINIMAL REAL LOAD (CRITICAL)
+try { startCpuBurnLimitedThreads(1); } catch (Throwable ignore) {}
+try { startGpuStressLevel(1); } catch (Throwable ignore) {}
 
             // =====================================================
             // 🔴 REAL 45s FAST PHASE LOOP (CRITICAL FIX)
@@ -18079,30 +18083,40 @@ private void startLab14FastThread() {
                 return;
             }
 
-            // =====================================================
-            // 🔴 TRANSITION TO MAIN PHASE
-            // =====================================================
-            lab14FastDone = true;
-            lab14FastPhase = false;
-            lab14MainPhase = true;
+// =====================================================
+// 🔴 TRANSITION TO MAIN PHASE
+// =====================================================
+lab14FastDone = true;
+lab14FastPhase = false;
+lab14MainPhase = true;
 
-            if (!lab14Cancelled && lab14Running) {
-                try {
-                    resetLab14Bar();
-                    startLab14MainStress();
-                } catch (Throwable t) {
+try { stopCpuBurn(); } catch (Throwable ignore) {}
+try { stopGpuStress(); } catch (Throwable ignore) {}
+try { stopMemoryStress(); } catch (Throwable ignore) {}
 
-                    logError("LAB14 MAIN START FAIL: " + t.getMessage());
-
-                    try { stopCpuBurn(); } catch (Throwable ignore) {}
-                    try { stopMemoryStress(); } catch (Throwable ignore) {}
-                    try { stopGpuStress(); } catch (Throwable ignore) {}
-
-                    lab14FastDone = true;
-                    lab14FastPhase = false;
-                    lab14MainPhase = false;
-                }
+if (!lab14Cancelled && lab14Running) {
+    try {
+        runOnUiThread(() -> {
+            try {
+                resetLab14Bar();
+                startLab14MainStress();
+            } catch (Throwable t) {
+                logError("LAB14 MAIN START FAIL: " + t.getMessage());
             }
+        });
+    } catch (Throwable t) {
+
+        logError("LAB14 MAIN START FAIL: " + t.getMessage());
+
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+
+        lab14FastDone = true;
+        lab14FastPhase = false;
+        lab14MainPhase = false;
+    }
+}
 
         } catch (Throwable t) {
 
@@ -18120,7 +18134,7 @@ private void startLab14FastThread() {
 
             lab14FastDone = true;
             lab14FastPhase = false;
-            lab14MainPhase = false;
+         
         }
 
     }).start();
