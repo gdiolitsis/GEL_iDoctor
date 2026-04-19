@@ -15568,10 +15568,20 @@ private boolean lab14DetectLimiter(
 // 🔴 DERIVED VALUES (FINAL — STABLE)
 // ----------------------------------------------------
 
-float sag = finalSag;   // 🔴 SINGLE SOURCE OF TRUTH
+float sag = Float.NaN;
 long drain = -1;
 float tempRise = Float.NaN;
 float current = Float.NaN;
+
+// 🔴 LOCAL SAG CALC (SELF-CONTAINED)
+if (!Float.isNaN(vStart) && !Float.isNaN(vLoad)) {
+
+    float tmp = vStart - vLoad;
+
+    if (tmp > 0.005f && tmp < 1.0f) {
+        sag = tmp;
+    }
+}
 
 // ----------------------------------------------------
 // 🔴 DRAIN
@@ -16074,10 +16084,14 @@ if (lab14_systemLimited[0]) {
 float sagFiltered = Float.NaN;
 
 // 🔹 Υπολογισμός
-sagFiltered = finalSag;
+if (!Float.isNaN(finalSag)) {
+    sagFiltered = finalSag;
+}
 
-if (!Float.isNaN(sagAvg[0])) {
-    sagFiltered = (sag + sagAvg[0]) / 2f;
+if (!Float.isNaN(finalSag) &&
+    !Float.isNaN(sagAvg[0])) {
+
+    sagFiltered = (finalSag + sagAvg[0]) / 2f;
 }
 
 if (!Float.isNaN(sagFiltered) &&
@@ -17872,28 +17886,6 @@ lab14LogSave(
     lab14Conf
 );
 });
-
-// ------------------------------------------------
-// STOP (NORMAL EXIT)
-// ------------------------------------------------
-
-lab14StopAllStress();
-
-try {
-    counterText = null;
-    lab14CleanupUI();
-} catch (Throwable ignore) {}
-
-restoreBrightnessAndKeepOn();
-
-lab14Cancelled = false;
-lab14Running = false;
-lab14PopupShown = false;
-lab14AdvisoryShown = false;
-
-// 🔴 RESET FLAGS (CRITICAL)
-lab14BoostActive = false;
-lab14SoftPhaseStarted = false;
 
 // ------------------------------------------------
 // END TRY
