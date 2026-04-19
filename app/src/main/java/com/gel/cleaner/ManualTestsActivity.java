@@ -19987,49 +19987,63 @@ private void runFastSagCapture(
 float s1 = Float.NaN;
 float s2 = Float.NaN;
 
-// 🔹 primary
+// =====================
+// 🔹 SAG1 (primary)
+// =====================
 if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad1[0])) {
 
-    s1 = vStart[0] - vLoad1[0];
+    float tmp = vStart[0] - vLoad1[0];
 
-    if (s1 > 0.005f && s1 < 1.0f) {
-        sag1[0] = s1;
+    if (tmp > 0.005f && tmp < 1.0f) {
+        s1 = tmp;
     }
 }
 
-// 🔹 fallback (use main load if missing)
-if (Float.isNaN(sag1[0]) &&
+// 🔹 fallback (main load)
+if (Float.isNaN(s1) &&
     !Float.isNaN(voltageStart) &&
     !Float.isNaN(voltageUnderLoad[0])) {
 
-    s1 = voltageStart - voltageUnderLoad[0];
+    float tmp = voltageStart - voltageUnderLoad[0];
 
-    if (s1 > 0.005f && s1 < 1.0f) {
-        sag1[0] = s1;
+    if (tmp > 0.005f && tmp < 1.0f) {
+        s1 = tmp;
     }
 }
 
-// -------------------------
-
+// =====================
+// 🔹 SAG2 (primary)
+// =====================
 if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad2[0])) {
 
-    s2 = vStart[0] - vLoad2[0];
+    float tmp = vStart[0] - vLoad2[0];
 
-    if (s2 > 0.005f && s2 < 1.0f) {
-        sag2[0] = s2;
+    if (tmp > 0.005f && tmp < 1.0f) {
+        s2 = tmp;
     }
 }
 
-// 🔹 fallback
-if (Float.isNaN(sag2[0]) &&
+// 🔹 fallback (main load)
+if (Float.isNaN(s2) &&
     !Float.isNaN(voltageStart) &&
     !Float.isNaN(voltageUnderLoad[0])) {
 
-    s2 = voltageStart - voltageUnderLoad[0];
+    float tmp = voltageStart - voltageUnderLoad[0];
 
-    if (s2 > 0.005f && s2 < 1.0f) {
-        sag2[0] = s2;
+    if (tmp > 0.005f && tmp < 1.0f) {
+        s2 = tmp;
     }
+}
+
+// =====================
+// 🔹 FINAL ASSIGN
+// =====================
+if (!Float.isNaN(s1)) {
+    sag1[0] = s1;
+}
+
+if (!Float.isNaN(s2)) {
+    sag2[0] = s2;
 }
 
         // ----------------------------------------------------
