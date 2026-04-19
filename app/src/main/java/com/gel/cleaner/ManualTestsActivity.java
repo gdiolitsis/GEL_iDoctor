@@ -15042,7 +15042,7 @@ String powerTextFinal = (Float.isNaN(res.powerMw) || res.powerMw <= 0f)
 
 String sagTextFinal = Float.isNaN(finalSag)
         ? "N/A"
-        : String.format(Locale.US, "%.3f V", sag);
+        : String.format(Locale.US, "%.3f V", finalSag);
 
 String tempTextFinal =
         (!Float.isNaN(res.tempStart) && !Float.isNaN(res.tempEnd))
@@ -15118,9 +15118,9 @@ if (DEBUG_MODE) {
 
     logLabelValue(
             "Sag",
-            Float.isNaN(sag)
+            Float.isNaN(finalSag)
                     ? "N/A"
-                    : String.format(Locale.US, "%.4f V", sag)
+                    : String.format(Locale.US, "%.4f V", finalSag)
     );
 
     logLabelValue(
@@ -15627,7 +15627,7 @@ if (!Float.isNaN(currentNow)) {
     // ----------------------------------------------------
     // 🔴 NORMALIZATION (reject noise)
     // ----------------------------------------------------
-    if (!Float.isNaN(sag) && sag < 0.003f) {
+    if (!Float.isNaN(finalSag) && sag < 0.003f) {
         sag = 0f;
     }
 
@@ -15639,7 +15639,7 @@ if (!Float.isNaN(currentNow)) {
     // 🔴 FLAGS (STRICTER)
     // ----------------------------------------------------
     boolean lowSag =
-            !Float.isNaN(sag) &&
+            !Float.isNaN(finalSag) &&
             sag >= 0f &&
             sag < 0.010f;
 
@@ -18926,7 +18926,7 @@ private boolean detectSwellingSmart(
     int score = 0;
 
     // 1. High sag (structural weakness)
-    if (!Float.isNaN(sag) && sag > 0.12f)
+    if (!Float.isNaN(finalSag) && sag > 0.12f)
         score++;
 
     // 2. High thermal rise
@@ -20150,7 +20150,7 @@ private String downgradeBatteryLevel(String level) {
 
 private String classifySag(float sag) {
 
-    if (Float.isNaN(sag)) return "Unknown";
+    if (Float.isNaN(finalSag)) return "Unknown";
 
     if (sag <= 0.05f) return "Excellent";
     if (sag <= 0.10f) return "Good";
