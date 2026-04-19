@@ -17928,11 +17928,13 @@ private float readStableBatteryVoltage() {
 }
 
 // ============================================================
-// FAST THREAD (FIXED — REAL 45s WARMUP)
+// FAST THREAD (SMOOTH TRANSITION + SAFE CLEANUP)
 // ============================================================
 private void startLab14FastThread() {
 
     new Thread(() -> {
+
+        boolean movedToMain = false;
 
         try {
 
@@ -17950,21 +17952,21 @@ private void startLab14FastThread() {
                 lab14FastDone = true;
                 lab14FastPhase = false;
                 lab14MainPhase = false;
+
                 try { stopCpuBurn(); } catch (Throwable ignore) {}
                 try { stopMemoryStress(); } catch (Throwable ignore) {}
                 try { stopGpuStress(); } catch (Throwable ignore) {}
+                try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+                try { stopVibrationStress(); } catch (Throwable ignore) {}
+
                 return;
             }
 
             final float[] powerMilliWattRef = { Float.NaN };
             final float[] estimatedCurrentMaRef = { Float.NaN };
-            
-            // 🔴 MINIMAL REAL LOAD (CRITICAL)
-try { startCpuBurnLimitedThreads(1); } catch (Throwable ignore) {}
-try { startGpuStressLevel(1); } catch (Throwable ignore) {}
 
             // =====================================================
-            // 🔴 REAL 45s FAST PHASE LOOP (CRITICAL FIX)
+            // 🔴 REAL 45s FAST PHASE LOOP
             // =====================================================
             long fastStart = SystemClock.elapsedRealtime();
 
@@ -17973,7 +17975,6 @@ try { startGpuStressLevel(1); } catch (Throwable ignore) {}
                 long elapsed =
                         (SystemClock.elapsedRealtime() - fastStart) / 1000;
 
-                // 🔹 capture κάθε ~3s (σταθερό sampling)
                 runFastSagCapture(
                         gr,
                         idoctor,
@@ -17987,14 +17988,13 @@ try { startGpuStressLevel(1); } catch (Throwable ignore) {}
                         estimatedCurrentMaRef
                 );
 
-                // 🔹 μικρό delay για stabilization
                 try { Thread.sleep(3000); } catch (Throwable ignore) {}
 
                 if (elapsed >= 45) break;
             }
 
             // =====================================================
-            // 🔴 SAG + RECOVERY (FINAL STABLE BLOCK)
+            // 🔴 SAG + RECOVERY
             // =====================================================
             if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
 
@@ -18015,7 +18015,6 @@ try { startGpuStressLevel(1); } catch (Throwable ignore) {}
                 }
 
                 if (!Float.isNaN(newSag)) {
-
                     if (Float.isNaN(sagAvg[0])) {
                         sagAvg[0] = newSag;
                     } else {
@@ -18039,9 +18038,7 @@ try { startGpuStressLevel(1); } catch (Throwable ignore) {}
                     float recDelta = vRecover[0] - vLoad2[0];
 
                     if (recDelta > 0.002f && recDelta < 0.5f) {
-
                         voltageRecovery[0] = recDelta;
-
                         voltageRecoverySpeed[0] =
                                 recDelta / Math.max(0.2f, recMs / 1000f);
                     }
@@ -18060,18 +18057,20 @@ try { startGpuStressLevel(1); } catch (Throwable ignore) {}
                 if (totalDrop > 0.002f && totalDrop < 1.0f) {
 
                     float recovered = vRecover[0] - vLoad2[0];
-
                     float ratio = recovered / totalDrop;
 
                     if (!Float.isNaN(ratio) && ratio >= 0f) {
-
                         voltageStability[0] =
                                 Math.max(0f, Math.min(100f, ratio * 100f));
                     }
                 }
             }
 
+            // =====================================================
+            // 🔴 CANCEL / EARLY STOP
+            // =====================================================
             if (lab14Cancelled || !lab14Running) {
+
                 lab14FastDone = true;
                 lab14FastPhase = false;
                 lab14MainPhase = false;
@@ -18079,44 +18078,77 @@ try { startGpuStressLevel(1); } catch (Throwable ignore) {}
                 try { stopCpuBurn(); } catch (Throwable ignore) {}
                 try { stopMemoryStress(); } catch (Throwable ignore) {}
                 try { stopGpuStress(); } catch (Throwable ignore) {}
+                try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+                try { stopVibrationStress(); } catch (Throwable ignore) {}
+
+                runOnUiThread(() -> {
+                    try {
+                        if (lab14Dialog != null && lab14Dialog.isShowing()) {
+                            lab14Dialog.dismiss();
+                            lab14Dialog = null;
+                        }
+                    } catch (Throwable ignore) {}
+                });
 
                 return;
             }
 
-// =====================================================
-// 🔴 TRANSITION TO MAIN PHASE
-// =====================================================
-lab14FastDone = true;
-lab14FastPhase = false;
-lab14MainPhase = true;
+            // =====================================================
+            // 🔴 CLEAN FAST LOAD BEFORE MAIN
+            // =====================================================
+            try { stopCpuBurn(); } catch (Throwable ignore) {}
+            try { stopGpuStress(); } catch (Throwable ignore) {}
+            try { stopMemoryStress(); } catch (Throwable ignore) {}
+            try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+            try { stopVibrationStress(); } catch (Throwable ignore) {}
 
-try { stopCpuBurn(); } catch (Throwable ignore) {}
-try { stopGpuStress(); } catch (Throwable ignore) {}
-try { stopMemoryStress(); } catch (Throwable ignore) {}
+            try { Thread.sleep(250); } catch (Throwable ignore) {}
 
-if (!lab14Cancelled && lab14Running) {
-    try {
-        runOnUiThread(() -> {
-            try {
-                resetLab14Bar();
-                startLab14MainStress();
-            } catch (Throwable t) {
-                logError("LAB14 MAIN START FAIL: " + t.getMessage());
-            }
-        });
-    } catch (Throwable t) {
+            // =====================================================
+            // 🔴 TRANSITION TO MAIN PHASE
+            // =====================================================
+            lab14FastDone = true;
+            lab14FastPhase = false;
+            lab14MainPhase = true;
+            movedToMain = true;
 
-        logError("LAB14 MAIN START FAIL: " + t.getMessage());
+            runOnUiThread(() -> {
+                try {
+                    resetLab14Bar();
 
-        try { stopCpuBurn(); } catch (Throwable ignore) {}
-        try { stopMemoryStress(); } catch (Throwable ignore) {}
-        try { stopGpuStress(); } catch (Throwable ignore) {}
+                    if (counterText != null) {
+                        counterText.setText(
+                                gr
+                                        ? "Έναρξη κύριας φάσης..."
+                                        : "Starting main phase..."
+                        );
+                    }
 
-        lab14FastDone = true;
-        lab14FastPhase = false;
-        lab14MainPhase = false;
-    }
-}
+                    startLab14MainStress();
+
+                } catch (Throwable t) {
+
+                    logError("LAB14 MAIN START FAIL: " + t.getMessage());
+
+                    try { stopCpuBurn(); } catch (Throwable ignore) {}
+                    try { stopMemoryStress(); } catch (Throwable ignore) {}
+                    try { stopGpuStress(); } catch (Throwable ignore) {}
+                    try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+                    try { stopVibrationStress(); } catch (Throwable ignore) {}
+
+                    lab14FastDone = true;
+                    lab14FastPhase = false;
+                    lab14MainPhase = false;
+                    lab14Running = false;
+
+                    try {
+                        if (lab14Dialog != null && lab14Dialog.isShowing()) {
+                            lab14Dialog.dismiss();
+                            lab14Dialog = null;
+                        }
+                    } catch (Throwable ignore) {}
+                }
+            });
 
         } catch (Throwable t) {
 
@@ -18125,16 +18157,32 @@ if (!lab14Cancelled && lab14Running) {
             try { stopCpuBurn(); } catch (Throwable ignore) {}
             try { stopMemoryStress(); } catch (Throwable ignore) {}
             try { stopGpuStress(); } catch (Throwable ignore) {}
+            try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+            try { stopVibrationStress(); } catch (Throwable ignore) {}
 
             lab14FastDone = true;
             lab14FastPhase = false;
             lab14MainPhase = false;
+            lab14Running = false;
+
+            runOnUiThread(() -> {
+                try {
+                    if (lab14Dialog != null && lab14Dialog.isShowing()) {
+                        lab14Dialog.dismiss();
+                        lab14Dialog = null;
+                    }
+                } catch (Throwable ignore) {}
+            });
 
         } finally {
 
             lab14FastDone = true;
             lab14FastPhase = false;
-         
+
+            // 🔴 ΜΗΝ μηδενίζεις το main phase αν όντως πέρασε στην κύρια φάση
+            if (!movedToMain) {
+                lab14MainPhase = false;
+            }
         }
 
     }).start();
@@ -18147,19 +18195,40 @@ private void startLab14MainStress() {
 
     if (!lab14Running || lab14Cancelled) return;
 
-    // 🔴 PHASE FIX
+    // 🔴 PHASE STATE
     lab14FastPhase = false;
     lab14MainPhase = true;
 
-    // 🔴 ENGINE TIMER
+    // 🔴 TIMER
     t0 = SystemClock.elapsedRealtime();
     lab14EndTime = t0 + (durationSec * 1000L);
 
+    // 🔴 UI FEEDBACK (smooth transition)
+    if (counterText != null) {
+        counterText.setText(
+                gr ? "Κύρια καταπόνηση..." : "Main stress phase..."
+        );
+    }
+
+    // ---------------------------------------------------------
+    // 🔴 CLEAN PREVIOUS LOAD (CRITICAL)
+    // ---------------------------------------------------------
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+    try { stopVibrationStress(); } catch (Throwable ignore) {}
+
+    try { Thread.sleep(200); } catch (Throwable ignore) {}
+
     // =========================================================
-    // 🔥 CPU STRESS (BACKGROUND THREAD)
+    // 🔥 CPU STRESS (BACKGROUND)
     // =========================================================
     new Thread(() -> {
+
         try {
+
+            if (!lab14Running || lab14Cancelled) return;
 
             final int cores = Runtime.getRuntime().availableProcessors();
 
@@ -18169,26 +18238,24 @@ private void startLab14MainStress() {
 
             if (!isLab14BMode) {
 
-// 🔴 BOOST PHASE (κρατάει το warming ζωντανό)
-startCpuBurn_C_Mode();
+                // 🔴 BOOST (short stabilization spike)
+                startCpuBurn_C_Mode();
+                SystemClock.sleep(4000); // πιο safe από 6000
+                stopCpuBurn();
 
-SystemClock.sleep(6000); // 6 sec boost
+                if (!lab14Running || lab14Cancelled) return;
 
-stopCpuBurn();
-
-// 🔵 NORMAL LOAD
-startCpuBurnLimitedThreads(threads);
+                // 🔵 NORMAL LOAD
+                startCpuBurnLimitedThreads(threads);
 
             } else {
 
                 if (inHardPhase) {
 
-                    // 🔴 HARD PHASE → MAX
                     startCpuBurn_C_Mode();
 
                 } else {
 
-                    // 🌿 SOFT PHASE
                     int softThreads = Math.max(1, cores / 2);
                     startCpuBurnLimitedThreads(softThreads);
                 }
@@ -18199,56 +18266,61 @@ startCpuBurnLimitedThreads(threads);
     }).start();
 
     // =========================================================
-    // 🟡 UI THREAD (FULL STACK LOAD)
+    // 🟡 UI THREAD LOAD
     // =========================================================
     runOnUiThread(() -> {
 
-        applyMaxBrightnessAndKeepOn();
-
-        // 🔴 MEMORY (base)
-        startMemoryStress();
-
-        // 🔴 MEMORY BANDWIDTH (CRITICAL)
         try {
-            startMemoryBandwidthStress();
+
+            if (!lab14Running || lab14Cancelled) return;
+
+            applyMaxBrightnessAndKeepOn();
+
+            // 🔴 MEMORY
+            startMemoryStress();
+
+            // 🔴 BANDWIDTH
+            try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
+
+            // 🔴 GPU
+            try {
+                startGpuStressLevel(
+                        lab14GpuIntensity > 0
+                                ? Math.max(3, lab14GpuIntensity)
+                                : 3
+                );
+            } catch (Throwable ignore) {}
+
+            // 🔴 VIBRATION
+            try { startVibrationStress(); } catch (Throwable ignore) {}
+
+            // 🔴 VIDEO LOAD
+            try {
+
+                if (lab14StressVideo != null) {
+
+                    lab14StressVideo.setVideoURI(
+                            Uri.parse(
+                                    "android.resource://"
+                                            + getPackageName()
+                                            + "/"
+                                            + R.raw.battery_stress_loop
+                            )
+                    );
+
+                    lab14StressVideo.setOnPreparedListener(mp -> {
+                        mp.setLooping(true);
+                        mp.setVolume(0f, 0f);
+
+                        if (lab14Running && !lab14Cancelled) {
+                            lab14StressVideo.start();
+                        }
+                    });
+                }
+
+            } catch (Throwable ignore) {}
+
         } catch (Throwable ignore) {}
-
-        // 🔴 GPU (FORCE HIGH)
-        try {
-            startGpuStressLevel(
-                    lab14GpuIntensity > 0
-                            ? Math.max(3, lab14GpuIntensity)
-                            : 3
-            );
-        } catch (Throwable ignore) {}
-
-        // 🔴 VIBRATION LOAD (adds real drain)
-        try {
-            startVibrationStress();
-        } catch (Throwable ignore) {}
-
-// 🔴 VIDEO LOAD (GPU + decoder + screen)
-try {
-
-    if (lab14StressVideo != null) {
-
-        lab14StressVideo.setVideoURI(
-                Uri.parse(
-                        "android.resource://"
-                                + getPackageName()
-                                + "/"
-                                + R.raw.battery_stress_loop
-                )
-        );
-
-        lab14StressVideo.setOnPreparedListener(mp -> {
-            mp.setLooping(true);
-            mp.setVolume(0f, 0f);
-            lab14StressVideo.start();
-        });
-    }
-
-} catch (Throwable ignore) {}
     });
 }
 
@@ -18261,269 +18333,159 @@ private void startLab14ProgressLoop() {
         @Override
         public void run() {
 
-            if (counterText == null) {
+            if (counterText == null || lab14Cancelled || !lab14Running) {
                 ui.removeCallbacks(this);
                 return;
             }
 
-            if (lab14Cancelled || !lab14Running) {
+            long now = SystemClock.elapsedRealtime();
+            int elapsed = (int) ((now - t0) / 1000);
+
+            // =====================================================
+            // 🔴 FINAL END (CRITICAL FIX — NO FREEZE EVER AGAIN)
+            // =====================================================
+            if (elapsed >= durationSec) {
+
                 ui.removeCallbacks(this);
+
+                lab14Running = false;
+
+                try { lab14StopAllStress(); } catch (Throwable ignore) {}
+
+                // 🔴 FORCE UI CLEANUP
+                runOnUiThread(() -> {
+                    try {
+                        if (lab14Dialog != null && lab14Dialog.isShowing()) {
+                            lab14Dialog.dismiss();
+                            lab14Dialog = null;
+                        }
+                    } catch (Throwable ignore) {}
+                });
+
+                final Lab14Engine engine =
+                        new Lab14Engine(ManualTestsActivity.this);
+
+                lab14PostLoadAnalysis(
+                        engine,
+                        gr,
+                        startMah,
+                        baselineFullMah,
+                        t0,
+                        voltageStart,
+                        batteryPercent,
+                        cycles,
+                        tempStart
+                );
+
                 return;
             }
 
-long now = SystemClock.elapsedRealtime();
-int elapsed = (int)((now - t0) / 1000);
+            // =====================================================
+            // 🔥 THERMAL TRACK
+            // =====================================================
+            try {
+                iDoctorEngine idoctor =
+                        iDoctorEngine.get(ManualTestsActivity.this);
 
-// 🔴 FAILSAFE ENGINE CONTROL (CORRECT)
+                Float tObj = idoctor.getBatteryTempUnified();
 
-if (elapsed >= durationSec) {
+                float tNow = tObj != null ? tObj : Float.NaN;
 
-    ui.removeCallbacks(this);
-
-    lab14StopAllStress();
-
-    final Lab14Engine engine =
-            new Lab14Engine(ManualTestsActivity.this);
-
-    lab14Running = false;
-
-    lab14PostLoadAnalysis(
-            engine,
-            gr,
-            startMah,
-            baselineFullMah,
-            t0,
-            voltageStart,
-            batteryPercent,
-            cycles,
-            tempStart
-    );
-
-    return;
-}
-            
-// ✅ THERMAL PEAK TRACKING
-    iDoctorEngine idoctor =
-        iDoctorEngine.get(ManualTestsActivity.this);
-
-Float tObj =
-        idoctor.getBatteryTempUnified();
-
-float tNow =
-        tObj != null ? tObj : Float.NaN;
-
-    if (!Float.isNaN(tNow)) {
-
-        if (Float.isNaN(lab14TempPeak) ||
-            tNow > lab14TempPeak) {
-
-            lab14TempPeak = tNow;
-        }
-    }
-    
-// 🔥 LIVE UPDATE
-updateLab14LiveStats();
-
-// ========================================================
-// 🔴 AUTO RESTART
-// ========================================================
-if (!isLab14BMode &&
-    elapsed > 20 &&
-    lab14WeakLoadCounter >= 5) {
-
-    lab14WeakLoadCounter = 0;
-
-    if (lab14RestartAttempts < 1) {
-
-        lab14RestartAttempts++;
-
-        appendLog("AUTO", "Restarting stress test...");
-
-        lab14Running = false;
-        lab14Cancelled = true;
-        lab14BoostActive = false;
-
-        try { ui.removeCallbacks(lab14VibrationLoop); } catch (Throwable ignore) {}
-
-        lab14StopAllStress();
-
-        ui.postDelayed(() -> {
-            lab14BatteryHealthStressTest_REAL();
-        }, 800);
-
-        return;
-    }
-}
-
-// ========================================================
-// 🔴 FALLBACK
-// ========================================================
-if (lab14WeakLoadCounter >= 5 &&
-    !lab14BoostActive &&
-    !lab14_systemLimited[0]) {
-
-    appendLog("FALLBACK", "Switching to adaptive load");
-
-    lab14BoostActive = true;
-    lab14WeakLoadCounter = 0;
-
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
-
-    final int cores = Runtime.getRuntime().availableProcessors();
-    int threads = Math.max(1, cores / 2);
-
-    try { startCpuBurnLimitedThreads(threads); } catch (Throwable ignore) {}
-    try { startGpuStressLevel(1); } catch (Throwable ignore) {}
-
-    return;
-}
-
-// =========================
-// FAST PHASE
-// =========================
-if (lab14FastPhase) {
-
-    int fastElapsed =
-            (int) ((now - lab14FastStartTime) / 1000);
-
-    if (fastElapsed > 45)
-        fastElapsed = 45;
-
-    counterText.setText(
-            gr
-                    ? "Προθέρμανση καταπόνησης " + fastElapsed + " / 45"
-                    : "Stress warm-up " + fastElapsed + " / 45"
-    );
-
-    if (lab14MainBar != null) {
-
-        int segCount = lab14MainBar.getChildCount();
-
-        float ratio = Math.min(1f, fastElapsed / 45f);
-
-        int active = (int) Math.floor(ratio * segCount);
-
-        for (int i = 0; i < segCount; i++) {
-
-            View seg = lab14MainBar.getChildAt(i);
-
-            seg.setBackgroundColor(
-                    i < active ? 0xFF39FF14 : 0xFF333333
-            );
-        }
-    }
-
-    ui.postDelayed(this, 300);
-    return;
-}
-
-// =========================
-// MAIN PHASE
-// =========================
-
-// ----------------------------------------------------
-// 🔴 SNAPSHOT (THROTTLED) — SINGLE CLEAN BLOCK
-// ----------------------------------------------------
-long nowTs = SystemClock.elapsedRealtime();
-
-if (nowTs - lastSnapshotTs > 1500) {
-
-    lastSnapshotTs = nowTs;
-
-    try {
-
-        iDoctorEngine.BatterySnapshot snap =
-                idoctor.readBatterySnapshotLab();
-
-        if (snap != null && snap.chargeNowMah > 0) {
-
-            // -----------------------------
-            // 🔴 FAST SAG SAMPLING (ONCE FLOW)
-            // -----------------------------
-            float v = lab14Voltage();
-
-            if (!Float.isNaN(v) && v > 0f) {
-
-                if (Float.isNaN(vStart[0])) {
-                    vStart[0] = v;
+                if (!Float.isNaN(tNow)) {
+                    if (Float.isNaN(lab14TempPeak) || tNow > lab14TempPeak) {
+                        lab14TempPeak = tNow;
+                    }
                 }
-                else if (Float.isNaN(vLoad1[0])) {
-                    vLoad1[0] = v;
-                }
-                else if (Float.isNaN(vRecover[0])) {
-                    vRecover[0] = v;
-                }
-                else if (Float.isNaN(vLoad2[0])) {
-                    vLoad2[0] = v;
-                }
+            } catch (Throwable ignore) {}
+
+            // =====================================================
+            // 🔴 LIVE STATS
+            // =====================================================
+            updateLab14LiveStats();
+
+            // =====================================================
+            // 🔴 FAST PHASE UI
+            // =====================================================
+            if (lab14FastPhase) {
+
+                int fastElapsed =
+                        (int) ((now - lab14FastStartTime) / 1000);
+
+                if (fastElapsed > 45) fastElapsed = 45;
+
+                counterText.setText(
+                        gr
+                                ? "Προθέρμανση " + fastElapsed + " / 45"
+                                : "Warm-up " + fastElapsed + " / 45"
+                );
+
+                updateProgressBar(fastElapsed, 45);
+
+                ui.postDelayed(this, 300);
+                return;
             }
 
-            // -----------------------------
-            // 🔴 CHARGE SAMPLING
-            // -----------------------------
-            long c = snap.chargeNowMah;
+            // =====================================================
+            // 🔴 SNAPSHOT (SAFE THROTTLED)
+            // =====================================================
+            if (now - lastSnapshotTs > 1500) {
 
-            lab14ChargeSamples.add(c);
+                lastSnapshotTs = now;
 
-            if (c < lab14MinCharge) lab14MinCharge = c;
-            if (c > lab14MaxCharge) lab14MaxCharge = c;
+                try {
 
-            // -----------------------------
-            // 🔴 VOLTAGE UNDER LOAD (LOWEST)
-            // -----------------------------
-            float vNow = snap.voltageMv > 0
-                    ? snap.voltageMv / 1000f
-                    : Float.NaN;
+                    iDoctorEngine idoctor =
+                            iDoctorEngine.get(ManualTestsActivity.this);
 
-            if (!Float.isNaN(vNow)) {
+                    iDoctorEngine.BatterySnapshot snap =
+                            idoctor.readBatterySnapshotLab();
 
-                if (Float.isNaN(voltageUnderLoad[0]) ||
-                    vNow < voltageUnderLoad[0]) {
+                    if (snap != null && snap.chargeNowMah > 0) {
 
-                    voltageUnderLoad[0] = vNow;
-                }
+                        float vNow = snap.voltageMv > 0
+                                ? snap.voltageMv / 1000f
+                                : Float.NaN;
+
+                        if (!Float.isNaN(vNow)) {
+
+                            if (Float.isNaN(vStart[0])) vStart[0] = vNow;
+                            else if (Float.isNaN(vLoad1[0])) vLoad1[0] = vNow;
+                            else if (Float.isNaN(vRecover[0])) vRecover[0] = vNow;
+                            else if (Float.isNaN(vLoad2[0])) vLoad2[0] = vNow;
+
+                            if (Float.isNaN(voltageUnderLoad[0]) ||
+                                vNow < voltageUnderLoad[0]) {
+
+                                voltageUnderLoad[0] = vNow;
+                            }
+                        }
+
+                        long c = snap.chargeNowMah;
+
+                        lab14ChargeSamples.add(c);
+
+                        if (c < lab14MinCharge) lab14MinCharge = c;
+                        if (c > lab14MaxCharge) lab14MaxCharge = c;
+                    }
+
+                } catch (Throwable ignore) {}
             }
-        }
 
-    } catch (Throwable ignore) {}
-}
-
-// ----------------------------------------------------
-// 🔴 UI / PROGRESS
-// ----------------------------------------------------
-if (elapsed < durationSec) {
-
-    counterText.setText(
-            gr
-                    ? "Πρόοδος Stress Test " + elapsed + " / " + durationSec
-                    : "Stress Test Progress " + elapsed + " / " + durationSec
-    );
-
-    if (lab14MainBar != null) {
-
-        int segCount = lab14MainBar.getChildCount();
-
-        float ratio = Math.min(1f, elapsed / (float) durationSec);
-
-        int active = (int) Math.floor(ratio * segCount);
-
-        for (int i = 0; i < segCount; i++) {
-            View seg = lab14MainBar.getChildAt(i);
-            seg.setBackgroundColor(
-                    i < active ? 0xFF39FF14 : 0xFF333333
+            // =====================================================
+            // 🔴 MAIN PHASE UI
+            // =====================================================
+            counterText.setText(
+                    gr
+                            ? "Καταπόνηση " + elapsed + " / " + durationSec
+                            : "Stress " + elapsed + " / " + durationSec
             );
+
+            updateProgressBar(elapsed, durationSec);
+
+            ui.postDelayed(this, 1000);
         }
-    }
-
-    ui.postDelayed(this, 1000);
-    return;
+    });
 }
-
-        }   // 🔴 τέλος run()
-    });     // 🔴 τέλος ui.post(new Runnable(){})
-}           // 🔴 τέλος startLab14ProgressLoop()
 
 private void resetLab14Bar() {
 
@@ -19959,173 +19921,139 @@ private void runFastSagCapture(
     try {
 
         // ----------------------------------------------------
-        // 🔴 BASELINE (IDLE VOLTAGE)
+        // 🔴 HARD RESET
         // ----------------------------------------------------
-        float v0 = readStableBatteryVoltage();
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+        try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+        try { stopVibrationStress(); } catch (Throwable ignore) {}
+
+        SystemClock.sleep(800);
+
+        // ----------------------------------------------------
+        // 🔴 BASELINE (TRUE IDLE)
+        // ----------------------------------------------------
+        float v0 = getBatteryVoltageFiltered();
 
         if (!Float.isNaN(v0) && v0 > 3.0f && v0 < 5.0f) {
             vStart[0] = v0;
         }
 
-        SystemClock.sleep(250);
-
-        // ----------------------------------------------------
-        // 🔥 FIRST LOAD PULSE
-        // ----------------------------------------------------
-        startCpuBurn_C_Mode();
-
+        // δώσε χρόνο να «κάτσει» το baseline
         SystemClock.sleep(1200);
 
-        float v1 = readStableBatteryVoltage();
+        // ----------------------------------------------------
+        // 🔥 LOAD PHASE 1 (STEADY, όχι spike)
+        // ----------------------------------------------------
+        try { startCpuBurnLimitedThreads(2); } catch (Throwable ignore) {}
+        try { startGpuStressLevel(1); } catch (Throwable ignore) {}
 
-        if (!Float.isNaN(v1) && v1 > 3.0f && v1 < 5.0f) {
-            vLoad1[0] = v1;
+        // πρώτη σταθεροποίηση φορτίου
+        SystemClock.sleep(2500);
+
+        float lv1 = getBatteryVoltageFiltered();
+        if (!Float.isNaN(lv1) && lv1 > 3.0f && lv1 < 5.0f) {
+            vLoad1[0] = lv1;
         }
 
-        stopCpuBurn();
+        // κράτα το ίδιο steady load λίγο ακόμα
+        SystemClock.sleep(2500);
 
-        // ----------------------------------------------------
-        // 🔴 RECOVERY PHASE
-        // ----------------------------------------------------
-        SystemClock.sleep(800);
-
-        float vRec = readStableBatteryVoltage();
-
-        if (!Float.isNaN(vRec) && vRec > 3.0f && vRec < 5.0f) {
-            vRecover[0] = vRec;
+        float lv2 = getBatteryVoltageFiltered();
+        if (!Float.isNaN(lv2) && lv2 > 3.0f && lv2 < 5.0f) {
+            vLoad2[0] = lv2;
         }
 
         // ----------------------------------------------------
-        // 🔥 SECOND LOAD (STABILITY CHECK)
-        // ----------------------------------------------------
-        startCpuBurn_C_Mode();
-
-        SystemClock.sleep(1200);
-
-        float v2 = readStableBatteryVoltage();
-
-        if (!Float.isNaN(v2) && v2 > 3.0f && v2 < 5.0f) {
-            vLoad2[0] = v2;
-        }
-
-        stopCpuBurn();
-        
-logLine();
-logWarn("DEBUG RAW LOADS");
-
-logWarn("vStart=" + vStart[0]);
-logWarn("vLoad1=" + vLoad1[0]);
-logWarn("vLoad2=" + vLoad2[0]);
-logWarn("vMainLoad=" + voltageUnderLoad[0]);
-logLine();
-
-// ----------------------------------------------------
-// 🔴 SAG CALCULATION (STABLE + SAFE)
-// ----------------------------------------------------
-
-float s1 = Float.NaN;
-float s2 = Float.NaN;
-
-// =====================
-// 🔹 SAG1 (primary)
-// =====================
-if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad1[0])) {
-
-    float tmp = vStart[0] - vLoad1[0];
-
-    if (tmp > 0.005f && tmp < 1.0f) {
-        s1 = tmp;
-    }
-}
-
-// 🔹 fallback (main load)
-if (Float.isNaN(s1) &&
-    !Float.isNaN(voltageStart) &&
-    !Float.isNaN(voltageUnderLoad[0])) {
-
-    float tmp = voltageStart - voltageUnderLoad[0];
-
-    if (tmp > 0.005f && tmp < 1.0f) {
-        s1 = tmp;
-    }
-}
-
-// =====================
-// 🔹 SAG2 (primary)
-// =====================
-if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad2[0])) {
-
-    float tmp = vStart[0] - vLoad2[0];
-
-    if (tmp > 0.005f && tmp < 1.0f) {
-        s2 = tmp;
-    }
-}
-
-// 🔹 fallback (main load)
-if (Float.isNaN(s2) &&
-    !Float.isNaN(voltageStart) &&
-    !Float.isNaN(voltageUnderLoad[0])) {
-
-    float tmp = voltageStart - voltageUnderLoad[0];
-
-    if (tmp > 0.005f && tmp < 1.0f) {
-        s2 = tmp;
-    }
-}
-
-// =====================
-// 🔹 FINAL ASSIGN
-// =====================
-if (!Float.isNaN(s1)) {
-    sag1[0] = s1;
-}
-
-if (!Float.isNaN(s2)) {
-    sag2[0] = s2;
-}
-
-        // ----------------------------------------------------
-        // 🔴 CURRENT ESTIMATION (SAFE)
+        // 🔴 CURRENT SAMPLE UNDER LOAD
         // ----------------------------------------------------
         float currentNow = idoctor.getBatteryCurrentNowUnified();
 
         if (!Float.isNaN(currentNow) &&
-            Math.abs(currentNow) > 50f &&
-            Math.abs(currentNow) < 10000f) {
-
+                Math.abs(currentNow) > 80f &&
+                Math.abs(currentNow) < 10000f) {
             estimatedCurrentMaRef[0] = Math.abs(currentNow);
         }
 
         // ----------------------------------------------------
-        // 🔴 POWER ESTIMATION (SAFE)
+        // 🔴 STOP LOAD
         // ----------------------------------------------------
-        if (!Float.isNaN(vLoad2[0]) &&
-            !Float.isNaN(estimatedCurrentMaRef[0])) {
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
 
-            float power = vLoad2[0] * estimatedCurrentMaRef[0];
+        // ----------------------------------------------------
+        // 🔴 RECOVERY PHASE
+        // ----------------------------------------------------
+        SystemClock.sleep(2000);
 
-            if (power > 500f && power < 15000f) {
-                powerMilliWattRef[0] = power;
+        float vr = getBatteryVoltageFiltered();
+        if (!Float.isNaN(vr) && vr > 3.0f && vr < 5.0f) {
+            vRecover[0] = vr;
+        }
+
+        // ----------------------------------------------------
+        // 🔴 DEBUG
+        // ----------------------------------------------------
+        logLine();
+        logWarn("DEBUG SAG CAPTURE");
+        logWarn("vStart=" + vStart[0]);
+        logWarn("vLoad1=" + vLoad1[0]);
+        logWarn("vLoad2=" + vLoad2[0]);
+        logWarn("vRecover=" + vRecover[0]);
+        logWarn("current=" + estimatedCurrentMaRef[0]);
+        logLine();
+
+        // ----------------------------------------------------
+        // 🔴 SAG 1
+        // ----------------------------------------------------
+        float s1 = Float.NaN;
+        if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad1[0])) {
+            float tmp = vStart[0] - vLoad1[0];
+            if (tmp > 0.010f && tmp < 1.0f) {
+                s1 = tmp;
             }
         }
 
         // ----------------------------------------------------
-        // 🔴 DEBUG (OPTIONAL)
+        // 🔴 SAG 2
         // ----------------------------------------------------
-        /*
-        appendLog("FAST",
-                "Vstart=" + vStart[0] +
-                " Vload1=" + vLoad1[0] +
-                " Vload2=" + vLoad2[0] +
-                " Sag1=" + sag1[0] +
-                " Sag2=" + sag2[0]);
-        */
+        float s2 = Float.NaN;
+        if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad2[0])) {
+            float tmp = vStart[0] - vLoad2[0];
+            if (tmp > 0.010f && tmp < 1.0f) {
+                s2 = tmp;
+            }
+        }
 
-    } catch (Throwable ignore) {
+        // ----------------------------------------------------
+        // 🔴 FINAL ASSIGN
+        // ----------------------------------------------------
+        if (!Float.isNaN(s1)) sag1[0] = s1;
+        if (!Float.isNaN(s2)) sag2[0] = s2;
 
-        try { stopCpuBurn(); } catch (Throwable t) {}
+        // ----------------------------------------------------
+        // 🔴 POWER
+        // ----------------------------------------------------
+        if (!Float.isNaN(vLoad2[0]) &&
+                !Float.isNaN(estimatedCurrentMaRef[0])) {
 
+            float power = vLoad2[0] * estimatedCurrentMaRef[0];
+
+            if (power > 500f && power < 20000f) {
+                powerMilliWattRef[0] = power;
+            }
+        }
+
+    } catch (Throwable t) {
+
+        logError("FAST SAG ERROR: " + t.getMessage());
+
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+        try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+        try { stopVibrationStress(); } catch (Throwable ignore) {}
     }
 }
 
@@ -20364,6 +20292,28 @@ private iDoctorEngine.PrivacySnapshot convertToEnginePrivacy(PrivacySnapshot p) 
     out.userAppsWithSms = p.userAppsWithSms;
 
     return out;
+}
+
+private void updateProgressBar(int value, int max) {
+
+    if (lab14MainBar == null) return;
+
+    int segCount = lab14MainBar.getChildCount();
+
+    float ratio = Math.min(1f, value / (float) max);
+
+    int active = (int) Math.floor(ratio * segCount);
+
+    for (int i = 0; i < segCount; i++) {
+
+        View seg = lab14MainBar.getChildAt(i);
+
+        if (seg != null) {
+            seg.setBackgroundColor(
+                    i < active ? 0xFF39FF14 : 0xFF333333
+            );
+        }
+    }
 }
 
 //=============================================================
