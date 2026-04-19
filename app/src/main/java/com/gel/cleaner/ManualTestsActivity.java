@@ -19980,26 +19980,57 @@ private void runFastSagCapture(
 
         stopCpuBurn();
 
-        // ----------------------------------------------------
-        // 🔴 SAG CALCULATION (CLEAN)
-        // ----------------------------------------------------
-        if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad1[0])) {
+// ----------------------------------------------------
+// 🔴 SAG CALCULATION (STABLE + SAFE)
+// ----------------------------------------------------
 
-            float s1 = vStart[0] - vLoad1[0];
+float s1 = Float.NaN;
+float s2 = Float.NaN;
 
-            if (s1 > 0.005f && s1 < 1.0f) {
-                sag1[0] = s1;
-            }
-        }
+// 🔹 primary
+if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad1[0])) {
 
-        if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad2[0])) {
+    s1 = vStart[0] - vLoad1[0];
 
-            float s2 = vStart[0] - vLoad2[0];
+    if (s1 > 0.005f && s1 < 1.0f) {
+        sag1[0] = s1;
+    }
+}
 
-            if (s2 > 0.005f && s2 < 1.0f) {
-                sag2[0] = s2;
-            }
-        }
+// 🔹 fallback (use main load if missing)
+if (Float.isNaN(sag1[0]) &&
+    !Float.isNaN(voltageStart) &&
+    !Float.isNaN(voltageUnderLoad[0])) {
+
+    s1 = voltageStart - voltageUnderLoad[0];
+
+    if (s1 > 0.005f && s1 < 1.0f) {
+        sag1[0] = s1;
+    }
+}
+
+// -------------------------
+
+if (!Float.isNaN(vStart[0]) && !Float.isNaN(vLoad2[0])) {
+
+    s2 = vStart[0] - vLoad2[0];
+
+    if (s2 > 0.005f && s2 < 1.0f) {
+        sag2[0] = s2;
+    }
+}
+
+// 🔹 fallback
+if (Float.isNaN(sag2[0]) &&
+    !Float.isNaN(voltageStart) &&
+    !Float.isNaN(voltageUnderLoad[0])) {
+
+    s2 = voltageStart - voltageUnderLoad[0];
+
+    if (s2 > 0.005f && s2 < 1.0f) {
+        sag2[0] = s2;
+    }
+}
 
         // ----------------------------------------------------
         // 🔴 CURRENT ESTIMATION (SAFE)
