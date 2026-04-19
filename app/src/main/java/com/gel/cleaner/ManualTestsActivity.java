@@ -14684,7 +14684,6 @@ private void lab14LogStressResult(
         Lab14Result res,
         float[] sagAvg,
         float voltageStart,
-        float voltageUnderLoad,
         float[] voltageRecovery,
         float[] voltageRecoverySpeed,
         float voltageStability,
@@ -14770,50 +14769,55 @@ logWarn("sagAvg=" + sagAvg[0]);
 logWarn("finalSag=" + finalSag);
 logLine();
 
-    boolean sagValid = !Float.isNaN(finalSag);
+    boolean sagValid =
+        !Float.isNaN(finalSag) &&
+        finalSag > 0.005f;
 
-    if (!sagValid) {
+if (!sagValid) {
+
+    logLabelWarnValue(
+            gr ? "Πτώση τάσης υπό φορτίο"
+               : "Voltage sag under load",
+            gr ? "Μη μετρήσιμη" : "Not measurable"
+    );
+
+} else {
+
+    String labelSafe =
+            (res.label != null) ? res.label : "Unknown";
+
+    String sagText = String.format(
+            Locale.US,
+            "%.3f V (%s)",
+            finalSag,
+            labelSafe
+    );
+
+    if ("Critical".equals(labelSafe)) {
+
+        logLabelErrorValue(
+                gr ? "Πτώση τάσης υπό φορτίο"
+                   : "Voltage sag under load",
+                sagText
+        );
+
+    } else if ("Weak".equals(labelSafe)) {
 
         logLabelWarnValue(
                 gr ? "Πτώση τάσης υπό φορτίο"
                    : "Voltage sag under load",
-                gr ? "Μη μετρήσιμη" : "Not measurable"
+                sagText
         );
 
     } else {
 
-        String sagText = String.format(
-        Locale.US,
-        "%.3f V (%s)",
-        finalSag,
-        res.label
-);
-
-        if ("Critical".equals(res.label)) {
-
-            logLabelErrorValue(
-                    gr ? "Πτώση τάσης υπό φορτίο"
-                       : "Voltage sag under load",
-                    sagText
-            );
-
-        } else if ("Weak".equals(res.label)) {
-
-            logLabelWarnValue(
-                    gr ? "Πτώση τάσης υπό φορτίο"
-                       : "Voltage sag under load",
-                    sagText
-            );
-
-        } else {
-
-            logLabelOkValue(
-                    gr ? "Πτώση τάσης υπό φορτίο"
-                       : "Voltage sag under load",
-                    sagText
-            );
-        }
+        logLabelOkValue(
+                gr ? "Πτώση τάσης υπό φορτίο"
+                   : "Voltage sag under load",
+                sagText
+        );
     }
+}
 
     // =====================================================
     // 🔴 POWER
@@ -15036,7 +15040,7 @@ String powerTextFinal = (Float.isNaN(res.powerMw) || res.powerMw <= 0f)
         ? "N/A"
         : String.format(Locale.US, "%.0f mW", res.powerMw);
 
-String sagTextFinal = Float.isNaN(sag)
+String sagTextFinal = Float.isNaN(finalSag)
         ? "N/A"
         : String.format(Locale.US, "%.3f V", sag);
 
@@ -15703,8 +15707,11 @@ if (!Float.isNaN(currentNow)) {
         long cycles,
         float tempStart
 ) {
-	
-	Lab14Result res = new Lab14Result();
+
+    Lab14Result res = new Lab14Result();
+
+    float finalSag = Float.NaN;   // 🔴 ΕΔΩ
+    float currentNow = Float.NaN; // 🔴 ΕΔΩ
 
 final iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
@@ -15977,12 +15984,9 @@ if (!Float.isNaN(voltageUnderLoad[0])) {
 // ELECTRICAL ANALYSIS (FINAL CLEAN)
 // ====================================================
 
-float currentNow = Float.NaN;
-
 // ----------------------------------------------------
 // 🔴 FINAL SAG (ONLY SOURCE)
 // ----------------------------------------------------
-float finalSag = Float.NaN;
 
 if (!Float.isNaN(voltageStart) &&
     !Float.isNaN(voltageUnderLoad[0])) {
