@@ -15774,6 +15774,72 @@ if (!Float.isNaN(voltageStart) &&
     }
 }
 
+// 🔴 ΕΔΩ ΜΠΑΙΝΕΙ
+
+boolean hasReliableSag =
+        !Float.isNaN(finalSag) &&
+        finalSag >= 0.02f &&
+        finalSag < 1.0f;
+
+if (!hasReliableSag) {
+
+    logLine();
+
+    logWarn(gr
+            ? "Ανεπαρκή δεδομένα για τελικό συμπέρασμα"
+            : "Insufficient data for final verdict");
+
+    logWarn(gr
+            ? "Δεν καταγράφηκε αξιόπιστη πτώση τάσης υπό φορτίο"
+            : "No reliable voltage sag was captured under load");
+
+    logLine();
+
+    res.label = "Insufficient data";
+    lab14LastLabel = res.label;
+
+    runOnUiThread(() -> {
+
+        logLine();
+
+        logLabelWarnValue(
+                gr ? "Τελικό αποτέλεσμα" : "Final verdict",
+                gr ? "Ανεπαρκή δεδομένα"
+                   : "Insufficient data"
+        );
+
+        logLabelWarnValue(
+                gr ? "Κατάσταση μπαταρίας" : "Battery status",
+                gr ? "Δεν είναι δυνατή η ασφαλής εκτίμηση"
+                   : "Safe estimation is not possible"
+        );
+
+        logLabelValue(
+                gr ? "Αποθήκευση αποτελέσματος" : "Result storage",
+                gr ? "Το αποτέλεσμα αποθηκεύτηκε ως ανεπαρκές"
+                   : "Result stored as insufficient"
+        );
+    });
+
+    lab14StopAllStress();
+
+    try {
+        counterText = null;
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    restoreBrightnessAndKeepOn();
+
+    lab14Cancelled = false;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+    lab14BoostActive = false;
+    lab14SoftPhaseStarted = false;
+
+    return;
+}
+
 // 🔴 VALIDATION CHECK
 boolean hasValidSag =
         !Float.isNaN(finalSag) &&
@@ -17140,15 +17206,17 @@ if (!validDrain || lab14_systemLimited[0]) {
     // ----------------------------
     // BASE FROM SAG
     // ----------------------------
-    float sagBase = Float.NaN;
+float sagBase = Float.NaN;
 
-    if (!Float.isNaN(sagAvg[0])) {
-        sagBase = sagAvg[0];
-    }
+// 🔴 PRIORITY 1 → FINAL SAG (MAIN)
+if (!Float.isNaN(finalSag)) {
+    sagBase = finalSag;
+}
 
-    if (Float.isNaN(sagBase) && !Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
-        sagBase = (sag1[0] + sag2[0]) / 2f;
-    }
+// 🔴 fallback (μόνο αν δεν υπάρχει main)
+else if (!Float.isNaN(sagAvg[0])) {
+    sagBase = sagAvg[0];
+}
 
     if (Float.isNaN(sagBase) || sagBase < 0.005f) {
 
