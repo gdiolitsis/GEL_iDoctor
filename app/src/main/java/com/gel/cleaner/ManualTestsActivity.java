@@ -15726,32 +15726,6 @@ logInfo("DEBUG Vstart=" + voltageStart +
         " | Vload=" + voltageUnderLoad[0]);
 logLine();
 
-// 🔴 CRITICAL VALIDATION — SAG DATA REQUIRED
-boolean hasSagData =
-        sag1 != null && sag2 != null &&
-        sag1.length > 0 && sag2.length > 0 &&
-        !Float.isNaN(sag1[0]) &&
-        !Float.isNaN(sag2[0]);
-
-if (!hasSagData) {
-
-    logLine();
-
-    logWarn(gr
-            ? "Ανεπαρκή δεδομένα καταπόνησης (Sag measurements missing)"
-            : "Insufficient stress data (Sag measurements missing)");
-
-    logWarn(gr
-            ? "Δεν είναι δυνατή η εξαγωγή αξιόπιστου συμπεράσματος"
-            : "Unable to produce reliable diagnosis");
-
-    logLine();
-
-    lab14Running = false;
-
-    return;
-}
-
 // 🔴 CANCEL CHECK
 if (lab14Cancelled) {
 
@@ -15780,6 +15754,52 @@ if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
         counterText = null;
         lab14CleanupUI();
     } catch (Throwable ignore) {}
+
+    lab14Running = false;
+
+    return;
+}
+
+// 🔴 NEW VALIDATION — MAIN SAG BASED
+
+float finalSag = Float.NaN;
+
+if (!Float.isNaN(voltageStart) &&
+    !Float.isNaN(voltageUnderLoad[0])) {
+
+    float tmp = voltageStart - voltageUnderLoad[0];
+
+    if (tmp > 0.005f && tmp < 1.0f) {
+        finalSag = tmp;
+    }
+}
+
+// 🔴 VALIDATION CHECK
+boolean hasValidSag =
+        !Float.isNaN(finalSag) &&
+        finalSag >= 0.005f &&
+        finalSag < 1.0f;
+        
+        logLine();
+logWarn("=== FINAL SAG DEBUG ===");
+logWarn("finalSag=" + finalSag);
+logWarn("Vstart=" + voltageStart);
+logWarn("Vload=" + voltageUnderLoad[0]);
+logLine();
+
+if (!hasValidSag) {
+
+    logLine();
+
+    logWarn(gr
+            ? "Ανεπαρκή δεδομένα καταπόνησης (No valid voltage sag)"
+            : "Insufficient stress data (No valid sag detected)");
+
+    logWarn(gr
+            ? "Δεν είναι δυνατή η εξαγωγή αξιόπιστου συμπεράσματος"
+            : "Unable to produce reliable diagnosis");
+
+    logLine();
 
     lab14Running = false;
 
