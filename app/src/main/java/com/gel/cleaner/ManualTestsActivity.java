@@ -26470,6 +26470,8 @@ if (validDrain &&
     !Float.isNaN(voltageUnderLoad[0]) &&
     !Float.isNaN(voltageRecovery[0])) {
 
+    float sag = finalSag;   // 🔴 FIX (απαραίτητο)
+
     // ignore micro sag noise
     if (sag < 0.015f)
         sag = 0f;
