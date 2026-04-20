@@ -430,7 +430,6 @@ private boolean lab14SoftPhaseStarted = false;
     final float[] sag2 = {Float.NaN};
     final float[] sagAvg = {Float.NaN};
 
-    final float[] voltageUnderLoad = {Float.NaN};
     final float[] voltageRecovery = {Float.NaN};
     final float[] voltageStability = {Float.NaN};
     final float[] internalResistance = {Float.NaN};
@@ -468,6 +467,8 @@ private boolean lab14SoftPhaseStarted = false;
     
     private final float[] dualLoadDiff = { Float.NaN };
     private final float[] dualLoadScore = { Float.NaN };
+    
+    private float finalSag = Float.NaN;
 
     // ============================================================
     // PERMISSION ENGINE (UNIVERSAL)
@@ -14729,8 +14730,6 @@ private void lab14LogStressResult(
 // 🔴 FINAL SAG CALCULATION (MAIN PHASE — STABLE)
 // ====================================================
 
-float finalSag = Float.NaN;
-
 // 🔴 PRIMARY: main phase sag (REAL)
 if (!Float.isNaN(voltageStart) &&
     !Float.isNaN(voltageUnderLoad[0])) {
@@ -15627,7 +15626,7 @@ if (!Float.isNaN(currentNow)) {
     // ----------------------------------------------------
     // 🔴 NORMALIZATION (reject noise)
     // ----------------------------------------------------
-    if (!Float.isNaN(finalSag) && sag < 0.003f) {
+    if (!Float.isNaN(finalSag) && finalSag < 0.003f) {
         sag = 0f;
     }
 
@@ -15710,7 +15709,6 @@ if (!Float.isNaN(currentNow)) {
 
     Lab14Result res = new Lab14Result();
 
-    float finalSag = Float.NaN;   // 🔴 ΕΔΩ
     float currentNow = Float.NaN; // 🔴 ΕΔΩ
 
 final iDoctorEngine idoctor =
@@ -26471,8 +26469,6 @@ if (validDrain &&
     !Float.isNaN(finalSag) &&
     !Float.isNaN(voltageUnderLoad[0]) &&
     !Float.isNaN(voltageRecovery[0])) {
-
-    float sag = finalSag;   // 🔴 USE FINAL SAG ONLY
 
     // ignore micro sag noise
     if (sag < 0.015f)
