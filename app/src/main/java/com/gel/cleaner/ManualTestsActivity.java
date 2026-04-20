@@ -17246,8 +17246,23 @@ final float endBatteryTempFinal = tempEnd;
 // ------------------------------------------------
 // POPULATE RESULT
 // ------------------------------------------------
+
 res.validDrain = validDrain;
 res.systemLimited = lab14_systemLimited[0];
+
+// 🔴 DEBUG START
+logLine();
+logWarn("=== LAB14 CORE DEBUG ===");
+logWarn("finalSag=" + finalSag);
+logWarn("sagAvg=" + sagAvg[0]);
+logWarn("voltageStart=" + voltageStart);
+logWarn("voltageUnderLoad=" + voltageUnderLoad[0]);
+logWarn("validDrain=" + validDrain);
+logWarn("drainMah=" + drainMah);
+logWarn("dtMs=" + dtMs);
+logWarn("systemLimited=" + lab14_systemLimited[0]);
+logLine();
+// 🔴 DEBUG END
 
 res.drainPercentPerHour = drainPercentPerHour;
 res.mahPerHour = mahPerHour;
