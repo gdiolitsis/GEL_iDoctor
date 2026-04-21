@@ -1911,14 +1911,17 @@ private void showLab14ConditionCheck(Runnable startAction) {
     root.addView(warnView);
 
     // BUTTON ROW
-    LinearLayout row = new LinearLayout(this);
-    row.setOrientation(LinearLayout.HORIZONTAL);
+LinearLayout row = new LinearLayout(this);
+row.setOrientation(LinearLayout.HORIZONTAL);
 
-    Button cancel =
-            gelButton(this, gr ? "Ακύρωση" : "Cancel", 0xFF8B0000);
+Button cancel =
+        gelButton(this, gr ? "Ακύρωση" : "Cancel", 0xFF8B0000);
 
-    Button start =
-            gelButton(this, gr ? "Έναρξη" : "Start", 0xFF0B5D1E);
+Button start =
+        gelButton(this, gr ? "Έναρξη" : "Start", 0xFF0B5D1E);
+
+// 🔴 LAYOUT LOGIC
+if (canStart) {
 
     LinearLayout.LayoutParams lp =
             new LinearLayout.LayoutParams(0, dp(48), 1);
@@ -1930,19 +1933,35 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     row.addView(cancel);
     row.addView(start);
-    root.addView(row);
 
-    b.setView(root);
+} else {
 
-    final AlertDialog dlg = b.create();
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(48)
+            );
 
-    if (dlg.getWindow() != null) {
-        dlg.getWindow().setBackgroundDrawable(
-                new ColorDrawable(Color.TRANSPARENT)
-        );
-    }
+    lp.setMargins(dp(6), dp(18), dp(6), 0);
 
-    dlg.show();
+    cancel.setLayoutParams(lp);
+
+    row.addView(cancel);
+}
+
+root.addView(row);
+
+b.setView(root);
+
+final AlertDialog dlg = b.create();
+
+if (dlg.getWindow() != null) {
+    dlg.getWindow().setBackgroundDrawable(
+            new ColorDrawable(Color.TRANSPARENT)
+    );
+}
+
+dlg.show();
 
     // 🔴 TTS (ORDER FIXED)
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
