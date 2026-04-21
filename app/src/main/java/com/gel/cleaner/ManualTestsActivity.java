@@ -14732,6 +14732,8 @@ private void lab14LogStressResult(
 
 // 🔴 PRIMARY: main phase sag (REAL)
 if (!Float.isNaN(voltageStart) &&
+    voltageUnderLoad != null &&
+    voltageUnderLoad.length > 0 &&
     !Float.isNaN(voltageUnderLoad[0])) {
 
     float tmp = voltageStart - voltageUnderLoad[0];
@@ -14743,11 +14745,11 @@ if (!Float.isNaN(voltageStart) &&
 
 // 🔴 FALLBACK: fast phase (ONLY if main failed)
 if (Float.isNaN(finalSag) &&
-    !Float.isNaN(sagAvg[0]) &&
-    sagAvg[0] > 0.005f &&
-    sagAvg[0] < 1.0f) {
+    !Float.isNaN(sagAvg) &&
+    sagAvg > 0.005f &&
+    sagAvg < 1.0f) {
 
-    finalSag = sagAvg[0];
+    finalSag = sagAvg;
 }
 
 // ====================================================
@@ -14764,7 +14766,7 @@ logLine();
 logWarn("DEBUG FINAL SAG");
 logWarn("voltageStart=" + voltageStart);
 logWarn("voltageUnderLoad=" + voltageUnderLoad[0]);
-logWarn("sagAvg=" + sagAvg[0]);
+logWarn("sagAvg=" + sagAvg);
 logWarn("finalSag=" + finalSag);
 logLine();
 
@@ -15717,14 +15719,6 @@ final iDoctorEngine idoctor =
 float powerMilliWatt = Float.NaN;
 
     try {
-    	
-logLine();
-logInfo("DEBUG SAG1=" + (sag1 != null ? sag1[0] : "null") +
-        " | SAG2=" + (sag2 != null ? sag2[0] : "null"));
-
-logInfo("DEBUG Vstart=" + voltageStart +
-        " | Vload=" + voltageUnderLoad[0]);
-logLine();
 
 // 🔴 CANCEL CHECK
 if (lab14Cancelled) {
@@ -15765,6 +15759,8 @@ if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
 float finalSag = Float.NaN;
 
 if (!Float.isNaN(voltageStart) &&
+    voltageUnderLoad != null &&
+    voltageUnderLoad.length > 0 &&
     !Float.isNaN(voltageUnderLoad[0])) {
 
     float tmp = voltageStart - voltageUnderLoad[0];
@@ -15773,6 +15769,44 @@ if (!Float.isNaN(voltageStart) &&
         finalSag = tmp;
     }
 }
+
+// 2️⃣ SAG1 / SAG2 CALC (ΛΕΙΠΕΙ ΤΩΡΑ)
+float sag1 = Float.NaN;
+float sag2 = Float.NaN;
+
+boolean validSagInputs =
+        !Float.isNaN(voltageStart) &&
+        vLoad1 != null && vLoad1.length > 0 && !Float.isNaN(vLoad1[0]) &&
+        vLoad2 != null && vLoad2.length > 0 && !Float.isNaN(vLoad2[0]);
+
+if (validSagInputs) {
+
+    float tmp1 = voltageStart - vLoad1[0];
+    float tmp2 = voltageStart - vLoad2[0];
+
+    if (tmp1 > 0.002f && tmp1 < 1.0f) sag1 = tmp1;
+    if (tmp2 > 0.002f && tmp2 < 1.0f) sag2 = tmp2;
+}
+
+// 3️⃣ SAG AVG (ΛΕΙΠΕΙ ΤΩΡΑ)
+float sagAvg = Float.NaN;
+
+if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+    sagAvg = (sag1 + sag2) / 2f;
+} else if (!Float.isNaN(sag1)) {
+    sagAvg = sag1;
+} else if (!Float.isNaN(sag2)) {
+    sagAvg = sag2;
+}
+
+// 4️⃣ DEBUG (βάλε το ΕΔΩ, όχι πριν)
+logLine();
+logWarn("=== SAG DEBUG ===");
+logWarn("sag1=" + sag1);
+logWarn("sag2=" + sag2);
+logWarn("sagAvg=" + sagAvg);
+logWarn("finalSag=" + finalSag);
+logLine();
 
 // 🔴 ΕΔΩ ΜΠΑΙΝΕΙ
 
@@ -15840,34 +15874,70 @@ if (!hasReliableSag) {
     return;
 }
 
-// 🔴 VALIDATION CHECK
-boolean hasValidSag =
-        !Float.isNaN(finalSag) &&
-        finalSag >= 0.005f &&
-        finalSag < 1.0f;
-        
+boolean invalidStructure =
+        Float.isNaN(sagAvg) ||
+        Float.isNaN(voltageStart) ||
+        voltageUnderLoad == null ||
+        voltageUnderLoad.length == 0 ||
+        Float.isNaN(voltageUnderLoad[0]) ||
+        vLoad1 == null ||
+        vLoad1.length == 0 ||
+        Float.isNaN(vLoad1[0]) ||
+        vLoad2 == null ||
+        vLoad2.length == 0 ||
+        Float.isNaN(vLoad2[0]);
+
+if (invalidStructure) {
+
+    logLine();
+
+    logWarn(gr
+            ? "Μη έγκυρα ενδιάμεσα δεδομένα"
+            : "Invalid intermediate data");
+
+    logWarn(gr
+            ? "Λείπουν κρίσιμα στοιχεία (sagAvg / load voltage)"
+            : "Missing critical structure (sagAvg / load voltage)");
+
+    logLine();
+
+    res.label = "Insufficient data";
+    lab14LastLabel = res.label;
+
+    runOnUiThread(() -> {
+
         logLine();
-logWarn("=== FINAL SAG DEBUG ===");
-logWarn("finalSag=" + finalSag);
-logWarn("Vstart=" + voltageStart);
-logWarn("Vload=" + voltageUnderLoad[0]);
-logLine();
 
-if (!hasValidSag) {
+        logLabelWarnValue(
+                gr ? "Τελικό αποτέλεσμα" : "Final verdict",
+                gr ? "Ανεπαρκή δεδομένα"
+                   : "Insufficient data"
+        );
 
-    logLine();
+        logLabelWarnValue(
+                gr ? "Κατάσταση μπαταρίας" : "Battery status",
+                gr ? "Δεν είναι δυνατή η εκτίμηση"
+                   : "Estimation not possible"
+        );
 
-    logWarn(gr
-            ? "Ανεπαρκή δεδομένα καταπόνησης (No valid voltage sag)"
-            : "Insufficient stress data (No valid sag detected)");
+        logLine();
+    });
 
-    logWarn(gr
-            ? "Δεν είναι δυνατή η εξαγωγή αξιόπιστου συμπεράσματος"
-            : "Unable to produce reliable diagnosis");
+    lab14StopAllStress();
 
-    logLine();
+    try {
+        counterText = null;
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
 
+    restoreBrightnessAndKeepOn();
+
+    lab14Cancelled = false;
     lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+    lab14BoostActive = false;
+    lab14SoftPhaseStarted = false;
 
     return;
 }
