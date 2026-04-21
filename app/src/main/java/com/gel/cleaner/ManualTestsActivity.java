@@ -17766,9 +17766,9 @@ if (!Float.isNaN(stressSignature[0]) &&
 // 🔴 COMPUTE CELL ELASTICITY INDEX (REALISTIC)
 // =====================================================
 
-if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
+if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
 
-    float base = 100f - (sagAvgF * 900f);
+    float base = 100f - (sagAvg * 900f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
@@ -17844,9 +17844,9 @@ if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 // 🔴 COMPUTE STRUCTURAL INDEX (INSERT HERE)
 // =====================================================
 
-if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
+if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
 
-    float base = 100f - (sagAvgF * 800f);
+    float base = 100f - (sagAvg * 800f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
@@ -17929,9 +17929,9 @@ if (!Float.isNaN(structuralIntegrityIndex[0]) &&
 } else {
 
     // 🔴 FALLBACK από SAG (critical fix)
-if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
+if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
-    float s = Math.max(sag1F, sag2F);
+    float s = Math.max(sag1, sag2);
 
         String siFallback;
 
@@ -17971,7 +17971,7 @@ if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
 // =====================================================
 // 🔴 CELL BALANCE (FIXED CONDITION)
 // =====================================================
-float s = Math.max(sag1F, sag2F); {
+float s = Math.max(sag1, sag2);
 
     if (cellImbalanceRisk[0]) {
 
