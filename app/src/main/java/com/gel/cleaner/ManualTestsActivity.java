@@ -17873,14 +17873,19 @@ if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
     structuralIntegrityIndex[0] = base;
 }
 
-// 🔴 HARD OVERRIDES
+// 🔴 HARD OVERRIDES (FIXED — WORST CASE)
+
+float override = structuralIntegrityIndex[0];
+
 if (collapseRisk[0]) {
-    structuralIntegrityIndex[0] = 30f;
+    override = Math.min(override, 30f);
 }
 
-if (smartSwelling) {
-    structuralIntegrityIndex[0] = 20f;
+if (smartSwellingFinal) {
+    override = Math.min(override, 20f);
 }
+
+structuralIntegrityIndex[0] = override;
 
 // =====================================================
 // 🔴 STRUCTURAL INTEGRITY (FIXED + FALLBACK)
