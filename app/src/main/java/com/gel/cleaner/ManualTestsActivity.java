@@ -17533,10 +17533,14 @@ if (drainMahFinalLong > 600) {
 // ------------------------------------------------
 // FAST STRESS
 // ------------------------------------------------
-if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
-    float s1 = sag1;
-    float s2 = sag2;
+final float sag1F = sag1;
+final float sag2F = sag2;
+
+if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
+
+    float s1 = sag1F;
+    float s2 = sag2F;
 
     if (Math.abs(s1) < 0.002f) s1 = Float.NaN;
     if (Math.abs(s2) < 0.002f) s2 = Float.NaN;
@@ -17548,28 +17552,28 @@ if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
     String sag2Text = Float.isNaN(s2)
             ? "N/A"
             : String.format(Locale.US, "%.3f V", s2);
-            
-boolean sagValid = !(
-    (Float.isNaN(sag1) || sag1 <= 0.005f) &&
-    (Float.isNaN(sag2) || sag2 <= 0.005f)
-);
+
+    boolean sagValid = !(
+        (Float.isNaN(sag1F) || sag1F <= 0.005f) &&
+        (Float.isNaN(sag2F) || sag2F <= 0.005f)
+    );
 
     if (!sagValid) {
 
-    logLabelWarnValue(
-            gr ? "Γρήγορη δοκιμή καταπόνησης"
-               : "Fast stress test",
-            gr ? "Μη μετρήσιμη" : "Not measurable"
-    );
+        logLabelWarnValue(
+                gr ? "Γρήγορη δοκιμή καταπόνησης"
+                   : "Fast stress test",
+                gr ? "Μη μετρήσιμη" : "Not measurable"
+        );
 
-} else {
+    } else {
 
-    logLabelValue(
-            gr ? "Γρήγορη δοκιμή καταπόνησης"
-               : "Fast stress test",
-            "Sag1=" + sag1Text + " | Sag2=" + sag2Text
-    );
-}
+        logLabelValue(
+                gr ? "Γρήγορη δοκιμή καταπόνησης"
+                   : "Fast stress test",
+                "Sag1=" + sag1Text + " | Sag2=" + sag2Text
+        );
+    }
 
     if ((!Float.isNaN(s1) && s1 > 0.35f) ||
         (!Float.isNaN(s2) && s2 > 0.40f)) {
