@@ -14314,9 +14314,9 @@ resetBatteryDiagnostics();
 // -------------------------
 // SAG / VOLTAGE
 // -------------------------
-sag1[0] = Float.NaN;
-sag2[0] = Float.NaN;
-sagAvg[0] = Float.NaN;
+sag1 = Float.NaN;
+sag2 = Float.NaN;
+sagAvg = Float.NaN;
 
 vStart[0] = Float.NaN;
 vLoad1[0] = Float.NaN;
@@ -14785,11 +14785,11 @@ if (!Float.isNaN(voltageStart) &&
 if (Float.isNaN(finalSag) &&
     sagAvg != null &&
     sagAvg.length > 0 &&
-    !Float.isNaN(sagAvg[0]) &&
-    sagAvg[0] > 0.005f &&
-    sagAvg[0] < 1.0f) {
+    !Float.isNaN(sagAvg) &&
+    sagAvg > 0.005f &&
+    sagAvg < 1.0f) {
 
-    finalSag = sagAvg[0];
+    finalSag = sagAvg;
 }
 
 // ====================================================
@@ -14811,7 +14811,7 @@ logWarn("voltageUnderLoad=" + (
                 : Float.NaN));
 logWarn("sagAvg=" + (
         sagAvg != null && sagAvg.length > 0
-                ? sagAvg[0]
+                ? sagAvg
                 : Float.NaN));
 logWarn("finalSag=" + finalSag);
 logLine();
@@ -16200,11 +16200,11 @@ if (!Float.isNaN(voltageStart) &&
 
 // fallback μόνο αν δεν υπάρχει main
 if (Float.isNaN(finalSag) &&
-    !Float.isNaN(sagAvg[0]) &&
-    sagAvg[0] > 0.005f &&
-    sagAvg[0] < 1.0f) {
+    !Float.isNaN(sagAvg) &&
+    sagAvg > 0.005f &&
+    sagAvg < 1.0f) {
 
-    finalSag = sagAvg[0];
+    finalSag = sagAvg;
 }
 
 // ----------------------------------------------------
@@ -16293,9 +16293,9 @@ if (!Float.isNaN(finalSag)) {
 }
 
 if (!Float.isNaN(finalSag) &&
-    !Float.isNaN(sagAvg[0])) {
+    !Float.isNaN(sagAvg)) {
 
-    sagFiltered = (finalSag + sagAvg[0]) / 2f;
+    sagFiltered = (finalSag + sagAvg) / 2f;
 }
 
 if (!Float.isNaN(sagFiltered) &&
@@ -16501,11 +16501,11 @@ int swellingScore = 0;
 float recoveryRatio = Float.NaN;
 
 if (!Float.isNaN(voltageRecovery[0]) &&
-    !Float.isNaN(sagAvg[0]) &&
-    sagAvg[0] > 0f) {
+    !Float.isNaN(sagAvg) &&
+    sagAvg > 0f) {
 
     recoveryRatio =
-            voltageRecovery[0] / sagAvg[0];
+            voltageRecovery[0] / sagAvg;
 }
 
 // collapse detector (STABLE)
@@ -16513,14 +16513,14 @@ if (!Float.isNaN(voltageRecovery[0]) &&
 if (validDrain &&
     !lab14_systemLimited[0] &&
     !Float.isNaN(voltageRecovery[0]) &&
-    !Float.isNaN(sagAvg[0]) &&
+    !Float.isNaN(sagAvg) &&
     !Float.isNaN(internalResistance[0])) {
 
     boolean weakRecovery =
             voltageRecovery[0] < 0.04f;
 
     boolean realSag =
-            sagAvg[0] > 0.01f;
+            sagAvg > 0.01f;
 
     boolean realESR =
             internalResistance[0] > 0.05f &&
@@ -16676,12 +16676,12 @@ if (!Float.isNaN(coulombDrift[0]) &&
 
 float sagDiff = Float.NaN;
 
-if (!Float.isNaN(sag1[0]) &&
-    !Float.isNaN(sag2[0]) &&
+if (!Float.isNaN(sag1) &&
+    !Float.isNaN(sag2) &&
     !lab14_systemLimited[0]) {
 
     sagDiff =
-            Math.abs(sag1[0] - sag2[0]);
+            Math.abs(sag1 - sag2);
 
     if (sagDiff > 0.10f) {
 
@@ -16708,8 +16708,8 @@ if (!Float.isNaN(sag1[0]) &&
         float base =
         (1f - norm) * 100f;
 
-if (!Float.isNaN(sagAvg[0]) &&
-    sagAvg[0] > 0.20f) {
+if (!Float.isNaN(sagAvg) &&
+    sagAvg > 0.20f) {
 
     base -= 10f;
 }
@@ -16735,13 +16735,13 @@ if (!Float.isNaN(currentStability) &&
 // DUAL LOAD STEP TEST
 // ----------------------------------------------------
 
-if (!Float.isNaN(sag1[0]) &&
-    !Float.isNaN(sag2[0]) &&
-    sag1[0] > 0f &&
-    sag2[0] > 0f) {
+if (!Float.isNaN(sag1) &&
+    !Float.isNaN(sag2) &&
+    sag1 > 0f &&
+    sag2 > 0f) {
 
     dualLoadDiff[0] =
-            Math.abs(sag1[0] - sag2[0]);
+            Math.abs(sag1 - sag2);
 
     float norm =
             Math.min(1f, dualLoadDiff[0] / 0.25f);
@@ -16780,17 +16780,17 @@ if (!Float.isNaN(dualLoadScore[0]) &&
 }
 
 // stress signature (SAFE)
-if (!Float.isNaN(sagAvg[0]) && sagAvg[0] < 0.005f)
-    sagAvg[0] = Float.NaN;
+if (!Float.isNaN(sagAvg) && sagAvg < 0.005f)
+    sagAvg = Float.NaN;
 
 if (validDrain &&
     !lab14_systemLimited[0] &&
-    !Float.isNaN(sag1[0]) &&
-    !Float.isNaN(sag2[0]) &&
+    !Float.isNaN(sag1) &&
+    !Float.isNaN(sag2) &&
     !Float.isNaN(voltageRecovery[0])) {
 
     sagDiff =
-        Math.abs(sag1[0] - sag2[0]);
+        Math.abs(sag1 - sag2);
 
     float sagNorm =
             Math.min(1f, sagDiff / 0.25f);
@@ -16818,8 +16818,8 @@ if (validDrain &&
 
 if (!Float.isNaN(internalResistance[0]) &&
     !Float.isNaN(voltageRecoverySpeed[0]) &&
-    !Float.isNaN(sagAvg[0]) &&
-    sagAvg[0] > 0.005f &&
+    !Float.isNaN(sagAvg) &&
+    sagAvg > 0.005f &&
     internalResistance[0] > 0f &&
     voltageRecoverySpeed[0] > 0f &&
     validDrain &&
@@ -16829,7 +16829,7 @@ if (!Float.isNaN(internalResistance[0]) &&
             Math.min(1f, internalResistance[0] / 0.25f);
 
     float sagNorm =
-            Math.min(1f, sagAvg[0] / 0.25f);
+            Math.min(1f, sagAvg / 0.25f);
 
     float recNorm =
             Math.min(1f, voltageRecoverySpeed[0] / 0.012f);
@@ -17207,7 +17207,7 @@ if (!Float.isNaN(rMilli) && (rMilli < 1f || rMilli > 400f)) {
 // SMART SWELLING (ONE SOURCE OF TRUTH)
 boolean smartSwelling =
         detectSwellingSmart(
-                sagAvg[0],
+                sagAvg,
                 tempDelta,
                 currentNow,
                 rMilli,
@@ -17215,7 +17215,7 @@ boolean smartSwelling =
         );
 
 // HARD FILTER
-if (!Float.isNaN(sagAvg[0]) && sagAvg[0] < 0.06f) {
+if (!Float.isNaN(sagAvg) && sagAvg < 0.06f) {
     smartSwelling = false;
 }
 
@@ -17330,8 +17330,8 @@ if (!Float.isNaN(finalSag)) {
 }
 
 // 🔴 fallback (μόνο αν δεν υπάρχει main)
-else if (!Float.isNaN(sagAvg[0])) {
-    sagBase = sagAvg[0];
+else if (!Float.isNaN(sagAvg)) {
+    sagBase = sagAvg;
 }
 
     if (Float.isNaN(sagBase) || sagBase < 0.005f) {
@@ -17458,7 +17458,7 @@ res.systemLimited = lab14_systemLimited[0];
 logLine();
 logWarn("=== LAB14 CORE DEBUG ===");
 logWarn("finalSag=" + finalSag);
-logWarn("sagAvg=" + sagAvg[0]);
+logWarn("sagAvg=" + sagAvg);
 logWarn("voltageStart=" + voltageStart);
 logWarn("voltageUnderLoad=" + voltageUnderLoad[0]);
 logWarn("validDrain=" + validDrain);
@@ -17538,10 +17538,10 @@ if (drainMahFinalLong > 600) {
 // ------------------------------------------------
 // FAST STRESS
 // ------------------------------------------------
-if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
+if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
-    float s1 = sag1[0];
-    float s2 = sag2[0];
+    float s1 = sag1;
+    float s2 = sag2;
 
     if (Math.abs(s1) < 0.002f) s1 = Float.NaN;
     if (Math.abs(s2) < 0.002f) s2 = Float.NaN;
@@ -17555,8 +17555,8 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
             : String.format(Locale.US, "%.3f V", s2);
             
 boolean sagValid = !(
-    (Float.isNaN(sag1[0]) || sag1[0] <= 0.005f) &&
-    (Float.isNaN(sag2[0]) || sag2[0] <= 0.005f)
+    (Float.isNaN(sag1) || sag1 <= 0.005f) &&
+    (Float.isNaN(sag2) || sag2 <= 0.005f)
 );
 
     if (!sagValid) {
@@ -17612,11 +17612,11 @@ if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 500f) {
     else base = 50f;
 
     // sag penalty
-    if (!Float.isNaN(sagAvg[0])) {
+    if (!Float.isNaN(sagAvg)) {
 
-        if (sagAvg[0] > 0.15f) base -= 25f;
-        else if (sagAvg[0] > 0.10f) base -= 15f;
-        else if (sagAvg[0] > 0.06f) base -= 8f;
+        if (sagAvg > 0.15f) base -= 25f;
+        else if (sagAvg > 0.10f) base -= 15f;
+        else if (sagAvg > 0.06f) base -= 8f;
     }
 
     // drain penalty (unstable discharge)
@@ -17685,10 +17685,10 @@ if (!Float.isNaN(powerStabilityFactor[0]) &&
 // 🔴 COMPUTE STRESS SIGNATURE (STABLE)
 // =====================================================
 
-if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
+if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
 
     // base από sag
-    float base = 100f - (sagAvg[0] * 700f);
+    float base = 100f - (sagAvg * 700f);
 
     // clamp
     if (base > 100f) base = 100f;
@@ -17760,9 +17760,9 @@ if (!Float.isNaN(stressSignature[0]) &&
 // 🔴 COMPUTE CELL ELASTICITY INDEX (REALISTIC)
 // =====================================================
 
-if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
+if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
 
-    float base = 100f - (sagAvg[0] * 900f);
+    float base = 100f - (sagAvg * 900f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
@@ -17838,9 +17838,9 @@ if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
 // 🔴 COMPUTE STRUCTURAL INDEX (INSERT HERE)
 // =====================================================
 
-if (!Float.isNaN(sagAvg[0]) && sagAvg[0] > 0f) {
+if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
 
-    float base = 100f - (sagAvg[0] * 800f);
+    float base = 100f - (sagAvg * 800f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
@@ -17923,9 +17923,9 @@ if (!Float.isNaN(structuralIntegrityIndex[0]) &&
 } else {
 
     // 🔴 FALLBACK από SAG (critical fix)
-if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
+if (!if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
-    float s = Math.max(sag1[0], sag2[0]);
+    float s = Math.max(sag1, sag2);
 
         String siFallback;
 
@@ -17965,7 +17965,7 @@ if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
 // =====================================================
 // 🔴 CELL BALANCE (FIXED CONDITION)
 // =====================================================
-if (!Float.isNaN(sag1[0]) && !Float.isNaN(sag2[0])) {
+if (!if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
     if (cellImbalanceRisk[0]) {
 
@@ -18248,10 +18248,10 @@ private void startLab14FastThread() {
             // =====================================================
             // 🔴 SAG + RECOVERY
             // =====================================================
-            if (!Float.isNaN(sag1[0]) || !Float.isNaN(sag2[0])) {
+            if (!Float.isNaN(sag1) || !Float.isNaN(sag2)) {
 
-                float s1 = sag1[0];
-                float s2 = sag2[0];
+                float s1 = sag1;
+                float s2 = sag2;
 
                 if (!Float.isNaN(s1) && Math.abs(s1) < 0.002f) s1 = Float.NaN;
                 if (!Float.isNaN(s2) && Math.abs(s2) < 0.002f) s2 = Float.NaN;
@@ -18267,10 +18267,10 @@ private void startLab14FastThread() {
                 }
 
                 if (!Float.isNaN(newSag)) {
-                    if (Float.isNaN(sagAvg[0])) {
-                        sagAvg[0] = newSag;
+                    if (Float.isNaN(sagAvg)) {
+                        sagAvg = newSag;
                     } else {
-                        sagAvg[0] = (sagAvg[0] + newSag) / 2f;
+                        sagAvg = (sagAvg + newSag) / 2f;
                     }
                 }
             }
@@ -18763,9 +18763,9 @@ private void resetBatteryDiagnostics() {
     vRecover[0] = Float.NaN;
     vLoad2[0] = Float.NaN;
 
-    sag1[0] = Float.NaN;
-    sag2[0] = Float.NaN;
-    sagAvg[0] = Float.NaN;
+    sag1 = Float.NaN;
+    sag2 = Float.NaN;
+    sagAvg = Float.NaN;
     pulseSag[0] = Float.NaN;
     pulseRecovery[0] = Float.NaN;
     pulseScore[0] = Float.NaN;
