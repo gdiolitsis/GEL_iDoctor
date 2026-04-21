@@ -14250,7 +14250,22 @@ AppTTS.stop();
 // ============================================================
 
 private void lab14BatteryHealthStressTest() {
-    lab14BatteryHealthStressTest_REAL();
+
+    showLab14ConditionCheck(() -> {
+
+        if (!lab14AdvisoryShown) {
+
+            lab14AdvisoryShown = true;
+
+            showLab14PreTestAdvisory(() -> {
+                lab14BatteryHealthStressTest_REAL();
+            });
+
+        } else {
+
+            lab14BatteryHealthStressTest_REAL();
+        }
+    });
 }
 
 // ============================================================
@@ -14518,31 +14533,6 @@ lab14Engine.startDrainSession();
 // ------------------------------------------------------------
 // 2) HEADER LOGS - START CONDITIONS
 // ------------------------------------------------------------
-
-if (!isLab14BMode && !lab14PopupShown && !lab14Running) {
-
-    lab14Running = false;
-    lab14Cancelled = false;
-    lab14PopupShown = true;
-
-    showLab14ConditionCheck(() -> {
-
-        if (!lab14AdvisoryShown) {
-
-            lab14AdvisoryShown = true;
-
-            showLab14PreTestAdvisory(() -> {
-                lab14BatteryHealthStressTest_REAL();
-            });
-
-        } else {
-
-            lab14BatteryHealthStressTest_REAL();
-        }
-    });
-
-    return;
-}
 
 appendHtml("<br>");
 logLine();
