@@ -17965,7 +17965,7 @@ if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 // =====================================================
 // 🔴 CELL BALANCE (FIXED CONDITION)
 // =====================================================
-if (!if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
     if (cellImbalanceRisk[0]) {
 
