@@ -15795,8 +15795,11 @@ if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
     return;
 }
 
-// 🔴 NEW VALIDATION — MAIN SAG BASED
+// =====================================================
+// 🔴 SAG PIPELINE (CLEAN & SAFE)
+// =====================================================
 
+// 1️⃣ MAIN SAG (primary)
 float finalSag = Float.NaN;
 
 if (!Float.isNaN(voltageStart) &&
@@ -15811,7 +15814,7 @@ if (!Float.isNaN(voltageStart) &&
     }
 }
 
-// 2️⃣ SAG1 / SAG2 CALC (ΛΕΙΠΕΙ ΤΩΡΑ)
+// 2️⃣ SAG1 / SAG2 (fast phase)
 float sag1 = Float.NaN;
 float sag2 = Float.NaN;
 
@@ -15829,10 +15832,10 @@ if (validSagInputs) {
     if (tmp2 > 0.002f && tmp2 < 1.0f) sag2 = tmp2;
 }
 
-// 3️⃣ SAG AVG (ΛΕΙΠΕΙ ΤΩΡΑ)
+// 3️⃣ SAG AVG
 float sagAvg = Float.NaN;
 
-if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+float s = Math.max(sag1F, sag2F); {
     sagAvg = (sag1 + sag2) / 2f;
 } else if (!Float.isNaN(sag1)) {
     sagAvg = sag1;
@@ -15840,7 +15843,16 @@ if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
     sagAvg = sag2;
 }
 
-// 4️⃣ DEBUG (βάλε το ΕΔΩ, όχι πριν)
+// 4️⃣ FALLBACK (CRITICAL FIX)
+if (Float.isNaN(finalSag) &&
+    !Float.isNaN(sagAvg) &&
+    sagAvg > 0.005f &&
+    sagAvg < 1.0f) {
+
+    finalSag = sagAvg;
+}
+
+// 5️⃣ DEBUG
 logLine();
 logWarn("=== SAG DEBUG ===");
 logWarn("sag1=" + sag1);
@@ -15849,12 +15861,17 @@ logWarn("sagAvg=" + sagAvg);
 logWarn("finalSag=" + finalSag);
 logLine();
 
-// 🔴 ΕΔΩ ΜΠΑΙΝΕΙ
+// =====================================================
+// 🔴 VALIDATION
+// =====================================================
 
 boolean hasReliableSag =
         !Float.isNaN(finalSag) &&
         finalSag >= 0.02f &&
         finalSag < 1.0f;
+
+// 🔴 SNAPSHOT για lambda (CRITICAL)
+final float finalSagF = finalSag;
 
 if (!hasReliableSag) {
 
@@ -15915,30 +15932,27 @@ if (!hasReliableSag) {
     return;
 }
 
+// =====================================================
+// 🔴 STRUCTURE VALIDATION (RELAXED)
+// =====================================================
+
 boolean invalidStructure =
-        Float.isNaN(sagAvg) ||
         Float.isNaN(voltageStart) ||
         voltageUnderLoad == null ||
         voltageUnderLoad.length == 0 ||
-        Float.isNaN(voltageUnderLoad[0]) ||
-        vLoad1 == null ||
-        vLoad1.length == 0 ||
-        Float.isNaN(vLoad1[0]) ||
-        vLoad2 == null ||
-        vLoad2.length == 0 ||
-        Float.isNaN(vLoad2[0]);
+        Float.isNaN(voltageUnderLoad[0]);
 
 if (invalidStructure) {
 
     logLine();
 
     logWarn(gr
-            ? "Μη έγκυρα ενδιάμεσα δεδομένα"
-            : "Invalid intermediate data");
+            ? "Μη έγκυρα δεδομένα"
+            : "Invalid data");
 
     logWarn(gr
-            ? "Λείπουν κρίσιμα στοιχεία (sagAvg / load voltage)"
-            : "Missing critical structure (sagAvg / load voltage)");
+            ? "Λείπουν βασικά στοιχεία τάσης"
+            : "Missing core voltage data");
 
     logLine();
 
@@ -17684,10 +17698,14 @@ if (!Float.isNaN(powerStabilityFactor[0]) &&
 // 🔴 COMPUTE STRESS SIGNATURE (STABLE)
 // =====================================================
 
-if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+final float sagAvgF = sagAvg;
+final float sag1F = sag1;
+final float sag2F = sag2;
+
+if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 
     // base από sag
-    float base = 100f - (sagAvg * 700f);
+    float base = 100f - (sagAvgF * 700f);
 
     // clamp
     if (base > 100f) base = 100f;
@@ -17759,9 +17777,9 @@ if (!Float.isNaN(stressSignature[0]) &&
 // 🔴 COMPUTE CELL ELASTICITY INDEX (REALISTIC)
 // =====================================================
 
-if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 
-    float base = 100f - (sagAvg * 900f);
+    float base = 100f - (sagAvgF * 900f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
@@ -17837,9 +17855,9 @@ if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
 // 🔴 COMPUTE STRUCTURAL INDEX (INSERT HERE)
 // =====================================================
 
-if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+if (!Float.isNaN(sagAvgF) && sagAvgG > 0f) {
 
-    float base = 100f - (sagAvg * 800f);
+    float base = 100f - (sagAvgF * 800f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
@@ -17922,9 +17940,9 @@ if (!Float.isNaN(structuralIntegrityIndex[0]) &&
 } else {
 
     // 🔴 FALLBACK από SAG (critical fix)
-if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
 
-    float s = Math.max(sag1, sag2);
+    float s = Math.max(sag1F, sag2F);
 
         String siFallback;
 
@@ -17964,7 +17982,7 @@ if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 // =====================================================
 // 🔴 CELL BALANCE (FIXED CONDITION)
 // =====================================================
-if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+float s = Math.max(sag1F, sag2F); {
 
     if (cellImbalanceRisk[0]) {
 
