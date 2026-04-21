@@ -17971,7 +17971,10 @@ if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 // =====================================================
 // 🔴 CELL BALANCE (FIXED CONDITION)
 // =====================================================
-float s = Math.max(sag1, sag2);
+
+if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+
+    float s = Math.max(sag1, sag2);
 
     if (cellImbalanceRisk[0]) {
 
@@ -17994,7 +17997,6 @@ float s = Math.max(sag1, sag2);
         );
     }
 }
-
 
 // =====================================================
 // ?? BATTERY BEHAVIOUR
