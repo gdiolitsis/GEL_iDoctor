@@ -1820,7 +1820,6 @@ private void showLab14ConditionCheck(Runnable startAction) {
     boolean badTemp = !Float.isNaN(tempC) && tempC >= 38f;
     boolean cpuOk = Float.isNaN(cpuTemp) || cpuTemp < 60f;
 
-    // 🔴 FINAL GATE
     final boolean canStart =
             !badBat &&
             !chargingNow &&
@@ -1837,7 +1836,6 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     LinearLayout root = buildGELPopupRoot(this);
 
-    // HEADER
     root.addView(
             buildPopupHeader(
                     this,
@@ -1847,9 +1845,7 @@ private void showLab14ConditionCheck(Runnable startAction) {
             )
     );
 
-    // INFO TEXT
     TextView info = new TextView(this);
-
     info.setText(
             gr
                     ? "Για την εκτέλεση του τεστ απαιτούνται:\n\n"
@@ -1864,74 +1860,69 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     info.setTextColor(0xFF39FF14);
     info.setTextSize(14f);
-    info.setLineSpacing(0f, 1.2f);
     info.setPadding(0, dp(8), 0, dp(6));
-
     root.addView(info);
 
     StringBuilder warn = new StringBuilder();
     boolean hasWarn = false;
 
-    // WARN
     if (badBat) {
         hasWarn = true;
-        warn.append(
-                gr
-                        ? "• Η μπαταρία πρέπει να είναι μεταξύ 30% και 70%\n"
-                        : "• Battery must be between 30% and 70%\n"
-        );
+        warn.append(gr
+                ? "• Η μπαταρία πρέπει να είναι μεταξύ 30% και 70%\n"
+                : "• Battery must be between 30% and 70%\n");
     }
 
     if (chargingNow) {
         hasWarn = true;
-        warn.append(
-                gr
-                        ? "• Η συσκευή δεν πρέπει να φορτίζει\n"
-                        : "• Device must not be charging\n"
-        );
+        warn.append(gr
+                ? "• Η συσκευή δεν πρέπει να φορτίζει\n"
+                : "• Device must not be charging\n");
     }
 
     if (!Float.isNaN(cpuTemp) && badCpu) {
         hasWarn = true;
-        warn.append(
-                gr
-                        ? "• Η θερμοκρασία CPU είναι υψηλή για την εκτέλεση του τεστ\n"
-                        : "• CPU temperature high for testing\n"
-        );
+        warn.append(gr
+                ? "• Υψηλή θερμοκρασία CPU\n"
+                : "• High CPU temperature\n");
     }
 
     if (badTemp) {
         hasWarn = true;
-        warn.append(
-                gr
-                        ? "• Η θερμοκρασία μπαταρίας είναι υψηλή\n"
-                        : "• Battery temperature high\n"
-        );
+        warn.append(gr
+                ? "• Υψηλή θερμοκρασία μπαταρίας\n"
+                : "• High battery temperature\n");
     }
 
     if (!hasWarn) {
-        warn.append(
-                gr
-                        ? "Οι συνθήκες είναι κατάλληλες"
-                        : "Conditions are OK"
-        );
+        warn.append(gr
+                ? "Οι συνθήκες είναι κατάλληλες"
+                : "Conditions are OK");
     }
 
-    // 🔴 WARN TEXT VIEW
     TextView warnView = new TextView(this);
     warnView.setText(warn.toString());
     warnView.setTextColor(hasWarn ? 0xFFFF4444 : 0xFF39FF14);
     warnView.setTextSize(13f);
-    warnView.setPadding(0, dp(6), 0, dp(6));
-
     root.addView(warnView);
 
-    // 🔴 BUTTONS
-    b.setPositiveButton(
-            gr ? "Έναρξη" : "Start",
-            (d, w) -> {
+    b.setView(root);
+
+    AlertDialog dialog = b.create();
+
+    dialog.setOnShowListener(dlg -> {
+
+        Button startBtn = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+
+        if (startBtn != null) {
+
+            startBtn.setEnabled(canStart);
+
+            startBtn.setOnClickListener(v -> {
 
                 if (canStart) {
+
+                    dialog.dismiss();
 
                     if (startAction != null) {
                         startAction.run();
@@ -1943,17 +1934,22 @@ private void showLab14ConditionCheck(Runnable startAction) {
                             ? "Δεν πληρούνται οι συνθήκες για LAB 14"
                             : "Conditions not met for LAB 14");
                 }
-            }
+            });
+        }
+    });
+
+    dialog.setButton(
+            AlertDialog.BUTTON_POSITIVE,
+            gr ? "Έναρξη" : "Start",
+            (DialogInterface) null
     );
 
-    b.setNegativeButton(
+    dialog.setButton(
+            AlertDialog.BUTTON_NEGATIVE,
             gr ? "Ακύρωση" : "Cancel",
-            null
+            (d, w) -> d.dismiss()
     );
 
-    // 🔴 SHOW
-    AlertDialog dialog = b.create();
-    dialog.setView(root);
     dialog.show();
 }
     
@@ -2804,7 +2800,7 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         endVolt[0] = getBatteryVoltageFiltered();
 
 // ------------------------------------------------
-// 🔴 REAL DRAIN + AUTO SWITCH
+// ?? REAL DRAIN + AUTO SWITCH
 // ------------------------------------------------
 long drain = -1L;
 
