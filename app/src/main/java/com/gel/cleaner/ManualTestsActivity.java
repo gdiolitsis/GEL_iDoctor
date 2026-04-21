@@ -15835,12 +15835,12 @@ if (validSagInputs) {
 // 3️⃣ SAG AVG
 float sagAvg = Float.NaN;
 
-float s = Math.max(sag1F, sag2F); {
-    sagAvg = (sag1 + sag2) / 2f;
-} else if (!Float.isNaN(sag1)) {
-    sagAvg = sag1;
-} else if (!Float.isNaN(sag2)) {
-    sagAvg = sag2;
+if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
+    sagAvg = (sag1F + sag2F) / 2f;
+} else if (!Float.isNaN(sag1F)) {
+    sagAvg = sag1F;
+} else if (!Float.isNaN(sag2F)) {
+    sagAvg = sag2F;
 }
 
 // 4️⃣ FALLBACK (CRITICAL FIX)
