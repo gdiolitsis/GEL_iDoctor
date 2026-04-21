@@ -14298,10 +14298,10 @@ lab14CpuFreqPeak = 0;
 // 🔴 RESET DATA (buffers / min-max / samples)
 resetBatteryDiagnostics();
 
-    // -------------------------
-    // 🔴 RUNTIME STATE (ΕΔΩ μπαίνει)
-    // -------------------------
-    if (!lab14Running) {
+// -------------------------
+// 🔴 RUNTIME STATE
+// -------------------------
+if (!lab14Running) {
 
     lab14WeakLoadCounter = 0;
     lab14RestartAttempts = 0;
@@ -14310,22 +14310,22 @@ resetBatteryDiagnostics();
     lab14LastGpuAdjustTs = 0L;
 }
 
-    // -------------------------
-    // DATA BUFFERS
-    // -------------------------
-    lab14ChargeSamples.clear();
-    lab14MinCharge = Long.MAX_VALUE;
-    lab14MaxCharge = Long.MIN_VALUE;
+// -------------------------
+// DATA BUFFERS
+// -------------------------
+lab14ChargeSamples.clear();
+lab14MinCharge = Long.MAX_VALUE;
+lab14MaxCharge = Long.MIN_VALUE;
 
-    // -------------------------
-    // FLAGS
-    // -------------------------
-    collapseRisk[0] = false;
-    calibrationDrift[0] = false;
-    cellImbalanceRisk[0] = false;
+// -------------------------
+// FLAGS
+// -------------------------
+collapseRisk[0] = false;
+calibrationDrift[0] = false;
+cellImbalanceRisk[0] = false;
 
-    lab14_systemLimited[0] = false;
-    
+lab14_systemLimited[0] = false;
+
 // -------------------------
 // SAG / VOLTAGE
 // -------------------------
@@ -14344,33 +14344,38 @@ voltageRecovery[0] = Float.NaN;
 voltageRecoverySpeed[0] = Float.NaN;
 voltageStability[0] = Float.NaN;
 
-    // -------------------------
-    // METRICS
-    // -------------------------
-    internalResistance[0] = Float.NaN;
-    thermalImpedance[0] = Float.NaN;
+// -------------------------
+// METRICS
+// -------------------------
+internalResistance[0] = Float.NaN;
+thermalImpedance[0] = Float.NaN;
 
-    powerStabilityFactor[0] = Float.NaN;
-    stressSignature[0] = Float.NaN;
-    cellElasticityIndex[0] = Float.NaN;
-    structuralIntegrityIndex[0] = Float.NaN;
+powerStabilityFactor[0] = Float.NaN;
+stressSignature[0] = Float.NaN;
+cellElasticityIndex[0] = Float.NaN;
+structuralIntegrityIndex[0] = Float.NaN;
 
-    expectedPercent[0] = Float.NaN;
-    percentDeviation[0] = Float.NaN;
+// 🔴 CRITICAL FIX — avoid NULL array crash
+if (structuralIntegrityIndex == null || structuralIntegrityIndex.length == 0) {
+    structuralIntegrityIndex = new float[]{Float.NaN};
+}
 
-    // -------------------------
-    // TEMP
-    // -------------------------
-    startBatteryTemp = Float.NaN;
-    endBatteryTemp = Float.NaN;
+expectedPercent[0] = Float.NaN;
+percentDeviation[0] = Float.NaN;
 
-    // -------------------------
-    // RESULT STATE
-    // -------------------------
-    lab14Conf = null;
-    lab14AgingIndex = -1;
-    lab14AgingInterp = "N/A";
-    lab14BatteryBehaviourWarning = false;
+// -------------------------
+// TEMP
+// -------------------------
+startBatteryTemp = Float.NaN;
+endBatteryTemp = Float.NaN;
+
+// -------------------------
+// RESULT STATE
+// -------------------------
+lab14Conf = null;
+lab14AgingIndex = -1;
+lab14AgingInterp = "N/A";
+lab14BatteryBehaviourWarning = false;
 
 // -------------------------
 // ✅ LAST — baseline temp
@@ -14410,14 +14415,12 @@ if (isChargingNowSafe()) {
 }
 
 // --------------------------------------------------
-// ZERO-RISK CALIBRATION (LAB14 ONLY)
+// ZERO-RISK CALIBRATION
 // --------------------------------------------------
-// CPU
 if (!isLab14BMode && lab14OptimalThreads <= 0) {
     calibrateLoadZeroRisk();
 }
 
-// GPU
 if (!isLab14BMode && lab14GpuIntensity <= 0) {
     calibrateGpuLoadZeroRisk();
 }
@@ -14432,7 +14435,7 @@ try {
     lastSelectedStressDurationSec = durationSec;
 
 // ------------------------------------------------------------
-// 1) INITIAL SNAPSHOT (LOCKED iDoctorEngine)
+// 1) INITIAL SNAPSHOT
 // ------------------------------------------------------------
 
 iDoctorEngine.BatterySnapshot start =
@@ -14454,13 +14457,8 @@ if (start.chargeNowMah <= 0) {
     return;
 }
 
-if (isChargingNowSafe()) {
-    logError(gr
-            ? "Η δοκιμή απαιτεί να μην φορτίζει"
-            : "Device must NOT be charging");
-    lab14Running = false;
-    return;
-}
+// 🔴 DUPLICATE REMOVED (είχες 2 φορές το ίδιο check)
+// if (isChargingNowSafe()) {...}
 
 if (Float.isNaN(start.batteryTempC)) {
     logWarn(gr
@@ -14495,8 +14493,10 @@ if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
     }
 }
 
-batteryPercent = getBatteryPercentSafe();
+// 🔴 CRITICAL FIX — safe percent
+batteryPercent = Math.max(0, getBatteryPercentSafe());
 
+// 🔴 CRITICAL FIX — always initialize
 baselineFullMah = -1;
 
 // 1. direct from hardware (best)
@@ -17863,19 +17863,23 @@ if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
     structuralIntegrityIndex[0] = base;
 }
 
-// 🔴 HARD OVERRIDES (FIXED — WORST CASE)
+// 🔴 HARD OVERRIDES (SAFE)
 
-float override = structuralIntegrityIndex[0];
+if (structuralIntegrityIndex != null &&
+    structuralIntegrityIndex.length > 0) {
 
-if (collapseRisk[0]) {
-    override = Math.min(override, 30f);
+    float override = structuralIntegrityIndex[0];
+
+    if (collapseRisk[0]) {
+        override = Math.min(override, 30f);
+    }
+
+    if (smartSwellingFinal) {
+        override = Math.min(override, 20f);
+    }
+
+    structuralIntegrityIndex[0] = override;
 }
-
-if (smartSwellingFinal) {
-    override = Math.min(override, 20f);
-}
-
-structuralIntegrityIndex[0] = override;
 
 // =====================================================
 // 🔴 STRUCTURAL INTEGRITY (FIXED + FALLBACK)
