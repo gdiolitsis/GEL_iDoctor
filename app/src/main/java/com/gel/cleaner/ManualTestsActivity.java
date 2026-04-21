@@ -1852,12 +1852,14 @@ private void showLab14ConditionCheck(Runnable startAction) {
             gr
                     ? "Για την εκτέλεση του τεστ απαιτούνται:\n\n"
                     + "1) Μπαταρία μεταξύ 30% – 70%\n"
-                    + "2) Θερμοκρασία CPU κάτω από 60°C\n"
-                    + "3) Η συσκευή να μην φορτίζεται\n"
+                    + "2) Θερμοκρασία μπαταρίας κάτω από 38°C\n"
+                    + "3) Θερμοκρασία CPU κάτω από 60°C\n"
+                    + "4) Η συσκευή να μην φορτίζεται\n"
                     : "Requirements for this test:\n\n"
                     + "1) Battery between 30% – 70%\n"
-                    + "2) CPU temperature below 60°C\n"
-                    + "3) Device must not be charging\n"
+                    + "2) Battery temperature below 38°C\n"
+                    + "3) CPU temperature below 60°C\n"
+                    + "4) Device must not be charging\n"
     );
     info.setTextColor(0xFF39FF14);
     info.setTextSize(14f);
@@ -1942,79 +1944,99 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     dlg.show();
 
-    // 🔴 TTS
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+    // 🔴 TTS (ORDER FIXED)
+new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-        if (!dlg.isShowing() || AppTTS.isMuted(this)) return;
+    if (!dlg.isShowing() || AppTTS.isMuted(this)) return;
 
-        AppTTS.stop(); // 🔥 prevent overlap
+    AppTTS.stop(); // prevent overlap
 
-        StringBuilder speak = new StringBuilder();
+    StringBuilder speak = new StringBuilder();
 
-        if (gr) {
-            speak.append("Έλεγχος συνθηκών για το LAB 14. ");
-        } else {
-            speak.append("Condition check for LAB 14. ");
-        }
+    // INTRO
+    speak.append(gr
+            ? "Έλεγχος συνθηκών για το LAB 14. "
+            : "Condition check for LAB 14. ");
 
-        speak.append(gr ? "Επίπεδο μπαταρίας " : "Battery level ");
-        speak.append(percent).append("%. ");
+    // 1️⃣ BATTERY LEVEL
+    speak.append(gr ? "Επίπεδο μπαταρίας " : "Battery level ");
+    speak.append(percent).append("%. ");
 
-        if (badBat) {
+    if (badBat) {
+        speak.append(gr
+                ? "Εκτός προτεινόμενου εύρους 30 έως 70 τοις εκατό. "
+                : "Outside recommended range 30 to 70 percent. ");
+    } else {
+        speak.append(gr
+                ? "Εντός αποδεκτού εύρους. "
+                : "Within acceptable range. ");
+    }
+
+    // 2️⃣ BATTERY TEMP
+    if (!Float.isNaN(tempC)) {
+
+        speak.append(gr
+                ? "Θερμοκρασία μπαταρίας "
+                : "Battery temperature ");
+
+        speak.append(String.format(Locale.US, "%.1f", tempC)).append(" βαθμοί. ");
+
+        if (badTemp) {
             speak.append(gr
-                    ? "Εκτός προτεινόμενου εύρους 30 έως 70 τοις εκατό. "
-                    : "Outside recommended range 30 to 70 percent. ");
-        } else {
-            speak.append(gr
-                    ? "Εντός αποδεκτού εύρους. "
-                    : "Within acceptable range. ");
-        }
-
-        if (!Float.isNaN(cpuTemp)) {
-            speak.append(gr ? "Θερμοκρασία CPU " : "CPU temperature ");
-            speak.append(String.format(Locale.US, "%.1f", cpuTemp)).append(" βαθμοί. ");
-
-            if (badCpu) {
-                speak.append(gr ? "Υψηλή θερμοκρασία. " : "Temperature is high. ");
-            } else {
-                speak.append(gr ? "Εντός ορίων. " : "Within limits. ");
-            }
-        }
-
-        if (!Float.isNaN(tempC)) {
-            speak.append(gr ? "Θερμοκρασία μπαταρίας " : "Battery temperature ");
-            speak.append(String.format(Locale.US, "%.1f", tempC)).append(" βαθμοί. ");
-
-            if (badTemp) {
-                speak.append(gr ? "Υψηλή θερμοκρασία. " : "Temperature is high. ");
-            } else {
-                speak.append(gr ? "Κανονική θερμοκρασία. " : "Temperature is normal. ");
-            }
-        }
-
-        if (chargingNow) {
-            speak.append(gr
-                    ? "Η συσκευή φορτίζει. Αυτό δεν επιτρέπεται. "
-                    : "Device is charging. This is not allowed. ");
+                    ? "Υψηλή θερμοκρασία. "
+                    : "Temperature is high. ");
         } else {
             speak.append(gr
-                    ? "Η συσκευή δεν φορτίζει. "
-                    : "Device is not charging. ");
+                    ? "Κανονική θερμοκρασία. "
+                    : "Temperature is normal. ");
         }
+    }
 
-        if (canStart) {
+    // 3️⃣ CPU TEMP
+    if (!Float.isNaN(cpuTemp)) {
+
+        speak.append(gr
+                ? "Θερμοκρασία CPU "
+                : "CPU temperature ");
+
+        speak.append(String.format(Locale.US, "%.1f", cpuTemp)).append(" βαθμοί. ");
+
+        if (badCpu) {
             speak.append(gr
-                    ? "Όλες οι συνθήκες είναι κατάλληλες. Μπορείτε να ξεκινήσετε το τεστ."
-                    : "All conditions are satisfied. You may start the test.");
+                    ? "Υψηλή θερμοκρασία. "
+                    : "Temperature is high. ");
         } else {
             speak.append(gr
-                    ? "Οι συνθήκες δεν είναι κατάλληλες για ασφαλή εκτέλεση του τεστ."
-                    : "Conditions are not suitable for safe test execution.");
+                    ? "Εντός ορίων. "
+                    : "Within limits. ");
         }
+    }
 
-        AppTTS.ensureSpeak(this, speak.toString());
+    // 4️⃣ CHARGING
+    if (chargingNow) {
+        speak.append(gr
+                ? "Η συσκευή φορτίζει. Αυτό δεν επιτρέπεται. "
+                : "Device is charging. This is not allowed. ");
+    } else {
+        speak.append(gr
+                ? "Η συσκευή δεν φορτίζει. "
+                : "Device is not charging. ");
+    }
 
-    }, 200);
+    // FINAL
+    if (canStart) {
+        speak.append(gr
+                ? "Όλες οι συνθήκες είναι κατάλληλες. Μπορείτε να ξεκινήσετε το τεστ."
+                : "All conditions are satisfied. You may start the test.");
+    } else {
+        speak.append(gr
+                ? "Οι συνθήκες δεν είναι κατάλληλες για ασφαλή εκτέλεση του τεστ."
+                : "Conditions are not suitable for safe test execution.");
+    }
+
+    AppTTS.ensureSpeak(this, speak.toString());
+
+}, 200);
 
     // ACTIONS
     cancel.setOnClickListener(v -> {
