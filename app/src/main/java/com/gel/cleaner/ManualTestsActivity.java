@@ -1836,6 +1836,7 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     LinearLayout root = buildGELPopupRoot(this);
 
+    // HEADER
     root.addView(
             buildPopupHeader(
                     this,
@@ -1845,6 +1846,7 @@ private void showLab14ConditionCheck(Runnable startAction) {
             )
     );
 
+    // INFO
     TextView info = new TextView(this);
     info.setText(
             gr
@@ -1857,12 +1859,12 @@ private void showLab14ConditionCheck(Runnable startAction) {
                     + "2) CPU temperature below 60°C\n"
                     + "3) Device must not be charging\n"
     );
-
     info.setTextColor(0xFF39FF14);
     info.setTextSize(14f);
     info.setPadding(0, dp(8), 0, dp(6));
     root.addView(info);
 
+    // WARN TEXT
     StringBuilder warn = new StringBuilder();
     boolean hasWarn = false;
 
@@ -1906,53 +1908,153 @@ private void showLab14ConditionCheck(Runnable startAction) {
     warnView.setTextSize(13f);
     root.addView(warnView);
 
+    // BUTTON ROW
+    LinearLayout row = new LinearLayout(this);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+
+    Button cancel =
+            gelButton(this, gr ? "Ακύρωση" : "Cancel", 0xFF8B0000);
+
+    Button start =
+            gelButton(this, gr ? "Έναρξη" : "Start", 0xFF0B5D1E);
+
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(0, dp(48), 1);
+
+    lp.setMargins(dp(6), dp(18), dp(6), 0);
+
+    cancel.setLayoutParams(lp);
+    start.setLayoutParams(lp);
+
+    row.addView(cancel);
+    row.addView(start);
+    root.addView(row);
+
     b.setView(root);
 
-    AlertDialog dialog = b.create();
+    final AlertDialog dlg = b.create();
 
-    dialog.setOnShowListener(dlg -> {
+    if (dlg.getWindow() != null) {
+        dlg.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT)
+        );
+    }
 
-        Button startBtn = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+    dlg.show();
 
-        if (startBtn != null) {
+    // 🔴 TTS
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-            startBtn.setEnabled(canStart);
+        if (!dlg.isShowing() || AppTTS.isMuted(this)) return;
 
-            startBtn.setOnClickListener(v -> {
+        AppTTS.stop(); // 🔥 prevent overlap
 
-                if (canStart) {
+        StringBuilder speak = new StringBuilder();
 
-                    dialog.dismiss();
+        if (gr) {
+            speak.append("Έλεγχος συνθηκών για το LAB 14. ");
+        } else {
+            speak.append("Condition check for LAB 14. ");
+        }
 
-                    if (startAction != null) {
-                        startAction.run();
-                    }
+        speak.append(gr ? "Επίπεδο μπαταρίας " : "Battery level ");
+        speak.append(percent).append("%. ");
 
-                } else {
+        if (badBat) {
+            speak.append(gr
+                    ? "Εκτός προτεινόμενου εύρους 30 έως 70 τοις εκατό. "
+                    : "Outside recommended range 30 to 70 percent. ");
+        } else {
+            speak.append(gr
+                    ? "Εντός αποδεκτού εύρους. "
+                    : "Within acceptable range. ");
+        }
 
-                    logWarn(gr
-                            ? "Δεν πληρούνται οι συνθήκες για LAB 14"
-                            : "Conditions not met for LAB 14");
-                }
-            });
+        if (!Float.isNaN(cpuTemp)) {
+            speak.append(gr ? "Θερμοκρασία CPU " : "CPU temperature ");
+            speak.append(String.format(Locale.US, "%.1f", cpuTemp)).append(" βαθμοί. ");
+
+            if (badCpu) {
+                speak.append(gr ? "Υψηλή θερμοκρασία. " : "Temperature is high. ");
+            } else {
+                speak.append(gr ? "Εντός ορίων. " : "Within limits. ");
+            }
+        }
+
+        if (!Float.isNaN(tempC)) {
+            speak.append(gr ? "Θερμοκρασία μπαταρίας " : "Battery temperature ");
+            speak.append(String.format(Locale.US, "%.1f", tempC)).append(" βαθμοί. ");
+
+            if (badTemp) {
+                speak.append(gr ? "Υψηλή θερμοκρασία. " : "Temperature is high. ");
+            } else {
+                speak.append(gr ? "Κανονική θερμοκρασία. " : "Temperature is normal. ");
+            }
+        }
+
+        if (chargingNow) {
+            speak.append(gr
+                    ? "Η συσκευή φορτίζει. Αυτό δεν επιτρέπεται. "
+                    : "Device is charging. This is not allowed. ");
+        } else {
+            speak.append(gr
+                    ? "Η συσκευή δεν φορτίζει. "
+                    : "Device is not charging. ");
+        }
+
+        if (canStart) {
+            speak.append(gr
+                    ? "Όλες οι συνθήκες είναι κατάλληλες. Μπορείτε να ξεκινήσετε το τεστ."
+                    : "All conditions are satisfied. You may start the test.");
+        } else {
+            speak.append(gr
+                    ? "Οι συνθήκες δεν είναι κατάλληλες για ασφαλή εκτέλεση του τεστ."
+                    : "Conditions are not suitable for safe test execution.");
+        }
+
+        AppTTS.ensureSpeak(this, speak.toString());
+
+    }, 200);
+
+    // ACTIONS
+    cancel.setOnClickListener(v -> {
+        AppTTS.stop();
+        dlg.dismiss();
+    });
+
+    start.setEnabled(canStart);
+
+    start.setOnClickListener(v -> {
+
+        if (canStart) {
+
+            AppTTS.stop();
+            dlg.dismiss();
+
+            if (startAction != null) {
+                startAction.run();
+            }
+
+        } else {
+
+            logWarn(gr
+                    ? "Δεν πληρούνται οι συνθήκες για LAB 14"
+                    : "Conditions not met for LAB 14");
         }
     });
 
-    dialog.setButton(
-            AlertDialog.BUTTON_POSITIVE,
-            gr ? "Έναρξη" : "Start",
-            (DialogInterface) null
-    );
+    dlg.setOnCancelListener(d -> AppTTS.stop());
+    dlg.setOnDismissListener(d -> AppTTS.stop()); // 🔥 CRITICAL
 
-    dialog.setButton(
-            AlertDialog.BUTTON_NEGATIVE,
-            gr ? "Ακύρωση" : "Cancel",
-            (d, w) -> d.dismiss()
-    );
-
-    dialog.show();
+    dlg.setOnKeyListener((dialog, keyCode, event) -> {
+        if (keyCode == KeyEvent.KEYCODE_BACK &&
+            event.getAction() == KeyEvent.ACTION_UP) {
+            AppTTS.stop();
+        }
+        return false;
+    });
 }
-    
+
     // =========================
     // SPANNABLE TEXT
     // =========================
