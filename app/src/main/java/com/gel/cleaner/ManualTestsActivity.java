@@ -17496,7 +17496,13 @@ final float[] powerMilliWattRef = { powerMilliWatt };
 
 final long dtMsFinal = dtMs;
 final long drainMahFinal = drainMah;
-final boolean smartSwellingF = smartSwelling;
+
+// 🔴 CRITICAL SNAPSHOT (ΛΕΙΠΕ)
+final float sag1F = sag1;
+final float sag2F = sag2;
+final float sagAvgF = sagAvg;
+
+final boolean smartSwellingFinal = smartSwelling;
 
 runOnUiThread(() -> {
 
@@ -17550,7 +17556,7 @@ if (drainMahFinalLong > 600) {
 // FAST STRESS
 // ------------------------------------------------
 
-if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
 
     float s1 = sag1F;
     float s2 = sag2F;
@@ -17624,11 +17630,11 @@ if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] > 500f) {
     else base = 50f;
 
     // sag penalty
-    if (!Float.isNaN(sagAvg)) {
+    if (!Float.isNaN(sagAvgF)) {
 
-        if (sagAvg > 0.15f) base -= 25f;
-        else if (sagAvg > 0.10f) base -= 15f;
-        else if (sagAvg > 0.06f) base -= 8f;
+        if (sagAvgF > 0.15f) base -= 25f;
+        else if (sagAvgF > 0.10f) base -= 15f;
+        else if (sagAvgF > 0.06f) base -= 8f;
     }
 
     // drain penalty (unstable discharge)
@@ -17699,7 +17705,7 @@ if (!Float.isNaN(powerStabilityFactor[0]) &&
 
 if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 
-    float base = 100f - (sagAvg * 700f);
+    float base = 100f - (sagAvgF * 700f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
@@ -17770,7 +17776,7 @@ if (!Float.isNaN(stressSignature[0]) &&
 
 if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 
-    float base = 100f - (sagAvg * 900f);
+    float base = 100f - (sagAvgF * 900f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
@@ -17848,7 +17854,7 @@ if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 
 if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 
-    float base = 100f - (sagAvg * 800f);
+    float base = 100f - (sagAvgF * 800f);
 
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
@@ -17931,8 +17937,7 @@ if (!Float.isNaN(structuralIntegrityIndex[0]) &&
 } else {
 
     // 🔴 FALLBACK από SAG (critical fix)
-if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
-
+if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
     float s = Math.max(sag1F, sag2F);
 
         String siFallback;
