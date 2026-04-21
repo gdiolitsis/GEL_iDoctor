@@ -2650,7 +2650,7 @@ final Runnable usageLoop = new Runnable() {
 
         long elapsed = SystemClock.elapsedRealtime() - startTs;
 
-        long nextDelay = 500
+        long nextDelay = 500;
 
         int mode = (int)(Math.random() * 4);
 
