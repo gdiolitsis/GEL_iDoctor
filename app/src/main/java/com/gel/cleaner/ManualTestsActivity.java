@@ -15839,7 +15839,7 @@ if (validSagInputs) {
 // 3️⃣ SAG AVG
 float sagAvg = Float.NaN;
 
-if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
+if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
     sagAvg = (sag1 + sag2) / 2f;
 } else if (!Float.isNaN(sag1)) {
     sagAvg = sag1;
@@ -17878,7 +17878,7 @@ if (collapseRisk[0]) {
     structuralIntegrityIndex[0] = 30f;
 }
 
-if (smartSwellingF) {
+if (smartSwelling) {
     structuralIntegrityIndex[0] = 20f;
 }
 
