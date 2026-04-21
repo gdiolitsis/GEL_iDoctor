@@ -2650,8 +2650,7 @@ final Runnable usageLoop = new Runnable() {
 
         long elapsed = SystemClock.elapsedRealtime() - startTs;
 
-        // κάθε ~15–25s αλλάζει behaviour
-        long nextDelay = 15000 + (long)(Math.random() * 10000);
+        long nextDelay = 500
 
         int mode = (int)(Math.random() * 4);
 
@@ -2710,13 +2709,50 @@ final Runnable usageLoop = new Runnable() {
             }
 
         } catch (Throwable ignore) {}
+        
+// 🔴 LIVE VOLTAGE SAMPLE (SMART DETECTION)
+float vNow = getBatteryVoltageFiltered();
 
-        usageHandler.postDelayed(this, nextDelay);
+if (!Float.isNaN(vNow) && vNow > 0f) {
+
+    if (Float.isNaN(vStart[0])) {
+        vStart[0] = vNow;
+        logInfo("SET vStart=" + vStart[0]);
+    }
+
+    float dropFromStart =
+            Float.isNaN(vStart[0]) ? 0f : (vStart[0] - vNow);
+
+    if (Float.isNaN(vLoad1[0]) &&
+        dropFromStart > 0.015f) {
+
+        vLoad1[0] = vNow;
+        logInfo("SET vLoad1=" + vLoad1[0]);
+    }
+
+    if (Float.isNaN(voltageUnderLoad[0]) &&
+        !Float.isNaN(vLoad1[0]) &&
+        dropFromStart > 0.030f) {
+
+        voltageUnderLoad[0] = vNow;
+        logInfo("SET vLoadMain=" + voltageUnderLoad[0]);
+    }
+
+    if (Float.isNaN(vLoad2[0]) &&
+        !Float.isNaN(voltageUnderLoad[0]) &&
+        dropFromStart > 0.045f) {
+
+        vLoad2[0] = vNow;
+        logInfo("SET vLoad2=" + vLoad2[0]);
+    }
+}
+
+usageHandler.postDelayed(this, nextDelay);
     }
 };
 
 // start loop
-usageHandler.postDelayed(usageLoop, 5000);
+usageHandler.post(usageLoop);
 
 // --------------------------------------------------------
 // AFTER 300s -> FINAL SNAPSHOT + ANALYSIS
@@ -14275,7 +14311,7 @@ resetBatteryDiagnostics();
 
     lab14_systemLimited[0] = false;
     
-    // -------------------------
+// -------------------------
 // SAG / VOLTAGE
 // -------------------------
 sag1[0] = Float.NaN;
@@ -14730,6 +14766,8 @@ private void lab14LogStressResult(
 // 🔴 FINAL SAG CALCULATION (MAIN PHASE — STABLE)
 // ====================================================
 
+float finalSag = Float.NaN;
+
 // 🔴 PRIMARY: main phase sag (REAL)
 if (!Float.isNaN(voltageStart) &&
     voltageUnderLoad != null &&
@@ -14745,11 +14783,13 @@ if (!Float.isNaN(voltageStart) &&
 
 // 🔴 FALLBACK: fast phase (ONLY if main failed)
 if (Float.isNaN(finalSag) &&
-    !Float.isNaN(sagAvg) &&
-    sagAvg > 0.005f &&
-    sagAvg < 1.0f) {
+    sagAvg != null &&
+    sagAvg.length > 0 &&
+    !Float.isNaN(sagAvg[0]) &&
+    sagAvg[0] > 0.005f &&
+    sagAvg[0] < 1.0f) {
 
-    finalSag = sagAvg;
+    finalSag = sagAvg[0];
 }
 
 // ====================================================
@@ -14765,8 +14805,14 @@ float sagFiltered = finalSag;
 logLine();
 logWarn("DEBUG FINAL SAG");
 logWarn("voltageStart=" + voltageStart);
-logWarn("voltageUnderLoad=" + voltageUnderLoad[0]);
-logWarn("sagAvg=" + sagAvg);
+logWarn("voltageUnderLoad=" + (
+        voltageUnderLoad != null && voltageUnderLoad.length > 0
+                ? voltageUnderLoad[0]
+                : Float.NaN));
+logWarn("sagAvg=" + (
+        sagAvg != null && sagAvg.length > 0
+                ? sagAvg[0]
+                : Float.NaN));
 logWarn("finalSag=" + finalSag);
 logLine();
 
