@@ -15255,7 +15255,7 @@ if ("Excellent".equals(lbl) ||
     // ----------------------------------------------------
     // SWELLING
     // ----------------------------------------------------
-    if (smartSwelling) {
+    if (smartSwellingFinal) {
 
         logLabelWarnValue(
                 gr ? "Διόγκωση μπαταρίας" : "Battery swelling",
