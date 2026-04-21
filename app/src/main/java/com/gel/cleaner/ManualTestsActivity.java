@@ -15835,12 +15835,12 @@ if (validSagInputs) {
 // 3️⃣ SAG AVG
 float sagAvg = Float.NaN;
 
-if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
-    sagAvg = (sag1F + sag2F) / 2f;
-} else if (!Float.isNaN(sag1F)) {
-    sagAvg = sag1F;
-} else if (!Float.isNaN(sag2F)) {
-    sagAvg = sag2F;
+if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+    sagAvg = (sag1 + sag2) / 2f;
+} else if (!Float.isNaN(sag1)) {
+    sagAvg = sag1;
+} else if (!Float.isNaN(sag2)) {
+    sagAvg = sag2;
 }
 
 // 4️⃣ FALLBACK (CRITICAL FIX)
@@ -17548,13 +17548,10 @@ if (drainMahFinalLong > 600) {
 // FAST STRESS
 // ------------------------------------------------
 
-final float sag1F = sag1;
-final float sag2F = sag2;
+if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
-if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
-
-    float s1 = sag1F;
-    float s2 = sag2F;
+    float s1 = sag1;
+    float s2 = sag2;
 
     if (Math.abs(s1) < 0.002f) s1 = Float.NaN;
     if (Math.abs(s2) < 0.002f) s2 = Float.NaN;
@@ -17568,8 +17565,8 @@ if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
             : String.format(Locale.US, "%.3f V", s2);
 
     boolean sagValid = !(
-        (Float.isNaN(sag1F) || sag1F <= 0.005f) &&
-        (Float.isNaN(sag2F) || sag2F <= 0.005f)
+        (Float.isNaN(s1) || s1 <= 0.005f) &&
+        (Float.isNaN(s2) || s2 <= 0.005f)
     );
 
     if (!sagValid) {
@@ -17698,35 +17695,24 @@ if (!Float.isNaN(powerStabilityFactor[0]) &&
 // 🔴 COMPUTE STRESS SIGNATURE (STABLE)
 // =====================================================
 
-final float sagAvgF = sagAvg;
-final float sag1F = sag1;
-final float sag2F = sag2;
+if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
 
-if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
+    float base = 100f - (sagAvg * 700f);
 
-    // base από sag
-    float base = 100f - (sagAvgF * 700f);
-
-    // clamp
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
 
-    // recovery penalty
     if (!Float.isNaN(voltageRecovery[0])) {
 
-        if (voltageRecovery[0] < 0.03f) {
-            base -= 20f;
-        } else if (voltageRecovery[0] < 0.06f) {
-            base -= 10f;
-        }
+        if (voltageRecovery[0] < 0.03f) base -= 20f;
+        else if (voltageRecovery[0] < 0.06f) base -= 10f;
     }
 
-    // power penalty (χαμηλό load = unreliable)
-    if (!Float.isNaN(powerMilliWattRef[0]) && powerMilliWattRef[0] < 2500f) {
+    if (!Float.isNaN(powerMilliWattRef[0]) &&
+        powerMilliWattRef[0] < 2500f) {
         base -= 15f;
     }
 
-    // clamp again
     if (base > 100f) base = 100f;
     if (base < 0f) base = 0f;
 
@@ -17737,41 +17723,44 @@ if (!Float.isNaN(stressSignature[0]) &&
     validDrain &&
     !lab14_systemLimited[0]) {
 
-                                String sLabel;
+    String sLabel;
 
-                                if (stressSignature[0] >= 85)
-                                    sLabel = "Stable electrochemical response";
-                                else if (stressSignature[0] >= 70)
-                                    sLabel = "Healthy response";
-                                else if (stressSignature[0] >= 50)
-                                    sLabel = "Possible cell imbalance";
-                                else
-                                    sLabel = "Irregular battery behaviour";
+    if (stressSignature[0] >= 85)
+        sLabel = "Stable electrochemical response";
+    else if (stressSignature[0] >= 70)
+        sLabel = "Healthy response";
+    else if (stressSignature[0] >= 50)
+        sLabel = "Possible cell imbalance";
+    else
+        sLabel = "Irregular battery behaviour";
 
-                                if (stressSignature[0] >= 70) {
-                                    logLabelOkValue(
-        gr ? "Υπογραφή καταπόνησης μπαταρίας"
-           : "Battery stress signature",
-        String.format(
-                Locale.US,
-                "%s (%.0f)",
-                sLabel,
-                stressSignature[0]
-        )
-);
-                                } else {
-                                    logLabelWarnValue(
-        gr ? "Υπογραφή καταπόνησης μπαταρίας"
-           : "Battery stress signature",
-        String.format(
-                Locale.US,
-                "%s (%.0f)",
-                sLabel,
-                stressSignature[0]
-        )
-);
-                                }
-                            }
+    if (stressSignature[0] >= 70) {
+
+        logLabelOkValue(
+            gr ? "Υπογραφή καταπόνησης μπαταρίας"
+               : "Battery stress signature",
+            String.format(
+                    Locale.US,
+                    "%s (%.0f)",
+                    sLabel,
+                    stressSignature[0]
+            )
+        );
+
+    } else {
+
+        logLabelWarnValue(
+            gr ? "Υπογραφή καταπόνησης μπαταρίας"
+               : "Battery stress signature",
+            String.format(
+                    Locale.US,
+                    "%s (%.0f)",
+                    sLabel,
+                    stressSignature[0]
+            )
+        );
+    }
+}
                             
 // =====================================================
 // 🔴 COMPUTE CELL ELASTICITY INDEX (REALISTIC)
@@ -17855,7 +17844,7 @@ if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 // 🔴 COMPUTE STRUCTURAL INDEX (INSERT HERE)
 // =====================================================
 
-if (!Float.isNaN(sagAvgF) && sagAvgG > 0f) {
+if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 
     float base = 100f - (sagAvgF * 800f);
 
