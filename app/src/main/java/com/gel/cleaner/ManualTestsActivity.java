@@ -426,9 +426,9 @@ private boolean lab14SoftPhaseStarted = false;
     final float[] vRecover = {Float.NaN};
     final float[] vLoad2 = {Float.NaN};
 
-    final float[] sag1 = {Float.NaN};
-    final float[] sag2 = {Float.NaN};
-    final float[] sagAvg = {Float.NaN};
+    float sag1 = {Float.NaN};
+    float sag2 = {Float.NaN};
+    float sagAvg = {Float.NaN};
 
     final float[] voltageRecovery = {Float.NaN};
     final float[] voltageStability = {Float.NaN};
@@ -14719,7 +14719,7 @@ startLab14ProgressLoop();
 private void lab14LogStressResult(
         boolean gr,
         Lab14Result res,
-        float[] sagAvg,
+        float sagAvg,
         float voltageStart,
         float[] voltageRecovery,
         float[] voltageRecoverySpeed,
@@ -17965,7 +17965,7 @@ if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 // =====================================================
 // 🔴 CELL BALANCE (FIXED CONDITION)
 // =====================================================
-if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+if (!if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
     if (cellImbalanceRisk[0]) {
 
@@ -20166,8 +20166,8 @@ private void runFastSagCapture(
         float[] vLoad1,
         float[] vRecover,
         float[] vLoad2,
-        float[] sag1,
-        float[] sag2,
+        float sag1,
+        float sag2,
         float[] powerMilliWattRef,
         float[] estimatedCurrentMaRef
 ) {
