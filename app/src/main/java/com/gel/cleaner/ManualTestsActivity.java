@@ -1811,23 +1811,21 @@ private void showLab14ConditionCheck(Runnable startAction) {
     final boolean gr = AppLang.isGreek(this);
 
     int percent = (int) getCurrentBatteryPercent();
-
     float tempC = getBatteryTemperature();
-
     boolean chargingNow = isDeviceCharging();
-
     float cpuTemp = readCpuTempSafe();
 
     boolean badBat = percent < 30 || percent > 70;
+    boolean badCpu = !Float.isNaN(cpuTemp) && cpuTemp >= 60f;
+    boolean badTemp = !Float.isNaN(tempC) && tempC >= 38f;
+    boolean cpuOk = Float.isNaN(cpuTemp) || cpuTemp < 60f;
 
-    boolean badCpu =
-            !Float.isNaN(cpuTemp) && cpuTemp >= 60f;
-
-    boolean badTemp =
-            !Float.isNaN(tempC) && tempC >= 38f;
-
-    boolean cpuOk =
-            Float.isNaN(cpuTemp) || cpuTemp < 60f;
+    // 🔴 FINAL GATE
+    final boolean canStart =
+            !badBat &&
+            !chargingNow &&
+            cpuOk &&
+            !badTemp;
 
     AlertDialog.Builder b =
             new AlertDialog.Builder(
@@ -1839,7 +1837,6 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     LinearLayout root = buildGELPopupRoot(this);
 
-
     // HEADER
     root.addView(
             buildPopupHeader(
@@ -1850,9 +1847,7 @@ private void showLab14ConditionCheck(Runnable startAction) {
             )
     );
 
-
     // INFO TEXT
-
     TextView info = new TextView(this);
 
     info.setText(
@@ -1874,17 +1869,12 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     root.addView(info);
 
-
     StringBuilder warn = new StringBuilder();
     boolean hasWarn = false;
 
-
     // WARN
-
     if (badBat) {
-
         hasWarn = true;
-
         warn.append(
                 gr
                         ? "• Η μπαταρία πρέπει να είναι μεταξύ 30% και 70%\n"
@@ -1892,11 +1882,8 @@ private void showLab14ConditionCheck(Runnable startAction) {
         );
     }
 
-
     if (chargingNow) {
-
         hasWarn = true;
-
         warn.append(
                 gr
                         ? "• Η συσκευή δεν πρέπει να φορτίζει\n"
@@ -1904,11 +1891,8 @@ private void showLab14ConditionCheck(Runnable startAction) {
         );
     }
 
-
     if (!Float.isNaN(cpuTemp) && badCpu) {
-
         hasWarn = true;
-
         warn.append(
                 gr
                         ? "• Η θερμοκρασία CPU είναι υψηλή για την εκτέλεση του τεστ\n"
@@ -1916,11 +1900,8 @@ private void showLab14ConditionCheck(Runnable startAction) {
         );
     }
 
-
     if (badTemp) {
-
         hasWarn = true;
-
         warn.append(
                 gr
                         ? "• Η θερμοκρασία μπαταρίας είναι υψηλή\n"
@@ -1928,15 +1909,53 @@ private void showLab14ConditionCheck(Runnable startAction) {
         );
     }
 
-
     if (!hasWarn) {
-
         warn.append(
                 gr
                         ? "Οι συνθήκες είναι κατάλληλες"
                         : "Conditions are OK"
         );
     }
+
+    // 🔴 WARN TEXT VIEW
+    TextView warnView = new TextView(this);
+    warnView.setText(warn.toString());
+    warnView.setTextColor(hasWarn ? 0xFFFF4444 : 0xFF39FF14);
+    warnView.setTextSize(13f);
+    warnView.setPadding(0, dp(6), 0, dp(6));
+
+    root.addView(warnView);
+
+    // 🔴 BUTTONS
+    b.setPositiveButton(
+            gr ? "Έναρξη" : "Start",
+            (d, w) -> {
+
+                if (canStart) {
+
+                    if (startAction != null) {
+                        startAction.run();
+                    }
+
+                } else {
+
+                    logWarn(gr
+                            ? "Δεν πληρούνται οι συνθήκες για LAB 14"
+                            : "Conditions not met for LAB 14");
+                }
+            }
+    );
+
+    b.setNegativeButton(
+            gr ? "Ακύρωση" : "Cancel",
+            null
+    );
+
+    // 🔴 SHOW
+    AlertDialog dialog = b.create();
+    dialog.setView(root);
+    dialog.show();
+}
     
     // =========================
     // SPANNABLE TEXT
@@ -14277,7 +14296,7 @@ private void lab14BatteryHealthStressTest_REAL() {
             iDoctorEngine.get(ManualTestsActivity.this);
 
     gr = AppLang.isGreek(this);
-
+    
     final Lab14Engine lab14Engine =
             new Lab14Engine(this);
 
