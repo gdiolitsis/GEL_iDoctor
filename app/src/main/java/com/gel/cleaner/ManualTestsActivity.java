@@ -14811,6 +14811,10 @@ logWarn("sagAvg=" + sagAvg);
 logWarn("finalSag=" + finalSag);
 logLine();
 
+final float sag1F = sag1;
+final float sag2F = sag2;
+final float sagAvgF = sagAvg;
+
     boolean sagValid =
         !Float.isNaN(finalSag) &&
         finalSag > 0.005f;
@@ -15835,7 +15839,7 @@ if (validSagInputs) {
 // 3️⃣ SAG AVG
 float sagAvg = Float.NaN;
 
-if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
     sagAvg = (sag1 + sag2) / 2f;
 } else if (!Float.isNaN(sag1)) {
     sagAvg = sag1;
@@ -17451,8 +17455,6 @@ final long baselineFullFinal = baselineFullMah;
 // 🔴 FIX 2
 final float drainMahFFinal = (float) drainMah;
 
-final boolean smartSwellingF = smartSwelling;
-
 final float startBatteryTempFinal = tempStart;
 final float endBatteryTempFinal = tempEnd;
 
@@ -17494,15 +17496,15 @@ final float[] powerMilliWattRef = { powerMilliWatt };
 
 final long dtMsFinal = dtMs;
 final long drainMahFinal = drainMah;
-final boolean smartSwellingFinal = smartSwelling;
+final boolean smartSwellingF = smartSwelling;
 
 runOnUiThread(() -> {
 
-    final long drainMahFinalLong = (long) drainMahFFinal;
+    final long drainMahFinalLong = drainMahFinal;
 
-// ------------------------------------------------
-// WARNINGS
-// ------------------------------------------------
+    // ------------------------------------------------
+    // WARNINGS
+    // ------------------------------------------------
 if (drainMahFinalLong > 600) {
         logLabelWarnValue(
                 gr ? "Ανωμαλία μέτρησης κατανάλωσης"
@@ -17550,8 +17552,8 @@ if (drainMahFinalLong > 600) {
 
 if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
-    float s1 = sag1;
-    float s2 = sag2;
+    float s1 = sag1F;
+    float s2 = sag2F;
 
     if (Math.abs(s1) < 0.002f) s1 = Float.NaN;
     if (Math.abs(s2) < 0.002f) s2 = Float.NaN;
@@ -17695,7 +17697,7 @@ if (!Float.isNaN(powerStabilityFactor[0]) &&
 // 🔴 COMPUTE STRESS SIGNATURE (STABLE)
 // =====================================================
 
-if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 
     float base = 100f - (sagAvg * 700f);
 
@@ -17766,7 +17768,7 @@ if (!Float.isNaN(stressSignature[0]) &&
 // 🔴 COMPUTE CELL ELASTICITY INDEX (REALISTIC)
 // =====================================================
 
-if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 
     float base = 100f - (sagAvg * 900f);
 
@@ -17844,7 +17846,7 @@ if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
 // 🔴 COMPUTE STRUCTURAL INDEX (INSERT HERE)
 // =====================================================
 
-if (!Float.isNaN(sagAvg) && sagAvg > 0f) {
+if (!Float.isNaN(sagAvgF) && sagAvgF > 0f) {
 
     float base = 100f - (sagAvg * 800f);
 
@@ -17931,7 +17933,7 @@ if (!Float.isNaN(structuralIntegrityIndex[0]) &&
     // 🔴 FALLBACK από SAG (critical fix)
 if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 
-    float s = Math.max(sag1, sag2);
+    float s = Math.max(sag1F, sag2F);
 
         String siFallback;
 
@@ -17972,9 +17974,9 @@ if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
 // 🔴 CELL BALANCE (FIXED CONDITION)
 // =====================================================
 
-if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+if (!Float.isNaN(sag1F) && !Float.isNaN(sag2F)) {
 
-    float s = Math.max(sag1, sag2);
+    float s = Math.max(sag1F, sag2F);
 
     if (cellImbalanceRisk[0]) {
 
