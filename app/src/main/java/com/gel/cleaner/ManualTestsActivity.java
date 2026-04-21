@@ -426,9 +426,9 @@ private boolean lab14SoftPhaseStarted = false;
     final float[] vRecover = {Float.NaN};
     final float[] vLoad2 = {Float.NaN};
 
-    float sag1 = {Float.NaN};
-    float sag2 = {Float.NaN};
-    float sagAvg = {Float.NaN};
+    float sag1 = Float.NaN;
+    float sag2 = Float.NaN;
+    float sagAvg = Float.NaN;
 
     final float[] voltageRecovery = {Float.NaN};
     final float[] voltageStability = {Float.NaN};
@@ -14783,8 +14783,6 @@ if (!Float.isNaN(voltageStart) &&
 
 // 🔴 FALLBACK: fast phase (ONLY if main failed)
 if (Float.isNaN(finalSag) &&
-    sagAvg != null &&
-    sagAvg.length > 0 &&
     !Float.isNaN(sagAvg) &&
     sagAvg > 0.005f &&
     sagAvg < 1.0f) {
@@ -14809,10 +14807,7 @@ logWarn("voltageUnderLoad=" + (
         voltageUnderLoad != null && voltageUnderLoad.length > 0
                 ? voltageUnderLoad[0]
                 : Float.NaN));
-logWarn("sagAvg=" + (
-        sagAvg != null && sagAvg.length > 0
-                ? sagAvg
-                : Float.NaN));
+logWarn("sagAvg=" + sagAvg);
 logWarn("finalSag=" + finalSag);
 logLine();
 
