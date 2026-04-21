@@ -14355,11 +14355,6 @@ stressSignature[0] = Float.NaN;
 cellElasticityIndex[0] = Float.NaN;
 structuralIntegrityIndex[0] = Float.NaN;
 
-// 🔴 CRITICAL FIX — avoid NULL array crash
-if (structuralIntegrityIndex == null || structuralIntegrityIndex.length == 0) {
-    structuralIntegrityIndex = new float[]{Float.NaN};
-}
-
 expectedPercent[0] = Float.NaN;
 percentDeviation[0] = Float.NaN;
 
