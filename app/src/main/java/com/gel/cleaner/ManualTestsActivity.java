@@ -19478,144 +19478,142 @@ private void startLab14MainStress() {
             Thread.sleep(50);
         } catch (Throwable ignore) {}
     }
-}
 
-// =========================================================
-// 🔥 CPU STRESS (BACKGROUND - FINAL)
-// =========================================================
-new Thread(() -> {
+    // =========================================================
+    // 🔥 CPU STRESS (BACKGROUND - FINAL)
+    // =========================================================
+    new Thread(() -> {
 
-    try {
-
-        if (!lab14Running || lab14Cancelled) return;
-
-        final int cores = Runtime.getRuntime().availableProcessors();
-
-        // 🔴 SAFE THREAD SELECTION
-        int threads = (lab14OptimalThreads > 0)
-                ? lab14OptimalThreads
-                : Math.max(1, Math.min(cores - 2, cores / 2));
-
-        if (!isLab14BMode) {
-
-            // ------------------------------------------------
-            // 🔴 BOOST (interruptible)
-            // ------------------------------------------------
-            startCpuBurn_C_Mode();
-
-            long boostStart = SystemClock.elapsedRealtime();
-
-            while (SystemClock.elapsedRealtime() - boostStart < 4000) {
-
-                if (!lab14Running || lab14Cancelled) {
-                    stopCpuBurn();
-                    return;
-                }
-
-                try { Thread.sleep(100); } catch (Throwable ignore) {}
-            }
-
-            stopCpuBurn();
+        try {
 
             if (!lab14Running || lab14Cancelled) return;
 
-            // ------------------------------------------------
-            // 🔵 NORMAL LOAD
-            // ------------------------------------------------
-            startCpuBurnLimitedThreads(threads);
+            final int cores = Runtime.getRuntime().availableProcessors();
 
-        } else {
+            // 🔴 SAFE THREAD SELECTION
+            int threads = (lab14OptimalThreads > 0)
+                    ? lab14OptimalThreads
+                    : Math.max(1, Math.min(cores - 2, cores / 2));
 
-            // ------------------------------------------------
-            // 🧪 LAB14B MODE
-            // ------------------------------------------------
-            if (inHardPhase) {
+            if (!isLab14BMode) {
 
+                // ------------------------------------------------
+                // 🔴 BOOST (interruptible)
+                // ------------------------------------------------
                 startCpuBurn_C_Mode();
+
+                long boostStart = SystemClock.elapsedRealtime();
+
+                while (SystemClock.elapsedRealtime() - boostStart < 4000) {
+
+                    if (!lab14Running || lab14Cancelled) {
+                        stopCpuBurn();
+                        return;
+                    }
+
+                    try { Thread.sleep(100); } catch (Throwable ignore) {}
+                }
+
+                stopCpuBurn();
+
+                if (!lab14Running || lab14Cancelled) return;
+
+                // ------------------------------------------------
+                // 🔵 NORMAL LOAD
+                // ------------------------------------------------
+                startCpuBurnLimitedThreads(threads);
 
             } else {
 
-                int softThreads = Math.max(1, cores / 2);
-                startCpuBurnLimitedThreads(softThreads);
+                // ------------------------------------------------
+                // 🧪 LAB14B MODE
+                // ------------------------------------------------
+                if (inHardPhase) {
+
+                    startCpuBurn_C_Mode();
+
+                } else {
+
+                    int softThreads = Math.max(1, cores / 2);
+                    startCpuBurnLimitedThreads(softThreads);
+                }
             }
-        }
 
-    } catch (Throwable ignore) {}
+        } catch (Throwable ignore) {}
 
-}).start();
+    }).start();
 
-// =========================================================
-// 🔴 MAIN LOAD (THREAD-SAFE SPLIT)
-// =========================================================
+    // =========================================================
+    // 🔴 MAIN LOAD (THREAD-SAFE SPLIT)
+    // =========================================================
 
-// 🔴 UI ONLY
-runOnUiThread(() -> {
+    // 🔴 UI ONLY
+    runOnUiThread(() -> {
 
-    try {
-
-        if (!lab14Running || lab14Cancelled) return;
-
-        applyMaxBrightnessAndKeepOn();
-
-        // 🔴 VIDEO LOAD (UI ONLY)
         try {
 
-            if (lab14StressVideo != null) {
+            if (!lab14Running || lab14Cancelled) return;
 
-                lab14StressVideo.setVideoURI(
-                        Uri.parse(
-                                "android.resource://"
-                                        + getPackageName()
-                                        + "/"
-                                        + R.raw.battery_stress_loop
-                        )
+            applyMaxBrightnessAndKeepOn();
+
+            // 🔴 VIDEO LOAD (UI ONLY)
+            try {
+
+                if (lab14StressVideo != null) {
+
+                    lab14StressVideo.setVideoURI(
+                            Uri.parse(
+                                    "android.resource://"
+                                            + getPackageName()
+                                            + "/"
+                                            + R.raw.battery_stress_loop
+                            )
+                    );
+
+                    lab14StressVideo.setOnPreparedListener(mp -> {
+                        mp.setLooping(true);
+                        mp.setVolume(0f, 0f);
+
+                        if (lab14Running && !lab14Cancelled) {
+                            lab14StressVideo.start();
+                        }
+                    });
+                }
+
+            } catch (Throwable ignore) {}
+
+        } catch (Throwable ignore) {}
+    });
+
+    // 🔴 BACKGROUND LOAD (CRITICAL FIX)
+    new Thread(() -> {
+
+        try {
+
+            if (!lab14Running || lab14Cancelled) return;
+
+            // 🔴 MEMORY
+            startMemoryStress();
+
+            // 🔴 BANDWIDTH
+            try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
+
+            // 🔴 GPU
+            try {
+                startGpuStressLevel(
+                        lab14GpuIntensity > 0
+                                ? Math.max(3, lab14GpuIntensity)
+                                : 3
                 );
+            } catch (Throwable ignore) {}
 
-                lab14StressVideo.setOnPreparedListener(mp -> {
-                    mp.setLooping(true);
-                    mp.setVolume(0f, 0f);
-
-                    if (lab14Running && !lab14Cancelled) {
-                        lab14StressVideo.start();
-                    }
-                });
-            }
+            // 🔴 VIBRATION
+            try { startVibrationStress(); } catch (Throwable ignore) {}
 
         } catch (Throwable ignore) {}
 
-    } catch (Throwable ignore) {}
-});
-
-
-// 🔴 BACKGROUND LOAD (CRITICAL FIX)
-new Thread(() -> {
-
-    try {
-
-        if (!lab14Running || lab14Cancelled) return;
-
-        // 🔴 MEMORY
-        startMemoryStress();
-
-        // 🔴 BANDWIDTH
-        try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
-
-        // 🔴 GPU
-        try {
-            startGpuStressLevel(
-                    lab14GpuIntensity > 0
-                            ? Math.max(3, lab14GpuIntensity)
-                            : 3
-            );
-        } catch (Throwable ignore) {}
-
-        // 🔴 VIBRATION
-        try { startVibrationStress(); } catch (Throwable ignore) {}
-
-    } catch (Throwable ignore) {}
-
-}).start();
-
+    }).start();
+}
 
 // =========================================================
 // 🔴 PROGRESS LOOP (FINAL SAFE)
@@ -19815,6 +19813,9 @@ updateProgressBar(
 
 // 🔴 LOOP (stable timing)
 ui.postDelayed(this, 1000);
+        }
+    });
+}
 
 private void resetLab14Bar() {
 
