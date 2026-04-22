@@ -16952,6 +16952,11 @@ boolean hasCurrent =
 // 🔴 MAIN CHECK (STRICT)
 // ----------------------------------------------------
 
+boolean lowDrain =
+        validDrain &&
+        drainMah >= 0 &&
+        drainMah < 3;
+
 if (hasSag && hasCurrent) {
 
     float sagCheck = finalSag;
@@ -16971,7 +16976,6 @@ int limiterFlags = 0;
 if (lowSag) limiterFlags++;
 if (lowCurrent) limiterFlags++;
 if (lowDrain) limiterFlags++;
-
 
 // ----------------------------------------------------
 // 🔴 FINAL TRIGGER (STRICT)
@@ -18251,11 +18255,6 @@ final boolean unrealCapFinal = unrealisticCapacity;
 // ----------------------------------------------------
 // LOW DRAIN (SAFE)
 // ----------------------------------------------------
-
-boolean lowDrain =
-        validDrain &&
-        drainMah >= 0 &&
-        drainMah < 3;
 
 final boolean lowDrainFinal = lowDrain;
 
