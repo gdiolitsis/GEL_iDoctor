@@ -17008,7 +17008,7 @@ if (lab14_systemLimited[0]) {
     mahPerHour = 0;
     drainPercentPerHour = 0;
 }
-
+}
 
 // ----------------------------------------------------
 // 🔴 SAG FILTER (SINGLE SOURCE)
