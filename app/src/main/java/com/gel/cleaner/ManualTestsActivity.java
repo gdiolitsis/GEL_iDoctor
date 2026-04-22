@@ -19635,13 +19635,10 @@ private void startLab14ProgressLoop() {
             long now = SystemClock.elapsedRealtime();
             int elapsed = (int) ((now - t0) / 1000);
 
-            // =====================================================
-            // 🔴 FINAL END (SAFE EXIT)
-            // =====================================================
+            // 🔴 FINAL END
             if (elapsed >= durationSec) {
 
                 ui.removeCallbacks(this);
-
                 lab14Running = false;
 
                 try { lab14StopAllStress(); } catch (Throwable ignore) {}
@@ -19673,140 +19670,48 @@ private void startLab14ProgressLoop() {
                 return;
             }
 
-// =====================================================
-// 🔥 THERMAL TRACK (STABLE)
-// =====================================================
-try {
-    iDoctorEngine idoctor =
-            iDoctorEngine.get(ManualTestsActivity.this);
+            // 🔥 THERMAL TRACK
+            try {
+                iDoctorEngine idoctor =
+                        iDoctorEngine.get(ManualTestsActivity.this);
 
-    Float tObj = idoctor.getBatteryTempUnified();
+                Float tObj = idoctor.getBatteryTempUnified();
 
-    float tNow = (tObj != null) ? tObj : Float.NaN;
+                float tNow = (tObj != null) ? tObj : Float.NaN;
 
-    // 🔴 HARD FILTER (noise + garbage kill)
-    if (!Float.isNaN(tNow) &&
-        tNow > 10f &&
-        tNow < 80f) {
+                if (!Float.isNaN(tNow) &&
+                        tNow > 10f &&
+                        tNow < 80f) {
 
-        if (Float.isNaN(lab14TempPeak) || tNow > lab14TempPeak) {
-            lab14TempPeak = tNow;
-        }
-    }
-
-} catch (Throwable ignore) {}
-
-
-// =====================================================
-// 🔴 LIVE STATS
-// =====================================================
-updateLab14LiveStats();
-
-
-// =====================================================
-// 🔴 FAST PHASE UI
-// =====================================================
-if (lab14FastPhase) {
-
-    int fastElapsed =
-            (int) ((now - lab14FastStartTime) / 1000);
-
-    if (fastElapsed < 0) fastElapsed = 0;      // 🔴 SAFETY
-    if (fastElapsed > 45) fastElapsed = 45;
-
-    if (counterText != null) {                 // 🔴 NPE GUARD
-        counterText.setText(
-                gr
-                        ? "Προθέρμανση " + fastElapsed + " / 45"
-                        : "Warm-up " + fastElapsed + " / 45"
-        );
-    }
-
-    updateProgressBar(fastElapsed, 45);
-
-    ui.postDelayed(this, 300);
-    return;
-}
-
-// =====================================================
-// 🔴 SNAPSHOT (STABLE)
-// =====================================================
-if (now - lastSnapshotTs > 1500) {
-
-    lastSnapshotTs = now;
-
-    try {
-
-        iDoctorEngine idoctor =
-                iDoctorEngine.get(ManualTestsActivity.this);
-
-        iDoctorEngine.BatterySnapshot snap =
-                idoctor.readBatterySnapshotLab();
-
-        if (snap != null &&
-            snap.chargeNowMah > 0 &&
-            snap.voltageMv > 3000 &&
-            snap.voltageMv < 5000) {
-
-            // -------------------------
-            // 🔴 VOLTAGE
-            // -------------------------
-            float vNow = snap.voltageMv / 1000f;
-
-            // 🔴 HARD FILTER (kill noise spikes)
-            if (vNow > 3.0f && vNow < 5.0f) {
-
-                // 🔴 LOWEST VOLTAGE TRACK (CRITICAL FOR SAG)
-                if (Float.isNaN(voltageUnderLoad[0]) ||
-                    vNow < voltageUnderLoad[0]) {
-
-                    voltageUnderLoad[0] = vNow;
+                    if (Float.isNaN(lab14TempPeak) || tNow > lab14TempPeak) {
+                        lab14TempPeak = tNow;
+                    }
                 }
+
+            } catch (Throwable ignore) {}
+
+            // 🔴 LIVE
+            updateLab14LiveStats();
+
+            // 🔴 UI
+            if (counterText != null) {
+
+                int safeElapsed =
+                        Math.max(0, Math.min(durationSec, elapsed));
+
+                counterText.setText(
+                        gr
+                                ? "Καταπόνηση " + safeElapsed + " / " + durationSec
+                                : "Stress " + safeElapsed + " / " + durationSec
+                );
             }
 
-            // -------------------------
-            // 🔴 CHARGE (STABLE TRACK)
-            // -------------------------
-            long c = snap.chargeNowMah;
+            updateProgressBar(
+                    Math.max(0, Math.min(durationSec, elapsed)),
+                    durationSec
+            );
 
-            // 🔴 HARD FILTER (reject jumps / buggy fuel gauge)
-            if (c > 0 && c < 20000) {
-
-                lab14ChargeSamples.add(c);
-
-                if (c < lab14MinCharge) lab14MinCharge = c;
-                if (c > lab14MaxCharge) lab14MaxCharge = c;
-            }
-        }
-
-    } catch (Throwable ignore) {}
-}
-
-// =====================================================
-// 🔴 MAIN PHASE UI (SAFE)
-// =====================================================
-if (counterText != null) {
-
-    int safeElapsed = elapsed;
-
-    if (safeElapsed < 0) safeElapsed = 0;                 // 🔴 SAFETY
-    if (safeElapsed > durationSec) safeElapsed = durationSec;
-
-    counterText.setText(
-            gr
-                    ? "Καταπόνηση " + safeElapsed + " / " + durationSec
-                    : "Stress " + safeElapsed + " / " + durationSec
-    );
-}
-
-// 🔴 PROGRESS BAR (guard)
-updateProgressBar(
-        Math.max(0, Math.min(durationSec, elapsed)),
-        durationSec
-);
-
-// 🔴 LOOP (stable timing)
-ui.postDelayed(this, 1000);
+            ui.postDelayed(this, 1000);
         }
     });
 }
