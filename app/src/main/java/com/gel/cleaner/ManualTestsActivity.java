@@ -19069,14 +19069,6 @@ lab14LogReliabilitySummary(
         lab14Conf
 );
 
-// ------------------------------------------------
-// END TRY
-// ------------------------------------------------
-
-} catch (Throwable t) {
-
-    logError("LAB14 CRASH: " + t.getMessage());
-
     // ------------------------------------------------
     // STOP (ERROR EXIT)
     // ------------------------------------------------
@@ -19090,24 +19082,11 @@ lab14LogReliabilitySummary(
 
     restoreBrightnessAndKeepOn();
 
-    lab14Cancelled = true;
-    lab14Running = false;
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
+lab14Cancelled = true;
+lab14Running = false;
+lab14PopupShown = false;
+lab14AdvisoryShown = false;
 
-} finally {
-
-    // ------------------------------------------------
-    // FINAL STATE (ALWAYS)
-    // ------------------------------------------------
-
-    lab14FastDone = true;
-    lab14FastPhase = false;
-
-    // safety reset
-    lab14BoostActive = false;
-    lab14SoftPhaseStarted = false;
-}
 }
 
 // ============================================================
