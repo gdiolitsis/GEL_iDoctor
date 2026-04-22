@@ -21087,7 +21087,6 @@ private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
 
         return shader;
     }
-}
 
 private boolean detectLab14SystemLimiter(
         int elapsed,
