@@ -14598,6 +14598,7 @@ startLab14SharedUI(durationSec, gr);
             ? "Σφάλμα LAB 14"
             : "LAB 14 error");
 }
+}
 
 // ============================================================
 // LAB 14 — LOG STRESS RESULT (HEADER)
