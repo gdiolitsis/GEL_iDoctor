@@ -15702,6 +15702,8 @@ if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
 
 // 1️⃣ MAIN SAG (primary)
 float finalSag = Float.NaN;
+boolean finalSagFromMain = false;
+boolean finalSagFromAvg  = false;
 
 if (!Float.isNaN(voltageStart) &&
     voltageUnderLoad != null &&
@@ -15712,6 +15714,7 @@ if (!Float.isNaN(voltageStart) &&
 
     if (tmp > 0.005f && tmp < 1.0f) {
         finalSag = tmp;
+        finalSagFromMain = true;
     }
 }
 
@@ -15744,13 +15747,14 @@ if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
     sagAvg = sag2;
 }
 
-// 4️⃣ FALLBACK (CRITICAL FIX)
+// 4️⃣ FALLBACK (ONLY if main missing)
 if (Float.isNaN(finalSag) &&
     !Float.isNaN(sagAvg) &&
     sagAvg > 0.005f &&
     sagAvg < 1.0f) {
 
     finalSag = sagAvg;
+    finalSagFromAvg = true;
 }
 
 // 5️⃣ DEBUG
@@ -15760,18 +15764,26 @@ logWarn("sag1=" + sag1);
 logWarn("sag2=" + sag2);
 logWarn("sagAvg=" + sagAvg);
 logWarn("finalSag=" + finalSag);
+logWarn("fromMain=" + finalSagFromMain);
+logWarn("fromAvg=" + finalSagFromAvg);
 logLine();
 
 // =====================================================
-// 🔴 VALIDATION
+// 🔴 VALIDATION (CRITICAL FIX)
 // =====================================================
+
+// 🔴 MUST have fast-phase confirmation
+boolean hasFastSag =
+        !Float.isNaN(sag1) ||
+        !Float.isNaN(sag2);
 
 boolean hasReliableSag =
         !Float.isNaN(finalSag) &&
         finalSag >= 0.02f &&
-        finalSag < 1.0f;
+        finalSag < 1.0f &&
+        hasFastSag;   // 🔥 THIS FIXES YOUR BUG
 
-// 🔴 SNAPSHOT για lambda (CRITICAL)
+// 🔴 SNAPSHOT για lambda
 final float finalSagF = finalSag;
 
 if (!hasReliableSag) {
