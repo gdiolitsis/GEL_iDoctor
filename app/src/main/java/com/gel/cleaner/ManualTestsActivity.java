@@ -18971,7 +18971,7 @@ if (!hasSag || !validDrain || lab14_systemLimited[0]) {
 // PARTIAL / FULL MODE DECISION
 // ------------------------------------------------
 
-boolean lowConfidence =
+lowConfidence =
         (lab14Conf == null ||
          lab14Conf.percent < 50f ||
          lab14Conf.percent > 100f);
