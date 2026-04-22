@@ -15697,13 +15697,11 @@ if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
 }
 
 // =====================================================
-// 🔴 SAG PIPELINE (CLEAN & SAFE)
+// 🔴 SAG PIPELINE (MAIN PHASE ONLY)
 // =====================================================
 
 // 1️⃣ MAIN SAG (primary)
 float finalSag = Float.NaN;
-boolean finalSagFromMain = false;
-boolean finalSagFromAvg  = false;
 
 if (!Float.isNaN(voltageStart) &&
     voltageUnderLoad != null &&
@@ -15714,29 +15712,27 @@ if (!Float.isNaN(voltageStart) &&
 
     if (tmp > 0.005f && tmp < 1.0f) {
         finalSag = tmp;
-        finalSagFromMain = true;
     }
 }
 
-// 2️⃣ SAG1 / SAG2 (fast phase)
+// 2️⃣ SAG1 / SAG2 (MAIN PHASE SAMPLES)
 float sag1 = Float.NaN;
 float sag2 = Float.NaN;
 
-boolean validSagInputs =
-        !Float.isNaN(voltageStart) &&
-        vLoad1 != null && vLoad1.length > 0 && !Float.isNaN(vLoad1[0]) &&
-        vLoad2 != null && vLoad2.length > 0 && !Float.isNaN(vLoad2[0]);
+if (!Float.isNaN(voltageStart)) {
 
-if (validSagInputs) {
+    if (vLoad1 != null && vLoad1.length > 0 && !Float.isNaN(vLoad1[0])) {
+        float tmp = voltageStart - vLoad1[0];
+        if (tmp > 0.002f && tmp < 1.0f) sag1 = tmp;
+    }
 
-    float tmp1 = voltageStart - vLoad1[0];
-    float tmp2 = voltageStart - vLoad2[0];
-
-    if (tmp1 > 0.002f && tmp1 < 1.0f) sag1 = tmp1;
-    if (tmp2 > 0.002f && tmp2 < 1.0f) sag2 = tmp2;
+    if (vLoad2 != null && vLoad2.length > 0 && !Float.isNaN(vLoad2[0])) {
+        float tmp = voltageStart - vLoad2[0];
+        if (tmp > 0.002f && tmp < 1.0f) sag2 = tmp;
+    }
 }
 
-// 3️⃣ SAG AVG
+// 3️⃣ SAG AVG (consistency)
 float sagAvg = Float.NaN;
 
 if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
@@ -15747,41 +15743,38 @@ if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
     sagAvg = sag2;
 }
 
-// 4️⃣ FALLBACK (ONLY if main missing)
+// 4️⃣ FINAL FALLBACK
 if (Float.isNaN(finalSag) &&
     !Float.isNaN(sagAvg) &&
     sagAvg > 0.005f &&
     sagAvg < 1.0f) {
 
     finalSag = sagAvg;
-    finalSagFromAvg = true;
 }
 
-// 5️⃣ DEBUG
-logLine();
-logWarn("=== SAG DEBUG ===");
-logWarn("sag1=" + sag1);
-logWarn("sag2=" + sag2);
-logWarn("sagAvg=" + sagAvg);
-logWarn("finalSag=" + finalSag);
-logWarn("fromMain=" + finalSagFromMain);
-logWarn("fromAvg=" + finalSagFromAvg);
-logLine();
-
 // =====================================================
-// 🔴 VALIDATION (CRITICAL FIX)
+// 🔴 VALIDATION (MAIN PHASE CORRECT)
 // =====================================================
 
-// 🔴 MUST have fast-phase confirmation
-boolean hasFastSag =
-        !Float.isNaN(sag1) ||
-        !Float.isNaN(sag2);
+// 🔴 consistency (2 samples required for strong confidence)
+boolean consistent =
+        !Float.isNaN(sag1) &&
+        !Float.isNaN(sag2) &&
+        Math.abs(sag1 - sag2) < 0.05f;   // ~50mV tolerance
 
+// 🔴 fallback (at least one valid sample)
+boolean hasAnySag =
+        !Float.isNaN(sagAvg);
+
+// 🔴 FINAL decision
 boolean hasReliableSag =
         !Float.isNaN(finalSag) &&
         finalSag >= 0.02f &&
         finalSag < 1.0f &&
-        hasFastSag;   // 🔥 THIS FIXES YOUR BUG
+        (
+            consistent ||   // ideal case
+            hasAnySag       // fallback safety
+        );
 
 // 🔴 SNAPSHOT για lambda
 final float finalSagF = finalSag;
