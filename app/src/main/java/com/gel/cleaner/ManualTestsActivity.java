@@ -19087,6 +19087,26 @@ lab14Running = false;
 lab14PopupShown = false;
 lab14AdvisoryShown = false;
 
+} catch (Throwable t) {
+
+    logError("LAB14 CRASH: " + t.getMessage());
+
+    lab14StopAllStress();
+
+    try {
+        counterText = null;
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    restoreBrightnessAndKeepOn();
+
+    lab14Cancelled = true;
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+
+}
+
 }
 
 // ============================================================
@@ -19416,6 +19436,8 @@ runOnUiThread(() -> {
         }
     }
 }
+
+    }).start();
 }
 
 // ============================================================
@@ -20668,7 +20690,7 @@ boolean weakLoadConfirmed = lab14WeakLoadCounter >= 5;
 if (!isLab14BMode &&
     !lab14_systemLimited[0]) {
 
-    long now = SystemClock.elapsedRealtime();
+    long now2 = SystemClock.elapsedRealtime();
 
     // 🔴 RATE LIMIT (avoid oscillation)
     if (now - lab14LastRebalanceTs > 2000) {
@@ -20915,6 +20937,7 @@ try {
 
     logError("LAB14 UI ERROR: " + t.getMessage());
 
+}
 }
 
 private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
