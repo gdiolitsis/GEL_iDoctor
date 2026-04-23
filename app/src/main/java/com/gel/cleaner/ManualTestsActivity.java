@@ -21897,59 +21897,77 @@ private void runFastVoltageSampling(
 
     try {
 
-        // 🔴 HELPER (unified read)
-final Supplier<Float> readVoltage = () -> {
+        // 🔴 HELPER (RAW-first)
+        final Supplier<Float> readVoltage = () -> {
 
-    float v = Float.NaN;
+            float v = Float.NaN;
 
-    // 🔴 PRIMARY: RAW από Battery Intent (REAL-TIME)
-    try {
-        IntentFilter ifilter =
-                new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+            // 🔴 PRIMARY: Battery Intent
+            try {
+                IntentFilter ifilter =
+                        new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
-        Intent batteryStatus =
-                registerReceiver(null, ifilter);
+                Intent batteryStatus =
+                        registerReceiver(null, ifilter);
 
-        if (batteryStatus != null) {
+                if (batteryStatus != null) {
+                    int mv = batteryStatus.getIntExtra("voltage", -1);
 
-            int mv = batteryStatus.getIntExtra("voltage", -1);
+                    if (mv > 3000 && mv < 5000) {
+                        v = mv / 1000f;
+                    }
+                }
 
-            if (mv > 3000 && mv < 5000) {
-                v = mv / 1000f;
+            } catch (Throwable ignore) {}
+
+            // 🔴 FALLBACK: engine
+            if (Float.isNaN(v)) {
+                try {
+                    float mv = idoctor.readBatteryVoltageMvStable(2, 5);
+
+                    if (!Float.isNaN(mv) && mv > 3000f && mv < 5000f) {
+                        v = mv / 1000f;
+                    }
+                } catch (Throwable ignore) {}
             }
-        }
 
-    } catch (Throwable ignore) {}
-
-    // 🔴 FALLBACK: engine (μόνο αν αποτύχει)
-    if (Float.isNaN(v)) {
-
-        try {
-            float mv = idoctor.readBatteryVoltageMvStable(2, 5);
-
-            if (!Float.isNaN(mv) && mv > 3000f && mv < 5000f) {
-                v = mv / 1000f;
-            }
-
-        } catch (Throwable ignore) {}
-    }
-
-    return (!Float.isNaN(v) && v > 3.0f && v < 5.0f)
-            ? v
-            : Float.NaN;
-};
+            return (!Float.isNaN(v) && v > 3.0f && v < 5.0f)
+                    ? v
+                    : Float.NaN;
+        };
 
         // ----------------------------------------------------
-        // 🔴 START
+        // 🔴 START (idle / baseline)
         // ----------------------------------------------------
         if (Float.isNaN(vStart[0])) {
+
+            try { stopCpuBurn(); } catch (Throwable ignore) {}
+            try { stopGpuStress(); } catch (Throwable ignore) {}
+
+            if (!sleepSilentlySafe(180)) return;
+            if (!lab14Running || lab14Cancelled) return;
+
             float vs = readVoltage.get();
-            if (!Float.isNaN(vs)) vStart[0] = vs;
+
+            if (!Float.isNaN(vs)) {
+                vStart[0] = vs;
+            }
         }
 
         // ----------------------------------------------------
-        // 🔴 LOAD 1
+        // 🔴 LOAD 1 (forced spike)
         // ----------------------------------------------------
+        startCpuBurn_C_Mode();
+
+        if (!sleepSilentlySafe(180)) {
+            try { stopCpuBurn(); } catch (Throwable ignore) {}
+            return;
+        }
+        if (!lab14Running || lab14Cancelled) {
+            try { stopCpuBurn(); } catch (Throwable ignore) {}
+            return;
+        }
+
         float load1 = readVoltage.get();
 
         if (!Float.isNaN(load1)) {
@@ -21963,13 +21981,42 @@ final Supplier<Float> readVoltage = () -> {
             }
         }
 
-        // 🔴 interrupt-safe sleep
-        if (!sleepSilentlySafe(180)) return;
-        if (!lab14Running || lab14Cancelled) return;
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
 
         // ----------------------------------------------------
-        // 🔴 LOAD 2
+        // 🔴 RECOVERY (real relax)
         // ----------------------------------------------------
+        if (!sleepSilentlySafe(220)) return;
+        if (!lab14Running || lab14Cancelled) return;
+
+        float rec = readVoltage.get();
+
+        if (!Float.isNaN(rec)) {
+
+            float refLoad =
+                    !Float.isNaN(vLoad1[0]) ? vLoad1[0] : Float.NaN;
+
+            if (Float.isNaN(refLoad) || rec >= refLoad) {
+                if (Float.isNaN(vRecover[0]) || rec > vRecover[0]) {
+                    vRecover[0] = rec;
+                }
+            }
+        }
+
+        // ----------------------------------------------------
+        // 🔴 LOAD 2 (second forced spike)
+        // ----------------------------------------------------
+        startCpuBurn_C_Mode();
+
+        if (!sleepSilentlySafe(220)) {
+            try { stopCpuBurn(); } catch (Throwable ignore) {}
+            return;
+        }
+        if (!lab14Running || lab14Cancelled) {
+            try { stopCpuBurn(); } catch (Throwable ignore) {}
+            return;
+        }
+
         float load2 = readVoltage.get();
 
         if (!Float.isNaN(load2)) {
@@ -21981,31 +22028,11 @@ final Supplier<Float> readVoltage = () -> {
             if (Float.isNaN(voltageUnderLoad[0]) || load2 < voltageUnderLoad[0]) {
                 voltageUnderLoad[0] = load2;
             }
+
+            vLoad2Time = SystemClock.elapsedRealtime();
         }
 
-        if (!sleepSilentlySafe(220)) return;
-        if (!lab14Running || lab14Cancelled) return;
-
-        // ----------------------------------------------------
-        // 🔴 RECOVERY
-        // ----------------------------------------------------
-        float rec = readVoltage.get();
-
-        if (!Float.isNaN(rec)) {
-
-            float refLoad =
-                    !Float.isNaN(vLoad2[0]) ? vLoad2[0] :
-                    !Float.isNaN(vLoad1[0]) ? vLoad1[0] :
-                    Float.NaN;
-
-            // 🔴 only accept valid recovery
-            if (Float.isNaN(refLoad) || rec >= refLoad) {
-
-                if (Float.isNaN(vRecover[0]) || rec > vRecover[0]) {
-                    vRecover[0] = rec;
-                }
-            }
-        }
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
 
         // ----------------------------------------------------
         // 🔴 DEBUG
@@ -22020,11 +22047,7 @@ final Supplier<Float> readVoltage = () -> {
             );
         }
 
-    } catch (Throwable t) {
-        if (DEBUG_MODE) {
-            logWarn("FAST_VOLTAGE_FAIL: " + t.getMessage());
-        }
-    }
+    } catch (Throwable ignore) {}
 }
 
 // =====================================================
