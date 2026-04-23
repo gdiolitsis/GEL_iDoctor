@@ -19241,7 +19241,7 @@ runOnUiThread(() -> {
     if (elapsed >= 45) break;
 
     // 🔴 FIXED INTERVAL (3s exact cadence)
-    nextTick += 3000;
+    nextTick += 1000;
 
     long sleepTime = nextTick - SystemClock.elapsedRealtime();
 
@@ -21880,23 +21880,41 @@ private void runFastVoltageSampling(
     try {
 
         // 🔴 HELPER (unified read)
-        final Supplier<Float> readVoltage = () -> {
+final Supplier<Float> readVoltage = () -> {
 
-            float v = readStableBatteryVoltage();
+    float v = Float.NaN;
 
-            if (Float.isNaN(v) || v <= 0f) {
+    // 🔴 PRIMARY: RAW (για sag detection)
+    try {
+        BatteryManager bm =
+                (BatteryManager) getSystemService(BATTERY_SERVICE);
 
-                float mv = idoctor.readBatteryVoltageMvStable(4, 15);
+        if (bm != null) {
+            int mv = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_VOLTAGE);
 
-                if (!Float.isNaN(mv) && mv > 3000f && mv < 5000f) {
-                    v = mv / 1000f;
-                }
+            if (mv > 3000 && mv < 5000) {
+                v = mv / 1000f;
+            }
+        }
+    } catch (Throwable ignore) {}
+
+    // 🔴 FALLBACK: engine (μόνο αν raw αποτύχει)
+    if (Float.isNaN(v)) {
+
+        try {
+            float mv = idoctor.readBatteryVoltageMvStable(2, 5);
+
+            if (!Float.isNaN(mv) && mv > 3000f && mv < 5000f) {
+                v = mv / 1000f;
             }
 
-            return (!Float.isNaN(v) && v > 3.0f && v < 5.0f)
-                    ? v
-                    : Float.NaN;
-        };
+        } catch (Throwable ignore) {}
+    }
+
+    return (!Float.isNaN(v) && v > 3.0f && v < 5.0f)
+            ? v
+            : Float.NaN;
+};
 
         // ----------------------------------------------------
         // 🔴 START
