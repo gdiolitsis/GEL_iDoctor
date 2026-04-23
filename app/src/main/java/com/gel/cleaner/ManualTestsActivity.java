@@ -19479,69 +19479,48 @@ private void startLab14MainStress() {
         } catch (Throwable ignore) {}
     }
 
-    // =========================================================
-    // 🔥 CPU STRESS (BACKGROUND - FINAL)
-    // =========================================================
-    new Thread(() -> {
+// =========================================================
+// 🔥 CPU STRESS (BACKGROUND - FINAL — FULL LOAD FIXED)
+// =========================================================
+new Thread(() -> {
 
-        try {
+    try {
 
-            if (!lab14Running || lab14Cancelled) return;
+        if (!lab14Running || lab14Cancelled) return;
 
-            final int cores = Runtime.getRuntime().availableProcessors();
+        final int cores = Runtime.getRuntime().availableProcessors();
 
-            // 🔴 SAFE THREAD SELECTION
-            int threads = (lab14OptimalThreads > 0)
-                    ? lab14OptimalThreads
-                    : Math.max(1, Math.min(cores - 2, cores / 2));
+        // 🔴 FULL THREAD UTILIZATION (CRITICAL FIX)
+        int threads = (lab14OptimalThreads > 0)
+                ? lab14OptimalThreads
+                : Math.max(2, cores - 1);
 
-            if (!isLab14BMode) {
+        if (!isLab14BMode) {
 
-                // ------------------------------------------------
-                // 🔴 BOOST (interruptible)
-                // ------------------------------------------------
-                startCpuBurn_C_Mode();
+            // 🔴 DIRECT FULL LOAD (NO BOOST / NO DOWNGRADE)
+            startCpuBurnLimitedThreads(threads);
 
-                long boostStart = SystemClock.elapsedRealtime();
+        } else {
 
-                while (SystemClock.elapsedRealtime() - boostStart < 4000) {
+            // ------------------------------------------------
+            // 🧪 LAB14B MODE
+            // ------------------------------------------------
+            if (inHardPhase) {
 
-                    if (!lab14Running || lab14Cancelled) {
-                        stopCpuBurn();
-                        return;
-                    }
-
-                    try { Thread.sleep(100); } catch (Throwable ignore) {}
-                }
-
-                stopCpuBurn();
-
-                if (!lab14Running || lab14Cancelled) return;
-
-                // ------------------------------------------------
-                // 🔵 NORMAL LOAD
-                // ------------------------------------------------
+                // 🔴 HARD PHASE → FULL LOAD
                 startCpuBurnLimitedThreads(threads);
 
             } else {
 
-                // ------------------------------------------------
-                // 🧪 LAB14B MODE
-                // ------------------------------------------------
-                if (inHardPhase) {
-
-                    startCpuBurn_C_Mode();
-
-                } else {
-
-                    int softThreads = Math.max(1, cores / 2);
-                    startCpuBurnLimitedThreads(softThreads);
-                }
+                // 🔵 SOFT PHASE → REDUCED LOAD
+                int softThreads = Math.max(1, cores / 2);
+                startCpuBurnLimitedThreads(softThreads);
             }
+        }
 
-        } catch (Throwable ignore) {}
+    } catch (Throwable ignore) {}
 
-    }).start();
+}).start();
 
     // =========================================================
     // 🔴 MAIN LOAD (THREAD-SAFE SPLIT)
