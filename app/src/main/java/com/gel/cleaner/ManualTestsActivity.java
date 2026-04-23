@@ -19210,6 +19210,23 @@ while (lab14Running && !lab14Cancelled) {
 
     long now = SystemClock.elapsedRealtime();
     long elapsed = (now - fastStart) / 1000;
+    
+    // 🔴 FAST UI BAR (ΕΔΩ ΜΠΑΙΝΕΙ)
+runOnUiThread(() -> {
+
+    int safeElapsed = Math.max(0, Math.min(45, (int) elapsed));
+
+    if (counterText != null) {
+        counterText.setText(
+                gr
+                        ? "Προθέρμανση " + safeElapsed + " / 45"
+                        : "Warm-up " + safeElapsed + " / 45"
+        );
+    }
+
+    updateProgressBar(safeElapsed, 45);
+
+});
 
     // 🔴 SAMPLE
     runFastVoltageSampling(
@@ -19609,6 +19626,11 @@ private void startLab14ProgressLoop() {
 
         @Override
         public void run() {
+        	
+        if (lab14FastPhase) {
+    ui.postDelayed(this, 1000);
+    return;
+}
 
             if (counterText == null || lab14Cancelled || !lab14Running) {
                 ui.removeCallbacks(this);
