@@ -19490,65 +19490,92 @@ new Thread(() -> {
 
         final int cores = Runtime.getRuntime().availableProcessors();
 
-        int threads = (lab14OptimalThreads > 0)
-                ? lab14OptimalThreads
-                : Math.max(2, cores - 1);
+        // 🔴 CRITICAL FIX — IGNORE broken optimalThreads
+        int threads;
+
+        if (!isLab14BMode) {
+            // FULL load για LAB14
+            threads = Math.max(4, cores - 1);
+        } else {
+            // LAB14B safe mode
+            threads = Math.max(1, cores / 2);
+        }
 
         if (!isLab14BMode) {
 
             while (lab14Running && !lab14Cancelled) {
 
-                // 🔴 PULSE 1 — SHORT BOOST
+                // =====================================================
+                // 🔴 PULSE 1 — FULL BOOST (ALL CORES)
+                // =====================================================
                 startCpuBurn_C_Mode();
 
                 long pulse1Start = SystemClock.elapsedRealtime();
-                while (SystemClock.elapsedRealtime() - pulse1Start < 1500) {
+
+                while (SystemClock.elapsedRealtime() - pulse1Start < 2000) {
+
                     if (!lab14Running || lab14Cancelled) {
                         stopCpuBurn();
                         return;
                     }
+
                     try { Thread.sleep(100); } catch (Throwable ignore) {}
                 }
 
                 stopCpuBurn();
 
-                // 🔴 RELAX
+                // =====================================================
+                // 🔴 RELAX (needed for recovery sag)
+                // =====================================================
                 long relaxStart = SystemClock.elapsedRealtime();
+
                 while (SystemClock.elapsedRealtime() - relaxStart < 1200) {
+
                     if (!lab14Running || lab14Cancelled) return;
+
                     try { Thread.sleep(100); } catch (Throwable ignore) {}
                 }
 
-                // 🔴 PULSE 2 — SUSTAINED LOAD
+                // =====================================================
+                // 🔴 PULSE 2 — HEAVY SUSTAINED LOAD
+                // =====================================================
                 startCpuBurnLimitedThreads(threads);
 
                 long pulse2Start = SystemClock.elapsedRealtime();
-                while (SystemClock.elapsedRealtime() - pulse2Start < 2500) {
+
+                while (SystemClock.elapsedRealtime() - pulse2Start < 3500) {
+
                     if (!lab14Running || lab14Cancelled) {
                         stopCpuBurn();
                         return;
                     }
+
                     try { Thread.sleep(100); } catch (Throwable ignore) {}
                 }
 
                 stopCpuBurn();
 
-                // 🔴 MICRO RELAX πριν τον επόμενο κύκλο
-                long microRelaxStart = SystemClock.elapsedRealtime();
-                while (SystemClock.elapsedRealtime() - microRelaxStart < 700) {
+                // =====================================================
+                // 🔴 MICRO RELAX
+                // =====================================================
+                long microRelax = SystemClock.elapsedRealtime();
+
+                while (SystemClock.elapsedRealtime() - microRelax < 700) {
+
                     if (!lab14Running || lab14Cancelled) return;
+
                     try { Thread.sleep(100); } catch (Throwable ignore) {}
                 }
             }
 
         } else {
 
-            // ------------------------------------------------
+            // =====================================================
             // 🧪 LAB14B MODE
-            // ------------------------------------------------
+            // =====================================================
             if (inHardPhase) {
 
-                startCpuBurnLimitedThreads(threads);
+                startCpuBurnLimitedThreads(Math.max(cores - 1, 4));
 
             } else {
 
