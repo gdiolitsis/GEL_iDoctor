@@ -19335,7 +19335,7 @@ if (lab14Cancelled || !lab14Running) {
 // 🔴 CLEAN FAST LOAD BEFORE MAIN (FINAL)
 // =====================================================
 
-stopAllStressSafe();
+stopFastStressSafe();
 
 // μικρό adaptive settle (όχι τυφλό sleep)
 long settleStart = SystemClock.elapsedRealtime();
@@ -19359,7 +19359,7 @@ movedToMain = true;
 runOnUiThread(() -> {
     try {
 
-        if (!lab14Running || lab14Cancelled) return;
+        if (lab14Cancelled) return;
 
         resetLab14Bar();
 
@@ -19448,7 +19448,7 @@ private void startLab14MainStress() {
     // ---------------------------------------------------------
     // 🔴 CLEAN PREVIOUS LOAD
     // ---------------------------------------------------------
-    stopAllStressSafe();
+    stopFastStressSafe();
 
     // 🔴 SMART SETTLE (αντί για sleep)
     long settleStart = SystemClock.elapsedRealtime();
