@@ -20934,6 +20934,13 @@ try {
     logError("LAB14 UI ERROR: " + t.getMessage());
 
 }
+
+// 🔴 ΕΔΩ ΜΠΑΙΝΕΙ ΤΟ MISSING CATCH
+} catch (Throwable t) {
+
+    logError("LAB14 LIVE CRASH: " + t.getMessage());
+
+}
 }
 
 private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
@@ -21342,7 +21349,7 @@ private void rebalanceLab14CpuLive(
     }
 
     // ----------------------------------------------------
-    // 🔒 CLAMP
+    // ?? CLAMP
     // ----------------------------------------------------
     newThreads = Math.max(1, Math.min(cores, newThreads));
 
