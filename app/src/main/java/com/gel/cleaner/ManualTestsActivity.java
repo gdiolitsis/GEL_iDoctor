@@ -20510,11 +20510,11 @@ boolean limiterNow =
         );
 
 // 🔴 TIME FILTER (min interval 1s)
-long now = SystemClock.elapsedRealtime();
+long nowLimiter = SystemClock.elapsedRealtime();
 
-if (now - lab14LastLimiterCheck > 1000) {
+if (nowLimiter - lab14LastLimiterCheck > 1000) {
 
-    lab14LastLimiterCheck = now;
+    lab14LastLimiterCheck = nowLimiter;
 
     if (limiterNow) {
         lab14LimiterScore = Math.min(10, lab14LimiterScore + 1);
@@ -20535,10 +20535,6 @@ if (lab14LimiterScore >= 4 && !lab14LimiterLatched) {
 // ----------------------------------------------------
 // 🔴 FINAL FLAGS (FIXED)
 // ----------------------------------------------------
-
-// 🔴 electrical confirmation
-boolean electricalLoad =
-        currentLoad || drainLoad;
 
 // 🔴 REAL LOAD (needs physics, όχι μόνο CPU)
 boolean realLoad =
@@ -20693,9 +20689,9 @@ if (!isLab14BMode &&
     long now2 = SystemClock.elapsedRealtime();
 
     // 🔴 RATE LIMIT (avoid oscillation)
-    if (now - lab14LastRebalanceTs > 2000) {
+    if (now2 - lab14LastRebalanceTs > 2000) {
 
-        lab14LastRebalanceTs = now;
+        lab14LastRebalanceTs = now2;
 
         rebalanceLab14GpuLive(
                 weakLoadConfirmed,
