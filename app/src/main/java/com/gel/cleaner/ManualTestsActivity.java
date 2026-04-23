@@ -209,6 +209,7 @@ import java.nio.ByteBuffer;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.function.Supplier;
 import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -333,6 +334,12 @@ public static class Lab14Result {
 
     public String label; // 🔴 FINAL LABEL ONLY
 }
+
+private long lab14LastLimiterCheck = 0;
+private long lab14LastBoostTs = 0;
+private long lab14LastRebalanceTs = 0;
+private final Object fastPhaseLock = new Object();
+private long vLoad2Time = 0;
 
 private static final boolean DEBUG_MODE = false;
 private static class PrivacySnapshot {
@@ -3515,31 +3522,6 @@ private void startGpuStress() {
         );
 
         try { lab14GLView.onResume(); } catch (Throwable ignore) {}
-    });
-}
-
-private void stopGpuStress() {
-
-    runOnUiThread(() -> {
-
-        try {
-            if (lab14GpuRenderer != null) {
-                lab14GpuRenderer.stop();
-            }
-        } catch (Throwable ignore) {}
-
-        try {
-            if (lab14GLView != null) {
-                lab14GLView.onPause();
-
-                ViewParent p = lab14GLView.getParent();
-                if (p instanceof ViewGroup) {
-                    ((ViewGroup) p).removeView(lab14GLView);
-                }
-
-                lab14GLView = null;
-            }
-        } catch (Throwable ignore) {}
     });
 }
 
@@ -17596,7 +17578,7 @@ if (!Float.isNaN(voltageRecovery[0]) &&
     validDrain &&
     !lab14_systemLimited[0]) {
 
-    float recoveryRatio =
+    recoveryRatio =
             voltageRecovery[0] / finalSag;
 
     if (!Float.isNaN(recoveryRatio) &&
@@ -17613,7 +17595,7 @@ if (!Float.isNaN(voltageRecovery[0]) &&
 
 if (validDrain &&
     !lab14_systemLimited[0] &&
-    !Float.isNaN(mahPerHour) &&
+    !Double.isNaN(mahPerHour) &&
     mahPerHour > 0f &&
     mahPerHour < 10000f) {   // 🔴 sanity cap
 
@@ -17662,7 +17644,7 @@ boolean agingInputOk =
         validDrain &&
         !lab14_systemLimited[0] &&
         lab14Conf != null &&
-        !Float.isNaN(mahPerHour) &&
+        !Double.isNaN(mahPerHour) &&
         mahPerHour > 0 &&
         !Float.isNaN(tempStart) &&
         !Float.isNaN(lab14TempPeak);
@@ -20341,14 +20323,14 @@ if (elapsed >= 10) {
     } else {
 
         // 🔴 FALLBACK → current (converted properly)
-        float currentMa = lab14Current();
+float currentFallback = lab14Current();
 
-        if (!Float.isNaN(currentMa) &&
-            Math.abs(currentMa) >= 50f &&
-            Math.abs(currentMa) <= 8000f) {
+if (!Float.isNaN(currentFallback) &&
+    Math.abs(currentFallback) >= 50f &&
+    Math.abs(currentFallback) <= 8000f) {
 
-            drainPerHour = Math.abs(currentMa); // OK as approximation
-        }
+    drainPerHour = Math.abs(currentFallback);
+}
     }
 }
 
@@ -22180,6 +22162,31 @@ private void stopGpuStress() {
             }
         });
     }
+}
+
+private void safeDismissDialog() {
+    runOnUiThread(() -> {
+        try {
+            if (lab14Dialog != null && lab14Dialog.isShowing()) {
+                lab14Dialog.dismiss();
+                lab14Dialog = null;
+            }
+        } catch (Throwable ignore) {}
+    });
+}
+
+private boolean sleepSilentlySafe(long ms) {
+    long end = SystemClock.elapsedRealtime() + ms;
+
+    while (SystemClock.elapsedRealtime() < end) {
+        if (!lab14Running || lab14Cancelled) return false;
+
+        try {
+            Thread.sleep(50);
+        } catch (Throwable ignore) {}
+    }
+
+    return true;
 }
 
 //=============================================================
