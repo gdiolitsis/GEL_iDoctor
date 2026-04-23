@@ -19630,34 +19630,23 @@ new Thread(() -> {
         } catch (Throwable ignore) {}
     });
 
-    // 🔴 BACKGROUND LOAD (CRITICAL FIX)
-    new Thread(() -> {
+new Thread(() -> {
 
-        try {
+    try {
 
-            if (!lab14Running || lab14Cancelled) return;
+        if (!lab14Running || lab14Cancelled) return;
 
-            // 🔴 MEMORY
-            startMemoryStress();
+        // 🔥 MAX LOAD (NO LIMITS)
+        startCpuBurn_C_Mode();
+        startGpuStressLevel(5);
+        startMemoryStress();
 
-            // 🔴 BANDWIDTH
-            try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
+        try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
+        try { startVibrationStress(); } catch (Throwable ignore) {}
 
-            // 🔴 GPU
-            try {
-                startGpuStressLevel(
-                        lab14GpuIntensity > 0
-                                ? Math.max(3, lab14GpuIntensity)
-                                : 3
-                );
-            } catch (Throwable ignore) {}
+    } catch (Throwable ignore) {}
 
-            // 🔴 VIBRATION
-            try { startVibrationStress(); } catch (Throwable ignore) {}
-
-        } catch (Throwable ignore) {}
-
-    }).start();
+}).start();
 }
 
 // =========================================================
@@ -20630,29 +20619,21 @@ lab14WeakLoad = weakLoad;
 // ----------------------------------------------------
 // 🔥 BOOST (STABLE + CONTROLLED)
 // ----------------------------------------------------
-
 if (!lab14BoostActive &&
-    lab14Running &&
-    !lab14Cancelled &&
-    !lab14_systemLimited[0]) {
+        lab14Running &&
+        !lab14Cancelled &&
+        !lab14_systemLimited[0]) {
 
-    boolean shouldBoost = false;
+    boolean shouldBoost;
 
     if (isLab14BMode) {
-
-        // 🔴 HARD phase → LOCK
-        if (lab14SoftPhaseStarted) {
-            shouldBoost = true;
-        }
-
+        shouldBoost = lab14SoftPhaseStarted;
     } else {
-
-        // 🔵 NORMAL LOGIC (STRONGER CONDITION)
         shouldBoost =
                 !lab14FastPhase &&
                 elapsed >= 6 &&
                 loadScore <= 1 &&
-                batteryScore < 70; // 🔴 πιο ασφαλές
+                batteryScore < 70;
     }
 
     if (shouldBoost) {
@@ -20671,36 +20652,29 @@ if (!lab14BoostActive &&
 
                 if (!lab14Running || lab14Cancelled) return;
 
-                // 🔴 CLEAN PREVIOUS LOAD (CRITICAL)
                 try { stopCpuBurn(); } catch (Throwable ignore) {}
                 try { stopGpuStress(); } catch (Throwable ignore) {}
                 try { stopMemoryStress(); } catch (Throwable ignore) {}
+                try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+                try { stopVibrationStress(); } catch (Throwable ignore) {}
 
-                if (isLab14BMode) {
+                final int coresLocal = Runtime.getRuntime().availableProcessors();
 
-                    // 🟢 SOFT BOOST
-                    final int coresLocal = Runtime.getRuntime().availableProcessors();
-                    int threads = Math.max(1, coresLocal / 3);
+                int threads = Math.max(4, coresLocal - 1);
 
-                    startCpuBurnLimitedThreads(threads);
-                    startGpuStressLevel(1);
-                    startMemoryStress();
+                logLabelOkValue(
+                        gr ? "Νήματα καταπόνησης CPU" : "CPU stress threads",
+                        threads + (gr
+                                ? " (πυρήνες=" + coresLocal + ")"
+                                : " (cores=" + coresLocal + ")")
+                );
 
-                } else {
+                startCpuBurnLimitedThreads(threads);
+                startGpuStressLevel(5);
+                startMemoryStress();
 
-                    if (lab14FastPhase) return;
-
-                    final int coresLocal = Runtime.getRuntime().availableProcessors();
-                    int threads = Math.max(2, coresLocal / 2);
-
-                    startCpuBurnLimitedThreads(threads);
-                    startGpuStressLevel(4);
-                    startMemoryStress();
-
-                    if (batteryScore >= 80) {
-                        startGpuStressLevel(5);
-                    }
-                }
+                try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
+                try { startVibrationStress(); } catch (Throwable ignore) {}
 
             } catch (Throwable ignore) {}
 
@@ -20880,14 +20854,19 @@ if (lab14LimiterLatched) {
     status = "WEAK LOAD ⚠";
 }
 
-// ----------------------------------------------------
 // 🔴 THROTTLED LOG (STABLE)
-// ----------------------------------------------------
 long nowTs = SystemClock.elapsedRealtime();
 
-if (nowTs - lab14LastLiveLogTs > 4000) {
+if (nowTs - lab14LastLiveLogTs > 2000) { // 🔴 κάθε 2 sec
 
     lab14LastLiveLogTs = nowTs;
+
+    appendLog("DEBUG",
+            "CPU=" + lab14CpuThreadsCurrent +
+            " | current=" + currentMa +
+            " | drain=" + drainPerHour +
+            " | v=" + voltageUnderLoad[0]);
+}
 
     // 🔴 ROUND battery (anti-spam)
     int battInt = Float.isNaN(battPct) ? -1 : Math.round(battPct);
