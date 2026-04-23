@@ -16659,7 +16659,6 @@ Lab14Engine.DrainResult drainResult =
 // ====================================================
 long drainMah = 0;
 double mahPerHour = 0;
-double drainPercentPerHour = 0;
 validDrain = false;
 
 // ----------------------------------------------------
@@ -19721,6 +19720,10 @@ private void resetLab14Bar() {
 // RESET BATTERY DIAGNOSTIC STATE (FULL CLEAN)
 // ============================================================
 private void resetBatteryDiagnostics() {
+
+float currentNow = Float.NaN;
+float powerMilliWatt = Float.NaN;
+double drainPercentPerHour = 0;
 
     // -------------------------
     // 🔴 VOLTAGE STAGES
