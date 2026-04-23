@@ -21884,21 +21884,26 @@ final Supplier<Float> readVoltage = () -> {
 
     float v = Float.NaN;
 
-    // 🔴 PRIMARY: RAW (για sag detection)
+    // 🔴 PRIMARY: RAW από Battery Intent (REAL-TIME)
     try {
-        BatteryManager bm =
-                (BatteryManager) getSystemService(BATTERY_SERVICE);
+        IntentFilter ifilter =
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
-        if (bm != null) {
-            int mv = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_VOLTAGE);
+        Intent batteryStatus =
+                registerReceiver(null, ifilter);
+
+        if (batteryStatus != null) {
+
+            int mv = batteryStatus.getIntExtra("voltage", -1);
 
             if (mv > 3000 && mv < 5000) {
                 v = mv / 1000f;
             }
         }
+
     } catch (Throwable ignore) {}
 
-    // 🔴 FALLBACK: engine (μόνο αν raw αποτύχει)
+    // 🔴 FALLBACK: engine (μόνο αν αποτύχει)
     if (Float.isNaN(v)) {
 
         try {
