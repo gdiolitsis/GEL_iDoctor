@@ -341,7 +341,7 @@ private long lab14LastRebalanceTs = 0;
 private final Object fastPhaseLock = new Object();
 private long vLoad2Time = 0;
 
-private static final boolean DEBUG_MODE = false;
+private static boolean DEBUG_MODE = true;
 private static class PrivacySnapshot {
 
     // υπάρχοντα (μην τα πειράξεις)
