@@ -15361,7 +15361,7 @@ if (res.validDrain && res.durationMs > 0 && res.drainMah > 0) {
 // =====================================================
 // 🔴 FINAL SUMMARY (FINAL — SAFE + CONSISTENT)
 // =====================================================
-String labelSafe =
+labelSafe =
         (res.label != null && !res.label.isEmpty())
                 ? res.label
                 : "Unknown";
@@ -16222,16 +16222,16 @@ if (lowTemp) flags += 1;
         float tempStart
 ) {
 
-    Lab14Result res = new Lab14Result();
+float currentNow = Float.NaN;
+float powerMilliWatt = Float.NaN;
+double drainPercentPerHour = 0;
 
-    float currentNow = Float.NaN; // 🔴 ΕΔΩ
+Lab14Result res = new Lab14Result();
 
 final iDoctorEngine idoctor =
         iDoctorEngine.get(ManualTestsActivity.this);
 
-float powerMilliWatt = Float.NaN;
-
-    try {
+try {
 
 // 🔴 CANCEL CHECK
 if (lab14Cancelled) {
