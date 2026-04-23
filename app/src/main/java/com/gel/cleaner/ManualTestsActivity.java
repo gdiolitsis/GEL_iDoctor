@@ -20881,7 +20881,6 @@ if (nowTs - lab14LastLiveLogTs > 2000) { // 🔴 κάθε 2 sec
         appendLog("LIVE", liveMsg);
         lastLiveStatus = liveMsg;
     }
-}
 
 // ----------------------------------------------------
 // 🔴 UI (FINAL FIXED)
