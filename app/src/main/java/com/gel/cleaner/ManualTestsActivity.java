@@ -20207,8 +20207,7 @@ isLab14BMode = false;
     });
 
     return;
-}
-	
+    
 	final int cores = Runtime.getRuntime().availableProcessors();
 
     try {
