@@ -14307,10 +14307,6 @@ try {
         calibrateLoadZeroRisk();
     }
 
-    if (!isLab14BMode && lab14GpuIntensity <= 0) {
-        calibrateGpuLoadZeroRisk();
-    }
-
     // ------------------------------------------------------------
     // 🔴 INITIAL SNAPSHOT
     // ------------------------------------------------------------
