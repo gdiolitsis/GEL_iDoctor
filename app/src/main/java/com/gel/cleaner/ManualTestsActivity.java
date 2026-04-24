@@ -20799,7 +20799,6 @@ try {
     logError("LAB14 LIVE CRASH: " + t.getMessage());
 
 }
-}
 
 private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
 
