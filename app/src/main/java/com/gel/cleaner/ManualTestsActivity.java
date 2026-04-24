@@ -1293,12 +1293,21 @@ private final List<Thread> lab14CpuThreads = new ArrayList<>();
 
 private void startCpuBurnLimitedThreads(int threads) {
 
-    stopCpuBurn();
+    // 🔴 ONLY FOR LAB14B (hard guard)
+    if (!isLab14BMode) return;
+
+    if (!lab14Running || lab14Cancelled) return;
 
     final int cores = Runtime.getRuntime().availableProcessors();
 
     if (threads <= 0) threads = cores;
     threads = Math.min(threads, cores);
+
+    // 🔴 SAFE RESET (only inside LAB14B)
+    stopCpuBurn();
+    lab14CpuThreads.clear();
+
+    lab14CpuThreadsCurrent = threads;
 
     for (int i = 0; i < threads; i++) {
 
@@ -1317,9 +1326,10 @@ private void startCpuBurnLimitedThreads(int threads) {
 
             } catch (Throwable ignore) {}
 
-        });
+        }, "LAB14B_CPU_" + i);
 
         t.setPriority(Thread.MAX_PRIORITY);
+
         lab14CpuThreads.add(t);
         t.start();
     }
@@ -19463,11 +19473,10 @@ private void startLab14MainStress() {
     }
 
     // ---------------------------------------------------------
-    // 🔴 CLEAN PREVIOUS LOAD
+    // 🔴 CLEAN FAST LOAD ONLY
     // ---------------------------------------------------------
     stopFastStressSafe();
 
-    // 🔴 SMART SETTLE (αντί για sleep)
     long settleStart = SystemClock.elapsedRealtime();
 
     while (SystemClock.elapsedRealtime() - settleStart < 200) {
@@ -19480,7 +19489,7 @@ private void startLab14MainStress() {
     }
 
 // =========================================================
-// 🔥 CPU STRESS (BACKGROUND - FINAL — PULSE LOAD FIX)
+// 🔥 CPU STRESS
 // =========================================================
 new Thread(() -> {
 
@@ -19490,88 +19499,17 @@ new Thread(() -> {
 
         final int cores = Runtime.getRuntime().availableProcessors();
 
-        // 🔴 CRITICAL FIX — IGNORE broken optimalThreads
-        int threads;
-
-        if (!isLab14BMode) {
-            // FULL load για LAB14
-            threads = Math.max(4, cores - 1);
-        } else {
-            // LAB14B safe mode
-            threads = Math.max(1, cores / 2);
-        }
-
         if (!isLab14BMode) {
 
-            while (lab14Running && !lab14Cancelled) {
+            // 🔴 LAB14 ONLY — TRUE FULL LOAD (ALL CORES)
+            lab14CpuThreadsCurrent = cores;
 
-                // =====================================================
-                // 🔴 PULSE 1 — FULL BOOST (ALL CORES)
-                // =====================================================
-                startCpuBurn_C_Mode();
-
-                long pulse1Start = SystemClock.elapsedRealtime();
-
-                while (SystemClock.elapsedRealtime() - pulse1Start < 2000) {
-
-                    if (!lab14Running || lab14Cancelled) {
-                        stopCpuBurn();
-                        return;
-                    }
-
-                    try { Thread.sleep(100); } catch (Throwable ignore) {}
-                }
-
-                stopCpuBurn();
-
-                // =====================================================
-                // 🔴 RELAX (needed for recovery sag)
-                // =====================================================
-                long relaxStart = SystemClock.elapsedRealtime();
-
-                while (SystemClock.elapsedRealtime() - relaxStart < 1200) {
-
-                    if (!lab14Running || lab14Cancelled) return;
-
-                    try { Thread.sleep(100); } catch (Throwable ignore) {}
-                }
-
-                // =====================================================
-                // 🔴 PULSE 2 — HEAVY SUSTAINED LOAD
-                // =====================================================
-                startCpuBurnLimitedThreads(threads);
-
-                long pulse2Start = SystemClock.elapsedRealtime();
-
-                while (SystemClock.elapsedRealtime() - pulse2Start < 3500) {
-
-                    if (!lab14Running || lab14Cancelled) {
-                        stopCpuBurn();
-                        return;
-                    }
-
-                    try { Thread.sleep(100); } catch (Throwable ignore) {}
-                }
-
-                stopCpuBurn();
-
-                // =====================================================
-                // 🔴 MICRO RELAX
-                // =====================================================
-                long microRelax = SystemClock.elapsedRealtime();
-
-                while (SystemClock.elapsedRealtime() - microRelax < 700) {
-
-                    if (!lab14Running || lab14Cancelled) return;
-
-                    try { Thread.sleep(100); } catch (Throwable ignore) {}
-                }
-            }
+            startCpuBurn_C_Mode(); // 🔥 FULL POWER
 
         } else {
 
             // =====================================================
-            // 🧪 LAB14B MODE
+            // 🧪 LAB14B MODE — LOCKED, DO NOT CHANGE
             // =====================================================
             if (inHardPhase) {
 
@@ -19589,10 +19527,8 @@ new Thread(() -> {
 }).start();
 
     // =========================================================
-    // 🔴 MAIN LOAD (THREAD-SAFE SPLIT)
-    // =========================================================
-
     // 🔴 UI ONLY
+    // =========================================================
     runOnUiThread(() -> {
 
         try {
@@ -19601,7 +19537,6 @@ new Thread(() -> {
 
             applyMaxBrightnessAndKeepOn();
 
-            // 🔴 VIDEO LOAD (UI ONLY)
             try {
 
                 if (lab14StressVideo != null) {
@@ -19630,23 +19565,27 @@ new Thread(() -> {
         } catch (Throwable ignore) {}
     });
 
-new Thread(() -> {
+    // =========================================================
+    // 🔥 LAB14 EXTRA LOAD ONLY
+    // =========================================================
+    if (!isLab14BMode) {
 
-    try {
+        new Thread(() -> {
 
-        if (!lab14Running || lab14Cancelled) return;
+            try {
 
-        // 🔥 MAX LOAD (NO LIMITS)
-        startCpuBurn_C_Mode();
-        startGpuStressLevel(5);
-        startMemoryStress();
+                if (!lab14Running || lab14Cancelled) return;
 
-        try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
-        try { startVibrationStress(); } catch (Throwable ignore) {}
+                startGpuStressLevel(5);
+                startMemoryStress();
 
-    } catch (Throwable ignore) {}
+                try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
+                try { startVibrationStress(); } catch (Throwable ignore) {}
 
-}).start();
+            } catch (Throwable ignore) {}
+
+        }).start();
+    }
 }
 
 // =========================================================
@@ -20230,23 +20169,29 @@ private void updateLab14LiveStats() {
 long now = SystemClock.elapsedRealtime();
 int elapsed = (int) ((now - t0) / 1000);
 
-// 🔴 HARD STOP FAILSAFE
-if (isLab14BMode && lab14Running && elapsed >= 300) {
-	
-	appendLog("TIME", "FINAL END at " + elapsed + " sec");
+// 🔴 HARD STOP FAILSAFE (ONLY ONCE)
+if (isLab14BMode && lab14Running && elapsed >= 300 && !lab14Cancelled) {
 
+    lab14Cancelled = true;
+    lab14Running = false;
+
+    appendLog("TIME", "FINAL END at " + elapsed + " sec");
     appendLog("FORCE END", "Failsafe trigger");
 
-try { stopCpuBurn(); } catch (Throwable ignore) {}
-try { stopGpuStress(); } catch (Throwable ignore) {}
-try { stopMemoryStress(); } catch (Throwable ignore) {}
-try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
-try { stopVibrationStress(); } catch (Throwable ignore) {}
-try {
-    if (lab14StressVideo != null) {
-        lab14StressVideo.stopPlayback();
-    }
-} catch (Throwable ignore) {}
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+    try { stopVibrationStress(); } catch (Throwable ignore) {}
+
+    try {
+        if (lab14StressVideo != null) {
+            lab14StressVideo.stopPlayback();
+        }
+    } catch (Throwable ignore) {}
+
+    return; // 🔴 CRITICAL → μην συνεχίσει loop
+}
 
     try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
@@ -20615,123 +20560,6 @@ if (isLab14BMode) {
 }
 
 lab14WeakLoad = weakLoad;
-
-// ----------------------------------------------------
-// 🔥 BOOST (STABLE + CONTROLLED)
-// ----------------------------------------------------
-if (!lab14BoostActive &&
-        lab14Running &&
-        !lab14Cancelled &&
-        !lab14_systemLimited[0]) {
-
-    boolean shouldBoost;
-
-    if (isLab14BMode) {
-        shouldBoost = lab14SoftPhaseStarted;
-    } else {
-        shouldBoost =
-                !lab14FastPhase &&
-                elapsed >= 6 &&
-                loadScore <= 1 &&
-                batteryScore < 70;
-    }
-
-    if (shouldBoost) {
-
-        lab14BoostActive = true;
-        lab14LastBoostTs = SystemClock.elapsedRealtime();
-
-        appendLog("BOOST",
-                isLab14BMode
-                        ? "SOFT BOOST (14B)"
-                        : "Adaptive boost (battery-aware)");
-
-        new Thread(() -> {
-
-            try {
-
-                if (!lab14Running || lab14Cancelled) return;
-
-                try { stopCpuBurn(); } catch (Throwable ignore) {}
-                try { stopGpuStress(); } catch (Throwable ignore) {}
-                try { stopMemoryStress(); } catch (Throwable ignore) {}
-                try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
-                try { stopVibrationStress(); } catch (Throwable ignore) {}
-
-                final int coresLocal = Runtime.getRuntime().availableProcessors();
-
-                int threads = Math.max(4, coresLocal - 1);
-
-                logLabelOkValue(
-                        gr ? "Νήματα καταπόνησης CPU" : "CPU stress threads",
-                        threads + (gr
-                                ? " (πυρήνες=" + coresLocal + ")"
-                                : " (cores=" + coresLocal + ")")
-                );
-
-                startCpuBurnLimitedThreads(threads);
-                startGpuStressLevel(5);
-                startMemoryStress();
-
-                try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
-                try { startVibrationStress(); } catch (Throwable ignore) {}
-
-            } catch (Throwable ignore) {}
-
-        }).start();
-    }
-}
-
-// ----------------------------------------------------
-// 🔴 BOOST COOLDOWN RESET
-// ----------------------------------------------------
-if (lab14BoostActive &&
-    SystemClock.elapsedRealtime() - lab14LastBoostTs > 15000) {
-
-    lab14BoostActive = false;
-}
-
-// ----------------------------------------------------
-// 🔴 COUNTER (BALANCED)
-// ----------------------------------------------------
-if (inHardPhase && elapsed >= 20) {
-
-    if (weakLoad) {
-        lab14WeakLoadCounter = Math.min(100, lab14WeakLoadCounter + 2);
-    } else {
-        lab14WeakLoadCounter = Math.max(0, lab14WeakLoadCounter - 1);
-    }
-}
-
-// 🔴 WEAK LOAD CONFIRMATION (STABLE SIGNAL)
-boolean weakLoadConfirmed = lab14WeakLoadCounter >= 5;
-
-// ----------------------------------------------------
-// 🔴 REBALANCE (CONTROLLED)
-// ----------------------------------------------------
-if (!isLab14BMode &&
-    !lab14_systemLimited[0]) {
-
-    long now2 = SystemClock.elapsedRealtime();
-
-    // 🔴 RATE LIMIT (avoid oscillation)
-    if (now2 - lab14LastRebalanceTs > 2000) {
-
-        lab14LastRebalanceTs = now2;
-
-        rebalanceLab14GpuLive(
-                weakLoadConfirmed,
-                thermalDelta,
-                false
-        );
-
-        rebalanceLab14CpuLive(
-                weakLoadConfirmed,
-                thermalDelta,
-                false
-        );
-    }
-}
 
 // ----------------------------------------------------
 // 🔴 LAB14 ABORT (FINAL — SAFE)
@@ -21131,98 +20959,6 @@ private void calibrateLoadZeroRisk() {
             " | ram=" + totalRamMb + "MB");
 }
 
-private void calibrateGpuLoadSafe() {
-
-    if (lab14Running || lab14Cancelled) return;
-
-    int[] levels = {1, 2, 3, 4};
-
-    float bestDelta = -1f;
-    int bestLevel = 1;
-
-    for (int lvl : levels) {
-
-        if (lab14Cancelled) break;
-
-        // 🔴 FULL STOP + COOLDOWN
-        stopGpuStress();
-        SystemClock.sleep(1200);
-
-        // 🔴 NEW BASE (CRITICAL FIX)
-        float baseTemp = readGpuTempSafe();
-
-        startGpuStressLevel(lvl);
-
-        SystemClock.sleep(3500);
-
-        float t = readGpuTempSafe();
-
-        float delta =
-                (!Float.isNaN(t) && !Float.isNaN(baseTemp))
-                        ? (t - baseTemp)
-                        : Float.NaN;
-
-        // 🔴 SANITY FILTER
-        if (!Float.isNaN(delta) &&
-            delta > 0.2f &&     // ignore noise
-            delta < 20f) {      // ignore broken sensors
-
-            if (delta > bestDelta) {
-                bestDelta = delta;
-                bestLevel = lvl;
-            }
-        }
-    }
-
-    stopGpuStress();
-
-    // 🔴 FAILSAFE (no sensor case)
-    if (bestDelta < 0f) {
-        bestLevel = 2; // safe default
-    }
-
-    lab14GpuIntensity = bestLevel;
-
-    appendLog("GPU CALIB",
-            "level=" + bestLevel +
-            " ΔT=" + (bestDelta > 0
-                    ? String.format(java.util.Locale.US, "%.2f", bestDelta)
-                    : "N/A"));
-}
-
-private void calibrateGpuLoadZeroRisk() {
-
-    final int cores = Runtime.getRuntime().availableProcessors();
-
-    int level;
-
-    if (cores <= 4) {
-
-        level = 1; // low-end
-
-    } else if (cores <= 6) {
-
-        level = 2; // mid
-
-    } else if (cores <= 8) {
-
-        level = 3; // upper mid
-
-    } else {
-
-        level = 4; // 🔴 allow flagship but still safe
-    }
-
-    // 🔴 HARD CAP (safety)
-    level = Math.max(1, Math.min(4, level));
-
-    lab14GpuIntensity = level;
-
-    appendLog("GPU CALIB",
-            "zero-risk level=" + level +
-            " cores=" + cores);
-}
-
 private void startGpuStressLevel(int level) {
 
     if (gpuRenderer != null) {
@@ -21245,93 +20981,17 @@ private void startGpuStressLevel(int level) {
     );
 }
 
-private void rebalanceLab14GpuLive(
-        boolean weakLoad,
-        float thermalDelta,
-        boolean systemLimited
-) {
-    if (!lab14Running || lab14Cancelled) return;
-    if (isLab14BMode) return;
-    if (lab14BoostActive) return;
-    if (lab14GpuIntensity <= 0) return;
-
-    long now = SystemClock.elapsedRealtime();
-
-    // 🔴 debounce
-    if (now - lab14LastGpuAdjustTs < 8000) return;
-
-    int oldLevel = lab14GpuIntensity;
-    int newLevel = oldLevel;
-
-    boolean validThermal = !Float.isNaN(thermalDelta);
-
-    boolean lowThermal = validThermal && thermalDelta < 3f;
-    boolean midThermal = validThermal && thermalDelta >= 3f && thermalDelta <= 7f;
-    boolean highThermal = validThermal && thermalDelta > 7f;
-    boolean veryHighThermal = validThermal && thermalDelta >= 10f;
-
-    // ----------------------------------------------------
-    // 🔴 PRIORITY 1: limiter / overheating
-    // ----------------------------------------------------
-    if (systemLimited || veryHighThermal) {
-
-        newLevel = oldLevel - 1;
-
-    }
-    // ----------------------------------------------------
-    // 🔴 PRIORITY 2: sustained weak load (NOT instant)
-    // ----------------------------------------------------
-    else if (weakLoad && lab14WeakLoadCounter >= 5) {
-
-        newLevel = oldLevel + 1;
-
-    }
-    // ----------------------------------------------------
-    // 🔴 PRIORITY 3: thermal tuning (stable zones)
-    // ----------------------------------------------------
-    else if (validThermal) {
-
-        if (lowThermal) {
-            newLevel = oldLevel + 1;
-        } else if (highThermal) {
-            newLevel = oldLevel - 1;
-        }
-        // mid zone → no change (stability)
-    }
-
-    // ----------------------------------------------------
-    // 🔴 CLAMP
-    // ----------------------------------------------------
-    newLevel = Math.max(lab14GpuMinLevel,
-            Math.min(lab14GpuMaxLevel, newLevel));
-
-    if (newLevel == oldLevel) return;
-
-    lab14GpuIntensity = newLevel;
-    lab14LastGpuAdjustTs = now;
-
-    try {
-        if (lab14GpuRenderer != null) {
-            lab14GpuRenderer.setIntensity(newLevel);
-        }
-    } catch (Throwable ignore) {}
-
-    appendLog("GPU LIVE",
-            "level " + oldLevel + " -> " + newLevel +
-            " ΔT=" + (validThermal
-                ? String.format(Locale.US, "%.1f", thermalDelta)
-                : "N/A") +
-            (systemLimited ? " LIMITED" : ""));
-}
-
 private void rebalanceLab14CpuLive(
         boolean weakLoad,
         float thermalDelta,
         boolean systemLimited
 ) {
 
-    // 🔴 HARD LOCK (14B)
-    if (isLab14BMode && inHardPhase) return;
+    // 🔴 LAB14 → ΔΕΝ αγγίζεται ΠΟΤΕ
+    if (!isLab14BMode) return;
+
+    // 🔴 HARD LOCK (14B hard phase)
+    if (inHardPhase) return;
 
     if (!lab14Running || lab14Cancelled) return;
 
@@ -21363,7 +21023,7 @@ private void rebalanceLab14CpuLive(
 
     }
     // ----------------------------------------------------
-    // 🔴 BOOST (only if sustained weak load)
+    // 🔴 BOOST
     // ----------------------------------------------------
     else if (weakLoad && lab14WeakLoadCounter >= 5 && lowThermal) {
 
@@ -21371,26 +21031,25 @@ private void rebalanceLab14CpuLive(
 
     }
     // ----------------------------------------------------
-    // 🔴 MID ZONE → STABLE
+    // 🔴 MID ZONE
     // ----------------------------------------------------
     else if (midThermal) {
 
-        newThreads = oldThreads; // no αλλαγή
+        newThreads = oldThreads;
     }
 
     // ----------------------------------------------------
-    // ?? CLAMP
+    // CLAMP
     // ----------------------------------------------------
     newThreads = Math.max(1, Math.min(cores, newThreads));
 
-    // 🔴 LOWER FLOOR (less restrictive)
     int minThreads = Math.max(1, cores / 4);
     newThreads = Math.max(newThreads, minThreads);
 
     if (newThreads == oldThreads) return;
 
     // ----------------------------------------------------
-    // 🔴 APPLY
+    // 🔴 APPLY (LAB14B ONLY)
     // ----------------------------------------------------
     lab14CpuThreadsCurrent = newThreads;
     lab14LastCpuAdjustTs = now;
@@ -21448,48 +21107,6 @@ private boolean detectRealTimeLimiter(
     if (lowThermal) hits++;
 
     return hits >= 2;
-}
-
-private void startCpuBurn_FullImmediate(final int threadCount) {
-
-    stopCpuBurn();
-
-    cpuBurnRunning = true;
-    cpuThreads.clear();
-
-    final int cores = Math.max(1, threadCount);
-
-    for (int i = 0; i < cores; i++) {
-
-        Thread t = new Thread(() -> {
-
-            double acc = 1.0;
-
-            while (cpuBurnRunning
-                    && lab14Running
-                    && !lab14Cancelled
-                    && !Thread.currentThread().isInterrupted()) {
-
-                for (int j = 1; j < 20000; j++) {
-
-                    acc += Math.sqrt(j * acc + 1.0);
-                    acc *= 1.000000119d;
-
-                    // 🔴 overflow guard (CRITICAL)
-                    if (acc > 1e12) {
-                        acc = 1.0;
-                    }
-                }
-            }
-
-        }, "LAB14_CPU_" + i);
-
-        // 🔴 NORMAL instead of MAX (more realistic scheduling)
-        t.setPriority(Thread.NORM_PRIORITY);
-
-        cpuThreads.add(t);
-        t.start();
-    }
 }
 
 // =====================================================
@@ -21941,103 +21558,80 @@ private void runFastVoltageSampling(
                     : Float.NaN;
         };
 
-        // ----------------------------------------------------
-        // 🔴 START (idle / baseline)
-        // ----------------------------------------------------
-        if (Float.isNaN(vStart[0])) {
+// ----------------------------------------------------
+// 🔴 START (baseline χωρίς kill load)
+// ----------------------------------------------------
+if (Float.isNaN(vStart[0])) {
 
-            try { stopCpuBurn(); } catch (Throwable ignore) {}
-            try { stopGpuStress(); } catch (Throwable ignore) {}
+    if (!sleepSilentlySafe(120)) return;
+    if (!lab14Running || lab14Cancelled) return;
 
-            if (!sleepSilentlySafe(180)) return;
-            if (!lab14Running || lab14Cancelled) return;
+    float vs = readVoltage.get();
 
-            float vs = readVoltage.get();
+    if (!Float.isNaN(vs)) {
+        vStart[0] = vs;
+    }
+}
 
-            if (!Float.isNaN(vs)) {
-                vStart[0] = vs;
-            }
+// ----------------------------------------------------
+// 🔴 LOAD 1 (no stop/start)
+// ----------------------------------------------------
+if (!sleepSilentlySafe(180)) return;
+if (!lab14Running || lab14Cancelled) return;
+
+float load1 = readVoltage.get();
+
+if (!Float.isNaN(load1)) {
+
+    if (Float.isNaN(vLoad1[0]) || load1 < vLoad1[0]) {
+        vLoad1[0] = load1;
+    }
+
+    if (Float.isNaN(voltageUnderLoad[0]) || load1 < voltageUnderLoad[0]) {
+        voltageUnderLoad[0] = load1;
+    }
+}
+
+// ----------------------------------------------------
+// 🔴 RECOVERY (natural, όχι forced)
+// ----------------------------------------------------
+if (!sleepSilentlySafe(220)) return;
+if (!lab14Running || lab14Cancelled) return;
+
+float rec = readVoltage.get();
+
+if (!Float.isNaN(rec)) {
+
+    float refLoad =
+            !Float.isNaN(vLoad1[0]) ? vLoad1[0] : Float.NaN;
+
+    if (Float.isNaN(refLoad) || rec >= refLoad) {
+        if (Float.isNaN(vRecover[0]) || rec > vRecover[0]) {
+            vRecover[0] = rec;
         }
+    }
+}
 
-        // ----------------------------------------------------
-        // 🔴 LOAD 1 (forced spike)
-        // ----------------------------------------------------
-        startCpuBurn_C_Mode();
+// ----------------------------------------------------
+// 🔴 LOAD 2 (no spike restart)
+// ----------------------------------------------------
+if (!sleepSilentlySafe(220)) return;
+if (!lab14Running || lab14Cancelled) return;
 
-        if (!sleepSilentlySafe(180)) {
-            try { stopCpuBurn(); } catch (Throwable ignore) {}
-            return;
-        }
-        if (!lab14Running || lab14Cancelled) {
-            try { stopCpuBurn(); } catch (Throwable ignore) {}
-            return;
-        }
+float load2 = readVoltage.get();
 
-        float load1 = readVoltage.get();
+if (!Float.isNaN(load2)) {
 
-        if (!Float.isNaN(load1)) {
+    if (Float.isNaN(vLoad2[0]) || load2 < vLoad2[0]) {
+        vLoad2[0] = load2;
+    }
 
-            if (Float.isNaN(vLoad1[0]) || load1 < vLoad1[0]) {
-                vLoad1[0] = load1;
-            }
+    if (Float.isNaN(voltageUnderLoad[0]) || load2 < voltageUnderLoad[0]) {
+        voltageUnderLoad[0] = load2;
+    }
 
-            if (Float.isNaN(voltageUnderLoad[0]) || load1 < voltageUnderLoad[0]) {
-                voltageUnderLoad[0] = load1;
-            }
-        }
-
-        try { stopCpuBurn(); } catch (Throwable ignore) {}
-
-        // ----------------------------------------------------
-        // 🔴 RECOVERY (real relax)
-        // ----------------------------------------------------
-        if (!sleepSilentlySafe(220)) return;
-        if (!lab14Running || lab14Cancelled) return;
-
-        float rec = readVoltage.get();
-
-        if (!Float.isNaN(rec)) {
-
-            float refLoad =
-                    !Float.isNaN(vLoad1[0]) ? vLoad1[0] : Float.NaN;
-
-            if (Float.isNaN(refLoad) || rec >= refLoad) {
-                if (Float.isNaN(vRecover[0]) || rec > vRecover[0]) {
-                    vRecover[0] = rec;
-                }
-            }
-        }
-
-        // ----------------------------------------------------
-        // 🔴 LOAD 2 (second forced spike)
-        // ----------------------------------------------------
-        startCpuBurn_C_Mode();
-
-        if (!sleepSilentlySafe(220)) {
-            try { stopCpuBurn(); } catch (Throwable ignore) {}
-            return;
-        }
-        if (!lab14Running || lab14Cancelled) {
-            try { stopCpuBurn(); } catch (Throwable ignore) {}
-            return;
-        }
-
-        float load2 = readVoltage.get();
-
-        if (!Float.isNaN(load2)) {
-
-            if (Float.isNaN(vLoad2[0]) || load2 < vLoad2[0]) {
-                vLoad2[0] = load2;
-            }
-
-            if (Float.isNaN(voltageUnderLoad[0]) || load2 < voltageUnderLoad[0]) {
-                voltageUnderLoad[0] = load2;
-            }
-
-            vLoad2Time = SystemClock.elapsedRealtime();
-        }
-
-        try { stopCpuBurn(); } catch (Throwable ignore) {}
+    vLoad2Time = SystemClock.elapsedRealtime();
+}
 
         // ----------------------------------------------------
         // 🔴 DEBUG
