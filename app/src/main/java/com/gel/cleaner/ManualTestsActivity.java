@@ -20792,6 +20792,7 @@ lab14LiveStats.setText(sb);
     logError("LAB14 UI ERROR: " + t.getMessage());
 
 }
+}
 
 private static class Lab14GpuRenderer implements GLSurfaceView.Renderer {
 
