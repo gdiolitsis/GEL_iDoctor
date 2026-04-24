@@ -20193,21 +20193,6 @@ if (isLab14BMode && lab14Running && elapsed >= 300 && !lab14Cancelled) {
     return; // 🔴 CRITICAL → μην συνεχίσει loop
 }
 
-    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-
-// 🔴 FIX
-lab14Running = false;
-lab14Cancelled = true;   // ✔ σωστό
-isLab14BMode = false;
-
-    runOnUiThread(() -> {
-        try {
-            lab14CleanupUI();
-        } catch (Throwable ignore) {}
-    });
-
-    return;
-    
 	final int cores = Runtime.getRuntime().availableProcessors();
 
     try {
@@ -20789,6 +20774,12 @@ lab14LiveStats.setText(sb);
 } catch (Throwable t) {
 
     logError("LAB14 UI ERROR: " + t.getMessage());
+
+}
+
+} catch (Throwable t) {
+
+    logError("LAB14 LIVE CRASH: " + t.getMessage());
 
 }
 }
