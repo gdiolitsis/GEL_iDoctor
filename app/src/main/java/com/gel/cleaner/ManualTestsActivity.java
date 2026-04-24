@@ -14892,16 +14892,15 @@ if (rValid) {
     } else {
 
         logLabelWarnValue(
-            gr ? "Αντίσταση υπό φορτίο"
-               : "Dynamic resistance",
-            gr ? "Μη αξιόπιστη μέτρηση"
-               : "Unreliable measurement"
+                gr ? "Αντίσταση υπό φορτίο"
+                   : "Dynamic resistance",
+                gr ? "Μη αξιόπιστη μέτρηση"
+                   : "Unreliable measurement"
         );
     }
 
-} else {
+} else {   // ✅ αυτό έλειπε
 
-    // fallback from sag if resistance absent
     if (!Float.isNaN(finalSag)) {
 
         float rEst = finalSag * 1000f / 2.0f;
@@ -14910,9 +14909,9 @@ if (rValid) {
             gr ? "Αντίσταση υπό φορτίο"
                : "Dynamic resistance",
             String.format(
-                Locale.US,
-                "~%.0f mΩ (estimated)",
-                rEst
+               Locale.US,
+               "~%.0f mΩ (estimated)",
+               rEst
             )
         );
 
@@ -17315,6 +17314,14 @@ if (hasSag &&
     } else if (finalSag > 0.06f) {
         base -= 15f;
     }
+    
+    powerStabilityFactor[0] =
+        Math.max(0f, Math.min(100f, base));
+
+} else {
+
+    powerStabilityFactor[0] = Float.NaN;
+}
 
 // ----------------------------------------------------
 // BEHAVIOUR (FINAL - FIXED)
