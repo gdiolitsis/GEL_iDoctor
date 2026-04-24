@@ -20768,35 +20768,28 @@ try {
 
     int statusColor;
 
-    // 🔴 FIX: robust matching (όχι equals)
-    if (status != null && status.startsWith("HIGH")) {
-        statusColor = neon;
-    } else if (status != null && status.startsWith("NORMAL")) {
-        statusColor = cyan;
-    } else if (status != null && status.startsWith("WARM")) {
-        statusColor = orange;
-    } else if (status != null && status.startsWith("LIMITED")) {
-        statusColor = red;
-    } else if (status != null && status.startsWith("WEAK")) {
-        statusColor = red;
-    } else {
-        statusColor = white;
-    }
+// 🔴 FIX: robust matching (όχι equals)
+if (status != null && status.startsWith("HIGH")) {
+    statusColor = neon;
+} else if (status != null && status.startsWith("NORMAL")) {
+    statusColor = cyan;
+} else if (status != null && status.startsWith("WARM")) {
+    statusColor = orange;
+} else if (status != null && status.startsWith("LIMITED")) {
+    statusColor = red;
+} else if (status != null && status.startsWith("WEAK")) {
+    statusColor = red;
+} else {
+    statusColor = white;
+}
 
-    sb.setSpan(new ForegroundColorSpan(statusColor), start, sb.length(), 0);
+sb.setSpan(new ForegroundColorSpan(statusColor), start, sb.length(), 0);
 
-    lab14LiveStats.setText(sb);
+lab14LiveStats.setText(sb);
 
 } catch (Throwable t) {
 
     logError("LAB14 UI ERROR: " + t.getMessage());
-
-}
-
-// 🔴 ΕΔΩ ΜΠΑΙΝΕΙ ΤΟ MISSING CATCH
-} catch (Throwable t) {
-
-    logError("LAB14 LIVE CRASH: " + t.getMessage());
 
 }
 
