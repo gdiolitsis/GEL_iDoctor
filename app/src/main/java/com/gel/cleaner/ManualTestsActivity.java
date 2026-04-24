@@ -14842,7 +14842,6 @@ if (rValid) {
 
     float rMilli = internalResistance[0] * 1000f;
 
-    // 🔴 sanity clamp
     if (rMilli >= 1f && rMilli <= 300f) {
 
         String rLabel;
@@ -14864,55 +14863,56 @@ if (rValid) {
                 rLabel
         );
 
-        if ("Excellent".equals(rLabel) || "Good".equals(rLabel)) {
+        if ("Excellent".equals(rLabel) ||
+            "Good".equals(rLabel)) {
 
             logLabelOkValue(
-                    gr ? "Αντίσταση υπό φορτίο"
-                       : "Dynamic resistance",
-                    text
+                gr ? "Αντίσταση υπό φορτίο"
+                   : "Dynamic resistance",
+                text
             );
 
         } else if ("Normal".equals(rLabel)) {
 
             logLabelValue(
-                    gr ? "Αντίσταση υπό φορτίο"
-                       : "Dynamic resistance",
-                    text
+                gr ? "Αντίσταση υπό φορτίο"
+                   : "Dynamic resistance",
+                text
             );
 
         } else {
 
             logLabelWarnValue(
-                    gr ? "Αντίσταση υπό φορτίο"
-                       : "Dynamic resistance",
-                    text
+                gr ? "Αντίσταση υπό φορτίο"
+                   : "Dynamic resistance",
+                text
             );
         }
 
     } else {
 
         logLabelWarnValue(
-                gr ? "Αντίσταση υπό φορτίο"
-                   : "Dynamic resistance",
-                gr ? "Μη αξιόπιστη μέτρηση"
-                   : "Unreliable measurement"
+            gr ? "Αντίσταση υπό φορτίο"
+               : "Dynamic resistance",
+            gr ? "Μη αξιόπιστη μέτρηση"
+               : "Unreliable measurement"
         );
     }
 
-else {
+} else {
 
     // fallback from sag if resistance absent
     if (!Float.isNaN(finalSag)) {
 
-        float rEst = finalSag * 1000f / 2.0f; // conservative proxy
+        float rEst = finalSag * 1000f / 2.0f;
 
         logLabelValue(
             gr ? "Αντίσταση υπό φορτίο"
                : "Dynamic resistance",
             String.format(
-               Locale.US,
-               "~%.0f mΩ (estimated)",
-               rEst
+                Locale.US,
+                "~%.0f mΩ (estimated)",
+                rEst
             )
         );
 
