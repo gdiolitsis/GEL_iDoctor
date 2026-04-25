@@ -332,7 +332,13 @@ public static class Lab14Result {
 
     public boolean batteryBehaviourWarning;
 
-    public String label; // 🔴 FINAL LABEL ONLY
+    public String label; 
+    
+    public float sagAvg = Float.NaN;
+    public float finalSag = Float.NaN;
+    
+    public float sagAvg = Float.NaN;
+    public float finalSag = Float.NaN;
 }
 
 private long lab14LastLimiterCheck = 0;
@@ -365,6 +371,19 @@ int totalUserAppsChecked = 0;
 private String lab14LastLabel = "Unknown";
 
 float[] voltageUnderLoad = { Float.NaN };
+
+float vSag1 = Float.NaN;
+float vSag2 = Float.NaN;
+
+// --------------------------------------------------
+// LAB14 derived metrics
+// --------------------------------------------------
+
+final float[] powerStabilityFactor = { Float.NaN };
+
+final boolean[] cellImbalanceRisk = { false };
+
+double drainPercentPerHour = 0d;
 
 // ============================================================
 // LAB14 SHARED STATE
@@ -14926,9 +14945,12 @@ if (rValid) {
 }
 
 // =====================================================
-// 🔴 VOLTAGE RECOVERY (FINAL + FALLBACK)
+// VOLTAGE RECOVERY (FINAL + FALLBACK)
 // =====================================================
-if (recValid) {
+
+if (voltageRecovery != null &&
+    voltageRecovery.length > 0 &&
+    !Float.isNaN(voltageRecovery[0])) {
 
     float rec = voltageRecovery[0];
 
@@ -14988,45 +15010,11 @@ if (recValid) {
 
 } else {
 
-    // ==========================================
-    // 🔴 FALLBACK FROM SAG
-    // ==========================================
-    if (!Float.isNaN(finalSag) && finalSag >= 0.015f) {
-
-        float recEst = finalSag * 0.55f; // conservative recovery proxy
-
-        String recLabel;
-
-        if (recEst >= 0.080f) {
-            recLabel = "Strong";
-        } else if (recEst >= 0.040f) {
-            recLabel = "Normal";
-        } else {
-            recLabel = "Weak";
-        }
-
-        String text = String.format(
-                Locale.US,
-                "~%.3f V (%s, estimated)",
-                recEst,
-                recLabel
-        );
-
-        logLabelValue(
-                gr ? "Ανάκαμψη τάσης"
-                   : "Voltage recovery",
-                text
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Ανάκαμψη τάσης"
-                   : "Voltage recovery",
-                gr ? "Μη διαθέσιμη"
-                   : "N/A"
-        );
-    }
+    logLabelWarnValue(
+            gr ? "Ανάκαμψη τάσης"
+               : "Voltage recovery",
+            "N/A"
+    );
 }
 
 // 🔴 RECOVERY SPEED
@@ -15393,10 +15381,6 @@ if (lab14_systemLimited[0]) {
                     : "Status: %s\nPower: %s\nVoltage sag: %s\nThermal delta: %s\nDrain: %s",
 
             labelSafe,
-            powerTextFinal,
-            sagTextFinal,
-            tempTextFinal,
-            drainTextFinal
     );
 }
 
@@ -16392,26 +16376,6 @@ if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
     sagAvg = sag2;
 }
 
-// ----------------------------------------------------
-// 🔴 LATCH BEST SAG DATA (CRITICAL)
-// ----------------------------------------------------
-if (!Float.isNaN(sag1)) {
-    vSag1 = sag1;      // ή sag1Holder[0] αν array
-}
-
-if (!Float.isNaN(sag2)) {
-    vSag2 = sag2;
-}
-
-if (!Float.isNaN(sagAvg)) {
-    res.sagAvg = sagAvg;
-}
-
-// final authoritative sag
-if (!Float.isNaN(finalSag)) {
-    res.finalSag = finalSag;
-}
-
 // =====================================================
 // 🔴 VALIDATION (RELAXED PRODUCTION FINAL)
 // =====================================================
@@ -17299,31 +17263,6 @@ if (!Float.isNaN(tempNowEngine) &&
 }
 
 // ----------------------------------------------------
-// POWER STABILITY (FINAL — CLEAN)
-// ----------------------------------------------------
-
-if (hasSag &&
-    validDrain &&
-    !lab14_systemLimited[0]) {
-
-    float base = 100f;
-
-    // 🔴 SAG penalty (core)
-    if (finalSag > 0.10f) {
-        base -= 30f;
-    } else if (finalSag > 0.06f) {
-        base -= 15f;
-    }
-    
-    powerStabilityFactor[0] =
-        Math.max(0f, Math.min(100f, base));
-
-} else {
-
-    powerStabilityFactor[0] = Float.NaN;
-}
-
-// ----------------------------------------------------
 // BEHAVIOUR (FINAL - FIXED)
 // ----------------------------------------------------
 
@@ -18160,7 +18099,7 @@ lowConfidence =
 boolean partial =
         !validDrain ||
         !hasSag ||
-        dtMsFinal < 20000 ||
+        dtMs < 20000 ||
         lowConfidence ||
         (drainMahFinal < 3 && !lab14_systemLimited[0]);
 
@@ -18189,7 +18128,6 @@ lab14LogFinalScore(
         res.label,
         res.powerMw,
         collapseRisk,
-        smartSwellingFinal,
         lab14_systemLimited
 );
 
@@ -18204,7 +18142,6 @@ lab14LogSave(
         p,
         variabilityDetected,
         collapseRisk,
-        smartSwellingFinal,
         false,
         partial,
         lab14_systemLimited
