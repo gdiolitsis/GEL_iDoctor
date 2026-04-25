@@ -14159,6 +14159,1094 @@ AppTTS.stop();
     logLine();
 }
 
+// ============================================================
+// LAB 14 REBORN — BATTERY HEALTH LAB
+// GDiolitsis Engine Lab (GEL) — Author & Developer
+//
+// Copy-paste replacement for old LAB 14 core.
+// Goal: small, measurable, honest. No over-engineering.
+// Keeps: entry popup flow, condition check, advisory, progress usage.
+// Outputs: sag, drain, mAh/h, power, thermal delta, recovery, verdict.
+// ============================================================
+
+
+// ============================================================
+// LAB 14 — ENTRY
+// ============================================================
+private void lab14BatteryHealthStressTest() {
+
+    showLab14ConditionCheck(() -> {
+
+        if (!lab14AdvisoryShown) {
+
+            lab14AdvisoryShown = true;
+
+            showLab14PreTestAdvisory(() -> {
+                lab14BatteryHealthStressTest_REAL();
+            });
+
+        } else {
+
+            lab14BatteryHealthStressTest_REAL();
+        }
+    });
+}
+
+
+// ============================================================
+// LAB 14 — REAL START
+// ============================================================
+private void lab14BatteryHealthStressTest_REAL() {
+
+    final boolean grLocal = AppLang.isGreek(this);
+    gr = grLocal;
+
+    if (lab14Running) {
+        logWarn(grLocal
+                ? "Το LAB 14 εκτελείται ήδη."
+                : "LAB 14 is already running.");
+        return;
+    }
+
+    if (isChargingNowSafe()) {
+        logError(grLocal
+                ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
+                : "Device must NOT be charging.");
+        return;
+    }
+
+    lab14ResetRebornState();
+
+    final iDoctorEngine idoctor =
+            iDoctorEngine.get(ManualTestsActivity.this);
+
+    final Lab14Engine lab14Engine =
+            new Lab14Engine(ManualTestsActivity.this);
+
+    iDoctorEngine.BatterySnapshot start = null;
+
+    try {
+        start = idoctor.readBatterySnapshotLab();
+    } catch (Throwable ignore) {}
+
+    if (start == null || start.chargeNowMah <= 0) {
+        logError(grLocal
+                ? "Δεν υπάρχει διαθέσιμο Charge Counter. Το LAB 14 δεν μπορεί να δώσει αξιόπιστο drain."
+                : "Charge Counter unavailable. LAB 14 cannot provide reliable drain.");
+        return;
+    }
+
+    final long startMahLocal = start.chargeNowMah;
+    final long cyclesLocal = start.cycleCount;
+    final int levelLocal = Math.max(0, getBatteryPercentSafe());
+
+    long capacityMah = -1;
+
+    if (start.chargeFullMah > 0) {
+        capacityMah = start.chargeFullMah;
+    } else if (start.chargeDesignMah > 0) {
+        capacityMah = start.chargeDesignMah;
+    } else if (levelLocal > 5 && startMahLocal > 0) {
+        capacityMah = Math.round(startMahLocal / (levelLocal / 100.0f));
+    }
+
+    final long baselineFullMahLocal = capacityMah;
+
+    float tempStartLocal = lab14ReadBatteryTempSafe(idoctor, start);
+    float voltageStartLocal = lab14ReadVoltageSafe(idoctor);
+
+    startMah = startMahLocal;
+    baselineFullMah = baselineFullMahLocal;
+    cycles = cyclesLocal;
+    batteryPercent = levelLocal;
+    tempStart = tempStartLocal;
+    voltageStart = voltageStartLocal;
+
+    lab14Running = true;
+    lab14Cancelled = false;
+    lab14FastPhase = false;
+    lab14MainPhase = true;
+    lab14FastDone = true;
+
+    durationSec = Math.max(60, LAB14_TOTAL_SECONDS);
+    lastSelectedStressDurationSec = durationSec;
+
+    t0 = SystemClock.elapsedRealtime();
+    lab14EndTime = t0 + (durationSec * 1000L);
+
+    try {
+        lab14Engine.startDrainSession();
+    } catch (Throwable ignore) {}
+
+    lab14LogRebornHeader(
+            grLocal,
+            startMahLocal,
+            baselineFullMahLocal,
+            levelLocal,
+            cyclesLocal,
+            tempStartLocal,
+            voltageStartLocal,
+            durationSec
+    );
+
+    try {
+        applyMaxBrightnessAndKeepOn();
+    } catch (Throwable ignore) {}
+
+    // Keep existing progress/popup system.
+    // The new engine starts stress itself and finishes through lab14RebornFinish().
+    startLab14SharedUI(durationSec, grLocal);
+
+    lab14StartRebornStress();
+
+    final float voltageStartFinal = voltageStartLocal;
+    final float tempStartFinal = tempStartLocal;
+    final long startMahFinal = startMahLocal;
+    final long baselineFinal = baselineFullMahLocal;
+    final long cyclesFinal = cyclesLocal;
+    final int levelFinal = levelLocal;
+
+    new Thread(() -> {
+
+        try {
+
+            long startTs = SystemClock.elapsedRealtime();
+
+            while (lab14Running && !lab14Cancelled) {
+
+                long elapsed = SystemClock.elapsedRealtime() - startTs;
+
+                lab14SampleRebornLive(idoctor, voltageStartFinal);
+
+                if (elapsed >= durationSec * 1000L) {
+                    break;
+                }
+
+                try {
+                    Thread.sleep(1000);
+                } catch (Throwable ignore) {}
+            }
+
+            lab14RebornFinish(
+                    idoctor,
+                    lab14Engine,
+                    grLocal,
+                    startMahFinal,
+                    baselineFinal,
+                    voltageStartFinal,
+                    tempStartFinal,
+                    cyclesFinal,
+                    levelFinal,
+                    startTs
+            );
+
+        } catch (Throwable t) {
+
+            logError("LAB14 REBORN CRASH: " + t.getMessage());
+
+            lab14Cancelled = true;
+            lab14StopAllStress();
+
+            try {
+                counterText = null;
+                lab14CleanupUI();
+            } catch (Throwable ignore) {}
+
+            try {
+                restoreBrightnessAndKeepOn();
+            } catch (Throwable ignore) {}
+
+            lab14Running = false;
+            lab14PopupShown = false;
+            lab14AdvisoryShown = false;
+        }
+
+    }).start();
+}
+
+
+// ============================================================
+// LAB 14 REBORN — RESET
+// ============================================================
+private void lab14ResetRebornState() {
+
+    validDrain = false;
+
+    lab14Cancelled = false;
+    lab14FastDone = false;
+    lab14FastPhase = false;
+    lab14MainPhase = false;
+
+    lab14LimiterScore = 0;
+    lab14LimiterLatched = false;
+    lab14CpuFreqPeak = 0;
+
+    lab14_systemLimited[0] = false;
+
+    lab14WeakLoadCounter = 0;
+    lab14BoostActive = false;
+    lab14SoftPhaseStarted = false;
+
+    lab14ChargeSamples.clear();
+    lab14MinCharge = Long.MAX_VALUE;
+    lab14MaxCharge = 0L;
+
+    collapseRisk[0] = false;
+
+    sag1 = Float.NaN;
+    sag2 = Float.NaN;
+    sagAvg = Float.NaN;
+
+    vStart[0] = Float.NaN;
+    vLoad1[0] = Float.NaN;
+    vRecover[0] = Float.NaN;
+    vLoad2[0] = Float.NaN;
+
+    voltageUnderLoad[0] = Float.NaN;
+    voltageRecovery[0] = Float.NaN;
+    voltageRecoverySpeed[0] = Float.NaN;
+    voltageStability[0] = Float.NaN;
+
+    internalResistance[0] = Float.NaN;
+    thermalImpedance[0] = Float.NaN;
+
+    startBatteryTemp = Float.NaN;
+    endBatteryTemp = Float.NaN;
+
+    lab14Conf = null;
+    lab14AgingIndex = -1;
+    lab14AgingInterp = "N/A";
+    lab14BatteryBehaviourWarning = false;
+}
+
+
+// ============================================================
+// LAB 14 REBORN — HEADER
+// ============================================================
+private void lab14LogRebornHeader(
+        boolean gr,
+        long startMah,
+        long baselineFullMah,
+        int level,
+        long cycles,
+        float tempStart,
+        float voltageStart,
+        int durationSec
+) {
+
+    appendHtml("<br>");
+    logLine();
+
+    logInfo(gr
+            ? "LAB 14 — Battery Health Lab REBORN"
+            : "LAB 14 — Battery Health Lab REBORN");
+
+    logLine();
+
+    logLabelOkValue(
+            gr ? "Διάρκεια" : "Duration",
+            durationSec + (gr ? " δευτ." : " sec")
+    );
+
+    logLabelOkValue(
+            gr ? "Αρχική φόρτιση" : "Start charge",
+            startMah + " mAh"
+    );
+
+    logLabelValue(
+            gr ? "Ποσοστό" : "Battery level",
+            level + "%"
+    );
+
+    logLabelValue(
+            gr ? "Πλήρης χωρητικότητα" : "Full capacity baseline",
+            baselineFullMah > 0 ? baselineFullMah + " mAh" : "N/A"
+    );
+
+    logLabelValue(
+            gr ? "Κύκλοι" : "Cycle count",
+            cycles > 0 ? String.valueOf(cycles) : "N/A"
+    );
+
+    logLabelValue(
+            gr ? "Τάση έναρξης" : "Start voltage",
+            !Float.isNaN(voltageStart)
+                    ? String.format(Locale.US, "%.3f V", voltageStart)
+                    : "N/A"
+    );
+
+    logLabelValue(
+            gr ? "Θερμοκρασία έναρξης" : "Start temperature",
+            !Float.isNaN(tempStart)
+                    ? String.format(Locale.US, "%.1f°C", tempStart)
+                    : "N/A"
+    );
+
+    logLine();
+}
+
+
+// ============================================================
+// LAB 14 REBORN — START STRESS
+// ============================================================
+private void lab14StartRebornStress() {
+
+    try {
+        startCpuBurn_C_Mode();
+    } catch (Throwable ignore) {}
+
+    try {
+        startGpuStressLevel(4);
+    } catch (Throwable ignore) {}
+
+    try {
+        startMemoryStress();
+    } catch (Throwable ignore) {}
+
+    try {
+        startMemoryBandwidthStress();
+    } catch (Throwable ignore) {}
+
+    try {
+        startVibrationStress();
+    } catch (Throwable ignore) {}
+
+    try {
+        if (ui != null) {
+            ui.removeCallbacks(lab14VibrationLoop);
+            ui.post(lab14VibrationLoop);
+        }
+    } catch (Throwable ignore) {}
+}
+
+
+// ============================================================
+// LAB 14 REBORN — LIVE SAMPLING
+// ============================================================
+private void lab14SampleRebornLive(
+        iDoctorEngine idoctor,
+        float voltageStart
+) {
+
+    try {
+
+        iDoctorEngine.BatterySnapshot snap =
+                idoctor.readBatterySnapshotLab();
+
+        if (snap != null && snap.chargeNowMah > 0) {
+
+            lab14ChargeSamples.add(snap.chargeNowMah);
+
+            if (snap.chargeNowMah < lab14MinCharge) {
+                lab14MinCharge = snap.chargeNowMah;
+            }
+
+            if (snap.chargeNowMah > lab14MaxCharge) {
+                lab14MaxCharge = snap.chargeNowMah;
+            }
+        }
+
+    } catch (Throwable ignore) {}
+
+    try {
+
+        float v = lab14ReadVoltageSafe(idoctor);
+
+        if (!Float.isNaN(v) && v > 2.5f && v < 5.5f) {
+
+            if (Float.isNaN(voltageUnderLoad[0]) ||
+                v < voltageUnderLoad[0]) {
+
+                voltageUnderLoad[0] = v;
+            }
+
+            if (Float.isNaN(vLoad1[0])) {
+                vLoad1[0] = v;
+            } else {
+                vLoad2[0] = v;
+            }
+
+            if (!Float.isNaN(voltageStart)) {
+
+                float s = voltageStart - v;
+
+                if (s > 0.002f && s < 1.0f) {
+
+                    if (Float.isNaN(sag1)) {
+                        sag1 = s;
+                    } else {
+                        sag2 = s;
+                    }
+                }
+            }
+        }
+
+    } catch (Throwable ignore) {}
+
+    try {
+
+        float t = lab14ReadBatteryTempSafe(idoctor, null);
+
+        if (!Float.isNaN(t) && t > 0f && t < 90f) {
+
+            if (Float.isNaN(lab14TempPeak) || t > lab14TempPeak) {
+                lab14TempPeak = t;
+            }
+        }
+
+    } catch (Throwable ignore) {}
+}
+
+
+// ============================================================
+// LAB 14 REBORN — FINISH + ANALYSIS
+// ============================================================
+private void lab14RebornFinish(
+        iDoctorEngine idoctor,
+        Lab14Engine engine,
+        boolean gr,
+        long startMah,
+        long baselineFullMah,
+        float voltageStart,
+        float tempStart,
+        long cycles,
+        int batteryPercent,
+        long startTs
+) {
+
+    lab14StopAllStress();
+
+    long endTs = SystemClock.elapsedRealtime();
+    long dtMs = Math.max(1000L, endTs - startTs);
+
+    iDoctorEngine.BatterySnapshot end = null;
+
+    try {
+        end = idoctor.readBatterySnapshotLab();
+    } catch (Throwable ignore) {}
+
+    long endMah = -1;
+
+    if (end != null && end.chargeNowMah > 0) {
+        endMah = end.chargeNowMah;
+    }
+
+    long drainMah = -1;
+
+    if (startMah > 0 && endMah > 0 && startMah >= endMah) {
+        drainMah = startMah - endMah;
+    }
+
+    if ((drainMah <= 0) &&
+        lab14MinCharge < Long.MAX_VALUE &&
+        lab14MaxCharge > 0 &&
+        lab14MaxCharge >= lab14MinCharge) {
+
+        long d = lab14MaxCharge - lab14MinCharge;
+
+        if (d > 0 && d < 10000) {
+            drainMah = d;
+        }
+    }
+
+    double mahPerHour = Double.NaN;
+
+    if (drainMah > 0 && dtMs > 0) {
+        mahPerHour = (drainMah * 3600000.0) / dtMs;
+    }
+
+    double percentPerHour = Double.NaN;
+
+    if (baselineFullMah > 0 &&
+        !Double.isNaN(mahPerHour) &&
+        mahPerHour > 0) {
+
+        percentPerHour =
+                (mahPerHour / baselineFullMah) * 100.0;
+    }
+
+    float bestLoadVoltage = Float.NaN;
+
+    if (!Float.isNaN(voltageUnderLoad[0])) {
+        bestLoadVoltage = voltageUnderLoad[0];
+    }
+
+    if (!Float.isNaN(vLoad1[0]) &&
+        (Float.isNaN(bestLoadVoltage) || vLoad1[0] < bestLoadVoltage)) {
+        bestLoadVoltage = vLoad1[0];
+    }
+
+    if (!Float.isNaN(vLoad2[0]) &&
+        (Float.isNaN(bestLoadVoltage) || vLoad2[0] < bestLoadVoltage)) {
+        bestLoadVoltage = vLoad2[0];
+    }
+
+    float finalSag = Float.NaN;
+
+    if (!Float.isNaN(voltageStart) &&
+        !Float.isNaN(bestLoadVoltage)) {
+
+        float s = voltageStart - bestLoadVoltage;
+
+        if (s > 0.002f && s < 1.0f) {
+            finalSag = s;
+        }
+    }
+
+    if (!Float.isNaN(sag1) && !Float.isNaN(sag2)) {
+        sagAvg = (sag1 + sag2) / 2f;
+    } else if (!Float.isNaN(sag1)) {
+        sagAvg = sag1;
+    } else if (!Float.isNaN(sag2)) {
+        sagAvg = sag2;
+    } else {
+        sagAvg = finalSag;
+    }
+
+    float recovery = Float.NaN;
+    float recoverySpeed = Float.NaN;
+
+    try {
+        SystemClock.sleep(900);
+        float vr = lab14ReadVoltageSafe(idoctor);
+
+        if (!Float.isNaN(vr) &&
+            !Float.isNaN(bestLoadVoltage)) {
+
+            recovery = vr - bestLoadVoltage;
+
+            if (recovery > 0.002f && recovery < 0.5f) {
+                voltageRecovery[0] = recovery;
+                recoverySpeed = recovery / 0.9f;
+                voltageRecoverySpeed[0] = recoverySpeed;
+            }
+        }
+
+    } catch (Throwable ignore) {}
+
+    float tempEnd = Float.NaN;
+
+    if (end != null && !Float.isNaN(end.batteryTempC)) {
+        tempEnd = end.batteryTempC;
+    }
+
+    float t2 = lab14ReadBatteryTempSafe(idoctor, end);
+
+    if (!Float.isNaN(t2)) {
+        tempEnd = t2;
+    }
+
+    endBatteryTemp = tempEnd;
+
+    float tempDelta = Float.NaN;
+
+    if (!Float.isNaN(tempStart) &&
+        !Float.isNaN(tempEnd)) {
+
+        tempDelta = tempEnd - tempStart;
+    }
+
+    float currentMa = Float.NaN;
+
+    try {
+        currentMa = Math.abs(idoctor.readBatteryCurrentMaStable(5, 20));
+    } catch (Throwable ignore) {}
+
+    if ((Float.isNaN(currentMa) || currentMa < 50f) &&
+        !Double.isNaN(mahPerHour) &&
+        mahPerHour > 0) {
+
+        currentMa = (float) mahPerHour;
+    }
+
+    float powerMw = Float.NaN;
+
+    if (!Float.isNaN(currentMa) &&
+        currentMa > 50f &&
+        currentMa < 15000f &&
+        !Float.isNaN(bestLoadVoltage)) {
+
+        powerMw = currentMa * bestLoadVoltage;
+    }
+
+    float resistanceOhm = Float.NaN;
+
+    if (!Float.isNaN(finalSag) &&
+        !Float.isNaN(currentMa) &&
+        currentMa > 100f &&
+        currentMa < 10000f) {
+
+        float amp = currentMa / 1000f;
+        resistanceOhm = finalSag / amp;
+
+        if (resistanceOhm > 0.005f &&
+            resistanceOhm < 0.400f) {
+
+            internalResistance[0] = resistanceOhm;
+
+        } else {
+
+            resistanceOhm = Float.NaN;
+        }
+    }
+
+    boolean validDrainLocal =
+            drainMah > 0 &&
+            !Double.isNaN(mahPerHour) &&
+            mahPerHour > 50 &&
+            mahPerHour < 20000;
+
+    validDrain = validDrainLocal;
+
+    String verdict =
+            lab14RebornVerdict(
+                    finalSag,
+                    resistanceOhm,
+                    tempDelta,
+                    mahPerHour,
+                    validDrainLocal
+            );
+
+    lab14LastLabel = verdict;
+
+    boolean collapse =
+            !Float.isNaN(finalSag) &&
+            finalSag >= 0.18f;
+
+    collapseRisk[0] = collapse;
+
+    lab14LogRebornResult(
+            gr,
+            verdict,
+            startMah,
+            endMah,
+            drainMah,
+            mahPerHour,
+            percentPerHour,
+            voltageStart,
+            bestLoadVoltage,
+            finalSag,
+            sag1,
+            sag2,
+            sagAvg,
+            recovery,
+            recoverySpeed,
+            currentMa,
+            powerMw,
+            resistanceOhm,
+            tempStart,
+            tempEnd,
+            tempDelta,
+            baselineFullMah,
+            cycles,
+            batteryPercent,
+            validDrainLocal
+    );
+
+    try {
+        engine.saveDrainValue(mahPerHour);
+        engine.saveRun();
+    } catch (Throwable ignore) {}
+
+    if (validDrainLocal && !Float.isNaN(finalSag)) {
+        incLab14RunCount(true);
+    }
+
+    try {
+        counterText = null;
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    try {
+        restoreBrightnessAndKeepOn();
+    } catch (Throwable ignore) {}
+
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+    lab14BoostActive = false;
+    lab14SoftPhaseStarted = false;
+}
+
+
+// ============================================================
+// LAB 14 REBORN — VERDICT
+// ============================================================
+private String lab14RebornVerdict(
+        float sag,
+        float resistanceOhm,
+        float tempDelta,
+        double mahPerHour,
+        boolean validDrain
+) {
+
+    int score = 100;
+
+    if (Float.isNaN(sag)) {
+        score -= 35;
+    } else if (sag >= 0.18f) {
+        score -= 35;
+    } else if (sag >= 0.10f) {
+        score -= 22;
+    } else if (sag >= 0.07f) {
+        score -= 12;
+    } else if (sag >= 0.04f) {
+        score -= 5;
+    }
+
+    if (!Float.isNaN(resistanceOhm)) {
+        if (resistanceOhm >= 0.180f) {
+            score -= 20;
+        } else if (resistanceOhm >= 0.120f) {
+            score -= 10;
+        } else if (resistanceOhm >= 0.080f) {
+            score -= 5;
+        }
+    }
+
+    if (!Float.isNaN(tempDelta)) {
+        if (tempDelta >= 10f) {
+            score -= 18;
+        } else if (tempDelta >= 6f) {
+            score -= 10;
+        } else if (tempDelta >= 3f) {
+            score -= 4;
+        }
+    }
+
+    if (!validDrain) {
+        score -= 10;
+    } else if (!Double.isNaN(mahPerHour)) {
+        if (mahPerHour < 300) {
+            score -= 8;
+        }
+    }
+
+    score = Math.max(0, Math.min(100, score));
+
+    if (score >= 88) return "Excellent";
+    if (score >= 75) return "Good";
+    if (score >= 60) return "Normal";
+    if (score >= 40) return "Weak";
+    return "Critical";
+}
+
+
+// ============================================================
+// LAB 14 REBORN — RESULT LOG
+// ============================================================
+private void lab14LogRebornResult(
+        boolean gr,
+        String verdict,
+        long startMah,
+        long endMah,
+        long drainMah,
+        double mahPerHour,
+        double percentPerHour,
+        float voltageStart,
+        float voltageLoad,
+        float finalSag,
+        float sag1Local,
+        float sag2Local,
+        float sagAvgLocal,
+        float recovery,
+        float recoverySpeed,
+        float currentMa,
+        float powerMw,
+        float resistanceOhm,
+        float tempStart,
+        float tempEnd,
+        float tempDelta,
+        long baselineFullMah,
+        long cycles,
+        int batteryPercent,
+        boolean validDrain
+) {
+
+    appendHtml("<br>");
+    logLine();
+
+    logInfo(gr
+            ? "LAB 14 — Αποτέλεσμα υγείας μπαταρίας"
+            : "LAB 14 — Battery health result");
+
+    logLine();
+
+    logLabelValue(
+            gr ? "Αρχική φόρτιση" : "Start charge",
+            startMah > 0 ? startMah + " mAh" : "N/A"
+    );
+
+    logLabelValue(
+            gr ? "Τελική φόρτιση" : "End charge",
+            endMah > 0 ? endMah + " mAh" : "N/A"
+    );
+
+    if (validDrain) {
+
+        logLabelOkValue(
+                gr ? "Κατανάλωση δοκιμής" : "Test drain",
+                drainMah + " mAh"
+        );
+
+        logLabelValue(
+                gr ? "Ρυθμός αποφόρτισης" : "Drain rate",
+                String.format(Locale.US, "%.0f mAh/h", mahPerHour)
+        );
+
+        if (!Double.isNaN(percentPerHour)) {
+            logLabelValue(
+                    gr ? "Αποφόρτιση ανά ώρα" : "Discharge per hour",
+                    String.format(Locale.US, "%.1f%%/h", percentPerHour)
+            );
+        }
+
+    } else {
+
+        logLabelWarnValue(
+                gr ? "Ρυθμός αποφόρτισης" : "Drain rate",
+                gr ? "Χαμηλή αξιοπιστία / μη διαθέσιμο" : "Low confidence / N/A"
+        );
+    }
+
+    logLabelValue(
+            gr ? "Τάση έναρξης" : "Start voltage",
+            !Float.isNaN(voltageStart)
+                    ? String.format(Locale.US, "%.3f V", voltageStart)
+                    : "N/A"
+    );
+
+    logLabelValue(
+            gr ? "Ελάχιστη τάση υπό φορτίο" : "Lowest load voltage",
+            !Float.isNaN(voltageLoad)
+                    ? String.format(Locale.US, "%.3f V", voltageLoad)
+                    : "N/A"
+    );
+
+    if (!Float.isNaN(finalSag)) {
+
+        String sagText = String.format(Locale.US, "%.3f V", finalSag);
+
+        if (finalSag >= 0.18f) {
+            logLabelWarnValue(
+                    gr ? "Πτώση τάσης υπό φορτίο" : "Voltage sag under load",
+                    sagText + (gr ? " (υψηλή)" : " (high)")
+            );
+        } else if (finalSag >= 0.10f) {
+            logLabelWarnValue(
+                    gr ? "Πτώση τάσης υπό φορτίο" : "Voltage sag under load",
+                    sagText + (gr ? " (μέτρια)" : " (moderate)")
+            );
+        } else {
+            logLabelOkValue(
+                    gr ? "Πτώση τάσης υπό φορτίο" : "Voltage sag under load",
+                    sagText + (gr ? " (χαμηλή)" : " (low)")
+            );
+        }
+
+    } else {
+
+        logLabelWarnValue(
+                gr ? "Πτώση τάσης υπό φορτίο" : "Voltage sag under load",
+                "N/A"
+        );
+    }
+
+    if (!Float.isNaN(sag1Local)) {
+        logLabelValue("Sag 1", String.format(Locale.US, "%.3f V", sag1Local));
+    }
+
+    if (!Float.isNaN(sag2Local)) {
+        logLabelValue("Sag 2", String.format(Locale.US, "%.3f V", sag2Local));
+    }
+
+    if (!Float.isNaN(sagAvgLocal)) {
+        logLabelValue("Sag Avg", String.format(Locale.US, "%.3f V", sagAvgLocal));
+    }
+
+    if (!Float.isNaN(recovery)) {
+        logLabelValue(
+                gr ? "Ανάκαμψη τάσης" : "Voltage recovery",
+                String.format(Locale.US, "%.3f V", recovery)
+        );
+    }
+
+    if (!Float.isNaN(recoverySpeed)) {
+        logLabelValue(
+                gr ? "Ταχύτητα ανάκαμψης" : "Recovery speed",
+                String.format(Locale.US, "%.4f V/sec", recoverySpeed)
+        );
+    }
+
+    if (!Float.isNaN(currentMa)) {
+        logLabelValue(
+                gr ? "Εκτιμώμενο ρεύμα" : "Estimated current",
+                String.format(Locale.US, "%.0f mA", currentMa)
+        );
+    }
+
+    if (!Float.isNaN(powerMw)) {
+        logLabelValue(
+                gr ? "Ικανότητα ισχύος" : "Power capability",
+                String.format(Locale.US, "%.0f mW", powerMw)
+        );
+    }
+
+    if (!Float.isNaN(resistanceOhm)) {
+
+        float rMilli = resistanceOhm * 1000f;
+
+        logLabelValue(
+                gr ? "Δυναμική αντίσταση" : "Dynamic resistance",
+                String.format(Locale.US, "%.0f mΩ", rMilli)
+        );
+
+    } else {
+
+        logLabelWarnValue(
+                gr ? "Δυναμική αντίσταση" : "Dynamic resistance",
+                "N/A"
+        );
+    }
+
+    if (!Float.isNaN(tempStart)) {
+        logLabelValue(
+                gr ? "Θερμοκρασία έναρξης" : "Start temperature",
+                String.format(Locale.US, "%.1f°C", tempStart)
+        );
+    }
+
+    if (!Float.isNaN(tempEnd)) {
+        logLabelValue(
+                gr ? "Θερμοκρασία τέλους" : "End temperature",
+                String.format(Locale.US, "%.1f°C", tempEnd)
+        );
+    }
+
+    if (!Float.isNaN(tempDelta)) {
+
+        if (tempDelta >= 8f) {
+            logLabelWarnValue(
+                    gr ? "Θερμική μεταβολή" : "Thermal change",
+                    String.format(Locale.US, "%.1f°C", tempDelta)
+            );
+        } else {
+            logLabelOkValue(
+                    gr ? "Θερμική μεταβολή" : "Thermal change",
+                    String.format(Locale.US, "%.1f°C", tempDelta)
+            );
+        }
+    }
+
+    logLine();
+
+    String verdictText;
+
+    if ("Excellent".equals(verdict)) {
+        verdictText = gr
+                ? "Εξαιρετική συμπεριφορά μπαταρίας"
+                : "Excellent battery behaviour";
+        logLabelOkValue(gr ? "Τελικό αποτέλεσμα" : "Final verdict", verdictText);
+
+    } else if ("Good".equals(verdict)) {
+        verdictText = gr
+                ? "Καλή κατάσταση μπαταρίας"
+                : "Good battery condition";
+        logLabelOkValue(gr ? "Τελικό αποτέλεσμα" : "Final verdict", verdictText);
+
+    } else if ("Normal".equals(verdict)) {
+        verdictText = gr
+                ? "Φυσιολογική κατάσταση με μικρές ενδείξεις φθοράς"
+                : "Normal condition with minor wear signs";
+        logLabelValue(gr ? "Τελικό αποτέλεσμα" : "Final verdict", verdictText);
+
+    } else if ("Weak".equals(verdict)) {
+        verdictText = gr
+                ? "Ενδείξεις φθοράς — συνιστάται παρακολούθηση"
+                : "Wear signs detected — monitoring recommended";
+        logLabelWarnValue(gr ? "Τελικό αποτέλεσμα" : "Final verdict", verdictText);
+
+    } else {
+        verdictText = gr
+                ? "Σοβαρές ενδείξεις φθοράς — συνιστάται τεχνικός έλεγχος"
+                : "Serious wear indicators — service check recommended";
+        logLabelErrorValue(gr ? "Τελικό αποτέλεσμα" : "Final verdict", verdictText);
+    }
+
+    logLine();
+
+    logLabelValue(
+            gr ? "Σύνοψη" : "Summary",
+            String.format(
+                    Locale.US,
+                    "Sag=%s, Drain=%s, Power=%s, TempΔ=%s",
+                    !Float.isNaN(finalSag)
+                            ? String.format(Locale.US, "%.3fV", finalSag)
+                            : "N/A",
+                    validDrain && !Double.isNaN(mahPerHour)
+                            ? String.format(Locale.US, "%.0fmAh/h", mahPerHour)
+                            : "N/A",
+                    !Float.isNaN(powerMw)
+                            ? String.format(Locale.US, "%.0fmW", powerMw)
+                            : "N/A",
+                    !Float.isNaN(tempDelta)
+                            ? String.format(Locale.US, "%.1f°C", tempDelta)
+                            : "N/A"
+            )
+    );
+}
+
+
+// ============================================================
+// LAB 14 REBORN — SAFE READERS
+// ============================================================
+private float lab14ReadVoltageSafe(iDoctorEngine idoctor) {
+
+    try {
+        float v = getBatteryVoltageFiltered();
+
+        if (!Float.isNaN(v) && v > 2.5f && v < 5.5f) {
+            return v;
+        }
+    } catch (Throwable ignore) {}
+
+    try {
+        float mv = idoctor.readBatteryVoltageMvStable(5, 20);
+
+        if (!Float.isNaN(mv) && mv > 2500f && mv < 5500f) {
+            return mv / 1000f;
+        }
+    } catch (Throwable ignore) {}
+
+    return Float.NaN;
+}
+
+
+private float lab14ReadBatteryTempSafe(
+        iDoctorEngine idoctor,
+        iDoctorEngine.BatterySnapshot snap
+) {
+
+    try {
+        Float t = idoctor.getBatteryTempUnified();
+
+        if (t != null && !Float.isNaN(t) && t > 0f && t < 90f) {
+            return t;
+        }
+    } catch (Throwable ignore) {}
+
+    try {
+        if (snap != null &&
+            !Float.isNaN(snap.batteryTempC) &&
+            snap.batteryTempC > 0f &&
+            snap.batteryTempC < 90f) {
+
+            return snap.batteryTempC;
+        }
+    } catch (Throwable ignore) {}
+
+    return Float.NaN;
+}
 
 
 //=============================================================
