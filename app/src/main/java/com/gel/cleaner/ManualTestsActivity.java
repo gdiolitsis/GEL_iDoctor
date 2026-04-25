@@ -15351,7 +15351,7 @@ if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
 }
 
 // =====================================================
-// 🔴 FINAL SUMMARY (FINAL — SAFE + CONSISTENT)
+// FINAL SUMMARY (SAFE)
 // =====================================================
 labelSafe =
         (res.label != null && !res.label.isEmpty())
@@ -15377,17 +15377,15 @@ if (lab14_systemLimited[0]) {
     summary = String.format(
             Locale.US,
             gr
-                    ? "Κατάσταση: %s\nΙσχύς: %s\nΠτώση τάσης: %s\nΘερμική μεταβολή: %s\nΑποφόρτιση: %s"
-                    : "Status: %s\nPower: %s\nVoltage sag: %s\nThermal delta: %s\nDrain: %s",
-
-            labelSafe,
+                    ? "Κατάσταση: %s"
+                    : "Status: %s",
+            labelSafe
     );
 }
 
 // ----------------------------------------------------
-// 🔴 COLOR BASED ON SEVERITY
-// ----------------------------------------------------
-String summaryLabel = gr ? "Σύνοψη" : "Summary";
+String summaryLabel =
+        gr ? "Σύνοψη" : "Summary";
 
 if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
 
