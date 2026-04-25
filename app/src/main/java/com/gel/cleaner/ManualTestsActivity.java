@@ -336,9 +336,6 @@ public static class Lab14Result {
     
     public float sagAvg = Float.NaN;
     public float finalSag = Float.NaN;
-    
-    public float sagAvg = Float.NaN;
-    public float finalSag = Float.NaN;
 }
 
 private long lab14LastLimiterCheck = 0;
@@ -18126,6 +18123,8 @@ lab14LogFinalScore(
         res.label,
         res.powerMw,
         collapseRisk,
+        smartSwelling,
+        calibrationDrift,
         lab14_systemLimited
 );
 
@@ -18140,6 +18139,8 @@ lab14LogSave(
         p,
         variabilityDetected,
         collapseRisk,
+        smartSwelling,
+        calibrationDrift,
         false,
         partial,
         lab14_systemLimited
