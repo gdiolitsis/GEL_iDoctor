@@ -1338,6 +1338,29 @@ private void stopCpuBurn() {
     lab14CpuThreads.clear();
 }
 
+private void stopGpuStress() {
+
+    runOnUiThread(() -> {
+
+        try {
+
+            if (lab14GLView != null) {
+                lab14GLView.onPause();
+
+                ViewGroup p =
+                    (ViewGroup) lab14GLView.getParent();
+
+                if (p != null) {
+                    p.removeView(lab14GLView);
+                }
+
+                lab14GLView = null;
+            }
+
+        } catch(Throwable ignore){}
+    });
+}
+
 private void showLogsFullScreen() {
     if (labsScroll != null) {
         labsScroll.setVisibility(View.GONE);
@@ -2360,6 +2383,725 @@ private void lab14LogPartialMode(
             : "Repeat test at 30–70% battery, not charging, normal temperature.");
 
     logLine();
+}
+
+// ------------------------------------------------------------
+// GPU COMPUTE STRESS (LAB14)
+// ------------------------------------------------------------
+private void startGpuStress() {
+
+    runOnUiThread(() -> {
+
+        // 🔁 αν υπάρχει ήδη → απλά resume
+        if (lab14GLView != null) {
+            try { lab14GLView.onResume(); } catch (Throwable ignore) {}
+            return;
+        }
+
+        lab14GLView = new GLSurfaceView(this);
+        lab14GLView.setEGLContextClientVersion(2);
+
+        lab14GpuRenderer = new Lab14GpuRenderer();
+        lab14GLView.setRenderer(lab14GpuRenderer);
+
+        lab14GLView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+
+        FrameLayout root = findViewById(android.R.id.content);
+
+        root.addView(
+                lab14GLView,
+                new FrameLayout.LayoutParams(1, 1) // 🔥 invisible αλλά GPU active
+        );
+
+        try { lab14GLView.onResume(); } catch (Throwable ignore) {}
+    });
+}
+
+// ===================================================================
+// LAB 14 — CONFIDENCE SCORE (%)
+// Variance-based reliability indicator
+// ===================================================================
+private static final String LAB14_PREFS = "lab14_prefs";
+private static final String KEY_LAB14_RUNS = "lab14_run_count";
+private static final String KEY_LAB14_LAST_DRAIN_1 = "lab14_drain_1";
+private static final String KEY_LAB14_LAST_DRAIN_2 = "lab14_drain_2";
+private static final String KEY_LAB14_LAST_DRAIN_3 = "lab14_drain_3";
+
+private void lab14LogReliabilitySummary(
+        boolean gr,
+        boolean[] lab14_systemLimited,
+        Lab14Engine.ConfidenceResult conf
+) {
+
+    int runs = getLab14RunCount();
+
+    appendHtml("<br>");
+    
+    logOk(gr
+            ? "Αξιοπιστία διάγνωσης"
+            : "Diagnostic reliability");
+
+    logLine();
+
+
+// =====================================================
+// LIMITER DETECTED
+// =====================================================
+
+if (lab14_systemLimited[0]) {
+
+    logLabelWarnValue(
+            gr ? "Περιορισμός συστήματος"
+               : "System limited",
+            gr
+                    ? "Εντοπίστηκε περιορισμός BMS"
+                    : "BMS current limiting detected"
+    );
+
+    logWarn(gr
+            ? "Η μέτρηση έγινε με περιορισμό από το σύστημα. Το αποτέλεσμα είναι ενδεικτικό."
+            : "Measurement affected by system limiter. Result is indicative.");
+
+}
+
+    // =====================================================
+    // CURRENT RUN STATUS
+    // =====================================================
+
+    boolean validRun = validDrain && !lab14_systemLimited[0];
+
+    if (validRun) {
+
+    logLabelOkValue(
+            gr ? "Έγκυρη εκτέλεση"
+               : "Valid run",
+            gr ? "Ναι" : "Yes"
+    );
+
+} else {
+
+    logLabelErrorValue(
+            gr ? "Έγκυρη εκτέλεση"
+               : "Valid run",
+            gr ? "Όχι" : "No"
+    );
+
+}
+
+// =====================================================
+// LIMITER
+// =====================================================
+
+if (lab14_systemLimited[0]) {
+
+    logLabelWarnValue(
+            gr ? "Περιορισμός συστήματος"
+               : "System limited",
+            gr
+                    ? "Το BMS περιόρισε την κατανάλωση"
+                    : "BMS current limiting detected"
+    );
+
+    logWarn(gr
+            ? "Η μέτρηση έγινε με περιορισμό από το σύστημα. Το αποτέλεσμα είναι ενδεικτικό."
+            : "System limiter detected. Result is indicative.");
+
+}
+
+// =====================================================
+// STORED RUNS (always show)
+// =====================================================
+
+logLabelOkValue(
+        gr ? "Καταγεγραμμένες έγκυρες εκτελέσεις"
+           : "Stored valid runs",
+        String.valueOf(runs)
+);
+
+    // =====================================================
+    // CONSISTENCY
+    // =====================================================
+
+    int consistency = -1;
+int validRunsForConsistency = 0;
+Lab14Engine.ConfidenceTier tier = null;
+
+if (conf != null) {
+    consistency = conf.percent;
+    validRunsForConsistency = conf.validRuns;
+    tier = conf.tier;
+}
+
+    // =====================================================
+// CONSISTENCY / TIER (only if >=2 runs)
+// =====================================================
+
+if (consistency >= 0 && validRunsForConsistency >= 2) {
+
+    String tierLabel = "";
+
+    if (tier != null) {
+
+        switch (tier) {
+
+            case PRELIMINARY:
+                tierLabel = gr ? "Προκαταρκτική" : "Preliminary";
+                break;
+
+            case MEDIUM:
+                tierLabel = gr ? "Μεσαία" : "Medium";
+                break;
+
+            case HIGH:
+                tierLabel = gr ? "Υψηλή" : "High";
+                break;
+
+            default:
+                tierLabel = gr ? "Άγνωστη" : "Unknown";
+        }
+    }
+
+}
+
+logLine();
+
+
+// =====================================================
+// CURRENT RUN INVALID
+// =====================================================
+
+if (!validRun) {
+
+    logLabelWarnValue(
+            gr ? "Εμπιστοσύνη" : "Confidence",
+            gr
+                    ? "Ενδεικτική (τρέχουσα εκτέλεση μη έγκυρη)"
+                    : "Indicative (current run not valid)"
+    );
+
+    logWarn(gr
+            ? "Η τρέχουσα εκτέλεση δεν καταχωρήθηκε ως έγκυρη."
+            : "Current run not valid.");
+
+    if (runs < 3) {
+
+        logWarn(gr
+                ? "Απαιτούνται 3 έγκυρες εκτελέσεις."
+                : "3 valid runs required.");
+
+    }
+
+    return;
+}
+
+
+// =====================================================
+// SKIP RUN COUNT IF CURRENT RUN LIMITED
+// =====================================================
+
+if (lab14_systemLimited[0]) {
+
+    logWarn(gr
+            ? "Η εκτέλεση επηρεάστηκε από limiter."
+            : "Run affected by limiter.");
+}
+
+
+// =====================================================
+// RUN COUNT CONFIDENCE
+// =====================================================
+
+if (runs <= 0) {
+
+    logLabelWarnValue(
+            gr ? "Εμπιστοσύνη" : "Confidence",
+            gr ? "Δεν υπάρχει ακόμη έγκυρη εκτέλεση"
+               : "No valid run yet"
+    );
+
+    logWarn(gr
+            ? "Απαιτούνται 3 έγκυρες εκτελέσεις, σε διαφορετικές ημέρες με παρόμοιες συνθήκες."
+            : "3 valid runs required, on different days under similar conditions.");
+
+    return;
+}
+
+
+else if (runs == 1) {
+
+    logLabelWarnValue(
+            gr ? "Εμπιστοσύνη" : "Confidence",
+            gr ? "Προκαταρκτική (1 έγκυρη εκτέλεση)"
+               : "Preliminary (1 valid run)"
+    );
+
+    logWarn(gr
+            ? "Απαιτούνται ακόμα 2 έγκυρες εκτελέσεις, σε διαφορετικές ημέρες με παρόμοιες συνθήκες."
+            : "2 more valid runs required, on different days under similar conditions.");
+
+    return;
+}
+
+
+else if (runs == 2) {
+
+    logLabelWarnValue(
+            gr ? "Εμπιστοσύνη" : "Confidence",
+            gr ? "Μεσαία (2 έγκυρες εκτελέσεις)"
+               : "Medium (2 valid runs)"
+    );
+
+    logWarn(gr
+            ? "Απαιτείται 1 ακόμα έγκυρη εκτελεση, σε διαφορετική ημέρα με παρόμοιες συνθήκες."
+            : "1 more valid run required, on different day under similar conditions.");
+
+    return;
+}
+
+
+// =====================================================
+// CONSISTENCY INFO
+// =====================================================
+
+if (consistency >= 70) {
+
+    logLabelOkValue(
+            gr ? "Πληροφορία" : "Info",
+            gr ? "Οι μετρήσεις είναι συνεπείς"
+               : "Measurements are consistent"
+    );
+
+    logOk(gr
+            ? "Οι εκτελέσεις έγιναν σε παρόμοιες συνθήκες."
+            : "Runs were performed under similar conditions.");
+
+}
+else if (consistency >= 50) {
+
+    logLabelOkValue(
+            gr ? "Πληροφορία" : "Info",
+            gr ? "Υπάρχουν μικρές διαφορές μεταξύ εκτελέσεων"
+               : "Minor variation between runs"
+    );
+
+    logOk(gr
+            ? "Μικρές αποκλίσεις θεωρούνται φυσιολογικές."
+            : "Small variations are normal.");
+
+}
+else {
+
+    logLabelWarnValue(
+            gr ? "Πληροφορία" : "Info",
+            gr ? "Μεγάλες αποκλίσεις μεταξύ εκτελέσεων"
+               : "Large deviation between runs"
+    );
+
+    logWarn(gr
+            ? "Οι εκτελέσεις έγιναν σε διαφορετικές συνθήκες με μεγάλες αποκλίσεις."
+            : "Runs were performed under different conditions with large deviation.");
+
+}
+}
+
+private int getLab14RunCount() {
+
+    try {
+
+        return getSharedPreferences(
+                LAB14_PREFS,
+                MODE_PRIVATE
+        ).getInt(KEY_LAB14_RUNS, 0);
+
+    } catch (Throwable ignore) {
+
+        return 0;
+
+    }
+}
+
+// ------------------------------------------------------------
+// CPU / GPU thermal helpers (SAFE, READ-ONLY)
+// ------------------------------------------------------------
+private Float readCpuTempSafe() {
+
+    try {
+
+        Map<String, Float> zones = readThermalZones();
+
+        Float t = pickZone(
+                zones,
+                "cpu",
+                "soc",
+                "ap",
+                "cluster",
+                "little",
+                "big"
+        );
+
+        if (t == null) return null;
+
+        // reject impossible values
+        if (t < 10f || t > 90f) return null;
+
+        return t;
+
+    } catch (Throwable ignore) {}
+
+    return null;
+}
+
+private Float readGpuTempSafe() {
+
+    try {
+
+        Map<String, Float> zones = readThermalZones();
+
+        Float t = pickZone(
+                zones,
+                "gpu",
+                "kgsl",
+                "gfx"
+        );
+
+        if (t == null) return null;
+
+        if (t < 10f || t > 90f) return null;
+
+        return t;
+
+    } catch (Throwable ignore) {}
+
+    return null;
+}
+
+// ------------------------------------------------------------
+// CPU stress (controlled) — used by LAB 14/17
+// ------------------------------------------------------------
+
+// ============================================================
+// 🔥 CPU BURN C_MODE (STABLE + CONTROLLED)
+// ============================================================
+
+private final List<Thread> cpuThreads = new ArrayList<>();
+
+private void startCpuBurn_C_Mode() {
+
+    stopCpuBurn(); // 🔴 clean start
+
+    cpuBurnRunning = true;
+
+    final int maxCores = Runtime.getRuntime().availableProcessors();
+
+    final int[] activeThreads = { maxCores };
+
+    for (int i = 0; i < maxCores; i++) {
+
+        final int threadIndex = i;
+
+        Thread t = new Thread(() -> {
+
+            final long t0 = System.currentTimeMillis(); // 🔴 BOOST TIMER FIX
+            long lastAdjust = t0;
+
+            while (cpuBurnRunning &&
+                   lab14Running &&
+                   !lab14Cancelled &&
+                   !Thread.currentThread().isInterrupted()) {
+
+                // 🔴 dynamic participation
+                if (threadIndex >= activeThreads[0]) {
+                    try { Thread.sleep(20); } catch (Throwable ignore) {}
+                    continue;
+                }
+
+                // 🔥 heavy compute (BOOSTED)
+                double acc = 0;
+                long now = System.nanoTime();
+
+                for (int j = 1; j < 16000; j++) { // 🔴 πιο δυνατό load
+                    acc += Math.sqrt(j * now);
+                    acc *= 1.0000001;
+
+                    if ((j & 7) == 0) {
+                        acc -= Math.log(j + 1);
+                    }
+                }
+
+                // anti-optimization
+                if (acc > 1e12) acc = 0;
+
+                // =====================================================
+                // 🔴 BOOST + ADAPTIVE CONTROL
+                // =====================================================
+
+                long nowMs = System.currentTimeMillis();
+
+                // 🔥 FULL LOAD για τα πρώτα 8s
+                if (nowMs - t0 < 8000) {
+
+                    activeThreads[0] = maxCores;
+
+                } else {
+
+                    // 🔴 adaptive κάθε 2 sec
+                    if (nowMs - lastAdjust > 2000) {
+
+                        float temp = readCpuTempSafe();
+
+                        if (!Float.isNaN(temp)) {
+
+                            if (temp > 65f && activeThreads[0] > 2) {
+                                activeThreads[0]--;
+                            }
+                            else if (temp < 55f && activeThreads[0] < maxCores) {
+                                activeThreads[0]++;
+                            }
+                        }
+
+                        lastAdjust = nowMs;
+                    }
+                }
+            }
+
+        }, "LAB14_CMODE_" + i);
+
+        t.setPriority(Thread.MAX_PRIORITY);
+
+        cpuThreads.add(t);
+        t.start();
+    }
+}
+
+private void startMainStressPhase(
+        int durationSec,
+        long t0,
+        TextView dotsView,
+        TextView counterText,
+        LinearLayout progressBar
+) {
+
+    // αυτή η μέθοδος υπάρχει μόνο για να καλέσει
+    // το ήδη υπάρχον main stress logic
+
+    // το πραγματικό stress τρέχει στο UI handler
+    // που έχεις ήδη παρακάτω
+
+}
+
+// ============================================================
+// MEMORY BANDWIDTH STRESS (LOW HEAT LOAD)
+// ============================================================
+private Thread memStressThread;
+
+private void startMemoryStress() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    memStressThread = new Thread(() -> {
+
+        try {
+
+            // 🔴 bandwidth-oriented load (cleaner than Random)
+            final int size = 24 * 1024 * 1024; // 24MB λίγο πιο δυνατό
+            final byte[] buf1 = new byte[size];
+            final byte[] buf2 = new byte[size];
+
+            // deterministic init (όχι Random CPU noise)
+            for (int i = 0; i < size; i++) {
+                buf1[i] = (byte)(i ^ 0x5A);
+            }
+
+            while (lab14Running &&
+                   !lab14Cancelled &&
+                   !Thread.currentThread().isInterrupted()) {
+
+                // charging guard
+                if (isCharging()) {
+
+                    runOnUiThread(() -> {
+
+                        logLine();
+
+                        logError(gr
+                                ? "Ανιχνεύθηκε φόρτιση κατά τη διάρκεια της δοκιμής."
+                                : "Charging detected during test.");
+
+                        logWarn(gr
+                                ? "Αποσύνδεσε τον φορτιστή και εκτέλεσε το τεστ από την αρχή."
+                                : "Disconnect charger and run the test again.");
+
+                        logLine();
+                    });
+
+                    return;
+                }
+
+                // ------------------------------------------------
+                // WRITE (stride to pressure memory bus)
+                // ------------------------------------------------
+                for (int i = 0; i < size; i += 64) {
+                    buf1[i] ^= (byte)(i + 31);
+                }
+
+                // ------------------------------------------------
+                // COPY (main bandwidth load)
+                // ------------------------------------------------
+                System.arraycopy(buf1, 0, buf2, 0, size);
+
+                // ------------------------------------------------
+                // READ (cache-busting stride)
+                // ------------------------------------------------
+                long checksum = 0;
+
+                for (int i = 0; i < size; i += 64) {
+                    checksum += buf2[i];
+                }
+
+                // anti-optimization
+                if (checksum == Long.MIN_VALUE) {
+                    appendLog("MEM","keep alive");
+                }
+
+                // tiny yield → avoids ugly scheduler monopolizing
+                Thread.yield();
+            }
+
+        } catch (Throwable ignore) {}
+
+    }, "LAB14_MEM_STRESS");
+
+    // not MAX → less fake thermal inflation
+    memStressThread.setPriority(Thread.NORM_PRIORITY);
+
+    memStressThread.start();
+}
+
+private void stopMemoryStress() {
+
+    try {
+        if (memStressThread != null) {
+            memStressThread.interrupt();
+            memStressThread = null;
+        }
+    } catch (Throwable ignore) {}
+
+}
+
+// ============================================================
+// BATTERY CURRENT HELPER
+// ============================================================
+private float getBatteryCurrentNowSafe() {
+
+    try {
+
+        iDoctorEngine eng = iDoctorEngine.get(this);
+
+        float ma = eng.getBatteryCurrentNowUnified();
+
+        if (!Float.isNaN(ma))
+            return ma;
+
+    } catch (Throwable ignore) {}
+
+    // fallback μόνο αν engine δεν δώσει τιμή
+
+    try {
+
+        BatteryManager bm =
+                (BatteryManager) getSystemService(BATTERY_SERVICE);
+
+        if (bm == null)
+            return Float.NaN;
+
+        long raw =
+                bm.getLongProperty(
+                        BatteryManager.BATTERY_PROPERTY_CURRENT_NOW
+                );
+
+        if (raw == Long.MIN_VALUE || raw == 0L)
+            return Float.NaN;
+
+        return (float) raw;   // µA
+
+    } catch (Throwable ignore) {
+
+        return Float.NaN;
+    }
+}
+
+// ---------------- LAB 14 ----------------
+private float getLastLab14HealthScore() {
+
+    try {
+
+        SharedPreferences p =
+                getSharedPreferences(
+                        LAB14_PREFS,
+                        MODE_PRIVATE
+                );
+
+        return p.getFloat(
+                "lab14_health_score",
+                -1f
+        );
+
+    } catch (Throwable t) {
+
+        return -1f;
+    }
+}
+
+private int getLastLab14AgingIndex() {
+
+    try {
+
+        SharedPreferences p =
+                getSharedPreferences(
+                        LAB14_PREFS,
+                        MODE_PRIVATE
+                );
+
+        return p.getInt(
+                "lab14_aging_index",
+                -1
+        );
+
+    } catch (Throwable t) {
+
+        return -1;
+    }
+}
+
+private boolean hasValidLab14() {
+return getLastLab14HealthScore() >= 0;
+}
+
+
+private boolean ensurePermissions(String[] permissions, Runnable afterGranted) {
+
+    List<String> missing = new ArrayList<>();
+
+    for (String p : permissions) {
+        if (ContextCompat.checkSelfPermission(this, p)
+                != PackageManager.PERMISSION_GRANTED) {
+            missing.add(p);
+        }
+    }
+
+    if (missing.isEmpty()) {
+        return true;
+    }
+
+    pendingAfterPermission = afterGranted;
+
+    ActivityCompat.requestPermissions(
+            this,
+            missing.toArray(new String[0]),
+            REQ_CORE_PERMS
+    );
+
+    return false;
 }
 
 // ============================================================
@@ -3493,703 +4235,6 @@ private void simulateShortCpuBurst() {
             Math.sqrt(Math.random());
         }
     }).start();
-}
-
-// ------------------------------------------------------------
-// GPU COMPUTE STRESS (LAB14)
-// ------------------------------------------------------------
-private void startGpuStress() {
-
-    runOnUiThread(() -> {
-
-        // 🔁 αν υπάρχει ήδη → απλά resume
-        if (lab14GLView != null) {
-            try { lab14GLView.onResume(); } catch (Throwable ignore) {}
-            return;
-        }
-
-        lab14GLView = new GLSurfaceView(this);
-        lab14GLView.setEGLContextClientVersion(2);
-
-        lab14GpuRenderer = new Lab14GpuRenderer();
-        lab14GLView.setRenderer(lab14GpuRenderer);
-
-        lab14GLView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
-
-        FrameLayout root = findViewById(android.R.id.content);
-
-        root.addView(
-                lab14GLView,
-                new FrameLayout.LayoutParams(1, 1) // 🔥 invisible αλλά GPU active
-        );
-
-        try { lab14GLView.onResume(); } catch (Throwable ignore) {}
-    });
-}
-
-// ===================================================================
-// LAB 14 — CONFIDENCE SCORE (%)
-// Variance-based reliability indicator
-// ===================================================================
-private static final String LAB14_PREFS = "lab14_prefs";
-private static final String KEY_LAB14_RUNS = "lab14_run_count";
-private static final String KEY_LAB14_LAST_DRAIN_1 = "lab14_drain_1";
-private static final String KEY_LAB14_LAST_DRAIN_2 = "lab14_drain_2";
-private static final String KEY_LAB14_LAST_DRAIN_3 = "lab14_drain_3";
-
-private void lab14LogReliabilitySummary(
-        boolean gr,
-        boolean[] lab14_systemLimited,
-        Lab14Engine.ConfidenceResult conf
-) {
-
-    int runs = getLab14RunCount();
-
-    appendHtml("<br>");
-    
-    logOk(gr
-            ? "Αξιοπιστία διάγνωσης"
-            : "Diagnostic reliability");
-
-    logLine();
-
-
-// =====================================================
-// LIMITER DETECTED
-// =====================================================
-
-if (lab14_systemLimited[0]) {
-
-    logLabelWarnValue(
-            gr ? "Περιορισμός συστήματος"
-               : "System limited",
-            gr
-                    ? "Εντοπίστηκε περιορισμός BMS"
-                    : "BMS current limiting detected"
-    );
-
-    logWarn(gr
-            ? "Η μέτρηση έγινε με περιορισμό από το σύστημα. Το αποτέλεσμα είναι ενδεικτικό."
-            : "Measurement affected by system limiter. Result is indicative.");
-
-}
-
-    // =====================================================
-    // CURRENT RUN STATUS
-    // =====================================================
-
-    boolean validRun = validDrain && !lab14_systemLimited[0];
-
-    if (validRun) {
-
-    logLabelOkValue(
-            gr ? "Έγκυρη εκτέλεση"
-               : "Valid run",
-            gr ? "Ναι" : "Yes"
-    );
-
-} else {
-
-    logLabelErrorValue(
-            gr ? "Έγκυρη εκτέλεση"
-               : "Valid run",
-            gr ? "Όχι" : "No"
-    );
-
-}
-
-// =====================================================
-// LIMITER
-// =====================================================
-
-if (lab14_systemLimited[0]) {
-
-    logLabelWarnValue(
-            gr ? "Περιορισμός συστήματος"
-               : "System limited",
-            gr
-                    ? "Το BMS περιόρισε την κατανάλωση"
-                    : "BMS current limiting detected"
-    );
-
-    logWarn(gr
-            ? "Η μέτρηση έγινε με περιορισμό από το σύστημα. Το αποτέλεσμα είναι ενδεικτικό."
-            : "System limiter detected. Result is indicative.");
-
-}
-
-// =====================================================
-// STORED RUNS (always show)
-// =====================================================
-
-logLabelOkValue(
-        gr ? "Καταγεγραμμένες έγκυρες εκτελέσεις"
-           : "Stored valid runs",
-        String.valueOf(runs)
-);
-
-    // =====================================================
-    // CONSISTENCY
-    // =====================================================
-
-    int consistency = -1;
-int validRunsForConsistency = 0;
-Lab14Engine.ConfidenceTier tier = null;
-
-if (conf != null) {
-    consistency = conf.percent;
-    validRunsForConsistency = conf.validRuns;
-    tier = conf.tier;
-}
-
-    // =====================================================
-// CONSISTENCY / TIER (only if >=2 runs)
-// =====================================================
-
-if (consistency >= 0 && validRunsForConsistency >= 2) {
-
-    String tierLabel = "";
-
-    if (tier != null) {
-
-        switch (tier) {
-
-            case PRELIMINARY:
-                tierLabel = gr ? "Προκαταρκτική" : "Preliminary";
-                break;
-
-            case MEDIUM:
-                tierLabel = gr ? "Μεσαία" : "Medium";
-                break;
-
-            case HIGH:
-                tierLabel = gr ? "Υψηλή" : "High";
-                break;
-
-            default:
-                tierLabel = gr ? "Άγνωστη" : "Unknown";
-        }
-    }
-
-}
-
-logLine();
-
-
-// =====================================================
-// CURRENT RUN INVALID
-// =====================================================
-
-if (!validRun) {
-
-    logLabelWarnValue(
-            gr ? "Εμπιστοσύνη" : "Confidence",
-            gr
-                    ? "Ενδεικτική (τρέχουσα εκτέλεση μη έγκυρη)"
-                    : "Indicative (current run not valid)"
-    );
-
-    logWarn(gr
-            ? "Η τρέχουσα εκτέλεση δεν καταχωρήθηκε ως έγκυρη."
-            : "Current run not valid.");
-
-    if (runs < 3) {
-
-        logWarn(gr
-                ? "Απαιτούνται 3 έγκυρες εκτελέσεις."
-                : "3 valid runs required.");
-
-    }
-
-    return;
-}
-
-
-// =====================================================
-// SKIP RUN COUNT IF CURRENT RUN LIMITED
-// =====================================================
-
-if (lab14_systemLimited[0]) {
-
-    logWarn(gr
-            ? "Η εκτέλεση επηρεάστηκε από limiter."
-            : "Run affected by limiter.");
-}
-
-
-// =====================================================
-// RUN COUNT CONFIDENCE
-// =====================================================
-
-if (runs <= 0) {
-
-    logLabelWarnValue(
-            gr ? "Εμπιστοσύνη" : "Confidence",
-            gr ? "Δεν υπάρχει ακόμη έγκυρη εκτέλεση"
-               : "No valid run yet"
-    );
-
-    logWarn(gr
-            ? "Απαιτούνται 3 έγκυρες εκτελέσεις, σε διαφορετικές ημέρες με παρόμοιες συνθήκες."
-            : "3 valid runs required, on different days under similar conditions.");
-
-    return;
-}
-
-
-else if (runs == 1) {
-
-    logLabelWarnValue(
-            gr ? "Εμπιστοσύνη" : "Confidence",
-            gr ? "Προκαταρκτική (1 έγκυρη εκτέλεση)"
-               : "Preliminary (1 valid run)"
-    );
-
-    logWarn(gr
-            ? "Απαιτούνται ακόμα 2 έγκυρες εκτελέσεις, σε διαφορετικές ημέρες με παρόμοιες συνθήκες."
-            : "2 more valid runs required, on different days under similar conditions.");
-
-    return;
-}
-
-
-else if (runs == 2) {
-
-    logLabelWarnValue(
-            gr ? "Εμπιστοσύνη" : "Confidence",
-            gr ? "Μεσαία (2 έγκυρες εκτελέσεις)"
-               : "Medium (2 valid runs)"
-    );
-
-    logWarn(gr
-            ? "Απαιτείται 1 ακόμα έγκυρη εκτελεση, σε διαφορετική ημέρα με παρόμοιες συνθήκες."
-            : "1 more valid run required, on different day under similar conditions.");
-
-    return;
-}
-
-
-// =====================================================
-// CONSISTENCY INFO
-// =====================================================
-
-if (consistency >= 70) {
-
-    logLabelOkValue(
-            gr ? "Πληροφορία" : "Info",
-            gr ? "Οι μετρήσεις είναι συνεπείς"
-               : "Measurements are consistent"
-    );
-
-    logOk(gr
-            ? "Οι εκτελέσεις έγιναν σε παρόμοιες συνθήκες."
-            : "Runs were performed under similar conditions.");
-
-}
-else if (consistency >= 50) {
-
-    logLabelOkValue(
-            gr ? "Πληροφορία" : "Info",
-            gr ? "Υπάρχουν μικρές διαφορές μεταξύ εκτελέσεων"
-               : "Minor variation between runs"
-    );
-
-    logOk(gr
-            ? "Μικρές αποκλίσεις θεωρούνται φυσιολογικές."
-            : "Small variations are normal.");
-
-}
-else {
-
-    logLabelWarnValue(
-            gr ? "Πληροφορία" : "Info",
-            gr ? "Μεγάλες αποκλίσεις μεταξύ εκτελέσεων"
-               : "Large deviation between runs"
-    );
-
-    logWarn(gr
-            ? "Οι εκτελέσεις έγιναν σε διαφορετικές συνθήκες με μεγάλες αποκλίσεις."
-            : "Runs were performed under different conditions with large deviation.");
-
-}
-}
-
-private int getLab14RunCount() {
-
-    try {
-
-        return getSharedPreferences(
-                LAB14_PREFS,
-                MODE_PRIVATE
-        ).getInt(KEY_LAB14_RUNS, 0);
-
-    } catch (Throwable ignore) {
-
-        return 0;
-
-    }
-}
-
-// ------------------------------------------------------------
-// CPU / GPU thermal helpers (SAFE, READ-ONLY)
-// ------------------------------------------------------------
-private Float readCpuTempSafe() {
-
-    try {
-
-        Map<String, Float> zones = readThermalZones();
-
-        Float t = pickZone(
-                zones,
-                "cpu",
-                "soc",
-                "ap",
-                "cluster",
-                "little",
-                "big"
-        );
-
-        if (t == null) return null;
-
-        // reject impossible values
-        if (t < 10f || t > 90f) return null;
-
-        return t;
-
-    } catch (Throwable ignore) {}
-
-    return null;
-}
-
-private Float readGpuTempSafe() {
-
-    try {
-
-        Map<String, Float> zones = readThermalZones();
-
-        Float t = pickZone(
-                zones,
-                "gpu",
-                "kgsl",
-                "gfx"
-        );
-
-        if (t == null) return null;
-
-        if (t < 10f || t > 90f) return null;
-
-        return t;
-
-    } catch (Throwable ignore) {}
-
-    return null;
-}
-
-// ------------------------------------------------------------
-// CPU stress (controlled) — used by LAB 14/17
-// ------------------------------------------------------------
-
-// ============================================================
-// 🔥 CPU BURN C_MODE (STABLE + CONTROLLED)
-// ============================================================
-
-private final List<Thread> cpuThreads = new ArrayList<>();
-
-private void startCpuBurn_C_Mode() {
-
-    stopCpuBurn(); // 🔴 clean start
-
-    cpuBurnRunning = true;
-
-    final int maxCores = Runtime.getRuntime().availableProcessors();
-
-    final int[] activeThreads = { maxCores };
-
-    for (int i = 0; i < maxCores; i++) {
-
-        final int threadIndex = i;
-
-        Thread t = new Thread(() -> {
-
-            final long t0 = System.currentTimeMillis(); // 🔴 BOOST TIMER FIX
-            long lastAdjust = t0;
-
-            while (cpuBurnRunning &&
-                   lab14Running &&
-                   !lab14Cancelled &&
-                   !Thread.currentThread().isInterrupted()) {
-
-                // 🔴 dynamic participation
-                if (threadIndex >= activeThreads[0]) {
-                    try { Thread.sleep(20); } catch (Throwable ignore) {}
-                    continue;
-                }
-
-                // 🔥 heavy compute (BOOSTED)
-                double acc = 0;
-                long now = System.nanoTime();
-
-                for (int j = 1; j < 16000; j++) { // 🔴 πιο δυνατό load
-                    acc += Math.sqrt(j * now);
-                    acc *= 1.0000001;
-
-                    if ((j & 7) == 0) {
-                        acc -= Math.log(j + 1);
-                    }
-                }
-
-                // anti-optimization
-                if (acc > 1e12) acc = 0;
-
-                // =====================================================
-                // 🔴 BOOST + ADAPTIVE CONTROL
-                // =====================================================
-
-                long nowMs = System.currentTimeMillis();
-
-                // 🔥 FULL LOAD για τα πρώτα 8s
-                if (nowMs - t0 < 8000) {
-
-                    activeThreads[0] = maxCores;
-
-                } else {
-
-                    // 🔴 adaptive κάθε 2 sec
-                    if (nowMs - lastAdjust > 2000) {
-
-                        float temp = readCpuTempSafe();
-
-                        if (!Float.isNaN(temp)) {
-
-                            if (temp > 65f && activeThreads[0] > 2) {
-                                activeThreads[0]--;
-                            }
-                            else if (temp < 55f && activeThreads[0] < maxCores) {
-                                activeThreads[0]++;
-                            }
-                        }
-
-                        lastAdjust = nowMs;
-                    }
-                }
-            }
-
-        }, "LAB14_CMODE_" + i);
-
-        t.setPriority(Thread.MAX_PRIORITY);
-
-        cpuThreads.add(t);
-        t.start();
-    }
-}
-
-private void startMainStressPhase(
-        int durationSec,
-        long t0,
-        TextView dotsView,
-        TextView counterText,
-        LinearLayout progressBar
-) {
-
-    // αυτή η μέθοδος υπάρχει μόνο για να καλέσει
-    // το ήδη υπάρχον main stress logic
-
-    // το πραγματικό stress τρέχει στο UI handler
-    // που έχεις ήδη παρακάτω
-
-}
-
-// ============================================================
-// MEMORY BANDWIDTH STRESS (LOW HEAT LOAD)
-// ============================================================
-private Thread memStressThread;
-
-private void startMemoryStress() {
-
-    final boolean gr = AppLang.isGreek(this);
-
-    memStressThread = new Thread(() -> {
-
-        try {
-
-            // 🔴 bandwidth-oriented load (cleaner than Random)
-            final int size = 24 * 1024 * 1024; // 24MB λίγο πιο δυνατό
-            final byte[] buf1 = new byte[size];
-            final byte[] buf2 = new byte[size];
-
-            // deterministic init (όχι Random CPU noise)
-            for (int i = 0; i < size; i++) {
-                buf1[i] = (byte)(i ^ 0x5A);
-            }
-
-            while (lab14Running &&
-                   !lab14Cancelled &&
-                   !Thread.currentThread().isInterrupted()) {
-
-                // charging guard
-                if (isCharging()) {
-
-                    runOnUiThread(() -> {
-
-                        logLine();
-
-                        logError(gr
-                                ? "Ανιχνεύθηκε φόρτιση κατά τη διάρκεια της δοκιμής."
-                                : "Charging detected during test.");
-
-                        logWarn(gr
-                                ? "Αποσύνδεσε τον φορτιστή και εκτέλεσε το τεστ από την αρχή."
-                                : "Disconnect charger and run the test again.");
-
-                        logLine();
-                    });
-
-                    return;
-                }
-
-                // ------------------------------------------------
-                // WRITE (stride to pressure memory bus)
-                // ------------------------------------------------
-                for (int i = 0; i < size; i += 64) {
-                    buf1[i] ^= (byte)(i + 31);
-                }
-
-                // ------------------------------------------------
-                // COPY (main bandwidth load)
-                // ------------------------------------------------
-                System.arraycopy(buf1, 0, buf2, 0, size);
-
-                // ------------------------------------------------
-                // READ (cache-busting stride)
-                // ------------------------------------------------
-                long checksum = 0;
-
-                for (int i = 0; i < size; i += 64) {
-                    checksum += buf2[i];
-                }
-
-                // anti-optimization
-                if (checksum == Long.MIN_VALUE) {
-                    appendLog("MEM","keep alive");
-                }
-
-                // tiny yield → avoids ugly scheduler monopolizing
-                Thread.yield();
-            }
-
-        } catch (Throwable ignore) {}
-
-    }, "LAB14_MEM_STRESS");
-
-    // not MAX → less fake thermal inflation
-    memStressThread.setPriority(Thread.NORM_PRIORITY);
-
-    memStressThread.start();
-}
-
-private void stopMemoryStress() {
-
-    try {
-        if (memStressThread != null) {
-            memStressThread.interrupt();
-            memStressThread = null;
-        }
-    } catch (Throwable ignore) {}
-
-}
-
-// ============================================================
-// BATTERY CURRENT HELPER
-// ============================================================
-private float getBatteryCurrentNowSafe() {
-
-    try {
-
-        iDoctorEngine eng = iDoctorEngine.get(this);
-
-        float ma = eng.getBatteryCurrentNowUnified();
-
-        if (!Float.isNaN(ma))
-            return ma;
-
-    } catch (Throwable ignore) {}
-
-    // fallback μόνο αν engine δεν δώσει τιμή
-
-    try {
-
-        BatteryManager bm =
-                (BatteryManager) getSystemService(BATTERY_SERVICE);
-
-        if (bm == null)
-            return Float.NaN;
-
-        long raw =
-                bm.getLongProperty(
-                        BatteryManager.BATTERY_PROPERTY_CURRENT_NOW
-                );
-
-        if (raw == Long.MIN_VALUE || raw == 0L)
-            return Float.NaN;
-
-        return (float) raw;   // µA
-
-    } catch (Throwable ignore) {
-
-        return Float.NaN;
-    }
-}
-
-// ---------------- LAB 14 ----------------
-private float getLastLab14HealthScore() {
-try {
-
-return p.getFloat("lab14_health_score", -1f);  
-} catch (Throwable t) {  
-    return -1f;  
-}
-
-}
-
-private int getLastLab14AgingIndex() {
-try {
-
-return p.getInt("lab14_aging_index", -1);  
-} catch (Throwable t) {  
-    return -1;  
-}
-
-}
-
-private boolean hasValidLab14() {
-return getLastLab14HealthScore() >= 0;
-}
-
-
-private boolean ensurePermissions(String[] permissions, Runnable afterGranted) {
-
-    List<String> missing = new ArrayList<>();
-
-    for (String p : permissions) {
-        if (ContextCompat.checkSelfPermission(this, p)
-                != PackageManager.PERMISSION_GRANTED) {
-            missing.add(p);
-        }
-    }
-
-    if (missing.isEmpty()) {
-        return true;
-    }
-
-    pendingAfterPermission = afterGranted;
-
-    ActivityCompat.requestPermissions(
-            this,
-            missing.toArray(new String[0]),
-            REQ_CORE_PERMS
-    );
-
-    return false;
 }
 
 
@@ -15248,6 +15293,108 @@ private float lab14ReadBatteryTempSafe(
     return Float.NaN;
 }
 
+// =====================================================
+// LAB14 COMPAT PATCH HELPERS
+// =====================================================
+
+private boolean isChargingNowSafe() {
+    try {
+        BatteryManager bm =
+            (BatteryManager)getSystemService(BATTERY_SERVICE);
+
+        if (bm == null) return false;
+
+        IntentFilter f =
+            new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+
+        Intent i =
+            registerReceiver(null, f);
+
+        if (i == null) return false;
+
+        int status =
+            i.getIntExtra(
+                BatteryManager.EXTRA_STATUS,
+                -1
+            );
+
+        return status ==
+                BatteryManager.BATTERY_STATUS_CHARGING
+            || status ==
+                BatteryManager.BATTERY_STATUS_FULL;
+
+    } catch(Throwable t){
+        return false;
+    }
+}
+
+private void startLab14SharedUI(
+        int seconds,
+        boolean gr
+){
+    try{
+        showLab14ProgressDialog();
+        startLab14ProgressLoop();
+    } catch(Throwable ignore){}
+}
+
+private void lab14StopAllStress() {
+    try { stopCpuBurn(); } catch(Throwable ignore){}
+    try { stopMemoryStress(); } catch(Throwable ignore){}
+    try { stopGpuStress(); } catch(Throwable ignore){}
+}
+
+private void lab14CleanupUI() {
+    try{
+        if(lab14Dialog!=null &&
+           lab14Dialog.isShowing()){
+            lab14Dialog.dismiss();
+        }
+        lab14Dialog=null;
+    }catch(Throwable ignore){}
+}
+
+private void startGpuStressLevel(int level){
+    try{
+        startGpuStress();
+    }catch(Throwable ignore){}
+}
+
+private void startMemoryBandwidthStress(){ }
+private void startVibrationStress(){ }
+
+private void incLab14RunCount(boolean ok){
+    try{
+        SharedPreferences p=
+            getSharedPreferences(
+                LAB14_PREFS,
+                MODE_PRIVATE
+            );
+
+        int c=
+          p.getInt("lab14_runs",0);
+
+        p.edit()
+         .putInt("lab14_runs",c+1)
+         .apply();
+
+    }catch(Throwable ignore){}
+}
+
+private float lab14BatteryTemp(){
+    try{
+        return getBatteryTempEngineSafe();
+    }catch(Throwable t){
+        return Float.NaN;
+    }
+}
+
+private iDoctorEngine.PrivacySnapshot
+convertToEnginePrivacy(
+    PrivacySnapshot p
+){
+    return p;
+}
 
 //=============================================================
 // LAB 15 - Charging System Diagnostic (SMART)
