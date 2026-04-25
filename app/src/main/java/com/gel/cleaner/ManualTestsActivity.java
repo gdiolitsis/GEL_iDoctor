@@ -468,10 +468,9 @@ final float[] thermalImpedance = {Float.NaN};
 
 final boolean[] collapseRisk = {false};
 final boolean[] batteryFailureRisk = {false};
+final boolean[] calibrationDrift = { false };
 
 final float[] batterySOH = {Float.NaN};
-    
-    private float finalSag = Float.NaN;
 
     // ============================================================
     // PERMISSION ENGINE (UNIVERSAL)
