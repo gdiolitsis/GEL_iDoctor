@@ -20749,6 +20749,12 @@ private void startLab14BPopup(long durationSec) {
 
     lab14Dialog.show();
 
+startLab14BProgressLoop(
+    statusText,
+    durationSec,
+    gr
+);
+
 if (lab14Dialog.getWindow() != null) {
 
     int width = (int) (getResources().getDisplayMetrics().widthPixels * 0.92);
