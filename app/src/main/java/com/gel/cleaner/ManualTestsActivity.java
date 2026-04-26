@@ -17288,34 +17288,6 @@ if (lab14LimiterLatched) {
     status = "WEAK LOAD ⚠";
 }
 
-// 🔴 THROTTLED LOG (STABLE)
-long nowTs = SystemClock.elapsedRealtime();
-
-if (nowTs - lab14LastLiveLogTs > 2000) { // 🔴 κάθε 2 sec
-
-    lab14LastLiveLogTs = nowTs;
-
-    appendLog("DEBUG",
-            "CPU=" + lab14CpuThreadsCurrent +
-            " | current=" + currentMa +
-            " | drain=" + drainPerHour +
-            " | v=" + voltageUnderLoad[0]);
-}
-
-    // 🔴 ROUND battery (anti-spam)
-    int battInt = Float.isNaN(battPct) ? -1 : Math.round(battPct);
-
-    String liveMsg =
-        "status=" + status +
-        " weak=" + weakLoad +
-        " score=" + loadScore +
-        " batt=" + battInt;
-
-    if (!liveMsg.equals(lastLiveStatus)) {
-        appendLog("LIVE", liveMsg);
-        lastLiveStatus = liveMsg;
-    }
-
 // ----------------------------------------------------
 // 🔴 UI (FINAL FIXED)
 // ----------------------------------------------------
@@ -20015,7 +19987,6 @@ if (!Float.isNaN(vNow) && vNow > 0f) {
 
     if (Float.isNaN(vStart[0])) {
         vStart[0] = vNow;
-        logInfo("SET vStart=" + vStart[0]);
     }
 
     float dropFromStart =
@@ -20025,7 +19996,6 @@ if (!Float.isNaN(vNow) && vNow > 0f) {
         dropFromStart > 0.015f) {
 
         vLoad1[0] = vNow;
-        logInfo("SET vLoad1=" + vLoad1[0]);
     }
 
     if (Float.isNaN(voltageUnderLoad[0]) &&
@@ -20033,7 +20003,6 @@ if (!Float.isNaN(vNow) && vNow > 0f) {
         dropFromStart > 0.030f) {
 
         voltageUnderLoad[0] = vNow;
-        logInfo("SET vLoadMain=" + voltageUnderLoad[0]);
     }
 
     if (Float.isNaN(vLoad2[0]) &&
@@ -20041,7 +20010,6 @@ if (!Float.isNaN(vNow) && vNow > 0f) {
         dropFromStart > 0.045f) {
 
         vLoad2[0] = vNow;
-        logInfo("SET vLoad2=" + vLoad2[0]);
     }
 }
 
@@ -20383,14 +20351,10 @@ try {
     isLab14BMode = false;
 
     // 🔴 FINAL COMPLETION
+   
     appendHtml("<br>");
-
-    logLabelOkValue(
-        gr ? "Κατάσταση" : "Status",
-        gr
-          ? "Το LAB 14B ολοκληρώθηκε"
-          : "LAB 14B completed"
-    );
+            logOk(gr ? "Το Lab 14B ολοκληρώθηκε." : "Lab 14B finished.");
+            logLine();
 
     logLine();
 
