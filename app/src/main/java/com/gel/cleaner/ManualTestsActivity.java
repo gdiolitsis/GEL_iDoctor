@@ -12882,7 +12882,7 @@ if (energyValid) {
 // =====================================================
 // 🔴 RECOMMENDATION ENGINE (FINAL — PRIORITIZED)
 // =====================================================
-String labelSafe =
+labelSafe =
         (res.label != null && !res.label.isEmpty())
                 ? res.label
                 : "Unknown";
@@ -13007,6 +13007,7 @@ if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
 } else {
 
     logLabelValue(summaryLabel, summary);
+}
 }
 
 // ============================================================
