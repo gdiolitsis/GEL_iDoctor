@@ -17575,17 +17575,17 @@ private void calibrateLoadZeroRisk() {
 
 private void startGpuStressLevel(int level) {
 
-    if (gpuRenderer != null) {
-        gpuRenderer.setIntensity(level);
+    if (lab14GpuRenderer != null) {
+        lab14GpuRenderer.setIntensity(level);
         return;
     }
 
-    gpuRenderer = new Lab14GpuRenderer();
-    gpuRenderer.setIntensity(level);
+    lab14GpuRenderer = new Lab14GpuRenderer();
+    lab14GpuRenderer.setIntensity(level);
 
     gpuView = new GLSurfaceView(this);
     gpuView.setEGLContextClientVersion(2);
-    gpuView.setRenderer(gpuRenderer);
+    gpuView.setRenderer(lab14GpuRenderer);
     gpuView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
     // invisible αλλά ενεργό
@@ -18425,40 +18425,6 @@ private float lab14Current() {
     }
 
     return Float.NaN;
-}
-
-private void stopGpuStress() {
-
-    // 🔴 STOP RENDERER
-    if (gpuRenderer != null) {
-        try {
-            gpuRenderer.stop();
-        } catch (Throwable t) {
-            logError("STOP GPU RENDERER FAIL: " + t.getMessage());
-        }
-        gpuRenderer = null;
-    }
-
-    // 🔴 STOP GLSurfaceView (UI thread)
-    if (gpuView != null) {
-
-        final GLSurfaceView view = gpuView;
-        gpuView = null; // 🔴 clear first
-
-        runOnUiThread(() -> {
-            try {
-                view.onPause();
-
-                ViewParent parent = view.getParent();
-                if (parent instanceof ViewGroup) {
-                    ((ViewGroup) parent).removeView(view);
-                }
-
-            } catch (Throwable t) {
-                logError("STOP GPU VIEW FAIL: " + t.getMessage());
-            }
-        });
-    }
 }
 
 private void safeDismissDialog() {
