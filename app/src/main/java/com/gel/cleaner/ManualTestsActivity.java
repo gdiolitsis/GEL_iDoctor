@@ -20373,22 +20373,33 @@ try {
     try { stopMemoryStress(); } catch (Throwable ignore) {}
     try { stopGpuStress(); } catch (Throwable ignore) {}
     try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-    
+
     try {
-    usageHandler.removeCallbacksAndMessages(null);
+        usageHandler.removeCallbacksAndMessages(null);
     } catch (Throwable ignore) {}
 
     lab14Cancelled = false;
     lab14Running = false;
     isLab14BMode = false;
 
-    // 🔴 ADD THIS (FIX POPUP)
+    // 🔴 FINAL COMPLETION
+    appendHtml("<br>");
+
+    logLabelOkValue(
+        gr ? "Κατάσταση" : "Status",
+        gr
+          ? "Το LAB 14B ολοκληρώθηκε"
+          : "LAB 14B completed"
+    );
+
+    logLine();
+
     runOnUiThread(() -> {
         try {
             if (lab14Dialog != null && lab14Dialog.isShowing()) {
-    lab14Dialog.dismiss();
-    lab14Dialog = null; // optional cleanup
-}
+                lab14Dialog.dismiss();
+                lab14Dialog = null;
+            }
         } catch (Throwable ignore) {}
     });
 }
@@ -20757,9 +20768,6 @@ if (lab14Dialog.getWindow() != null) {
             });
         } catch (Throwable ignore) {}
     });
-
-    // 🔥 LOOP
-    startLab14BProgressLoop(statusText, durationSec, gr);
 }
 
 private void startLab14BProgressLoop(TextView statusText, long durationSec, boolean gr) {
@@ -20839,8 +20847,6 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
 }
 
             } catch (Throwable t) {
-
-                appendLog("LAB14B_LOOP", "Progress loop error: " + t.getClass().getSimpleName());
 
             }
 
