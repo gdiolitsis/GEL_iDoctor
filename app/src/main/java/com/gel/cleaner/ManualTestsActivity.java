@@ -13560,7 +13560,7 @@ private void lab14StopAllStress() {
 // ------------------------------------------------------------
 // BATTERY CHARGING STATE HELPER (FINAL — UNIFIED)
 // ------------------------------------------------------------
-private boolean isCharging() {}
+private boolean isCharging() {
 
     // ----------------------------------------------------
     // 🔴 PRIMARY (ENGINE — VALIDATED)
