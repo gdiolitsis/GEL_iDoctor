@@ -12303,6 +12303,11 @@ if (DEBUG_MODE) {
     logLine();
 }
 
+String labelSafe =
+        (res.label != null && !res.label.isEmpty())
+                ? res.label
+                : "Unknown";
+
 
 // 🔴 slightly lower threshold (15mV)
 boolean sagValid =
@@ -12321,12 +12326,6 @@ if (!sagValid) {
     );
 
 } else {
-
-    String labelSafe =
-            (res.label != null && !res.label.isEmpty())
-                    ? res.label
-                    : "Unknown";
-
 
     // =================================================
     // 🔴 SELF FALLBACK CLASSIFIER (if upstream label missing)
