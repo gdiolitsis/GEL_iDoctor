@@ -20296,7 +20296,7 @@ if (!Float.isNaN(estimatedHours) && battPct > 0f) {
     );
     
 // ------------------------------------------------
-// 🔴 GEL BATTERY RELATIVITY VERDICT (X+ψ=Ω)
+// 🔴 GEL BATTERY RELATIVITY VERDICT (X + ψ = Ω)
 // ------------------------------------------------
 appendHtml("<br>");
 
@@ -20312,95 +20312,110 @@ if (!Float.isNaN(estimatedHours)) {
     if (screenInches <= 0f) screenInches = 6.5f;
 
     // ------------------------------------------------
-    // 🔴 PURE PHYSICS BASELINE
-    // 5000mAh + ~6.5-7" + 9h normal = reference
+    // PURE PHYSICS BASELINE
     // ------------------------------------------------
     float expectedHours =
-            9f *
+            8.8f *
             (baselineMah[0] / 5000f) *
             (6.5f / screenInches);
 
     float omega =
             expectedHours > 0f
-            ? estimatedHours / expectedHours
-            : 1f;
+                    ? estimatedHours / expectedHours
+                    : 1f;
 
-    float relativePct = (omega - 1f) * 100f;
+    // anti-outlier clamp
+    omega = Math.max(0.40f, Math.min(1.60f, omega));
+
+    float relativePct =
+            (omega - 1f) * 100f;
 
     String verdict;
     String humanVerdict;
 
     // ------------------------------------------------
-    // 🔴 NEW THRESHOLDS
+    // X + ψ = Ω verdict zones
     // ------------------------------------------------
     if (omega >= 1.25f) {
 
         verdict = gr
-                ? "Εξαιρετική απόδοση"
-                : "Exceptional";
+                ? "Εξαιρετική απόδοση υπό περιορισμούς"
+                : "Constraint exceptional";
 
         humanVerdict = gr
-                ? "Η μπαταρία αποδίδει εντυπωσιακά. Έχει πολλά ψωμιά ακόμα."
-                : "Battery performs exceptionally and still has a lot of life left.";
+                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει εντυπωσιακά πάνω από τους περιορισμούς της. Έχει πολλά ψωμιά ακόμα."
+                : "Based on battery capacity and screen size, battery performance is exceptionally above its constraints and still has a lot of life left.";
 
     } else if (omega >= 1.05f) {
 
         verdict = gr
-                ? "Πολύ καλή κατάσταση"
-                : "Very good condition";
+                ? "Άριστη κατάσταση εντός περιορισμών"
+                : "Excellent within constraints";
 
         humanVerdict = gr
-                ? "Η συμπεριφορά δείχνει πολύ υγιές battery system."
-                : "Behavior indicates a very healthy battery system.";
+                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει πολύ καλά για τους περιορισμούς της και δείχνει υγιές battery system."
+                : "Based on battery capacity and screen size, the battery performs very well for its constraints and indicates a healthy battery system.";
 
     } else if (omega >= 0.85f) {
 
         verdict = gr
-                ? "Υγιής / καλή κατάσταση"
-                : "Healthy / good condition";
+                ? "Υγιής κατάσταση εντός περιορισμών"
+                : "Healthy within constraints";
 
         humanVerdict = gr
-                ? "Η μπαταρία αποδίδει καλά και έχει ψωμιά ακόμα."
-                : "Battery performs well and still has solid life left.";
+                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει καλά για τους περιορισμούς της και έχει ψωμιά ακόμα."
+                : "Based on battery capacity and screen size, the battery performs well for its constraints and still has solid life left.";
 
     } else if (omega >= 0.70f) {
 
         verdict = gr
-                ? "Μέτρια φθορά"
-                : "Moderate wear";
+                ? "Μέτρια υποαπόδοση"
+                : "Moderate underperformance";
 
         humanVerdict = gr
-                ? "Υπάρχουν ενδείξεις μέτριας φθοράς αλλά η μπαταρία παραμένει λειτουργική."
-                : "There are signs of moderate wear but the battery remains usable.";
+                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η απόδοση βρίσκεται κάτω από το ιδανικό και υπάρχουν ενδείξεις μέτριας φθοράς."
+                : "Based on battery capacity and screen size, performance is below ideal and shows signs of moderate wear.";
 
     } else {
 
         verdict = gr
-                ? "Έντονη φθορά"
+                ? "Ενδείξεις έντονης φθοράς"
                 : "Heavy wear";
 
         humanVerdict = gr
-                ? "Η αυτονομία δείχνει σημαντική φθορά μπαταρίας."
-                : "Endurance indicates significant battery wear.";
+                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η αυτονομία δείχνει σημαντική φθορά μπαταρίας."
+                : "Based on battery capacity and screen size, endurance indicates significant battery wear.";
     }
 
     logLabelValue(
-            "Relativity score Ω",
+            gr ? "Σχετικός δείκτης Ω"
+               : "Relativity score Ω",
             String.format(Locale.US,"%.2f", omega)
     );
 
     logLabelValue(
-            gr ? "Αναμενόμενη διάρκεια" : "Expected duration",
-            String.format(Locale.US,"%.1f h", expectedHours)
+            gr ? "Αναμενόμενη διάρκεια"
+               : "Expected duration",
+            String.format(
+                    Locale.US,
+                    "%.1f h",
+                    expectedHours
+            )
     );
 
     logLabelValue(
-            gr ? "Σχετική απόδοση" : "Relative performance",
-            String.format(Locale.US,"%+.0f%%", relativePct)
+            gr ? "Σχετική απόδοση"
+               : "Relative performance",
+            String.format(
+                    Locale.US,
+                    "%+.0f%%",
+                    relativePct
+            )
     );
 
     logLabelValue(
-            gr ? "Verdict" : "Verdict",
+            gr ? "Συμπέρασμα αξιολόγησης"
+               : "Verdict",
             verdict
     );
 
@@ -20411,7 +20426,7 @@ if (!Float.isNaN(estimatedHours)) {
 } else {
 
     logWarn(gr
-            ? "Ανεπαρκή δεδομένα για verdict"
+            ? "Ανεπαρκή δεδομένα για αξιολόγηση"
             : "Insufficient data for verdict");
 }
 
