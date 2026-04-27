@@ -20114,7 +20114,7 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         endVolt[0] = getBatteryVoltageFiltered();
 
 // ------------------------------------------------
-// ?? REAL DRAIN + AUTO SWITCH
+// REAL DRAIN + AUTO SWITCH
 // ------------------------------------------------
 long drain = -1L;
 
@@ -20218,34 +20218,51 @@ if (!Float.isNaN(perHour)) {
 
     logLabelValue(
             gr ? "Κατανάλωση" : "Consumption",
-            String.format(Locale.US, "%.0f mAh/h", perHour)
+            String.format(
+                    Locale.US,
+                    "%.0f mAh/h",
+                    perHour
+            )
     );
-    
+
+    // ----------------------------------------
+    // SPIKE / RUN STABILITY INTERPRETATION
+    // ----------------------------------------
     if (lab14SpikeMah > 1f) {
 
-    logLabelValue(
-        gr
-          ? "Έξτρα κατανάλωση από spikes"
-          : "Extra spike consumption",
-        String.format(
-           Locale.US,
-           "%.1f mAh",
-           lab14SpikeMah
-        )
-    );
+        logLabelValue(
+                gr
+                   ? "Έξτρα κατανάλωση από spikes"
+                   : "Extra spike consumption",
+                String.format(
+                        Locale.US,
+                        "%.1f mAh",
+                        lab14SpikeMah
+                )
+        );
 
-    logWarn(
-      gr
-      ? "Παρατηρήθηκαν απότομα φορτία κατά το τεστ. Η κατανάλωση ίσως αυξήθηκε προσωρινά."
-      : "Transient load spikes were detected. Consumption may have been temporarily inflated."
-    );
-}
+        logWarn(
+            gr
+            ? "Παρατηρήθηκαν απότομα φορτία κατά το τεστ. Η κατανάλωση ίσως αυξήθηκε προσωρινά. Συνιστάται επανάληψη για ακριβέστερη διάγνωση."
+            : "Transient load spikes were detected. Consumption may have been temporarily inflated. Repeating the test is recommended for maximum accuracy."
+        );
+
+    } else {
+
+        logOk(
+            gr
+            ? "Δεν ανιχνεύθηκαν απότομα φορτία κατά το τεστ. Η μέτρηση θεωρείται σταθερή και υψηλής αξιοπιστίας."
+            : "No transient load spikes were detected during the test. This run is considered stable and high confidence."
+        );
+    }
 
 } else {
 
-    logWarn(gr
+    logWarn(
+            gr
             ? "Αδυναμία υπολογισμού κατανάλωσης"
-            : "Unable to calculate consumption");
+            : "Unable to calculate consumption"
+    );
 }
 
 // 🔴 THERMAL
