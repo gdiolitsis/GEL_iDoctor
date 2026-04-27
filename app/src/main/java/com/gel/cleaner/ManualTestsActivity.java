@@ -19759,15 +19759,37 @@ private boolean checkLab14BConditions() {
     }
 
     // ------------------------------------------------------------
-    // BATTERY LEVEL (INFO ONLY)
+    // BATTERY LEVEL
     // ------------------------------------------------------------
     logLabelValue(
             gr ? "Επίπεδο μπαταρίας" : "Battery level",
             percent + "%"
     );
 
+    // 🔴 HARD FLOOR
+    if (percent < 30) {
+
+        logWarn(gr
+                ? "Το LAB 14B απαιτεί τουλάχιστον 30% μπαταρία για αξιόπιστη αξιολόγηση."
+                : "LAB 14B requires at least 30% battery for reliable evaluation.");
+
+        logWarn(gr
+                ? "Κάτω από αυτό το επίπεδο ορισμένες συσκευές μπορεί να ενεργοποιούν μηχανισμούς προστασίας."
+                : "Below this level some devices may enter battery protection behavior.");
+
+        return false;
+    }
+
+    // 🟡 SOFT ADVISORY
+    if (percent < 40) {
+
+        logWarn(gr
+                ? "Η δοκιμή μπορεί να εκτελεστεί, αλλά 40%+ συνιστάται για βέλτιστη συνέπεια."
+                : "The test can run, but 40%+ is recommended for optimal consistency.");
+    }
+
     // ------------------------------------------------------------
-    // TEMPERATURE (INFO ONLY)
+    // TEMPERATURE
     // ------------------------------------------------------------
     logLabelValue(
             gr ? "Θερμοκρασία" : "Temperature",
@@ -20736,14 +20758,21 @@ private void showLab14BAdvisory(Runnable onContinue) {
     );
 
     final String text =
-            gr
-                    ? "Η δοκιμή προσομοιώνει καθημερινή χρήση της συσκευής "
-                      + "για 5 λεπτά ώστε να εκτιμηθεί η κατανάλωση και η "
-                      + "διάρκεια της μπαταρίας.\n\n"
-                      + "Βεβαιώσου ότι η συσκευή δεν φορτίζει πριν ξεκινήσεις."
-                    : "This test simulates real device usage for 5 minutes "
-                      + "to estimate battery consumption and duration.\n\n"
-                      + "Make sure the device is not charging before starting.";
+        gr
+                ? "Η δοκιμή προσομοιώνει καθημερινή χρήση της συσκευής "
+                  + "για 5 λεπτά ώστε να εκτιμηθούν η κατανάλωση, "
+                  + "η αναμενόμενη διάρκεια και η συμπεριφορά της μπαταρίας "
+                  + "υπό πραγματικές συνθήκες.\n\n"
+                  + "Βεβαιώσου ότι η συσκευή δεν φορτίζει πριν ξεκινήσεις "
+                  + "και ότι η μπαταρία είναι τουλάχιστον 30% "
+                  + "(40%+ συνιστάται για βέλτιστη συνέπεια)."
+
+                : "This test simulates real device usage for 5 minutes "
+                  + "to estimate battery consumption, expected endurance, "
+                  + "and battery behavior under real-world conditions.\n\n"
+                  + "Make sure the device is not charging before starting "
+                  + "and battery level is at least 30% "
+                  + "(40%+ recommended for optimal consistency).";
 
     int percent = getBatteryPercentSafe();
 
@@ -20770,24 +20799,73 @@ private void showLab14BAdvisory(Runnable onContinue) {
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
     );
 
-    // ------------------------------------------------------------
-    // BATTERY LEVEL (INFO ONLY)
-    // ------------------------------------------------------------
-    start = sb.length();
+// ------------------------------------------------------------
+// BATTERY LEVEL STATUS
+// ------------------------------------------------------------
+start = sb.length();
 
-    String batteryStatus =
+String batteryStatus;
+int batteryColor;
+
+if (percent < 30) {
+
+    batteryStatus =
+            gr
+                    ? "✖ Μπαταρία: " + percent + "% (Απαιτείται τουλάχιστον 30%)"
+                    : "✖ Battery: " + percent + "% (Minimum 30% required)";
+
+    batteryColor = red;
+
+} else if (percent < 40) {
+
+    batteryStatus =
+            gr
+                    ? "⚠ Μπαταρία: " + percent + "% (Συνιστάται 40%+)"
+                    : "⚠ Battery: " + percent + "% (40%+ recommended)";
+
+    batteryColor = 0xFFFFA500; // orange
+
+} else {
+
+    batteryStatus =
             gr
                     ? "✓ Μπαταρία: " + percent + "%"
                     : "✓ Battery: " + percent + "%";
 
-    sb.append(batteryStatus).append("\n");
+    batteryColor = green;
+}
+
+sb.append(batteryStatus).append("\n");
+
+sb.setSpan(
+        new ForegroundColorSpan(batteryColor),
+        start,
+        sb.length(),
+        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+);
+
+// ------------------------------------------------------------
+// LOW BATTERY ADVISORY
+// ------------------------------------------------------------
+if (percent < 30) {
+
+    start = sb.length();
+
+    sb.append("\n");
+
+    sb.append(
+            gr
+            ? "Κάτω από 30% ορισμένες συσκευές μπορεί να ενεργοποιούν προστασία και η αξιολόγηση να αλλοιωθεί."
+            : "Below 30% some devices may enter protection behavior and affect reliability."
+    );
 
     sb.setSpan(
-            new ForegroundColorSpan(green),
+            new ForegroundColorSpan(red),
             start,
             sb.length(),
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
     );
+}
 
     // ------------------------------------------------------------
     // CHARGING STATUS (CRITICAL)
@@ -20840,7 +20918,9 @@ private void showLab14BAdvisory(Runnable onContinue) {
     // ------------------------------------------------------------
     // BUTTON LOGIC
     // ------------------------------------------------------------
-    boolean allowContinue = chargingOk;
+    boolean allowContinue =
+        chargingOk &&
+        percent >= 30;
 
     LinearLayout row = new LinearLayout(this);
     row.setOrientation(LinearLayout.VERTICAL);
