@@ -16798,8 +16798,7 @@ if (isLab14BMode && lab14Running && elapsed >= 300 && !lab14Cancelled) {
     lab14Running = false;
 
     appendLog("TIME", "FINAL END at " + elapsed + " sec");
-    appendLog("FORCE END", "Failsafe trigger");
-
+    
     try { stopCpuBurn(); } catch (Throwable ignore) {}
     try { stopGpuStress(); } catch (Throwable ignore) {}
     try { stopMemoryStress(); } catch (Throwable ignore) {}
@@ -20295,6 +20294,98 @@ if (!Float.isNaN(estimatedHours) && battPct > 0f) {
             String.format(Locale.US, "%.1f %s",
                     heavyRemaining, gr ? "ώρες" : "hours")
     );
+    
+    // ------------------------------------------------
+// 🔴 GEL BATTERY RELATIVITY VERDICT (X+ψ=Ω)
+// ------------------------------------------------
+appendHtml("<br>");
+
+logOk(gr
+        ? "Συμπέρασμα κατάστασης μπαταρίας"
+        : "Battery condition verdict");
+
+logLine();
+
+if (!Float.isNaN(estimatedHours)) {
+
+    float screenInches = getScreenSizeInches(); // existing or helper
+    if (screenInches <= 0f) screenInches = 6.5f;
+
+    // baseline relative expectation
+    float expectedHours =
+            10f *
+            (baselineMah[0] / 5000f) *
+            (6.5f / screenInches);
+
+    float omega =
+            expectedHours > 0f
+            ? estimatedHours / expectedHours
+            : 1f;
+
+    String verdict;
+    String humanVerdict;
+
+    if (omega >= 1.30f) {
+
+        verdict = gr
+                ? "Εξαιρετική απόδοση υπό περιορισμούς"
+                : "Exceptional under constraints";
+
+        humanVerdict = gr
+                ? "Η μπαταρία έχει πολλά ψωμιά ακόμα."
+                : "Battery still has a lot of life left.";
+
+    } else if (omega >= 1.15f) {
+
+        verdict = gr
+                ? "Πολύ καλή κατάσταση"
+                : "Very good condition";
+
+        humanVerdict = gr
+                ? "Η συμπεριφορά δείχνει υγιές battery system."
+                : "Behavior indicates a healthy battery system.";
+
+    } else if (omega >= 0.90f) {
+
+        verdict = gr
+                ? "Φυσιολογική / καλή κατάσταση"
+                : "Normal / good condition";
+
+        humanVerdict = gr
+                ? "Η μπαταρία αποδίδει όπως αναμένεται."
+                : "Battery performs as expected.";
+
+    } else {
+
+        verdict = gr
+                ? "Κάτω από το αναμενόμενο"
+                : "Below expected";
+
+        humanVerdict = gr
+                ? "Υπάρχουν ενδείξεις φθοράς."
+                : "There are signs of wear.";
+    }
+
+    logLabelValue(
+            gr ? "Relativity score Ω" : "Relativity score Ω",
+            String.format(Locale.US,"%.2f", omega)
+    );
+
+    logLabelValue(
+            gr ? "Verdict" : "Verdict",
+            verdict
+    );
+
+    appendHtml("<br>");
+
+    logInfo(humanVerdict);
+
+} else {
+
+    logWarn(gr
+            ? "Ανεπαρκή δεδομένα για verdict"
+            : "Insufficient data for verdict");
+}
 
 // ------------------------------------------------------------
 // 🔴 SAFE VALUES (ANTI-NaN)
@@ -20355,8 +20446,6 @@ try {
     appendHtml("<br>");
             logOk(gr ? "Το Lab 14B ολοκληρώθηκε." : "Lab 14B finished.");
             logLine();
-
-    logLine();
 
     runOnUiThread(() -> {
         try {
@@ -20845,6 +20934,12 @@ private void simulateShortCpuBurst() {
     }).start();
 }
 
+private float getScreenSizeInches() {
+    DisplayMetrics dm = getResources().getDisplayMetrics();
+    float x = (dm.widthPixels / dm.xdpi);
+    float y = (dm.heightPixels / dm.ydpi);
+    return (float)Math.sqrt(x*x + y*y);
+}
 
 //=============================================================
 // LAB 15 - Charging System Diagnostic (SMART)
