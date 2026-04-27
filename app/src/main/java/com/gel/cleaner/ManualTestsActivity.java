@@ -16827,7 +16827,14 @@ if (isLab14BMode && lab14Running && elapsed >= 300 && !lab14Cancelled) {
     iDoctorEngine idoctor =
             iDoctorEngine.get(ManualTestsActivity.this);
 
-Float cpuTemp = readCpuTempSafe();
+float cpuTemp = Float.NaN;
+
+try {
+    Float tmp = readCpuTempSafe();
+    if (tmp != null) {
+        cpuTemp = tmp;
+    }
+} catch (Throwable ignore) {}
 
 // ----------------------------------------------------
 // 🔴 TIME FLAGS (SOFT ONLY)
