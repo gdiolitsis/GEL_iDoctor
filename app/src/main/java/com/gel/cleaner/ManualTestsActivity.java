@@ -20336,7 +20336,7 @@ if (!Float.isNaN(estimatedHours)) {
     // ------------------------------------------------
     // X + ψ = Ω verdict zones
     // ------------------------------------------------
-    if (omega >= 1.25f) {
+    if (omega >= 1.20f) {
 
         verdict = gr
                 ? "Εξαιρετική απόδοση υπό περιορισμούς"
@@ -20346,7 +20346,7 @@ if (!Float.isNaN(estimatedHours)) {
                 ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει εντυπωσιακά πάνω από τους περιορισμούς της. Έχει πολλά ψωμιά ακόμα."
                 : "Based on battery capacity and screen size, battery performance is exceptionally above its constraints and still has a lot of life left.";
 
-    } else if (omega >= 1.05f) {
+    } else if (omega >= 1.00f) {
 
         verdict = gr
                 ? "Άριστη κατάσταση εντός περιορισμών"
@@ -20356,7 +20356,7 @@ if (!Float.isNaN(estimatedHours)) {
                 ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει πολύ καλά για τους περιορισμούς της και δείχνει υγιές battery system."
                 : "Based on battery capacity and screen size, the battery performs very well for its constraints and indicates a healthy battery system.";
 
-    } else if (omega >= 0.85f) {
+    } else if (omega >= 0.80f) {
 
         verdict = gr
                 ? "Υγιής κατάσταση εντός περιορισμών"
@@ -20366,7 +20366,7 @@ if (!Float.isNaN(estimatedHours)) {
                 ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει καλά για τους περιορισμούς της και έχει ψωμιά ακόμα."
                 : "Based on battery capacity and screen size, the battery performs well for its constraints and still has solid life left.";
 
-    } else if (omega >= 0.70f) {
+    } else if (omega >= 0.65f) {
 
         verdict = gr
                 ? "Μέτρια υποαπόδοση"
@@ -20388,8 +20388,8 @@ if (!Float.isNaN(estimatedHours)) {
     }
 
     logLabelValue(
-            gr ? "Σχετικός δείκτης Ω"
-               : "Relativity score Ω",
+            gr ? "Σχετικός δείκτης μπαταριας Ω"
+               : "Relativity battery score Ω",
             String.format(Locale.US,"%.2f", omega)
     );
 
@@ -20421,13 +20421,68 @@ if (!Float.isNaN(estimatedHours)) {
 
     appendHtml("<br>");
 
-    logInfo(humanVerdict);
+// severity-colored human interpretation
+if (omega >= 0.80f) {
+
+    logOk(humanVerdict);      // πράσινο
+
+} else if (omega >= 0.65f) {
+
+    logWarn(humanVerdict);    // κίτρινο
+
+} else {
+
+    logError(humanVerdict);   // κόκκινο
+}
 
 } else {
 
     logWarn(gr
             ? "Ανεπαρκή δεδομένα για αξιολόγηση"
             : "Insufficient data for verdict");
+}
+
+appendHtml("<br>");
+
+logOk(gr
+        ? "Κλίμακα ερμηνείας δείκτη Ω"
+        : "Ω interpretation scale");
+
+logLine();
+
+if (gr) {
+
+    logLabelValue("Ω ≥ 1.20",
+            "Εξαιρετική μπαταρία");
+
+    logLabelValue("Ω ≥ 1.00",
+            "Πολύ καλή μπαταρία");
+
+    logLabelValue("Ω ≥ 0.80",
+            "Υγιής μπαταρία με φυσιολογική φθορά");
+
+    logLabelValue("Ω ≥ 0.65",
+            "Μέτρια φθορά μπαταρίας");
+
+    logLabelValue("Ω < 0.65",
+            "Έντονη φθορά μπαταρίας");
+
+} else {
+
+    logLabelValue("Ω ≥ 1.20",
+            "Exceptional battery");
+
+    logLabelValue("Ω ≥ 1.00",
+            "Very good battery");
+
+    logLabelValue("Ω ≥ 0.80",
+            "Healthy battery with normal wear");
+
+    logLabelValue("Ω ≥ 0.65",
+            "Battery with moderate wear");
+
+    logLabelValue("Ω < 0.65",
+            "Battery with heavy wear");
 }
 
 // ------------------------------------------------------------
