@@ -16802,8 +16802,6 @@ if (isLab14BMode && lab14Running && elapsed >= 300 && !lab14Cancelled) {
 
     lab14Cancelled = true;
     lab14Running = false;
-
-    appendLog("TIME", "FINAL END at " + elapsed + " sec");
     
     try { stopCpuBurn(); } catch (Throwable ignore) {}
     try { stopGpuStress(); } catch (Throwable ignore) {}
@@ -20870,6 +20868,9 @@ if (percent < 30) {
     // ------------------------------------------------------------
     // CHARGING STATUS (CRITICAL)
     // ------------------------------------------------------------
+    
+    sb.append("\n\n"); 
+    
     start = sb.length();
 
     String chargingStatus;
