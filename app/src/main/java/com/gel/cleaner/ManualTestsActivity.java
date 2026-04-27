@@ -20184,14 +20184,14 @@ if (!Float.isNaN(perHour)) {
 // --------------------------------------
 float correctedPerHour = perHour;
 
-if (lab14SpikeMah > 0.8f && baselineMah[0] > 0) {
+if (lab14SpikeMah > 1.0f && baselineMah[0] > 0) {
 
     float spikePerHour =
-            lab14SpikeMah * 15f; // 5 min -> hourly
+            lab14SpikeMah * 12f; // 5 min -> hourly
 
     // compensate up to 25% max
     float cap =
-            perHour * 0.25f;
+            perHour * 0.15f;
 
     spikePerHour =
             Math.min(
@@ -20275,7 +20275,7 @@ if (!Float.isNaN(perHour)) {
 // ----------------------------------------
 // SPIKE / RUN STABILITY INTERPRETATION
 // ----------------------------------------
-if (lab14SpikeMah >= 0.8f) {
+if (lab14SpikeMah > 1.0f) {
 
     logLabelValue(
             gr
