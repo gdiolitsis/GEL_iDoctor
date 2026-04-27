@@ -20305,15 +20305,6 @@ if (lab14SpikeMah >= 0.8f) {
     );
 }
 
-} else {
-
-    logWarn(
-            gr
-            ? "Αδυναμία υπολογισμού κατανάλωσης"
-            : "Unable to calculate consumption"
-    );
-}
-
 // 🔴 THERMAL
 if (!Float.isNaN(tempRise)) {
     logLabelValue(
