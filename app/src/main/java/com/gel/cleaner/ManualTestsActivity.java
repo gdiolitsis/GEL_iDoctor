@@ -442,7 +442,7 @@ private boolean isLab14BMode = false;
 
 private boolean lab14SoftPhaseStarted = false;
 
-    // ============================================================
+// ============================================================
 // BATTERY STRESS DIAGNOSTIC STATE (shared between labs)
 // ============================================================
 
@@ -617,6 +617,12 @@ private static class BatteryInfo {
     String source = "Unknown";
     long estimatedFullMah = -1;
 }
+
+// 🔴 SPIKE DISTURBANCE TRACKING
+private float lab14SpikeMah = 0f;
+private float lab14PrevCurrent = Float.NaN;
+private float lab14CurrentEMA = Float.NaN;
+private long lab14SpikeLastTs = 0L;
 
 // ============================================================  
 // Battery stress internals  
@@ -19852,6 +19858,17 @@ lab14MainPhase = false;
 rateSum = 0;
 rateSamples = 0;
 
+// ---------------------------------------------
+// 🔴 SPIKE 
+// ---------------------------------------------
+
+lab14SpikeMah = 0f;
+lab14PrevCurrent = Float.NaN;
+lab14CurrentEMA = Float.NaN;
+lab14SpikeLastTs = 0L;
+
+// ---------------------------------------------
+
 startLab14BPopup(300); // 5 λεπτά
 
 logLine();
@@ -20012,6 +20029,53 @@ if (!Float.isNaN(vNow) && vNow > 0f) {
     }
 }
 
+// ---------------------------------------------
+// 🔴 SPIKE DISTURBANCE DETECTOR
+// ---------------------------------------------
+try {
+
+    float iNow =
+            (float)Math.abs(lab14Current());
+
+    long ts =
+            SystemClock.elapsedRealtime();
+
+    if (!Float.isNaN(iNow) && iNow > 50f) {
+
+        if (Float.isNaN(lab14CurrentEMA)) {
+            lab14CurrentEMA = iNow;
+        }
+
+        // exponential moving average baseline
+        lab14CurrentEMA =
+                0.90f * lab14CurrentEMA +
+                0.10f * iNow;
+
+        if (lab14SpikeLastTs > 0) {
+
+            float dtSec =
+                    (ts - lab14SpikeLastTs)/1000f;
+
+            float spikeExcess =
+                    iNow - lab14CurrentEMA;
+
+            // abrupt anomaly only
+            if (spikeExcess > 250f &&
+                iNow > lab14CurrentEMA * 1.50f) {
+
+                lab14SpikeMah +=
+                        (spikeExcess * dtSec) / 3600f;
+            }
+        }
+
+        lab14SpikeLastTs = ts;
+        lab14PrevCurrent = iNow;
+    }
+
+} catch(Throwable ignore){}
+
+// ---------------------------------------------
+
 usageHandler.postDelayed(this, nextDelay);
     }
 };
@@ -20156,6 +20220,26 @@ if (!Float.isNaN(perHour)) {
             gr ? "Κατανάλωση" : "Consumption",
             String.format(Locale.US, "%.0f mAh/h", perHour)
     );
+    
+    if (lab14SpikeMah > 1f) {
+
+    logLabelValue(
+        gr
+          ? "Έξτρα κατανάλωση από spikes"
+          : "Extra spike consumption",
+        String.format(
+           Locale.US,
+           "%.1f mAh",
+           lab14SpikeMah
+        )
+    );
+
+    logWarn(
+      gr
+      ? "Παρατηρήθηκαν απότομα φορτία κατά το τεστ. Η κατανάλωση ίσως αυξήθηκε προσωρινά."
+      : "Transient load spikes were detected. Consumption may have been temporarily inflated."
+    );
+}
 
 } else {
 
