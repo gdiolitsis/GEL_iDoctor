@@ -20295,7 +20295,7 @@ if (!Float.isNaN(estimatedHours) && battPct > 0f) {
                     heavyRemaining, gr ? "ώρες" : "hours")
     );
     
-    // ------------------------------------------------
+// ------------------------------------------------
 // 🔴 GEL BATTERY RELATIVITY VERDICT (X+ψ=Ω)
 // ------------------------------------------------
 appendHtml("<br>");
@@ -20308,12 +20308,15 @@ logLine();
 
 if (!Float.isNaN(estimatedHours)) {
 
-    float screenInches = getScreenSizeInches(); // existing or helper
+    float screenInches = getScreenSizeInches();
     if (screenInches <= 0f) screenInches = 6.5f;
 
-    // baseline relative expectation
+    // ------------------------------------------------
+    // 🔴 PURE PHYSICS BASELINE
+    // 5000mAh + ~6.5-7" + 9h normal = reference
+    // ------------------------------------------------
     float expectedHours =
-            10f *
+            9f *
             (baselineMah[0] / 5000f) *
             (6.5f / screenInches);
 
@@ -20322,53 +20325,78 @@ if (!Float.isNaN(estimatedHours)) {
             ? estimatedHours / expectedHours
             : 1f;
 
+    float relativePct = (omega - 1f) * 100f;
+
     String verdict;
     String humanVerdict;
 
-    if (omega >= 1.30f) {
+    // ------------------------------------------------
+    // 🔴 NEW THRESHOLDS
+    // ------------------------------------------------
+    if (omega >= 1.25f) {
 
         verdict = gr
-                ? "Εξαιρετική απόδοση υπό περιορισμούς"
-                : "Exceptional under constraints";
+                ? "Εξαιρετική απόδοση"
+                : "Exceptional";
 
         humanVerdict = gr
-                ? "Η μπαταρία έχει πολλά ψωμιά ακόμα."
-                : "Battery still has a lot of life left.";
+                ? "Η μπαταρία αποδίδει εντυπωσιακά. Έχει πολλά ψωμιά ακόμα."
+                : "Battery performs exceptionally and still has a lot of life left.";
 
-    } else if (omega >= 1.15f) {
+    } else if (omega >= 1.05f) {
 
         verdict = gr
                 ? "Πολύ καλή κατάσταση"
                 : "Very good condition";
 
         humanVerdict = gr
-                ? "Η συμπεριφορά δείχνει υγιές battery system."
-                : "Behavior indicates a healthy battery system.";
+                ? "Η συμπεριφορά δείχνει πολύ υγιές battery system."
+                : "Behavior indicates a very healthy battery system.";
 
-    } else if (omega >= 0.90f) {
+    } else if (omega >= 0.85f) {
 
         verdict = gr
-                ? "Φυσιολογική / καλή κατάσταση"
-                : "Normal / good condition";
+                ? "Υγιής / καλή κατάσταση"
+                : "Healthy / good condition";
 
         humanVerdict = gr
-                ? "Η μπαταρία αποδίδει όπως αναμένεται."
-                : "Battery performs as expected.";
+                ? "Η μπαταρία αποδίδει καλά και έχει ψωμιά ακόμα."
+                : "Battery performs well and still has solid life left.";
+
+    } else if (omega >= 0.70f) {
+
+        verdict = gr
+                ? "Μέτρια φθορά"
+                : "Moderate wear";
+
+        humanVerdict = gr
+                ? "Υπάρχουν ενδείξεις μέτριας φθοράς αλλά η μπαταρία παραμένει λειτουργική."
+                : "There are signs of moderate wear but the battery remains usable.";
 
     } else {
 
         verdict = gr
-                ? "Κάτω από το αναμενόμενο"
-                : "Below expected";
+                ? "Έντονη φθορά"
+                : "Heavy wear";
 
         humanVerdict = gr
-                ? "Υπάρχουν ενδείξεις φθοράς."
-                : "There are signs of wear.";
+                ? "Η αυτονομία δείχνει σημαντική φθορά μπαταρίας."
+                : "Endurance indicates significant battery wear.";
     }
 
     logLabelValue(
-            gr ? "Relativity score Ω" : "Relativity score Ω",
+            "Relativity score Ω",
             String.format(Locale.US,"%.2f", omega)
+    );
+
+    logLabelValue(
+            gr ? "Αναμενόμενη διάρκεια" : "Expected duration",
+            String.format(Locale.US,"%.1f h", expectedHours)
+    );
+
+    logLabelValue(
+            gr ? "Σχετική απόδοση" : "Relative performance",
+            String.format(Locale.US,"%+.0f%%", relativePct)
     );
 
     logLabelValue(
