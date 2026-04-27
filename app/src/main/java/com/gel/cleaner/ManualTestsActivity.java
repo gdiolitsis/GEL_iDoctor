@@ -20500,6 +20500,7 @@ if (!Float.isNaN(estimatedHours)) {
 
     String verdict;
     String humanVerdict;
+    String proPrompt = null;
 
     // ------------------------------------------------
     // X + ψ = Ω verdict zones
@@ -20507,8 +20508,8 @@ if (!Float.isNaN(estimatedHours)) {
     if (omega >= 1.20f) {
 
         verdict = gr
-                ? "Εξαιρετική απόδοση υπό περιορισμούς"
-                : "Constraint exceptional";
+                ? "Εξαιρετική απόδοση μπαταρίας υπό περιορισμούς"
+                : "Exceptional battery performance within constraints";
 
         humanVerdict = gr
                 ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει εντυπωσιακά πάνω από τους περιορισμούς της. Έχει πολλά ψωμιά ακόμα."
@@ -20517,43 +20518,51 @@ if (!Float.isNaN(estimatedHours)) {
     } else if (omega >= 1.00f) {
 
         verdict = gr
-                ? "Άριστη κατάσταση εντός περιορισμών"
-                : "Excellent within constraints";
+                ? "Άριστη κατάσταση μπαταρίας εντός περιορισμών"
+                : "Excellent battery condition within constraints";
 
         humanVerdict = gr
-                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει πολύ καλά για τους περιορισμούς της και δείχνει υγιές battery system."
+                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει πολύ καλά για τους περιορισμούς της και δείχνει υγιές σύστημα μπαταρίας."
                 : "Based on battery capacity and screen size, the battery performs very well for its constraints and indicates a healthy battery system.";
 
     } else if (omega >= 0.80f) {
 
         verdict = gr
-                ? "Υγιής κατάσταση εντός περιορισμών"
-                : "Healthy within constraints";
+                ? "Υγιής κατάσταση μπαταρίας εντός περιορισμών"
+                : "Healthy battery condition within constraints";
 
         humanVerdict = gr
-                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει καλά για τους περιορισμούς της και έχει ψωμιά ακόμα."
+                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει καλά για τους περιορισμούς της και έχει ζωή ακόμα."
                 : "Based on battery capacity and screen size, the battery performs well for its constraints and still has solid life left.";
 
     } else if (omega >= 0.65f) {
 
-        verdict = gr
-                ? "Μέτρια υποαπόδοση"
-                : "Moderate underperformance";
+    verdict = gr
+            ? "Μέτρια υποαπόδοση μπαταρίας"
+            : "Moderate battery underperformance";
 
-        humanVerdict = gr
-                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η απόδοση βρίσκεται κάτω από το ιδανικό και υπάρχουν ενδείξεις μέτριας φθοράς."
-                : "Based on battery capacity and screen size, performance is below ideal and shows signs of moderate wear.";
+    humanVerdict = gr
+            ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η απόδοση βρίσκεται κάτω από το ιδανικό και υπάρχουν ενδείξεις μέτριας φθοράς."
+            : "Based on battery capacity and screen size, performance is below ideal and shows signs of moderate wear.";
 
-    } else {
+    proPrompt = gr
+        ? "Εντοπίστηκαν ενδείξεις φθοράς μπαταρίας.\nΣυνιστάται το LAB14 Pro για βαθύτερη αξιολόγηση της κατάστασης της μπαταρίας."
+        : "Signs of battery wear detected.\nRecommended: Run LAB14 Pro for deeper battery condition assessment.";
 
-        verdict = gr
-                ? "Ενδείξεις έντονης φθοράς"
-                : "Heavy wear";
+} else {
 
-        humanVerdict = gr
-                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η αυτονομία δείχνει σημαντική φθορά μπαταρίας."
-                : "Based on battery capacity and screen size, endurance indicates significant battery wear.";
-    }
+    verdict = gr
+        ? "Ενδείξεις έντονης φθοράς μπαταρίας"
+        : "Significant battery degradation detected";
+
+    humanVerdict = gr
+            ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η αυτονομία δείχνει σημαντική φθορά μπαταρίας."
+            : "Based on battery capacity and screen size, endurance indicates significant battery wear.";
+
+    proPrompt = gr
+        ? "Εντοπίστηκαν ισχυρές ενδείξεις φθοράς μπαταρίας.\nΣυνιστάται το LAB14 Pro για πλήρη διάγνωση."
+        : "Strong signs of battery wear detected.\nRecommended: Run LAB14 Pro for full diagnosis.";
+}
 
     logLabelValue(
             gr ? "Σχετικός δείκτης μπαταριας Ω"
@@ -20588,19 +20597,26 @@ if (!Float.isNaN(estimatedHours)) {
     );
 
     appendHtml("<br>");
-
+    
 // severity-colored human interpretation
 if (omega >= 0.80f) {
 
-    logOk(humanVerdict);      // πράσινο
+    logOk(humanVerdict);
 
 } else if (omega >= 0.65f) {
 
-    logWarn(humanVerdict);    // κίτρινο
+    logWarn(humanVerdict);
 
 } else {
 
-    logError(humanVerdict);   // κόκκινο
+    logError(humanVerdict);
+}
+
+// 🔴 Recommended next step
+if (proPrompt != null) {
+
+    appendHtml("<br>");
+    logOk(proPrompt);
 }
 
 } else {
