@@ -20172,12 +20172,52 @@ if (!Float.isNaN(perHour)) {
     if (perHour > 5000f) perHour = 5000f; // 🔴 anti-bug spike
 }
 
+// --------------------------------------
+// 🔴 SPIKE COMPENSATION (anti distortion)
+// --------------------------------------
+float correctedPerHour = perHour;
+
+if (lab14SpikeMah > 0.8f && baselineMah[0] > 0) {
+
+    float spikePerHour =
+            lab14SpikeMah * 15f; // 5 min -> hourly
+
+    // compensate up to 25% max
+    float cap =
+            perHour * 0.25f;
+
+    spikePerHour =
+            Math.min(
+                spikePerHour,
+                cap
+            );
+
+    correctedPerHour =
+            perHour - spikePerHour;
+
+    if (correctedPerHour < 50f) {
+        correctedPerHour = perHour;
+    }
+
+    logLabelValue(
+       gr
+       ? "Διορθωμένη κατανάλωση"
+       : "Spike-corrected consumption",
+       String.format(
+         Locale.US,
+         "%.0f mAh/h",
+         correctedPerHour
+       )
+    );
+}
+
 // ------------------------------------------------
 // FINAL ESTIMATION
 // ------------------------------------------------
 if (!Float.isNaN(perHour) && perHour > 0f && baselineMah[0] > 0) {
 
-    estimatedHours = baselineMah[0] / perHour;
+    estimatedHours =
+baselineMah[0] / correctedPerHour;
 
 } else {
 
@@ -20225,36 +20265,45 @@ if (!Float.isNaN(perHour)) {
             )
     );
 
-    // ----------------------------------------
-    // SPIKE / RUN STABILITY INTERPRETATION
-    // ----------------------------------------
-    if (lab14SpikeMah > 1f) {
+// ----------------------------------------
+// SPIKE / RUN STABILITY INTERPRETATION
+// ----------------------------------------
+if (lab14SpikeMah >= 0.8f) {
 
-        logLabelValue(
-                gr
-                   ? "Έξτρα κατανάλωση από spikes"
-                   : "Extra spike consumption",
-                String.format(
-                        Locale.US,
-                        "%.1f mAh",
-                        lab14SpikeMah
-                )
-        );
-
-        logWarn(
+    logLabelValue(
             gr
-            ? "Παρατηρήθηκαν απότομα φορτία κατά το τεστ. Η κατανάλωση ίσως αυξήθηκε προσωρινά. Συνιστάται επανάληψη για ακριβέστερη διάγνωση."
-            : "Transient load spikes were detected. Consumption may have been temporarily inflated. Repeating the test is recommended for maximum accuracy."
-        );
+               ? "Έξτρα κατανάλωση από απότομα φορτία"
+               : "Extra consumption from load spikes",
+            String.format(
+                    Locale.US,
+                    "%.1f mAh",
+                    lab14SpikeMah
+            )
+    );
 
-    } else {
+    logWarn(
+    gr
+    ? "Παρατηρήθηκαν απότομα φορτία κατά το τεστ. Τα αποτελέσματα διορθώθηκαν λόγω της ανωμαλίας, αλλά επανάληψη του τεστ μπορεί να αυξήσει την αξιοπιστία."
+    : "Transient load spikes were detected during the test. Results were compensated for the disturbance, but repeating the test may improve confidence."
+);
 
-        logOk(
-            gr
-            ? "Δεν ανιχνεύθηκαν απότομα φορτία κατά το τεστ. Η μέτρηση θεωρείται σταθερή και υψηλής αξιοπιστίας."
-            : "No transient load spikes were detected during the test. This run is considered stable and high confidence."
-        );
-    }
+} else {
+
+    logOk(
+        gr
+        ? "Δεν ανιχνεύθηκαν απότομα φορτία κατά το τεστ. Η μέτρηση θεωρείται σταθερή και υψηλής αξιοπιστίας."
+        : "No transient load spikes were detected during the test. This run is considered stable and high confidence."
+    );
+}
+
+} else {
+
+    logWarn(
+        gr
+        ? "Αδυναμία υπολογισμού κατανάλωσης"
+        : "Unable to calculate consumption"
+    );
+}
 
 } else {
 
