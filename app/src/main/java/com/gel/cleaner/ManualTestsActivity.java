@@ -19800,39 +19800,9 @@ logLabelValue(
         airplaneMode ? "ON" : "OFF"
 );
 
-if (!airplaneMode) {
+    if (!airplaneMode) {
 
-    new AlertDialog.Builder(this)
-        .setTitle(
-            gr
-            ? "Απαιτείται Airplane Mode"
-            : "Airplane Mode Required"
-        )
-        .setMessage(
-            gr
-            ? "Για σταθερότητα runs ενεργοποιήστε Airplane Mode τώρα;"
-            : "Enable Airplane Mode now for run stability?"
-        )
-
-        .setNegativeButton(
-            gr ? "ΟΧΙ" : "NO",
-            null
-        )
-
-        .setPositiveButton(
-            gr ? "ΝΑΙ" : "YES",
-            (d,w) -> {
-
-                try {
-                    startActivity(
-                        new Intent(
-                           Settings.ACTION_AIRPLANE_MODE_SETTINGS
-                        )
-                    );
-                } catch (Throwable ignore) {}
-            }
-        )
-        .show();
+    showAirplaneModePrompt();
 
     return false;
 }
@@ -20333,12 +20303,24 @@ baselineMah[0] / correctedPerHour;
 float tempRise = Float.NaN;
 float voltDrop = Float.NaN;
 
-if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
-    tempRise = endTemp[0] - startTemp[0];
+if (!Float.isNaN(startTemp[0]) &&
+    !Float.isNaN(endTemp[0])) {
+
+    tempRise =
+            endTemp[0] - startTemp[0];
+
+    // sensor jitter filter
+    if (Math.abs(tempRise) < 0.3f) {
+        tempRise = 0f;
+    }
 }
 
 if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
+
     voltDrop = startVolt[0] - endVolt[0];
+
+    // show magnitude only
+    voltDrop = Math.abs(voltDrop);
 }
 
 appendHtml("<br>");
@@ -21466,6 +21448,161 @@ private void promptRestoreNormalMode() {
 
             .show();
 }
+private void showAirplaneModePrompt() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    AlertDialog.Builder b =
+            new AlertDialog.Builder(
+                    this,
+                    android.R.style.Theme_Material_Dialog_NoActionBar
+            );
+
+    LinearLayout root =
+            new LinearLayout(this);
+
+    root.setOrientation(
+            LinearLayout.VERTICAL
+    );
+
+    root.setPadding(
+            dp(24),
+            dp(22),
+            dp(24),
+            dp(24)
+    );
+
+    GradientDrawable bg =
+            new GradientDrawable();
+
+    bg.setColor(0xFF101010);      // black
+    bg.setCornerRadius(dp(12));
+    bg.setStroke(dp(4),0xFFFFD700); // gold
+
+    root.setBackground(bg);
+
+    TextView title =
+            new TextView(this);
+
+    title.setText(
+            gr
+            ? "Απαιτείται Airplane Mode"
+            : "Airplane Mode Required"
+    );
+
+    title.setTextColor(0xFF39FF14);
+    title.setTextSize(20f);
+    title.setTypeface(null,Typeface.BOLD);
+
+    root.addView(title);
+
+    TextView msg =
+            new TextView(this);
+
+    msg.setText(
+            gr
+            ? "\nΓια σταθερότητα των runs ενεργοποιήστε τώρα Airplane Mode."
+            : "\nEnable Airplane Mode now for stable runs."
+    );
+
+    msg.setTextColor(0xFF39FF14);
+    msg.setTextSize(16f);
+
+    root.addView(msg);
+
+    // buttons row
+    LinearLayout row =
+            new LinearLayout(this);
+
+    row.setOrientation(
+            LinearLayout.HORIZONTAL
+    );
+
+    row.setPadding(
+            0,dp(24),0,0
+    );
+
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    1f
+            );
+
+    lp.setMargins(
+            dp(6),0,dp(6),0
+    );
+
+    // NO red
+    Button noBtn = new Button(this);
+    noBtn.setText(gr?"ΟΧΙ":"NO");
+    noBtn.setTextColor(Color.WHITE);
+    noBtn.setAllCaps(false);
+
+    GradientDrawable noBg =
+            new GradientDrawable();
+
+    noBg.setColor(0xFF8B0000);
+    noBg.setCornerRadius(dp(10));
+    noBg.setStroke(dp(3),0xFFFFD700);
+
+    noBtn.setBackground(noBg);
+    noBtn.setLayoutParams(lp);
+
+    // YES green
+    Button yesBtn = new Button(this);
+    yesBtn.setText(gr?"ΝΑΙ":"YES");
+    yesBtn.setTextColor(Color.WHITE);
+    yesBtn.setAllCaps(false);
+
+    GradientDrawable yesBg =
+            new GradientDrawable();
+
+    yesBg.setColor(0xFF0B5F3B);
+    yesBg.setCornerRadius(dp(10));
+    yesBg.setStroke(dp(3),0xFFFFD700);
+
+    yesBtn.setBackground(yesBg);
+    yesBtn.setLayoutParams(lp);
+
+    row.addView(noBtn);
+    row.addView(yesBtn);
+
+    root.addView(row);
+
+    b.setView(root);
+
+    final AlertDialog dlg =
+            b.create();
+
+    if (dlg.getWindow()!=null){
+        dlg.getWindow().setBackgroundDrawable(
+                new ColorDrawable(
+                        Color.TRANSPARENT
+                )
+        );
+    }
+
+    noBtn.setOnClickListener(v ->
+            dlg.dismiss()
+    );
+
+    yesBtn.setOnClickListener(v -> {
+
+        dlg.dismiss();
+
+        try {
+            startActivity(
+                new Intent(
+                    Settings.ACTION_AIRPLANE_MODE_SETTINGS
+                )
+            );
+        } catch(Throwable ignore){}
+    });
+
+    dlg.show();
+}
+
 
 //=============================================================
 // LAB 15 - Charging System Diagnostic (SMART)
