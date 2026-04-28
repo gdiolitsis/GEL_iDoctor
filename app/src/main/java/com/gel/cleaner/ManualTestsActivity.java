@@ -624,6 +624,9 @@ private float lab14PrevCurrent = Float.NaN;
 private float lab14CurrentEMA = Float.NaN;
 private long lab14SpikeLastTs = 0L;
 
+private int lab14SpikeCount = 0;
+private float lab14MaxSpikeExcess = 0f;
+
 // ============================================================  
 // Battery stress internals  
 // ============================================================  
@@ -19893,6 +19896,8 @@ lab14SpikeMah = 0f;
 lab14PrevCurrent = Float.NaN;
 lab14CurrentEMA = Float.NaN;
 lab14SpikeLastTs = 0L;
+lab14SpikeCount = 0;
+lab14MaxSpikeExcess = 0f;
 
 // ---------------------------------------------
 
@@ -20062,7 +20067,7 @@ if (!Float.isNaN(vNow) && vNow > 0f) {
 try {
 
     float iNow =
-            (float)Math.abs(lab14Current());
+            (float) Math.abs(lab14Current());
 
     long ts =
             SystemClock.elapsedRealtime();
@@ -20073,7 +20078,7 @@ try {
             lab14CurrentEMA = iNow;
         }
 
-        // exponential moving average baseline
+        // EMA baseline
         lab14CurrentEMA =
                 0.90f * lab14CurrentEMA +
                 0.10f * iNow;
@@ -20081,14 +20086,27 @@ try {
         if (lab14SpikeLastTs > 0) {
 
             float dtSec =
-                    (ts - lab14SpikeLastTs)/1000f;
+                    (ts - lab14SpikeLastTs) / 1000f;
 
             float spikeExcess =
                     iNow - lab14CurrentEMA;
 
-            // abrupt anomaly only
-            if (spikeExcess > 250f &&
-                iNow > lab14CurrentEMA * 1.50f) {
+            // 🔴 dynamic disturbance detection
+            boolean mildSpike =
+                    spikeExcess > 250f &&
+                    iNow > lab14CurrentEMA * 1.50f;
+
+            boolean strongSpike =
+                    spikeExcess > 500f &&
+                    iNow > lab14CurrentEMA * 1.80f;
+
+            if (mildSpike || strongSpike) {
+
+                lab14SpikeCount++;
+
+                if (spikeExcess > lab14MaxSpikeExcess) {
+                    lab14MaxSpikeExcess = spikeExcess;
+                }
 
                 lab14SpikeMah +=
                         (spikeExcess * dtSec) / 3600f;
@@ -20099,7 +20117,7 @@ try {
         lab14PrevCurrent = iNow;
     }
 
-} catch(Throwable ignore){}
+} catch (Throwable ignore) {}
 
 // ---------------------------------------------
 
