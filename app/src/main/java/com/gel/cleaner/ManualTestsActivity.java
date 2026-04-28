@@ -21035,9 +21035,8 @@ private void showLab14BAdvisory(Runnable onContinue) {
     // BUTTON
     // ------------------------------------------------
     boolean allowContinue =
-            chargingOk &&
-            percent >= 30 &&
-            airplaneMode;
+        chargingOk &&
+        percent >= 30;
 
     LinearLayout row =
             new LinearLayout(this);
