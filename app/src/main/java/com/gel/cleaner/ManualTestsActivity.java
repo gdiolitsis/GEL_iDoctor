@@ -225,6 +225,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Collections;
 import java.util.concurrent.Executor;
 import java.util.Comparator;
+import java.util.concurrent.CountDownLatch;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -448,7 +449,6 @@ private boolean lab14SoftPhaseStarted = false;
 
 final float[] vStart = {Float.NaN};
 final float[] vLoad1 = {Float.NaN};
-final float[] voltageUnderLoad = {Float.NaN};
 final float[] vRecover = {Float.NaN};
 final float[] vLoad2 = {Float.NaN};
 
