@@ -19953,7 +19953,7 @@ try {
 } catch (Throwable ignore) {}
 
 // --------------------------------------------------------
-// 🌿 HUMAN USAGE SIMULATION (STABLE & SAFE)
+// 🌿 HUMAN USAGE SIMULATION (PASSIVE TEST MODE)
 // --------------------------------------------------------
 
 final Handler usageHandler = new Handler(Looper.getMainLooper());
@@ -19970,7 +19970,8 @@ final Runnable usageLoop = new Runnable() {
 
         long nextDelay = 500;
 
-        int mode = (int)(Math.random() * 4);
+        // 🔴 no synthetic CPU mode
+        int mode = (int)(Math.random() * 3); // 0..2 only
 
         try {
 
@@ -20002,7 +20003,6 @@ final Runnable usageLoop = new Runnable() {
                     try {
                         if (lab14StressVideo != null) {
 
-                            // reset πριν start (anti overlap)
                             lab14StressVideo.pause();
                             lab14StressVideo.seekTo(0);
 
@@ -20013,16 +20013,10 @@ final Runnable usageLoop = new Runnable() {
                                     lab14StressVideo.pause();
                                     lab14StressVideo.seekTo(0);
                                 } catch (Throwable ignore) {}
-                            }, 15000); // 15s burst
+                            }, 15000);
+
                         }
                     } catch (Throwable ignore) {}
-                    break;
-
-                // -------------------------
-                // SHORT CPU BURST
-                // -------------------------
-                case 3:
-                    simulateShortCpuBurst();
                     break;
             }
 
@@ -20218,61 +20212,20 @@ if (!Float.isNaN(perHour)) {
 }
 
 // --------------------------------------
-// 🔴 SPIKE COMPENSATION (anti distortion)
+// PASSIVE MODE (no synthetic CPU correction)
 // --------------------------------------
 float correctedPerHour = perHour;
 
-if (lab14SpikeMah > 0.8f && baselineMah[0] > 0) {
-
-    float multiplier = 15f;
-    float capPct = 0.25f;
-
-    // 🔴 Violent disturbance override
-    if (lab14SpikeCount >= 5 ||
-        lab14MaxSpikeExcess > 700f) {
-
-        multiplier = 30f;
-        capPct = 0.40f;
-    }
-
-    float spikePerHour =
-            lab14SpikeMah * multiplier;
-
-    float cap =
-            perHour * capPct;
-
-    spikePerHour =
-            Math.min(
-                    spikePerHour,
-                    cap
-            );
-
-    correctedPerHour =
-            perHour - spikePerHour;
-
-    // safety floor
-    float minAllowed =
-            perHour * 0.55f;
-
-    if (correctedPerHour < minAllowed) {
-        correctedPerHour = minAllowed;
-    }
-
-    if (correctedPerHour < 50f) {
-        correctedPerHour = perHour;
-    }
-
-    logLabelValue(
-        gr
-        ? "Διορθωμένη κατανάλωση"
-        : "Spike-corrected consumption",
-        String.format(
-            Locale.US,
-            "%.0f mAh/h",
-            correctedPerHour
-        )
-    );
-}
+logLabelValue(
+    gr
+    ? "Διορθωμένη κατανάλωση"
+    : "Corrected consumption",
+    String.format(
+        Locale.US,
+        "%.0f mAh/h",
+        correctedPerHour
+    )
+);
 
 // ------------------------------------------------
 // FINAL ESTIMATION
