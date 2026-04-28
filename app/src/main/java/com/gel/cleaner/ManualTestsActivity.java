@@ -627,6 +627,8 @@ private long lab14SpikeLastTs = 0L;
 private int lab14SpikeCount = 0;
 private float lab14MaxSpikeExcess = 0f;
 
+private boolean pendingRestartLab14B = false;
+
 // ============================================================  
 // Battery stress internals  
 // ============================================================  
@@ -1038,7 +1040,7 @@ logScroll.setOnTouchListener((v, event) -> {
     TextView title = new TextView(this);
     title.setText(getString(R.string.manual_hospital_title));
     title.setTextSize(20f);
-    title.setTextColor(0xFFFFD700);
+    title.setTextColor(Color.WHITE);
     title.setGravity(Gravity.CENTER_HORIZONTAL);
     title.setPadding(0, 0, 0, dp(6));
     labsContainer.addView(title);
@@ -1284,6 +1286,25 @@ logScroll.setOnTouchListener((v, event) -> {
         serviceLogInit = true;
     }
 }  // onCreate ENDS HERE
+
+@Override
+protected void onResume() {
+    super.onResume();
+
+    if (pendingRestartLab14B) {
+
+        pendingRestartLab14B = false;
+
+        if (Settings.Global.getInt(
+                getContentResolver(),
+                Settings.Global.AIRPLANE_MODE_ON,
+                0
+        ) == 1) {
+
+            lab14BBatteryDurationTest();
+        }
+    }
+}
 
 // ============================================================
 // CPU STRESS HELPERS (REQUIRED BY OTHER LABS) NOT for 14B
@@ -16509,7 +16530,7 @@ private void startLab14SharedUI(long durationSec, boolean gr) {
                     ? "LAB 14 — Δοκιμή Καταπόνησης Υγείας Μπαταρίας"
                     : "LAB 14 — Battery Health Stress Test"
     );
-    title.setTextColor(0xFFFFFFFF);
+    title.setTextColor(Color.WHITE);
     title.setTextSize(18f);
     title.setTypeface(null, Typeface.BOLD);
     title.setGravity(Gravity.CENTER);
@@ -21170,7 +21191,7 @@ private void startLab14BPopup(long durationSec) {
     title.setText(gr
             ? "LAB 14B — Κατανάλωση & διάρκεια μπαταρίας"
             : "LAB 14B — Battery usage & duration");
-    title.setTextColor(0xFFFFFFFF);
+    title.setTextColor(Color.WHITE);
     title.setTextSize(18f);
     title.setTypeface(null, Typeface.BOLD);
     title.setGravity(Gravity.CENTER);
@@ -21401,52 +21422,186 @@ private void promptRestoreNormalMode() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    new AlertDialog.Builder(this)
-            .setTitle(
-                    gr
-                    ? "Επαναφορά Normal Mode"
-                    : "Restore Normal Mode"
-            )
+    AlertDialog.Builder b =
+            new AlertDialog.Builder(
+                    this,
+                    android.R.style.Theme_Material_Dialog_NoActionBar
+            );
 
-            .setMessage(
-                    gr
-                    ? "Η δοκιμή ολοκληρώθηκε.\n\nΝα απενεργοποιηθεί τώρα το Airplane Mode και να επανέλθουν οι κανονικές συνδέσεις;"
-                    : "Test completed.\n\nDisable Airplane Mode now and restore normal connections?"
-            )
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(
+            dp(24),
+            dp(22),
+            dp(24),
+            dp(24)
+    );
 
-            .setNegativeButton(
-                    gr ? "ΟΧΙ" : "NO",
-                    null
-            )
+    GradientDrawable bg =
+            new GradientDrawable();
 
-            .setPositiveButton(
-                    gr ? "ΝΑΙ" : "YES",
-                    (d, which) -> {
+    bg.setColor(0xFF101010);
+    bg.setCornerRadius(dp(12));
+    bg.setStroke(
+            dp(4),
+            0xFFFFD700
+    );
 
-                        try {
+    root.setBackground(bg);
 
-                            startActivity(
-                                    new Intent(
-                                            Settings.ACTION_AIRPLANE_MODE_SETTINGS
-                                    )
-                            );
+    // TITLE (white)
+    TextView title =
+            new TextView(this);
 
-                        } catch (Throwable e) {
+    title.setText(
+            gr
+            ? "Επαναφορά Συσκευής"
+            : "Restore Device"
+    );
 
-                            try {
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(20f);
+    title.setTypeface(
+            null,
+            Typeface.BOLD
+    );
 
-                                startActivity(
-                                        new Intent(
-                                                Settings.ACTION_SETTINGS
-                                        )
-                                );
+    root.addView(title);
 
-                            } catch (Throwable ignore) {}
-                        }
-                    }
-            )
+    // MESSAGE (green)
+    TextView msg =
+            new TextView(this);
 
-            .show();
+    msg.setText(
+            gr
+            ? "\nΘέλεις να επαναφέρουμε τη συσκευή σου "
+              + "απενεργοποιώντας το Airplane Mode "
+              + "και επαναφέροντας τις κανονικές συνδέσεις;"
+            : "\nDisable Airplane Mode now "
+              + "and restore normal device connections?"
+    );
+
+    msg.setTextColor(
+            0xFF39FF14
+    );
+
+    msg.setTextSize(16f);
+
+    root.addView(msg);
+
+    // BUTTON ROW
+    LinearLayout row =
+            new LinearLayout(this);
+
+    row.setOrientation(
+            LinearLayout.HORIZONTAL
+    );
+
+    row.setPadding(
+            0,
+            dp(24),
+            0,
+            0
+    );
+
+    LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    1f
+            );
+
+    lp.setMargins(
+            dp(6),0,dp(6),0
+    );
+
+    // NO button
+    Button noBtn = new Button(this);
+    noBtn.setText(gr ? "ΟΧΙ" : "NO");
+    noBtn.setTextColor(Color.WHITE);
+    noBtn.setAllCaps(false);
+
+    GradientDrawable noBg =
+            new GradientDrawable();
+
+    noBg.setColor(0xFF8B0000);
+    noBg.setCornerRadius(dp(10));
+    noBg.setStroke(
+            dp(3),
+            0xFFFFD700
+    );
+
+    noBtn.setBackground(noBg);
+    noBtn.setLayoutParams(lp);
+
+    // YES button
+    Button yesBtn = new Button(this);
+    yesBtn.setText(gr ? "ΝΑΙ" : "YES");
+    yesBtn.setTextColor(Color.WHITE);
+    yesBtn.setAllCaps(false);
+
+    GradientDrawable yesBg =
+            new GradientDrawable();
+
+    yesBg.setColor(0xFF0B5F3B);
+    yesBg.setCornerRadius(dp(10));
+    yesBg.setStroke(
+            dp(3),
+            0xFFFFD700
+    );
+
+    yesBtn.setBackground(yesBg);
+    yesBtn.setLayoutParams(lp);
+
+    row.addView(noBtn);
+    row.addView(yesBtn);
+
+    root.addView(row);
+
+    b.setView(root);
+
+    final AlertDialog dlg =
+            b.create();
+
+    if (dlg.getWindow()!=null) {
+        dlg.getWindow().setBackgroundDrawable(
+                new ColorDrawable(
+                        Color.TRANSPARENT
+                )
+        );
+    }
+
+    noBtn.setOnClickListener(v ->
+            dlg.dismiss()
+    );
+
+    yesBtn.setOnClickListener(v -> {
+
+        dlg.dismiss();
+
+        try {
+
+            startActivity(
+                    new Intent(
+                            Settings.ACTION_AIRPLANE_MODE_SETTINGS
+                    )
+            );
+
+        } catch (Throwable e) {
+
+            try {
+
+                startActivity(
+                        new Intent(
+                                Settings.ACTION_SETTINGS
+                        )
+                );
+
+            } catch (Throwable ignore) {}
+        }
+    });
+
+    dlg.show();
 }
 private void showAirplaneModePrompt() {
 
@@ -21490,7 +21645,7 @@ private void showAirplaneModePrompt() {
             : "Airplane Mode Required"
     );
 
-    title.setTextColor(0xFF39FF14);
+    title.setTextColor(Color.WHITE);
     title.setTextSize(20f);
     title.setTypeface(null,Typeface.BOLD);
 
@@ -21587,18 +21742,23 @@ private void showAirplaneModePrompt() {
             dlg.dismiss()
     );
 
-    yesBtn.setOnClickListener(v -> {
+yesBtn.setOnClickListener(v -> {
 
-        dlg.dismiss();
+    dlg.dismiss();
 
-        try {
-            startActivity(
-                new Intent(
-                    Settings.ACTION_AIRPLANE_MODE_SETTINGS
-                )
-            );
-        } catch(Throwable ignore){}
-    });
+    // auto resume flag
+    pendingRestartLab14B = true;
+
+    try {
+
+        startActivity(
+            new Intent(
+                Settings.ACTION_AIRPLANE_MODE_SETTINGS
+            )
+        );
+
+    } catch(Throwable ignore){}
+});
 
     dlg.show();
 }
