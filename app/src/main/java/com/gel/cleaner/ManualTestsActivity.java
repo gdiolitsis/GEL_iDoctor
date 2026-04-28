@@ -20224,35 +20224,53 @@ float correctedPerHour = perHour;
 
 if (lab14SpikeMah > 0.8f && baselineMah[0] > 0) {
 
-    float spikePerHour =
-            lab14SpikeMah * 15f; // 5 min -> hourly
+    float multiplier = 15f;
+    float capPct = 0.25f;
 
-    // compensate up to 25% max
+    // 🔴 Violent disturbance override
+    if (lab14SpikeCount >= 5 ||
+        lab14MaxSpikeExcess > 700f) {
+
+        multiplier = 30f;
+        capPct = 0.40f;
+    }
+
+    float spikePerHour =
+            lab14SpikeMah * multiplier;
+
     float cap =
-            perHour * 0.25f;
+            perHour * capPct;
 
     spikePerHour =
             Math.min(
-                spikePerHour,
-                cap
+                    spikePerHour,
+                    cap
             );
 
     correctedPerHour =
             perHour - spikePerHour;
+
+    // safety floor
+    float minAllowed =
+            perHour * 0.55f;
+
+    if (correctedPerHour < minAllowed) {
+        correctedPerHour = minAllowed;
+    }
 
     if (correctedPerHour < 50f) {
         correctedPerHour = perHour;
     }
 
     logLabelValue(
-       gr
-       ? "Διορθωμένη κατανάλωση"
-       : "Spike-corrected consumption",
-       String.format(
-         Locale.US,
-         "%.0f mAh/h",
-         correctedPerHour
-       )
+        gr
+        ? "Διορθωμένη κατανάλωση"
+        : "Spike-corrected consumption",
+        String.format(
+            Locale.US,
+            "%.0f mAh/h",
+            correctedPerHour
+        )
     );
 }
 
