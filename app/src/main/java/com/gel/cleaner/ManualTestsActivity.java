@@ -448,6 +448,7 @@ private boolean lab14SoftPhaseStarted = false;
 
 final float[] vStart = {Float.NaN};
 final float[] vLoad1 = {Float.NaN};
+final float[] voltageUnderLoad = {Float.NaN};
 final float[] vRecover = {Float.NaN};
 final float[] vLoad2 = {Float.NaN};
 
@@ -19722,7 +19723,7 @@ private boolean ensurePermissions(String[] permissions, Runnable afterGranted) {
 }
 
 // ============================================================
-// LAB 14B — CONDITIONS CHECK (BATTERY USAGE TEST)
+// LAB 14B — CONDITIONS CHECK (STRAITJACKET MODE)
 // ============================================================
 private boolean checkLab14BConditions() {
 
@@ -19731,30 +19732,42 @@ private boolean checkLab14BConditions() {
     int percent = (int) getCurrentBatteryPercent();
 
     boolean chargingNow = false;
-    float tempC = Float.NaN;
+    boolean airplaneMode = false;
 
     try {
+
         chargingNow = isDeviceCharging();
-        tempC = getBatteryTemperature();
+
+        airplaneMode =
+                Settings.Global.getInt(
+                        getContentResolver(),
+                        Settings.Global.AIRPLANE_MODE_ON,
+                        0
+                ) == 1;
+
     } catch (Throwable ignore) {}
 
     appendHtml("<br>");
     logLine();
 
     logInfo(gr
-            ? "LAB 14B - Έλεγχος κατανάλωσης και συμπεριφοράς μπαταρίας"
-            : "LAB 14B - Battery usage and behavior test");
+            ? "LAB 14B - Έλεγχος συνθηκών δοκιμής"
+            : "LAB 14B - Test conditions check");
 
     logLine();
 
     // ------------------------------------------------------------
-    // CHARGING STATE (HARD REQUIREMENT)
+    // CHARGING (HARD REQUIREMENT)
     // ------------------------------------------------------------
     if (chargingNow) {
 
         logWarn(gr
                 ? "Η συσκευή φορτίζει."
                 : "Device is charging.");
+
+        logWarn(gr
+                ? "Αποσυνδέστε τον φορτιστή και δοκιμάστε ξανά."
+                : "Disconnect charger and retry.");
 
         return false;
     }
@@ -19767,44 +19780,75 @@ private boolean checkLab14BConditions() {
             percent + "%"
     );
 
-    // 🔴 HARD FLOOR
     if (percent < 30) {
 
         logWarn(gr
-                ? "Το LAB 14B απαιτεί τουλάχιστον 30% μπαταρία για αξιόπιστη αξιολόγηση."
-                : "LAB 14B requires at least 30% battery for reliable evaluation.");
+                ? "Το LAB 14B απαιτεί τουλάχιστον 30% μπαταρία."
+                : "LAB 14B requires at least 30% battery.");
 
         logWarn(gr
-                ? "Κάτω από αυτό το επίπεδο ορισμένες συσκευές μπορεί να ενεργοποιούν μηχανισμούς προστασίας."
-                : "Below this level some devices may enter battery protection behavior.");
+                ? "Κάτω από αυτό το επίπεδο μπορεί να επέμβει system protection."
+                : "Below this level system protection may interfere.");
 
         return false;
     }
 
-    // 🟡 SOFT ADVISORY
-    if (percent < 40) {
+    // ------------------------------------------------------------
+    // AIRPLANE MODE
+    // ------------------------------------------------------------
+    logLabelValue(
+            gr ? "Airplane mode" : "Airplane mode",
+            airplaneMode ? "ON" : "OFF"
+    );
 
-        logWarn(gr
-                ? "Η δοκιμή μπορεί να εκτελεστεί, αλλά 40%+ συνιστάται για βέλτιστη συνέπεια."
-                : "The test can run, but 40%+ is recommended for optimal consistency.");
+    if (!airplaneMode) {
+
+        boolean enableNow =
+                showYesNoPopup(
+                        gr
+                        ? "Απαιτείται Airplane Mode"
+                        : "Airplane Mode Required",
+
+                        gr
+                        ? "Για σταθερότητα των runs το LAB 14B απαιτεί Airplane Mode.\n\nΝα το ενεργοποιήσετε τώρα;"
+                        : "LAB 14B requires Airplane Mode for run stability.\n\nEnable it now?"
+                );
+
+        if (enableNow) {
+
+            try {
+
+                startActivity(
+                        new Intent(
+                                Settings.ACTION_AIRPLANE_MODE_SETTINGS
+                        )
+                );
+
+            } catch (Throwable e) {
+
+                try {
+
+                    startActivity(
+                            new Intent(
+                                    Settings.ACTION_SETTINGS
+                            )
+                    );
+
+                } catch (Throwable ignore) {}
+            }
+        }
+
+        return false;
     }
 
     // ------------------------------------------------------------
-    // TEMPERATURE
-    // ------------------------------------------------------------
-    logLabelValue(
-            gr ? "Θερμοκρασία" : "Temperature",
-            Float.isNaN(tempC)
-                    ? "N/A"
-                    : String.format(Locale.US, "%.1f°C", tempC)
-    );
-
-    // ------------------------------------------------------------
-    // FINAL OK
+    // PASS
     // ------------------------------------------------------------
     logOk(gr
-            ? "Οι συνθήκες είναι κατάλληλες."
-            : "Conditions OK.");
+            ? "Οι συνθήκες είναι σταθερές. Έναρξη δοκιμής."
+            : "Conditions stable. Starting test.");
+
+    logLine();
 
     return true;
 }
@@ -19953,7 +19997,7 @@ try {
 } catch (Throwable ignore) {}
 
 // --------------------------------------------------------
-// 🌿 HUMAN USAGE SIMULATION (PASSIVE TEST MODE)
+// 🌿 HUMAN USAGE SIMULATION (CONTROLLED REAL USE)
 // --------------------------------------------------------
 
 final Handler usageHandler = new Handler(Looper.getMainLooper());
@@ -19966,19 +20010,20 @@ final Runnable usageLoop = new Runnable() {
 
         if (!lab14Running || lab14Cancelled) return;
 
-        long elapsed = SystemClock.elapsedRealtime() - startTs;
+        long elapsed =
+                SystemClock.elapsedRealtime() - startTs;
 
         long nextDelay = 500;
 
-        // 🔴 no synthetic CPU mode
-        int mode = (int)(Math.random() * 3); // 0..2 only
+        // 🔴 restore CPU burst mode
+        int mode = (int)(Math.random() * 4);
 
         try {
 
             switch (mode) {
 
                 // -------------------------
-                // IDLE (real standby)
+                // IDLE
                 // -------------------------
                 case 0:
                     try {
@@ -19990,17 +20035,18 @@ final Runnable usageLoop = new Runnable() {
                     break;
 
                 // -------------------------
-                // LIGHT INTERACTION (scroll/UI)
+                // LIGHT UI INTERACTION
                 // -------------------------
                 case 1:
                     simulateUiInteraction();
                     break;
 
                 // -------------------------
-                // VIDEO BURST (controlled)
+                // VIDEO BURST
                 // -------------------------
                 case 2:
                     try {
+
                         if (lab14StressVideo != null) {
 
                             lab14StressVideo.pause();
@@ -20016,7 +20062,16 @@ final Runnable usageLoop = new Runnable() {
                             }, 15000);
 
                         }
+
                     } catch (Throwable ignore) {}
+
+                    break;
+
+                // -------------------------
+                // SHORT CPU BURST
+                // -------------------------
+                case 3:
+                    simulateShortCpuBurst();
                     break;
             }
 
@@ -20250,18 +20305,18 @@ if (lab14SpikeMah > 0.8f && baselineMah[0] > 0) {
     if (correctedPerHour < 50f) {
         correctedPerHour = perHour;
     }
-
-    logLabelValue(
-        gr
-        ? "Διορθωμένη κατανάλωση"
-        : "Spike-corrected consumption",
-        String.format(
-            Locale.US,
-            "%.0f mAh/h",
-            correctedPerHour
-        )
-    );
 }
+
+logLabelValue(
+    gr
+    ? "Διορθωμένη κατανάλωση"
+    : "Corrected consumption",
+    String.format(
+        Locale.US,
+        "%.0f mAh/h",
+        correctedPerHour
+    )
+);
 
 // ------------------------------------------------
 // FINAL ESTIMATION
@@ -20324,8 +20379,8 @@ if (lab14SpikeMah > 0.8f) {
 
     logLabelValue(
             gr
-               ? "Έξτρα κατανάλωση από απότομα φορτία"
-               : "Extra consumption from load spikes",
+            ? "Έξτρα κατανάλωση από απότομα φορτία"
+            : "Extra consumption from load spikes",
             String.format(
                     Locale.US,
                     "%.1f mAh",
@@ -20334,17 +20389,17 @@ if (lab14SpikeMah > 0.8f) {
     );
 
     logWarn(
-    gr
-    ? "Παρατηρήθηκαν απότομα φορτία κατά το τεστ. Τα αποτελέσματα διορθώθηκαν λόγω της ανωμαλίας, αλλά επανάληψη του τεστ μπορεί να αυξήσει την αξιοπιστία."
-    : "Transient load spikes were detected during the test. Results were compensated for the disturbance, but repeating the test may improve confidence."
-);
+        gr
+        ? "Παρατηρήθηκαν απότομα φορτία κατά το τεστ. Εφαρμόστηκε διόρθωση όπου απαιτήθηκε, αλλά επανάληψη του τεστ μπορεί να αυξήσει την αξιοπιστία."
+        : "Transient load spikes were detected. Compensation was applied where needed, but repeating the test may improve confidence."
+    );
 
 } else {
 
     logOk(
         gr
-        ? "Δεν ανιχνεύθηκαν απότομα φορτία κατά το τεστ. Η μέτρηση θεωρείται σταθερή και υψηλής αξιοπιστίας."
-        : "No transient load spikes were detected during the test. This run is considered stable and high confidence."
+        ? "Δεν ανιχνεύθηκαν απότομα φορτία. Η μέτρηση θεωρείται σταθερή και υψηλής αξιοπιστίας."
+        : "No transient load spikes were detected. This run is considered stable and high confidence."
     );
 }
 
@@ -20696,6 +20751,8 @@ if (gr) {
             "Battery with heavy wear");
 }
 
+promptRestoreNormalMode();
+
 // ------------------------------------------------------------
 // 🔴 SAFE VALUES (ANTI-NaN)
 // ------------------------------------------------------------
@@ -20773,7 +20830,7 @@ try {
 }
 
 // ============================================================
-// LAB 14B — PRE TEST ADVISORY (BATTERY USAGE TEST)
+// LAB 14B — PRE TEST ADVISORY (STABILIZED MODE)
 // ============================================================
 private void showLab14BAdvisory(Runnable onContinue) {
 
@@ -20793,41 +20850,52 @@ private void showLab14BAdvisory(Runnable onContinue) {
             buildPopupHeader(
                     this,
                     gr
-                            ? "Έλεγχος κατανάλωσης και διάρκειας μπαταρίας"
-                            : "Battery usage and duration test"
+                    ? "Έλεγχος κατανάλωσης και διάρκειας μπαταρίας"
+                    : "Battery usage and duration test"
             )
     );
 
     final String text =
-        gr
-                ? "Η δοκιμή προσομοιώνει καθημερινή χρήση της συσκευής "
-                  + "για 5 λεπτά ώστε να εκτιμηθούν η κατανάλωση, "
-                  + "η αναμενόμενη διάρκεια και η συμπεριφορά της μπαταρίας "
-                  + "υπό πραγματικές συνθήκες.\n\n"
-                  + "Βεβαιώσου ότι η συσκευή δεν φορτίζει πριν ξεκινήσεις "
-                  + "και ότι η μπαταρία είναι τουλάχιστον 30% "
-                  + "(40%+ συνιστάται για βέλτιστη συνέπεια)."
+            gr
+            ? "Η δοκιμή προσομοιώνει καθημερινή χρήση για 5 λεπτά "
+              + "ώστε να εκτιμηθούν κατανάλωση, διάρκεια και συμπεριφορά μπαταρίας.\n\n"
+              + "Προϋποθέσεις:\n"
+              + "• Μπαταρία τουλάχιστον 30%\n"
+              + "• Η συσκευή να μην φορτίζει\n"
+              + "• Airplane Mode ενεργό για σταθερότητα runs."
 
-                : "This test simulates real device usage for 5 minutes "
-                  + "to estimate battery consumption, expected endurance, "
-                  + "and battery behavior under real-world conditions.\n\n"
-                  + "Make sure the device is not charging before starting "
-                  + "and battery level is at least 30% "
-                  + "(40%+ recommended for optimal consistency).";
+            : "This test simulates 5 minutes of real device usage "
+              + "to estimate battery consumption, endurance "
+              + "and battery behavior.\n\n"
+              + "Requirements:\n"
+              + "• Battery at least 30%\n"
+              + "• Device not charging\n"
+              + "• Airplane Mode enabled for run stability.";
 
     int percent = getBatteryPercentSafe();
 
     boolean chargingNow = false;
+    boolean airplaneMode = false;
+
     try {
         chargingNow = isDeviceCharging();
+
+        airplaneMode =
+                Settings.Global.getInt(
+                        getContentResolver(),
+                        Settings.Global.AIRPLANE_MODE_ON,
+                        0
+                ) == 1;
+
     } catch (Throwable ignore) {}
 
     boolean chargingOk = !chargingNow;
 
-    SpannableStringBuilder sb = new SpannableStringBuilder();
+    SpannableStringBuilder sb =
+            new SpannableStringBuilder();
 
     int green = 0xFF39FF14;
-    int red = 0xFFFF4444;
+    int red   = 0xFFFF4444;
 
     int start = sb.length();
 
@@ -20840,108 +20908,57 @@ private void showLab14BAdvisory(Runnable onContinue) {
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
     );
 
-// ------------------------------------------------------------
-// BATTERY LEVEL STATUS
-// ------------------------------------------------------------
-start = sb.length();
-
-String batteryStatus;
-int batteryColor;
-
-if (percent < 30) {
-
-    batteryStatus =
-            gr
-                    ? "✖ Μπαταρία: " + percent + "% (Απαιτείται τουλάχιστον 30%)"
-                    : "✖ Battery: " + percent + "% (Minimum 30% required)";
-
-    batteryColor = red;
-
-} else if (percent < 40) {
-
-    batteryStatus =
-            gr
-                    ? "⚠ Μπαταρία: " + percent + "% (Συνιστάται 40%+)"
-                    : "⚠ Battery: " + percent + "% (40%+ recommended)";
-
-    batteryColor = 0xFFFFA500; // orange
-
-} else {
-
-    batteryStatus =
-            gr
-                    ? "✓ Μπαταρία: " + percent + "%"
-                    : "✓ Battery: " + percent + "%";
-
-    batteryColor = green;
-}
-
-sb.append(batteryStatus).append("\n");
-
-sb.setSpan(
-        new ForegroundColorSpan(batteryColor),
-        start,
-        sb.length(),
-        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-);
-
-// ------------------------------------------------------------
-// LOW BATTERY ADVISORY
-// ------------------------------------------------------------
-if (percent < 30) {
-
+    // ------------------------------------------------
+    // BATTERY STATUS
+    // ------------------------------------------------
     start = sb.length();
 
-    sb.append("\n");
+    String batteryStatus;
+    int batteryColor;
 
-    sb.append(
-            gr
-            ? "Κάτω από 30% ορισμένες συσκευές μπορεί να ενεργοποιούν προστασία και η αξιολόγηση να αλλοιωθεί."
-            : "Below 30% some devices may enter protection behavior and affect reliability."
-    );
+    if (percent < 30) {
+
+        batteryStatus =
+                gr
+                ? "✖ Μπαταρία: " + percent +
+                  "% (Απαιτείται τουλάχιστον 30%)"
+                : "✖ Battery: " + percent +
+                  "% (Minimum 30% required)";
+
+        batteryColor = red;
+
+    } else {
+
+        batteryStatus =
+                gr
+                ? "✓ Μπαταρία: " + percent + "%"
+                : "✓ Battery: " + percent + "%";
+
+        batteryColor = green;
+    }
+
+    sb.append(batteryStatus).append("\n");
 
     sb.setSpan(
-            new ForegroundColorSpan(red),
+            new ForegroundColorSpan(
+                    batteryColor
+            ),
             start,
             sb.length(),
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
     );
-}
 
-    // ------------------------------------------------------------
-    // CHARGING STATUS (CRITICAL)
-    // ------------------------------------------------------------
-    
-    sb.append("\n\n"); 
-    
-    start = sb.length();
+    if (percent < 30) {
 
-    String chargingStatus;
+        start = sb.length();
 
-    if (chargingOk) {
+        sb.append("\n");
 
-        chargingStatus =
+        sb.append(
                 gr
-                        ? "✓ Η συσκευή δεν φορτίζεται"
-                        : "✓ Device not charging";
-
-        sb.append(chargingStatus);
-
-        sb.setSpan(
-                new ForegroundColorSpan(green),
-                start,
-                sb.length(),
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                ? "Κάτω από 30% μπορεί να επέμβει system protection."
+                : "Below 30% system protection may interfere."
         );
-
-    } else {
-
-        chargingStatus =
-                gr
-                        ? "✖ Η συσκευή φορτίζεται"
-                        : "✖ Device is charging";
-
-        sb.append(chargingStatus);
 
         sb.setSpan(
                 new ForegroundColorSpan(red),
@@ -20951,42 +20968,109 @@ if (percent < 30) {
         );
     }
 
+    // ------------------------------------------------
+    // CHARGING STATUS
+    // ------------------------------------------------
+    sb.append("\n\n");
+
+    start = sb.length();
+
+    String chargingStatus =
+            chargingOk
+            ? (gr
+               ? "✓ Η συσκευή δεν φορτίζεται"
+               : "✓ Device not charging")
+            : (gr
+               ? "✖ Η συσκευή φορτίζει"
+               : "✖ Device is charging");
+
+    sb.append(chargingStatus);
+
+    sb.setSpan(
+            new ForegroundColorSpan(
+                    chargingOk ? green : red
+            ),
+            start,
+            sb.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
+    // ------------------------------------------------
+    // AIRPLANE MODE STATUS
+    // ------------------------------------------------
+    sb.append("\n");
+
+    start = sb.length();
+
+    String airStatus =
+            airplaneMode
+            ? (gr
+               ? "✓ Airplane Mode ενεργό"
+               : "✓ Airplane Mode enabled")
+            : (gr
+               ? "✖ Airplane Mode ανενεργό"
+               : "✖ Airplane Mode disabled");
+
+    sb.append(airStatus);
+
+    sb.setSpan(
+            new ForegroundColorSpan(
+                    airplaneMode ? green : red
+            ),
+            start,
+            sb.length(),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+    );
+
     TextView msg = new TextView(this);
     msg.setText(sb);
     msg.setTextSize(14.5f);
-    msg.setLineSpacing(0f, 1.2f);
+    msg.setLineSpacing(0f,1.2f);
+
     root.addView(msg);
 
     root.addView(buildMuteRow());
 
-    // ------------------------------------------------------------
-    // BUTTON LOGIC
-    // ------------------------------------------------------------
+    // ------------------------------------------------
+    // BUTTON
+    // ------------------------------------------------
     boolean allowContinue =
-        chargingOk &&
-        percent >= 30;
+            chargingOk &&
+            percent >= 30 &&
+            airplaneMode;
 
-    LinearLayout row = new LinearLayout(this);
-    row.setOrientation(LinearLayout.VERTICAL);
+    LinearLayout row =
+            new LinearLayout(this);
+
+    row.setOrientation(
+            LinearLayout.VERTICAL
+    );
 
     LinearLayout.LayoutParams lp =
-        new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
 
-    lp.setMargins(0, dp(14), 0, 0);
+    lp.setMargins(
+            0, dp(14),0,0
+    );
 
     Button btnAction;
 
     if (allowContinue) {
+
         btnAction =
                 gelButton(
                         this,
-                        gr ? "Συνέχεια (5 λεπτά τεστ)" : "Continue (5 min test)",
+                        gr
+                        ? "Έναρξη 5λεπτου τεστ"
+                        : "Start 5-minute test",
                         0xFF0B5D1E
                 );
+
     } else {
+
         btnAction =
                 gelButton(
                         this,
@@ -21004,50 +21088,72 @@ if (percent < 30) {
 
     AlertDialog dlg = b.create();
 
-    if (dlg.getWindow() != null) {
+    if (dlg.getWindow()!=null){
         dlg.getWindow().setBackgroundDrawable(
-                new ColorDrawable(Color.TRANSPARENT)
+                new ColorDrawable(
+                        Color.TRANSPARENT
+                )
         );
     }
 
     dlg.show();
 
-    dlg.setOnCancelListener(d -> AppTTS.stop());
-    dlg.setOnDismissListener(d -> AppTTS.stop());
+    dlg.setOnCancelListener(
+            d -> AppTTS.stop()
+    );
 
-    // 🔊 TTS
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+    dlg.setOnDismissListener(
+            d -> AppTTS.stop()
+    );
 
-        if (!dlg.isShowing()) return;
+    // ------------------------------------------------
+    // TTS
+    // ------------------------------------------------
+    new Handler(
+            Looper.getMainLooper()
+    ).postDelayed(() -> {
+
+        if (!dlg.isShowing())
+            return;
 
         AppTTS.stop();
 
         if (!AppTTS.isMuted(this)) {
-            String speakText = text + ". " + batteryStatus + ". " + chargingStatus;
+
+            String speakText =
+                    text + ". "
+                    + batteryStatus + ". "
+                    + chargingStatus + ". "
+                    + airStatus;
+
             AppTTS.ensureSpeak(
                     ManualTestsActivity.this,
                     speakText
             );
         }
 
-    }, 120L);
+    },120L);
 
-    // ------------------------------------------------------------
+    // ------------------------------------------------
     // CLICK
-    // ------------------------------------------------------------
+    // ------------------------------------------------
     btnAction.setOnClickListener(v -> {
 
         AppTTS.stop();
+
         dlg.dismiss();
 
-        if (!allowContinue) return;
+        if (!allowContinue)
+            return;
 
         if (onContinue != null) {
 
             if (!checkLab14BConditions()) {
+
                 logWarn(gr
                         ? "Οι συνθήκες άλλαξαν — το τεστ ακυρώθηκε"
                         : "Conditions changed — test aborted");
+
                 return;
             }
 
@@ -21192,7 +21298,7 @@ if (lab14Dialog.getWindow() != null) {
             Uri uri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.battery_stress_loop);
             lab14StressVideo.setVideoURI(uri);
             lab14StressVideo.setOnPreparedListener(mp -> {
-                mp.setLooping(true);
+                mp.setLooping(false);
                 lab14StressVideo.start();
             });
         } catch (Throwable ignore) {}
@@ -21309,6 +21415,202 @@ private float getScreenSizeInches() {
     float x = (dm.widthPixels / dm.xdpi);
     float y = (dm.heightPixels / dm.ydpi);
     return (float)Math.sqrt(x*x + y*y);
+}
+
+// ============================================================
+// GEL YES / NO POPUP
+// returns true if YES
+// ============================================================
+private boolean showYesNoPopup(
+        String title,
+        String message
+) {
+
+    final boolean[] result = {false};
+
+    final CountDownLatch latch =
+            new CountDownLatch(1);
+
+    runOnUiThread(() -> {
+
+        AlertDialog.Builder b =
+                new AlertDialog.Builder(
+                        ManualTestsActivity.this
+                );
+
+        LinearLayout root =
+                new LinearLayout(this);
+
+        root.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        root.setPadding(
+                dp(20),
+                dp(20),
+                dp(20),
+                dp(20)
+        );
+
+        TextView tv =
+                new TextView(this);
+
+        tv.setText(title + "\n\n" + message);
+        tv.setTextColor(Color.WHITE);
+        tv.setTextSize(17f);
+
+        root.addView(tv);
+
+        LinearLayout btnRow =
+                new LinearLayout(this);
+
+        btnRow.setOrientation(
+                LinearLayout.HORIZONTAL
+        );
+
+        btnRow.setPadding(
+                0, dp(18), 0, 0
+        );
+
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1f
+                );
+
+        lp.setMargins(
+                dp(6),0,dp(6),0
+        );
+
+        // ---------------- NO (RED)
+        Button noBtn =
+                new Button(this);
+
+        noBtn.setText(
+                AppLang.isGreek(this)
+                        ? "ΟΧΙ"
+                        : "NO"
+        );
+
+        noBtn.setAllCaps(false);
+        noBtn.setTextColor(Color.WHITE);
+
+        GradientDrawable noBg =
+                new GradientDrawable();
+
+        noBg.setColor(0xFF8B0000);
+        noBg.setCornerRadius(dp(10));
+        noBg.setStroke(
+                dp(3),
+                0xFFFFD700
+        );
+
+        noBtn.setBackground(noBg);
+        noBtn.setLayoutParams(lp);
+
+        // ---------------- YES (GREEN)
+        Button yesBtn =
+                new Button(this);
+
+        yesBtn.setText(
+                AppLang.isGreek(this)
+                        ? "ΝΑΙ"
+                        : "YES"
+        );
+
+        yesBtn.setAllCaps(false);
+        yesBtn.setTextColor(Color.WHITE);
+
+        GradientDrawable yesBg =
+                new GradientDrawable();
+
+        yesBg.setColor(0xFF0B5F3B);
+        yesBg.setCornerRadius(dp(10));
+        yesBg.setStroke(
+                dp(3),
+                0xFFFFD700
+        );
+
+        yesBtn.setBackground(yesBg);
+        yesBtn.setLayoutParams(lp);
+
+        btnRow.addView(noBtn);
+        btnRow.addView(yesBtn);
+
+        root.addView(btnRow);
+
+        b.setView(root);
+
+        final AlertDialog dlg =
+                b.setCancelable(false)
+                 .create();
+
+        noBtn.setOnClickListener(v -> {
+            result[0] = false;
+            dlg.dismiss();
+            latch.countDown();
+        });
+
+        yesBtn.setOnClickListener(v -> {
+            result[0] = true;
+            dlg.dismiss();
+            latch.countDown();
+        });
+
+        dlg.show();
+
+    });
+
+    try {
+        latch.await();
+    } catch (Throwable ignore) {}
+
+    return result[0];
+}
+
+// ============================================================
+// RESTORE NORMAL MODE PROMPT
+// ============================================================
+private void promptRestoreNormalMode() {
+
+    boolean gr = AppLang.isGreek(this);
+
+    boolean restoreNow =
+            showYesNoPopup(
+                gr
+                ? "Επαναφορά Normal Mode"
+                : "Restore Normal Mode",
+
+                gr
+                ? "Η δοκιμή ολοκληρώθηκε.\n\nΝα επανέλθει τώρα το κινητό σε Normal Mode;\n(Απενεργοποίηση Airplane Mode)"
+                : "Test completed.\n\nRestore phone to Normal Mode now?\n(Disable Airplane Mode)"
+            );
+
+    if (!restoreNow) {
+        return;
+    }
+
+    try {
+
+        startActivity(
+                new Intent(
+                        Settings.ACTION_AIRPLANE_MODE_SETTINGS
+                )
+        );
+
+    } catch (Throwable e) {
+
+        try {
+
+            startActivity(
+                    new Intent(
+                            Settings.ACTION_SETTINGS
+                    )
+            );
+
+        } catch (Throwable ignore) {}
+    }
 }
 
 //=============================================================
