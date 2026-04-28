@@ -20212,20 +20212,56 @@ if (!Float.isNaN(perHour)) {
 }
 
 // --------------------------------------
-// PASSIVE MODE (no synthetic CPU correction)
+// SPIKES CORRECTION 
 // --------------------------------------
 float correctedPerHour = perHour;
 
-logLabelValue(
-    gr
-    ? "Διορθωμένη κατανάλωση"
-    : "Corrected consumption",
-    String.format(
-        Locale.US,
-        "%.0f mAh/h",
-        correctedPerHour
-    )
-);
+if (lab14SpikeMah > 0.8f && baselineMah[0] > 0) {
+
+    float multiplier = 15f;
+    float capPct = 0.25f;
+
+    if (lab14SpikeCount >= 5 ||
+        lab14MaxSpikeExcess > 700f) {
+
+        multiplier = 30f;
+        capPct = 0.40f;
+    }
+
+    float spikePerHour =
+            lab14SpikeMah * multiplier;
+
+    float cap =
+            perHour * capPct;
+
+    spikePerHour =
+            Math.min(spikePerHour, cap);
+
+    correctedPerHour =
+            perHour - spikePerHour;
+
+    float minAllowed =
+            perHour * 0.55f;
+
+    if (correctedPerHour < minAllowed) {
+        correctedPerHour = minAllowed;
+    }
+
+    if (correctedPerHour < 50f) {
+        correctedPerHour = perHour;
+    }
+
+    logLabelValue(
+        gr
+        ? "Διορθωμένη κατανάλωση"
+        : "Spike-corrected consumption",
+        String.format(
+            Locale.US,
+            "%.0f mAh/h",
+            correctedPerHour
+        )
+    );
+}
 
 // ------------------------------------------------
 // FINAL ESTIMATION
