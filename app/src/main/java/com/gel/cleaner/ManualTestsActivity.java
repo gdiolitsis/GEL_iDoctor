@@ -20359,7 +20359,7 @@ appendHtml("<br>");
                 if (!Float.isNaN(estimatedHours)) {
 
                     logLabelValue(
-                            gr ? "Εκτιμώμενη διάρκεια" : "Estimated duration",
+                            gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
                             String.format(
                                     Locale.US,
                                     "%.1f %s",
@@ -20371,12 +20371,14 @@ appendHtml("<br>");
                 } else {
 
                     logWarn(gr
-                            ? "Αδυναμία εκτίμησης διάρκειας"
-                            : "Estimation failed");
+                            ? "Αδυναμία εκτίμησης διάρκειας μπαταρίας"
+                            : "Battery duration estimation failed");
                 }
                 
                 appendHtml("<br>");
-logOk(gr ? "Σενάρια χρήσης" : "Usage scenarios");
+logOk(gr 
+    ? "Σενάρια διάρκειας χρήσης"
+    : "Usage endurance scenarios");
 logLine();
                 
 float lightUsage = Float.NaN;
@@ -20404,17 +20406,17 @@ if (!Float.isNaN(estimatedHours) && estimatedHours > 0f) {
             heavyUsage, gr ? "ώρες" : "hours"
     );
 
-    logLabelValue(gr ? "Με ελαφριά χρήση" : "Light usage", lightStr);
-    logLabelValue(gr ? "Με κανονική χρήση" : "Normal usage", normalStr);
-    logLabelValue(gr ? "Με βαριά χρήση" : "Heavy usage", heavyStr);
+    logLabelValue(gr ? "Με ελαφριά χρήση" : "Under light usage", lightStr);
+    logLabelValue(gr ? "Με κανονική χρήση" : "Under normal usage", normalStr);
+    logLabelValue(gr ? "Με βαριά χρήση" : "Under heavy usage", heavyStr);
 
 } else {
 
     String na = gr ? "Μ/Δ" : "N/A";
 
-    logLabelValue(gr ? "Με ελαφριά χρήση" : "Light usage", na);
-    logLabelValue(gr ? "Με κανονική χρήση" : "Normal usage", na);
-    logLabelValue(gr ? "Με βαριά χρήση" : "Heavy usage", na);
+    logLabelValue(gr ? "Με ελαφριά χρήση" : "Under light usage", na);
+    logLabelValue(gr ? "Με κανονική χρήση" : "Under normal usage", na);
+    logLabelValue(gr ? "Με βαριά χρήση" : "Under heavy usage", na);
 }
 
 float battPct = (float) getBatteryPercentSafe();
@@ -20446,19 +20448,19 @@ if (!Float.isNaN(estimatedHours) && battPct > 0f) {
     );
 
     logLabelValue(
-            gr ? "Με ελαφριά χρήση" : "Light usage",
+            gr ? "Με ελαφριά χρήση" : "Under light usage",
             String.format(Locale.US, "%.1f %s",
                     lightRemaining, gr ? "ώρες" : "hours")
     );
 
     logLabelValue(
-            gr ? "Με κανονική χρήση" : "Normal usage",
+            gr ? "Με κανονική χρήση" : "Under normal usage",
             String.format(Locale.US, "%.1f %s",
                     normalRemaining, gr ? "ώρες" : "hours")
     );
 
     logLabelValue(
-            gr ? "Με βαριά χρήση" : "Heavy usage",
+            gr ? "Με βαριά χρήση" : "Under heavy usage",
             String.format(Locale.US, "%.1f %s",
                     heavyRemaining, gr ? "ώρες" : "hours")
     );
@@ -20507,33 +20509,33 @@ if (!Float.isNaN(estimatedHours)) {
     // ------------------------------------------------
     if (omega >= 1.20f) {
 
-        verdict = gr
-                ? "Εξαιρετική απόδοση μπαταρίας υπό περιορισμούς"
-                : "Exceptional battery performance within constraints";
+    verdict = gr
+            ? "Εξαιρετική απόδοση μπαταρίας"
+            : "Exceptional battery performance";
 
-        humanVerdict = gr
-                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει εντυπωσιακά πάνω από τους περιορισμούς της. Έχει πολλά ψωμιά ακόμα."
-                : "Based on battery capacity and screen size, battery performance is exceptionally above its constraints and still has a lot of life left.";
+    humanVerdict = gr
+            ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει εντυπωσιακά πάνω από το αναμενόμενο. Έχει πολλή ζωή ακόμα."
+            : "Based on battery capacity and screen size, battery performance is impressively above expectations and still has a lot of life left.";
 
-    } else if (omega >= 1.00f) {
+} else if (omega >= 1.00f) {
 
-        verdict = gr
-                ? "Άριστη κατάσταση μπαταρίας εντός περιορισμών"
-                : "Excellent battery condition within constraints";
+    verdict = gr
+            ? "Πολύ καλή απόδοση μπαταρίας"
+            : "Very good battery performance";
 
-        humanVerdict = gr
-                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει πολύ καλά για τους περιορισμούς της και δείχνει υγιές σύστημα μπαταρίας."
-                : "Based on battery capacity and screen size, the battery performs very well for its constraints and indicates a healthy battery system.";
+    humanVerdict = gr
+            ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει πολύ καλά και δείχνει υγιές σύστημα μπαταρίας."
+            : "Based on battery capacity and screen size, the battery performs very well and indicates a healthy battery system.";
 
-    } else if (omega >= 0.80f) {
+} else if (omega >= 0.80f) {
 
-        verdict = gr
-                ? "Υγιής κατάσταση μπαταρίας εντός περιορισμών"
-                : "Healthy battery condition within constraints";
+    verdict = gr
+            ? "Υγιής κατάσταση μπαταρίας"
+            : "Healthy battery condition";
 
-        humanVerdict = gr
-                ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει καλά για τους περιορισμούς της και έχει ζωή ακόμα."
-                : "Based on battery capacity and screen size, the battery performs well for its constraints and still has solid life left.";
+    humanVerdict = gr
+            ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει καλά και έχει ζωή ακόμα."
+            : "Based on battery capacity and screen size, the battery performs well and still has solid life left.";
 
     } else if (omega >= 0.65f) {
 
