@@ -225,7 +225,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Collections;
 import java.util.concurrent.Executor;
 import java.util.Comparator;
-import java.util.concurrent.CountDownLatch;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -19793,53 +19792,50 @@ private boolean checkLab14BConditions() {
         return false;
     }
 
-    // ------------------------------------------------------------
-    // AIRPLANE MODE
-    // ------------------------------------------------------------
-    logLabelValue(
-            gr ? "Airplane mode" : "Airplane mode",
-            airplaneMode ? "ON" : "OFF"
-    );
+// ------------------------------------------------------------
+// AIRPLANE MODE
+// ------------------------------------------------------------
+logLabelValue(
+        "Airplane mode",
+        airplaneMode ? "ON" : "OFF"
+);
 
-    if (!airplaneMode) {
+if (!airplaneMode) {
 
-        boolean enableNow =
-                showYesNoPopup(
-                        gr
-                        ? "Απαιτείται Airplane Mode"
-                        : "Airplane Mode Required",
+    new AlertDialog.Builder(this)
+        .setTitle(
+            gr
+            ? "Απαιτείται Airplane Mode"
+            : "Airplane Mode Required"
+        )
+        .setMessage(
+            gr
+            ? "Για σταθερότητα runs ενεργοποιήστε Airplane Mode τώρα;"
+            : "Enable Airplane Mode now for run stability?"
+        )
 
-                        gr
-                        ? "Για σταθερότητα των runs το LAB 14B απαιτεί Airplane Mode.\n\nΝα το ενεργοποιήσετε τώρα;"
-                        : "LAB 14B requires Airplane Mode for run stability.\n\nEnable it now?"
-                );
+        .setNegativeButton(
+            gr ? "ΟΧΙ" : "NO",
+            null
+        )
 
-        if (enableNow) {
-
-            try {
-
-                startActivity(
-                        new Intent(
-                                Settings.ACTION_AIRPLANE_MODE_SETTINGS
-                        )
-                );
-
-            } catch (Throwable e) {
+        .setPositiveButton(
+            gr ? "ΝΑΙ" : "YES",
+            (d,w) -> {
 
                 try {
-
                     startActivity(
-                            new Intent(
-                                    Settings.ACTION_SETTINGS
-                            )
+                        new Intent(
+                           Settings.ACTION_AIRPLANE_MODE_SETTINGS
+                        )
                     );
-
                 } catch (Throwable ignore) {}
             }
-        }
+        )
+        .show();
 
-        return false;
-    }
+    return false;
+}
 
     // ------------------------------------------------------------
     // PASS
@@ -21417,199 +21413,58 @@ private float getScreenSizeInches() {
 }
 
 // ============================================================
-// GEL YES / NO POPUP
-// returns true if YES
-// ============================================================
-private boolean showYesNoPopup(
-        String title,
-        String message
-) {
-
-    final boolean[] result = {false};
-
-    final CountDownLatch latch =
-            new CountDownLatch(1);
-
-    runOnUiThread(() -> {
-
-        AlertDialog.Builder b =
-                new AlertDialog.Builder(
-                        ManualTestsActivity.this
-                );
-
-        LinearLayout root =
-                new LinearLayout(this);
-
-        root.setOrientation(
-                LinearLayout.VERTICAL
-        );
-
-        root.setPadding(
-                dp(20),
-                dp(20),
-                dp(20),
-                dp(20)
-        );
-
-        TextView tv =
-                new TextView(this);
-
-        tv.setText(title + "\n\n" + message);
-        tv.setTextColor(Color.WHITE);
-        tv.setTextSize(17f);
-
-        root.addView(tv);
-
-        LinearLayout btnRow =
-                new LinearLayout(this);
-
-        btnRow.setOrientation(
-                LinearLayout.HORIZONTAL
-        );
-
-        btnRow.setPadding(
-                0, dp(18), 0, 0
-        );
-
-        LinearLayout.LayoutParams lp =
-                new LinearLayout.LayoutParams(
-                        0,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        1f
-                );
-
-        lp.setMargins(
-                dp(6),0,dp(6),0
-        );
-
-        // ---------------- NO (RED)
-        Button noBtn =
-                new Button(this);
-
-        noBtn.setText(
-                AppLang.isGreek(this)
-                        ? "ΟΧΙ"
-                        : "NO"
-        );
-
-        noBtn.setAllCaps(false);
-        noBtn.setTextColor(Color.WHITE);
-
-        GradientDrawable noBg =
-                new GradientDrawable();
-
-        noBg.setColor(0xFF8B0000);
-        noBg.setCornerRadius(dp(10));
-        noBg.setStroke(
-                dp(3),
-                0xFFFFD700
-        );
-
-        noBtn.setBackground(noBg);
-        noBtn.setLayoutParams(lp);
-
-        // ---------------- YES (GREEN)
-        Button yesBtn =
-                new Button(this);
-
-        yesBtn.setText(
-                AppLang.isGreek(this)
-                        ? "ΝΑΙ"
-                        : "YES"
-        );
-
-        yesBtn.setAllCaps(false);
-        yesBtn.setTextColor(Color.WHITE);
-
-        GradientDrawable yesBg =
-                new GradientDrawable();
-
-        yesBg.setColor(0xFF0B5F3B);
-        yesBg.setCornerRadius(dp(10));
-        yesBg.setStroke(
-                dp(3),
-                0xFFFFD700
-        );
-
-        yesBtn.setBackground(yesBg);
-        yesBtn.setLayoutParams(lp);
-
-        btnRow.addView(noBtn);
-        btnRow.addView(yesBtn);
-
-        root.addView(btnRow);
-
-        b.setView(root);
-
-        final AlertDialog dlg =
-                b.setCancelable(false)
-                 .create();
-
-        noBtn.setOnClickListener(v -> {
-            result[0] = false;
-            dlg.dismiss();
-            latch.countDown();
-        });
-
-        yesBtn.setOnClickListener(v -> {
-            result[0] = true;
-            dlg.dismiss();
-            latch.countDown();
-        });
-
-        dlg.show();
-
-    });
-
-    try {
-        latch.await();
-    } catch (Throwable ignore) {}
-
-    return result[0];
-}
-
-// ============================================================
 // RESTORE NORMAL MODE PROMPT
 // ============================================================
 private void promptRestoreNormalMode() {
 
-    boolean gr = AppLang.isGreek(this);
+    final boolean gr = AppLang.isGreek(this);
 
-    boolean restoreNow =
-            showYesNoPopup(
-                gr
-                ? "Επαναφορά Normal Mode"
-                : "Restore Normal Mode",
+    new AlertDialog.Builder(this)
+            .setTitle(
+                    gr
+                    ? "Επαναφορά Normal Mode"
+                    : "Restore Normal Mode"
+            )
 
-                gr
-                ? "Η δοκιμή ολοκληρώθηκε.\n\nΝα επανέλθει τώρα το κινητό σε Normal Mode;\n(Απενεργοποίηση Airplane Mode)"
-                : "Test completed.\n\nRestore phone to Normal Mode now?\n(Disable Airplane Mode)"
-            );
+            .setMessage(
+                    gr
+                    ? "Η δοκιμή ολοκληρώθηκε.\n\nΝα απενεργοποιηθεί τώρα το Airplane Mode και να επανέλθουν οι κανονικές συνδέσεις;"
+                    : "Test completed.\n\nDisable Airplane Mode now and restore normal connections?"
+            )
 
-    if (!restoreNow) {
-        return;
-    }
+            .setNegativeButton(
+                    gr ? "ΟΧΙ" : "NO",
+                    null
+            )
 
-    try {
+            .setPositiveButton(
+                    gr ? "ΝΑΙ" : "YES",
+                    (d, which) -> {
 
-        startActivity(
-                new Intent(
-                        Settings.ACTION_AIRPLANE_MODE_SETTINGS
-                )
-        );
+                        try {
 
-    } catch (Throwable e) {
+                            startActivity(
+                                    new Intent(
+                                            Settings.ACTION_AIRPLANE_MODE_SETTINGS
+                                    )
+                            );
 
-        try {
+                        } catch (Throwable e) {
 
-            startActivity(
-                    new Intent(
-                            Settings.ACTION_SETTINGS
-                    )
-            );
+                            try {
 
-        } catch (Throwable ignore) {}
-    }
+                                startActivity(
+                                        new Intent(
+                                                Settings.ACTION_SETTINGS
+                                        )
+                                );
+
+                            } catch (Throwable ignore) {}
+                        }
+                    }
+            )
+
+            .show();
 }
 
 //=============================================================
