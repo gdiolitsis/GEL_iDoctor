@@ -21272,7 +21272,7 @@ private void showLab14BAdvisory(Runnable onContinue) {
 // 🔥 LAB 14B — SIMPLIFIED (BATTERY USAGE ONLY)
 // ==========================================================
 
-startLab14DurationPopup(
+private void startLab14DurationPopup(
         long durationSec,
         boolean gamaMode
 ) {
