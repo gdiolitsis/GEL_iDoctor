@@ -19965,6 +19965,7 @@ try { stopVibrationStress(); } catch (Throwable ignore) {}
 // 🎬 VIDEO SETUP (CONTINUOUS LIGHT BACKGROUND LOAD)
 // --------------------------------------------------------
 try {
+
     if (lab14StressVideo != null) {
 
         lab14StressVideo.setVideoURI(
@@ -19977,12 +19978,18 @@ try {
         );
 
         lab14StressVideo.setOnPreparedListener(mp -> {
+
             mp.setLooping(true);
-            mp.setVolume(0f, 0f);
+            mp.setVolume(0f,0f);
 
             try {
                 lab14StressVideo.start();
-            } catch (Throwable
+            } catch (Throwable ignore) {}
+
+        });
+    }
+
+} catch (Throwable ignore) {}
 
 // --------------------------------------------------------
 // 🌿 HUMAN USAGE SIMULATION (CONTROLLED REAL USE)
@@ -20139,11 +20146,11 @@ usageHandler.postDelayed(this, nextDelay);
 };
 
 // start continuous video baseline
-try{
+try {
     if (lab14StressVideo != null) {
         lab14StressVideo.start();
     }
-}catch(Throwable ignore){}
+} catch (Throwable ignore) {}
 
 // start loop
 usageHandler.post(usageLoop);
@@ -21273,7 +21280,7 @@ if (lab14Dialog.getWindow() != null) {
             Uri uri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.battery_stress_loop);
             lab14StressVideo.setVideoURI(uri);
             lab14StressVideo.setOnPreparedListener(mp -> {
-                mp.setLooping(false);
+                mp.setLooping(true);
                 lab14StressVideo.start();
             });
         } catch (Throwable ignore) {}
@@ -21369,10 +21376,16 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
 }
 
 private void simulateUiInteraction() {
+
+    // Controlled light interaction.
+    // Keep background video running continuously.
+    // Intentionally no video pause here.
+
     try {
-        if (lab14StressVideo != null && lab14StressVideo.isPlaying()) {
-            lab14StressVideo.pause();
-        }
+
+        // tiny UI-like workload only
+        Math.sqrt(Math.random());
+
     } catch (Throwable ignore) {}
 }
 
