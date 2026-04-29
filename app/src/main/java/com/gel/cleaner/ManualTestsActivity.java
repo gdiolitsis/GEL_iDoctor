@@ -20013,13 +20013,8 @@ final Runnable usageLoop = new Runnable() {
                 // IDLE
                 // -------------------------
                 case 0:
-                    try {
-                        if (lab14StressVideo != null) {
-                            lab14StressVideo.pause();
-                            lab14StressVideo.seekTo(0);
-                        }
-                    } catch (Throwable ignore) {}
-                    break;
+    // idle while background video keeps running
+    break;
 
                 // -------------------------
                 // LIGHT UI INTERACTION
@@ -20032,27 +20027,8 @@ final Runnable usageLoop = new Runnable() {
                 // VIDEO BURST
                 // -------------------------
                 case 2:
-                    try {
-
-                        if (lab14StressVideo != null) {
-
-                            lab14StressVideo.pause();
-                            lab14StressVideo.seekTo(0);
-
-                            lab14StressVideo.start();
-
-                            usageHandler.postDelayed(() -> {
-                                try {
-                                    lab14StressVideo.pause();
-                                    lab14StressVideo.seekTo(0);
-                                } catch (Throwable ignore) {}
-                            }, 15000);
-
-                        }
-
-                    } catch (Throwable ignore) {}
-
-                    break;
+    // video runs continuously in background
+    break;
 
                 // -------------------------
                 // SHORT CPU BURST
@@ -20160,6 +20136,13 @@ try {
 usageHandler.postDelayed(this, nextDelay);
     }
 };
+
+// start continuous video baseline
+try{
+    if (lab14StressVideo != null) {
+        lab14StressVideo.start();
+    }
+}catch(Throwable ignore){}
 
 // start loop
 usageHandler.post(usageLoop);
@@ -20324,23 +20307,16 @@ baselineMah[0] / correctedPerHour;
 float tempRise = Float.NaN;
 float voltDrop = Float.NaN;
 
-if (!Float.isNaN(startTemp[0]) &&
-    !Float.isNaN(endTemp[0])) {
+if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
+    tempRise = endTemp[0] - startTemp[0];
 
-    tempRise =
-            endTemp[0] - startTemp[0];
-
-    // sensor jitter filter
-    if (Math.abs(tempRise) < 0.3f) {
-        tempRise = 0f;
-    }
+    if (tempRise < 0f) tempRise = 0f;
+    if (Math.abs(tempRise) < 0.3f) tempRise = 0f;
 }
 
 if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
-
     voltDrop = startVolt[0] - endVolt[0];
 
-    // show magnitude only
     voltDrop = Math.abs(voltDrop);
 }
 
