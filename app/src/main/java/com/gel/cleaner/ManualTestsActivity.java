@@ -629,6 +629,8 @@ private float lab14MaxSpikeExcess = 0f;
 
 private boolean pendingRestartLab14B = false;
 
+private boolean isLab14GamaMode = false;
+
 // ============================================================  
 // Battery stress internals  
 // ============================================================  
@@ -1148,16 +1150,11 @@ logScroll.setOnTouchListener((v, event) -> {
     Button header4 = makeSectionHeader(getString(R.string.manual_cat_4), body4);
     labsContainer.addView(header4);
     labsContainer.addView(body4);
-
+    
     body4.addView(makeTestButtonRedGold(
-            gr ? "14. Δοκιμή Καταπόνησης Υγείας Μπαταρίας"
-               : "14. Battery Health Stress Test",
-            this::lab14BatteryHealthStressTest));
-
-    body4.addView(makeTestButtonRedGold(
-        gr ? "14B. Έλεγχος κατανάλωσης και διάρκειας μπαταρίας"
-           : "14B. Battery usage and duration test",
-        this::lab14BBatteryDurationTest));
+       gr ? "14. Σουίτα Διάγνωσης Μπαταρίας"
+          : "14. Battery Diagnostics Suite",
+       this::showBatterySuiteMenu));
 
     body4.addView(makeTestButton(
             gr ? "15. Διαγνωστικός Έλεγχος Συστήματος Φόρτισης (Smart)"
@@ -11796,6 +11793,62 @@ AppTTS.stop();
 }
 
 // ============================================================
+// LAB 14 — BATTERY DIAGNOSTICS SUITE
+// ============================================================
+private void showBatterySuiteMenu() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    AlertDialog.Builder b =
+            new AlertDialog.Builder(
+                    this,
+                    android.R.style.Theme_Material_Dialog_NoActionBar
+            );
+
+    LinearLayout root =
+            buildGELPopupRoot(this);
+
+    root.addView(
+            buildPopupHeader(
+                    this,
+                    gr
+                    ? "Σουίτα Διάγνωσης Μπαταρίας"
+                    : "Battery Diagnostics Suite"
+            )
+    );
+
+    root.addView(
+            makeTestButton(
+                    gr
+                    ? "14A. Διάγνωση Υγείας και Καταπόνησης Μπαταρίας"
+                    : "14A. Battery Health and Stress Diagnosis",
+                    this::lab14BatteryHealthStressTest
+            )
+    );
+
+    root.addView(
+            makeTestButton(
+                    gr
+                    ? "14B. Προσομοίωση διάρκειας μπαταρίας καθημερινής χρήσης"
+                    : "14B. Daily Battery Endurance Simulation",
+                    this::lab14BBatteryDurationTest
+            )
+    );
+
+    root.addView(
+            makeTestButton(
+                    gr
+                    ? "14 GAMA. Προσομοίωση διάρκειας μπαταρίας σε Gaming"
+                    : "14 GAMA. Gaming Battery Endurance Simulation",
+                    this::lab14GamingDurationTest
+            )
+    );
+
+    b.setView(root);
+    b.show();
+}
+
+// ============================================================
 // LAB 14 — ENTRY
 // ============================================================
 
@@ -19841,9 +19894,20 @@ logLabelValue(
 }
 
 // ============================================================
-// LAB 14B — battery duration estimation (SOFT ONLY)
+// LAB 14B — battery duration estimation
 // ============================================================
 private void lab14BBatteryDurationTest() {
+    runLab14DurationMode(false);
+}
+
+// ============================================================
+// LAB 14 GAMA
+// ============================================================
+private void lab14GamingDurationTest() {
+    runLab14DurationMode(true);
+}
+
+private void runLab14DurationMode(boolean gamaMode) {
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -19904,7 +19968,8 @@ if (Float.isNaN(startTemp[0]) || startTemp[0] <= 0f) {
 
 startVolt[0] = getBatteryVoltageFiltered();
 
-isLab14BMode = true;
+isLab14BMode = !gamaMode;
+isLab14GamaMode = gamaMode;
 lab14Cancelled = false;
 lab14Running = true;
 
@@ -19932,18 +19997,32 @@ lab14MaxSpikeExcess = 0f;
 
 // ---------------------------------------------
 
-startLab14BPopup(300); // 5 λεπτά
+startLab14DurationPopup(
+    300,
+    gamaMode
+);
 
 logLine();
 
-logOk(gr
-        ? "LAB 14B ξεκίνησε"
-        : "LAB 14B started");
+logOk(
+    gr
+    ? (gamaMode
+        ? "LAB 14 GAMA ξεκίνησε"
+        : "LAB 14B ξεκίνησε")
+    : (gamaMode
+        ? "LAB 14 GAMA started"
+        : "LAB 14B started")
+);
 
 logLabelValue(
-        gr ? "Λειτουργία" : "Mode",
-        gr ? "Προσομοίωση καθημερινής χρήσης (5 λεπτά)"
-           : "Real usage simulation (5 minutes)"
+    gr ? "Λειτουργία" : "Mode",
+    gr
+    ? (gamaMode
+        ? "Προσομοίωση gaming χρήσης (5 λεπτά)"
+        : "Προσομοίωση καθημερινής χρήσης (5 λεπτά)")
+    : (gamaMode
+        ? "Gaming usage simulation (5 minutes)"
+        : "Daily usage simulation (5 minutes)")
 );
 
 try {
@@ -20011,42 +20090,50 @@ final Runnable usageLoop = new Runnable() {
         long nextDelay = 500;
 
         // 🔴 restore CPU burst mode
-        int mode = (int)(Math.random() * 4);
-
         try {
 
-            switch (mode) {
+    if (gamaMode) {
 
-                // -------------------------
-                // IDLE
-                // -------------------------
-                case 0:
-    // idle while background video keeps running
-    break;
+        int r =
+                (int)(Math.random()*10);
 
-                // -------------------------
-                // LIGHT UI INTERACTION
-                // -------------------------
-                case 1:
-                    simulateUiInteraction();
-                    break;
+        if (r < 5) {
 
-                // -------------------------
-                // VIDEO BURST
-                // -------------------------
-                case 2:
-    // video runs continuously in background
-    break;
+            simulateShortCpuBurst();
 
-                // -------------------------
-                // SHORT CPU BURST
-                // -------------------------
-                case 3:
-                    simulateShortCpuBurst();
-                    break;
-            }
+        } else if (r < 8) {
 
-        } catch (Throwable ignore) {}
+            simulateGpuBurst();
+
+        } else {
+
+            // video baseline only
+        }
+
+    } else {
+
+        int mode =
+                (int)(Math.random()*4);
+
+        switch(mode) {
+
+            case 0:
+                break;
+
+            case 1:
+                simulateUiInteraction();
+                break;
+
+            case 2:
+                break;
+
+            case 3:
+                simulateShortCpuBurst();
+                break;
+        }
+    }
+
+} catch (Throwable ignore) {}
         
 // 🔴 LIVE VOLTAGE SAMPLE (SMART DETECTION)
 float vNow = getBatteryVoltageFiltered();
@@ -20547,10 +20634,32 @@ if (!Float.isNaN(estimatedHours)) {
     // ------------------------------------------------
     // PURE PHYSICS BASELINE
     // ------------------------------------------------
-    float expectedHours =
-            8.8f *
-            (baselineMah[0] / 5000f) *
-            (6.5f / screenInches);
+    float refScreen =
+        gamaMode
+        ? 6.7f
+        : 6.5f;
+
+float baseRef =
+        gamaMode
+        ? 5.5f
+        : 8.8f;
+
+float screenFactor =
+        refScreen / screenInches;
+
+screenFactor =
+        Math.max(
+            0.80f,
+            Math.min(
+                1.20f,
+                screenFactor
+            )
+        );
+
+float expectedHours =
+        baseRef *
+        (baselineMah[0] / 5000f) *
+        screenFactor;
 
     float omega =
             expectedHours > 0f
@@ -20636,14 +20745,19 @@ if (!Float.isNaN(estimatedHours)) {
     );
 
     logLabelValue(
-            gr ? "Αναμενόμενη διάρκεια"
-               : "Expected duration",
-            String.format(
-                    Locale.US,
-                    "%.1f h",
-                    expectedHours
-            )
-    );
+    gr
+    ? (gamaMode
+       ? "Αναμενόμενη διάρκεια gaming"
+       : "Αναμενόμενη διάρκεια")
+    : (gamaMode
+       ? "Expected gaming endurance"
+       : "Expected duration"),
+    String.format(
+        Locale.US,
+        "%.1f h",
+        expectedHours
+    )
+);
 
     logLabelValue(
             gr ? "Σχετική απόδοση"
@@ -20793,8 +20907,18 @@ try {
     // 🔴 FINAL COMPLETION
    
     appendHtml("<br>");
-            logOk(gr ? "Το Lab 14B ολοκληρώθηκε." : "Lab 14B finished.");
-            logLine();
+
+logOk(
+    gr
+    ? (gamaMode
+        ? "Το Lab 14 GAMA ολοκληρώθηκε."
+        : "Το Lab 14B ολοκληρώθηκε.")
+    : (gamaMode
+        ? "Lab 14 GAMA finished."
+        : "Lab 14B finished.")
+);
+
+logLine();
 
     runOnUiThread(() -> {
         try {
@@ -21148,7 +21272,10 @@ private void showLab14BAdvisory(Runnable onContinue) {
 // 🔥 LAB 14B — SIMPLIFIED (BATTERY USAGE ONLY)
 // ==========================================================
 
-private void startLab14BPopup(long durationSec) {
+startLab14DurationPopup(
+        long durationSec,
+        boolean gamaMode
+) {
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -21172,9 +21299,15 @@ private void startLab14BPopup(long durationSec) {
 
     // TITLE
     TextView title = new TextView(this);
-    title.setText(gr
-            ? "LAB 14B — Κατανάλωση & διάρκεια μπαταρίας"
-            : "LAB 14B — Battery usage & duration");
+    title.setText(
+    gr
+    ? (gamaMode
+        ? "LAB 14 GAMA — Διάρκεια μπαταρίας σε Gaming "
+        : "LAB 14B — Διάρκεια μπαταρίας σε καθημερινή χρήση")
+    : (gamaMode
+        ? "LAB 14 GAMA — Gaming battery endurance"
+        : "LAB 14B — Daily battery usage & duration")
+);
     title.setTextColor(Color.WHITE);
     title.setTextSize(18f);
     title.setTypeface(null, Typeface.BOLD);
@@ -21183,8 +21316,17 @@ private void startLab14BPopup(long durationSec) {
     root.addView(title);
 
     // STATUS
-    TextView statusText = new TextView(this);
-    statusText.setText(gr ? "Soft usage simulation..." : "Soft usage simulation...");
+TextView statusText = new TextView(this);
+
+statusText.setText(
+    gr
+    ? (gamaMode
+        ? "Προσομοίωση φόρτου gaming..."
+        : "Προσομοίωση καθημερινής χρήσης...")
+    : (gamaMode
+        ? "Gaming stress simulation..."
+        : "Daily usage simulation...")
+);
     statusText.setTextColor(0xFF39FF14);
     statusText.setGravity(Gravity.CENTER);
     root.addView(statusText);
@@ -21753,6 +21895,25 @@ yesBtn.setOnClickListener(v -> {
     dlg.show();
 }
 
+private void simulateGpuBurst() {
+
+    new Thread(() -> {
+
+        long t =
+            SystemClock.elapsedRealtime();
+
+        while (
+            SystemClock.elapsedRealtime() - t < 3000
+        ) {
+
+            Math.sin(Math.random());
+            Math.sqrt(Math.random());
+            Math.tan(Math.random());
+
+        }
+
+    }).start();
+}
 
 //=============================================================
 // LAB 15 - Charging System Diagnostic (SMART)
@@ -22798,7 +22959,7 @@ final long ts14b =
     // ------------------------------------------------------------
     // PRECHECK — SMART POPUP (STRICT)
     // ------------------------------------------------------------
-    if (!(fresh14 && fresh14b && fresh15 && fresh16)) {
+    if (!(fresh14 && fresh15 && fresh16)) {
 
         StringBuilder msg = new StringBuilder();
 
@@ -22811,7 +22972,7 @@ final long ts14b =
         // --------------------------------------------------------
         // LAB 14
         // --------------------------------------------------------
-        msg.append(gr ? "• LAB 14: " : "• LAB 14: ");
+        msg.append(gr ? "• LAB 14A: " : "• LAB 14A: ");
 
         if (!has14) {
             msg.append("<font color='#FF4444'>")
@@ -22826,27 +22987,6 @@ final long ts14b =
             msg.append("<font color='#39FF14'>")
                .append("OK (")
                .append(lab17_age(now - ts14))
-               .append(")</font><br>");
-        }
-
-        // --------------------------------------------------------
-        // LAB 14B
-        // --------------------------------------------------------
-        msg.append(gr ? "• LAB 14B: " : "• LAB 14B: ");
-
-        if (!has14b) {
-            msg.append("<font color='#FF4444'>")
-               .append(gr ? "Απουσιάζει" : "Missing")
-               .append("</font><br>");
-        } else if (!fresh14b) {
-            msg.append("<font color='#FF4444'>")
-               .append(gr ? "Έληξε (" : "Expired (")
-               .append(lab17_age(now - ts14b))
-               .append(")</font><br>");
-        } else {
-            msg.append("<font color='#39FF14'>")
-               .append("OK (")
-               .append(lab17_age(now - ts14b))
                .append(")</font><br>");
         }
 
@@ -22897,55 +23037,45 @@ final long ts14b =
         // --------------------------------------------------------
         // SMART DECISION
         // --------------------------------------------------------
-        if ((fresh14 && fresh15 && fresh14b) && !fresh16) {
+        if ((fresh14 && fresh15) && !fresh16) {
 
             msg.append(
                     gr
-                            ? "Έχουν ολοκληρωθεί τα LAB 14, 14B και LAB 15.<br>"
+                            ? "Έχουν ολοκληρωθεί τα LAB 14A, και LAB 15.<br>"
                               + "Εκτέλεσε ΜΟΝΟ το LAB 16 για να ολοκληρωθεί το σύνολο.<br>"
-                            : "LAB 14, 14B and LAB 15 are already completed.<br>"
+                            : "LAB 14A and LAB 15 are already completed.<br>"
                               + "Run ONLY LAB 16 to complete the set.<br>"
             );
 
-        } else if ((fresh14 && fresh16 && fresh14b) && !fresh15) {
+        } else if ((fresh14 && fresh16) && !fresh15) {
 
             msg.append(
                     gr
-                            ? "Έχουν ολοκληρωθεί τα LAB 14, 14B και LAB 16.<br>"
+                            ? "Έχουν ολοκληρωθεί τα LAB 14A και LAB 16.<br>"
                               + "Εκτέλεσε ΜΟΝΟ το LAB 15 για να ολοκληρωθεί το σύνολο.<br>"
-                            : "LAB 14, 14B and LAB 16 are already completed.<br>"
+                            : "LAB 14A and LAB 16 are already completed.<br>"
                               + "Run ONLY LAB 15 to complete the set.<br>"
             );
 
-        } else if ((fresh15 && fresh16 && fresh14b) && !fresh14) {
+        } else if ((fresh15 && fresh16) && !fresh14) {
 
             msg.append(
                     gr
-                            ? "Έχουν ολοκληρωθεί τα LAB 15, 16 και LAB 14B.<br>"
-                              + "Εκτέλεσε ΜΟΝΟ το LAB 14 για να ολοκληρωθεί το σύνολο.<br>"
-                            : "LAB 15, 16 and LAB 14B are already completed.<br>"
-                              + "Run ONLY LAB 14 to complete the set.<br>"
+                            ? "Έχουν ολοκληρωθεί τα LAB 15 και 16.<br>"
+                              + "Εκτέλεσε ΜΟΝΟ το LAB 14A για να ολοκληρωθεί το σύνολο.<br>"
+                            : "LAB 15 and 16 are already completed.<br>"
+                              + "Run ONLY LAB 14A to complete the set.<br>"
             );
-
-        } else if ((fresh14 && fresh15 && fresh16) && !fresh14b) {
-
-            msg.append(
-                    gr
-                            ? "Έχουν ολοκληρωθεί τα LAB 14, 15 και 16.<br>"
-                              + "Εκτέλεσε ΜΟΝΟ το LAB 14B για να ολοκληρωθεί το σύνολο.<br>"
-                            : "LAB 14, 15 and 16 are already completed.<br>"
-                              + "Run ONLY LAB 14B to complete the set.<br>"
-            );
-
+        
         } else {
 
             msg.append(
                     gr
                             ? "Για έγκυρο αποτέλεσμα, απαιτείται εκτέλεση των<br>"
-                              + "LAB 14 + LAB 14B + LAB 15 + LAB 16 μαζί.<br><br>"
+                              + "LAB 14A + LAB 15 + LAB 16 μαζί.<br><br>"
                               + "Αιτία: απουσία ή/και λήξη αποτελεσμάτων."
                             : "To generate a valid result, run<br>"
-                              + "LAB 14 + LAB 14B + LAB 15 + LAB 16 together.<br><br>"
+                              + "LAB 14A + LAB 15 + LAB 16 together.<br><br>"
                               + "Reason: missing and/or expired results."
             );
         }
@@ -22994,28 +23124,6 @@ boolean valid14b =
 
 if (!valid14b) {
     penaltyExtra += 10;
-}
-
-// ------------------------------------------------------------
-// LAB14B PENALTIES (μόνο αν valid)
-// ------------------------------------------------------------
-if (valid14b) {
-
-    if (lab14bEstimatedHours < 3f) {
-        penaltyExtra += 14;
-    } else if (lab14bEstimatedHours < 5f) {
-        penaltyExtra += 8;
-    } else if (lab14bEstimatedHours < 7f) {
-        penaltyExtra += 3;
-    }
-
-    if (lab14bConsumptionPerHour > 1500f) {
-        penaltyExtra += 10;
-    } else if (lab14bConsumptionPerHour > 1200f) {
-        penaltyExtra += 6;
-    } else if (lab14bConsumptionPerHour > 1000f) {
-        penaltyExtra += 3;
-    }
 }
 
             if (lab15Charge < 60 && lab15SystemLimited) penaltyExtra += 6;
@@ -23113,86 +23221,6 @@ logLabelOkValue(
                 agingText
         )
 );
-
-// ================= LAB 14B =================
-logInfo(gr
-        ? "LAB 14B — Κατανάλωση και διάρκεια μπαταρίας"
-        : "LAB 14B — Battery consumption and duration");
-
-if (lab14bEstimatedHours >= 6f) {
-
-    logLabelOkValue(
-            gr ? "Αυτονομία" : "Battery duration",
-            String.format(
-                    Locale.US,
-                    gr
-                            ? "Καλή (%.1f ώρες)"
-                            : "Good (%.1f hours)",
-                    lab14bEstimatedHours
-            )
-    );
-
-} else if (lab14bEstimatedHours >= 4f) {
-
-    logLabelWarnValue(
-            gr ? "Αυτονομία" : "Battery duration",
-            String.format(
-                    Locale.US,
-                    gr
-                            ? "Μέτρια (%.1f ώρες)"
-                            : "Moderate (%.1f hours)",
-                    lab14bEstimatedHours
-            )
-    );
-
-} else if (lab14bEstimatedHours > 0f) {
-
-    logLabelErrorValue(
-            gr ? "Αυτονομία" : "Battery duration",
-            String.format(
-                    Locale.US,
-                    gr
-                            ? "Χαμηλή (%.1f ώρες)"
-                            : "Low (%.1f hours)",
-                    lab14bEstimatedHours
-            )
-    );
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            gr ? "Μη διαθέσιμα δεδομένα" : "Data unavailable"
-    );
-}
-
-if (lab14bConsumptionPerHour > 0f) {
-    logLabelValue(
-            gr ? "Κατανάλωση" : "Consumption",
-            String.format(Locale.US, "%.0f mAh/h", lab14bConsumptionPerHour)
-    );
-}
-
-appendHtml("<br>");
-
-logOk(
-        gr ? "Εκτίμηση υπόλοιπου χρόνου"
-           : "Remaining time estimation"
-);
-
-logLine();
-
-if (lab14bRemainingNormal > 0f) {
-    logLabelValue(
-            gr ? "Με κανονική χρήση" : "Normal usage",
-            String.format(
-                    Locale.US,
-                    "%.1f %s",
-                    lab14bRemainingNormal,
-                    gr ? "ώρες" : "hours"
-            )
-    );
-}
 
                 logInfo(gr
                         ? "LAB 15 — Φόρτιση"
@@ -23392,45 +23420,6 @@ logLine();
 // ------------------------------------------------------------
 // 🔴 CROSS-LAB INSIGHT (SINGLE DECISION)
 // ------------------------------------------------------------
-if (lab14Health >= 80f && lab14bEstimatedHours > 0f && lab14bEstimatedHours < 4f) {
-
-    logLabelWarnValue(
-            gr ? "Παρατήρηση" : "Observation",
-            gr
-                    ? "Η μπαταρία είναι σε καλή κατάσταση, αλλά η συνολική κατανάλωση συστήματος φαίνεται αυξημένη"
-                    : "Battery health is good, but overall system consumption appears elevated"
-    );
-
-} else if (lab14Health < 70f && lab14bEstimatedHours >= 5f) {
-
-    logLabelOkValue(
-            gr ? "Παρατήρηση" : "Observation",
-            gr
-                    ? "Υπάρχουν ενδείξεις φθοράς, αλλά η αυτονομία παραμένει σε φυσιολογικά επίπεδα"
-                    : "Aging indicators detected, but real-world autonomy remains within normal range"
-    );
-
-} else if (lab14bConsumptionPerHour > 1300f && lab16Thermal < 65) {
-
-    logLabelWarnValue(
-            gr ? "Παρατήρηση" : "Observation",
-            gr
-                    ? "Η αυξημένη κατανάλωση ενδέχεται να σχετίζεται με θερμική επιβάρυνση"
-                    : "Elevated consumption may be influenced by thermal conditions"
-    );
-
-} else if (lab14Health >= 80f &&
-           lab14bEstimatedHours >= 5f &&
-           lab16Thermal >= 70 &&
-           lab15Charge >= 70) {
-
-    logLabelOkValue(
-            gr ? "Συμπέρασμα" : "Conclusion",
-            gr
-                    ? "Τα αποτελέσματα είναι συνεπή μεταξύ των δοκιμών"
-                    : "Results are consistent across tests"
-    );
-}
 
                 if (lab14Unstable) {
 
@@ -23678,10 +23667,10 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         String speakText =
                     gr
                             ? "Δεν πληρούνται οι προϋποθέσεις για το LAB δεκαεπτά. "
-                              + "Απαιτούνται πρόσφατα αποτελέσματα από τα LAB δεκατέσσερα, "
-                              + "δεκατέσσερα βήτα, δεκαπέντε και δεκαέξι."
+                              + "Απαιτούνται πρόσφατα αποτελέσματα από τα LAB δεκατέσσερα άλφα, "
+                              + " δεκαπέντε και δεκαέξι."
                             : "Requirements for LAB seventeen are not met. "
-                              + "Recent results from LAB fourteen, LAB fourteen B, "
+                              + "Recent results from LAB fourteen alpha, "
                               + "LAB fifteen and LAB sixteen are required.";
 
             AppTTS.ensureSpeak(this, speakText);
