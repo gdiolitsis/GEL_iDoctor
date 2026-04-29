@@ -19962,7 +19962,7 @@ try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
 try { stopVibrationStress(); } catch (Throwable ignore) {}
 
 // --------------------------------------------------------
-// 🎬 VIDEO SETUP (NO AUTO PLAY)
+// 🎬 VIDEO SETUP (CONTINUOUS LIGHT BACKGROUND LOAD)
 // --------------------------------------------------------
 try {
     if (lab14StressVideo != null) {
@@ -19977,11 +19977,12 @@ try {
         );
 
         lab14StressVideo.setOnPreparedListener(mp -> {
-            mp.setLooping(false);     // 🔴 ΟΧΙ loop
+            mp.setLooping(true);
             mp.setVolume(0f, 0f);
-        });
-    }
-} catch (Throwable ignore) {}
+
+            try {
+                lab14StressVideo.start();
+            } catch (Throwable
 
 // --------------------------------------------------------
 // 🌿 HUMAN USAGE SIMULATION (CONTROLLED REAL USE)
