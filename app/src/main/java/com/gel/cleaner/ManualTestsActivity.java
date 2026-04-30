@@ -631,6 +631,8 @@ private boolean pendingRestartLab14B = false;
 
 private boolean isLab14GamaMode = false;
 
+private AlertDialog batterySuiteDialog;
+
 // ============================================================  
 // Battery stress internals  
 // ============================================================  
@@ -11845,7 +11847,16 @@ private void showBatterySuiteMenu() {
     );
 
     b.setView(root);
-    b.show();
+
+batterySuiteDialog = b.create();
+
+if (batterySuiteDialog.getWindow() != null) {
+    batterySuiteDialog.getWindow().setBackgroundDrawable(
+            new ColorDrawable(Color.TRANSPARENT)
+    );
+}
+
+batterySuiteDialog.show();
 }
 
 // ============================================================
@@ -20525,50 +20536,80 @@ appendHtml("<br>");
                             : "Battery duration estimation failed");
                 }
                 
-                appendHtml("<br>");
-logOk(gr 
-    ? "Σενάρια διάρκειας χρήσης"
-    : "Usage endurance scenarios");
+appendHtml("<br>");
+
+logOk(
+        gamaMode
+        ? (gr ? "Σενάρια διάρκειας gaming"
+              : "Gaming endurance scenarios")
+        : (gr ? "Σενάρια διάρκειας χρήσης"
+              : "Usage endurance scenarios")
+);
+
 logLine();
-                
+
+// ------------------------------------------------------------
+// 🔴 USAGE / GAMING SCENARIOS
+// ------------------------------------------------------------
+String labelLight =
+        gamaMode
+        ? (gr ? "Ελαφρύ gaming" : "Light gaming")
+        : (gr ? "Με ελαφριά χρήση" : "Under light usage");
+
+String labelNormal =
+        gamaMode
+        ? (gr ? "Τυπικό gaming" : "Typical gaming")
+        : (gr ? "Με κανονική χρήση" : "Under normal usage");
+
+String labelHeavy =
+        gamaMode
+        ? (gr ? "Βαρύ 3D gaming" : "Heavy 3D gaming")
+        : (gr ? "Με βαριά χρήση" : "Under heavy usage");
+
+float lightMul = gamaMode ? 1.20f : 1.40f;
+float normalMul = 1.00f;
+float heavyMul = gamaMode ? 0.75f : 0.60f;
+
 float lightUsage = Float.NaN;
 float normalUsage = Float.NaN;
 float heavyUsage = Float.NaN;
 
 if (!Float.isNaN(estimatedHours) && estimatedHours > 0f) {
 
-    normalUsage = estimatedHours;
-    lightUsage = estimatedHours * 1.4f;
-    heavyUsage = estimatedHours * 0.6f;
+    lightUsage = estimatedHours * lightMul;
+    normalUsage = estimatedHours * normalMul;
+    heavyUsage = estimatedHours * heavyMul;
 
-    String lightStr = String.format(
-            Locale.US, "%.1f %s",
-            lightUsage, gr ? "ώρες" : "hours"
+    logLabelValue(
+            labelLight,
+            String.format(Locale.US, "%.1f %s",
+                    lightUsage, gr ? "ώρες" : "hours")
     );
 
-    String normalStr = String.format(
-            Locale.US, "%.1f %s",
-            normalUsage, gr ? "ώρες" : "hours"
+    logLabelValue(
+            labelNormal,
+            String.format(Locale.US, "%.1f %s",
+                    normalUsage, gr ? "ώρες" : "hours")
     );
 
-    String heavyStr = String.format(
-            Locale.US, "%.1f %s",
-            heavyUsage, gr ? "ώρες" : "hours"
+    logLabelValue(
+            labelHeavy,
+            String.format(Locale.US, "%.1f %s",
+                    heavyUsage, gr ? "ώρες" : "hours")
     );
-
-    logLabelValue(gr ? "Με ελαφριά χρήση" : "Under light usage", lightStr);
-    logLabelValue(gr ? "Με κανονική χρήση" : "Under normal usage", normalStr);
-    logLabelValue(gr ? "Με βαριά χρήση" : "Under heavy usage", heavyStr);
 
 } else {
 
     String na = gr ? "Μ/Δ" : "N/A";
 
-    logLabelValue(gr ? "Με ελαφριά χρήση" : "Under light usage", na);
-    logLabelValue(gr ? "Με κανονική χρήση" : "Under normal usage", na);
-    logLabelValue(gr ? "Με βαριά χρήση" : "Under heavy usage", na);
+    logLabelValue(labelLight, na);
+    logLabelValue(labelNormal, na);
+    logLabelValue(labelHeavy, na);
 }
 
+// ------------------------------------------------------------
+// 🔴 REMAINING TIME
+// ------------------------------------------------------------
 float battPct = (float) getBatteryPercentSafe();
 
 float lightRemaining = Float.NaN;
@@ -20579,41 +20620,41 @@ if (!Float.isNaN(estimatedHours) && battPct > 0f) {
 
     float factor = battPct / 100f;
 
-    lightRemaining = estimatedHours * 1.4f * factor;
-    normalRemaining = estimatedHours * factor;
-    heavyRemaining = estimatedHours * 0.6f * factor;
+    lightRemaining = estimatedHours * lightMul * factor;
+    normalRemaining = estimatedHours * normalMul * factor;
+    heavyRemaining = estimatedHours * heavyMul * factor;
 
     appendHtml("<br>");
 }
 
-    logOk(gr
-            ? "Εκτίμηση υπόλοιπου χρόνου"
-            : "Remaining time estimation");
+logOk(gr
+        ? "Εκτίμηση υπόλοιπου χρόνου"
+        : "Remaining time estimation");
 
-    logLine();
+logLine();
 
-    logLabelValue(
-            gr ? "Μπαταρία" : "Battery",
-            String.format(Locale.US, "%.0f%%", battPct)
-    );
+logLabelValue(
+        gr ? "Μπαταρία" : "Battery",
+        String.format(Locale.US, "%.0f%%", battPct)
+);
 
-    logLabelValue(
-            gr ? "Με ελαφριά χρήση" : "Under light usage",
-            String.format(Locale.US, "%.1f %s",
-                    lightRemaining, gr ? "ώρες" : "hours")
-    );
+logLabelValue(
+        labelLight,
+        String.format(Locale.US, "%.1f %s",
+                lightRemaining, gr ? "ώρες" : "hours")
+);
 
-    logLabelValue(
-            gr ? "Με κανονική χρήση" : "Under normal usage",
-            String.format(Locale.US, "%.1f %s",
-                    normalRemaining, gr ? "ώρες" : "hours")
-    );
+logLabelValue(
+        labelNormal,
+        String.format(Locale.US, "%.1f %s",
+                normalRemaining, gr ? "ώρες" : "hours")
+);
 
-    logLabelValue(
-            gr ? "Με βαριά χρήση" : "Under heavy usage",
-            String.format(Locale.US, "%.1f %s",
-                    heavyRemaining, gr ? "ώρες" : "hours")
-    );
+logLabelValue(
+        labelHeavy,
+        String.format(Locale.US, "%.1f %s",
+                heavyRemaining, gr ? "ώρες" : "hours")
+);
     
 // ------------------------------------------------
 // 🔴 GEL BATTERY RELATIVITY VERDICT (X + ψ = Ω)
@@ -20917,6 +20958,13 @@ logOk(
         ? "Lab 14 GAMA finished."
         : "Lab 14B finished.")
 );
+
+try {
+    if (batterySuiteDialog != null && batterySuiteDialog.isShowing()) {
+        batterySuiteDialog.dismiss();
+        batterySuiteDialog = null;
+    }
+} catch (Throwable ignore) {}
 
 logLine();
 
@@ -21453,10 +21501,16 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
                 if (elapsed < 0) elapsed = 0;
                 if (elapsed > durationSec) elapsed = (int) durationSec;
 
-                // 🔴 STATUS (SOFT ONLY)
-                statusText.setText(gr
-                        ? "Προσομοίωση καθημερινής χρήσης"
-                        : "Daily usage simulation");
+                // 🔴 STATUS
+statusText.setText(
+    gr
+    ? (gamaMode
+        ? "Προσομοίωση gaming χρήσης"
+        : "Προσομοίωση καθημερινής χρήσης")
+    : (gamaMode
+        ? "Gaming usage simulation"
+        : "Daily usage simulation")
+);
 
                 // 🔴 COUNTER
                 if (counterText != null) {
