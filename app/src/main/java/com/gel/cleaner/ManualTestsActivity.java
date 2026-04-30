@@ -633,8 +633,6 @@ private boolean isLab14GamaMode = false;
 
 private AlertDialog batterySuiteDialog;
 
-private boolean isLab14GamaMode = false;
-
 // ============================================================  
 // Battery stress internals  
 // ============================================================  
