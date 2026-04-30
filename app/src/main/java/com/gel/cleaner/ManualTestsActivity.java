@@ -638,6 +638,8 @@ private final Object lab14Lock = new Object();
 private boolean lab14SessionActive = false;
 private int lab14SessionId = 0;
 
+private volatile boolean lab14ForceStop = false;
+
 // ============================================================  
 // Battery stress internals  
 // ============================================================  
@@ -19933,6 +19935,7 @@ private void runLab14DurationMode(boolean gamaMode) {
 synchronized (lab14Lock) {
 
     // 🔴 kill previous session
+    lab14ForceStop = true;   // 🔴 kill old threads
     lab14SessionActive = false;
     lab14SessionId++;
 
@@ -19978,11 +19981,16 @@ showLab14BAdvisory(() -> {
 
     // 🔴 new session id (IMPORTANT)
     final int mySessionId;
-    synchronized (lab14Lock) {
-        lab14SessionActive = true;
-        lab14SessionId++;
-        mySessionId = lab14SessionId;
-    }
+
+synchronized (lab14Lock) {
+
+    lab14ForceStop = false;   // 🔴 allow new threads
+
+    lab14SessionActive = true;
+    lab14SessionId++;
+
+    mySessionId = lab14SessionId;
+}
 
         final iDoctorEngine idoctor =
                 iDoctorEngine.get(ManualTestsActivity.this);
@@ -21680,10 +21688,18 @@ private void simulateUiInteraction() {
 
 private void simulateShortCpuBurst() {
     new Thread(() -> {
+
+        if (lab14ForceStop) return;
+
         long t = SystemClock.elapsedRealtime();
+
         while (SystemClock.elapsedRealtime() - t < 1500) {
+
+            if (lab14ForceStop) return;
+
             Math.sqrt(Math.random());
         }
+
     }).start();
 }
 
@@ -22046,17 +22062,17 @@ private void simulateGpuBurst() {
 
     new Thread(() -> {
 
-        long t =
-            SystemClock.elapsedRealtime();
+        if (lab14ForceStop) return;
 
-        while (
-            SystemClock.elapsedRealtime() - t < 3000
-        ) {
+        long t = SystemClock.elapsedRealtime();
+
+        while (SystemClock.elapsedRealtime() - t < 3000) {
+
+            if (lab14ForceStop) return;
 
             Math.sin(Math.random());
             Math.sqrt(Math.random());
             Math.tan(Math.random());
-
         }
 
     }).start();
