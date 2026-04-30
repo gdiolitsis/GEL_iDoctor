@@ -20682,8 +20682,8 @@ if (!Float.isNaN(estimatedHours)) {
 
 float baseRef =
         isLab14GamaMode
-        ? 7.0f
-        : 10.0f;
+        ? 10.5f
+        : 13.0f;
 
 float screenFactor =
         refScreen / screenInches;
