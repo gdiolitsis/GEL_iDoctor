@@ -633,6 +633,8 @@ private boolean isLab14GamaMode = false;
 
 private AlertDialog batterySuiteDialog;
 
+private Handler usageHandler;
+
 // ============================================================  
 // Battery stress internals  
 // ============================================================  
@@ -19921,6 +19923,26 @@ private void lab14GamingDurationTest() {
 private void runLab14DurationMode(boolean gamaMode) {
 
     final boolean gr = AppLang.isGreek(this);
+    
+// ------------------------------------------------------------
+// 🔴 HARD RESET BEFORE START (CRITICAL FIX)
+// ------------------------------------------------------------
+try { stopCpuBurn(); } catch (Throwable ignore) {}
+try { stopMemoryStress(); } catch (Throwable ignore) {}
+try { stopGpuStress(); } catch (Throwable ignore) {}
+try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+try { stopVibrationStress(); } catch (Throwable ignore) {}
+
+try {
+    if (usageHandler != null) {
+        usageHandler.removeCallbacksAndMessages(null);
+    }
+} catch (Throwable ignore) {}
+
+lab14Running = false;
+lab14Cancelled = false;
+isLab14BMode = false;
+isLab14GamaMode = false;
 
     showLab14BAdvisory(() -> {
 
@@ -20085,7 +20107,7 @@ try {
 // 🌿 HUMAN USAGE SIMULATION (CONTROLLED REAL USE)
 // --------------------------------------------------------
 
-final Handler usageHandler = new Handler(Looper.getMainLooper());
+usageHandler = new Handler(Looper.getMainLooper());
 
 final long startTs = SystemClock.elapsedRealtime();
 
@@ -20566,10 +20588,26 @@ String labelHeavy =
         ? (gr ? "Βαρύ 3D gaming" : "Heavy 3D gaming")
         : (gr ? "Με βαριά χρήση" : "Under heavy usage");
 
-float lightMul = isLab14GamaMode ? 1.20f : 1.40f;
+// ------------------------------------------------------------
+// 🔴 USAGE / GAMING MULTIPLIERS (BALANCED PHYSICS)
+// ------------------------------------------------------------
+float lightMul;
 float normalMul = 1.00f;
-float heavyMul = isLab14GamaMode ? 0.75f : 0.60f;
+float heavyMul;
 
+if (isLab14GamaMode) {
+    // Gaming = πιο στενό εύρος (βαριά χρήση by default)
+    lightMul = 1.15f;   // ελαφρύ gaming (menus, idle scenes)
+    heavyMul = 0.70f;   // βαρύ 3D (GPU stress)
+} else {
+    // Daily = μεγαλύτερο εύρος χρήσης
+    lightMul = 1.40f;   // standby / light usage
+    heavyMul = 0.60f;   // heavy usage (apps, multitasking)
+}
+
+// ------------------------------------------------------------
+// 🔴 RESULTS INIT
+// ------------------------------------------------------------
 float lightUsage = Float.NaN;
 float normalUsage = Float.NaN;
 float heavyUsage = Float.NaN;
@@ -20675,16 +20713,10 @@ if (!Float.isNaN(estimatedHours)) {
     // ------------------------------------------------
     // PURE PHYSICS BASELINE
     // ------------------------------------------------
-    float refScreen =
-        isLab14GamaMode
-        ? 6.7f
-        : 6.5f;
-
-float baseRef =
-        isLab14GamaMode
-        ? 7.2f
-        : 9.5f;
-
+float refScreen = 6.5f;
+        
+float baseRef = 9.5f;
+        
 float screenFactor =
         refScreen / screenInches;
 
@@ -21325,6 +21357,16 @@ private void startLab14DurationPopup(
         long durationSec,
         boolean gamaMode
 ) {
+
+    // ------------------------------------------------------------
+    // 🔴 CLOSE PREVIOUS POPUP (CRITICAL)
+    // ------------------------------------------------------------
+    try {
+        if (lab14Dialog != null && lab14Dialog.isShowing()) {
+            lab14Dialog.dismiss();
+            lab14Dialog = null;
+        }
+    } catch (Throwable ignore) {}
 
     final boolean gr = AppLang.isGreek(this);
 
