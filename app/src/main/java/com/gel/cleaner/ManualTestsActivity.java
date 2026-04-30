@@ -634,6 +634,9 @@ private boolean isLab14GamaMode = false;
 private AlertDialog batterySuiteDialog;
 
 private Handler usageHandler;
+private final Object lab14Lock = new Object();
+private boolean lab14SessionActive = false;
+private int lab14SessionId = 0;
 
 // ============================================================  
 // Battery stress internals  
@@ -19925,28 +19928,61 @@ private void runLab14DurationMode(boolean gamaMode) {
     final boolean gr = AppLang.isGreek(this);
     
 // ------------------------------------------------------------
-// 🔴 HARD RESET BEFORE START (CRITICAL FIX)
+// 🔴 HARD RESET BEFORE START (CRITICAL FIX — FINAL)
 // ------------------------------------------------------------
-try { stopCpuBurn(); } catch (Throwable ignore) {}
-try { stopMemoryStress(); } catch (Throwable ignore) {}
-try { stopGpuStress(); } catch (Throwable ignore) {}
-try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
-try { stopVibrationStress(); } catch (Throwable ignore) {}
+synchronized (lab14Lock) {
 
-try {
-    if (usageHandler != null) {
-        usageHandler.removeCallbacksAndMessages(null);
+    // 🔴 kill previous session
+    lab14SessionActive = false;
+    lab14SessionId++;
+
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+    try { stopVibrationStress(); } catch (Throwable ignore) {}
+
+    try {
+        if (usageHandler != null) {
+            usageHandler.removeCallbacksAndMessages(null);
+            usageHandler = null;
+        }
+    } catch (Throwable ignore) {}
+
+    try {
+        if (lab14Dialog != null && lab14Dialog.isShowing()) {
+            lab14Dialog.dismiss();
+            lab14Dialog = null;
+        }
+    } catch (Throwable ignore) {}
+
+    try {
+        if (batterySuiteDialog != null && batterySuiteDialog.isShowing()) {
+            batterySuiteDialog.dismiss();
+            batterySuiteDialog = null;
+        }
+    } catch (Throwable ignore) {}
+
+    lab14Running = false;
+    lab14Cancelled = false;
+    isLab14BMode = false;
+    isLab14GamaMode = false;
+}
+
+// ------------------------------------------------------------
+// 🔴 START FLOW
+// ------------------------------------------------------------
+showLab14BAdvisory(() -> {
+
+    appendHtml("<br>");
+
+    // 🔴 new session id (IMPORTANT)
+    final int mySessionId;
+    synchronized (lab14Lock) {
+        lab14SessionActive = true;
+        lab14SessionId++;
+        mySessionId = lab14SessionId;
     }
-} catch (Throwable ignore) {}
-
-lab14Running = false;
-lab14Cancelled = false;
-isLab14BMode = false;
-isLab14GamaMode = false;
-
-    showLab14BAdvisory(() -> {
-
-        appendHtml("<br>");
 
         final iDoctorEngine idoctor =
                 iDoctorEngine.get(ManualTestsActivity.this);
@@ -20114,6 +20150,10 @@ final long startTs = SystemClock.elapsedRealtime();
 final Runnable usageLoop = new Runnable() {
     @Override
     public void run() {
+
+        if (!lab14SessionActive || mySessionId != lab14SessionId) {
+            return;
+        }
 
         if (!lab14Running || lab14Cancelled) return;
 
@@ -20964,13 +21004,23 @@ try {
                         
             } finally {
 
+    // ------------------------------------------------------------
+    // 🔴 SESSION END (CRITICAL)
+    // ------------------------------------------------------------
+    synchronized (lab14Lock) {
+        lab14SessionActive = false;
+    }
+
     try { stopCpuBurn(); } catch (Throwable ignore) {}
     try { stopMemoryStress(); } catch (Throwable ignore) {}
     try { stopGpuStress(); } catch (Throwable ignore) {}
     try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
     try {
-        usageHandler.removeCallbacksAndMessages(null);
+        if (usageHandler != null) {
+            usageHandler.removeCallbacksAndMessages(null);
+            usageHandler = null;
+        }
     } catch (Throwable ignore) {}
 
     lab14Cancelled = false;
