@@ -643,8 +643,6 @@ private int lab14SessionId = 0;
 
 private volatile boolean lab14ForceStop = false;
 
-private int pendingRestartLab14Mode = 0;
-
 // ============================================================  
 // Battery stress internals  
 // ============================================================  
