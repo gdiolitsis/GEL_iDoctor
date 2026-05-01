@@ -627,7 +627,10 @@ private long lab14SpikeLastTs = 0L;
 private int lab14SpikeCount = 0;
 private float lab14MaxSpikeExcess = 0f;
 
-private boolean pendingRestartLab14B = false;
+private int pendingRestartLab14Mode = 0;
+// 0 = none
+// 1 = LAB 14B
+// 2 = LAB 14 GAMA
 
 private boolean isLab14GamaMode = false;
 
@@ -639,6 +642,8 @@ private boolean lab14SessionActive = false;
 private int lab14SessionId = 0;
 
 private volatile boolean lab14ForceStop = false;
+
+private int pendingRestartLab14Mode = 0;
 
 // ============================================================  
 // Battery stress internals  
@@ -1297,17 +1302,28 @@ logScroll.setOnTouchListener((v, event) -> {
 protected void onResume() {
     super.onResume();
 
-    if (pendingRestartLab14B) {
+    if (pendingRestartLab14Mode != 0) {
 
-        pendingRestartLab14B = false;
+        int mode = pendingRestartLab14Mode;
+        pendingRestartLab14Mode = 0;
 
-        if (Settings.Global.getInt(
-                getContentResolver(),
-                Settings.Global.AIRPLANE_MODE_ON,
-                0
-        ) == 1) {
+        boolean airplaneOn = false;
 
+        try {
+            airplaneOn =
+                    Settings.Global.getInt(
+                            getContentResolver(),
+                            Settings.Global.AIRPLANE_MODE_ON,
+                            0
+                    ) == 1;
+        } catch (Throwable ignore) {}
+
+        if (!airplaneOn) return;
+
+        if (mode == 1) {
             lab14BBatteryDurationTest();
+        } else if (mode == 2) {
+            lab14GamingDurationTest();
         }
     }
 }
@@ -22042,7 +22058,9 @@ yesBtn.setOnClickListener(v -> {
     dlg.dismiss();
 
     // auto resume flag
-    pendingRestartLab14B = true;
+    pendingRestartLab14Mode = isLab14GamaMode ? 2 : 1;
+// 1 = 14B
+// 2 = GAMA
 
     try {
 
