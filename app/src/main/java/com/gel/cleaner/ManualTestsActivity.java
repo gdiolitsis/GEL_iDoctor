@@ -20528,6 +20528,23 @@ float batteryWh =
         (baselineMah[0] > 0)
         ? (baselineMah[0] / 1000f) * avgVolt
         : Float.NaN;
+        
+// ------------------------------------------------
+// THERMAL / VOLTAGE (MOVE UP - CRITICAL)
+// ------------------------------------------------
+float tempRise = Float.NaN;
+float voltDrop = Float.NaN;
+
+if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
+    tempRise = endTemp[0] - startTemp[0];
+
+    if (tempRise < 0f) tempRise = 0f;
+    if (Math.abs(tempRise) < 0.3f) tempRise = 0f;
+}
+
+if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
+    voltDrop = Math.abs(startVolt[0] - endVolt[0]);
+}
 
 float refPower =
         isLab14GamaMode ? 3.5f : 2.0f;
@@ -20548,23 +20565,6 @@ float omega =
         : 1f;
 
 omega = Math.max(0.40f, Math.min(1.60f, omega));
-
-// ------------------------------------------------
-// THERMAL / VOLTAGE (MOVE UP - CRITICAL)
-// ------------------------------------------------
-float tempRise = Float.NaN;
-float voltDrop = Float.NaN;
-
-if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
-    tempRise = endTemp[0] - startTemp[0];
-
-    if (tempRise < 0f) tempRise = 0f;
-    if (Math.abs(tempRise) < 0.3f) tempRise = 0f;
-}
-
-if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
-    voltDrop = Math.abs(startVolt[0] - endVolt[0]);
-}
 
 appendHtml("<br>");
 
