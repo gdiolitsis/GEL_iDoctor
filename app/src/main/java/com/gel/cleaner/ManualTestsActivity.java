@@ -23238,11 +23238,40 @@ if (isLab14GamaMode) {
 // ------------------------------------------------------------
 
 // 🔴 RAW (source of truth)
-final float lab14bConsumptionPerHour =
+float lab14bConsumptionPerHour =
         p.getFloat("lab14b_consumption_per_hour", -1f);
 
-final long ts14b =
+long ts14b =
         p.getLong("lab14b_ts", 0L);
+
+// ------------------------------------------------------------
+// 🔴 BASELINE CAPACITY (LOCAL FIX)
+// ------------------------------------------------------------
+long baselineMah = -1L;
+
+iDoctorEngine.BatterySnapshot snap =
+        iDoctorEngine.get(this).readBatterySnapshotLab();
+
+if (snap != null) {
+
+    if (snap.chargeFullMah > 0) {
+
+        baselineMah = snap.chargeFullMah;
+
+    } else if (snap.chargeDesignMah > 0) {
+
+        baselineMah = snap.chargeDesignMah;
+
+    } else {
+
+        int p = Math.max(1, getBatteryPercentSafe());
+
+        if (snap.chargeNowMah > 0) {
+            baselineMah =
+                    (long) (snap.chargeNowMah / (p / 100.0f));
+        }
+    }
+}
 
 // ------------------------------------------------------------
 // 🔴 DERIVED (PREFERRED)
@@ -23251,7 +23280,7 @@ float lab14bEstimatedHours = -1f;
 
 if (lab14bConsumptionPerHour > 0f && baselineMah[0] > 0f) {
     lab14bEstimatedHours =
-            baselineMah[0] / lab14bConsumptionPerHour;
+            baselineMah / lab14bConsumptionPerHour;
 } else {
     // 🔴 fallback για παλιές εκδόσεις
     lab14bEstimatedHours =
