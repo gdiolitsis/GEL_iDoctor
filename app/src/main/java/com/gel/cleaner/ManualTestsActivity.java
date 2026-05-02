@@ -21668,8 +21668,6 @@ if (lab14Dialog.getWindow() != null) {
 
 private void startLab14BProgressLoop(TextView statusText, long durationSec, boolean gr) {
 
-boolean wasGama = gamaMode;
-
     t0 = SystemClock.elapsedRealtime();
 
     ui.post(new Runnable() {
@@ -21695,10 +21693,10 @@ boolean wasGama = gamaMode;
                 // 🔴 STATUS
 statusText.setText(
     gr
-    ? (wasGama
+    ? (isLab14GamaMode
         ? "Προσομοίωση gaming χρήσης"
         : "Προσομοίωση καθημερινής χρήσης")
-    : (wasGama
+    : (isLab14GamaMode
         ? "Gaming usage simulation"
         : "Daily usage simulation")
 );
