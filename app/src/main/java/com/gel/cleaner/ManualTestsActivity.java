@@ -20027,7 +20027,7 @@ synchronized (lab14Lock) {
         final long[] startMah = new long[]{ -1L };
         final long[] endMah = new long[]{ -1L };
 
-        final long[] baselineMah = new long[]{ -1L };
+        long baselineMah = -1L;
 
         final float[] startVolt = new float[]{ Float.NaN };
         final float[] endVolt = new float[]{ Float.NaN };
