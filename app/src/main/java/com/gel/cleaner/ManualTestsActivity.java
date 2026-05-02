@@ -20070,6 +20070,8 @@ if (Float.isNaN(startTemp[0]) || startTemp[0] <= 0f) {
 
 startVolt[0] = getBatteryVoltageFiltered();
 
+boolean wasGama = gamaMode;
+
 isLab14BMode = !gamaMode;
 isLab14GamaMode = gamaMode;
 lab14Cancelled = false;
@@ -20106,12 +20108,14 @@ startLab14DurationPopup(
 
 logLine();
 
+boolean wasGama = isLab14GamaMode;
+
 logOk(
     gr
-    ? (isLab14GamaMode
+    ? (wasGama
         ? "LAB 14 GAMA ξεκίνησε"
         : "LAB 14B ξεκίνησε")
-    : (isLab14GamaMode
+    : (wasGama
         ? "LAB 14 GAMA started"
         : "LAB 14B started")
 );
@@ -20119,10 +20123,10 @@ logOk(
 logLabelValue(
     gr ? "Λειτουργία" : "Mode",
     gr
-    ? (isLab14GamaMode
+    ? (wasGama
         ? "Προσομοίωση gaming χρήσης (5 λεπτά)"
         : "Προσομοίωση καθημερινής χρήσης (5 λεπτά)")
-    : (isLab14GamaMode
+    : (wasGama
         ? "Gaming usage simulation (5 minutes)"
         : "Daily usage simulation (5 minutes)")
 );
@@ -20634,7 +20638,7 @@ appendHtml("<br>");
 appendHtml("<br>");
 
 logOk(
-        isLab14GamaMode
+        wasGama
         ? (gr ? "Σενάρια διάρκειας gaming"
               : "Gaming endurance scenarios")
         : (gr ? "Σενάρια διάρκειας χρήσης"
@@ -20647,17 +20651,17 @@ logLine();
 // 🔴 USAGE / GAMING SCENARIOS
 // ------------------------------------------------------------
 String labelLight =
-        isLab14GamaMode
+        wasGama
         ? (gr ? "Ελαφρύ gaming" : "Light gaming")
         : (gr ? "Με ελαφριά χρήση" : "Under light usage");
 
 String labelNormal =
-        isLab14GamaMode
+        wasGama
         ? (gr ? "Τυπικό gaming" : "Typical gaming")
         : (gr ? "Με κανονική χρήση" : "Under normal usage");
 
 String labelHeavy =
-        isLab14GamaMode
+        wasGama
         ? (gr ? "Βαρύ 3D gaming" : "Heavy 3D gaming")
         : (gr ? "Με βαριά χρήση" : "Under heavy usage");
 
@@ -20919,10 +20923,10 @@ if (omega >= 1.20f) {
 
     logLabelValue(
             gr
-            ? (isLab14GamaMode
+            ? (wasGama
                ? "Αναμενόμενη διάρκεια gaming"
                : "Αναμενόμενη διάρκεια")
-            : (isLab14GamaMode
+            : (wasGama
                ? "Expected gaming endurance"
                : "Expected duration"),
             String.format(Locale.US, "%.1f h", expectedHours)
@@ -21034,15 +21038,6 @@ if (batteryIssue && systemIssue) {
 
 appendHtml("<br>");
 
-} else {
-
-    logWarn(gr
-            ? "Ανεπαρκή δεδομένα για αξιολόγηση"
-            : "Insufficient data for verdict");
-}
-
-appendHtml("<br>");
-
 logOk(gr
         ? "Κλίμακα ερμηνείας δείκτη Ω"
         : "Ω interpretation scale");
@@ -21127,8 +21122,6 @@ try {
             usageHandler = null;
         }
     } catch (Throwable ignore) {}
-
-    boolean wasGama = isLab14GamaMode;
 
 // reset flags
 lab14Cancelled = false;
@@ -21548,10 +21541,10 @@ private void startLab14DurationPopup(
     TextView title = new TextView(this);
     title.setText(
     gr
-    ? (isLab14GamaMode
+    ? (wasGama
         ? "LAB 14 GAMA — Διάρκεια μπαταρίας σε Gaming "
         : "LAB 14B — Διάρκεια μπαταρίας σε καθημερινή χρήση")
-    : (isLab14GamaMode
+    : (wasGama
         ? "LAB 14 GAMA — Gaming battery endurance"
         : "LAB 14B — Daily battery usage & duration")
 );
@@ -21567,10 +21560,10 @@ TextView statusText = new TextView(this);
 
 statusText.setText(
     gr
-    ? (isLab14GamaMode
+    ? (wasGama
         ? "Προσομοίωση φόρτου gaming..."
         : "Προσομοίωση καθημερινής χρήσης...")
-    : (isLab14GamaMode
+    : (wasGama
         ? "Gaming stress simulation..."
         : "Daily usage simulation...")
 );
@@ -21703,10 +21696,10 @@ private void startLab14BProgressLoop(TextView statusText, long durationSec, bool
                 // 🔴 STATUS
 statusText.setText(
     gr
-    ? (isLab14GamaMode
+    ? (wasGama
         ? "Προσομοίωση gaming χρήσης"
         : "Προσομοίωση καθημερινής χρήσης")
-    : (isLab14GamaMode
+    : (wasGama
         ? "Gaming usage simulation"
         : "Daily usage simulation")
 );
