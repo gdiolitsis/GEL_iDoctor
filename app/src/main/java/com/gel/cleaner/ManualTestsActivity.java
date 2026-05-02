@@ -20747,18 +20747,27 @@ float lightUsage = Float.NaN;
 float normalUsage = Float.NaN;
 float heavyUsage = Float.NaN;
 
-// 🔴 derive hours από consumption
+// ------------------------------------------------------------
+// 🔴 BASE HOURS (CLEAN FIX)
+// ------------------------------------------------------------
 float baseHours = Float.NaN;
 
-// 🔴 USE FINAL HOURS (CRITICAL FIX)
-if (!Float.isNaN(finalHours)) {
-    baseHours = finalHours;
+// 👉 1. use estimated (αν υπάρχει ήδη)
+if (!Float.isNaN(estimatedHours)) {
+
+    baseHours = estimatedHours;
+
+// 👉 2. fallback σε physics
+} else if (!Float.isNaN(correctedPerHour)
+        && correctedPerHour > 0f
+        && lab14baselineMah > 0f) {
+
+    baseHours = lab14baselineMah / correctedPerHour;
 }
 
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah > 0) {
-    baseHours = baselineMah / correctedPerHour;
-}
-
+// ------------------------------------------------------------
+// 🔴 APPLY USAGE MULTIPLIERS
+// ------------------------------------------------------------
 if (!Float.isNaN(baseHours)) {
 
     lightUsage = baseHours * lightMul;
