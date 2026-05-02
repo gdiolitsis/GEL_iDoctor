@@ -442,6 +442,8 @@ private boolean isLab14BMode = false;
 
 private boolean lab14SoftPhaseStarted = false;
 
+private long lab14bBaselineMah = -1L;
+
 // ============================================================
 // BATTERY STRESS DIAGNOSTIC STATE (shared between labs)
 // ============================================================
@@ -20051,17 +20053,17 @@ startMah[0] = snap0.chargeNowMah;
 
 if (snap0.chargeFullMah > 0) {
 
-    baselineMah[0] = snap0.chargeFullMah;
+    lab14bBaselineMah = snap0.chargeFullMah;
 
 } else if (snap0.chargeDesignMah > 0) {
 
-    baselineMah[0] = snap0.chargeDesignMah;
+    lab14bBaselineMah = snap0.chargeDesignMah;
 
 } else {
 
     int p = Math.max(1, getBatteryPercentSafe());
 
-    baselineMah[0] =
+    lab14bBaselineMah =
             (long) (snap0.chargeNowMah / (p / 100.0f));
 }
 
@@ -20428,7 +20430,7 @@ if (rateSamples >= 5) { // 🔴 όχι απλά >0
     // ------------------------------------------------
     // 🔴 FALLBACK → OLD LOGIC
     // ------------------------------------------------
-    if (baselineMah[0] > 0) {
+    if (lab14bBaselineMah > 0) {
 
         if (drain > 0 && !fakeCounter) {
 
@@ -20455,7 +20457,7 @@ if (!Float.isNaN(perHour)) {
 // --------------------------------------
 float correctedPerHour = perHour;
 
-if (lab14SpikeMah > 0.8f && baselineMah[0] > 0) {
+if (lab14SpikeMah > 0.8f && lab14bBaselineMah > 0) {
 
     float multiplier = 15f;
     float capPct = 0.25f;
@@ -20505,10 +20507,10 @@ logLabelValue(
 // ------------------------------------------------
 // FINAL ESTIMATION (NO REDECLARATION)
 // ------------------------------------------------
-if (!Float.isNaN(perHour) && perHour > 0f && baselineMah[0] > 0) {
+if (!Float.isNaN(perHour) && perHour > 0f && lab14bBaselineMah > 0) {
 
     estimatedHours =
-            baselineMah[0] / correctedPerHour;
+            lab14bBaselineMah / correctedPerHour;
 
 } else {
 
@@ -20623,7 +20625,7 @@ logOk(gr
 
 logLine();
 
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0) {
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && lab14bBaselineMah > 0) {
 
     logLabelValue(
             gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
@@ -20701,8 +20703,8 @@ float heavyUsage = Float.NaN;
 // 🔴 derive hours από consumption
 float baseHours = Float.NaN;
 
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0) {
-    baseHours = baselineMah[0] / correctedPerHour;
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && lab14bBaselineMah > 0) {
+    baseHours = lab14bBaselineMah / correctedPerHour;
 }
 
 if (!Float.isNaN(baseHours)) {
@@ -20827,7 +20829,7 @@ screenFactor = Math.max(0.80f, Math.min(1.20f, screenFactor));
 
 float expectedPerHour =
         referencePerHour *
-        (baselineMah[0] / 5000f) *
+        (lab14bBaselineMah / 5000f) *
         screenFactor;
 
 // safety clamp
@@ -21117,8 +21119,8 @@ float safePerHour =
         Float.isNaN(correctedPerHour) ? -1f : correctedPerHour;
 
 float safeEstimated =
-        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0)
-                ? (baselineMah[0] / correctedPerHour)
+        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && lab14bBaselineMah > 0)
+                ? (lab14bBaselineMah / correctedPerHour)
                 : -1f;
 
 float safeLight =
@@ -23247,7 +23249,7 @@ long ts14b =
 // ------------------------------------------------------------
 // 🔴 BASELINE CAPACITY (LOCAL FIX)
 // ------------------------------------------------------------
-long baselineMah = -1L;
+lab14bBaselineMah = -1L;
 
 iDoctorEngine.BatterySnapshot snap =
         iDoctorEngine.get(this).readBatterySnapshotLab();
@@ -23256,18 +23258,21 @@ if (snap != null) {
 
     if (snap.chargeFullMah > 0) {
 
-        baselineMah = snap.chargeFullMah;
+        lab14bBaselineMah = snap.chargeFullMah;
 
     } else if (snap.chargeDesignMah > 0) {
 
-        baselineMah = snap.chargeDesignMah;
+        lab14bBaselineMah = snap.chargeDesignMah;
 
     } else {
 
-        int p = Math.max(1, getBatteryPercentSafe());
+        int pct = Math.max(1, getBatteryPercentSafe());
+        lab14bBaselineMah =
+        (long) (snap.chargeNowMah / (pct / 100.0f));
+        
 
         if (snap.chargeNowMah > 0) {
-            baselineMah =
+            lab14bBaselineMah =
                     (long) (snap.chargeNowMah / (p / 100.0f));
         }
     }
@@ -23278,9 +23283,9 @@ if (snap != null) {
 // ------------------------------------------------------------
 float lab14bEstimatedHours = -1f;
 
-if (lab14bConsumptionPerHour > 0f && baselineMah[0] > 0f) {
+if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
     lab14bEstimatedHours =
-            baselineMah / lab14bConsumptionPerHour;
+            lab14bBaselineMah / lab14bConsumptionPerHour;
 } else {
     // 🔴 fallback για παλιές εκδόσεις
     lab14bEstimatedHours =
@@ -29246,10 +29251,10 @@ long ts14b =
 float lab14bEstimatedHours = -1f;
 float lab14bRemainingNormal = -1f;
 
-if (lab14bConsumptionPerHour > 0f && baselineMah[0] > 0f) {
+if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
 
     lab14bEstimatedHours =
-            baselineMah[0] / lab14bConsumptionPerHour;
+            lab14bBaselineMah / lab14bConsumptionPerHour;
 
     float battPct = (float) getBatteryPercentSafe();
 
@@ -29360,8 +29365,8 @@ boolean batteryConsumptionVeryHigh =
 // ------------------------------------------------------------
 float runtimeHours = -1f;
 
-if (lab14bConsumptionPerHour > 0f && baselineMah[0] > 0f) {
-    runtimeHours = baselineMah[0] / lab14bConsumptionPerHour;
+if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
+    runtimeHours = lab14bBaselineMah / lab14bConsumptionPerHour;
 } else {
     runtimeHours = lab14bEstimatedHours; // fallback
 }
@@ -31253,10 +31258,10 @@ long ts14b =
 float lab14bEstimatedHours = -1f;
 float lab14bRemainingNormal = -1f;
 
-if (lab14bConsumptionPerHour > 0f && baselineMah[0] > 0f) {
+if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
 
     lab14bEstimatedHours =
-            baselineMah[0] / lab14bConsumptionPerHour;
+            lab14bBaselineMah / lab14bConsumptionPerHour;
 
     float battPct = (float) getBatteryPercentSafe();
 
