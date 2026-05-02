@@ -20199,61 +20199,51 @@ final Runnable usageLoop = new Runnable() {
 
         // 🔴 restore CPU burst mode
 
+// 🔴 DETERMINISTIC LOAD (NO RANDOM)
 try {
+
+    long cycle = (elapsed / 1000) % 20; // 20s loop
 
     if (isLab14GamaMode) {
 
-        // 🔴 CONSTANT BASELINE (gaming never idle)
-        simulateGpuBaseline();
-        simulateMemoryStressLite();
-
-        int r = (int)(Math.random() * 10);
-
-        if (r < 6) {
-
-            simulateShortCpuBurst();
-
-        } else if (r < 9) {
+        if (cycle < 6) {
 
             simulateGpuBurst();
+
+        } else if (cycle < 12) {
+
+            simulateShortCpuBurst();
+            simulateGpuBurst();
+
+        } else if (cycle < 16) {
+
+            simulateShortCpuBurst();
 
         } else {
-
-            simulateShortCpuBurst();
-            simulateGpuBurst();
+            // idle
         }
 
     } else {
 
-        int mode = (int)(Math.random() * 6);
+        if (cycle < 5) {
 
-        switch (mode) {
+            // idle
 
-            case 0:
-                break;
+        } else if (cycle < 9) {
 
-            case 1:
-                simulateUiInteraction();
-                break;
+            simulateUiInteraction();
 
-            case 2:
-                break;
+        } else if (cycle < 13) {
 
-            case 3:
-                if (Math.random() < 0.5f) {
-                    simulateShortCpuBurst();
-                }
-                break;
+            simulateShortCpuBurst();
 
-            case 4:
-                simulateUiInteraction();
-                break;
+        } else if (cycle < 17) {
 
-            case 5:
-                if (Math.random() < 0.3f) {
-                    simulateShortCpuBurst();
-                }
-                break;
+            simulateUiInteraction();
+            simulateShortCpuBurst();
+
+        } else {
+            // idle
         }
     }
 
@@ -20836,32 +20826,42 @@ if (!Float.isNaN(estimatedHours)) {
     float screenInches = getScreenSizeInches();
     if (screenInches <= 0f) screenInches = 6.5f;
 
-    // ------------------------------------------------
-    // PURE PHYSICS BASELINE
-    // ------------------------------------------------
-    float refScreen = 6.5f;
-    float baseRef = 9.5f;
+// ------------------------------------------------
+// 🔴 DYNAMIC EXPECTED FROM TEST LOAD (NO 9.5h)
+// ------------------------------------------------
 
-    float screenFactor = refScreen / screenInches;
+// reference consumption ανά mode (σταθερό load από το test)
+float referencePerHour =
+        isLab14GamaMode ? 1200f : 600f;
 
-    screenFactor = Math.max(
-            0.80f,
-            Math.min(1.20f, screenFactor)
-    );
+// scaling με βάση χωρητικότητα + μικρή διόρθωση οθόνης
+float refScreen = 6.5f;
 
-    float expectedHours =
-            baseRef *
-            (baselineMah[0] / 5000f) *
-            screenFactor;
+float screenFactor = refScreen / screenInches;
+screenFactor = Math.max(0.80f, Math.min(1.20f, screenFactor));
 
-    float omega =
-        expectedHours > 0f
-                ? estimatedHours / expectedHours
+float expectedPerHour =
+        referencePerHour *
+        (baselineMah[0] / 5000f) *
+        screenFactor;
+
+// safety clamp
+expectedPerHour = Math.max(300f, Math.min(2000f, expectedPerHour));
+
+// ------------------------------------------------
+// 🔴 Ω FROM CONSUMPTION (EFFICIENCY)
+// ------------------------------------------------
+float omega =
+        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f)
+                ? (expectedPerHour / correctedPerHour)
                 : 1f;
 
 // anti-outlier clamp
 omega = Math.max(0.40f, Math.min(1.60f, omega));
 
+// ------------------------------------------------
+// 🔴 RELATIVE %
+// ------------------------------------------------
 float relativePct =
         (omega - 1f) * 100f;
 
@@ -20973,31 +20973,41 @@ if (omega >= 1.20f) {
 }
 
 // ------------------------------------------------------------
-// 🔴 LOG OUTPUT
+// 🔴 LOG OUTPUT (UPDATED FOR CONSUMPTION MODEL)
 // ------------------------------------------------------------
 logLabelValue(
         gr ? "Δείκτης απόδοσης μπαταρίας Ω"
            : "Battery performance index Ω",
-        String.format(Locale.US,"%.2f", omega)
+        String.format(Locale.US, "%.2f", omega)
 );
 
+// 🔴 Expected consumption (dynamic)
 logLabelValue(
         gr
         ? (wasGama
-           ? "Αναμενόμενη διάρκεια gaming"
-           : "Αναμενόμενη διάρκεια")
+           ? "Αναμενόμενη κατανάλωση gaming"
+           : "Αναμενόμενη κατανάλωση")
         : (wasGama
-           ? "Expected gaming endurance"
-           : "Expected duration"),
-        String.format(Locale.US, "%.1f h", expectedHours)
+           ? "Expected gaming consumption"
+           : "Expected consumption"),
+        String.format(Locale.US, "%.0f mAh/h", expectedPerHour)
 );
 
+// 🔴 Real consumption
+logLabelValue(
+        gr ? "Πραγματική κατανάλωση"
+           : "Actual consumption",
+        String.format(Locale.US, "%.0f mAh/h", correctedPerHour)
+);
+
+// 🔴 Relative %
 logLabelValue(
         gr ? "Σχετική απόδοση"
            : "Relative performance",
         String.format(Locale.US, "%+.0f%%", relativePct)
 );
 
+// 🔴 Verdict
 logLabelValue(
         gr ? "Συμπέρασμα"
            : "Verdict",
@@ -21006,7 +21016,9 @@ logLabelValue(
 
 appendHtml("<br>");
 
+// ------------------------------------------------------------
 // 🔴 Human interpretation
+// ------------------------------------------------------------
 if (omega >= 0.85f) {
     logOk(humanVerdict);
 } else if (omega >= 0.65f) {
@@ -21015,7 +21027,9 @@ if (omega >= 0.85f) {
     logError(humanVerdict);
 }
 
+// ------------------------------------------------------------
 // 🔴 Optional prompt
+// ------------------------------------------------------------
 if (proPrompt != null) {
     appendHtml("<br>");
     logOk(proPrompt);
