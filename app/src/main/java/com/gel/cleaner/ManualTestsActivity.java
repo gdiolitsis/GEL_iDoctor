@@ -20430,7 +20430,7 @@ if (rateSamples >= 5) { // 🔴 όχι απλά >0
     // ------------------------------------------------
     // 🔴 FALLBACK → OLD LOGIC
     // ------------------------------------------------
-    if (lab14bBaselineMah > 0) {
+    if (baselineMah > 0) {
 
         if (drain > 0 && !fakeCounter) {
 
@@ -20457,7 +20457,7 @@ if (!Float.isNaN(perHour)) {
 // --------------------------------------
 float correctedPerHour = perHour;
 
-if (lab14SpikeMah > 0.8f && lab14bBaselineMah > 0) {
+if (lab14SpikeMah > 0.8f && baselineMah > 0) {
 
     float multiplier = 15f;
     float capPct = 0.25f;
@@ -20507,10 +20507,10 @@ logLabelValue(
 // ------------------------------------------------
 // FINAL ESTIMATION (NO REDECLARATION)
 // ------------------------------------------------
-if (!Float.isNaN(perHour) && perHour > 0f && lab14bBaselineMah > 0) {
+if (!Float.isNaN(perHour) && perHour > 0f && baselineMah > 0) {
 
     estimatedHours =
-            lab14bBaselineMah / correctedPerHour;
+            baselineMah / correctedPerHour;
 
 } else {
 
@@ -20625,7 +20625,7 @@ logOk(gr
 
 logLine();
 
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && lab14bBaselineMah > 0) {
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah > 0) {
 
     logLabelValue(
             gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
@@ -20703,8 +20703,8 @@ float heavyUsage = Float.NaN;
 // 🔴 derive hours από consumption
 float baseHours = Float.NaN;
 
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && lab14bBaselineMah > 0) {
-    baseHours = lab14bBaselineMah / correctedPerHour;
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah > 0) {
+    baseHours = baselineMah / correctedPerHour;
 }
 
 if (!Float.isNaN(baseHours)) {
@@ -20829,7 +20829,7 @@ screenFactor = Math.max(0.80f, Math.min(1.20f, screenFactor));
 
 float expectedPerHour =
         referencePerHour *
-        (lab14bBaselineMah / 5000f) *
+        (baselineMah / 5000f) *
         screenFactor;
 
 // safety clamp
@@ -21119,8 +21119,8 @@ float safePerHour =
         Float.isNaN(correctedPerHour) ? -1f : correctedPerHour;
 
 float safeEstimated =
-        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && lab14bBaselineMah > 0)
-                ? (lab14bBaselineMah / correctedPerHour)
+        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah > 0)
+                ? (baselineMah / correctedPerHour)
                 : -1f;
 
 float safeLight =
@@ -23273,7 +23273,7 @@ if (snap != null) {
 
         if (snap.chargeNowMah > 0) {
             lab14bBaselineMah =
-                    (long) (snap.chargeNowMah / (p / 100.0f));
+                 (long) (snap.chargeNowMah / (pct / 100.0f));
         }
     }
 }
