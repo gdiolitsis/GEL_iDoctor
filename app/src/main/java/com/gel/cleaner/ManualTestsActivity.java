@@ -20750,6 +20750,11 @@ float heavyUsage = Float.NaN;
 // 🔴 derive hours από consumption
 float baseHours = Float.NaN;
 
+// 🔴 USE FINAL HOURS (CRITICAL FIX)
+if (!Float.isNaN(finalHours)) {
+    baseHours = finalHours;
+}
+
 if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah > 0) {
     baseHours = baselineMah / correctedPerHour;
 }
@@ -20861,25 +20866,45 @@ if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
     if (screenInches <= 0f) screenInches = 6.5f;
 
 // ------------------------------------------------
-// 🔴 DYNAMIC EXPECTED FROM TEST LOAD (NO 9.5h)
+// 🔴 DYNAMIC EXPECTED FROM TEST LOAD (THERMAL-AWARE)
 // ------------------------------------------------
 
-// reference consumption ανά mode (σταθερό load από το test)
+// 🔴 screen normalization
+float screen = getScreenSizeInches();
+if (screen <= 0f) screen = 6.5f;
+
+float screenFactor = screen / 6.5f;
+screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
+
+// 🔴 base reference (device-agnostic)
 float referencePerHour =
-        isLab14GamaMode ? 1200f : 600f;
+        isLab14GamaMode ? 1100f : 500f;
 
-// scaling με βάση χωρητικότητα + μικρή διόρθωση οθόνης
-float refScreen = 6.5f;
-
-float screenFactor = refScreen / screenInches;
-screenFactor = Math.max(0.80f, Math.min(1.20f, screenFactor));
-
+// 🔴 base expected
 float expectedPerHour =
-        referencePerHour *
-        (baselineMah / 5000f) *
-        screenFactor;
+        referencePerHour * screenFactor;
 
-// safety clamp
+// ------------------------------------------------
+// 🔴 THERMAL PENALTY (CRITICAL)
+// ------------------------------------------------
+
+float thermalFactor = 1.0f;
+
+if (!Float.isNaN(tempRise)) {
+
+    if (tempRise >= 8f) {
+        thermalFactor = 1.25f;   // πολύ ζεστό
+    } else if (tempRise >= 5f) {
+        thermalFactor = 1.15f;   // ζεστό
+    } else if (tempRise >= 3f) {
+        thermalFactor = 1.08f;   // ελαφριά αύξηση
+    }
+}
+
+// 🔴 apply thermal scaling
+expectedPerHour *= thermalFactor;
+
+// 🔴 safety clamp
 expectedPerHour = Math.max(300f, Math.min(2000f, expectedPerHour));
 
 // ------------------------------------------------
