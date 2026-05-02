@@ -1302,6 +1302,9 @@ protected void onResume() {
 
     if (pendingRestartLab14Mode != 0) {
 
+        // 🔴 ΜΗΝ ξεκινήσεις αν ήδη τρέχει test
+        if (lab14Running) return;
+
         int mode = pendingRestartLab14Mode;
         pendingRestartLab14Mode = 0;
 
@@ -1318,11 +1321,16 @@ protected void onResume() {
 
         if (!airplaneOn) return;
 
-        if (mode == 1) {
-            lab14BBatteryDurationTest();
-        } else if (mode == 2) {
-            lab14GamingDurationTest();
-        }
+        // 🔴 μικρό delay για να "ηρεμήσει" το lifecycle
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+            if (mode == 1) {
+                lab14BBatteryDurationTest();
+            } else if (mode == 2) {
+                lab14GamingDurationTest();
+            }
+
+        }, 250);
     }
 }
 
@@ -19985,6 +19993,9 @@ synchronized (lab14Lock) {
     isLab14BMode = false;
     isLab14GamaMode = false;
 }
+
+isLab14BMode = !gamaMode;
+isLab14GamaMode = gamaMode;
 
 // ------------------------------------------------------------
 // 🔴 START FLOW
