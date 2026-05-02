@@ -20515,6 +20515,23 @@ if (!Float.isNaN(perHour) && perHour > 0f && baselineMah[0] > 0) {
     estimatedHours = Float.NaN;
 }
 
+// ------------------------------------------------
+// THERMAL / VOLTAGE (RESTORED MINIMAL)
+// ------------------------------------------------
+float tempRise = Float.NaN;
+float voltDrop = Float.NaN;
+
+if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
+    tempRise = endTemp[0] - startTemp[0];
+
+    if (tempRise < 0f) tempRise = 0f;
+    if (Math.abs(tempRise) < 0.3f) tempRise = 0f;
+}
+
+if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
+    voltDrop = Math.abs(startVolt[0] - endVolt[0]);
+}
+
 appendHtml("<br>");
 
 logOk(gr
@@ -23197,6 +23214,24 @@ private void lab17RunAuto() {
     // LAB 14 reliability flag (future-safe)
     final boolean lab14Unstable =
             p.getBoolean("lab14_unstable_measurement", false);
+            
+// ------------------------------------------------------------
+// 🔴 MULTIPLIERS (LOCAL SAFE)
+// ------------------------------------------------------------
+float lightMul;
+float normalMul = 1.00f;
+float heavyMul;
+
+if (isLab14GamaMode) {
+
+    lightMul = 1.15f;
+    heavyMul = 0.70f;
+
+} else {
+
+    lightMul = 1.40f;
+    heavyMul = 0.60f;
+}
 
     // ------------------------------------------------------------
 // 🔴 LAB 14B RESULTS (CLEAN + BACKWARD SAFE)
@@ -23214,9 +23249,9 @@ final long ts14b =
 // ------------------------------------------------------------
 float lab14bEstimatedHours = -1f;
 
-if (lab14bConsumptionPerHour > 0f && baselineMah > 0f) {
+if (lab14bConsumptionPerHour > 0f && baselineMah[0] > 0f) {
     lab14bEstimatedHours =
-            baselineMah / lab14bConsumptionPerHour;
+            baselineMah[0] / lab14bConsumptionPerHour;
 } else {
     // 🔴 fallback για παλιές εκδόσεις
     lab14bEstimatedHours =
@@ -29165,7 +29200,7 @@ boolean lab14CollapseRisk =
 boolean lab14SwellingSuspected =
         p.getBoolean("lab14_swelling_risk", false);
         
- // ------------------------------------------------------------
+// ------------------------------------------------------------
 // 🔴 LAB14B (CLEAN READ)
 // ------------------------------------------------------------
 
@@ -29182,10 +29217,10 @@ long ts14b =
 float lab14bEstimatedHours = -1f;
 float lab14bRemainingNormal = -1f;
 
-if (lab14bConsumptionPerHour > 0f && baselineMah > 0f) {
+if (lab14bConsumptionPerHour > 0f && baselineMah[0] > 0f) {
 
     lab14bEstimatedHours =
-            baselineMah / lab14bConsumptionPerHour;
+            baselineMah[0] / lab14bConsumptionPerHour;
 
     float battPct = (float) getBatteryPercentSafe();
 
@@ -29193,7 +29228,7 @@ if (lab14bConsumptionPerHour > 0f && baselineMah > 0f) {
         float factor = battPct / 100f;
 
         lab14bRemainingNormal =
-                lab14bEstimatedHours * normalMul * factor;
+                lab14bEstimatedHours * factor; // 🔴 no normalMul
     }
 
 } else {
@@ -29296,8 +29331,8 @@ boolean batteryConsumptionVeryHigh =
 // ------------------------------------------------------------
 float runtimeHours = -1f;
 
-if (lab14bConsumptionPerHour > 0f && baselineMah > 0f) {
-    runtimeHours = baselineMah / lab14bConsumptionPerHour;
+if (lab14bConsumptionPerHour > 0f && baselineMah[0] > 0f) {
+    runtimeHours = baselineMah[0] / lab14bConsumptionPerHour;
 } else {
     runtimeHours = lab14bEstimatedHours; // fallback
 }
@@ -31189,10 +31224,10 @@ long ts14b =
 float lab14bEstimatedHours = -1f;
 float lab14bRemainingNormal = -1f;
 
-if (lab14bConsumptionPerHour > 0f && baselineMah > 0f) {
+if (lab14bConsumptionPerHour > 0f && baselineMah[0] > 0f) {
 
     lab14bEstimatedHours =
-            baselineMah / lab14bConsumptionPerHour;
+            baselineMah[0] / lab14bConsumptionPerHour;
 
     float battPct = (float) getBatteryPercentSafe();
 
@@ -31201,7 +31236,7 @@ if (lab14bConsumptionPerHour > 0f && baselineMah > 0f) {
         float factor = battPct / 100f;
 
         lab14bRemainingNormal =
-                lab14bEstimatedHours * normalMul * factor;
+                lab14bEstimatedHours * factor; // ✅ FIX
     }
 
 } else {
