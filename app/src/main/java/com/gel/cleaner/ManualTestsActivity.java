@@ -20503,12 +20503,12 @@ logLabelValue(
 );
 
 // ------------------------------------------------
-// FINAL ESTIMATION
+// FINAL ESTIMATION (NO REDECLARATION)
 // ------------------------------------------------
 if (!Float.isNaN(perHour) && perHour > 0f && baselineMah[0] > 0) {
 
     estimatedHours =
-baselineMah[0] / correctedPerHour;
+            baselineMah[0] / correctedPerHour;
 
 } else {
 
@@ -20516,7 +20516,7 @@ baselineMah[0] / correctedPerHour;
 }
 
 // ------------------------------------------------
-// 🔴 POWER-BASED EXPECTATION (ONE-RUN MODEL)
+// 🔴 POWER-BASED EXPECTATION (FIXED ORDER)
 // ------------------------------------------------
 
 float avgVolt =
@@ -20529,29 +20529,28 @@ float batteryWh =
         ? (baselineMah[0] / 1000f) * avgVolt
         : Float.NaN;
 
-// reference power (real-world typical loads)
 float refPower =
         isLab14GamaMode ? 3.5f : 2.0f;
 
-// thermal penalty (inefficiency)
+// 🔴 ΤΩΡΑ δουλεύει σωστά (tempRise ήδη υπάρχει)
 if (!Float.isNaN(tempRise) && tempRise > 5f) {
     refPower *= 1.1f;
 }
 
-// expected duration (physics-based)
 float expectedHours =
         (!Float.isNaN(batteryWh))
         ? (batteryWh / refPower)
         : Float.NaN;
 
-// Ω performance index
 float omega =
         (!Float.isNaN(expectedHours) && expectedHours > 0f && !Float.isNaN(estimatedHours))
         ? (estimatedHours / expectedHours)
         : 1f;
 
+omega = Math.max(0.40f, Math.min(1.60f, omega));
+
 // ------------------------------------------------
-// THERMAL / VOLTAGE
+// THERMAL / VOLTAGE (MOVE UP - CRITICAL)
 // ------------------------------------------------
 float tempRise = Float.NaN;
 float voltDrop = Float.NaN;
@@ -20564,9 +20563,7 @@ if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
 }
 
 if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
-    voltDrop = startVolt[0] - endVolt[0];
-
-    voltDrop = Math.abs(voltDrop);
+    voltDrop = Math.abs(startVolt[0] - endVolt[0]);
 }
 
 appendHtml("<br>");
@@ -20661,9 +20658,6 @@ logOk(gr
 logLine();
 
 if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0) {
-
-    float estimatedHours =
-            baselineMah[0] / correctedPerHour;
 
     logLabelValue(
             gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
@@ -21150,12 +21144,11 @@ if (gr) {
 promptRestoreNormalMode();
 
 // ------------------------------------------------------------
-// 🔴 SAFE VALUES (ANTI-NaN) — CONSUMPTION MODEL
+// 🔴 SAFE VALUES (FIXED)
 // ------------------------------------------------------------
 float safePerHour =
         Float.isNaN(correctedPerHour) ? -1f : correctedPerHour;
 
-// 🔴 derive hours από consumption (όχι estimatedHours)
 float safeEstimated =
         (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0)
                 ? (baselineMah[0] / correctedPerHour)
@@ -21169,6 +21162,11 @@ float safeNormal =
 
 float safeHeavy =
         Float.isNaN(heavyRemaining) ? -1f : heavyRemaining;
+
+// 🔴 FIX: αυτά έλειπαν
+float safeRemLight = safeLight;
+float safeRemNormal = safeNormal;
+float safeRemHeavy = safeHeavy;
 
 // ------------------------------------------------------------
 // 🔴 SAVE LAB 14B RESULTS (CRITICAL)
