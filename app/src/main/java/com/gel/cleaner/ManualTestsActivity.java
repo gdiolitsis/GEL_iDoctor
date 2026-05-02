@@ -22184,6 +22184,29 @@ private void simulateGpuBurst() {
     }).start();
 }
 
+private void simulateGpuBaseline() {
+    try {
+        if (lab14StressVideo != null && !lab14StressVideo.isPlaying()) {
+            lab14StressVideo.start();
+        }
+    } catch (Throwable ignore) {}
+}
+
+private void simulateMemoryStressLite() {
+
+    try {
+
+        int size = 256 * 1024; // ~256KB
+
+        byte[] block = new byte[size];
+
+        for (int i = 0; i < block.length; i += 64) {
+            block[i] = (byte) (i % 128);
+        }
+
+    } catch (Throwable ignore) {}
+}
+
 //=============================================================
 // LAB 15 - Charging System Diagnostic (SMART)
 // FINAL / LOCKED — NO PATCHES — NO SIDE EFFECTS
