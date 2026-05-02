@@ -20198,31 +20198,27 @@ final Runnable usageLoop = new Runnable() {
         long nextDelay = 500;
 
         // 🔴 restore CPU burst mode
-        try {
 
-    try {
+try {
 
     if (isLab14GamaMode) {
 
         // 🔴 CONSTANT BASELINE (gaming never idle)
-        simulateGpuBaseline();          // light continuous GPU load
-        simulateMemoryStressLite();     // background pressure
+        simulateGpuBaseline();
+        simulateMemoryStressLite();
 
         int r = (int)(Math.random() * 10);
 
         if (r < 6) {
 
-            // 🔥 CPU bursts πιο συχνά
             simulateShortCpuBurst();
 
         } else if (r < 9) {
 
-            // 🔥 GPU bursts πιο βαριά
             simulateGpuBurst();
 
         } else {
 
-            // 🔥 occasional combined spike
             simulateShortCpuBurst();
             simulateGpuBurst();
         }
@@ -20234,7 +20230,6 @@ final Runnable usageLoop = new Runnable() {
         switch (mode) {
 
             case 0:
-                // idle
                 break;
 
             case 1:
@@ -20242,7 +20237,6 @@ final Runnable usageLoop = new Runnable() {
                 break;
 
             case 2:
-                // light scroll / pause
                 break;
 
             case 3:
@@ -20256,7 +20250,6 @@ final Runnable usageLoop = new Runnable() {
                 break;
 
             case 5:
-                // rare background activity
                 if (Math.random() < 0.3f) {
                     simulateShortCpuBurst();
                 }
