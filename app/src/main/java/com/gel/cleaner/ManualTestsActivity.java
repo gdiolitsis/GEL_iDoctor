@@ -20515,57 +20515,6 @@ if (!Float.isNaN(perHour) && perHour > 0f && baselineMah[0] > 0) {
     estimatedHours = Float.NaN;
 }
 
-// ------------------------------------------------
-// 🔴 POWER-BASED EXPECTATION (FIXED ORDER)
-// ------------------------------------------------
-
-float avgVolt =
-        (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0]))
-        ? (startVolt[0] + endVolt[0]) * 0.5f
-        : 3.85f;
-
-float batteryWh =
-        (baselineMah[0] > 0)
-        ? (baselineMah[0] / 1000f) * avgVolt
-        : Float.NaN;
-        
-// ------------------------------------------------
-// THERMAL / VOLTAGE (MOVE UP - CRITICAL)
-// ------------------------------------------------
-float tempRise = Float.NaN;
-float voltDrop = Float.NaN;
-
-if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
-    tempRise = endTemp[0] - startTemp[0];
-
-    if (tempRise < 0f) tempRise = 0f;
-    if (Math.abs(tempRise) < 0.3f) tempRise = 0f;
-}
-
-if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
-    voltDrop = Math.abs(startVolt[0] - endVolt[0]);
-}
-
-float refPower =
-        isLab14GamaMode ? 3.5f : 2.0f;
-
-// 🔴 ΤΩΡΑ δουλεύει σωστά (tempRise ήδη υπάρχει)
-if (!Float.isNaN(tempRise) && tempRise > 5f) {
-    refPower *= 1.1f;
-}
-
-float expectedHours =
-        (!Float.isNaN(batteryWh))
-        ? (batteryWh / refPower)
-        : Float.NaN;
-
-float omega =
-        (!Float.isNaN(expectedHours) && expectedHours > 0f && !Float.isNaN(estimatedHours))
-        ? (estimatedHours / expectedHours)
-        : 1f;
-
-omega = Math.max(0.40f, Math.min(1.60f, omega));
-
 appendHtml("<br>");
 
 logOk(gr
@@ -21140,6 +21089,7 @@ if (gr) {
     logLabelValue("Ω ≥ 0.65", "Reduced performance");
     logLabelValue("Ω < 0.65", "Significantly reduced performance");
 }
+}
 
 promptRestoreNormalMode();
 
@@ -21189,69 +21139,64 @@ try {
 
             } catch (Throwable t) {
 
-                logError(gr
-                        ? "Σφάλμα ανάλυσης"
-                        : "Analysis error");
-                        
-            } finally {
+        logError(gr
+                ? "Σφάλμα ανάλυσης"
+                : "Analysis error");
 
-    // ------------------------------------------------------------
-    // 🔴 SESSION END (CRITICAL)
-    // ------------------------------------------------------------
-    synchronized (lab14Lock) {
-        lab14SessionActive = false;
-    }
+    } finally {
 
-    try { stopCpuBurn(); } catch (Throwable ignore) {}
-    try { stopMemoryStress(); } catch (Throwable ignore) {}
-    try { stopGpuStress(); } catch (Throwable ignore) {}
-    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-
-    try {
-        if (usageHandler != null) {
-            usageHandler.removeCallbacksAndMessages(null);
-            usageHandler = null;
+        // 👉 CLEANUP ΕΔΩ
+        synchronized (lab14Lock) {
+            lab14SessionActive = false;
         }
-    } catch (Throwable ignore) {}
 
-// reset flags
-lab14Cancelled = false;
-lab14Running = false;
-isLab14BMode = false;
-isLab14GamaMode = false;
+        try { stopCpuBurn(); } catch (Throwable ignore) {}
+        try { stopMemoryStress(); } catch (Throwable ignore) {}
+        try { stopGpuStress(); } catch (Throwable ignore) {}
+        try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
-appendHtml("<br>");
-
-logOk(
-    gr
-    ? (wasGama
-        ? "Το Lab 14 GAMA ολοκληρώθηκε."
-        : "Το Lab 14B ολοκληρώθηκε.")
-    : (wasGama
-        ? "Lab 14 GAMA finished."
-        : "Lab 14B finished.")
-);
-
-try {
-    if (batterySuiteDialog != null && batterySuiteDialog.isShowing()) {
-        batterySuiteDialog.dismiss();
-        batterySuiteDialog = null;
-    }
-} catch (Throwable ignore) {}
-
-logLine();
-
-    runOnUiThread(() -> {
         try {
-            if (lab14Dialog != null && lab14Dialog.isShowing()) {
-                lab14Dialog.dismiss();
-                lab14Dialog = null;
+            if (usageHandler != null) {
+                usageHandler.removeCallbacksAndMessages(null);
+                usageHandler = null;
             }
         } catch (Throwable ignore) {}
-    });
-}
 
-        }, 300000L);
+        lab14Cancelled = false;
+        lab14Running = false;
+        isLab14BMode = false;
+        isLab14GamaMode = false;
+
+        appendHtml("<br>");
+
+        logOk(
+            gr
+            ? (wasGama
+                ? "Το Lab 14 GAMA ολοκληρώθηκε."
+                : "Το Lab 14B ολοκληρώθηκε.")
+            : (wasGama
+                ? "Lab 14 GAMA finished."
+                : "Lab 14B finished.")
+        );
+
+        try {
+            if (batterySuiteDialog != null && batterySuiteDialog.isShowing()) {
+                batterySuiteDialog.dismiss();
+                batterySuiteDialog = null;
+            }
+        } catch (Throwable ignore) {}
+
+        runOnUiThread(() -> {
+            try {
+                if (lab14Dialog != null && lab14Dialog.isShowing()) {
+                    lab14Dialog.dismiss();
+                    lab14Dialog = null;
+                }
+            } catch (Throwable ignore) {}
+        });
+    }
+
+}, 300000L);
 
     });
 
