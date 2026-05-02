@@ -20402,13 +20402,18 @@ if (hasChargeCounter) {
 
     drain = Math.max(0L, startMah[0] - endMah[0]);
 
-// 🔴 FAKE DETECTION
-if (drain == 0 && Math.abs(liveCurrentMa) > 150) {
-    fakeCounter = true;
-}
+    // 🔴 πιο safe fake detection
+    if (drain < 1 && Math.abs(liveCurrentMa) > 150) {
+        fakeCounter = true;
+    }
 }
 
+// ------------------------------------------------
+// RESULTS INIT
+// ------------------------------------------------
 float perHour = Float.NaN;
+
+// 🔴 keep only if still needed elsewhere
 float estimatedHours = Float.NaN;
 
 // ------------------------------------------------
@@ -20649,30 +20654,35 @@ if (!Float.isNaN(voltDrop)) {
 
 appendHtml("<br>");
 
-                logOk(gr
-                        ? "Εκτίμηση πλήρους διάρκειας μπαταρίας"
-                        : "Estimated full battery duration");
+logOk(gr
+        ? "Εκτίμηση πλήρους διάρκειας μπαταρίας"
+        : "Estimated full battery duration");
 
-                logLine();
+logLine();
 
-                if (!Float.isNaN(estimatedHours)) {
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0) {
 
-                    logLabelValue(
-                            gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
-                            String.format(
-                                    Locale.US,
-                                    "%.1f %s",
-                                    estimatedHours,
-                                    gr ? "ώρες" : "hours"
-                            )
-                    );
+    float estimatedHours =
+            baselineMah[0] / correctedPerHour;
 
-                } else {
+    logLabelValue(
+            gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
+            String.format(
+                    Locale.US,
+                    "%.1f %s",
+                    estimatedHours,
+                    gr ? "ώρες" : "hours"
+            )
+    );
 
-                    logWarn(gr
-                            ? "Αδυναμία εκτίμησης διάρκειας μπαταρίας"
-                            : "Battery duration estimation failed");
-                }
+} else {
+
+    logWarn(
+            gr
+            ? "Αδυναμία εκτίμησης διάρκειας"
+            : "Unable to estimate duration"
+    );
+}
                 
 appendHtml("<br>");
 
@@ -20722,17 +20732,24 @@ if (isLab14GamaMode) {
 }
 
 // ------------------------------------------------------------
-// 🔴 RESULTS INIT
+// 🔴 RESULTS INIT (FROM CONSUMPTION)
 // ------------------------------------------------------------
 float lightUsage = Float.NaN;
 float normalUsage = Float.NaN;
 float heavyUsage = Float.NaN;
 
-if (!Float.isNaN(estimatedHours) && estimatedHours > 0f) {
+// 🔴 derive hours από consumption
+float baseHours = Float.NaN;
 
-    lightUsage = estimatedHours * lightMul;
-    normalUsage = estimatedHours * normalMul;
-    heavyUsage = estimatedHours * heavyMul;
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0) {
+    baseHours = baselineMah[0] / correctedPerHour;
+}
+
+if (!Float.isNaN(baseHours)) {
+
+    lightUsage = baseHours * lightMul;
+    normalUsage = baseHours * normalMul;
+    heavyUsage = baseHours * heavyMul;
 
     logLabelValue(
             labelLight,
@@ -20762,7 +20779,7 @@ if (!Float.isNaN(estimatedHours) && estimatedHours > 0f) {
 }
 
 // ------------------------------------------------------------
-// 🔴 REMAINING TIME
+// 🔴 REMAINING TIME (FROM CONSUMPTION)
 // ------------------------------------------------------------
 float battPct = (float) getBatteryPercentSafe();
 
@@ -20770,13 +20787,13 @@ float lightRemaining = Float.NaN;
 float normalRemaining = Float.NaN;
 float heavyRemaining = Float.NaN;
 
-if (!Float.isNaN(estimatedHours) && battPct > 0f) {
+if (!Float.isNaN(baseHours) && battPct > 0f) {
 
     float factor = battPct / 100f;
 
-    lightRemaining = estimatedHours * lightMul * factor;
-    normalRemaining = estimatedHours * normalMul * factor;
-    heavyRemaining = estimatedHours * heavyMul * factor;
+    lightRemaining = baseHours * lightMul * factor;
+    normalRemaining = baseHours * normalMul * factor;
+    heavyRemaining = baseHours * heavyMul * factor;
 
     appendHtml("<br>");
 }
@@ -20792,22 +20809,30 @@ logLabelValue(
         String.format(Locale.US, "%.0f%%", battPct)
 );
 
+String na = gr ? "Μ/Δ" : "N/A";
+
 logLabelValue(
         labelLight,
-        String.format(Locale.US, "%.1f %s",
-                lightRemaining, gr ? "ώρες" : "hours")
+        Float.isNaN(lightRemaining)
+                ? na
+                : String.format(Locale.US, "%.1f %s",
+                        lightRemaining, gr ? "ώρες" : "hours")
 );
 
 logLabelValue(
         labelNormal,
-        String.format(Locale.US, "%.1f %s",
-                normalRemaining, gr ? "ώρες" : "hours")
+        Float.isNaN(normalRemaining)
+                ? na
+                : String.format(Locale.US, "%.1f %s",
+                        normalRemaining, gr ? "ώρες" : "hours")
 );
 
 logLabelValue(
         labelHeavy,
-        String.format(Locale.US, "%.1f %s",
-                heavyRemaining, gr ? "ώρες" : "hours")
+        Float.isNaN(heavyRemaining)
+                ? na
+                : String.format(Locale.US, "%.1f %s",
+                        heavyRemaining, gr ? "ώρες" : "hours")
 );
     
 // ------------------------------------------------
@@ -20821,7 +20846,7 @@ logOk(gr
 
 logLine();
 
-if (!Float.isNaN(estimatedHours)) {
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
 
     float screenInches = getScreenSizeInches();
     if (screenInches <= 0f) screenInches = 6.5f;
@@ -20901,10 +20926,6 @@ logLabelValue(
 // ------------------------------------------------------------
 // 🔴 Ω PERFORMANCE ZONES (FINAL VERDICT - CLEAN)
 // ------------------------------------------------------------
-
-// 🔴 Relative %
-float relativePct =
-        (omega - 1f) * 100f;
 
 String verdict;
 String humanVerdict;
@@ -21129,18 +21150,25 @@ if (gr) {
 promptRestoreNormalMode();
 
 // ------------------------------------------------------------
-// 🔴 SAFE VALUES (ANTI-NaN)
+// 🔴 SAFE VALUES (ANTI-NaN) — CONSUMPTION MODEL
 // ------------------------------------------------------------
-float safePerHour = Float.isNaN(perHour) ? -1f : perHour;
-float safeEstimated = Float.isNaN(estimatedHours) ? -1f : estimatedHours;
+float safePerHour =
+        Float.isNaN(correctedPerHour) ? -1f : correctedPerHour;
 
-float safeLight = Float.isNaN(lightRemaining) ? -1f : lightRemaining;
-float safeNormal = Float.isNaN(normalRemaining) ? -1f : normalRemaining;
-float safeHeavy = Float.isNaN(heavyRemaining) ? -1f : heavyRemaining;
+// 🔴 derive hours από consumption (όχι estimatedHours)
+float safeEstimated =
+        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0)
+                ? (baselineMah[0] / correctedPerHour)
+                : -1f;
 
-float safeRemLight = Float.isNaN(lightRemaining) ? -1f : lightRemaining;
-float safeRemNormal = Float.isNaN(normalRemaining) ? -1f : normalRemaining;
-float safeRemHeavy = Float.isNaN(heavyRemaining) ? -1f : heavyRemaining;
+float safeLight =
+        Float.isNaN(lightRemaining) ? -1f : lightRemaining;
+
+float safeNormal =
+        Float.isNaN(normalRemaining) ? -1f : normalRemaining;
+
+float safeHeavy =
+        Float.isNaN(heavyRemaining) ? -1f : heavyRemaining;
 
 // ------------------------------------------------------------
 // 🔴 SAVE LAB 14B RESULTS (CRITICAL)
@@ -23228,33 +23256,67 @@ private void lab17RunAuto() {
     final boolean lab14Unstable =
             p.getBoolean("lab14_unstable_measurement", false);
 
-    // LAB 14B results
+    // ------------------------------------------------------------
+// 🔴 LAB 14B RESULTS (CLEAN + BACKWARD SAFE)
+// ------------------------------------------------------------
+
+// 🔴 RAW (source of truth)
 final float lab14bConsumptionPerHour =
         p.getFloat("lab14b_consumption_per_hour", -1f);
 
-final float lab14bEstimatedHours =
-        p.getFloat("lab14b_estimated_hours", -1f);
-
-final float lab14bLightHours =
-        p.getFloat("lab14b_light_hours", -1f);
-
-final float lab14bNormalHours =
-        p.getFloat("lab14b_normal_hours", -1f);
-
-final float lab14bHeavyHours =
-        p.getFloat("lab14b_heavy_hours", -1f);
-
-final float lab14bRemainingLight =
-        p.getFloat("lab14b_remaining_light", -1f);
-
-final float lab14bRemainingNormal =
-        p.getFloat("lab14b_remaining_normal", -1f);
-
-final float lab14bRemainingHeavy =
-        p.getFloat("lab14b_remaining_heavy", -1f);
-
 final long ts14b =
         p.getLong("lab14b_ts", 0L);
+
+// ------------------------------------------------------------
+// 🔴 DERIVED (PREFERRED)
+// ------------------------------------------------------------
+float lab14bEstimatedHours = -1f;
+
+if (lab14bConsumptionPerHour > 0f && baselineMah > 0f) {
+    lab14bEstimatedHours =
+            baselineMah / lab14bConsumptionPerHour;
+} else {
+    // 🔴 fallback για παλιές εκδόσεις
+    lab14bEstimatedHours =
+            p.getFloat("lab14b_estimated_hours", -1f);
+}
+
+// ------------------------------------------------------------
+// 🔴 USAGE HOURS (DERIVED)
+// ------------------------------------------------------------
+float lab14bLightHours = -1f;
+float lab14bNormalHours = -1f;
+float lab14bHeavyHours = -1f;
+
+if (lab14bEstimatedHours > 0f) {
+
+    lab14bLightHours = lab14bEstimatedHours * lightMul;
+    lab14bNormalHours = lab14bEstimatedHours * normalMul;
+    lab14bHeavyHours = lab14bEstimatedHours * heavyMul;
+}
+
+// ------------------------------------------------------------
+// 🔴 REMAINING TIME (DERIVED)
+// ------------------------------------------------------------
+float battPct = (float) getBatteryPercentSafe();
+
+float lab14bRemainingLight = -1f;
+float lab14bRemainingNormal = -1f;
+float lab14bRemainingHeavy = -1f;
+
+if (lab14bEstimatedHours > 0f && battPct > 0f) {
+
+    float factor = battPct / 100f;
+
+    lab14bRemainingLight =
+            lab14bLightHours * factor;
+
+    lab14bRemainingNormal =
+            lab14bNormalHours * factor;
+
+    lab14bRemainingHeavy =
+            lab14bHeavyHours * factor;
+}
 
     // LAB 15
     final int lab15Charge = p.getInt("lab15_charge_score", -1);
@@ -23271,20 +23333,35 @@ final long ts14b =
     final long ts16 = p.getLong("lab16_last_ts", 0L);
 
     // ------------------------------------------------------------
-    // PRESENCE + FRESHNESS CHECK
-    // ------------------------------------------------------------
-    final boolean has14 = (lab14Health >= 0f && ts14 > 0L);
-    final boolean has14b =
-        (lab14bConsumptionPerHour > 0f) &&
-        (lab14bEstimatedHours > 0f) &&
-        (ts14b > 0L);
-    final boolean has15 = (lab15Charge >= 0 && ts15 > 0L);
-    final boolean has16 = (lab16Thermal >= 0 && ts16 > 0L);
+// PRESENCE + FRESHNESS CHECK (CLEAN)
+// ------------------------------------------------------------
+final boolean has14 =
+        (lab14Health >= 0f && ts14 > 0L);
 
-    final boolean fresh14 = has14 && (now - ts14) <= WINDOW_MS;
-    final boolean fresh14b = has14b && (now - ts14b) <= WINDOW_MS;
-    final boolean fresh15 = has15 && (now - ts15) <= WINDOW_MS;
-    final boolean fresh16 = has16 && (now - ts16) <= WINDOW_MS;
+final boolean has14b =
+        (lab14bConsumptionPerHour > 0f) &&
+        (ts14b > 0L);
+
+final boolean has15 =
+        (lab15Charge >= 0 && ts15 > 0L);
+
+final boolean has16 =
+        (lab16Thermal >= 0 && ts16 > 0L);
+
+// ------------------------------------------------------------
+// FRESHNESS
+// ------------------------------------------------------------
+final boolean fresh14 =
+        has14 && (now - ts14) <= WINDOW_MS;
+
+final boolean fresh14b =
+        has14b && (now - ts14b) <= WINDOW_MS;
+
+final boolean fresh15 =
+        has15 && (now - ts15) <= WINDOW_MS;
+
+final boolean fresh16 =
+        has16 && (now - ts16) <= WINDOW_MS;
 
     // ------------------------------------------------------------
     // HIGH VARIABILITY CONFIRMATION (LAB 14 INTELLIGENCE)
@@ -23461,9 +23538,11 @@ final long ts14b =
 // ------------------------------------------------------------
 int penaltyExtra = 0;
 
-// 🔴 VALIDATION 14B (CRITICAL)
+// 🔴 VALIDATION 14B (CRITICAL — FIXED)
 boolean valid14b =
-        lab14bEstimatedHours > 0f;
+        lab14bConsumptionPerHour >= 50f &&
+        lab14bConsumptionPerHour <= 5000f &&
+        ts14b > 0L;
 
 if (!valid14b) {
     penaltyExtra += 10;
@@ -29144,18 +29223,45 @@ boolean lab14CollapseRisk =
 boolean lab14SwellingSuspected =
         p.getBoolean("lab14_swelling_risk", false);
         
- // LAB14B
+ // ------------------------------------------------------------
+// 🔴 LAB14B (CLEAN READ)
+// ------------------------------------------------------------
+
+// 🔴 RAW
 float lab14bConsumptionPerHour =
         p.getFloat("lab14b_consumption_per_hour", -1f);
 
-float lab14bEstimatedHours =
-        p.getFloat("lab14b_estimated_hours", -1f);
-
-float lab14bRemainingNormal =
-        p.getFloat("lab14b_remaining_normal", -1f);
-
 long ts14b =
         p.getLong("lab14b_ts", 0L);
+
+// ------------------------------------------------------------
+// 🔴 DERIVED (RUNTIME)
+// ------------------------------------------------------------
+float lab14bEstimatedHours = -1f;
+float lab14bRemainingNormal = -1f;
+
+if (lab14bConsumptionPerHour > 0f && baselineMah > 0f) {
+
+    lab14bEstimatedHours =
+            baselineMah / lab14bConsumptionPerHour;
+
+    float battPct = (float) getBatteryPercentSafe();
+
+    if (battPct > 0f) {
+        float factor = battPct / 100f;
+
+        lab14bRemainingNormal =
+                lab14bEstimatedHours * normalMul * factor;
+    }
+
+} else {
+    // 🔴 fallback για παλιά installs (optional)
+    lab14bEstimatedHours =
+            p.getFloat("lab14b_estimated_hours", -1f);
+
+    lab14bRemainingNormal =
+            p.getFloat("lab14b_remaining_normal", -1f);
+}
 
 // stability flags
 boolean pmicInstability =
@@ -29222,7 +29328,7 @@ int thermalScore = scoreThermals(maxThermal, avgThermal);
 String thermalFlag = colorFlagFromScore(thermalScore);
 
 // ------------------------------------------------------------
-// 2) BATTERY HEALTH (light auto inference)
+// 2) BATTERY HEALTH (light auto inference — FIXED)
 // ------------------------------------------------------------
 boolean charging = isChargingNow();
 
@@ -29234,22 +29340,37 @@ int batteryScore = scoreBattery(
 
 String batteryFlag = colorFlagFromScore(batteryScore);
 
-boolean batteryRuntimeWeak =
-        lab14bEstimatedHours > 0f &&
-        lab14bEstimatedHours < 4f;
-
-boolean batteryRuntimeModerate =
-        lab14bEstimatedHours >= 4f &&
-        lab14bEstimatedHours < 6f;
-
-boolean batteryRuntimeGood =
-        lab14bEstimatedHours >= 6f;
-
+// ------------------------------------------------------------
+// 🔴 PRIMARY: CONSUMPTION-BASED FLAGS
+// ------------------------------------------------------------
 boolean batteryConsumptionHigh =
         lab14bConsumptionPerHour > 1200f;
 
 boolean batteryConsumptionVeryHigh =
         lab14bConsumptionPerHour > 1500f;
+
+// ------------------------------------------------------------
+// 🔴 SECONDARY: HOURS (DERIVED — ONLY IF VALID)
+// ------------------------------------------------------------
+float runtimeHours = -1f;
+
+if (lab14bConsumptionPerHour > 0f && baselineMah > 0f) {
+    runtimeHours = baselineMah / lab14bConsumptionPerHour;
+} else {
+    runtimeHours = lab14bEstimatedHours; // fallback
+}
+
+// ------------------------------------------------------------
+// 🔴 RUNTIME CLASSIFICATION (SAFE)
+// ------------------------------------------------------------
+boolean batteryRuntimeWeak =
+        runtimeHours > 0f && runtimeHours < 4f;
+
+boolean batteryRuntimeModerate =
+        runtimeHours >= 4f && runtimeHours < 6f;
+
+boolean batteryRuntimeGood =
+        runtimeHours >= 6f;
 
 // ------------------------------------------------------------
 // 3) STORAGE HEALTH
@@ -31110,26 +31231,58 @@ private void lab31FinalSummary() {
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
 // ------------------------------------------------------------
-// LAB14B READ (NEW)
+// LAB14B READ (CLEAN + DERIVED)
 // ------------------------------------------------------------
+
+// 🔴 RAW (source of truth)
 float lab14bConsumptionPerHour =
         p.getFloat("lab14b_consumption_per_hour", -1f);
-
-float lab14bEstimatedHours =
-        p.getFloat("lab14b_estimated_hours", -1f);
-
-float lab14bRemainingNormal =
-        p.getFloat("lab14b_remaining_normal", -1f);
 
 long ts14b =
         p.getLong("lab14b_ts", 0L);
 
-    appendHtml("<br>");
-    logLine();
-    logInfo(gr
-            ? "LAB 31 — ΤΕΛΙΚΗ ΣΥΝΟΨΗ ΤΕΧΝΙΚΟΥ (ΜΟΝΟ ΑΝΑΓΝΩΣΗ)"
-            : "LAB 31 — FINAL TECHNICIAN SUMMARY (READ-ONLY)");
-    logLine();
+// ------------------------------------------------------------
+// 🔴 DERIVED (RUNTIME)
+// ------------------------------------------------------------
+float lab14bEstimatedHours = -1f;
+float lab14bRemainingNormal = -1f;
+
+if (lab14bConsumptionPerHour > 0f && baselineMah > 0f) {
+
+    lab14bEstimatedHours =
+            baselineMah / lab14bConsumptionPerHour;
+
+    float battPct = (float) getBatteryPercentSafe();
+
+    if (battPct > 0f) {
+
+        float factor = battPct / 100f;
+
+        lab14bRemainingNormal =
+                lab14bEstimatedHours * normalMul * factor;
+    }
+
+} else {
+
+    // 🔴 fallback για παλιές εκδόσεις (optional)
+    lab14bEstimatedHours =
+            p.getFloat("lab14b_estimated_hours", -1f);
+
+    lab14bRemainingNormal =
+            p.getFloat("lab14b_remaining_normal", -1f);
+}
+
+// ------------------------------------------------------------
+// 🔴 LOG HEADER
+// ------------------------------------------------------------
+appendHtml("<br>");
+logLine();
+
+logInfo(gr
+        ? "LAB 31 — ΤΕΛΙΚΗ ΣΥΝΟΨΗ ΤΕΧΝΙΚΟΥ (ΜΟΝΟ ΑΝΑΓΝΩΣΗ)"
+        : "LAB 31 — FINAL TECHNICIAN SUMMARY (READ-ONLY)");
+
+logLine();
 
     // ------------------------------------------------------------
     // 1) READ FULL LOG
