@@ -20399,6 +20399,13 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         }
 
         endVolt[0] = getBatteryVoltageFiltered();
+        
+// 🔴 DEBUG (ΒΑΛΤΟ ΕΔΩ)
+logLabelValue("Start Temp", String.valueOf(startTemp[0]));
+logLabelValue("End Temp", String.valueOf(endTemp[0]));
+
+logLabelValue("Start Volt", String.valueOf(startVolt[0]));
+logLabelValue("End Volt", String.valueOf(endVolt[0]));
 
 // ------------------------------------------------
 // REAL DRAIN + AUTO SWITCH
@@ -20530,20 +20537,38 @@ if (!Float.isNaN(perHour) && perHour > 0f && baselineMah > 0) {
 }
 
 // ------------------------------------------------
-// THERMAL / VOLTAGE (RESTORED MINIMAL)
+// 🔴 THERMAL / VOLTAGE (FINAL CLEAN VERSION)
 // ------------------------------------------------
 float tempRise = Float.NaN;
 float voltDrop = Float.NaN;
 
+// ------------------------
+// 🔴 TEMPERATURE
+// ------------------------
 if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
+
     tempRise = endTemp[0] - startTemp[0];
 
+    // clamp negatives (sensor glitch)
     if (tempRise < 0f) tempRise = 0f;
-    if (Math.abs(tempRise) < 0.3f) tempRise = 0f;
+
+    // ignore μόνο εντελώς αμελητέα noise
+    if (Math.abs(tempRise) < 0.05f) {
+        tempRise = 0f;
+    }
 }
 
+// ------------------------
+// 🔴 VOLTAGE
+// ------------------------
 if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
+
     voltDrop = Math.abs(startVolt[0] - endVolt[0]);
+
+    // ignore micro-noise από ADC / rounding
+    if (voltDrop < 0.002f) {
+        voltDrop = 0f;
+    }
 }
 
 appendHtml("<br>");
@@ -20747,10 +20772,8 @@ float lightUsage = Float.NaN;
 float normalUsage = Float.NaN;
 float heavyUsage = Float.NaN;
 
-// ------------------------------------------------------------
-// 🔴 BASE HOURS (CLEAN FIX)
-// ------------------------------------------------------------
-float baseHours = Float.NaN;
+// 🔴 BASE HOURS (FIX)
+float baseHours = estimatedHours; 
 
 // 👉 use estimated only
 if (!Float.isNaN(estimatedHours)) {
@@ -20760,7 +20783,7 @@ if (!Float.isNaN(estimatedHours)) {
 // ------------------------------------------------------------
 // 🔴 APPLY USAGE MULTIPLIERS
 // ------------------------------------------------------------
-if (!Float.isNaN(baseHours)) {
+if (!Float.isNaN(baseHours) && baseHours > 0f) {
 
     lightUsage = baseHours * lightMul;
     normalUsage = baseHours * normalMul;
