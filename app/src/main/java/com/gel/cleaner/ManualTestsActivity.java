@@ -19951,7 +19951,7 @@ private void runLab14DurationMode(boolean gamaMode) {
 
     final boolean gr = AppLang.isGreek(this);
     
-    boolean wasGama = gamaMode;
+     boolean wasGama = gamaMode;
     
 // ------------------------------------------------------------
 // 🔴 HARD RESET BEFORE START (CRITICAL FIX — FINAL)
@@ -21500,10 +21500,9 @@ private void showLab14BAdvisory(Runnable onContinue) {
 // 🔥 LAB 14B — SIMPLIFIED (BATTERY USAGE ONLY)
 // ==========================================================
 
-private void startLab14DurationPopup(
-        long durationSec,
-        boolean gamaMode
-) {
+private void startLab14DurationPopup(long durationSec, boolean gamaMode) {
+
+    boolean wasGama = gamaMode;
 
     // ------------------------------------------------------------
     // 🔴 CLOSE PREVIOUS POPUP (CRITICAL)
@@ -21668,6 +21667,8 @@ if (lab14Dialog.getWindow() != null) {
 }
 
 private void startLab14BProgressLoop(TextView statusText, long durationSec, boolean gr) {
+
+boolean wasGama = gamaMode;
 
     t0 = SystemClock.elapsedRealtime();
 
