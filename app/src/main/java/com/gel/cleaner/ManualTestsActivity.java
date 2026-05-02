@@ -20768,13 +20768,13 @@ logLabelValue(
 );
     
 // ------------------------------------------------
-// 🔴 GEL BATTERY RELATIVITY VERDICT (X + ψ = Ω)
+// 🔴 GEL BATTERY PERFORMANCE INDEX (Ω)
 // ------------------------------------------------
 appendHtml("<br>");
 
 logOk(gr
-        ? "Συμπέρασμα κατάστασης μπαταρίας"
-        : "Battery condition verdict");
+        ? "Συμπέρασμα απόδοσης μπαταρίας"
+        : "Battery performance verdict");
 
 logLine();
 
@@ -20786,163 +20786,253 @@ if (!Float.isNaN(estimatedHours)) {
     // ------------------------------------------------
     // PURE PHYSICS BASELINE
     // ------------------------------------------------
-float refScreen = 6.5f;
-        
-float baseRef = 9.5f;
-        
-float screenFactor =
-        refScreen / screenInches;
+    float refScreen = 6.5f;
+    float baseRef = 9.5f;
 
-screenFactor =
-        Math.max(
+    float screenFactor = refScreen / screenInches;
+
+    screenFactor = Math.max(
             0.80f,
-            Math.min(
-                1.20f,
-                screenFactor
-            )
-        );
+            Math.min(1.20f, screenFactor)
+    );
 
-float expectedHours =
-        baseRef *
-        (baselineMah[0] / 5000f) *
-        screenFactor;
+    float expectedHours =
+            baseRef *
+            (baselineMah[0] / 5000f) *
+            screenFactor;
 
     float omega =
-            expectedHours > 0f
-                    ? estimatedHours / expectedHours
-                    : 1f;
+        expectedHours > 0f
+                ? estimatedHours / expectedHours
+                : 1f;
 
-    // anti-outlier clamp
-    omega = Math.max(0.40f, Math.min(1.60f, omega));
+// anti-outlier clamp
+omega = Math.max(0.40f, Math.min(1.60f, omega));
 
-    float relativePct =
-            (omega - 1f) * 100f;
+float relativePct =
+        (omega - 1f) * 100f;
 
-    String verdict;
-    String humanVerdict;
-    String proPrompt = null;
+// ------------------------------------------------------------
+// 🔴 LOAD SCORE (SYSTEM PRESSURE)
+// ------------------------------------------------------------
+float loadScore = 0f;
 
-    // ------------------------------------------------
-    // X + ψ = Ω verdict zones
-    // ------------------------------------------------
-    if (omega >= 1.20f) {
+if (!Float.isNaN(correctedPerHour)) {
+    loadScore += correctedPerHour / 1500f;
+}
 
-    verdict = gr
-            ? "Εξαιρετική απόδοση μπαταρίας"
-            : "Exceptional battery performance";
+if (!Float.isNaN(tempRise)) {
+    loadScore += tempRise / 15f;
+}
 
-    humanVerdict = gr
-            ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει εντυπωσιακά πάνω από το αναμενόμενο. Έχει πολλή ζωή ακόμα."
-            : "Based on battery capacity and screen size, battery performance is impressively above expectations and still has a lot of life left.";
+loadScore = Math.max(0.5f, Math.min(2.5f, loadScore));
 
-} else if (omega >= 1.00f) {
+// ------------------------------------------------------------
+// 🔴 LOAD LEVEL
+// ------------------------------------------------------------
+String loadLevel;
 
-    verdict = gr
-            ? "Πολύ καλή απόδοση μπαταρίας"
-            : "Very good battery performance";
+if (loadScore >= 1.6f) {
+    loadLevel = gr ? "Υψηλό" : "High";
+} else if (loadScore >= 1.2f) {
+    loadLevel = gr ? "Μέτριο" : "Moderate";
+} else {
+    loadLevel = gr ? "Χαμηλό" : "Low";
+}
 
-    humanVerdict = gr
-            ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει πολύ καλά και δείχνει υγιές σύστημα μπαταρίας."
-            : "Based on battery capacity and screen size, the battery performs very well and indicates a healthy battery system.";
+logLabelValue(
+        gr ? "Φόρτος συστήματος" : "System load",
+        loadLevel
+);
 
-} else if (omega >= 0.80f) {
+// ------------------------------------------------------------
+// 🔴 Ω PERFORMANCE ZONES (VERDICT)
+// ------------------------------------------------------------
+String verdict;
+String humanVerdict;
+String proPrompt = null;
 
-    verdict = gr
-            ? "Υγιής κατάσταση μπαταρίας"
-            : "Healthy battery condition";
+if (omega >= 1.20f) {
 
-    humanVerdict = gr
-            ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η μπαταρία αποδίδει καλά και έχει ζωή ακόμα."
-            : "Based on battery capacity and screen size, the battery performs well and still has solid life left.";
+        verdict = gr
+                ? "Εξαιρετική απόδοση"
+                : "Exceptional performance";
+
+        humanVerdict = gr
+                ? "Η συσκευή αποδίδει σημαντικά πάνω από το αναμενόμενο με βάση τη χωρητικότητα και το μέγεθος οθόνης."
+                : "Device performs significantly above expected based on capacity and screen size.";
+
+    } else if (omega >= 1.00f) {
+
+        verdict = gr
+                ? "Πολύ καλή απόδοση"
+                : "Very good performance";
+
+        humanVerdict = gr
+                ? "Η απόδοση βρίσκεται πάνω από το αναμενόμενο και το σύστημα λειτουργεί αποδοτικά."
+                : "Performance is above expected and system efficiency is strong.";
+
+    } else if (omega >= 0.80f) {
+
+        verdict = gr
+                ? "Κανονική απόδοση"
+                : "Normal performance";
+
+        humanVerdict = gr
+                ? "Η απόδοση βρίσκεται εντός φυσιολογικών ορίων για τα χαρακτηριστικά της συσκευής."
+                : "Performance is within expected range for device characteristics.";
 
     } else if (omega >= 0.65f) {
 
-    verdict = gr
-            ? "Μέτρια υποαπόδοση μπαταρίας"
-            : "Moderate battery underperformance";
+        verdict = gr
+                ? "Μειωμένη απόδοση"
+                : "Reduced performance";
 
-    humanVerdict = gr
-            ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η απόδοση βρίσκεται κάτω από το ιδανικό και υπάρχουν ενδείξεις μέτριας φθοράς."
-            : "Based on battery capacity and screen size, performance is below ideal and shows signs of moderate wear.";
+        humanVerdict = gr
+                ? "Η απόδοση βρίσκεται κάτω από το αναμενόμενο και υπάρχει πιθανή επιβάρυνση κατανάλωσης."
+                : "Performance is below expected and indicates increased power demand.";
 
-    proPrompt = gr
-        ? "Εντοπίστηκαν ενδείξεις φθοράς μπαταρίας.\nΣυνιστάται το LAB14 Pro για βαθύτερη αξιολόγηση της κατάστασης της μπαταρίας."
-        : "Signs of battery wear detected.\nRecommended: Run LAB14 Pro for deeper battery condition assessment.";
+        proPrompt = gr
+                ? "Συνιστάται εκτέλεση LAB14 Pro για ανάλυση κατανάλωσης και συμπεριφοράς."
+                : "Recommended: run LAB14 Pro for deeper consumption analysis.";
 
-} else {
+    } else {
 
-    verdict = gr
-        ? "Ενδείξεις έντονης φθοράς μπαταρίας"
-        : "Significant battery degradation detected";
+        verdict = gr
+                ? "Σημαντικά μειωμένη απόδοση"
+                : "Significantly reduced performance";
 
-    humanVerdict = gr
-            ? "Με βάση χωρητικότητα και μέγεθος οθόνης, η αυτονομία δείχνει σημαντική φθορά μπαταρίας."
-            : "Based on battery capacity and screen size, endurance indicates significant battery wear.";
+        humanVerdict = gr
+                ? "Η αυτονομία είναι αισθητά χαμηλότερη από το αναμενόμενο για τα χαρακτηριστικά της συσκευής."
+                : "Endurance is significantly below expected for device characteristics.";
 
-    proPrompt = gr
-        ? "Εντοπίστηκαν ισχυρές ενδείξεις φθοράς μπαταρίας.\nΣυνιστάται το LAB14 Pro για πλήρη διάγνωση."
-        : "Strong signs of battery wear detected.\nRecommended: Run LAB14 Pro for full diagnosis.";
-}
+        proPrompt = gr
+                ? "Συνιστάται πλήρης διάγνωση μέσω LAB14 Pro."
+                : "Recommended: full diagnosis via LAB14 Pro.";
+    }
 
     logLabelValue(
-            gr ? "Σχετικός δείκτης μπαταριας Ω"
-               : "Relativity battery score Ω",
+            gr ? "Δείκτης απόδοσης μπαταρίας Ω"
+               : "Battery performance index Ω",
             String.format(Locale.US,"%.2f", omega)
     );
 
     logLabelValue(
-    gr
-    ? (isLab14GamaMode
-       ? "Αναμενόμενη διάρκεια gaming"
-       : "Αναμενόμενη διάρκεια")
-    : (isLab14GamaMode
-       ? "Expected gaming endurance"
-       : "Expected duration"),
-    String.format(
-        Locale.US,
-        "%.1f h",
-        expectedHours
-    )
+            gr
+            ? (isLab14GamaMode
+               ? "Αναμενόμενη διάρκεια gaming"
+               : "Αναμενόμενη διάρκεια")
+            : (isLab14GamaMode
+               ? "Expected gaming endurance"
+               : "Expected duration"),
+            String.format(Locale.US, "%.1f h", expectedHours)
+    );
+
+    logLabelValue(
+        gr ? "Σχετική απόδοση"
+           : "Relative performance",
+        String.format(Locale.US, "%+.0f%%", relativePct)
 );
 
-    logLabelValue(
-            gr ? "Σχετική απόδοση"
-               : "Relative performance",
-            String.format(
-                    Locale.US,
-                    "%+.0f%%",
-                    relativePct
-            )
-    );
+logLabelValue(
+        gr ? "Συμπέρασμα"
+           : "Verdict",
+        verdict
+);
 
-    logLabelValue(
-            gr ? "Συμπέρασμα αξιολόγησης"
-               : "Verdict",
-            verdict
-    );
+appendHtml("<br>");
 
-    appendHtml("<br>");
-    
-// severity-colored human interpretation
+// 🔴 Human interpretation
 if (omega >= 0.80f) {
-
     logOk(humanVerdict);
-
 } else if (omega >= 0.65f) {
-
     logWarn(humanVerdict);
-
 } else {
-
     logError(humanVerdict);
 }
 
-// 🔴 Recommended next step
+// 🔴 Optional prompt
 if (proPrompt != null) {
-
     appendHtml("<br>");
     logOk(proPrompt);
 }
+
+// ------------------------------------------------------------
+// 🔴 ROOT CAUSE CLASSIFICATION (INSIDE SAME IF BLOCK)
+// ------------------------------------------------------------
+appendHtml("<br>");
+
+logOk(gr
+        ? "Ανάλυση αιτίας"
+        : "Root cause analysis");
+
+logLine();
+
+boolean batteryIssue = false;
+boolean systemIssue = false;
+
+// battery issue
+if (omega < 0.80f && loadScore < 1.3f) {
+    batteryIssue = true;
+}
+
+// system issue
+if (loadScore >= 1.5f && omega >= 0.80f) {
+    systemIssue = true;
+}
+
+// mixed
+if (omega < 0.80f && loadScore >= 1.5f) {
+    batteryIssue = true;
+    systemIssue = true;
+}
+
+// 🔴 OUTPUT
+if (batteryIssue && systemIssue) {
+
+    logWarn(gr
+            ? "Συνδυασμένο πρόβλημα: μπαταρία και σύστημα"
+            : "Combined issue: battery and system");
+
+    logWarn(gr
+            ? "Η απόδοση είναι χαμηλή και το σύστημα λειτουργεί με υψηλό φορτίο"
+            : "Performance is low and system operates under high load");
+
+} else if (batteryIssue) {
+
+    logWarn(gr
+            ? "Μειωμένη απόδοση μπαταρίας"
+            : "Reduced battery performance");
+
+    logWarn(gr
+            ? "Η απόδοση είναι κάτω από το αναμενόμενο χωρίς υψηλό φορτίο"
+            : "Performance is below expected without high system load");
+
+} else if (systemIssue) {
+
+    logWarn(gr
+            ? "Αυξημένη κατανάλωση συστήματος"
+            : "High system consumption detected");
+
+    logWarn(gr
+            ? "Η μπαταρία αποδίδει κανονικά αλλά το σύστημα καταναλώνει περισσότερη ενέργεια"
+            : "Battery performs normally but system consumes more power");
+
+} else {
+
+    logOk(gr
+            ? "Ισορροπημένη λειτουργία συστήματος και μπαταρίας"
+            : "Balanced system and battery behaviour");
+}
+
+} else {
+
+    logWarn(gr
+            ? "Ανεπαρκή δεδομένα για αξιολόγηση"
+            : "Insufficient data for verdict");
+}
+
+appendHtml("<br>");
 
 } else {
 
@@ -20961,37 +21051,19 @@ logLine();
 
 if (gr) {
 
-    logLabelValue("Ω ≥ 1.20",
-            "Εξαιρετική μπαταρία");
-
-    logLabelValue("Ω ≥ 1.00",
-            "Πολύ καλή μπαταρία");
-
-    logLabelValue("Ω ≥ 0.80",
-            "Υγιής μπαταρία με φυσιολογική φθορά");
-
-    logLabelValue("Ω ≥ 0.65",
-            "Μέτρια φθορά μπαταρίας");
-
-    logLabelValue("Ω < 0.65",
-            "Έντονη φθορά μπαταρίας");
+    logLabelValue("Ω ≥ 1.20", "Εξαιρετική απόδοση");
+    logLabelValue("Ω ≥ 1.00", "Πολύ καλή απόδοση");
+    logLabelValue("Ω ≥ 0.80", "Κανονική απόδοση");
+    logLabelValue("Ω ≥ 0.65", "Μειωμένη απόδοση");
+    logLabelValue("Ω < 0.65", "Σημαντικά μειωμένη απόδοση");
 
 } else {
 
-    logLabelValue("Ω ≥ 1.20",
-            "Exceptional battery");
-
-    logLabelValue("Ω ≥ 1.00",
-            "Very good battery");
-
-    logLabelValue("Ω ≥ 0.80",
-            "Healthy battery with normal wear");
-
-    logLabelValue("Ω ≥ 0.65",
-            "Battery with moderate wear");
-
-    logLabelValue("Ω < 0.65",
-            "Battery with heavy wear");
+    logLabelValue("Ω ≥ 1.20", "Exceptional performance");
+    logLabelValue("Ω ≥ 1.00", "Very good performance");
+    logLabelValue("Ω ≥ 0.80", "Normal performance");
+    logLabelValue("Ω ≥ 0.65", "Reduced performance");
+    logLabelValue("Ω < 0.65", "Significantly reduced performance");
 }
 
 promptRestoreNormalMode();
@@ -21056,21 +21128,22 @@ try {
         }
     } catch (Throwable ignore) {}
 
-    lab14Cancelled = false;
-    lab14Running = false;
-    isLab14BMode = false;
-    isLab14GamaMode = false;
+    boolean wasGama = isLab14GamaMode;
 
-    // 🔴 FINAL COMPLETION
-   
-    appendHtml("<br>");
+// reset flags
+lab14Cancelled = false;
+lab14Running = false;
+isLab14BMode = false;
+isLab14GamaMode = false;
+
+appendHtml("<br>");
 
 logOk(
     gr
-    ? (isLab14GamaMode
+    ? (wasGama
         ? "Το Lab 14 GAMA ολοκληρώθηκε."
         : "Το Lab 14B ολοκληρώθηκε.")
-    : (isLab14GamaMode
+    : (wasGama
         ? "Lab 14 GAMA finished."
         : "Lab 14B finished.")
 );
