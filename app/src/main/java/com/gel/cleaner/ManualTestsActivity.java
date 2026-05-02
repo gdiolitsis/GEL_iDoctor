@@ -19951,6 +19951,8 @@ private void runLab14DurationMode(boolean gamaMode) {
 
     final boolean gr = AppLang.isGreek(this);
     
+    boolean wasGama = gamaMode;
+    
 // ------------------------------------------------------------
 // 🔴 HARD RESET BEFORE START (CRITICAL FIX — FINAL)
 // ------------------------------------------------------------
@@ -20070,8 +20072,6 @@ if (Float.isNaN(startTemp[0]) || startTemp[0] <= 0f) {
 
 startVolt[0] = getBatteryVoltageFiltered();
 
-boolean wasGama = gamaMode;
-
 isLab14BMode = !gamaMode;
 isLab14GamaMode = gamaMode;
 lab14Cancelled = false;
@@ -20107,8 +20107,6 @@ startLab14DurationPopup(
 );
 
 logLine();
-
-boolean wasGama = isLab14GamaMode;
 
 logOk(
     gr
