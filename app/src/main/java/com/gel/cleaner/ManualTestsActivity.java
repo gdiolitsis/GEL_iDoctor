@@ -20200,32 +20200,41 @@ final Runnable usageLoop = new Runnable() {
         // 🔴 restore CPU burst mode
         try {
 
+    try {
+
     if (isLab14GamaMode) {
 
-        int r =
-                (int)(Math.random()*10);
+        // 🔴 CONSTANT BASELINE (gaming never idle)
+        simulateGpuBaseline();          // light continuous GPU load
+        simulateMemoryStressLite();     // background pressure
 
-        if (r < 5) {
+        int r = (int)(Math.random() * 10);
 
+        if (r < 6) {
+
+            // 🔥 CPU bursts πιο συχνά
             simulateShortCpuBurst();
 
-        } else if (r < 8) {
+        } else if (r < 9) {
 
+            // 🔥 GPU bursts πιο βαριά
             simulateGpuBurst();
 
         } else {
 
-            // video baseline only
+            // 🔥 occasional combined spike
+            simulateShortCpuBurst();
+            simulateGpuBurst();
         }
 
     } else {
 
-        int mode =
-                (int)(Math.random()*4);
+        int mode = (int)(Math.random() * 6);
 
-        switch(mode) {
+        switch (mode) {
 
             case 0:
+                // idle
                 break;
 
             case 1:
@@ -20233,10 +20242,24 @@ final Runnable usageLoop = new Runnable() {
                 break;
 
             case 2:
+                // light scroll / pause
                 break;
 
             case 3:
-                simulateShortCpuBurst();
+                if (Math.random() < 0.5f) {
+                    simulateShortCpuBurst();
+                }
+                break;
+
+            case 4:
+                simulateUiInteraction();
+                break;
+
+            case 5:
+                // rare background activity
+                if (Math.random() < 0.3f) {
+                    simulateShortCpuBurst();
+                }
                 break;
         }
     }
@@ -20820,7 +20843,7 @@ float relativePct =
 float loadScore = 0f;
 
 if (!Float.isNaN(correctedPerHour)) {
-    loadScore += correctedPerHour / 1500f;
+    loadScore += correctedPerHour / 900f;
 }
 
 if (!Float.isNaN(tempRise)) {
