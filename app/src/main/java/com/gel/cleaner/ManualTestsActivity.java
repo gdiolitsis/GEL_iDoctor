@@ -20752,17 +20752,9 @@ float heavyUsage = Float.NaN;
 // ------------------------------------------------------------
 float baseHours = Float.NaN;
 
-// 👉 1. use estimated (αν υπάρχει ήδη)
+// 👉 use estimated only
 if (!Float.isNaN(estimatedHours)) {
-
     baseHours = estimatedHours;
-
-// 👉 2. fallback σε physics
-} else if (!Float.isNaN(correctedPerHour)
-        && correctedPerHour > 0f
-        && lab14baselineMah > 0f) {
-
-    baseHours = lab14baselineMah / correctedPerHour;
 }
 
 // ------------------------------------------------------------
