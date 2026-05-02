@@ -20061,10 +20061,22 @@ if (snap0.chargeFullMah > 0) {
 
 } else {
 
-    int p = Math.max(1, getBatteryPercentSafe());
+    int pct = Math.max(1, getBatteryPercentSafe());
 
     lab14bBaselineMah =
-            (long) (snap0.chargeNowMah / (p / 100.0f));
+        (long) (snap0.chargeNowMah / (pct / 100.0f));
+}
+
+// 🔴 FIX BASELINE (CRITICAL)
+if (lab14bBaselineMah < 1000) {
+
+    lab14bBaselineMah = 5000; // safe default
+
+    logWarn(
+        gr
+        ? "Χρήση fallback χωρητικότητας 5000mAh"
+        : "Using fallback capacity 5000mAh"
+    );
 }
 
 startTemp[0] = getBatteryTemperature();
@@ -20625,14 +20637,49 @@ logOk(gr
 
 logLine();
 
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah > 0) {
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
+
+    float finalHours;
+
+    if (baselineMah > 1000) {
+
+        // ✅ έχουμε πραγματική χωρητικότητα
+        finalHours = baselineMah / correctedPerHour;
+
+    } else {
+
+        // 🔴 PURE PHYSICS MODE (χωρίς capacity)
+        float screen = getScreenSizeInches();
+if (screen <= 0f) screen = 6.5f;
+
+// 🔴 normalize vs reference device
+float screenFactor = screen / 6.5f;
+
+// clamp για να μην ξεφύγει
+screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
+
+// 🔴 adjust consumption
+float adjustedPerHour =
+        correctedPerHour * screenFactor;
+
+// 🔴 convert to %/hour
+float pctPerHour = adjustedPerHour / 45f;
+
+finalHours = 100f / pctPerHour;
+
+        logWarn(
+            gr
+            ? "Χωρητικότητα μη διαθέσιμη — εκτίμηση βάσει κατανάλωσης"
+            : "Capacity unavailable — estimation based on consumption"
+        );
+    }
 
     logLabelValue(
             gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
             String.format(
                     Locale.US,
                     "%.1f %s",
-                    estimatedHours,
+                    finalHours,
                     gr ? "ώρες" : "hours"
             )
     );
