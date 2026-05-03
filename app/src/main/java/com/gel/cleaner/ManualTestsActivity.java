@@ -20213,31 +20213,50 @@ final Runnable usageLoop = new Runnable() {
 
         // 🔴 restore CPU burst mode
 
-// 🔴 DETERMINISTIC LOAD (NO RANDOM)
+// 🔴 GAMING DETERMINISTIC LOAD (NO RANDOM)
 try {
 
     long cycle = (elapsed / 1000) % 20; // 20s loop
 
     if (isLab14GamaMode) {
 
-        if (cycle < 6) {
+        // ------------------------------------------------
+        // 🎮 REALISTIC GAMING PROFILE
+        // ------------------------------------------------
+        nextDelay = 300; // tighter loop for gaming load
 
+        if (cycle < 5) {
+
+            // GPU-heavy render phase
+            simulateGpuBurst();
             simulateGpuBurst();
 
-        } else if (cycle < 12) {
+        } else if (cycle < 10) {
 
+            // CPU + GPU combined load
             simulateShortCpuBurst();
             simulateGpuBurst();
+            simulateGpuBurst();
 
-        } else if (cycle < 16) {
+        } else if (cycle < 15) {
 
+            // sustained CPU pressure
             simulateShortCpuBurst();
+            simulateShortCpuBurst();
+            simulateGpuBurst();
 
         } else {
-            // idle
+
+            // short cooldown, but not idle
+            simulateGpuBurst();
         }
 
     } else {
+
+        // ------------------------------------------------
+        // 🌿 DAILY PROFILE
+        // ------------------------------------------------
+        nextDelay = 500;
 
         if (cycle < 5) {
 
@@ -20257,6 +20276,7 @@ try {
             simulateShortCpuBurst();
 
         } else {
+
             // idle
         }
     }
@@ -20904,8 +20924,19 @@ float screenFactor = screen / 6.5f;
 screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
 
 // 🔴 base reference (device-agnostic)
-float referencePerHour =
-        isLab14GamaMode ? 1100f : 500f;
+float referencePerHour;
+
+if (isLab14GamaMode) {
+
+    if (!Float.isNaN(tempRise) && tempRise > 3f) {
+        referencePerHour = 850f; // heavy gaming
+    } else {
+        referencePerHour = 650f; // normal gaming
+    }
+
+} else {
+    referencePerHour = 500f;
+}
 
 // 🔴 base expected
 float expectedPerHour =
