@@ -20230,11 +20230,14 @@ try {
             // GPU-heavy render phase
             simulateGpuBurst();
             simulateGpuBurst();
+            simulateGpuBurst();
 
         } else if (cycle < 10) {
 
             // CPU + GPU combined load
             simulateShortCpuBurst();
+            simulateShortCpuBurst(); // 🔴 BOOST CPU
+            simulateGpuBurst();
             simulateGpuBurst();
             simulateGpuBurst();
 
@@ -20243,6 +20246,8 @@ try {
             // sustained CPU pressure
             simulateShortCpuBurst();
             simulateShortCpuBurst();
+            simulateShortCpuBurst();
+            simulateGpuBurst();
             simulateGpuBurst();
 
         } else {
@@ -20409,6 +20414,17 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
                     : "Final snapshot failed");
 
             return;
+        }
+
+        // ------------------------------------------------
+        // 🔴 BASELINE CAPACITY (SOURCE OF TRUTH)
+        // ------------------------------------------------
+        float baselineMah = -1f;
+
+        if (snapEnd.chargeFullMah > 1000) {
+            baselineMah = snapEnd.chargeFullMah;
+        } else if (snapEnd.chargeDesignMah > 1000) {
+            baselineMah = snapEnd.chargeDesignMah;
         }
 
         endMah[0] = snapEnd.chargeNowMah;
@@ -20684,40 +20700,32 @@ logLine();
 
 if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
 
-    float finalHours = Float.NaN;
+float finalHours;
 
-if (baselineMah > 1000) {
+if (baselineMah > 1000f) {
 
-        // ✅ έχουμε πραγματική χωρητικότητα
-        finalHours = baselineMah / correctedPerHour;
+    // ✅ REAL CAPACITY
+    finalHours = baselineMah / correctedPerHour;
 
-    } else {
+} else {
 
-        // 🔴 PURE PHYSICS MODE (χωρίς capacity)
-        float screen = getScreenSizeInches();
-if (screen <= 0f) screen = 6.5f;
+    // 🔴 PURE PHYSICS FALLBACK
+    float screen = getScreenSizeInches();
+    if (screen <= 0f) screen = 6.5f;
 
-// 🔴 normalize vs reference device
-float screenFactor = screen / 6.5f;
+    float screenFactor = screen / 6.5f;
+    screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
 
-// clamp για να μην ξεφύγει
-screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
+    float adjustedPerHour = correctedPerHour * screenFactor;
 
-// 🔴 adjust consumption
-float adjustedPerHour =
-        correctedPerHour * screenFactor;
+    float pctPerHour = adjustedPerHour / 45f;
 
-// 🔴 convert to %/hour
-float pctPerHour = adjustedPerHour / 45f;
+    finalHours = 100f / pctPerHour;
 
-finalHours = 100f / pctPerHour;
-
-        logWarn(
-            gr
-            ? "Χωρητικότητα μη διαθέσιμη — εκτίμηση βάσει κατανάλωσης"
-            : "Capacity unavailable — estimation based on consumption"
-        );
-    }
+    logWarn(gr
+        ? "Χωρητικότητα μη διαθέσιμη — εκτίμηση βάσει κατανάλωσης"
+        : "Capacity unavailable — estimation based on consumption");
+}
     
     // 🔴 CRITICAL: pass finalHours downstream
 estimatedHours = finalHours;
@@ -20795,13 +20803,8 @@ float lightUsage = Float.NaN;
 float normalUsage = Float.NaN;
 float heavyUsage = Float.NaN;
 
-// 🔴 BASE HOURS (FIX)
-float baseHours = estimatedHours; 
-
-// 👉 use estimated only
-if (!Float.isNaN(estimatedHours)) {
-    baseHours = estimatedHours;
-}
+// 🔴 BASE HOURS (FINAL SOURCE)
+float baseHours = finalHours;
 
 // ------------------------------------------------------------
 // 🔴 APPLY USAGE MULTIPLIERS
@@ -20928,7 +20931,7 @@ float referencePerHour;
 
 if (isLab14GamaMode) {
 
-    if (!Float.isNaN(tempRise) && tempRise > 3f) {
+    if (!Float.isNaN(tempRise) && tempRise > 4f) {
         referencePerHour = 850f; // heavy gaming
     } else {
         referencePerHour = 650f; // normal gaming
@@ -20942,6 +20945,24 @@ if (isLab14GamaMode) {
 float expectedPerHour =
         referencePerHour * screenFactor;
 
+// ------------------------------------------------
+// 🔴 AUTO CALIBRATION (SAFE)
+// ------------------------------------------------
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
+
+    float ratio = correctedPerHour / expectedPerHour;
+
+    // clamp για να μην “κλέψει”
+    ratio = Math.max(0.85f, Math.min(1.15f, ratio));
+
+    // apply μόνο 50% correction (soft adapt)
+    expectedPerHour *= (1f + (ratio - 1f) * 0.5f);
+}
+
+// 🔴 clamp
+expectedPerHour =
+        Math.max(300f, Math.min(2000f, expectedPerHour));
+        
 // ------------------------------------------------
 // 🔴 THERMAL PENALTY (CRITICAL)
 // ------------------------------------------------
