@@ -20664,9 +20664,9 @@ logLine();
 
 if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
 
-    float finalHours;
+    float finalHours = Float.NaN;
 
-    if (baselineMah > 1000) {
+if (baselineMah > 1000) {
 
         // ✅ έχουμε πραγματική χωρητικότητα
         finalHours = baselineMah / correctedPerHour;
@@ -20698,6 +20698,9 @@ finalHours = 100f / pctPerHour;
             : "Capacity unavailable — estimation based on consumption"
         );
     }
+    
+    // 🔴 CRITICAL: pass finalHours downstream
+estimatedHours = finalHours;
 
     logLabelValue(
             gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
