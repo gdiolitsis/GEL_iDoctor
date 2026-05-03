@@ -20419,7 +20419,7 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         // ------------------------------------------------
         // 🔴 BASELINE CAPACITY (SOURCE OF TRUTH)
         // ------------------------------------------------
-        float baselineMah = -1f;
+        baselineMah = -1f;
 
         if (snapEnd.chargeFullMah > 1000) {
             baselineMah = snapEnd.chargeFullMah;
@@ -20806,6 +20806,11 @@ float heavyUsage = Float.NaN;
 // 🔴 BASE HOURS (FINAL SOURCE)
 float baseHours = finalHours;
 
+// 🔴 SAFETY (μην περάσει NaN κάτω)
+if (Float.isNaN(baseHours) || baseHours <= 0f) {
+    baseHours = Float.NaN;
+}
+
 // ------------------------------------------------------------
 // 🔴 APPLY USAGE MULTIPLIERS
 // ------------------------------------------------------------
@@ -20910,13 +20915,37 @@ logOk(gr
 
 logLine();
 
+// ------------------------------------------------
+// 🔴 FINAL HOURS (REAL ENGINE)
+// ------------------------------------------------
+float finalHours = Float.NaN;
+
 if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
 
-    float screenInches = getScreenSizeInches();
-    if (screenInches <= 0f) screenInches = 6.5f;
+    if (baselineMah > 1000f) {
+
+        // ✅ REAL CAPACITY
+        finalHours = baselineMah / correctedPerHour;
+
+    } else {
+
+        // 🔴 FALLBACK (PURE PHYSICS)
+        float screen = getScreenSizeInches();
+        if (screen <= 0f) screen = 6.5f;
+
+        float screenFactor = screen / 6.5f;
+        screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
+
+        float adjustedPerHour = correctedPerHour * screenFactor;
+
+        float pctPerHour = adjustedPerHour / 45f;
+
+        finalHours = 100f / pctPerHour;
+    }
+}
 
 // ------------------------------------------------
-// 🔴 DYNAMIC EXPECTED FROM TEST LOAD (THERMAL-AWARE)
+// 🔴 EXPECTED CONSUMPTION (MODEL - SEPARATE)
 // ------------------------------------------------
 
 // 🔴 screen normalization
@@ -20926,12 +20955,12 @@ if (screen <= 0f) screen = 6.5f;
 float screenFactor = screen / 6.5f;
 screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
 
-// 🔴 base reference (device-agnostic)
+// 🔴 base reference
 float referencePerHour;
 
 if (isLab14GamaMode) {
 
-    if (!Float.isNaN(tempRise) && tempRise > 4f) {
+    if (!Float.isNaN(tempRise) && tempRise >= 4f) {
         referencePerHour = 850f; // heavy gaming
     } else {
         referencePerHour = 650f; // normal gaming
@@ -20944,6 +20973,10 @@ if (isLab14GamaMode) {
 // 🔴 base expected
 float expectedPerHour =
         referencePerHour * screenFactor;
+
+// 🔴 clamp
+expectedPerHour =
+        Math.max(300f, Math.min(2000f, expectedPerHour));
 
 // ------------------------------------------------
 // 🔴 AUTO CALIBRATION (SAFE)
