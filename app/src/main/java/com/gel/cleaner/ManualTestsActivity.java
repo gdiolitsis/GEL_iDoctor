@@ -21311,9 +21311,9 @@ try {
             .apply();
 } catch (Throwable ignore) {}
 
-}
+}   // 🔴 αυτό κλείνει το try
 
-            } catch (Throwable t) {
+catch (Throwable t) {
 
         logError(gr
                 ? "Σφάλμα ανάλυσης"
@@ -21321,7 +21321,6 @@ try {
 
     } finally {
 
-        // 👉 CLEANUP ΕΔΩ
         synchronized (lab14Lock) {
             lab14SessionActive = false;
         }
@@ -23441,7 +23440,7 @@ if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
     lab14bEstimatedHours =
             lab14bBaselineMah / lab14bConsumptionPerHour;
 } else {
-    // 🔴 fallback για παλιές εκδόσεις
+    // ?? fallback για παλιές εκδόσεις
     lab14bEstimatedHours =
             p.getFloat("lab14b_estimated_hours", -1f);
 }
