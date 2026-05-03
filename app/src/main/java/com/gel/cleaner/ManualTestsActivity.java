@@ -21311,9 +21311,7 @@ try {
             .apply();
 } catch (Throwable ignore) {}
 
-}   // 🔴 αυτό κλείνει το try
-
-catch (Throwable t) {
+} catch (Throwable t) {
 
         logError(gr
                 ? "Σφάλμα ανάλυσης"
