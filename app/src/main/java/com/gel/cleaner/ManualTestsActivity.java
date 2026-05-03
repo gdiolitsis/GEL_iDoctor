@@ -20916,35 +20916,6 @@ logOk(gr
 logLine();
 
 // ------------------------------------------------
-// 🔴 FINAL HOURS (REAL ENGINE)
-// ------------------------------------------------
-float finalHours = Float.NaN;
-
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
-
-    if (baselineMah > 1000f) {
-
-        // ✅ REAL CAPACITY
-        finalHours = baselineMah / correctedPerHour;
-
-    } else {
-
-        // 🔴 FALLBACK (PURE PHYSICS)
-        float screen = getScreenSizeInches();
-        if (screen <= 0f) screen = 6.5f;
-
-        float screenFactor = screen / 6.5f;
-        screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
-
-        float adjustedPerHour = correctedPerHour * screenFactor;
-
-        float pctPerHour = adjustedPerHour / 45f;
-
-        finalHours = 100f / pctPerHour;
-    }
-}
-
-// ------------------------------------------------
 // 🔴 EXPECTED CONSUMPTION (MODEL - SEPARATE)
 // ------------------------------------------------
 
@@ -21400,9 +21371,6 @@ try {
     }
 
 }, 300000L);
-
-});
-}
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (STABILIZED MODE)
