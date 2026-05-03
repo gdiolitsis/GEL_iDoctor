@@ -21311,6 +21311,8 @@ try {
             .apply();
 } catch (Throwable ignore) {}
 
+}
+
             } catch (Throwable t) {
 
         logError(gr
