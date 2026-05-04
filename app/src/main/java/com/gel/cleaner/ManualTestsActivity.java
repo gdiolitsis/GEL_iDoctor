@@ -21371,7 +21371,7 @@ try {
 
 }); // advisory
 
-} // 🔴 METHOD END (CRITICAL)
+} // runLab14DurationMode
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (STABILIZED MODE)
