@@ -21169,6 +21169,7 @@ if (omega >= 0.85f) {
 if (proPrompt != null && !proPrompt.isEmpty()) {
     appendHtml("<br>");
     logOk(proPrompt);
+    }
 
 appendHtml("<br>");
 
