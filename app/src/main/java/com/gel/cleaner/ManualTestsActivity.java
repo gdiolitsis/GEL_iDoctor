@@ -21314,6 +21314,9 @@ try {
             .putLong("lab14b_ts", System.currentTimeMillis())
             .apply();
 
+} catch (Throwable ignore) {}
+    });
+
 } catch (Throwable t) {
 
     logError(gr
@@ -21372,10 +21375,10 @@ try {
     });
 }
 
-// 🔴 σωστό κλείσιμο postDelayed + advisory
+// 🔴 ΤΩΡΑ κλείνει σωστά το postDelayed
 }, 300000L);
 
-}); // 🔴 ΑΥΤΟ ΕΛΕΙΠΕ
+}); // 🔴 ΚΛΕΙΝΕΙ το advisory lambda
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (STABILIZED MODE)
