@@ -20942,21 +20942,23 @@ expectedPerHour =
 // ------------------------------------------------
 // 🔴 AUTO CALIBRATION (SAFE)
 // ------------------------------------------------
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
-
-    if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f
         && !Float.isNaN(expectedPerHour) && expectedPerHour > 0f) {
+
+    float ratio =
+            correctedPerHour / expectedPerHour;
 
     // clamp για να μην “κλέψει”
     ratio = Math.max(0.85f, Math.min(1.15f, ratio));
 
     // apply μόνο 50% correction (soft adapt)
-    float adapt = (ratio - 1f) * 0.5f;
+    float adapt =
+            (ratio - 1f) * 0.5f;
 
-// clamp adaptation επίσης
-adapt = Math.max(-0.10f, Math.min(0.10f, adapt));
+    // clamp adaptation επίσης
+    adapt = Math.max(-0.10f, Math.min(0.10f, adapt));
 
-expectedPerHour *= (1f + adapt);
+    expectedPerHour *= (1f + adapt);
 }
 
 // 🔴 clamp
@@ -21372,6 +21374,8 @@ try {
 
 // 🔴 σωστό κλείσιμο postDelayed + advisory
 }, 300000L);
+
+}); // 🔴 ΑΥΤΟ ΕΛΕΙΠΕ
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (STABILIZED MODE)
