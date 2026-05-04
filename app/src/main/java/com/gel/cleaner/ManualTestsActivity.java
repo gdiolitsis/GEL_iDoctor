@@ -20401,16 +20401,983 @@ usageHandler.post(usageLoop);
 
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
-    logOk("LAB14 TIMER OK");
+    try {
+
+        stopFastStressSafe();
+
+        iDoctorEngine.BatterySnapshot snapEnd =
+                idoctor.readBatterySnapshotLab();
+
+        if (snapEnd == null || snapEnd.chargeNowMah <= 0) {
+
+            logError(gr
+                    ? "Αποτυχία τελικής ανάγνωσης"
+                    : "Final snapshot failed");
+
+            return;
+        }
+
+        // ------------------------------------------------
+        // 🔴 BASELINE CAPACITY (SOURCE OF TRUTH)
+        // ------------------------------------------------
+        baselineMah = -1L;
+
+        if (snapEnd.chargeFullMah > 1000) {
+            baselineMah = snapEnd.chargeFullMah;
+        } else if (snapEnd.chargeDesignMah > 1000) {
+            baselineMah = snapEnd.chargeDesignMah;
+        }
+
+        endMah[0] = snapEnd.chargeNowMah;
+
+        endTemp[0] = getBatteryTemperature();
+        if (Float.isNaN(endTemp[0]) || endTemp[0] <= 0f) {
+            endTemp[0] = snapEnd.batteryTempC;
+        }
+
+        endVolt[0] = getBatteryVoltageFiltered();
+        
+// 🔴 DEBUG (ΒΑΛΤΟ ΕΔΩ)
+logLabelValue("Start Temp", String.valueOf(startTemp[0]));
+logLabelValue("End Temp", String.valueOf(endTemp[0]));
+
+logLabelValue("Start Volt", String.valueOf(startVolt[0]));
+logLabelValue("End Volt", String.valueOf(endVolt[0]));
+
+// ------------------------------------------------
+// REAL DRAIN + AUTO SWITCH
+// ------------------------------------------------
+long drain = -1L;
+
+boolean hasChargeCounter =
+        startMah[0] > 0 && endMah[0] > 0;
+
+double liveCurrentMa = lab14Current();
+
+boolean fakeCounter = false;
+
+if (hasChargeCounter) {
+
+    drain = Math.max(0L, startMah[0] - endMah[0]);
+
+    // 🔴 πιο safe fake detection
+    if (drain < 1 && Math.abs(liveCurrentMa) > 150) {
+        fakeCounter = true;
+    }
+}
+
+// ------------------------------------------------
+// RESULTS INIT
+// ------------------------------------------------
+float perHour = Float.NaN;
+
+// 🔴 keep only if still needed elsewhere
+float estimatedHours = Float.NaN;
+
+// ------------------------------------------------
+// 🔴 PRIMARY → AVERAGE RATE (REAL DATA)
+// ------------------------------------------------
+if (rateSamples >= 5) { // 🔴 όχι απλά >0
+
+    perHour = (float) (rateSum / rateSamples);
+
+} else {
+
+    // ------------------------------------------------
+    // 🔴 FALLBACK → OLD LOGIC
+    // ------------------------------------------------
+    if (baselineMah > 0) {
+
+        if (drain > 0 && !fakeCounter) {
+
+            perHour = (drain / 5f) * 60f;
+
+        } else if (!Double.isNaN(liveCurrentMa) && Math.abs(liveCurrentMa) >= 50d) {
+
+            perHour = (float) Math.abs(liveCurrentMa);
+        }
+    }
+}
+
+// ------------------------------------------------
+// 🔴 SANITY CLAMP (CRITICAL)
+// ------------------------------------------------
+if (!Float.isNaN(perHour)) {
+
+    if (perHour < 50f) perHour = 50f;
+    if (perHour > 5000f) perHour = 5000f; // 🔴 anti-bug spike
+}
+
+// --------------------------------------
+// SPIKES CORRECTION 
+// --------------------------------------
+float correctedPerHour = perHour;
+
+if (lab14SpikeMah > 0.8f && !Float.isNaN(perHour)) {
+
+    float multiplier = 15f;
+    float capPct = 0.25f;
+
+    if (lab14SpikeCount >= 5 ||
+        lab14MaxSpikeExcess > 700f) {
+
+        multiplier = 30f;
+        capPct = 0.40f;
+    }
+
+    float spikePerHour =
+            lab14SpikeMah * multiplier;
+
+    float cap =
+        (!Float.isNaN(perHour))
+        ? perHour * capPct
+        : 0f;
+
+    spikePerHour =
+            Math.min(spikePerHour, cap);
+
+    correctedPerHour =
+            perHour - spikePerHour;
+
+    float minAllowed =
+            perHour * 0.55f;
+
+    if (correctedPerHour < minAllowed) {
+        correctedPerHour = minAllowed;
+    }
+
+    if (correctedPerHour < 50f) {
+        correctedPerHour = perHour;
+    }
+}
+
+logLabelValue(
+    gr
+    ? "Διορθωμένη κατανάλωση"
+    : "Corrected consumption",
+    String.format(
+        Locale.US,
+        "%.0f mAh/h",
+        correctedPerHour
+    )
+);
+
+// ------------------------------------------------
+// FINAL ESTIMATION (NO REDECLARATION)
+// ------------------------------------------------
+if (!Float.isNaN(perHour)
+        && perHour > 0f
+        && baselineMah > 0
+        && !Float.isNaN(correctedPerHour)
+        && correctedPerHour > 0f) {
+
+    estimatedHours =
+            baselineMah / correctedPerHour;
+
+} else {
+
+    estimatedHours = Float.NaN;
+}
+
+// ------------------------------------------------
+// 🔴 THERMAL / VOLTAGE (FINAL CLEAN VERSION)
+// ------------------------------------------------
+float tempRise = Float.NaN;
+float voltDrop = Float.NaN;
+
+// ------------------------
+// 🔴 TEMPERATURE
+// ------------------------
+if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
+
+    tempRise = endTemp[0] - startTemp[0];
+
+    // clamp negatives (sensor glitch)
+    if (tempRise < 0f) tempRise = 0f;
+
+    // ignore μόνο εντελώς αμελητέα noise
+    if (Math.abs(tempRise) < 0.05f) {
+        tempRise = 0f;
+    }
+}
+
+// ------------------------
+// 🔴 VOLTAGE
+// ------------------------
+if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
+
+    voltDrop = Math.abs(startVolt[0] - endVolt[0]);
+
+    // ignore micro-noise από ADC / rounding
+    if (voltDrop < 0.002f) {
+        voltDrop = 0f;
+    }
+}
+
+appendHtml("<br>");
+
+logOk(gr
+        ? "Αποτελέσματα κατανάλωσης"
+        : "Battery usage results");
+
+logLine();
+
+if (fakeCounter) {
+
+    logWarn(gr
+        ? "Ο αισθητήρας charge counter φαίνεται μη αξιόπιστος — γίνεται χρήση εκτίμησης βάσει ρεύματος"
+        : "Charge counter appears unreliable — switched to current-based estimation");
+}
+
+// 🔴 SAFE OUTPUT
+if (!Float.isNaN(perHour)) {
+
+    logLabelValue(
+            gr ? "Κατανάλωση" : "Consumption",
+            String.format(Locale.US, "%.0f mAh/h", perHour)
+    );
+
+    // ----------------------------------------
+    // SPIKE / RUN STABILITY
+    // ----------------------------------------
+    if (lab14SpikeMah > 0.8f) {
+
+        logLabelValue(
+                gr
+                ? "Έξτρα κατανάλωση από απότομα φορτία"
+                : "Extra consumption from load spikes",
+                String.format(Locale.US, "%.1f mAh", lab14SpikeMah)
+        );
+
+        logWarn(gr
+                ? "Παρατηρήθηκαν απότομα φορτία..."
+                : "Transient load spikes detected...");
+
+    } else {
+
+        logOk(gr
+                ? "Δεν ανιχνεύθηκαν απότομα φορτία."
+                : "No spikes detected.");
+    }
+
+} else {
+
+    logWarn(
+        gr
+        ? "Αδυναμία υπολογισμού κατανάλωσης"
+        : "Unable to calculate consumption"
+    );
+}
+
+// 🔴 THERMAL
+if (!Float.isNaN(tempRise)) {
+    logLabelValue(
+            gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
+            String.format(Locale.US, "%.1f°C", tempRise)
+    );
+}
+
+// 🔴 VOLTAGE
+if (!Float.isNaN(voltDrop)) {
+    logLabelValue(
+            gr ? "Πτώση τάσης" : "Voltage drop",
+            String.format(Locale.US, "%.3f V", voltDrop)
+    );
+}
+
+appendHtml("<br>");
+
+logOk(gr
+        ? "Εκτίμηση πλήρους διάρκειας μπαταρίας"
+        : "Estimated full battery duration");
+
+logLine();
+
+float finalHours = Float.NaN;
+
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
+
+    if (baselineMah > 1000f) {
+
+        // ✅ REAL CAPACITY
+        finalHours = baselineMah / correctedPerHour;
+
+    } else {
+
+        // 🔴 PURE PHYSICS FALLBACK
+        float screen = getScreenSizeInches();
+        if (screen <= 0f) screen = 6.5f;
+
+        float screenFactor = screen / 6.5f;
+        screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
+
+        float adjustedPerHour = correctedPerHour * screenFactor;
+
+        float pctPerHour = adjustedPerHour / 45f;
+
+        finalHours = 100f / pctPerHour;
+
+        logWarn(gr
+            ? "Χωρητικότητα μη διαθέσιμη — εκτίμηση βάσει κατανάλωσης"
+            : "Capacity unavailable — estimation based on consumption");
+    }
+
+    // 🔴 CRITICAL: pass finalHours downstream
+    estimatedHours = finalHours;
+
+    logLabelValue(
+            gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
+            String.format(
+                    Locale.US,
+                    "%.1f %s",
+                    finalHours,
+                    gr ? "ώρες" : "hours"
+            )
+    );
+
+} else {
+
+    logWarn(
+            gr
+            ? "Αδυναμία εκτίμησης διάρκειας"
+            : "Unable to estimate duration"
+    );
+}
+                
+appendHtml("<br>");
+
+logOk(
+        wasGama
+        ? (gr ? "Σενάρια διάρκειας gaming"
+              : "Gaming endurance scenarios")
+        : (gr ? "Σενάρια διάρκειας χρήσης"
+              : "Usage endurance scenarios")
+);
+
+logLine();
+
+// ------------------------------------------------------------
+// 🔴 USAGE / GAMING SCENARIOS
+// ------------------------------------------------------------
+String labelLight =
+        wasGama
+        ? (gr ? "Ελαφρύ gaming" : "Light gaming")
+        : (gr ? "Με ελαφριά χρήση" : "Under light usage");
+
+String labelNormal =
+        wasGama
+        ? (gr ? "Τυπικό gaming" : "Typical gaming")
+        : (gr ? "Με κανονική χρήση" : "Under normal usage");
+
+String labelHeavy =
+        wasGama
+        ? (gr ? "Βαρύ 3D gaming" : "Heavy 3D gaming")
+        : (gr ? "Με βαριά χρήση" : "Under heavy usage");
+
+// ------------------------------------------------------------
+// 🔴 USAGE / GAMING MULTIPLIERS (BALANCED PHYSICS)
+// ------------------------------------------------------------
+float lightMul;
+float normalMul = 1.00f;
+float heavyMul;
+
+if (isLab14GamaMode) {
+    // Gaming = πιο στενό εύρος (βαριά χρήση by default)
+    lightMul = 1.15f;   // ελαφρύ gaming (menus, idle scenes)
+    heavyMul = 0.70f;   // βαρύ 3D (GPU stress)
+} else {
+    // Daily = μεγαλύτερο εύρος χρήσης
+    lightMul = 1.40f;   // standby / light usage
+    heavyMul = 0.60f;   // heavy usage (apps, multitasking)
+}
+
+// ------------------------------------------------------------
+// 🔴 RESULTS INIT (FROM CONSUMPTION)
+// ------------------------------------------------------------
+float lightUsage = Float.NaN;
+float normalUsage = Float.NaN;
+float heavyUsage = Float.NaN;
+
+// 🔴 BASE HOURS (FINAL SOURCE)
+float baseHours = finalHours;
+
+// clamp (optional but recommended)
+if (!Float.isNaN(baseHours)) {
+    baseHours = Math.max(0.5f, Math.min(48f, baseHours));
+}
+
+if (!Float.isNaN(baseHours) && baseHours > 0f) {
+
+    lightUsage = baseHours * lightMul;
+    normalUsage = baseHours * normalMul;
+    heavyUsage = baseHours * heavyMul;
+
+    logLabelValue(labelLight,
+            String.format(Locale.US, "%.1f %s",
+                    lightUsage, gr ? "ώρες" : "hours"));
+
+    logLabelValue(labelNormal,
+            String.format(Locale.US, "%.1f %s",
+                    normalUsage, gr ? "ώρες" : "hours"));
+
+    logLabelValue(labelHeavy,
+            String.format(Locale.US, "%.1f %s",
+                    heavyUsage, gr ? "ώρες" : "hours"));
+
+} else {
+
+    String na = gr ? "Μ/Δ" : "N/A";
+
+    logLabelValue(labelLight, na);
+    logLabelValue(labelNormal, na);
+    logLabelValue(labelHeavy, na);
+}
+
+// ------------------------------------------------------------
+// 🔴 REMAINING TIME (FROM CONSUMPTION)
+// ------------------------------------------------------------
+float battPct = (float) getBatteryPercentSafe();
+
+if (Float.isNaN(battPct)) battPct = 0f;
+battPct = Math.max(0f, Math.min(100f, battPct));
+
+float lightRemaining = Float.NaN;
+float normalRemaining = Float.NaN;
+float heavyRemaining = Float.NaN;
+
+if (!Float.isNaN(baseHours) && baseHours > 0f && battPct > 0f) {
+
+    float factor = battPct / 100f;
+
+    lightRemaining = Math.max(0f, baseHours * lightMul * factor);
+    normalRemaining = Math.max(0f, baseHours * normalMul * factor);
+    heavyRemaining = Math.max(0f, baseHours * heavyMul * factor);
+
+    appendHtml("<br>");
+}
+
+logOk(gr
+        ? "Εκτίμηση υπόλοιπου χρόνου"
+        : "Remaining time estimation");
+
+logLine();
+
+logLabelValue(
+        gr ? "Μπαταρία" : "Battery",
+        String.format(Locale.US, "%.0f%%", battPct)
+);
+
+String na = gr ? "Μ/Δ" : "N/A";
+
+logLabelValue(
+        labelLight,
+        Float.isNaN(lightRemaining)
+                ? na
+                : String.format(Locale.US, "%.1f %s",
+                        lightRemaining, gr ? "ώρες" : "hours")
+);
+
+logLabelValue(
+        labelNormal,
+        Float.isNaN(normalRemaining)
+                ? na
+                : String.format(Locale.US, "%.1f %s",
+                        normalRemaining, gr ? "ώρες" : "hours")
+);
+
+logLabelValue(
+        labelHeavy,
+        Float.isNaN(heavyRemaining)
+                ? na
+                : String.format(Locale.US, "%.1f %s",
+                        heavyRemaining, gr ? "ώρες" : "hours")
+);
+    
+// ------------------------------------------------
+// 🔴 GEL BATTERY PERFORMANCE INDEX (Ω)
+// ------------------------------------------------
+appendHtml("<br>");
+
+logOk(gr
+        ? "Συμπέρασμα απόδοσης μπαταρίας"
+        : "Battery performance verdict");
+
+logLine();
+
+// ------------------------------------------------
+// 🔴 EXPECTED CONSUMPTION (MODEL - SEPARATE)
+// ------------------------------------------------
+
+// 🔴 screen normalization
+float screen = getScreenSizeInches();
+if (screen <= 0f) screen = 6.5f;
+
+float screenFactor = screen / 6.5f;
+screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
+
+// 🔴 base reference
+float referencePerHour;
+
+if (isLab14GamaMode) {
+
+    if (!Float.isNaN(tempRise) && tempRise >= 4f) {
+        referencePerHour = 850f; // heavy gaming
+    } else {
+        referencePerHour = 650f; // normal gaming
+    }
+
+} else {
+    referencePerHour = 500f;
+}
+
+// 🔴 base expected
+float expectedPerHour =
+        referencePerHour * screenFactor;
+
+// 🔴 clamp
+expectedPerHour =
+        Math.max(300f, Math.min(2000f, expectedPerHour));
+
+// ------------------------------------------------
+// 🔴 AUTO CALIBRATION (SAFE)
+// ------------------------------------------------
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f
+        && !Float.isNaN(expectedPerHour) && expectedPerHour > 0f) {
+
+    float ratio =
+            correctedPerHour / expectedPerHour;
+
+    // clamp για να μην “κλέψει”
+    ratio = Math.max(0.85f, Math.min(1.15f, ratio));
+
+    // apply μόνο 50% correction (soft adapt)
+    float adapt =
+            (ratio - 1f) * 0.5f;
+
+    // clamp adaptation επίσης
+    adapt = Math.max(-0.10f, Math.min(0.10f, adapt));
+
+    expectedPerHour *= (1f + adapt);
+}
+
+// 🔴 clamp
+expectedPerHour =
+        Math.max(300f, Math.min(2000f, expectedPerHour));
+        
+// ------------------------------------------------
+// 🔴 THERMAL PENALTY (CRITICAL)
+// ------------------------------------------------
+
+float thermalFactor = 1.0f;
+
+if (!Float.isNaN(tempRise)) {
+
+    if (tempRise >= 8f) {
+        thermalFactor = 1.25f;   // πολύ ζεστό
+    } else if (tempRise >= 5f) {
+        thermalFactor = 1.15f;   // ζεστό
+    } else if (tempRise >= 3f) {
+        thermalFactor = 1.08f;   // ελαφριά αύξηση
+    }
+}
+
+// 🔴 apply thermal scaling
+expectedPerHour *= thermalFactor;
+
+// 🔴 safety clamp
+expectedPerHour = Math.max(300f, Math.min(2000f, expectedPerHour));
+
+// ------------------------------------------------
+// 🔴 Ω FROM CONSUMPTION (EFFICIENCY)
+// ------------------------------------------------
+float omega =
+        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f
+         && !Float.isNaN(expectedPerHour) && expectedPerHour > 0f)
+                ? (expectedPerHour / correctedPerHour)
+                : 1f;
+
+if (Float.isNaN(omega)) omega = 1f;
+
+omega = Math.max(0.40f, Math.min(1.60f, omega));
+
+float relativePct =
+        (omega - 1f) * 100f;
+
+float loadScore = 0f;
+int loadParts = 0;
+
+if (!Float.isNaN(correctedPerHour)) {
+    loadScore += correctedPerHour / 900f;
+    loadParts++;
+}
+
+if (!Float.isNaN(tempRise)) {
+    loadScore += tempRise / 15f;
+    loadParts++;
+}
+
+if (loadParts > 0) {
+    loadScore /= loadParts;
+}
+
+loadScore = Math.max(0.5f, Math.min(2.5f, loadScore));
+
+// ------------------------------------------------------------
+// 🔴 LOAD LEVEL
+// ------------------------------------------------------------
+String loadLevel;
+
+if (loadScore >= 1.6f) {
+    loadLevel = gr ? "Υψηλό" : "High";
+} else if (loadScore >= 1.2f) {
+    loadLevel = gr ? "Μέτριο" : "Moderate";
+} else {
+    loadLevel = gr ? "Χαμηλό" : "Low";
+}
+
+logLabelValue(
+        gr ? "Φόρτος συστήματος" : "System load",
+        loadLevel
+);
+
+// ------------------------------------------------------------
+// 🔴 Ω PERFORMANCE ZONES (FINAL VERDICT - CLEAN)
+// ------------------------------------------------------------
+
+String verdict;
+String humanVerdict;
+String proPrompt = null;
+
+// ------------------------------------------------------------
+// 🔴 PERFORMANCE ZONES
+// ------------------------------------------------------------
+if (omega >= 1.20f) {
+
+    verdict = gr
+            ? "Εξαιρετική απόδοση"
+            : "Exceptional performance";
+
+    humanVerdict = gr
+            ? "Η συσκευή αποδίδει σημαντικά πάνω από το αναμενόμενο με βάση την πραγματική κατανάλωση ενέργειας."
+            : "Device performs significantly above expected based on real power consumption.";
+
+} else if (omega >= 1.00f) {
+
+    verdict = gr
+            ? "Πολύ καλή απόδοση"
+            : "Very good performance";
+
+    humanVerdict = gr
+            ? "Η απόδοση βρίσκεται πάνω από το αναμενόμενο και η ενεργειακή συμπεριφορά είναι αποδοτική."
+            : "Performance is above expected and energy efficiency is strong.";
+
+} else if (omega >= 0.85f) {
+
+    verdict = gr
+            ? "Κανονική απόδοση"
+            : "Normal performance";
+
+    humanVerdict = gr
+            ? "Η απόδοση βρίσκεται εντός φυσιολογικών ορίων για την κατανάλωση της συσκευής."
+            : "Performance is within expected range for device power behavior.";
+
+} else if (omega >= 0.65f) {
+
+    verdict = gr
+            ? "Μειωμένη απόδοση"
+            : "Reduced performance";
+
+    humanVerdict = gr
+            ? "Η απόδοση είναι χαμηλότερη από το αναμενόμενο και υποδηλώνει αυξημένη κατανάλωση."
+            : "Performance is below expected and indicates increased power consumption.";
+
+    proPrompt = gr
+            ? "Συνιστάται εκτέλεση LAB14 Pro για ανάλυση κατανάλωσης και συμπεριφοράς."
+            : "Recommended: run LAB14 Pro for deeper consumption analysis.";
+
+} else {
+
+    verdict = gr
+            ? "Σημαντικά μειωμένη απόδοση"
+            : "Significantly reduced performance";
+
+    humanVerdict = gr
+            ? "Η κατανάλωση είναι σημαντικά υψηλότερη από το αναμενόμενο για τη συσκευή."
+            : "Power consumption is significantly higher than expected.";
+
+    proPrompt = gr
+            ? "Συνιστάται πλήρης διάγνωση μέσω LAB14 Pro."
+            : "Recommended: full diagnosis via LAB14 Pro.";
+}
+
+// ------------------------------------------------------------
+// 🔴 LOG OUTPUT (UPDATED FOR CONSUMPTION MODEL)
+// ------------------------------------------------------------
+logLabelValue(
+        gr ? "Δείκτης απόδοσης μπαταρίας Ω"
+           : "Battery performance index Ω",
+        String.format(Locale.US, "%.2f", omega)
+);
+
+// 🔴 Expected consumption (dynamic)
+logLabelValue(
+        gr
+        ? (wasGama
+           ? "Αναμενόμενη κατανάλωση gaming"
+           : "Αναμενόμενη κατανάλωση")
+        : (wasGama
+           ? "Expected gaming consumption"
+           : "Expected consumption"),
+        String.format(Locale.US, "%.0f mAh/h", expectedPerHour)
+);
+
+// 🔴 Real consumption
+logLabelValue(
+        gr ? "Πραγματική κατανάλωση"
+           : "Actual consumption",
+        String.format(Locale.US, "%.0f mAh/h", correctedPerHour)
+);
+
+// 🔴 Relative %
+logLabelValue(
+        gr ? "Σχετική απόδοση"
+           : "Relative performance",
+        String.format(Locale.US, "%+.0f%%", relativePct)
+);
+
+// 🔴 Verdict
+logLabelValue(
+        gr ? "Συμπέρασμα"
+           : "Verdict",
+        verdict
+);
+
+appendHtml("<br>");
+
+// ------------------------------------------------------------
+// 🔴 Human interpretation
+// ------------------------------------------------------------
+if (Float.isNaN(omega)) omega = 1f;
+
+if (omega >= 0.85f) {
+    logOk(humanVerdict);
+} else if (omega >= 0.65f) {
+    logWarn(humanVerdict);
+} else {
+    logError(humanVerdict);
+}
+
+if (proPrompt != null && !proPrompt.isEmpty()) {
+    appendHtml("<br>");
+    logOk(proPrompt);
+    }
+
+appendHtml("<br>");
+
+logOk(gr
+        ? "Ανάλυση αιτίας"
+        : "Root cause analysis");
+
+logLine();
+
+// ROOT CAUSE (FIXED LOGIC)
+boolean batteryIssue = false;
+boolean systemIssue = false;
+
+if (omega < 0.85f) {
+
+    if (loadScore >= 1.4f) {
+        batteryIssue = true;
+        systemIssue = true;
+    } else {
+        batteryIssue = true;
+    }
+
+} else {
+
+    if (loadScore >= 1.4f) {
+        systemIssue = true;
+    }
+}
+
+if (omega < 0.85f && loadScore >= 1.4f) {
+    batteryIssue = true;
+    systemIssue = true;
+}
+
+// 🔴 OUTPUT
+if (batteryIssue && systemIssue) {
+
+    logWarn(gr
+            ? "Συνδυασμένο πρόβλημα: μπαταρία και σύστημα"
+            : "Combined issue: battery and system");
+
+    logWarn(gr
+            ? "Η απόδοση είναι χαμηλή και το σύστημα λειτουργεί με υψηλό φορτίο"
+            : "Performance is low and system operates under high load");
+
+} else if (batteryIssue) {
+
+    logWarn(gr
+            ? "Μειωμένη απόδοση μπαταρίας"
+            : "Reduced battery performance");
+
+    logWarn(gr
+            ? "Η κατανάλωση είναι αυξημένη χωρίς έντονο φορτίο συστήματος"
+            : "Power consumption is high without heavy system load");
+
+} else if (systemIssue) {
+
+    logWarn(gr
+            ? "Αυξημένη κατανάλωση συστήματος"
+            : "High system consumption detected");
+
+    logWarn(gr
+            ? "Η μπαταρία αποδίδει κανονικά αλλά το σύστημα καταναλώνει περισσότερη ενέργεια"
+            : "Battery performs normally but system consumes more power");
+
+} else {
+
+    logOk(gr
+            ? "Ισορροπημένη λειτουργία συστήματος και μπαταρίας"
+            : "Balanced system and battery behaviour");
+}
+
+appendHtml("<br>");
+
+logOk(gr
+        ? "Κλίμακα ερμηνείας δείκτη Ω"
+        : "Ω interpretation scale");
+
+logLine();
+
+if (gr) {
+
+    logLabelValue("Ω ≥ 1.20", "Εξαιρετική απόδοση");
+    logLabelValue("Ω ≥ 1.00", "Πολύ καλή απόδοση");
+    logLabelValue("Ω ≥ 0.80", "Κανονική απόδοση");
+    logLabelValue("Ω ≥ 0.65", "Μειωμένη απόδοση");
+    logLabelValue("Ω < 0.65", "Σημαντικά μειωμένη απόδοση");
+
+} else {
+
+    logLabelValue("Ω ≥ 1.20", "Exceptional performance");
+    logLabelValue("Ω ≥ 1.00", "Very good performance");
+    logLabelValue("Ω ≥ 0.80", "Normal performance");
+    logLabelValue("Ω ≥ 0.65", "Reduced performance");
+    logLabelValue("Ω < 0.65", "Significantly reduced performance");
+}
+
+promptRestoreNormalMode();
+
+// ------------------------------------------------------------
+// 🔴 SAFE VALUES (FIXED)
+// ------------------------------------------------------------
+float safePerHour =
+        Float.isNaN(correctedPerHour) ? -1f : correctedPerHour;
+
+float safeEstimated =
+        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah > 0)
+                ? (baselineMah / correctedPerHour)
+                : -1f;
+
+float safeLight =
+        Float.isNaN(lightRemaining) ? -1f : lightRemaining;
+
+float safeNormal =
+        Float.isNaN(normalRemaining) ? -1f : normalRemaining;
+
+float safeHeavy =
+        Float.isNaN(heavyRemaining) ? -1f : heavyRemaining;
+
+// 🔴 FIX: αυτά έλειπαν
+float safeRemLight = safeLight;
+float safeRemNormal = safeNormal;
+float safeRemHeavy = safeHeavy;
+
+// ------------------------------------------------------------
+// 🔴 SAVE LAB 14B RESULTS (CRITICAL)
+// ------------------------------------------------------------
+try {
+
+    getSharedPreferences("GEL_DIAG", MODE_PRIVATE)
+            .edit()
+            .putFloat("lab14b_consumption_per_hour", safePerHour)
+            .putFloat("lab14b_estimated_hours", safeEstimated)
+            .putFloat("lab14b_light_hours", safeLight)
+            .putFloat("lab14b_normal_hours", safeNormal)
+            .putFloat("lab14b_heavy_hours", safeHeavy)
+            .putFloat("lab14b_remaining_light", safeRemLight)
+            .putFloat("lab14b_remaining_normal", safeRemNormal)
+            .putFloat("lab14b_remaining_heavy", safeRemHeavy)
+            .putLong("lab14b_ts", System.currentTimeMillis())
+            .apply();
+
+} catch (Throwable ignore) {}
+
+} catch (Throwable t) {
+
+    logError(gr
+            ? "Σφάλμα ανάλυσης"
+            : "Analysis error");
+
+} finally {
+
+    synchronized (lab14Lock) {
+        lab14SessionActive = false;
+    }
+
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+
+    try {
+        if (usageHandler != null) {
+            usageHandler.removeCallbacksAndMessages(null);
+            usageHandler = null;
+        }
+    } catch (Throwable ignore) {}
+
+    lab14Cancelled = false;
+    lab14Running = false;
+    isLab14BMode = false;
+    isLab14GamaMode = false;
+
+    appendHtml("<br>");
+
+    logOk(
+        gr
+        ? (wasGama
+            ? "Το Lab 14 GAMA ολοκληρώθηκε."
+            : "Το Lab 14B ολοκληρώθηκε.")
+        : (wasGama
+            ? "Lab 14 GAMA finished."
+            : "Lab 14B finished.")
+    );
+
+    try {
+        if (batterySuiteDialog != null && batterySuiteDialog.isShowing()) {
+            batterySuiteDialog.dismiss();
+            batterySuiteDialog = null;
+        }
+    } catch (Throwable ignore) {}
+
+    runOnUiThread(() -> {
+        try {
+            if (lab14Dialog != null && lab14Dialog.isShowing()) {
+                lab14Dialog.dismiss();
+                lab14Dialog = null;
+            }
+        } catch (Throwable ignore) {}
+    });
+}
 
 }, 300000L);
 
-}); // 🔴 ΚΛΕΙΣΙΜΟ advisory
+}); // showLab14BAdvisory
 
-} // 🔴 ΚΛΕΙΣΙΜΟ runLab14DurationMode
-
-
-
+} // runLab14DurationMode
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (STABILIZED MODE)
