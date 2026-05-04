@@ -21295,7 +21295,7 @@ float safeRemHeavy = safeHeavy;
 // 🔴 SAVE LAB 14B RESULTS (CRITICAL)
 // ------------------------------------------------------------
 try {
-	
+
     getSharedPreferences("GEL_DIAG", MODE_PRIVATE)
             .edit()
             .putFloat("lab14b_consumption_per_hour", safePerHour)
@@ -21308,65 +21308,64 @@ try {
             .putFloat("lab14b_remaining_heavy", safeRemHeavy)
             .putLong("lab14b_ts", System.currentTimeMillis())
             .apply();
-} catch (Throwable ignore) {}
 
-catch (Throwable t) {
+} catch (Throwable t) {
 
-        logError(gr
-                ? "Σφάλμα ανάλυσης"
-                : "Analysis error");
+    logError(gr
+            ? "Σφάλμα ανάλυσης"
+            : "Analysis error");
 
-    } finally {
+} finally {
 
-        synchronized (lab14Lock) {
-            lab14SessionActive = false;
-        }
-
-        try { stopCpuBurn(); } catch (Throwable ignore) {}
-        try { stopMemoryStress(); } catch (Throwable ignore) {}
-        try { stopGpuStress(); } catch (Throwable ignore) {}
-        try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
-
-        try {
-            if (usageHandler != null) {
-                usageHandler.removeCallbacksAndMessages(null);
-                usageHandler = null;
-            }
-        } catch (Throwable ignore) {}
-
-        lab14Cancelled = false;
-        lab14Running = false;
-        isLab14BMode = false;
-        isLab14GamaMode = false;
-
-        appendHtml("<br>");
-
-        logOk(
-            gr
-            ? (wasGama
-                ? "Το Lab 14 GAMA ολοκληρώθηκε."
-                : "Το Lab 14B ολοκληρώθηκε.")
-            : (wasGama
-                ? "Lab 14 GAMA finished."
-                : "Lab 14B finished.")
-        );
-
-        try {
-            if (batterySuiteDialog != null && batterySuiteDialog.isShowing()) {
-                batterySuiteDialog.dismiss();
-                batterySuiteDialog = null;
-            }
-        } catch (Throwable ignore) {}
-
-        runOnUiThread(() -> {
-            try {
-                if (lab14Dialog != null && lab14Dialog.isShowing()) {
-                    lab14Dialog.dismiss();
-                    lab14Dialog = null;
-                }
-            } catch (Throwable ignore) {}
-        });
+    synchronized (lab14Lock) {
+        lab14SessionActive = false;
     }
+
+    try { stopCpuBurn(); } catch (Throwable ignore) {}
+    try { stopMemoryStress(); } catch (Throwable ignore) {}
+    try { stopGpuStress(); } catch (Throwable ignore) {}
+    try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
+
+    try {
+        if (usageHandler != null) {
+            usageHandler.removeCallbacksAndMessages(null);
+            usageHandler = null;
+        }
+    } catch (Throwable ignore) {}
+
+    lab14Cancelled = false;
+    lab14Running = false;
+    isLab14BMode = false;
+    isLab14GamaMode = false;
+
+    appendHtml("<br>");
+
+    logOk(
+        gr
+        ? (wasGama
+            ? "Το Lab 14 GAMA ολοκληρώθηκε."
+            : "Το Lab 14B ολοκληρώθηκε.")
+        : (wasGama
+            ? "Lab 14 GAMA finished."
+            : "Lab 14B finished.")
+    );
+
+    try {
+        if (batterySuiteDialog != null && batterySuiteDialog.isShowing()) {
+            batterySuiteDialog.dismiss();
+            batterySuiteDialog = null;
+        }
+    } catch (Throwable ignore) {}
+
+    runOnUiThread(() -> {
+        try {
+            if (lab14Dialog != null && lab14Dialog.isShowing()) {
+                lab14Dialog.dismiss();
+                lab14Dialog = null;
+            }
+        } catch (Throwable ignore) {}
+    });
+}
 
 }, 300000L);
 
