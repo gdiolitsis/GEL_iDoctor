@@ -20419,7 +20419,7 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         // ------------------------------------------------
         // 🔴 BASELINE CAPACITY (SOURCE OF TRUTH)
         // ------------------------------------------------
-        baselineMah = -1f;
+        baselineMah = -1L;
 
         if (snapEnd.chargeFullMah > 1000) {
             baselineMah = snapEnd.chargeFullMah;
@@ -20512,7 +20512,7 @@ if (!Float.isNaN(perHour)) {
 // --------------------------------------
 float correctedPerHour = perHour;
 
-if (lab14SpikeMah > 0.8f && baselineMah > 0) {
+if (lab14SpikeMah > 0.8f && !Float.isNaN(perHour)) {
 
     float multiplier = 15f;
     float capPct = 0.25f;
@@ -20528,7 +20528,9 @@ if (lab14SpikeMah > 0.8f && baselineMah > 0) {
             lab14SpikeMah * multiplier;
 
     float cap =
-            perHour * capPct;
+        (!Float.isNaN(perHour))
+        ? perHour * capPct
+        : 0f;
 
     spikePerHour =
             Math.min(spikePerHour, cap);
@@ -20562,7 +20564,11 @@ logLabelValue(
 // ------------------------------------------------
 // FINAL ESTIMATION (NO REDECLARATION)
 // ------------------------------------------------
-if (!Float.isNaN(perHour) && perHour > 0f && baselineMah > 0) {
+if (!Float.isNaN(perHour)
+        && perHour > 0f
+        && baselineMah > 0
+        && !Float.isNaN(correctedPerHour)
+        && correctedPerHour > 0f) {
 
     estimatedHours =
             baselineMah / correctedPerHour;
@@ -20627,43 +20633,31 @@ if (!Float.isNaN(perHour)) {
 
     logLabelValue(
             gr ? "Κατανάλωση" : "Consumption",
-            String.format(
-                    Locale.US,
-                    "%.0f mAh/h",
-                    perHour
-            )
+            String.format(Locale.US, "%.0f mAh/h", perHour)
     );
 
-// ----------------------------------------
-// SPIKE / RUN STABILITY INTERPRETATION
-// ----------------------------------------
-if (lab14SpikeMah > 0.8f) {
+    // ----------------------------------------
+    // SPIKE / RUN STABILITY
+    // ----------------------------------------
+    if (lab14SpikeMah > 0.8f) {
 
-    logLabelValue(
-            gr
-            ? "Έξτρα κατανάλωση από απότομα φορτία"
-            : "Extra consumption from load spikes",
-            String.format(
-                    Locale.US,
-                    "%.1f mAh",
-                    lab14SpikeMah
-            )
-    );
+        logLabelValue(
+                gr
+                ? "Έξτρα κατανάλωση από απότομα φορτία"
+                : "Extra consumption from load spikes",
+                String.format(Locale.US, "%.1f mAh", lab14SpikeMah)
+        );
 
-    logWarn(
-        gr
-        ? "Παρατηρήθηκαν απότομα φορτία κατά το τεστ. Εφαρμόστηκε διόρθωση όπου απαιτήθηκε, αλλά επανάληψη του τεστ μπορεί να αυξήσει την αξιοπιστία."
-        : "Transient load spikes were detected. Compensation was applied where needed, but repeating the test may improve confidence."
-    );
+        logWarn(gr
+                ? "Παρατηρήθηκαν απότομα φορτία..."
+                : "Transient load spikes detected...");
 
-} else {
+    } else {
 
-    logOk(
-        gr
-        ? "Δεν ανιχνεύθηκαν απότομα φορτία. Η μέτρηση θεωρείται σταθερή και υψηλής αξιοπιστίας."
-        : "No transient load spikes were detected. This run is considered stable and high confidence."
-    );
-}
+        logOk(gr
+                ? "Δεν ανιχνεύθηκαν απότομα φορτία."
+                : "No spikes detected.");
+    }
 
 } else {
 
@@ -20705,7 +20699,9 @@ if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
 if (baselineMah > 1000f) {
 
     // ✅ REAL CAPACITY
+    if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
     finalHours = baselineMah / correctedPerHour;
+}
 
 } else {
 
@@ -20806,37 +20802,28 @@ float heavyUsage = Float.NaN;
 // 🔴 BASE HOURS (FINAL SOURCE)
 float baseHours = finalHours;
 
-// 🔴 SAFETY (μην περάσει NaN κάτω)
-if (Float.isNaN(baseHours) || baseHours <= 0f) {
-    baseHours = Float.NaN;
+// clamp (optional but recommended)
+if (!Float.isNaN(baseHours)) {
+    baseHours = Math.max(0.5f, Math.min(48f, baseHours));
 }
 
-// ------------------------------------------------------------
-// 🔴 APPLY USAGE MULTIPLIERS
-// ------------------------------------------------------------
 if (!Float.isNaN(baseHours) && baseHours > 0f) {
 
     lightUsage = baseHours * lightMul;
     normalUsage = baseHours * normalMul;
     heavyUsage = baseHours * heavyMul;
 
-    logLabelValue(
-            labelLight,
+    logLabelValue(labelLight,
             String.format(Locale.US, "%.1f %s",
-                    lightUsage, gr ? "ώρες" : "hours")
-    );
+                    lightUsage, gr ? "ώρες" : "hours"));
 
-    logLabelValue(
-            labelNormal,
+    logLabelValue(labelNormal,
             String.format(Locale.US, "%.1f %s",
-                    normalUsage, gr ? "ώρες" : "hours")
-    );
+                    normalUsage, gr ? "ώρες" : "hours"));
 
-    logLabelValue(
-            labelHeavy,
+    logLabelValue(labelHeavy,
             String.format(Locale.US, "%.1f %s",
-                    heavyUsage, gr ? "ώρες" : "hours")
-    );
+                    heavyUsage, gr ? "ώρες" : "hours"));
 
 } else {
 
@@ -20852,17 +20839,20 @@ if (!Float.isNaN(baseHours) && baseHours > 0f) {
 // ------------------------------------------------------------
 float battPct = (float) getBatteryPercentSafe();
 
+if (Float.isNaN(battPct)) battPct = 0f;
+battPct = Math.max(0f, Math.min(100f, battPct));
+
 float lightRemaining = Float.NaN;
 float normalRemaining = Float.NaN;
 float heavyRemaining = Float.NaN;
 
-if (!Float.isNaN(baseHours) && battPct > 0f) {
+if (!Float.isNaN(baseHours) && baseHours > 0f && battPct > 0f) {
 
     float factor = battPct / 100f;
 
-    lightRemaining = baseHours * lightMul * factor;
-    normalRemaining = baseHours * normalMul * factor;
-    heavyRemaining = baseHours * heavyMul * factor;
+    lightRemaining = Math.max(0f, baseHours * lightMul * factor);
+    normalRemaining = Math.max(0f, baseHours * normalMul * factor);
+    heavyRemaining = Math.max(0f, baseHours * heavyMul * factor);
 
     appendHtml("<br>");
 }
@@ -20954,13 +20944,19 @@ expectedPerHour =
 // ------------------------------------------------
 if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
 
-    float ratio = correctedPerHour / expectedPerHour;
+    if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f
+        && !Float.isNaN(expectedPerHour) && expectedPerHour > 0f) {
 
     // clamp για να μην “κλέψει”
     ratio = Math.max(0.85f, Math.min(1.15f, ratio));
 
     // apply μόνο 50% correction (soft adapt)
-    expectedPerHour *= (1f + (ratio - 1f) * 0.5f);
+    float adapt = (ratio - 1f) * 0.5f;
+
+// clamp adaptation επίσης
+adapt = Math.max(-0.10f, Math.min(0.10f, adapt));
+
+expectedPerHour *= (1f + adapt);
 }
 
 // 🔴 clamp
@@ -20994,30 +20990,33 @@ expectedPerHour = Math.max(300f, Math.min(2000f, expectedPerHour));
 // 🔴 Ω FROM CONSUMPTION (EFFICIENCY)
 // ------------------------------------------------
 float omega =
-        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f)
+        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f
+         && !Float.isNaN(expectedPerHour) && expectedPerHour > 0f)
                 ? (expectedPerHour / correctedPerHour)
                 : 1f;
 
-// anti-outlier clamp
+if (Float.isNaN(omega)) omega = 1f;
+
 omega = Math.max(0.40f, Math.min(1.60f, omega));
 
-// ------------------------------------------------
-// 🔴 RELATIVE %
-// ------------------------------------------------
 float relativePct =
         (omega - 1f) * 100f;
 
-// ------------------------------------------------------------
-// 🔴 LOAD SCORE (SYSTEM PRESSURE)
-// ------------------------------------------------------------
 float loadScore = 0f;
+int loadParts = 0;
 
 if (!Float.isNaN(correctedPerHour)) {
     loadScore += correctedPerHour / 900f;
+    loadParts++;
 }
 
 if (!Float.isNaN(tempRise)) {
     loadScore += tempRise / 15f;
+    loadParts++;
+}
+
+if (loadParts > 0) {
+    loadScore /= loadParts;
 }
 
 loadScore = Math.max(0.5f, Math.min(2.5f, loadScore));
@@ -21157,6 +21156,8 @@ appendHtml("<br>");
 // ------------------------------------------------------------
 // 🔴 Human interpretation
 // ------------------------------------------------------------
+if (Float.isNaN(omega)) omega = 1f;
+
 if (omega >= 0.85f) {
     logOk(humanVerdict);
 } else if (omega >= 0.65f) {
@@ -21165,17 +21166,10 @@ if (omega >= 0.85f) {
     logError(humanVerdict);
 }
 
-// ------------------------------------------------------------
-// 🔴 Optional prompt
-// ------------------------------------------------------------
-if (proPrompt != null) {
+if (proPrompt != null && !proPrompt.isEmpty()) {
     appendHtml("<br>");
     logOk(proPrompt);
-}
 
-// ------------------------------------------------------------
-// 🔴 ROOT CAUSE ANALYSIS
-// ------------------------------------------------------------
 appendHtml("<br>");
 
 logOk(gr
@@ -21184,16 +21178,24 @@ logOk(gr
 
 logLine();
 
+// ROOT CAUSE (FIXED LOGIC)
 boolean batteryIssue = false;
 boolean systemIssue = false;
 
-// 🔴 classification (tuned)
-if (omega < 0.85f && loadScore < 1.2f) {
-    batteryIssue = true;
-}
+if (omega < 0.85f) {
 
-if (loadScore >= 1.4f && omega >= 0.85f) {
-    systemIssue = true;
+    if (loadScore >= 1.4f) {
+        batteryIssue = true;
+        systemIssue = true;
+    } else {
+        batteryIssue = true;
+    }
+
+} else {
+
+    if (loadScore >= 1.4f) {
+        systemIssue = true;
+    }
 }
 
 if (omega < 0.85f && loadScore >= 1.4f) {
@@ -21367,11 +21369,11 @@ try {
     });
 }
 
+// 🔴 σωστό κλείσιμο postDelayed + advisory
 }, 300000L);
 
-}); // advisory
-
-} // runLab14DurationMode
+});
+}
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (STABILIZED MODE)
