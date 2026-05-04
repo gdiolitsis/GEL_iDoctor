@@ -20417,27 +20417,47 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
             return;
         }
 
-        // ------------------------------------------------
-        // 🔴 BASELINE CAPACITY (SOURCE OF TRUTH)
-        // ------------------------------------------------
-        baselineMah[0] = -1L;
+// ------------------------------------------------
+// 🔴 TEMPERATURE (FUSION)
+// ------------------------------------------------
+float temp = readTempMulti(snapEnd);
 
-        if (snapEnd.chargeFullMah > 1000) {
-            baselineMah[0] = snapEnd.chargeFullMah;
-        } else if (snapEnd.chargeDesignMah > 1000) {
-            baselineMah[0] = snapEnd.chargeDesignMah;
-        }
+// fallback αν είναι invalid
+if (Float.isNaN(temp) || temp <= 0f) {
+    temp = snapEnd.batteryTempC;
+}
 
-        endMah[0] = snapEnd.chargeNowMah;
+// 🔴 detect stuck sensor
+if (!Float.isNaN(startTemp[0]) &&
+    Math.abs(temp - startTemp[0]) < 0.05f) {
 
-        endTemp[0] = getBatteryTemperature();
-        if (Float.isNaN(endTemp[0]) || endTemp[0] <= 0f) {
-            endTemp[0] = snapEnd.batteryTempC;
-        }
+    temp = snapEnd.batteryTempC;
+}
 
-        endVolt[0] = getBatteryVoltageFiltered();
-        
-// 🔴 DEBUG (ΒΑΛΤΟ ΕΔΩ)
+endTemp[0] = temp;
+
+// ------------------------------------------------
+// 🔴 VOLTAGE (FUSION)
+// ------------------------------------------------
+float volt = readVoltMulti(snapEnd);
+
+// fallback αν είναι invalid
+if (Float.isNaN(volt) || volt <= 0f) {
+    volt = snapEnd.batteryVoltage;
+}
+
+// 🔴 detect stuck sensor
+if (!Float.isNaN(startVolt[0]) &&
+    Math.abs(volt - startVolt[0]) < 0.002f) {
+
+    volt = snapEnd.batteryVoltage;
+}
+
+endVolt[0] = volt;
+
+// ------------------------------------------------
+// 🔴 DEBUG
+// ------------------------------------------------
 logLabelValue("Start Temp", String.valueOf(startTemp[0]));
 logLabelValue("End Temp", String.valueOf(endTemp[0]));
 
@@ -22404,6 +22424,55 @@ private void simulateMemoryStressLite() {
         }
 
     } catch (Throwable ignore) {}
+}
+
+private float readTempMulti(iDoctorEngine.BatterySnapshot snap) {
+
+    float t1 = getBatteryTemperature(); // current method
+    float t2 = snap != null ? snap.batteryTempC : Float.NaN;
+    float t3 = readSysTemp();
+
+    // priority: sysfs > snapshot > api
+    if (!Float.isNaN(t3) && t3 > 0f) return t3;
+    if (!Float.isNaN(t2) && t2 > 0f) return t2;
+    return t1;
+}
+
+private float readVoltMulti(iDoctorEngine.BatterySnapshot snap) {
+
+    float v1 = getBatteryVoltageFiltered();
+    float v2 = snap != null ? snap.batteryVoltage : Float.NaN;
+    float v3 = readSysVolt();
+
+    if (!Float.isNaN(v3) && v3 > 0f) return v3;
+    if (!Float.isNaN(v2) && v2 > 0f) return v2;
+    return v1;
+}
+
+private float readSysTemp() {
+    try {
+        String path = "/sys/class/power_supply/battery/temp";
+        BufferedReader br = new BufferedReader(new FileReader(path));
+        float v = Float.parseFloat(br.readLine());
+        br.close();
+
+        return v / 10f; // usually deci-degrees
+    } catch (Throwable e) {
+        return Float.NaN;
+    }
+}
+
+private float readSysVolt() {
+    try {
+        String path = "/sys/class/power_supply/battery/voltage_now";
+        BufferedReader br = new BufferedReader(new FileReader(path));
+        float v = Float.parseFloat(br.readLine());
+        br.close();
+
+        return v / 1000000f; // μV → V
+    } catch (Throwable e) {
+        return Float.NaN;
+    }
 }
 
 //=============================================================
