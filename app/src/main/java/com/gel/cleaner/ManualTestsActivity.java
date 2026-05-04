@@ -634,6 +634,9 @@ private int pendingRestartLab14Mode = 0;
 // 1 = LAB 14B
 // 2 = LAB 14 GAMA
 
+private int lab14TempSource = -1;
+private boolean lab14UseSnapshotTemp = false;
+
 private boolean isLab14GamaMode = false;
 
 private AlertDialog batterySuiteDialog;
@@ -20051,11 +20054,14 @@ synchronized (lab14Lock) {
 
 startMah[0] = snap0.chargeNowMah;
 
-if (snap0.chargeFullMah > 0) {
+// ------------------------------------------------
+// 🔴 BASELINE CAPACITY (DYNAMIC, NO HARDCODE)
+// ------------------------------------------------
+if (snap0.chargeFullMah > 1000) {
 
     lab14bBaselineMah = snap0.chargeFullMah;
 
-} else if (snap0.chargeDesignMah > 0) {
+} else if (snap0.chargeDesignMah > 1000) {
 
     lab14bBaselineMah = snap0.chargeDesignMah;
 
@@ -20063,27 +20069,51 @@ if (snap0.chargeFullMah > 0) {
 
     int pct = Math.max(1, getBatteryPercentSafe());
 
-    lab14bBaselineMah =
-        (long) (snap0.chargeNowMah / (pct / 100.0f));
+    if (snap0.chargeNowMah > 0 && pct > 0) {
+
+        lab14bBaselineMah =
+                (long) (snap0.chargeNowMah / (pct / 100.0f));
+
+    } else {
+
+        lab14bBaselineMah = -1L; // ❗ no fake capacity
+    }
 }
 
-// 🔴 FIX BASELINE (CRITICAL)
+// ------------------------------------------------
+// 🔴 VALIDATION (NO HARDCODE DEFAULT)
+// ------------------------------------------------
 if (lab14bBaselineMah < 1000) {
 
-    lab14bBaselineMah = 5000; // safe default
+    lab14bBaselineMah = -1L;
 
     logWarn(
-        gr
-        ? "Χρήση fallback χωρητικότητας 5000mAh"
-        : "Using fallback capacity 5000mAh"
-    );
+    gr
+    ? "Η χωρητικότητα της μπαταρίας δεν είναι διαθέσιμη — η εκτίμηση βασίζεται στην πραγματική κατανάλωση"
+    : "Battery capacity not available — estimation based on real usage"
+);
 }
 
-startTemp[0] = getBatteryTemperature();
-if (Float.isNaN(startTemp[0]) || startTemp[0] <= 0f) {
-    startTemp[0] = snap0.batteryTempC;
+// ------------------------------------------------
+// 🔴 START TEMP (LOCK SOURCE)
+// ------------------------------------------------
+float tApi = getBatteryTemperature();
+float tSnap = snap0 != null ? snap0.batteryTempC : Float.NaN;
+
+if (!Float.isNaN(tSnap) && tSnap > 0f) {
+
+    lab14UseSnapshotTemp = true;
+    startTemp[0] = tSnap;
+
+} else {
+
+    lab14UseSnapshotTemp = false;
+    startTemp[0] = tApi;
 }
 
+// ------------------------------------------------
+// 🔴 START VOLT (OK όπως είναι)
+// ------------------------------------------------
 startVolt[0] = getBatteryVoltageFiltered();
 
 isLab14BMode = !gamaMode;
@@ -20420,17 +20450,16 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 // ------------------------------------------------
 // 🔴 TEMPERATURE (FUSION - FINAL)
 // ------------------------------------------------
-float temp = readTempMulti(snapEnd);
+float temp;
+
+if (lab14UseSnapshotTemp) {
+    temp = snapEnd.batteryTempC;
+} else {
+    temp = getBatteryTemperature();
+}
 
 // fallback
 if (Float.isNaN(temp) || temp <= 0f) {
-    temp = snapEnd.batteryTempC;
-}
-
-// stuck sensor detection
-if (!Float.isNaN(startTemp[0]) &&
-    Math.abs(temp - startTemp[0]) < 0.05f) {
-
     temp = snapEnd.batteryTempC;
 }
 
