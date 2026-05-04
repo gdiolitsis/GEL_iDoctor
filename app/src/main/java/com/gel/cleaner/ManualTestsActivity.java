@@ -20418,16 +20418,16 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         }
 
 // ------------------------------------------------
-// 🔴 TEMPERATURE (FUSION)
+// 🔴 TEMPERATURE (FUSION - FINAL)
 // ------------------------------------------------
 float temp = readTempMulti(snapEnd);
 
-// fallback αν είναι invalid
+// fallback
 if (Float.isNaN(temp) || temp <= 0f) {
     temp = snapEnd.batteryTempC;
 }
 
-// 🔴 detect stuck sensor
+// stuck sensor detection
 if (!Float.isNaN(startTemp[0]) &&
     Math.abs(temp - startTemp[0]) < 0.05f) {
 
@@ -20437,20 +20437,24 @@ if (!Float.isNaN(startTemp[0]) &&
 endTemp[0] = temp;
 
 // ------------------------------------------------
-// 🔴 VOLTAGE (FUSION)
+// 🔴 VOLTAGE (FUSION - FINAL, NO SNAPSHOT)
 // ------------------------------------------------
 float volt = readVoltMulti(snapEnd);
 
-// fallback αν είναι invalid
+// fallback (no snapshot voltage)
 if (Float.isNaN(volt) || volt <= 0f) {
-    volt = snapEnd.batteryVoltage;
+    volt = getBatteryVoltageFiltered();
 }
 
-// 🔴 detect stuck sensor
+// stuck sensor detection
 if (!Float.isNaN(startVolt[0]) &&
     Math.abs(volt - startVolt[0]) < 0.002f) {
 
-    volt = snapEnd.batteryVoltage;
+    float sysVolt = readSysVolt();
+
+    if (!Float.isNaN(sysVolt) && sysVolt > 0f) {
+        volt = sysVolt;
+    }
 }
 
 endVolt[0] = volt;
@@ -22441,10 +22445,8 @@ private float readTempMulti(iDoctorEngine.BatterySnapshot snap) {
 private float readVoltMulti(iDoctorEngine.BatterySnapshot snap) {
 
     float v1 = getBatteryVoltageFiltered();
-    float v2 = snap != null ? snap.batteryVoltage : Float.NaN;
-    float v3 = readSysVolt();
+    float v2 = readSysVolt();
 
-    if (!Float.isNaN(v3) && v3 > 0f) return v3;
     if (!Float.isNaN(v2) && v2 > 0f) return v2;
     return v1;
 }
