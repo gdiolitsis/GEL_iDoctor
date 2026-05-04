@@ -20027,7 +20027,7 @@ synchronized (lab14Lock) {
         final long[] startMah = new long[]{ -1L };
         final long[] endMah = new long[]{ -1L };
 
-        long baselineMah = -1L;
+        final long[] baselineMah = new long[]{-1L};
 
         final float[] startVolt = new float[]{ Float.NaN };
         final float[] endVolt = new float[]{ Float.NaN };
@@ -20697,10 +20697,10 @@ float finalHours = Float.NaN;
 
 if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
 
-    if (baselineMah > 1000f) {
+    if (baselineMah[0] > 1000L) {
 
         // ✅ REAL CAPACITY
-        finalHours = baselineMah / correctedPerHour;
+        finalHours = baselineMah[0] / correctedPerHour;
 
     } else {
 
