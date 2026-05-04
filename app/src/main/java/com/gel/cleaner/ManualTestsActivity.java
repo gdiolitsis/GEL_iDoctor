@@ -21371,8 +21371,9 @@ try {
 
 }, 300000L);
 
-// 🔴 ΚΛΕΙΝΕΙ ΤΟ showLab14BAdvisory
-});
+}); // advisory
+
+} // 🔴 METHOD END (CRITICAL)
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (STABILIZED MODE)
