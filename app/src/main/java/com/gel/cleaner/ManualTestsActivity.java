@@ -20698,9 +20698,9 @@ logOk(gr
 
 logLine();
 
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
+float finalHours = Float.NaN;
 
-float finalHours;
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
 
 if (baselineMah > 1000f) {
 
@@ -21263,7 +21263,6 @@ if (gr) {
     logLabelValue("Ω ≥ 0.65", "Reduced performance");
     logLabelValue("Ω < 0.65", "Significantly reduced performance");
 }
-}
 
 promptRestoreNormalMode();
 
@@ -21311,7 +21310,7 @@ try {
             .apply();
 } catch (Throwable ignore) {}
 
-} catch (Throwable t) {
+catch (Throwable t) {
 
         logError(gr
                 ? "Σφάλμα ανάλυσης"
