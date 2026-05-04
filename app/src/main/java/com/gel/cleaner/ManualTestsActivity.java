@@ -20645,12 +20645,19 @@ if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
 
     tempRise = endTemp[0] - startTemp[0];
 
-    // clamp negatives (sensor glitch)
-    if (tempRise < 0f) tempRise = 0f;
-
-    // ignore μόνο εντελώς αμελητέα noise
-    if (Math.abs(tempRise) < 0.05f) {
+    // clamp negatives (sensor glitch / refresh lag)
+    if (tempRise < 0f) {
         tempRise = 0f;
+    }
+
+    // ignore tiny sensor noise
+    if (Math.abs(tempRise) < 0.1f) {
+        tempRise = 0f;
+    }
+
+    // 🔴 extra safety: unrealistic jump protection
+    if (tempRise > 15f) {
+        tempRise = 15f;
     }
 }
 
@@ -20661,9 +20668,14 @@ if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
 
     voltDrop = Math.abs(startVolt[0] - endVolt[0]);
 
-    // ignore micro-noise από ADC / rounding
-    if (voltDrop < 0.002f) {
+    // ignore ADC / rounding noise
+    if (voltDrop < 0.005f) {
         voltDrop = 0f;
+    }
+
+    // 🔴 clamp unrealistic spikes
+    if (voltDrop > 0.5f) {
+        voltDrop = 0.5f;
     }
 }
 
@@ -20724,9 +20736,15 @@ if (!Float.isNaN(perHour)) {
 
 // 🔴 THERMAL
 if (!Float.isNaN(tempRise)) {
+
+    String tempStr =
+            (tempRise < 0.1f)
+            ? "≈0.0°C"
+            : String.format(Locale.US, "%.1f°C", tempRise);
+
     logLabelValue(
             gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
-            String.format(Locale.US, "%.1f°C", tempRise)
+            tempStr
     );
 }
 
