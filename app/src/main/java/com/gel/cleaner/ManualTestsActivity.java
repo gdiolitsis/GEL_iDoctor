@@ -20420,12 +20420,12 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
         // ------------------------------------------------
         // 🔴 BASELINE CAPACITY (SOURCE OF TRUTH)
         // ------------------------------------------------
-        baselineMah = -1L;
+        baselineMah[0] = -1L;
 
         if (snapEnd.chargeFullMah > 1000) {
-            baselineMah = snapEnd.chargeFullMah;
+            baselineMah[0] = snapEnd.chargeFullMah;
         } else if (snapEnd.chargeDesignMah > 1000) {
-            baselineMah = snapEnd.chargeDesignMah;
+            baselineMah[0] = snapEnd.chargeDesignMah;
         }
 
         endMah[0] = snapEnd.chargeNowMah;
@@ -20486,7 +20486,7 @@ if (rateSamples >= 5) { // 🔴 όχι απλά >0
     // ------------------------------------------------
     // 🔴 FALLBACK → OLD LOGIC
     // ------------------------------------------------
-    if (baselineMah > 0) {
+    if (baselineMah[0] > 0) {
 
         if (drain > 0 && !fakeCounter) {
 
@@ -20567,12 +20567,12 @@ logLabelValue(
 // ------------------------------------------------
 if (!Float.isNaN(perHour)
         && perHour > 0f
-        && baselineMah > 0
+        && baselineMah[0] > 0
         && !Float.isNaN(correctedPerHour)
         && correctedPerHour > 0f) {
 
     estimatedHours =
-            baselineMah / correctedPerHour;
+            baselineMah[0] / correctedPerHour;
 
 } else {
 
@@ -21277,8 +21277,8 @@ float safePerHour =
         Float.isNaN(correctedPerHour) ? -1f : correctedPerHour;
 
 float safeEstimated =
-        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah > 0)
-                ? (baselineMah / correctedPerHour)
+        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0)
+                ? (baselineMah[0] / correctedPerHour)
                 : -1f;
 
 float safeLight =
