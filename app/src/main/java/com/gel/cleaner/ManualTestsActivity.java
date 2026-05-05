@@ -20963,7 +20963,9 @@ logLabelValue(
                 : String.format(Locale.US, "%.1f %s",
                         heavyRemaining, gr ? "ώρες" : "hours")
 );
-    
+
+if (!isLab14GamaMode) {
+
 // ------------------------------------------------
 // 🔴 GEL BATTERY PERFORMANCE INDEX (Ω)
 // ------------------------------------------------
@@ -20975,10 +20977,6 @@ logOk(gr
 
 logLine();
 
-// ------------------------------------------------
-// 🔴 EXPECTED CONSUMPTION (MODEL - SEPARATE)
-// ------------------------------------------------
-
 // 🔴 screen normalization
 float screen = getScreenSizeInches();
 if (screen <= 0f) screen = 6.5f;
@@ -20986,20 +20984,8 @@ if (screen <= 0f) screen = 6.5f;
 float screenFactor = screen / 6.5f;
 screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
 
-// 🔴 base reference
-float referencePerHour;
-
-if (isLab14GamaMode) {
-
-    if (!Float.isNaN(tempRise) && tempRise >= 4f) {
-        referencePerHour = 850f; // heavy gaming
-    } else {
-        referencePerHour = 650f; // normal gaming
-    }
-
-} else {
-    referencePerHour = 500f;
-}
+// 🔴 FIXED BASELINE (Daily only)
+float referencePerHour = 500f;
 
 // 🔴 base expected
 float expectedPerHour =
