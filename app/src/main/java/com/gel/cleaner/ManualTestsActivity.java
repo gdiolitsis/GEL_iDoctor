@@ -20965,7 +20965,7 @@ logLabelValue(
 );
 
 if (!isLab14GamaMode) {
-
+    
 // ------------------------------------------------
 // 🔴 GEL BATTERY PERFORMANCE INDEX (Ω)
 // ------------------------------------------------
@@ -20977,6 +20977,10 @@ logOk(gr
 
 logLine();
 
+// ------------------------------------------------
+// 🔴 EXPECTED CONSUMPTION (DAILY MODEL)
+// ------------------------------------------------
+
 // 🔴 screen normalization
 float screen = getScreenSizeInches();
 if (screen <= 0f) screen = 6.5f;
@@ -20984,7 +20988,7 @@ if (screen <= 0f) screen = 6.5f;
 float screenFactor = screen / 6.5f;
 screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
 
-// 🔴 FIXED BASELINE (Daily only)
+// 🔴 FIXED DAILY BASELINE (NO GAMING LOGIC)
 float referencePerHour = 500f;
 
 // 🔴 base expected
