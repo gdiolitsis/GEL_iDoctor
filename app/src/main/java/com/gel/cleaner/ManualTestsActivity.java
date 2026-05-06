@@ -18222,41 +18222,52 @@ private void runFastVoltageSampling(
         // 🔴 HELPER (RAW-first)
         final Supplier<Float> readVoltage = () -> {
 
-            float v = Float.NaN;
+    float v = Float.NaN;
 
-            // 🔴 PRIMARY: Battery Intent
-            try {
-                IntentFilter ifilter =
-                        new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-
-                Intent batteryStatus =
-                        registerReceiver(null, ifilter);
-
-                if (batteryStatus != null) {
-                    int mv = batteryStatus.getIntExtra("voltage", -1);
-
-                    if (mv > 3000 && mv < 5000) {
-                        v = mv / 1000f;
-                    }
-                }
-
-            } catch (Throwable ignore) {}
-
-// 🔴 FALLBACK: raw fast voltage
-if (Float.isNaN(v)) {
+    // 🔴 PRIMARY: Battery Intent
     try {
 
-        float vFast = getBatteryVoltageFast();
+        IntentFilter ifilter =
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
-        if (!Float.isNaN(vFast) &&
-            vFast > 3.0f &&
-            vFast < 5.0f) {
+        Intent batteryStatus =
+                registerReceiver(null, ifilter);
 
-            v = vFast;
+        if (batteryStatus != null) {
+
+            int mv =
+                    batteryStatus.getIntExtra("voltage", -1);
+
+            if (mv > 3000 && mv < 5000) {
+                v = mv / 1000f;
+            }
         }
 
     } catch (Throwable ignore) {}
-}
+
+    // 🔴 FALLBACK: raw fast voltage
+    if (Float.isNaN(v)) {
+
+        try {
+
+            float vFast = getBatteryVoltageFast();
+
+            if (!Float.isNaN(vFast) &&
+                vFast > 3.0f &&
+                vFast < 5.0f) {
+
+                v = vFast;
+            }
+
+        } catch (Throwable ignore) {}
+    }
+
+    return (!Float.isNaN(v) &&
+            v > 3.0f &&
+            v < 5.0f)
+            ? v
+            : Float.NaN;
+};
 
 // ----------------------------------------------------
 // 🔴 START (baseline χωρίς kill load)
