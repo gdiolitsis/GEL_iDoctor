@@ -15389,12 +15389,9 @@ if (!validDrain || lab14_systemLimited[0]) {
 
 } else {
 
-    // ----------------------------
-    // BASE FROM SAG
-    // ----------------------------
     if (!hasSag || finalSag < 0.02f) {
 
-        batteryTruth = "Unknown";
+        batteryTruth = "Low confidence";
 
     } else {
 
@@ -15765,7 +15762,6 @@ lowConfidence =
 
 boolean partial =
         !validDrain ||
-        !hasSag ||
         dtMs < 20000 ||
         lowConfidence ||
         (drainMahFinal < 3 && !lab14_systemLimited[0]);
@@ -15833,7 +15829,7 @@ if (!partial &&
 
 // RUN COUNT
 boolean countableRun =
-        hasSag &&
+        validDrain &&
         !lab14_systemLimited[0];
 
 if (countableRun)
@@ -21912,7 +21908,7 @@ statusText.setText(
                 .setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
     }
 
-    // 🔴 RESET STATE
+    // ?? RESET STATE
     lab14Running = true;
     lab14Cancelled = false;
 
