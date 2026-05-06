@@ -14060,27 +14060,74 @@ boolean hasReliableSag =
         finalSag < 1.0f;
 
 // ----------------------------------------------------
-// 🔴 NO HARD ABORT ANYMORE
+// 🔴 HARD ABORT — NO ELECTRICAL SIGNAL
 // ----------------------------------------------------
 if (!hasReliableSag) {
 
     logLine();
 
     logWarn(gr
-            ? "Ασθενές ή μη σαφές σήμα sag — συνεχίζεται η ανάλυση"
-            : "Weak or unclear sag signal — analysis continues");
+            ? "Ασθενές ή μη σαφές σήμα sag"
+            : "Weak or unclear sag signal");
+
+    logWarn(gr
+            ? "Δεν είναι δυνατή ηλεκτρική ανάλυση μπαταρίας"
+            : "Electrical battery analysis is not possible");
 
     logLine();
 
-    res.label = "Low confidence";
+    res.label = "Insufficient electrical data";
     lab14LastLabel = res.label;
 
     logLabelWarnValue(
             gr ? "Πτώση τάσης υπό φορτίο"
                : "Voltage sag under load",
-            gr ? "Χαμηλή εμπιστοσύνη μέτρησης"
-               : "Low confidence measurement"
+            gr ? "Μη μετρήσιμο voltage sag"
+               : "No measurable voltage sag"
     );
+
+    runOnUiThread(() -> {
+
+        logLabelWarnValue(
+                gr ? "Τελικό αποτέλεσμα"
+                   : "Final verdict",
+
+                gr
+                   ? "Ανεπαρκή ηλεκτρικά δεδομένα"
+                   : "Insufficient electrical data"
+        );
+
+        logLabelWarnValue(
+                gr ? "Κατάσταση μπαταρίας"
+                   : "Battery status",
+
+                gr
+                   ? "Δεν μπορεί να εξαχθεί ασφαλές συμπέρασμα"
+                   : "Safe electrical diagnosis is not possible"
+        );
+    });
+
+    // 🔴 STOP HERE
+    lab14FastDone = true;
+    lab14FastPhase = false;
+    lab14MainPhase = false;
+
+    lab14StopAllStress();
+
+    try {
+        counterText = null;
+        lab14CleanupUI();
+    } catch (Throwable ignore) {}
+
+    restoreBrightnessAndKeepOn();
+
+    lab14Running = false;
+    lab14PopupShown = false;
+    lab14AdvisoryShown = false;
+    lab14BoostActive = false;
+    lab14SoftPhaseStarted = false;
+
+    return;
 
 } else {
 
@@ -14090,18 +14137,22 @@ if (!hasReliableSag) {
     String sagLabel;
 
     if (finalSag >= 0.12f) {
+
         sagLabel = "Critical";
         res.label = "Critical";
 
     } else if (finalSag >= 0.08f) {
+
         sagLabel = "Weak";
         res.label = "Weak";
 
     } else if (finalSag >= 0.045f) {
+
         sagLabel = "Normal";
         res.label = "Normal";
 
     } else {
+
         sagLabel = "Excellent";
         res.label = "Excellent";
     }
@@ -18285,12 +18336,27 @@ if (Float.isNaN(vStart[0])) {
 }
 
 // ----------------------------------------------------
-// 🔴 LOAD 1 (no stop/start)
+// 🔴 LOAD 1 (BURST MIN-SAMPLING)
 // ----------------------------------------------------
 if (!sleepSilentlySafe(180)) return;
 if (!lab14Running || lab14Cancelled) return;
 
-float load1 = readVoltage.get();
+float load1 = Float.NaN;
+
+for (int i = 0; i < 8; i++) {
+
+    float v = readVoltage.get();
+
+    if (!Float.isNaN(v)) {
+
+        // 🔴 KEEP LOWEST VOLTAGE (TRUE SAG)
+        if (Float.isNaN(load1) || v < load1) {
+            load1 = v;
+        }
+    }
+
+    SystemClock.sleep(35);
+}
 
 if (!Float.isNaN(load1)) {
 
@@ -18304,19 +18370,37 @@ if (!Float.isNaN(load1)) {
 }
 
 // ----------------------------------------------------
-// 🔴 RECOVERY (natural, όχι forced)
+// 🔴 RECOVERY (BURST MAX-SAMPLING)
 // ----------------------------------------------------
 if (!sleepSilentlySafe(220)) return;
 if (!lab14Running || lab14Cancelled) return;
 
-float rec = readVoltage.get();
+float rec = Float.NaN;
+
+for (int i = 0; i < 8; i++) {
+
+    float v = readVoltage.get();
+
+    if (!Float.isNaN(v)) {
+
+        // 🔴 KEEP HIGHEST VOLTAGE (TRUE RECOVERY)
+        if (Float.isNaN(rec) || v > rec) {
+            rec = v;
+        }
+    }
+
+    SystemClock.sleep(35);
+}
 
 if (!Float.isNaN(rec)) {
 
     float refLoad =
-            !Float.isNaN(vLoad1[0]) ? vLoad1[0] : Float.NaN;
+            !Float.isNaN(vLoad1[0])
+                    ? vLoad1[0]
+                    : Float.NaN;
 
     if (Float.isNaN(refLoad) || rec >= refLoad) {
+
         if (Float.isNaN(vRecover[0]) || rec > vRecover[0]) {
             vRecover[0] = rec;
         }
@@ -18324,12 +18408,27 @@ if (!Float.isNaN(rec)) {
 }
 
 // ----------------------------------------------------
-// 🔴 LOAD 2 (no spike restart)
+// 🔴 LOAD 2 (BURST MIN-SAMPLING)
 // ----------------------------------------------------
 if (!sleepSilentlySafe(220)) return;
 if (!lab14Running || lab14Cancelled) return;
 
-float load2 = readVoltage.get();
+float load2 = Float.NaN;
+
+for (int i = 0; i < 8; i++) {
+
+    float v = readVoltage.get();
+
+    if (!Float.isNaN(v)) {
+
+        // 🔴 KEEP LOWEST VOLTAGE (TRUE SAG)
+        if (Float.isNaN(load2) || v < load2) {
+            load2 = v;
+        }
+    }
+
+    SystemClock.sleep(35);
+}
 
 if (!Float.isNaN(load2)) {
 
