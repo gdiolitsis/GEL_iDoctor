@@ -16301,8 +16301,8 @@ new Thread(() -> {
 
             } else {
 
-                int softThreads = Math.max(1, cores / 2);
-                startCpuBurnLimitedThreads(softThreads);
+                int softThreads = Math.max(2, cores / 2);
+startCpuBurnLimitedThreads(softThreads);
             }
         }
 
@@ -17746,9 +17746,9 @@ private void rebalanceLab14CpuLive(
     // ----------------------------------------------------
     // CLAMP
     // ----------------------------------------------------
-    newThreads = Math.max(1, Math.min(cores, newThreads));
+    newThreads = Math.max(2, Math.min(cores, newThreads));
 
-    int minThreads = Math.max(1, cores / 4);
+    int minThreads = Math.max(2, cores / 4);
     newThreads = Math.max(newThreads, minThreads);
 
     if (newThreads == oldThreads) return;
