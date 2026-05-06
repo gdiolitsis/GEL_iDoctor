@@ -21376,6 +21376,9 @@ try {
 
 } catch (Throwable ignore) {}
 
+// 🔴 ΚΛΕΙΝΕΙ ΤΟ if (!isLab14GamaMode)
+}
+
 } catch (Throwable t) {
 
     logError(gr
