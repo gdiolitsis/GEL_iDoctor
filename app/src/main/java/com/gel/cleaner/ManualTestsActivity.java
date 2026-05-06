@@ -18242,21 +18242,21 @@ private void runFastVoltageSampling(
 
             } catch (Throwable ignore) {}
 
-            // 🔴 FALLBACK: engine
-            if (Float.isNaN(v)) {
-                try {
-                    float mv = idoctor.readBatteryVoltageMvStable(2, 5);
+// 🔴 FALLBACK: raw fast voltage
+if (Float.isNaN(v)) {
+    try {
 
-                    if (!Float.isNaN(mv) && mv > 3000f && mv < 5000f) {
-                        v = mv / 1000f;
-                    }
-                } catch (Throwable ignore) {}
-            }
+        float vFast = getBatteryVoltageFast();
 
-            return (!Float.isNaN(v) && v > 3.0f && v < 5.0f)
-                    ? v
-                    : Float.NaN;
-        };
+        if (!Float.isNaN(vFast) &&
+            vFast > 3.0f &&
+            vFast < 5.0f) {
+
+            v = vFast;
+        }
+
+    } catch (Throwable ignore) {}
+}
 
 // ----------------------------------------------------
 // 🔴 START (baseline χωρίς kill load)
@@ -22511,6 +22511,43 @@ private float readSysVolt() {
     } catch (Throwable e) {
         return Float.NaN;
     }
+}
+
+private float getBatteryVoltageFast() {
+
+    try {
+
+        File f = new File(
+            "/sys/class/power_supply/battery/voltage_now"
+        );
+
+        if (!f.exists()) {
+            return Float.NaN;
+        }
+
+        BufferedReader br =
+                new BufferedReader(new FileReader(f));
+
+        String s = br.readLine();
+
+        br.close();
+
+        if (s == null) {
+            return Float.NaN;
+        }
+
+        float uv = Float.parseFloat(s.trim());
+
+        // μV -> V
+        float v = uv / 1000000f;
+
+        if (v > 2.5f && v < 5.5f) {
+            return v;
+        }
+
+    } catch (Throwable ignore) {}
+
+    return Float.NaN;
 }
 
 //=============================================================
