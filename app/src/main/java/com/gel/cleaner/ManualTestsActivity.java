@@ -18301,16 +18301,34 @@ private void runFastVoltageSampling(
 
         try {
 
-            float vFast = getBatteryVoltageFast();
+    File f = new File(
+        "/sys/class/power_supply/battery/voltage_now"
+    );
 
-            if (!Float.isNaN(vFast) &&
-                vFast > 3.0f &&
-                vFast < 5.0f) {
+    if (f.exists()) {
 
-                v = vFast;
+        BufferedReader br =
+                new BufferedReader(new FileReader(f));
+
+        String s = br.readLine();
+
+        br.close();
+
+        if (s != null) {
+
+            float uv =
+                    Float.parseFloat(s.trim());
+
+            // μV → V
+            float rawV = uv / 1000000f;
+
+            if (rawV > 3.0f && rawV < 5.0f) {
+                v = rawV;
             }
+        }
+    }
 
-        } catch (Throwable ignore) {}
+} catch (Throwable ignore) {}
     }
 
     return (!Float.isNaN(v) &&
