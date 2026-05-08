@@ -12029,11 +12029,26 @@ try {
     lastSelectedStressDurationSec = durationSec;
 
     // --------------------------------------------------
-    // 🔴 ZERO-RISK CALIBRATION
-    // --------------------------------------------------
-    if (!isLab14BMode && lab14OptimalThreads <= 0) {
-        calibrateLoadZeroRisk();
+// 🔴 ZERO-RISK CALIBRATION
+// --------------------------------------------------
+if (!isLab14BMode && lab14OptimalThreads <= 0) {
+
+    calibrateLoadZeroRisk();
+
+    // 🔴 NEVER ALLOW WEAK LOAD
+    int minThreads =
+            Math.max(4, cores - 2);
+
+    if (lab14OptimalThreads < minThreads) {
+        lab14OptimalThreads = minThreads;
     }
+
+    appendLog(
+            "CALIB",
+            "final threads=" + lab14OptimalThreads +
+            " | minFloor=" + minThreads
+    );
+}
 
     // ------------------------------------------------------------
     // 🔴 INITIAL SNAPSHOT
@@ -12273,6 +12288,11 @@ appendLog("ENGINE", "START");
 // 🔴 START ENGINE (ONLY)
 // ------------------------------------------------------------
 lab14Engine.startDrainSession();
+
+appendLog("LOAD",
+        "CPU=" + lab14CpuThreadsCurrent +
+        " | boost=" + lab14BoostActive +
+        " | soft=" + lab14SoftPhaseStarted);
 
 // 🔴 vibration loop
 ui.removeCallbacks(lab14VibrationLoop);
@@ -16048,32 +16068,33 @@ private void startLab14FastThread() {
 // =====================================================
 // 🔴 REAL 45s FAST PHASE LOOP (STABLE TIMING)
 // =====================================================
-long fastStart = SystemClock.elapsedRealtime();
-long nextTick = fastStart;
 
 while (lab14Running && !lab14Cancelled) {
 
     long now = SystemClock.elapsedRealtime();
     long elapsed = (now - fastStart) / 1000;
-    
-    // 🔴 FAST UI BAR (ΕΔΩ ΜΠΑΙΝΕΙ)
-runOnUiThread(() -> {
 
-    int safeElapsed = Math.max(0, Math.min(45, (int) elapsed));
+    appendLog("LOAD",
+            "threads=" + lab14CpuThreadsCurrent +
+            " | running=" + lab14Running);
 
-    if (counterText != null) {
-        counterText.setText(
-                gr
-                        ? "Προθέρμανση " + safeElapsed + " / 45"
-                        : "Warm-up " + safeElapsed + " / 45"
-        );
-    }
+    // 🔴 FAST UI BAR
+    runOnUiThread(() -> {
 
-    updateProgressBar(safeElapsed, 45);
+        int safeElapsed = Math.max(0, Math.min(45, (int) elapsed));
 
-});
+        if (counterText != null) {
+            counterText.setText(
+                    gr
+                            ? "Προθέρμανση " + safeElapsed + " / 45"
+                            : "Warm-up " + safeElapsed + " / 45"
+            );
+        }
 
-    // 🔴 SAMPLE
+        updateProgressBar(safeElapsed, 45);
+
+    });
+
     runFastVoltageSampling(
             idoctor,
             vStart,
@@ -16083,7 +16104,9 @@ runOnUiThread(() -> {
     );
 
     // 🔴 EXIT
-    if (elapsed >= 45) break;
+if (elapsedSec >= 45f) {
+    break;
+}
 
     // 🔴 FIXED INTERVAL (3s exact cadence)
     nextTick += 1000;
