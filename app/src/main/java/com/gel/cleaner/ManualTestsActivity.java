@@ -12285,12 +12285,33 @@ lab14EndTime = t0 + (durationSec * 1000L);
 appendLog("ENGINE", "START");
 
 // ------------------------------------------------------------
-// 🔴 START ENGINE (ONLY)
+// 🔴 START ENGINE
 // ------------------------------------------------------------
 lab14Engine.startDrainSession();
 
+// --------------------------------------------------
+// 🔴 REAL STRESS START (RESTORED)
+// --------------------------------------------------
+
+int startThreads =
+        (lab14OptimalThreads > 0)
+                ? lab14OptimalThreads
+                : Math.max(4, cores - 1);
+
+lab14CpuThreadsCurrent = startThreads;
+
+startCpuBurnLimitedThreads(startThreads);
+
+try {
+    startGpuStress();
+} catch (Throwable ignore) {}
+
+try {
+    startMemoryStress();
+} catch (Throwable ignore) {}
+
 appendLog("LOAD",
-        "CPU=" + lab14CpuThreadsCurrent +
+        "START threads=" + startThreads +
         " | boost=" + lab14BoostActive +
         " | soft=" + lab14SoftPhaseStarted);
 
@@ -12302,11 +12323,6 @@ ui.post(lab14VibrationLoop);
 // 🔴 START UI (THIS DRIVES EVERYTHING)
 // ------------------------------------------------------------
 startLab14SharedUI(durationSec, gr);
-
-// ❌ ΔΕΝ ξεκινάς εδώ:
-// startCpuBurn...
-// startGpuStress...
-// startMemory...
 
 // ❌ ΔΕΝ καλείς:
 // startLab14ProgressLoop()
