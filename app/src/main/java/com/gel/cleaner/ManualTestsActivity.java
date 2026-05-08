@@ -16069,6 +16069,9 @@ private void startLab14FastThread() {
 // 🔴 REAL 45s FAST PHASE LOOP (STABLE TIMING)
 // =====================================================
 
+long fastStart = SystemClock.elapsedRealtime();
+long nextTick = fastStart;
+
 while (lab14Running && !lab14Cancelled) {
 
     long now = SystemClock.elapsedRealtime();
@@ -16081,9 +16084,11 @@ while (lab14Running && !lab14Cancelled) {
     // 🔴 FAST UI BAR
     runOnUiThread(() -> {
 
-        int safeElapsed = Math.max(0, Math.min(45, (int) elapsed));
+        int safeElapsed =
+                Math.max(0, Math.min(45, (int) elapsed));
 
         if (counterText != null) {
+
             counterText.setText(
                     gr
                             ? "Προθέρμανση " + safeElapsed + " / 45"
@@ -16095,6 +16100,7 @@ while (lab14Running && !lab14Cancelled) {
 
     });
 
+    // 🔴 SAMPLE
     runFastVoltageSampling(
             idoctor,
             vStart,
@@ -16104,30 +16110,21 @@ while (lab14Running && !lab14Cancelled) {
     );
 
     // 🔴 EXIT
-if (elapsedSec >= 45f) {
-    break;
-}
+    if (elapsed >= 45) {
+        break;
+    }
 
-    // 🔴 FIXED INTERVAL (3s exact cadence)
+    // 🔴 FIXED INTERVAL
     nextTick += 1000;
 
-    long sleepTime = nextTick - SystemClock.elapsedRealtime();
+    long sleepTime =
+            nextTick - SystemClock.elapsedRealtime();
 
-    // 🔴 SMART SLEEP (interruptible feeling)
     if (sleepTime > 0) {
 
-        long end = SystemClock.elapsedRealtime() + sleepTime;
-
-        while (SystemClock.elapsedRealtime() < end) {
-
-            if (!lab14Running || lab14Cancelled) {
-                break;
-            }
-
-            try {
-                Thread.sleep(100); // μικρά slices
-            } catch (Throwable ignore) {}
-        }
+        try {
+            Thread.sleep(sleepTime);
+        } catch (Throwable ignore) {}
     }
 }
 
