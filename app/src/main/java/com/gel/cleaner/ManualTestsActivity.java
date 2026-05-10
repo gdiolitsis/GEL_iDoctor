@@ -17782,9 +17782,6 @@ private void rebalanceLab14CpuLive(
     // 🔴 LAB14 → ΔΕΝ αγγίζεται ΠΟΤΕ
     if (!isLab14BMode) return;
 
-    // 🔴 HARD LOCK (14B hard phase)
-    if (inHardPhase) return;
-
     if (!lab14Running || lab14Cancelled) return;
 
     long now = SystemClock.elapsedRealtime();
@@ -17792,19 +17789,43 @@ private void rebalanceLab14CpuLive(
     // 🔴 cooldown
     if (now - lab14LastCpuAdjustTs < 6000) return;
 
-    final int cores = Runtime.getRuntime().availableProcessors();
+    final int cores =
+            Runtime.getRuntime().availableProcessors();
 
-    int oldThreads = lab14CpuThreadsCurrent > 0
-            ? lab14CpuThreadsCurrent
-            : Math.max(2, cores / 2);
+    int oldThreads =
+            lab14CpuThreadsCurrent > 0
+                    ? lab14CpuThreadsCurrent
+                    : Math.max(4, cores - 1);
 
     int newThreads = oldThreads;
 
-    boolean validThermal = !Float.isNaN(thermalDelta);
+    boolean validThermal =
+            !Float.isNaN(thermalDelta);
 
-    boolean lowThermal = validThermal && thermalDelta < 3f;
-    boolean midThermal = validThermal && thermalDelta >= 3f && thermalDelta <= 7f;
-    boolean highThermal = validThermal && thermalDelta > 7f;
+    boolean lowThermal =
+            validThermal && thermalDelta < 3f;
+
+    boolean midThermal =
+            validThermal &&
+            thermalDelta >= 3f &&
+            thermalDelta <= 7f;
+
+    boolean highThermal =
+            validThermal && thermalDelta > 7f;
+
+    // ----------------------------------------------------
+    // 🔴 HARD PHASE PROTECTION
+    // ----------------------------------------------------
+    int minThreads;
+
+    if (inHardPhase) {
+
+        minThreads = Math.max(4, cores / 2);
+
+    } else {
+
+        minThreads = Math.max(2, cores / 4);
+    }
 
     // ----------------------------------------------------
     // 🔴 SAFETY
@@ -17817,7 +17838,9 @@ private void rebalanceLab14CpuLive(
     // ----------------------------------------------------
     // 🔴 BOOST
     // ----------------------------------------------------
-    else if (weakLoad && lab14WeakLoadCounter >= 5 && lowThermal) {
+    else if (weakLoad &&
+             lab14WeakLoadCounter >= 5 &&
+             lowThermal) {
 
         newThreads = oldThreads + 1;
 
@@ -17831,30 +17854,39 @@ private void rebalanceLab14CpuLive(
     }
 
     // ----------------------------------------------------
-    // CLAMP
+    // 🔴 CLAMP
     // ----------------------------------------------------
-    newThreads = Math.max(2, Math.min(cores, newThreads));
+    newThreads =
+            Math.max(1,
+            Math.min(cores, newThreads));
 
-    int minThreads = Math.max(2, cores / 4);
-    newThreads = Math.max(newThreads, minThreads);
+    newThreads =
+            Math.max(newThreads, minThreads);
 
     if (newThreads == oldThreads) return;
 
     // ----------------------------------------------------
-    // 🔴 APPLY (LAB14B ONLY)
+    // 🔴 APPLY
     // ----------------------------------------------------
     lab14CpuThreadsCurrent = newThreads;
     lab14LastCpuAdjustTs = now;
 
     try {
+
         stopCpuBurn();
         startCpuBurnLimitedThreads(newThreads);
+
     } catch (Throwable ignore) {}
 
     appendLog("CPU",
-            "threads " + oldThreads + " → " + newThreads +
-            " ΔT=" + (validThermal
-                    ? String.format(java.util.Locale.US, "%.2f", thermalDelta)
+            "threads " + oldThreads +
+            " → " + newThreads +
+            " ΔT=" +
+            (validThermal
+                    ? String.format(
+                            java.util.Locale.US,
+                            "%.2f",
+                            thermalDelta)
                     : "N/A"));
 }
 
