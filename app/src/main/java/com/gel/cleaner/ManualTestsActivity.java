@@ -14430,6 +14430,15 @@ if (directDrainMah >= 0) {
     finalDrainMah = lab14DeltaMah;
 }
 
+appendLog("DRAIN_DEBUG",
+        "startMah=" + startMah +
+        " | endMah=" + endMah +
+        " | direct=" + directDrainMah +
+        " | sampled=" + lab14DeltaMah +
+        " | final=" + finalDrainMah +
+        " | min=" + lab14MinCharge +
+        " | max=" + lab14MaxCharge);
+
 // ----------------------------------------------------
 // 🔴 TEMPERATURE END
 // ----------------------------------------------------
