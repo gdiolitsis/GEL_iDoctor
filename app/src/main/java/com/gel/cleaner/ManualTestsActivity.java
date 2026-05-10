@@ -16619,6 +16619,34 @@ private void startLab14ProgressLoop() {
                 }
 
             } catch (Throwable ignore) {}
+            
+// ----------------------------------------------------
+// 🔴 LIVE CHARGE SAMPLING — MAIN PHASE
+// ----------------------------------------------------
+try {
+
+    iDoctorEngine.BatterySnapshot snapNow =
+            iDoctorEngine.get(ManualTestsActivity.this)
+                    .readBatterySnapshotLab();
+
+    if (snapNow != null &&
+        snapNow.chargeNowMah > 0 &&
+        snapNow.chargeNowMah < 100000) {
+
+        long nowMah = snapNow.chargeNowMah;
+
+        lab14ChargeSamples.add(nowMah);
+
+        if (nowMah < lab14MinCharge) {
+            lab14MinCharge = nowMah;
+        }
+
+        if (nowMah > lab14MaxCharge) {
+            lab14MaxCharge = nowMah;
+        }
+    }
+
+} catch (Throwable ignore) {}
 
             // 🔴 LIVE
             updateLab14LiveStats();
