@@ -1347,21 +1347,27 @@ private final List<Thread> lab14CpuThreads = new ArrayList<>();
 
 private void startCpuBurnLimitedThreads(int threads) {
 
-    // 🔴 ONLY FOR LAB14B (hard guard)
-    if (!isLab14BMode) return;
-
+    // 🔴 ALLOW LAB14 + LAB14B
     if (!lab14Running || lab14Cancelled) return;
 
-    final int cores = Runtime.getRuntime().availableProcessors();
+    final int cores =
+            Runtime.getRuntime().availableProcessors();
 
-    if (threads <= 0) threads = cores;
-    threads = Math.min(threads, cores);
+    if (threads <= 0) {
+        threads = Math.max(2, cores - 1);
+    }
 
-    // 🔴 SAFE RESET (only inside LAB14B)
+    // 🔴 HARD CLAMP
+    threads = Math.max(2, Math.min(threads, cores));
+
+    // 🔴 SAFE RESET
     stopCpuBurn();
     lab14CpuThreads.clear();
 
     lab14CpuThreadsCurrent = threads;
+
+    appendLog("CPU",
+            "START BURN threads=" + threads);
 
     for (int i = 0; i < threads; i++) {
 
@@ -1369,18 +1375,27 @@ private void startCpuBurnLimitedThreads(int threads) {
 
             try {
 
-                while (lab14Running && !lab14Cancelled &&
-                        !Thread.currentThread().isInterrupted()) {
+                while (lab14Running &&
+                       !lab14Cancelled &&
+                       !Thread.currentThread().isInterrupted()) {
 
-                    for (int j = 0; j < 10000; j++) {
-                        Math.sqrt(j * Math.random());
+                    double x = 0;
+
+                    // 🔴 HEAVIER REAL LOAD
+                    for (int j = 0; j < 500000; j++) {
+
+                        x += Math.sqrt(j) *
+                             Math.sin(j);
+
+                        if (x > 1e12) {
+                            x = 0;
+                        }
                     }
-
                 }
 
             } catch (Throwable ignore) {}
 
-        }, "LAB14B_CPU_" + i);
+        }, "LAB14_CPU_" + i);
 
         t.setPriority(Thread.MAX_PRIORITY);
 
@@ -12294,7 +12309,7 @@ lab14Engine.startDrainSession();
 // --------------------------------------------------
 
 int startThreads =
-        (lab14OptimalThreads > 0)
+        (lab14OptimalThreads >= 2)
                 ? lab14OptimalThreads
                 : Math.max(4, cores - 1);
 
