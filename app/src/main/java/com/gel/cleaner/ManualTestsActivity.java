@@ -18492,9 +18492,16 @@ for (int i = 0; i < 8; i++) {
 
     if (!Float.isNaN(v)) {
 
-        // 🔴 KEEP LOWEST VOLTAGE (TRUE SAG)
+        // 🔴 LOCAL LOWEST
         if (Float.isNaN(load1) || v < load1) {
             load1 = v;
+        }
+
+        // 🔴 GLOBAL LOWEST (MOST IMPORTANT)
+        if (Float.isNaN(voltageUnderLoad[0]) ||
+            v < voltageUnderLoad[0]) {
+
+            voltageUnderLoad[0] = v;
         }
     }
 
@@ -18505,10 +18512,6 @@ if (!Float.isNaN(load1)) {
 
     if (Float.isNaN(vLoad1[0]) || load1 < vLoad1[0]) {
         vLoad1[0] = load1;
-    }
-
-    if (Float.isNaN(voltageUnderLoad[0]) || load1 < voltageUnderLoad[0]) {
-        voltageUnderLoad[0] = load1;
     }
 }
 
@@ -18564,9 +18567,16 @@ for (int i = 0; i < 8; i++) {
 
     if (!Float.isNaN(v)) {
 
-        // 🔴 KEEP LOWEST VOLTAGE (TRUE SAG)
+        // 🔴 LOCAL LOWEST
         if (Float.isNaN(load2) || v < load2) {
             load2 = v;
+        }
+
+        // 🔴 GLOBAL LOWEST (MOST IMPORTANT)
+        if (Float.isNaN(voltageUnderLoad[0]) ||
+            v < voltageUnderLoad[0]) {
+
+            voltageUnderLoad[0] = v;
         }
     }
 
@@ -18577,10 +18587,6 @@ if (!Float.isNaN(load2)) {
 
     if (Float.isNaN(vLoad2[0]) || load2 < vLoad2[0]) {
         vLoad2[0] = load2;
-    }
-
-    if (Float.isNaN(voltageUnderLoad[0]) || load2 < voltageUnderLoad[0]) {
-        voltageUnderLoad[0] = load2;
     }
 
     vLoad2Time = SystemClock.elapsedRealtime();
