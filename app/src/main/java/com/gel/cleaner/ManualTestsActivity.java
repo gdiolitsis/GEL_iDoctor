@@ -18538,7 +18538,7 @@ if (!lab14Running || lab14Cancelled) return;
 
 float load1 = Float.NaN;
 
-for (int i = 0; i < 8; i++) {
+for (int i = 0; i < 12; i++) {
 
     float v = readVoltage.get();
 
@@ -18557,7 +18557,7 @@ for (int i = 0; i < 8; i++) {
         }
     }
 
-    SystemClock.sleep(35);
+    SystemClock.sleep(90);
 }
 
 if (!Float.isNaN(load1)) {
@@ -18575,7 +18575,7 @@ if (!lab14Running || lab14Cancelled) return;
 
 float rec = Float.NaN;
 
-for (int i = 0; i < 8; i++) {
+for (int i = 0; i < 12; i++) {
 
     float v = readVoltage.get();
 
@@ -18587,7 +18587,7 @@ for (int i = 0; i < 8; i++) {
         }
     }
 
-    SystemClock.sleep(35);
+    SystemClock.sleep(90);
 }
 
 if (!Float.isNaN(rec)) {
@@ -18613,7 +18613,7 @@ if (!lab14Running || lab14Cancelled) return;
 
 float load2 = Float.NaN;
 
-for (int i = 0; i < 8; i++) {
+for (int i = 0; i < 12; i++) {
 
     float v = readVoltage.get();
 
@@ -18632,7 +18632,7 @@ for (int i = 0; i < 8; i++) {
         }
     }
 
-    SystemClock.sleep(35);
+    SystemClock.sleep(90);
 }
 
 if (!Float.isNaN(load2)) {
@@ -31314,7 +31314,7 @@ try {
 
     StringBuilder hex = new StringBuilder();
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 12; i++) {
         hex.append(String.format("%02X", hash[i]));
     }
 
