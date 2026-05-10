@@ -19841,82 +19841,61 @@ private final List<Thread> cpuThreads = new ArrayList<>();
 
 private void startCpuBurn_C_Mode() {
 
-    stopCpuBurn(); // 🔴 clean start
+    stopCpuBurn();
 
     cpuBurnRunning = true;
 
-    final int maxCores = Runtime.getRuntime().availableProcessors();
+    final int maxCores =
+            Runtime.getRuntime().availableProcessors();
 
-    final int[] activeThreads = { maxCores };
+    lab14CpuThreadsCurrent = maxCores;
 
     for (int i = 0; i < maxCores; i++) {
 
-        final int threadIndex = i;
-
         Thread t = new Thread(() -> {
 
-            final long t0 = System.currentTimeMillis(); // 🔴 BOOST TIMER FIX
-            long lastAdjust = t0;
+            try {
 
-            while (cpuBurnRunning &&
-                   lab14Running &&
-                   !lab14Cancelled &&
-                   !Thread.currentThread().isInterrupted()) {
+                long spin = 0;
 
-                // 🔴 dynamic participation
-                if (threadIndex >= activeThreads[0]) {
-                    try { Thread.sleep(20); } catch (Throwable ignore) {}
-                    continue;
-                }
+                while (cpuBurnRunning &&
+                       lab14Running &&
+                       !lab14Cancelled &&
+                       !Thread.currentThread().isInterrupted()) {
 
-                // 🔥 heavy compute (BOOSTED)
-                double acc = 0;
-                long now = System.nanoTime();
+                    // 🔥 CHAOTIC MIXED LOAD
+                    for (int j = 1; j < 40000; j++) {
 
-                for (int j = 1; j < 16000; j++) { // 🔴 πιο δυνατό load
-                    acc += Math.sqrt(j * now);
-                    acc *= 1.0000001;
+                        double a = Math.sqrt(j * 13.37);
+                        double b = Math.sin(j);
+                        double c = Math.cos(j * 0.5);
+                        double d = Math.tan((j % 45) + 1);
 
-                    if ((j & 7) == 0) {
-                        acc -= Math.log(j + 1);
-                    }
-                }
+                        spin += (long)
+                                ((a * b * c) + d);
 
-                // anti-optimization
-                if (acc > 1e12) acc = 0;
+                        // 🔴 memory pressure
+                        if ((j & 255) == 0) {
 
-                // =====================================================
-                // 🔴 BOOST + ADAPTIVE CONTROL
-                // =====================================================
+                            byte[] tmp = new byte[32 * 1024];
 
-                long nowMs = System.currentTimeMillis();
-
-                // 🔥 FULL LOAD για τα πρώτα 8s
-                if (nowMs - t0 < 8000) {
-
-                    activeThreads[0] = maxCores;
-
-                } else {
-
-                    // 🔴 adaptive κάθε 2 sec
-                    if (nowMs - lastAdjust > 2000) {
-
-                        float temp = readCpuTempSafe();
-
-                        if (!Float.isNaN(temp)) {
-
-                            if (temp > 65f && activeThreads[0] > 2) {
-                                activeThreads[0]--;
-                            }
-                            else if (temp < 55f && activeThreads[0] < maxCores) {
-                                activeThreads[0]++;
-                            }
+                            tmp[0] = (byte) j;
+                            tmp[tmp.length - 1] = (byte) spin;
                         }
+                    }
 
-                        lastAdjust = nowMs;
+                    // 🔴 anti optimizer
+                    if (spin > Long.MAX_VALUE / 4) {
+                        spin = 0;
+                    }
+
+                    // 🔴 micro burst jitter
+                    if ((spin & 7) == 0) {
+                        Thread.yield();
                     }
                 }
-            }
+
+            } catch (Throwable ignore) {}
 
         }, "LAB14_CMODE_" + i);
 
