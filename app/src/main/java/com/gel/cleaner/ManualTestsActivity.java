@@ -1375,22 +1375,55 @@ private void startCpuBurnLimitedThreads(int threads) {
 
             try {
 
+                // 🔴 THREAD-LOCAL BUFFER
+                byte[] buffer =
+                        new byte[1024 * 1024];
+
+                long acc = 0;
+
                 while (lab14Running &&
                        !lab14Cancelled &&
                        !Thread.currentThread().isInterrupted()) {
 
-                    double x = 0;
+                    // =================================================
+                    // 🔥 HEAVY MIXED LOAD
+                    // CPU + MEMORY + CACHE + FP
+                    // =================================================
+                    for (int j = 0;
+                         j < buffer.length;
+                         j++) {
 
-                    // 🔴 HEAVIER REAL LOAD
-                    for (int j = 0; j < 500000; j++) {
+                        buffer[j] =
+                                (byte) ((j * 31)
+                                ^ (acc & 0xFF));
 
-                        x += Math.sqrt(j) *
-                             Math.sin(j);
+                        acc += buffer[j];
 
-                        if (x > 1e12) {
-                            x = 0;
+                        acc ^= (acc << 13);
+                        acc ^= (acc >> 7);
+                        acc ^= (acc << 17);
+
+                        // 🔴 PERIODIC FP PRESSURE
+                        if ((j & 1023) == 0) {
+
+                            double z =
+                                    Math.sqrt(
+                                            Math.abs(acc)
+                                    ) *
+                                    Math.sin(acc) *
+                                    Math.cos(acc);
+
+                            if (Double.isNaN(z) ||
+                                Double.isInfinite(z) ||
+                                z > 1e9) {
+
+                                acc = 0;
+                            }
                         }
                     }
+
+                    // 🔴 SMALL YIELD PREVENTS DEADLOCKS
+                    Thread.yield();
                 }
 
             } catch (Throwable ignore) {}
