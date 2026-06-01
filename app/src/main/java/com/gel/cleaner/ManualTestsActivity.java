@@ -12062,6 +12062,9 @@ lab14AgingIndex = -1;
 lab14AgingInterp = "N/A";
 lab14BatteryBehaviourWarning = false;
 
+// 🔴 CENTRAL DIAGNOSTIC RESET — activates existing helper, prevents stale ghost state
+resetBatteryDiagnostics();
+
     // --------------------------------------------------
     // 🔴 BASELINE TEMP (IDLE)
     // --------------------------------------------------
@@ -12097,7 +12100,10 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
 
     // 🔴 NEVER ALLOW WEAK LOAD
     int minThreads =
-            Math.max(4, cores - 2);
+            Math.max(
+                    4,
+                    Runtime.getRuntime().availableProcessors() - 2
+            );
 
     if (lab14OptimalThreads < minThreads) {
         lab14OptimalThreads = minThreads;
@@ -12184,7 +12190,11 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
     // --------------------------------------------------
     // 🔴 BASELINE VOLTAGE
     // --------------------------------------------------
-    voltageStart = getBatteryVoltageFiltered();
+    voltageStart = readStableBatteryVoltage();
+
+    if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
+        voltageStart = getBatteryVoltageFiltered();
+    }
 
     if (Float.isNaN(voltageStart) || voltageStart <= 0f) {
 
@@ -16979,8 +16989,8 @@ private void startLab14SharedUI(long durationSec, boolean gr) {
     // =====================================================
     if (!isLab14BMode) {
 
-        // 🔴 RESET FIRST (πριν ξεκινήσει ΟΤΙΔΗΠΟΤΕ)
-        resetLab14RuntimeState();
+        // 🔴 RESET already done BEFORE stress start in lab14BatteryHealthStressTest_REAL()
+        // Do NOT reset here; it can wipe live limiter / thermal state after load has started.
 
         // 🔴 STATE GUARANTEE
         lab14Running = true;
@@ -18868,6 +18878,20 @@ private float lab14Current() {
         logError("BAT CURRENT FAIL: " + t.getMessage());
     }
 
+    // 🔴 FALLBACK — activates BatteryManager CURRENT_NOW helper
+    try {
+        float fallback = getBatteryCurrentNowSafe();
+
+        if (!Float.isNaN(fallback)) {
+            float abs = Math.abs(fallback);
+
+            if (abs >= 50f && abs <= 12000f) {
+                return fallback;
+            }
+        }
+
+    } catch (Throwable ignore) {}
+
     return Float.NaN;
 }
 
@@ -19475,8 +19499,8 @@ private void lab14LogPartialMode(
             : "Electrical and thermal findings remain indicative.");
 
     logInfo(gr
-            ? "Συνιστάται επανάληψη με φόρτιση 30–70%, χωρίς φόρτιση και σε φυσιολογική θερμοκρασία."
-            : "Repeat test at 30–70% battery, not charging, normal temperature.");
+            ? "Συνιστάται επανάληψη με φόρτιση 30–90%, χωρίς φόρτιση και σε φυσιολογική θερμοκρασία."
+            : "Repeat test at 30–90% battery, not charging, normal temperature.");
 
     logLine();
 }
@@ -19841,6 +19865,19 @@ private Float readCpuTempSafe() {
         if (t < 10f || t > 90f) return null;
 
         return t;
+
+    } catch (Throwable ignore) {}
+
+    // 🔴 FALLBACK — activates sysfs multi-zone CPU reader
+    try {
+        float alt = readCpuTempSafe2();
+
+        if (!Float.isNaN(alt) &&
+            alt >= 10f &&
+            alt <= 110f) {
+
+            return alt;
+        }
 
     } catch (Throwable ignore) {}
 
