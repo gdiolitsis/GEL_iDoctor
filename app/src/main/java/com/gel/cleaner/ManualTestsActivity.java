@@ -14166,7 +14166,7 @@ boolean hasReliableSag =
         finalSag < 1.0f;
 
 // ----------------------------------------------------
-// 🔴 HARD ABORT — NO ELECTRICAL SIGNAL
+// 🔴 SOFT ELECTRICAL WARNING — CONTINUE FULL REPORT
 // ----------------------------------------------------
 if (!hasReliableSag) {
 
@@ -14177,8 +14177,12 @@ if (!hasReliableSag) {
             : "Weak or unclear sag signal");
 
     logWarn(gr
-            ? "Δεν είναι δυνατή ηλεκτρική ανάλυση μπαταρίας"
-            : "Electrical battery analysis is not possible");
+            ? "Δεν είναι δυνατή πλήρης ηλεκτρική ανάλυση μπαταρίας"
+            : "Full electrical battery analysis is not possible");
+
+    logWarn(gr
+            ? "Συνεχίζουμε με θερμικά / drain / power / confidence δεδομένα."
+            : "Continuing with thermal / drain / power / confidence data.");
 
     logLine();
 
@@ -14191,49 +14195,6 @@ if (!hasReliableSag) {
             gr ? "Μη μετρήσιμο voltage sag"
                : "No measurable voltage sag"
     );
-
-    runOnUiThread(() -> {
-
-        logLabelWarnValue(
-                gr ? "Τελικό αποτέλεσμα"
-                   : "Final verdict",
-
-                gr
-                   ? "Ανεπαρκή ηλεκτρικά δεδομένα"
-                   : "Insufficient electrical data"
-        );
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση μπαταρίας"
-                   : "Battery status",
-
-                gr
-                   ? "Δεν μπορεί να εξαχθεί ασφαλές συμπέρασμα"
-                   : "Safe electrical diagnosis is not possible"
-        );
-    });
-
-    // 🔴 STOP HERE
-    lab14FastDone = true;
-    lab14FastPhase = false;
-    lab14MainPhase = false;
-
-    lab14StopAllStress();
-
-    try {
-        counterText = null;
-        lab14CleanupUI();
-    } catch (Throwable ignore) {}
-
-    restoreBrightnessAndKeepOn();
-
-    lab14Running = false;
-    lab14PopupShown = false;
-    lab14AdvisoryShown = false;
-    lab14BoostActive = false;
-    lab14SoftPhaseStarted = false;
-
-    return;
 
 } else {
 
@@ -15950,6 +15911,38 @@ if (partial) {
 // ------------------------------------------------
 // HEALTH
 // ------------------------------------------------
+
+// 🔴 FULL STRESS RESULT SUMMARY
+float lab14EnergyEfficiency = Float.NaN;
+
+if (validDrain &&
+    mahPerHour > 0 &&
+    !Float.isNaN(finalSag) &&
+    finalSag >= 0.015f &&
+    finalSag < 1.0f) {
+
+    lab14EnergyEfficiency =
+            (float) (mahPerHour / finalSag);
+}
+
+lab14LogStressResult(
+        res,
+        sagAvg,
+        voltageStart,
+        voltageRecovery,
+        voltageRecoverySpeed,
+        voltageStability[0],
+        internalResistance,
+        Float.NaN,
+        thermalImpedance[0],
+        lab14EnergyEfficiency,
+        startMah,
+        endMah,
+        lab14_systemLimited,
+        collapseRisk,
+        smartSwelling,
+        calibrationDrift
+);
 
 // FINAL SCORE
 lab14LogFinalScore(
