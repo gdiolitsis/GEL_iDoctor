@@ -1663,17 +1663,29 @@ private int getBatteryPercentSafe() {
 // ============================================================
 private float getBatteryVoltageFiltered() {
 
+    // LAB14 FAST SAG MODE — raw sysfs first
+    try {
+
+        float v = getBatteryVoltageFast();
+
+        if (!Float.isNaN(v) && v > 2.5f && v < 5.5f) {
+            return v;
+        }
+
+    } catch (Throwable ignore) {}
+
+    // fallback only
     try {
 
         iDoctorEngine engine =
                 iDoctorEngine.get(ManualTestsActivity.this);
 
         float mv =
-                engine.readBatteryVoltageMvStable(5, 20);
+                engine.readBatteryVoltageMvStable(1, 1);
 
         if (!Float.isNaN(mv) && mv > 3000f && mv < 5000f) {
-    return mv / 1000f;
-}
+            return mv / 1000f;
+        }
 
     } catch (Throwable ignore) {}
 
