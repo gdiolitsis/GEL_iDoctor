@@ -18916,7 +18916,7 @@ private void showLab14ConditionCheck(Runnable startAction) {
     boolean chargingNow = isDeviceCharging();
     float cpuTemp = readCpuTempSafe();
 
-    boolean badBat = percent < 30 || percent > 70;
+    boolean badBat = percent < 30 || percent > 90;
     boolean badCpu = !Float.isNaN(cpuTemp) && cpuTemp >= 60f;
     boolean badTemp = !Float.isNaN(tempC) && tempC >= 38f;
     boolean cpuOk = Float.isNaN(cpuTemp) || cpuTemp < 60f;
@@ -18952,12 +18952,12 @@ private void showLab14ConditionCheck(Runnable startAction) {
     info.setText(
             gr
                     ? "Για την εκτέλεση του τεστ απαιτούνται:\n\n"
-                    + "1) Μπαταρία μεταξύ 30% – 70%\n"
+                    + "1) Μπαταρία μεταξύ 30% – 90%\n"
                     + "2) Θερμοκρασία μπαταρίας κάτω από 38°C\n"
                     + "3) Θερμοκρασία CPU κάτω από 60°C\n"
                     + "4) Η συσκευή να μην φορτίζεται\n"
                     : "Requirements for this test:\n\n"
-                    + "1) Battery between 30% – 70%\n"
+                    + "1) Battery between 30% – 90%\n"
                     + "2) Battery temperature below 38°C\n"
                     + "3) CPU temperature below 60°C\n"
                     + "4) Device must not be charging\n"
@@ -18974,8 +18974,8 @@ private void showLab14ConditionCheck(Runnable startAction) {
     if (badBat) {
         hasWarn = true;
         warn.append(gr
-                ? "• Η μπαταρία πρέπει να είναι μεταξύ 30% και 70%\n"
-                : "• Battery must be between 30% and 70%\n");
+                ? "• Η μπαταρία πρέπει να είναι μεταξύ 30% και 90%\n"
+                : "• Battery must be between 30% and 90%\n");
     }
 
     if (chargingNow) {
@@ -19084,8 +19084,8 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
     if (badBat) {
         speak.append(gr
-                ? "Εκτός προτεινόμενου εύρους 30 έως 70 τοις εκατό. "
-                : "Outside recommended range 30 to 70 percent. ");
+                ? "Εκτός προτεινόμενου εύρους 30 έως 90 τοις εκατό. "
+                : "Outside recommended range 30 to 90 percent. ");
     } else {
         speak.append(gr
                 ? "Εντός αποδεκτού εύρους. "
