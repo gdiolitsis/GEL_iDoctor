@@ -18464,60 +18464,71 @@ private void runFastVoltageSampling(
 
     float v = Float.NaN;
 
-    // 🔴 PRIMARY: Battery Intent
+    // 🔴 PRIMARY: raw fast voltage_now
     try {
 
-        IntentFilter ifilter =
-                new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        File f = new File(
+                "/sys/class/power_supply/battery/voltage_now"
+        );
 
-        Intent batteryStatus =
-                registerReceiver(null, ifilter);
+        if (f.exists()) {
 
-        if (batteryStatus != null) {
+            BufferedReader br =
+                    new BufferedReader(new FileReader(f));
 
-            int mv =
-                    batteryStatus.getIntExtra("voltage", -1);
+            String s = br.readLine();
 
-            if (mv > 3000 && mv < 5000) {
-                v = mv / 1000f;
+            br.close();
+
+            if (s != null) {
+
+                float raw =
+                        Float.parseFloat(s.trim());
+
+                float rawV;
+
+                // µV → V
+                if (raw > 1000000f) {
+                    rawV = raw / 1000000f;
+
+                // mV → V fallback
+                } else if (raw > 1000f) {
+                    rawV = raw / 1000f;
+
+                } else {
+                    rawV = raw;
+                }
+
+                if (rawV > 3.0f && rawV < 5.0f) {
+                    v = rawV;
+                }
             }
         }
 
     } catch (Throwable ignore) {}
 
-    // 🔴 FALLBACK: raw fast voltage
+    // 🔴 FALLBACK: Battery Intent only if raw failed
     if (Float.isNaN(v)) {
 
         try {
 
-    File f = new File(
-        "/sys/class/power_supply/battery/voltage_now"
-    );
+            IntentFilter ifilter =
+                    new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 
-    if (f.exists()) {
+            Intent batteryStatus =
+                    registerReceiver(null, ifilter);
 
-        BufferedReader br =
-                new BufferedReader(new FileReader(f));
+            if (batteryStatus != null) {
 
-        String s = br.readLine();
+                int mv =
+                        batteryStatus.getIntExtra("voltage", -1);
 
-        br.close();
-
-        if (s != null) {
-
-            float uv =
-                    Float.parseFloat(s.trim());
-
-            // μV → V
-            float rawV = uv / 1000000f;
-
-            if (rawV > 3.0f && rawV < 5.0f) {
-                v = rawV;
+                if (mv > 3000 && mv < 5000) {
+                    v = mv / 1000f;
+                }
             }
-        }
-    }
 
-} catch (Throwable ignore) {}
+        } catch (Throwable ignore) {}
     }
 
     return (!Float.isNaN(v) &&
