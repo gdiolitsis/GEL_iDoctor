@@ -17174,6 +17174,25 @@ inHardPhase = false;
 // 🔴 CURRENT
 float currentMa = lab14Current();
 
+// ----------------------------------------------------
+// 🔴 CONTINUOUS HARD-STRESS VOLTAGE MIN TRACKING
+// ----------------------------------------------------
+if (!isLab14BMode && lab14Running && !lab14Cancelled) {
+
+    try {
+        float vNow = getBatteryVoltageFast();
+
+        if (!Float.isNaN(vNow) && vNow > 3.0f && vNow < 5.0f) {
+
+            if (Float.isNaN(voltageUnderLoad[0]) ||
+                vNow < voltageUnderLoad[0]) {
+
+                voltageUnderLoad[0] = vNow;
+            }
+        }
+    } catch (Throwable ignore) {}
+}
+
 // 🔴 BATTERY TEMP (helper ήδη filtered)
 float batTemp = lab14BatteryTemp();
 
