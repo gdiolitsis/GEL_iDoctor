@@ -22998,7 +22998,7 @@ private float getBatteryVoltageFast() {
 }
 
 // ============================================================
-// LAB 14 — MICRO-RELAX VOLTAGE PULSE
+// LAB 14 — TRANSITION VOLTAGE PULSE
 // ============================================================
 private void lab14RunVoltagePulse(final int elapsedSec) {
 
@@ -23012,18 +23012,18 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
         float relax = Float.NaN;
         float after = Float.NaN;
 
-        int restoreThreads =
-                lab14CpuThreadsCurrent > 0
-                        ? lab14CpuThreadsCurrent
-                        : Math.max(
-                                4,
-                                Runtime.getRuntime().availableProcessors() - 1
-                        );
+        final int cores =
+                Runtime.getRuntime().availableProcessors();
+
+        final int restoreThreads =
+                lab14OptimalThreads >= 2
+                        ? lab14OptimalThreads
+                        : Math.max(4, cores - 1);
 
         try {
 
             // ------------------------------------------------
-            // 1) READ UNDER LOAD
+            // 1) READ CURRENT HARD-LOAD VOLTAGE
             // ------------------------------------------------
             try {
                 before = lab14Voltage();
@@ -23043,18 +23043,26 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
             }
 
             // ------------------------------------------------
-            // 2) MICRO RELAX — CPU ONLY
+            // 2) FULL CONTROLLED LOAD DROP
+            //    This mimics FAST → HARD phase transition.
             // ------------------------------------------------
-            try {
-                stopCpuBurn();
-            } catch (Throwable ignore) {}
+            try { stopCpuBurn(); } catch (Throwable ignore) {}
+            try { stopMemoryStress(); } catch (Throwable ignore) {}
+            try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+            try { stopGpuStress(); } catch (Throwable ignore) {}
+            try { stopVibrationStress(); } catch (Throwable ignore) {}
 
             try {
-                Thread.sleep(1000);
+                ui.removeCallbacks(lab14VibrationLoop);
+            } catch (Throwable ignore) {}
+
+            // 🔴 give BMS / Android time to publish a new voltage state
+            try {
+                Thread.sleep(3000);
             } catch (Throwable ignore) {}
 
             // ------------------------------------------------
-            // 3) READ RELAX / RECOVERY
+            // 3) READ RELAX / RECOVERY VOLTAGE
             // ------------------------------------------------
             try {
                 relax = lab14Voltage();
@@ -23070,15 +23078,14 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
                             relax - voltageUnderLoad[0];
 
                     if (rec > 0.002f && rec < 1.0f) {
-
                         voltageRecovery[0] = rec;
-                        voltageRecoverySpeed[0] = rec / 1.0f;
+                        voltageRecoverySpeed[0] = rec / 3.0f;
                     }
                 }
             }
 
             // ------------------------------------------------
-            // 4) RESTORE HARD LOAD
+            // 4) RESTART FULL HARD LOAD
             // ------------------------------------------------
             if (lab14Running && !lab14Cancelled) {
 
@@ -23086,14 +23093,24 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
                     startCpuBurnLimitedThreads(restoreThreads);
                     lab14CpuThreadsCurrent = restoreThreads;
                 } catch (Throwable ignore) {}
+
+                try { startGpuStress(); } catch (Throwable ignore) {}
+                try { startMemoryStress(); } catch (Throwable ignore) {}
+                try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
+
+                try {
+                    ui.removeCallbacks(lab14VibrationLoop);
+                    ui.post(lab14VibrationLoop);
+                } catch (Throwable ignore) {}
             }
 
+            // 🔴 wait after reload, exactly like a mini phase transition
             try {
-                Thread.sleep(1200);
+                Thread.sleep(3000);
             } catch (Throwable ignore) {}
 
             // ------------------------------------------------
-            // 5) READ AFTER RE-LOAD
+            // 5) READ NEW HARD-LOAD VOLTAGE
             // ------------------------------------------------
             try {
                 after = lab14Voltage();
@@ -23113,7 +23130,7 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
             }
 
             // ------------------------------------------------
-            // 6) LOG RESULT
+            // 6) LOG TRANSITION RESULT
             // ------------------------------------------------
             final float fBefore = before;
             final float fRelax = relax;
@@ -23124,7 +23141,7 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
             runOnUiThread(() -> {
 
                 logWarn(
-                        "PULSE_VOLTAGE | elapsed=" + elapsedSec +
+                        "TRANSITION_PULSE | elapsed=" + elapsedSec +
                                 " | before=" + String.format(Locale.US, "%.3f", fBefore) +
                                 " | relax=" + String.format(Locale.US, "%.3f", fRelax) +
                                 " | after=" + String.format(Locale.US, "%.3f", fAfter) +
@@ -23140,11 +23157,11 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
             lab14VoltagePulseRunning = false;
         }
 
-    }, "LAB14_VOLTAGE_PULSE").start();
+    }, "LAB14_TRANSITION_PULSE").start();
 }
 
 // ============================================================
-// LAB 14 — PRE-HARD VOLTAGE PULSE
+// LAB 14 — PRE-HARD TRANSITION VOLTAGE PULSE
 // ============================================================
 private void lab14RunPreHardVoltagePulse(final int elapsedSec) {
 
@@ -23154,18 +23171,18 @@ private void lab14RunPreHardVoltagePulse(final int elapsedSec) {
         float relax = Float.NaN;
         float after = Float.NaN;
 
-        int restoreThreads =
-                lab14CpuThreadsCurrent > 0
-                        ? lab14CpuThreadsCurrent
-                        : Math.max(
-                                4,
-                                Runtime.getRuntime().availableProcessors() - 1
-                        );
+        final int cores =
+                Runtime.getRuntime().availableProcessors();
+
+        final int restoreThreads =
+                lab14OptimalThreads >= 2
+                        ? lab14OptimalThreads
+                        : Math.max(4, cores - 1);
 
         try {
 
             // ------------------------------------------------
-            // 1) READ FAST LOAD VOLTAGE
+            // 1) READ FAST-PHASE LOAD VOLTAGE
             // ------------------------------------------------
             try {
                 before = lab14Voltage();
@@ -23179,18 +23196,25 @@ private void lab14RunPreHardVoltagePulse(final int elapsedSec) {
             }
 
             // ------------------------------------------------
-            // 2) MICRO RELAX BEFORE HARD PHASE
+            // 2) CONTROLLED PRE-HARD LOAD DROP
             // ------------------------------------------------
-            try {
-                stopCpuBurn();
-            } catch (Throwable ignore) {}
+            try { stopCpuBurn(); } catch (Throwable ignore) {}
+            try { stopMemoryStress(); } catch (Throwable ignore) {}
+            try { stopMemoryBandwidthStress(); } catch (Throwable ignore) {}
+            try { stopGpuStress(); } catch (Throwable ignore) {}
+            try { stopVibrationStress(); } catch (Throwable ignore) {}
 
             try {
-                Thread.sleep(1000);
+                ui.removeCallbacks(lab14VibrationLoop);
+            } catch (Throwable ignore) {}
+
+            // 🔴 let BMS / Android refresh before hard phase
+            try {
+                Thread.sleep(2500);
             } catch (Throwable ignore) {}
 
             // ------------------------------------------------
-            // 3) READ RECOVERY
+            // 3) READ PRE-HARD RECOVERY
             // ------------------------------------------------
             try {
                 relax = lab14Voltage();
@@ -23202,11 +23226,12 @@ private void lab14RunPreHardVoltagePulse(final int elapsedSec) {
 
                 if (!Float.isNaN(before)) {
 
-                    float rec = relax - before;
+                    float rec =
+                            relax - before;
 
                     if (rec > 0.002f && rec < 1.0f) {
                         voltageRecovery[0] = rec;
-                        voltageRecoverySpeed[0] = rec / 1.0f;
+                        voltageRecoverySpeed[0] = rec / 2.5f;
                     }
                 }
             }
@@ -23220,14 +23245,23 @@ private void lab14RunPreHardVoltagePulse(final int elapsedSec) {
                     startCpuBurnLimitedThreads(restoreThreads);
                     lab14CpuThreadsCurrent = restoreThreads;
                 } catch (Throwable ignore) {}
+
+                try { startGpuStress(); } catch (Throwable ignore) {}
+                try { startMemoryStress(); } catch (Throwable ignore) {}
+                try { startMemoryBandwidthStress(); } catch (Throwable ignore) {}
+
+                try {
+                    ui.removeCallbacks(lab14VibrationLoop);
+                    ui.post(lab14VibrationLoop);
+                } catch (Throwable ignore) {}
             }
 
             try {
-                Thread.sleep(800);
+                Thread.sleep(2500);
             } catch (Throwable ignore) {}
 
             // ------------------------------------------------
-            // 5) READ AFTER RELOAD
+            // 5) READ AFTER PRE-HARD RELOAD
             // ------------------------------------------------
             try {
                 after = lab14Voltage();
@@ -23247,7 +23281,7 @@ private void lab14RunPreHardVoltagePulse(final int elapsedSec) {
             runOnUiThread(() -> {
 
                 logWarn(
-                        "PRE_HARD_PULSE | elapsed=" + elapsedSec +
+                        "PRE_HARD_TRANSITION | elapsed=" + elapsedSec +
                                 " | before=" + String.format(Locale.US, "%.3f", fBefore) +
                                 " | relax=" + String.format(Locale.US, "%.3f", fRelax) +
                                 " | after=" + String.format(Locale.US, "%.3f", fAfter)
@@ -23255,7 +23289,7 @@ private void lab14RunPreHardVoltagePulse(final int elapsedSec) {
             });
 
         } catch (Throwable ignore) {}
-    }, "LAB14_PRE_HARD_PULSE").start();
+    }, "LAB14_PRE_HARD_TRANSITION").start();
 }
 
 //=============================================================
