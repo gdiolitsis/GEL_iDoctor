@@ -518,6 +518,20 @@ private volatile boolean lab14VoltagePulseRunning = false;
 private volatile long lab14LastVoltagePulseElapsedSec = -9999L;
 private volatile boolean lab14PreHardVoltagePulseDone = false;
 
+// ============================================================
+// LAB 14 — VOLTAGE BEHAVIOR TRACKING
+// ============================================================
+private volatile float lab14FirstHardVoltage = Float.NaN;
+private volatile float lab14MidHardVoltage = Float.NaN;
+private volatile float lab14LateHardVoltage = Float.NaN;
+private volatile float lab14LowestHardVoltage = Float.NaN;
+private volatile float lab14LastHardVoltage = Float.NaN;
+
+// ============================================================
+// LAB 14 — SELECTED STRESS THREADS
+// ============================================================
+private volatile int lab14SelectedStressThreads = 0;
+
 private AlertDialog lab14Dialog;
 
 private int __oldBrightness = -1;
@@ -12027,6 +12041,14 @@ lab14VoltagePulseRunning = false;
 lab14LastVoltagePulseElapsedSec = -9999L;
 lab14PreHardVoltagePulseDone = false;
 
+lab14FirstHardVoltage = Float.NaN;
+lab14MidHardVoltage = Float.NaN;
+lab14LateHardVoltage = Float.NaN;
+lab14LowestHardVoltage = Float.NaN;
+lab14LastHardVoltage = Float.NaN;
+
+lab14SelectedStressThreads = 0;
+
 lab14LimiterScore = 0;
 lab14LimiterLatched = false;
 lab14CpuFreqPeak = 0;
@@ -12302,6 +12324,8 @@ int startThreads =
                             ? lab14OptimalThreads
                             : Math.max(4, cores - 1)
                 );
+
+lab14SelectedStressThreads = startThreads;
 
 int cpuThreadsToUse =
         startThreads;
@@ -15937,6 +15961,11 @@ if (validDrain &&
             (float) (mahPerHour / finalSag);
 }
 
+lab14LogVoltageBehaviorSummary(
+        gr,
+        voltageStart
+);
+
 lab14LogStressResult(
         res,
         sagAvg,
@@ -17211,6 +17240,29 @@ if (!isLab14BMode && lab14Running && !lab14Cancelled) {
         }
 
         if (!Float.isNaN(vNow) && vNow > 3.0f && vNow < 5.0f) {
+        	
+// ----------------------------------------------------
+// 🔴 VOLTAGE BEHAVIOR TRACKING
+// ----------------------------------------------------
+lab14LastHardVoltage = vNow;
+
+if (Float.isNaN(lab14FirstHardVoltage) && elapsed >= 30) {
+    lab14FirstHardVoltage = vNow;
+}
+
+if (elapsed >= (durationSec / 2)) {
+    lab14MidHardVoltage = vNow;
+}
+
+if (elapsed >= (durationSec - 45)) {
+    lab14LateHardVoltage = vNow;
+}
+
+if (Float.isNaN(lab14LowestHardVoltage) ||
+        vNow < lab14LowestHardVoltage) {
+
+    lab14LowestHardVoltage = vNow;
+}
 
             // 🔴 keep lowest real hard-stress voltage
             if (Float.isNaN(voltageUnderLoad[0]) ||
@@ -23013,12 +23065,16 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
         float after = Float.NaN;
 
         final int cores =
-                Runtime.getRuntime().availableProcessors();
+        Runtime.getRuntime().availableProcessors();
 
-        final int restoreThreads =
-                lab14OptimalThreads >= 2
-                        ? lab14OptimalThreads
-                        : Math.max(4, cores - 1);
+final int restoreThreads =
+        lab14SelectedStressThreads > 0
+                ? lab14SelectedStressThreads
+                : (
+                    lab14OptimalThreads >= 2
+                            ? lab14OptimalThreads
+                            : Math.max(4, cores - 1)
+                );
 
         try {
 
@@ -23072,16 +23128,20 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
 
                 vRecover[0] = relax;
 
-                if (!Float.isNaN(voltageUnderLoad[0])) {
+// ------------------------------------------------
+// 🔴 LOCAL PULSE RECOVERY — REAL ONLY
+// ------------------------------------------------
+if (!Float.isNaN(before)) {
 
-                    float rec =
-                            relax - voltageUnderLoad[0];
+    float localRec =
+            relax - before;
 
-                    if (rec > 0.002f && rec < 1.0f) {
-                        voltageRecovery[0] = rec;
-                        voltageRecoverySpeed[0] = rec / 3.0f;
-                    }
-                }
+    if (localRec > 0.002f && localRec < 1.0f) {
+
+        voltageRecovery[0] = localRec;
+        voltageRecoverySpeed[0] = localRec / 3.0f;
+    }
+}
             }
 
             // ------------------------------------------------
@@ -23136,7 +23196,10 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
             final float fRelax = relax;
             final float fAfter = after;
             final float fUnder = voltageUnderLoad[0];
-            final float fRecovery = voltageRecovery[0];
+            final float fRecovery =
+        (!Float.isNaN(before) && !Float.isNaN(relax))
+                ? (relax - before)
+                : Float.NaN;
 
             runOnUiThread(() -> {
 
@@ -23172,12 +23235,16 @@ private void lab14RunPreHardVoltagePulse(final int elapsedSec) {
         float after = Float.NaN;
 
         final int cores =
-                Runtime.getRuntime().availableProcessors();
+        Runtime.getRuntime().availableProcessors();
 
-        final int restoreThreads =
-                lab14OptimalThreads >= 2
-                        ? lab14OptimalThreads
-                        : Math.max(4, cores - 1);
+final int restoreThreads =
+        lab14SelectedStressThreads > 0
+                ? lab14SelectedStressThreads
+                : (
+                    lab14OptimalThreads >= 2
+                            ? lab14OptimalThreads
+                            : Math.max(4, cores - 1)
+                );
 
         try {
 
@@ -23290,6 +23357,109 @@ private void lab14RunPreHardVoltagePulse(final int elapsedSec) {
 
         } catch (Throwable ignore) {}
     }, "LAB14_PRE_HARD_TRANSITION").start();
+}
+
+// ============================================================
+// LAB 14 — VOLTAGE BEHAVIOR SUMMARY
+// ============================================================
+private void lab14LogVoltageBehaviorSummary(
+        boolean gr,
+        float voltageStart
+) {
+
+    appendHtml("<br>");
+    logLine();
+
+    logInfo(gr
+            ? "LAB 14 — Συμπεριφορά τάσης"
+            : "LAB 14 — Voltage behavior");
+
+    logLine();
+
+    if (Float.isNaN(voltageStart) ||
+            Float.isNaN(lab14FirstHardVoltage) ||
+            Float.isNaN(lab14LowestHardVoltage)) {
+
+        logLabelWarnValue(
+                gr ? "Συμπεριφορά τάσης" : "Voltage behavior",
+                gr ? "Ανεπαρκή δεδομένα" : "Insufficient data"
+        );
+
+        return;
+    }
+
+    float firstSag =
+            voltageStart - lab14FirstHardVoltage;
+
+    float worstSag =
+            voltageStart - lab14LowestHardVoltage;
+
+    logLabelValue(
+            gr ? "Τάση έναρξης" : "Start voltage",
+            String.format(Locale.US, "%.3f V", voltageStart)
+    );
+
+    logLabelValue(
+            gr ? "Πρώτη τάση hard stress" : "First hard-load voltage",
+            String.format(Locale.US, "%.3f V", lab14FirstHardVoltage)
+    );
+
+    if (!Float.isNaN(lab14MidHardVoltage)) {
+        logLabelValue(
+                gr ? "Μέση τάση hard stress" : "Mid-run hard voltage",
+                String.format(Locale.US, "%.3f V", lab14MidHardVoltage)
+        );
+    }
+
+    if (!Float.isNaN(lab14LateHardVoltage)) {
+        logLabelValue(
+                gr ? "Τελική τάση hard stress" : "Late-run hard voltage",
+                String.format(Locale.US, "%.3f V", lab14LateHardVoltage)
+        );
+    }
+
+    logLabelValue(
+            gr ? "Χαμηλότερη τάση" : "Lowest hard-load voltage",
+            String.format(Locale.US, "%.3f V", lab14LowestHardVoltage)
+    );
+
+    logLabelValue(
+            gr ? "Αρχική πτώση" : "Initial hard sag",
+            String.format(Locale.US, "%.3f V", firstSag)
+    );
+
+    logLabelValue(
+            gr ? "Μέγιστη πτώση" : "Worst sag",
+            String.format(Locale.US, "%.3f V", worstSag)
+    );
+
+    String behavior;
+
+    if (!Float.isNaN(lab14LateHardVoltage) &&
+            lab14LateHardVoltage > lab14LowestHardVoltage + 0.015f) {
+
+        behavior = gr
+                ? "Πρώιμη πτώση με μερική σταθεροποίηση / ανάκαμψη"
+                : "Early sag with partial stabilization / rebound";
+
+    } else if (!Float.isNaN(lab14LateHardVoltage) &&
+            lab14LateHardVoltage < lab14FirstHardVoltage - 0.020f) {
+
+        behavior = gr
+                ? "Προοδευτική πτώση τάσης κατά τη διάρκεια του stress"
+                : "Progressive voltage sag during stress";
+
+    } else {
+
+        behavior = gr
+                ? "Σχετικά σταθερή τάση υπό φορτίο μετά την αρχική πτώση"
+                : "Relatively stable voltage under load after initial drop";
+    }
+
+    logLabelOkValue(
+            gr ? "Συμπεριφορά" : "Behavior",
+            behavior
+    );
 }
 
 //=============================================================
