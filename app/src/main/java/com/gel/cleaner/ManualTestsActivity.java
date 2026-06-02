@@ -23408,11 +23408,20 @@ private void lab14LogVoltageBehaviorSummary(
         return;
     }
 
-    float firstSag =
+    float initialDelta =
             voltageStart - lab14FirstHardVoltage;
 
-    float worstSag =
+    float worstDelta =
             voltageStart - lab14LowestHardVoltage;
+
+    boolean voltageSettlingDetected =
+            lab14FirstHardVoltage > voltageStart + 0.010f;
+
+    float initialSag =
+            Math.max(0f, initialDelta);
+
+    float worstSag =
+            Math.max(0f, worstDelta);
 
     logLabelValue(
             gr ? "Τάση έναρξης" : "Start voltage",
@@ -23443,10 +23452,31 @@ private void lab14LogVoltageBehaviorSummary(
             String.format(Locale.US, "%.3f V", lab14LowestHardVoltage)
     );
 
-    logLabelValue(
-            gr ? "Αρχική πτώση" : "Initial hard sag",
-            String.format(Locale.US, "%.3f V", firstSag)
-    );
+    if (voltageSettlingDetected) {
+
+        logLabelWarnValue(
+                gr ? "Αρχική πτώση" : "Initial hard sag",
+                gr
+                        ? "Δεν υπολογίζεται — εντοπίστηκε αρχική σταθεροποίηση τάσης"
+                        : "Not calculated — initial voltage settling detected"
+        );
+
+        logLabelValue(
+                gr ? "Αρχική μεταβολή τάσης" : "Initial voltage change",
+                String.format(
+                        Locale.US,
+                        "+%.3f V",
+                        lab14FirstHardVoltage - voltageStart
+                )
+        );
+
+    } else {
+
+        logLabelValue(
+                gr ? "Αρχική πτώση" : "Initial hard sag",
+                String.format(Locale.US, "%.3f V", initialSag)
+        );
+    }
 
     logLabelValue(
             gr ? "Μέγιστη πτώση" : "Worst sag",
@@ -23455,7 +23485,13 @@ private void lab14LogVoltageBehaviorSummary(
 
     String behavior;
 
-    if (!Float.isNaN(lab14LateHardVoltage) &&
+    if (voltageSettlingDetected) {
+
+        behavior = gr
+                ? "Αρχική σταθεροποίηση τάσης — πιθανή πρόσφατη φόρτιση, προηγούμενο φορτίο ή BMS refresh"
+                : "Initial voltage settling — possible recent charging, previous load, or BMS refresh";
+
+    } else if (!Float.isNaN(lab14LateHardVoltage) &&
             lab14LateHardVoltage > lab14LowestHardVoltage + 0.015f) {
 
         behavior = gr
@@ -23476,10 +23512,20 @@ private void lab14LogVoltageBehaviorSummary(
                 : "Relatively stable voltage under load after initial drop";
     }
 
-    logLabelOkValue(
-            gr ? "Συμπεριφορά" : "Behavior",
-            behavior
-    );
+    if (voltageSettlingDetected) {
+
+        logLabelWarnValue(
+                gr ? "Συμπεριφορά" : "Behavior",
+                behavior
+        );
+
+    } else {
+
+        logLabelOkValue(
+                gr ? "Συμπεριφορά" : "Behavior",
+                behavior
+        );
+    }
 }
 
 //=============================================================
