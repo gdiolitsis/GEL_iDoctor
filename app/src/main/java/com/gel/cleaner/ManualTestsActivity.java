@@ -12281,13 +12281,18 @@ logLabelOkValue(
                 : (gr ? "Μη διαθέσιμο" : "N/A")
 );
 
-// 🔴 REAL THREADS (όχι θεωρητικά)
+// 🔴 REAL THREADS — SINGLE SOURCE OF TRUTH
+int startThreads =
+        isLab14BMode
+                ? cores
+                : (
+                    lab14OptimalThreads >= 2
+                            ? lab14OptimalThreads
+                            : Math.max(4, cores - 1)
+                );
+
 int cpuThreadsToUse =
-        !isLab14BMode
-                ? (lab14OptimalThreads > 0
-                    ? lab14OptimalThreads
-                    : cores)
-                : cores;
+        startThreads;
 
 logLabelOkValue(
         gr ? "Νήματα καταπόνησης CPU" : "CPU stress threads",
@@ -12362,11 +12367,6 @@ lab14Engine.startDrainSession();
 // --------------------------------------------------
 // 🔴 REAL STRESS START (RESTORED)
 // --------------------------------------------------
-
-int startThreads =
-        (lab14OptimalThreads >= 2)
-                ? lab14OptimalThreads
-                : Math.max(4, cores - 1);
 
 lab14CpuThreadsCurrent = startThreads;
 
@@ -17178,21 +17178,62 @@ inHardPhase = false;
 float currentMa = lab14Current();
 
 // ----------------------------------------------------
-// 🔴 CONTINUOUS HARD-STRESS VOLTAGE MIN TRACKING
+// 🔴 CONTINUOUS HARD-STRESS VOLTAGE SAMPLING + LOG
 // ----------------------------------------------------
 if (!isLab14BMode && lab14Running && !lab14Cancelled) {
 
     try {
-        float vNow = getBatteryVoltageFast();
+
+        float vNow = Float.NaN;
+
+        // 🔴 PRIMARY — LAB14 voltage reader
+        try {
+            vNow = lab14Voltage();
+        } catch (Throwable ignore) {}
+
+        // 🔴 FALLBACK — filtered system voltage
+        if (Float.isNaN(vNow) || vNow <= 0f) {
+            try {
+                vNow = getBatteryVoltageFiltered();
+            } catch (Throwable ignore) {}
+        }
 
         if (!Float.isNaN(vNow) && vNow > 3.0f && vNow < 5.0f) {
 
+            // 🔴 keep lowest real hard-stress voltage
             if (Float.isNaN(voltageUnderLoad[0]) ||
-                vNow < voltageUnderLoad[0]) {
+                    vNow < voltageUnderLoad[0]) {
 
                 voltageUnderLoad[0] = vNow;
             }
+
+            // 🔴 refresh main-load samples during hard stress
+            if (elapsed >= 5 && elapsed < 20) {
+
+                if (Float.isNaN(vLoad1[0]) || vNow < vLoad1[0]) {
+                    vLoad1[0] = vNow;
+                }
+
+            } else if (elapsed >= 20) {
+
+                if (Float.isNaN(vLoad2[0]) || vNow < vLoad2[0]) {
+                    vLoad2[0] = vNow;
+                }
+            }
+
+            // 🔴 visible proof that hard-stress voltage is sampled
+            if (elapsed % 5 == 0) {
+
+                logWarn(
+                        "MAIN_VOLTAGE | elapsed=" + elapsed +
+                        " | now=" + String.format(Locale.US, "%.3f", vNow) +
+                        " | load1=" + String.format(Locale.US, "%.3f", vLoad1[0]) +
+                        " | load2=" + String.format(Locale.US, "%.3f", vLoad2[0]) +
+                        " | underLoad=" + String.format(Locale.US, "%.3f", voltageUnderLoad[0])
+                );
+            }
         }
+
     } catch (Throwable ignore) {}
 }
 
