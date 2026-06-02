@@ -17242,26 +17242,46 @@ if (!isLab14BMode && lab14Running && !lab14Cancelled) {
         if (!Float.isNaN(vNow) && vNow > 3.0f && vNow < 5.0f) {
         	
 // ----------------------------------------------------
-// 🔴 VOLTAGE BEHAVIOR TRACKING
+// 🔴 VOLTAGE BEHAVIOR TRACKING — REAL HARD SAG AWARE
 // ----------------------------------------------------
 lab14LastHardVoltage = vNow;
 
-if (Float.isNaN(lab14FirstHardVoltage) && elapsed >= 30) {
-    lab14FirstHardVoltage = vNow;
-}
-
-if (elapsed >= (durationSec / 2)) {
-    lab14MidHardVoltage = vNow;
-}
-
-if (elapsed >= (durationSec - 45)) {
-    lab14LateHardVoltage = vNow;
-}
-
+// 🔴 lowest hard voltage — always track
 if (Float.isNaN(lab14LowestHardVoltage) ||
         vNow < lab14LowestHardVoltage) {
 
     lab14LowestHardVoltage = vNow;
+}
+
+// 🔴 first REAL hard-load voltage
+// Do not capture flat/cached voltage equal to start.
+// Capture only when voltage actually drops from baseline.
+if (Float.isNaN(lab14FirstHardVoltage) &&
+        !Float.isNaN(voltageStart) &&
+        vNow < voltageStart - 0.010f) {
+
+    lab14FirstHardVoltage = vNow;
+}
+
+// 🔴 fallback: if no clear drop was detected, capture after 70 sec
+if (Float.isNaN(lab14FirstHardVoltage) &&
+        elapsed >= 70) {
+
+    lab14FirstHardVoltage = vNow;
+}
+
+// 🔴 mid-run voltage — capture once around middle
+if (Float.isNaN(lab14MidHardVoltage) &&
+        elapsed >= (durationSec / 2)) {
+
+    lab14MidHardVoltage = vNow;
+}
+
+// 🔴 late-run voltage — capture once near end
+if (Float.isNaN(lab14LateHardVoltage) &&
+        elapsed >= (durationSec - 45)) {
+
+    lab14LateHardVoltage = vNow;
 }
 
             // 🔴 keep lowest real hard-stress voltage
