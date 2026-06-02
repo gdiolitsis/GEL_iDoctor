@@ -371,6 +371,12 @@ float[] voltageUnderLoad = { Float.NaN };
 float vSag1 = Float.NaN;
 float vSag2 = Float.NaN;
 
+// ============================================================
+// LAB 14 — VOLTAGE PULSE STATE
+// ============================================================
+private volatile boolean lab14VoltagePulseRunning = false;
+private volatile long lab14LastVoltagePulseElapsedSec = -9999L;
+
 // --------------------------------------------------
 // LAB14 derived metrics
 // --------------------------------------------------
@@ -17237,6 +17243,22 @@ if (!isLab14BMode && lab14Running && !lab14Cancelled) {
     } catch (Throwable ignore) {}
 }
 
+// ----------------------------------------------------
+// 🔴 MICRO-RELAX VOLTAGE PULSE
+// ----------------------------------------------------
+if (!isLab14BMode &&
+        lab14Running &&
+        !lab14Cancelled &&
+        elapsed >= 60 &&
+        elapsed < durationSec - 20 &&
+        !lab14VoltagePulseRunning &&
+        elapsed - lab14LastVoltagePulseElapsedSec >= 55) {
+
+    lab14LastVoltagePulseElapsedSec = elapsed;
+
+    lab14RunVoltagePulse(elapsed);
+}
+
 // 🔴 BATTERY TEMP (helper ήδη filtered)
 float batTemp = lab14BatteryTemp();
 
@@ -22951,6 +22973,152 @@ private float getBatteryVoltageFast() {
     } catch (Throwable ignore) {}
 
     return Float.NaN;
+}
+
+// ============================================================
+// LAB 14 — MICRO-RELAX VOLTAGE PULSE
+// ============================================================
+private void lab14RunVoltagePulse(final int elapsedSec) {
+
+    if (lab14VoltagePulseRunning) return;
+
+    lab14VoltagePulseRunning = true;
+
+    new Thread(() -> {
+
+        float before = Float.NaN;
+        float relax = Float.NaN;
+        float after = Float.NaN;
+
+        int restoreThreads =
+                lab14CpuThreadsCurrent > 0
+                        ? lab14CpuThreadsCurrent
+                        : Math.max(
+                                4,
+                                Runtime.getRuntime().availableProcessors() - 1
+                        );
+
+        try {
+
+            // ------------------------------------------------
+            // 1) READ UNDER LOAD
+            // ------------------------------------------------
+            try {
+                before = lab14Voltage();
+            } catch (Throwable ignore) {}
+
+            if (!Float.isNaN(before) && before > 3.0f && before < 5.0f) {
+
+                if (Float.isNaN(voltageUnderLoad[0]) ||
+                        before < voltageUnderLoad[0]) {
+
+                    voltageUnderLoad[0] = before;
+                }
+
+                if (Float.isNaN(vLoad2[0]) || before < vLoad2[0]) {
+                    vLoad2[0] = before;
+                }
+            }
+
+            // ------------------------------------------------
+            // 2) MICRO RELAX — CPU ONLY
+            // ------------------------------------------------
+            try {
+                stopCpuBurn();
+            } catch (Throwable ignore) {}
+
+            try {
+                Thread.sleep(1000);
+            } catch (Throwable ignore) {}
+
+            // ------------------------------------------------
+            // 3) READ RELAX / RECOVERY
+            // ------------------------------------------------
+            try {
+                relax = lab14Voltage();
+            } catch (Throwable ignore) {}
+
+            if (!Float.isNaN(relax) && relax > 3.0f && relax < 5.0f) {
+
+                vRecover[0] = relax;
+
+                if (!Float.isNaN(voltageUnderLoad[0])) {
+
+                    float rec =
+                            relax - voltageUnderLoad[0];
+
+                    if (rec > 0.002f && rec < 1.0f) {
+
+                        voltageRecovery[0] = rec;
+                        voltageRecoverySpeed[0] = rec / 1.0f;
+                    }
+                }
+            }
+
+            // ------------------------------------------------
+            // 4) RESTORE HARD LOAD
+            // ------------------------------------------------
+            if (lab14Running && !lab14Cancelled) {
+
+                try {
+                    startCpuBurnLimitedThreads(restoreThreads);
+                    lab14CpuThreadsCurrent = restoreThreads;
+                } catch (Throwable ignore) {}
+            }
+
+            try {
+                Thread.sleep(1200);
+            } catch (Throwable ignore) {}
+
+            // ------------------------------------------------
+            // 5) READ AFTER RE-LOAD
+            // ------------------------------------------------
+            try {
+                after = lab14Voltage();
+            } catch (Throwable ignore) {}
+
+            if (!Float.isNaN(after) && after > 3.0f && after < 5.0f) {
+
+                if (Float.isNaN(voltageUnderLoad[0]) ||
+                        after < voltageUnderLoad[0]) {
+
+                    voltageUnderLoad[0] = after;
+                }
+
+                if (Float.isNaN(vLoad2[0]) || after < vLoad2[0]) {
+                    vLoad2[0] = after;
+                }
+            }
+
+            // ------------------------------------------------
+            // 6) LOG RESULT
+            // ------------------------------------------------
+            final float fBefore = before;
+            final float fRelax = relax;
+            final float fAfter = after;
+            final float fUnder = voltageUnderLoad[0];
+            final float fRecovery = voltageRecovery[0];
+
+            runOnUiThread(() -> {
+
+                logWarn(
+                        "PULSE_VOLTAGE | elapsed=" + elapsedSec +
+                                " | before=" + String.format(Locale.US, "%.3f", fBefore) +
+                                " | relax=" + String.format(Locale.US, "%.3f", fRelax) +
+                                " | after=" + String.format(Locale.US, "%.3f", fAfter) +
+                                " | underLoad=" + String.format(Locale.US, "%.3f", fUnder) +
+                                " | recovery=" + String.format(Locale.US, "%.3f", fRecovery)
+                );
+            });
+
+        } catch (Throwable ignore) {
+
+        } finally {
+
+            lab14VoltagePulseRunning = false;
+        }
+
+    }, "LAB14_VOLTAGE_PULSE").start();
 }
 
 //=============================================================
