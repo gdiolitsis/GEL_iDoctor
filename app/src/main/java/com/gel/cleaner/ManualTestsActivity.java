@@ -371,12 +371,6 @@ float[] voltageUnderLoad = { Float.NaN };
 float vSag1 = Float.NaN;
 float vSag2 = Float.NaN;
 
-// ============================================================
-// LAB 14 — VOLTAGE PULSE STATE
-// ============================================================
-private volatile boolean lab14VoltagePulseRunning = false;
-private volatile long lab14LastVoltagePulseElapsedSec = -9999L;
-
 // --------------------------------------------------
 // LAB14 derived metrics
 // --------------------------------------------------
@@ -512,17 +506,24 @@ final float[] batterySOH = {Float.NaN};
     
     private Lab14Engine lab14Engine;
     
-    private volatile boolean lab14Cancelled = false;
-    private boolean lab14PopupShown = false;
-    private boolean lab14AdvisoryShown = false;
-    private volatile boolean lab14MainPhase = false;
-    
-    private AlertDialog lab14Dialog;    
-    
-    private int __oldBrightness = -1;
-    
-    private float lab14HealthPercent = Float.NaN;
-    private String lab14HealthLabel = "Unknown";
+private volatile boolean lab14Cancelled = false;
+private boolean lab14PopupShown = false;
+private boolean lab14AdvisoryShown = false;
+private volatile boolean lab14MainPhase = false;
+
+// ============================================================
+// LAB 14 — VOLTAGE PULSE STATE
+// ============================================================
+private volatile boolean lab14VoltagePulseRunning = false;
+private volatile long lab14LastVoltagePulseElapsedSec = -9999L;
+private volatile boolean lab14PreHardVoltagePulseDone = false;
+
+private AlertDialog lab14Dialog;
+
+private int __oldBrightness = -1;
+
+private float lab14HealthPercent = Float.NaN;
+private String lab14HealthLabel = "Unknown";
     
 // ------------------------------------------------
 // LAB14 state (must be fields for lambda/thread)
@@ -12021,6 +12022,11 @@ validDrain = false;
 lab14Cancelled = false;
 lab14FastDone = false;
 
+// 🔴 voltage pulse reset
+lab14VoltagePulseRunning = false;
+lab14LastVoltagePulseElapsedSec = -9999L;
+lab14PreHardVoltagePulseDone = false;
+
 lab14LimiterScore = 0;
 lab14LimiterLatched = false;
 lab14CpuFreqPeak = 0;
@@ -17241,6 +17247,22 @@ if (!isLab14BMode && lab14Running && !lab14Cancelled) {
         }
 
     } catch (Throwable ignore) {}
+}
+
+// ----------------------------------------------------
+// 🔴 PRE-HARD VOLTAGE PULSE — ONCE BEFORE HARD PHASE
+// ----------------------------------------------------
+if (!isLab14BMode &&
+        lab14Running &&
+        !lab14Cancelled &&
+        lab14FastPhase &&
+        !lab14MainPhase &&
+        !lab14PreHardVoltagePulseDone &&
+        elapsed >= 25) {
+
+    lab14PreHardVoltagePulseDone = true;
+
+    lab14RunPreHardVoltagePulse(elapsed);
 }
 
 // ----------------------------------------------------
@@ -23119,6 +23141,121 @@ private void lab14RunVoltagePulse(final int elapsedSec) {
         }
 
     }, "LAB14_VOLTAGE_PULSE").start();
+}
+
+// ============================================================
+// LAB 14 — PRE-HARD VOLTAGE PULSE
+// ============================================================
+private void lab14RunPreHardVoltagePulse(final int elapsedSec) {
+
+    new Thread(() -> {
+
+        float before = Float.NaN;
+        float relax = Float.NaN;
+        float after = Float.NaN;
+
+        int restoreThreads =
+                lab14CpuThreadsCurrent > 0
+                        ? lab14CpuThreadsCurrent
+                        : Math.max(
+                                4,
+                                Runtime.getRuntime().availableProcessors() - 1
+                        );
+
+        try {
+
+            // ------------------------------------------------
+            // 1) READ FAST LOAD VOLTAGE
+            // ------------------------------------------------
+            try {
+                before = lab14Voltage();
+            } catch (Throwable ignore) {}
+
+            if (!Float.isNaN(before) && before > 3.0f && before < 5.0f) {
+
+                if (Float.isNaN(vLoad1[0]) || before < vLoad1[0]) {
+                    vLoad1[0] = before;
+                }
+            }
+
+            // ------------------------------------------------
+            // 2) MICRO RELAX BEFORE HARD PHASE
+            // ------------------------------------------------
+            try {
+                stopCpuBurn();
+            } catch (Throwable ignore) {}
+
+            try {
+                Thread.sleep(1000);
+            } catch (Throwable ignore) {}
+
+            // ------------------------------------------------
+            // 3) READ RECOVERY
+            // ------------------------------------------------
+            try {
+                relax = lab14Voltage();
+            } catch (Throwable ignore) {}
+
+            if (!Float.isNaN(relax) && relax > 3.0f && relax < 5.0f) {
+
+                vRecover[0] = relax;
+
+                if (!Float.isNaN(before)) {
+
+                    float rec = relax - before;
+
+                    if (rec > 0.002f && rec < 1.0f) {
+                        voltageRecovery[0] = rec;
+                        voltageRecoverySpeed[0] = rec / 1.0f;
+                    }
+                }
+            }
+
+            // ------------------------------------------------
+            // 4) RESTORE FAST LOAD UNTIL HARD PHASE TAKES OVER
+            // ------------------------------------------------
+            if (lab14Running && !lab14Cancelled) {
+
+                try {
+                    startCpuBurnLimitedThreads(restoreThreads);
+                    lab14CpuThreadsCurrent = restoreThreads;
+                } catch (Throwable ignore) {}
+            }
+
+            try {
+                Thread.sleep(800);
+            } catch (Throwable ignore) {}
+
+            // ------------------------------------------------
+            // 5) READ AFTER RELOAD
+            // ------------------------------------------------
+            try {
+                after = lab14Voltage();
+            } catch (Throwable ignore) {}
+
+            if (!Float.isNaN(after) && after > 3.0f && after < 5.0f) {
+
+                if (Float.isNaN(vLoad1[0]) || after < vLoad1[0]) {
+                    vLoad1[0] = after;
+                }
+            }
+
+            final float fBefore = before;
+            final float fRelax = relax;
+            final float fAfter = after;
+
+            runOnUiThread(() -> {
+
+                logWarn(
+                        "PRE_HARD_PULSE | elapsed=" + elapsedSec +
+                                " | before=" + String.format(Locale.US, "%.3f", fBefore) +
+                                " | relax=" + String.format(Locale.US, "%.3f", fRelax) +
+                                " | after=" + String.format(Locale.US, "%.3f", fAfter)
+                );
+            });
+
+        } catch (Throwable ignore) {}
+    }, "LAB14_PRE_HARD_PULSE").start();
 }
 
 //=============================================================
