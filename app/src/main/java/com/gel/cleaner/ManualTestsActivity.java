@@ -23184,10 +23184,10 @@ if (!Float.isNaN(before)) {
                 } catch (Throwable ignore) {}
             }
 
-            // 🔴 wait after reload, exactly like a mini phase transition
-            try {
-                Thread.sleep(3000);
-            } catch (Throwable ignore) {}
+            // 🔴 wait after reload — BMS/Android may publish voltage with delay
+try {
+    Thread.sleep(10000);
+} catch (Throwable ignore) {}
 
             // ------------------------------------------------
             // 5) READ NEW HARD-LOAD VOLTAGE
