@@ -12602,24 +12602,28 @@ if (!sagValid) {
 } else {
 
     // =================================================
-    // 🔴 SELF FALLBACK CLASSIFIER (if upstream label missing)
+    // 🔴 SINGLE SAG CLASSIFIER — USER-FRIENDLY FINAL
     // =================================================
-    if ("Unknown".equals(labelSafe)) {
-
-        if (finalSag < 0.040f) {
-            labelSafe = "Excellent";
-        }
-        else if (finalSag < 0.080f) {
-            labelSafe = "Normal";
-        }
-        else if (finalSag < 0.120f) {
-            labelSafe = "Weak";
-        }
-        else {
-            labelSafe = "Critical";
-        }
+    // Keep the same user-visible label across:
+    // - quick stress output
+    // - stress result
+    // - final result
+    // Small sag gets the benefit of the doubt so we do not
+    // alarm users for a healthy low-voltage-drop battery.
+    if (finalSag < 0.045f) {
+        labelSafe = "Excellent";
+    }
+    else if (finalSag < 0.080f) {
+        labelSafe = "Normal";
+    }
+    else if (finalSag < 0.120f) {
+        labelSafe = "Weak";
+    }
+    else {
+        labelSafe = "Critical";
     }
 
+    res.label = labelSafe;
     lab14LastLabel = labelSafe;
 
     String sagText = String.format(
@@ -33278,3 +33282,4 @@ if (requestCode == 8008) {
 // END OF CLASS
 // ============================================================
 }
+
