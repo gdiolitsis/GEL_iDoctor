@@ -343,7 +343,7 @@ private long lab14LastRebalanceTs = 0;
 private final Object fastPhaseLock = new Object();
 private long vLoad2Time = 0;
 
-private static boolean DEBUG_MODE = true;
+private static boolean DEBUG_MODE = false; // production clean logs
 private static class PrivacySnapshot {
 
     // υπάρχοντα (μην τα πειράξεις)
@@ -1387,8 +1387,10 @@ private void startCpuBurnLimitedThreads(int threads) {
 
     lab14CpuThreadsCurrent = threads;
 
-    appendLog("CPU",
-            "START BURN threads=" + threads);
+    if (DEBUG_MODE) {
+        appendLog("CPU",
+                "START BURN threads=" + threads);
+    }
 
     for (int i = 0; i < threads; i++) {
 
@@ -12393,7 +12395,7 @@ lab14SoftPhaseStarted = false;
 t0 = SystemClock.elapsedRealtime();
 lab14EndTime = t0 + (durationSec * 1000L);
 
-appendLog("ENGINE", "START");
+if (DEBUG_MODE) appendLog("ENGINE", "START");
 
 // ------------------------------------------------------------
 // 🔴 START ENGINE
@@ -12416,10 +12418,12 @@ try {
     startMemoryStress();
 } catch (Throwable ignore) {}
 
-appendLog("LOAD",
-        "START threads=" + startThreads +
-        " | boost=" + lab14BoostActive +
-        " | soft=" + lab14SoftPhaseStarted);
+if (DEBUG_MODE) {
+    appendLog("LOAD",
+            "START threads=" + startThreads +
+            " | boost=" + lab14BoostActive +
+            " | soft=" + lab14SoftPhaseStarted);
+}
 
 // 🔴 vibration loop
 ui.removeCallbacks(lab14VibrationLoop);
@@ -14449,14 +14453,16 @@ if (directDrainMah >= 0) {
     finalDrainMah = lab14DeltaMah;
 }
 
-appendLog("DRAIN_DEBUG",
-        "startMah=" + startMah +
-        " | endMah=" + endMah +
-        " | direct=" + directDrainMah +
-        " | sampled=" + lab14DeltaMah +
-        " | final=" + finalDrainMah +
-        " | min=" + lab14MinCharge +
-        " | max=" + lab14MaxCharge);
+if (DEBUG_MODE) {
+    appendLog("DRAIN_DEBUG",
+            "startMah=" + startMah +
+            " | endMah=" + endMah +
+            " | direct=" + directDrainMah +
+            " | sampled=" + lab14DeltaMah +
+            " | final=" + finalDrainMah +
+            " | min=" + lab14MinCharge +
+            " | max=" + lab14MaxCharge);
+}
 
 // ----------------------------------------------------
 // 🔴 TEMPERATURE END
@@ -16206,9 +16212,11 @@ while (lab14Running && !lab14Cancelled) {
     long now = SystemClock.elapsedRealtime();
     long elapsed = (now - fastStart) / 1000;
 
-    appendLog("LOAD",
-            "threads=" + lab14CpuThreadsCurrent +
-            " | running=" + lab14Running);
+    if (DEBUG_MODE) {
+        appendLog("LOAD",
+                "threads=" + lab14CpuThreadsCurrent +
+                " | running=" + lab14Running);
+    }
 
     // 🔴 FAST UI BAR
     runOnUiThread(() -> {
@@ -17305,8 +17313,8 @@ if (Float.isNaN(lab14LateHardVoltage) &&
                 }
             }
 
-            // 🔴 visible proof that hard-stress voltage is sampled
-            if (elapsed % 5 == 0) {
+            // 🔴 debug proof that hard-stress voltage is sampled
+            if (DEBUG_MODE && elapsed % 5 == 0) {
 
                 logWarn(
                         "MAIN_VOLTAGE | elapsed=" + elapsed +
@@ -20222,7 +20230,7 @@ private void startMemoryStress() {
 
                 // anti-optimization
                 if (checksum == Long.MIN_VALUE) {
-                    appendLog("MEM","keep alive");
+                    if (DEBUG_MODE) appendLog("MEM","keep alive");
                 }
 
                 // tiny yield → avoids ugly scheduler monopolizing
@@ -23221,17 +23229,19 @@ try {
                 ? (relax - before)
                 : Float.NaN;
 
-            runOnUiThread(() -> {
+            if (DEBUG_MODE) {
+                runOnUiThread(() -> {
 
-                logWarn(
-                        "TRANSITION_PULSE | elapsed=" + elapsedSec +
-                                " | before=" + String.format(Locale.US, "%.3f", fBefore) +
-                                " | relax=" + String.format(Locale.US, "%.3f", fRelax) +
-                                " | after=" + String.format(Locale.US, "%.3f", fAfter) +
-                                " | underLoad=" + String.format(Locale.US, "%.3f", fUnder) +
-                                " | recovery=" + String.format(Locale.US, "%.3f", fRecovery)
-                );
-            });
+                    logWarn(
+                            "TRANSITION_PULSE | elapsed=" + elapsedSec +
+                                    " | before=" + String.format(Locale.US, "%.3f", fBefore) +
+                                    " | relax=" + String.format(Locale.US, "%.3f", fRelax) +
+                                    " | after=" + String.format(Locale.US, "%.3f", fAfter) +
+                                    " | underLoad=" + String.format(Locale.US, "%.3f", fUnder) +
+                                    " | recovery=" + String.format(Locale.US, "%.3f", fRecovery)
+                    );
+                });
+            }
 
         } catch (Throwable ignore) {
 
@@ -23365,15 +23375,17 @@ final int restoreThreads =
             final float fRelax = relax;
             final float fAfter = after;
 
-            runOnUiThread(() -> {
+            if (DEBUG_MODE) {
+                runOnUiThread(() -> {
 
-                logWarn(
-                        "PRE_HARD_TRANSITION | elapsed=" + elapsedSec +
-                                " | before=" + String.format(Locale.US, "%.3f", fBefore) +
-                                " | relax=" + String.format(Locale.US, "%.3f", fRelax) +
-                                " | after=" + String.format(Locale.US, "%.3f", fAfter)
-                );
-            });
+                    logWarn(
+                            "PRE_HARD_TRANSITION | elapsed=" + elapsedSec +
+                                    " | before=" + String.format(Locale.US, "%.3f", fBefore) +
+                                    " | relax=" + String.format(Locale.US, "%.3f", fRelax) +
+                                    " | after=" + String.format(Locale.US, "%.3f", fAfter)
+                    );
+                });
+            }
 
         } catch (Throwable ignore) {}
     }, "LAB14_PRE_HARD_TRANSITION").start();
