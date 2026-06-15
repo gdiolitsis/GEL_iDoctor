@@ -859,273 +859,277 @@ getResources().getDisplayMetrics()
 // ------------------------------------------------------------
 private void showPanicGuidePopup() {
 
-if (panicGuideShown) return;
-panicGuideShown = true;
+    if (panicGuideShown) return;
 
-boolean gr = AppLang.isGreek(this);
+    panicGuideShown = true;
+    panicGuidePopupOpen = true;
 
-AlertDialog.Builder b =
-new AlertDialog.Builder(IPhoneLabsActivity.this);
+    final boolean gr = AppLang.isGreek(this);
 
-b.setCancelable(true);
+    AlertDialog.Builder b =
+            new AlertDialog.Builder(IPhoneLabsActivity.this);
 
-// ================= ROOT =================
-LinearLayout root = new LinearLayout(IPhoneLabsActivity.this);
-root.setOrientation(LinearLayout.VERTICAL);
-root.setPadding(dp(24), dp(22), dp(24), dp(20));
+    b.setCancelable(true);
 
-GradientDrawable bg = new GradientDrawable();
-bg.setColor(0xFF000000); // Μαύρο
-bg.setCornerRadius(dp(14));
-bg.setStroke(dp(4), 0xFFFFD700); // Χρυσό περίγραμμα
-root.setBackground(bg);
+    // ========================================================
+    // ROOT — FIXED DIALOG LAYOUT
+    // Only the guide text scrolls. Controls and OK stay visible.
+    // ========================================================
+    LinearLayout root = new LinearLayout(IPhoneLabsActivity.this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(24), dp(22), dp(24), dp(20));
 
-// ================= TITLE =================
-panicGuideTitle = new TextView(IPhoneLabsActivity.this);
-panicGuideTitle.setText(
-        AppLang.isGreek(this)
-                ? "PANIC LOGS — Οδηγός Εισαγωγής"
-                : "PANIC LOGS — Import Guide"
-);
-panicGuideTitle.setTextColor(Color.WHITE);
-panicGuideTitle.setTextSize(19f);
-panicGuideTitle.setTypeface(null, Typeface.BOLD);
-panicGuideTitle.setGravity(Gravity.CENTER);
-panicGuideTitle.setPadding(0, 0, 0, dp(14));
-root.addView(panicGuideTitle);
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF000000);
+    bg.setCornerRadius(dp(14));
+    bg.setStroke(dp(4), 0xFFFFD700);
+    root.setBackground(bg);
 
-// ================= MESSAGE =================
-panicGuideMessage = new TextView(IPhoneLabsActivity.this);
-panicGuideMessage.setText(
-        AppLang.isGreek(this)
-                ? getPanicGuideTextGR()
-                : getPanicGuideTextEN()
-);
+    // ================= TITLE =================
+    panicGuideTitle = new TextView(IPhoneLabsActivity.this);
+    panicGuideTitle.setText(
+            gr
+                    ? "PANIC LOGS — Οδηγός Εισαγωγής"
+                    : "PANIC LOGS — Import Guide"
+    );
+    panicGuideTitle.setTextColor(Color.WHITE);
+    panicGuideTitle.setTextSize(19f);
+    panicGuideTitle.setTypeface(null, Typeface.BOLD);
+    panicGuideTitle.setGravity(Gravity.CENTER);
+    panicGuideTitle.setPadding(0, 0, 0, dp(14));
 
-panicGuideMessage.setTextColor(0xFF00FF9C); // Neon green
-panicGuideMessage.setTextSize(15f);
-panicGuideMessage.setGravity(Gravity.CENTER);
-panicGuideMessage.setLineSpacing(0f, 1.15f);
-panicGuideMessage.setPadding(dp(6), 0, dp(6), dp(18));
+    root.addView(
+            panicGuideTitle,
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+    );
 
-// ενεργοποίηση scroll μέσα στο TextView
-panicGuideMessage.setVerticalScrollBarEnabled(true);
-panicGuideMessage.setMovementMethod(
-        android.text.method.ScrollingMovementMethod.getInstance()
-);
+    // ================= SCROLLABLE MESSAGE =================
+    ScrollView messageScroll = new ScrollView(IPhoneLabsActivity.this);
+    messageScroll.setFillViewport(false);
+    messageScroll.setVerticalScrollBarEnabled(true);
+    messageScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
 
-// βοηθά το scroll να λειτουργεί σε όλες τις συσκευές
-panicGuideMessage.setFocusable(true);
-panicGuideMessage.setFocusableInTouchMode(true);
+    LinearLayout.LayoutParams messageScrollLp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+            );
+    messageScrollLp.setMargins(0, 0, 0, dp(10));
+    messageScroll.setLayoutParams(messageScrollLp);
 
-root.addView(panicGuideMessage);
+    panicGuideMessage = new TextView(IPhoneLabsActivity.this);
+    panicGuideMessage.setText(
+            gr
+                    ? getPanicGuideTextGR()
+                    : getPanicGuideTextEN()
+    );
+    panicGuideMessage.setTextColor(0xFF00FF9C);
+    panicGuideMessage.setTextSize(15f);
+    panicGuideMessage.setGravity(Gravity.START);
+    panicGuideMessage.setLineSpacing(0f, 1.15f);
+    panicGuideMessage.setPadding(dp(6), 0, dp(6), dp(18));
+    panicGuideMessage.setClickable(false);
+    panicGuideMessage.setFocusable(false);
+    panicGuideMessage.setLongClickable(false);
 
-// ================= MUTE ROW =================
-root.addView(buildMuteRow());
+    messageScroll.addView(
+            panicGuideMessage,
+            new ScrollView.LayoutParams(
+                    ScrollView.LayoutParams.MATCH_PARENT,
+                    ScrollView.LayoutParams.WRAP_CONTENT
+            )
+    );
 
-// ================= LANGUAGE SPINNER =================
-Spinner langSpinner = new Spinner(IPhoneLabsActivity.this);
+    root.addView(messageScroll);
 
-ArrayAdapter<String> adapter =
-        new ArrayAdapter<String>(
-                IPhoneLabsActivity.this,
-                android.R.layout.simple_spinner_item,
-                new String[]{"EN", "GR"}
-        ) {
+    // ================= MUTE ROW =================
+    root.addView(buildMuteRow());
 
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
-                TextView tv = (TextView) super.getView(position, convertView, parent);
-                tv.setTypeface(null, Typeface.BOLD);
-                tv.setGravity(Gravity.CENTER);
-                tv.setTextColor(Color.WHITE);
-                return tv;
-            }
+    // ================= LANGUAGE SPINNER =================
+    Spinner langSpinner = new Spinner(IPhoneLabsActivity.this);
 
-            @Override
-            public View getDropDownView(int position, View convertView, ViewGroup parent) {
-                TextView tv = (TextView) super.getDropDownView(position, convertView, parent);
-                tv.setTypeface(null, Typeface.BOLD);
-                tv.setGravity(Gravity.CENTER);
-                tv.setTextColor(Color.BLACK);
-                tv.setPadding(dp(14), dp(12), dp(14), dp(12));
-                return tv;
-            }
-        };
-
-adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-langSpinner.setAdapter(adapter);
-langSpinner.setSelection(AppLang.isGreek(this) ? 1 : 0);
-
-langSpinner.setOnItemSelectedListener(
-        new AdapterView.OnItemSelectedListener() {
-
-            @Override
-            public void onItemSelected(
-                    AdapterView<?> parent,
-                    View view,
-                    int position,
-                    long id
+    ArrayAdapter<String> adapter =
+            new ArrayAdapter<String>(
+                    IPhoneLabsActivity.this,
+                    android.R.layout.simple_spinner_item,
+                    new String[]{"EN", "GR"}
             ) {
 
-                String newLang = (position == 0) ? "en" : "el";
-
-                if (!newLang.equals(LocaleHelper.getLang(IPhoneLabsActivity.this))) {
-
-                    LocaleHelper.set(IPhoneLabsActivity.this, newLang);
-
-                    try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-                    // 🔥 Hard restart activity + force reopen PancGuide
-                    Intent i = getIntent();
-                    i.putExtra("force_PanicGuide", true);
-
-                    finish();
-                    overridePendingTransition(0, 0);
-                    startActivity(i);
-                    overridePendingTransition(0, 0);
+                @Override
+                public View getView(int position, View convertView, ViewGroup parent) {
+                    TextView tv = (TextView) super.getView(position, convertView, parent);
+                    tv.setTypeface(null, Typeface.BOLD);
+                    tv.setGravity(Gravity.CENTER);
+                    tv.setTextColor(Color.WHITE);
+                    return tv;
                 }
+
+                @Override
+                public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                    TextView tv = (TextView) super.getDropDownView(position, convertView, parent);
+                    tv.setTypeface(null, Typeface.BOLD);
+                    tv.setGravity(Gravity.CENTER);
+                    tv.setTextColor(Color.BLACK);
+                    tv.setPadding(dp(14), dp(12), dp(14), dp(12));
+                    return tv;
+                }
+            };
+
+    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+    langSpinner.setAdapter(adapter);
+    langSpinner.setSelection(gr ? 1 : 0);
+
+    langSpinner.setOnItemSelectedListener(
+            new AdapterView.OnItemSelectedListener() {
+
+                @Override
+                public void onItemSelected(
+                        AdapterView<?> parent,
+                        View view,
+                        int position,
+                        long id
+                ) {
+
+                    String newLang = (position == 0) ? "en" : "el";
+
+                    if (!newLang.equals(LocaleHelper.getLang(IPhoneLabsActivity.this))) {
+
+                        LocaleHelper.set(IPhoneLabsActivity.this, newLang);
+
+                        try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+                        Intent i = getIntent();
+                        i.putExtra("force_PanicGuide", true);
+
+                        finish();
+                        overridePendingTransition(0, 0);
+                        startActivity(i);
+                        overridePendingTransition(0, 0);
+                    }
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {}
             }
+    );
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
+    LinearLayout langBox = new LinearLayout(IPhoneLabsActivity.this);
+    langBox.setOrientation(LinearLayout.VERTICAL);
+    langBox.setGravity(Gravity.CENTER);
+    langBox.setPadding(dp(12), dp(8), dp(12), dp(8));
+
+    GradientDrawable langBg = new GradientDrawable();
+    langBg.setColor(0xFF111111);
+    langBg.setCornerRadius(dp(10));
+    langBg.setStroke(dp(3), 0xFFFFD700);
+    langBox.setBackground(langBg);
+    langBox.addView(langSpinner);
+
+    LinearLayout.LayoutParams lpLang =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+    lpLang.gravity = Gravity.CENTER;
+    lpLang.setMargins(0, 0, 0, dp(8));
+    langBox.setLayoutParams(lpLang);
+
+    root.addView(langBox);
+
+    // ================= CHECKBOX =================
+    CheckBox cb = new CheckBox(this);
+    cb.setText(gr
+            ? "Να μην εμφανιστεί ξανά"
+            : "Do not show again");
+    cb.setTextColor(Color.WHITE);
+    cb.setGravity(Gravity.CENTER_VERTICAL);
+
+    LinearLayout.LayoutParams cbLp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+    cbLp.gravity = Gravity.CENTER_HORIZONTAL;
+    cbLp.setMargins(0, 0, 0, dp(8));
+    cb.setLayoutParams(cbLp);
+
+    root.addView(cb);
+
+    // ================= OK BUTTON — ALWAYS VISIBLE =================
+    Button okBtn = new Button(IPhoneLabsActivity.this);
+    okBtn.setText("OK");
+    okBtn.setAllCaps(false);
+    okBtn.setTextColor(Color.WHITE);
+    okBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f);
+    okBtn.setTypeface(null, Typeface.BOLD);
+
+    GradientDrawable okBg = new GradientDrawable();
+    okBg.setColor(0xFF00E676);
+    okBg.setCornerRadius(dp(12));
+    okBg.setStroke(dp(3), 0xFFFFD700);
+    okBtn.setBackground(okBg);
+
+    LinearLayout.LayoutParams okLp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(56)
+            );
+    okLp.setMargins(dp(6), dp(4), dp(6), 0);
+    okBtn.setLayoutParams(okLp);
+
+    root.addView(okBtn);
+
+    b.setView(root);
+
+    final AlertDialog d = b.create();
+
+    d.setOnDismissListener(dialog -> {
+        try { AppTTS.stop(); } catch (Throwable ignore) {}
+        panicGuideShown = false;
+        panicGuidePopupOpen = false;
+    });
+
+    d.setOnCancelListener(dialog -> {
+        try { AppTTS.stop(); } catch (Throwable ignore) {}
+        panicGuideShown = false;
+        panicGuidePopupOpen = false;
+    });
+
+    d.setOnShowListener(dialog -> {
+        if (!AppTTS.isMuted(IPhoneLabsActivity.this) && panicGuideShown) {
+            speakPanicGuideTTS();
         }
-);
+    });
 
-// ================= LANGUAGE BOX =================
-LinearLayout langBox = new LinearLayout(IPhoneLabsActivity.this);
-langBox.setOrientation(LinearLayout.VERTICAL);
-langBox.setGravity(Gravity.CENTER);
-langBox.setPadding(dp(12), dp(12), dp(12), dp(12));
+    d.show();
 
-GradientDrawable langBg = new GradientDrawable();
-langBg.setColor(0xFF111111); // Σκούρο μαύρο
-langBg.setCornerRadius(dp(10));
-langBg.setStroke(dp(3), 0xFFFFD700); // Χρυσό
-langBox.setBackground(langBg);
-
-langBox.addView(langSpinner);
-
-LinearLayout.LayoutParams lpLang =
-new LinearLayout.LayoutParams(
-LinearLayout.LayoutParams.WRAP_CONTENT,
-LinearLayout.LayoutParams.WRAP_CONTENT
-);
-lpLang.gravity = Gravity.CENTER;
-lpLang.setMargins(0, 0, 0, dp(18));
-langBox.setLayoutParams(lpLang);
-
-root.addView(langBox);
-
-// ================= CHECKBOX =================
-CheckBox cb = new CheckBox(this);
-cb.setText(AppLang.isGreek(this)
-        ? "Να μην εμφανιστεί ξανά"
-        : "Do not show again");
-cb.setTextColor(Color.WHITE);
-cb.setGravity(Gravity.CENTER);
-
-// margins αντί για padding
-LinearLayout.LayoutParams lp =
-        new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+    if (d.getWindow() != null) {
+        d.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT)
         );
-lp.setMargins(0, dp(8), 0, dp(16));
-cb.setLayoutParams(lp);
-
-root.addView(cb);
-
-// ================= OK BUTTON =================
-Button okBtn = new Button(IPhoneLabsActivity.this);
-okBtn.setText("OK");
-okBtn.setAllCaps(false);
-okBtn.setTextColor(Color.WHITE);
-okBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f);
-okBtn.setTypeface(null, Typeface.BOLD);
-
-GradientDrawable okBg = new GradientDrawable();
-okBg.setColor(0xFF00E676); // Neon green
-okBg.setCornerRadius(dp(12));
-okBg.setStroke(dp(3), 0xFFFFD700); // Χρυσό περίγραμμα
-okBtn.setBackground(okBg);
-
-LinearLayout.LayoutParams okLp =
-new LinearLayout.LayoutParams(
-LinearLayout.LayoutParams.MATCH_PARENT,
-dp(56)
-);
-okLp.setMargins(dp(6), dp(6), dp(6), 0);
-okBtn.setLayoutParams(okLp);
-
-root.addView(okBtn);
-
-// ================= SCROLL WRAPPER =================
-ScrollView scroll = new ScrollView(IPhoneLabsActivity.this);
-scroll.setFillViewport(true);
-scroll.addView(root);
-
-// ================= SET VIEW =================
-b.setView(scroll);
-
-final AlertDialog d = b.create();
-
-if (d.getWindow() != null) {
-    d.getWindow().setBackgroundDrawable(
-            new ColorDrawable(Color.TRANSPARENT)
-    );
-}
-
-// --------------------------------------------
-// STOP ALWAYS ON DISMISS - CANCEL
-// --------------------------------------------
-d.setOnDismissListener(dialog -> {
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-    panicGuideShown = false;
-});
-
-d.setOnCancelListener(dialog -> {
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-    panicGuideShown = false;
-});
-
-// --------------------------------------------
-// SPEAK ONLY WHEN DIALOG IS ACTUALLY SHOWN
-// --------------------------------------------
-d.setOnShowListener(dialog -> {
-    if (!AppTTS.isMuted(IPhoneLabsActivity.this) && panicGuideShown) {
-        speakPanicGuideTTS();
-    }
-});
-
-// --------------------------------------------
-// SHOW
-// --------------------------------------------
-d.show();
-
-if (d.getWindow() != null) {
-    d.getWindow().setLayout(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            (int)(getResources().getDisplayMetrics().heightPixels * 0.85)
-    );
-}
-
-// --------------------------------------------
-// OK BUTTON
-// --------------------------------------------
-okBtn.setOnClickListener(v -> {
-
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-    panicGuideShown = false;
-
-    if (cb.isChecked()) {
-        disablePanicGuideForever();
+        d.getWindow().setLayout(
+                (int) (getResources().getDisplayMetrics().widthPixels * 0.96f),
+                (int) (getResources().getDisplayMetrics().heightPixels * 0.90f)
+        );
     }
 
-    d.dismiss();
-});
+    okBtn.setOnClickListener(v -> {
+
+        try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+        if (cb.isChecked()) {
+            disablePanicGuideForever();
+        }
+
+        panicGuideShown = false;
+        panicGuidePopupOpen = false;
+        d.dismiss();
+    });
 }
 
 // ============================================================
