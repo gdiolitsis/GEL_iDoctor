@@ -268,15 +268,14 @@ private void buildAppleInfoLog() {
     msg.setTextSize(14f);
     msg.setLineSpacing(0f, 1.25f);
     msg.setPadding(dp(6), dp(6), dp(6), dp(6));
-    // enable scroll
-    msg.setVerticalScrollBarEnabled(true);
-    msg.setMovementMethod(android.text.method.ScrollingMovementMethod.getInstance());
-    msg.setFocusable(true);
-    msg.setFocusableInTouchMode(true);
-
-// max height ~40% screen
-int maxH = (int)(getResources().getDisplayMetrics().heightPixels * 0.40);
-msg.setMaxHeight(maxH);
+    // IMPORTANT:
+    // Do not create nested scrolling inside the Apple information text.
+    // The MainActivity ScrollView is the single scrolling authority.
+    msg.setVerticalScrollBarEnabled(false);
+    msg.setMovementMethod(null);
+    msg.setFocusable(false);
+    msg.setFocusableInTouchMode(false);
+    msg.setMaxHeight(Integer.MAX_VALUE);
 
     boolean gr = AppLang.isGreek(this);
 
@@ -1377,6 +1376,7 @@ private void applyAndroidModeUI() {
 
 hide(R.id.btnAppleDeviceDeclaration);
 hide(R.id.appleInfoPanel);
+hide(R.id.btnAppleInfoContinue);
 
 show(R.id.section_system);
 show(R.id.section_clean);
@@ -1384,7 +1384,6 @@ show(R.id.section_junk);
 show(R.id.section_performance);
 
 show(R.id.btnCpuRamLive);
-show(R.id.btnInternetSpeedTest);
 show(R.id.btnCleanAll);
 show(R.id.btnBrowserCache);
 show(R.id.btnAppCache);
@@ -1416,7 +1415,6 @@ hide(R.id.section_junk);
 hide(R.id.section_performance);
 
 hide(R.id.btnCpuRamLive);
-hide(R.id.btnInternetSpeedTest);
 hide(R.id.btnCleanAll);
 hide(R.id.btnBrowserCache);
 hide(R.id.btnAppCache);
@@ -1429,6 +1427,7 @@ show(R.id.btnPhoneInfoPeripherals);
 show(R.id.btnDiagnostics);
 show(R.id.btnAppleDeviceDeclaration);
 show(R.id.appleInfoPanel);
+show(R.id.btnAppleInfoContinue);
 
 // APPLE DIAGNOSTICS - LOCALIZED + EMPHASIZED
 View v = findViewById(R.id.btnDiagnostics);
@@ -1512,6 +1511,16 @@ bind(R.id.btnAppleDeviceDeclaration,
 this::showAppleDeviceDeclarationPopup);
 
 // ==========================
+// APPLE INFO — OK / CONTINUE TO LABS
+// ==========================
+bind(R.id.btnAppleInfoContinue, () -> {
+    startActivity(new Intent(
+            this,
+            IPhoneLabsActivity.class
+    ));
+});
+
+// ==========================
 //  INTERNAL INFO
 // ==========================
 bind(R.id.btnPhoneInfoInternal, () -> {
@@ -1550,9 +1559,6 @@ DeviceInfoPeripheralsActivity.class
 // ==========================
 bind(R.id.btnCpuRamLive,
 () -> startActivity(new Intent(this, CpuRamLiveActivity.class)));
-
-bind(R.id.btnInternetSpeedTest,
-this::openInternetSpeedTest);
 
 bind(R.id.btnCleanAll,
 () -> GELCleaner.deepClean(this,this));
@@ -1596,26 +1602,6 @@ DiagnosisMenuActivity.class
 
         recreate();
     });
-}
-
-// =========================================================
-// INTERNET SPEED TEST
-// =========================================================
-private void openInternetSpeedTest() {
-    try {
-        startActivity(new Intent(
-                MainActivity.this,
-                SpeedTestActivity.class
-        ));
-    } catch (Throwable t) {
-        Toast.makeText(
-                MainActivity.this,
-                AppLang.isGreek(this)
-                        ? "Αδυναμία ανοίγματος του ελέγχου ταχύτητας."
-                        : "Cannot open Internet Speed Test.",
-                Toast.LENGTH_SHORT
-        ).show();
-    }
 }
 
 // =========================================================
