@@ -122,6 +122,19 @@
             android:name=".OptimizerReminderReceiver"
             android:exported="false" />
 
+        <!-- ================= GEL DEVICE MONITOR WIDGET ================= -->
+        <receiver
+            android:name=".GelDeviceMonitorWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_gel_device_monitor_info"/>
+        </receiver>
+
         <!-- ================= EXISTING ================= -->
         <activity
             android:name="com.gel.cleaner.iphone.AppleDeviceInfoInternalActivity"
