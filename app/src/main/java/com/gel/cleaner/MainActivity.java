@@ -78,6 +78,16 @@ private ScrollView scroll;
 // =========================================================
 private boolean waitingForUsageAccessReturn = false;
 
+// =========================================================
+// GEL DEVICE MONITOR WIDGET
+// =========================================================
+private static final String KEY_WIDGET_OFFER_HIDDEN =
+        "widget_offer_hidden_v1";
+
+private boolean widgetOfferDialogOpen = false;
+private boolean widgetOfferHandledThisSession = false;
+private int widgetOfferRetryCount = 0;
+
 // ==============================
 // MAINACTIVITY — ADD/REPLACE THESE METHODS
 // ==============================
@@ -270,6 +280,9 @@ if (savedInstanceState == null) {
                 openGuidedOptimizerWithPermissionGuard()
         );
     }
+
+    // Delayed so it never overlaps welcome/platform startup dialogs.
+    scheduleWidgetOfferIfNeeded();
 }
 
 private void buildAppleInfoLog() {
@@ -395,10 +408,19 @@ private void showContactDeveloperDialog() {
     box.addView(row);
 
     // ================= DIALOG =================
+    ScrollView settingsScroll = new ScrollView(this);
+    settingsScroll.setFillViewport(true);
+    settingsScroll.addView(box);
+
     AlertDialog dlg = new AlertDialog.Builder(this)
-            .setView(box)
+            .setView(settingsScroll)
             .setCancelable(true)
             .create();
+
+    btnAddWidget.setOnClickListener(v -> {
+        dlg.dismiss();
+        requestPinGelWidget();
+    });
 
     btnCancel.setOnClickListener(v -> dlg.dismiss());
 
@@ -592,6 +614,62 @@ private void showSettingsDialog() {
     box.addView(rg);
 
     // ==============================
+    // GEL DEVICE MONITOR WIDGET
+    // ==============================
+    TextView widgetSep = new TextView(this);
+    widgetSep.setText("────────────────────────");
+    widgetSep.setTextColor(0xFF333333);
+    widgetSep.setGravity(Gravity.CENTER);
+    widgetSep.setPadding(0, dp(8), 0, dp(10));
+    box.addView(widgetSep);
+
+    TextView widgetTitle = new TextView(this);
+    widgetTitle.setText("GEL DEVICE MONITOR WIDGET");
+    widgetTitle.setTextColor(0xFFFFD700);
+    widgetTitle.setTypeface(Typeface.DEFAULT_BOLD);
+    widgetTitle.setTextSize(16f);
+    widgetTitle.setGravity(Gravity.CENTER);
+    widgetTitle.setPadding(0, 0, 0, dp(8));
+    box.addView(widgetTitle);
+
+    TextView widgetHint = new TextView(this);
+    widgetHint.setText(
+            gr
+                    ? "Άμεση προβολή CPU, RAM, μπαταρίας, θερμοκρασίας, "
+                      + "αποθηκευτικού χώρου και τελευταίας μέτρησης.\n\n"
+                      + "Manual refresh, χωρίς συνεχή υπηρεσία παρασκηνίου."
+                    : "Instant CPU, RAM, battery, thermal, storage and "
+                      + "last-measurement information.\n\n"
+                      + "Manual refresh with no continuous background service."
+    );
+    widgetHint.setTextColor(Color.WHITE);
+    widgetHint.setTextSize(13f);
+    widgetHint.setPadding(0, 0, 0, dp(10));
+    box.addView(widgetHint);
+
+    Button btnAddWidget = new Button(this);
+    btnAddWidget.setText(
+            gr
+                    ? "ΠΡΟΣΘΗΚΗ WIDGET ΣΤΗΝ ΑΡΧΙΚΗ"
+                    : "ADD WIDGET TO HOME SCREEN"
+    );
+    btnAddWidget.setAllCaps(false);
+    btnAddWidget.setTextColor(0xFF00FF7F);
+    btnAddWidget.setTextSize(15f);
+    btnAddWidget.setTypeface(Typeface.DEFAULT_BOLD);
+    btnAddWidget.setGravity(Gravity.CENTER);
+    btnAddWidget.setPadding(dp(10), dp(12), dp(10), dp(12));
+    btnAddWidget.setBackgroundResource(R.drawable.gel_btn_neon_outline);
+
+    LinearLayout.LayoutParams widgetButtonLp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(72)
+            );
+    widgetButtonLp.setMargins(0, dp(4), 0, dp(8));
+    box.addView(btnAddWidget, widgetButtonLp);
+
+    // ==============================
     // BUTTONS
     // ==============================
     LinearLayout row = new LinearLayout(this);
@@ -653,6 +731,315 @@ private void showSettingsDialog() {
     });
 
     dlg.show();
+
+    if (dlg.getWindow() != null) {
+        dlg.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT)
+        );
+        dlg.getWindow().setLayout(
+                (int) (getResources().getDisplayMetrics().widthPixels * 0.96f),
+                (int) (getResources().getDisplayMetrics().heightPixels * 0.88f)
+        );
+    }
+}
+
+// =========================================================
+// GEL DEVICE MONITOR — FIRST START OFFER
+// =========================================================
+private void scheduleWidgetOfferIfNeeded() {
+
+    if (widgetOfferHandledThisSession) return;
+
+    if (getSharedPreferences(PREFS, MODE_PRIVATE)
+            .getBoolean(KEY_WIDGET_OFFER_HIDDEN, false)) {
+        return;
+    }
+
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+        if (isFinishing() || isDestroyed()) return;
+
+        if (welcomePopupActive || welcomeShown) {
+
+            widgetOfferRetryCount++;
+
+            if (widgetOfferRetryCount < 12) {
+                scheduleWidgetOfferIfNeeded();
+            }
+
+            return;
+        }
+
+        showWidgetOfferDialog();
+
+    }, 1400);
+}
+
+// =========================================================
+// GEL DEVICE MONITOR — OFFER DIALOG
+// =========================================================
+private void showWidgetOfferDialog() {
+
+    if (widgetOfferDialogOpen || widgetOfferHandledThisSession) return;
+
+    widgetOfferDialogOpen = true;
+    widgetOfferHandledThisSession = true;
+
+    final boolean gr = AppLang.isGreek(this);
+
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    box.setPadding(dp(20), dp(18), dp(20), dp(18));
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF080808);
+    bg.setCornerRadius(dp(18));
+    bg.setStroke(dp(3), 0xFFFFD700);
+    box.setBackground(bg);
+
+    TextView title = new TextView(this);
+    title.setText("GEL DEVICE MONITOR WIDGET");
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(20f);
+    title.setTypeface(Typeface.DEFAULT_BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(0, 0, 0, dp(12));
+    box.addView(title);
+
+    TextView message = new TextView(this);
+    message.setText(
+            gr
+                    ? "Βάλε στην αρχική οθόνη ένα ελαφρύ GEL widget και δες άμεσα:\n\n"
+                      + "• CPU και RAM\n"
+                      + "• Μπαταρία και θερμοκρασία\n"
+                      + "• Θερμική ένδειξη, όπου είναι διαθέσιμη\n"
+                      + "• Ελεύθερο αποθηκευτικό χώρο\n"
+                      + "• Ώρα τελευταίας μέτρησης\n\n"
+                      + "Η ανανέωση γίνεται χειροκίνητα. Δεν τρέχει συνεχής υπηρεσία "
+                      + "και δεν επιβαρύνει τη συσκευή."
+                    : "Add a lightweight GEL widget to your home screen for instant access to:\n\n"
+                      + "• CPU and RAM\n"
+                      + "• Battery and temperature\n"
+                      + "• Thermal reading, when available\n"
+                      + "• Free storage\n"
+                      + "• Last measurement time\n\n"
+                      + "Refresh is manual. No continuous background service runs."
+    );
+    message.setTextColor(0xFF00FF9C);
+    message.setTextSize(15f);
+    message.setLineSpacing(0f, 1.16f);
+    message.setPadding(0, 0, 0, dp(12));
+    box.addView(message);
+
+    CheckBox dontShow = new CheckBox(this);
+    dontShow.setText(
+            gr ? "Να μην εμφανιστεί ξανά" : "Do not show again"
+    );
+    dontShow.setTextColor(Color.WHITE);
+    dontShow.setPadding(0, dp(4), 0, dp(8));
+    box.addView(dontShow);
+
+    TextView reminder = new TextView(this);
+    reminder.setText(
+            gr
+                    ? "Μπορείς να ενεργοποιήσεις το widget όποτε θέλεις "
+                      + "μέσα από τις Ρυθμίσεις της εφαρμογής."
+                    : "You can activate the widget at any time from the app Settings."
+    );
+    reminder.setTextColor(0xFFFFD700);
+    reminder.setTextSize(13f);
+    reminder.setGravity(Gravity.CENTER);
+    reminder.setPadding(0, 0, 0, dp(12));
+    box.addView(reminder);
+
+    Button add = new Button(this);
+    add.setText(gr ? "ΠΡΟΣΘΗΚΗ WIDGET" : "ADD WIDGET");
+    add.setAllCaps(false);
+    add.setTextColor(0xFF00FF7F);
+    add.setTextSize(16f);
+    add.setTypeface(Typeface.DEFAULT_BOLD);
+    add.setBackgroundResource(R.drawable.gel_btn_neon_outline);
+
+    Button later = new Button(this);
+    later.setText(gr ? "ΑΡΓΟΤΕΡΑ" : "LATER");
+    later.setAllCaps(false);
+    later.setTextColor(Color.WHITE);
+    later.setTextSize(16f);
+    later.setTypeface(Typeface.DEFAULT_BOLD);
+    later.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+
+    LinearLayout.LayoutParams buttonLp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(76)
+            );
+    buttonLp.setMargins(0, dp(7), 0, 0);
+
+    box.addView(add, buttonLp);
+    box.addView(later, new LinearLayout.LayoutParams(buttonLp));
+
+    AlertDialog dialog =
+            new AlertDialog.Builder(this)
+                    .setView(box)
+                    .setCancelable(true)
+                    .create();
+
+    Runnable saveHidePreference = () -> {
+        if (dontShow.isChecked()) {
+            getSharedPreferences(PREFS, MODE_PRIVATE)
+                    .edit()
+                    .putBoolean(KEY_WIDGET_OFFER_HIDDEN, true)
+                    .apply();
+        }
+    };
+
+    add.setOnClickListener(v -> {
+        saveHidePreference.run();
+        dialog.dismiss();
+        requestPinGelWidget();
+    });
+
+    later.setOnClickListener(v -> {
+        saveHidePreference.run();
+        dialog.dismiss();
+    });
+
+    dialog.setOnDismissListener(d -> {
+        widgetOfferDialogOpen = false;
+        saveHidePreference.run();
+    });
+
+    dialog.show();
+
+    if (dialog.getWindow() != null) {
+        dialog.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT)
+        );
+        dialog.getWindow().setLayout(
+                (int) (getResources().getDisplayMetrics().widthPixels * 0.94f),
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+    }
+}
+
+// =========================================================
+// REQUEST PIN WIDGET
+// =========================================================
+private void requestPinGelWidget() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+        try {
+
+            android.appwidget.AppWidgetManager manager =
+                    android.appwidget.AppWidgetManager.getInstance(this);
+
+            android.content.ComponentName provider =
+                    new android.content.ComponentName(
+                            this,
+                            GelDeviceMonitorWidget.class
+                    );
+
+            if (manager.isRequestPinAppWidgetSupported()) {
+
+                boolean accepted =
+                        manager.requestPinAppWidget(
+                                provider,
+                                null,
+                                null
+                        );
+
+                if (accepted) {
+                    Toast.makeText(
+                            this,
+                            gr
+                                    ? "Επιβεβαίωσε την προσθήκη από τον launcher."
+                                    : "Confirm widget placement in your launcher.",
+                            Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
+            }
+
+        } catch (Throwable ignore) {}
+    }
+
+    showManualWidgetInstructions();
+}
+
+// =========================================================
+// MANUAL WIDGET INSTRUCTIONS
+// =========================================================
+private void showManualWidgetInstructions() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    box.setPadding(dp(20), dp(18), dp(20), dp(18));
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF080808);
+    bg.setCornerRadius(dp(18));
+    bg.setStroke(dp(3), 0xFFFFD700);
+    box.setBackground(bg);
+
+    TextView title = new TextView(this);
+    title.setText("GEL Device Monitor Widget");
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(19f);
+    title.setTypeface(Typeface.DEFAULT_BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(0, 0, 0, dp(12));
+    box.addView(title);
+
+    TextView message = new TextView(this);
+    message.setText(
+            gr
+                    ? "Ο launcher δεν υποστηρίζει αυτόματη προσθήκη.\n\n"
+                      + "Κάνε παρατεταμένο πάτημα στην αρχική οθόνη → "
+                      + "Widgets → GEL iDoctor → GEL Device Monitor."
+                    : "Your launcher does not support automatic pinning.\n\n"
+                      + "Long-press the home screen → Widgets → "
+                      + "GEL iDoctor → GEL Device Monitor."
+    );
+    message.setTextColor(0xFF00FF9C);
+    message.setTextSize(15f);
+    message.setPadding(0, 0, 0, dp(12));
+    box.addView(message);
+
+    Button ok = new Button(this);
+    ok.setText("OK");
+    ok.setAllCaps(false);
+    ok.setTextColor(0xFF00FF7F);
+    ok.setTextSize(17f);
+    ok.setTypeface(Typeface.DEFAULT_BOLD);
+    ok.setBackgroundResource(R.drawable.gel_btn_neon_outline);
+
+    box.addView(
+            ok,
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(76)
+            )
+    );
+
+    AlertDialog dialog =
+            new AlertDialog.Builder(this)
+                    .setView(box)
+                    .create();
+
+    ok.setOnClickListener(v -> dialog.dismiss());
+
+    dialog.show();
+
+    if (dialog.getWindow() != null) {
+        dialog.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT)
+        );
+    }
 }
 
 private GradientDrawable makeGelBtn(int solidColor) {
