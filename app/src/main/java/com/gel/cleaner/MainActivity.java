@@ -871,7 +871,7 @@ private void showWidgetOfferDialog() {
     LinearLayout.LayoutParams buttonLp =
             new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(76)
+                    dp(152)
             );
     buttonLp.setMargins(0, dp(7), 0, 0);
 
