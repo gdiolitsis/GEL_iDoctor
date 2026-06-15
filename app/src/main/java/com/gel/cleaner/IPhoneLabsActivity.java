@@ -875,9 +875,16 @@ private void showPanicGuidePopup() {
     // ROOT — FIXED DIALOG LAYOUT
     // Only the guide text scrolls. Controls and OK stay visible.
     // ========================================================
+    final int dialogHeight =
+            (int) (getResources().getDisplayMetrics().heightPixels * 0.88f);
+
     LinearLayout root = new LinearLayout(IPhoneLabsActivity.this);
     root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(dp(24), dp(22), dp(24), dp(20));
+    root.setPadding(dp(20), dp(18), dp(20), dp(16));
+    root.setLayoutParams(new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            dialogHeight
+    ));
 
     GradientDrawable bg = new GradientDrawable();
     bg.setColor(0xFF000000);
@@ -935,6 +942,7 @@ private void showPanicGuidePopup() {
     panicGuideMessage.setClickable(false);
     panicGuideMessage.setFocusable(false);
     panicGuideMessage.setLongClickable(false);
+    panicGuideMessage.setMovementMethod(null);
 
     messageScroll.addView(
             panicGuideMessage,
@@ -1114,7 +1122,7 @@ private void showPanicGuidePopup() {
         );
         d.getWindow().setLayout(
                 (int) (getResources().getDisplayMetrics().widthPixels * 0.96f),
-                (int) (getResources().getDisplayMetrics().heightPixels * 0.90f)
+                dialogHeight
         );
     }
 
