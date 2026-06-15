@@ -167,41 +167,17 @@
                     android:padding="6dp"/>
             </LinearLayout>
 
-            <!-- CPU/RAM LIVE + INTERNET SPEED TEST -->
-            <LinearLayout
+            <!-- CPU/RAM LIVE -->
+            <Button
+                android:id="@+id/btnCpuRamLive"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
-
-                <Button
-                    android:id="@+id/btnCpuRamLive"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="60dp"
-                    android:text="@string/cpu_ram_live"
-                    android:background="@drawable/gel_btn_outline_selector"
-                    android:textColor="@color/gel_btn_text_white"
-                    android:layout_marginEnd="4dp"
-                    android:gravity="center"
-                    android:maxLines="2"
-                    android:padding="6dp"/>
-
-                <Button
-                    android:id="@+id/btnInternetSpeedTest"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="60dp"
-                    android:text="🌐 SPEED TEST"
-                    android:textAllCaps="false"
-                    android:textColor="#00FF7F"
-                    android:background="@drawable/gel_btn_neon_outline"
-                    android:layout_marginStart="4dp"
-                    android:gravity="center"
-                    android:maxLines="2"
-                    android:padding="6dp"/>
-
-            </LinearLayout>
+                android:layout_height="60dp"
+                android:text="@string/cpu_ram_live"
+                android:background="@drawable/gel_btn_outline_selector"
+                android:textColor="@color/gel_btn_text_white"
+                android:layout_marginBottom="16dp"
+                android:singleLine="true"
+                android:ellipsize="end"/>
 
             <!-- ================================================= -->
             <!-- CLEANER -->
@@ -400,6 +376,23 @@
         android:lineSpacingMultiplier="1.2"/>
 
 </LinearLayout>
+
+<!-- ================================================= -->
+<!-- APPLE INFO — FIXED CONTINUE BUTTON -->
+<!-- ================================================= -->
+<Button
+    android:id="@+id/btnAppleInfoContinue"
+    android:layout_width="match_parent"
+    android:layout_height="60dp"
+    android:text="OK"
+    android:textAllCaps="false"
+    android:textColor="#00FF7F"
+    android:textStyle="bold"
+    android:textSize="22sp"
+    android:background="@drawable/gel_btn_neon_outline"
+    android:gravity="center"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="20dp"/>
 
 </LinearLayout>
 </ScrollView>
