@@ -91,6 +91,7 @@
          APPLICATION
          ============================================================ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <application
         android:allowBackup="false"
         android:supportsRtl="true"
@@ -102,6 +103,13 @@
         android:theme="@style/Theme.GEL.DarkGold">
 
         <activity android:name=".OptimizerDiagnosticActivity"/>
+
+        <!-- ================= INTERNET SPEED TEST ================= -->
+        <activity
+            android:name=".SpeedTestActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.GEL.DarkGold" />
 
         <!-- ================= NEW OPTIMIZER ================= -->
         <activity
