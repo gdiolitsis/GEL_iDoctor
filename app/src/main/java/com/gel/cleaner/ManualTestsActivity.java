@@ -7421,7 +7421,7 @@ private void lab4ResultEarpiece() {
 
 /* ============================================================
    LAB 5 — Vibration Motor Test
-   FULL ENV CHECK + PRO TEST + USER CONFIRM
+   UNIVERSAL OEM-SAFE TEST + USER CONFIRM
    ============================================================ */
 private void lab5Vibration() {
 
@@ -7440,35 +7440,60 @@ private void lab5Vibration() {
 
     new Thread(() -> {
 
+        Vibrator vibrator = null;
+
         try {
 
-            Vibrator vibrator;
-
+            // =====================================================
+            // UNIVERSAL VIBRATOR SOURCE
+            // Android 12+ → VibratorManager
+            // Older Android → legacy Vibrator service
+            // =====================================================
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+
                 VibratorManager vm =
-                        (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
-                vibrator = (vm != null) ? vm.getDefaultVibrator() : null;
+                        (VibratorManager) getSystemService(
+                                Context.VIBRATOR_MANAGER_SERVICE
+                        );
+
+                if (vm != null) {
+                    vibrator = vm.getDefaultVibrator();
+                }
+
             } else {
-                vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+
+                vibrator =
+                        (Vibrator) getSystemService(
+                                Context.VIBRATOR_SERVICE
+                        );
             }
 
             if (vibrator == null || !vibrator.hasVibrator()) {
-                logError(gr ? "Δεν εντοπίστηκε μοτέρ δόνησης"
-                            : "No vibration motor detected");
+
+                logError(
+                        gr
+                                ? "Δεν εντοπίστηκε μοτέρ δόνησης"
+                                : "No vibration motor detected"
+                );
                 return;
             }
 
             appendHtml("<br>");
-            logInfo(gr ? "Έλεγχος ρυθμίσεων συστήματος:"
-                       : "System settings check:");
+            logInfo(
+                    gr
+                            ? "Έλεγχος ρυθμίσεων συστήματος:"
+                            : "System settings check:"
+            );
             logLine();
 
             // =====================================================
-            // 1️⃣ DND
+            // 1 — DO NOT DISTURB
             // =====================================================
             try {
                 NotificationManager nm =
-                        (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                        (NotificationManager) getSystemService(
+                                Context.NOTIFICATION_SERVICE
+                        );
 
                 if (nm != null &&
                         nm.getCurrentInterruptionFilter()
@@ -7476,49 +7501,58 @@ private void lab5Vibration() {
 
                     logLabelWarnValue(
                             gr ? "Ρύθμιση" : "Setting",
-                            gr ? "Ενεργή λειτουργία Μην Ενοχλείτε."
-                               : "Do Not Disturb mode is active."
+                            gr
+                                    ? "Ενεργή λειτουργία Μην Ενοχλείτε."
+                                    : "Do Not Disturb mode is active."
                     );
                 }
             } catch (Throwable ignore) {}
 
             // =====================================================
-            // 2️⃣ Battery Saver
+            // 2 — BATTERY SAVER
             // =====================================================
             try {
                 PowerManager pm =
-                        (PowerManager) getSystemService(Context.POWER_SERVICE);
+                        (PowerManager) getSystemService(
+                                Context.POWER_SERVICE
+                        );
 
                 if (pm != null && pm.isPowerSaveMode()) {
 
                     logLabelWarnValue(
                             gr ? "Ρύθμιση" : "Setting",
-                            gr ? "Ενεργή λειτουργία εξοικονόμησης ενέργειας μπαταρίας."
-                               : "Battery saver mode is active."
+                            gr
+                                    ? "Ενεργή λειτουργία εξοικονόμησης ενέργειας μπαταρίας."
+                                    : "Battery saver mode is active."
                     );
                 }
             } catch (Throwable ignore) {}
 
             // =====================================================
-            // 3️⃣ Silent Mode
+            // 3 — SILENT MODE
             // =====================================================
             try {
                 AudioManager am =
-                        (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                        (AudioManager) getSystemService(
+                                Context.AUDIO_SERVICE
+                        );
 
                 if (am != null &&
                         am.getRingerMode() == AudioManager.RINGER_MODE_SILENT) {
 
                     logLabelWarnValue(
                             gr ? "Ρύθμιση" : "Setting",
-                            gr ? "Η συσκευή βρίσκεται σε αθόρυβη λειτουργία."
-                               : "Device is in Silent mode."
+                            gr
+                                    ? "Η συσκευή βρίσκεται σε αθόρυβη λειτουργία."
+                                    : "Device is in Silent mode."
                     );
                 }
             } catch (Throwable ignore) {}
 
             // =====================================================
-            // 4️⃣ Haptic Feedback Enabled
+            // 4 — HAPTIC FEEDBACK
+            // Informational only: a diagnostic vibration should
+            // still be attempted even when touch haptics are off.
             // =====================================================
             try {
                 int haptic = Settings.System.getInt(
@@ -7529,27 +7563,28 @@ private void lab5Vibration() {
                 if (haptic == 0) {
                     logLabelWarnValue(
                             gr ? "Ρύθμιση" : "Setting",
-                            gr ? "Η απτική ανάδραση είναι απενεργοποιημένη."
-                               : "Haptic feedback is disabled."
+                            gr
+                                    ? "Η απτική ανάδραση είναι απενεργοποιημένη."
+                                    : "Haptic feedback is disabled."
                     );
                 }
             } catch (Throwable ignore) {}
 
             // =====================================================
-            // 5️⃣ Vibrate When Ringing
+            // 5 — VIBRATE WHEN RINGING
             // =====================================================
             try {
-                int vibrate =
-                        Settings.System.getInt(
-                                getContentResolver(),
-                                "vibrate_when_ringing"
-                        );
+                int vibrate = Settings.System.getInt(
+                        getContentResolver(),
+                        "vibrate_when_ringing"
+                );
 
                 if (vibrate == 0) {
                     logLabelWarnValue(
                             gr ? "Ρύθμιση" : "Setting",
-                            gr ? "Η δόνηση κατά την κλήση είναι απενεργοποιημένη."
-                               : "Vibrate on ring is disabled."
+                            gr
+                                    ? "Η δόνηση κατά την κλήση είναι απενεργοποιημένη."
+                                    : "Vibrate on ring is disabled."
                     );
                 }
             } catch (Throwable ignore) {}
@@ -7557,247 +7592,306 @@ private void lab5Vibration() {
             logLine();
 
             // =====================================================
-            // PRO TESTS
+            // OEM-SAFE DIAGNOSTIC VIBRATION
+            // Uses sonification/alarm attributes so HyperOS and
+            // other aggressive OEM firmware do not treat it as
+            // a weak touch-haptic event.
             // =====================================================
+            logInfo(
+                    gr
+                            ? "Ισχυρό διαγνωστικό μοτίβο δόνησης"
+                            : "Strong diagnostic vibration pattern"
+            );
 
-            logInfo(gr ? "Συνεχής δόνηση 3 δευτερολέπτων"
-                       : "Continuous vibration 3 seconds");
+            AudioAttributes vibrationAttributes =
+                    new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(
+                                    AudioAttributes.CONTENT_TYPE_SONIFICATION
+                            )
+                            .build();
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+                VibrationEffect diagnosticEffect;
+
+                if (vibrator.hasAmplitudeControl()) {
+
+                    diagnosticEffect = VibrationEffect.createWaveform(
+                            new long[]{0, 700, 180, 700, 180, 1200},
+                            new int[]{0, 255, 0, 255, 0, 255},
+                            -1
+                    );
+
+                } else {
+
+                    diagnosticEffect = VibrationEffect.createWaveform(
+                            new long[]{0, 700, 180, 700, 180, 1200},
+                            -1
+                    );
+                }
+
                 vibrator.vibrate(
-                        VibrationEffect.createOneShot(3000,
-                                VibrationEffect.DEFAULT_AMPLITUDE)
+                        diagnosticEffect,
+                        vibrationAttributes
                 );
+
             } else {
-                vibrator.vibrate(3000);
+
+                vibrator.vibrate(
+                        new long[]{0, 700, 180, 700, 180, 1200},
+                        -1
+                );
             }
 
-            SystemClock.sleep(3200);
+            SystemClock.sleep(3300);
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                    vibrator.hasAmplitudeControl()) {
+            // =====================================================
+            // SECOND FALLBACK PULSE
+            // Some OEMs suppress the first pattern after service
+            // wake-up but accept a direct one-shot immediately after.
+            // =====================================================
+            try {
 
-                logInfo(gr ? "Έλεγχος έντασης δόνησης"
-                           : "Amplitude variation test");
+                vibrator.cancel();
+                SystemClock.sleep(180);
 
-                vibrator.vibrate(VibrationEffect.createOneShot(800, 80));
-                SystemClock.sleep(900);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
-                vibrator.vibrate(VibrationEffect.createOneShot(800, 255));
-                SystemClock.sleep(900);
+                    vibrator.vibrate(
+                            VibrationEffect.createOneShot(
+                                    1300,
+                                    VibrationEffect.DEFAULT_AMPLITUDE
+                            ),
+                            vibrationAttributes
+                    );
 
+                } else {
+                    vibrator.vibrate(1300);
+                }
+
+                SystemClock.sleep(1450);
+
+            } catch (Throwable ignore) {}
+
+            // =====================================================
+            // USER CONFIRMATION
+            // =====================================================
+            final AtomicBoolean answered = new AtomicBoolean(false);
+
+            runOnUiThread(() -> {
+
+                AlertDialog.Builder b =
+                        new AlertDialog.Builder(
+                                this,
+                                android.R.style.Theme_Material_Dialog_NoActionBar
+                        );
+                b.setCancelable(false);
+
+                LinearLayout root = new LinearLayout(this);
+                root.setOrientation(LinearLayout.VERTICAL);
+                root.setPadding(dp(26), dp(24), dp(26), dp(22));
+
+                GradientDrawable bg = new GradientDrawable();
+                bg.setColor(0xFF000000);
+                bg.setCornerRadius(dp(10));
+                bg.setStroke(dp(3), 0xFFFFD700);
+                root.setBackground(bg);
+
+                TextView msg = new TextView(this);
+                msg.setText(
+                        gr
+                                ? "Ένιωσες καθαρά τη δόνηση;"
+                                : "Did you clearly feel the vibration?"
+                );
+                msg.setTextColor(0xFF39FF14);
+                msg.setTextSize(15f);
+                msg.setGravity(Gravity.CENTER);
+                msg.setPadding(0, 0, 0, dp(18));
+                root.addView(msg);
+
+                root.addView(buildMuteRow());
+
+                LinearLayout btnRow = new LinearLayout(this);
+                btnRow.setOrientation(LinearLayout.HORIZONTAL);
+                btnRow.setGravity(Gravity.CENTER);
+
+                LinearLayout.LayoutParams btnLp =
+                        new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.WRAP_CONTENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT
+                        );
+                btnLp.setMargins(dp(12), dp(8), dp(12), dp(8));
+
+                Button noBtn = new Button(this);
+                noBtn.setText(gr ? "ΟΧΙ" : "NO");
+                noBtn.setAllCaps(false);
+                noBtn.setTextColor(Color.WHITE);
+
+                GradientDrawable noBg = new GradientDrawable();
+                noBg.setColor(0xFF8B0000);
+                noBg.setCornerRadius(dp(10));
+                noBg.setStroke(dp(3), 0xFFFFD700);
+                noBtn.setBackground(noBg);
+                noBtn.setLayoutParams(btnLp);
+
+                Button yesBtn = new Button(this);
+                yesBtn.setText(gr ? "ΝΑΙ" : "YES");
+                yesBtn.setAllCaps(false);
+                yesBtn.setTextColor(Color.WHITE);
+
+                GradientDrawable yesBg = new GradientDrawable();
+                yesBg.setColor(0xFF0B5F3B);
+                yesBg.setCornerRadius(dp(10));
+                yesBg.setStroke(dp(3), 0xFFFFD700);
+                yesBtn.setBackground(yesBg);
+                yesBtn.setLayoutParams(btnLp);
+
+                btnRow.addView(noBtn);
+                btnRow.addView(yesBtn);
+                root.addView(btnRow);
+
+                b.setView(root);
+
+                final AlertDialog d = b.create();
+
+                if (d.getWindow() != null) {
+                    d.getWindow().setBackgroundDrawable(
+                            new ColorDrawable(Color.TRANSPARENT)
+                    );
+                }
+
+                d.setOnDismissListener(dialog -> {
+                    try { AppTTS.stop(); } catch (Throwable ignore) {}
+                });
+
+                d.setOnKeyListener((dialog, keyCode, event) -> {
+                    if (keyCode == KeyEvent.KEYCODE_BACK &&
+                            event.getAction() == KeyEvent.ACTION_UP) {
+
+                        try { AppTTS.stop(); } catch (Throwable ignore) {}
+                        answered.set(true);
+                        dialog.dismiss();
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (!isFinishing() && !isDestroyed()) {
+                    d.show();
+                } else {
+                    answered.set(true);
+                    return;
+                }
+
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (d.isShowing() && !AppTTS.isMuted(this)) {
+                        AppTTS.ensureSpeak(
+                                this,
+                                gr
+                                        ? "Ένιωσες καθαρά τη δόνηση;"
+                                        : "Did you clearly feel the vibration?"
+                        );
+                    }
+                }, 400);
+
+                noBtn.setOnClickListener(v -> {
+                    userConfirmed.set(false);
+                    answered.set(true);
+                    d.dismiss();
+                });
+
+                yesBtn.setOnClickListener(v -> {
+                    userConfirmed.set(true);
+                    answered.set(true);
+                    d.dismiss();
+                });
+            });
+
+            // No artificial 10-second failure.
+            // Wait until the technician answers or the Activity closes.
+            while (!answered.get() &&
+                    !isFinishing() &&
+                    !isDestroyed()) {
+
+                SystemClock.sleep(80);
             }
 
-// =====================================================
-// USER CONFIRMATION
-// =====================================================
+            appendHtml("<br>");
+            logLine();
 
-final AtomicBoolean answered = new AtomicBoolean(false);
+            if (userConfirmed.get()) {
 
-runOnUiThread(() -> {
+                logLabelOkValue(
+                        gr ? "Αποτέλεσμα" : "Result",
+                        gr
+                                ? "Η δόνηση επιβεβαιώθηκε από τον χρήστη."
+                                : "Vibration confirmed by the user."
+                );
 
-    AlertDialog.Builder b =
-            new AlertDialog.Builder(
-                    this,
-                    android.R.style.Theme_Material_Dialog_NoActionBar
-            );
-    b.setCancelable(false);
+            } else {
 
-    LinearLayout root = new LinearLayout(this);
-    root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(dp(26), dp(24), dp(26), dp(22));
+                logLabelErrorValue(
+                        gr ? "Αποτέλεσμα" : "Result",
+                        gr
+                                ? "Η δόνηση δεν επιβεβαιώθηκε από τον χρήστη."
+                                : "Vibration was not confirmed by the user."
+                );
 
-    GradientDrawable bg = new GradientDrawable();
-    bg.setColor(0xFF000000);
-    bg.setCornerRadius(dp(10));
-    bg.setStroke(dp(3), 0xFFFFD700);
-    root.setBackground(bg);
+                logLabelWarnValue(
+                        gr ? "Πιθανές αιτίες" : "Possible causes",
+                        gr
+                                ? "Απενεργοποιημένες ρυθμίσεις δόνησης, περιορισμός firmware, "
+                                  + "ή πιθανή μηχανική φθορά."
+                                : "Disabled vibration settings, firmware restriction, "
+                                  + "or possible mechanical wear."
+                );
 
-    TextView msg = new TextView(this);
-    msg.setText(gr
-            ? "Ένιωσες καθαρά τη δόνηση;"
-            : "Did you clearly feel the vibration?");
-    msg.setTextColor(0xFF39FF14);
-    msg.setTextSize(15f);
-    msg.setGravity(Gravity.CENTER);
-    msg.setPadding(0, 0, 0, dp(18));
-    root.addView(msg);
+                logOk(
+                        gr
+                                ? "Συνιστάται επιβεβαίωση μέσω πραγματικής κλήσης ή δοκιμής ειδοποίησης."
+                                : "Verification via a real call or notification test is recommended."
+                );
+            }
 
-    // ---------------------------
-    // MUTE ROW (HELPER)
-    // ---------------------------
-    root.addView(buildMuteRow());
+        } catch (Throwable t) {
 
-    // ---------- BUTTON ROW ----------
-    LinearLayout btnRow = new LinearLayout(this);
-    btnRow.setOrientation(LinearLayout.HORIZONTAL);
-    btnRow.setGravity(Gravity.CENTER);
-
-    LinearLayout.LayoutParams btnLp =
-            new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-    btnLp.setMargins(dp(12), dp(8), dp(12), dp(8));
-
-    // ---------- NO ----------
-    Button noBtn = new Button(this);
-    noBtn.setText(gr ? "ΟΧΙ" : "NO");
-    noBtn.setAllCaps(false);
-    noBtn.setTextColor(Color.WHITE);
-
-    GradientDrawable noBg = new GradientDrawable();
-    noBg.setColor(0xFF8B0000);
-    noBg.setCornerRadius(dp(10));
-    noBg.setStroke(dp(3), 0xFFFFD700);
-    noBtn.setBackground(noBg);
-    noBtn.setLayoutParams(btnLp);
-
-    // ---------- YES ----------
-    Button yesBtn = new Button(this);
-    yesBtn.setText(gr ? "ΝΑΙ" : "YES");
-    yesBtn.setAllCaps(false);
-    yesBtn.setTextColor(Color.WHITE);
-
-    GradientDrawable yesBg = new GradientDrawable();
-    yesBg.setColor(0xFF0B5F3B);
-    yesBg.setCornerRadius(dp(10));
-    yesBg.setStroke(dp(3), 0xFFFFD700);
-    yesBtn.setBackground(yesBg);
-    yesBtn.setLayoutParams(btnLp);
-
-    btnRow.addView(noBtn);
-    btnRow.addView(yesBtn);
-    root.addView(btnRow);
-
-    b.setView(root);
-
-    final AlertDialog d = b.create();
-
-    if (d.getWindow() != null) {
-        d.getWindow().setBackgroundDrawable(
-                new ColorDrawable(Color.TRANSPARENT)
-        );
-    }
-
-    // STOP TTS on ANY dismiss
-    d.setOnDismissListener(dialog -> {
-        try { AppTTS.stop(); } catch (Throwable ignore) {}
-    });
-
-    // BACK protection
-    d.setOnKeyListener((dialog, keyCode, event) -> {
-        if (keyCode == KeyEvent.KEYCODE_BACK &&
-                event.getAction() == KeyEvent.ACTION_UP) {
-
-            try { AppTTS.stop(); } catch (Throwable ignore) {}
-            dialog.dismiss();
-            return true;
-        }
-        return false;
-    });
-
-    if (!isFinishing() && !isDestroyed()) {
-        d.show();
-    }
-
-    // ---------------------------
-    // TTS (SAFE + RESPECT MUTE)
-    // ---------------------------
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-        if (d.isShowing() && !AppTTS.isMuted(this)) {
-            AppTTS.ensureSpeak(
-                    this,
+            logError(
                     gr
-                            ? "Ένιωσες καθαρά τη δόνηση;"
-                            : "Did you clearly feel the vibration?"
+                            ? "Η δοκιμή δόνησης απέτυχε"
+                            : "Vibration test failed"
             );
+
+            logLabelWarnValue(
+                    gr ? "Πιθανή αιτία" : "Possible cause",
+                    gr
+                            ? "Απενεργοποιημένη δόνηση, περιορισμός συστήματος, "
+                              + "ή βλάβη μηχανισμού δόνησης."
+                            : "Vibration disabled, system restriction, "
+                              + "or vibration motor malfunction."
+            );
+
+        } finally {
+
+            try {
+                if (vibrator != null) {
+                    vibrator.cancel();
+                }
+            } catch (Throwable ignore) {}
+
+            appendHtml("<br>");
+            logOk(
+                    gr
+                            ? "Το Lab 5 ολοκληρώθηκε."
+                            : "Lab 5 finished."
+            );
+            logLine();
+
+            runOnUiThread(this::enableSingleExportButton);
         }
-    }, 400);
 
-    noBtn.setOnClickListener(v -> {
-        userConfirmed.set(false);
-        answered.set(true);
-        d.dismiss();
-    });
-
-    yesBtn.setOnClickListener(v -> {
-        userConfirmed.set(true);
-        answered.set(true);
-        d.dismiss();
-    });
-
-});
-
-// ==========================
-// WAIT FOR USER RESPONSE
-// ==========================
-long waitUntil = SystemClock.uptimeMillis() + 10000;
-
-while (!answered.get() &&
-        SystemClock.uptimeMillis() < waitUntil) {
-
-    SystemClock.sleep(80);
+    }, "GEL_LAB5_VIBRATION").start();
 }
-
-appendHtml("<br>");
-logLine();
-
-if (userConfirmed.get()) {
-
-    logLabelOkValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr ? "Η δόνηση επιβεβαιώθηκε από τον χρήστη."
-               : "Vibration confirmed by the user."
-    );
-
-} else {
-
-    logLabelErrorValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr ? "Η δόνηση δεν επιβεβαιώθηκε από τον χρήστη."
-               : "Vibration was not confirmed by the user."
-    );
-
-    logLabelWarnValue(
-            gr ? "Πιθανές αιτίες" : "Possible causes",
-            gr
-                    ? "Απενεργοποιημένες ρυθμίσεις δόνησης, χαμηλή ένταση απτικής ανάδρασης, "
-                      + "περιορισμός firmware, ή πιθανή μηχανική φθορά."
-                    : "Disabled vibration settings, low haptic intensity, "
-                      + "firmware restriction, or possible mechanical wear."
-    );
-
-    logOk(
-            gr
-                    ? "Συνιστάται επιβεβαίωση μέσω πραγματικής κλήσης ή δοκιμής ειδοποίησης."
-                    : "Verification via a real call or notification test is recommended."
-    );
-}
-
-} catch (Throwable t) {
-
-    logError(gr ? "Η δοκιμή δόνησης απέτυχε"
-            : "Vibration test failed");
-
-logLabelWarnValue(
-        gr ? "Πιθανή αιτία" : "Possible cause",
-        gr
-                ? "Απενεργοποιημένη δόνηση, περιορισμός συστήματος, ή βλάβη μηχανισμού δόνησης."
-                : "Vibration disabled, system restriction, or vibration motor malfunction."
-);
-
-} finally {
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 5 ολοκληρώθηκε." : "Lab 5 finished.");
-    logLine();
-
-    runOnUiThread(this::enableSingleExportButton);
-}
-
-}).start();
-} 
 
 // ============================================================
 // LABS 6 — 9: DISPLAY & SENSORS
