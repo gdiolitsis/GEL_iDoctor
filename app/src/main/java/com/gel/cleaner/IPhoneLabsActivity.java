@@ -866,25 +866,21 @@ private void showPanicGuidePopup() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    AlertDialog.Builder b =
-            new AlertDialog.Builder(IPhoneLabsActivity.this);
-
-    b.setCancelable(true);
-
     // ========================================================
-    // ROOT — FIXED DIALOG LAYOUT
-    // Only the guide text scrolls. Controls and OK stay visible.
+    // REAL FIXED DIALOG
+    // The dialog itself has a fixed height.
+    // Only the guide text scrolls.
+    // All controls and OK remain permanently visible.
     // ========================================================
-    final int dialogHeight =
-            (int) (getResources().getDisplayMetrics().heightPixels * 0.88f);
+    final android.app.Dialog d =
+            new android.app.Dialog(IPhoneLabsActivity.this);
+
+    d.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+    d.setCancelable(true);
 
     LinearLayout root = new LinearLayout(IPhoneLabsActivity.this);
     root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(dp(20), dp(18), dp(20), dp(16));
-    root.setLayoutParams(new ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            dialogHeight
-    ));
+    root.setPadding(dp(18), dp(16), dp(18), dp(14));
 
     GradientDrawable bg = new GradientDrawable();
     bg.setColor(0xFF000000);
@@ -903,7 +899,7 @@ private void showPanicGuidePopup() {
     panicGuideTitle.setTextSize(19f);
     panicGuideTitle.setTypeface(null, Typeface.BOLD);
     panicGuideTitle.setGravity(Gravity.CENTER);
-    panicGuideTitle.setPadding(0, 0, 0, dp(14));
+    panicGuideTitle.setPadding(0, 0, 0, dp(10));
 
     root.addView(
             panicGuideTitle,
@@ -913,20 +909,12 @@ private void showPanicGuidePopup() {
             )
     );
 
-    // ================= SCROLLABLE MESSAGE =================
+    // ================= SCROLLABLE TEXT ONLY =================
     ScrollView messageScroll = new ScrollView(IPhoneLabsActivity.this);
     messageScroll.setFillViewport(false);
     messageScroll.setVerticalScrollBarEnabled(true);
+    messageScroll.setScrollbarFadingEnabled(false);
     messageScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
-
-    LinearLayout.LayoutParams messageScrollLp =
-            new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    0,
-                    1f
-            );
-    messageScrollLp.setMargins(0, 0, 0, dp(10));
-    messageScroll.setLayoutParams(messageScrollLp);
 
     panicGuideMessage = new TextView(IPhoneLabsActivity.this);
     panicGuideMessage.setText(
@@ -938,11 +926,11 @@ private void showPanicGuidePopup() {
     panicGuideMessage.setTextSize(15f);
     panicGuideMessage.setGravity(Gravity.START);
     panicGuideMessage.setLineSpacing(0f, 1.15f);
-    panicGuideMessage.setPadding(dp(6), 0, dp(6), dp(18));
+    panicGuideMessage.setPadding(dp(6), 0, dp(6), dp(14));
+    panicGuideMessage.setMovementMethod(null);
     panicGuideMessage.setClickable(false);
     panicGuideMessage.setFocusable(false);
     panicGuideMessage.setLongClickable(false);
-    panicGuideMessage.setMovementMethod(null);
 
     messageScroll.addView(
             panicGuideMessage,
@@ -952,12 +940,18 @@ private void showPanicGuidePopup() {
             )
     );
 
-    root.addView(messageScroll);
+    LinearLayout.LayoutParams messageLp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+            );
+    messageLp.setMargins(0, 0, 0, dp(8));
+    root.addView(messageScroll, messageLp);
 
-    // ================= MUTE ROW =================
+    // ================= FIXED CONTROLS =================
     root.addView(buildMuteRow());
 
-    // ================= LANGUAGE SPINNER =================
     Spinner langSpinner = new Spinner(IPhoneLabsActivity.this);
 
     ArrayAdapter<String> adapter =
@@ -987,7 +981,9 @@ private void showPanicGuidePopup() {
                 }
             };
 
-    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+    adapter.setDropDownViewResource(
+            android.R.layout.simple_spinner_dropdown_item
+    );
 
     langSpinner.setAdapter(adapter);
     langSpinner.setSelection(gr ? 1 : 0);
@@ -1005,15 +1001,22 @@ private void showPanicGuidePopup() {
 
                     String newLang = (position == 0) ? "en" : "el";
 
-                    if (!newLang.equals(LocaleHelper.getLang(IPhoneLabsActivity.this))) {
+                    if (!newLang.equals(
+                            LocaleHelper.getLang(IPhoneLabsActivity.this)
+                    )) {
 
-                        LocaleHelper.set(IPhoneLabsActivity.this, newLang);
+                        LocaleHelper.set(
+                                IPhoneLabsActivity.this,
+                                newLang
+                        );
 
-                        try { AppTTS.stop(); } catch (Throwable ignore) {}
+                        try { AppTTS.stop(); }
+                        catch (Throwable ignore) {}
 
                         Intent i = getIntent();
                         i.putExtra("force_PanicGuide", true);
 
+                        d.dismiss();
                         finish();
                         overridePendingTransition(0, 0);
                         startActivity(i);
@@ -1029,7 +1032,7 @@ private void showPanicGuidePopup() {
     LinearLayout langBox = new LinearLayout(IPhoneLabsActivity.this);
     langBox.setOrientation(LinearLayout.VERTICAL);
     langBox.setGravity(Gravity.CENTER);
-    langBox.setPadding(dp(12), dp(8), dp(12), dp(8));
+    langBox.setPadding(dp(12), dp(6), dp(12), dp(6));
 
     GradientDrawable langBg = new GradientDrawable();
     langBg.setColor(0xFF111111);
@@ -1043,17 +1046,16 @@ private void showPanicGuidePopup() {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
             );
-    lpLang.gravity = Gravity.CENTER;
-    lpLang.setMargins(0, 0, 0, dp(8));
-    langBox.setLayoutParams(lpLang);
+    lpLang.gravity = Gravity.CENTER_HORIZONTAL;
+    lpLang.setMargins(0, 0, 0, dp(6));
+    root.addView(langBox, lpLang);
 
-    root.addView(langBox);
-
-    // ================= CHECKBOX =================
-    CheckBox cb = new CheckBox(this);
-    cb.setText(gr
-            ? "Να μην εμφανιστεί ξανά"
-            : "Do not show again");
+    CheckBox cb = new CheckBox(IPhoneLabsActivity.this);
+    cb.setText(
+            gr
+                    ? "Να μην εμφανιστεί ξανά"
+                    : "Do not show again"
+    );
     cb.setTextColor(Color.WHITE);
     cb.setGravity(Gravity.CENTER_VERTICAL);
 
@@ -1063,17 +1065,15 @@ private void showPanicGuidePopup() {
                     LinearLayout.LayoutParams.WRAP_CONTENT
             );
     cbLp.gravity = Gravity.CENTER_HORIZONTAL;
-    cbLp.setMargins(0, 0, 0, dp(8));
-    cb.setLayoutParams(cbLp);
+    cbLp.setMargins(0, 0, 0, dp(6));
+    root.addView(cb, cbLp);
 
-    root.addView(cb);
-
-    // ================= OK BUTTON — ALWAYS VISIBLE =================
+    // ================= FIXED OK BUTTON =================
     Button okBtn = new Button(IPhoneLabsActivity.this);
     okBtn.setText("OK");
     okBtn.setAllCaps(false);
     okBtn.setTextColor(Color.WHITE);
-    okBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f);
+    okBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f);
     okBtn.setTypeface(null, Typeface.BOLD);
 
     GradientDrawable okBg = new GradientDrawable();
@@ -1085,59 +1085,70 @@ private void showPanicGuidePopup() {
     LinearLayout.LayoutParams okLp =
             new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(56)
+                    dp(54)
             );
-    okLp.setMargins(dp(6), dp(4), dp(6), 0);
-    okBtn.setLayoutParams(okLp);
+    okLp.setMargins(dp(4), 0, dp(4), 0);
+    root.addView(okBtn, okLp);
 
-    root.addView(okBtn);
-
-    b.setView(root);
-
-    final AlertDialog d = b.create();
+    d.setContentView(root);
 
     d.setOnDismissListener(dialog -> {
-        try { AppTTS.stop(); } catch (Throwable ignore) {}
+        try { AppTTS.stop(); }
+        catch (Throwable ignore) {}
+
         panicGuideShown = false;
         panicGuidePopupOpen = false;
     });
 
     d.setOnCancelListener(dialog -> {
-        try { AppTTS.stop(); } catch (Throwable ignore) {}
+        try { AppTTS.stop(); }
+        catch (Throwable ignore) {}
+
         panicGuideShown = false;
         panicGuidePopupOpen = false;
     });
 
-    d.setOnShowListener(dialog -> {
-        if (!AppTTS.isMuted(IPhoneLabsActivity.this) && panicGuideShown) {
-            speakPanicGuideTTS();
-        }
-    });
-
-    d.show();
-
-    if (d.getWindow() != null) {
-        d.getWindow().setBackgroundDrawable(
-                new ColorDrawable(Color.TRANSPARENT)
-        );
-        d.getWindow().setLayout(
-                (int) (getResources().getDisplayMetrics().widthPixels * 0.96f),
-                dialogHeight
-        );
-    }
-
     okBtn.setOnClickListener(v -> {
 
-        try { AppTTS.stop(); } catch (Throwable ignore) {}
+        try { AppTTS.stop(); }
+        catch (Throwable ignore) {}
 
         if (cb.isChecked()) {
             disablePanicGuideForever();
         }
 
-        panicGuideShown = false;
-        panicGuidePopupOpen = false;
         d.dismiss();
     });
+
+    d.show();
+
+    android.view.Window w = d.getWindow();
+
+    if (w != null) {
+
+        w.setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT)
+        );
+
+        w.setLayout(
+                (int) (
+                        getResources()
+                                .getDisplayMetrics()
+                                .widthPixels * 0.96f
+                ),
+                (int) (
+                        getResources()
+                                .getDisplayMetrics()
+                                .heightPixels * 0.90f
+                )
+        );
+
+        w.setGravity(Gravity.CENTER);
+    }
+
+    if (!AppTTS.isMuted(this) && panicGuideShown) {
+        speakPanicGuideTTS();
+    }
 }
 
 // ============================================================
