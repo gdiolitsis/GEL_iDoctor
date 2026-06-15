@@ -2462,6 +2462,20 @@ if (!isSystem) {
 
     private void showCache() {
 
+        if (limitedMode) {
+
+            showLimitedModeSkippedStep(
+                    progressTitle(
+                            gr
+                                    ? "ΒΗΜΑ 6 — Καθαρισμός Προσωρινής Μνήμης Εφαρμογών"
+                                    : "STEP 6 — App Cache Cleaning"
+                    ),
+                    STEP_DNS
+            );
+
+            return;
+        }
+
         showDialog(
                 progressTitle(gr ? "ΒΗΜΑ 6 — Καθαρισμός Προσωρινής Μνήμης Εφαρμογών" : "STEP 6 — App Cache Cleaning"),
                 gr
