@@ -1384,6 +1384,7 @@ show(R.id.section_junk);
 show(R.id.section_performance);
 
 show(R.id.btnCpuRamLive);
+show(R.id.btnInternetSpeedTest);
 show(R.id.btnCleanAll);
 show(R.id.btnBrowserCache);
 show(R.id.btnAppCache);
@@ -1415,6 +1416,7 @@ hide(R.id.section_junk);
 hide(R.id.section_performance);
 
 hide(R.id.btnCpuRamLive);
+hide(R.id.btnInternetSpeedTest);
 hide(R.id.btnCleanAll);
 hide(R.id.btnBrowserCache);
 hide(R.id.btnAppCache);
@@ -1549,6 +1551,9 @@ DeviceInfoPeripheralsActivity.class
 bind(R.id.btnCpuRamLive,
 () -> startActivity(new Intent(this, CpuRamLiveActivity.class)));
 
+bind(R.id.btnInternetSpeedTest,
+this::openInternetSpeedTest);
+
 bind(R.id.btnCleanAll,
 () -> GELCleaner.deepClean(this,this));
 
@@ -1591,6 +1596,26 @@ DiagnosisMenuActivity.class
 
         recreate();
     });
+}
+
+// =========================================================
+// INTERNET SPEED TEST
+// =========================================================
+private void openInternetSpeedTest() {
+    try {
+        startActivity(new Intent(
+                MainActivity.this,
+                SpeedTestActivity.class
+        ));
+    } catch (Throwable t) {
+        Toast.makeText(
+                MainActivity.this,
+                AppLang.isGreek(this)
+                        ? "Αδυναμία ανοίγματος του ελέγχου ταχύτητας."
+                        : "Cannot open Internet Speed Test.",
+                Toast.LENGTH_SHORT
+        ).show();
+    }
 }
 
 // =========================================================
@@ -1699,30 +1724,6 @@ AlertDialog d = b.create();
 if (d.getWindow() != null)
 d.getWindow().setBackgroundDrawable(
 new ColorDrawable(Color.TRANSPARENT));
-
-// --------------------------------------------
-// iPHONE BUTTON
-// --------------------------------------------
-iphoneBtn.setOnClickListener(v -> {
-
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-    d.dismiss();
-
-    showAppleModelPicker("iphone");
-});
-
-// --------------------------------------------
-// iPAD BUTTON
-// --------------------------------------------
-ipadBtn.setOnClickListener(v -> {
-
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-    d.dismiss();
-
-    showAppleModelPicker("ipad");
-});
 
 // --------------------------------------------
 // SHOW
