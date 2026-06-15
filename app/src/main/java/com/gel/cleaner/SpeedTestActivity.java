@@ -540,33 +540,65 @@ public class SpeedTestActivity extends AppCompatActivity {
                     : "⚠ Partial result — repeat the test.";
         }
 
-        if (download >= 100d && upload >= 20d && ping >= 0d && ping <= 35d) {
-            return gr
+        String connectionVerdict;
+
+        // Overall connection quality is based primarily on real throughput.
+        // Ping is reported separately so high latency does not falsely
+        // downgrade an otherwise fast connection to Moderate.
+        if (download >= 100d && upload >= 20d) {
+
+            connectionVerdict = gr
                     ? "🏆 Εξαιρετική σύνδεση"
                     : "🏆 Excellent connection";
-        }
 
-        if (download >= 50d && upload >= 10d && (ping < 0d || ping <= 60d)) {
-            return gr
+        } else if (download >= 50d && upload >= 10d) {
+
+            connectionVerdict = gr
                     ? "✅ Πολύ καλή σύνδεση"
                     : "✅ Very good connection";
-        }
 
-        if (download >= 20d && upload >= 5d && (ping < 0d || ping <= 100d)) {
-            return gr
+        } else if (download >= 20d && upload >= 5d) {
+
+            connectionVerdict = gr
                     ? "✓ Καλή σύνδεση"
                     : "✓ Good connection";
-        }
 
-        if (download >= 8d && upload >= 2d) {
-            return gr
+        } else if (download >= 8d && upload >= 2d) {
+
+            connectionVerdict = gr
                     ? "⚠ Μέτρια σύνδεση"
                     : "⚠ Moderate connection";
+
+        } else {
+
+            connectionVerdict = gr
+                    ? "❗ Αργή ή ασταθής σύνδεση"
+                    : "❗ Slow or unstable connection";
         }
 
-        return gr
-                ? "❗ Αργή ή ασταθής σύνδεση"
-                : "❗ Slow or unstable connection";
+        if (ping < 0d) {
+            return connectionVerdict;
+        }
+
+        if (ping > 100d) {
+            return connectionVerdict
+                    + "\n"
+                    + (gr
+                        ? "⚠ Υψηλή καθυστέρηση: "
+                        : "⚠ High latency: ")
+                    + String.format(Locale.US, "%.0f ms", ping);
+        }
+
+        if (ping > 60d) {
+            return connectionVerdict
+                    + "\n"
+                    + (gr
+                        ? "⚠ Αυξημένη καθυστέρηση: "
+                        : "⚠ Elevated latency: ")
+                    + String.format(Locale.US, "%.0f ms", ping);
+        }
+
+        return connectionVerdict;
     }
 
     private boolean hasValidatedInternet() {
