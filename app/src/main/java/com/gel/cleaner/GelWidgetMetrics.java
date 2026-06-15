@@ -74,88 +74,52 @@ public final class GelWidgetMetrics {
         );
     }
 
+    // ============================================================
+    // CPU — SAME NATIVE ENGINE AS CpuRamLiveActivity
+    // ============================================================
     private static String readCpuUsage() {
 
         try {
 
-            long[] first = readProcStat();
-            if (first == null) return "N/A";
+            try {
+                System.loadLibrary("cpustat");
+            } catch (Throwable ignore) {}
 
-            Thread.sleep(180L);
+            CpuRamLiveActivity nativeBridge =
+                    new CpuRamLiveActivity();
 
-            long[] second = readProcStat();
-            if (second == null) return "N/A";
+            int rawValue =
+                    nativeBridge.getCpuUsageNative();
 
-            long totalDiff = second[0] - first[0];
-            long idleDiff = second[1] - first[1];
+            int percent =
+                    decodeNativeCpuPercent(rawValue);
 
-            if (totalDiff <= 0L) return "N/A";
+            if (percent < 0 || percent > 100) {
+                return "N/A";
+            }
 
-            double used =
-                    100d * (double) (totalDiff - idleDiff)
-                            / (double) totalDiff;
-
-            if (!Double.isFinite(used)) return "N/A";
-
-            used = Math.max(0d, Math.min(100d, used));
-
-            return Math.round(used) + "%";
+            return percent + "%";
 
         } catch (Throwable ignore) {
             return "N/A";
         }
     }
 
-    private static long[] readProcStat() {
+    private static int decodeNativeCpuPercent(int value) {
 
-        try (BufferedReader reader =
-                     new BufferedReader(
-                             new FileReader("/proc/stat")
-                     )) {
-
-            String line = reader.readLine();
-
-            if (line == null || !line.startsWith("cpu ")) {
-                return null;
-            }
-
-            String[] parts = line.trim().split("\\s+");
-
-            if (parts.length < 8) return null;
-
-            long user = parseLong(parts, 1);
-            long nice = parseLong(parts, 2);
-            long system = parseLong(parts, 3);
-            long idle = parseLong(parts, 4);
-            long ioWait = parseLong(parts, 5);
-            long irq = parseLong(parts, 6);
-            long softIrq = parseLong(parts, 7);
-            long steal = parts.length > 8
-                    ? parseLong(parts, 8)
-                    : 0L;
-
-            long idleAll = idle + ioWait;
-
-            long total =
-                    user + nice + system + idle + ioWait
-                            + irq + softIrq + steal;
-
-            return new long[]{total, idleAll};
-
-        } catch (Throwable ignore) {
-            return null;
+        if (value >= 0 && value <= 100) {
+            return value;
         }
-    }
 
-    private static long parseLong(String[] values, int index) {
-
-        if (index < 0 || index >= values.length) return 0L;
-
-        try {
-            return Long.parseLong(values[index]);
-        } catch (Throwable ignore) {
-            return 0L;
+        if (value >= 1000 && value <= 1100) {
+            return value - 1000;
         }
+
+        if (value >= 2000 && value <= 2100) {
+            return value - 2000;
+        }
+
+        return -1;
     }
 
     private static String readRam(Context context) {
