@@ -408,19 +408,10 @@ private void showContactDeveloperDialog() {
     box.addView(row);
 
     // ================= DIALOG =================
-    ScrollView settingsScroll = new ScrollView(this);
-    settingsScroll.setFillViewport(true);
-    settingsScroll.addView(box);
-
     AlertDialog dlg = new AlertDialog.Builder(this)
-            .setView(settingsScroll)
+            .setView(box)
             .setCancelable(true)
             .create();
-
-    btnAddWidget.setOnClickListener(v -> {
-        dlg.dismiss();
-        requestPinGelWidget();
-    });
 
     btnCancel.setOnClickListener(v -> dlg.dismiss());
 
@@ -696,10 +687,19 @@ private void showSettingsDialog() {
 
     box.addView(row);
 
+    ScrollView settingsScroll = new ScrollView(this);
+    settingsScroll.setFillViewport(true);
+    settingsScroll.addView(box);
+
     AlertDialog dlg = new AlertDialog.Builder(this)
-            .setView(box)
+            .setView(settingsScroll)
             .setCancelable(true)
             .create();
+
+    btnAddWidget.setOnClickListener(v -> {
+        dlg.dismiss();
+        requestPinGelWidget();
+    });
 
     btnCancel.setOnClickListener(v -> dlg.dismiss());
 
