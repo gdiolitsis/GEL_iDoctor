@@ -17,7 +17,7 @@
 
     <!-- SYSTEM -->
     <string name="cpu_ram_info">📱 DEVICE INFO</string>
-    <string name="cpu_ram_live">📈 CPU / RAM LIVE MONITOR</string>
+    <string name="cpu_ram_live">📈 CPU / RAM LIVE</string>
 
     <!-- DEVICE INFO -->
     <string name="phone_info_internal">📱 DEVICE INFO\n(Internal)</string>
