@@ -73,6 +73,12 @@ public final class GuidedOptimizerActivity extends AppCompatActivity {
     
     private boolean returnedFromDevScreen = false;
 
+    // ============================================================
+    // GUIDED OPTIMIZER — LIMITED MODE
+    // ============================================================
+    private boolean limitedMode = false;
+    private boolean usageAccessGrantedAtEntry = false;
+
     private static final String PREFS = "gel_prefs";
     private static final String KEY_PULSE_ENABLED = "pulse_enabled";
     private static final String KEY_REMINDER_ENABLED = "reminder_enabled";
@@ -106,10 +112,38 @@ protected void onCreate(Bundle savedInstanceState) {
 
     gr = AppLang.isGreek(this);
 
+    Intent launchIntent = getIntent();
+
+    if (launchIntent != null) {
+        limitedMode =
+                launchIntent.getBooleanExtra(
+                        "gel_limited_mode",
+                        false
+                );
+
+        usageAccessGrantedAtEntry =
+                launchIntent.getBooleanExtra(
+                        "gel_usage_access_granted",
+                        false
+                );
+    }
+
     // RESTORE CURRENT STEP (so we don't restart intro after returning / recreation)
     if (savedInstanceState != null) {
         step = savedInstanceState.getInt("gel_step", STEP_INTRO);
         returnedFromUsageScreen = savedInstanceState.getBoolean("gel_returned_usage", false);
+
+        limitedMode =
+                savedInstanceState.getBoolean(
+                        "gel_limited_mode",
+                        limitedMode
+                );
+
+        usageAccessGrantedAtEntry =
+                savedInstanceState.getBoolean(
+                        "gel_usage_access_granted",
+                        usageAccessGrantedAtEntry
+                );
 
         batteryVerdict = savedInstanceState.getString("gel_battery_verdict", "STABLE");
         dataVerdict    = savedInstanceState.getString("gel_data_verdict", "STABLE");
@@ -134,6 +168,12 @@ protected void onSaveInstanceState(Bundle out) {
 
     out.putInt("gel_step", step);
     out.putBoolean("gel_returned_usage", returnedFromUsageScreen);
+
+    out.putBoolean("gel_limited_mode", limitedMode);
+    out.putBoolean(
+            "gel_usage_access_granted",
+            usageAccessGrantedAtEntry
+    );
 
     out.putString("gel_battery_verdict", batteryVerdict);
     out.putString("gel_data_verdict", dataVerdict);
@@ -339,10 +379,16 @@ private void limitAndAdd(LinearLayout root, ArrayList<AppRisk> list) {
                         ? "Θα σε πάω στις σωστές ρυθμίσεις της συσκευής.\n\n"
                         + "Ο στόχος είναι να κάνουμε τη συσκευή σου να λειτουργεί ομαλά και με ασφάλεια.\n\n"
                         + "Εσύ κάνεις τις επιλογές — εγώ κρατάω το τιμόνι (χωρίς να πατάω γκάζι μόνος μου 😄).\n\n"
+                        + (limitedMode
+                            ? "⚠ LIMITED MODE: Οι έλεγχοι που απαιτούν Πρόσβαση χρήσης θα παραλειφθούν.\n\n"
+                            : "")
                         + "Πάτα «ΈΝΑΡΞΗ» για να ξεκινήσουμε. \n\n"
                         : "I will guide you to the right system settings.\n\n"
                         + "The goal is to help your device run smoothly and securely.\n\n"
                         + "You make the choices — I simply steer (no autopilot 😄).\n\n"
+                        + (limitedMode
+                            ? "⚠ LIMITED MODE: Checks that require Usage Access will be skipped.\n\n"
+                            : "")
                         + "Press “START” to begin. \n\n",
                 null,
                 () -> go(STEP_STORAGE),
@@ -426,10 +472,53 @@ Toast.makeText(
 }
 
 // ============================================================
+// LIMITED MODE — SKIPPED USAGE ACCESS STEP
+// ============================================================
+private void showLimitedModeSkippedStep(
+        String title,
+        int nextStep
+) {
+
+    showDialog(
+            title,
+            gr
+                    ? "⚠ LIMITED MODE\n\n"
+                      + "Αυτός ο έλεγχος παραλείφθηκε επειδή απαιτεί "
+                      + "Πρόσβαση χρήσης εφαρμογών.\n\n"
+                      + "Οι υπόλοιποι διαθέσιμοι έλεγχοι του Guided Optimiser "
+                      + "θα συνεχιστούν κανονικά."
+                    : "⚠ LIMITED MODE\n\n"
+                      + "This check was skipped because it requires "
+                      + "Usage Access.\n\n"
+                      + "All other available Guided Optimizer checks "
+                      + "will continue normally.",
+            null,
+            () -> go(nextStep),
+            false
+    );
+}
+
+// ============================================================
 // STEP 2 — BATTERY INTELLIGENCE ENGINE (MODERATE + HEAVY ONLY)
 // ============================================================
 
 private void showBattery() {
+
+    if (limitedMode) {
+
+        batteryVerdict = "LIMITED";
+
+        showLimitedModeSkippedStep(
+                progressTitle(
+                        gr
+                                ? "ΒΗΜΑ 2 — Κατανάλωση Μπαταρίας (48 ώρες)"
+                                : "STEP 2 — Battery Consumption (48 hours)"
+                ),
+                STEP_DATA
+        );
+
+        return;
+    }
 
     if (!hasUsageAccess()) {
 
@@ -722,6 +811,32 @@ private void showFinalVerdict() {
             break;
     }
 
+    if (limitedMode) {
+
+        TextView limitedNotice = new TextView(this);
+
+        limitedNotice.setText(
+                gr
+                        ? "⚠ LIMITED MODE\n\n"
+                          + "Η τελική αναφορά βασίζεται μόνο στους ελέγχους "
+                          + "που δεν απαιτούν Πρόσβαση χρήσης. "
+                          + "Οι αναλύσεις Μπαταρίας, Δεδομένων, Δραστηριότητας "
+                          + "και Αδρανών Εφαρμογών παραλείφθηκαν."
+                        : "⚠ LIMITED MODE\n\n"
+                          + "The final report is based only on checks "
+                          + "that do not require Usage Access. "
+                          + "Battery, Data, App Activity and Unused Apps "
+                          + "analysis were skipped."
+        );
+
+        limitedNotice.setTextColor(0xFFFFC107);
+        limitedNotice.setTextSize(15f);
+        limitedNotice.setTypeface(null, Typeface.BOLD);
+        limitedNotice.setPadding(0, dp(8), 0, dp(18));
+
+        root.addView(limitedNotice);
+    }
+
     // Section Details
     addFinalRow(root, gr ? "Μπαταρία" : "Battery", batteryVerdict, gr);
     addFinalRow(root, gr ? "Δεδομένα" : "Data", dataVerdict, gr);
@@ -862,7 +977,9 @@ private void addFinalRow(LinearLayout root,
 
     String verdictText;
 
-    if ("HEAVY".equals(verdict)) {
+    if ("LIMITED".equals(verdict)) {
+        verdictText = gr ? "Παραλείφθηκε — Limited Mode" : "Skipped — Limited Mode";
+    } else if ("HEAVY".equals(verdict)) {
         verdictText = gr ? "Υψηλή" : "High";
     } else if ("MODERATE".equals(verdict)) {
         verdictText = gr ? "Μέτρια" : "Moderate";
@@ -871,6 +988,7 @@ private void addFinalRow(LinearLayout root,
     }
 
     int color =
+            "LIMITED".equals(verdict) ? 0xFFFFC107 :
             "HEAVY".equals(verdict) ? 0xFFFF5252 :
             "MODERATE".equals(verdict) ? 0xFFFFC107 :
             0xFF00C853;
@@ -901,19 +1019,29 @@ private static class AppRisk {
 
 private boolean hasUsageAccess() {
 
-    UsageStatsManager usm =
-            (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+    try {
 
-    long now = System.currentTimeMillis();
+        UsageStatsManager usm =
+                (UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
 
-    List<UsageStats> stats =
-            usm.queryUsageStats(
-                    UsageStatsManager.INTERVAL_DAILY,
-                    now - 1000 * 60,
-                    now
-            );
+        if (usm == null) {
+            return false;
+        }
 
-    return stats != null && !stats.isEmpty();
+        long now = System.currentTimeMillis();
+
+        List<UsageStats> stats =
+                usm.queryUsageStats(
+                        UsageStatsManager.INTERVAL_DAILY,
+                        now - (24L * 60L * 60L * 1000L),
+                        now
+                );
+
+        return stats != null && !stats.isEmpty();
+
+    } catch (Throwable ignore) {
+        return false;
+    }
 }
 
 private void addEngineVerdict(LinearLayout root,
@@ -973,6 +1101,22 @@ private void addRecommendations(LinearLayout root,
 // ============================================================
 
 private void showData() {
+
+    if (limitedMode) {
+
+        dataVerdict = "LIMITED";
+
+        showLimitedModeSkippedStep(
+                progressTitle(
+                        gr
+                                ? "ΒΗΜΑ 3 — Κατανάλωση Δεδομένων (48 ώρες)"
+                                : "STEP 3 — Data Consumption (48 hours)"
+                ),
+                STEP_APPS
+        );
+
+        return;
+    }
 
     // ✅ Needs Usage Access (for "rarely used but active" signal)
     if (!hasUsageAccess()) {
@@ -1521,6 +1665,38 @@ private void openBatterySettings(String pkg) {
 
 private void showApps() {
 
+    if (limitedMode) {
+
+        appsVerdict = "LIMITED";
+
+        showLimitedModeSkippedStep(
+                progressTitle(
+                        gr
+                                ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
+                                : "STEP 4 — App Activity (48 hours)"
+                ),
+                STEP_UNUSED
+        );
+
+        return;
+    }
+
+    if (!hasUsageAccess()) {
+
+        appsVerdict = "LIMITED";
+
+        showLimitedModeSkippedStep(
+                progressTitle(
+                        gr
+                                ? "ΒΗΜΑ 4 — Δραστηριότητα Εφαρμογών (48 ώρες)"
+                                : "STEP 4 — App Activity (48 hours)"
+                ),
+                STEP_UNUSED
+        );
+
+        return;
+    }
+
     long now = System.currentTimeMillis();
     long start = now - (48L * 60 * 60 * 1000);
 
@@ -1739,6 +1915,20 @@ showCustomDialog(scroll);
 // ----------------------------------------------------
 
 private void showInactiveApps() {
+
+    if (limitedMode) {
+
+        showLimitedModeSkippedStep(
+                progressTitle(
+                        gr
+                                ? "ΒΗΜΑ 5 — Αδρανείς Εφαρμογές (30 ημέρες)"
+                                : "STEP 5 — Unused Applications (30 days)"
+                ),
+                STEP_CACHE
+        );
+
+        return;
+    }
 
     if (!hasUsageAccess()) {
         go(STEP_CACHE);
