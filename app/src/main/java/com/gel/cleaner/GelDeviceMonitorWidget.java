@@ -84,22 +84,44 @@ public final class GelDeviceMonitorWidget extends AppWidgetProvider {
 
         boolean gr = AppLang.isGreek(context);
 
-        views.setTextViewText(R.id.widget_cpu, "CPU  " + snapshot.cpu);
-        views.setTextViewText(R.id.widget_ram, "RAM  " + snapshot.ram);
-
         views.setTextViewText(
-                R.id.widget_battery,
-                (gr ? "ΜΠΑΤΑΡΙΑ  " : "BATTERY  ") + snapshot.battery
+                R.id.widget_cpu_value,
+                snapshot.cpu
         );
 
         views.setTextViewText(
-                R.id.widget_thermal,
-                (gr ? "ΘΕΡΜΙΚΟ  " : "THERMAL  ") + snapshot.thermal
+                R.id.widget_ram_value,
+                snapshot.ram
         );
 
         views.setTextViewText(
-                R.id.widget_storage,
-                (gr ? "ΕΛΕΥΘΕΡΑ  " : "FREE  ") + snapshot.storage
+                R.id.widget_battery_label,
+                gr ? "ΜΠΑΤΑΡΙΑ  " : "BATTERY  "
+        );
+
+        views.setTextViewText(
+                R.id.widget_battery_value,
+                snapshot.battery
+        );
+
+        views.setTextViewText(
+                R.id.widget_thermal_label,
+                gr ? "ΘΕΡΜΙΚΟ  " : "THERMAL  "
+        );
+
+        views.setTextViewText(
+                R.id.widget_thermal_value,
+                snapshot.thermal
+        );
+
+        views.setTextViewText(
+                R.id.widget_storage_label,
+                gr ? "ΕΛΕΥΘΕΡΑ  " : "FREE  "
+        );
+
+        views.setTextViewText(
+                R.id.widget_storage_value,
+                snapshot.storage
         );
 
         views.setTextViewText(
