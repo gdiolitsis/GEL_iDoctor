@@ -249,13 +249,16 @@ public class ManualTestsActivity extends AppCompatActivity {
 
 }
 
-private float startY = 0;
-private float endY = 0;
-private static final int SWIPE_THRESHOLD = 180;
-
 private ScrollView labsScroll;
 private ScrollView logScroll;
+private Button btnLogToggle;
 private Button btnExport;
+
+// ============================================================
+// LOG PANEL STATE
+// 0 = normal, 1 = full screen
+// ============================================================
+private int logPanelState = 0;
 
 private int startPercent = -1;
 private long startMahThread = -1;
@@ -1000,6 +1003,27 @@ logContainer.addView(txtLog);
 logScroll.addView(logContainer);
 
 // ============================================================
+// LOG PANEL TOGGLE (ARROWS — NO SWIPE)
+// ============================================================
+btnLogToggle = new Button(this);
+btnLogToggle.setText("LOGS ▲");
+btnLogToggle.setAllCaps(false);
+btnLogToggle.setTextColor(0xFFFFFFFF);
+btnLogToggle.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+btnLogToggle.setPadding(dp(16), dp(8), dp(16), dp(8));
+
+LinearLayout.LayoutParams logToggleParams =
+        new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+
+logToggleParams.setMargins(dp(12), dp(6), dp(12), dp(4));
+btnLogToggle.setLayoutParams(logToggleParams);
+
+btnLogToggle.setOnClickListener(v -> toggleLogPanel());
+
+// ============================================================
 // EXPORT BUTTON (BOTTOM)
 // ============================================================
 btnExport = new Button(this);
@@ -1026,6 +1050,7 @@ btnExport.setOnClickListener(v -> {
 // ADD ORDER (CRITICAL)
 // ============================================================
 root.addView(labsScroll);
+root.addView(btnLogToggle);
 root.addView(logScroll);
 root.addView(btnExport);
 
@@ -1037,42 +1062,8 @@ UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
 final boolean gr = AppLang.isGreek(this);
 
-// 🔴 DEFAULT STATE FIX (σαν swipe down)
-logScroll.post(() -> showLabsAndLogs());
-
-logScroll.setOnTouchListener((v, event) -> {
-    switch (event.getAction()) {
-
-        case MotionEvent.ACTION_DOWN:
-            startY = event.getY();
-            break;
-
-        case MotionEvent.ACTION_UP:
-            endY = event.getY();
-            float diff = endY - startY;
-
-            if (Math.abs(diff) > SWIPE_THRESHOLD) {
-
-                if (diff < 0) {
-                    // 🔼 SWIPE UP → FULL LOGS
-                    showLogsFullScreen();
-
-                } else {
-                    // 🔽 SWIPE DOWN → BACK (ΜΟΝΟ αν είμαστε TOP)
-
-                    boolean atTop =
-                            logScroll != null &&
-                            !logScroll.canScrollVertically(-1);
-
-                    if (atTop) {
-                        showLabsAndLogs();
-                    }
-                }
-            }
-            break;
-    }
-    return false;
-});
+// 🔴 DEFAULT STATE — NORMAL LOG PANEL
+logScroll.post(() -> setLogPanelState(0));
 
     // ============================================================
     // TITLE
@@ -1492,6 +1483,24 @@ private void stopGpuStress() {
 
         } catch(Throwable ignore){}
     });
+}
+
+private void toggleLogPanel() {
+    setLogPanelState(logPanelState == 0 ? 1 : 0);
+}
+
+private void setLogPanelState(int state) {
+    logPanelState = state == 1 ? 1 : 0;
+
+    if (logPanelState == 1) {
+        showLogsFullScreen();
+    } else {
+        showLabsAndLogs();
+    }
+
+    if (btnLogToggle != null) {
+        btnLogToggle.setText(logPanelState == 1 ? "LOGS ▼" : "LOGS ▲");
+    }
 }
 
 private void showLogsFullScreen() {
