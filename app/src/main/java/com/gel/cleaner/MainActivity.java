@@ -777,17 +777,17 @@ private boolean hasUsageAccess() {
 }
 
 // =========================================================
-// USAGE ACCESS REQUIRED DIALOG
+// USAGE ACCESS REQUIRED DIALOG — GEL STYLE
 // =========================================================
 private void showUsageAccessRequiredDialog() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    String title = gr
+    String titleText = gr
             ? "Απαιτείται Πρόσβαση Χρήσης"
             : "Usage Access Required";
 
-    String message = gr
+    String messageText = gr
             ? "Ο πλήρης Guided Optimiser χρειάζεται την ειδική άδεια "
               + "«Πρόσβαση χρήσης», ώστε να αναλύσει σωστά τη χρήση εφαρμογών.\n\n"
               + "Εάν το Android δεν επιτρέπει την ενεργοποίηση και εμφανίζει "
@@ -807,41 +807,15 @@ private void showUsageAccessRequiredDialog() {
               + "You may also continue now in Limited Mode. "
               + "The optimizer will run only checks that do not require Usage Access.";
 
-    AlertDialog dialog =
-            new AlertDialog.Builder(this)
-                    .setTitle(title)
-                    .setMessage(message)
-                    .setPositiveButton(
-                            gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ" : "OPEN SETTINGS",
-                            (d, which) -> openUsageAccessSettings()
-                    )
-                    .setNeutralButton(
-                            gr ? "LIMITED MODE" : "LIMITED MODE",
-                            (d, which) -> showLimitedModeConfirmation()
-                    )
-                    .setNegativeButton(
-                            gr ? "ΑΚΥΡΟ" : "CANCEL",
-                            null
-                    )
-                    .create();
-
-    dialog.setOnShowListener(d -> {
-
-        try {
-
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                    .setTextColor(0xFF00FF7F);
-
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
-                    .setTextColor(0xFFFFD700);
-
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-                    .setTextColor(Color.WHITE);
-
-        } catch (Throwable ignore) {}
-    });
-
-    dialog.show();
+    showGelPermissionDialog(
+            titleText,
+            messageText,
+            gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ" : "OPEN SETTINGS",
+            this::openUsageAccessSettings,
+            "LIMITED MODE",
+            this::showLimitedModeConfirmation,
+            gr ? "ΑΚΥΡΟ" : "CANCEL"
+    );
 }
 
 // =========================================================
@@ -890,13 +864,17 @@ private void openUsageAccessSettings() {
 }
 
 // =========================================================
-// USAGE ACCESS STILL BLOCKED
+// USAGE ACCESS STILL BLOCKED — GEL STYLE
 // =========================================================
 private void showUsageAccessStillBlockedDialog() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    String message = gr
+    String titleText = gr
+            ? "Η άδεια παραμένει κλειδωμένη"
+            : "Permission is still blocked";
+
+    String messageText = gr
             ? "Η Πρόσβαση χρήσης δεν ενεργοποιήθηκε.\n\n"
               + "Αν το Android την έχει μπλοκάρει, πήγαινε:\n\n"
               + "Ρυθμίσεις → Εφαρμογές → GELiDOCTOR → ⋮ → "
@@ -908,59 +886,189 @@ private void showUsageAccessStillBlockedDialog() {
               + "Allow restricted settings\n\n"
               + "You can try again or continue in Limited Mode.";
 
-    new AlertDialog.Builder(this)
-            .setTitle(
-                    gr
-                            ? "Η άδεια παραμένει κλειδωμένη"
-                            : "Permission is still blocked"
-            )
-            .setMessage(message)
-            .setPositiveButton(
-                    gr ? "ΞΑΝΑ ΡΥΘΜΙΣΕΙΣ" : "OPEN SETTINGS AGAIN",
-                    (d, which) -> openUsageAccessSettings()
-            )
-            .setNeutralButton(
-                    "LIMITED MODE",
-                    (d, which) -> showLimitedModeConfirmation()
-            )
-            .setNegativeButton(
-                    gr ? "ΑΚΥΡΟ" : "CANCEL",
-                    null
-            )
-            .show();
+    showGelPermissionDialog(
+            titleText,
+            messageText,
+            gr ? "ΞΑΝΑ ΡΥΘΜΙΣΕΙΣ" : "OPEN SETTINGS AGAIN",
+            this::openUsageAccessSettings,
+            "LIMITED MODE",
+            this::showLimitedModeConfirmation,
+            gr ? "ΑΚΥΡΟ" : "CANCEL"
+    );
 }
 
 // =========================================================
-// LIMITED MODE CONFIRMATION
+// LIMITED MODE CONFIRMATION — GEL STYLE
 // =========================================================
 private void showLimitedModeConfirmation() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    new AlertDialog.Builder(this)
-            .setTitle(
-                    gr
-                            ? "Guided Optimiser — Limited Mode"
-                            : "Guided Optimizer — Limited Mode"
-            )
-            .setMessage(
-                    gr
-                            ? "Ο optimiser θα συνεχίσει χωρίς Πρόσβαση χρήσης.\n\n"
-                              + "Θα παραλειφθούν οι έλεγχοι που απαιτούν ιστορικό χρήσης εφαρμογών. "
-                              + "Οι υπόλοιποι διαθέσιμοι έλεγχοι θα εκτελεστούν κανονικά."
-                            : "The optimizer will continue without Usage Access.\n\n"
-                              + "Checks that require app usage history will be skipped. "
-                              + "All other available checks will run normally."
-            )
-            .setPositiveButton(
-                    gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE",
-                    (d, which) -> launchGuidedOptimizer(true)
-            )
-            .setNegativeButton(
-                    gr ? "ΑΚΥΡΟ" : "CANCEL",
-                    null
-            )
-            .show();
+    String titleText = gr
+            ? "Guided Optimiser — Limited Mode"
+            : "Guided Optimizer — Limited Mode";
+
+    String messageText = gr
+            ? "Ο optimiser θα συνεχίσει χωρίς Πρόσβαση χρήσης.\n\n"
+              + "Θα παραλειφθούν οι έλεγχοι που απαιτούν ιστορικό χρήσης εφαρμογών. "
+              + "Οι υπόλοιποι διαθέσιμοι έλεγχοι θα εκτελεστούν κανονικά."
+            : "The optimizer will continue without Usage Access.\n\n"
+              + "Checks that require app usage history will be skipped. "
+              + "All other available checks will run normally.";
+
+    showGelPermissionDialog(
+            titleText,
+            messageText,
+            gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE",
+            () -> launchGuidedOptimizer(true),
+            null,
+            null,
+            gr ? "ΑΚΥΡΟ" : "CANCEL"
+    );
+}
+
+// =========================================================
+// GEL PERMISSION DIALOG BUILDER
+// =========================================================
+private void showGelPermissionDialog(
+        String titleText,
+        String messageText,
+        String positiveText,
+        Runnable positiveAction,
+        String neutralText,
+        Runnable neutralAction,
+        String negativeText
+) {
+
+    LinearLayout outer = new LinearLayout(this);
+    outer.setOrientation(LinearLayout.VERTICAL);
+    outer.setPadding(dp(18), dp(18), dp(18), dp(18));
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF080808);
+    bg.setCornerRadius(dp(18));
+    bg.setStroke(dp(3), 0xFFFFD700);
+    outer.setBackground(bg);
+
+    TextView title = new TextView(this);
+    title.setText(titleText);
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(20f);
+    title.setTypeface(Typeface.DEFAULT_BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(dp(8), dp(4), dp(8), dp(14));
+    outer.addView(title);
+
+    ScrollView scroll = new ScrollView(this);
+    scroll.setFillViewport(false);
+
+    TextView message = new TextView(this);
+    message.setText(messageText);
+    message.setTextColor(0xFF00FF9C);
+    message.setTextSize(15f);
+    message.setLineSpacing(0f, 1.18f);
+    message.setPadding(dp(8), dp(4), dp(8), dp(14));
+
+    scroll.addView(message);
+
+    LinearLayout.LayoutParams scrollLp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    0,
+                    1f
+            );
+    scrollLp.setMargins(0, 0, 0, dp(12));
+    outer.addView(scroll, scrollLp);
+
+    LinearLayout buttons = new LinearLayout(this);
+    buttons.setOrientation(LinearLayout.VERTICAL);
+    buttons.setPadding(0, dp(4), 0, 0);
+
+    Button positive = new Button(this);
+    positive.setText(positiveText);
+    positive.setAllCaps(false);
+    positive.setTextColor(0xFF00FF7F);
+    positive.setTextSize(16f);
+    positive.setTypeface(Typeface.DEFAULT_BOLD);
+    positive.setBackgroundResource(R.drawable.gel_btn_neon_outline);
+
+    LinearLayout.LayoutParams btnLp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(56)
+            );
+    btnLp.setMargins(0, dp(6), 0, 0);
+
+    buttons.addView(positive, btnLp);
+
+    Button neutral = null;
+
+    if (neutralText != null && neutralAction != null) {
+        neutral = new Button(this);
+        neutral.setText(neutralText);
+        neutral.setAllCaps(false);
+        neutral.setTextColor(0xFFFFD700);
+        neutral.setTextSize(16f);
+        neutral.setTypeface(Typeface.DEFAULT_BOLD);
+        neutral.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+        buttons.addView(neutral, new LinearLayout.LayoutParams(btnLp));
+    }
+
+    Button negative = new Button(this);
+    negative.setText(negativeText);
+    negative.setAllCaps(false);
+    negative.setTextColor(Color.WHITE);
+    negative.setTextSize(16f);
+    negative.setTypeface(Typeface.DEFAULT_BOLD);
+    negative.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+    buttons.addView(negative, new LinearLayout.LayoutParams(btnLp));
+
+    outer.addView(buttons);
+
+    AlertDialog dialog =
+            new AlertDialog.Builder(this)
+                    .setView(outer)
+                    .setCancelable(true)
+                    .create();
+
+    positive.setOnClickListener(v -> {
+        dialog.dismiss();
+        if (positiveAction != null) {
+            positiveAction.run();
+        }
+    });
+
+    if (neutral != null) {
+        Button neutralButton = neutral;
+        neutralButton.setOnClickListener(v -> {
+            dialog.dismiss();
+            neutralAction.run();
+        });
+    }
+
+    negative.setOnClickListener(v -> dialog.dismiss());
+
+    dialog.setOnShowListener(d -> {
+        Window w = dialog.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            w.setLayout(
+                    (int) (getResources().getDisplayMetrics().widthPixels * 0.94f),
+                    (int) (getResources().getDisplayMetrics().heightPixels * 0.82f)
+            );
+        }
+    });
+
+    dialog.show();
+
+    Window w = dialog.getWindow();
+    if (w != null) {
+        w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        w.setLayout(
+                (int) (getResources().getDisplayMetrics().widthPixels * 0.94f),
+                (int) (getResources().getDisplayMetrics().heightPixels * 0.82f)
+        );
+    }
 }
 
 // =========================================================
