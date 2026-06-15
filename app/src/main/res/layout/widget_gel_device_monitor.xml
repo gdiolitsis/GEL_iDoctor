@@ -46,61 +46,135 @@
 
     </LinearLayout>
 
+    <!-- CPU -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="9dp">
+        android:layout_marginTop="10dp">
 
         <TextView
-            android:id="@+id/widget_cpu"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="CPU  --"
+            android:text="CPU  "
             android:textColor="#FFFFFF"
             android:textStyle="bold"
             android:textSize="15sp"/>
 
         <TextView
-            android:id="@+id/widget_ram"
-            android:layout_width="0dp"
+            android:id="@+id/widget_cpu_value"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="end"
-            android:text="RAM  --"
-            android:textColor="#00FF9C"
+            android:text="--"
+            android:textColor="#00FF7F"
             android:textStyle="bold"
             android:textSize="15sp"/>
 
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/widget_battery"
+    <!-- RAM -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="7dp"
-        android:text="BATTERY  --"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp"/>
+        android:orientation="horizontal"
+        android:layout_marginTop="6dp">
 
-    <TextView
-        android:id="@+id/widget_thermal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        android:text="THERMAL  --"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RAM  "
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="15sp"/>
 
-    <TextView
-        android:id="@+id/widget_storage"
+        <TextView
+            android:id="@+id/widget_ram_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textColor="#00FF7F"
+            android:textStyle="bold"
+            android:textSize="15sp"/>
+
+    </LinearLayout>
+
+    <!-- BATTERY -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        android:text="FREE  --"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp"/>
+        android:orientation="horizontal"
+        android:layout_marginTop="6dp">
+
+        <TextView
+            android:id="@+id/widget_battery_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BATTERY  "
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"/>
+
+        <TextView
+            android:id="@+id/widget_battery_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textColor="#00FF7F"
+            android:textStyle="bold"
+            android:textSize="14sp"/>
+
+    </LinearLayout>
+
+    <!-- THERMAL -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="5dp">
+
+        <TextView
+            android:id="@+id/widget_thermal_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="THERMAL  "
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"/>
+
+        <TextView
+            android:id="@+id/widget_thermal_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textColor="#00FF7F"
+            android:textStyle="bold"
+            android:textSize="14sp"/>
+
+    </LinearLayout>
+
+    <!-- STORAGE -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="5dp">
+
+        <TextView
+            android:id="@+id/widget_storage_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="FREE  "
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"/>
+
+        <TextView
+            android:id="@+id/widget_storage_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textColor="#00FF7F"
+            android:textStyle="bold"
+            android:textSize="14sp"/>
+
+    </LinearLayout>
 
     <TextView
         android:id="@+id/widget_updated"
