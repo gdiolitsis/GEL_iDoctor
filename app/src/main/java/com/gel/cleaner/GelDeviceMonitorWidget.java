@@ -116,7 +116,7 @@ public final class GelDeviceMonitorWidget extends AppWidgetProvider {
 
         views.setTextViewText(
                 R.id.widget_storage_label,
-                gr ? "ΕΛΕΥΘΕΡΑ  " : "FREE  "
+                gr ? "ΕΛΕΥΘΕΡΟΣ ΧΩΡΟΣ  " : "STORAGE FREE  "
         );
 
         views.setTextViewText(
