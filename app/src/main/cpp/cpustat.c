@@ -1,5 +1,5 @@
 // GDiolitsis Engine Lab (GEL) — Author & Developer
-// cpustat.c — v16.0 Triple Engine CPU%
+// cpustat.c — v16.1 Shared JNI Bridge Edition
 // Priority chain:
 //   1) /proc/stat   RAW (only if REAL, not fake)
 //   2) /sys/cpu/... FREQ (universal, true hardware Hz)
@@ -33,24 +33,35 @@ static long clamp_long(long v, long lo, long hi) {
 static int read_line(const char *path, char *buf, size_t len) {
     FILE *fp = fopen(path, "r");
     if (!fp) return -1;
+
     if (!fgets(buf, (int)len, fp)) {
         fclose(fp);
         return -1;
     }
+
     fclose(fp);
     return 0;
 }
 
 static long read_long(const char *path) {
     char buf[64];
-    if (read_line(path, buf, sizeof(buf)) != 0) return -1;
 
-    size_t L = strlen(buf);
-    if (L > 0 && (buf[L-1] == '\n' || buf[L-1] == '\r')) buf[L-1] = 0;
+    if (read_line(path, buf, sizeof(buf)) != 0)
+        return -1;
 
-    long v = -1;
-    if (sscanf(buf, "%ld", &v) != 1) return -1;
-    return v;
+    size_t length = strlen(buf);
+
+    if (length > 0 &&
+        (buf[length - 1] == '\n' || buf[length - 1] == '\r')) {
+        buf[length - 1] = 0;
+    }
+
+    long value = -1;
+
+    if (sscanf(buf, "%ld", &value) != 1)
+        return -1;
+
+    return value;
 }
 
 // ======================================================
@@ -60,6 +71,7 @@ static long lastIdle = -1;
 static long lastTotal = -1;
 
 static int read_cpu_raw(int *outPercent) {
+
     char line[256];
 
     if (read_line("/proc/stat", line, sizeof(line)) != 0)
@@ -69,58 +81,71 @@ static int read_cpu_raw(int *outPercent) {
         return -1;
 
     char cpuLabel[5];
-    long user, nice, system, idle, iowait, irq, softirq;
+    long user;
+    long nice;
+    long system;
+    long idle;
+    long iowait;
+    long irq;
+    long softirq;
 
-    int s = sscanf(
-        line,
-        "%4s %ld %ld %ld %ld %ld %ld %ld",
-        cpuLabel,
-        &user, &nice, &system, &idle, &iowait, &irq, &softirq
+    int scanned = sscanf(
+            line,
+            "%4s %ld %ld %ld %ld %ld %ld %ld",
+            cpuLabel,
+            &user,
+            &nice,
+            &system,
+            &idle,
+            &iowait,
+            &irq,
+            &softirq
     );
 
-    if (s < 5)
+    if (scanned < 5)
         return -1;
 
     long idleAll = idle + iowait;
-    long total   = user + nice + system + idle + iowait + irq + softirq;
 
-    // First call
+    long total =
+            user
+            + nice
+            + system
+            + idle
+            + iowait
+            + irq
+            + softirq;
+
+    // First call establishes baseline.
     if (lastIdle < 0 || lastTotal < 0) {
-        lastIdle  = idleAll;
+        lastIdle = idleAll;
         lastTotal = total;
         *outPercent = 0;
         return 0;
     }
 
-    long diffIdle  = idleAll - lastIdle;
-    long diffTotal = total   - lastTotal;
+    long diffIdle = idleAll - lastIdle;
+    long diffTotal = total - lastTotal;
 
-    lastIdle  = idleAll;
+    lastIdle = idleAll;
     lastTotal = total;
 
-    // --------------------------------------------------
-    // Anti-fake #1:
-    // RAW must have significant diffTotal. If tiny → fake.
-    // --------------------------------------------------
-    if (diffTotal < 50) {  // threshold tuned for fake MIUI/HyperOS
+    // RAW must have significant movement.
+    if (diffTotal < 50)
         return -1;
-    }
 
-    // --------------------------------------------------
-    // Anti-fake #2:
-    // All diffs zero → fake / static ticks.
-    // --------------------------------------------------
-    if (diffIdle == 0 && diffTotal == 0) {
+    if (diffIdle == 0 && diffTotal == 0)
         return -1;
-    }
 
     long used = diffTotal - diffIdle;
-    if (used < 0) used = 0;
 
-    long pct = (used * 100) / diffTotal;
-    pct = clamp_long(pct, 0, 100);
+    if (used < 0)
+        used = 0;
 
-    *outPercent = (int)pct;
+    long percent = (used * 100) / diffTotal;
+    percent = clamp_long(percent, 0, 100);
+
+    *outPercent = (int)percent;
     return 0;
 }
 
@@ -128,54 +153,85 @@ static int read_cpu_raw(int *outPercent) {
 // 2) UNIVERSAL FREQ ENGINE
 // ======================================================
 static int detect_cores() {
-    int c = 0;
-    for (int i = 0; i < 32; i++) {
+
+    int cores = 0;
+
+    for (int index = 0; index < 32; index++) {
+
         char path[128];
-        snprintf(path, sizeof(path),
-                 "/sys/devices/system/cpu/cpu%d/cpufreq", i);
+
+        snprintf(
+                path,
+                sizeof(path),
+                "/sys/devices/system/cpu/cpu%d/cpufreq",
+                index
+        );
+
         FILE *fp = fopen(path, "r");
+
         if (fp) {
             fclose(fp);
-            c++;
-        } else {
-            if (c == i) break;
+            cores++;
+        } else if (cores == index) {
+            break;
         }
     }
-    if (c <= 0) c = 1;
-    return c;
+
+    if (cores <= 0)
+        cores = 1;
+
+    return cores;
 }
 
 static int read_cpu_freq(int *outPercent) {
-    int cores = detect_cores();
-    if (cores <= 0) return -1;
 
-    long acc = 0;
+    int cores = detect_cores();
+
+    if (cores <= 0)
+        return -1;
+
+    long accumulator = 0;
     int valid = 0;
 
-    for (int i = 0; i < cores; i++) {
-        char pCur[160], pMax[160];
-        snprintf(pCur, sizeof(pCur),
-                "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", i);
-        snprintf(pMax, sizeof(pMax),
-                "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq", i);
+    for (int index = 0; index < cores; index++) {
 
-        long cur = read_long(pCur);
-        long max = read_long(pMax);
+        char currentPath[160];
+        char maximumPath[160];
 
-        if (cur <= 0 || max <= 0) continue;
+        snprintf(
+                currentPath,
+                sizeof(currentPath),
+                "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq",
+                index
+        );
 
-        long pct = (cur * 100) / max;
-        pct = clamp_long(pct, 0, 100);
+        snprintf(
+                maximumPath,
+                sizeof(maximumPath),
+                "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq",
+                index
+        );
 
-        acc += pct;
+        long current = read_long(currentPath);
+        long maximum = read_long(maximumPath);
+
+        if (current <= 0 || maximum <= 0)
+            continue;
+
+        long percent = (current * 100) / maximum;
+        percent = clamp_long(percent, 0, 100);
+
+        accumulator += percent;
         valid++;
     }
 
-    if (valid <= 0) return -1;
+    if (valid <= 0)
+        return -1;
 
-    long avg = acc / valid;
-    avg = clamp_long(avg, 0, 100);
-    *outPercent = (int)avg;
+    long average = accumulator / valid;
+    average = clamp_long(average, 0, 100);
+
+    *outPercent = (int)average;
     return 0;
 }
 
@@ -183,49 +239,80 @@ static int read_cpu_freq(int *outPercent) {
 // 3) THERMAL ENGINE
 // ======================================================
 static int read_cpu_thermal(int *outPercent) {
+
     char type[128];
-    char tpath[128];
+    char tempPath[128];
 
     long tempMilli = -1;
 
-    for (int i = 0; i < 32; i++) {
+    for (int index = 0; index < 32; index++) {
+
         char typePath[160];
-        snprintf(typePath, sizeof(typePath),
-                 "/sys/class/thermal/thermal_zone%d/type", i);
+
+        snprintf(
+                typePath,
+                sizeof(typePath),
+                "/sys/class/thermal/thermal_zone%d/type",
+                index
+        );
 
         if (read_line(typePath, type, sizeof(type)) != 0)
             continue;
 
-        size_t L = strlen(type);
-        if (L > 0 && (type[L-1] == '\n' || type[L-1] == '\r'))
-            type[L-1] = 0;
+        size_t length = strlen(type);
 
-        if (!(strstr(type, "cpu") || strstr(type, "CPU") ||
-              strstr(type, "soc") || strstr(type, "SOC") ||
-              strstr(type, "ap")  || strstr(type, "AP")))
+        if (length > 0 &&
+            (type[length - 1] == '\n' || type[length - 1] == '\r')) {
+            type[length - 1] = 0;
+        }
+
+        if (!(strstr(type, "cpu")
+              || strstr(type, "CPU")
+              || strstr(type, "soc")
+              || strstr(type, "SOC")
+              || strstr(type, "ap")
+              || strstr(type, "AP"))) {
             continue;
+        }
 
-        snprintf(tpath, sizeof(tpath),
-                 "/sys/class/thermal/thermal_zone%d/temp", i);
+        snprintf(
+                tempPath,
+                sizeof(tempPath),
+                "/sys/class/thermal/thermal_zone%d/temp",
+                index
+        );
 
-        tempMilli = read_long(tpath);
-        if (tempMilli > 0) break;
+        tempMilli = read_long(tempPath);
+
+        if (tempMilli > 0)
+            break;
     }
 
     if (tempMilli <= 0)
         return -1;
 
-    double C = (tempMilli > 1000 ? tempMilli / 1000.0 : tempMilli);
+    double celsius =
+            tempMilli > 1000
+                    ? tempMilli / 1000.0
+                    : tempMilli;
 
-    double minC = 30.0;
-    double maxC = 90.0;
-    double pct;
+    const double minimumCelsius = 30.0;
+    const double maximumCelsius = 90.0;
 
-    if (C <= minC) pct = 0;
-    else if (C >= maxC) pct = 100;
-    else pct = (C - minC) * 100.0 / (maxC - minC);
+    double percent;
 
-    int result = (int)(pct + 0.5);
+    if (celsius <= minimumCelsius) {
+        percent = 0;
+    } else if (celsius >= maximumCelsius) {
+        percent = 100;
+    } else {
+        percent =
+                (celsius - minimumCelsius)
+                * 100.0
+                / (maximumCelsius - minimumCelsius);
+    }
+
+    int result = (int)(percent + 0.5);
     result = clamp_int(result, 0, 100);
 
     *outPercent = result;
@@ -233,27 +320,45 @@ static int read_cpu_thermal(int *outPercent) {
 }
 
 // ======================================================
-// JNI Entry — Engine Chain & Encoding
+// SHARED ENGINE
+// ======================================================
+static jint get_cpu_usage_encoded() {
+
+    int percent = -1;
+
+    if (read_cpu_raw(&percent) == 0) {
+        return clamp_int(percent, 0, 100);
+    }
+
+    if (read_cpu_freq(&percent) == 0) {
+        return 1000 + clamp_int(percent, 0, 100);
+    }
+
+    if (read_cpu_thermal(&percent) == 0) {
+        return 2000 + clamp_int(percent, 0, 100);
+    }
+
+    return -1;
+}
+
+// ======================================================
+// JNI ENTRY — CpuRamLiveActivity (backward compatibility)
 // ======================================================
 JNIEXPORT jint JNICALL
-Java_com_gel_cleaner_CpuRamLiveActivity_getCpuUsageNative(JNIEnv *env, jobject obj) {
+Java_com_gel_cleaner_CpuRamLiveActivity_getCpuUsageNative(
+        JNIEnv *env,
+        jobject obj
+) {
+    return get_cpu_usage_encoded();
+}
 
-    int p = -1;
-
-    // RAW attempt (with anti-fake)
-    if (read_cpu_raw(&p) == 0) {
-        return clamp_int(p, 0, 100);  // RAW: 0–100
-    }
-
-    // FREQ fallback
-    if (read_cpu_freq(&p) == 0) {
-        return 1000 + clamp_int(p, 0, 100);  // encoded freq
-    }
-
-    // THERMAL fallback
-    if (read_cpu_thermal(&p) == 0) {
-        return 2000 + clamp_int(p, 0, 100);  // encoded thermal
-    }
-
-    return -1; // total fail
+// ======================================================
+// JNI ENTRY — CpuStatBridge (widget + shared access)
+// ======================================================
+JNIEXPORT jint JNICALL
+Java_com_gel_cleaner_CpuStatBridge_getCpuUsageNative(
+        JNIEnv *env,
+        jclass clazz
+) {
+    return get_cpu_usage_encoded();
 }
