@@ -1701,6 +1701,30 @@ d.getWindow().setBackgroundDrawable(
 new ColorDrawable(Color.TRANSPARENT));
 
 // --------------------------------------------
+// iPHONE BUTTON
+// --------------------------------------------
+iphoneBtn.setOnClickListener(v -> {
+
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+    d.dismiss();
+
+    showAppleModelPicker("iphone");
+});
+
+// --------------------------------------------
+// iPAD BUTTON
+// --------------------------------------------
+ipadBtn.setOnClickListener(v -> {
+
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+
+    d.dismiss();
+
+    showAppleModelPicker("ipad");
+});
+
+// --------------------------------------------
 // SHOW
 // --------------------------------------------
 d.show();
