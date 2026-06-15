@@ -990,14 +990,17 @@ private void showGelPermissionDialog(
     positive.setTextColor(0xFF00FF7F);
     positive.setTextSize(16f);
     positive.setTypeface(Typeface.DEFAULT_BOLD);
+    positive.setGravity(Gravity.CENTER);
+    positive.setPadding(dp(12), dp(14), dp(12), dp(14));
+    positive.setMinHeight(dp(90));
     positive.setBackgroundResource(R.drawable.gel_btn_neon_outline);
 
     LinearLayout.LayoutParams btnLp =
             new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(56)
+                    dp(90)
             );
-    btnLp.setMargins(0, dp(6), 0, 0);
+    btnLp.setMargins(0, dp(8), 0, 0);
 
     buttons.addView(positive, btnLp);
 
@@ -1010,6 +1013,9 @@ private void showGelPermissionDialog(
         neutral.setTextColor(0xFFFFD700);
         neutral.setTextSize(16f);
         neutral.setTypeface(Typeface.DEFAULT_BOLD);
+        neutral.setGravity(Gravity.CENTER);
+        neutral.setPadding(dp(12), dp(14), dp(12), dp(14));
+        neutral.setMinHeight(dp(90));
         neutral.setBackgroundResource(R.drawable.gel_btn_outline_selector);
         buttons.addView(neutral, new LinearLayout.LayoutParams(btnLp));
     }
@@ -1020,6 +1026,9 @@ private void showGelPermissionDialog(
     negative.setTextColor(Color.WHITE);
     negative.setTextSize(16f);
     negative.setTypeface(Typeface.DEFAULT_BOLD);
+    negative.setGravity(Gravity.CENTER);
+    negative.setPadding(dp(12), dp(14), dp(12), dp(14));
+    negative.setMinHeight(dp(90));
     negative.setBackgroundResource(R.drawable.gel_btn_outline_selector);
     buttons.addView(negative, new LinearLayout.LayoutParams(btnLp));
 
