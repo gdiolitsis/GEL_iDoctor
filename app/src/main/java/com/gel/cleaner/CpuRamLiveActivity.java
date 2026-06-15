@@ -1,5 +1,5 @@
-// GDiolitsis Engine Lab (GEL) — v21.0 FINAL
-// CPU/RAM LIVE — Vertical Layout + Neon Colors
+// GDiolitsis Engine Lab (GEL) — v21.1 FINAL
+// CPU/RAM LIVE — Shared CpuStatBridge Edition
 
 package com.gel.cleaner;
 
@@ -16,31 +16,31 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.gel.cleaner.UIHelpers;
-
 public class CpuRamLiveActivity extends AppCompatActivity {
 
-    static {
-        System.loadLibrary("cpustat");
-    }
-
     private TextView txtLive;
-    private boolean running = true;
-
-    public native int getCpuUsageNative();
+    private volatile boolean running = true;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cpu_ram_live);
 
-        UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
+        UIHelpers.applyPressEffectRecursive(
+                getWindow().getDecorView()
+        );
 
         txtLive = findViewById(R.id.txtLiveInfo);
 
         Button btnCore = findViewById(R.id.btnCoreMonitor);
+
         btnCore.setOnClickListener(v ->
-                startActivity(new Intent(this, CoreMonitorActivity.class))
+                startActivity(
+                        new Intent(
+                                this,
+                                CoreMonitorActivity.class
+                        )
+                )
         );
 
         startLoop();
@@ -53,99 +53,174 @@ public class CpuRamLiveActivity extends AppCompatActivity {
     }
 
     private void startLoop() {
+
         new Thread(() -> {
 
             int counter = 1;
 
             while (running) {
 
-                int cpuVal = getCpuUsageNative();
-                EngineInfo info = EngineInfo.decode(cpuVal);
+                int cpuPercent =
+                        CpuStatBridge.readCpuPercent();
 
-                // CPU neon
-                String cpu = "<font color='#00FF66'>" + info.percent + "%</font>";
+                String cpuText =
+                        cpuPercent >= 0
+                                ? cpuPercent + "%"
+                                : "N/A";
 
-                // TEMP neon
-                String temp = "<font color='#00FF66'>" + readCpuTemp() + "</font>";
+                String cpu =
+                        "<font color='#00FF66'>"
+                                + cpuText
+                                + "</font>";
 
-                // RAM neon (USED only)
-                String ramRaw = readRamUsage();   // "2131 / 3479 MB"
-                String[] p = ramRaw.split(" ");
+                String temp =
+                        "<font color='#00FF66'>"
+                                + readCpuTemp()
+                                + "</font>";
 
-                String used = "<font color='#00FF66'>" + p[0] + "</font>";
-                String slash = p[1];
-                String total = p[2];
+                String ramRaw = readRamUsage();
 
-                // ================================
-                //  NEW VERTICAL FORMAT
-                // ================================
+                String ram;
+
+                if ("N/A".equals(ramRaw)) {
+
+                    ram =
+                            "<font color='#00FF66'>N/A</font>";
+
+                } else {
+
+                    String[] parts =
+                            ramRaw.split(" ");
+
+                    if (parts.length >= 3) {
+
+                        String used =
+                                "<font color='#00FF66'>"
+                                        + parts[0]
+                                        + "</font>";
+
+                        ram =
+                                used
+                                        + " "
+                                        + parts[1]
+                                        + " "
+                                        + parts[2];
+
+                    } else {
+
+                        ram =
+                                "<font color='#00FF66'>"
+                                        + ramRaw
+                                        + "</font>";
+                    }
+                }
+
                 String html =
-                        "Live " + counter + "<br><br>" +
-                        "CPU: " + cpu + "<br>" +
-                        "TEMP: " + temp + "<br>" +
-                        "RAM: " + used + " " + slash + " " + total;
+                        "Live "
+                                + counter
+                                + "<br><br>"
+                                + "CPU: "
+                                + cpu
+                                + "<br>"
+                                + "TEMP: "
+                                + temp
+                                + "<br>"
+                                + "RAM: "
+                                + ram;
 
                 runOnUiThread(() ->
-                        txtLive.setText(Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY))
+                        txtLive.setText(
+                                Html.fromHtml(
+                                        html,
+                                        Html.FROM_HTML_MODE_LEGACY
+                                )
+                        )
                 );
 
                 counter++;
-                if (counter > 999) counter = 1;
 
-                try { Thread.sleep(1000); } catch (Exception ignored) {}
+                if (counter > 999) {
+                    counter = 1;
+                }
+
+                try {
+                    Thread.sleep(1000L);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
 
-        }).start();
-    }
-
-    // =============================
-    // INTERNAL HELPERS
-    // =============================
-
-    private static class EngineInfo {
-        public final int percent;
-        public final String name;
-
-        EngineInfo(int p, String n) {
-            percent = p;
-            name = n;
-        }
-
-        static EngineInfo decode(int v) {
-            if (v >= 0 && v <= 100) return new EngineInfo(v, "RAW");
-            if (v >= 1000 && v <= 1100) return new EngineInfo(v - 1000, "FREQ");
-            if (v >= 2000 && v <= 2100) return new EngineInfo(v - 2000, "THERMAL");
-            return new EngineInfo(0, "N/A");
-        }
+        }, "GEL-CPU-RAM-Live").start();
     }
 
     private String readCpuTemp() {
-        try {
-            Intent intent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-            if (intent == null) return "N/A";
 
-            int t = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1);
-            if (t > 0) return (t / 10f) + "°C";
+        try {
+
+            Intent intent =
+                    registerReceiver(
+                            null,
+                            new IntentFilter(
+                                    Intent.ACTION_BATTERY_CHANGED
+                            )
+                    );
+
+            if (intent == null) {
+                return "N/A";
+            }
+
+            int rawTemperature =
+                    intent.getIntExtra(
+                            BatteryManager.EXTRA_TEMPERATURE,
+                            -1
+                    );
+
+            if (rawTemperature > 0) {
+                return (rawTemperature / 10f) + "°C";
+            }
+
             return "N/A";
 
-        } catch (Exception e) {
+        } catch (Throwable ignore) {
             return "N/A";
         }
     }
 
     private String readRamUsage() {
+
         try {
-            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
-            am.getMemoryInfo(mi);
 
-            long total = mi.totalMem / (1024 * 1024);
-            long free  = mi.availMem / (1024 * 1024);
-            long used  = total - free;
+            ActivityManager manager =
+                    (ActivityManager) getSystemService(
+                            Context.ACTIVITY_SERVICE
+                    );
 
-            return used + " / " + total + " MB";
+            if (manager == null) {
+                return "N/A";
+            }
 
-        } catch (Exception e) {
+            ActivityManager.MemoryInfo info =
+                    new ActivityManager.MemoryInfo();
+
+            manager.getMemoryInfo(info);
+
+            long total =
+                    info.totalMem
+                            / (1024L * 1024L);
+
+            long free =
+                    info.availMem
+                            / (1024L * 1024L);
+
+            long used = total - free;
+
+            return used
+                    + " / "
+                    + total
+                    + " MB";
+
+        } catch (Throwable ignore) {
             return "N/A";
         }
     }
