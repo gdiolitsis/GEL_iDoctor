@@ -17,7 +17,7 @@
 
     <!-- SYSTEM -->
     <string name="cpu_ram_info">📱 ΠΛΗΡΟΦΟΡΙΕΣ ΣΥΣΚΕΥΗΣ</string>
-    <string name="cpu_ram_live">📈 CPU / RAM ΖΩΝΤΑΝΗ ΠΑΡΑΚΟΛΟΥΘΗΣΗ</string>
+    <string name="cpu_ram_live">📈 CPU / RAM LIVE</string>
 
     <!-- DEVICE INFO -->
     <string name="phone_info_internal">📱 ΠΛΗΡΟΦ. ΣΥΣΚΕΥΗΣ\n(Εσωτερικά)</string>
