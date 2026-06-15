@@ -73,6 +73,11 @@ private TextView welcomeMessage;
 
 private ScrollView scroll;
 
+// =========================================================
+// GUIDED OPTIMIZER — USAGE ACCESS GUARD STATE
+// =========================================================
+private boolean waitingForUsageAccessReturn = false;
+
 // ==============================
 // MAINACTIVITY — ADD/REPLACE THESE METHODS
 // ==============================
@@ -121,7 +126,26 @@ super.attachBaseContext(LocaleHelper.apply(base));
 
 @Override
 protected void onResume() {
-super.onResume();
+    super.onResume();
+
+    // Re-check Usage Access after returning from Android Settings.
+    if (waitingForUsageAccessReturn) {
+
+        waitingForUsageAccessReturn = false;
+
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+
+            if (hasUsageAccess()) {
+
+                launchGuidedOptimizer(false);
+
+            } else {
+
+                showUsageAccessStillBlockedDialog();
+            }
+
+        }, 250);
+    }
 }
 
 // =========================================================
@@ -242,20 +266,9 @@ if (savedInstanceState == null) {
     // ================= GUIDED OPTIMIZER =================
     View btnGuidedOptimizer = findViewById(R.id.btnGuidedOptimizer);
     if (btnGuidedOptimizer != null) {
-        btnGuidedOptimizer.setOnClickListener(v -> {
-            try {
-                startActivity(new Intent(
-                        MainActivity.this,
-                        GuidedOptimizerActivity.class
-                ));
-            } catch (Exception e) {
-                Toast.makeText(
-                        MainActivity.this,
-                        "Cannot open Guided Optimizer",
-                        Toast.LENGTH_SHORT
-                ).show();
-            }
-        });
+        btnGuidedOptimizer.setOnClickListener(v ->
+                openGuidedOptimizerWithPermissionGuard()
+        );
     }
 }
 
@@ -703,10 +716,301 @@ private void showSmartDiagnosticPopup(String issue) {
             .setMessage(message)
             .setPositiveButton(gr ? "Έλεγχος" : "Run Check", (d, w) -> {
 
-                startActivity(new Intent(this, GuidedOptimizerActivity.class));
+                openGuidedOptimizerWithPermissionGuard();
             })
             .setNegativeButton(gr ? "Αργότερα" : "Later", null)
             .show();
+}
+
+
+// =========================================================
+// GUIDED OPTIMIZER — USAGE ACCESS PERMISSION GUARD
+// =========================================================
+private void openGuidedOptimizerWithPermissionGuard() {
+
+    if (hasUsageAccess()) {
+        launchGuidedOptimizer(false);
+        return;
+    }
+
+    showUsageAccessRequiredDialog();
+}
+
+// =========================================================
+// CHECK USAGE ACCESS
+// =========================================================
+private boolean hasUsageAccess() {
+
+    try {
+
+        AppOpsManager appOps =
+                (AppOpsManager) getSystemService(APP_OPS_SERVICE);
+
+        if (appOps == null) {
+            return false;
+        }
+
+        int mode;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+
+            mode = appOps.unsafeCheckOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(),
+                    getPackageName()
+            );
+
+        } else {
+
+            mode = appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(),
+                    getPackageName()
+            );
+        }
+
+        return mode == AppOpsManager.MODE_ALLOWED;
+
+    } catch (Throwable ignore) {
+        return false;
+    }
+}
+
+// =========================================================
+// USAGE ACCESS REQUIRED DIALOG
+// =========================================================
+private void showUsageAccessRequiredDialog() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    String title = gr
+            ? "Απαιτείται Πρόσβαση Χρήσης"
+            : "Usage Access Required";
+
+    String message = gr
+            ? "Ο πλήρης Guided Optimiser χρειάζεται την ειδική άδεια "
+              + "«Πρόσβαση χρήσης», ώστε να αναλύσει σωστά τη χρήση εφαρμογών.\n\n"
+              + "Εάν το Android δεν επιτρέπει την ενεργοποίηση και εμφανίζει "
+              + "«Περιορισμένη ρύθμιση», άνοιξε:\n\n"
+              + "Ρυθμίσεις → Εφαρμογές → GELiDOCTOR → ⋮ → "
+              + "Να επιτρέπονται οι περιορισμένες ρυθμίσεις\n\n"
+              + "Μετά επέστρεψε και ενεργοποίησε την Πρόσβαση χρήσης.\n\n"
+              + "Μπορείς επίσης να συνεχίσεις τώρα σε Limited Mode. "
+              + "Ο optimiser θα εκτελέσει μόνο τους ελέγχους που δεν απαιτούν Usage Access."
+            : "The full Guided Optimizer requires the special "
+              + "Usage Access permission to analyze app usage correctly.\n\n"
+              + "If Android blocks the switch and displays "
+              + "\"Restricted setting\", open:\n\n"
+              + "Settings → Apps → GELiDOCTOR → ⋮ → "
+              + "Allow restricted settings\n\n"
+              + "Then return and enable Usage Access.\n\n"
+              + "You may also continue now in Limited Mode. "
+              + "The optimizer will run only checks that do not require Usage Access.";
+
+    AlertDialog dialog =
+            new AlertDialog.Builder(this)
+                    .setTitle(title)
+                    .setMessage(message)
+                    .setPositiveButton(
+                            gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ" : "OPEN SETTINGS",
+                            (d, which) -> openUsageAccessSettings()
+                    )
+                    .setNeutralButton(
+                            gr ? "LIMITED MODE" : "LIMITED MODE",
+                            (d, which) -> showLimitedModeConfirmation()
+                    )
+                    .setNegativeButton(
+                            gr ? "ΑΚΥΡΟ" : "CANCEL",
+                            null
+                    )
+                    .create();
+
+    dialog.setOnShowListener(d -> {
+
+        try {
+
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    .setTextColor(0xFF00FF7F);
+
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+                    .setTextColor(0xFFFFD700);
+
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                    .setTextColor(Color.WHITE);
+
+        } catch (Throwable ignore) {}
+    });
+
+    dialog.show();
+}
+
+// =========================================================
+// OPEN USAGE ACCESS SETTINGS
+// =========================================================
+private void openUsageAccessSettings() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    try {
+
+        waitingForUsageAccessReturn = true;
+
+        Intent intent =
+                new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+
+        intent.setData(
+                Uri.parse("package:" + getPackageName())
+        );
+
+        startActivity(intent);
+
+    } catch (Throwable first) {
+
+        try {
+
+            waitingForUsageAccessReturn = true;
+
+            startActivity(
+                    new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            );
+
+        } catch (Throwable second) {
+
+            waitingForUsageAccessReturn = false;
+
+            Toast.makeText(
+                    this,
+                    gr
+                            ? "Δεν ήταν δυνατό να ανοίξουν οι ρυθμίσεις Πρόσβασης χρήσης."
+                            : "Unable to open Usage Access settings.",
+                    Toast.LENGTH_LONG
+            ).show();
+        }
+    }
+}
+
+// =========================================================
+// USAGE ACCESS STILL BLOCKED
+// =========================================================
+private void showUsageAccessStillBlockedDialog() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    String message = gr
+            ? "Η Πρόσβαση χρήσης δεν ενεργοποιήθηκε.\n\n"
+              + "Αν το Android την έχει μπλοκάρει, πήγαινε:\n\n"
+              + "Ρυθμίσεις → Εφαρμογές → GELiDOCTOR → ⋮ → "
+              + "Να επιτρέπονται οι περιορισμένες ρυθμίσεις\n\n"
+              + "Μπορείς να ξαναδοκιμάσεις ή να συνεχίσεις σε Limited Mode."
+            : "Usage Access was not enabled.\n\n"
+              + "If Android blocked it, open:\n\n"
+              + "Settings → Apps → GELiDOCTOR → ⋮ → "
+              + "Allow restricted settings\n\n"
+              + "You can try again or continue in Limited Mode.";
+
+    new AlertDialog.Builder(this)
+            .setTitle(
+                    gr
+                            ? "Η άδεια παραμένει κλειδωμένη"
+                            : "Permission is still blocked"
+            )
+            .setMessage(message)
+            .setPositiveButton(
+                    gr ? "ΞΑΝΑ ΡΥΘΜΙΣΕΙΣ" : "OPEN SETTINGS AGAIN",
+                    (d, which) -> openUsageAccessSettings()
+            )
+            .setNeutralButton(
+                    "LIMITED MODE",
+                    (d, which) -> showLimitedModeConfirmation()
+            )
+            .setNegativeButton(
+                    gr ? "ΑΚΥΡΟ" : "CANCEL",
+                    null
+            )
+            .show();
+}
+
+// =========================================================
+// LIMITED MODE CONFIRMATION
+// =========================================================
+private void showLimitedModeConfirmation() {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    new AlertDialog.Builder(this)
+            .setTitle(
+                    gr
+                            ? "Guided Optimiser — Limited Mode"
+                            : "Guided Optimizer — Limited Mode"
+            )
+            .setMessage(
+                    gr
+                            ? "Ο optimiser θα συνεχίσει χωρίς Πρόσβαση χρήσης.\n\n"
+                              + "Θα παραλειφθούν οι έλεγχοι που απαιτούν ιστορικό χρήσης εφαρμογών. "
+                              + "Οι υπόλοιποι διαθέσιμοι έλεγχοι θα εκτελεστούν κανονικά."
+                            : "The optimizer will continue without Usage Access.\n\n"
+                              + "Checks that require app usage history will be skipped. "
+                              + "All other available checks will run normally."
+            )
+            .setPositiveButton(
+                    gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE",
+                    (d, which) -> launchGuidedOptimizer(true)
+            )
+            .setNegativeButton(
+                    gr ? "ΑΚΥΡΟ" : "CANCEL",
+                    null
+            )
+            .show();
+}
+
+// =========================================================
+// LAUNCH GUIDED OPTIMIZER
+// =========================================================
+private void launchGuidedOptimizer(boolean limitedMode) {
+
+    final boolean gr = AppLang.isGreek(this);
+
+    try {
+
+        Intent intent =
+                new Intent(
+                        MainActivity.this,
+                        GuidedOptimizerActivity.class
+                );
+
+        intent.putExtra(
+                "gel_limited_mode",
+                limitedMode
+        );
+
+        intent.putExtra(
+                "gel_usage_access_granted",
+                !limitedMode && hasUsageAccess()
+        );
+
+        startActivity(intent);
+
+        if (limitedMode) {
+
+            Toast.makeText(
+                    this,
+                    gr
+                            ? "Guided Optimiser: εκτέλεση σε Limited Mode."
+                            : "Guided Optimizer: running in Limited Mode.",
+                    Toast.LENGTH_LONG
+            ).show();
+        }
+
+    } catch (Throwable t) {
+
+        Toast.makeText(
+                this,
+                gr
+                        ? "Αδυναμία ανοίγματος του Guided Optimiser."
+                        : "Cannot open Guided Optimizer.",
+                Toast.LENGTH_SHORT
+        ).show();
+    }
 }
 
 private void showSmartMiniDiagnostic(
