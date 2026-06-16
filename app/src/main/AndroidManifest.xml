@@ -91,6 +91,7 @@
          APPLICATION
          ============================================================ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
     <application
         android:allowBackup="false"
@@ -134,6 +135,13 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_gel_device_monitor_info"/>
         </receiver>
+
+        <!-- ================= GEL WIDGET TEMPORARY LIVE MODE ================= -->
+        <service
+            android:name=".GelWidgetLiveService"
+            android:exported="false"
+            android:foregroundServiceType="shortService"
+            android:stopWithTask="false" />
 
         <!-- ================= EXISTING ================= -->
         <activity
