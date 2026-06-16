@@ -8431,6 +8431,31 @@ private void lab8CameraHardwareCheck() {
     logInfo(gr
             ? "Σύνοψη δυνατοτήτων καμερών:"
             : "Camera capabilities summary:");
+
+    logLabelOkValue(
+            gr ? "Προσβάσιμες κάμερες που εντοπίστηκαν"
+               : "Accessible cameras detected",
+            String.valueOf(cams.size())
+    );
+
+    logInfo(
+            gr
+                    ? "Το LAB 8 θα ελέγξει όλες τις κάμερες που το Android "
+                      + "εκθέτει στην εφαρμογή."
+                    : "LAB 8 will test every camera exposed by Android "
+                      + "to this application."
+    );
+
+    logWarn(
+            gr
+                    ? "Ορισμένοι κατασκευαστές μπορεί να μην εκθέτουν ξεχωριστά "
+                      + "βοηθητικούς φακούς, όπως macro, depth ή telephoto. "
+                      + "Η μη εμφάνισή τους δεν θεωρείται ένδειξη βλάβης."
+                    : "Some manufacturers may not expose auxiliary lenses separately, "
+                      + "such as macro, depth or telephoto cameras. "
+                      + "Their absence from this list is not treated as a hardware fault."
+    );
+
     logLine();
     appendHtml("<br>");
 
@@ -8467,7 +8492,7 @@ private void showLab8IntroAndStart(
 
     final String messageText =
             gr
-                    ? "Αυτό το τεστ, θα ελέγξει ΟΛΕΣ τις κάμερες, μία-μία.\n\n"
+                    ? "Αυτό το τεστ θα ελέγξει ΟΛΕΣ τις προσβάσιμες κάμερες, μία-μία.\n\n"
                       + "Για κάθε κάμερα:\n"
                       + "• Θα ανοίξει ζωντανή προεπισκόπηση.\n"
                       + "• Θα μετρηθεί η ροή καρέ.\n"
@@ -8600,8 +8625,25 @@ private void lab8RunNextCamera(
         logLine();
 
         logLabelValue(
-                gr ? "Κάμερες που ελέγχθηκαν" : "Cameras tested",
+                gr ? "Προσβάσιμες κάμερες που ελέγχθηκαν"
+                   : "Accessible cameras tested",
                 String.valueOf(overall.total)
+        );
+
+        logInfo(
+                gr
+                        ? "Ελέγχθηκαν όλες οι κάμερες που ήταν διαθέσιμες "
+                          + "στην εφαρμογή μέσω Android Camera2."
+                        : "All cameras available to the application through "
+                          + "Android Camera2 were tested."
+        );
+
+        logWarn(
+                gr
+                        ? "Τυχόν κρυφές βοηθητικές κάμερες που δεν εκτίθενται "
+                          + "από τον κατασκευαστή δεν αξιολογούνται ως αποτυχία."
+                        : "Any hidden auxiliary cameras not exposed by the manufacturer "
+                          + "are not evaluated as a failure."
         );
 
         if (overall.previewOkCount == overall.total && overall.total > 0)
