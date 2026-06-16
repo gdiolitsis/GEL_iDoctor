@@ -31,18 +31,36 @@
             android:textSize="15sp"
             android:singleLine="true"/>
 
-        <TextView
-            android:id="@+id/widget_refresh"
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:gravity="center"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:text="↻ REFRESH"
-            android:textColor="#00FF7F"
-            android:textStyle="bold"
-            android:textSize="12sp"
-            android:background="@drawable/gel_btn_neon_outline"/>
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/widget_live"
+                android:layout_width="96dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:text="● LIVE 3′"
+                android:textColor="#FF5252"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:background="@drawable/gel_btn_outline_selector"/>
+
+            <TextView
+                android:id="@+id/widget_refresh"
+                android:layout_width="96dp"
+                android:layout_height="36dp"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:text="↻ REFRESH"
+                android:textColor="#00FF7F"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:background="@drawable/gel_btn_neon_outline"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -51,7 +69,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="10dp">
+        android:layout_marginTop="8dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -77,7 +95,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="6dp">
+        android:layout_marginTop="5dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -103,7 +121,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="6dp">
+        android:layout_marginTop="5dp">
 
         <TextView
             android:id="@+id/widget_battery_label"
@@ -129,7 +147,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="5dp">
+        android:layout_marginTop="4dp">
 
         <TextView
             android:id="@+id/widget_thermal_label"
@@ -155,13 +173,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="5dp">
+        android:layout_marginTop="4dp">
 
         <TextView
             android:id="@+id/widget_storage_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="FREE  "
+            android:text="STORAGE FREE  "
             android:textColor="#FFFFFF"
             android:textSize="14sp"/>
 
@@ -180,7 +198,7 @@
         android:id="@+id/widget_updated"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:gravity="end"
         android:text="Updated: --:--"
         android:textColor="#BDBDBD"
