@@ -48,6 +48,43 @@ public final class GelWidgetMetrics {
         }
     }
 
+    public static final class CpuRamSnapshot {
+
+        public final String cpu;
+        public final String ram;
+        public final String updated;
+
+        CpuRamSnapshot(
+                String cpu,
+                String ram,
+                String updated
+        ) {
+            this.cpu = cpu;
+            this.ram = ram;
+            this.updated = updated;
+        }
+    }
+
+    public static CpuRamSnapshot captureCpuRam(Context context) {
+
+        Context app = context.getApplicationContext();
+
+        String cpu = readCpuUsage();
+        String ram = readRam(app);
+
+        String updated =
+                new SimpleDateFormat(
+                        "HH:mm:ss",
+                        Locale.getDefault()
+                ).format(new Date());
+
+        return new CpuRamSnapshot(
+                cpu,
+                ram,
+                updated
+        );
+    }
+
     public static Snapshot capture(Context context) {
 
         Context app = context.getApplicationContext();
