@@ -40,24 +40,38 @@
             <TextView
                 android:id="@+id/widget_live"
                 android:layout_width="96dp"
-                android:layout_height="36dp"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
                 android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingLeft="2dp"
+                android:paddingTop="0dp"
+                android:paddingRight="2dp"
+                android:paddingBottom="0dp"
                 android:text="● LIVE 3′"
                 android:textColor="#FF5252"
                 android:textStyle="bold"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:background="@drawable/gel_btn_outline_selector"/>
 
             <TextView
                 android:id="@+id/widget_refresh"
                 android:layout_width="96dp"
-                android:layout_height="36dp"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
                 android:layout_marginTop="4dp"
                 android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingLeft="2dp"
+                android:paddingTop="0dp"
+                android:paddingRight="2dp"
+                android:paddingBottom="0dp"
                 android:text="↻ REFRESH"
                 android:textColor="#00FF7F"
                 android:textStyle="bold"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:background="@drawable/gel_btn_neon_outline"/>
 
         </LinearLayout>
