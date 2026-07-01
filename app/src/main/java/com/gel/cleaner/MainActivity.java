@@ -127,6 +127,15 @@ private static final String PREFS = "gel_prefs";
 private static final String KEY_PLATFORM = "platform_mode";
 
 // =========================================================
+// SUPPORT LINK
+// =========================================================
+// Use a normal PayPal.me support/payment link, not the legacy
+// PayPal donations endpoint, because _donations may require
+// organisation/charity eligibility on PayPal.
+private static final String GEL_SUPPORT_URL =
+        "https://www.paypal.me/gdiolitsis";
+
+// =========================================================
 // LOCALE
 // =========================================================
 @Override
@@ -2298,27 +2307,34 @@ private void setupDonate() {
 
     View b = findViewById(R.id.btnDonate);
 
-    if (b != null) {
+    if (b == null) return;
 
-        b.setOnClickListener(v -> {
+    b.setOnClickListener(v -> {
 
-            try {
+        final boolean gr = AppLang.isGreek(this);
 
-                startActivity(new Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse("https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=gdiolitsis@yahoo.com&currency_code=EUR")
-                ));
+        try {
 
-            } catch (Exception e) {
+            Intent intent = new Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(GEL_SUPPORT_URL)
+            );
 
-                Toast.makeText(
-                        this,
-                        "Cannot open browser",
-                        Toast.LENGTH_SHORT
-                ).show();
-            }
-        });
-    }
+            intent.addCategory(Intent.CATEGORY_BROWSABLE);
+
+            startActivity(intent);
+
+        } catch (Throwable e) {
+
+            Toast.makeText(
+                    this,
+                    gr
+                            ? "Δεν ήταν δυνατό να ανοίξει η σελίδα υποστήριξης"
+                            : "Cannot open support page",
+                    Toast.LENGTH_SHORT
+            ).show();
+        }
+    });
 }
 
 // =========================================================
