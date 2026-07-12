@@ -27896,7 +27896,29 @@ try {
     magiskStealthScore = lab24_magiskStealthScore(magiskStealthFindings);
 } catch (Throwable ignore) {}
 
-int risk = Math.min(100, rootScore + blScore + animScore + Math.min(25, magiskStealthScore / 2));
+int risk =
+        rootScore +
+        blScore +
+        animScore +
+        Math.min(15, magiskStealthScore / 3);
+
+// ------------------------------------------------
+// VERIFIED SECURITY BONUS
+// ------------------------------------------------
+if ("green".equals(vbState)) {
+    risk -= 8;
+}
+
+if ("locked".equals(vbmeta)) {
+    risk -= 8;
+}
+
+if ("1".equals(flashL)) {
+    risk -= 6;
+}
+
+// never below zero
+risk = Math.max(0, Math.min(100, risk));
 
 logInfo(gr ? "Έλεγχος Root:" : "Root Scan:");  
 if (rootFindings.isEmpty()) {  
@@ -27908,14 +27930,32 @@ if (rootFindings.isEmpty()) {
 }  
 
 logInfo(gr ? "Bootloader / Verified Boot:"
-           : "Bootloader / Verified Boot:");  
-if (blFindings.isEmpty()) {  
-    logOk(gr ? "Δεν εντοπίστηκαν ανωμαλίες bootloader."
-             : "No bootloader anomalies detected.");  
-} else {  
-    for (String s : blFindings)
-        logWarn("• " + s);  
-}  
+           : "Bootloader / Verified Boot:");
+
+if (blFindings.isEmpty()) {
+
+    logOk(gr
+            ? "Δεν εντοπίστηκαν ανωμαλίες bootloader."
+            : "No bootloader anomalies detected.");
+
+} else {
+
+    for (String s : blFindings) {
+
+        String l = s.toLowerCase(Locale.US);
+
+        if (l.contains("verifiedbootstate=green") ||
+            l.contains("vbmeta.device_state=locked") ||
+            l.contains("flash.locked=1")) {
+
+            logOk("• " + s);
+
+        } else {
+
+            logWarn("• " + s);
+        }
+    }
+}
 
 logInfo(gr ? "Boot Animation / Splash:"
            : "Boot Animation / Splash:");  
