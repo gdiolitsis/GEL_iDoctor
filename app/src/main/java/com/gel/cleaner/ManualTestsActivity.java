@@ -18757,9 +18757,11 @@ private void updateProgressBar(int value, int max) {
 
     float ratio = Math.min(1f, value / (float) max);
 
-    // 🔴 better fill behavior
+    // 🔴 Fill only completed segments.
+    // With 12 segments over 300 sec, each segment fills after 25 sec,
+    // not immediately when the test starts.
     int active = Math.min(segCount,
-            (int) Math.ceil(ratio * segCount));
+            (int) Math.floor(ratio * segCount));
 
     for (int i = 0; i < segCount; i++) {
 
@@ -31258,8 +31260,8 @@ if (lab29InstabilityPattern) {
             gr ? "Ακεραιότητα συσκευής"
                : "Device integrity",
             gr
-        ? "Το LAB 29 εντόπισε συνδυασμένο μοτίβο αστάθειας."
-        : "LAB 29 detected a combined instability pattern."
+                    ? "Το LAB 29 εντόπισε επαναλαμβανόμενο μοτίβο αστάθειας."
+                    : "LAB 29 detected a repeated instability pattern."
     );
 }
 
