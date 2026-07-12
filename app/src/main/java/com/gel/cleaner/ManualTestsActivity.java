@@ -27959,13 +27959,28 @@ if (blFindings.isEmpty()) {
 
 logInfo(gr ? "Boot Animation / Splash:"
            : "Boot Animation / Splash:");  
-if (animFindings.isEmpty()) {  
-    logOk(gr ? "Δεν εντοπίστηκαν ίχνη προσαρμοσμένης εκκίνησης."
-             : "No custom animation traces detected.");  
-} else {  
-    for (String s : animFindings)
-        logWarn("• " + s);  
-}  
+if (animFindings.isEmpty()) {
+
+    logOk(gr
+            ? "Δεν εντοπίστηκαν ίχνη προσαρμοσμένης εκκίνησης."
+            : "No custom animation traces detected.");
+
+} else {
+
+    for (String s : animFindings) {
+
+        String l = s.toLowerCase(Locale.US);
+
+        if (l.contains("stock bootanimation")) {
+
+            logOk("• " + s);
+
+        } else {
+
+            logWarn("• " + s);
+        }
+    }
+}
 
 logInfo(gr ? "Magisk / Stealth heuristics:"
            : "Magisk / Stealth heuristics:");
@@ -27978,8 +27993,23 @@ if (magiskStealthFindings.isEmpty()) {
 
 } else {
 
-    for (String s : magiskStealthFindings)
-        logWarn("• " + s);
+    for (String s : magiskStealthFindings) {
+
+        String l = s.toLowerCase(Locale.US);
+
+        if ((l.contains("/debug_ramdisk") ||
+             l.contains("overlay mount")) &&
+            "green".equals(vbState) &&
+            "locked".equals(vbmeta) &&
+            "1".equals(flashL)) {
+
+            logOk("• " + s);
+
+        } else {
+
+            logWarn("• " + s);
+        }
+    }
 }
 
 // ------------------------------------------------------------
