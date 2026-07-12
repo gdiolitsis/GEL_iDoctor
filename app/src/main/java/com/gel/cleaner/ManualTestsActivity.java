@@ -31962,12 +31962,34 @@ appendHtml("<br>");
 logInfo(gr ? "Τελικό Συμπέρασμα" : "Final verdict");
 logLine();
 
-if (verdict.startsWith("🟢"))
-    logLabelOkValue(gr ? "Αποτέλεσμα" : "Result", verdict);
-else if (verdict.startsWith("??"))
-    logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result", verdict);
-else
-    logLabelErrorValue(gr ? "Αποτέλεσμα" : "Result", verdict);
+if (deviceHealthScore >= 80) {
+
+    if (securityScore < 55 || privacyScore < 55) {
+        logLabelWarnValue(
+                gr ? "Αποτέλεσμα" : "Result",
+                verdict
+        );
+    } else {
+        logLabelOkValue(
+                gr ? "Αποτέλεσμα" : "Result",
+                verdict
+        );
+    }
+
+} else if (deviceHealthScore >= 55) {
+
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            verdict
+    );
+
+} else {
+
+    logLabelErrorValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            verdict
+    );
+}
 
 // ------------------------------------------------------------
 // HARDWARE TREND ENGINE
@@ -32666,7 +32688,7 @@ return s;
 
 private String colorFlagFromScore(int s) {
 
-    if (s >= 80) return "??";
+    if (s >= 80) return "🟢";
     if (s >= 55) return "🟡";
     return "🔴";
 }
