@@ -5257,10 +5257,7 @@ if (calibrationDrift[0]) {
 
         manipulationScore += 15;
     }
-
-    if (manipulationScore > 100)
-        manipulationScore = 100;
-
+    
     // ------------------------------------------------------------
     // FINAL INTERPRETATION
     // ------------------------------------------------------------
@@ -30410,23 +30407,23 @@ private void lab29DeviceAuthenticity() {
     logInfo(gr
             ? "LAB 29 — Έλεγχος Γνησιότητας Συσκευής & Ακεραιότητας"
             : "LAB 29 — Device Authenticity & Integrity");
-    logWarn(gr
-            ? "SAFE MODE — εμφανίζονται μόνο επιβεβαιωμένα ευρήματα"
-            : "SAFE MODE — only confirmed findings are reported");
+    logInfo(gr
+        ? "SAFE MODE — εμφανίζονται μόνο επιβεβαιωμένα ευρήματα"
+        : "SAFE MODE — only confirmed findings are reported");
     logLine();
 
     appendHtml("<br>");
 
-    if (!isDeviceRooted()) {
+if (!isDeviceRooted()) {
 
-        logLabelWarnValue(
-                gr ? "Advanced verification"
-                        : "Advanced verification",
-                gr
-                        ? "Ορισμένοι έλεγχοι απαιτούν root"
-                        : "Some checks require root"
-        );
-    }
+    logLabelValue(
+            gr ? "Advanced verification"
+               : "Advanced verification",
+            gr
+                    ? "Ορισμένοι πρόσθετοι έλεγχοι δεν είναι διαθέσιμοι χωρίς root"
+                    : "Some additional checks are unavailable without root"
+    );
+}
 
     int authenticityScore = 100;
 
@@ -30441,9 +30438,10 @@ private void lab29DeviceAuthenticity() {
     int batteryLevel = getBatteryPercentSafe();
     float voltage = getBatteryVoltageFiltered();
 
-    if (batteryLevel < 0 || Float.isNaN(voltage)
-            || voltage < 2500
-            || voltage > 5500) {
+    if (batteryLevel < 0 ||
+    Float.isNaN(voltage) ||
+    voltage < 2.5f ||
+    voltage > 5.5f) {
 
         logLabelWarnValue(
                 gr ? "Μπαταρία" : "Battery",
@@ -30687,6 +30685,18 @@ if (lab14CollapseRisk || lab14SwellingSuspected)
 
     if (authenticityScore < 0)
         authenticityScore = 0;
+        
+// ============================================================
+// SAVE LAB 29 RESULTS — SINGLE SOURCE FOR LAB 30 / LAB 31
+// ============================================================
+boolean instabilityDetected = instabilityScore >= 20;
+
+p.edit()
+        .putInt("lab29_authenticity_score", authenticityScore)
+        .putInt("lab29_instability_score", instabilityScore)
+        .putBoolean("lab29_instability_pattern", instabilityDetected)
+        .putLong("lab29_ts", System.currentTimeMillis())
+        .apply();
 
 String level;
 
@@ -30941,59 +30951,81 @@ String privacyFlag = colorFlagFromScore(privacyScore);
 // 9) AUTHENTICITY / REPAIR INDICATORS (LAB 29)
 // ------------------------------------------------------------
 
-boolean nonOemParts =
-        p.getBoolean("lab29_non_oem_parts", false);
+int lab29AuthenticityScore =
+        p.getInt("lab29_authenticity_score", -1);
 
-boolean displayReplaced =
-        p.getBoolean("lab29_display_replaced", false);
+int lab29InstabilityScore =
+        p.getInt("lab29_instability_score", 0);
 
-boolean cameraReplaced =
-        p.getBoolean("lab29_camera_replaced", false);
-
-boolean batteryReplaced =
-        p.getBoolean("lab29_battery_replaced", false);
+boolean lab29InstabilityPattern =
+        p.getBoolean("lab29_instability_pattern", false);
 
 appendHtml("<br>");
-logInfo(gr ? "Αυθεντικότητα / Επισκευές" : "Authenticity / Repairs");
+logInfo(gr
+        ? "Αυθεντικότητα / Ακεραιότητα συσκευής"
+        : "Device authenticity / integrity");
 logLine();
 
-if (nonOemParts)
+if (lab29AuthenticityScore >= 0) {
+
+    if (lab29AuthenticityScore >= 90) {
+
+        logLabelOkValue(
+                gr ? "Γνησιότητα" : "Authenticity",
+                lab29AuthenticityScore + "/100"
+        );
+
+        logLabelOkValue(
+                gr ? "Κατάσταση" : "Status",
+                gr
+                        ? "Δεν εντοπίστηκαν επιβεβαιωμένες ανωμαλίες"
+                        : "No confirmed integrity anomalies detected"
+        );
+
+    } else if (lab29AuthenticityScore >= 70) {
+
+        logLabelWarnValue(
+                gr ? "Γνησιότητα" : "Authenticity",
+                lab29AuthenticityScore + "/100"
+        );
+
+        logLabelWarnValue(
+                gr ? "Κατάσταση" : "Status",
+                gr
+                        ? "Εντοπίστηκαν αποκλίσεις που χρειάζονται επανέλεγχο"
+                        : "Deviations detected — verification recommended"
+        );
+
+    } else {
+
+        logLabelWarnValue(
+                gr ? "Γνησιότητα" : "Authenticity",
+                lab29AuthenticityScore + "/100"
+        );
+
+        logLabelWarnValue(
+                gr ? "Κατάσταση" : "Status",
+                gr
+                        ? "Εντοπίστηκαν σημαντικές αποκλίσεις ακεραιότητας"
+                        : "Significant integrity deviations detected"
+        );
+    }
+
+} else {
+
     logLabelWarnValue(
-            gr ? "Μη γνήσια εξαρτήματα" : "Non-OEM parts",
-            gr ? "Πιθανή χρήση μη γνήσιων ανταλλακτικών"
-               : "Possible non-OEM components detected"
+            gr ? "Γνησιότητα" : "Authenticity",
+            gr
+                    ? "Δεν υπάρχουν δεδομένα από το LAB 29"
+                    : "No LAB 29 data available"
     );
+}
 
-if (displayReplaced)
+if (lab29InstabilityPattern) {
+
     logLabelWarnValue(
-            gr ? "Οθόνη" : "Display",
-            gr ? "Ενδείξεις αντικατάστασης οθόνης"
-               : "Display replacement indicators detected"
-    );
-
-if (cameraReplaced)
-    logLabelWarnValue(
-            gr ? "Κάμερα" : "Camera",
-            gr ? "Ενδείξεις αντικατάστασης κάμερας"
-               : "Camera replacement indicators detected"
-    );
-
-if (batteryReplaced)
-    logLabelWarnValue(
-            gr ? "Μπαταρία" : "Battery",
-            gr ? "Ενδείξεις αντικατάστασης μπαταρίας"
-               : "Battery replacement indicators detected"
-    );
-
-if (!nonOemParts &&
-    !displayReplaced &&
-    !cameraReplaced &&
-    !batteryReplaced) {
-
-    logLabelOkValue(
-            gr ? "Κατάσταση υλικού" : "Hardware authenticity",
-            gr ? "Δεν εντοπίστηκαν ενδείξεις επισκευής"
-               : "No repair indicators detected"
+            gr ? "Μοτίβο αστάθειας" : "Instability pattern",
+            lab29InstabilityScore + "/100"
     );
 }
 
@@ -31029,6 +31061,15 @@ if (sensorBusInstability)
 
 if (thermalRunawayRisk)
     hardwareRiskScore += 10;
+    
+if (lab29InstabilityPattern)
+    hardwareRiskScore += 10;
+    
+// hard cap — score is always 0..100
+hardwareRiskScore = Math.max(
+        0,
+        Math.min(100, hardwareRiskScore)
+);
 
 logLabelValue(
         gr ? "Συνολικός δείκτης κινδύνου hardware"
@@ -31203,6 +31244,22 @@ if (sensorBusInstability) {
             gr
                     ? "Πιθανή αστάθεια διαύλου αισθητήρων."
                     : "Possible sensor bus instability."
+    );
+}
+
+// ------------------------------------------------------------
+// LAB 29 INTEGRITY / INSTABILITY
+// ------------------------------------------------------------
+if (lab29InstabilityPattern) {
+
+    faultDetected = true;
+
+    logLabelWarnValue(
+            gr ? "Ακεραιότητα συσκευής"
+               : "Device integrity",
+            gr
+        ? "Το LAB 29 εντόπισε συνδυασμένο μοτίβο αστάθειας."
+        : "LAB 29 detected a combined instability pattern."
     );
 }
 
@@ -31481,7 +31538,10 @@ if (pmicInstability) riskSignals++;
 // SENSOR BUS
 if (sensorBusInstability) riskSignals++;
 
-if (riskSignals <= 1) {
+// LAB 29 INSTABILITY
+if (lab29InstabilityPattern) riskSignals++;
+
+if (riskSignals == 1) {
 
     logLabelWarnValue(
             gr ? "Σημείωση αξιολόγησης"
@@ -31627,12 +31687,12 @@ if (!certificateWarning && reliabilityScore >= 85) {
 } else {
 
     logLabelWarnValue(
-            gr ? "Κατάσταση Πιστοποιητικού"
-               : "Certificate status",
-            gr
-                    ? "Εντοπίστηκαν ενδείξεις πιθανής επέμβασης ή αστάθειας hardware."
-                    : "Indicators of hardware intervention or instability detected."
-    );
+        gr ? "Κατάσταση Πιστοποιητικού"
+           : "Certificate status",
+        gr
+                ? "Εντοπίστηκαν αποκλίσεις ακεραιότητας ή ενδείξεις αστάθειας hardware."
+                : "Integrity deviations or hardware instability indicators detected."
+);
 
     logLabelValue(
             gr ? "Κατηγορία"
@@ -32132,8 +32192,8 @@ logInfo(gr
 boolean diagnosticConflict = false;
 int conflictScore = 0;
 
-// Battery instability (real signal)
-if (collapseRisk[0]) {
+// Battery instability — stored LAB 14 result
+if (lab14CollapseRisk) {
 
     diagnosticConflict = true;
     conflictScore += 30;
@@ -32897,248 +32957,237 @@ logLine();
         }
     }
 
-    // ------------------------------------------------------------
-    // 4) BATTERY SCORE FROM LAB 14
-    // ------------------------------------------------------------
-    float batteryScore =
-            p.getFloat("lab14_health_score", -1f);
-            
-    float batteryHealth =
-        p.getFloat("lab14_health_percent", -1f);
-
-    float batteryContribution = 0f;
-
-    if (batteryScore >= 0 && batteryScore <= 100) {
-    batteryContribution = batteryScore * 0.20f;
-}
-
-    // ------------------------------------------------------------
-    // 5) DEVICE BASE SCORE
-    // ------------------------------------------------------------
-    float deviceScore = 70f;
-
-    if (issuesDetected) {
-        deviceScore -= 20f;
-    }
-    
-    // LAB14B influence
-
-    deviceScore += batteryContribution;
-
-    if (deviceScore > 100f) deviceScore = 100f;
-    if (deviceScore < 0f) deviceScore = 0f;
-
-    // ------------------------------------------------------------
-    // 6) DEVICE GRADE
-    // ------------------------------------------------------------
-    String deviceGrade;
-
-    if (deviceScore >= 90)
-        deviceGrade = "A+";
-    else if (deviceScore >= 80)
-        deviceGrade = "A";
-    else if (deviceScore >= 70)
-        deviceGrade = "B";
-    else if (deviceScore >= 60)
-        deviceGrade = "C";
-    else
-        deviceGrade = "D";
-
 // ------------------------------------------------------------
-// 7) PRINT DEVICE EVALUATION
+// 4) BATTERY FINDINGS — INFORMATIONAL ONLY
+// LAB 30 remains the single source of truth for device scoring.
+// ------------------------------------------------------------
+float batteryScore =
+        p.getFloat("lab14_health_score", -1f);
+
+float batteryHealth =
+        p.getFloat("lab14_health_percent", -1f);
+        
+// ------------------------------------------------------------
+// TECHNICIAN FINDINGS — NO DEVICE RE-SCORING
 // ------------------------------------------------------------
 appendHtml("<br>");
 logInfo(gr
-        ? "Αξιολόγηση συσκευής"
-        : "Device evaluation");
+        ? "Ευρήματα τεχνικού ελέγχου"
+        : "Technician findings");
 logLine();
 
-if (batteryScore >= 0 || batteryHealth >= 0) {
+// ------------------------------------------------------------
+// BATTERY FINDING
+// ------------------------------------------------------------
+float finalBatteryHealth = -1f;
 
-    float finalHealth;
+if (batteryHealth >= 0f && batteryHealth <= 100f) {
+    finalBatteryHealth = batteryHealth;
+} else if (batteryScore >= 0f && batteryScore <= 100f) {
+    finalBatteryHealth = batteryScore;
+}
 
-    if (batteryHealth >= 0f) {
-        finalHealth = batteryHealth;
+if (finalBatteryHealth >= 0f) {
+
+    if (finalBatteryHealth >= 80f) {
+
+        logLabelOkValue(
+                gr ? "Κατάσταση μπαταρίας" : "Battery condition",
+                gr
+                        ? "Δεν εντοπίστηκαν σημαντικές ενδείξεις φθοράς"
+                        : "No significant battery wear indicators detected"
+        );
+
+    } else if (finalBatteryHealth >= 60f) {
+
+        logLabelWarnValue(
+                gr ? "Κατάσταση μπαταρίας" : "Battery condition",
+                gr
+                        ? "Εντοπίστηκαν ενδείξεις μέτριας υποβάθμισης"
+                        : "Moderate degradation indicators detected"
+        );
+
     } else {
-        finalHealth = batteryScore;
+
+        logLabelWarnValue(
+                gr ? "Κατάσταση μπαταρίας" : "Battery condition",
+                gr
+                        ? "Εντοπίστηκαν σημαντικές ενδείξεις φθοράς"
+                        : "Significant battery wear indicators detected"
+        );
     }
 
-    logLabelValue(
-            gr ? "Υγεία μπαταρίας"
-               : "Battery health",
-            colorFlagFromScore((int) finalHealth)
-                    + " (" + (int) finalHealth + ")"
+} else {
+
+    logLabelWarnValue(
+            gr ? "Κατάσταση μπαταρίας" : "Battery condition",
+            gr
+                    ? "Δεν υπάρχουν επαρκή δεδομένα από το LAB 14"
+                    : "Insufficient LAB 14 data"
     );
 }
 
-logLabelOkValue(
-        gr ? "Συνολική βαθμολογία συσκευής"
-           : "Device overall",
-        colorFlagFromScore((int) deviceScore)
-                + " (" + (int) deviceScore + ")"
-);
+// ------------------------------------------------------------
+// BATTERY ENDURANCE FINDING — INFORMATIONAL ONLY
+// ------------------------------------------------------------
+if (lab14bConsumptionPerHour > 0f &&
+    lab14bEstimatedHours > 0f) {
 
-logLabelOkValue(
-        gr ? "Κατηγορία συσκευής"
-           : "Device grade",
-        deviceGrade
-);
+    String enduranceText = String.format(
+            Locale.US,
+            gr
+                    ? "%.1f ώρες στο 100%% | %.0f mAh/h"
+                    : "%.1f hours at 100%% | %.0f mAh/h",
+            lab14bEstimatedHours,
+            lab14bConsumptionPerHour
+    );
 
-appendHtml("<br>");
+    if (lab14bEstimatedHours >= 7f) {
+
+        logLabelOkValue(
+                gr ? "Εκτιμώμενη αυτονομία" : "Estimated endurance",
+                enduranceText
+        );
+
+    } else if (lab14bEstimatedHours >= 5f) {
+
+        logLabelWarnValue(
+                gr ? "Εκτιμώμενη αυτονομία" : "Estimated endurance",
+                enduranceText
+        );
+
+    } else {
+
+        logLabelWarnValue(
+                gr ? "Εκτιμώμενη αυτονομία" : "Estimated endurance",
+                enduranceText
+        );
+
+        logLabelWarnValue(
+                gr ? "Τεχνικό εύρημα" : "Technician finding",
+                gr
+                        ? "Η μετρημένη αυτονομία είναι χαμηλότερη από το αναμενόμενο."
+                        : "Measured endurance is lower than expected."
+        );
+    }
+
+    float currentPercent =
+            (float) getBatteryPercentSafe();
+
+    if (lab14bRemainingNormal > 0f &&
+        currentPercent > 0f) {
+
+        logLabelValue(
+                gr ? "Υπόλοιπο κανονικής χρήσης"
+                   : "Remaining normal use",
+                String.format(
+                        Locale.US,
+                        gr
+                                ? "%.1f ώρες στο %.0f%%"
+                                : "%.1f hours at %.0f%%",
+                        lab14bRemainingNormal,
+                        currentPercent
+                )
+        );
+    }
+
+} else {
+
+    logLabelWarnValue(
+            gr ? "Εκτιμώμενη αυτονομία"
+               : "Estimated endurance",
+            gr
+                    ? "Δεν υπάρχουν έγκυρα δεδομένα από το LAB 14B"
+                    : "No valid LAB 14B endurance data"
+    );
+}
    
 // ------------------------------------------------------------
-// DEVICE MANIPULATION SUSPICION INDEX
-// (LAB28 + LAB29 indicators)
+// DEVICE INTEGRITY / INSTABILITY FINDINGS
+// LAB 29 confirmed measurements — no manipulation accusation
 // ------------------------------------------------------------
-int manipulationScore = 0;
+int lab29AuthenticityScore =
+        p.getInt("lab29_authenticity_score", -1);
 
-// LAB29 instability patterns
+int lab29InstabilityScore =
+        p.getInt("lab29_instability_score", 0);
+
 boolean hwInstability =
         p.getBoolean("lab29_instability_pattern", false);
 
-// LAB30 authenticity indicators
-boolean nonOemParts =
-        p.getBoolean("lab30_non_oem_parts", false);
-
-boolean displayReplaced =
-        p.getBoolean("lab30_display_replaced", false);
-
-boolean cameraReplaced =
-        p.getBoolean("lab30_camera_replaced", false);
-
-boolean batteryReplaced =
-        p.getBoolean("lab30_battery_replaced", false);
-
-// scoring
-if (hwInstability) manipulationScore += 20;
-if (nonOemParts) manipulationScore += 20;
-if (displayReplaced) manipulationScore += 10;
-if (cameraReplaced) manipulationScore += 10;
-if (batteryReplaced) manipulationScore += 5;
-
-if (manipulationScore > 100) manipulationScore = 100;
-
-String manipulationLabel;
-
-if (manipulationScore >= 60)
-    manipulationLabel = gr ? "Ισχυρές ενδείξεις παρέμβασης"
-                           : "Strong manipulation indicators";
-else if (manipulationScore >= 35)
-    manipulationLabel = gr ? "Μέτριες ενδείξεις παρέμβασης"
-                           : "Moderate manipulation indicators";
-else if (manipulationScore >= 15)
-    manipulationLabel = gr ? "Ασθενείς ενδείξεις"
-                           : "Weak indicators";
-else
-    manipulationLabel = gr ? "Καμία ένδειξη"
-                           : "No indicators";
-                           
 appendHtml("<br>");
 
-if (manipulationScore >= 35) {
+// ------------------------------------------------------------
+// AUTHENTICITY / INTEGRITY RESULT
+// ------------------------------------------------------------
+if (lab29AuthenticityScore >= 0) {
+
+    if (lab29AuthenticityScore >= 90) {
+
+        logLabelOkValue(
+                gr ? "Ακεραιότητα συσκευής"
+                   : "Device integrity",
+                lab29AuthenticityScore + "/100"
+        );
+
+    } else if (lab29AuthenticityScore >= 70) {
+
+        logLabelWarnValue(
+                gr ? "Ακεραιότητα συσκευής"
+                   : "Device integrity",
+                lab29AuthenticityScore + "/100 — " +
+                        (gr
+                                ? "Απαιτείται επανέλεγχος αποκλίσεων"
+                                : "Detected deviations require verification")
+        );
+
+    } else {
+
+        logLabelWarnValue(
+                gr ? "Ακεραιότητα συσκευής"
+                   : "Device integrity",
+                lab29AuthenticityScore + "/100 — " +
+                        (gr
+                                ? "Εντοπίστηκαν σημαντικές αποκλίσεις"
+                                : "Significant integrity deviations detected")
+        );
+    }
+
+} else {
 
     logLabelWarnValue(
-            gr ? "Δείκτης παρέμβασης συσκευής"
-               : "Device manipulation suspicion index",
-            manipulationLabel + " (" + manipulationScore + ")"
+            gr ? "Ακεραιότητα συσκευής"
+               : "Device integrity",
+            gr
+                    ? "Δεν υπάρχουν διαθέσιμα αποτελέσματα από το LAB 29"
+                    : "No LAB 29 results available"
+    );
+}
+
+// ------------------------------------------------------------
+// INSTABILITY FINDING
+// ------------------------------------------------------------
+if (hwInstability) {
+
+    logLabelWarnValue(
+            gr ? "Μοτίβο αστάθειας"
+               : "Instability pattern",
+            lab29InstabilityScore + "/100 — " +
+                    (gr
+                            ? "Απαιτείται τεχνικός επανέλεγχος"
+                            : "Technician verification recommended")
     );
 
 } else {
 
     logLabelOkValue(
-            gr ? "Δείκτης παρέμβασης συσκευής"
-               : "Device manipulation suspicion index",
-            manipulationScore + "/100 (" + manipulationLabel + ")"
+            gr ? "Μοτίβο αστάθειας"
+               : "Instability pattern",
+            gr
+                    ? "Δεν εντοπίστηκε"
+                    : "Not detected"
     );
-
 }
-    
-// ------------------------------------------------------------
-// DEVICE RELIABILITY INDEX
-// ------------------------------------------------------------
-float dri = 100f;
-
-// battery health
-if (batteryScore >= 0) {
-
-    if (batteryScore < 55)
-        dri -= 25;
-    else if (batteryScore < 70)
-        dri -= 15;
-}
-
-// RAM pressure
-boolean ramStress =
-        p.getBoolean("lab19_ram_pressure", false);
-
-if (ramStress) dri -= 10;
-
-// crash history
-boolean crashHistory =
-        p.getBoolean("lab25_crash_detected", false);
-
-if (crashHistory) dri -= 20;
-
-// reboot instability
-boolean rebootPattern =
-        p.getBoolean("lab20_reboot_pattern", false);
-
-if (rebootPattern) dri -= 10;
-
-// thermal instability
-boolean thermalIssue =
-        p.getBoolean("lab16_thermal_warning", false);
-
-if (thermalIssue) dri -= 15;
-
-// swelling
-boolean lab14SwellingSuspected =
-        p.getBoolean("lab14_swelling_risk", false);
-
-// 🟡 weaker penalty
-if (lab14SwellingSuspected && dri < 80)
-    dri -= 6;
-
-// root risk
-boolean rooted =
-        p.getBoolean("lab24_root_detected", false);
-
-if (rooted) dri -= 10;
-
-// battery calibration drift
-boolean lab14CalibrationDrift =
-        p.getBoolean("lab14_calibration_drift", false);
-
-if (lab14CalibrationDrift) dri -= 10;
-
-boolean lab14CollapseRisk =
-        p.getBoolean("lab14_collapse_risk", false);
-
-if (lab14CollapseRisk) dri -= 20;
-
-// LAB14B limiter influence
-
-// manipulation suspicion (LAB28 + LAB29)
-if (manipulationScore >= 60)
-    dri -= 20;
-else if (manipulationScore >= 35)
-    dri -= 10;
-
-if (dri > 100) dri = 100;
-if (dri < 0) dri = 0;
-
-String driLabel;
-
-if (dri >= 90)
-    driLabel = gr ? "Πολύ αξιόπιστη συσκευή" : "Highly reliable";
-else if (dri >= 75)
-    driLabel = gr ? "Σταθερή συσκευή" : "Stable";
-else if (dri >= 60)
-    driLabel = gr ? "Μέτριος κίνδυνος αστάθειας" : "Moderate risk";
-else if (dri >= 40)
-    driLabel = gr ? "Υψηλός κίνδυνος προβλημάτων" : "High risk";
-else
-    driLabel = gr ? "Ασταθής συσκευή" : "Unstable device";
 
     // ------------------------------------------------------------
     // 8) EXPORT NOTE
