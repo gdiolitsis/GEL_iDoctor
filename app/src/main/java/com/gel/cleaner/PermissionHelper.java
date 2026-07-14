@@ -85,36 +85,6 @@ public class PermissionHelper {
     }
 
     /* =========================================================
-     *  ACCESSIBILITY (unchanged)
-     * ========================================================= */
-    public static boolean hasAccessibility(Context ctx) {
-        if (ctx == null) return false;
-
-        try {
-            return Settings.Secure.getInt(
-                    ctx.getContentResolver(),
-                    Settings.Secure.ACCESSIBILITY_ENABLED, 0
-            ) == 1;
-
-        } catch (Throwable ignore) {
-            return false;
-        }
-    }
-
-    public static void requestAccessibility(Context ctx) {
-        if (ctx == null) return;
-
-        try {
-            Intent i = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-            // 🔥 Foldable-safe launch (always checks pane / posture)
-            FoldableSafeLauncher.launch(ctx, i);
-
-        } catch (Throwable ignore) {}
-    }
-
-    /* =========================================================
      *  INTERNAL FOLDABLE-SAFE WRAPPER
      *  Prevents crashes on foldable split-modes / hinge changes.
      *  DualPane-aware without hard dependency.
