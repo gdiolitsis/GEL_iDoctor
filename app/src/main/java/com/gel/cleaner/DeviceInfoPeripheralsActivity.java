@@ -406,9 +406,7 @@ populateAllSections();
 // ------------------------------------------------------------  
 requestAllRuntimePermissions();  
 requestPermissions(new String[]{  
-        Manifest.permission.READ_PHONE_STATE,  
-        Manifest.permission.READ_SMS,  
-        Manifest.permission.READ_PHONE_NUMBERS  
+        Manifest.permission.READ_PHONE_STATE  
 }, 101);  
 
 // ============================================================
