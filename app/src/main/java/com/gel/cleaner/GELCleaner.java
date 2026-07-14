@@ -17,7 +17,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.provider.Settings;
 
 import java.io.File;
@@ -156,8 +155,6 @@ public static void deepClean(Context ctx, LogCallback cb) {
         initFoldableRuntime(ctx);
 
         try {
-            ensureAllFilesAccessIfNeeded(ctx, cb);
-
             if (isDeviceRooted()) {
                 info(cb, "Root detected — ενεργοποίηση GEL Root Temp Cleaner.");
                 rootExtraTempCleanup(cb);
@@ -314,31 +311,6 @@ public static void deepClean(Context ctx, LogCallback cb) {
         if (mb < 1024) return String.format(Locale.US, "%.2f MB", mb);
         float gb = mb / 1024f;
         return String.format(Locale.US, "%.2f GB", gb);
-    }
-
-    // ============================================================
-    // PERMISSION SELF-REPAIR (Android 11+)
-    // ============================================================
-    private static void ensureAllFilesAccessIfNeeded(Context ctx, LogCallback cb) {
-        if (ctx == null) return;
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return;
-
-        try {
-            if (!Environment.isExternalStorageManager()) {
-                warn(cb, "Android 11+ περιορισμός. Χρειάζεται All-Files Access.");
-                info(cb, "➡ Άνοιγμα Settings για δικαίωμα αρχείων.");
-
-                Intent i = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                i.setData(Uri.parse("package:" + ctx.getPackageName()));
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-                if (DualPaneManager.isDualPaneActive(ctx)) {
-                    DualPaneManager.openSide(ctx, i);
-                } else {
-                    ctx.startActivity(i);
-                }
-            }
-        } catch (Throwable ignored) {}
     }
 
     // ============================================================
