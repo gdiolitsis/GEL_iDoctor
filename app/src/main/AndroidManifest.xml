@@ -11,7 +11,9 @@
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29"/>
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
 
     <!-- ============================================================
          USAGE ACCESS
@@ -43,9 +45,6 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
     <uses-permission android:name="android.permission.READ_PHONE_NUMBERS"/>
     <uses-permission android:name="android.permission.READ_SMS"/>
-    <uses-permission
-        android:name="android.permission.READ_PRIVILEGED_PHONE_STATE"
-        tools:ignore="ProtectedPermissions"/>
 
     <!-- ============================================================
          WIFI
@@ -60,9 +59,16 @@
     <!-- ============================================================
          BLUETOOTH
          ============================================================ -->
-    <uses-permission android:name="android.permission.BLUETOOTH"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30"/>
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30"/>
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
 
     <!-- ============================================================
          CAMERA
@@ -172,16 +178,13 @@
         <!-- CORE ACTIVITIES -->
         <activity android:name=".AppListActivity" android:exported="false" android:screenOrientation="portrait"/>
         <activity android:name=".CleanerActivity" android:exported="false" android:screenOrientation="portrait"/>
-        <activity android:name=".PermissionsActivity" android:exported="false"/>
         <activity android:name=".DeviceInfoInternalActivity" android:exported="false" android:screenOrientation="portrait"/>
         <activity android:name=".DeviceInfoPeripheralsActivity" android:exported="false" android:screenOrientation="portrait"/>
         <activity android:name=".CpuRamLiveActivity" android:exported="false" android:screenOrientation="portrait"/>
         <activity android:name=".CoreMonitorActivity" android:exported="false" android:screenOrientation="portrait"/>
         <activity android:name=".DiagnosisMenuActivity" android:exported="false" android:screenOrientation="portrait"/>
         <activity android:name=".ManualTestsActivity" android:exported="false" android:screenOrientation="portrait"/>
-        <activity android:name=".PerformanceDiagnosticsActivity" android:exported="false" android:screenOrientation="portrait"/>
         <activity android:name=".ServiceReportActivity" android:exported="false" android:screenOrientation="portrait"/>
-        <activity android:name=".AutoDiagnosisActivity" android:exported="false" android:screenOrientation="portrait"/>
 
         <!-- ============================================================
              MANUAL LABS 6–9 : DISPLAY & SENSORS
