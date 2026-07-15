@@ -13299,6 +13299,28 @@ if (energyValid) {
 }
 
 // =====================================================
+// 🔴 OVERALL VERDICT — COMPARATIVE PHYSICS
+// A mildly weak sag alone must not classify the whole battery as weak
+// when power, resistance, thermal behaviour and safety indicators are normal.
+// =====================================================
+boolean normalAgeingPattern =
+        "Weak".equals(labelSafe) &&
+        !lab14_systemLimited[0] &&
+        (collapseRisk == null || collapseRisk.length == 0 || !collapseRisk[0]) &&
+        !smartSwelling &&
+        (calibrationDrift == null || calibrationDrift.length == 0 || !calibrationDrift[0]) &&
+        powerValid &&
+        res.powerMw >= 3500f &&
+        (!rValid || internalResistance[0] <= 0.090f) &&
+        (!tempValid || Float.isNaN(deltaTemp) || deltaTemp < 2.5f);
+
+if (normalAgeingPattern) {
+    labelSafe = "Normal";
+    res.label = "Normal";
+    lab14LastLabel = "Normal";
+}
+
+// =====================================================
 // 🔴 RECOMMENDATION ENGINE (FINAL — PRIORITIZED)
 // =====================================================
 
@@ -13311,7 +13333,14 @@ if (lab14_systemLimited[0]) {
             ? "Η συσκευή περιόρισε το φορτίο (BMS). Συνιστάται επανάληψη υπό διαφορετικές συνθήκες."
             : "Device limited the load (BMS). Retest under different conditions is recommended.";
 
-// 🔴 PRIORITY 2 — CRITICAL
+// 🔴 PRIORITY 2 — NORMAL AGEING
+} else if (normalAgeingPattern) {
+
+    recommendation = gr
+            ? "Φυσιολογική γήρανση μπαταρίας. Η συνολική ηλεκτρική και θερμική συμπεριφορά παραμένει φυσιολογική. Δεν απαιτείται αντικατάσταση. Συνεχίστε κανονικά τη χρήση της συσκευής."
+            : "Normal battery ageing. Overall electrical and thermal behaviour remains normal. Battery replacement is not required. Continue normal device use.";
+
+// 🔴 PRIORITY 3 — CRITICAL
 } else if ("Critical".equals(labelSafe)) {
 
     recommendation = gr
@@ -13322,8 +13351,8 @@ if (lab14_systemLimited[0]) {
 } else if ("Weak".equals(labelSafe)) {
 
     recommendation = gr
-            ? "Ενδείξεις φθοράς. Συνιστάται παρακολούθηση και πιθανή αντικατάσταση."
-            : "Battery wear detected. Monitoring and possible replacement recommended.";
+            ? "Ενδείξεις αυξημένης φθοράς. Συνιστάται επανάληψη του διαγνωστικού ελέγχου και τεχνική αξιολόγηση. Δεν προτείνεται αντικατάσταση χωρίς επιβεβαιωμένα ευρήματα."
+            : "Increased battery wear indicators detected. A repeat diagnostic test and professional evaluation are recommended. Replacement is not advised without confirmed findings.";
 
 // 🔴 PRIORITY 4 — CALIBRATION
 } else if (calibrationDrift != null && calibrationDrift.length > 0 && calibrationDrift[0]) {
@@ -13384,6 +13413,12 @@ if (lab14_systemLimited[0]) {
     summary = gr
             ? "Ανεπαρκή δεδομένα για διάγνωση."
             : "Insufficient data for diagnosis.";
+
+} else if (normalAgeingPattern) {
+
+    summary = gr
+            ? "Φυσιολογική γήρανση μπαταρίας — συνεχίστε κανονικά τη χρήση."
+            : "Normal battery ageing — continue normal use.";
 
 } else {
 
