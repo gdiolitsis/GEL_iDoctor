@@ -13306,13 +13306,20 @@ if (energyValid) {
 boolean normalAgeingPattern =
         "Weak".equals(labelSafe) &&
         !lab14_systemLimited[0] &&
-        (collapseRisk == null || collapseRisk.length == 0 || !collapseRisk[0]) &&
+        collapseRisk != null &&
+        collapseRisk.length > 0 &&
+        !collapseRisk[0] &&
         !smartSwelling &&
-        (calibrationDrift == null || calibrationDrift.length == 0 || !calibrationDrift[0]) &&
+        calibrationDrift != null &&
+        calibrationDrift.length > 0 &&
+        !calibrationDrift[0] &&
         powerValid &&
         res.powerMw >= 3500f &&
-        (!rValid || internalResistance[0] <= 0.090f) &&
-        (!tempValid || Float.isNaN(deltaTemp) || deltaTemp < 2.5f);
+        rValid &&
+        internalResistance[0] <= 0.090f &&
+        tempValid &&
+        !Float.isNaN(deltaTemp) &&
+        deltaTemp < 2.5f;
 
 if (normalAgeingPattern) {
     labelSafe = "Normal";
