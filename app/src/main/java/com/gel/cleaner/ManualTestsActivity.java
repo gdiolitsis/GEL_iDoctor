@@ -19711,7 +19711,7 @@ private void showLab14PreTestAdvisory(Runnable onContinue) {
 
         boolean conditionsOk =
                 percent >= 30 && percent <= 90
-                && (Float.isNaN(temp) || temp < 38f)
+                && (Float.isNaN(temp) || temp < 39f)
                 && (Float.isNaN(cpu) || cpu < 60f)
                 && !charging;
 
