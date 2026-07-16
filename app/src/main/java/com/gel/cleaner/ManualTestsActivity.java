@@ -19320,7 +19320,7 @@ private void showLab14ConditionCheck(Runnable startAction) {
 
     boolean badBat = percent < 30 || percent > 90;
     boolean badCpu = !Float.isNaN(cpuTemp) && cpuTemp >= 60f;
-    boolean badTemp = !Float.isNaN(tempC) && tempC >= 38f;
+    boolean badTemp = !Float.isNaN(tempC) && tempC >= 39f;
     boolean cpuOk = Float.isNaN(cpuTemp) || cpuTemp < 60f;
 
     final boolean canStart =
@@ -19355,12 +19355,12 @@ private void showLab14ConditionCheck(Runnable startAction) {
             gr
                     ? "Για την εκτέλεση του τεστ απαιτούνται:\n\n"
                     + "1) Μπαταρία μεταξύ 30% – 90%\n"
-                    + "2) Θερμοκρασία μπαταρίας κάτω από 38°C\n"
+                    + "2) Θερμοκρασία μπαταρίας κάτω από 39°C\n"
                     + "3) Θερμοκρασία CPU κάτω από 60°C\n"
                     + "4) Η συσκευή να μην φορτίζεται\n"
                     : "Requirements for this test:\n\n"
                     + "1) Battery between 30% – 90%\n"
-                    + "2) Battery temperature below 38°C\n"
+                    + "2) Battery temperature below 39°C\n"
                     + "3) CPU temperature below 60°C\n"
                     + "4) Device must not be charging\n"
     );
