@@ -13529,12 +13529,17 @@ private void lab14LogFinalScore(
     // ----------------------------------------------------
     // 🔴 COLLAPSE
     // ----------------------------------------------------
-    logLabelValue(
-            gr ? "Κατάρρευση τάσης" : "Voltage collapse",
-            collapse
-                    ? (gr ? "Υψηλός κίνδυνος" : "High risk")
-                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
-    );
+    if (collapse) {
+        logLabelErrorValue(
+                gr ? "Κατάρρευση τάσης" : "Voltage collapse",
+                gr ? "Υψηλός κίνδυνος" : "High risk"
+        );
+    } else {
+        logLabelOkValue(
+                gr ? "Κατάρρευση τάσης" : "Voltage collapse",
+                gr ? "Δεν εντοπίστηκε" : "Not detected"
+        );
+    }
 
     // ----------------------------------------------------
     // 🔴 SWELLING
