@@ -790,7 +790,17 @@ private boolean oldKeepScreenOn = false;
     }
 
     private void showGelProLockedDialog(String featureName) {
-        final boolean gr = AppLang.isGreek(this);
+
+        // ========================================================
+        // GEL PRO POPUP — SCROLL SAFE + LIVE EL / EN SWITCH
+        // ========================================================
+        final boolean[] popupGreek = { AppLang.isGreek(this) };
+
+        final String featureEl =
+                "LAB 14A — Υγεία και Καταπόνηση Μπαταρίας";
+
+        final String featureEn =
+                "LAB 14A — Battery Health and Stress Diagnosis";
 
         AlertDialog.Builder b =
                 new AlertDialog.Builder(
@@ -799,113 +809,223 @@ private boolean oldKeepScreenOn = false;
                 );
         b.setCancelable(true);
 
-        // ========================================================
-        // ROOT — SAME GEL BLACK / GOLD LANGUAGE AS OTHER POPUPS
-        // ========================================================
+        // ROOT — standard GEL black / gold popup shell
         LinearLayout root = buildGELPopupRoot(this);
+        root.setOrientation(LinearLayout.VERTICAL);
 
-        root.addView(
+        // ========================================================
+        // FIXED HEADER
+        // ========================================================
+        LinearLayout header =
                 buildPopupHeader(
                         this,
-                        gr
+                        popupGreek[0]
                                 ? "GEL PRO — Επαγγελματική λειτουργία"
                                 : "GEL PRO — Professional Feature"
-                )
-        );
+                );
+
+        TextView headerTitle = null;
+        if (header.getChildCount() > 0 &&
+                header.getChildAt(0) instanceof TextView) {
+            headerTitle = (TextView) header.getChildAt(0);
+        }
+
+        root.addView(header);
+
+        // ========================================================
+        // FIXED LANGUAGE SWITCH — EL / EN
+        // Changes only this popup, not the app language.
+        // ========================================================
+        LinearLayout langRow = new LinearLayout(this);
+        langRow.setOrientation(LinearLayout.HORIZONTAL);
+        langRow.setGravity(Gravity.CENTER);
+        langRow.setPadding(0, 0, 0, dp(10));
+
+        Button btnEl = gelButton(this, "EL", 0xFF202020);
+        Button btnEn = gelButton(this, "EN", 0xFF202020);
+
+        LinearLayout.LayoutParams langLp1 =
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                );
+        langLp1.setMargins(dp(2), 0, dp(4), 0);
+
+        LinearLayout.LayoutParams langLp2 =
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                );
+        langLp2.setMargins(dp(4), 0, dp(2), 0);
+
+        btnEl.setLayoutParams(langLp1);
+        btnEn.setLayoutParams(langLp2);
+
+        langRow.addView(btnEl);
+        langRow.addView(btnEn);
+        root.addView(langRow);
+
+        // ========================================================
+        // SCROLLABLE BODY
+        // ========================================================
+        ScrollView contentScroll = new ScrollView(this);
+        contentScroll.setFillViewport(false);
+        contentScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+
+        LinearLayout.LayoutParams scrollLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        0,
+                        1f
+                );
+        contentScroll.setLayoutParams(scrollLp);
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(0, 0, 0, dp(6));
 
         // FEATURE NAME
         TextView feature = new TextView(this);
-        feature.setText(featureName);
         feature.setTextColor(Color.WHITE);
         feature.setTextSize(16f);
         feature.setTypeface(null, Typeface.BOLD);
         feature.setGravity(Gravity.CENTER_HORIZONTAL);
         feature.setPadding(0, dp(4), 0, dp(12));
-        root.addView(feature);
+        content.addView(feature);
 
-        // MESSAGE
+        // SALES / CAPABILITIES TEXT
         TextView msg = new TextView(this);
-        msg.setText(
-                gr
-                        ? "Επαγγελματική διάγνωση μπαταρίας\n\n" +
-                          "Το LAB 14A πραγματοποιεί προηγμένο stress test και αξιολογεί:\n\n" +
-                          "✓ Πτώση τάσης υπό φορτίο (Voltage Sag)\n" +
-                          "✓ Δυναμική / εσωτερική αντίσταση μπαταρίας\n" +
-                          "✓ Ανάκαμψη τάσης μετά από φορτίο\n" +
-                          "✓ Ικανότητα παροχής ισχύος\n" +
-                          "✓ Θερμική συμπεριφορά υπό καταπόνηση\n" +
-                          "✓ Ισορροπία και ηλεκτρική συμπεριφορά κυψελών\n" +
-                          "✓ Ενδείξεις Voltage Collapse\n" +
-                          "✓ Ενδείξεις διόγκωσης / αστάθειας\n" +
-                          "✓ Calibration Drift\n" +
-                          "✓ Σύγκριση επαναλαμβανόμενων διαγνωστικών μετρήσεων\n\n" +
-                          "Τελική αξιολόγηση κατάστασης μπαταρίας"
-                        : "Professional battery diagnostics\n\n" +
-                          "LAB 14A performs an advanced stress test and evaluates:\n\n" +
-                          "✓ Voltage sag under load\n" +
-                          "✓ Dynamic / internal battery resistance\n" +
-                          "✓ Voltage recovery after load\n" +
-                          "✓ Power delivery capability\n" +
-                          "✓ Thermal behavior under stress\n" +
-                          "✓ Cell balance and electrical behavior\n" +
-                          "✓ Voltage collapse indicators\n" +
-                          "✓ Swelling / instability indicators\n" +
-                          "✓ Calibration drift\n" +
-                          "✓ Comparison of repeated diagnostic measurements\n\n" +
-                          "Final battery condition assessment"
-        );
         msg.setTextColor(0xFF00FF9C);
         msg.setTextSize(15f);
         msg.setGravity(Gravity.CENTER_HORIZONTAL);
         msg.setLineSpacing(0f, 1.15f);
-        root.addView(msg);
+        content.addView(msg);
 
-        // PRICE
+        contentScroll.addView(content);
+        root.addView(contentScroll);
+
+        // ========================================================
+        // FIXED PRICE + ACTIONS
+        // ========================================================
         TextView price = new TextView(this);
-        price.setText(
-                gr
-                        ? "Συνδρομή: 4,99 € / μήνα"
-                        : "Subscription: €4.99 / month"
-        );
         price.setTextColor(0xFFFFD700);
         price.setTextSize(17f);
         price.setTypeface(null, Typeface.BOLD);
         price.setGravity(Gravity.CENTER);
-        price.setPadding(0, dp(12), 0, dp(8));
+        price.setPadding(0, dp(10), 0, dp(8));
         root.addView(price);
 
-        // NOT NOW
-        Button notNowBtn = gelButton(
-                this,
-                gr ? "Όχι τώρα" : "Not now",
-                0xFF202020
-        );
+        Button notNowBtn =
+                gelButton(
+                        this,
+                        popupGreek[0] ? "Όχι τώρα" : "Not now",
+                        0xFF202020
+                );
         root.addView(notNowBtn);
 
-        // OK — temporary until Google Play Billing purchase flow is connected
-        Button okBtn = gelButton(
-                this,
-                "OK",
-                0xFF0F8A3B
-        );
-        root.addView(okBtn);
+        // Purchase action will be connected to Google Play Billing.
+        Button proBtn =
+                gelButton(
+                        this,
+                        "GEL PRO",
+                        0xFF0F8A3B
+                );
+        root.addView(proBtn);
 
+        // ========================================================
+        // LIVE LANGUAGE RENDERER
+        // ========================================================
+        final TextView finalHeaderTitle = headerTitle;
+
+        Runnable renderLanguage = () -> {
+
+            final boolean gr = popupGreek[0];
+
+            if (finalHeaderTitle != null) {
+                finalHeaderTitle.setText(
+                        gr
+                                ? "GEL PRO — Επαγγελματική λειτουργία"
+                                : "GEL PRO — Professional Feature"
+                );
+            }
+
+            feature.setText(gr ? featureEl : featureEn);
+
+            msg.setText(
+                    gr
+                            ? "Επαγγελματική διάγνωση μπαταρίας\n\n" +
+                              "Το LAB 14A πραγματοποιεί προηγμένο stress test και αξιολογεί:\n\n" +
+                              "✓ Πτώση τάσης υπό φορτίο (Voltage Sag)\n" +
+                              "✓ Δυναμική / εσωτερική αντίσταση μπαταρίας\n" +
+                              "✓ Ανάκαμψη τάσης μετά από φορτίο\n" +
+                              "✓ Ικανότητα παροχής ισχύος\n" +
+                              "✓ Θερμική συμπεριφορά υπό καταπόνηση\n" +
+                              "✓ Ισορροπία και ηλεκτρική συμπεριφορά κυψελών\n" +
+                              "✓ Ενδείξεις Voltage Collapse\n" +
+                              "✓ Ενδείξεις διόγκωσης / αστάθειας\n" +
+                              "✓ Calibration Drift\n" +
+                              "✓ Σύγκριση επαναλαμβανόμενων διαγνωστικών μετρήσεων\n\n" +
+                              "Τελική αξιολόγηση κατάστασης μπαταρίας"
+                            : "Professional battery diagnostics\n\n" +
+                              "LAB 14A performs an advanced stress test and evaluates:\n\n" +
+                              "✓ Voltage sag under load\n" +
+                              "✓ Dynamic / internal battery resistance\n" +
+                              "✓ Voltage recovery after load\n" +
+                              "✓ Power delivery capability\n" +
+                              "✓ Thermal behavior under stress\n" +
+                              "✓ Cell balance and electrical behavior\n" +
+                              "✓ Voltage collapse indicators\n" +
+                              "✓ Swelling / instability indicators\n" +
+                              "✓ Calibration drift\n" +
+                              "✓ Comparison of repeated diagnostic measurements\n\n" +
+                              "Final battery condition assessment"
+            );
+
+            price.setText(
+                    gr
+                            ? "Συνδρομή: 4,99 € / μήνα"
+                            : "Subscription: €4.99 / month"
+            );
+
+            notNowBtn.setText(gr ? "Όχι τώρα" : "Not now");
+            proBtn.setText("GEL PRO");
+
+            // visual language selection
+            btnEl.setAlpha(gr ? 1.0f : 0.55f);
+            btnEn.setAlpha(gr ? 0.55f : 1.0f);
+
+            contentScroll.post(() -> contentScroll.scrollTo(0, 0));
+        };
+
+        btnEl.setOnClickListener(v -> {
+            popupGreek[0] = true;
+            renderLanguage.run();
+        });
+
+        btnEn.setOnClickListener(v -> {
+            popupGreek[0] = false;
+            renderLanguage.run();
+        });
+
+        renderLanguage.run();
+
+        // ========================================================
+        // DIALOG
+        // ========================================================
         b.setView(root);
 
         final AlertDialog d = b.create();
 
-        if (d.getWindow() != null) {
-            d.getWindow().setBackgroundDrawable(
-                    new ColorDrawable(Color.TRANSPARENT)
-            );
-        }
-
         notNowBtn.setOnClickListener(v -> d.dismiss());
-        okBtn.setOnClickListener(v -> d.dismiss());
+
+        // Temporary behavior until Google Play Billing is connected.
+        proBtn.setOnClickListener(v -> d.dismiss());
 
         d.setOnKeyListener((dialog, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_BACK &&
-                event.getAction() == KeyEvent.ACTION_UP) {
+                    event.getAction() == KeyEvent.ACTION_UP) {
                 dialog.dismiss();
                 return true;
             }
@@ -913,7 +1033,32 @@ private boolean oldKeepScreenOn = false;
         });
 
         if (!isFinishing() && !isDestroyed()) {
+
             d.show();
+
+            if (d.getWindow() != null) {
+
+                d.getWindow().setBackgroundDrawable(
+                        new ColorDrawable(Color.TRANSPARENT)
+                );
+
+                // Keep the popup inside small screens and landscape mode.
+                DisplayMetrics dm = getResources().getDisplayMetrics();
+
+                int safeWidth =
+                        Math.min(
+                                dm.widthPixels - dp(20),
+                                dp(560)
+                        );
+
+                int safeHeight =
+                        (int) (dm.heightPixels * 0.92f);
+
+                d.getWindow().setLayout(
+                        Math.max(dp(280), safeWidth),
+                        safeHeight
+                );
+            }
         }
     }
 
