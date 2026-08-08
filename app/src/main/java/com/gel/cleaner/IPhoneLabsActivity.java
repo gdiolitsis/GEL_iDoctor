@@ -129,19 +129,292 @@ private boolean looksCorruptedPanic(String text) {
     }
 
     private void showGelProLockedDialog(String featureName) {
-        final boolean gr = AppLang.isGreek(this);
-        final String feature = featureName == null ? "GEL PRO" : featureName;
 
-        new AlertDialog.Builder(this)
-                .setTitle(gr ? "GEL PRO — Επαγγελματική λειτουργία"
-                             : "GEL PRO — Professional Feature")
-                .setMessage((gr
-                        ? "Η λειτουργία «" + feature + "» είναι διαθέσιμη στο GEL PRO.\n\nΣυνδρομή: 4,99 € / μήνα"
-                        : "The feature “" + feature + "” is available with GEL PRO.\n\nSubscription: €4.99 / month"))
-                .setNegativeButton(gr ? "Όχι τώρα" : "Not now", null)
-                // Temporary until Google Play Billing purchase flow is connected.
-                .setPositiveButton("GEL PRO", null)
-                .show();
+        final boolean[] popupGreek = { AppLang.isGreek(this) };
+
+        AlertDialog.Builder b =
+                new AlertDialog.Builder(
+                        this,
+                        android.R.style.Theme_Material_Dialog_NoActionBar
+                );
+        b.setCancelable(true);
+
+        // ========================================================
+        // ROOT — GEL BLACK / GOLD
+        // ========================================================
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(24), dp(22), dp(24), dp(18));
+
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setColor(0xFF101010);
+        rootBg.setCornerRadius(dp(10));
+        rootBg.setStroke(dp(4), 0xFFFFD700);
+        root.setBackground(rootBg);
+
+        // ========================================================
+        // FIXED HEADER
+        // ========================================================
+        TextView headerTitle = new TextView(this);
+        headerTitle.setTextColor(Color.WHITE);
+        headerTitle.setTextSize(18f);
+        headerTitle.setTypeface(null, Typeface.BOLD);
+        headerTitle.setGravity(Gravity.START);
+        headerTitle.setPadding(0, 0, 0, dp(12));
+        root.addView(headerTitle);
+
+        // ========================================================
+        // FIXED LANGUAGE SWITCH — EL / EN
+        // ========================================================
+        LinearLayout langRow = new LinearLayout(this);
+        langRow.setOrientation(LinearLayout.HORIZONTAL);
+        langRow.setGravity(Gravity.CENTER);
+        langRow.setPadding(0, 0, 0, dp(10));
+
+        Button btnEl = makeGelProPopupButton("EL", 0xFF202020);
+        Button btnEn = makeGelProPopupButton("EN", 0xFF202020);
+
+        LinearLayout.LayoutParams langLp1 =
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                );
+        langLp1.setMargins(dp(2), 0, dp(4), 0);
+
+        LinearLayout.LayoutParams langLp2 =
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1f
+                );
+        langLp2.setMargins(dp(4), 0, dp(2), 0);
+
+        btnEl.setLayoutParams(langLp1);
+        btnEn.setLayoutParams(langLp2);
+
+        langRow.addView(btnEl);
+        langRow.addView(btnEn);
+        root.addView(langRow);
+
+        // ========================================================
+        // SCROLLABLE BODY
+        // ========================================================
+        ScrollView contentScroll = new ScrollView(this);
+        contentScroll.setFillViewport(false);
+        contentScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+
+        LinearLayout.LayoutParams scrollLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        0,
+                        1f
+                );
+        contentScroll.setLayoutParams(scrollLp);
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(0, 0, 0, dp(6));
+
+        TextView feature = new TextView(this);
+        feature.setTextColor(Color.WHITE);
+        feature.setTextSize(17f);
+        feature.setTypeface(null, Typeface.BOLD);
+        feature.setGravity(Gravity.CENTER_HORIZONTAL);
+        feature.setPadding(0, dp(4), 0, dp(12));
+        content.addView(feature);
+
+        TextView subtitle = new TextView(this);
+        subtitle.setTextColor(0xFF00FF9C);
+        subtitle.setTextSize(16f);
+        subtitle.setTypeface(null, Typeface.BOLD);
+        subtitle.setGravity(Gravity.CENTER_HORIZONTAL);
+        subtitle.setPadding(0, 0, 0, dp(12));
+        content.addView(subtitle);
+
+        TextView msg = new TextView(this);
+        msg.setTextColor(0xFF00FF9C);
+        msg.setTextSize(15f);
+        msg.setGravity(Gravity.CENTER_HORIZONTAL);
+        msg.setLineSpacing(0f, 1.15f);
+        content.addView(msg);
+
+        contentScroll.addView(content);
+        root.addView(contentScroll);
+
+        // ========================================================
+        // FIXED PRICE + ACTIONS
+        // ========================================================
+        TextView price = new TextView(this);
+        price.setTextColor(0xFFFFD700);
+        price.setTextSize(17f);
+        price.setTypeface(null, Typeface.BOLD);
+        price.setGravity(Gravity.CENTER);
+        price.setPadding(0, dp(10), 0, dp(8));
+        root.addView(price);
+
+        Button notNowBtn =
+                makeGelProPopupButton(
+                        popupGreek[0] ? "Όχι τώρα" : "Not now",
+                        0xFF202020
+                );
+        root.addView(notNowBtn);
+
+        Button proBtn =
+                makeGelProPopupButton(
+                        "GEL PRO",
+                        0xFF0F8A3B
+                );
+        root.addView(proBtn);
+
+        // ========================================================
+        // LIVE LANGUAGE RENDERER
+        // ========================================================
+        Runnable renderLanguage = () -> {
+
+            final boolean gr = popupGreek[0];
+
+            headerTitle.setText(
+                    gr
+                            ? "GEL PRO — Επαγγελματική λειτουργία"
+                            : "GEL PRO — Professional Feature"
+            );
+
+            feature.setText(
+                    gr
+                            ? "iPhone Panic Log Analysis"
+                            : "iPhone Panic Log Analysis"
+            );
+
+            subtitle.setText(
+                    gr
+                            ? "Προηγμένη ανάλυση Panic Logs για τεχνικούς Apple συσκευών"
+                            : "Advanced Panic Log Analysis for Apple device technicians"
+            );
+
+            msg.setText(
+                    gr
+                            ? "Εισάγετε πραγματικά panic logs από iPhone / iPad και πραγματοποιήστε επαγγελματική διαγνωστική ανάλυση.\n\n" +
+                              "✓ Ανάλυση panic reason / panic string\n" +
+                              "✓ Εντοπισμός watchdog και kernel panic patterns\n" +
+                              "✓ Συσχέτιση πιθανών hardware subsystems\n" +
+                              "✓ Ενδείξεις sensor / thermal / power faults\n" +
+                              "✓ Ανάλυση επαναλαμβανόμενων panic patterns\n" +
+                              "✓ Εξαγωγή κρίσιμων diagnostic identifiers\n" +
+                              "✓ Τεχνική σύνοψη πιθανής αιτίας βλάβης\n" +
+                              "✓ Υποστήριξη διαγνωστικής απόφασης πριν την επισκευή\n\n" +
+                              "Το DEMO MODE με τα 2 ενσωματωμένα panic logs παραμένει δωρεάν."
+                            : "Import real panic logs from iPhone / iPad and perform professional diagnostic analysis.\n\n" +
+                              "✓ Panic reason / panic string analysis\n" +
+                              "✓ Watchdog and kernel panic pattern detection\n" +
+                              "✓ Correlation of probable hardware subsystems\n" +
+                              "✓ Sensor / thermal / power fault indicators\n" +
+                              "✓ Repeated panic pattern analysis\n" +
+                              "✓ Extraction of key diagnostic identifiers\n" +
+                              "✓ Technical summary of probable fault cause\n" +
+                              "✓ Diagnostic decision support before repair\n\n" +
+                              "DEMO MODE with the 2 built-in panic logs remains free."
+            );
+
+            price.setText(
+                    gr
+                            ? "Συνδρομή: 4,99 € / μήνα"
+                            : "Subscription: €4.99 / month"
+            );
+
+            notNowBtn.setText(gr ? "Όχι τώρα" : "Not now");
+            proBtn.setText("GEL PRO");
+
+            btnEl.setAlpha(gr ? 1.0f : 0.55f);
+            btnEn.setAlpha(gr ? 0.55f : 1.0f);
+
+            contentScroll.post(() -> contentScroll.scrollTo(0, 0));
+        };
+
+        btnEl.setOnClickListener(v -> {
+            popupGreek[0] = true;
+            renderLanguage.run();
+        });
+
+        btnEn.setOnClickListener(v -> {
+            popupGreek[0] = false;
+            renderLanguage.run();
+        });
+
+        renderLanguage.run();
+
+        b.setView(root);
+
+        final AlertDialog d = b.create();
+
+        notNowBtn.setOnClickListener(v -> d.dismiss());
+
+        // Temporary until Google Play Billing purchase flow is connected.
+        proBtn.setOnClickListener(v -> d.dismiss());
+
+        d.setOnKeyListener((dialog, keyCode, event) -> {
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK &&
+                    event.getAction() == android.view.KeyEvent.ACTION_UP) {
+                dialog.dismiss();
+                return true;
+            }
+            return false;
+        });
+
+        if (!isFinishing() && !isDestroyed()) {
+
+            d.show();
+
+            if (d.getWindow() != null) {
+
+                d.getWindow().setBackgroundDrawable(
+                        new ColorDrawable(Color.TRANSPARENT)
+                );
+
+                android.util.DisplayMetrics dm =
+                        getResources().getDisplayMetrics();
+
+                int safeWidth =
+                        Math.min(
+                                dm.widthPixels - dp(20),
+                                dp(560)
+                        );
+
+                int safeHeight =
+                        (int) (dm.heightPixels * 0.92f);
+
+                d.getWindow().setLayout(
+                        Math.max(dp(280), safeWidth),
+                        safeHeight
+                );
+            }
+        }
+    }
+
+    private Button makeGelProPopupButton(String text, int bgColor) {
+
+        Button b = new Button(this);
+        b.setText(text);
+        b.setAllCaps(false);
+        b.setTextColor(Color.WHITE);
+        b.setTextSize(15f);
+        b.setTypeface(null, Typeface.BOLD);
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(bgColor);
+        bg.setCornerRadius(dp(10));
+        bg.setStroke(dp(3), 0xFFFFD700);
+        b.setBackground(bg);
+
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(52)
+                );
+        lp.setMargins(0, dp(10), 0, 0);
+        b.setLayoutParams(lp);
+
+        return b;
     }
 
 
