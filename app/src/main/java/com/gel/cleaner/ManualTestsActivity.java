@@ -764,6 +764,55 @@ private boolean oldKeepScreenOn = false;
     private SharedPreferences prefs;
 
     // ============================================================
+    // GEL PRO — CENTRAL ENTITLEMENT GATE
+    // Single source of truth for professional features.
+    // Google Play Billing will update "active" after verified purchase.
+    // ============================================================
+    private static final String GEL_PRO_PREFS = "GEL_PRO_ENTITLEMENT";
+    private static final String GEL_PRO_ACTIVE_KEY = "active";
+
+    private boolean isGelProActive() {
+        try {
+            return getSharedPreferences(GEL_PRO_PREFS, MODE_PRIVATE)
+                    .getBoolean(GEL_PRO_ACTIVE_KEY, false);
+        } catch (Throwable ignore) {
+            return false;
+        }
+    }
+
+    private boolean requireGelPro(String featureName) {
+        if (isGelProActive()) {
+            return true;
+        }
+
+        showGelProLockedDialog(featureName);
+        return false;
+    }
+
+    private void showGelProLockedDialog(String featureName) {
+        final boolean gr = AppLang.isGreek(this);
+
+        String title = gr
+                ? "GEL PRO — Επαγγελματική λειτουργία"
+                : "GEL PRO — Professional feature";
+
+        String message = gr
+                ? featureName
+                    + "\n\nΗ λειτουργία περιλαμβάνεται στο GEL PRO. "
+                    + "Συνδρομή: 4,99 € / μήνα."
+                : featureName
+                    + "\n\nThis feature is included with GEL PRO. "
+                    + "Subscription: €4.99 / month.";
+
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setNegativeButton(gr ? "Όχι τώρα" : "Not now", null)
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+    // ============================================================
     // LAB 3 — STATE (CLASS LEVEL)
     // ============================================================
     private volatile boolean lab3WaitingUser = false;
@@ -12081,8 +12130,8 @@ private void showBatterySuiteMenu() {
     root.addView(
             makeTestButton(
                     gr
-                    ? "14A. Διάγνωση Υγείας και Καταπόνησης Μπαταρίας"
-                    : "14A. Battery Health and Stress Diagnosis",
+                    ? "🔒 PRO  14A. Διάγνωση Υγείας και Καταπόνησης Μπαταρίας"
+                    : "🔒 PRO  14A. Battery Health and Stress Diagnosis",
                     this::lab14BatteryHealthStressTest
             )
     );
@@ -12123,6 +12172,13 @@ batterySuiteDialog.show();
 // ============================================================
 
 private void lab14BatteryHealthStressTest() {
+
+    final boolean grLocal = AppLang.isGreek(this);
+    if (!requireGelPro(
+            grLocal ? "LAB 14A — Υγεία και Καταπόνηση Μπαταρίας"
+                    : "LAB 14A — Battery Health and Stress Diagnosis")) {
+        return;
+    }
 
     showLab14ConditionCheck(() -> {
 
@@ -13529,17 +13585,12 @@ private void lab14LogFinalScore(
     // ----------------------------------------------------
     // 🔴 COLLAPSE
     // ----------------------------------------------------
-    if (collapse) {
-        logLabelErrorValue(
-                gr ? "Κατάρρευση τάσης" : "Voltage collapse",
-                gr ? "Υψηλός κίνδυνος" : "High risk"
-        );
-    } else {
-        logLabelOkValue(
-                gr ? "Κατάρρευση τάσης" : "Voltage collapse",
-                gr ? "Δεν εντοπίστηκε" : "Not detected"
-        );
-    }
+    logLabelValue(
+            gr ? "Κατάρρευση τάσης" : "Voltage collapse",
+            collapse
+                    ? (gr ? "Υψηλός κίνδυνος" : "High risk")
+                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
+    );
 
     // ----------------------------------------------------
     // 🔴 SWELLING
