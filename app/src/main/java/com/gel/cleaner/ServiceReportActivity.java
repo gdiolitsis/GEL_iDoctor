@@ -6,12 +6,14 @@ import android.content.ContentValues;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
+import android.graphics.drawable.GradientDrawable;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
@@ -22,6 +24,7 @@ import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.LinearLayout;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -63,11 +66,66 @@ public class ServiceReportActivity extends AppCompatActivity {
         root.setPadding(32, 32, 32, 32);
         root.setBackgroundColor(0xFF101010);
 
+        // ==========================================================
+        // FREE GEL SERVICE REPORT PREVIEW
+        // Visible to everyone. Export itself is GEL PRO.
+        // ==========================================================
+        LinearLayout previewCard = new LinearLayout(this);
+        previewCard.setOrientation(LinearLayout.VERTICAL);
+        previewCard.setPadding(dp(18), dp(18), dp(18), dp(18));
+
+        GradientDrawable previewBg = new GradientDrawable();
+        previewBg.setColor(0xFFF7F7F7);
+        previewBg.setCornerRadius(dp(12));
+        previewBg.setStroke(dp(1), 0xFFBFA24A);
+        previewCard.setBackground(previewBg);
+
+        ImageView previewLogo = new ImageView(this);
+        previewLogo.setImageResource(R.drawable.gel_logo);
+        previewLogo.setAdjustViewBounds(true);
+        previewLogo.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+
+        LinearLayout.LayoutParams logoLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(72)
+                );
+        logoLp.bottomMargin = dp(8);
+        previewLogo.setLayoutParams(logoLp);
+        previewCard.addView(previewLogo);
+
+        TextView previewTitle = new TextView(this);
+        previewTitle.setText("GEL Service Report / Αναφορά Service");
+        previewTitle.setTextColor(0xFF111111);
+        previewTitle.setTextSize(20f);
+        previewTitle.setGravity(Gravity.CENTER);
+        previewTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        previewCard.addView(previewTitle);
+
+        TextView previewSubtitle = new TextView(this);
+        previewSubtitle.setText("GDiolitsis Engine Lab (GEL) — Author & Developer");
+        previewSubtitle.setTextColor(0xFF555555);
+        previewSubtitle.setTextSize(12f);
+        previewSubtitle.setGravity(Gravity.CENTER);
+        previewSubtitle.setPadding(0, dp(2), 0, dp(14));
+        previewCard.addView(previewSubtitle);
+
         txtPreview = new TextView(this);
-        txtPreview.setTextColor(0xFFFFFFFF);
+        txtPreview.setTextColor(0xFF111111);
         txtPreview.setTextSize(13f);
+        txtPreview.setLineSpacing(0f, 1.12f);
+        previewCard.addView(txtPreview);
+
+        LinearLayout.LayoutParams previewLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+        previewLp.bottomMargin = dp(18);
+        previewCard.setLayoutParams(previewLp);
+
+        root.addView(previewCard);
         updatePreview();
-        root.addView(txtPreview);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.VERTICAL);
@@ -132,6 +190,8 @@ btnTxt.setOnClickListener(v -> {
     String report = validateExport();
     if (report == null) return;
 
+    if (!requireGelProExport()) return;
+
     if (GELServiceLog.isEmpty()) {
         Toast.makeText(this,
                 "Nothing to export. Run a lab first.",
@@ -149,6 +209,8 @@ btnTxt.setOnClickListener(v -> {
         btnHtml.setOnClickListener(v -> {
             String report = validateExport();
             if (report == null) return;
+
+            if (!requireGelProExport()) return;
 
             if (GELServiceLog.isEmpty()) {
                 Toast.makeText(this,
@@ -772,14 +834,98 @@ private String buildHtmlReport(String report) {
     private void updatePreview() {
         if (txtPreview == null) return;
 
+        final boolean gr = AppLang.isGreek(this);
         String data = GELServiceLog.getAll();
 
+        StringBuilder preview = new StringBuilder();
+
+        preview.append(gr ? "ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΑΝΑΦΟΡΑΣ
+
+" : "REPORT PREVIEW
+
+");
+
+        preview.append("Date / Ημερομηνία: ")
+                .append(java.text.DateFormat.getDateTimeInstance()
+                        .format(new java.util.Date()))
+                .append("
+");
+
+        preview.append("Device / Συσκευή: ")
+                .append(android.os.Build.MANUFACTURER)
+                .append(" ")
+                .append(android.os.Build.MODEL)
+                .append("
+");
+
+        preview.append("Android / Έκδοση: ")
+                .append(android.os.Build.VERSION.RELEASE)
+                .append(" (API ")
+                .append(android.os.Build.VERSION.SDK_INT)
+                .append(")
+
+");
+
+        preview.append("Device intake condition / Κατάσταση παραλαβής συσκευής
+");
+        preview.append("□ OK   □ DAMAGED — Screen / Οθόνη
+");
+        preview.append("□ OK   □ DAMAGED — Back cover / Πίσω καπάκι
+");
+        preview.append("□ OK   □ DAMAGED — Frame / Πλαίσιο
+");
+        preview.append("□ OK   □ DAMAGED — Camera lens / Φακός κάμερας
+");
+        preview.append("□ OK   □ DAMAGED — Charging port / Θύρα φόρτισης
+");
+        preview.append("□ OK   □ DAMAGED — Buttons / Κουμπιά
+");
+        preview.append("□ OK   □ DAMAGED — Speaker / Microphone / Ηχείο / Μικρόφωνο
+");
+        preview.append("□ OK   □ DAMAGED — Water signs / Ενδείξεις υγρασίας
+");
+        preview.append("□ OK   □ DAMAGED — Battery condition / Κατάσταση μπαταρίας
+
+");
+
+        preview.append(gr ? "ΔΙΑΓΝΩΣΤΙΚΑ ΑΠΟΤΕΛΕΣΜΑΤΑ
+" : "DIAGNOSTIC RESULTS
+");
+
         if (data == null || data.trim().isEmpty()) {
-            txtPreview.setText("No logs available.");
-            return;
+            preview.append(gr
+                    ? "Δεν υπάρχουν ακόμη αποτελέσματα. Εκτελέστε ένα εργαστήριο για να εμφανιστούν εδώ.
+"
+                    : "No diagnostic results yet. Run a lab to display its results here.
+");
+        } else {
+            preview.append(data.replaceAll("\n{3,}", "\n\n"));
         }
 
-        txtPreview.setText(data.replaceAll("\\n{3,}", "\n\n"));
+        preview.append("
+
+Repair Summary / Τι επισκευάστηκε
+");
+        preview.append("________________________________________
+");
+        preview.append("________________________________________
+
+");
+
+        preview.append("Additional Notes / Επιπλέον παρατηρήσεις
+");
+        preview.append("________________________________________
+");
+        preview.append("________________________________________
+
+");
+
+        preview.append("Technician / Τεχνικός: ____________________
+");
+        preview.append("Customer / Πελάτης: ______________________
+");
+
+        txtPreview.setText(preview.toString());
     }
 
     private int drawReportHeader(
@@ -920,18 +1066,21 @@ private String buildHtmlReport(String report) {
     }
 
     private String validateExport() {
-        String report = txtPreview.getText().toString();
+        // IMPORTANT: export engines continue receiving the original GEL logs,
+        // not the formatted on-screen preview.
+        String report = GELServiceLog.getAll();
 
-        if (report == null
-                || report.trim().isEmpty()
-                || report.contains("No logs available")) {
+        if (report == null || report.trim().isEmpty()) {
 
             if (exportProgress != null) {
                 exportProgress.setVisibility(View.GONE);
             }
 
-            Toast.makeText(this,
-                    "Nothing to export. Run a lab first.",
+            Toast.makeText(
+                    this,
+                    AppLang.isGreek(this)
+                            ? "Δεν υπάρχει περιεχόμενο για εξαγωγή. Εκτελέστε πρώτα ένα εργαστήριο."
+                            : "Nothing to export. Run a lab first.",
                     Toast.LENGTH_LONG
             ).show();
 
@@ -940,7 +1089,259 @@ private String buildHtmlReport(String report) {
 
         return report;
     }
-    
+
+    // ==========================================================
+    // GEL PRO — EXPORT ENTITLEMENT
+    // ==========================================================
+    private boolean hasGelProEntitlement() {
+        SharedPreferences p =
+                getSharedPreferences("gel_pro_entitlement", MODE_PRIVATE);
+        return p.getBoolean("pro_active", false);
+    }
+
+    private boolean requireGelProExport() {
+        if (hasGelProEntitlement()) {
+            return true;
+        }
+
+        showGelProExportDialog();
+        return false;
+    }
+
+    private void showGelProExportDialog() {
+
+        final boolean[] popupGreek = { AppLang.isGreek(this) };
+
+        final android.app.AlertDialog dialog =
+                new android.app.AlertDialog.Builder(this).create();
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(18), dp(18), dp(18), dp(18));
+
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setColor(0xFF0B0B0B);
+        rootBg.setCornerRadius(dp(14));
+        rootBg.setStroke(dp(1), 0xFFFFD700);
+        root.setBackground(rootBg);
+
+        TextView header = new TextView(this);
+        header.setTextColor(0xFFFFD700);
+        header.setTextSize(19f);
+        header.setTypeface(null, android.graphics.Typeface.BOLD);
+        header.setGravity(Gravity.CENTER);
+        header.setPadding(0, 0, 0, dp(10));
+        root.addView(header);
+
+        LinearLayout langRow = new LinearLayout(this);
+        langRow.setOrientation(LinearLayout.HORIZONTAL);
+        langRow.setGravity(Gravity.CENTER);
+
+        AppCompatButton btnEl = makeProDialogButton("EL", 0xFF202020);
+        AppCompatButton btnEn = makeProDialogButton("EN", 0xFF202020);
+
+        LinearLayout.LayoutParams elLp =
+                new LinearLayout.LayoutParams(0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        elLp.setMargins(0, 0, dp(4), 0);
+        btnEl.setLayoutParams(elLp);
+
+        LinearLayout.LayoutParams enLp =
+                new LinearLayout.LayoutParams(0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        enLp.setMargins(dp(4), 0, 0, 0);
+        btnEn.setLayoutParams(enLp);
+
+        langRow.addView(btnEl);
+        langRow.addView(btnEn);
+        root.addView(langRow);
+
+        ScrollView bodyScroll = new ScrollView(this);
+        LinearLayout.LayoutParams bodyLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        0,
+                        1f
+                );
+        bodyScroll.setLayoutParams(bodyLp);
+
+        TextView body = new TextView(this);
+        body.setTextColor(0xFF00FF9C);
+        body.setTextSize(15f);
+        body.setLineSpacing(0f, 1.15f);
+        body.setGravity(Gravity.CENTER_HORIZONTAL);
+        body.setPadding(0, dp(12), 0, dp(8));
+        bodyScroll.addView(body);
+        root.addView(bodyScroll);
+
+        TextView price = new TextView(this);
+        price.setTextColor(0xFFFFD700);
+        price.setTextSize(17f);
+        price.setTypeface(null, android.graphics.Typeface.BOLD);
+        price.setGravity(Gravity.CENTER);
+        price.setPadding(0, dp(8), 0, dp(8));
+        root.addView(price);
+
+        AppCompatButton notNow = makeProDialogButton(
+                popupGreek[0] ? "Όχι τώρα" : "Not now",
+                0xFF202020
+        );
+        root.addView(notNow);
+
+        AppCompatButton gelPro = makeProDialogButton("GEL PRO", 0xFF0F8A3B);
+        root.addView(gelPro);
+
+        Runnable render = () -> {
+            boolean gr = popupGreek[0];
+
+            header.setText(gr
+                    ? "GEL PRO — Επαγγελματική λειτουργία"
+                    : "GEL PRO — Professional Feature");
+
+            body.setText(gr
+                    ? "Export Service Report
+
+" +
+                      "Επαγγελματική αναφορά διάγνωσης για τον πελάτη
+
+" +
+                      "Δημιουργήστε ολοκληρωμένη αναφορά service με τα αποτελέσματα των διαγνωστικών ελέγχων GEL.
+
+" +
+                      "✓ Επαγγελματική μορφοποίηση αναφοράς
+" +
+                      "✓ Στοιχεία συσκευής και διάγνωσης
+" +
+                      "✓ Συγκεντρωτικά αποτελέσματα εργαστηρίων
+" +
+                      "✓ Βασικά τεχνικά ευρήματα
+" +
+                      "✓ Τελική κατάσταση συσκευής
+" +
+                      "✓ Ημερομηνία και στοιχεία διάγνωσης
+" +
+                      "✓ Diagnostic ID
+" +
+                      "✓ Αναφορά κατάλληλη για αποθήκευση, εκτύπωση ή παράδοση στον πελάτη
+
+" +
+                      "Προαιρετική εξατομίκευση επαγγελματία
+" +
+                      "Λογότυπο, επωνυμία και στοιχεία τεχνικού/καταστήματος.
+" +
+                      "Εφάπαξ ενεργοποίηση: 29,99 €"
+                    : "Export Service Report
+
+" +
+                      "Professional diagnostic report for your customer
+
+" +
+                      "Create a complete service report using the results of GEL diagnostic tests.
+
+" +
+                      "✓ Professional report formatting
+" +
+                      "✓ Device and diagnostic information
+" +
+                      "✓ Consolidated laboratory results
+" +
+                      "✓ Key technical findings
+" +
+                      "✓ Final device condition
+" +
+                      "✓ Diagnostic date and information
+" +
+                      "✓ Diagnostic ID
+" +
+                      "✓ Report suitable for saving, printing or delivery to the customer
+
+" +
+                      "Optional professional personalization
+" +
+                      "Logo, business name and technician/shop details.
+" +
+                      "One-time activation: €29.99");
+
+            price.setText(gr
+                    ? "Συνδρομή: 4,99 € / μήνα"
+                    : "Subscription: €4.99 / month");
+
+            notNow.setText(gr ? "Όχι τώρα" : "Not now");
+
+            btnEl.setAlpha(gr ? 1.0f : 0.55f);
+            btnEn.setAlpha(gr ? 0.55f : 1.0f);
+            bodyScroll.post(() -> bodyScroll.scrollTo(0, 0));
+        };
+
+        btnEl.setOnClickListener(v -> {
+            popupGreek[0] = true;
+            render.run();
+        });
+
+        btnEn.setOnClickListener(v -> {
+            popupGreek[0] = false;
+            render.run();
+        });
+
+        notNow.setOnClickListener(v -> dialog.dismiss());
+
+        // Purchase flow will be connected to Google Play Billing.
+        gelPro.setOnClickListener(v -> dialog.dismiss());
+
+        render.run();
+
+        dialog.setView(root);
+
+        if (!isFinishing() && !isDestroyed()) {
+            dialog.show();
+
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(
+                        new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
+                );
+
+                android.util.DisplayMetrics dm =
+                        getResources().getDisplayMetrics();
+
+                int safeWidth = Math.min(dm.widthPixels - dp(20), dp(560));
+                int safeHeight = (int) (dm.heightPixels * 0.92f);
+
+                dialog.getWindow().setLayout(
+                        Math.max(dp(280), safeWidth),
+                        safeHeight
+                );
+            }
+        }
+    }
+
+    private AppCompatButton makeProDialogButton(String text, int bgColor) {
+        AppCompatButton b = new AppCompatButton(this);
+        b.setText(text);
+        b.setAllCaps(false);
+        b.setTextColor(Color.WHITE);
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(bgColor);
+        bg.setCornerRadius(dp(9));
+        bg.setStroke(dp(1), 0xFFFFD700);
+        b.setBackground(bg);
+
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+        lp.setMargins(0, dp(4), 0, dp(4));
+        b.setLayoutParams(lp);
+        return b;
+    }
+
+    private int dp(int value) {
+        return Math.round(
+                value * getResources().getDisplayMetrics().density
+        );
+    }
+
     private Uri savePdfToDownloads(String fileName, byte[] data) throws Exception {
 
     ContentValues values = new ContentValues();
