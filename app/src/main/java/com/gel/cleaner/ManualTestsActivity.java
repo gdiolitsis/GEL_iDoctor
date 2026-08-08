@@ -792,24 +792,129 @@ private boolean oldKeepScreenOn = false;
     private void showGelProLockedDialog(String featureName) {
         final boolean gr = AppLang.isGreek(this);
 
-        String title = gr
-                ? "GEL PRO — Επαγγελματική λειτουργία"
-                : "GEL PRO — Professional feature";
+        AlertDialog.Builder b =
+                new AlertDialog.Builder(
+                        this,
+                        android.R.style.Theme_Material_Dialog_NoActionBar
+                );
+        b.setCancelable(true);
 
-        String message = gr
-                ? featureName
-                    + "\n\nΗ λειτουργία περιλαμβάνεται στο GEL PRO. "
-                    + "Συνδρομή: 4,99 € / μήνα."
-                : featureName
-                    + "\n\nThis feature is included with GEL PRO. "
-                    + "Subscription: €4.99 / month.";
+        // ========================================================
+        // ROOT — SAME GEL BLACK / GOLD LANGUAGE AS OTHER POPUPS
+        // ========================================================
+        LinearLayout root = buildGELPopupRoot(this);
 
-        new AlertDialog.Builder(this)
-                .setTitle(title)
-                .setMessage(message)
-                .setNegativeButton(gr ? "Όχι τώρα" : "Not now", null)
-                .setPositiveButton("OK", null)
-                .show();
+        root.addView(
+                buildPopupHeader(
+                        this,
+                        gr
+                                ? "GEL PRO — Επαγγελματική λειτουργία"
+                                : "GEL PRO — Professional Feature"
+                )
+        );
+
+        // FEATURE NAME
+        TextView feature = new TextView(this);
+        feature.setText(featureName);
+        feature.setTextColor(Color.WHITE);
+        feature.setTextSize(16f);
+        feature.setTypeface(null, Typeface.BOLD);
+        feature.setGravity(Gravity.CENTER_HORIZONTAL);
+        feature.setPadding(0, dp(4), 0, dp(12));
+        root.addView(feature);
+
+        // MESSAGE
+        TextView msg = new TextView(this);
+        msg.setText(
+                gr
+                        ? "Επαγγελματική διάγνωση μπαταρίας\n\n" +
+                          "Το LAB 14A πραγματοποιεί προηγμένο stress test και αξιολογεί:\n\n" +
+                          "✓ Πτώση τάσης υπό φορτίο (Voltage Sag)\n" +
+                          "✓ Δυναμική / εσωτερική αντίσταση μπαταρίας\n" +
+                          "✓ Ανάκαμψη τάσης μετά από φορτίο\n" +
+                          "✓ Ικανότητα παροχής ισχύος\n" +
+                          "✓ Θερμική συμπεριφορά υπό καταπόνηση\n" +
+                          "✓ Ισορροπία και ηλεκτρική συμπεριφορά κυψελών\n" +
+                          "✓ Ενδείξεις Voltage Collapse\n" +
+                          "✓ Ενδείξεις διόγκωσης / αστάθειας\n" +
+                          "✓ Calibration Drift\n" +
+                          "✓ Σύγκριση επαναλαμβανόμενων διαγνωστικών μετρήσεων\n\n" +
+                          "Τελική αξιολόγηση κατάστασης μπαταρίας"
+                        : "Professional battery diagnostics\n\n" +
+                          "LAB 14A performs an advanced stress test and evaluates:\n\n" +
+                          "✓ Voltage sag under load\n" +
+                          "✓ Dynamic / internal battery resistance\n" +
+                          "✓ Voltage recovery after load\n" +
+                          "✓ Power delivery capability\n" +
+                          "✓ Thermal behavior under stress\n" +
+                          "✓ Cell balance and electrical behavior\n" +
+                          "✓ Voltage collapse indicators\n" +
+                          "✓ Swelling / instability indicators\n" +
+                          "✓ Calibration drift\n" +
+                          "✓ Comparison of repeated diagnostic measurements\n\n" +
+                          "Final battery condition assessment"
+        );
+        msg.setTextColor(0xFF00FF9C);
+        msg.setTextSize(15f);
+        msg.setGravity(Gravity.CENTER_HORIZONTAL);
+        msg.setLineSpacing(0f, 1.15f);
+        root.addView(msg);
+
+        // PRICE
+        TextView price = new TextView(this);
+        price.setText(
+                gr
+                        ? "Συνδρομή: 4,99 € / μήνα"
+                        : "Subscription: €4.99 / month"
+        );
+        price.setTextColor(0xFFFFD700);
+        price.setTextSize(17f);
+        price.setTypeface(null, Typeface.BOLD);
+        price.setGravity(Gravity.CENTER);
+        price.setPadding(0, dp(12), 0, dp(8));
+        root.addView(price);
+
+        // NOT NOW
+        Button notNowBtn = gelButton(
+                this,
+                gr ? "Όχι τώρα" : "Not now",
+                0xFF202020
+        );
+        root.addView(notNowBtn);
+
+        // OK — temporary until Google Play Billing purchase flow is connected
+        Button okBtn = gelButton(
+                this,
+                "OK",
+                0xFF0F8A3B
+        );
+        root.addView(okBtn);
+
+        b.setView(root);
+
+        final AlertDialog d = b.create();
+
+        if (d.getWindow() != null) {
+            d.getWindow().setBackgroundDrawable(
+                    new ColorDrawable(Color.TRANSPARENT)
+            );
+        }
+
+        notNowBtn.setOnClickListener(v -> d.dismiss());
+        okBtn.setOnClickListener(v -> d.dismiss());
+
+        d.setOnKeyListener((dialog, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_BACK &&
+                event.getAction() == KeyEvent.ACTION_UP) {
+                dialog.dismiss();
+                return true;
+            }
+            return false;
+        });
+
+        if (!isFinishing() && !isDestroyed()) {
+            d.show();
+        }
     }
 
     // ============================================================
