@@ -1,7 +1,17 @@
 // GDiolitsis Engine Lab (GEL) — Author & Developer
 // GelBillingManager.java
-// Google Play Billing Library 8.x
-// Central billing layer for GEL PRO subscription + custom report branding.
+// Google Play Billing Library 9.1.0
+//
+// Central billing layer for:
+// 1) GEL PRO monthly subscription
+// 2) GEL Custom Reports one-time purchase
+//
+// IMPORTANT:
+// - Create the SAME product IDs in Google Play Console.
+// - GEL PRO uses the existing app entitlement:
+//      SharedPreferences "GEL_PRO_ENTITLEMENT" / boolean "active"
+// - Custom Reports uses:
+//      SharedPreferences "GEL_CUSTOM_REPORT_ENTITLEMENT" / boolean "active"
 
 package com.gel.cleaner;
 
@@ -18,7 +28,6 @@ import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
-import com.android.billingclient.api.ProductDetailsResponseListener;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.QueryProductDetailsParams;
@@ -30,92 +39,182 @@ import java.util.List;
 
 public final class GelBillingManager implements PurchasesUpdatedListener {
 
+    // ============================================================
+    // GOOGLE PLAY CONSOLE IDs
+    // ============================================================
+    // Subscription product:
+    // Product ID: gel_pro_monthly
+    //
+    // Recommended base plan:
+    // Base plan ID: monthly
+    //
+    // One-time product:
+    // Product ID: gel_custom_reports
+    // ============================================================
     public static final String PRODUCT_GEL_PRO_MONTHLY = "gel_pro_monthly";
-    public static final String PRODUCT_CUSTOM_REPORTS  = "gel_custom_reports";
+    public static final String GEL_PRO_BASE_PLAN_ID = "monthly";
+    public static final String PRODUCT_CUSTOM_REPORTS = "gel_custom_reports";
 
+    // ============================================================
+    // EXISTING GEL PRO ENTITLEMENT — DO NOT RENAME
+    // ============================================================
     private static final String GEL_PRO_PREFS = "GEL_PRO_ENTITLEMENT";
     private static final String GEL_PRO_ACTIVE_KEY = "active";
 
-    private static final String GEL_CUSTOM_PREFS = "GEL_CUSTOM_REPORT_ENTITLEMENT";
+    // ============================================================
+    // CUSTOM REPORT ENTITLEMENT
+    // ============================================================
+    private static final String GEL_CUSTOM_PREFS =
+            "GEL_CUSTOM_REPORT_ENTITLEMENT";
+
     private static final String GEL_CUSTOM_ACTIVE_KEY = "active";
-    private static final String GEL_CUSTOM_OFFER_SHOWN_KEY = "custom_offer_shown";
+
+    // Prevent the €29.99 offer from being shown repeatedly.
+    private static final String GEL_CUSTOM_OFFER_SHOWN_KEY =
+            "custom_offer_shown";
 
     private final Context appContext;
-    private final BillingClient billingClient;
     private final Listener listener;
+    private final BillingClient billingClient;
 
-    private ProductDetails gelProProductDetails;
-    private ProductDetails customReportsProductDetails;
-    private boolean connected = false;
+    @Nullable
+    private ProductDetails gelProDetails;
 
+    @Nullable
+    private ProductDetails customReportsDetails;
+
+    private boolean billingReady = false;
+
+    // ============================================================
+    // CALLBACKS TO THE ACTIVITY
+    // ============================================================
     public interface Listener {
+
+        // Billing connected and ProductDetails queries have been started.
         void onBillingReady();
+
+        // Called after GEL PRO becomes PURCHASED and acknowledged.
+        // true = show the "Custom Reports €29.99?" question now.
         void onGelProActivated(boolean showCustomReportsOffer);
+
+        // Called after the one-time Custom Reports purchase is PURCHASED
+        // and acknowledged.
         void onCustomReportsActivated();
-        void onPurchasePending(String productId);
+
+        // Google Play reports a pending transaction.
+        void onPurchasePending(@NonNull String productId);
+
+        // User closed/cancelled the Play purchase sheet.
         void onPurchaseCancelled();
-        void onBillingError(String message);
+
+        // Billing error or missing Play product.
+        void onBillingError(@NonNull String message);
     }
 
-    public GelBillingManager(@NonNull Context context, @NonNull Listener listener) {
+    // ============================================================
+    // CONSTRUCTOR
+    // ============================================================
+    public GelBillingManager(
+            @NonNull Context context,
+            @NonNull Listener listener
+    ) {
         this.appContext = context.getApplicationContext();
         this.listener = listener;
 
-        PendingPurchasesParams pendingParams =
+        PendingPurchasesParams pendingPurchasesParams =
                 PendingPurchasesParams.newBuilder()
                         .enableOneTimeProducts()
                         .build();
 
-        billingClient = BillingClient.newBuilder(appContext)
-                .setListener(this)
-                .enablePendingPurchases(pendingParams)
-                .enableAutoServiceReconnection()
-                .build();
+        this.billingClient =
+                BillingClient.newBuilder(appContext)
+                        .setListener(this)
+                        .enablePendingPurchases(pendingPurchasesParams)
+                        .enableAutoServiceReconnection()
+                        .build();
     }
 
+    // ============================================================
+    // START / STOP
+    // ============================================================
     public void start() {
+
         if (billingClient.isReady()) {
-            connected = true;
+            billingReady = true;
+
+            // Restore current entitlements from Google Play.
             refreshPurchases();
+
+            // Load products/prices/offers.
             queryProducts();
+
             listener.onBillingReady();
             return;
         }
 
-        billingClient.startConnection(new BillingClientStateListener() {
-            @Override
-            public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
-                if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                    connected = true;
-                    refreshPurchases();
-                    queryProducts();
-                    listener.onBillingReady();
-                } else {
-                    connected = false;
-                    listener.onBillingError("Google Play Billing setup failed: " + billingResult.getDebugMessage());
-                }
-            }
+        billingClient.startConnection(
+                new BillingClientStateListener() {
 
-            @Override
-            public void onBillingServiceDisconnected() {
-                connected = false;
-            }
-        });
+                    @Override
+                    public void onBillingSetupFinished(
+                            @NonNull BillingResult billingResult
+                    ) {
+                        if (billingResult.getResponseCode()
+                                == BillingClient.BillingResponseCode.OK) {
+
+                            billingReady = true;
+
+                            refreshPurchases();
+                            queryProducts();
+
+                            listener.onBillingReady();
+
+                        } else {
+
+                            billingReady = false;
+
+                            listener.onBillingError(
+                                    "Google Play Billing setup failed: "
+                                            + billingResult.getDebugMessage()
+                            );
+                        }
+                    }
+
+                    @Override
+                    public void onBillingServiceDisconnected() {
+                        // enableAutoServiceReconnection() handles reconnects.
+                        billingReady = false;
+                    }
+                }
+        );
     }
 
     public void close() {
-        try { billingClient.endConnection(); } catch (Throwable ignore) {}
-        connected = false;
+        billingReady = false;
+
+        try {
+            billingClient.endConnection();
+        } catch (Throwable ignore) {}
     }
 
     public boolean isReady() {
-        return connected && billingClient.isReady();
+        return billingReady && billingClient.isReady();
     }
 
+    // ============================================================
+    // LOCAL ENTITLEMENT READERS
+    // ============================================================
     public boolean isGelProActive() {
         try {
-            return appContext.getSharedPreferences(GEL_PRO_PREFS, Context.MODE_PRIVATE)
-                    .getBoolean(GEL_PRO_ACTIVE_KEY, false);
+            return appContext
+                    .getSharedPreferences(
+                            GEL_PRO_PREFS,
+                            Context.MODE_PRIVATE
+                    )
+                    .getBoolean(
+                            GEL_PRO_ACTIVE_KEY,
+                            false
+                    );
         } catch (Throwable ignore) {
             return false;
         }
@@ -123,8 +222,15 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
 
     public boolean isCustomReportsActive() {
         try {
-            return appContext.getSharedPreferences(GEL_CUSTOM_PREFS, Context.MODE_PRIVATE)
-                    .getBoolean(GEL_CUSTOM_ACTIVE_KEY, false);
+            return appContext
+                    .getSharedPreferences(
+                            GEL_CUSTOM_PREFS,
+                            Context.MODE_PRIVATE
+                    )
+                    .getBoolean(
+                            GEL_CUSTOM_ACTIVE_KEY,
+                            false
+                    );
         } catch (Throwable ignore) {
             return false;
         }
@@ -132,8 +238,15 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
 
     public boolean wasCustomReportsOfferShown() {
         try {
-            return appContext.getSharedPreferences(GEL_CUSTOM_PREFS, Context.MODE_PRIVATE)
-                    .getBoolean(GEL_CUSTOM_OFFER_SHOWN_KEY, false);
+            return appContext
+                    .getSharedPreferences(
+                            GEL_CUSTOM_PREFS,
+                            Context.MODE_PRIVATE
+                    )
+                    .getBoolean(
+                            GEL_CUSTOM_OFFER_SHOWN_KEY,
+                            false
+                    );
         } catch (Throwable ignore) {
             return false;
         }
@@ -141,264 +254,629 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
 
     public void markCustomReportsOfferShown() {
         try {
-            appContext.getSharedPreferences(GEL_CUSTOM_PREFS, Context.MODE_PRIVATE)
+            appContext
+                    .getSharedPreferences(
+                            GEL_CUSTOM_PREFS,
+                            Context.MODE_PRIVATE
+                    )
                     .edit()
-                    .putBoolean(GEL_CUSTOM_OFFER_SHOWN_KEY, true)
+                    .putBoolean(
+                            GEL_CUSTOM_OFFER_SHOWN_KEY,
+                            true
+                    )
                     .apply();
         } catch (Throwable ignore) {}
     }
 
+    // ============================================================
+    // LOCAL ENTITLEMENT WRITERS
+    // ============================================================
     private void setGelProActive(boolean active) {
-        appContext.getSharedPreferences(GEL_PRO_PREFS, Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean(GEL_PRO_ACTIVE_KEY, active)
-                .apply();
+        try {
+            appContext
+                    .getSharedPreferences(
+                            GEL_PRO_PREFS,
+                            Context.MODE_PRIVATE
+                    )
+                    .edit()
+                    .putBoolean(
+                            GEL_PRO_ACTIVE_KEY,
+                            active
+                    )
+                    .apply();
+        } catch (Throwable ignore) {}
     }
 
     private void setCustomReportsActive(boolean active) {
-        appContext.getSharedPreferences(GEL_CUSTOM_PREFS, Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean(GEL_CUSTOM_ACTIVE_KEY, active)
-                .apply();
+        try {
+            appContext
+                    .getSharedPreferences(
+                            GEL_CUSTOM_PREFS,
+                            Context.MODE_PRIVATE
+                    )
+                    .edit()
+                    .putBoolean(
+                            GEL_CUSTOM_ACTIVE_KEY,
+                            active
+                    )
+                    .apply();
+        } catch (Throwable ignore) {}
     }
 
-    private void queryProducts() {
+    // ============================================================
+    // QUERY GOOGLE PLAY PRODUCTS
+    // ============================================================
+    public void queryProducts() {
         queryGelProProduct();
         queryCustomReportsProduct();
     }
 
     private void queryGelProProduct() {
-        QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(PRODUCT_GEL_PRO_MONTHLY)
-                .setProductType(BillingClient.ProductType.SUBS)
-                .build();
 
-        QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
-                .setProductList(Collections.singletonList(product))
-                .build();
+        if (!billingClient.isReady()) {
+            return;
+        }
 
-        billingClient.queryProductDetailsAsync(params, new ProductDetailsResponseListener() {
-            @Override
-            public void onProductDetailsResponse(@NonNull BillingResult billingResult,
-                                                 @NonNull QueryProductDetailsResult result) {
-                if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                    listener.onBillingError("GEL PRO product query failed: " + billingResult.getDebugMessage());
-                    return;
+        QueryProductDetailsParams.Product product =
+                QueryProductDetailsParams.Product
+                        .newBuilder()
+                        .setProductId(PRODUCT_GEL_PRO_MONTHLY)
+                        .setProductType(BillingClient.ProductType.SUBS)
+                        .build();
+
+        QueryProductDetailsParams params =
+                QueryProductDetailsParams
+                        .newBuilder()
+                        .setProductList(
+                                Collections.singletonList(product)
+                        )
+                        .build();
+
+        billingClient.queryProductDetailsAsync(
+                params,
+                (
+                        @NonNull BillingResult billingResult,
+                        @NonNull QueryProductDetailsResult result
+                ) -> {
+
+                    if (billingResult.getResponseCode()
+                            != BillingClient.BillingResponseCode.OK) {
+
+                        gelProDetails = null;
+
+                        listener.onBillingError(
+                                "GEL PRO product query failed: "
+                                        + billingResult.getDebugMessage()
+                        );
+                        return;
+                    }
+
+                    List<ProductDetails> products =
+                            result.getProductDetailsList();
+
+                    gelProDetails =
+                            products.isEmpty()
+                                    ? null
+                                    : products.get(0);
                 }
-                List<ProductDetails> list = result.getProductDetailsList();
-                gelProProductDetails = (list != null && !list.isEmpty()) ? list.get(0) : null;
-            }
-        });
+        );
     }
 
     private void queryCustomReportsProduct() {
-        QueryProductDetailsParams.Product product = QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(PRODUCT_CUSTOM_REPORTS)
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build();
 
-        QueryProductDetailsParams params = QueryProductDetailsParams.newBuilder()
-                .setProductList(Collections.singletonList(product))
-                .build();
-
-        billingClient.queryProductDetailsAsync(params, new ProductDetailsResponseListener() {
-            @Override
-            public void onProductDetailsResponse(@NonNull BillingResult billingResult,
-                                                 @NonNull QueryProductDetailsResult result) {
-                if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                    listener.onBillingError("Custom Reports product query failed: " + billingResult.getDebugMessage());
-                    return;
-                }
-                List<ProductDetails> list = result.getProductDetailsList();
-                customReportsProductDetails = (list != null && !list.isEmpty()) ? list.get(0) : null;
-            }
-        });
-    }
-
-    public void launchGelProPurchase(@NonNull Activity activity) {
         if (!billingClient.isReady()) {
-            listener.onBillingError("Google Play Billing is not ready.");
-            return;
-        }
-        if (gelProProductDetails == null) {
-            queryGelProProduct();
-            listener.onBillingError("GEL PRO product is not ready yet. Try again in a moment.");
             return;
         }
 
-        List<ProductDetails.SubscriptionOfferDetails> offers = gelProProductDetails.getSubscriptionOfferDetails();
-        if (offers == null || offers.isEmpty()) {
-            listener.onBillingError("No eligible GEL PRO subscription offer was returned by Google Play.");
-            return;
-        }
-
-        String offerToken = offers.get(0).getOfferToken();
-
-        BillingFlowParams.ProductDetailsParams productParams =
-                BillingFlowParams.ProductDetailsParams.newBuilder()
-                        .setProductDetails(gelProProductDetails)
-                        .setOfferToken(offerToken)
+        QueryProductDetailsParams.Product product =
+                QueryProductDetailsParams.Product
+                        .newBuilder()
+                        .setProductId(PRODUCT_CUSTOM_REPORTS)
+                        .setProductType(BillingClient.ProductType.INAPP)
                         .build();
 
-        BillingFlowParams flowParams = BillingFlowParams.newBuilder()
-                .setProductDetailsParamsList(Collections.singletonList(productParams))
-                .build();
+        QueryProductDetailsParams params =
+                QueryProductDetailsParams
+                        .newBuilder()
+                        .setProductList(
+                                Collections.singletonList(product)
+                        )
+                        .build();
 
-        BillingResult launchResult = billingClient.launchBillingFlow(activity, flowParams);
-        if (launchResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-            listener.onBillingError("Could not open GEL PRO purchase: " + launchResult.getDebugMessage());
+        billingClient.queryProductDetailsAsync(
+                params,
+                (
+                        @NonNull BillingResult billingResult,
+                        @NonNull QueryProductDetailsResult result
+                ) -> {
+
+                    if (billingResult.getResponseCode()
+                            != BillingClient.BillingResponseCode.OK) {
+
+                        customReportsDetails = null;
+
+                        listener.onBillingError(
+                                "Custom Reports product query failed: "
+                                        + billingResult.getDebugMessage()
+                        );
+                        return;
+                    }
+
+                    List<ProductDetails> products =
+                            result.getProductDetailsList();
+
+                    customReportsDetails =
+                            products.isEmpty()
+                                    ? null
+                                    : products.get(0);
+                }
+        );
+    }
+
+    // ============================================================
+    // GEL PRO PURCHASE
+    // ============================================================
+    public void launchGelProPurchase(
+            @NonNull Activity activity
+    ) {
+
+        if (!billingClient.isReady()) {
+            listener.onBillingError(
+                    "Google Play Billing is not ready."
+            );
+            return;
+        }
+
+        if (gelProDetails == null) {
+            queryGelProProduct();
+
+            listener.onBillingError(
+                    "GEL PRO is not available yet. Try again in a moment."
+            );
+            return;
+        }
+
+        List<ProductDetails.SubscriptionOfferDetails> offers =
+                gelProDetails.getSubscriptionOfferDetails();
+
+        if (offers == null || offers.isEmpty()) {
+            listener.onBillingError(
+                    "Google Play returned no eligible GEL PRO subscription plan."
+            );
+            return;
+        }
+
+        ProductDetails.SubscriptionOfferDetails selectedOffer = null;
+
+        // 1) Prefer our exact monthly base plan.
+        for (ProductDetails.SubscriptionOfferDetails offer : offers) {
+            if (GEL_PRO_BASE_PLAN_ID.equals(offer.getBasePlanId())
+                    && offer.getOfferId() == null) {
+
+                selectedOffer = offer;
+                break;
+            }
+        }
+
+        // 2) If Play Console uses a different base-plan id,
+        // choose a normal non-promotional base plan.
+        if (selectedOffer == null) {
+            for (ProductDetails.SubscriptionOfferDetails offer : offers) {
+                if (offer.getOfferId() == null) {
+                    selectedOffer = offer;
+                    break;
+                }
+            }
+        }
+
+        if (selectedOffer == null) {
+            listener.onBillingError(
+                    "No standard GEL PRO base plan is eligible for this account."
+            );
+            return;
+        }
+
+        BillingFlowParams.ProductDetailsParams productParams =
+                BillingFlowParams.ProductDetailsParams
+                        .newBuilder()
+                        .setProductDetails(gelProDetails)
+                        .setOfferToken(
+                                selectedOffer.getOfferToken()
+                        )
+                        .build();
+
+        BillingFlowParams flowParams =
+                BillingFlowParams
+                        .newBuilder()
+                        .setProductDetailsParamsList(
+                                Collections.singletonList(
+                                        productParams
+                                )
+                        )
+                        .build();
+
+        BillingResult result =
+                billingClient.launchBillingFlow(
+                        activity,
+                        flowParams
+                );
+
+        if (result.getResponseCode()
+                != BillingClient.BillingResponseCode.OK) {
+
+            listener.onBillingError(
+                    "Could not open GEL PRO purchase: "
+                            + result.getDebugMessage()
+            );
         }
     }
 
-    public void launchCustomReportsPurchase(@NonNull Activity activity) {
+    // ============================================================
+    // CUSTOM REPORTS €29.99 — ONE-TIME PURCHASE
+    // ============================================================
+    public void launchCustomReportsPurchase(
+            @NonNull Activity activity
+    ) {
+
         if (!isGelProActive()) {
-            listener.onBillingError("An active GEL PRO subscription is required first.");
+            listener.onBillingError(
+                    "An active GEL PRO subscription is required first."
+            );
             return;
         }
+
         if (!billingClient.isReady()) {
-            listener.onBillingError("Google Play Billing is not ready.");
+            listener.onBillingError(
+                    "Google Play Billing is not ready."
+            );
             return;
         }
-        if (customReportsProductDetails == null) {
+
+        if (customReportsDetails == null) {
             queryCustomReportsProduct();
-            listener.onBillingError("Custom Reports product is not ready yet. Try again in a moment.");
+
+            listener.onBillingError(
+                    "Custom Reports are not available yet. Try again in a moment."
+            );
             return;
         }
 
         BillingFlowParams.ProductDetailsParams.Builder productBuilder =
-                BillingFlowParams.ProductDetailsParams.newBuilder()
-                        .setProductDetails(customReportsProductDetails);
+                BillingFlowParams.ProductDetailsParams
+                        .newBuilder()
+                        .setProductDetails(customReportsDetails);
 
-        List<ProductDetails.OneTimePurchaseOfferDetails> oneTimeOffers =
-                customReportsProductDetails.getOneTimePurchaseOfferDetailsList();
+        // Billing 9 supports multiple purchase options/offers
+        // for one-time products.
+        List<ProductDetails.OneTimePurchaseOfferDetails> offers =
+                customReportsDetails
+                        .getOneTimePurchaseOfferDetailsList();
 
-        if (oneTimeOffers != null && !oneTimeOffers.isEmpty()) {
-            String offerToken = oneTimeOffers.get(0).getOfferToken();
-            if (offerToken != null && !offerToken.trim().isEmpty()) {
+        if (offers != null && !offers.isEmpty()) {
+
+            ProductDetails.OneTimePurchaseOfferDetails offer =
+                    offers.get(0);
+
+            String offerToken = offer.getOfferToken();
+
+            if (offerToken != null
+                    && !offerToken.trim().isEmpty()) {
+
                 productBuilder.setOfferToken(offerToken);
             }
         }
 
-        BillingFlowParams flowParams = BillingFlowParams.newBuilder()
-                .setProductDetailsParamsList(Collections.singletonList(productBuilder.build()))
-                .build();
+        BillingFlowParams flowParams =
+                BillingFlowParams
+                        .newBuilder()
+                        .setProductDetailsParamsList(
+                                Collections.singletonList(
+                                        productBuilder.build()
+                                )
+                        )
+                        .build();
 
-        BillingResult launchResult = billingClient.launchBillingFlow(activity, flowParams);
-        if (launchResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-            listener.onBillingError("Could not open Custom Reports purchase: " + launchResult.getDebugMessage());
+        BillingResult result =
+                billingClient.launchBillingFlow(
+                        activity,
+                        flowParams
+                );
+
+        if (result.getResponseCode()
+                != BillingClient.BillingResponseCode.OK) {
+
+            listener.onBillingError(
+                    "Could not open Custom Reports purchase: "
+                            + result.getDebugMessage()
+            );
         }
     }
 
+    // ============================================================
+    // GOOGLE PLAY PURCHASE CALLBACK
+    // ============================================================
     @Override
-    public void onPurchasesUpdated(@NonNull BillingResult billingResult,
-                                   @Nullable List<Purchase> purchases) {
-        int code = billingResult.getResponseCode();
+    public void onPurchasesUpdated(
+            @NonNull BillingResult billingResult,
+            @Nullable List<Purchase> purchases
+    ) {
 
-        if (code == BillingClient.BillingResponseCode.OK && purchases != null) {
-            for (Purchase purchase : purchases) {
-                processPurchase(purchase, true);
+        int responseCode =
+                billingResult.getResponseCode();
+
+        if (responseCode
+                == BillingClient.BillingResponseCode.OK) {
+
+            if (purchases == null) {
+                return;
             }
-        } else if (code == BillingClient.BillingResponseCode.USER_CANCELED) {
-            listener.onPurchaseCancelled();
-        } else {
-            listener.onBillingError("Purchase failed: " + billingResult.getDebugMessage());
-        }
-    }
-
-    public void refreshPurchases() {
-        refreshSubscription();
-        refreshOneTimePurchase();
-    }
-
-    private void refreshSubscription() {
-        QueryPurchasesParams params = QueryPurchasesParams.newBuilder()
-                .setProductType(BillingClient.ProductType.SUBS)
-                .build();
-
-        billingClient.queryPurchasesAsync(params, (billingResult, purchases) -> {
-            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) return;
-
-            boolean proFound = false;
-            if (purchases != null) {
-                for (Purchase purchase : purchases) {
-                    if (purchase.getProducts().contains(PRODUCT_GEL_PRO_MONTHLY)
-                            && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                        proFound = true;
-                        processPurchase(purchase, false);
-                    }
-                }
-            }
-
-            if (!proFound) setGelProActive(false);
-        });
-    }
-
-    private void refreshOneTimePurchase() {
-        QueryPurchasesParams params = QueryPurchasesParams.newBuilder()
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build();
-
-        billingClient.queryPurchasesAsync(params, (billingResult, purchases) -> {
-            if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) return;
-            if (purchases == null) return;
 
             for (Purchase purchase : purchases) {
-                if (purchase.getProducts().contains(PRODUCT_CUSTOM_REPORTS)
-                        && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                    processPurchase(purchase, false);
-                }
+                processPurchase(
+                        purchase,
+                        true
+                );
             }
-        });
-    }
 
-    private void processPurchase(@NonNull Purchase purchase, boolean fromFreshPurchaseFlow) {
-        List<String> products = purchase.getProducts();
-
-        boolean containsPro = products.contains(PRODUCT_GEL_PRO_MONTHLY);
-        boolean containsCustom = products.contains(PRODUCT_CUSTOM_REPORTS);
-
-        if (!containsPro && !containsCustom) return;
-
-        if (purchase.getPurchaseState() == Purchase.PurchaseState.PENDING) {
-            if (containsPro) listener.onPurchasePending(PRODUCT_GEL_PRO_MONTHLY);
-            if (containsCustom) listener.onPurchasePending(PRODUCT_CUSTOM_REPORTS);
             return;
         }
 
-        if (purchase.getPurchaseState() != Purchase.PurchaseState.PURCHASED) return;
+        if (responseCode
+                == BillingClient.BillingResponseCode.USER_CANCELED) {
 
-        if (containsPro) setGelProActive(true);
-        if (containsCustom) setCustomReportsActive(true);
+            listener.onPurchaseCancelled();
+            return;
+        }
 
-        if (!purchase.isAcknowledged()) {
-            AcknowledgePurchaseParams params = AcknowledgePurchaseParams.newBuilder()
-                    .setPurchaseToken(purchase.getPurchaseToken())
-                    .build();
+        listener.onBillingError(
+                "Purchase failed: "
+                        + billingResult.getDebugMessage()
+        );
+    }
 
-            billingClient.acknowledgePurchase(params, billingResult -> {
-                if (billingResult.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                    listener.onBillingError("Purchase acknowledgement failed: " + billingResult.getDebugMessage());
-                    return;
+    // ============================================================
+    // RESTORE / REFRESH CURRENT GOOGLE PLAY PURCHASES
+    // ============================================================
+    public void refreshPurchases() {
+
+        if (!billingClient.isReady()) {
+            return;
+        }
+
+        refreshGelProSubscription();
+        refreshCustomReportsPurchase();
+    }
+
+    private void refreshGelProSubscription() {
+
+        QueryPurchasesParams params =
+                QueryPurchasesParams
+                        .newBuilder()
+                        .setProductType(
+                                BillingClient.ProductType.SUBS
+                        )
+                        .build();
+
+        billingClient.queryPurchasesAsync(
+                params,
+                (billingResult, purchases) -> {
+
+                    if (billingResult.getResponseCode()
+                            != BillingClient.BillingResponseCode.OK) {
+
+                        // Important:
+                        // Do NOT revoke entitlement on a transient Play error.
+                        return;
+                    }
+
+                    boolean activeGelProFound = false;
+
+                    if (purchases != null) {
+
+                        for (Purchase purchase : purchases) {
+
+                            if (purchase
+                                    .getProducts()
+                                    .contains(PRODUCT_GEL_PRO_MONTHLY)
+                                    && purchase.getPurchaseState()
+                                    == Purchase.PurchaseState.PURCHASED) {
+
+                                activeGelProFound = true;
+
+                                processPurchase(
+                                        purchase,
+                                        false
+                                );
+                            }
+                        }
+                    }
+
+                    // queryPurchasesAsync(SUBS) returns currently owned/
+                    // active subscriptions. If the query succeeds and GEL PRO
+                    // is not present, the local subscription entitlement
+                    // must not remain unlocked.
+                    if (!activeGelProFound) {
+                        setGelProActive(false);
+                    }
                 }
-                notifyEntitlementActivated(containsPro, containsCustom, fromFreshPurchaseFlow);
-            });
+        );
+    }
+
+    private void refreshCustomReportsPurchase() {
+
+        QueryPurchasesParams params =
+                QueryPurchasesParams
+                        .newBuilder()
+                        .setProductType(
+                                BillingClient.ProductType.INAPP
+                        )
+                        .build();
+
+        billingClient.queryPurchasesAsync(
+                params,
+                (billingResult, purchases) -> {
+
+                    if (billingResult.getResponseCode()
+                            != BillingClient.BillingResponseCode.OK) {
+
+                        return;
+                    }
+
+                    if (purchases == null) {
+                        return;
+                    }
+
+                    for (Purchase purchase : purchases) {
+
+                        if (purchase
+                                .getProducts()
+                                .contains(PRODUCT_CUSTOM_REPORTS)
+                                && purchase.getPurchaseState()
+                                == Purchase.PurchaseState.PURCHASED) {
+
+                            processPurchase(
+                                    purchase,
+                                    false
+                            );
+                        }
+                    }
+                }
+        );
+    }
+
+    // ============================================================
+    // CENTRAL PURCHASE PROCESSOR
+    // ============================================================
+    private void processPurchase(
+            @NonNull Purchase purchase,
+            boolean freshPurchaseFlow
+    ) {
+
+        List<String> products =
+                purchase.getProducts();
+
+        boolean isGelProPurchase =
+                products.contains(
+                        PRODUCT_GEL_PRO_MONTHLY
+                );
+
+        boolean isCustomReportsPurchase =
+                products.contains(
+                        PRODUCT_CUSTOM_REPORTS
+                );
+
+        if (!isGelProPurchase
+                && !isCustomReportsPurchase) {
+            return;
+        }
+
+        // --------------------------------------------------------
+        // PENDING
+        // Never unlock while payment is pending.
+        // --------------------------------------------------------
+        if (purchase.getPurchaseState()
+                == Purchase.PurchaseState.PENDING) {
+
+            if (isGelProPurchase) {
+                listener.onPurchasePending(
+                        PRODUCT_GEL_PRO_MONTHLY
+                );
+            }
+
+            if (isCustomReportsPurchase) {
+                listener.onPurchasePending(
+                        PRODUCT_CUSTOM_REPORTS
+                );
+            }
+
+            return;
+        }
+
+        // --------------------------------------------------------
+        // PURCHASED ONLY
+        // --------------------------------------------------------
+        if (purchase.getPurchaseState()
+                != Purchase.PurchaseState.PURCHASED) {
+            return;
+        }
+
+        // The BillingClient purchase response says PURCHASED.
+        // Keep entitlement state in sync with the existing app gates.
+        if (isGelProPurchase) {
+            setGelProActive(true);
+        }
+
+        if (isCustomReportsPurchase) {
+            setCustomReportsActive(true);
+        }
+
+        // --------------------------------------------------------
+        // ACKNOWLEDGE
+        // --------------------------------------------------------
+        if (!purchase.isAcknowledged()) {
+
+            AcknowledgePurchaseParams acknowledgeParams =
+                    AcknowledgePurchaseParams
+                            .newBuilder()
+                            .setPurchaseToken(
+                                    purchase.getPurchaseToken()
+                            )
+                            .build();
+
+            billingClient.acknowledgePurchase(
+                    acknowledgeParams,
+                    billingResult -> {
+
+                        if (billingResult.getResponseCode()
+                                != BillingClient.BillingResponseCode.OK) {
+
+                            listener.onBillingError(
+                                    "Purchase acknowledgement failed: "
+                                            + billingResult.getDebugMessage()
+                            );
+                            return;
+                        }
+
+                        notifyActivated(
+                                isGelProPurchase,
+                                isCustomReportsPurchase,
+                                freshPurchaseFlow
+                        );
+                    }
+            );
+
         } else {
-            notifyEntitlementActivated(containsPro, containsCustom, fromFreshPurchaseFlow);
+
+            notifyActivated(
+                    isGelProPurchase,
+                    isCustomReportsPurchase,
+                    freshPurchaseFlow
+            );
         }
     }
 
-    private void notifyEntitlementActivated(boolean containsPro,
-                                            boolean containsCustom,
-                                            boolean fromFreshPurchaseFlow) {
-        if (containsPro) {
-            boolean shouldShowCustomOffer = fromFreshPurchaseFlow
-                    && !isCustomReportsActive()
-                    && !wasCustomReportsOfferShown();
+    // ============================================================
+    // ACTIVITY NOTIFICATION
+    // ============================================================
+    private void notifyActivated(
+            boolean gelPro,
+            boolean customReports,
+            boolean freshPurchaseFlow
+    ) {
 
-            listener.onGelProActivated(shouldShowCustomOffer);
+        if (gelPro) {
+
+            boolean shouldOfferCustomReports =
+                    freshPurchaseFlow
+                            && !isCustomReportsActive()
+                            && !wasCustomReportsOfferShown();
+
+            listener.onGelProActivated(
+                    shouldOfferCustomReports
+            );
         }
 
-        if (containsCustom) {
+        if (customReports) {
             listener.onCustomReportsActivated();
         }
     }
