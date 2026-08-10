@@ -59,10 +59,10 @@ android {
     }
 
     compileOptions {
-    sourceCompatibility JavaVersion.VERSION_17
-    targetCompatibility JavaVersion.VERSION_17
-    coreLibraryDesugaringEnabled true
-}
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
 
     packagingOptions {
         jniLibs {
@@ -92,6 +92,12 @@ dependencies {
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
     implementation 'com.google.zxing:core:3.5.2'
     implementation "androidx.work:work-runtime:2.9.0"
+
+    // -------------------------------------------------
+    // Google Play Billing
+    // -------------------------------------------------
+    def billing_version = "9.1.0"
+    implementation "com.android.billingclient:billing:$billing_version"
 
     // 🔥 Java 8+ API support (LocalDateTime etc)
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
