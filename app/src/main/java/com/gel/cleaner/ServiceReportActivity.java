@@ -65,6 +65,11 @@ public class ServiceReportActivity extends AppCompatActivity {
     private AppCompatButton btnHtml;
     private ProgressBar exportProgress;
 
+    // STEP 2 — billing/report entitlement bridge.
+    private GelBillingManager billingManager;
+    private boolean pendingSingleReportExport = false;
+    private boolean useSingleReportCreditForCurrentExport = false;
+
     // GEL PRO — same entitlement store used by the professional labs.
     private static final String GEL_PRO_PREFS = "GEL_PRO_ENTITLEMENT";
     private static final String GEL_PRO_ACTIVE_KEY = "active";
@@ -93,6 +98,57 @@ public class ServiceReportActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         gelLogo = BitmapFactory.decodeResource(getResources(), R.drawable.gel_logo);
+
+        billingManager = new GelBillingManager(this, new GelBillingManager.Listener() {
+            @Override public void onBillingReady() {}
+
+            @Override public void onGelProActivated(boolean showCustomReportsOffer) {
+                runOnUiThread(() -> recreate());
+            }
+
+            @Override public void onCustomReportsActivated() {
+                runOnUiThread(() -> {
+                    Toast.makeText(ServiceReportActivity.this,
+                            AppLang.isGreek(ServiceReportActivity.this)
+                                    ? "Η απεριόριστη εξατομίκευση αναφορών ενεργοποιήθηκε."
+                                    : "Unlimited personalised reports activated.",
+                            Toast.LENGTH_LONG).show();
+                    recreate();
+                });
+            }
+
+            @Override public void onSingleReportCreditAdded(int availableCredits) {
+                runOnUiThread(() -> {
+                    Toast.makeText(ServiceReportActivity.this,
+                            AppLang.isGreek(ServiceReportActivity.this)
+                                    ? "Η αγορά ολοκληρώθηκε. Διαθέσιμη 1 εξατομικευμένη αναφορά."
+                                    : "Purchase complete. One personalised report is available.",
+                            Toast.LENGTH_LONG).show();
+                    if (pendingSingleReportExport) {
+                        pendingSingleReportExport = false;
+                        startEntitledExport();
+                    }
+                });
+            }
+
+            @Override public void onPurchasePending(@androidx.annotation.NonNull String productId) {
+                runOnUiThread(() -> Toast.makeText(ServiceReportActivity.this,
+                        AppLang.isGreek(ServiceReportActivity.this)
+                                ? "Η πληρωμή είναι σε αναμονή."
+                                : "Payment is pending.",
+                        Toast.LENGTH_LONG).show());
+            }
+
+            @Override public void onPurchaseCancelled() {
+                pendingSingleReportExport = false;
+            }
+
+            @Override public void onBillingError(@androidx.annotation.NonNull String message) {
+                runOnUiThread(() -> Toast.makeText(ServiceReportActivity.this,
+                        message, Toast.LENGTH_LONG).show());
+            }
+        });
+        billingManager.start();
 
         ScrollView scroll = new ScrollView(this);
 
@@ -175,39 +231,9 @@ lpProg.gravity = Gravity.CENTER;
 exportProgress.setLayoutParams(lpProg);
 
 // 🔴 TXT ACTION
-btnTxt.setOnClickListener(v -> {
-    if (!requireGelProExport()) return;
+btnTxt.setOnClickListener(v -> beginReportExport(false));
 
-    // No labs yet: offer a useful blank two-page service form
-    // BEFORE the normal export validation runs.
-    if (GELServiceLog.isEmpty()) {
-        showEmptyReportOptionsDialog();
-        return;
-    }
-
-    String report = validateExport();
-    if (report == null) return;
-
-    lockExportUI(true);
-    exportTxtToPdf();
-});
-
-        btnHtml.setOnClickListener(v -> {
-            if (!requireGelProExport()) return;
-
-            // No labs yet: offer a useful blank two-page service form
-            // BEFORE the normal export validation runs.
-            if (GELServiceLog.isEmpty()) {
-                showEmptyReportOptionsDialog();
-                return;
-            }
-
-            String report = validateExport();
-            if (report == null) return;
-
-            lockExportUI(true);
-            exportHtmlPdf(report);
-        });
+        btnHtml.setOnClickListener(v -> beginReportExport(true));
 
         btnRow.addView(line);
         btnRow.addView(exportProgress);
@@ -220,6 +246,173 @@ btnTxt.setOnClickListener(v -> {
         UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
     }
 
+
+    // ============================================================
+    // STEP 2 — REPORT BILLING / ENTITLEMENT GATE
+    // ============================================================
+    private boolean pendingHtmlExport = false;
+
+    private void beginReportExport(boolean html) {
+        pendingHtmlExport = html;
+
+        // Blank form remains available through the existing flow and never
+        // consumes a €5 personalised-report credit.
+        if (GELServiceLog.isEmpty()) {
+            showEmptyReportOptionsDialog();
+            return;
+        }
+
+        // Unlimited personalised reports require BOTH GEL PRO and the €29.99 unlock.
+        if (billingManager != null
+                && billingManager.isGelProActive()
+                && billingManager.isCustomReportsActive()) {
+            useSingleReportCreditForCurrentExport = false;
+            startEntitledExport();
+            return;
+        }
+
+        // A previously purchased €5 credit works without GEL PRO.
+        if (billingManager != null && billingManager.hasSingleReportCredit()) {
+            useSingleReportCreditForCurrentExport = true;
+            startEntitledExport();
+            return;
+        }
+
+        showPersonalisedReportPurchaseDialog();
+    }
+
+    private void startEntitledExport() {
+        String report = validateExport();
+        if (report == null) {
+            useSingleReportCreditForCurrentExport = false;
+            return;
+        }
+
+        // Re-evaluate which entitlement is being used. A newly purchased
+        // €5 credit reaches this method through the billing callback.
+        if (billingManager != null
+                && billingManager.isGelProActive()
+                && billingManager.isCustomReportsActive()) {
+            useSingleReportCreditForCurrentExport = false;
+        } else if (billingManager != null && billingManager.hasSingleReportCredit()) {
+            useSingleReportCreditForCurrentExport = true;
+        } else {
+            useSingleReportCreditForCurrentExport = false;
+            showPersonalisedReportPurchaseDialog();
+            return;
+        }
+
+        if (pendingHtmlExport && useSingleReportCreditForCurrentExport) {
+            useSingleReportCreditForCurrentExport = false;
+            Toast.makeText(this,
+                    AppLang.isGreek(this)
+                            ? "Το credit των 5 € χρησιμοποιείται στο TXT PDF, όπου η εφαρμογή μπορεί να επιβεβαιώσει την επιτυχημένη δημιουργία του αρχείου."
+                            : "The €5 credit is used with TXT PDF, where the app can verify successful file creation.",
+                    Toast.LENGTH_LONG).show();
+            pendingHtmlExport = false;
+            return;
+        }
+
+        lockExportUI(true);
+        if (pendingHtmlExport) {
+            exportHtmlPdf(report);
+        } else {
+            exportTxtToPdf();
+        }
+    }
+
+    private void consumeSingleReportCreditIfNeeded() {
+        if (!useSingleReportCreditForCurrentExport) return;
+        useSingleReportCreditForCurrentExport = false;
+
+        if (billingManager != null) {
+            boolean consumed = billingManager.consumeSingleReportCreditAfterSuccessfulExport();
+            if (!consumed) {
+                Toast.makeText(this,
+                        AppLang.isGreek(this)
+                                ? "Η αναφορά δημιουργήθηκε, αλλά δεν ήταν δυνατό να ενημερωθεί το credit."
+                                : "The report was created, but the report credit could not be updated.",
+                        Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void showPersonalisedReportPurchaseDialog() {
+        final boolean gr = AppLang.isGreek(this);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(
+                this, android.R.style.Theme_Material_Dialog_NoActionBar);
+        LinearLayout root = buildGELPopupRoot(this);
+
+        TextView title = new TextView(this);
+        title.setText(gr ? "PERSONALISED SERVICE REPORT" : "PERSONALISED SERVICE REPORT");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(18f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        root.addView(title);
+
+        TextView msg = new TextView(this);
+        msg.setText(gr
+                ? "Επίλεξε τον τρόπο πρόσβασης:\n\n"
+                  + "• 5 € — μία εξατομικευμένη αναφορά. Δεν απαιτείται συνδρομή.\n\n"
+                  + "• 29,99 € — απεριόριστες εξατομικευμένες αναφορές. Απαιτεί ενεργή συνδρομή GEL PRO."
+                : "Choose access:\n\n"
+                  + "• €5 — one personalised report. No subscription required.\n\n"
+                  + "• €29.99 — unlimited personalised reports. Requires an active GEL PRO subscription.");
+        msg.setTextColor(0xFF00FF9C);
+        msg.setTextSize(14f);
+        msg.setPadding(0, dp(14), 0, dp(8));
+        root.addView(msg);
+
+        Button single = gelButton(this,
+                gr ? "1 REPORT — 5 €" : "1 REPORT — €5", 0xFF0F8A3B);
+        Button unlimited = gelButton(this,
+                gr ? "UNLIMITED — 29,99 €" : "UNLIMITED — €29.99", 0xFF202020);
+        Button cancel = gelButton(this, gr ? "ΑΚΥΡΟ" : "CANCEL", 0xFF202020);
+
+        root.addView(single);
+        root.addView(unlimited);
+        root.addView(cancel);
+
+        builder.setView(root);
+        final AlertDialog dialog = builder.create();
+
+        single.setOnClickListener(v -> {
+            dialog.dismiss();
+            if (billingManager == null) return;
+            pendingSingleReportExport = true;
+            billingManager.launchSingleReportPurchase(this);
+        });
+
+        unlimited.setOnClickListener(v -> {
+            dialog.dismiss();
+            if (billingManager == null) return;
+
+            if (!billingManager.isGelProActive()) {
+                Toast.makeText(this,
+                        gr ? "Για το unlimited πακέτο απαιτείται πρώτα ενεργή συνδρομή GEL PRO."
+                           : "An active GEL PRO subscription is required before the unlimited package.",
+                        Toast.LENGTH_LONG).show();
+                billingManager.launchGelProPurchase(this);
+                return;
+            }
+
+            billingManager.launchCustomReportsPurchase(this);
+        });
+
+        cancel.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            DisplayMetrics dm = getResources().getDisplayMetrics();
+            int safeWidth = Math.min(dm.widthPixels - dp(20), dp(560));
+            dialog.getWindow().setLayout(
+                    Math.max(dp(280), safeWidth),
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
 
     // ============================================================
     // EMPTY REPORT FLOW — offer a printable blank two-page form
@@ -1723,6 +1916,7 @@ pdf.writeTo(bos);
 pdf.close();
 
 Uri uri = savePdfToDownloads("GEL_Service_Report.pdf", bos.toByteArray());
+consumeSingleReportCreditIfNeeded();
 sharePdf(uri);
 
             runOnUiThread(() -> {
@@ -2440,6 +2634,16 @@ private void sharePdf(Uri uri) {
         Toast.makeText(this, "No app available to share PDF", Toast.LENGTH_SHORT).show();
     }
 }
+
+
+    @Override
+    protected void onDestroy() {
+        if (billingManager != null) {
+            billingManager.close();
+            billingManager = null;
+        }
+        super.onDestroy();
+    }
 
     private String escapeHtml(String s) {
         if (s == null) return "";
