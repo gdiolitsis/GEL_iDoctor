@@ -2323,11 +2323,11 @@ private void showCertificationAccessDialog() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    String title = gr
+    String titleText = gr
             ? "30 ΗΜΕΡΕΣ ΠΛΗΡΗΣ ΕΛΕΓΧΟΣ ΣΥΣΚΕΥΗΣ"
             : "30-DAY FULL DEVICE CHECK";
 
-    String message = gr
+    String messageText = gr
             ? "Έλεγξε σωστά μια συσκευή πριν την αγοράσεις.\n\n"
               + "• Πλήρης πρόσβαση στα διαγνωστικά εργαλεία για 30 ημέρες\n"
               + "• Περιλαμβάνει Labs 14, 28 και 30\n"
@@ -2343,11 +2343,73 @@ private void showCertificationAccessDialog() {
               + "• No subscription and no auto-renewal\n\n"
               + "Purchase will be handled exclusively through Google Play.";
 
-    new AlertDialog.Builder(this)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton("OK", null)
-            .show();
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    box.setPadding(dp(20), dp(18), dp(20), dp(18));
+
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(0xFF080808);
+    bg.setCornerRadius(dp(18));
+    bg.setStroke(dp(3), 0xFFFFD700);
+    box.setBackground(bg);
+
+    TextView title = new TextView(this);
+    title.setText(titleText);
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(19f);
+    title.setTypeface(Typeface.DEFAULT_BOLD);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(dp(4), 0, dp(4), dp(14));
+    box.addView(title);
+
+    TextView message = new TextView(this);
+    message.setText(messageText);
+    message.setTextColor(0xFF00FF9C);
+    message.setTextSize(15f);
+    message.setLineSpacing(0f, 1.18f);
+    message.setPadding(dp(4), 0, dp(4), dp(16));
+    box.addView(message);
+
+    Button ok = new Button(this);
+    ok.setText("OK");
+    ok.setAllCaps(false);
+    ok.setTextColor(0xFF00FF7F);
+    ok.setTextSize(17f);
+    ok.setTypeface(Typeface.DEFAULT_BOLD);
+    ok.setGravity(Gravity.CENTER);
+    ok.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+    ok.setIncludeFontPadding(false);
+    ok.setPadding(dp(12), 0, dp(12), 0);
+    ok.setMinHeight(0);
+    ok.setMinimumHeight(0);
+    ok.setBackgroundResource(R.drawable.gel_btn_neon_outline);
+
+    LinearLayout.LayoutParams okLp =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(76)
+            );
+    okLp.setMargins(0, dp(4), 0, 0);
+    box.addView(ok, okLp);
+
+    AlertDialog dialog = new AlertDialog.Builder(this)
+            .setView(box)
+            .setCancelable(true)
+            .create();
+
+    ok.setOnClickListener(v -> dialog.dismiss());
+
+    dialog.show();
+
+    if (dialog.getWindow() != null) {
+        dialog.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT)
+        );
+        dialog.getWindow().setLayout(
+                (int) (getResources().getDisplayMetrics().widthPixels * 0.94f),
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+    }
 }
 
 // =========================================================
