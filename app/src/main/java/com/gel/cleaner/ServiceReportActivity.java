@@ -691,7 +691,10 @@ btnTxt.setOnClickListener(v -> {
     // GEL PRO — EXPORT ENTITLEMENT
     // ============================================================
     private boolean isGelProActive() {
-        try {
+        
+        // TEST BUILD: unlock GEL PRO without changing stored purchase state.
+        if (BuildConfig.DEBUG) return true;
+try {
             return getSharedPreferences(GEL_PRO_PREFS, MODE_PRIVATE)
                     .getBoolean(GEL_PRO_ACTIVE_KEY, false);
         } catch (Throwable ignore) {
