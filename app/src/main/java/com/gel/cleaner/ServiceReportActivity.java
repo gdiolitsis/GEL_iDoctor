@@ -349,48 +349,9 @@ btnTxt.setOnClickListener(v -> {
                         true
                 );
 
-                y += 10;
-
-                c1.drawText(
-                        "Device intake condition / Κατάσταση παραλαβής συσκευής",
-                        x,
-                        y,
-                        sectionPaint
-                );
-                y += 22;
-
-                String[] intake = new String[] {
-                        "Screen (cracked/scratched) / Οθόνη (σπασμένη/γρατζουνισμένη)",
-                        "Back cover / Πίσω καπάκι",
-                        "Frame / Πλαίσιο",
-                        "Camera lens / Φακός κάμερας",
-                        "Charging port / Θύρα φόρτισης",
-                        "Buttons / Κουμπιά",
-                        "Speaker / Microphone / Ηχείο / Μικρόφωνο",
-                        "Water signs / Ενδείξεις υγρασίας",
-                        "Battery condition / Κατάσταση μπαταρίας"
-                };
-
-                for (String item : intake) {
-                    c1.drawRect(x, y - 10, x + 10, y, textPaint);
-                    c1.drawText("OK", x + 16, y, textPaint);
-
-                    c1.drawRect(x + 90, y - 10, x + 100, y, textPaint);
-                    c1.drawText("DAMAGED", x + 106, y, textPaint);
-
-                    c1.drawText("– " + item, x + 205, y, textPaint);
-                    y += 18;
-                }
-
-                y += 18;
-                c1.drawText("Notes / Παρατηρήσεις:", x, y, sectionPaint);
-                y += 20;
-
-                for (int i = 0; i < 5; i++) {
-                    c1.drawLine(x, y, x + 500, y, textPaint);
-                    y += 24;
-                }
-
+                // drawReportHeader(..., true) already contains the complete
+                // first-page blank intake form and notes area.
+                // Do not draw them a second time here.
                 drawPageFooter(c1, pageNum);
                 pdf.finishPage(page1);
 
