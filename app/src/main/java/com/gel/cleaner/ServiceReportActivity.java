@@ -64,6 +64,10 @@ public class ServiceReportActivity extends AppCompatActivity {
     private boolean pendingSingleReportExport = false;
     private boolean useSingleReportCreditForCurrentExport = false;
 
+    // True only when this specific export is allowed to use the saved
+    // professional logo/company/technician profile.
+    private boolean useProfessionalBrandingForCurrentExport = false;
+
     // GEL PRO — same entitlement store used by the professional labs.
     private static final String GEL_PRO_PREFS = "GEL_PRO_ENTITLEMENT";
     private static final String GEL_PRO_ACTIVE_KEY = "active";
@@ -248,66 +252,120 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
     private void beginReportExport(boolean html) {
         pendingHtmlExport = html;
+        useSingleReportCreditForCurrentExport = false;
+        useProfessionalBrandingForCurrentExport = false;
 
-        // Blank form remains available through the existing flow and never
-        // consumes a €5 personalised-report credit.
+        final boolean gelProActive =
+                billingManager != null
+                        ? billingManager.isGelProActive()
+                        : isGelProActive();
+
+        final boolean unlimitedPersonalisation =
+                gelProActive
+                        && billingManager != null
+                        && billingManager.isCustomReportsActive();
+
+        final boolean singleReportCredit =
+                billingManager != null
+                        && billingManager.hasSingleReportCredit();
+
+        // --------------------------------------------------------
+        // LEVEL 1 — EXPORT ACCESS
+        // Service Report export is never a free feature.
+        //
+        // Access is granted by:
+        //   • active GEL PRO, OR
+        //   • one already-purchased €5 single personalised report credit.
+        // --------------------------------------------------------
+        if (!gelProActive && !singleReportCredit) {
+            showPersonalisedReportPurchaseDialog();
+            return;
+        }
+
+        // --------------------------------------------------------
+        // LEVEL 2 — PERSONALISATION ACCESS
+        // GEL PRO by itself gives the normal GEL Service Report.
+        // Saved company/logo details are used only with:
+        //   • GEL PRO + €29.99 unlimited personalisation, OR
+        //   • one €5 single-report credit.
+        // --------------------------------------------------------
+        if (unlimitedPersonalisation) {
+            useProfessionalBrandingForCurrentExport = true;
+        } else if (singleReportCredit) {
+            useSingleReportCreditForCurrentExport = true;
+            useProfessionalBrandingForCurrentExport = true;
+        }
+
+        // The blank report is also an export, therefore it reaches this
+        // point only after the paid export gate above has been passed.
         if (GELServiceLog.isEmpty()) {
             showEmptyReportOptionsDialog();
             return;
         }
 
-        // Unlimited personalised reports require BOTH GEL PRO and the €29.99 unlock.
-        if (billingManager != null
-                && billingManager.isGelProActive()
-                && billingManager.isCustomReportsActive()) {
-            useSingleReportCreditForCurrentExport = false;
-            startEntitledExport();
-            return;
-        }
-
-        // A previously purchased €5 credit works without GEL PRO.
-        if (billingManager != null && billingManager.hasSingleReportCredit()) {
-            useSingleReportCreditForCurrentExport = true;
-            startEntitledExport();
-            return;
-        }
-
-        showPersonalisedReportPurchaseDialog();
+        startEntitledExport();
     }
 
     private void startEntitledExport() {
-        String report = validateExport();
-        if (report == null) {
-            useSingleReportCreditForCurrentExport = false;
-            return;
-        }
+        final boolean gelProActive =
+                billingManager != null
+                        ? billingManager.isGelProActive()
+                        : isGelProActive();
 
-        // Re-evaluate which entitlement is being used. A newly purchased
-        // €5 credit reaches this method through the billing callback.
-        if (billingManager != null
-                && billingManager.isGelProActive()
-                && billingManager.isCustomReportsActive()) {
+        final boolean unlimitedPersonalisation =
+                gelProActive
+                        && billingManager != null
+                        && billingManager.isCustomReportsActive();
+
+        final boolean singleReportCredit =
+                billingManager != null
+                        && billingManager.hasSingleReportCredit();
+
+        // Re-check the paid export entitlement immediately before export.
+        if (!gelProActive && !singleReportCredit) {
             useSingleReportCreditForCurrentExport = false;
-        } else if (billingManager != null && billingManager.hasSingleReportCredit()) {
-            useSingleReportCreditForCurrentExport = true;
-        } else {
-            useSingleReportCreditForCurrentExport = false;
+            useProfessionalBrandingForCurrentExport = false;
             showPersonalisedReportPurchaseDialog();
             return;
         }
 
+        if (unlimitedPersonalisation) {
+            useSingleReportCreditForCurrentExport = false;
+            useProfessionalBrandingForCurrentExport = true;
+        } else if (singleReportCredit) {
+            useSingleReportCreditForCurrentExport = true;
+            useProfessionalBrandingForCurrentExport = true;
+        } else {
+            // GEL PRO base report: export is allowed, but user branding is not.
+            useSingleReportCreditForCurrentExport = false;
+            useProfessionalBrandingForCurrentExport = false;
+        }
+
+        String report = validateExport();
+        if (report == null) {
+            useSingleReportCreditForCurrentExport = false;
+            useProfessionalBrandingForCurrentExport = false;
+            return;
+        }
+
+        // The system HTML print flow cannot reliably confirm that a PDF file
+        // was actually saved, so a one-report credit is restricted to TXT PDF.
         if (pendingHtmlExport && useSingleReportCreditForCurrentExport) {
             useSingleReportCreditForCurrentExport = false;
+            useProfessionalBrandingForCurrentExport = false;
+
             Toast.makeText(this,
                     AppLang.isGreek(this)
                             ? "Το credit των 5 € χρησιμοποιείται στο TXT PDF, όπου η εφαρμογή μπορεί να επιβεβαιώσει την επιτυχημένη δημιουργία του αρχείου."
                             : "The €5 credit is used with TXT PDF, where the app can verify successful file creation.",
                     Toast.LENGTH_LONG).show();
+
             pendingHtmlExport = false;
             return;
         }
 
         lockExportUI(true);
+
         if (pendingHtmlExport) {
             exportHtmlPdf(report);
         } else {
@@ -316,8 +374,13 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     }
 
     private void consumeSingleReportCreditIfNeeded() {
-        if (!useSingleReportCreditForCurrentExport) return;
+        if (!useSingleReportCreditForCurrentExport) {
+            useProfessionalBrandingForCurrentExport = false;
+            return;
+        }
+
         useSingleReportCreditForCurrentExport = false;
+        useProfessionalBrandingForCurrentExport = false;
 
         if (billingManager != null) {
             boolean consumed = billingManager.consumeSingleReportCreditAfterSuccessfulExport();
@@ -665,6 +728,11 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                         "GEL_Blank_Service_Report_V4.pdf",
                         bos.toByteArray()
                 );
+
+                if (useSingleReportCreditForCurrentExport && billingManager != null) {
+                    billingManager.consumeSingleReportCreditAfterSuccessfulExport();
+                    useSingleReportCreditForCurrentExport = false;
+                }
 
                 runOnUiThread(() -> {
                     sharePdf(uri);
@@ -2043,17 +2111,27 @@ private String buildHtmlReport(String report) {
 
     // LEFT
     body.append("<div class='header-left'>");
-    body.append("<img class='logo' src='")
-            .append(getProfessionalLogoDataUri())
-            .append("'/>");
 
-    body.append("<div class='header-text'>");
-    body.append("<div class='title'>")
-            .append(escapeHtml(professionalCompanyName()))
-            .append("</div>");
-    body.append("<div class='subtitle'>GEL Service Report / Αναφορά Service</div>");
-    body.append(buildProfessionalHtmlDetails());
-    body.append("</div>");
+    if (useProfessionalBrandingForCurrentExport) {
+        body.append("<img class='logo' src='")
+                .append(getProfessionalLogoDataUri())
+                .append("'/>");
+
+        body.append("<div class='header-text'>");
+        body.append("<div class='title'>")
+                .append(escapeHtml(professionalCompanyName()))
+                .append("</div>");
+        body.append("<div class='subtitle'>GEL Service Report / Αναφορά Service</div>");
+        body.append(buildProfessionalHtmlDetails());
+        body.append("</div>");
+
+    } else {
+        body.append("<img class='logo' src='file:///android_res/drawable/gel_logo.png'/>");
+        body.append("<div class='header-text'>");
+        body.append("<div class='title'>GDiolitsis Engine Lab (GEL)</div>");
+        body.append("<div class='subtitle'>GEL Service Report / Αναφορά Service</div>");
+        body.append("</div>");
+    }
 
     body.append("</div>");
 
@@ -2302,30 +2380,47 @@ private String buildHtmlReport(String report) {
     ) {
         int y = startY;
 
-        // Professional identity — page 1 only.
-        Bitmap professionalLogo = getProfessionalLogoBitmap();
-        if (professionalLogo != null) {
-            Bitmap scaled = Bitmap.createScaledBitmap(professionalLogo, 58, 58, true);
-            c.drawBitmap(scaled, x, y, null);
+        // Page-1 identity.
+        // Saved professional branding is a separate paid entitlement.
+        if (useProfessionalBrandingForCurrentExport) {
+            Bitmap professionalLogo = getProfessionalLogoBitmap();
+            if (professionalLogo != null) {
+                Bitmap scaled = Bitmap.createScaledBitmap(professionalLogo, 58, 58, true);
+                c.drawBitmap(scaled, x, y, null);
+            }
+
+            y += 76;
+
+            c.drawText(professionalCompanyName(), x, y, title);
+            y += 20;
+
+            c.drawText("GEL Service Report / Αναφορά Service", x, y, subtitle);
+            y += 20;
+
+            y = drawProfessionalCompanyDetails(
+                    c,
+                    x,
+                    y,
+                    text,
+                    Math.max(240, c.getWidth() - (x * 2))
+            );
+
+            y += 8;
+
+        } else {
+            if (gelLogo != null) {
+                Bitmap scaled = Bitmap.createScaledBitmap(gelLogo, 58, 58, true);
+                c.drawBitmap(scaled, x, y, null);
+            }
+
+            y += 76;
+
+            c.drawText("GDiolitsis Engine Lab (GEL)", x, y, title);
+            y += 20;
+
+            c.drawText("GEL Service Report / Αναφορά Service", x, y, subtitle);
+            y += 28;
         }
-
-        y += 76;
-
-        c.drawText(professionalCompanyName(), x, y, title);
-        y += 20;
-
-        c.drawText("GEL Service Report / Αναφορά Service", x, y, subtitle);
-        y += 20;
-
-        y = drawProfessionalCompanyDetails(
-                c,
-                x,
-                y,
-                text,
-                Math.max(240, c.getWidth() - (x * 2))
-        );
-
-        y += 8;
 
         String dateLine = "Date / Ημερομηνία: " +
                 java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
@@ -2411,30 +2506,48 @@ private String buildHtmlReport(String report) {
         int y = startY;
 
         if (isFirstPage) {
-            // Full professional identity appears ONLY on page 1.
-            Bitmap professionalLogo = getProfessionalLogoBitmap();
-            if (professionalLogo != null) {
-                Bitmap scaled = Bitmap.createScaledBitmap(professionalLogo, 58, 58, true);
-                c.drawBitmap(scaled, x, y, null);
+            // Full identity appears ONLY on page 1.
+            // Professional user branding is used only when separately entitled.
+            if (useProfessionalBrandingForCurrentExport) {
+                Bitmap professionalLogo = getProfessionalLogoBitmap();
+                if (professionalLogo != null) {
+                    Bitmap scaled = Bitmap.createScaledBitmap(professionalLogo, 58, 58, true);
+                    c.drawBitmap(scaled, x, y, null);
+                }
+
+                y += 76;
+
+                c.drawText(professionalCompanyName(), x, y, title);
+                y += 20;
+
+                c.drawText("GEL Service Report / Αναφορά Service", x, y, subtitle);
+                y += 20;
+
+                y = drawProfessionalCompanyDetails(
+                        c,
+                        x,
+                        y,
+                        text,
+                        Math.max(240, c.getWidth() - (x * 2))
+                );
+
+                y += 8;
+
+            } else {
+                if (gelLogo != null) {
+                    Bitmap scaled = Bitmap.createScaledBitmap(gelLogo, 58, 58, true);
+                    c.drawBitmap(scaled, x, y, null);
+                }
+
+                y += 76;
+
+                c.drawText("GDiolitsis Engine Lab (GEL)", x, y, title);
+                y += 20;
+
+                c.drawText("GEL Service Report / Αναφορά Service", x, y, subtitle);
+                y += 28;
             }
 
-            y += 76;
-
-            c.drawText(professionalCompanyName(), x, y, title);
-            y += 20;
-
-            c.drawText("GEL Service Report / Αναφορά Service", x, y, subtitle);
-            y += 20;
-
-            y = drawProfessionalCompanyDetails(
-                    c,
-                    x,
-                    y,
-                    text,
-                    Math.max(240, c.getWidth() - (x * 2))
-            );
-
-            y += 8;
             String dateLine = "Date / Ημερομηνία: " +
                     java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
 
