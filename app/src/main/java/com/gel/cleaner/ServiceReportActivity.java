@@ -7,6 +7,7 @@ import android.content.ContentValues;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -28,6 +29,7 @@ import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -62,6 +64,25 @@ public class ServiceReportActivity extends AppCompatActivity {
     private static final String GEL_PRO_PREFS = "GEL_PRO_ENTITLEMENT";
     private static final String GEL_PRO_ACTIVE_KEY = "active";
 
+    // Professional report personalization — STEP 1 (local profile only)
+    private static final String PRO_PROFILE_PREFS = "GEL_PRO_PROFILE";
+    private static final String KEY_LOGO_URI = "logo_uri";
+    private static final int REQ_PICK_PRO_LOGO = 5201;
+
+    private static final String KEY_BUSINESS_NAME = "business_name";
+    private static final String KEY_TECHNICIAN_NAME = "technician_name";
+    private static final String KEY_ADDRESS = "address";
+    private static final String KEY_CITY = "city";
+    private static final String KEY_POSTAL_CODE = "postal_code";
+    private static final String KEY_COUNTRY = "country";
+    private static final String KEY_PHONE = "phone";
+    private static final String KEY_EMAIL = "email";
+    private static final String KEY_WEBSITE = "website";
+    private static final String KEY_VAT = "vat_number";
+    private static final String KEY_TAX_OFFICE = "tax_office";
+
+    private ImageView proLogoPreview;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -77,6 +98,11 @@ public class ServiceReportActivity extends AppCompatActivity {
 
         // FREE PREVIEW — the user can see what the professional report looks like.
         root.addView(buildServiceReportPreview());
+
+        // Visible only while GEL PRO entitlement is active.
+        if (isGelProActive()) {
+            root.addView(buildProfessionalProfileSection());
+        }
 
         txtPreview = new TextView(this);
         txtPreview.setTextColor(0xFFFFFFFF);
@@ -199,6 +225,355 @@ btnTxt.setOnClickListener(v -> {
     protected void onResume() {
         super.onResume();
         updatePreview();
+        if (proLogoPreview != null) refreshProfessionalLogoPreview();
+    }
+
+
+    // ============================================================
+    // PROFESSIONAL REPORT PERSONALIZATION — STEP 1
+    // Billing and PDF branding are intentionally NOT added yet.
+    // ============================================================
+    private View buildProfessionalProfileSection() {
+
+        final boolean gr = AppLang.isGreek(this);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(14), dp(14), dp(14), dp(14));
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF151515);
+        bg.setCornerRadius(dp(12));
+        bg.setStroke(dp(2), 0xFFFFD700);
+        card.setBackground(bg);
+
+        LinearLayout.LayoutParams cardLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+        cardLp.setMargins(0, 0, 0, dp(18));
+        card.setLayoutParams(cardLp);
+
+        TextView title = new TextView(this);
+        title.setText("PROFESSIONAL REPORT PERSONALIZATION");
+        title.setTextColor(0xFFFFD700);
+        title.setTextSize(16f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, 0, 0, dp(8));
+        card.addView(title);
+
+        TextView hint = new TextView(this);
+        hint.setText(gr
+                ? "Αποθήκευσε το λογότυπο και τα στοιχεία της επιχείρησής σου. "
+                  + "Στο επόμενο βήμα θα χρησιμοποιούνται στα personalised PDF reports."
+                : "Save your logo and business details. In the next step they will be used "
+                  + "in personalised PDF reports.");
+        hint.setTextColor(0xFF00FF9C);
+        hint.setTextSize(13f);
+        hint.setGravity(Gravity.CENTER_HORIZONTAL);
+        hint.setLineSpacing(0f, 1.15f);
+        hint.setPadding(0, 0, 0, dp(12));
+        card.addView(hint);
+
+        proLogoPreview = new ImageView(this);
+        proLogoPreview.setAdjustViewBounds(true);
+        proLogoPreview.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        proLogoPreview.setBackgroundColor(0xFF0B0B0B);
+        proLogoPreview.setPadding(dp(8), dp(8), dp(8), dp(8));
+
+        LinearLayout.LayoutParams logoLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(120)
+                );
+        logoLp.setMargins(0, 0, 0, dp(10));
+        card.addView(proLogoPreview, logoLp);
+
+        refreshProfessionalLogoPreview();
+
+        Button uploadLogo = gelButton(this, "UPLOAD YOUR LOGO", 0xFF202020);
+        uploadLogo.setOnClickListener(v -> openProfessionalLogoPicker());
+        card.addView(uploadLogo);
+
+        Button companyDetails = gelButton(
+                this,
+                gr ? "ΣΤΟΙΧΕΙΑ ΕΤΑΙΡΕΙΑΣ / ΤΕΧΝΙΚΟΥ"
+                   : "COMPANY / TECHNICIAN DETAILS",
+                0xFF0F8A3B
+        );
+        companyDetails.setOnClickListener(v -> showProfessionalProfileDialog());
+        card.addView(companyDetails);
+
+        TextView status = new TextView(this);
+        status.setText(buildProfessionalProfileStatus());
+        status.setTextColor(Color.WHITE);
+        status.setTextSize(12f);
+        status.setGravity(Gravity.CENTER);
+        status.setPadding(0, dp(10), 0, 0);
+        card.addView(status);
+
+        return card;
+    }
+
+    private void openProfessionalLogoPicker() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("image/*");
+            startActivityForResult(intent, REQ_PICK_PRO_LOGO);
+        } catch (Throwable t) {
+            Toast.makeText(
+                    this,
+                    AppLang.isGreek(this)
+                            ? "Δεν ήταν δυνατό να ανοίξει η επιλογή εικόνας."
+                            : "Could not open image picker.",
+                    Toast.LENGTH_LONG
+            ).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode != REQ_PICK_PRO_LOGO || resultCode != RESULT_OK || data == null) return;
+
+        Uri uri = data.getData();
+        if (uri == null) return;
+
+        try {
+            int flags = data.getFlags()
+                    & (Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+
+            try {
+                getContentResolver().takePersistableUriPermission(
+                        uri,
+                        flags & Intent.FLAG_GRANT_READ_URI_PERMISSION
+                );
+            } catch (Throwable ignore) {}
+
+            getSharedPreferences(PRO_PROFILE_PREFS, MODE_PRIVATE)
+                    .edit()
+                    .putString(KEY_LOGO_URI, uri.toString())
+                    .apply();
+
+            refreshProfessionalLogoPreview();
+
+            Toast.makeText(
+                    this,
+                    AppLang.isGreek(this) ? "Το λογότυπο αποθηκεύτηκε." : "Logo saved.",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+        } catch (Throwable t) {
+            Toast.makeText(
+                    this,
+                    AppLang.isGreek(this)
+                            ? "Αποτυχία αποθήκευσης λογοτύπου."
+                            : "Could not save logo.",
+                    Toast.LENGTH_LONG
+            ).show();
+        }
+    }
+
+    private void refreshProfessionalLogoPreview() {
+
+        if (proLogoPreview == null) return;
+
+        String savedUri = getSharedPreferences(PRO_PROFILE_PREFS, MODE_PRIVATE)
+                .getString(KEY_LOGO_URI, null);
+
+        if (savedUri == null || savedUri.trim().isEmpty()) {
+            proLogoPreview.setImageResource(R.drawable.gel_logo);
+            return;
+        }
+
+        try {
+            proLogoPreview.setImageURI(Uri.parse(savedUri));
+        } catch (Throwable t) {
+            proLogoPreview.setImageResource(R.drawable.gel_logo);
+        }
+    }
+
+    private void showProfessionalProfileDialog() {
+
+        final boolean gr = AppLang.isGreek(this);
+        final SharedPreferences sp =
+                getSharedPreferences(PRO_PROFILE_PREFS, MODE_PRIVATE);
+
+        AlertDialog.Builder builder =
+                new AlertDialog.Builder(
+                        this,
+                        android.R.style.Theme_Material_Dialog_NoActionBar
+                );
+
+        LinearLayout root = buildGELPopupRoot(this);
+
+        TextView title = new TextView(this);
+        title.setText(gr
+                ? "ΣΤΟΙΧΕΙΑ ΕΤΑΙΡΕΙΑΣ / ΤΕΧΝΙΚΟΥ"
+                : "COMPANY / TECHNICIAN DETAILS");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(18f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, 0, 0, dp(12));
+        root.addView(title);
+
+        ScrollView bodyScroll = new ScrollView(this);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+
+        EditText businessName = profileField(gr ? "Επωνυμία επιχείρησης" : "Business name",
+                sp.getString(KEY_BUSINESS_NAME, ""));
+        EditText technicianName = profileField(gr ? "Ονοματεπώνυμο τεχνικού / υπευθύνου" : "Technician / responsible person",
+                sp.getString(KEY_TECHNICIAN_NAME, ""));
+        EditText address = profileField(gr ? "Διεύθυνση" : "Address",
+                sp.getString(KEY_ADDRESS, ""));
+        EditText city = profileField(gr ? "Πόλη" : "City",
+                sp.getString(KEY_CITY, ""));
+        EditText postalCode = profileField(gr ? "Τ.Κ." : "Postal code",
+                sp.getString(KEY_POSTAL_CODE, ""));
+        EditText country = profileField(gr ? "Χώρα" : "Country",
+                sp.getString(KEY_COUNTRY, ""));
+        EditText phone = profileField(gr ? "Τηλέφωνο" : "Phone",
+                sp.getString(KEY_PHONE, ""));
+        phone.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        EditText email = profileField("Email", sp.getString(KEY_EMAIL, ""));
+        email.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        EditText website = profileField("Website", sp.getString(KEY_WEBSITE, ""));
+        EditText vat = profileField(gr ? "ΑΦΜ / VAT Number" : "VAT Number / Tax ID",
+                sp.getString(KEY_VAT, ""));
+        EditText taxOffice = profileField(gr ? "ΔΟΥ / Tax Office" : "Tax Office",
+                sp.getString(KEY_TAX_OFFICE, ""));
+
+        body.addView(businessName);
+        body.addView(technicianName);
+        body.addView(address);
+        body.addView(city);
+        body.addView(postalCode);
+        body.addView(country);
+        body.addView(phone);
+        body.addView(email);
+        body.addView(website);
+        body.addView(vat);
+        body.addView(taxOffice);
+
+        bodyScroll.addView(body);
+
+        LinearLayout.LayoutParams scrollLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        0,
+                        1f
+                );
+        root.addView(bodyScroll, scrollLp);
+
+        Button save = gelButton(this, gr ? "ΑΠΟΘΗΚΕΥΣΗ" : "SAVE", 0xFF0F8A3B);
+        Button cancel = gelButton(this, gr ? "ΑΚΥΡΟ" : "CANCEL", 0xFF202020);
+
+        root.addView(save);
+        root.addView(cancel);
+
+        builder.setView(root);
+        final AlertDialog dialog = builder.create();
+
+        cancel.setOnClickListener(v -> dialog.dismiss());
+
+        save.setOnClickListener(v -> {
+            sp.edit()
+                    .putString(KEY_BUSINESS_NAME, valueOf(businessName))
+                    .putString(KEY_TECHNICIAN_NAME, valueOf(technicianName))
+                    .putString(KEY_ADDRESS, valueOf(address))
+                    .putString(KEY_CITY, valueOf(city))
+                    .putString(KEY_POSTAL_CODE, valueOf(postalCode))
+                    .putString(KEY_COUNTRY, valueOf(country))
+                    .putString(KEY_PHONE, valueOf(phone))
+                    .putString(KEY_EMAIL, valueOf(email))
+                    .putString(KEY_WEBSITE, valueOf(website))
+                    .putString(KEY_VAT, valueOf(vat))
+                    .putString(KEY_TAX_OFFICE, valueOf(taxOffice))
+                    .apply();
+
+            Toast.makeText(
+                    this,
+                    gr ? "Τα επαγγελματικά στοιχεία αποθηκεύτηκαν."
+                       : "Professional profile saved.",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            dialog.dismiss();
+            recreate();
+        });
+
+        dialog.show();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+            DisplayMetrics dm = getResources().getDisplayMetrics();
+            int safeWidth = Math.min(dm.widthPixels - dp(20), dp(560));
+            int safeHeight = (int) (dm.heightPixels * 0.92f);
+
+            dialog.getWindow().setLayout(
+                    Math.max(dp(280), safeWidth),
+                    safeHeight
+            );
+        }
+    }
+
+    private EditText profileField(String hint, String value) {
+
+        EditText field = new EditText(this);
+        field.setHint(hint);
+        field.setText(value == null ? "" : value);
+        field.setTextColor(Color.WHITE);
+        field.setHintTextColor(0xFFAAAAAA);
+        field.setTextSize(14f);
+        field.setSingleLine(true);
+        field.setPadding(dp(12), dp(10), dp(12), dp(10));
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF0B0B0B);
+        bg.setCornerRadius(dp(8));
+        bg.setStroke(dp(1), 0xFFFFD700);
+        field.setBackground(bg);
+
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+        lp.setMargins(0, 0, 0, dp(10));
+        field.setLayoutParams(lp);
+
+        return field;
+    }
+
+    private String valueOf(EditText field) {
+        return field == null ? "" : field.getText().toString().trim();
+    }
+
+    private String buildProfessionalProfileStatus() {
+
+        SharedPreferences sp = getSharedPreferences(PRO_PROFILE_PREFS, MODE_PRIVATE);
+
+        boolean hasLogo = sp.getString(KEY_LOGO_URI, null) != null;
+        boolean hasBusiness = !sp.getString(KEY_BUSINESS_NAME, "").trim().isEmpty();
+
+        if (AppLang.isGreek(this)) {
+            if (hasLogo && hasBusiness) return "✓ Το επαγγελματικό προφίλ είναι έτοιμο.";
+            if (hasLogo || hasBusiness) return "• Το επαγγελματικό προφίλ είναι μερικώς συμπληρωμένο.";
+            return "• Δεν έχουν αποθηκευτεί ακόμα στοιχεία επαγγελματικού προφίλ.";
+        }
+
+        if (hasLogo && hasBusiness) return "✓ Professional profile is ready.";
+        if (hasLogo || hasBusiness) return "• Professional profile is partially completed.";
+        return "• No professional profile details saved yet.";
     }
 
     // ============================================================
