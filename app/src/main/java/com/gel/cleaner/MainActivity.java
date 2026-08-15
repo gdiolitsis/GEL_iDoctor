@@ -127,13 +127,10 @@ private static final String PREFS = "gel_prefs";
 private static final String KEY_PLATFORM = "platform_mode";
 
 // =========================================================
-// SUPPORT LINK
+// 30-DAY FULL DEVICE CHECK — GOOGLE PLAY PRODUCT
 // =========================================================
-// Use a normal PayPal.me support/payment link, not the legacy
-// PayPal donations endpoint, because _donations may require
-// organisation/charity eligibility on PayPal.
-private static final String GEL_SUPPORT_URL =
-        "https://www.paypal.me/gdiolitsis";
+private static final String GEL_30_DAY_PRODUCT_ID =
+        "gel_30_day_full_device_check";
 
 // =========================================================
 // LOCALE
@@ -215,7 +212,7 @@ if (getIntent() != null && getIntent().hasExtra("mini_cpu")) {
     scroll = findViewById(R.id.scrollRoot);
 
     setupLangButtons();
-    setupDonate();
+    setupCertificationAccess();
     setupButtons();
     
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -2301,40 +2298,56 @@ private void changeLang(String code) {
 }
 
 // =========================================================
-// DONATE
+// 30-DAY FULL DEVICE CHECK — €5 ONE-TIME ACCESS
 // =========================================================
-private void setupDonate() {
+private void setupCertificationAccess() {
 
     View b = findViewById(R.id.btnDonate);
 
     if (b == null) return;
 
-    b.setOnClickListener(v -> {
+    final boolean gr = AppLang.isGreek(this);
 
-        final boolean gr = AppLang.isGreek(this);
+    if (b instanceof TextView) {
+        ((TextView) b).setText(
+                gr
+                        ? "🔐 30 ΗΜΕΡΕΣ ΠΛΗΡΗΣ ΕΛΕΓΧΟΣ ΣΥΣΚΕΥΗΣ • 5€"
+                        : "🔐 30-DAY FULL DEVICE CHECK • €5"
+        );
+    }
 
-        try {
+    b.setOnClickListener(v -> showCertificationAccessDialog());
+}
 
-            Intent intent = new Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse(GEL_SUPPORT_URL)
-            );
+private void showCertificationAccessDialog() {
 
-            intent.addCategory(Intent.CATEGORY_BROWSABLE);
+    final boolean gr = AppLang.isGreek(this);
 
-            startActivity(intent);
+    String title = gr
+            ? "30 ΗΜΕΡΕΣ ΠΛΗΡΗΣ ΕΛΕΓΧΟΣ ΣΥΣΚΕΥΗΣ"
+            : "30-DAY FULL DEVICE CHECK";
 
-        } catch (Throwable e) {
+    String message = gr
+            ? "Έλεγξε σωστά μια συσκευή πριν την αγοράσεις.\n\n"
+              + "• Πλήρης πρόσβαση στα διαγνωστικά εργαλεία για 30 ημέρες\n"
+              + "• Περιλαμβάνει Labs 14, 28 και 30\n"
+              + "• Πιστοποίηση / τελική αξιολόγηση συσκευής\n"
+              + "• 5€ εφάπαξ πληρωμή\n"
+              + "• Χωρίς συνδρομή και χωρίς αυτόματη ανανέωση\n\n"
+              + "Η αγορά θα πραγματοποιείται αποκλειστικά μέσω Google Play."
+            : "Check a device properly before you buy it.\n\n"
+              + "• Full diagnostic access for 30 days\n"
+              + "• Includes Labs 14, 28 and 30\n"
+              + "• Device certification / final assessment\n"
+              + "• €5 one-time purchase\n"
+              + "• No subscription and no auto-renewal\n\n"
+              + "Purchase will be handled exclusively through Google Play.";
 
-            Toast.makeText(
-                    this,
-                    gr
-                            ? "Δεν ήταν δυνατό να ανοίξει η σελίδα υποστήριξης"
-                            : "Cannot open support page",
-                    Toast.LENGTH_SHORT
-            ).show();
-        }
-    });
+    new AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show();
 }
 
 // =========================================================
