@@ -205,7 +205,10 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
     // LOCAL ENTITLEMENT READERS
     // ============================================================
     public boolean isGelProActive() {
-        try {
+        
+        // TEST BUILD: unlock GEL PRO without changing stored purchase state.
+        if (BuildConfig.DEBUG) return true;
+try {
             return appContext
                     .getSharedPreferences(
                             GEL_PRO_PREFS,
@@ -221,7 +224,10 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
     }
 
     public boolean isCustomReportsActive() {
-        try {
+        
+        // TEST BUILD: unlock Professional Personalization entitlement.
+        if (BuildConfig.DEBUG) return true;
+try {
             return appContext
                     .getSharedPreferences(
                             GEL_CUSTOM_PREFS,
