@@ -673,6 +673,53 @@ btnTxt.setOnClickListener(v -> {
                 .append("</div>");
     }
 
+
+    private int drawWrappedLine(
+            Canvas canvas,
+            String value,
+            int x,
+            int y,
+            Paint paint,
+            int maxWidth
+    ) {
+        if (canvas == null || paint == null || value == null) return y;
+
+        String remaining = value.trim();
+        if (remaining.isEmpty()) return y;
+
+        final int lineHeight =
+                Math.max(16, (int) Math.ceil(paint.getFontSpacing()));
+
+        while (!remaining.isEmpty()) {
+
+            int count = paint.breakText(
+                    remaining,
+                    true,
+                    Math.max(80, maxWidth),
+                    null
+            );
+
+            if (count <= 0) count = Math.min(1, remaining.length());
+
+            // Prefer breaking on a space instead of cutting a word.
+            if (count < remaining.length()) {
+                int lastSpace = remaining.lastIndexOf(' ', count - 1);
+                if (lastSpace > 0) count = lastSpace;
+            }
+
+            String line = remaining.substring(0, count).trim();
+
+            if (!line.isEmpty()) {
+                canvas.drawText(line, x, y, paint);
+                y += lineHeight;
+            }
+
+            remaining = remaining.substring(count).trim();
+        }
+
+        return y;
+    }
+
     private int drawProfessionalCompanyDetails(
             Canvas c,
             int x,
