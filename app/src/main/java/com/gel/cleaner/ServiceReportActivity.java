@@ -178,14 +178,15 @@ exportProgress.setLayoutParams(lpProg);
 btnTxt.setOnClickListener(v -> {
     if (!requireGelProExport()) return;
 
-    String report = validateExport();
-    if (report == null) return;
-
+    // No labs yet: offer a useful blank two-page service form
+    // BEFORE the normal export validation runs.
     if (GELServiceLog.isEmpty()) {
         showEmptyReportOptionsDialog();
-        lockExportUI(false);
         return;
     }
+
+    String report = validateExport();
+    if (report == null) return;
 
     lockExportUI(true);
     exportTxtToPdf();
@@ -194,14 +195,15 @@ btnTxt.setOnClickListener(v -> {
         btnHtml.setOnClickListener(v -> {
             if (!requireGelProExport()) return;
 
-            String report = validateExport();
-            if (report == null) return;
-
+            // No labs yet: offer a useful blank two-page service form
+            // BEFORE the normal export validation runs.
             if (GELServiceLog.isEmpty()) {
                 showEmptyReportOptionsDialog();
-                lockExportUI(false);
                 return;
             }
+
+            String report = validateExport();
+            if (report == null) return;
 
             lockExportUI(true);
             exportHtmlPdf(report);
@@ -1560,8 +1562,7 @@ try {
 
         if (GELServiceLog.isEmpty()) {
             runOnUiThread(() -> {
-                Toast.makeText(this, "Nothing to export.", Toast.LENGTH_SHORT).show();
-                updatePreview();
+                showEmptyReportOptionsDialog();
                 lockExportUI(false);
             });
             return;
@@ -2302,11 +2303,7 @@ private String buildHtmlReport(String report) {
                 exportProgress.setVisibility(View.GONE);
             }
 
-            Toast.makeText(this,
-                    "Nothing to export. Run a lab first.",
-                    Toast.LENGTH_LONG
-            ).show();
-
+            showEmptyReportOptionsDialog();
             return null;
         }
 
