@@ -182,11 +182,7 @@ btnTxt.setOnClickListener(v -> {
     if (report == null) return;
 
     if (GELServiceLog.isEmpty()) {
-        Toast.makeText(this,
-                "Nothing to export. Run a lab first.",
-                Toast.LENGTH_SHORT
-        ).show();
-        updatePreview();
+        showEmptyReportOptionsDialog();
         lockExportUI(false);
         return;
     }
@@ -202,14 +198,10 @@ btnTxt.setOnClickListener(v -> {
             if (report == null) return;
 
             if (GELServiceLog.isEmpty()) {
-                Toast.makeText(this,
-                        "Nothing to export. Run a lab first.",
-                        Toast.LENGTH_LONG
-                ).show();
-        updatePreview();
-        lockExportUI(false);
-        return;
-    }
+                showEmptyReportOptionsDialog();
+                lockExportUI(false);
+                return;
+            }
 
             lockExportUI(true);
             exportHtmlPdf(report);
@@ -224,6 +216,332 @@ btnTxt.setOnClickListener(v -> {
         setContentView(scroll);
 
         UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
+    }
+
+
+    // ============================================================
+    // EMPTY REPORT FLOW — offer a printable blank two-page form
+    // ============================================================
+    private void showEmptyReportOptionsDialog() {
+
+        final boolean gr = AppLang.isGreek(this);
+
+        AlertDialog.Builder builder =
+                new AlertDialog.Builder(
+                        this,
+                        android.R.style.Theme_Material_Dialog_NoActionBar
+                );
+
+        LinearLayout root = buildGELPopupRoot(this);
+
+        TextView title = new TextView(this);
+        title.setText(gr
+                ? "ΔΕΝ ΥΠΑΡΧΟΥΝ ΑΠΟΤΕΛΕΣΜΑΤΑ ΕΡΓΑΣΤΗΡΙΩΝ"
+                : "NO LAB RESULTS AVAILABLE");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(18f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, 0, 0, dp(12));
+        root.addView(title);
+
+        TextView message = new TextView(this);
+        message.setText(gr
+                ? "Δεν έχει εκτελεστεί ακόμη κάποιο εργαστήριο, επομένως δεν υπάρχουν "
+                  + "διαγνωστικά αποτελέσματα για εξαγωγή.\n\n"
+                  + "Θέλεις να δημιουργήσεις μια κενή φόρμα Service Report με την πρώτη "
+                  + "και την τελευταία σελίδα, ώστε να τη συμπληρώσεις χειρόγραφα;"
+                : "No diagnostic lab has been run yet, so there are no diagnostic results "
+                  + "to export.\n\n"
+                  + "Would you like to create a blank Service Report containing the first "
+                  + "and final pages, ready to be completed by hand?");
+        message.setTextColor(0xFF00FF9C);
+        message.setTextSize(14f);
+        message.setLineSpacing(0f, 1.18f);
+        message.setGravity(Gravity.CENTER_HORIZONTAL);
+        message.setPadding(dp(4), 0, dp(4), dp(16));
+        root.addView(message);
+
+        Button createBlank = gelButton(
+                this,
+                gr ? "ΔΗΜΙΟΥΡΓΙΑ ΚΕΝΗΣ ΦΟΡΜΑΣ"
+                   : "CREATE BLANK FORM",
+                0xFF0F8A3B
+        );
+
+        Button cancel = gelButton(
+                this,
+                gr ? "ΑΚΥΡΟ" : "CANCEL",
+                0xFF202020
+        );
+
+        root.addView(createBlank);
+        root.addView(cancel);
+
+        builder.setView(root);
+        final AlertDialog dialog = builder.create();
+
+        cancel.setOnClickListener(v -> dialog.dismiss());
+
+        createBlank.setOnClickListener(v -> {
+            dialog.dismiss();
+            exportBlankServiceFormPdf();
+        });
+
+        dialog.show();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(
+                    new ColorDrawable(Color.TRANSPARENT)
+            );
+
+            DisplayMetrics dm = getResources().getDisplayMetrics();
+            int safeWidth = Math.min(dm.widthPixels - dp(20), dp(560));
+
+            dialog.getWindow().setLayout(
+                    Math.max(dp(280), safeWidth),
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+        }
+    }
+
+    private void exportBlankServiceFormPdf() {
+
+        lockExportUI(true);
+
+        new Thread(() -> {
+            try {
+                PdfDocument pdf = new PdfDocument();
+
+                Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                textPaint.setTextSize(12f);
+                textPaint.setColor(Color.BLACK);
+
+                Paint titlePaint = new Paint(textPaint);
+                titlePaint.setTextSize(14f);
+                titlePaint.setFakeBoldText(true);
+
+                Paint subtitlePaint = new Paint(textPaint);
+                subtitlePaint.setTextSize(11f);
+
+                Paint sectionPaint = new Paint(textPaint);
+                sectionPaint.setFakeBoldText(true);
+
+                int x = PAGE_MARGIN;
+
+                // ----------------------------------------------------
+                // PAGE 1 — professional header + device intake + notes
+                // ----------------------------------------------------
+                int pageNum = 1;
+                PdfDocument.Page page1 = startPage(pdf, pageNum);
+                Canvas c1 = page1.getCanvas();
+                c1.drawColor(Color.WHITE);
+
+                int y = drawReportHeader(
+                        c1,
+                        x,
+                        40,
+                        titlePaint,
+                        subtitlePaint,
+                        textPaint,
+                        true
+                );
+
+                y += 10;
+
+                c1.drawText(
+                        "Device intake condition / Κατάσταση παραλαβής συσκευής",
+                        x,
+                        y,
+                        sectionPaint
+                );
+                y += 22;
+
+                String[] intake = new String[] {
+                        "Screen (cracked/scratched) / Οθόνη (σπασμένη/γρατζουνισμένη)",
+                        "Back cover / Πίσω καπάκι",
+                        "Frame / Πλαίσιο",
+                        "Camera lens / Φακός κάμερας",
+                        "Charging port / Θύρα φόρτισης",
+                        "Buttons / Κουμπιά",
+                        "Speaker / Microphone / Ηχείο / Μικρόφωνο",
+                        "Water signs / Ενδείξεις υγρασίας",
+                        "Battery condition / Κατάσταση μπαταρίας"
+                };
+
+                for (String item : intake) {
+                    c1.drawRect(x, y - 10, x + 10, y, textPaint);
+                    c1.drawText("OK", x + 16, y, textPaint);
+
+                    c1.drawRect(x + 90, y - 10, x + 100, y, textPaint);
+                    c1.drawText("DAMAGED", x + 106, y, textPaint);
+
+                    c1.drawText("– " + item, x + 205, y, textPaint);
+                    y += 18;
+                }
+
+                y += 18;
+                c1.drawText("Notes / Παρατηρήσεις:", x, y, sectionPaint);
+                y += 20;
+
+                for (int i = 0; i < 5; i++) {
+                    c1.drawLine(x, y, x + 500, y, textPaint);
+                    y += 24;
+                }
+
+                drawPageFooter(c1, pageNum);
+                pdf.finishPage(page1);
+
+                // ----------------------------------------------------
+                // PAGE 2 — final manual completion / signatures
+                // ----------------------------------------------------
+                pageNum = 2;
+                PdfDocument.Page page2 = startPage(pdf, pageNum);
+                Canvas c2 = page2.getCanvas();
+                c2.drawColor(Color.WHITE);
+
+                y = 70;
+
+                c2.drawText(
+                        "FINAL SERVICE REPORT / ΤΕΛΙΚΗ ΑΝΑΦΟΡΑ SERVICE",
+                        x,
+                        y,
+                        titlePaint
+                );
+                y += 36;
+
+                c2.drawText(
+                        "Repair Summary / Τι επισκευάστηκε",
+                        x,
+                        y,
+                        sectionPaint
+                );
+                y += 22;
+
+                for (int i = 0; i < 6; i++) {
+                    c2.drawLine(x, y, x + 500, y, textPaint);
+                    y += 24;
+                }
+
+                y += 14;
+
+                c2.drawText(
+                        "Additional Notes / Επιπλέον παρατηρήσεις",
+                        x,
+                        y,
+                        sectionPaint
+                );
+                y += 22;
+
+                for (int i = 0; i < 5; i++) {
+                    c2.drawLine(x, y, x + 500, y, textPaint);
+                    y += 24;
+                }
+
+                y += 30;
+
+                int rightX = x + 300;
+
+                c2.drawText(
+                        "Technician Name / Όνομα τεχνικού:",
+                        x,
+                        y,
+                        textPaint
+                );
+                c2.drawLine(x, y + 15, x + 250, y + 15, textPaint);
+
+                c2.drawText(
+                        "Customer Name / Όνομα πελάτη:",
+                        rightX,
+                        y,
+                        textPaint
+                );
+                c2.drawLine(
+                        rightX,
+                        y + 15,
+                        rightX + 250,
+                        y + 15,
+                        textPaint
+                );
+
+                y += 42;
+
+                c2.drawText(
+                        "Signature / Υπογραφή:",
+                        x,
+                        y,
+                        textPaint
+                );
+                c2.drawLine(x, y + 15, x + 250, y + 15, textPaint);
+
+                c2.drawText(
+                        "Signature / Υπογραφή:",
+                        rightX,
+                        y,
+                        textPaint
+                );
+                c2.drawLine(
+                        rightX,
+                        y + 15,
+                        rightX + 250,
+                        y + 15,
+                        textPaint
+                );
+
+                y += 55;
+
+                c2.drawText(
+                        "Date / Ημερομηνία:",
+                        x,
+                        y,
+                        textPaint
+                );
+                c2.drawLine(
+                        x + 140,
+                        y + 15,
+                        x + 300,
+                        y + 15,
+                        textPaint
+                );
+
+                drawPageFooter(c2, pageNum);
+                pdf.finishPage(page2);
+
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                pdf.writeTo(bos);
+                pdf.close();
+
+                Uri uri = savePdfToDownloads(
+                        "GEL_Blank_Service_Report.pdf",
+                        bos.toByteArray()
+                );
+
+                runOnUiThread(() -> {
+                    sharePdf(uri);
+
+                    String msg = AppLang.isGreek(this)
+                            ? "Η κενή φόρμα Service Report δημιουργήθηκε."
+                            : "Blank Service Report created.";
+
+                    onExportSuccess(msg);
+                });
+
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(
+                            this,
+                            AppLang.isGreek(this)
+                                    ? "Σφάλμα κατά τη δημιουργία της κενής φόρμας."
+                                    : "Error creating blank Service Report.",
+                            Toast.LENGTH_LONG
+                    ).show();
+
+                    lockExportUI(false);
+                });
+
+                e.printStackTrace();
+            }
+        }).start();
     }
 
     @Override
@@ -1836,31 +2154,31 @@ private String buildHtmlReport(String report) {
     ) {
         int y = startY;
 
-        Bitmap professionalLogo = getProfessionalLogoBitmap();
-        if (professionalLogo != null) {
-            Bitmap scaled = Bitmap.createScaledBitmap(professionalLogo, 58, 58, true);
-            c.drawBitmap(scaled, x, y, null);
-        }
-
-        y += 76;
-
-        c.drawText(professionalCompanyName(), x, y, title);
-        y += 20;
-
-        c.drawText("GEL Service Report / Αναφορά Service", x, y, subtitle);
-        y += 20;
-
-        y = drawProfessionalCompanyDetails(
-                c,
-                x,
-                y,
-                text,
-                Math.max(240, c.getWidth() - (x * 2))
-        );
-
-        y += 8;
-
         if (isFirstPage) {
+            // Full professional identity appears ONLY on page 1.
+            Bitmap professionalLogo = getProfessionalLogoBitmap();
+            if (professionalLogo != null) {
+                Bitmap scaled = Bitmap.createScaledBitmap(professionalLogo, 58, 58, true);
+                c.drawBitmap(scaled, x, y, null);
+            }
+
+            y += 76;
+
+            c.drawText(professionalCompanyName(), x, y, title);
+            y += 20;
+
+            c.drawText("GEL Service Report / Αναφορά Service", x, y, subtitle);
+            y += 20;
+
+            y = drawProfessionalCompanyDetails(
+                    c,
+                    x,
+                    y,
+                    text,
+                    Math.max(240, c.getWidth() - (x * 2))
+            );
+
+            y += 8;
             String dateLine = "Date / Ημερομηνία: " +
                     java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
 
