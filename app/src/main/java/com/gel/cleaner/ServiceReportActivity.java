@@ -581,6 +581,164 @@ btnTxt.setOnClickListener(v -> {
         return "• No professional profile details saved yet.";
     }
 
+
+    // ============================================================
+    // PROFESSIONAL PROFILE — STEP 2 PDF BRANDING HELPERS
+    // ============================================================
+    private SharedPreferences proProfilePrefs() {
+        return getSharedPreferences(PRO_PROFILE_PREFS, MODE_PRIVATE);
+    }
+
+    private String proValue(String key) {
+        return proProfilePrefs().getString(key, "").trim();
+    }
+
+    private Bitmap getProfessionalLogoBitmap() {
+        String savedUri = proProfilePrefs().getString(KEY_LOGO_URI, null);
+
+        if (savedUri != null && !savedUri.trim().isEmpty()) {
+            try (java.io.InputStream in =
+                         getContentResolver().openInputStream(Uri.parse(savedUri))) {
+                Bitmap b = BitmapFactory.decodeStream(in);
+                if (b != null) return b;
+            } catch (Throwable ignore) {}
+        }
+
+        return gelLogo;
+    }
+
+    private String getProfessionalLogoDataUri() {
+        Bitmap b = getProfessionalLogoBitmap();
+        if (b == null) return "file:///android_res/drawable/gel_logo.png";
+
+        try {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            b.compress(Bitmap.CompressFormat.PNG, 95, out);
+            String encoded = android.util.Base64.encodeToString(
+                    out.toByteArray(),
+                    android.util.Base64.NO_WRAP
+            );
+            return "data:image/png;base64," + encoded;
+        } catch (Throwable ignore) {
+            return "file:///android_res/drawable/gel_logo.png";
+        }
+    }
+
+    private String professionalCompanyName() {
+        String business = proValue(KEY_BUSINESS_NAME);
+        return business.isEmpty() ? "GDiolitsis Engine Lab (GEL)" : business;
+    }
+
+    private String buildProfessionalHtmlDetails() {
+        StringBuilder sb = new StringBuilder();
+
+        appendHtmlDetail(sb, "Technician / Τεχνικός", proValue(KEY_TECHNICIAN_NAME));
+
+        String address = proValue(KEY_ADDRESS);
+        String city = proValue(KEY_CITY);
+        String postal = proValue(KEY_POSTAL_CODE);
+        String country = proValue(KEY_COUNTRY);
+
+        StringBuilder addressLine = new StringBuilder();
+        if (!address.isEmpty()) addressLine.append(address);
+        if (!city.isEmpty()) {
+            if (addressLine.length() > 0) addressLine.append(", ");
+            addressLine.append(city);
+        }
+        if (!postal.isEmpty()) {
+            if (addressLine.length() > 0) addressLine.append(" ");
+            addressLine.append(postal);
+        }
+        if (!country.isEmpty()) {
+            if (addressLine.length() > 0) addressLine.append(", ");
+            addressLine.append(country);
+        }
+        appendHtmlDetail(sb, "Address / Διεύθυνση", addressLine.toString());
+
+        appendHtmlDetail(sb, "Phone / Τηλέφωνο", proValue(KEY_PHONE));
+        appendHtmlDetail(sb, "Email", proValue(KEY_EMAIL));
+        appendHtmlDetail(sb, "Website", proValue(KEY_WEBSITE));
+        appendHtmlDetail(sb, "VAT / ΑΦΜ", proValue(KEY_VAT));
+        appendHtmlDetail(sb, "Tax Office / ΔΟΥ", proValue(KEY_TAX_OFFICE));
+
+        return sb.toString();
+    }
+
+    private void appendHtmlDetail(StringBuilder sb, String label, String value) {
+        if (value == null || value.trim().isEmpty()) return;
+        sb.append("<div class='company-detail'><b>")
+                .append(escapeHtml(label))
+                .append(":</b> ")
+                .append(escapeHtml(value.trim()))
+                .append("</div>");
+    }
+
+    private int drawProfessionalCompanyDetails(
+            Canvas c,
+            int x,
+            int y,
+            Paint text,
+            int maxWidth
+    ) {
+        Paint detailPaint = new Paint(text);
+        detailPaint.setTextSize(Math.max(9f, text.getTextSize() - 1f));
+
+        String technician = proValue(KEY_TECHNICIAN_NAME);
+        if (!technician.isEmpty()) {
+            y = drawWrappedLine(c, "Technician / Τεχνικός: " + technician, x, y, detailPaint, maxWidth);
+        }
+
+        String address = proValue(KEY_ADDRESS);
+        String city = proValue(KEY_CITY);
+        String postal = proValue(KEY_POSTAL_CODE);
+        String country = proValue(KEY_COUNTRY);
+
+        StringBuilder addr = new StringBuilder();
+        if (!address.isEmpty()) addr.append(address);
+        if (!city.isEmpty()) {
+            if (addr.length() > 0) addr.append(", ");
+            addr.append(city);
+        }
+        if (!postal.isEmpty()) {
+            if (addr.length() > 0) addr.append(" ");
+            addr.append(postal);
+        }
+        if (!country.isEmpty()) {
+            if (addr.length() > 0) addr.append(", ");
+            addr.append(country);
+        }
+        if (addr.length() > 0) {
+            y = drawWrappedLine(c, "Address / Διεύθυνση: " + addr, x, y, detailPaint, maxWidth);
+        }
+
+        String phone = proValue(KEY_PHONE);
+        if (!phone.isEmpty()) {
+            y = drawWrappedLine(c, "Phone / Τηλέφωνο: " + phone, x, y, detailPaint, maxWidth);
+        }
+
+        String email = proValue(KEY_EMAIL);
+        if (!email.isEmpty()) {
+            y = drawWrappedLine(c, "Email: " + email, x, y, detailPaint, maxWidth);
+        }
+
+        String website = proValue(KEY_WEBSITE);
+        if (!website.isEmpty()) {
+            y = drawWrappedLine(c, "Website: " + website, x, y, detailPaint, maxWidth);
+        }
+
+        String vat = proValue(KEY_VAT);
+        if (!vat.isEmpty()) {
+            y = drawWrappedLine(c, "VAT / ΑΦΜ: " + vat, x, y, detailPaint, maxWidth);
+        }
+
+        String taxOffice = proValue(KEY_TAX_OFFICE);
+        if (!taxOffice.isEmpty()) {
+            y = drawWrappedLine(c, "Tax Office / ΔΟΥ: " + taxOffice, x, y, detailPaint, maxWidth);
+        }
+
+        return y;
+    }
+
     // ============================================================
     // FREE SERVICE REPORT PREVIEW
     // ============================================================
@@ -1373,11 +1531,16 @@ private String buildHtmlReport(String report) {
 
     // LEFT
     body.append("<div class='header-left'>");
-    body.append("<img class='logo' src='file:///android_res/drawable/gel_logo.png'/>");
+    body.append("<img class='logo' src='")
+            .append(getProfessionalLogoDataUri())
+            .append("'/>");
 
     body.append("<div class='header-text'>");
-    body.append("<div class='title'>GEL Service Report / Αναφορά Service</div>");
-    body.append("<div class='subtitle'>GDiolitsis Engine Lab (GEL) — Author & Developer</div>");
+    body.append("<div class='title'>")
+            .append(escapeHtml(professionalCompanyName()))
+            .append("</div>");
+    body.append("<div class='subtitle'>GEL Service Report / Αναφορά Service</div>");
+    body.append(buildProfessionalHtmlDetails());
     body.append("</div>");
 
     body.append("</div>");
@@ -1509,7 +1672,7 @@ private String buildHtmlReport(String report) {
             + ".logo{width:52px;height:52px;}"
             + ".header-text{display:flex;flex-direction:column;}"
             + ".title{font-size:18px;font-weight:700;color:#000;margin-bottom:4px;}"
-            + ".subtitle{font-size:12px;color:#444;}"
+            + ".company-detail{font-size:10px;color:#222;line-height:1.35;margin-top:2px;}.subtitle{font-size:12px;color:#444;}"
             + ".header-meta{font-size:11px;color:#222;text-align:right;line-height:1.4;}"
 
             // LOGS
@@ -1626,18 +1789,29 @@ private String buildHtmlReport(String report) {
     ) {
         int y = startY;
 
-        if (gelLogo != null) {
-            Bitmap scaled = Bitmap.createScaledBitmap(gelLogo, 52, 52, true);
+        Bitmap professionalLogo = getProfessionalLogoBitmap();
+        if (professionalLogo != null) {
+            Bitmap scaled = Bitmap.createScaledBitmap(professionalLogo, 58, 58, true);
             c.drawBitmap(scaled, x, y, null);
         }
 
-        y += 70;
+        y += 76;
 
-        c.drawText("GEL Service Report / Αναφορά Service", x, y, title);
+        c.drawText(professionalCompanyName(), x, y, title);
         y += 20;
 
-        c.drawText("GDiolitsis Engine Lab (GEL) — Author & Developer", x, y, subtitle);
-        y += 26;
+        c.drawText("GEL Service Report / Αναφορά Service", x, y, subtitle);
+        y += 20;
+
+        y = drawProfessionalCompanyDetails(
+                c,
+                x,
+                y,
+                text,
+                Math.max(240, c.getWidth() - (x * 2))
+        );
+
+        y += 8;
 
         if (isFirstPage) {
             String dateLine = "Date / Ημερομηνία: " +
