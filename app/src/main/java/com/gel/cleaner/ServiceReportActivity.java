@@ -339,19 +339,19 @@ btnTxt.setOnClickListener(v -> {
                 Canvas c1 = page1.getCanvas();
                 c1.drawColor(Color.WHITE);
 
-                int y = drawReportHeader(
+                // Blank report uses its OWN first-page renderer.
+                // Do not call drawReportHeader() here, because that method is
+                // also used by normal reports and already contains intake fields.
+                int y = drawBlankReportFirstPage(
                         c1,
                         x,
                         40,
                         titlePaint,
                         subtitlePaint,
                         textPaint,
-                        true
+                        sectionPaint
                 );
 
-                // drawReportHeader(..., true) already contains the complete
-                // first-page blank intake form and notes area.
-                // Do not draw them a second time here.
                 drawPageFooter(c1, pageNum);
                 pdf.finishPage(page1);
 
@@ -475,7 +475,7 @@ btnTxt.setOnClickListener(v -> {
                 pdf.close();
 
                 Uri uri = savePdfToDownloads(
-                        "GEL_Blank_Service_Report.pdf",
+                        "GEL_Blank_Service_Report_V4.pdf",
                         bos.toByteArray()
                 );
 
@@ -2103,6 +2103,115 @@ private String buildHtmlReport(String report) {
         }
 
         txtPreview.setText(data.replaceAll("\\n{3,}", "\n\n"));
+    }
+
+
+    private int drawBlankReportFirstPage(
+            Canvas c,
+            int x,
+            int startY,
+            Paint title,
+            Paint subtitle,
+            Paint text,
+            Paint sectionTitle
+    ) {
+        int y = startY;
+
+        // Professional identity — page 1 only.
+        Bitmap professionalLogo = getProfessionalLogoBitmap();
+        if (professionalLogo != null) {
+            Bitmap scaled = Bitmap.createScaledBitmap(professionalLogo, 58, 58, true);
+            c.drawBitmap(scaled, x, y, null);
+        }
+
+        y += 76;
+
+        c.drawText(professionalCompanyName(), x, y, title);
+        y += 20;
+
+        c.drawText("GEL Service Report / Αναφορά Service", x, y, subtitle);
+        y += 20;
+
+        y = drawProfessionalCompanyDetails(
+                c,
+                x,
+                y,
+                text,
+                Math.max(240, c.getWidth() - (x * 2))
+        );
+
+        y += 8;
+
+        String dateLine = "Date / Ημερομηνία: " +
+                java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
+
+        String deviceLine = "Device / Συσκευή: " +
+                android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
+
+        String osLine = "Android / Έκδοση: " +
+                android.os.Build.VERSION.RELEASE +
+                " (API " + android.os.Build.VERSION.SDK_INT + ")";
+
+        c.drawText(dateLine, x, y, text);
+        y += 16;
+
+        c.drawText(deviceLine, x, y, text);
+        y += 16;
+
+        c.drawText(osLine, x, y, text);
+        y += 22;
+
+        // ONE AND ONLY intake block for the blank report.
+        c.drawText(
+                "Device intake condition / Κατάσταση παραλαβής συσκευής",
+                x,
+                y,
+                sectionTitle
+        );
+        y += 18;
+
+        String[] intakeLines = new String[]{
+                "Screen (cracked/scratched) / Οθόνη (σπασμένη/γρατζουνισμένη)",
+                "Back cover / Πίσω καπάκι",
+                "Frame / Πλαίσιο",
+                "Camera lens / Φακός κάμερας",
+                "Charging port / Θύρα φόρτισης",
+                "Buttons / Κουμπιά",
+                "Speaker / Microphone / Ηχείο / Μικρόφωνο",
+                "Water signs / Ενδείξεις υγρασίας",
+                "Battery condition / Κατάσταση μπαταρίας"
+        };
+
+        Paint boxPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        boxPaint.setStyle(Paint.Style.STROKE);
+        boxPaint.setStrokeWidth(1.5f);
+        boxPaint.setColor(Color.BLACK);
+
+        for (String item : intakeLines) {
+            int boxSize = 10;
+
+            c.drawRect(x, y - 9, x + boxSize, y + 1, boxPaint);
+            c.drawText(" OK", x + boxSize + 4, y, text);
+
+            int dmgX = x + 80;
+            c.drawRect(dmgX, y - 9, dmgX + boxSize, y + 1, boxPaint);
+            c.drawText(" DAMAGED", dmgX + boxSize + 4, y, text);
+
+            c.drawText("— " + item, x + 170, y, text);
+            y += 16;
+        }
+
+        y += 24;
+
+        c.drawText("Notes / Παρατηρήσεις:", x, y, sectionTitle);
+        y += 20;
+
+        for (int i = 0; i < 4; i++) {
+            c.drawLine(x, y, x + 500, y, text);
+            y += 22;
+        }
+
+        return y;
     }
 
     private int drawReportHeader(
