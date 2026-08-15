@@ -300,7 +300,7 @@ btnTxt.setOnClickListener(v -> {
 
             dialog.getWindow().setLayout(
                     Math.max(dp(280), safeWidth),
-                    ViewGroup.LayoutParams.WRAP_CONTENT
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
             );
         }
     }
