@@ -248,8 +248,9 @@ try {
 
     public boolean isCustomReportsActive() {
         
-        // TEST BUILD: unlock Professional Personalization entitlement.
-        if (GEL_TEST_UNLOCKED) return true;
+                // TEST BUILD NOTE:
+        // Keep this entitlement locked during local testing so the
+        // €5 / €29.99 purchase chooser remains visible.
 try {
             return appContext
                     .getSharedPreferences(
