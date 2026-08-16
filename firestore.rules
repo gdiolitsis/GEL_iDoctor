@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /service_sessions/{sessionId} {
+
+      allow get: if request.auth != null
+        && (
+          resource.data.technicianUid == request.auth.uid
+          || resource.data.get('customerUid', '') == request.auth.uid
+        );
+
+      allow list: if false;
+
+      allow create, update, delete: if false;
+
+      match /diagnostics/{diagnosticId} {
+
+        allow read: if request.auth != null
+          && (
+            get(/databases/$(database)/documents/service_sessions/$(sessionId))
+                .data.technicianUid == request.auth.uid
+            ||
+            get(/databases/$(database)/documents/service_sessions/$(sessionId))
+                .data.get('customerUid', '') == request.auth.uid
+          );
+
+        allow write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
