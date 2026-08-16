@@ -12,6 +12,7 @@ import android.app.Dialog;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
@@ -22,6 +23,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -30,10 +32,19 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class RepairDeviceActivity extends GELAutoActivityHook {
 
@@ -94,6 +105,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     private TextView txtServiceCode;
     private TextView txtExpiry;
     private TextView txtQrPlaceholder;
+    private ImageView imgQrCode;
 
     private Button btnCreateSession;
     private Button btnCopyCode;
@@ -408,6 +420,56 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                 qrSection
         );
 
+        LinearLayout qrCard =
+                createCard();
+
+        imgQrCode =
+                new ImageView(this);
+
+        imgQrCode.setAdjustViewBounds(
+                true
+        );
+
+        imgQrCode.setScaleType(
+                ImageView.ScaleType.CENTER_INSIDE
+        );
+
+        imgQrCode.setBackgroundColor(
+                Color.WHITE
+        );
+
+        imgQrCode.setPadding(
+                dp(10),
+                dp(10),
+                dp(10),
+                dp(10)
+        );
+
+        LinearLayout.LayoutParams qrImageLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(300)
+                );
+
+        qrImageLp.setMargins(
+                dp(10),
+                dp(10),
+                dp(10),
+                dp(8)
+        );
+
+        imgQrCode.setLayoutParams(
+                qrImageLp
+        );
+
+        imgQrCode.setVisibility(
+                View.GONE
+        );
+
+        qrCard.addView(
+                imgQrCode
+        );
+
         txtQrPlaceholder =
                 new TextView(this);
 
@@ -424,51 +486,18 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         );
 
         txtQrPlaceholder.setPadding(
-                dp(18),
-                dp(34),
-                dp(18),
-                dp(34)
+                dp(14),
+                dp(14),
+                dp(14),
+                dp(16)
         );
 
-        GradientDrawable qrBg =
-                new GradientDrawable();
-
-        qrBg.setColor(
-                0xFF080808
-        );
-
-        qrBg.setCornerRadius(
-                dp(12)
-        );
-
-        qrBg.setStroke(
-                dp(2),
-                0xFFFFD700
-        );
-
-        txtQrPlaceholder.setBackground(
-                qrBg
-        );
-
-        LinearLayout.LayoutParams qrLp =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
-
-        qrLp.setMargins(
-                0,
-                dp(6),
-                0,
-                dp(10)
-        );
-
-        txtQrPlaceholder.setLayoutParams(
-                qrLp
+        qrCard.addView(
+                txtQrPlaceholder
         );
 
         root.addView(
-                txtQrPlaceholder
+                qrCard
         );
 
         // ========================================================
@@ -771,16 +800,47 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                         : "Pairing code valid until " + expiryText
         );
 
-        txtQrPlaceholder.setText(
-                gr
-                        ? "QR CODE\n\n"
-                        + "Το QR pairing θα ενεργοποιηθεί στο επόμενο βήμα.\n\n"
-                        + "Προς το παρόν η σύνδεση προετοιμάζεται με τον 6ψήφιο Service Code."
-                        :
-                        "QR CODE\n\n"
-                        + "QR pairing will be activated in the next step.\n\n"
-                        + "For now, pairing is prepared using the 6-digit Service Code."
-        );
+        String qrPayload =
+                buildQrPayload(
+                        sessionId,
+                        serviceCode,
+                        pairingExpires
+                );
+
+        Bitmap qrBitmap =
+                generateQrBitmap(
+                        qrPayload,
+                        dp(720)
+                );
+
+        if (qrBitmap != null) {
+
+            imgQrCode.setImageBitmap(
+                    qrBitmap
+            );
+
+            imgQrCode.setVisibility(
+                    View.VISIBLE
+            );
+
+            txtQrPlaceholder.setText(
+                    gr
+                            ? "Σαρώστε το QR από τη συσκευή του πελάτη ή χρησιμοποιήστε τον 6ψήφιο Service Code."
+                            : "Scan this QR from the customer's device or use the 6-digit Service Code."
+            );
+
+        } else {
+
+            imgQrCode.setVisibility(
+                    View.GONE
+            );
+
+            txtQrPlaceholder.setText(
+                    gr
+                            ? "Δεν ήταν δυνατή η δημιουργία QR. Χρησιμοποιήστε τον 6ψήφιο Service Code."
+                            : "QR generation failed. Use the 6-digit Service Code."
+            );
+        }
 
         btnCreateSession.setVisibility(
                 View.GONE
@@ -825,6 +885,17 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         txtExpiry.setText(
                 ""
         );
+
+        if (imgQrCode != null) {
+
+            imgQrCode.setImageDrawable(
+                    null
+            );
+
+            imgQrCode.setVisibility(
+                    View.GONE
+            );
+        }
 
         txtQrPlaceholder.setText(
                 gr
@@ -979,6 +1050,106 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                 timestamp +
                 "-" +
                 suffix;
+    }
+
+    // ============================================================
+    // QR PAYLOAD
+    // ============================================================
+    private String buildQrPayload(
+            String sessionId,
+            String serviceCode,
+            long pairingExpires
+    ) {
+
+        // Versioned custom URI.
+        // The customer-side Connect to Technician flow will parse this.
+        return "gel://technician/pair"
+                + "?v=1"
+                + "&session=" + sessionId
+                + "&code=" + serviceCode
+                + "&expires=" + pairingExpires;
+    }
+
+    // ============================================================
+    // LOCAL QR GENERATION — ZXING CORE
+    // ============================================================
+    private Bitmap generateQrBitmap(
+            String payload,
+            int requestedSize
+    ) {
+
+        if (payload == null ||
+                payload.trim().isEmpty()) {
+
+            return null;
+        }
+
+        int size =
+                Math.max(
+                        dp(260),
+                        requestedSize
+                );
+
+        try {
+
+            Map<EncodeHintType, Object> hints =
+                    new HashMap<>();
+
+            hints.put(
+                    EncodeHintType.CHARACTER_SET,
+                    "UTF-8"
+            );
+
+            hints.put(
+                    EncodeHintType.ERROR_CORRECTION,
+                    ErrorCorrectionLevel.M
+            );
+
+            hints.put(
+                    EncodeHintType.MARGIN,
+                    1
+            );
+
+            QRCodeWriter writer =
+                    new QRCodeWriter();
+
+            BitMatrix matrix =
+                    writer.encode(
+                            payload,
+                            BarcodeFormat.QR_CODE,
+                            size,
+                            size,
+                            hints
+                    );
+
+            Bitmap bitmap =
+                    Bitmap.createBitmap(
+                            size,
+                            size,
+                            Bitmap.Config.ARGB_8888
+                    );
+
+            for (int y = 0; y < size; y++) {
+
+                for (int x = 0; x < size; x++) {
+
+                    bitmap.setPixel(
+                            x,
+                            y,
+                            matrix.get(x, y)
+                                    ? Color.BLACK
+                                    : Color.WHITE
+                    );
+                }
+            }
+
+            return bitmap;
+
+        } catch (WriterException |
+                 IllegalArgumentException e) {
+
+            return null;
+        }
     }
 
     // ============================================================
