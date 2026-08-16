@@ -1,7 +1,7 @@
 // GDiolitsis Engine Lab (GEL) — Author & Developer
 // RepairDeviceActivity.java
 // iDoctor / GEL Professional Technician Service Session
-// STEP 1 — Service Session + 2-hour Pairing Code + Pairing UI
+// FIREBASE TEST — REAL Cloud Function session + Firestore live status + QR
 
 package com.gel.cleaner;
 
@@ -31,6 +31,12 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.functions.FirebaseFunctions;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -83,6 +89,12 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     private static final String KEY_PAIRING_EXPIRES_AT =
             "pairing_expires_at";
 
+    private static final String KEY_FIREBASE_BACKED =
+            "firebase_backed";
+
+    private static final String KEY_SESSION_CONNECTED =
+            "session_connected";
+
     // ============================================================
     // PAIRING WINDOW
     // ============================================================
@@ -114,6 +126,20 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
     private boolean gr;
 
+    // ============================================================
+    // FIREBASE — REAL BACKEND
+    // ============================================================
+    private static final String FUNCTIONS_REGION =
+            "europe-west1";
+
+    private static final String SESSIONS_COLLECTION =
+            "service_sessions";
+
+    private FirebaseAuth firebaseAuth;
+    private FirebaseFunctions firebaseFunctions;
+    private FirebaseFirestore firestore;
+    private ListenerRegistration sessionListener;
+
     private final SecureRandom secureRandom =
             new SecureRandom();
 
@@ -137,6 +163,17 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         gr = AppLang.isGreek(this);
 
+        firebaseAuth =
+                FirebaseAuth.getInstance();
+
+        firebaseFunctions =
+                FirebaseFunctions.getInstance(
+                        FUNCTIONS_REGION
+                );
+
+        firestore =
+                FirebaseFirestore.getInstance();
+
         buildScreen();
 
         restoreExistingSession();
@@ -144,6 +181,22 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         UIHelpers.applyPressEffectRecursive(
                 getWindow().getDecorView()
         );
+    }
+
+    @Override
+    protected void onStart() {
+
+        super.onStart();
+
+        attachListenerForStoredFirebaseSession();
+    }
+
+    @Override
+    protected void onStop() {
+
+        removeSessionListener();
+
+        super.onStop();
     }
 
     // ============================================================
@@ -241,8 +294,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         testBanner.setText(
                 gr
-                        ? "TEST MODE — TECHNICIAN UNLOCKED"
-                        : "TEST MODE — TECHNICIAN UNLOCKED"
+                        ? "FIREBASE TEST — REAL BACKEND"
+                        : "FIREBASE TEST — REAL BACKEND"
         );
 
         testBanner.setTextColor(
@@ -587,11 +640,11 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                 gr
                         ? "Η συνδρομή GEL PRO παραμένει στον λογαριασμό του τεχνικού. "
                         + "Η συσκευή του πελάτη δεν αποκτά μόνιμη πρόσβαση στη συνδρομή. "
-                        + "Ο κωδικός σύνδεσης χρησιμοποιείται μόνο για το συγκεκριμένο Service Session."
+                        + "Ο κωδικός σύνδεσης χρησιμοποιείται μόνο για το συγκεκριμένο Firebase Service Session."
                         :
                         "The GEL PRO entitlement remains with the technician. "
                         + "The customer's device does not receive permanent subscription access. "
-                        + "The pairing code is used only for the specific Service Session."
+                        + "The pairing code is used only for the specific Firebase Service Session."
         );
 
         root.addView(
@@ -650,48 +703,243 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     private void createServiceSession() {
 
-        long now =
-                System.currentTimeMillis();
-
-        long pairingExpires =
-                now + PAIRING_CODE_DURATION_MS;
-
-        String serviceCode =
-                generateServiceCode();
-
-        String sessionId =
-                generateSessionId();
-
-        SharedPreferences prefs =
-                getSharedPreferences(
-                        SESSION_PREFS,
-                        MODE_PRIVATE
-                );
-
-        prefs.edit()
-                .putString(
-                        KEY_SESSION_ID,
-                        sessionId
-                )
-                .putString(
-                        KEY_SERVICE_CODE,
-                        serviceCode
-                )
-                .putLong(
-                        KEY_CREATED_AT,
-                        now
-                )
-                .putLong(
-                        KEY_PAIRING_EXPIRES_AT,
-                        pairingExpires
-                )
-                .apply();
-
-        showSession(
-                sessionId,
-                serviceCode,
-                pairingExpires
+        btnCreateSession.setEnabled(
+                false
         );
+
+        txtStatus.setText(
+                gr
+                        ? "● FIREBASE\nΈλεγχος ταυτότητας τεχνικού..."
+                        : "● FIREBASE\nAuthenticating technician..."
+        );
+
+        txtStatus.setTextColor(
+                0xFFFFD700
+        );
+
+        FirebaseUser currentUser =
+                firebaseAuth.getCurrentUser();
+
+        if (currentUser != null) {
+
+            callCreateServiceSession();
+
+            return;
+        }
+
+        firebaseAuth
+                .signInAnonymously()
+                .addOnCompleteListener(
+                        this,
+                        task -> {
+
+                            if (!task.isSuccessful() ||
+                                    firebaseAuth.getCurrentUser() == null) {
+
+                                btnCreateSession.setEnabled(
+                                        true
+                                );
+
+                                txtStatus.setText(
+                                        gr
+                                                ? "● ΑΠΟΤΥΧΙΑ FIREBASE AUTH\nΔεν ήταν δυνατή η σύνδεση με το backend."
+                                                : "● FIREBASE AUTH FAILED\nCould not authenticate with the backend."
+                                );
+
+                                txtStatus.setTextColor(
+                                        0xFFFF5555
+                                );
+
+                                Toast.makeText(
+                                        this,
+                                        gr
+                                                ? "Αποτυχία Firebase Authentication."
+                                                : "Firebase Authentication failed.",
+                                        Toast.LENGTH_LONG
+                                ).show();
+
+                                return;
+                            }
+
+                            callCreateServiceSession();
+                        }
+                );
+    }
+
+    // ============================================================
+    // CALL REAL CLOUD FUNCTION
+    // ============================================================
+    private void callCreateServiceSession() {
+
+        txtStatus.setText(
+                gr
+                        ? "● FIREBASE\nΔημιουργία πραγματικού Service Session..."
+                        : "● FIREBASE\nCreating real Service Session..."
+        );
+
+        txtStatus.setTextColor(
+                0xFFFFD700
+        );
+
+        firebaseFunctions
+                .getHttpsCallable(
+                        "createServiceSession"
+                )
+                .call()
+                .addOnCompleteListener(
+                        this,
+                        task -> {
+
+                            btnCreateSession.setEnabled(
+                                    true
+                            );
+
+                            if (!task.isSuccessful() ||
+                                    task.getResult() == null) {
+
+                                txtStatus.setText(
+                                        gr
+                                                ? "● ΑΠΟΤΥΧΙΑ BACKEND\nΔεν δημιουργήθηκε Service Session."
+                                                : "● BACKEND ERROR\nService Session was not created."
+                                );
+
+                                txtStatus.setTextColor(
+                                        0xFFFF5555
+                                );
+
+                                String message =
+                                        task.getException() != null
+                                                ? task.getException().getMessage()
+                                                : null;
+
+                                Toast.makeText(
+                                        this,
+                                        message != null
+                                                ? message
+                                                : (
+                                                gr
+                                                        ? "Άγνωστο σφάλμα Firebase Functions."
+                                                        : "Unknown Firebase Functions error."
+                                        ),
+                                        Toast.LENGTH_LONG
+                                ).show();
+
+                                return;
+                            }
+
+                            Object raw =
+                                    task.getResult()
+                                            .getData();
+
+                            if (!(raw instanceof Map)) {
+
+                                txtStatus.setText(
+                                        gr
+                                                ? "● ΜΗ ΕΓΚΥΡΗ ΑΠΑΝΤΗΣΗ SERVER"
+                                                : "● INVALID SERVER RESPONSE"
+                                );
+
+                                txtStatus.setTextColor(
+                                        0xFFFF5555
+                                );
+
+                                return;
+                            }
+
+                            Map<?, ?> result =
+                                    (Map<?, ?>) raw;
+
+                            Object sessionRaw =
+                                    result.get(
+                                            "sessionId"
+                                    );
+
+                            Object codeRaw =
+                                    result.get(
+                                            "serviceCode"
+                                    );
+
+                            Object expiryRaw =
+                                    result.get(
+                                            "expiresAt"
+                                    );
+
+                            if (!(sessionRaw instanceof String) ||
+                                    !(codeRaw instanceof String) ||
+                                    !(expiryRaw instanceof Number)) {
+
+                                txtStatus.setText(
+                                        gr
+                                                ? "● ΕΛΛΙΠΗΣ ΑΠΑΝΤΗΣΗ SERVER"
+                                                : "● INCOMPLETE SERVER RESPONSE"
+                                );
+
+                                txtStatus.setTextColor(
+                                        0xFFFF5555
+                                );
+
+                                return;
+                            }
+
+                            String sessionId =
+                                    (String) sessionRaw;
+
+                            String serviceCode =
+                                    (String) codeRaw;
+
+                            long pairingExpires =
+                                    ((Number) expiryRaw)
+                                            .longValue();
+
+                            long now =
+                                    System.currentTimeMillis();
+
+                            removeSessionListener();
+
+                            SharedPreferences prefs =
+                                    getSharedPreferences(
+                                            SESSION_PREFS,
+                                            MODE_PRIVATE
+                                    );
+
+                            prefs.edit()
+                                    .putString(
+                                            KEY_SESSION_ID,
+                                            sessionId
+                                    )
+                                    .putString(
+                                            KEY_SERVICE_CODE,
+                                            serviceCode
+                                    )
+                                    .putLong(
+                                            KEY_CREATED_AT,
+                                            now
+                                    )
+                                    .putLong(
+                                            KEY_PAIRING_EXPIRES_AT,
+                                            pairingExpires
+                                    )
+                                    .putBoolean(
+                                            KEY_FIREBASE_BACKED,
+                                            true
+                                    )
+                                    .putBoolean(
+                                            KEY_SESSION_CONNECTED,
+                                            false
+                                    )
+                                    .apply();
+
+                            showSession(
+                                    sessionId,
+                                    serviceCode,
+                                    pairingExpires
+                            );
+
+                            attachSessionListener(
+                                    sessionId
+                            );
+                        }
+                );
     }
 
     // ============================================================
@@ -704,6 +952,22 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                         SESSION_PREFS,
                         MODE_PRIVATE
                 );
+
+        boolean firebaseBacked =
+                prefs.getBoolean(
+                        KEY_FIREBASE_BACKED,
+                        false
+                );
+
+        // Remove old local-only test sessions from earlier builds.
+        if (!firebaseBacked) {
+
+            clearStoredSession();
+
+            showNoSessionState();
+
+            return;
+        }
 
         String sessionId =
                 prefs.getString(
@@ -723,6 +987,12 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                         0L
                 );
 
+        boolean connected =
+                prefs.getBoolean(
+                        KEY_SESSION_CONNECTED,
+                        false
+                );
+
         if (sessionId == null ||
                 serviceCode == null ||
                 pairingExpires <= 0L) {
@@ -732,7 +1002,10 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
             return;
         }
 
-        if (System.currentTimeMillis() >= pairingExpires) {
+        // Pairing expiry blocks new claims, but it does NOT terminate
+        // a Service Session that was already connected.
+        if (!connected &&
+                System.currentTimeMillis() >= pairingExpires) {
 
             clearStoredSession();
 
@@ -754,6 +1027,222 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                 serviceCode,
                 pairingExpires
         );
+
+        if (connected) {
+
+            showConnectedState();
+        }
+    }
+
+    // ============================================================
+    // FIRESTORE REAL-TIME SESSION LISTENER
+    // ============================================================
+    private void attachListenerForStoredFirebaseSession() {
+
+        SharedPreferences prefs =
+                getSharedPreferences(
+                        SESSION_PREFS,
+                        MODE_PRIVATE
+                );
+
+        if (!prefs.getBoolean(
+                KEY_FIREBASE_BACKED,
+                false
+        )) {
+
+            return;
+        }
+
+        String sessionId =
+                prefs.getString(
+                        KEY_SESSION_ID,
+                        null
+                );
+
+        if (sessionId == null ||
+                sessionId.trim().isEmpty()) {
+
+            return;
+        }
+
+        attachSessionListener(
+                sessionId
+        );
+    }
+
+    private void attachSessionListener(String sessionId) {
+
+        if (firestore == null ||
+                sessionId == null ||
+                sessionId.trim().isEmpty()) {
+
+            return;
+        }
+
+        removeSessionListener();
+
+        sessionListener =
+                firestore
+                        .collection(
+                                SESSIONS_COLLECTION
+                        )
+                        .document(
+                                sessionId
+                        )
+                        .addSnapshotListener(
+                                (snapshot, error) -> {
+
+                                    if (error != null) {
+
+                                        txtStatus.setText(
+                                                gr
+                                                        ? "● FIREBASE OFFLINE / ERROR\nΑναμονή για επανασύνδεση..."
+                                                        : "● FIREBASE OFFLINE / ERROR\nWaiting to reconnect..."
+                                        );
+
+                                        txtStatus.setTextColor(
+                                                0xFFFFD700
+                                        );
+
+                                        return;
+                                    }
+
+                                    if (snapshot == null ||
+                                            !snapshot.exists()) {
+
+                                        txtStatus.setText(
+                                                gr
+                                                        ? "● ΤΟ SESSION ΔΕΝ ΒΡΕΘΗΚΕ ΣΤΟ FIREBASE"
+                                                        : "● SESSION NOT FOUND IN FIREBASE"
+                                        );
+
+                                        txtStatus.setTextColor(
+                                                0xFFFF5555
+                                        );
+
+                                        return;
+                                    }
+
+                                    String status =
+                                            snapshot.getString(
+                                                    "status"
+                                            );
+
+                                    if ("CONNECTED".equals(status)) {
+
+                                        getSharedPreferences(
+                                                SESSION_PREFS,
+                                                MODE_PRIVATE
+                                        )
+                                                .edit()
+                                                .putBoolean(
+                                                        KEY_SESSION_CONNECTED,
+                                                        true
+                                                )
+                                                .apply();
+
+                                        showConnectedState();
+
+                                        return;
+                                    }
+
+                                    if ("WAITING".equals(status)) {
+
+                                        getSharedPreferences(
+                                                SESSION_PREFS,
+                                                MODE_PRIVATE
+                                        )
+                                                .edit()
+                                                .putBoolean(
+                                                        KEY_SESSION_CONNECTED,
+                                                        false
+                                                )
+                                                .apply();
+
+                                        txtStatus.setText(
+                                                gr
+                                                        ? "● ΕΝΕΡΓΟ FIREBASE SERVICE SESSION\nΑναμονή για σύνδεση συσκευής..."
+                                                        : "● ACTIVE FIREBASE SERVICE SESSION\nWaiting for customer device..."
+                                        );
+
+                                        txtStatus.setTextColor(
+                                                0xFF39FF14
+                                        );
+
+                                        return;
+                                    }
+
+                                    txtStatus.setText(
+                                            gr
+                                                    ? "● FIREBASE SESSION: " + String.valueOf(status)
+                                                    : "● FIREBASE SESSION: " + String.valueOf(status)
+                                    );
+
+                                    txtStatus.setTextColor(
+                                            0xFFFFD700
+                                    );
+                                }
+                        );
+    }
+
+    private void removeSessionListener() {
+
+        if (sessionListener != null) {
+
+            sessionListener.remove();
+
+            sessionListener = null;
+        }
+    }
+
+    private void showConnectedState() {
+
+        txtStatus.setText(
+                gr
+                        ? "● ΣΥΣΚΕΥΗ ΠΕΛΑΤΗ ΣΥΝΔΕΘΗΚΕ\nFirebase real-time pairing ενεργό."
+                        : "● CUSTOMER DEVICE CONNECTED\nFirebase real-time pairing is active."
+        );
+
+        txtStatus.setTextColor(
+                0xFF39FF14
+        );
+
+        txtExpiry.setText(
+                gr
+                        ? "Η σύνδεση είναι ενεργή. Η λήξη του pairing code δεν διακόπτει το Service Session."
+                        : "Connection is active. Pairing-code expiry does not terminate the Service Session."
+        );
+
+        if (imgQrCode != null) {
+
+            imgQrCode.setImageDrawable(
+                    null
+            );
+
+            imgQrCode.setVisibility(
+                    View.GONE
+            );
+        }
+
+        txtQrPlaceholder.setText(
+                gr
+                        ? "✓ Η συσκευή πελάτη συνδέθηκε επιτυχώς μέσω Firebase."
+                        : "✓ Customer device connected successfully through Firebase."
+        );
+
+        btnCopyCode.setVisibility(
+                View.GONE
+        );
+
+        // Server-side regenerate/cancel will be added as dedicated
+        // callable functions. Hide local-only controls in real mode.
+        btnNewSession.setVisibility(
+                View.GONE
+        );
+
+        btnCancelSession.setVisibility(
+                View.GONE
+        );
     }
 
     // ============================================================
@@ -767,8 +1256,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         txtStatus.setText(
                 gr
-                        ? "● ΕΝΕΡΓΟ SERVICE SESSION\nΑναμονή για σύνδεση συσκευής..."
-                        : "● ACTIVE SERVICE SESSION\nWaiting for customer device..."
+                        ? "● ΕΝΕΡΓΟ FIREBASE SERVICE SESSION\nΑναμονή για σύνδεση συσκευής..."
+                        : "● ACTIVE FIREBASE SERVICE SESSION\nWaiting for customer device..."
         );
 
         txtStatus.setTextColor(
@@ -850,12 +1339,14 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                 View.VISIBLE
         );
 
+        // In real Firebase mode these controls stay hidden until
+        // dedicated server-side regenerate/cancel functions are deployed.
         btnNewSession.setVisibility(
-                View.VISIBLE
+                View.GONE
         );
 
         btnCancelSession.setVisibility(
-                View.VISIBLE
+                View.GONE
         );
     }
 
@@ -866,8 +1357,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         txtStatus.setText(
                 gr
-                        ? "● TEST MODE — TECHNICIAN UNLOCKED\nΔεν υπάρχει ενεργό Service Session."
-                        : "● TEST MODE — TECHNICIAN UNLOCKED\nNo active Service Session."
+                        ? "● FIREBASE TEST — REAL BACKEND\nΔεν υπάρχει ενεργό Service Session."
+                        : "● FIREBASE TEST — REAL BACKEND\nNo active Service Session."
         );
 
         txtStatus.setTextColor(
