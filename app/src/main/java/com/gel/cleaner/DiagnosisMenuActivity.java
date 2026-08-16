@@ -137,6 +137,28 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
             );
 
             root.addView(repairBtn);
+
+            // ========================================================
+            // CUSTOMER DEVICE — CONNECT TO TECHNICIAN
+            // Connect this device to an active technician session
+            // ========================================================
+            View connectTechnicianBtn = makeBlockButton(
+                    gr
+                            ? "Σύνδεση με Τεχνικό"
+                            : "Connect to Technician",
+                    gr
+                            ? "Σύνδεση αυτής της συσκευής σε ενεργό Service Session τεχνικού • QR / Service Code"
+                            : "Connect this device to an active technician Service Session • QR / Service Code"
+            );
+
+            connectTechnicianBtn.setOnClickListener(v ->
+                    startActivity(new Intent(
+                            this,
+                            ConnectToTechnicianActivity.class
+                    ))
+            );
+
+            root.addView(connectTechnicianBtn);
         }
 
         // ============================================================
