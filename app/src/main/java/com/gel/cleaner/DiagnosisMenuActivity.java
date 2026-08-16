@@ -93,33 +93,74 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
         // (ΔΕΝ εμφανίζεται σε Apple mode)
         // ============================================================
         if (!isAppleMode) {
+
             root.addView(sectionLabel(getString(R.string.manual_tests)));
 
             View manualBtn = makeBlockButton(
                     getString(R.string.manual_tests_title),
                     getString(R.string.manual_tests_desc)
             );
+
             manualBtn.setOnClickListener(v ->
-                    startActivity(new Intent(this, ManualTestsActivity.class)));
+                    startActivity(new Intent(
+                            this,
+                            ManualTestsActivity.class
+                    ))
+            );
+
             root.addView(manualBtn);
+
+            // ========================================================
+            // TECHNICIAN SERVICE — REPAIR A DEVICE
+            // Android customer-device service session
+            // ========================================================
+            final boolean gr = AppLang.isGreek(this);
+
+            root.addView(sectionLabel(
+                    gr
+                            ? "ΤΕΧΝΙΚΟΙ — SERVICE ΣΥΣΚΕΥΗΣ"
+                            : "TECHNICIAN — DEVICE SERVICE"
+            ));
+
+            View repairBtn = makeBlockButton(
+                    "Repair a Device",
+                    gr
+                            ? "Σύνδεση συσκευής πελάτη • QR / Service Code • Διάγνωση"
+                            : "Connect customer device • QR / Service Code • Diagnostics"
+            );
+
+            repairBtn.setOnClickListener(v ->
+                    startActivity(new Intent(
+                            this,
+                            RepairDeviceActivity.class
+                    ))
+            );
+
+            root.addView(repairBtn);
         }
 
-// ============================================================
-// iPHONE DIAGNOSIS (LABS)
-// (Εμφανίζεται ΜΟΝΟ σε Apple mode)
-// ============================================================
-if (isAppleMode) {
+        // ============================================================
+        // iPHONE DIAGNOSIS (LABS)
+        // (Εμφανίζεται ΜΟΝΟ σε Apple mode)
+        // ============================================================
+        if (isAppleMode) {
 
-    root.addView(sectionLabel(getString(R.string.auto_diagnosis)));
+            root.addView(sectionLabel(getString(R.string.auto_diagnosis)));
 
-    View iphoneBtn = makeBlockButton(
-            getString(R.string.gel_phone_diag_title),
-            getString(R.string.gel_phone_diag_desc)
-    );
-    iphoneBtn.setOnClickListener(v ->
-            startActivity(new Intent(this, IPhoneLabsActivity.class)));
-    root.addView(iphoneBtn);
-}
+            View iphoneBtn = makeBlockButton(
+                    getString(R.string.gel_phone_diag_title),
+                    getString(R.string.gel_phone_diag_desc)
+            );
+
+            iphoneBtn.setOnClickListener(v ->
+                    startActivity(new Intent(
+                            this,
+                            IPhoneLabsActivity.class
+                    ))
+            );
+
+            root.addView(iphoneBtn);
+        }
 
         // ============================================================
         // SERVICE REPORT
@@ -131,8 +172,14 @@ if (isAppleMode) {
                 getString(R.string.export_report_title),
                 getString(R.string.export_report_desc)
         );
+
         reportBtn.setOnClickListener(v ->
-                startActivity(new Intent(this, ServiceReportActivity.class)));
+                startActivity(new Intent(
+                        this,
+                        ServiceReportActivity.class
+                ))
+        );
+
         root.addView(reportBtn);
 
         // ============================================================
@@ -141,15 +188,19 @@ if (isAppleMode) {
         scroll.addView(root);
         setContentView(scroll);
 
-            UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
+        UIHelpers.applyPressEffectRecursive(
+                getWindow().getDecorView()
+        );
     }
 
     // ============================================================
     // PLATFORM CHECK
     // ============================================================
     private boolean isAppleMode() {
+
         SharedPreferences prefs =
                 getSharedPreferences(PREFS, MODE_PRIVATE);
+
         return "apple".equals(
                 prefs.getString(KEY_PLATFORM, "android")
         );
@@ -181,52 +232,87 @@ if (isAppleMode) {
     @Override
     public void onScreenChanged(boolean isInner) {
         uiManager.applyUI(isInner);
-        try { DualPaneManager.prepareIfSupported(this); } catch (Throwable ignore) {}
+
+        try {
+            DualPaneManager.prepareIfSupported(this);
+        } catch (Throwable ignore) {
+        }
     }
 
     // ============================================================
     // UI HELPERS
     // ============================================================
     private TextView sectionLabel(String txt) {
+
         TextView tv = new TextView(this);
+
         tv.setText(txt);
         tv.setTextSize(sp(16f));
         tv.setTextColor(0xFFEEEEEE);
         tv.setGravity(Gravity.CENTER_HORIZONTAL);
         tv.setPadding(0, dp(12), 0, dp(6));
+
         return tv;
     }
 
     private View makeBlockButton(String title, String subtitle) {
+
         LinearLayout card = new LinearLayout(this);
+
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(12), dp(12), dp(12), dp(12));
+        card.setPadding(
+                dp(12),
+                dp(12),
+                dp(12),
+                dp(12)
+        );
+
         card.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+        LinearLayout.LayoutParams lp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+
+        lp.setMargins(
+                0,
+                dp(6),
+                0,
+                dp(6)
         );
-        lp.setMargins(0, dp(6), 0, dp(6));
+
         card.setLayoutParams(lp);
 
-        card.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+        card.setBackgroundResource(
+                R.drawable.gel_btn_outline_selector
+        );
+
         card.setClickable(true);
         card.setFocusable(true);
 
         TextView t = new TextView(this);
+
         t.setText(title);
         t.setTextSize(sp(16f));
         t.setTextColor(0xFFFFFFFF);
         t.setGravity(Gravity.CENTER_HORIZONTAL);
-        t.setPadding(0, 0, 0, dp(4));
+        t.setPadding(
+                0,
+                0,
+                0,
+                dp(4)
+        );
+
         card.addView(t);
 
         TextView s = new TextView(this);
+
         s.setText(subtitle);
         s.setTextSize(sp(13f));
         s.setTextColor(0xFFAAAAAA);
         s.setGravity(Gravity.CENTER_HORIZONTAL);
+
         card.addView(s);
 
         return card;
