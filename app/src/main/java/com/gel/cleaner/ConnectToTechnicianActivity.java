@@ -1,9 +1,8 @@
 // GDiolitsis Engine Lab (GEL) — Author & Developer
 // ConnectToTechnicianActivity.java
 // iDoctor Customer Device Pairing
-// STEP 1 — QR Scan + Manual Service Code Validation
-// NOTE: This step validates pairing data locally.
-// Real technician/customer connection will be added through backend next.
+// FIREBASE TEST — QR Scan + Manual Service Code + REAL claimServiceSession
+// Customer device performs Anonymous Auth and claims the technician session.
 
 package com.gel.cleaner;
 
@@ -27,8 +26,15 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.Nullable;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.functions.FirebaseFunctions;
+
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class ConnectToTechnicianActivity extends GELAutoActivityHook {
 
@@ -40,6 +46,32 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
     private TextView txtExpiry;
 
     private EditText inputCode;
+
+    // ============================================================
+    // FIREBASE — REAL CUSTOMER PAIRING
+    // ============================================================
+    private static final String FUNCTIONS_REGION =
+            "europe-west1";
+
+    private static final String CUSTOMER_SESSION_PREFS =
+            "GEL_CUSTOMER_SERVICE_SESSION";
+
+    private static final String KEY_SESSION_ID =
+            "session_id";
+
+    private static final String KEY_SERVICE_CODE =
+            "service_code";
+
+    private static final String KEY_EXPIRES_AT =
+            "expires_at";
+
+    private static final String KEY_CONNECTED =
+            "connected";
+
+    private FirebaseAuth firebaseAuth;
+    private FirebaseFunctions firebaseFunctions;
+
+    private boolean pairingInProgress = false;
 
     private final ActivityResultLauncher<ScanOptions> qrLauncher =
             registerForActivityResult(
@@ -79,6 +111,14 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
         super.onCreate(savedInstanceState);
 
         gr = AppLang.isGreek(this);
+
+        firebaseAuth =
+                FirebaseAuth.getInstance();
+
+        firebaseFunctions =
+                FirebaseFunctions.getInstance(
+                        FUNCTIONS_REGION
+                );
 
         buildScreen();
 
@@ -199,7 +239,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                 new TextView(this);
 
         test.setText(
-                "PAIRING TEST — LOCAL VALIDATION"
+                "FIREBASE TEST — REAL PAIRING"
         );
 
         test.setTextColor(
@@ -528,13 +568,13 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
 
         security.setText(
                 gr
-                        ? "Σε αυτό το δοκιμαστικό βήμα το iDoctor ελέγχει το QR και τον Service Code τοπικά. "
-                        + "Δεν έχει γίνει ακόμη πραγματική σύνδεση με τη συσκευή του τεχνικού. "
-                        + "Η σύνδεση μέσω server θα προστεθεί στο επόμενο στάδιο."
+                        ? "Η σύνδεση γίνεται πλέον μέσω Firebase backend. "
+                        + "Το iDoctor δημιουργεί προσωρινή ανώνυμη ταυτότητα στη συσκευή πελάτη και "
+                        + "η Cloud Function ελέγχει τον Service Code, τη λήξη και τη διαθεσιμότητα του Session."
                         :
-                        "In this test step, iDoctor validates the QR and Service Code locally. "
-                        + "No real connection to the technician device has been made yet. "
-                        + "Server pairing will be added in the next stage."
+                        "Pairing now uses the Firebase backend. "
+                        + "iDoctor creates a temporary anonymous identity for the customer device and "
+                        + "the Cloud Function validates the Service Code, expiry and Session availability."
         );
 
         root.addView(
@@ -722,6 +762,12 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                     expires
             );
 
+            claimServiceSession(
+                    session,
+                    code,
+                    expires
+            );
+
         } catch (Throwable t) {
 
             showInvalidQr(
@@ -824,11 +870,58 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
             return;
         }
 
+        claimServiceSession(
+                null,
+                code,
+                0L
+        );
+    }
+
+    // ============================================================
+    // REAL FIREBASE CLAIM
+    // ============================================================
+    private void claimServiceSession(
+            @Nullable String sessionId,
+            String serviceCode,
+            long qrExpiresAt
+    ) {
+
+        if (pairingInProgress) {
+
+            return;
+        }
+
+        if (!isSixDigitCode(serviceCode)) {
+
+            showPairingError(
+                    gr
+                            ? "Μη έγκυρος Service Code."
+                            : "Invalid Service Code."
+            );
+
+            return;
+        }
+
+        if (sessionId != null &&
+                qrExpiresAt > 0L &&
+                System.currentTimeMillis() >= qrExpiresAt) {
+
+            showPairingError(
+                    gr
+                            ? "Ο QR κωδικός έχει λήξει."
+                            : "The QR pairing code has expired."
+            );
+
+            return;
+        }
+
+        pairingInProgress =
+                true;
+
         txtStatus.setText(
                 gr
-                        ? "● ΕΓΚΥΡΗ ΜΟΡΦΗ SERVICE CODE\nΑπαιτείται server lookup για να βρεθεί το Session."
-                        :
-                        "● VALID SERVICE CODE FORMAT\nServer lookup is required to find the Session."
+                        ? "● FIREBASE\nΈλεγχος ταυτότητας συσκευής πελάτη..."
+                        : "● FIREBASE\nAuthenticating customer device..."
         );
 
         txtStatus.setTextColor(
@@ -836,21 +929,347 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
         );
 
         txtSessionId.setText(
-                gr
-                        ? "Αναμονή server lookup"
-                        : "Waiting for server lookup"
+                sessionId != null
+                        ? sessionId
+                        : (
+                        gr
+                                ? "Αναζήτηση μέσω Service Code..."
+                                : "Looking up Service Code..."
+                )
         );
 
         txtServiceCode.setText(
-                code
+                serviceCode
         );
 
         txtExpiry.setText(
                 gr
-                        ? "Στο επόμενο στάδιο ο κωδικός θα αναζητείται στο ενεργό session του τεχνικού."
-                        :
-                        "In the next stage this code will be looked up against the technician's active session."
+                        ? "Γίνεται ασφαλής σύνδεση με το Firebase backend..."
+                        : "Securely connecting to the Firebase backend..."
         );
+
+        FirebaseUser currentUser =
+                firebaseAuth.getCurrentUser();
+
+        if (currentUser != null) {
+
+            callClaimServiceSession(
+                    sessionId,
+                    serviceCode
+            );
+
+            return;
+        }
+
+        firebaseAuth
+                .signInAnonymously()
+                .addOnCompleteListener(
+                        this,
+                        task -> {
+
+                            if (!task.isSuccessful() ||
+                                    firebaseAuth.getCurrentUser() == null) {
+
+                                pairingInProgress =
+                                        false;
+
+                                showPairingError(
+                                        gr
+                                                ? "Αποτυχία Firebase Authentication."
+                                                : "Firebase Authentication failed."
+                                );
+
+                                return;
+                            }
+
+                            callClaimServiceSession(
+                                    sessionId,
+                                    serviceCode
+                            );
+                        }
+                );
+    }
+
+    private void callClaimServiceSession(
+            @Nullable String sessionId,
+            String serviceCode
+    ) {
+
+        Map<String, Object> data =
+                new HashMap<>();
+
+        data.put(
+                "code",
+                serviceCode
+        );
+
+        if (sessionId != null &&
+                !sessionId.trim().isEmpty()) {
+
+            data.put(
+                    "sessionId",
+                    sessionId
+            );
+        }
+
+        txtStatus.setText(
+                gr
+                        ? "● FIREBASE\nΑναζήτηση και κατοχύρωση Service Session..."
+                        : "● FIREBASE\nLooking up and claiming Service Session..."
+        );
+
+        txtStatus.setTextColor(
+                0xFFFFD700
+        );
+
+        firebaseFunctions
+                .getHttpsCallable(
+                        "claimServiceSession"
+                )
+                .call(
+                        data
+                )
+                .addOnCompleteListener(
+                        this,
+                        task -> {
+
+                            pairingInProgress =
+                                    false;
+
+                            if (!task.isSuccessful() ||
+                                    task.getResult() == null) {
+
+                                String message =
+                                        task.getException() != null
+                                                ? task.getException().getMessage()
+                                                : null;
+
+                                if (message != null &&
+                                        message.contains(
+                                                "Technician and customer must use different app identities"
+                                        )) {
+
+                                    message =
+                                            gr
+                                                    ? "Για πραγματική δοκιμή χρειάζεται δεύτερη συσκευή. "
+                                                    + "Το ίδιο Firebase identity δεν μπορεί να είναι ταυτόχρονα τεχνικός και πελάτης."
+                                                    :
+                                                    "A second device is required for a real test. "
+                                                    + "The same Firebase identity cannot be both technician and customer.";
+                                }
+
+                                showPairingError(
+                                        message != null
+                                                ? message
+                                                : (
+                                                gr
+                                                        ? "Η σύνδεση με τον τεχνικό απέτυχε."
+                                                        : "Could not connect to the technician."
+                                        )
+                                );
+
+                                return;
+                            }
+
+                            Object raw =
+                                    task.getResult()
+                                            .getData();
+
+                            if (!(raw instanceof Map)) {
+
+                                showPairingError(
+                                        gr
+                                                ? "Μη έγκυρη απάντηση από τον server."
+                                                : "Invalid response from server."
+                                );
+
+                                return;
+                            }
+
+                            Map<?, ?> result =
+                                    (Map<?, ?>) raw;
+
+                            Object sessionRaw =
+                                    result.get(
+                                            "sessionId"
+                                    );
+
+                            Object codeRaw =
+                                    result.get(
+                                            "serviceCode"
+                                    );
+
+                            Object expiryRaw =
+                                    result.get(
+                                            "expiresAt"
+                                    );
+
+                            Object statusRaw =
+                                    result.get(
+                                            "status"
+                                    );
+
+                            if (!(sessionRaw instanceof String) ||
+                                    !(codeRaw instanceof String) ||
+                                    !(expiryRaw instanceof Number) ||
+                                    !(statusRaw instanceof String)) {
+
+                                showPairingError(
+                                        gr
+                                                ? "Ελλιπής απάντηση από το Firebase backend."
+                                                : "Incomplete response from Firebase backend."
+                                );
+
+                                return;
+                            }
+
+                            String connectedSessionId =
+                                    (String) sessionRaw;
+
+                            String connectedServiceCode =
+                                    (String) codeRaw;
+
+                            long expiresAt =
+                                    ((Number) expiryRaw)
+                                            .longValue();
+
+                            String status =
+                                    (String) statusRaw;
+
+                            if (!"CONNECTED".equals(status)) {
+
+                                showPairingError(
+                                        gr
+                                                ? "Το Session δεν επέστρεψε κατάσταση CONNECTED."
+                                                : "Session did not return CONNECTED status."
+                                );
+
+                                return;
+                            }
+
+                            saveConnectedCustomerSession(
+                                    connectedSessionId,
+                                    connectedServiceCode,
+                                    expiresAt
+                            );
+
+                            showConnectedState(
+                                    connectedSessionId,
+                                    connectedServiceCode,
+                                    expiresAt
+                            );
+                        }
+                );
+    }
+
+    private void saveConnectedCustomerSession(
+            String sessionId,
+            String serviceCode,
+            long expiresAt
+    ) {
+
+        getSharedPreferences(
+                CUSTOMER_SESSION_PREFS,
+                MODE_PRIVATE
+        )
+                .edit()
+                .putString(
+                        KEY_SESSION_ID,
+                        sessionId
+                )
+                .putString(
+                        KEY_SERVICE_CODE,
+                        serviceCode
+                )
+                .putLong(
+                        KEY_EXPIRES_AT,
+                        expiresAt
+                )
+                .putBoolean(
+                        KEY_CONNECTED,
+                        true
+                )
+                .apply();
+    }
+
+    private void showConnectedState(
+            String sessionId,
+            String serviceCode,
+            long expiresAt
+    ) {
+
+        txtStatus.setText(
+                gr
+                        ? "● ΣΥΝΔΕΘΗΚΕ ΜΕ ΤΕΧΝΙΚΟ\nΤο Firebase Service Session είναι ενεργό."
+                        : "● CONNECTED TO TECHNICIAN\nFirebase Service Session is active."
+        );
+
+        txtStatus.setTextColor(
+                0xFF39FF14
+        );
+
+        txtSessionId.setText(
+                sessionId
+        );
+
+        txtServiceCode.setText(
+                serviceCode
+        );
+
+        long remainingMs =
+                Math.max(
+                        0L,
+                        expiresAt - System.currentTimeMillis()
+                );
+
+        long remainingMinutes =
+                remainingMs / 60000L;
+
+        txtExpiry.setText(
+                gr
+                        ? "Η συσκευή συνδέθηκε επιτυχώς. "
+                        + "Ο pairing code παραμένει έγκυρος για περίπου "
+                        + remainingMinutes
+                        + " λεπτά, αλλά το ενεργό Service Session δεν διακόπτεται από τη λήξη του code."
+                        :
+                        "Device connected successfully. "
+                        + "The pairing code remains valid for approximately "
+                        + remainingMinutes
+                        + " minutes, but the active Service Session is not terminated by code expiry."
+        );
+
+        Toast.makeText(
+                this,
+                gr
+                        ? "Σύνδεση με τεχνικό επιτυχής."
+                        : "Connected to technician successfully.",
+                Toast.LENGTH_LONG
+        ).show();
+    }
+
+    private void showPairingError(String message) {
+
+        txtStatus.setText(
+                gr
+                        ? "● ΑΠΟΤΥΧΙΑ ΣΥΝΔΕΣΗΣ\n" + message
+                        : "● PAIRING FAILED\n" + message
+        );
+
+        txtStatus.setTextColor(
+                0xFFFF5555
+        );
+
+        txtExpiry.setText(
+                gr
+                        ? "Ελέγξτε τον Service Code ή ζητήστε νέο Session από τον τεχνικό."
+                        : "Check the Service Code or ask the technician for a new Session."
+        );
+
+        Toast.makeText(
+                this,
+                message,
+                Toast.LENGTH_LONG
+        ).show();
     }
 
     private boolean isSixDigitCode(String code) {
