@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "172626247066",
+    "project_id": "gel-idoctor",
+    "storage_bucket": "gel-idoctor.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:172626247066:android:9edb027c4fbfe510b90e23",
+        "android_client_info": {
+          "package_name": "com.gel.iDoctor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDWTH5S9SXDKUjmR3DC_ydhRg_nm1ca-0k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
