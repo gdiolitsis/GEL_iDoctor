@@ -8,14 +8,18 @@ package com.gel.cleaner;
 import com.gel.cleaner.base.*;
 
 import android.content.ClipData;
+import android.app.Dialog;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -41,6 +45,14 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
     private static final String GEL_PRO_ACTIVE_KEY =
             "active";
+
+    // ============================================================
+    // TEMPORARY TEST UNLOCK
+    // ============================================================
+    // true  = Repair a Device works without GEL PRO during testing
+    // false = normal production GEL PRO entitlement check
+    // IMPORTANT: set to false before release.
+    private static final boolean TEMP_TEST_UNLOCK = true;
 
     // ============================================================
     // SERVICE SESSION STORAGE
@@ -209,6 +221,42 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         );
 
         root.addView(subtitle);
+
+        // ========================================================
+        // TEMPORARY TEST BUILD BANNER
+        // ========================================================
+        TextView testBanner = new TextView(this);
+
+        testBanner.setText(
+                gr
+                        ? "TEST MODE — TECHNICIAN UNLOCKED"
+                        : "TEST MODE — TECHNICIAN UNLOCKED"
+        );
+
+        testBanner.setTextColor(
+                0xFF39FF14
+        );
+
+        testBanner.setTextSize(
+                14f
+        );
+
+        testBanner.setTypeface(
+                Typeface.DEFAULT_BOLD
+        );
+
+        testBanner.setGravity(
+                Gravity.CENTER
+        );
+
+        testBanner.setPadding(
+                dp(8),
+                dp(8),
+                dp(8),
+                dp(10)
+        );
+
+        root.addView(testBanner);
 
         // ========================================================
         // TECHNICIAN STATUS
@@ -573,14 +621,6 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     private void createServiceSession() {
 
-        // Technician feature — GEL PRO required.
-        if (!isGelProActive()) {
-
-            showGelProRequiredDialog();
-
-            return;
-        }
-
         long now =
                 System.currentTimeMillis();
 
@@ -764,27 +804,14 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     private void showNoSessionState() {
 
-        boolean pro =
-                isGelProActive();
-
         txtStatus.setText(
-                pro
-                        ? (
-                        gr
-                                ? "Δεν υπάρχει ενεργό Service Session."
-                                : "No active Service Session."
-                )
-                        : (
-                        gr
-                                ? "🔒 GEL PRO απαιτείται για Technician Service Sessions."
-                                : "🔒 GEL PRO is required for Technician Service Sessions."
-                )
+                gr
+                        ? "● TEST MODE — TECHNICIAN UNLOCKED\nΔεν υπάρχει ενεργό Service Session."
+                        : "● TEST MODE — TECHNICIAN UNLOCKED\nNo active Service Session."
         );
 
         txtStatus.setTextColor(
-                pro
-                        ? 0xFFCCCCCC
-                        : 0xFFFFD700
+                0xFF39FF14
         );
 
         txtSessionId.setText(
@@ -973,40 +1000,319 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     private boolean isGelProActive() {
 
-        try {
-
-            return getSharedPreferences(
-                    GEL_PRO_PREFS,
-                    MODE_PRIVATE
-            )
-                    .getBoolean(
-                            GEL_PRO_ACTIVE_KEY,
-                            false
-                    );
-
-        } catch (Throwable ignore) {
-
-            return false;
-        }
+        // TEST BUILD: intentionally unlocked.
+        return true;
     }
 
     private void showGelProRequiredDialog() {
 
-        new AlertDialog.Builder(this)
-                .setTitle(
-                        "GEL PRO — Technician Service"
-                )
-                .setMessage(
-                        gr
-                                ? "Η λειτουργία Repair a Device προορίζεται για επαγγελματίες τεχνικούς και απαιτεί ενεργή συνδρομή GEL PRO."
-                                :
-                                "Repair a Device is a professional technician feature and requires an active GEL PRO subscription."
-                )
-                .setPositiveButton(
-                        "OK",
-                        null
-                )
-                .show();
+        // ========================================================
+        // GEL DARK-GOLD POPUP
+        // Use a plain Dialog so the Android AlertDialog theme
+        // cannot force a white panel/background.
+        // ========================================================
+        final Dialog dialog = new Dialog(this);
+
+        dialog.requestWindowFeature(
+                Window.FEATURE_NO_TITLE
+        );
+
+        LinearLayout box = new LinearLayout(this);
+
+        box.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        box.setPadding(
+                dp(20),
+                dp(18),
+                dp(20),
+                dp(16)
+        );
+
+        GradientDrawable boxBg =
+                new GradientDrawable();
+
+        boxBg.setColor(
+                0xFF0B0B0B
+        );
+
+        boxBg.setCornerRadius(
+                dp(14)
+        );
+
+        boxBg.setStroke(
+                dp(2),
+                0xFFFFD700
+        );
+
+        box.setBackground(
+                boxBg
+        );
+
+        // ========================================================
+        // TITLE
+        // ========================================================
+        TextView title =
+                new TextView(this);
+
+        title.setText(
+                "🔒 GEL PRO — Technician Service"
+        );
+
+        title.setTextColor(
+                0xFFFFD700
+        );
+
+        title.setTextSize(
+                19f
+        );
+
+        title.setTypeface(
+                Typeface.DEFAULT_BOLD
+        );
+
+        title.setGravity(
+                Gravity.CENTER
+        );
+
+        title.setPadding(
+                0,
+                dp(2),
+                0,
+                dp(14)
+        );
+
+        box.addView(
+                title
+        );
+
+        // ========================================================
+        // DIVIDER
+        // ========================================================
+        View divider =
+                new View(this);
+
+        GradientDrawable dividerBg =
+                new GradientDrawable();
+
+        dividerBg.setColor(
+                0xFFFFD700
+        );
+
+        divider.setBackground(
+                dividerBg
+        );
+
+        LinearLayout.LayoutParams dividerLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(1)
+                );
+
+        dividerLp.setMargins(
+                0,
+                0,
+                0,
+                dp(16)
+        );
+
+        divider.setLayoutParams(
+                dividerLp
+        );
+
+        box.addView(
+                divider
+        );
+
+        // ========================================================
+        // MESSAGE
+        // ========================================================
+        TextView message =
+                new TextView(this);
+
+        message.setText(
+                gr
+                        ? "Η λειτουργία «Repair a Device» είναι διαθέσιμη μόνο σε επαγγελματίες τεχνικούς με ενεργή συνδρομή GEL PRO.\n\n"
+                        + "Η συνδρομή ενεργοποιεί τα Technician Service Sessions για τη σύνδεση και διάγνωση συσκευών πελατών."
+                        :
+                        "“Repair a Device” is available only to professional technicians with an active GEL PRO subscription.\n\n"
+                        + "The subscription enables Technician Service Sessions for connecting and diagnosing customer devices."
+        );
+
+        message.setTextColor(
+                0xFFE6E6E6
+        );
+
+        message.setTextSize(
+                15f
+        );
+
+        message.setGravity(
+                Gravity.CENTER
+        );
+
+        message.setLineSpacing(
+                0f,
+                1.20f
+        );
+
+        message.setPadding(
+                dp(4),
+                0,
+                dp(4),
+                dp(18)
+        );
+
+        box.addView(
+                message
+        );
+
+        // ========================================================
+        // OK BUTTON
+        // ========================================================
+        Button ok =
+                new Button(this);
+
+        ok.setText(
+                "OK"
+        );
+
+        ok.setAllCaps(
+                false
+        );
+
+        ok.setTextColor(
+                0xFFFFD700
+        );
+
+        ok.setTextSize(
+                16f
+        );
+
+        ok.setTypeface(
+                Typeface.DEFAULT_BOLD
+        );
+
+        ok.setGravity(
+                Gravity.CENTER
+        );
+
+        ok.setPadding(
+                dp(12),
+                dp(12),
+                dp(12),
+                dp(12)
+        );
+
+        GradientDrawable okBg =
+                new GradientDrawable();
+
+        okBg.setColor(
+                0xFF0B0B0B
+        );
+
+        okBg.setCornerRadius(
+                dp(10)
+        );
+
+        okBg.setStroke(
+                dp(2),
+                0xFFFFD700
+        );
+
+        ok.setBackground(
+                okBg
+        );
+
+        LinearLayout.LayoutParams okLp =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+
+        okLp.setMargins(
+                0,
+                dp(2),
+                0,
+                0
+        );
+
+        ok.setLayoutParams(
+                okLp
+        );
+
+        ok.setOnClickListener(
+                v -> dialog.dismiss()
+        );
+
+        box.addView(
+                ok
+        );
+
+        // ========================================================
+        // SHOW DIALOG
+        // ========================================================
+        dialog.setContentView(
+                box
+        );
+
+        dialog.setCancelable(
+                true
+        );
+
+        dialog.setCanceledOnTouchOutside(
+                true
+        );
+
+        Window window =
+                dialog.getWindow();
+
+        if (window != null) {
+
+            window.setBackgroundDrawable(
+                    new ColorDrawable(
+                            Color.TRANSPARENT
+                    )
+            );
+
+            window.addFlags(
+                    WindowManager.LayoutParams.FLAG_DIM_BEHIND
+            );
+
+            WindowManager.LayoutParams params =
+                    window.getAttributes();
+
+            params.dimAmount =
+                    0.72f;
+
+            window.setAttributes(
+                    params
+            );
+        }
+
+        dialog.show();
+
+        // setLayout must be applied AFTER show()
+        if (dialog.getWindow() != null) {
+
+            int width =
+                    (int) (
+                            getResources()
+                                    .getDisplayMetrics()
+                                    .widthPixels
+                                    * 0.92f
+                    );
+
+            dialog.getWindow().setLayout(
+                    width,
+                    WindowManager.LayoutParams.WRAP_CONTENT
+            );
+
+            dialog.getWindow().setGravity(
+                    Gravity.CENTER
+            );
+        }
     }
 
     // ============================================================
