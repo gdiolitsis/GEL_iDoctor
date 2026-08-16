@@ -27,7 +27,6 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.Nullable;
 
-import com.gel.cleaner.base.GELAutoActivityHook;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
