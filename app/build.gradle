@@ -100,6 +100,12 @@ dependencies {
     implementation "androidx.work:work-runtime:2.9.0"
 
     // -------------------------------------------------
+    // Guava concurrency API required by WorkManager Worker
+    // Provides com.google.common.util.concurrent.ListenableFuture
+    // -------------------------------------------------
+    implementation 'com.google.guava:guava:33.6.0-android'
+
+    // -------------------------------------------------
     // Firebase — Technician / Customer real-time pairing
     // BoM keeps Firebase Android SDK versions compatible.
     // -------------------------------------------------
