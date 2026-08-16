@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -89,9 +90,23 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
+
+    // -------------------------------------------------
+    // QR / BARCODE
+    // -------------------------------------------------
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
     implementation 'com.google.zxing:core:3.5.2'
+
     implementation "androidx.work:work-runtime:2.9.0"
+
+    // -------------------------------------------------
+    // Firebase — Technician / Customer real-time pairing
+    // BoM keeps Firebase Android SDK versions compatible.
+    // -------------------------------------------------
+    implementation platform('com.google.firebase:firebase-bom:34.16.0')
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-functions'
 
     // -------------------------------------------------
     // Google Play Billing
