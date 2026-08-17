@@ -97,6 +97,12 @@ dependencies {
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
     implementation 'com.google.zxing:core:3.5.2'
 
+    // -------------------------------------------------
+    // Google Play Install Referrer
+    // Preserves the Smart Service Session across install -> first open.
+    // -------------------------------------------------
+    implementation "com.android.installreferrer:installreferrer:2.2"
+
     implementation "androidx.work:work-runtime:2.9.0"
 
     // -------------------------------------------------

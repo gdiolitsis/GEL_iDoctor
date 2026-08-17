@@ -1,0 +1,36 @@
+{
+  "hosting": {
+    "public": "hosting",
+    "ignore": [
+      "firebase.smartqr.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "cleanUrls": true,
+    "headers": [
+      {
+        "source": "/connect/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store, max-age=0"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "no-referrer"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/connect",
+        "destination": "/connect/index.html"
+      },
+      {
+        "source": "/connect/**",
+        "destination": "/connect/index.html"
+      }
+    ]
+  }
+}

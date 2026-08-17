@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>GEL iDoctor Service Connection</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #0b0b0b;
+      color: #f6f6f6;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 24px;
+    }
+    .card {
+      width: min(520px, 100%);
+      border: 1px solid #d7b93e;
+      border-radius: 20px;
+      background: #121212;
+      padding: 28px 22px;
+      text-align: center;
+      box-shadow: 0 18px 50px rgba(0,0,0,.45);
+    }
+    .brand { color: #ffd700; font-size: 27px; font-weight: 800; letter-spacing: .4px; }
+    .sub { margin-top: 8px; color: #cfcfcf; font-size: 15px; }
+    .status { margin: 28px 0 20px; font-size: 17px; line-height: 1.45; }
+    .btn {
+      display: block;
+      width: 100%;
+      border: 1px solid #ffd700;
+      border-radius: 14px;
+      padding: 14px 16px;
+      color: #ffd700;
+      background: #171717;
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 16px;
+      margin-top: 12px;
+    }
+    .small { color: #8f8f8f; font-size: 12px; margin-top: 20px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand">GEL iDoctor</div>
+    <div class="sub">Smart Service Connection</div>
+    <div class="status" id="status">Opening iDoctor…</div>
+    <a class="btn" id="openBtn" href="#">OPEN / INSTALL iDoctor</a>
+    <div class="small">This temporary service link is valid only for the technician session that created the QR code.</div>
+  </main>
+
+  <script>
+    (() => {
+      const q = new URLSearchParams(window.location.search);
+      const v = q.get('v') || '';
+      const session = q.get('session') || '';
+      const code = q.get('code') || '';
+      const expires = q.get('expires') || '';
+      const status = document.getElementById('status');
+      const button = document.getElementById('openBtn');
+
+      const valid =
+        v === '1' &&
+        /^GEL-/.test(session) &&
+        /^\d{6}$/.test(code) &&
+        /^\d+$/.test(expires);
+
+      if (!valid) {
+        status.textContent = 'Invalid or incomplete GEL iDoctor service link.';
+        button.style.display = 'none';
+        return;
+      }
+
+      if (Date.now() >= Number(expires)) {
+        status.textContent = 'This GEL iDoctor service link has expired. Ask the technician to create a new Service Session.';
+        button.style.display = 'none';
+        return;
+      }
+
+      const params = new URLSearchParams({v, session, code, expires});
+      const referrer = new URLSearchParams({
+        gel_service: '1',
+        v,
+        session,
+        code,
+        expires
+      }).toString();
+
+      const playUrl =
+        'https://play.google.com/store/apps/details?id=com.gel.iDoctor&referrer=' +
+        encodeURIComponent(referrer);
+
+      // Chrome/Android route used before verified App Links are activated.
+      // If iDoctor is installed, the explicit package+scheme opens it.
+      // If not installed, browser_fallback_url opens the Play listing and
+      // Install Referrer preserves this exact Service Session after install.
+      const intentUrl =
+        'intent://technician/pair?' + params.toString() +
+        '#Intent;scheme=gel;package=com.gel.iDoctor;S.browser_fallback_url=' +
+        encodeURIComponent(playUrl) + ';end';
+
+      button.href = intentUrl;
+      status.textContent = 'Connecting to the technician session…';
+
+      // Automatic hand-off. The visible button remains as a safe fallback
+      // for browsers that block automatic external-app navigation.
+      setTimeout(() => {
+        window.location.href = intentUrl;
+      }, 180);
+    })();
+  </script>
+</body>
+</html>

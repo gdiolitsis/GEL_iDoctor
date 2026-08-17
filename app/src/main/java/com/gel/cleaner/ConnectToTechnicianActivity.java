@@ -7,6 +7,7 @@
 package com.gel.cleaner;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -125,6 +126,50 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
         UIHelpers.applyPressEffectRecursive(
                 getWindow().getDecorView()
         );
+
+        boolean handledSmartLink =
+                handleIncomingSmartServiceIntent(
+                        getIntent()
+                );
+
+        if (!handledSmartLink) {
+            GELInstallReferrerManager.checkOnce(
+                    this,
+                    payload -> runOnUiThread(
+                            () -> handleQrPayload(payload)
+                    )
+            );
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingSmartServiceIntent(intent);
+    }
+
+    private boolean handleIncomingSmartServiceIntent(Intent intent) {
+
+        if (intent == null || intent.getData() == null) {
+            return false;
+        }
+
+        String action = intent.getAction();
+
+        if (action != null &&
+                !Intent.ACTION_VIEW.equals(action)) {
+            return false;
+        }
+
+        String payload = intent.getData().toString();
+
+        if (GELSmartServiceLink.parse(payload) == null) {
+            return false;
+        }
+
+        handleQrPayload(payload);
+        return true;
     }
 
     // ============================================================
@@ -640,9 +685,10 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
     }
 
     // ============================================================
-    // QR PAYLOAD VALIDATION
-    // Expected:
-    // gel://technician/pair?v=1&session=...&code=......&expires=...
+    // QR / SMART SERVICE LINK VALIDATION
+    // Accepted formats:
+    // 1) https://gel-idoctor.web.app/connect?...
+    // 2) gel://technician/pair?...   (legacy / browser fallback)
     // ============================================================
     private void handleQrPayload(String payload) {
 
@@ -658,124 +704,64 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
             return;
         }
 
-        try {
+        GELSmartServiceLink.ParsedLink parsed =
+                GELSmartServiceLink.parse(payload);
 
-            Uri uri =
-                    Uri.parse(
-                            payload.trim()
-                    );
-
-            String scheme =
-                    uri.getScheme();
-
-            String host =
-                    uri.getHost();
-
-            String path =
-                    uri.getPath();
-
-            if (!"gel".equalsIgnoreCase(scheme) ||
-                    !"technician".equalsIgnoreCase(host) ||
-                    !"/pair".equals(path)) {
-
-                showInvalidQr(
-                        gr
-                                ? "Το QR δεν είναι iDoctor Technician Session."
-                                : "This QR is not an iDoctor Technician Session."
-                );
-
-                return;
-            }
-
-            String version =
-                    uri.getQueryParameter(
-                            "v"
-                    );
-
-            String session =
-                    uri.getQueryParameter(
-                            "session"
-                    );
-
-            String code =
-                    uri.getQueryParameter(
-                            "code"
-                    );
-
-            String expiresRaw =
-                    uri.getQueryParameter(
-                            "expires"
-                    );
-
-            if (!"1".equals(version) ||
-                    session == null ||
-                    !session.startsWith("GEL-") ||
-                    !isSixDigitCode(code) ||
-                    expiresRaw == null) {
-
-                showInvalidQr(
-                        gr
-                                ? "Το QR δεν περιέχει έγκυρα στοιχεία Service Session."
-                                : "The QR does not contain valid Service Session data."
-                );
-
-                return;
-            }
-
-            long expires =
-                    Long.parseLong(
-                            expiresRaw
-                    );
-
-            if (System.currentTimeMillis() >= expires) {
-
-                txtStatus.setText(
-                        gr
-                                ? "● Ο ΚΩΔΙΚΟΣ ΣΥΝΔΕΣΗΣ ΕΧΕΙ ΛΗΞΕΙ"
-                                : "● PAIRING CODE EXPIRED"
-                );
-
-                txtStatus.setTextColor(
-                        0xFFFF5555
-                );
-
-                txtSessionId.setText(
-                        session
-                );
-
-                txtServiceCode.setText(
-                        code
-                );
-
-                txtExpiry.setText(
-                        gr
-                                ? "Ζητήστε από τον τεχνικό να δημιουργήσει νέο κωδικό."
-                                : "Ask the technician to generate a new code."
-                );
-
-                return;
-            }
-
-            showValidQr(
-                    session,
-                    code,
-                    expires
-            );
-
-            claimServiceSession(
-                    session,
-                    code,
-                    expires
-            );
-
-        } catch (Throwable t) {
+        if (parsed == null) {
 
             showInvalidQr(
                     gr
-                            ? "Μη έγκυρο QR."
-                            : "Invalid QR."
+                            ? "Το QR δεν είναι έγκυρο iDoctor Service Session."
+                            : "This QR is not a valid iDoctor Service Session."
             );
+
+            return;
         }
+
+        String session = parsed.sessionId;
+        String code = parsed.serviceCode;
+        long expires = parsed.expiresAt;
+
+        if (System.currentTimeMillis() >= expires) {
+
+            txtStatus.setText(
+                    gr
+                            ? "● Ο ΚΩΔΙΚΟΣ ΣΥΝΔΕΣΗΣ ΕΧΕΙ ΛΗΞΕΙ"
+                            : "● PAIRING CODE EXPIRED"
+            );
+
+            txtStatus.setTextColor(
+                    0xFFFF5555
+            );
+
+            txtSessionId.setText(
+                    session
+            );
+
+            txtServiceCode.setText(
+                    code
+            );
+
+            txtExpiry.setText(
+                    gr
+                            ? "Ζητήστε από τον τεχνικό να δημιουργήσει νέο κωδικό."
+                            : "Ask the technician to generate a new code."
+            );
+
+            return;
+        }
+
+        showValidQr(
+                session,
+                code,
+                expires
+        );
+
+        claimServiceSession(
+                session,
+                code,
+                expires
+        );
     }
 
     private void showValidQr(

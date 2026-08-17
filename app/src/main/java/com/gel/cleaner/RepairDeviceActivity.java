@@ -616,7 +616,9 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         // ========================================================
         TextView qrSection =
                 sectionLabel(
-                        "QR PAIRING"
+                        gr
+                                ? "SMART SERVICE QR"
+                                : "SMART SERVICE QR"
                 );
 
         root.addView(
@@ -1974,8 +1976,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
             txtQrPlaceholder.setText(
                     gr
-                            ? "Σαρώστε το QR από τη συσκευή του πελάτη ή χρησιμοποιήστε τον 6ψήφιο Service Code."
-                            : "Scan this QR from the customer's device or use the 6-digit Service Code."
+                            ? "Σαρώστε μία φορά: ανοίγει το iDoctor ή οδηγεί στην εγκατάσταση. Ο Service Code παραμένει διαθέσιμος ως εφεδρεία."
+                            : "Scan once: opens iDoctor or takes the customer to installation. The Service Code remains available as a fallback."
             );
 
         } else {
@@ -2209,7 +2211,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     }
 
     // ============================================================
-    // QR PAYLOAD
+    // SMART SERVICE QR PAYLOAD
     // ============================================================
     private String buildQrPayload(
             String sessionId,
@@ -2217,13 +2219,15 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
             long pairingExpires
     ) {
 
-        // Versioned custom URI.
-        // The customer-side Connect to Technician flow will parse this.
-        return "gel://technician/pair"
-                + "?v=1"
-                + "&session=" + sessionId
-                + "&code=" + serviceCode
-                + "&expires=" + pairingExpires;
+        // One HTTPS QR for the technician workflow.
+        // Installed iDoctor: opens the customer pairing flow.
+        // Not installed: Firebase Hosting sends the customer to Google Play
+        // while preserving this same Service Session through Install Referrer.
+        return GELSmartServiceLink.buildSmartLink(
+                sessionId,
+                serviceCode,
+                pairingExpires
+        );
     }
 
     // ============================================================

@@ -214,6 +214,37 @@ if (getIntent() != null && getIntent().hasExtra("mini_cpu")) {
     setupLangButtons();
     setupCertificationAccess();
     setupButtons();
+
+    // Smart Service QR deferred hand-off after a Google Play install.
+    // If the first install originated from a technician Service QR,
+    // open the customer pairing screen automatically with that same session.
+    GELInstallReferrerManager.checkOnce(
+            this,
+            payload -> runOnUiThread(() -> {
+
+                Intent smartConnect =
+                        new Intent(
+                                MainActivity.this,
+                                ConnectToTechnicianActivity.class
+                        );
+
+                smartConnect.setAction(
+                        Intent.ACTION_VIEW
+                );
+
+                smartConnect.setData(
+                        Uri.parse(payload)
+                );
+
+                smartConnect.addFlags(
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                );
+
+                startActivity(
+                        smartConnect
+                );
+            })
+    );
     
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
     if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)

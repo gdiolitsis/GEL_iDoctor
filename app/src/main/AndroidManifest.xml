@@ -232,9 +232,35 @@
         <!-- ================= CUSTOMER DEVICE / CONNECT TO TECHNICIAN ================= -->
         <activity
             android:name=".ConnectToTechnicianActivity"
-            android:exported="false"
+            android:exported="true"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.GEL.DarkGold"/>
+            android:theme="@style/Theme.GEL.DarkGold">
+
+            <!-- Smart Service QR — verified HTTPS App Link.
+                 The Digital Asset Links file can be activated later with
+                 the Play/App signing SHA-256 fingerprint. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="gel-idoctor.web.app"
+                    android:pathPrefix="/connect"/>
+            </intent-filter>
+
+            <!-- Browser fallback while App Link verification is not yet active. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="gel"
+                    android:host="technician"
+                    android:path="/pair"/>
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".ServiceReportActivity"
