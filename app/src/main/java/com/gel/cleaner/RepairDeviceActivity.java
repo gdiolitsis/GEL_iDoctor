@@ -47,6 +47,13 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
             "active";
 
     // ============================================================
+    // TEMPORARY TECHNICIAN SERVICE TEST UNLOCK
+    // true only for real-world two-device testing.
+    // MUST be false before production release.
+    // ============================================================
+    private static final boolean TEMP_TECHNICIAN_TEST_UNLOCK = true;
+
+    // ============================================================
     // SERVICE SESSION STORAGE
     // ============================================================
     private static final String SESSION_PREFS =
@@ -158,7 +165,9 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         TextView title = new TextView(this);
 
         title.setText(
-                "Repair a Device"
+                gr
+                        ? "Απομακρυσμένη Διάγνωση & Υποστήριξη Συσκευής"
+                        : "Remote Device Diagnostics & Support"
         );
 
         title.setTextColor(
@@ -1081,19 +1090,22 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     private boolean isGelProActive() {
 
-        try {
+        // TEST BUILD:
+        // both physical devices may act as technician.
+        if (TEMP_TECHNICIAN_TEST_UNLOCK) {
+            return true;
+        }
 
+        // Production entitlement path remains intact.
+        try {
             return getSharedPreferences(
                     GEL_PRO_PREFS,
                     MODE_PRIVATE
-            )
-                    .getBoolean(
-                            GEL_PRO_ACTIVE_KEY,
-                            false
-                    );
-
+            ).getBoolean(
+                    GEL_PRO_ACTIVE_KEY,
+                    false
+            );
         } catch (Throwable ignore) {
-
             return false;
         }
     }
