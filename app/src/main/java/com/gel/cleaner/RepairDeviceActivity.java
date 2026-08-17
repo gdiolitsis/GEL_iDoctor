@@ -5,6 +5,11 @@
 
 package com.gel.cleaner;
 
+import android.app.Dialog;
+import android.graphics.drawable.ColorDrawable;
+import android.view.Window;
+import android.view.WindowManager;
+
 import com.gel.cleaner.base.*;
 
 import android.content.ClipData;
