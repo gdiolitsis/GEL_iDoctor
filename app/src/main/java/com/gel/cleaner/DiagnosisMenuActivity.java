@@ -111,8 +111,8 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
             root.addView(manualBtn);
 
             // ========================================================
-            // TECHNICIAN SERVICE — REPAIR A DEVICE
-            // Android customer-device service session
+            // TECHNICIAN SERVICE — REMOTE DEVICE DIAGNOSTICS & SUPPORT
+            // Android customer-device remote service session
             // ========================================================
             final boolean gr = AppLang.isGreek(this);
 
@@ -123,10 +123,12 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
             ));
 
             View repairBtn = makeBlockButton(
-                    "Repair a Device",
                     gr
-                            ? "Σύνδεση συσκευής πελάτη • QR / Service Code • Διάγνωση"
-                            : "Connect customer device • QR / Service Code • Diagnostics"
+                            ? "Απομακρυσμένη Διάγνωση & Υποστήριξη Συσκευής"
+                            : "Remote Device Diagnostics & Support",
+                    gr
+                            ? "Σύνδεση συσκευής πελάτη • QR / Service Code • Live Diagnostics"
+                            : "Connect customer device • QR / Service Code • Live Diagnostics"
             );
 
             repairBtn.setOnClickListener(v ->
