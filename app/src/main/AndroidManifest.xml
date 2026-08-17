@@ -95,6 +95,7 @@
          ============================================================ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
 
     <application
         android:allowBackup="false"
@@ -145,6 +146,13 @@
             android:name=".GelWidgetLiveService"
             android:exported="false"
             android:foregroundServiceType="shortService"
+            android:stopWithTask="false" />
+
+        <!-- ================= CUSTOMER REMOTE COMMAND SESSION ================= -->
+        <service
+            android:name=".GELRemoteCommandService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
 
         <!-- ================= EXISTING ================= -->
@@ -214,7 +222,7 @@
             android:exported="false"
             android:screenOrientation="portrait"/>
 
-        <!-- ================= REPAIR A DEVICE / TECHNICIAN SERVICE ================= -->
+        <!-- ================= REMOTE DEVICE DIAGNOSTICS & SUPPORT / TECHNICIAN ================= -->
         <activity
             android:name=".RepairDeviceActivity"
             android:exported="false"
