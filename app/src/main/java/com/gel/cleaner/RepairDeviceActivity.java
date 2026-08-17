@@ -24,7 +24,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
@@ -239,8 +238,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         btnCreateSession =
                 makeActionButton(
                         gr
-                                ? "Δημιουργία Service Session"
-                                : "Create Service Session"
+                                ? "Δημιουργία Smart Service Session"
+                                : "Create Smart Service Session"
                 );
 
         btnCreateSession.setOnClickListener(
@@ -353,7 +352,9 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         // ========================================================
         TextView qrSection =
                 sectionLabel(
-                        "QR PAIRING"
+                        gr
+                                ? "ΕΓΚΑΤΑΣΤΑΣΗ & ΣΥΝΔΕΣΗ ΜΕ QR"
+                                : "INSTALL & CONNECT WITH QR"
                 );
 
         root.addView(
@@ -475,17 +476,17 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         instructions.setText(
                 gr
-                        ? "1. Ανοίξτε το iDoctor στη συσκευή του πελάτη.\n\n"
-                        + "2. Επιλέξτε «Connect to Technician».\n\n"
-                        + "3. Σαρώστε το QR ή εισαγάγετε τον 6ψήφιο Service Code.\n\n"
-                        + "4. Επιτρέψτε τα απαραίτητα δικαιώματα διαγνωστικών ελέγχων.\n\n"
-                        + "5. Η συσκευή θα συνδεθεί προσωρινά στο ενεργό Service Session του τεχνικού."
+                        ? "1. Σαρώστε το QR από τη συσκευή του πελάτη.\n\n"
+                        + "2. Αν το GEL iDoctor δεν είναι εγκατεστημένο, θα ανοίξει η σελίδα εγκατάστασης.\n\n"
+                        + "3. Μετά την εγκατάσταση πατήστε Άνοιγμα. Αν το iDoctor υπάρχει ήδη, ανοίγει απευθείας.\n\n"
+                        + "4. Το Smart Service Session μεταφέρεται αυτόματα στη συσκευή του πελάτη.\n\n"
+                        + "5. Ο 6ψήφιος Service Code παραμένει διαθέσιμος μόνο ως εφεδρεία."
                         :
-                        "1. Open iDoctor on the customer's device.\n\n"
-                        + "2. Select \"Connect to Technician\".\n\n"
-                        + "3. Scan the QR code or enter the 6-digit Service Code.\n\n"
-                        + "4. Allow the required diagnostic permissions.\n\n"
-                        + "5. The device will temporarily connect to the technician's active Service Session."
+                        "1. Scan the QR code from the customer's device.\n\n"
+                        + "2. If GEL iDoctor is not installed, the installation page will open.\n\n"
+                        + "3. After installation tap Open. If iDoctor is already installed, it opens directly.\n\n"
+                        + "4. The Smart Service Session is transferred automatically to the customer's device.\n\n"
+                        + "5. The 6-digit Service Code remains available only as a fallback."
         );
 
         root.addView(
@@ -827,43 +828,145 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     private void cancelCurrentSession() {
 
-        new AlertDialog.Builder(this)
-                .setTitle(
-                        gr
-                                ? "Ακύρωση Service Session"
-                                : "Cancel Service Session"
-                )
-                .setMessage(
-                        gr
-                                ? "Θέλετε να ακυρώσετε το ενεργό Service Session;"
-                                : "Do you want to cancel the active Service Session?"
-                )
-                .setNegativeButton(
-                        gr
-                                ? "Όχι"
-                                : "No",
-                        null
-                )
-                .setPositiveButton(
-                        gr
-                                ? "Ακύρωση Session"
-                                : "Cancel Session",
-                        (dialog, which) -> {
+        showGelConfirmDialog(
+                gr ? "Ακύρωση Service Session" : "Cancel Service Session",
+                gr
+                        ? "Θέλετε να ακυρώσετε το ενεργό Service Session;"
+                        : "Do you want to cancel the active Service Session?",
+                gr ? "Όχι" : "No",
+                gr ? "Ακύρωση Session" : "Cancel Session",
+                () -> {
+                    clearStoredSession();
+                    showNoSessionState();
 
-                            clearStoredSession();
+                    Toast.makeText(
+                            this,
+                            gr
+                                    ? "Το Service Session ακυρώθηκε."
+                                    : "Service Session cancelled.",
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
+        );
+    }
 
-                            showNoSessionState();
+    private void showGelConfirmDialog(
+            String titleText,
+            String messageText,
+            String negativeText,
+            String positiveText,
+            Runnable onPositive
+    ) {
+        final Dialog dialog = new Dialog(
+                this,
+                android.R.style.Theme_Material_NoActionBar_TranslucentDecor
+        );
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setCancelable(true);
+        dialog.setCanceledOnTouchOutside(true);
 
-                            Toast.makeText(
-                                    this,
-                                    gr
-                                            ? "Το Service Session ακυρώθηκε."
-                                            : "Service Session cancelled.",
-                                    Toast.LENGTH_SHORT
-                            ).show();
-                        }
-                )
-                .show();
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(18), dp(20), dp(16));
+
+        GradientDrawable boxBg = new GradientDrawable();
+        boxBg.setColor(0xFF0B0B0B);
+        boxBg.setCornerRadius(dp(14));
+        boxBg.setStroke(dp(2), 0xFFFFD700);
+        box.setBackground(boxBg);
+
+        TextView title = new TextView(this);
+        title.setText(titleText);
+        title.setTextColor(0xFFFFD700);
+        title.setTextSize(19f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, dp(2), 0, dp(14));
+        box.addView(title);
+
+        View divider = new View(this);
+        GradientDrawable dividerBg = new GradientDrawable();
+        dividerBg.setColor(0xFFFFD700);
+        divider.setBackground(dividerBg);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        dividerLp.setMargins(0, 0, 0, dp(16));
+        divider.setLayoutParams(dividerLp);
+        box.addView(divider);
+
+        TextView message = new TextView(this);
+        message.setText(messageText);
+        message.setTextColor(0xFFE6E6E6);
+        message.setTextSize(15f);
+        message.setGravity(Gravity.CENTER);
+        message.setLineSpacing(0f, 1.20f);
+        message.setPadding(dp(4), 0, dp(4), dp(18));
+        box.addView(message);
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER);
+
+        Button negative = buildGelDialogButton(negativeText);
+        Button positive = buildGelDialogButton(positiveText);
+
+        LinearLayout.LayoutParams leftLp = new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        leftLp.setMargins(0, 0, dp(6), 0);
+        negative.setLayoutParams(leftLp);
+
+        LinearLayout.LayoutParams rightLp = new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        rightLp.setMargins(dp(6), 0, 0, 0);
+        positive.setLayoutParams(rightLp);
+
+        negative.setOnClickListener(v -> dialog.dismiss());
+        positive.setOnClickListener(v -> {
+            dialog.dismiss();
+            if (onPositive != null) onPositive.run();
+        });
+
+        row.addView(negative);
+        row.addView(positive);
+        box.addView(row);
+
+        dialog.setContentView(box);
+        dialog.show();
+        applyGelDialogWindow(dialog);
+    }
+
+    private Button buildGelDialogButton(String text) {
+        Button button = new Button(this);
+        button.setText(text);
+        button.setAllCaps(false);
+        button.setTextColor(0xFFFFD700);
+        button.setTextSize(15f);
+        button.setTypeface(Typeface.DEFAULT_BOLD);
+        button.setGravity(Gravity.CENTER);
+        button.setPadding(dp(10), dp(11), dp(10), dp(11));
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF0B0B0B);
+        bg.setCornerRadius(dp(10));
+        bg.setStroke(dp(2), 0xFFFFD700);
+        button.setBackground(bg);
+        return button;
+    }
+
+    private void applyGelDialogWindow(Dialog dialog) {
+        Window window = dialog.getWindow();
+        if (window == null) return;
+
+        window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+
+        WindowManager.LayoutParams params = window.getAttributes();
+        params.dimAmount = 0.72f;
+        window.setAttributes(params);
+
+        int width = (int) (getResources().getDisplayMetrics().widthPixels * 0.92f);
+        window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
+        window.setGravity(Gravity.CENTER);
     }
 
     // ============================================================
@@ -991,22 +1094,65 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     }
 
     private void showGelProRequiredDialog() {
+        final Dialog dialog = new Dialog(
+                this,
+                android.R.style.Theme_Material_NoActionBar_TranslucentDecor
+        );
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setCancelable(true);
+        dialog.setCanceledOnTouchOutside(true);
 
-        new AlertDialog.Builder(this)
-                .setTitle(
-                        "GEL PRO — Technician Service"
-                )
-                .setMessage(
-                        gr
-                                ? "Η λειτουργία Repair a Device προορίζεται για επαγγελματίες τεχνικούς και απαιτεί ενεργή συνδρομή GEL PRO."
-                                :
-                                "Repair a Device is a professional technician feature and requires an active GEL PRO subscription."
-                )
-                .setPositiveButton(
-                        "OK",
-                        null
-                )
-                .show();
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(18), dp(20), dp(16));
+
+        GradientDrawable boxBg = new GradientDrawable();
+        boxBg.setColor(0xFF0B0B0B);
+        boxBg.setCornerRadius(dp(14));
+        boxBg.setStroke(dp(2), 0xFFFFD700);
+        box.setBackground(boxBg);
+
+        TextView title = new TextView(this);
+        title.setText("🔒 GEL PRO — Technician Service");
+        title.setTextColor(0xFFFFD700);
+        title.setTextSize(19f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(0, dp(2), 0, dp(14));
+        box.addView(title);
+
+        View divider = new View(this);
+        GradientDrawable dividerBg = new GradientDrawable();
+        dividerBg.setColor(0xFFFFD700);
+        divider.setBackground(dividerBg);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        dividerLp.setMargins(0, 0, 0, dp(16));
+        divider.setLayoutParams(dividerLp);
+        box.addView(divider);
+
+        TextView message = new TextView(this);
+        message.setText(
+                gr
+                        ? "Η λειτουργία «Απομακρυσμένη Διάγνωση & Υποστήριξη Συσκευής» είναι διαθέσιμη μόνο σε επαγγελματίες τεχνικούς με ενεργή συνδρομή GEL PRO.\n\n"
+                          + "Η συνδρομή ενεργοποιεί τα Smart Technician Service Sessions για σύνδεση και διάγνωση συσκευών πελατών."
+                        : "Remote Device Diagnostics & Support is available only to professional technicians with an active GEL PRO subscription.\n\n"
+                          + "The subscription enables Smart Technician Service Sessions for connecting and diagnosing customer devices."
+        );
+        message.setTextColor(0xFFE6E6E6);
+        message.setTextSize(15f);
+        message.setGravity(Gravity.CENTER);
+        message.setLineSpacing(0f, 1.20f);
+        message.setPadding(dp(4), 0, dp(4), dp(18));
+        box.addView(message);
+
+        Button ok = buildGelDialogButton("OK");
+        ok.setOnClickListener(v -> dialog.dismiss());
+        box.addView(ok);
+
+        dialog.setContentView(box);
+        dialog.show();
+        applyGelDialogWindow(dialog);
     }
 
     // ============================================================
