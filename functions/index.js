@@ -42,6 +42,70 @@ const DIAGNOSTIC_MAX_LINES_PER_BATCH = 25;
 const DIAGNOSTIC_MAX_LINE_CHARS = 2000;
 const DIAGNOSTIC_MAX_BATCH_CHARS = 16000;
 
+
+// Remote functional-control limits.
+const REMOTE_COMMAND_TTL_MS = 2 * 60 * 1000;
+const REMOTE_MAX_PAYLOAD_CHARS = 4096;
+const REMOTE_MAX_RESULT_CHARS = 12000;
+const REMOTE_MAX_MESSAGE_CHARS = 1000;
+
+const REMOTE_ACTIONS = new Set([
+  "PING",
+  "GET_IDOCTOR_SETTINGS",
+  "APPLY_IDOCTOR_SETTINGS",
+  "SET_LANGUAGE",
+  "SET_PLATFORM",
+  "CLEAN_IDOCTOR_CACHE",
+  "GET_DEVICE_SUMMARY",
+  "CPU_RAM_SNAPSHOT",
+]);
+
+function normalizeRemoteAction(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const action = value.trim().toUpperCase();
+
+  return REMOTE_ACTIONS.has(action)
+    ? action
+    : null;
+}
+
+function sanitizePlainObject(value, maxChars, fieldName) {
+  const obj =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {};
+
+  let encoded;
+
+  try {
+    encoded = JSON.stringify(obj);
+  } catch (err) {
+    throw new HttpsError(
+      "invalid-argument",
+      `${fieldName} must be JSON-serializable.`
+    );
+  }
+
+  if (encoded.length > maxChars) {
+    throw new HttpsError(
+      "invalid-argument",
+      `${fieldName} is too large.`
+    );
+  }
+
+  return obj;
+}
+
+function createCommandId() {
+  return `CMD-${Date.now().toString(36).toUpperCase()}-${crypto
+    .randomBytes(4)
+    .toString("hex")
+    .toUpperCase()}`;
+}
+
 function requireAuth(request) {
   if (!request.auth || !request.auth.uid) {
     throw new HttpsError(
@@ -628,6 +692,513 @@ exports.appendDiagnosticBatch =
         acceptedLines:
           sanitizedLines.length,
         sequence,
+      };
+    }
+  );
+// ============================================================
+// TECHNICIAN — SEND ALLOWLISTED REMOTE COMMAND
+//
+// Writes a single active command into the parent Service Session.
+// This intentionally reuses the parent document because the current
+// Firestore rules already allow both assigned parties to read it.
+//
+// PENDING -> RUNNING -> SUCCESS / FAILED
+// ============================================================
+exports.sendRemoteCommand =
+  onCall(
+    async (request) => {
+      const technicianUid =
+        requireAuth(request);
+
+      const data =
+        request.data || {};
+
+      const sessionId =
+        normalizeSessionId(
+          data.sessionId
+        );
+
+      const action =
+        normalizeRemoteAction(
+          data.action
+        );
+
+      if (!sessionId) {
+        throw new HttpsError(
+          "invalid-argument",
+          "A valid Service Session ID is required."
+        );
+      }
+
+      if (!action) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Unsupported remote action."
+        );
+      }
+
+      const payload =
+        sanitizePlainObject(
+          data.payload,
+          REMOTE_MAX_PAYLOAD_CHARS,
+          "Remote command payload"
+        );
+
+      const sessionRef =
+        db
+          .collection(COLLECTION)
+          .doc(sessionId);
+
+      const commandId =
+        createCommandId();
+
+      const nowMs =
+        Date.now();
+
+      const expiresAtMs =
+        nowMs +
+        REMOTE_COMMAND_TTL_MS;
+
+      await db.runTransaction(
+        async (tx) => {
+          const snap =
+            await tx.get(
+              sessionRef
+            );
+
+          if (!snap.exists) {
+            throw new HttpsError(
+              "not-found",
+              "Service Session not found."
+            );
+          }
+
+          const session =
+            snap.data();
+
+          if (
+            session.technicianUid !==
+            technicianUid
+          ) {
+            throw new HttpsError(
+              "permission-denied",
+              "This Service Session does not belong to this technician."
+            );
+          }
+
+          if (
+            session.status !==
+            "CONNECTED" ||
+            !session.customerUid
+          ) {
+            throw new HttpsError(
+              "failed-precondition",
+              "Remote commands require a CONNECTED customer device."
+            );
+          }
+
+          const previous =
+            session.remoteCommand;
+
+          if (
+            previous &&
+            (
+              previous.status === "PENDING" ||
+              previous.status === "RUNNING"
+            )
+          ) {
+            const previousExpiresMs =
+              previous.expiresAt &&
+              typeof previous.expiresAt.toMillis === "function"
+                ? previous.expiresAt.toMillis()
+                : 0;
+
+            if (
+              previousExpiresMs >
+              nowMs
+            ) {
+              throw new HttpsError(
+                "resource-exhausted",
+                "Another remote command is still active."
+              );
+            }
+          }
+
+          tx.update(
+            sessionRef,
+            {
+              remoteCommand: {
+                version: 1,
+                id: commandId,
+                action,
+                payload,
+                status: "PENDING",
+                technicianUid,
+                customerUid:
+                  session.customerUid,
+                issuedAt:
+                  Timestamp.fromMillis(
+                    nowMs
+                  ),
+                expiresAt:
+                  Timestamp.fromMillis(
+                    expiresAtMs
+                  ),
+                startedAt: null,
+                completedAt: null,
+                message: null,
+                result: null,
+              },
+
+              lastRemoteCommandAt:
+                FieldValue.serverTimestamp(),
+
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            }
+          );
+        }
+      );
+
+      return {
+        ok: true,
+        sessionId,
+        commandId,
+        action,
+        status: "PENDING",
+        expiresAt:
+          expiresAtMs,
+      };
+    }
+  );
+
+
+// ============================================================
+// CUSTOMER — CLAIM REMOTE COMMAND
+//
+// The transaction changes PENDING -> RUNNING before execution,
+// preventing duplicate execution from repeated Firestore snapshots.
+// ============================================================
+exports.claimRemoteCommand =
+  onCall(
+    async (request) => {
+      const customerUid =
+        requireAuth(request);
+
+      const data =
+        request.data || {};
+
+      const sessionId =
+        normalizeSessionId(
+          data.sessionId
+        );
+
+      const commandId =
+        typeof data.commandId === "string"
+          ? data.commandId.trim()
+          : "";
+
+      if (
+        !sessionId ||
+        !/^CMD-[A-Z0-9-]+$/i.test(commandId)
+      ) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Valid sessionId and commandId are required."
+        );
+      }
+
+      const sessionRef =
+        db
+          .collection(COLLECTION)
+          .doc(sessionId);
+
+      const result =
+        await db.runTransaction(
+          async (tx) => {
+            const snap =
+              await tx.get(
+                sessionRef
+              );
+
+            if (!snap.exists) {
+              throw new HttpsError(
+                "not-found",
+                "Service Session not found."
+              );
+            }
+
+            const session =
+              snap.data();
+
+            if (
+              session.status !==
+              "CONNECTED"
+            ) {
+              throw new HttpsError(
+                "failed-precondition",
+                "Service Session is not CONNECTED."
+              );
+            }
+
+            if (
+              session.customerUid !==
+              customerUid
+            ) {
+              throw new HttpsError(
+                "permission-denied",
+                "This device is not the customer device assigned to this session."
+              );
+            }
+
+            const command =
+              session.remoteCommand;
+
+            if (
+              !command ||
+              command.id !==
+              commandId
+            ) {
+              throw new HttpsError(
+                "not-found",
+                "Remote command not found."
+              );
+            }
+
+            if (
+              command.status !==
+              "PENDING"
+            ) {
+              throw new HttpsError(
+                "failed-precondition",
+                "Remote command is no longer pending."
+              );
+            }
+
+            const expiresAtMs =
+              command.expiresAt &&
+              typeof command.expiresAt.toMillis === "function"
+                ? command.expiresAt.toMillis()
+                : 0;
+
+            if (
+              !expiresAtMs ||
+              Date.now() >=
+              expiresAtMs
+            ) {
+              throw new HttpsError(
+                "deadline-exceeded",
+                "Remote command expired."
+              );
+            }
+
+            tx.update(
+              sessionRef,
+              {
+                "remoteCommand.status":
+                  "RUNNING",
+
+                "remoteCommand.startedAt":
+                  FieldValue.serverTimestamp(),
+
+                updatedAt:
+                  FieldValue.serverTimestamp(),
+              }
+            );
+
+            return {
+              action:
+                command.action,
+              payload:
+                command.payload || {},
+            };
+          }
+        );
+
+      return {
+        ok: true,
+        sessionId,
+        commandId,
+        status: "RUNNING",
+        ...result,
+      };
+    }
+  );
+
+
+// ============================================================
+// CUSTOMER — COMPLETE REMOTE COMMAND
+//
+// Only the assigned customerUid can complete the command that it claimed.
+// The final command is archived under commands/{commandId} for audit history.
+// ============================================================
+exports.completeRemoteCommand =
+  onCall(
+    async (request) => {
+      const customerUid =
+        requireAuth(request);
+
+      const data =
+        request.data || {};
+
+      const sessionId =
+        normalizeSessionId(
+          data.sessionId
+        );
+
+      const commandId =
+        typeof data.commandId === "string"
+          ? data.commandId.trim()
+          : "";
+
+      const terminalStatus =
+        data.status === "SUCCESS"
+          ? "SUCCESS"
+          : (
+            data.status === "FAILED"
+              ? "FAILED"
+              : null
+          );
+
+      if (
+        !sessionId ||
+        !/^CMD-[A-Z0-9-]+$/i.test(commandId) ||
+        !terminalStatus
+      ) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Valid sessionId, commandId and terminal status are required."
+        );
+      }
+
+      let message =
+        typeof data.message === "string"
+          ? data.message.trim()
+          : "";
+
+      if (
+        message.length >
+        REMOTE_MAX_MESSAGE_CHARS
+      ) {
+        message =
+          message.substring(
+            0,
+            REMOTE_MAX_MESSAGE_CHARS
+          );
+      }
+
+      const resultPayload =
+        sanitizePlainObject(
+          data.result,
+          REMOTE_MAX_RESULT_CHARS,
+          "Remote command result"
+        );
+
+      const sessionRef =
+        db
+          .collection(COLLECTION)
+          .doc(sessionId);
+
+      const finalCommand =
+        await db.runTransaction(
+          async (tx) => {
+            const snap =
+              await tx.get(
+                sessionRef
+              );
+
+            if (!snap.exists) {
+              throw new HttpsError(
+                "not-found",
+                "Service Session not found."
+              );
+            }
+
+            const session =
+              snap.data();
+
+            if (
+              session.customerUid !==
+              customerUid
+            ) {
+              throw new HttpsError(
+                "permission-denied",
+                "This device is not the customer device assigned to this session."
+              );
+            }
+
+            const command =
+              session.remoteCommand;
+
+            if (
+              !command ||
+              command.id !==
+              commandId
+            ) {
+              throw new HttpsError(
+                "not-found",
+                "Remote command not found."
+              );
+            }
+
+            if (
+              command.status !==
+              "RUNNING"
+            ) {
+              throw new HttpsError(
+                "failed-precondition",
+                "Remote command is not RUNNING."
+              );
+            }
+
+            const completedAt =
+              Timestamp.fromMillis(
+                Date.now()
+              );
+
+            const updatedCommand = {
+              ...command,
+              status:
+                terminalStatus,
+              completedAt,
+              message,
+              result:
+                resultPayload,
+            };
+
+            tx.update(
+              sessionRef,
+              {
+                remoteCommand:
+                  updatedCommand,
+
+                lastRemoteCommandCompletedAt:
+                  FieldValue.serverTimestamp(),
+
+                updatedAt:
+                  FieldValue.serverTimestamp(),
+              }
+            );
+
+            return updatedCommand;
+          }
+        );
+
+      await sessionRef
+        .collection("commands")
+        .doc(commandId)
+        .set({
+          ...finalCommand,
+          archivedAt:
+            FieldValue.serverTimestamp(),
+        });
+
+      return {
+        ok: true,
+        sessionId,
+        commandId,
+        status:
+          terminalStatus,
       };
     }
   );
