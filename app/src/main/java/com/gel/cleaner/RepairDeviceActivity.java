@@ -15,6 +15,7 @@ import com.gel.cleaner.base.*;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -113,6 +114,12 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     private Button btnCopyCode;
     private Button btnNewSession;
     private Button btnCancelSession;
+
+    // ============================================================
+    // REMOTE DEVICE MODE — TECHNICIAN
+    // ============================================================
+    private TextView txtRemoteControlStatus;
+    private Button btnEnterRemoteMode;
 
     private boolean gr;
 
@@ -383,6 +390,62 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         root.addView(
                 sessionCard
+        );
+
+        // ========================================================
+        // REMOTE DEVICE MODE — FUNCTIONAL MIRROR
+        // ========================================================
+        root.addView(
+                sectionLabel(
+                        "REMOTE DEVICE MODE"
+                )
+        );
+
+        LinearLayout remoteControlCard =
+                createCard();
+
+        txtRemoteControlStatus =
+                createInfoText();
+
+        txtRemoteControlStatus.setGravity(
+                Gravity.CENTER
+        );
+
+        txtRemoteControlStatus.setTextColor(
+                0xFFFFD700
+        );
+
+        txtRemoteControlStatus.setText(
+                gr
+                        ? "Αναμονή για CONNECTED συσκευή πελάτη."
+                        : "Waiting for CONNECTED customer device."
+        );
+
+        remoteControlCard.addView(
+                txtRemoteControlStatus
+        );
+
+        btnEnterRemoteMode =
+                makeActionButton(
+                        gr
+                                ? "Άνοιγμα Remote Device Mode"
+                                : "Open Remote Device Mode"
+                );
+
+        btnEnterRemoteMode.setVisibility(
+                View.GONE
+        );
+
+        btnEnterRemoteMode.setOnClickListener(
+                v -> openRemoteDeviceMode()
+        );
+
+        remoteControlCard.addView(
+                btnEnterRemoteMode
+        );
+
+        root.addView(
+                remoteControlCard
         );
 
         // ========================================================
@@ -882,6 +945,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                                         );
 
                                         GELRemoteTargetManager.syncAvailability(this);
+                                        showRemoteControlReady();
                                         return;
                                     }
 
@@ -894,6 +958,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                                                 .apply();
 
                                         GELRemoteTargetManager.syncAvailability(this);
+                                        showRemoteControlWaiting();
                                         return;
                                     }
 
@@ -904,6 +969,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                                             .apply();
 
                                     GELRemoteTargetManager.syncAvailability(this);
+                                    showRemoteControlWaiting();
                                 }
                         );
     }
@@ -923,6 +989,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
             String serviceCode,
             long pairingExpires
     ) {
+
+        showRemoteControlWaiting();
 
         txtStatus.setText(
                 gr
@@ -992,6 +1060,9 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     private void showNoSessionState() {
 
+        GELRemoteTargetManager.exitRemoteMode(this);
+        showRemoteControlWaiting();
+
         boolean pro =
                 isGelProActive();
 
@@ -1046,6 +1117,91 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         );
 
         btnCancelSession.setVisibility(
+                View.GONE
+        );
+    }
+
+    // ============================================================
+    // REMOTE DEVICE MODE — TECHNICIAN CONTROL
+    // ============================================================
+    private void openRemoteDeviceMode() {
+
+        if (!GELRemoteTargetManager.enterRemoteMode(this)) {
+
+            Toast.makeText(
+                    this,
+                    gr
+                            ? "Δεν υπάρχει CONNECTED συσκευή πελάτη."
+                            : "No CONNECTED customer device.",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        Intent intent =
+                new Intent(
+                        this,
+                        MainActivity.class
+                );
+
+        intent.putExtra(
+                "skip_welcome_once",
+                true
+        );
+
+        intent.addFlags(
+                Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+        );
+
+        startActivity(
+                intent
+        );
+    }
+
+    private void showRemoteControlReady() {
+
+        if (txtRemoteControlStatus == null ||
+                btnEnterRemoteMode == null) {
+
+            return;
+        }
+
+        txtRemoteControlStatus.setText(
+                gr
+                        ? "● READY — Η συσκευή πελάτη μπορεί να δεχτεί ασφαλείς remote εντολές."
+                        : "● READY — Customer device can receive allowlisted remote commands."
+        );
+
+        txtRemoteControlStatus.setTextColor(
+                0xFF39FF14
+        );
+
+        btnEnterRemoteMode.setVisibility(
+                View.VISIBLE
+        );
+    }
+
+    private void showRemoteControlWaiting() {
+
+        if (txtRemoteControlStatus == null ||
+                btnEnterRemoteMode == null) {
+
+            return;
+        }
+
+        txtRemoteControlStatus.setText(
+                gr
+                        ? "Αναμονή για CONNECTED συσκευή πελάτη."
+                        : "Waiting for CONNECTED customer device."
+        );
+
+        txtRemoteControlStatus.setTextColor(
+                0xFFFFD700
+        );
+
+        btnEnterRemoteMode.setVisibility(
                 View.GONE
         );
     }
