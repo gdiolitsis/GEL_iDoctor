@@ -8,6 +8,7 @@ package com.gel.cleaner;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -30,6 +31,8 @@ import androidx.annotation.Nullable;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.functions.FirebaseFunctions;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
@@ -71,6 +74,8 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
 
     private FirebaseAuth firebaseAuth;
     private FirebaseFunctions firebaseFunctions;
+    private FirebaseFirestore firebaseFirestore;
+    private ListenerRegistration sessionListener;
 
     private boolean pairingInProgress = false;
 
@@ -121,7 +126,12 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                         FUNCTIONS_REGION
                 );
 
+        firebaseFirestore =
+                FirebaseFirestore.getInstance();
+
         buildScreen();
+
+        restoreStoredCustomerSession();
 
         UIHelpers.applyPressEffectRecursive(
                 getWindow().getDecorView()
@@ -147,6 +157,64 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
         super.onNewIntent(intent);
         setIntent(intent);
         handleIncomingSmartServiceIntent(intent);
+    }
+
+    // ============================================================
+    // RESTORE CUSTOMER SESSION AFTER APP RESTART / UPDATE
+    // ============================================================
+    private void restoreStoredCustomerSession() {
+
+        SharedPreferences prefs =
+                getSharedPreferences(
+                        CUSTOMER_SESSION_PREFS,
+                        MODE_PRIVATE
+                );
+
+        boolean connected =
+                prefs.getBoolean(
+                        KEY_CONNECTED,
+                        false
+                );
+
+        String sessionId =
+                prefs.getString(
+                        KEY_SESSION_ID,
+                        null
+                );
+
+        if (!connected ||
+                sessionId == null ||
+                sessionId.trim().isEmpty()) {
+            return;
+        }
+
+        String serviceCode =
+                prefs.getString(
+                        KEY_SERVICE_CODE,
+                        "------"
+                );
+
+        long expiresAt =
+                prefs.getLong(
+                        KEY_EXPIRES_AT,
+                        0L
+                );
+
+        showConnectedState(
+                sessionId.trim(),
+                serviceCode != null
+                        ? serviceCode
+                        : "------",
+                expiresAt
+        );
+
+        GELRemoteCommandService.ensureRunning(
+                this
+        );
+
+        attachConnectedSessionListener(
+                sessionId.trim()
+        );
     }
 
     private boolean handleIncomingSmartServiceIntent(Intent intent) {
@@ -1150,6 +1218,10 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                             GELRemoteCommandService.ensureRunning(
                                     this
                             );
+
+                            attachConnectedSessionListener(
+                                    connectedSessionId
+                            );
                         }
                 );
     }
@@ -1237,6 +1309,152 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                         : "Connected to technician successfully.",
                 Toast.LENGTH_LONG
         ).show();
+    }
+
+    // ============================================================
+    // CUSTOMER — ACTIVE SESSION LIFECYCLE LISTENER
+    // ============================================================
+    private void attachConnectedSessionListener(
+            String sessionId
+    ) {
+
+        removeSessionListener();
+
+        if (firebaseFirestore == null ||
+                sessionId == null ||
+                sessionId.trim().isEmpty()) {
+            return;
+        }
+
+        sessionListener =
+                firebaseFirestore
+                        .collection(
+                                "service_sessions"
+                        )
+                        .document(
+                                sessionId.trim()
+                        )
+                        .addSnapshotListener(
+                                (snapshot, error) -> {
+
+                                    if (error != null) {
+                                        return;
+                                    }
+
+                                    if (snapshot == null ||
+                                            !snapshot.exists()) {
+
+                                        handleCustomerSessionEnded(
+                                                "ENDED"
+                                        );
+                                        return;
+                                    }
+
+                                    String status =
+                                            snapshot.getString(
+                                                    "status"
+                                            );
+
+                                    if ("CONNECTED".equals(status)) {
+                                        return;
+                                    }
+
+                                    handleCustomerSessionEnded(
+                                            status != null
+                                                    ? status
+                                                    : "ENDED"
+                                    );
+                                }
+                        );
+    }
+
+    private void handleCustomerSessionEnded(
+            String status
+    ) {
+
+        removeSessionListener();
+
+        getSharedPreferences(
+                CUSTOMER_SESSION_PREFS,
+                MODE_PRIVATE
+        )
+                .edit()
+                .clear()
+                .apply();
+
+        GELRemoteCommandService.stopRemoteService(
+                this
+        );
+
+        try {
+            GELRemoteDiagnosticsSync.stop(
+                    getApplicationContext()
+            );
+        } catch (Throwable ignore) {}
+
+        if (txtStatus != null) {
+            txtStatus.setText(
+                    gr
+                            ? (
+                            "CANCELLED".equals(status)
+                                    ? "● ΤΟ SERVICE SESSION ΑΚΥΡΩΘΗΚΕ ΑΠΟ ΤΟΝ ΤΕΧΝΙΚΟ"
+                                    : "● ΤΟ SERVICE SESSION ΤΕΡΜΑΤΙΣΤΗΚΕ"
+                    )
+                            : (
+                            "CANCELLED".equals(status)
+                                    ? "● SERVICE SESSION CANCELLED BY TECHNICIAN"
+                                    : "● SERVICE SESSION ENDED"
+                    )
+            );
+            txtStatus.setTextColor(
+                    0xFFFFD700
+            );
+        }
+
+        if (txtSessionId != null) {
+            txtSessionId.setText(
+                    "—"
+            );
+        }
+
+        if (txtServiceCode != null) {
+            txtServiceCode.setText(
+                    "------"
+            );
+        }
+
+        if (txtExpiry != null) {
+            txtExpiry.setText(
+                    gr
+                            ? "Η απομακρυσμένη σύνδεση έκλεισε με ασφάλεια."
+                            : "The remote connection was closed safely."
+            );
+        }
+
+        Toast.makeText(
+                this,
+                gr
+                        ? "Το Service Session τερματίστηκε."
+                        : "Service Session ended.",
+                Toast.LENGTH_LONG
+        ).show();
+    }
+
+    private void removeSessionListener() {
+
+        if (sessionListener != null) {
+            sessionListener.remove();
+            sessionListener =
+                    null;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+
+        removeSessionListener();
+
+        super.onDestroy();
     }
 
     private void showPairingError(String message) {

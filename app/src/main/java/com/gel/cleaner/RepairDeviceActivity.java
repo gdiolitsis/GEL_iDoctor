@@ -962,14 +962,14 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                                         return;
                                     }
 
-                                    // Any terminal/unavailable state disables remote mode locally.
-                                    getSharedPreferences(SESSION_PREFS, MODE_PRIVATE)
-                                            .edit()
-                                            .putBoolean(KEY_SESSION_CONNECTED, false)
-                                            .apply();
-
+                                    // Firebase is authoritative for terminal
+                                    // Service Session states (for example CANCELLED).
+                                    // Once a terminal state is observed, remove the
+                                    // stale local technician-session record as well.
+                                    stopSessionListener();
+                                    clearStoredSession();
                                     GELRemoteTargetManager.syncAvailability(this);
-                                    showRemoteControlWaiting();
+                                    showNoSessionState();
                                 }
                         );
     }
@@ -1218,21 +1218,121 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                         : "Do you want to cancel the active Service Session?",
                 gr ? "Όχι" : "No",
                 gr ? "Ακύρωση Session" : "Cancel Session",
-                () -> {
-                    stopSessionListener();
-                    clearStoredSession();
-                    GELRemoteTargetManager.syncAvailability(this);
-                    showNoSessionState();
-
-                    Toast.makeText(
-                            this,
-                            gr
-                                    ? "Το Service Session έκλεισε σε αυτή τη συσκευή."
-                                    : "Service Session closed on this device.",
-                            Toast.LENGTH_SHORT
-                    ).show();
-                }
+                this::cancelCurrentSessionOnServer
         );
+    }
+
+    private void cancelCurrentSessionOnServer() {
+
+        SharedPreferences prefs =
+                getSharedPreferences(
+                        SESSION_PREFS,
+                        MODE_PRIVATE
+                );
+
+        String sessionId =
+                prefs.getString(
+                        KEY_SESSION_ID,
+                        null
+                );
+
+        if (sessionId == null ||
+                sessionId.trim().isEmpty()) {
+
+            stopSessionListener();
+            clearStoredSession();
+            GELRemoteTargetManager.syncAvailability(this);
+            showNoSessionState();
+            return;
+        }
+
+        if (btnCancelSession != null) {
+            btnCancelSession.setEnabled(
+                    false
+            );
+        }
+
+        txtStatus.setText(
+                gr
+                        ? "● ΑΚΥΡΩΣΗ SERVICE SESSION\nΕνημέρωση Firebase..."
+                        : "● CANCELLING SERVICE SESSION\nUpdating Firebase..."
+        );
+
+        txtStatus.setTextColor(
+                0xFFFFD700
+        );
+
+        java.util.Map<String, Object> data =
+                new java.util.HashMap<>();
+
+        data.put(
+                "sessionId",
+                sessionId.trim()
+        );
+
+        firebaseFunctions
+                .getHttpsCallable(
+                        "cancelServiceSession"
+                )
+                .call(
+                        data
+                )
+                .addOnCompleteListener(
+                        this,
+                        task -> {
+
+                            if (btnCancelSession != null) {
+                                btnCancelSession.setEnabled(
+                                        true
+                                );
+                            }
+
+                            if (!task.isSuccessful()) {
+
+                                String message =
+                                        task.getException() != null
+                                                ? task.getException().getMessage()
+                                                : null;
+
+                                txtStatus.setText(
+                                        gr
+                                                ? "● ΑΠΟΤΥΧΙΑ ΑΚΥΡΩΣΗΣ\nΤο Service Session παραμένει ενεργό."
+                                                : "● CANCELLATION FAILED\nThe Service Session remains active."
+                                );
+
+                                txtStatus.setTextColor(
+                                        0xFFFF5555
+                                );
+
+                                Toast.makeText(
+                                        this,
+                                        message != null
+                                                ? message
+                                                : (
+                                                gr
+                                                        ? "Δεν ήταν δυνατή η ακύρωση στο Firebase."
+                                                        : "Could not cancel the Service Session in Firebase."
+                                        ),
+                                        Toast.LENGTH_LONG
+                                ).show();
+
+                                return;
+                            }
+
+                            stopSessionListener();
+                            clearStoredSession();
+                            GELRemoteTargetManager.syncAvailability(this);
+                            showNoSessionState();
+
+                            Toast.makeText(
+                                    this,
+                                    gr
+                                            ? "Το Service Session ακυρώθηκε σε τεχνικό, πελάτη και Firebase."
+                                            : "Service Session cancelled for technician, customer and Firebase.",
+                                    Toast.LENGTH_LONG
+                            ).show();
+                        }
+                );
     }
 
     private void showGelConfirmDialog(

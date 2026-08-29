@@ -323,6 +323,23 @@ public class GELRemoteCommandService extends Service {
                                     if (snapshot == null ||
                                             !snapshot.exists()) {
 
+                                        getSharedPreferences(
+                                                CUSTOMER_SESSION_PREFS,
+                                                MODE_PRIVATE
+                                        )
+                                                .edit()
+                                                .clear()
+                                                .apply();
+
+                                        try {
+                                            GELRemoteDiagnosticsSync.stop(
+                                                    getApplicationContext()
+                                            );
+                                        } catch (Throwable ignore) {}
+
+                                        processingCommandId =
+                                                null;
+
                                         stopSelf();
                                         return;
                                     }
@@ -334,16 +351,32 @@ public class GELRemoteCommandService extends Service {
 
                                     if (!"CONNECTED".equals(status)) {
 
+                                        // The parent Firebase session is authoritative.
+                                        // Any non-CONNECTED state means this customer
+                                        // device is no longer part of an active remote
+                                        // Service Session. Clear the complete local
+                                        // customer-session record so it cannot be
+                                        // resurrected after an app restart/update.
                                         getSharedPreferences(
                                                 CUSTOMER_SESSION_PREFS,
                                                 MODE_PRIVATE
                                         )
                                                 .edit()
-                                                .putBoolean(
-                                                        KEY_CONNECTED,
-                                                        false
-                                                )
+                                                .clear()
                                                 .apply();
+
+                                        try {
+                                            GELRemoteDiagnosticsSync.stop(
+                                                    getApplicationContext()
+                                            );
+                                        } catch (Throwable ignore) {}
+
+                                        processingCommandId =
+                                                null;
+
+                                        updateNotification(
+                                                "Remote Service Session ended"
+                                        );
 
                                         stopSelf();
 

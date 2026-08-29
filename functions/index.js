@@ -242,6 +242,8 @@ exports.createServiceSession =
 
         connectedAt: null,
         completedAt: null,
+        cancelledAt: null,
+        endedAt: null,
         deviceInfo: null,
 
         updatedAt:
@@ -457,6 +459,163 @@ exports.claimServiceSession =
       };
     }
   );
+
+
+// ============================================================
+// TECHNICIAN — CANCEL SERVICE SESSION
+//
+// Server-authoritative lifecycle transition.
+// Only the technician who created the session may cancel it.
+//
+// WAITING / CONNECTED -> CANCELLED
+// Repeated cancellation of the same session is idempotent.
+// ============================================================
+exports.cancelServiceSession =
+  onCall(
+    async (request) => {
+      const technicianUid =
+        requireAuth(request);
+
+      const data =
+        request.data || {};
+
+      const sessionId =
+        normalizeSessionId(
+          data.sessionId
+        );
+
+      if (!sessionId) {
+        throw new HttpsError(
+          "invalid-argument",
+          "A valid Service Session ID is required."
+        );
+      }
+
+      const sessionRef =
+        db
+          .collection(COLLECTION)
+          .doc(sessionId);
+
+      const result =
+        await db.runTransaction(
+          async (tx) => {
+            const snap =
+              await tx.get(
+                sessionRef
+              );
+
+            if (!snap.exists) {
+              throw new HttpsError(
+                "not-found",
+                "Service Session not found."
+              );
+            }
+
+            const session =
+              snap.data();
+
+            if (
+              session.technicianUid !==
+              technicianUid
+            ) {
+              throw new HttpsError(
+                "permission-denied",
+                "This Service Session does not belong to this technician."
+              );
+            }
+
+            if (
+              session.status ===
+              "CANCELLED"
+            ) {
+              return {
+                status:
+                  "CANCELLED",
+                alreadyCancelled:
+                  true,
+              };
+            }
+
+            if (
+              session.status !==
+                "WAITING" &&
+              session.status !==
+                "CONNECTED"
+            ) {
+              throw new HttpsError(
+                "failed-precondition",
+                "This Service Session is already in a terminal state."
+              );
+            }
+
+            const now =
+              Timestamp.fromMillis(
+                Date.now()
+              );
+
+            const update = {
+              status:
+                "CANCELLED",
+
+              cancelledAt:
+                now,
+
+              endedAt:
+                now,
+
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            };
+
+            const command =
+              session.remoteCommand;
+
+            if (
+              command &&
+              (
+                command.status ===
+                  "PENDING" ||
+                command.status ===
+                  "RUNNING"
+              )
+            ) {
+              update.remoteCommand = {
+                ...command,
+                status:
+                  "FAILED",
+                completedAt:
+                  now,
+                message:
+                  "Service Session cancelled by technician.",
+                result: {},
+              };
+
+              update.lastRemoteCommandCompletedAt =
+                FieldValue.serverTimestamp();
+            }
+
+            tx.update(
+              sessionRef,
+              update
+            );
+
+            return {
+              status:
+                "CANCELLED",
+              alreadyCancelled:
+                false,
+            };
+          }
+        );
+
+      return {
+        ok: true,
+        sessionId,
+        ...result,
+      };
+    }
+  );
+
 
 // ============================================================
 // CUSTOMER — REMOTE DIAGNOSTICS LOG BATCH
