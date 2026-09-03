@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -39,6 +40,8 @@ import java.util.concurrent.Executors;
  * FCM instead of holding a long-lived foreground service.
  */
 public class GELRemoteCommandService extends Service {
+
+    private static final String TAG = "GELRemoteCommandSvc";
 
     private static final String CUSTOMER_SESSION_PREFS =
             "GEL_CUSTOMER_SERVICE_SESSION";
@@ -126,7 +129,8 @@ public class GELRemoteCommandService extends Service {
                             serviceIntent
                     );
 
-        } catch (Throwable ignore) {
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to start foreground remote service", t);
         }
     }
 
@@ -313,8 +317,16 @@ public class GELRemoteCommandService extends Service {
 
                                     if (error != null) {
 
+                                        String errorText = buildThrowableMessage(error);
+
+                                        Log.e(
+                                                TAG,
+                                                "Firestore session listener failed: " + errorText,
+                                                error
+                                        );
+
                                         updateNotification(
-                                                "Remote session waiting for network"
+                                                "Remote listener error: " + errorText
                                         );
 
                                         return;
@@ -490,11 +502,21 @@ public class GELRemoteCommandService extends Service {
                             if (!task.isSuccessful() ||
                                     task.getResult() == null) {
 
+                                Throwable error = task.getException();
+                                String errorText = buildThrowableMessage(error);
+
+                                Log.e(
+                                        TAG,
+                                        "claimRemoteCommand failed for " + commandId +
+                                                ": " + errorText,
+                                        error
+                                );
+
                                 processingCommandId =
                                         null;
 
                                 updateNotification(
-                                        "Remote Service Session connected"
+                                        "Remote claim error: " + errorText
                                 );
 
                                 return;
@@ -507,8 +529,18 @@ public class GELRemoteCommandService extends Service {
 
                             if (!(raw instanceof Map)) {
 
+                                Log.e(
+                                        TAG,
+                                        "claimRemoteCommand returned unexpected payload type: " +
+                                                (raw == null ? "null" : raw.getClass().getName())
+                                );
+
                                 processingCommandId =
                                         null;
+
+                                updateNotification(
+                                        "Remote claim error: invalid server response"
+                                );
 
                                 return;
                             }
@@ -683,13 +715,59 @@ public class GELRemoteCommandService extends Service {
                             processingCommandId =
                                     null;
 
-                            updateNotification(
-                                    task.isSuccessful()
-                                            ? "Remote Service Session connected"
-                                            : "Remote result sync failed"
-                            );
+                            if (!task.isSuccessful()) {
+
+                                Throwable error = task.getException();
+                                String errorText = buildThrowableMessage(error);
+
+                                Log.e(
+                                        TAG,
+                                        "completeRemoteCommand failed for " + commandId +
+                                                " after attempt " + attempt +
+                                                ": " + errorText,
+                                        error
+                                );
+
+                                updateNotification(
+                                        "Remote complete error: " + errorText
+                                );
+
+                            } else {
+
+                                Log.i(
+                                        TAG,
+                                        "Remote command completed: " + commandId
+                                );
+
+                                updateNotification(
+                                        "Remote Service Session connected"
+                                );
+                            }
                         }
                 );
+    }
+
+
+    private String buildThrowableMessage(
+            Throwable error
+    ) {
+
+        if (error == null) {
+            return "unknown error";
+        }
+
+        String type =
+                error.getClass().getSimpleName();
+
+        String message =
+                error.getMessage();
+
+        if (message == null ||
+                message.trim().isEmpty()) {
+            return type;
+        }
+
+        return type + ": " + message.trim();
     }
 
     private void createNotificationChannel() {
