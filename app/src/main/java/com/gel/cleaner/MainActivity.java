@@ -2513,15 +2513,10 @@ bind(R.id.btnAppleInfoContinue, () -> {
 bind(R.id.btnPhoneInfoInternal, () -> {
 
 if (GELRemoteTargetManager.isRemoteMode(this)) {
-GELActionRouter.sendRemoteAndShowResult(
-        this,
-        "GET_DEVICE_SUMMARY",
-        null,
-        AppLang.isGreek(this)
-                ? "REMOTE — ΣΤΟΙΧΕΙΑ ΣΥΣΚΕΥΗΣ"
-                : "REMOTE — DEVICE SUMMARY"
-);
-return;
+    // Open the normal menu. DeviceInfoInternalActivity itself routes every
+    // expanded section to the connected customer device.
+    startActivity(new Intent(this, DeviceInfoInternalActivity.class));
+    return;
 }
 
 if (isAppleMode()) {
@@ -2543,13 +2538,10 @@ DeviceInfoInternalActivity.class
 bind(R.id.btnPhoneInfoPeripherals, () -> {
 
 if (GELRemoteTargetManager.isRemoteMode(this)) {
-GELActionRouter.blockUnsupportedRemote(
-        this,
-        AppLang.isGreek(this)
-                ? "Device Info — Peripherals"
-                : "Device Info — Peripherals"
-);
-return;
+    // Open the normal peripherals menu; sections are fetched on demand from
+    // the customer device by DeviceInfoPeripheralsActivity.
+    startActivity(new Intent(this, DeviceInfoPeripheralsActivity.class));
+    return;
 }
 
 if (isAppleMode()) {
@@ -2571,13 +2563,10 @@ DeviceInfoPeripheralsActivity.class
 bind(R.id.btnCpuRamLive, () -> {
 
 if (GELRemoteTargetManager.isRemoteMode(this)) {
-GELActionRouter.sendRemoteAndShowResult(
-        this,
-        "CPU_RAM_SNAPSHOT",
-        null,
-        "REMOTE — CPU / RAM"
-);
-return;
+    // CpuRamLiveActivity is remote-aware and polls the customer without
+    // overlapping Firebase commands.
+    startActivity(new Intent(this, CpuRamLiveActivity.class));
+    return;
 }
 
 startActivity(new Intent(this, CpuRamLiveActivity.class));

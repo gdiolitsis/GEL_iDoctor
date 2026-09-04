@@ -58,6 +58,8 @@ const REMOTE_ACTIONS = new Set([
   "CLEAN_IDOCTOR_CACHE",
   "GET_DEVICE_SUMMARY",
   "CPU_RAM_SNAPSHOT",
+  "GET_INTERNAL_SECTION",
+  "GET_PERIPHERALS_SECTION",
 ]);
 
 function normalizeRemoteAction(value) {

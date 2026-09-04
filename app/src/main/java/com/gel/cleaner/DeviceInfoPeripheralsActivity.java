@@ -200,6 +200,7 @@ private static final String GOLD_COLOR = "#FFD700";
 private static final int LINK_BLUE     = Color.parseColor("#1E90FF");  
 
 private boolean isRooted = false;  
+private boolean remoteMode = false;
 
 private View[] allContents;
 private TextView[] allIcons;
@@ -286,8 +287,11 @@ protected void onCreate(Bundle savedInstanceState) {
         
     UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
-    // ✅ ROOT FLAG — MUST BE HERE
-    isRooted = isDeviceRooted();
+    remoteMode = GELRemoteTargetManager.isRemoteMode(this);
+
+    // ROOT belongs to the device being inspected. In remote mode it must
+    // never be read from the technician phone.
+    isRooted = !remoteMode && isDeviceRooted();
 
 // ------------------------------------------------------------  
 // 1️⃣  TITLE  
@@ -303,7 +307,13 @@ batteryContainer        = findViewById(R.id.batteryContainer);
 txtBatteryContent       = findViewById(R.id.txtBatteryContent);  
 iconBattery             = findViewById(R.id.iconBatteryToggle);  
 txtBatteryModelCapacity = findViewById(R.id.txtBatteryModelCapacity);  
-initBatterySection();
+if (!remoteMode) {
+    initBatterySection();
+} else if (txtBatteryModelCapacity != null) {
+    // This control edits local technician preferences, so it is hidden while
+    // the inspected target is the remote customer device.
+    txtBatteryModelCapacity.setVisibility(View.GONE);
+}
 
 txtScreenContent          = findViewById(R.id.txtScreenContent);  
 txtCameraContent          = findViewById(R.id.txtCameraContent);  
@@ -397,81 +407,543 @@ allIcons = new TextView[]{
 };  
 
 // ------------------------------------------------------------  
-// 4️⃣  LOAD ALL SECTION TEXTS (LIGHT ONLY)  
+// 4️⃣  LOAD SECTION TEXTS
 // ------------------------------------------------------------  
-populateAllSections();  
+if (!remoteMode) {
+    populateAllSections();
 
-// ------------------------------------------------------------  
-// 5️⃣  PERMISSIONS  
-// ------------------------------------------------------------  
-requestAllRuntimePermissions();  
-requestPermissions(new String[]{  
-        Manifest.permission.READ_PHONE_STATE  
-}, 101);  
+    // Permissions are local-only. Asking them on the technician phone while
+    // inspecting a customer would be both misleading and wrong.
+    requestAllRuntimePermissions();
+    requestPermissions(new String[]{
+            Manifest.permission.READ_PHONE_STATE
+    }, 101);
+} else {
+    prepareRemotePeripheralPlaceholders();
+}
 
 // ============================================================
-// 5️⃣ BATTERY — MANUAL SECTION (FINAL, FIXED)
+// 5️⃣ SECTION ROUTING — LOCAL / REMOTE
 // ============================================================
 LinearLayout headerBattery = findViewById(R.id.headerBattery);
 
-if (headerBattery != null && batteryContainer != null) {
-    headerBattery.setOnClickListener(v -> {
+if (remoteMode) {
+    setupRemoteSection(headerBattery, batteryContainer, txtBatteryContent, iconBattery, "BATTERY");
+    setupRemoteSection(findViewById(R.id.headerScreen), txtScreenContent, txtScreenContent, iconScreen, "SCREEN");
+    setupRemoteSection(findViewById(R.id.headerCamera), txtCameraContent, txtCameraContent, iconCamera, "CAMERA");
+    setupRemoteSection(findViewById(R.id.headerConnectivity), txtConnectivityContent, txtConnectivityContent, iconConnectivity, "CONNECTIVITY");
+    setupRemoteSection(findViewById(R.id.headerLocation), txtLocationContent, txtLocationContent, iconLocation, "LOCATION");
+    setupRemoteSection(findViewById(R.id.headerThermal), txtThermalContent, txtThermalContent, iconThermal, "THERMAL");
+    setupRemoteSection(findViewById(R.id.headerModem), txtModemContent, txtModemContent, iconModem, "MODEM");
+    setupRemoteSection(findViewById(R.id.headerWifiAdvanced), txtWifiAdvancedContent, txtWifiAdvancedContent, iconWifiAdvanced, "WIFI_ADVANCED");
+    setupRemoteSection(findViewById(R.id.headerAudioUnified), txtAudioUnifiedContent, txtAudioUnifiedContent, iconAudioUnified, "AUDIO");
+    setupRemoteSection(findViewById(R.id.headerSensors), txtSensorsContent, txtSensorsContent, iconSensors, "SENSORS");
+    setupRemoteSection(findViewById(R.id.headerBiometrics), txtBiometricsContent, txtBiometricsContent, iconBiometrics, "BIOMETRICS");
+    setupRemoteSection(findViewById(R.id.headerNfc), txtNfcContent, txtNfcContent, iconNfc, "NFC");
+    setupRemoteSection(findViewById(R.id.headerGnss), txtGnssContent, txtGnssContent, iconGnss, "GNSS");
+    setupRemoteSection(findViewById(R.id.headerUwb), txtUwbContent, txtUwbContent, iconUwb, "UWB");
+    setupRemoteSection(findViewById(R.id.headerUsb), txtUsbContent, txtUsbContent, iconUsb, "USB");
+    setupRemoteSection(findViewById(R.id.headerHaptics), txtHapticsContent, txtHapticsContent, iconHaptics, "HAPTICS");
+    setupRemoteSection(findViewById(R.id.headerSystemFeatures), txtSystemFeaturesContent, txtSystemFeaturesContent, iconSystemFeatures, "SYSTEM_FEATURES");
+    setupRemoteSection(findViewById(R.id.headerSecurityFlags), txtSecurityFlagsContent, txtSecurityFlagsContent, iconSecurityFlags, "SECURITY_FLAGS");
+    setupRemoteSection(findViewById(R.id.headerRoot), txtRootContent, txtRootContent, iconRoot, "ROOT");
+    setupRemoteSection(findViewById(R.id.headerOtherPeripherals), txtOtherPeripherals, txtOtherPeripherals, iconOther, "OTHER");
+} else {
+    if (headerBattery != null && batteryContainer != null) {
+        headerBattery.setOnClickListener(v -> {
 
-        boolean isOpen = batteryContainer.getVisibility() == View.VISIBLE;
+            boolean isOpen = batteryContainer.getVisibility() == View.VISIBLE;
 
-        // 🔻 Κλείσε όλα τα άλλα sections
-        if (allContents != null && allIcons != null) {
-            for (int i = 1; i < allContents.length; i++) {
-                if (allContents[i] != null)
-                    allContents[i].setVisibility(View.GONE);
-                if (allIcons[i] != null)
-                    allIcons[i].setText("+");
+            if (allContents != null && allIcons != null) {
+                for (int i = 1; i < allContents.length; i++) {
+                    if (allContents[i] != null) allContents[i].setVisibility(View.GONE);
+                    if (allIcons[i] != null) allIcons[i].setText("+");
+                }
             }
-        }
 
-        if (!isOpen) {
-            // 🔺 ΑΝΟΙΓΜΑ BATTERY (ΚΑΙ ΕΝΕΡΓΟΠΟΙΗΣΗ)
-            batteryContainer.setVisibility(View.VISIBLE);
-            batteryContainer.setClickable(true);
-            batteryContainer.setFocusable(true);
-            batteryContainer.setFocusableInTouchMode(true);
+            if (!isOpen) {
+                batteryContainer.setVisibility(View.VISIBLE);
+                batteryContainer.setClickable(true);
+                batteryContainer.setFocusable(true);
+                batteryContainer.setFocusableInTouchMode(true);
+                iconBattery.setText("-");
+            } else {
+                batteryContainer.setVisibility(View.GONE);
+                iconBattery.setText("+");
+            }
+        });
+    }
 
-            iconBattery.setText("-");
-        } else {
-            // 🔻 ΠΛΗΡΕΣ ΚΛΕΙΣΙΜΟ BATTERY
-            batteryContainer.setVisibility(View.GONE);
-            iconBattery.setText("+");
-        }
-    });
+    setupSection(findViewById(R.id.headerScreen), txtScreenContent, iconScreen);
+    setupSection(findViewById(R.id.headerCamera), txtCameraContent, iconCamera);
+    setupSection(findViewById(R.id.headerConnectivity), txtConnectivityContent, iconConnectivity);
+    setupSection(findViewById(R.id.headerLocation), txtLocationContent, iconLocation);
+    setupSection(findViewById(R.id.headerThermal), txtThermalContent, iconThermal);
+    setupSection(findViewById(R.id.headerModem), txtModemContent, iconModem);
+    setupSection(findViewById(R.id.headerWifiAdvanced), txtWifiAdvancedContent, iconWifiAdvanced);
+    setupSection(findViewById(R.id.headerAudioUnified), txtAudioUnifiedContent, iconAudioUnified);
+    setupSection(findViewById(R.id.headerSensors), txtSensorsContent, iconSensors);
+    setupSection(findViewById(R.id.headerBiometrics), txtBiometricsContent, iconBiometrics);
+    setupSection(findViewById(R.id.headerNfc), txtNfcContent, iconNfc);
+    setupSection(findViewById(R.id.headerGnss), txtGnssContent, iconGnss);
+    setupSection(findViewById(R.id.headerUwb), txtUwbContent, iconUwb);
+    setupSection(findViewById(R.id.headerUsb), txtUsbContent, iconUsb);
+    setupSection(findViewById(R.id.headerHaptics), txtHapticsContent, iconHaptics);
+    setupSection(findViewById(R.id.headerSystemFeatures), txtSystemFeaturesContent, iconSystemFeatures);
+    setupSection(findViewById(R.id.headerSecurityFlags), txtSecurityFlagsContent, iconSecurityFlags);
+    setupSection(findViewById(R.id.headerRoot), txtRootContent, iconRoot);
+    setupSection(findViewById(R.id.headerOtherPeripherals), txtOtherPeripherals, iconOther);
 }
-
-// ------------------------------------------------------------  
-// 7️⃣  NORMAL SECTIONS (WITH AUDIO)  
-// ------------------------------------------------------------  
-
-setupSection(findViewById(R.id.headerScreen), txtScreenContent, iconScreen);  
-setupSection(findViewById(R.id.headerCamera), txtCameraContent, iconCamera);  
-setupSection(findViewById(R.id.headerConnectivity), txtConnectivityContent, iconConnectivity);  
-setupSection(findViewById(R.id.headerLocation), txtLocationContent, iconLocation);  
-setupSection(findViewById(R.id.headerThermal), txtThermalContent, iconThermal);  
-setupSection(findViewById(R.id.headerModem), txtModemContent, iconModem);  
-setupSection(findViewById(R.id.headerWifiAdvanced), txtWifiAdvancedContent, iconWifiAdvanced);  
-setupSection(findViewById(R.id.headerAudioUnified), txtAudioUnifiedContent, iconAudioUnified);  
-setupSection(findViewById(R.id.headerSensors), txtSensorsContent, iconSensors);  
-setupSection(findViewById(R.id.headerBiometrics), txtBiometricsContent, iconBiometrics);  
-setupSection(findViewById(R.id.headerNfc), txtNfcContent, iconNfc);  
-setupSection(findViewById(R.id.headerGnss), txtGnssContent, iconGnss);  
-setupSection(findViewById(R.id.headerUwb), txtUwbContent, iconUwb);  
-setupSection(findViewById(R.id.headerUsb), txtUsbContent, iconUsb);  
-setupSection(findViewById(R.id.headerHaptics), txtHapticsContent, iconHaptics);  
-setupSection(findViewById(R.id.headerSystemFeatures), txtSystemFeaturesContent, iconSystemFeatures);  
-setupSection(findViewById(R.id.headerSecurityFlags), txtSecurityFlagsContent, iconSecurityFlags);  
-setupSection(findViewById(R.id.headerRoot), txtRootContent, iconRoot);  
-setupSection(findViewById(R.id.headerOtherPeripherals), txtOtherPeripherals, iconOther);
 
 }
 
 // 🔥 END onCreate()
+
+// ============================================================
+// REMOTE PERIPHERALS — ON-DEMAND CUSTOMER DATA
+// ============================================================
+private void prepareRemotePeripheralPlaceholders() {
+    String text = AppLang.isGreek(this)
+            ? "Πατήστε την ενότητα για ανάγνωση από τη συσκευή πελάτη."
+            : "Tap the section to read it from the customer device.";
+
+    TextView[] targets = new TextView[]{
+            txtBatteryContent, txtScreenContent, txtCameraContent,
+            txtConnectivityContent, txtLocationContent, txtThermalContent,
+            txtModemContent, txtWifiAdvancedContent, txtAudioUnifiedContent,
+            txtSensorsContent, txtBiometricsContent, txtNfcContent,
+            txtGnssContent, txtUwbContent, txtUsbContent, txtHapticsContent,
+            txtSystemFeaturesContent, txtSecurityFlagsContent,
+            txtRootContent, txtOtherPeripherals
+    };
+
+    for (TextView target : targets) {
+        if (target != null) applyNeonValues(target, text);
+    }
+}
+
+private void setupRemoteSection(
+        View header,
+        View contentContainer,
+        TextView textTarget,
+        TextView icon,
+        String section
+) {
+    if (header == null || contentContainer == null || textTarget == null || icon == null) return;
+
+    contentContainer.setVisibility(View.GONE);
+    icon.setText("+");
+
+    header.setOnClickListener(v -> {
+        boolean isOpen = contentContainer.getVisibility() == View.VISIBLE;
+
+        if (allContents != null && allIcons != null) {
+            for (int i = 0; i < allContents.length; i++) {
+                if (allContents[i] != null) allContents[i].setVisibility(View.GONE);
+                if (allIcons[i] != null) allIcons[i].setText("+");
+            }
+        }
+
+        if (isOpen) return;
+
+        contentContainer.setVisibility(View.VISIBLE);
+        icon.setText("-");
+        loadRemotePeripheralSection(section, textTarget);
+    });
+}
+
+private void loadRemotePeripheralSection(String section, TextView target) {
+    applyNeonValues(
+            target,
+            AppLang.isGreek(this)
+                    ? "Ανάγνωση από τη συσκευή πελάτη..."
+                    : "Reading from customer device..."
+    );
+
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("section", section);
+
+    GELRemoteCommandClient.send(
+            this,
+            "GET_PERIPHERALS_SECTION",
+            payload,
+            new GELRemoteCommandClient.Callback() {
+                @Override
+                public void onCompleted(
+                        boolean success,
+                        Map<String, Object> result,
+                        String message
+                ) {
+                    if (!success) {
+                        applyNeonValues(
+                                target,
+                                (message != null && !message.trim().isEmpty())
+                                        ? message
+                                        : (AppLang.isGreek(DeviceInfoPeripheralsActivity.this)
+                                            ? "Αποτυχία ανάγνωσης remote ενότητας."
+                                            : "Remote section read failed.")
+                        );
+                        return;
+                    }
+
+                    Object raw = result != null ? result.get("text") : null;
+                    applyNeonValues(
+                            target,
+                            raw != null
+                                    ? String.valueOf(raw)
+                                    : (AppLang.isGreek(DeviceInfoPeripheralsActivity.this)
+                                        ? "Δεν επιστράφηκαν δεδομένα."
+                                        : "No data returned.")
+                    );
+                }
+            }
+    );
+}
+
+/** Customer-side collector. Invoked by GELRemoteCommandExecutor on the customer phone. */
+public static String collectRemoteSection(Context context, String section) {
+    if (context == null || section == null) return "Invalid remote section.";
+    String key = section.trim().toUpperCase(Locale.US);
+    try {
+        switch (key) {
+            case "BATTERY": return remoteBattery(context);
+            case "SCREEN": return remoteScreen(context);
+            case "CAMERA": return remoteCamera(context);
+            case "CONNECTIVITY": return remoteConnectivity(context);
+            case "LOCATION": return remoteLocation(context);
+            case "THERMAL": return remoteThermal(context);
+            case "MODEM": return remoteModem(context);
+            case "WIFI_ADVANCED": return remoteWifi(context);
+            case "AUDIO": return remoteAudio(context);
+            case "SENSORS": return remoteSensors(context);
+            case "BIOMETRICS": return remoteBiometrics(context);
+            case "NFC": return remoteNfc(context);
+            case "GNSS": return remoteGnss(context);
+            case "UWB": return remoteUwb(context);
+            case "USB": return remoteUsb(context);
+            case "HAPTICS": return remoteHaptics(context);
+            case "SYSTEM_FEATURES": return remoteSystemFeatures(context);
+            case "SECURITY_FLAGS": return remoteSecurityFlags(context);
+            case "ROOT": return remoteRoot();
+            case "OTHER": return remoteOther(context);
+            default: return "Unsupported peripherals section: " + key;
+        }
+    } catch (Throwable t) {
+        String msg = t.getMessage();
+        return "Remote section error: " + (msg != null ? msg : t.getClass().getSimpleName());
+    }
+}
+
+private static String remoteBattery(Context c) {
+    StringBuilder sb = new StringBuilder();
+    Intent i = c.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+    if (i != null) {
+        int level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        int scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+        float pct = (level >= 0 && scale > 0) ? (100f * level / scale) : -1f;
+        int temp = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1);
+        int voltage = i.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1);
+        int status = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+        int plugged = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+        sb.append("Level           : ").append(pct >= 0 ? Math.round(pct) + "%" : "N/A").append('\n');
+        sb.append("Temperature     : ").append(temp > 0 ? String.format(Locale.US, "%.1f°C", temp / 10f) : "N/A").append('\n');
+        sb.append("Voltage         : ").append(voltage > 0 ? String.format(Locale.US, "%.3f V", voltage / 1000f) : "N/A").append('\n');
+        sb.append("Charging        : ").append(status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL ? "Yes" : "No").append('\n');
+        sb.append("Power source    : ").append(plugged == BatteryManager.BATTERY_PLUGGED_USB ? "USB" : plugged == BatteryManager.BATTERY_PLUGGED_AC ? "AC" : plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS ? "Wireless" : "Battery").append('\n');
+    }
+    try {
+        BatteryManager bm = (BatteryManager)c.getSystemService(Context.BATTERY_SERVICE);
+        if (bm != null) {
+            long current = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+            long charge = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
+            if (current != Long.MIN_VALUE) sb.append("Current now     : ").append(current).append(" µA\n");
+            if (charge > 0) sb.append("Charge counter  : ").append(charge).append(" µAh\n");
+        }
+    } catch (Throwable ignore) {}
+    return sb.length() > 0 ? sb.toString() : "Battery information unavailable.";
+}
+
+private static String remoteScreen(Context c) {
+    android.util.DisplayMetrics dm = c.getResources().getDisplayMetrics();
+    StringBuilder sb = new StringBuilder();
+    sb.append("Resolution      : ").append(dm.widthPixels).append(" x ").append(dm.heightPixels).append('\n');
+    sb.append("Density DPI     : ").append(dm.densityDpi).append('\n');
+    sb.append("Density         : ").append(dm.density).append('\n');
+    sb.append("Scaled density  : ").append(dm.scaledDensity).append('\n');
+    try {
+        android.view.WindowManager wm = (android.view.WindowManager)c.getSystemService(Context.WINDOW_SERVICE);
+        if (wm != null) sb.append("Refresh rate    : ").append(String.format(Locale.US, "%.1f Hz", wm.getDefaultDisplay().getRefreshRate())).append('\n');
+    } catch (Throwable ignore) {}
+    return sb.toString();
+}
+
+private static String remoteCamera(Context c) {
+    StringBuilder sb = new StringBuilder();
+    try {
+        android.hardware.camera2.CameraManager cm = (android.hardware.camera2.CameraManager)c.getSystemService(Context.CAMERA_SERVICE);
+        String[] ids = cm != null ? cm.getCameraIdList() : new String[0];
+        sb.append("Camera count    : ").append(ids.length).append('\n');
+        for (String id : ids) {
+            android.hardware.camera2.CameraCharacteristics ch = cm.getCameraCharacteristics(id);
+            Integer facing = ch.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING);
+            android.util.SizeF size = ch.get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+            sb.append("Camera ").append(id).append("      : ")
+              .append(facing != null && facing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT ? "Front" : "Rear/Other");
+            if (size != null) sb.append(" • sensor ").append(size.getWidth()).append("x").append(size.getHeight()).append(" mm");
+            sb.append('\n');
+        }
+    } catch (Throwable t) {
+        sb.append("Camera details  : restricted/unavailable\n");
+    }
+    return sb.toString();
+}
+
+private static String remoteConnectivity(Context c) {
+    StringBuilder sb = new StringBuilder();
+    try {
+        android.net.ConnectivityManager cm = (android.net.ConnectivityManager)c.getSystemService(Context.CONNECTIVITY_SERVICE);
+        android.net.Network n = cm != null ? cm.getActiveNetwork() : null;
+        android.net.NetworkCapabilities cap = cm != null && n != null ? cm.getNetworkCapabilities(n) : null;
+        sb.append("Active network  : ").append(n != null ? "Yes" : "No").append('\n');
+        if (cap != null) {
+            sb.append("Wi-Fi           : ").append(cap.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ? "Connected" : "No").append('\n');
+            sb.append("Cellular        : ").append(cap.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ? "Connected" : "No").append('\n');
+            sb.append("Validated       : ").append(cap.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED) ? "Yes" : "No").append('\n');
+        }
+    } catch (Throwable ignore) {}
+    return sb.length() > 0 ? sb.toString() : "Connectivity information unavailable.";
+}
+
+private static String remoteLocation(Context c) {
+    StringBuilder sb = new StringBuilder();
+    PackageManager pm = c.getPackageManager();
+    sb.append("GPS hardware     : ").append(pm.hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS) ? "Yes" : "No").append('\n');
+    sb.append("Network location : ").append(pm.hasSystemFeature(PackageManager.FEATURE_LOCATION_NETWORK) ? "Yes" : "No").append('\n');
+    try {
+        android.location.LocationManager lm = (android.location.LocationManager)c.getSystemService(Context.LOCATION_SERVICE);
+        if (lm != null) {
+            sb.append("GPS enabled      : ").append(lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ? "Yes" : "No").append('\n');
+            sb.append("Network enabled  : ").append(lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) ? "Yes" : "No").append('\n');
+        }
+    } catch (Throwable ignore) {}
+    return sb.toString();
+}
+
+private static String remoteThermal(Context c) {
+    StringBuilder sb = new StringBuilder();
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            android.os.PowerManager pm = (android.os.PowerManager)c.getSystemService(Context.POWER_SERVICE);
+            if (pm != null) sb.append("Thermal status   : ").append(pm.getCurrentThermalStatus()).append('\n');
+        }
+    } catch (Throwable ignore) {}
+    java.io.File base = new java.io.File("/sys/class/thermal");
+    java.io.File[] zones = base.listFiles((d,n) -> n.startsWith("thermal_zone"));
+    int count = 0;
+    if (zones != null) {
+        for (java.io.File z : zones) {
+            String type = remoteReadLine(z.getAbsolutePath() + "/type");
+            long raw = remoteLong(z.getAbsolutePath() + "/temp");
+            if (type == null || raw <= 0) continue;
+            double temp = raw > 1000 ? raw / 1000.0 : raw / 10.0;
+            if (temp < -20 || temp > 150) continue;
+            sb.append(type).append(" : ").append(String.format(Locale.US, "%.1f°C", temp)).append('\n');
+            if (++count >= 30) break;
+        }
+    }
+    if (count == 0 && sb.length() == 0) sb.append("Thermal sensors not exposed.\n");
+    return sb.toString();
+}
+
+private static String remoteModem(Context c) {
+    StringBuilder sb = new StringBuilder();
+    try {
+        TelephonyManager tm = (TelephonyManager)c.getSystemService(Context.TELEPHONY_SERVICE);
+        if (tm != null) {
+            sb.append("SIM state       : ").append(tm.getSimState()).append('\n');
+            sb.append("Phone type      : ").append(tm.getPhoneType()).append('\n');
+            sb.append("Carrier         : ").append(remoteSafe(tm.getNetworkOperatorName())).append('\n');
+            sb.append("Country ISO     : ").append(remoteSafe(tm.getNetworkCountryIso())).append('\n');
+            sb.append("Data state      : ").append(tm.getDataState()).append('\n');
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) sb.append("Data network    : ").append(tm.getDataNetworkType()).append('\n');
+        }
+    } catch (Throwable t) { sb.append("Modem details   : restricted by Android\n"); }
+    return sb.toString();
+}
+
+private static String remoteWifi(Context c) {
+    StringBuilder sb = new StringBuilder();
+    try {
+        android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager)c.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        if (wm != null) {
+            sb.append("Wi-Fi enabled    : ").append(wm.isWifiEnabled() ? "Yes" : "No").append('\n');
+            android.net.wifi.WifiInfo wi = wm.getConnectionInfo();
+            if (wi != null) {
+                sb.append("SSID             : ").append(remoteSafe(wi.getSSID())).append('\n');
+                sb.append("RSSI             : ").append(wi.getRssi()).append(" dBm\n");
+                sb.append("Link speed       : ").append(wi.getLinkSpeed()).append(" Mbps\n");
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) sb.append("Frequency        : ").append(wi.getFrequency()).append(" MHz\n");
+            }
+        }
+    } catch (Throwable t) { sb.append("Wi-Fi details    : permission restricted\n"); }
+    return sb.toString();
+}
+
+private static String remoteAudio(Context c) {
+    StringBuilder sb = new StringBuilder();
+    try {
+        android.media.AudioManager am = (android.media.AudioManager)c.getSystemService(Context.AUDIO_SERVICE);
+        if (am != null) {
+            sb.append("Mode             : ").append(am.getMode()).append('\n');
+            sb.append("Music volume     : ").append(am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)).append(" / ").append(am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)).append('\n');
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                sb.append("Output devices   : ").append(am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS).length).append('\n');
+                sb.append("Input devices    : ").append(am.getDevices(android.media.AudioManager.GET_DEVICES_INPUTS).length).append('\n');
+            }
+        }
+    } catch (Throwable ignore) {}
+    return sb.toString();
+}
+
+private static String remoteSensors(Context c) {
+    StringBuilder sb = new StringBuilder();
+    try {
+        android.hardware.SensorManager sm = (android.hardware.SensorManager)c.getSystemService(Context.SENSOR_SERVICE);
+        java.util.List<android.hardware.Sensor> sensors = sm != null ? sm.getSensorList(android.hardware.Sensor.TYPE_ALL) : java.util.Collections.emptyList();
+        sb.append("Sensor count     : ").append(sensors.size()).append('\n');
+        int n = Math.min(40, sensors.size());
+        for (int i = 0; i < n; i++) {
+            android.hardware.Sensor s = sensors.get(i);
+            sb.append("• ").append(s.getName()).append(" | ").append(s.getVendor()).append('\n');
+        }
+        if (sensors.size() > n) sb.append("… ").append(sensors.size() - n).append(" more sensors\n");
+    } catch (Throwable ignore) {}
+    return sb.toString();
+}
+
+private static String remoteBiometrics(Context c) {
+    PackageManager pm = c.getPackageManager();
+    StringBuilder sb = new StringBuilder();
+    sb.append("Fingerprint HW   : ").append(pm.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT) ? "Yes" : "No").append('\n');
+    sb.append("Face HW          : ").append(pm.hasSystemFeature("android.hardware.biometrics.face") ? "Yes" : "No").append('\n');
+    sb.append("Iris HW          : ").append(pm.hasSystemFeature("android.hardware.biometrics.iris") ? "Yes" : "No").append('\n');
+    return sb.toString();
+}
+
+private static String remoteNfc(Context c) {
+    try {
+        android.nfc.NfcAdapter a = android.nfc.NfcAdapter.getDefaultAdapter(c);
+        if (a == null) return "NFC Supported    : No\n";
+        return "NFC Supported    : Yes\nNFC Enabled      : " + (a.isEnabled() ? "Yes" : "No") + "\n";
+    } catch (Throwable ignore) { return "NFC information unavailable.\n"; }
+}
+
+private static String remoteGnss(Context c) {
+    StringBuilder sb = new StringBuilder();
+    PackageManager pm = c.getPackageManager();
+    sb.append("GNSS/GPS HW      : ").append(pm.hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS) ? "Yes" : "No").append('\n');
+    try {
+        android.location.LocationManager lm = (android.location.LocationManager)c.getSystemService(Context.LOCATION_SERVICE);
+        if (lm != null) sb.append("GPS provider     : ").append(lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ? "Enabled" : "Disabled").append('\n');
+    } catch (Throwable ignore) {}
+    return sb.toString();
+}
+
+private static String remoteUwb(Context c) {
+    return "UWB Hardware      : " + (c.getPackageManager().hasSystemFeature("android.hardware.uwb") ? "Yes" : "No") + "\n";
+}
+
+private static String remoteUsb(Context c) {
+    StringBuilder sb = new StringBuilder();
+    try {
+        android.hardware.usb.UsbManager um = (android.hardware.usb.UsbManager)c.getSystemService(Context.USB_SERVICE);
+        java.util.HashMap<String, android.hardware.usb.UsbDevice> devices = um != null ? um.getDeviceList() : new java.util.HashMap<>();
+        sb.append("Connected USB    : ").append(devices.size()).append('\n');
+        for (android.hardware.usb.UsbDevice d : devices.values()) {
+            sb.append("• VID ").append(d.getVendorId()).append(" PID ").append(d.getProductId()).append(" • ").append(remoteSafe(d.getProductName())).append('\n');
+        }
+    } catch (Throwable ignore) {}
+    return sb.toString();
+}
+
+private static String remoteHaptics(Context c) {
+    try {
+        android.os.Vibrator v = (android.os.Vibrator)c.getSystemService(Context.VIBRATOR_SERVICE);
+        if (v == null) return "Vibrator         : N/A\n";
+        StringBuilder sb = new StringBuilder();
+        sb.append("Vibrator         : ").append(v.hasVibrator() ? "Yes" : "No").append('\n');
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) sb.append("Amplitude ctrl   : ").append(v.hasAmplitudeControl() ? "Yes" : "No").append('\n');
+        return sb.toString();
+    } catch (Throwable ignore) { return "Haptics information unavailable.\n"; }
+}
+
+private static String remoteSystemFeatures(Context c) {
+    StringBuilder sb = new StringBuilder();
+    try {
+        android.content.pm.FeatureInfo[] features = c.getPackageManager().getSystemAvailableFeatures();
+        int count = features != null ? features.length : 0;
+        sb.append("Feature count    : ").append(count).append('\n');
+        if (features != null) {
+            int shown = 0;
+            for (android.content.pm.FeatureInfo f : features) {
+                if (f == null || f.name == null) continue;
+                sb.append("• ").append(f.name).append('\n');
+                if (++shown >= 80) break;
+            }
+            if (count > shown) sb.append("… more features not shown\n");
+        }
+    } catch (Throwable ignore) {}
+    return sb.toString();
+}
+
+private static String remoteSecurityFlags(Context c) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Build type       : ").append(remoteSafe(Build.TYPE)).append('\n');
+    sb.append("Build tags       : ").append(remoteSafe(Build.TAGS)).append('\n');
+    sb.append("Debuggable app   : ").append((c.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 ? "Yes" : "No").append('\n');
+    try {
+        int adb = Settings.Global.getInt(c.getContentResolver(), Settings.Global.ADB_ENABLED, 0);
+        sb.append("ADB enabled      : ").append(adb == 1 ? "Yes" : "No").append('\n');
+    } catch (Throwable ignore) {}
+    sb.append("Fingerprint      : ").append(remoteSafe(Build.FINGERPRINT)).append('\n');
+    return sb.toString();
+}
+
+private static String remoteRoot() {
+    String[] paths = {"/system/bin/su", "/system/xbin/su", "/sbin/su", "/system/app/Superuser.apk", "/system/app/Magisk.apk", "/system/priv-app/Magisk"};
+    boolean rooted = false;
+    for (String p : paths) { if (new java.io.File(p).exists()) { rooted = true; break; } }
+    return "Root indicators   : " + (rooted ? "Detected" : "Not detected") + "\n";
+}
+
+private static String remoteOther(Context c) {
+    PackageManager pm = c.getPackageManager();
+    StringBuilder sb = new StringBuilder();
+    sb.append("Touchscreen      : ").append(pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN) ? "Yes" : "No").append('\n');
+    sb.append("Microphone       : ").append(pm.hasSystemFeature(PackageManager.FEATURE_MICROPHONE) ? "Yes" : "No").append('\n');
+    sb.append("Bluetooth LE     : ").append(pm.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE) ? "Yes" : "No").append('\n');
+    sb.append("USB host         : ").append(pm.hasSystemFeature(PackageManager.FEATURE_USB_HOST) ? "Yes" : "No").append('\n');
+    sb.append("USB accessory    : ").append(pm.hasSystemFeature(PackageManager.FEATURE_USB_ACCESSORY) ? "Yes" : "No").append('\n');
+    return sb.toString();
+}
+
+private static String remoteReadLine(String path) {
+    try {
+        java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(path));
+        String line = br.readLine(); br.close(); return line != null ? line.trim() : null;
+    } catch (Throwable ignore) { return null; }
+}
+
+private static long remoteLong(String path) {
+    String s = remoteReadLine(path);
+    if (s == null) return -1L;
+    try { return Long.parseLong(s.replaceAll("[^0-9-]", "")); }
+    catch (Throwable ignore) { return -1L; }
+}
+
+private static String remoteSafe(String s) {
+    return s == null || s.trim().isEmpty() ? "N/A" : s.trim();
+}
 
 private void appendAccessInstructions(StringBuilder sb, String type) {
     if (sb == null) return;

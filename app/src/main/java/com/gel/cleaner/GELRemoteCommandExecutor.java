@@ -3,6 +3,7 @@ package com.gel.cleaner;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -11,6 +12,7 @@ import android.os.StatFs;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -123,6 +125,18 @@ public final class GELRemoteCommandExecutor {
             case "CPU_RAM_SNAPSHOT":
                 return getCpuRamSnapshot(
                         context
+                );
+
+            case "GET_INTERNAL_SECTION":
+                return getInternalSection(
+                        context,
+                        payload
+                );
+
+            case "GET_PERIPHERALS_SECTION":
+                return getPeripheralsSection(
+                        context,
+                        payload
                 );
 
             default:
@@ -686,10 +700,122 @@ public final class GELRemoteCommandExecutor {
 
         } catch (Throwable ignore) {}
 
+        try {
+            int cpuPercent = CpuStatBridge.readCpuPercent();
+            if (cpuPercent >= 0) {
+                out.put("cpuPercent", cpuPercent);
+            }
+        } catch (Throwable ignore) {}
+
+        try {
+            Intent battery = context.registerReceiver(
+                    null,
+                    new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+            );
+            if (battery != null) {
+                int raw = battery.getIntExtra(
+                        BatteryManager.EXTRA_TEMPERATURE,
+                        -1
+                );
+                if (raw > 0) {
+                    out.put("temperatureC", raw / 10.0d);
+                }
+            }
+        } catch (Throwable ignore) {}
+
+        try {
+            Map<String, Object> coreFreqs = new LinkedHashMap<>();
+            int cores = Runtime.getRuntime().availableProcessors();
+            for (int i = 0; i < cores; i++) {
+                long khz = readLongFile(
+                        "/sys/devices/system/cpu/cpu" + i +
+                                "/cpufreq/scaling_cur_freq"
+                );
+                if (khz > 0) {
+                    coreFreqs.put("C" + i, khz / 1000L);
+                }
+            }
+            if (!coreFreqs.isEmpty()) {
+                out.put("coreFrequenciesMHz", coreFreqs);
+            }
+        } catch (Throwable ignore) {}
+
+        out.put("timestamp", System.currentTimeMillis());
+
         return Result.ok(
                 "CPU/RAM snapshot loaded.",
                 out
         );
+    }
+
+    private static Result getInternalSection(
+            Context context,
+            Map<String, Object> payload
+    ) {
+        String section = payload != null && payload.get("section") != null
+                ? String.valueOf(payload.get("section")).trim()
+                : "";
+
+        if (section.isEmpty()) {
+            return Result.fail("Internal section is required.");
+        }
+
+        String text = DeviceInfoInternalActivity.collectRemoteSection(
+                context,
+                section
+        );
+
+        Map<String, Object> out = new HashMap<>();
+        out.put("section", section);
+        out.put("text", text != null ? text : "");
+
+        return Result.ok(
+                "Customer internal section loaded.",
+                out
+        );
+    }
+
+    private static Result getPeripheralsSection(
+            Context context,
+            Map<String, Object> payload
+    ) {
+        String section = payload != null && payload.get("section") != null
+                ? String.valueOf(payload.get("section")).trim()
+                : "";
+
+        if (section.isEmpty()) {
+            return Result.fail("Peripherals section is required.");
+        }
+
+        String text = DeviceInfoPeripheralsActivity.collectRemoteSection(
+                context,
+                section
+        );
+
+        Map<String, Object> out = new HashMap<>();
+        out.put("section", section);
+        out.put("text", text != null ? text : "");
+
+        return Result.ok(
+                "Customer peripherals section loaded.",
+                out
+        );
+    }
+
+    private static long readLongFile(String path) {
+        java.io.BufferedReader br = null;
+        try {
+            java.io.File f = new java.io.File(path);
+            if (!f.exists()) return -1L;
+            br = new java.io.BufferedReader(new java.io.FileReader(f));
+            String line = br.readLine();
+            if (line == null) return -1L;
+            return Long.parseLong(line.trim().replaceAll("[^0-9-]", ""));
+        } catch (Throwable ignore) {
+            return -1L;
+        } finally {
+            try { if (br != null) br.close(); } catch (Throwable ignore) {}
+        }
     }
 
     private static void notifyLanguageChanged(

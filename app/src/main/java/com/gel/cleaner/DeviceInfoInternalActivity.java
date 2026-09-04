@@ -34,6 +34,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.util.Locale;
+import java.util.Map;
+import java.util.HashMap;
 
 public class DeviceInfoInternalActivity extends GELAutoActivityHook
         implements GELFoldableCallback {
@@ -41,6 +43,7 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
     private static final String NEON_GREEN = "#39FF14";
 
     private boolean isRooted = false;
+    private boolean remoteMode = false;
 
     private iDoctorEngine engine;
 
@@ -59,8 +62,15 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        engine = iDoctorEngine.get(this);
-        isRooted = engine.isDeviceRooted();
+        remoteMode = GELRemoteTargetManager.isRemoteMode(this);
+
+        if (!remoteMode) {
+            engine = iDoctorEngine.get(this);
+            isRooted = engine.isDeviceRooted();
+        } else {
+            engine = null;
+            isRooted = false;
+        }
 
         setContentView(R.layout.activity_device_info_internal);
 
@@ -108,44 +118,67 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
         };
 
         // CONTENT BUILD
-        if (txtSystemContent != null) {
-            setNeonSectionText(txtSystemContent, buildSystemInfo());
-        }
-        if (txtAndroidContent != null) {
-            setNeonSectionText(txtAndroidContent, buildAndroidInfo());
-        }
-        if (txtCpuContent != null) {
-            setNeonSectionText(txtCpuContent, buildCpuInfo());
-        }
-        if (txtGpuContent != null) {
-            setNeonSectionText(txtGpuContent, buildGpuInfo());
-        }
-        if (txtThermalContent != null) {
-            setNeonSectionText(txtThermalContent, buildThermalInternalReport());
-        }
-        if (txtVulkanContent != null) {
-            setNeonSectionText(txtVulkanContent, buildVulkanInfo());
-        }
-        if (txtRamContent != null) {
-            setNeonSectionText(txtRamContent, buildRamInfo());
-        }
-        if (txtStorageContent != null) {
-            setNeonSectionText(txtStorageContent, buildStorageInfo());
-        }
-        if (txtConnectivityContent != null) {
-            setNeonSectionText(txtConnectivityContent, buildConnectivityInfo());
-        }
+        if (!remoteMode) {
+            if (txtSystemContent != null) {
+                setNeonSectionText(txtSystemContent, buildSystemInfo());
+            }
+            if (txtAndroidContent != null) {
+                setNeonSectionText(txtAndroidContent, buildAndroidInfo());
+            }
+            if (txtCpuContent != null) {
+                setNeonSectionText(txtCpuContent, buildCpuInfo());
+            }
+            if (txtGpuContent != null) {
+                setNeonSectionText(txtGpuContent, buildGpuInfo());
+            }
+            if (txtThermalContent != null) {
+                setNeonSectionText(txtThermalContent, buildThermalInternalReport());
+            }
+            if (txtVulkanContent != null) {
+                setNeonSectionText(txtVulkanContent, buildVulkanInfo());
+            }
+            if (txtRamContent != null) {
+                setNeonSectionText(txtRamContent, buildRamInfo());
+            }
+            if (txtStorageContent != null) {
+                setNeonSectionText(txtStorageContent, buildStorageInfo());
+            }
+            if (txtConnectivityContent != null) {
+                setNeonSectionText(txtConnectivityContent, buildConnectivityInfo());
+            }
 
-        // EXPANDERS
-        setupSection(findViewById(R.id.headerSystem), txtSystemContent, iconSystem);
-        setupSection(findViewById(R.id.headerAndroid), txtAndroidContent, iconAndroid);
-        setupSection(findViewById(R.id.headerCpu), txtCpuContent, iconCpu);
-        setupSection(findViewById(R.id.headerGpu), txtGpuContent, iconGpu);
-        setupSection(findViewById(R.id.headerThermal), txtThermalContent, iconThermal);
-        setupSection(findViewById(R.id.headerVulkan), txtVulkanContent, iconVulkan);
-        setupSection(findViewById(R.id.headerRam), txtRamContent, iconRam);
-        setupSection(findViewById(R.id.headerStorage), txtStorageContent, iconStorage);
-        setupSection(findViewById(R.id.headerConnectivity), txtConnectivityContent, iconConnectivity);
+            // LOCAL EXPANDERS
+            setupSection(findViewById(R.id.headerSystem), txtSystemContent, iconSystem);
+            setupSection(findViewById(R.id.headerAndroid), txtAndroidContent, iconAndroid);
+            setupSection(findViewById(R.id.headerCpu), txtCpuContent, iconCpu);
+            setupSection(findViewById(R.id.headerGpu), txtGpuContent, iconGpu);
+            setupSection(findViewById(R.id.headerThermal), txtThermalContent, iconThermal);
+            setupSection(findViewById(R.id.headerVulkan), txtVulkanContent, iconVulkan);
+            setupSection(findViewById(R.id.headerRam), txtRamContent, iconRam);
+            setupSection(findViewById(R.id.headerStorage), txtStorageContent, iconStorage);
+            setupSection(findViewById(R.id.headerConnectivity), txtConnectivityContent, iconConnectivity);
+        } else {
+            // REMOTE EXPANDERS — each section is read on demand from the customer device.
+            setRemotePlaceholder(txtSystemContent);
+            setRemotePlaceholder(txtAndroidContent);
+            setRemotePlaceholder(txtCpuContent);
+            setRemotePlaceholder(txtGpuContent);
+            setRemotePlaceholder(txtThermalContent);
+            setRemotePlaceholder(txtVulkanContent);
+            setRemotePlaceholder(txtRamContent);
+            setRemotePlaceholder(txtStorageContent);
+            setRemotePlaceholder(txtConnectivityContent);
+
+            setupRemoteSection(findViewById(R.id.headerSystem), txtSystemContent, iconSystem, "SYSTEM");
+            setupRemoteSection(findViewById(R.id.headerAndroid), txtAndroidContent, iconAndroid, "ANDROID");
+            setupRemoteSection(findViewById(R.id.headerCpu), txtCpuContent, iconCpu, "CPU");
+            setupRemoteSection(findViewById(R.id.headerGpu), txtGpuContent, iconGpu, "GPU");
+            setupRemoteSection(findViewById(R.id.headerThermal), txtThermalContent, iconThermal, "THERMAL");
+            setupRemoteSection(findViewById(R.id.headerVulkan), txtVulkanContent, iconVulkan, "VULKAN");
+            setupRemoteSection(findViewById(R.id.headerRam), txtRamContent, iconRam, "RAM");
+            setupRemoteSection(findViewById(R.id.headerStorage), txtStorageContent, iconStorage, "STORAGE");
+            setupRemoteSection(findViewById(R.id.headerConnectivity), txtConnectivityContent, iconConnectivity, "CONNECTIVITY");
+        }
     }
 
     @Override
@@ -166,6 +199,366 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
     @Override
     public void onScreenChanged(boolean isInner) {
         if (foldUI != null) foldUI.applyUI(isInner);
+    }
+
+    // ============================================================
+    // REMOTE INTERNAL SECTIONS
+    // ============================================================
+
+    private void setRemotePlaceholder(TextView tv) {
+        if (tv == null) return;
+        setNeonSectionText(
+                tv,
+                AppLang.isGreek(this)
+                        ? "Πατήστε την ενότητα για ανάγνωση από τη συσκευή πελάτη."
+                        : "Tap the section to read it from the customer device."
+        );
+    }
+
+    private void setupRemoteSection(
+            View header,
+            final TextView content,
+            final TextView icon,
+            final String section
+    ) {
+        if (header == null || content == null || icon == null) return;
+
+        header.setOnClickListener(v -> {
+            boolean opening = content.getVisibility() != View.VISIBLE;
+            toggleSection(content, icon);
+
+            if (opening) {
+                loadRemoteInternalSection(section, content);
+            }
+        });
+    }
+
+    private void loadRemoteInternalSection(
+            String section,
+            TextView target
+    ) {
+        if (target == null) return;
+
+        setNeonSectionText(
+                target,
+                AppLang.isGreek(this)
+                        ? "Ανάγνωση από τη συσκευή πελάτη..."
+                        : "Reading from customer device..."
+        );
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("section", section);
+
+        GELRemoteCommandClient.send(
+                this,
+                "GET_INTERNAL_SECTION",
+                payload,
+                new GELRemoteCommandClient.Callback() {
+                    @Override
+                    public void onCompleted(
+                            boolean success,
+                            Map<String, Object> result,
+                            String message
+                    ) {
+                        if (!success) {
+                            setNeonSectionText(
+                                    target,
+                                    (message != null && !message.trim().isEmpty())
+                                            ? message
+                                            : (AppLang.isGreek(DeviceInfoInternalActivity.this)
+                                                ? "Αποτυχία ανάγνωσης remote ενότητας."
+                                                : "Remote section read failed.")
+                            );
+                            return;
+                        }
+
+                        Object raw = result != null ? result.get("text") : null;
+                        setNeonSectionText(
+                                target,
+                                raw != null
+                                        ? String.valueOf(raw)
+                                        : (AppLang.isGreek(DeviceInfoInternalActivity.this)
+                                            ? "Δεν επιστράφηκαν δεδομένα."
+                                            : "No data returned.")
+                        );
+                    }
+                }
+        );
+    }
+
+    /**
+     * Customer-side collector used only by GELRemoteCommandExecutor.
+     * It never reads the technician device: this method executes inside the
+     * customer foreground remote-command service process.
+     */
+    public static String collectRemoteSection(Context context, String section) {
+        if (context == null || section == null) return "Invalid remote section.";
+
+        String key = section.trim().toUpperCase(Locale.US);
+        try {
+            switch (key) {
+                case "SYSTEM":
+                    return remoteSystemInfo(context);
+                case "ANDROID":
+                    return remoteAndroidInfo();
+                case "CPU":
+                    return remoteCpuInfo();
+                case "GPU":
+                    return remoteGpuInfo();
+                case "THERMAL":
+                    return remoteThermalInfo();
+                case "VULKAN":
+                    return remoteVulkanInfo(context);
+                case "RAM":
+                    return remoteRamInfo(context);
+                case "STORAGE":
+                    return remoteStorageInfo();
+                case "CONNECTIVITY":
+                    return remoteConnectivityInfo(context);
+                default:
+                    return "Unsupported internal section: " + key;
+            }
+        } catch (Throwable t) {
+            String msg = t.getMessage();
+            return "Remote section error: " + (msg != null ? msg : t.getClass().getSimpleName());
+        }
+    }
+
+    private static String remoteSystemInfo(Context context) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Manufacturer : ").append(remoteSafe(Build.MANUFACTURER)).append('\n');
+        sb.append("Brand        : ").append(remoteSafe(Build.BRAND)).append('\n');
+        sb.append("Model        : ").append(remoteSafe(Build.MODEL)).append('\n');
+        sb.append("Device       : ").append(remoteSafe(Build.DEVICE)).append('\n');
+        sb.append("Product      : ").append(remoteSafe(Build.PRODUCT)).append('\n');
+        sb.append("Hardware     : ").append(remoteSafe(Build.HARDWARE)).append('\n');
+        sb.append("Board        : ").append(remoteSafe(Build.BOARD)).append('\n');
+        sb.append("Bootloader   : ").append(remoteSafe(Build.BOOTLOADER)).append('\n');
+        sb.append("\n=== System Fingerprint ===\n\n").append(remoteSafe(Build.FINGERPRINT)).append("\n\n");
+        try {
+            sb.append("Android ID   : ")
+              .append(remoteSafe(Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID)))
+              .append('\n');
+        } catch (Throwable ignore) {}
+        return sb.toString();
+    }
+
+    private static String remoteAndroidInfo() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Android        : ").append(remoteSafe(Build.VERSION.RELEASE))
+          .append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n");
+        sb.append("Security Patch : ").append(remoteSafe(Build.VERSION.SECURITY_PATCH)).append('\n');
+        sb.append("Build ID       : ").append(remoteSafe(Build.ID)).append('\n');
+        sb.append("Build Type     : ").append(remoteSafe(Build.TYPE)).append('\n');
+        sb.append("Build Tags     : ").append(remoteSafe(Build.TAGS)).append('\n');
+        sb.append("Incremental    : ").append(remoteSafe(Build.VERSION.INCREMENTAL)).append('\n');
+        sb.append("Baseband       : ").append(remoteProp("gsm.version.baseband")).append('\n');
+        sb.append("Vendor Release : ").append(remoteProp("ro.vendor.build.version.release")).append('\n');
+        return sb.toString();
+    }
+
+    private static String remoteCpuInfo() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("ABI          : ").append(remoteSafe(Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "N/A")).append('\n');
+        sb.append("CPU Cores    : ").append(Runtime.getRuntime().availableProcessors()).append('\n');
+        int cpu = CpuStatBridge.readCpuPercent();
+        sb.append("CPU Load     : ").append(cpu >= 0 ? cpu + "%" : "N/A").append('\n');
+        String model = remoteReadCpuInfoValue("model name");
+        if (model == null) model = remoteReadCpuInfoValue("Hardware");
+        sb.append("CPU Model    : ").append(remoteSafe(model)).append('\n');
+        int n = Runtime.getRuntime().availableProcessors();
+        for (int i = 0; i < n; i++) {
+            long khz = remoteReadLong("/sys/devices/system/cpu/cpu" + i + "/cpufreq/scaling_cur_freq");
+            if (khz > 0) sb.append("C").append(i).append(" Frequency : ").append(khz / 1000L).append(" MHz\n");
+        }
+        return sb.toString();
+    }
+
+    private static String remoteGpuInfo() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Hardware      : ").append(remoteSafe(Build.HARDWARE)).append('\n');
+        sb.append("EGL Hardware  : ").append(remoteProp("ro.hardware.egl")).append('\n');
+        sb.append("Vulkan HW     : ").append(remoteProp("ro.hardware.vulkan")).append('\n');
+        String kgsl = remoteReadString("/sys/class/kgsl/kgsl-3d0/gpu_model");
+        if (kgsl == null) kgsl = remoteReadString("/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq");
+        if (kgsl != null) sb.append("KGSL          : ").append(kgsl).append('\n');
+        String busy = remoteReadString("/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage");
+        if (busy != null) sb.append("GPU Busy      : ").append(busy).append('%').append('\n');
+        return sb.toString();
+    }
+
+    private static String remoteThermalInfo() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("THERMAL SENSORS (REMOTE)\n────────────────────────\n");
+        java.io.File base = new java.io.File("/sys/class/thermal");
+        java.io.File[] zones = base.listFiles((dir, name) -> name.startsWith("thermal_zone"));
+        int count = 0;
+        if (zones != null) {
+            for (java.io.File z : zones) {
+                String type = remoteReadString(z.getAbsolutePath() + "/type");
+                long raw = remoteReadLong(z.getAbsolutePath() + "/temp");
+                if (type == null || raw <= 0) continue;
+                double c = raw > 1000 ? raw / 1000.0 : raw / 10.0;
+                if (c < -20 || c > 150) continue;
+                sb.append(type).append(" : ").append(String.format(Locale.US, "%.1f°C", c)).append('\n');
+                count++;
+                if (count >= 30) break;
+            }
+        }
+        if (count == 0) sb.append("Thermal zones are not exposed by this kernel.\n");
+        return sb.toString();
+    }
+
+    private static String remoteVulkanInfo(Context context) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            PackageManager pm = context.getPackageManager();
+            sb.append("Vulkan feature : ")
+              .append(pm.hasSystemFeature("android.hardware.vulkan.level") ? "Yes" : "No").append('\n');
+            sb.append("Vulkan version : ")
+              .append(pm.hasSystemFeature("android.hardware.vulkan.version") ? "Yes" : "No").append('\n');
+        } catch (Throwable ignore) {}
+        sb.append("Vulkan HW      : ").append(remoteProp("ro.hardware.vulkan")).append('\n');
+        sb.append("Vulkan Enable  : ").append(remoteProp("ro.vulkan.enable")).append('\n');
+        return sb.toString();
+    }
+
+    private static String remoteRamInfo(Context context) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            if (am != null) {
+                ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+                am.getMemoryInfo(mi);
+                long total = mi.totalMem / (1024L * 1024L);
+                long free = mi.availMem / (1024L * 1024L);
+                sb.append("Total RAM     : ").append(total).append(" MB\n");
+                sb.append("Used RAM      : ").append(Math.max(0, total - free)).append(" MB\n");
+                sb.append("Free RAM      : ").append(free).append(" MB\n");
+                sb.append("Low Memory    : ").append(mi.lowMemory ? "Yes" : "No").append('\n');
+                sb.append("Threshold     : ").append(mi.threshold / (1024L * 1024L)).append(" MB\n");
+            }
+        } catch (Throwable ignore) {}
+        String meminfo = remoteReadText("/proc/meminfo", 6000);
+        if (meminfo != null) sb.append("\n/proc/meminfo:\n\n").append(meminfo);
+        return sb.length() > 0 ? sb.toString() : "RAM information unavailable.";
+    }
+
+    private static String remoteStorageInfo() {
+        try {
+            StatFs stat = new StatFs(Environment.getDataDirectory().getAbsolutePath());
+            long total = stat.getTotalBytes();
+            long free = stat.getAvailableBytes();
+            long used = Math.max(0L, total - free);
+            return "Internal Storage:\n"
+                    + "Total : " + remoteBytes(total) + "\n"
+                    + "Used  : " + remoteBytes(used) + "\n"
+                    + "Free  : " + remoteBytes(free) + "\n"
+                    + "Path  : " + Environment.getDataDirectory().getAbsolutePath() + "\n";
+        } catch (Throwable t) {
+            return "Storage information unavailable.";
+        }
+    }
+
+    private static String remoteConnectivityInfo(Context context) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            android.net.ConnectivityManager cm = (android.net.ConnectivityManager)
+                    context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            android.net.Network active = cm != null ? cm.getActiveNetwork() : null;
+            android.net.NetworkCapabilities nc = (cm != null && active != null) ? cm.getNetworkCapabilities(active) : null;
+            sb.append("Active Network : ").append(active != null ? "Yes" : "No").append('\n');
+            if (nc != null) {
+                sb.append("Wi-Fi         : ").append(nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ? "Connected" : "No").append('\n');
+                sb.append("Cellular      : ").append(nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ? "Connected" : "No").append('\n');
+                sb.append("Internet      : ").append(nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) ? "Yes" : "No").append('\n');
+                sb.append("Validated     : ").append(nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED) ? "Yes" : "No").append('\n');
+            }
+        } catch (Throwable ignore) {}
+        try {
+            TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+            if (tm != null) {
+                sb.append("SIM State      : ").append(tm.getSimState()).append('\n');
+                sb.append("Carrier        : ").append(remoteSafe(tm.getNetworkOperatorName())).append('\n');
+                sb.append("Country ISO    : ").append(remoteSafe(tm.getNetworkCountryIso())).append('\n');
+                sb.append("Data State     : ").append(tm.getDataState()).append('\n');
+            }
+        } catch (Throwable ignore) {}
+        return sb.length() > 0 ? sb.toString() : "Connectivity information unavailable.";
+    }
+
+    private static String remoteSafe(String s) {
+        return s == null || s.trim().isEmpty() ? "N/A" : s.trim();
+    }
+
+    private static String remoteProp(String key) {
+        try {
+            Process p = Runtime.getRuntime().exec(new String[]{"getprop", key});
+            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()));
+            String line = br.readLine();
+            br.close();
+            return remoteSafe(line);
+        } catch (Throwable ignore) {
+            return "N/A";
+        }
+    }
+
+    private static String remoteReadString(String path) {
+        try {
+            java.io.File f = new java.io.File(path);
+            if (!f.exists()) return null;
+            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(f));
+            String line = br.readLine();
+            br.close();
+            return line != null ? line.trim() : null;
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    private static String remoteReadText(String path, int maxLen) {
+        try {
+            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(path));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null && sb.length() < maxLen) {
+                sb.append(line).append('\n');
+            }
+            br.close();
+            return sb.toString();
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    private static long remoteReadLong(String path) {
+        String s = remoteReadString(path);
+        if (s == null) return -1L;
+        try { return Long.parseLong(s.replaceAll("[^0-9-]", "")); }
+        catch (Throwable ignore) { return -1L; }
+    }
+
+    private static String remoteReadCpuInfoValue(String wanted) {
+        try {
+            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader("/proc/cpuinfo"));
+            String line;
+            while ((line = br.readLine()) != null) {
+                int idx = line.indexOf(':');
+                if (idx <= 0) continue;
+                String k = line.substring(0, idx).trim();
+                if (k.equalsIgnoreCase(wanted)) {
+                    String v = line.substring(idx + 1).trim();
+                    br.close();
+                    return v;
+                }
+            }
+            br.close();
+        } catch (Throwable ignore) {}
+        return null;
+    }
+
+    private static String remoteBytes(long bytes) {
+        return String.format(Locale.US, "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
     }
 
     // ============================================================
