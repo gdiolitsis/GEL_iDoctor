@@ -1,6 +1,16 @@
 package com.gel.cleaner;
 
 import android.app.Activity;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
+import android.view.View;
+import android.view.Window;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -207,24 +217,186 @@ public final class GELActionRouter {
                             }
                         }
 
-                        new AlertDialog.Builder(
-                                activity
-                        )
-                                .setTitle(
-                                        title != null
-                                                ? title
-                                                : "REMOTE DEVICE"
-                                )
-                                .setMessage(
-                                        body.toString()
-                                )
-                                .setPositiveButton(
-                                        "OK",
-                                        null
-                                )
-                                .show();
+                        showGelRemoteResultDialog(
+                                activity,
+                                title != null
+                                        ? title
+                                        : "REMOTE DEVICE",
+                                body.toString()
+                        );
                     }
                 }
+        );
+    }
+
+    private static void showGelRemoteResultDialog(
+            Activity activity,
+            String titleText,
+            String messageText
+    ) {
+
+        if (activity == null) {
+            return;
+        }
+
+        LinearLayout box =
+                new LinearLayout(activity);
+
+        box.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        int pad =
+                dp(activity, 18);
+
+        box.setPadding(
+                pad,
+                pad,
+                pad,
+                pad
+        );
+
+        GradientDrawable bg =
+                new GradientDrawable();
+
+        bg.setColor(
+                0xFF0B0B0B
+        );
+
+        bg.setCornerRadius(
+                dp(activity, 16)
+        );
+
+        bg.setStroke(
+                dp(activity, 2),
+                0xFFFFD700
+        );
+
+        box.setBackground(bg);
+
+        TextView title =
+                new TextView(activity);
+
+        title.setText(titleText);
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(18f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(
+                0,
+                0,
+                0,
+                dp(activity, 12)
+        );
+
+        box.addView(title);
+
+        TextView message =
+                new TextView(activity);
+
+        message.setText(
+                messageText != null
+                        ? messageText
+                        : ""
+        );
+
+        message.setTextColor(
+                0xFFE6E6E6
+        );
+
+        message.setTextSize(15f);
+        message.setLineSpacing(0f, 1.18f);
+        message.setGravity(Gravity.START);
+        message.setTextIsSelectable(true);
+        message.setPadding(
+                dp(activity, 2),
+                0,
+                dp(activity, 2),
+                dp(activity, 16)
+        );
+
+        box.addView(message);
+
+        Button ok =
+                new Button(activity);
+
+        ok.setText("OK");
+        ok.setAllCaps(false);
+        ok.setTextColor(0xFFFFD700);
+        ok.setTextSize(16f);
+        ok.setTypeface(Typeface.DEFAULT_BOLD);
+        ok.setGravity(Gravity.CENTER);
+        ok.setPadding(
+                dp(activity, 10),
+                dp(activity, 10),
+                dp(activity, 10),
+                dp(activity, 10)
+        );
+
+        GradientDrawable okBg =
+                new GradientDrawable();
+
+        okBg.setColor(
+                0xFF0B0B0B
+        );
+
+        okBg.setCornerRadius(
+                dp(activity, 10)
+        );
+
+        okBg.setStroke(
+                dp(activity, 2),
+                0xFFFFD700
+        );
+
+        ok.setBackground(okBg);
+
+        box.addView(ok);
+
+        AlertDialog dialog =
+                new AlertDialog.Builder(activity)
+                        .setView(box)
+                        .setCancelable(true)
+                        .create();
+
+        ok.setOnClickListener(
+                v -> dialog.dismiss()
+        );
+
+        dialog.show();
+
+        Window window =
+                dialog.getWindow();
+
+        if (window != null) {
+            window.setBackgroundDrawable(
+                    new ColorDrawable(Color.TRANSPARENT)
+            );
+
+            window.setLayout(
+                    (int) (
+                            activity
+                                    .getResources()
+                                    .getDisplayMetrics()
+                                    .widthPixels *
+                                    0.92f
+                    ),
+                    android.view.WindowManager.LayoutParams.WRAP_CONTENT
+            );
+        }
+    }
+
+    private static int dp(
+            Activity activity,
+            int value
+    ) {
+
+        return Math.round(
+                value *
+                        activity
+                                .getResources()
+                                .getDisplayMetrics()
+                                .density
         );
     }
 
