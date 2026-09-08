@@ -64,6 +64,12 @@ public class GELRemoteCommandService extends Service {
     private static final int NOTIFICATION_ID =
             44117;
 
+    // Customer transport presence heartbeat. The technician considers the
+    // remote transport stale if the server has not seen a heartbeat for
+    // longer than the server-side threshold.
+    private static final long HEARTBEAT_INTERVAL_MS =
+            30_000L;
+
     private FirebaseAuth firebaseAuth;
     private FirebaseFunctions functions;
     private FirebaseFirestore firestore;
@@ -81,6 +87,29 @@ public class GELRemoteCommandService extends Service {
 
     private String sessionId;
     private String processingCommandId;
+
+    private boolean heartbeatLoopStarted = false;
+    private boolean heartbeatInFlight = false;
+
+    private final Runnable heartbeatRunnable =
+            new Runnable() {
+                @Override
+                public void run() {
+
+                    if (!heartbeatLoopStarted) {
+                        return;
+                    }
+
+                    sendHeartbeatNow();
+
+                    if (heartbeatLoopStarted) {
+                        main.postDelayed(
+                                this,
+                                HEARTBEAT_INTERVAL_MS
+                        );
+                    }
+                }
+            };
 
     public static void ensureRunning(
             Context context
@@ -185,6 +214,7 @@ public class GELRemoteCommandService extends Service {
 
                     if (user != null) {
                         attachSessionListenerIfReady();
+                        startHeartbeatLoop();
                     }
                 };
 
@@ -207,6 +237,7 @@ public class GELRemoteCommandService extends Service {
         }
 
         attachSessionListenerIfReady();
+        startHeartbeatLoop();
 
         return START_STICKY;
     }
@@ -222,6 +253,7 @@ public class GELRemoteCommandService extends Service {
     @Override
     public void onDestroy() {
 
+        stopHeartbeatLoop();
         removeSessionListener();
 
         if (firebaseAuth != null &&
@@ -245,6 +277,104 @@ public class GELRemoteCommandService extends Service {
     ) {
 
         stopSelf();
+    }
+
+
+    // ============================================================
+    // CUSTOMER REMOTE TRANSPORT PRESENCE
+    // ============================================================
+    private void startHeartbeatLoop() {
+
+        if (heartbeatLoopStarted) {
+            return;
+        }
+
+        heartbeatLoopStarted =
+                true;
+
+        main.removeCallbacks(
+                heartbeatRunnable
+        );
+
+        // Send immediately instead of waiting for the first interval.
+        main.post(
+                heartbeatRunnable
+        );
+    }
+
+    private void stopHeartbeatLoop() {
+
+        heartbeatLoopStarted =
+                false;
+
+        heartbeatInFlight =
+                false;
+
+        main.removeCallbacks(
+                heartbeatRunnable
+        );
+    }
+
+    private void sendHeartbeatNow() {
+
+        if (heartbeatInFlight) {
+            return;
+        }
+
+        if (!refreshSession()) {
+            stopHeartbeatLoop();
+            stopSelf();
+            return;
+        }
+
+        FirebaseUser user =
+                firebaseAuth != null
+                        ? firebaseAuth.getCurrentUser()
+                        : null;
+
+        if (user == null ||
+                functions == null) {
+            return;
+        }
+
+        Map<String, Object> data =
+                new HashMap<>();
+
+        data.put(
+                "sessionId",
+                sessionId
+        );
+
+        heartbeatInFlight =
+                true;
+
+        functions
+                .getHttpsCallable(
+                        "customerRemoteHeartbeat"
+                )
+                .call(
+                        data
+                )
+                .addOnCompleteListener(
+                        task -> {
+
+                            heartbeatInFlight =
+                                    false;
+
+                            if (!task.isSuccessful()) {
+
+                                Throwable error =
+                                        task.getException();
+
+                                Log.w(
+                                        TAG,
+                                        "customerRemoteHeartbeat failed: " +
+                                                buildThrowableMessage(error),
+                                        error
+                                );
+                            }
+                        }
+                );
     }
 
     private boolean refreshSession() {

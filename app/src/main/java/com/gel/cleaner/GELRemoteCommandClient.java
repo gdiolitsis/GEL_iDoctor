@@ -8,7 +8,9 @@ import androidx.annotation.Nullable;
 
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.Timestamp;
 import com.google.firebase.functions.FirebaseFunctions;
+import com.google.firebase.functions.FirebaseFunctionsException;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,8 +30,11 @@ public final class GELRemoteCommandClient {
     private static final String SESSIONS_COLLECTION =
             "service_sessions";
 
+    // Once a command is accepted by the server, a live customer transport
+    // should claim it quickly. Presence heartbeat already rejects stale
+    // devices before queueing, so this is only a bounded fallback.
     private static final long COMMAND_WATCH_TIMEOUT_MS =
-            120_000L;
+            35_000L;
 
     public interface Callback {
 
@@ -142,9 +147,10 @@ public final class GELRemoteCommandClient {
                                     task.getResult() == null) {
 
                                 String message =
-                                        task.getException() != null
-                                                ? task.getException().getMessage()
-                                                : "Remote command failed.";
+                                        formatCallableError(
+                                                activity,
+                                                task.getException()
+                                        );
 
                                 if (callback != null) {
                                     callback.onCompleted(
@@ -232,6 +238,9 @@ public final class GELRemoteCommandClient {
         final boolean[] finished =
                 { false };
 
+        final long[] customerLastSeenMs =
+                { 0L };
+
         Handler handler =
                 new Handler(
                         Looper.getMainLooper()
@@ -254,7 +263,11 @@ public final class GELRemoteCommandClient {
                         callback.onCompleted(
                                 false,
                                 Collections.emptyMap(),
-                                "Timed out waiting for customer device."
+                                formatOfflineMessage(
+                                        activity,
+                                        customerLastSeenMs[0],
+                                        true
+                                )
                         );
                     }
                 };
@@ -298,6 +311,18 @@ public final class GELRemoteCommandClient {
                                     if (snapshot == null ||
                                             !snapshot.exists()) {
                                         return;
+                                    }
+
+                                    long heartbeatMs =
+                                            timestampToMillis(
+                                                    snapshot.get(
+                                                            "customerRemoteHeartbeatAt"
+                                                    )
+                                            );
+
+                                    if (heartbeatMs > 0L) {
+                                        customerLastSeenMs[0] =
+                                                heartbeatMs;
                                     }
 
                                     Object raw =
@@ -391,6 +416,140 @@ public final class GELRemoteCommandClient {
                 timeout,
                 COMMAND_WATCH_TIMEOUT_MS
         );
+    }
+
+
+    private static String formatCallableError(
+            Activity activity,
+            @Nullable Throwable error
+    ) {
+
+        if (error instanceof FirebaseFunctionsException) {
+
+            Object details =
+                    ((FirebaseFunctionsException) error)
+                            .getDetails();
+
+            if (details instanceof Map) {
+
+                Object reason =
+                        ((Map<?, ?>) details)
+                                .get(
+                                        "reason"
+                                );
+
+                if ("CUSTOMER_DEVICE_OFFLINE".equals(
+                        String.valueOf(reason)
+                )) {
+
+                    long lastSeenMs =
+                            numberToLong(
+                                    ((Map<?, ?>) details)
+                                            .get(
+                                                    "lastSeenAt"
+                                            )
+                            );
+
+                    return formatOfflineMessage(
+                            activity,
+                            lastSeenMs,
+                            false
+                    );
+                }
+            }
+        }
+
+        String message =
+                error != null
+                        ? error.getMessage()
+                        : null;
+
+        return message != null &&
+                !message.trim().isEmpty()
+                ? message
+                : "Remote command failed.";
+    }
+
+    private static String formatOfflineMessage(
+            Activity activity,
+            long lastSeenMs,
+            boolean timedOut
+    ) {
+
+        boolean gr =
+                activity != null &&
+                        AppLang.isGreek(
+                                activity
+                        );
+
+        if (lastSeenMs <= 0L) {
+            return gr
+                    ? (timedOut
+                        ? "Η συσκευή πελάτη δεν αποκρίνεται. Το Remote Service πιθανόν είναι offline."
+                        : "Η συσκευή πελάτη είναι offline ή το Remote Service δεν εκτελείται.")
+                    : (timedOut
+                        ? "Customer device is not responding. The Remote Service may be offline."
+                        : "Customer device is offline or the Remote Service is not running.");
+        }
+
+        long ageSeconds =
+                Math.max(
+                        0L,
+                        (System.currentTimeMillis() - lastSeenMs) / 1000L
+                );
+
+        String ageText;
+
+        if (ageSeconds < 5L) {
+            ageText =
+                    gr
+                            ? "μόλις τώρα"
+                            : "just now";
+        } else if (ageSeconds < 60L) {
+            ageText =
+                    gr
+                            ? "πριν " + ageSeconds + " δευτ."
+                            : ageSeconds + " sec ago";
+        } else {
+            long minutes =
+                    ageSeconds / 60L;
+
+            ageText =
+                    gr
+                            ? "πριν " + minutes + " λεπτά"
+                            : minutes + " min ago";
+        }
+
+        return gr
+                ? "Η συσκευή πελάτη είναι offline. Τελευταία παρουσία: " + ageText + "."
+                : "Customer device is offline. Last seen " + ageText + ".";
+    }
+
+    private static long timestampToMillis(
+            Object raw
+    ) {
+
+        if (raw instanceof Timestamp) {
+            return ((Timestamp) raw)
+                    .toDate()
+                    .getTime();
+        }
+
+        return numberToLong(
+                raw
+        );
+    }
+
+    private static long numberToLong(
+            Object raw
+    ) {
+
+        if (raw instanceof Number) {
+            return ((Number) raw)
+                    .longValue();
+        }
+
+        return 0L;
     }
 
     private static Map<String, Object> copyStringObjectMap(
