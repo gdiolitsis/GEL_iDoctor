@@ -46,7 +46,7 @@ const DIAGNOSTIC_MAX_BATCH_CHARS = 16000;
 // Remote functional-control limits.
 const REMOTE_COMMAND_TTL_MS = 2 * 60 * 1000;
 const REMOTE_MAX_PAYLOAD_CHARS = 4096;
-const REMOTE_MAX_RESULT_CHARS = 120000;
+const REMOTE_MAX_RESULT_CHARS = 12000;
 const REMOTE_MAX_MESSAGE_CHARS = 1000;
 
 const REMOTE_ACTIONS = new Set([
@@ -58,8 +58,6 @@ const REMOTE_ACTIONS = new Set([
   "CLEAN_IDOCTOR_CACHE",
   "GET_DEVICE_SUMMARY",
   "CPU_RAM_SNAPSHOT",
-  "GET_INTERNAL_SECTION",
-  "GET_PERIPHERALS_SECTION",
 ]);
 
 function normalizeRemoteAction(value) {
@@ -562,6 +560,9 @@ exports.cancelServiceSession =
               cancelledAt:
                 now,
 
+              cancelledBy:
+                "TECHNICIAN",
+
               endedAt:
                 now,
 
@@ -604,6 +605,182 @@ exports.cancelServiceSession =
             return {
               status:
                 "CANCELLED",
+              alreadyCancelled:
+                false,
+            };
+          }
+        );
+
+      return {
+        ok: true,
+        sessionId,
+        ...result,
+      };
+    }
+  );
+
+
+// ============================================================
+// CUSTOMER — CANCEL ACTIVE SERVICE SESSION
+//
+// Server-authoritative lifecycle transition.
+// Only the authenticated customerUid already bound to the
+// CONNECTED session may terminate it.
+//
+// CONNECTED -> CANCELLED_BY_CUSTOMER
+// Repeated customer cancellation is idempotent.
+// ============================================================
+exports.customerCancelServiceSession =
+  onCall(
+    async (request) => {
+      const customerUid =
+        requireAuth(request);
+
+      const data =
+        request.data || {};
+
+      const sessionId =
+        normalizeSessionId(
+          data.sessionId
+        );
+
+      if (!sessionId) {
+        throw new HttpsError(
+          "invalid-argument",
+          "A valid Service Session ID is required."
+        );
+      }
+
+      const sessionRef =
+        db
+          .collection(COLLECTION)
+          .doc(sessionId);
+
+      const result =
+        await db.runTransaction(
+          async (tx) => {
+            const snap =
+              await tx.get(
+                sessionRef
+              );
+
+            if (!snap.exists) {
+              throw new HttpsError(
+                "not-found",
+                "Service Session not found."
+              );
+            }
+
+            const session =
+              snap.data();
+
+            if (
+              session.customerUid !==
+              customerUid
+            ) {
+              throw new HttpsError(
+                "permission-denied",
+                "This device is not the customer device assigned to this session."
+              );
+            }
+
+            if (
+              session.status ===
+              "CANCELLED_BY_CUSTOMER"
+            ) {
+              return {
+                status:
+                  "CANCELLED_BY_CUSTOMER",
+                alreadyCancelled:
+                  true,
+              };
+            }
+
+            // Handle a technician/customer race cleanly. The assigned
+            // customer may observe the already-terminal technician state
+            // without turning it into an error in the UI.
+            if (
+              session.status ===
+              "CANCELLED"
+            ) {
+              return {
+                status:
+                  "CANCELLED",
+                alreadyCancelled:
+                  true,
+              };
+            }
+
+            if (
+              session.status !==
+              "CONNECTED"
+            ) {
+              throw new HttpsError(
+                "failed-precondition",
+                "Only a CONNECTED Service Session can be ended by the customer."
+              );
+            }
+
+            const now =
+              Timestamp.fromMillis(
+                Date.now()
+              );
+
+            const update = {
+              status:
+                "CANCELLED_BY_CUSTOMER",
+
+              cancelledBy:
+                "CUSTOMER",
+
+              customerCancelledAt:
+                now,
+
+              cancelledAt:
+                now,
+
+              endedAt:
+                now,
+
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            };
+
+            const command =
+              session.remoteCommand;
+
+            if (
+              command &&
+              (
+                command.status ===
+                  "PENDING" ||
+                command.status ===
+                  "RUNNING"
+              )
+            ) {
+              update.remoteCommand = {
+                ...command,
+                status:
+                  "FAILED",
+                completedAt:
+                  now,
+                message:
+                  "Service Session cancelled by customer.",
+                result: {},
+              };
+
+              update.lastRemoteCommandCompletedAt =
+                FieldValue.serverTimestamp();
+            }
+
+            tx.update(
+              sessionRef,
+              update
+            );
+
+            return {
+              status:
+                "CANCELLED_BY_CUSTOMER",
               alreadyCancelled:
                 false,
             };

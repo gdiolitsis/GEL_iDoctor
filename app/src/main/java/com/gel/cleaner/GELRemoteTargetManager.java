@@ -12,6 +12,10 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+
 /**
  * Technician-side target selector.
  *
@@ -263,6 +267,17 @@ public final class GELRemoteTargetManager {
                 px
         );
 
+        // Keep the exit control comfortably tappable on every device.
+        banner.setMinimumHeight(
+                px * 6
+        );
+        banner.setClickable(
+                true
+        );
+        banner.setFocusable(
+                true
+        );
+
         FrameLayout.LayoutParams lp =
                 new FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT,
@@ -270,9 +285,83 @@ public final class GELRemoteTargetManager {
                         Gravity.BOTTOM
                 );
 
+        // Small visual gap even on devices that report zero bottom inset.
+        lp.bottomMargin =
+                Math.max(
+                        1,
+                        px / 2
+                );
+
         content.addView(
                 banner,
                 lp
+        );
+
+        // Android 10-15 can place app content behind the system navigation
+        // area (3-button navigation or gesture navigation). Keep the REMOTE
+        // DEVICE exit banner above every bottom system inset, and above the
+        // IME too if a keyboard is open.
+        ViewCompat.setOnApplyWindowInsetsListener(
+                banner,
+                (view, insets) -> {
+
+                    Insets navigationInsets =
+                            insets.getInsets(
+                                    WindowInsetsCompat.Type.navigationBars()
+                            );
+
+                    Insets gestureInsets =
+                            insets.getInsets(
+                                    WindowInsetsCompat.Type.systemGestures()
+                            );
+
+                    Insets imeInsets =
+                            insets.getInsets(
+                                    WindowInsetsCompat.Type.ime()
+                            );
+
+                    int bottomInset =
+                            Math.max(
+                                    navigationInsets.bottom,
+                                    Math.max(
+                                            gestureInsets.bottom,
+                                            imeInsets.bottom
+                                    )
+                            );
+
+                    ViewGroup.LayoutParams rawParams =
+                            view.getLayoutParams();
+
+                    if (rawParams instanceof FrameLayout.LayoutParams) {
+
+                        FrameLayout.LayoutParams safeParams =
+                                (FrameLayout.LayoutParams) rawParams;
+
+                        int safeBottomMargin =
+                                bottomInset +
+                                        Math.max(
+                                                1,
+                                                px / 2
+                                        );
+
+                        if (safeParams.bottomMargin !=
+                                safeBottomMargin) {
+
+                            safeParams.bottomMargin =
+                                    safeBottomMargin;
+
+                            view.setLayoutParams(
+                                    safeParams
+                            );
+                        }
+                    }
+
+                    return insets;
+                }
+        );
+
+        ViewCompat.requestApplyInsets(
+                banner
         );
     }
 }

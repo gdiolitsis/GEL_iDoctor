@@ -963,13 +963,29 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                                     }
 
                                     // Firebase is authoritative for terminal
-                                    // Service Session states (for example CANCELLED).
+                                    // Service Session states (for example CANCELLED
+                                    // or CANCELLED_BY_CUSTOMER).
                                     // Once a terminal state is observed, remove the
                                     // stale local technician-session record as well.
+                                    boolean endedByCustomer =
+                                            "CANCELLED_BY_CUSTOMER".equals(
+                                                    status
+                                            );
+
                                     stopSessionListener();
                                     clearStoredSession();
                                     GELRemoteTargetManager.syncAvailability(this);
                                     showNoSessionState();
+
+                                    if (endedByCustomer) {
+                                        Toast.makeText(
+                                                this,
+                                                gr
+                                                        ? "Ο πελάτης τερμάτισε το Service Session."
+                                                        : "The customer ended the Service Session.",
+                                                Toast.LENGTH_LONG
+                                        ).show();
+                                    }
                                 }
                         );
     }

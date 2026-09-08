@@ -27,6 +27,7 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -50,6 +51,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
     private TextView txtExpiry;
 
     private EditText inputCode;
+    private Button btnEndSession;
 
     // ============================================================
     // FIREBASE — REAL CUSTOMER PAIRING
@@ -78,6 +80,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
     private ListenerRegistration sessionListener;
 
     private boolean pairingInProgress = false;
+    private boolean customerSessionEndInProgress = false;
 
     private final ActivityResultLauncher<ScanOptions> qrLauncher =
             registerForActivityResult(
@@ -663,6 +666,32 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
 
         root.addView(
                 resultCard
+        );
+
+        // ========================================================
+        // CUSTOMER — END ACTIVE SESSION
+        // ========================================================
+        btnEndSession =
+                makeActionButton(
+                        gr
+                                ? "Τερματισμός Service Session"
+                                : "End Service Session"
+                );
+
+        btnEndSession.setTextColor(
+                0xFFFF5555
+        );
+
+        btnEndSession.setVisibility(
+                View.GONE
+        );
+
+        btnEndSession.setOnClickListener(
+                v -> confirmCustomerSessionEnd()
+        );
+
+        root.addView(
+                btnEndSession
         );
 
         // ========================================================
@@ -1294,13 +1323,24 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                         ? "Η συσκευή συνδέθηκε επιτυχώς. "
                         + "Ο pairing code παραμένει έγκυρος για περίπου "
                         + remainingMinutes
-                        + " λεπτά, αλλά το ενεργό Service Session δεν διακόπτεται από τη λήξη του code."
+                        + " λεπτά, αλλά το ενεργό Service Session δεν διακόπτεται από τη λήξη του code. "
+                        + "Μπορείτε να τερματίσετε το Session οποιαδήποτε στιγμή."
                         :
                         "Device connected successfully. "
                         + "The pairing code remains valid for approximately "
                         + remainingMinutes
-                        + " minutes, but the active Service Session is not terminated by code expiry."
+                        + " minutes, but the active Service Session is not terminated by code expiry. "
+                        + "You can end the Session at any time."
         );
+
+        if (btnEndSession != null) {
+            btnEndSession.setVisibility(
+                    View.VISIBLE
+            );
+            btnEndSession.setEnabled(
+                    !customerSessionEndInProgress
+            );
+        }
 
         Toast.makeText(
                 this,
@@ -1309,6 +1349,249 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
                         : "Connected to technician successfully.",
                 Toast.LENGTH_LONG
         ).show();
+    }
+
+    // ============================================================
+    // CUSTOMER — USER-INITIATED SESSION TERMINATION
+    // ============================================================
+    private void confirmCustomerSessionEnd() {
+
+        SharedPreferences prefs =
+                getSharedPreferences(
+                        CUSTOMER_SESSION_PREFS,
+                        MODE_PRIVATE
+                );
+
+        boolean connected =
+                prefs.getBoolean(
+                        KEY_CONNECTED,
+                        false
+                );
+
+        String sessionId =
+                prefs.getString(
+                        KEY_SESSION_ID,
+                        null
+                );
+
+        if (!connected ||
+                sessionId == null ||
+                sessionId.trim().isEmpty()) {
+
+            if (btnEndSession != null) {
+                btnEndSession.setVisibility(
+                        View.GONE
+                );
+            }
+
+            Toast.makeText(
+                    this,
+                    gr
+                            ? "Δεν υπάρχει ενεργό Service Session."
+                            : "There is no active Service Session.",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(
+                        gr
+                                ? "Τερματισμός Service Session"
+                                : "End Service Session"
+                )
+                .setMessage(
+                        gr
+                                ? "Θέλετε να τερματίσετε τώρα το Service Session; "
+                                + "Η απομακρυσμένη πρόσβαση του τεχνικού θα διακοπεί αμέσως."
+                                : "Do you want to end the Service Session now? "
+                                + "The technician's remote access will stop immediately."
+                )
+                .setNegativeButton(
+                        gr
+                                ? "Όχι"
+                                : "No",
+                        null
+                )
+                .setPositiveButton(
+                        gr
+                                ? "Τερματισμός"
+                                : "End Session",
+                        (dialog, which) ->
+                                requestCustomerSessionEnd(
+                                        sessionId.trim()
+                                )
+                )
+                .show();
+    }
+
+    private void requestCustomerSessionEnd(
+            String sessionId
+    ) {
+
+        if (customerSessionEndInProgress ||
+                sessionId == null ||
+                sessionId.trim().isEmpty()) {
+            return;
+        }
+
+        customerSessionEndInProgress =
+                true;
+
+        if (btnEndSession != null) {
+            btnEndSession.setEnabled(
+                    false
+            );
+        }
+
+        if (txtStatus != null) {
+            txtStatus.setText(
+                    gr
+                            ? "● ΤΕΡΜΑΤΙΣΜΟΣ SERVICE SESSION\nΕνημέρωση Firebase..."
+                            : "● ENDING SERVICE SESSION\nUpdating Firebase..."
+            );
+            txtStatus.setTextColor(
+                    0xFFFFD700
+            );
+        }
+
+        Map<String, Object> data =
+                new HashMap<>();
+
+        data.put(
+                "sessionId",
+                sessionId.trim()
+        );
+
+        firebaseFunctions
+                .getHttpsCallable(
+                        "customerCancelServiceSession"
+                )
+                .call(
+                        data
+                )
+                .addOnCompleteListener(
+                        this,
+                        task -> {
+
+                            customerSessionEndInProgress =
+                                    false;
+
+                            if (!task.isSuccessful()) {
+
+                                // A simultaneous technician-side cancellation may
+                                // already have cleared the local session via the
+                                // Firestore listener. Do not overwrite that terminal UI.
+                                if (!isStoredCustomerSessionConnected()) {
+                                    return;
+                                }
+
+                                if (btnEndSession != null) {
+                                    btnEndSession.setVisibility(
+                                            View.VISIBLE
+                                    );
+                                    btnEndSession.setEnabled(
+                                            true
+                                    );
+                                }
+
+                                if (txtStatus != null) {
+                                    txtStatus.setText(
+                                            gr
+                                                    ? "● ΑΠΟΤΥΧΙΑ ΤΕΡΜΑΤΙΣΜΟΥ\nΤο Service Session παραμένει ενεργό."
+                                                    : "● END SESSION FAILED\nThe Service Session remains active."
+                                    );
+                                    txtStatus.setTextColor(
+                                            0xFFFF5555
+                                    );
+                                }
+
+                                String message =
+                                        task.getException() != null
+                                                ? task.getException().getMessage()
+                                                : null;
+
+                                Toast.makeText(
+                                        this,
+                                        message != null
+                                                ? message
+                                                : (
+                                                gr
+                                                        ? "Δεν ήταν δυνατός ο τερματισμός του Service Session."
+                                                        : "Could not end the Service Session."
+                                        ),
+                                        Toast.LENGTH_LONG
+                                ).show();
+
+                                return;
+                            }
+
+                            String finalStatus =
+                                    "CANCELLED_BY_CUSTOMER";
+
+                            if (task.getResult() != null) {
+
+                                Object raw =
+                                        task
+                                                .getResult()
+                                                .getData();
+
+                                if (raw instanceof Map) {
+
+                                    Object statusRaw =
+                                            ((Map<?, ?>) raw)
+                                                    .get(
+                                                            "status"
+                                                    );
+
+                                    if (statusRaw instanceof String &&
+                                            !((String) statusRaw)
+                                                    .trim()
+                                                    .isEmpty()) {
+
+                                        finalStatus =
+                                                ((String) statusRaw)
+                                                        .trim();
+                                    }
+                                }
+                            }
+
+                            // Usually the Firestore listener fires first. If it
+                            // has not, perform the exact same local cleanup now.
+                            if (isStoredCustomerSessionConnected()) {
+                                handleCustomerSessionEnded(
+                                        finalStatus
+                                );
+                            } else if (btnEndSession != null) {
+                                btnEndSession.setVisibility(
+                                        View.GONE
+                                );
+                            }
+                        }
+                );
+    }
+
+    private boolean isStoredCustomerSessionConnected() {
+
+        SharedPreferences prefs =
+                getSharedPreferences(
+                        CUSTOMER_SESSION_PREFS,
+                        MODE_PRIVATE
+                );
+
+        String sessionId =
+                prefs.getString(
+                        KEY_SESSION_ID,
+                        null
+                );
+
+        return prefs.getBoolean(
+                KEY_CONNECTED,
+                false
+        )
+                && sessionId != null
+                && !sessionId.trim().isEmpty();
     }
 
     // ============================================================
@@ -1374,6 +1657,9 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
 
         removeSessionListener();
 
+        customerSessionEndInProgress =
+                false;
+
         getSharedPreferences(
                 CUSTOMER_SESSION_PREFS,
                 MODE_PRIVATE
@@ -1392,19 +1678,51 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
             );
         } catch (Throwable ignore) {}
 
+        boolean endedByCustomer =
+                "CANCELLED_BY_CUSTOMER".equals(
+                        status
+                );
+
+        boolean cancelledByTechnician =
+                "CANCELLED".equals(
+                        status
+                );
+
+        if (btnEndSession != null) {
+            btnEndSession.setEnabled(
+                    false
+            );
+            btnEndSession.setVisibility(
+                    View.GONE
+            );
+        }
+
         if (txtStatus != null) {
+
+            String statusText;
+
+            if (gr) {
+                statusText =
+                        endedByCustomer
+                                ? "● ΤΕΡΜΑΤΙΣΑΤΕ ΤΟ SERVICE SESSION"
+                                : (
+                                cancelledByTechnician
+                                        ? "● ΤΟ SERVICE SESSION ΑΚΥΡΩΘΗΚΕ ΑΠΟ ΤΟΝ ΤΕΧΝΙΚΟ"
+                                        : "● ΤΟ SERVICE SESSION ΤΕΡΜΑΤΙΣΤΗΚΕ"
+                        );
+            } else {
+                statusText =
+                        endedByCustomer
+                                ? "● YOU ENDED THE SERVICE SESSION"
+                                : (
+                                cancelledByTechnician
+                                        ? "● SERVICE SESSION CANCELLED BY TECHNICIAN"
+                                        : "● SERVICE SESSION ENDED"
+                        );
+            }
+
             txtStatus.setText(
-                    gr
-                            ? (
-                            "CANCELLED".equals(status)
-                                    ? "● ΤΟ SERVICE SESSION ΑΚΥΡΩΘΗΚΕ ΑΠΟ ΤΟΝ ΤΕΧΝΙΚΟ"
-                                    : "● ΤΟ SERVICE SESSION ΤΕΡΜΑΤΙΣΤΗΚΕ"
-                    )
-                            : (
-                            "CANCELLED".equals(status)
-                                    ? "● SERVICE SESSION CANCELLED BY TECHNICIAN"
-                                    : "● SERVICE SESSION ENDED"
-                    )
+                    statusText
             );
             txtStatus.setTextColor(
                     0xFFFFD700
@@ -1433,9 +1751,17 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
 
         Toast.makeText(
                 this,
-                gr
-                        ? "Το Service Session τερματίστηκε."
-                        : "Service Session ended.",
+                endedByCustomer
+                        ? (
+                        gr
+                                ? "Τερματίσατε το Service Session. Η πρόσβαση του τεχνικού διακόπηκε."
+                                : "You ended the Service Session. Technician access has stopped."
+                )
+                        : (
+                        gr
+                                ? "Το Service Session τερματίστηκε."
+                                : "Service Session ended."
+                ),
                 Toast.LENGTH_LONG
         ).show();
     }
