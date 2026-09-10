@@ -1324,10 +1324,38 @@ exports.claimRemoteCommand =
               Date.now() >=
               expiresAtMs
             ) {
-              throw new HttpsError(
-                "deadline-exceeded",
-                "Remote command expired."
+              const completedAt =
+                Timestamp.fromMillis(
+                  Date.now()
+                );
+
+              const expiredCommand = {
+                ...command,
+                status:
+                  "FAILED",
+                completedAt,
+                message:
+                  "Remote command expired.",
+                result: {},
+              };
+
+              tx.update(
+                sessionRef,
+                {
+                  remoteCommand:
+                    expiredCommand,
+
+                  lastRemoteCommandCompletedAt:
+                    FieldValue.serverTimestamp(),
+
+                  updatedAt:
+                    FieldValue.serverTimestamp(),
+                }
               );
+
+              return {
+                expired: true,
+              };
             }
 
             tx.update(
@@ -1352,6 +1380,16 @@ exports.claimRemoteCommand =
             };
           }
         );
+
+      if (
+        result &&
+        result.expired === true
+      ) {
+        throw new HttpsError(
+          "deadline-exceeded",
+          "Remote command expired."
+        );
+      }
 
       return {
         ok: true,

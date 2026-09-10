@@ -24,12 +24,23 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
+import android.text.Layout;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.text.style.ForegroundColorSpan;
+import android.util.Base64;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.InputStreamReader;
@@ -249,6 +260,12 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
         Map<String, Object> payload = new HashMap<>();
         payload.put("section", section);
 
+        // Proof-of-concept: System Information is rendered as a visual snapshot
+        // on the CUSTOMER device. The technician only displays the returned image.
+        if ("SYSTEM".equalsIgnoreCase(section)) {
+            payload.put("visualSnapshot", true);
+        }
+
         GELRemoteCommandClient.send(
                 this,
                 "GET_INTERNAL_SECTION",
@@ -269,6 +286,13 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
                                                 ? "Αποτυχία ανάγνωσης remote ενότητας."
                                                 : "Remote section read failed.")
                             );
+                            return;
+                        }
+
+                        // For SYSTEM, prefer the customer-rendered visual snapshot.
+                        // If decoding fails for any reason, fall back to the existing text path.
+                        if ("SYSTEM".equalsIgnoreCase(section) &&
+                                showRemoteVisualSnapshot(target, result)) {
                             return;
                         }
 
@@ -310,6 +334,332 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
         } catch (Throwable t) {
             String msg = t.getMessage();
             return "Remote section error: " + (msg != null ? msg : t.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * Customer-side visual snapshot for remote diagnostics.
+     *
+     * This deliberately does NOT capture the Android screen and does not require
+     * MediaProjection. It renders the exact customer-side diagnostic text using
+     * the same neon-value styling, then sends the resulting image through the
+     * already allowlisted remote-command result. SYSTEM is the first POC section.
+     *
+     * The image bytes are capped before Base64 encoding so the result remains
+     * inside the existing server-side remote-command transport envelope.
+     */
+    public static Map<String, Object> collectRemoteVisualSnapshot(
+            Context context,
+            String section
+    ) {
+        Map<String, Object> out = new HashMap<>();
+        String key = section != null
+                ? section.trim().toUpperCase(Locale.US)
+                : "";
+
+        String text = collectRemoteSection(context, key);
+        out.put("section", key);
+        out.put("text", text != null ? text : "");
+        out.put("visualSnapshot", false);
+
+        if (context == null || !"SYSTEM".equals(key)) {
+            return out;
+        }
+
+        Bitmap bitmap = null;
+        Bitmap scaled = null;
+        try {
+            float density = context.getResources().getDisplayMetrics().density;
+            int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
+            int width = Math.max(720, Math.min(1080, screenWidth));
+            int padding = Math.max(24, Math.round(16f * density));
+            int contentWidth = Math.max(320, width - (padding * 2));
+
+            TextPaint paint = new TextPaint(
+                    Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG
+            );
+            paint.setColor(Color.WHITE);
+            paint.setTextSize(Math.max(28f, 12.5f * density));
+            paint.setTypeface(Typeface.MONOSPACE);
+
+            String title = "SYSTEM INFORMATION\n\n";
+            CharSequence styled = applyNeonToValuesStatic(
+                    title + (text != null ? text : "")
+            );
+
+            StaticLayout layout = new StaticLayout(
+                    styled,
+                    paint,
+                    contentWidth,
+                    Layout.Alignment.ALIGN_NORMAL,
+                    1.08f,
+                    0f,
+                    false
+            );
+
+            int height = Math.max(
+                    1,
+                    layout.getHeight() + (padding * 2)
+            );
+
+            // Never silently crop diagnostic information.
+            // If the rendered report is abnormally tall,
+            // return the existing full text instead.
+            if (height > 8192) {
+                out.put(
+                        "visualSnapshotError",
+                        "System Information snapshot exceeded safe render height."
+                );
+                return out;
+            }
+
+            bitmap = Bitmap.createBitmap(
+                    width,
+                    height,
+                    Bitmap.Config.ARGB_8888
+            );
+
+            Canvas canvas = new Canvas(bitmap);
+            canvas.drawColor(Color.rgb(5, 8, 10));
+            canvas.save();
+            canvas.translate(padding, padding);
+            layout.draw(canvas);
+            canvas.restore();
+
+            // Keep the encoded image safely inside the existing
+            // server-side remote-command result envelope.
+            final int maxRawBytes = 64 * 1024;
+            int currentWidth = bitmap.getWidth();
+            int currentHeight = bitmap.getHeight();
+            int jpegQuality = 88;
+
+            byte[] imageBytes =
+                    compressJpeg(bitmap, jpegQuality);
+
+            while (imageBytes.length > maxRawBytes &&
+                    jpegQuality > 56) {
+
+                jpegQuality -= 8;
+                imageBytes =
+                        compressJpeg(bitmap, jpegQuality);
+            }
+
+            while (imageBytes.length > maxRawBytes &&
+                    currentWidth > 560) {
+
+                int nextWidth =
+                        Math.max(
+                                560,
+                                Math.round(currentWidth * 0.84f)
+                        );
+
+                int nextHeight =
+                        Math.max(
+                                1,
+                                Math.round(
+                                        currentHeight *
+                                                (nextWidth /
+                                                        (float) currentWidth)
+                                )
+                        );
+
+                scaled =
+                        Bitmap.createScaledBitmap(
+                                bitmap,
+                                nextWidth,
+                                nextHeight,
+                                true
+                        );
+
+                if (bitmap != null &&
+                        bitmap != scaled &&
+                        !bitmap.isRecycled()) {
+
+                    bitmap.recycle();
+                }
+
+                bitmap = scaled;
+                scaled = null;
+
+                currentWidth = bitmap.getWidth();
+                currentHeight = bitmap.getHeight();
+                jpegQuality = 72;
+
+                imageBytes =
+                        compressJpeg(bitmap, jpegQuality);
+
+                while (imageBytes.length > maxRawBytes &&
+                        jpegQuality > 48) {
+
+                    jpegQuality -= 8;
+                    imageBytes =
+                            compressJpeg(bitmap, jpegQuality);
+                }
+            }
+
+            if (imageBytes.length > maxRawBytes) {
+                out.put(
+                        "visualSnapshotError",
+                        "System Information snapshot is too large for inline transport."
+                );
+                return out;
+            }
+
+            String encoded =
+                    Base64.encodeToString(
+                            imageBytes,
+                            Base64.NO_WRAP
+                    );
+
+            out.put("visualSnapshot", true);
+            out.put("mimeType", "image/jpeg");
+            out.put("imageBase64", encoded);
+            out.put("imageWidth", bitmap.getWidth());
+            out.put("imageHeight", bitmap.getHeight());
+            out.put("imageBytes", imageBytes.length);
+            out.put("imageQuality", jpegQuality);
+            out.put("generatedAt", System.currentTimeMillis());
+
+            return out;
+
+        } catch (Throwable t) {
+            out.put(
+                    "visualSnapshotError",
+                    t.getMessage() != null
+                            ? t.getMessage()
+                            : t.getClass().getSimpleName()
+            );
+            return out;
+        } finally {
+            try {
+                if (scaled != null && !scaled.isRecycled()) scaled.recycle();
+            } catch (Throwable ignore) {}
+            try {
+                if (bitmap != null && !bitmap.isRecycled()) bitmap.recycle();
+            } catch (Throwable ignore) {}
+        }
+    }
+
+    private static byte[] compressJpeg(
+            Bitmap bitmap,
+            int quality
+    ) throws Exception {
+
+        ByteArrayOutputStream out =
+                new ByteArrayOutputStream();
+
+        int safeQuality =
+                Math.max(
+                        35,
+                        Math.min(95, quality)
+                );
+
+        if (bitmap == null ||
+                !bitmap.compress(
+                        Bitmap.CompressFormat.JPEG,
+                        safeQuality,
+                        out
+                )) {
+
+            throw new IllegalStateException(
+                    "Could not encode visual snapshot."
+            );
+        }
+
+        return out.toByteArray();
+    }
+
+    private boolean showRemoteVisualSnapshot(
+            TextView target,
+            Map<String, Object> result
+    ) {
+        if (target == null || result == null) return false;
+
+        Object visualRaw = result.get("visualSnapshot");
+        if (!(visualRaw instanceof Boolean) || !((Boolean) visualRaw)) {
+            return false;
+        }
+
+        Object imageRaw = result.get("imageBase64");
+        if (!(imageRaw instanceof String) || ((String) imageRaw).trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            byte[] bytes = Base64.decode(
+                    (String) imageRaw,
+                    Base64.DEFAULT
+            );
+            final Bitmap bitmap = BitmapFactory.decodeByteArray(
+                    bytes,
+                    0,
+                    bytes.length
+            );
+
+            if (bitmap == null) return false;
+
+            target.post(() -> {
+                if (isFinishing() || isDestroyed()) {
+                    try {
+                        if (!bitmap.isRecycled()) bitmap.recycle();
+                    } catch (Throwable ignore) {}
+                    return;
+                }
+
+                try {
+                    int availableWidth = target.getWidth()
+                            - target.getPaddingLeft()
+                            - target.getPaddingRight();
+                    if (availableWidth <= 0) {
+                        availableWidth = getResources()
+                                .getDisplayMetrics()
+                                .widthPixels;
+                    }
+
+                    int drawWidth = Math.min(
+                            availableWidth,
+                            bitmap.getWidth()
+                    );
+                    int drawHeight = Math.max(
+                            1,
+                            Math.round(
+                                    bitmap.getHeight()
+                                            * (drawWidth / (float) bitmap.getWidth())
+                            )
+                    );
+
+                    BitmapDrawable drawable = new BitmapDrawable(
+                            getResources(),
+                            bitmap
+                    );
+                    drawable.setBounds(
+                            0,
+                            0,
+                            drawWidth,
+                            drawHeight
+                    );
+
+                    target.setText("");
+                    target.setCompoundDrawables(
+                            null,
+                            drawable,
+                            null,
+                            null
+                    );
+                    target.setCompoundDrawablePadding(0);
+                    target.requestLayout();
+
+                } catch (Throwable t) {
+                    try {
+                        if (!bitmap.isRecycled()) bitmap.recycle();
+                    } catch (Throwable ignore) {}
+                }
+            });
+
+            return true;
+
+        } catch (Throwable ignore) {
+            return false;
         }
     }
 
@@ -1289,10 +1639,12 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
     private void setNeonSectionText(TextView tv, String text) {
         if (tv == null) return;
         if (text == null) text = "";
-        tv.setText(applyNeonToValues(text));
+        // Clear a previously rendered remote snapshot before showing text again.
+        tv.setCompoundDrawables(null, null, null, null);
+        tv.setText(applyNeonToValuesStatic(text));
     }
 
-    private CharSequence applyNeonToValues(String text) {
+    private static CharSequence applyNeonToValuesStatic(String text) {
         SpannableStringBuilder ssb = new SpannableStringBuilder(text);
         String[] lines = text.split("\n", -1);
         int offset = 0;

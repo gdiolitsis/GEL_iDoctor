@@ -760,6 +760,25 @@ public final class GELRemoteCommandExecutor {
             return Result.fail("Internal section is required.");
         }
 
+        boolean visualSnapshot =
+                payload != null &&
+                        Boolean.TRUE.equals(payload.get("visualSnapshot"));
+
+        if (visualSnapshot && "SYSTEM".equalsIgnoreCase(section)) {
+            Map<String, Object> out =
+                    DeviceInfoInternalActivity.collectRemoteVisualSnapshot(
+                            context,
+                            section
+                    );
+
+            return Result.ok(
+                    Boolean.TRUE.equals(out.get("visualSnapshot"))
+                            ? "Customer System Information visual snapshot loaded."
+                            : "Customer System Information loaded; visual snapshot unavailable, text fallback returned.",
+                    out
+            );
+        }
+
         String text = DeviceInfoInternalActivity.collectRemoteSection(
                 context,
                 section
