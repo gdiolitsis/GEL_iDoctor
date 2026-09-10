@@ -21,8 +21,6 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -36,7 +34,6 @@ import androidx.annotation.Nullable;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.functions.FirebaseFunctions;
 
@@ -104,14 +101,6 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     private static final long PAIRING_CODE_DURATION_MS =
             2L * 60L * 60L * 1000L; // 2 hours
 
-    // Remote-command transport presence. The server uses the same stale
-    // threshold before accepting a technician command.
-    private static final long CUSTOMER_REMOTE_HEARTBEAT_STALE_MS =
-            75_000L;
-
-    private static final long PRESENCE_REFRESH_MS =
-            5_000L;
-
     // ============================================================
     // UI
     // ============================================================
@@ -138,29 +127,6 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     private FirebaseFunctions firebaseFunctions;
     private FirebaseFirestore firebaseFirestore;
     private ListenerRegistration sessionListener;
-
-    private final Handler presenceHandler =
-            new Handler(
-                    Looper.getMainLooper()
-            );
-
-    private boolean firebaseSessionConnected = false;
-    private long customerRemoteLastSeenMs = 0L;
-
-    private final Runnable presenceRefreshRunnable =
-            new Runnable() {
-                @Override
-                public void run() {
-                    renderCustomerRemotePresence();
-
-                    if (firebaseSessionConnected) {
-                        presenceHandler.postDelayed(
-                                this,
-                                PRESENCE_REFRESH_MS
-                        );
-                    }
-                }
-            };
 
     private final SecureRandom secureRandom =
             new SecureRandom();
@@ -965,37 +931,21 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                                                 .putBoolean(KEY_SESSION_CONNECTED, true)
                                                 .apply();
 
-                                        firebaseSessionConnected =
-                                                true;
-
-                                        long heartbeatMs =
-                                                timestampToMillis(
-                                                        snapshot.get(
-                                                                "customerRemoteHeartbeatAt"
-                                                        )
-                                                );
-
-                                        if (heartbeatMs > 0L) {
-                                            customerRemoteLastSeenMs =
-                                                    heartbeatMs;
-                                        }
-
                                         txtStatus.setText(
                                                 gr
-                                                        ? "● SERVICE SESSION CONNECTED\nΈλεγχος διαθεσιμότητας Remote Device..."
-                                                        : "● SERVICE SESSION CONNECTED\nChecking Remote Device availability..."
+                                                        ? "● ΣΥΝΔΕΘΗΚΕ ΣΥΣΚΕΥΗ ΠΕΛΑΤΗ\nΤο Remote Device Mode είναι διαθέσιμο."
+                                                        : "● CUSTOMER DEVICE CONNECTED\nRemote Device Mode is available."
                                         );
-                                        txtStatus.setTextColor(0xFFFFD700);
+                                        txtStatus.setTextColor(0xFF39FF14);
 
                                         txtExpiry.setText(
                                                 gr
-                                                        ? "Το Firebase Session είναι ενεργό. Η πραγματική διαθεσιμότητα της συσκευής ελέγχεται από heartbeat."
-                                                        : "The Firebase Session is active. Actual device availability is verified by heartbeat."
+                                                        ? "Η συσκευή πελάτη συνδέθηκε επιτυχώς στο Service Session."
+                                                        : "Customer device successfully connected to the Service Session."
                                         );
 
                                         GELRemoteTargetManager.syncAvailability(this);
-                                        startPresenceRefresh();
-                                        renderCustomerRemotePresence();
+                                        showRemoteControlReady();
                                         return;
                                     }
 
@@ -1006,12 +956,6 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
                                                 .putBoolean(KEY_FIREBASE_BACKED, true)
                                                 .putBoolean(KEY_SESSION_CONNECTED, false)
                                                 .apply();
-
-                                        firebaseSessionConnected =
-                                                false;
-                                        customerRemoteLastSeenMs =
-                                                0L;
-                                        stopPresenceRefresh();
 
                                         GELRemoteTargetManager.syncAvailability(this);
                                         showRemoteControlWaiting();
@@ -1047,10 +991,6 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     }
 
     private void stopSessionListener() {
-        stopPresenceRefresh();
-        firebaseSessionConnected = false;
-        customerRemoteLastSeenMs = 0L;
-
         if (sessionListener != null) {
             sessionListener.remove();
             sessionListener = null;
@@ -1236,161 +1176,6 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         );
     }
 
-
-    private void startPresenceRefresh() {
-
-        presenceHandler.removeCallbacks(
-                presenceRefreshRunnable
-        );
-
-        presenceHandler.post(
-                presenceRefreshRunnable
-        );
-    }
-
-    private void stopPresenceRefresh() {
-
-        presenceHandler.removeCallbacks(
-                presenceRefreshRunnable
-        );
-    }
-
-    private void renderCustomerRemotePresence() {
-
-        if (!firebaseSessionConnected) {
-            return;
-        }
-
-        if (customerRemoteLastSeenMs <= 0L) {
-            showRemoteControlHeartbeatWaiting();
-            return;
-        }
-
-        long ageMs =
-                Math.max(
-                        0L,
-                        System.currentTimeMillis() - customerRemoteLastSeenMs
-                );
-
-        if (ageMs <= CUSTOMER_REMOTE_HEARTBEAT_STALE_MS) {
-            showRemoteControlReady();
-            return;
-        }
-
-        showRemoteControlOffline(
-                customerRemoteLastSeenMs
-        );
-    }
-
-    private void showRemoteControlHeartbeatWaiting() {
-
-        if (txtRemoteControlStatus == null ||
-                btnEnterRemoteMode == null) {
-            return;
-        }
-
-        txtRemoteControlStatus.setText(
-                gr
-                        ? "● ΑΝΑΜΟΝΗ — Περιμένουμε heartbeat από το Remote Service της συσκευής πελάτη."
-                        : "● WAITING — Waiting for heartbeat from the customer Remote Service."
-        );
-
-        txtRemoteControlStatus.setTextColor(
-                0xFFFFD700
-        );
-
-        btnEnterRemoteMode.setVisibility(
-                View.GONE
-        );
-    }
-
-    private void showRemoteControlOffline(
-            long lastSeenMs
-    ) {
-
-        if (txtRemoteControlStatus == null ||
-                btnEnterRemoteMode == null) {
-            return;
-        }
-
-        txtRemoteControlStatus.setText(
-                gr
-                        ? "● CUSTOMER DEVICE OFFLINE — Τελευταία παρουσία: " + formatLastSeen(lastSeenMs)
-                        : "● CUSTOMER DEVICE OFFLINE — Last seen " + formatLastSeen(lastSeenMs)
-        );
-
-        txtRemoteControlStatus.setTextColor(
-                0xFFFF5555
-        );
-
-        btnEnterRemoteMode.setVisibility(
-                View.GONE
-        );
-    }
-
-    private String formatLastSeen(
-            long lastSeenMs
-    ) {
-
-        long ageSeconds =
-                Math.max(
-                        0L,
-                        (System.currentTimeMillis() - lastSeenMs) / 1000L
-                );
-
-        if (ageSeconds < 5L) {
-            return gr
-                    ? "μόλις τώρα"
-                    : "just now";
-        }
-
-        if (ageSeconds < 60L) {
-            return gr
-                    ? "πριν " + ageSeconds + " δευτ."
-                    : ageSeconds + " sec ago";
-        }
-
-        long minutes =
-                ageSeconds / 60L;
-
-        if (minutes < 60L) {
-            return gr
-                    ? "πριν " + minutes + " λεπτά"
-                    : minutes + " min ago";
-        }
-
-        String time =
-                new SimpleDateFormat(
-                        "HH:mm:ss",
-                        Locale.getDefault()
-                )
-                        .format(
-                                new Date(lastSeenMs)
-                        );
-
-        return gr
-                ? "στις " + time
-                : "at " + time;
-    }
-
-    private static long timestampToMillis(
-            Object raw
-    ) {
-
-        if (raw instanceof Timestamp) {
-            return ((Timestamp) raw)
-                    .toDate()
-                    .getTime();
-        }
-
-        if (raw instanceof Number) {
-            return ((Number) raw)
-                    .longValue();
-        }
-
-        return 0L;
-    }
-
     private void showRemoteControlReady() {
 
         if (txtRemoteControlStatus == null ||
@@ -1401,8 +1186,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         txtRemoteControlStatus.setText(
                 gr
-                        ? "● ONLINE — Η συσκευή πελάτη είναι διαθέσιμη για remote εντολές."
-                        : "● ONLINE — Customer device is available for remote commands."
+                        ? "● READY — Η συσκευή πελάτη μπορεί να δεχτεί ασφαλείς remote εντολές."
+                        : "● READY — Customer device can receive allowlisted remote commands."
         );
 
         txtRemoteControlStatus.setTextColor(

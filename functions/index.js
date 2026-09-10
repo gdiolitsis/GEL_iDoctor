@@ -45,7 +45,6 @@ const DIAGNOSTIC_MAX_BATCH_CHARS = 16000;
 
 // Remote functional-control limits.
 const REMOTE_COMMAND_TTL_MS = 2 * 60 * 1000;
-const CUSTOMER_REMOTE_HEARTBEAT_STALE_MS = 75 * 1000;
 const REMOTE_MAX_PAYLOAD_CHARS = 4096;
 const REMOTE_MAX_RESULT_CHARS = 12000;
 const REMOTE_MAX_MESSAGE_CHARS = 1000;
@@ -59,8 +58,6 @@ const REMOTE_ACTIONS = new Set([
   "CLEAN_IDOCTOR_CACHE",
   "GET_DEVICE_SUMMARY",
   "CPU_RAM_SNAPSHOT",
-  "GET_INTERNAL_SECTION",
-  "GET_PERIPHERALS_SECTION",
 ]);
 
 function normalizeRemoteAction(value) {
@@ -1036,101 +1033,6 @@ exports.appendDiagnosticBatch =
       };
     }
   );
-
-// ============================================================
-// CUSTOMER — REMOTE TRANSPORT HEARTBEAT
-//
-// The Firebase Service Session may remain CONNECTED while Android has
-// killed/replaced the customer app process. This authenticated heartbeat
-// represents the actual customer-side remote-command transport presence.
-// ============================================================
-exports.customerRemoteHeartbeat =
-  onCall(
-    async (request) => {
-      const customerUid =
-        requireAuth(request);
-
-      const data =
-        request.data || {};
-
-      const sessionId =
-        normalizeSessionId(
-          data.sessionId
-        );
-
-      if (!sessionId) {
-        throw new HttpsError(
-          "invalid-argument",
-          "A valid Service Session ID is required."
-        );
-      }
-
-      const sessionRef =
-        db
-          .collection(COLLECTION)
-          .doc(sessionId);
-
-      await db.runTransaction(
-        async (tx) => {
-          const snap =
-            await tx.get(
-              sessionRef
-            );
-
-          if (!snap.exists) {
-            throw new HttpsError(
-              "not-found",
-              "Service Session not found."
-            );
-          }
-
-          const session =
-            snap.data();
-
-          if (
-            session.status !==
-            "CONNECTED"
-          ) {
-            throw new HttpsError(
-              "failed-precondition",
-              "Remote heartbeat requires a CONNECTED Service Session."
-            );
-          }
-
-          if (
-            session.customerUid !==
-            customerUid
-          ) {
-            throw new HttpsError(
-              "permission-denied",
-              "This device is not the customer device assigned to the Service Session."
-            );
-          }
-
-          tx.update(
-            sessionRef,
-            {
-              customerRemoteHeartbeatAt:
-                FieldValue.serverTimestamp(),
-              customerRemoteTransport:
-                "ONLINE",
-              customerRemoteTransportVersion:
-                1,
-            }
-          );
-        }
-      );
-
-      return {
-        ok: true,
-        sessionId,
-        serverTime:
-          Date.now(),
-      };
-    }
-  );
-
-
 // ============================================================
 // TECHNICIAN — SEND ALLOWLISTED REMOTE COMMAND
 //
@@ -1230,29 +1132,6 @@ exports.sendRemoteCommand =
             throw new HttpsError(
               "failed-precondition",
               "Remote commands require a CONNECTED customer device."
-            );
-          }
-
-          const heartbeatMs =
-            session.customerRemoteHeartbeatAt &&
-            typeof session.customerRemoteHeartbeatAt.toMillis === "function"
-              ? session.customerRemoteHeartbeatAt.toMillis()
-              : 0;
-
-          if (
-            !heartbeatMs ||
-            nowMs - heartbeatMs >
-              CUSTOMER_REMOTE_HEARTBEAT_STALE_MS
-          ) {
-            throw new HttpsError(
-              "failed-precondition",
-              "Customer device is offline.",
-              {
-                reason:
-                  "CUSTOMER_DEVICE_OFFLINE",
-                lastSeenAt:
-                  heartbeatMs || null,
-              }
             );
           }
 
