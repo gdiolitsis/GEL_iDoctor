@@ -511,6 +511,12 @@ public class DeviceInfoInternalActivity extends GELAutoActivityHook
                             Base64.NO_WRAP
                     );
 
+            // A successful visual snapshot is the payload.
+            // Do not duplicate the full raw report text beside the Base64 image,
+            // otherwise the completeRemoteCommand result can exceed its
+            // server-side JSON size limit.
+            out.remove("text");
+
             out.put("visualSnapshot", true);
             out.put("mimeType", "image/jpeg");
             out.put("imageBase64", encoded);
