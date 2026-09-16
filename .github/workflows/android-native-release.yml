@@ -31,6 +31,7 @@ jobs:
         with:
           cmdline-tools-version: 11076708
           accept-android-sdk-licenses: true
+          packages: ''
 
       # --------------------------------------------
       # Install SDK packages
