@@ -1578,3 +1578,767 @@ exports.completeRemoteCommand =
       };
     }
   );
+
+
+// ============================================================
+// GEL REMOTE ASSIST — APP-ONLY WEBRTC SIGNALING
+//
+// Firebase carries only authenticated SDP / ICE signaling.
+// Live video and control events travel peer-to-peer over WebRTC.
+// ============================================================
+const REMOTE_ASSIST_TTL_MS =
+  10 * 60 * 1000;
+const REMOTE_ASSIST_MAX_SDP_CHARS =
+  64000;
+const REMOTE_ASSIST_MAX_CANDIDATE_CHARS =
+  4096;
+const REMOTE_ASSIST_MAX_CANDIDATES =
+  64;
+const REMOTE_ASSIST_MAX_MESSAGE_CHARS =
+  500;
+
+function createRemoteAssistId() {
+  return `RA-${Date.now().toString(36).toUpperCase()}-${crypto
+    .randomBytes(4)
+    .toString("hex")
+    .toUpperCase()}`;
+}
+
+function normalizeRemoteAssistId(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  return /^RA-[A-Z0-9-]+$/i.test(trimmed) &&
+    trimmed.length <= 100
+    ? trimmed
+    : null;
+}
+
+function sanitizeRemoteAssistSdp(value, fieldName) {
+  if (typeof value !== "string") {
+    throw new HttpsError(
+      "invalid-argument",
+      `${fieldName} is required.`
+    );
+  }
+
+  const text = value.trim();
+
+  if (
+    !text ||
+    text.length > REMOTE_ASSIST_MAX_SDP_CHARS
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      `${fieldName} is invalid or too large.`
+    );
+  }
+
+  return text;
+}
+
+function sanitizeRemoteAssistMessage(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value
+    .trim()
+    .substring(
+      0,
+      REMOTE_ASSIST_MAX_MESSAGE_CHARS
+    );
+}
+
+function sanitizeRemoteAssistCandidate(value) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      "A valid ICE candidate is required."
+    );
+  }
+
+  const candidate =
+    typeof value.candidate === "string"
+      ? value.candidate.trim()
+      : "";
+
+  const sdpMid =
+    typeof value.sdpMid === "string"
+      ? value.sdpMid.trim().substring(0, 128)
+      : "";
+
+  const sdpMLineIndex =
+    Number.isInteger(value.sdpMLineIndex)
+      ? value.sdpMLineIndex
+      : Number.parseInt(
+          value.sdpMLineIndex,
+          10
+        );
+
+  if (
+    !candidate ||
+    candidate.length >
+      REMOTE_ASSIST_MAX_CANDIDATE_CHARS ||
+    !Number.isInteger(sdpMLineIndex) ||
+    sdpMLineIndex < 0 ||
+    sdpMLineIndex > 64
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      "ICE candidate is invalid or too large."
+    );
+  }
+
+  return {
+    sdpMid,
+    sdpMLineIndex,
+    candidate,
+  };
+}
+
+function remoteAssistCandidateKey(value) {
+  return `${value.sdpMid}|${value.sdpMLineIndex}|${value.candidate}`;
+}
+
+// ============================================================
+// TECHNICIAN — START GEL-ONLY REMOTE ASSIST
+// ============================================================
+exports.startRemoteAssist =
+  onCall(
+    async (request) => {
+      const technicianUid =
+        requireAuth(request);
+
+      const data =
+        request.data || {};
+
+      const sessionId =
+        normalizeSessionId(
+          data.sessionId
+        );
+
+      if (!sessionId) {
+        throw new HttpsError(
+          "invalid-argument",
+          "A valid Service Session ID is required."
+        );
+      }
+
+      const offerSdp =
+        sanitizeRemoteAssistSdp(
+          data.offerSdp,
+          "Remote Assist offer SDP"
+        );
+
+      const assistId =
+        createRemoteAssistId();
+      const nowMs =
+        Date.now();
+      const expiresAtMs =
+        nowMs + REMOTE_ASSIST_TTL_MS;
+
+      const sessionRef =
+        db
+          .collection(COLLECTION)
+          .doc(sessionId);
+
+      await db.runTransaction(
+        async (tx) => {
+          const snap =
+            await tx.get(
+              sessionRef
+            );
+
+          if (!snap.exists) {
+            throw new HttpsError(
+              "not-found",
+              "Service Session not found."
+            );
+          }
+
+          const session =
+            snap.data();
+
+          if (
+            session.technicianUid !==
+            technicianUid
+          ) {
+            throw new HttpsError(
+              "permission-denied",
+              "This Service Session does not belong to this technician."
+            );
+          }
+
+          if (
+            session.status !== "CONNECTED" ||
+            !session.customerUid
+          ) {
+            throw new HttpsError(
+              "failed-precondition",
+              "GEL Remote Assist requires a CONNECTED customer device."
+            );
+          }
+
+          // Starting a new offer intentionally supersedes any stale offer
+          // from the same authenticated technician. The customer sees the
+          // new assistId and tears down the previous peer locally.
+          tx.update(
+            sessionRef,
+            {
+              remoteAssist: {
+                version: 1,
+                id: assistId,
+                status: "OFFERED",
+                scope: "GEL_APP_ONLY",
+                technicianUid,
+                customerUid:
+                  session.customerUid,
+                offerSdp,
+                answerSdp: null,
+                technicianCandidates: [],
+                customerCandidates: [],
+                message:
+                  "Waiting for customer approval.",
+                createdAt:
+                  Timestamp.fromMillis(nowMs),
+                answeredAt: null,
+                stoppedAt: null,
+                expiresAt:
+                  Timestamp.fromMillis(
+                    expiresAtMs
+                  ),
+                updatedAt:
+                  Timestamp.fromMillis(nowMs),
+              },
+
+              lastRemoteAssistAt:
+                FieldValue.serverTimestamp(),
+
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            }
+          );
+        }
+      );
+
+      return {
+        ok: true,
+        sessionId,
+        assistId,
+        status: "OFFERED",
+        expiresAt: expiresAtMs,
+      };
+    }
+  );
+
+
+// ============================================================
+// CUSTOMER — ACCEPT / DECLINE GEL-ONLY REMOTE ASSIST
+// ============================================================
+exports.answerRemoteAssist =
+  onCall(
+    async (request) => {
+      const customerUid =
+        requireAuth(request);
+
+      const data =
+        request.data || {};
+
+      const sessionId =
+        normalizeSessionId(
+          data.sessionId
+        );
+
+      const assistId =
+        normalizeRemoteAssistId(
+          data.assistId
+        );
+
+      const accepted =
+        data.accepted === true;
+
+      if (!sessionId || !assistId) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Valid sessionId and assistId are required."
+        );
+      }
+
+      const answerSdp =
+        accepted
+          ? sanitizeRemoteAssistSdp(
+              data.answerSdp,
+              "Remote Assist answer SDP"
+            )
+          : null;
+
+      const message =
+        sanitizeRemoteAssistMessage(
+          data.message
+        );
+
+      const sessionRef =
+        db
+          .collection(COLLECTION)
+          .doc(sessionId);
+
+      const status =
+        accepted
+          ? "ANSWERED"
+          : "REJECTED";
+
+      await db.runTransaction(
+        async (tx) => {
+          const snap =
+            await tx.get(
+              sessionRef
+            );
+
+          if (!snap.exists) {
+            throw new HttpsError(
+              "not-found",
+              "Service Session not found."
+            );
+          }
+
+          const session =
+            snap.data();
+
+          if (
+            session.status !== "CONNECTED" ||
+            session.customerUid !== customerUid
+          ) {
+            throw new HttpsError(
+              "permission-denied",
+              "This device is not the connected customer for this session."
+            );
+          }
+
+          const assist =
+            session.remoteAssist;
+
+          if (
+            !assist ||
+            assist.id !== assistId ||
+            assist.status !== "OFFERED"
+          ) {
+            throw new HttpsError(
+              "failed-precondition",
+              "Remote Assist offer is no longer pending."
+            );
+          }
+
+          const expiresAtMs =
+            assist.expiresAt &&
+            typeof assist.expiresAt.toMillis === "function"
+              ? assist.expiresAt.toMillis()
+              : 0;
+
+          if (
+            !expiresAtMs ||
+            Date.now() >= expiresAtMs
+          ) {
+            throw new HttpsError(
+              "deadline-exceeded",
+              "Remote Assist offer expired."
+            );
+          }
+
+          const now =
+            Timestamp.fromMillis(
+              Date.now()
+            );
+
+          tx.update(
+            sessionRef,
+            {
+              remoteAssist: {
+                ...assist,
+                status,
+                answerSdp,
+                message:
+                  message ||
+                  (
+                    accepted
+                      ? "Customer accepted GEL-only Remote Assist."
+                      : "Customer declined GEL Remote Assist."
+                  ),
+                answeredAt: now,
+                updatedAt: now,
+              },
+
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            }
+          );
+        }
+      );
+
+      return {
+        ok: true,
+        sessionId,
+        assistId,
+        status,
+      };
+    }
+  );
+
+
+// ============================================================
+// BOTH PARTIES — TRICKLE ICE CANDIDATE
+// ============================================================
+exports.addRemoteAssistIceCandidate =
+  onCall(
+    async (request) => {
+      const uid =
+        requireAuth(request);
+
+      const data =
+        request.data || {};
+
+      const sessionId =
+        normalizeSessionId(
+          data.sessionId
+        );
+
+      const assistId =
+        normalizeRemoteAssistId(
+          data.assistId
+        );
+
+      if (!sessionId || !assistId) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Valid sessionId and assistId are required."
+        );
+      }
+
+      const candidate =
+        sanitizeRemoteAssistCandidate(
+          data.candidate
+        );
+
+      const sessionRef =
+        db
+          .collection(COLLECTION)
+          .doc(sessionId);
+
+      const result =
+        await db.runTransaction(
+          async (tx) => {
+            const snap =
+              await tx.get(
+                sessionRef
+              );
+
+            if (!snap.exists) {
+              throw new HttpsError(
+                "not-found",
+                "Service Session not found."
+              );
+            }
+
+            const session =
+              snap.data();
+
+            if (
+              session.status !== "CONNECTED"
+            ) {
+              throw new HttpsError(
+                "failed-precondition",
+                "Service Session is not CONNECTED."
+              );
+            }
+
+            let fieldName;
+            let role;
+
+            if (
+              uid === session.technicianUid
+            ) {
+              fieldName =
+                "technicianCandidates";
+              role =
+                "technician";
+            } else if (
+              uid === session.customerUid
+            ) {
+              fieldName =
+                "customerCandidates";
+              role =
+                "customer";
+            } else {
+              throw new HttpsError(
+                "permission-denied",
+                "Caller is not assigned to this Service Session."
+              );
+            }
+
+            const assist =
+              session.remoteAssist;
+
+            if (
+              !assist ||
+              assist.id !== assistId ||
+              ![
+                "OFFERED",
+                "ANSWERED",
+              ].includes(assist.status)
+            ) {
+              throw new HttpsError(
+                "failed-precondition",
+                "Remote Assist is not accepting ICE candidates."
+              );
+            }
+
+            const expiresAtMs =
+              assist.expiresAt &&
+              typeof assist.expiresAt.toMillis === "function"
+                ? assist.expiresAt.toMillis()
+                : 0;
+
+            if (
+              !expiresAtMs ||
+              Date.now() >= expiresAtMs
+            ) {
+              const now =
+                Timestamp.fromMillis(
+                  Date.now()
+                );
+
+              tx.update(
+                sessionRef,
+                {
+                  remoteAssist: {
+                    ...assist,
+                    status: "EXPIRED",
+                    message:
+                      "GEL Remote Assist signaling expired.",
+                    stoppedAt: now,
+                    updatedAt: now,
+                  },
+                  updatedAt:
+                    FieldValue.serverTimestamp(),
+                }
+              );
+
+              return {
+                expired: true,
+              };
+            }
+
+            const existing =
+              Array.isArray(
+                assist[fieldName]
+              )
+                ? assist[fieldName]
+                : [];
+
+            const key =
+              remoteAssistCandidateKey(
+                candidate
+              );
+
+            if (
+              existing.some(
+                (item) =>
+                  item &&
+                  remoteAssistCandidateKey(item) === key
+              )
+            ) {
+              return {
+                role,
+                duplicate: true,
+              };
+            }
+
+            if (
+              existing.length >=
+              REMOTE_ASSIST_MAX_CANDIDATES
+            ) {
+              throw new HttpsError(
+                "resource-exhausted",
+                "Too many Remote Assist ICE candidates."
+              );
+            }
+
+            const now =
+              Timestamp.fromMillis(
+                Date.now()
+              );
+
+            tx.update(
+              sessionRef,
+              {
+                remoteAssist: {
+                  ...assist,
+                  [fieldName]: [
+                    ...existing,
+                    candidate,
+                  ],
+                  updatedAt: now,
+                },
+
+                updatedAt:
+                  FieldValue.serverTimestamp(),
+              }
+            );
+
+            return {
+              role,
+              duplicate: false,
+            };
+          }
+        );
+
+      if (
+        result &&
+        result.expired === true
+      ) {
+        throw new HttpsError(
+          "deadline-exceeded",
+          "Remote Assist signaling expired."
+        );
+      }
+
+      return {
+        ok: true,
+        sessionId,
+        assistId,
+        ...result,
+      };
+    }
+  );
+
+
+// ============================================================
+// BOTH PARTIES — STOP GEL-ONLY REMOTE ASSIST
+// ============================================================
+exports.stopRemoteAssist =
+  onCall(
+    async (request) => {
+      const uid =
+        requireAuth(request);
+
+      const data =
+        request.data || {};
+
+      const sessionId =
+        normalizeSessionId(
+          data.sessionId
+        );
+
+      const assistId =
+        normalizeRemoteAssistId(
+          data.assistId
+        );
+
+      if (!sessionId || !assistId) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Valid sessionId and assistId are required."
+        );
+      }
+
+      const message =
+        sanitizeRemoteAssistMessage(
+          data.message
+        );
+
+      const sessionRef =
+        db
+          .collection(COLLECTION)
+          .doc(sessionId);
+
+      await db.runTransaction(
+        async (tx) => {
+          const snap =
+            await tx.get(
+              sessionRef
+            );
+
+          if (!snap.exists) {
+            throw new HttpsError(
+              "not-found",
+              "Service Session not found."
+            );
+          }
+
+          const session =
+            snap.data();
+
+          if (
+            uid !== session.technicianUid &&
+            uid !== session.customerUid
+          ) {
+            throw new HttpsError(
+              "permission-denied",
+              "Caller is not assigned to this Service Session."
+            );
+          }
+
+          const assist =
+            session.remoteAssist;
+
+          if (
+            !assist ||
+            assist.id !== assistId
+          ) {
+            throw new HttpsError(
+              "not-found",
+              "Remote Assist session not found."
+            );
+          }
+
+          if (
+            assist.status === "STOPPED"
+          ) {
+            return;
+          }
+
+          const now =
+            Timestamp.fromMillis(
+              Date.now()
+            );
+
+          tx.update(
+            sessionRef,
+            {
+              remoteAssist: {
+                ...assist,
+                status: "STOPPED",
+                offerSdp: null,
+                answerSdp: null,
+                technicianCandidates: [],
+                customerCandidates: [],
+                stoppedBy: uid,
+                stoppedAt: now,
+                message:
+                  message ||
+                  "GEL Remote Assist stopped.",
+                updatedAt: now,
+              },
+
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            }
+          );
+        }
+      );
+
+      return {
+        ok: true,
+        sessionId,
+        assistId,
+        status: "STOPPED",
+      };
+    }
+  );

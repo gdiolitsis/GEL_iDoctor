@@ -235,6 +235,8 @@ public class GELRemoteCommandService extends Service {
 
         executor.shutdownNow();
 
+        GELRemoteAssistCustomer.onSessionEnded();
+
         super.onDestroy();
     }
 
@@ -352,6 +354,8 @@ public class GELRemoteCommandService extends Service {
                                         processingCommandId =
                                                 null;
 
+                                        GELRemoteAssistCustomer.onSessionEnded();
+
                                         stopSelf();
                                         return;
                                     }
@@ -390,10 +394,23 @@ public class GELRemoteCommandService extends Service {
                                                 "Remote Service Session ended"
                                         );
 
+                                        GELRemoteAssistCustomer.onSessionEnded();
+
                                         stopSelf();
 
                                         return;
                                     }
+
+                                    Object remoteAssistRaw =
+                                            snapshot.get(
+                                                    "remoteAssist"
+                                            );
+
+                                    GELRemoteAssistCustomer.onSessionSignal(
+                                            getApplicationContext(),
+                                            sessionId,
+                                            remoteAssistRaw
+                                    );
 
                                     Object raw =
                                             snapshot.get(
@@ -403,7 +420,9 @@ public class GELRemoteCommandService extends Service {
                                     if (!(raw instanceof Map)) {
 
                                         updateNotification(
-                                                "Remote Service Session connected"
+                                                GELRemoteAssistCustomer.isActive()
+                                                        ? "GEL Remote Assist active — GEL only"
+                                                        : "Remote Service Session connected"
                                         );
 
                                         return;

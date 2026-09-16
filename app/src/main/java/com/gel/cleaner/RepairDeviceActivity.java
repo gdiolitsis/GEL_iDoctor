@@ -393,11 +393,11 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         );
 
         // ========================================================
-        // REMOTE DEVICE MODE — FUNCTIONAL MIRROR
+        // GEL REMOTE ASSIST — APP-ONLY LIVE CONTROL
         // ========================================================
         root.addView(
                 sectionLabel(
-                        "REMOTE DEVICE MODE"
+                        "GEL REMOTE ASSIST"
                 )
         );
 
@@ -428,8 +428,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         btnEnterRemoteMode =
                 makeActionButton(
                         gr
-                                ? "Άνοιγμα Remote Device Mode"
-                                : "Open Remote Device Mode"
+                                ? "Άνοιγμα GEL Remote Assist"
+                                : "Open GEL Remote Assist"
                 );
 
         btnEnterRemoteMode.setVisibility(
@@ -933,8 +933,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
                                         txtStatus.setText(
                                                 gr
-                                                        ? "● ΣΥΝΔΕΘΗΚΕ ΣΥΣΚΕΥΗ ΠΕΛΑΤΗ\nΤο Remote Device Mode είναι διαθέσιμο."
-                                                        : "● CUSTOMER DEVICE CONNECTED\nRemote Device Mode is available."
+                                                        ? "● ΣΥΝΔΕΘΗΚΕ ΣΥΣΚΕΥΗ ΠΕΛΑΤΗ\nΤο GEL Remote Assist είναι διαθέσιμο."
+                                                        : "● CUSTOMER DEVICE CONNECTED\nGEL Remote Assist is available."
                                         );
                                         txtStatus.setTextColor(0xFF39FF14);
 
@@ -1158,18 +1158,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
         Intent intent =
                 new Intent(
                         this,
-                        MainActivity.class
+                        GELRemoteAssistActivity.class
                 );
-
-        intent.putExtra(
-                "skip_welcome_once",
-                true
-        );
-
-        intent.addFlags(
-                Intent.FLAG_ACTIVITY_CLEAR_TOP |
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP
-        );
 
         startActivity(
                 intent
@@ -1186,8 +1176,8 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         txtRemoteControlStatus.setText(
                 gr
-                        ? "● READY — Η συσκευή πελάτη μπορεί να δεχτεί ασφαλείς remote εντολές."
-                        : "● READY — Customer device can receive allowlisted remote commands."
+                        ? "● READY — Ζωντανή εικόνα και χειρισμός ΜΟΝΟ μέσα στο GEL iDoctor."
+                        : "● READY — Live view and control ONLY inside GEL iDoctor."
         );
 
         txtRemoteControlStatus.setTextColor(

@@ -127,6 +127,13 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
         GELRemoteCommandService.ensureRunning(this);
 
         // ============================================================
+        // GEL-ONLY REMOTE ASSIST ACTIVITY REGISTRY
+        // Only GELAutoActivityHook instances can ever become customer
+        // capture / input targets.
+        // ============================================================
+        GELRemoteAssistRuntime.onActivityResumed(this);
+
+        // ============================================================
         // TECHNICIAN REMOTE TARGET WARNING
         // Visible on every GELAutoActivityHook screen while REMOTE mode
         // is active, so local/remote target can never be confused.
@@ -148,6 +155,9 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
         safeCall(dualPaneManager, "onPause");
 
         if (foldDetector != null) foldDetector.stop();
+
+        GELRemoteAssistRuntime.onActivityPaused(this);
+
         super.onPause();
     }
 

@@ -128,6 +128,11 @@ dependencies {
     implementation 'com.google.firebase:firebase-functions'
 
     // -------------------------------------------------
+    // WebRTC — GEL-only Remote Assist live video + DataChannel control
+    // -------------------------------------------------
+    implementation 'io.github.webrtc-sdk:android:150.7871.01'
+
+    // -------------------------------------------------
     // Google Play Billing
     // -------------------------------------------------
     def billing_version = "9.1.0"

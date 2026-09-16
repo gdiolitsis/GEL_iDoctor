@@ -224,6 +224,12 @@
 
         <!-- ================= REMOTE DEVICE DIAGNOSTICS & SUPPORT / TECHNICIAN ================= -->
         <activity
+            android:name=".GELRemoteAssistActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.GEL.DarkGold"/>
+
+        <activity
             android:name=".RepairDeviceActivity"
             android:exported="false"
             android:screenOrientation="portrait"
