@@ -120,6 +120,12 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                         this
                 );
 
+        Toast.makeText(
+                this,
+                "RA ENTRY DIAG-2",
+                Toast.LENGTH_LONG
+        ).show();
+
         if (!GELRemoteTargetManager
                 .isRemoteMode(
                         this
@@ -576,9 +582,18 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                         public void onCreateSuccess(
                                 SessionDescription offer
                         ) {
-                            setTechnicianLocalOffer(
-                                    offer
-                            );
+                            try {
+                                setTechnicianLocalOffer(
+                                        offer
+                                );
+                            } catch (Throwable t) {
+                                failAndClose(
+                                        "SET_LOCAL_EXCEPTION ["
+                                                + t.getClass().getSimpleName()
+                                                + "]: "
+                                                + messageOf(t)
+                                );
+                            }
                         }
 
                         @Override
@@ -586,7 +601,7 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                                 String error
                         ) {
                             failAndClose(
-                                    error
+                                    "CREATE_OFFER_FAILED: " + error
                             );
                         }
                     },
@@ -595,7 +610,10 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
 
         } catch (Throwable t) {
             failAndClose(
-                    messageOf(t)
+                    "NEGOTIATION_EXCEPTION ["
+                            + t.getClass().getSimpleName()
+                            + "]: "
+                            + messageOf(t)
             );
         }
     }
@@ -617,9 +635,18 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                 new SimpleSdpObserver() {
                     @Override
                     public void onSetSuccess() {
-                        sendOfferToCustomer(
-                                offer.description
-                        );
+                        try {
+                            sendOfferToCustomer(
+                                    offer.description
+                            );
+                        } catch (Throwable t) {
+                            failAndClose(
+                                    "SEND_OFFER_EXCEPTION ["
+                                            + t.getClass().getSimpleName()
+                                            + "]: "
+                                            + messageOf(t)
+                            );
+                        }
                     }
 
                     @Override
@@ -627,7 +654,7 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                             String error
                     ) {
                         failAndClose(
-                                error
+                                "SET_LOCAL_DESCRIPTION_FAILED: " + error
                         );
                     }
                 },
@@ -652,7 +679,7 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                         () -> {
                             if (!success) {
                                 failAndClose(
-                                        message
+                                        "START_SIGNALING_FAILED: " + message
                                 );
                                 return;
                             }
@@ -1378,10 +1405,27 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                 Toast.LENGTH_LONG
         ).show();
 
-        main.postDelayed(
-                this::finish,
-                900L
-        );
+        try {
+            new androidx.appcompat.app.AlertDialog.Builder(
+                    this
+            )
+                    .setTitle(
+                            "REMOTE ASSIST FAILURE"
+                    )
+                    .setMessage(
+                            message
+                    )
+                    .setCancelable(
+                            false
+                    )
+                    .setPositiveButton(
+                            "OK",
+                            (dialog, which) -> finish()
+                    )
+                    .show();
+        } catch (Throwable dialogError) {
+            finish();
+        }
     }
 
     private void cleanupPeer() {
