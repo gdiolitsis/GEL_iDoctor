@@ -162,7 +162,35 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
             return;
         }
 
-        buildScreen();
+        try {
+            buildScreen();
+        } catch (Throwable t) {
+
+            String error =
+                    t.getClass().getSimpleName()
+                            + ": "
+                            + messageOf(t);
+
+            android.util.Log.e(
+                    "GELRemoteAssist",
+                    "Remote Assist UI/WebRTC initialization failed",
+                    t
+            );
+
+            Toast.makeText(
+                    this,
+                    "REMOTE ASSIST INIT ERROR\n" + error,
+                    Toast.LENGTH_LONG
+            ).show();
+
+            GELRemoteTargetManager
+                    .exitRemoteMode(
+                            this
+                    );
+
+            finish();
+            return;
+        }
 
         getOnBackPressedDispatcher()
                 .addCallback(
