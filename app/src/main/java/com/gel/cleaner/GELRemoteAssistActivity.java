@@ -1323,6 +1323,15 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
     private void failAndClose(
             @Nullable String error
     ) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            main.post(
+                    () -> failAndClose(
+                            error
+                    )
+            );
+            return;
+        }
+
         if (stopping) {
             return;
         }
@@ -1458,6 +1467,16 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
             String text,
             int color
     ) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            main.post(
+                    () -> setStatus(
+                            text,
+                            color
+                    )
+            );
+            return;
+        }
+
         if (statusText == null) {
             return;
         }
