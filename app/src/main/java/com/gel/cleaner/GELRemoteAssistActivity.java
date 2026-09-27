@@ -131,15 +131,24 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                         this
                 )) {
 
-            Toast.makeText(
-                    this,
-                    gr
-                            ? "Το Remote Device Mode δεν είναι ενεργό."
-                            : "Remote Device Mode is not active.",
-                    Toast.LENGTH_LONG
-            ).show();
+            new androidx.appcompat.app.AlertDialog.Builder(
+                    this
+            )
+                    .setTitle(
+                            "RA PRECHECK FAILED"
+                    )
+                    .setMessage(
+                            "remoteMode = FALSE"
+                    )
+                    .setCancelable(
+                            false
+                    )
+                    .setPositiveButton(
+                            "OK",
+                            (dialog, which) -> finish()
+                    )
+                    .show();
 
-            finish();
             return;
         }
 
@@ -152,19 +161,30 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
         if (sessionId == null ||
                 sessionId.trim().isEmpty()) {
 
-            Toast.makeText(
-                    this,
-                    gr
-                            ? "Δεν υπάρχει ενεργό Service Session."
-                            : "No active Service Session.",
-                    Toast.LENGTH_LONG
-            ).show();
+            new androidx.appcompat.app.AlertDialog.Builder(
+                    this
+            )
+                    .setTitle(
+                            "RA PRECHECK FAILED"
+                    )
+                    .setMessage(
+                            "sessionId = MISSING"
+                    )
+                    .setCancelable(
+                            false
+                    )
+                    .setPositiveButton(
+                            "OK",
+                            (dialog, which) -> {
+                                GELRemoteTargetManager
+                                        .exitRemoteMode(
+                                                GELRemoteAssistActivity.this
+                                        );
+                                finish();
+                            }
+                    )
+                    .show();
 
-            GELRemoteTargetManager
-                    .exitRemoteMode(
-                            this
-                    );
-            finish();
             return;
         }
 
