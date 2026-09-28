@@ -95,21 +95,56 @@ public final class GELRemoteAssistRuntime {
                     context.getApplicationContext();
 
             if (!webRtcInitialized) {
+                runtimeDiag(
+                        app,
+                        "RUNTIME_BEFORE_INIT_OPTIONS"
+                );
+
                 PeerConnectionFactory.InitializationOptions options =
                         PeerConnectionFactory.InitializationOptions
                                 .builder(app)
                                 .setEnableInternalTracer(false)
                                 .createInitializationOptions();
 
+                runtimeDiag(
+                        app,
+                        "RUNTIME_AFTER_INIT_OPTIONS"
+                );
+
+                runtimeDiag(
+                        app,
+                        "RUNTIME_BEFORE_PCF_INITIALIZE"
+                );
+
                 PeerConnectionFactory.initialize(
                         options
+                );
+
+                runtimeDiag(
+                        app,
+                        "RUNTIME_AFTER_PCF_INITIALIZE"
                 );
 
                 webRtcInitialized = true;
             }
 
+            runtimeDiag(
+                    app,
+                    "RUNTIME_BEFORE_EGL_CREATE"
+            );
+
             rootEglBase =
                     EglBase.create();
+
+            runtimeDiag(
+                    app,
+                    "RUNTIME_AFTER_EGL_CREATE"
+            );
+
+            runtimeDiag(
+                    app,
+                    "RUNTIME_BEFORE_ENCODER_FACTORY"
+            );
 
             DefaultVideoEncoderFactory encoderFactory =
                     new DefaultVideoEncoderFactory(
@@ -118,10 +153,30 @@ public final class GELRemoteAssistRuntime {
                             true
                     );
 
+            runtimeDiag(
+                    app,
+                    "RUNTIME_AFTER_ENCODER_FACTORY"
+            );
+
+            runtimeDiag(
+                    app,
+                    "RUNTIME_BEFORE_DECODER_FACTORY"
+            );
+
             DefaultVideoDecoderFactory decoderFactory =
                     new DefaultVideoDecoderFactory(
                             rootEglBase.getEglBaseContext()
                     );
+
+            runtimeDiag(
+                    app,
+                    "RUNTIME_AFTER_DECODER_FACTORY"
+            );
+
+            runtimeDiag(
+                    app,
+                    "RUNTIME_BEFORE_CREATE_FACTORY"
+            );
 
             peerConnectionFactory =
                     PeerConnectionFactory
@@ -133,7 +188,40 @@ public final class GELRemoteAssistRuntime {
                                     decoderFactory
                             )
                             .createPeerConnectionFactory();
+
+            runtimeDiag(
+                    app,
+                    "RUNTIME_AFTER_CREATE_FACTORY"
+            );
         }
+    }
+
+    private static void runtimeDiag(
+            Context context,
+            String stage
+    ) {
+        try {
+            context.getSharedPreferences(
+                    "gel_remote_assist_diag",
+                    Context.MODE_PRIVATE
+            )
+                    .edit()
+                    .putString(
+                            "last_stage",
+                            stage
+                    )
+                    .putLong(
+                            "last_stage_time",
+                            System.currentTimeMillis()
+                    )
+                    .commit();
+
+            android.util.Log.e(
+                    "GELRemoteAssistDiag",
+                    stage
+            );
+
+        } catch (Throwable ignore) {}
     }
 
     public static PeerConnectionFactory getFactory(
