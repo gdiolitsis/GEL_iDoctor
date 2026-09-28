@@ -104,6 +104,25 @@ public final class GELRemoteAssistRuntime {
                         PeerConnectionFactory.InitializationOptions
                                 .builder(app)
                                 .setEnableInternalTracer(false)
+                                .setNativeLibraryLoader(
+                                        name -> {
+                                            runtimeDiag(
+                                                    app,
+                                                    "RUNTIME_BEFORE_NATIVE_LOAD"
+                                            );
+
+                                            System.loadLibrary(
+                                                    name
+                                            );
+
+                                            runtimeDiag(
+                                                    app,
+                                                    "RUNTIME_AFTER_NATIVE_LOAD"
+                                            );
+
+                                            return true;
+                                        }
+                                )
                                 .createInitializationOptions();
 
                 runtimeDiag(
