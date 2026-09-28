@@ -90,3 +90,16 @@
 # Keep annotations / prevent stripping logs
 # ============================================================
 -keepattributes *Annotation*
+
+# ============================================================
+# GEL REMOTE ASSIST — WEBRTC JNI KEEP RULES
+# Native WebRTC registers Java/JNI bindings during JNI_OnLoad.
+# Do not allow R8 to rename/remove these classes or members.
+# ============================================================
+
+-keep class org.webrtc.** { *; }
+-keep class org.jni_zero.** { *; }
+
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeInvisibleAnnotations
+-keepattributes AnnotationDefault
