@@ -111,16 +111,32 @@ public final class GELRemoteAssistRuntime {
                                                     "RUNTIME_BEFORE_NATIVE_LOAD"
                                             );
 
-                                            System.loadLibrary(
-                                                    name
-                                            );
+                                            try {
+                                                System.loadLibrary(
+                                                        name
+                                                );
 
-                                            runtimeDiag(
-                                                    app,
-                                                    "RUNTIME_AFTER_NATIVE_LOAD"
-                                            );
+                                                runtimeDiag(
+                                                        app,
+                                                        "RUNTIME_AFTER_NATIVE_LOAD"
+                                                );
 
-                                            return true;
+                                                return true;
+
+                                            } catch (RuntimeException | Error t) {
+
+                                                runtimeDiag(
+                                                        app,
+                                                        "RUNTIME_NATIVE_LOAD_ERROR ["
+                                                                + t.getClass().getSimpleName()
+                                                                + "]: "
+                                                                + String.valueOf(
+                                                                        t.getMessage()
+                                                                )
+                                                );
+
+                                                throw t;
+                                            }
                                         }
                                 )
                                 .createInitializationOptions();
