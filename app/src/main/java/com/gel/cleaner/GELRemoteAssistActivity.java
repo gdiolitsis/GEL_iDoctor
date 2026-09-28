@@ -120,11 +120,24 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                         this
                 );
 
+        String previousDiag =
+                getSharedPreferences(
+                        "gel_remote_assist_diag",
+                        MODE_PRIVATE
+                ).getString(
+                        "last_stage",
+                        "NONE"
+                );
+
         Toast.makeText(
                 this,
-                "RA ENTRY DIAG-2",
+                "RA DIAG-3 PREVIOUS: " + previousDiag,
                 Toast.LENGTH_LONG
         ).show();
+
+        diagStage(
+                "ONCREATE_ENTRY"
+        );
 
         if (!GELRemoteTargetManager
                 .isRemoteMode(
@@ -188,8 +201,16 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
             return;
         }
 
+        diagStage(
+                "BEFORE_BUILD_SCREEN"
+        );
+
         try {
             buildScreen();
+
+            diagStage(
+                    "AFTER_BUILD_SCREEN"
+            );
         } catch (Throwable t) {
 
             String error =
@@ -235,7 +256,15 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                         }
                 );
 
+        diagStage(
+                "BEFORE_START_NEGOTIATION"
+        );
+
         startNegotiation();
+
+        diagStage(
+                "AFTER_START_NEGOTIATION_RETURN"
+        );
     }
 
     private void buildScreen() {
@@ -330,16 +359,39 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                 Color.BLACK
         );
 
+        diagStage(
+                "BEFORE_SURFACE_RENDERER_NEW"
+        );
+
         renderer =
                 new SurfaceViewRenderer(
                         this
                 );
 
-        renderer.init(
+        diagStage(
+                "AFTER_SURFACE_RENDERER_NEW"
+        );
+
+        diagStage(
+                "BEFORE_GET_EGL_CONTEXT"
+        );
+
+        org.webrtc.EglBase.Context eglContext =
                 GELRemoteAssistRuntime
                         .getEglContext(
                                 this
-                        ),
+                        );
+
+        diagStage(
+                "AFTER_GET_EGL_CONTEXT"
+        );
+
+        diagStage(
+                "BEFORE_RENDERER_INIT"
+        );
+
+        renderer.init(
+                eglContext,
                 new RendererCommon.RendererEvents() {
                     @Override
                     public void onFirstFrameRendered() {
@@ -377,6 +429,10 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                         );
                     }
                 }
+        );
+
+        diagStage(
+                "AFTER_RENDERER_INIT"
         );
 
         renderer.setScalingType(
@@ -521,8 +577,16 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                 )
         );
 
+        diagStage(
+                "BEFORE_SET_CONTENT_VIEW"
+        );
+
         setContentView(
                 root
+        );
+
+        diagStage(
+                "AFTER_SET_CONTENT_VIEW"
         );
     }
 
@@ -535,11 +599,23 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
         );
 
         try {
+            diagStage(
+                    "NEG_BEFORE_GET_FACTORY"
+            );
+
             PeerConnectionFactory factory =
                     GELRemoteAssistRuntime
                             .getFactory(
                                     this
                             );
+
+            diagStage(
+                    "NEG_AFTER_GET_FACTORY"
+            );
+
+            diagStage(
+                    "NEG_BEFORE_CREATE_PEER"
+            );
 
             peerConnection =
                     factory.createPeerConnection(
@@ -548,11 +624,19 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                             new TechnicianPeerObserver()
                     );
 
+            diagStage(
+                    "NEG_AFTER_CREATE_PEER"
+            );
+
             if (peerConnection == null) {
                 throw new IllegalStateException(
                         "Unable to create WebRTC peer connection."
                 );
             }
+
+            diagStage(
+                    "NEG_BEFORE_ADD_TRANSCEIVER"
+            );
 
             peerConnection.addTransceiver(
                     MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO,
@@ -561,17 +645,29 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                     )
             );
 
+            diagStage(
+                    "NEG_AFTER_ADD_TRANSCEIVER"
+            );
+
             DataChannel.Init init =
                     new DataChannel.Init();
 
             init.ordered =
                     true;
 
+            diagStage(
+                    "NEG_BEFORE_CREATE_DATA_CHANNEL"
+            );
+
             controlChannel =
                     peerConnection.createDataChannel(
                             "gel-control",
                             init
                     );
+
+            diagStage(
+                    "NEG_AFTER_CREATE_DATA_CHANNEL"
+            );
 
             if (controlChannel != null) {
                 controlChannel.registerObserver(
@@ -596,12 +692,20 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                 );
             }
 
+            diagStage(
+                    "NEG_BEFORE_CREATE_OFFER"
+            );
+
             peerConnection.createOffer(
                     new SimpleSdpObserver() {
                         @Override
                         public void onCreateSuccess(
                                 SessionDescription offer
                         ) {
+                            diagStage(
+                                    "OFFER_CREATE_SUCCESS"
+                            );
+
                             try {
                                 setTechnicianLocalOffer(
                                         offer
@@ -628,6 +732,10 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                     new MediaConstraints()
             );
 
+            diagStage(
+                    "NEG_AFTER_CREATE_OFFER_CALL"
+            );
+
         } catch (Throwable t) {
             failAndClose(
                     "NEGOTIATION_EXCEPTION ["
@@ -651,10 +759,18 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
             return;
         }
 
+        diagStage(
+                "BEFORE_SET_LOCAL_DESCRIPTION"
+        );
+
         peer.setLocalDescription(
                 new SimpleSdpObserver() {
                     @Override
                     public void onSetSuccess() {
+                        diagStage(
+                                "SET_LOCAL_DESCRIPTION_SUCCESS"
+                        );
+
                         try {
                             sendOfferToCustomer(
                                     offer.description
@@ -690,6 +806,10 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                         ? "Αναμονή έγκρισης από τον πελάτη..."
                         : "Waiting for customer approval...",
                 0xFFFFD700
+        );
+
+        diagStage(
+                "BEFORE_SIGNALING_START"
         );
 
         GELRemoteAssistSignaling.start(
@@ -1525,6 +1645,33 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
         }
 
         super.onDestroy();
+    }
+
+    private void diagStage(
+            String stage
+    ) {
+        try {
+            getSharedPreferences(
+                    "gel_remote_assist_diag",
+                    MODE_PRIVATE
+            )
+                    .edit()
+                    .putString(
+                            "last_stage",
+                            stage
+                    )
+                    .putLong(
+                            "last_stage_time",
+                            System.currentTimeMillis()
+                    )
+                    .commit();
+
+            android.util.Log.e(
+                    "GELRemoteAssistDiag",
+                    stage
+            );
+
+        } catch (Throwable ignore) {}
     }
 
     private void setStatus(
