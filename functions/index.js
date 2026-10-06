@@ -1625,10 +1625,11 @@ function sanitizeRemoteAssistSdp(value, fieldName) {
     );
   }
 
-  const text = value.trim();
+  const text = value;
+  const nonBlankText = value.trim();
 
   if (
-    !text ||
+    !nonBlankText ||
     text.length > REMOTE_ASSIST_MAX_SDP_CHARS
   ) {
     throw new HttpsError(

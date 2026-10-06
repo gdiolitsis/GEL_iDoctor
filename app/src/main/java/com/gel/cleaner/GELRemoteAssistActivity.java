@@ -85,7 +85,9 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
     private DataChannel controlChannel;
     private VideoTrack remoteVideoTrack;
 
-    private boolean remoteDescriptionSet;
+    private volatile boolean remoteDescriptionSet;
+    private volatile boolean remoteDescriptionApplying;
+    private volatile Map<?, ?> latestAnsweredAssist;
     private boolean stopping;
 
     private ListenerRegistration sessionListener;
@@ -979,24 +981,45 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
         }
 
         if ("ANSWERED".equals(status)) {
-            String answerSdp =
-                    stringValue(
-                            assist.get(
-                                    "answerSdp"
-                            )
-                    );
+            latestAnsweredAssist =
+                    assist;
 
-            if (!remoteDescriptionSet &&
-                    answerSdp != null) {
-                setCustomerAnswer(
-                        answerSdp,
-                        assist
-                );
-            } else {
+            if (remoteDescriptionSet) {
                 applyCustomerCandidates(
                         assist
                 );
+                return;
             }
+
+            if (remoteDescriptionApplying) {
+                return;
+            }
+
+            Object answerRaw =
+                    assist.get(
+                            "answerSdp"
+                    );
+
+            String answerSdp =
+                    answerRaw instanceof String
+                            ? (String) answerRaw
+                            : null;
+
+            if (answerSdp == null ||
+                    answerSdp.trim().isEmpty()) {
+                failAndClose(
+                        "ANSWERED session has no valid answer SDP."
+                );
+                return;
+            }
+
+            remoteDescriptionApplying =
+                    true;
+
+            setCustomerAnswer(
+                    answerSdp,
+                    assist
+            );
         }
     }
 
@@ -1015,6 +1038,9 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                 new SimpleSdpObserver() {
                     @Override
                     public void onSetSuccess() {
+                        remoteDescriptionApplying =
+                                false;
+
                         remoteDescriptionSet =
                                 true;
 
@@ -1025,8 +1051,13 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                                 0xFFFFD700
                         );
 
+                        Map<?, ?> candidateSource =
+                                latestAnsweredAssist != null
+                                        ? latestAnsweredAssist
+                                        : assist;
+
                         applyCustomerCandidates(
-                                assist
+                                candidateSource
                         );
                     }
 
@@ -1034,6 +1065,9 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                     public void onSetFailure(
                             String error
                     ) {
+                        remoteDescriptionApplying =
+                                false;
+
                         failAndClose(
                                 error
                         );
@@ -1546,23 +1580,135 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
         ).show();
 
         try {
-            new androidx.appcompat.app.AlertDialog.Builder(
-                    this
-            )
-                    .setTitle(
-                            "REMOTE ASSIST FAILURE"
+            final int densityPad =
+                    (int) (
+                            22 *
+                            getResources()
+                                    .getDisplayMetrics()
+                                    .density
+                    );
+
+            android.widget.LinearLayout dialogContent =
+                    new android.widget.LinearLayout(
+                            this
+                    );
+
+            dialogContent.setOrientation(
+                    android.widget.LinearLayout.VERTICAL
+            );
+
+            dialogContent.setPadding(
+                    densityPad,
+                    densityPad,
+                    densityPad,
+                    densityPad
+            );
+
+            dialogContent.setBackgroundColor(
+                    0xFF181818
+            );
+
+            android.widget.TextView dialogTitle =
+                    new android.widget.TextView(
+                            this
+                    );
+
+            dialogTitle.setText(
+                    "REMOTE ASSIST FAILURE"
+            );
+
+            dialogTitle.setTextColor(
+                    0xFFFFD700
+            );
+
+            dialogTitle.setTextSize(
+                    20f
+            );
+
+            dialogTitle.setTypeface(
+                    android.graphics.Typeface.DEFAULT_BOLD
+            );
+
+            dialogTitle.setGravity(
+                    android.view.Gravity.CENTER
+            );
+
+            dialogTitle.setPadding(
+                    0,
+                    0,
+                    0,
+                    densityPad
+            );
+
+            android.widget.TextView dialogMessage =
+                    new android.widget.TextView(
+                            this
+                    );
+
+            dialogMessage.setText(
+                    message
+            );
+
+            dialogMessage.setTextColor(
+                    0xFFF2F2F2
+            );
+
+            dialogMessage.setTextSize(
+                    16f
+            );
+
+            dialogMessage.setGravity(
+                    android.view.Gravity.CENTER
+            );
+
+            dialogContent.addView(
+                    dialogTitle
+            );
+
+            dialogContent.addView(
+                    dialogMessage
+            );
+
+            androidx.appcompat.app.AlertDialog failureDialog =
+                    new androidx.appcompat.app.AlertDialog.Builder(
+                            this
                     )
-                    .setMessage(
-                            message
-                    )
-                    .setCancelable(
-                            false
-                    )
-                    .setPositiveButton(
-                            "OK",
-                            (dialog, which) -> finish()
-                    )
-                    .show();
+                            .setView(
+                                    dialogContent
+                            )
+                            .setCancelable(
+                                    false
+                            )
+                            .setPositiveButton(
+                                    "OK",
+                                    (dialog, which) -> finish()
+                            )
+                            .create();
+
+            failureDialog.setOnShowListener(
+                    ignored -> {
+                        failureDialog
+                                .getButton(
+                                        androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE
+                                )
+                                .setTextColor(
+                                        0xFFFFD700
+                                );
+
+                        if (failureDialog.getWindow() != null) {
+                            failureDialog
+                                    .getWindow()
+                                    .setBackgroundDrawable(
+                                            new android.graphics.drawable.ColorDrawable(
+                                                    0xFF181818
+                                            )
+                                    );
+                        }
+                    }
+            );
+
+            failureDialog.show();
+
         } catch (Throwable dialogError) {
             finish();
         }
@@ -1614,6 +1760,10 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
         appliedCustomerCandidates.clear();
         remoteDescriptionSet =
                 false;
+        remoteDescriptionApplying =
+                false;
+        latestAnsweredAssist =
+                null;
         touchSequenceActive =
                 false;
 

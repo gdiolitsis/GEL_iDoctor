@@ -189,10 +189,15 @@ public final class GELRemoteAssistCustomer {
         }
 
         if ("OFFERED".equals(status)) {
-            String offerSdp =
-                    stringValue(
-                            assist.get("offerSdp")
+            Object offerRaw =
+                    assist.get(
+                            "offerSdp"
                     );
+
+            String offerSdp =
+                    offerRaw instanceof String
+                            ? (String) offerRaw
+                            : null;
 
             if (offerSdp == null ||
                     offerSdp.trim().isEmpty()) {
@@ -574,11 +579,27 @@ public final class GELRemoteAssistCustomer {
                 new SimpleSdpObserver() {
                     @Override
                     public void onSetSuccess() {
+                        SessionDescription localAnswer =
+                                peer.getLocalDescription();
+
+                        if (localAnswer == null ||
+                                localAnswer.description == null ||
+                                localAnswer.description.trim().isEmpty()) {
+
+                            failAcceptedOffer(
+                                    activity,
+                                    currentSession,
+                                    currentAssist,
+                                    "Customer local SDP answer is missing."
+                            );
+                            return;
+                        }
+
                         GELRemoteAssistSignaling.answer(
                                 currentSession,
                                 currentAssist,
                                 true,
-                                answer.description,
+                                localAnswer.description,
                                 "Customer accepted GEL-only Remote Assist.",
                                 (success, data, message) -> {
                                     MAIN.post(
