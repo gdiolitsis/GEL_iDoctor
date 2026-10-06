@@ -18,7 +18,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-public class OptimizerDiagnosticActivity extends AppCompatActivity {
+public class OptimizerDiagnosticActivity extends GELAutoActivityHook {
 
     private boolean cpu;
     private boolean thermal;

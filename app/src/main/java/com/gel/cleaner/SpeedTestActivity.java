@@ -40,7 +40,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class SpeedTestActivity extends AppCompatActivity {
+public class SpeedTestActivity extends GELAutoActivityHook {
 
     private static final String TEST_HOST = "https://speed.cloudflare.com";
     private static final int CONNECT_TIMEOUT_MS = 12_000;

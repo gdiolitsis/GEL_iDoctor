@@ -6,6 +6,8 @@
 
 package com.gel.cleaner.iphone;
 
+import com.gel.cleaner.GELAutoActivityHook;
+
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -18,7 +20,7 @@ import com.gel.cleaner.base.AppleSpecProvider;
 import com.gel.cleaner.R;
 import com.gel.cleaner.UIHelpers;
 
-public class AppleDeviceInfoInternalActivity extends Activity {
+public class AppleDeviceInfoInternalActivity extends GELAutoActivityHook {
 
     // =========================
     // SECTIONS (FROM XML)

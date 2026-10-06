@@ -39,7 +39,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 
-public final class GuidedOptimizerActivity extends AppCompatActivity {
+public final class GuidedOptimizerActivity extends GELAutoActivityHook {
 
     private boolean gr;
     private int step = 0;
@@ -250,7 +250,7 @@ private boolean isSystemPkg(String pkg) {
     }
 }
 
-private int dp(int v) {
+public int dp(int v) {
     return (int) android.util.TypedValue.applyDimension(
             android.util.TypedValue.COMPLEX_UNIT_DIP,
             v,

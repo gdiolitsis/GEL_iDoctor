@@ -19,7 +19,7 @@ import android.widget.FrameLayout;
  * FINAL — TEST ONLY (NO LOGS HERE)
  * ============================================================
  */
-public class TouchGridTestActivity extends Activity {
+public class TouchGridTestActivity extends GELAutoActivityHook {
 
     // ========================================================
     // STATIC RESULTS (READ BY ManualTestsActivity)
@@ -79,7 +79,7 @@ public class TouchGridTestActivity extends Activity {
         setContentView(root);
     }
 
-    private int dp(int v) {
+    public int dp(int v) {
         float d = getResources().getDisplayMetrics().density;
         return (int) (v * d + 0.5f);
     }

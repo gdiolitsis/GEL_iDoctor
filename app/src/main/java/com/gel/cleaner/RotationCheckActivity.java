@@ -22,7 +22,7 @@ import android.widget.TextView;
  * FINAL — PURE TEST ONLY (NO LOGS • NO TTS • NO POPUPS)
  * ============================================================
  */
-public class RotationCheckActivity extends Activity
+public class RotationCheckActivity extends GELAutoActivityHook
         implements SensorEventListener {
 
     private SensorManager sensorManager;
@@ -153,7 +153,7 @@ public class RotationCheckActivity extends Activity
         // not used
     }
 
-    private int dp(int v) {
+    public int dp(int v) {
         float d = getResources().getDisplayMetrics().density;
         return (int) (v * d + 0.5f);
     }

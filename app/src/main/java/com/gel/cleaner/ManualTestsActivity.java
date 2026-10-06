@@ -184,7 +184,6 @@ import android.widget.CheckBox;
 // ============================================================
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
@@ -235,7 +234,7 @@ import java.util.Set;
 import javax.microedition.khronos.opengles.GL10;
 import javax.microedition.khronos.egl.EGLConfig;
 
-public class ManualTestsActivity extends AppCompatActivity {
+public class ManualTestsActivity extends GELAutoActivityHook {
 	private AlertDialog progressDialog;
 	
 	private enum DrainMode {
@@ -3767,7 +3766,7 @@ private void logError(String label, String value) {
 // SAFE ESCAPE FOR UI ONLY (SERVICE LOG STORES RAW TEXT)
 // ------------------------------------------------------------
 
-private int dp(int v) {
+public int dp(int v) {
 float d = getResources().getDisplayMetrics().density;
 return (int) (v * d + 0.5f);
 }

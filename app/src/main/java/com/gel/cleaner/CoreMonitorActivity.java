@@ -10,7 +10,7 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-public class CoreMonitorActivity extends AppCompatActivity {
+public class CoreMonitorActivity extends GELAutoActivityHook {
 
     static {
         System.loadLibrary("corefreq");

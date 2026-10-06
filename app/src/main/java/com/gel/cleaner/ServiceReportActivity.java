@@ -46,7 +46,7 @@ import java.io.File;
 import java.io.OutputStream;
 import java.io.FileOutputStream;
 
-public class ServiceReportActivity extends AppCompatActivity {
+public class ServiceReportActivity extends GELAutoActivityHook {
     private static final int PAGE_WIDTH = 595;
     private static final int PAGE_HEIGHT = 842;
     private static final int PAGE_MARGIN = 32;
@@ -735,7 +735,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                 }
 
                 runOnUiThread(() -> {
-                    sharePdf(uri);
+                    presentPdf(uri);
 
                     String msg = AppLang.isGreek(this)
                             ? "Η κενή φόρμα Service Report δημιουργήθηκε."
@@ -1747,7 +1747,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         return root;
     }
 
-    private int dp(int value) {
+    public int dp(int value) {
         float density = getResources().getDisplayMetrics().density;
         return (int) (value * density + 0.5f);
     }
@@ -1976,7 +1976,7 @@ pdf.close();
 
 Uri uri = savePdfToDownloads("GEL_Service_Report.pdf", bos.toByteArray());
 consumeSingleReportCreditIfNeeded();
-sharePdf(uri);
+presentPdf(uri);
 
             runOnUiThread(() -> {
 
@@ -2720,25 +2720,91 @@ private String buildHtmlReport(String report) {
     return uri;
 }
 
-private void sharePdf(Uri uri) {
-	
-	boolean gr = AppLang.isGreek(this);
+private void presentPdf(Uri uri) {
 
-    if (uri == null) return;
-
-    Intent intent = new Intent(Intent.ACTION_SEND);
-    intent.setType("application/pdf");
-    intent.putExtra(Intent.EXTRA_STREAM, uri);
-    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-    try {
-    startActivity(Intent.createChooser(intent,
-            gr ? "Αποστολή αναφοράς μέσω..." : "Send report via..."));
-} catch (Throwable t) {
-        Toast.makeText(this, "No app available to share PDF", Toast.LENGTH_SHORT).show();
+    if (uri == null) {
+        return;
     }
+
+    // During GEL Remote Assist keep the report inside GEL,
+    // so the technician continues receiving live video/input.
+    if (GELRemoteAssistCustomer.isActive()) {
+
+        Intent viewer =
+                new Intent(
+                        this,
+                        GELPdfViewerActivity.class
+                );
+
+        viewer.putExtra(
+                GELPdfViewerActivity.EXTRA_PDF_URI,
+                uri.toString()
+        );
+
+        startActivity(
+                viewer
+        );
+
+        return;
+    }
+
+    // Normal local use keeps the existing Android share flow.
+    sharePdf(
+            uri
+    );
 }
 
+private void sharePdf(Uri uri) {
+
+    boolean gr =
+            AppLang.isGreek(
+                    this
+            );
+
+    if (uri == null) {
+        return;
+    }
+
+    Intent intent =
+            new Intent(
+                    Intent.ACTION_SEND
+            );
+
+    intent.setType(
+            "application/pdf"
+    );
+
+    intent.putExtra(
+            Intent.EXTRA_STREAM,
+            uri
+    );
+
+    intent.addFlags(
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+    );
+
+    try {
+
+        startActivity(
+                Intent.createChooser(
+                        intent,
+                        gr
+                                ? "Αποστολή αναφοράς μέσω..."
+                                : "Send report via..."
+                )
+        );
+
+    } catch (Throwable t) {
+
+        Toast.makeText(
+                this,
+                gr
+                        ? "Δεν υπάρχει εφαρμογή για κοινοποίηση PDF."
+                        : "No app available to share PDF.",
+                Toast.LENGTH_SHORT
+        ).show();
+    }
+}
 
     @Override
     protected void onDestroy() {

@@ -56,7 +56,7 @@ import java.util.regex.Matcher;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-public class IPhoneLabsActivity extends AppCompatActivity {
+public class IPhoneLabsActivity extends GELAutoActivityHook {
 	private boolean panicGuidePopupOpen = false;
 	boolean panicGuideShown;
 TextView panicGuideTitle;
@@ -3002,7 +3002,7 @@ private String safe(String s) {
     // HELPERS (dp/sp + I/O)
     // ============================================================
     
-    private float sp(float v) {
+    public float sp(float v) {
         return TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_SP, v, getResources().getDisplayMetrics());
     }

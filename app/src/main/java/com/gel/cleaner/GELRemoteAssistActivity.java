@@ -517,7 +517,7 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                 dp(8),
                 0,
                 dp(8),
-                dp(12)
+                dp(44)
         );
 
         backButton =

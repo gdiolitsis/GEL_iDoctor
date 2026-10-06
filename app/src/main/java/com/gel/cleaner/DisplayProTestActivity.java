@@ -26,7 +26,7 @@ import android.widget.TextView;
 
 import com.gel.cleaner.UIHelpers;
 
-public class DisplayProTestActivity extends Activity {
+public class DisplayProTestActivity extends GELAutoActivityHook {
 
     // ============================================================
     // CONFIG
@@ -499,7 +499,7 @@ private LinearLayout buildMuteRow() {
         p.addView(r);
     }
 
-    private int dp(int v) {
+    public int dp(int v) {
         return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
     }
 

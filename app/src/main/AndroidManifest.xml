@@ -273,6 +273,12 @@
             android:exported="false"
             android:screenOrientation="portrait"/>
 
+        <activity
+            android:name=".GELPdfViewerActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.GEL.DarkGold"/>
+
         <!-- ============================================================
              MANUAL LABS 6–9 : DISPLAY & SENSORS
              ============================================================ -->
