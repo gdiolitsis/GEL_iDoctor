@@ -249,11 +249,7 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                         ) {
                             @Override
                             public void handleOnBackPressed() {
-                                stopByTechnician(
-                                        gr
-                                                ? "Ο τεχνικός έκλεισε το GEL Remote Assist."
-                                                : "Technician closed GEL Remote Assist."
-                                );
+                                sendBack();
                             }
                         }
                 );
@@ -500,83 +496,6 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
         root.addView(
                 videoContainer,
                 videoLp
-        );
-
-        LinearLayout controls =
-                new LinearLayout(
-                        this
-                );
-
-        controls.setOrientation(
-                LinearLayout.HORIZONTAL
-        );
-        controls.setGravity(
-                Gravity.CENTER
-        );
-        controls.setPadding(
-                dp(8),
-                0,
-                dp(8),
-                dp(44)
-        );
-
-        backButton =
-                makeControlButton(
-                        gr
-                                ? "← ΠΙΣΩ"
-                                : "← BACK"
-                );
-
-        stopButton =
-                makeControlButton(
-                        gr
-                                ? "ΤΕΡΜΑΤΙΣΜΟΣ"
-                                : "STOP"
-                );
-
-        backButton.setEnabled(
-                false
-        );
-
-        backButton.setOnClickListener(
-                v -> sendBack()
-        );
-
-        stopButton.setOnClickListener(
-                v -> stopByTechnician(
-                        "Technician stopped GEL Remote Assist."
-                )
-        );
-
-        LinearLayout.LayoutParams buttonLp =
-                new LinearLayout.LayoutParams(
-                        0,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        1f
-                );
-
-        buttonLp.setMargins(
-                dp(5),
-                0,
-                dp(5),
-                0
-        );
-
-        controls.addView(
-                backButton,
-                buttonLp
-        );
-        controls.addView(
-                stopButton,
-                buttonLp
-        );
-
-        root.addView(
-                controls,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                )
         );
 
         diagStage(

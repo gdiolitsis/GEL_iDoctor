@@ -1155,9 +1155,24 @@ public final class GELRemoteAssistCustomer {
                         )
                 );
 
+        int topInset =
+                0;
+
+        if (android.os.Build.VERSION.SDK_INT >=
+                android.os.Build.VERSION_CODES.M) {
+
+            android.view.WindowInsets insets =
+                    content.getRootWindowInsets();
+
+            if (insets != null) {
+                topInset =
+                        insets.getStableInsetTop();
+            }
+        }
+
         lp.setMargins(
                 margin,
-                margin,
+                topInset + margin,
                 margin,
                 margin
         );
