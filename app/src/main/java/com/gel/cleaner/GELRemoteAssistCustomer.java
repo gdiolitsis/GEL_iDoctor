@@ -941,20 +941,37 @@ public final class GELRemoteAssistCustomer {
                         return;
                     }
 
-                    View decor =
-                            activity
-                                    .getWindow()
-                                    .getDecorView();
+                    View content =
+                            activity.findViewById(
+                                    android.R.id.content
+                            );
+
+                    if (content == null) {
+                        return;
+                    }
 
                     int width =
-                            decor.getWidth();
+                            content.getWidth();
                     int height =
-                            decor.getHeight();
+                            content.getHeight();
 
                     if (width <= 0 ||
                             height <= 0) {
                         return;
                     }
+
+                    int[] contentLocation =
+                            new int[2];
+
+                    content.getLocationInWindow(
+                            contentLocation
+                    );
+
+                    float contentLeft =
+                            contentLocation[0];
+
+                    float contentTop =
+                            contentLocation[1];
 
                     long now =
                             SystemClock.uptimeMillis();
@@ -972,14 +989,16 @@ public final class GELRemoteAssistCustomer {
                                     remoteDownTime,
                                     now,
                                     action,
-                                    (float) (
-                                            normalizedX *
-                                                    width
-                                    ),
-                                    (float) (
-                                            normalizedY *
-                                                    height
-                                    ),
+                                    contentLeft +
+                                            (float) (
+                                                    normalizedX *
+                                                            width
+                                            ),
+                                    contentTop +
+                                            (float) (
+                                                    normalizedY *
+                                                            height
+                                            ),
                                     0
                             );
 
@@ -1076,14 +1095,14 @@ public final class GELRemoteAssistCustomer {
         );
         banner.setText(
                 AppLang.isGreek(activity)
-                        ? "REMOTE ASSIST • GEL ΜΟΝΟ • ΠΑΤΗΣΤΕ ΓΙΑ ΔΙΑΚΟΠΗ"
-                        : "REMOTE ASSIST • GEL ONLY • TAP TO STOP"
+                        ? "REMOTE • ΠΑΤΗΣΤΕ ΓΙΑ STOP"
+                        : "REMOTE • TAP TO STOP"
         );
         banner.setTextColor(
                 0xFFFFFFFF
         );
         banner.setTextSize(
-                12f
+                10f
         );
         banner.setGravity(
                 Gravity.CENTER
@@ -1094,9 +1113,9 @@ public final class GELRemoteAssistCustomer {
 
         int pad =
                 Math.max(
-                        8,
+                        5,
                         Math.round(
-                                8f *
+                                5f *
                                         activity
                                                 .getResources()
                                                 .getDisplayMetrics()
@@ -1119,10 +1138,29 @@ public final class GELRemoteAssistCustomer {
 
         FrameLayout.LayoutParams lp =
                 new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
                         FrameLayout.LayoutParams.WRAP_CONTENT,
-                        Gravity.BOTTOM
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        Gravity.TOP | Gravity.END
                 );
+
+        int margin =
+                Math.max(
+                        6,
+                        Math.round(
+                                6f *
+                                        activity
+                                                .getResources()
+                                                .getDisplayMetrics()
+                                                .density
+                        )
+                );
+
+        lp.setMargins(
+                margin,
+                margin,
+                margin,
+                margin
+        );
 
         content.addView(
                 banner,

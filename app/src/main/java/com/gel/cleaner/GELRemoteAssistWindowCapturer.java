@@ -2,6 +2,7 @@ package com.gel.cleaner;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Rect;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.view.PixelCopy;
@@ -255,23 +256,45 @@ public final class GELRemoteAssistWindowCapturer implements VideoCapturer {
                         ? window.peekDecorView()
                         : null;
 
+        final View content =
+                activity.findViewById(
+                        android.R.id.content
+                );
+
         if (window == null ||
                 decor == null ||
-                !decor.isAttachedToWindow()) {
+                content == null ||
+                !decor.isAttachedToWindow() ||
+                !content.isAttachedToWindow()) {
             scheduleNext();
             return;
         }
 
         final int sourceWidth =
-                decor.getWidth();
+                content.getWidth();
         final int sourceHeight =
-                decor.getHeight();
+                content.getHeight();
 
         if (sourceWidth < 2 ||
                 sourceHeight < 2) {
             scheduleNext();
             return;
         }
+
+        final int[] contentLocation =
+                new int[2];
+
+        content.getLocationInWindow(
+                contentLocation
+        );
+
+        final Rect sourceRect =
+                new Rect(
+                        contentLocation[0],
+                        contentLocation[1],
+                        contentLocation[0] + sourceWidth,
+                        contentLocation[1] + sourceHeight
+                );
 
         final int[] size =
                 fitEven(
@@ -298,6 +321,7 @@ public final class GELRemoteAssistWindowCapturer implements VideoCapturer {
         try {
             PixelCopy.request(
                     window,
+                    sourceRect,
                     bitmap,
                     copyResult -> {
                         try {
