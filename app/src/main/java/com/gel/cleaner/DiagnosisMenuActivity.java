@@ -113,10 +113,17 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
             // ========================================================
             // TECHNICIAN SERVICE — REMOTE DEVICE DIAGNOSTICS & SUPPORT
             // Android customer-device remote service session
+            //
+            // Initial Play Store release:
+            // keep Remote Assist code/backend intact, but hide its UI.
+            // Set to true later to restore both Remote Assist entry points.
             // ========================================================
-            final boolean gr = AppLang.isGreek(this);
+            final boolean showRemoteAssistUi = false;
 
-            root.addView(sectionLabel(
+            if (showRemoteAssistUi) {
+                final boolean gr = AppLang.isGreek(this);
+
+                root.addView(sectionLabel(
                     gr
                             ? "ΤΕΧΝΙΚΟΙ — SERVICE ΣΥΣΚΕΥΗΣ"
                             : "TECHNICIAN — DEVICE SERVICE"
@@ -160,7 +167,8 @@ public class DiagnosisMenuActivity extends GELAutoActivityHook
                     ))
             );
 
-            root.addView(connectTechnicianBtn);
+                root.addView(connectTechnicianBtn);
+            }
         }
 
         // ============================================================
