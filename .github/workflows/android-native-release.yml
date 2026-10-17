@@ -112,6 +112,31 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
       # --------------------------------------------
+      # 🔐 Sign AAB with the same upload keystore
+      # --------------------------------------------
+      - name: Sign & Verify AAB
+        run: |
+          set -e
+          cd app/build/outputs/bundle/release
+
+          echo ">>> AABs before signing:"
+          ls -lh *.aab
+
+          cp app-release.aab GEL_iDoctor_v4_signed.aab
+
+          echo ">>> Signing AAB with upload key..."
+
+          jarsigner             -keystore "$GITHUB_WORKSPACE/gel-keystore.jks"             -storepass "$KEYSTORE_PASSWORD"             -keypass "$KEY_ALIAS_PASSWORD"             GEL_iDoctor_v4_signed.aab             "$KEY_ALIAS"
+
+          echo ">>> Verifying signed AAB..."
+
+          jarsigner             -verify             -verbose             -certs             GEL_iDoctor_v4_signed.aab
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+      # --------------------------------------------
       # 📦 Upload APK
       # --------------------------------------------
       - name: Upload APK
@@ -121,10 +146,10 @@ jobs:
           path: app/build/outputs/apk/release/GEL_iDoctor_v4_signed.apk
 
       # --------------------------------------------
-      # 📦 Upload AAB
+      # 📦 Upload SIGNED AAB
       # --------------------------------------------
-      - name: Upload AAB
+      - name: Upload Signed AAB
         uses: actions/upload-artifact@v4
         with:
           name: GEL_iDoctor_AAB_v4
-          path: app/build/outputs/bundle/release/app-release.aab
+          path: app/build/outputs/bundle/release/GEL_iDoctor_v4_signed.aab
