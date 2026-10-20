@@ -16,6 +16,8 @@ package com.gel.cleaner;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.content.SharedPreferences;
 import android.text.InputType;
 import android.widget.EditText;
@@ -538,14 +540,30 @@ public final class GelProEntitlement {
                         : "Tester activation code"
         );
 
-        String status =
+
+        // Explicit GEL dark-dialog colors.
+        // Do not depend on OEM theme inference.
+        input.setTextColor(Color.WHITE);
+
+        input.setHintTextColor(
+                Color.rgb(185, 185, 185)
+        );
+
+        input.setBackgroundTintList(
+                ColorStateList.valueOf(
+                        Color.rgb(255, 215, 0)
+                )
+        );
+
+String status =
                 buildStatusText(
                         activity,
                         gr
                 );
 
         new AlertDialog.Builder(
-                activity
+                activity,
+                androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert
         )
                 .setTitle(
                         gr

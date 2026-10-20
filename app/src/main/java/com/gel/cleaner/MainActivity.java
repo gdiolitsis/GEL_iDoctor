@@ -203,7 +203,14 @@ UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
    androidx.appcompat.widget.Toolbar toolbar =
         findViewById(R.id.gelToolbar);
 
-setSupportActionBar(toolbar);
+
+  // GEL uses a dark UI. Keep the overflow popup consistent
+  // instead of inheriting an OEM/light popup theme.
+  toolbar.setPopupTheme(
+          androidx.appcompat.R.style.ThemeOverlay_AppCompat_Dark
+  );
+
+  setSupportActionBar(toolbar);
 
 if (getSupportActionBar() != null) {
     getSupportActionBar().setTitle("");
