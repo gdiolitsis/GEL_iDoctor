@@ -103,6 +103,18 @@ public boolean onCreateOptionsMenu(Menu menu) {
 menu.add(0, 1002, 1, "Contact")
         .setIcon(R.drawable.ic_contact_gel)
         .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+
+    // Closed Test / trusted tester entitlement.
+    menu.add(
+            0,
+            1003,
+            2,
+            AppLang.isGreek(this)
+                    ? "Tester PRO"
+                    : "Tester PRO"
+    ).setShowAsAction(
+            MenuItem.SHOW_AS_ACTION_NEVER
+    );
     return true;
 }
 
@@ -117,6 +129,11 @@ if (item.getItemId() == 1002) {
     showContactDeveloperDialog();
     return true;
 }
+
+    if (item.getItemId() == 1003) {
+        GelProEntitlement.showActivationDialog(this);
+        return true;
+    }
     return super.onOptionsItemSelected(item);
 }
 
@@ -171,6 +188,12 @@ protected void onResume() {
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+
+    // Refresh server-backed Tester PRO entitlement.
+    // Network failure never revokes a still-valid local tester cache.
+    GelProEntitlement.refreshKnownTesterFromServer(
+              this
+      );
     buildAppleInfoLog();
 
 LinearLayout root = findViewById(R.id.contentRoot);

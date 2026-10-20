@@ -766,16 +766,9 @@ private boolean oldKeepScreenOn = false;
     // Single source of truth for professional features.
     // Google Play Billing will update "active" after verified purchase.
     // ============================================================
-    private static final String GEL_PRO_PREFS = "GEL_PRO_ENTITLEMENT";
-    private static final String GEL_PRO_ACTIVE_KEY = "active";
 
     private boolean isGelProActive() {
-        try {
-            return getSharedPreferences(GEL_PRO_PREFS, MODE_PRIVATE)
-                    .getBoolean(GEL_PRO_ACTIVE_KEY, false);
-        } catch (Throwable ignore) {
-            return false;
-        }
+        return GelProEntitlement.isActive(this);
     }
 
     private boolean requireGelPro(String featureName) {

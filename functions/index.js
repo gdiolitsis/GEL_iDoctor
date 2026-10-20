@@ -2343,3 +2343,412 @@ exports.stopRemoteAssist =
       };
     }
   );
+
+
+// ===== GEL TESTER PRO ENTITLEMENT =====
+//
+// Activation codes are NEVER stored in the Android APK.
+//
+// Firestore:
+//   tester_activation_codes/{sha256(normalizedCode)}
+//
+// Example fields:
+//   enabled: true
+//   permanent: false
+//   durationDays: 21
+//   maxActivations: 1
+//   activationCount: 0
+//   label: "Closed Test - Tester 01"
+//
+// Trusted tester:
+//   permanent: true
+//
+// Granted entitlement:
+//   tester_entitlements/{firebaseUid}
+//
+// Direct client Firestore access is not required.
+// Cloud Functions Admin SDK is authoritative.
+
+const TESTER_CODE_COLLECTION =
+  "tester_activation_codes";
+
+const TESTER_ENTITLEMENT_COLLECTION =
+  "tester_entitlements";
+
+const TESTER_DEFAULT_DURATION_DAYS = 21;
+
+function normalizeTesterActivationCode(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const code =
+    value
+      .trim()
+      .toUpperCase();
+
+  if (!/^[A-Z0-9-]{8,64}$/.test(code)) {
+    return null;
+  }
+
+  return code;
+}
+
+function testerActivationCodeId(code) {
+  return crypto
+    .createHash("sha256")
+    .update(code, "utf8")
+    .digest("hex");
+}
+
+function timestampToMillis(value) {
+  if (
+    value &&
+    typeof value.toMillis === "function"
+  ) {
+    return value.toMillis();
+  }
+
+  return 0;
+}
+
+function buildTesterEntitlementResult(data) {
+  const enabled =
+    data &&
+    data.enabled === true;
+
+  const permanent =
+    data &&
+    data.permanent === true;
+
+  const expiresAtMs =
+    timestampToMillis(
+      data
+        ? data.expiresAt
+        : null
+    );
+
+  const active =
+    enabled &&
+    (
+      permanent ||
+      (
+        expiresAtMs > 0 &&
+        expiresAtMs > Date.now()
+      )
+    );
+
+  return {
+    active,
+    permanent:
+      active && permanent,
+    expiresAtMs:
+      active && !permanent
+        ? expiresAtMs
+        : 0,
+    type:
+      data &&
+      typeof data.type === "string"
+        ? data.type
+        : "TESTER_PRO",
+  };
+}
+
+exports.getTesterEntitlement =
+  onCall(
+    async (request) => {
+
+      const uid =
+        requireAuth(request);
+
+      const entitlementRef =
+        db
+          .collection(
+            TESTER_ENTITLEMENT_COLLECTION
+          )
+          .doc(uid);
+
+      const snapshot =
+        await entitlementRef.get();
+
+      if (!snapshot.exists) {
+        return {
+          active: false,
+          permanent: false,
+          expiresAtMs: 0,
+          type: "TESTER_PRO",
+        };
+      }
+
+      return buildTesterEntitlementResult(
+        snapshot.data() || {}
+      );
+    }
+  );
+
+
+exports.activateTesterPro =
+  onCall(
+    async (request) => {
+
+      const uid =
+        requireAuth(request);
+
+      const code =
+        normalizeTesterActivationCode(
+          request.data
+            ? request.data.code
+            : null
+        );
+
+      if (!code) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Invalid tester activation code."
+        );
+      }
+
+      const codeId =
+        testerActivationCodeId(
+          code
+        );
+
+      const codeRef =
+        db
+          .collection(
+            TESTER_CODE_COLLECTION
+          )
+          .doc(codeId);
+
+      const redemptionRef =
+        codeRef
+          .collection("redemptions")
+          .doc(uid);
+
+      const entitlementRef =
+        db
+          .collection(
+            TESTER_ENTITLEMENT_COLLECTION
+          )
+          .doc(uid);
+
+      return db.runTransaction(
+        async (tx) => {
+
+          // All reads first.
+          const codeSnapshot =
+            await tx.get(codeRef);
+
+          const redemptionSnapshot =
+            await tx.get(
+              redemptionRef
+            );
+
+          const entitlementSnapshot =
+            await tx.get(
+              entitlementRef
+            );
+
+          if (!codeSnapshot.exists) {
+            throw new HttpsError(
+              "not-found",
+              "Tester activation code not found."
+            );
+          }
+
+          const codeData =
+            codeSnapshot.data() || {};
+
+          if (codeData.enabled !== true) {
+            throw new HttpsError(
+              "permission-denied",
+              "Tester activation code is disabled."
+            );
+          }
+
+          const codeValidUntilMs =
+            timestampToMillis(
+              codeData.validUntil
+            );
+
+          if (
+            codeValidUntilMs > 0 &&
+            Date.now() >= codeValidUntilMs
+          ) {
+            throw new HttpsError(
+              "failed-precondition",
+              "Tester activation code has expired."
+            );
+          }
+
+          // Same Firebase UID may safely call activation again.
+          // It does NOT consume another activation.
+          if (redemptionSnapshot.exists) {
+
+            if (entitlementSnapshot.exists) {
+
+              const existingResult =
+                buildTesterEntitlementResult(
+                  entitlementSnapshot.data() || {}
+                );
+
+              if (existingResult.active) {
+                return existingResult;
+              }
+            }
+
+            throw new HttpsError(
+              "failed-precondition",
+              "This tester code was already redeemed and its entitlement is no longer active."
+            );
+          }
+
+          const rawMaxActivations =
+            Number(
+              codeData.maxActivations
+            );
+
+          const maxActivations =
+            Number.isFinite(
+              rawMaxActivations
+            )
+              ? Math.max(
+                  1,
+                  Math.min(
+                    100,
+                    Math.floor(
+                      rawMaxActivations
+                    )
+                  )
+                )
+              : 1;
+
+          const rawActivationCount =
+            Number(
+              codeData.activationCount
+            );
+
+          const activationCount =
+            Number.isFinite(
+              rawActivationCount
+            )
+              ? Math.max(
+                  0,
+                  Math.floor(
+                    rawActivationCount
+                  )
+                )
+              : 0;
+
+          if (
+            activationCount >=
+            maxActivations
+          ) {
+            throw new HttpsError(
+              "resource-exhausted",
+              "Tester activation code has reached its activation limit."
+            );
+          }
+
+          const permanent =
+            codeData.permanent === true;
+
+          const rawDurationDays =
+            Number(
+              codeData.durationDays
+            );
+
+          const durationDays =
+            Number.isFinite(
+              rawDurationDays
+            )
+              ? Math.max(
+                  1,
+                  Math.min(
+                    3650,
+                    Math.floor(
+                      rawDurationDays
+                    )
+                  )
+                )
+              : TESTER_DEFAULT_DURATION_DAYS;
+
+          const now =
+            Timestamp.now();
+
+          const expiresAt =
+            permanent
+              ? null
+              : Timestamp.fromMillis(
+                  Date.now() +
+                  (
+                    durationDays *
+                    24 *
+                    60 *
+                    60 *
+                    1000
+                  )
+                );
+
+          const type =
+            permanent
+              ? "PRO"
+              : "TESTER_PRO";
+
+          const entitlementData = {
+            enabled: true,
+            permanent,
+            type,
+            activatedAt: now,
+            updatedAt: now,
+            source: "ACTIVATION_CODE",
+            activationCodeId: codeId,
+          };
+
+          if (permanent) {
+            entitlementData.expiresAt =
+              null;
+          } else {
+            entitlementData.expiresAt =
+              expiresAt;
+          }
+
+          // Writes after all reads.
+          tx.set(
+            entitlementRef,
+            entitlementData,
+            {
+              merge: true,
+            }
+          );
+
+          tx.set(
+            redemptionRef,
+            {
+              uid,
+              activatedAt: now,
+            }
+          );
+
+          tx.update(
+            codeRef,
+            {
+              activationCount:
+                activationCount + 1,
+              lastActivatedAt: now,
+            }
+          );
+
+          return {
+            active: true,
+            permanent,
+            expiresAtMs:
+              permanent
+                ? 0
+                : expiresAt.toMillis(),
+            type,
+          };
+        }
+      );
+    }
+  );

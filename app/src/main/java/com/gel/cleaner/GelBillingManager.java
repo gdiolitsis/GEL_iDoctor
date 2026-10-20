@@ -221,20 +221,20 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
     // ============================================================
     // LOCAL ENTITLEMENT READERS
     // ============================================================
+    /**
+     * Effective feature entitlement:
+     * paid GEL PRO OR valid Tester PRO.
+     */
     public boolean isGelProActive() {
-        try {
-            return appContext
-                    .getSharedPreferences(
-                            GEL_PRO_PREFS,
-                            Context.MODE_PRIVATE
-                    )
-                    .getBoolean(
-                            GEL_PRO_ACTIVE_KEY,
-                            false
-                    );
-        } catch (Throwable ignore) {
-            return false;
-        }
+        return GelProEntitlement.isActive(appContext);
+    }
+
+    /**
+     * Actual paid Google Play GEL PRO subscription only.
+     * Use for billing prerequisites, never for feature access.
+     */
+    public boolean isPaidGelProActive() {
+        return GelProEntitlement.isPaidProActive(appContext);
     }
 
     public boolean isCustomReportsActive() {
@@ -616,9 +616,9 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
             @NonNull Activity activity
     ) {
 
-        if (!isGelProActive()) {
+        if (!isPaidGelProActive()) {
             listener.onBillingError(
-                    "An active GEL PRO subscription is required first."
+                    "An active paid GEL PRO subscription is required first."
             );
             return;
         }

@@ -109,16 +109,9 @@ private boolean looksCorruptedPanic(String text) {
     // GEL PRO — CENTRAL ENTITLEMENT GATE
     // Same entitlement source used by ManualTestsActivity.
     // ============================================================
-    private static final String GEL_PRO_PREFS = "GEL_PRO_ENTITLEMENT";
-    private static final String GEL_PRO_ACTIVE_KEY = "active";
 
     private boolean isGelProActive() {
-        try {
-            return getSharedPreferences(GEL_PRO_PREFS, MODE_PRIVATE)
-                    .getBoolean(GEL_PRO_ACTIVE_KEY, false);
-        } catch (Throwable ignore) {
-            return false;
-        }
+        return GelProEntitlement.isActive(this);
     }
 
     private boolean requireGelPro(String featureName) {

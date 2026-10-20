@@ -69,8 +69,6 @@ public class ServiceReportActivity extends GELAutoActivityHook {
     private boolean useProfessionalBrandingForCurrentExport = false;
 
     // GEL PRO — same entitlement store used by the professional labs.
-    private static final String GEL_PRO_PREFS = "GEL_PRO_ENTITLEMENT";
-    private static final String GEL_PRO_ACTIVE_KEY = "active";
 
     // Professional report personalization — STEP 1 (local profile only)
     private static final String PRO_PROFILE_PREFS = "GEL_PRO_PROFILE";
@@ -1437,12 +1435,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     // GEL PRO — EXPORT ENTITLEMENT
     // ============================================================
     private boolean isGelProActive() {
-        try {
-            return getSharedPreferences(GEL_PRO_PREFS, MODE_PRIVATE)
-                    .getBoolean(GEL_PRO_ACTIVE_KEY, false);
-        } catch (Throwable ignore) {
-            return false;
-        }
+        return GelProEntitlement.isActive(this);
     }
 
     private boolean requireGelProExport() {

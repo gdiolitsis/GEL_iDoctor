@@ -47,18 +47,6 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // ============================================================
     // GEL PRO ENTITLEMENT
     // ============================================================
-    private static final String GEL_PRO_PREFS =
-            "GEL_PRO_ENTITLEMENT";
-
-    private static final String GEL_PRO_ACTIVE_KEY =
-            "active";
-
-    // ============================================================
-    // TEMPORARY TECHNICIAN SERVICE TEST UNLOCK
-    // true only for real-world two-device testing.
-    // MUST be false before production release.
-    // ============================================================
-    private static final boolean TEMP_TECHNICIAN_TEST_UNLOCK = true;
 
     // ============================================================
     // SERVICE SESSION STORAGE
@@ -1572,25 +1560,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     // GEL PRO
     // ============================================================
     private boolean isGelProActive() {
-
-        // TEST BUILD:
-        // both physical devices may act as technician.
-        if (TEMP_TECHNICIAN_TEST_UNLOCK) {
-            return true;
-        }
-
-        // Production entitlement path remains intact.
-        try {
-            return getSharedPreferences(
-                    GEL_PRO_PREFS,
-                    MODE_PRIVATE
-            ).getBoolean(
-                    GEL_PRO_ACTIVE_KEY,
-                    false
-            );
-        } catch (Throwable ignore) {
-            return false;
-        }
+        return GelProEntitlement.isActive(this);
     }
 
     private void showGelProRequiredDialog() {
