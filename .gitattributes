@@ -1,1 +1,5 @@
 * text=auto eol=lf
+
+# ==== GEL CANONICAL LINE ENDINGS ====
+/gradlew text eol=lf
+/gradlew.bat text eol=crlf

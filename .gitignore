@@ -10,3 +10,12 @@ GEL_Cleaner/
 app/platforms/
 app/plugins/
 
+# ==== ANDROID / GRADLE GENERATED ====
+.gradle/
+**/build/
+**/.cxx/
+**/.externalNativeBuild/
+local.properties
+.idea/
+*.iml
+

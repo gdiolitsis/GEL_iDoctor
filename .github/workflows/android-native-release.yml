@@ -3,153 +3,131 @@ name: Manual Build — GEL iDoctor (APK + AAB)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # --------------------------------------------
-      # Checkout
-      # --------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --------------------------------------------
-      # JDK 17
-      # --------------------------------------------
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: "17"
           distribution: "temurin"
+          cache: "gradle"
 
-      # --------------------------------------------
-      # Android SDK
-      # --------------------------------------------
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
-        with:
-          cmdline-tools-version: 11076708
-          accept-android-sdk-licenses: true
-          packages: ''
 
-      # --------------------------------------------
-      # Install SDK packages
-      # --------------------------------------------
       - name: Install Android SDK packages
         run: |
           sdkmanager \
             "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0" \
-            "ndk;25.2.9519653" \
-            "cmake;3.22.1"
+            "platforms;android-36" \
+            "build-tools;36.0.0"
 
-      # --------------------------------------------
-      # Gradle 8.2.1
-      # --------------------------------------------
-      - name: Install Gradle
+      - name: Verify canonical Gradle wrapper
         run: |
-          wget https://services.gradle.org/distributions/gradle-8.2.1-bin.zip
-          unzip -q gradle-8.2.1-bin.zip
-          echo "GRADLE_HOME=$PWD/gradle-8.2.1" >> $GITHUB_ENV
-          echo "$PWD/gradle-8.2.1/bin" >> $GITHUB_PATH
+          chmod +x ./gradlew
+          ./gradlew --version
 
-      # --------------------------------------------
-      # AndroidX flags
-      # --------------------------------------------
-      - name: Enable AndroidX
-        run: |
-          echo "android.useAndroidX=true" >> gradle.properties
-          echo "android.enableJetifier=true" >> gradle.properties
-
-      # --------------------------------------------
-      # Decode Keystore
-      # --------------------------------------------
-      - name: Decode Keystore
+      - name: Decode upload keystore
         run: |
           echo "$KEYSTORE_B64" | base64 --decode > gel-keystore.jks
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
 
-      # --------------------------------------------
-      # 🔨 BUILD BOTH
-      # --------------------------------------------
-      - name: Build APK + AAB
+      - name: Build release APK + AAB
         run: |
-          gradle assembleRelease
-          gradle bundleRelease
+          ./gradlew --no-daemon clean assembleRelease bundleRelease
 
-      # --------------------------------------------
-      # 🔐 Sign APK (ONLY APK, όχι AAB)
-      # --------------------------------------------
-      - name: Install Android build tools
+      - name: Align and sign APK
         run: |
-          sudo apt-get update
-          sudo apt-get install -y zipalign apksigner
+          set -e
 
-      - name: Align & Sign APK
-        run: |
-          cd app/build/outputs/apk/release
-          echo ">>> APKs:"
-          ls -1 *.apk
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
+          APK_DIR="$GITHUB_WORKSPACE/app/build/outputs/apk/release"
 
-          APK=$(ls *.apk | head -n 1)
-          echo ">>> Signing: $APK"
+          APK="$(find "$APK_DIR" \
+            -maxdepth 1 \
+            -type f \
+            -name '*.apk' \
+            ! -name '*aligned*' \
+            ! -name '*signed*' \
+            | head -n 1)"
 
-          zipalign -f 4 "$APK" aligned.apk
+          if [ -z "$APK" ]; then
+            echo "ERROR: Release APK not found."
+            exit 1
+          fi
 
-          apksigner sign \
-            --ks $GITHUB_WORKSPACE/gel-keystore.jks \
+          "$BUILD_TOOLS/zipalign" \
+            -f \
+            4 \
+            "$APK" \
+            "$APK_DIR/GEL_iDoctor_aligned.apk"
+
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$GITHUB_WORKSPACE/gel-keystore.jks" \
             --ks-pass pass:"$KEYSTORE_PASSWORD" \
             --key-pass pass:"$KEY_ALIAS_PASSWORD" \
             --ks-key-alias "$KEY_ALIAS" \
-            --out GEL_iDoctor_v4_signed.apk \
-            aligned.apk
+            --out "$APK_DIR/GEL_iDoctor_signed.apk" \
+            "$APK_DIR/GEL_iDoctor_aligned.apk"
+
+          "$BUILD_TOOLS/apksigner" verify \
+            --verbose \
+            "$APK_DIR/GEL_iDoctor_signed.apk"
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
-      # --------------------------------------------
-      # 🔐 Sign AAB with the same upload keystore
-      # --------------------------------------------
-      - name: Sign & Verify AAB
+      - name: Sign and verify AAB
         run: |
           set -e
-          cd app/build/outputs/bundle/release
 
-          echo ">>> AABs before signing:"
-          ls -lh *.aab
+          AAB_DIR="$GITHUB_WORKSPACE/app/build/outputs/bundle/release"
+          SOURCE="$AAB_DIR/app-release.aab"
+          SIGNED="$AAB_DIR/GEL_iDoctor_signed.aab"
 
-          cp app-release.aab GEL_iDoctor_v4_signed.aab
+          if [ ! -f "$SOURCE" ]; then
+            echo "ERROR: Release AAB not found."
+            exit 1
+          fi
 
-          echo ">>> Signing AAB with upload key..."
+          cp "$SOURCE" "$SIGNED"
 
-          jarsigner             -keystore "$GITHUB_WORKSPACE/gel-keystore.jks"             -storepass "$KEYSTORE_PASSWORD"             -keypass "$KEY_ALIAS_PASSWORD"             GEL_iDoctor_v4_signed.aab             "$KEY_ALIAS"
+          jarsigner \
+            -keystore "$GITHUB_WORKSPACE/gel-keystore.jks" \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -keypass "$KEY_ALIAS_PASSWORD" \
+            "$SIGNED" \
+            "$KEY_ALIAS"
 
-          echo ">>> Verifying signed AAB..."
-
-          jarsigner             -verify             -verbose             -certs             GEL_iDoctor_v4_signed.aab
+          jarsigner \
+            -verify \
+            -verbose \
+            -certs \
+            "$SIGNED"
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
-      # --------------------------------------------
-      # 📦 Upload APK
-      # --------------------------------------------
-      - name: Upload APK
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: GEL_iDoctor_APK_v4
-          path: app/build/outputs/apk/release/GEL_iDoctor_v4_signed.apk
+          name: GEL_iDoctor_APK
+          path: app/build/outputs/apk/release/GEL_iDoctor_signed.apk
 
-      # --------------------------------------------
-      # 📦 Upload SIGNED AAB
-      # --------------------------------------------
-      - name: Upload Signed AAB
+      - name: Upload signed AAB
         uses: actions/upload-artifact@v4
         with:
-          name: GEL_iDoctor_AAB_v4
-          path: app/build/outputs/bundle/release/GEL_iDoctor_v4_signed.aab
+          name: GEL_iDoctor_AAB
+          path: app/build/outputs/bundle/release/GEL_iDoctor_signed.aab
