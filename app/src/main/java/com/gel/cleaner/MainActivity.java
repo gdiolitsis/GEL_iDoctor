@@ -2418,8 +2418,8 @@ private void setupCertificationAccess() {
     if (b instanceof TextView) {
         ((TextView) b).setText(
                 gr
-                        ? "🔐 30 ΗΜΕΡΕΣ ΠΛΗΡΗΣ ΕΛΕΓΧΟΣ ΣΥΣΚΕΥΗΣ • 5€"
-                        : "🔐 30-DAY FULL DEVICE CHECK • €5"
+                        ? "30 ΗΜΕΡΕΣ ΠΛΗΡΗΣ ΕΛΕΓΧΟΣ ΣΥΣΚΕΥΗΣ • 5€"
+                        : "30-DAY FULL DEVICE CHECK • €5"
         );
     }
 

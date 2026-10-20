@@ -555,7 +555,7 @@ public final class GelProEntitlement {
                 )
         );
 
-String status =
+        String status =
                 buildStatusText(
                         activity,
                         gr

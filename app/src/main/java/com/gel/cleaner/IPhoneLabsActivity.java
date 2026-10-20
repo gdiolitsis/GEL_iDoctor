@@ -261,8 +261,11 @@ root.addView(makeLabButton(
 
 // 1) Import (replace mode)
 View importBtn = makeLabButton(
-        gr ? "🔒 GEL PRO — Εισαγωγή Panic Logs (TXT / ZIP)"
-           : "🔒 GEL PRO — Panic Log Import (TXT / ZIP)",
+        gr
+                ? (isGelProActive() ? "" : "🔒 ")
+                  + "GEL PRO — Εισαγωγή Panic Logs (TXT / ZIP)"
+                : (isGelProActive() ? "" : "🔒 ")
+                  + "GEL PRO — Panic Log Import (TXT / ZIP)",
         gr ? "Αυτόματη αποσυμπίεση + φόρτωση αναφοράς"
            : "Auto unzip + load panic report",
         false,
@@ -290,8 +293,11 @@ root.addView(importBtn);
 
 // 1b) Add more logs (append mode)
 View appendBtn = makeLabButton(
-        gr ? "🔒 GEL PRO — Προσθήκη επιπλέον panic logs"
-           : "🔒 GEL PRO — Add more panic logs",
+        gr
+                ? (isGelProActive() ? "" : "🔒 ")
+                  + "GEL PRO — Προσθήκη επιπλέον panic logs"
+                : (isGelProActive() ? "" : "🔒 ")
+                  + "GEL PRO — Add more panic logs",
         gr ? "Προσθήκη logs στην τρέχουσα ανάλυση"
            : "Append logs to current analysis",
         false,

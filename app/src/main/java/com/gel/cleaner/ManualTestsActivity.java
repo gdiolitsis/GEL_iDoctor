@@ -1631,8 +1631,11 @@ logScroll.post(() -> setLogPanelState(0));
             this::lab27PermissionsPrivacy));
 
     body7.addView(makeTestButton(
-            gr ? "🔒 PRO  28. Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων\nΥποψία Κόλλησης / (Βάσει Συμπτωμάτων)"
-               : "🔒 PRO  28. Hardware Stability & Interconnect Integrity\nSolder / (SYMPTOM-BASED)",
+            gr
+                    ? (isGelProActive() ? "" : "🔒 ")
+                      + "PRO  28. Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων\nΥποψία Κόλλησης / (Βάσει Συμπτωμάτων)"
+                    : (isGelProActive() ? "" : "🔒 ")
+                      + "PRO  28. Hardware Stability & Interconnect Integrity\nSolder / (SYMPTOM-BASED)",
             this::lab28HardwareStability));
 
     body7.addView(makeTestButton(
@@ -1641,8 +1644,11 @@ logScroll.post(() -> setLogPanelState(0));
             this::lab29DeviceAuthenticity));
 
     body7.addView(makeTestButton(
-            gr ? "🔒 PRO  30. GEL Device Certification"
-               : "🔒 PRO  30. GEL Device Certification",
+            gr
+                    ? (isGelProActive() ? "" : "🔒 ")
+                      + "PRO  30. GEL Device Certification"
+                    : (isGelProActive() ? "" : "🔒 ")
+                      + "PRO  30. GEL Device Certification",
             this::lab30CombineFindings));
 
     body7.addView(makeTestButton(
@@ -12450,8 +12456,10 @@ private void showBatterySuiteMenu() {
     root.addView(
             makeTestButton(
                     gr
-                    ? "🔒 PRO  14A. Διάγνωση Υγείας και Καταπόνησης Μπαταρίας"
-                    : "🔒 PRO  14A. Battery Health and Stress Diagnosis",
+                    ? (isGelProActive() ? "" : "🔒 ")
+                      + "PRO  14A. Διάγνωση Υγείας και Καταπόνησης Μπαταρίας"
+                    : (isGelProActive() ? "" : "🔒 ")
+                      + "PRO  14A. Battery Health and Stress Diagnosis",
                     this::lab14BatteryHealthStressTest
             )
     );

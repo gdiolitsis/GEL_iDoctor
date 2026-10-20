@@ -179,11 +179,23 @@ btnHtml = new AppCompatButton(this);
 
 // 🔴 TEXT (AFTER BOTH BUTTONS CREATED)
 if (AppLang.isGreek(this)) {
-    btnTxt.setText("🔒 PRO  TXT PDF (Αποθήκευση & Κοινοποίηση)");
-    btnHtml.setText("🔒 PRO  HTML PDF (Αποθήκευση)");
+    btnTxt.setText(
+            (isGelProActive() ? "" : "🔒 ")
+                    + "PRO  TXT PDF (Αποθήκευση & Κοινοποίηση)"
+    );
+    btnHtml.setText(
+            (isGelProActive() ? "" : "🔒 ")
+                    + "PRO  HTML PDF (Αποθήκευση)"
+    );
 } else {
-    btnTxt.setText("🔒 PRO  TXT PDF (Save & Share)");
-    btnHtml.setText("🔒 PRO  HTML PDF (Save)");
+    btnTxt.setText(
+            (isGelProActive() ? "" : "🔒 ")
+                    + "PRO  TXT PDF (Save & Share)"
+    );
+    btnHtml.setText(
+            (isGelProActive() ? "" : "🔒 ")
+                    + "PRO  HTML PDF (Save)"
+    );
 }
 
 // 🔴 TXT BUTTON STYLE
@@ -1404,8 +1416,10 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
         TextView proNote = previewText(
                 gr
-                        ? "🔒 Αποθήκευση & εξαγωγή PDF — GEL PRO"
-                        : "🔒 Save & export PDF — GEL PRO",
+                        ? (isGelProActive() ? "" : "🔒 ")
+                          + "Αποθήκευση & εξαγωγή PDF — GEL PRO"
+                        : (isGelProActive() ? "" : "🔒 ")
+                          + "Save & export PDF — GEL PRO",
                 14f,
                 0xFFFFD700,
                 true
