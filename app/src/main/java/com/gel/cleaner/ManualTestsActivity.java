@@ -1387,6 +1387,11 @@ btnExport.setText(getString(R.string.export_report_title));
 btnExport.setAllCaps(false);
 btnExport.setTextColor(0xFFFFFFFF);
 btnExport.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+btnExport.setGravity(Gravity.CENTER);
+btnExport.setSingleLine(false);
+btnExport.setIncludeFontPadding(true);
+btnExport.setMinHeight(dp(72));
+btnExport.setMinimumHeight(dp(72));
 btnExport.setPadding(dp(16), dp(14), dp(16), dp(14));
 
 LinearLayout.LayoutParams btnParams =
