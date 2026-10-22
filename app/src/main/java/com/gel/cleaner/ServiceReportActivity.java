@@ -202,25 +202,35 @@ if (AppLang.isGreek(this)) {
 btnTxt.setAllCaps(false);
 btnTxt.setTextColor(0xFFFFFFFF);
 btnTxt.setBackgroundResource(R.drawable.gel_btn_outline);
+btnTxt.setGravity(Gravity.CENTER);
+btnTxt.setSingleLine(false);
+btnTxt.setIncludeFontPadding(true);
+btnTxt.setMinHeight(dp(72));
+btnTxt.setMinimumHeight(dp(72));
 
 LinearLayout.LayoutParams lpTxt =
         new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-lpTxt.setMargins(0, 0, 8, 0);
+lpTxt.setMargins(0, 0, dp(8), 0);
 btnTxt.setLayoutParams(lpTxt);
-btnTxt.setPadding(0, 28, 0, 28);
+btnTxt.setPadding(dp(12), dp(12), dp(12), dp(12));
 
 // 🔴 HTML BUTTON STYLE
 btnHtml.setAllCaps(false);
 btnHtml.setTextColor(0xFFFFFFFF);
 btnHtml.setBackgroundResource(R.drawable.gel_btn_outline);
+btnHtml.setGravity(Gravity.CENTER);
+btnHtml.setSingleLine(false);
+btnHtml.setIncludeFontPadding(true);
+btnHtml.setMinHeight(dp(72));
+btnHtml.setMinimumHeight(dp(72));
 
 LinearLayout.LayoutParams lpHtml =
         new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-lpHtml.setMargins(8, 0, 0, 0);
+lpHtml.setMargins(dp(8), 0, 0, 0);
 btnHtml.setLayoutParams(lpHtml);
-btnHtml.setPadding(0, 28, 0, 28);
+btnHtml.setPadding(dp(12), dp(12), dp(12), dp(12));
 
 line.addView(btnTxt);
 line.addView(btnHtml);

@@ -1082,11 +1082,14 @@ Button okBtn = new Button(IPhoneLabsActivity.this);
 okBtn.setText("OK");
 okBtn.setAllCaps(false);
 okBtn.setTextColor(Color.WHITE);
-okBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f);
+okBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f);
 okBtn.setTypeface(null, Typeface.BOLD);
 okBtn.setGravity(Gravity.CENTER);
 okBtn.setIncludeFontPadding(true);
-okBtn.setPadding(dp(16), 0, dp(16), 0);
+okBtn.setSingleLine(false);
+okBtn.setMinHeight(dp(72));
+okBtn.setMinimumHeight(dp(72));
+okBtn.setPadding(dp(16), dp(12), dp(16), dp(12));
 
 GradientDrawable okBg = new GradientDrawable();
 okBg.setColor(0xFF00E676); // Neon green
@@ -1097,7 +1100,7 @@ okBtn.setBackground(okBg);
 LinearLayout.LayoutParams okLp =
 new LinearLayout.LayoutParams(
 LinearLayout.LayoutParams.MATCH_PARENT,
-dp(72)
+LinearLayout.LayoutParams.WRAP_CONTENT
 );
 okLp.setMargins(dp(6), dp(8), dp(6), dp(8));
 okBtn.setLayoutParams(okLp);
