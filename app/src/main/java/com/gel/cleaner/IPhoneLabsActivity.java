@@ -447,10 +447,19 @@ btnExport.setAllCaps(false);
 btnExport.setBackgroundResource(R.drawable.gel_btn_outline_selector);
 btnExport.setTextColor(0xFFFFFFFF);
 
+// Font-scale safe: allow the button to grow vertically
+// instead of clipping its label at a fixed 52dp height.
+btnExport.setGravity(Gravity.CENTER);
+btnExport.setSingleLine(false);
+btnExport.setIncludeFontPadding(true);
+btnExport.setMinHeight(dp(72));
+btnExport.setMinimumHeight(dp(72));
+btnExport.setPadding(dp(16), dp(12), dp(16), dp(12));
+
 LinearLayout.LayoutParams lpExp =
         new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(52)
+                LinearLayout.LayoutParams.WRAP_CONTENT
         );
 lpExp.setMargins(dp(4), dp(12), dp(4), dp(20));
 btnExport.setLayoutParams(lpExp);
