@@ -1084,6 +1084,9 @@ okBtn.setAllCaps(false);
 okBtn.setTextColor(Color.WHITE);
 okBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f);
 okBtn.setTypeface(null, Typeface.BOLD);
+okBtn.setGravity(Gravity.CENTER);
+okBtn.setIncludeFontPadding(true);
+okBtn.setPadding(dp(16), 0, dp(16), 0);
 
 GradientDrawable okBg = new GradientDrawable();
 okBg.setColor(0xFF00E676); // Neon green
@@ -1094,9 +1097,9 @@ okBtn.setBackground(okBg);
 LinearLayout.LayoutParams okLp =
 new LinearLayout.LayoutParams(
 LinearLayout.LayoutParams.MATCH_PARENT,
-dp(56)
+dp(72)
 );
-okLp.setMargins(dp(6), dp(6), dp(6), 0);
+okLp.setMargins(dp(6), dp(8), dp(6), dp(8));
 okBtn.setLayoutParams(okLp);
 
 root.addView(okBtn);
