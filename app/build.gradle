@@ -11,8 +11,8 @@ android {
         applicationId = "com.gel.iDoctor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 46
-        versionName = "4.6"
+        versionCode = 47
+        versionName = "4.7"
 
         multiDexEnabled = true
 // ✅ SINGLE SOURCE OF ABI TRUTH
