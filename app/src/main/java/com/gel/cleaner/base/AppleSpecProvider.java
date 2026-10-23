@@ -10,9 +10,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.gel.cleaner.iphone.AppleDeviceSpec;
+import com.gel.cleaner.iphone.AppleSpecs;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Locale;
 
 public final class AppleSpecProvider {
@@ -80,13 +80,7 @@ public final class AppleSpecProvider {
             Selection s = getSavedSelection(c);
             if (s.model == null) return null;
 
-            Class<?> cls =
-                    Class.forName("com.gel.cleaner.iphone.AppleSpecs");
-
-            Method m = cls.getDeclaredMethod("get", String.class);
-            m.setAccessible(true);
-
-            return m.invoke(null, s.model);
+            return AppleSpecs.get(s.model);
 
         } catch (Throwable ignore) {
             return null;

@@ -5,7 +5,6 @@
 
 package com.gel.cleaner;
 
-import java.lang.reflect.Method;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Configuration;
@@ -169,57 +168,9 @@ public final class GELAutoDP {
      * Reflection-safe, no hard dependency.
      */
     private static boolean detectCurrentInnerMode(Activity a, float sw) {
-
-        // 1) Try orchestrator singleton/static
-        try {
-            Class<?> clazz = Class.forName("com.gel.cleaner.GELFoldableOrchestrator");
-
-            // a) static isInnerScreen() ?
-            try {
-                Method mStatic = clazz.getMethod("isInnerScreen");
-                if (java.lang.reflect.Modifier.isStatic(mStatic.getModifiers())) {
-                    Object r = mStatic.invoke(null);
-                    if (r instanceof Boolean) return (Boolean) r;
-                }
-            } catch (Throwable ignored) {}
-
-            // b) getInstance(Context) / get(Context) / instance()
-            Object inst = null;
-
-            inst = tryInvokeFactory(clazz, "getInstance", new Class[]{Context.class}, new Object[]{a});
-            if (inst == null) {
-                inst = tryInvokeFactory(clazz, "get", new Class[]{Context.class}, new Object[]{a});
-            }
-            if (inst == null) {
-                inst = tryInvokeFactory(clazz, "instance", null, null);
-            }
-
-            if (inst != null) {
-                try {
-                    Method m = clazz.getMethod("isInnerScreen");
-                    Object r = m.invoke(inst);
-                    if (r instanceof Boolean) return (Boolean) r;
-                } catch (Throwable ignored) {}
-            }
-
-        } catch (Throwable ignored) {}
-
-        // 2) Fallback: treat large screens as inner-mode
+        // Current GEL foldable policy:
+        // large/inner layouts begin at the established 520dp threshold.
         return sw >= 520f;
-    }
-
-    private static Object tryInvokeFactory(Class<?> clazz, String name, Class<?>[] sig, Object[] args) {
-        try {
-            Method m = (sig == null)
-                    ? clazz.getMethod(name)
-                    : clazz.getMethod(name, sig);
-
-            if (!java.lang.reflect.Modifier.isStatic(m.getModifiers())) return null;
-
-            return (sig == null) ? m.invoke(null) : m.invoke(null, args);
-        } catch (Throwable ignored) {
-            return null;
-        }
     }
 
     private static float lerp(float a, float b, float t) {

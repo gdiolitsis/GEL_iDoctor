@@ -23,6 +23,7 @@ import androidx.annotation.NonNull;
 import com.gel.cleaner.base.GELFoldableAnimationPack;
 import com.gel.cleaner.base.GELFoldableCallback;
 import com.gel.cleaner.base.GELFoldableDetector;
+import com.gel.cleaner.base.GELFoldableUIManager;
 import com.gel.cleaner.base.GELFoldableCallback.Posture;
 
 import java.lang.ref.WeakReference;
@@ -45,7 +46,7 @@ public class GELFoldableOrchestrator implements GELFoldableCallback {
     private final Activity activity;
 
     private GELFoldableDetector detector;
-    private Object uiManager; // reflection-safe (can be in cleaner or base)
+    private GELFoldableUIManager uiManager;
     private GELFoldableAnimationPack animator;
 
     // Optional components — NO hard types (compile-safe)
@@ -141,19 +142,7 @@ public class GELFoldableOrchestrator implements GELFoldableCallback {
     public void start() {
         if (initialized) return;
 
-        // UIManager can be in two packages. Try both.
-        uiManager = tryNew(
-                "com.gel.cleaner.GELFoldableUIManager",
-                new Class[]{Activity.class},
-                new Object[]{activity}
-        );
-        if (uiManager == null) {
-            uiManager = tryNew(
-                    "com.gel.cleaner.base.GELFoldableUIManager",
-                    new Class[]{Activity.class},
-                    new Object[]{activity}
-            );
-        }
+        uiManager = new GELFoldableUIManager(activity);
 
         animator = new GELFoldableAnimationPack(activity);
 
@@ -187,11 +176,9 @@ public class GELFoldableOrchestrator implements GELFoldableCallback {
         lastInnerState = isInner;
 
         if (animator != null && uiManager != null) {
-            animator.animateReflow(() -> safeCall(uiManager, "applyUI",
-                    new Class[]{boolean.class}, new Object[]{isInner}));
+            animator.animateReflow(() -> uiManager.applyUI(isInner));
         } else if (uiManager != null) {
-            safeCall(uiManager, "applyUI",
-                    new Class[]{boolean.class}, new Object[]{isInner});
+            uiManager.applyUI(isInner);
         }
 
         // notify optional components (safe no-op if null)
@@ -207,11 +194,9 @@ public class GELFoldableOrchestrator implements GELFoldableCallback {
         lastInnerState = isInner;
 
         if (animator != null && uiManager != null) {
-            animator.animateReflow(() -> safeCall(uiManager, "applyUI",
-                    new Class[]{boolean.class}, new Object[]{isInner}));
+            animator.animateReflow(() -> uiManager.applyUI(isInner));
         } else if (uiManager != null) {
-            safeCall(uiManager, "applyUI",
-                    new Class[]{boolean.class}, new Object[]{isInner});
+            uiManager.applyUI(isInner);
         }
 
         safeCall(dualPaneManager, "onScreenChanged",

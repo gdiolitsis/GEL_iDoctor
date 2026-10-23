@@ -29,8 +29,7 @@ public class GELBroadcast extends BroadcastReceiver {
         // 0) INITIALIZE FOLDABLE RUNTIME (SAFE, REFLECTIVE)
         // ============================================================
         try {
-            Class<?> c = Class.forName("com.gel.cleaner.GELFoldableOrchestrator");
-            c.getMethod("initIfPossible", Context.class).invoke(null, ctx);
+            GELFoldableOrchestrator.initIfPossible(ctx);
             Log.d(TAG, "🔧 Foldable Orchestrator initialized");
         } catch (Throwable t) {
             Log.w(TAG, "Foldable init skipped: " + t.getMessage());
@@ -66,11 +65,7 @@ public class GELBroadcast extends BroadcastReceiver {
 
             Log.d(TAG, "📦 Package event: " + action + " → " + pkg);
 
-            // Notify orchestrator (safe reflection – no hard dependency)
-            try {
-                Class<?> c = Class.forName("com.gel.cleaner.GELFoldableOrchestrator");
-                c.getMethod("notifyPackageEvent", String.class).invoke(null, pkg);
-            } catch (Throwable ignore) {}
+            // No foldable package-event hook is required by the current runtime.
 
             // Future extensions:
             // - Automatic junk recalculation

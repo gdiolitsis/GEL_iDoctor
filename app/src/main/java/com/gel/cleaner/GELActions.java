@@ -23,7 +23,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.text.DecimalFormat;
 
 public final class GELActions {
@@ -235,16 +234,8 @@ public final class GELActions {
     private static boolean isDualPaneActiveSafe(Context ctx) {
         try {
             return DualPaneManager.isDualPaneActive(ctx);
-        } catch (Throwable t) {
-            // reflection fallback if class missing
-            try {
-                Class<?> c = Class.forName("com.gel.cleaner.DualPaneManager");
-                Method m = c.getMethod("isDualPaneActive", Context.class);
-                Object r = m.invoke(null, ctx);
-                return (r instanceof Boolean) && (Boolean) r;
-            } catch (Throwable ignored) {
-                return false;
-            }
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 
@@ -252,15 +243,8 @@ public final class GELActions {
         try {
             DualPaneManager.openSide(ctx, i);
             return true;
-        } catch (Throwable t) {
-            try {
-                Class<?> c = Class.forName("com.gel.cleaner.DualPaneManager");
-                Method m = c.getMethod("openSide", Context.class, Intent.class);
-                m.invoke(null, ctx, i);
-                return true;
-            } catch (Throwable ignored) {
-                return false;
-            }
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 
