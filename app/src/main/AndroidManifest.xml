@@ -119,14 +119,12 @@
         <activity
             android:name=".SpeedTestActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
             android:theme="@style/Theme.GEL.DarkGold" />
 
         <!-- ================= NEW OPTIMIZER ================= -->
         <activity
             android:name=".GuidedOptimizerActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
             android:theme="@style/Theme.GEL.DarkGold" />
 
         <receiver
@@ -182,7 +180,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:screenOrientation="portrait">
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -193,54 +191,46 @@
         <activity
             android:name=".AppListActivity"
             android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:windowSoftInputMode="adjustResize"/>
 
         <activity
             android:name=".CleanerActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:exported="false"/>
 
         <activity
             android:name=".DeviceInfoInternalActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:exported="false"/>
 
         <activity
             android:name=".DeviceInfoPeripheralsActivity"
             android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:windowSoftInputMode="adjustResize"/>
 
         <activity
             android:name=".CpuRamLiveActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:exported="false"/>
 
         <activity
             android:name=".CoreMonitorActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:exported="false"/>
 
         <activity
             android:name=".DiagnosisMenuActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:exported="false"/>
 
         <activity
             android:name=".ManualTestsActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:exported="false"/>
 
         <!-- ================= REMOTE DEVICE DIAGNOSTICS & SUPPORT / TECHNICIAN ================= -->
         <activity
             android:name=".GELRemoteAssistActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
             android:theme="@style/Theme.GEL.DarkGold"/>
 
         <activity
             android:name=".RepairDeviceActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
             android:theme="@style/Theme.GEL.DarkGold"/>
 
         <!-- ================= CUSTOMER DEVICE / CONNECT TO TECHNICIAN ================= -->
@@ -248,8 +238,8 @@
             android:name=".ConnectToTechnicianActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.GEL.DarkGold">
+            android:theme="@style/Theme.GEL.DarkGold"
+            android:windowSoftInputMode="adjustResize">
 
             <!-- Smart Service QR — verified HTTPS App Link.
                  The Digital Asset Links file can be activated later with
@@ -279,12 +269,11 @@
         <activity
             android:name=".ServiceReportActivity"
             android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:windowSoftInputMode="adjustResize"/>
 
         <activity
             android:name=".GELPdfViewerActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
             android:theme="@style/Theme.GEL.DarkGold"/>
 
         <!-- ============================================================
@@ -293,26 +282,26 @@
         <activity
             android:name=".TouchGridTestActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.GEL.DarkGold"/>
+            android:theme="@style/Theme.GEL.DarkGold"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
         <activity
             android:name=".DisplayProTestActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.GEL.DarkGold" />
+            android:theme="@style/Theme.GEL.DarkGold"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
         <activity
             android:name=".RotationCheckActivity"
             android:exported="false"
-            android:screenOrientation="unspecified"
-            android:theme="@style/Theme.GEL.DarkGold"/>
+            android:theme="@style/Theme.GEL.DarkGold"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
         <activity
             android:name=".ProximityCheckActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.GEL.DarkGold"/>
+            android:theme="@style/Theme.GEL.DarkGold"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
     </application>
 

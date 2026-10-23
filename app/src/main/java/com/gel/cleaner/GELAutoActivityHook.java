@@ -71,6 +71,8 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        GELWindowInsets.install(this);
+
         GELAutoDP.init(this);
 
         uiManager    = new GELFoldableUIManager(this);

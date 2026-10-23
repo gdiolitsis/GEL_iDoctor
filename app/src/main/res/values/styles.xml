@@ -11,14 +11,6 @@
         <!-- Background -->
         <item name="android:windowBackground">@color/gel_bg</item>
 
-        <!-- Status & Navigation Bar -->
-        <item name="android:statusBarColor">@color/gel_bg_dark</item>
-        <item name="android:navigationBarColor">@color/gel_bg_dark</item>
-
-        <!-- Icons = LIGHT -->
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
-
         <!-- Text colors -->
         <item name="android:textColorPrimary">@color/gel_text_primary</item>
         <item name="android:textColorSecondary">@color/gel_text_secondary</item>
@@ -34,9 +26,6 @@
 
         <!-- Disable default ripple for consistency -->
         <item name="android:colorControlActivated">@color/gel_gold</item>
-
-        <!-- Prevent default window inset padding -->
-        <item name="android:fitsSystemWindows">false</item>
 
         <!-- Buttons elevation -->
         <item name="android:stateListAnimator">@null</item>
