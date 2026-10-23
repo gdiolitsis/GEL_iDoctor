@@ -1,105 +1,83 @@
 # ============================================================
-# GEL Android Cleaner — ProGuard / R8 Rules
-# Hospital-Grade Edition (30 LABS + Manual Tests)
+# GEL iDoctor — R8 / ProGuard Rules
+# ============================================================
+#
+# Policy:
+# - Application classes are referenced directly and must remain
+#   fully optimizable by R8.
+# - Do NOT add package-wide GEL / AndroidX / Material keep rules.
+# - Add narrow rules only for code reached indirectly through
+#   reflection, JNI, serialization, or other runtime lookup.
 # ============================================================
 
-# ===== Keep ALL app classes (Activities, Services, Logs, Diagnostics) =====
--keep class com.gel.** { *; }
-
-# ===== AndroidX =====
--keep class androidx.** { *; }
--dontwarn androidx.**
-
-# ===== Google Material =====
--keep class com.google.android.material.** { *; }
--dontwarn com.google.android.material.**
-
-# ===== Prevent warnings from optional libraries =====
--dontwarn org.apache.**
--dontwarn okhttp3.**
--dontwarn okio.**
-
-# ===== Keep Exceptions =====
--keep class * extends java.lang.Exception
 
 # ============================================================
-# 30 LABS — CRITICAL INFRASTRUCTURE KEEP RULES
+# METADATA
+# ============================================================
+# Preserve runtime metadata that libraries / frameworks may inspect.
+# These attributes do not keep entire classes or packages alive.
 # ============================================================
 
-# --- Reflection (SELinux, System Properties, ABI, getprop) ---
--keep class android.os.SELinux { *; }
--keep class android.os.SystemProperties { *; }
--dontwarn android.os.SystemProperties
-
-# --- exec("getprop") / Runtime / BufferedReader ---
--keep class java.lang.Runtime { *; }
--keep class java.io.BufferedReader { *; }
--keep class java.io.InputStreamReader { *; }
-
-# --- Sensors / SensorManager / Sensor List ---
--keep class android.hardware.Sensor { *; }
--keep class android.hardware.SensorManager { *; }
--dontwarn android.hardware.SensorManager
-
-# --- HardwarePropertiesManager (Thermals) ---
--keep class android.os.HardwarePropertiesManager { *; }
--dontwarn android.os.HardwarePropertiesManager
-
-# --- Battery (ACTION_BATTERY_CHANGED) ---
--keep class android.os.BatteryManager { *; }
--keep class android.content.Intent { *; }
--keep class android.content.IntentFilter { *; }
--dontwarn android.content.IntentFilter
-
-# --- Connectivity / NetworkCapabilities ---
--keep class android.net.ConnectivityManager { *; }
--keep class android.net.NetworkCapabilities { *; }
--keep class android.net.NetworkInfo { *; }
-
-# --- Audio / ToneGenerator / Vibrator ---
--keep class android.media.ToneGenerator { *; }
--keep class android.os.Vibrator { *; }
-
-# --- Camera summary (no stripping of camera manager) ---
--keep class android.hardware.camera2.** { *; }
--dontwarn android.hardware.camera2.**
-
-# --- NFC / GPS / Location ---
--keep class android.nfc.** { *; }
--dontwarn android.nfc.**
--keep class android.location.** { *; }
--dontwarn android.location.**
-
-# --- WindowManager / Display / Metrics ---
--keep class android.view.Display { *; }
--keep class android.util.DisplayMetrics { *; }
-
-# --- GPU Renderer / EGL / OpenGL ES ---
--keep class android.opengl.** { *; }
--dontwarn android.opengl.**
-
-# --- File & Storage I/O (internal/external diagnostics) ---
--keep class java.io.File { *; }
-
-# ============================================================
-# Export System LOG (GELServiceLog + PDF/TXT formatting)
-# ============================================================
--keep class com.gel.cleaner.GELServiceLog { *; }
-
-# ============================================================
-# Keep annotations / prevent stripping logs
-# ============================================================
--keepattributes *Annotation*
-
-# ============================================================
-# GEL REMOTE ASSIST — WEBRTC JNI KEEP RULES
-# Native WebRTC registers Java/JNI bindings during JNI_OnLoad.
-# Do not allow R8 to rename/remove these classes or members.
-# ============================================================
-
--keep class org.webrtc.** { *; }
--keep class org.jni_zero.** { *; }
-
+-keepattributes Signature
+-keepattributes InnerClasses,EnclosingMethod
 -keepattributes RuntimeVisibleAnnotations
 -keepattributes RuntimeInvisibleAnnotations
 -keepattributes AnnotationDefault
+
+
+# ============================================================
+# WEBRTC / JNI — TARGETED RULES
+# ============================================================
+# Native WebRTC performs JNI registration / native-to-Java calls
+# that R8 cannot necessarily infer from ordinary Java references.
+#
+# The bundled WebRTC 144.7559.15 AAR has no consumer R8 rules.
+# Preserve only JNI-visible members instead of the whole package.
+# ============================================================
+
+# Java -> native JNI downcalls.
+# Keep native method names and every type appearing in their descriptors.
+-keepclasseswithmembernames,includedescriptorclasses class org.webrtc.** {
+    native <methods>;
+}
+
+# Native -> Java JNI upcalls generated from WebRTC annotations.
+# Methods and constructors are separate because a class does not
+# necessarily contain both kinds of annotated member.
+
+-keepclasseswithmembers,includedescriptorclasses class org.webrtc.** {
+    @org.webrtc.CalledByNative <methods>;
+}
+
+-keepclasseswithmembers,includedescriptorclasses class org.webrtc.** {
+    @org.webrtc.CalledByNative <init>(...);
+}
+
+-keepclasseswithmembers,includedescriptorclasses class org.webrtc.** {
+    @org.webrtc.CalledByNativeUnchecked <methods>;
+}
+
+-keepclasseswithmembers,includedescriptorclasses class org.webrtc.** {
+    @org.webrtc.CalledByNativeUnchecked <init>(...);
+}
+
+# jni_zero is small (17 classes in the current WebRTC artifact).
+# Keep it conservatively until/unless the dependency ships its own
+# consumer R8 rules.
+-keep class org.jni_zero.** { *; }
+
+
+# ============================================================
+# IMPORTANT
+# ============================================================
+# No blanket rules for:
+#
+#   com.gel.**
+#   androidx.**
+#   com.google.android.material.**
+#   android.**
+#   java.**
+#
+# Direct code references, Android manifests/resources, and library
+# consumer rules are handled by R8 / AGP.
+# ============================================================

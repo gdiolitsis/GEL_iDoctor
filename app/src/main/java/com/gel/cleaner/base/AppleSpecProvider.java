@@ -12,7 +12,6 @@ import android.content.SharedPreferences;
 import com.gel.cleaner.iphone.AppleDeviceSpec;
 import com.gel.cleaner.iphone.AppleSpecs;
 
-import java.lang.reflect.Field;
 import java.util.Locale;
 
 public final class AppleSpecProvider {
@@ -109,50 +108,4 @@ public final class AppleSpecProvider {
         return null;
     }
 
-    // =========================================================
-    // SAFE FIELD ACCESSORS
-    // =========================================================
-    public static String getStr(Object spec, String... fieldNames) {
-        if (spec == null) return null;
-        for (String f : fieldNames) {
-            try {
-                Field ff = spec.getClass().getDeclaredField(f);
-                ff.setAccessible(true);
-                Object v = ff.get(spec);
-                if (v != null) {
-                    String s = String.valueOf(v).trim();
-                    if (!s.isEmpty()) return s;
-                }
-            } catch (Throwable ignore) {}
-        }
-        return null;
-    }
-
-    public static int getInt(Object spec, String... fieldNames) {
-        if (spec == null) return -1;
-        for (String f : fieldNames) {
-            try {
-                Field ff = spec.getClass().getDeclaredField(f);
-                ff.setAccessible(true);
-                Object v = ff.get(spec);
-                if (v instanceof Number)
-                    return ((Number) v).intValue();
-            } catch (Throwable ignore) {}
-        }
-        return -1;
-    }
-
-    public static double getDouble(Object spec, String... fieldNames) {
-        if (spec == null) return -1;
-        for (String f : fieldNames) {
-            try {
-                Field ff = spec.getClass().getDeclaredField(f);
-                ff.setAccessible(true);
-                Object v = ff.get(spec);
-                if (v instanceof Number)
-                    return ((Number) v).doubleValue();
-            } catch (Throwable ignore) {}
-        }
-        return -1;
-    }
 }

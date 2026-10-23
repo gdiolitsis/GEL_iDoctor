@@ -2,11 +2,10 @@
 // app/src/main/java/com/gel/cleaner/GELFoldableOrchestrator.java
 // GELFoldableOrchestrator — FINAL Core v4.1 (Compile-Safe + Unified)
 // ------------------------------------------------------------
-// ✔ ZERO hard dependencies on optional foldable classes (UIManager / DualPane / Bridge)
+// ✔ Direct typed foldable runtime — R8 visible
 // ✔ Works whether UIManager lives in:
 //      • com.gel.cleaner.GELFoldableUIManager  (cleaner)
 //      • com.gel.cleaner.base.GELFoldableUIManager (base)
-// ✔ registerBridge / registerDualPaneManager accept Object (keeps old calls compiling)
 // ✔ Posture mapping supports BOTH vocabularies (FLAT/TABLETOP + FULLY_OPEN/TABLE_MODE)
 // ✔ Safe no-op on non-foldables
 // ------------------------------------------------------------
@@ -27,8 +26,6 @@ import com.gel.cleaner.base.GELFoldableUIManager;
 import com.gel.cleaner.base.GELFoldableCallback.Posture;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -48,10 +45,6 @@ public class GELFoldableOrchestrator implements GELFoldableCallback {
     private GELFoldableDetector detector;
     private GELFoldableUIManager uiManager;
     private GELFoldableAnimationPack animator;
-
-    // Optional components — NO hard types (compile-safe)
-    private Object dualPaneManager; // can be DualPaneManager or GELDualPaneManager
-    private Object bridge;          // can be GELFoldableActivityBridge
 
     private boolean lastInnerState = false;
     private boolean initialized = false;
@@ -99,21 +92,7 @@ public class GELFoldableOrchestrator implements GELFoldableCallback {
     }
 
     // Accept Object to avoid missing-class errors.
-    public static void registerBridge(@NonNull Activity act, @NonNull Object b) {
-        GELFoldableOrchestrator orch = getOrCreate(act);
-        orch.bridge = b;
-        orch.start();
-        Log.d(TAG, "registerBridge()");
-    }
-
     // Accept Object to avoid missing-class errors.
-    public static void registerDualPaneManager(@NonNull Activity act, @NonNull Object dpm) {
-        GELFoldableOrchestrator orch = getOrCreate(act);
-        orch.dualPaneManager = dpm;
-        orch.start();
-        Log.d(TAG, "registerDualPaneManager()");
-    }
-
     // Return Object (caller may cast if it knows the type).
     public static Object getUiManager(@NonNull Activity act) {
         GELFoldableOrchestrator orch = getOrCreate(act);
@@ -181,11 +160,6 @@ public class GELFoldableOrchestrator implements GELFoldableCallback {
             uiManager.applyUI(isInner);
         }
 
-        // notify optional components (safe no-op if null)
-        safeCall(dualPaneManager, "onPostureChanged",
-                new Class[]{Posture.class}, new Object[]{posture});
-        safeCall(bridge, "onPostureChanged",
-                new Class[]{Posture.class}, new Object[]{posture});
     }
 
     @Override
@@ -199,10 +173,6 @@ public class GELFoldableOrchestrator implements GELFoldableCallback {
             uiManager.applyUI(isInner);
         }
 
-        safeCall(dualPaneManager, "onScreenChanged",
-                new Class[]{boolean.class}, new Object[]{isInner});
-        safeCall(bridge, "onScreenChanged",
-                new Class[]{boolean.class}, new Object[]{isInner});
     }
 
     // =====================================================================
@@ -227,44 +197,7 @@ public class GELFoldableOrchestrator implements GELFoldableCallback {
     }
 
     // =====================================================================
-    // REFLECTION UTILITIES (internal)
+    // OPTIONAL CALLBACK BRIDGE (internal)
     // =====================================================================
-    private Object tryNew(String name, Class<?>[] sig, Object[] args) {
-        try {
-            Class<?> c = Class.forName(name);
-            Constructor<?> ctor = c.getConstructor(sig);
-            ctor.setAccessible(true);
-            return ctor.newInstance(args);
-        } catch (Throwable ignore) {
-            try {
-                Class<?> c = Class.forName(name);
-                Constructor<?> ctor = c.getDeclaredConstructor();
-                ctor.setAccessible(true);
-                return ctor.newInstance();
-            } catch (Throwable ignored) {
-                return null;
-            }
-        }
-    }
 
-    private void safeCall(Object target, String method) {
-        safeCall(target, method, null, null);
-    }
-
-    private void safeCall(Object target, String method,
-                          Class<?>[] sig, Object[] args) {
-        if (target == null || method == null) return;
-        try {
-            Method m;
-            if (sig == null) {
-                m = target.getClass().getMethod(method);
-                m.setAccessible(true);
-                m.invoke(target);
-            } else {
-                m = target.getClass().getMethod(method, sig);
-                m.setAccessible(true);
-                m.invoke(target, args);
-            }
-        } catch (Throwable ignored) {}
-    }
 }

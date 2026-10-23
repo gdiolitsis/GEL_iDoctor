@@ -203,7 +203,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -26105,23 +26104,6 @@ private void lab18StorageSnapshot() {
                        : "Healthy storage level for daily usage"
             );
         }
-
-        // ------------------------------------------------------------
-        // FILESYSTEM INFO (BEST EFFORT)
-        // ------------------------------------------------------------
-        try {
-            String fsType = s.getClass().getMethod("getFilesystemType") != null
-                    ? (String) s.getClass().getMethod("getFilesystemType").invoke(s)
-                    : null;
-
-            if (fsType != null) {
-                logInfo("Filesystem:");
-                logLabelOkValue(
-                        gr ? "Τύπος" : "Type",
-                        fsType.toUpperCase(Locale.US)
-                );
-            }
-        } catch (Throwable ignore) {}
 
         // ------------------------------------------------------------
         // ROOT AWARE INTELLIGENCE

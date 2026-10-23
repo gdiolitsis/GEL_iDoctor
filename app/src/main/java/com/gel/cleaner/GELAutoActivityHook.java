@@ -22,8 +22,6 @@ import com.gel.cleaner.base.GELFoldableDetector;
 import com.gel.cleaner.base.GELFoldableUIManager;
 import com.gel.cleaner.base.GELFoldableAnimationPack;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 
 public abstract class GELAutoActivityHook extends AppCompatActivity
         implements GELFoldableCallback {
@@ -31,10 +29,10 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
     private GELFoldableDetector foldDetector;
     private GELFoldableUIManager uiManager;
 
-    // Optional engines (reflection only)
-    private Object foldOrchestrator;
-    private Object foldAnimPack;
-    private Object dualPaneManager;
+    // Direct, R8-visible foldable engines.
+    // No runtime class-name lookup is required.
+    private GELFoldableOrchestrator foldOrchestrator;
+    private GELFoldableAnimationPack foldAnimPack;
 
     private boolean lastInner = false;
 
@@ -143,16 +141,16 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
 
         if (foldDetector != null) foldDetector.start();
 
-        safeCall(foldOrchestrator, "onResume");
-        safeCall(foldAnimPack, "onResume");
-        safeCall(dualPaneManager, "onResume");
+        if (foldAnimPack != null) {
+            foldAnimPack.onResume();
+        }
     }
 
     @Override
     protected void onPause() {
-        safeCall(foldOrchestrator, "onPause");
-        safeCall(foldAnimPack, "onPause");
-        safeCall(dualPaneManager, "onPause");
+        if (foldAnimPack != null) {
+            foldAnimPack.onPause();
+        }
 
         if (foldDetector != null) foldDetector.stop();
 
@@ -174,12 +172,9 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
 
         if (uiManager != null) uiManager.applyUI(lastInner);
 
-        safeCall(foldOrchestrator, "onConfigurationChanged",
-                new Class[]{Configuration.class}, new Object[]{newConfig});
-        safeCall(foldAnimPack, "onConfigurationChanged",
-                new Class[]{Configuration.class}, new Object[]{newConfig});
-        safeCall(dualPaneManager, "onConfigurationChanged",
-                new Class[]{Configuration.class}, new Object[]{newConfig});
+        if (foldAnimPack != null) {
+            foldAnimPack.onConfigurationChanged(newConfig);
+        }
     }
 
     @Override
@@ -190,12 +185,9 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
 
         if (uiManager != null) uiManager.applyUI(lastInner);
 
-        safeCall(foldOrchestrator, "onMultiWindowModeChanged",
-                new Class[]{boolean.class}, new Object[]{isInMultiWindowMode});
-        safeCall(foldAnimPack, "onMultiWindowModeChanged",
-                new Class[]{boolean.class}, new Object[]{isInMultiWindowMode});
-        safeCall(dualPaneManager, "onMultiWindowModeChanged",
-                new Class[]{boolean.class}, new Object[]{isInMultiWindowMode});
+        if (foldAnimPack != null) {
+            foldAnimPack.onMultiWindowModeChanged(isInMultiWindowMode);
+        }
     }
 
     // ============================================================
@@ -203,12 +195,13 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
     // ============================================================
     @Override
     public void onPostureChanged(@NonNull Posture posture) {
-        safeCall(foldOrchestrator, "onPostureChanged",
-                new Class[]{Posture.class}, new Object[]{posture});
-        safeCall(foldAnimPack, "onPostureChanged",
-                new Class[]{Posture.class}, new Object[]{posture});
-        safeCall(dualPaneManager, "onPostureChanged",
-                new Class[]{Posture.class}, new Object[]{posture});
+        if (foldOrchestrator != null) {
+            foldOrchestrator.onPostureChanged(posture);
+        }
+
+        if (foldAnimPack != null) {
+            foldAnimPack.onPostureChanged(posture);
+        }
     }
 
     @Override
@@ -219,97 +212,34 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
 
         if (uiManager != null) uiManager.applyUI(isInner);
 
-        safeCall(foldOrchestrator, "onScreenChanged",
-                new Class[]{boolean.class}, new Object[]{isInner});
-        safeCall(foldAnimPack, "onScreenChanged",
-                new Class[]{boolean.class}, new Object[]{isInner});
-        safeCall(dualPaneManager, "onScreenChanged",
-                new Class[]{boolean.class}, new Object[]{isInner});
+        if (foldOrchestrator != null) {
+            foldOrchestrator.onScreenChanged(isInner);
+        }
+
+        if (foldAnimPack != null) {
+            foldAnimPack.onScreenChanged(isInner);
+        }
     }
 
     // ============================================================
     // EXTRA ENGINES (Reflection Safe)
     // ============================================================
     private void initExtraFoldableEngines() {
+        // Preserve the existing runtime behaviour, but make the
+        // concrete GEL classes visible to the compiler and R8.
+        foldOrchestrator = new GELFoldableOrchestrator(this);
+        foldAnimPack = new GELFoldableAnimationPack(this);
 
-        // Current orchestrator ctor is (Activity)
-        foldOrchestrator = tryNew(
-                "com.gel.cleaner.GELFoldableOrchestrator",
-                new Class[]{Activity.class},
-                new Object[]{this}
-        );
-
-        // Animation pack (has Context ctor)
-        foldAnimPack = tryNew(
-                "com.gel.cleaner.base.GELFoldableAnimationPack",
-                new Class[]{Context.class},
-                new Object[]{this}
-        );
-
-        // Dual pane optional engine (if exists in base)
-        dualPaneManager = tryNew(
-                "com.gel.cleaner.base.GELDualPaneManager",
-                new Class[]{Context.class},
-                new Object[]{this}
-        );
-
-        // bind() is optional — safe no-op if not present
-        safeCall(foldOrchestrator, "bind",
-                new Class[]{
-                        GELFoldableDetector.class,
-                        GELFoldableUIManager.class,
-                        Object.class,
-                        Object.class
-                },
-                new Object[]{foldDetector, uiManager, dualPaneManager, foldAnimPack}
-        );
-
-        safeCall(foldOrchestrator, "onCreate");
-        safeCall(foldAnimPack, "onCreate");
-        safeCall(dualPaneManager, "onCreate");
+        // The current orchestrator has no onCreate()/bind() API.
+        // AnimationPack does, so preserve that valid lifecycle hook.
+        foldAnimPack.onCreate();
     }
 
     // ============================================================
     // REFLECTION HELPERS
     // ============================================================
-    private Object tryNew(String name, Class<?>[] sig, Object[] args) {
-        try {
-            Class<?> c = Class.forName(name);
-            Constructor<?> ctor = c.getConstructor(sig);
-            ctor.setAccessible(true);
-            return ctor.newInstance(args);
-        } catch (Throwable ignore) {
-            try {
-                Class<?> c = Class.forName(name);
-                Constructor<?> ctor = c.getDeclaredConstructor();
-                ctor.setAccessible(true);
-                return ctor.newInstance();
-            } catch (Throwable ignored) {
-                return null;
-            }
-        }
-    }
 
-    private void safeCall(Object target, String method) {
-        safeCall(target, method, null, null);
-    }
 
-    private void safeCall(Object target, String method,
-                          Class<?>[] sig, Object[] args) {
-        if (target == null || method == null) return;
-        try {
-            Method m;
-            if (sig == null) {
-                m = target.getClass().getMethod(method);
-                m.setAccessible(true);
-                m.invoke(target);
-            } else {
-                m = target.getClass().getMethod(method, sig);
-                m.setAccessible(true);
-                m.invoke(target, args);
-            }
-        } catch (Throwable ignored) {}
-    }
 
     // ============================================================
     // GLOBAL HELPERS
