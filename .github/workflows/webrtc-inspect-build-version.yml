@@ -1,0 +1,38 @@
+name: Inspect Upstream WebRTC Build Version
+
+on:
+  push:
+    branches:
+      - crash-observability-v49
+    paths:
+      - '.github/workflows/webrtc-inspect-build-version.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Set up JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Inspect official WebrtcBuildVersion
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          WORK="$RUNNER_TEMP/webrtc-version-audit"
+          mkdir -p "$WORK"
+
+          curl             --fail             --location             --retry 5             --retry-all-errors             "https://github.com/webrtc-sdk/android/releases/download/v144.7559.15/libwebrtc.aar"             --output "$WORK/libwebrtc.aar"
+
+          unzip -p "$WORK/libwebrtc.aar" classes.jar > "$WORK/classes.jar"
+
+          javap             -classpath "$WORK/classes.jar"             -public             -constants             org.webrtc.WebrtcBuildVersion
+
+          echo "WEBRTC_BUILD_VERSION_AUDIT=PASS"
