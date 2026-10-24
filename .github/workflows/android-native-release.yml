@@ -139,8 +139,8 @@ jobs:
               -maxdepth 1 \
               -type f \
               -name '*.apk' \
-              ! -name '*aligned*' \
-              ! -name '*signed*' \
+              ! -name '*_aligned.apk' \
+              ! -name '*_signed.apk' \
               | head -n 1
           )"
           AAB="$GITHUB_WORKSPACE/app/build/outputs/bundle/release/app-release.aab"
@@ -214,8 +214,8 @@ jobs:
               -maxdepth 1 \
               -type f \
               -name '*.apk' \
-              ! -name '*aligned*' \
-              ! -name '*signed*' \
+              ! -name '*_aligned.apk' \
+              ! -name '*_signed.apk' \
               | head -n 1
           )"
 
