@@ -1,0 +1,43 @@
+name: Cleanup Failed Actions Runs
+
+on:
+  push:
+    branches:
+      - crash-observability-v49
+    paths:
+      - '.github/workflows/cleanup-failed-actions.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete failed workflow runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          repo="${GITHUB_REPOSITORY}"
+
+          mapfile -t ids < <(
+            gh api --paginate --method GET               -H "Accept: application/vnd.github+json"               "/repos/${repo}/actions/runs"               -f status=failure               -f per_page=100               --jq '.workflow_runs[].id'
+          )
+
+          echo "FAILED_RUNS_FOUND=${#ids[@]}"
+
+          deleted=0
+          for id in "${ids[@]}"; do
+            if [ "${id}" = "${GITHUB_RUN_ID}" ]; then
+              continue
+            fi
+
+            echo "Deleting failed workflow run ${id}"
+            gh api --method DELETE "/repos/${repo}/actions/runs/${id}"
+            deleted=$((deleted + 1))
+          done
+
+          echo "FAILED_RUNS_DELETED=${deleted}"
