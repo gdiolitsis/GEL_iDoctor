@@ -283,16 +283,28 @@ jobs:
 
           entry = '      "api/org/webrtc/WebrtcBuildVersion.java",\n'
           anchor = '      "api/org/webrtc/RefCounted.java",\n'
+          target = '  rtc_android_library("base_java") {\n'
+          next_target = '  rtc_android_library("audio_device_java") {\n'
 
           if entry in s:
               raise SystemExit("ERROR: WebrtcBuildVersion BUILD.gn entry already exists unexpectedly")
 
-          if s.count(anchor) != 1:
+          start = s.find(target)
+          if start < 0:
+              raise SystemExit("ERROR: base_java target not found in sdk/android/BUILD.gn")
+
+          end = s.find(next_target, start)
+          if end < 0:
+              raise SystemExit("ERROR: could not bound base_java target in sdk/android/BUILD.gn")
+
+          block = s[start:end]
+          if block.count(anchor) != 1:
               raise SystemExit(
-                  f"ERROR: expected one RefCounted.java BUILD.gn anchor, found {s.count(anchor)}"
+                  f"ERROR: expected one RefCounted.java anchor inside base_java, found {block.count(anchor)}"
               )
 
-          s = s.replace(anchor, anchor + entry, 1)
+          block = block.replace(anchor, anchor + entry, 1)
+          s = s[:start] + block + s[end:]
           p.write_text(s, encoding="utf-8")
 
           print("OFFICIAL_ANDROID_WEBRTC_VERSION_PATCH=PASS")
