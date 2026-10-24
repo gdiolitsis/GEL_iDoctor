@@ -14,10 +14,13 @@ permissions:
 
 concurrency:
   group: webrtc-promotion-144.7559.15-gel.1
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   promote:
+    # Promotion is intentionally suspended until the vendor-exact full-symbol
+    # build replaces the Run #3 validation artifact.
+    if: ${{ false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
 
