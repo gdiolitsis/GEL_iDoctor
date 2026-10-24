@@ -20,7 +20,7 @@ test -s "$GEL_AAR" || {
     exit 1
 }
 
-for tool in unzip jar javap readelf sha256sum diff awk sort sed grep; do
+for tool in unzip jar javap readelf sha256sum diff cmp awk sort sed grep; do
     command -v "$tool" >/dev/null 2>&1 || {
         echo "ERROR: required tool missing: $tool"
         exit 1
