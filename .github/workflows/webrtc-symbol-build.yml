@@ -25,7 +25,7 @@ jobs:
       - name: Maximize WebRTC build volume
         uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c
         with:
-          root-reserve-mb: 4096
+          root-reserve-mb: 24576
           temp-reserve-mb: 1024
           swap-size-mb: 2048
           remove-dotnet: 'true'
@@ -75,11 +75,19 @@ jobs:
               awk 'NR == 2 { print int($4 / 1024 / 1024) }'
           )"
 
+          ROOT_FREE_GB="$(
+            df -Pk / |
+              awk 'NR == 2 { print int($4 / 1024 / 1024) }'
+          )"
+
           MIN_FREE_GB=45
+          MIN_ROOT_FREE_GB=16
 
           echo
           echo "Build volume free : ${FREE_GB} GB"
-          echo "Required minimum  : ${MIN_FREE_GB} GB"
+          echo "Build minimum     : ${MIN_FREE_GB} GB"
+          echo "Root free         : ${ROOT_FREE_GB} GB"
+          echo "Root minimum      : ${MIN_ROOT_FREE_GB} GB"
 
           if [ "$FREE_GB" -lt "$MIN_FREE_GB" ]; then
             echo "ERROR: insufficient expanded disk for full-symbol WebRTC build"
@@ -87,9 +95,16 @@ jobs:
             exit 1
           fi
 
+          if [ "$ROOT_FREE_GB" -lt "$MIN_ROOT_FREE_GB" ]; then
+            echo "ERROR: insufficient root disk for apt/dpkg WebRTC dependencies"
+            echo "Need at least ${MIN_ROOT_FREE_GB} GB free on /."
+            exit 1
+          fi
+
           mkdir -p "$GITHUB_WORKSPACE/.webrtc-work"
 
           echo "WEBRTC_BUILD_DISK_GATE=PASS"
+          echo "WEBRTC_ROOT_DISK_GATE=PASS"
 
       - name: Install host dependencies
         shell: bash
@@ -203,9 +218,15 @@ jobs:
 
           cd "$GITHUB_WORKSPACE/.webrtc-work/webrtc-checkout/src"
 
+          echo "===== ROOT SPACE BEFORE WEBRTC DEPENDENCIES ====="
+          df -h /
+
           sudo ./build/install-build-deps.sh \
             --android \
             --no-prompt
+
+          echo "===== ROOT SPACE AFTER WEBRTC DEPENDENCIES ====="
+          df -h /
 
           gclient runhooks
 
