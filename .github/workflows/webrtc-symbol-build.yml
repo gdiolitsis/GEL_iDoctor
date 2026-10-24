@@ -1,3 +1,4 @@
+# Vendor-exact validation trigger: recipe finalized for 144.7559.15
 name: Build WebRTC Symbol Pair
 
 on:
