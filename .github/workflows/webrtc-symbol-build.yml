@@ -2,6 +2,12 @@ name: Build WebRTC Symbol Pair
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - crash-observability-v49
+    paths:
+      - '.github/workflows/webrtc-symbol-build.yml'
+      - 'tools/webrtc/**'
 
 permissions:
   contents: read
