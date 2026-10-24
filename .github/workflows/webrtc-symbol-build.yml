@@ -1,0 +1,508 @@
+# Vendor-exact validation trigger: recipe finalized for 144.7559.15
+name: Build WebRTC Symbol Pair
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - crash-observability-v49
+    paths:
+      - '.github/workflows/webrtc-symbol-build.yml'
+      - 'tools/webrtc/webrtc-symbols.env'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webrtc-symbol-pair-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-webrtc-symbol-pair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+
+    steps:
+      # Do not use easimon/maximize-build-space here. On current ubuntu-24.04
+      # hosted runners /mnt can live on the same filesystem as /; that action
+      # then allocates both /pv.img and /mnt/tmp-pv.img from /dev/root and can
+      # exhaust the root filesystem before apt/dpkg runs.
+      - name: Reclaim runner disk without LVM
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "===== STORAGE BEFORE CLEANUP ====="
+          df -h / /mnt "$GITHUB_WORKSPACE" || true
+
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+
+          echo
+          echo "===== STORAGE AFTER CLEANUP ====="
+          df -h / /mnt "$GITHUB_WORKSPACE" || true
+
+          ROOT_DEVICE="$(df -P / | awk 'NR == 2 {print $1}')"
+          MNT_DEVICE="$(df -P /mnt | awk 'NR == 2 {print $1}')"
+          echo "Root device: $ROOT_DEVICE"
+          echo "/mnt device: $MNT_DEVICE"
+
+          if [ "$ROOT_DEVICE" = "$MNT_DEVICE" ]; then
+            echo "STORAGE_LAYOUT=SHARED_ROOT_MNT"
+            echo "Keeping WebRTC checkout/build directly on the reclaimed root filesystem."
+          else
+            echo "STORAGE_LAYOUT=SEPARATE_ROOT_MNT"
+            echo "No LVM aggregation is required; root remains reserved for apt/dpkg."
+          fi
+
+      - name: Checkout GEL iDoctor
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load pinned WebRTC policy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          source tools/webrtc/webrtc-symbols.env
+
+          {
+            echo "WEBRTC_VERSION=$WEBRTC_VERSION"
+            echo "WEBRTC_SOURCE_REPO=$WEBRTC_SOURCE_REPO"
+            echo "WEBRTC_SOURCE_REVISION=$WEBRTC_SOURCE_REVISION"
+            echo "WEBRTC_VENDOR_BUILD_REVISION=$WEBRTC_VENDOR_BUILD_REVISION"
+            echo "WEBRTC_BUILD_BRANCH=$WEBRTC_BUILD_BRANCH"
+            echo "WEBRTC_BUILD_COMMIT=$WEBRTC_BUILD_COMMIT"
+            echo "WEBRTC_MAINT_VERSION=$WEBRTC_MAINT_VERSION"
+            echo "DEPOT_TOOLS_REVISION=$DEPOT_TOOLS_REVISION"
+            echo "WEBRTC_GN_ARGS=$WEBRTC_GN_ARGS"
+            echo "WEBRTC_LIBRARY=$WEBRTC_LIBRARY"
+          } >> "$GITHUB_ENV"
+
+          echo "Version : $WEBRTC_VERSION"
+          echo "WebRTC revision    : $WEBRTC_SOURCE_REVISION"
+          echo "Vendor build rev   : $WEBRTC_VENDOR_BUILD_REVISION"
+          echo "WebRTC branch      : $WEBRTC_BUILD_BRANCH"
+          echo "WebRTC commit      : $WEBRTC_BUILD_COMMIT"
+          echo "WebRTC maintenance : $WEBRTC_MAINT_VERSION"
+          echo "depot_tools revision: $DEPOT_TOOLS_REVISION"
+          echo "GN args            : $WEBRTC_GN_ARGS"
+
+      - name: Verify expanded WebRTC build volume
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "===== FILESYSTEMS ====="
+          df -h
+          echo
+
+          echo "===== WEBRTC BUILD FILESYSTEM ====="
+          df -h "$GITHUB_WORKSPACE"
+
+          FREE_GB="$(
+            df -Pk "$GITHUB_WORKSPACE" |
+              awk 'NR == 2 { print int($4 / 1024 / 1024) }'
+          )"
+
+          ROOT_FREE_GB="$(
+            df -Pk / |
+              awk 'NR == 2 { print int($4 / 1024 / 1024) }'
+          )"
+
+          # WebRTC checkout/build and apt/dpkg intentionally share the reclaimed
+          # root filesystem on current hosted runners. Require enough aggregate
+          # headroom for both instead of manufacturing a second LVM filesystem.
+          MIN_FREE_GB=70
+          MIN_ROOT_FREE_GB=70
+
+          echo
+          echo "Build filesystem free : ${FREE_GB} GB"
+          echo "Build minimum         : ${MIN_FREE_GB} GB"
+          echo "Root free             : ${ROOT_FREE_GB} GB"
+          echo "Root minimum          : ${MIN_ROOT_FREE_GB} GB"
+
+          if [ "$FREE_GB" -lt "$MIN_FREE_GB" ]; then
+            echo "ERROR: insufficient reclaimed disk for full-symbol WebRTC build"
+            echo "Need at least ${MIN_FREE_GB} GB on GITHUB_WORKSPACE."
+            exit 1
+          fi
+
+          if [ "$ROOT_FREE_GB" -lt "$MIN_ROOT_FREE_GB" ]; then
+            echo "ERROR: insufficient shared root headroom for apt/dpkg plus WebRTC build"
+            echo "Need at least ${MIN_ROOT_FREE_GB} GB free on / before dependency installation."
+            exit 1
+          fi
+
+          mkdir -p "$GITHUB_WORKSPACE/.webrtc-work"
+
+          echo "WEBRTC_BUILD_DISK_GATE=PASS"
+          echo "WEBRTC_ROOT_DISK_GATE=PASS"
+
+      - name: Install host dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            binutils \
+            build-essential \
+            curl \
+            git \
+            lsb-release \
+            python3 \
+            unzip \
+            xz-utils \
+            zip
+
+      - name: Install pinned depot_tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          DEPOT_TOOLS_DIR="$RUNNER_TEMP/depot_tools"
+
+          mkdir -p "$DEPOT_TOOLS_DIR"
+
+          git -C "$DEPOT_TOOLS_DIR" init
+          git -C "$DEPOT_TOOLS_DIR" remote add origin \
+            https://chromium.googlesource.com/chromium/tools/depot_tools.git
+
+          git -C "$DEPOT_TOOLS_DIR" fetch \
+            --depth=1 \
+            origin \
+            "$DEPOT_TOOLS_REVISION"
+
+          git -C "$DEPOT_TOOLS_DIR" checkout \
+            --detach FETCH_HEAD
+
+          ACTUAL_DEPOT_REVISION="$(
+            git -C "$DEPOT_TOOLS_DIR" rev-parse HEAD
+          )"
+
+          echo "Pinned depot_tools : $DEPOT_TOOLS_REVISION"
+          echo "Actual depot_tools : $ACTUAL_DEPOT_REVISION"
+
+          test "$ACTUAL_DEPOT_REVISION" = "$DEPOT_TOOLS_REVISION"
+
+          echo "$DEPOT_TOOLS_DIR" >> "$GITHUB_PATH"
+          echo "DEPOT_TOOLS_UPDATE=0" >> "$GITHUB_ENV"
+
+          echo "DEPOT_TOOLS_REVISION_VERIFIED=YES"
+
+      - name: Sync exact WebRTC source revision
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          export PATH="$RUNNER_TEMP/depot_tools:$PATH"
+          export DEPOT_TOOLS_UPDATE=0
+
+          CHECKOUT_ROOT="$GITHUB_WORKSPACE/.webrtc-work/webrtc-checkout"
+
+          mkdir -p "$CHECKOUT_ROOT"
+          cd "$CHECKOUT_ROOT"
+
+          cat > .gclient <<GCLIENT
+          solutions = [
+            {
+              "name": "src",
+              "url": "$WEBRTC_SOURCE_REPO",
+              "deps_file": "DEPS",
+              "managed": False,
+              "custom_deps": {},
+              "custom_vars": {},
+            },
+          ]
+          target_os = ["android"]
+          GCLIENT
+
+          gclient sync \
+            --no-history \
+            --reset \
+            --force \
+            -D \
+            --revision "src@$WEBRTC_SOURCE_REVISION"
+
+          ACTUAL_REVISION="$(git -C src rev-parse HEAD)"
+
+          echo "Requested revision: $WEBRTC_SOURCE_REVISION"
+          echo "Actual revision   : $ACTUAL_REVISION"
+
+          case "$ACTUAL_REVISION" in
+            "$WEBRTC_SOURCE_REVISION"*)
+              echo "WEBRTC_REVISION_VERIFIED=YES"
+              ;;
+            *)
+              echo "ERROR: checked-out WebRTC revision mismatch"
+              exit 1
+              ;;
+          esac
+
+      - name: Install WebRTC Android build dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          export PATH="$RUNNER_TEMP/depot_tools:$PATH"
+          export DEPOT_TOOLS_UPDATE=0
+
+          cd "$GITHUB_WORKSPACE/.webrtc-work/webrtc-checkout/src"
+
+          echo "===== ROOT SPACE BEFORE WEBRTC DEPENDENCIES ====="
+          df -h /
+
+          sudo ./build/install-build-deps.sh \
+            --android \
+            --no-prompt
+
+          echo "===== ROOT SPACE AFTER WEBRTC DEPENDENCIES ====="
+          df -h /
+
+          gclient runhooks
+
+      - name: Apply official WebRTC Android metadata patch
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          SRC="$GITHUB_WORKSPACE/.webrtc-work/webrtc-checkout/src"
+          BUILD_GN="$SRC/sdk/android/BUILD.gn"
+          VERSION_JAVA="$SRC/sdk/android/api/org/webrtc/WebrtcBuildVersion.java"
+
+          python - "$BUILD_GN" <<'PY'
+          import sys
+          from pathlib import Path
+
+          p = Path(sys.argv[1])
+          s = p.read_text(encoding="utf-8")
+
+          entry = '      "api/org/webrtc/WebrtcBuildVersion.java",\n'
+          anchor = '      "api/org/webrtc/RefCounted.java",\n'
+          target = '  rtc_android_library("base_java") {\n'
+
+          if entry in s:
+              raise SystemExit("ERROR: WebrtcBuildVersion BUILD.gn entry already exists unexpectedly")
+
+          start = s.find(target)
+          if start < 0:
+              raise SystemExit("ERROR: base_java target not found in sdk/android/BUILD.gn")
+
+          depth = 0
+          end = None
+          for pos in range(start, len(s)):
+              ch = s[pos]
+              if ch == "{":
+                  depth += 1
+              elif ch == "}":
+                  depth -= 1
+                  if depth == 0:
+                      end = pos + 1
+                      if end < len(s) and s[end] == "\\n":
+                          end += 1
+                      break
+
+          if end is None:
+              raise SystemExit("ERROR: could not close base_java target in sdk/android/BUILD.gn")
+
+          block = s[start:end]
+          if block.count(anchor) != 1:
+              raise SystemExit(
+                  f"ERROR: expected one RefCounted.java anchor inside base_java, found {block.count(anchor)}"
+              )
+
+          block = block.replace(anchor, anchor + entry, 1)
+          s = s[:start] + block + s[end:]
+          p.write_text(s, encoding="utf-8")
+
+          print("OFFICIAL_ANDROID_WEBRTC_VERSION_PATCH=PASS")
+          PY
+
+          mkdir -p "$(dirname "$VERSION_JAVA")"
+
+          cat > "$VERSION_JAVA" <<EOF
+          package org.webrtc;
+          public interface WebrtcBuildVersion {
+              public static final String webrtc_branch = "$WEBRTC_BUILD_BRANCH";
+              public static final String webrtc_commit = "$WEBRTC_BUILD_COMMIT";
+              public static final String webrtc_revision = "$WEBRTC_SOURCE_REVISION";
+              public static final String maint_version = "$WEBRTC_MAINT_VERSION";
+          }
+          EOF
+
+          grep -F '"api/org/webrtc/WebrtcBuildVersion.java"' "$BUILD_GN"
+          grep -F 'webrtc_branch = "M144"' "$VERSION_JAVA"
+          grep -F 'webrtc_commit = "15"' "$VERSION_JAVA"
+          grep -F "webrtc_revision = \"$WEBRTC_SOURCE_REVISION\"" "$VERSION_JAVA"
+          grep -F 'maint_version = "0"' "$VERSION_JAVA"
+
+          echo "WEBRTC_BUILD_VERSION_SOURCE=PASS"
+
+      - name: Verify exact vendor Android GN recipe
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXPECTED='is_debug=false is_java_debug=false treat_warnings_as_errors=false rtc_use_h264=false is_component_build=false rtc_build_examples=false use_rtti=true rtc_build_tools=false rtc_enable_protobuf=false rtc_include_tests=false symbol_level=2'
+
+          echo "Expected: $EXPECTED"
+          echo "Actual  : $WEBRTC_GN_ARGS"
+
+          test "$WEBRTC_GN_ARGS" = "$EXPECTED"
+
+          echo "WEBRTC_VENDOR_GN_RECIPE=PASS"
+
+      - name: Build production stripped AAR
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          export PATH="$RUNNER_TEMP/depot_tools:$PATH"
+          export DEPOT_TOOLS_UPDATE=0
+
+          SRC="$GITHUB_WORKSPACE/.webrtc-work/webrtc-checkout/src"
+          BUILD_DIR="$SRC/out/gel-symbol-build"
+          OUT_DIR="$GITHUB_WORKSPACE/.webrtc-work/gel-webrtc-output"
+
+          mkdir -p "$OUT_DIR"
+
+          cd "$SRC"
+
+          vpython3 ./tools_webrtc/android/build_aar.py \
+            --build-dir "$BUILD_DIR" \
+            --output "$OUT_DIR/libwebrtc-gel-production.aar" \
+            --arch arm64-v8a armeabi-v7a \
+            --extra-gn-args "$WEBRTC_GN_ARGS"
+
+          test -s "$OUT_DIR/libwebrtc-gel-production.aar"
+
+      - name: Build matching unstripped AAR
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          export PATH="$RUNNER_TEMP/depot_tools:$PATH"
+          export DEPOT_TOOLS_UPDATE=0
+
+          SRC="$GITHUB_WORKSPACE/.webrtc-work/webrtc-checkout/src"
+          BUILD_DIR="$SRC/out/gel-symbol-build"
+          OUT_DIR="$GITHUB_WORKSPACE/.webrtc-work/gel-webrtc-output"
+
+          cd "$SRC"
+
+          vpython3 ./tools_webrtc/android/build_aar.py \
+            --build-dir "$BUILD_DIR" \
+            --output "$OUT_DIR/libwebrtc-gel-unstripped.aar" \
+            --arch arm64-v8a armeabi-v7a \
+            --use-unstripped-libs \
+            --extra-gn-args "$WEBRTC_GN_ARGS"
+
+          test -s "$OUT_DIR/libwebrtc-gel-unstripped.aar"
+
+      - name: Verify production and symbol pair
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          OUT_DIR="$GITHUB_WORKSPACE/.webrtc-work/gel-webrtc-output"
+
+          tools/webrtc/verify_webrtc_symbols.sh \
+            "$OUT_DIR/libwebrtc-gel-production.aar" \
+            "$OUT_DIR/libwebrtc-gel-unstripped.aar"
+
+      - name: Generate build provenance manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          OUT_DIR="$GITHUB_WORKSPACE/.webrtc-work/gel-webrtc-output"
+          SRC="$GITHUB_WORKSPACE/.webrtc-work/webrtc-checkout/src"
+          DEPOT="$RUNNER_TEMP/depot_tools"
+          AUDIT="$GITHUB_WORKSPACE/.webrtc-work/webrtc-build-id-audit"
+
+          mkdir -p "$AUDIT"
+
+          PROD="$OUT_DIR/libwebrtc-gel-production.aar"
+          SYMBOLS="$OUT_DIR/libwebrtc-gel-unstripped.aar"
+          MANIFEST="$OUT_DIR/BUILD-PROVENANCE.txt"
+
+          WEBRTC_FULL_REVISION="$(git -C "$SRC" rev-parse HEAD)"
+          DEPOT_TOOLS_ACTUAL_REVISION="$(git -C "$DEPOT" rev-parse HEAD)"
+
+          test "$DEPOT_TOOLS_ACTUAL_REVISION" = "$DEPOT_TOOLS_REVISION"
+
+          PROD_SHA="$(sha256sum "$PROD" | awk '{print $1}')"
+          SYMBOL_SHA="$(sha256sum "$SYMBOLS" | awk '{print $1}')"
+
+          {
+            echo "GEL_iDoctor WebRTC native-symbol build"
+            echo
+            echo "webrtc_version=$WEBRTC_VERSION"
+            echo "webrtc_requested_revision=$WEBRTC_SOURCE_REVISION"
+            echo "webrtc_full_revision=$WEBRTC_FULL_REVISION"
+            echo "webrtc_vendor_build_revision=$WEBRTC_VENDOR_BUILD_REVISION"
+            echo "webrtc_build_branch=$WEBRTC_BUILD_BRANCH"
+            echo "webrtc_build_commit=$WEBRTC_BUILD_COMMIT"
+            echo "webrtc_maint_version=$WEBRTC_MAINT_VERSION"
+            echo "depot_tools_pinned_revision=$DEPOT_TOOLS_REVISION"
+            echo "depot_tools_actual_revision=$DEPOT_TOOLS_ACTUAL_REVISION"
+            echo "gn_args=$WEBRTC_GN_ARGS"
+            echo
+            echo "production_aar_sha256=$PROD_SHA"
+            echo "unstripped_aar_sha256=$SYMBOL_SHA"
+            echo
+          } > "$MANIFEST"
+
+          for ABI in arm64-v8a armeabi-v7a; do
+            unzip -p \
+              "$PROD" \
+              "jni/$ABI/$WEBRTC_LIBRARY" \
+              > "$AUDIT/prod-$ABI.so"
+
+            unzip -p \
+              "$SYMBOLS" \
+              "jni/$ABI/$WEBRTC_LIBRARY" \
+              > "$AUDIT/symbol-$ABI.so"
+
+            PROD_ID="$(
+              readelf -n "$AUDIT/prod-$ABI.so" \
+                | awk '/Build ID:/ {print $3; exit}'
+            )"
+
+            SYMBOL_ID="$(
+              readelf -n "$AUDIT/symbol-$ABI.so" \
+                | awk '/Build ID:/ {print $3; exit}'
+            )"
+
+            {
+              echo "${ABI}_production_build_id=$PROD_ID"
+              echo "${ABI}_unstripped_build_id=$SYMBOL_ID"
+            } >> "$MANIFEST"
+          done
+
+          echo
+          cat "$MANIFEST"
+
+      - name: Show final artifact sizes
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          ls -lh "$GITHUB_WORKSPACE/.webrtc-work/gel-webrtc-output"
+          df -h /
+
+      - name: Upload verified WebRTC symbol pair
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: GEL_WebRTC_144.7559.15_verified_symbol_pair
+          path: |
+            ${{ github.workspace }}/.webrtc-work/gel-webrtc-output/libwebrtc-gel-production.aar
+            ${{ github.workspace }}/.webrtc-work/gel-webrtc-output/libwebrtc-gel-unstripped.aar
+            ${{ github.workspace }}/.webrtc-work/gel-webrtc-output/BUILD-PROVENANCE.txt
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 7

@@ -117,6 +117,8 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
                 savedInstanceState
         );
 
+        GELWindowInsets.install(this);
+
         gr =
                 AppLang.isGreek(
                         this

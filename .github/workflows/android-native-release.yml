@@ -1,106 +1,269 @@
-name: Manual Build — GEL iDoctor (APK + AAB)
+name: v49 Release Candidate — APK + AAB + Crashlytics Symbols
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - crash-observability-v49
+    paths:
+      - '.github/workflows/android-native-release.yml'
+      - 'app/build.gradle'
+      - '.gitignore'
+      - 'tools/webrtc/webrtc-promoted.env'
+      - 'tools/webrtc/fetch_promoted_webrtc.sh'
 
 permissions:
   contents: read
 
+concurrency:
+  group: gel-idoctor-v49-release-candidate
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with:
           java-version: "17"
           distribution: "temurin"
           cache: "gradle"
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
 
-      - name: Install Android SDK packages
+      - name: Install release verification dependencies
+        shell: bash
         run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y binutils curl unzip zip
+
           sdkmanager \
             "platform-tools" \
             "platforms;android-36" \
             "build-tools;36.0.0"
 
+          curl \
+            --fail \
+            --location \
+            --retry 5 \
+            --retry-all-errors \
+            "https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar" \
+            --output "$RUNNER_TEMP/bundletool.jar"
+
+          echo "a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29  $RUNNER_TEMP/bundletool.jar" \
+            | sha256sum -c -
+
       - name: Verify canonical Gradle wrapper
+        shell: bash
         run: |
+          set -euxo pipefail
           chmod +x ./gradlew
           ./gradlew --version
 
-      - name: Decode upload keystore
+      - name: Fetch promoted WebRTC production and Crashlytics symbols
+        shell: bash
         run: |
-          echo "$KEYSTORE_B64" | base64 --decode > gel-keystore.jks
+          set -euxo pipefail
+
+          chmod +x tools/webrtc/fetch_promoted_webrtc.sh
+          tools/webrtc/fetch_promoted_webrtc.sh --with-symbols
+
+          test -s app/libs/libwebrtc-gel-144.7559.15.aar
+          test -s .webrtc-symbols/144.7559.15/arm64-v8a/libjingle_peerconnection_so.so
+          test -s .webrtc-symbols/144.7559.15/armeabi-v7a/libjingle_peerconnection_so.so
+
+      - name: Verify Crashlytics release tasks exist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8" \
+            --no-daemon \
+            --no-parallel \
+            --max-workers=2 \
+            app:tasks --all \
+            | tee "$RUNNER_TEMP/gradle-tasks.txt"
+
+          grep -F "uploadCrashlyticsSymbolFileRelease" "$RUNNER_TEMP/gradle-tasks.txt"
+          grep -F "uploadCrashlyticsMappingFileRelease" "$RUNNER_TEMP/gradle-tasks.txt"
+
+          echo "CRASHLYTICS_RELEASE_TASKS=PASS"
+
+      - name: Build v49 release APK and AAB
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8" \
+            --no-daemon \
+            --no-parallel \
+            --max-workers=2 \
+            clean \
+            app:assembleRelease \
+            app:bundleRelease
+
+          test -s app/build/outputs/bundle/release/app-release.aab
+          find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print
+
+          echo "V49_RELEASE_BUILD=PASS"
+
+      - name: Upload Crashlytics Java and native symbols
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8" \
+            --no-daemon \
+            --no-parallel \
+            --max-workers=2 \
+            app:uploadCrashlyticsMappingFileRelease \
+            app:uploadCrashlyticsSymbolFileRelease
+
+          echo "CRASHLYTICS_MAPPING_UPLOAD=PASS"
+          echo "CRASHLYTICS_NATIVE_SYMBOL_UPLOAD=PASS"
+
+      - name: Verify packaged WebRTC Build IDs
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          source tools/webrtc/webrtc-promoted.env
+
+          APK_DIR="$GITHUB_WORKSPACE/app/build/outputs/apk/release"
+          APK="$(
+            find "$APK_DIR" \
+              -maxdepth 1 \
+              -type f \
+              -name '*.apk' \
+              ! -name '*aligned*' \
+              ! -name '*signed*' \
+              | head -n 1
+          )"
+          AAB="$GITHUB_WORKSPACE/app/build/outputs/bundle/release/app-release.aab"
+
+          test -s "$APK"
+          test -s "$AAB"
+
+          AUDIT="$RUNNER_TEMP/webrtc-package-audit"
+          mkdir -p "$AUDIT"
+
+          verify_id() {
+            local archive="$1"
+            local entry="$2"
+            local expected="$3"
+            local label="$4"
+            local out="$AUDIT/${label}.so"
+            local actual
+
+            unzip -p "$archive" "$entry" > "$out"
+            test -s "$out"
+
+            actual="$(readelf -n "$out" | awk '/Build ID:/ {print $3; exit}')"
+
+            echo "$label expected: $expected"
+            echo "$label actual  : $actual"
+
+            test -n "$actual"
+            test "$actual" = "$expected"
+          }
+
+          verify_id "$APK" "lib/arm64-v8a/$WEBRTC_LIBRARY" "$WEBRTC_ARM64_BUILD_ID" "apk-arm64"
+          verify_id "$APK" "lib/armeabi-v7a/$WEBRTC_LIBRARY" "$WEBRTC_ARMV7_BUILD_ID" "apk-armv7"
+          verify_id "$AAB" "base/lib/arm64-v8a/$WEBRTC_LIBRARY" "$WEBRTC_ARM64_BUILD_ID" "aab-arm64"
+          verify_id "$AAB" "base/lib/armeabi-v7a/$WEBRTC_LIBRARY" "$WEBRTC_ARMV7_BUILD_ID" "aab-armv7"
+
+          if unzip -l "$APK" | grep -q "lib/x86_64/$WEBRTC_LIBRARY"; then
+            echo "ERROR: unexpected x86_64 WebRTC library in release APK"
+            exit 1
+          fi
+
+          if unzip -l "$AAB" | grep -q "base/lib/x86_64/$WEBRTC_LIBRARY"; then
+            echo "ERROR: unexpected x86_64 WebRTC library in release AAB"
+            exit 1
+          fi
+
+          echo "PACKAGED_WEBRTC_BUILD_IDS=PASS"
+
+      - name: Decode upload keystore
+        shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
-
-      - name: Build release APK + AAB
         run: |
-          ./gradlew --no-daemon clean assembleRelease bundleRelease
+          set -euxo pipefail
+          echo "$KEYSTORE_B64" | base64 --decode > gel-keystore.jks
+          test -s gel-keystore.jks
 
-      - name: Align and sign APK
+      - name: Align and sign release APK
+        shell: bash
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          set -e
+          set -euxo pipefail
 
           BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
           APK_DIR="$GITHUB_WORKSPACE/app/build/outputs/apk/release"
 
-          APK="$(find "$APK_DIR" \
-            -maxdepth 1 \
-            -type f \
-            -name '*.apk' \
-            ! -name '*aligned*' \
-            ! -name '*signed*' \
-            | head -n 1)"
+          APK="$(
+            find "$APK_DIR" \
+              -maxdepth 1 \
+              -type f \
+              -name '*.apk' \
+              ! -name '*aligned*' \
+              ! -name '*signed*' \
+              | head -n 1
+          )"
 
-          if [ -z "$APK" ]; then
-            echo "ERROR: Release APK not found."
-            exit 1
-          fi
+          test -s "$APK"
 
           "$BUILD_TOOLS/zipalign" \
             -f \
             4 \
             "$APK" \
-            "$APK_DIR/GEL_iDoctor_aligned.apk"
+            "$APK_DIR/GEL_iDoctor_v4.9_aligned.apk"
 
           "$BUILD_TOOLS/apksigner" sign \
             --ks "$GITHUB_WORKSPACE/gel-keystore.jks" \
             --ks-pass pass:"$KEYSTORE_PASSWORD" \
             --key-pass pass:"$KEY_ALIAS_PASSWORD" \
             --ks-key-alias "$KEY_ALIAS" \
-            --out "$APK_DIR/GEL_iDoctor_signed.apk" \
-            "$APK_DIR/GEL_iDoctor_aligned.apk"
+            --out "$APK_DIR/GEL_iDoctor_v4.9_signed.apk" \
+            "$APK_DIR/GEL_iDoctor_v4.9_aligned.apk"
 
           "$BUILD_TOOLS/apksigner" verify \
             --verbose \
-            "$APK_DIR/GEL_iDoctor_signed.apk"
+            --print-certs \
+            "$APK_DIR/GEL_iDoctor_v4.9_signed.apk"
+
+          echo "SIGNED_APK_VERIFIED=PASS"
+
+      - name: Sign release AAB
+        shell: bash
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-
-      - name: Sign and verify AAB
         run: |
-          set -e
+          set -euxo pipefail
 
           AAB_DIR="$GITHUB_WORKSPACE/app/build/outputs/bundle/release"
           SOURCE="$AAB_DIR/app-release.aab"
-          SIGNED="$AAB_DIR/GEL_iDoctor_signed.aab"
+          SIGNED="$AAB_DIR/GEL_iDoctor_v4.9_signed.aab"
 
-          if [ ! -f "$SOURCE" ]; then
-            echo "ERROR: Release AAB not found."
-            exit 1
-          fi
-
+          test -s "$SOURCE"
           cp "$SOURCE" "$SIGNED"
 
           jarsigner \
@@ -115,19 +278,79 @@ jobs:
             -verbose \
             -certs \
             "$SIGNED"
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
-      - name: Upload signed APK
+          java -jar "$RUNNER_TEMP/bundletool.jar" validate --bundle="$SIGNED"
+
+          echo "SIGNED_AAB_VERIFIED=PASS"
+          echo "BUNDLETOOL_VALIDATE=PASS"
+
+      - name: Verify v49 Play release identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
+          APK="$GITHUB_WORKSPACE/app/build/outputs/apk/release/GEL_iDoctor_v4.9_signed.apk"
+
+          "$BUILD_TOOLS/aapt2" dump badging "$APK" \
+            | tee "$RUNNER_TEMP/v49-badging.txt"
+
+          grep -F "package: name='com.gel.iDoctor' versionCode='49' versionName='4.9'" \
+            "$RUNNER_TEMP/v49-badging.txt"
+
+          grep -Fx "minSdkVersion:'26'" "$RUNNER_TEMP/v49-badging.txt"
+          grep -F "targetSdkVersion:'36'" "$RUNNER_TEMP/v49-badging.txt"
+
+          echo "V49_PLAY_IDENTITY=PASS"
+
+      - name: Generate release-candidate evidence
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          source tools/webrtc/webrtc-promoted.env
+
+          {
+            echo "GEL iDoctor v49 release-candidate evidence"
+            echo
+            echo "git_commit=$GITHUB_SHA"
+            echo "application_id=com.gel.iDoctor"
+            echo "version_code=49"
+            echo "version_name=4.9"
+            echo "target_sdk=36"
+            echo "webrtc_tag=$WEBRTC_PROMOTED_TAG"
+            echo "webrtc_production_sha256=$WEBRTC_PRODUCTION_SHA256"
+            echo "webrtc_unstripped_sha256=$WEBRTC_UNSTRIPPED_SHA256"
+            echo "arm64-v8a_build_id=$WEBRTC_ARM64_BUILD_ID"
+            echo "armeabi-v7a_build_id=$WEBRTC_ARMV7_BUILD_ID"
+            echo "crashlytics_mapping_upload=PASS"
+            echo "crashlytics_native_symbol_upload=PASS"
+            echo "packaged_webrtc_build_ids=PASS"
+            echo "bundletool_validate=PASS"
+            echo "release_identity=PASS"
+          } > "$GITHUB_WORKSPACE/V49-RELEASE-CANDIDATE-EVIDENCE.txt"
+
+          cat "$GITHUB_WORKSPACE/V49-RELEASE-CANDIDATE-EVIDENCE.txt"
+
+      - name: Upload signed v49 APK
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_APK
-          path: app/build/outputs/apk/release/GEL_iDoctor_signed.apk
+          name: GEL_iDoctor_v49_APK
+          path: app/build/outputs/apk/release/GEL_iDoctor_v4.9_signed.apk
+          if-no-files-found: error
 
-      - name: Upload signed AAB
+      - name: Upload signed v49 AAB
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_AAB
-          path: app/build/outputs/bundle/release/GEL_iDoctor_signed.aab
+          name: GEL_iDoctor_v49_AAB
+          path: app/build/outputs/bundle/release/GEL_iDoctor_v4.9_signed.aab
+          if-no-files-found: error
+
+      - name: Upload v49 release evidence and mapping
+        uses: actions/upload-artifact@v6
+        with:
+          name: GEL_iDoctor_v49_release_evidence
+          path: |
+            V49-RELEASE-CANDIDATE-EVIDENCE.txt
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
