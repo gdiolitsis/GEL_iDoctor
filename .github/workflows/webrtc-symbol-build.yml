@@ -284,7 +284,6 @@ jobs:
           entry = '      "api/org/webrtc/WebrtcBuildVersion.java",\n'
           anchor = '      "api/org/webrtc/RefCounted.java",\n'
           target = '  rtc_android_library("base_java") {\n'
-          next_target = '  rtc_android_library("audio_device_java") {\n'
 
           if entry in s:
               raise SystemExit("ERROR: WebrtcBuildVersion BUILD.gn entry already exists unexpectedly")
@@ -293,9 +292,22 @@ jobs:
           if start < 0:
               raise SystemExit("ERROR: base_java target not found in sdk/android/BUILD.gn")
 
-          end = s.find(next_target, start)
-          if end < 0:
-              raise SystemExit("ERROR: could not bound base_java target in sdk/android/BUILD.gn")
+          depth = 0
+          end = None
+          for pos in range(start, len(s)):
+              ch = s[pos]
+              if ch == "{":
+                  depth += 1
+              elif ch == "}":
+                  depth -= 1
+                  if depth == 0:
+                      end = pos + 1
+                      if end < len(s) and s[end] == "\\n":
+                          end += 1
+                      break
+
+          if end is None:
+              raise SystemExit("ERROR: could not close base_java target in sdk/android/BUILD.gn")
 
           block = s[start:end]
           if block.count(anchor) != 1:
