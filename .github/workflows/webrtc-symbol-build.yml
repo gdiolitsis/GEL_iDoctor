@@ -65,6 +65,9 @@ jobs:
             echo "WEBRTC_VERSION=$WEBRTC_VERSION"
             echo "WEBRTC_SOURCE_REPO=$WEBRTC_SOURCE_REPO"
             echo "WEBRTC_SOURCE_REVISION=$WEBRTC_SOURCE_REVISION"
+            echo "WEBRTC_BUILD_BRANCH=$WEBRTC_BUILD_BRANCH"
+            echo "WEBRTC_BUILD_COMMIT=$WEBRTC_BUILD_COMMIT"
+            echo "WEBRTC_MAINT_VERSION=$WEBRTC_MAINT_VERSION"
             echo "DEPOT_TOOLS_REVISION=$DEPOT_TOOLS_REVISION"
             echo "WEBRTC_GN_ARGS=$WEBRTC_GN_ARGS"
             echo "WEBRTC_LIBRARY=$WEBRTC_LIBRARY"
@@ -72,6 +75,9 @@ jobs:
 
           echo "Version : $WEBRTC_VERSION"
           echo "WebRTC revision    : $WEBRTC_SOURCE_REVISION"
+          echo "WebRTC branch      : $WEBRTC_BUILD_BRANCH"
+          echo "WebRTC commit      : $WEBRTC_BUILD_COMMIT"
+          echo "WebRTC maintenance : $WEBRTC_MAINT_VERSION"
           echo "depot_tools revision: $DEPOT_TOOLS_REVISION"
           echo "GN args            : $WEBRTC_GN_ARGS"
 
@@ -249,6 +255,33 @@ jobs:
           df -h /
 
           gclient runhooks
+
+      - name: Generate official WebrtcBuildVersion source
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          SRC="$GITHUB_WORKSPACE/.webrtc-work/webrtc-checkout/src"
+          VERSION_JAVA="$SRC/sdk/android/api/org/webrtc/WebrtcBuildVersion.java"
+
+          mkdir -p "$(dirname "$VERSION_JAVA")"
+
+          cat > "$VERSION_JAVA" <<EOF
+          package org.webrtc;
+          public interface WebrtcBuildVersion {
+            public static final String webrtc_branch = "$WEBRTC_BUILD_BRANCH";
+            public static final String webrtc_commit = "$WEBRTC_BUILD_COMMIT";
+            public static final String webrtc_revision = "$WEBRTC_SOURCE_REVISION";
+            public static final String maint_version = "$WEBRTC_MAINT_VERSION";
+          }
+          EOF
+
+          grep -F 'webrtc_branch = "M144"' "$VERSION_JAVA"
+          grep -F 'webrtc_commit = "15"' "$VERSION_JAVA"
+          grep -F "webrtc_revision = \"$WEBRTC_SOURCE_REVISION\"" "$VERSION_JAVA"
+          grep -F 'maint_version = "0"' "$VERSION_JAVA"
+
+          echo "WEBRTC_BUILD_VERSION_SOURCE=PASS"
 
       - name: Build production stripped AAR
         shell: bash
