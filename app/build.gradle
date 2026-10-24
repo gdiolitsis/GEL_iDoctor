@@ -4,6 +4,21 @@ plugins {
     id 'com.google.firebase.crashlytics'
 }
 
+def promotedWebRtcProperties = new java.util.Properties()
+rootProject.file("tools/webrtc/webrtc-promoted.env").withInputStream {
+    promotedWebRtcProperties.load(it)
+}
+
+def gelWebRtcVersion = promotedWebRtcProperties.getProperty("WEBRTC_PROMOTED_VERSION")
+def gelWebRtcProductionAsset = promotedWebRtcProperties.getProperty("WEBRTC_PRODUCTION_ASSET")
+def gelWebRtcProductionSha256 = promotedWebRtcProperties.getProperty("WEBRTC_PRODUCTION_SHA256")
+def gelWebRtcLibrary = promotedWebRtcProperties.getProperty("WEBRTC_LIBRARY")
+def gelWebRtcProductionAar = file("libs/${gelWebRtcProductionAsset}")
+def gelWebRtcSymbolsDir = rootProject.file(
+        promotedWebRtcProperties.getProperty("WEBRTC_SYMBOL_DIR")
+)
+
+
 android {
     namespace = "com.gel.cleaner"
     compileSdk = 36
@@ -29,6 +44,10 @@ buildTypes {
 
             firebaseCrashlytics {
                 nativeSymbolUploadEnabled true
+                // WebRTC is a promoted third-party native library. Crashlytics must
+                // read symbols from the matching unstripped twin, never from the
+                // stripped production AAR packaged into the application.
+                unstrippedNativeLibsDir gelWebRtcSymbolsDir
             }
             minifyEnabled = true
             shrinkResources = true
@@ -118,7 +137,7 @@ dependencies {
     // -------------------------------------------------
     // WebRTC — GEL-only Remote Assist live video + DataChannel control
     // -------------------------------------------------
-    implementation 'io.github.webrtc-sdk:android:144.7559.15'
+    implementation files(gelWebRtcProductionAar)
 
     // -------------------------------------------------
     // Google Play Billing
@@ -129,3 +148,68 @@ dependencies {
     // 🔥 Java 8+ API support (LocalDateTime etc)
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
 }
+
+tasks.register("verifyGelWebRtcProductionAar") {
+    group = "verification"
+    description = "Verifies the immutable promoted GEL WebRTC production AAR."
+
+    doLast {
+        if (!gelWebRtcProductionAar.isFile()) {
+            throw new GradleException(
+                    "Missing promoted WebRTC AAR: ${gelWebRtcProductionAar}. " +
+                    "Run: bash tools/webrtc/fetch_promoted_webrtc.sh --production-only"
+            )
+        }
+
+        def digest = java.security.MessageDigest.getInstance("SHA-256")
+        gelWebRtcProductionAar.withInputStream { input ->
+            byte[] buffer = new byte[1024 * 1024]
+            int count
+            while ((count = input.read(buffer)) != -1) {
+                if (count > 0) {
+                    digest.update(buffer, 0, count)
+                }
+            }
+        }
+
+        def actualSha256 = digest.digest().encodeHex().toString()
+        if (!actualSha256.equalsIgnoreCase(gelWebRtcProductionSha256)) {
+            throw new GradleException(
+                    "Promoted WebRTC AAR SHA-256 mismatch. " +
+                    "expected=${gelWebRtcProductionSha256}, actual=${actualSha256}"
+            )
+        }
+
+        println "WEBRTC_PRODUCTION_AAR_VERIFIED=YES"
+    }
+}
+
+tasks.register("verifyGelWebRtcCrashlyticsSymbols") {
+    group = "verification"
+    description = "Requires the matching WebRTC unstripped libraries before Crashlytics upload."
+
+    doLast {
+        ["arm64-v8a", "armeabi-v7a"].each { abi ->
+            def symbolSo = new File(gelWebRtcSymbolsDir, "${abi}/${gelWebRtcLibrary}")
+            if (!symbolSo.isFile()) {
+                throw new GradleException(
+                        "Missing matching WebRTC symbols for ${abi}: ${symbolSo}. " +
+                        "Run: bash tools/webrtc/fetch_promoted_webrtc.sh --with-symbols"
+                )
+            }
+        }
+
+        println "WEBRTC_CRASHLYTICS_SYMBOL_INPUTS_PRESENT=YES"
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn("verifyGelWebRtcProductionAar")
+}
+
+tasks.matching { task ->
+    task.name.startsWith("uploadCrashlyticsSymbolFile")
+}.configureEach {
+    dependsOn("verifyGelWebRtcCrashlyticsSymbols")
+}
+
