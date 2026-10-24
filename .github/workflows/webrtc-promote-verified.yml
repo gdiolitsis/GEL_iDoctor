@@ -1,12 +1,7 @@
 name: Promote Verified WebRTC Pair
 
 on:
-  push:
-    branches:
-      - crash-observability-v49
-    paths:
-      - '.github/workflows/webrtc-promote-verified.yml'
-      - 'tools/webrtc/verify_webrtc_compatibility.sh'
+  workflow_dispatch:
 
 permissions:
   actions: read

@@ -2,15 +2,6 @@ name: v49 Release Candidate — APK + AAB + Crashlytics Symbols
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - crash-observability-v49
-    paths:
-      - '.github/workflows/android-native-release.yml'
-      - 'app/build.gradle'
-      - '.gitignore'
-      - 'tools/webrtc/webrtc-promoted.env'
-      - 'tools/webrtc/fetch_promoted_webrtc.sh'
 
 permissions:
   contents: read
