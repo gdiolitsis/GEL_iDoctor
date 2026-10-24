@@ -76,7 +76,7 @@
 
   <h1>GEL iDoctor – Privacy Policy</h1>
   <p class="subtitle">
-    Effective date: October 17, 2026
+    Effective date: October 24, 2026
   </p>
 
   <section>
@@ -148,60 +148,105 @@
   </section>
 
   <section>
-    <h2>6. Network and cloud services</h2>
+    <h2>6. Network, crash reporting and tester access</h2>
     <p>
-      GEL iDoctor uses Internet connectivity for functions that require
-      online communication. Some service functionality may use Google
-      Firebase services such as authentication, Cloud Firestore or Cloud
-      Functions to support application services and temporary service-session
-      operations.
+      GEL iDoctor uses Google Firebase as a service provider. Firebase
+      Crashlytics, including native crash reporting, collects crash logs,
+      stack traces, diagnostic app state, app and operating-system versions,
+      device metadata and installation identifiers. Firebase Sessions
+      collects session identifiers and app-interaction metrics such as
+      foreground time and session starts. We use these data to monitor
+      reliability, diagnose failures and improve application performance.
+      These reports are transmitted off the device and are not processed
+      only ephemerally. Version 4.9 does not offer an in-app switch to
+      disable this automatic reliability-data collection.
     </p>
-
     <p>
-      Such communication is limited to information required to provide the
-      selected service functionality.
+      Tester PRO activation is optional. When a user enters a tester
+      activation code, Firebase Authentication creates an anonymous user
+      identifier (UID). Firebase Cloud Functions and Cloud Firestore use
+      this identity and the activation code to validate and maintain
+      tester access, including its status and expiry. Ordinary users do
+      not need to activate Tester PRO to use the app's available features.
+      The tester UID is retained for entitlement checks rather than
+      processed only in memory. This flow does not ask for a name, email
+      address, phone number or password. Anonymous authentication still
+      creates a persistent pseudonymous identifier; it is not fully
+      anonymized data.
+    </p>
+    <p>
+      Firebase Authentication also processes IP addresses and technical
+      request information for authentication security and abuse prevention.
+      Internet-based tests communicate with the relevant test endpoint,
+      which necessarily receives the connection's IP address. The
+      collection described above is distinct from diagnostic information
+      that is processed solely on the device.
+    </p>
+    <p>
+      Remote Assistance is not available in the version 4.9 closed-test
+      release. That release does not offer remote service sessions.
+    </p>
+    <p>
+      Further information about Firebase data processing is available in
+      <a href="https://firebase.google.com/support/privacy">Firebase Privacy
+      and Security</a> and
+      <a href="https://firebase.google.com/docs/android/play-data-disclosure">Firebase's
+      Android data disclosures</a>.
     </p>
   </section>
 
   <section>
-    <h2>7. Advertising and sale of data</h2>
+    <h2>7. Service providers, advertising and sharing</h2>
     <p>
-      GEL iDoctor does not use installed-app inventory for advertising or
-      advertising profiling, and installed-app inventory is not sold to
-      third parties.
+      Google Firebase processes the cloud data described above on our
+      behalf to provide authentication, tester-entitlement and reliability
+      services. Processing by a service provider is distinct from sharing
+      data with independent third parties for their own purposes under
+      Google Play's Data safety definitions.
+    </p>
+    <p>
+      GEL iDoctor does not sell user data or use installed-app inventory
+      for advertising or advertising profiling. If you choose to export
+      and share a report, the recipient and destination are selected by
+      you through the available sharing mechanisms.
     </p>
   </section>
 
   <section>
     <h2>8. Data security</h2>
     <p>
-      GEL iDoctor is designed to limit access to diagnostic information to
-      the functionality requested by the user. Android system permissions
-      and platform security controls are used where applicable.
+      Firebase communications use HTTPS encryption in transit. Android
+      permissions and platform security controls protect access to
+      device capabilities and locally stored app data where applicable.
+      No storage or transmission system can guarantee absolute security.
     </p>
   </section>
 
   <section>
     <h2>9. Data retention and deletion</h2>
     <p>
-      Diagnostic information that is processed locally on the device is
-      retained only as necessary for the user-requested diagnostic or
-      maintenance function and is removed when the user clears or deletes
-      the corresponding locally stored application data or uninstalls the
-      application.
+      Locally stored application data can be removed through Android's
+      app-data controls or by uninstalling the app. Reports exported to
+      shared storage, backups or recipients may remain outside the app;
+      those copies must be managed separately.
     </p>
-
     <p>
-      Where GEL iDoctor uses online services, service-related data is
-      retained only for as long as necessary to provide, secure, or support
-      the relevant application functionality, or as required by applicable
-      legal obligations.
+      Cloud crash and session reports are retained according to the
+      applicable Firebase service retention settings and policies.
+      Tester identity and entitlement records are retained as necessary
+      to operate and verify tester access and to meet applicable
+      obligations. We do not promise that all cloud data is deleted
+      within 90 days. Clearing local data or uninstalling the app does
+      not itself delete cloud records.
     </p>
-
     <p>
-      Users may request deletion of personal data associated with GEL
-      iDoctor by contacting the developer through the developer contact
-      information provided on the Google Play listing.
+      Users may contact the developer through the contact information on
+      the Google Play listing to request deletion of personal data
+      associated with GEL iDoctor. We may need information sufficient
+      to identify the relevant records and verify the request. Do not
+      send passwords or authentication tokens. Requests are handled
+      subject to applicable obligations and the available controls of
+      the relevant service provider.
     </p>
   </section>
 
