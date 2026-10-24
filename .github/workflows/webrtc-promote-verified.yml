@@ -131,6 +131,104 @@ jobs:
 
           echo "UPSTREAM_REFERENCE_VERIFIED=PASS"
 
+      - name: Add official WebrtcBuildVersion metadata class
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          WORK="$RUNNER_TEMP/webrtc-promotion"
+          VERIFIED="$WORK/verified"
+          REFERENCE="$WORK/libwebrtc-upstream-$WEBRTC_VERSION.aar"
+          VERSION_DIR="$WORK/version-class"
+          REFERENCE_CLASSES="$WORK/reference-classes.jar"
+
+          mkdir -p "$VERSION_DIR/org/webrtc"
+
+          unzip -p "$REFERENCE" classes.jar > "$REFERENCE_CLASSES"
+
+          unzip -p "$REFERENCE_CLASSES" org/webrtc/WebrtcBuildVersion.class             > "$VERSION_DIR/org/webrtc/WebrtcBuildVersion.class"
+
+          test -s "$VERSION_DIR/org/webrtc/WebrtcBuildVersion.class"
+
+          javap             -classpath "$REFERENCE_CLASSES"             -public             -constants             org.webrtc.WebrtcBuildVersion             | tee "$WORK/WEBRTC-BUILD-VERSION.txt"
+
+          grep -F 'webrtc_branch = "M144"' "$WORK/WEBRTC-BUILD-VERSION.txt"
+          grep -F 'webrtc_commit = "15"' "$WORK/WEBRTC-BUILD-VERSION.txt"
+          grep -F 'webrtc_revision = "30d5e63ae91da483e06577b5c35ee91cc5e5c3db"' "$WORK/WEBRTC-BUILD-VERSION.txt"
+          grep -F 'maint_version = "0"' "$WORK/WEBRTC-BUILD-VERSION.txt"
+
+          augment_aar() {
+            local aar="$1"
+            local name="$2"
+            local dir="$WORK/augment-$name"
+
+            mkdir -p "$dir"
+
+            unzip -p "$aar" classes.jar > "$dir/classes.jar"
+
+            jar uf "$dir/classes.jar"                 -C "$VERSION_DIR"                 org/webrtc/WebrtcBuildVersion.class
+
+            jar tf "$dir/classes.jar"                 | grep -Fx 'org/webrtc/WebrtcBuildVersion.class'
+
+            jar uf "$aar"                 -C "$dir"                 classes.jar
+          }
+
+          augment_aar "$VERIFIED/libwebrtc-gel-production.aar" production
+          augment_aar "$VERIFIED/libwebrtc-gel-unstripped.aar" unstripped
+
+          tools/webrtc/verify_webrtc_symbols.sh             "$VERIFIED/libwebrtc-gel-production.aar"             "$VERIFIED/libwebrtc-gel-unstripped.aar"
+
+          verify_build_id() {
+            local aar="$1"
+            local abi="$2"
+            local expected="$3"
+            local so="$WORK/$abi.so"
+
+            unzip -p "$aar" "jni/$abi/libjingle_peerconnection_so.so" > "$so"
+
+            local actual
+            actual="$(readelf -n "$so" | awk '/Build ID:/ {print $3; exit}')"
+
+            echo "$abi expected Build ID: $expected"
+            echo "$abi actual   Build ID: $actual"
+
+            test "$actual" = "$expected"
+          }
+
+          verify_build_id "$VERIFIED/libwebrtc-gel-production.aar" arm64-v8a "$ARM64_BUILD_ID"
+          verify_build_id "$VERIFIED/libwebrtc-gel-production.aar" armeabi-v7a "$ARMV7_BUILD_ID"
+
+          PROMOTED_PRODUCTION_SHA256="$(sha256sum "$VERIFIED/libwebrtc-gel-production.aar" | awk '{print $1}')"
+          PROMOTED_UNSTRIPPED_SHA256="$(sha256sum "$VERIFIED/libwebrtc-gel-unstripped.aar" | awk '{print $1}')"
+
+          {
+            echo "PROMOTED_PRODUCTION_SHA256=$PROMOTED_PRODUCTION_SHA256"
+            echo "PROMOTED_UNSTRIPPED_SHA256=$PROMOTED_UNSTRIPPED_SHA256"
+          } >> "$GITHUB_ENV"
+
+          {
+            echo "GEL WebRTC promotion provenance"
+            echo
+            echo "source_run_id=$SOURCE_RUN_ID"
+            echo "source_commit=$SOURCE_COMMIT"
+            echo "reference_aar_sha256=$UPSTREAM_AAR_SHA256"
+            echo "base_production_aar_sha256=$GEL_PRODUCTION_SHA256"
+            echo "base_unstripped_aar_sha256=$GEL_UNSTRIPPED_SHA256"
+            echo "promoted_production_aar_sha256=$PROMOTED_PRODUCTION_SHA256"
+            echo "promoted_unstripped_aar_sha256=$PROMOTED_UNSTRIPPED_SHA256"
+            echo "metadata_class_source=official_upstream_reference"
+            echo "webrtc_branch=M144"
+            echo "webrtc_commit=15"
+            echo "webrtc_revision=30d5e63ae91da483e06577b5c35ee91cc5e5c3db"
+            echo "maint_version=0"
+            echo "arm64-v8a_build_id=$ARM64_BUILD_ID"
+            echo "armeabi-v7a_build_id=$ARMV7_BUILD_ID"
+          } > "$WORK/PROMOTION-PROVENANCE.txt"
+
+          cat "$WORK/PROMOTION-PROVENANCE.txt"
+
+          echo "WEBRTC_BUILD_VERSION_AUGMENTATION=PASS"
+
       - name: Compare GEL WebRTC with upstream API and native ABI
         shell: bash
         run: |
@@ -244,6 +342,8 @@ jobs:
 
           cp             "$VERIFIED/BUILD-PROVENANCE.txt"             "$RELEASE_DIR/BUILD-PROVENANCE.txt"
 
+          cp             "$WORK/PROMOTION-PROVENANCE.txt"             "$RELEASE_DIR/PROMOTION-PROVENANCE.txt"
+
           cp             "$WORK/COMPATIBILITY-REPORT.txt"             "$RELEASE_DIR/COMPATIBILITY-REPORT.txt"
 
           {
@@ -251,8 +351,10 @@ jobs:
             echo
             echo "Source workflow run: $SOURCE_RUN_ID"
             echo "Source commit: $SOURCE_COMMIT"
-            echo "Production SHA-256: $GEL_PRODUCTION_SHA256"
-            echo "Unstripped SHA-256: $GEL_UNSTRIPPED_SHA256"
+            echo "Base production SHA-256: $GEL_PRODUCTION_SHA256"
+            echo "Base unstripped SHA-256: $GEL_UNSTRIPPED_SHA256"
+            echo "Promoted production SHA-256: $PROMOTED_PRODUCTION_SHA256"
+            echo "Promoted unstripped SHA-256: $PROMOTED_UNSTRIPPED_SHA256"
             echo "arm64-v8a Build ID: $ARM64_BUILD_ID"
             echo "armeabi-v7a Build ID: $ARMV7_BUILD_ID"
             echo
@@ -279,7 +381,7 @@ jobs:
             exit 1
           fi
 
-          gh release create "$RELEASE_TAG"             --repo "$GITHUB_REPOSITORY"             --target "$SOURCE_COMMIT"             --title "GEL WebRTC $WEBRTC_VERSION — verified symbol pair"             --notes-file "$RELEASE_DIR/RELEASE-NOTES.txt"             --latest=false             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION.aar"             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION-unstripped.aar"             "$RELEASE_DIR/BUILD-PROVENANCE.txt"             "$RELEASE_DIR/COMPATIBILITY-REPORT.txt"
+          gh release create "$RELEASE_TAG"             --repo "$GITHUB_REPOSITORY"             --target "$SOURCE_COMMIT"             --title "GEL WebRTC $WEBRTC_VERSION — verified symbol pair"             --notes-file "$RELEASE_DIR/RELEASE-NOTES.txt"             --latest=false             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION.aar"             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION-unstripped.aar"             "$RELEASE_DIR/BUILD-PROVENANCE.txt"             "$RELEASE_DIR/PROMOTION-PROVENANCE.txt"             "$RELEASE_DIR/COMPATIBILITY-REPORT.txt"
 
           gh release view "$RELEASE_TAG"             --repo "$GITHUB_REPOSITORY"
 
