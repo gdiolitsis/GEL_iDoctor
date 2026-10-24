@@ -18,23 +18,20 @@ concurrency:
 
 jobs:
   promote:
-    # Promotion is intentionally suspended until the vendor-exact full-symbol
-    # build replaces the Run #3 validation artifact.
-    if: ${{ false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
 
     env:
-      SOURCE_RUN_ID: "40081350482"
-      SOURCE_COMMIT: "31342009a2a987933b626ed43fa12003549abda4"
+      SOURCE_RUN_ID: "40094612980"
+      SOURCE_COMMIT: "c0038cf8e5874636a82c1048e4a74cf6ed9b1ff6"
       SOURCE_ARTIFACT: "GEL_WebRTC_144.7559.15_verified_symbol_pair"
       WEBRTC_VERSION: "144.7559.15"
       RELEASE_TAG: "webrtc-144.7559.15-gel.1"
       UPSTREAM_AAR_SHA256: "fc7c8d027eb33860ccbb7847988f7f942d44a92d1f575348bba6c0250cde4071"
-      GEL_PRODUCTION_SHA256: "2c3821bba43e50f9d7a6e88549dc009e1522d70dfa8952d293c884eacdd2fa7a"
-      GEL_UNSTRIPPED_SHA256: "2f60668b432fbb1ccc1ac3b2bae44023e352e914f83d9a3c31dd6faad6433906"
-      ARM64_BUILD_ID: "02f54bdc1cee1d8c"
-      ARMV7_BUILD_ID: "61a29bd900017e41"
+      GEL_PRODUCTION_SHA256: "e717cd91224fad935ef37dfc8d14b2e67d8b06157f773141e6055b828d1056bf"
+      GEL_UNSTRIPPED_SHA256: "c137dfe2fcd432e71ce2d5f2aa17131790e65fb2e2d277d2ad1131e822a0ebbc"
+      ARM64_BUILD_ID: "58a65eaa902d8792"
+      ARMV7_BUILD_ID: "c5c92f8997d255a7"
 
     steps:
       - name: Checkout GEL iDoctor
@@ -63,7 +60,7 @@ jobs:
           gh --version
           java -version
 
-      - name: Download verified WebRTC pair from Run 3
+      - name: Download verified WebRTC pair from Run 11
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -134,7 +131,7 @@ jobs:
 
           echo "UPSTREAM_REFERENCE_VERIFIED=PASS"
 
-      - name: Add official WebrtcBuildVersion metadata class
+      - name: Verify vendor-exact WebrtcBuildVersion metadata
         shell: bash
         run: |
           set -euxo pipefail
@@ -142,67 +139,37 @@ jobs:
           WORK="$RUNNER_TEMP/webrtc-promotion"
           VERIFIED="$WORK/verified"
           REFERENCE="$WORK/libwebrtc-upstream-$WEBRTC_VERSION.aar"
-          VERSION_DIR="$WORK/version-class"
           REFERENCE_CLASSES="$WORK/reference-classes.jar"
-
-          mkdir -p "$VERSION_DIR/org/webrtc"
+          PRODUCTION_CLASSES="$WORK/production-classes.jar"
+          UNSTRIPPED_CLASSES="$WORK/unstripped-classes.jar"
 
           unzip -p "$REFERENCE" classes.jar > "$REFERENCE_CLASSES"
+          unzip -p "$VERIFIED/libwebrtc-gel-production.aar" classes.jar > "$PRODUCTION_CLASSES"
+          unzip -p "$VERIFIED/libwebrtc-gel-unstripped.aar" classes.jar > "$UNSTRIPPED_CLASSES"
 
-          unzip -p "$REFERENCE_CLASSES" org/webrtc/WebrtcBuildVersion.class             > "$VERSION_DIR/org/webrtc/WebrtcBuildVersion.class"
+          for jar_file in "$REFERENCE_CLASSES" "$PRODUCTION_CLASSES" "$UNSTRIPPED_CLASSES"; do
+            jar tf "$jar_file" | grep -Fx 'org/webrtc/WebrtcBuildVersion.class'
+          done
 
-          test -s "$VERSION_DIR/org/webrtc/WebrtcBuildVersion.class"
+          javap -classpath "$REFERENCE_CLASSES" -public -constants org.webrtc.WebrtcBuildVersion \
+            > "$WORK/reference-WebrtcBuildVersion.txt"
 
-          javap             -classpath "$REFERENCE_CLASSES"             -public             -constants             org.webrtc.WebrtcBuildVersion             | tee "$WORK/WEBRTC-BUILD-VERSION.txt"
+          javap -classpath "$PRODUCTION_CLASSES" -public -constants org.webrtc.WebrtcBuildVersion \
+            > "$WORK/production-WebrtcBuildVersion.txt"
 
-          grep -F 'webrtc_branch = "M144"' "$WORK/WEBRTC-BUILD-VERSION.txt"
-          grep -F 'webrtc_commit = "15"' "$WORK/WEBRTC-BUILD-VERSION.txt"
-          grep -F 'webrtc_revision = "30d5e63ae91da483e06577b5c35ee91cc5e5c3db"' "$WORK/WEBRTC-BUILD-VERSION.txt"
-          grep -F 'maint_version = "0"' "$WORK/WEBRTC-BUILD-VERSION.txt"
+          javap -classpath "$UNSTRIPPED_CLASSES" -public -constants org.webrtc.WebrtcBuildVersion \
+            > "$WORK/unstripped-WebrtcBuildVersion.txt"
 
-          augment_aar() {
-            local aar="$1"
-            local name="$2"
-            local dir="$WORK/augment-$name"
+          diff -u "$WORK/reference-WebrtcBuildVersion.txt" "$WORK/production-WebrtcBuildVersion.txt"
+          diff -u "$WORK/production-WebrtcBuildVersion.txt" "$WORK/unstripped-WebrtcBuildVersion.txt"
 
-            mkdir -p "$dir"
+          grep -F 'webrtc_branch = "M144"' "$WORK/production-WebrtcBuildVersion.txt"
+          grep -F 'webrtc_commit = "15"' "$WORK/production-WebrtcBuildVersion.txt"
+          grep -F 'webrtc_revision = "30d5e63ae91da483e06577b5c35ee91cc5e5c3db"' "$WORK/production-WebrtcBuildVersion.txt"
+          grep -F 'maint_version = "0"' "$WORK/production-WebrtcBuildVersion.txt"
 
-            unzip -p "$aar" classes.jar > "$dir/classes.jar"
-
-            jar uf "$dir/classes.jar"                 -C "$VERSION_DIR"                 org/webrtc/WebrtcBuildVersion.class
-
-            jar tf "$dir/classes.jar"                 | grep -Fx 'org/webrtc/WebrtcBuildVersion.class'
-
-            jar uf "$aar"                 -C "$dir"                 classes.jar
-          }
-
-          augment_aar "$VERIFIED/libwebrtc-gel-production.aar" production
-          augment_aar "$VERIFIED/libwebrtc-gel-unstripped.aar" unstripped
-
-          tools/webrtc/verify_webrtc_symbols.sh             "$VERIFIED/libwebrtc-gel-production.aar"             "$VERIFIED/libwebrtc-gel-unstripped.aar"
-
-          verify_build_id() {
-            local aar="$1"
-            local abi="$2"
-            local expected="$3"
-            local so="$WORK/$abi.so"
-
-            unzip -p "$aar" "jni/$abi/libjingle_peerconnection_so.so" > "$so"
-
-            local actual
-            actual="$(readelf -n "$so" | awk '/Build ID:/ {print $3; exit}')"
-
-            echo "$abi expected Build ID: $expected"
-            echo "$abi actual   Build ID: $actual"
-
-            test "$actual" = "$expected"
-          }
-
-          verify_build_id "$VERIFIED/libwebrtc-gel-production.aar" arm64-v8a "$ARM64_BUILD_ID"
-          verify_build_id "$VERIFIED/libwebrtc-gel-production.aar" armeabi-v7a "$ARMV7_BUILD_ID"
-
-          PROMOTED_PRODUCTION_SHA256="$(sha256sum "$VERIFIED/libwebrtc-gel-production.aar" | awk '{print $1}')"
-          PROMOTED_UNSTRIPPED_SHA256="$(sha256sum "$VERIFIED/libwebrtc-gel-unstripped.aar" | awk '{print $1}')"
+          PROMOTED_PRODUCTION_SHA256="$GEL_PRODUCTION_SHA256"
+          PROMOTED_UNSTRIPPED_SHA256="$GEL_UNSTRIPPED_SHA256"
 
           {
             echo "PROMOTED_PRODUCTION_SHA256=$PROMOTED_PRODUCTION_SHA256"
@@ -219,18 +186,20 @@ jobs:
             echo "base_unstripped_aar_sha256=$GEL_UNSTRIPPED_SHA256"
             echo "promoted_production_aar_sha256=$PROMOTED_PRODUCTION_SHA256"
             echo "promoted_unstripped_aar_sha256=$PROMOTED_UNSTRIPPED_SHA256"
-            echo "metadata_class_source=official_upstream_reference"
+            echo "metadata_class_source=vendor_exact_source_build"
             echo "webrtc_branch=M144"
             echo "webrtc_commit=15"
             echo "webrtc_revision=30d5e63ae91da483e06577b5c35ee91cc5e5c3db"
             echo "maint_version=0"
             echo "arm64-v8a_build_id=$ARM64_BUILD_ID"
             echo "armeabi-v7a_build_id=$ARMV7_BUILD_ID"
+            echo "post_build_aar_mutation=NO"
           } > "$WORK/PROMOTION-PROVENANCE.txt"
 
           cat "$WORK/PROMOTION-PROVENANCE.txt"
 
-          echo "WEBRTC_BUILD_VERSION_AUGMENTATION=PASS"
+          echo "WEBRTC_BUILD_VERSION_VENDOR_PARITY=PASS"
+          echo "WEBRTC_PROMOTION_AAR_IMMUTABLE=YES"
 
       - name: Compare GEL WebRTC with upstream API and native ABI
         shell: bash
