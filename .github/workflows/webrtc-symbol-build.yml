@@ -22,17 +22,40 @@ jobs:
     timeout-minutes: 330
 
     steps:
-      - name: Maximize WebRTC build volume
-        uses: easimon/maximize-build-space@fc881a613ad2a34aca9c9624518214ebc21dfc0c
-        with:
-          root-reserve-mb: 24576
-          temp-reserve-mb: 1024
-          swap-size-mb: 2048
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
-          remove-docker-images: 'true'
+      # Do not use easimon/maximize-build-space here. On current ubuntu-24.04
+      # hosted runners /mnt can live on the same filesystem as /; that action
+      # then allocates both /pv.img and /mnt/tmp-pv.img from /dev/root and can
+      # exhaust the root filesystem before apt/dpkg runs.
+      - name: Reclaim runner disk without LVM
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "===== STORAGE BEFORE CLEANUP ====="
+          df -h / /mnt "$GITHUB_WORKSPACE" || true
+
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+
+          echo
+          echo "===== STORAGE AFTER CLEANUP ====="
+          df -h / /mnt "$GITHUB_WORKSPACE" || true
+
+          ROOT_DEVICE="$(df -P / | awk 'NR == 2 {print $1}')"
+          MNT_DEVICE="$(df -P /mnt | awk 'NR == 2 {print $1}')"
+          echo "Root device: $ROOT_DEVICE"
+          echo "/mnt device: $MNT_DEVICE"
+
+          if [ "$ROOT_DEVICE" = "$MNT_DEVICE" ]; then
+            echo "STORAGE_LAYOUT=SHARED_ROOT_MNT"
+            echo "Keeping WebRTC checkout/build directly on the reclaimed root filesystem."
+          else
+            echo "STORAGE_LAYOUT=SEPARATE_ROOT_MNT"
+            echo "No LVM aggregation is required; root remains reserved for apt/dpkg."
+          fi
 
       - name: Checkout GEL iDoctor
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,24 +103,27 @@ jobs:
               awk 'NR == 2 { print int($4 / 1024 / 1024) }'
           )"
 
-          MIN_FREE_GB=45
-          MIN_ROOT_FREE_GB=16
+          # WebRTC checkout/build and apt/dpkg intentionally share the reclaimed
+          # root filesystem on current hosted runners. Require enough aggregate
+          # headroom for both instead of manufacturing a second LVM filesystem.
+          MIN_FREE_GB=70
+          MIN_ROOT_FREE_GB=70
 
           echo
-          echo "Build volume free : ${FREE_GB} GB"
-          echo "Build minimum     : ${MIN_FREE_GB} GB"
-          echo "Root free         : ${ROOT_FREE_GB} GB"
-          echo "Root minimum      : ${MIN_ROOT_FREE_GB} GB"
+          echo "Build filesystem free : ${FREE_GB} GB"
+          echo "Build minimum         : ${MIN_FREE_GB} GB"
+          echo "Root free             : ${ROOT_FREE_GB} GB"
+          echo "Root minimum          : ${MIN_ROOT_FREE_GB} GB"
 
           if [ "$FREE_GB" -lt "$MIN_FREE_GB" ]; then
-            echo "ERROR: insufficient expanded disk for full-symbol WebRTC build"
+            echo "ERROR: insufficient reclaimed disk for full-symbol WebRTC build"
             echo "Need at least ${MIN_FREE_GB} GB on GITHUB_WORKSPACE."
             exit 1
           fi
 
           if [ "$ROOT_FREE_GB" -lt "$MIN_ROOT_FREE_GB" ]; then
-            echo "ERROR: insufficient root disk for apt/dpkg WebRTC dependencies"
-            echo "Need at least ${MIN_ROOT_FREE_GB} GB free on /."
+            echo "ERROR: insufficient shared root headroom for apt/dpkg plus WebRTC build"
+            echo "Need at least ${MIN_ROOT_FREE_GB} GB free on / before dependency installation."
             exit 1
           fi
 
