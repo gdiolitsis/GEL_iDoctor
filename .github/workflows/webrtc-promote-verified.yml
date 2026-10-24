@@ -381,7 +381,18 @@ jobs:
             exit 1
           fi
 
-          gh release create "$RELEASE_TAG"             --repo "$GITHUB_REPOSITORY"             --target "$SOURCE_COMMIT"             --title "GEL WebRTC $WEBRTC_VERSION — verified symbol pair"             --notes-file "$RELEASE_DIR/RELEASE-NOTES.txt"             --latest=false             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION.aar"             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION-unstripped.aar"             "$RELEASE_DIR/BUILD-PROVENANCE.txt"             "$RELEASE_DIR/PROMOTION-PROVENANCE.txt"             "$RELEASE_DIR/COMPATIBILITY-REPORT.txt"
+          DEFAULT_BRANCH="$(
+            gh repo view "$GITHUB_REPOSITORY" \
+              --json defaultBranchRef \
+              --jq '.defaultBranchRef.name'
+          )"
+
+          test -n "$DEFAULT_BRANCH"
+
+          echo "Release vault tag target: $DEFAULT_BRANCH"
+          echo "Verified WebRTC source commit remains: $SOURCE_COMMIT"
+
+          gh release create "$RELEASE_TAG"             --repo "$GITHUB_REPOSITORY"             --target "$DEFAULT_BRANCH"             --title "GEL WebRTC $WEBRTC_VERSION — verified symbol pair"             --notes-file "$RELEASE_DIR/RELEASE-NOTES.txt"             --latest=false             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION.aar"             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION-unstripped.aar"             "$RELEASE_DIR/BUILD-PROVENANCE.txt"             "$RELEASE_DIR/PROMOTION-PROVENANCE.txt"             "$RELEASE_DIR/COMPATIBILITY-REPORT.txt"
 
           gh release view "$RELEASE_TAG"             --repo "$GITHUB_REPOSITORY"
 
