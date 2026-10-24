@@ -1,0 +1,286 @@
+name: Promote Verified WebRTC Pair
+
+on:
+  push:
+    branches:
+      - crash-observability-v49
+    paths:
+      - '.github/workflows/webrtc-promote-verified.yml'
+      - 'tools/webrtc/verify_webrtc_compatibility.sh'
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: webrtc-promotion-144.7559.15-gel.1
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    env:
+      SOURCE_RUN_ID: "40081350482"
+      SOURCE_COMMIT: "31342009a2a987933b626ed43fa12003549abda4"
+      SOURCE_ARTIFACT: "GEL_WebRTC_144.7559.15_verified_symbol_pair"
+      WEBRTC_VERSION: "144.7559.15"
+      RELEASE_TAG: "webrtc-144.7559.15-gel.1"
+      UPSTREAM_AAR_SHA256: "fc7c8d027eb33860ccbb7847988f7f942d44a92d1f575348bba6c0250cde4071"
+      GEL_PRODUCTION_SHA256: "2c3821bba43e50f9d7a6e88549dc009e1522d70dfa8952d293c884eacdd2fa7a"
+      GEL_UNSTRIPPED_SHA256: "2f60668b432fbb1ccc1ac3b2bae44023e352e914f83d9a3c31dd6faad6433906"
+      ARM64_BUILD_ID: "02f54bdc1cee1d8c"
+      ARMV7_BUILD_ID: "61a29bd900017e41"
+
+    steps:
+      - name: Checkout GEL iDoctor
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: "gradle"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+
+      - name: Install promotion dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y             binutils             curl             unzip             zip
+
+          sdkmanager             "platform-tools"             "platforms;android-36"             "build-tools;36.0.0"
+
+          gh --version
+          java -version
+
+      - name: Download verified WebRTC pair from Run 3
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+
+          WORK="$RUNNER_TEMP/webrtc-promotion"
+          VERIFIED="$WORK/verified"
+
+          mkdir -p "$VERIFIED"
+
+          gh run download "$SOURCE_RUN_ID"             --repo "$GITHUB_REPOSITORY"             --name "$SOURCE_ARTIFACT"             --dir "$VERIFIED"
+
+          test -s "$VERIFIED/libwebrtc-gel-production.aar"
+          test -s "$VERIFIED/libwebrtc-gel-unstripped.aar"
+          test -s "$VERIFIED/BUILD-PROVENANCE.txt"
+
+          ls -lh "$VERIFIED"
+
+      - name: Verify source provenance and hashes
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          WORK="$RUNNER_TEMP/webrtc-promotion"
+          VERIFIED="$WORK/verified"
+          PROVENANCE="$VERIFIED/BUILD-PROVENANCE.txt"
+
+          source tools/webrtc/webrtc-symbols.env
+
+          test "$WEBRTC_SOURCE_REVISION" =             "30d5e63ae91da483e06577b5c35ee91cc5e5c3db"
+
+          grep -Fx             "webrtc_full_revision=$WEBRTC_SOURCE_REVISION"             "$PROVENANCE"
+
+          grep -Fx             "production_aar_sha256=$GEL_PRODUCTION_SHA256"             "$PROVENANCE"
+
+          grep -Fx             "unstripped_aar_sha256=$GEL_UNSTRIPPED_SHA256"             "$PROVENANCE"
+
+          grep -Fx             "arm64-v8a_production_build_id=$ARM64_BUILD_ID"             "$PROVENANCE"
+
+          grep -Fx             "arm64-v8a_unstripped_build_id=$ARM64_BUILD_ID"             "$PROVENANCE"
+
+          grep -Fx             "armeabi-v7a_production_build_id=$ARMV7_BUILD_ID"             "$PROVENANCE"
+
+          grep -Fx             "armeabi-v7a_unstripped_build_id=$ARMV7_BUILD_ID"             "$PROVENANCE"
+
+          echo "$GEL_PRODUCTION_SHA256  $VERIFIED/libwebrtc-gel-production.aar"             | sha256sum -c -
+
+          echo "$GEL_UNSTRIPPED_SHA256  $VERIFIED/libwebrtc-gel-unstripped.aar"             | sha256sum -c -
+
+          tools/webrtc/verify_webrtc_symbols.sh             "$VERIFIED/libwebrtc-gel-production.aar"             "$VERIFIED/libwebrtc-gel-unstripped.aar"
+
+          echo "VERIFIED_PAIR_PROVENANCE=PASS"
+
+      - name: Download official upstream reference AAR
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          WORK="$RUNNER_TEMP/webrtc-promotion"
+          REFERENCE="$WORK/libwebrtc-upstream-$WEBRTC_VERSION.aar"
+
+          curl             --fail             --location             --retry 5             --retry-all-errors             "https://github.com/webrtc-sdk/android/releases/download/v$WEBRTC_VERSION/libwebrtc.aar"             --output "$REFERENCE"
+
+          test -s "$REFERENCE"
+
+          echo "$UPSTREAM_AAR_SHA256  $REFERENCE"             | sha256sum -c -
+
+          echo "UPSTREAM_REFERENCE_VERIFIED=PASS"
+
+      - name: Compare GEL WebRTC with upstream API and native ABI
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          WORK="$RUNNER_TEMP/webrtc-promotion"
+          VERIFIED="$WORK/verified"
+          REFERENCE="$WORK/libwebrtc-upstream-$WEBRTC_VERSION.aar"
+          REPORT="$WORK/COMPATIBILITY-REPORT.txt"
+
+          chmod +x tools/webrtc/verify_webrtc_compatibility.sh
+
+          tools/webrtc/verify_webrtc_compatibility.sh             "$REFERENCE"             "$VERIFIED/libwebrtc-gel-production.aar"             | tee "$REPORT"
+
+          grep -Fx "WEBRTC_COMPATIBILITY_VERIFIED=YES" "$REPORT"
+
+      - name: Compile GEL iDoctor against verified production AAR
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          WORK="$RUNNER_TEMP/webrtc-promotion"
+          VERIFIED="$WORK/verified"
+
+          mkdir -p app/libs
+
+          cp             "$VERIFIED/libwebrtc-gel-production.aar"             app/libs/libwebrtc-gel-production.aar
+
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path("app/build.gradle")
+          s = p.read_text(encoding="utf-8")
+
+          old = "    implementation 'io.github.webrtc-sdk:android:144.7559.15'\n"
+          new = "    implementation files('libs/libwebrtc-gel-production.aar')\n"
+
+          if s.count(old) != 1:
+              raise SystemExit(
+                  f"ERROR: expected exactly one Maven WebRTC dependency, found {s.count(old)}"
+              )
+
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding="utf-8")
+
+          print("OK: promotion build wired to verified GEL WebRTC AAR")
+          PY
+
+          chmod +x ./gradlew
+
+          ./gradlew             -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8"             --no-daemon             --no-parallel             --max-workers=2             clean             assembleDebug
+
+          APK="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+
+          echo "APP_COMPILE_WITH_VERIFIED_WEBRTC=PASS"
+
+      - name: Verify packaged WebRTC Build IDs
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          WORK="$RUNNER_TEMP/webrtc-promotion"
+          APK="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+          AUDIT="$WORK/apk-audit"
+
+          mkdir -p "$AUDIT"
+
+          unzip -p             "$APK"             "lib/arm64-v8a/libjingle_peerconnection_so.so"             > "$AUDIT/arm64.so"
+
+          unzip -p             "$APK"             "lib/armeabi-v7a/libjingle_peerconnection_so.so"             > "$AUDIT/armv7.so"
+
+          ARM64_ACTUAL="$(
+            readelf -n "$AUDIT/arm64.so"               | awk '/Build ID:/ {print $3; exit}'
+          )"
+
+          ARMV7_ACTUAL="$(
+            readelf -n "$AUDIT/armv7.so"               | awk '/Build ID:/ {print $3; exit}'
+          )"
+
+          echo "Expected arm64: $ARM64_BUILD_ID"
+          echo "Actual   arm64: $ARM64_ACTUAL"
+          echo "Expected armv7: $ARMV7_BUILD_ID"
+          echo "Actual   armv7: $ARMV7_ACTUAL"
+
+          test "$ARM64_ACTUAL" = "$ARM64_BUILD_ID"
+          test "$ARMV7_ACTUAL" = "$ARMV7_BUILD_ID"
+
+          if unzip -l "$APK"             | grep -q 'lib/x86_64/libjingle_peerconnection_so.so'
+          then
+            echo "ERROR: unexpected x86_64 WebRTC library packaged"
+            exit 1
+          fi
+
+          echo "PACKAGED_WEBRTC_BUILD_IDS=PASS"
+
+      - name: Prepare immutable release assets
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          WORK="$RUNNER_TEMP/webrtc-promotion"
+          VERIFIED="$WORK/verified"
+          RELEASE_DIR="$WORK/release"
+
+          mkdir -p "$RELEASE_DIR"
+
+          cp             "$VERIFIED/libwebrtc-gel-production.aar"             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION.aar"
+
+          cp             "$VERIFIED/libwebrtc-gel-unstripped.aar"             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION-unstripped.aar"
+
+          cp             "$VERIFIED/BUILD-PROVENANCE.txt"             "$RELEASE_DIR/BUILD-PROVENANCE.txt"
+
+          cp             "$WORK/COMPATIBILITY-REPORT.txt"             "$RELEASE_DIR/COMPATIBILITY-REPORT.txt"
+
+          {
+            echo "GEL WebRTC $WEBRTC_VERSION verified symbol pair"
+            echo
+            echo "Source workflow run: $SOURCE_RUN_ID"
+            echo "Source commit: $SOURCE_COMMIT"
+            echo "Production SHA-256: $GEL_PRODUCTION_SHA256"
+            echo "Unstripped SHA-256: $GEL_UNSTRIPPED_SHA256"
+            echo "arm64-v8a Build ID: $ARM64_BUILD_ID"
+            echo "armeabi-v7a Build ID: $ARMV7_BUILD_ID"
+            echo
+            echo "The production and unstripped binaries were produced by the same build,"
+            echo "passed Build-ID/SYMTAB/DWARF verification, matched the upstream Java/native"
+            echo "ABI, and compiled successfully inside GEL iDoctor."
+          } > "$RELEASE_DIR/RELEASE-NOTES.txt"
+
+          ls -lh "$RELEASE_DIR"
+
+      - name: Publish permanent WebRTC symbol vault release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+
+          WORK="$RUNNER_TEMP/webrtc-promotion"
+          RELEASE_DIR="$WORK/release"
+
+          if gh release view "$RELEASE_TAG"             --repo "$GITHUB_REPOSITORY"             >/dev/null 2>&1
+          then
+            echo "ERROR: immutable WebRTC release already exists: $RELEASE_TAG"
+            exit 1
+          fi
+
+          gh release create "$RELEASE_TAG"             --repo "$GITHUB_REPOSITORY"             --target "$SOURCE_COMMIT"             --title "GEL WebRTC $WEBRTC_VERSION — verified symbol pair"             --notes-file "$RELEASE_DIR/RELEASE-NOTES.txt"             --latest=false             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION.aar"             "$RELEASE_DIR/libwebrtc-gel-$WEBRTC_VERSION-unstripped.aar"             "$RELEASE_DIR/BUILD-PROVENANCE.txt"             "$RELEASE_DIR/COMPATIBILITY-REPORT.txt"
+
+          gh release view "$RELEASE_TAG"             --repo "$GITHUB_REPOSITORY"
+
+          echo "WEBRTC_PERMANENT_SYMBOL_VAULT=PASS"
