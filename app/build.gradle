@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
 }
 
 android {
@@ -11,8 +12,8 @@ android {
         applicationId = "com.gel.iDoctor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 48
-        versionName = "4.8"
+        versionCode = 49
+        versionName = "4.9"
 
         multiDexEnabled = true
 // ✅ SINGLE SOURCE OF ABI TRUTH
@@ -24,6 +25,10 @@ buildTypes {
         release {
             ndk {
                 debugSymbolLevel 'symbol_table'
+            }
+
+            firebaseCrashlytics {
+                nativeSymbolUploadEnabled true
             }
             minifyEnabled = true
             shrinkResources = true
@@ -108,6 +113,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-functions'
+    implementation 'com.google.firebase:firebase-crashlytics-ndk'
 
     // -------------------------------------------------
     // WebRTC — GEL-only Remote Assist live video + DataChannel control
