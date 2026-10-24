@@ -298,7 +298,7 @@ jobs:
           grep -F "package: name='com.gel.iDoctor' versionCode='49' versionName='4.9'" \
             "$RUNNER_TEMP/v49-badging.txt"
 
-          grep -F "sdkVersion:'26'" "$RUNNER_TEMP/v49-badging.txt"
+          grep -Fx "minSdkVersion:'26'" "$RUNNER_TEMP/v49-badging.txt"
           grep -F "targetSdkVersion:'36'" "$RUNNER_TEMP/v49-badging.txt"
 
           echo "V49_PLAY_IDENTITY=PASS"
