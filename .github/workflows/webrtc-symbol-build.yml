@@ -2,6 +2,12 @@ name: Build WebRTC Symbol Pair
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - crash-observability-v49
+    paths:
+      - '.github/workflows/webrtc-symbol-build.yml'
+      - 'tools/webrtc/webrtc-symbols.env'
 
 permissions:
   contents: read
@@ -65,6 +71,7 @@ jobs:
             echo "WEBRTC_VERSION=$WEBRTC_VERSION"
             echo "WEBRTC_SOURCE_REPO=$WEBRTC_SOURCE_REPO"
             echo "WEBRTC_SOURCE_REVISION=$WEBRTC_SOURCE_REVISION"
+            echo "WEBRTC_VENDOR_BUILD_REVISION=$WEBRTC_VENDOR_BUILD_REVISION"
             echo "WEBRTC_BUILD_BRANCH=$WEBRTC_BUILD_BRANCH"
             echo "WEBRTC_BUILD_COMMIT=$WEBRTC_BUILD_COMMIT"
             echo "WEBRTC_MAINT_VERSION=$WEBRTC_MAINT_VERSION"
@@ -75,6 +82,7 @@ jobs:
 
           echo "Version : $WEBRTC_VERSION"
           echo "WebRTC revision    : $WEBRTC_SOURCE_REVISION"
+          echo "Vendor build rev   : $WEBRTC_VENDOR_BUILD_REVISION"
           echo "WebRTC branch      : $WEBRTC_BUILD_BRANCH"
           echo "WebRTC commit      : $WEBRTC_BUILD_COMMIT"
           echo "WebRTC maintenance : $WEBRTC_MAINT_VERSION"
@@ -256,32 +264,71 @@ jobs:
 
           gclient runhooks
 
-      - name: Generate official WebrtcBuildVersion source
+      - name: Apply official WebRTC Android metadata patch
         shell: bash
         run: |
           set -euxo pipefail
 
           SRC="$GITHUB_WORKSPACE/.webrtc-work/webrtc-checkout/src"
+          BUILD_GN="$SRC/sdk/android/BUILD.gn"
           VERSION_JAVA="$SRC/sdk/android/api/org/webrtc/WebrtcBuildVersion.java"
+
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path("$GITHUB_WORKSPACE/.webrtc-work/webrtc-checkout/src/sdk/android/BUILD.gn")
+          s = p.read_text(encoding="utf-8")
+
+          entry = '      "api/org/webrtc/WebrtcBuildVersion.java",\n'
+          anchor = '      "api/org/webrtc/RefCounted.java",\n'
+
+          if entry in s:
+              raise SystemExit("ERROR: WebrtcBuildVersion BUILD.gn entry already exists unexpectedly")
+
+          if s.count(anchor) != 1:
+              raise SystemExit(
+                  f"ERROR: expected one RefCounted.java BUILD.gn anchor, found {s.count(anchor)}"
+              )
+
+          s = s.replace(anchor, anchor + entry, 1)
+          p.write_text(s, encoding="utf-8")
+
+          print("OFFICIAL_ANDROID_WEBRTC_VERSION_PATCH=PASS")
+          PY
 
           mkdir -p "$(dirname "$VERSION_JAVA")"
 
           cat > "$VERSION_JAVA" <<EOF
           package org.webrtc;
           public interface WebrtcBuildVersion {
-            public static final String webrtc_branch = "$WEBRTC_BUILD_BRANCH";
-            public static final String webrtc_commit = "$WEBRTC_BUILD_COMMIT";
-            public static final String webrtc_revision = "$WEBRTC_SOURCE_REVISION";
-            public static final String maint_version = "$WEBRTC_MAINT_VERSION";
+              public static final String webrtc_branch = "$WEBRTC_BUILD_BRANCH";
+              public static final String webrtc_commit = "$WEBRTC_BUILD_COMMIT";
+              public static final String webrtc_revision = "$WEBRTC_SOURCE_REVISION";
+              public static final String maint_version = "$WEBRTC_MAINT_VERSION";
           }
           EOF
 
+          grep -F '"api/org/webrtc/WebrtcBuildVersion.java"' "$BUILD_GN"
           grep -F 'webrtc_branch = "M144"' "$VERSION_JAVA"
           grep -F 'webrtc_commit = "15"' "$VERSION_JAVA"
           grep -F "webrtc_revision = \"$WEBRTC_SOURCE_REVISION\"" "$VERSION_JAVA"
           grep -F 'maint_version = "0"' "$VERSION_JAVA"
 
           echo "WEBRTC_BUILD_VERSION_SOURCE=PASS"
+
+      - name: Verify exact vendor Android GN recipe
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXPECTED='is_debug=false is_java_debug=false treat_warnings_as_errors=false rtc_use_h264=false is_component_build=false rtc_build_examples=false use_rtti=true rtc_build_tools=false rtc_enable_protobuf=false rtc_include_tests=false symbol_level=2'
+
+          echo "Expected: $EXPECTED"
+          echo "Actual  : $WEBRTC_GN_ARGS"
+
+          test "$WEBRTC_GN_ARGS" = "$EXPECTED"
+
+          echo "WEBRTC_VENDOR_GN_RECIPE=PASS"
 
       - name: Build production stripped AAR
         shell: bash
@@ -371,6 +418,10 @@ jobs:
             echo "webrtc_version=$WEBRTC_VERSION"
             echo "webrtc_requested_revision=$WEBRTC_SOURCE_REVISION"
             echo "webrtc_full_revision=$WEBRTC_FULL_REVISION"
+            echo "webrtc_vendor_build_revision=$WEBRTC_VENDOR_BUILD_REVISION"
+            echo "webrtc_build_branch=$WEBRTC_BUILD_BRANCH"
+            echo "webrtc_build_commit=$WEBRTC_BUILD_COMMIT"
+            echo "webrtc_maint_version=$WEBRTC_MAINT_VERSION"
             echo "depot_tools_pinned_revision=$DEPOT_TOOLS_REVISION"
             echo "depot_tools_actual_revision=$DEPOT_TOOLS_ACTUAL_REVISION"
             echo "gn_args=$WEBRTC_GN_ARGS"
