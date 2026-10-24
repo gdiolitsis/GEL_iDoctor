@@ -27,8 +27,8 @@ android {
         applicationId = "com.gel.iDoctor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 49
-        versionName = "4.9"
+        versionCode = 50
+        versionName = "5.0"
 
         multiDexEnabled = true
 // ✅ SINGLE SOURCE OF ABI TRUTH
@@ -77,16 +77,7 @@ buildTypes {
         }
     }
 
-    // -------------------------------------------------
-    // 🎯 APK NAME — GEL iDoctor Release
-    // -------------------------------------------------
-    applicationVariants.all { variant ->
-        if (variant.buildType.name == "release") {
-            variant.outputs.all {
-                outputFileName = "GEL_iDoctor_v${variant.versionName}.apk"
-            }
-        }
-    }
+
 }
 
 dependencies {
