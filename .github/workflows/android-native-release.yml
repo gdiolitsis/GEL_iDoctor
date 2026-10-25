@@ -1,24 +1,26 @@
-name: v51 Release Candidate — APK + AAB + Crashlytics Symbols
+name: v52 Release Candidate — APK + AAB + Crashlytics Symbols
 
 on:
   workflow_dispatch:
     inputs:
-      reproduce_v50:
-        description: Reproduce the archived v50 crash before testing the fix
-        type: boolean
-        default: false
+      upgrade_artifact_id:
+        description: Optional signed v51 APK artifact ID for upgrade verification
+        type: string
+        default: ""
 
 permissions:
   contents: read
   actions: read
 
 concurrency:
-  group: gel-idoctor-v51-release-candidate
+  group: gel-idoctor-v52-release-candidate
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      UPGRADE_ARTIFACT_ID: ${{ inputs.upgrade_artifact_id }}
     timeout-minutes: 90
 
     steps:
@@ -97,7 +99,7 @@ jobs:
 
           echo "CRASHLYTICS_RELEASE_TASKS=PASS"
 
-      - name: Build v51 release APK and AAB
+      - name: Build v52 release APK and AAB
         shell: bash
         run: |
           set -euxo pipefail
@@ -114,7 +116,7 @@ jobs:
           test -s app/build/outputs/bundle/release/app-release.aab
           find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print
 
-          echo "V51_RELEASE_BUILD=PASS"
+          echo "V52_RELEASE_BUILD=PASS"
 
       - name: Upload Crashlytics Java and native symbols
         shell: bash
@@ -231,20 +233,20 @@ jobs:
             -f \
             4 \
             "$APK" \
-            "$APK_DIR/GEL_iDoctor_v5.1_aligned.apk"
+            "$APK_DIR/GEL_iDoctor_v5.2_aligned.apk"
 
           "$BUILD_TOOLS/apksigner" sign \
             --ks "$GITHUB_WORKSPACE/gel-keystore.jks" \
             --ks-pass pass:"$KEYSTORE_PASSWORD" \
             --key-pass pass:"$KEY_ALIAS_PASSWORD" \
             --ks-key-alias "$KEY_ALIAS" \
-            --out "$APK_DIR/GEL_iDoctor_v5.1_signed.apk" \
-            "$APK_DIR/GEL_iDoctor_v5.1_aligned.apk"
+            --out "$APK_DIR/GEL_iDoctor_v5.2_signed.apk" \
+            "$APK_DIR/GEL_iDoctor_v5.2_aligned.apk"
 
           "$BUILD_TOOLS/apksigner" verify \
             --verbose \
             --print-certs \
-            "$APK_DIR/GEL_iDoctor_v5.1_signed.apk"
+            "$APK_DIR/GEL_iDoctor_v5.2_signed.apk"
 
           echo "SIGNED_APK_VERIFIED=PASS"
 
@@ -259,7 +261,7 @@ jobs:
 
           AAB_DIR="$GITHUB_WORKSPACE/app/build/outputs/bundle/release"
           SOURCE="$AAB_DIR/app-release.aab"
-          SIGNED="$AAB_DIR/GEL_iDoctor_v5.1_signed.aab"
+          SIGNED="$AAB_DIR/GEL_iDoctor_v5.2_signed.aab"
 
           test -s "$SOURCE"
           cp "$SOURCE" "$SIGNED"
@@ -282,93 +284,69 @@ jobs:
           echo "SIGNED_AAB_VERIFIED=PASS"
           echo "BUNDLETOOL_VALIDATE=PASS"
 
-      - name: Verify v51 Play release identity
+      - name: Verify v52 Play release identity
         shell: bash
         run: |
           set -euxo pipefail
 
           BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
-          APK="$GITHUB_WORKSPACE/app/build/outputs/apk/release/GEL_iDoctor_v5.1_signed.apk"
+          APK="$GITHUB_WORKSPACE/app/build/outputs/apk/release/GEL_iDoctor_v5.2_signed.apk"
 
           "$BUILD_TOOLS/aapt2" dump badging "$APK" \
-            | tee "$RUNNER_TEMP/v51-badging.txt"
+            | tee "$RUNNER_TEMP/v52-badging.txt"
 
-          grep -F "package: name='com.gel.iDoctor' versionCode='51' versionName='5.1'" \
-            "$RUNNER_TEMP/v51-badging.txt"
+          grep -F "package: name='com.gel.iDoctor' versionCode='52' versionName='5.2'" \
+            "$RUNNER_TEMP/v52-badging.txt"
 
-          grep -Fx "minSdkVersion:'26'" "$RUNNER_TEMP/v51-badging.txt"
-          grep -F "targetSdkVersion:'36'" "$RUNNER_TEMP/v51-badging.txt"
+          grep -Fx "minSdkVersion:'26'" "$RUNNER_TEMP/v52-badging.txt"
+          grep -F "targetSdkVersion:'36'" "$RUNNER_TEMP/v52-badging.txt"
 
-          echo "V51_PLAY_IDENTITY=PASS"
+          echo "V52_PLAY_IDENTITY=PASS"
 
-      - name: Verify v50 regression and v51 release startup on Android 11
+      - name: Verify packaged manifest orientation and resizing
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -jar "$RUNNER_TEMP/bundletool.jar" dump manifest \
+            --bundle=app/build/outputs/bundle/release/GEL_iDoctor_v5.2_signed.aab \
+            > "$RUNNER_TEMP/v52-packaged-manifest.xml"
+          python3 tools/ci/verify_release_manifest.py "$RUNNER_TEMP/v52-packaged-manifest.xml"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump xmltree \
+            app/build/outputs/apk/release/GEL_iDoctor_v5.2_signed.apk --file AndroidManifest.xml \
+            > "$RUNNER_TEMP/v52-apk-manifest.txt"
+
+      - name: Preserve internal candidate for release diagnostics
+        uses: actions/upload-artifact@v6
+        with:
+          name: GEL_iDoctor_v52_UNVERIFIED_candidate
+          path: |
+            app/build/outputs/apk/release/GEL_iDoctor_v5.2_signed.apk
+            app/build/outputs/bundle/release/GEL_iDoctor_v5.2_signed.aab
+            app/build/outputs/mapping/release/mapping.txt
+            ${{ runner.temp }}/v52-packaged-manifest.xml
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Verify startup, upgrade and camera QR scanning on Android 11 and 16
+        timeout-minutes: 35
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          REPRODUCE_V50: ${{ inputs.reproduce_v50 }}
         run: |
-          set -euo pipefail
-          sdkmanager "emulator" "system-images;android-30;google_apis;x86_64"
-          sudo chmod 666 /dev/kvm
-          export ANDROID_USER_HOME="$RUNNER_TEMP/gel-android-user"
-          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
-          mkdir -p "$ANDROID_AVD_HOME"
-          echo no | avdmanager create avd --name gel_release_smoke --package "system-images;android-30;google_apis;x86_64" --path "$ANDROID_AVD_HOME/gel_release_smoke.avd" --force
-          "$ANDROID_HOME/emulator/emulator" -list-avds | tee "$RUNNER_TEMP/smoke-avds.txt"
-          grep -Fx gel_release_smoke "$RUNNER_TEMP/smoke-avds.txt"
-          "$ANDROID_HOME/emulator/emulator" -avd gel_release_smoke -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > "$RUNNER_TEMP/emulator.log" 2>&1 &
-          trap 'cat "$RUNNER_TEMP/emulator.log"; timeout 10 adb emu kill || true' EXIT
-          timeout 120 adb wait-for-device
-          booted=false
-          for attempt in $(seq 1 120); do
-            if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; then booted=true; break; fi
-            sleep 2
-          done
-          test "$booted" = true
-          adb shell input keyevent 82
-          adb shell getprop ro.product.cpu.abilist | tee "$RUNNER_TEMP/smoke-abis.txt"
-          grep -q arm64-v8a "$RUNNER_TEMP/smoke-abis.txt"
-
-          mkdir -p "$RUNNER_TEMP/startup-evidence"
-          # This historical artifact is optional so expiry cannot block future releases.
-          if [ "$REPRODUCE_V50" = true ]; then
-            # Reproduce the actual shipped v50 crash before accepting the fix.
-            curl --fail --location --retry 3 \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/gdiolitsis/GEL_iDoctor/actions/artifacts/12580210846/zip" \
-              -o "$RUNNER_TEMP/v50-baseline.zip"
-            mkdir -p "$RUNNER_TEMP/v50-baseline" "$RUNNER_TEMP/startup-evidence"
-            unzip -q "$RUNNER_TEMP/v50-baseline.zip" -d "$RUNNER_TEMP/v50-baseline"
-            BASELINE="$(find "$RUNNER_TEMP/v50-baseline" -name '*.apk' -print -quit)"
-            if bash tools/ci/release_startup_smoke.sh "$BASELINE" "$RUNNER_TEMP/startup-evidence/v50"; then
-              echo "ERROR: v50 did not reproduce the reported startup failure"
-              exit 1
-            fi
-            grep -F "Failed to create an instance of class" "$RUNNER_TEMP/startup-evidence/v50/logcat.txt"
-            grep -F "WorkDatabase" "$RUNNER_TEMP/startup-evidence/v50/logcat.txt"
-            echo "V50_REGRESSION_REPRODUCED=PASS"
-            # Preserve v50 data and verify the in-place update before a clean install.
-            bash tools/ci/release_startup_smoke.sh \
-              app/build/outputs/apk/release/GEL_iDoctor_v5.1_signed.apk \
-              "$RUNNER_TEMP/startup-evidence/v51-upgrade"
-            echo "V51_UPGRADE_STARTUP=PASS"
-            adb uninstall com.gel.iDoctor
-          fi
-          bash tools/ci/release_startup_smoke.sh \
-            app/build/outputs/apk/release/GEL_iDoctor_v5.1_signed.apk \
-            "$RUNNER_TEMP/startup-evidence/v51"
-          echo "V51_RELEASE_STARTUP=PASS"
+          bash tools/ci/verify_release_emulators.sh \
+            app/build/outputs/apk/release/GEL_iDoctor_v5.2_signed.apk
 
       - name: Upload startup diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v51_startup_evidence
+          name: GEL_iDoctor_v52_startup_evidence
           path: |
             ${{ runner.temp }}/startup-evidence
-            ${{ runner.temp }}/emulator.log
-            ${{ runner.temp }}/smoke-abis.txt
+            ${{ runner.temp }}/emulator-*.log
+            ${{ runner.temp }}/v52-packaged-manifest.xml
+            ${{ runner.temp }}/v52-apk-manifest.txt
+            ${{ runner.temp }}/scanner-qr.png
           if-no-files-found: warn
 
       - name: Generate release-candidate evidence
@@ -379,12 +357,12 @@ jobs:
           source tools/webrtc/webrtc-promoted.env
 
           {
-            echo "GEL iDoctor v51 release-candidate evidence"
+            echo "GEL iDoctor v52 release-candidate evidence"
             echo
             echo "git_commit=$GITHUB_SHA"
             echo "application_id=com.gel.iDoctor"
-            echo "version_code=51"
-            echo "version_name=5.1"
+            echo "version_code=52"
+            echo "version_name=5.2"
             echo "target_sdk=36"
             echo "webrtc_tag=$WEBRTC_PROMOTED_TAG"
             echo "webrtc_production_sha256=$WEBRTC_PRODUCTION_SHA256"
@@ -396,31 +374,34 @@ jobs:
             echo "packaged_webrtc_build_ids=PASS"
             echo "bundletool_validate=PASS"
             echo "release_identity=PASS"
-            echo "v50_startup_regression_requested=${{ inputs.reproduce_v50 }}"
-            echo "v51_release_startup_android_11=PASS"
-          } > "$GITHUB_WORKSPACE/V51-RELEASE-CANDIDATE-EVIDENCE.txt"
+            echo "upgrade_baseline_artifact_id=$UPGRADE_ARTIFACT_ID"
+            echo "release_startup_android_11_and_16=PASS"
+            echo "scanner_camera_qr_portrait_landscape_android_11_and_16=PASS"
+            echo "packaged_manifest_orientation=PASS"
+          } > "$GITHUB_WORKSPACE/V52-RELEASE-CANDIDATE-EVIDENCE.txt"
 
-          cat "$GITHUB_WORKSPACE/V51-RELEASE-CANDIDATE-EVIDENCE.txt"
+          cat "$GITHUB_WORKSPACE/V52-RELEASE-CANDIDATE-EVIDENCE.txt"
 
-      - name: Upload signed v51 APK
+      - name: Upload signed v52 APK
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v51_APK
-          path: app/build/outputs/apk/release/GEL_iDoctor_v5.1_signed.apk
+          name: GEL_iDoctor_v52_APK
+          path: app/build/outputs/apk/release/GEL_iDoctor_v5.2_signed.apk
           if-no-files-found: error
 
-      - name: Upload signed v51 AAB
+      - name: Upload signed v52 AAB
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v51_AAB
-          path: app/build/outputs/bundle/release/GEL_iDoctor_v5.1_signed.aab
+          name: GEL_iDoctor_v52_AAB
+          path: app/build/outputs/bundle/release/GEL_iDoctor_v5.2_signed.aab
           if-no-files-found: error
 
-      - name: Upload v51 release evidence and mapping
+      - name: Upload v52 release evidence and mapping
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v51_release_evidence
+          name: GEL_iDoctor_v52_release_evidence
           path: |
-            V51-RELEASE-CANDIDATE-EVIDENCE.txt
+            V52-RELEASE-CANDIDATE-EVIDENCE.txt
             app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
+
