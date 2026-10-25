@@ -2,6 +2,11 @@ name: v51 Release Candidate — APK + AAB + Crashlytics Symbols
 
 on:
   workflow_dispatch:
+    inputs:
+      reproduce_v50:
+        description: Reproduce the archived v50 crash before testing the fix
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -300,14 +305,20 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          REPRODUCE_V50: ${{ inputs.reproduce_v50 }}
         run: |
           set -euo pipefail
           sdkmanager "emulator" "system-images;android-30;google_apis;x86_64"
           sudo chmod 666 /dev/kvm
-          echo no | avdmanager create avd --name gel_release_smoke --package "system-images;android-30;google_apis;x86_64" --force
+          export ANDROID_USER_HOME="$RUNNER_TEMP/gel-android-user"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | avdmanager create avd --name gel_release_smoke --package "system-images;android-30;google_apis;x86_64" --path "$ANDROID_AVD_HOME/gel_release_smoke.avd" --force
+          "$ANDROID_HOME/emulator/emulator" -list-avds | tee "$RUNNER_TEMP/smoke-avds.txt"
+          grep -Fx gel_release_smoke "$RUNNER_TEMP/smoke-avds.txt"
           "$ANDROID_HOME/emulator/emulator" -avd gel_release_smoke -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > "$RUNNER_TEMP/emulator.log" 2>&1 &
-          trap 'adb emu kill || true' EXIT
-          adb wait-for-device
+          trap 'cat "$RUNNER_TEMP/emulator.log"; timeout 10 adb emu kill || true' EXIT
+          timeout 120 adb wait-for-device
           booted=false
           for attempt in $(seq 1 120); do
             if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; then booted=true; break; fi
@@ -318,26 +329,30 @@ jobs:
           adb shell getprop ro.product.cpu.abilist | tee "$RUNNER_TEMP/smoke-abis.txt"
           grep -q arm64-v8a "$RUNNER_TEMP/smoke-abis.txt"
 
-          # Reproduce the actual shipped v50 crash before accepting the fix.
-          curl --fail --location --retry 3 \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/gdiolitsis/GEL_iDoctor/actions/artifacts/12580210846/zip" \
-            -o "$RUNNER_TEMP/v50-baseline.zip"
-          mkdir -p "$RUNNER_TEMP/v50-baseline" "$RUNNER_TEMP/startup-evidence"
-          unzip -q "$RUNNER_TEMP/v50-baseline.zip" -d "$RUNNER_TEMP/v50-baseline"
-          BASELINE="$(find "$RUNNER_TEMP/v50-baseline" -name '*.apk' -print -quit)"
-          if bash tools/ci/release_startup_smoke.sh "$BASELINE" "$RUNNER_TEMP/startup-evidence/v50"; then
-            echo "ERROR: v50 did not reproduce the reported startup failure"
-            exit 1
+          mkdir -p "$RUNNER_TEMP/startup-evidence"
+          # This historical artifact is optional so expiry cannot block future releases.
+          if [ "$REPRODUCE_V50" = true ]; then
+            # Reproduce the actual shipped v50 crash before accepting the fix.
+            curl --fail --location --retry 3 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/gdiolitsis/GEL_iDoctor/actions/artifacts/12580210846/zip" \
+              -o "$RUNNER_TEMP/v50-baseline.zip"
+            mkdir -p "$RUNNER_TEMP/v50-baseline" "$RUNNER_TEMP/startup-evidence"
+            unzip -q "$RUNNER_TEMP/v50-baseline.zip" -d "$RUNNER_TEMP/v50-baseline"
+            BASELINE="$(find "$RUNNER_TEMP/v50-baseline" -name '*.apk' -print -quit)"
+            if bash tools/ci/release_startup_smoke.sh "$BASELINE" "$RUNNER_TEMP/startup-evidence/v50"; then
+              echo "ERROR: v50 did not reproduce the reported startup failure"
+              exit 1
+            fi
+            grep -F "Failed to create an instance of class" "$RUNNER_TEMP/startup-evidence/v50/logcat.txt"
+            grep -F "WorkDatabase" "$RUNNER_TEMP/startup-evidence/v50/logcat.txt"
+            adb uninstall com.gel.iDoctor
+            echo "V50_REGRESSION_REPRODUCED=PASS"
           fi
-          grep -F "Failed to create an instance of class" "$RUNNER_TEMP/startup-evidence/v50/logcat.txt"
-          grep -F "WorkDatabase" "$RUNNER_TEMP/startup-evidence/v50/logcat.txt"
-          adb uninstall com.gel.iDoctor
           bash tools/ci/release_startup_smoke.sh \
             app/build/outputs/apk/release/GEL_iDoctor_v5.1_signed.apk \
             "$RUNNER_TEMP/startup-evidence/v51"
-          echo "V50_REGRESSION_REPRODUCED=PASS"
           echo "V51_RELEASE_STARTUP=PASS"
 
       - name: Upload startup diagnostic evidence
@@ -376,7 +391,7 @@ jobs:
             echo "packaged_webrtc_build_ids=PASS"
             echo "bundletool_validate=PASS"
             echo "release_identity=PASS"
-            echo "v50_startup_regression_reproduced=PASS"
+            echo "v50_startup_regression_requested=${{ inputs.reproduce_v50 }}"
             echo "v51_release_startup_android_11=PASS"
           } > "$GITHUB_WORKSPACE/V51-RELEASE-CANDIDATE-EVIDENCE.txt"
 
