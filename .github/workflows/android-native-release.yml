@@ -315,6 +315,14 @@ jobs:
             app/build/outputs/apk/release/GEL_iDoctor_v5.2_signed.apk --file AndroidManifest.xml \
             > "$RUNNER_TEMP/v52-apk-manifest.txt"
 
+      - name: Preserve internal candidate for release diagnostics
+        uses: actions/upload-artifact@v6
+        with:
+          name: GEL_iDoctor_v52_UNVERIFIED_candidate
+          path: app/build/outputs/apk/release/GEL_iDoctor_v5.2_signed.apk
+          retention-days: 7
+          if-no-files-found: error
+
       - name: Verify startup, upgrade and camera QR scanning on Android 11 and 16
         timeout-minutes: 35
         shell: bash
@@ -392,3 +400,4 @@ jobs:
             V52-RELEASE-CANDIDATE-EVIDENCE.txt
             app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
+
