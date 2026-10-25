@@ -68,6 +68,21 @@
 
 
 # ============================================================
+# WORKMANAGER / ROOM — REFLECTIVE CONSTRUCTION
+# ============================================================
+# Room loads this generated implementation by name. AGP 9 / R8
+# must retain its no-argument constructor and generated implementation.
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }
+
+# WorkManager's default factories instantiate these through reflection.
+-keep class * extends androidx.work.ListenableWorker {
+    <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keep class * extends androidx.work.InputMerger {
+    <init>();
+}
+
+# ============================================================
 # IMPORTANT
 # ============================================================
 # No blanket rules for:

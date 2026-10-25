@@ -28,8 +28,8 @@ android {
         applicationId = "com.gel.iDoctor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 50
-        versionName = "5.0"
+        versionCode = 51
+        versionName = "5.1"
 
 // ✅ SINGLE SOURCE OF ABI TRUTH
         ndk {

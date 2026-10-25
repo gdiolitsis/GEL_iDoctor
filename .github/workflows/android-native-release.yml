@@ -1,13 +1,14 @@
-name: v50 Release Candidate — APK + AAB + Crashlytics Symbols
+name: v51 Release Candidate — APK + AAB + Crashlytics Symbols
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: gel-idoctor-v50-release-candidate
+  group: gel-idoctor-v51-release-candidate
   cancel-in-progress: true
 
 jobs:
@@ -91,7 +92,7 @@ jobs:
 
           echo "CRASHLYTICS_RELEASE_TASKS=PASS"
 
-      - name: Build v50 release APK and AAB
+      - name: Build v51 release APK and AAB
         shell: bash
         run: |
           set -euxo pipefail
@@ -108,7 +109,7 @@ jobs:
           test -s app/build/outputs/bundle/release/app-release.aab
           find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print
 
-          echo "V50_RELEASE_BUILD=PASS"
+          echo "V51_RELEASE_BUILD=PASS"
 
       - name: Upload Crashlytics Java and native symbols
         shell: bash
@@ -225,20 +226,20 @@ jobs:
             -f \
             4 \
             "$APK" \
-            "$APK_DIR/GEL_iDoctor_v5.0_aligned.apk"
+            "$APK_DIR/GEL_iDoctor_v5.1_aligned.apk"
 
           "$BUILD_TOOLS/apksigner" sign \
             --ks "$GITHUB_WORKSPACE/gel-keystore.jks" \
             --ks-pass pass:"$KEYSTORE_PASSWORD" \
             --key-pass pass:"$KEY_ALIAS_PASSWORD" \
             --ks-key-alias "$KEY_ALIAS" \
-            --out "$APK_DIR/GEL_iDoctor_v5.0_signed.apk" \
-            "$APK_DIR/GEL_iDoctor_v5.0_aligned.apk"
+            --out "$APK_DIR/GEL_iDoctor_v5.1_signed.apk" \
+            "$APK_DIR/GEL_iDoctor_v5.1_aligned.apk"
 
           "$BUILD_TOOLS/apksigner" verify \
             --verbose \
             --print-certs \
-            "$APK_DIR/GEL_iDoctor_v5.0_signed.apk"
+            "$APK_DIR/GEL_iDoctor_v5.1_signed.apk"
 
           echo "SIGNED_APK_VERIFIED=PASS"
 
@@ -253,7 +254,7 @@ jobs:
 
           AAB_DIR="$GITHUB_WORKSPACE/app/build/outputs/bundle/release"
           SOURCE="$AAB_DIR/app-release.aab"
-          SIGNED="$AAB_DIR/GEL_iDoctor_v5.0_signed.aab"
+          SIGNED="$AAB_DIR/GEL_iDoctor_v5.1_signed.aab"
 
           test -s "$SOURCE"
           cp "$SOURCE" "$SIGNED"
@@ -276,24 +277,79 @@ jobs:
           echo "SIGNED_AAB_VERIFIED=PASS"
           echo "BUNDLETOOL_VALIDATE=PASS"
 
-      - name: Verify v50 Play release identity
+      - name: Verify v51 Play release identity
         shell: bash
         run: |
           set -euxo pipefail
 
           BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
-          APK="$GITHUB_WORKSPACE/app/build/outputs/apk/release/GEL_iDoctor_v5.0_signed.apk"
+          APK="$GITHUB_WORKSPACE/app/build/outputs/apk/release/GEL_iDoctor_v5.1_signed.apk"
 
           "$BUILD_TOOLS/aapt2" dump badging "$APK" \
-            | tee "$RUNNER_TEMP/v50-badging.txt"
+            | tee "$RUNNER_TEMP/v51-badging.txt"
 
-          grep -F "package: name='com.gel.iDoctor' versionCode='50' versionName='5.0'" \
-            "$RUNNER_TEMP/v50-badging.txt"
+          grep -F "package: name='com.gel.iDoctor' versionCode='51' versionName='5.1'" \
+            "$RUNNER_TEMP/v51-badging.txt"
 
-          grep -Fx "minSdkVersion:'26'" "$RUNNER_TEMP/v50-badging.txt"
-          grep -F "targetSdkVersion:'36'" "$RUNNER_TEMP/v50-badging.txt"
+          grep -Fx "minSdkVersion:'26'" "$RUNNER_TEMP/v51-badging.txt"
+          grep -F "targetSdkVersion:'36'" "$RUNNER_TEMP/v51-badging.txt"
 
-          echo "V50_PLAY_IDENTITY=PASS"
+          echo "V51_PLAY_IDENTITY=PASS"
+
+      - name: Verify v50 regression and v51 release startup on Android 11
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sdkmanager "emulator" "system-images;android-30;google_apis;x86_64"
+          sudo chmod 666 /dev/kvm
+          echo no | avdmanager create avd --name gel_release_smoke --package "system-images;android-30;google_apis;x86_64" --force
+          "$ANDROID_HOME/emulator/emulator" -avd gel_release_smoke -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          trap 'adb emu kill || true' EXIT
+          adb wait-for-device
+          booted=false
+          for attempt in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; then booted=true; break; fi
+            sleep 2
+          done
+          test "$booted" = true
+          adb shell input keyevent 82
+          adb shell getprop ro.product.cpu.abilist | tee "$RUNNER_TEMP/smoke-abis.txt"
+          grep -q arm64-v8a "$RUNNER_TEMP/smoke-abis.txt"
+
+          # Reproduce the actual shipped v50 crash before accepting the fix.
+          curl --fail --location --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/gdiolitsis/GEL_iDoctor/actions/artifacts/12580210846/zip" \
+            -o "$RUNNER_TEMP/v50-baseline.zip"
+          mkdir -p "$RUNNER_TEMP/v50-baseline" "$RUNNER_TEMP/startup-evidence"
+          unzip -q "$RUNNER_TEMP/v50-baseline.zip" -d "$RUNNER_TEMP/v50-baseline"
+          BASELINE="$(find "$RUNNER_TEMP/v50-baseline" -name '*.apk' -print -quit)"
+          if bash tools/ci/release_startup_smoke.sh "$BASELINE" "$RUNNER_TEMP/startup-evidence/v50"; then
+            echo "ERROR: v50 did not reproduce the reported startup failure"
+            exit 1
+          fi
+          grep -F "Failed to create an instance of class" "$RUNNER_TEMP/startup-evidence/v50/logcat.txt"
+          grep -F "WorkDatabase" "$RUNNER_TEMP/startup-evidence/v50/logcat.txt"
+          adb uninstall com.gel.iDoctor
+          bash tools/ci/release_startup_smoke.sh \
+            app/build/outputs/apk/release/GEL_iDoctor_v5.1_signed.apk \
+            "$RUNNER_TEMP/startup-evidence/v51"
+          echo "V50_REGRESSION_REPRODUCED=PASS"
+          echo "V51_RELEASE_STARTUP=PASS"
+
+      - name: Upload startup diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: GEL_iDoctor_v51_startup_evidence
+          path: |
+            ${{ runner.temp }}/startup-evidence
+            ${{ runner.temp }}/emulator.log
+            ${{ runner.temp }}/smoke-abis.txt
+          if-no-files-found: warn
 
       - name: Generate release-candidate evidence
         shell: bash
@@ -303,12 +359,12 @@ jobs:
           source tools/webrtc/webrtc-promoted.env
 
           {
-            echo "GEL iDoctor v50 release-candidate evidence"
+            echo "GEL iDoctor v51 release-candidate evidence"
             echo
             echo "git_commit=$GITHUB_SHA"
             echo "application_id=com.gel.iDoctor"
-            echo "version_code=50"
-            echo "version_name=5.0"
+            echo "version_code=51"
+            echo "version_name=5.1"
             echo "target_sdk=36"
             echo "webrtc_tag=$WEBRTC_PROMOTED_TAG"
             echo "webrtc_production_sha256=$WEBRTC_PRODUCTION_SHA256"
@@ -320,29 +376,31 @@ jobs:
             echo "packaged_webrtc_build_ids=PASS"
             echo "bundletool_validate=PASS"
             echo "release_identity=PASS"
-          } > "$GITHUB_WORKSPACE/V50-RELEASE-CANDIDATE-EVIDENCE.txt"
+            echo "v50_startup_regression_reproduced=PASS"
+            echo "v51_release_startup_android_11=PASS"
+          } > "$GITHUB_WORKSPACE/V51-RELEASE-CANDIDATE-EVIDENCE.txt"
 
-          cat "$GITHUB_WORKSPACE/V50-RELEASE-CANDIDATE-EVIDENCE.txt"
+          cat "$GITHUB_WORKSPACE/V51-RELEASE-CANDIDATE-EVIDENCE.txt"
 
-      - name: Upload signed v50 APK
+      - name: Upload signed v51 APK
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v50_APK
-          path: app/build/outputs/apk/release/GEL_iDoctor_v5.0_signed.apk
+          name: GEL_iDoctor_v51_APK
+          path: app/build/outputs/apk/release/GEL_iDoctor_v5.1_signed.apk
           if-no-files-found: error
 
-      - name: Upload signed v50 AAB
+      - name: Upload signed v51 AAB
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v50_AAB
-          path: app/build/outputs/bundle/release/GEL_iDoctor_v5.0_signed.aab
+          name: GEL_iDoctor_v51_AAB
+          path: app/build/outputs/bundle/release/GEL_iDoctor_v5.1_signed.aab
           if-no-files-found: error
 
-      - name: Upload v50 release evidence and mapping
+      - name: Upload v51 release evidence and mapping
         uses: actions/upload-artifact@v6
         with:
-          name: GEL_iDoctor_v50_release_evidence
+          name: GEL_iDoctor_v51_release_evidence
           path: |
-            V50-RELEASE-CANDIDATE-EVIDENCE.txt
+            V51-RELEASE-CANDIDATE-EVIDENCE.txt
             app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
