@@ -75,7 +75,7 @@ for rotation, label in [(0, "portrait"), (1, "landscape")]:
                 break
             activities = adb("shell", "dumpsys", "activity", "activities")
             if re.search(r"(?:mResumedActivity|topResumedActivity).*ConnectToTechnicianActivity", activities):
-                swipe(False)
+                swipe(True)
         assert decoded, "Camera QR decode did not return the expected invalid-session result"
         evidence(folder)
         assert "Process: " + PKG + "," not in (folder / "logcat.txt").read_text(), "App crash recorded"
@@ -86,3 +86,4 @@ for rotation, label in [(0, "portrait"), (1, "landscape")]:
     finally:
         evidence(folder)
 print("SCANNER_ORIENTATION_SMOKE=PASS")
+
