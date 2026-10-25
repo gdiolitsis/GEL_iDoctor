@@ -23,8 +23,19 @@ for api in 30 36; do
   image="system-images;android-$api;google_apis;x86_64"
   sdkmanager "$image"
   echo no | avdmanager create avd --name "$name" --package "$image" --path "$ANDROID_AVD_HOME/$name.avd" --force
+  if [ "$api" = 36 ]; then
+    # Configure tablet dimensions before boot; avoid resizing an already
+    # running 320x640 display into a much larger software-rendered surface.
+    python3 - "$ANDROID_AVD_HOME/$name.avd/config.ini" <<'PYCONFIG'
+import pathlib, sys
+path = pathlib.Path(sys.argv[1])
+values = dict(line.split("=", 1) for line in path.read_text().splitlines() if "=" in line)
+values.update({"hw.lcd.width": "800", "hw.lcd.height": "1280", "hw.lcd.density": "160"})
+path.write_text("".join(key + "=" + value + "\n" for key, value in values.items()))
+PYCONFIG
+  fi
   "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx "$name"
-  "$ANDROID_HOME/emulator/emulator" -avd "$name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 2048 -camera-back "imagefile:$RUNNER_TEMP/scanner-qr.png" -camera-front none > "$RUNNER_TEMP/emulator-$api.log" 2>&1 &
+  "$ANDROID_HOME/emulator/emulator" -avd "$name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader -memory 3072 -camera-back "imagefile:$RUNNER_TEMP/scanner-qr.png" -camera-front none > "$RUNNER_TEMP/emulator-$api.log" 2>&1 &
   emulator_pid=$!
   if ! timeout 120 adb wait-for-device; then cat "$RUNNER_TEMP/emulator-$api.log"; exit 1; fi
   booted=false
@@ -49,10 +60,6 @@ for api in 30 36; do
     echo "V51_TO_V52_UPGRADE_STARTUP=PASS"
     adb uninstall com.gel.iDoctor
   fi
-  if [ "$api" = 36 ]; then
-    adb shell wm size 1600x2560
-    adb shell wm density 240
-  fi
   bash tools/ci/release_startup_smoke.sh "$apk" "$evidence/api-$api-fresh-v52"
   python3 tools/ci/scanner_smoke.py "$evidence/api-$api-scanner"
   echo "API_${api}_RELEASE_STARTUP_AND_SCANNER=PASS"
@@ -62,3 +69,4 @@ for api in 30 36; do
   sdkmanager --uninstall "$image"
 done
 trap - EXIT
+
