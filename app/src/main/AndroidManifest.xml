@@ -175,6 +175,14 @@
             android:exported="false"
             android:theme="@style/Theme.GEL.DarkGold" />
 
+        <!-- ZXing supplies a landscape-only default. Let the scanner follow
+             the device/window orientation, including large Android 16 screens.
+             ScanOptions already disables the library's runtime orientation lock. -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="unspecified"
+            tools:replace="android:screenOrientation" />
+
         <!-- MAIN -->
         <activity
             android:name=".MainActivity"
