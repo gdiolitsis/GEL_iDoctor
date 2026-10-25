@@ -347,8 +347,13 @@ jobs:
             fi
             grep -F "Failed to create an instance of class" "$RUNNER_TEMP/startup-evidence/v50/logcat.txt"
             grep -F "WorkDatabase" "$RUNNER_TEMP/startup-evidence/v50/logcat.txt"
-            adb uninstall com.gel.iDoctor
             echo "V50_REGRESSION_REPRODUCED=PASS"
+            # Preserve v50 data and verify the in-place update before a clean install.
+            bash tools/ci/release_startup_smoke.sh \
+              app/build/outputs/apk/release/GEL_iDoctor_v5.1_signed.apk \
+              "$RUNNER_TEMP/startup-evidence/v51-upgrade"
+            echo "V51_UPGRADE_STARTUP=PASS"
+            adb uninstall com.gel.iDoctor
           fi
           bash tools/ci/release_startup_smoke.sh \
             app/build/outputs/apk/release/GEL_iDoctor_v5.1_signed.apk \

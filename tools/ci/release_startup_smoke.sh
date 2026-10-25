@@ -6,11 +6,11 @@ apk="${1:?APK path required}"
 out="${2:?evidence directory required}"
 pkg=com.gel.iDoctor
 mkdir -p "$out"
-adb install -r "$apk"
+adb install --no-incremental -r "$apk"
 adb shell dumpsys package "$pkg" > "$out/package.txt"
-adb logcat -c
+adb logcat -b all -c
 cleanup() {
-  adb logcat -d -v threadtime > "$out/logcat.txt" || true
+  adb logcat -b all -d -v threadtime > "$out/logcat.txt" || true
   adb shell dumpsys activity activities > "$out/activities.txt" || true
   adb exec-out screencap -p > "$out/screen.png" || true
 }
