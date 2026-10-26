@@ -14,7 +14,23 @@ out = pathlib.Path(sys.argv[1])
 out.mkdir(parents=True, exist_ok=True)
 
 def adb(*args, binary=False, timeout=30):
-    return subprocess.check_output(["adb", *args], timeout=timeout, **({} if binary else {"text": True, "errors": "replace"}))
+    for attempt in range(2):
+        try:
+            return subprocess.check_output(
+                ["adb", *args], timeout=timeout, stderr=subprocess.PIPE,
+                **({} if binary else {"text": True, "errors": "replace"}))
+        except subprocess.CalledProcessError as error:
+            detail = error.stderr or b""
+            if isinstance(detail, bytes):
+                detail = detail.decode("utf-8", errors="replace")
+            if attempt or "device offline" not in detail:
+                raise
+            print("ADB_TRANSPORT_RECOVERY: reconnecting existing device", file=sys.stderr, flush=True)
+            subprocess.run(["adb", "reconnect", "offline"], check=True, timeout=10,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(["adb", "wait-for-device"], check=True, timeout=30,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
 
 def ui(path):
     adb("shell", "uiautomator", "dump", "/sdcard/gel-scanner-smoke.xml")

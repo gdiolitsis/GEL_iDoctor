@@ -40,6 +40,7 @@ for launch in 1 2 3; do
   done
 done
 cleanup
+trap - EXIT
 if grep -Fq "Process: $pkg," "$out/logcat.txt"; then
   echo "Release crash recorded in logcat"
   exit 1
