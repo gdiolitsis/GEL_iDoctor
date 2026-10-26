@@ -15,7 +15,16 @@ export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
 mkdir -p "$ANDROID_AVD_HOME"
 stop_emulator() {
   timeout 10 adb emu kill || true
-  if [ -n "${emulator_pid:-}" ]; then wait "$emulator_pid" || true; fi
+  if [ -n "${emulator_pid:-}" ]; then
+    for attempt in $(seq 1 10); do
+      if ! kill -0 "$emulator_pid" 2>/dev/null; then wait "$emulator_pid" || true; return; fi
+      sleep 1
+    done
+    kill "$emulator_pid" 2>/dev/null || true
+    sleep 1
+    kill -KILL "$emulator_pid" 2>/dev/null || true
+    wait "$emulator_pid" || true
+  fi
 }
 trap 'stop_emulator' EXIT
 for api in 30 36; do
@@ -34,8 +43,10 @@ values.update({"hw.lcd.width": "800", "hw.lcd.height": "1280", "hw.lcd.density":
 path.write_text("".join(key + "=" + value + "\n" for key, value in values.items()))
 PYCONFIG
   fi
+  port=$((5554 + (api == 36 ? 2 : 0)))
+  export ANDROID_SERIAL="emulator-$port"
   "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx "$name"
-  "$ANDROID_HOME/emulator/emulator" -avd "$name" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader -memory 3072 -camera-back "imagefile:$RUNNER_TEMP/scanner-qr.png" -camera-front none > "$RUNNER_TEMP/emulator-$api.log" 2>&1 &
+  "$ANDROID_HOME/emulator/emulator" -avd "$name" -port "$port" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader -feature -Vulkan -memory 3072 -camera-back "imagefile:$RUNNER_TEMP/scanner-qr.png" -camera-front none > "$RUNNER_TEMP/emulator-$api.log" 2>&1 &
   emulator_pid=$!
   if ! timeout 120 adb wait-for-device; then cat "$RUNNER_TEMP/emulator-$api.log"; exit 1; fi
   booted=false
