@@ -10,7 +10,7 @@ const reportId = 'a'.repeat(64), another = 'b'.repeat(64);
 const attemptId = '11111111-1111-1111-1111-111111111111';
 const attempt2 = '22222222-2222-2222-2222-222222222222';
 function setup() {
-  const docs = new Map(); const calls=[];
+  const docs = new Map(); const calls=[]; const logs=[];
   let purchase={purchaseState:0,consumptionState:0,acknowledgementState:0};
   let failFinalize=false; let chain=Promise.resolve();
   const ref = path => ({path,collection:name=>collection(path+'/'+name),get:async()=>snap(path)});
@@ -25,7 +25,7 @@ function setup() {
   }};
   const exports={};
   vm.runInNewContext(fs.readFileSync(require.resolve('../report-functions'),'utf8'),{
-    exports,Date,encodeURIComponent,
+    exports,Date,encodeURIComponent,console:{info:(...args)=>logs.push(args)},
     require:name=>({
       'firebase-functions/v2/https':{onCall:(options,fn)=>fn||options,HttpsError:class extends Error{constructor(code,message){super(message);this.code=code;}}},
       'firebase-admin/firestore':{getFirestore:()=>db},
@@ -47,8 +47,18 @@ function setup() {
   const finish=(success,id=reportId,attempt=attemptId)=>exports.finishReportExport(req({reportId:id,attemptId:attempt,success}));
   const balance=()=>exports.getReportEntitlements(req());
   docs.set('pro_paid_accounts/owner',{verifiedUntil:Date.now()+60000});
-  return {exports,docs,calls,req,buy,prepare,finish,balance,setPurchase:p=>{purchase=p;},failFinalize:()=>{failFinalize=true;}};
+  return {exports,docs,calls,logs,req,buy,prepare,finish,balance,setPurchase:p=>{purchase=p;},failFinalize:()=>{failFinalize=true;}};
 }
+test('Play connectivity probe logs acknowledgement without payload, purchase verification or ledger writes',async()=>{
+  const s=setup(); const before=[...s.docs];
+  const message={packageName:'com.gel.iDoctor',testNotification:{version:'1.0'},purchaseToken:'must-not-be-logged'};
+  await s.exports.handleReportPurchaseNotification({data:{message:{json:message}}});
+  assert.deepEqual(s.logs,[['RTDN test notification received successfully.']]);
+  assert.deepEqual([...s.docs],before);
+  assert.equal(s.calls.length,0);
+  await s.exports.handleReportPurchaseNotification({data:{message:{json:{...message,packageName:'another.app'}}}});
+  assert.equal(s.logs.length,1);
+});
 test('purchase grant survives restore and duplicate/concurrent token submissions credit once',async()=>{
   const s=setup();await Promise.all([s.buy(),s.buy(),s.buy()]);
   assert.equal((await s.balance()).credits,1);

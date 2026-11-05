@@ -116,6 +116,11 @@ exports.verifyReportPurchase = callable(async request => {
 exports.handleReportPurchaseNotification = onMessagePublished({topic:'gel-play-report-events',retry:true,timeoutSeconds:60}, async event => {
   const message = event.data.message.json;
   if (message.packageName !== PACKAGE) return;
+  if (message.testNotification) {
+    // Acknowledge Play's connectivity probe without logging the payload or touching purchases.
+    console.info('RTDN test notification received successfully.');
+    return;
+  }
   const notification = message.oneTimeProductNotification || message.voidedPurchaseNotification;
   const token = notification?.purchaseToken;
   if (typeof token !== 'string' || token.length < 10 || token.length > 4096) return;
