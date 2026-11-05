@@ -152,10 +152,7 @@ private static final String PREFS = "gel_prefs";
 private static final String KEY_PLATFORM = "platform_mode";
 
 // =========================================================
-// 30-DAY FULL DEVICE CHECK — GOOGLE PLAY PRODUCT
-// =========================================================
-private static final String GEL_30_DAY_PRODUCT_ID =
-        "gel_30_day_full_device_check";
+// Monthly PRO plans are selected through GelProPurchaseDialog.
 
 // =========================================================
 // LOCALE
@@ -2435,7 +2432,7 @@ private void changeLang(String code) {
 }
 
 // =========================================================
-// 30-DAY FULL DEVICE CHECK — €5 ONE-TIME ACCESS
+// MONTHLY PRO ACCESS — PREPAID OR AUTO-RENEWING
 // =========================================================
 private void setupCertificationAccess() {
 
@@ -2448,8 +2445,8 @@ private void setupCertificationAccess() {
     if (b instanceof TextView) {
         ((TextView) b).setText(
                 gr
-                        ? "30 ΗΜΕΡΕΣ ΠΛΗΡΗΣ ΕΛΕΓΧΟΣ ΣΥΣΚΕΥΗΣ • 5€"
-                        : "30-DAY FULL DEVICE CHECK • €5"
+                        ? "ΠΛΗΡΗΣ ΠΡΟΣΒΑΣΗ GEL PRO • 4,99€/μήνα"
+                        : "GEL PRO — FULL ACCESS • €4.99/month"
         );
     }
 
@@ -2457,100 +2454,7 @@ private void setupCertificationAccess() {
 }
 
 private void showCertificationAccessDialog() {
-
-    final boolean gr = AppLang.isGreek(this);
-
-    String titleText = gr
-            ? "30 ΗΜΕΡΕΣ ΠΛΗΡΗΣ ΕΛΕΓΧΟΣ ΣΥΣΚΕΥΗΣ"
-            : "30-DAY FULL DEVICE CHECK";
-
-    String messageText = gr
-            ? "Έλεγξε σωστά μια συσκευή πριν την αγοράσεις.\n\n"
-              + "• Πλήρης πρόσβαση στα διαγνωστικά εργαλεία για 30 ημέρες\n"
-              + "• Περιλαμβάνει Labs 14, 28 και 30\n"
-              + "• Πιστοποίηση / τελική αξιολόγηση συσκευής\n"
-              + "• 5€ εφάπαξ πληρωμή\n"
-              + "• Χωρίς συνδρομή και χωρίς αυτόματη ανανέωση\n\n"
-              + "Η αγορά θα πραγματοποιείται αποκλειστικά μέσω Google Play."
-            : "Check a device properly before you buy it.\n\n"
-              + "• Full diagnostic access for 30 days\n"
-              + "• Includes Labs 14, 28 and 30\n"
-              + "• Device certification / final assessment\n"
-              + "• €5 one-time purchase\n"
-              + "• No subscription and no auto-renewal\n\n"
-              + "Purchase will be handled exclusively through Google Play.";
-
-    LinearLayout box = new LinearLayout(this);
-    box.setOrientation(LinearLayout.VERTICAL);
-    box.setPadding(dp(20), dp(18), dp(20), dp(18));
-
-    GradientDrawable bg = new GradientDrawable();
-    bg.setColor(0xFF080808);
-    bg.setCornerRadius(dp(18));
-    bg.setStroke(dp(3), 0xFFFFD700);
-    box.setBackground(bg);
-
-    TextView title = new TextView(this);
-    title.setText(titleText);
-    title.setTextColor(Color.WHITE);
-    title.setTextSize(19f);
-    title.setTypeface(Typeface.DEFAULT_BOLD);
-    title.setGravity(Gravity.CENTER);
-    title.setPadding(dp(4), 0, dp(4), dp(14));
-    box.addView(title);
-
-    TextView message = new TextView(this);
-    message.setText(messageText);
-    message.setTextColor(0xFF00FF9C);
-    message.setTextSize(15f);
-    message.setLineSpacing(0f, 1.18f);
-    message.setPadding(dp(4), 0, dp(4), dp(16));
-    box.addView(message);
-
-    Button ok = new com.gel.cleaner.GelButton(this);
-    ok.setText("OK");
-    ok.setAllCaps(false);
-    ok.setTextColor(0xFF00FF7F);
-    ok.setTextSize(17f);
-    ok.setTypeface(Typeface.DEFAULT_BOLD);
-    ok.setGravity(Gravity.CENTER);
-    ok.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-    ok.setIncludeFontPadding(false);
-    ok.setPadding(dp(12), 0, dp(12), 0);
-    ok.setMinHeight(0);
-    ok.setMinimumHeight(0);
-    ok.setBackgroundResource(R.drawable.gel_btn_neon_outline);
-
-    LinearLayout.LayoutParams okLp =
-            new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(76)
-            );
-    okLp.setMargins(0, dp(4), 0, 0);
-    box.addView(ok, okLp);
-
-    ScrollView informationScroll = new ScrollView(this);
-    informationScroll.addView(box);
-    AlertDialog dialog = new AlertDialog.Builder(this)
-            .setView(informationScroll)
-            .setCancelable(true)
-            .create();
-
-    ok.setOnClickListener(v -> dialog.dismiss());
-
-    dialog.show();
-
-    com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
-
-    if (dialog.getWindow() != null) {
-        dialog.getWindow().setBackgroundDrawable(
-                new ColorDrawable(Color.TRANSPARENT)
-        );
-        dialog.getWindow().setLayout(
-                (int) (getResources().getDisplayMetrics().widthPixels * 0.94f),
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-    }
+    GelProPurchaseDialog.show(this, proRestoreBilling);
 }
 
 // =========================================================

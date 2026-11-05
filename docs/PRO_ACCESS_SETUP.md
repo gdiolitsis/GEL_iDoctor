@@ -36,3 +36,14 @@ Run `./gradlew testDebugUnitTest` for Greek/English, font scales 1/1.5/2 and nar
 ## Dependency security maintenance (2026-11-05)
 
 Firebase Admin 14.5.0, Firebase Functions 7.4.0 and Google Auth Library 11.3.3 replace the vulnerable dependency chains. The legacy Firestore API package still uses google-gax 5.0.8, so rimraf is overridden to 6.1.4 (patched glob/minimatch chain). A top-level rimraf override is required: the version-scoped parent override was accepted by npm 11/12 but made npm 10 reject the lockfile during Cloud Build. CI installs the lockfile, audits at moderate severity and loads the Functions module under Node 22 with npm 10.9.4 before running the access tests.
+
+
+## Monthly access and report personalisation
+
+Both base plans belong to subscription `gel_pro_monthly`: `monthly` is auto-renewing P1M; `prepaid-monthly` is prepaid P1M without automatic renewal. Configure both at EUR 4.99 in Play Console before testing. The app selects the exact base plan and never substitutes another renewal type. Do not use a fixed 30/31-day expiry: server verification uses Play expiryTime for either plan.
+
+Active PRO includes all labs and unlimited GEL-branded report exports. `gel_single_report` is a EUR 4.99 consumable for one personalised report; `gel_custom_reports` is a EUR 29.99 non-consumable for unlimited personalisation while PRO is active. Both report purchases require active PRO. Existing unlimited ownership is retained when PRO expires. Gift/tester PRO is accepted as feature access, avoiding an unnecessary paid subscription for authorised testers.
+
+A successful single report export records its content/profile identity alongside the credit debit. Retrying the same content/profile does not debit again; changed content/profile is another report. Failed/cancelled exports do not invoke the debit. Single credits currently use the direct PDF export; the Android HTML print flow cannot confirm successful file creation and remains excluded from credit consumption. Credits and report identities are currently device-local; reinstall/cross-device recovery and server-side one-time purchase validation remain release blockers requiring additional implementation.
+
+Manual trial: prepaid purchase/expiry/restore, recurring purchase/cancellation/expiry, no-PRO export denied even with credits, GEL-only branding with PRO, single purchase success/cancel/error, successful PDF retry without extra debit, changed report requires another credit, unlimited restore after PRO expires and is renewed, Greek/English at font scale 2 and narrow display. No Play rollout until these checks and product configuration are completed.

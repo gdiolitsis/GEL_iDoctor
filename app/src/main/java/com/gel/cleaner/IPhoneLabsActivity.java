@@ -132,7 +132,7 @@ private boolean looksCorruptedPanic(String text) {
                         : "The feature “" + feature + "” is available with GEL PRO.\n\nSubscription: €4.99 / month"))
                 .setNegativeButton(gr ? "Όχι τώρα" : "Not now", null)
                 // Temporary until Google Play Billing purchase flow is connected.
-                .setPositiveButton("GEL PRO", null)
+                .setPositiveButton("GEL PRO", (d, w) -> startActivity(new android.content.Intent(this, GelProAccountActivity.class)))
                 .show();
     }
 

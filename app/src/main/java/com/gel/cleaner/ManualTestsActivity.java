@@ -1071,7 +1071,7 @@ private boolean oldKeepScreenOn = false;
         notNowBtn.setOnClickListener(v -> d.dismiss());
 
         // Temporary until Google Play Billing purchase flow is connected.
-        proBtn.setOnClickListener(v -> d.dismiss());
+        proBtn.setOnClickListener(v -> { d.dismiss(); startActivity(new android.content.Intent(this, GelProAccountActivity.class)); });
 
         d.setOnKeyListener((dialog, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_BACK &&
