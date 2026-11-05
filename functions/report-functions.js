@@ -113,7 +113,7 @@ exports.verifyReportPurchase = callable(async request => {
   return verifyForAccount(uid, request.data?.productId, request.data?.purchaseToken);
 });
 // Configure Play RTDN to this topic. Only Google's Play notification service gets publish rights.
-exports.handleReportPurchaseNotification = onMessagePublished({topic:'google-play-report-events',retry:true,timeoutSeconds:60}, async event => {
+exports.handleReportPurchaseNotification = onMessagePublished({topic:'gel-play-report-events',retry:true,timeoutSeconds:60}, async event => {
   const message = event.data.message.json;
   if (message.packageName !== PACKAGE) return;
   const notification = message.oneTimeProductNotification || message.voidedPurchaseNotification;

@@ -29,7 +29,11 @@ function setup() {
     require:name=>({
       'firebase-functions/v2/https':{onCall:(options,fn)=>fn||options,HttpsError:class extends Error{constructor(code,message){super(message);this.code=code;}}},
       'firebase-admin/firestore':{getFirestore:()=>db},
-      'firebase-functions/v2/pubsub':{onMessagePublished:(topic,fn)=>fn},
+      'firebase-functions/v2/pubsub':{onMessagePublished:(options,fn)=>{
+        assert.match(options.topic,/^[A-Za-z][A-Za-z0-9._~+%-]{2,254}$/);
+        assert.equal(options.topic.startsWith('goog'),false,'Pub/Sub reserves the goog prefix');
+        return fn;
+      }},
       'node:crypto':crypto,'./pro-policy':require('../pro-policy'),
       'google-auth-library':{GoogleAuth:class{async getClient(){return {request:async options=>{
         calls.push(options);if(options.method==='POST'&&failFinalize)throw {response:{status:503}};
