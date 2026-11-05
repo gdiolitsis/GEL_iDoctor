@@ -12,8 +12,13 @@
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "firebase-admin": "14.2.0",
-    "firebase-functions": "7.3.2",
-    "google-auth-library": "10.5.0"
+    "firebase-admin": "14.5.0",
+    "firebase-functions": "7.4.0",
+    "google-auth-library": "11.3.3"
+  },
+  "overrides": {
+    "google-gax@5.0.8": {
+      "rimraf": "6.1.4"
+    }
   }
 }

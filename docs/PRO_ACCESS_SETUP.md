@@ -11,7 +11,7 @@ This branch is preparation, not a deployed or Play-verified release.
 
 ## Required cloud configuration BEFORE shipping
 
-1. Firebase Authentication: enable Google provider for `gel-idoctor`; configure support email. Add the Play App Signing SHA fingerprints (and debug fingerprints only for debug testing). Download the updated `app/google-services.json`. The repository's current configuration has no OAuth clients, so Google sign-in intentionally reports unavailable until replaced.
+1. Firebase Authentication: enable Google provider for `gel-idoctor`; configure support email. Add the Play App Signing SHA fingerprints (and debug fingerprints only for debug testing). Download the updated `app/google-services.json`. The configuration now includes the supplied Play SHA-1 and Android/web OAuth clients. Live sign-in still requires a new Play-installed build.
 2. Enable Google Play Android Developer API. Grant the deployed functions runtime service account only the required app-scoped permission to read purchases/subscriptions for `com.gel.iDoctor`. Do not put a service-account key into the Android app or Git.
 3. From `functions/`, run `npm ci`, `npm test`; deploy new callables `getGiftProEntitlement`, `verifyGelProPurchase`, `deleteProGoogleAccount` with a trusted Firebase administrator. Existing Firestore default-deny rules already prevent client reads/writes of gifts and entitlements. No public admin endpoint is provided.
 4. With trusted Application Default Credentials for this project, manage gifts:
@@ -32,3 +32,7 @@ This branch is preparation, not a deployed or Play-verified release.
 All app-owned XML `Button` tags and programmatic `new Button` constructions use `GelButton`, which wraps text, preserves system font scaling and grows vertically. Explicit minima preserve touch targets. Platform/AppCompat dialog buttons receive the same fit policy after show. Image/icon controls and compound controls are deliberately unchanged. The long 30-day information popup scrolls. Speed Test now converts integer dp arguments to physical pixels rather than accidentally selecting the inherited non-density overload.
 
 Run `./gradlew testDebugUnitTest` for Greek/English, font scales 1/1.5/2 and narrow-width text measurement checks. Physical-device visual testing is still required for OEM themes, landscape, dialog reachability and foldables; static coverage does not prove every screen visually correct.
+
+## Dependency security maintenance (2026-11-05)
+
+Firebase Admin 14.5.0, Firebase Functions 7.4.0 and Google Auth Library 11.3.3 replace the vulnerable dependency chains. The legacy Firestore API package still uses google-gax 5.0.8, so its rimraf dependency is narrowly overridden to 6.1.4 (patched glob/minimatch chain). No global major-version override is used. CI installs the lockfile, audits at moderate severity and loads the Functions module under Node 22 before running the access tests.
