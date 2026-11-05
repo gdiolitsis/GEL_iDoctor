@@ -121,7 +121,7 @@ public class ServiceReportActivity extends GELAutoActivityHook {
                             Toast.LENGTH_LONG).show();
                     if (pendingSingleReportExport) {
                         pendingSingleReportExport = false;
-                        startEntitledExport();
+                        prepareReportExport(1);
                     }
                 });
             }
@@ -271,6 +271,9 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
     private int reportBrandingChoice = 0; // 0 GEL, 1 single report, 2 unlimited
     private String singleReportIdentity = "";
+    private String exportAttempt = "";
+    private String exportOwner = "";
+    private boolean reportServerAuthorised;
 
     private void beginReportExport(boolean html) {
         pendingHtmlExport = html;
@@ -279,25 +282,51 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
     private void prepareReportExport(int choice) {
         reportBrandingChoice = choice;
+        reportServerAuthorised = false;
         if (billingManager == null || !billingManager.isGelProActive()) {
             if (billingManager != null) billingManager.launchGelProPurchase(this);
             return;
         }
-        if (choice == 2 && !billingManager.isCustomReportsActive()) {
-            billingManager.launchCustomReportsPurchase(this);
-            return;
-        }
-        singleReportIdentity = reportIdentity();
-        if (choice == 1 && !billingManager.hasSingleReportCredit()
-                && !billingManager.isReportPreviouslyExported(singleReportIdentity)) {
-            pendingSingleReportExport = true;
-            billingManager.launchSingleReportPurchase(this);
-            return;
-        }
         useProfessionalBrandingForCurrentExport = choice != 0;
         useSingleReportCreditForCurrentExport = choice == 1;
+        if (choice == 0) { continuePreparedExport(); return; }
+        if (GelReportStore.uid().isEmpty()) {
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Συνδεθείτε με Google για αγορά και επαναφορά εξατομικευμένων αναφορών."
+                    : "Sign in with Google for personalised report purchases and recovery.", Toast.LENGTH_LONG).show();
+            startActivity(new android.content.Intent(this, GelProAccountActivity.class)); return;
+        }
+        singleReportIdentity = reportIdentity();
+        exportAttempt = java.util.UUID.randomUUID().toString();
+        exportOwner = GelReportStore.uid();
+        final String identity = singleReportIdentity;
+        final String attempt = exportAttempt;
+        lockExportUI(true);
+        GelReportStore.prepare(this, identity, attempt, choice == 2, (ok,code,message) -> {
+            lockExportUI(false);
+            if (isFinishing()) return;
+            if (!ok) {
+                if (choice == 1 && "RESOURCE_EXHAUSTED".equals(code)) {
+                    pendingSingleReportExport = true; billingManager.launchSingleReportPurchase(this);
+                } else if (choice == 2 && "PERMISSION_DENIED".equals(code)) billingManager.launchCustomReportsPurchase(this);
+                else Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                return;
+            }
+            reportServerAuthorised = true;
+            continuePreparedExport();
+        });
+    }
+
+    private void continuePreparedExport() {
         if (GELServiceLog.isEmpty()) showEmptyReportOptionsDialog();
         else startEntitledExport();
+    }
+
+    private void finishSingleReport(boolean success) {
+        if (!useSingleReportCreditForCurrentExport) return;
+        GelReportStore.finish(this, singleReportIdentity, exportAttempt, exportOwner, success);
+        useSingleReportCreditForCurrentExport = false;
+        reportServerAuthorised = false;
     }
 
     private String reportIdentity() {
@@ -330,19 +359,17 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
         // Re-check the paid export entitlement immediately before export.
         if (!gelProActive) {
+            finishSingleReport(false);
             useSingleReportCreditForCurrentExport = false;
             useProfessionalBrandingForCurrentExport = false;
             showPersonalisedReportPurchaseDialog();
             return;
         }
 
-        singleReportIdentity = reportIdentity();
-        if (reportBrandingChoice == 2 && !unlimitedPersonalisation) {
-            showPersonalisedReportPurchaseDialog(); return;
-        }
-        if (reportBrandingChoice == 1 && !singleReportCredit
-                && !billingManager.isReportPreviouslyExported(singleReportIdentity)) {
-            showPersonalisedReportPurchaseDialog(); return;
+        if (reportBrandingChoice != 0 && (!reportServerAuthorised
+                || !exportOwner.equals(GelReportStore.uid()) || !singleReportIdentity.equals(reportIdentity()))) {
+            finishSingleReport(false);
+            prepareReportExport(reportBrandingChoice); return;
         }
         useProfessionalBrandingForCurrentExport = reportBrandingChoice != 0;
         useSingleReportCreditForCurrentExport = reportBrandingChoice == 1;
@@ -375,24 +402,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     }
 
     private void consumeSingleReportCreditIfNeeded() {
-        if (!useSingleReportCreditForCurrentExport) {
-            useProfessionalBrandingForCurrentExport = false;
-            return;
-        }
-
-        useSingleReportCreditForCurrentExport = false;
+        finishSingleReport(true);
         useProfessionalBrandingForCurrentExport = false;
-
-        if (billingManager != null) {
-            boolean consumed = billingManager.consumeSingleReportCreditForReport(singleReportIdentity);
-            if (!consumed) {
-                Toast.makeText(this,
-                        AppLang.isGreek(this)
-                                ? "Η αναφορά δημιουργήθηκε, αλλά δεν ήταν δυνατό να ενημερωθεί το credit."
-                                : "The report was created, but the report credit could not be updated.",
-                        Toast.LENGTH_LONG).show();
-            }
-        }
     }
 
     private void showPersonalisedReportPurchaseDialog() {
@@ -510,7 +521,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         builder.setView(root);
         final AlertDialog dialog = builder.create();
 
-        cancel.setOnClickListener(v -> dialog.dismiss());
+        cancel.setOnClickListener(v -> { finishSingleReport(false); dialog.dismiss(); });
+        dialog.setOnCancelListener(d -> finishSingleReport(false));
 
         createBlank.setOnClickListener(v -> {
             dialog.dismiss();
@@ -709,8 +721,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                 );
 
                 if (useSingleReportCreditForCurrentExport && billingManager != null) {
-                    billingManager.consumeSingleReportCreditForReport(singleReportIdentity);
-                    useSingleReportCreditForCurrentExport = false;
+                    finishSingleReport(true);
                 }
 
                 runOnUiThread(() -> {
@@ -724,6 +735,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                 });
 
             } catch (Exception e) {
+                finishSingleReport(false);
                 runOnUiThread(() -> {
                     Toast.makeText(
                             this,
@@ -745,6 +757,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     protected void onResume() {
         super.onResume();
         updatePreview();
+        if (billingManager != null) billingManager.refreshPurchases();
         if (proLogoPreview != null) refreshProfessionalLogoPreview();
     }
 
@@ -1973,6 +1986,7 @@ GELServiceLog.clear();
 
 } catch (Exception e) {
 
+    finishSingleReport(false);
     runOnUiThread(() -> {
 
         boolean gr = AppLang.isGreek(this);

@@ -185,8 +185,8 @@
     <p>
       Paid PRO is purchased through Google Play. Purchase tokens are sent over HTTPS to
       Firebase Cloud Functions for verification with the Google Play Developer API.
-      A Firebase identity is used for authenticated verification; ordinary purchases do
-      not require Google sign-in inside GEL iDoctor. Payment-card details are handled
+      A Firebase identity is used for authenticated verification; ordinary PRO subscription purchases do
+      not require Google sign-in inside GEL iDoctor. Personalised-report purchases require Google sign-in so credits and purchased personalisation can be recovered across installations. Payment-card details are handled
       by Google Play and are not received by GEL iDoctor.
     </p>
     <p>
@@ -245,6 +245,10 @@
   </section>
 
   <section>
+    <h2>Report purchase restoration</h2>
+    <p>For personalised reports, Firebase stores your account-linked credit balance, unlimited-personalisation ownership, purchase verification records and report fingerprints. Fingerprints support re-export without spending another credit; report contents, customer details and logos are not uploaded to this purchase ledger. Google Play purchase tokens are processed on our server; a token for unlimited ownership may be retained privately to recheck its status. Successful export confirmations may be queued on your device while offline.</p>
+    <p>Deleting your app account removes its report ledger and forfeits the associated credits and report grants. Minimal pseudonymous purchase-token hashes, owner hashes, product identifiers and fulfillment status are retained to prevent duplicate crediting and fraud; these receipts exclude email addresses, raw purchase tokens and direct account references. Account deletion does not cancel Google Play subscriptions.</p>
+
     <h2>9. Data retention and deletion</h2>
     <p>
       Locally stored application data can be removed through Android's

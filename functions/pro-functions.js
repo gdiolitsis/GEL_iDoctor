@@ -33,7 +33,10 @@ exports.verifyGelProPurchase = onCall(async request => {
     // Never log the exception: request config contains the purchase bearer token.
     throw new HttpsError('unavailable', 'Google Play verification is temporarily unavailable.');
   }
-  return subscriptionResult(purchase);
+  const result = subscriptionResult(purchase);
+  await getFirestore().collection('pro_paid_accounts').doc(request.auth.uid)
+    .set({verifiedUntil: result.expiresAtMs});
+  return result;
 });
 exports.deleteProGoogleAccount = onCall(async request => {
   const email = verifiedGoogleEmail(request.auth);
@@ -58,6 +61,16 @@ exports.deleteProGoogleAccount = onCall(async request => {
     const sessions = await db.collection('service_sessions').where(field, '==', request.auth.uid).get();
     for (const session of sessions.docs) await db.recursiveDelete(session.ref);
   }
+  const crypto = require('node:crypto');
+  const owner = crypto.createHash('sha256').update(request.auth.uid).digest('hex');
+  const receipts = await db.collection('report_purchase_receipts').where('owner','==',owner).get();
+  for (const receipt of receipts.docs) {
+    const data = receipt.data();
+    // Retain only the pseudonymous anti-replay receipt, not account references or tokens.
+    await receipt.ref.set({owner:data.owner,productId:data.productId,valid:data.valid,createdAt:data.createdAt});
+  }
+  await db.recursiveDelete(db.collection('report_accounts').doc(request.auth.uid));
+  await db.collection('pro_paid_accounts').doc(request.auth.uid).delete();
   await getAuth().deleteUser(request.auth.uid);
   return {deleted: true};
 });

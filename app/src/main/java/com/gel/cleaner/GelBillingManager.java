@@ -79,10 +79,7 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
     private static final String GEL_CUSTOM_OFFER_SHOWN_KEY =
             "custom_offer_shown";
 
-    // Local credits bought through the €4.99 consumable product.
-    // One credit = one successfully generated personalised report.
-    private static final String GEL_SINGLE_REPORT_CREDITS_KEY =
-            "single_report_credits";
+    // Report credits and permanent ownership are authoritative on the server.
 
     private final Context appContext;
     private final Listener listener;
@@ -142,6 +139,7 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
         PendingPurchasesParams pendingPurchasesParams =
                 PendingPurchasesParams.newBuilder()
                         .enableOneTimeProducts()
+                        .enablePrepaidPlans()
                         .build();
 
         this.billingClient =
@@ -238,85 +236,15 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
         return GelProEntitlement.isPaidProActive(appContext);
     }
 
-    public boolean isCustomReportsActive() {
-        try {
-            return appContext
-                    .getSharedPreferences(
-                            GEL_CUSTOM_PREFS,
-                            Context.MODE_PRIVATE
-                    )
-                    .getBoolean(
-                            GEL_CUSTOM_ACTIVE_KEY,
-                            false
-                    );
-        } catch (Throwable ignore) {
-            return false;
-        }
-    }
+    public boolean isCustomReportsActive() { return GelReportStore.unlimited(appContext); }
+    public int getSingleReportCredits() { return GelReportStore.credits(appContext); }
+    public boolean hasSingleReportCredit() { return getSingleReportCredits() > 0; }
 
-    public int getSingleReportCredits() {
-        try {
-            return Math.max(0, appContext
-                    .getSharedPreferences(GEL_CUSTOM_PREFS, Context.MODE_PRIVATE)
-                    .getInt(GEL_SINGLE_REPORT_CREDITS_KEY, 0));
-        } catch (Throwable ignore) {
-            return 0;
-        }
-    }
-
-    public boolean hasSingleReportCredit() {
-        return getSingleReportCredits() > 0;
-    }
-
-    // Call ONLY after a personalised PDF has been generated successfully.
-    public boolean consumeSingleReportCreditAfterSuccessfulExport() {
-        synchronized (this) {
-            int credits = getSingleReportCredits();
-            if (credits <= 0) return false;
-            try {
-                appContext
-                        .getSharedPreferences(GEL_CUSTOM_PREFS, Context.MODE_PRIVATE)
-                        .edit()
-                        .putInt(GEL_SINGLE_REPORT_CREDITS_KEY, credits - 1)
-                        .commit();
-                return true;
-            } catch (Throwable ignore) {
-                return false;
-            }
-        }
-    }
-
-    public boolean isReportPreviouslyExported(String identity) {
-        return appContext.getSharedPreferences(GEL_CUSTOM_PREFS, Context.MODE_PRIVATE)
-                .getBoolean("report_exported_" + identity, false);
-    }
-
-    public boolean consumeSingleReportCreditForReport(String identity) {
-        synchronized (GelBillingManager.class) {
-            if (identity == null || identity.isEmpty()) return false;
-            if (isReportPreviouslyExported(identity)) return true;
-            int credits = getSingleReportCredits();
-            if (credits <= 0) return false;
-            return appContext.getSharedPreferences(GEL_CUSTOM_PREFS, Context.MODE_PRIVATE).edit()
-                    .putInt(GEL_SINGLE_REPORT_CREDITS_KEY, credits - 1)
-                    .putBoolean("report_exported_" + identity, true).commit();
-        }
-    }
-
-    private int addSingleReportCredit() {
-        synchronized (this) {
-            int credits = getSingleReportCredits() + 1;
-            try {
-                appContext
-                        .getSharedPreferences(GEL_CUSTOM_PREFS, Context.MODE_PRIVATE)
-                        .edit()
-                        .putInt(GEL_SINGLE_REPORT_CREDITS_KEY, credits)
-                        .commit();
-                return credits;
-            } catch (Throwable ignore) {
-                return getSingleReportCredits();
-            }
-        }
+    private boolean requireReportAccount(Activity activity) {
+        if (!GelReportStore.uid().isEmpty()) return true;
+        listener.onBillingError("Sign in with Google first. Report purchases are saved to your account.");
+        activity.startActivity(new android.content.Intent(activity, GelProAccountActivity.class));
+        return false;
     }
 
     public boolean wasCustomReportsOfferShown() {
@@ -364,22 +292,6 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
                     .edit()
                     .putBoolean(
                             GEL_PRO_ACTIVE_KEY,
-                            active
-                    )
-                    .apply();
-        } catch (Throwable ignore) {}
-    }
-
-    private void setCustomReportsActive(boolean active) {
-        try {
-            appContext
-                    .getSharedPreferences(
-                            GEL_CUSTOM_PREFS,
-                            Context.MODE_PRIVATE
-                    )
-                    .edit()
-                    .putBoolean(
-                            GEL_CUSTOM_ACTIVE_KEY,
                             active
                     )
                     .apply();
@@ -625,6 +537,8 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
             @NonNull Activity activity
     ) {
 
+        if (!requireReportAccount(activity)) return;
+
         if (!isGelProActive()) {
             listener.onBillingError(
                     "An active paid GEL PRO subscription is required first."
@@ -676,6 +590,7 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
         BillingFlowParams flowParams =
                 BillingFlowParams
                         .newBuilder()
+                        .setObfuscatedAccountId(GelReportStore.accountHash())
                         .setProductDetailsParamsList(
                                 Collections.singletonList(
                                         productBuilder.build()
@@ -704,6 +619,8 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
     // Active GEL PRO access is required.
     // ============================================================
     public void launchSingleReportPurchase(@NonNull Activity activity) {
+
+        if (!requireReportAccount(activity)) return;
 
         if (!isGelProActive()) {
             listener.onBillingError("Active GEL PRO access is required for personalised reports.");
@@ -737,6 +654,7 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
         }
 
         BillingFlowParams flowParams = BillingFlowParams.newBuilder()
+                .setObfuscatedAccountId(GelReportStore.accountHash())
                 .setProductDetailsParamsList(
                         Collections.singletonList(productBuilder.build()))
                 .build();
@@ -800,6 +718,9 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
             return;
         }
 
+        if (!GelReportStore.uid().isEmpty()) GelReportStore.refresh(appContext, (ok,code,message) -> {
+            if (!ok) listener.onBillingError(message);
+        });
         refreshGelProSubscription();
         refreshCustomReportsPurchase();
     }
@@ -904,6 +825,17 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
     // CENTRAL PURCHASE PROCESSOR
     // ============================================================
     private void processPurchase(Purchase purchase, boolean freshPurchaseFlow) {
+        boolean single = purchase.getProducts().contains(PRODUCT_SINGLE_REPORT);
+        boolean custom = purchase.getProducts().contains(PRODUCT_CUSTOM_REPORTS);
+        if ((single || custom) && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+            String sku = single ? PRODUCT_SINGLE_REPORT : PRODUCT_CUSTOM_REPORTS;
+            GelReportStore.verify(appContext, sku, purchase.getPurchaseToken(), (ok,code,message) -> {
+                if (!ok) { listener.onBillingError(message); return; }
+                if (single) listener.onSingleReportCreditAdded(getSingleReportCredits());
+                else listener.onCustomReportsActivated();
+            });
+            return;
+        }
         if (purchase.getProducts().contains(PRODUCT_GEL_PRO_MONTHLY)
                 && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
             GelPlayVerifier.verify(appContext, purchase.getPurchaseToken(), (verified, error) -> {
@@ -978,12 +910,8 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
             return;
         }
 
-        // €4.99 product is consumable: grant one local credit, then consume the
-        // Google Play purchase so the user can buy another report later.
-        if (isSingleReportPurchase) {
-            processSingleReportConsumable(purchase);
-            return;
-        }
+        // One-time purchases never reach the client-side entitlement/acknowledgement path.
+        if (!isGelProPurchase) return;
 
         // The BillingClient purchase response says PURCHASED.
         // Keep entitlement state in sync with the existing app gates.
@@ -991,9 +919,6 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
             setGelProActive(true);
         }
 
-        if (isCustomReportsPurchase) {
-            setCustomReportsActive(true);
-        }
 
         // --------------------------------------------------------
         // ACKNOWLEDGE
@@ -1038,28 +963,6 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
                     freshPurchaseFlow
             );
         }
-    }
-
-    private void processSingleReportConsumable(@NonNull Purchase purchase) {
-
-        ConsumeParams consumeParams = ConsumeParams.newBuilder()
-                .setPurchaseToken(purchase.getPurchaseToken())
-                .build();
-
-        billingClient.consumeAsync(consumeParams, (billingResult, purchaseToken) -> {
-            if (billingResult.getResponseCode()
-                    != BillingClient.BillingResponseCode.OK) {
-                listener.onBillingError(
-                        "Single Report purchase could not be finalized: "
-                                + billingResult.getDebugMessage());
-                return;
-            }
-
-            // Credit is created only after Google Play confirms consumption.
-            // The app will spend this credit only after successful PDF creation.
-            int credits = addSingleReportCredit();
-            listener.onSingleReportCreditAdded(credits);
-        });
     }
 
     // ============================================================

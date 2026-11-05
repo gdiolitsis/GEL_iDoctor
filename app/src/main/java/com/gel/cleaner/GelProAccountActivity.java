@@ -57,13 +57,17 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
         action(box, gr ? "Διαγραφή λογαριασμού" : "Delete account", () -> {
             if (busy) return;
             new AlertDialog.Builder(this).setMessage(gr
-                    ? "Θα διαγραφεί ο λογαριασμός σύνδεσης και η δωρεάν άδεια PRO. Η συνδρομή Google Play δεν ακυρώνεται από εδώ."
-                    : "Delete your sign-in account and gifted PRO access? This does not cancel a Google Play subscription.")
+                    ? "Θα διαγραφεί ο λογαριασμός σύνδεσης και η δωρεάν άδεια PRO, καθώς και τα credits και οι αποθηκευμένες άδειες αναφορών. Η συνδρομή Google Play δεν ακυρώνεται από εδώ."
+                    : "Delete your sign-in account, gifted PRO access, report credits and saved report grants? This does not cancel a Google Play subscription.")
                     .setNegativeButton(gr ? "Άκυρο" : "Cancel", null)
                     .setPositiveButton(gr ? "Διαγραφή" : "Delete", (d,w) -> deleteAccount()).show();
         });
         action(box, gr ? "Επιστροφή" : "Back", this::finish);
         scroll.addView(box); setContentView(scroll); render("");
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        if (billing != null) billing.refreshPurchases();
     }
     @Override protected void onDestroy() {
         if (billing != null) billing.close();
@@ -86,6 +90,9 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
                 : (gr ? "Δεν υπάρχει επιβεβαιωμένη δωρεάν άδεια PRO." : "No verified gifted PRO access."))
                 + "\n\n" + (gr ? "Η δωρεάν πρόσβαση αποδίδεται από τον δημιουργό και επανελέγχεται online. Οι αγορές Play λειτουργούν ξεχωριστά."
                 : "Gift access is assigned by the developer and periodically checked online. Play purchases work separately.")
+                + "\n\n" + (gr ? "Διαθέσιμα credits αναφορών: " : "Available report credits: ")
+                + GelReportStore.credits(this)
+                + (GelReportStore.unlimited(this) ? (gr ? "\nΑπεριόριστη εξατομίκευση αγορασμένη." : "\nUnlimited personalisation purchased.") : "")
                 + "\n\n" + message);
     }
     private void signIn() {
@@ -107,7 +114,7 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
                             FirebaseAuth.getInstance().signInWithCredential(GoogleAuthProvider.getCredential(token, null))
                                     .addOnCompleteListener(task -> {
                                         busy = false; GelAccountPro.clear(GelProAccountActivity.this);
-                                        if (task.isSuccessful()) { GelProEntitlement.clearTesterCache(GelProAccountActivity.this); refresh(); }
+                                        if (task.isSuccessful()) { GelProEntitlement.clearTesterCache(GelProAccountActivity.this); billing.refreshPurchases(); refresh(); }
                                         else render(gr ? "Η σύνδεση απέτυχε. Δοκιμάστε ξανά." : "Sign-in failed. Please retry.");
                                     });
                         } catch (Exception e) { busy = false; render("Google credential could not be read."); }

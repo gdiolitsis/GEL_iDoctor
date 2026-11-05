@@ -30,6 +30,7 @@ service cloud.firestore {
       }
     }
 
+    // report_accounts, report_purchase_receipts and pro_paid_accounts are server-only.
     match /{document=**} {
       allow read, write: if false;
     }
