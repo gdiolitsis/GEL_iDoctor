@@ -85,6 +85,7 @@ private static final String KEY_WIDGET_OFFER_HIDDEN =
         "widget_offer_hidden_v1";
 
 private GelBillingManager proRestoreBilling;
+private boolean proPurchaseRequested;
 
 private boolean widgetOfferDialogOpen = false;
 private boolean widgetOfferHandledThisSession = false;
@@ -200,7 +201,18 @@ protected void onDestroy() {
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-    proRestoreBilling = new GelBillingManager(this, new GelProBillingListener());
+    proRestoreBilling = new GelBillingManager(this, new GelProBillingListener() {
+        @Override public void onBillingError(String message) {
+            if (proPurchaseRequested) runOnUiThread(() -> android.widget.Toast.makeText(
+                    MainActivity.this, message, android.widget.Toast.LENGTH_LONG).show());
+        }
+        @Override public void onGelProActivated(boolean offer) {
+            if (proPurchaseRequested) runOnUiThread(() -> android.widget.Toast.makeText(
+                    MainActivity.this, AppLang.isGreek(MainActivity.this) ? "Το PRO είναι ενεργό." : "PRO is active.",
+                    android.widget.Toast.LENGTH_LONG).show());
+            proPurchaseRequested = false;
+        }
+    });
     proRestoreBilling.start();
 
     // Refresh server-backed Tester PRO entitlement.
@@ -2454,6 +2466,7 @@ private void setupCertificationAccess() {
 }
 
 private void showCertificationAccessDialog() {
+    proPurchaseRequested = true;
     GelProPurchaseDialog.show(this, proRestoreBilling);
 }
 

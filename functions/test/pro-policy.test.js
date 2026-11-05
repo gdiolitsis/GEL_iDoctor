@@ -27,3 +27,14 @@ test('active, grace and cancelled-but-not-expired subscriptions unlock until exp
     assert.deepEqual(result,{active:true,expiresAtMs:now+1000});
   }
 });
+test('prepaid month uses Play expiry across February, never an invented 31-day period', () => {
+  const start = Date.parse('2027-02-01T12:00:00Z');
+  const expiry = Date.parse('2027-03-01T12:00:00Z');
+  const purchase = {subscriptionState:'SUBSCRIPTION_STATE_ACTIVE',lineItems:[{
+    productId:'gel_pro_monthly',expiryTime:new Date(expiry).toISOString(),
+    prepaidPlan:{},offerDetails:{basePlanId:'prepaid-monthly'}
+  }]};
+  assert.equal(subscriptionResult(purchase,start).active,true);
+  assert.deepEqual(subscriptionResult(purchase,expiry-1000),{active:true,expiresAtMs:expiry});
+  assert.deepEqual(subscriptionResult(purchase,expiry),{active:false,expiresAtMs:0});
+});
