@@ -3271,7 +3271,7 @@ private void addActionButtons(LinearLayout root, Runnable okAction) {
 }
 
     private Button mkGreenBtn(String t) {
-        Button b = new Button(this);
+        Button b = new com.gel.cleaner.GelButton(this);
         b.setText(t);
         b.setTextColor(Color.WHITE);
         GradientDrawable d = new GradientDrawable();
@@ -3284,7 +3284,7 @@ private void addActionButtons(LinearLayout root, Runnable okAction) {
     }
 
     private Button mkRedBtn(String t) {
-        Button b = new Button(this);
+        Button b = new com.gel.cleaner.GelButton(this);
         b.setText(t);
         b.setTextColor(Color.WHITE);
         GradientDrawable d = new GradientDrawable();
@@ -3297,7 +3297,7 @@ private void addActionButtons(LinearLayout root, Runnable okAction) {
     }
 
     private Button mkBlackGoldBtn(String t) {
-        Button b = new Button(this);
+        Button b = new com.gel.cleaner.GelButton(this);
         b.setText(t);
         b.setTextColor(0xFF00FF7F);
         GradientDrawable d = new GradientDrawable();
@@ -3362,6 +3362,8 @@ private void showCustomDialog(View v) {
     );
 
     currentDialog.show();
+
+    com.gel.cleaner.GelButtonLayout.fitDialog(currentDialog);
 }
 
 // ============================================================

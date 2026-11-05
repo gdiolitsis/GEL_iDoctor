@@ -4814,6 +4814,7 @@ private void showBatteryCapacityDialog() {
                     R.drawable.gel_dialog_battery_full_black
             );
             dialog.show();
+            com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
 
         } catch (Throwable ignore) {}
     });

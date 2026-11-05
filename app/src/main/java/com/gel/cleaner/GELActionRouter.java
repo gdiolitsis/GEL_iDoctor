@@ -318,7 +318,7 @@ public final class GELActionRouter {
         box.addView(message);
 
         Button ok =
-                new Button(activity);
+                new com.gel.cleaner.GelButton(activity);
 
         ok.setText("OK");
         ok.setAllCaps(false);
@@ -364,6 +364,8 @@ public final class GELActionRouter {
         );
 
         dialog.show();
+
+        com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
 
         Window window =
                 dialog.getWindow();

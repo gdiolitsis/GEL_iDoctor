@@ -35,7 +35,7 @@
             android:padding="6dp"/>
 
         <!-- GOLD BUTTON + BORDO BORDER -->
-        <Button
+        <com.gel.cleaner.GelButton
             android:id="@+id/btnCoreMonitor"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

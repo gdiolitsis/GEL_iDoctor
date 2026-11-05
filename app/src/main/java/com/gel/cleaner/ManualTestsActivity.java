@@ -1085,6 +1085,7 @@ private boolean oldKeepScreenOn = false;
         if (!isFinishing() && !isDestroyed()) {
 
             d.show();
+            com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
             if (d.getWindow() != null) {
 
@@ -1360,7 +1361,7 @@ logScroll.addView(logContainer);
 // ============================================================
 // LOG PANEL TOGGLE (ARROWS — NO SWIPE)
 // ============================================================
-btnLogToggle = new Button(this);
+btnLogToggle = new com.gel.cleaner.GelButton(this);
 btnLogToggle.setText("LOGS ▲");
 btnLogToggle.setAllCaps(false);
 btnLogToggle.setTextColor(0xFFFFFFFF);
@@ -1381,7 +1382,7 @@ btnLogToggle.setOnClickListener(v -> toggleLogPanel());
 // ============================================================
 // EXPORT BUTTON (BOTTOM)
 // ============================================================
-btnExport = new Button(this);
+btnExport = new com.gel.cleaner.GelButton(this);
 btnExport.setText(getString(R.string.export_report_title));
 btnExport.setAllCaps(false);
 btnExport.setTextColor(0xFFFFFFFF);
@@ -2536,7 +2537,7 @@ private LinearLayout makeSectionBody() {
 }  
 
 private Button makeSectionHeader(String text, LinearLayout bodyToToggle) {
-    Button b = new Button(this);
+    Button b = new com.gel.cleaner.GelButton(this);
     allSectionHeaders.add(b);
 
     b.setText(text);
@@ -2586,7 +2587,7 @@ return b;
 
 private Button makeTestButton(String text, Runnable action) {
 
-    Button b = new Button(this);
+    Button b = new com.gel.cleaner.GelButton(this);
 
     b.setText(text);
     b.setAllCaps(false);
@@ -2620,7 +2621,7 @@ private Button makeTestButton(String text, Runnable action) {
 }
 
 private Button makeTestButtonRedGold(String text, Runnable action) {  
-Button b = new Button(this);  
+Button b = new com.gel.cleaner.GelButton(this);
 b.setText(text);  
 b.setAllCaps(false);  
 b.setTextSize(14f);  
@@ -2754,7 +2755,7 @@ root.addView(buildMuteRow());
         btnLp.setMargins(dp(12), dp(8), dp(12), dp(8));
 
         // ---------- NO ----------
-        Button noBtn = new Button(this);
+        Button noBtn = new com.gel.cleaner.GelButton(this);
         noBtn.setText(gr ? "ΟΧΙ" : "NO");
         noBtn.setAllCaps(false);
         noBtn.setTextColor(Color.WHITE);
@@ -2767,7 +2768,7 @@ root.addView(buildMuteRow());
         noBtn.setLayoutParams(btnLp);
 
         // ---------- YES ----------
-        Button yesBtn = new Button(this);
+        Button yesBtn = new com.gel.cleaner.GelButton(this);
         yesBtn.setText(gr ? "ΝΑΙ" : "YES");
         yesBtn.setAllCaps(false);
         yesBtn.setTextColor(Color.WHITE);
@@ -2821,6 +2822,7 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 
 if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
     new Handler(Looper.getMainLooper()).postDelayed(() -> {
         if (d.isShowing()
@@ -3096,7 +3098,7 @@ private AlertDialog buildInfoDialog(
     msg.setPadding(0, 0, 0, dp(16));
     root.addView(msg);
 
-    Button exit = new Button(this);
+    Button exit = new com.gel.cleaner.GelButton(this);
     exit.setAllCaps(false);
     exit.setText(AppLang.isGreek(this) ? "ΕΞΟΔΟΣ ΤΕΣΤ" : "EXIT TEST");
     exit.setTextColor(Color.WHITE);
@@ -3152,6 +3154,7 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 
 if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
 return d;
@@ -4254,6 +4257,7 @@ private void showLab15ConditionCheck(Runnable startAction) {
         );
 
     dlg.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(dlg);
 
 
     final String speakTextFinal =
@@ -4611,7 +4615,7 @@ private String buildHardwareCoolingReport() {
 // ============================================================
 private Button makeTestButtonGreenGold(String text, Runnable action) {
 
-Button btn = new Button(this);  
+Button btn = new com.gel.cleaner.GelButton(this);
 btn.setText(text);  
 btn.setAllCaps(false);  
 btn.setTextColor(0xFF8B0000); // Red text  
@@ -5104,7 +5108,7 @@ private LinearLayout buildPopupHeader(Context ctx, String titleText) {
 // ============================================================
 private Button gelButton(Context ctx, String text, int bgColor) {
 
-    Button b = new Button(ctx);
+    Button b = new com.gel.cleaner.GelButton(ctx);
     b.setText(text);
     b.setAllCaps(false);
     b.setTextColor(Color.WHITE);
@@ -5237,7 +5241,7 @@ private void showUsageAccessDialog() {
             new LinearLayout.LayoutParams(0, dp(48), 1f);
     btnLp.setMargins(dp(6), 4, dp(6), 4);
 
-    Button continueBtn = new Button(this);
+    Button continueBtn = new com.gel.cleaner.GelButton(this);
     continueBtn.setText(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE");
     continueBtn.setAllCaps(false);
     continueBtn.setTextColor(Color.WHITE);
@@ -5251,7 +5255,7 @@ private void showUsageAccessDialog() {
     contBg.setStroke(dp(3), 0xFFFFD700);
     continueBtn.setBackground(contBg);
 
-    Button skipBtn = new Button(this);
+    Button skipBtn = new com.gel.cleaner.GelButton(this);
     skipBtn.setText(gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP");
     skipBtn.setAllCaps(false);
     skipBtn.setTextColor(Color.WHITE);
@@ -5289,6 +5293,7 @@ private void showUsageAccessDialog() {
     });
 
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
     root.postDelayed(() -> {
         try {
@@ -5375,7 +5380,7 @@ private void showLab28Popup() {
         // ==========================
         // OK BUTTON
         // ==========================
-        Button okBtn = new Button(this);
+        Button okBtn = new com.gel.cleaner.GelButton(this);
         okBtn.setText("OK");
         okBtn.setAllCaps(false);
         okBtn.setTextColor(Color.WHITE);
@@ -5429,6 +5434,7 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 
 if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
         // ==========================
@@ -6621,7 +6627,7 @@ LinearLayout.LayoutParams btnLp =
 btnLp.setMargins(dp(6), dp(6), dp(6), dp(6));
 
 // ---------- EXIT ----------
-Button exitBtn = new Button(this);
+Button exitBtn = new com.gel.cleaner.GelButton(this);
 exitBtn.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
 exitBtn.setAllCaps(false);
 exitBtn.setTextSize(14f);
@@ -6635,7 +6641,7 @@ exitBtn.setBackground(exitBg);
 exitBtn.setLayoutParams(btnLp);
 
 // ---------- START ----------
-Button start = new Button(this);
+Button start = new com.gel.cleaner.GelButton(this);
 start.setText(gr ? "ΕΝΑΡΞΗ" : "START");
 start.setAllCaps(false);
 start.setTextSize(14f);
@@ -6687,6 +6693,7 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 
 if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
     new Handler(Looper.getMainLooper()).postDelayed(() -> {
         if (d.isShowing()
@@ -7016,7 +7023,7 @@ runOnUiThread(() -> {
             );
     lp.setMargins(dp(12), dp(8), dp(12), dp(8));
 
-    Button exitBtn = new Button(this);
+    Button exitBtn = new com.gel.cleaner.GelButton(this);
     exitBtn.setText("EXIT");
     exitBtn.setTextColor(Color.WHITE);
     exitBtn.setAllCaps(false);
@@ -7028,7 +7035,7 @@ runOnUiThread(() -> {
     exitBtn.setBackground(exitBg);
     exitBtn.setLayoutParams(lp);
 
-    Button startBtn = new Button(this);
+    Button startBtn = new com.gel.cleaner.GelButton(this);
     startBtn.setText("START");
     startBtn.setTextColor(Color.WHITE);
     startBtn.setAllCaps(false);
@@ -7090,6 +7097,7 @@ startBtn.setOnClickListener(v -> {
 
 if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
     new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -7218,7 +7226,7 @@ runOnUiThread(() -> {
             );
     lp.setMargins(dp(12), dp(8), dp(12), dp(8));
 
-    Button noBtn = new Button(this);
+    Button noBtn = new com.gel.cleaner.GelButton(this);
     noBtn.setText(gr ? "ΟΧΙ" : "NO");
     noBtn.setAllCaps(false);
     noBtn.setTextColor(Color.WHITE);
@@ -7230,7 +7238,7 @@ runOnUiThread(() -> {
     noBtn.setBackground(noBg);
     noBtn.setLayoutParams(lp);
 
-    Button yesBtn = new Button(this);
+    Button yesBtn = new com.gel.cleaner.GelButton(this);
     yesBtn.setText(gr ? "ΝΑΙ" : "YES");
     yesBtn.setAllCaps(false);
     yesBtn.setTextColor(Color.WHITE);
@@ -7284,6 +7292,7 @@ dialogRef.set(null);
 
     if (!isFinishing() && !isDestroyed()) {
         d.show();
+        com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
         // 🔊 SAFE TTS after attach
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -7440,6 +7449,7 @@ runOnUiThread(() -> {
     if (!isFinishing() && !isDestroyed()) {
 
         d.show();
+        com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
@@ -7656,7 +7666,7 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
 
         lp.setMargins(dp(12), dp(8), dp(12), dp(8));
 
-        Button noBtn = new Button(this);
+        Button noBtn = new com.gel.cleaner.GelButton(this);
         noBtn.setText(gr ? "ΟΧΙ" : "NO");
         noBtn.setAllCaps(false);
         noBtn.setTextColor(Color.WHITE);
@@ -7669,7 +7679,7 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
         noBtn.setBackground(noBg);
         noBtn.setLayoutParams(lp);
 
-        Button yesBtn = new Button(this);
+        Button yesBtn = new com.gel.cleaner.GelButton(this);
         yesBtn.setText(gr ? "ΝΑΙ" : "YES");
         yesBtn.setAllCaps(false);
         yesBtn.setTextColor(Color.WHITE);
@@ -7703,6 +7713,7 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
 
         if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
 // 🔊 TTS (safe)
@@ -8099,7 +8110,7 @@ private void lab5Vibration() {
                         );
                 btnLp.setMargins(dp(12), dp(8), dp(12), dp(8));
 
-                Button noBtn = new Button(this);
+                Button noBtn = new com.gel.cleaner.GelButton(this);
                 noBtn.setText(gr ? "ΟΧΙ" : "NO");
                 noBtn.setAllCaps(false);
                 noBtn.setTextColor(Color.WHITE);
@@ -8111,7 +8122,7 @@ private void lab5Vibration() {
                 noBtn.setBackground(noBg);
                 noBtn.setLayoutParams(btnLp);
 
-                Button yesBtn = new Button(this);
+                Button yesBtn = new com.gel.cleaner.GelButton(this);
                 yesBtn.setText(gr ? "ΝΑΙ" : "YES");
                 yesBtn.setAllCaps(false);
                 yesBtn.setTextColor(Color.WHITE);
@@ -8155,6 +8166,7 @@ private void lab5Vibration() {
 
                 if (!isFinishing() && !isDestroyed()) {
                     d.show();
+                    com.gel.cleaner.GelButtonLayout.fitDialog(d);
                 } else {
                     answered.set(true);
                     return;
@@ -8343,7 +8355,7 @@ root.addView(tvMsg);
 // ---------------------------
 // START BUTTON
 // ---------------------------
-Button startBtn = new Button(this);
+Button startBtn = new com.gel.cleaner.GelButton(this);
 startBtn.setAllCaps(false);
 startBtn.setText(gr ? "ΕΝΑΡΞΗ ΤΕΣΤ" : "START TEST");
 startBtn.setTextColor(Color.WHITE);
@@ -8394,6 +8406,7 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 
 if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
 // ---------------------------
@@ -8552,6 +8565,7 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 
 if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
         // ---------------------------
@@ -8931,7 +8945,7 @@ root.addView(msg);
     // ---------------------------
     // START BUTTON
     // ---------------------------
-    Button start = new Button(this);
+    Button start = new com.gel.cleaner.GelButton(this);
     start.setText(gr ? "ΕΝΑΡΞΗ ΤΕΣΤ" : "START TEST");
     start.setAllCaps(false);
     start.setTextColor(Color.WHITE);
@@ -8975,6 +8989,7 @@ start.setOnClickListener(v -> {
 
 if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
 }  
@@ -9338,7 +9353,7 @@ root.addView(hint);
     row.setGravity(Gravity.CENTER);
     row.setPadding(0, dp(12), 0, 0);
 
-    Button yes = new Button(this);
+    Button yes = new com.gel.cleaner.GelButton(this);
     yes.setText(gr ? "ΒΛΕΠΩ ΕΙΚΟΝΑ" : "I SEE IMAGE");
     yes.setAllCaps(false);
     yes.setTextColor(0xFFFFFFFF);
@@ -9348,7 +9363,7 @@ root.addView(hint);
     yesBg.setStroke(dp(3), 0xFFFFD700);
     yes.setBackground(yesBg);
 
-    Button no = new Button(this);
+    Button no = new com.gel.cleaner.GelButton(this);
     no.setText(gr ? "ΔΕΝ ΒΛΕΠΩ ΕΙΚΟΝΑ" : "NO IMAGE");
     no.setAllCaps(false);
     no.setTextColor(0xFFFFFFFF);
@@ -9402,6 +9417,7 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 
 if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
     
 // ---------------------------
@@ -10026,7 +10042,7 @@ root.addView(msg);
                 new LinearLayout.LayoutParams(0, dp(54), 1f);
         lp.setMargins(dp(6), 0, dp(6), 0);
 
-        Button yes = new Button(this);
+        Button yes = new com.gel.cleaner.GelButton(this);
         yes.setText(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE");
         yes.setAllCaps(false);
         yes.setTextColor(Color.WHITE);
@@ -10038,7 +10054,7 @@ root.addView(msg);
         yesBg.setStroke(dp(3), 0xFFFFD700);
         yes.setBackground(yesBg);
 
-        Button no = new Button(this);
+        Button no = new com.gel.cleaner.GelButton(this);
         no.setText(gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP");
         no.setAllCaps(false);
         no.setTextColor(Color.WHITE);
@@ -10084,6 +10100,7 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 
 if (!isFinishing() && !isDestroyed()) {
     d.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
         
         yes.setOnClickListener(v -> {
@@ -11574,6 +11591,7 @@ buttons.addView(cont);
     }
 
     gate.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(gate);
 
     // ---------------------------
     // ACTIONS
@@ -11933,6 +11951,7 @@ if (lab13Dialog.getWindow() != null) {
 }
 
 lab13Dialog.show();
+com.gel.cleaner.GelButtonLayout.fitDialog(lab13Dialog);
 
 // ---------------------------
 // TTS (ONLY IF NOT MUTED)
@@ -12497,6 +12516,7 @@ if (batterySuiteDialog.getWindow() != null) {
 }
 
 batterySuiteDialog.show();
+com.gel.cleaner.GelButtonLayout.fitDialog(batterySuiteDialog);
 }
 
 // ============================================================
@@ -17600,6 +17620,7 @@ private void startLab14SharedUI(long durationSec, boolean gr) {
 
     if (!isLab14BMode) {
         lab14Dialog.show();
+        com.gel.cleaner.GelButtonLayout.fitDialog(lab14Dialog);
     }
 
     // =====================================================
@@ -19853,6 +19874,7 @@ if (dlg.getWindow() != null) {
 }
 
 dlg.show();
+com.gel.cleaner.GelButtonLayout.fitDialog(dlg);
 
     // 🔴 TTS (ORDER FIXED)
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -20079,6 +20101,7 @@ private void showLab14PreTestAdvisory(Runnable onContinue) {
     }
 
     dlg.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(dlg);
 
     // 🔊 TTS
     new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -22811,6 +22834,7 @@ private void showLab14BAdvisory(Runnable onContinue) {
     }
 
     dlg.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(dlg);
 
     dlg.setOnCancelListener(
             d -> AppTTS.stop()
@@ -23018,6 +23042,7 @@ statusText.setText(
     lab14Cancelled = false;
 
     lab14Dialog.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(lab14Dialog);
 
 startLab14BProgressLoop(
     statusText,
@@ -23279,7 +23304,7 @@ private void promptRestoreNormalMode() {
     );
 
     // NO button
-    Button noBtn = new Button(this);
+    Button noBtn = new com.gel.cleaner.GelButton(this);
     noBtn.setText(gr ? "ΟΧΙ" : "NO");
     noBtn.setTextColor(Color.WHITE);
     noBtn.setAllCaps(false);
@@ -23298,7 +23323,7 @@ private void promptRestoreNormalMode() {
     noBtn.setLayoutParams(lp);
 
     // YES button
-    Button yesBtn = new Button(this);
+    Button yesBtn = new com.gel.cleaner.GelButton(this);
     yesBtn.setText(gr ? "ΝΑΙ" : "YES");
     yesBtn.setTextColor(Color.WHITE);
     yesBtn.setAllCaps(false);
@@ -23365,6 +23390,7 @@ private void promptRestoreNormalMode() {
     });
 
     dlg.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(dlg);
 }
 private void showAirplaneModePrompt() {
 
@@ -23452,7 +23478,7 @@ private void showAirplaneModePrompt() {
     );
 
     // NO red
-    Button noBtn = new Button(this);
+    Button noBtn = new com.gel.cleaner.GelButton(this);
     noBtn.setText(gr?"ΟΧΙ":"NO");
     noBtn.setTextColor(Color.WHITE);
     noBtn.setAllCaps(false);
@@ -23468,7 +23494,7 @@ private void showAirplaneModePrompt() {
     noBtn.setLayoutParams(lp);
 
     // YES green
-    Button yesBtn = new Button(this);
+    Button yesBtn = new com.gel.cleaner.GelButton(this);
     yesBtn.setText(gr?"ΝΑΙ":"YES");
     yesBtn.setTextColor(Color.WHITE);
     yesBtn.setAllCaps(false);
@@ -23526,6 +23552,7 @@ yesBtn.setOnClickListener(v -> {
 });
 
     dlg.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(dlg);
 }
 
 private void simulateGpuBurst() {
@@ -24346,7 +24373,7 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 // EXIT BUTTON (LAB 15 — GEL STYLE)
 // ============================================================
 
-Button exitBtn = new Button(this);
+Button exitBtn = new com.gel.cleaner.GelButton(this);
 exitBtn.setText(
         gr
                 ? "Έξοδος τεστ"
@@ -24399,6 +24426,7 @@ if (lab15Dialog.getWindow() != null) {
 }
 
 lab15Dialog.show();
+com.gel.cleaner.GelButtonLayout.fitDialog(lab15Dialog);
 
 iDoctorEngine eng = iDoctorEngine.get(this);
 
@@ -25959,6 +25987,7 @@ private void lab17_showPopup(String titleText, String msgText) {
     }
 
     popup.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(popup);
 
 // 🔴 FIX: STOP TTS ON BACK / DISMISS
 popup.setOnDismissListener(d -> AppTTS.stop());

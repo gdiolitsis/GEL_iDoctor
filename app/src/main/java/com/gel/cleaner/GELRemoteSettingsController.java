@@ -67,6 +67,8 @@ public final class GELRemoteSettingsController {
 
         loading.show();
 
+        com.gel.cleaner.GelButtonLayout.fitDialog(loading);
+
         GELRemoteCommandClient.send(
                 activity,
                 "GET_IDOCTOR_SETTINGS",
@@ -415,7 +417,7 @@ public final class GELRemoteSettingsController {
         );
 
         Button cleanCache =
-                new Button(
+                new com.gel.cleaner.GelButton(
                         activity
                 );
 
@@ -442,7 +444,7 @@ public final class GELRemoteSettingsController {
         );
 
         Button apply =
-                new Button(
+                new com.gel.cleaner.GelButton(
                         activity
                 );
 
@@ -469,7 +471,7 @@ public final class GELRemoteSettingsController {
         );
 
         Button cancel =
-                new Button(
+                new com.gel.cleaner.GelButton(
                         activity
                 );
 
@@ -662,6 +664,8 @@ public final class GELRemoteSettingsController {
         );
 
         dialog.show();
+
+        com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
     }
 
     private static TextView label(

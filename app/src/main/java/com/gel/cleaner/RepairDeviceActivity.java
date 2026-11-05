@@ -1411,11 +1411,12 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         dialog.setContentView(box);
         dialog.show();
+        com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
         applyGelDialogWindow(dialog);
     }
 
     private Button buildGelDialogButton(String text) {
-        Button button = new Button(this);
+        Button button = new com.gel.cleaner.GelButton(this);
         button.setText(text);
         button.setAllCaps(false);
         button.setTextColor(0xFFFFD700);
@@ -1622,6 +1623,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
 
         dialog.setContentView(box);
         dialog.show();
+        com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
         applyGelDialogWindow(dialog);
     }
 
@@ -1811,7 +1813,7 @@ public class RepairDeviceActivity extends GELAutoActivityHook {
     private Button makeActionButton(String text) {
 
         Button button =
-                new Button(this);
+                new com.gel.cleaner.GelButton(this);
 
         button.setText(
                 text

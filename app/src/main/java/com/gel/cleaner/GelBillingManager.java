@@ -889,7 +889,17 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
     // ============================================================
     // CENTRAL PURCHASE PROCESSOR
     // ============================================================
-    private void processPurchase(
+    private void processPurchase(Purchase purchase, boolean freshPurchaseFlow) {
+        if (purchase.getProducts().contains(PRODUCT_GEL_PRO_MONTHLY)
+                && purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+            GelPlayVerifier.verify(appContext, purchase.getPurchaseToken(), (verified, error) -> {
+                if (verified) processVerifiedPurchase(purchase, freshPurchaseFlow);
+                else listener.onBillingError(error);
+            });
+        } else processVerifiedPurchase(purchase, freshPurchaseFlow);
+    }
+
+    private void processVerifiedPurchase(
             @NonNull Purchase purchase,
             boolean freshPurchaseFlow
     ) {

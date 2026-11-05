@@ -174,8 +174,8 @@ public class ServiceReportActivity extends GELAutoActivityHook {
         LinearLayout line = new LinearLayout(this);
         line.setOrientation(LinearLayout.HORIZONTAL);
 
-btnTxt = new AppCompatButton(this);
-btnHtml = new AppCompatButton(this);
+btnTxt = new GelButton(this);
+btnHtml = new GelButton(this);
 
 // 🔴 TEXT (AFTER BOTH BUTTONS CREATED)
 if (AppLang.isGreek(this)) {
@@ -481,6 +481,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         cancel.setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
+
+        com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             DisplayMetrics dm = getResources().getDisplayMetrics();
@@ -561,6 +563,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         });
 
         dialog.show();
+
+        com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
 
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(
@@ -1072,6 +1076,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         });
 
         dialog.show();
+
+        com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
 
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -1681,6 +1687,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
         if (!isFinishing() && !isDestroyed()) {
             dialog.show();
+            com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
 
             if (dialog.getWindow() != null) {
                 dialog.getWindow().setBackgroundDrawable(
@@ -1728,7 +1735,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     }
 
     private Button gelButton(Context ctx, String text, int bgColor) {
-        Button b = new Button(ctx);
+        Button b = new com.gel.cleaner.GelButton(ctx);
         b.setText(text);
         b.setAllCaps(false);
         b.setTextColor(Color.WHITE);

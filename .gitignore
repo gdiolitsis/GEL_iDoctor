@@ -26,3 +26,5 @@ app/libs/libwebrtc-gel-*.aar
 .webrtc-cache/
 .webrtc-symbols/
 gel-keystore.jks
+
+functions/node_modules/

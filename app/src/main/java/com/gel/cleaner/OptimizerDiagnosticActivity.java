@@ -144,7 +144,7 @@ public class OptimizerDiagnosticActivity extends GELAutoActivityHook {
 
     private Button buildButton(String text, int backgroundColor) {
 
-        Button btn = new Button(this);
+        Button btn = new com.gel.cleaner.GelButton(this);
         btn.setText(text);
         btn.setTextColor(Color.BLACK);
         btn.setTextSize(15f);

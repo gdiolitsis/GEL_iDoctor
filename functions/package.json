@@ -8,10 +8,12 @@
   "main": "index.js",
   "scripts": {
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "firebase-admin": "14.2.0",
-    "firebase-functions": "7.3.2"
+    "firebase-functions": "7.3.2",
+    "google-auth-library": "10.5.0"
   }
 }

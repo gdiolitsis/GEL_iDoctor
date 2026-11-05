@@ -23,7 +23,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <Button
+        <com.gel.cleaner.GelButton
             android:id="@+id/btnCleanRam"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -32,7 +32,7 @@
             android:textColor="#FFFFFF"
             android:layout_marginBottom="@dimen/gel_dp_8" />
 
-        <Button
+        <com.gel.cleaner.GelButton
             android:id="@+id/btnDeepClean"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -41,7 +41,7 @@
             android:textColor="#FFFFFF"
             android:layout_marginBottom="@dimen/gel_dp_8" />
 
-        <Button
+        <com.gel.cleaner.GelButton
             android:id="@+id/btnTempFiles"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -50,7 +50,7 @@
             android:textColor="#FFFFFF"
             android:layout_marginBottom="@dimen/gel_dp_8" />
 
-        <Button
+        <com.gel.cleaner.GelButton
             android:id="@+id/btnBrowserClean"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -59,7 +59,7 @@
             android:textColor="#FFFFFF"
             android:layout_marginBottom="@dimen/gel_dp_8" />
 
-        <Button
+        <com.gel.cleaner.GelButton
             android:id="@+id/btnRunningApps"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
