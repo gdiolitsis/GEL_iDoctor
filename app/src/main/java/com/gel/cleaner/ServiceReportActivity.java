@@ -109,7 +109,6 @@ public class ServiceReportActivity extends GELAutoActivityHook {
                                     ? "Η απεριόριστη εξατομίκευση αναφορών ενεργοποιήθηκε."
                                     : "Unlimited personalised reports activated.",
                             Toast.LENGTH_LONG).show();
-                    showPersonalisedReportPurchaseDialog();
                 });
             }
 
@@ -358,17 +357,12 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         // The system HTML print flow cannot reliably confirm that a PDF file
         // was actually saved, so a one-report credit is restricted to TXT PDF.
         if (pendingHtmlExport && useSingleReportCreditForCurrentExport) {
-            useSingleReportCreditForCurrentExport = false;
-            useProfessionalBrandingForCurrentExport = false;
-
             Toast.makeText(this,
                     AppLang.isGreek(this)
-                            ? "Το credit των 4,99 € χρησιμοποιείται στο TXT PDF, όπου η εφαρμογή μπορεί να επιβεβαιώσει την επιτυχημένη δημιουργία του αρχείου."
-                            : "The €4.99 credit is used with TXT PDF, where the app can verify successful file creation.",
+                            ? "Η μεμονωμένη αναφορά αποθηκεύεται απευθείας ως PDF για επιβεβαίωση της επιτυχίας."
+                            : "The single report is saved directly as PDF so successful creation can be confirmed.",
                     Toast.LENGTH_LONG).show();
-
             pendingHtmlExport = false;
-            return;
         }
 
         lockExportUI(true);
