@@ -17,8 +17,6 @@
     "google-auth-library": "11.3.3"
   },
   "overrides": {
-    "google-gax@5.0.8": {
-      "rimraf": "6.1.4"
-    }
+    "rimraf": "6.1.4"
   }
 }

@@ -25,6 +25,8 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: functions/package-lock.json
+      - name: Match Cloud Build npm
+        run: npm install --global npm@10.9.4
       - name: Backend dependencies and security audit
         run: |
           npm ci --prefix functions

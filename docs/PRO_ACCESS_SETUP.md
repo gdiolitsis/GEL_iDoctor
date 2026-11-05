@@ -35,4 +35,4 @@ Run `./gradlew testDebugUnitTest` for Greek/English, font scales 1/1.5/2 and nar
 
 ## Dependency security maintenance (2026-11-05)
 
-Firebase Admin 14.5.0, Firebase Functions 7.4.0 and Google Auth Library 11.3.3 replace the vulnerable dependency chains. The legacy Firestore API package still uses google-gax 5.0.8, so its rimraf dependency is narrowly overridden to 6.1.4 (patched glob/minimatch chain). No global major-version override is used. CI installs the lockfile, audits at moderate severity and loads the Functions module under Node 22 before running the access tests.
+Firebase Admin 14.5.0, Firebase Functions 7.4.0 and Google Auth Library 11.3.3 replace the vulnerable dependency chains. The legacy Firestore API package still uses google-gax 5.0.8, so rimraf is overridden to 6.1.4 (patched glob/minimatch chain). A top-level rimraf override is required: the version-scoped parent override was accepted by npm 11/12 but made npm 10 reject the lockfile during Cloud Build. CI installs the lockfile, audits at moderate severity and loads the Functions module under Node 22 with npm 10.9.4 before running the access tests.
