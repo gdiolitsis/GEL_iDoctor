@@ -1,0 +1,41 @@
+name: PRO access and button validation
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'functions/**'
+      - '.github/workflows/pro-access-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - name: Match Cloud Build npm
+        run: npm install --global npm@10.9.4
+      - name: Backend dependencies and security audit
+        run: |
+          npm ci --prefix functions
+          npm audit --prefix functions --audit-level=moderate
+          node -e 'require("./functions/index.js")'
+      - name: Backend access tests
+        run: npm test --prefix functions
+      - name: Android resources and UI measurement tests
+        run: |
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          ./gradlew testDebugUnitTest --no-daemon --console=plain

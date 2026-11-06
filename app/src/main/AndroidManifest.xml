@@ -311,6 +311,7 @@
             android:theme="@style/Theme.GEL.DarkGold"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
+        <activity android:name="com.gel.cleaner.GelProAccountActivity" android:exported="false" />
     </application>
 
 </manifest>

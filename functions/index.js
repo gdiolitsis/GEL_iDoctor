@@ -2752,3 +2752,8 @@ exports.activateTesterPro =
       );
     }
   );
+
+// Google-account gifts and server-verified paid PRO remain independent.
+Object.assign(exports, require('./pro-functions'));
+
+Object.assign(exports, require('./report-functions'));

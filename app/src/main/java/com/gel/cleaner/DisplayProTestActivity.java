@@ -157,6 +157,8 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
 
         d.show();
 
+        com.gel.cleaner.GelButtonLayout.fitDialog(d);
+
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
     if (!AppTTS.isMuted(this)) {
         AppTTS.ensureSpeak(this, text);
@@ -211,7 +213,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         hint.setGravity(Gravity.CENTER);
         root.addView(hint);
 
-        Button exitBtn = new Button(this);
+        Button exitBtn = new com.gel.cleaner.GelButton(this);
         exitBtn.setAllCaps(false);
         exitBtn.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
         exitBtn.setTextColor(Color.WHITE);
@@ -340,6 +342,8 @@ root.addView(buildMuteRow());
             d.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
         d.show();
+
+        com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
     if (!testFinished && !AppTTS.isMuted(this)) {
@@ -474,7 +478,7 @@ private LinearLayout buildMuteRow() {
     }
 
     private Button gelButton(String text, int color) {
-        Button b = new Button(this);
+        Button b = new com.gel.cleaner.GelButton(this);
         b.setText(text);
         b.setAllCaps(false);
         b.setTextColor(Color.WHITE);

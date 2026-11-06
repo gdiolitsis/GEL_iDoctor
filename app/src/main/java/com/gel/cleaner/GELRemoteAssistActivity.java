@@ -1630,6 +1630,8 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
 
             failureDialog.show();
 
+            com.gel.cleaner.GelButtonLayout.fitDialog(failureDialog);
+
         } catch (Throwable dialogError) {
             finish();
         }
@@ -1775,7 +1777,7 @@ public final class GELRemoteAssistActivity extends AppCompatActivity {
             String text
     ) {
         Button button =
-                new Button(
+                new com.gel.cleaner.GelButton(
                         this
                 );
 

@@ -68,7 +68,7 @@ public class ProximityCheckActivity extends GELAutoActivityHook
         // ======================
         // END TEST BUTTON
         // ======================
-        Button end = new Button(this);
+        Button end = new com.gel.cleaner.GelButton(this);
         end.setText("END TEST");
         end.setAllCaps(false);
         end.setTextColor(Color.WHITE);

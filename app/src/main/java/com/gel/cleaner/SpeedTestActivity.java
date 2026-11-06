@@ -160,7 +160,7 @@ public class SpeedTestActivity extends GELAutoActivityHook {
         verdictText.setPadding(dp(8), dp(20), dp(8), dp(18));
         root.addView(verdictText, matchWrap());
 
-        startButton = new Button(this);
+        startButton = new com.gel.cleaner.GelButton(this);
         startButton.setText(gr ? "ΕΝΑΡΞΗ SPEED TEST" : "START SPEED TEST");
         startButton.setAllCaps(false);
         startButton.setTextColor(COLOR_NEON);
@@ -171,12 +171,12 @@ public class SpeedTestActivity extends GELAutoActivityHook {
 
         LinearLayout.LayoutParams startLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(62)
+                ViewGroup.LayoutParams.WRAP_CONTENT
         );
         startLp.setMargins(0, dp(8), 0, dp(12));
         root.addView(startButton, startLp);
 
-        Button closeButton = new Button(this);
+        Button closeButton = new com.gel.cleaner.GelButton(this);
         closeButton.setText(gr ? "ΕΠΙΣΤΡΟΦΗ" : "BACK");
         closeButton.setAllCaps(false);
         closeButton.setTextColor(COLOR_WHITE);
@@ -187,7 +187,7 @@ public class SpeedTestActivity extends GELAutoActivityHook {
 
         root.addView(closeButton, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(54)
+                ViewGroup.LayoutParams.WRAP_CONTENT
         ));
 
         scroll.addView(root);
@@ -646,6 +646,10 @@ public class SpeedTestActivity extends GELAutoActivityHook {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
+    }
+
+    @Override public int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private int dp(float value) {

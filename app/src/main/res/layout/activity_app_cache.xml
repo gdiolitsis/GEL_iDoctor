@@ -83,20 +83,22 @@
         android:orientation="horizontal"
         android:layout_marginBottom="8dp">
 
-        <Button
+        <com.gel.cleaner.GelButton
     android:id="@+id/btnSelectAll"
     android:layout_width="0dp"
-    android:layout_height="42dp"
+    android:layout_height="wrap_content"
+ android:minHeight="42dp"
     android:layout_weight="1"
     android:text="@string/select_all"
     android:textAllCaps="false"
     android:textColor="#000000"
     android:background="@drawable/gel_btn_blue_gold"/>
         
-        <Button
+        <com.gel.cleaner.GelButton
     android:id="@+id/btnSortCache"
     android:layout_width="0dp"
-    android:layout_height="42dp"
+    android:layout_height="wrap_content"
+ android:minHeight="42dp"
     android:layout_weight="1"
     android:text="@string/largest_cache"
     android:textAllCaps="false"
@@ -115,20 +117,22 @@
         android:orientation="horizontal"
         android:layout_marginBottom="10dp">
 
-        <Button
+        <com.gel.cleaner.GelButton
     android:id="@+id/btnSelectUsers"
     android:layout_width="0dp"
-    android:layout_height="40dp"
+    android:layout_height="wrap_content"
+ android:minHeight="40dp"
     android:layout_weight="1"
     android:text="@string/select_user_apps"
     android:textAllCaps="false"
     android:textColor="#000000"
     android:background="@drawable/gel_btn_green_gold"/>
 
-        <Button
+        <com.gel.cleaner.GelButton
     android:id="@+id/btnSelectSystem"
     android:layout_width="0dp"
-    android:layout_height="40dp"
+    android:layout_height="wrap_content"
+ android:minHeight="40dp"
     android:layout_weight="1"
     android:text="@string/select_system_apps"
     android:textAllCaps="false"
@@ -152,10 +156,11 @@
     <!-- ⚡ GUIDED MODE -->
     <!-- ========================================================= -->
 
-    <Button
+    <com.gel.cleaner.GelButton
     android:id="@+id/btnGuidedClean"
     android:layout_width="match_parent"
-    android:layout_height="48dp"
+    android:layout_height="wrap_content"
+ android:minHeight="48dp"
     android:text="@string/start_guided_cleaning"
     android:textAllCaps="false"
     android:layout_marginTop="10dp"

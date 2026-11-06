@@ -26,6 +26,13 @@ import com.gel.cleaner.base.GELFoldableAnimationPack;
 public abstract class GELAutoActivityHook extends AppCompatActivity
         implements GELFoldableCallback {
 
+    private final android.os.Handler giftHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable giftRefresh = new Runnable() {
+        public void run() {
+            GelAccountPro.refresh(getApplicationContext(), (active, message) -> {});
+            giftHandler.postDelayed(this, 5 * 60 * 1000L);
+        }
+    };
     private GELFoldableDetector foldDetector;
     private GELFoldableUIManager uiManager;
 
@@ -84,6 +91,7 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
     @Override
     protected void onStart() {
         super.onStart();
+        giftHandler.post(giftRefresh);
 
         if (!remoteLanguageReceiverRegistered) {
 
@@ -113,12 +121,14 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
             remoteLanguageReceiverRegistered = false;
         }
 
+        giftHandler.removeCallbacks(giftRefresh);
         super.onStop();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+
 
         // ============================================================
         // CUSTOMER REMOTE SESSION TRANSPORT

@@ -84,6 +84,9 @@ private boolean waitingForUsageAccessReturn = false;
 private static final String KEY_WIDGET_OFFER_HIDDEN =
         "widget_offer_hidden_v1";
 
+private GelBillingManager proRestoreBilling;
+private boolean proPurchaseRequested;
+
 private boolean widgetOfferDialogOpen = false;
 private boolean widgetOfferHandledThisSession = false;
 private int widgetOfferRetryCount = 0;
@@ -115,6 +118,8 @@ menu.add(0, 1002, 1, "Contact")
     ).setShowAsAction(
             MenuItem.SHOW_AS_ACTION_NEVER
     );
+    menu.add(0, 1004, 3, AppLang.isGreek(this) ? "Λογαριασμός PRO" : "PRO account")
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
     return true;
 }
 
@@ -130,6 +135,10 @@ if (item.getItemId() == 1002) {
     return true;
 }
 
+    if (item.getItemId() == 1004) {
+        startActivity(new Intent(this, GelProAccountActivity.class));
+        return true;
+    }
     if (item.getItemId() == 1003) {
         GelProEntitlement.showActivationDialog(this);
         return true;
@@ -144,10 +153,7 @@ private static final String PREFS = "gel_prefs";
 private static final String KEY_PLATFORM = "platform_mode";
 
 // =========================================================
-// 30-DAY FULL DEVICE CHECK — GOOGLE PLAY PRODUCT
-// =========================================================
-private static final String GEL_30_DAY_PRODUCT_ID =
-        "gel_30_day_full_device_check";
+// Monthly PRO plans are selected through GelProPurchaseDialog.
 
 // =========================================================
 // LOCALE
@@ -160,6 +166,7 @@ super.attachBaseContext(LocaleHelper.apply(base));
 @Override
 protected void onResume() {
     super.onResume();
+    if (proRestoreBilling != null) proRestoreBilling.refreshPurchases();
 
     // Re-check Usage Access after returning from Android Settings.
     if (waitingForUsageAccessReturn) {
@@ -181,6 +188,12 @@ protected void onResume() {
     }
 }
 
+@Override
+protected void onDestroy() {
+    if (proRestoreBilling != null) proRestoreBilling.close();
+    super.onDestroy();
+}
+
 // =========================================================
 // ON CREATE
 // =========================================================
@@ -188,6 +201,19 @@ protected void onResume() {
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+    proRestoreBilling = new GelBillingManager(this, new GelProBillingListener() {
+        @Override public void onBillingError(String message) {
+            if (proPurchaseRequested) runOnUiThread(() -> android.widget.Toast.makeText(
+                    MainActivity.this, message, android.widget.Toast.LENGTH_LONG).show());
+        }
+        @Override public void onGelProActivated(boolean offer) {
+            if (proPurchaseRequested) runOnUiThread(() -> android.widget.Toast.makeText(
+                    MainActivity.this, AppLang.isGreek(MainActivity.this) ? "Το PRO είναι ενεργό." : "PRO is active.",
+                    android.widget.Toast.LENGTH_LONG).show());
+            proPurchaseRequested = false;
+        }
+    });
+    proRestoreBilling.start();
 
     // Refresh server-backed Tester PRO entitlement.
     // Network failure never revokes a still-valid local tester cache.
@@ -475,13 +501,13 @@ private void showContactDeveloperDialog() {
     row.setOrientation(LinearLayout.HORIZONTAL);
     row.setGravity(Gravity.CENTER);
 
-    Button btnCancel = new Button(this);
+    Button btnCancel = new com.gel.cleaner.GelButton(this);
     btnCancel.setText(gr ? "Άκυρο" : "Cancel");
     btnCancel.setTextColor(Color.WHITE);
     btnCancel.setAllCaps(false);
     btnCancel.setBackground(makeGelBtn(0xFFAA1111));
 
-    Button btnSend = new Button(this);
+    Button btnSend = new com.gel.cleaner.GelButton(this);
     btnSend.setText("Send");
     btnSend.setTextColor(Color.WHITE);
     btnSend.setAllCaps(false);
@@ -536,6 +562,8 @@ try {
     });
 
     dlg.show();
+
+    com.gel.cleaner.GelButtonLayout.fitDialog(dlg);
 
     // 🔥 ΚΑΝΕ ΤΟ BACKGROUND FULL TRANSPARENT (για να φανεί το box σωστά)
     if (dlg.getWindow() != null) {
@@ -734,7 +762,7 @@ private void showSettingsDialog() {
     widgetHint.setPadding(0, 0, 0, dp(10));
     box.addView(widgetHint);
 
-    Button btnAddWidget = new Button(this);
+    Button btnAddWidget = new com.gel.cleaner.GelButton(this);
     btnAddWidget.setText(
             gr
                     ? "ΠΡΟΣΘΗΚΗ WIDGET ΣΤΗΝ ΑΡΧΙΚΗ"
@@ -764,13 +792,13 @@ private void showSettingsDialog() {
     row.setGravity(Gravity.CENTER);
     row.setPadding(0, dp(18), 0, 0);
 
-    android.widget.Button btnCancel = new android.widget.Button(this);
+    android.widget.Button btnCancel = new com.gel.cleaner.GelButton(this);
     btnCancel.setText(gr ? "Άκυρο" : "Cancel");
     btnCancel.setAllCaps(false);
     btnCancel.setTextColor(Color.WHITE);
     btnCancel.setBackground(makeGelBtn(0xFFAA1111)); // red
 
-    android.widget.Button btnSave = new android.widget.Button(this);
+    android.widget.Button btnSave = new com.gel.cleaner.GelButton(this);
     btnSave.setText(gr ? "Αποθήκευση" : "Save");
     btnSave.setAllCaps(false);
     btnSave.setTextColor(Color.WHITE);
@@ -827,6 +855,8 @@ private void showSettingsDialog() {
     });
 
     dlg.show();
+
+    com.gel.cleaner.GelButtonLayout.fitDialog(dlg);
 
     if (dlg.getWindow() != null) {
         dlg.getWindow().setBackgroundDrawable(
@@ -948,7 +978,7 @@ private void showWidgetOfferDialog() {
     reminder.setPadding(0, 0, 0, dp(12));
     box.addView(reminder);
 
-    Button add = new Button(this);
+    Button add = new com.gel.cleaner.GelButton(this);
     add.setText(gr ? "ΠΡΟΣΘΗΚΗ WIDGET" : "ADD WIDGET");
     add.setAllCaps(false);
     add.setTextColor(0xFF00FF7F);
@@ -956,7 +986,7 @@ private void showWidgetOfferDialog() {
     add.setTypeface(Typeface.DEFAULT_BOLD);
     add.setBackgroundResource(R.drawable.gel_btn_neon_outline);
 
-    Button later = new Button(this);
+    Button later = new com.gel.cleaner.GelButton(this);
     later.setText(gr ? "ΑΡΓΟΤΕΡΑ" : "LATER");
     later.setAllCaps(false);
     later.setTextColor(Color.WHITE);
@@ -1006,6 +1036,8 @@ private void showWidgetOfferDialog() {
     });
 
     dialog.show();
+
+    com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
 
     if (dialog.getWindow() != null) {
         dialog.getWindow().setBackgroundDrawable(
@@ -1106,7 +1138,7 @@ private void showManualWidgetInstructions() {
     message.setPadding(0, 0, 0, dp(12));
     box.addView(message);
 
-    Button ok = new Button(this);
+    Button ok = new com.gel.cleaner.GelButton(this);
     ok.setText("OK");
     ok.setAllCaps(false);
     ok.setTextColor(0xFF00FF7F);
@@ -1130,6 +1162,8 @@ private void showManualWidgetInstructions() {
     ok.setOnClickListener(v -> dialog.dismiss());
 
     dialog.show();
+
+    com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
 
     if (dialog.getWindow() != null) {
         dialog.getWindow().setBackgroundDrawable(
@@ -1467,7 +1501,7 @@ private void showGelPermissionDialog(
     buttons.setOrientation(LinearLayout.VERTICAL);
     buttons.setPadding(0, dp(4), 0, 0);
 
-    Button positive = new Button(this);
+    Button positive = new com.gel.cleaner.GelButton(this);
     positive.setText(positiveText);
     positive.setAllCaps(false);
     positive.setTextColor(0xFF00FF7F);
@@ -1493,7 +1527,7 @@ private void showGelPermissionDialog(
     Button neutral = null;
 
     if (neutralText != null && neutralAction != null) {
-        neutral = new Button(this);
+        neutral = new com.gel.cleaner.GelButton(this);
         neutral.setText(neutralText);
         neutral.setAllCaps(false);
         neutral.setTextColor(0xFFFFD700);
@@ -1509,7 +1543,7 @@ private void showGelPermissionDialog(
         buttons.addView(neutral, new LinearLayout.LayoutParams(btnLp));
     }
 
-    Button negative = new Button(this);
+    Button negative = new com.gel.cleaner.GelButton(this);
     negative.setText(negativeText);
     negative.setAllCaps(false);
     negative.setTextColor(Color.WHITE);
@@ -1561,6 +1595,8 @@ private void showGelPermissionDialog(
     });
 
     dialog.show();
+
+    com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
 
     Window w = dialog.getWindow();
     if (w != null) {
@@ -2010,7 +2046,7 @@ cb.setPadding(0, dp(8), 0, dp(16));
 root.addView(cb);
 
 // ================= OK BUTTON =================
-Button okBtn = new Button(MainActivity.this);
+Button okBtn = new com.gel.cleaner.GelButton(MainActivity.this);
 okBtn.setText("OK");
 okBtn.setAllCaps(false);
 okBtn.setTextColor(Color.WHITE);
@@ -2081,6 +2117,8 @@ d.setOnShowListener(dialog -> {
 });
 
 d.show();
+
+com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
 if (d.getWindow() != null) {
     d.getWindow().setLayout(
@@ -2229,6 +2267,7 @@ welcomeShown = false;
 // SHOW
 // --------------------------------------------
 d.show();
+com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
 // --------------------------------------------
 // WINDOW LAYOUT AFTER SHOW
@@ -2405,7 +2444,7 @@ private void changeLang(String code) {
 }
 
 // =========================================================
-// 30-DAY FULL DEVICE CHECK — €5 ONE-TIME ACCESS
+// MONTHLY PRO ACCESS — PREPAID OR AUTO-RENEWING
 // =========================================================
 private void setupCertificationAccess() {
 
@@ -2418,8 +2457,8 @@ private void setupCertificationAccess() {
     if (b instanceof TextView) {
         ((TextView) b).setText(
                 gr
-                        ? "30 ΗΜΕΡΕΣ ΠΛΗΡΗΣ ΕΛΕΓΧΟΣ ΣΥΣΚΕΥΗΣ • 5€"
-                        : "30-DAY FULL DEVICE CHECK • €5"
+                        ? "ΠΛΗΡΗΣ ΠΡΟΣΒΑΣΗ GEL PRO • 4,99€/μήνα"
+                        : "GEL PRO — FULL ACCESS • €4.99/month"
         );
     }
 
@@ -2427,96 +2466,8 @@ private void setupCertificationAccess() {
 }
 
 private void showCertificationAccessDialog() {
-
-    final boolean gr = AppLang.isGreek(this);
-
-    String titleText = gr
-            ? "30 ΗΜΕΡΕΣ ΠΛΗΡΗΣ ΕΛΕΓΧΟΣ ΣΥΣΚΕΥΗΣ"
-            : "30-DAY FULL DEVICE CHECK";
-
-    String messageText = gr
-            ? "Έλεγξε σωστά μια συσκευή πριν την αγοράσεις.\n\n"
-              + "• Πλήρης πρόσβαση στα διαγνωστικά εργαλεία για 30 ημέρες\n"
-              + "• Περιλαμβάνει Labs 14, 28 και 30\n"
-              + "• Πιστοποίηση / τελική αξιολόγηση συσκευής\n"
-              + "• 5€ εφάπαξ πληρωμή\n"
-              + "• Χωρίς συνδρομή και χωρίς αυτόματη ανανέωση\n\n"
-              + "Η αγορά θα πραγματοποιείται αποκλειστικά μέσω Google Play."
-            : "Check a device properly before you buy it.\n\n"
-              + "• Full diagnostic access for 30 days\n"
-              + "• Includes Labs 14, 28 and 30\n"
-              + "• Device certification / final assessment\n"
-              + "• €5 one-time purchase\n"
-              + "• No subscription and no auto-renewal\n\n"
-              + "Purchase will be handled exclusively through Google Play.";
-
-    LinearLayout box = new LinearLayout(this);
-    box.setOrientation(LinearLayout.VERTICAL);
-    box.setPadding(dp(20), dp(18), dp(20), dp(18));
-
-    GradientDrawable bg = new GradientDrawable();
-    bg.setColor(0xFF080808);
-    bg.setCornerRadius(dp(18));
-    bg.setStroke(dp(3), 0xFFFFD700);
-    box.setBackground(bg);
-
-    TextView title = new TextView(this);
-    title.setText(titleText);
-    title.setTextColor(Color.WHITE);
-    title.setTextSize(19f);
-    title.setTypeface(Typeface.DEFAULT_BOLD);
-    title.setGravity(Gravity.CENTER);
-    title.setPadding(dp(4), 0, dp(4), dp(14));
-    box.addView(title);
-
-    TextView message = new TextView(this);
-    message.setText(messageText);
-    message.setTextColor(0xFF00FF9C);
-    message.setTextSize(15f);
-    message.setLineSpacing(0f, 1.18f);
-    message.setPadding(dp(4), 0, dp(4), dp(16));
-    box.addView(message);
-
-    Button ok = new Button(this);
-    ok.setText("OK");
-    ok.setAllCaps(false);
-    ok.setTextColor(0xFF00FF7F);
-    ok.setTextSize(17f);
-    ok.setTypeface(Typeface.DEFAULT_BOLD);
-    ok.setGravity(Gravity.CENTER);
-    ok.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-    ok.setIncludeFontPadding(false);
-    ok.setPadding(dp(12), 0, dp(12), 0);
-    ok.setMinHeight(0);
-    ok.setMinimumHeight(0);
-    ok.setBackgroundResource(R.drawable.gel_btn_neon_outline);
-
-    LinearLayout.LayoutParams okLp =
-            new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(76)
-            );
-    okLp.setMargins(0, dp(4), 0, 0);
-    box.addView(ok, okLp);
-
-    AlertDialog dialog = new AlertDialog.Builder(this)
-            .setView(box)
-            .setCancelable(true)
-            .create();
-
-    ok.setOnClickListener(v -> dialog.dismiss());
-
-    dialog.show();
-
-    if (dialog.getWindow() != null) {
-        dialog.getWindow().setBackgroundDrawable(
-                new ColorDrawable(Color.TRANSPARENT)
-        );
-        dialog.getWindow().setLayout(
-                (int) (getResources().getDisplayMetrics().widthPixels * 0.94f),
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-    }
+    proPurchaseRequested = true;
+    GelProPurchaseDialog.show(this, proRestoreBilling);
 }
 
 // =========================================================
@@ -2777,7 +2728,7 @@ root.addView(title);
 // ==========================
 // ðŸ“± iPHONE BUTTON
 // ==========================
-Button iphoneBtn = new Button(this);
+Button iphoneBtn = new com.gel.cleaner.GelButton(this);
 iphoneBtn.setIncludeFontPadding(false);
 iphoneBtn.setText("📱  iPHONE");
 iphoneBtn.setAllCaps(false);
@@ -2802,7 +2753,7 @@ iphoneBtn.setPadding(dp(16), dp(14), dp(16), dp(14));
 // ==========================
 // ðŸ“² iPAD BUTTON
 // ==========================
-Button ipadBtn = new Button(this);
+Button ipadBtn = new com.gel.cleaner.GelButton(this);
 ipadBtn.setIncludeFontPadding(false);
 ipadBtn.setText("📲  iPAD");
 ipadBtn.setAllCaps(false);
@@ -2840,6 +2791,7 @@ new ColorDrawable(Color.TRANSPARENT));
 // SHOW
 // --------------------------------------------
 d.show();
+com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
 // =========================================================
@@ -2977,6 +2929,8 @@ d.getWindow().setBackgroundDrawable(
 new ColorDrawable(Color.TRANSPARENT));
 
 d.show();
+
+com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
 // =========================
 // ACTION
@@ -3130,6 +3084,7 @@ openAppInfo(pkg);
 
 AlertDialog dialog = builder.create();
 dialog.show();
+com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
 
 Window window = dialog.getWindow();
 if (window != null) {

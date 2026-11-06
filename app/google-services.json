@@ -12,7 +12,20 @@
           "package_name": "com.gel.iDoctor"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "172626247066-6bjn23pedg8mu4h9ut42b77dkehd8a7c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gel.iDoctor",
+            "certificate_hash": "3856727c9e0b5587be8f980636b40e625501a3a6"
+          }
+        },
+        {
+          "client_id": "172626247066-6l3holm8d1hnjffs6r2b5mddn0sp1b1d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDWTH5S9SXDKUjmR3DC_ydhRg_nm1ca-0k"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "172626247066-6l3holm8d1hnjffs6r2b5mddn0sp1b1d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

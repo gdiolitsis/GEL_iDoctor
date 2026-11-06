@@ -3,6 +3,9 @@
 import sys
 import xml.etree.ElementTree as ET
 
+if len(sys.argv) != 4:
+    sys.exit("Usage: verify_release_manifest.py MANIFEST VERSION_CODE VERSION_NAME")
+
 ANDROID = "{http://schemas.android.com/apk/res/android}"
 ORIENTATIONS = dict(zip(
     ("unspecified", "landscape", "portrait", "user", "behind", "sensor", "nosensor",
@@ -21,8 +24,8 @@ root = ET.parse(sys.argv[1]).getroot()
 app = root.find("application")
 assert app is not None, "Missing application"
 assert root.get("package") == "com.gel.iDoctor", "Wrong application"
-assert root.get(ANDROID + "versionCode") == "52", "Wrong version code"
-assert root.get(ANDROID + "versionName") == "5.2", "Wrong version name"
+assert root.get(ANDROID + "versionCode") == sys.argv[2], "Wrong version code"
+assert root.get(ANDROID + "versionName") == sys.argv[3], "Wrong version name"
 scanner = [a for a in app.findall("activity") if a.get(ANDROID + "name") == "com.journeyapps.barcodescanner.CaptureActivity"]
 assert len(scanner) == 1, "Expected exactly one scanner activity"
 assert orientation(scanner[0].get(ANDROID + "screenOrientation")) == -1, "Scanner orientation still restricted"

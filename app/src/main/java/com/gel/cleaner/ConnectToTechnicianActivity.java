@@ -1993,7 +1993,7 @@ public class ConnectToTechnicianActivity extends GELAutoActivityHook {
     private Button makeActionButton(String text) {
 
         Button button =
-                new Button(this);
+                new com.gel.cleaner.GelButton(this);
 
         button.setText(
                 text

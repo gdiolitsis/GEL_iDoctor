@@ -51,7 +51,7 @@ public class TouchGridTestActivity extends GELAutoActivityHook {
         gridView = new TouchGridView(this);
         root.addView(gridView);
 
-        Button endButton = new Button(this);
+        Button endButton = new com.gel.cleaner.GelButton(this);
         endButton.setText("END TEST");
         endButton.setAllCaps(false);
         endButton.setTextColor(Color.WHITE);

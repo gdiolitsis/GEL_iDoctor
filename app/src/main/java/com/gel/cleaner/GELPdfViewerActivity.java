@@ -492,7 +492,7 @@ public final class GELPdfViewerActivity
     ) {
 
         Button button =
-                new Button(
+                new com.gel.cleaner.GelButton(
                         this
                 );
 

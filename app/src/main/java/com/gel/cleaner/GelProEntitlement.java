@@ -92,7 +92,8 @@ public final class GelProEntitlement {
         }
 
         return isPaidProActive(context)
-                || isTesterProActive(context);
+                || isTesterProActive(context)
+                || GelAccountPro.active(context);
     }
 
     public static boolean isPaidProActive(
@@ -108,7 +109,8 @@ public final class GelProEntitlement {
                     .getBoolean(
                             PAID_PRO_ACTIVE_KEY,
                             false
-                    );
+                    ) && context.getSharedPreferences(PAID_PRO_PREFS, Context.MODE_PRIVATE)
+                    .getLong("verified_until", 0) > System.currentTimeMillis();
 
         } catch (Throwable ignore) {
             return false;
@@ -762,7 +764,7 @@ public final class GelProEntitlement {
                 .apply();
     }
 
-    private static void clearTesterCache(
+    static void clearTesterCache(
             Context context
     ) {
 

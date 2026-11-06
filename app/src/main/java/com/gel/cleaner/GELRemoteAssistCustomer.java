@@ -338,6 +338,7 @@ public final class GELRemoteAssistCustomer {
 
         try {
             dialog.show();
+            com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
         } catch (Throwable t) {
             synchronized (LOCK) {
                 if (currentAssist.equals(

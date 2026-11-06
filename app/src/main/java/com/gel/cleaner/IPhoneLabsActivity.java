@@ -132,7 +132,7 @@ private boolean looksCorruptedPanic(String text) {
                         : "The feature “" + feature + "” is available with GEL PRO.\n\nSubscription: €4.99 / month"))
                 .setNegativeButton(gr ? "Όχι τώρα" : "Not now", null)
                 // Temporary until Google Play Billing purchase flow is connected.
-                .setPositiveButton("GEL PRO", null)
+                .setPositiveButton("GEL PRO", (d, w) -> startActivity(new android.content.Intent(this, GelProAccountActivity.class)))
                 .show();
     }
 
@@ -441,7 +441,7 @@ logOk(gr
  // ============================================================
 // EXPORT SERVICE REPORT BUTTON (iPhone Labs)
 // ============================================================
-Button btnExport = new Button(this);
+Button btnExport = new com.gel.cleaner.GelButton(this);
 btnExport.setText(getString(R.string.export_report_title));
 btnExport.setAllCaps(false);
 btnExport.setBackgroundResource(R.drawable.gel_btn_outline_selector);
@@ -629,7 +629,7 @@ private void disablePanicGuideForever() {
 
 private Button mkRedBtn(String t) {
 
-    Button b = new Button(this);
+    Button b = new com.gel.cleaner.GelButton(this);
     b.setText(t);
     b.setTextColor(Color.WHITE);
 
@@ -1087,7 +1087,7 @@ cb.setLayoutParams(lp);
 root.addView(cb);
 
 // ================= OK BUTTON =================
-Button okBtn = new Button(IPhoneLabsActivity.this);
+Button okBtn = new com.gel.cleaner.GelButton(IPhoneLabsActivity.this);
 okBtn.setText("OK");
 okBtn.setAllCaps(false);
 okBtn.setTextColor(Color.WHITE);
@@ -1158,6 +1158,7 @@ d.setOnShowListener(dialog -> {
 // SHOW
 // --------------------------------------------
 d.show();
+com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
 if (d.getWindow() != null) {
     d.getWindow().setLayout(

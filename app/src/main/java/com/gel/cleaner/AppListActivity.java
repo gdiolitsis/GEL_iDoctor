@@ -494,7 +494,7 @@ public void showRootRequiredDialog() {
 // ==========================
 root.addView(buildMuteRow());
 
-    Button exitBtn = new Button(this);
+    Button exitBtn = new com.gel.cleaner.GelButton(this);
     exitBtn.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
     exitBtn.setAllCaps(false);
     exitBtn.setTextColor(Color.WHITE);
@@ -530,6 +530,8 @@ root.addView(buildMuteRow());
     });
 
     d.show();
+
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
     new Handler(Looper.getMainLooper()).postDelayed(() -> {
         AppTTS.ensureSpeak(
@@ -632,7 +634,7 @@ private void showUninstallConfirmDialog() {
             );
     lp.setMargins(dp(8), 0, dp(8), 0);
 
-    Button cancelBtn = new Button(this);
+    Button cancelBtn = new com.gel.cleaner.GelButton(this);
     cancelBtn.setText(gr ? "ΑΚΥΡΟ" : "CANCEL");
     cancelBtn.setAllCaps(false);
     cancelBtn.setTextColor(Color.WHITE);
@@ -644,7 +646,7 @@ private void showUninstallConfirmDialog() {
     cancelBg.setStroke(dp(3), 0xFFFFD700);
     cancelBtn.setBackground(cancelBg);
 
-    Button okBtn = new Button(this);
+    Button okBtn = new com.gel.cleaner.GelButton(this);
     okBtn.setText(gr ? "ΝΑΙ" : "YES");
     okBtn.setAllCaps(false);
     okBtn.setTextColor(Color.BLACK);
@@ -679,6 +681,8 @@ private void showUninstallConfirmDialog() {
     });
 
     d.show();
+
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
 private void showContinueGuidedDialog() {
@@ -720,7 +724,7 @@ private void showContinueGuidedDialog() {
                     LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
     lp.setMargins(dp(8), 0, dp(8), 0);
 
-Button stop = new Button(this);
+Button stop = new com.gel.cleaner.GelButton(this);
 stop.setText(gr ? "ΔΙΑΚΟΠΗ" : "STOP");
 stop.setAllCaps(false);
 stop.setTypeface(null, Typeface.BOLD);
@@ -734,7 +738,7 @@ stopBg.setStroke(dp(3), 0xFFFFD700);
 stop.setBackground(stopBg);
 
 
-Button cont = new Button(this);
+Button cont = new com.gel.cleaner.GelButton(this);
 cont.setText(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE");
 cont.setAllCaps(false);
 cont.setTypeface(null, Typeface.BOLD);
@@ -772,6 +776,8 @@ cont.setBackground(contBg);
     });
 
     d.show();
+
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
     // ============================================================
@@ -862,7 +868,7 @@ root.addView(buildMuteRow());
 btnLp.setMargins(dp(8), dp(6), dp(8), dp(6));
 
     // -------- CONTINUE --------
-    Button continueBtn = new Button(this);
+    Button continueBtn = new com.gel.cleaner.GelButton(this);
     continueBtn.setText(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE");
     continueBtn.setAllCaps(false);
     continueBtn.setTextColor(Color.WHITE);
@@ -877,7 +883,7 @@ btnLp.setMargins(dp(8), dp(6), dp(8), dp(6));
     continueBtn.setBackground(contBg);
 
     // -------- SKIP --------
-    Button skipBtn = new Button(this);
+    Button skipBtn = new com.gel.cleaner.GelButton(this);
     skipBtn.setText(gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP");
     skipBtn.setAllCaps(false);
     skipBtn.setTextColor(Color.WHITE);
@@ -917,6 +923,8 @@ d.setOnCancelListener(dialog -> {
 });
 
 d.show();
+
+com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
 // 🔊 SPEAK WHEN SHOWN (ίδιο με MainActivity)
 root.postDelayed(() -> {
@@ -1509,7 +1517,7 @@ private void showGelDialog(String message) {
     root.addView(neonBox);
 
     // ================= OK BUTTON (GEL STYLE) =================
-    Button okBtn = new Button(this);
+    Button okBtn = new com.gel.cleaner.GelButton(this);
     okBtn.setText("OK");
     okBtn.setAllCaps(false);
     okBtn.setTextColor(Color.WHITE);
@@ -1548,6 +1556,8 @@ private void showGelDialog(String message) {
     okBtn.setOnClickListener(v -> d.dismiss());
 
     d.show();
+
+    com.gel.cleaner.GelButtonLayout.fitDialog(d);
 }
 
 // ============================================================
