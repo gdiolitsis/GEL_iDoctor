@@ -67,11 +67,11 @@ PYCONFIG
     baseline="$(find "$RUNNER_TEMP/upgrade-baseline" -name '*.apk' -print -quit)"
     "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$baseline" | grep -F "package: name='com.gel.iDoctor' versionCode='51' versionName='5.1'"
     bash tools/ci/release_startup_smoke.sh "$baseline" "$evidence/api-30-baseline-v51"
-    bash tools/ci/release_startup_smoke.sh "$apk" "$evidence/api-30-upgrade-v52"
-    echo "V51_TO_V52_UPGRADE_STARTUP=PASS"
+    bash tools/ci/release_startup_smoke.sh "$apk" "$evidence/api-30-upgrade-v53"
+    echo "V51_TO_V53_UPGRADE_STARTUP=PASS"
     adb uninstall com.gel.iDoctor
   fi
-  bash tools/ci/release_startup_smoke.sh "$apk" "$evidence/api-$api-fresh-v52"
+  bash tools/ci/release_startup_smoke.sh "$apk" "$evidence/api-$api-fresh-v53"
   python3 tools/ci/scanner_smoke.py "$evidence/api-$api-scanner"
   echo "API_${api}_RELEASE_STARTUP_AND_SCANNER=PASS"
   stop_emulator
