@@ -20,17 +20,28 @@ exports.verifyGelProPurchase = onCall(async request => {
     throw new HttpsError('invalid-argument', 'Invalid purchase token.');
   }
   let purchase;
+  let stage = 'credentials';
   try {
     const client = await publisherAuth.getClient();
+    stage = 'publisher';
     const result = await client.request({
       url: `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/subscriptionsv2/tokens/${encodeURIComponent(token)}`,
       timeout: 10000,
     });
     purchase = result.data;
   } catch (error) {
-    const status = error.response?.status;
+    const status = Number(error.response?.status) || 0;
+    const allowedReasons = new Set(['accessNotConfigured','permissionDenied','insufficientPermissions',
+      'SERVICE_DISABLED','PERMISSION_DENIED','UNAUTHENTICATED','RATE_LIMIT_EXCEEDED','QUOTA_EXCEEDED']);
+    const apiError = error.response?.data?.error;
+    const candidates = [apiError?.status, ...(apiError?.errors || []).map(e => e.reason),
+      ...(apiError?.details || []).map(e => e.reason)];
+    const reason = candidates.find(value => allowedReasons.has(value)) || 'unspecified';
+    const networkCode = ['ETIMEDOUT','ECONNRESET','ENOTFOUND','EAI_AGAIN','ECONNABORTED'].includes(error.code)
+      ? error.code : 'none';
+    // Log only fixed categories. Never log the error, URL, message, token or account.
+    console.warn('PRO_PLAY_VERIFY_FAILED', {stage,httpStatus:status,reason,networkCode});
     if ([400, 404, 410].includes(status)) return {active: false, expiresAtMs: 0};
-    // Never log the exception: request config contains the purchase bearer token.
     throw new HttpsError('unavailable', 'Google Play verification is temporarily unavailable.');
   }
   const result = subscriptionResult(purchase);
