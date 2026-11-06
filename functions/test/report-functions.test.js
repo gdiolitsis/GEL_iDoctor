@@ -15,7 +15,12 @@ function setup() {
   let failFinalize=false; let chain=Promise.resolve();
   const ref = path => ({path,collection:name=>collection(path+'/'+name),get:async()=>snap(path)});
   const collection = path => ({doc:id=>ref(path+'/'+id)});
-  const snap=path=>({exists:docs.has(path),data:()=>structuredClone(docs.get(path))});
+  const snap=path=>({exists:docs.has(path),data:()=>{
+    const data=docs.get(path);
+    // Firestore timestamps retain their toMillis method in real snapshots.
+    if (data?.expiresAt?.toMillis) return {...structuredClone({...data,expiresAt:undefined}),expiresAt:data.expiresAt};
+    return structuredClone(data);
+  }});
   const db={collection,runTransaction:fn=>{
     const run=chain.then(async()=>{
       const writes=new Map();
@@ -58,6 +63,47 @@ test('Play connectivity probe logs acknowledgement without payload, purchase ver
   assert.equal(s.calls.length,0);
   await s.exports.handleReportPurchaseNotification({data:{message:{json:{...message,packageName:'another.app'}}}});
   assert.equal(s.logs.length,1);
+});
+test('permanent gift restores full access without purchases or spending report credits',async()=>{
+  const s=setup(); const key=require('../pro-policy').giftKey(auth.token.email);
+  s.docs.delete('pro_paid_accounts/owner');
+  s.docs.set('pro_gift_accounts/'+key,{enabled:true});
+  s.docs.set('report_accounts/owner',{credits:2});
+  const before=structuredClone([...s.docs]);
+  assert.equal((await s.balance()).unlimited,true);
+  for (const mode of ['single','unlimited']) {
+    const result=await s.prepare(reportId,attemptId,mode);
+    assert.equal(result.allowed,true);assert.equal(result.unlimited,true);
+    await s.finish(true);
+  }
+  assert.equal((await s.prepare(another,attempt2,'unlimited')).allowed,true);
+  assert.equal((await s.balance()).credits,2);
+  assert.deepEqual([...s.docs],before);
+  assert.equal(s.calls.length,0);
+});
+test('gift full access uses verified non-Gmail identity and cannot be spoofed by client data',async()=>{
+  const s=setup(); const email='gift-recipient@hotmail.com';
+  const key=require('../pro-policy').giftKey(email);
+  s.docs.set('pro_gift_accounts/'+key,{enabled:true});
+  const who={uid:'hotmail-owner',token:{...auth.token,email}};
+  assert.equal((await s.exports.getReportEntitlements(s.req({},who))).unlimited,true);
+  assert.equal((await s.exports.getReportEntitlements(s.req({email},other))).unlimited,false);
+  await assert.rejects(s.exports.getReportEntitlements(s.req({}, {uid:'anonymous',token:{email,email_verified:true,firebase:{sign_in_provider:'anonymous'}}})),e=>e.code==='unauthenticated');
+});
+test('revoked or expired gift never becomes permanent purchased report ownership',async()=>{
+  for (const grant of [{enabled:false},{enabled:true,expiresAt:{toMillis:()=>Date.now()-1}}]) {
+    const s=setup(); const path='pro_gift_accounts/'+require('../pro-policy').giftKey(auth.token.email);
+    s.docs.set(path,{enabled:true});assert.equal((await s.balance()).unlimited,true);
+    s.docs.set(path,grant);assert.equal((await s.balance()).unlimited,false);
+    await assert.rejects(s.prepare(reportId,attemptId,'unlimited'),e=>e.code==='permission-denied');
+    assert.equal(s.docs.has('report_accounts/owner'),false);
+  }
+});
+test('gift removal preserves independently purchased unlimited ownership',async()=>{
+  const s=setup();await s.buy('gel_custom_reports');
+  const path='pro_gift_accounts/'+require('../pro-policy').giftKey(auth.token.email);
+  s.docs.set(path,{enabled:true});assert.equal((await s.balance()).unlimited,true);
+  s.docs.delete(path);assert.equal((await s.balance()).unlimited,true);
 });
 test('purchase grant survives restore and duplicate/concurrent token submissions credit once',async()=>{
   const s=setup();await Promise.all([s.buy(),s.buy(),s.buy()]);

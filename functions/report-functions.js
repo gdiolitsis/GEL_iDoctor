@@ -39,7 +39,10 @@ async function playRequest(url, method = 'GET') {
   }
 }
 function ledger(db, uid) { return db.collection('report_accounts').doc(uid); }
-function view(data = {}) { return {credits:Math.max(0, Number(data.credits)||0), unlimited:data.unlimited === true}; }
+function view(data = {}, giftFullAccess = false) { return {credits:Math.max(0, Number(data.credits)||0), unlimited:giftFullAccess || data.unlimited === true}; }
+async function hasGiftFullAccess(db, email) {
+  return giftResult((await db.collection('pro_gift_accounts').doc(giftKey(email)).get()).data()).active;
+}
 async function requirePro(db, uid, email) {
   const [paid, gift, tester] = await Promise.all([
     db.collection('pro_paid_accounts').doc(uid).get(),
@@ -47,13 +50,16 @@ async function requirePro(db, uid, email) {
     db.collection('tester_entitlements').doc(uid).get(),
   ]);
   const t = tester.data() || {};
-  if (Number(paid.data()?.verifiedUntil) > Date.now() || giftResult(gift.data()).active ||
-      (t.enabled === true && (t.permanent === true || (t.expiresAt?.toMillis?.() || 0) > Date.now()))) return;
+  // Every enabled gift includes personalisation. Never turn it into paid ownership in the ledger.
+  const giftFullAccess = giftResult(gift.data()).active;
+  if (Number(paid.data()?.verifiedUntil) > Date.now() || giftFullAccess ||
+      (t.enabled === true && (t.permanent === true || (t.expiresAt?.toMillis?.() || 0) > Date.now()))) return giftFullAccess;
   throw new HttpsError('failed-precondition', 'Active PRO is required. Restore PRO first.');
 }
 exports.getReportEntitlements = callable(async request => {
-  const {uid} = identity(request);
-  const data = (await ledger(getFirestore(),uid).get()).data() || {};
+  const {uid,email} = identity(request); const db = getFirestore();
+  const data = (await ledger(db,uid).get()).data() || {};
+  if (await hasGiftFullAccess(db,email)) return view(data,true);
   // Recheck permanent ownership on restoration as a fallback to refund notifications.
   if (data.unlimitedPurchaseToken) {
     try { await verifyForAccount(uid,'gel_custom_reports',data.unlimitedPurchaseToken); }
@@ -109,8 +115,9 @@ async function verifyForAccount(uid, sku, token) {
   return result;
 }
 exports.verifyReportPurchase = callable(async request => {
-  const {uid} = identity(request);
-  return verifyForAccount(uid, request.data?.productId, request.data?.purchaseToken);
+  const {uid,email} = identity(request);
+  const result = await verifyForAccount(uid, request.data?.productId, request.data?.purchaseToken);
+  return {...result,unlimited:result.unlimited || await hasGiftFullAccess(getFirestore(),email)};
 });
 // Configure Play RTDN to this topic. Only Google's Play notification service gets publish rights.
 exports.handleReportPurchaseNotification = onMessagePublished({topic:'gel-play-report-events',retry:true,timeoutSeconds:60}, async event => {
@@ -135,12 +142,13 @@ exports.handleReportPurchaseNotification = onMessagePublished({topic:'gel-play-r
 });
 exports.prepareReportExport = callable(async request => {
   const {uid,email} = identity(request); const id = reportId(request); const db = getFirestore();
-  await requirePro(db,uid,email);
+  const giftFullAccess = await requirePro(db,uid,email);
   const mode = request.data?.mode;
   const attempt = attemptId(request);
   const reservationKey = id + ':' + attempt;
   if (!['single','unlimited'].includes(mode)) throw new HttpsError('invalid-argument','Invalid export mode.');
   const account = ledger(db,uid); const report = account.collection('reports').doc(id);
+  if (giftFullAccess) return {allowed:true,...view((await account.get()).data(),true)};
   return db.runTransaction(async tx => {
     const [a,r] = await Promise.all([tx.get(account),tx.get(report)]);
     const data = a.data() || {}; const now = Date.now();
@@ -160,12 +168,13 @@ exports.prepareReportExport = callable(async request => {
   });
 });
 exports.finishReportExport = callable(async request => {
-  const {uid} = identity(request); const id = reportId(request); const db = getFirestore();
+  const {uid,email} = identity(request); const id = reportId(request); const db = getFirestore();
   const attempt = attemptId(request);
   const reservationKey = id + ':' + attempt;
   const success = request.data?.success;
   if (typeof success !== 'boolean') throw new HttpsError('invalid-argument','Export result required.');
   const account = ledger(db,uid); const report = account.collection('reports').doc(id);
+  if (await hasGiftFullAccess(db,email)) return view((await account.get()).data(),true);
   return db.runTransaction(async tx => {
     const [a,r,proof] = await Promise.all([tx.get(account),tx.get(report),tx.get(report.collection('attempts').doc(attempt))]);
     const data = a.data() || {}; const reservations = {...(data.reservations || {})};
