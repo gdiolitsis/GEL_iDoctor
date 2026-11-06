@@ -14,7 +14,11 @@ final class GelPlayVerifier {
             // Identity creation occurs only after an explicit Play purchase/restore.
             auth.signInAnonymously().addOnCompleteListener(task -> {
                 if (task.isSuccessful()) verify(context, token, callback);
-                else callback.done(false, "Could not connect to purchase verification.");
+                else {
+                    String code = task.getException() instanceof com.google.firebase.auth.FirebaseAuthException
+                            ? ((com.google.firebase.auth.FirebaseAuthException) task.getException()).getErrorCode() : "CONNECTION";
+                    callback.done(false, "Purchase verification sign-in failed (" + code + ").");
+                }
             });
             return;
         }
@@ -22,7 +26,9 @@ final class GelPlayVerifier {
                 .call(Collections.singletonMap("purchaseToken", token)).addOnCompleteListener(task -> {
                     if (!task.isSuccessful() || task.getResult() == null
                             || !(task.getResult().getData() instanceof Map)) {
-                        callback.done(false, "Purchase verification unavailable. Please retry Restore."); return;
+                        String code = task.getException() instanceof com.google.firebase.functions.FirebaseFunctionsException
+                                ? ((com.google.firebase.functions.FirebaseFunctionsException) task.getException()).getCode().name() : "CONNECTION";
+                        callback.done(false, "Purchase verification failed (" + code + "). Please retry Restore."); return;
                     }
                     Map<?, ?> data = (Map<?, ?>) task.getResult().getData();
                     long expiry = data.get("expiresAtMs") instanceof Number

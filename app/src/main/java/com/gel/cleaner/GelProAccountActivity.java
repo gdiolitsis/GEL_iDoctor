@@ -66,7 +66,7 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
         } else {
         action(box, gr ? "Συνδρομή PRO μέσω Google Play" : "Subscribe to PRO through Google Play",
                 () -> billing.launchGelProPurchase(this));
-        action(box, gr ? "Επαναφορά αγορών Play" : "Restore Play purchases", () -> billing.refreshPurchases());
+        action(box, gr ? "Επαναφορά αγορών Play" : "Restore Play purchases", this::restorePurchases);
         action(box, gr ? "Σύνδεση με Google" : "Sign in with Google", this::signIn);
         action(box, gr ? "Έλεγχος δωρεάν PRO" : "Refresh gifted PRO", this::refresh);
         action(box, gr ? "Αποσύνδεση" : "Sign out", () -> {
@@ -133,10 +133,28 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
                 + (GelReportStore.unlimited(this) ? (gr ? "\nΑπεριόριστη εξατομίκευση διαθέσιμη." : "\nUnlimited personalisation available.") : "")
                 + "\n\n" + message);
     }
+    private void restorePurchases() {
+        if (busy) return;
+        busy = true;
+        render(gr ? "Έλεγχος αγορών Google Play…" : "Checking Google Play purchases…");
+        final android.os.Handler timeout = new android.os.Handler(android.os.Looper.getMainLooper());
+        final boolean[] completed = {false};
+        timeout.postDelayed(() -> {
+            if (completed[0] || isFinishing()) return;
+            completed[0] = true; busy = false;
+            render(gr ? "Ο έλεγχος καθυστέρησε. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά."
+                    : "Restore timed out. Check your connection and retry.");
+        }, 45000);
+        billing.restorePurchases((ok, message) -> runOnUiThread(() -> {
+            if (completed[0] || isFinishing()) return;
+            completed[0] = true; busy = false;
+            render(message);
+        }));
+    }
     private void signIn() {
         if (busy) return;
-        int id = getResources().getIdentifier("default_web_client_id", "string", getPackageName());
-        if (id == 0) { render(gr ? "Η σύνδεση Google δεν έχει ρυθμιστεί ακόμη." : "Google sign-in is not configured yet."); return; }
+        // Direct reference keeps the generated OAuth resource in shrunk release APKs.
+        int id = R.string.default_web_client_id;
         busy = true;
         GetCredentialRequest request = new GetCredentialRequest.Builder().addCredentialOption(
                 new GetSignInWithGoogleOption.Builder(getString(id)).build()).build();

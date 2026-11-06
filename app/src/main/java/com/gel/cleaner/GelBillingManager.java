@@ -725,6 +725,77 @@ public final class GelBillingManager implements PurchasesUpdatedListener {
         refreshCustomReportsPurchase();
     }
 
+    public interface RestoreCallback { void done(boolean ok, String message); }
+
+    /** Explicit user restore waits for server verification, including empty/error results. */
+    public void restorePurchases(RestoreCallback callback) {
+        final boolean gr = AppLang.isGreek(appContext);
+        if (!billingClient.isReady()) {
+            callback.done(false, gr ? "Το Google Play δεν είναι έτοιμο. Δοκιμάστε ξανά σε λίγο."
+                    : "Google Play Billing is not ready. Please retry shortly.");
+            start();
+            return;
+        }
+        java.util.List<String> errors = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+        java.util.concurrent.atomic.AtomicInteger queries = new java.util.concurrent.atomic.AtomicInteger(3);
+        java.util.concurrent.atomic.AtomicInteger restored = new java.util.concurrent.atomic.AtomicInteger();
+        Runnable queryDone = () -> {
+            if (queries.decrementAndGet() != 0) return;
+            if (!errors.isEmpty()) { callback.done(false, errors.get(0)); return; }
+            callback.done(true, restored.get() > 0
+                    ? (gr ? "Η επαναφορά ολοκληρώθηκε. Οι διαθέσιμες αγορές επαληθεύτηκαν."
+                          : "Restore complete. Available purchases verified.")
+                    : (gr ? "Ο έλεγχος ολοκληρώθηκε. Δεν βρέθηκαν ενεργές αγορές Google Play."
+                          : "Restore complete. No active Google Play purchases found."));
+        };
+        if (GelReportStore.uid().isEmpty()) queryDone.run();
+        else GelReportStore.refresh(appContext, (ok, code, message) -> {
+            if (!ok) errors.add(message);
+            else if (GelReportStore.unlimited(appContext) || GelReportStore.credits(appContext) > 0) restored.incrementAndGet();
+            queryDone.run();
+        });
+        for (String type : new String[]{BillingClient.ProductType.SUBS, BillingClient.ProductType.INAPP}) {
+            billingClient.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(type).build(), (result, purchases) -> {
+                if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                    errors.add("Google Play restore failed (code " + result.getResponseCode() + ").");
+                    queryDone.run(); return;
+                }
+                java.util.List<Purchase> owned = new java.util.ArrayList<>();
+                if (purchases != null) for (Purchase p : purchases) {
+                    if (p.getPurchaseState() == Purchase.PurchaseState.PURCHASED
+                            && (p.getProducts().contains(PRODUCT_GEL_PRO_MONTHLY)
+                            || p.getProducts().contains(PRODUCT_SINGLE_REPORT)
+                            || p.getProducts().contains(PRODUCT_CUSTOM_REPORTS))) owned.add(p);
+                }
+                if (owned.isEmpty()) {
+                    if (BillingClient.ProductType.SUBS.equals(type)) setGelProActive(false);
+                    queryDone.run(); return;
+                }
+                java.util.concurrent.atomic.AtomicInteger pending = new java.util.concurrent.atomic.AtomicInteger(owned.size());
+                Runnable purchaseDone = () -> { if (pending.decrementAndGet() == 0) queryDone.run(); };
+                for (Purchase p : owned) {
+                    if (p.getProducts().contains(PRODUCT_GEL_PRO_MONTHLY)) {
+                        GelPlayVerifier.verify(appContext, p.getPurchaseToken(), (ok, error) -> {
+                            if (ok) { restored.incrementAndGet(); processVerifiedPurchase(p, false); }
+                            else errors.add(error);
+                            purchaseDone.run();
+                        });
+                    } else if (GelReportStore.uid().isEmpty()) {
+                        errors.add(gr ? "Συνδεθείτε με Google για επαναφορά εξατομικευμένων αναφορών."
+                                : "Sign in with Google to restore personalised reports.");
+                        purchaseDone.run();
+                    } else {
+                        String sku = p.getProducts().contains(PRODUCT_SINGLE_REPORT) ? PRODUCT_SINGLE_REPORT : PRODUCT_CUSTOM_REPORTS;
+                        GelReportStore.verify(appContext, sku, p.getPurchaseToken(), (ok, code, message) -> {
+                            if (ok) restored.incrementAndGet(); else errors.add(message);
+                            purchaseDone.run();
+                        });
+                    }
+                }
+            });
+        }
+    }
+
     private void refreshGelProSubscription() {
 
         QueryPurchasesParams params =
