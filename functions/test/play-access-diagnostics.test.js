@@ -3,7 +3,7 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-function load({email='172626247066-compute@developer.gserviceaccount.com',scopes=['https://www.googleapis.com/auth/androidpublisher'],scopeFailure=false,status=401,reason='permissionDenied'}={}) {
+function load({email='172626247066-compute@developer.gserviceaccount.com',scopes=['https://www.googleapis.com/auth/androidpublisher'],scopeFailure=false,catalogStatus=200,status=401,reason='permissionDenied'}={}) {
   const logs=[],requests=[];const exports={};
   vm.runInNewContext(fs.readFileSync(require.resolve('../play-access-diagnostics'),'utf8'),{
     exports,console:{info:(...v)=>logs.push(v)},require:n=>({
@@ -15,7 +15,7 @@ function load({email='172626247066-compute@developer.gserviceaccount.com',scopes
         async getClient(){return {
           getAccessToken:async()=>({token:'secret-access-token'}),
           getTokenInfo:async token=>{assert.equal(token,'secret-access-token');if(scopeFailure)throw Error('secret-access-token');return {scopes};},
-          request:async options=>{requests.push(options);throw {response:{status,data:{error:{message:'secret-access-token',errors:[{reason}]}}}};},
+          request:async options=>{requests.push(options);if(options.url.endsWith('/subscriptions/gel_pro_monthly') && catalogStatus===200)return {status:200,data:{private:'secret-catalog'}};throw {response:{status,data:{error:{message:'secret-access-token',errors:[{reason}]}}}};},
         };}
       }},
     })[n],
@@ -26,8 +26,8 @@ test('runtime probe reports identity, scope and Play denial without credentials 
   const s=load();await s.run({run:true,url:'https://untrusted.invalid',purchaseToken:'secret-purchase'});
   assert.equal(s.logs[0][1].expectedServiceAccount,true);
   assert.equal(s.logs[1][1].publisherScopePresent,true);
-  assert.equal(s.logs[2][1].httpStatus,401);assert.equal(s.logs[2][1].reason,'permissionDenied');
-  assert.equal(s.requests.length,1);assert.match(s.requests[0].url,/com.gel.iDoctor\/purchases\/subscriptionsv2\/tokens\/gel-diagnostic-invalid-token$/);
+  assert.equal(s.logs[3][1].httpStatus,401);assert.equal(s.logs[3][1].reason,'permissionDenied');
+  assert.equal(s.requests.length,2);assert.match(s.requests[1].url,/com.gel.iDoctor\/purchases\/subscriptionsv2\/tokens\/gel-diagnostic-invalid-token$/);
   assert.equal(s.requests[0].method,undefined);
   assert.equal(JSON.stringify(s.logs).includes('secret'),false);
 });
@@ -37,6 +37,13 @@ test('probe ignores unrelated messages and reports mismatched identity and missi
 });
 test('scope introspection failure still tests Play without leaking raw errors',async()=>{
   const s=load({scopeFailure:true,status:400,reason:'private-sensitive-value'});await s.run({run:true});
-  assert.equal(s.logs[1][1].scopeKnown,false);assert.equal(s.logs[2][1].httpStatus,400);
-  assert.equal(s.logs[2][1].reason,'unspecified');assert.equal(JSON.stringify(s.logs).includes('secret'),false);
+  assert.equal(s.logs[1][1].scopeKnown,false);assert.equal(s.logs[3][1].httpStatus,400);
+  assert.equal(s.logs[3][1].reason,'unspecified');assert.equal(JSON.stringify(s.logs).includes('secret'),false);
+});
+
+test('catalogue read reports status only, independently of purchase permission errors',async()=>{
+ const s=load();await s.run({run:true});
+ assert.equal(s.logs[2][0],'PRO_PLAY_RUNTIME_CATALOG');assert.equal(s.logs[2][1].httpStatus,200);
+ assert.equal(s.logs[3][1].httpStatus,401);assert.equal(JSON.stringify(s.logs).includes('secret-catalog'),false);
+ const denied=load({catalogStatus:401});await denied.run({run:true});assert.equal(denied.logs[2][1].httpStatus,401);
 });

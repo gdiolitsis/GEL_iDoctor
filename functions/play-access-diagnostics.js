@@ -30,22 +30,27 @@ exports.diagnosePlayAccess = onMessagePublished({
   } catch {
     console.info('PRO_PLAY_RUNTIME_SCOPE', {scopeKnown:false});
   }
+  for (const [label,url] of [
+    ['PRO_PLAY_RUNTIME_CATALOG','https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.gel.iDoctor/subscriptions/gel_pro_monthly'],
+    ['PRO_PLAY_RUNTIME_PROBE','https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.gel.iDoctor/purchases/subscriptionsv2/tokens/gel-diagnostic-invalid-token'],
+  ]) {
   try {
     // Fixed nonexistent token, through the same API as production verification.
     // This cannot buy, acknowledge, cancel or grant anything, and writes no ledger data.
     const result = await client.request({
-      url:'https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.gel.iDoctor/purchases/subscriptionsv2/tokens/gel-diagnostic-invalid-token',
+      url,
       timeout:10000,
     });
-    console.info('PRO_PLAY_RUNTIME_PROBE', {httpStatus:result.status || 200});
+    console.info(label, {httpStatus:result.status || 200});
   } catch (error) {
     const allowed = new Set(['permissionDenied','insufficientPermissions','accessNotConfigured',
       'invalidToken','purchaseTokenMismatch','subscriptionNotFound','PERMISSION_DENIED','SERVICE_DISABLED','UNAUTHENTICATED']);
     const api = error.response?.data?.error;
     const reasons = [...(api?.errors || []).map(e=>e.reason), ...(api?.details || []).map(e=>e.reason),api?.status];
-    console.info('PRO_PLAY_RUNTIME_PROBE', {
+    console.info(label, {
       httpStatus:Number(error.response?.status)||0,
       reason:reasons.find(r=>allowed.has(r)) || 'unspecified',
     });
+  }
   }
 });
