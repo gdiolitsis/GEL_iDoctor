@@ -11,9 +11,12 @@ import android.widget.TextView;
 public final class GelProPurchaseDialog {
     private GelProPurchaseDialog() {}
     public static void show(Activity activity, GelBillingManager billing) {
-        show(activity, billing, AppLang.isGreek(activity));
+        show(activity, billing, null);
     }
-    private static void show(Activity activity, GelBillingManager billing, boolean gr) {
+    public static void show(Activity activity, GelBillingManager billing, Runnable onCancelled) {
+        show(activity, billing, AppLang.isGreek(activity), onCancelled);
+    }
+    private static void show(Activity activity, GelBillingManager billing, boolean gr, Runnable onCancelled) {
         LinearLayout box = new LinearLayout(activity);
         box.setOrientation(LinearLayout.VERTICAL);
         int pad = Math.round(20 * activity.getResources().getDisplayMetrics().density);
@@ -23,22 +26,38 @@ public final class GelProPurchaseDialog {
         message.setTextColor(0xFF00FF9C);
         message.setTextSize(17);
         message.setText(gr
-            ? "GEL PRO — Πλήρης πρόσβαση\n\nΌλα τα εργαστήρια και απεριόριστες αναφορές με λογότυπο GEL. Η εξατομίκευση αγοράζεται χωριστά και απαιτεί ενεργό PRO.\n\nΗ διάρκεια ακολουθεί τον μήνα του Google Play. Η αυτόματη ανανέωση χρεώνεται κάθε μήνα μέχρι ακύρωσης."
-            : "GEL PRO — Full access\n\nAll labs and unlimited reports with the GEL logo. Personalisation is purchased separately and requires active PRO.\n\nDuration follows the Google Play month. Auto-renewal charges every month until cancelled.");
+            ? "GEL PRO — Πρόσβαση ενός μήνα\n\nΌλα τα εργαστήρια και απεριόριστες αναφορές με λογότυπο GEL. Η εξατομίκευση αγοράζεται χωριστά και απαιτεί ενεργό PRO.\n\nΗ διάρκεια ακολουθεί τον μήνα του Google Play. Η αυτόματη ανανέωση χρεώνεται κάθε μήνα μέχρι ακύρωσης."
+            : "GEL PRO — One-month access\n\nAll labs and unlimited reports with the GEL logo. Personalisation is purchased separately and requires active PRO.\n\nDuration follows the Google Play month. Auto-renewal charges every month until cancelled.");
         box.addView(message);
         ScrollView scroll = new ScrollView(activity); scroll.addView(box);
-        AlertDialog dialog = new AlertDialog.Builder(activity).setView(scroll).create();
+        AlertDialog dialog = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_NoActionBar).setView(scroll).create();
         GelButton language = button(activity, box, gr ? "English" : "Ελληνικά");
-        language.setOnClickListener(v -> { dialog.dismiss(); show(activity, billing, !gr); });
+        language.setOnClickListener(v -> { dialog.dismiss(); show(activity, billing, !gr, onCancelled); });
         GelButton prepaid = button(activity, box, gr ? "1 μήνας — 4,99€ · Χωρίς αυτόματη ανανέωση" : "1 month — €4.99 · No auto-renewal");
         GelButton monthly = button(activity, box, gr ? "4,99€/μήνα · Με αυτόματη ανανέωση" : "€4.99/month · Auto-renewing");
         prepaid.setOnClickListener(v -> { if (billing != null) { dialog.dismiss(); billing.launchGelProPlan(activity, true); } });
         monthly.setOnClickListener(v -> { if (billing != null) { dialog.dismiss(); billing.launchGelProPlan(activity, false); } });
-        button(activity, box, gr ? "Όχι τώρα" : "Not now").setOnClickListener(v -> dialog.dismiss());
+        button(activity, box, gr ? "Όχι τώρα" : "Not now").setOnClickListener(v -> {
+            if (onCancelled != null) onCancelled.run();
+            dialog.dismiss();
+        });
+        dialog.setOnCancelListener(d -> { if (onCancelled != null) onCancelled.run(); });
         dialog.show(); GelButtonLayout.fitDialog(dialog);
     }
     private static GelButton button(Activity activity, LinearLayout box, String label) {
         GelButton button = new GelButton(activity); button.setText(label); button.setAllCaps(false);
-        box.addView(button, new LinearLayout.LayoutParams(-1, -2)); return button;
+        button.setTextColor(Color.WHITE);
+        button.setTextSize(16);
+        button.setTypeface(null, android.graphics.Typeface.BOLD);
+        button.setSupportBackgroundTintList(null);
+        button.setBackgroundTintList(null);
+        android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
+        background.setColor(0xFF101010);
+        background.setCornerRadius(12 * activity.getResources().getDisplayMetrics().density);
+        background.setStroke(Math.round(2 * activity.getResources().getDisplayMetrics().density), 0xFFFFD700);
+        button.setBackground(background);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.topMargin = Math.round(12 * activity.getResources().getDisplayMetrics().density);
+        box.addView(button, params); return button;
     }
 }
