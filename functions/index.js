@@ -2757,3 +2757,5 @@ exports.activateTesterPro =
 Object.assign(exports, require('./pro-functions'));
 
 Object.assign(exports, require('./report-functions'));
+
+Object.assign(exports, require("./play-access-diagnostics"));
