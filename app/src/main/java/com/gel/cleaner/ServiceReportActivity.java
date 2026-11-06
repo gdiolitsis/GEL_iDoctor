@@ -99,7 +99,12 @@ public class ServiceReportActivity extends GELAutoActivityHook {
             @Override public void onBillingReady() {}
 
             @Override public void onGelProActivated(boolean showCustomReportsOffer) {
-                // Entitlement is rechecked on each export; do not recreate on every restore.
+                runOnUiThread(() -> {
+                    if (pendingProReportExport && !isFinishing()) {
+                        pendingProReportExport = false;
+                        showPersonalisedReportPurchaseDialog();
+                    }
+                });
             }
 
             @Override public void onCustomReportsActivated() {
@@ -136,6 +141,7 @@ public class ServiceReportActivity extends GELAutoActivityHook {
 
             @Override public void onPurchaseCancelled() {
                 pendingSingleReportExport = false;
+                pendingProReportExport = false;
             }
 
             @Override public void onBillingError(@androidx.annotation.NonNull String message) {
@@ -268,6 +274,7 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
     // STEP 2 — REPORT BILLING / ENTITLEMENT GATE
     // ============================================================
     private boolean pendingHtmlExport = false;
+    private boolean pendingProReportExport = false;
 
     private int reportBrandingChoice = 0; // 0 GEL, 1 single report, 2 unlimited
     private String singleReportIdentity = "";
@@ -408,13 +415,17 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
 
     private void showPersonalisedReportPurchaseDialog() {
         final boolean gr = AppLang.isGreek(this);
+        final boolean proActive = billingManager != null && billingManager.isGelProActive();
+        final boolean unlimitedOwned = proActive && billingManager.isCustomReportsActive();
+        final boolean creditAvailable = proActive && billingManager.hasSingleReportCredit();
 
         AlertDialog.Builder builder = new AlertDialog.Builder(
                 this, android.R.style.Theme_Material_Dialog_NoActionBar);
         LinearLayout root = buildGELPopupRoot(this);
 
         TextView title = new TextView(this);
-        title.setText(gr ? "ΕΞΑΓΩΓΗ SERVICE REPORT" : "EXPORT SERVICE REPORT");
+        title.setText(proActive ? (gr ? "ΕΞΑΓΩΓΗ SERVICE REPORT" : "EXPORT SERVICE REPORT")
+                : (gr ? "ΑΠΑΙΤΕΙΤΑΙ GEL PRO" : "GEL PRO REQUIRED"));
         title.setTextColor(Color.WHITE);
         title.setTextSize(18f);
         title.setTypeface(null, Typeface.BOLD);
@@ -422,29 +433,48 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         root.addView(title);
 
         TextView msg = new TextView(this);
-        msg.setText(gr
-                ? "Οι εξαγωγές απαιτούν ενεργό GEL PRO (1 μήνας με ή χωρίς αυτόματη ανανέωση). Οι αναφορές με λογότυπο GEL περιλαμβάνονται απεριόριστα.\n\nΕξατομίκευση με τα στοιχεία και το λογότυπό σας: 4,99€ για μία αναφορά ή 29,99€ εφάπαξ για απεριόριστες. Η επανεξαγωγή της ίδιας αναφοράς δεν χρεώνεται ξανά. Απαιτείται ενεργό PRO και στις δύο επιλογές."
-                : "Exports require active GEL PRO (1 month, with or without auto-renewal). Unlimited GEL-branded reports are included.\n\nYour details and logo: €4.99 for one report, or €29.99 once for unlimited personalisation. Re-exporting the same report uses no additional credit. Both options require active PRO.");
+        msg.setText(!proActive
+                ? (gr ? "Η εξαγωγή απαιτεί ενεργό GEL PRO. Επιλέξτε έναν μήνα με ή χωρίς αυτόματη ανανέωση, με 4,99€. Οι αναφορές με λογότυπο GEL περιλαμβάνονται. Η εξατομίκευση αγοράζεται χωριστά μετά την ενεργοποίηση PRO."
+                      : "Export requires active GEL PRO. Choose one month with or without auto-renewal for €4.99. Reports with the GEL logo are included. Personalisation is purchased separately after PRO activation.")
+                : (gr ? "Οι αναφορές με λογότυπο GEL περιλαμβάνονται στο ενεργό PRO. Η εξατομίκευση απαιτεί ενεργό PRO. Η επανεξαγωγή της ίδιας αναφοράς δεν καταναλώνει επιπλέον credit."
+                      : "Reports with the GEL logo are included in active PRO. Personalisation requires active PRO. Re-exporting the same report uses no additional credit."));
         msg.setTextColor(0xFF00FF9C);
         msg.setTextSize(14f);
         msg.setPadding(0, dp(14), 0, dp(8));
         root.addView(msg);
 
-        Button standard = gelButton(this,
-                gr ? "Εξαγωγή με λογότυπο GEL" : "Export with GEL logo", 0xFF0F8A3B);
-        Button single = gelButton(this,
-                gr ? "1 εξατομικευμένη αναφορά — 4,99€" : "1 personalised report — €4.99", 0xFF202020);
-        Button unlimited = gelButton(this,
-                gr ? "Απεριόριστη εξατομίκευση — 29,99€ εφάπαξ" : "Unlimited personalisation — €29.99 once", 0xFF202020);
-        Button cancel = gelButton(this, gr ? "Ακύρωση" : "Cancel", 0xFF202020);
-        root.addView(standard); root.addView(single); root.addView(unlimited); root.addView(cancel);
-        ScrollView scroll = new ScrollView(this); scroll.addView(root);
-        builder.setView(scroll);
         final AlertDialog dialog = builder.create();
-        standard.setOnClickListener(v -> { dialog.dismiss(); prepareReportExport(0); });
-        single.setOnClickListener(v -> { dialog.dismiss(); prepareReportExport(1); });
-        unlimited.setOnClickListener(v -> { dialog.dismiss(); prepareReportExport(2); });
-        cancel.setOnClickListener(v -> dialog.dismiss());
+        if (!proActive) {
+            Button activate = gelButton(this, gr ? "Ενεργοποίηση GEL PRO — 4,99€" : "Activate GEL PRO — €4.99", 0xFF0F8A3B);
+            root.addView(activate);
+            activate.setOnClickListener(v -> {
+                dialog.dismiss();
+                pendingProReportExport = true;
+                GelProPurchaseDialog.show(this, billingManager, () -> pendingProReportExport = false);
+            });
+        } else {
+            Button standard = gelButton(this, gr ? "Εξαγωγή με λογότυπο GEL — Περιλαμβάνεται" : "Export with GEL logo — Included", 0xFF0F8A3B);
+            root.addView(standard);
+            standard.setOnClickListener(v -> { dialog.dismiss(); prepareReportExport(0); });
+            if (unlimitedOwned) {
+                Button ownLogo = gelButton(this, gr ? "Εξαγωγή με το λογότυπό σας — Περιλαμβάνεται" : "Export with your logo — Included", 0xFF101010);
+                root.addView(ownLogo);
+                ownLogo.setOnClickListener(v -> { dialog.dismiss(); prepareReportExport(2); });
+            } else {
+                Button single = gelButton(this, creditAvailable
+                        ? (gr ? "Χρήση διαθέσιμου credit — Το λογότυπό σας" : "Use available credit — Your logo")
+                        : (gr ? "Μία αναφορά με το λογότυπό σας — 4,99€" : "One report with your logo — €4.99"), 0xFF101010);
+                Button unlimited = gelButton(this, gr ? "Απεριόριστη εξατομίκευση — 29,99€ εφάπαξ" : "Unlimited personalisation — €29.99 once", 0xFF101010);
+                root.addView(single); root.addView(unlimited);
+                single.setOnClickListener(v -> { dialog.dismiss(); prepareReportExport(1); });
+                unlimited.setOnClickListener(v -> { dialog.dismiss(); prepareReportExport(2); });
+            }
+        }
+        Button cancel = gelButton(this, gr ? "Όχι τώρα" : "Not now", 0xFF101010);
+        root.addView(cancel);
+        cancel.setOnClickListener(v -> { pendingProReportExport = false; dialog.dismiss(); });
+        ScrollView scroll = new ScrollView(this); scroll.addView(root);
+        dialog.setView(scroll);
 
         dialog.show();
 
@@ -1714,6 +1744,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         bg.setColor(bgColor);
         bg.setCornerRadius(dp(10));
         bg.setStroke(dp(3), 0xFFFFD700);
+        ((GelButton) b).setSupportBackgroundTintList(null);
+        b.setBackgroundTintList(null);
         b.setBackground(bg);
 
         LinearLayout.LayoutParams lp =
