@@ -25,10 +25,14 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
     private TextView status;
     private boolean busy;
     private GelBillingManager billing;
+    public static final String EXTRA_ACCESS_CHOICES = "gel_access_choices";
+    private boolean accessChoices;
+    private boolean giftActivation;
     private boolean gr;
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         gr = AppLang.isGreek(this);
+        accessChoices = getIntent().getBooleanExtra(EXTRA_ACCESS_CHOICES, false);
         ScrollView scroll = new ScrollView(this);
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -38,13 +42,28 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
         status = new TextView(this); status.setTextSize(18); status.setTextColor(Color.WHITE);
         box.addView(status);
         billing = new GelBillingManager(this, new GelProBillingListener() {
-            @Override public void onGelProActivated(boolean offer) { render(""); }
+            @Override public void onGelProActivated(boolean offer) {
+                if (accessChoices && !giftActivation && billing.isGelProActive()) finish();
+                else render("");
+            }
             @Override public void onPurchasePending(String product) {
                 render(gr ? "Η πληρωμή εκκρεμεί." : "Payment pending.");
             }
             @Override public void onBillingError(String message) { render(message); }
         });
         billing.start();
+        if (accessChoices) {
+            action(box, gr ? "Ενεργοποίηση GEL PRO — 4,99€" : "Activate GEL PRO — €4.99",
+                    () -> billing.launchGelProPurchase(this));
+            action(box, gr ? "Ενεργοποίηση δωρεάν FULL ACCESS — Gift" : "Activate free FULL ACCESS — Gift", () -> {
+                giftActivation = true;
+                box.removeAllViews(); box.addView(status);
+                action(box, gr ? "Επιλογή λογαριασμού Google" : "Choose Google account", this::signIn);
+                action(box, gr ? "Επιστροφή" : "Back", this::finish);
+                render("");
+                signIn();
+            });
+        } else {
         action(box, gr ? "Συνδρομή PRO μέσω Google Play" : "Subscribe to PRO through Google Play",
                 () -> billing.launchGelProPurchase(this));
         action(box, gr ? "Επαναφορά αγορών Play" : "Restore Play purchases", () -> billing.refreshPurchases());
@@ -62,7 +81,8 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
                     .setNegativeButton(gr ? "Άκυρο" : "Cancel", null)
                     .setPositiveButton(gr ? "Διαγραφή" : "Delete", (d,w) -> deleteAccount()).show();
         });
-        action(box, gr ? "Επιστροφή" : "Back", this::finish);
+        }
+        action(box, accessChoices ? (gr ? "Όχι τώρα" : "Not now") : (gr ? "Επιστροφή" : "Back"), this::finish);
         scroll.addView(box); setContentView(scroll); render("");
     }
     @Override protected void onResume() {
@@ -75,11 +95,29 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
     }
     private void action(LinearLayout box, String title, Runnable action) {
         GelButton button = new GelButton(this); button.setText(title); button.setAllCaps(false);
+        button.setTextColor(Color.WHITE); button.setTextSize(16);
+        button.setSupportBackgroundTintList(null); button.setBackgroundTintList(null);
+        android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
+        background.setColor(0xFF101010);
+        background.setCornerRadius(12 * getResources().getDisplayMetrics().density);
+        background.setStroke(Math.round(2 * getResources().getDisplayMetrics().density), 0xFFFFD700);
+        button.setBackground(background);
         button.setOnClickListener(v -> action.run());
-        box.addView(button, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.topMargin = Math.round(12 * getResources().getDisplayMetrics().density);
+        box.addView(button, params);
     }
     private void render(String message) {
+        if (accessChoices) {
+            status.setText((giftActivation
+                    ? (gr ? "Δωρεάν FULL ACCESS\n\nΣυνδεθείτε με τον Google λογαριασμό στον οποίο έχει απονεμηθεί το gift. Η απλή δήλωση email δεν παρέχει πρόσβαση."
+                          : "Free FULL ACCESS\n\nSign in with the Google account awarded the gift. Entering an email alone does not grant access.")
+                    : (gr ? "GEL PRO\n\nΕπιλέξτε αγορά πρόσβασης ενός μήνα ή ενεργοποίηση gift. Η δωρεάν FULL ACCESS πρόσβαση ισχύει μόνο για λογαριασμούς που έχει επιλέξει ο δημιουργός."
+                          : "GEL PRO\n\nChoose one-month access or activate a gift. Free FULL ACCESS is only available to accounts selected by the developer."))
+                    + "\n\n" + message);
+            return;
+        }
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         String identity = user != null && !user.isAnonymous() ? user.getEmail()
                 : (gr ? "Δεν έχετε συνδεθεί με Google." : "Not signed in with Google.");
@@ -92,7 +130,7 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
                 : "Gift access is assigned by the developer and periodically checked online. Play purchases work separately.")
                 + "\n\n" + (gr ? "Διαθέσιμα credits αναφορών: " : "Available report credits: ")
                 + GelReportStore.credits(this)
-                + (GelReportStore.unlimited(this) ? (gr ? "\nΑπεριόριστη εξατομίκευση αγορασμένη." : "\nUnlimited personalisation purchased.") : "")
+                + (GelReportStore.unlimited(this) ? (gr ? "\nΑπεριόριστη εξατομίκευση διαθέσιμη." : "\nUnlimited personalisation available.") : "")
                 + "\n\n" + message);
     }
     private void signIn() {
@@ -126,7 +164,21 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
     }
     private void refresh() {
         if (busy) return; busy = true;
-        GelAccountPro.refresh(this, (active, message) -> { busy = false; if (!isFinishing()) render(message); });
+        GelAccountPro.refresh(this, (active, message) -> {
+            busy = false;
+            if (isFinishing()) return;
+            if (accessChoices && giftActivation && active) {
+                GelReportStore.refresh(this, (ok, code, reportMessage) -> {
+                    if (isFinishing()) return;
+                    if (!ok) { render(reportMessage); return; }
+                    android.widget.Toast.makeText(this, gr ? "Το δωρεάν FULL ACCESS ενεργοποιήθηκε."
+                            : "Free FULL ACCESS activated.", android.widget.Toast.LENGTH_LONG).show();
+                    finish();
+                });
+            } else render(accessChoices && giftActivation && message.isEmpty()
+                    ? (gr ? "Δεν έχει απονεμηθεί gift σε αυτόν τον λογαριασμό. Επιλέξτε διαφορετικό λογαριασμό ή GEL PRO μέσω Google Play."
+                          : "This account has no gift. Choose another Google account or GEL PRO through Google Play.") : message);
+        });
     }
     private void deleteAccount() {
         if (busy) return; busy = true;
