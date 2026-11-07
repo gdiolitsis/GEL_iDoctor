@@ -56,8 +56,8 @@ exports.deleteProGoogleAccount = onCall(async request => {
     throw new HttpsError('failed-precondition', 'Sign in again before deleting your account.');
   }
   const db = getFirestore();
-  // Removes the gift as well, so recreating the account cannot restore a deleted grant.
-  await db.collection('pro_gift_accounts').doc(giftKey(email)).delete();
+  // Developer-issued gifts belong to the verified Google identity, not this Auth UID.
+  // Preserve the grant so signing in again can restore it; only an administrator revokes gifts.
   const testerRef = db.collection('tester_entitlements').doc(request.auth.uid);
   const tester = await testerRef.get();
   const codeId = tester.data()?.activationCodeId;

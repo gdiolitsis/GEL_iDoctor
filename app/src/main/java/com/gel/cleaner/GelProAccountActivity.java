@@ -84,8 +84,8 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
         action(box, gr ? "Διαγραφή λογαριασμού" : "Delete account", () -> {
             if (busy) return;
             AlertDialog dialog = new AlertDialog.Builder(this).setTitle(gr ? "Διαγραφή λογαριασμού" : "Delete account").setMessage(gr
-                    ? "Θα διαγραφεί ο λογαριασμός σύνδεσης και η δωρεάν άδεια PRO, καθώς και τα credits και οι αποθηκευμένες άδειες αναφορών. Η συνδρομή Google Play δεν ακυρώνεται από εδώ."
-                    : "Delete your sign-in account, gifted PRO access, report credits and saved report grants? This does not cancel a Google Play subscription.")
+                    ? "Θα διαγραφούν ο λογαριασμός και τα συνδεδεμένα δεδομένα της εφαρμογής, τα credits και οι αποθηκευμένες άδειες αναφορών. Αν σας έχει απονεμηθεί gift, θα ενεργοποιηθεί ξανά με σύνδεση στο ίδιο Google account. Η συνδρομή Google Play δεν ακυρώνεται από εδώ."
+                    : "Delete your app account and associated data, report credits and saved report grants? A developer-awarded gift will reactivate when you sign in again with the same Google account. This does not cancel a Google Play subscription.")
                     .setNegativeButton(gr ? "Άκυρο" : "Cancel", null)
                     .setPositiveButton(gr ? "Διαγραφή" : "Delete", (d,w) -> deleteAccount()).create();
             dialog.setOnShowListener(d -> {

@@ -55,3 +55,52 @@ test('publisher diagnostics never include tokens or messages',async()=>{
   assert.equal(logs[0][1].stage,'publisher');
   assert.equal(JSON.stringify(logs).includes('secret-token'),false);
 });
+
+test('deleting an app account preserves its gift for a new verified Google UID', async () => {
+  const {giftKey} = require('../pro-policy');
+  const giftId = giftKey(auth.token.email);
+  const records = new Map([
+    ['pro_gift_accounts/' + giftId, {enabled:true}],
+    ['pro_paid_accounts/google-user', {verifiedUntil:Date.now()+10000}],
+    ['report_accounts/google-user', {credits:2}],
+    ['tester_entitlements/google-user', {}],
+  ]);
+  const deletedUsers = [];
+  const db = {
+    collection: name => ({
+      doc: key => ({path:name+'/'+key,
+        get:async()=>({exists:records.has(name+'/'+key),data:()=>records.get(name+'/'+key)}),
+        delete:async()=>records.delete(name+'/'+key),
+      }),
+      where:()=>({get:async()=>({docs:[]})}),
+    }),
+    recursiveDelete:async ref=>records.delete(ref.path),
+  };
+  const handlers = {};
+  vm.runInNewContext(fs.readFileSync(require.resolve('../pro-functions'),'utf8'), {
+    exports:handlers, Date, encodeURIComponent, console,
+    require:name=>({
+      'firebase-functions/v2/https':{onCall:fn=>fn,HttpsError:class extends Error {constructor(code,message){super(message);this.code=code;}}},
+      'firebase-admin/firestore':{getFirestore:()=>db},
+      'firebase-admin/auth':{getAuth:()=>({deleteUser:async uid=>deletedUsers.push(uid)})},
+      'google-auth-library':{GoogleAuth:class {}},
+      './pro-policy':require('../pro-policy'),
+      'node:crypto':require('node:crypto'),
+    })[name],
+  });
+  const recent = {...auth,token:{...auth.token,auth_time:Date.now()/1000}};
+  await assert.rejects(handlers.deleteProGoogleAccount({auth:{uid:'anon',token:{}}}));
+  await assert.rejects(handlers.deleteProGoogleAccount({auth:{...recent,token:{...recent.token,auth_time:0}}}));
+  assert.equal(deletedUsers.length,0);
+  assert.equal((await handlers.deleteProGoogleAccount({auth:recent})).deleted,true);
+  assert.deepEqual(deletedUsers,['google-user']);
+  assert.equal(records.has('report_accounts/google-user'),false);
+  assert.equal(records.has('pro_paid_accounts/google-user'),false);
+  assert.equal(records.has('tester_entitlements/google-user'),false);
+  assert.equal(records.has('pro_gift_accounts/'+giftId),true);
+  const newIdentity = {...auth,uid:'new-google-uid'};
+  assert.equal((await handlers.getGiftProEntitlement({auth:newIdentity})).active,true);
+  assert.equal((await handlers.getGiftProEntitlement({auth:{...newIdentity,token:{...auth.token,email:'other@example.com'}}})).active,false);
+  records.set('pro_gift_accounts/'+giftId,{enabled:false});
+  assert.equal((await handlers.getGiftProEntitlement({auth:newIdentity})).active,false);
+});
