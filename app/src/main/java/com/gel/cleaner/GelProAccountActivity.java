@@ -26,6 +26,8 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
     private boolean busy;
     private GelBillingManager billing;
     public static final String EXTRA_ACCESS_CHOICES = "gel_access_choices";
+    public static final String EXTRA_TRIAL = "gel_trial";
+    private boolean trialActivation;
     private boolean accessChoices;
     private boolean giftActivation;
     private boolean gr;
@@ -33,6 +35,7 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         gr = AppLang.isGreek(this);
+        trialActivation = getIntent().getBooleanExtra(EXTRA_TRIAL, false);
         accessChoices = getIntent().getBooleanExtra(EXTRA_ACCESS_CHOICES, false);
         ScrollView scroll = new ScrollView(this);
         LinearLayout box = new LinearLayout(this);
@@ -53,7 +56,9 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
             @Override public void onBillingError(String message) { render(message); }
         });
         billing.start();
-        if (accessChoices) {
+        if (trialActivation) {
+            action(box, gr ? "Έναρξη δωρεάν δοκιμής — 60 λεπτά" : "Start free trial — 60 minutes", this::startTrial);
+        } else if (accessChoices) {
             action(box, gr ? "Ενεργοποίηση GEL PRO — 4,99€" : "Activate GEL PRO — €4.99",
                     () -> billing.launchGelProPurchase(this));
             action(box, gr ? "Ενεργοποίηση δωρεάν FULL ACCESS — Gift" : "Activate free FULL ACCESS — Gift", () -> {
@@ -77,7 +82,7 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
                 render(gr ? "Δεν υπάρχει συνδεδεμένος λογαριασμός Google." : "No Google account is signed in.");
                 return;
             }
-            FirebaseAuth.getInstance().signOut(); GelAccountPro.clear(this); GelProEntitlement.clearTesterCache(this);
+            FirebaseAuth.getInstance().signOut(); GelTrialAccess.clear(); GelAccountPro.clear(this); GelProEntitlement.clearTesterCache(this);
             render(gr ? "Αποσυνδεθήκατε από Google. Η συνδρομή Play παραμένει ανεξάρτητη."
                     : "Signed out of Google. Your Play subscription is separate.");
         });
@@ -139,6 +144,14 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
         // Quiet billing callbacks must not erase an explicit account action's result.
         if (message != null && !message.isEmpty()) lastMessage = message;
         message = lastMessage;
+        if (trialActivation) {
+            long until = GelTrialAccess.expiresAt(this);
+            status.setText((gr ? "Αν είστε επαγγελματίας ή απαιτητικός απλός χρήστης, δοκιμάστε τις πλήρεις δυνατότητες της εφαρμογής για μία ώρα. Μετά αποφασίζετε αν αξίζει για εσάς η συνδρομή.\n\nΌλα τα διαγνωστικά εργαστήρια και απεριόριστες προσωποποιημένες αναφορές με το λογότυπό σας. Χωρίς κάρτα, χρέωση ή αυτόματη συνδρομή.\n\nΜία δοκιμή ανά Google account και συσκευή. Απαιτούνται σύνδεση Google και internet. Η ώρα αρχίζει με την ενεργοποίηση και συνεχίζει όταν κλείνετε την εφαρμογή.\n\n"
+                    : "Whether you are a professional or a demanding everyday user, try the app’s full capabilities for one hour. Then decide whether the subscription is worth it for you.\n\nAll diagnostic labs and unlimited personalised reports with your logo. No card, charge or automatic subscription.\n\nOne trial per Google account and device. Google sign-in and internet required. Time starts on activation and continues when you close the app.\n\n")
+                    + (until > 0 ? (gr ? "Λήξη δοκιμής: " : "Trial expires: ") + java.text.DateFormat.getDateTimeInstance().format(new java.util.Date(until)) + "\n\n" : "")
+                    + message);
+            return;
+        }
         if (accessChoices) {
             status.setText((giftActivation
                     ? (gr ? "Δωρεάν FULL ACCESS\n\nΣυνδεθείτε με τον Google λογαριασμό στον οποίο έχει απονεμηθεί το gift. Η απλή δήλωση email δεν παρέχει πρόσβαση."
@@ -151,7 +164,8 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         String identity = user != null && !user.isAnonymous() ? user.getEmail()
                 : (gr ? "Δεν έχετε συνδεθεί με Google." : "Not signed in with Google.");
-        status.setText(identity + "\n\n" + (GelProEntitlement.isPaidProActive(this)
+        status.setText(identity + "\n\n" + (GelTrialAccess.active(this)
+                ? (gr ? "Δοκιμή FULL ACCESS έως: " : "FULL ACCESS trial until: ") + java.text.DateFormat.getDateTimeInstance().format(new java.util.Date(GelTrialAccess.expiresAt(this))) + "\n\n" : "") + (GelProEntitlement.isPaidProActive(this)
                 ? (gr ? "Συνδρομή PRO ενεργή μέσω Google Play." : "Paid PRO active through Google Play.")
                 : "") + "\n" + (GelAccountPro.active(this)
                 ? (gr ? "Δωρεάν PRO ενεργό — χωρίς συνδρομή." : "Gifted PRO active — no subscription.")
@@ -162,6 +176,26 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
                 + GelReportStore.credits(this)
                 + (GelReportStore.unlimited(this) ? (gr ? "\nΑπεριόριστη εξατομίκευση διαθέσιμη." : "\nUnlimited personalisation available.") : "")
                 + "\n\n" + message);
+    }
+    private void startTrial() {
+        if (busy) return;
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || user.isAnonymous()) { signIn(); return; }
+        busy = true;
+        render(gr ? "Έλεγχος δικαιώματος δοκιμής…" : "Checking trial eligibility…");
+        GelTrialAccess.start(this, (active, eligible, error) -> {
+            busy = false;
+            if (isFinishing() || isDestroyed()) return;
+            if (!error.isEmpty()) {
+                render(gr ? "Η ενεργοποίηση δεν επιβεβαιώθηκε. Ελέγξτε το internet και δοκιμάστε ξανά."
+                        : "Activation could not be confirmed. Check internet and retry.");
+                return;
+            }
+            if (active) render(gr ? "Η δωρεάν δοκιμή FULL ACCESS είναι ενεργή. Πατήστε Επιστροφή για να χρησιμοποιήσετε την εφαρμογή."
+                        : "Your free FULL ACCESS trial is active. Tap Back to use the app.");
+            else render(gr ? "Η δωρεάν δοκιμή έχει ήδη χρησιμοποιηθεί για αυτόν τον λογαριασμό ή τη συσκευή."
+                    : "The free trial has already been used for this account or device.");
+        });
     }
     private void restorePurchases() {
         if (busy) return;
@@ -204,7 +238,8 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
                                         if (task.isSuccessful()) {
                                             render(gr ? "Η σύνδεση Google ολοκληρώθηκε." : "Google sign-in complete.");
                                             GelProEntitlement.clearTesterCache(GelProAccountActivity.this);
-                                            billing.refreshPurchases(); refresh();
+                                            if (trialActivation) startTrial();
+                                            else { billing.refreshPurchases(); refresh(); }
                                         } else {
                                             String code = task.getException() instanceof com.google.firebase.auth.FirebaseAuthException
                                                     ? ((com.google.firebase.auth.FirebaseAuthException) task.getException()).getErrorCode() : "CONNECTION";
@@ -341,6 +376,7 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
                         if (current == null || owner.getUid().equals(current.getUid())) {
                             FirebaseAuth.getInstance().signOut();
                             GelAccountPro.clear(this);
+                            GelTrialAccess.clear();
                             GelProEntitlement.clearTesterCache(this);
                         }
                         render(gr ? "Ο λογαριασμός διαγράφηκε. Το gift επιστρέφει με νέα σύνδεση στο ίδιο Google account. Η συνδρομή Play δεν ακυρώθηκε."

@@ -62,3 +62,32 @@ Configure Play real-time developer notifications to `projects/gel-idoctor/topics
 Account deletion removes the ledger, tokens, report hashes and paid lease. Minimal token-hash/owner-hash/product/status receipts remain to prevent replay of already fulfilled purchases; no email, raw token or account reference remains in those receipts. Deleting the account forfeits its report credits/grants and does not cancel the separate Play subscription.
 
 Deployment alone does not configure Play products, Publisher permissions, topic publishing or Data Safety. Confirm all in the live project before charging users. Do not publish a Play release as part of setup.
+
+## One-hour FULL ACCESS trial
+
+Deploy startGelProTrial, getGelProTrial, prepareReportExport and finishReportExport,
+plus Hosting for the privacy disclosure. The new callables have a public invoker;
+verified Firebase Google authentication is enforced inside the handlers.
+Private pro_trial_accounts and pro_trial_devices collections are covered by default-deny
+Firestore rules. Store only hashed email/device keys and server start/expiry timestamps.
+Do not delete these eligibility records during normal app-account deletion.
+
+One fixed 60-minute trial per verified Google identity AND Android device identifier.
+Concurrent starts, reinstall, a new Firebase UID and another account on the same device
+cannot create another trial for the same identifiers. Active trials resume their original expiry.
+The client obtains at most a 60-second monotonic lease and refreshes about every 30 seconds
+while its activity is resumed. Process restart requires server refresh. Internet is required.
+Trial personalised exports do not consume credits or create permanent purchased ownership.
+An export authorised before expiry may complete after expiry without billing a credit.
+
+ANDROID_ID is scoped to Android profile and signing key: factory reset, another Android
+profile, upload-key APK versus Play-signing-key APK, or modified clients can evade device-only
+matching. The verified-email limit remains independent. This is not hardware attestation;
+no promise of absolute prevention is made. Consider Play Integrity/Device Recall when
+available before advertising stronger device recognition. Shared/second-hand device disputes
+require developer support; no public reset endpoint is provided.
+
+Update Play Data Safety disclosures for trial device identifiers and server-retained
+anti-abuse eligibility before publishing. No card or automatic subscription is created.
+Test fresh/consumed account and device, concurrent start, cancel sign-in, expiry, clock changes,
+offline, process restart, account deletion/recreation, credit preservation and trial PDF export.

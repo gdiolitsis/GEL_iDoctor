@@ -33,6 +33,12 @@ public final class GelProPurchaseDialog {
         AlertDialog dialog = new AlertDialog.Builder(activity, android.R.style.Theme_Material_Dialog_NoActionBar).setView(scroll).create();
         GelButton language = button(activity, box, gr ? "English" : "Ελληνικά");
         language.setOnClickListener(v -> { dialog.dismiss(); show(activity, billing, !gr, onCancelled); });
+        GelButton trial = button(activity, box, gr ? "Δωρεάν δοκιμή FULL ACCESS — 1 ώρα" : "Free FULL ACCESS trial — 1 hour");
+        trial.setOnClickListener(v -> {
+            dialog.dismiss();
+            activity.startActivity(new android.content.Intent(activity, GelProAccountActivity.class)
+                    .putExtra(GelProAccountActivity.EXTRA_TRIAL, true));
+        });
         GelButton prepaid = button(activity, box, gr ? "1 μήνας — 4,99€ · Χωρίς αυτόματη ανανέωση" : "1 month — €4.99 · No auto-renewal");
         GelButton monthly = button(activity, box, gr ? "4,99€/μήνα · Με αυτόματη ανανέωση" : "€4.99/month · Auto-renewing");
         prepaid.setOnClickListener(v -> { if (billing != null) { dialog.dismiss(); billing.launchGelProPlan(activity, true); } });

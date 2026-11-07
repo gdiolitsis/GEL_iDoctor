@@ -200,6 +200,16 @@
       paid subscriptions in Google Play. See the retention section for other cloud records.
     </p>
     <p>
+      The optional one-hour FULL ACCESS trial requires verified Google sign-in.
+      To limit repeat trials, our server retains pseudonymous hashes of the Google email
+      and the app-scoped Android device identifier, plus the trial start and expiry times.
+      These eligibility records are retained after app-account deletion so reinstalling or
+      recreating an account does not renew the trial. No IMEI or advertising identifier is used.
+      The trial lasts 60 continuous minutes, requires internet verification, and never
+      charges a payment method or starts a subscription. Contact the developer below
+      for privacy or eligibility questions, including shared or second-hand devices.
+    </p>
+    <p>
       Firebase Authentication also processes IP addresses and technical
       request information for authentication security and abuse prevention.
       Internet-based tests communicate with the relevant test endpoint,
