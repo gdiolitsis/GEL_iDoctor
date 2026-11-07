@@ -729,8 +729,8 @@ private void showSettingsDialog() {
     Button btnAddWidget = new com.gel.cleaner.GelButton(this);
     btnAddWidget.setText(
             gr
-                    ? "ΠΡΟΣΘΗΚΗ WIDGET ΣΤΗΝ ΑΡΧΙΚΗ"
-                    : "ADD WIDGET TO HOME SCREEN"
+                    ? "Αποθήκευση & προσθήκη widget"
+                    : "Save & add widget"
     );
     btnAddWidget.setAllCaps(false);
     btnAddWidget.setTextColor(0xFF00FF7F);
@@ -784,15 +784,8 @@ private void showSettingsDialog() {
             .setCancelable(true)
             .create();
 
-    btnAddWidget.setOnClickListener(v -> {
-        dlg.dismiss();
-        requestPinGelWidget();
-    });
-
-    btnCancel.setOnClickListener(v -> dlg.dismiss());
-
-    btnSave.setOnClickListener(v -> {
-
+    // Both actions persist the same selection before any launcher handoff.
+    Runnable saveSettings = () -> {
         // ---- mini check save ----
         boolean newMini = cbMini.isChecked();
         sp.edit().putBoolean("pulse_enabled", newMini).apply();
@@ -815,6 +808,20 @@ private void showSettingsDialog() {
             OptimizerScheduler.disableReminder(this);
         }
 
+    };
+
+    btnAddWidget.setOnClickListener(v -> {
+        saveSettings.run();
+        Toast.makeText(this, gr ? "Οι ρυθμίσεις αποθηκεύτηκαν."
+                : "Settings saved.", Toast.LENGTH_SHORT).show();
+        dlg.dismiss();
+        requestPinGelWidget();
+    });
+
+    btnCancel.setOnClickListener(v -> dlg.dismiss());
+
+    btnSave.setOnClickListener(v -> {
+        saveSettings.run();
         dlg.dismiss();
     });
 
