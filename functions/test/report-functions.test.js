@@ -39,7 +39,7 @@ function setup() {
         assert.equal(options.topic.startsWith('goog'),false,'Pub/Sub reserves the goog prefix');
         return fn;
       }},
-      'node:crypto':crypto,'./pro-policy':require('../pro-policy'),
+      'node:crypto':crypto,'./pro-policy':require('../pro-policy'),'./trial-policy':require('../trial-policy'),
       'google-auth-library':{GoogleAuth:class{async getClient(){return {request:async options=>{
         calls.push(options);if(options.method==='POST'&&failFinalize)throw {response:{status:503}};
         return {data:purchase};
@@ -176,4 +176,24 @@ test('restore rechecks and revokes refunded unlimited ownership',async()=>{
   const s=setup();await s.buy('gel_custom_reports');s.setPurchase({purchaseState:1,consumptionState:0});
   assert.equal((await s.balance()).unlimited,false);
   await assert.rejects(s.prepare(reportId,attemptId,'unlimited'),e=>e.code==='permission-denied');
+});
+
+test('trial exports are free only before expiry and never become purchased ownership',async()=>{
+ const s=setup(),deviceId='0123456789abcdef';
+ const {deviceKey,TRIAL_MS}=require('../trial-policy'),{giftKey}=require('../pro-policy');
+ const startedAt=Date.now()-1000,expiresAt=startedAt+TRIAL_MS,key=deviceKey(deviceId),email=auth.token.email;
+ s.docs.delete('pro_paid_accounts/owner');
+ s.docs.set('pro_trial_accounts/'+giftKey(email),{device:key,startedAt,expiresAt});
+ s.docs.set('pro_trial_devices/'+key,{account:giftKey(email),startedAt,expiresAt});
+ const data={deviceId,reportId,attemptId,mode:'unlimited'};
+ assert.equal((await s.exports.prepareReportExport(s.req(data))).allowed,true);
+ assert.equal((await s.balance()).unlimited,false);
+ assert.notEqual(s.docs.get('report_accounts/owner')?.unlimited,true);
+ for(const name of ['pro_trial_accounts/'+giftKey(email),'pro_trial_devices/'+key]){
+   const d=s.docs.get(name);d.startedAt-=TRIAL_MS;d.expiresAt-=TRIAL_MS;
+ }
+ await s.exports.finishReportExport(s.req({...data,success:true}));
+ assert.equal(s.docs.get('report_accounts/owner')?.credits,undefined);
+ assert.equal(s.docs.get('report_accounts/owner/reports/'+reportId)?.completed,undefined);
+ await assert.rejects(s.exports.prepareReportExport(s.req({...data,attemptId:attempt2})));
 });

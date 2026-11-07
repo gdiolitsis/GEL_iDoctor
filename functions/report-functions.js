@@ -6,6 +6,7 @@ const {getFirestore} = require('firebase-admin/firestore');
 const {GoogleAuth} = require('google-auth-library');
 const crypto = require('node:crypto');
 const {verifiedGoogleEmail, giftKey, giftResult} = require('./pro-policy');
+const {trialUntil} = require('./trial-policy');
 const publisher = new GoogleAuth({scopes:['https://www.googleapis.com/auth/androidpublisher']});
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const callable = fn => onCall({timeoutSeconds:60},fn);
@@ -43,7 +44,7 @@ function view(data = {}, giftFullAccess = false) { return {credits:Math.max(0, N
 async function hasGiftFullAccess(db, email) {
   return giftResult((await db.collection('pro_gift_accounts').doc(giftKey(email)).get()).data()).active;
 }
-async function requirePro(db, uid, email) {
+async function requirePro(db, uid, email, trialExpiry = 0) {
   const [paid, gift, tester] = await Promise.all([
     db.collection('pro_paid_accounts').doc(uid).get(),
     db.collection('pro_gift_accounts').doc(giftKey(email)).get(),
@@ -52,7 +53,7 @@ async function requirePro(db, uid, email) {
   const t = tester.data() || {};
   // Every enabled gift includes personalisation. Never turn it into paid ownership in the ledger.
   const giftFullAccess = giftResult(gift.data()).active;
-  if (Number(paid.data()?.verifiedUntil) > Date.now() || giftFullAccess ||
+  if (Number(paid.data()?.verifiedUntil) > Date.now() || giftFullAccess || trialExpiry > Date.now() ||
       (t.enabled === true && (t.permanent === true || (t.expiresAt?.toMillis?.() || 0) > Date.now()))) return giftFullAccess;
   throw new HttpsError('failed-precondition', 'Active PRO is required. Restore PRO first.');
 }
@@ -142,13 +143,22 @@ exports.handleReportPurchaseNotification = onMessagePublished({topic:'gel-play-r
 });
 exports.prepareReportExport = callable(async request => {
   const {uid,email} = identity(request); const id = reportId(request); const db = getFirestore();
-  const giftFullAccess = await requirePro(db,uid,email);
+  const trialExpiry = await trialUntil(db,email,request.data?.deviceId);
+  const giftFullAccess = await requirePro(db,uid,email,trialExpiry);
   const mode = request.data?.mode;
   const attempt = attemptId(request);
   const reservationKey = id + ':' + attempt;
   if (!['single','unlimited'].includes(mode)) throw new HttpsError('invalid-argument','Invalid export mode.');
   const account = ledger(db,uid); const report = account.collection('reports').doc(id);
   if (giftFullAccess) return {allowed:true,...view((await account.get()).data(),true)};
+  if (trialExpiry > Date.now()) {
+    return db.runTransaction(async tx => {
+      const a = await tx.get(account);
+      if (trialExpiry <= Date.now()) throw new HttpsError('failed-precondition','Trial expired.');
+      tx.set(report.collection('attempts').doc(attempt),{trial:true,authorisedAt:Date.now(),trialUntil:trialExpiry});
+      return {allowed:true,...view(a.data())};
+    });
+  }
   return db.runTransaction(async tx => {
     const [a,r] = await Promise.all([tx.get(account),tx.get(report)]);
     const data = a.data() || {}; const now = Date.now();
@@ -178,6 +188,8 @@ exports.finishReportExport = callable(async request => {
   return db.runTransaction(async tx => {
     const [a,r,proof] = await Promise.all([tx.get(account),tx.get(report),tx.get(report.collection('attempts').doc(attempt))]);
     const data = a.data() || {}; const reservations = {...(data.reservations || {})};
+    // Complete a previously authorised trial export without spending or minting credits.
+    if (proof.data()?.trial === true) return view(data);
     if (r.data()?.completed === true) {
       delete reservations[reservationKey]; tx.set(account,{...data,reservations});
       return view(data); // replay-safe completion, release a concurrent duplicate hold

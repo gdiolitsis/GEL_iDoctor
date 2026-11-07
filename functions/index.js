@@ -2759,3 +2759,5 @@ Object.assign(exports, require('./pro-functions'));
 Object.assign(exports, require('./report-functions'));
 
 Object.assign(exports, require("./play-access-diagnostics"));
+
+Object.assign(exports, require('./trial-functions'));

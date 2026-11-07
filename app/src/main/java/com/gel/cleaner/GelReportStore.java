@@ -28,8 +28,9 @@ final class GelReportStore {
     }
     static SharedPreferences prefs(Context c) { return c.getSharedPreferences("GEL_REPORT_SERVER_" + uid(), 0); }
     static int credits(Context c) { return uid().isEmpty() ? 0 : prefs(c).getInt("credits", 0); }
-    static boolean unlimited(Context c) { return !uid().isEmpty() && prefs(c).getBoolean("unlimited", false); }
+    static boolean unlimited(Context c) { return !uid().isEmpty() && (prefs(c).getBoolean("unlimited", false) || GelTrialAccess.active(c)); }
     private static void call(Context c, String name, Map<String,Object> args, Callback callback) {
+        args.put("deviceId", GelTrialAccess.deviceId(c));
         final String owner = uid();
         if (owner.isEmpty()) { callback.done(false,"UNAUTHENTICATED","Sign in with Google to restore report purchases."); return; }
         functions().getHttpsCallable(name).call(args).addOnCompleteListener(task -> {

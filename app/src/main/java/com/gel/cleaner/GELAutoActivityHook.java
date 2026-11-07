@@ -26,6 +26,15 @@ import com.gel.cleaner.base.GELFoldableAnimationPack;
 public abstract class GELAutoActivityHook extends AppCompatActivity
         implements GELFoldableCallback {
 
+    private boolean trialForeground;
+    private final android.os.Handler trialHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable trialRefresh = new Runnable() {
+        public void run() {
+            GelTrialAccess.refresh(GELAutoActivityHook.this, (active, eligible, error) -> {
+                if (trialForeground && !isFinishing() && !isDestroyed() && active) trialHandler.postDelayed(this, 30000);
+            });
+        }
+    };
     private final android.os.Handler giftHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable giftRefresh = new Runnable() {
         public void run() {
@@ -128,6 +137,9 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
     @Override
     protected void onResume() {
         super.onResume();
+        trialHandler.removeCallbacks(trialRefresh);
+        trialForeground = true;
+        trialRefresh.run();
 
 
         // ============================================================
@@ -160,6 +172,8 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
 
     @Override
     protected void onPause() {
+        trialForeground = false;
+        trialHandler.removeCallbacks(trialRefresh);
         if (foldAnimPack != null) {
             foldAnimPack.onPause();
         }

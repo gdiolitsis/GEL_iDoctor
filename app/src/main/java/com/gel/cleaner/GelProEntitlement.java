@@ -93,7 +93,8 @@ public final class GelProEntitlement {
 
         return isPaidProActive(context)
                 || isTesterProActive(context)
-                || GelAccountPro.active(context);
+                || GelAccountPro.active(context)
+                || GelTrialAccess.active(context);
     }
 
     public static boolean isPaidProActive(
