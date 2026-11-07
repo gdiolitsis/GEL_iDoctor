@@ -13,6 +13,7 @@ public class GELServiceLog {
     // ----------------------------
     // BUFFERS
     // ----------------------------
+    private static final StringBuilder SUPPORT = new StringBuilder(4096); // bounded current-process support history
     private static final StringBuilder LOG  = new StringBuilder(4096); // plain text
     private static final StringBuilder HTML = new StringBuilder(4096); // colored html
 
@@ -27,6 +28,8 @@ public class GELServiceLog {
     private static synchronized void addPlain(String line) {
         if (line == null) return;
         LOG.append(line).append('\n');
+        SUPPORT.append(line).append('\n');
+        if (SUPPORT.length() > MAX_CHARS) SUPPORT.delete(0, SUPPORT.length() - MAX_CHARS);
         ensureLimit();
     }
 
@@ -143,6 +146,11 @@ public class GELServiceLog {
     // ============================================================
     public static synchronized String getAll() {
         return LOG.toString();   // plain text
+    }
+
+    /** Diagnostic history survives report/lab cleanup; retained only in this app process. */
+    public static synchronized String getSupportLog() {
+        return SUPPORT.toString();
     }
 
     public static synchronized String getHtml() {
