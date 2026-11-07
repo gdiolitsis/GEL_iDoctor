@@ -2428,8 +2428,8 @@ private void setupCertificationAccess() {
     if (b instanceof TextView) {
         ((TextView) b).setText(
                 gr
-                        ? "ΠΛΗΡΗΣ ΠΡΟΣΒΑΣΗ GEL PRO • 4,99€/μήνα"
-                        : "GEL PRO — FULL ACCESS • €4.99/month"
+                        ? "ΠΛΗΡΗΣ ΠΡΟΣΒΑΣΗ GEL PRO • 4,99€/μήνα\n(Κυρίως για επαγγελματίες)"
+                        : "GEL PRO — FULL ACCESS • €4.99/month\n(Mainly for professionals)"
         );
     }
 
