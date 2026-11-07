@@ -254,14 +254,103 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
         });
     }
     private void deleteAccount() {
-        if (busy) return; busy = true;
+        if (busy) return;
+        final FirebaseUser owner = FirebaseAuth.getInstance().getCurrentUser();
+        if (owner == null || owner.isAnonymous()) {
+            render(gr ? "Δεν υπάρχει συνδεδεμένος λογαριασμός Google για διαγραφή."
+                    : "No Google account is signed in for deletion.");
+            return;
+        }
+        busy = true;
+        render(gr ? "Επιβεβαιώστε τον ίδιο λογαριασμό Google για τη διαγραφή…"
+                : "Confirm the same Google account to delete your app account…");
+        GetCredentialRequest request = new GetCredentialRequest.Builder().addCredentialOption(
+                new GetSignInWithGoogleOption.Builder(getString(R.string.default_web_client_id)).build()).build();
+        try {
+            CredentialManager.create(this).getCredentialAsync(this, request, null,
+                    ContextCompat.getMainExecutor(this),
+                    new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+                        @Override public void onResult(GetCredentialResponse response) {
+                            if (!deletionOwnerCurrent(owner)) return;
+                            try {
+                                if (!GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL.equals(
+                                        response.getCredential().getType())) {
+                                    deletionFailed(gr ? "Μη υποστηριζόμενη επαλήθευση. Δεν έγινε διαγραφή."
+                                            : "Unsupported verification. Account was not deleted.");
+                                    return;
+                                }
+                                String token = GoogleIdTokenCredential.createFrom(
+                                        response.getCredential().getData()).getIdToken();
+                                // Reauthenticate the captured user; never sign in as a different account for deletion.
+                                owner.reauthenticate(GoogleAuthProvider.getCredential(token, null))
+                                        .addOnCompleteListener(authTask -> {
+                                            if (!deletionOwnerCurrent(owner)) return;
+                                            if (!authTask.isSuccessful()) {
+                                                deletionFailed(gr ? "Η επαλήθευση απέτυχε. Επιλέξτε τον ίδιο Google λογαριασμό. Δεν έγινε διαγραφή."
+                                                        : "Verification failed. Choose the same Google account. Account was not deleted.");
+                                                return;
+                                            }
+                                            // The callable must receive a fresh auth_time, not the previously cached ID token.
+                                            owner.getIdToken(true).addOnCompleteListener(tokenTask -> {
+                                                if (!deletionOwnerCurrent(owner)) return;
+                                                if (!tokenTask.isSuccessful()) {
+                                                    deletionFailed(gr ? "Η ανανέωση σύνδεσης απέτυχε. Δεν έγινε διαγραφή. Δοκιμάστε ξανά."
+                                                            : "Session refresh failed. Account was not deleted. Please retry.");
+                                                    return;
+                                                }
+                                                performAccountDeletion(owner);
+                                            });
+                                        });
+                            } catch (Exception error) {
+                                deletionFailed(gr ? "Η επαλήθευση Google απέτυχε. Δεν έγινε διαγραφή."
+                                        : "Google verification failed. Account was not deleted.");
+                            }
+                        }
+                        @Override public void onError(GetCredentialException error) {
+                            if (!deletionOwnerCurrent(owner)) return;
+                            deletionFailed(gr ? "Η επαλήθευση ακυρώθηκε ή δεν είναι διαθέσιμη. Δεν έγινε διαγραφή."
+                                    : "Verification cancelled or unavailable. Account was not deleted.");
+                        }
+                    });
+        } catch (Exception error) {
+            deletionFailed(gr ? "Η επαλήθευση Google δεν είναι διαθέσιμη. Δεν έγινε διαγραφή."
+                    : "Google verification unavailable. Account was not deleted.");
+        }
+    }
+    private boolean deletionOwnerCurrent(FirebaseUser owner) {
+        if (isFinishing() || isDestroyed()) return false;
+        FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
+        if (current != null && owner.getUid().equals(current.getUid())) return true;
+        deletionFailed(gr ? "Ο συνδεδεμένος λογαριασμός άλλαξε. Η διαγραφή διακόπηκε."
+                : "The signed-in account changed. Deletion stopped.");
+        return false;
+    }
+    private void deletionFailed(String message) {
+        busy = false;
+        if (!isFinishing() && !isDestroyed()) render(message);
+    }
+    private void performAccountDeletion(FirebaseUser owner) {
+        if (!deletionOwnerCurrent(owner)) return;
+        render(gr ? "Διαγραφή λογαριασμού…" : "Deleting app account…");
         FirebaseFunctions.getInstance("europe-west1").getHttpsCallable("deleteProGoogleAccount")
                 .call().addOnCompleteListener(task -> {
+                    if (isFinishing() || isDestroyed()) return;
                     busy = false;
                     if (task.isSuccessful()) {
-                        FirebaseAuth.getInstance().signOut(); GelAccountPro.clear(this); GelProEntitlement.clearTesterCache(this); render(gr ? "Ο λογαριασμός διαγράφηκε." : "Account deleted.");
-                    } else render(gr ? "Συνδεθείτε ξανά με Google και επαναλάβετε τη διαγραφή."
-                            : "Sign in with Google again, then retry deletion.");
+                        FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
+                        if (current == null || owner.getUid().equals(current.getUid())) {
+                            FirebaseAuth.getInstance().signOut();
+                            GelAccountPro.clear(this);
+                            GelProEntitlement.clearTesterCache(this);
+                        }
+                        render(gr ? "Ο λογαριασμός διαγράφηκε. Το gift επιστρέφει με νέα σύνδεση στο ίδιο Google account. Η συνδρομή Play δεν ακυρώθηκε."
+                                : "Account deleted. Your gift returns when you sign in again with the same Google account. Your Play subscription was not cancelled.");
+                    } else {
+                        String code = task.getException() instanceof com.google.firebase.functions.FirebaseFunctionsException
+                                ? ((com.google.firebase.functions.FirebaseFunctionsException) task.getException()).getCode().name() : "CONNECTION";
+                        render((gr ? "Η διαγραφή δεν ολοκληρώθηκε. Δοκιμάστε ξανά. Κωδικός: "
+                                : "Deletion did not complete. Please retry. Code: ") + code);
+                    }
                 });
     }
 }
