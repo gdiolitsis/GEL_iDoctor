@@ -572,43 +572,7 @@ try {
 }
 
 private String buildSupportReport(String userMsg) {
-
-    StringBuilder sb = new StringBuilder();
-
-    sb.append("=== GEL iDoctor Support Report ===\n\n");
-
-// ================= USER MESSAGE =================
-sb.append("----- USER MESSAGE -----\n");
-sb.append(userMsg).append("\n\n");
-
-// ================= DEVICE INFO =================
-sb.append("----- DEVICE -----\n");
-sb.append("Model: ").append(android.os.Build.MODEL).append("\n");
-sb.append("Brand: ").append(android.os.Build.BRAND).append("\n");
-sb.append("Android: ").append(android.os.Build.VERSION.RELEASE).append("\n");
-sb.append("SDK: ").append(android.os.Build.VERSION.SDK_INT).append("\n\n");
-
-// ================= APP STATE =================
-sb.append("----- APP -----\n");
-sb.append("Version: 1.0\n\n");
-
-// ================= LOGS =================
-sb.append("----- LOGS -----\n");
-
-try {
-    String logs = GELServiceLog.getAll();
-    if (logs != null && !logs.trim().isEmpty()) {
-        sb.append(logs);
-    } else {
-        sb.append("No logs available\n");
-    }
-} catch (Throwable ignore) {
-    sb.append("Logs unavailable\n");
-}
-
-sb.append("\n\n----- END OF REPORT -----\n");
-
-return sb.toString();
+    return GelSupportReport.build(this, userMsg);
 }
 
 @Override
