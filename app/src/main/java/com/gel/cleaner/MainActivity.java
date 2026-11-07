@@ -632,8 +632,19 @@ private void showSettingsDialog() {
 
     TextView miniHint = new TextView(this);
     miniHint.setText(gr
-? "Διαρκεί λιγότερο από 1 δευτερόλεπτο και στέλνει ειδοποίηση μόνο σε κρίσιμες καταστάσεις (Crash / ≥45°C / Υπερφόρτωση CPU–GPU–Cache)."
-: "Runs in under 1 second and notifies only on critical conditions (Crash / ≥45°C / CPU–GPU–Cache overload).");
+            ? "Περιοδικός έλεγχος θερμοκρασίας μπαταρίας, πίεσης RAM, εσωτερικού αποθηκευτικού χώρου και προειδοποιήσεων μπαταρίας όπου διατίθενται. Ειδοποιεί για ανησυχητικές ενδείξεις και προτείνει ενέργειες. Δεν ανιχνεύει crash και δεν παρέχει συνεχή παρακολούθηση. Οι ώρες ενδέχεται να καθυστερούν λόγω Android."
+            : "Periodic checks of battery temperature, RAM pressure, internal storage and battery health warnings where available. Reports concerning readings with suggested actions. Does not detect crashes or provide continuous monitoring. Android may delay scheduled checks.");
+    long miniSuccess = sp.getLong("mini_last_success", 0);
+    long miniAttempt = sp.getLong("mini_last_attempt", 0);
+    miniHint.append("\n\n" + (gr ? "Τελευταίος πλήρης έλεγχος: " : "Last complete check: ")
+            + (miniSuccess > 0 ? java.text.DateFormat.getDateTimeInstance().format(new java.util.Date(miniSuccess))
+                    : (gr ? "Δεν έχει ολοκληρωθεί ακόμη." : "Not completed yet.")));
+    if (miniAttempt > 0 && !sp.getBoolean("mini_last_complete", false))
+        miniHint.append(gr ? "\nΣτην τελευταία προσπάθεια ορισμένες μετρήσεις δεν ήταν διαθέσιμες."
+                : "\nSome readings were unavailable on the last attempt.");
+    if (!androidx.core.app.NotificationManagerCompat.from(this).areNotificationsEnabled())
+        miniHint.append(gr ? "\nΟι ειδοποιήσεις είναι απενεργοποιημένες στις ρυθμίσεις Android."
+                : "\nNotifications are disabled in Android settings.");
     miniHint.setTextColor(Color.WHITE);
     miniHint.setTextSize(13f);
     miniHint.setPadding(0, 0, 0, dp(14));
