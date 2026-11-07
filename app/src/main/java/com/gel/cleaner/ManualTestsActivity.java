@@ -28753,486 +28753,124 @@ private String lab24_readWholeFile(String path) {
 // LAB 25 — GEL Crash Intelligence v5.0 (FULL AUTO EDITION)
 // ============================================================
 private void lab25CrashHistory() {
-
     final boolean gr = AppLang.isGreek(this);
-
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 25 — GEL Ανάλυση Σφαλμάτων (ΑΥΤΟΜΑΤΗ)"
-            : "LAB 25 — GEL Crash Intelligence (AUTO)");
+    logInfo(gr ? "LAB 25 — Διαθέσιμα στοιχεία crash / παγώματος"
+            : "LAB 25 — Available crash / ANR evidence");
     logLine();
 
-    int crashCount = 0;
-    int anrCount = 0;
-    int systemCount = 0;
+    logLabelWarnValue(gr ? "Κάλυψη" : "Coverage", gr
+            ? "Το Android περιορίζει την πρόσβαση. Ο έλεγχος δεν αποτελεί πλήρες ιστορικό όλων των εφαρμογών ή πιστοποίηση σταθερότητας."
+            : "Android restricts access. This is not a complete history of all apps or a stability certification.");
 
-    Map<String, Integer> appEvents = new HashMap<>();
-    List<String> details = new ArrayList<>();
-
-    // ============================================================
-    // (A) Android 11+ — REALTIME ERROR SNAPSHOT
-    // ============================================================
+    // This API may be restricted to our UID. It is not a historical query.
     try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-
-            ActivityManager am =
-                    (ActivityManager) getSystemService(ACTIVITY_SERVICE);
-
-            if (am != null) {
-
-                List<ActivityManager.ProcessErrorStateInfo> errs =
-                        am.getProcessesInErrorState();
-
-                if (errs != null && !errs.isEmpty()) {
-
-                    logInfo(gr
-                            ? "Στιγμιότυπο τρεχόντων σφαλμάτων"
-                            : "Realtime error snapshot");
-
-                    for (ActivityManager.ProcessErrorStateInfo e : errs) {
-
-                        String app =
-                                (e != null && e.processName != null)
-                                        ? e.processName
-                                        : "(unknown)";
-
-                        appEvents.put(app, appEvents.getOrDefault(app, 0) + 1);
-
-                        if (e.condition ==
-                                ActivityManager.ProcessErrorStateInfo.CRASHED) {
-
-                            logLabelErrorValue(
-                                    "CRASH",
-                                    app + " — " + safeStr(e.shortMsg)
-                            );
-
-                        } else if (e.condition ==
-                                ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING) {
-
-                            logLabelWarnValue(
-                                    "ANR",
-                                    app + " — " + safeStr(e.shortMsg)
-                            );
-
-                        } else {
-
-                            logLabelWarnValue(
-                                    gr ? "ΣΦΑΛΜΑ" : "ERROR",
-                                    app + " — " + safeStr(e.shortMsg)
-                            );
-                        }
-                    }
-
-                    appendHtml("<br>");
-                    logLabelOkValue(
-                            gr ? "Σημείωση" : "Note",
-                            gr
-                                    ? "Το στιγμιότυπο δείχνει ΜΟΝΟ τρέχοντα crashes / ANR (όχι ιστορικό)"
-                                    : "Snapshot shows ONLY current crashed / ANR processes (not history)"
-                    );
-                }
-            }
+        ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        if (am == null) throw new IllegalStateException("Service unavailable");
+        List<ActivityManager.ProcessErrorStateInfo> errors = am.getProcessesInErrorState();
+        int visible = 0;
+        if (errors != null) for (ActivityManager.ProcessErrorStateInfo error : errors) {
+            if (error == null) continue;
+            visible++;
+            logLabelWarnValue(error.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING
+                    ? "ANR" : "ERROR", safeStr(error.processName) + " — " + safeStr(error.shortMsg));
         }
+        logInfo(gr
+                ? "Τρέχον στιγμιότυπο: " + visible + " ορατές εγγραφές. Η πρόσβαση μπορεί να περιορίζεται στο iDoctor· δεν είναι ιστορικό της συσκευής."
+                : "Current snapshot: " + visible + " visible records. Access may be limited to iDoctor; this is not device history.");
+    } catch (RuntimeException unavailable) {
+        logLabelWarnValue(gr ? "Τρέχον στιγμιότυπο" : "Current snapshot",
+                gr ? "Μη διαθέσιμα δεδομένα." : "Data unavailable.");
+    }
 
-    } catch (Throwable ignore) {}
-
-    // ============================================================
-    // (B) DropBox crash logs
-    // ============================================================
-    try {
-        DropBoxManager db =
-                (DropBoxManager) getSystemService(DROPBOX_SERVICE);
-
-        if (db != null) {
-
-            String[] tags = {
-                    "system_app_crash", "data_app_crash",
-                    "system_app_anr", "data_app_anr",
-                    "system_server_crash", "system_server_wtf",
-                    "system_server_anr"
-            };
-
-            for (String tag : tags) {
-
+    String[] tags = {"system_app_crash", "data_app_crash", "system_app_anr",
+            "data_app_anr", "system_server_crash", "system_server_wtf", "system_server_anr"};
+    GelCrashCoverage coverage = new GelCrashCoverage(tags.length);
+    List<String> records = new ArrayList<>();
+    int crashes = 0, anrs = 0, system = 0;
+    boolean allowed = checkSelfPermission("android.permission.READ_LOGS")
+            == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    if (!allowed && checkSelfPermission("android.permission.READ_DROPBOX_DATA")
+            == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        android.app.AppOpsManager ops = (android.app.AppOpsManager) getSystemService(APP_OPS_SERVICE);
+        try {
+            allowed = ops != null && ops.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(), getPackageName()) == android.app.AppOpsManager.MODE_ALLOWED;
+        } catch (RuntimeException ignored) { allowed = false; }
+    }
+    DropBoxManager dropbox = (DropBoxManager) getSystemService(DROPBOX_SERVICE);
+    if (allowed && dropbox != null) for (String tag : tags) {
+        boolean complete = false;
+        try {
+            long since = 0;
+            int scanned = 0;
+            while (true) {
+                DropBoxManager.Entry entry = dropbox.getNextEntry(tag, since);
+                if (entry == null) { complete = true; break; }
                 try {
-
-                    long since = 0;
-
-                    DropBoxManager.Entry ent = db.getNextEntry(tag, since);
-
-                    // Android 13–14 / OEM workaround
-                    if (ent == null) {
-                        try {
-                            ent = db.getNextEntry(tag, 0);
-                        } catch (Throwable ignore) {}
-                    }
-
-                    int scanned = 0;
-
-                    while (ent != null && scanned < 50) {
-
-                        scanned++;
-
-                        boolean crashDetected = false;
-
-                        String ttag = tag.toLowerCase(Locale.US);
-
-                        if (ttag.contains("system_server")) {
-
-                            systemCount++;
-
-                        } else if (ttag.contains("anr")) {
-
-                            anrCount++;
-
-                        } else if (ttag.contains("crash")
-                                || ttag.contains("native_crash")
-                                || ttag.contains("tombstone")) {
-
-                            crashDetected = true;
-                        }
-
-                        String shortTxt = readDropBoxEntry(ent);
-
-                        if (!crashDetected && shortTxt != null) {
-
-                            String tx = shortTxt.toLowerCase(Locale.US);
-
-                            if (tx.contains("fatal signal")
-                                    || tx.contains("segmentation fault")
-                                    || tx.contains("abort message")
-                                    || tx.contains("signal 11")) {
-
-                                crashDetected = true;
-                            }
-                        }
-
-                        if (crashDetected) {
-                            crashCount++;
-                        }
-
-                        String clean = tag.toUpperCase(Locale.US)
-                                .replace("_", " ");
-
-                        details.add(clean + ": " + shortTxt);
-
-                        try {
-
-                            String key;
-
-                            if (shortTxt != null && shortTxt.length() > 0) {
-
-                                String t = shortTxt.toLowerCase(Locale.US);
-                                int pi = t.indexOf("package:");
-
-                                if (pi >= 0) {
-
-                                    String rest = t.substring(pi + 8).trim();
-                                    String[] parts =
-                                            rest.split("[\\s\\n\\r\\t]+");
-
-                                    key = (parts.length > 0 && parts[0].contains("."))
-                                            ? parts[0]
-                                            : clean;
-
-                                } else {
-                                    key = clean;
-                                }
-
-                            } else {
-                                key = clean;
-                            }
-
-                            appEvents.put(
-                                    key,
-                                    appEvents.getOrDefault(key, 0) + 1
-                            );
-
-                        } catch (Exception ignored) {}
-
-                        try {
-                            long next = ent.getTimeMillis();
-                            ent = db.getNextEntry(tag, next);
-                        } catch (Throwable ignore) {
-                            break;
-                        }
-                    }
-
-                } catch (Throwable ignorePerTag) {
-                    // συνεχίζουμε στο επόμενο tag χωρίς να νεκρώνει όλο το LAB 25
+                    long timestamp = entry.getTimeMillis();
+                    // Bounded work; a truncated query is never reported as complete.
+                    if (scanned >= 50 || timestamp <= since) break;
+                    scanned++;
+                    since = timestamp;
+                    if (tag.startsWith("system_server")) system++;
+                    else if (tag.endsWith("_anr")) anrs++;
+                    else crashes++;
+                    records.add(tag + " — " + java.text.DateFormat.getDateTimeInstance()
+                            .format(new java.util.Date(timestamp)) + ": " + readDropBoxEntry(entry));
+                } finally {
+                    entry.close();
                 }
             }
+        } catch (RuntimeException unavailable) {
+            // Permission failures and partial reads must not become healthy zero counts.
         }
-
-    } catch (Throwable ignored) {}
-
-    // ============================================================
-    // (C) SUMMARY + RISK SCORE
-    // ============================================================
-    int risk = 0;
-    risk += crashCount * 5;
-    risk += anrCount * 8;
-    risk += systemCount * 15;
-
-    List<String> crashPatternFindings = new ArrayList<>();
-    int hwPatternScore = analyzeCrashPattern(details, crashPatternFindings);
-
-    if (hwPatternScore > 0) {
-        risk += Math.min(30, hwPatternScore / 2);
+        coverage.recordQuery(complete);
     }
-
-    logInfo(gr
-            ? "Ανάλυση μοτίβου crash"
-            : "Crash pattern analysis");
-    logLine();
-
-    if (crashPatternFindings.isEmpty()) {
-
-        logLabelOkValue(
-                gr ? "Μοτίβο" : "Pattern",
-                gr
-                        ? "Δεν εντοπίστηκαν ενδείξεις χαμηλού επιπέδου σφαλμάτων"
-                        : "No low-level crash indicators detected"
-        );
-
-    } else {
-
-        for (String s : crashPatternFindings) {
-            logWarn("• " + s);
-        }
-
-        if (hwPatternScore >= 40) {
-
-            logLabelWarnValue(
-                    gr ? "Εκτίμηση" : "Assessment",
-                    gr
-                            ? "Πιθανό μοτίβο χαμηλού επιπέδου σφαλμάτων (RAM / storage / kernel)"
-                            : "Possible low-level fault pattern (RAM / storage / kernel)"
-            );
-
-        } else {
-
-            logLabelWarnValue(
-                    gr ? "Εκτίμηση" : "Assessment",
-                    gr
-                            ? "Μικρές ενδείξεις συστημικών σφαλμάτων"
-                            : "Minor system-level fault indicators"
-            );
-        }
-    }
-
-    if (risk > 100) risk = 100;
 
     appendHtml("<br>");
-    logInfo(gr
-            ? "Έλεγχος καθυστέρησης αποθηκευτικού"
-            : "Storage latency probe");
+    logInfo(gr ? "Διαθέσιμο ιστορικό Android DropBox" : "Available Android DropBox history");
     logLine();
+    String unavailable = gr ? "Μη διαθέσιμα δεδομένα — ανεπαρκής πρόσβαση ή ελλιπής ανάγνωση."
+            : "Data unavailable — insufficient access or incomplete reading.";
+    if (coverage.complete()) {
+        logInfo(gr ? "Συμβάντα crash στις διαθέσιμες καταγραφές: " + crashes
+                : "Crash events in available records: " + crashes);
+        logInfo("ANR: " + anrs);
+        logInfo(gr ? "Συμβάντα συστήματος: " + system : "System events: " + system);
+        logLabelWarnValue(gr ? "Περιορισμός" : "Limitation", gr
+                ? "Οι καταγραφές μπορεί να έχουν διαγραφεί ή να μην τηρούνται από τον κατασκευαστή. Μηδενικές καταγραφές δεν αποδεικνύουν απουσία crash."
+                : "Records may have been removed or not retained by the manufacturer. Zero records do not prove absence of crashes.");
+    } else {
+        logLabelWarnValue(gr ? "Σύνοψη ιστορικού" : "History summary", unavailable);
+        if (!records.isEmpty()) logInfo(gr
+                ? "Ακολουθούν μόνο οι εγγραφές που ήταν προσβάσιμες· δεν αποτελούν πλήρες σύνολο."
+                : "Only accessible records follow; these are not a complete total.");
+    }
+    for (String record : records)
+        logLabelWarnValue(gr ? "Προσβάσιμη καταγραφή" : "Accessible record", record);
+    logLabelWarnValue(gr ? "Δείκτης κινδύνου σταθερότητας" : "Stability risk score", gr
+            ? "Δεν υπολογίζεται: οι διαθέσιμες καταγραφές δεν επαρκούν για αξιόπιστη συνολική βαθμολογία."
+            : "Not calculated: available records do not support a reliable overall score.");
 
+    appendHtml("<br>");
+    logInfo(gr ? "Στιγμιαία δοκιμή I/O αποθηκευτικού" : "Storage I/O spot test");
     long latency = storageLatencyProbe();
-
-    if (latency < 0) {
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Δεν ήταν δυνατή η μέτρηση latency"
-                   : "Unable to measure storage latency"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Latency" : "Latency",
-                latency + " ms"
-        );
-
-        if (latency > 120) {
-
-            logLabelWarnValue(
-                    gr ? "Εκτίμηση" : "Assessment",
-                    gr
-                            ? "Αργή απόκριση αποθηκευτικού (πιθανή κόπωση NAND ή έντονη δραστηριότητα I/O)"
-                            : "Slow storage response (possible NAND wear or heavy I/O)"
-            );
-
-        } else if (latency > 60) {
-
-            logLabelWarnValue(
-                    gr ? "Εκτίμηση" : "Assessment",
-                    gr
-                            ? "Μέτρια καθυστέρηση I/O"
-                            : "Moderate I/O latency"
-            );
-
-        } else {
-
-            logLabelOkValue(
-                    gr ? "Εκτίμηση" : "Assessment",
-                    gr
-                            ? "Φυσιολογική απόκριση αποθηκευτικού"
-                            : "Normal storage latency"
-            );
-        }
+    if (latency < 0) logLabelWarnValue(gr ? "Μέτρηση" : "Reading",
+            gr ? "Μη διαθέσιμα δεδομένα." : "Data unavailable.");
+    else {
+        logInfo("I/O: " + latency + " ms");
+        logInfo(gr
+                ? "Μεμονωμένη μέτρηση αρχείου της εφαρμογής. Δεν αποδεικνύει φθορά NAND ή συνολική σταθερότητα συσκευής."
+                : "A single measurement of an app file. It does not establish NAND wear or overall device stability.");
     }
-
+    GELServiceLog.info("SUMMARY: CRASH_ORIGIN=UNCLEAR; HISTORY_COVERAGE="
+            + (coverage.complete() ? "AVAILABLE_RECORDS_ONLY" : "UNAVAILABLE_OR_PARTIAL"));
     appendHtml("<br>");
-    logInfo(gr ? "Σύνοψη Σταθερότητας" : "Stability summary");
+    logInfo(gr ? "Το Lab 25 ολοκληρώθηκε με τους παραπάνω περιορισμούς."
+            : "Lab 25 finished with the limitations above.");
     logLine();
-
-    logLabelOkValue(
-            gr ? "Συμβάντα Crash" : "Crash events",
-            String.valueOf(crashCount)
-    );
-
-    if (anrCount > 0)
-        logLabelWarnValue("ANR", String.valueOf(anrCount));
-    else
-        logLabelOkValue("ANR", "0");
-
-    if (systemCount > 0)
-        logLabelErrorValue(
-                gr ? "Σφάλματα Συστήματος" : "System-level faults",
-                String.valueOf(systemCount)
-        );
-    else
-        logLabelOkValue(
-                gr ? "Σφάλματα Συστήματος" : "System-level faults",
-                "0"
-        );
-
-    appendHtml("<br>");
-    logInfo(gr
-        ? "Δείκτης Ρίσκου Σταθερότητας"
-        : "Stability risk score");
-
-logLine();
-
-String riskLabel;
-
-if (risk >= 70) {
-
-    riskLabel = gr ? "Υψηλό" : "High";
-
-    logLabelErrorValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + risk + ")"
-    );
-
-} else if (risk >= 40) {
-
-    riskLabel = gr ? "Μέτριο" : "Moderate";
-
-    logLabelWarnValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + risk + ")"
-    );
-
-} else {
-
-    riskLabel = gr ? "Χαμηλό" : "Low";
-
-    logLabelOkValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + risk + ")"
-    );
-}
-
-    logLabelOkValue(
-        gr ? "Σημείωση" : "Note",
-        gr
-                ? "Η βαθμολογία βασίζεται σε διαθέσιμα system logs (διαφέρει ανά OEM / Android)"
-                : "Score based on detected system log signals (availability varies by OEM / Android)"
-    );
-
-    boolean softwareCrashLikely =
-            (crashCount > 0 || anrCount > 0);
-
-    // ============================================================
-    // (D) HEATMAP
-    // ============================================================
-    if (!appEvents.isEmpty()) {
-
-        appendHtml("<br>");
-        logInfo(gr
-                ? "Heatmap (συχνότερα συμβάντα)"
-                : "Heatmap (top offenders)");
-        logLine();
-
-        appEvents.entrySet()
-                .stream()
-                .sorted((a, b) -> b.getValue() - a.getValue())
-                .limit(5)
-                .forEach(e -> {
-
-                    String label =
-                            e.getValue() + (gr ? " συμβάντα" : " events");
-
-                    if (e.getValue() >= 10)
-                        logLabelErrorValue(e.getKey(), label);
-                    else if (e.getValue() >= 5)
-                        logLabelWarnValue(e.getKey(), label);
-                    else
-                        logLabelOkValue(e.getKey(), label);
-                });
-    }
-
-    // ============================================================
-    // (E) FULL DETAILS
-    // ============================================================
-    if (!details.isEmpty()) {
-
-        appendHtml("<br>");
-        logInfo(gr
-                ? "Αναλυτικά αρχεία crash"
-                : "Detailed crash records");
-        logLine();
-
-        int count = details.size();
-
-        if (count == 1)
-            logLabelWarnValue(
-                    gr ? "Καταγραφές" : "Records",
-                    gr ? "1 crash εντοπίστηκε"
-                       : "1 crash detected");
-        else if (count <= 3)
-            logLabelWarnValue(
-                    gr ? "Καταγραφές" : "Records",
-                    count + (gr ? " crashes εντοπίστηκαν"
-                                 : " crashes detected"));
-        else
-            logLabelErrorValue(
-                    gr ? "Καταγραφές" : "Records",
-                    count + (gr ? " crashes εντοπίστηκαν (ΥΨΗΛΗ αστάθεια)"
-                                 : " crashes detected (HIGH instability)")
-            );
-
-        for (String d : details) {
-            logLabelWarnValue(
-                    gr ? "Λεπτομέρεια" : "Detail",
-                    d
-            );
-        }
-
-    } else {
-
-        logLine();
-        logLabelOkValue(
-                gr ? "Ιστορικό Crash" : "Crash history",
-                gr
-                        ? "Δεν εντοπίστηκαν καταγραφές crash"
-                        : "No crash records detected"
-        );
-    }
-
-    GELServiceLog.info(
-            "SUMMARY: CRASH_ORIGIN=" +
-                    (softwareCrashLikely ? "SOFTWARE" : "UNCLEAR")
-    );
-
-    appendHtml("<br>");
-logOk(gr ? "Το Lab 25 ολοκληρώθηκε." : "Lab 25 finished.");
-logLine();
 } // END lab25CrashHistory()
 
 // ============================================================
