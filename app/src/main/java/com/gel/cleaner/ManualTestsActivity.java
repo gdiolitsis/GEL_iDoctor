@@ -1644,8 +1644,8 @@ logScroll.post(() -> setLogPanelState(0));
             this::lab28HardwareStability));
 
     body7.addView(makeTestButton(
-            gr ? "29. Έλεγχος Γνησιότητας Συσκευής & Ανταλλακτικών\nΠιθανή Αντικατάσταση Μερών"
-               : "29. Device Authenticity & Parts Verification\nPossible Non-OEM Components",
+            gr ? "29. Παρατηρήσεις Hardware\nΗ γνησιότητα απαιτεί εξωτερικό έλεγχο"
+               : "29. Hardware Observations\nOEM origin requires external verification",
             this::lab29DeviceAuthenticity));
 
     body7.addView(makeTestButton(
@@ -4948,17 +4948,6 @@ return Integer.parseInt(line.replaceAll("\\D+", ""));
 br.close();
 } catch (Throwable ignore) {}
 return -1;
-}
-
-// Frequent reboot hint (human-level inference)
-private boolean detectFrequentRebootsHint() {
-try {
-long uptimeMs = SystemClock.elapsedRealtime();
-// Reboot within last 6 hours
-return uptimeMs < (6L * 60L * 60L * 1000L);
-} catch (Throwable t) {
-return false;
-}
 }
 
 // ============================================================
@@ -24882,6 +24871,7 @@ private void lab16ThermalSnapshot() {
 
     float  peakTemp = -1f;
     String peakSrc  = "N/A";
+    final int observedCount = internal.size() + peripherals.size();
 
     // ------------------------------------------------------------
     // BASIC + CRITICAL THERMALS
@@ -24924,34 +24914,36 @@ private void lab16ThermalSnapshot() {
     logInfo(gr ? "Θερμική σύνοψη:" : "Thermal summary:");
     logLine();
 
-    if (danger) {
-
+    if (observedCount == 0) {
         logLabelWarnValue(
                 gr ? "Κατάσταση" : "Status",
-                gr ? "Ανιχνεύθηκε αυξημένη θερμοκρασία"
-                   : "Elevated temperature detected"
+                gr ? "Δεν υπάρχουν διαθέσιμες θερμικές μετρήσεις"
+                   : "No thermal readings available"
         );
-
+    } else if (danger) {
+        logLabelWarnValue(
+                gr ? "Κατάσταση" : "Status",
+                gr ? "Ανιχνεύθηκε αυξημένη θερμοκρασία σε διαθέσιμο αισθητήρα"
+                   : "Elevated reading detected from an available sensor"
+        );
         logLabelWarnValue(
                 gr ? "Αντίδραση συστήματος" : "System response",
                 gr ? "Ενδέχεται να ενεργοποιηθεί θερμική προστασία"
                    : "Thermal protection may activate"
         );
-
     } else {
-
         logLabelOkValue(
                 gr ? "Κατάσταση" : "Status",
-                gr ? "Ασφαλείς θερμοκρασίες λειτουργίας"
-                   : "Safe operating temperatures"
-        );
-
-        logLabelOkValue(
-                gr ? "Κάλυψη" : "Coverage",
-                gr ? "Παρακολουθήθηκαν εσωτερικά chips και κρίσιμα περιφερειακά"
-                   : "Internal chips and critical peripherals monitored"
+                gr ? "Δεν εντοπίστηκε υψηλή ένδειξη στους διαθέσιμους αισθητήρες"
+                   : "No high reading among available sensors"
         );
     }
+    logLabelWarnValue(
+            gr ? "Κάλυψη" : "Coverage",
+            (gr ? "Μετρήσεις από " : "Readings from ") + observedCount
+                    + (gr ? " διαθέσιμους αισθητήρες· δεν πιστοποιείται πλήρης κάλυψη"
+                          : " available sensors; full hardware coverage is not verified")
+    );
 
     // ------------------------------------------------------------
     // PEAK TEMPERATURE
@@ -25011,12 +25003,10 @@ private void lab16ThermalSnapshot() {
         );
 
     } else {
-
-        logLabelOkValue(
+        logLabelWarnValue(
                 gr ? "Κρυφοί αισθητήρες" : "Hidden sensors",
-                gr
-                        ? "Όλοι οι κρίσιμοι θερμικοί αισθητήρες είναι εντός ορίων"
-                        : "All critical thermal sensors monitored"
+                gr ? "Δεν τεκμηριώνεται κάλυψη μη προσβάσιμων αισθητήρων"
+                   : "Unexposed sensors cannot be assessed"
         );
     }
 
@@ -25044,7 +25034,8 @@ private void lab16ThermalSnapshot() {
         }
     }
 
-    thermalScore = Math.max(0, Math.min(100, thermalScore));
+    thermalDanger = thermalDanger || hiddenRisk;
+    thermalScore = ThermalEvidencePolicy.score(observedCount, thermalScore, hiddenRisk);
 
     try {
         p.edit()
@@ -25056,31 +25047,25 @@ private void lab16ThermalSnapshot() {
                 .apply();
     } catch (Throwable ignore) {}
 
-    String tLabel;
-
-if (thermalScore >= 80)
-    tLabel = gr ? "Φυσιολογική" : "Normal";
-else if (thermalScore >= 60)
-    tLabel = gr ? "Μέτρια" : "Moderate";
-else
-    tLabel = gr ? "Υψηλή" : "High";
-
-logLabelOkValue(
-        gr ? "Αξιολόγηση θερμικής συμπεριφοράς"
-           : "Thermal behaviour rating",
-        String.format(
-                Locale.US,
-                "%s (%d)",
-                tLabel,
-                thermalScore
-        )
-);
-
-    boolean thermalSpikesDetected = thermalDanger;
-
+    if (thermalScore < 0) {
+        logLabelWarnValue(
+                gr ? "Αξιολόγηση θερμικής συμπεριφοράς" : "Thermal behaviour rating",
+                gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA"
+        );
+    } else {
+        String tLabel = thermalScore >= 80
+                ? (gr ? "Εντός παρατηρημένων ορίων" : "Within observed limits")
+                : thermalScore >= 60
+                ? (gr ? "Μέτρια" : "Moderate")
+                : (gr ? "Υψηλή" : "High");
+        logLabelOkValue(
+                gr ? "Αξιολόγηση θερμικής συμπεριφοράς" : "Thermal behaviour rating",
+                String.format(Locale.US, "%s (%d)", tLabel, thermalScore)
+        );
+    }
     GELServiceLog.info(
-            "SUMMARY: THERMAL_PATTERN=" +
-                    (thermalSpikesDetected ? "SPIKES" : "NORMAL")
+            "SUMMARY: THERMAL_PATTERN="
+                    + ThermalEvidencePolicy.pattern(thermalScore, thermalDanger)
     );
 
     appendHtml("<br>");
@@ -26440,58 +26425,42 @@ private void lab19RamSnapshot() {
         logInfo(gr ? "Αξιολόγηση πίεσης RAM:" : "RAM pressure assessment:");
         logLine();
 
-        if (pctFree < 8) {
-
-            logLabelErrorValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Κρίσιμη πίεση RAM"
-                       : "Critical RAM pressure"
-            );
-            logLabelErrorValue(
-                    gr ? "Συμπεριφορά συστήματος" : "System behaviour",
-                    gr ? "Επιθετικό κλείσιμο εφαρμογών στο παρασκήνιο"
-                       : "Aggressive background app killing"
-            );
-            logLabelWarnValue(
-                    gr ? "Επίδραση στον χρήστη" : "User impact",
-                    gr ? "Έντονο lag, επαναφορτώσεις και κολλήματα UI"
-                       : "Strong lag, reloads and UI stutter"
-            );
-
-        } else if (pctFree < 15) {
-
-            logLabelWarnValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Υψηλή πίεση RAM"
-                       : "High RAM pressure"
-            );
-            logLabelWarnValue(
-                    gr ? "Επίδραση στον χρήστη" : "User impact",
-                    gr ? "Το multitasking μπορεί να γίνει ασταθές"
-                       : "Multitasking may become unstable"
-            );
-
-        } else if (pctFree < 25) {
-
-            logLabelOkValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Αυξημένη χρήση RAM"
-                       : "Elevated RAM usage"
-            );
-            logLabelOkValue(
-                    gr ? "Σημείωση" : "Note",
-                    gr ? "Φυσιολογικό κατά τη χρήση βαριών εφαρμογών ή gaming"
-                       : "Normal during heavy apps or gaming"
-            );
-
-        } else {
-
-            logLabelOkValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Υγιές επίπεδο RAM"
-                       : "Healthy RAM level"
-            );
+        RamEvidencePolicy.Assessment ramAssessment =
+                RamEvidencePolicy.assess(pctFree, mi.lowMemory);
+        switch (ramAssessment) {
+            case ANDROID_LOW_MEMORY:
+                logLabelWarnValue(
+                        gr ? "Κατάσταση" : "Status",
+                        gr ? "Το Android αναφέρει κατάσταση χαμηλής μνήμης"
+                           : "Android reports a low-memory condition"
+                );
+                break;
+            case LOW_AVAILABLE_RAM:
+                logLabelWarnValue(
+                        gr ? "Κατάσταση" : "Status",
+                        gr ? "Μικρό διαθέσιμο περιθώριο RAM — χωρίς σήμα low-memory από Android"
+                           : "Low available RAM headroom — no Android low-memory signal"
+                );
+                break;
+            case NO_OS_LOW_MEMORY_SIGNAL:
+                logLabelOkValue(
+                        gr ? "Κατάσταση" : "Status",
+                        gr ? "Δεν αναφέρθηκε κατάσταση low-memory από Android"
+                           : "Android has not reported a low-memory condition"
+                );
+                break;
+            default:
+                logLabelWarnValue(
+                        gr ? "Κατάσταση" : "Status",
+                        gr ? "Μη επαρκή στοιχεία για πίεση RAM"
+                           : "Insufficient RAM pressure evidence"
+                );
         }
+        logLabelWarnValue(
+                gr ? "Όρια ελέγχου" : "Assessment limits",
+                gr ? "Δεν μετρήθηκαν καθυστέρηση UI, κλεισίματα εφαρμογών ή ποιότητα multitasking"
+                   : "UI lag, app terminations and multitasking quality were not measured"
+        );
 
         // ------------------------------------------------------------
         // MEMORY PRESSURE INDICATORS (LOW-LEVEL)
@@ -26649,7 +26618,6 @@ private void lab20UptimeHints() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    boolean frequentReboots = false;   // shared summary flag
 
     appendHtml("<br>");
     logLine();
@@ -26761,33 +26729,13 @@ private void lab20UptimeHints() {
             boolean lowMemoryPressure =
                     readLowMemoryKillCountSafe() < 5;
 
-            frequentReboots =
-                    detectFrequentRebootsHint();
-
-            if (frequentReboots) {
-
-                logLabelWarnValue(
-                        gr ? "Μοτίβο επανεκκινήσεων" : "Reboot pattern",
-                        gr
-                                ? "Εντοπίστηκαν επαναλαμβανόμενες επανεκκινήσεις"
-                                : "Repeated reboots detected"
-                );
-                logLabelWarnValue(
-                        gr ? "Πιθανές αιτίες" : "Possible causes",
-                        gr
-                                ? "Αστάθεια, κρασαρίσματα ή watchdog resets"
-                                : "Instability, crashes or watchdog resets"
-                );
-
-            } else {
-
-                logLabelOkValue(
-                        gr ? "Μοτίβο επανεκκινήσεων" : "Reboot pattern",
-                        gr
-                                ? "Δεν εντοπίστηκε μη φυσιολογική συμπεριφορά επανεκκινήσεων"
-                                : "No abnormal reboot behaviour detected"
-                );
-            }
+            // Root access alone does not provide reboot history. A short
+            // uptime proves only that the device booted recently.
+            logLabelWarnValue(
+                    gr ? "Ιστορικό επανεκκινήσεων" : "Reboot history",
+                    gr ? "Δεν υπάρχουν επαληθευμένα συμβάντα επανεκκινήσεων"
+                       : "No verified reboot event history available"
+            );
 
             if (!lowMemoryPressure) {
 
@@ -26814,11 +26762,10 @@ private void lab20UptimeHints() {
                 );
             }
 
-            logLabelOkValue(
+            logLabelWarnValue(
                     gr ? "Ερμηνεία" : "Interpretation",
-                    gr
-                            ? "Η συμπεριφορά uptime συμβαδίζει με φυσιολογική λειτουργία συστήματος"
-                            : "Uptime behaviour consistent with normal system operation"
+                    gr ? "Το uptime δεν αποδεικνύει συχνότητα επανεκκινήσεων"
+                       : "Uptime does not establish reboot frequency"
             );
         }
 
@@ -26839,20 +26786,25 @@ appendHtml("<br>");
 logInfo(gr ? "Σύνοψη επανεκκινήσεων" : "Reboot summary");
 logLine();
 
-if (frequentReboots) {
-
+// No historical reboot-event series is collected by this Lab.
+// Never translate "no evidence" into a NORMAL verdict.
+RebootHistoryEvidence.Verdict rebootVerdict =
+        RebootHistoryEvidence.classify(-1, 0L);
+if (rebootVerdict == RebootHistoryEvidence.Verdict.INSUFFICIENT_DATA) {
     logLabelWarnValue(
             "REBOOT_PATTERN",
-            gr ? "ΜΗ ΦΥΣΙΟΛΟΓΙΚΟ" : "ABNORMAL"
+            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ ΙΣΤΟΡΙΚΟ" : "HISTORY UNAVAILABLE"
     );
-
 } else {
-
-    logLabelOkValue(
+    // Reserved for future verified, timestamped reboot histories.
+    logLabelWarnValue(
             "REBOOT_PATTERN",
-            gr ? "ΦΥΣΙΟΛΟΓΙΚΌ" : "NORMAL"
+            rebootVerdict == RebootHistoryEvidence.Verdict.REPEATED_OBSERVED
+                    ? (gr ? "ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΕΣ" : "REPEATED")
+                    : (gr ? "ΔΕΝ ΕΠΑΛΗΘΕΥΤΗΚΑΝ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΕΣ" : "NO REPEATED EVENTS OBSERVED")
     );
 }
+GELServiceLog.info("SUMMARY: REBOOT_PATTERN=" + rebootVerdict.name());
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 20 ολοκληρώθηκε." : "Lab 20 finished.");
@@ -30493,8 +30445,8 @@ private void lab29DeviceAuthenticity() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 29 — Έλεγχος Γνησιότητας Συσκευής & Ακεραιότητας"
-            : "LAB 29 — Device Authenticity & Integrity");
+            ? "LAB 29 — Παρατηρήσεις Hardware (όχι πιστοποίηση γνησιότητας)"
+            : "LAB 29 — Hardware observations (not OEM certification)");
     logInfo(gr
         ? "SAFE MODE — εμφανίζονται μόνο επιβεβαιωμένα ευρήματα"
         : "SAFE MODE — only confirmed findings are reported");
@@ -30513,7 +30465,7 @@ if (!isDeviceRooted()) {
     );
 }
 
-    int authenticityScore = 100;
+    // Android platform observations do not authenticate OEM replacement parts.
 
     // ============================================================
     // BATTERY
@@ -30537,8 +30489,6 @@ if (!isDeviceRooted()) {
                         ? "Ασυνήθιστες τιμές μέτρησης"
                         : "Abnormal measurement values"
         );
-
-        authenticityScore -= 10;
 
     } else {
 
@@ -30574,8 +30524,6 @@ if (!isDeviceRooted()) {
                         : "Unusual refresh rate"
         );
 
-        authenticityScore -= 5;
-
     } else {
 
         logLabelOkValue(
@@ -30608,8 +30556,6 @@ if (!isDeviceRooted()) {
                         ? "Δεν εντοπίστηκε"
                         : "Not detected"
         );
-
-        authenticityScore -= 20;
 
     } else {
 
@@ -30712,8 +30658,6 @@ if (!isDeviceRooted()) {
                         : "Unusual value"
         );
 
-        authenticityScore -= 5;
-
     } else {
 
         logLabelOkValue(
@@ -30771,46 +30715,30 @@ if (lab14CollapseRisk || lab14SwellingSuspected)
     appendHtml("<br>");
     logLine();
 
-    if (authenticityScore < 0)
-        authenticityScore = 0;
-        
 // ============================================================
 // SAVE LAB 29 RESULTS — SINGLE SOURCE FOR LAB 30 / LAB 31
 // ============================================================
 boolean instabilityDetected = instabilityScore >= 20;
 
 p.edit()
-        .putInt("lab29_authenticity_score", authenticityScore)
+
+        .remove("lab29_authenticity_score")
+        .putBoolean("lab29_provenance_unverified", true)
         .putInt("lab29_instability_score", instabilityScore)
         .putBoolean("lab29_instability_pattern", instabilityDetected)
         .putLong("lab29_ts", System.currentTimeMillis())
         .apply();
 
-String level;
-
-if (authenticityScore >= 90)
-    level = gr ? "ΥΨΗΛΗ" : "HIGH";
-else if (authenticityScore >= 70)
-    level = gr ? "ΜΕΤΡΙΑ" : "MEDIUM";
-else
-    level = gr ? "ΧΑΜΗΛΗ" : "LOW";
-
-    if (authenticityScore >= 70) {
-
-        logLabelOkValue(
-                gr ? "Γνησιότητα"
-                        : "Authenticity",
-                authenticityScore + "/100 (" + level + ")"
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Γνησιότητα"
-                        : "Authenticity",
-                authenticityScore + "/100 (" + level + ")"
-        );
-    }
+logLabelWarnValue(
+        gr ? "Γνησιότητα ανταλλακτικών" : "Replacement part authenticity",
+        gr ? "ΔΕΝ ΕΠΑΛΗΘΕΥΕΤΑΙ από ενδείξεις Android. Απαιτείται τεκμηρίωση OEM ή φυσική επιθεώρηση."
+           : "NOT VERIFIABLE from Android readings. OEM documentation or physical inspection required."
+);
+logLabelValue(
+        gr ? "Εύρος ελέγχου" : "Assessment scope",
+        gr ? "Διατίθενται μόνο παρατηρήσεις hardware και ενδείξεις αστάθειας."
+           : "Hardware observations and instability indicators only."
+);
 
     appendHtml("<br>");
     logOk(gr
@@ -30953,21 +30881,19 @@ pmic = pickZone(zones, "pmic", "pmic-therm", "power-thermal", "charger", "chg");
 float maxThermal = maxOf(cpu, gpu, skin, pmic, batTemp);
 float avgThermal = avgOf(cpu, gpu, skin, pmic, batTemp);
 
-int thermalScore = scoreThermals(maxThermal, avgThermal);
-String thermalFlag = colorFlagFromScore(thermalScore);
+int thermalScore = Lab30ScoreEvidence.hasThermalReadings(maxThermal, avgThermal)
+        ? scoreThermals(maxThermal, avgThermal) : -1;
+String thermalFlag = thermalScore < 0 ? "⚪" : colorFlagFromScore(thermalScore);
 
 // ------------------------------------------------------------
 // 2) BATTERY HEALTH (light auto inference — FIXED)
 // ------------------------------------------------------------
 boolean charging = isChargingNow();
 
-int batteryScore = scoreBattery(
-        batTemp,
-        (float) batteryPercent,
-        charging
-);
+int batteryScore = Lab30ScoreEvidence.hasBatteryReadings(batTemp, (float) batteryPercent)
+        ? scoreBattery(batTemp, (float) batteryPercent, charging) : -1;
 
-String batteryFlag = colorFlagFromScore(batteryScore);
+String batteryFlag = batteryScore < 0 ? "⚪" : colorFlagFromScore(batteryScore);
 
 // ------------------------------------------------------------
 // 🔴 PRIMARY: CONSUMPTION-BASED FLAGS
@@ -31047,8 +30973,8 @@ String privacyFlag = colorFlagFromScore(privacyScore);
 // 9) AUTHENTICITY / REPAIR INDICATORS (LAB 29)
 // ------------------------------------------------------------
 
-int lab29AuthenticityScore =
-        p.getInt("lab29_authenticity_score", -1);
+boolean lab29ObservationsAvailable =
+        p.getBoolean("lab29_provenance_unverified", false);
 
 int lab29InstabilityScore =
         p.getInt("lab29_instability_score", 0);
@@ -31062,58 +30988,22 @@ logInfo(gr
         : "Device authenticity / integrity");
 logLine();
 
-if (lab29AuthenticityScore >= 0) {
-
-    if (lab29AuthenticityScore >= 90) {
-
-        logLabelOkValue(
-                gr ? "Γνησιότητα" : "Authenticity",
-                lab29AuthenticityScore + "/100"
-        );
-
-        logLabelOkValue(
-                gr ? "Κατάσταση" : "Status",
-                gr
-                        ? "Δεν εντοπίστηκαν επιβεβαιωμένες ανωμαλίες"
-                        : "No confirmed integrity anomalies detected"
-        );
-
-    } else if (lab29AuthenticityScore >= 70) {
-
-        logLabelWarnValue(
-                gr ? "Γνησιότητα" : "Authenticity",
-                lab29AuthenticityScore + "/100"
-        );
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
-                gr
-                        ? "Εντοπίστηκαν αποκλίσεις που χρειάζονται επανέλεγχο"
-                        : "Deviations detected — verification recommended"
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Γνησιότητα" : "Authenticity",
-                lab29AuthenticityScore + "/100"
-        );
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
-                gr
-                        ? "Εντοπίστηκαν σημαντικές αποκλίσεις ακεραιότητας"
-                        : "Significant integrity deviations detected"
-        );
-    }
-
-} else {
-
+if (lab29ObservationsAvailable) {
     logLabelWarnValue(
-            gr ? "Γνησιότητα" : "Authenticity",
-            gr
-                    ? "Δεν υπάρχουν δεδομένα από το LAB 29"
-                    : "No LAB 29 data available"
+            gr ? "Γνησιότητα εξαρτημάτων" : "Component authenticity",
+            gr ? "ΔΕΝ ΕΠΑΛΗΘΕΥΕΤΑΙ από διαθέσιμα σήματα Android"
+               : "NOT VERIFIABLE from available Android signals"
+    );
+    logLabelValue(
+            gr ? "Στοιχεία Lab 29" : "Lab 29 observations",
+            gr ? "Παρατηρήσεις διαθέσιμες· η προέλευση OEM απαιτεί ανεξάρτητο έλεγχο"
+               : "Observations available; OEM origin requires independent verification"
+    );
+} else {
+    logLabelWarnValue(
+            gr ? "Στοιχεία Lab 29" : "Lab 29 observations",
+            gr ? "Δεν υπάρχουν αποτελέσματα νέας μορφής· εκτελέστε το Lab 29"
+               : "No current-format findings; run Lab 29"
     );
 }
 
@@ -31224,7 +31114,7 @@ if (batteryRuntimeWeak) {
                     : "Low real-world battery duration"
     );
 
-    if (batteryScore < 60 || lab14CollapseRisk) {
+    if ((batteryScore >= 0 && batteryScore < 60) || lab14CollapseRisk) {
 
         logLabelWarnValue(
                 gr ? "Πιθανή αιτία" : "Possible cause",
@@ -31849,19 +31739,10 @@ else {
 // ------------------------------------------------------------
 // 10) FINAL SCORES
 // ------------------------------------------------------------
-int performanceScore = Math.round(
-(storageScore * 0.35f) +
-(ramScore     * 0.35f) +
-(appsScore    * 0.15f) +
-(thermalScore * 0.15f)
-);
-
-int deviceHealthScore = Math.round(
-(thermalScore   * 0.25f) +
-(batteryScore   * 0.25f) +
-(performanceScore * 0.30f) +
-(stabilityScore * 0.20f)
-);
+int performanceScore = Lab30ScoreEvidence.performanceScore(
+        storageScore, ramScore, appsScore, thermalScore);
+int deviceHealthScore = Lab30ScoreEvidence.deviceHealthScore(
+        thermalScore, batteryScore, performanceScore, stabilityScore);
 
 // ------------------------------------------------------------
 // PRINT DETAILS
@@ -31878,7 +31759,9 @@ logLine();
 
 logLabelOkValue(
         gr ? "Κατάσταση" : "Status",
-        thermalFlag + " (" + thermalScore + ")"
+        thermalScore < 0
+                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
+                : thermalFlag + " (" + thermalScore + ")"
 );
 
 if (zones == null || zones.isEmpty()) {
@@ -31886,8 +31769,10 @@ if (zones == null || zones.isEmpty()) {
     logLabelWarnValue(
             gr ? "Ζώνες" : "Zones",
             gr
-                    ? "Δεν είναι αναγνώσιμες θερμικές ζώνες — Μόνο θερμοκρασία μπαταρίας (" + fmt1(batTemp) + "°C)"
-                    : "No thermal zones readable — Battery temp only (" + fmt1(batTemp) + "°C)"
+                    ? (Float.isNaN(batTemp) ? "Δεν υπάρχουν διαθέσιμες θερμικές μετρήσεις"
+                                            : "Μόνο θερμοκρασία μπαταρίας (" + fmt1(batTemp) + "°C)")
+                    : (Float.isNaN(batTemp) ? "No thermal readings available"
+                                            : "Battery temperature only (" + fmt1(batTemp) + "°C)")
     );
 
 } else {
@@ -31910,7 +31795,9 @@ logLine();
 
 logLabelOkValue(
         gr ? "Κατάσταση" : "Status",
-        batteryFlag + " (" + batteryScore + ")"
+        batteryScore < 0
+                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
+                : batteryFlag + " (" + batteryScore + ")"
 );
 
 logLabelOkValue(
@@ -32069,13 +31956,16 @@ logLine();
 
 logLabelOkValue(
         gr ? "Υγεία συσκευής" : "Device health",
-        colorFlagFromScore(deviceHealthScore)
-                + " (" + deviceHealthScore + ")"
+        deviceHealthScore < 0
+                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
+                : colorFlagFromScore(deviceHealthScore) + " (" + deviceHealthScore + ")"
 );
 
 String deviceClass;
 
-if (deviceHealthScore >= 90)
+if (deviceHealthScore < 0)
+    deviceClass = "INSUFFICIENT DATA";
+else if (deviceHealthScore >= 90)
     deviceClass = "GEL CERTIFIED";
 else if (deviceHealthScore >= 75)
     deviceClass = "GEL VERIFIED";
@@ -32090,8 +31980,9 @@ logLabelValue(
 
 logLabelOkValue(
         gr ? "Απόδοση" : "Performance",
-        colorFlagFromScore(performanceScore)
-                + " (" + performanceScore + ")"
+        performanceScore < 0
+                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
+                : colorFlagFromScore(performanceScore) + " (" + performanceScore + ")"
 );
 
 logLabelOkValue(
@@ -32118,7 +32009,11 @@ appendHtml("<br>");
 logInfo(gr ? "Τελικό Συμπέρασμα" : "Final verdict");
 logLine();
 
-if (deviceHealthScore >= 80) {
+if (deviceHealthScore < 0) {
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result", verdict
+    );
+} else if (deviceHealthScore >= 80) {
 
     if (securityScore < 55 || privacyScore < 55) {
         logLabelWarnValue(
@@ -32852,6 +32747,10 @@ private String colorFlagFromScore(int s) {
 private String finalVerdict(int health, int sec, int priv, int perf) {
 
     final boolean gr = AppLang.isGreek(this);
+    if (health < 0 || perf < 0) {
+        return gr ? "Ανεπαρκή δεδομένα για συνολική αξιολόγηση ή πιστοποίηση συσκευής."
+                  : "Insufficient measurements for a device health verdict or certification.";
+    }
 
 // ============================================================
 // LEVEL 1 — HEALTHY / NORMAL
