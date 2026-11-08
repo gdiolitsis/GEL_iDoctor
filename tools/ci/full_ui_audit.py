@@ -2,6 +2,7 @@
 """Evidence-first UI exploration of the unmodified signed release; never claims hardware pass."""
 import json, os, pathlib, re, struct, subprocess, sys, time, traceback
 import xml.etree.ElementTree as ET
+from ui_audit_selectors import MANUAL_ENTRY, matching as search, is_visible as visible, find_visible
 
 PKG = "com.gel.iDoctor"
 out = pathlib.Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
@@ -14,9 +15,6 @@ def adb(*args, binary=False, timeout=35):
 def tree():
     adb("shell","uiautomator","dump","/sdcard/gel-audit.xml")
     return ET.fromstring(adb("exec-out","cat","/sdcard/gel-audit.xml",binary=True))
-def visible(n):
-    b = list(map(int,re.findall(r"\d+",n.get("bounds",""))))
-    return len(b)==4 and b[2]>b[0] and b[3]>b[1]
 def tap(n):
     print("UI_TAP "+json.dumps({"text":n.get("text",""),"id":n.get("resource-id",""),"bounds":n.get("bounds","")},ensure_ascii=False),flush=True)
     b=list(map(int,re.findall(r"\d+",n.get("bounds",""))))
@@ -31,15 +29,15 @@ def find(predicate, scrolls=0):
     previous=None
     for attempt in range(scrolls+1):
         t=tree()
-        for n in t.iter("node"):
-            if visible(n) and predicate(n): return n
+        found = find_visible(t, predicate)
+        if found is not None: return found
         signature=ET.tostring(t)
         if signature==previous: break
         previous=signature
         if attempt < scrolls: swipe()
     return None
 def textmatch(pattern):
-    return lambda n: bool(re.search(pattern,n.get("text",""),re.I))
+    return lambda n: bool(search(pattern,n.get("text",""),re.I))
 def rid(name): return lambda n:n.get("resource-id","").endswith("/"+name)
 def save(label):
     global counter
@@ -67,16 +65,16 @@ def dismiss_intro():
         denied = next((n for n in nodes if n.get("resource-id","").endswith("/permission_deny_button")),None)
         if denied is not None:
             tap(denied); stable=0; continue
-        later = next((n for n in nodes if re.search(r"^(Not now|Όχι τώρα|Later|Αργότερα)$",n.get("text",""),re.I)),None)
+        later = next((n for n in nodes if search(r"^(Not now|Όχι τώρα|Later|Αργότερα)$",n.get("text",""),re.I)),None)
         if later is not None:
             tap(later); stable=0; continue
-        android = next((n for n in nodes if re.search(r"MY ANDROID DEVICE|Η ANDROID ΣΥΣΚΕΥΗ ΜΟΥ",n.get("text",""),re.I)),None)
+        android = next((n for n in nodes if search(r"MY ANDROID DEVICE|Η ANDROID ΣΥΣΚΕΥΗ ΜΟΥ",n.get("text",""),re.I)),None)
         if android is not None:
             tap(android); stable=0; continue
-        welcome = any(re.search(r"^(WELCOME|ΚΑΛΩΣ ΗΡΘΑΤΕ)$",n.get("text",""),re.I) for n in nodes)
+        welcome = any(search(r"^(WELCOME|ΚΑΛΩΣ ΗΡΘΑΤΕ)$",n.get("text",""),re.I) for n in nodes)
         if welcome:
             for node in nodes:
-                if node.get("checkable")=="true" and node.get("checked")=="false" and re.search(r"Do not show again|Να μην εμφανιστεί ξανά|Mute voice|Σίγαση",node.get("text",""),re.I):
+                if node.get("checkable")=="true" and node.get("checked")=="false" and search(r"Do not show again|Να μην εμφανιστεί ξανά|Mute voice|Σίγαση",node.get("text",""),re.I):
                     tap(node)
             ok = next((n for n in nodes if n.get("text","").upper()=="OK"),None)
             if ok is not None: tap(ok)
@@ -108,7 +106,7 @@ def manual():
     n=find(rid("btnDiagnostics"),12)
     if n is None: raise RuntimeError("Diagnostics entry missing")
     tap(n)
-    n=find(textmatch(r"^GEL (?:Android Manual Tests|Χειροκίνητα Tests Android)$"),8)
+    n=find(textmatch(MANUAL_ENTRY),8)
     if n is None: raise RuntimeError("Manual labs entry missing")
     tap(n); time.sleep(.8); dismiss_intro()
 def safe_interaction():
@@ -119,11 +117,11 @@ def safe_interaction():
     return False
 def outcome(folder):
     text=(folder/"texts.txt").read_text() if (folder/"texts.txt").exists() else ""
-    if re.search(r"Sign in with Google|Σύνδεση.*Google|Subscribe|Συνδρομ|GEL PRO.*Access|PRO required",text,re.I):
+    if search(r"Sign in with Google|Σύνδεση.*Google|Subscribe|Συνδρομ|GEL PRO.*Access|PRO required",text,re.I):
         return "ACCESS_OR_ACCOUNT_GATE"
-    if re.search(r"permission|δικαίω|Usage access|πρόσβαση χρήσης|Allow.*GEL|Να επιτρέπεται",text,re.I):
+    if search(r"permission|δικαίω|Usage access|πρόσβαση χρήσης|Allow.*GEL|Να επιτρέπεται",text,re.I):
         return "PERMISSION_OR_SETTINGS_GATE"
-    if re.search(r"ολοκληρώθηκε|finished|completed",text,re.I):
+    if search(r"ολοκληρώθηκε|finished|completed",text,re.I):
         return "COMPLETION_TEXT_OBSERVED_NOT_HARDWARE_VERIFIED"
     return "UI_OPENED_REQUIRES_INTERACTION_OR_REVIEW"
 
@@ -152,7 +150,7 @@ try:
         home()
         for label,pattern in [("contact",r"^Contact$"),("overflow",r"More options|Περισσότερες επιλογές")]:
             home()
-            n=find(lambda n: bool(re.search(pattern,n.get("text","")+" "+n.get("content-desc",""),re.I)))
+            n=find(lambda n: bool(search(pattern,n.get("text","")+" "+n.get("content-desc",""),re.I)))
             if n is not None:
                 tap(n); record(label,"UI_OPENED",folder=save(label)); adb("shell","input","keyevent","4")
             else: record(label,"NO_ACCESSIBLE_LABEL")

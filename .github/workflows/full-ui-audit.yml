@@ -16,6 +16,11 @@ on:
         type: choice
         options: [full, labs_only]
         default: full
+      language_filter:
+        description: Language selection
+        type: choice
+        options: [all, en, el]
+        default: all
 permissions:
   contents: read
   actions: read
@@ -49,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         api: ${{ fromJSON(inputs.api_filter == '30' && '[30]' || inputs.api_filter == '36' && '[36]' || '[30,36]') }}
-        language: [en, el]
+        language: ${{ fromJSON(inputs.language_filter == 'en' && '["en"]' || inputs.language_filter == 'el' && '["el"]' || '["en","el"]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 85
     steps:
@@ -59,6 +64,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Validate UI selector behavior
+        run: python3 tools/ci/test_ui_audit_selectors.py
       - name: Download exact verified release APK from build 3803
         env:
           GH_TOKEN: ${{ github.token }}
