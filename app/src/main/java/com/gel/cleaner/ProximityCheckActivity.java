@@ -129,10 +129,10 @@ public class ProximityCheckActivity extends GELAutoActivityHook
         if (state == Lab7SensorEvidence.Proximity.UNKNOWN) return;
         if (state == Lab7SensorEvidence.Proximity.NEAR) {
             nearEvents++;
-            if (nearEvents >= 2) nearSeen = true;
+            nearSeen = true; // on-change sensors may emit only one event per state
         } else {
             farEvents++;
-            if (farEvents >= 2) farSeen = true;
+            farSeen = true;
         }
         if (nearSeen && farSeen) {
             setResult(RESULT_OK, new Intent()
