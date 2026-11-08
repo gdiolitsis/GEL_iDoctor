@@ -9864,7 +9864,6 @@ private void lab9SensorsCheck() {
         // INTERPRETATION LOGIC
         // ------------------------------------------------------------
         boolean hasVirtualGyro = false;
-        boolean hasDualALS = false;
         int alsCount = 0;
         boolean hasSAR = false;
         boolean hasPickup = false;
@@ -9892,8 +9891,6 @@ private void lab9SensorsCheck() {
             if (name.contains("game") && name.contains("rotation"))
                 hasGameRotation = true;
         }
-
-        if (alsCount >= 2) hasDualALS = true;
 
         // ------------------------------------------------------------
         // SENSOR INTERPRETATION SUMMARY — ONE LINE PER ITEM
