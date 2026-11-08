@@ -25901,395 +25901,111 @@ return false;
 // GEL Universal Edition — NO external libs
 // ============================================================
 private void lab24RootSuspicion() {
-
     final boolean gr = AppLang.isGreek(this);
-
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 24 — Έλεγχος Root / Ακεραιότητας Bootloader (ΑΥΤΟΜΑΤΟ)."
-            : "LAB 24 — Root / Bootloader Integrity Scan (AUTO).");
+    logInfo(gr ? "LAB 24 — Παρατηρούμενες ενδείξεις root / verified boot"
+               : "LAB 24 — Observed root / verified-boot indicators");
     logLine();
 
-// ---------------------------  
-// (1) ROOT DETECTION  
-// ---------------------------  
-int rootScore = 0;  
-List<String> rootFindings = new ArrayList<>();  
+    // Visible su paths are positive, limited observations. Their absence
+    // (especially with Android sandboxing and root hiding) is NOT proof of
+    // unmodified firmware. Never attempt 'su -c id' silently or ask for root.
+    String[] suCandidates = {
+            "/system/bin/su", "/system/xbin/su", "/sbin/su",
+            "/su/bin/su", "/vendor/bin/su", "/odm/bin/su"
+    };
+    int observedSuPaths = 0;
+    for (String path : suCandidates) {
+        if (!lab24_fileExists(path)) continue;
+        observedSuPaths++;
+        logLabelWarnValue(gr ? "Ορατό εκτελέσιμο ίχνος su" : "Visible su-path indicator",
+                path + " (existence only; capabilities not tested)");
+    }
+    if (observedSuPaths == 0) {
+        logLabelWarnValue(gr ? "su path coverage" : "su path coverage",
+                gr ? "Δεν είναι ορατά στα συνηθισμένα paths· root ΔΕΝ αποκλείεται"
+                   : "No listed paths visible; root is NOT ruled out");
+    }
 
-// su / busybox paths  
-String[] suPaths = {  
-        "/system/bin/su",  
-        "/system/xbin/su",  
-        "/sbin/su",  
-        "/su/bin/su",  
-        "/system/bin/busybox",  
-        "/system/xbin/busybox",  
-        "/vendor/bin/su",  
-        "/odm/bin/su"  
-};  
-
-boolean suFound = false;  
-
-for (String p : suPaths) {  
-    if (lab24_fileExists(p)) {  
-        suFound = true;  
-        rootScore += 18;  
-        rootFindings.add("su/busybox path found: " + p);  
-    }  
-}  
-
-// which su (best-effort, avoid false positives)  
-String whichSu = lab24_execFirstLine("which su");
-if (whichSu != null &&
-    (whichSu.contains("/system/xbin/") ||
-     whichSu.contains("/su/"))) {
-
-    rootScore += 12;
-    rootFindings.add("'which su' returned: " + whichSu);
-    suFound = true;
-}
-
-// try exec su (strong indicator)  
-boolean suExec = lab24_canExecSu();  
-if (suExec) {  
-    rootScore += 25;  
-    rootFindings.add("su execution possible (shell granted).");  
-    suFound = true;  
-}  
-
-// known root packages  
-String[] rootPkgs = {  
-        "com.topjohnwu.magisk",  
-        "eu.chainfire.supersu",  
-        "com.koushikdutta.superuser",  
-        "com.noshufou.android.su",  
-        "com.kingroot.kinguser",  
-        "com.kingo.root",  
-        "com.saurik.substrate",  
-        "de.robv.android.xposed.installer"  
-};  
-
-List<String> installed = lab24_getInstalledPackagesLower();  
-boolean pkgHit = false;  
-
-for (String rp : rootPkgs) {  
-    if (installed.contains(rp)) {  
-        pkgHit = true;  
-        rootScore += 20;  
-        rootFindings.add("root package installed: " + rp);  
-    }  
-}  
-
-// build tags  
-    try {
-
-    String tags = Build.TAGS;
-
-    if (tags != null && tags.contains("test-keys")) {
-
-        rootFindings.add("Build.TAGS contains test-keys.");
-
-        // only increase score if other root signals exist
-        if (suFound || pkgHit) {
-            rootScore += 10;
+    // An installed manager application alone does not confer root access.
+    // Package visibility may hide even installed packages from this process.
+    String[] rootManagerPackages = {
+            "com.topjohnwu.magisk",
+            "eu.chainfire.supersu",
+            "com.kingroot.kinguser",
+            "com.kingo.root"
+    };
+    List<String> visiblePackages = lab24_getInstalledPackagesLower();
+    int visibleManagerCount = 0;
+    for (String pkg : rootManagerPackages) {
+        if (visiblePackages.contains(pkg)) {
+            visibleManagerCount++;
+            logLabelWarnValue(gr ? "Διαθέσιμο package διαχειριστή"
+                                  : "Visible manager package",
+                    pkg + " (presence is not proof of granted root)");
         }
     }
-
-} catch (Throwable ignore) {}
-
-// suspicious system properties  
-String roSecure = lab24_getProp("ro.secure");  
-String roDebug  = lab24_getProp("ro.debuggable");  
-
-if ("0".equals(roSecure)) {  
-    rootScore += 18;  
-    rootFindings.add("ro.secure=0 (insecure build).");  
-}  
-if ("1".equals(roDebug)) {  
-    rootScore += 12;  
-    rootFindings.add("ro.debuggable=1 (debuggable build).");  
-}  
-
-// ---------------------------  
-// (2) BOOTLOADER / VERIFIED BOOT  
-// ---------------------------  
-int blScore = 0;  
-List<String> blFindings = new ArrayList<>();  
-
-String vbState = lab24_getProp("ro.boot.verifiedbootstate"); // green/yellow/orange/red  
-String vbmeta  = lab24_getProp("ro.boot.vbmeta.device_state"); // locked/unlocked  
-String flashL  = lab24_getProp("ro.boot.flash.locked"); // 1/0  
-String wlBit   = lab24_getProp("ro.boot.warranty_bit"); // 0/1 (OEM)  
-
-if (vbState != null) {
-
-    String v = vbState.toLowerCase(Locale.US);
-
-    if (v.contains("orange") ||
-        v.contains("yellow") ||
-        v.contains("red")) {
-
-        blScore += 30;
-        blFindings.add("VerifiedBootState=" + vbState);
-    } else {
-        blFindings.add("VerifiedBootState=" + vbState);
+    if (visibleManagerCount == 0) {
+        logLabelValue(gr ? "Root manager apps" : "Root manager apps",
+                gr ? "Δεν αναφέρθηκαν στα ορατά packages — όχι έλεγχος απουσίας"
+                   : "None among visible packages — not an absence proof");
     }
-}
 
-if (vbmeta != null && vbmeta.contains("unlocked")) {  
-    blScore += 35;  
-    blFindings.add("vbmeta.device_state=unlocked");  
-} else if (vbmeta != null) {  
-    blFindings.add("vbmeta.device_state=" + vbmeta);  
-}  
-
-if ("0".equals(flashL)) {  
-    blScore += 25;  
-    blFindings.add("flash.locked=0 (bootloader unlocked).");  
-} else if (flashL != null) {  
-    blFindings.add("flash.locked=" + flashL);  
-}  
-
-if ("1".equals(wlBit)) {  
-    blScore += 15;  
-    blFindings.add("warranty_bit=1 (tamper flag).");  
-}  
-
-// OEM unlock allowed (settings)  
-try {  
-    int oemAllowed =  
-            Settings.Global.getInt(  
-                    getContentResolver(),  
-                    "oem_unlock_allowed",  
-                    0  
-            );  
-    if (oemAllowed == 1) {  
-        blScore += 10;  
-        blFindings.add("OEM unlock allowed=1 (developer enabled).");  
-    }  
-} catch (Throwable ignore) {}  
-
-// /proc/cmdline hints  
-String cmdline = lab24_readOneLine("/proc/cmdline");  
-if (cmdline != null) {  
-    String c = cmdline.toLowerCase(Locale.US);  
-    if (c.contains("verifiedbootstate=orange") ||  
-        c.contains("verifiedbootstate=yellow") ||  
-        c.contains("vbmeta.device_state=unlocked") ||  
-        c.contains("bootloader=unlocked")) {  
-        blScore += 20;  
-        blFindings.add("/proc/cmdline reports unlocked / weak verified boot.");  
-    }  
-}  
-
-// ---------------------------  
-// (3) BOOT ANIMATION / SPLASH MOD  
-// ---------------------------  
-int animScore = 0;  
-List<String> animFindings = new ArrayList<>();  
-
-if (lab24_fileExists("/data/local/bootanimation.zip")) {  
-    animScore += 35;  
-    animFindings.add("Custom bootanimation: /data/local/bootanimation.zip");  
-}  
-
-boolean sysBoot =
-        lab24_fileExists("/system/media/bootanimation.zip") ||
-        lab24_fileExists("/product/media/bootanimation.zip") ||
-        lab24_fileExists("/oem/media/bootanimation.zip") ||
-        lab24_fileExists("/vendor/media/bootanimation.zip") ||
-        lab24_fileExists("/system_ext/media/bootanimation.zip");
-
-if (!sysBoot) {  
-    animScore += 15;  
-    animFindings.add("No stock bootanimation found (possible custom ROM).");  
-} else {  
-    animFindings.add("Stock bootanimation path exists.");  
-}  
-
-// ---------------------------  
-// FINAL RISK SCORE  
-// ---------------------------  
-int magiskStealthScore = 0;
-List<String> magiskStealthFindings = new ArrayList<>();
-
-try {
-    magiskStealthScore = lab24_magiskStealthScore(magiskStealthFindings);
-} catch (Throwable ignore) {}
-
-int risk =
-        rootScore +
-        blScore +
-        animScore +
-        Math.min(15, magiskStealthScore / 3);
-
-// ------------------------------------------------
-// VERIFIED SECURITY BONUS
-// ------------------------------------------------
-if ("green".equals(vbState)) {
-    risk -= 8;
-}
-
-if ("locked".equals(vbmeta)) {
-    risk -= 8;
-}
-
-if ("1".equals(flashL)) {
-    risk -= 6;
-}
-
-// never below zero
-risk = Math.max(0, Math.min(100, risk));
-
-logInfo(gr ? "Έλεγχος Root:" : "Root Scan:");  
-if (rootFindings.isEmpty()) {  
-    logOk(gr ? "Δεν εντοπίστηκαν ισχυρά ίχνη root."
-             : "No strong root traces detected.");  
-} else {  
-    for (String s : rootFindings)
-        logWarn("• " + s);  
-}  
-
-logInfo(gr ? "Bootloader / Verified Boot:"
-           : "Bootloader / Verified Boot:");
-
-if (blFindings.isEmpty()) {
-
-    logOk(gr
-            ? "Δεν εντοπίστηκαν ανωμαλίες bootloader."
-            : "No bootloader anomalies detected.");
-
-} else {
-
-    for (String s : blFindings) {
-
-        String l = s.toLowerCase(Locale.US);
-
-        if (l.contains("verifiedbootstate=green") ||
-            l.contains("vbmeta.device_state=locked") ||
-            l.contains("flash.locked=1")) {
-
-            logOk("• " + s);
-
-        } else {
-
-            logWarn("• " + s);
-        }
+    String tags = Build.TAGS == null ? "" : Build.TAGS;
+    logLabelValue("Build.TAGS",
+            tags.isEmpty() ? (gr ? "Άγνωστο" : "Unknown") : tags);
+    if (tags.contains("test-keys")) {
+        logLabelWarnValue(gr ? "Περιορισμός build tags" : "Build tags limitation",
+                gr ? "Τα test-keys δηλώνουν build metadata, όχι υποχρεωτικά root"
+                   : "test-keys is build metadata, not a root-access proof");
     }
-}
 
-logInfo(gr ? "Boot Animation / Splash:"
-           : "Boot Animation / Splash:");  
-if (animFindings.isEmpty()) {
+    String bootState = lab24_getProp("ro.boot.verifiedbootstate");
+    String deviceState = lab24_getProp("ro.boot.vbmeta.device_state");
+    String flashLocked = lab24_getProp("ro.boot.flash.locked");
+    logLabelValue(gr ? "OS-reported Verified Boot" : "OS-reported Verified Boot",
+            bootState != null && !bootState.trim().isEmpty()
+                    ? bootState : (gr ? "Μη διαθέσιμο" : "Unavailable"));
+    logLabelValue(gr ? "OS-reported vbmeta state" : "OS-reported vbmeta state",
+            deviceState != null && !deviceState.trim().isEmpty()
+                    ? deviceState : (gr ? "Μη διαθέσιμο" : "Unavailable"));
+    logLabelValue(gr ? "OS-reported flash locked" : "OS-reported flash locked",
+            flashLocked != null && !flashLocked.trim().isEmpty()
+                    ? flashLocked : (gr ? "Μη διαθέσιμο" : "Unavailable"));
 
-    logOk(gr
-            ? "Δεν εντοπίστηκαν ίχνη προσαρμοσμένης εκκίνησης."
-            : "No custom animation traces detected.");
-
-} else {
-
-    for (String s : animFindings) {
-
-        String l = s.toLowerCase(Locale.US);
-
-        if (l.contains("stock bootanimation")) {
-
-            logOk("• " + s);
-
-        } else {
-
-            logWarn("• " + s);
-        }
+    if ("orange".equalsIgnoreCase(bootState)
+            || "red".equalsIgnoreCase(bootState)
+            || "unlocked".equalsIgnoreCase(deviceState)
+            || "0".equals(flashLocked)) {
+        logLabelWarnValue(gr ? "Παρατηρούμενη κατάσταση εκκίνησης"
+                             : "Observed boot state",
+                gr ? "Το Android αναφέρει τροποποιημένη ή μη κλειδωμένη κατάσταση· "
+                       + "απαιτείται επιβεβαίωση εμπιστοσύνης."
+                   : "OS properties report modified/unlocked state; "
+                       + "trusted verification is required.");
     }
+
+    logLabelWarnValue(gr ? "Root / ακεραιότητα συσκευής"
+                         : "Device root/integrity verification",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΣΙΜΗ πλήρως από εφαρμογή τρίτου χωρίς έμπιστη attestation"
+               : "NOT fully verifiable by a third-party app without trusted attestation");
+    logLabelWarnValue(gr ? "Ποσοστιαία ασφάλεια" : "Safety percentage",
+            gr ? "Δεν υπολογίζεται από path, package ή boot-animation heuristics"
+               : "Not computed from path, package or boot-animation heuristics");
+    logLabelValue(gr ? "Επόμενος έλεγχος" : "Next verification",
+            gr ? "Για υψηλή βεβαιότητα απαιτείται εξουσιοδοτημένη επιβεβαίωση "
+                   + "verified boot / Play Integrity με κατάλληλο backend."
+               : "High-assurance verification requires authorized verified-boot "
+                   + "or Play Integrity evidence with an appropriate trusted backend.");
+
+    GELServiceLog.info("SUMMARY: ROOT_STATE=UNKNOWN; "
+            + "VERIFIED_BOOT=OS_REPORTED_ONLY; ROOT_PATHS_OBSERVED=" + observedSuPaths);
+    appendHtml("<br>");
+    logOk(gr ? "Το Lab 24 ολοκληρώθηκε με τεκμηριωμένα όρια."
+             : "Lab 24 completed with documented evidence limits.");
+    logLine();
 }
-
-logInfo(gr ? "Magisk / Stealth heuristics:"
-           : "Magisk / Stealth heuristics:");
-
-if (magiskStealthFindings.isEmpty()) {
-
-    logOk(gr
-            ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις stealth root."
-            : "No strong stealth root indicators detected.");
-
-} else {
-
-    for (String s : magiskStealthFindings) {
-
-        String l = s.toLowerCase(Locale.US);
-
-        if ((l.contains("/debug_ramdisk") ||
-             l.contains("overlay mount")) &&
-            "green".equals(vbState) &&
-            "locked".equals(vbmeta) &&
-            "1".equals(flashL)) {
-
-            logOk("• " + s);
-
-        } else {
-
-            logWarn("• " + s);
-        }
-    }
-}
-
-// ------------------------------------------------------------
-// RISK SCORE (colored VALUE only)
-// ------------------------------------------------------------
-
-appendHtml("<br>");
-if (risk >= 70) {
-    logLabelErrorValue(
-            gr ? "Εκτιμιση κινδύνου" : "Risk netdict",
-            risk + " / 100"
-    );
-} else if (risk >= 35) {
-    logLabelWarnValue(
-            gr ? "Εκτιμιση κινδύνου" : "Risk netdict",
-            risk + " / 100"
-    );
-} else {
-    logLabelOkValue(
-            gr ? "Εκτιμιση κινδύνου" : "Risk netdict",
-            risk + " / 100"
-    );
-}
-
-// ------------------------------------------------------------
-// STATUS (GEL LABEL/VALUE STYLE)
-// ------------------------------------------------------------
-
-if (risk >= 70 || suExec || pkgHit) {
-
-    logLabelErrorValue(
-            gr ? "Τελική κατάσταση" : "Final status",
-            gr ? "ROOT / ΤΡΟΠΟΠΟΙΗΜΕΝΟ ΣΥΣΤΗΜΑ (υψηλή βεβαιότητα)"
-               : "ROOTED / SYSTEM MODIFIED (high confidence)"
-    );
-
-} else if (risk >= 35) {
-
-    logLabelWarnValue(
-            gr ? "Τελική κατάσταση" : "Final status",
-            gr ? "ΥΠΟΠΤΟ (πιθανό root / ξεκλείδωτος bootloader / custom ROM)"
-               : "SUSPICIOUS (possible root / unlocked / custom ROM)"
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Τελική κατάσταση" : "Final status",
-            gr ? "ΑΣΦΑΛΕΣ (δεν βρέθηκαν σημαντικές ενδείξεις τροποποίησης)"
-               : "SAFE (no significant modification evidence)"
-    );
-}
-
-appendHtml("<br>");
-logOk(gr ? "Το Lab 24 ολοκληρώθηκε." : "Lab 24 finished.");
-logLine();
-}
-
 
 // ============================================================
 // LAB 24 — INTERNAL HELPERS
