@@ -26440,58 +26440,42 @@ private void lab19RamSnapshot() {
         logInfo(gr ? "Αξιολόγηση πίεσης RAM:" : "RAM pressure assessment:");
         logLine();
 
-        if (pctFree < 8) {
-
-            logLabelErrorValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Κρίσιμη πίεση RAM"
-                       : "Critical RAM pressure"
-            );
-            logLabelErrorValue(
-                    gr ? "Συμπεριφορά συστήματος" : "System behaviour",
-                    gr ? "Επιθετικό κλείσιμο εφαρμογών στο παρασκήνιο"
-                       : "Aggressive background app killing"
-            );
-            logLabelWarnValue(
-                    gr ? "Επίδραση στον χρήστη" : "User impact",
-                    gr ? "Έντονο lag, επαναφορτώσεις και κολλήματα UI"
-                       : "Strong lag, reloads and UI stutter"
-            );
-
-        } else if (pctFree < 15) {
-
-            logLabelWarnValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Υψηλή πίεση RAM"
-                       : "High RAM pressure"
-            );
-            logLabelWarnValue(
-                    gr ? "Επίδραση στον χρήστη" : "User impact",
-                    gr ? "Το multitasking μπορεί να γίνει ασταθές"
-                       : "Multitasking may become unstable"
-            );
-
-        } else if (pctFree < 25) {
-
-            logLabelOkValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Αυξημένη χρήση RAM"
-                       : "Elevated RAM usage"
-            );
-            logLabelOkValue(
-                    gr ? "Σημείωση" : "Note",
-                    gr ? "Φυσιολογικό κατά τη χρήση βαριών εφαρμογών ή gaming"
-                       : "Normal during heavy apps or gaming"
-            );
-
-        } else {
-
-            logLabelOkValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Υγιές επίπεδο RAM"
-                       : "Healthy RAM level"
-            );
+        RamEvidencePolicy.Assessment ramAssessment =
+                RamEvidencePolicy.assess(pctFree, mi.lowMemory);
+        switch (ramAssessment) {
+            case ANDROID_LOW_MEMORY:
+                logLabelWarnValue(
+                        gr ? "Κατάσταση" : "Status",
+                        gr ? "Το Android αναφέρει κατάσταση χαμηλής μνήμης"
+                           : "Android reports a low-memory condition"
+                );
+                break;
+            case LOW_AVAILABLE_RAM:
+                logLabelWarnValue(
+                        gr ? "Κατάσταση" : "Status",
+                        gr ? "Μικρό διαθέσιμο περιθώριο RAM — χωρίς σήμα low-memory από Android"
+                           : "Low available RAM headroom — no Android low-memory signal"
+                );
+                break;
+            case NO_OS_LOW_MEMORY_SIGNAL:
+                logLabelOkValue(
+                        gr ? "Κατάσταση" : "Status",
+                        gr ? "Δεν αναφέρθηκε κατάσταση low-memory από Android"
+                           : "Android has not reported a low-memory condition"
+                );
+                break;
+            default:
+                logLabelWarnValue(
+                        gr ? "Κατάσταση" : "Status",
+                        gr ? "Μη επαρκή στοιχεία για πίεση RAM"
+                           : "Insufficient RAM pressure evidence"
+                );
         }
+        logLabelWarnValue(
+                gr ? "Όρια ελέγχου" : "Assessment limits",
+                gr ? "Δεν μετρήθηκαν καθυστέρηση UI, κλεισίματα εφαρμογών ή ποιότητα multitasking"
+                   : "UI lag, app terminations and multitasking quality were not measured"
+        );
 
         // ------------------------------------------------------------
         // MEMORY PRESSURE INDICATORS (LOW-LEVEL)
