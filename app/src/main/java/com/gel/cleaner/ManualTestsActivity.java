@@ -8781,27 +8781,12 @@ private void lab8RunNextCamera(
                 String.valueOf(overall.previewInconclusiveCount)
         );
 
-        if (overall.torchOkCount > 0)
-            logLabelOkValue(
-                    gr ? "Φλας OK" : "Torch OK",
-                    String.valueOf(overall.torchOkCount)
-            );
-        else
-            logLabelWarnValue(
-                    gr ? "Φλας OK" : "Torch OK",
-                    "0"
-            );
-
-        if (overall.torchFailCount == 0)
-            logLabelOkValue(
-                    gr ? "Αποτυχίες φλας" : "Torch FAIL",
-                    "0"
-            );
-        else
-            logLabelWarnValue(
-                    gr ? "Αποτυχίες φλας" : "Torch FAIL",
-                    String.valueOf(overall.torchFailCount)
-            );
+        logLabelValue(gr ? "Εντολές Torch που έγιναν δεκτές" : "Torch commands accepted",
+                String.valueOf(overall.torchOkCount));
+        logLabelValue(gr ? "Εντολές Torch μη διαθέσιμες" : "Torch commands unavailable",
+                String.valueOf(overall.torchFailCount));
+        logInfo(gr ? "Αποδοχή εντολής δεν αποδεικνύει εκπομπή φωτός από LED."
+                   : "A successful command does not prove physical LED emission.");
 
         if (overall.streamIssueCount == 0)
             logLabelValue(
@@ -8840,18 +8825,9 @@ private void lab8RunNextCamera(
                         gr ? "Μικρές ανωμαλίες" : "Minor anomalies detected"
                 );
 
-            if (overall.torchFailCount == 0)
-                logLabelOkValue(
-                        gr ? "Εντολές φλας" : "Torch commands",
-                        gr ? "Δεν απέτυχε εντολή — όχι μέτρηση φωτός" : "No command failure; emitted light unmeasured"
-                );
-            else
-                logLabelWarnValue(
-                        gr ? "Υποσύστημα φλας" : "Flash subsystem",
-                        gr
-                                ? "Ορισμένες κάμερες χωρίς φλας ή με πρόβλημα"
-                                : "Some cameras have no flash / torch issues"
-                );
+            logLabelValue(gr ? "Torch — κατάσταση" : "Torch — status",
+                    gr ? "Παρατηρήθηκαν μόνο αποτελέσματα εντολών Android"
+                       : "Only Android command outcomes observed");
 
             logOk(
                     gr
@@ -8974,12 +8950,12 @@ private void lab8TryTorchToggle(String camId, Lab8Cam cam, Lab8Overall overall) 
         SystemClock.sleep(250);
         cm.setTorchMode(camId, false);
 
-        logLabelOkValue("Flash", "Torch toggled successfully");
+        logLabelValue("Flash", "Android accepted torch on/off commands — light not measured");
         overall.torchOkCount++;
 
     } catch (Throwable t) {
-        logLabelErrorValue("Flash", "Torch control failed");
-        logWarn("Possible flash hardware, driver, or permission issue.");
+        logLabelWarnValue("Flash", "Torch command unavailable in current conditions");
+        logWarn("Permission, camera-in-use, device policy and OEM limits remain possible.");
         overall.torchFailCount++;
     }
 }
