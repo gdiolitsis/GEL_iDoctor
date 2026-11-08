@@ -22,14 +22,12 @@ import android.widget.TextView;
 public class RotationCheckActivity extends GELAutoActivityHook
         implements SensorEventListener {
     private SensorManager manager;
-    private Sensor accelerometer;
+    private Sensor orientationSensor;
     private TextView info;
+    private String instructions;
     private int samples = 0;
-    private int consecutive = 0;
-    private Lab7SensorEvidence.Orientation pending =
-            Lab7SensorEvidence.Orientation.OTHER_OR_UNSTABLE;
-    private Lab7SensorEvidence.Orientation stable =
-            Lab7SensorEvidence.Orientation.OTHER_OR_UNSTABLE;
+    private final Lab7SensorEvidence.OrientationSequence sequence =
+            new Lab7SensorEvidence.OrientationSequence();
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -37,32 +35,27 @@ public class RotationCheckActivity extends GELAutoActivityHook
         final boolean gr = AppLang.isGreek(this);
         manager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (manager != null) {
-            accelerometer = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        }
-
-        if (state != null) {
-            samples = state.getInt("samples", 0);
-            consecutive = state.getInt("consecutive", 0);
-            try {
-                pending = Lab7SensorEvidence.Orientation.valueOf(
-                        state.getString("pending", "OTHER_OR_UNSTABLE"));
-                stable = Lab7SensorEvidence.Orientation.valueOf(
-                        state.getString("stable", "OTHER_OR_UNSTABLE"));
-            } catch (IllegalArgumentException ignored) {
-                pending = Lab7SensorEvidence.Orientation.OTHER_OR_UNSTABLE;
-                stable = Lab7SensorEvidence.Orientation.OTHER_OR_UNSTABLE;
+            // Prefer the OS gravity vector, which filters much of the transient
+            // acceleration. Fall back to the accelerometer with timed stability.
+            orientationSensor = manager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+            if (orientationSensor == null) {
+                orientationSensor = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
             }
         }
+        // Do not restore previously observed samples after recreation/process death.
+        // A fresh registration must generate fresh evidence.
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF101010);
         info = new TextView(this);
-        info.setText(gr
-                ? "Κράτησε το κινητό πρώτα όρθιο (portrait) και μετά γύρισέ το "
-                        + "αργά στο πλάι (landscape).\n\n"
-                        + "Απαιτούνται σταθερά δείγματα επιταχυνσιομέτρου, όχι απλό κούνημα."
-                : "Hold the phone in portrait, then slowly rotate it to landscape.\n\n"
-                        + "Stable accelerometer orientation events are required, not a shake.");
+        instructions = gr
+                ? "Κράτησε το κινητό όρθιο (portrait) τουλάχιστον 1 δευτερόλεπτο. "
+                        + "Μετά γύρισέ το αργά στο πλάι (landscape) και κράτησέ το σταθερό.\n\n"
+                        + "Το κούνημα δεν θεωρείται περιστροφή."
+                : "Hold the device steady in portrait for at least one second. "
+                        + "Then slowly turn it to landscape and hold it steady.\n\n"
+                        + "Shaking does not count as rotation.";
+        info.setText(instructions);
         info.setTextSize(18f);
         info.setTextColor(Color.WHITE);
         info.setGravity(Gravity.CENTER);
@@ -92,72 +85,63 @@ public class RotationCheckActivity extends GELAutoActivityHook
         end.setLayoutParams(endLp);
         end.setOnClickListener(v -> {
             setResult(RESULT_CANCELED, new Intent()
-                    .putExtra("reason", accelerometer == null
-                            ? "Accelerometer not advertised" : "Guided test not completed")
+                    .putExtra("reason", orientationSensor == null
+                            ? "Gravity/accelerometer sensor unavailable" : "Guided test not completed")
                     .putExtra("samples", samples));
             finish();
         });
         root.addView(end);
         setContentView(root);
-        if (accelerometer == null) {
-            info.setText(gr ? "Το Android δεν διαθέτει επιταχυνσιόμετρο για αυτόν τον έλεγχο."
-                            : "Android did not expose an accelerometer for this test.");
+        if (orientationSensor == null) {
+            info.setText(gr ? "Το Android δεν διαθέτει αισθητήρα βαρύτητας ή επιταχυνσιόμετρο."
+                            : "Android did not expose a gravity sensor or accelerometer.");
         }
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
-        state.putInt("samples", samples);
-        state.putInt("consecutive", consecutive);
-        state.putString("pending", pending.name());
-        state.putString("stable", stable.name());
+        // No test-progress restoration: stale sensor evidence cannot survive lifecycle.
         super.onSaveInstanceState(state);
     }
 
     @Override protected void onResume() {
         super.onResume();
-        if (manager != null && accelerometer != null &&
-                !manager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI)) {
+        sequence.reset();
+        samples = 0;
+        info.setText(instructions);
+        if (manager != null && orientationSensor != null &&
+                !manager.registerListener(this, orientationSensor, SensorManager.SENSOR_DELAY_UI)) {
             info.setText(AppLang.isGreek(this)
-                    ? "Δεν έγινε καταχώριση ακροατή επιταχυνσιομέτρου."
-                    : "Accelerometer event registration unavailable.");
+                    ? "Δεν διατίθεται ροή συμβάντων προσανατολισμού."
+                    : "Orientation sensor event registration unavailable.");
         }
     }
 
     @Override protected void onPause() {
         if (manager != null) manager.unregisterListener(this);
+        sequence.reset();
         super.onPause();
     }
 
     @Override public void onSensorChanged(SensorEvent event) {
-        if (event == null || event.sensor.getType() != Sensor.TYPE_ACCELEROMETER
+        if (event == null || event.sensor != orientationSensor
                 || event.values == null || event.values.length < 3) return;
         samples++;
-        Lab7SensorEvidence.Orientation next = Lab7SensorEvidence.gravityOrientation(
-                event.values[0], event.values[1], event.values[2]);
-        if (next == Lab7SensorEvidence.Orientation.OTHER_OR_UNSTABLE) {
-            pending = next;
-            consecutive = 0;
-            return;
-        }
-        if (next != pending) {
-            pending = next;
-            consecutive = 1;
-        } else {
-            consecutive++;
-        }
-        if (consecutive < 3 || next == stable) return;
-        if (stable == Lab7SensorEvidence.Orientation.OTHER_OR_UNSTABLE) {
-            stable = next;
-            info.setText(AppLang.isGreek(this)
-                    ? "Πρώτη σταθερή θέση: " + stable.name()
-                            + "\nΠερίστρεψε αργά στη δεύτερη θέση."
-                    : "Stable initial orientation: " + stable.name()
-                            + "\nSlowly rotate to the other orientation.");
-        } else {
+        boolean portraitPreviouslyVerified = sequence.sawStablePortrait();
+        boolean complete = sequence.observe(event.values[0], event.values[1],
+                event.values[2], event.timestamp);
+        if (complete) {
             setResult(RESULT_OK, new Intent()
-                    .putExtra("evidence", "stable_portrait_landscape_transition")
+                    .putExtra("evidence", "timed_stable_portrait_then_landscape")
+                    .putExtra("orientation_source", orientationSensor.getType()
+                            == Sensor.TYPE_GRAVITY ? "ANDROID_GRAVITY" : "ANDROID_ACCELEROMETER")
                     .putExtra("samples", samples));
             finish();
+        } else if (!portraitPreviouslyVerified && sequence.sawStablePortrait()) {
+            info.setText(AppLang.isGreek(this)
+                    ? "Επιβεβαιώθηκε σταθερό portrait. Τώρα γύρισε τη συσκευή "
+                            + "σε landscape και κράτησέ την σταθερά."
+                    : "Stable portrait observed. Now slowly rotate to landscape "
+                            + "and keep the device steady.");
         }
     }
 
