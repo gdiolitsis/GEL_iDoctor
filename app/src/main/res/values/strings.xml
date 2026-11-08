@@ -207,7 +207,7 @@ Professional service tools.\nEach manual lab writes detailed results\nand is inc
     <string name="manual_cat_4">Battery &amp; Thermal — Manual Labs 14–17</string>
     <string name="manual_cat_5">Storage &amp; Performance — Manual Labs 18–20</string>
     <string name="manual_cat_6">Security &amp; System Health — Manual Labs 21–24</string>
-    <string name="manual_cat_7">Advanced / Logs — Manual Labs 25–30</string>
+    <string name="manual_cat_7">Advanced / Logs — Manual Labs 25–31</string>
 
     <!-- LOG -->
     <string name="manual_log_title">Manual Tests Log</string>
