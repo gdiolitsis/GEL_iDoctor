@@ -11,6 +11,7 @@ public class SensorAxisEvidenceTest {
         assertTrue(evidence.observe(new float[]{9.8f, 1.0f, 0f}, 1_200_000_000L));
         assertEquals(2, evidence.validEvents());
         assertTrue(evidence.observedVariation(0.001f));
+        assertEquals("Y", evidence.variedAxes(0.001f));
     }
 
     @Test public void zAxisOnlyVariationIsObserved() {
@@ -18,6 +19,7 @@ public class SensorAxisEvidenceTest {
         assertTrue(evidence.observe(new float[]{0f, 0f, 0f}, 1_000_000_000L));
         assertTrue(evidence.observe(new float[]{0f, 0f, -0.25f}, 1_200_000_000L));
         assertTrue(evidence.observedVariation(0.001f));
+        assertEquals("Z", evidence.variedAxes(0.001f));
     }
 
     @Test public void stationaryStreamIsNotFabricatedIntoMovement() {
@@ -27,6 +29,7 @@ public class SensorAxisEvidenceTest {
         assertEquals(2, evidence.validEvents());
         assertEquals(0, evidence.invalidEvents());
         assertFalse(evidence.observedVariation(0f)); // not a physical-failure conclusion
+        assertEquals("", evidence.variedAxes(0f));
     }
 
     @Test public void nonfiniteSecondaryAxisAndShortVectorAreInvalid() {
@@ -60,11 +63,13 @@ public class SensorAxisEvidenceTest {
         assertTrue(light.observe(new float[]{12f}, 1_000_000_000L));
         assertTrue(light.observe(new float[]{18f}, 1_200_000_000L));
         assertTrue(light.observedVariation(0.1f));
+        assertEquals("VALUE", light.variedAxes(0.1f));
 
         SensorAxisEvidence proximity = new SensorAxisEvidence(1);
         assertTrue(proximity.observe(new float[]{5f}, 1_000_000_000L));
         assertTrue(proximity.observe(new float[]{0f}, 1_400_000_000L));
         assertTrue(proximity.observedVariation(0.1f));
+        assertEquals("VALUE", proximity.variedAxes(0.1f));
     }
 
     @Test public void smallJitterBelowResolutionBoundIsNotVariation() {
