@@ -70,3 +70,11 @@ def find_accessible_action(root, label):
                             node.get(field, ""), re.I)
                    for field in ("text", "content-desc"))
     return find_visible(root, named)
+
+
+# Allowlist: only non-purchasing account actions may be tapped by unattended QA.
+SAFE_ACCOUNT_ACTIONS = (r"^Refresh gifted PRO$", r"^Restore Play purchases$")
+
+
+def is_safe_account_action(label):
+    return any(matching(pattern, label, re.I) for pattern in SAFE_ACCOUNT_ACTIONS)

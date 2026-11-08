@@ -3,7 +3,7 @@ import unittest
 import xml.etree.ElementTree as ET
 from ui_audit_selectors import (MANUAL_ENTRY, matching, is_visible, find_visible,
                                 scroll_gesture, manual_section_pattern, incomplete_lab_names,
-                                find_accessible_action)
+                                find_accessible_action, SAFE_ACCOUNT_ACTIONS, is_safe_account_action)
 
 class SelectorsTest(unittest.TestCase):
     def test_android_uppercase_greek_removes_tonos(self):
@@ -69,6 +69,16 @@ class SelectorsTest(unittest.TestCase):
             '<hierarchy><node clickable="true" text="" content-desc="" '
             'bounds="[270,10][315,57]"/></hierarchy>')
         self.assertIsNone(find_accessible_action(root, "Settings"))
+
+
+
+    def test_unattended_account_actions_are_read_only_allowlisted(self):
+        self.assertEqual(len(SAFE_ACCOUNT_ACTIONS), 2)
+        self.assertTrue(is_safe_account_action("Refresh gifted PRO"))
+        self.assertTrue(is_safe_account_action("Restore Play purchases"))
+        for label in ("Sign out", "Delete account", "Αποσύνδεση",
+                      "Διαγραφή λογαριασμού", "Buy GEL PRO", "Subscribe"):
+            self.assertFalse(is_safe_account_action(label), label)
 
 
 if __name__ == "__main__":

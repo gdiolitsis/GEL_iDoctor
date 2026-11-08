@@ -4,7 +4,7 @@ import json, os, pathlib, re, struct, subprocess, sys, time, traceback
 import xml.etree.ElementTree as ET
 from ui_audit_selectors import (MANUAL_ENTRY, matching as search, is_visible as visible,
                                 find_visible, scroll_gesture, manual_section_pattern,
-                                incomplete_lab_names, find_accessible_action)
+                                incomplete_lab_names, find_accessible_action, SAFE_ACCOUNT_ACTIONS)
 
 PKG = "com.gel.iDoctor"
 out = pathlib.Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
@@ -186,13 +186,16 @@ try:
                     account=find(textmatch(r"^(PRO account|Λογαριασμός PRO)$"))
                     if account is not None:
                         tap(account); record("account","UI_OPENED",folder=save("account"))
-                        for action in [r"^Refresh gifted PRO$",r"^Sign out$",r"^Delete account$",r"^Restore Play purchases$"]:
+                        # Strict allowlist: NEVER tap Sign out or Delete account.
+                        # Their dismissal behavior is not guaranteed across versions.
+                        for action in SAFE_ACCOUNT_ACTIONS:
                             control=find(textmatch(action),4)
                             if control is None: continue
                             tap(control); time.sleep(2)
                             record("account-"+action,"UI_ACTION_REVIEW",folder=save("account-"+action))
                             cancel=find(textmatch(r"^(CANCEL|ΑΚΥΡΟ)$"))
                             if cancel is not None: tap(cancel)
+                        record("account-sensitive-controls","NOT_ACTIVATED_BY_POLICY")
                 adb("shell","input","keyevent","4")
             else: record(label,"NO_ACCESSIBLE_LABEL")
         # Validate the accessible Settings label, not the legacy unnamed icon.
