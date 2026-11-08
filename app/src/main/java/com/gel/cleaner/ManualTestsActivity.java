@@ -24882,6 +24882,7 @@ private void lab16ThermalSnapshot() {
 
     float  peakTemp = -1f;
     String peakSrc  = "N/A";
+    final int observedCount = internal.size() + peripherals.size();
 
     // ------------------------------------------------------------
     // BASIC + CRITICAL THERMALS
@@ -24924,34 +24925,36 @@ private void lab16ThermalSnapshot() {
     logInfo(gr ? "Θερμική σύνοψη:" : "Thermal summary:");
     logLine();
 
-    if (danger) {
-
+    if (observedCount == 0) {
         logLabelWarnValue(
                 gr ? "Κατάσταση" : "Status",
-                gr ? "Ανιχνεύθηκε αυξημένη θερμοκρασία"
-                   : "Elevated temperature detected"
+                gr ? "Δεν υπάρχουν διαθέσιμες θερμικές μετρήσεις"
+                   : "No thermal readings available"
         );
-
+    } else if (danger) {
+        logLabelWarnValue(
+                gr ? "Κατάσταση" : "Status",
+                gr ? "Ανιχνεύθηκε αυξημένη θερμοκρασία σε διαθέσιμο αισθητήρα"
+                   : "Elevated reading detected from an available sensor"
+        );
         logLabelWarnValue(
                 gr ? "Αντίδραση συστήματος" : "System response",
                 gr ? "Ενδέχεται να ενεργοποιηθεί θερμική προστασία"
                    : "Thermal protection may activate"
         );
-
     } else {
-
         logLabelOkValue(
                 gr ? "Κατάσταση" : "Status",
-                gr ? "Ασφαλείς θερμοκρασίες λειτουργίας"
-                   : "Safe operating temperatures"
-        );
-
-        logLabelOkValue(
-                gr ? "Κάλυψη" : "Coverage",
-                gr ? "Παρακολουθήθηκαν εσωτερικά chips και κρίσιμα περιφερειακά"
-                   : "Internal chips and critical peripherals monitored"
+                gr ? "Δεν εντοπίστηκε υψηλή ένδειξη στους διαθέσιμους αισθητήρες"
+                   : "No high reading among available sensors"
         );
     }
+    logLabelWarnValue(
+            gr ? "Κάλυψη" : "Coverage",
+            (gr ? "Μετρήσεις από " : "Readings from ") + observedCount
+                    + (gr ? " διαθέσιμους αισθητήρες· δεν πιστοποιείται πλήρης κάλυψη"
+                          : " available sensors; full hardware coverage is not verified")
+    );
 
     // ------------------------------------------------------------
     // PEAK TEMPERATURE
@@ -25011,12 +25014,10 @@ private void lab16ThermalSnapshot() {
         );
 
     } else {
-
-        logLabelOkValue(
+        logLabelWarnValue(
                 gr ? "Κρυφοί αισθητήρες" : "Hidden sensors",
-                gr
-                        ? "Όλοι οι κρίσιμοι θερμικοί αισθητήρες είναι εντός ορίων"
-                        : "All critical thermal sensors monitored"
+                gr ? "Δεν τεκμηριώνεται κάλυψη μη προσβάσιμων αισθητήρων"
+                   : "Unexposed sensors cannot be assessed"
         );
     }
 
@@ -25044,7 +25045,8 @@ private void lab16ThermalSnapshot() {
         }
     }
 
-    thermalScore = Math.max(0, Math.min(100, thermalScore));
+    thermalDanger = thermalDanger || hiddenRisk;
+    thermalScore = ThermalEvidencePolicy.score(observedCount, thermalScore, hiddenRisk);
 
     try {
         p.edit()
@@ -25056,31 +25058,25 @@ private void lab16ThermalSnapshot() {
                 .apply();
     } catch (Throwable ignore) {}
 
-    String tLabel;
-
-if (thermalScore >= 80)
-    tLabel = gr ? "Φυσιολογική" : "Normal";
-else if (thermalScore >= 60)
-    tLabel = gr ? "Μέτρια" : "Moderate";
-else
-    tLabel = gr ? "Υψηλή" : "High";
-
-logLabelOkValue(
-        gr ? "Αξιολόγηση θερμικής συμπεριφοράς"
-           : "Thermal behaviour rating",
-        String.format(
-                Locale.US,
-                "%s (%d)",
-                tLabel,
-                thermalScore
-        )
-);
-
-    boolean thermalSpikesDetected = thermalDanger;
-
+    if (thermalScore < 0) {
+        logLabelWarnValue(
+                gr ? "Αξιολόγηση θερμικής συμπεριφοράς" : "Thermal behaviour rating",
+                gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA"
+        );
+    } else {
+        String tLabel = thermalScore >= 80
+                ? (gr ? "Εντός παρατηρημένων ορίων" : "Within observed limits")
+                : thermalScore >= 60
+                ? (gr ? "Μέτρια" : "Moderate")
+                : (gr ? "Υψηλή" : "High");
+        logLabelOkValue(
+                gr ? "Αξιολόγηση θερμικής συμπεριφοράς" : "Thermal behaviour rating",
+                String.format(Locale.US, "%s (%d)", tLabel, thermalScore)
+        );
+    }
     GELServiceLog.info(
-            "SUMMARY: THERMAL_PATTERN=" +
-                    (thermalSpikesDetected ? "SPIKES" : "NORMAL")
+            "SUMMARY: THERMAL_PATTERN="
+                    + ThermalEvidencePolicy.pattern(thermalScore, thermalDanger)
     );
 
     appendHtml("<br>");
