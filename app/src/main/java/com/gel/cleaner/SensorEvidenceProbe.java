@@ -52,29 +52,25 @@ public final class SensorEvidenceProbe {
     private static final class Sample {
         final String name;
         final Sensor sensor;
-        boolean registered;
-        int events;
-        int bad;
-        boolean monotonic = true;
-        long previousTimestamp = -1L;
-        float min = Float.POSITIVE_INFINITY;
-        float max = Float.NEGATIVE_INFINITY;
+        final SensorAxisEvidence evidence;
+        volatile boolean registered;
 
-        Sample(String name, Sensor sensor) {
+        Sample(String name, Sensor sensor, int requiredAxes) {
             this.name = name;
             this.sensor = sensor;
+            this.evidence = new SensorAxisEvidence(requiredAxes);
         }
 
         Result result() {
-            boolean varied = events > 1 && Float.isFinite(min) && Float.isFinite(max)
-                    && (max - min) >= Math.max(0.02f, sensor == null ? 0f
-                            : sensor.getResolution() * 2f);
+            int valid = evidence.validEvents();
+            float resolution = sensor == null ? 0f : sensor.getResolution();
+            boolean varied = evidence.observedVariation(resolution);
             return new Result(name, sensor != null, registered,
-                    events, bad, monotonic, varied,
+                    valid, evidence.invalidEvents(), evidence.timestampsMonotonic(), varied,
                     sensor == null ? "Not advertised" :
                             !registered ? "Registration refused" :
-                            events == 0 ? "No event during sample interval" :
-                            "Event stream observed, not a calibrated functional diagnosis");
+                            valid == 0 ? "No valid events during sample interval" :
+                            "Only sensor-event variation observed; no calibration or hardware diagnosis");
         }
     }
 
@@ -102,7 +98,9 @@ public final class SensorEvidenceProbe {
             try {
                 sensor = manager.getDefaultSensor(types[i]);
             } catch (RuntimeException ignored) {}
-            samples.put(types[i], new Sample(names[i], sensor));
+            int requiredAxes = types[i] == Sensor.TYPE_ACCELEROMETER
+                    || types[i] == Sensor.TYPE_GYROSCOPE ? 3 : 1;
+            samples.put(types[i], new Sample(names[i], sensor, requiredAxes));
         }
 
         SensorEventListener listener = new SensorEventListener() {
@@ -114,19 +112,9 @@ public final class SensorEvidenceProbe {
                 if (event == null || event.sensor == null) return;
                 Sample sample = samples.get(event.sensor.getType());
                 if (sample == null || !sample.registered) return;
-                if (event.values == null || event.values.length == 0 ||
-                        !Float.isFinite(event.values[0]) || event.timestamp <= 0L) {
-                    sample.bad++;
-                    return;
-                }
-                if (sample.previousTimestamp >= 0
-                        && event.timestamp <= sample.previousTimestamp) {
-                    sample.monotonic = false;
-                }
-                sample.previousTimestamp = event.timestamp;
-                sample.events++;
-                sample.min = Math.min(sample.min, event.values[0]);
-                sample.max = Math.max(sample.max, event.values[0]);
+                // All three accelerometer/gyroscope axes must be valid. Light
+                // and proximity expose one value. No physical health verdict.
+                sample.evidence.observe(event.values, event.timestamp);
             }
         };
 
