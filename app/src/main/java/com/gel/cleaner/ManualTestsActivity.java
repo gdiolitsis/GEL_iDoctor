@@ -6395,6 +6395,8 @@ private void lab4MicBase(Runnable onFinished) {
 
         int bottomRms = 0, bottomPeak = 0;
         int topRms = 0, topPeak = 0;
+        int bottomInputRoute = -1;
+        int topInputRoute = -1;
 
         boolean stopBaseHere = false;
 
@@ -6415,12 +6417,16 @@ private void lab4MicBase(Runnable onFinished) {
             if (bottom != null) {
                 bottomRms  = (int) bottom.rms;
                 bottomPeak = (int) bottom.peak;
+                bottomInputRoute = bottom.routedInputDeviceId;
+                bottomOk = bottom.audioRecordStarted && !bottom.silenceDetected;
             }
 
             logLabelOkValue("Bottom RMS",  String.valueOf(bottomRms));
             logLabelOkValue("Bottom Peak", String.valueOf(bottomPeak));
 
-            bottomOk = bottomRms > 0 || bottomPeak > 0;
+            logLabelValue(gr ? "Android διαδρομή MIC profile" : "Android MIC input route",
+                    bottomInputRoute >= 0 ? "route id " + bottomInputRoute
+                            : (gr ? "Μη διαθέσιμη" : "Unavailable"));
 
             // ====================================================
             // AUTO CHECK — TOP MIC
@@ -6437,6 +6443,8 @@ private void lab4MicBase(Runnable onFinished) {
             if (top != null) {
                 topRms  = (int) top.rms;
                 topPeak = (int) top.peak;
+                topInputRoute = top.routedInputDeviceId;
+                topOk = top.audioRecordStarted && !top.silenceDetected;
             }
 
             logLabelOkValue(
@@ -6449,29 +6457,48 @@ logLabelOkValue(
         String.valueOf(topPeak)
 );
 
-            topOk = topRms > 0 || topPeak > 0;
+            logLabelValue(gr ? "Android διαδρομή CAMCORDER profile"
+                             : "Android CAMCORDER input route",
+                    topInputRoute >= 0 ? "route id " + topInputRoute
+                            : (gr ? "Μη διαθέσιμη" : "Unavailable"));
 
 // ====================================================
-// FINAL BASE VERDICT (NO FALLBACK)
+// FINAL BASE VERDICT — SOURCE PROFILE, NOT MICROPHONE IDENTITY
+// ====================================================
+logLabelWarnValue(gr ? "Αξιοπιστία ταυτοποίησης" : "Physical input identification",
+        gr ? "Το AudioSource.CAMCORDER δεν εγγυάται το πάνω μικρόφωνο. "
+                 + "Η ίδια φυσική είσοδος μπορεί να εξυπηρετεί και τα δύο προφίλ."
+           : "CAMCORDER is not guaranteed to use the top microphone. "
+                 + "Both profiles may route to the same physical input.");
+if (bottomInputRoute >= 0 && bottomInputRoute == topInputRoute) {
+    logLabelValue(gr ? "Συσχέτιση διαδρομών" : "Route correlation",
+            gr ? "Το Android επέστρεψε το ίδιο device ID και στις δύο λήψεις."
+               : "Android returned the same input device ID for both recordings.");
+}
+// ====================================================
+
 // ====================================================
 appendHtml("<br>");
-logInfo(gr ? "Συμπεράσματα υλικού:" : "Hardware conclusions:");
+logInfo(gr ? "Καταγραφή προφίλ εισόδου (όχι πιστοποίηση φυσικών μικροφώνων):"
+           : "Input source observations (not per-microphone hardware certification):");
 logLine();
 
 if (bottomOk && topOk) {
 
     logLabelOkValue(
             gr ? "Κατάσταση" : "Status",
-            gr ? "Και τα δύο μικρόφωνα λειτουργούν κανονικά"
-               : "Both microphones are operational"
+            gr ? "Ελήφθη ήχος και στα δύο Android recording profiles· "
+                      + "δεν ταυτοποιήθηκαν δύο φυσικά μικρόφωνα"
+               : "Audio captured under both Android recording profiles; "
+                      + "two separate hardware microphones not established"
     );
 
 } else if (bottomOk || topOk) {
 
     logLabelWarnValue(
             gr ? "Κατάσταση" : "Status",
-            gr ? "Μερική λειτουργία μικροφώνων"
-               : "Partial microphone operation detected"
+            gr ? "Ήχος καταγράφηκε μόνο με ένα προφίλ· όχι απόδειξη βλάβης άλλου μικροφώνου"
+               : "Only one input profile captured audio; not proof of a failed second mic"
     );
 
 } else {
@@ -6479,8 +6506,8 @@ if (bottomOk && topOk) {
     logLabelWarnValue(
             gr ? "Κατάσταση" : "Status",
             gr
-                    ? "Η λειτουργία μικροφώνων δεν επιβεβαιώθηκε από τον αυτόματο έλεγχο."
-                    : "Microphone operation was not confirmed by the automatic test."
+                    ? "Κανένα προφίλ δεν έδωσε επαρκές δείγμα στις τρέχουσες συνθήκες."
+                    : "Neither source profile yielded sufficient audio in this environment."
     );
 
     logWarn(
