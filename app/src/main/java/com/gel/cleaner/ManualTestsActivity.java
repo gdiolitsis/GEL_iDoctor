@@ -10880,226 +10880,180 @@ private float estimateSpeedSimMbps(
 // LAB 11 — Mobile Data Diagnostic
 // ============================================================
 private void lab11MobileDataDiagnostic() {
-
     final boolean gr = AppLang.isGreek(this);
-
     appendHtml("<br>");
     logLine();
-    logInfo(gr ? "LAB 11 — Διαγνωστικός Έλεγχος Κινητού Δικτύου (Εργαστήριο)"
-               : "LAB 11 — Mobile Network Diagnostic (Laboratory)");
+    logSection(gr ? "LAB 11 — Κινητό Δίκτυο: Παρατηρήσεις Android"
+                  : "LAB 11 — Mobile Network: Android observations");
     logLine();
 
+    // A passive snapshot of the current DEFAULT subscription and network,
+    // not a physical modem diagnostic or a forced cellular connection.
     TelephonySnapshot s = getTelephonySnapshot();
 
-    // ------------------------------------------------------------
-    // Airplane mode (context only)
-    // ------------------------------------------------------------
+    logLabelValue(gr ? "Λειτουργία πτήσης" : "Airplane mode",
+            s.airplaneOn ? (gr ? "Ενεργή" : "Enabled")
+                         : (gr ? "Ανενεργή" : "Disabled"));
     if (s.airplaneOn) {
-        logInfo(gr
-                ? "Η Λειτουργία Πτήσης είναι ΕΝΕΡΓΗ. Τα ραδιο-interfaces είναι σκόπιμα απενεργοποιημένα."
-                : "Airplane mode is ENABLED. Radio interfaces are intentionally disabled.");
-        return;
+        logLabelWarnValue(gr ? "Έλεγχος κυψελωτού δικτύου" : "Cellular assessment",
+                gr ? "ΠΕΡΙΟΡΙΣΜΕΝΟΣ — λειτουργία πτήσης, όχι ένδειξη βλάβης"
+                   : "BLOCKED by airplane mode — not a hardware defect");
     }
 
-    // ------------------------------------------------------------
-    // SIM state (laboratory reporting)
-    // ------------------------------------------------------------
-    if (!s.simReady) {
-
+    // SIM not ready can mean absent, locked, unavailable or OEM/eSIM behavior.
+    // None of these proves a failed baseband/modem.
+    String simDescription;
+    if (!s.simStateKnown) {
+        simDescription = gr ? "ΑΓΝΩΣΤΗ / ΜΗ ΔΙΑΘΕΣΙΜΗ" : "UNKNOWN / UNAVAILABLE";
+    } else {
         switch (s.simState) {
-
+            case TelephonyManager.SIM_STATE_READY:
+                simDescription = gr ? "ΕΤΟΙΜΗ (προεπιλεγμένη SIM)" : "READY (default SIM)";
+                break;
             case TelephonyManager.SIM_STATE_ABSENT:
-                logLabelWarnValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΑΠΟΥΣΑ" : "ABSENT");
-                return;
-
+                simDescription = gr ? "ΑΠΟΥΣΑ (στο εκτεθειμένο προφίλ)"
+                                    : "ABSENT (reported subscription)";
+                break;
             case TelephonyManager.SIM_STATE_PIN_REQUIRED:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση SIM" : "SIM State",
-                        gr ? "ΠΑΡΟΥΣΑ αλλά κλειδωμένη (απαιτείται PIN)"
-                           : "PRESENT but locked (PIN required)"
-                );
-                return;
-
+                simDescription = gr ? "ΑΠΑΙΤΕΙΤΑΙ PIN" : "PIN REQUIRED";
+                break;
             case TelephonyManager.SIM_STATE_PUK_REQUIRED:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση SIM" : "SIM State",
-                        gr ? "ΠΑΡΟΥΣΑ αλλά κλειδωμένη (απαιτείται PUK)"
-                           : "PRESENT but locked (PUK required)"
-                );
-                return;
-
+                simDescription = gr ? "ΑΠΑΙΤΕΙΤΑΙ PUK" : "PUK REQUIRED";
+                break;
             case TelephonyManager.SIM_STATE_NETWORK_LOCKED:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση SIM" : "SIM State",
-                        gr ? "ΠΑΡΟΥΣΑ αλλά κλειδωμένη από δίκτυο"
-                           : "PRESENT but network locked"
-                );
-                return;
-
+                simDescription = gr ? "ΚΛΕΙΔΩΜΕΝΗ ΣΤΟ ΔΙΚΤΥΟ" : "NETWORK LOCKED";
+                break;
             default:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση SIM" : "SIM State",
-                        gr ? "ΠΑΡΟΥΣΑ αλλά δεν είναι έτοιμη"
-                           : "PRESENT but not ready"
-                );
-                return;
+                simDescription = gr ? "ΜΗ ΕΤΟΙΜΗ / ΜΕΡΙΚΗ" : "NOT READY / PARTIAL";
+        }
+    }
+    logLabelValue(gr ? "SIM / προεπιλεγμένη συνδρομή" : "SIM / default subscription",
+            simDescription);
+
+    if (s.serviceKnown) {
+        logLabelValue(gr ? "Κατάσταση υπηρεσίας (legacy)" : "Service state (legacy)",
+                s.inService ? (gr ? "Αναφέρθηκε IN SERVICE" : "Reported IN SERVICE")
+                            : (gr ? "Δεν αναφέρθηκε IN SERVICE" : "Not reported IN SERVICE"));
+        if (!s.inService) {
+            logInfo(gr ? "Δεν αποδεικνύεται βλάβη modem ούτε συνολική απουσία IMS/VoLTE."
+                       : "Does not prove modem failure or absence of IMS/VoLTE.");
+        }
+    } else {
+        logLabelWarnValue(gr ? "Κατάσταση υπηρεσίας" : "Service state",
+                gr ? "ΑΓΝΩΣΤΗ — άδεια, API, συνδρομή ή OEM"
+                   : "UNKNOWN — permission, API, subscription or OEM limits");
+    }
+
+    String dataLabel;
+    if (!s.dataStateKnown) {
+        dataLabel = gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN";
+    } else {
+        switch (s.dataState) {
+            case TelephonyManager.DATA_CONNECTED:
+                dataLabel = gr ? "Αναφέρεται CONNECTED" : "Reported CONNECTED";
+                break;
+            case TelephonyManager.DATA_CONNECTING:
+                dataLabel = gr ? "Αναφέρεται CONNECTING" : "Reported CONNECTING";
+                break;
+            case TelephonyManager.DATA_DISCONNECTED:
+                dataLabel = gr ? "Αναφέρεται DISCONNECTED" : "Reported DISCONNECTED";
+                break;
+            default:
+                dataLabel = gr ? "Άλλη / μη καθορισμένη" : "Other / unspecified";
+        }
+    }
+    logLabelValue(gr ? "Κατάσταση δεδομένων (Telephony)" : "Telephony data state",
+            dataLabel);
+    logInfo(gr ? "DISCONNECTED δεν σημαίνει κατ' ανάγκη ότι ο χρήστης απενεργοποίησε τα δεδομένα κινητής."
+               : "DISCONNECTED does not imply the user switched mobile data off.");
+
+    Lab11NetworkEvidence.DefaultRoute route = Lab11NetworkEvidence.classifyDefault(
+            s.defaultNetworkPresent, s.defaultCapsKnown,
+            s.defaultInternetAdvertised, s.defaultValidated,
+            s.defaultCellular, s.defaultWifi, s.defaultVpn);
+    final String routeLabel;
+    switch (route) {
+        case CELLULAR_VALIDATED:
+            routeLabel = gr ? "CELLULAR — VALIDATED από το Android"
+                            : "CELLULAR — Android VALIDATED";
+            break;
+        case CELLULAR_NOT_VALIDATED:
+            routeLabel = gr ? "CELLULAR — μη επαληθευμένο Internet"
+                            : "CELLULAR — Internet not validated";
+            break;
+        case WIFI_VALIDATED:
+            routeLabel = gr ? "Wi-Fi — VALIDATED, όχι απόδειξη κινητής"
+                            : "Wi-Fi — VALIDATED, not cellular evidence";
+            break;
+        case WIFI_NOT_VALIDATED:
+            routeLabel = gr ? "Wi-Fi — Internet μη επαληθευμένο"
+                            : "Wi-Fi — Internet not validated";
+            break;
+        case VPN_VALIDATED_UNATTRIBUTED:
+            routeLabel = gr ? "VPN — VALIDATED, υποκείμενο δίκτυο άγνωστο"
+                            : "VPN — VALIDATED, underlying transport unverified";
+            break;
+        case VPN_NOT_VALIDATED_UNATTRIBUTED:
+            routeLabel = gr ? "VPN — Internet μη επαληθευμένο"
+                            : "VPN — Internet not validated";
+            break;
+        case NO_DEFAULT_NETWORK:
+            routeLabel = gr ? "Κανένα ενεργό προεπιλεγμένο δίκτυο"
+                            : "No active default network";
+            break;
+        case CAPABILITIES_UNAVAILABLE:
+            routeLabel = gr ? "Μη διαθέσιμες δυνατότητες δρομολόγησης"
+                            : "Default network capabilities unavailable";
+            break;
+        case OTHER_VALIDATED:
+            routeLabel = gr ? "Άλλη / μικτή διαδρομή — VALIDATED"
+                            : "Other/mixed transport — VALIDATED";
+            break;
+        default:
+            routeLabel = gr ? "Άλλη / μικτή διαδρομή — μη επαληθευμένη"
+                            : "Other/mixed transport — not validated";
+    }
+    logLabelValue(gr ? "Ενεργή διαδρομή Internet" : "Active default Internet route",
+            routeLabel);
+
+    if (s.defaultCapsKnown) {
+        logLabelValue(gr ? "Capability INTERNET" : "INTERNET capability",
+                s.defaultInternetAdvertised ? "ADVERTISED" : "NOT ADVERTISED");
+        logLabelValue(gr ? "Android validation" : "Android validation",
+                s.defaultValidated ? "VALIDATED" : "NOT VALIDATED");
+        if (s.defaultCaptivePortal) {
+            logLabelWarnValue(gr ? "Πύλη σύνδεσης" : "Captive portal",
+                    gr ? "Αναφέρθηκε από το Android" : "Reported by Android");
         }
     }
 
-    // SIM ready
-    logLabelOkValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ" : "READY");
-
-    // ------------------------------------------------------------
-    // Service state (legacy domain — informational)
-    // ------------------------------------------------------------
-    logLabelValue(
-        gr ? "Κατάσταση Υπηρεσίας (legacy)" : "Service State (legacy)",
-        s.inService
-                ? (gr ? "ΣΕ ΥΠΗΡΕΣΙΑ" : "IN SERVICE")
-                : (gr ? "ΔΕΝ ΑΝΑΦΕΡΕΤΑΙ ΩΣ ΕΝΕΡΓΗ" : "NOT REPORTED AS IN SERVICE")
-);
-
-if (!s.inService) {
-    logLabelWarnValue(
-            gr ? "Σημείωση (Legacy Service)" : "Legacy Service Note",
-            gr
-                    ? "Η legacy κατάσταση υπηρεσίας δεν αναφέρεται ως ενεργή. "
-                      + "Σε σύγχρονες LTE/5G συσκευές, η φωνή και τα δεδομένα "
-                      + "μπορεί να παρέχονται μέσω IMS (VoLTE / VoWiFi)."
-                    : "Legacy service registration is not reported as active. "
-                      + "On modern LTE/5G devices, voice and data may be provided via IMS (VoLTE / VoWiFi)."
-    );
-}
-
-    // ------------------------------------------------------------
-    // Data state (packet domain — informational)
-    // ------------------------------------------------------------
-    String dataStateLabel;
-    switch (s.dataState) {
-        case TelephonyManager.DATA_CONNECTED:
-            dataStateLabel = gr ? "ΣΥΝΔΕΔΕΜΕΝΟ" : "CONNECTED";
-            break;
-        case TelephonyManager.DATA_CONNECTING:
-            dataStateLabel = gr ? "ΣΥΝΔΕΣΗ..." : "CONNECTING";
-            break;
-        case TelephonyManager.DATA_DISCONNECTED:
-            dataStateLabel = gr ? "ΑΠΟΣΥΝΔΕΔΕΜΕΝΟ" : "DISCONNECTED";
-            break;
-        default:
-            dataStateLabel = gr ? "ΑΓΝΩΣΤΟ" : "UNKNOWN";
-            break;
-    }
-
-    logLabelValue(gr ? "Κατάσταση Δεδομένων" : "Data State", dataStateLabel);
-
-    // ------------------------------------------------------------
-    // Internet routing context (best effort)
-    // ------------------------------------------------------------
-    if (s.hasInternet) {
-        logLabelOkValue(gr ? "Internet Context" : "Internet Context",
-                gr ? "ΔΙΑΘΕΣΙΜΟ (system routing)" : "AVAILABLE (system routing)");
-    } else {
-        logLabelWarnValue(gr ? "Internet Context" : "Internet Context",
-                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "NOT AVAILABLE");
-    }
-
-// ------------------------------------------------------------
-// VERDICT ENGINE (GEL)
-// ------------------------------------------------------------
-
-boolean hasSim = s.simReady;
-boolean inService = s.inService;
-boolean dataConnected = s.dataState == TelephonyManager.DATA_CONNECTED;
-boolean hasInternet = s.hasInternet;
-
-String verdict;
-String recommendation;
-
-// =====================
-// CASE 1 — FULL OK
-// =====================
-if (hasSim && (inService || hasInternet)) {
-
-    verdict = gr
-            ? "Το δίκτυο λειτουργεί κανονικά."
-            : "Network is operating normally.";
-
-    recommendation = gr
-            ? "Δεν απαιτείται ενέργεια."
-            : "No action required.";
-}
-
-// =====================
-// CASE 2 — NO INTERNET
-// =====================
-else if (!hasInternet) {
-
-    verdict = gr
-            ? "Δεν υπάρχει πρόσβαση στο διαδίκτυο."
-            : "No internet access detected.";
-
-    recommendation = gr
-            ? "Έλεγχος Wi-Fi ή ενεργοποίηση δεδομένων κινητής."
-            : "Check Wi-Fi or enable mobile data.";
-}
-
-// =====================
-// CASE 3 — NO SERVICE
-// =====================
-else if (hasSim && !inService) {
-
-    verdict = gr
-            ? "Η SIM είναι ενεργή αλλά δεν υπάρχει υπηρεσία δικτύου."
-            : "SIM is ready but no network service.";
-
-    recommendation = gr
-            ? "Μετακινηθείτε σε περιοχή με σήμα ή ελέγξτε τον πάροχο."
-            : "Move to better signal area or check carrier.";
-}
-
-// =====================
-// CASE 4 — DATA OFF
-// =====================
-else if (hasSim && !dataConnected) {
-
-    verdict = gr
-            ? "Τα δεδομένα κινητής είναι απενεργοποιημένα."
-            : "Mobile data is disabled.";
-
-    recommendation = gr
-            ? "Ενεργοποιήστε mobile data αν απαιτείται."
-            : "Enable mobile data if needed.";
-}
-
-// =====================
-// FALLBACK
-// =====================
-else {
-
-    verdict = gr
-            ? "Μερική κατάσταση δικτύου."
-            : "Partial network state.";
-
-    recommendation = gr
-            ? "Ελέγξτε SIM, δεδομένα και σήμα."
-            : "Check SIM, data and signal.";
-}
-
-// ------------------------------------------------------------
-// OUTPUT (NO DUPLICATES)
-// ------------------------------------------------------------
-appendHtml("<br>");
-
-logLabelValue(gr ? "Συμπέρασμα" : "Verdict", verdict);
-logLabelValue(gr ? "Πρόταση" : "Recommendation", recommendation);
-
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 11 ολοκληρώθηκε." : "Lab 11 finished.");
+    if (Lab11NetworkEvidence.provesCurrentDefaultCellularValidation(route)
+            && !s.airplaneOn) {
+        logLabelValue(gr ? "Συμπέρασμα Lab 11" : "Lab 11 conclusion",
+                gr ? "ΠΑΡΑΤΗΡΗΘΗΚΕ: ενεργό CELLULAR με επιβεβαίωση Internet από το Android"
+                   : "OBSERVED: active CELLULAR default with Android-validated Internet");
+        logInfo(gr ? "Δεν πιστοποιεί κάλυψη παρόχου, RF ισχύ, σταθερότητα ή υγεία modem."
+                   : "Does not certify carrier coverage, radio strength, stability or modem health.");
+    } else {
+        logLabelWarnValue(gr ? "Συμπέρασμα Lab 11" : "Lab 11 conclusion",
+                gr ? "Κινητή σύνδεση ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ στην τρέχουσα διαδρομή — όχι βλάβη modem"
+                   : "CELLULAR NOT VERIFIED on current default route — not a modem fault");
+        logInfo(gr ? "Wi-Fi, VPN, απουσία SIM, άδειες ή επιλογή διαδρομής μπορούν να περιορίσουν τον έλεγχο."
+                   : "Wi-Fi, VPN, SIM, permissions or routing can limit this observation.");
+    }
+
+    logLabelValue(gr ? "Εμβέλεια δοκιμής" : "Test scope",
+            gr ? "Στιγμιότυπο τρέχουσας κατάστασης — όχι μετρημένη σταθερότητα χρόνου"
+               : "Current-state snapshot — not a time-series stability test");
+    logInfo(gr ? "Για ακριβή έλεγχο δεδομένων κινητής απαιτείται επιβεβαίωση χωρίς Wi-Fi/VPN και νέα μέτρηση."
+               : "For a direct cellular test, verify without Wi-Fi/VPN and repeat the measurement.");
     logLine();
+    enableSingleExportButton();
 }
 
 // ============================================================
-// LAB 12 — Call Function Interpretation (Laboratory)
+// // LAB 12 — Call Function Interpretation (Laboratory)
 // ============================================================
 private void lab12CallFunctionInterpretation() {
 
