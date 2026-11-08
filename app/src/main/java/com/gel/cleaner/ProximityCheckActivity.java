@@ -24,8 +24,9 @@ public class ProximityCheckActivity extends GELAutoActivityHook
     private SensorManager manager;
     private Sensor proximity;
     private TextView info;
-    private boolean nearSeen = false;
-    private boolean farSeen = false;
+    private String instructions;
+    private final Lab7SensorEvidence.ProximitySequence sequence =
+            new Lab7SensorEvidence.ProximitySequence();
     private int nearEvents = 0;
     private int farEvents = 0;
 
@@ -37,22 +38,17 @@ public class ProximityCheckActivity extends GELAutoActivityHook
         if (manager != null) {
             proximity = manager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
         }
-        if (state != null) {
-            nearSeen = state.getBoolean("near_seen");
-            farSeen = state.getBoolean("far_seen");
-            nearEvents = state.getInt("near_events");
-            farEvents = state.getInt("far_events");
-        }
-
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF101010);
         info = new TextView(this);
-        info.setText(gr
-                ? "Απομάκρυνε το χέρι από τον αισθητήρα και μετά κάλυψέ τον αργά. "
-                        + "Στη συνέχεια αποκάλυψέ τον.\n\n"
-                        + "Η οθόνη δεν χρειάζεται να σβήσει: μετράμε γεγονότα κοντά/μακριά."
-                : "First uncover, then cover, then uncover the proximity area.\n\n"
-                        + "The screen does not need to turn off: we measure near/far events.");
+        instructions = gr
+                ? "Ξεκίνα με τον αισθητήρα ακάλυπτο (ΜΑΚΡΙΑ). Μετά κάλυψέ τον "
+                        + "(ΚΟΝΤΑ) και αποκάλυψέ τον ξανά (ΜΑΚΡΙΑ), με μικρές παύσεις.\n\n"
+                        + "Ελέγχουμε μόνο τα συμβάντα εγγύτητας, ΟΧΙ αν σβήνει η οθόνη."
+                : "Start with the proximity area uncovered (FAR). Then cover it "
+                        + "(NEAR) and uncover it again (FAR), with short pauses.\n\n"
+                        + "This tests proximity events, NOT whether the screen turns off.";
+        info.setText(instructions);
         info.setTextSize(17f);
         info.setTextColor(Color.WHITE);
         info.setGravity(Gravity.CENTER);
@@ -84,8 +80,8 @@ public class ProximityCheckActivity extends GELAutoActivityHook
             setResult(RESULT_CANCELED, new Intent()
                     .putExtra("reason", proximity == null
                             ? "Proximity sensor not advertised" : "Guided test incomplete")
-                    .putExtra("near", nearSeen)
-                    .putExtra("far", farSeen));
+                    .putExtra("near_events", nearEvents)
+                    .putExtra("far_events", farEvents));
             finish();
         });
         root.addView(end);
@@ -97,57 +93,69 @@ public class ProximityCheckActivity extends GELAutoActivityHook
     }
 
     @Override protected void onSaveInstanceState(Bundle outState) {
-        outState.putBoolean("near_seen", nearSeen);
-        outState.putBoolean("far_seen", farSeen);
-        outState.putInt("near_events", nearEvents);
-        outState.putInt("far_events", farEvents);
+        // No partial result may survive activity recreation.
         super.onSaveInstanceState(outState);
     }
 
     @Override protected void onResume() {
         super.onResume();
+        sequence.reset();
+        nearEvents = 0;
+        farEvents = 0;
+        info.setText(instructions);
         if (manager != null && proximity != null &&
                 !manager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_UI)) {
             info.setText(AppLang.isGreek(this)
                     ? "Δεν είναι διαθέσιμα συμβάντα αισθητήρα εγγύτητας."
                     : "Proximity event registration unavailable.");
         }
+        if (proximity == null) {
+            info.setText(AppLang.isGreek(this)
+                    ? "Δεν υπάρχει προσβάσιμος αισθητήρας εγγύτητας."
+                    : "No Android-exposed proximity sensor available.");
+        }
     }
 
     @Override protected void onPause() {
         if (manager != null) manager.unregisterListener(this);
+        sequence.reset();
         super.onPause();
     }
 
     @Override public void onSensorChanged(SensorEvent event) {
-        if (event == null || event.sensor == null
-                || event.sensor.getType() != Sensor.TYPE_PROXIMITY
+        if (event == null || event.sensor != proximity
                 || event.values == null || event.values.length == 0
                 || proximity == null) return;
-        Lab7SensorEvidence.Proximity state = Lab7SensorEvidence.proximityState(
+        Lab7SensorEvidence.Proximity observed = Lab7SensorEvidence.proximityState(
                 event.values[0], proximity.getMaximumRange());
-        if (state == Lab7SensorEvidence.Proximity.UNKNOWN) return;
-        if (state == Lab7SensorEvidence.Proximity.NEAR) {
-            nearEvents++;
-            nearSeen = true; // on-change sensors may emit only one event per state
-        } else {
-            farEvents++;
-            farSeen = true;
-        }
-        if (nearSeen && farSeen) {
+        if (observed == Lab7SensorEvidence.Proximity.UNKNOWN || event.timestamp <= 0L) return;
+        if (observed == Lab7SensorEvidence.Proximity.NEAR) nearEvents++;
+        else farEvents++;
+
+        if (sequence.observe(observed, event.timestamp)) {
             setResult(RESULT_OK, new Intent()
-                    .putExtra("evidence", "near_far_sensor_event_transition")
-                    .putExtra("near", true).putExtra("far", true));
+                    .putExtra("evidence", "timestamped_far_near_far_proximity_sequence")
+                    .putExtra("near_events", nearEvents)
+                    .putExtra("far_events", farEvents)
+                    .putExtra("screen_power_verified", false));
             finish();
-        } else {
-            info.setText(AppLang.isGreek(this)
-                    ? "Πραγματικά συμβάντα Android:\nΚοντά: " + nearEvents
-                            + "\nΜακριά: " + farEvents
-                            + "\nΚάλυψε και αποκάλυψε τον αισθητήρα."
-                    : "Observed Android sensor events:\nNear: " + nearEvents
-                            + "\nFar: " + farEvents
-                            + "\nCover and uncover the sensor.");
+            return;
         }
+
+        final boolean gr = AppLang.isGreek(this);
+        String step = sequence.stage() == 0
+                ? (gr ? "Αρχικά κράτησε τον αισθητήρα ακάλυπτο (ΜΑΚΡΙΑ)."
+                      : "First keep the sensor uncovered (FAR).")
+                : sequence.stage() == 1
+                ? (gr ? "Τώρα κάλυψε τον αισθητήρα (ΚΟΝΤΑ)."
+                      : "Now cover the proximity area (NEAR).")
+                : (gr ? "Τώρα αποκάλυψε ξανά τον αισθητήρα (ΜΑΚΡΙΑ)."
+                      : "Now uncover the proximity area again (FAR).");
+        info.setText((gr ? "Συμβάντα Android — Κοντά: " : "Android events — Near: ")
+                + nearEvents + (gr ? ", Μακριά: " : ", Far: ") + farEvents
+                + "\n" + step
+                + (gr ? "\nΤο σβήσιμο της οθόνης ΔΕΝ ελέγχεται."
+                      : "\nDisplay turn-off is NOT tested."));
     }
 
     @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {
