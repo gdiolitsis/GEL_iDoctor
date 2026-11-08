@@ -1128,6 +1128,10 @@ private boolean oldKeepScreenOn = false;
     private final AtomicBoolean lab5VibrationPending = new AtomicBoolean(false);
     private final AtomicBoolean lab3GuidedPending = new AtomicBoolean(false);
     private final AtomicBoolean lab4GuidedPending = new AtomicBoolean(false);
+    private volatile boolean lab4AudioStateSaved = false;
+    private int lab4OriginalMode = AudioManager.MODE_NORMAL;
+    private boolean lab4OriginalSpeaker = false;
+    private boolean lab4OriginalMute = false;
 
     // ============================================================
     // SERVICE LOG SESSION FLAG (CRITICAL)
@@ -6341,6 +6345,29 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
    BASE — FINAL • CLEAN • ISOLATED
    ============================================================ */
 
+/**
+ * A guided acoustic check spans multiple workers and UI callbacks. Restore the
+ * saved OS audio settings only at the terminal result, cancel or unavailable.
+ */
+private void finishLab4Guided() {
+    if (!lab4GuidedPending.getAndSet(false)) return;
+    if (lab4AudioStateSaved) {
+        lab4AudioStateSaved = false;
+        try {
+            AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
+            if (am != null) {
+                try { am.setSpeakerphoneOn(lab4OriginalSpeaker); }
+                catch (RuntimeException ignored) {}
+                try { am.setMicrophoneMute(lab4OriginalMute); }
+                catch (RuntimeException ignored) {}
+                try { am.setMode(lab4OriginalMode); }
+                catch (RuntimeException ignored) {}
+            }
+        } catch (RuntimeException ignored) {}
+    }
+    enableSingleExportButton();
+}
+
 private void lab4MicManual() {
     if (!guardMic(this::lab4MicManual)) return;
     if (!lab4GuidedPending.compareAndSet(false, true)) {
@@ -6354,6 +6381,20 @@ private void lab4MicManual() {
             btnExport.setAlpha(0.5f);
         }
     });
+    // Never commandeer an active call or another app's communication route.
+    AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
+    if (am == null || am.getMode() != AudioManager.MODE_NORMAL) {
+        logLabelWarnValue(AppLang.isGreek(this) ? "Διαδρομή ήχου" : "Audio state",
+                AppLang.isGreek(this)
+                        ? "Μη διαθέσιμο: ο ήχος χρησιμοποιείται ή δεν διατίθεται. Επανάλαβε μετά την κλήση."
+                        : "UNAVAILABLE: audio in use or unavailable; retry after the call.");
+        finishLab4Guided();
+        return;
+    }
+    lab4OriginalMode = am.getMode();
+    lab4OriginalSpeaker = am.isSpeakerphoneOn();
+    lab4OriginalMute = am.isMicrophoneMute();
+    lab4AudioStateSaved = true;
     lab4MicBase(this::lab4MicPro);
 }
 
@@ -6525,11 +6566,11 @@ private void lab4MicPro() {
     final boolean gr = AppLang.isGreek(this);
 
     new Thread(() -> {
-
+    final AtomicBoolean handedToStage2 = new AtomicBoolean(false);
     try {
 
 // ====================================================
-// STAGE 1 — Bottom microphone HUMAN ACOUSTIC check
+// STAGE 1 — Guided microphone audio path observation
 // ====================================================
 
 // 🔊 Force call audio path
@@ -6688,7 +6729,7 @@ while (!started.get() && !cancelled.get()
 }
 
 if (cancelled.get() || !started.get()) {
-    lab4GuidedPending.set(false);
+    finishLab4Guided();
     appendHtml("<br>");
 
     logWarn(gr
@@ -6716,7 +6757,7 @@ logLabelValue(gr ? "Πραγματική διαδρομή Android" : "Actual And
                 ? "UNKNOWN" : loopEvidence.routedOutputType)
                 + " (not physical-health proof)");
 if (!loopEvidence.attempted || cancelled.get()) {
-    lab4GuidedPending.set(false);
+    finishLab4Guided();
     logLabelWarnValue(gr ? "Αποτέλεσμα διαδρομής" : "Audio path result",
             gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ — δεν εκτελέστηκε επαρκής ακουστική επανάληψη: "
                     + loopEvidence.reason
@@ -6877,7 +6918,7 @@ while (!answered.get() && !cancelled.get()) {
 }
 
 if (cancelled.get() || isFinishing() || isDestroyed()) {
-    lab4GuidedPending.set(false);
+    finishLab4Guided();
     runOnUiThread(this::enableSingleExportButton);
     return;
 }
@@ -6955,7 +6996,7 @@ try {
     }
 } catch (Throwable ignore) {}
 
-AtomicBoolean ttsFinished = new AtomicBoolean(false);
+handedToStage2.set(true);
 
 // ==========================
 // SHOW DIALOG (UI THREAD)
@@ -7041,7 +7082,7 @@ runOnUiThread(() -> {
                 });
 
                 if (isFinishing() || isDestroyed()) {
-                    lab4GuidedPending.set(false);
+                    finishLab4Guided();
                     return;
                 }
                 routeToCallEarpiece();
@@ -7051,13 +7092,13 @@ runOnUiThread(() -> {
 
         }, 500);
     } else {
-        lab4GuidedPending.set(false);
+        finishLab4Guided();
         enableSingleExportButton();
     }
 });
 
         } catch (Throwable t) {
-            lab4GuidedPending.set(false);
+            finishLab4Guided();
             runOnUiThread(this::enableSingleExportButton);
 
             appendHtml("<br>");
@@ -7072,10 +7113,8 @@ runOnUiThread(() -> {
             logLabelWarnValue(
         gr ? "Πιθανές αιτίες" : "Possible causes",
         gr
-                ? "Χαμηλή στάθμη έντασης, βουλωμένο ακουστικό, "
-                  + "προστατευτικό οθόνης, θέση συσκευής, ή πραγματική βλάβη ακουστικού."
-                : "Low volume level, obstructed earpiece, "
-                  + "screen protector interference, device position, or actual earpiece hardware issue."
+                ? "Περιορισμός δρομολόγησης, δικαιωμάτων ή Android/OEM· δεν επιβεβαιώθηκε φυσική βλάβη."
+                : "Routing, permission or Android/OEM limitation; no physical failure established."
 );
 
             appendHtml("<br>");
@@ -7083,20 +7122,11 @@ runOnUiThread(() -> {
             logLine();
 
 } finally {
-
-    // ABSOLUTE SAFETY — COMPILE SAFE
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-
-    try {
-        AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
-        if (am != null) {
-            try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-            try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-            try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
-            try { am.setSpeakerphoneOn(false); } catch (Throwable ignore) {}
-            try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
-        }
-    } catch (Throwable ignore) {}
+    // Do not reset audio during the asynchronous Stage 2 handoff.
+    if (!handedToStage2.get()) {
+        try { AppTTS.stop(); } catch (RuntimeException ignored) {}
+        finishLab4Guided();
+    }
 }
 
 }).start();
@@ -7108,7 +7138,7 @@ runOnUiThread(() -> {
 private void playAnswerCheckWav() {
     final boolean gr = AppLang.isGreek(this);
     if (isFinishing() || isDestroyed()) {
-        lab4GuidedPending.set(false);
+        finishLab4Guided();
         return;
     }
 
@@ -7162,7 +7192,7 @@ private void playAnswerCheckWav() {
 
     // Android playback acceptance cannot identify the actual physical output.
     if (!playbackRequested || isFinishing() || isDestroyed()) {
-        lab4GuidedPending.set(false);
+        finishLab4Guided();
         runOnUiThread(this::enableSingleExportButton);
         return;
     }
@@ -7277,7 +7307,7 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
         d.setOnDismissListener(dialog -> {
             try { AppTTS.stop(); } catch (Throwable ignore) {}
             if (!answerProvided.get()) {
-                lab4GuidedPending.set(false);
+                finishLab4Guided();
                 enableSingleExportButton();
                 logLabelWarnValue(gr ? "Αποτέλεσμα ακουστικού" : "Earpiece result",
                         gr ? "ΑΚΥΡΩΘΗΚΕ — καμία απάντηση χρήστη"
@@ -7289,7 +7319,7 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
             d.show();
             com.gel.cleaner.GelButtonLayout.fitDialog(d);
         } else {
-            lab4GuidedPending.set(false);
+            finishLab4Guided();
             enableSingleExportButton();
             return;
         }
@@ -7383,7 +7413,7 @@ private void lab4ResultEarpiece() {
              : "Lab 4 finished.");
     logLine();
 
-    lab4GuidedPending.set(false);
+    finishLab4Guided();
     runOnUiThread(this::enableSingleExportButton);
 }
 
