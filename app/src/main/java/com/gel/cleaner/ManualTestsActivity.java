@@ -5962,516 +5962,92 @@ private boolean guardUsageAccess() {
 // LAB 1 - Speaker Tone Test (AUTO) — WITH AUDIO PATH CHECK
 // ============================================================
 private void lab1SpeakerTone() {
-
     if (!guardMic(this::lab1SpeakerTone)) return;
 
     final boolean gr = AppLang.isGreek(this);
-
     appendHtml("<br>");
     logLine();
-    logSection(gr
-            ? "LAB 1 — Δοκιμή Τόνου Ηχείου"
-            : "LAB 1 — Speaker Tone Test");
+    logSection(gr ? "LAB 1 — Ηχείο: συγχρονισμένη δοκιμή τόνου"
+                  : "LAB 1 — Speaker: synchronized tone challenge");
     logLine();
 
     new Thread(() -> {
-
-        ToneGenerator tg = null;
-
-        try {
-
-            // ------------------------------------------------------------
-            // AUDIO PATH PRE-CHECK (NO UI)
-            // ------------------------------------------------------------
-            AudioManager am =
-                    (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-
-            boolean volumeMuted = false;
-            boolean bluetoothRouted = false;
-            boolean wiredRouted = false;
-
-            try {
-                volumeMuted =
-                        am != null &&
-                        am.getStreamVolume(AudioManager.STREAM_MUSIC) == 0;
-            } catch (Throwable ignore) {}
-
-            try {
-                bluetoothRouted =
-                        am != null &&
-                        (am.isBluetoothA2dpOn() || am.isBluetoothScoOn());
-            } catch (Throwable ignore) {}
-
-            try {
-                wiredRouted =
-                        am != null &&
-                        am.isWiredHeadsetOn();
-            } catch (Throwable ignore) {}
-
-// ------------------------------------------------------------
-// BLOCKED AUDIO PATH — STOP & ASK RE-RUN
-// ------------------------------------------------------------
-if (volumeMuted || bluetoothRouted || wiredRouted) {
-
-    logLine();
-    logInfo(gr
-            ? "Έλεγχος διαδρομής εξόδου ήχου"
-            : "Audio output path check");
-
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            gr ? "Μη καθαρή (μπλοκαρισμένη)"
-               : "Not clear (blocked)"
-    );
-
-    if (volumeMuted) {
-        logLabelWarnValue(
-                gr ? "Εντοπίστηκε" : "Detected",
-                gr ? "Η ένταση πολυμέσων είναι στο μηδέν (0%)."
-                   : "Media volume is muted (volume = 0)"
-        );
-    }
-
-    if (bluetoothRouted) {
-        logLabelWarnValue(
-                gr ? "Εντοπίστηκε" : "Detected",
-                gr ? "Ο ήχος δρομολογείται σε συσκευή Bluetooth."
-                   : "Audio routed to Bluetooth device"
-        );
-    }
-
-    if (wiredRouted) {
-        logLabelWarnValue(
-                gr ? "Εντοπίστηκε" : "Detected",
-                gr ? "Ο ήχος δρομολογείται σε ενσύρματη ή USB συσκευή."
-                   : "Audio routed to wired or USB device"
-        );
-    }
-
-    logLabelOkValue(
-            gr ? "Απαιτούμενη ενέργεια" : "Action required",
-            gr ? "Διόρθωσε τα παραπάνω και εκτέλεσε ξανά το LAB 1."
-               : "Fix the condition(s) above and re-run LAB 1"
-    );
-
-    appendHtml("<br>");
-logLabelErrorValue(
-        gr ? "Αποτέλεσμα LAB 1" : "LAB 1 result",
-        gr ? "Δεν εντοπίστηκε έξοδος ήχου."
-           : "No acoustic output detected."
-);
-
-logLabelWarnValue(
-        gr ? "Παρατήρηση" : "Note",
-        gr ? "Η διαδρομή ήχου, ενδέχεται να είναι μπλοκαρισμένη, ή εκτός δρομολόγησης."
-           : "Audio path, may be blocked, or not properly routed."
-);
-
-    logLine();
-    return;
-}
-
-// ------------------------------------------------------------
-// PLAY TEST TONE
-// ------------------------------------------------------------
-
-// FORCE CLEAN MEDIA STATE (FULL RESET)
-if (am != null) {
-    try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-    try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-    try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
-    try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
-    try { am.setSpeakerphoneOn(true); } catch (Throwable ignore) {}
-}
-
-tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
-tg.startTone(ToneGenerator.TONE_DTMF_1, 1200);
-            SystemClock.sleep(1400);
-
-            // ------------------------------------------------------------
-            // MIC ANALYSIS
-            // ------------------------------------------------------------
-
-// SAFE AUDIO NORMALIZE BEFORE MIC CAPTURE (NO EXTRA HELPERS)
-if (am != null) {
-    try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-    try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-    try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
-    try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
-    // Κρατάμε speaker ON γιατί θέλουμε το mic να "ακούσει" το speaker
-    try { am.setSpeakerphoneOn(true); } catch (Throwable ignore) {}
-}
-SystemClock.sleep(250);
-
-MicDiagnosticEngine.Result r =
-        MicDiagnosticEngine.run(this);
-
-if (r == null) {
-    logLabelErrorValue(
-            gr ? "Μικρόφωνο" : "Mic",
-            gr ? "Δεν καταγράφηκαν δεδομένα"
-               : "No data captured"
-    );
-    return;
-}
-
-int rms  = (int) r.rms;
-int peak = (int) r.peak;
-
-logLabelOkValue(
-        gr ? "RMS Μικροφώνου" : "Mic RMS",
-        String.valueOf(rms)
-);
-
-logLabelOkValue(
-        gr ? "Peak Μικροφώνου" : "Mic Peak",
-        String.valueOf(peak)
-);
-
-String conf = (r.confidence == null)
-        ? ""
-        : r.confidence.trim().toUpperCase(Locale.US);
-
-// CONFIDENCE = QUALITY ONLY (NEVER RED)
-if (conf.contains("LOW") || conf.contains("WEAK")
-        || conf.contains("FAIL") || conf.contains("NONE") || conf.contains("NO")) {
-
-    logLabelWarnValue(
-            gr ? "Ποιότητα Ανίχνευσης" : "Confidence",
-            r.confidence
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Ποιότητα Ανίχνευσης" : "Confidence",
-            r.confidence
-    );
-}
-
-// ------------------------------------------------------------
-// SPEAKER OUTPUT EVALUATION (UNIFIED)
-// ------------------------------------------------------------
-SpeakerOutputState state = evaluateSpeakerOutput(r);
-
-if (state == SpeakerOutputState.NO_OUTPUT) {
-    
-appendHtml("<br>");
-    logLabelErrorValue(
-            gr ? "Έξοδος ηχείου" : "Speaker output",
-            gr ? "Δεν ανιχνεύθηκε ακουστικό σήμα"
-               : "No acoustic output detected"
-    );
-
-    logLabelErrorValue(
-            gr ? "Διάγνωση" : "Diagnosis",
-            gr ? "Η διαδρομή ήχου είναι καθαρή, αλλά δεν καταγράφηκε ήχος από το μικρόφωνο"
-               : "Audio path is clear, but no sound was captured by the microphone"
-    );
-
-    logLabelWarnValue(
-            gr ? "Πιθανή αιτία" : "Possible cause",
-            gr ? "Πιθανή βλάβη ηχείου ή έντονη ακουστική απομόνωση"
-               : "Speaker hardware failure or severe acoustic isolation"
-    );
-
-    logLabelOkValue(
-            gr ? "Προτεινόμενη ενέργεια" : "Recommended action",
-            gr ? "Επανεκτέλεσε το τεστ. Αν η σιωπή επιμένει, συνιστάται έλεγχος υλικού"
-               : "Re-run the test once more. If silence persists, hardware inspection is advised"
-    );
-
-    appendHtml("<br>");
-
-logLabelErrorValue(
-        gr ? "Αποτέλεσμα" : "Result",
-        gr ? "Δεν ανιχνεύθηκε έξοδος ήχου."
-           : "No acoustic output detected."
-);
-
-logLabelWarnValue(
-        gr ? "Παρατήρηση" : "Note",
-        gr
-                ? "Αυτό μπορεί να οφείλεται σε χαμηλή ένταση, ακουστική απομόνωση, "
-                  + "DSP φιλτράρισμα ή πιθανή βλάβη ηχείου."
-                : "This may be caused by low volume level, acoustic isolation, "
-                  + "DSP filtering, or possible speaker hardware issue."
-);
-
-    logLine();
-    return;
-}
-
-// ------------------------------------------------------------
-// OUTPUT DETECTED — CONFIDENCE IS INFORMATIONAL ONLY
-// ------------------------------------------------------------
-
-appendHtml("<br>");
-
-if (conf.contains("LOW")) {
-
-    logLabelOkValue(
-            gr ? "Έξοδος ηχείου" : "Speaker output",
-            gr ? "Ανιχνεύθηκε ακουστικό σήμα, με χαμηλή αξιοπιστία"
-               : "Acoustic signal detected, with LOW confidence"
-    );
-
-    logLabelWarnValue(
-            gr ? "Σημείωση" : "Note",
-            gr ? "Η χαμηλή αξιοπιστία μπορεί να οφείλεται, σε DSP φιλτράρισμα, "
-                 + "ακύρωση θορύβου, ή θέση μικροφώνου"
-               : "Low confidence may be caused, by DSP filtering, noise cancellation, "
-                 + "microphone placement, or acoustic design"
-    );
-
-} else {
-
-appendHtml("<br>");
-    logLabelOkValue(
-            gr ? "Έξοδος ηχείου" : "Speaker output",
-            gr ? "Ανιχνεύθηκε ακουστικό σήμα"
-               : "Acoustic signal detected"
-    );
-
-}
-
-} catch (Throwable t) {
-
-    appendHtml("<br>");
-logLine();
-logInfo(gr ? "LAB 1 - Δοκιμή Τόνου Ηχείου"
-           : "LAB 1 - Speaker tone test");
-logLine();
-
-appendHtml("<br>");
-logLabelErrorValue(
-gr ? "Κατάσταση" : "Status",
-gr ? "Αποτυχία"
-: "Failed"
-);
-
-logLabelWarnValue(
-gr ? "Παρατήρηση" : "Observation",
-gr ? "Η δοκιμή τόνου δεν ολοκληρώθηκε."
-: "The tone test did not complete."
-);
-
-logLabelWarnValue(
-gr ? "Πιθανή αιτία" : "Possible cause",
-gr ? "Αποτυχία δρομολόγησης ήχου ή περιορισμός συστήματος."
-: "Audio routing failure or system-level restriction."
-);
-
-} finally {
-
-    if (tg != null) {
-        tg.release();
-    }
-
-            appendHtml("<br>");
-            logOk(gr ? "Το Lab 1 ολοκληρώθηκε." : "Lab 1 finished.");
-            logLine();
+        AcousticStimulusProbe.Result result = AcousticStimulusProbe.run(this, false);
+        if (result.attempted && result.responseObserved) {
+            logLabelOkValue(gr ? "Σύμπτωση ερεθίσματος–απόκρισης"
+                               : "Stimulus/response correlation",
+                    gr ? "Ο τόνος DTMF 697/1209 Hz καταγράφηκε κατά την αναπαραγωγή"
+                       : "DTMF 697/1209 Hz rose during synchronized playback");
+        } else {
+            logLabelWarnValue(gr ? "Αποτέλεσμα ελέγχου" : "Probe result",
+                    gr ? "ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟ — όχι διάγνωση χαλασμένου ηχείου"
+                       : "INCONCLUSIVE — not evidence of speaker hardware failure");
         }
-
-    }).start();
+        logLabelValue(gr ? "Αριθμός επαληθευμένων τόνων" : "Correlated tones",
+                result.observedTones + "/" + result.testedTones);
+        if (result.testedTones > 0) {
+            logLabelValue(gr ? "Άνοδος στο φάσμα (σε σχέση με περιβάλλον)"
+                             : "Spectral rise vs ambient",
+                    String.format(Locale.US, "%.1f / %.1f dB",
+                            result.weakestLowRiseDb, result.weakestHighRiseDb));
+        }
+        logLabelValue(gr ? "Διαδρομή μικροφώνου" : "Mic input route", result.inputRoute);
+        logLabelValue(gr ? "Μέθοδος" : "Method",
+                "AudioRecord during ToneGenerator, baseline OFF / challenge ON");
+        logLabelValue(gr ? "Αιτιολόγηση" : "Reason", result.reason);
+        logLabelWarnValue(gr ? "Περιορισμός" : "Limitations",
+                gr ? "Ο ενσωματωμένος μικροφωνικός έλεγχος δεν πιστοποιεί ποιο "
+                       + "ηχείο ακούστηκε ή την ακουστική ποιότητά του."
+                   : "Internal microphone cannot certify which speaker emitted "
+                       + "the tone or its calibrated acoustic performance.");
+        appendHtml("<br>");
+        logOk(gr ? "Η δοκιμή Lab 1 ολοκληρώθηκε." : "Lab 1 probe completed.");
+        logLine();
+    }, "GEL-Lab1-AudioEvidence").start();
 }
 
 // ============================================================
-// LAB 2 — Speaker Frequency Sweep (ADAPTIVE)
-// • Runs independently
-// • Detects real speaker output via mic
-// • FAIL only if absolute silence (RMS == 0 && Peak == 0)
+// LAB 2 — MULTI-TONE CORRELATED AUDIO TEST (NOT CALIBRATED SWEEP)
 // ============================================================
 private void lab2SpeakerSweep() {
-
     if (!guardMic(this::lab2SpeakerSweep)) return;
 
     final boolean gr = AppLang.isGreek(this);
-
     appendHtml("<br>");
-logLine();
-logInfo(gr ? "LAB 2 — Έλεγχος Συχνοτήτων Ηχείου"
-               : "LAB 2 — Speaker Frequency Sweep"
-    );
+    logLine();
+    logSection(gr ? "LAB 2 — Ηχείο: πολυσυχνοτικός συγχρονισμένος έλεγχος"
+                  : "LAB 2 — Speaker: synchronized multi-tone check");
     logLine();
 
     new Thread(() -> {
-
-        ToneGenerator tg = null;
-
-        try {
-
-            AudioManager am =
-        (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-
-if (am != null) {
-    try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-    try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-    try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
-    try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
-    try { am.setSpeakerphoneOn(true); } catch (Throwable ignore) {}
-}
-
-tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
-
-            // ----------------------------------------------------
-            // PLAY MULTI-TONE SWEEP
-            // ----------------------------------------------------
-            int[] tones = {
-                    ToneGenerator.TONE_DTMF_1,
-                    ToneGenerator.TONE_DTMF_3,
-                    ToneGenerator.TONE_DTMF_6,
-                    ToneGenerator.TONE_DTMF_9
-            };
-
-            for (int t : tones) {
-                tg.startTone(t, 500);
-                SystemClock.sleep(550);
-            }
-
-// ----------------------------------------------------
-// MIC FEEDBACK ANALYSIS
-// ----------------------------------------------------
-
-// SAFE AUDIO NORMALIZE BEFORE MIC CAPTURE (NO EXTRA HELPERS)
-if (am != null) {
-    try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-    try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-    try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
-    try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
-    try { am.setSpeakerphoneOn(true); } catch (Throwable ignore) {}
-}
-SystemClock.sleep(250);
-
-MicDiagnosticEngine.Result r =
-        MicDiagnosticEngine.run(this);
-
-if (r == null) {
-    
-appendHtml("<br>");
-    logLabelErrorValue(
-            gr ? "Μικρόφωνο" : "Mic",
-            gr ? "Δεν καταγράφηκαν δεδομένα" : "No data captured"
-    );
-    return;
-}
-
-int rms  = (int) r.rms;
-int peak = (int) r.peak;
-
-logLabelOkValue("Mic RMS",  String.valueOf(rms));
-logLabelOkValue("Mic Peak", String.valueOf(peak));
-
-String conf = (r.confidence == null)
-        ? ""
-        : r.confidence.trim().toUpperCase(Locale.US);
-
-// ----------------------------------------------------
-// CONFIDENCE (QUALITY, NOT EXISTENCE)
-// ----------------------------------------------------
-if (conf.contains("LOW") || conf.contains("WEAK")
-        || conf.contains("FAIL") || conf.contains("NONE")) {
-
-    logLabelWarnValue(
-            gr ? "Ποιότητα" : "Confidence",
-            r.confidence
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Ποιότητα" : "Confidence",
-            r.confidence
-    );
-}
-
-// ----------------------------------------------------
-// HARD GATE — ABSOLUTE SILENCE ONLY
-// ----------------------------------------------------
-if (rms == 0 && peak == 0) {
-
-appendHtml("<br>");
-    logLabelErrorValue(
-            gr ? "Έξοδος Ηχείου" : "Speaker output",
-            gr ? "Δεν ανιχνεύθηκε ακουστικό σήμα"
-               : "No acoustic output detected"
-    );
-
-    logLabelWarnValue(
-            gr ? "Πιθανή αιτία" : "Possible cause",
-            gr
-                    ? "Βλάβη ηχείου, σίγαση εξόδου ή πλήρης ακουστική απομόνωση"
-                    : "Speaker hardware failure, muted output path, or extreme isolation"
-    );
-
-    logLabelOkValue(
-            gr ? "Σύσταση" : "Recommended",
-            gr
-                    ? "Επανεκτέλεσε το LAB 1 για έλεγχο διαδρομής ήχου"
-                    : "Re-run LAB 1 to verify speaker operation and routing"
-    );
-
-    appendHtml("<br>");
-    logLine();
-    return;
-}
-
-// ----------------------------------------------------
-// OUTPUT CONFIRMED (EVEN WITH LOW CONFIDENCE)
-// ----------------------------------------------------
-if (conf.contains("LOW") || conf.contains("WEAK")) {
-
-appendHtml("<br>");
-    logLabelOkValue(
-            gr ? "Έξοδος Ηχείου" : "Speaker output",
-            gr
-                    ? "Ανιχνεύθηκε ακουστικό σήμα με χαμηλή αξιοπιστία."
-                    : "Acoustic signal detected with LOW confidence"
-    );
-
-    logLabelWarnValue(
-            gr ? "Σημείωση" : "Note",
-            gr
-                    ? "Η χαμηλή αξιοπιστία μπορεί να οφείλεται, σε DSP φιλτράρισμα, ακύρωση θορύβου, περιοσισμό απόκρισης συχνότητας, ή θέση μικροφώνου."
-                    : "Low confidence may be caused, by DSP filtering, noise cancellation, speaker frequency limits, or microphone placement."
-    );
-
-} else {
-
-appendHtml("<br>");
-    logLabelOkValue(
-            gr ? "Έξοδος Ηχείου" : "Speaker output",
-            gr
-                    ? "Ανιχνεύθηκε ακουστικό σήμα"
-                    : "Acoustic signal detected"
-    );
-
-    logLabelOkValue(
-            gr ? "Σημείωση" : "Note",
-            gr
-                    ? "Η σάρωση συχνοτήτων ολοκληρώθηκε επιτυχώς."
-                    : "Frequency sweep detected successfully across multiple tones."
-    );
-}
-
-} catch (Throwable t) {
-
-    logError(
-            gr
-                    ? "Αποτυχία δοκιμής σάρωσης συχνοτήτων ηχείου"
-                    : "Speaker frequency sweep failed"
-    );
-
-} finally {
-
-            if (tg != null) tg.release();
-
-            appendHtml("<br>");
-            logOk(gr ? "Το Lab 2 ολοκληρώθηκε." : "Lab 2 finished.");
-            logLine();
+        AcousticStimulusProbe.Result result = AcousticStimulusProbe.run(this, true);
+        logLabelValue(gr ? "Σύγχρονοι τόνοι" : "Timed tone responses",
+                result.observedTones + " / " + result.testedTones + " (4 requested)");
+        if (result.attempted && result.responseObserved) {
+            logLabelOkValue(gr ? "Ακουστικός συσχετισμός" : "Acoustic correlation",
+                    gr ? "Ανιχνεύθηκαν ζεύγη DTMF σε 4 βήματα κατά την αναπαραγωγή"
+                       : "Both DTMF frequencies observed during each of 4 challenges");
+        } else {
+            logLabelWarnValue(gr ? "Ακουστικός συσχετισμός" : "Acoustic correlation",
+                    gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟΣ — δεν τεκμηριώνεται αστοχία hardware"
+                       : "INCONCLUSIVE — no physical hardware failure established");
         }
-
-    }).start();
+        if (result.testedTones > 0) {
+            logLabelValue(gr ? "Ελάχιστη φασματική μεταβολή" : "Minimum spectral rise",
+                    String.format(Locale.US, "%.1f / %.1f dB",
+                            result.weakestLowRiseDb, result.weakestHighRiseDb));
+        }
+        logLabelValue(gr ? "Διαδρομή εισόδου" : "Mic input route", result.inputRoute);
+        logLabelValue(gr ? "Κατάσταση δείγματος" : "Sample status", result.reason);
+        logLabelWarnValue(gr ? "Περιορισμός" : "Limitations",
+                gr ? "Οι 4 τόνοι DTMF δεν αποτελούν σαρωτή πλήρους ακουστικού φάσματος, "
+                        + "ούτε αποδεικνύουν την ποιότητα ή την προέλευση του ηχείου."
+                   : "Four DTMF challenges are not a calibrated frequency-response sweep "
+                        + "and cannot identify an individual speaker or certify fidelity.");
+        appendHtml("<br>");
+        logOk(gr ? "Η δοκιμή Lab 2 ολοκληρώθηκε." : "Lab 2 probe completed.");
+        logLine();
+    }, "GEL-Lab2-AudioEvidence").start();
 }
 
 /* ============================================================
