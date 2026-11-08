@@ -47,6 +47,7 @@ fetch_verified() {
   local url="$1"
   local dest="$2"
   local expected_sha="$3"
+  local asset_id="${4:-}"
 
   if [ -s "$dest" ]; then
     local existing_sha
@@ -59,17 +60,37 @@ fetch_verified() {
     rm -f "$dest"
   fi
 
-  local tmp="$dest.tmp.$$"
+  local tmp="$dest.tmp.$"
   rm -f "$tmp"
 
-  curl \
+  if ! curl \
     --fail \
     --location \
     --retry 5 \
     --retry-all-errors \
     --connect-timeout 30 \
     "$url" \
-    --output "$tmp"
+    --output "$tmp"; then
+    rm -f "$tmp"
+    if [[ -z "$asset_id" ]]; then
+      echo "ERROR: release download failed and no pinned asset ID was provided" >&2
+      return 1
+    fi
+    echo "Primary WebRTC release download failed; trying pinned GitHub REST asset $asset_id"
+    local -a headers=(-H "Accept: application/octet-stream")
+    if [[ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]]; then
+      headers+=(-H "Authorization: Bearer ${GH_TOKEN:-${GITHUB_TOKEN:-}}")
+    fi
+    curl \
+      --fail \
+      --location \
+      --retry 5 \
+      --retry-all-errors \
+      --connect-timeout 30 \
+      "${headers[@]}" \
+      "https://api.github.com/repos/gdiolitsis/GEL_iDoctor/releases/assets/$asset_id" \
+      --output "$tmp"
+  fi
 
   echo "$expected_sha  $tmp" | sha256sum -c -
   mv "$tmp" "$dest"
@@ -105,7 +126,8 @@ verify_build_id() {
 fetch_verified \
   "$WEBRTC_PROMOTED_RELEASE_BASE/$WEBRTC_PRODUCTION_ASSET" \
   "$PROD_AAR" \
-  "$WEBRTC_PRODUCTION_SHA256"
+  "$WEBRTC_PRODUCTION_SHA256" \
+  "$WEBRTC_PRODUCTION_ASSET_ID"
 
 TMP_VERIFY="$(mktemp -d "${TMPDIR:-/tmp}/gel-webrtc-fetch.XXXXXX")"
 cleanup() {
@@ -128,7 +150,8 @@ fi
 fetch_verified \
   "$WEBRTC_PROMOTED_RELEASE_BASE/$WEBRTC_UNSTRIPPED_ASSET" \
   "$UNSTRIPPED_AAR" \
-  "$WEBRTC_UNSTRIPPED_SHA256"
+  "$WEBRTC_UNSTRIPPED_SHA256" \
+  "$WEBRTC_UNSTRIPPED_ASSET_ID"
 
 rm -rf "$SYMBOL_ROOT"
 mkdir -p "$SYMBOL_ROOT"
