@@ -261,6 +261,8 @@ private void saveModelCapacity(long v) {
      */
     public BatterySnapshot readBatterySnapshot() {
         BatterySnapshot bi = new BatterySnapshot();
+        // Retain the legacy *root hint* independently of public battery telemetry.
+        bi.rooted = isDeviceRooted();
         try {
             BatteryPublicCollector.Snapshot signals = BatteryPublicCollector.collect(ctx);
             bi.evidence = signals;
