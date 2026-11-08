@@ -68,13 +68,21 @@ public final class SensorAxisEvidence {
      * No change during a short passive window is NOT a device-failure verdict.
      */
     public boolean observedVariation(float sensorResolution) {
-        if (validEvents < 2) return false;
+        return !variedAxes(sensorResolution).isEmpty();
+    }
+
+    /** Identifies only axes with observed span, without asserting hardware health. */
+    public String variedAxes(float sensorResolution) {
+        if (validEvents < 2) return "";
         double resolution = Float.isFinite(sensorResolution) && sensorResolution > 0f
                 ? (double) sensorResolution : 0d;
         double threshold = Math.max(MIN_OBSERVABLE_SPAN, resolution * 2d);
+        StringBuilder axesSeen = new StringBuilder();
         for (int i = 0; i < axes; i++) {
-            if (maximum[i] - minimum[i] >= threshold) return true;
+            if (maximum[i] - minimum[i] < threshold) continue;
+            if (axesSeen.length() > 0) axesSeen.append(",");
+            axesSeen.append(axes == 1 ? "VALUE" : i == 0 ? "X" : i == 1 ? "Y" : "Z");
         }
-        return false;
+        return axesSeen.toString();
     }
 }
