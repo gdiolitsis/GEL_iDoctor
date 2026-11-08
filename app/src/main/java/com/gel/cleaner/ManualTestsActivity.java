@@ -101,6 +101,7 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.location.LocationManager;
 import android.Manifest;
 import android.media.AudioAttributes;
+import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
@@ -1116,6 +1117,7 @@ private boolean oldKeepScreenOn = false;
     // LAB 3 — STATE (CLASS LEVEL)
     // ============================================================
     private volatile boolean lab3WaitingUser = false;
+    private volatile int lab3RoutedOutputType = -1;
     private int lab3OldMode = AudioManager.MODE_NORMAL;
     private boolean lab3OldSpeaker = false;
     private boolean lab3OldMicMute = false;
@@ -3010,6 +3012,8 @@ private boolean playEarpieceBeep() {
         if (written != buffer.length) return false;
         track.play();
         if (track.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) return false;
+        AudioDeviceInfo routed = track.getRoutedDevice();
+        if (routed != null) lab3RoutedOutputType = routed.getType();
         SystemClock.sleep(durationMs + 100);
         // Playback API accepted samples; does NOT confirm audible hardware route.
         return true;
@@ -5994,6 +5998,7 @@ private void lab3EarpieceManual() {
                    : "Earpiece challenge is already active.");
         return;
     }
+    lab3RoutedOutputType = -1;
     runOnUiThread(() -> {
         if (btnExport != null) {
             btnExport.setEnabled(false);
@@ -6293,7 +6298,13 @@ start.setOnClickListener(v -> {
             resetAudioAfterLab3(am, lab3OldMode, lab3OldSpeaker, lab3OldMicMute);
 
             final boolean allRequestsAccepted = acceptedPlaybackRequests == 3;
+            final int observedRoute = lab3RoutedOutputType;
             runOnUiThread(() -> {
+                logLabelValue(gr ? "Διαδρομή εξόδου Android" : "Android output routing",
+                        observedRoute < 0 ? (gr ? "Άγνωστη" : "Unknown")
+                        : observedRoute == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
+                        ? "Android TYPE_BUILTIN_EARPIECE"
+                        : "Android device type " + observedRoute + " — not verified earpiece");
                 if (isFinishing() || isDestroyed()) {
                     lab3GuidedPending.set(false);
                     return;
@@ -6698,6 +6709,12 @@ logLabelValue(gr ? "Δείγματα ζωντανής διαδρομής" : "Voi
         loopEvidence.bytesCaptured + " captured bytes / "
                 + loopEvidence.bytesWritten + " written bytes; "
                 + loopEvidence.elapsedMs + " ms");
+logLabelValue(gr ? "Πραγματική διαδρομή Android" : "Actual Android routed devices",
+        "input type " + (loopEvidence.routedInputType < 0
+                ? "UNKNOWN" : loopEvidence.routedInputType)
+                + " / output type " + (loopEvidence.routedOutputType < 0
+                ? "UNKNOWN" : loopEvidence.routedOutputType)
+                + " (not physical-health proof)");
 if (!loopEvidence.attempted || cancelled.get()) {
     lab4GuidedPending.set(false);
     logLabelWarnValue(gr ? "Αποτέλεσμα διαδρομής" : "Audio path result",
@@ -7118,6 +7135,18 @@ private void playAnswerCheckWav() {
         mp.start();
         if (!mp.isPlaying()) throw new IllegalStateException("Audio playback did not start");
         playbackRequested = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            AudioDeviceInfo routed = mp.getRoutedDevice();
+            logLabelValue(gr ? "Διαδρομή δείγματος φωνής" : "Recorded voice playback route",
+                    routed == null ? "UNKNOWN (Android)"
+                    : routed.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
+                      ? "Android TYPE_BUILTIN_EARPIECE"
+                      : "Android device type " + routed.getType()
+                        + " — not verified built-in earpiece");
+        } else {
+            logLabelValue(gr ? "Διαδρομή δείγματος φωνής" : "Recorded voice playback route",
+                    "UNAVAILABLE on API < 28; Android playback accepted only");
+        }
         int durationMs = mp.getDuration();
         SystemClock.sleep(durationMs > 0 && durationMs <= 15000 ? durationMs : 1800);
     } catch (Exception ex) {
@@ -7181,8 +7210,8 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
 
         final String text =
                 gr
-                        ? "Με άκουσες καθαρά; Τσέκαρε την απάντησή σου."
-                        : "Did you hear me clearly? Check your answer.";
+                        ? "Άκουσες το ηχογραφημένο δείγμα ΠΡΙΝ από αυτή την ερώτηση; Μη μετρήσεις τη φωνητική οδηγία."
+                        : "Did you hear the recorded sample BEFORE this question? Do not count the spoken prompt.";
 
         msg.setText(text);
         msg.setTextColor(0xFF39FF14);
