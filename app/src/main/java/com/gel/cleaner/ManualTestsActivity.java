@@ -1128,6 +1128,8 @@ private boolean oldKeepScreenOn = false;
     private final AtomicBoolean lab5VibrationPending = new AtomicBoolean(false);
     private final AtomicBoolean lab3GuidedPending = new AtomicBoolean(false);
     private final AtomicBoolean lab4GuidedPending = new AtomicBoolean(false);
+    private final AtomicBoolean lab4Cancelled = new AtomicBoolean(false);
+    private volatile boolean lab3Cancelled = false;
     private volatile boolean lab4AudioStateSaved = false;
     private int lab4OriginalMode = AudioManager.MODE_NORMAL;
     private boolean lab4OriginalSpeaker = false;
@@ -2344,13 +2346,23 @@ protected void onPause() {
     super.onPause();
 
     // =========================
-    // LAB 3
+    // GUIDED AUDIO: stop on background, but never restore stale Lab 3
+    // settings when the diagnostic was not running.
     // =========================
-    try {
-        lab3WaitingUser = false;
-        stopLab3Tone();
-        restoreLab3Audio();
-    } catch (Throwable ignore) {}
+    lab3Cancelled = true;
+    if (lab3GuidedPending.getAndSet(false)) {
+        try {
+            lab3WaitingUser = false;
+            stopLab3Tone();
+            restoreLab3Audio();
+            enableSingleExportButton();
+        } catch (RuntimeException ignored) {}
+    }
+    if (lab4GuidedPending.get()) {
+        lab4Cancelled.set(true);
+        try { AppTTS.stop(); } catch (RuntimeException ignored) {}
+        finishLab4Guided();
+    }
 
     // =========================
     // LAB 14 / 14B
@@ -2700,7 +2712,7 @@ private void askUserEarpieceConfirmation(boolean playbackRequested) {
     }
 
     runOnUiThread(() -> {
-
+        if (lab3Cancelled || !lab3GuidedPending.get()) return;
         if (lab3WaitingUser) return;
         lab3WaitingUser = true;
 
@@ -2869,7 +2881,10 @@ if (!isFinishing() && !isDestroyed()) {
 // YES ACTION (PASS)
 // ------------------------------------------------------------
 yesBtn.setOnClickListener(v -> {
-
+    if (lab3Cancelled || !lab3GuidedPending.get()) {
+        d.dismiss();
+        return;
+    }
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 
     lab3WaitingUser = false;
@@ -2895,7 +2910,10 @@ yesBtn.setOnClickListener(v -> {
 // NO ACTION (FAIL)
 // ------------------------------------------------------------
 noBtn.setOnClickListener(v -> {
-
+    if (lab3Cancelled || !lab3GuidedPending.get()) {
+        d.dismiss();
+        return;
+    }
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 
     lab3WaitingUser = false;
@@ -6020,6 +6038,7 @@ private void lab3EarpieceManual() {
         return;
     }
     lab3RoutedOutputType = -1;
+    lab3Cancelled = false;
     runOnUiThread(() -> {
         if (btnExport != null) {
             btnExport.setEnabled(false);
@@ -6271,6 +6290,7 @@ exitBtn.setOnClickListener(v -> {
 // START ACTION: one run only, no premature audio restoration.
 // ------------------------------------------------------------
 start.setOnClickListener(v -> {
+    if (lab3Cancelled || !lab3GuidedPending.get()) return;
     if (!lab3Started.compareAndSet(false, true)) return;
     try { AppTTS.stop(); } catch (Throwable ignore) {}
     d.dismiss();
@@ -6284,7 +6304,8 @@ start.setOnClickListener(v -> {
                     : "Playing earpiece test tones.");
 
             for (int i = 1; i <= 3; i++) {
-
+                if (lab3Cancelled || !lab3GuidedPending.get())
+                    throw new IllegalStateException("Lab 3 canceled by lifecycle");
                 logInfo(gr
                         ? "Τόνος " + i + " / 3"
                         : "Tone " + i + " / 3");
@@ -6326,7 +6347,8 @@ start.setOnClickListener(v -> {
                         : observedRoute == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
                         ? "Android TYPE_BUILTIN_EARPIECE"
                         : "Android device type " + observedRoute + " — not verified earpiece");
-                if (isFinishing() || isDestroyed()) {
+                if (isFinishing() || isDestroyed() || lab3Cancelled
+                        || !lab3GuidedPending.get()) {
                     lab3GuidedPending.set(false);
                     return;
                 }
@@ -6368,6 +6390,7 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
  */
 private void finishLab4Guided() {
     if (!lab4GuidedPending.getAndSet(false)) return;
+    lab4Cancelled.set(true);
     if (lab4AudioStateSaved) {
         lab4AudioStateSaved = false;
         try {
@@ -6413,6 +6436,7 @@ private void lab4MicManual() {
         finishLab4Guided();
         return;
     }
+    lab4Cancelled.set(false);
     lab4OriginalMode = am.getMode();
     lab4OriginalSpeaker = am.isSpeakerphoneOn();
     lab4OriginalMute = am.isMicrophoneMute();
@@ -6583,8 +6607,7 @@ if (bottomOk && topOk) {
 private volatile boolean lastAnswerHeardClearly = false;
 
 private void lab4MicPro() {
-	
-
+    if (!lab4GuidedPending.get() || lab4Cancelled.get()) return;
     final boolean gr = AppLang.isGreek(this);
 
     new Thread(() -> {
@@ -6605,7 +6628,7 @@ if (amCall != null) {
     try { amCall.setMode(AudioManager.MODE_IN_COMMUNICATION); } catch (Throwable ignore) {}
 }
 
-AtomicBoolean cancelled = new AtomicBoolean(false);
+AtomicBoolean cancelled = lab4Cancelled;
 AtomicBoolean started = new AtomicBoolean(false);
 AtomicReference<AlertDialog> dialogRef = new AtomicReference<>();
 
@@ -7024,6 +7047,7 @@ handedToStage2.set(true);
 // SHOW DIALOG (UI THREAD)
 // ==========================
 runOnUiThread(() -> {
+    if (lab4Cancelled.get() || !lab4GuidedPending.get()) return;
 
     AlertDialog.Builder b =
             new AlertDialog.Builder(
@@ -7103,7 +7127,8 @@ runOnUiThread(() -> {
                     } catch (Throwable ignore) {}
                 });
 
-                if (isFinishing() || isDestroyed()) {
+                if (isFinishing() || isDestroyed() || lab4Cancelled.get()
+                        || !lab4GuidedPending.get()) {
                     finishLab4Guided();
                     return;
                 }
@@ -7159,7 +7184,8 @@ runOnUiThread(() -> {
 // ============================================================
 private void playAnswerCheckWav() {
     final boolean gr = AppLang.isGreek(this);
-    if (isFinishing() || isDestroyed()) {
+    if (isFinishing() || isDestroyed() || lab4Cancelled.get()
+            || !lab4GuidedPending.get()) {
         finishLab4Guided();
         return;
     }
@@ -7225,6 +7251,7 @@ private void playAnswerCheckWav() {
 // STAGE 4 — USER-REPORTED EARPIECE AUDIBILITY
 // ============================================================
 private void showAnswerCheckConfirmation(Runnable onAnswered) {
+    if (lab4Cancelled.get() || !lab4GuidedPending.get()) return;
     final boolean gr = AppLang.isGreek(this);
     lastAnswerHeardClearly = false;
     final AtomicBoolean answerProvided = new AtomicBoolean(false);
@@ -7401,7 +7428,7 @@ yesBtn.setOnClickListener(v -> {
 }
 
 private void lab4ResultEarpiece() {
-
+    if (lab4Cancelled.get() || !lab4GuidedPending.get()) return;
     final boolean gr = AppLang.isGreek(this);
 
     appendHtml("<br>");
