@@ -24087,8 +24087,8 @@ iDoctorEngine.BatterySnapshot chargeEnd = eng.readBatterySnapshotLab();
 long endMah = chargeEnd != null ? chargeEnd.chargeNowMah : -1L;
 long observedMs = startTs[0] > 0 ? SystemClock.elapsedRealtime() - startTs[0] : -1L;
 long deltaMah = startMah[0] > 0 && endMah > startMah[0] ? endMah - startMah[0] : -1L;
-boolean counterValid = observedMs >= 120000L && deltaMah > 0
-        && deltaMah <= 1000 && !lab15FlapUnstable;
+boolean counterValid = BatteryChargeEvidence.isValidChargeGain(
+        startMah[0], endMah, observedMs, lab15FlapUnstable);
 lab15_strengthKnown = counterValid;
 lab15_strengthWeak = false; // A single charging session cannot validate charge health.
 if (counterValid) {
