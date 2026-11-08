@@ -631,9 +631,7 @@ private void showSettingsDialog() {
     box.addView(cbMini);
 
     TextView miniHint = new TextView(this);
-    miniHint.setText(gr
-            ? "Περιοδικός έλεγχος θερμοκρασίας μπαταρίας, πίεσης RAM, εσωτερικού αποθηκευτικού χώρου και προειδοποιήσεων μπαταρίας όπου διατίθενται. Ειδοποιεί για ανησυχητικές ενδείξεις και προτείνει ενέργειες. Δεν ανιχνεύει crash και δεν παρέχει συνεχή παρακολούθηση. Οι ώρες ενδέχεται να καθυστερούν λόγω Android."
-            : "Periodic checks of battery temperature, RAM pressure, internal storage and battery health warnings where available. Reports concerning readings with suggested actions. Does not detect crashes or provide continuous monitoring. Android may delay scheduled checks.");
+    miniHint.setText(getString(R.string.mini_check_scope_description));
     long miniSuccess = sp.getLong("mini_last_success", 0);
     long miniAttempt = sp.getLong("mini_last_attempt", 0);
     miniHint.append("\n\n" + (gr ? "Τελευταίος πλήρης έλεγχος: " : "Last complete check: ")
