@@ -98,9 +98,11 @@ private int widgetOfferRetryCount = 0;
 @Override
 public boolean onCreateOptionsMenu(Menu menu) {
     // ⚙ settings icon (always visible)
-    menu.add(0, 1001, 0, "")
-        .setIcon(R.drawable.ic_settings)
-        .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+    final String settingsLabel = AppLang.isGreek(this) ? "Ρυθμίσεις" : "Settings";
+    MenuItem settingsItem = menu.add(0, 1001, 0, settingsLabel);
+    settingsItem.setIcon(R.drawable.ic_settings);
+    settingsItem.setContentDescription(settingsLabel);
+    settingsItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 // 🔽 CONTACT BUTTON
 menu.add(0, 1002, 1, "Contact")
@@ -508,7 +510,7 @@ private void showContactDeveloperDialog() {
     btnCancel.setBackground(makeGelBtn(0xFFAA1111));
 
     Button btnSend = new com.gel.cleaner.GelButton(this);
-    btnSend.setText("Send");
+    btnSend.setText(gr ? "Αποστολή" : "Send");
     btnSend.setTextColor(Color.WHITE);
     btnSend.setAllCaps(false);
     btnSend.setBackground(makeGelBtn(0xFF00FF7F));
@@ -631,9 +633,7 @@ private void showSettingsDialog() {
     box.addView(cbMini);
 
     TextView miniHint = new TextView(this);
-    miniHint.setText(gr
-            ? "Περιοδικός έλεγχος θερμοκρασίας μπαταρίας, πίεσης RAM, εσωτερικού αποθηκευτικού χώρου και προειδοποιήσεων μπαταρίας όπου διατίθενται. Ειδοποιεί για ανησυχητικές ενδείξεις και προτείνει ενέργειες. Δεν ανιχνεύει crash και δεν παρέχει συνεχή παρακολούθηση. Οι ώρες ενδέχεται να καθυστερούν λόγω Android."
-            : "Periodic checks of battery temperature, RAM pressure, internal storage and battery health warnings where available. Reports concerning readings with suggested actions. Does not detect crashes or provide continuous monitoring. Android may delay scheduled checks.");
+    miniHint.setText(getString(R.string.mini_check_scope_description));
     long miniSuccess = sp.getLong("mini_last_success", 0);
     long miniAttempt = sp.getLong("mini_last_attempt", 0);
     miniHint.append("\n\n" + (gr ? "Τελευταίος πλήρης έλεγχος: " : "Last complete check: ")
@@ -1884,6 +1884,20 @@ bg.setCornerRadius(dp(14));
 bg.setStroke(dp(4), 0xFFFFD700); // Χρυσό περίγραμμα
 root.setBackground(bg);
 
+// The fixed-height dialog must allocate space to the action button first.
+// Only descriptive content is scrollable; OK remains reachable on small phones.
+root.setMinimumHeight((int) (getResources().getDisplayMetrics().heightPixels * 0.85));
+android.widget.ScrollView welcomeScroll = new android.widget.ScrollView(MainActivity.this);
+welcomeScroll.setFillViewport(false);
+welcomeScroll.setVerticalScrollBarEnabled(true);
+LinearLayout welcomeContent = new LinearLayout(MainActivity.this);
+welcomeContent.setOrientation(LinearLayout.VERTICAL);
+welcomeScroll.addView(welcomeContent, new android.widget.FrameLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.WRAP_CONTENT));
+root.addView(welcomeScroll, new LinearLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
 // ================= TITLE =================
 welcomeTitle = new TextView(MainActivity.this);
 welcomeTitle.setText(
@@ -1894,7 +1908,7 @@ welcomeTitle.setTextSize(19f);
 welcomeTitle.setTypeface(null, Typeface.BOLD);
 welcomeTitle.setGravity(Gravity.CENTER);
 welcomeTitle.setPadding(0, 0, 0, dp(14));
-root.addView(welcomeTitle);
+welcomeContent.addView(welcomeTitle);
 
 // ================= MESSAGE =================
 welcomeMessage = new TextView(MainActivity.this);
@@ -1910,18 +1924,11 @@ welcomeMessage.setGravity(Gravity.CENTER);
 welcomeMessage.setLineSpacing(0f, 1.15f);
 welcomeMessage.setPadding(dp(6), 0, dp(6), dp(18));
 
-welcomeMessage.setVerticalScrollBarEnabled(true);
-welcomeMessage.setMovementMethod(
-        android.text.method.ScrollingMovementMethod.getInstance()
-);
-
-welcomeMessage.setFocusable(true);
-welcomeMessage.setFocusableInTouchMode(true);
-
-root.addView(welcomeMessage);
+// Scrolling belongs to the parent ScrollView, not a nested TextView.
+welcomeContent.addView(welcomeMessage);
 
 // ================= MUTE ROW =================
-root.addView(buildMuteRow());
+welcomeContent.addView(buildMuteRow());
 
 // ================= LANGUAGE SPINNER =================
 Spinner langSpinner = new Spinner(MainActivity.this);
@@ -2016,7 +2023,7 @@ lpLang.gravity = Gravity.CENTER;
 lpLang.setMargins(0, 0, 0, dp(18));
 langBox.setLayoutParams(lpLang);
 
-root.addView(langBox);
+welcomeContent.addView(langBox);
 
 // ================= CHECKBOX =================
 CheckBox cb = new CheckBox(this);
@@ -2025,7 +2032,7 @@ cb.setText(AppLang.isGreek(this)
 : "Do not show again");
 cb.setTextColor(Color.WHITE);
 cb.setPadding(0, dp(8), 0, dp(16));
-root.addView(cb);
+welcomeContent.addView(cb);
 
 // ================= OK BUTTON =================
 Button okBtn = new com.gel.cleaner.GelButton(MainActivity.this);
@@ -2044,7 +2051,7 @@ okBtn.setBackground(okBg);
 LinearLayout.LayoutParams okLp =
 new LinearLayout.LayoutParams(
 LinearLayout.LayoutParams.MATCH_PARENT,
-dp(140)
+dp(64)
 );
 okLp.setMargins(dp(6), dp(6), dp(6), 0);
 okBtn.setLayoutParams(okLp);
