@@ -10512,11 +10512,51 @@ private void lab9SensorsCheck() {
                                 + "cannot be verified from enumeration alone."
         );
 
+        logInfo(gr
+                ? "Κίνησε απαλά το κινητό και κάλυψε/αποκάλυψε τον proximity "
+                        + "για 5 δευτερόλεπτα. Η απουσία αλλαγής δεν σημαίνει βλάβη."
+                : "Gently move the device and cover/uncover the proximity area "
+                        + "for 5 seconds. No observed change does not prove failure.");
+        SensorEvidenceProbe.sample(this, samples -> {
+            if (isFinishing() || isDestroyed()) return;
+            appendHtml("<br>");
+            logInfo(gr ? "Συμβάντα αισθητήρων (5 δευτ.)"
+                       : "Sensor event observations (5 seconds)");
+            for (SensorEvidenceProbe.Result sample : samples) {
+                if (!sample.advertised || !sample.listenerRegistered) {
+                    logLabelWarnValue(sample.name,
+                            gr ? "Δεν διατέθηκε ροή συμβάντων"
+                               : "Event stream not available");
+                } else if (sample.events == 0) {
+                    logLabelWarnValue(sample.name,
+                            gr ? "Μηδέν συμβάντα στο δείγμα — όχι τεκμήριο φυσικής βλάβης"
+                               : "No events during window — not proof of physical failure");
+                } else {
+                    logLabelValue(sample.name,
+                            sample.events + " events"
+                            + (sample.observedVariation ? " | variation observed"
+                                                      : " | variation not observed")
+                            + (sample.monotonicTimestamps ? "" : " | timestamp order anomaly"));
+                }
+                if (sample.invalidEvents > 0) {
+                    logLabelWarnValue(gr ? "Μη έγκυρα δείγματα" : "Invalid samples",
+                            sample.name + ": " + sample.invalidEvents);
+                }
+            }
+            logLabelWarnValue(gr ? "Όρια καταγραφής" : "Sampling limitation",
+                    gr ? "Περιορισμένη χρονικά καταγραφή API, όχι βαθμονόμηση ή "
+                            + "πιστοποίηση λειτουργίας όλων των αισθητήρων."
+                       : "Time-bounded API observation, not calibration or "
+                            + "whole-device sensor-health certification.");
+            enableSingleExportButton();
+        });
+
     } catch (Throwable e) {
         logError(gr ? "Σφάλμα ανάλυσης αισθητήρων" : "Sensors analysis error", e.getMessage());
     } finally {
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 9 ολοκληρώθηκε." : "Lab 9 finished.");
+        logInfo(gr ? "Η απογραφή Lab 9 ολοκληρώθηκε· ακολουθεί το δείγμα συμβάντων."
+                   : "Lab 9 inventory completed; event sample follows.");
         logLine();
         enableSingleExportButton();
     }
