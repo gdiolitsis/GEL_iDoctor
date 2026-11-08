@@ -1,11 +1,40 @@
 name: Signed APK full UI exploration
 on:
   workflow_dispatch:
+    inputs:
+      evidence_artifact_id:
+        description: Optional existing QA evidence artifact to inspect instead of running emulators
+        type: string
+        default: ""
 permissions:
   contents: read
   actions: read
 jobs:
+  inspect:
+    if: ${{ inputs.evidence_artifact_id != '' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Inspect saved QA evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT: ${{ inputs.evidence_artifact_id }}
+        run: |
+          set -euo pipefail
+          [[ "$ARTIFACT" =~ ^[0-9]+$ ]]
+          curl --fail --location -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/gdiolitsis/GEL_iDoctor/actions/artifacts/$ARTIFACT/zip" -o evidence.zip
+          python3 - <<'PY'
+          import zipfile,base64
+          z=zipfile.ZipFile('evidence.zip')
+          for n in z.namelist():
+              if n.endswith(('texts.txt','coverage.json','ui.xml')):
+                  print('EVIDENCE_FILE='+n)
+                  print(z.read(n).decode('utf-8',errors='replace')[:16000])
+          images=[n for n in z.namelist() if n.endswith('screen.png')]
+          for n in images[:2]:
+              print('EVIDENCE_IMAGE='+n+'|'+base64.b64encode(z.read(n)).decode())
+          PY
   explore:
+    if: ${{ inputs.evidence_artifact_id == '' }}
     strategy:
       fail-fast: false
       matrix:
