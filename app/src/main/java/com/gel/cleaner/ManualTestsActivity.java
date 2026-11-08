@@ -483,6 +483,8 @@ final float[] batterySOH = {Float.NaN};
     private final int REQ_LAB6_TOUCH = 6006;
     private final int REQ_LAB6_COLOR = 6007;
     private final int REQ_LAB13_BT_CONNECT = 1313;
+    private static final int REQ_LAB12_DIALER = 12120;
+    private boolean lab12DialerPending = false;
 
     private AlertDialog lab14RunningDialog;
     
@@ -11069,122 +11071,275 @@ logLabelValue(gr ? "Πρόταση" : "Recommendation", recommendation);
 // LAB 12 — Call Function Interpretation (Laboratory)
 // ============================================================
 private void lab12CallFunctionInterpretation() {
-
     final boolean gr = AppLang.isGreek(this);
+    if (lab12DialerPending) {
+        logLabelWarnValue(gr ? "Lab 12" : "Lab 12",
+                gr ? "Περιμένει επιστροφή από τον τηλεφωνητή — χωρίς νέο αποτέλεσμα"
+                   : "Awaiting dialer return — no new conclusion");
+        return;
+    }
 
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 12 — Ερμηνεία Λειτουργίας Κλήσεων (Εργαστήριο)"
-            : "LAB 12 — Call Function Interpretation (Laboratory)");
+    logSection(gr ? "LAB 12 — Παρατηρήσεις τηλεφωνίας και προαιρετική πραγματική κλήση"
+                  : "LAB 12 — Telephony observations and optional real call");
     logLine();
 
-    TelephonySnapshot s = getTelephonySnapshot();
+    // Independent Lab 12 snapshot: do not borrow Lab 11's legacy hasInternet
+    // flag. Internet routing / Wi-Fi / VPN are NOT IMS or calling evidence.
+    TelephonyManager tm = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+    Boolean airplaneOn = null;
+    Boolean voiceCapable = null;
+    Boolean serviceInService = null;
+    Integer simState = null;
 
-    // ------------------------------------------------------------
-    // Airplane mode (context only)
-    // ------------------------------------------------------------
-    if (s.airplaneOn) {
-        logInfo(gr
-                ? "Η Λειτουργία Πτήσης είναι ΕΝΕΡΓΗ. Τα voice radio interfaces είναι σκόπιμα απενεργοποιημένα."
-                : "Airplane mode is ENABLED. Voice radio interfaces are intentionally disabled.");
-        return;
+    try {
+        airplaneOn = Settings.Global.getInt(getContentResolver(),
+                Settings.Global.AIRPLANE_MODE_ON) == 1;
+    } catch (RuntimeException ignored) {
+        // No default false: an unavailable OS setting remains UNKNOWN.
     }
 
-    // ------------------------------------------------------------
-    // SIM availability (context only)
-    // ------------------------------------------------------------
-    if (s.simReady) {
-        logLabelOkValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ" : "READY");
+    if (tm != null) {
+        try {
+            voiceCapable = Build.VERSION.SDK_INT >= 35
+                    ? tm.isDeviceVoiceCapable() : tm.isVoiceCapable();
+        } catch (RuntimeException ignored) {}
+        try {
+            simState = tm.getSimState();
+        } catch (RuntimeException ignored) {}
+        try {
+            ServiceState ss = tm.getServiceState();
+            if (ss != null) {
+                serviceInService = ss.getState() == ServiceState.STATE_IN_SERVICE;
+            }
+        } catch (RuntimeException ignored) {
+            // Permission, inactive subscription, unavailable radio/OEM.
+        }
+    }
+
+    Lab12CallEvidence.Passive passive = Lab12CallEvidence.passive(
+            tm != null, airplaneOn, voiceCapable, serviceInService);
+    logLabelValue(gr ? "Λειτουργία πτήσης" : "Airplane mode",
+            airplaneOn == null ? (gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN")
+                    : airplaneOn ? (gr ? "ΕΝΕΡΓΗ" : "ON")
+                                 : (gr ? "ΑΝΕΝΕΡΓΗ" : "OFF"));
+    logLabelValue(gr ? "Υποστήριξη φωνής συσκευής (Android)" : "Device voice capability",
+            voiceCapable == null ? (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ" : "UNAVAILABLE")
+                    : voiceCapable ? (gr ? "ΑΝΑΦΕΡΕΤΑΙ" : "REPORTED")
+                                   : (gr ? "ΔΕΝ ΑΝΑΦΕΡΕΤΑΙ" : "NOT REPORTED"));
+    logInfo(gr ? "Η γενική δυνατότητα κλήσεων δεν πιστοποιεί ενεργή συνδρομή, VoLTE/IMS ή επιτυχημένη κλήση."
+               : "Device capability does not prove active voice subscription, VoLTE/IMS or a successful call.");
+
+    if (simState != null) {
+        String simLabel;
+        switch (simState) {
+            case TelephonyManager.SIM_STATE_READY:
+                simLabel = gr ? "READY (προεπιλεγμένη)" : "READY (default)";
+                break;
+            case TelephonyManager.SIM_STATE_ABSENT:
+                simLabel = gr ? "ABSENT (εκτεθειμένο προφίλ)" : "ABSENT (reported profile)";
+                break;
+            case TelephonyManager.SIM_STATE_PIN_REQUIRED:
+                simLabel = gr ? "Απαιτείται PIN" : "PIN required";
+                break;
+            case TelephonyManager.SIM_STATE_PUK_REQUIRED:
+                simLabel = gr ? "Απαιτείται PUK" : "PUK required";
+                break;
+            case TelephonyManager.SIM_STATE_NETWORK_LOCKED:
+                simLabel = gr ? "Κλειδωμένη στο δίκτυο" : "Network locked";
+                break;
+            default:
+                simLabel = gr ? "Άγνωστη / μη έτοιμη" : "Unknown / not ready";
+        }
+        logLabelValue(gr ? "SIM" : "SIM", simLabel);
     } else {
-        logLabelWarnValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΜΗ ΕΤΟΙΜΗ" : "NOT READY");
+        logLabelValue("SIM", gr ? "ΑΓΝΩΣΤΗ / μη διαθέσιμη" : "UNKNOWN / unavailable");
     }
 
-    if (!s.simReady) {
-        logInfo(gr
-                ? "Η διαθεσιμότητα φωνητικής υπηρεσίας εξαρτάται από το αν η SIM είναι έτοιμη. "
-                  + "Δεν βγαίνει λειτουργικό συμπέρασμα."
-                : "Voice service availability depends on SIM readiness. "
-                  + "No functional verdict inferred.");
-        return;
-    }
-
-    // ------------------------------------------------------------
-    // Legacy voice service state (informational)
-    // ------------------------------------------------------------
-    if (s.inService) {
-        logLabelOkValue(
-                gr ? "Φωνητική Υπηρεσία (legacy)" : "Voice Service (legacy)",
-                gr ? "ΣΕ ΥΠΗΡΕΣΙΑ" : "IN SERVICE"
-        );
+    if (serviceInService == null) {
+        logLabelWarnValue(gr ? "Υπηρεσία φωνής (legacy)" : "Voice service (legacy)",
+                gr ? "ΑΓΝΩΣΤΗ — η κατάσταση δεν ήταν προσβάσιμη"
+                   : "UNKNOWN — service-state observation unavailable");
     } else {
-        logLabelWarnValue(
-                gr ? "Φωνητική Υπηρεσία (legacy)" : "Voice Service (legacy)",
-                gr ? "ΔΕΝ ΑΝΑΦΕΡΕΤΑΙ ΩΣ ΣΕ ΥΠΗΡΕΣΙΑ" : "NOT REPORTED AS IN SERVICE"
-        );
+        logLabelValue(gr ? "Υπηρεσία φωνής (legacy)" : "Voice service (legacy)",
+                serviceInService ? (gr ? "Αναφέρθηκε IN SERVICE" : "Reported IN SERVICE")
+                                 : (gr ? "Δεν αναφέρθηκε IN SERVICE" : "Not reported IN SERVICE"));
     }
+    logLabelValue(gr ? "Συμπέρασμα Android" : "Android observation",
+            lab12PassiveStatusLabel(passive, gr));
+    logInfo(gr ? "Δεν εξετάστηκε πραγματική κλήση ούτε αν λειτουργεί το ακουστικό ή το μικρόφωνο."
+               : "No actual voice call, receiver or microphone has been verified.");
+    logInfo(gr ? "Το Internet, ακόμη και όταν είναι VALIDATED μέσω Wi-Fi, δεν αποδεικνύει IMS/VoWiFi."
+               : "Internet, including VALIDATED Wi-Fi, does not prove IMS/VoWiFi voice service.");
+    logLine();
 
-    if (!s.inService) {
-        logInfo(gr
-                ? "Η legacy εγγραφή υπηρεσίας δεν αναφέρεται. "
-                  + "Σε σύγχρονες LTE/5G συσκευές, φωνή/δεδομένα μπορεί να παρέχονται μέσω IMS (VoLTE / VoWiFi)."
-                : "Legacy service registration is not reported. "
-                  + "On modern LTE/5G devices, voice and data may be provided via IMS (VoLTE / VoWiFi).");
-    }
-
-    // ------------------------------------------------------------
-    // Internet context (IMS relevance)
-    // ------------------------------------------------------------
-    if (s.hasInternet) {
-    logLabelOkValue(
-            gr ? "Κατάσταση Σύνδεσης Internet"
-               : "Internet Context",
-            gr ? "ΔΙΑΘΕΣΙΜΗ (system routing)"
-               : "AVAILABLE (system routing)"
-    );
-} else {
-    logLabelWarnValue(
-            gr ? "Κατάσταση Σύνδεσης Internet"
-               : "Internet Context",
-            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ"
-               : "NOT AVAILABLE"
-    );
+    // Optional, explicit user action only; ACTION_DIAL does not place a call,
+    // access call logs or record audio. No phone number is provided or stored.
+    new AlertDialog.Builder(this)
+            .setTitle(gr ? "LAB 12 — Πραγματική δοκιμή κλήσης (προαιρετικά)"
+                         : "LAB 12 — Optional live-call check")
+            .setMessage(gr
+                    ? "Θέλεις να δοκιμάσεις μια πραγματική κλήση με γνωστό σου άτομο; "
+                      + "Θα ανοίξει ΜΟΝΟ ο τηλεφωνητής χωρίς αριθμό. "
+                      + "Εσύ επιλέγεις αν θα καλέσεις. Μην χρησιμοποιήσεις αριθμούς έκτακτης ανάγκης. "
+                      + "Ενδέχεται να ισχύουν χρεώσεις. Δεν καταγράφουμε ήχο, αριθμό ή περιεχόμενο. "
+                      + "Μετά την επιστροφή θα αναφέρεις αν ακούγατε ο ένας τον άλλον."
+                    : "Would you like to test a real call with a consenting person? "
+                      + "Only an EMPTY dialer opens. You decide whether to place a call. "
+                      + "Never use emergency numbers for testing. Carrier charges may apply. "
+                      + "No audio, phone number or conversation is recorded. "
+                      + "On return, report whether both parties could hear each other.")
+            .setPositiveButton(gr ? "ΑΝΟΙΓΜΑ ΤΗΛΕΦΩΝΟΥ" : "OPEN DIALER",
+                    (dialog, which) -> lab12OpenDialer())
+            .setNegativeButton(gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP",
+                    (dialog, which) -> lab12ReportGuided(
+                            Lab12CallEvidence.Guided.NOT_TESTED))
+            .setOnCancelListener(dialog -> lab12ReportGuided(
+                    Lab12CallEvidence.Guided.NOT_TESTED))
+            .show();
 }
 
-    if (s.hasInternet) {
-        logOk(gr
-                ? "Εντοπίστηκε ενεργό internet routing. "
-                  + "Κλήσεις μέσω IMS (VoLTE / VoWiFi) μπορεί να υποστηρίζονται, ανάλογα με τον πάροχο."
-                : "Active internet routing detected. "
-                  + "IMS-based calling (VoLTE / VoWiFi) may be supported depending on carrier configuration.");
-    } else {
-        logOk(gr
-                ? "Δεν εντοπίστηκε ενεργό internet routing. "
-                  + "Οι κλασικές κλήσεις μπορεί να λειτουργούν κανονικά, αν τις υποστηρίζει το δίκτυο."
-                : "No active internet routing detected. "
-                  + "Legacy voice calling may still function if supported by the network.");
+private String lab12PassiveStatusLabel(Lab12CallEvidence.Passive status, boolean gr) {
+    switch (status) {
+        case TELEPHONY_UNAVAILABLE:
+            return gr ? "Μη διαθέσιμη υπηρεσία Telephony — όχι συμπέρασμα βλάβης"
+                      : "Telephony API unavailable — no hardware fault inferred";
+        case AIRPLANE_MODE_REPORTED:
+            return gr ? "Λειτουργία πτήσης — περιορισμένη παρατήρηση"
+                      : "Airplane mode — observation limited";
+        case VOICE_CAPABILITY_NOT_REPORTED:
+            return gr ? "Η δυνατότητα φωνητικών κλήσεων δεν δηλώθηκε"
+                      : "Voice-call capability not advertised";
+        case SERVICE_REPORTED_IN_SERVICE:
+            return gr ? "Android: υπηρεσία αναφέρεται ως ενεργή, ΟΧΙ επαλήθευση κλήσης"
+                      : "Android service reported active, NOT call verification";
+        case SERVICE_NOT_REPORTED_IN_SERVICE:
+            return gr ? "Android: δεν αναφέρθηκε legacy υπηρεσία — IMS άγνωστο"
+                      : "Legacy service not reported — IMS unknown";
+        default:
+            return gr ? "Κατάσταση υπηρεσίας ΑΓΝΩΣΤΗ — δεν επαληθεύτηκε κλήση"
+                      : "Service status UNKNOWN — call not verified";
     }
+}
 
-    // ------------------------------------------------------------
-    // Laboratory conclusion
-    // ------------------------------------------------------------
-    logOk(gr
-            ? "Η εργαστηριακή ερμηνεία ολοκληρώθηκε. "
-              + "Αυτό το τεστ δεν ξεκινά ούτε επιβεβαιώνει πραγματική κλήση."
-            : "Laboratory interpretation complete. "
-              + "This test does not initiate or verify real call execution.");
+private void lab12OpenDialer() {
+    final boolean gr = AppLang.isGreek(this);
+    if (lab12DialerPending) return;
+    lab12DialerPending = true;
+    if (btnExport != null) {
+        btnExport.setEnabled(false);
+        btnExport.setAlpha(0.5f);
+    }
+    try {
+        // ACTION_DIAL with NO telephone URI, no ACTION_CALL and no CALL_PHONE.
+        // ACTION_DIAL resultCode is never proof a call was made.
+        startActivityForResult(new Intent(Intent.ACTION_DIAL), REQ_LAB12_DIALER);
+    } catch (RuntimeException e) {
+        lab12DialerPending = false;
+        logLabelWarnValue(gr ? "Τηλεφωνητής" : "Dialer",
+                gr ? "Δεν άνοιξε — χωρίς επαλήθευση πραγματικής κλήσης"
+                   : "Could not open — no live-call verification");
+        lab12ReportGuided(Lab12CallEvidence.Guided.NOT_TESTED);
+    }
+}
 
-    logInfo(gr
-            ? "Το audio routing κλήσης και οι διαδρομές μικροφώνου/ακουστικού ελέγχονται ξεχωριστά (LAB 3)."
-            : "Call audio routing and microphone/earpiece paths are examined separately (LAB 3).");
+private void lab12AfterDialerReturn() {
+    final boolean gr = AppLang.isGreek(this);
+    if (isFinishing() || isDestroyed()) {
+        lab12ReportGuided(Lab12CallEvidence.Guided.INCONCLUSIVE);
+        return;
+    }
+    // A dialer return does NOT prove the user placed or finished a call.
+    new AlertDialog.Builder(this)
+            .setTitle(gr ? "LAB 12 — Επιβεβαίωση από χρήστη" : "LAB 12 — User confirmation")
+            .setMessage(gr ? "Πραγματοποιήθηκε και ολοκληρώθηκε πραγματική κλήση; "
+                            + "Αν άνοιξες απλώς τον τηλεφωνητή, πάτησε ΟΧΙ."
+                           : "Did you actually make and finish a real call? "
+                            + "If you merely opened the dialer, choose NO.")
+            .setPositiveButton(gr ? "ΝΑΙ" : "YES",
+                    (dialog, which) -> lab12AskHearOtherParty())
+            .setNegativeButton(gr ? "ΟΧΙ" : "NO",
+                    (dialog, which) -> lab12ReportGuided(
+                            Lab12CallEvidence.userReport(true, false, null, null)))
+            .setOnCancelListener(dialog -> lab12ReportGuided(
+                    Lab12CallEvidence.Guided.INCONCLUSIVE))
+            .show();
+}
 
+private void lab12AskHearOtherParty() {
+    final boolean gr = AppLang.isGreek(this);
+    new AlertDialog.Builder(this)
+            .setTitle(gr ? "LAB 12 — Ήχος λήψης" : "LAB 12 — Receive audio")
+            .setMessage(gr ? "Κατά την πραγματική κλήση ΑΚΟΥΓΕΣ καθαρά τον συνομιλητή σου; "
+                            + "Η επιλεγμένη διαδρομή (ακουστικό, Bluetooth ή ηχείο) δεν έχει πιστοποιηθεί."
+                           : "During the real call, could YOU hear the other person clearly? "
+                            + "The exact route (earpiece, Bluetooth or speaker) was not verified.")
+            .setPositiveButton(gr ? "ΝΑΙ" : "YES",
+                    (dialog, which) -> lab12AskOtherPartyHeard(true))
+            .setNegativeButton(gr ? "ΟΧΙ" : "NO",
+                    (dialog, which) -> lab12AskOtherPartyHeard(false))
+            .setOnCancelListener(dialog -> lab12ReportGuided(
+                    Lab12CallEvidence.Guided.INCONCLUSIVE))
+            .show();
+}
+
+private void lab12AskOtherPartyHeard(boolean heardOther) {
+    final boolean gr = AppLang.isGreek(this);
+    new AlertDialog.Builder(this)
+            .setTitle(gr ? "LAB 12 — Ήχος μετάδοσης" : "LAB 12 — Transmit audio")
+            .setMessage(gr ? "Ο συνομιλητής σου επιβεβαίωσε ότι ΑΚΟΥΓΕ εσένα; "
+                            + "Απάντησε μόνο βάσει πραγματικής συνομιλίας."
+                           : "Did the other person confirm they could HEAR you? "
+                            + "Answer only based on the actual conversation.")
+            .setPositiveButton(gr ? "ΝΑΙ" : "YES", (dialog, which) ->
+                    lab12ReportGuided(Lab12CallEvidence.userReport(
+                            true, true, heardOther, true)))
+            .setNegativeButton(gr ? "ΟΧΙ" : "NO", (dialog, which) ->
+                    lab12ReportGuided(Lab12CallEvidence.userReport(
+                            true, true, heardOther, false)))
+            .setOnCancelListener(dialog -> lab12ReportGuided(
+                    Lab12CallEvidence.Guided.INCONCLUSIVE))
+            .show();
+}
+
+private void lab12ReportGuided(Lab12CallEvidence.Guided outcome) {
+    final boolean gr = AppLang.isGreek(this);
+    lab12DialerPending = false;
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 12 ολοκληρώθηκε." : "Lab 12 finished.");
+    switch (outcome) {
+        case USER_REPORTED_TWO_WAY_AUDIO:
+            logLabelValue(gr ? "Αποτέλεσμα κλήσης (αναφορά χρήστη)"
+                             : "Call result (user report)",
+                    gr ? "Ο χρήστης ανέφερε αμφίδρομο ήχο σε πραγματική κλήση"
+                       : "User reported two-way audio during a real call");
+            logInfo(gr ? "Δεν έγινε αυτόματη επιβεβαίωση κλήσης ή ταυτοποίηση ακουστικού/μικροφώνου."
+                       : "Call execution and specific earpiece/microphone hardware were not independently verified.");
+            break;
+        case USER_REPORTED_ONE_WAY_OR_AUDIO_ISSUE:
+            logLabelWarnValue(gr ? "Αποτέλεσμα κλήσης (αναφορά χρήστη)"
+                                 : "Call result (user report)",
+                    gr ? "Αναφέρθηκε δυσκολία αμφίδρομης επικοινωνίας — όχι αποδεδειγμένη βλάβη συσκευής"
+                       : "Two-way communication problem reported — no confirmed device fault");
+            break;
+        case INCONCLUSIVE:
+            logLabelWarnValue(gr ? "Δοκιμή κλήσης" : "Call check",
+                    gr ? "Ανεπαρκής ή διακοπείσα επιβεβαίωση — ΑΓΝΩΣΤΟ"
+                       : "Incomplete or interrupted confirmation — INCONCLUSIVE");
+            break;
+        default:
+            logLabelValue(gr ? "Δοκιμή πραγματικής κλήσης" : "Actual call test",
+                    gr ? "ΔΕΝ ΠΡΑΓΜΑΤΟΠΟΙΗΘΗΚΕ / ΔΕΝ ΕΠΑΛΗΘΕΥΤΗΚΕ"
+                       : "NOT PERFORMED / NOT VERIFIED");
+    }
+    logInfo(gr ? "Το Lab 12 δεν καταγράφει τηλεφωνική κλήση, ήχο, αριθμούς ή δεδομένα συνομιλίας."
+               : "Lab 12 does not record call events, audio, numbers or conversation content.");
     logLine();
+    enableSingleExportButton();
 }
 
 // ============================================================
-// LAB 13 — Bluetooth Connectivity Check
+// // LAB 13 — Bluetooth Connectivity Check
 // POPUP + WAIT FOR DEVICE + 60s MONITOR + DIAGNOSIS
 // (FINAL — STRUCTURED / NO NESTED METHODS / READY COPY-PASTE)
 // ============================================================
@@ -30671,6 +30826,15 @@ short[] buffer = new short[samples];
 @Override
 protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
+
+    // ACTION_DIAL does not report whether a call was made. Only ask the user.
+    if (requestCode == REQ_LAB12_DIALER) {
+        if (lab12DialerPending) {
+            lab12DialerPending = false;
+            lab12AfterDialerReturn();
+        }
+        return;
+    }
 
 // ============================================================
 // LAB 6 — TOUCH GRID
