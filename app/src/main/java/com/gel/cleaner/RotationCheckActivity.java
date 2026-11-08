@@ -165,7 +165,7 @@ public class RotationCheckActivity extends GELAutoActivityHook
         // Event accuracy is not proof of calibrated physical orientation.
     }
 
-    private int dp(int value) {
+    @Override public int dp(int value) {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 }
