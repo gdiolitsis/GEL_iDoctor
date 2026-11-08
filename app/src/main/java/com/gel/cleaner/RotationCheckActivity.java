@@ -114,6 +114,11 @@ public class RotationCheckActivity extends GELAutoActivityHook
                     ? "Δεν διατίθεται ροή συμβάντων προσανατολισμού."
                     : "Orientation sensor event registration unavailable.");
         }
+        if (orientationSensor == null) {
+            info.setText(AppLang.isGreek(this)
+                    ? "Το Android δεν διαθέτει αισθητήρα βαρύτητας ή επιταχυνσιόμετρο."
+                    : "Android did not expose a gravity sensor or accelerometer.");
+        }
     }
 
     @Override protected void onPause() {
