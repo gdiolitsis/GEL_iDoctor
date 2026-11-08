@@ -12639,6 +12639,8 @@ lab14BatteryBehaviourWarning = false;
 
 // 🔴 CENTRAL DIAGNOSTIC RESET — activates existing helper, prevents stale ghost state
 resetBatteryDiagnostics();
+// Invalidate previous battery evidence before a new run (including cancellation).
+BatteryEvidenceStore.clearLab14(ManualTestsActivity.this);
 
     // --------------------------------------------------
     // 🔴 BASELINE TEMP (IDLE)
@@ -16486,6 +16488,14 @@ p.edit().remove("lab14_health_percent").remove("lab14_health_score")
 getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
         .remove("lab14_health_percent").remove("lab14_health_score")
         .remove("lab14_aging_index").apply();
+
+// One atomic, versioned observation record for Labs 17, 30 and 31.
+boolean lab14EvidenceStored = BatteryEvidenceStore.recordLab14(
+        ManualTestsActivity.this, !partial, validDrain, lab14_systemLimited[0]);
+if (!lab14EvidenceStored) {
+    logWarn(gr ? "Τα διαγνωστικά τεκμήρια δεν αποθηκεύτηκαν."
+            : "Diagnostic evidence could not be stored.");
+}
 
 // ----------------------------------------------------
 // // RUN COUNT
