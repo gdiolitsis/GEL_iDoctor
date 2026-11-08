@@ -50,6 +50,7 @@ def save(label):
         (folder/"ui.xml").write_bytes(ET.tostring(t,encoding="utf-8"))
         (folder/"screen.png").write_bytes(adb("exec-out","screencap","-p",binary=True))
         (folder/"texts.txt").write_text("\n".join(n.get("text","") for n in t.iter("node")),encoding="utf-8")
+        print("UI_TEXT "+label+" "+json.dumps([n.get("text","") for n in t.iter("node") if n.get("text")],ensure_ascii=False)[:6000],flush=True)
     except Exception as e: (folder/"capture-error.txt").write_text(str(e))
     (folder/"activities.txt").write_text(adb("shell","dumpsys","activity","activities"))
     return folder
@@ -59,13 +60,13 @@ def record(name,status,detail="",folder=None):
     print(json.dumps(results[-1],ensure_ascii=False),flush=True)
 def dismiss_intro():
     # Decline optional offers only; no consent to purchases or trial activation.
-    for _ in range(5):
+    for _ in range(8):
         denied=find(lambda n: n.get("resource-id","").endswith("/permission_deny_button"))
-        if denied: tap(denied); continue
-        n=find(textmatch(r"^(Not now|Όχι τώρα|Later|Αργότερα|NOT NOW|ΟΧΙ ΤΩΡΑ)$"))
-        if n: tap(n); continue
+        if denied is not None: tap(denied); continue
+        n=find(textmatch(r"^(Not now|Όχι τώρα|Later|Αργότερα|NOT NOW|ΟΧΙ ΤΩΡΑ|Continue|Συνέχεια|ΣΥΝΕΧΕΙΑ|OK)$"))
+        if n is not None: tap(n); continue
         n=find(textmatch(r"MY ANDROID DEVICE|Η ANDROID ΣΥΣΚΕΥΗ ΜΟΥ|^Android$"))
-        if n: tap(n); continue
+        if n is not None: tap(n); continue
         break
 def home():
     adb("shell","am","force-stop",PKG)
@@ -76,22 +77,22 @@ def select_language():
     home()
     save("before-language")
     n=find(rid("btnLangGR" if lang=="el" else "btnLangEN"),3)
-    if not n: raise RuntimeError("Language selector unavailable")
+    if n is None: raise RuntimeError("Language selector unavailable")
     tap(n); time.sleep(1); dismiss_intro()
     record("language-"+lang,"UI_OPENED",folder=save("language-"+lang))
 def manual():
     home()
     n=find(rid("btnDiagnostics"),12)
-    if not n: raise RuntimeError("Diagnostics entry missing")
+    if n is None: raise RuntimeError("Diagnostics entry missing")
     tap(n)
     n=find(textmatch(r"GEL Android Manual Tests|Χειροκίνητ|Χειροκίν|Manual Tests"),8)
-    if not n: raise RuntimeError("Manual labs entry missing")
+    if n is None: raise RuntimeError("Manual labs entry missing")
     tap(n); time.sleep(.8); dismiss_intro()
 def safe_interaction():
     # Only explicit non-destructive controls. Never choose good/bad hardware answers,
     # send mail, place calls, buy, consume a trial, grant account access or delete data.
     n=find(textmatch(r"^(START|START TEST|BEGIN TEST|RUN CHECK|RUN TEST|ΕΝΑΡΞΗ|ΕΝΑΡΞΗ ΕΛΕΓΧΟΥ|ΞΕΚΙΝΑ|Έναρξη|Έναρξη ελέγχου)$"))
-    if n: tap(n); return True
+    if n is not None: tap(n); return True
     return False
 def outcome(folder):
     text=(folder/"texts.txt").read_text() if (folder/"texts.txt").exists() else ""
@@ -117,7 +118,7 @@ try:
     for target in targets:
         try:
             home(); n=find(rid(target),12)
-            if not n: record(target,"NOT_FOUND"); continue
+            if n is None: record(target,"NOT_FOUND"); continue
             tap(n); time.sleep(2)
             folder=save(target)
             record(target,outcome(folder),folder=folder)
@@ -128,19 +129,19 @@ try:
     for label,pattern in [("contact",r"^Contact$"),("overflow",r"More options|Περισσότερες επιλογές")]:
         home()
         n=find(lambda n: bool(re.search(pattern,n.get("text","")+" "+n.get("content-desc",""),re.I)))
-        if n:
+        if n is not None:
             tap(n); record(label,"UI_OPENED",folder=save(label)); adb("shell","input","keyevent","4")
         else: record(label,"NO_ACCESSIBLE_LABEL")
     # Settings is currently an icon with an empty title; use actual toolbar bounds,
     # not guessed absolute screen coordinates.
     home(); toolbar=find(rid("gelToolbar"))
-    if toolbar:
+    if toolbar is not None:
         candidates=[n for n in toolbar.iter("node") if n.get("clickable")=="true" and visible(n)]
         unnamed=[n for n in candidates if not n.get("text") and not n.get("content-desc")]
         if unnamed:
             tap(unnamed[0]); record("settings","UI_OPENED",folder=save("settings"))
             n=find(textmatch(r"^(Save|Αποθήκευση)$"))
-            if n: tap(n); record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
+            if n is not None: tap(n); record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
         else: record("settings","NO_ACCESSIBLE_LABEL")
     sections=[(1,5),(6,9),(10,13),(14,17),(18,20),(21,24),(25,31)]
     for number in range(1,32):
@@ -149,11 +150,11 @@ try:
             lo,hi=next((a,b) for a,b in sections if a<=number<=b)
             end=30 if lo==25 else hi
             header=find(textmatch(r"Manual Labs\s*"+str(lo)+r"\s*[–—-]\s*"+str(end)),16)
-            if not header:
+            if header is None:
                 record("lab-%02d"%number,"SECTION_NOT_FOUND",folder=save("lab-%02d-section"%number)); continue
             tap(header)
             button=find(textmatch(r"^(?:🔒\s*)?(?:PRO\s*)?"+str(number)+r"\."),12)
-            if not button:
+            if button is None:
                 record("lab-%02d"%number,"LAB_NOT_FOUND",folder=save("lab-%02d-missing"%number)); continue
             tap(button)
             time.sleep(2)
