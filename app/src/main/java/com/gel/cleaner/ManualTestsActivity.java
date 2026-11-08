@@ -15734,8 +15734,8 @@ if (validDrain &&
     mahPerHour > 0f &&
     mahPerHour < 10000f) {   // 🔴 sanity cap
 
-    engine.saveDrainValue(mahPerHour);
-    engine.saveRun();
+    // Recorded after run completion by BatteryEvidenceStore.recordLab14().
+    // No mid-run pseudo-persistence or phantom confidence statistics.
 }
 
 // ----------------------------------------------------
