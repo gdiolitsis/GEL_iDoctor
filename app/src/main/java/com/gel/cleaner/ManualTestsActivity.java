@@ -6336,8 +6336,11 @@ start.setOnClickListener(v -> {
 
         } finally {
 
-            // Restore the originally observed audio mode even on failure.
-            resetAudioAfterLab3(am, lab3OldMode, lab3OldSpeaker, lab3OldMicMute);
+            // onPause already restored audio when the session was cancelled.
+            // A late worker must never override another app's route again.
+            if (!lab3Cancelled && lab3GuidedPending.get()) {
+                resetAudioAfterLab3(am, lab3OldMode, lab3OldSpeaker, lab3OldMicMute);
+            }
 
             final boolean allRequestsAccepted = acceptedPlaybackRequests == 3;
             final int observedRoute = lab3RoutedOutputType;
@@ -7239,7 +7242,8 @@ private void playAnswerCheckWav() {
     }
 
     // Android playback acceptance cannot identify the actual physical output.
-    if (!playbackRequested || isFinishing() || isDestroyed()) {
+    if (!playbackRequested || isFinishing() || isDestroyed()
+            || lab4Cancelled.get() || !lab4GuidedPending.get()) {
         finishLab4Guided();
         runOnUiThread(this::enableSingleExportButton);
         return;
