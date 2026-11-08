@@ -21086,47 +21086,17 @@ synchronized (lab14Lock) {
 startMah[0] = snap0.chargeNowMah;
 
 // ------------------------------------------------
-// 🔴 BASELINE CAPACITY (DYNAMIC, NO HARDCODE)
+// VERIFIED FULL CAPACITY — UNKNOWN UNDER PUBLIC SDK
 // ------------------------------------------------
-if (snap0.chargeFullMah > 1000) {
-
-    lab14bBaselineMah = snap0.chargeFullMah;
-
-} else if (snap0.chargeDesignMah > 1000) {
-
-    lab14bBaselineMah = snap0.chargeDesignMah;
-
-} else {
-
-    int pct = Math.max(1, getBatteryPercentSafe());
-
-    if (snap0.chargeNowMah > 0 && pct > 0) {
-
-        lab14bBaselineMah =
-                (long) (snap0.chargeNowMah / (pct / 100.0f));
-
-    } else {
-
-        lab14bBaselineMah = -1L; // ❗ no fake capacity
-    }
-}
+// Remaining charge divided by SOC is NOT an independent full-charge capacity.
+lab14bBaselineMah = -1L;
+baselineMah[0] = -1L;
+logLabelWarnValue(gr ? "Πλήρης χωρητικότητα" : "Full-charge capacity",
+        gr ? "Δεν επαληθεύεται από δημόσιο Android API"
+           : "Not verifiable from public Android APIs");
 
 // ------------------------------------------------
-// 🔴 VALIDATION (NO HARDCODE DEFAULT)
-// ------------------------------------------------
-if (lab14bBaselineMah < 1000) {
-
-    lab14bBaselineMah = -1L;
-
-    logWarn(
-    gr
-    ? "Η χωρητικότητα της μπαταρίας δεν είναι διαθέσιμη — η εκτίμηση βασίζεται στην πραγματική κατανάλωση"
-    : "Battery capacity not available — estimation based on real usage"
-);
-}
-
-// ------------------------------------------------
-// 🔴 START TEMP (LOCK SOURCE)
+// // 🔴 START TEMP (LOCK SOURCE)
 // ------------------------------------------------
 float tApi = getBatteryTemperature();
 float tSnap = snap0 != null ? snap0.batteryTempC : Float.NaN;
@@ -21463,7 +21433,11 @@ usageHandler.post(usageLoop);
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
     try {
-
+        if (!lab14SessionActive || mySessionId != lab14SessionId || lab14Cancelled) {
+            logWarn(gr ? "Το Lab 14B ακυρώθηκε ή αντικαταστάθηκε"
+                       : "Lab 14B cancelled or superseded");
+            return;
+        }
         stopFastStressSafe();
 
         iDoctorEngine.BatterySnapshot snapEnd =
@@ -21477,6 +21451,8 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
             return;
         }
+        endMah[0] = snapEnd.chargeNowMah;
+        final long measuredElapsedMs = SystemClock.elapsedRealtime() - startTs;
 
 // ------------------------------------------------
 // 🔴 TEMPERATURE (FUSION - FINAL)
@@ -21529,138 +21505,26 @@ logLabelValue("Start Volt", String.valueOf(startVolt[0]));
 logLabelValue("End Volt", String.valueOf(endVolt[0]));
 
 // ------------------------------------------------
-// REAL DRAIN + AUTO SWITCH
+// REAL DISCHARGE DELTA / MONOTONIC DURATION
 // ------------------------------------------------
-long drain = -1L;
-
-boolean hasChargeCounter =
-        startMah[0] > 0 && endMah[0] > 0;
-
-double liveCurrentMa = lab14Current();
-
-boolean fakeCounter = false;
-
-if (hasChargeCounter) {
-
-    drain = Math.max(0L, startMah[0] - endMah[0]);
-
-    // 🔴 πιο safe fake detection
-    if (drain < 1 && Math.abs(liveCurrentMa) > 150) {
-        fakeCounter = true;
-    }
-}
-
-// ------------------------------------------------
-// RESULTS INIT
-// ------------------------------------------------
-float perHour = Float.NaN;
-
-// 🔴 keep only if still needed elsewhere
+// Reject missing/stationary/charging counters; never substitute a heuristic.
+final double observedRate = BatteryDrainEvidence.dischargeMilliAmpHoursPerHour(
+        startMah[0], endMah[0], measuredElapsedMs, snap0.charging, snapEnd.charging);
+boolean fakeCounter = Double.isNaN(observedRate);
+float perHour = fakeCounter ? Float.NaN : (float) observedRate;
+float correctedPerHour = perHour; // historical local name; no arbitrary correction
 float estimatedHours = Float.NaN;
-
-// ------------------------------------------------
-// 🔴 PRIMARY → AVERAGE RATE (REAL DATA)
-// ------------------------------------------------
-if (rateSamples >= 5) { // 🔴 όχι απλά >0
-
-    perHour = (float) (rateSum / rateSamples);
-
+logLabelValue(gr ? "Διάρκεια δείγματος" : "Sample duration",
+        String.format(Locale.US, "%.1f min", measuredElapsedMs / 60000.0d));
+if (fakeCounter) {
+    logLabelWarnValue(gr ? "Ρυθμός εκφόρτισης" : "Discharge rate",
+            gr ? "Μη διαθέσιμος: άγνωστη ή μη έγκυρη μεταβολή φορτίου"
+               : "Unavailable: missing or invalid counter delta");
 } else {
-
-    // ------------------------------------------------
-    // 🔴 FALLBACK → OLD LOGIC
-    // ------------------------------------------------
-    if (baselineMah[0] > 0) {
-
-        if (drain > 0 && !fakeCounter) {
-
-            perHour = (drain / 5f) * 60f;
-
-        } else if (!Double.isNaN(liveCurrentMa) && Math.abs(liveCurrentMa) >= 50d) {
-
-            perHour = (float) Math.abs(liveCurrentMa);
-        }
-    }
-}
-
-// ------------------------------------------------
-// 🔴 SANITY CLAMP (CRITICAL)
-// ------------------------------------------------
-if (!Float.isNaN(perHour)) {
-
-    if (perHour < 50f) perHour = 50f;
-    if (perHour > 5000f) perHour = 5000f; // 🔴 anti-bug spike
-}
-
-// --------------------------------------
-// SPIKES CORRECTION 
-// --------------------------------------
-float correctedPerHour = perHour;
-
-if (lab14SpikeMah > 0.8f && !Float.isNaN(perHour)) {
-
-    float multiplier = 15f;
-    float capPct = 0.25f;
-
-    if (lab14SpikeCount >= 5 ||
-        lab14MaxSpikeExcess > 700f) {
-
-        multiplier = 30f;
-        capPct = 0.40f;
-    }
-
-    float spikePerHour =
-            lab14SpikeMah * multiplier;
-
-    float cap =
-        (!Float.isNaN(perHour))
-        ? perHour * capPct
-        : 0f;
-
-    spikePerHour =
-            Math.min(spikePerHour, cap);
-
-    correctedPerHour =
-            perHour - spikePerHour;
-
-    float minAllowed =
-            perHour * 0.55f;
-
-    if (correctedPerHour < minAllowed) {
-        correctedPerHour = minAllowed;
-    }
-
-    if (correctedPerHour < 50f) {
-        correctedPerHour = perHour;
-    }
-}
-
-logLabelValue(
-    gr
-    ? "Διορθωμένη κατανάλωση"
-    : "Corrected consumption",
-    String.format(
-        Locale.US,
-        "%.0f mAh/h",
-        correctedPerHour
-    )
-);
-
-// ------------------------------------------------
-// FINAL ESTIMATION (NO REDECLARATION)
-// ------------------------------------------------
-if (!Float.isNaN(perHour)
-        && perHour > 0f
-        && baselineMah[0] > 0
-        && !Float.isNaN(correctedPerHour)
-        && correctedPerHour > 0f) {
-
-    estimatedHours =
-            baselineMah[0] / correctedPerHour;
-
-} else {
-
-    estimatedHours = Float.NaN;
+    logLabelValue(gr ? "Μεταβολή φορτίου" : "Charge counter delta",
+            (startMah[0] - endMah[0]) + " mAh");
+    logLabelValue(gr ? "Μέση κατανάλωση στο συγκεκριμένο τεστ" : "Average draw in this test",
+            String.format(Locale.US, "%.1f mAh/h", observedRate));
 }
 
 // ------------------------------------------------
@@ -21796,56 +21660,22 @@ logOk(gr
 logLine();
 
 float finalHours = Float.NaN;
-
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
-
-    if (baselineMah[0] > 1000L) {
-
-        // ✅ REAL CAPACITY
-        finalHours = baselineMah[0] / correctedPerHour;
-
-    } else {
-
-        // 🔴 PURE PHYSICS FALLBACK
-        float screen = getScreenSizeInches();
-        if (screen <= 0f) screen = 6.5f;
-
-        float screenFactor = screen / 6.5f;
-        screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
-
-        float adjustedPerHour = correctedPerHour * screenFactor;
-
-        float pctPerHour = adjustedPerHour / 45f;
-
-        finalHours = 100f / pctPerHour;
-
-        logWarn(gr
-            ? "Χωρητικότητα μη διαθέσιμη — εκτίμηση βάσει κατανάλωσης"
-            : "Capacity unavailable — estimation based on consumption");
-    }
-
-    // 🔴 CRITICAL: pass finalHours downstream
-    estimatedHours = finalHours;
-
-    logLabelValue(
-            gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
-            String.format(
-                    Locale.US,
-                    "%.1f %s",
-                    finalHours,
-                    gr ? "ώρες" : "hours"
-            )
-    );
-
+estimatedHours = Float.NaN;
+logLabelWarnValue(
+        gr ? "Διάρκεια από πλήρη φόρτιση" : "Full-charge duration",
+        gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ: λείπει επαληθευμένη πλήρης χωρητικότητα"
+           : "UNAVAILABLE: verified full-charge capacity missing");
+BatteryEvidence osPrediction = BatteryPublicCollector.collect(
+        ManualTestsActivity.this).get("os_estimated_discharge_time_ms");
+if (osPrediction.isObserved() && osPrediction.value > 0) {
+    logLabelValue(gr ? "Πρόβλεψη υπολοίπου Android" : "Android remaining-time estimate",
+            String.format(Locale.US, "%.1f h (OS estimate)",
+                    osPrediction.value / 3600000.0d));
 } else {
-
-    logWarn(
-            gr
-            ? "Αδυναμία εκτίμησης διάρκειας"
-            : "Unable to estimate duration"
-    );
+    logLabelValue(gr ? "Πρόβλεψη Android" : "Android prediction",
+            gr ? "Μη διαθέσιμη" : "Unavailable");
 }
-                
+
 appendHtml("<br>");
 
 logOk(
@@ -22368,10 +22198,7 @@ promptRestoreNormalMode();
 float safePerHour =
         Float.isNaN(correctedPerHour) ? -1f : correctedPerHour;
 
-float safeEstimated =
-        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0)
-                ? (baselineMah[0] / correctedPerHour)
-                : -1f;
+float safeEstimated = -1f; // full-capacity endurance not measured
 
 float safeLight =
         Float.isNaN(lightRemaining) ? -1f : lightRemaining;
