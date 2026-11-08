@@ -9305,6 +9305,7 @@ private void lab8StartCamera2Session(
                     }
 
                     if (count > 0) {
+                        s.validLumaFrames++;
                         int mean = (int) (sum / count);
                         s.sumLuma += sum;
                         s.sumLuma2 += sum2;
@@ -9385,11 +9386,17 @@ s.cm.openCamera(s.camId, new CameraDevice.StateCallback() {
                                         null,
                                         new Handler(Looper.getMainLooper())
                                 );
+                                s.repeatingRequestStarted = true;
 
                                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                    if (s.terminal || s.cancelled) return;
                                     try {
                                         lab8StopAndReportSample(s, overall);
-                                    } catch (Throwable ignore) {}
+                                        s.samplingComplete = true;
+                                    } catch (RuntimeException e) {
+                                        onFail.run();
+                                        return;
+                                    }
                                     onSamplingDoneEnableButtons.run();
                                 }, 5000);
 
@@ -9645,7 +9652,9 @@ private static class Lab8Cam {
 private static class Lab8Overall {
     int total;
     int previewOkCount;
-    int previewFailCount;
+    int previewFailCount; // user said NO IMAGE; not evidence of broken hardware
+    int previewUnavailableCount;
+    int previewInconclusiveCount;
     int torchOkCount;
     int torchFailCount;
     int streamIssueCount;
@@ -9662,7 +9671,12 @@ private static class Lab8Session {
     ImageReader reader;
 
     long sampleStartMs;
-    long frames;
+    volatile long frames;
+    volatile long validLumaFrames;
+    volatile boolean repeatingRequestStarted;
+    volatile boolean samplingComplete;
+    volatile boolean terminal;
+    volatile boolean cancelled;
     long blackFrames;
     long droppedFrames;
 
