@@ -23841,7 +23841,8 @@ final boolean[] wasCharging = { false };
 final long[] unplugTs = { -1 };
 final String[] dotFrames = { "•", "• •", "• • •" };
 
-final long startMah = snapStart.chargeNowMah;
+// Snapshot at actual charging onset, not dialog open.
+final long[] startMah = { -1L };
 
 ui.post(new Runnable() {
 
@@ -23873,6 +23874,8 @@ if (chargingNow) {
 
         wasCharging[0] = true;
         startTs[0] = now;
+        iDoctorEngine.BatterySnapshot chargeStart = eng.readBatterySnapshotLab();
+        startMah[0] = chargeStart != null ? chargeStart.chargeNowMah : -1L;
 
         lab15batTempStart = getBatteryTemperature();
         lab15batTempPeak  = lab15batTempStart;
@@ -24077,163 +24080,93 @@ if (lab15FlapUnstable) {
 }
 
 // ------------------------------------------------------------
-// CHARGING INPUT & STRENGTH
+// CHARGING COUNTER OBSERVATION — SAME SOURCE AND SESSION
 // ------------------------------------------------------------
-BatteryInfo endInfo = getBatteryInfo();
-
-if (startMah > 0 && endInfo != null &&
-        endInfo.currentChargeMah > startMah && startTs[0] > 0) {
-
-    lab15_strengthKnown = true;
-
-    long deltaMah = lab14DeltaMah;
-long dtMs = Math.max(1, SystemClock.elapsedRealtime() - startTs[0]);
-double minutes = dtMs / 60000.0;
-double mahPerMin = (minutes > 0) ? (lab14DeltaMah / minutes) : -1;
-
-    logLabelOkValue(
-            gr ? "Είσοδος φόρτισης" : "Charging input",
-            String.format(
-                    Locale.US,
-                    gr
-                            ? "+%d mAh σε %.1f λεπτά (%.1f mAh/min)"
-                            : "+%d mAh in %.1f min (%.1f mAh/min)",
-                    lab14DeltaMah,
-                    minutes,
-                    mahPerMin
-            )
-    );
-
-// ------------------------------------------------------------
-// PMIC / CHARGING IC DIAGNOSTIC
-// ------------------------------------------------------------
-if (lab15_strengthKnown && mahPerMin < 1 && !lab15FlapUnstable) {
-
-    logLabelWarnValue(
-            gr ? "Ελεγκτής φόρτισης" : "Charging controller",
-            gr
-                    ? "Πιθανή δυσλειτουργία IC φόρτισης (PMIC)"
-                    : "Possible charging IC / PMIC limitation"
-    );
-}
-
-if (mahPerMin >= 20.0) {
-    logLabelOkValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΙΣΧΥΡΗ" : "STRONG");
-    lab15_strengthWeak = false;
-
-} else if (mahPerMin >= 10.0) {
-    logLabelOkValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΚΑΝΟΝΙΚΗ" : "NORMAL");
-    lab15_strengthWeak = false;
-
-} else if (mahPerMin >= 5.0) {
-    logLabelWarnValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΜΕΤΡΙΑ" : "MODERATE");
-    lab15_strengthWeak = true;
-
+// Net pack charge gain is not charger input power or a PMIC/cable test.
+iDoctorEngine.BatterySnapshot chargeEnd = eng.readBatterySnapshotLab();
+long endMah = chargeEnd != null ? chargeEnd.chargeNowMah : -1L;
+long observedMs = startTs[0] > 0 ? SystemClock.elapsedRealtime() - startTs[0] : -1L;
+long deltaMah = startMah[0] > 0 && endMah > startMah[0] ? endMah - startMah[0] : -1L;
+boolean counterValid = observedMs >= 120000L && deltaMah > 0
+        && deltaMah <= 1000 && !lab15FlapUnstable;
+lab15_strengthKnown = counterValid;
+lab15_strengthWeak = false; // A single charging session cannot validate charge health.
+if (counterValid) {
+    double minutes = observedMs / 60000.0d;
+    logLabelValue(gr ? "Παρατηρημένη αύξηση φορτίου" : "Observed net battery charge gain",
+            String.format(Locale.US, "+%d mAh in %.1f min (%.2f mAh/min)",
+                    deltaMah, minutes, deltaMah / minutes));
 } else {
-    logLabelErrorValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΑΣΘΕΝΗΣ" : "WEAK");
-    lab15_strengthWeak = true;
+    logLabelWarnValue(gr ? "Αύξηση φορτίου" : "Charge-counter delta",
+            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ — μη έγκυρη ή ανεπαρκής παρατήρηση"
+               : "UNAVAILABLE — missing or insufficient observation");
 }
-
-// ------------------------------------------------------------
-// USB PORT / CABLE LOSS DETECTOR
-// ------------------------------------------------------------
-if (lab15_strengthKnown && mahPerMin < 6 && mahPerMin > 1 && !lab15OverTempDuringCharge) {
-
-    logLabelWarnValue(
-            gr ? "Θύρα φόρτισης" : "Charging port",
-            gr
-                    ? "Πιθανή απώλεια ισχύος (καλώδιο / θύρα USB)"
-                    : "Possible power loss (cable / USB port)"
-    );
-}
-
+BatteryEvidence osChargeTime = BatteryPublicCollector.collect(
+        ManualTestsActivity.this).get("os_estimated_charge_time_ms");
+if (osChargeTime.isObserved() && osChargeTime.value >= 0) {
+    logLabelValue(gr ? "Εκτίμηση χρόνου φόρτισης Android" : "Android charge-time estimate",
+            String.format(Locale.US, "%.1f min (OS estimate)",
+                    osChargeTime.value / 60000.0d));
 } else {
-
-    lab15_strengthKnown = false;
-    lab15_strengthWeak  = true;
-
-    logLabelWarnValue(
-            gr ? "Ισχύς φόρτισης" : "Charging strength",
-            gr
-                    ? "Δεν ήταν δυνατή η αξιόπιστη εκτίμηση"
-                    : "Unable to estimate accurately"
-    );
+    logLabelValue(gr ? "Εκτίμηση Android" : "Android charge-time prediction",
+            gr ? "Δεν είναι διαθέσιμη" : "Unavailable");
 }
+logLabelWarnValue(gr ? "Περιορισμός" : "Limit",
+        gr ? "Η καθαρή μεταβολή φορτίου δεν αποδεικνύει βλάβη καλωδίου, "
+               + "θύρας φόρτισης ή PMIC."
+           : "Net battery charge gain does not establish cable, port or PMIC failure.");
 
 // ------------------------------------------------------------
-// FINAL LAB 15 DECISION
+// // LAB 15 VERDICT — ONLY OBSERVED EVENTS
 // ------------------------------------------------------------
-
 appendHtml("<br>");
-logInfo(gr ? "Απόφαση LAB:" : "LAB decision:");
-logLine();
-
-if (!lab15OverTempDuringCharge && !lab15FlapUnstable && !lab15_strengthWeak) {
-
-    logLabelOkValue(
-            gr ? "Σύστημα φόρτισης" : "Charging system",
-            gr
-                    ? "OK — δεν απαιτείται καθαρισμός ή αντικατάσταση"
-                    : "OK — no cleaning or replacement required"
-    );
-
-    logLabelOkValue(gr ? "Σταθερότητα" : "Stability", "OK");
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Σύστημα φόρτισης" : "Charging system",
-            gr
-                    ? "Εντοπίστηκαν πιθανά ζητήματα"
-                    : "Potential issues detected"
-    );
-
-    logLabelWarnValue(
-            gr ? "Σύσταση" : "Recommendation",
-            gr
-                    ? "Συνιστάται περαιτέρω έλεγχος ή επανάληψη δοκιμής"
-                    : "Further inspection or repeat test recommended"
-    );
+logInfo(gr ? "Τεκμηριωμένα ευρήματα φόρτισης" : "Observed charging findings");
+if (lab15FlapUnstable) {
+    logLabelWarnValue(gr ? "Σύνδεση" : "Connection",
+            gr ? "Καταγράφηκε διακοπή κατά τη φόρτιση"
+               : "Charging interruption observed");
 }
-
-// ------------------------------------------------------------
-// SUMMARY FLAG
-// ------------------------------------------------------------
-boolean chargingGlitchDetected =
-        lab15FlapUnstable ||
-        lab15OverTempDuringCharge ||
-        lab15_strengthWeak ||
-        lab15_systemLimited;
-
-GELServiceLog.info(
-        "SUMMARY: CHARGING_STABILITY=" +
-                (chargingGlitchDetected ? "UNSTABLE" : "STABLE")
-);
-
+if (lab15OverTempDuringCharge) {
+    logLabelWarnValue(gr ? "Θερμοκρασία" : "Temperature",
+            gr ? "Αναφέρθηκε υψηλή θερμοκρασία κατά τη φόρτιση"
+               : "Elevated temperature observed while charging");
+}
+if (!lab15FlapUnstable && !lab15OverTempDuringCharge && counterValid) {
+    logLabelValue(gr ? "Εκτέλεση δοκιμής" : "Test outcome",
+            gr ? "Καταγράφηκε καθαρή αύξηση φορτίου χωρίς συμβάν των ελεγχόμενων τύπων"
+               : "Net charge gain observed without the monitored event types");
+} else if (!lab15FlapUnstable && !lab15OverTempDuringCharge) {
+    logLabelWarnValue(gr ? "Εκτέλεση δοκιμής" : "Test outcome",
+            gr ? "ΑΝΕΠΑΡΚΗ ΣΤΟΙΧΕΙΑ" : "INSUFFICIENT EVIDENCE");
+}
+logLabelWarnValue(gr ? "Τεχνικό συμπέρασμα" : "Diagnostic limit",
+        gr ? "Απαιτείται ξεχωριστός έλεγχος φορτιστή/καλωδίου/θύρας/PMIC"
+           : "Separate charger/cable/port/PMIC testing is required");
+GELServiceLog.info("SUMMARY: CHARGING_OBSERVATION="
+        + (lab15FlapUnstable ? "INTERRUPTED"
+                : counterValid ? "NET_CHARGE_GAIN_OBSERVED" : "UNKNOWN"));
 appendHtml("<br>");
-logOk(gr ? "Το Lab 15 ολοκληρώθηκε." : "Lab 15 finished.");
-logLine();
+logOk(gr ? "Το Lab 15 ολοκληρώθηκε με περιορισμούς."
+         : "Lab 15 finished with stated limitations.");
 
 // ------------------------------------------------------------
-// STORE RESULT FOR LAB 17 (LAB 15 OUTPUT)
+// // STORE RESULT FOR LAB 17 (LAB 15 OUTPUT)
 // ------------------------------------------------------------
 try {
 
-    int chargeScore = 100;
-
-    if (lab15_strengthWeak)          chargeScore -= 25;
-    if (lab15FlapUnstable)           chargeScore -= 25;
-    if (lab15OverTempDuringCharge)   chargeScore -= 25;
-
-    chargeScore = Math.max(0, Math.min(100, chargeScore));
+    int chargeScore = -1; // A universal health percent is unsupported.
 
     p.edit()
+            .putInt("lab15_evidence_schema", 1)
+            .putBoolean("lab15_counter_delta_valid", counterValid)
+            .putLong("lab15_observed_delta_mah", counterValid ? deltaMah : -1L)
+            .putLong("lab15_observed_duration_ms", observedMs)
             .putInt("lab15_charge_score", chargeScore)
             .putBoolean("lab15_system_limited", lab15_systemLimited)
             .putBoolean("lab15_overtemp", lab15OverTempDuringCharge)
             .putString(
                     "lab15_strength_label",
-                    lab15_strengthWeak ? "WEAK" : "NORMAL/STRONG"
+                    counterValid ? "OBSERVED_CHARGE_GAIN" : "UNKNOWN"
             )
             .putLong("lab15_ts", System.currentTimeMillis())
             .apply();
