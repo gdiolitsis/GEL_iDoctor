@@ -1644,8 +1644,8 @@ logScroll.post(() -> setLogPanelState(0));
             this::lab28HardwareStability));
 
     body7.addView(makeTestButton(
-            gr ? "29. Έλεγχος Γνησιότητας Συσκευής & Ανταλλακτικών\nΠιθανή Αντικατάσταση Μερών"
-               : "29. Device Authenticity & Parts Verification\nPossible Non-OEM Components",
+            gr ? "29. Παρατηρήσεις Hardware\nΗ γνησιότητα απαιτεί εξωτερικό έλεγχο"
+               : "29. Hardware Observations\nOEM origin requires external verification",
             this::lab29DeviceAuthenticity));
 
     body7.addView(makeTestButton(
@@ -30493,8 +30493,8 @@ private void lab29DeviceAuthenticity() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 29 — Έλεγχος Γνησιότητας Συσκευής & Ακεραιότητας"
-            : "LAB 29 — Device Authenticity & Integrity");
+            ? "LAB 29 — Παρατηρήσεις Hardware (όχι πιστοποίηση γνησιότητας)"
+            : "LAB 29 — Hardware observations (not OEM certification)");
     logInfo(gr
         ? "SAFE MODE — εμφανίζονται μόνο επιβεβαιωμένα ευρήματα"
         : "SAFE MODE — only confirmed findings are reported");
@@ -30513,7 +30513,7 @@ if (!isDeviceRooted()) {
     );
 }
 
-    int authenticityScore = 100;
+    // Android platform observations do not authenticate OEM replacement parts.
 
     // ============================================================
     // BATTERY
@@ -30537,8 +30537,6 @@ if (!isDeviceRooted()) {
                         ? "Ασυνήθιστες τιμές μέτρησης"
                         : "Abnormal measurement values"
         );
-
-        authenticityScore -= 10;
 
     } else {
 
@@ -30574,8 +30572,6 @@ if (!isDeviceRooted()) {
                         : "Unusual refresh rate"
         );
 
-        authenticityScore -= 5;
-
     } else {
 
         logLabelOkValue(
@@ -30608,8 +30604,6 @@ if (!isDeviceRooted()) {
                         ? "Δεν εντοπίστηκε"
                         : "Not detected"
         );
-
-        authenticityScore -= 20;
 
     } else {
 
@@ -30712,8 +30706,6 @@ if (!isDeviceRooted()) {
                         : "Unusual value"
         );
 
-        authenticityScore -= 5;
-
     } else {
 
         logLabelOkValue(
@@ -30771,46 +30763,30 @@ if (lab14CollapseRisk || lab14SwellingSuspected)
     appendHtml("<br>");
     logLine();
 
-    if (authenticityScore < 0)
-        authenticityScore = 0;
-        
 // ============================================================
 // SAVE LAB 29 RESULTS — SINGLE SOURCE FOR LAB 30 / LAB 31
 // ============================================================
 boolean instabilityDetected = instabilityScore >= 20;
 
 p.edit()
-        .putInt("lab29_authenticity_score", authenticityScore)
+
+        .remove("lab29_authenticity_score")
+        .putBoolean("lab29_provenance_unverified", true)
         .putInt("lab29_instability_score", instabilityScore)
         .putBoolean("lab29_instability_pattern", instabilityDetected)
         .putLong("lab29_ts", System.currentTimeMillis())
         .apply();
 
-String level;
-
-if (authenticityScore >= 90)
-    level = gr ? "ΥΨΗΛΗ" : "HIGH";
-else if (authenticityScore >= 70)
-    level = gr ? "ΜΕΤΡΙΑ" : "MEDIUM";
-else
-    level = gr ? "ΧΑΜΗΛΗ" : "LOW";
-
-    if (authenticityScore >= 70) {
-
-        logLabelOkValue(
-                gr ? "Γνησιότητα"
-                        : "Authenticity",
-                authenticityScore + "/100 (" + level + ")"
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Γνησιότητα"
-                        : "Authenticity",
-                authenticityScore + "/100 (" + level + ")"
-        );
-    }
+logLabelWarnValue(
+        gr ? "Γνησιότητα ανταλλακτικών" : "Replacement part authenticity",
+        gr ? "ΔΕΝ ΕΠΑΛΗΘΕΥΕΤΑΙ από ενδείξεις Android. Απαιτείται τεκμηρίωση OEM ή φυσική επιθεώρηση."
+           : "NOT VERIFIABLE from Android readings. OEM documentation or physical inspection required."
+);
+logLabelValue(
+        gr ? "Εύρος ελέγχου" : "Assessment scope",
+        gr ? "Διατίθενται μόνο παρατηρήσεις hardware και ενδείξεις αστάθειας."
+           : "Hardware observations and instability indicators only."
+);
 
     appendHtml("<br>");
     logOk(gr
@@ -31047,8 +31023,8 @@ String privacyFlag = colorFlagFromScore(privacyScore);
 // 9) AUTHENTICITY / REPAIR INDICATORS (LAB 29)
 // ------------------------------------------------------------
 
-int lab29AuthenticityScore =
-        p.getInt("lab29_authenticity_score", -1);
+boolean lab29ObservationsAvailable =
+        p.getBoolean("lab29_provenance_unverified", false);
 
 int lab29InstabilityScore =
         p.getInt("lab29_instability_score", 0);
@@ -31062,58 +31038,22 @@ logInfo(gr
         : "Device authenticity / integrity");
 logLine();
 
-if (lab29AuthenticityScore >= 0) {
-
-    if (lab29AuthenticityScore >= 90) {
-
-        logLabelOkValue(
-                gr ? "Γνησιότητα" : "Authenticity",
-                lab29AuthenticityScore + "/100"
-        );
-
-        logLabelOkValue(
-                gr ? "Κατάσταση" : "Status",
-                gr
-                        ? "Δεν εντοπίστηκαν επιβεβαιωμένες ανωμαλίες"
-                        : "No confirmed integrity anomalies detected"
-        );
-
-    } else if (lab29AuthenticityScore >= 70) {
-
-        logLabelWarnValue(
-                gr ? "Γνησιότητα" : "Authenticity",
-                lab29AuthenticityScore + "/100"
-        );
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
-                gr
-                        ? "Εντοπίστηκαν αποκλίσεις που χρειάζονται επανέλεγχο"
-                        : "Deviations detected — verification recommended"
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Γνησιότητα" : "Authenticity",
-                lab29AuthenticityScore + "/100"
-        );
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
-                gr
-                        ? "Εντοπίστηκαν σημαντικές αποκλίσεις ακεραιότητας"
-                        : "Significant integrity deviations detected"
-        );
-    }
-
-} else {
-
+if (lab29ObservationsAvailable) {
     logLabelWarnValue(
-            gr ? "Γνησιότητα" : "Authenticity",
-            gr
-                    ? "Δεν υπάρχουν δεδομένα από το LAB 29"
-                    : "No LAB 29 data available"
+            gr ? "Γνησιότητα εξαρτημάτων" : "Component authenticity",
+            gr ? "ΔΕΝ ΕΠΑΛΗΘΕΥΕΤΑΙ από διαθέσιμα σήματα Android"
+               : "NOT VERIFIABLE from available Android signals"
+    );
+    logLabelValue(
+            gr ? "Στοιχεία Lab 29" : "Lab 29 observations",
+            gr ? "Παρατηρήσεις διαθέσιμες· η προέλευση OEM απαιτεί ανεξάρτητο έλεγχο"
+               : "Observations available; OEM origin requires independent verification"
+    );
+} else {
+    logLabelWarnValue(
+            gr ? "Στοιχεία Lab 29" : "Lab 29 observations",
+            gr ? "Δεν υπάρχουν αποτελέσματα νέας μορφής· εκτελέστε το Lab 29"
+               : "No current-format findings; run Lab 29"
     );
 }
 
