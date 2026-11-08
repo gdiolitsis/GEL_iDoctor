@@ -1125,6 +1125,7 @@ private boolean oldKeepScreenOn = false;
     private final AtomicBoolean lab12AudioBusy = new AtomicBoolean(false);
     private final AtomicBoolean lab5VibrationPending = new AtomicBoolean(false);
     private final AtomicBoolean lab3GuidedPending = new AtomicBoolean(false);
+    private final AtomicBoolean lab4GuidedPending = new AtomicBoolean(false);
 
     // ============================================================
     // SERVICE LOG SESSION FLAG (CRITICAL)
@@ -6330,10 +6331,19 @@ new Handler(Looper.getMainLooper()).postDelayed(() -> {
    ============================================================ */
 
 private void lab4MicManual() {
-
     if (!guardMic(this::lab4MicManual)) return;
-    
-    lab4MicBase(() -> lab4MicPro());
+    if (!lab4GuidedPending.compareAndSet(false, true)) {
+        logWarn(AppLang.isGreek(this) ? "Έλεγχος μικροφώνου ήδη σε εξέλιξη."
+                                     : "Microphone check already in progress.");
+        return;
+    }
+    runOnUiThread(() -> {
+        if (btnExport != null) {
+            btnExport.setEnabled(false);
+            btnExport.setAlpha(0.5f);
+        }
+    });
+    lab4MicBase(this::lab4MicPro);
 }
 
 private void lab4MicBase(Runnable onFinished) {
@@ -6667,7 +6677,7 @@ while (!started.get() && !cancelled.get()
 }
 
 if (cancelled.get() || !started.get()) {
-
+    lab4GuidedPending.set(false);
     appendHtml("<br>");
 
     logWarn(gr
@@ -6689,6 +6699,7 @@ logLabelValue(gr ? "Δείγματα ζωντανής διαδρομής" : "Voi
                 + loopEvidence.bytesWritten + " written bytes; "
                 + loopEvidence.elapsedMs + " ms");
 if (!loopEvidence.attempted || cancelled.get()) {
+    lab4GuidedPending.set(false);
     logLabelWarnValue(gr ? "Αποτέλεσμα διαδρομής" : "Audio path result",
             gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ — δεν εκτελέστηκε επαρκής ακουστική επανάληψη: "
                     + loopEvidence.reason
@@ -6848,7 +6859,11 @@ while (!answered.get() && !cancelled.get()) {
     SystemClock.sleep(80);
 }
 
-if (cancelled.get()) return;
+if (cancelled.get() || isFinishing() || isDestroyed()) {
+    lab4GuidedPending.set(false);
+    runOnUiThread(this::enableSingleExportButton);
+    return;
+}
 
 // -----------------------------------------
 // UI STABILIZATION BEFORE STAGE 2
@@ -7008,16 +7023,25 @@ runOnUiThread(() -> {
                     } catch (Throwable ignore) {}
                 });
 
+                if (isFinishing() || isDestroyed()) {
+                    lab4GuidedPending.set(false);
+                    return;
+                }
                 routeToCallEarpiece();
                 playAnswerCheckWav();
 
             }).start();
 
         }, 500);
+    } else {
+        lab4GuidedPending.set(false);
+        enableSingleExportButton();
     }
 });
 
         } catch (Throwable t) {
+            lab4GuidedPending.set(false);
+            runOnUiThread(this::enableSingleExportButton);
 
             appendHtml("<br>");
 
@@ -7065,71 +7089,64 @@ runOnUiThread(() -> {
 // 🎵 PLAY VOICE WAV — AUTO LANGUAGE (EARPIECE ONLY • LOCKED)
 // ============================================================
 private void playAnswerCheckWav() {
+    final boolean gr = AppLang.isGreek(this);
+    if (isFinishing() || isDestroyed()) {
+        lab4GuidedPending.set(false);
+        return;
+    }
 
-    // 👂 FORCE CALL PATH → EARPICE
     AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
     if (am != null) {
-        try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-        try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-        try { am.setSpeakerphoneOn(false); } catch (Throwable ignore) {}
-        try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
-        try { am.setMode(AudioManager.MODE_IN_COMMUNICATION); } catch (Throwable ignore) {}
+        try { am.stopBluetoothSco(); } catch (RuntimeException ignored) {}
+        try { am.setBluetoothScoOn(false); } catch (RuntimeException ignored) {}
+        try { am.setSpeakerphoneOn(false); } catch (RuntimeException ignored) {}
+        try { am.setMode(AudioManager.MODE_IN_COMMUNICATION); }
+        catch (RuntimeException ignored) {}
     }
 
-    SystemClock.sleep(150);
-
-    // 🌍 AUTO LANGUAGE
-    final boolean gr = AppLang.isGreek(this);
-    final int resId = gr ? R.raw.answercheck_el : R.raw.answercheck_en;
-
-    MediaPlayer mp = new MediaPlayer();
-
+    MediaPlayer mp = null;
+    boolean playbackRequested = false;
     try {
-        AssetFileDescriptor afd =
-                getResources().openRawResourceFd(resId);
-        if (afd == null) return;
-
-        mp.setDataSource(
-                afd.getFileDescriptor(),
-                afd.getStartOffset(),
-                afd.getLength()
-        );
-        afd.close();
-
-        // 🔒 CRITICAL: VOICE_CALL → EARPICE (ΟΧΙ MUSIC)
+        int resId = gr ? R.raw.answercheck_el : R.raw.answercheck_en;
+        mp = new MediaPlayer();
+        try (AssetFileDescriptor afd = getResources().openRawResourceFd(resId)) {
+            if (afd == null) throw new IllegalStateException("Sample audio unavailable");
+            mp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+        }
         mp.setAudioStreamType(AudioManager.STREAM_VOICE_CALL);
-
         mp.prepare();
         mp.start();
-
-        int dur = 0;
-        try { dur = mp.getDuration(); } catch (Throwable ignore) {}
-        SystemClock.sleep(dur > 0 ? dur : 1800);
-
-    } catch (Throwable ignore) {
-
+        if (!mp.isPlaying()) throw new IllegalStateException("Audio playback did not start");
+        playbackRequested = true;
+        int durationMs = mp.getDuration();
+        SystemClock.sleep(durationMs > 0 && durationMs <= 15000 ? durationMs : 1800);
+    } catch (Exception ex) {
+        logLabelWarnValue(gr ? "Δείγμα ακουστικού" : "Earpiece sample",
+                (gr ? "Μη διαθέσιμη αναπαραγωγή: " : "Playback unavailable: ")
+                        + ex.getClass().getSimpleName());
     } finally {
-        try { mp.stop(); } catch (Throwable ignore) {}
-        try { mp.release(); } catch (Throwable ignore) {}
+        if (mp != null) {
+            try { mp.stop(); } catch (RuntimeException ignored) {}
+            try { mp.release(); } catch (RuntimeException ignored) {}
+        }
     }
 
-    // ❗ ΔΕΝ αλλάζουμε route εδώ
-    // συνεχίζουμε με confirmation
-    AppTTS.stop();
-
-showAnswerCheckConfirmation(() -> {
-
-    lab4ResultEarpiece();
-
-});
+    // Android playback acceptance cannot identify the actual physical output.
+    if (!playbackRequested || isFinishing() || isDestroyed()) {
+        lab4GuidedPending.set(false);
+        runOnUiThread(this::enableSingleExportButton);
+        return;
+    }
+    showAnswerCheckConfirmation(this::lab4ResultEarpiece);
 }
 
 // ============================================================
-// STAGE 4 — HUMAN CONFIRMATION (FINAL • COMPILE SAFE)
+// STAGE 4 — USER-REPORTED EARPIECE AUDIBILITY
 // ============================================================
 private void showAnswerCheckConfirmation(Runnable onAnswered) {
-
     final boolean gr = AppLang.isGreek(this);
+    lastAnswerHeardClearly = false;
+    final AtomicBoolean answerProvided = new AtomicBoolean(false);
 
     // 🔊 Speaker mode
     AudioManager am =
@@ -7230,12 +7247,23 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
 
         d.setOnDismissListener(dialog -> {
             try { AppTTS.stop(); } catch (Throwable ignore) {}
+            if (!answerProvided.get()) {
+                lab4GuidedPending.set(false);
+                enableSingleExportButton();
+                logLabelWarnValue(gr ? "Αποτέλεσμα ακουστικού" : "Earpiece result",
+                        gr ? "ΑΚΥΡΩΘΗΚΕ — καμία απάντηση χρήστη"
+                           : "CANCELLED — no user response");
+            }
         });
 
         if (!isFinishing() && !isDestroyed()) {
-    d.show();
-    com.gel.cleaner.GelButtonLayout.fitDialog(d);
-}
+            d.show();
+            com.gel.cleaner.GelButtonLayout.fitDialog(d);
+        } else {
+            lab4GuidedPending.set(false);
+            enableSingleExportButton();
+            return;
+        }
 
 // 🔊 TTS (safe)
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -7259,6 +7287,7 @@ noBtn.setOnClickListener(v -> {
 
     if (!d.isShowing()) return;
 
+    answerProvided.set(true);
     lastAnswerHeardClearly = false;
 
     try { AppTTS.stop(); } catch (Throwable ignore) {}
@@ -7275,6 +7304,7 @@ yesBtn.setOnClickListener(v -> {
 
     if (!d.isShowing()) return;
 
+    answerProvided.set(true);
     lastAnswerHeardClearly = true;
 
     try { AppTTS.stop(); } catch (Throwable ignore) {}
@@ -7303,8 +7333,8 @@ private void lab4ResultEarpiece() {
         logLabelOkValue(
                 gr ? "Αποτέλεσμα" : "Result",
                 gr
-                        ? "Σύμφωνα με τη δήλωση χρήστη, το ακουστικό αποδίδει καθαρό ήχο."
-                        : "According to the user's declaration, the earpiece delivers clear audio."
+                        ? "USER_REPORTED: ακούστηκε ήχος στη διαδρομή επικοινωνίας· η φυσική έξοδος δεν ταυτοποιήθηκε."
+                        : "USER_REPORTED: audio heard on communication route; physical output unverified."
         );
 
     } else {
@@ -7324,6 +7354,7 @@ private void lab4ResultEarpiece() {
              : "Lab 4 finished.");
     logLine();
 
+    lab4GuidedPending.set(false);
     runOnUiThread(this::enableSingleExportButton);
 }
 
@@ -30425,7 +30456,7 @@ private void enableSingleExportButton() {
     ui.post(() -> {
         if (btnExport == null) return;
         if (lab12AudioBusy.get() || lab5VibrationPending.get()
-                || lab3GuidedPending.get()) {
+                || lab3GuidedPending.get() || lab4GuidedPending.get()) {
             // Other callbacks cannot export an incomplete guided sample.
             btnExport.setEnabled(false);
             btnExport.setAlpha(0.5f);
