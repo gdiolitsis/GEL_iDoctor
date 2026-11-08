@@ -683,6 +683,7 @@ private boolean oldKeepScreenOn = false;
     // ============================================================
     private ArrayList<Lab8Cam> lab8CamsFor81 = null;
     private CameraManager lab8CmFor81 = null;
+private AlertDialog lab8ActiveDialog = null;
     private final Map<String, Integer> lab8CameraLogAnchors = new HashMap<>();
 
     // ============================================================
@@ -2375,6 +2376,13 @@ protected void onPause() {
         AlertDialog dialog = lab4ActiveDialog;
         lab4ActiveDialog = null;
         if (dialog != null && dialog.isShowing()) dialog.dismiss();
+    } catch (RuntimeException ignored) {}
+
+    // Camera2 guided preview cannot be certified by an answer on resume.
+    try {
+        AlertDialog cameraDialog = lab8ActiveDialog;
+        lab8ActiveDialog = null;
+        if (cameraDialog != null && cameraDialog.isShowing()) cameraDialog.dismiss();
     } catch (RuntimeException ignored) {}
 
     // =========================
@@ -9112,9 +9120,12 @@ if (d.getWindow() != null) {
     );
 }
 
+// Keep the active preview separately so backgrounding can invalidate it.
+lab8ActiveDialog = d;
 // Σταμάτα TTS ΟΠΟΤΕ κλείσει
 d.setOnDismissListener(dialog -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
+    if (lab8ActiveDialog == d) lab8ActiveDialog = null;
     Lab8Session abandoned = cam.runtimeSession;
     if (abandoned != null && !abandoned.terminal) {
         // BACK, background or dismiss cannot leave an orphaned Camera2 resource.
@@ -9208,6 +9219,14 @@ cam.runtimeSession = s;
         lab8FinalizePreviewOutcome(s, overall);
         finishAndNext.run();
     });
+
+    // A missing surface/slow OEM callback must not leave this dialog alive
+    // indefinitely. Timeout is test unavailability, not hardware failure.
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        if (!finished.get() && !s.samplingComplete && !s.terminal) {
+            failAndNext.run();
+        }
+    }, 20000);
 
     // Start camera when texture is ready
     if (tv.isAvailable()) {
@@ -9349,6 +9368,10 @@ s.cm.openCamera(s.camId, new CameraDevice.StateCallback() {
 
     @Override
     public void onOpened(CameraDevice camera) {
+        if (s.cancelled || s.terminal) {
+            try { camera.close(); } catch (RuntimeException ignored) {}
+            return;
+        }
         s.device = camera;
 
         try {
@@ -9362,6 +9385,10 @@ s.cm.openCamera(s.camId, new CameraDevice.StateCallback() {
 
                         @Override
                         public void onConfigured(CameraCaptureSession session) {
+                            if (s.cancelled || s.terminal) {
+                                try { session.close(); } catch (RuntimeException ignored) {}
+                                return;
+                            }
                             s.session = session;
 
                             try {
