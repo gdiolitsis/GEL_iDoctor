@@ -28452,6 +28452,60 @@ private void lab25CrashHistory() {
                 gr ? "Μη διαθέσιμα δεδομένα." : "Data unavailable.");
     }
 
+    // Android API 30+: reliable *own-package* historical process-exit reasons.
+    // This is not an all-app, system/kernel or hardware-failure history.
+    if (Build.VERSION.SDK_INT >= 30) {
+        try {
+            ActivityManager ownManager =
+                    (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+            List<android.app.ApplicationExitInfo> exits = ownManager == null
+                    ? null : ownManager.getHistoricalProcessExitReasons(
+                            getPackageName(), 0, 32);
+            if (exits != null) {
+                int appJavaCrashes = 0, appNativeCrashes = 0;
+                int appAnrs = 0, appLowMemory = 0;
+                for (android.app.ApplicationExitInfo exit : exits) {
+                    if (exit == null) continue;
+                    switch (exit.getReason()) {
+                        case android.app.ApplicationExitInfo.REASON_CRASH:
+                            appJavaCrashes++;
+                            break;
+                        case android.app.ApplicationExitInfo.REASON_CRASH_NATIVE:
+                            appNativeCrashes++;
+                            break;
+                        case android.app.ApplicationExitInfo.REASON_ANR:
+                            appAnrs++;
+                            break;
+                        case android.app.ApplicationExitInfo.REASON_LOW_MEMORY:
+                            appLowMemory++;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                logLabelValue(gr ? "Ιστορικό τερματισμών iDoctor" : "iDoctor exits retained",
+                        exits.size() + (gr ? " εγγραφές (όριο 32)" : " records (max 32)"));
+                logLabelValue(gr ? "Java / native crash (iDoctor)" : "Java / native crashes (iDoctor)",
+                        appJavaCrashes + " / " + appNativeCrashes);
+                logLabelValue(gr ? "ANR / χαμηλή μνήμη (iDoctor)" : "ANR / low-memory exits (iDoctor)",
+                        appAnrs + " / " + appLowMemory);
+                logLabelWarnValue(gr ? "Περιορισμός ιστορικού" : "History limitation",
+                        gr ? "Μόνο πρόσφατοι καταγεγραμμένοι τερματισμοί της εφαρμογής, όχι όλης της συσκευής."
+                           : "Only retained process exits of this app, not all-device history.");
+            } else {
+                logLabelWarnValue(gr ? "Ιστορικό iDoctor" : "iDoctor process exit history",
+                        gr ? "Μη διαθέσιμο" : "Unavailable");
+            }
+        } catch (RuntimeException ignored) {
+            logLabelWarnValue(gr ? "Ιστορικό iDoctor" : "iDoctor process exit history",
+                    gr ? "Πρόσβαση μη διαθέσιμη" : "Access unavailable");
+        }
+    } else {
+        logLabelValue(gr ? "Ιστορικό τερματισμών εφαρμογής" : "App process exit history",
+                gr ? "Απαιτεί Android 11 (API 30) ή νεότερο."
+                   : "Requires Android 11 (API 30) or later.");
+    }
+
     String[] tags = {"system_app_crash", "data_app_crash", "system_app_anr",
             "data_app_anr", "system_server_crash", "system_server_wtf", "system_server_anr"};
     GelCrashCoverage coverage = new GelCrashCoverage(tags.length);
