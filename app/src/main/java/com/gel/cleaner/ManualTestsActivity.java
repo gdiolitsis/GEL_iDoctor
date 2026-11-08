@@ -25866,296 +25866,68 @@ logLine();
 // ============================================================
 
 private void lab23DeveloperOptionsRisk() {
-	
-	final boolean gr = AppLang.isGreek(this);
-	
-	appendHtml("<br>");
+    final boolean gr = AppLang.isGreek(this);
+    appendHtml("<br>");
     logLine();
-    logInfo(gr 
-            ? "LAB 23 — Κίνδυνος από επιλογές Προγραμματιστή"
-            : "LAB 22 — Developer Options Risk");
+    logInfo(gr ? "LAB 23 — Παρατηρήσεις debugging & επιλογών προγραμματιστή"
+               : "LAB 23 — Developer and debugging evidence");
     logLine();
 
-    int risk = 0;
-    boolean usbDebug = false;
+    // Android's documented Settings.Global.ADB_ENABLED and
+    // DEVELOPMENT_SETTINGS_ENABLED report 0 to ordinary third-party apps.
+    // 0 MUST NOT be used to claim device debugging is off.
+    logLabelWarnValue(gr ? "USB debugging ολόκληρης συσκευής"
+                         : "Device-wide USB debugging",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΣΙΜΟ: η ανάγνωση ADB_ENABLED περιορίζεται από το Android"
+               : "UNVERIFIABLE: Android restricts ADB_ENABLED for third-party apps");
+    logLabelWarnValue(gr ? "Επιλογές προγραμματιστή"
+                         : "Developer options",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΣΙΜΕΣ από το DEVELOPMENT_SETTINGS_ENABLED τρίτων εφαρμογών"
+               : "UNVERIFIABLE via third-party DEVELOPMENT_SETTINGS_ENABLED");
+    logLabelWarnValue(gr ? "Wireless ADB / pairing"
+                         : "Wireless ADB / pairing",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΣΙΜΟ: localhost TCP θύρες δεν πιστοποιούν απομακρυσμένο ADB"
+               : "UNVERIFIABLE: open localhost TCP ports cannot establish wireless ADB");
 
-    try {
-        int adb = Settings.Global.getInt(
-                getContentResolver(),
-                Settings.Global.ADB_ENABLED,
-                0
-        );
-        usbDebug = (adb == 1);
+    // A direct, restricted signal that we CAN inspect is our OWN application
+    // process and APK flag. This is not a device compromise assessment.
+    boolean ownAppDebuggable =
+            (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+    boolean currentProcessDebugged = android.os.Debug.isDebuggerConnected();
+    boolean waitingForDebugger = android.os.Debug.waitingForDebugger();
+    logLabelValue(gr ? "Build του GEL iDoctor" : "GEL iDoctor build",
+            ownAppDebuggable ? "DEBUGGABLE application" : "NON-DEBUGGABLE application");
+    logLabelValue(gr ? "Debugger στο iDoctor αυτή τη στιγμή"
+                     : "Debugger attached to iDoctor process now",
+            currentProcessDebugged ? "OBSERVED" : "NOT OBSERVED AT THIS MOMENT");
+    logLabelValue(gr ? "Η διεργασία iDoctor περιμένει debugger"
+                     : "iDoctor process waiting for debugger",
+            waitingForDebugger ? "YES" : "NO");
 
-        if (usbDebug) {
+    logLabelWarnValue(gr ? "Δείκτης κινδύνου συσκευής" : "Device security risk score",
+            gr ? "Δεν υπολογίζεται — απουσιάζουν επαληθεύσιμα στοιχεία"
+               : "Not calculated — device-wide evidence is unavailable");
+    logLabelWarnValue(gr ? "Ερμηνεία" : "Interpretation",
+            gr ? "Η ενεργοποίηση εργαλείων ανάπτυξης δεν ισοδυναμεί από μόνη "
+                   + "της με κακόβουλη επέμβαση. Η απουσία debugger στο iDoctor "
+                   + "δεν αποδεικνύει ότι το ADB είναι κλειστό."
+               : "Developer tools alone do not establish compromise. No debugger "
+                   + "attached to iDoctor does not prove ADB is disabled.");
 
-            logLabelWarnValue(
-                    gr ? "Κατάσταση USB Debugging" : "Status",
-                    gr ? "ΕΝΕΡΓΟΠΟΙΗΜΕΝΟ"
-                       : "ENABLED"
-            );
-
-            logLabelWarnValue(
-                    gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Επιφάνεια επίθεσης με φυσική πρόσβαση"
-                       : "Physical access attack surface"
-            );
-
-            risk += 30;
-
-        } else {
-
-            logLabelOkValue(
-                    gr ? "Κατάσταση USB Debugging" : "Status",
-                    gr ? "ΑΝΕΝΕΡΓΟ"
-                       : "OFF"
-            );
-        }
-
-    } catch (Throwable e) {
-
-        logLabelWarnValue(
-                gr ? "USB Debugging" : "USB Debugging",
-                gr ? "Αδυναμία ανάγνωσης (περιορισμός κατασκευαστή)"
-                   : "Unable to read (OEM restriction)"
-        );
-
-        risk += 5;
-    }
-
-// ============================================================
-// 2) DEVELOPER OPTIONS FLAG
-// ============================================================
-boolean devOpts = false;
-
-try {
-    int dev = Settings.Global.getInt(
-            getContentResolver(),
-            Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-            0
-    );
-    devOpts = (dev == 1);
-
-    if (devOpts) {
-
-        logLabelWarnValue(
-                gr ? "Επιλογές προγραμματιστή" : "Developer options",
-                gr ? "ΕΝΕΡΓΟΠΟΙΗΜΕΝΕΣ"
-                   : "ENABLED"
-        );
-
-        logLabelWarnValue(
-                gr ? "Κίνδυνος" : "Risk",
-                gr ? "Έκθεση σε προχωρημένες ρυθμίσεις συστήματος"
-                   : "Advanced system settings exposed"
-        );
-
-        risk += 20;
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Επιλογές προγραμματιστή" : "Developer options",
-                gr ? "ΑΝΕΝΕΡΓΕΣ"
-                   : "OFF"
-        );
-    }
-
-} catch (Throwable e) {
-
-    logLabelWarnValue(
-            gr ? "Επιλογές προγραμματιστή" : "Developer options",
-            gr ? "Αδυναμία ανάγνωσης"
-               : "Unable to read"
-    );
-
-    risk += 5;
+    logInfo(gr ? "Χειροκίνητη επαλήθευση από τον κάτοχο"
+               : "User-authorized manual verification");
+    logLabelValue(gr ? "Ρυθμίσεις" : "Settings",
+            gr ? "Σύστημα > Επιλογές προγραμματιστή > USB debugging / Ασύρματο debugging. "
+                   + "Επαλήθευση στην οθόνη της ίδιας της συσκευής."
+               : "System > Developer options > USB debugging / Wireless debugging. "
+                   + "Confirm directly in device settings.");
+    GELServiceLog.info("SUMMARY: DEVICE_ADB_STATUS=UNKNOWN; "
+            + "DEVELOPER_OPTIONS=UNKNOWN; APP_DEBUGGABLE=" + ownAppDebuggable);
+    appendHtml("<br>");
+    logOk(gr ? "Το Lab 23 ολοκληρώθηκε με σαφή όρια πρόσβασης."
+             : "Lab 23 finished with explicit platform access limits.");
+    logLine();
 }
-
-// ============================================================
-// 3) ADB OVER WI-FI (TCP/IP 5555)
-// ============================================================
-boolean adbWifi = isPortOpen(5555, 200);
-
-if (adbWifi) {
-
-    logLabelErrorValue(
-            gr ? "ADB μέσω Wi-Fi" : "ADB over Wi-Fi",
-            gr ? "ΕΝΕΡΓΟ (θύρα 5555)"
-               : "ACTIVE (port 5555)"
-    );
-
-    logLabelErrorValue(
-            gr ? "Κίνδυνος" : "Risk",
-            gr ? "Δυνατότητα απομακρυσμένου debugging στο τοπικό δίκτυο"
-               : "Remote debugging possible on local network"
-    );
-
-    risk += 40;
-
-} else {
-
-    logLabelOkValue(
-            gr ? "ADB μέσω Wi-Fi" : "ADB over Wi-Fi",
-            gr ? "ΑΝΕΝΕΡΓΟ"
-               : "OFF"
-    );
-}
-
-// ============================================================
-// 4) ADB PAIRING MODE (Wireless Debugging)
-// ============================================================
-boolean adbPairing =
-        isPortOpen(3700, 200) ||
-        isPortOpen(7460, 200) ||
-        scanPairingPortRange();
-
-if (adbPairing) {
-
-    logLabelWarnValue(
-            gr ? "ADB σύζευξη / Ασύρματο debugging" : "ADB pairing / wireless debugging",
-            gr ? "ΕΝΕΡΓΟ"
-               : "ACTIVE"
-    );
-
-    logLabelWarnValue(
-            gr ? "Κίνδυνος" : "Risk",
-            gr ? "Η συσκευή είναι ανιχνεύσιμη για σύζευξη"
-               : "Device discoverable for pairing"
-    );
-
-    risk += 25;
-
-} else {
-
-    logLabelOkValue(
-            gr ? "ADB σύζευξη / Ασύρματο debugging" : "ADB pairing / wireless debugging",
-            gr ? "ΑΝΕΝΕΡΓΟ"
-               : "OFF"
-    );
-}
-
-// ============================================================
-// 5) FINAL RISK SCORE
-// ============================================================
-risk = Math.min(100, risk);
-
-String level;
-if (risk <= 10)       level = gr ? "ΧΑΜΗΛΟ" : "LOW";
-else if (risk <= 30)  level = gr ? "ΜΕΤΡΙΟ" : "MEDIUM";
-else if (risk <= 60)  level = gr ? "ΥΨΗΛΟ" : "HIGH";
-else                  level = gr ? "ΚΡΙΣΙΜΟ" : "CRITICAL";
-
-
-if (risk >= 70) {
-	
-appendHtml("<br>");
-    logLabelErrorValue(
-            gr ? "Δείκτης κινδύνου ασφάλειας" : "Security risk score",
-            risk + "/100 (" + level + ")"
-    );
-
-} else if (risk >= 30) {
-
-    logLabelWarnValue(
-            gr ? "Δείκτης κινδύνου ασφάλειας" : "Security risk score",
-            risk + "/100 (" + level + ")"
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Δείκτης κινδύνου ασφάλειας" : "Security risk score",
-            risk + "/100 (" + level + ")"
-    );
-}
-
-// ============================================================
-// 6) ACTION RECOMMENDATIONS
-// ============================================================
-appendHtml("<br>");
-logInfo(gr ? "Προτεινόμενες ενέργειες"
-           : "Recommended actions");
-           logLine();
-
-if (usbDebug || devOpts) {
-
-    logLabelWarnValue(
-            gr ? "Απενεργοποίηση" : "Disable",
-            gr ? "Ρυθμίσεις > Σύστημα > Επιλογές προγραμματιστή > OFF"
-               : "Settings > System > Developer options > OFF"
-    );
-
-    logLabelWarnValue(
-            "USB Debugging",
-            gr ? "Απενεργοποιήστε το"
-               : "Turn OFF"
-    );
-
-    } else {
-
-    logLabelOkValue(
-            "USB Debugging",
-            gr ? "Απενεργοποιημένο"
-               : "Disabled"
-    );
-}
-
-if (adbWifi || adbPairing) {
-
-    logLabelErrorValue(
-            gr ? "Ασύρματο debugging"
-               : "Wireless debugging",
-            gr ? "Απενεργοποιήστε άμεσα (Επιλογές προγραμματιστή)"
-               : "Disable immediately (Developer options)"
-    );
-
-    logLabelWarnValue(
-            gr ? "Συμβουλή" : "Tip",
-            gr ? "Η επανεκκίνηση καθαρίζει ενεργό TCP/IP debugging"
-               : "Reboot clears active TCP/IP debugging"
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Ασύρματο debugging"
-               : "Wireless debugging",
-            gr ? "Δεν είναι ενεργό"
-               : "Not active"
-    );
-}
-
-if (risk >= 60) {
-
-    logLabelErrorValue(
-            gr ? "Επείγον" : "Urgency",
-            gr ? "Πολύ υψηλό — απενεργοποιήστε άμεσα τις λειτουργίες ADB"
-               : "Very high — disable ADB features immediately"
-    );
-
-} else if (risk >= 30) {
-
-    logLabelWarnValue(
-            gr ? "Επείγον" : "Urgency",
-            gr ? "Μερική έκθεση — ελέγξτε τις ρυθμίσεις"
-               : "Partial exposure — review settings"
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Συνολικά" : "Overall",
-            gr ? "Το επίπεδο κινδύνου είναι αποδεκτό"
-               : "Risk level acceptable"
-    );
-}
-
-appendHtml("<br>");
-logOk(gr ? "Το Lab 23 ολοκληρώθηκε." : "Lab 23 finished.");
-logLine();
-}
-
 
 // ============================================================
 // UI BUBBLES (GEL)
