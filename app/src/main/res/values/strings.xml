@@ -240,4 +240,5 @@ Professional service tools.\nEach manual lab writes detailed results\nand is inc
     <!-- APPLE DIAGNOSIS -->
     <string name="apple_diagnosis">🚀 GEL Apple Devices Diagnosis</string>
 
+    <string name="mini_check_scope_description">Periodic snapshots of battery temperature, Android low-memory status, internal storage, and battery-health warnings where available. Alerts for concerning readings include suggested actions when notifications are enabled. No crash detection or continuous monitoring. Android may delay scheduled checks.</string>
 </resources>
