@@ -4950,17 +4950,6 @@ br.close();
 return -1;
 }
 
-// Frequent reboot hint (human-level inference)
-private boolean detectFrequentRebootsHint() {
-try {
-long uptimeMs = SystemClock.elapsedRealtime();
-// Reboot within last 6 hours
-return uptimeMs < (6L * 60L * 60L * 1000L);
-} catch (Throwable t) {
-return false;
-}
-}
-
 // ============================================================
 // SAFETY STUBS — Stability detectors
 // (production-safe, no side effects)
@@ -26649,7 +26638,6 @@ private void lab20UptimeHints() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    boolean frequentReboots = false;   // shared summary flag
 
     appendHtml("<br>");
     logLine();
@@ -26761,33 +26749,13 @@ private void lab20UptimeHints() {
             boolean lowMemoryPressure =
                     readLowMemoryKillCountSafe() < 5;
 
-            frequentReboots =
-                    detectFrequentRebootsHint();
-
-            if (frequentReboots) {
-
-                logLabelWarnValue(
-                        gr ? "Μοτίβο επανεκκινήσεων" : "Reboot pattern",
-                        gr
-                                ? "Εντοπίστηκαν επαναλαμβανόμενες επανεκκινήσεις"
-                                : "Repeated reboots detected"
-                );
-                logLabelWarnValue(
-                        gr ? "Πιθανές αιτίες" : "Possible causes",
-                        gr
-                                ? "Αστάθεια, κρασαρίσματα ή watchdog resets"
-                                : "Instability, crashes or watchdog resets"
-                );
-
-            } else {
-
-                logLabelOkValue(
-                        gr ? "Μοτίβο επανεκκινήσεων" : "Reboot pattern",
-                        gr
-                                ? "Δεν εντοπίστηκε μη φυσιολογική συμπεριφορά επανεκκινήσεων"
-                                : "No abnormal reboot behaviour detected"
-                );
-            }
+            // Root access alone does not provide reboot history. A short
+            // uptime proves only that the device booted recently.
+            logLabelWarnValue(
+                    gr ? "Ιστορικό επανεκκινήσεων" : "Reboot history",
+                    gr ? "Δεν υπάρχουν επαληθευμένα συμβάντα επανεκκινήσεων"
+                       : "No verified reboot event history available"
+            );
 
             if (!lowMemoryPressure) {
 
@@ -26814,11 +26782,10 @@ private void lab20UptimeHints() {
                 );
             }
 
-            logLabelOkValue(
+            logLabelWarnValue(
                     gr ? "Ερμηνεία" : "Interpretation",
-                    gr
-                            ? "Η συμπεριφορά uptime συμβαδίζει με φυσιολογική λειτουργία συστήματος"
-                            : "Uptime behaviour consistent with normal system operation"
+                    gr ? "Το uptime δεν αποδεικνύει συχνότητα επανεκκινήσεων"
+                       : "Uptime does not establish reboot frequency"
             );
         }
 
@@ -26839,20 +26806,25 @@ appendHtml("<br>");
 logInfo(gr ? "Σύνοψη επανεκκινήσεων" : "Reboot summary");
 logLine();
 
-if (frequentReboots) {
-
+// No historical reboot-event series is collected by this Lab.
+// Never translate "no evidence" into a NORMAL verdict.
+RebootHistoryEvidence.Verdict rebootVerdict =
+        RebootHistoryEvidence.classify(-1, 0L);
+if (rebootVerdict == RebootHistoryEvidence.Verdict.INSUFFICIENT_DATA) {
     logLabelWarnValue(
             "REBOOT_PATTERN",
-            gr ? "ΜΗ ΦΥΣΙΟΛΟΓΙΚΟ" : "ABNORMAL"
+            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ ΙΣΤΟΡΙΚΟ" : "HISTORY UNAVAILABLE"
     );
-
 } else {
-
-    logLabelOkValue(
+    // Reserved for future verified, timestamped reboot histories.
+    logLabelWarnValue(
             "REBOOT_PATTERN",
-            gr ? "ΦΥΣΙΟΛΟΓΙΚΌ" : "NORMAL"
+            rebootVerdict == RebootHistoryEvidence.Verdict.REPEATED_OBSERVED
+                    ? (gr ? "ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΕΣ" : "REPEATED")
+                    : (gr ? "ΔΕΝ ΕΠΑΛΗΘΕΥΤΗΚΑΝ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΕΣ" : "NO REPEATED EVENTS OBSERVED")
     );
 }
+GELServiceLog.info("SUMMARY: REBOOT_PATTERN=" + rebootVerdict.name());
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 20 ολοκληρώθηκε." : "Lab 20 finished.");
