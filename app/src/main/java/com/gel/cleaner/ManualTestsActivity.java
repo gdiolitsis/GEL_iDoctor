@@ -5471,231 +5471,91 @@ private String getLab28TextGR() {
 // SERVICE LEVEL — COMPONENT & BOARD INSPECTION (LOGIC BASED)
 // ============================================================
 private void lab29AuthenticityCheck() {
-	
-SharedPreferences p =
-        getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
-        
-boolean lab14CollapseRisk =
-        p.getBoolean("lab14_collapse_risk", false);
-
-boolean lab14SwellingSuspected =
-        p.getBoolean("lab14_swelling_risk", false);
-
     final boolean gr = AppLang.isGreek(this);
-
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 29 — Έλεγχος γνησιότητας συσκευής & πιθανών επισκευών"
-            : "LAB 29 — Device authenticity & repair inspection");
+    logInfo(gr ? "LAB 29 — Παρατηρούμενη ταυτότητα υλικού / ανταλλακτικών"
+               : "LAB 29 — Observed hardware and parts identity");
     logLine();
 
-    int manipulationScore = 0;
+    // Public Android build descriptors describe the reported device profile.
+    // They do not attest to individual replacement parts or prior repairs.
+    logLabelValue(gr ? "Κατασκευαστής που δηλώνει το Android" : "Android-reported manufacturer",
+            String.valueOf(Build.MANUFACTURER));
+    logLabelValue(gr ? "Μάρκα / μοντέλο Android" : "Android brand / model",
+            String.valueOf(Build.BRAND) + " / " + String.valueOf(Build.MODEL));
+    logLabelValue(gr ? "Κωδικό όνομα συσκευής" : "Device codename",
+            String.valueOf(Build.DEVICE));
+    logLabelValue(gr ? "Έκδοση συστήματος" : "OS version",
+            String.valueOf(Build.VERSION.RELEASE) + " (API " + Build.VERSION.SDK_INT + ")");
+    logLabelValue(gr ? "Patch date (δηλωμένη)" : "OS-reported security patch",
+            String.valueOf(Build.VERSION.SECURITY_PATCH));
 
-    boolean batteryAuthSuspect =
-            p.getBoolean("lab14_battery_auth_suspect", false);
+    // Enumeration is not provenance verification: a camera/sensor being exposed
+    // by Android cannot prove which OEM part was physically installed.
+    try {
+        android.hardware.camera2.CameraManager camera =
+                (android.hardware.camera2.CameraManager) getSystemService(CAMERA_SERVICE);
+        if (camera != null) {
+            logLabelValue(gr ? "Ορατά camera IDs" : "Exposed camera IDs",
+                    String.valueOf(camera.getCameraIdList().length));
+        } else {
+            logLabelWarnValue(gr ? "Camera API" : "Camera API",
+                    gr ? "Δεν διατίθεται" : "Unavailable");
+        }
+    } catch (Exception unavailable) {
+        logLabelWarnValue(gr ? "Camera API" : "Camera API",
+                gr ? "Μη διαθέσιμη πλήρης απογραφή" : "Inventory unavailable or restricted");
+    }
 
-    boolean lab14CalibrationDrift =
-        p.getBoolean("lab14_calibration_drift", false);
+    try {
+        SensorManager manager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        List<Sensor> sensors = manager == null ? null : manager.getSensorList(Sensor.TYPE_ALL);
+        if (sensors != null) {
+            logLabelValue(gr ? "Αναφερόμενοι αισθητήρες" : "Android-exposed sensors",
+                    String.valueOf(sensors.size()));
+        } else {
+            logLabelWarnValue(gr ? "Αισθητήρες" : "Sensors",
+                    gr ? "Δεν διατίθεται απογραφή" : "Inventory unavailable");
+        }
+    } catch (RuntimeException unavailable) {
+        logLabelWarnValue(gr ? "Αισθητήρες" : "Sensors",
+                gr ? "Δεν διατίθεται απογραφή" : "Inventory unavailable");
+    }
 
-    boolean instabilityPattern =
-            p.getBoolean("lab29_instability_pattern", false);
-
-    boolean thermalSpike =
-            p.getBoolean("lab28_thermal_spike", false);
-
-    boolean radioInstability =
-            p.getBoolean("lab28_radio_instability", false);
-
-    boolean sensorFlaps =
-            p.getBoolean("lab28_sensor_flaps", false);
-
-    boolean rebootPattern =
-            p.getBoolean("lab28_reboot_pattern", false);
-
-    // ------------------------------------------------------------
-    // BATTERY AUTHENTICITY
-    // ------------------------------------------------------------
-    if (batteryAuthSuspect) {
-
-        logLabelWarnValue(
-                gr ? "Μπαταρία"
-                   : "Battery",
-                gr
-                        ? "Ενδείξεις πιθανής μη γνήσιας ή aftermarket μπαταρίας"
-                        : "Possible aftermarket or non-original battery detected"
-        );
-
-        manipulationScore += 20;
-
+    BatteryEvidence cycleCount = BatteryPublicCollector.collect(this).get("cycle_count");
+    if (cycleCount.isObserved()) {
+        logLabelValue(gr ? "Κύκλοι μπαταρίας (δηλωμένοι)" : "Battery cycles (reported)",
+                String.format(Locale.US, "%.0f", cycleCount.value));
     } else {
-
-        logLabelOkValue(
-                gr ? "Μπαταρία"
-                   : "Battery",
-                gr
-                        ? "Δεν εντοπίστηκαν ενδείξεις μη γνήσιας μπαταρίας"
-                        : "No indicators of non-original battery"
-        );
-    }
-
-if (calibrationDrift[0]) {
-
-    logLabelWarnValue(
-            gr ? "Fuel gauge"
-               : "Fuel gauge",
-            gr
-                    ? "Απόκλιση βαθμονόμησης μπαταρίας"
-                    : "Battery fuel-gauge calibration drift detected"
-    );
-
-    manipulationScore += 10;
-}
-
-    // ------------------------------------------------------------
-    // SENSOR & BOARD LINES
-    // ------------------------------------------------------------
-    if (sensorFlaps) {
-
-        logLabelWarnValue(
-                gr ? "Αισθητήρες"
-                   : "Sensors",
-                gr
-                        ? "Ασταθής λειτουργία αισθητήρων"
-                        : "Sensor instability detected"
-        );
-
-        manipulationScore += 10;
-    }
-
-    // ------------------------------------------------------------
-    // RADIO / BASEBAND
-    // ------------------------------------------------------------
-    if (radioInstability) {
-
-        logLabelWarnValue(
-                gr ? "Ραδιοσύστημα"
-                   : "Radio subsystem",
-                gr
-                        ? "Ασταθής λειτουργία modem ή RF γραμμών"
-                        : "Possible modem / RF line instability"
-        );
-
-        manipulationScore += 10;
-    }
-
-    // ------------------------------------------------------------
-    // THERMAL PMIC BEHAVIOUR
-    // ------------------------------------------------------------
-    if (thermalSpike) {
-
-        logLabelWarnValue(
-                gr ? "Θερμική συμπεριφορά"
-                   : "Thermal behaviour",
-                gr
-                        ? "Απότομες θερμικές αιχμές"
-                        : "Abnormal thermal spikes detected"
-        );
-
-        manipulationScore += 10;
-    }
-
-    // ------------------------------------------------------------
-    // REBOOT PATTERN
-    // ------------------------------------------------------------
-    if (rebootPattern) {
-
-        logLabelWarnValue(
-                gr ? "Επανεκκινήσεις"
-                   : "Reboot behaviour",
-                gr
-                        ? "Μοτίβο επανεκκινήσεων"
-                        : "Unexpected reboot pattern detected"
-        );
-
-        manipulationScore += 15;
-    }
-
-    // ------------------------------------------------------------
-    // BOARD STABILITY
-    // ------------------------------------------------------------
-    if (instabilityPattern) {
-
-        logLabelWarnValue(
-                gr ? "Σταθερότητα συστήματος"
-                   : "System stability",
-                gr
-                        ? "Μοτίβο αστάθειας υλικού"
-                        : "Hardware instability pattern detected"
-        );
-
-        manipulationScore += 15;
-    }
-    
-    // ------------------------------------------------------------
-    // FINAL INTERPRETATION
-    // ------------------------------------------------------------
-    String level =
-            (manipulationScore < 20) ? "LOW" :
-            (manipulationScore < 40) ? "MODERATE" :
-            (manipulationScore < 60) ? "ELEVATED" :
-            (manipulationScore < 80) ? "HIGH" :
-                                      "VERY HIGH";
-
-    appendHtml("<br>");
-
-    if (manipulationScore >= 40) {
-
-        logLabelWarnValue(
-                gr ? "Δείκτης επέμβασης συσκευής"
-                   : "Device manipulation index",
-                manipulationScore + "/100 (" + level + ")"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Δείκτης επέμβασης συσκευής"
-                   : "Device manipulation index",
-                manipulationScore + "/100 (" + level + ")"
-        );
+        logLabelValue(gr ? "Κύκλοι μπαταρίας" : "Battery cycle count",
+                gr ? "Δεν παρέχεται από το Android/OEM" : "Not exposed by Android/OEM");
     }
 
     appendHtml("<br>");
+    logLabelWarnValue(gr ? "Γνησιότητα μπαταρίας" : "Battery originality",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΣΙΜΗ χωρίς έμπιστη ταυτοποίηση OEM/ανταλλακτικού"
+               : "UNVERIFIABLE without trusted OEM/part identity evidence");
+    logLabelWarnValue(gr ? "Αντικατάσταση οθόνης / κάμερας" : "Screen / camera replacement",
+            gr ? "Δεν προκύπτει από αναφερόμενα hardware IDs ή συμπτώματα"
+               : "Cannot be established from reported hardware IDs or symptoms");
+    logLabelWarnValue(gr ? "Προηγούμενη επισκευή μητρικής" : "Prior motherboard repair",
+            gr ? "Δεν μπορεί να διαγνωστεί από public Android APIs ή logs"
+               : "Cannot be determined from public Android APIs or logs");
+    logLabelWarnValue(gr ? "Δείκτης γνησιότητας" : "Authenticity percentage",
+            gr ? "Δεν υπολογίζεται· δεν υπάρχει έγκυρο πρότυπο αναφοράς"
+               : "Not calculated; no validated reference baseline");
+    logLabelValue(gr ? "Επαλήθευση από τεχνικό" : "External verification",
+            gr ? "Έλεγχος πραγματικών ανταλλακτικών, επίσημο ιστορικό επισκευών "
+                   + "ή επιθεώρηση από εξουσιοδοτημένο τεχνικό."
+               : "Verify installed parts against trusted OEM service evidence "
+                   + "or authorized physical inspection.");
 
-    if (manipulationScore >= 60) {
-
-        logLabelWarnValue(
-                gr ? "Συμπέρασμα"
-                   : "Conclusion",
-                gr
-                        ? "Ισχυρές ενδείξεις ότι η συσκευή έχει επισκευαστεί ή τροποποιηθεί."
-                        : "Strong indicators that the device has been repaired or modified."
-        );
-
-    } else if (manipulationScore >= 30) {
-
-        logLabelWarnValue(
-                gr ? "Συμπέρασμα"
-                   : "Conclusion",
-                gr
-                        ? "Πιθανές ενδείξεις προηγούμενης επισκευής."
-                        : "Possible indicators of previous repair."
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Συμπέρασμα"
-                   : "Conclusion",
-                gr
-                        ? "Δεν εντοπίστηκαν σημαντικές ενδείξεις επέμβασης."
-                        : "No significant repair indicators detected."
-        );
-    }
-
+    GELServiceLog.info("SUMMARY: PART_AUTHENTICITY=UNKNOWN; "
+            + "REPAIR_HISTORY=NOT_AVAILABLE; SOURCE=ANDROID_PUBLIC_API");
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 29 ολοκληρώθηκε." : "Lab 29 finished.");
+    logOk(gr ? "Το Lab 29 ολοκληρώθηκε με ρητούς περιορισμούς."
+             : "Lab 29 finished with explicit evidence limits.");
     logLine();
 }
 
