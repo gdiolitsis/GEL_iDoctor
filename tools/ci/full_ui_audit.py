@@ -59,20 +59,39 @@ def record(name,status,detail="",folder=None):
     (out/"coverage.json").write_text(json.dumps(results,ensure_ascii=False,indent=2))
     print(json.dumps(results[-1],ensure_ascii=False),flush=True)
 def dismiss_intro():
-    # Decline optional offers only; no consent to purchases or trial activation.
-    for _ in range(8):
-        denied=find(lambda n: n.get("resource-id","").endswith("/permission_deny_button"))
-        if denied is not None: tap(denied); continue
-        n=find(textmatch(r"^(Not now|Όχι τώρα|Later|Αργότερα|NOT NOW|ΟΧΙ ΤΩΡΑ|Continue|Συνέχεια|ΣΥΝΕΧΕΙΑ|OK)$"))
-        if n is not None: tap(n); continue
-        n=find(textmatch(r"MY ANDROID DEVICE|Η ANDROID ΣΥΣΚΕΥΗ ΜΟΥ|^Android$"))
-        if n is not None: tap(n); continue
-        break
+    stable = 0
+    for attempt in range(12):
+        t = tree()
+        nodes = [n for n in t.iter("node") if visible(n)]
+        denied = next((n for n in nodes if n.get("resource-id","").endswith("/permission_deny_button")),None)
+        if denied is not None:
+            tap(denied); stable=0; continue
+        later = next((n for n in nodes if re.search(r"^(Not now|Όχι τώρα|Later|Αργότερα)$",n.get("text",""),re.I)),None)
+        if later is not None:
+            tap(later); stable=0; continue
+        android = next((n for n in nodes if re.search(r"MY ANDROID DEVICE|Η ANDROID ΣΥΣΚΕΥΗ ΜΟΥ",n.get("text",""),re.I)),None)
+        if android is not None:
+            tap(android); stable=0; continue
+        welcome = any(re.search(r"^(WELCOME|ΚΑΛΩΣ ΗΡΘΑΤΕ)$",n.get("text",""),re.I) for n in nodes)
+        if welcome:
+            ok = next((n for n in nodes if n.get("text","").upper()=="OK"),None)
+            if ok is not None: tap(ok)
+            else:
+                save("welcome-actions-unreachable")
+                adb("shell","input","keyevent","4")
+            stable=0; continue
+        # Wait for delayed first-run permission dialogs before declaring home ready.
+        if any(n.get("resource-id","").endswith(("/btnLangEN","/btnLangGR","/scrollRoot")) for n in nodes):
+            stable += 1
+            if stable >= 2: return
+        else: stable=0
+        time.sleep(1)
 def home():
     adb("shell","am","force-stop",PKG)
     adb("shell","am","start","-W","-n",PKG+"/com.gel.cleaner.MainActivity")
     time.sleep(1)
     dismiss_intro()
+    for _ in range(3): swipe(False)
 def select_language():
     home()
     save("before-language")
