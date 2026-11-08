@@ -1235,6 +1235,8 @@ private static class TelephonySnapshot {
     boolean serviceKnown = false;
     int dataState = TelephonyManager.DATA_UNKNOWN;
     boolean dataStateKnown = false;
+    boolean signalLevelKnown = false;
+    int signalLevel = -1; // Android coarse 0..4, NOT measured dBm or modem health
 
     // Legacy is "INTERNET capability advertised", NOT validated reachability.
     // Lab 11 must never use this field to judge cellular connectivity.
@@ -3696,6 +3698,20 @@ if (tm != null) {
         s.dataState = tm.getDataState();
         s.dataStateKnown = s.dataState != TelephonyManager.DATA_UNKNOWN;  
     } catch (Throwable ignored) {}  
+    // Cached/OS-reported signal level on API28+. Absence is not zero signal.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        try {
+            android.telephony.SignalStrength strength = tm.getSignalStrength();
+            if (strength != null) {
+                int level = strength.getLevel();
+                if (level >= 0 && level <= 4) {
+                    s.signalLevel = level;
+                    s.signalLevelKnown = true;
+                }
+            }
+        } catch (RuntimeException ignored) {}
+    }
+
 }  
 
 ConnectivityManager cm =  
@@ -10966,6 +10982,16 @@ private void lab11MobileDataDiagnostic() {
             dataLabel);
     logInfo(gr ? "DISCONNECTED δεν σημαίνει κατ' ανάγκη ότι ο χρήστης απενεργοποίησε τα δεδομένα κινητής."
                : "DISCONNECTED does not imply the user switched mobile data off.");
+
+    if (s.signalLevelKnown) {
+        logLabelValue(gr ? "Σήμα (ένδειξη Android)" : "Signal (Android-reported)",
+                s.signalLevel + " / 4");
+        logInfo(gr ? "Πρόκειται για εκτίμηση του Android, όχι βαθμονομημένη μέτρηση dBm ή τεστ υγείας RF."
+                   : "This is an OS-reported estimate, not calibrated dBm or RF hardware health.");
+    } else {
+        logLabelValue(gr ? "Σήμα" : "Signal",
+                gr ? "ΑΓΝΩΣΤΟ / μη εκτεθειμένο" : "UNKNOWN / not exposed");
+    }
 
     Lab11NetworkEvidence.DefaultRoute route = Lab11NetworkEvidence.classifyDefault(
             s.defaultNetworkPresent, s.defaultCapsKnown,
