@@ -1130,6 +1130,8 @@ private boolean oldKeepScreenOn = false;
     private final AtomicBoolean lab4GuidedPending = new AtomicBoolean(false);
     private final AtomicBoolean lab4Cancelled = new AtomicBoolean(false);
     private volatile boolean lab3Cancelled = false;
+    private volatile AlertDialog lab3ActiveDialog;
+    private volatile AlertDialog lab4ActiveDialog;
     private volatile boolean lab4AudioStateSaved = false;
     private int lab4OriginalMode = AudioManager.MODE_NORMAL;
     private boolean lab4OriginalSpeaker = false;
@@ -2363,6 +2365,17 @@ protected void onPause() {
         try { AppTTS.stop(); } catch (RuntimeException ignored) {}
         finishLab4Guided();
     }
+    // Orphaned prompts must not remain usable after the Activity pauses.
+    try {
+        AlertDialog dialog = lab3ActiveDialog;
+        lab3ActiveDialog = null;
+        if (dialog != null && dialog.isShowing()) dialog.dismiss();
+    } catch (RuntimeException ignored) {}
+    try {
+        AlertDialog dialog = lab4ActiveDialog;
+        lab4ActiveDialog = null;
+        if (dialog != null && dialog.isShowing()) dialog.dismiss();
+    } catch (RuntimeException ignored) {}
 
     // =========================
     // LAB 14 / 14B
@@ -2819,6 +2832,7 @@ b.setView(root);
 b.setCancelable(false);
 
 final AlertDialog d = b.create();
+lab3ActiveDialog = d;
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
@@ -6219,6 +6233,7 @@ b.setView(root);
 b.setCancelable(false);
 
 final AlertDialog d = b.create();
+lab3ActiveDialog = d;
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
@@ -6230,7 +6245,7 @@ if (d.getWindow() != null) {
 final AtomicBoolean lab3Started = new AtomicBoolean(false);
 d.setOnDismissListener(dialog -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
-    if (!lab3Started.get()) {
+    if (!lab3Started.get() && lab3GuidedPending.get()) {
         restoreLab3Audio();
         lab3GuidedPending.set(false);
         enableSingleExportButton();
@@ -6712,6 +6727,7 @@ runOnUiThread(() -> {
 b.setCancelable(false);
 
 final AlertDialog d = b.create();
+    lab4ActiveDialog = d;
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
@@ -6893,6 +6909,7 @@ runOnUiThread(() -> {
     b.setView(root);
 
     final AlertDialog d = b.create();
+    lab4ActiveDialog = d;
 
     if (d.getWindow() != null) {
         d.getWindow().setBackgroundDrawable(
@@ -7081,6 +7098,7 @@ runOnUiThread(() -> {
     b.setView(root);
 
     final AlertDialog d = b.create();
+    lab4ActiveDialog = d;
     dialogRef.set(d);
 
     if (d.getWindow() != null) {
@@ -7350,6 +7368,7 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
         b.setView(root);
 
         final AlertDialog d = b.create();
+    lab4ActiveDialog = d;
 
         if (d.getWindow() != null) {
             d.getWindow().setBackgroundDrawable(
@@ -7359,7 +7378,7 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
 
         d.setOnDismissListener(dialog -> {
             try { AppTTS.stop(); } catch (Throwable ignore) {}
-            if (!answerProvided.get()) {
+            if (!answerProvided.get() && lab4GuidedPending.get()) {
                 finishLab4Guided();
                 enableSingleExportButton();
                 logLabelWarnValue(gr ? "Αποτέλεσμα ακουστικού" : "Earpiece result",
