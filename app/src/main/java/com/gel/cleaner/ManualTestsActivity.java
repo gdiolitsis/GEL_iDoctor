@@ -9157,6 +9157,7 @@ cam.runtimeSession = s;
 
     Runnable finishAndNext = () -> {
         if (finished.getAndSet(true)) return;
+        s.terminal = true;
         try { lab8CloseSession(s); } catch (Throwable ignore) {}
         try { d.dismiss(); } catch (Throwable ignore) {}
         onDone.run();
@@ -9164,39 +9165,45 @@ cam.runtimeSession = s;
 
     // After sampling window, enable buttons
     Runnable enableButtons = () -> {
-        if (finished.get()) return;
+        if (finished.get() || s.terminal || s.cancelled || !s.samplingComplete) return;
         yes.setEnabled(true);
         no.setEnabled(true);
     };
 
-    yes.setOnClickListener(v -> {
-    AppTTS.stop();
-    overall.previewOkCount++;
-    s.userConfirmedPreview = Boolean.TRUE;
-    finishAndNext.run();
-});
+    Runnable failAndNext = () -> {
+        if (finished.get() || s.cancelled || s.terminal) return;
+        overall.previewUnavailableCount++;
+        overall.streamIssueCount++;
+        logLabelWarnValue(gr ? "Camera2" : "Camera2",
+                gr ? "Μη διαθέσιμη δοκιμή — όχι διάγνωση βλάβης"
+                   : "Capture unavailable — no hardware-failure verdict");
+        finishAndNext.run();
+    };
 
-no.setOnClickListener(v -> {
-    AppTTS.stop();
-    overall.previewFailCount++;
-    s.userConfirmedPreview = Boolean.FALSE;
-    finishAndNext.run();
-});
+    yes.setOnClickListener(v -> {
+        if (finished.get() || !s.samplingComplete || s.cancelled) return;
+        AppTTS.stop();
+        s.userConfirmedPreview = Boolean.TRUE;
+        lab8FinalizePreviewOutcome(s, overall);
+        finishAndNext.run();
+    });
+
+    no.setOnClickListener(v -> {
+        if (finished.get() || !s.samplingComplete || s.cancelled) return;
+        AppTTS.stop();
+        s.userConfirmedPreview = Boolean.FALSE;
+        lab8FinalizePreviewOutcome(s, overall);
+        finishAndNext.run();
+    });
 
     // Start camera when texture is ready
     if (tv.isAvailable()) {
-        lab8StartCamera2Session(s, overall, enableButtons, () -> {
-            overall.streamIssueCount++;
-            enableButtons.run();
-        });
+        lab8StartCamera2Session(s, overall, enableButtons, failAndNext);
     } else {
         tv.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) {
                 if (finished.get()) return;
-                lab8StartCamera2Session(s, overall, enableButtons, () -> {
-                    overall.streamIssueCount++;
-                    enableButtons.run();
-                });
+                lab8StartCamera2Session(s, overall, enableButtons, failAndNext);
             }
             @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int h) {}
             @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture st) { return true; }
