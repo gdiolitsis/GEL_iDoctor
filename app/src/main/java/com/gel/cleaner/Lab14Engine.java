@@ -242,16 +242,16 @@ public DrainResult computeDrain(DrainSession s) {
 
     public static class ConfidenceResult {
 
-        public ConfidenceTier tier = ConfidenceTier.MEDIUM;
+        public ConfidenceTier tier = ConfidenceTier.PRELIMINARY;
 
-        public int percent = 50;
+        public int percent = -1;
 
-        public int validRuns = 1;
+        public int validRuns = 0;
     }
 
     public ConfidenceResult computeConfidence() {
 
-        // 🔧 Placeholder – logic μένει στο Activity όπως ήδη έχεις
+        // Unknown until independent sample quality and repeated-run data are validated.
         return new ConfidenceResult();
     }
 
@@ -261,11 +261,15 @@ public DrainResult computeDrain(DrainSession s) {
 
     public static class AgingResult {
 
-        public int index = 0;
+        public int index = -1;
 
-        public String description = "N/A";
+        public String description = "Not determined";
     }
 
+    /**
+     * Discharge rate measures present workload, not battery aging. No percentage of
+     * wear is defensible from this method's inputs alone.
+     */
     public AgingResult computeAging(
             double mahPerHour,
             ConfidenceResult conf,
@@ -273,30 +277,10 @@ public DrainResult computeDrain(DrainSession s) {
             float tempStart,
             float tempEnd
     ) {
-
-        AgingResult r = new AgingResult();
-
-        if (mahPerHour <= 0) {
-            r.index = 0;
-            r.description = "No data";
-            return r;
-        }
-
-        if (mahPerHour < 150) {
-            r.index = 90;
-            r.description = "Excellent";
-        } else if (mahPerHour < 300) {
-            r.index = 75;
-            r.description = "Good";
-        } else if (mahPerHour < 500) {
-            r.index = 60;
-            r.description = "Moderate wear";
-        } else {
-            r.index = 40;
-            r.description = "Degraded battery";
-        }
-
-        return r;
+        AgingResult result = new AgingResult();
+        result.index = -1;
+        result.description = "Battery wear not determined: no verified full-charge capacity";
+        return result;
     }
 
     // =====================================================
