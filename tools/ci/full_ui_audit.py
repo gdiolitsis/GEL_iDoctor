@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Evidence-first UI exploration of the unmodified signed release; never claims hardware pass."""
-import json, pathlib, re, struct, subprocess, sys, time, traceback
+import json, os, pathlib, re, struct, subprocess, sys, time, traceback
 import xml.etree.ElementTree as ET
 
 PKG = "com.gel.iDoctor"
@@ -75,6 +75,9 @@ def dismiss_intro():
             tap(android); stable=0; continue
         welcome = any(re.search(r"^(WELCOME|ΚΑΛΩΣ ΗΡΘΑΤΕ)$",n.get("text",""),re.I) for n in nodes)
         if welcome:
+            for node in nodes:
+                if node.get("checkable")=="true" and node.get("checked")=="false" and re.search(r"Do not show again|Να μην εμφανιστεί ξανά|Mute voice|Σίγαση",node.get("text",""),re.I):
+                    tap(node)
             ok = next((n for n in nodes if n.get("text","").upper()=="OK"),None)
             if ok is not None: tap(ok)
             else:
@@ -82,7 +85,7 @@ def dismiss_intro():
                 adb("shell","input","keyevent","4")
             stable=0; continue
         # Wait for delayed first-run permission dialogs before declaring home ready.
-        if any(n.get("resource-id","").endswith(("/btnLangEN","/btnLangGR","/scrollRoot")) for n in nodes):
+        if any(n.get("resource-id","").endswith(("/btnLangEN","/btnLangGR","/scrollRoot")) or "Manual Labs" in n.get("text","") for n in nodes):
             stable += 1
             if stable >= 2: return
         else: stable=0
@@ -105,7 +108,7 @@ def manual():
     n=find(rid("btnDiagnostics"),12)
     if n is None: raise RuntimeError("Diagnostics entry missing")
     tap(n)
-    n=find(textmatch(r"GEL Android Manual Tests|Χειροκίνητ|Χειροκίν|Manual Tests"),8)
+    n=find(textmatch(r"^GEL (?:Android Manual Tests|Χειροκίνητα Tests Android)$"),8)
     if n is None: raise RuntimeError("Manual labs entry missing")
     tap(n); time.sleep(.8); dismiss_intro()
 def safe_interaction():
@@ -129,40 +132,41 @@ try:
     adb("shell","settings","put","system","accelerometer_rotation","0")
     adb("shell","settings","put","system","user_rotation","0")
     select_language()
-    # Inventory home at every scroll position.
-    home()
-    for page in range(6):
-        save("home-page-"+str(page)); swipe()
-    targets=["btnPhoneInfoInternal","btnPhoneInfoPeripherals","btnCpuRamLive","btnInternetSpeedTest",
-             "btnCleanAll","btnBrowserCache","btnAppCache","btnAppManager","btnGuidedOptimizer","btnDiagnostics","btnDonate"]
-    for target in targets:
-        try:
-            home(); n=find(rid(target),12)
-            if n is None: record(target,"NOT_FOUND"); continue
-            tap(n); time.sleep(2)
-            folder=save(target)
-            record(target,outcome(folder),folder=folder)
-            adb("shell","input","keyevent","4")
-        except Exception as e: record(target,"HARNESS_OR_UI_ERROR",str(e),save(target+"-error"))
-    # Toolbar: inspect settings/contact/overflow without sending any message.
-    home()
-    for label,pattern in [("contact",r"^Contact$"),("overflow",r"More options|Περισσότερες επιλογές")]:
+    if os.environ.get("AUDIT_SCOPE","full") != "labs_only":
+        # Inventory home at every scroll position.
         home()
-        n=find(lambda n: bool(re.search(pattern,n.get("text","")+" "+n.get("content-desc",""),re.I)))
-        if n is not None:
-            tap(n); record(label,"UI_OPENED",folder=save(label)); adb("shell","input","keyevent","4")
-        else: record(label,"NO_ACCESSIBLE_LABEL")
-    # Settings is currently an icon with an empty title; use actual toolbar bounds,
-    # not guessed absolute screen coordinates.
-    home(); toolbar=find(rid("gelToolbar"))
-    if toolbar is not None:
-        candidates=[n for n in toolbar.iter("node") if n.get("clickable")=="true" and visible(n)]
-        unnamed=[n for n in candidates if not n.get("text") and not n.get("content-desc")]
-        if unnamed:
-            tap(unnamed[0]); record("settings","UI_OPENED",folder=save("settings"))
-            n=find(textmatch(r"^(Save|Αποθήκευση)$"))
-            if n is not None: tap(n); record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
-        else: record("settings","NO_ACCESSIBLE_LABEL")
+        for page in range(6):
+            save("home-page-"+str(page)); swipe()
+        targets=["btnPhoneInfoInternal","btnPhoneInfoPeripherals","btnCpuRamLive","btnInternetSpeedTest",
+                 "btnCleanAll","btnBrowserCache","btnAppCache","btnAppManager","btnGuidedOptimizer","btnDiagnostics","btnDonate"]
+        for target in targets:
+            try:
+                home(); n=find(rid(target),12)
+                if n is None: record(target,"NOT_FOUND"); continue
+                tap(n); time.sleep(2)
+                folder=save(target)
+                record(target,outcome(folder),folder=folder)
+                adb("shell","input","keyevent","4")
+            except Exception as e: record(target,"HARNESS_OR_UI_ERROR",str(e),save(target+"-error"))
+        # Toolbar: inspect settings/contact/overflow without sending any message.
+        home()
+        for label,pattern in [("contact",r"^Contact$"),("overflow",r"More options|Περισσότερες επιλογές")]:
+            home()
+            n=find(lambda n: bool(re.search(pattern,n.get("text","")+" "+n.get("content-desc",""),re.I)))
+            if n is not None:
+                tap(n); record(label,"UI_OPENED",folder=save(label)); adb("shell","input","keyevent","4")
+            else: record(label,"NO_ACCESSIBLE_LABEL")
+        # Settings is currently an icon with an empty title; use actual toolbar bounds,
+        # not guessed absolute screen coordinates.
+        home(); toolbar=find(rid("gelToolbar"))
+        if toolbar is not None:
+            candidates=[n for n in toolbar.iter("node") if n.get("clickable")=="true" and visible(n)]
+            unnamed=[n for n in candidates if not n.get("text") and not n.get("content-desc")]
+            if unnamed:
+                tap(unnamed[0]); record("settings","UI_OPENED",folder=save("settings"))
+                n=find(textmatch(r"^(Save|Αποθήκευση)$"))
+                if n is not None: tap(n); record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
+            else: record("settings","NO_ACCESSIBLE_LABEL")
     sections=[(1,5),(6,9),(10,13),(14,17),(18,20),(21,24),(25,31)]
     for number in range(1,32):
         try:
