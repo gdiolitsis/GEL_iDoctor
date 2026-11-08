@@ -25991,208 +25991,52 @@ private void lab18StorageSnapshot() {
         }
 
         // ------------------------------------------------------------
-        // ROOT AWARE INTELLIGENCE
         // ------------------------------------------------------------
-        boolean rooted = isDeviceRooted();
+        // PHYSICAL STORAGE WEAR IS NOT OBSERVABLE FROM FREE-SPACE PRESSURE.
+        // Kernel/firmware NAND erase counts are OEM-specific and generally
+        // unavailable to ordinary apps. Never turn a capacity percent into
+        // a flash-health, filesystem-corruption or controller-failure score.
+        // ------------------------------------------------------------
+        appendHtml("<br>");
+        logLabelWarnValue(
+                gr ? "Φυσική φθορά NAND / Controller"
+                   : "NAND / controller physical wear",
+                gr ? "ΜΗ ΕΠΑΛΗΘΕΥΣΙΜΗ από τον διαθέσιμο χώρο"
+                   : "NOT VERIFIABLE from storage capacity readings");
 
-boolean wearSignals = false;
-boolean controllerRisk = false;
-
-if (rooted) {
-
-    appendHtml("<br>");
-    logInfo(gr
-            ? "Προχωρημένη ανάλυση αποθηκευτικού χώρου (root access):"
-            : "Advanced storage analysis (root access):");
-            logLine();
-
-    wearSignals = detectStorageWearSignals();
-    boolean reservedPressure = pctFree < 12;
-            
-// ------------------------------------------------------------
-// EARLY STORAGE DEGRADATION INDICATORS
-// ------------------------------------------------------------
-boolean nandRisk = false;
-int nandScore = 0;
-
-// primary signal
-if (wearSignals)
-    nandScore += 60;
-
-// secondary contextual signals
-if (reservedPressure)
-    nandScore += 15;
-
-if (pctFree < 5)
-    nandScore += 25;
-
-// prevent false NAND diagnosis when wearSignals not present
-if (!wearSignals)
-    nandScore = Math.min(nandScore, 40);
-
-logLabelValue(
-        gr ? "Δείκτης πιθανής φθοράς NAND"
-           : "Possible NAND degradation index",
-        nandScore + "/100"
-);
-
-if (nandScore >= 70) {
-
-    nandRisk = true;
-
-    logLabelWarnValue(
-            gr ? "Ένδειξη αποθηκευτικού χώρου"
-               : "Storage integrity",
-            gr
-                    ? "Εντοπίστηκε μοτίβο που μπορεί να σχετίζεται με φθορά NAND ή controller."
-                    : "Pattern may indicate NAND or storage controller degradation."
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Ακεραιότητα αποθηκευτικού χώρου"
-               : "Storage integrity",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις φθοράς NAND."
-                    : "No NAND degradation indicators detected."
-    );
-}
-
-
-// ------------------------------------------------------------
-// STORAGE CONTROLLER INSTABILITY DETECTOR
-// ------------------------------------------------------------
-int controllerScore = 0;
-
-if (pctFree < 10)
-    controllerScore += 40;
-
-if (pctFree < 7)
-    controllerScore += 30;
-
-if (wearSignals)
-    controllerScore += 30;
-
-logLabelValue(
-        gr ? "Δείκτης σταθερότητας controller"
-           : "Storage controller stability index",
-        controllerScore + "/100"
-);
-
-if (controllerScore >= 60) {
-
-    controllerRisk = true;
-
-    logLabelWarnValue(
-            gr ? "Controller αποθήκευσης"
-               : "Storage controller",
-            gr
-                    ? "Πιθανή αστάθεια controller αποθήκευσης."
-                    : "Possible storage controller instability detected."
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Controller αποθήκευσης"
-               : "Storage controller",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις αστάθειας."
-                    : "Controller behaviour appears stable."
-    );
-}
-
-
-// ------------------------------------------------------------
-// FILESYSTEM CORRUPTION EARLY DETECTOR
-// ------------------------------------------------------------
-boolean fsCorruptionRisk = false;
-int fsScore = 0;
-
-if (pctFree < 10)
-    fsScore += 40;
-
-if (pctFree < 7)
-    fsScore += 30;
-
-if (wearSignals)
-    fsScore += 30;
-
-logLabelValue(
-        gr ? "Δείκτης ακεραιότητας filesystem"
-           : "Filesystem integrity index",
-        fsScore + "/100"
-);
-
-if (fsScore >= 60) {
-
-    fsCorruptionRisk = true;
-
-    logLabelWarnValue(
-            gr ? "Ακεραιότητα filesystem"
-               : "Filesystem integrity",
-            gr
-                    ? "Εντοπίστηκε μοτίβο που μπορεί να οδηγήσει σε σφάλματα filesystem."
-                    : "Pattern detected that may lead to filesystem errors."
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Ακεραιότητα filesystem"
-               : "Filesystem integrity",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις πιθανής αλλοίωσης."
-                    : "No filesystem corruption indicators detected."
-    );
-}
-
-
-// ------------------------------------------------------------
-// SILENT DATA CORRUPTION PREDICTOR
-// ------------------------------------------------------------
-boolean silentCorruptionRisk = false;
-int corruptionScore = 0;
-
-if (pctFree < 12)
-    corruptionScore += 30;
-
-if (wearSignals)
-    corruptionScore += 35;
-
-if (controllerRisk)
-    corruptionScore += 35;
-
-logLabelValue(
-        gr ? "Δείκτης κινδύνου σιωπηλής αλλοίωσης δεδομένων"
-           : "Silent data corruption risk index",
-        corruptionScore + "/100"
-);
-
-if (corruptionScore >= 60) {
-
-    silentCorruptionRisk = true;
-
-    logLabelWarnValue(
-            gr ? "Κίνδυνος σιωπηλής αλλοίωσης δεδομένων"
-               : "Silent data corruption risk",
-            gr
-                    ? "Πιθανή φθορά NAND ή controller μπορεί να προκαλέσει αλλοίωση αρχείων."
-                    : "Possible NAND or controller degradation may lead to silent file corruption."
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Ακεραιότητα δεδομένων"
-               : "Data integrity",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις σιωπηλής αλλοίωσης."
-                    : "No silent corruption indicators detected."
-    );
-}
-}
+        // Separate a real, bounded functional I/O test from physical wear.
+        // Run off the UI thread; use only the app's private cache directory.
+        final java.io.File lab18CacheDir = getCacheDir();
+        new Thread(() -> {
+            StorageEvidenceProbe.Result probe = StorageEvidenceProbe.run(lab18CacheDir);
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (probe.completed && probe.checksumMatched) {
+                    logLabelOkValue(
+                            gr ? "Έλεγχος αρχείων εφαρμογής" : "App-file integrity check",
+                            (gr ? "Επιτυχής ανάγνωση/εγγραφή " : "Read/write verified for ")
+                                    + (probe.bytes / 1024) + " KiB"
+                                    + " | write+sync " + probe.writeAndSyncMs + " ms"
+                                    + " | read " + probe.readMs + " ms");
+                } else {
+                    logLabelWarnValue(
+                            gr ? "Έλεγχος αρχείων εφαρμογής" : "App-file integrity check",
+                            gr ? "Μη επιβεβαιωμένος: " + probe.reason
+                               : "Not verified: " + probe.reason);
+                }
+                if (!probe.cleanedUp) {
+                    logLabelWarnValue(
+                            gr ? "Προσωρινό αρχείο" : "Temporary test file",
+                            gr ? "Αποτυχία αυτόματης διαγραφής" : "Cleanup failed");
+                }
+                logLabelValue(
+                        gr ? "Περιορισμός ελέγχου" : "Test limitation",
+                        gr ? "Το checksum ελέγχει μόνο το προσωρινό αρχείο εφαρμογής, όχι φθορά NAND."
+                           : "The checksum checks an app-private file, not NAND lifetime.");
+                logOk(gr ? "Ο λειτουργικός έλεγχος Lab 18 ολοκληρώθηκε."
+                         : "Lab 18 functional I/O check finished.");
+            });
+        }, "GEL-Lab18-IO").start();
 
         // ------------------------------------------------------------
         // FINAL HUMAN SUMMARY
@@ -26224,7 +26068,8 @@ if (corruptionScore >= 60) {
         }
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 18 ολοκληρώθηκε." : "Lab 18 finished.");
+        logInfo(gr ? "Η αποτύπωση χώρου ολοκληρώθηκε· εκτελείται έλεγχος checksum."
+                   : "Space snapshot finished; bounded checksum check running.");
         logLine();
 
     } catch (Throwable ignore) {
