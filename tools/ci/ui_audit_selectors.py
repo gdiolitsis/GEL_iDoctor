@@ -60,3 +60,13 @@ def incomplete_lab_names(results):
     return [item["name"] for item in results
             if re.fullmatch(r"lab-\d{2}", item.get("name", ""))
             and item.get("status") in incomplete]
+
+def find_accessible_action(root, label):
+    """Find a visible clickable action by exact text or content description."""
+    def named(node):
+        if node.get("clickable") != "true":
+            return False
+        return any(matching(r"^" + re.escape(label) + r"$",
+                            node.get(field, ""), re.I)
+                   for field in ("text", "content-desc"))
+    return find_visible(root, named)
