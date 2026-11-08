@@ -11094,8 +11094,9 @@ private void lab12CallFunctionInterpretation() {
     Integer simState = null;
 
     try {
-        airplaneOn = Settings.Global.getInt(getContentResolver(),
-                Settings.Global.AIRPLANE_MODE_ON) == 1;
+        int airplaneValue = Settings.Global.getInt(getContentResolver(),
+                Settings.Global.AIRPLANE_MODE_ON, -1);
+        airplaneOn = airplaneValue == -1 ? null : airplaneValue == 1;
     } catch (RuntimeException ignored) {
         // No default false: an unavailable OS setting remains UNKNOWN.
     }
