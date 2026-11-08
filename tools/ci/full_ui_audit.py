@@ -28,14 +28,14 @@ def swipe(up=True):
     adb("shell","input","swipe",str(w//2),str(int(h*y1)),str(w//2),str(int(h*y2)),"250")
 def find(predicate, scrolls=0):
     previous=None
-    for _ in range(scrolls+1):
+    for attempt in range(scrolls+1):
         t=tree()
         for n in t.iter("node"):
             if visible(n) and predicate(n): return n
         signature=ET.tostring(t)
         if signature==previous: break
         previous=signature
-        swipe()
+        if attempt < scrolls: swipe()
     return None
 def textmatch(pattern):
     return lambda n: bool(re.search(pattern,n.get("text",""),re.I))
@@ -74,6 +74,7 @@ def home():
     dismiss_intro()
 def select_language():
     home()
+    save("before-language")
     n=find(rid("btnLangGR" if lang=="el" else "btnLangEN"),3)
     if not n: raise RuntimeError("Language selector unavailable")
     tap(n); time.sleep(1); dismiss_intro()
@@ -172,6 +173,8 @@ try:
     adb("shell","svc","wifi","disable"); adb("shell","svc","data","disable")
     home(); record("offline-relaunch","UI_OPENED",folder=save("offline-relaunch"))
 finally:
+    try: save("final-state")
+    except Exception: pass
     try: (out/"logcat.txt").write_text(adb("logcat","-b","all","-d","-v","threadtime"))
     except Exception: pass
     (out/"coverage.json").write_text(json.dumps(results,ensure_ascii=False,indent=2))
