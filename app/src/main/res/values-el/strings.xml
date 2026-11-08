@@ -239,4 +239,5 @@ GDiolitsis Engine Lab (GEL) — Author &amp; Developer
 
     <!-- APPLE DIAGNOSIS -->
     <string name="apple_diagnosis">🚀 GEL Διάγνωση Συσκευών Apple</string>
+    <string name="mini_check_scope_description">Περιοδικές μετρήσεις θερμοκρασίας μπαταρίας, σήματος χαμηλής RAM από το Android, εσωτερικού χώρου και προειδοποιήσεων υγείας μπαταρίας όπου διατίθενται. Οι ειδοποιήσεις για ανησυχητικές ενδείξεις προτείνουν ενέργειες, εφόσον είναι ενεργές. Δεν γίνεται ανίχνευση crash ή συνεχής παρακολούθηση. Το Android μπορεί να καθυστερήσει τους προγραμματισμένους ελέγχους.</string>
 </resources>
