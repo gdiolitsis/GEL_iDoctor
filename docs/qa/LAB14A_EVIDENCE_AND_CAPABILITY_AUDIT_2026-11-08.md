@@ -6,7 +6,7 @@
 
 Lab 14A can become a **strong, evidence-rich battery electrical-behaviour lab**, but **a short stress test is not a calibrated measurement of full-charge capacity, State of Health (SoH), cell balance, or swelling**. Those require specific fuel-gauge capabilities, matched observations, long-window tests, OEM service data or a physical inspection. The current implementation often presents subjective scoring as battery "health %" despite missing those prerequisites.
 
-### Confirmed source-level defects / false-claim risks (14 reviewed items)
+### Confirmed source-level defects / false-claim risks (16 reviewed items)
 
 | ID | Severity | Code reference (approx. line) | Finding | Acceptance requirement |
 |---|---|---|---|---|
@@ -24,6 +24,8 @@ Lab 14A can become a **strong, evidence-rich battery electrical-behaviour lab**,
 | B14-12 | HIGH | `ManualTestsActivity.java:16608–16618` | A completed run can save heuristic `lab14_health_percent` without proof of learned/design capacity. Cached historical value may survive bad runs without an explicit invalidation policy. | Distinguish good measurement snapshot from validated SoH estimate; never preserve a prior "healthy" score as if current after incomplete runs; version the record and require freshness. |
 | B14-13 | HIGH | `iDoctorEngine.java:732–735,484–499,543–640` | `readBatterySnapshotLab()` calls `resolveBatteryModeOnce()` but returns the generic `readBatterySnapshot()`, not the advertised OEM-locked/BatteryManager-locked path. The documented source-lock guarantee therefore needs investigation and a code-level consistency test. | Route via one explicit selected reader or remove the lock claim; record source per field and reject source switching within a run unless all metrics are rebaselined. |
 | B14-14 | HIGH | `iDoctorEngine.java:266–318,332–362,543–575` | On ordinary non-OEM reads the public Android `EXTRA_CYCLE_COUNT` introduced at API34 is not consumed, even though the engine's battery snapshot has a cycle-count field. This leaves useful available evidence uncollected on supporting devices. | Read `EXTRA_CYCLE_COUNT` with API gate and unsupported handling, never invent zero cycles, and label reported vs unreported values. |
+| B14-15 | **P0** | `iDoctorEngine.java:2608–2614` | `normalizeCurrentMa()` converts BatteryManager current from µA to mA **only when the magnitude exceeds 10,000**; lower nonzero µA readings can therefore be mislabeled as mA, up to a factor of 1,000. The API contract specifies µA regardless of magnitude. | Always convert BatteryManager µA → mA explicitly using /1000.0, preserve current polarity, and handle the unsupported sentinel. No unit inference by magnitude. |
+| B14-16 | **P0** | `iDoctorEngine.java:readSysLongSafe()` and `readBatterySnapshotFromLockedOem()` | A shared sysfs reader silently divides any value >100,000 by 1,000, rejects values ≥30,000 after conversion, and rejects nonpositive values. This discards valid **negative discharge currents** and destroys distinctions among µA, µV, µAh, µWh and cycles before field-specific normalizers receive the data. It is used across heterogeneous battery fields. | Replace generic scaled sysfs reads with raw signed parsing and separate, source-/field-specific, unit-verified converters; unsupported remains UNKNOWN and never substitutes zero. Verify negative current, high-value counters and cross-source consistency. |
 
 ## What Android can actually give us
 
@@ -104,6 +106,8 @@ Capture aligned **rest → modest load → rest** traces with actual current/vol
 | BAT-12 | Root/sysfs absent; API 26/30/34/36, both locales | Degrade gracefully; show correct Android public data only |
 | BAT-13 | Repeat test under mismatched SOC/temp/brightness | Separate runs as **non-comparable**, do not pronounce degradation trend |
 | BAT-14 | Healthy battery and heavy CPU load vs aged battery and light CPU load | Workload-dependent draw never misclassified as battery State of Health |
+| BAT-15 | BatteryManager current = +5,000 µA and -5,000 µA | Correct +5 mA / -5 mA, never ±5,000 mA; no inference from magnitude |
+| BAT-16 | OEM current_now = -350,000 µA; voltage_now = 3,850,000 µV; charge_now = 4,200,000 µAh; energy_now is µWh | Distinct signed and correctly typed current/voltage/charge/energy fields; no generic clipping, mixing or silent replacement |
 
 ## No silent merge/release
 
