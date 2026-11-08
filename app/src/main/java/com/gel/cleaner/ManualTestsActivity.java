@@ -15386,22 +15386,14 @@ boolean hasSag =
 
 currentNow = idoctor.readBatteryCurrentMaStable(5, 20);
 
-if ((Float.isNaN(currentNow) ||
-     Math.abs(currentNow) < 50f) &&
-    drainMah > 0 &&
-    dtMs > 0) {
-
-    float mahPerSec =
-            (float) drainMah / (dtMs / 1000f);
-
-    currentNow = Math.abs(mahPerSec * 3600f);
-}
+// A discharge rate is not an instantaneous current sample.
+// Missing hardware current stays unknown; it must never validate ESR.
 
 // 🔴 CURRENT VALID FLAG
 boolean hasCurrent =
         !Float.isNaN(currentNow) &&
-        currentNow >= 100f &&
-        currentNow < 8000f;
+        Math.abs(currentNow) >= 100f &&
+        Math.abs(currentNow) < 8000f;
         
 boolean strongElectricalSignal =
         hasSag &&
@@ -15832,7 +15824,7 @@ if (agingInputOk) {
 // ----------------------------------------------------
 
 if (aging != null &&
-    !Float.isNaN(aging.index)) {
+    aging.index >= 0) {
 
     lab14AgingIndex =
             Math.max(0, Math.min(100, aging.index));
@@ -15886,134 +15878,16 @@ if (aging != null &&
 }
 
 // ----------------------------------------------------
-// BATTERY HEALTH ESTIMATION (SOH - TRIMMED FINAL)
+// BATTERY HEALTH: FAIL CLOSED UNTIL CAPACITY IS INDEPENDENTLY VERIFIED
 // ----------------------------------------------------
-
-float health = 100f;
-
-// ----------------------------------------------------
-// INTERNAL RESISTANCE
-// ----------------------------------------------------
-if (!Float.isNaN(internalResistance[0]) &&
-    internalResistance[0] > 0.01f &&
-    internalResistance[0] < 0.40f) {
-
-    if (internalResistance[0] > 0.22f)
-        health -= 18f;
-    else if (internalResistance[0] > 0.15f)
-        health -= 8f;
-}
-
-// ----------------------------------------------------
-// CYCLES
-// ----------------------------------------------------
-if (cycles > 0) {
-
-    if (cycles > 700)
-        health -= 18f;
-    else if (cycles > 500)
-        health -= 10f;
-    else if (cycles > 300)
-        health -= 5f;
-}
-
-// ----------------------------------------------------
-// TEMPERATURE
-// ----------------------------------------------------
-if (!Float.isNaN(lab14TempPeak) &&
-    lab14TempPeak > 0f &&
-    lab14TempPeak < 80f) {
-
-    if (lab14TempPeak > 50f)
-        health -= 10f;
-    else if (lab14TempPeak > 45f)
-        health -= 5f;
-}
-
-// ----------------------------------------------------
-// SMART SWELLING
-// ----------------------------------------------------
-
-float tempDelta =
-        (!Float.isNaN(tempStart) &&
-         !Float.isNaN(lab14TempPeak))
-                ? Math.max(
-                        0f,
-                        lab14TempPeak - tempStart
-                  )
-                : Float.NaN;
-
-float rMilli =
-        !Float.isNaN(internalResistance[0])
-                ? internalResistance[0] * 1000f
-                : Float.NaN;
-
-if (!Float.isNaN(rMilli) &&
-    (rMilli < 1f || rMilli > 400f)) {
-
-    rMilli = Float.NaN;
-}
-
-float currentSafe =
-        (!Float.isNaN(currentNow) &&
-         Math.abs(currentNow) > 50f)
-                ? currentNow
-                : Float.NaN;
-
-double drainSafe =
-        (!Double.isNaN(drainPercentPerHour) &&
-         drainPercentPerHour > 0)
-                ? drainPercentPerHour
-                : Double.NaN;
-
+// Electrical response and cycle count are observations, not calibrated SoH.
+// Physical swelling cannot be determined by Android software.
 boolean smartSwelling = false;
-
-if (hasSag &&
-    finalSag >= 0.06f &&
-    finalSag < 1.0f &&
-    validDrain &&
-    !lab14_systemLimited[0]) {
-
-    smartSwelling =
-            detectSwellingSmart(
-                    finalSag,
-                    tempDelta,
-                    currentSafe,
-                    rMilli,
-                    drainSafe
-            );
-}
-
-if (smartSwelling) {
-    health -= 10f;
-}
+lab14HealthPercent = Float.NaN;
+lab14HealthLabel = "Not measured";
+// All available measured V/I/Q/T/SoC evidence remains visible in the test log.
 
 // ----------------------------------------------------
-// CLAMP
-// ----------------------------------------------------
-health =
-        Math.max(
-                0f,
-                Math.min(100f, health)
-        );
-
-lab14HealthPercent = health;
-
-// ----------------------------------------------------
-// LABEL
-// ----------------------------------------------------
-if (health >= 90f)
-    lab14HealthLabel = "Excellent";
-else if (health >= 80f)
-    lab14HealthLabel = "Good";
-else if (health >= 70f)
-    lab14HealthLabel = "Normal";
-else if (health >= 60f)
-    lab14HealthLabel = "Worn";
-else
-    lab14HealthLabel = "Degraded";
-
-
 // ------------------------------------------------
 // DATA QUALITY WARNING (TRIMMED)
 // ------------------------------------------------
@@ -16605,20 +16479,16 @@ lab14LogSave(
         lab14_systemLimited
 );
 
-// store health only full run
-if (!partial &&
-    !lab14_systemLimited[0]) {
+// Never persist a heuristic SoH or preserve a prior fabricated health score.
+// Clear legacy battery-score keys in BOTH historical preference stores.
+p.edit().remove("lab14_health_percent").remove("lab14_health_score")
+        .remove("lab14_aging_index").apply();
+getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
+        .remove("lab14_health_percent").remove("lab14_health_score")
+        .remove("lab14_aging_index").apply();
 
-   SharedPreferences.Editor e = p.edit();
-   e.putFloat(
-      "lab14_health_percent",
-      lab14HealthPercent
-   );
-   e.apply();
-}
-
-
-// RUN COUNT
+// ----------------------------------------------------
+// // RUN COUNT
 boolean countableRun =
         validDrain &&
         !lab14_systemLimited[0];
