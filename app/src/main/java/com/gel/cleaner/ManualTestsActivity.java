@@ -1121,6 +1121,8 @@ private boolean oldKeepScreenOn = false;
     private boolean lab3OldMicMute = false;
 
     private volatile boolean lab4HumanFallbackUsed = false;
+    // Serialize Labs 1/2 tone challenges and prevent incomplete PDF export.
+    private final AtomicBoolean lab12AudioBusy = new AtomicBoolean(false);
 
     // ============================================================
     // SERVICE LOG SESSION FLAG (CRITICAL)
@@ -5838,6 +5840,18 @@ private boolean guardUsageAccess() {
 // ============================================================
 private void lab1SpeakerTone() {
     if (!guardMic(this::lab1SpeakerTone)) return;
+    if (!lab12AudioBusy.compareAndSet(false, true)) {
+        logWarn(AppLang.isGreek(this)
+                ? "Άλλη ακουστική δοκιμή εκτελείται· το αποτέλεσμα παραμένει μη επαληθευμένο."
+                : "Another acoustic challenge is active; no new result was collected.");
+        return;
+    }
+    runOnUiThread(() -> {
+        if (btnExport != null) {
+            btnExport.setEnabled(false);
+            btnExport.setAlpha(0.5f);
+        }
+    });
 
     final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
@@ -5847,6 +5861,7 @@ private void lab1SpeakerTone() {
     logLine();
 
     new Thread(() -> {
+        try {
         AcousticStimulusProbe.Result result = AcousticStimulusProbe.run(this, false);
         if (result.attempted && result.responseObserved) {
             logLabelOkValue(gr ? "Σύμπτωση ερεθίσματος–απόκρισης"
@@ -5878,6 +5893,13 @@ private void lab1SpeakerTone() {
         appendHtml("<br>");
         logOk(gr ? "Η δοκιμή Lab 1 ολοκληρώθηκε." : "Lab 1 probe completed.");
         logLine();
+        } catch (RuntimeException e) {
+            logLabelWarnValue("Acoustic probe", "UNAVAILABLE: "
+                    + e.getClass().getSimpleName());
+        } finally {
+            lab12AudioBusy.set(false);
+            runOnUiThread(this::enableSingleExportButton);
+        }
     }, "GEL-Lab1-AudioEvidence").start();
 }
 
@@ -5886,6 +5908,18 @@ private void lab1SpeakerTone() {
 // ============================================================
 private void lab2SpeakerSweep() {
     if (!guardMic(this::lab2SpeakerSweep)) return;
+    if (!lab12AudioBusy.compareAndSet(false, true)) {
+        logWarn(AppLang.isGreek(this)
+                ? "Άλλη ακουστική δοκιμή εκτελείται· το αποτέλεσμα παραμένει μη επαληθευμένο."
+                : "Another acoustic challenge is active; no new result was collected.");
+        return;
+    }
+    runOnUiThread(() -> {
+        if (btnExport != null) {
+            btnExport.setEnabled(false);
+            btnExport.setAlpha(0.5f);
+        }
+    });
 
     final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
@@ -5895,6 +5929,7 @@ private void lab2SpeakerSweep() {
     logLine();
 
     new Thread(() -> {
+        try {
         AcousticStimulusProbe.Result result = AcousticStimulusProbe.run(this, true);
         logLabelValue(gr ? "Σύγχρονοι τόνοι" : "Timed tone responses",
                 result.observedTones + " / " + result.testedTones + " (4 requested)");
@@ -5922,6 +5957,13 @@ private void lab2SpeakerSweep() {
         appendHtml("<br>");
         logOk(gr ? "Η δοκιμή Lab 2 ολοκληρώθηκε." : "Lab 2 probe completed.");
         logLine();
+        } catch (RuntimeException e) {
+            logLabelWarnValue("Acoustic probe", "UNAVAILABLE: "
+                    + e.getClass().getSimpleName());
+        } finally {
+            lab12AudioBusy.set(false);
+            runOnUiThread(this::enableSingleExportButton);
+        }
     }, "GEL-Lab2-AudioEvidence").start();
 }
 
@@ -30328,7 +30370,12 @@ private void enableSingleExportButton() {
 
     ui.post(() -> {
         if (btnExport == null) return;
-
+        if (lab12AudioBusy.get()) {
+            // Other callbacks cannot export an incomplete Lab 1/2 sample.
+            btnExport.setEnabled(false);
+            btnExport.setAlpha(0.5f);
+            return;
+        }
         btnExport.setEnabled(true);
         btnExport.setAlpha(1f);
     });
