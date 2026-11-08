@@ -283,15 +283,5 @@ public DrainResult computeDrain(DrainSession s) {
         return result;
     }
 
-    // =====================================================
-    // SAVE (hook only – αφήνεις Activity να τα κάνει)
-    // =====================================================
-
-    public void saveDrainValue(double v) {
-        // handled in Activity (SharedPreferences)
-    }
-
-    public void saveRun() {
-        // handled in Activity
-    }
+    // Persistence is owned by BatteryEvidenceStore at Activity run completion.
 }
