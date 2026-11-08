@@ -9115,6 +9115,17 @@ if (d.getWindow() != null) {
 // Σταμάτα TTS ΟΠΟΤΕ κλείσει
 d.setOnDismissListener(dialog -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
+    Lab8Session abandoned = cam.runtimeSession;
+    if (abandoned != null && !abandoned.terminal) {
+        // BACK, background or dismiss cannot leave an orphaned Camera2 resource.
+        abandoned.cancelled = true;
+        abandoned.terminal = true;
+        lab8CloseSession(abandoned);
+        logLabelWarnValue(gr ? "Προεπισκόπηση" : "Preview",
+                gr ? "Διακόπηκε — κανένα συμπέρασμα υλικού"
+                   : "Interrupted — no camera hardware verdict");
+        enableSingleExportButton();
+    }
 });
 
 // Κάλυψη BACK button
