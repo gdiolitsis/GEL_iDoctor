@@ -30637,19 +30637,17 @@ if (!requireGelPro(
 SharedPreferences p =
         getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
         
-boolean silentCorruptionRisk =
-        p.getBoolean("lab27_silent_corruption_risk", false);
+// Legacy storage-risk heuristics are not validated controller failure evidence.
+boolean silentCorruptionRisk = false;
 
 // battery data
 
-float finalScore =
-        p.getFloat("lab14_health_score", Float.NaN);
-
-boolean lab14CollapseRisk =
-        p.getBoolean("lab14_collapse_risk", false);
-
-boolean lab14SwellingSuspected =
-        p.getBoolean("lab14_swelling_risk", false);
+BatteryEvidenceStore.Record lab14ReportRecord =
+        BatteryEvidenceStore.readLatestLab14(this);
+// Legacy heuristics must never masquerade as verified physical battery health.
+float finalScore = Float.NaN;
+boolean lab14CollapseRisk = false;
+boolean lab14SwellingSuspected = false;
         
 // ------------------------------------------------------------
 // 🔴 LAB14B (CLEAN READ)
@@ -30692,25 +30690,19 @@ if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
 }
 
 // stability flags
-boolean pmicInstability =
-        p.getBoolean("lab28_pmic_instability", false);
-
-boolean sensorBusInstability =
-        p.getBoolean("lab28_sensor_bus_instability", false);
-
-boolean sensorFlaps =
-        p.getBoolean("lab28_sensor_flaps", false);
+// Keyword-only symptom extraction is unvalidated hardware failure evidence.
+boolean pmicInstability = false;
+boolean sensorBusInstability = false;
+boolean sensorFlaps = false;
 
 // storage / controller
-boolean nandRisk =
-        p.getBoolean("lab27_nand_risk", false);
-
-boolean controllerRisk =
-        p.getBoolean("lab27_controller_risk", false);
+// Free space and unstructured logs do not reveal NAND wear/controller health.
+boolean nandRisk = false;
+boolean controllerRisk = false;
 
 // thermal
-boolean thermalRunawayRisk =
-        p.getBoolean("lab24_thermal_runaway", false);
+// A legacy boolean is not a verified thermal runaway event.
+boolean thermalRunawayRisk = false;
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -30761,8 +30753,8 @@ String thermalFlag = thermalScore < 0 ? "⚪" : colorFlagFromScore(thermalScore)
 // ------------------------------------------------------------
 boolean charging = isChargingNow();
 
-int batteryScore = Lab30ScoreEvidence.hasBatteryReadings(batTemp, (float) batteryPercent)
-        ? scoreBattery(batTemp, (float) batteryPercent, charging) : -1;
+// Temperature and SOC cannot establish battery capacity health.
+int batteryScore = -1;
 
 String batteryFlag = batteryScore < 0 ? "⚪" : colorFlagFromScore(batteryScore);
 
@@ -31509,7 +31501,14 @@ if (hardwareRiskScore >= 60)
 // ------------------------------------------------------------
 // CERTIFICATE RESULT
 // ------------------------------------------------------------
-if (!certificateWarning && reliabilityScore >= 85) {
+if (batteryScore < 0 || lab14ReportRecord == null ||
+        !lab14ReportRecord.isCompletedValidRun(2L * 60L * 60L * 1000L) ||
+        Double.isNaN(lab14ReportRecord.validatedSoHPercent())) {
+    logLabelWarnValue(
+            gr ? "Κατάσταση Πιστοποιητικού" : "Certificate status",
+            gr ? "ΑΝΕΠΑΡΚΗ ΕΠΑΛΗΘΕΥΜΕΝΑ ΣΤΟΙΧΕΙΑ — δεν εκδίδεται πιστοποίηση"
+               : "INSUFFICIENT VERIFIED EVIDENCE — certification withheld");
+} else if (!certificateWarning && reliabilityScore >= 85) {
 
     logLabelOkValue(
             gr ? "Κατάσταση Πιστοποιητικού"
@@ -31614,6 +31613,8 @@ int performanceScore = Lab30ScoreEvidence.performanceScore(
         storageScore, ramScore, appsScore, thermalScore);
 int deviceHealthScore = Lab30ScoreEvidence.deviceHealthScore(
         thermalScore, batteryScore, performanceScore, stabilityScore);
+// Without battery-health evidence, overall device health cannot be certified.
+if (batteryScore < 0) deviceHealthScore = -1;
 
 // ------------------------------------------------------------
 // PRINT DETAILS
