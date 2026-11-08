@@ -31,7 +31,8 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
     private boolean accessChoices;
     private boolean giftActivation;
     private boolean gr;
-    private String lastMessage = "";
+    private final AccountMessageState accountMessages = new AccountMessageState();
+    private TextView billingNotice;
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         gr = AppLang.isGreek(this);
@@ -45,6 +46,12 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
         box.setBackgroundColor(Color.rgb(16,16,16));
         status = new TextView(this); status.setTextSize(18); status.setTextColor(Color.WHITE);
         box.addView(status);
+        // Billing availability is not the outcome of a Google/gift action.
+        billingNotice = new TextView(this);
+        billingNotice.setTextSize(14);
+        billingNotice.setTextColor(0xFFFFB74D);
+        billingNotice.setVisibility(android.view.View.GONE);
+        box.addView(billingNotice);
         billing = new GelBillingManager(this, new GelProBillingListener() {
             @Override public void onGelProActivated(boolean offer) {
                 if (accessChoices && !giftActivation && billing.isGelProActive()) finish();
@@ -53,7 +60,15 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
             @Override public void onPurchasePending(String product) {
                 render(gr ? "Η πληρωμή εκκρεμεί." : "Payment pending.");
             }
-            @Override public void onBillingError(String message) { render(message); }
+            @Override public void onBillingError(String message) {
+                // Background product queries can fail independently of the
+                // current account action. Never overwrite last action result.
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    accountMessages.onBillingError();
+                    showBillingNotice();
+                });
+            }
         });
         billing.start();
         if (trialActivation) {
@@ -140,10 +155,20 @@ public final class GelProAccountActivity extends GELAutoActivityHook {
         params.topMargin = Math.round(12 * getResources().getDisplayMetrics().density);
         box.addView(button, params);
     }
+    private void showBillingNotice() {
+        if (billingNotice == null) return;
+        if (accountMessages.billingUnavailable()) {
+            billingNotice.setText(gr
+                    ? "Το Google Play Billing δεν είναι διαθέσιμο αυτή τη στιγμή. Οι ενέργειες Google/gift ελέγχονται ανεξάρτητα."
+                    : "Google Play Billing is temporarily unavailable. Google/gift account actions are independent.");
+            billingNotice.setVisibility(android.view.View.VISIBLE);
+        } else {
+            billingNotice.setVisibility(android.view.View.GONE);
+        }
+    }
     private void render(String message) {
-        // Quiet billing callbacks must not erase an explicit account action's result.
-        if (message != null && !message.isEmpty()) lastMessage = message;
-        message = lastMessage;
+        accountMessages.onActionMessage(message);
+        message = accountMessages.currentActionMessage();
         if (trialActivation) {
             long until = GelTrialAccess.expiresAt(this);
             status.setText((gr ? "Αν είστε επαγγελματίας ή απαιτητικός απλός χρήστης, δοκιμάστε τις πλήρεις δυνατότητες της εφαρμογής για μία ώρα. Μετά αποφασίζετε αν αξίζει για εσάς η συνδρομή.\n\nΌλα τα διαγνωστικά εργαστήρια και απεριόριστες προσωποποιημένες αναφορές με το λογότυπό σας. Χωρίς κάρτα, χρέωση ή αυτόματη συνδρομή.\n\nΜία δοκιμή ανά Google account και συσκευή. Απαιτούνται σύνδεση Google και internet. Η ώρα αρχίζει με την ενεργοποίηση και συνεχίζει όταν κλείνετε την εφαρμογή.\n\n"
