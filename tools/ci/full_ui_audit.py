@@ -7,6 +7,7 @@ from ui_audit_selectors import MANUAL_ENTRY, matching as search, is_visible as v
 PKG = "com.gel.iDoctor"
 out = pathlib.Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
 lang = sys.argv[2]
+mode = os.environ.get("AUDIT_SCOPE","full")
 results = []
 counter = 0
 def adb(*args, binary=False, timeout=35):
@@ -130,13 +131,14 @@ try:
     adb("shell","settings","put","system","accelerometer_rotation","0")
     adb("shell","settings","put","system","user_rotation","0")
     select_language()
-    if os.environ.get("AUDIT_SCOPE","full") != "labs_only":
+    if mode != "labs_only":
         # Inventory home at every scroll position.
         home()
-        for page in range(6):
+        for page in range(6 if mode == "full" else 0):
             save("home-page-"+str(page)); swipe()
         targets=["btnPhoneInfoInternal","btnPhoneInfoPeripherals","btnCpuRamLive","btnInternetSpeedTest",
                  "btnCleanAll","btnBrowserCache","btnAppCache","btnAppManager","btnGuidedOptimizer","btnDiagnostics","btnDonate"]
+        if mode == "menus_only": targets=[]
         for target in targets:
             try:
                 home(); n=find(rid(target),12)
@@ -150,9 +152,21 @@ try:
         home()
         for label,pattern in [("contact",r"^Contact$"),("overflow",r"More options|Περισσότερες επιλογές")]:
             home()
-            n=find(lambda n: bool(search(pattern,n.get("text","")+" "+n.get("content-desc",""),re.I)))
+            n=find(lambda n: bool(search(pattern,(n.get("text","")+" "+n.get("content-desc","")).strip(),re.I)))
             if n is not None:
-                tap(n); record(label,"UI_OPENED",folder=save(label)); adb("shell","input","keyevent","4")
+                tap(n); record(label,"UI_OPENED",folder=save(label))
+                if label == "overflow":
+                    account=find(textmatch(r"^(PRO account|Λογαριασμός PRO)$"))
+                    if account is not None:
+                        tap(account); record("account","UI_OPENED",folder=save("account"))
+                        for action in [r"^Refresh gifted PRO$",r"^Sign out$",r"^Delete account$",r"^Restore Play purchases$"]:
+                            control=find(textmatch(action),4)
+                            if control is None: continue
+                            tap(control); time.sleep(2)
+                            record("account-"+action,"UI_ACTION_REVIEW",folder=save("account-"+action))
+                            cancel=find(textmatch(r"^(CANCEL|ΑΚΥΡΟ)$"))
+                            if cancel is not None: tap(cancel)
+                adb("shell","input","keyevent","4")
             else: record(label,"NO_ACCESSIBLE_LABEL")
         # Settings is currently an icon with an empty title; use actual toolbar bounds,
         # not guessed absolute screen coordinates.
@@ -166,7 +180,7 @@ try:
                 if n is not None: tap(n); record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
             else: record("settings","NO_ACCESSIBLE_LABEL")
     sections=[(1,5),(6,9),(10,13),(14,17),(18,20),(21,24),(25,31)]
-    for number in range(1,32):
+    for number in (range(1,32) if mode != "menus_only" else []):
         try:
             manual()
             lo,hi=next((a,b) for a,b in sections if a<=number<=b)
