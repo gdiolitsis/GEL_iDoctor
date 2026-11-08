@@ -8034,18 +8034,18 @@ private void lab7RotationAndProximityManual() {
         gr
                 ? "Βήμα 1:\n"
                   + "Περιστρέψτε αργά τη συσκευή.\n"
-                  + "Η οθόνη πρέπει να ακολουθεί τον προσανατολισμό.\n\n"
+                  + "Η δοκιμή ελέγχει σταθερή αλλαγή προσανατολισμού, όχι περιστροφή UI.\n\n"
                   + "Βήμα 2:\n"
                   + "Καλύψτε με το χέρι σας τον αισθητήρα εγγύτητας, "
                   + "στο επάνω μέρος της οθόνης, στην περιοχή ειδοποιήσεων.\n"
-                  + "Η οθόνη πρέπει να σβήσει."
+                  + "Αποκάλυψε και κάλυψε τον αισθητήρα. Η οθόνη δεν χρειάζεται να σβήσει."
                 : "Step 1:\n"
                   + "Rotate the device slowly.\n"
-                  + "The screen should rotate accordingly.\n\n"
+                  + "The test detects stable orientation changes, not UI rotation.\n\n"
                   + "Step 2:\n"
                   + "Cover the proximity sensor with your hand, "
                   + "at the top of the screen, to the notification area.\n"
-                  + "The screen should turn off.";
+                  + "Uncover and cover the sensor. The screen does not need to turn off.";
 
         AlertDialog.Builder b =
                 new AlertDialog.Builder(
@@ -31331,7 +31331,7 @@ if (requestCode == 7007) {
 
         logLabelOkValue(
                 gr ? "Αισθητήρες κίνησης" : "Motion sensors",
-                gr ? "Λειτουργούν κανονικά" : "Responding normally"
+                gr ? "Παρατηρήθηκε μετάβαση σταθερών στάσεων" : "Stable pose transition observed"
         );
 
         logLabelOkValue(
@@ -31348,16 +31348,16 @@ if (requestCode == 7007) {
 
     } else {
 
-        logLabelErrorValue(
+        logLabelWarnValue(
                 gr ? "Ανίχνευση περιστροφής" : "Rotation detection",
-                gr ? "Δεν εντοπίστηκε" : "Not detected"
+                gr ? "Μη επαληθευμένο" : "Not verified"
         );
 
         logLabelWarnValue(
                 gr ? "Πιθανή αιτία" : "Possible cause",
                 gr
-                        ? "Η αυτόματη περιστροφή είναι απενεργοποιημένη ή υπάρχει βλάβη αισθητήρα"
-                        : "Auto-rotate disabled or sensor malfunction"
+                        ? "Δεν τεκμηριώθηκε δεύτερη σταθερή στάση· όχι διάγνωση βλάβης"
+                        : "No second stable orientation confirmed; no hardware fault established"
         );
 
         appendHtml("<br>");
@@ -31392,22 +31392,22 @@ if (requestCode == 8008) {
         logLabelOkValue(
                 gr ? "Συμπεριφορά οθόνης" : "Screen behavior",
                 gr
-                        ? "Η οθόνη έκλεισε όταν καλύφθηκε ο αισθητήρας"
-                        : "Turned off when sensor was covered"
+                        ? "Δεν ελέγχθηκε σβήσιμο οθόνης εκτός τηλεφωνικής κλήσης"
+                        : "Screen turn-off was not checked outside a call"
         );
 
     } else {
 
-        logLabelErrorValue(
+        logLabelWarnValue(
                 gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
-                gr ? "Δεν εντοπίστηκε απόκριση" : "No response detected"
+                gr ? "Μη επαληθευμένη απόκριση" : "Response not verified"
         );
 
         logLabelWarnValue(
                 gr ? "Πιθανή αιτία" : "Possible cause",
                 gr
-                        ? "Εμπόδιο στον αισθητήρα ή πιθανή βλάβη υλικού"
-                        : "Sensor obstruction or hardware fault"
+                        ? "Η μεταβολή κοντά/μακριά δεν επαληθεύτηκε· άγνωστη αιτία"
+                        : "Near/far event transition unverified; cause unknown"
         );
     }
 
