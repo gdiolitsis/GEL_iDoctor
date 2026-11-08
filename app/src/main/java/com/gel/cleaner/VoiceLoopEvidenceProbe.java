@@ -82,10 +82,10 @@ public final class VoiceLoopEvidenceProbe {
 
             // Read the actual OS-selected route while both streams are active;
             // null is UNKNOWN, never proof of a missing physical component.
-            AudioDeviceInfo input = recorder.getRoutedDevice();
-            AudioDeviceInfo output = track.getRoutedDevice();
-            if (input != null) inputType = input.getType();
-            if (output != null) outputType = output.getType();
+            AudioDeviceInfo routedInput = recorder.getRoutedDevice();
+            AudioDeviceInfo routedOutput = track.getRoutedDevice();
+            if (routedInput != null) inputType = routedInput.getType();
+            if (routedOutput != null) outputType = routedOutput.getType();
 
             byte[] buffer = new byte[size];
             start = SystemClock.elapsedRealtime();
@@ -110,12 +110,12 @@ public final class VoiceLoopEvidenceProbe {
             }
             long elapsed = SystemClock.elapsedRealtime() - start;
             if (inputType < 0) {
-                AudioDeviceInfo input = recorder.getRoutedDevice();
-                if (input != null) inputType = input.getType();
+                AudioDeviceInfo fallbackInput = recorder.getRoutedDevice();
+                if (fallbackInput != null) inputType = fallbackInput.getType();
             }
             if (outputType < 0) {
-                AudioDeviceInfo output = track.getRoutedDevice();
-                if (output != null) outputType = output.getType();
+                AudioDeviceInfo fallbackOutput = track.getRoutedDevice();
+                if (fallbackOutput != null) outputType = fallbackOutput.getType();
             }
             boolean complete = !cancelled.get()
                     && AudioChallengeEvidence.loopAttempted(elapsed, captured, written, peak);
