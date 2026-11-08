@@ -1,5 +1,11 @@
 name: Signed APK full UI exploration
 on:
+  pull_request:
+    paths:
+      - 'tools/ci/full_ui_audit.py'
+      - 'tools/ci/ui_audit_selectors.py'
+      - 'tools/ci/test_ui_audit_selectors.py'
+      - '.github/workflows/full-ui-audit.yml'
   workflow_dispatch:
     inputs:
       evidence_artifact_id:
@@ -26,7 +32,7 @@ permissions:
   actions: read
 jobs:
   inspect:
-    if: ${{ inputs.evidence_artifact_id != '' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.evidence_artifact_id != '' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Inspect saved QA evidence
@@ -49,12 +55,12 @@ jobs:
               print('EVIDENCE_IMAGE='+n+'|'+base64.b64encode(z.read(n)).decode())
           PY
   explore:
-    if: ${{ inputs.evidence_artifact_id == '' }}
+    if: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && inputs.evidence_artifact_id == '') }}
     strategy:
       fail-fast: false
       matrix:
-        api: ${{ fromJSON(inputs.api_filter == '30' && '[30]' || inputs.api_filter == '36' && '[36]' || '[30,36]') }}
-        language: ${{ fromJSON(inputs.language_filter == 'en' && '["en"]' || inputs.language_filter == 'el' && '["el"]' || '["en","el"]') }}
+        api: ${{ fromJSON(github.event_name == 'pull_request' && '[30]' || inputs.api_filter == '30' && '[30]' || inputs.api_filter == '36' && '[36]' || '[30,36]') }}
+        language: ${{ fromJSON(github.event_name == 'pull_request' && '["el"]' || inputs.language_filter == 'en' && '["en"]' || inputs.language_filter == 'el' && '["el"]' || '["en","el"]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 85
     steps:
@@ -80,7 +86,7 @@ jobs:
           echo "AUDIT_APK=$apk" >> "$GITHUB_ENV"
       - name: Explore real release UI and capture coverage
         env:
-          AUDIT_SCOPE: ${{ inputs.audit_scope }}
+          AUDIT_SCOPE: ${{ github.event_name == 'pull_request' && 'labs_only' || inputs.audit_scope }}
         run: bash tools/ci/full_ui_audit.sh "$AUDIT_APK" "${{ matrix.api }}" "${{ matrix.language }}"
       - name: Upload screenshots, UI hierarchy, coverage and logs
         if: always()
