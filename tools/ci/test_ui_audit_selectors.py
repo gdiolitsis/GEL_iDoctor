@@ -1,7 +1,8 @@
 import re
 import unittest
 import xml.etree.ElementTree as ET
-from ui_audit_selectors import MANUAL_ENTRY, matching, is_visible, find_visible
+from ui_audit_selectors import (MANUAL_ENTRY, matching, is_visible, find_visible,
+                                scroll_gesture, manual_section_pattern, incomplete_lab_names)
 
 class SelectorsTest(unittest.TestCase):
     def test_android_uppercase_greek_removes_tonos(self):
@@ -20,6 +21,34 @@ class SelectorsTest(unittest.TestCase):
     def test_zero_area_is_not_tappable(self):
         self.assertFalse(is_visible(ET.fromstring('<node bounds="[0,0][0,50]"/>')))
         self.assertTrue(is_visible(ET.fromstring('<node bounds="[0,0][50,50]"/>')))
+
+
+    def test_scroll_targets_labs_not_fixed_logs_on_android_11(self):
+        # Real Android 11 bounds: labs [0,24][320,382], LOGS [0,448][320,548].
+        root = ET.fromstring(
+            '<hierarchy><node scrollable="true" bounds="[0,24][320,382]"/>'
+            '<node scrollable="true" bounds="[0,448][320,548]"/></hierarchy>'
+        )
+        self.assertEqual(scroll_gesture(root), (160, 311, 160, 95))
+        self.assertEqual(scroll_gesture(root, up=False), (160, 95, 160, 311))
+
+    def test_scroll_no_scrollable_view_uses_fallback(self):
+        root = ET.fromstring('<hierarchy><node bounds="[0,0][320,640]"/></hierarchy>')
+        self.assertIsNone(scroll_gesture(root))
+
+    def test_manual_section_legacy_and_corrected_range(self):
+        pattern = manual_section_pattern(25, 31)
+        self.assertIsNotNone(matching(pattern, "Advanced / Logs — Manual Labs 25–30", re.I))
+        self.assertIsNotNone(matching(pattern, "Advanced / Logs — Manual Labs 25–31", re.I))
+        self.assertIsNone(matching(manual_section_pattern(21, 24), "Manual Labs 25–30", re.I))
+
+    def test_missing_lab_sections_fail_qa_coverage(self):
+        rows = [
+            {"name": "lab-10", "status": "SECTION_NOT_FOUND"},
+            {"name": "lab-11", "status": "UI_OPENED_REQUIRES_INTERACTION_OR_REVIEW"},
+            {"name": "lab-12", "status": "HARNESS_OR_UI_ERROR"},
+        ]
+        self.assertEqual(incomplete_lab_names(rows), ["lab-10", "lab-12"])
 
 if __name__ == "__main__":
     unittest.main()
