@@ -154,7 +154,7 @@ public class ProximityCheckActivity extends GELAutoActivityHook
         // Physical distance calibration is outside app-level observation.
     }
 
-    private int dp(int value) {
+    @Override public int dp(int value) {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 }
