@@ -24972,14 +24972,14 @@ private void lab17RunAuto() {
     // ------------------------------------------------------------
     SharedPreferences p = getSharedPreferences(PREF, MODE_PRIVATE);
 
-    // LAB 14 results
-    final float lab14Health = p.getFloat("lab14_health_score", -1f);
-    final int lab14Aging = p.getInt("lab14_aging_index", -1);
-    final long ts14 = p.getLong("lab14_last_ts", 0L);
-
-    // LAB 14 reliability flag (future-safe)
-    final boolean lab14Unstable =
-            p.getBoolean("lab14_unstable_measurement", false);
+    // Versioned evidence only; legacy heuristic health percentages never count.
+    final BatteryEvidenceStore.Record lab14Record =
+            BatteryEvidenceStore.readLatestLab14(this);
+    final float lab14Health = -1f;
+    final int lab14Aging = -1;
+    final long ts14 = lab14Record != null ? lab14Record.wallTimeMs : 0L;
+    final boolean lab14Unstable = lab14Record != null
+            && (!lab14Record.drainValid || lab14Record.thermalLimited);
             
 // ------------------------------------------------------------
 // 🔴 MULTIPLIERS (LOCAL SAFE)
@@ -25029,16 +25029,8 @@ if (snap != null) {
         lab14bBaselineMah = snap.chargeDesignMah;
 
     } else {
-
-        int pct = Math.max(1, getBatteryPercentSafe());
-        lab14bBaselineMah =
-        (long) (snap.chargeNowMah / (pct / 100.0f));
-        
-
-        if (snap.chargeNowMah > 0) {
-            lab14bBaselineMah =
-                 (long) (snap.chargeNowMah / (pct / 100.0f));
-        }
+        // Charge counter / SOC is not independently verified full capacity.
+        lab14bBaselineMah = -1L;
     }
 }
 
@@ -25051,9 +25043,8 @@ if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
     lab14bEstimatedHours =
             lab14bBaselineMah / lab14bConsumptionPerHour;
 } else {
-    // ?? fallback για παλιές εκδόσεις
-    lab14bEstimatedHours =
-            p.getFloat("lab14b_estimated_hours", -1f);
+    // Legacy cached estimates have no validated capacity provenance.
+    lab14bEstimatedHours = -1f;
 }
 
 // ------------------------------------------------------------
