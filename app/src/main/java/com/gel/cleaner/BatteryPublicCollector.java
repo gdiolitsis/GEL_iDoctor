@@ -188,7 +188,7 @@ public final class BatteryPublicCollector {
                             "PowerManager.getBatteryDischargePrediction",
                             prediction != null && !prediction.isNegative()
                                     ? prediction.toMillis() : Double.NaN);
-                } catch (RuntimeException | ArithmeticException ignored) {
+                } catch (RuntimeException ignored) {
                     unavailable(data, "os_estimated_discharge_time_ms", "ms", "PowerManager",
                             "Prediction unavailable");
                 }
