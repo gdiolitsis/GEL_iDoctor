@@ -24822,6 +24822,50 @@ private void lab16ThermalSnapshot() {
         }
     }
 
+    // Android thermal manager data complement OEM-exposed sensors; they are not
+    // interchangeable physical quantities or temperatures of all components.
+    BatteryPublicCollector.Snapshot osBattery =
+            BatteryPublicCollector.collect(this);
+    BatteryEvidence osThermalStatus = osBattery.get("thermal_status_enum");
+    BatteryEvidence osThermalHeadroom = osBattery.get("thermal_headroom");
+    BatteryEvidence osBatteryTemp = osBattery.get("temperature_c");
+
+    appendHtml("<br>");
+    logInfo(gr ? "Πρόσθετα στοιχεία θερμικής προστασίας Android:"
+               : "Additional Android thermal-protection evidence:");
+    if (osThermalStatus.isObserved()) {
+        logLabelValue(
+                gr ? "Κατάσταση θερμικής προστασίας λειτουργικού"
+                   : "OS thermal status",
+                String.format(Locale.US, "Android enum %.0f", osThermalStatus.value));
+        if (osThermalStatus.value >= android.os.PowerManager.THERMAL_STATUS_SEVERE) {
+            logLabelWarnValue(gr ? "Προστασία από υπερθέρμανση"
+                                  : "Thermal protection",
+                    gr ? "Το Android αναφέρει σοβαρό θερμικό περιορισμό"
+                       : "Android reports severe system thermal stress");
+        }
+    } else {
+        logLabelWarnValue(gr ? "Θερμική κατάσταση Android" : "Android thermal status",
+                gr ? "Δεν διατίθεται" : "Unavailable");
+    }
+    if (osThermalHeadroom.isObserved()) {
+        logLabelValue(gr ? "Πρόβλεψη θερμικού περιθωρίου"
+                         : "OS thermal headroom prediction",
+                String.format(Locale.US, "%.3f (OS estimate)", osThermalHeadroom.value));
+    } else {
+        logLabelValue(gr ? "Θερμικό περιθώριο" : "Thermal headroom",
+                gr ? "Δεν διατίθεται ή περιορίστηκε από το Android"
+                   : "Unavailable or rate-limited by Android");
+    }
+    if (osBatteryTemp.isObserved()) {
+        logLabelValue(gr ? "Θερμοκρασία μπαταρίας — δημόσιο API"
+                         : "Battery temperature — public API",
+                String.format(Locale.US, "%.1f °C", osBatteryTemp.value));
+    }
+    logLabelWarnValue(gr ? "Περιορισμός" : "Limitation",
+            gr ? "Η θερμική κατάσταση του Android δεν ταυτοποιεί βλάβη μπαταρίας ή συγκεκριμένου αισθητήρα."
+               : "OS-wide thermal status does not isolate a battery or sensor hardware defect.");
+
     appendHtml("<br>");
 
     // ------------------------------------------------------------
@@ -24952,8 +24996,12 @@ private void lab16ThermalSnapshot() {
         }
     }
 
-    thermalDanger = thermalDanger || hiddenRisk;
+    thermalDanger = thermalDanger || hiddenRisk
+            || (osThermalStatus.isObserved()
+                && osThermalStatus.value >= android.os.PowerManager.THERMAL_STATUS_SEVERE);
     thermalScore = ThermalEvidencePolicy.score(internal.size(), peripherals.size(), thermalScore, hiddenRisk);
+    // This is a contextual, uncalibrated observation score; OS thermal stress
+    // is recorded separately and cannot certify physical sensor health.
 
     try {
         p.edit()
