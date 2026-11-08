@@ -1124,6 +1124,7 @@ private boolean oldKeepScreenOn = false;
     // Serialize Labs 1/2 tone challenges and prevent incomplete PDF export.
     private final AtomicBoolean lab12AudioBusy = new AtomicBoolean(false);
     private final AtomicBoolean lab5VibrationPending = new AtomicBoolean(false);
+    private final AtomicBoolean lab3GuidedPending = new AtomicBoolean(false);
 
     // ============================================================
     // SERVICE LOG SESSION FLAG (CRITICAL)
@@ -2686,6 +2687,7 @@ private void askUserEarpieceConfirmation(boolean playbackRequested) {
     if (!playbackRequested) {
         logLabelWarnValue("Lab 3 audio playback",
                 "Not verified: playback failed; user confirmation withheld");
+        lab3GuidedPending.set(false);
         enableSingleExportButton();
         return;
     }
@@ -2823,6 +2825,8 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 
         lab3WaitingUser = false;
         restoreLab3Audio();
+        lab3GuidedPending.set(false);
+        enableSingleExportButton();
         dialog.dismiss();
         return true;
     }
@@ -2847,6 +2851,11 @@ if (!isFinishing() && !isDestroyed()) {
             );
         }
     }, 400);
+} else {
+    lab3WaitingUser = false;
+    lab3GuidedPending.set(false);
+    enableSingleExportButton();
+    return;
 }
 
 // ------------------------------------------------------------
@@ -2870,6 +2879,8 @@ yesBtn.setOnClickListener(v -> {
     logLine();
 
     restoreLab3Audio();
+    lab3GuidedPending.set(false);
+    enableSingleExportButton();
     d.dismiss();
 });
 
@@ -2901,6 +2912,8 @@ noBtn.setOnClickListener(v -> {
     logLine();
 
     restoreLab3Audio();
+    lab3GuidedPending.set(false);
+    enableSingleExportButton();
     d.dismiss();
 });
 
@@ -5975,6 +5988,17 @@ private void lab2SpeakerSweep() {
 private void lab3EarpieceManual() {
 
     final boolean gr = AppLang.isGreek(this);
+    if (!lab3GuidedPending.compareAndSet(false, true)) {
+        logWarn(gr ? "Έλεγχος ακουστικού σε εξέλιξη."
+                   : "Earpiece challenge is already active.");
+        return;
+    }
+    runOnUiThread(() -> {
+        if (btnExport != null) {
+            btnExport.setEnabled(false);
+            btnExport.setAlpha(0.5f);
+        }
+    });
 
     appendHtml("<br>");
     logLine();
@@ -5992,6 +6016,8 @@ private void lab3EarpieceManual() {
                         ? "Ο AudioManager δεν είναι διαθέσιμος."
                         : "AudioManager is unavailable."
         );
+        lab3GuidedPending.set(false);
+        enableSingleExportButton();
         return;
     }
 
@@ -6029,7 +6055,9 @@ private void lab3EarpieceManual() {
                         : "Audio routing failed."
         );
 
-        restoreLab3Audio(); // 🔒 FAIL-SAFE
+        restoreLab3Audio(); // restore on failed setup
+        lab3GuidedPending.set(false);
+        enableSingleExportButton();
         return;
     }
 
@@ -6156,7 +6184,11 @@ if (d.getWindow() != null) {
 final AtomicBoolean lab3Started = new AtomicBoolean(false);
 d.setOnDismissListener(dialog -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
-    if (!lab3Started.get()) restoreLab3Audio();
+    if (!lab3Started.get()) {
+        restoreLab3Audio();
+        lab3GuidedPending.set(false);
+        enableSingleExportButton();
+    }
 });
 
 // BACK
@@ -6261,13 +6293,17 @@ start.setOnClickListener(v -> {
 
             final boolean allRequestsAccepted = acceptedPlaybackRequests == 3;
             runOnUiThread(() -> {
-                if (isFinishing() || isDestroyed()) return;
+                if (isFinishing() || isDestroyed()) {
+                    lab3GuidedPending.set(false);
+                    return;
+                }
                 if (allRequestsAccepted) {
                     askUserEarpieceConfirmation(true);
                 } else {
                     logLabelWarnValue(gr ? "LAB 3 — Αποτέλεσμα" : "LAB 3 — Result",
                             gr ? "Μη επαληθευμένο: αποτυχία αναπαραγωγής ή διαδρομής ήχου"
                                : "UNAVAILABLE: playback failed; no earpiece hardware verdict");
+                    lab3GuidedPending.set(false);
                     enableSingleExportButton();
                 }
             });
@@ -30388,7 +30424,8 @@ private void enableSingleExportButton() {
 
     ui.post(() -> {
         if (btnExport == null) return;
-        if (lab12AudioBusy.get() || lab5VibrationPending.get()) {
+        if (lab12AudioBusy.get() || lab5VibrationPending.get()
+                || lab3GuidedPending.get()) {
             // Other callbacks cannot export an incomplete guided sample.
             btnExport.setEnabled(false);
             btnExport.setAlpha(0.5f);
