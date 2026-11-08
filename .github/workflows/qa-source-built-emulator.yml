@@ -33,7 +33,7 @@ jobs:
           test -s "$apk"
           mkdir -p "$RUNNER_TEMP/candidate-apk"
           cp "$apk" "$RUNNER_TEMP/candidate-apk/GEL_iDoctor_v53_source_debug.apk"
-          sha256sum "$RUNNER_TEMP/candidate-apk/GEL_iDoctor_v53_source_debug.apk" | tee "$RUNNER_TEMP/candidate-apk/SHA256SUMS"
+          (cd "$RUNNER_TEMP/candidate-apk" && sha256sum GEL_iDoctor_v53_source_debug.apk > SHA256SUMS)
           git rev-parse HEAD > "$RUNNER_TEMP/candidate-apk/SOURCE_COMMIT"
       - uses: actions/upload-artifact@v6
         with:
