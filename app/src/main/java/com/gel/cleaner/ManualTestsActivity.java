@@ -9577,51 +9577,48 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                         : "NO — professional uncompressed photos not supported (JPEG only)"
         );
 
-    // User confirmation
-    if (s.userConfirmedPreview != null) {
-        if (s.userConfirmedPreview)
-            logLabelOkValue(
-                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                    gr ? "Η προεπισκόπηση ήταν ορατή" : "Live preview visible"
-            );
-        else
-            logLabelErrorValue(
-                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                    gr ? "Η προεπισκόπηση ΔΕΝ ήταν ορατή" : "Preview NOT visible"
-            );
-    }
-
-    // ------------------------------------------------------------
-    // Final verdict (per camera)
-    // ------------------------------------------------------------
-    boolean ok =
-            (s.frames > 0) &&
-            (s.blackFrames == 0) &&
-            (s.droppedFrames == 0) &&
-            (s.latencyCount == 0 || (s.latencySumMs / Math.max(1, s.latencyCount)) <= 250) &&
-            (s.userConfirmedPreview != null && s.userConfirmedPreview);
-
-    s.verdictOk = ok;
-
-    if (ok) {
-        logLabelOkValue(
-                gr ? "Τελικό αποτέλεσμα" : "Verdict",
-                gr ? "OK — Η διαδρομή κάμερας λειτουργεί σωστά"
-                   : "OK — Camera path operational"
-        );
-    } else {
-        logLabelWarnValue(
-                gr ? "Τελικό αποτέλεσμα" : "Verdict",
-                gr ? "Εντοπίστηκαν θέματα — έλεγξε τα παραπάνω"
-                   : "Issues detected — review above"
-        );
-    }
-
+    logLabelValue(gr ? "Διαγνωστική εκτίμηση" : "Diagnostic assessment",
+            gr ? "Αναμονή επιβεβαίωσης χρήστη — χωρίς συμπέρασμα hardware"
+               : "Awaiting human confirmation — no hardware verdict");
     logLine();
     appendHtml("<br>");
 } // ✅ ΤΕΛΟΣ lab8StopAndReportSample (αυτό έλειπε)
 
 // ============================================================
+// Only the finished stream AND the subsequent user response can create a
+// scoped functional observation. It does not certify camera physical health.
+private void lab8FinalizePreviewOutcome(Lab8Session s, Lab8Overall overall) {
+    final boolean gr = AppLang.isGreek(this);
+    Lab8Evidence.Result r = Lab8Evidence.classify(
+            s.repeatingRequestStarted, s.samplingComplete,
+            s.frames, s.validLumaFrames, s.userConfirmedPreview);
+    if (r == Lab8Evidence.Result.OBSERVED_PREVIEW_WITH_USER_CONFIRMATION) {
+        overall.previewOkCount++;
+        s.verdictOk = true;
+        logLabelValue(gr ? "Προεπισκόπηση κάμερας" : "Camera preview",
+                gr ? "Καρέ καταγράφηκαν και ο χρήστης είδε ζωντανή εικόνα"
+                   : "Frames sampled and user saw live preview");
+        logLabelValue(gr ? "Όρια" : "Limit",
+                gr ? "Δεν πιστοποιείται φακός, autofocus, ISP ή οπτική ποιότητα"
+                   : "Lens, autofocus, ISP and optical quality not certified");
+    } else if (r == Lab8Evidence.Result.USER_REPORTED_NO_IMAGE) {
+        overall.previewFailCount++;
+        logLabelWarnValue(gr ? "Απάντηση χρήστη" : "User report",
+                gr ? "Δεν είδε εικόνα — άγνωστη αιτία"
+                   : "Did not see image — unverified cause");
+    } else if (r == Lab8Evidence.Result.UNAVAILABLE) {
+        overall.previewUnavailableCount++;
+        logLabelWarnValue(gr ? "Προεπισκόπηση" : "Preview",
+                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ — χωρίς διάγνωση βλάβης"
+                   : "UNAVAILABLE — no hardware verdict");
+    } else {
+        overall.previewInconclusiveCount++;
+        logLabelWarnValue(gr ? "Προεπισκόπηση" : "Preview",
+                gr ? "ΑΝΕΠΑΡΚΗ ΣΤΟΙΧΕΙΑ — χωρίς διάγνωση βλάβης"
+                   : "INCONCLUSIVE — no hardware verdict");
+    }
+}
+
 // LAB 8 — Close session safely
 // ============================================================
 private void lab8CloseSession(Lab8Session s) {
