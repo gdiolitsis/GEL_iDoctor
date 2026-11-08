@@ -84,9 +84,7 @@ public class TouchGridTestActivity extends GELAutoActivityHook {
         finishTouch(false);
     }
 
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
-    }
+    // dp(int) is inherited from GELAutoActivityHook.
 
     private final class TouchGridView extends View {
         private final boolean[][] cleared =
