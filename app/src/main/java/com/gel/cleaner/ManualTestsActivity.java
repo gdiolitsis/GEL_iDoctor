@@ -2679,7 +2679,13 @@ return (ip & 0xFF) + "." +
 // LAB 3 — User Confirmation Dialog (Earpiece)
 // FINAL — GEL Dark/Gold + Neon Green + TTS + Mute
 // ============================================================
-private void askUserEarpieceConfirmation() {
+private void askUserEarpieceConfirmation(boolean playbackRequested) {
+    if (!playbackRequested) {
+        logLabelWarnValue("Lab 3 audio playback",
+                "Not verified: playback failed; user confirmation withheld");
+        enableSingleExportButton();
+        return;
+    }
 
     runOnUiThread(() -> {
 
@@ -2852,8 +2858,8 @@ yesBtn.setOnClickListener(v -> {
     logLabelOkValue(
             gr ? "Αποτέλεσμα" : "Result",
             gr
-                    ? "Ο χρήστης επιβεβαίωσε καθαρή αναπαραγωγή ήχου"
-                    : "User confirmed audio playback"
+                    ? "Ο χρήστης δήλωσε ότι άκουσε καθαρά τον ήχο· φυσικό ακουστικό και έξοδος μη πιστοποιημένα"
+                    : "USER_REPORTED: heard tone; physical earpiece/output not independently verified"
     );
 
     appendHtml("<br>");
@@ -2873,11 +2879,11 @@ noBtn.setOnClickListener(v -> {
 
     lab3WaitingUser = false;
 
-    logLabelErrorValue(
+    logLabelWarnValue(
             gr ? "LAB 3 — Ακουστικό" : "LAB 3 — Earpiece",
             gr
-                    ? "Ο χρήστης ΔΕΝ άκουσε τους ήχους"
-                    : "User did NOT hear tones"
+                    ? "USER_REPORTED: ο χρήστης δεν άκουσε τους τόνους· αιτία άγνωστη"
+                    : "USER_REPORTED: tones were not heard; cause unverified"
     );
 
     logLabelWarnValue(
@@ -2958,7 +2964,7 @@ private void restoreLab3Audio() {
  * Plays a short earpiece beep using VOICE_CALL stream.
  * Earpiece-only, OEM safe.
  */
-private void playEarpieceBeep() {
+private boolean playEarpieceBeep() {
 
     int sampleRate = 8000;
     int durationMs = 400;
@@ -2972,22 +2978,31 @@ private void playEarpieceBeep() {
                 (Math.sin(2 * Math.PI * i * freq / sampleRate) * 32767);
     }
 
-    AudioTrack track = new AudioTrack(
-            AudioManager.STREAM_VOICE_CALL,
-            sampleRate,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            buffer.length * 2,
-            AudioTrack.MODE_STATIC
-    );
-
+    AudioTrack track = null;
     try {
-        track.write(buffer, 0, buffer.length);
+        track = new AudioTrack(
+                AudioManager.STREAM_VOICE_CALL,
+                sampleRate,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                buffer.length * 2,
+                AudioTrack.MODE_STATIC
+        );
+        if (track.getState() != AudioTrack.STATE_INITIALIZED) return false;
+        int written = track.write(buffer, 0, buffer.length);
+        if (written != buffer.length) return false;
         track.play();
+        if (track.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) return false;
         SystemClock.sleep(durationMs + 100);
+        // Playback API accepted samples; does NOT confirm audible hardware route.
+        return true;
+    } catch (RuntimeException e) {
+        return false;
     } finally {
-        try { track.stop(); } catch (Throwable ignore) {}
-        try { track.release(); } catch (Throwable ignore) {}
+        if (track != null) {
+            try { track.stop(); } catch (Throwable ignore) {}
+            try { track.release(); } catch (Throwable ignore) {}
+        }
     }
 }
 
@@ -3020,7 +3035,7 @@ private void resetAudioAfterLab3(
         try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
 
         // Force clean baseline
-        try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
+        try { am.setMode(oldMode); } catch (Throwable ignore) {}
         try { am.setSpeakerphoneOn(oldSpeaker); } catch (Throwable ignore) {}
         try { am.setMicrophoneMute(oldMicMute); } catch (Throwable ignore) {}
 
@@ -6094,9 +6109,11 @@ if (d.getWindow() != null) {
     );
 }
 
-// STOP TTS
+// Dismissing before START is a cancellation; restore the original audio mode.
+final AtomicBoolean lab3Started = new AtomicBoolean(false);
 d.setOnDismissListener(dialog -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
+    if (!lab3Started.get()) restoreLab3Audio();
 });
 
 // BACK
@@ -6148,21 +6165,16 @@ exitBtn.setOnClickListener(v -> {
     runOnUiThread(this::enableSingleExportButton);
 });
 
+// ------------------------------------------------------------
+// START ACTION: one run only, no premature audio restoration.
+// ------------------------------------------------------------
 start.setOnClickListener(v -> {
+    if (!lab3Started.compareAndSet(false, true)) return;
     try { AppTTS.stop(); } catch (Throwable ignore) {}
     d.dismiss();
 
-    // 👉 εδώ συνεχίζεις το test
-});
-
-// ------------------------------------------------------------
-// START ACTION
-// ------------------------------------------------------------
-start.setOnClickListener(v -> {
-
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-
     new Thread(() -> {
+        int acceptedPlaybackRequests = 0;
         try {
 
             logInfo(gr
@@ -6175,13 +6187,16 @@ start.setOnClickListener(v -> {
                         ? "Τόνος " + i + " / 3"
                         : "Tone " + i + " / 3");
 
-                playEarpieceBeep();
+                if (!playEarpieceBeep()) {
+                    throw new IllegalStateException("Android playback request rejected");
+                }
+                acceptedPlaybackRequests++;
                 SystemClock.sleep(650);
             }
 
-            logOk(gr
-                    ? "Η αναπαραγωγή τόνων ολοκληρώθηκε."
-                    : "Earpiece tone playback completed.");
+            logInfo(gr
+                    ? "Το Android δέχτηκε τρεις αναπαραγωγές· η ακουστική έξοδος δεν επιβεβαιώθηκε αυτόματα."
+                    : "Android accepted three playback requests; audibility was not automatically verified.");
 
         } catch (Throwable t) {
 
@@ -6198,12 +6213,20 @@ start.setOnClickListener(v -> {
 
         } finally {
 
-            // 🔒 HARD AUDIO RESET
+            // Restore the originally observed audio mode even on failure.
             resetAudioAfterLab3(am, lab3OldMode, lab3OldSpeaker, lab3OldMicMute);
 
+            final boolean allRequestsAccepted = acceptedPlaybackRequests == 3;
             runOnUiThread(() -> {
-                try { d.dismiss(); } catch (Throwable ignore) {}
-                askUserEarpieceConfirmation();
+                if (isFinishing() || isDestroyed()) return;
+                if (allRequestsAccepted) {
+                    askUserEarpieceConfirmation(true);
+                } else {
+                    logLabelWarnValue(gr ? "LAB 3 — Αποτέλεσμα" : "LAB 3 — Result",
+                            gr ? "Μη επαληθευμένο: αποτυχία αναπαραγωγής ή διαδρομής ήχου"
+                               : "UNAVAILABLE: playback failed; no earpiece hardware verdict");
+                    enableSingleExportButton();
+                }
             });
         }
 
