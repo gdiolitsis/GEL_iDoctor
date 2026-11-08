@@ -9794,6 +9794,14 @@ LAB 9 — Sensors Check (LABEL / VALUE MODE)
 private void lab9SensorsCheck() {
 
     final boolean gr = AppLang.isGreek(this);
+    // Do not allow exporting the report before this asynchronous lab finishes.
+    boolean samplingScheduled = false;
+    ui.post(() -> {
+        if (btnExport != null) {
+            btnExport.setEnabled(false);
+            btnExport.setAlpha(0.5f);
+        }
+    });
 
     appendHtml("<br>");
     logLine();
@@ -9997,9 +10005,13 @@ private void lab9SensorsCheck() {
                 } else {
                     logLabelValue(sample.name,
                             sample.events + " events"
-                            + (sample.observedVariation ? " | variation observed"
-                                                      : " | variation not observed")
-                            + (sample.monotonicTimestamps ? "" : " | timestamp order anomaly"));
+                            + (sample.observedVariation
+                                    ? (gr ? " | μεταβολή: " : " | varied: ") + sample.variedAxes
+                                    : (gr ? " | δεν παρατηρήθηκε μεταβολή"
+                                          : " | no variation observed"))
+                            + (sample.monotonicTimestamps ? ""
+                                    : (gr ? " | ανωμαλία χρονικής σειράς"
+                                          : " | timestamp order anomaly")));
                 }
                 if (sample.invalidEvents > 0) {
                     logLabelWarnValue(gr ? "Μη έγκυρα δείγματα" : "Invalid samples",
@@ -10013,6 +10025,7 @@ private void lab9SensorsCheck() {
                             + "whole-device sensor-health certification.");
             enableSingleExportButton();
         });
+        samplingScheduled = true;
 
     } catch (Throwable e) {
         logError(gr ? "Σφάλμα ανάλυσης αισθητήρων" : "Sensors analysis error", e.getMessage());
@@ -10021,7 +10034,8 @@ private void lab9SensorsCheck() {
         logInfo(gr ? "Η απογραφή Lab 9 ολοκληρώθηκε· ακολουθεί το δείγμα συμβάντων."
                    : "Lab 9 inventory completed; event sample follows.");
         logLine();
-        enableSingleExportButton();
+        // Early returns and setup errors have no asynchronous observation pending.
+        if (!samplingScheduled) enableSingleExportButton();
     }
 }
 
