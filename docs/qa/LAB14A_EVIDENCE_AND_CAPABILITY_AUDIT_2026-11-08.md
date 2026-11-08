@@ -6,7 +6,7 @@
 
 Lab 14A can become a **strong, evidence-rich battery electrical-behaviour lab**, but **a short stress test is not a calibrated measurement of full-charge capacity, State of Health (SoH), cell balance, or swelling**. Those require specific fuel-gauge capabilities, matched observations, long-window tests, OEM service data or a physical inspection. The current implementation often presents subjective scoring as battery "health %" despite missing those prerequisites.
 
-### Confirmed source-level defects / false-claim risks
+### Confirmed source-level defects / false-claim risks (14 reviewed items)
 
 | ID | Severity | Code reference (approx. line) | Finding | Acceptance requirement |
 |---|---|---|---|---|
@@ -22,6 +22,8 @@ Lab 14A can become a **strong, evidence-rich battery electrical-behaviour lab**,
 | B14-10 | HIGH | `Lab14Engine.java:306–312` | `saveDrainValue` and `saveRun` are **no-op stubs**. The Activity independently stores some counters but the engine API implies functionality not present. | Consolidate persistence via one tested repository and run record; verify reproducibility on restart. |
 | B14-11 | HIGH | `iDoctorEngine.java:440–464` | `charge_now` availability alone yields `FULL_ACCESS/HIGH` despite potentially missing design/full capacity, current, voltage, cycle count and thermal data. | Rate **coverage per metric**, not a single "full access" label. |
 | B14-12 | HIGH | `ManualTestsActivity.java:16608–16618` | A completed run can save heuristic `lab14_health_percent` without proof of learned/design capacity. Cached historical value may survive bad runs without an explicit invalidation policy. | Distinguish good measurement snapshot from validated SoH estimate; never preserve a prior "healthy" score as if current after incomplete runs; version the record and require freshness. |
+| B14-13 | HIGH | `iDoctorEngine.java:732–735,484–499,543–640` | `readBatterySnapshotLab()` calls `resolveBatteryModeOnce()` but returns the generic `readBatterySnapshot()`, not the advertised OEM-locked/BatteryManager-locked path. The documented source-lock guarantee therefore needs investigation and a code-level consistency test. | Route via one explicit selected reader or remove the lock claim; record source per field and reject source switching within a run unless all metrics are rebaselined. |
+| B14-14 | HIGH | `iDoctorEngine.java:266–318,332–362,543–575` | On ordinary non-OEM reads the public Android `EXTRA_CYCLE_COUNT` introduced at API34 is not consumed, even though the engine's battery snapshot has a cycle-count field. This leaves useful available evidence uncollected on supporting devices. | Read `EXTRA_CYCLE_COUNT` with API gate and unsupported handling, never invent zero cycles, and label reported vs unreported values. |
 
 ## What Android can actually give us
 
