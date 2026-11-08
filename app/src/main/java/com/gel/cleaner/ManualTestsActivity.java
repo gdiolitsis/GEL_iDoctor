@@ -30953,21 +30953,19 @@ pmic = pickZone(zones, "pmic", "pmic-therm", "power-thermal", "charger", "chg");
 float maxThermal = maxOf(cpu, gpu, skin, pmic, batTemp);
 float avgThermal = avgOf(cpu, gpu, skin, pmic, batTemp);
 
-int thermalScore = scoreThermals(maxThermal, avgThermal);
-String thermalFlag = colorFlagFromScore(thermalScore);
+int thermalScore = Lab30ScoreEvidence.hasThermalReadings(maxThermal, avgThermal)
+        ? scoreThermals(maxThermal, avgThermal) : -1;
+String thermalFlag = thermalScore < 0 ? "⚪" : colorFlagFromScore(thermalScore);
 
 // ------------------------------------------------------------
 // 2) BATTERY HEALTH (light auto inference — FIXED)
 // ------------------------------------------------------------
 boolean charging = isChargingNow();
 
-int batteryScore = scoreBattery(
-        batTemp,
-        (float) batteryPercent,
-        charging
-);
+int batteryScore = Lab30ScoreEvidence.hasBatteryReadings(batTemp, (float) batteryPercent)
+        ? scoreBattery(batTemp, (float) batteryPercent, charging) : -1;
 
-String batteryFlag = colorFlagFromScore(batteryScore);
+String batteryFlag = batteryScore < 0 ? "⚪" : colorFlagFromScore(batteryScore);
 
 // ------------------------------------------------------------
 // 🔴 PRIMARY: CONSUMPTION-BASED FLAGS
@@ -31224,7 +31222,7 @@ if (batteryRuntimeWeak) {
                     : "Low real-world battery duration"
     );
 
-    if (batteryScore < 60 || lab14CollapseRisk) {
+    if ((batteryScore >= 0 && batteryScore < 60) || lab14CollapseRisk) {
 
         logLabelWarnValue(
                 gr ? "Πιθανή αιτία" : "Possible cause",
@@ -31849,19 +31847,10 @@ else {
 // ------------------------------------------------------------
 // 10) FINAL SCORES
 // ------------------------------------------------------------
-int performanceScore = Math.round(
-(storageScore * 0.35f) +
-(ramScore     * 0.35f) +
-(appsScore    * 0.15f) +
-(thermalScore * 0.15f)
-);
-
-int deviceHealthScore = Math.round(
-(thermalScore   * 0.25f) +
-(batteryScore   * 0.25f) +
-(performanceScore * 0.30f) +
-(stabilityScore * 0.20f)
-);
+int performanceScore = Lab30ScoreEvidence.performanceScore(
+        storageScore, ramScore, appsScore, thermalScore);
+int deviceHealthScore = Lab30ScoreEvidence.deviceHealthScore(
+        thermalScore, batteryScore, performanceScore, stabilityScore);
 
 // ------------------------------------------------------------
 // PRINT DETAILS
@@ -31878,7 +31867,9 @@ logLine();
 
 logLabelOkValue(
         gr ? "Κατάσταση" : "Status",
-        thermalFlag + " (" + thermalScore + ")"
+        thermalScore < 0
+                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
+                : thermalFlag + " (" + thermalScore + ")"
 );
 
 if (zones == null || zones.isEmpty()) {
@@ -31886,8 +31877,10 @@ if (zones == null || zones.isEmpty()) {
     logLabelWarnValue(
             gr ? "Ζώνες" : "Zones",
             gr
-                    ? "Δεν είναι αναγνώσιμες θερμικές ζώνες — Μόνο θερμοκρασία μπαταρίας (" + fmt1(batTemp) + "°C)"
-                    : "No thermal zones readable — Battery temp only (" + fmt1(batTemp) + "°C)"
+                    ? (Float.isNaN(batTemp) ? "Δεν υπάρχουν διαθέσιμες θερμικές μετρήσεις"
+                                            : "Μόνο θερμοκρασία μπαταρίας (" + fmt1(batTemp) + "°C)")
+                    : (Float.isNaN(batTemp) ? "No thermal readings available"
+                                            : "Battery temperature only (" + fmt1(batTemp) + "°C)")
     );
 
 } else {
@@ -31910,7 +31903,9 @@ logLine();
 
 logLabelOkValue(
         gr ? "Κατάσταση" : "Status",
-        batteryFlag + " (" + batteryScore + ")"
+        batteryScore < 0
+                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
+                : batteryFlag + " (" + batteryScore + ")"
 );
 
 logLabelOkValue(
@@ -32069,13 +32064,16 @@ logLine();
 
 logLabelOkValue(
         gr ? "Υγεία συσκευής" : "Device health",
-        colorFlagFromScore(deviceHealthScore)
-                + " (" + deviceHealthScore + ")"
+        deviceHealthScore < 0
+                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
+                : colorFlagFromScore(deviceHealthScore) + " (" + deviceHealthScore + ")"
 );
 
 String deviceClass;
 
-if (deviceHealthScore >= 90)
+if (deviceHealthScore < 0)
+    deviceClass = "INSUFFICIENT DATA";
+else if (deviceHealthScore >= 90)
     deviceClass = "GEL CERTIFIED";
 else if (deviceHealthScore >= 75)
     deviceClass = "GEL VERIFIED";
@@ -32090,8 +32088,9 @@ logLabelValue(
 
 logLabelOkValue(
         gr ? "Απόδοση" : "Performance",
-        colorFlagFromScore(performanceScore)
-                + " (" + performanceScore + ")"
+        performanceScore < 0
+                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
+                : colorFlagFromScore(performanceScore) + " (" + performanceScore + ")"
 );
 
 logLabelOkValue(
@@ -32118,7 +32117,11 @@ appendHtml("<br>");
 logInfo(gr ? "Τελικό Συμπέρασμα" : "Final verdict");
 logLine();
 
-if (deviceHealthScore >= 80) {
+if (deviceHealthScore < 0) {
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result", verdict
+    );
+} else if (deviceHealthScore >= 80) {
 
     if (securityScore < 55 || privacyScore < 55) {
         logLabelWarnValue(
@@ -32852,6 +32855,10 @@ private String colorFlagFromScore(int s) {
 private String finalVerdict(int health, int sec, int priv, int perf) {
 
     final boolean gr = AppLang.isGreek(this);
+    if (health < 0 || perf < 0) {
+        return gr ? "Ανεπαρκή δεδομένα για συνολική αξιολόγηση ή πιστοποίηση συσκευής."
+                  : "Insufficient measurements for a device health verdict or certification.";
+    }
 
 // ============================================================
 // LEVEL 1 — HEALTHY / NORMAL
