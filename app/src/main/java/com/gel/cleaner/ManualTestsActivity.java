@@ -6265,8 +6265,8 @@ private void lab4MicBase(Runnable onFinished) {
     logLine();
     logSection(
             gr
-                    ? "LAB 4 — Έλεγχος Υλικού Μικροφώνων"
-                    : "LAB 4 — Microphone Hardware Check"
+                    ? "LAB 4 — Προφίλ μικροφώνου και ακουστική δοκιμή"
+                    : "LAB 4 — Recording profiles and guided audio test"
     );
     logLine();
 
@@ -6289,8 +6289,8 @@ private void lab4MicBase(Runnable onFinished) {
             // AUTO CHECK — BOTTOM MIC
             // ====================================================
             appendHtml("<br>");
-            logInfo(gr ? "Έλεγχος κάτω μικροφώνου (αυτόματος):"
-                       : "Bottom microphone auto check:");
+            logInfo(gr ? "Καταγραφή Android MIC profile:"
+                       : "Android MIC source-profile capture:");
             logLine();
 
             hardNormalizeAudioForMic();
@@ -6304,8 +6304,8 @@ private void lab4MicBase(Runnable onFinished) {
                 bottomOk = bottom.audioRecordStarted && !bottom.silenceDetected;
             }
 
-            logLabelOkValue("Bottom RMS",  String.valueOf(bottomRms));
-            logLabelOkValue("Bottom Peak", String.valueOf(bottomPeak));
+            logLabelValue("MIC profile RMS",  String.valueOf(bottomRms));
+            logLabelValue("MIC profile Peak", String.valueOf(bottomPeak));
 
             logLabelValue(gr ? "Android διαδρομή MIC profile" : "Android MIC input route",
                     bottomInputRoute >= 0 ? "route id " + bottomInputRoute
@@ -6315,8 +6315,8 @@ private void lab4MicBase(Runnable onFinished) {
             // AUTO CHECK — TOP MIC
             // ====================================================
             appendHtml("<br>");
-            logInfo(gr ? "Έλεγχος άνω μικροφώνου (αυτόματος):"
-                       : "Top microphone auto check:");
+            logInfo(gr ? "Καταγραφή Android CAMCORDER profile:"
+                       : "Android CAMCORDER source-profile capture:");
             logLine();
 
             hardNormalizeAudioForMic();
@@ -6330,15 +6330,8 @@ private void lab4MicBase(Runnable onFinished) {
                 topOk = top.audioRecordStarted && !top.silenceDetected;
             }
 
-            logLabelOkValue(
-        gr ? "RMS (Άνω Μικρόφωνο)" : "Top RMS",
-        String.valueOf(topRms)
-);
-
-logLabelOkValue(
-        gr ? "Peak (Άνω Μικρόφωνο)" : "Top Peak",
-        String.valueOf(topPeak)
-);
+            logLabelValue("CAMCORDER profile RMS", String.valueOf(topRms));
+            logLabelValue("CAMCORDER profile Peak", String.valueOf(topPeak));
 
             logLabelValue(gr ? "Android διαδρομή CAMCORDER profile"
                              : "Android CAMCORDER input route",
@@ -6594,13 +6587,13 @@ while (!started.get() && !cancelled.get()
     SystemClock.sleep(80);
 }
 
-if (cancelled.get()) {
+if (cancelled.get() || !started.get()) {
 
     appendHtml("<br>");
 
     logWarn(gr
-            ? "LAB 4 PRO — Διακόπηκε από τον χρήστη"
-            : "LAB 4 PRO — Interrupted by user");
+            ? "LAB 4 PRO — Ακυρώθηκε ή δεν ξεκίνησε έγκαιρα"
+            : "LAB 4 PRO — Cancelled or start not confirmed");
     logLine();
 
     runOnUiThread(this::enableSingleExportButton);
@@ -6608,51 +6601,23 @@ if (cancelled.get()) {
 }
 
 // ==========================
-// LIVE MIC → EARPIECE LOOP (5s)
+// LIVE AUDIO PATH PROBE: captured and written bytes, no physical mic identity.
 // ==========================
-int sampleRate = 16000;
-int minBuf = AudioRecord.getMinBufferSize(
-        sampleRate,
-        AudioFormat.CHANNEL_IN_MONO,
-        AudioFormat.ENCODING_PCM_16BIT
-);
-
-AudioRecord recorder = new AudioRecord(
-        MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-        sampleRate,
-        AudioFormat.CHANNEL_IN_MONO,
-        AudioFormat.ENCODING_PCM_16BIT,
-        minBuf
-);
-
-AudioTrack track = new AudioTrack(
-        AudioManager.STREAM_VOICE_CALL,
-        sampleRate,
-        AudioFormat.CHANNEL_OUT_MONO,
-        AudioFormat.ENCODING_PCM_16BIT,
-        minBuf,
-        AudioTrack.MODE_STREAM
-);
-
-byte[] buffer = new byte[minBuf];
-
-recorder.startRecording();
-track.play();
-
-long loopUntil = SystemClock.uptimeMillis() + 5000;
-
-while (SystemClock.uptimeMillis() < loopUntil && !cancelled.get()) {
-
-    int read = recorder.read(buffer, 0, buffer.length);
-    if (read > 0) {
-        track.write(buffer, 0, read);
-    }
+VoiceLoopEvidenceProbe.Result loopEvidence =
+        VoiceLoopEvidenceProbe.run(cancelled);
+logLabelValue(gr ? "Δείγματα ζωντανής διαδρομής" : "Voice-loop sample evidence",
+        loopEvidence.bytesCaptured + " captured bytes / "
+                + loopEvidence.bytesWritten + " written bytes; "
+                + loopEvidence.elapsedMs + " ms");
+if (!loopEvidence.attempted || cancelled.get()) {
+    logLabelWarnValue(gr ? "Αποτέλεσμα διαδρομής" : "Audio path result",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ — δεν εκτελέστηκε επαρκής ακουστική επανάληψη: "
+                    + loopEvidence.reason
+               : "UNAVAILABLE — no sufficiently observed voice loop: "
+                    + loopEvidence.reason);
+    runOnUiThread(this::enableSingleExportButton);
+    return; // Never offer a 'YES' confirmation when no valid loop ran.
 }
-
-try { recorder.stop(); } catch (Throwable ignore) {}
-try { recorder.release(); } catch (Throwable ignore) {}
-try { track.stop(); } catch (Throwable ignore) {}
-try { track.release(); } catch (Throwable ignore) {}
 
 // ==========================
 // POPUP 2 — CONFIRMATION (SAFE VERSION)
@@ -6818,25 +6783,27 @@ SystemClock.sleep(350);   // αφήνουμε το UI να "κάτσει"
 // ====================================================
 appendHtml("<br>");
 logInfo(gr
-        ? "LAB 4 PRO — Ποιότητα συνομιλίας κάτω μικροφώνου"
-        : "LAB 4 PRO — Bottom microphone call quality");
+        ? "LAB 4 PRO — Ακουστική επανάληψη διαδρομής Android (επιβεβαίωση χρήστη)"
+        : "LAB 4 PRO — Android voice path loopback (user-reported)");
 logLine();
 
-if (heardClearly.get()) {
+if (AudioChallengeEvidence.microphoneLoop(loopEvidence.attempted, heardClearly.get())
+        == AudioChallengeEvidence.Result.USER_REPORTED_RESPONSE) {
 
     logLabelOkValue(
-            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Ακουστική επανάληψη (δήλωση χρήστη)" : "Voice loop (user report)",
             gr
-                    ? "Ο χρήστης επιβεβαίωσε καθαρή ακουστική επανάληψη. Το κάτω μικρόφωνο λειτουργεί σωστά."
-                    : "User confirmed clear acoustic loop. Bottom microphone is functioning properly."
+                    ? "USER_REPORTED: ακούστηκε η φωνή στη διαδρομή Android· "
+                      + "δεν πιστοποιείται το κάτω μικρόφωνο, ακουστικό ή πραγματική κλήση."
+                    : "USER_REPORTED: loop heard through Android audio path; "
+                      + "no physical bottom mic, earpiece or carrier-call certification."
     );
 
-    logLabelOkValue(
-            gr ? "Σημείωση" : "Note",
+    logLabelWarnValue(
+            gr ? "Όρια επαλήθευσης" : "Verification limits",
             gr
-                    ? "Αν παρουσιαστούν προβλήματα σε πραγματικές συνομιλίες, "
-                      + "ενδέχεται να σχετίζονται με το δίκτυο, ή codec, η προβλημα στο μικρόφωνο του συνομιλητη"
-                    : "If issues occur during real calls, they may be related to network, or codec, or other's party microphone issue"
+                    ? "Οι φυσικές είσοδοι, η δρομολόγηση OEM και η ποιότητα κλήσης παραμένουν μη επαληθευμένες."
+                    : "Physical inputs, OEM routing and actual call quality remain unverified."
     );
 
 } else {
