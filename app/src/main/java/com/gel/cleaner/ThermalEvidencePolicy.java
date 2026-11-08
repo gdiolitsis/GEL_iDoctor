@@ -4,9 +4,12 @@ package com.gel.cleaner;
 public final class ThermalEvidencePolicy {
     private ThermalEvidencePolicy() {}
 
-    /** -1 means no usable readings; a hidden high sensor is still evidence. */
-    public static int score(int visibleReadings, int rawScore, boolean hiddenHigh) {
-        if (visibleReadings <= 0 && !hiddenHigh) return -1;
+    /** A battery-only reading cannot score device thermal health. A visible
+     *  internal (CPU/GPU/SoC) sensor is required for a qualified snapshot score.
+     *  Unknown coverage is -1, while a separately observed hidden high sensor
+     *  remains a warning in the Lab's danger flag. */
+    public static int score(int internalReadings, int peripheralReadings, int rawScore, boolean hiddenHigh) {
+        if (internalReadings <= 0 || peripheralReadings < 0) return -1;
         int score = Math.max(0, Math.min(100, rawScore));
         return hiddenHigh ? Math.min(score, 75) : score;
     }
