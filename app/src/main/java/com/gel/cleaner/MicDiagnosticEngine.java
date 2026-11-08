@@ -1,6 +1,7 @@
 package com.gel.cleaner;
 
 import android.content.Context;
+import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -68,6 +69,9 @@ public final class MicDiagnosticEngine {
         public final String confidence;
         public final Status status;
         public final String note;
+        /** Android input route, not physical microphone location. */
+        public final int routedInputDeviceId;
+        public final int routedInputType;
 
         private Result(MicType micType,
                        boolean audioRecordStarted,
@@ -76,7 +80,7 @@ public final class MicDiagnosticEngine {
                        boolean silenceDetected,
                        String confidence,
                        Status status,
-                       String note) {
+                       String note, int routedInputDeviceId, int routedInputType) {
 
             this.micType = micType;
             this.audioRecordStarted = audioRecordStarted;
@@ -86,6 +90,8 @@ public final class MicDiagnosticEngine {
             this.confidence = confidence;
             this.status = status;
             this.note = note;
+            this.routedInputDeviceId = routedInputDeviceId;
+            this.routedInputType = routedInputType;
         }
 
         public String toReportLine() {
@@ -97,7 +103,8 @@ public final class MicDiagnosticEngine {
                     peak,
                     silenceDetected ? "YES" : "NO",
                     confidence
-            );
+            ) + " | ROUTED_INPUT_ID=" + routedInputDeviceId
+              + " | ROUTED_INPUT_TYPE=" + routedInputType;
         }
     }
 
@@ -143,6 +150,9 @@ public final class MicDiagnosticEngine {
                 return errorResult(micType, "Microphone not recording");
             }
 
+            AudioDeviceInfo actualRoute = record.getRoutedDevice();
+            int routedId = actualRoute != null ? actualRoute.getId() : -1;
+            int routedType = actualRoute != null ? actualRoute.getType() : -1;
             short[] buffer = new short[minBuffer];
             long start = SystemClock.elapsedRealtime();
 
@@ -181,15 +191,15 @@ public final class MicDiagnosticEngine {
             } else if (rms >= STRONG_RMS_THRESHOLD) {
                 confidence = "HIGH";
                 status = Result.Status.OK;
-                note = "Microphone signal strong and clear";
+                note = "Audio samples above threshold; physical microphone identity unverified";
             } else if (rms >= GOOD_RMS_THRESHOLD) {
                 confidence = "MEDIUM";
                 status = Result.Status.OK;
-                note = "Microphone signal detected normally";
+                note = "Samples captured via selected profile; physical mic identity unknown";
             } else {
                 confidence = "LOW";
                 status = Result.Status.WARN;
-                note = "Weak microphone signal detected";
+                note = "Low input signal under current conditions";
             }
 
             return new Result(
@@ -200,7 +210,7 @@ public final class MicDiagnosticEngine {
                     silence,
                     confidence,
                     status,
-                    note
+                    note, routedId, routedType
             );
 
         } catch (Throwable t) {
@@ -209,7 +219,7 @@ public final class MicDiagnosticEngine {
         } finally {
             try {
                 if (record != null) {
-                    record.stop();
+                    try { record.stop(); } catch (RuntimeException ignored) {}
                     record.release();
                 }
             } catch (Throwable ignore) {}
@@ -223,6 +233,7 @@ public final class MicDiagnosticEngine {
         switch (micType) {
             case TOP:
                 // Secondary mic / noise cancel
+                // A CAMCORDER source is an input profile, not a guaranteed TOP microphone.
                 return MediaRecorder.AudioSource.CAMCORDER;
             case BOTTOM:
             default:
@@ -240,7 +251,7 @@ public final class MicDiagnosticEngine {
                 true,
                 "LOW",
                 Result.Status.ERROR,
-                note
+                note, -1, -1
         );
     }
 }
