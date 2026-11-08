@@ -10631,7 +10631,10 @@ private void lab10WifiConnectivityCheck() {
     int freqMhz = 0;
     try { freqMhz = info.getFrequency(); } catch (Throwable ignore) {}
 
-    String band = (freqMhz > 3000) ? (gr ? "5 GHz" : "5 GHz") : (gr ? "2.4 GHz" : "2.4 GHz");
+    String band = freqMhz >= 5925 && freqMhz <= 7125 ? "6 GHz"
+            : freqMhz >= 4900 && freqMhz < 5925 ? "5 GHz"
+            : freqMhz >= 2400 && freqMhz < 2500 ? "2.4 GHz"
+            : (gr ? "Άγνωστη" : "Unknown");
 
     // ---------------- IDENTIFIERS ----------------
     logLabelValue(gr ? "SSID" : "SSID", ssid);
@@ -10647,11 +10650,11 @@ private void lab10WifiConnectivityCheck() {
 
     // ---------------- LINK SPEED ----------------
     if (speed >= 150) {
-        logLabelOkValue(gr ? "Ταχύτητα Link" : "Link speed", speed + " Mbps");
+        logLabelOkValue(gr ? "Διαπραγματευμένη ταχύτητα Wi-Fi (όχι Internet)" : "Negotiated Wi-Fi PHY rate (not Internet throughput)", speed + " Mbps");
     } else if (speed >= 54) {
-        logLabelWarnValue(gr ? "Ταχύτητα Link" : "Link speed", speed + " Mbps");
+        logLabelWarnValue(gr ? "Διαπραγματευμένη ταχύτητα Wi-Fi (όχι Internet)" : "Negotiated Wi-Fi PHY rate (not Internet throughput)", speed + " Mbps");
     } else {
-        logLabelErrorValue(gr ? "Ταχύτητα Link" : "Link speed", speed + " Mbps");
+        logLabelErrorValue(gr ? "Διαπραγματευμένη ταχύτητα Wi-Fi (όχι Internet)" : "Negotiated Wi-Fi PHY rate (not Internet throughput)", speed + " Mbps");
     }
 
     // ---------------- SIGNAL (RSSI) ----------------
@@ -10866,66 +10869,101 @@ private void runWifiDeepScan(WifiManager wm) {
                 logLabelWarnValue(gr ? "Gateway" : "Gateway", gr ? "Δεν εντοπίστηκε" : "Not detected");
             }
 
-            // 4) Speed heuristic
+            // 4) Physical link rate is not an internet-throughput measurement.
             WifiInfo info = wm.getConnectionInfo();
-            int link = info != null ? info.getLinkSpeed() : 0;
-            int rssi = info != null ? info.getRssi() : -80;
+            int link = info != null ? info.getLinkSpeed() : -1;
+            if (link > 0) {
+                logLabelValue(
+                        gr ? "Διαπραγματευμένος ρυθμός Wi-Fi" : "Negotiated Wi-Fi link rate",
+                        link + " Mbps — " + (gr ? "δεν είναι ταχύτητα Internet"
+                                                 : "not measured Internet throughput"));
+            } else {
+                logLabelWarnValue(gr ? "Ρυθμός Wi-Fi" : "Wi-Fi link rate",
+                        gr ? "Δεν είναι διαθέσιμος" : "Unavailable");
+            }
 
-            float speedSim = estimateSpeedSimMbps(link, rssi);
-            logLabelOkValue(
-                    gr ? "SpeedSim" : "SpeedSim",
-                    String.format(Locale.US, gr ? "~%.2f Mbps (εκτίμηση)" : "~%.2f Mbps (heuristic)", speedSim)
-            );
-
-            // Finish
-            logLabelOkValue(gr ? "DeepScan" : "DeepScan", gr ? "Ολοκληρώθηκε" : "Finished");
-
-            // ====================================================
-            // INTERNET AVAILABILITY
-            // ====================================================
+            // 5) OS-level default-network validation, transport and captive portal.
+            // NET_CAPABILITY_INTERNET means the network is configured for internet;
+            // only NET_CAPABILITY_VALIDATED is Android's validation observation.
+            // This does not independently prove a working HTTPS transaction.
             try {
-                ConnectivityManager cm =
-                        (ConnectivityManager)
-                                getSystemService(CONNECTIVITY_SERVICE);
-
+                ConnectivityManager cm = (ConnectivityManager)
+                        getSystemService(CONNECTIVITY_SERVICE);
                 if (cm == null) {
-                    logError(gr ? "ConnectivityManager δεν είναι διαθέσιμο." : "ConnectivityManager not available.");
+                    logLabelWarnValue(gr ? "Συνδεσιμότητα" : "Connectivity",
+                            gr ? "Υπηρεσία μη διαθέσιμη" : "Service unavailable");
                 } else {
-
-                    boolean hasInternet = false;
-                    String transport = gr ? "ΑΓΝΩΣΤΟ" : "UNKNOWN";
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        Network n = cm.getActiveNetwork();
-                        NetworkCapabilities caps = cm.getNetworkCapabilities(n);
-
-                        if (caps != null) {
-                            hasInternet =
-                                    caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
-
-                            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))
-                                transport = gr ? "Wi-Fi" : "Wi-Fi";
-                            else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
-                                transport = gr ? "Δεδομένα" : "Cellular";
-                        }
+                    Network activeNetwork = cm.getActiveNetwork();
+                    NetworkCapabilities caps = activeNetwork != null
+                            ? cm.getNetworkCapabilities(activeNetwork) : null;
+                    if (caps == null) {
+                        logLabelWarnValue(gr ? "Προεπιλεγμένη διαδρομή δικτύου"
+                                              : "Active default network",
+                                gr ? "Άγνωστη / χωρίς στοιχεία" : "Unknown / no capabilities");
                     } else {
-                        @SuppressWarnings("deprecation")
-                        NetworkInfo ni = cm.getActiveNetworkInfo();
-                        if (ni != null && ni.isConnected()) {
-                            hasInternet = true;
-                            transport = ni.getTypeName();
+                        boolean viaWifi =
+                                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+                        boolean viaCellular =
+                                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR);
+                        boolean viaVpn =
+                                caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
+                        boolean configuredForInternet = caps.hasCapability(
+                                NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                        boolean osValidated = caps.hasCapability(
+                                NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                        boolean captive = caps.hasCapability(
+                                NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL);
+                        String transport = viaVpn ? "VPN"
+                                : viaWifi ? "Wi-Fi"
+                                : viaCellular ? (gr ? "Κινητό δίκτυο" : "Cellular")
+                                : (gr ? "Άλλο / άγνωστο" : "Other / unknown");
+
+                        logLabelValue(gr ? "Ενεργή προεπιλεγμένη διαδρομή"
+                                         : "Active default network transport", transport);
+                        if (viaCellular || viaVpn || !viaWifi) {
+                            logLabelWarnValue(gr ? "Περιορισμός δοκιμής Wi-Fi"
+                                                  : "Wi-Fi test attribution",
+                                    gr ? "Η προεπιλεγμένη διαδρομή δεν είναι επαληθευμένα απευθείας Wi-Fi· "
+                                            + "οι εξωτερικές δοκιμές μπορεί να χρησιμοποιούν άλλο δίκτυο."
+                                       : "Default route is not verified as direct Wi-Fi; "
+                                            + "external probes may use another network.");
+                        }
+                        if (captive) {
+                            logLabelWarnValue(gr ? "Captive portal" : "Captive portal",
+                                    gr ? "Το Android αναφέρει πιθανή πύλη σύνδεσης"
+                                       : "Android reports a captive portal");
+                        }
+                        if (osValidated) {
+                            logLabelOkValue(gr ? "Επικύρωση δικτύου από Android"
+                                               : "Android network validation",
+                                    gr ? "Επικυρωμένη προεπιλεγμένη σύνδεση"
+                                       : "Default network validated by Android");
+                        } else if (configuredForInternet) {
+                            logLabelWarnValue(gr ? "Επικύρωση δικτύου από Android"
+                                                  : "Android network validation",
+                                    gr ? "Δηλωμένη δυνατότητα Internet, όχι επικυρωμένη"
+                                       : "Internet capability declared, not OS validated");
+                        } else {
+                            logLabelWarnValue(gr ? "Επικύρωση δικτύου από Android"
+                                                  : "Android network validation",
+                                    gr ? "Δεν τεκμηριώνεται επικυρωμένη πρόσβαση Internet"
+                                       : "No OS-validated internet access evidenced");
                         }
                     }
-
-                    if (!hasInternet)
-                        logError(gr ? "Δεν βρέθηκε ενεργή σύνδεση Internet (OS-level)." : "No active Internet connection detected (OS-level).");
-                    else
-                        logOk((gr ? "Internet ενεργό (" : "Internet connectivity active (") + transport + ").");
                 }
-
-            } catch (Throwable e) {
-                logError((gr ? "Σφάλμα ελέγχου Internet: " : "Internet quick check error: ") + e.getMessage());
+            } catch (RuntimeException unavailable) {
+                logLabelWarnValue(gr ? "Δικτυακός έλεγχος Android" : "Android network check",
+                        gr ? "Η υπηρεσία δεν επέστρεψε διαθέσιμα στοιχεία"
+                           : "OS network capabilities unavailable");
             }
+
+            logLabelValue(gr ? "Όριο ελέγχου DeepScan" : "DeepScan limitation",
+                    gr ? "Τα TCP/DNS αιτήματα ελέγχουν συγκεκριμένες υπηρεσίες και διαδρομές."
+                            + " Η αποτυχία TCP/53 δεν αποδεικνύει βλάβη Wi-Fi."
+                       : "TCP/DNS probes measure specific endpoints and routes."
+                            + " A blocked TCP/53 port does not prove Wi-Fi failure.");
+            logLabelValue(gr ? "DeepScan" : "DeepScan",
+                    gr ? "Ο έλεγχος ολοκληρώθηκε με περιορισμούς" : "Check completed with limitations");
 
             // ====================================================
             // NETWORK / PRIVACY EXPOSURE
