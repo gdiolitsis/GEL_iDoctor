@@ -30587,6 +30587,14 @@ if (requestCode == REQ_LAB6_COLOR) {
 
 if (requestCode == 7007) {
 
+    // Successful Activity result alone is not diagnostic evidence.
+    String orientationEvidence = data == null ? null : data.getStringExtra("evidence");
+    String orientationSource = data == null ? null : data.getStringExtra("orientation_source");
+    boolean sourceSupported = "ANDROID_GRAVITY".equals(orientationSource)
+            || "ANDROID_ACCELEROMETER".equals(orientationSource);
+    boolean poseVerified = resultCode == RESULT_OK && sourceSupported
+            && "timed_stable_portrait_then_landscape".equals(orientationEvidence);
+
     appendHtml("<br>");
     logLine();
     logSection(gr
@@ -30594,11 +30602,13 @@ if (requestCode == 7007) {
             : "LAB 7 — Rotation & Proximity Sensors");
     logLine();
 
-    if (resultCode == RESULT_OK) {
+    if (poseVerified) {
 
         logLabelOkValue(
-                gr ? "Ανίχνευση περιστροφής" : "Rotation detection",
-                gr ? "Εντοπίστηκε μέσω επιταχυνσιόμετρου" : "Detected via accelerometer"
+                gr ? "Πηγή αισθητήρα προσανατολισμού" : "Orientation sensor source",
+                "ANDROID_GRAVITY".equals(orientationSource)
+                        ? (gr ? "Αισθητήρας βαρύτητας Android" : "Android gravity sensor")
+                        : (gr ? "Επιταχυνσιόμετρο Android" : "Android accelerometer")
         );
 
         logLabelOkValue(
@@ -30654,7 +30664,11 @@ if (requestCode == 7007) {
 
 if (requestCode == 8008) {
 
-    if (resultCode == RESULT_OK) {
+    boolean proximityVerified = resultCode == RESULT_OK && data != null
+            && "timestamped_far_near_far_proximity_sequence".equals(
+                    data.getStringExtra("evidence"));
+
+    if (proximityVerified) {
 
         logLabelOkValue(
                 gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
@@ -30666,11 +30680,11 @@ if (requestCode == 8008) {
                 gr ? "Επιβεβαιώθηκε" : "Confirmed"
         );
 
-        logLabelOkValue(
+        logLabelWarnValue(
                 gr ? "Συμπεριφορά οθόνης" : "Screen behavior",
                 gr
-                        ? "Δεν ελέγχθηκε σβήσιμο οθόνης εκτός τηλεφωνικής κλήσης"
-                        : "Screen turn-off was not checked outside a call"
+                        ? "Δεν μετρήθηκε η κατάσταση οθόνης· δεν επιβεβαιώθηκε σβήσιμο σε κλήση"
+                        : "Display power was not measured; call-screen blanking is unverified"
         );
 
     } else {
