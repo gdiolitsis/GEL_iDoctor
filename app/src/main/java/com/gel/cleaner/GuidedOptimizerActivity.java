@@ -3103,24 +3103,10 @@ private void showMiniSchedulerPopup() {
     );
 
     TextView body = new TextView(this);
-    body.setText(gr
-  ? "Θέλεις, 3 φορές την ημέρα να κάνουμε έναν mini έλεγχο στο κινητό σου στο παρασκήνιο;\n\n"
-  + "Κάθε mini check θα διαρκεί λιγότερο από 1 δευτερόλεπτο.\n\n"
-  + "Θα παρακολουθούμε ενδείξεις όπως:\n"
-  + "• Υψηλή θερμοκρασία (όταν είναι διαθέσιμο)\n"
-  + "• Υπερβολική cache (> 80%)\n"
-  + "• Ύποπτη αστάθεια συστήματος (best-effort)\n\n"
-  + "Αν εντοπίσουμε σημαντικές μεταβολές στη συσκευή σου,\n"
-  + "θα σου εμφανίσουμε σχετική ειδοποίηση με προτάσεις.\n\n"
-: "Would you like us to run a mini background check 3 times per day?\n\n"
-  + "Each mini check lasts under 1 second.\n\n"
-  + "We monitor signals such as:\n"
-  + "• High device temperature (when available)\n"
-  + "• Excessive cache usage (> 80%)\n"
-  + "• Possible system instability (best-effort detection)\n\n"
-  + "If we detect significant changes on your device,\n"
-  + "you will receive a notification with recommendations.\n\n"
-    );
+    body.setText((gr
+            ? "Ενεργοποίηση 3 περιοδικών ελέγχων (09:00 • 15:00 • 21:00);\n\n"
+            : "Enable 3 scheduled checks (09:00 • 15:00 • 21:00)?\n\n")
+            + getString(R.string.mini_check_scope_description));
 
     body.setTextColor(0xFF00FF7F);
     body.setPadding(0, dp(16), 0, dp(20));
