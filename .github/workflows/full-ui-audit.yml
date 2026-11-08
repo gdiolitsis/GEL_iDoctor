@@ -6,6 +6,11 @@ on:
         description: Optional existing QA evidence artifact to inspect instead of running emulators
         type: string
         default: ""
+      api_filter:
+        description: Android API selection
+        type: choice
+        options: [all, "30", "36"]
+        default: all
 permissions:
   contents: read
   actions: read
@@ -38,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [30, 36]
+        api: ${{ fromJSON(inputs.api_filter == '30' && '[30]' || inputs.api_filter == '36' && '[36]' || '[30,36]') }}
         language: [en, el]
     runs-on: ubuntu-24.04
     timeout-minutes: 85
