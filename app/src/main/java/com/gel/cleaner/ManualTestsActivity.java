@@ -24512,812 +24512,137 @@ private void lab16ThermalSnapshot() {
 // INTELLIGENCE EDITION • STRICT FRESHNESS (<= 2 HOURS)
 // ============================================================
 private void lab17RunAuto() {
-
     final boolean gr = AppLang.isGreek(this);
-
-    final String PREF = "GEL_DIAG";
-
-    // STRICT WINDOW: 2 hours
-    final long WINDOW_MS = 2L * 60L * 60L * 1000L;
+    final long windowMs = 2L * 60L * 60L * 1000L;
     final long now = System.currentTimeMillis();
+    SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
-    // ------------------------------------------------------------
-    // READ STORED RESULTS + TIMESTAMPS (STRICT)
-    // ------------------------------------------------------------
-    SharedPreferences p = getSharedPreferences(PREF, MODE_PRIVATE);
-
-    // Versioned evidence only; legacy heuristic health percentages never count.
-    final BatteryEvidenceStore.Record lab14Record =
-            BatteryEvidenceStore.readLatestLab14(this);
-    final float lab14Health = -1f;
-    final int lab14Aging = -1;
-    final long ts14 = lab14Record != null ? lab14Record.wallTimeMs : 0L;
-    final boolean lab14Unstable = lab14Record != null
-            && (!lab14Record.drainValid || lab14Record.thermalLimited);
-            
-// ------------------------------------------------------------
-// 🔴 MULTIPLIERS (LOCAL SAFE)
-// ------------------------------------------------------------
-float lightMul;
-float normalMul = 1.00f;
-float heavyMul;
-
-if (isLab14GamaMode) {
-
-    lightMul = 1.15f;
-    heavyMul = 0.70f;
-
-} else {
-
-    lightMul = 1.40f;
-    heavyMul = 0.60f;
-}
-
-    // ------------------------------------------------------------
-// 🔴 LAB 14B RESULTS (CLEAN + BACKWARD SAFE)
-// ------------------------------------------------------------
-
-// 🔴 RAW (source of truth)
-float lab14bConsumptionPerHour =
-        p.getInt("lab14b_evidence_schema", 0) == 1
-        && p.getBoolean("lab14b_rate_valid", false)
-        && "BATTERY_MANAGER_CHARGE_COUNTER_ELAPSED".equals(
-                p.getString("lab14b_rate_source", ""))
-        && p.getLong("lab14b_sample_duration_ms", 0L) >= 240000L
-        ? p.getFloat("lab14b_consumption_per_hour", -1f) : -1f;
-
-long ts14b =
-        p.getLong("lab14b_ts", 0L);
-
-// ------------------------------------------------------------
-// 🔴 BASELINE CAPACITY (LOCAL FIX)
-// ------------------------------------------------------------
-lab14bBaselineMah = -1L;
-
-iDoctorEngine.BatterySnapshot snap =
-        iDoctorEngine.get(this).readBatterySnapshotLab();
-
-if (snap != null) {
-
-    if (snap.chargeFullMah > 0) {
-
-        lab14bBaselineMah = snap.chargeFullMah;
-
-    } else if (snap.chargeDesignMah > 0) {
-
-        lab14bBaselineMah = snap.chargeDesignMah;
-
-    } else {
-        // Charge counter / SOC is not independently verified full capacity.
-        lab14bBaselineMah = -1L;
-    }
-}
-
-// ------------------------------------------------------------
-// 🔴 DERIVED (PREFERRED)
-// ------------------------------------------------------------
-float lab14bEstimatedHours = -1f;
-
-if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
-    lab14bEstimatedHours =
-            lab14bBaselineMah / lab14bConsumptionPerHour;
-} else {
-    // Legacy cached estimates have no validated capacity provenance.
-    lab14bEstimatedHours = -1f;
-}
-
-// ------------------------------------------------------------
-// 🔴 USAGE HOURS (DERIVED)
-// ------------------------------------------------------------
-float lab14bLightHours = -1f;
-float lab14bNormalHours = -1f;
-float lab14bHeavyHours = -1f;
-
-if (lab14bEstimatedHours > 0f) {
-
-    lab14bLightHours = lab14bEstimatedHours * lightMul;
-    lab14bNormalHours = lab14bEstimatedHours * normalMul;
-    lab14bHeavyHours = lab14bEstimatedHours * heavyMul;
-}
-
-// ------------------------------------------------------------
-// 🔴 REMAINING TIME (DERIVED)
-// ------------------------------------------------------------
-float battPct = (float) getBatteryPercentSafe();
-
-float lab14bRemainingLight = -1f;
-float lab14bRemainingNormal = -1f;
-float lab14bRemainingHeavy = -1f;
-
-if (lab14bEstimatedHours > 0f && battPct > 0f) {
-
-    float factor = battPct / 100f;
-
-    lab14bRemainingLight =
-            lab14bLightHours * factor;
-
-    lab14bRemainingNormal =
-            lab14bNormalHours * factor;
-
-    lab14bRemainingHeavy =
-            lab14bHeavyHours * factor;
-}
-
-    // LAB 15
-    final int lab15Charge = p.getInt("lab15_charge_score", -1);
-    final boolean lab15SystemLimited =
-            p.getBoolean("lab15_system_limited", false);
-    final String lab15StrengthLabel =
-            p.getString("lab15_strength_label", null);
-    final long ts15 = p.getLong("lab15_ts", 0L);
-
-    // LAB 16
-    final int lab16Thermal = p.getInt("lab16_thermal_score", -1);
-    final boolean lab16ThermalDanger =
-            p.getBoolean("lab16_thermal_danger", false);
-    final long ts16 = p.getLong("lab16_last_ts", 0L);
-
-    // ------------------------------------------------------------
-// PRESENCE + FRESHNESS CHECK (CLEAN)
-// ------------------------------------------------------------
-final boolean has14 =
-        (lab14Health >= 0f && ts14 > 0L);
-
-final boolean has14b =
-        (lab14bConsumptionPerHour > 0f) &&
-        (ts14b > 0L);
-
-final boolean has15 =
-        (lab15Charge >= 0 && ts15 > 0L);
-
-final boolean has16 =
-        (lab16Thermal >= 0 && ts16 > 0L);
-
-// ------------------------------------------------------------
-// FRESHNESS
-// ------------------------------------------------------------
-final boolean fresh14 =
-        has14 && (now - ts14) <= WINDOW_MS;
-
-final boolean fresh14b =
-        has14b && (now - ts14b) <= WINDOW_MS;
-
-final boolean fresh15 =
-        has15 && (now - ts15) <= WINDOW_MS;
-
-final boolean fresh16 =
-        has16 && (now - ts16) <= WINDOW_MS;
-
-    // ------------------------------------------------------------
-    // HIGH VARIABILITY CONFIRMATION (LAB 14 INTELLIGENCE)
-    // ------------------------------------------------------------
-    final long hvFirstTs = p.getLong("lab14_hv_first_ts", -1L);
-    final long hvLastTs = p.getLong("lab14_hv_last_ts", -1L);
-    final boolean hvPending = p.getBoolean("lab14_hv_pending", false);
-
-    final boolean hvConfirmed =
-            hvPending &&
-            hvFirstTs > 0L &&
-            hvLastTs > hvFirstTs &&
-            (hvLastTs - hvFirstTs) <= WINDOW_MS;
-
-    // ------------------------------------------------------------
-    // PRECHECK — SMART POPUP (STRICT)
-    // ------------------------------------------------------------
-    if (!(fresh14 && fresh15 && fresh16)) {
-
-        StringBuilder msg = new StringBuilder();
-
-        msg.append(
-                gr
-                        ? "Κατάσταση (απαιτούνται αποτελέσματα τελευταίων 2 ωρών):<br><br>"
-                        : "Status (results required within last 2 hours):<br><br>"
-        );
-
-        // --------------------------------------------------------
-        // LAB 14
-        // --------------------------------------------------------
-        msg.append(gr ? "• LAB 14A: " : "• LAB 14A: ");
-
-        if (!has14) {
-            msg.append("<font color='#FF4444'>")
-               .append(gr ? "Απουσιάζει" : "Missing")
-               .append("</font><br>");
-        } else if (!fresh14) {
-            msg.append("<font color='#FF4444'>")
-               .append(gr ? "Έληξε (" : "Expired (")
-               .append(lab17_age(now - ts14))
-               .append(")</font><br>");
-        } else {
-            msg.append("<font color='#39FF14'>")
-               .append("OK (")
-               .append(lab17_age(now - ts14))
-               .append(")</font><br>");
-        }
-
-        // --------------------------------------------------------
-        // LAB 15
-        // --------------------------------------------------------
-        msg.append(gr ? "• LAB 15: " : "• LAB 15: ");
-
-        if (!has15) {
-            msg.append("<font color='#FF4444'>")
-               .append(gr ? "Απουσιάζει" : "Missing")
-               .append("</font><br>");
-        } else if (!fresh15) {
-            msg.append("<font color='#FF4444'>")
-               .append(gr ? "Έληξε (" : "Expired (")
-               .append(lab17_age(now - ts15))
-               .append(")</font><br>");
-        } else {
-            msg.append("<font color='#39FF14'>")
-               .append("OK (")
-               .append(lab17_age(now - ts15))
-               .append(")</font><br>");
-        }
-
-        // --------------------------------------------------------
-        // LAB 16
-        // --------------------------------------------------------
-        msg.append(gr ? "• LAB 16: " : "• LAB 16: ");
-
-        if (!has16) {
-            msg.append("<font color='#FF4444'>")
-               .append(gr ? "Απουσιάζει" : "Missing")
-               .append("</font><br>");
-        } else if (!fresh16) {
-            msg.append("<font color='#FF4444'>")
-               .append(gr ? "Έληξε (" : "Expired (")
-               .append(lab17_age(now - ts16))
-               .append(")</font><br>");
-        } else {
-            msg.append("<font color='#39FF14'>")
-               .append("OK (")
-               .append(lab17_age(now - ts16))
-               .append(")</font><br>");
-        }
-
-        msg.append("<br>");
-
-        // --------------------------------------------------------
-        // SMART DECISION
-        // --------------------------------------------------------
-        if ((fresh14 && fresh15) && !fresh16) {
-
-            msg.append(
-                    gr
-                            ? "Έχουν ολοκληρωθεί τα LAB 14A, και LAB 15.<br>"
-                              + "Εκτέλεσε ΜΟΝΟ το LAB 16 για να ολοκληρωθεί το σύνολο.<br>"
-                            : "LAB 14A and LAB 15 are already completed.<br>"
-                              + "Run ONLY LAB 16 to complete the set.<br>"
-            );
-
-        } else if ((fresh14 && fresh16) && !fresh15) {
-
-            msg.append(
-                    gr
-                            ? "Έχουν ολοκληρωθεί τα LAB 14A και LAB 16.<br>"
-                              + "Εκτέλεσε ΜΟΝΟ το LAB 15 για να ολοκληρωθεί το σύνολο.<br>"
-                            : "LAB 14A and LAB 16 are already completed.<br>"
-                              + "Run ONLY LAB 15 to complete the set.<br>"
-            );
-
-        } else if ((fresh15 && fresh16) && !fresh14) {
-
-            msg.append(
-                    gr
-                            ? "Έχουν ολοκληρωθεί τα LAB 15 και 16.<br>"
-                              + "Εκτέλεσε ΜΟΝΟ το LAB 14A για να ολοκληρωθεί το σύνολο.<br>"
-                            : "LAB 15 and 16 are already completed.<br>"
-                              + "Run ONLY LAB 14A to complete the set.<br>"
-            );
-        
-        } else {
-
-            msg.append(
-                    gr
-                            ? "Για έγκυρο αποτέλεσμα, απαιτείται εκτέλεση των<br>"
-                              + "LAB 14A + LAB 15 + LAB 16 μαζί.<br><br>"
-                              + "Αιτία: απουσία ή/και λήξη αποτελεσμάτων."
-                            : "To generate a valid result, run<br>"
-                              + "LAB 14A + LAB 15 + LAB 16 together.<br><br>"
-                              + "Reason: missing and/or expired results."
-            );
-        }
-
-        lab17_showPopup(
-                gr
-                        ? "LAB 17 — Έλεγχος Προϋποθέσεων"
-                        : "LAB 17 — Prerequisites Check",
-                msg.toString()
-        );
-        return;
-    }
-
-    // ------------------------------------------------------------
-    // START LAB 17
-    // ------------------------------------------------------------
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 17 — GEL Ευφυής Ανάλυση Υγείας Συστήματος"
-            : "LAB 17 — GEL Intelligent System Health Analysis");
+    logInfo(gr ? "LAB 17 — Συνδυαστική Αναφορά Τεκμηρίων Μπαταρίας"
+               : "LAB 17 — Combined Battery Evidence Review");
     logLine();
 
-    new Thread(() -> {
-
-        try {
-
-            // ------------------------------------------------------------
-            // BASE WEIGHTED SCORE
-            // ------------------------------------------------------------
-            int baseScore = Math.round(
-                    (lab14Health * 0.50f) +
-                    (lab15Charge * 0.25f) +
-                    (lab16Thermal * 0.25f)
-            );
-            baseScore = Math.max(0, Math.min(100, baseScore));
-
-// ------------------------------------------------------------
-// PENALTIES
-// ------------------------------------------------------------
-int penaltyExtra = 0;
-
-// 🔴 VALIDATION 14B (CRITICAL — FIXED)
-boolean valid14b =
-        lab14bConsumptionPerHour >= 50f &&
-        lab14bConsumptionPerHour <= 5000f &&
-        ts14b > 0L;
-
-if (!valid14b) {
-    penaltyExtra += 10;
-}
-
-            if (lab15Charge < 60 && lab15SystemLimited) penaltyExtra += 6;
-            else if (lab15Charge < 60) penaltyExtra += 12;
-
-            if (lab16Thermal < 60) penaltyExtra += 10;
-            else if (lab16Thermal < 75) penaltyExtra += 5;
-
-            if (lab14Aging >= 0) {
-    if (lab14Aging >= 70) penaltyExtra += 10;
-    else if (lab14Aging >= 50) penaltyExtra += 6;
-    else if (lab14Aging >= 30) penaltyExtra += 3;
-}
-
-// 🔴 FREEZE VALUE
-final int fPenaltyExtra = penaltyExtra;
-
-// 🔴 USE SAME VARIABLE
-int finalScore = Math.max(0, Math.min(100, baseScore - fPenaltyExtra));
-
-            String category =
-                    (finalScore >= 85) ? "Strong" :
-                    (finalScore >= 70) ? "Normal" :
-                    "Weak";
-
-            final int fFinalScore = finalScore;
-            
-            final String fCategory = category;
-
-            final boolean thermalDanger =
-                    lab16ThermalDanger || (lab16Thermal < 60);
-
-            final boolean chargingWeakOrThrottled =
-                    (lab15Charge < 60) || lab15SystemLimited;
-
-            final boolean batteryLooksFineButThermalBad =
-                    (lab14Health >= 80f) && thermalDanger;
-
-            final boolean batteryBadButThermalOk =
-                    (lab14Health < 70f) && (lab16Thermal >= 75);
-
-            final boolean overallDeviceConcern =
-                    thermalDanger ||
-                    chargingWeakOrThrottled ||
-                    (lab14Health < 70f);
-                    
-String lab14AgingLabel;
-
-if (lab14Aging >= 0) {
-
-    lab14AgingLabel = gr
-            ? "Δείκτης γήρανσης"
-            : "Aging index";
-
-} else {
-
-    lab14AgingLabel = gr
-            ? "Δείκτης γήρανσης"
-            : "Aging index";
-
-}
-
-            ui.post(() -> {
-
-// ================= SUMMARY =================
-logLine();
-logInfo(gr
-        ? "LAB 14 — Υγεία μπαταρίας"
-        : "LAB 14 — Battery health");
-
-String agingText;
-
-if (lab14Aging >= 0) {
-
-    agingText = String.format(
-            Locale.US,
-            "%s (%d)",
-            lab14AgingLabel,
-            lab14Aging
-    );
-
-} else {
-
-    agingText = gr ? "Μ/Δ" : "N/A";
-}
-
-logLabelOkValue(
-        gr ? "Υγεία" : "Health",
-        String.format(
-                Locale.US,
-                "%s (%.0f) | %s: %s",
-                lab14HealthLabel,
-                lab14Health,
-                gr ? "Γήρανση" : "Aging",
-                agingText
-        )
-);
-
-                logInfo(gr
-                        ? "LAB 15 — Φόρτιση"
-                        : "LAB 15 — Charging");
-
-                if (lab15Charge >= 70) {
-
-                    logLabelOkValue(
-                            gr ? "Φόρτιση" : "Charging",
-                            String.format(
-                                    Locale.US,
-                                    gr
-                                            ? "%d%% | Ισχύς: %s"
-                                            : "%d%% | Strength: %s",
-                                    lab15Charge,
-                                    (lab15StrengthLabel != null
-                                            ? lab15StrengthLabel
-                                            : (gr ? "Μ/Δ" : "N/A"))
-                            )
-                    );
-
-                } else {
-
-                    logLabelWarnValue(
-                            gr ? "Φόρτιση" : "Charging",
-                            String.format(
-                                    Locale.US,
-                                    gr
-                                            ? "%d%% | Ισχύς: %s"
-                                            : "%d%% | Strength: %s",
-                                    lab15Charge,
-                                    (lab15StrengthLabel != null
-                                            ? lab15StrengthLabel
-                                            : (gr ? "Μ/Δ" : "N/A"))
-                            )
-                    );
-                }
-
-logInfo(gr
-        ? "LAB 16 — Θερμική συμπεριφορά"
-        : "LAB 16 — Thermal behaviour");
-
-String thermalLabel;
-
-if (lab16Thermal >= 85) {
-
-    thermalLabel = gr ? "Άριστη" : "Excellent";
-
-    logLabelOkValue(
-            gr ? "Θερμική κατάσταση" : "Thermal",
-            thermalLabel + " (" + lab16Thermal + ")"
-    );
-
-} else if (lab16Thermal >= 70) {
-
-    thermalLabel = gr ? "Καλή" : "Good";
-
-    logLabelOkValue(
-            gr ? "Θερμική κατάσταση" : "Thermal",
-            thermalLabel + " (" + lab16Thermal + ")"
-    );
-
-} else if (lab16Thermal >= 55) {
-
-    thermalLabel = gr ? "Μέτρια" : "Moderate";
-
-    logLabelWarnValue(
-            gr ? "Θερμική κατάσταση" : "Thermal",
-            thermalLabel + " (" + lab16Thermal + ")"
-    );
-
-} else {
-
-    thermalLabel = gr ? "Κακή" : "Poor";
-
-    logLabelErrorValue(
-            gr ? "Θερμική κατάσταση" : "Thermal",
-            thermalLabel + " (" + lab16Thermal + ")"
-    );
-}
-
-                // ================= ANALYSIS =================
-                if (lab15SystemLimited) {
-
-                    logLine();
-                    logInfo(gr
-                            ? "Ανάλυση περιορισμού φόρτισης"
-                            : "Charging limitation analysis");
-
-                    logLabelWarnValue(
-                            gr ? "Κατάσταση" : "Status",
-                            gr
-                                    ? "Ανιχνεύθηκε περιορισμός από το σύστημα"
-                                    : "System-limited throttling detected"
-                    );
-
-                    logLabelWarnValue(
-                            gr ? "Πηγή" : "Source",
-                            "PMIC / thermal protection"
-                    );
-
-                    logLabelOkValue(
-                            gr ? "Σημείωση" : "Note",
-                            gr
-                                    ? "Δεν αποδίδεται αποκλειστικά σε υγεία μπαταρίας"
-                                    : "Not attributed to battery health alone"
-                    );
-                }
-
-                if (fPenaltyExtra > 0) {
-
-                    logLine();
-                    logInfo(gr
-                            ? "Ανάλυση ποινών"
-                            : "Penalty breakdown");
-
-                    if (lab15Charge < 60 && lab15SystemLimited) {
-                        logLabelWarnValue(
-                                gr ? "Φόρτιση" : "Charging",
-                                gr
-                                        ? "Περιορισμός από το σύστημα"
-                                        : "System-limited throttling detected"
-                        );
-                    } else if (lab15Charge < 60) {
-                        logLabelWarnValue(
-                                gr ? "Φόρτιση" : "Charging",
-                                gr
-                                        ? "Ασθενής απόδοση φόρτισης"
-                                        : "Weak charging performance detected"
-                        );
-                    }
-
-                    if (lab14Aging >= 70) {
-                        logLabelErrorValue(
-                                gr ? "Γήρανση" : "Aging",
-                                gr
-                                        ? "Σοβαρές ενδείξεις γήρανσης"
-                                        : "Severe aging indicators detected"
-                        );
-                    } else if (lab14Aging >= 50) {
-                        logLabelWarnValue(
-                                gr ? "Γήρανση" : "Aging",
-                                gr
-                                        ? "Υψηλές ενδείξεις γήρανσης"
-                                        : "High aging indicators detected"
-                        );
-                    } else if (lab14Aging >= 30) {
-                        logLabelWarnValue(
-                                gr ? "Γήρανση" : "Aging",
-                                gr
-                                        ? "Μέτριες ενδείξεις γήρανσης"
-                                        : "Moderate aging indicators detected"
-                        );
-                    }
-                }
-
-// ================= FINAL SCORE =================
-logLine();
-logInfo(gr
-        ? "Τελικός Δείκτης Αξιοπιστίας Μπαταρίας"
-        : "Final Battery Reliability Score");
-
-String finalText = String.format(
-        Locale.US,
-        "%s (%d)",
-        fCategory,
-        fFinalScore
-);
-
-if (fFinalScore >= 80) {
-
-    logLabelOkValue(
-            gr ? "Κατάσταση" : "Status",
-            finalText
-    );
-
-} else if (fFinalScore >= 60) {
-
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            finalText
-    );
-
-} else {
-
-    logLabelErrorValue(
-            gr ? "Κατάσταση" : "Status",
-            finalText
-    );
-}
-
-// ================= DIAGNOSIS =================
-appendHtml("<br>");
-logInfo(gr ? "Διάγνωση" : "Diagnosis");
-logLine();
-
-// ------------------------------------------------------------
-// 🔴 CROSS-LAB INSIGHT (SINGLE DECISION)
-// ------------------------------------------------------------
-
-                if (lab14Unstable) {
-
-                    logLabelWarnValue(
-                            gr ? "Αξιοπιστία μέτρησης" : "Measurement reliability",
-                            gr ? "Ασταθής" : "Unstable"
-                    );
-
-                    logLabelWarnValue(
-                            gr ? "Αιτία" : "Cause",
-                            "PMIC / fuel gauge instability"
-                    );
-
-                    logLabelOkValue(
-                            gr ? "Σημείωση" : "Note",
-                            gr
-                                    ? "Δεν αποτελεί επιβεβαιωμένη αστοχία μπαταρίας"
-                                    : "Not a confirmed battery failure"
-                    );
-                }
-
-                if (!overallDeviceConcern) {
-
-                    logLabelOkValue(
-                            gr ? "Συνολική κατάσταση" : "Overall status",
-                            gr
-                                    ? "Δεν εντοπίστηκαν κρίσιμα προβλήματα (μπαταρία / φόρτιση / θερμικά)"
-                                    : "No critical issues detected (battery / charging / thermal)"
-                    );
-
-                    logLabelOkValue(
-                            gr ? "Παρακολούθηση" : "Monitoring",
-                            gr
-                                    ? "Ελέγχθηκαν εσωτερικά chips και κρίσιμα περιφερειακά"
-                                    : "Internal chips and critical peripherals checked"
-                    );
-
-                } else {
-
-                    if (batteryLooksFineButThermalBad) {
-
-                        logLabelWarnValue(
-                                gr ? "Θερμικός κίνδυνος" : "Thermal risk",
-                                gr
-                                        ? "Η υγεία μπαταρίας είναι ΟΚ, αλλά η θερμική συμπεριφορά είναι οριακή"
-                                        : "Battery health OK, thermal behaviour risky"
-                        );
-
-                        logLabelWarnValue(
-                                gr ? "Σύσταση" : "Recommendation",
-                                gr
-                                        ? "Έλεγχος ψύξης και θερμικών επαφών"
-                                        : "Inspect cooling path and thermal interfaces"
-                        );
-
-                        logLabelWarnValue(
-                                gr ? "Πιθανές αιτίες" : "Possible causes",
-                                gr
-                                        ? "Φόρτος CPU/GPU, thermal pads, επαφή heatsink"
-                                        : "CPU/GPU load, thermal pads, heatsink contact"
-                        );
-                    }
-
-                    if (chargingWeakOrThrottled) {
-
-                        if (lab15SystemLimited) {
-
-                            logLabelWarnValue(
-                                    gr ? "Φόρτιση" : "Charging",
-                                    gr
-                                            ? "Περιορισμός από το σύστημα (προστασία ενεργή)"
-                                            : "System-limited (protection logic active)"
-                            );
-
-                            logLabelWarnValue(
-                                    gr ? "Πιθανές αιτίες" : "Possible causes",
-                                    gr
-                                            ? "Υπερθέρμανση ή περιορισμός ρεύματος από PMIC"
-                                            : "Overheating or PMIC current limiting"
-                            );
-
-                        } else if (lab15Charge < 60) {
-
-                            logLabelWarnValue(
-                                    gr ? "Φόρτιση" : "Charging",
-                                    gr
-                                            ? "Ασθενής απόδοση φόρτισης"
-                                            : "Weak charging performance"
-                            );
-
-                            logLabelWarnValue(
-                                    gr ? "Πιθανές αιτίες" : "Possible causes",
-                                    gr
-                                            ? "Καλώδιο / αντάπτορας, φθορά θύρας, αυξημένη εσωτερική αντίσταση μπαταρίας"
-                                            : "Cable / adapter quality, port wear, battery impedance"
-                            );
-                        }
-                    }
-
-                    if (batteryBadButThermalOk) {
-
-                        logLabelWarnValue(
-                                gr ? "Μπαταρία" : "Battery",
-                                gr
-                                        ? "Η υγεία είναι μειωμένη ενώ τα θερμικά είναι φυσιολογικά"
-                                        : "Health weak while thermals remain normal"
-                        );
-
-                        logLabelWarnValue(
-                                gr ? "Πιθανή αιτία" : "Likely cause",
-                                gr
-                                        ? "Γήρανση / απώλεια χωρητικότητας"
-                                        : "Battery aging / capacity loss"
-                        );
-                    }
-
-                    if (lab14Health < 70f && thermalDanger) {
-
-                        logLabelErrorValue(
-                                gr ? "Συνδυασμένος κίνδυνος" : "Combined risk",
-                                gr
-                                        ? "Εντοπίστηκαν προβλήματα μπαταρίας και θερμικής συμπεριφοράς — συνιστάται τεχνικός έλεγχος"
-                                        : "Battery + thermal issues detected — technician inspection recommended"
-                        );
-                    }
-                }
-
-                // ------------------------------------------------------------
-                // STORE FINAL RESULT
-                // ------------------------------------------------------------
-                try {
-                    p.edit()
-                            .putInt("lab17_final_score", fFinalScore)
-                            .putString("lab17_category", fCategory)
-                            .putLong("lab17_ts", System.currentTimeMillis())
-                            .apply();
-                } catch (Throwable ignore) {}
-
-                // ================= FINAL =================
-                appendHtml("<br>");
-                logOk(gr ? "Το Lab 17 ολοκληρώθηκε." : "Lab 17 finished.");
-                logLine();
-
-            });
-
-        } catch (Throwable ignore) {
-            // silent
+    BatteryEvidenceStore.Record lab14 = BatteryEvidenceStore.readLatestLab14(this);
+    boolean has14 = lab14 != null && lab14.isCompletedValidRun(windowMs);
+    if (has14) {
+        logLabelValue("Lab 14A",
+                lab14.observedSignalCount
+                        + (gr ? " παρατηρημένα δημόσια σήματα" : " observed public API signals")
+                        + " | run=" + lab14.runId);
+    } else {
+        logLabelWarnValue("Lab 14A",
+                gr ? "Δεν υπάρχει πρόσφατη, ολοκληρωμένη έγκυρη δοκιμή"
+                   : "No fresh, completed and valid test evidence");
+    }
+
+    boolean source14b = p.getInt("lab14b_evidence_schema", 0) == 1
+            && "BATTERY_MANAGER_CHARGE_COUNTER_ELAPSED".equals(
+                    p.getString("lab14b_rate_source", ""))
+            && p.getBoolean("lab14b_rate_valid", false);
+    long ts14b = p.getLong("lab14b_ts", 0L);
+    long duration14b = p.getLong("lab14b_sample_duration_ms", 0L);
+    float draw14b = p.getFloat("lab14b_consumption_per_hour", -1f);
+    boolean has14b = source14b && duration14b >= 240000L
+            && ts14b > 0L && now >= ts14b && now - ts14b <= windowMs
+            && Float.isFinite(draw14b) && draw14b > 0f;
+    if (has14b) {
+        logLabelValue("Lab 14B", String.format(Locale.US, "%.1f mAh/h | %.1f min",
+                draw14b, duration14b / 60000.0d));
+        logLabelWarnValue(gr ? "Ερμηνεία εκφόρτισης" : "Discharge interpretation",
+                gr ? "Μέση κατανάλωση στο δοκιμαστικό φορτίο, όχι υγεία μπαταρίας"
+                   : "Measured average draw in test workload, not battery health");
+    } else {
+        logLabelWarnValue("Lab 14B",
+                gr ? "Δεν υπάρχει πρόσφατο έγκυρο δείγμα charge counter"
+                   : "No fresh validated charge-counter sample");
+    }
+
+    long ts15 = p.getLong("lab15_ts", 0L);
+    long sample15 = p.getLong("lab15_observed_duration_ms", 0L);
+    long delta15 = p.getLong("lab15_observed_delta_mah", -1L);
+    boolean has15 = p.getInt("lab15_evidence_schema", 0) == 1
+            && p.getBoolean("lab15_counter_delta_valid", false)
+            && ts15 > 0L && now >= ts15 && now - ts15 <= windowMs
+            && sample15 >= 120000L && delta15 > 0L;
+    if (has15) {
+        logLabelValue("Lab 15", "+" + delta15 + " mAh"
+                + String.format(Locale.US, " | %.1f min", sample15 / 60000.0d));
+        logLabelWarnValue(gr ? "Ερμηνεία φόρτισης" : "Charge interpretation",
+                gr ? "Αύξηση φορτίου συστοιχίας, όχι πιστοποίηση καλωδίου/PMIC"
+                   : "Net pack charge gain, not charger/PMIC certification");
+    } else {
+        logLabelWarnValue("Lab 15",
+                gr ? "Δεν υπάρχει πρόσφατο έγκυρο δείγμα φόρτισης"
+                   : "No fresh validated charging sample");
+    }
+
+    long ts16 = p.getLong("lab16_last_ts", 0L);
+    float peak16 = p.getFloat("lab16_peak_temp", Float.NaN);
+    boolean has16 = ts16 > 0L && now >= ts16 && now - ts16 <= windowMs
+            && Float.isFinite(peak16) && peak16 >= -20f && peak16 <= 120f;
+    if (has16) {
+        String source16 = p.getString("lab16_peak_source", "unknown");
+        logLabelValue("Lab 16",
+                String.format(Locale.US, "Reported peak %.1f °C | %s",
+                        peak16, source16));
+        logLabelWarnValue(gr ? "Θερμική κάλυψη" : "Thermal coverage",
+                gr ? "Η μέγιστη ορατή ένδειξη δεν εγγυάται πρόσβαση σε όλα τα θερμικά στοιχεία"
+                   : "Highest exposed reading does not prove whole-device thermal coverage");
+    } else {
+        logLabelWarnValue("Lab 16",
+                gr ? "Δεν υπάρχει πρόσφατη επαληθεύσιμη θερμική ένδειξη"
+                   : "No fresh, source-bound thermal reading");
+    }
+
+    BatteryPublicCollector.Snapshot live = BatteryPublicCollector.collect(this);
+    for (String key : new String[]{"soc_percent", "voltage_mv", "current_now_ma",
+            "remaining_charge_mah", "remaining_energy_mwh", "temperature_c",
+            "cycle_count", "thermal_status_enum", "thermal_headroom",
+            "os_estimated_discharge_time_ms"}) {
+        BatteryEvidence item = live.get(key);
+        if (item.isObserved()) {
+            logLabelValue(key, String.format(Locale.US, "%.2f %s (%s)",
+                    item.value, item.unit, item.source));
+        } else {
+            logLabelValue(key, gr ? "Μη διαθέσιμο" : "Unavailable");
         }
+    }
 
-    }).start();
+    int availableDomains = (has14 ? 1 : 0) + (has14b ? 1 : 0)
+            + (has15 ? 1 : 0) + (has16 ? 1 : 0);
+    appendHtml("<br>");
+    logInfo(gr ? "Συμπέρασμα επάρκειας τεκμηρίων"
+               : "Diagnostic evidence coverage conclusion");
+    logLabelValue(gr ? "Πρόσφατες ενότητες" : "Fresh evidence domains",
+            availableDomains + "/4");
+    if (availableDomains == 0) {
+        logLabelWarnValue(gr ? "Διαθεσιμότητα" : "Availability",
+                gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — δεν επιτρέπεται συνολική διάγνωση"
+                   : "INSUFFICIENT DATA — combined diagnosis unavailable");
+    } else {
+        logLabelValue(gr ? "Διαθεσιμότητα" : "Availability",
+                gr ? "Υπάρχουν μερικά τεκμηριωμένα σήματα προς τεχνική αξιολόγηση"
+                   : "Scoped observations available for technician review");
+    }
+    logLabelWarnValue(gr ? "Υγεία/γήρανση μπαταρίας" : "Battery capacity health / aging",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΣΙΜΗ — καμία συνδυαστική βαθμολογία 0–100"
+               : "NOT VERIFIED — no numerical 0–100 health score");
+    logLabelWarnValue(gr ? "Πιστοποίηση" : "Certification",
+            gr ? "Η αναφορά δεν πιστοποιεί φυσική κατάσταση μπαταρίας ή συσκευής"
+               : "This review does not certify physical battery or device condition");
 
+    // Legacy synthetic scores are not carried forward, including on upgrades.
+    p.edit()
+            .remove("lab17_final_score")
+            .remove("lab17_category")
+            .putInt("lab17_evidence_schema", 1)
+            .putInt("lab17_available_domains", availableDomains)
+            .putLong("lab17_ts", now)
+            .apply();
+    logOk(gr ? "Το Lab 17 ολοκλήρωσε την αναφορά τεκμηρίων."
+             : "Lab 17 evidence report completed.");
+    logLine();
 } // ===== END lab17RunAuto()
 
 
