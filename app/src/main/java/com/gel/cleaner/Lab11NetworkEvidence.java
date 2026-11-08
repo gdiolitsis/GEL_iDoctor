@@ -56,12 +56,5 @@ final class Lab11NetworkEvidence {
         return phoneApiAvailable && serviceReadSucceeded;
     }
 
-    static boolean isHardwareFailureProven(DefaultRoute r,
-                                           boolean simReady,
-                                           boolean serviceKnown,
-                                           boolean inService) {
-        // Radio failure needs independent device-specific tests and external
-        // corroboration; API routing and SIM/service indicators are insufficient.
-        return false;
-    }
+
 }
