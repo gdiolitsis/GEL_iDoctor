@@ -11,6 +11,11 @@ on:
         type: choice
         options: [all, "30", "36"]
         default: all
+      audit_scope:
+        description: Exploration scope
+        type: choice
+        options: [full, labs_only]
+        default: full
 permissions:
   contents: read
   actions: read
@@ -67,6 +72,8 @@ jobs:
           test -s "$apk"
           echo "AUDIT_APK=$apk" >> "$GITHUB_ENV"
       - name: Explore real release UI and capture coverage
+        env:
+          AUDIT_SCOPE: ${{ inputs.audit_scope }}
         run: bash tools/ci/full_ui_audit.sh "$AUDIT_APK" "${{ matrix.api }}" "${{ matrix.language }}"
       - name: Upload screenshots, UI hierarchy, coverage and logs
         if: always()
