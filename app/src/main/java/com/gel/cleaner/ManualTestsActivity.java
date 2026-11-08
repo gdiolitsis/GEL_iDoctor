@@ -30881,7 +30881,7 @@ pmic = pickZone(zones, "pmic", "pmic-therm", "power-thermal", "charger", "chg");
 float maxThermal = maxOf(cpu, gpu, skin, pmic, batTemp);
 float avgThermal = avgOf(cpu, gpu, skin, pmic, batTemp);
 
-int thermalScore = Lab30ScoreEvidence.hasThermalReadings(maxThermal, avgThermal)
+int thermalScore = Lab30ScoreEvidence.hasThermalReadings(maxThermal, avgThermal, cpu, gpu, skin, pmic)
         ? scoreThermals(maxThermal, avgThermal) : -1;
 String thermalFlag = thermalScore < 0 ? "⚪" : colorFlagFromScore(thermalScore);
 

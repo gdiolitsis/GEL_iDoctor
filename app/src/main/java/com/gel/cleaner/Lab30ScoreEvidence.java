@@ -4,9 +4,21 @@ package com.gel.cleaner;
 public final class Lab30ScoreEvidence {
     private Lab30ScoreEvidence() {}
 
-    public static boolean hasThermalReadings(float max, float avg) {
-        return Float.isFinite(max) && Float.isFinite(avg)
-                && max > 0f && avg > 0f && max <= 120f && avg <= 120f;
+    /** Battery temperature is not independent CPU/GPU/board thermal coverage.
+     *  Lab 30 must not certify health based on battery-only observations.
+     */
+    public static boolean hasThermalReadings(float max, float avg,
+                                              Float cpu, Float gpu, Float skin, Float pmic) {
+        if (!Float.isFinite(max) || !Float.isFinite(avg)
+                || max <= 0f || avg <= 0f || max > 120f || avg > 120f) {
+            return false;
+        }
+        return validZone(cpu) || validZone(gpu) || validZone(skin) || validZone(pmic);
+    }
+
+    private static boolean validZone(Float value) {
+        return value != null && Float.isFinite(value)
+                && value > 0f && value <= 120f;
     }
 
     public static boolean hasBatteryReadings(float temp, float pct) {
