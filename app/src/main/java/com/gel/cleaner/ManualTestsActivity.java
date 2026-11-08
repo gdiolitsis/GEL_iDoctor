@@ -9510,9 +9510,9 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                 String.valueOf(s.frames)
         );
     else
-        logLabelErrorValue(
+        logLabelWarnValue(
                 gr ? "Καρέ" : "Frames",
-                "0"
+                gr ? "0 — άγνωστη λειτουργία ροής" : "0 — no stream evidence"
         );
 
     if (fps >= 20f)
@@ -9526,8 +9526,8 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                 String.format(Locale.US, "%.1f", fps)
         );
 
-    if (s.droppedFrames == 0)
-        logLabelOkValue(
+    if (s.frames > 0 && s.droppedFrames == 0)
+        logLabelValue(
                 gr ? "Απώλειες καρέ / timeouts" : "Frame drops / timeouts",
                 "0"
         );
@@ -9537,8 +9537,8 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                 String.valueOf(s.droppedFrames)
         );
 
-    if (s.blackFrames == 0)
-        logLabelOkValue(
+    if (s.frames > 0 && s.blackFrames == 0)
+        logLabelValue(
                 gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
                 "0"
         );
@@ -9586,8 +9586,8 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
         logLabelWarnValue(
                 gr ? "Υποστήριξη RAW" : "RAW support",
                 gr
-                        ? "ΟΧΙ — μόνο JPEG"
-                        : "NO — professional uncompressed photos not supported (JPEG only)"
+                        ? "RAW δεν δηλώθηκε — άλλες μορφές εξόδου πιθανές"
+                        : "RAW not advertised; alternate output formats may be available"
         );
 
     logLabelValue(gr ? "Διαγνωστική εκτίμηση" : "Diagnostic assessment",
