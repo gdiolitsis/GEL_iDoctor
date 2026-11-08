@@ -1123,6 +1123,7 @@ private boolean oldKeepScreenOn = false;
     private volatile boolean lab4HumanFallbackUsed = false;
     // Serialize Labs 1/2 tone challenges and prevent incomplete PDF export.
     private final AtomicBoolean lab12AudioBusy = new AtomicBoolean(false);
+    private final AtomicBoolean lab5VibrationPending = new AtomicBoolean(false);
 
     // ============================================================
     // SERVICE LOG SESSION FLAG (CRITICAL)
@@ -7297,6 +7298,17 @@ private void lab4ResultEarpiece() {
 private void lab5Vibration() {
 
     final boolean gr = AppLang.isGreek(this);
+    if (!lab5VibrationPending.compareAndSet(false, true)) {
+        logWarn(gr ? "Η δοκιμή δόνησης είναι ήδη σε εξέλιξη."
+                   : "Vibration test is already in progress.");
+        return;
+    }
+    runOnUiThread(() -> {
+        if (btnExport != null) {
+            btnExport.setEnabled(false);
+            btnExport.setAlpha(0.5f);
+        }
+    });
 
     appendHtml("<br>");
     logLine();
@@ -7308,6 +7320,7 @@ private void lab5Vibration() {
     logLine();
 
     final AtomicBoolean userConfirmed = new AtomicBoolean(false);
+    final AtomicBoolean userResponded = new AtomicBoolean(false);
 
     new Thread(() -> {
 
@@ -7341,10 +7354,10 @@ private void lab5Vibration() {
 
             if (vibrator == null || !vibrator.hasVibrator()) {
 
-                logError(
-                        gr
-                                ? "Δεν εντοπίστηκε μοτέρ δόνησης"
-                                : "No vibration motor detected"
+                logLabelWarnValue(
+                        gr ? "Διαθεσιμότητα Vibrator API" : "Vibrator API availability",
+                        gr ? "Το Android δεν ανέφερε διαθέσιμο μοτέρ· φυσική βλάβη μη επαληθευμένη"
+                           : "Android exposed no vibrator; physical hardware failure unverified"
                 );
                 return;
             }
@@ -7669,12 +7682,14 @@ private void lab5Vibration() {
 
                 noBtn.setOnClickListener(v -> {
                     userConfirmed.set(false);
+                    userResponded.set(true);
                     answered.set(true);
                     d.dismiss();
                 });
 
                 yesBtn.setOnClickListener(v -> {
                     userConfirmed.set(true);
+                    userResponded.set(true);
                     answered.set(true);
                     d.dismiss();
                 });
@@ -7692,22 +7707,26 @@ private void lab5Vibration() {
             appendHtml("<br>");
             logLine();
 
-            if (userConfirmed.get()) {
+            if (!userResponded.get()) {
+                logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                        gr ? "Η δοκιμή ακυρώθηκε· δεν υπάρχει απάντηση χρήστη"
+                           : "CANCELLED: no user observation was provided");
+            } else if (userConfirmed.get()) {
 
                 logLabelOkValue(
-                        gr ? "Αποτέλεσμα" : "Result",
+                        gr ? "Αποτέλεσμα (δήλωση χρήστη)" : "Result (user report)",
                         gr
-                                ? "Η δόνηση επιβεβαιώθηκε από τον χρήστη."
-                                : "Vibration confirmed by the user."
+                                ? "USER_REPORTED: ο χρήστης ένιωσε τη δόνηση. Δεν μετρήθηκε φυσική ένταση."
+                                : "USER_REPORTED: vibration was felt; physical intensity was not measured."
                 );
 
             } else {
 
-                logLabelErrorValue(
+                logLabelWarnValue(
                         gr ? "Αποτέλεσμα" : "Result",
                         gr
-                                ? "Η δόνηση δεν επιβεβαιώθηκε από τον χρήστη."
-                                : "Vibration was not confirmed by the user."
+                                ? "USER_REPORTED: δεν έγινε αισθητή δόνηση· η αιτία παραμένει άγνωστη."
+                                : "USER_REPORTED: vibration not felt; cause remains unknown."
                 );
 
                 logLabelWarnValue(
@@ -7737,10 +7756,8 @@ private void lab5Vibration() {
             logLabelWarnValue(
                     gr ? "Πιθανή αιτία" : "Possible cause",
                     gr
-                            ? "Απενεργοποιημένη δόνηση, περιορισμός συστήματος, "
-                              + "ή βλάβη μηχανισμού δόνησης."
-                            : "Vibration disabled, system restriction, "
-                              + "or vibration motor malfunction."
+                            ? "Εκτέλεση μη διαθέσιμη· ρυθμίσεις, δικαιώματα ή περιορισμοί Android/OEM άγνωστοι."
+                            : "Probe unavailable; Android/OEM settings, permissions or routing unverified."
             );
 
         } finally {
@@ -7759,6 +7776,7 @@ private void lab5Vibration() {
             );
             logLine();
 
+            lab5VibrationPending.set(false);
             runOnUiThread(this::enableSingleExportButton);
         }
 
@@ -30370,8 +30388,8 @@ private void enableSingleExportButton() {
 
     ui.post(() -> {
         if (btnExport == null) return;
-        if (lab12AudioBusy.get()) {
-            // Other callbacks cannot export an incomplete Lab 1/2 sample.
+        if (lab12AudioBusy.get() || lab5VibrationPending.get()) {
+            // Other callbacks cannot export an incomplete guided sample.
             btnExport.setEnabled(false);
             btnExport.setAlpha(0.5f);
             return;
