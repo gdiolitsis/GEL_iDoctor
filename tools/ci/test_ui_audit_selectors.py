@@ -3,7 +3,8 @@ import unittest
 import xml.etree.ElementTree as ET
 from ui_audit_selectors import (MANUAL_ENTRY, matching, is_visible, find_visible,
                                 scroll_gesture, manual_section_pattern, incomplete_lab_names,
-                                find_accessible_action, SAFE_ACCOUNT_ACTIONS, is_safe_account_action)
+                                find_accessible_action, SAFE_ACCOUNT_ACTIONS, is_safe_account_action,
+                                has_welcome_dialog)
 
 class SelectorsTest(unittest.TestCase):
     def test_android_uppercase_greek_removes_tonos(self):
@@ -80,6 +81,24 @@ class SelectorsTest(unittest.TestCase):
                       "Διαγραφή λογαριασμού", "Buy GEL PRO", "Subscribe"):
             self.assertFalse(is_safe_account_action(label), label)
 
+
+
+    def test_welcome_dialog_requires_real_dismissal(self):
+        blocked = ET.fromstring(
+            '<hierarchy><node text="WELCOME" bounds="[20,80][300,120]"/>'
+            '<node text="Mute voice instructions" bounds="[30,500][200,520]"/>'
+            '</hierarchy>'
+        )
+        self.assertTrue(has_welcome_dialog(blocked))
+        dismissed = ET.fromstring(
+            '<hierarchy><node text="Settings" bounds="[20,80][300,120]"/></hierarchy>'
+        )
+        self.assertFalse(has_welcome_dialog(dismissed))
+        greek = ET.fromstring(
+            '<hierarchy><node text="ΚΑΛΩΣ ΗΡΘΑΤΕ" bounds="[20,80][300,120]"/>'
+            '</hierarchy>'
+        )
+        self.assertTrue(has_welcome_dialog(greek))
 
 if __name__ == "__main__":
     unittest.main()

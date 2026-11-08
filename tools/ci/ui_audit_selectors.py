@@ -78,3 +78,9 @@ SAFE_ACCOUNT_ACTIONS = (r"^Refresh gifted PRO$", r"^Restore Play purchases$")
 
 def is_safe_account_action(label):
     return any(matching(pattern, label, re.I) for pattern in SAFE_ACCOUNT_ACTIONS)
+
+
+def has_welcome_dialog(root):
+    """True if a visible first-run Welcome header remains on screen."""
+    return find_visible(root, lambda n: bool(matching(
+        r"^(WELCOME|ΚΑΛΩΣ ΗΡΘΑΤΕ)$", n.get("text", ""), re.I))) is not None

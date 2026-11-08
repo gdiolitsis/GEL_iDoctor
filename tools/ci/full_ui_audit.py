@@ -4,7 +4,8 @@ import json, os, pathlib, re, struct, subprocess, sys, time, traceback
 import xml.etree.ElementTree as ET
 from ui_audit_selectors import (MANUAL_ENTRY, matching as search, is_visible as visible,
                                 find_visible, scroll_gesture, manual_section_pattern,
-                                incomplete_lab_names, find_accessible_action, SAFE_ACCOUNT_ACTIONS)
+                                incomplete_lab_names, find_accessible_action, SAFE_ACCOUNT_ACTIONS,
+                                has_welcome_dialog)
 
 PKG = "com.gel.iDoctor"
 out = pathlib.Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
@@ -92,8 +93,14 @@ def dismiss_intro():
             if ok is not None:
                 evidence=save("welcome-ok-visible")
                 tap(ok)
-                welcome_ok_observed=True
-                record("welcome-ok","ACCESSIBLE_AND_CLICKED",folder=evidence)
+                time.sleep(1)
+                if has_welcome_dialog(tree()):
+                    record("welcome-ok","CLICK_DID_NOT_DISMISS",
+                           folder=save("welcome-still-visible-after-tap"))
+                    adb("shell","input","keyevent","4")
+                else:
+                    welcome_ok_observed=True
+                    record("welcome-ok","CLICKED_AND_DISMISSED",folder=evidence)
             else:
                 evidence=save("welcome-actions-unreachable")
                 record("welcome-ok","UNREACHABLE",folder=evidence)
@@ -210,10 +217,13 @@ try:
                 record("settings","ACCESSIBILITY_LABEL_MISSING",folder=save("settings-accessibility-failure"))
             else:
                 tap(control)
-                settings_accessible=True
-                record("settings","ACCESSIBLE_ACTION_OPENED",folder=save("settings"))
-                n=find(textmatch(r"^(Save|Αποθήκευση)$"))
-                if n is not None:
+                n=find(textmatch(r"^(Save|Αποθήκευση)$"),2)
+                if n is None:
+                    record("settings","ACCESSIBLE_BUT_PANEL_NOT_OPEN",
+                           folder=save("settings-panel-not-open"))
+                else:
+                    settings_accessible=True
+                    record("settings","ACCESSIBLE_ACTION_OPENED",folder=save("settings"))
                     tap(n)
                     record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
     sections=[(1,5),(6,9),(10,13),(14,17),(18,20),(21,24),(25,31)]
