@@ -8730,15 +8730,15 @@ private void lab8RunNextCamera(
         logLabelValue(
                 gr ? "Προσβάσιμες κάμερες που ελέγχθηκαν"
                    : "Accessible cameras tested",
-                String.valueOf(overall.total)
+                String.valueOf(overall.previewOkCount + overall.previewFailCount + overall.previewUnavailableCount + overall.previewInconclusiveCount)
         );
 
         logInfo(
                 gr
-                        ? "Ελέγχθηκαν όλες οι κάμερες που ήταν διαθέσιμες "
-                          + "στην εφαρμογή μέσω Android Camera2."
-                        : "All cameras available to the application through "
-                          + "Android Camera2 were tested."
+                        ? "Έγινε προσπάθεια ελέγχου των προσβάσιμων καμερών· "
+                          + "η πλήρης κάλυψη εξαρτάται από τα πραγματικά καρέ."
+                        : "Accessible cameras were attempted; coverage depends "
+                          + "on frames actually sampled."
         );
 
         logWarn(
@@ -8760,16 +8760,18 @@ private void lab8RunNextCamera(
                     overall.previewOkCount + "/" + overall.total
             );
 
-        if (overall.previewFailCount == 0)
-            logLabelOkValue(
-                    gr ? "Αποτυχίες προεπισκόπησης" : "Preview FAIL",
-                    "0"
-            );
-        else
-            logLabelErrorValue(
-                    gr ? "Αποτυχίες προεπισκόπησης" : "Preview FAIL",
-                    String.valueOf(overall.previewFailCount)
-            );
+        logLabelValue(
+                gr ? "Ο χρήστης δεν είδε εικόνα" : "User reported no image",
+                String.valueOf(overall.previewFailCount)
+        );
+        logLabelValue(
+                gr ? "Camera2 μη διαθέσιμη" : "Camera2 unavailable",
+                String.valueOf(overall.previewUnavailableCount)
+        );
+        logLabelValue(
+                gr ? "Ανεπαρκή στοιχεία" : "Inconclusive observations",
+                String.valueOf(overall.previewInconclusiveCount)
+        );
 
         if (overall.torchOkCount > 0)
             logLabelOkValue(
@@ -8794,9 +8796,9 @@ private void lab8RunNextCamera(
             );
 
         if (overall.streamIssueCount == 0)
-            logLabelOkValue(
-                    gr ? "Προβλήματα ροής καρέ" : "Frame stream issues",
-                    gr ? "Κανένα" : "None detected"
+            logLabelValue(
+                    gr ? "Επισημάνσεις ροής καρέ" : "Frame stream flags",
+                    gr ? "Δεν καταγράφηκαν στο διαθέσιμο δείγμα" : "None flagged in sampled evidence"
             );
         else
             logLabelWarnValue(
@@ -8815,8 +8817,8 @@ private void lab8RunNextCamera(
         if (cameraSubsystemOk) {
 
             logLabelOkValue(
-                    gr ? "Υποσύστημα κάμερας" : "Camera subsystem",
-                    gr ? "Λειτουργικό" : "Operational"
+                    gr ? "Παρατηρήσεις προεπισκόπησης" : "Guided preview observations",
+                    gr ? "Επαρκείς για το περιορισμένο πρωτόκολλο" : "Sufficient for scoped preview protocol"
             );
 
             if (overall.streamIssueCount == 0)
@@ -8832,8 +8834,8 @@ private void lab8RunNextCamera(
 
             if (overall.torchFailCount == 0)
                 logLabelOkValue(
-                        gr ? "Υποσύστημα φλας" : "Flash subsystem",
-                        gr ? "OK (όπου υπάρχει)" : "OK (where available)"
+                        gr ? "Εντολές φλας" : "Torch commands",
+                        gr ? "Δεν απέτυχε εντολή — όχι μέτρηση φωτός" : "No command failure; emitted light unmeasured"
                 );
             else
                 logLabelWarnValue(
@@ -8865,14 +8867,14 @@ private void lab8RunNextCamera(
         } else {
 
             logLabelErrorValue(
-                    gr ? "Υποσύστημα κάμερας" : "Camera subsystem",
-                    gr ? "ΜΗ αξιόπιστο" : "NOT reliable"
+                    gr ? "Παρατηρήσεις προεπισκόπησης" : "Guided preview observations",
+                    gr ? "ΜΕΡΙΚΕΣ / ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΕΣ" : "PARTIAL / UNVERIFIED"
             );
 
             logError(
                     gr
-                            ? "Μία ή περισσότερες κάμερες απέτυχαν στον βασικό έλεγχο."
-                            : "One or more cameras failed basic operation checks."
+                            ? "Δεν συλλέχθηκαν επαρκείς ενδείξεις από όλες τις κάμερες. Δεν τεκμηριώνεται βλάβη."
+                            : "Not all cameras yielded sufficient evidence. Hardware failure is not established."
             );
 
             appendHtml("<br>");
