@@ -10436,7 +10436,8 @@ private void lab9SensorsCheck() {
         if (hasVirtualGyro)
             logLabelOkValue(
                     gr ? "Εικονικό γυροσκόπιο" : "Virtual Gyroscope",
-                    gr ? "Εντοπίστηκε (sensor fusion — αναμενόμενο)" : "Detected (sensor fusion — expected behavior)"
+                    gr ? "Το όνομα δηλώνει virtual/fused — δεν επιβεβαιώνεται φυσικό chip"
+                       : "Name suggests virtual/fused — physical hardware unverified"
             );
         else
             logLabelWarnValue(
@@ -10447,7 +10448,8 @@ private void lab9SensorsCheck() {
         if (hasDualALS)
             logLabelOkValue(
                     gr ? "Αισθητήρες φωτός" : "Ambient Light Sensors",
-                    gr ? "Διπλός ALS (μπροστά + πίσω)" : "Dual ALS (front + rear)"
+                    gr ? "Πολλαπλές αναφορές ALS — θέση μη επαληθευμένη"
+                       : "Multiple ALS descriptors — position unverified"
             );
         else
             logLabelWarnValue(
@@ -10499,11 +10501,15 @@ private void lab9SensorsCheck() {
                     gr ? "Δεν αναφέρθηκε" : "Not reported"
             );
 
-        logLabelOkValue(
-                gr ? "Συνολική εκτίμηση" : "Overall Assessment",
+        // Enumeration proves only that Android advertises a sensor.
+        // It is not a live functional challenge or hardware-health certificate.
+        logLabelWarnValue(
+                gr ? "Συνολική εκτίμηση" : "Overall assessment",
                 gr
-                        ? "Το sensor suite είναι πλήρες και υγιές για αυτή τη συσκευή"
-                        : "Sensor suite complete and healthy for this device"
+                        ? "Καταγράφηκαν οι αναφερόμενοι αισθητήρες. Η λειτουργία τους "
+                                + "δεν επαληθεύεται μόνο από τη λίστα."
+                        : "Android-reported sensors were enumerated. Their operation "
+                                + "cannot be verified from enumeration alone."
         );
 
     } catch (Throwable e) {
