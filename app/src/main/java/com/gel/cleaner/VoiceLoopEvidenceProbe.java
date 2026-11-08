@@ -1,5 +1,6 @@
 package com.gel.cleaner;
 
+import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
@@ -26,15 +27,19 @@ public final class VoiceLoopEvidenceProbe {
         public final int bytesCaptured;
         public final int bytesWritten;
         public final int peakAbsSample;
+        public final int routedInputType;
+        public final int routedOutputType;
         public final String reason;
 
         private Result(boolean attempted, long elapsedMs, int captured,
-                       int written, int peak, String reason) {
+                       int written, int peak, int inputType, int outputType, String reason) {
             this.attempted = attempted;
             this.elapsedMs = elapsedMs;
             this.bytesCaptured = captured;
             this.bytesWritten = written;
             this.peakAbsSample = peak;
+            this.routedInputType = inputType;
+            this.routedOutputType = outputType;
             this.reason = reason;
         }
     }
@@ -45,6 +50,7 @@ public final class VoiceLoopEvidenceProbe {
         AudioTrack track = null;
         long start = 0L;
         int captured = 0, written = 0, peak = 0;
+        int inputType = -1, outputType = -1;
         try {
             int inMin = AudioRecord.getMinBufferSize(RATE,
                     AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
@@ -74,6 +80,13 @@ public final class VoiceLoopEvidenceProbe {
                 return unavailable("Voice-call playback did not start");
             }
 
+            // Read the actual OS-selected route while both streams are active;
+            // null is UNKNOWN, never proof of a missing physical component.
+            AudioDeviceInfo input = recorder.getRoutedDevice();
+            AudioDeviceInfo output = track.getRoutedDevice();
+            if (input != null) inputType = input.getType();
+            if (output != null) outputType = output.getType();
+
             byte[] buffer = new byte[size];
             start = SystemClock.elapsedRealtime();
             while (!cancelled.get() && SystemClock.elapsedRealtime() - start < DURATION_MS) {
@@ -96,15 +109,24 @@ public final class VoiceLoopEvidenceProbe {
                 if (offset != n) break;
             }
             long elapsed = SystemClock.elapsedRealtime() - start;
+            if (inputType < 0) {
+                AudioDeviceInfo input = recorder.getRoutedDevice();
+                if (input != null) inputType = input.getType();
+            }
+            if (outputType < 0) {
+                AudioDeviceInfo output = track.getRoutedDevice();
+                if (output != null) outputType = output.getType();
+            }
             boolean complete = !cancelled.get()
                     && AudioChallengeEvidence.loopAttempted(elapsed, captured, written, peak);
             return new Result(complete, elapsed, captured, written, peak,
-                    cancelled.get() ? "User cancelled voice loop"
+                    inputType, outputType, cancelled.get() ? "User cancelled voice loop"
                     : complete ? "Android audio sample loop completed; physical route unverified"
                     : "Insufficient microphone-to-output samples, duration or nonzero signal");
         } catch (SecurityException | IllegalStateException | IllegalArgumentException e) {
             return new Result(false, start == 0 ? 0 : SystemClock.elapsedRealtime()-start,
-                    captured, written, peak, "Voice loop unavailable: "
+                    captured, written, peak, inputType, outputType,
+                    "Voice loop unavailable: "
                             + e.getClass().getSimpleName());
         } finally {
             if (recorder != null) {
@@ -119,6 +141,6 @@ public final class VoiceLoopEvidenceProbe {
     }
 
     private static Result unavailable(String reason) {
-        return new Result(false, 0, 0, 0, 0, reason);
+        return new Result(false, 0, 0, 0, 0, -1, -1, reason);
     }
 }
