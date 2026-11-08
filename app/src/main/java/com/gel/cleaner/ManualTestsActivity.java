@@ -32736,12 +32736,9 @@ if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
 
 } else {
 
-    // 🔴 fallback για παλιές εκδόσεις (optional)
-    lab14bEstimatedHours =
-            p.getFloat("lab14b_estimated_hours", -1f);
-
-    lab14bRemainingNormal =
-            p.getFloat("lab14b_remaining_normal", -1f);
+    // Legacy extrapolations have no verified full-charge baseline.
+    lab14bEstimatedHours = -1f;
+    lab14bRemainingNormal = -1f;
 }
 
 // ------------------------------------------------------------
@@ -32795,12 +32792,11 @@ logLine();
     boolean issuesDetected = warnings.length() > 0;
 
     if (!issuesDetected) {
-
-        logLabelOkValue(
+        // Keyword matching is not structured evidence and cannot certify a clean device.
+        logLabelWarnValue(
                 gr ? "Κατάσταση συστήματος" : "System status",
-                gr
-                        ? "Δεν εντοπίστηκαν προειδοποιήσεις ή σφάλματα"
-                        : "No warnings or errors detected"
+                gr ? "Δεν επιβεβαιώνεται απουσία προβλημάτων από μη δομημένα logs"
+                   : "Absence of faults cannot be certified from unstructured logs"
         );
 
     } else {
@@ -32828,11 +32824,18 @@ logLine();
 // 4) BATTERY FINDINGS — INFORMATIONAL ONLY
 // LAB 30 remains the single source of truth for device scoring.
 // ------------------------------------------------------------
-float batteryScore =
-        p.getFloat("lab14_health_score", -1f);
-
-float batteryHealth =
-        p.getFloat("lab14_health_percent", -1f);
+BatteryEvidenceStore.Record lab14Report =
+        BatteryEvidenceStore.readLatestLab14(this);
+// No uncalibrated cached health score can be accepted as capacity evidence.
+float batteryScore = -1f;
+float batteryHealth = -1f;
+if (lab14Report != null) {
+    logLabelValue(gr ? "Lab 14A — καταγεγραμμένα σήματα" : "Lab 14A — recorded signals",
+            lab14Report.observedSignalCount + (gr ? " διαθέσιμα" : " observed"));
+    logLabelWarnValue(gr ? "Υγεία χωρητικότητας" : "Battery capacity health",
+            gr ? "Δεν υπάρχει επαληθευμένο ποσοστό SoH για αυτή τη συσκευή"
+               : "No verified capacity SoH percentage for this device");
+}
         
 // ------------------------------------------------------------
 // TECHNICIAN FINDINGS — NO DEVICE RE-SCORING
