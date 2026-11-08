@@ -508,7 +508,7 @@ private void showContactDeveloperDialog() {
     btnCancel.setBackground(makeGelBtn(0xFFAA1111));
 
     Button btnSend = new com.gel.cleaner.GelButton(this);
-    btnSend.setText("Send");
+    btnSend.setText(gr ? "Αποστολή" : "Send");
     btnSend.setTextColor(Color.WHITE);
     btnSend.setAllCaps(false);
     btnSend.setBackground(makeGelBtn(0xFF00FF7F));
