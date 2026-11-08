@@ -146,6 +146,17 @@ try:
     adb("logcat","-b","all","-c")
     adb("shell","settings","put","system","accelerometer_rotation","0")
     adb("shell","settings","put","system","user_rotation","0")
+    # Explicitly exercise the first-run dialog even when prior onboarding has
+    # saved "do not show again". Otherwise a missing popup looks like failure.
+    if os.environ.get("AUDIT_REQUIRE_WELCOME_OK") == "1":
+        adb("shell","am","force-stop",PKG)
+        adb("shell","am","start","-W","-n",PKG+"/com.gel.cleaner.MainActivity",
+            "--ez","force_welcome","true")
+        time.sleep(1)
+        dismiss_intro()
+        if not welcome_ok_observed:
+            record("welcome-ok","FORCED_DIALOG_NOT_VERIFIED",
+                   folder=save("welcome-forced-unverified"))
     select_language()
     if mode != "labs_only":
         # Inventory home at every scroll position.

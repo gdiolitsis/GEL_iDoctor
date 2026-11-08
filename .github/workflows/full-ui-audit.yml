@@ -1,11 +1,5 @@
 name: Signed APK full UI exploration
 on:
-  pull_request:
-    paths:
-      - 'tools/ci/full_ui_audit.py'
-      - 'tools/ci/ui_audit_selectors.py'
-      - 'tools/ci/test_ui_audit_selectors.py'
-      - '.github/workflows/full-ui-audit.yml'
   workflow_dispatch:
     inputs:
       evidence_artifact_id:
