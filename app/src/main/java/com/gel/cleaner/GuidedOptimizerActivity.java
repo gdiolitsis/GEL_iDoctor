@@ -3104,8 +3104,8 @@ private void showMiniSchedulerPopup() {
 
     TextView body = new TextView(this);
     body.setText((gr
-            ? "Ενεργοποίηση 3 περιοδικών ελέγχων (09:00 • 15:00 • 21:00);\\n\\n"
-            : "Enable 3 scheduled checks (09:00 • 15:00 • 21:00)?\\n\\n")
+            ? "Ενεργοποίηση 3 περιοδικών ελέγχων (09:00 • 15:00 • 21:00);\n\n"
+            : "Enable 3 scheduled checks (09:00 • 15:00 • 21:00)?\n\n")
             + getString(R.string.mini_check_scope_description));
 
     body.setTextColor(0xFF00FF7F);
