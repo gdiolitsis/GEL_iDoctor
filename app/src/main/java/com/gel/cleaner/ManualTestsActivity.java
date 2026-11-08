@@ -21879,6 +21879,10 @@ try {
 
     getSharedPreferences("GEL_DIAG", MODE_PRIVATE)
             .edit()
+            .putInt("lab14b_evidence_schema", 1)
+            .putString("lab14b_rate_source", "BATTERY_MANAGER_CHARGE_COUNTER_ELAPSED")
+            .putLong("lab14b_sample_duration_ms", measuredElapsedMs)
+            .putBoolean("lab14b_rate_valid", safePerHour > 0f && !fakeCounter)
             .putFloat("lab14b_consumption_per_hour", safePerHour)
             .putFloat("lab14b_estimated_hours", safeEstimated)
             .putFloat("lab14b_light_hours", safeLight)
@@ -24576,7 +24580,12 @@ if (isLab14GamaMode) {
 
 // 🔴 RAW (source of truth)
 float lab14bConsumptionPerHour =
-        p.getFloat("lab14b_consumption_per_hour", -1f);
+        p.getInt("lab14b_evidence_schema", 0) == 1
+        && p.getBoolean("lab14b_rate_valid", false)
+        && "BATTERY_MANAGER_CHARGE_COUNTER_ELAPSED".equals(
+                p.getString("lab14b_rate_source", ""))
+        && p.getLong("lab14b_sample_duration_ms", 0L) >= 240000L
+        ? p.getFloat("lab14b_consumption_per_hour", -1f) : -1f;
 
 long ts14b =
         p.getLong("lab14b_ts", 0L);
@@ -29718,7 +29727,12 @@ boolean lab14SwellingSuspected = false;
 
 // 🔴 RAW
 float lab14bConsumptionPerHour =
-        p.getFloat("lab14b_consumption_per_hour", -1f);
+        p.getInt("lab14b_evidence_schema", 0) == 1
+        && p.getBoolean("lab14b_rate_valid", false)
+        && "BATTERY_MANAGER_CHARGE_COUNTER_ELAPSED".equals(
+                p.getString("lab14b_rate_source", ""))
+        && p.getLong("lab14b_sample_duration_ms", 0L) >= 240000L
+        ? p.getFloat("lab14b_consumption_per_hour", -1f) : -1f;
 
 long ts14b =
         p.getLong("lab14b_ts", 0L);
@@ -29744,12 +29758,9 @@ if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
     }
 
 } else {
-    // 🔴 fallback για παλιά installs (optional)
-    lab14bEstimatedHours =
-            p.getFloat("lab14b_estimated_hours", -1f);
-
-    lab14bRemainingNormal =
-            p.getFloat("lab14b_remaining_normal", -1f);
+    // Historical estimates are not proven; do not reuse after migration.
+    lab14bEstimatedHours = -1f;
+    lab14bRemainingNormal = -1f;
 }
 
 // stability flags
@@ -31771,7 +31782,12 @@ private void lab31FinalSummary() {
 
 // 🔴 RAW (source of truth)
 float lab14bConsumptionPerHour =
-        p.getFloat("lab14b_consumption_per_hour", -1f);
+        p.getInt("lab14b_evidence_schema", 0) == 1
+        && p.getBoolean("lab14b_rate_valid", false)
+        && "BATTERY_MANAGER_CHARGE_COUNTER_ELAPSED".equals(
+                p.getString("lab14b_rate_source", ""))
+        && p.getLong("lab14b_sample_duration_ms", 0L) >= 240000L
+        ? p.getFloat("lab14b_consumption_per_hour", -1f) : -1f;
 
 long ts14b =
         p.getLong("lab14b_ts", 0L);
