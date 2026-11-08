@@ -1,0 +1,43 @@
+name: Signed APK full UI exploration
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  explore:
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [30, 36]
+        language: [en, el]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Download exact verified release APK from build 3803
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/gdiolitsis/GEL_iDoctor/actions/artifacts/13580399347/zip -o "$RUNNER_TEMP/apk.zip"
+          echo "d8860f2c52d4daa987e69fd3037712783301321154c6f23800b7ce43636d126d  $RUNNER_TEMP/apk.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/apk.zip" -d "$RUNNER_TEMP/apk"
+          apk="$(find "$RUNNER_TEMP/apk" -name '*.apk' -print -quit)"
+          test -s "$apk"
+          echo "AUDIT_APK=$apk" >> "$GITHUB_ENV"
+      - name: Explore real release UI and capture coverage
+        run: bash tools/ci/full_ui_audit.sh "$AUDIT_APK" "${{ matrix.api }}" "${{ matrix.language }}"
+      - name: Upload screenshots, UI hierarchy, coverage and logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: UI-audit-android-${{ matrix.api }}-${{ matrix.language }}
+          path: ${{ runner.temp }}/full-ui-audit
+          retention-days: 14
