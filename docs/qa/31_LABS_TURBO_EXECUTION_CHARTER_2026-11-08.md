@@ -25,6 +25,8 @@ Any present evidence is scoped by Android's public APIs. Device-level failures, 
 6. **Gate F — Labs 30–31 integration:** versioned cross-lab source-of-truth, provenance and missing-data propagation, report re-open/restart/upgrade, customer-facing limitation language.
 7. **Gate G — acceptance:** compare source-built debug APK on Android 11 (API30) and Android 16 (API36), EL/EN, multiple OEMs; physical accessories and known-fault specimens where possible. Explicit owner approval for any merge or publication.
 
+The 31 numbered laboratories are listed as **32 sub-workstreams** below because battery Lab 14 has separate **14A** and **14B** protocols. This does not create a new numbered Lab.
+
 ## All-Lab falsification register
 | Lab | Domain | Highest-value evidence expansion | Required negative control / prohibition |
 |---|---|---|---|
