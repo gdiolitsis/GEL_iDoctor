@@ -98,9 +98,11 @@ private int widgetOfferRetryCount = 0;
 @Override
 public boolean onCreateOptionsMenu(Menu menu) {
     // ⚙ settings icon (always visible)
-    menu.add(0, 1001, 0, "")
-        .setIcon(R.drawable.ic_settings)
-        .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+    final String settingsLabel = AppLang.isGreek(this) ? "Ρυθμίσεις" : "Settings";
+    MenuItem settingsItem = menu.add(0, 1001, 0, settingsLabel);
+    settingsItem.setIcon(R.drawable.ic_settings);
+    settingsItem.setContentDescription(settingsLabel);
+    settingsItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 // 🔽 CONTACT BUTTON
 menu.add(0, 1002, 1, "Contact")
