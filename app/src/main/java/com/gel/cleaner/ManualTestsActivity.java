@@ -5863,6 +5863,12 @@ private boolean guardUsageAccess() {
 // ============================================================
 private void lab1SpeakerTone() {
     if (!guardMic(this::lab1SpeakerTone)) return;
+    if (lab3GuidedPending.get() || lab4GuidedPending.get()) {
+        logWarn(AppLang.isGreek(this)
+                ? "Άλλος έλεγχος ήχου σε εξέλιξη· περίμενε να ολοκληρωθεί."
+                : "Another guided audio test is active; finish it first.");
+        return;
+    }
     if (!lab12AudioBusy.compareAndSet(false, true)) {
         logWarn(AppLang.isGreek(this)
                 ? "Άλλη ακουστική δοκιμή εκτελείται· το αποτέλεσμα παραμένει μη επαληθευμένο."
@@ -5931,6 +5937,12 @@ private void lab1SpeakerTone() {
 // ============================================================
 private void lab2SpeakerSweep() {
     if (!guardMic(this::lab2SpeakerSweep)) return;
+    if (lab3GuidedPending.get() || lab4GuidedPending.get()) {
+        logWarn(AppLang.isGreek(this)
+                ? "Άλλος έλεγχος ήχου σε εξέλιξη· περίμενε να ολοκληρωθεί."
+                : "Another guided audio test is active; finish it first.");
+        return;
+    }
     if (!lab12AudioBusy.compareAndSet(false, true)) {
         logWarn(AppLang.isGreek(this)
                 ? "Άλλη ακουστική δοκιμή εκτελείται· το αποτέλεσμα παραμένει μη επαληθευμένο."
@@ -5997,6 +6009,11 @@ private void lab2SpeakerSweep() {
 private void lab3EarpieceManual() {
 
     final boolean gr = AppLang.isGreek(this);
+    if (lab12AudioBusy.get() || lab4GuidedPending.get()) {
+        logWarn(gr ? "Άλλη ακουστική δοκιμή είναι ενεργή."
+                   : "Another audio challenge is in progress.");
+        return;
+    }
     if (!lab3GuidedPending.compareAndSet(false, true)) {
         logWarn(gr ? "Έλεγχος ακουστικού σε εξέλιξη."
                    : "Earpiece challenge is already active.");
@@ -6370,6 +6387,11 @@ private void finishLab4Guided() {
 
 private void lab4MicManual() {
     if (!guardMic(this::lab4MicManual)) return;
+    if (lab12AudioBusy.get() || lab3GuidedPending.get()) {
+        logWarn(AppLang.isGreek(this) ? "Άλλη δοκιμή ήχου είναι ενεργή."
+                                     : "Another audio test is already active.");
+        return;
+    }
     if (!lab4GuidedPending.compareAndSet(false, true)) {
         logWarn(AppLang.isGreek(this) ? "Έλεγχος μικροφώνου ήδη σε εξέλιξη."
                                      : "Microphone check already in progress.");
