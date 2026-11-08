@@ -9873,12 +9873,8 @@ private void lab9SensorsCheck() {
 
         for (Sensor s : sensors) {
             String name   = s.getName()   != null ? s.getName().toLowerCase(Locale.US)   : "";
-            String vendor = s.getVendor() != null ? s.getVendor().toLowerCase(Locale.US) : "";
 
             if (name.contains("virtual") && name.contains("gyro"))
-                hasVirtualGyro = true;
-
-            if (name.contains("gyroscope") && vendor.contains("xiaomi"))
                 hasVirtualGyro = true;
 
             if (name.contains("ambient") && name.contains("light"))
@@ -9904,73 +9900,52 @@ private void lab9SensorsCheck() {
         // ------------------------------------------------------------
         logLine();
 
-        if (hasVirtualGyro)
-            logLabelOkValue(
-                    gr ? "Εικονικό γυροσκόπιο" : "Virtual Gyroscope",
-                    gr ? "Το όνομα δηλώνει virtual/fused — δεν επιβεβαιώνεται φυσικό chip"
-                       : "Name suggests virtual/fused — physical hardware unverified"
-            );
-        else
-            logLabelWarnValue(
-                    gr ? "Εικονικό γυροσκόπιο" : "Virtual Gyroscope",
-                    gr ? "Δεν αναφέρθηκε" : "Not reported"
-            );
+        // OEM-provided names are metadata, not proof of physical components,
+        // calibration or implemented system features. Use neutral labels.
+        logLabelValue(gr ? "Εικονικό γυροσκόπιο (όνομα)" : "Virtual gyro (name)",
+                hasVirtualGyro
+                        ? (gr ? "Όνομα με virtual/gyro· φυσικό chip μη επαληθευμένο"
+                              : "Virtual/gyro descriptor; physical chip unverified")
+                        : (gr ? "Δεν αναφέρθηκε τέτοιο όνομα· τύπος hardware άγνωστος"
+                              : "No such descriptor; physical hardware type unknown"));
 
-        if (hasDualALS)
-            logLabelOkValue(
-                    gr ? "Αισθητήρες φωτός" : "Ambient Light Sensors",
-                    gr ? "Πολλαπλές αναφορές ALS — θέση μη επαληθευμένη"
-                       : "Multiple ALS descriptors — position unverified"
-            );
-        else
-            logLabelWarnValue(
-                    gr ? "Αισθητήρες φωτός" : "Ambient Light Sensors",
-                    gr ? "Μονός ALS" : "Single ALS"
-            );
+        logLabelValue(gr ? "Αισθητήρες φωτός (ονόματα)" : "Ambient light (names)",
+                alsCount >= 2
+                        ? (gr ? "Πολλαπλά σχετικά ονόματα· θέση και λειτουργία μη επαληθευμένες"
+                              : "Multiple related names; location/function unverified")
+                        : alsCount == 1
+                        ? (gr ? "Ένα σχετικό όνομα· δεν αποκλείονται άλλοι αισθητήρες"
+                              : "One matching name; additional sensors not ruled out")
+                        : (gr ? "Δεν εντοπίστηκε όνομα ALS· δεν αποδεικνύεται απουσία"
+                              : "No ALS-like name matched; absence not established"));
 
-        if (hasSAR)
-            logLabelOkValue(
-                    gr ? "Αισθητήρες SAR" : "SAR Sensors",
-                    gr ? "Υπάρχουν (proximity / RF tuning)" : "Present (proximity / RF tuning)"
-            );
-        else
-            logLabelWarnValue(
-                    gr ? "Αισθητήρες SAR" : "SAR Sensors",
-                    gr ? "Δεν αναφέρθηκαν" : "Not reported"
-            );
+        logLabelValue(gr ? "Αισθητήρες SAR/RF (ονόματα)" : "SAR/RF (names)",
+                hasSAR
+                        ? (gr ? "Εντοπίστηκε σχετικό όνομα· RF λειτουργία μη ελεγμένη"
+                              : "Related name reported; RF function untested")
+                        : (gr ? "Δεν εντοπίστηκε σχετικό όνομα· όχι απόδειξη απουσίας"
+                              : "No related name matched; absence unverified"));
 
-        if (hasPickup)
-            logLabelOkValue(
-                    gr ? "Pickup sensor" : "Pickup Sensor",
-                    gr ? "Υπάρχει (lift-to-wake υποστήριξη)" : "Present (lift-to-wake supported)"
-            );
-        else
-            logLabelWarnValue(
-                    gr ? "Pickup sensor" : "Pickup Sensor",
-                    gr ? "Δεν αναφέρθηκε" : "Not reported"
-            );
+        logLabelValue(gr ? "Pickup (όνομα)" : "Pickup (name)",
+                hasPickup
+                        ? (gr ? "Σχετικό όνομα· δεν ελέγχθηκε το lift-to-wake"
+                              : "Related descriptor; lift-to-wake not tested")
+                        : (gr ? "Δεν αναφέρθηκε σχετικό όνομα"
+                              : "No matching descriptor reported"));
 
-        if (hasLargeTouch)
-            logLabelOkValue(
-                    gr ? "Large area touch" : "Large Area Touch",
-                    gr ? "Υπάρχει (palm rejection / ακρίβεια)" : "Present (palm rejection / accuracy)"
-            );
-        else
-            logLabelWarnValue(
-                    gr ? "Large area touch" : "Large Area Touch",
-                    gr ? "Δεν αναφέρθηκε" : "Not reported"
-            );
+        logLabelValue(gr ? "Large-area touch (όνομα)" : "Large-area touch (name)",
+                hasLargeTouch
+                        ? (gr ? "Σχετικό όνομα· palm rejection/ακρίβεια μη ελεγμένα"
+                              : "Related descriptor; palm rejection/accuracy untested")
+                        : (gr ? "Δεν αναφέρθηκε σχετικό όνομα"
+                              : "No matching descriptor reported"));
 
-        if (hasGameRotation)
-            logLabelOkValue(
-                    gr ? "Game rotation vector" : "Game Rotation Vector",
-                    gr ? "Υπάρχει (gaming orientation)" : "Present (gaming orientation)"
-            );
-        else
-            logLabelWarnValue(
-                    gr ? "Game rotation vector" : "Game Rotation Vector",
-                    gr ? "Δεν αναφέρθηκε" : "Not reported"
-            );
+        logLabelValue(gr ? "Game rotation vector (όνομα)" : "Game rotation (name)",
+                hasGameRotation
+                        ? (gr ? "Σχετικό όνομα· δεν έγινε λειτουργική επαλήθευση"
+                              : "Related descriptor; functionality not tested")
+                        : (gr ? "Δεν αναφέρθηκε σχετικό όνομα"
+                              : "No matching descriptor reported"));
 
         // Enumeration proves only that Android advertises a sensor.
         // It is not a live functional challenge or hardware-health certificate.
