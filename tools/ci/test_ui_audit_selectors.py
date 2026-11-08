@@ -2,7 +2,8 @@ import re
 import unittest
 import xml.etree.ElementTree as ET
 from ui_audit_selectors import (MANUAL_ENTRY, matching, is_visible, find_visible,
-                                scroll_gesture, manual_section_pattern, incomplete_lab_names)
+                                scroll_gesture, manual_section_pattern, incomplete_lab_names,
+                                find_accessible_action)
 
 class SelectorsTest(unittest.TestCase):
     def test_android_uppercase_greek_removes_tonos(self):
@@ -49,6 +50,26 @@ class SelectorsTest(unittest.TestCase):
             {"name": "lab-12", "status": "HARNESS_OR_UI_ERROR"},
         ]
         self.assertEqual(incomplete_lab_names(rows), ["lab-10", "lab-12"])
+
+
+    def test_accessible_settings_toolbar_action_in_both_locales(self):
+        root = ET.fromstring(
+            '<hierarchy><node bounds="[0,0][320,64]">'
+            '<node clickable="true" content-desc="Ρυθμίσεις" bounds="[270,10][315,57]"/>'
+            '</node></hierarchy>')
+        self.assertIsNotNone(find_accessible_action(root, "Ρυθμίσεις"))
+        self.assertIsNone(find_accessible_action(root, "Settings"))
+        eng = ET.fromstring(
+            '<hierarchy><node clickable="true" content-desc="Settings" '
+            'bounds="[270,10][315,57]"/></hierarchy>')
+        self.assertIsNotNone(find_accessible_action(eng, "Settings"))
+
+    def test_empty_toolbar_icon_does_not_pass_accessibility(self):
+        root = ET.fromstring(
+            '<hierarchy><node clickable="true" text="" content-desc="" '
+            'bounds="[270,10][315,57]"/></hierarchy>')
+        self.assertIsNone(find_accessible_action(root, "Settings"))
+
 
 if __name__ == "__main__":
     unittest.main()
