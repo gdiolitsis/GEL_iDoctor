@@ -29499,565 +29499,93 @@ return (i >= 0 && i < p.length() - 1) ? p.substring(i + 1) : p;
 // TECHNICIAN MODE — SYMPTOM-BASED TRIAGE ONLY
 // ============================================================
 private void lab28HardwareStability() {
-
     final boolean gr = AppLang.isGreek(this);
-
-    if (!requireGelPro(
-            gr ? "LAB 28 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων"
-               : "LAB 28 — Hardware Stability & Interconnect Integrity")) {
+    if (!requireGelPro(gr
+            ? "LAB 28 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων"
+            : "LAB 28 — Hardware Stability & Interconnect Integrity")) {
         return;
     }
 
-    boolean randomReboots = false;
-    boolean signalDrops = false;
-    boolean sensorFlaps = false;
-    boolean thermalSpikes = false;
-
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 28 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων"
-            : "LAB 28 — Hardware Stability & Interconnect Integrity");
-    logOk(gr
-            ? "Λειτουργία τεχνικού — Ανάλυση βασισμένη σε συμπτώματα ΜΟΝΟ."
-            : "Technician mode — symptom-based analysis ONLY.");
+    logInfo(gr ? "LAB 28 — ΠΑΡΑΤΗΡΗΣΕΙΣ ΣΤΑΘΕΡΟΤΗΤΑΣ (ΤΕΚΜΗΡΙΩΜΕΝΕΣ)"
+               : "LAB 28 — HARDWARE STABILITY OBSERVATIONS (EVIDENCE-BOUND)");
     logLine();
 
-    int symptomScore = 0;
-    int powerGlitches = 0;
+    // A log line containing 'overheat', 'reboot' or 'failure' is not proof that
+    // the symptom happened. This lab uses direct OS observations only.
+    BatteryPublicCollector.Snapshot sample = BatteryPublicCollector.collect(this);
+    BatteryEvidence status = sample.get("thermal_status_enum");
+    BatteryEvidence headroom = sample.get("thermal_headroom");
+    BatteryEvidence temp = sample.get("temperature_c");
+    BatteryEvidence voltage = sample.get("voltage_mv");
+    BatteryEvidence current = sample.get("current_now_ma");
+    BatteryEvidence cycles = sample.get("cycle_count");
 
-    Lab28Evidence ev = Lab28EvidenceReader.readFromGELServiceLog();
+    logLabelValue(
+            gr ? "Πηγή δεδομένων" : "Data source",
+            "Android public BatteryManager / PowerManager APIs");
 
-    randomReboots = ev.rebootPattern;
-    signalDrops   = ev.radioInstability;
-    sensorFlaps   = ev.sensorFlaps;
-    thermalSpikes = ev.thermalSpikes;
-
-    if (ev.chargingGlitch) powerGlitches++;
-
-    // Technician popup
-    showLab28Popup();
-
-    // ============================================================
-    // STAGE A — SYMPTOM SCORE
-    // ============================================================
-    appendHtml("<br>");
-    logInfo(gr ? "Παρατηρούμενα συμπτώματα" : "Observed symptom signals");
-    logLine();
-
-    if (randomReboots) {
-        logLabelWarnValue(gr ? "Επανεκκινήσεις" : "Reboots",
-                gr ? "Τυχαίες επανεκκινήσεις ή resets"
-                   : "Random reboots or sudden resets detected");
-        symptomScore += 25;
+    if (status.isObserved()) {
+        logLabelValue(gr ? "Θερμική κατάσταση λειτουργικού" : "OS thermal status",
+                String.format(Locale.US, "%.0f (Android status enum)", status.value));
     } else {
-        logLabelOkValue(gr ? "Επανεκκινήσεις" : "Reboots",
-                gr ? "Καμία ανωμαλία" : "No abnormal reboot pattern");
+        logLabelWarnValue(gr ? "Θερμική κατάσταση" : "Thermal status",
+                gr ? "Μη διαθέσιμη μέτρηση" : "Reading unavailable");
     }
 
-    if (signalDrops) {
-        logLabelWarnValue(gr ? "Δίκτυο" : "Radio",
-                gr ? "Αστάθεια σήματος ή δικτύου"
-                   : "Network or signal instability detected");
-        symptomScore += 20;
+    if (headroom.isObserved()) {
+        logLabelValue(gr ? "Θερμικό περιθώριο συστήματος" : "Thermal headroom",
+                String.format(Locale.US, "%.3f (Android estimate)", headroom.value));
     } else {
-        logLabelOkValue(gr ? "Δίκτυο" : "Radio",
-                gr ? "Σήμα σταθερό" : "Signals appear stable");
+        logLabelValue(gr ? "Θερμικό περιθώριο" : "Thermal headroom",
+                gr ? "Μη διαθέσιμο / περιορισμός συχνότητας" : "Unavailable/rate-limited");
     }
 
-    if (sensorFlaps) {
-        logLabelWarnValue(gr ? "Αισθητήρες" : "Sensors",
-                gr ? "Διακοπτόμενες μετρήσεις αισθητήρων"
-                   : "Intermittent sensor readings detected");
-        symptomScore += 15;
+    if (temp.isObserved()) {
+        logLabelValue(gr ? "Αναφερόμενη θερμοκρασία μπαταρίας" : "Reported battery temperature",
+                String.format(Locale.US, "%.1f °C", temp.value));
+    }
+
+    if (voltage.isObserved()) {
+        logLabelValue(gr ? "Αναφερόμενη τάση συστοιχίας" : "Reported pack voltage",
+                String.format(Locale.US, "%.0f mV", voltage.value));
+    }
+
+    if (current.isObserved()) {
+        logLabelValue(gr ? "Αναφερόμενο καθαρό ρεύμα" : "Reported net battery current",
+                String.format(Locale.US, "%.2f mA", current.value));
+    }
+
+    if (cycles.isObserved()) {
+        logLabelValue(gr ? "Αναφερόμενοι κύκλοι" : "Reported charge cycles",
+                String.format(Locale.US, "%.0f", cycles.value));
+    }
+
+    BatteryEvidenceStore.Record batteryRecord = BatteryEvidenceStore.readLatestLab14(this);
+    if (batteryRecord != null && batteryRecord.isFresh(2L * 60L * 60L * 1000L)) {
+        logLabelValue(gr ? "Lab 14A — πρόσφατα τεκμήρια" : "Lab 14A — recent evidence",
+                batteryRecord.observedSignalCount +
+                        (gr ? " απευθείας σήματα" : " directly observed signals"));
     } else {
-        logLabelOkValue(gr ? "Αισθητήρες" : "Sensors",
-                gr ? "Σταθερή λειτουργία" : "Sensors stable");
+        logLabelValue(gr ? "Συσχετισμένο ιστορικό" : "Correlated history",
+                gr ? "Δεν υπάρχει πρόσφατη επαληθευμένη σειρά συμβάντων"
+                   : "No recent corroborated event series");
     }
-
-    if (thermalSpikes) {
-        logLabelWarnValue(gr ? "Θερμικά" : "Thermal",
-                gr ? "Απότομες θερμικές αιχμές"
-                   : "Abnormal thermal spikes detected");
-        symptomScore += 20;
-    } else {
-        logLabelOkValue(gr ? "Θερμικά" : "Thermal",
-                gr ? "Θερμική συμπεριφορά φυσιολογική"
-                   : "Thermal behaviour normal");
-    }
-
-    if (powerGlitches > 0) {
-        logLabelWarnValue(gr ? "Τροφοδοσία" : "Power",
-                gr ? "Αστάθεια φόρτισης ή ρεύματος"
-                   : "Power or charging instability detected");
-        symptomScore += 20;
-    } else {
-        logLabelOkValue(gr ? "Τροφοδοσία" : "Power",
-                gr ? "Σταθερή συμπεριφορά"
-                   : "Power behaviour stable");
-    }
-
-    if (symptomScore > 100) symptomScore = 100;
-
-    // ------------------------------------------------------------
-    // SYMPTOM INTERPRETATION
-    // ------------------------------------------------------------
-    String symptomLevel =
-            (symptomScore <= 20) ? (gr ? "ΧΑΜΗΛΟ" : "LOW") :
-            (symptomScore <= 45) ? (gr ? "ΜΕΤΡΙΟ" : "MODERATE") :
-            (symptomScore <= 70) ? (gr ? "ΥΨΗΛΟ" : "HIGH") :
-                                   (gr ? "ΠΟΛΥ ΥΨΗΛΟ" : "VERY HIGH");
-
-    appendHtml("<br>");
-    if (symptomScore >= 40)
-        logLabelWarnValue(gr ? "Δείκτης Συνεκτικότητας Συμπτωμάτων"
-                             : "Symptom consistency score",
-                symptomScore + "/100 (" + symptomLevel + ")");
-    else
-        logLabelOkValue(gr ? "Δείκτης Συνεκτικότητας Συμπτωμάτων"
-                           : "Symptom consistency score",
-                symptomScore + "/100 (" + symptomLevel + ")");
-
-// ============================================================
-// HARDWARE PATTERN ANALYSIS
-// ============================================================
-appendHtml("<br>");
-logInfo(gr ? "Ανάλυση μοτίβων υλικού" : "Hardware instability patterns");
-logLine();
-
-boolean pmicInstability = false;
-boolean basebandDegradation = false;
-boolean sensorBusInstability = false;
-boolean thermalRunaway = false;
-boolean storageDegradation = false;
-
-
-// PMIC instability (pattern correlation)
-if ((powerGlitches > 1 && thermalSpikes) || powerGlitches > 3) {
-
-    pmicInstability = true;
 
     logLabelWarnValue(
-            gr ? "PMIC αστάθεια"
-               : "PMIC instability",
-            gr
-                    ? "Συνδυασμός θερμικών αιχμών και αστάθειας φόρτισης."
-                    : "Thermal spikes combined with charging instability."
-    );
-}
-
-
-// ----------------------------------------------------
-// PMIC / FUEL GAUGE STABILITY CHECK (FINAL)
-// ----------------------------------------------------
-
-if (validDrain &&
-    !Float.isNaN(finalSag) &&
-    !Float.isNaN(voltageUnderLoad[0]) &&
-    !Float.isNaN(voltageRecovery[0])) {
-
-    float sag = finalSag;   // 🔴 FIX (απαραίτητο)
-
-    // ignore micro sag noise
-    if (sag < 0.015f)
-        sag = 0f;
-
-    float recoveryDelta =
-            voltageRecovery[0] - voltageUnderLoad[0];
-
-    float electricalNoise =
-            Math.abs(sag - recoveryDelta);
-
-    // abnormal voltage behaviour
-    if (electricalNoise > 0.20f)
-        pmicInstability = true;
-
-    // counter behaviour anomaly
-    if (drainMah == 0f && mahPerHour > 0f)
-        pmicInstability = true;
-
-    // unrealistic drain spike
-    if (mahPerHour > 2500f)
-        pmicInstability = true;
-}
-
-// ----------------------------------------------------
-// RESULT
-// ----------------------------------------------------
-if (pmicInstability) {
-
-    logLabelWarnValue(
-            gr ? "Σταθερότητα ελεγκτή τροφοδοσίας (PMIC)"
-               : "Power controller stability (PMIC)",
-            gr
-                    ? "Ανιχνεύθηκε πιθανή αστάθεια fuel-gauge ή PMIC."
-                    : "Possible PMIC or fuel-gauge instability detected."
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Σταθερότητα ελεγκτή τροφοδοσίας (PMIC)"
-               : "Power controller stability (PMIC)",
-            gr
-                    ? "Δεν εντοπίστηκαν ανωμαλίες ελεγκτή."
-                    : "No PMIC instability detected."
-    );
-}
-
-// ----------------------------------------------------
-// BASEBAND INSTABILITY INDICATOR
-// ----------------------------------------------------
-if (signalDrops && randomReboots && !thermalSpikes) {
-
-    basebandDegradation = true;
-
-    logLabelWarnValue(
-            gr ? "Πιθανή αστάθεια baseband"
-               : "Possible baseband instability",
-            gr
-                    ? "Αστάθεια σήματος σε συνδυασμό με επανεκκινήσεις."
-                    : "Signal instability combined with device reboots."
-    );
-
-} else if (signalDrops) {
-
-    logLabelWarnValue(
-            gr ? "Σήμα δικτύου"
-               : "Radio signal",
-            gr
-                    ? "Παρατηρήθηκε αστάθεια σήματος."
-                    : "Signal instability observed."
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Baseband"
-               : "Baseband",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις αστάθειας."
-                    : "No baseband instability indicators."
-    );
-}
-
-// ----------------------------------------------------
-// SENSOR BUS INSTABILITY DETECTOR (ROOT ONLY)
-// ----------------------------------------------------
-
-if (!isDeviceRooted()) {
-
-    logLabelOkValue(
-            gr ? "Δίαυλος αισθητήρων"
-               : "Sensor bus diagnostics",
-            gr
-                    ? "Η προχωρημένη διάγνωση αισθητήρων απαιτεί πρόσβαση root."
-                    : "Advanced sensor diagnostics require root access."
-    );
-
-} else {
-
-    // basic communication issues
-    if (sensorFlaps) {
-
-        sensorBusInstability = true;
-
-        logLabelWarnValue(
-                gr ? "Αστάθεια διαύλου αισθητήρων"
-                   : "Sensor bus instability",
-                gr
-                        ? "Εντοπίστηκαν ασυνέπειες επικοινωνίας αισθητήρων."
-                        : "Sensor communication inconsistencies detected."
-        );
-    }
-
-    // severe pattern
-    if (sensorFlaps && randomReboots) {
-
-        sensorBusInstability = true;
-
-        logLabelWarnValue(
-                gr ? "Σοβαρή αστάθεια αισθητήρων"
-                   : "Severe sensor bus instability",
-                gr
-                        ? "Διακοπτόμενη λειτουργία αισθητήρων σε συνδυασμό με επανεκκινήσεις."
-                        : "Intermittent sensor communication combined with system reboots."
-        );
-    }
-
-    if (!sensorBusInstability) {
-
-        logLabelOkValue(
-                gr ? "Δίαυλος αισθητήρων"
-                   : "Sensor bus integrity",
-                gr
-                        ? "Δεν εντοπίστηκαν ανωμαλίες επικοινωνίας."
-                        : "No sensor communication issues detected."
-        );
-    }
-}
-
-    // Thermal runaway
-    if (thermalSpikes && randomReboots) {
-        thermalRunaway = true;
-        logLabelWarnValue(
-                gr ? "Θερμική αστάθεια"
-                   : "Thermal runaway pattern",
-                gr
-                        ? "Απότομες αυξήσεις θερμοκρασίας."
-                        : "Rapid thermal escalation behaviour."
-        );
-    }
-
-    // Storage degradation indicator
-    if (ev.crashPattern.equals("UNKNOWN") && randomReboots) {
-        storageDegradation = true;
-        logLabelWarnValue(
-                gr ? "Αποθηκευτικός χώρος"
-                   : "Storage subsystem",
-                gr
-                        ? "Πιθανή αστάθεια NAND / controller."
-                        : "Possible NAND or storage controller instability."
-        );
-    }
-    
-// ----------------------------------------------------
-// THERMAL RUNAWAY PREDICTOR
-// ----------------------------------------------------
-boolean thermalRunawayRisk = false;
-int thermalScore = 0;
-
-// έντονες θερμικές αιχμές
-if (thermalSpikes)
-    thermalScore += 30;
-
-// PMIC instability
-if (pmicInstability)
-    thermalScore += 20;
-
-// υψηλή θερμοκρασία CPU
-Float cpu = null;
-Float gpu = null;
-
-try {
-
-    Map<String, Float> zones = readThermalZones();
-
-    if (zones != null) {
-
-        cpu = pickZone(zones,
-                "cpu", "cpu-therm", "big", "little",
-                "tsens", "mtktscpu");
-
-        gpu = pickZone(zones,
-                "gpu", "gpu-therm", "gpuss",
-                "mtkgpu");
-    }
-
-} catch (Throwable ignored) {}
-
-if (cpu != null && cpu > 85f)
-    thermalScore += 20;
-
-if (gpu != null && gpu > 80f)
-    thermalScore += 15;
-
-logLabelValue(
-        gr ? "Δείκτης θερμικής αστάθειας"
-           : "Thermal instability index",
-        thermalScore + "/100"
-);
-
-if (thermalScore >= 60) {
-
-    thermalRunawayRisk = true;
-
-    logLabelWarnValue(
-            gr ? "Κίνδυνος θερμικής αστάθειας"
-               : "Thermal runaway risk",
-            gr
-                    ? "Εντοπίστηκε μοτίβο θερμικής αστάθειας στο hardware."
-                    : "Hardware pattern indicates possible thermal runaway."
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Θερμική σταθερότητα"
-               : "Thermal stability",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις θερμικής αστάθειας."
-                    : "No thermal runaway indicators detected."
-    );
-}
-    
-// ------------------------------------------------------------
-// MOTHERBOARD REPAIR / REBALL INDICATORS
-// ------------------------------------------------------------
-boolean boardRepairSuspicion = false;
-int boardScore = 0;
-
-// συνδυασμός πολλών instability patterns
-if (pmicInstability)
-    boardScore += 25;
-
-if (basebandDegradation)
-    boardScore += 20;
-
-if (sensorBusInstability)
-    boardScore += 20;
-
-if (thermalRunaway)
-    boardScore += 15;
-
-if (storageDegradation)
-    boardScore += 15;
-
-// reboot behaviour
-if (randomReboots)
-    boardScore += 10;
-
-logLabelValue(
-        gr ? "Δείκτης πιθανής επέμβασης μητρικής"
-           : "Motherboard repair suspicion index",
-        boardScore + "/100"
-);
-
-if (boardScore >= 60) {
-
-    boardRepairSuspicion = true;
-
-    logLabelWarnValue(
-            gr ? "Μητρική πλακέτα"
-               : "Mainboard integrity",
-            gr
-                    ? "Εντοπίστηκε μοτίβο αστάθειας που συναντάται σε συσκευές μετά από επέμβαση μητρικής."
-                    : "Instability pattern consistent with board repair or micro-soldering detected."
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Ακεραιότητα μητρικής"
-               : "Mainboard integrity",
-            gr
-                    ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις επέμβασης."
-                    : "No strong motherboard repair indicators detected."
-    );
-}
-
-// ------------------------------------------------------------
-// HIDDEN HARDWARE FAULT PREDICTOR
-// ------------------------------------------------------------
-boolean hiddenFaultRisk = false;
-
-int hiddenScore = 0;
-
-// power instability patterns
-if (pmicInstability)
-    hiddenScore += 25;
-
-// thermal abnormal behaviour
-if (thermalRunaway)
-    hiddenScore += 20;
-
-// baseband aging patterns
-if (basebandDegradation)
-    hiddenScore += 15;
-
-// sensor bus instability
-if (sensorBusInstability)
-    hiddenScore += 15;
-
-// storage subsystem instability
-if (storageDegradation)
-    hiddenScore += 15;
-
-// repeated reboot behaviour
-if (randomReboots)
-    hiddenScore += 10;
-
-logLabelValue(
-        gr ? "Δείκτης κρυφής αστάθειας υλικού"
-           : "Hidden hardware fault predictor",
-        hiddenScore + "/100"
-);
-
-if (hiddenScore >= 60) {
-
-    hiddenFaultRisk = true;
-
-    logLabelWarnValue(
-            gr ? "Πρόβλεψη βλάβης υλικού"
-               : "Hardware risk prediction",
-            gr
-                    ? "Εντοπίστηκε μοτίβο που μπορεί να οδηγήσει σε μελλοντική αστοχία hardware."
-                    : "Pattern detected that may lead to future hardware failure."
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Σταθερότητα υλικού"
-               : "Hardware stability",
-            gr
-                    ? "Δεν εντοπίστηκαν πρώιμες ενδείξεις αστοχίας."
-                    : "No early hardware fault indicators detected."
-    );
-}
-
-    // ============================================================
-    // STAGE D — FINAL CONFIDENCE
-    // ============================================================
-    int finalScore = symptomScore;
-    if (finalScore > 100) finalScore = 100;
-
-    String finalLevel =
-            (finalScore <= 20) ? (gr ? "ΧΑΜΗΛΟ" : "LOW") :
-            (finalScore <= 45) ? (gr ? "ΜΕΤΡΙΟ" : "MODERATE") :
-            (finalScore <= 70) ? (gr ? "ΥΨΗΛΟ" : "HIGH") :
-                                 (gr ? "ΠΟΛΥ ΥΨΗΛΟ" : "VERY HIGH");
-
-    appendHtml("<br>");
-    if (finalScore >= 40)
-        logLabelWarnValue(gr ? "Τελική Εκτίμηση Σταθερότητας"
-                             : "Final stability confidence",
-                finalScore + "/100 (" + finalLevel + ")");
-    else
-        logLabelOkValue(gr ? "Τελική Εκτίμηση Σταθερότητας"
-                           : "Final stability confidence",
-                finalScore + "/100 (" + finalLevel + ")");
-
-    // ============================================================
-    // TRIAGE NOTE
-    // ============================================================
-    appendHtml("<br>");
-    logInfo(gr ? "Σημείωση Τεχνικού" : "Technician note");
-    logLine();
-
-    if (finalScore >= 60) {
-
-        logLabelWarnValue(gr ? "Εύρημα" : "Finding",
-                gr ? "Εντοπίστηκε μοτίβο αστάθειας"
-                   : "Multi-source instability pattern detected");
-
-        logLabelOkValue(gr ? "Σημαντικό" : "Important",
-                gr ? "ΔΕΝ αποτελεί διάγνωση υλικού."
-                   : "This is NOT a hardware diagnosis.");
-
-        logLabelOkValue(gr ? "Συστήνεται" : "Recommended action",
-                gr ? "Έλεγχος από τεχνικό."
-                   : "Professional inspection recommended.");
-
-    } else {
-
-        logLabelOkValue(gr ? "Εύρημα" : "Finding",
-                gr ? "Δεν εντοπίστηκαν σοβαρά μοτίβα αστάθειας."
-                   : "No significant instability patterns detected.");
-    }
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 28 ολοκληρώθηκε." : "Lab 28 finished.");
+            gr ? "Τεχνικό συμπέρασμα" : "Technical conclusion",
+            gr ? "Δεν επαληθεύονται PMIC, baseband, βλάβη μητρικής, NAND ή επισκευή "
+                    + "από μία αποτύπωση ή λέξεις σε logs."
+               : "PMIC, baseband, motherboard, NAND failure or prior repair cannot "
+                    + "be verified from a snapshot or log keywords.");
+
+    logLabelValue(
+            gr ? "Αξιολόγηση" : "Assessment",
+            gr ? "ΑΠΑΙΤΟΥΝΤΑΙ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΑ, ΣΥΓΧΡΟΝΙΣΜΕΝΑ ΣΗΜΑΤΑ"
+               : "REPEATED, TIME-ALIGNED EVIDENCE REQUIRED");
+    logOk(gr ? "Το Lab 28 κατέγραψε διαθέσιμες παρατηρήσεις."
+             : "Lab 28 recorded available observations.");
     logLine();
 }
 
