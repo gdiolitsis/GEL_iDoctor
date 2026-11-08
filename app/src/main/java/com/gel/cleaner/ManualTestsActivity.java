@@ -1225,15 +1225,30 @@ private static final int LAB15_TOTAL_SECONDS = 180;
 // ============================================================  
 // TELEPHONY SNAPSHOT — Passive system probe (no side effects)  
 // ============================================================  
-private static class TelephonySnapshot {  
-    boolean airplaneOn = false;  
-    int simState = TelephonyManager.SIM_STATE_UNKNOWN;  
-    boolean simReady = false;  
-    int serviceState = ServiceState.STATE_OUT_OF_SERVICE;  
-    boolean inService = false;  
-    int dataState = TelephonyManager.DATA_UNKNOWN;  
-    boolean hasInternet = false;  
-}  
+private static class TelephonySnapshot {
+    boolean airplaneOn = false;
+    int simState = TelephonyManager.SIM_STATE_UNKNOWN;
+    boolean simReady = false;
+    boolean simStateKnown = false;
+    int serviceState = ServiceState.STATE_OUT_OF_SERVICE; // legacy consumer only
+    boolean inService = false;
+    boolean serviceKnown = false;
+    int dataState = TelephonyManager.DATA_UNKNOWN;
+    boolean dataStateKnown = false;
+
+    // Legacy is "INTERNET capability advertised", NOT validated reachability.
+    // Lab 11 must never use this field to judge cellular connectivity.
+    boolean hasInternet = false;
+
+    boolean defaultNetworkPresent = false;
+    boolean defaultCapsKnown = false;
+    boolean defaultInternetAdvertised = false;
+    boolean defaultValidated = false;
+    boolean defaultCellular = false;
+    boolean defaultWifi = false;
+    boolean defaultVpn = false;
+    boolean defaultCaptivePortal = false;
+}
 
 // ================= SNAPSHOTS CONTAINERS =================  
 
@@ -3661,21 +3676,25 @@ TelephonyManager tm =
 
 if (tm != null) {  
     try {  
-        s.simState = tm.getSimState();  
-        s.simReady = (s.simState == TelephonyManager.SIM_STATE_READY);  
+        s.simState = tm.getSimState();
+        s.simStateKnown = (s.simState != TelephonyManager.SIM_STATE_UNKNOWN);
+        s.simReady = s.simStateKnown
+                && s.simState == TelephonyManager.SIM_STATE_READY;  
     } catch (Throwable ignored) {}  
 
     try {  
         ServiceState ss = tm.getServiceState();  
         if (ss != null) {  
-            s.serviceState = ss.getState();  
+            s.serviceState = ss.getState();
+            s.serviceKnown = true;
             s.inService =  
                     (s.serviceState == ServiceState.STATE_IN_SERVICE);  
         }  
     } catch (Throwable ignored) {}  
 
     try {  
-        s.dataState = tm.getDataState();  
+        s.dataState = tm.getDataState();
+        s.dataStateKnown = s.dataState != TelephonyManager.DATA_UNKNOWN;  
     } catch (Throwable ignored) {}  
 }  
 
@@ -3685,14 +3704,28 @@ ConnectivityManager cm =
 if (cm != null) {  
     try {  
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {  
-            Network n = cm.getActiveNetwork();  
-            NetworkCapabilities caps =  
-                    cm.getNetworkCapabilities(n);  
-            s.hasInternet =  
-                    caps != null &&  
-                    caps.hasCapability(  
-                            NetworkCapabilities.NET_CAPABILITY_INTERNET  
-                    );  
+            Network n = cm.getActiveNetwork();
+            s.defaultNetworkPresent = n != null;
+            NetworkCapabilities caps = n == null ? null
+                    : cm.getNetworkCapabilities(n);
+            s.defaultCapsKnown = caps != null;
+            if (caps != null) {
+                s.defaultInternetAdvertised = caps.hasCapability(
+                        NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                s.defaultValidated = caps.hasCapability(
+                        NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                s.defaultCellular = caps.hasTransport(
+                        NetworkCapabilities.TRANSPORT_CELLULAR);
+                s.defaultWifi = caps.hasTransport(
+                        NetworkCapabilities.TRANSPORT_WIFI);
+                s.defaultVpn = caps.hasTransport(
+                        NetworkCapabilities.TRANSPORT_VPN);
+                s.defaultCaptivePortal = caps.hasCapability(
+                        NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL);
+                // Keep legacy meaning for Lab 12. Its own scope will be
+                // addressed separately; do not silently reinterpret it here.
+                s.hasInternet = s.defaultInternetAdvertised;
+            }  
         }  
     } catch (Throwable ignored) {}  
 }  
