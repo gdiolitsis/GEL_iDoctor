@@ -191,6 +191,7 @@ private long lastChargeNowMah = -1;
     // BATTERY
     // ============================================================
     public static final class BatterySnapshot {
+    public BatteryPublicCollector.Snapshot evidence = null;
     public int sohPercent = -1;
     public int level = -1;
     public int scale = -1;
@@ -253,228 +254,85 @@ private void saveModelCapacity(long v) {
     } catch (Throwable ignore) {}
 }
 
+    /**
+     * Truth-first public-API battery snapshot. Per-field source/units are retained in
+     * evidence. Never synthesize learned capacity from design capacity or claim SoH.
+     * Legacy OEM/sysfs helpers remain isolated pending validated unit profiles.
+     */
     public BatterySnapshot readBatterySnapshot() {
-
-    BatterySnapshot bi = new BatterySnapshot();
-
-    bi.rooted = isDeviceRooted();
-
-    // --------------------------------------------------
-    // 🔹 BASIC BATTERY INFO (BatteryManager intent)
-    // --------------------------------------------------
-
-    try {
-        Intent i = ctx.registerReceiver(
-                null,
-                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        );
-
-        if (i != null) {
-
-            bi.level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-            bi.scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-
-            int status = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-            switch (status) {
-                case BatteryManager.BATTERY_STATUS_CHARGING:
-                    bi.status = "Charging";
-                    break;
-                case BatteryManager.BATTERY_STATUS_DISCHARGING:
-                    bi.status = "Discharging";
-                    break;
-                case BatteryManager.BATTERY_STATUS_FULL:
-                    bi.status = "Full";
-                    break;
-                case BatteryManager.BATTERY_STATUS_NOT_CHARGING:
-                    bi.status = "Not charging";
-                    break;
-                default:
-                    bi.status = "Unknown";
-                    break;
-            }
-
-            int plug = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
-
-            bi.charging =
-                    plug == BatteryManager.BATTERY_PLUGGED_USB
-                            || plug == BatteryManager.BATTERY_PLUGGED_AC
-                            || plug == BatteryManager.BATTERY_PLUGGED_WIRELESS;
-
-            if (plug == BatteryManager.BATTERY_PLUGGED_USB) {
-                bi.chargingSource = "USB";
-            } else if (plug == BatteryManager.BATTERY_PLUGGED_AC) {
-                bi.chargingSource = "AC";
-            } else if (plug == BatteryManager.BATTERY_PLUGGED_WIRELESS) {
-                bi.chargingSource = "Wireless";
-            } else {
-                bi.chargingSource = "Battery";
-            }
-
-            int rawTemp = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1);
-            if (rawTemp > 0) bi.batteryTempC = rawTemp / 10f;
-
-            int volt = i.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1);
-            if (volt > 0) bi.voltageMv = volt;
-        }
-
-    } catch (Throwable ignore) {}
-
-    // --------------------------------------------------
-    // 🔥 STEP 1 — BatteryManager PROPERTIES (PRIMARY)
-    // --------------------------------------------------
-
-    try {
-
-        BatteryManager bm =
-                (BatteryManager) ctx.getSystemService(Context.BATTERY_SERVICE);
-
-        if (bm != null) {
-
-            long cc =
-                    bm.getLongProperty(
-                            BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER
-                    );
-
-            long cur =
-                    bm.getLongProperty(
-                            BatteryManager.BATTERY_PROPERTY_CURRENT_NOW
-                    );
-
-            long cap =
-                    bm.getLongProperty(
-                            BatteryManager.BATTERY_PROPERTY_CAPACITY
-                    );
-
-            long nowMah = normalizeMah(cc);
-            float currentMa = normalizeCurrentMa(cur);
-
-            if (nowMah > 0 && bi.chargeNowMah <= 0) {
-                bi.chargeNowMah = nowMah;
-            }
-
-            if (!Float.isNaN(currentMa)) {
-                bi.currentMa = currentMa;
-            }
-
-            if (cap > 0 && cap <= 100 && bi.level <= 0) {
-                bi.level = (int) cap;
-            }
-        }
-
-    } catch (Throwable ignore) {}
-
-    // --------------------------------------------------
-    // 🔥 STEP 2 — OEM / SYSFS (SECONDARY)
-    // --------------------------------------------------
-
-    boolean gotCounterFromSysfs = false;
-
-    if (bi.chargeNowMah <= 0) {
-
-        long rawNow = readSysLongSafe(
-                "/sys/class/power_supply/battery/charge_now",
-                "/sys/class/power_supply/battery/energy_now"
-        );
-
-        if (rawNow > 0) {
-
-            bi.chargeNowMah = rawNow;
-            gotCounterFromSysfs = true;
-        }
-    }
-
-    if (bi.chargeFullMah <= 0) {
-
-        long rawFull = readSysLongSafe(
-                "/sys/class/power_supply/battery/charge_full",
-                "/sys/class/power_supply/battery/energy_full"
-        );
-
-        if (rawFull > 0) {
-            bi.chargeFullMah = rawFull;
-        }
-    }
-
-    // --------------------------------------------------
-    // 🔥 STEP 3 — FALLBACK LOGIC
-    // --------------------------------------------------
-
-    if (bi.internalResistance <= 0 &&
-        lastInternalResistanceMilliOhm > 0) {
-
-        bi.internalResistance = lastInternalResistanceMilliOhm;
-    }
-
-    if (bi.chargeFullMah <= 0 && bi.chargeDesignMah > 0) {
-        bi.chargeFullMah = bi.chargeDesignMah;
-    }
-
-    if (bi.source == null || bi.source.trim().isEmpty()) {
-        bi.source = gotCounterFromSysfs
-                ? "SYSFS_COUNTER"
-                : "BATTERY_MANAGER";
-    }
-
-    // --------------------------------------------------
-    // 🔥 SOH
-    // --------------------------------------------------
-
-    if (bi.chargeDesignMah > 0 && bi.chargeFullMah > 0) {
+        BatterySnapshot bi = new BatterySnapshot();
         try {
-            int soh =
-                    (int) Math.round(
-                            (bi.chargeFullMah * 100.0)
-                                    / bi.chargeDesignMah
-                    );
-
-            if (soh > 0 && soh < 200) {
-                bi.sohPercent = soh;
+            BatteryPublicCollector.Snapshot signals = BatteryPublicCollector.collect(ctx);
+            bi.evidence = signals;
+            BatteryEvidence soc = signals.get("soc_percent");
+            if (!soc.isObserved()) soc = signals.get("property_soc_percent");
+            if (soc.isObserved()) {
+                bi.level = (int) Math.round(soc.value);
+                bi.scale = 100;
             }
-        } catch (Throwable ignore) {}
+            BatteryEvidence temp = signals.get("temperature_c");
+            if (temp.isObserved()) bi.batteryTempC = (float) temp.value;
+            BatteryEvidence voltage = signals.get("voltage_mv");
+            if (voltage.isObserved()) bi.voltageMv = (float) voltage.value;
+            BatteryEvidence current = signals.get("current_now_ma");
+            if (current.isObserved()) bi.currentMa = (float) current.value;
+            BatteryEvidence charge = signals.get("remaining_charge_mah");
+            if (charge.isObserved()) bi.chargeNowMah = Math.round(charge.value);
+            BatteryEvidence cycles = signals.get("cycle_count");
+            if (cycles.isObserved()) bi.cycleCount = (long) cycles.value;
+
+            BatteryEvidence status = signals.get("battery_status_enum");
+            if (status.isObserved()) {
+                int value = (int) status.value;
+                bi.charging = value == BatteryManager.BATTERY_STATUS_CHARGING;
+                switch (value) {
+                    case BatteryManager.BATTERY_STATUS_CHARGING: bi.status = "Charging"; break;
+                    case BatteryManager.BATTERY_STATUS_DISCHARGING: bi.status = "Discharging"; break;
+                    case BatteryManager.BATTERY_STATUS_FULL: bi.status = "Full"; break;
+                    case BatteryManager.BATTERY_STATUS_NOT_CHARGING: bi.status = "Not charging"; break;
+                    default: bi.status = "Unknown"; break;
+                }
+            }
+            BatteryEvidence plugged = signals.get("plugged_enum");
+            if (plugged.isObserved()) {
+                switch ((int) plugged.value) {
+                    case BatteryManager.BATTERY_PLUGGED_USB: bi.chargingSource = "USB"; break;
+                    case BatteryManager.BATTERY_PLUGGED_AC: bi.chargingSource = "AC"; break;
+                    case BatteryManager.BATTERY_PLUGGED_WIRELESS: bi.chargingSource = "Wireless"; break;
+                    case 0: bi.chargingSource = "Battery"; break;
+                    default: bi.chargingSource = "Other/unknown"; break;
+                }
+            }
+
+            // Charge counter is remaining charge, not full-charge capacity.
+            // No public universal gauge exists for certified capacity SoH.
+            bi.chargeFullMah = -1;
+            bi.chargeDesignMah = -1;
+            bi.sohPercent = -1;
+            bi.internalResistance = -1;
+            bi.source = "ANDROID_PUBLIC_SDK";
+            boolean hasElectrical = voltage.isObserved() && current.isObserved();
+            boolean hasCharge = charge.isObserved();
+            boolean hasAny = soc.isObserved() || temp.isObserved() ||
+                    voltage.isObserved() || current.isObserved() || hasCharge;
+            bi.telemetryStatus = hasElectrical || hasCharge ? "AVAILABLE"
+                    : hasAny ? "LIMITED" : "BLOCKED";
+            bi.mode = hasAny ? "PARTIAL_ACCESS" : "RESTRICTED";
+            bi.confidence = "UNVERIFIED_SOH";
+            bi.reason = hasAny
+                    ? "Observed public Android battery signals; SoH not determined"
+                    : "No supported battery readings available";
+            bi.noBatteryAccess = !hasAny;
+        } catch (RuntimeException e) {
+            bi.source = "ANDROID_PUBLIC_SDK";
+            bi.telemetryStatus = "BLOCKED";
+            bi.mode = "RESTRICTED";
+            bi.confidence = "UNVERIFIED_SOH";
+            bi.reason = "Battery public API read failed";
+            bi.noBatteryAccess = true;
+        }
+        return bi;
     }
-
-    // --------------------------------------------------
-    // 🔥 CLASSIFICATION (CLEAN)
-    // --------------------------------------------------
-
-    boolean hasCounter = bi.chargeNowMah > 0;
-    boolean hasFull = bi.chargeFullMah > 0;
-    boolean hasLevel = bi.level > 0 && bi.level <= 100;
-
-    if (hasCounter) {
-
-        bi.telemetryStatus = "AVAILABLE";
-        bi.mode = "FULL_ACCESS";
-        bi.confidence = "HIGH";
-        bi.reason = "Hardware counter available";
-
-    } else if (hasFull && hasLevel) {
-
-        bi.telemetryStatus = "LIMITED";
-        bi.mode = "PARTIAL_ACCESS";
-        bi.confidence = "MEDIUM";
-        bi.reason = "Derived from capacity";
-
-    } else {
-
-        bi.telemetryStatus = "BLOCKED";
-        bi.mode = "RESTRICTED";
-        bi.confidence = "LOW";
-        bi.reason = "OEM restriction";
-    }
-
-    bi.noBatteryAccess = !hasCounter && !hasFull;
-
-    if (!hasCounter && !hasFull) {
-        bi.source = "NO_COUNTER_AVAILABLE";
-    }
-
-    // --------------------------------------------------
-    // 🔥 RETURN
-    // --------------------------------------------------
-
-    return bi;
-}
 
 // ============================================================
 // LOCK BATTERY MODE ONCE
@@ -730,13 +588,13 @@ private long readBatteryDesignCapacityBestEffort() {
 // ============================================================
 
 public BatterySnapshot readBatterySnapshotLab() {
-    resolveBatteryModeOnce();
+    // Public-SDK sampling does not access privileged OEM/sysfs paths.
     return readBatterySnapshot();
 }
 
 public float readBatteryVoltageMvStable(int samples, long sleepMs) {
 
-    resolveBatteryModeOnce();
+    // Public-SDK sampling does not access privileged OEM/sysfs paths.
 
     float sum = 0f;
     int ok = 0;
@@ -765,7 +623,7 @@ public float readBatteryVoltageMvStable(int samples, long sleepMs) {
 
 public float readBatteryCurrentMaStable(int samples, long sleepMs) {
 
-    resolveBatteryModeOnce();
+    // Public-SDK sampling does not access privileged OEM/sysfs paths.
 
     float sum = 0f;
     int ok = 0;
@@ -794,7 +652,7 @@ public float readBatteryCurrentMaStable(int samples, long sleepMs) {
 
 public long readChargeNowMahStable(int samples, long sleepMs) {
 
-    resolveBatteryModeOnce();
+    // Public-SDK sampling does not access privileged OEM/sysfs paths.
 
     long sum = 0L;
     int ok = 0;
@@ -820,7 +678,7 @@ public long readChargeNowMahStable(int samples, long sleepMs) {
 
 public long readChargeFullMahStable(int samples, long sleepMs) {
 
-    resolveBatteryModeOnce();
+    // Public-SDK sampling does not access privileged OEM/sysfs paths.
 
     long sum = 0L;
     int ok = 0;
@@ -845,23 +703,23 @@ public long readChargeFullMahStable(int samples, long sleepMs) {
 }
 
     public boolean isChargingNowUnified() {
-    resolveBatteryModeOnce();
+    // Public-SDK sampling does not access privileged OEM/sysfs paths.
     return readBatterySnapshot().charging;
 }
 
     public Float getBatteryTempUnified() {
-    resolveBatteryModeOnce();
+    // Public-SDK sampling does not access privileged OEM/sysfs paths.
     BatterySnapshot s = readBatterySnapshot();
     return Float.isNaN(s.batteryTempC) ? null : s.batteryTempC;
 }
 
 public float getBatteryVoltageUnified() {
-    resolveBatteryModeOnce();
+    // Public-SDK sampling does not access privileged OEM/sysfs paths.
     return readBatterySnapshot().voltageMv;
 }
 
 public float getBatteryCurrentNowUnified() {
-    resolveBatteryModeOnce();
+    // Public-SDK sampling does not access privileged OEM/sysfs paths.
     return readBatterySnapshot().currentMa;
 }
 
@@ -2836,7 +2694,7 @@ private String fuelGaugeNode = null;
 
 private String resolveFuelGaugeNode() {
 
-    resolveBatteryModeOnce();
+    // Public-SDK sampling does not access privileged OEM/sysfs paths.
 
     if (lockedBatteryMode == BatteryReadMode.OEM_LOCKED &&
         lockedPowerNode != null &&
