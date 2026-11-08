@@ -14,7 +14,7 @@ on:
       audit_scope:
         description: Exploration scope
         type: choice
-        options: [full, labs_only]
+        options: [full, labs_only, menus_only]
         default: full
       language_filter:
         description: Language selection
