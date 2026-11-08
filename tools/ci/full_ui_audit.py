@@ -4,7 +4,7 @@ import json, os, pathlib, re, struct, subprocess, sys, time, traceback
 import xml.etree.ElementTree as ET
 from ui_audit_selectors import (MANUAL_ENTRY, matching as search, is_visible as visible,
                                 find_visible, scroll_gesture, manual_section_pattern,
-                                incomplete_lab_names)
+                                incomplete_lab_names, find_accessible_action)
 
 PKG = "com.gel.iDoctor"
 out = pathlib.Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
@@ -12,6 +12,8 @@ lang = sys.argv[2]
 mode = os.environ.get("AUDIT_SCOPE","full")
 results = []
 counter = 0
+welcome_ok_observed = False
+settings_accessible = False
 def adb(*args, binary=False, timeout=35):
     return subprocess.check_output(["adb", *args], timeout=timeout, stderr=subprocess.PIPE,
         **({} if binary else {"text":True, "errors":"replace"}))
@@ -67,6 +69,7 @@ def record(name,status,detail="",folder=None):
     (out/"coverage.json").write_text(json.dumps(results,ensure_ascii=False,indent=2))
     print(json.dumps(results[-1],ensure_ascii=False),flush=True)
 def dismiss_intro():
+    global welcome_ok_observed
     stable = 0
     for attempt in range(12):
         t = tree()
@@ -85,10 +88,15 @@ def dismiss_intro():
             for node in nodes:
                 if node.get("checkable")=="true" and node.get("checked")=="false" and search(r"Do not show again|Να μην εμφανιστεί ξανά|Mute voice|Σίγαση",node.get("text",""),re.I):
                     tap(node)
-            ok = next((n for n in nodes if n.get("text","").upper()=="OK"),None)
-            if ok is not None: tap(ok)
+            ok = next((n for n in nodes if n.get("text","").upper()=="OK" and visible(n)),None)
+            if ok is not None:
+                evidence=save("welcome-ok-visible")
+                tap(ok)
+                welcome_ok_observed=True
+                record("welcome-ok","ACCESSIBLE_AND_CLICKED",folder=evidence)
             else:
-                save("welcome-actions-unreachable")
+                evidence=save("welcome-actions-unreachable")
+                record("welcome-ok","UNREACHABLE",folder=evidence)
                 adb("shell","input","keyevent","4")
             stable=0; continue
         # Wait for delayed first-run permission dialogs before declaring home ready.
@@ -176,17 +184,24 @@ try:
                             if cancel is not None: tap(cancel)
                 adb("shell","input","keyevent","4")
             else: record(label,"NO_ACCESSIBLE_LABEL")
-        # Settings is currently an icon with an empty title; use actual toolbar bounds,
-        # not guessed absolute screen coordinates.
-        home(); toolbar=find(rid("gelToolbar"))
-        if toolbar is not None:
-            candidates=[n for n in toolbar.iter("node") if n.get("clickable")=="true" and visible(n)]
-            unnamed=[n for n in candidates if not n.get("text") and not n.get("content-desc")]
-            if unnamed:
-                tap(unnamed[0]); record("settings","UI_OPENED",folder=save("settings"))
+        # Validate the accessible Settings label, not the legacy unnamed icon.
+        home()
+        toolbar=find(rid("gelToolbar"))
+        if toolbar is None:
+            record("settings","TOOLBAR_NOT_FOUND",folder=save("settings-toolbar-missing"))
+        else:
+            label="Ρυθμίσεις" if lang=="el" else "Settings"
+            control=find_accessible_action(toolbar,label)
+            if control is None:
+                record("settings","ACCESSIBILITY_LABEL_MISSING",folder=save("settings-accessibility-failure"))
+            else:
+                tap(control)
+                settings_accessible=True
+                record("settings","ACCESSIBLE_ACTION_OPENED",folder=save("settings"))
                 n=find(textmatch(r"^(Save|Αποθήκευση)$"))
-                if n is not None: tap(n); record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
-            else: record("settings","NO_ACCESSIBLE_LABEL")
+                if n is not None:
+                    tap(n)
+                    record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
     sections=[(1,5),(6,9),(10,13),(14,17),(18,20),(21,24),(25,31)]
     for number in (range(1,32) if mode != "menus_only" else []):
         try:
@@ -228,5 +243,11 @@ finally:
     print("APP_CRASH_LOG_PRESENT="+str(crashed),flush=True)
     incomplete = incomplete_lab_names(results) if mode != "menus_only" else []
     print("QA_INCOMPLETE_LABS="+json.dumps(incomplete),flush=True)
+    print("QA_WELCOME_OK_VERIFIED="+str(welcome_ok_observed),flush=True)
+    print("QA_ACCESSIBLE_SETTINGS_VERIFIED="+str(settings_accessible),flush=True)
     if crashed: sys.exit(2)
     if incomplete: sys.exit(3)
+    if os.environ.get("AUDIT_REQUIRE_WELCOME_OK") == "1" and not welcome_ok_observed:
+        sys.exit(4)
+    if os.environ.get("AUDIT_REQUIRE_ACCESSIBLE_SETTINGS") == "1" and not settings_accessible:
+        sys.exit(5)
