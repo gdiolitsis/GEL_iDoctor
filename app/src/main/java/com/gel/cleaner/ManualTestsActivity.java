@@ -25678,12 +25678,16 @@ try {
         logInfo(gr ? "Κατάσταση ενημέρωσης"
                    : "Patch status");
 
-        if (diffMonths <= 3) {
+        if (diffDays < 0) {
+            logLabelWarnValue(gr ? "Ημερομηνία patch" : "Security patch date",
+                    gr ? "Μελλοντική ή μη συμβατή με το ρολόι συσκευής — όχι αξιολογήσιμη"
+                       : "Future relative to device clock — cannot assess age");
+        } else if (diffMonths <= 3) {
 
             logLabelOkValue(
-                    gr ? "Κίνδυνος" : "Risk",
-                    gr ? "ΠΡΟΣΦΑΤΗ (χαμηλή έκθεση σε γνωστά exploits)"
-                       : "RECENT (low known exploit exposure)"
+                    gr ? "Ηλικία patch" : "Patch age category",
+                    gr ? "ΠΡΟΣΦΑΤΗ δηλωμένη ημερομηνία — δεν έγινε ανάλυση ευπαθειών"
+                       : "Recent reported date — vulnerabilities were NOT scanned"
             );
 
         } else if (diffMonths <= 6) {
@@ -25712,100 +25716,23 @@ try {
 }
 
 // ------------------------------------------------------------
-// 3) Play Protect Detection (best effort, non-root)
+// 3) Play Protect — NOT CERTIFIABLE BY A NORMAL THIRD-PARTY APP
 // ------------------------------------------------------------
-try {
-    PackageManager pm = getPackageManager();
-
-    boolean gmsPresent;
-    try {
-        pm.getPackageInfo("com.google.android.gms", 0);
-        gmsPresent = true;
-    } catch (Throwable ignore) {
-        gmsPresent = false;
-    }
-
-    logInfo(gr ? "Play Protect" : "Play Protect");
-
-    if (!gmsPresent) {
-
-        logLabelErrorValue(
-                gr ? "Υπηρεσίες Google Play" : "Google Play Services",
-                gr ? "ΔΕΝ βρέθηκαν" : "NOT present"
-        );
-
-        logLabelWarnValue(
-                "Play Protect",
-                gr ? "Μη διαθέσιμο" : "Unavailable"
-        );
-
-    } else {
-
-        int verify = -1;
-        try {
-            verify = Settings.Global.getInt(
-                    getContentResolver(),
-                    "package_verifier_enable",
-                    -1
-            );
-        } catch (Throwable ignore) {}
-
-        if (verify == 1) {
-
-            logLabelOkValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "ΕΝΕΡΓΟ (Έλεγχος εφαρμογών ενεργός)"
-                       : "ENABLED (Verify Apps ON)"
-            );
-
-        } else if (verify == 0) {
-
-            logLabelWarnValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "ΑΝΕΝΕΡΓΟ (Έλεγχος εφαρμογών απενεργοποιημένος)"
-                       : "DISABLED (Verify Apps OFF)"
-            );
-
-        } else {
-
-            Intent i = new Intent();
-            i.setClassName(
-                    "com.google.android.gms",
-                    "com.google.android.gms.security.settings.VerifyAppsSettingsActivity"
-            );
-
-            if (i.resolveActivity(pm) != null) {
-
-                logLabelOkValue(
-                        gr ? "Μονάδα" : "Module",
-                        gr ? "Εντοπίστηκε (διαθέσιμη δραστηριότητα ρυθμίσεων)"
-                           : "Detected (settings activity present)"
-                );
-
-                logLabelWarnValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Άγνωστη (OEM / περιορισμένη έκδοση)"
-                           : "Unknown (OEM / restricted build)"
-                );
-
-            } else {
-
-                logLabelWarnValue(
-                        "Play Protect",
-                        gr ? "Η κατάσταση δεν είναι σαφής"
-                           : "Status unclear"
-                );
-            }
-        }
-    }
-
-} catch (Throwable e) {
-
-    logLabelWarnValue(
-            gr ? "Ανίχνευση Play Protect" : "Play Protect detection",
-            (gr ? "Αποτυχία (" : "Failed (") + e.getMessage() + ")"
-    );
-}
+// package_verifier_enable is not an authoritative public Play Protect API.
+// Google Play Services package visibility is also restricted on modern Android;
+// failure to query that package is not proof it is uninstalled.
+logInfo("Google Play Protect");
+logLabelWarnValue(gr ? "Κατάσταση προστασίας" : "Protection status",
+        gr ? "ΜΗ ΕΠΑΛΗΘΕΥΣΙΜΗ μέσω δημόσιου SDK από το GEL iDoctor"
+           : "NOT VERIFIABLE by GEL iDoctor via the public Android SDK");
+logLabelWarnValue(gr ? "Έλεγχος για malware" : "Malware-free status",
+        gr ? "Δεν μπορεί να πιστοποιηθεί από αυτή την εφαρμογή"
+           : "Cannot be certified by this app");
+logLabelValue(gr ? "Επαλήθευση" : "Verification",
+        gr ? "Άνοιξε Google Play Store > Play Protect και έλεγξε την οθόνη "
+               + "ρυθμίσεων / πρόσφατης σάρωσης."
+           : "Open Google Play Store > Play Protect and review its own "
+               + "settings and recent scan status.");
 
 // ------------------------------------------------------------
 // 4) Trust Boundary Clarification
@@ -25814,10 +25741,12 @@ logLine();
 logInfo(gr ? "Πεδίο ασφάλειας"
            : "Security scope");
 
-logLabelOkValue(
+logLabelWarnValue(
         "Play Protect",
-        gr ? "Έλεγχος κακόβουλου λογισμικού και επαλήθευση εφαρμογών"
-           : "Malware scanning and app verification"
+        gr ? "Η λειτουργία υπάρχει στο οικοσύστημα Google αλλά το iDoctor "
+               + "δεν μπορεί να επιβεβαιώσει την τρέχουσα κατάστασή της."
+           : "Google provides the feature, but iDoctor cannot independently "
+               + "verify its current enabled/scanned state."
 );
 
 logLabelWarnValue(
