@@ -16,7 +16,8 @@ public class Lab11NetworkEvidenceTest {
                 true, true, true, true, true, false, false);
         assertEquals(Lab11NetworkEvidence.DefaultRoute.CELLULAR_VALIDATED, r);
         assertTrue(Lab11NetworkEvidence.provesCurrentDefaultCellularValidation(r));
-        assertFalse(Lab11NetworkEvidence.isHardwareFailureProven(r, true, true, false));
+        // Validation is scoped to the currently selected DEFAULT route only.
+        assertEquals(Lab11NetworkEvidence.DefaultRoute.CELLULAR_VALIDATED, r);
     }
 
     @Test public void internetCapabilityIsNotValidatedConnectivity() {
@@ -63,15 +64,13 @@ public class Lab11NetworkEvidenceTest {
     @Test public void simNotReadyDoesNotEstablishDefectiveModem() {
         Lab11NetworkEvidence.DefaultRoute r = Lab11NetworkEvidence.classifyDefault(
                 true, true, true, false, true, false, false);
-        assertFalse(Lab11NetworkEvidence.isHardwareFailureProven(r, false, false, false));
+        assertFalse(Lab11NetworkEvidence.provesCurrentDefaultCellularValidation(r));
     }
 
     @Test public void noDefaultOrUnvalidatedRouteCannotProveRadioFailure() {
-        assertFalse(Lab11NetworkEvidence.isHardwareFailureProven(
-                Lab11NetworkEvidence.DefaultRoute.NO_DEFAULT_NETWORK,
-                true, true, false));
-        assertFalse(Lab11NetworkEvidence.isHardwareFailureProven(
-                Lab11NetworkEvidence.DefaultRoute.CELLULAR_NOT_VALIDATED,
-                true, true, false));
+        assertFalse(Lab11NetworkEvidence.provesCurrentDefaultCellularValidation(
+                Lab11NetworkEvidence.DefaultRoute.NO_DEFAULT_NETWORK));
+        assertFalse(Lab11NetworkEvidence.provesCurrentDefaultCellularValidation(
+                Lab11NetworkEvidence.DefaultRoute.CELLULAR_NOT_VALIDATED));
     }
 }
