@@ -598,6 +598,9 @@ private boolean lab15PopupShown = false;
     private String pendingTtsText;
     
     private boolean lab6ProCanceled = false;
+    // Only true when the CURRENT run returned a fresh 96-zone grid result.
+    // Never infer this from TouchGridTestActivity's legacy static fields.
+    private boolean lab6TouchGridObserved = false;
     
 // ============================================================
 // BATTERY SCORE STATE
@@ -8002,6 +8005,7 @@ private void lab5Vibration() {
 // FINAL — LIFECYCLE SAFE
 // ============================================================
 private void lab6DisplayTouch() {
+    lab6TouchGridObserved = false;
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -8128,9 +8132,13 @@ startBtn.setOnClickListener(v -> {
     AppTTS.stop();
     d.dismiss();
 
+    if (btnExport != null) {
+        btnExport.setEnabled(false);
+        btnExport.setAlpha(0.5f);
+    }
     startActivityForResult(
             new Intent(this, TouchGridTestActivity.class),
-            6006
+            REQ_LAB6_TOUCH
     );
 });
 
@@ -30680,74 +30688,50 @@ final boolean gr = AppLang.isGreek(this);
 
 if (requestCode == REQ_LAB6_TOUCH) {
 
-    int total = TouchGridTestActivity.getTotalZones();
-    int remaining = TouchGridTestActivity.getRemainingZones();
+    // Never use old process-static counts as evidence for this result.
+    boolean fresh = data != null
+            && data.hasExtra(TouchGridTestActivity.EXTRA_TOTAL_ZONES)
+            && data.hasExtra(TouchGridTestActivity.EXTRA_REMAINING_ZONES);
+    int total = fresh
+            ? data.getIntExtra(TouchGridTestActivity.EXTRA_TOTAL_ZONES, -1) : -1;
+    int remaining = fresh
+            ? data.getIntExtra(TouchGridTestActivity.EXTRA_REMAINING_ZONES, -1) : -1;
+    Lab6Evidence.Touch touch = Lab6Evidence.touch(
+            resultCode == RESULT_OK, fresh, total, remaining);
+    lab6TouchGridObserved = touch == Lab6Evidence.Touch.GRID_SAMPLED;
 
     appendHtml("<br>");
     logLine();
     logSection(gr ? "LAB 6 — Οθόνη / Αφή" : "LAB 6 — Display / Touch");
     logLine();
 
-    if (resultCode == RESULT_OK) {
-
-        logLabelOkValue(
-                gr ? "Έλεγχος αφής" : "Touch grid test",
-                gr ? "Ολοκληρώθηκε" : "Completed"
-        );
-
-        logLabelOkValue(
-                gr ? "Ζώνες οθόνης" : "Screen zones",
-                gr ? "Όλες οι ζώνες ανταποκρίθηκαν" : "All zones responded"
-        );
-
-        logLabelOkValue(
-                gr ? "Νεκρές ζώνες" : "Dead zones",
-                gr ? "Δεν εντοπίστηκαν" : "Not detected"
-        );
-
+    if (touch == Lab6Evidence.Touch.GRID_SAMPLED) {
+        logLabelOkValue(gr ? "Δειγματοληψία αφής" : "Touch grid sampling",
+                gr ? "Καταγράφηκαν και οι 96 στόχοι της ορατής περιοχής"
+                   : "All 96 visible-area targets registered touch events");
+        logLabelValue(gr ? "Περιορισμός" : "Limitation",
+                gr ? "Δεν επαληθεύτηκαν ολόκληρος ο digitizer, ghost touches ή ακρίβεια αφής"
+                   : "Not a full digitizer, ghost-touch or touch-accuracy certification");
+    } else if (touch == Lab6Evidence.Touch.USER_STOPPED_INCOMPLETE) {
+        logLabelWarnValue(gr ? "Δοκιμή αφής" : "Touch sampling",
+                gr ? "Διακόπηκε από τον χρήστη — χωρίς διάγνωση βλάβης"
+                   : "Stopped by user — no digitizer fault verdict");
+        logLabelValue(gr ? "Στόχοι που καταγράφηκαν" : "Targets observed",
+                (total - remaining) + " / " + total);
     } else {
-
-        logLabelWarnValue(
-                gr ? "Έλεγχος αφής" : "Touch grid test",
-                gr ? "Μη ολοκληρωμένος" : "Incomplete"
-        );
-
-        logLabelErrorValue(
-                gr ? "Μη ανταποκρινόμενες ζώνες" : "Unresponsive zones",
-                remaining + " / " + total
-        );
-
-        logInfo(gr ? "Ερμηνεία:" : "Interpretation:");
-
-        logLabelWarnValue(
-                gr ? "Πιθανή αιτία" : "Possible cause",
-                gr
-                        ? "Τοπικές νεκρές ζώνες digitizer"
-                        : "Localized digitizer dead zones"
-        );
-
-        logLabelOkValue(
-                gr ? "Σύσταση" : "Recommendation",
-                gr
-                        ? "Επαναλάβετε χειροκίνητα τον έλεγχο για επιβεβαίωση"
-                        : "Manual re-test to confirm behavior"
-        );
+        logLabelWarnValue(gr ? "Δοκιμή αφής" : "Touch sampling",
+                gr ? "Ανεπαρκή/μη έγκυρα δεδομένα — ΑΓΝΩΣΤΟ"
+                   : "Missing or invalid evidence — INCONCLUSIVE");
     }
 
-    appendHtml("<br>");
-    logLabelOkValue(
-            gr ? "Επόμενο βήμα" : "Next step",
-            gr
-                    ? "LAB 6 PRO — Χρώμα & Ομοιομορφία Οθόνης"
-                    : "LAB 6 PRO — Display Color & Uniformity"
-    );
-    logLine();
-
+    // Visual inspection remains optional and separate. It cannot repair
+    // an aborted touch grid into a successful touchscreen verdict.
+    logLabelValue(gr ? "Επόμενο βήμα" : "Next step",
+            gr ? "Προαιρετική οπτική επιθεώρηση (USER_REPORTED)"
+               : "Optional guided visual inspection (USER_REPORTED)");
     startActivityForResult(
             new Intent(this, DisplayProTestActivity.class),
-            REQ_LAB6_COLOR
-    );
-
+            REQ_LAB6_COLOR);
     return;
 }
 
@@ -30756,78 +30740,56 @@ if (requestCode == REQ_LAB6_TOUCH) {
 // ============================================================
 if (requestCode == REQ_LAB6_COLOR) {
 
-    if (resultCode == RESULT_CANCELED) {
+    boolean hasAnswer = data != null && data.hasExtra("display_issues");
+    boolean fullPresentation = data != null
+            && data.getBooleanExtra("display_steps_completed", false);
+    boolean reportedIssue = data != null
+            && data.getBooleanExtra("display_issues", false);
+    Lab6Evidence.Visual visual = Lab6Evidence.visual(
+            resultCode == RESULT_OK, hasAnswer, fullPresentation, reportedIssue);
 
-        logLabelWarnValue(
-                "LAB 6 PRO",
-                gr ? "Ακυρώθηκε από τον χρήστη" : "Canceled by user"
-        );
+    appendHtml("<br>");
+    logLine();
+    logSection(gr ? "LAB 6 PRO — Οπτική επιθεώρηση"
+                  : "LAB 6 PRO — Visual inspection");
+    logLine();
 
-        logLabelWarnValue(
-                gr ? "Οπτικός έλεγχος" : "Visual inspection",
-                gr ? "Δεν πραγματοποιήθηκε" : "Not performed"
-        );
-
-        appendHtml("<br>");
-        logLine();
-        enableSingleExportButton();
-        return;
-    }
-
-    boolean issues =
-            data != null && data.getBooleanExtra("display_issues", false);
-
-    if (!issues) {
-
-        logLabelOkValue(
-                gr ? "Οπτικός έλεγχος" : "Visual inspection",
-                gr ? "Δεν αναφέρθηκαν ανωμαλίες" : "No visible artifacts reported"
-        );
-
-        logLabelOkValue(
-                gr ? "Ομοιομορφία οθόνης" : "Display uniformity",
-                "OK"
-        );
-
-        logLabelOkValue(
-                gr ? "Burn-in / banding" : "Burn-in / banding",
-                gr ? "Δεν παρατηρήθηκε" : "Not observed"
-        );
-
+    if (visual == Lab6Evidence.Visual.USER_REPORTED_NO_ISSUE) {
+        logLabelValue(gr ? "Απάντηση χρήστη" : "User response",
+                gr ? "Δεν ανέφερε ορατές ανωμαλίες στο παρουσιασμένο μοτίβο"
+                   : "No visible artifacts reported during the presented patterns");
+        logLabelValue(gr ? "Περιορισμός" : "Limitation",
+                gr ? "Δεν μετρήθηκαν φωτεινότητα, burn-in ή χρωματική ακρίβεια"
+                   : "Brightness, burn-in and color accuracy were not instrumentally measured");
+    } else if (visual == Lab6Evidence.Visual.USER_REPORTED_ISSUE) {
+        logLabelWarnValue(gr ? "Απάντηση χρήστη" : "User response",
+                gr ? "Αναφέρθηκε οπτική ανωμαλία — τύπος και αιτία μη επαληθευμένα"
+                   : "Visible anomaly reported — type and cause unverified");
     } else {
-
-        logLabelWarnValue(
-                gr ? "Οπτικός έλεγχος" : "Visual inspection",
-                gr ? "Αναφέρθηκαν οπτικές ανωμαλίες" : "User reported visual anomalies"
-        );
-
-        logInfo(gr ? "Πιθανά ευρήματα:" : "Possible findings:");
-
-        logLabelWarnValue("• Issue",
-                gr ? "Burn-in / αποτύπωση εικόνας" : "Burn-in / image retention");
-
-        logLabelWarnValue("• Issue",
-                gr ? "Color banding / διαβαθμίσεις" : "Color banding / gradient steps");
-
-        logLabelWarnValue("• Issue",
-                gr ? "Λεκέδες / mura / μετατόπιση χρώματος"
-                   : "Screen stains / mura / tint shift");
+        logLabelWarnValue(gr ? "Οπτική επιθεώρηση" : "Visual inspection",
+                gr ? "Ακυρώθηκε, διακόπηκε ή δεν επιστράφηκε έγκυρη απάντηση"
+                   : "Cancelled, interrupted or missing a valid guided answer");
     }
 
     appendHtml("<br>");
-    logSection(gr ? "LAB 6 — Τελικό Αποτέλεσμα" : "LAB 6 — Final Result");
+    logSection(gr ? "LAB 6 — Συνολικό αποτέλεσμα" : "LAB 6 — Overall result");
     logLine();
 
-    logLabelOkValue(
-            gr ? "Έλεγχος οθόνης" : "Display test",
-            gr
-                    ? "Ολοκληρώθηκε έλεγχος αφής και οπτικής επιθεώρησης"
-                    : "Touch integrity and visual inspection completed"
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 6 ολοκληρώθηκε." : "Lab 6 finished.");
-    logLine();
+    Lab6Evidence.Touch touch = lab6TouchGridObserved
+            ? Lab6Evidence.Touch.GRID_SAMPLED
+            : Lab6Evidence.Touch.INCONCLUSIVE;
+    if (Lab6Evidence.guidedProtocolComplete(touch, visual)) {
+        logLabelValue(gr ? "Πρωτόκολλο" : "Guided protocol",
+                gr ? "Ολοκληρώθηκε πλέγμα αφής και καταγράφηκε υποκειμενική απάντηση"
+                   : "Touch grid sampled and subjective visual answer recorded");
+        logLabelValue(gr ? "Διαγνωστικό όριο" : "Diagnostic limit",
+                gr ? "Δεν αποτελεί συνολική πιστοποίηση υγείας οθόνης"
+                   : "Does not certify full display hardware health");
+    } else {
+        logLabelWarnValue(gr ? "Πρωτόκολλο" : "Guided protocol",
+                gr ? "ΜΕΡΙΚΟ / ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ — όχι hardware PASS ή FAIL"
+                   : "PARTIAL / UNVERIFIED — no hardware PASS or FAIL");
+    }
 
     enableSingleExportButton();
     return;
