@@ -33,11 +33,12 @@ public final class SensorEvidenceProbe {
         public final int invalidEvents;
         public final boolean monotonicTimestamps;
         public final boolean observedVariation;
+        public final String variedAxes;
         public final String limitation;
 
         private Result(String name, boolean advertised, boolean registered,
                        int events, int invalidEvents, boolean monotonic,
-                       boolean varied, String limitation) {
+                       boolean varied, String axes, String limitation) {
             this.name = name;
             this.advertised = advertised;
             this.listenerRegistered = registered;
@@ -45,6 +46,7 @@ public final class SensorEvidenceProbe {
             this.invalidEvents = invalidEvents;
             this.monotonicTimestamps = monotonic;
             this.observedVariation = varied;
+            this.variedAxes = axes;
             this.limitation = limitation;
         }
     }
@@ -64,9 +66,10 @@ public final class SensorEvidenceProbe {
         Result result() {
             int valid = evidence.validEvents();
             float resolution = sensor == null ? 0f : sensor.getResolution();
-            boolean varied = evidence.observedVariation(resolution);
+            String variedAxes = evidence.variedAxes(resolution);
             return new Result(name, sensor != null, registered,
-                    valid, evidence.invalidEvents(), evidence.timestampsMonotonic(), varied,
+                    valid, evidence.invalidEvents(), evidence.timestampsMonotonic(),
+                    !variedAxes.isEmpty(), variedAxes,
                     sensor == null ? "Not advertised" :
                             !registered ? "Registration refused" :
                             valid == 0 ? "No valid events during sample interval" :
