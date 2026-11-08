@@ -26454,19 +26454,19 @@ private void lab20UptimeHints() {
 
             logLabelWarnValue(
                     gr ? "Κατάσταση" : "Status",
-                    gr ? "Εντοπίστηκε πρόσφατη επανεκκίνηση"
-                       : "Recent reboot detected"
+                    gr ? "Η τρέχουσα εκκίνηση έγινε τις τελευταίες 2 ώρες"
+                       : "Current boot began within the last 2 hours"
             );
             logLabelWarnValue(
                     gr ? "Επίπτωση" : "Impact",
-                    gr ? "Ορισμένα προβλήματα μπορεί να καλύπτονται προσωρινά"
-                       : "Some issues may be temporarily masked"
+                    gr ? "Δεν γνωρίζουμε αν η επανεκκίνηση ήταν προγραμματισμένη"
+                       : "Cannot determine whether the restart was planned"
             );
             logLabelOkValue(
                     gr ? "Σημείωση" : "Note",
                     gr
-                            ? "Οι διαγνώσεις είναι έγκυρες αλλά όχι πλήρως αντιπροσωπευτικές ακόμη"
-                            : "Diagnostics are valid but not fully representative yet"
+                            ? "Δεν διατίθεται ιστορικό επανεκκινήσεων από μία μέτρηση uptime"
+                            : "A single uptime reading is not a reboot history"
             );
 
         } else if (veryLongUptime) {
@@ -26478,8 +26478,8 @@ private void lab20UptimeHints() {
             );
             logLabelWarnValue(
                     gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Συσσώρευση φόρτου παρασκηνίου και πίεσης μνήμης"
-                       : "Background load and memory pressure may accumulate"
+                    gr ? "Το μεγάλο uptime από μόνο του δεν αποδεικνύει διαρροή μνήμης ή βλάβη"
+                       : "Long uptime alone does not prove memory leaks or hardware defects"
             );
 
             if (extremeUptime) {
@@ -26487,14 +26487,14 @@ private void lab20UptimeHints() {
                 logLabelErrorValue(
                         gr ? "Σοβαρότητα" : "Severity",
                         gr
-                                ? "Εξαιρετικά μεγάλος χρόνος λειτουργίας (> 14 ημέρες)"
-                                : "Extremely long uptime (> 14 days)"
+                                ? "Χρόνος λειτουργίας πάνω από 14 ημέρες"
+                                : "Uptime exceeds 14 days"
                 );
                 logLabelErrorValue(
                         gr ? "Σύσταση" : "Recommendation",
                         gr
-                                ? "Συνιστάται έντονα επανεκκίνηση πριν από τελικά συμπεράσματα"
-                                : "Reboot strongly recommended before final conclusions"
+                                ? "Επανεκκίνηση μόνο εφόσον υπάρχει σχετικό λειτουργικό σύμπτωμα"
+                                : "Restart only if there is a related functional symptom"
                 );
 
             } else {
@@ -26502,8 +26502,8 @@ private void lab20UptimeHints() {
                 logLabelOkValue(
                         gr ? "Σύσταση" : "Recommendation",
                         gr
-                                ? "Μια επανεκκίνηση μπορεί να βοηθήσει στην επαναφορά της κατάστασης"
-                                : "A reboot can help reset system state"
+                                ? "Δεν απαιτείται επανεκκίνηση με κριτήριο μόνο το uptime"
+                                : "Uptime alone does not justify a restart"
                 );
             }
 
@@ -26512,8 +26512,8 @@ private void lab20UptimeHints() {
             logLabelOkValue(
                     gr ? "Κατάσταση" : "Status",
                     gr
-                            ? "Χρόνος λειτουργίας εντός υγιούς διαγνωστικού εύρους"
-                            : "Uptime within healthy diagnostic range"
+                            ? "Χρόνος λειτουργίας καταγράφηκε (χωρίς διάγνωση υγείας)"
+                            : "Uptime observed (no device-health inference)"
             );
         }
 
@@ -26528,8 +26528,10 @@ private void lab20UptimeHints() {
                     : "Advanced uptime signals (root access):");
                     logLine();
 
-            boolean lowMemoryPressure =
-                    readLowMemoryKillCountSafe() < 5;
+            long observedLowMemoryKills = readLowMemoryKillCountSafe();
+            boolean pressureCounterAvailable = observedLowMemoryKills >= 0L;
+            boolean lowMemoryPressure = pressureCounterAvailable
+                    && observedLowMemoryKills < 5L;
 
             // Root access alone does not provide reboot history. A short
             // uptime proves only that the device booted recently.
@@ -26539,7 +26541,11 @@ private void lab20UptimeHints() {
                        : "No verified reboot event history available"
             );
 
-            if (!lowMemoryPressure) {
+            if (!pressureCounterAvailable) {
+                logLabelWarnValue(gr ? "Πίεση μνήμης" : "Memory pressure",
+                        gr ? "Μετρητής μη διαθέσιμος — δεν τεκμηριώνεται κατάσταση"
+                           : "Counter unavailable — no condition established");
+            } else if (!lowMemoryPressure) {
 
                 logLabelWarnValue(
                         gr ? "Πίεση μνήμης" : "Memory pressure",
@@ -26550,8 +26556,8 @@ private void lab20UptimeHints() {
                 logLabelWarnValue(
                         gr ? "Συμπεριφορά συστήματος" : "System behaviour",
                         gr
-                                ? "Επιθετική διαχείριση εφαρμογών στο παρασκήνιο"
-                                : "Aggressive background app management"
+                                ? "Αναφέρθηκαν συμβάντα· η αιτία τους δεν έχει ταυτοποιηθεί"
+                                : "Events were reported; their cause is not established"
                 );
 
             } else {
