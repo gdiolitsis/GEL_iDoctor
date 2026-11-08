@@ -2,7 +2,9 @@
 """Evidence-first UI exploration of the unmodified signed release; never claims hardware pass."""
 import json, os, pathlib, re, struct, subprocess, sys, time, traceback
 import xml.etree.ElementTree as ET
-from ui_audit_selectors import MANUAL_ENTRY, matching as search, is_visible as visible, find_visible
+from ui_audit_selectors import (MANUAL_ENTRY, matching as search, is_visible as visible,
+                                find_visible, scroll_gesture, manual_section_pattern,
+                                incomplete_lab_names)
 
 PKG = "com.gel.iDoctor"
 out = pathlib.Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
@@ -21,11 +23,17 @@ def tap(n):
     b=list(map(int,re.findall(r"\d+",n.get("bounds",""))))
     adb("shell","input","tap",str((b[0]+b[2])//2),str((b[1]+b[3])//2))
     time.sleep(.6)
-def swipe(up=True):
-    b=adb("exec-out","screencap","-p",binary=True)
-    w,h=struct.unpack(">II",b[16:24])
-    y1,y2=(.72,.32) if up else (.32,.72)
-    adb("shell","input","swipe",str(w//2),str(int(h*y1)),str(w//2),str(int(h*y2)),"250")
+def swipe(up=True, snapshot=None):
+    if snapshot is None:
+        snapshot=tree()
+    gesture=scroll_gesture(snapshot, up)
+    if gesture is None:
+        b=adb("exec-out","screencap","-p",binary=True)
+        w,h=struct.unpack(">II",b[16:24])
+        y1,y2=(.72,.32) if up else (.32,.72)
+        gesture=(w//2,int(h*y1),w//2,int(h*y2))
+    print("UI_SCROLL "+json.dumps({"gesture":gesture,"up":up}),flush=True)
+    adb("shell","input","swipe",*(str(v) for v in gesture),"250")
 def find(predicate, scrolls=0):
     previous=None
     for attempt in range(scrolls+1):
@@ -35,7 +43,7 @@ def find(predicate, scrolls=0):
         signature=ET.tostring(t)
         if signature==previous: break
         previous=signature
-        if attempt < scrolls: swipe()
+        if attempt < scrolls: swipe(snapshot=t)
     return None
 def textmatch(pattern):
     return lambda n: bool(search(pattern,n.get("text",""),re.I))
@@ -184,8 +192,7 @@ try:
         try:
             manual()
             lo,hi=next((a,b) for a,b in sections if a<=number<=b)
-            end=30 if lo==25 else hi
-            header=find(textmatch(r"Manual Labs\s*"+str(lo)+r"\s*[–—-]\s*"+str(end)),16)
+            header=find(textmatch(manual_section_pattern(lo,hi)),16)
             if header is None:
                 record("lab-%02d"%number,"SECTION_NOT_FOUND",folder=save("lab-%02d-section"%number)); continue
             tap(header)
@@ -219,4 +226,7 @@ finally:
     crash=(out/"logcat.txt").read_text() if (out/"logcat.txt").exists() else ""
     crashed = "Process: "+PKG+"," in crash
     print("APP_CRASH_LOG_PRESENT="+str(crashed),flush=True)
+    incomplete = incomplete_lab_names(results) if mode != "menus_only" else []
+    print("QA_INCOMPLETE_LABS="+json.dumps(incomplete),flush=True)
     if crashed: sys.exit(2)
+    if incomplete: sys.exit(3)
