@@ -26200,25 +26200,84 @@ private void lab19RamSnapshot() {
         ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
         am.getMemoryInfo(mi);
 
+        // availMem includes reclaimable memory; it is NOT literally unused RAM.
         long total = mi.totalMem;
         long free  = mi.availMem;
-        long used  = total - free;
-
-        int pctFree = (int) ((free * 100L) / Math.max(1L, total));
+        if (total <= 0L || free < 0L || free > total) {
+            logLabelWarnValue(gr ? "Ποιότητα στοιχείων" : "Evidence validity",
+                    gr ? "Το Android επέστρεψε μη έγκυρη χωρητικότητα RAM."
+                       : "Android returned an invalid RAM capacity snapshot.");
+            return;
+        }
+        long used = total - free; // approximate non-available, NOT proven active app use
+        int pctFree = (int) (free * 100.0d / total);
 
         // ------------------------------------------------------------
         // BASIC SNAPSHOT
         // ------------------------------------------------------------
         logInfo(gr ? "Τρέχουσα χρήση RAM:" : "Current RAM usage:");
         logLabelOkValue(
-                gr ? "Χρήση" : "Usage",
+                gr ? "Μη διαθέσιμη / δεσμευμένη (προσέγγιση)" : "Non-available/committed (approx.)",
                 humanBytes(used) +
-                        (gr ? " χρησιμοποιούνται / " : " used / ") +
+                        (gr ? " κατά προσέγγιση / " : " approximate / ") +
                         humanBytes(total) +
                         (gr
-                                ? " (ελεύθερα " + humanBytes(free) + ", " + pctFree + "%)"
-                                : " (free " + humanBytes(free) + ", " + pctFree + "%)")
+                                ? " (διαθέσιμα " + humanBytes(free) + ", " + pctFree + "%)"
+                                : " (available " + humanBytes(free) + ", " + pctFree + "%)")
         );
+
+        // ------------------------------------------------------------
+        // PUBLIC ANDROID MEMORY PRESSURE THRESHOLD & OWN-APP FOOTPRINT
+        // ------------------------------------------------------------
+        logLabelValue(gr ? "Πραγματικά διαθέσιμη RAM" : "OS-available RAM",
+                humanBytes(free) + " (" + pctFree + "%)");
+        if (mi.threshold > 0L) {
+            logLabelValue(gr ? "Όριο low-memory του Android" : "Android low-memory threshold",
+                    humanBytes(mi.threshold));
+            long margin = free - mi.threshold;
+            logLabelValue(gr ? "Περιθώριο πάνω από το όριο" : "Headroom above OS threshold",
+                    margin >= 0 ? humanBytes(margin)
+                            : (gr ? "Κάτω κατά " : "Below by ") + humanBytes(-margin));
+        } else {
+            logLabelWarnValue(gr ? "Όριο low-memory" : "Low-memory threshold",
+                    gr ? "Δεν είναι διαθέσιμο" : "Unavailable");
+        }
+        if (Build.VERSION.SDK_INT >= 34 && mi.advertisedMem > 0L) {
+            logLabelValue(gr ? "RAM που αναφέρει το Android για το μοντέλο"
+                             : "Android-advertised RAM",
+                    humanBytes(mi.advertisedMem));
+        }
+
+        // Debug.getMemoryInfo is scoped to our OWN process.
+        try {
+            android.os.Debug.MemoryInfo ownMemory = new android.os.Debug.MemoryInfo();
+            android.os.Debug.getMemoryInfo(ownMemory);
+            int pssKb = ownMemory.getTotalPss();
+            if (pssKb >= 0) {
+                logLabelValue(gr ? "Μνήμη διεργασίας GEL iDoctor (PSS)"
+                                 : "GEL iDoctor process PSS",
+                        humanBytes(pssKb * 1024L));
+            }
+            String privateJavaKb = ownMemory.getMemoryStat("summary.java-heap");
+            if (privateJavaKb != null) {
+                try {
+                    long kb = Long.parseLong(privateJavaKb);
+                    if (kb >= 0) {
+                        logLabelValue(gr ? "Java heap της εφαρμογής" : "App Java heap",
+                                humanBytes(kb * 1024L));
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Unparseable provider value is unknown, not zero.
+                }
+            }
+        } catch (RuntimeException ignored) {
+            logLabelWarnValue(gr ? "Μνήμη iDoctor" : "iDoctor memory",
+                    gr ? "Δεν ήταν διαθέσιμη" : "Unavailable");
+        }
+        logLabelWarnValue(gr ? "Ερμηνεία RAM" : "RAM interpretation",
+                gr ? "Η διαθέσιμη μνήμη και η χρήση της εφαρμογής δεν είναι έλεγχος "
+                       + "αστοχίας φυσικών κυψελών RAM."
+                   : "Available RAM and own-process footprint do not test physical RAM-cell integrity.");
 
         // ------------------------------------------------------------
         // HUMAN INTERPRETATION
