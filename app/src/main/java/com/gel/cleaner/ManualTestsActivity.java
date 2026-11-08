@@ -6479,16 +6479,17 @@ private void lab4MicBase(Runnable onFinished) {
 
         boolean bottomOk = false;
         boolean topOk = false;
-        boolean fallbackUsed = false;
+        boolean baseCompleted = false;
 
         int bottomRms = 0, bottomPeak = 0;
         int topRms = 0, topPeak = 0;
         int bottomInputRoute = -1;
         int topInputRoute = -1;
 
-        boolean stopBaseHere = false;
-
         try {
+            if (!lab4GuidedPending.get() || lab4Cancelled.get()) {
+                return; // Previous session was cancelled before collection began.
+            }
 
             // ====================================================
             // AUTO CHECK — BOTTOM MIC
@@ -6501,6 +6502,7 @@ private void lab4MicBase(Runnable onFinished) {
             hardNormalizeAudioForMic();
             MicDiagnosticEngine.Result bottom =
                     MicDiagnosticEngine.run(this, MicDiagnosticEngine.MicType.BOTTOM);
+            if (!lab4GuidedPending.get() || lab4Cancelled.get()) return;
 
             if (bottom != null) {
                 bottomRms  = (int) bottom.rms;
@@ -6527,6 +6529,7 @@ private void lab4MicBase(Runnable onFinished) {
             hardNormalizeAudioForMic();
             MicDiagnosticEngine.Result top =
                     MicDiagnosticEngine.run(this, MicDiagnosticEngine.MicType.TOP);
+            if (!lab4GuidedPending.get() || lab4Cancelled.get()) return;
 
             if (top != null) {
                 topRms  = (int) top.rms;
@@ -6603,15 +6606,24 @@ if (bottomOk && topOk) {
                     : "Testing via a real call is recommended."
     );
 }
+            // Collection flow reached a terminal diagnostic statement, even
+            // when measurements were inconclusive. Failure/exception is different.
+            baseCompleted = true;
 
+        } catch (RuntimeException e) {
+            logLabelWarnValue(gr ? "Καταγραφή Lab 4" : "Lab 4 capture",
+                    (gr ? "Μη διαθέσιμη / διακοπή: " : "UNAVAILABLE / interrupted: ")
+                            + e.getClass().getSimpleName());
         } finally {
-
             appendHtml("<br>");
-            logOk(gr ? "Το Lab 4 BASE ολοκληρώθηκε." : "Lab 4 BASE finished.");
+            logInfo(gr ? "Το Lab 4 BASE τερματίστηκε." : "Lab 4 BASE ended.");
             logLine();
 
-            if (onFinished != null && !fallbackUsed) {
+            if (baseCompleted && lab4GuidedPending.get()
+                    && !lab4Cancelled.get() && onFinished != null) {
                 runOnUiThread(onFinished);
+            } else {
+                finishLab4Guided();
             }
         }
 
