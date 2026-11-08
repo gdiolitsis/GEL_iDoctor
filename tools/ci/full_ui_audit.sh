@@ -40,6 +40,6 @@ test "$booted" = true
 adb shell input keyevent 82
 adb shell getprop ro.product.cpu.abilist | tee "$out/abis.txt"
 grep -q arm64-v8a "$out/abis.txt"
-adb install --no-incremental "$apk"
+adb install --no-incremental -g "$apk"
 adb shell dumpsys package com.gel.iDoctor > "$out/package.txt"
 python3 tools/ci/full_ui_audit.py "$out" "$language"

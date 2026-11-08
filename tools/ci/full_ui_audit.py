@@ -18,6 +18,7 @@ def visible(n):
     b = list(map(int,re.findall(r"\d+",n.get("bounds",""))))
     return len(b)==4 and b[2]>b[0] and b[3]>b[1]
 def tap(n):
+    print("UI_TAP "+json.dumps({"text":n.get("text",""),"id":n.get("resource-id",""),"bounds":n.get("bounds","")},ensure_ascii=False),flush=True)
     b=list(map(int,re.findall(r"\d+",n.get("bounds",""))))
     adb("shell","input","tap",str((b[0]+b[2])//2),str((b[1]+b[3])//2))
     time.sleep(.6)
