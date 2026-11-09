@@ -26842,356 +26842,115 @@ private long storageLatencyProbe() {
 // ============================================================
 
 private void lab26AppsFootprint() {
-
-    if (!guardUsageAccess()) return;
-
+    final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
-
-    final boolean gr = AppLang.isGreek(this);
-
-    logInfo(gr
-            ? "LAB 26 — Ανάλυση Επιπτώσεων Εγκατεστημένων Εφαρμογών"
-            : "LAB 26 — Installed Applications Impact Analysis");
-
+    logInfo(gr ? "LAB 26 — Ορατές εφαρμογές και στοιχεία χρήσης"
+               : "LAB 26 — Visible apps and usage evidence");
     logLine();
 
-    final boolean rooted = isDeviceRooted();
-
-    // ============================================================
-    // ENGINE
-    // ============================================================
+    // Usage access is optional. No root, all-app or battery health claim.
     AppImpactEngine.ImpactResult r;
     try {
-        r = AppImpactEngine.analyze(this, rooted);
+        r = AppImpactEngine.analyze(this, false);
     } catch (Throwable t) {
-
-        logLabelErrorValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Αποτυχία ανάλυσης εφαρμογών" : "Failed to analyze applications"
-        );
-
-        logLabelWarnValue(
-                gr ? "Αιτία" : "Reason",
-                gr ? "Σφάλμα πρόσβασης PackageManager / UsageStats" : "PackageManager / UsageStats access error"
-        );
-
-        logLine();
-        appendHtml("<br>");
-        logOk(gr ? "Το Lab 26 ολοκληρώθηκε." : "Lab 26 finished.");
-        logLine();
+        logLabelWarnValue(gr ? "Κατάσταση" : "Status",
+                gr ? "INCONCLUSIVE — η συλλογή απέτυχε"
+                   : "INCONCLUSIVE — collection failed");
+        GELServiceLog.info("SUMMARY: APPS_IMPACT=INCONCLUSIVE");
+        return;
+    }
+    if (r == null || Lab26Evidence.packageCoverage(
+            r.packageQuerySucceeded, r.totalPkgs)
+            == Lab26Evidence.PackageCoverage.UNAVAILABLE) {
+        logLabelWarnValue(gr ? "Ορατότητα εφαρμογών" : "App visibility",
+                gr ? "UNAVAILABLE — δεν επιστράφηκε αξιόπιστη λίστα"
+                   : "UNAVAILABLE — no reliable package list");
+        GELServiceLog.info("SUMMARY: APPS_IMPACT=INCONCLUSIVE");
         return;
     }
 
-    if (r == null) {
-
-        logLabelErrorValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Το αποτέλεσμα ανάλυσης είναι κενό" : "Engine result is null"
-        );
-
-        logLine();
-        appendHtml("<br>");
-        logOk(gr ? "Το Lab 26 ολοκληρώθηκε." : "Lab 26 finished.");
-        logLine();
-        return;
-    }
-
-    // ============================================================
-    // OVERVIEW
-    // ============================================================
-    
-appendHtml("<br>");
-logInfo(gr ? "Επισκόπηση εγκατεστημένων" : "Installed overview");
-logLine();
-
-    logLabelOkValue(
-            gr ? "Σύνολα" : "Totals",
-            (gr
-                    ? "Όλα: " + r.totalPkgs + " | Χρήστη: " + r.userApps + " | Συστήματος: " + r.systemApps
-                    : "All: " + r.totalPkgs + " | User: " + r.userApps + " | System: " + r.systemApps)
-    );
-
-    logLabelOkValue(
-            gr ? "Usage Access" : "Usage Access",
-            r.usageAccessOk
-                    ? (gr ? "Ενεργό (OK)" : "Enabled (OK)")
-                    : (gr ? "Ανενεργό (χωρίς foreground χρόνο)" : "Disabled (no foreground time)")
-    );
-
-    logLabelOkValue(
-            gr ? "Root-aware" : "Root-aware",
-            rooted
-                    ? (gr ? "Ναι (best-effort χωρίς su)" : "Yes (best-effort without su)")
-                    : (gr ? "Όχι" : "No")
-    );
-
-    // ============================================================
-    // CAPABILITY PRESSURE (HONEST)
-    // ============================================================
-    int userApps = Math.max(1, r.userApps);
-    int pctBg   = (int) Math.round((r.bgCapable * 100.0) / userApps);
-    int pctPerm = (int) Math.round((r.permHeavy * 100.0) / userApps);
+    logLabelWarnValue(gr ? "Κάλυψη" : "Coverage",
+            gr ? "OBSERVED_LIMITED — μόνο πακέτα ορατά στην εφαρμογή"
+               : "OBSERVED_LIMITED — only packages visible to this app");
+    logLabelValue(gr ? "Ορατά πακέτα" : "Visible packages",
+            (gr ? "Σύνολο: " : "Total: ") + r.totalPkgs
+            + (gr ? " | Χρήστη: " : " | User: ") + r.userApps
+            + (gr ? " | Συστήματος: " : " | System: ") + r.systemApps);
+    logLabelWarnValue(gr ? "Όριο Android" : "Android limitation",
+            gr ? "Δεν τεκμηριώνεται πλήρης κατάλογος εφαρμογών ή μηδενικές κρυφές εφαρμογές."
+               : "No complete inventory or absence of hidden packages is established.");
 
     appendHtml("<br>");
-    logInfo(gr ? "Ενδείξεις φόρτου (βάσει δυνατοτήτων)" : "Load indicators (capability-based)");
+    logInfo(gr ? "Δηλωμένες δυνατότητες ορατών εφαρμογών"
+               : "Declared capabilities of visible apps");
     logLine();
+    logLabelValue(gr ? "Πιθανό background / Πολλές δηλώσεις"
+                     : "Background potential / Multiple declarations",
+            r.bgCapable + " / " + r.permHeavy);
+    logLabelValue("Boot / Location / Mic / Camera",
+            r.bootAware + " / " + r.locationLike + " / "
+            + r.micLike + " / " + r.cameraLike);
+    logLabelValue("Overlay / VPN / Storage / Notifications",
+            r.overlayLike + " / " + r.vpnLike + " / "
+            + r.storageLike + " / " + r.notifLike);
+    logLabelWarnValue(gr ? "Ερμηνεία" : "Interpretation",
+            gr ? "Οι δηλώσεις manifest δεν αποδεικνύουν ενεργή χρήση, φόρτο CPU ή κατανάλωση ενέργειας."
+               : "Manifest declarations do not prove active use, CPU load or energy consumption.");
 
-    logLabelOkValue(gr ? "Background-capable" : "Background-capable",
-            r.bgCapable + " (" + pctBg + "%)");
-
-    logLabelOkValue(gr ? "Permission-heavy" : "Permission-heavy",
-            r.permHeavy + " (" + pctPerm + "%)");
-            
-   appendHtml("<br>");
-    logInfo(gr ? "Χάρτης δυνατοτήτων (user apps)" : "Capability map (user apps)");
-    logLine();
-
-    logLabelOkValue(
-            gr ? "Boot / Location / Mic / Camera" : "Boot / Location / Mic / Camera",
-            r.bootAware + " | " + r.locationLike + " | " + r.micLike + " | " + r.cameraLike
-    );
-
-    logLabelOkValue(
-            gr ? "Overlay / VPN / Storage / Notifications" : "Overlay / VPN / Storage / Notifications",
-            r.overlayLike + " | " + r.vpnLike + " | " + r.storageLike + " | " + r.notifLike
-    );
-
-    // ============================================================
-    // REDUNDANCY (HONEST / HEURISTIC)
-    // ============================================================
     appendHtml("<br>");
-    logInfo(gr ? "Ενδείξεις πλεονασμού (heuristic)" : "Redundancy signals (heuristic)");
+    logInfo(gr ? "Χρόνος χρήσης από Android" : "Android-reported usage time");
     logLine();
-
-    logLabelOkValue(gr ? "Cleaners / Optimizers" : "Cleaners / Optimizers", String.valueOf(r.cleanersLike));
-    logLabelOkValue(gr ? "Launchers" : "Launchers", String.valueOf(r.launchersLike));
-    logLabelOkValue(gr ? "Antivirus suites" : "Antivirus suites", String.valueOf(r.antivirusLike));
-    logLabelOkValue(gr ? "Keyboards" : "Keyboards", String.valueOf(r.keyboardsLike));
-
-// ============================================================
-// REAL DATA (HONEST) — SINCE BOOT (TrafficStats)
-// ============================================================
-appendHtml("<br>");
-logInfo(gr ? "Κατανάλωση δεδομένων (από boot)" : "Data usage (since boot)");
-logLine();
-
-if (r.topDataConsumers != null && !r.topDataConsumers.isEmpty()) {
-
-    int limit = Math.min(10, r.topDataConsumers.size());
-    boolean foundRealData = false;
-
-    for (int i = 0; i < limit; i++) {
-
-        AppImpactEngine.AppScore a = r.topDataConsumers.get(i);
-        if (a == null) continue;
-
-        if (a.dataBytesSinceBoot < 1024) {
-            continue; // εξαφανίζουμε τα μηδενικά
-        }
-
-        foundRealData = true;
-
-        String val = humanBytes(a.dataBytesSinceBoot);
-
-        logLabelWarnValue(
-                a.safeLabel(),
-                (gr
-        ? val + " (Συνολική κίνηση δεδομένων από εκκίνηση)"
-        : val + " (Total data traffic since boot)")
-);
-
-        logInfo(a.pkg);
-    }
-
-    if (!foundRealData) {
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
-                gr
-                        ? "Δεν υπάρχουν διαθέσιμα δεδομένα κατανάλωσης.\n\n"
-                          + "Πιθανές αιτίες:\n"
-                          + "• Πρόσφατη επανεκκίνηση συσκευής\n"
-                          + "• Περιορισμοί κατασκευαστή (OEM)\n"
-                          + "• Μη διαθέσιμα UID counters στο Android"
-                        : "No data usage available.\n\n"
-                          + "Possible reasons:\n"
-                          + "• Device was recently rebooted\n"
-                          + "• OEM restrictions\n"
-                          + "• UID traffic counters not exposed by Android"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Σημείωση" : "Note",
-                gr
-                        ? "Τα δεδομένα είναι συνολικά από την τελευταία εκκίνηση της συσκευής."
-                        : "Data is cumulative since last device boot."
-        );
-    }
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            gr
-                    ? "Δεν ήταν δυνατή η ανάκτηση στατιστικών κατανάλωσης."
-                    : "Unable to retrieve usage statistics."
-    );
-}
-
-    // ============================================================
-    // BATTERY EXPOSURE (HONEST HEURISTIC)
-    // ============================================================
-    appendHtml("<br>");
-    logInfo(gr ? "Έκθεση μπαταρίας (heuristic — no mAh)" : "Battery exposure (heuristic — no mAh)");
-    logLine();
-
     if (!r.usageAccessOk) {
-
-        logLabelWarnValue(
-                gr ? "Περιορισμός" : "Limitation",
-                gr
-                        ? "Δεν υπάρχει Usage Access, άρα δεν έχουμε αξιόπιστο foreground χρόνο."
-                        : "Usage Access is off, so we do not have reliable foreground time."
-        );
-    }
-
-    if (r.topBatteryExposure != null && !r.topBatteryExposure.isEmpty()) {
-
-        int limit = Math.min(10, r.topBatteryExposure.size());
-        for (int i = 0; i < limit; i++) {
-
-            AppImpactEngine.AppScore a = r.topBatteryExposure.get(i);
-            if (a == null) continue;
-
-// =======================
-// DATA SAFETY (EXPLAINED)
-// =======================
-
-long fgMin = a.fgMs24h / 60000L;
-
-// ---------- Usage text ----------
-String usageText;
-
-if (!r.usageAccessOk) {
-
-    usageText = gr
-            ? "Χρήση (24h): δεν υπάρχουν δεδομένα (δεν έχει δοθεί Usage Access)"
-            : "Usage (24h): no data (Usage Access not granted)";
-
-} else if (fgMin <= 0) {
-
-    usageText = gr
-            ? "Χρήση (24h): δεν καταγράφηκε χρήση το τελευταίο 24ωρο"
-            : "Usage (24h): no recorded usage in the last 24h";
-
-} else {
-
-    usageText = gr
-            ? "Χρήση (24h): " + fgMin + " λεπτά"
-            : "Usage (24h): " + fgMin + " min";
-}
-
-// ---------- Data text (TrafficStats since boot) ----------
-String dataText;
-
-if (a.dataBytesSinceBoot < 1024) {
-
-    dataText = gr
-            ? "Δεδομένα: δεν υπάρχουν διαθέσιμα στοιχεία (πιθανός περιορισμός συστήματος/ROM)"
-            : "Data: not available (possible system/ROM limitation)";
-
-} else {
-
-    dataText = gr
-            ? "Δεδομένα: " + humanBytes(a.dataBytesSinceBoot)
-            : "Data: " + humanBytes(a.dataBytesSinceBoot);
-}
-
-// ---------- Final detail ----------
-String detail = gr
-        ? "Δείκτης Επιρροής: " + a.estImpactScore +
-          " | " + usageText +
-          " | " + dataText +
-          " | Ενδείξεις: " + a.tags
-        : "Impact Index: " + a.estImpactScore +
-          " | " + usageText +
-          " | " + dataText +
-          " | Indicators: " + a.tags;
-
-            logLabelWarnValue(a.safeLabel(), detail);
-            logInfo(a.pkg);
-        }
-
-        logLabelOkValue(
-                gr ? "Σημείωση" : "Note",
-                gr
-                        ? "Το «Battery exposure» είναι εκτίμηση βάσει χρήσης/δυνατοτήτων/δεδομένων — όχι πραγματικό mAh."
-                        : "'Battery exposure' is an estimate based on usage/capabilities/data — not real mAh."
-        );
-
+        logLabelWarnValue("Usage Access",
+                gr ? "Δεν έχει δοθεί — η βασική αποτύπωση παραμένει διαθέσιμη"
+                   : "Not granted — basic observation remains available");
+    } else if (!r.usageQuerySucceeded || !r.usageRecordsObserved) {
+        logLabelWarnValue(gr ? "Στοιχεία" : "Evidence",
+                gr ? "UNAVAILABLE — δεν υπάρχουν αξιοποιήσιμα στατιστικά"
+                   : "UNAVAILABLE — no usable usage records");
+    } else if (r.topBatteryExposure == null || r.topBatteryExposure.isEmpty()) {
+        logLabelWarnValue(gr ? "Χρήση" : "Usage",
+                gr ? "Δεν βρέθηκαν θετικές παρατηρήσεις σε ορατές εφαρμογές"
+                   : "No positive observations for visible apps");
     } else {
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Δεν ήταν δυνατή η κατάταξη έκθεσης μπαταρίας" : "Unable to rank battery exposure"
-        );
-    }
-
-    // ============================================================
-    // TOP CAPABILITY-HEAVY
-    // ============================================================
-    appendHtml("<br>");
-    logInfo(gr
-            ? "Top εφαρμογές με ισχυρές δυνατότητες (επισήμανση, όχι κατηγορούμενα)"
-            : "Top capability-heavy apps (flagged, not accused)");
-            logLine();
-
-    if (r.topCapabilityHeavy != null && !r.topCapabilityHeavy.isEmpty()) {
-
-        int limit = Math.min(10, r.topCapabilityHeavy.size());
-        for (int i = 0; i < limit; i++) {
-
-            AppImpactEngine.AppScore a = r.topCapabilityHeavy.get(i);
-            if (a == null) continue;
-
-            String detail =
-                    (gr
-        ? "Δείκτης Δυνατοτήτων: " + a.capabilityScore +
-          " | Επικίνδυνες Άδειες: " + a.dangerPermCount +
-          " | Παράγοντες Επιρροής: " + a.tags
-        : "Capability Index: " + a.capabilityScore +
-          " | Dangerous Permissions: " + a.dangerPermCount +
-          " | Impact Factors: " + a.tags);
-
-            logLabelWarnValue(a.safeLabel(), detail);
-            logInfo(a.pkg);
+        int n = Math.min(10, r.topBatteryExposure.size());
+        for (int i = 0; i < n; i++) {
+            AppImpactEngine.AppScore app = r.topBatteryExposure.get(i);
+            if (app == null || app.fgMs24h <= 0) continue;
+            logLabelValue(app.safeLabel(),
+                    (gr ? "Ημερήσια διαστήματα Android: " : "Android daily buckets: ")
+                    + (app.fgMs24h / 60000L) + (gr ? " λεπτά" : " min"));
         }
     }
+    logLabelWarnValue(gr ? "Χρονικό όριο" : "Time-window limit",
+            gr ? "Τα ημερήσια διαστήματα μπορεί να ξεπερνούν το ζητούμενο 24ωρο."
+               : "Daily aggregation may extend beyond the requested 24-hour window.");
 
-    // ============================================================
-    // HUMAN VERDICT
-    // ============================================================
     appendHtml("<br>");
-    logOk(gr ? "ΓΕΝΙΚΟ ΣΥΜΠΕΡΑΣΜΑ" : "TOTAL VERDICT");
+    logInfo(gr ? "Κίνηση δικτύου" : "Network traffic");
     logLine();
-
-    if (r.riskPoints >= 8) {
-        logLabelWarnValue(gr ? "Επίπεδο πίεσης" : "Pressure level", gr ? "ΥΨΗΛΟ" : "HIGH");
-    } else if (r.riskPoints >= 5) {
-        logLabelWarnValue(gr ? "Επίπεδο πίεσης" : "Pressure level", gr ? "ΜΕΤΡΙΟ" : "MODERATE");
+    if (r.topDataConsumers == null || r.topDataConsumers.isEmpty()) {
+        logLabelWarnValue(gr ? "Άλλες εφαρμογές" : "Other apps",
+                gr ? "UNAVAILABLE — το Android 7+ αποκρύπτει τα TrafficStats άλλων UID"
+                   : "UNAVAILABLE — Android 7+ hides other UIDs' TrafficStats");
     } else {
-        logLabelOkValue(gr ? "Επίπεδο πίεσης" : "Pressure level", gr ? "ΦΥΣΙΟΛΟΓΙΚΟ" : "NORMAL");
+        for (AppImpactEngine.AppScore app : r.topDataConsumers) {
+            if (app == null || app.dataBytesSinceBoot < 0) continue;
+            logLabelValue(app.safeLabel(), humanBytes(app.dataBytesSinceBoot)
+                    + (gr ? " (ίδιο UID, από boot)" : " (own UID, since boot)"));
+        }
     }
 
-    GELServiceLog.info(
-            "SUMMARY: APPS_IMPACT=" + (r.appsImpactHigh ? "HIGH" : "NORMAL")
-    );
-
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 26 ολοκληρώθηκε." : "Lab 26 finished.");
+    logInfo(gr ? "Διαγνωστικό συμπέρασμα" : "Diagnostic conclusion");
+    logLine();
+    logLabelWarnValue(gr ? "Ετυμηγορία" : "Verdict",
+            gr ? "OBSERVED_LIMITED — δεν μετρήθηκε κατανάλωση μπαταρίας, πραγματικός φόρτος ή ασφάλεια εφαρμογών"
+               : "OBSERVED_LIMITED — battery drain, actual load and app safety were not measured");
+    GELServiceLog.info("SUMMARY: APPS_IMPACT=INCONCLUSIVE");
+    logInfo(gr ? "Το Lab 26 ολοκληρώθηκε με ρητά όρια κάλυψης."
+               : "Lab 26 completed with explicit coverage limits.");
     logLine();
 }
 
