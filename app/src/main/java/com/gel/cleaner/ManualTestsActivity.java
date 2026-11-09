@@ -26185,13 +26185,14 @@ private void lab24RootSuspicion() {
     List<String> visiblePackages = lab24_getInstalledPackagesLower();
     int visibleManagerCount = 0;
     for (String pkg : rootManagerPackages) {
-        if (visiblePackages.contains(pkg)) {
-            visibleManagerCount++;
-            logLabelWarnValue(gr ? "Διαθέσιμο package διαχειριστή"
-                                  : "Visible manager package",
-                    pkg + " (presence is not proof of granted root)");
-        }
+        if (visiblePackages.contains(pkg)) visibleManagerCount++;
     }
+    if (visibleManagerCount > 0) {
+        logLabelWarnValue(gr ? "Ορατές εφαρμογές διαχείρισης" : "Visible manager packages",
+                gr ? (visibleManagerCount + " ενδείξεις — όχι απόδειξη root")
+                   : (visibleManagerCount + " hints — not proof of root"));
+    }
+    // Names of the user's installed packages are deliberately not exported.
     if (visibleManagerCount == 0) {
         logLabelValue(gr ? "Root manager apps" : "Root manager apps",
                 gr ? "Δεν αναφέρθηκαν στα ορατά packages — όχι έλεγχος απουσίας"
@@ -26220,17 +26221,36 @@ private void lab24RootSuspicion() {
             flashLocked != null && !flashLocked.trim().isEmpty()
                     ? flashLocked : (gr ? "Μη διαθέσιμο" : "Unavailable"));
 
-    if ("orange".equalsIgnoreCase(bootState)
-            || "red".equalsIgnoreCase(bootState)
-            || "unlocked".equalsIgnoreCase(deviceState)
-            || "0".equals(flashLocked)) {
-        logLabelWarnValue(gr ? "Παρατηρούμενη κατάσταση εκκίνησης"
-                             : "Observed boot state",
-                gr ? "Το Android αναφέρει τροποποιημένη ή μη κλειδωμένη κατάσταση· "
-                       + "απαιτείται επιβεβαίωση εμπιστοσύνης."
-                   : "OS properties report modified/unlocked state; "
-                       + "trusted verification is required.");
+    Lab24BootEvidence.Result bootEvidence =
+            Lab24BootEvidence.classify(bootState, deviceState, flashLocked);
+    switch (bootEvidence) {
+        case OS_REPORTS_LOCKED_VERIFIED:
+            logLabelValue(gr ? "Ενδείξεις Verified Boot" : "Verified Boot indicators",
+                    gr ? "Το Android αναφέρει locked/green — ΔΕΝ είναι attestation"
+                       : "Android reports locked/green — NOT cryptographic attestation");
+            break;
+        case OS_REPORTS_NONSTANDARD_TRUST:
+            logLabelWarnValue(gr ? "Ενδείξεις Verified Boot" : "Verified Boot indicators",
+                    gr ? "Μη τυπική αλυσίδα εμπιστοσύνης κατά το Android"
+                       : "Android reports a non-standard trust chain");
+            break;
+        case OS_REPORTS_UNLOCKED_OR_UNVERIFIED:
+            logLabelWarnValue(gr ? "Ενδείξεις Verified Boot" : "Verified Boot indicators",
+                    gr ? "Το Android αναφέρει unlocked ή αποτυχία επαλήθευσης — root άγνωστο"
+                       : "Android reports unlocked/verification concern — root UNKNOWN");
+            break;
+        case OS_PROPERTIES_INCONSISTENT:
+            logLabelWarnValue(gr ? "Ενδείξεις Verified Boot" : "Verified Boot indicators",
+                    gr ? "ΑΝΤΙΦΑΤΙΚΑ boot properties — απαιτείται εξωτερική επαλήθευση"
+                       : "CONFLICTING boot properties — independent verification required");
+            break;
+        default:
+            logLabelWarnValue(gr ? "Ενδείξεις Verified Boot" : "Verified Boot indicators",
+                    gr ? "ΑΓΝΩΣΤΕΣ — δεν τεκμηριώνεται unlocked ή locked"
+                       : "UNKNOWN — neither locked nor unlocked proven");
     }
+    logInfo(gr ? "Τα system properties μπορεί να απουσιάζουν, να είναι OEM-specific ή να τροποποιούνται."
+               : "System properties may be missing, OEM-specific or altered.");
 
     logLabelWarnValue(gr ? "Root / ακεραιότητα συσκευής"
                          : "Device root/integrity verification",
@@ -26255,239 +26275,6 @@ private void lab24RootSuspicion() {
 
 // ============================================================
 // LAB 24 — INTERNAL HELPERS
-// ============================================================
-private boolean lab24_fileExists(String path) {
-try { return new File(path).exists(); }
-catch (Throwable t) { return false; }
-}
-
-private List<String> lab24_getInstalledPackagesLower() {
-List<String> out = new ArrayList<>();
-try {
-PackageManager pm = getPackageManager();
-List<ApplicationInfo> apps = pm.getInstalledApplications(0);
-if (apps != null) {
-for (ApplicationInfo ai : apps) {
-String p = ai.packageName;
-if (p != null) out.add(p.toLowerCase(Locale.US));
-}
-}
-} catch (Throwable ignore) {}
-return out;
-}
-
-private boolean lab24_canExecSu() {
-java.lang.Process p = null;
-try {
-p = Runtime.getRuntime().exec(new String[]{"su", "-c", "id"});
-BufferedReader br =
-new BufferedReader(
-new InputStreamReader(p.getInputStream()));
-String line = br.readLine();
-br.close();
-return line != null &&
-line.toLowerCase(Locale.US).contains("uid=0");
-} catch (Throwable t) {
-return false;
-} finally {
-if (p != null) try { p.destroy(); } catch (Throwable ignore) {}
-}
-}
-
-private String lab24_execFirstLine(String cmd) {
-java.lang.Process p = null;
-try {
-p = Runtime.getRuntime().exec(cmd);
-BufferedReader br =
-new BufferedReader(
-new InputStreamReader(p.getInputStream()));
-String line = br.readLine();
-br.close();
-return line != null ? line.trim() : null;
-} catch (Throwable t) {
-return null;
-} finally {
-if (p != null) try { p.destroy(); } catch (Throwable ignore) {}
-}
-}
-
-private String lab24_getProp(String key) {
-String v = lab24_execFirstLine("getprop " + key);
-if (v == null) return null;
-v = v.trim();
-return v.isEmpty() ? null : v.toLowerCase(Locale.US);
-}
-
-private String lab24_readOneLine(String path) {
-BufferedReader br = null;
-try {
-br = new BufferedReader(new FileReader(new File(path)));
-return br.readLine();
-} catch (Throwable t) {
-return null;
-} finally {
-if (br != null) try { br.close(); } catch (Throwable ignore) {}
-}
-}
-
-// ============================================================
-// LAB 24 — MAGISK STEALTH HEURISTICS (HONEST / HEURISTIC ONLY)
-// Detects strong indicators of hidden root environments.
-// Does NOT claim certainty.
-// ============================================================
-private int lab24_magiskStealthScore(List<String> findings) {
-
-    int score = 0;
-
-    // --------------------------------------------------------
-    // 1) Zygisk / denylist style property hints
-    // --------------------------------------------------------
-    try {
-        String v;
-
-        v = lab24_getProp("ro.dalvik.vm.native.bridge");
-        if (v != null && !v.isEmpty() && !"0".equals(v)) {
-            score += 10;
-            findings.add("native.bridge is set: " + v);
-        }
-
-        v = lab24_getProp("init.svc.magiskd");
-        if (v != null) {
-            score += 35;
-            findings.add("init.svc.magiskd=" + v);
-        }
-
-        v = lab24_getProp("persist.magisk.hide");
-        if (v != null) {
-            score += 20;
-            findings.add("persist.magisk.hide detected");
-        }
-
-    } catch (Throwable ignore) {}
-
-    // --------------------------------------------------------
-    // 2) Typical Magisk / overlay / mirror traces
-    // --------------------------------------------------------
-    String[] paths = {
-            "/sbin/.magisk",
-            "/dev/.magisk_unblock",
-            "/cache/.magisk",
-            "/data/adb/magisk",
-            "/data/adb/modules",
-            "/data/adb/service.d",
-            "/data/adb/post-fs-data.d",
-            "/debug_ramdisk",
-            "/dev/zygisk",
-            "/metadata/magisk"
-    };
-
-    for (String p : paths) {
-        try {
-            if (lab24_fileExists(p)) {
-                score += 20;
-                findings.add("suspicious root path: " + p);
-            }
-        } catch (Throwable ignore) {}
-    }
-
-    // --------------------------------------------------------
-    // 3) Mount table traces
-    // --------------------------------------------------------
-    try {
-        String mounts = lab24_readWholeFile("/proc/self/mounts");
-        if (mounts != null) {
-            String m = mounts.toLowerCase(Locale.US);
-
-            if (m.contains("magisk")) {
-                score += 35;
-                findings.add("/proc/self/mounts contains magisk");
-            }
-
-            if (m.contains("/data/adb/modules")) {
-                score += 25;
-                findings.add("mounts reference /data/adb/modules");
-            }
-
-            if (m.contains("overlay") && m.contains("/system")) {
-                score += 10;
-                findings.add("overlay mount affecting /system detected");
-            }
-        }
-    } catch (Throwable ignore) {}
-
-    // --------------------------------------------------------
-    // 4) /proc/* cmdline / maps traces (best effort)
-    // --------------------------------------------------------
-    try {
-        String maps = lab24_readWholeFile("/proc/self/maps");
-        if (maps != null) {
-            String mm = maps.toLowerCase(Locale.US);
-
-            if (mm.contains("zygisk")) {
-                score += 25;
-                findings.add("/proc/self/maps contains zygisk");
-            }
-
-            if (mm.contains("magisk")) {
-                score += 25;
-                findings.add("/proc/self/maps contains magisk");
-            }
-        }
-    } catch (Throwable ignore) {}
-
-    // --------------------------------------------------------
-    // 5) Package hiding paradox:
-    // no Magisk package, but strong root shell / adb module traces
-    // --------------------------------------------------------
-    try {
-        boolean shellRoot = lab24_canExecSu();
-        boolean magiskPkg = false;
-
-        List<String> installed = lab24_getInstalledPackagesLower();
-        for (String p : installed) {
-            if (p == null) continue;
-            if (p.contains("magisk")) {
-                magiskPkg = true;
-                break;
-            }
-        }
-
-        boolean adbModules =
-                lab24_fileExists("/data/adb/modules") ||
-                lab24_fileExists("/data/adb/service.d") ||
-                lab24_fileExists("/data/adb/post-fs-data.d");
-
-        if (shellRoot && adbModules && !magiskPkg) {
-            score += 30;
-            findings.add("root shell + /data/adb traces present without visible Magisk package");
-        }
-
-    } catch (Throwable ignore) {}
-
-    return Math.min(score, 100);
-}
-
-private String lab24_readWholeFile(String path) {
-    BufferedReader br = null;
-    try {
-        br = new BufferedReader(new FileReader(new File(path)));
-        StringBuilder sb = new StringBuilder();
-        String line;
-        int lines = 0;
-
-        while ((line = br.readLine()) != null && lines < 400) {
-            sb.append(line).append('\n');
-            lines++;
-        }
-
-        return sb.toString();
-    } catch (Throwable ignore) {
-        return null;
-    } finally {
-        try { if (br != null) br.close(); } catch (Throwable ignore) {}
-    }
-}
-
 // ============================================================
 // LABS 25 — 30: ADVANCED / LOGS
 // ============================================================
