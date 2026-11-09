@@ -11477,7 +11477,8 @@ private void runLab13BluetoothCheckCore() {
             le ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
     );
 
-    if (!Boolean.TRUE.equals(enabled)) {
+    final boolean adapterEnabledAtStart = Boolean.TRUE.equals(enabled);
+    if (!adapterEnabledAtStart) {
         logWarn(gr
                 ? "Το Bluetooth είναι ΚΛΕΙΣΤΟ — ενεργοποίησέ το και ξανατρέξε το Lab 13."
                 : "Bluetooth is OFF — enable Bluetooth and re-run Lab 13.");
@@ -11783,7 +11784,7 @@ lab13Handler.postDelayed(() -> {
     logLabelWarnValue(gr ? "Περιφερειακό" : "Accessory",
             gr ? "Δεν παρατηρήθηκε σε 45s — όχι βλάβη Bluetooth"
                : "Not observed within 45s — not hardware failure");
-    lab13FinishAndReport(Boolean.TRUE.equals(enabled));
+    lab13FinishAndReport(adapterEnabledAtStart);
 }, 45000L);
 }
 
@@ -11793,6 +11794,7 @@ lab13Handler.postDelayed(() -> {
 private void startLab13Monitor60s() {
 
     if (lab13MonitoringStarted) return;
+    lab13WaitingForExternal = false;
     lab13MonitoringStarted = true;
 
     lab13Running = true;
@@ -11801,6 +11803,9 @@ private void startLab13Monitor60s() {
 
     lab13DisconnectEvents = 0;
     lab13ReconnectEvents = 0;
+    lab13AmbiguousTransitions = 0;
+    lab13AdapterObservedThroughout = true;
+    final int generation = lab13MonitorGeneration;
 
     boolean connectedNow = lab13IsAnyExternalConnected();
 
@@ -11841,7 +11846,7 @@ private void startLab13Monitor60s() {
         @Override
         public void run() {
 
-            if (!lab13Running) return;
+            if (!lab13Running || lab13MonitorGeneration != generation) return;
 
             boolean adapterStable = false;
             try {
@@ -11849,7 +11854,8 @@ private void startLab13Monitor60s() {
                         lab13Ba != null &&
                         lab13Ba.isEnabled() &&
                         lab13Ba.getState() == BluetoothAdapter.STATE_ON;
-            } catch (Throwable ignore) {}
+            } catch (RuntimeException ignored) {}
+            if (!adapterStable) lab13AdapterObservedThroughout = false;
 
             boolean connected = lab13IsAnyExternalConnected();
 
@@ -11857,7 +11863,12 @@ private void startLab13Monitor60s() {
             // HARD SYNC — receiver + snapshot (EACH TICK)
             // ------------------------------------------------------------
             // Priority: explicit events > snapshot
-            if (lab13ReceiverSawConnection) {
+            if (lab13ReceiverSawConnection && lab13ReceiverSawDisconnection) {
+                // Two ACL transitions in the same polling interval:
+                // event ordering and the affected remote device are UNKNOWN.
+                lab13AmbiguousTransitions++;
+                lab13HadAnyConnection = true;
+            } else if (lab13ReceiverSawConnection) {
                 connected = true;
             } else if (lab13ReceiverSawDisconnection) {
                 connected = false;
@@ -11887,7 +11898,8 @@ private void startLab13Monitor60s() {
             // ------------------------------------------------------------
             // TIME
             // ------------------------------------------------------------
-            lab13Seconds++;
+            lab13Seconds = Lab13BluetoothEvidence.boundedSeconds(
+                    SystemClock.elapsedRealtime() - lab13StartMs, 60);
 
             if (lab13CounterText != null) {
                 lab13CounterText.setText(
@@ -11957,7 +11969,7 @@ if (lab13StatusText != null) {
             // ------------------------------------------------------------
             if (lab13Seconds >= 60) {
                 lab13Running = false;
-                lab13FinishAndReport(adapterStable);
+                lab13FinishAndReport(adapterStable && lab13AdapterObservedThroughout);
                 return;
             }
 
