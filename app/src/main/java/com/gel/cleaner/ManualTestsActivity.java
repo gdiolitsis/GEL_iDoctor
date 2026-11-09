@@ -11374,6 +11374,11 @@ buttons.addView(cont);
         );
     }
 
+    gate.setOnCancelListener(dialog -> {
+        logLabelValue(gr ? "Εξωτερική δοκιμή Bluetooth" : "Bluetooth external test",
+                "NOT_TESTED — cancelled before monitoring");
+        enableSingleExportButton();
+    });
     gate.show();
     com.gel.cleaner.GelButtonLayout.fitDialog(gate);
 
@@ -11424,9 +11429,9 @@ private void runLab13BluetoothCheckCore() {
 
     // BASIC SUPPORT
     if (lab13Ba == null) {
-        logError(gr
-                ? "Το Bluetooth ΔΕΝ υποστηρίζεται σε αυτή τη συσκευή."
-                : "Bluetooth NOT supported on this device.");
+        logLabelWarnValue(gr ? "Bluetooth adapter" : "Bluetooth adapter",
+                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟΣ — η αιτία είναι άγνωστη"
+                   : "UNAVAILABLE — underlying cause unknown");
         logLine();
 
         appendHtml("<br>");
@@ -11479,9 +11484,11 @@ private void runLab13BluetoothCheckCore() {
 
     final boolean adapterEnabledAtStart = Boolean.TRUE.equals(enabled);
     if (!adapterEnabledAtStart) {
-        logWarn(gr
-                ? "Το Bluetooth είναι ΚΛΕΙΣΤΟ — ενεργοποίησέ το και ξανατρέξε το Lab 13."
-                : "Bluetooth is OFF — enable Bluetooth and re-run Lab 13.");
+        logLabelWarnValue(gr ? "Bluetooth adapter" : "Bluetooth adapter",
+                enabled == null ? (gr ? "ΑΓΝΩΣΤΟ — άδεια ή OEM"
+                                      : "UNKNOWN — permission or OEM")
+                                : (gr ? "ΚΛΕΙΣΤΟ — ενεργοποίησέ το"
+                                      : "OFF — enable Bluetooth"));
         logLine();
 
         appendHtml("<br>");
@@ -11535,6 +11542,10 @@ private void runLab13BluetoothCheckCore() {
     lab13ReceiverSawDisconnection = false;
     lab13MonitoringStarted = false;
     lab13WaitingForExternal = true;
+    if (btnExport != null) {
+        btnExport.setEnabled(false);
+        btnExport.setAlpha(0.5f);
+    }
     final int generation = ++lab13MonitorGeneration;
     try { unregisterReceiver(lab13BtReceiver); } catch (RuntimeException ignored) {}
 
