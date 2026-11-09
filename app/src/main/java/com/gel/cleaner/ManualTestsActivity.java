@@ -11438,16 +11438,16 @@ private void runLab13BluetoothCheckCore() {
 
     logOk(gr ? "Το Bluetooth υποστηρίζεται." : "Bluetooth supported.");
 
-    boolean enabled = false;
-    try { enabled = lab13Ba.isEnabled(); } catch (Throwable ignore) {}
+    Boolean enabled = null;
+    try { enabled = lab13Ba.isEnabled(); } catch (RuntimeException ignored) {}
 
     logLabelValue(
             gr ? "Ενεργό" : "Enabled",
-            enabled ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
+            enabled == null ? "UNKNOWN" : enabled ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
     );
 
-    int state = BluetoothAdapter.STATE_OFF;
-    try { state = lab13Ba.getState(); } catch (Throwable ignore) {}
+    int state = -1;
+    try { state = lab13Ba.getState(); } catch (RuntimeException ignored) {}
 
     String stateStr;
     if (state == BluetoothAdapter.STATE_ON) {
@@ -11456,8 +11456,10 @@ private void runLab13BluetoothCheckCore() {
         stateStr = gr ? "ΑΝΟΙΓΕΙ" : "TURNING ON";
     } else if (state == BluetoothAdapter.STATE_TURNING_OFF) {
         stateStr = gr ? "ΚΛΕΙΝΕΙ" : "TURNING OFF";
-    } else {
+    } else if (state == BluetoothAdapter.STATE_OFF) {
         stateStr = gr ? "ΚΛΕΙΣΤΟ" : "OFF";
+    } else {
+        stateStr = "UNKNOWN";
     }
 
     logLabelValue(
@@ -11475,7 +11477,7 @@ private void runLab13BluetoothCheckCore() {
             le ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
     );
 
-    if (!enabled) {
+    if (!Boolean.TRUE.equals(enabled)) {
         logWarn(gr
                 ? "Το Bluetooth είναι ΚΛΕΙΣΤΟ — ενεργοποίησέ το και ξανατρέξε το Lab 13."
                 : "Bluetooth is OFF — enable Bluetooth and re-run Lab 13.");
@@ -11488,56 +11490,15 @@ private void runLab13BluetoothCheckCore() {
         return;
     }
 
-    // ---------- PAIRED DEVICES SNAPSHOT
+    // Privacy-preserving pairing count only; no peripheral names or MACs in report.
     try {
         Set<BluetoothDevice> bonded = lab13Ba.getBondedDevices();
-
-        if (bonded == null || bonded.isEmpty()) {
-
-            logWarn(gr
-                    ? "Συζευγμένες συσκευές Bluetooth: 0 (δεν βρέθηκαν)."
-                    : "Paired Bluetooth devices: 0 (no paired devices found).");
-
-        } else {
-
-            logOk(gr
-                    ? "Βρέθηκαν Συζευγμένες συσκευές Bluetooth: " + bonded.size()
-                    : "Paired Bluetooth devices detected: " + bonded.size());
-
-            for (BluetoothDevice d : bonded) {
-
-                String name = gr ? "Χωρίς όνομα" : "Unnamed";
-                String addr = gr ? "χωρίς-mac" : "no-mac";
-                String typeStr = gr ? "Άγνωστο" : "Unknown";
-
-                if (d != null) {
-                    try {
-                        if (d.getName() != null) name = d.getName();
-                    } catch (Throwable ignore) {}
-
-                    try {
-                        if (d.getAddress() != null) addr = d.getAddress();
-                    } catch (Throwable ignore) {}
-
-                    try {
-                        int type = d.getType();
-                        typeStr =
-                                type == BluetoothDevice.DEVICE_TYPE_CLASSIC ? (gr ? "Κλασικό" : "Classic") :
-                                type == BluetoothDevice.DEVICE_TYPE_LE ? "LE" :
-                                type == BluetoothDevice.DEVICE_TYPE_DUAL ? (gr ? "Διπλό" : "Dual") :
-                                (gr ? "Άγνωστο" : "Unknown");
-                    } catch (Throwable ignore) {}
-                }
-
-                logInfo("• " + name + " [" + typeStr + "] (" + addr + ")");
-            }
-        }
-
-    } catch (Throwable e) {
-
-        logWarn(gr
-                ? "Αποτυχία σάρωσης συζευγμένων συσκευών: " + e.getClass().getSimpleName()
-                : "Paired device scan failed: " + e.getClass().getSimpleName());
+        logLabelValue(gr ? "Πλήθος συζευγμένων" : "Paired device count",
+                bonded == null ? "UNKNOWN" : String.valueOf(bonded.size()));
+        logInfo(gr ? "Σύζευξη δεν αποδεικνύει πραγματική σύνδεση."
+                   : "Pairing is not proof of a live connection.");
+    } catch (RuntimeException e) {
+        logLabelWarnValue(gr ? "Σύζευξη" : "Pairing", "UNAVAILABLE");
     }
 
     // ------------------------------------------------------------
@@ -11547,9 +11508,8 @@ private void runLab13BluetoothCheckCore() {
         logWarn(gr
                 ? "Το τεστ εξωτερικής Bluetooth συσκευής παραλείφθηκε από τον χρήστη."
                 : "External Bluetooth device test skipped by user.");
-        logOk(gr
-                ? "Συνέχεια μόνο με έλεγχο Bluetooth του συστήματος."
-                : "Proceeded with system Bluetooth connection check only.");
+        logLabelValue(gr ? "Εξωτερικό Bluetooth" : "External Bluetooth",
+                "NOT_TESTED — no peripheral connection verified");
 
         appendHtml("<br>");
         logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
@@ -11568,8 +11528,14 @@ private void runLab13BluetoothCheckCore() {
 
     lab13DisconnectEvents = 0;
     lab13ReconnectEvents = 0;
-
-    try { unregisterReceiver(lab13BtReceiver); } catch (Throwable ignore) {}
+    lab13AmbiguousTransitions = 0;
+    lab13AdapterObservedThroughout = true;
+    lab13ReceiverSawConnection = false;
+    lab13ReceiverSawDisconnection = false;
+    lab13MonitoringStarted = false;
+    lab13WaitingForExternal = true;
+    final int generation = ++lab13MonitorGeneration;
+    try { unregisterReceiver(lab13BtReceiver); } catch (RuntimeException ignored) {
 
 // ------------------------------------------------------------
 // REGISTER BLUETOOTH RECEIVER (LAB 13)
@@ -11577,7 +11543,15 @@ private void runLab13BluetoothCheckCore() {
 IntentFilter f = new IntentFilter();
 f.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
 f.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
-registerReceiver(lab13BtReceiver, f);
+try {
+    registerReceiver(lab13BtReceiver, f);
+} catch (RuntimeException e) {
+    lab13WaitingForExternal = false;
+    logLabelWarnValue(gr ? "Εγγραφή συμβάντων" : "Event receiver",
+            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ — δεν γίνεται διάγνωση" : "UNAVAILABLE — no verdict");
+    enableSingleExportButton();
+    return;
+}
 
 // ------------------------------------------------------------
 // UI — GEL DARK GOLD MONITOR DIALOG (MODERN)
@@ -11741,7 +11715,7 @@ com.gel.cleaner.GelButtonLayout.fitDialog(lab13Dialog);
 // TTS (ONLY IF NOT MUTED)
 // ---------------------------
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (lab13Dialog.isShowing() && !AppTTS.isMuted(this)) {
+    if (lab13Dialog != null && lab13Dialog.isShowing() && !AppTTS.isMuted(this)) {
         AppTTS.ensureSpeak(this, messageText);
     }
 }, 120);
@@ -11761,10 +11735,9 @@ if (Build.VERSION.SDK_INT >= 31) {
     if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
             != PackageManager.PERMISSION_GRANTED) {
 
-        requestPermissions(
-                new String[]{Manifest.permission.BLUETOOTH_CONNECT},
-                REQ_LAB13_BT_CONNECT
-        );
+        logLabelWarnValue(gr ? "BLUETOOTH_CONNECT" : "BLUETOOTH_CONNECT",
+                gr ? "Δεν επιτράπηκε η δοκιμή" : "Permission not granted");
+        abortLab13ByUser();
         return;
     }
 }
@@ -11800,12 +11773,18 @@ if (!lab13MonitoringStarted && lab13StatusText != null) {
 }
 
 if (lab13CounterText != null) {
-    lab13CounterText.setText(
-            gr
-                    ? "Παρακολούθηση: σε αναμονή…"
-                    : "Monitoring: waiting…"
-    );
+    lab13CounterText.setText(gr ? "Αναμονή περιφερειακού: έως 45 δευτερόλεπτα"
+                                 : "Waiting for accessory: up to 45 seconds");
 }
+lab13Handler.postDelayed(() -> {
+    if (lab13MonitorGeneration != generation
+            || !lab13WaitingForExternal || lab13MonitoringStarted) return;
+    lab13WaitingForExternal = false;
+    logLabelWarnValue(gr ? "Περιφερειακό" : "Accessory",
+            gr ? "Δεν παρατηρήθηκε σε 45s — όχι βλάβη Bluetooth"
+               : "Not observed within 45s — not hardware failure");
+    lab13FinishAndReport(Boolean.TRUE.equals(enabled));
+}, 45000L);
 }
 
 // ============================================================
