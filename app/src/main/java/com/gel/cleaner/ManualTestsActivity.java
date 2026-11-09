@@ -12016,178 +12016,89 @@ private void lab13UpdateProgressSegments(int seconds) {
 // FINISH — close dialog + structured diagnosis (GEL LOGIC)
 // ============================================================
 private void lab13FinishAndReport(boolean adapterStable) {
-
     final boolean gr = AppLang.isGreek(this);
+    boolean hadMonitor = lab13MonitoringStarted;
+    long observedMs = hadMonitor
+            ? Math.max(0L, SystemClock.elapsedRealtime() - lab13StartMs) : 0L;
+    Lab13BluetoothEvidence.Result outcome = Lab13BluetoothEvidence.classify(
+            lab13SkipExternalTest, hadMonitor,
+            adapterStable && lab13AdapterObservedThroughout,
+            lab13HadAnyConnection, observedMs, 60000L,
+            lab13DisconnectEvents, lab13ReconnectEvents,
+            lab13AmbiguousTransitions);
 
     lab13Running = false;
-    try { lab13Handler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
-
+    lab13WaitingForExternal = false;
+    lab13MonitoringStarted = false;
+    lab13MonitorGeneration++;
+    lab13Handler.removeCallbacksAndMessages(null);
+    try { unregisterReceiver(lab13BtReceiver); } catch (RuntimeException ignored) {}
     try {
-        if (lab13Dialog != null && lab13Dialog.isShowing())
-            lab13Dialog.dismiss();
-    } catch (Throwable ignore) {}
+        if (lab13Dialog != null && lab13Dialog.isShowing()) lab13Dialog.dismiss();
+    } catch (RuntimeException ignored) {}
     lab13Dialog = null;
 
-    try { unregisterReceiver(lab13BtReceiver); } catch (Throwable ignore) {}
-
-    // ------------------------------------------------------------
-    // NO EXTERNAL DEVICE
-    // ------------------------------------------------------------
-    if (!lab13HadAnyConnection) {
-
-        logLine();
-        logInfo(gr ? "LAB 13 — Αποτελέσματα"
-                   : "LAB 13 — Results");
-
-        logWarn(gr
-                ? "Δεν συνδέθηκε καμία εξωτερική Bluetooth συσκευή."
-                : "No external Bluetooth device was connected.");
-
-        appendHtml("<br>");
-        logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
-        logLine();
-        return;
-    }
-
-    logLine();
-    logInfo(gr ? "LAB 13 — Αποτελέσματα (60s monitor)"
-               : "LAB 13 — Results (60s monitor)");
-
-    // ============================================================
-    // 1️⃣ Adapter Stability (COLOR)
-    // ============================================================
-    if (adapterStable) {
-        logLabelOkValue(
-                gr ? "Σταθερότητα Bluetooth adapter"
-                   : "Adapter stability",
-                gr ? "Σταθερή" : "Stable"
-        );
-    } else {
-        logLabelErrorValue(
-                gr ? "Σταθερότητα Bluetooth adapter"
-                   : "Adapter stability",
-                gr ? "Μη σταθερή" : "Unstable"
-        );
-    }
-
-    // ============================================================
-    // 2️⃣ Disconnect Events (SEVERITY)
-    // ============================================================
-    if (lab13DisconnectEvents == 0) {
-
-        logLabelOkValue(
-                gr ? "Αποσυνδέσεις" : "Disconnect events",
-                "0"
-        );
-
-    } else if (lab13DisconnectEvents <= 2) {
-
-        logLabelWarnValue(
-                gr ? "Αποσυνδέσεις" : "Disconnect events",
-                String.valueOf(lab13DisconnectEvents)
-        );
-
-    } else {
-
-        logLabelErrorValue(
-                gr ? "Αποσυνδέσεις" : "Disconnect events",
-                String.valueOf(lab13DisconnectEvents)
-        );
-    }
-
-    // ============================================================
-    // 3️⃣ Reconnect Events (RECOVERY INDICATOR)
-    // ============================================================
-    if (lab13ReconnectEvents == 0) {
-
-        logLabelValue(
-                gr ? "Επανασυνδέσεις" : "Reconnect events",
-                "0"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Επανασυνδέσεις" : "Reconnect events",
-                String.valueOf(lab13ReconnectEvents)
-        );
-    }
-
-    // ============================================================
-    // 4️⃣ PATTERN DIAGNOSIS
-    // ============================================================
-    boolean flapping =
-            lab13DisconnectEvents >= 3 &&
-            lab13ReconnectEvents >= 3;
-
-    boolean fullLoss =
-            lab13DisconnectEvents >= 3 &&
-            lab13ReconnectEvents == 0;
-
-    logLine();
-
-    if (flapping) {
-
-        logLabelErrorValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Connection flapping (συχνές αποσυνδέσεις & επανασυνδέσεις)"
-                        : "Connection flapping (frequent disconnect/reconnect)"
-        );
-
-        logWarn(gr
-                ? "Πιθανό πρόβλημα εξωτερικής συσκευής ή RF παρεμβολή."
-                : "Likely external device instability or RF interference.");
-
-    } else if (fullLoss) {
-
-        logLabelErrorValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Πλήρης απώλεια σύνδεσης"
-                        : "Full connection loss"
-        );
-
-    } else if (lab13DisconnectEvents > 0) {
-
-        logLabelWarnValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Μικρή αστάθεια σύνδεσης"
-                        : "Minor connection instability"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Σταθερή σύνδεση Bluetooth"
-                        : "Stable Bluetooth connection"
-        );
-    }
-
-    // ============================================================
-    // ROOT NOTE
-    // ============================================================
-    logLabelValue(
-            "Root access",
-            isDeviceRooted()
-                    ? (gr
-                        ? "Διαθέσιμο (advanced diagnostics)"
-                        : "Available (advanced diagnostics)")
-                    : (gr
-                        ? "Μη διαθέσιμο"
-                        : "Not available")
-    );
-
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
     logLine();
+    logSection(gr ? "LAB 13 — Τεκμήρια σύνδεσης Bluetooth"
+                  : "LAB 13 — Bluetooth link observations");
+    logLine();
+
+    logLabelValue(gr ? "Περίοδος παρακολούθησης" : "Observed monitoring window",
+            hadMonitor ? (observedMs / 1000L) + " s" : (gr ? "Δεν ξεκίνησε" : "Not started"));
+    logLabelValue(gr ? "ACL / profile μεταβολές (συνολικά)" : "Aggregate ACL/profile transitions",
+            gr ? ("Αποσυνδέσεις " + lab13DisconnectEvents
+                    + ", επανασυνδέσεις " + lab13ReconnectEvents
+                    + ", ασαφή γεγονότα " + lab13AmbiguousTransitions)
+               : ("Disconnections " + lab13DisconnectEvents
+                    + ", reconnections " + lab13ReconnectEvents
+                    + ", ambiguous events " + lab13AmbiguousTransitions));
+    logInfo(gr ? "Τα γεγονότα ACL ή οι καταστάσεις profile αφορούν πιθανώς διαφορετικές συσκευές."
+               : "ACL broadcasts and profile status may refer to different remote devices.");
+
+    switch (outcome) {
+        case AGGREGATE_LINK_OBSERVED:
+            logLabelValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "ΠΑΡΑΤΗΡΗΘΗΚΕ σύνδεση σε πλήρες δείγμα 60s"
+                       : "Aggregate link observed over a full 60s sample");
+            logInfo(gr ? "Δεν επιβεβαιώθηκε συγκεκριμένη συσκευή ή μεταφορά δεδομένων GATT."
+                       : "A specific peripheral and GATT data transfer were not verified.");
+            break;
+        case AGGREGATE_LINK_CHANGES_OBSERVED:
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Παρατηρήθηκαν μεταβολές σύνδεσης — άγνωστη η αιτία"
+                       : "Aggregate link changes observed — cause unknown");
+            break;
+        case ADAPTER_UNAVAILABLE:
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Ο adapter δεν ήταν συνεχώς διαθέσιμος — δοκιμή ανεπαρκής"
+                       : "Adapter not available throughout — incomplete observation");
+            break;
+        case INCOMPLETE:
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "ΔΕΙΓΜΑ ΜΗ ΟΛΟΚΛΗΡΩΜΕΝΟ — όχι PASS ή FAIL"
+                       : "INCOMPLETE WINDOW — no hardware PASS or FAIL");
+            break;
+        case NOT_TESTED:
+            logLabelValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "NOT_TESTED — παραλείφθηκε λειτουργική δοκιμή"
+                       : "NOT_TESTED — functional challenge skipped");
+            break;
+        default:
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Δεν παρατηρήθηκε εξωτερική σύνδεση — όχι βλάβη Bluetooth"
+                       : "No external link observed — not a Bluetooth hardware failure");
+    }
+    logLabelValue(gr ? "Διαγνωστικό όριο" : "Diagnostic limit",
+            gr ? "Δεν αποδεικνύεται σταθερότητα RF, συγκεκριμένο περιφερειακό ή GATT read/write"
+               : "RF health, specific peripheral identity and GATT read/write remain unverified");
+    logInfo(gr ? "Το Lab 13 κατέγραψε διαθέσιμες ενδείξεις Android, όχι οριστική διάγνωση hardware."
+               : "Lab 13 captured available Android indicators, not a hardware diagnosis.");
+    enableSingleExportButton();
 }
 
 // ============================================================
-// PROFILE NAME (small internal helper)
+// // PROFILE NAME (small internal helper)
 // ============================================================
 private String lab13ProfileName(int p) {
     if (p == BluetoothProfile.A2DP) return "A2DP";
@@ -12200,34 +12111,33 @@ private String lab13ProfileName(int p) {
 // ABORT HOOK
 // ============================================================
 private void abortLab13ByUser() {
-
-    // stop lab state
+    final boolean gr = AppLang.isGreek(this);
+    boolean hadSession = lab13Running || lab13WaitingForExternal
+            || lab13MonitoringStarted;
     lab13Running = false;
-    try { lab13Handler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
-
-    // close dialog
+    lab13WaitingForExternal = false;
+    lab13MonitoringStarted = false;
+    lab13MonitorGeneration++;
+    lab13Handler.removeCallbacksAndMessages(null);
+    try { unregisterReceiver(lab13BtReceiver); } catch (RuntimeException ignored) {}
     try {
-        if (lab13Dialog != null && lab13Dialog.isShowing())
-            lab13Dialog.dismiss();
-    } catch (Throwable ignore) {}
+        if (lab13Dialog != null && lab13Dialog.isShowing()) lab13Dialog.dismiss();
+    } catch (RuntimeException ignored) {}
     lab13Dialog = null;
+    try { AppTTS.stop(); } catch (RuntimeException ignored) {}
 
-    // unregister BT receiver (safety)
-    try { unregisterReceiver(lab13BtReceiver); } catch (Throwable ignore) {}
-
-// stop TTS
-AppTTS.stop();
-
-    // ------------------------------------------------------------
-    // ABORT LOG
-    // ------------------------------------------------------------
-    appendHtml("<br>");
-    logWarn("Lab 13 aborted by user.");
-    logLine();
+    if (hadSession) {
+        appendHtml("<br>");
+        logLabelWarnValue(gr ? "LAB 13 — Δοκιμή" : "LAB 13 — Test",
+                gr ? "ΔΙΑΚΟΠΗ / ΑΚΥΡΩΣΗ — χωρίς συμπέρασμα hardware"
+                   : "INTERRUPTED / CANCELLED — no hardware verdict");
+        logLine();
+    }
+    enableSingleExportButton();
 }
 
 // ============================================================
-// LAB 14 — BATTERY DIAGNOSTICS SUITE
+// // LAB 14 — BATTERY DIAGNOSTICS SUITE
 // ============================================================
 private void showBatterySuiteMenu() {
 
