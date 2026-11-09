@@ -1,0 +1,88 @@
+name: Candidate source-built Android UI QA
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'tools/ci/**'
+      - '.github/workflows/qa-source-built-emulator.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-candidate:
+    if: ${{ startsWith(github.head_ref, 'qa/integration-') && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Verify promoted WebRTC and build fresh QA APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon --console=plain
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$apk"
+          mkdir -p "$RUNNER_TEMP/candidate-apk"
+          cp "$apk" "$RUNNER_TEMP/candidate-apk/GEL_iDoctor_v53_source_debug.apk"
+          (cd "$RUNNER_TEMP/candidate-apk" && sha256sum GEL_iDoctor_v53_source_debug.apk > SHA256SUMS)
+          git rev-parse HEAD > "$RUNNER_TEMP/candidate-apk/SOURCE_COMMIT"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: gel-v53-source-built-debug-apk
+          path: ${{ runner.temp }}/candidate-apk
+          retention-days: 14
+  emulator:
+    needs: build-candidate
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [30, 36]
+        language: [el, en]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - uses: actions/download-artifact@v4
+        with:
+          name: gel-v53-source-built-debug-apk
+          path: ${{ runner.temp }}/candidate-apk
+      - name: Verify exact downloaded candidate
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/candidate-apk"
+          sha256sum --check SHA256SUMS
+          test -s GEL_iDoctor_v53_source_debug.apk
+      - name: Check selectors and explore candidate UI
+        env:
+          AUDIT_SCOPE: full
+          AUDIT_REQUIRE_WELCOME_OK: '1'
+          AUDIT_REQUIRE_ACCESSIBLE_SETTINGS: '1'
+        run: |
+          set -euo pipefail
+          python3 tools/ci/test_ui_audit_selectors.py
+          bash tools/ci/full_ui_audit.sh \
+            "$RUNNER_TEMP/candidate-apk/GEL_iDoctor_v53_source_debug.apk" \
+            "${{ matrix.api }}" "${{ matrix.language }}"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: GEL-v53-candidate-QA-api${{ matrix.api }}-${{ matrix.language }}
+          path: ${{ runner.temp }}/full-ui-audit
+          retention-days: 14

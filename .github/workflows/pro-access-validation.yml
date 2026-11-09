@@ -4,6 +4,7 @@ on:
     paths:
       - 'app/**'
       - 'functions/**'
+      - 'tools/webrtc/**'
       - '.github/workflows/pro-access-validation.yml'
   workflow_dispatch:
 permissions:
@@ -35,6 +36,8 @@ jobs:
       - name: Backend access tests
         run: npm test --prefix functions
       - name: Android resources and UI measurement tests
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
           bash tools/webrtc/fetch_promoted_webrtc.sh --production-only

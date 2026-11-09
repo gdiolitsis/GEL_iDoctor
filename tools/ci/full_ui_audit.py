@@ -2,7 +2,10 @@
 """Evidence-first UI exploration of the unmodified signed release; never claims hardware pass."""
 import json, os, pathlib, re, struct, subprocess, sys, time, traceback
 import xml.etree.ElementTree as ET
-from ui_audit_selectors import MANUAL_ENTRY, matching as search, is_visible as visible, find_visible
+from ui_audit_selectors import (MANUAL_ENTRY, matching as search, is_visible as visible,
+                                find_visible, scroll_gesture, manual_section_pattern,
+                                incomplete_lab_names, find_accessible_action, SAFE_ACCOUNT_ACTIONS,
+                                has_welcome_dialog)
 
 PKG = "com.gel.iDoctor"
 out = pathlib.Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
@@ -10,6 +13,8 @@ lang = sys.argv[2]
 mode = os.environ.get("AUDIT_SCOPE","full")
 results = []
 counter = 0
+welcome_ok_observed = False
+settings_accessible = False
 def adb(*args, binary=False, timeout=35):
     return subprocess.check_output(["adb", *args], timeout=timeout, stderr=subprocess.PIPE,
         **({} if binary else {"text":True, "errors":"replace"}))
@@ -21,11 +26,17 @@ def tap(n):
     b=list(map(int,re.findall(r"\d+",n.get("bounds",""))))
     adb("shell","input","tap",str((b[0]+b[2])//2),str((b[1]+b[3])//2))
     time.sleep(.6)
-def swipe(up=True):
-    b=adb("exec-out","screencap","-p",binary=True)
-    w,h=struct.unpack(">II",b[16:24])
-    y1,y2=(.72,.32) if up else (.32,.72)
-    adb("shell","input","swipe",str(w//2),str(int(h*y1)),str(w//2),str(int(h*y2)),"250")
+def swipe(up=True, snapshot=None):
+    if snapshot is None:
+        snapshot=tree()
+    gesture=scroll_gesture(snapshot, up)
+    if gesture is None:
+        b=adb("exec-out","screencap","-p",binary=True)
+        w,h=struct.unpack(">II",b[16:24])
+        y1,y2=(.72,.32) if up else (.32,.72)
+        gesture=(w//2,int(h*y1),w//2,int(h*y2))
+    print("UI_SCROLL "+json.dumps({"gesture":gesture,"up":up}),flush=True)
+    adb("shell","input","swipe",*(str(v) for v in gesture),"250")
 def find(predicate, scrolls=0):
     previous=None
     for attempt in range(scrolls+1):
@@ -35,7 +46,7 @@ def find(predicate, scrolls=0):
         signature=ET.tostring(t)
         if signature==previous: break
         previous=signature
-        if attempt < scrolls: swipe()
+        if attempt < scrolls: swipe(snapshot=t)
     return None
 def textmatch(pattern):
     return lambda n: bool(search(pattern,n.get("text",""),re.I))
@@ -59,6 +70,7 @@ def record(name,status,detail="",folder=None):
     (out/"coverage.json").write_text(json.dumps(results,ensure_ascii=False,indent=2))
     print(json.dumps(results[-1],ensure_ascii=False),flush=True)
 def dismiss_intro():
+    global welcome_ok_observed
     stable = 0
     for attempt in range(12):
         t = tree()
@@ -77,10 +89,21 @@ def dismiss_intro():
             for node in nodes:
                 if node.get("checkable")=="true" and node.get("checked")=="false" and search(r"Do not show again|Να μην εμφανιστεί ξανά|Mute voice|Σίγαση",node.get("text",""),re.I):
                     tap(node)
-            ok = next((n for n in nodes if n.get("text","").upper()=="OK"),None)
-            if ok is not None: tap(ok)
+            ok = next((n for n in nodes if n.get("text","").upper()=="OK" and visible(n)),None)
+            if ok is not None:
+                evidence=save("welcome-ok-visible")
+                tap(ok)
+                time.sleep(1)
+                if has_welcome_dialog(tree()):
+                    record("welcome-ok","CLICK_DID_NOT_DISMISS",
+                           folder=save("welcome-still-visible-after-tap"))
+                    adb("shell","input","keyevent","4")
+                else:
+                    welcome_ok_observed=True
+                    record("welcome-ok","CLICKED_AND_DISMISSED",folder=evidence)
             else:
-                save("welcome-actions-unreachable")
+                evidence=save("welcome-actions-unreachable")
+                record("welcome-ok","UNREACHABLE",folder=evidence)
                 adb("shell","input","keyevent","4")
             stable=0; continue
         # Wait for delayed first-run permission dialogs before declaring home ready.
@@ -130,6 +153,17 @@ try:
     adb("logcat","-b","all","-c")
     adb("shell","settings","put","system","accelerometer_rotation","0")
     adb("shell","settings","put","system","user_rotation","0")
+    # Explicitly exercise the first-run dialog even when prior onboarding has
+    # saved "do not show again". Otherwise a missing popup looks like failure.
+    if os.environ.get("AUDIT_REQUIRE_WELCOME_OK") == "1":
+        adb("shell","am","force-stop",PKG)
+        adb("shell","am","start","-W","-n",PKG+"/com.gel.cleaner.MainActivity",
+            "--ez","force_welcome","true")
+        time.sleep(1)
+        dismiss_intro()
+        if not welcome_ok_observed:
+            record("welcome-ok","FORCED_DIALOG_NOT_VERIFIED",
+                   folder=save("welcome-forced-unverified"))
     select_language()
     if mode != "labs_only":
         # Inventory home at every scroll position.
@@ -159,33 +193,45 @@ try:
                     account=find(textmatch(r"^(PRO account|Λογαριασμός PRO)$"))
                     if account is not None:
                         tap(account); record("account","UI_OPENED",folder=save("account"))
-                        for action in [r"^Refresh gifted PRO$",r"^Sign out$",r"^Delete account$",r"^Restore Play purchases$"]:
+                        # Strict allowlist: NEVER tap Sign out or Delete account.
+                        # Their dismissal behavior is not guaranteed across versions.
+                        for action in SAFE_ACCOUNT_ACTIONS:
                             control=find(textmatch(action),4)
                             if control is None: continue
                             tap(control); time.sleep(2)
                             record("account-"+action,"UI_ACTION_REVIEW",folder=save("account-"+action))
                             cancel=find(textmatch(r"^(CANCEL|ΑΚΥΡΟ)$"))
                             if cancel is not None: tap(cancel)
+                        record("account-sensitive-controls","NOT_ACTIVATED_BY_POLICY")
                 adb("shell","input","keyevent","4")
             else: record(label,"NO_ACCESSIBLE_LABEL")
-        # Settings is currently an icon with an empty title; use actual toolbar bounds,
-        # not guessed absolute screen coordinates.
-        home(); toolbar=find(rid("gelToolbar"))
-        if toolbar is not None:
-            candidates=[n for n in toolbar.iter("node") if n.get("clickable")=="true" and visible(n)]
-            unnamed=[n for n in candidates if not n.get("text") and not n.get("content-desc")]
-            if unnamed:
-                tap(unnamed[0]); record("settings","UI_OPENED",folder=save("settings"))
-                n=find(textmatch(r"^(Save|Αποθήκευση)$"))
-                if n is not None: tap(n); record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
-            else: record("settings","NO_ACCESSIBLE_LABEL")
+        # Validate the accessible Settings label, not the legacy unnamed icon.
+        home()
+        toolbar=find(rid("gelToolbar"))
+        if toolbar is None:
+            record("settings","TOOLBAR_NOT_FOUND",folder=save("settings-toolbar-missing"))
+        else:
+            label="Ρυθμίσεις" if lang=="el" else "Settings"
+            control=find_accessible_action(toolbar,label)
+            if control is None:
+                record("settings","ACCESSIBILITY_LABEL_MISSING",folder=save("settings-accessibility-failure"))
+            else:
+                tap(control)
+                n=find(textmatch(r"^(Save|Αποθήκευση)$"),2)
+                if n is None:
+                    record("settings","ACCESSIBLE_BUT_PANEL_NOT_OPEN",
+                           folder=save("settings-panel-not-open"))
+                else:
+                    settings_accessible=True
+                    record("settings","ACCESSIBLE_ACTION_OPENED",folder=save("settings"))
+                    tap(n)
+                    record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
     sections=[(1,5),(6,9),(10,13),(14,17),(18,20),(21,24),(25,31)]
     for number in (range(1,32) if mode != "menus_only" else []):
         try:
             manual()
             lo,hi=next((a,b) for a,b in sections if a<=number<=b)
-            end=30 if lo==25 else hi
-            header=find(textmatch(r"Manual Labs\s*"+str(lo)+r"\s*[–—-]\s*"+str(end)),16)
+            header=find(textmatch(manual_section_pattern(lo,hi)),16)
             if header is None:
                 record("lab-%02d"%number,"SECTION_NOT_FOUND",folder=save("lab-%02d-section"%number)); continue
             tap(header)
@@ -219,4 +265,13 @@ finally:
     crash=(out/"logcat.txt").read_text() if (out/"logcat.txt").exists() else ""
     crashed = "Process: "+PKG+"," in crash
     print("APP_CRASH_LOG_PRESENT="+str(crashed),flush=True)
+    incomplete = incomplete_lab_names(results) if mode != "menus_only" else []
+    print("QA_INCOMPLETE_LABS="+json.dumps(incomplete),flush=True)
+    print("QA_WELCOME_OK_VERIFIED="+str(welcome_ok_observed),flush=True)
+    print("QA_ACCESSIBLE_SETTINGS_VERIFIED="+str(settings_accessible),flush=True)
     if crashed: sys.exit(2)
+    if incomplete: sys.exit(3)
+    if os.environ.get("AUDIT_REQUIRE_WELCOME_OK") == "1" and not welcome_ok_observed:
+        sys.exit(4)
+    if os.environ.get("AUDIT_REQUIRE_ACCESSIBLE_SETTINGS") == "1" and not settings_accessible:
+        sys.exit(5)
