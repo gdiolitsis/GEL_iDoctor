@@ -26300,7 +26300,7 @@ private String lab24_getProp(String key) {
             || "ro.boot.flash.locked".equals(key))) {
         return null;
     }
-    Process process = null;
+    java.lang.Process process = null;
     try {
         process = new ProcessBuilder("/system/bin/getprop", key)
                 .redirectErrorStream(true).start();
