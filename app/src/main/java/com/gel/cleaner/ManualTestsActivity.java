@@ -6015,17 +6015,52 @@ private void lab1SpeakerTone() {
                     String.format(Locale.US, "%.1f / %.1f dB",
                             result.weakestLowRiseDb, result.weakestHighRiseDb));
         }
+        // Restore user-useful microphone amplitude information from the CURRENT
+        // synchronized capture, not the legacy post-tone unrelated recording.
+        // Raw 16-bit PCM levels are not calibrated dB SPL or a speaker verdict.
+        if (result.testedTones > 0) {
+            if (!Double.isNaN(result.ambientMicRms) && !Double.isNaN(result.challengeMicRms)) {
+                logLabelValue(gr ? "RMS μικροφώνου — πριν τον τόνο" : "Mic RMS — ambient",
+                        String.format(Locale.US, "%.1f (PCM)", result.ambientMicRms));
+                logLabelValue(gr ? "RMS μικροφώνου — κατά τον τόνο" : "Mic RMS — challenge",
+                        String.format(Locale.US, "%.1f (PCM)", result.challengeMicRms));
+            }
+            if (!Double.isNaN(result.challengeMicPeak)) {
+                logLabelValue(gr ? "Peak μικροφώνου — κατά τον τόνο" : "Mic peak — challenge",
+                        String.format(Locale.US, "%.0f (PCM)", result.challengeMicPeak));
+            }
+            logLabelValue(gr ? "Ποιότητα δείγματος" : "Capture quality",
+                    result.clipped
+                            ? (gr ? "Παραμόρφωση clipping — επανάλαβε με χαμηλότερη ένταση"
+                                  : "Clipping — repeat at a lower volume")
+                            : (gr ? "Δεν ανιχνεύθηκε clipping στο δείγμα"
+                                  : "No clipping detected in sample"));
+        }
         logLabelValue(gr ? "Διαδρομή μικροφώνου" : "Mic input route", result.inputRoute);
         logLabelValue(gr ? "Μέθοδος" : "Method",
                 "AudioRecord during ToneGenerator, baseline OFF / challenge ON");
         logLabelValue(gr ? "Αιτιολόγηση" : "Reason", result.reason);
+        if (!result.responseObserved) {
+            logLabelWarnValue(gr ? "Προτεινόμενη ενέργεια" : "Recommended action",
+                    gr ? "Έλεγξε την ένταση, αποσύνδεσε Bluetooth/ακουστικά/USB ήχο, "
+                            + "δοκίμασε σε ήσυχο περιβάλλον και επανάλαβε. "
+                            + "Η απουσία απόκρισης δεν τεκμηριώνει βλάβη ηχείου."
+                       : "Check volume, disconnect Bluetooth/headphones/USB audio, "
+                            + "retry in a quiet room. Missing response does not prove speaker failure.");
+        }
         logLabelWarnValue(gr ? "Περιορισμός" : "Limitations",
                 gr ? "Ο ενσωματωμένος μικροφωνικός έλεγχος δεν πιστοποιεί ποιο "
                        + "ηχείο ακούστηκε ή την ακουστική ποιότητά του."
                    : "Internal microphone cannot certify which speaker emitted "
                        + "the tone or its calibrated acoustic performance.");
         appendHtml("<br>");
-        logOk(gr ? "Η δοκιμή Lab 1 ολοκληρώθηκε." : "Lab 1 probe completed.");
+        if (result.attempted) {
+            logOk(gr ? "Η δειγματοληψία Lab 1 ολοκληρώθηκε." : "Lab 1 sampling completed.");
+        } else {
+            logLabelWarnValue(gr ? "Κατάσταση Lab 1" : "Lab 1 status",
+                    gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ — η ακουστική δοκιμή δεν εκτελέστηκε"
+                       : "UNAVAILABLE — acoustic challenge was not performed");
+        }
         logLine();
         } catch (RuntimeException e) {
             logLabelWarnValue("Acoustic probe", "UNAVAILABLE: "
