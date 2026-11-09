@@ -1178,11 +1178,8 @@ private void openPanicLogPicker() {
     i.addCategory(Intent.CATEGORY_OPENABLE);
     i.setType("*/*");
     i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-    i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
-            "text/plain",
-            "application/zip",
-            "application/octet-stream"
-    });
+    // iOS .ips file MIME values vary across content providers.
+    // The read-only content validation below remains authoritative.
 
     startActivityForResult(i, REQ_PANIC_LOG);
 
@@ -1846,6 +1843,16 @@ if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
 // ============================================================
 // LAB 5 — PANIC FREQUENCY ANALYZER (Multi-File Correlation)
 // ============================================================
+private int countSupportedPanicBlocks(String[] blocks) {
+    int valid = 0;
+    if (blocks != null) {
+        for (String b : blocks) {
+            if (ApplePanicEvidencePolicy.hasPanicEvidence(b)) valid++;
+        }
+    }
+    return valid;
+}
+
 private void runPanicFrequencyLab() {
     if (!guardPanicLog()) return;
 
@@ -1860,7 +1867,7 @@ private void runPanicFrequencyLab() {
 
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
-    if (blocks.length <= 1) {
+    if (countSupportedPanicBlocks(blocks) <= 1) {
         logWarn(gr
                 ? "Δεν υπάρχουν πολλαπλά logs για σύγκριση."
                 : "No multiple logs detected for comparison.");
@@ -1871,7 +1878,7 @@ java.util.Map<String, Integer> crashCount = new java.util.HashMap<>();
 
 for (String block : blocks) {
 
-    if (block == null || block.trim().isEmpty())
+    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
         continue;
 
     resetSignatureCache();
@@ -1914,7 +1921,7 @@ private void runPanicClusteringLab() {
 
 String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
-if (blocks.length <= 1) {
+if (countSupportedPanicBlocks(blocks) <= 1) {
     logWarn(gr
             ? "Δεν υπάρχουν πολλαπλά logs για clustering."
             : "No multiple logs available for clustering.");
@@ -1925,7 +1932,7 @@ java.util.Map<String, Integer> domainCount = new java.util.HashMap<>();
 
 for (String block : blocks) {
 
-    if (block == null || block.trim().isEmpty())
+    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
         continue;
 
     resetSignatureCache();
@@ -1986,7 +1993,7 @@ private void runRecurringDomainLab() {
 
     for (String block : blocks) {
 
-        if (block == null || block.trim().isEmpty())
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
             continue;
 
         resetSignatureCache();
