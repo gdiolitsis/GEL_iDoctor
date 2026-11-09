@@ -25409,7 +25409,6 @@ private void lab21StartPrompt(final int runId, final int authenticator) {
                     public void onAuthenticationError(int errorCode, CharSequence errString) {
                         boolean userCancelled =
                                 errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED
-                                || errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON
                                 || errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_CANCELED;
                         if (lab21IsCurrent(runId, evidence)
                                 && evidence.onError(userCancelled)) {
