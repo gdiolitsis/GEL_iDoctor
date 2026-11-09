@@ -1369,7 +1369,7 @@ public static AppleDeviceSpec get(String modelName) {
     return MAP.get("ipad pro 11 m4");
 
     // iPad mini
-    if (m.contains("ipad mini"))
+    if (m.equals("ipad mini 6"))
         return MAP.get("ipad mini 6");
 
     // =====================================================
