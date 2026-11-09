@@ -11218,28 +11218,28 @@ private void lab13BluetoothConnectivityCheck() {
     logLine();
 
     if (ba == null) {
-        logError(gr
-                ? "Το Bluetooth ΔΕΝ υποστηρίζεται σε αυτή τη συσκευή."
-                : "Bluetooth NOT supported on this device.");
-        logLine();
+        logLabelWarnValue(gr ? "Bluetooth adapter" : "Bluetooth adapter",
+                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟΣ — δεν αποδεικνύεται βλάβη"
+                   : "UNAVAILABLE — no hardware-failure verdict");
+        enableSingleExportButton();
         return;
     }
 
-    boolean enabled = false;
-    try { enabled = ba.isEnabled(); } catch (Throwable ignore) {}
+    Boolean enabled = null;
+    try { enabled = ba.isEnabled(); } catch (RuntimeException ignored) {}
 
-    if (!enabled) {
-        logError(gr
-                ? "Το Bluetooth είναι ΚΛΕΙΣΤΟ. Ενεργοποίησέ το και ξαναδοκίμασε."
-                : "Bluetooth is OFF. Please enable Bluetooth and retry.");
-        logLine();
+    if (!Boolean.TRUE.equals(enabled)) {
+        logLabelWarnValue(gr ? "Bluetooth adapter" : "Bluetooth adapter",
+                enabled == null
+                        ? (gr ? "Άγνωστη κατάσταση — άδεια/OEM" : "Unknown — permission/OEM")
+                        : (gr ? "ΑΝΕΝΕΡΓΟ — ενεργοποίησέ το για τον έλεγχο"
+                              : "OFF — enable Bluetooth for testing"));
+        enableSingleExportButton();
         return;
     }
 
-    logLabelOkValue(
-            gr ? "Κατάσταση Bluetooth" : "Bluetooth State",
-            gr ? "ΕΝΕΡΓΟ" : "ENABLED"
-    );
+    logLabelValue(gr ? "Bluetooth adapter (Android)" : "Bluetooth adapter (Android)",
+            gr ? "ΕΝΕΡΓΟ — όχι πιστοποίηση RF" : "ON — not RF hardware certification");
 
     // RESET STATE
     lab13Bm = bm;
