@@ -1,0 +1,81 @@
+name: Restored main fresh UI inspection
+on:
+  push:
+    branches: ['qa/restart-main-ui-20261109']
+    paths: ['.github/workflows/restart-main-ui.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    name: Android ${{ matrix.api }} / ${{ matrix.language }}
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [30, 36]
+        language: [el, en]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 2113c74dc0089f39096d62f6b8aea13e8b3ebf86
+          fetch-depth: 0
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Verify source baseline and exact owner APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/full-ui-audit" "$RUNNER_TEMP/owner-apk"
+          evidence="$RUNNER_TEMP/full-ui-audit"
+          git rev-parse HEAD > "$evidence/SOURCE_COMMIT"
+          git rev-parse HEAD^{tree} > "$evidence/SOURCE_TREE"
+          git diff --exit-code 69fb2ab85d0528937dc257fc19abc6722462cfc8 HEAD -- > "$evidence/backup-to-main.diff"
+          test "$(git rev-parse HEAD^{tree})" = 3661cc96e9adb054ebac6667f917e2ce35c7f04d
+          curl --fail --location --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/gdiolitsis/GEL_iDoctor/actions/artifacts/13691993800/zip -o "$RUNNER_TEMP/owner-apk.zip"
+          echo "cbb8e5ea4f506dfd16aa7bdea31c93948f899d8b23f1c2a8ee59e6b8573011af  $RUNNER_TEMP/owner-apk.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/owner-apk.zip" -d "$RUNNER_TEMP/owner-apk"
+          cd "$RUNNER_TEMP/owner-apk"
+          sha256sum --check SHA256SUMS
+          echo "7dae3d03716b6247c786bfa851db4bc510e9a8939e80b1159e4c9a5ee320cf98  GEL_iDoctor_main_2113c74_debug.apk" | sha256sum -c -
+          test "$(cat SOURCE_COMMIT)" = 2113c74dc0089f39096d62f6b8aea13e8b3ebf86
+          cp SOURCE_COMMIT SOURCE_TREE SHA256SUMS APK_METADATA.txt SIGNING_CERTIFICATE.txt "$evidence/"
+      - name: Instrument evidence only (no application changes)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("tools/ci/full_ui_audit.sh")
+          s=p.read_text().replace('adb install --no-incremental -g "$apk"', 'adb install --no-incremental -g "$apk" | tee "$out/install-result.txt"\nadb shell getprop > "$out/device-properties.txt"\nadb shell wm size > "$out/display.txt"\nadb shell wm density >> "$out/display.txt"\nadb shell dumpsys package com.gel.iDoctor > "$out/installed-package.txt"')
+          p.write_text(s)
+          p=Path("tools/ci/full_ui_audit.py")
+          s=p.read_text()
+          needle='(folder/"ui.xml").write_bytes(ET.tostring(t,encoding="utf-8"))'
+          insert=needle+'\n        (folder/"controls.json").write_text(json.dumps([dict(n.attrib) for n in t.iter("node") if n.get("clickable")=="true" or n.get("checkable")=="true"],ensure_ascii=False,indent=2))'
+          assert needle in s
+          p.write_text(s.replace(needle,insert))
+          PY
+          git diff -- tools/ci > "$RUNNER_TEMP/full-ui-audit/harness-instrumentation.diff"
+          python3 tools/ci/test_ui_audit_selectors.py
+      - name: Clean emulator install and full initial UI survey
+        env:
+          AUDIT_SCOPE: full
+          AUDIT_REQUIRE_WELCOME_OK: '1'
+          AUDIT_REQUIRE_ACCESSIBLE_SETTINGS: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tools/ci/full_ui_audit.sh "$RUNNER_TEMP/owner-apk/GEL_iDoctor_main_2113c74_debug.apk" "${{ matrix.api }}" "${{ matrix.language }}" 2>&1 | tee "$RUNNER_TEMP/full-ui-audit/session.log"
+      - name: Upload actual evidence and uncovered paths
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: restart-main-api${{ matrix.api }}-${{ matrix.language }}
+          path: ${{ runner.temp }}/full-ui-audit
+          retention-days: 14
