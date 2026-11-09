@@ -1492,8 +1492,8 @@ else if ("Medium".equalsIgnoreCase(r.severity)) {
     );
 }
 else {
-    logLabelOkValue(
-            gr ? "Σοβαρότητα:" : "Severity:",
+    logLabelWarnValue(
+            gr ? "Βαθμός σοβαρότητας (μη επαληθευμένος):" : "Severity (not verified):",
             safe(r.severity)
     );
 }
@@ -1512,8 +1512,8 @@ else if ("Medium".equalsIgnoreCase(r.confidence)) {
     );
 }
 else {
-    logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence:",
+    logLabelWarnValue(
+            gr ? "Βεβαιότητα (μη επαληθευμένη):" : "Confidence (unverified):",
             safe(r.confidence)
     );
 }
@@ -2108,7 +2108,7 @@ private void runFinalServiceRecommendationLab() {
                     String.valueOf(valid));
 
     for (java.util.Map.Entry<String,Integer> entry : domainCount.entrySet()) {
-        logLabelValue(gr ? "Ενδεικτικό υποσύστημα:" : "Subsystem keyword hint:",
+        logLabelWarnValue(gr ? "Ενδεικτικό υποσύστημα:" : "Subsystem keyword hint:",
                 safe(entry.getKey()) + " — " + entry.getValue() + "/" + valid);
     }
     logLabelWarnValue(gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
@@ -2117,7 +2117,7 @@ private void runFinalServiceRecommendationLab() {
             ApplePanicEvidencePolicy.limitation(gr));
     logLabelWarnValue(gr ? "Σύσταση:" : "Recommendation:",
             ApplePanicEvidencePolicy.recommendation(gr));
-    logLabelValue(gr ? "Βαθμός υγείας / 100:" : "Device health score / 100:",
+    logLabelWarnValue(gr ? "Βαθμός υγείας / 100:" : "Device health score / 100:",
             gr ? "Δεν υπολογίζεται από panic logs" : "Not calculable from panic logs");
     logOk(gr ? "Η τεχνική σύνοψη ολοκληρώθηκε με τους παραπάνω περιορισμούς."
              : "Technical summary completed with the stated limitations.");
