@@ -81,25 +81,10 @@ TextView panicGuideMessage;
     private final StringBuilder logHtmlBuffer = new StringBuilder();
 
 private boolean looksCorruptedPanic(String text) {
-
-    if (text == null) return true;
-
-    String t = text.toLowerCase(Locale.US);
-
-    if (t.length() < 80) return true;
-
-    // βασικά panic signals (πολύ πιο ασφαλές)
-    if (t.contains("panic(")) return false;
-    if (t.contains("panicstring")) return false;
-    if (t.contains("bug_type")) return false;
-    if (t.contains("incident")) return false;
-    if (t.contains("watchdog")) return false;
-    if (t.contains("thermal")) return false;
-    if (t.contains("jetsam")) return false;
-
-    return true;
+    return !ApplePanicEvidencePolicy.hasPanicEvidence(text);
 }
 
+    // ============================================================
     // ============================================================
     // REQUEST CODES
     // ============================================================
@@ -1273,14 +1258,18 @@ for (Uri uri : uris) {
     if (is == null) continue;
 
     String text;
-
-    if (looksLikeZip(safeName)) {
-        text = readPanicFromZip(is);
-    } else {
-        text = readTextStream(is);
+    try {
+        BufferedInputStream source = new BufferedInputStream(is);
+        source.mark(8);
+        int a = source.read(), b = source.read();
+        source.reset();
+        boolean zipMagic = a == 'P' && b == 'K';
+        text = (zipMagic || looksLikeZip(safeName))
+                ? readPanicFromZip(source)
+                : readTextStream(source);
+    } finally {
+        try { is.close(); } catch (Throwable ignore) {}
     }
-
-    try { is.close(); } catch (Throwable ignore) {}
 
     if (text == null || text.trim().isEmpty()) {
 
@@ -2570,81 +2559,57 @@ private boolean guardPanicLog() {
 // ============================================================
 // ZIP/TEXT READERS
 // ============================================================
-private String readTextStream(InputStream is) throws Exception {
-
-    BufferedInputStream bis = new BufferedInputStream(is);
+private String readTextStream(InputStream input) throws Exception {
+    // Do not close the input: it may be a ZipInputStream with further entries.
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
-
     byte[] buf = new byte[4096];
-    int read;
-    int total = 0;
-
-    while ((read = bis.read(buf)) != -1) {
-        total += read;
-        if (total > MAX_TEXT_BYTES) break;
+    int read, total = 0;
+    while ((read = input.read(buf)) != -1) {
+        if (read > MAX_TEXT_BYTES - total) {
+            throw new java.io.IOException("Panic log exceeds per-entry size cap");
+        }
         bos.write(buf, 0, read);
+        total += read;
     }
-
-    try { bis.close(); } catch (Throwable ignore) {}
-
     byte[] bytes = bos.toByteArray();
-
-    String s = new String(bytes, Charset.forName("UTF-8"));
-    if (looksGarbled(s)) s = new String(bytes, Charset.forName("ISO-8859-1"));
-
-    return s;
+    String result = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+    if (looksGarbled(result)) result = new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1);
+    return result;
 }
 
-private String readPanicFromZip(InputStream is) throws Exception {
-
-    ZipInputStream zis = new ZipInputStream(new BufferedInputStream(is));
-    ZipEntry entry;
+private String readPanicFromZip(InputStream input) throws Exception {
+    ZipInputStream zis = new ZipInputStream(new BufferedInputStream(input));
     int scanned = 0;
-
     try {
-
-StringBuilder all = new StringBuilder();
-
-while ((entry = zis.getNextEntry()) != null && scanned < ZIP_SCAN_CAP) {
-
-    scanned++;
-
-    String name = entry.getName().toLowerCase(Locale.US);
-
-    boolean candidate =
-            name.contains("panic") ||
-            name.endsWith(".ips") ||
-            name.endsWith(".log") ||
-            name.endsWith(".txt");
-
-    if (!candidate) continue;
-
-    String text = readTextStream(zis);
-
-    if (text != null && !text.trim().isEmpty()) {
-
-        all.append("\n\n===== ZIP FILE: ")
-           .append(name)
-           .append(" =====\n\n")
-           .append(text);
-    }
-}
-
-if (all.length() > 0) {
-    return all.toString();
-}
-
+        ZipEntry entry;
+        StringBuilder all = new StringBuilder();
+        while ((entry = zis.getNextEntry()) != null) {
+            if (++scanned > ZIP_SCAN_CAP) throw new java.io.IOException("ZIP entry limit reached");
+            if (entry.isDirectory()) continue;
+            String name = entry.getName().toLowerCase(Locale.US);
+            boolean candidate = name.contains("panic") || name.endsWith(".ips")
+                    || name.endsWith(".log") || name.endsWith(".txt");
+            if (!candidate) continue;
+            String text = readTextStream(zis);
+            if (!ApplePanicEvidencePolicy.hasPanicEvidence(text)) continue;
+            if (all.length() + text.length() > MAX_PANIC_LOG_SIZE) {
+                throw new java.io.IOException("ZIP text exceeds combined size limit");
+            }
+            all.append("\n===== ZIP FILE: ").append(name).append(" =====\n")
+                    .append(text).append("\n");
+            zis.closeEntry();
+        }
+        if (all.length() > 0) return all.toString();
     } finally {
         try { zis.close(); } catch (Throwable ignore) {}
     }
-
-    throw new Exception(
+    throw new java.io.IOException(
             AppLang.isGreek(this)
-                    ? "Δεν βρέθηκε αναγνώσιμο panic log μέσα στο ZIP (πιθανώς κατεστραμμένο αρχείο)."
-                    : "No readable panic entry found in ZIP (file may be corrupted)."
-    );
+                    ? "Δεν βρέθηκαν υποστηριζόμενα panic logs στο ZIP."
+                    : "No supported panic logs found in ZIP.");
 }
 
+// ============================================================
 // ============================================================
 // SIGNATURE PARSER STATE (CANONICAL - DO NOT LOCALIZE)
 // ============================================================
