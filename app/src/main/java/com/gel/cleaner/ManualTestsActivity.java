@@ -12960,17 +12960,15 @@ if (!sagValid) {
     res.label = labelSafe;
     lab14LastLabel = labelSafe;
 
-    String sagText = String.format(
-            Locale.US,
-            "%.3f V (%s)",
-            finalSag,
-            labelSafe
-    );
+    // The physical delta remains visible; legacy Excellent/Weak/Critical
+    // are heuristic bins and must not be shown as battery-health results.
+    String sagText = Lab14CustomerGuidance.voltageReading(finalSag, gr);
 
 
     if ("Critical".equals(labelSafe)) {
 
-        logLabelErrorValue(
+        // A single sag threshold is not a calibrated cell-failure alarm.
+        logLabelWarnValue(
                 gr ? "Πτώση τάσης υπό φορτίο"
                    : "Voltage sag under load",
                 sagText
@@ -13131,32 +13129,17 @@ if (rValid) {
         );
     }
 
-} else {   // ✅ αυτό έλειπε
-
-    if (!Float.isNaN(finalSag)) {
-
-        float rEst = finalSag * 1000f / 2.0f;
-
-        logLabelValue(
-            gr ? "Αντίσταση υπό φορτίο"
-               : "Dynamic resistance",
-            String.format(
-               Locale.US,
-               "~%.0f mΩ (estimated)",
-               rEst
-            )
-        );
-
-    } else {
-
-        logLabelWarnValue(
-            gr ? "Αντίσταση υπό φορτίο"
-               : "Dynamic resistance",
-            "N/A"
-        );
-    }
+ } else {
+    // The previous fixed-2A denominator was not a measured current step.
+    // Dynamic R = DeltaV / DeltaI requires aligned, observed current values.
+    logLabelWarnValue(
+            gr ? "Δυναμική αντίσταση" : "Dynamic resistance",
+            gr ? "Δεν προσδιορίζεται χωρίς συγχρονισμένη μεταβολή ρεύματος"
+               : "Not established without synchronized current change"
+    );
 }
 
+// =====================================================
 // =====================================================
 // VOLTAGE RECOVERY (FINAL + FALLBACK)
 // =====================================================
@@ -13491,170 +13474,22 @@ if (energyValid) {
 }
 
 // =====================================================
-// 🔴 OVERALL VERDICT — COMPARATIVE PHYSICS
-// A mildly weak sag alone must not classify the whole battery as weak
-// when power, resistance, thermal behaviour and safety indicators are normal.
+// CUSTOMER GUIDANCE: OBSERVATION, NOT CAPACITY LOSS CERTIFICATION
 // =====================================================
-boolean normalAgeingPattern =
-        "Weak".equals(labelSafe) &&
-        !lab14_systemLimited[0] &&
-        collapseRisk != null &&
-        collapseRisk.length > 0 &&
-        !collapseRisk[0] &&
-        !smartSwelling &&
-        calibrationDrift != null &&
-        calibrationDrift.length > 0 &&
-        !calibrationDrift[0] &&
-        powerValid &&
-        res.powerMw >= 3500f &&
-        rValid &&
-        internalResistance[0] <= 0.090f &&
-        tempValid &&
-        !Float.isNaN(deltaTemp) &&
-        deltaTemp < 2.5f;
-
-if (normalAgeingPattern) {
-    labelSafe = "Normal";
-    res.label = "Normal";
-    lab14LastLabel = "Normal";
+boolean observedSag = sagValid && !lab14_systemLimited[0];
+String recommendation = Lab14CustomerGuidance.recommendation(
+        gr, lab14_systemLimited[0], observedSag);
+logLabelWarnValue(gr ? "Σύσταση" : "Recommendation", recommendation);
+logLabelWarnValue(gr ? "Περιορισμός διάγνωσης" : "Diagnostic limitation",
+        gr ? "Η στιγμιαία πτώση τάσης δεν μετρά την πλήρη χωρητικότητα, το SoH ή το αν απαιτείται επέμβαση."
+           : "Short-duration voltage sag does not measure full-charge capacity, SoH or necessity of repair.");
+logLabelWarnValue(gr ? "Σύνοψη" : "Summary",
+        Lab14CustomerGuidance.evidenceLabel(gr, lab14_systemLimited[0], observedSag));
+logLabelValue(gr ? "Ερμηνεία ένδειξης" : "Evidence interpretation",
+        Lab14CustomerGuidance.electricalWarning(gr, observedSag));
 }
 
-// =====================================================
-// 🔴 RECOMMENDATION ENGINE (FINAL — PRIORITIZED)
-// =====================================================
-
-String recommendation;
-
-// 🔴 PRIORITY 1 — LIMITER
-if (lab14_systemLimited[0]) {
-
-    recommendation = gr
-            ? "Η συσκευή περιόρισε το φορτίο (BMS). Συνιστάται επανάληψη υπό διαφορετικές συνθήκες."
-            : "Device limited the load (BMS). Retest under different conditions is recommended.";
-
-// 🔴 PRIORITY 2 — NORMAL AGEING
-} else if (normalAgeingPattern) {
-
-    recommendation = gr
-            ? "Φυσιολογική γήρανση μπαταρίας. Η συνολική ηλεκτρική και θερμική συμπεριφορά παραμένει φυσιολογική. Δεν απαιτείται αντικατάσταση. Συνεχίστε κανονικά τη χρήση της συσκευής."
-            : "Normal battery ageing. Overall electrical and thermal behaviour remains normal. Battery replacement is not required. Continue normal device use.";
-
-// 🔴 PRIORITY 3 — CRITICAL
-} else if ("Critical".equals(labelSafe)) {
-
-    recommendation = gr
-            ? "Συνιστάται άμεσος τεχνικός έλεγχος ή αντικατάσταση μπαταρίας."
-            : "Immediate battery service or replacement is recommended.";
-
-// 🔴 PRIORITY 3 — WEAK
-} else if ("Weak".equals(labelSafe)) {
-
-    recommendation = gr
-            ? "Ενδείξεις αυξημένης φθοράς. Συνιστάται επανάληψη του διαγνωστικού ελέγχου και τεχνική αξιολόγηση. Δεν προτείνεται αντικατάσταση χωρίς επιβεβαιωμένα ευρήματα."
-            : "Increased battery wear indicators detected. A repeat diagnostic test and professional evaluation are recommended. Replacement is not advised without confirmed findings.";
-
-// 🔴 PRIORITY 4 — CALIBRATION
-} else if (calibrationDrift != null && calibrationDrift.length > 0 && calibrationDrift[0]) {
-
-    recommendation = gr
-            ? "Πιθανή απόκλιση βαθμονόμησης. Συνιστάται πλήρης κύκλος φόρτισης/εκφόρτισης."
-            : "Possible calibration drift. Full charge-discharge cycle recommended.";
-
-// 🔴 PRIORITY 5 — UNKNOWN
-} else if ("Unknown".equals(labelSafe)) {
-
-    recommendation = gr
-            ? "Ανεπαρκή δεδομένα για αξιόπιστη διάγνωση."
-            : "Insufficient data for reliable diagnosis.";
-
-// 🔴 DEFAULT — NORMAL
-} else {
-
-    recommendation = gr
-            ? "Η μπαταρία λειτουργεί εντός φυσιολογικών ορίων."
-            : "Battery operates within normal parameters.";
-}
-
-// ----------------------------------------------------
-// 🔴 OUTPUT LEVEL
-// ----------------------------------------------------
-String recLabel = gr ? "Σύσταση" : "Recommendation";
-
-if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
-
-    logLabelErrorValue(recLabel, recommendation);
-
-} else if ("Weak".equals(labelSafe) ||
-           "Unknown".equals(labelSafe) ||
-           (calibrationDrift != null && calibrationDrift.length > 0 && calibrationDrift[0])) {
-
-    logLabelWarnValue(recLabel, recommendation);
-
-} else {
-
-    logLabelOkValue(recLabel, recommendation);
-}
-
-// =====================================================
-// FINAL SUMMARY (SAFE)
-// =====================================================
-
-String summary;
-
-if (lab14_systemLimited[0]) {
-
-    summary = gr
-            ? "Η συσκευή περιόρισε το φορτίο (BMS).\nΔεν είναι δυνατή αξιόπιστη εκτίμηση."
-            : "Device limited the load (BMS).\nReliable estimation is not possible.";
-
-} else if ("Unknown".equals(labelSafe)) {
-
-    summary = gr
-            ? "Ανεπαρκή δεδομένα για διάγνωση."
-            : "Insufficient data for diagnosis.";
-
-} else if (normalAgeingPattern) {
-
-    summary = gr
-            ? "Φυσιολογική γήρανση μπαταρίας — συνεχίστε κανονικά τη χρήση."
-            : "Normal battery ageing — continue normal use.";
-
-} else {
-
-    summary = String.format(
-            Locale.US,
-            gr
-                    ? "Κατάσταση: %s"
-                    : "Status: %s",
-            labelSafe
-    );
-}
-
-// ----------------------------------------------------
-String summaryLabel =
-        gr ? "Σύνοψη" : "Summary";
-
-if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
-
-    logLabelErrorValue(summaryLabel, summary);
-
-} else if ("Weak".equals(labelSafe) ||
-           "Unknown".equals(labelSafe)) {
-
-    logLabelWarnValue(summaryLabel, summary);
-
-} else if ("Excellent".equals(labelSafe) ||
-           "Good".equals(labelSafe) ||
-           "Normal".equals(labelSafe)) {
-
-    logLabelOkValue(summaryLabel, summary);
-
-} else {
-
-    logLabelValue(summaryLabel, summary);
-}
-}
-
+// ============================================================
 // ============================================================
 // LAB 14 — LOG FINAL RESULT (FINAL — SAFE + CONSISTENT)
 // ============================================================
@@ -13667,113 +13502,41 @@ private void lab14LogFinalScore(
         boolean[] calibrationDrift,
         boolean[] lab14_systemLimited
 ) {
-
     appendHtml("<br>");
     logLine();
     logInfo(gr ? "Τελικό αποτέλεσμα" : "Final result");
     logLine();
 
-    String condLabel = gr ? "Κατάσταση μπαταρίας" : "Battery condition";
+    boolean limited = lab14_systemLimited != null
+            && lab14_systemLimited.length > 0 && lab14_systemLimited[0];
+    // Legacy internal score labels are NOT independent battery health evidence.
+    boolean observed = !limited && label != null
+            && !"Unknown".equals(label) && !"Limited".equals(label);
 
-    // 🔴 SAFE LABEL
-    String lbl =
-            (label != null && !label.isEmpty())
-                    ? label
-                    : "Unknown";
+    logLabelWarnValue(gr ? "Ηλεκτρική απόκριση" : "Electrical response",
+            Lab14CustomerGuidance.evidenceLabel(gr, limited, observed));
+    logLabelWarnValue(gr ? "Όρια συμπεράσματος" : "Interpretation limit",
+            gr ? "Η δοκιμή δεν πιστοποιεί απώλεια χωρητικότητας, φθορά κυψελών ή ανάγκη επέμβασης."
+               : "This test does not certify capacity loss, cell wear, or need for intervention.");
 
-    boolean limiter =
-            lab14_systemLimited != null &&
-            lab14_systemLimited.length > 0 &&
-            lab14_systemLimited[0];
-
-    boolean collapse =
-            collapseRisk != null &&
-            collapseRisk.length > 0 &&
-            collapseRisk[0];
-
-    boolean calibration =
-            calibrationDrift != null &&
-            calibrationDrift.length > 0 &&
-            calibrationDrift[0];
-
-    // ----------------------------------------------------
-    // 🔴 MAIN LABEL (WITH LIMITER PRIORITY)
-    // ----------------------------------------------------
-    if (limiter || "Critical".equals(lbl)) {
-
-        logLabelErrorValue(condLabel, lbl);
-
-    } else if ("Weak".equals(lbl) || "Unknown".equals(lbl)) {
-
-        logLabelWarnValue(condLabel, lbl);
-
-    } else if ("Excellent".equals(lbl) ||
-               "Good".equals(lbl) ||
-               "Normal".equals(lbl)) {
-
-        logLabelOkValue(condLabel, lbl);
-
+    if (collapseRisk != null && collapseRisk.length > 0 && collapseRisk[0]) {
+        logLabelWarnValue(gr ? "Σύνθετες ενδείξεις φορτίου" : "Load-response flags",
+                gr ? "Καταγράφηκε ασυνήθιστος συνδυασμός σημάτων· απαιτείται επανάληψη και τεχνική αξιολόγηση."
+                   : "Unusual combination of signals observed; repeat test and seek technician assessment.");
     } else {
-
-        logLabelValue(condLabel, lbl);
+        logLabelValue(gr ? "Κατάρρευση τάσης" : "Voltage collapse",
+                gr ? "Δεν αξιολογείται ως κίνδυνος από αυτή τη δοκιμή"
+                   : "Failure risk not assessed by this test");
     }
-
-    // ----------------------------------------------------
-    // 🔴 COLLAPSE
-    // ----------------------------------------------------
-    logLabelValue(
-            gr ? "Κατάρρευση τάσης" : "Voltage collapse",
-            collapse
-                    ? (gr ? "Υψηλός κίνδυνος" : "High risk")
-                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
-    );
-
-    // ----------------------------------------------------
-    // 🔴 SWELLING
-    // ----------------------------------------------------
-    if (smartSwelling) {
-
-        logLabelWarnValue(
-                gr ? "Διόγκωση μπαταρίας" : "Battery swelling",
-                gr
-                        ? "Πιθανές ενδείξεις — απαιτείται έλεγχος"
-                        : "Possible indicators — verification recommended"
-        );
-
-    } else {
-
-        logLabelValue(
-                gr ? "Διόγκωση μπαταρίας" : "Battery swelling",
-                gr
-                        ? "Δεν εντοπίστηκαν αξιόπιστες ενδείξεις"
-                        : "No reliable indicators detected"
-        );
-    }
-
-    // ----------------------------------------------------
-    // 🔴 CALIBRATION
-    // ----------------------------------------------------
-    logLabelValue(
-            gr ? "Απόκλιση βαθμονόμησης" : "Calibration drift",
-            calibration
-                    ? (gr ? "Εντοπίστηκε" : "Detected")
-                    : (gr ? "Κανονική" : "Normal")
-    );
-
-    // ----------------------------------------------------
-    // 🔴 SYSTEM LIMIT
-    // ----------------------------------------------------
-    if (limiter) {
-
-        logLabelWarnValue(
-                gr ? "Περιορισμός συστήματος" : "System limitation",
-                gr
-                        ? "Το BMS περιόρισε το ρεύμα — μειωμένη αξιοπιστία"
-                        : "BMS current limiting detected — reduced accuracy"
-        );
-    }
+    logLabelWarnValue(gr ? "Διόγκωση / ακεραιότητα κυψελών"
+                         : "Swelling / cell integrity",
+            Lab14CustomerGuidance.unverifiedCellCondition(gr));
+    logLabelWarnValue(gr ? "Βαθμονόμηση" : "Calibration",
+            gr ? "Δεν επιβεβαιώνεται ανεξάρτητα από την παρούσα δοκιμή."
+               : "Not independently verified by this test.");
 }
 
+// ============================================================
 // ============================================================
 // LAB 14 — LOG SAVE (FINAL — SAFE + STRICT)
 // ============================================================
@@ -14646,16 +14409,13 @@ if (!hasReliableSag) {
 
     lab14LastLabel = res.label;
 
-    String sagText = String.format(
-            Locale.US,
-            "%.3f V (%s)",
-            finalSag,
-            sagLabel
-    );
+    // Do not stamp the measured sag with an uncalibrated health grade.
+    String sagText = Lab14CustomerGuidance.voltageReading(finalSag, gr);
 
     if ("Critical".equals(sagLabel)) {
 
-        logLabelErrorValue(
+        // Elevated *observation* merits review, not a certified emergency.
+        logLabelWarnValue(
                 gr ? "Πτώση τάσης υπό φορτίο"
                    : "Voltage sag under load",
                 sagText
@@ -16005,8 +15765,8 @@ if (hasSag &&
         logLabelWarnValue(
             gr ? "Διάγνωση":"Diagnosis",
             gr
-              ? "Έντονη πτώση τάσης — πιθανή φθορά κυψελών"
-              : "Severe voltage sag — degraded battery cells"
+              ? "Έντονη παρατηρούμενη πτώση τάσης — συνιστάται επανάληψη και τεχνικός έλεγχος"
+              : "Large observed voltage drop — repeat testing and technician inspection"
         );
 
     } else if (finalSag > 0.10f) {
@@ -16014,8 +15774,8 @@ if (hasSag &&
         logLabelWarnValue(
             gr ? "Διάγνωση":"Diagnosis",
             gr
-              ? "Αυξημένη πτώση τάσης — πιθανή γήρανση"
-              : "Elevated voltage sag — possible aging"
+              ? "Αυξημένη παρατηρούμενη πτώση τάσης — η πιθανή γήρανση δεν επιβεβαιώνεται"
+              : "Elevated observed voltage sag — battery aging is not confirmed"
         );
 
     } else {
@@ -16040,105 +15800,16 @@ if (hasSag &&
 }
                            
 // =====================================================
-// 🔴 STRUCTURAL INTEGRITY (FINAL — SAG BASED ONLY)
+// CELL / STRUCTURAL CONDITION REQUIRES PHYSICAL OR OEM EVIDENCE
 // =====================================================
-
-if (hasSag &&
-    validDrain &&
-    !lab14_systemLimited[0] &&
-    finalSag >= 0.02f &&
-    finalSag < 1.0f) {
-
-    String siText;
-
-    if (finalSag < 0.05f) {
-
-        siText = gr
-                ? "Καλή δομική σταθερότητα"
-                : "Good structural integrity";
-
-        logLabelOkValue(
-                gr ? "Δομική ακεραιότητα μπαταρίας"
-                   : "Battery structural integrity",
-                siText
-        );
-
-    } else if (finalSag < 0.12f) {
-
-        siText = gr
-                ? "Μέτρια δομική κατάσταση"
-                : "Moderate structural condition";
-
-        logLabelValue(
-                gr ? "Δομική ακεραιότητα μπαταρίας"
-                   : "Battery structural integrity",
-                siText
-        );
-
-    } else {
-
-        siText = gr
-                ? "Πιθανή φθορά κυψελών"
-                : "Possible cell degradation";
-
-        logLabelWarnValue(
-                gr ? "Δομική ακεραιότητα μπαταρίας"
-                   : "Battery structural integrity",
-                siText
-        );
-    }
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Δομική ακεραιότητα μπαταρίας"
-               : "Battery structural integrity",
-            gr
-                    ? "Ανεπαρκή δεδομένα"
-                    : "Insufficient data"
-    );
-}
+logLabelWarnValue(gr ? "Δομική ακεραιότητα μπαταρίας"
+                     : "Battery structural integrity",
+        Lab14CustomerGuidance.unverifiedCellCondition(gr));
+logLabelWarnValue(gr ? "Ισορροπία κυψελών μπαταρίας"
+                     : "Battery cell balance",
+        Lab14CustomerGuidance.unverifiedCellCondition(gr));
 
 // =====================================================
-// 🔴 CELL BALANCE (FINAL - no legacy sag1/sag2)
-// =====================================================
-
-if (hasSag &&
-    validDrain &&
-    !lab14_systemLimited[0]) {
-
-    if (cellImbalanceRisk[0]) {
-
-        logLabelWarnValue(
-                gr ? "Ισορροπία κυψελών μπαταρίας"
-                   : "Battery cell balance",
-                gr
-                        ? "Εντοπίστηκε πιθανή ασυμμετρία κυψελών"
-                        : "Possible lithium cell imbalance detected"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Ισορροπία κυψελών μπαταρίας"
-                   : "Battery cell balance",
-                gr
-                        ? "Δεν εντοπίστηκε ανισορροπία"
-                        : "No imbalance detected"
-        );
-    }
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Ισορροπία κυψελών μπαταρίας"
-               : "Battery cell balance",
-            gr
-                    ? "Ανεπαρκή δεδομένα"
-                    : "Insufficient data"
-    );
-}
-
 // =====================================================
 // BATTERY BEHAVIOUR (FINAL SAFE)
 // =====================================================
