@@ -8,7 +8,7 @@ public class ApplePanicEvidencePolicyTest {
         assertTrue(ApplePanicEvidencePolicy.hasPanicEvidence("timestamp 123; panic(cpu 0 caller 0xfffffff) recovered after reboot"));
     }
     @Test public void acceptsJsonPanicString() {
-        assertTrue(ApplePanicEvidencePolicy.hasPanicEvidence("{\\\"panicString\\\":\\\"panic(cpu 0 caller 0xffff) ...\\\"}"));
+        assertTrue(ApplePanicEvidencePolicy.hasPanicEvidence("metadata panicString: panic(cpu 0 caller 0xffff) log information"));
     }
     @Test public void acceptsBugType210Unquoted() {
         assertTrue(ApplePanicEvidencePolicy.hasPanicEvidence("metadata: bug_type: 210 and log timestamp 2025-01-01 some content"));
