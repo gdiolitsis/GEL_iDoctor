@@ -767,7 +767,7 @@ View.OnClickListener toggle = v -> {
 private void resetSignatureCache() {
     sigCrashType  = "Unknown";
     sigDomain     = "Unknown";
-    sigConfidence = "Low";
+    sigConfidence = "Unverified";
 }
 
 @Override
@@ -1430,8 +1430,8 @@ private void runPanicLogAnalyzer() {
 logLabelOkValue(
         gr ? "Τι σημαίνει αυτό:" : "What this means:",
         gr
-                ? "Το log είναι έγκυρο αλλά δεν αντιστοιχεί σε προκαθορισμένο μοτίβο crash."
-                : "The log is valid but does not match a predefined crash pattern."
+                ? "Δεν αντιστοιχήθηκε γνωστός κανόνας. Δεν αποδεικνύεται ότι η συσκευή είναι υγιής."
+                : "No known rule matched; this does not establish device health."
 );
 
 logLabelOkValue(
@@ -1474,7 +1474,7 @@ logLabelWarnValue(
 );
 
 logLabelOkValue(
-        gr ? "Αναφερόμενη Αιτία:" : "Reported Cause:",
+        gr ? "Υπόθεση μοτίβου (όχι διάγνωση):" : "Pattern hypothesis (not diagnosed):",
         safe(r.cause)
 );
 
@@ -1520,7 +1520,7 @@ else {
 
 logLabelOkValue(
         gr ? "Αρχική Σύσταση:" : "Initial Recommendation:",
-        safe(r.recommendation)
+        ApplePanicEvidencePolicy.recommendation(gr)
 );
 
 logLabelOkValue(
@@ -1699,8 +1699,8 @@ private void runStabilityLab() {
 } else {
 
     logOk(gr
-            ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις συνεχιζόμενης αστάθειας."
-            : "No strong indicators of ongoing system instability found.");
+            ? "Η συνολική σταθερότητα δεν προσδιορίζεται μόνο από τα εισαγόμενα logs."
+            : "Overall stability cannot be determined from imported logs alone.");
 }
 
 logLabelOkValue(
@@ -1790,8 +1790,8 @@ if ("Power / PMIC".equals(sigDomain)
     logLabelErrorValue(
             gr ? "Τεχνική ένδειξη:" : "Technical indication:",
             gr
-                    ? "Υποδεικνύεται κρίσιμη διαδρομή σχετιζόμενη με hardware."
-                    : "A critical hardware-related path is suggested."
+                    ? "Εμφανίστηκε όρος σχετικός με υποσύστημα, όχι επιβεβαίωση βλάβης."
+                    : "A subsystem-related term was observed; a defect is unverified."
     );
 
     logLabelWarnValue(
@@ -1944,7 +1944,7 @@ for (String k : domainCount.keySet()) {
 
     if (count >= 2) {
 
-        logLabelErrorValue(
+        logLabelWarnValue(
                 safe(k) + ":",
                 String.valueOf(count)
         );
@@ -2042,8 +2042,8 @@ private void runRecurringDomainLab() {
 
         if (isHighRiskDomain(dominant)) {
             logError(gr
-                    ? "Εντοπίστηκε ισχυρό επαναλαμβανόμενο hardware pattern."
-                    : "Strong recurring hardware pattern detected.");
+                    ? "Εμφανίστηκε επανάληψη ενδεικτικών όρων, όχι επιβεβαιωμένη βλάβη υλικού."
+                    : "Repeated subsystem hints were found, not a confirmed hardware fault.");
         } else {
             logWarn(gr
                     ? "Εντοπίστηκε επαναλαμβανόμενο μοτίβο domain."
@@ -2702,9 +2702,8 @@ if (isGpu)                   { points += 20; evAppend(ev, "gpu/agx"); }
 if (isThermal)               { points += 20; evAppend(ev, "thermal"); }
 if (isJetsam)                { points += 20; evAppend(ev, "jetsam"); }
 
-        if (points >= 70) sigConfidence = "High";
-        else if (points >= 40) sigConfidence = "Medium";
-        else sigConfidence = "Low";
+        // Token-count is not validated diagnostic certainty.
+        sigConfidence = ApplePanicEvidencePolicy.patternConfidence();
 
         sigKeyEvidence = ev.toString();
         if (sigKeyEvidence.endsWith(", ")) sigKeyEvidence = sigKeyEvidence.substring(0, sigKeyEvidence.length() - 2);
