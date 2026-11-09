@@ -483,6 +483,8 @@ final float[] batterySOH = {Float.NaN};
     private final int REQ_LAB6_TOUCH = 6006;
     private final int REQ_LAB6_COLOR = 6007;
     private final int REQ_LAB13_BT_CONNECT = 1313;
+    private static final int REQ_LAB12_DIALER = 12120;
+    private boolean lab12DialerPending = false;
 
     private AlertDialog lab14RunningDialog;
     
@@ -598,6 +600,9 @@ private boolean lab15PopupShown = false;
     private String pendingTtsText;
     
     private boolean lab6ProCanceled = false;
+    // Only true when the CURRENT run returned a fresh 96-zone grid result.
+    // Never infer this from TouchGridTestActivity's legacy static fields.
+    private boolean lab6TouchGridObserved = false;
     
 // ============================================================
 // BATTERY SCORE STATE
@@ -683,6 +688,7 @@ private boolean oldKeepScreenOn = false;
     // ============================================================
     private ArrayList<Lab8Cam> lab8CamsFor81 = null;
     private CameraManager lab8CmFor81 = null;
+private AlertDialog lab8ActiveDialog = null;
     private final Map<String, Integer> lab8CameraLogAnchors = new HashMap<>();
 
     // ============================================================
@@ -690,39 +696,27 @@ private boolean oldKeepScreenOn = false;
     // ============================================================
     private final BroadcastReceiver lab13BtReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context c, Intent i) {
-
-            if (!lab13Running && !lab13MonitoringStarted) {
-
-                String a = i.getAction();
-
-                if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(a)) {
-
-                    lab13ReceiverSawConnection = true;
-                    lab13HadAnyConnection = true;
-
-                    final boolean gr = AppLang.isGreek(c);
-
+        public void onReceive(Context context, Intent intent) {
+            if (!lab13Running && !lab13WaitingForExternal) return;
+            if (intent == null) return;
+            String action = intent.getAction();
+            if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                lab13ReceiverSawConnection = true;
+                lab13HadAnyConnection = true;
+                if (lab13WaitingForExternal && !lab13MonitoringStarted) {
+                    lab13WaitingForExternal = false;
                     if (lab13StatusText != null) {
                         lab13StatusText.setText(
-                                gr
-                                        ? "Συνδέθηκε εξωτερική συσκευή Bluetooth. Εκκίνηση παρακολούθησης..."
-                                        : "External Bluetooth device connected. Starting monitor..."
-                        );
+                                AppLang.isGreek(context)
+                                    ? "Παρατηρήθηκε Bluetooth ACL σύνδεση — αρχίζει η δειγματοληψία"
+                                    : "Bluetooth ACL connection observed — sampling begins");
                     }
-
-                    if (!lab13WaitTtsPlayed && !AppTTS.isMuted(c)) {
-                        lab13WaitTtsPlayed = true;
-                        AppTTS.ensureSpeak(
-                                c,
-                                gr
-                                        ? "Εντοπίστηκε σύνδεση Bluetooth. Ξεκινά η παρακολούθηση."
-                                        : "Bluetooth connection detected. Monitoring started."
-                        );
-                    }
-
                     startLab13Monitor60s();
                 }
+            } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
+                // The old receiver never set this flag. ACL events are
+                // aggregate and may involve a DIFFERENT paired device.
+                if (lab13Running) lab13ReceiverSawDisconnection = true;
             }
         }
     };
@@ -1191,6 +1185,10 @@ private final Handler lab13Handler =
 // ============================================================
 private volatile boolean lab13ReceiverSawConnection = false;
 private volatile boolean lab13ReceiverSawDisconnection = false;
+private volatile boolean lab13WaitingForExternal = false;
+private boolean lab13AdapterObservedThroughout = true;
+private int lab13AmbiguousTransitions = 0;
+private int lab13MonitorGeneration = 0;
 
 // ============================================================
 // LAB 15 — FLAGS (DO NOT MOVE)
@@ -1225,15 +1223,32 @@ private static final int LAB15_TOTAL_SECONDS = 180;
 // ============================================================  
 // TELEPHONY SNAPSHOT — Passive system probe (no side effects)  
 // ============================================================  
-private static class TelephonySnapshot {  
-    boolean airplaneOn = false;  
-    int simState = TelephonyManager.SIM_STATE_UNKNOWN;  
-    boolean simReady = false;  
-    int serviceState = ServiceState.STATE_OUT_OF_SERVICE;  
-    boolean inService = false;  
-    int dataState = TelephonyManager.DATA_UNKNOWN;  
-    boolean hasInternet = false;  
-}  
+private static class TelephonySnapshot {
+    boolean airplaneOn = false;
+    int simState = TelephonyManager.SIM_STATE_UNKNOWN;
+    boolean simReady = false;
+    boolean simStateKnown = false;
+    int serviceState = ServiceState.STATE_OUT_OF_SERVICE; // legacy consumer only
+    boolean inService = false;
+    boolean serviceKnown = false;
+    int dataState = TelephonyManager.DATA_UNKNOWN;
+    boolean dataStateKnown = false;
+    boolean signalLevelKnown = false;
+    int signalLevel = -1; // Android coarse 0..4, NOT measured dBm or modem health
+
+    // Legacy is "INTERNET capability advertised", NOT validated reachability.
+    // Lab 11 must never use this field to judge cellular connectivity.
+    boolean hasInternet = false;
+
+    boolean defaultNetworkPresent = false;
+    boolean defaultCapsKnown = false;
+    boolean defaultInternetAdvertised = false;
+    boolean defaultValidated = false;
+    boolean defaultCellular = false;
+    boolean defaultWifi = false;
+    boolean defaultVpn = false;
+    boolean defaultCaptivePortal = false;
+}
 
 // ================= SNAPSHOTS CONTAINERS =================  
 
@@ -2377,6 +2392,19 @@ protected void onPause() {
         if (dialog != null && dialog.isShowing()) dialog.dismiss();
     } catch (RuntimeException ignored) {}
 
+    // Camera2 guided preview cannot be certified by an answer on resume.
+    try {
+        AlertDialog cameraDialog = lab8ActiveDialog;
+        lab8ActiveDialog = null;
+        if (cameraDialog != null && cameraDialog.isShowing()) cameraDialog.dismiss();
+    } catch (RuntimeException ignored) {}
+
+    // Lab13 external monitoring is foreground-only; background/rotation
+    // must not later report an old partial sample as a 60-second success.
+    if (lab13Running || lab13WaitingForExternal) {
+        abortLab13ByUser();
+    }
+
     // =========================
     // LAB 14 / 14B
     // =========================
@@ -2421,6 +2449,10 @@ protected void onDestroy() {
         }
     } catch (Throwable ignore) {}
 
+    lab13Running = false;
+    lab13WaitingForExternal = false;
+    lab13MonitorGeneration++;
+    lab13Handler.removeCallbacksAndMessages(null);
     try {
         unregisterReceiver(lab13BtReceiver);
     } catch (Throwable ignore) {}
@@ -3661,22 +3693,40 @@ TelephonyManager tm =
 
 if (tm != null) {  
     try {  
-        s.simState = tm.getSimState();  
-        s.simReady = (s.simState == TelephonyManager.SIM_STATE_READY);  
+        s.simState = tm.getSimState();
+        s.simStateKnown = (s.simState != TelephonyManager.SIM_STATE_UNKNOWN);
+        s.simReady = s.simStateKnown
+                && s.simState == TelephonyManager.SIM_STATE_READY;  
     } catch (Throwable ignored) {}  
 
     try {  
         ServiceState ss = tm.getServiceState();  
         if (ss != null) {  
-            s.serviceState = ss.getState();  
+            s.serviceState = ss.getState();
+            s.serviceKnown = true;
             s.inService =  
                     (s.serviceState == ServiceState.STATE_IN_SERVICE);  
         }  
     } catch (Throwable ignored) {}  
 
     try {  
-        s.dataState = tm.getDataState();  
+        s.dataState = tm.getDataState();
+        s.dataStateKnown = s.dataState != TelephonyManager.DATA_UNKNOWN;  
     } catch (Throwable ignored) {}  
+    // Cached/OS-reported signal level on API28+. Absence is not zero signal.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        try {
+            android.telephony.SignalStrength strength = tm.getSignalStrength();
+            if (strength != null) {
+                int level = strength.getLevel();
+                if (level >= 0 && level <= 4) {
+                    s.signalLevel = level;
+                    s.signalLevelKnown = true;
+                }
+            }
+        } catch (RuntimeException ignored) {}
+    }
+
 }  
 
 ConnectivityManager cm =  
@@ -3685,14 +3735,28 @@ ConnectivityManager cm =
 if (cm != null) {  
     try {  
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {  
-            Network n = cm.getActiveNetwork();  
-            NetworkCapabilities caps =  
-                    cm.getNetworkCapabilities(n);  
-            s.hasInternet =  
-                    caps != null &&  
-                    caps.hasCapability(  
-                            NetworkCapabilities.NET_CAPABILITY_INTERNET  
-                    );  
+            Network n = cm.getActiveNetwork();
+            s.defaultNetworkPresent = n != null;
+            NetworkCapabilities caps = n == null ? null
+                    : cm.getNetworkCapabilities(n);
+            s.defaultCapsKnown = caps != null;
+            if (caps != null) {
+                s.defaultInternetAdvertised = caps.hasCapability(
+                        NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                s.defaultValidated = caps.hasCapability(
+                        NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                s.defaultCellular = caps.hasTransport(
+                        NetworkCapabilities.TRANSPORT_CELLULAR);
+                s.defaultWifi = caps.hasTransport(
+                        NetworkCapabilities.TRANSPORT_WIFI);
+                s.defaultVpn = caps.hasTransport(
+                        NetworkCapabilities.TRANSPORT_VPN);
+                s.defaultCaptivePortal = caps.hasCapability(
+                        NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL);
+                // Keep legacy meaning for Lab 12. Its own scope will be
+                // addressed separately; do not silently reinterpret it here.
+                s.hasInternet = s.defaultInternetAdvertised;
+            }  
         }  
     } catch (Throwable ignored) {}  
 }  
@@ -8002,6 +8066,7 @@ private void lab5Vibration() {
 // FINAL — LIFECYCLE SAFE
 // ============================================================
 private void lab6DisplayTouch() {
+    lab6TouchGridObserved = false;
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -8128,9 +8193,13 @@ startBtn.setOnClickListener(v -> {
     AppTTS.stop();
     d.dismiss();
 
+    if (btnExport != null) {
+        btnExport.setEnabled(false);
+        btnExport.setAlpha(0.5f);
+    }
     startActivityForResult(
             new Intent(this, TouchGridTestActivity.class),
-            6006
+            REQ_LAB6_TOUCH
     );
 });
 
@@ -8730,15 +8799,15 @@ private void lab8RunNextCamera(
         logLabelValue(
                 gr ? "Προσβάσιμες κάμερες που ελέγχθηκαν"
                    : "Accessible cameras tested",
-                String.valueOf(overall.total)
+                String.valueOf(overall.previewOkCount + overall.previewFailCount + overall.previewUnavailableCount + overall.previewInconclusiveCount)
         );
 
         logInfo(
                 gr
-                        ? "Ελέγχθηκαν όλες οι κάμερες που ήταν διαθέσιμες "
-                          + "στην εφαρμογή μέσω Android Camera2."
-                        : "All cameras available to the application through "
-                          + "Android Camera2 were tested."
+                        ? "Έγινε προσπάθεια ελέγχου των προσβάσιμων καμερών· "
+                          + "η πλήρης κάλυψη εξαρτάται από τα πραγματικά καρέ."
+                        : "Accessible cameras were attempted; coverage depends "
+                          + "on frames actually sampled."
         );
 
         logWarn(
@@ -8760,43 +8829,30 @@ private void lab8RunNextCamera(
                     overall.previewOkCount + "/" + overall.total
             );
 
-        if (overall.previewFailCount == 0)
-            logLabelOkValue(
-                    gr ? "Αποτυχίες προεπισκόπησης" : "Preview FAIL",
-                    "0"
-            );
-        else
-            logLabelErrorValue(
-                    gr ? "Αποτυχίες προεπισκόπησης" : "Preview FAIL",
-                    String.valueOf(overall.previewFailCount)
-            );
+        logLabelValue(
+                gr ? "Ο χρήστης δεν είδε εικόνα" : "User reported no image",
+                String.valueOf(overall.previewFailCount)
+        );
+        logLabelValue(
+                gr ? "Camera2 μη διαθέσιμη" : "Camera2 unavailable",
+                String.valueOf(overall.previewUnavailableCount)
+        );
+        logLabelValue(
+                gr ? "Ανεπαρκή στοιχεία" : "Inconclusive observations",
+                String.valueOf(overall.previewInconclusiveCount)
+        );
 
-        if (overall.torchOkCount > 0)
-            logLabelOkValue(
-                    gr ? "Φλας OK" : "Torch OK",
-                    String.valueOf(overall.torchOkCount)
-            );
-        else
-            logLabelWarnValue(
-                    gr ? "Φλας OK" : "Torch OK",
-                    "0"
-            );
-
-        if (overall.torchFailCount == 0)
-            logLabelOkValue(
-                    gr ? "Αποτυχίες φλας" : "Torch FAIL",
-                    "0"
-            );
-        else
-            logLabelWarnValue(
-                    gr ? "Αποτυχίες φλας" : "Torch FAIL",
-                    String.valueOf(overall.torchFailCount)
-            );
+        logLabelValue(gr ? "Εντολές Torch που έγιναν δεκτές" : "Torch commands accepted",
+                String.valueOf(overall.torchOkCount));
+        logLabelValue(gr ? "Εντολές Torch μη διαθέσιμες" : "Torch commands unavailable",
+                String.valueOf(overall.torchFailCount));
+        logInfo(gr ? "Αποδοχή εντολής δεν αποδεικνύει εκπομπή φωτός από LED."
+                   : "A successful command does not prove physical LED emission.");
 
         if (overall.streamIssueCount == 0)
-            logLabelOkValue(
-                    gr ? "Προβλήματα ροής καρέ" : "Frame stream issues",
-                    gr ? "Κανένα" : "None detected"
+            logLabelValue(
+                    gr ? "Επισημάνσεις ροής καρέ" : "Frame stream flags",
+                    gr ? "Δεν καταγράφηκαν στο διαθέσιμο δείγμα" : "None flagged in sampled evidence"
             );
         else
             logLabelWarnValue(
@@ -8815,8 +8871,8 @@ private void lab8RunNextCamera(
         if (cameraSubsystemOk) {
 
             logLabelOkValue(
-                    gr ? "Υποσύστημα κάμερας" : "Camera subsystem",
-                    gr ? "Λειτουργικό" : "Operational"
+                    gr ? "Παρατηρήσεις προεπισκόπησης" : "Guided preview observations",
+                    gr ? "Επαρκείς για το περιορισμένο πρωτόκολλο" : "Sufficient for scoped preview protocol"
             );
 
             if (overall.streamIssueCount == 0)
@@ -8830,18 +8886,9 @@ private void lab8RunNextCamera(
                         gr ? "Μικρές ανωμαλίες" : "Minor anomalies detected"
                 );
 
-            if (overall.torchFailCount == 0)
-                logLabelOkValue(
-                        gr ? "Υποσύστημα φλας" : "Flash subsystem",
-                        gr ? "OK (όπου υπάρχει)" : "OK (where available)"
-                );
-            else
-                logLabelWarnValue(
-                        gr ? "Υποσύστημα φλας" : "Flash subsystem",
-                        gr
-                                ? "Ορισμένες κάμερες χωρίς φλας ή με πρόβλημα"
-                                : "Some cameras have no flash / torch issues"
-                );
+            logLabelValue(gr ? "Torch — κατάσταση" : "Torch — status",
+                    gr ? "Παρατηρήθηκαν μόνο αποτελέσματα εντολών Android"
+                       : "Only Android command outcomes observed");
 
             logOk(
                     gr
@@ -8865,14 +8912,14 @@ private void lab8RunNextCamera(
         } else {
 
             logLabelErrorValue(
-                    gr ? "Υποσύστημα κάμερας" : "Camera subsystem",
-                    gr ? "ΜΗ αξιόπιστο" : "NOT reliable"
+                    gr ? "Παρατηρήσεις προεπισκόπησης" : "Guided preview observations",
+                    gr ? "ΜΕΡΙΚΕΣ / ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΕΣ" : "PARTIAL / UNVERIFIED"
             );
 
             logError(
                     gr
-                            ? "Μία ή περισσότερες κάμερες απέτυχαν στον βασικό έλεγχο."
-                            : "One or more cameras failed basic operation checks."
+                            ? "Δεν συλλέχθηκαν επαρκείς ενδείξεις από όλες τις κάμερες. Δεν τεκμηριώνεται βλάβη."
+                            : "Not all cameras yielded sufficient evidence. Hardware failure is not established."
             );
 
             appendHtml("<br>");
@@ -8964,12 +9011,12 @@ private void lab8TryTorchToggle(String camId, Lab8Cam cam, Lab8Overall overall) 
         SystemClock.sleep(250);
         cm.setTorchMode(camId, false);
 
-        logLabelOkValue("Flash", "Torch toggled successfully");
+        logLabelValue("Flash", "Android accepted torch on/off commands — light not measured");
         overall.torchOkCount++;
 
     } catch (Throwable t) {
-        logLabelErrorValue("Flash", "Torch control failed");
-        logWarn("Possible flash hardware, driver, or permission issue.");
+        logLabelWarnValue("Flash", "Torch command unavailable in current conditions");
+        logWarn("Permission, camera-in-use, device policy and OEM limits remain possible.");
         overall.torchFailCount++;
     }
 }
@@ -9110,9 +9157,23 @@ if (d.getWindow() != null) {
     );
 }
 
+// Keep the active preview separately so backgrounding can invalidate it.
+lab8ActiveDialog = d;
 // Σταμάτα TTS ΟΠΟΤΕ κλείσει
 d.setOnDismissListener(dialog -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
+    if (lab8ActiveDialog == d) lab8ActiveDialog = null;
+    Lab8Session abandoned = cam.runtimeSession;
+    if (abandoned != null && !abandoned.terminal) {
+        // BACK, background or dismiss cannot leave an orphaned Camera2 resource.
+        abandoned.cancelled = true;
+        abandoned.terminal = true;
+        lab8CloseSession(abandoned);
+        logLabelWarnValue(gr ? "Προεπισκόπηση" : "Preview",
+                gr ? "Διακόπηκε — κανένα συμπέρασμα υλικού"
+                   : "Interrupted — no camera hardware verdict");
+        enableSingleExportButton();
+    }
 });
 
 // Κάλυψη BACK button
@@ -9157,6 +9218,7 @@ cam.runtimeSession = s;
 
     Runnable finishAndNext = () -> {
         if (finished.getAndSet(true)) return;
+        s.terminal = true;
         try { lab8CloseSession(s); } catch (Throwable ignore) {}
         try { d.dismiss(); } catch (Throwable ignore) {}
         onDone.run();
@@ -9164,39 +9226,53 @@ cam.runtimeSession = s;
 
     // After sampling window, enable buttons
     Runnable enableButtons = () -> {
-        if (finished.get()) return;
+        if (finished.get() || s.terminal || s.cancelled || !s.samplingComplete) return;
         yes.setEnabled(true);
         no.setEnabled(true);
     };
 
-    yes.setOnClickListener(v -> {
-    AppTTS.stop();
-    overall.previewOkCount++;
-    s.userConfirmedPreview = Boolean.TRUE;
-    finishAndNext.run();
-});
+    Runnable failAndNext = () -> {
+        if (finished.get() || s.cancelled || s.terminal) return;
+        overall.previewUnavailableCount++;
+        overall.streamIssueCount++;
+        logLabelWarnValue(gr ? "Camera2" : "Camera2",
+                gr ? "Μη διαθέσιμη δοκιμή — όχι διάγνωση βλάβης"
+                   : "Capture unavailable — no hardware-failure verdict");
+        finishAndNext.run();
+    };
 
-no.setOnClickListener(v -> {
-    AppTTS.stop();
-    overall.previewFailCount++;
-    s.userConfirmedPreview = Boolean.FALSE;
-    finishAndNext.run();
-});
+    yes.setOnClickListener(v -> {
+        if (finished.get() || !s.samplingComplete || s.cancelled) return;
+        AppTTS.stop();
+        s.userConfirmedPreview = Boolean.TRUE;
+        lab8FinalizePreviewOutcome(s, overall);
+        finishAndNext.run();
+    });
+
+    no.setOnClickListener(v -> {
+        if (finished.get() || !s.samplingComplete || s.cancelled) return;
+        AppTTS.stop();
+        s.userConfirmedPreview = Boolean.FALSE;
+        lab8FinalizePreviewOutcome(s, overall);
+        finishAndNext.run();
+    });
+
+    // A missing surface/slow OEM callback must not leave this dialog alive
+    // indefinitely. Timeout is test unavailability, not hardware failure.
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        if (!finished.get() && !s.samplingComplete && !s.terminal) {
+            failAndNext.run();
+        }
+    }, 20000);
 
     // Start camera when texture is ready
     if (tv.isAvailable()) {
-        lab8StartCamera2Session(s, overall, enableButtons, () -> {
-            overall.streamIssueCount++;
-            enableButtons.run();
-        });
+        lab8StartCamera2Session(s, overall, enableButtons, failAndNext);
     } else {
         tv.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) {
                 if (finished.get()) return;
-                lab8StartCamera2Session(s, overall, enableButtons, () -> {
-                    overall.streamIssueCount++;
-                    enableButtons.run();
-                });
+                lab8StartCamera2Session(s, overall, enableButtons, failAndNext);
             }
             @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int h) {}
             @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture st) { return true; }
@@ -9298,6 +9374,7 @@ private void lab8StartCamera2Session(
                     }
 
                     if (count > 0) {
+                        s.validLumaFrames++;
                         int mean = (int) (sum / count);
                         s.sumLuma += sum;
                         s.sumLuma2 += sum2;
@@ -9328,6 +9405,10 @@ s.cm.openCamera(s.camId, new CameraDevice.StateCallback() {
 
     @Override
     public void onOpened(CameraDevice camera) {
+        if (s.cancelled || s.terminal) {
+            try { camera.close(); } catch (RuntimeException ignored) {}
+            return;
+        }
         s.device = camera;
 
         try {
@@ -9341,6 +9422,10 @@ s.cm.openCamera(s.camId, new CameraDevice.StateCallback() {
 
                         @Override
                         public void onConfigured(CameraCaptureSession session) {
+                            if (s.cancelled || s.terminal) {
+                                try { session.close(); } catch (RuntimeException ignored) {}
+                                return;
+                            }
                             s.session = session;
 
                             try {
@@ -9378,11 +9463,17 @@ s.cm.openCamera(s.camId, new CameraDevice.StateCallback() {
                                         null,
                                         new Handler(Looper.getMainLooper())
                                 );
+                                s.repeatingRequestStarted = true;
 
                                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                    if (s.terminal || s.cancelled) return;
                                     try {
                                         lab8StopAndReportSample(s, overall);
-                                    } catch (Throwable ignore) {}
+                                        s.samplingComplete = true;
+                                    } catch (RuntimeException e) {
+                                        onFail.run();
+                                        return;
+                                    }
                                     onSamplingDoneEnableButtons.run();
                                 }, 5000);
 
@@ -9483,9 +9574,9 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                 String.valueOf(s.frames)
         );
     else
-        logLabelErrorValue(
+        logLabelWarnValue(
                 gr ? "Καρέ" : "Frames",
-                "0"
+                gr ? "0 — άγνωστη λειτουργία ροής" : "0 — no stream evidence"
         );
 
     if (fps >= 20f)
@@ -9499,8 +9590,8 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                 String.format(Locale.US, "%.1f", fps)
         );
 
-    if (s.droppedFrames == 0)
-        logLabelOkValue(
+    if (s.frames > 0 && s.droppedFrames == 0)
+        logLabelValue(
                 gr ? "Απώλειες καρέ / timeouts" : "Frame drops / timeouts",
                 "0"
         );
@@ -9510,8 +9601,8 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                 String.valueOf(s.droppedFrames)
         );
 
-    if (s.blackFrames == 0)
-        logLabelOkValue(
+    if (s.frames > 0 && s.blackFrames == 0)
+        logLabelValue(
                 gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
                 "0"
         );
@@ -9559,55 +9650,52 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
         logLabelWarnValue(
                 gr ? "Υποστήριξη RAW" : "RAW support",
                 gr
-                        ? "ΟΧΙ — μόνο JPEG"
-                        : "NO — professional uncompressed photos not supported (JPEG only)"
+                        ? "RAW δεν δηλώθηκε — άλλες μορφές εξόδου πιθανές"
+                        : "RAW not advertised; alternate output formats may be available"
         );
 
-    // User confirmation
-    if (s.userConfirmedPreview != null) {
-        if (s.userConfirmedPreview)
-            logLabelOkValue(
-                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                    gr ? "Η προεπισκόπηση ήταν ορατή" : "Live preview visible"
-            );
-        else
-            logLabelErrorValue(
-                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                    gr ? "Η προεπισκόπηση ΔΕΝ ήταν ορατή" : "Preview NOT visible"
-            );
-    }
-
-    // ------------------------------------------------------------
-    // Final verdict (per camera)
-    // ------------------------------------------------------------
-    boolean ok =
-            (s.frames > 0) &&
-            (s.blackFrames == 0) &&
-            (s.droppedFrames == 0) &&
-            (s.latencyCount == 0 || (s.latencySumMs / Math.max(1, s.latencyCount)) <= 250) &&
-            (s.userConfirmedPreview != null && s.userConfirmedPreview);
-
-    s.verdictOk = ok;
-
-    if (ok) {
-        logLabelOkValue(
-                gr ? "Τελικό αποτέλεσμα" : "Verdict",
-                gr ? "OK — Η διαδρομή κάμερας λειτουργεί σωστά"
-                   : "OK — Camera path operational"
-        );
-    } else {
-        logLabelWarnValue(
-                gr ? "Τελικό αποτέλεσμα" : "Verdict",
-                gr ? "Εντοπίστηκαν θέματα — έλεγξε τα παραπάνω"
-                   : "Issues detected — review above"
-        );
-    }
-
+    logLabelValue(gr ? "Διαγνωστική εκτίμηση" : "Diagnostic assessment",
+            gr ? "Αναμονή επιβεβαίωσης χρήστη — χωρίς συμπέρασμα hardware"
+               : "Awaiting human confirmation — no hardware verdict");
     logLine();
     appendHtml("<br>");
 } // ✅ ΤΕΛΟΣ lab8StopAndReportSample (αυτό έλειπε)
 
 // ============================================================
+// Only the finished stream AND the subsequent user response can create a
+// scoped functional observation. It does not certify camera physical health.
+private void lab8FinalizePreviewOutcome(Lab8Session s, Lab8Overall overall) {
+    final boolean gr = AppLang.isGreek(this);
+    Lab8Evidence.Result r = Lab8Evidence.classify(
+            s.repeatingRequestStarted, s.samplingComplete,
+            s.frames, s.validLumaFrames, s.userConfirmedPreview);
+    if (r == Lab8Evidence.Result.OBSERVED_PREVIEW_WITH_USER_CONFIRMATION) {
+        overall.previewOkCount++;
+        s.verdictOk = true;
+        logLabelValue(gr ? "Προεπισκόπηση κάμερας" : "Camera preview",
+                gr ? "Καρέ καταγράφηκαν και ο χρήστης είδε ζωντανή εικόνα"
+                   : "Frames sampled and user saw live preview");
+        logLabelValue(gr ? "Όρια" : "Limit",
+                gr ? "Δεν πιστοποιείται φακός, autofocus, ISP ή οπτική ποιότητα"
+                   : "Lens, autofocus, ISP and optical quality not certified");
+    } else if (r == Lab8Evidence.Result.USER_REPORTED_NO_IMAGE) {
+        overall.previewFailCount++;
+        logLabelWarnValue(gr ? "Απάντηση χρήστη" : "User report",
+                gr ? "Δεν είδε εικόνα — άγνωστη αιτία"
+                   : "Did not see image — unverified cause");
+    } else if (r == Lab8Evidence.Result.UNAVAILABLE) {
+        overall.previewUnavailableCount++;
+        logLabelWarnValue(gr ? "Προεπισκόπηση" : "Preview",
+                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ — χωρίς διάγνωση βλάβης"
+                   : "UNAVAILABLE — no hardware verdict");
+    } else {
+        overall.previewInconclusiveCount++;
+        logLabelWarnValue(gr ? "Προεπισκόπηση" : "Preview",
+                gr ? "ΑΝΕΠΑΡΚΗ ΣΤΟΙΧΕΙΑ — χωρίς διάγνωση βλάβης"
+                   : "INCONCLUSIVE — no hardware verdict");
+    }
+}
+
 // LAB 8 — Close session safely
 // ============================================================
 private void lab8CloseSession(Lab8Session s) {
@@ -9638,7 +9726,9 @@ private static class Lab8Cam {
 private static class Lab8Overall {
     int total;
     int previewOkCount;
-    int previewFailCount;
+    int previewFailCount; // user said NO IMAGE; not evidence of broken hardware
+    int previewUnavailableCount;
+    int previewInconclusiveCount;
     int torchOkCount;
     int torchFailCount;
     int streamIssueCount;
@@ -9655,7 +9745,12 @@ private static class Lab8Session {
     ImageReader reader;
 
     long sampleStartMs;
-    long frames;
+    volatile long frames;
+    volatile long validLumaFrames;
+    volatile boolean repeatingRequestStarted;
+    volatile boolean samplingComplete;
+    volatile boolean terminal;
+    volatile boolean cancelled;
     long blackFrames;
     long droppedFrames;
 
@@ -10847,344 +10942,462 @@ private float estimateSpeedSimMbps(
 // LAB 11 — Mobile Data Diagnostic
 // ============================================================
 private void lab11MobileDataDiagnostic() {
-
     final boolean gr = AppLang.isGreek(this);
-
     appendHtml("<br>");
     logLine();
-    logInfo(gr ? "LAB 11 — Διαγνωστικός Έλεγχος Κινητού Δικτύου (Εργαστήριο)"
-               : "LAB 11 — Mobile Network Diagnostic (Laboratory)");
+    logSection(gr ? "LAB 11 — Κινητό Δίκτυο: Παρατηρήσεις Android"
+                  : "LAB 11 — Mobile Network: Android observations");
     logLine();
 
+    // A passive snapshot of the current DEFAULT subscription and network,
+    // not a physical modem diagnostic or a forced cellular connection.
     TelephonySnapshot s = getTelephonySnapshot();
 
-    // ------------------------------------------------------------
-    // Airplane mode (context only)
-    // ------------------------------------------------------------
+    logLabelValue(gr ? "Λειτουργία πτήσης" : "Airplane mode",
+            s.airplaneOn ? (gr ? "Ενεργή" : "Enabled")
+                         : (gr ? "Ανενεργή" : "Disabled"));
     if (s.airplaneOn) {
-        logInfo(gr
-                ? "Η Λειτουργία Πτήσης είναι ΕΝΕΡΓΗ. Τα ραδιο-interfaces είναι σκόπιμα απενεργοποιημένα."
-                : "Airplane mode is ENABLED. Radio interfaces are intentionally disabled.");
-        return;
+        logLabelWarnValue(gr ? "Έλεγχος κυψελωτού δικτύου" : "Cellular assessment",
+                gr ? "ΠΕΡΙΟΡΙΣΜΕΝΟΣ — λειτουργία πτήσης, όχι ένδειξη βλάβης"
+                   : "BLOCKED by airplane mode — not a hardware defect");
     }
 
-    // ------------------------------------------------------------
-    // SIM state (laboratory reporting)
-    // ------------------------------------------------------------
-    if (!s.simReady) {
-
+    // SIM not ready can mean absent, locked, unavailable or OEM/eSIM behavior.
+    // None of these proves a failed baseband/modem.
+    String simDescription;
+    if (!s.simStateKnown) {
+        simDescription = gr ? "ΑΓΝΩΣΤΗ / ΜΗ ΔΙΑΘΕΣΙΜΗ" : "UNKNOWN / UNAVAILABLE";
+    } else {
         switch (s.simState) {
-
+            case TelephonyManager.SIM_STATE_READY:
+                simDescription = gr ? "ΕΤΟΙΜΗ (προεπιλεγμένη SIM)" : "READY (default SIM)";
+                break;
             case TelephonyManager.SIM_STATE_ABSENT:
-                logLabelWarnValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΑΠΟΥΣΑ" : "ABSENT");
-                return;
-
+                simDescription = gr ? "ΑΠΟΥΣΑ (στο εκτεθειμένο προφίλ)"
+                                    : "ABSENT (reported subscription)";
+                break;
             case TelephonyManager.SIM_STATE_PIN_REQUIRED:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση SIM" : "SIM State",
-                        gr ? "ΠΑΡΟΥΣΑ αλλά κλειδωμένη (απαιτείται PIN)"
-                           : "PRESENT but locked (PIN required)"
-                );
-                return;
-
+                simDescription = gr ? "ΑΠΑΙΤΕΙΤΑΙ PIN" : "PIN REQUIRED";
+                break;
             case TelephonyManager.SIM_STATE_PUK_REQUIRED:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση SIM" : "SIM State",
-                        gr ? "ΠΑΡΟΥΣΑ αλλά κλειδωμένη (απαιτείται PUK)"
-                           : "PRESENT but locked (PUK required)"
-                );
-                return;
-
+                simDescription = gr ? "ΑΠΑΙΤΕΙΤΑΙ PUK" : "PUK REQUIRED";
+                break;
             case TelephonyManager.SIM_STATE_NETWORK_LOCKED:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση SIM" : "SIM State",
-                        gr ? "ΠΑΡΟΥΣΑ αλλά κλειδωμένη από δίκτυο"
-                           : "PRESENT but network locked"
-                );
-                return;
-
+                simDescription = gr ? "ΚΛΕΙΔΩΜΕΝΗ ΣΤΟ ΔΙΚΤΥΟ" : "NETWORK LOCKED";
+                break;
             default:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση SIM" : "SIM State",
-                        gr ? "ΠΑΡΟΥΣΑ αλλά δεν είναι έτοιμη"
-                           : "PRESENT but not ready"
-                );
-                return;
+                simDescription = gr ? "ΜΗ ΕΤΟΙΜΗ / ΜΕΡΙΚΗ" : "NOT READY / PARTIAL";
+        }
+    }
+    logLabelValue(gr ? "SIM / προεπιλεγμένη συνδρομή" : "SIM / default subscription",
+            simDescription);
+
+    if (s.serviceKnown) {
+        logLabelValue(gr ? "Κατάσταση υπηρεσίας (legacy)" : "Service state (legacy)",
+                s.inService ? (gr ? "Αναφέρθηκε IN SERVICE" : "Reported IN SERVICE")
+                            : (gr ? "Δεν αναφέρθηκε IN SERVICE" : "Not reported IN SERVICE"));
+        if (!s.inService) {
+            logInfo(gr ? "Δεν αποδεικνύεται βλάβη modem ούτε συνολική απουσία IMS/VoLTE."
+                       : "Does not prove modem failure or absence of IMS/VoLTE.");
+        }
+    } else {
+        logLabelWarnValue(gr ? "Κατάσταση υπηρεσίας" : "Service state",
+                gr ? "ΑΓΝΩΣΤΗ — άδεια, API, συνδρομή ή OEM"
+                   : "UNKNOWN — permission, API, subscription or OEM limits");
+    }
+
+    String dataLabel;
+    if (!s.dataStateKnown) {
+        dataLabel = gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN";
+    } else {
+        switch (s.dataState) {
+            case TelephonyManager.DATA_CONNECTED:
+                dataLabel = gr ? "Αναφέρεται CONNECTED" : "Reported CONNECTED";
+                break;
+            case TelephonyManager.DATA_CONNECTING:
+                dataLabel = gr ? "Αναφέρεται CONNECTING" : "Reported CONNECTING";
+                break;
+            case TelephonyManager.DATA_DISCONNECTED:
+                dataLabel = gr ? "Αναφέρεται DISCONNECTED" : "Reported DISCONNECTED";
+                break;
+            default:
+                dataLabel = gr ? "Άλλη / μη καθορισμένη" : "Other / unspecified";
+        }
+    }
+    logLabelValue(gr ? "Κατάσταση δεδομένων (Telephony)" : "Telephony data state",
+            dataLabel);
+    logInfo(gr ? "DISCONNECTED δεν σημαίνει κατ' ανάγκη ότι ο χρήστης απενεργοποίησε τα δεδομένα κινητής."
+               : "DISCONNECTED does not imply the user switched mobile data off.");
+
+    if (s.signalLevelKnown) {
+        logLabelValue(gr ? "Σήμα (ένδειξη Android)" : "Signal (Android-reported)",
+                s.signalLevel + " / 4");
+        logInfo(gr ? "Πρόκειται για εκτίμηση του Android, όχι βαθμονομημένη μέτρηση dBm ή τεστ υγείας RF."
+                   : "This is an OS-reported estimate, not calibrated dBm or RF hardware health.");
+    } else {
+        logLabelValue(gr ? "Σήμα" : "Signal",
+                gr ? "ΑΓΝΩΣΤΟ / μη εκτεθειμένο" : "UNKNOWN / not exposed");
+    }
+
+    Lab11NetworkEvidence.DefaultRoute route = Lab11NetworkEvidence.classifyDefault(
+            s.defaultNetworkPresent, s.defaultCapsKnown,
+            s.defaultInternetAdvertised, s.defaultValidated,
+            s.defaultCellular, s.defaultWifi, s.defaultVpn);
+    final String routeLabel;
+    switch (route) {
+        case CELLULAR_VALIDATED:
+            routeLabel = gr ? "CELLULAR — VALIDATED από το Android"
+                            : "CELLULAR — Android VALIDATED";
+            break;
+        case CELLULAR_NOT_VALIDATED:
+            routeLabel = gr ? "CELLULAR — μη επαληθευμένο Internet"
+                            : "CELLULAR — Internet not validated";
+            break;
+        case WIFI_VALIDATED:
+            routeLabel = gr ? "Wi-Fi — VALIDATED, όχι απόδειξη κινητής"
+                            : "Wi-Fi — VALIDATED, not cellular evidence";
+            break;
+        case WIFI_NOT_VALIDATED:
+            routeLabel = gr ? "Wi-Fi — Internet μη επαληθευμένο"
+                            : "Wi-Fi — Internet not validated";
+            break;
+        case VPN_VALIDATED_UNATTRIBUTED:
+            routeLabel = gr ? "VPN — VALIDATED, υποκείμενο δίκτυο άγνωστο"
+                            : "VPN — VALIDATED, underlying transport unverified";
+            break;
+        case VPN_NOT_VALIDATED_UNATTRIBUTED:
+            routeLabel = gr ? "VPN — Internet μη επαληθευμένο"
+                            : "VPN — Internet not validated";
+            break;
+        case NO_DEFAULT_NETWORK:
+            routeLabel = gr ? "Κανένα ενεργό προεπιλεγμένο δίκτυο"
+                            : "No active default network";
+            break;
+        case CAPABILITIES_UNAVAILABLE:
+            routeLabel = gr ? "Μη διαθέσιμες δυνατότητες δρομολόγησης"
+                            : "Default network capabilities unavailable";
+            break;
+        case OTHER_VALIDATED:
+            routeLabel = gr ? "Άλλη / μικτή διαδρομή — VALIDATED"
+                            : "Other/mixed transport — VALIDATED";
+            break;
+        default:
+            routeLabel = gr ? "Άλλη / μικτή διαδρομή — μη επαληθευμένη"
+                            : "Other/mixed transport — not validated";
+    }
+    logLabelValue(gr ? "Ενεργή διαδρομή Internet" : "Active default Internet route",
+            routeLabel);
+
+    if (s.defaultCapsKnown) {
+        logLabelValue(gr ? "Capability INTERNET" : "INTERNET capability",
+                s.defaultInternetAdvertised ? "ADVERTISED" : "NOT ADVERTISED");
+        logLabelValue(gr ? "Android validation" : "Android validation",
+                s.defaultValidated ? "VALIDATED" : "NOT VALIDATED");
+        if (s.defaultCaptivePortal) {
+            logLabelWarnValue(gr ? "Πύλη σύνδεσης" : "Captive portal",
+                    gr ? "Αναφέρθηκε από το Android" : "Reported by Android");
         }
     }
 
-    // SIM ready
-    logLabelOkValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ" : "READY");
-
-    // ------------------------------------------------------------
-    // Service state (legacy domain — informational)
-    // ------------------------------------------------------------
-    logLabelValue(
-        gr ? "Κατάσταση Υπηρεσίας (legacy)" : "Service State (legacy)",
-        s.inService
-                ? (gr ? "ΣΕ ΥΠΗΡΕΣΙΑ" : "IN SERVICE")
-                : (gr ? "ΔΕΝ ΑΝΑΦΕΡΕΤΑΙ ΩΣ ΕΝΕΡΓΗ" : "NOT REPORTED AS IN SERVICE")
-);
-
-if (!s.inService) {
-    logLabelWarnValue(
-            gr ? "Σημείωση (Legacy Service)" : "Legacy Service Note",
-            gr
-                    ? "Η legacy κατάσταση υπηρεσίας δεν αναφέρεται ως ενεργή. "
-                      + "Σε σύγχρονες LTE/5G συσκευές, η φωνή και τα δεδομένα "
-                      + "μπορεί να παρέχονται μέσω IMS (VoLTE / VoWiFi)."
-                    : "Legacy service registration is not reported as active. "
-                      + "On modern LTE/5G devices, voice and data may be provided via IMS (VoLTE / VoWiFi)."
-    );
-}
-
-    // ------------------------------------------------------------
-    // Data state (packet domain — informational)
-    // ------------------------------------------------------------
-    String dataStateLabel;
-    switch (s.dataState) {
-        case TelephonyManager.DATA_CONNECTED:
-            dataStateLabel = gr ? "ΣΥΝΔΕΔΕΜΕΝΟ" : "CONNECTED";
-            break;
-        case TelephonyManager.DATA_CONNECTING:
-            dataStateLabel = gr ? "ΣΥΝΔΕΣΗ..." : "CONNECTING";
-            break;
-        case TelephonyManager.DATA_DISCONNECTED:
-            dataStateLabel = gr ? "ΑΠΟΣΥΝΔΕΔΕΜΕΝΟ" : "DISCONNECTED";
-            break;
-        default:
-            dataStateLabel = gr ? "ΑΓΝΩΣΤΟ" : "UNKNOWN";
-            break;
-    }
-
-    logLabelValue(gr ? "Κατάσταση Δεδομένων" : "Data State", dataStateLabel);
-
-    // ------------------------------------------------------------
-    // Internet routing context (best effort)
-    // ------------------------------------------------------------
-    if (s.hasInternet) {
-        logLabelOkValue(gr ? "Internet Context" : "Internet Context",
-                gr ? "ΔΙΑΘΕΣΙΜΟ (system routing)" : "AVAILABLE (system routing)");
-    } else {
-        logLabelWarnValue(gr ? "Internet Context" : "Internet Context",
-                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "NOT AVAILABLE");
-    }
-
-// ------------------------------------------------------------
-// VERDICT ENGINE (GEL)
-// ------------------------------------------------------------
-
-boolean hasSim = s.simReady;
-boolean inService = s.inService;
-boolean dataConnected = s.dataState == TelephonyManager.DATA_CONNECTED;
-boolean hasInternet = s.hasInternet;
-
-String verdict;
-String recommendation;
-
-// =====================
-// CASE 1 — FULL OK
-// =====================
-if (hasSim && (inService || hasInternet)) {
-
-    verdict = gr
-            ? "Το δίκτυο λειτουργεί κανονικά."
-            : "Network is operating normally.";
-
-    recommendation = gr
-            ? "Δεν απαιτείται ενέργεια."
-            : "No action required.";
-}
-
-// =====================
-// CASE 2 — NO INTERNET
-// =====================
-else if (!hasInternet) {
-
-    verdict = gr
-            ? "Δεν υπάρχει πρόσβαση στο διαδίκτυο."
-            : "No internet access detected.";
-
-    recommendation = gr
-            ? "Έλεγχος Wi-Fi ή ενεργοποίηση δεδομένων κινητής."
-            : "Check Wi-Fi or enable mobile data.";
-}
-
-// =====================
-// CASE 3 — NO SERVICE
-// =====================
-else if (hasSim && !inService) {
-
-    verdict = gr
-            ? "Η SIM είναι ενεργή αλλά δεν υπάρχει υπηρεσία δικτύου."
-            : "SIM is ready but no network service.";
-
-    recommendation = gr
-            ? "Μετακινηθείτε σε περιοχή με σήμα ή ελέγξτε τον πάροχο."
-            : "Move to better signal area or check carrier.";
-}
-
-// =====================
-// CASE 4 — DATA OFF
-// =====================
-else if (hasSim && !dataConnected) {
-
-    verdict = gr
-            ? "Τα δεδομένα κινητής είναι απενεργοποιημένα."
-            : "Mobile data is disabled.";
-
-    recommendation = gr
-            ? "Ενεργοποιήστε mobile data αν απαιτείται."
-            : "Enable mobile data if needed.";
-}
-
-// =====================
-// FALLBACK
-// =====================
-else {
-
-    verdict = gr
-            ? "Μερική κατάσταση δικτύου."
-            : "Partial network state.";
-
-    recommendation = gr
-            ? "Ελέγξτε SIM, δεδομένα και σήμα."
-            : "Check SIM, data and signal.";
-}
-
-// ------------------------------------------------------------
-// OUTPUT (NO DUPLICATES)
-// ------------------------------------------------------------
-appendHtml("<br>");
-
-logLabelValue(gr ? "Συμπέρασμα" : "Verdict", verdict);
-logLabelValue(gr ? "Πρόταση" : "Recommendation", recommendation);
-
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 11 ολοκληρώθηκε." : "Lab 11 finished.");
+    if (Lab11NetworkEvidence.provesCurrentDefaultCellularValidation(route)
+            && !s.airplaneOn) {
+        logLabelValue(gr ? "Συμπέρασμα Lab 11" : "Lab 11 conclusion",
+                gr ? "ΠΑΡΑΤΗΡΗΘΗΚΕ: ενεργό CELLULAR με επιβεβαίωση Internet από το Android"
+                   : "OBSERVED: active CELLULAR default with Android-validated Internet");
+        logInfo(gr ? "Δεν πιστοποιεί κάλυψη παρόχου, RF ισχύ, σταθερότητα ή υγεία modem."
+                   : "Does not certify carrier coverage, radio strength, stability or modem health.");
+    } else {
+        logLabelWarnValue(gr ? "Συμπέρασμα Lab 11" : "Lab 11 conclusion",
+                gr ? "Κινητή σύνδεση ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ στην τρέχουσα διαδρομή — όχι βλάβη modem"
+                   : "CELLULAR NOT VERIFIED on current default route — not a modem fault");
+        logInfo(gr ? "Wi-Fi, VPN, απουσία SIM, άδειες ή επιλογή διαδρομής μπορούν να περιορίσουν τον έλεγχο."
+                   : "Wi-Fi, VPN, SIM, permissions or routing can limit this observation.");
+    }
+
+    logLabelValue(gr ? "Εμβέλεια δοκιμής" : "Test scope",
+            gr ? "Στιγμιότυπο τρέχουσας κατάστασης — όχι μετρημένη σταθερότητα χρόνου"
+               : "Current-state snapshot — not a time-series stability test");
+    logInfo(gr ? "Για ακριβή έλεγχο δεδομένων κινητής απαιτείται επιβεβαίωση χωρίς Wi-Fi/VPN και νέα μέτρηση."
+               : "For a direct cellular test, verify without Wi-Fi/VPN and repeat the measurement.");
     logLine();
+    enableSingleExportButton();
 }
 
 // ============================================================
-// LAB 12 — Call Function Interpretation (Laboratory)
+// // LAB 12 — Call Function Interpretation (Laboratory)
 // ============================================================
 private void lab12CallFunctionInterpretation() {
-
     final boolean gr = AppLang.isGreek(this);
+    if (lab12DialerPending) {
+        logLabelWarnValue(gr ? "Lab 12" : "Lab 12",
+                gr ? "Περιμένει επιστροφή από τον τηλεφωνητή — χωρίς νέο αποτέλεσμα"
+                   : "Awaiting dialer return — no new conclusion");
+        return;
+    }
 
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 12 — Ερμηνεία Λειτουργίας Κλήσεων (Εργαστήριο)"
-            : "LAB 12 — Call Function Interpretation (Laboratory)");
+    logSection(gr ? "LAB 12 — Παρατηρήσεις τηλεφωνίας και προαιρετική πραγματική κλήση"
+                  : "LAB 12 — Telephony observations and optional real call");
     logLine();
 
-    TelephonySnapshot s = getTelephonySnapshot();
+    // Independent Lab 12 snapshot: do not borrow Lab 11's legacy hasInternet
+    // flag. Internet routing / Wi-Fi / VPN are NOT IMS or calling evidence.
+    TelephonyManager tm = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+    Boolean airplaneOn = null;
+    Boolean voiceCapable = null;
+    Boolean serviceInService = null;
+    Integer simState = null;
 
-    // ------------------------------------------------------------
-    // Airplane mode (context only)
-    // ------------------------------------------------------------
-    if (s.airplaneOn) {
-        logInfo(gr
-                ? "Η Λειτουργία Πτήσης είναι ΕΝΕΡΓΗ. Τα voice radio interfaces είναι σκόπιμα απενεργοποιημένα."
-                : "Airplane mode is ENABLED. Voice radio interfaces are intentionally disabled.");
-        return;
+    try {
+        int airplaneValue = Settings.Global.getInt(getContentResolver(),
+                Settings.Global.AIRPLANE_MODE_ON, -1);
+        airplaneOn = airplaneValue == -1 ? null : airplaneValue == 1;
+    } catch (RuntimeException ignored) {
+        // No default false: an unavailable OS setting remains UNKNOWN.
     }
 
-    // ------------------------------------------------------------
-    // SIM availability (context only)
-    // ------------------------------------------------------------
-    if (s.simReady) {
-        logLabelOkValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ" : "READY");
+    if (tm != null) {
+        try {
+            voiceCapable = Build.VERSION.SDK_INT >= 35
+                    ? tm.isDeviceVoiceCapable() : tm.isVoiceCapable();
+        } catch (RuntimeException ignored) {}
+        try {
+            simState = tm.getSimState();
+        } catch (RuntimeException ignored) {}
+        try {
+            ServiceState ss = tm.getServiceState();
+            if (ss != null) {
+                serviceInService = ss.getState() == ServiceState.STATE_IN_SERVICE;
+            }
+        } catch (RuntimeException ignored) {
+            // Permission, inactive subscription, unavailable radio/OEM.
+        }
+    }
+
+    Lab12CallEvidence.Passive passive = Lab12CallEvidence.passive(
+            tm != null, airplaneOn, voiceCapable, serviceInService);
+    logLabelValue(gr ? "Λειτουργία πτήσης" : "Airplane mode",
+            airplaneOn == null ? (gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN")
+                    : airplaneOn ? (gr ? "ΕΝΕΡΓΗ" : "ON")
+                                 : (gr ? "ΑΝΕΝΕΡΓΗ" : "OFF"));
+    logLabelValue(gr ? "Υποστήριξη φωνής συσκευής (Android)" : "Device voice capability",
+            voiceCapable == null ? (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ" : "UNAVAILABLE")
+                    : voiceCapable ? (gr ? "ΑΝΑΦΕΡΕΤΑΙ" : "REPORTED")
+                                   : (gr ? "ΔΕΝ ΑΝΑΦΕΡΕΤΑΙ" : "NOT REPORTED"));
+    logInfo(gr ? "Η γενική δυνατότητα κλήσεων δεν πιστοποιεί ενεργή συνδρομή, VoLTE/IMS ή επιτυχημένη κλήση."
+               : "Device capability does not prove active voice subscription, VoLTE/IMS or a successful call.");
+
+    if (simState != null) {
+        String simLabel;
+        switch (simState) {
+            case TelephonyManager.SIM_STATE_READY:
+                simLabel = gr ? "READY (προεπιλεγμένη)" : "READY (default)";
+                break;
+            case TelephonyManager.SIM_STATE_ABSENT:
+                simLabel = gr ? "ABSENT (εκτεθειμένο προφίλ)" : "ABSENT (reported profile)";
+                break;
+            case TelephonyManager.SIM_STATE_PIN_REQUIRED:
+                simLabel = gr ? "Απαιτείται PIN" : "PIN required";
+                break;
+            case TelephonyManager.SIM_STATE_PUK_REQUIRED:
+                simLabel = gr ? "Απαιτείται PUK" : "PUK required";
+                break;
+            case TelephonyManager.SIM_STATE_NETWORK_LOCKED:
+                simLabel = gr ? "Κλειδωμένη στο δίκτυο" : "Network locked";
+                break;
+            default:
+                simLabel = gr ? "Άγνωστη / μη έτοιμη" : "Unknown / not ready";
+        }
+        logLabelValue(gr ? "SIM" : "SIM", simLabel);
     } else {
-        logLabelWarnValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΜΗ ΕΤΟΙΜΗ" : "NOT READY");
+        logLabelValue("SIM", gr ? "ΑΓΝΩΣΤΗ / μη διαθέσιμη" : "UNKNOWN / unavailable");
     }
 
-    if (!s.simReady) {
-        logInfo(gr
-                ? "Η διαθεσιμότητα φωνητικής υπηρεσίας εξαρτάται από το αν η SIM είναι έτοιμη. "
-                  + "Δεν βγαίνει λειτουργικό συμπέρασμα."
-                : "Voice service availability depends on SIM readiness. "
-                  + "No functional verdict inferred.");
-        return;
-    }
-
-    // ------------------------------------------------------------
-    // Legacy voice service state (informational)
-    // ------------------------------------------------------------
-    if (s.inService) {
-        logLabelOkValue(
-                gr ? "Φωνητική Υπηρεσία (legacy)" : "Voice Service (legacy)",
-                gr ? "ΣΕ ΥΠΗΡΕΣΙΑ" : "IN SERVICE"
-        );
+    if (serviceInService == null) {
+        logLabelWarnValue(gr ? "Υπηρεσία φωνής (legacy)" : "Voice service (legacy)",
+                gr ? "ΑΓΝΩΣΤΗ — η κατάσταση δεν ήταν προσβάσιμη"
+                   : "UNKNOWN — service-state observation unavailable");
     } else {
-        logLabelWarnValue(
-                gr ? "Φωνητική Υπηρεσία (legacy)" : "Voice Service (legacy)",
-                gr ? "ΔΕΝ ΑΝΑΦΕΡΕΤΑΙ ΩΣ ΣΕ ΥΠΗΡΕΣΙΑ" : "NOT REPORTED AS IN SERVICE"
-        );
+        logLabelValue(gr ? "Υπηρεσία φωνής (legacy)" : "Voice service (legacy)",
+                serviceInService ? (gr ? "Αναφέρθηκε IN SERVICE" : "Reported IN SERVICE")
+                                 : (gr ? "Δεν αναφέρθηκε IN SERVICE" : "Not reported IN SERVICE"));
     }
+    logLabelValue(gr ? "Συμπέρασμα Android" : "Android observation",
+            lab12PassiveStatusLabel(passive, gr));
+    logInfo(gr ? "Δεν εξετάστηκε πραγματική κλήση ούτε αν λειτουργεί το ακουστικό ή το μικρόφωνο."
+               : "No actual voice call, receiver or microphone has been verified.");
+    logInfo(gr ? "Το Internet, ακόμη και όταν είναι VALIDATED μέσω Wi-Fi, δεν αποδεικνύει IMS/VoWiFi."
+               : "Internet, including VALIDATED Wi-Fi, does not prove IMS/VoWiFi voice service.");
+    logLine();
 
-    if (!s.inService) {
-        logInfo(gr
-                ? "Η legacy εγγραφή υπηρεσίας δεν αναφέρεται. "
-                  + "Σε σύγχρονες LTE/5G συσκευές, φωνή/δεδομένα μπορεί να παρέχονται μέσω IMS (VoLTE / VoWiFi)."
-                : "Legacy service registration is not reported. "
-                  + "On modern LTE/5G devices, voice and data may be provided via IMS (VoLTE / VoWiFi).");
-    }
-
-    // ------------------------------------------------------------
-    // Internet context (IMS relevance)
-    // ------------------------------------------------------------
-    if (s.hasInternet) {
-    logLabelOkValue(
-            gr ? "Κατάσταση Σύνδεσης Internet"
-               : "Internet Context",
-            gr ? "ΔΙΑΘΕΣΙΜΗ (system routing)"
-               : "AVAILABLE (system routing)"
-    );
-} else {
-    logLabelWarnValue(
-            gr ? "Κατάσταση Σύνδεσης Internet"
-               : "Internet Context",
-            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ"
-               : "NOT AVAILABLE"
-    );
+    // Optional, explicit user action only; ACTION_DIAL does not place a call,
+    // access call logs or record audio. No phone number is provided or stored.
+    new AlertDialog.Builder(this)
+            .setTitle(gr ? "LAB 12 — Πραγματική δοκιμή κλήσης (προαιρετικά)"
+                         : "LAB 12 — Optional live-call check")
+            .setMessage(gr
+                    ? "Θέλεις να δοκιμάσεις μια πραγματική κλήση με γνωστό σου άτομο; "
+                      + "Θα ανοίξει ΜΟΝΟ ο τηλεφωνητής χωρίς αριθμό. "
+                      + "Εσύ επιλέγεις αν θα καλέσεις. Μην χρησιμοποιήσεις αριθμούς έκτακτης ανάγκης. "
+                      + "Ενδέχεται να ισχύουν χρεώσεις. Δεν καταγράφουμε ήχο, αριθμό ή περιεχόμενο. "
+                      + "Μετά την επιστροφή θα αναφέρεις αν ακούγατε ο ένας τον άλλον."
+                    : "Would you like to test a real call with a consenting person? "
+                      + "Only an EMPTY dialer opens. You decide whether to place a call. "
+                      + "Never use emergency numbers for testing. Carrier charges may apply. "
+                      + "No audio, phone number or conversation is recorded. "
+                      + "On return, report whether both parties could hear each other.")
+            .setPositiveButton(gr ? "ΑΝΟΙΓΜΑ ΤΗΛΕΦΩΝΟΥ" : "OPEN DIALER",
+                    (dialog, which) -> lab12OpenDialer())
+            .setNegativeButton(gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP",
+                    (dialog, which) -> lab12ReportGuided(
+                            Lab12CallEvidence.Guided.NOT_TESTED))
+            .setOnCancelListener(dialog -> lab12ReportGuided(
+                    Lab12CallEvidence.Guided.NOT_TESTED))
+            .show();
 }
 
-    if (s.hasInternet) {
-        logOk(gr
-                ? "Εντοπίστηκε ενεργό internet routing. "
-                  + "Κλήσεις μέσω IMS (VoLTE / VoWiFi) μπορεί να υποστηρίζονται, ανάλογα με τον πάροχο."
-                : "Active internet routing detected. "
-                  + "IMS-based calling (VoLTE / VoWiFi) may be supported depending on carrier configuration.");
-    } else {
-        logOk(gr
-                ? "Δεν εντοπίστηκε ενεργό internet routing. "
-                  + "Οι κλασικές κλήσεις μπορεί να λειτουργούν κανονικά, αν τις υποστηρίζει το δίκτυο."
-                : "No active internet routing detected. "
-                  + "Legacy voice calling may still function if supported by the network.");
+private String lab12PassiveStatusLabel(Lab12CallEvidence.Passive status, boolean gr) {
+    switch (status) {
+        case TELEPHONY_UNAVAILABLE:
+            return gr ? "Μη διαθέσιμη υπηρεσία Telephony — όχι συμπέρασμα βλάβης"
+                      : "Telephony API unavailable — no hardware fault inferred";
+        case AIRPLANE_MODE_REPORTED:
+            return gr ? "Λειτουργία πτήσης — περιορισμένη παρατήρηση"
+                      : "Airplane mode — observation limited";
+        case VOICE_CAPABILITY_NOT_REPORTED:
+            return gr ? "Η δυνατότητα φωνητικών κλήσεων δεν δηλώθηκε"
+                      : "Voice-call capability not advertised";
+        case SERVICE_REPORTED_IN_SERVICE:
+            return gr ? "Android: υπηρεσία αναφέρεται ως ενεργή, ΟΧΙ επαλήθευση κλήσης"
+                      : "Android service reported active, NOT call verification";
+        case SERVICE_NOT_REPORTED_IN_SERVICE:
+            return gr ? "Android: δεν αναφέρθηκε legacy υπηρεσία — IMS άγνωστο"
+                      : "Legacy service not reported — IMS unknown";
+        default:
+            return gr ? "Κατάσταση υπηρεσίας ΑΓΝΩΣΤΗ — δεν επαληθεύτηκε κλήση"
+                      : "Service status UNKNOWN — call not verified";
     }
+}
 
-    // ------------------------------------------------------------
-    // Laboratory conclusion
-    // ------------------------------------------------------------
-    logOk(gr
-            ? "Η εργαστηριακή ερμηνεία ολοκληρώθηκε. "
-              + "Αυτό το τεστ δεν ξεκινά ούτε επιβεβαιώνει πραγματική κλήση."
-            : "Laboratory interpretation complete. "
-              + "This test does not initiate or verify real call execution.");
+private void lab12OpenDialer() {
+    final boolean gr = AppLang.isGreek(this);
+    if (lab12DialerPending) return;
+    lab12DialerPending = true;
+    if (btnExport != null) {
+        btnExport.setEnabled(false);
+        btnExport.setAlpha(0.5f);
+    }
+    try {
+        // ACTION_DIAL with NO telephone URI, no ACTION_CALL and no CALL_PHONE.
+        // ACTION_DIAL resultCode is never proof a call was made.
+        startActivityForResult(new Intent(Intent.ACTION_DIAL), REQ_LAB12_DIALER);
+    } catch (RuntimeException e) {
+        lab12DialerPending = false;
+        logLabelWarnValue(gr ? "Τηλεφωνητής" : "Dialer",
+                gr ? "Δεν άνοιξε — χωρίς επαλήθευση πραγματικής κλήσης"
+                   : "Could not open — no live-call verification");
+        lab12ReportGuided(Lab12CallEvidence.Guided.NOT_TESTED);
+    }
+}
 
-    logInfo(gr
-            ? "Το audio routing κλήσης και οι διαδρομές μικροφώνου/ακουστικού ελέγχονται ξεχωριστά (LAB 3)."
-            : "Call audio routing and microphone/earpiece paths are examined separately (LAB 3).");
+private void lab12AfterDialerReturn() {
+    final boolean gr = AppLang.isGreek(this);
+    if (isFinishing() || isDestroyed()) {
+        lab12ReportGuided(Lab12CallEvidence.Guided.INCONCLUSIVE);
+        return;
+    }
+    // A dialer return does NOT prove the user placed or finished a call.
+    new AlertDialog.Builder(this)
+            .setTitle(gr ? "LAB 12 — Επιβεβαίωση από χρήστη" : "LAB 12 — User confirmation")
+            .setMessage(gr ? "Πραγματοποιήθηκε και ολοκληρώθηκε πραγματική κλήση; "
+                            + "Αν άνοιξες απλώς τον τηλεφωνητή, πάτησε ΟΧΙ."
+                           : "Did you actually make and finish a real call? "
+                            + "If you merely opened the dialer, choose NO.")
+            .setPositiveButton(gr ? "ΝΑΙ" : "YES",
+                    (dialog, which) -> lab12AskHearOtherParty())
+            .setNegativeButton(gr ? "ΟΧΙ" : "NO",
+                    (dialog, which) -> lab12ReportGuided(
+                            Lab12CallEvidence.userReport(true, false, null, null)))
+            .setOnCancelListener(dialog -> lab12ReportGuided(
+                    Lab12CallEvidence.Guided.INCONCLUSIVE))
+            .show();
+}
 
+private void lab12AskHearOtherParty() {
+    final boolean gr = AppLang.isGreek(this);
+    new AlertDialog.Builder(this)
+            .setTitle(gr ? "LAB 12 — Ήχος λήψης" : "LAB 12 — Receive audio")
+            .setMessage(gr ? "Κατά την πραγματική κλήση ΑΚΟΥΓΕΣ καθαρά τον συνομιλητή σου; "
+                            + "Η επιλεγμένη διαδρομή (ακουστικό, Bluetooth ή ηχείο) δεν έχει πιστοποιηθεί."
+                           : "During the real call, could YOU hear the other person clearly? "
+                            + "The exact route (earpiece, Bluetooth or speaker) was not verified.")
+            .setPositiveButton(gr ? "ΝΑΙ" : "YES",
+                    (dialog, which) -> lab12AskOtherPartyHeard(true))
+            .setNegativeButton(gr ? "ΟΧΙ" : "NO",
+                    (dialog, which) -> lab12AskOtherPartyHeard(false))
+            .setOnCancelListener(dialog -> lab12ReportGuided(
+                    Lab12CallEvidence.Guided.INCONCLUSIVE))
+            .show();
+}
+
+private void lab12AskOtherPartyHeard(boolean heardOther) {
+    final boolean gr = AppLang.isGreek(this);
+    new AlertDialog.Builder(this)
+            .setTitle(gr ? "LAB 12 — Ήχος μετάδοσης" : "LAB 12 — Transmit audio")
+            .setMessage(gr ? "Ο συνομιλητής σου επιβεβαίωσε ότι ΑΚΟΥΓΕ εσένα; "
+                            + "Απάντησε μόνο βάσει πραγματικής συνομιλίας."
+                           : "Did the other person confirm they could HEAR you? "
+                            + "Answer only based on the actual conversation.")
+            .setPositiveButton(gr ? "ΝΑΙ" : "YES", (dialog, which) ->
+                    lab12ReportGuided(Lab12CallEvidence.userReport(
+                            true, true, heardOther, true)))
+            .setNegativeButton(gr ? "ΟΧΙ" : "NO", (dialog, which) ->
+                    lab12ReportGuided(Lab12CallEvidence.userReport(
+                            true, true, heardOther, false)))
+            .setOnCancelListener(dialog -> lab12ReportGuided(
+                    Lab12CallEvidence.Guided.INCONCLUSIVE))
+            .show();
+}
+
+private void lab12ReportGuided(Lab12CallEvidence.Guided outcome) {
+    final boolean gr = AppLang.isGreek(this);
+    lab12DialerPending = false;
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 12 ολοκληρώθηκε." : "Lab 12 finished.");
+    switch (outcome) {
+        case USER_REPORTED_TWO_WAY_AUDIO:
+            logLabelValue(gr ? "Αποτέλεσμα κλήσης (αναφορά χρήστη)"
+                             : "Call result (user report)",
+                    gr ? "Ο χρήστης ανέφερε αμφίδρομο ήχο σε πραγματική κλήση"
+                       : "User reported two-way audio during a real call");
+            logInfo(gr ? "Δεν έγινε αυτόματη επιβεβαίωση κλήσης ή ταυτοποίηση ακουστικού/μικροφώνου."
+                       : "Call execution and specific earpiece/microphone hardware were not independently verified.");
+            break;
+        case USER_REPORTED_ONE_WAY_OR_AUDIO_ISSUE:
+            logLabelWarnValue(gr ? "Αποτέλεσμα κλήσης (αναφορά χρήστη)"
+                                 : "Call result (user report)",
+                    gr ? "Αναφέρθηκε δυσκολία αμφίδρομης επικοινωνίας — όχι αποδεδειγμένη βλάβη συσκευής"
+                       : "Two-way communication problem reported — no confirmed device fault");
+            break;
+        case INCONCLUSIVE:
+            logLabelWarnValue(gr ? "Δοκιμή κλήσης" : "Call check",
+                    gr ? "Ανεπαρκής ή διακοπείσα επιβεβαίωση — ΑΓΝΩΣΤΟ"
+                       : "Incomplete or interrupted confirmation — INCONCLUSIVE");
+            break;
+        default:
+            logLabelValue(gr ? "Δοκιμή πραγματικής κλήσης" : "Actual call test",
+                    gr ? "ΔΕΝ ΠΡΑΓΜΑΤΟΠΟΙΗΘΗΚΕ / ΔΕΝ ΕΠΑΛΗΘΕΥΤΗΚΕ"
+                       : "NOT PERFORMED / NOT VERIFIED");
+    }
+    logInfo(gr ? "Το Lab 12 δεν καταγράφει τηλεφωνική κλήση, ήχο, αριθμούς ή δεδομένα συνομιλίας."
+               : "Lab 12 does not record call events, audio, numbers or conversation content.");
     logLine();
+    enableSingleExportButton();
 }
 
 // ============================================================
-// LAB 13 — Bluetooth Connectivity Check
+// // LAB 13 — Bluetooth Connectivity Check
 // POPUP + WAIT FOR DEVICE + 60s MONITOR + DIAGNOSIS
 // (FINAL — STRUCTURED / NO NESTED METHODS / READY COPY-PASTE)
 // ============================================================
@@ -11216,28 +11429,28 @@ private void lab13BluetoothConnectivityCheck() {
     logLine();
 
     if (ba == null) {
-        logError(gr
-                ? "Το Bluetooth ΔΕΝ υποστηρίζεται σε αυτή τη συσκευή."
-                : "Bluetooth NOT supported on this device.");
-        logLine();
+        logLabelWarnValue(gr ? "Bluetooth adapter" : "Bluetooth adapter",
+                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟΣ — δεν αποδεικνύεται βλάβη"
+                   : "UNAVAILABLE — no hardware-failure verdict");
+        enableSingleExportButton();
         return;
     }
 
-    boolean enabled = false;
-    try { enabled = ba.isEnabled(); } catch (Throwable ignore) {}
+    Boolean enabled = null;
+    try { enabled = ba.isEnabled(); } catch (RuntimeException ignored) {}
 
-    if (!enabled) {
-        logError(gr
-                ? "Το Bluetooth είναι ΚΛΕΙΣΤΟ. Ενεργοποίησέ το και ξαναδοκίμασε."
-                : "Bluetooth is OFF. Please enable Bluetooth and retry.");
-        logLine();
+    if (!Boolean.TRUE.equals(enabled)) {
+        logLabelWarnValue(gr ? "Bluetooth adapter" : "Bluetooth adapter",
+                enabled == null
+                        ? (gr ? "Άγνωστη κατάσταση — άδεια/OEM" : "Unknown — permission/OEM")
+                        : (gr ? "ΑΝΕΝΕΡΓΟ — ενεργοποίησέ το για τον έλεγχο"
+                              : "OFF — enable Bluetooth for testing"));
+        enableSingleExportButton();
         return;
     }
 
-    logLabelOkValue(
-            gr ? "Κατάσταση Bluetooth" : "Bluetooth State",
-            gr ? "ΕΝΕΡΓΟ" : "ENABLED"
-    );
+    logLabelValue(gr ? "Bluetooth adapter (Android)" : "Bluetooth adapter (Android)",
+            gr ? "ΕΝΕΡΓΟ — όχι πιστοποίηση RF" : "ON — not RF hardware certification");
 
     // RESET STATE
     lab13Bm = bm;
@@ -11372,6 +11585,11 @@ buttons.addView(cont);
         );
     }
 
+    gate.setOnCancelListener(dialog -> {
+        logLabelValue(gr ? "Εξωτερική δοκιμή Bluetooth" : "Bluetooth external test",
+                "NOT_TESTED — cancelled before monitoring");
+        enableSingleExportButton();
+    });
     gate.show();
     com.gel.cleaner.GelButtonLayout.fitDialog(gate);
 
@@ -11422,9 +11640,9 @@ private void runLab13BluetoothCheckCore() {
 
     // BASIC SUPPORT
     if (lab13Ba == null) {
-        logError(gr
-                ? "Το Bluetooth ΔΕΝ υποστηρίζεται σε αυτή τη συσκευή."
-                : "Bluetooth NOT supported on this device.");
+        logLabelWarnValue(gr ? "Bluetooth adapter" : "Bluetooth adapter",
+                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟΣ — η αιτία είναι άγνωστη"
+                   : "UNAVAILABLE — underlying cause unknown");
         logLine();
 
         appendHtml("<br>");
@@ -11436,16 +11654,16 @@ private void runLab13BluetoothCheckCore() {
 
     logOk(gr ? "Το Bluetooth υποστηρίζεται." : "Bluetooth supported.");
 
-    boolean enabled = false;
-    try { enabled = lab13Ba.isEnabled(); } catch (Throwable ignore) {}
+    Boolean enabled = null;
+    try { enabled = lab13Ba.isEnabled(); } catch (RuntimeException ignored) {}
 
     logLabelValue(
             gr ? "Ενεργό" : "Enabled",
-            enabled ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
+            enabled == null ? "UNKNOWN" : enabled ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
     );
 
-    int state = BluetoothAdapter.STATE_OFF;
-    try { state = lab13Ba.getState(); } catch (Throwable ignore) {}
+    int state = -1;
+    try { state = lab13Ba.getState(); } catch (RuntimeException ignored) {}
 
     String stateStr;
     if (state == BluetoothAdapter.STATE_ON) {
@@ -11454,8 +11672,10 @@ private void runLab13BluetoothCheckCore() {
         stateStr = gr ? "ΑΝΟΙΓΕΙ" : "TURNING ON";
     } else if (state == BluetoothAdapter.STATE_TURNING_OFF) {
         stateStr = gr ? "ΚΛΕΙΝΕΙ" : "TURNING OFF";
-    } else {
+    } else if (state == BluetoothAdapter.STATE_OFF) {
         stateStr = gr ? "ΚΛΕΙΣΤΟ" : "OFF";
+    } else {
+        stateStr = "UNKNOWN";
     }
 
     logLabelValue(
@@ -11473,10 +11693,13 @@ private void runLab13BluetoothCheckCore() {
             le ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
     );
 
-    if (!enabled) {
-        logWarn(gr
-                ? "Το Bluetooth είναι ΚΛΕΙΣΤΟ — ενεργοποίησέ το και ξανατρέξε το Lab 13."
-                : "Bluetooth is OFF — enable Bluetooth and re-run Lab 13.");
+    final boolean adapterEnabledAtStart = Boolean.TRUE.equals(enabled);
+    if (!adapterEnabledAtStart) {
+        logLabelWarnValue(gr ? "Bluetooth adapter" : "Bluetooth adapter",
+                enabled == null ? (gr ? "ΑΓΝΩΣΤΟ — άδεια ή OEM"
+                                      : "UNKNOWN — permission or OEM")
+                                : (gr ? "ΚΛΕΙΣΤΟ — ενεργοποίησέ το"
+                                      : "OFF — enable Bluetooth"));
         logLine();
 
         appendHtml("<br>");
@@ -11486,56 +11709,15 @@ private void runLab13BluetoothCheckCore() {
         return;
     }
 
-    // ---------- PAIRED DEVICES SNAPSHOT
+    // Privacy-preserving pairing count only; no peripheral names or MACs in report.
     try {
         Set<BluetoothDevice> bonded = lab13Ba.getBondedDevices();
-
-        if (bonded == null || bonded.isEmpty()) {
-
-            logWarn(gr
-                    ? "Συζευγμένες συσκευές Bluetooth: 0 (δεν βρέθηκαν)."
-                    : "Paired Bluetooth devices: 0 (no paired devices found).");
-
-        } else {
-
-            logOk(gr
-                    ? "Βρέθηκαν Συζευγμένες συσκευές Bluetooth: " + bonded.size()
-                    : "Paired Bluetooth devices detected: " + bonded.size());
-
-            for (BluetoothDevice d : bonded) {
-
-                String name = gr ? "Χωρίς όνομα" : "Unnamed";
-                String addr = gr ? "χωρίς-mac" : "no-mac";
-                String typeStr = gr ? "Άγνωστο" : "Unknown";
-
-                if (d != null) {
-                    try {
-                        if (d.getName() != null) name = d.getName();
-                    } catch (Throwable ignore) {}
-
-                    try {
-                        if (d.getAddress() != null) addr = d.getAddress();
-                    } catch (Throwable ignore) {}
-
-                    try {
-                        int type = d.getType();
-                        typeStr =
-                                type == BluetoothDevice.DEVICE_TYPE_CLASSIC ? (gr ? "Κλασικό" : "Classic") :
-                                type == BluetoothDevice.DEVICE_TYPE_LE ? "LE" :
-                                type == BluetoothDevice.DEVICE_TYPE_DUAL ? (gr ? "Διπλό" : "Dual") :
-                                (gr ? "Άγνωστο" : "Unknown");
-                    } catch (Throwable ignore) {}
-                }
-
-                logInfo("• " + name + " [" + typeStr + "] (" + addr + ")");
-            }
-        }
-
-    } catch (Throwable e) {
-
-        logWarn(gr
-                ? "Αποτυχία σάρωσης συζευγμένων συσκευών: " + e.getClass().getSimpleName()
-                : "Paired device scan failed: " + e.getClass().getSimpleName());
+        logLabelValue(gr ? "Πλήθος συζευγμένων" : "Paired device count",
+                bonded == null ? "UNKNOWN" : String.valueOf(bonded.size()));
+        logInfo(gr ? "Σύζευξη δεν αποδεικνύει πραγματική σύνδεση."
+                   : "Pairing is not proof of a live connection.");
+    } catch (RuntimeException e) {
+        logLabelWarnValue(gr ? "Σύζευξη" : "Pairing", "UNAVAILABLE");
     }
 
     // ------------------------------------------------------------
@@ -11545,9 +11727,8 @@ private void runLab13BluetoothCheckCore() {
         logWarn(gr
                 ? "Το τεστ εξωτερικής Bluetooth συσκευής παραλείφθηκε από τον χρήστη."
                 : "External Bluetooth device test skipped by user.");
-        logOk(gr
-                ? "Συνέχεια μόνο με έλεγχο Bluetooth του συστήματος."
-                : "Proceeded with system Bluetooth connection check only.");
+        logLabelValue(gr ? "Εξωτερικό Bluetooth" : "External Bluetooth",
+                "NOT_TESTED — no peripheral connection verified");
 
         appendHtml("<br>");
         logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
@@ -11566,8 +11747,18 @@ private void runLab13BluetoothCheckCore() {
 
     lab13DisconnectEvents = 0;
     lab13ReconnectEvents = 0;
-
-    try { unregisterReceiver(lab13BtReceiver); } catch (Throwable ignore) {}
+    lab13AmbiguousTransitions = 0;
+    lab13AdapterObservedThroughout = true;
+    lab13ReceiverSawConnection = false;
+    lab13ReceiverSawDisconnection = false;
+    lab13MonitoringStarted = false;
+    lab13WaitingForExternal = true;
+    if (btnExport != null) {
+        btnExport.setEnabled(false);
+        btnExport.setAlpha(0.5f);
+    }
+    final int generation = ++lab13MonitorGeneration;
+    try { unregisterReceiver(lab13BtReceiver); } catch (RuntimeException ignored) {}
 
 // ------------------------------------------------------------
 // REGISTER BLUETOOTH RECEIVER (LAB 13)
@@ -11575,7 +11766,15 @@ private void runLab13BluetoothCheckCore() {
 IntentFilter f = new IntentFilter();
 f.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
 f.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
-registerReceiver(lab13BtReceiver, f);
+try {
+    registerReceiver(lab13BtReceiver, f);
+} catch (RuntimeException e) {
+    lab13WaitingForExternal = false;
+    logLabelWarnValue(gr ? "Εγγραφή συμβάντων" : "Event receiver",
+            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ — δεν γίνεται διάγνωση" : "UNAVAILABLE — no verdict");
+    enableSingleExportButton();
+    return;
+}
 
 // ------------------------------------------------------------
 // UI — GEL DARK GOLD MONITOR DIALOG (MODERN)
@@ -11739,7 +11938,7 @@ com.gel.cleaner.GelButtonLayout.fitDialog(lab13Dialog);
 // TTS (ONLY IF NOT MUTED)
 // ---------------------------
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (lab13Dialog.isShowing() && !AppTTS.isMuted(this)) {
+    if (lab13Dialog != null && lab13Dialog.isShowing() && !AppTTS.isMuted(this)) {
         AppTTS.ensureSpeak(this, messageText);
     }
 }, 120);
@@ -11759,10 +11958,9 @@ if (Build.VERSION.SDK_INT >= 31) {
     if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
             != PackageManager.PERMISSION_GRANTED) {
 
-        requestPermissions(
-                new String[]{Manifest.permission.BLUETOOTH_CONNECT},
-                REQ_LAB13_BT_CONNECT
-        );
+        logLabelWarnValue(gr ? "BLUETOOTH_CONNECT" : "BLUETOOTH_CONNECT",
+                gr ? "Δεν επιτράπηκε η δοκιμή" : "Permission not granted");
+        abortLab13ByUser();
         return;
     }
 }
@@ -11798,12 +11996,18 @@ if (!lab13MonitoringStarted && lab13StatusText != null) {
 }
 
 if (lab13CounterText != null) {
-    lab13CounterText.setText(
-            gr
-                    ? "Παρακολούθηση: σε αναμονή…"
-                    : "Monitoring: waiting…"
-    );
+    lab13CounterText.setText(gr ? "Αναμονή περιφερειακού: έως 45 δευτερόλεπτα"
+                                 : "Waiting for accessory: up to 45 seconds");
 }
+lab13Handler.postDelayed(() -> {
+    if (lab13MonitorGeneration != generation
+            || !lab13WaitingForExternal || lab13MonitoringStarted) return;
+    lab13WaitingForExternal = false;
+    logLabelWarnValue(gr ? "Περιφερειακό" : "Accessory",
+            gr ? "Δεν παρατηρήθηκε σε 45s — όχι βλάβη Bluetooth"
+               : "Not observed within 45s — not hardware failure");
+    lab13FinishAndReport(adapterEnabledAtStart);
+}, 45000L);
 }
 
 // ============================================================
@@ -11812,6 +12016,7 @@ if (lab13CounterText != null) {
 private void startLab13Monitor60s() {
 
     if (lab13MonitoringStarted) return;
+    lab13WaitingForExternal = false;
     lab13MonitoringStarted = true;
 
     lab13Running = true;
@@ -11820,6 +12025,9 @@ private void startLab13Monitor60s() {
 
     lab13DisconnectEvents = 0;
     lab13ReconnectEvents = 0;
+    lab13AmbiguousTransitions = 0;
+    lab13AdapterObservedThroughout = true;
+    final int generation = lab13MonitorGeneration;
 
     boolean connectedNow = lab13IsAnyExternalConnected();
 
@@ -11860,7 +12068,7 @@ private void startLab13Monitor60s() {
         @Override
         public void run() {
 
-            if (!lab13Running) return;
+            if (!lab13Running || lab13MonitorGeneration != generation) return;
 
             boolean adapterStable = false;
             try {
@@ -11868,7 +12076,8 @@ private void startLab13Monitor60s() {
                         lab13Ba != null &&
                         lab13Ba.isEnabled() &&
                         lab13Ba.getState() == BluetoothAdapter.STATE_ON;
-            } catch (Throwable ignore) {}
+            } catch (RuntimeException ignored) {}
+            if (!adapterStable) lab13AdapterObservedThroughout = false;
 
             boolean connected = lab13IsAnyExternalConnected();
 
@@ -11876,7 +12085,12 @@ private void startLab13Monitor60s() {
             // HARD SYNC — receiver + snapshot (EACH TICK)
             // ------------------------------------------------------------
             // Priority: explicit events > snapshot
-            if (lab13ReceiverSawConnection) {
+            if (lab13ReceiverSawConnection && lab13ReceiverSawDisconnection) {
+                // Two ACL transitions in the same polling interval:
+                // event ordering and the affected remote device are UNKNOWN.
+                lab13AmbiguousTransitions++;
+                lab13HadAnyConnection = true;
+            } else if (lab13ReceiverSawConnection) {
                 connected = true;
             } else if (lab13ReceiverSawDisconnection) {
                 connected = false;
@@ -11906,7 +12120,8 @@ private void startLab13Monitor60s() {
             // ------------------------------------------------------------
             // TIME
             // ------------------------------------------------------------
-            lab13Seconds++;
+            lab13Seconds = Lab13BluetoothEvidence.boundedSeconds(
+                    SystemClock.elapsedRealtime() - lab13StartMs, 60);
 
             if (lab13CounterText != null) {
                 lab13CounterText.setText(
@@ -11976,7 +12191,7 @@ if (lab13StatusText != null) {
             // ------------------------------------------------------------
             if (lab13Seconds >= 60) {
                 lab13Running = false;
-                lab13FinishAndReport(adapterStable);
+                lab13FinishAndReport(adapterStable && lab13AdapterObservedThroughout);
                 return;
             }
 
@@ -12023,178 +12238,89 @@ private void lab13UpdateProgressSegments(int seconds) {
 // FINISH — close dialog + structured diagnosis (GEL LOGIC)
 // ============================================================
 private void lab13FinishAndReport(boolean adapterStable) {
-
     final boolean gr = AppLang.isGreek(this);
+    boolean hadMonitor = lab13MonitoringStarted;
+    long observedMs = hadMonitor
+            ? Math.max(0L, SystemClock.elapsedRealtime() - lab13StartMs) : 0L;
+    Lab13BluetoothEvidence.Result outcome = Lab13BluetoothEvidence.classify(
+            lab13SkipExternalTest, hadMonitor,
+            adapterStable && lab13AdapterObservedThroughout,
+            lab13HadAnyConnection, observedMs, 60000L,
+            lab13DisconnectEvents, lab13ReconnectEvents,
+            lab13AmbiguousTransitions);
 
     lab13Running = false;
-    try { lab13Handler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
-
+    lab13WaitingForExternal = false;
+    lab13MonitoringStarted = false;
+    lab13MonitorGeneration++;
+    lab13Handler.removeCallbacksAndMessages(null);
+    try { unregisterReceiver(lab13BtReceiver); } catch (RuntimeException ignored) {}
     try {
-        if (lab13Dialog != null && lab13Dialog.isShowing())
-            lab13Dialog.dismiss();
-    } catch (Throwable ignore) {}
+        if (lab13Dialog != null && lab13Dialog.isShowing()) lab13Dialog.dismiss();
+    } catch (RuntimeException ignored) {}
     lab13Dialog = null;
 
-    try { unregisterReceiver(lab13BtReceiver); } catch (Throwable ignore) {}
-
-    // ------------------------------------------------------------
-    // NO EXTERNAL DEVICE
-    // ------------------------------------------------------------
-    if (!lab13HadAnyConnection) {
-
-        logLine();
-        logInfo(gr ? "LAB 13 — Αποτελέσματα"
-                   : "LAB 13 — Results");
-
-        logWarn(gr
-                ? "Δεν συνδέθηκε καμία εξωτερική Bluetooth συσκευή."
-                : "No external Bluetooth device was connected.");
-
-        appendHtml("<br>");
-        logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
-        logLine();
-        return;
-    }
-
-    logLine();
-    logInfo(gr ? "LAB 13 — Αποτελέσματα (60s monitor)"
-               : "LAB 13 — Results (60s monitor)");
-
-    // ============================================================
-    // 1️⃣ Adapter Stability (COLOR)
-    // ============================================================
-    if (adapterStable) {
-        logLabelOkValue(
-                gr ? "Σταθερότητα Bluetooth adapter"
-                   : "Adapter stability",
-                gr ? "Σταθερή" : "Stable"
-        );
-    } else {
-        logLabelErrorValue(
-                gr ? "Σταθερότητα Bluetooth adapter"
-                   : "Adapter stability",
-                gr ? "Μη σταθερή" : "Unstable"
-        );
-    }
-
-    // ============================================================
-    // 2️⃣ Disconnect Events (SEVERITY)
-    // ============================================================
-    if (lab13DisconnectEvents == 0) {
-
-        logLabelOkValue(
-                gr ? "Αποσυνδέσεις" : "Disconnect events",
-                "0"
-        );
-
-    } else if (lab13DisconnectEvents <= 2) {
-
-        logLabelWarnValue(
-                gr ? "Αποσυνδέσεις" : "Disconnect events",
-                String.valueOf(lab13DisconnectEvents)
-        );
-
-    } else {
-
-        logLabelErrorValue(
-                gr ? "Αποσυνδέσεις" : "Disconnect events",
-                String.valueOf(lab13DisconnectEvents)
-        );
-    }
-
-    // ============================================================
-    // 3️⃣ Reconnect Events (RECOVERY INDICATOR)
-    // ============================================================
-    if (lab13ReconnectEvents == 0) {
-
-        logLabelValue(
-                gr ? "Επανασυνδέσεις" : "Reconnect events",
-                "0"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Επανασυνδέσεις" : "Reconnect events",
-                String.valueOf(lab13ReconnectEvents)
-        );
-    }
-
-    // ============================================================
-    // 4️⃣ PATTERN DIAGNOSIS
-    // ============================================================
-    boolean flapping =
-            lab13DisconnectEvents >= 3 &&
-            lab13ReconnectEvents >= 3;
-
-    boolean fullLoss =
-            lab13DisconnectEvents >= 3 &&
-            lab13ReconnectEvents == 0;
-
-    logLine();
-
-    if (flapping) {
-
-        logLabelErrorValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Connection flapping (συχνές αποσυνδέσεις & επανασυνδέσεις)"
-                        : "Connection flapping (frequent disconnect/reconnect)"
-        );
-
-        logWarn(gr
-                ? "Πιθανό πρόβλημα εξωτερικής συσκευής ή RF παρεμβολή."
-                : "Likely external device instability or RF interference.");
-
-    } else if (fullLoss) {
-
-        logLabelErrorValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Πλήρης απώλεια σύνδεσης"
-                        : "Full connection loss"
-        );
-
-    } else if (lab13DisconnectEvents > 0) {
-
-        logLabelWarnValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Μικρή αστάθεια σύνδεσης"
-                        : "Minor connection instability"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Σταθερή σύνδεση Bluetooth"
-                        : "Stable Bluetooth connection"
-        );
-    }
-
-    // ============================================================
-    // ROOT NOTE
-    // ============================================================
-    logLabelValue(
-            "Root access",
-            isDeviceRooted()
-                    ? (gr
-                        ? "Διαθέσιμο (advanced diagnostics)"
-                        : "Available (advanced diagnostics)")
-                    : (gr
-                        ? "Μη διαθέσιμο"
-                        : "Not available")
-    );
-
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
     logLine();
+    logSection(gr ? "LAB 13 — Τεκμήρια σύνδεσης Bluetooth"
+                  : "LAB 13 — Bluetooth link observations");
+    logLine();
+
+    logLabelValue(gr ? "Περίοδος παρακολούθησης" : "Observed monitoring window",
+            hadMonitor ? (observedMs / 1000L) + " s" : (gr ? "Δεν ξεκίνησε" : "Not started"));
+    logLabelValue(gr ? "ACL / profile μεταβολές (συνολικά)" : "Aggregate ACL/profile transitions",
+            gr ? ("Αποσυνδέσεις " + lab13DisconnectEvents
+                    + ", επανασυνδέσεις " + lab13ReconnectEvents
+                    + ", ασαφή γεγονότα " + lab13AmbiguousTransitions)
+               : ("Disconnections " + lab13DisconnectEvents
+                    + ", reconnections " + lab13ReconnectEvents
+                    + ", ambiguous events " + lab13AmbiguousTransitions));
+    logInfo(gr ? "Τα γεγονότα ACL ή οι καταστάσεις profile αφορούν πιθανώς διαφορετικές συσκευές."
+               : "ACL broadcasts and profile status may refer to different remote devices.");
+
+    switch (outcome) {
+        case AGGREGATE_LINK_OBSERVED:
+            logLabelValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "ΠΑΡΑΤΗΡΗΘΗΚΕ σύνδεση σε πλήρες δείγμα 60s"
+                       : "Aggregate link observed over a full 60s sample");
+            logInfo(gr ? "Δεν επιβεβαιώθηκε συγκεκριμένη συσκευή ή μεταφορά δεδομένων GATT."
+                       : "A specific peripheral and GATT data transfer were not verified.");
+            break;
+        case AGGREGATE_LINK_CHANGES_OBSERVED:
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Παρατηρήθηκαν μεταβολές σύνδεσης — άγνωστη η αιτία"
+                       : "Aggregate link changes observed — cause unknown");
+            break;
+        case ADAPTER_UNAVAILABLE:
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Ο adapter δεν ήταν συνεχώς διαθέσιμος — δοκιμή ανεπαρκής"
+                       : "Adapter not available throughout — incomplete observation");
+            break;
+        case INCOMPLETE:
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "ΔΕΙΓΜΑ ΜΗ ΟΛΟΚΛΗΡΩΜΕΝΟ — όχι PASS ή FAIL"
+                       : "INCOMPLETE WINDOW — no hardware PASS or FAIL");
+            break;
+        case NOT_TESTED:
+            logLabelValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "NOT_TESTED — παραλείφθηκε λειτουργική δοκιμή"
+                       : "NOT_TESTED — functional challenge skipped");
+            break;
+        default:
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Δεν παρατηρήθηκε εξωτερική σύνδεση — όχι βλάβη Bluetooth"
+                       : "No external link observed — not a Bluetooth hardware failure");
+    }
+    logLabelValue(gr ? "Διαγνωστικό όριο" : "Diagnostic limit",
+            gr ? "Δεν αποδεικνύεται σταθερότητα RF, συγκεκριμένο περιφερειακό ή GATT read/write"
+               : "RF health, specific peripheral identity and GATT read/write remain unverified");
+    logInfo(gr ? "Το Lab 13 κατέγραψε διαθέσιμες ενδείξεις Android, όχι οριστική διάγνωση hardware."
+               : "Lab 13 captured available Android indicators, not a hardware diagnosis.");
+    enableSingleExportButton();
 }
 
 // ============================================================
-// PROFILE NAME (small internal helper)
+// // PROFILE NAME (small internal helper)
 // ============================================================
 private String lab13ProfileName(int p) {
     if (p == BluetoothProfile.A2DP) return "A2DP";
@@ -12207,34 +12333,33 @@ private String lab13ProfileName(int p) {
 // ABORT HOOK
 // ============================================================
 private void abortLab13ByUser() {
-
-    // stop lab state
+    final boolean gr = AppLang.isGreek(this);
+    boolean hadSession = lab13Running || lab13WaitingForExternal
+            || lab13MonitoringStarted;
     lab13Running = false;
-    try { lab13Handler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
-
-    // close dialog
+    lab13WaitingForExternal = false;
+    lab13MonitoringStarted = false;
+    lab13MonitorGeneration++;
+    lab13Handler.removeCallbacksAndMessages(null);
+    try { unregisterReceiver(lab13BtReceiver); } catch (RuntimeException ignored) {}
     try {
-        if (lab13Dialog != null && lab13Dialog.isShowing())
-            lab13Dialog.dismiss();
-    } catch (Throwable ignore) {}
+        if (lab13Dialog != null && lab13Dialog.isShowing()) lab13Dialog.dismiss();
+    } catch (RuntimeException ignored) {}
     lab13Dialog = null;
+    try { AppTTS.stop(); } catch (RuntimeException ignored) {}
 
-    // unregister BT receiver (safety)
-    try { unregisterReceiver(lab13BtReceiver); } catch (Throwable ignore) {}
-
-// stop TTS
-AppTTS.stop();
-
-    // ------------------------------------------------------------
-    // ABORT LOG
-    // ------------------------------------------------------------
-    appendHtml("<br>");
-    logWarn("Lab 13 aborted by user.");
-    logLine();
+    if (hadSession) {
+        appendHtml("<br>");
+        logLabelWarnValue(gr ? "LAB 13 — Δοκιμή" : "LAB 13 — Test",
+                gr ? "ΔΙΑΚΟΠΗ / ΑΚΥΡΩΣΗ — χωρίς συμπέρασμα hardware"
+                   : "INTERRUPTED / CANCELLED — no hardware verdict");
+        logLine();
+    }
+    enableSingleExportButton();
 }
 
 // ============================================================
-// LAB 14 — BATTERY DIAGNOSTICS SUITE
+// // LAB 14 — BATTERY DIAGNOSTICS SUITE
 // ============================================================
 private void showBatterySuiteMenu() {
 
@@ -30344,6 +30469,15 @@ short[] buffer = new short[samples];
 protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
 
+    // ACTION_DIAL does not report whether a call was made. Only ask the user.
+    if (requestCode == REQ_LAB12_DIALER) {
+        if (lab12DialerPending) {
+            lab12DialerPending = false;
+            lab12AfterDialerReturn();
+        }
+        return;
+    }
+
 // ============================================================
 // LAB 6 — TOUCH GRID
 // ============================================================
@@ -30352,74 +30486,50 @@ final boolean gr = AppLang.isGreek(this);
 
 if (requestCode == REQ_LAB6_TOUCH) {
 
-    int total = TouchGridTestActivity.getTotalZones();
-    int remaining = TouchGridTestActivity.getRemainingZones();
+    // Never use old process-static counts as evidence for this result.
+    boolean fresh = data != null
+            && data.hasExtra(TouchGridTestActivity.EXTRA_TOTAL_ZONES)
+            && data.hasExtra(TouchGridTestActivity.EXTRA_REMAINING_ZONES);
+    int total = fresh
+            ? data.getIntExtra(TouchGridTestActivity.EXTRA_TOTAL_ZONES, -1) : -1;
+    int remaining = fresh
+            ? data.getIntExtra(TouchGridTestActivity.EXTRA_REMAINING_ZONES, -1) : -1;
+    Lab6Evidence.Touch touch = Lab6Evidence.touch(
+            resultCode == RESULT_OK, fresh, total, remaining);
+    lab6TouchGridObserved = touch == Lab6Evidence.Touch.GRID_SAMPLED;
 
     appendHtml("<br>");
     logLine();
     logSection(gr ? "LAB 6 — Οθόνη / Αφή" : "LAB 6 — Display / Touch");
     logLine();
 
-    if (resultCode == RESULT_OK) {
-
-        logLabelOkValue(
-                gr ? "Έλεγχος αφής" : "Touch grid test",
-                gr ? "Ολοκληρώθηκε" : "Completed"
-        );
-
-        logLabelOkValue(
-                gr ? "Ζώνες οθόνης" : "Screen zones",
-                gr ? "Όλες οι ζώνες ανταποκρίθηκαν" : "All zones responded"
-        );
-
-        logLabelOkValue(
-                gr ? "Νεκρές ζώνες" : "Dead zones",
-                gr ? "Δεν εντοπίστηκαν" : "Not detected"
-        );
-
+    if (touch == Lab6Evidence.Touch.GRID_SAMPLED) {
+        logLabelOkValue(gr ? "Δειγματοληψία αφής" : "Touch grid sampling",
+                gr ? "Καταγράφηκαν και οι 96 στόχοι της ορατής περιοχής"
+                   : "All 96 visible-area targets registered touch events");
+        logLabelValue(gr ? "Περιορισμός" : "Limitation",
+                gr ? "Δεν επαληθεύτηκαν ολόκληρος ο digitizer, ghost touches ή ακρίβεια αφής"
+                   : "Not a full digitizer, ghost-touch or touch-accuracy certification");
+    } else if (touch == Lab6Evidence.Touch.USER_STOPPED_INCOMPLETE) {
+        logLabelWarnValue(gr ? "Δοκιμή αφής" : "Touch sampling",
+                gr ? "Διακόπηκε από τον χρήστη — χωρίς διάγνωση βλάβης"
+                   : "Stopped by user — no digitizer fault verdict");
+        logLabelValue(gr ? "Στόχοι που καταγράφηκαν" : "Targets observed",
+                (total - remaining) + " / " + total);
     } else {
-
-        logLabelWarnValue(
-                gr ? "Έλεγχος αφής" : "Touch grid test",
-                gr ? "Μη ολοκληρωμένος" : "Incomplete"
-        );
-
-        logLabelErrorValue(
-                gr ? "Μη ανταποκρινόμενες ζώνες" : "Unresponsive zones",
-                remaining + " / " + total
-        );
-
-        logInfo(gr ? "Ερμηνεία:" : "Interpretation:");
-
-        logLabelWarnValue(
-                gr ? "Πιθανή αιτία" : "Possible cause",
-                gr
-                        ? "Τοπικές νεκρές ζώνες digitizer"
-                        : "Localized digitizer dead zones"
-        );
-
-        logLabelOkValue(
-                gr ? "Σύσταση" : "Recommendation",
-                gr
-                        ? "Επαναλάβετε χειροκίνητα τον έλεγχο για επιβεβαίωση"
-                        : "Manual re-test to confirm behavior"
-        );
+        logLabelWarnValue(gr ? "Δοκιμή αφής" : "Touch sampling",
+                gr ? "Ανεπαρκή/μη έγκυρα δεδομένα — ΑΓΝΩΣΤΟ"
+                   : "Missing or invalid evidence — INCONCLUSIVE");
     }
 
-    appendHtml("<br>");
-    logLabelOkValue(
-            gr ? "Επόμενο βήμα" : "Next step",
-            gr
-                    ? "LAB 6 PRO — Χρώμα & Ομοιομορφία Οθόνης"
-                    : "LAB 6 PRO — Display Color & Uniformity"
-    );
-    logLine();
-
+    // Visual inspection remains optional and separate. It cannot repair
+    // an aborted touch grid into a successful touchscreen verdict.
+    logLabelValue(gr ? "Επόμενο βήμα" : "Next step",
+            gr ? "Προαιρετική οπτική επιθεώρηση (USER_REPORTED)"
+               : "Optional guided visual inspection (USER_REPORTED)");
     startActivityForResult(
             new Intent(this, DisplayProTestActivity.class),
-            REQ_LAB6_COLOR
-    );
-
+            REQ_LAB6_COLOR);
     return;
 }
 
@@ -30428,78 +30538,56 @@ if (requestCode == REQ_LAB6_TOUCH) {
 // ============================================================
 if (requestCode == REQ_LAB6_COLOR) {
 
-    if (resultCode == RESULT_CANCELED) {
+    boolean hasAnswer = data != null && data.hasExtra("display_issues");
+    boolean fullPresentation = data != null
+            && data.getBooleanExtra("display_steps_completed", false);
+    boolean reportedIssue = data != null
+            && data.getBooleanExtra("display_issues", false);
+    Lab6Evidence.Visual visual = Lab6Evidence.visual(
+            resultCode == RESULT_OK, hasAnswer, fullPresentation, reportedIssue);
 
-        logLabelWarnValue(
-                "LAB 6 PRO",
-                gr ? "Ακυρώθηκε από τον χρήστη" : "Canceled by user"
-        );
+    appendHtml("<br>");
+    logLine();
+    logSection(gr ? "LAB 6 PRO — Οπτική επιθεώρηση"
+                  : "LAB 6 PRO — Visual inspection");
+    logLine();
 
-        logLabelWarnValue(
-                gr ? "Οπτικός έλεγχος" : "Visual inspection",
-                gr ? "Δεν πραγματοποιήθηκε" : "Not performed"
-        );
-
-        appendHtml("<br>");
-        logLine();
-        enableSingleExportButton();
-        return;
-    }
-
-    boolean issues =
-            data != null && data.getBooleanExtra("display_issues", false);
-
-    if (!issues) {
-
-        logLabelOkValue(
-                gr ? "Οπτικός έλεγχος" : "Visual inspection",
-                gr ? "Δεν αναφέρθηκαν ανωμαλίες" : "No visible artifacts reported"
-        );
-
-        logLabelOkValue(
-                gr ? "Ομοιομορφία οθόνης" : "Display uniformity",
-                "OK"
-        );
-
-        logLabelOkValue(
-                gr ? "Burn-in / banding" : "Burn-in / banding",
-                gr ? "Δεν παρατηρήθηκε" : "Not observed"
-        );
-
+    if (visual == Lab6Evidence.Visual.USER_REPORTED_NO_ISSUE) {
+        logLabelValue(gr ? "Απάντηση χρήστη" : "User response",
+                gr ? "Δεν ανέφερε ορατές ανωμαλίες στο παρουσιασμένο μοτίβο"
+                   : "No visible artifacts reported during the presented patterns");
+        logLabelValue(gr ? "Περιορισμός" : "Limitation",
+                gr ? "Δεν μετρήθηκαν φωτεινότητα, burn-in ή χρωματική ακρίβεια"
+                   : "Brightness, burn-in and color accuracy were not instrumentally measured");
+    } else if (visual == Lab6Evidence.Visual.USER_REPORTED_ISSUE) {
+        logLabelWarnValue(gr ? "Απάντηση χρήστη" : "User response",
+                gr ? "Αναφέρθηκε οπτική ανωμαλία — τύπος και αιτία μη επαληθευμένα"
+                   : "Visible anomaly reported — type and cause unverified");
     } else {
-
-        logLabelWarnValue(
-                gr ? "Οπτικός έλεγχος" : "Visual inspection",
-                gr ? "Αναφέρθηκαν οπτικές ανωμαλίες" : "User reported visual anomalies"
-        );
-
-        logInfo(gr ? "Πιθανά ευρήματα:" : "Possible findings:");
-
-        logLabelWarnValue("• Issue",
-                gr ? "Burn-in / αποτύπωση εικόνας" : "Burn-in / image retention");
-
-        logLabelWarnValue("• Issue",
-                gr ? "Color banding / διαβαθμίσεις" : "Color banding / gradient steps");
-
-        logLabelWarnValue("• Issue",
-                gr ? "Λεκέδες / mura / μετατόπιση χρώματος"
-                   : "Screen stains / mura / tint shift");
+        logLabelWarnValue(gr ? "Οπτική επιθεώρηση" : "Visual inspection",
+                gr ? "Ακυρώθηκε, διακόπηκε ή δεν επιστράφηκε έγκυρη απάντηση"
+                   : "Cancelled, interrupted or missing a valid guided answer");
     }
 
     appendHtml("<br>");
-    logSection(gr ? "LAB 6 — Τελικό Αποτέλεσμα" : "LAB 6 — Final Result");
+    logSection(gr ? "LAB 6 — Συνολικό αποτέλεσμα" : "LAB 6 — Overall result");
     logLine();
 
-    logLabelOkValue(
-            gr ? "Έλεγχος οθόνης" : "Display test",
-            gr
-                    ? "Ολοκληρώθηκε έλεγχος αφής και οπτικής επιθεώρησης"
-                    : "Touch integrity and visual inspection completed"
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 6 ολοκληρώθηκε." : "Lab 6 finished.");
-    logLine();
+    Lab6Evidence.Touch touch = lab6TouchGridObserved
+            ? Lab6Evidence.Touch.GRID_SAMPLED
+            : Lab6Evidence.Touch.INCONCLUSIVE;
+    if (Lab6Evidence.guidedProtocolComplete(touch, visual)) {
+        logLabelValue(gr ? "Πρωτόκολλο" : "Guided protocol",
+                gr ? "Ολοκληρώθηκε πλέγμα αφής και καταγράφηκε υποκειμενική απάντηση"
+                   : "Touch grid sampled and subjective visual answer recorded");
+        logLabelValue(gr ? "Διαγνωστικό όριο" : "Diagnostic limit",
+                gr ? "Δεν αποτελεί συνολική πιστοποίηση υγείας οθόνης"
+                   : "Does not certify full display hardware health");
+    } else {
+        logLabelWarnValue(gr ? "Πρωτόκολλο" : "Guided protocol",
+                gr ? "ΜΕΡΙΚΟ / ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ — όχι hardware PASS ή FAIL"
+                   : "PARTIAL / UNVERIFIED — no hardware PASS or FAIL");
+    }
 
     enableSingleExportButton();
     return;
