@@ -2079,66 +2079,13 @@ MAP.put("iphone 11 pro max", iphone11ProMax);
 }
 
 public static AppleDeviceSpec get(String modelName) {
-
-    if (modelName == null)
+    if (modelName == null || modelName.trim().isEmpty())
         return AppleDeviceSpec.unknown();
-
-    String m = modelName.trim().toLowerCase();
-
-    // =====================================================
-    // SERIES RESOLUTION — CRITICAL
-    // =====================================================
-
-    if (m.contains("iphone 16 pro max"))
-        return MAP.get("iphone 16 pro max");
-
-    if (m.contains("iphone 16 pro"))
-        return MAP.get("iphone 16 pro");
-
-    if (m.contains("iphone 16 plus"))
-        return MAP.get("iphone 16 plus");
-
-    if (m.contains("iphone 16"))
-        return MAP.get("iphone 16");
-    
-    if (m.contains("iphone 15")) {
-        if (m.contains("pro max")) return MAP.get("iphone 15 pro max");
-        if (m.contains("pro"))     return MAP.get("iphone 15 pro");
-        if (m.contains("plus"))    return MAP.get("iphone 15 plus");
-        return MAP.get("iphone 15");
-    }
-
-    if (m.contains("iphone 14")) {
-        if (m.contains("pro max")) return MAP.get("iphone 14 pro max");
-        if (m.contains("pro"))     return MAP.get("iphone 14 pro");
-        if (m.contains("plus"))    return MAP.get("iphone 14 plus");
-        return MAP.get("iphone 14");
-    }
-
-    if (m.contains("iphone 13")) {
-        if (m.contains("pro max")) return MAP.get("iphone 13 pro max");
-        if (m.contains("pro"))     return MAP.get("iphone 13 pro");
-        if (m.contains("mini"))    return MAP.get("iphone 13 mini");
-        return MAP.get("iphone 13");
-    }
-
-    if (m.contains("iphone 12")) {
-        if (m.contains("pro max")) return MAP.get("iphone 12 pro max");
-        if (m.contains("pro"))     return MAP.get("iphone 12 pro");
-        if (m.contains("mini"))    return MAP.get("iphone 12 mini");
-        return MAP.get("iphone 12");
-    }
-
-    if (m.contains("iphone 11")) {
-        if (m.contains("pro max")) return MAP.get("iphone 11 pro max");
-        if (m.contains("pro"))     return MAP.get("iphone 11 pro");
-        return MAP.get("iphone 11");
-    }
-
-    // =====================================================
-    // FALLBACK (exact key)
-    // =====================================================
-    AppleDeviceSpec d = MAP.get(m);
-    return d != null ? d : AppleDeviceSpec.unknown();
+    // Exact canonical match only. In particular, iPhone 16e must never
+    // silently inherit the hardware specifications of iPhone 16.
+    String key = modelName.trim().toLowerCase(java.util.Locale.ROOT)
+            .replaceAll("\\s+", " ");
+    AppleDeviceSpec spec = MAP.get(key);
+    return spec != null ? spec : AppleDeviceSpec.unknown();
 }
 }
