@@ -690,39 +690,27 @@ private boolean oldKeepScreenOn = false;
     // ============================================================
     private final BroadcastReceiver lab13BtReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(Context c, Intent i) {
-
-            if (!lab13Running && !lab13MonitoringStarted) {
-
-                String a = i.getAction();
-
-                if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(a)) {
-
-                    lab13ReceiverSawConnection = true;
-                    lab13HadAnyConnection = true;
-
-                    final boolean gr = AppLang.isGreek(c);
-
+        public void onReceive(Context context, Intent intent) {
+            if (!lab13Running && !lab13WaitingForExternal) return;
+            if (intent == null) return;
+            String action = intent.getAction();
+            if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                lab13ReceiverSawConnection = true;
+                lab13HadAnyConnection = true;
+                if (lab13WaitingForExternal && !lab13MonitoringStarted) {
+                    lab13WaitingForExternal = false;
                     if (lab13StatusText != null) {
                         lab13StatusText.setText(
-                                gr
-                                        ? "Συνδέθηκε εξωτερική συσκευή Bluetooth. Εκκίνηση παρακολούθησης..."
-                                        : "External Bluetooth device connected. Starting monitor..."
-                        );
+                                AppLang.isGreek(context)
+                                    ? "Παρατηρήθηκε Bluetooth ACL σύνδεση — αρχίζει η δειγματοληψία"
+                                    : "Bluetooth ACL connection observed — sampling begins");
                     }
-
-                    if (!lab13WaitTtsPlayed && !AppTTS.isMuted(c)) {
-                        lab13WaitTtsPlayed = true;
-                        AppTTS.ensureSpeak(
-                                c,
-                                gr
-                                        ? "Εντοπίστηκε σύνδεση Bluetooth. Ξεκινά η παρακολούθηση."
-                                        : "Bluetooth connection detected. Monitoring started."
-                        );
-                    }
-
                     startLab13Monitor60s();
                 }
+            } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
+                // The old receiver never set this flag. ACL events are
+                // aggregate and may involve a DIFFERENT paired device.
+                if (lab13Running) lab13ReceiverSawDisconnection = true;
             }
         }
     };
@@ -1191,6 +1179,10 @@ private final Handler lab13Handler =
 // ============================================================
 private volatile boolean lab13ReceiverSawConnection = false;
 private volatile boolean lab13ReceiverSawDisconnection = false;
+private volatile boolean lab13WaitingForExternal = false;
+private boolean lab13AdapterObservedThroughout = true;
+private int lab13AmbiguousTransitions = 0;
+private int lab13MonitorGeneration = 0;
 
 // ============================================================
 // LAB 15 — FLAGS (DO NOT MOVE)
@@ -2377,6 +2369,12 @@ protected void onPause() {
         if (dialog != null && dialog.isShowing()) dialog.dismiss();
     } catch (RuntimeException ignored) {}
 
+    // Lab13 external monitoring is foreground-only; background/rotation
+    // must not later report an old partial sample as a 60-second success.
+    if (lab13Running || lab13WaitingForExternal) {
+        abortLab13ByUser();
+    }
+
     // =========================
     // LAB 14 / 14B
     // =========================
@@ -2421,6 +2419,10 @@ protected void onDestroy() {
         }
     } catch (Throwable ignore) {}
 
+    lab13Running = false;
+    lab13WaitingForExternal = false;
+    lab13MonitorGeneration++;
+    lab13Handler.removeCallbacksAndMessages(null);
     try {
         unregisterReceiver(lab13BtReceiver);
     } catch (Throwable ignore) {}
