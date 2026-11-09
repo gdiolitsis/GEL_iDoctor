@@ -42,9 +42,14 @@ public final class AcousticStimulusProbe {
         public final String reason;
         public final double weakestLowRiseDb;
         public final double weakestHighRiseDb;
+        // Raw PCM counts, not calibrated sound pressure level or speaker quality.
+        public final double ambientMicRms;
+        public final double challengeMicRms;
+        public final double challengeMicPeak;
 
         private Result(boolean attempted, boolean observed, int tests, int positives,
-                       boolean clipped, String route, String reason, double lo, double hi) {
+                       boolean clipped, String route, String reason, double lo, double hi,
+                       double ambientRms, double challengeRms, double challengePeak) {
             this.attempted = attempted;
             this.responseObserved = observed;
             this.testedTones = tests;
@@ -54,6 +59,9 @@ public final class AcousticStimulusProbe {
             this.reason = reason;
             this.weakestLowRiseDb = lo;
             this.weakestHighRiseDb = hi;
+            this.ambientMicRms = ambientRms;
+            this.challengeMicRms = challengeRms;
+            this.challengeMicPeak = challengePeak;
         }
     }
 
@@ -64,6 +72,11 @@ public final class AcousticStimulusProbe {
         if (manager.getStreamVolume(AudioManager.STREAM_MUSIC) <= 0) {
             return unavailable("Media stream muted; no acoustic challenge");
         }
+        // Available external output devices are not proof of routing. When present,
+        // this built-in-speaker challenge cannot isolate the emitter. Fail closed:
+        // request a re-test after disconnection, not a speaker hardware verdict.
+        String outputBlocker = externalOutputBlocker(manager);
+        if (outputBlocker != null) return unavailable(outputBlocker);
 
         final int minBuffer = AudioRecord.getMinBufferSize(SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
@@ -81,6 +94,8 @@ public final class AcousticStimulusProbe {
         int tested = 0, observed = 0;
         boolean clipped = false;
         double minLow = Double.POSITIVE_INFINITY, minHigh = Double.POSITIVE_INFINITY;
+        double ambientMicRms = Double.NaN, challengeMicRms = Double.NaN;
+        double challengeMicPeak = Double.NaN;
         String route = "Unknown microphone route";
         String failure = "";
         try {
@@ -126,6 +141,12 @@ public final class AcousticStimulusProbe {
                     break;
                 }
                 tested++;
+                ambientMicRms = score.ambientRms;
+                challengeMicRms = score.challengeRms;
+                double peak = 0d;
+                for (short sample : during) peak = Math.max(peak, Math.abs((int) sample));
+                challengeMicPeak = Double.isNaN(challengeMicPeak)
+                        ? peak : Math.max(challengeMicPeak, peak);
                 if (score.responseObserved) observed++;
                 clipped |= score.clipping;
                 minLow = Math.min(minLow, score.lowFrequencyRiseDb);
@@ -149,7 +170,51 @@ public final class AcousticStimulusProbe {
                 : "No repeatable synchronized tone above microphone baseline";
         return new Result(complete, positive, tested, observed, clipped, route,
                 reason, tested > 0 ? minLow : Double.NaN,
-                tested > 0 ? minHigh : Double.NaN);
+                tested > 0 ? minHigh : Double.NaN,
+                ambientMicRms, challengeMicRms, challengeMicPeak);
+    }
+
+    /**
+     * A connected external output is not necessarily the currently routed output.
+     * Nevertheless, we cannot attribute a microphone response to the internal
+     * loudspeaker while an alternate output is available to the media stream.
+     * This is a conservative preflight, not a physical output-route measurement.
+     */
+    private static String externalOutputBlocker(AudioManager manager) {
+        final AudioDeviceInfo[] outputs;
+        try {
+            outputs = manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+        } catch (RuntimeException e) {
+            return "Cannot inspect available audio outputs: " + e.getClass().getSimpleName();
+        }
+        if (outputs == null || outputs.length == 0) {
+            return "Audio output devices unavailable; built-in speaker route unverified";
+        }
+        for (AudioDeviceInfo device : outputs) {
+            if (device == null) continue;
+            switch (device.getType()) {
+                case AudioDeviceInfo.TYPE_WIRED_HEADSET:
+                case AudioDeviceInfo.TYPE_WIRED_HEADPHONES:
+                case AudioDeviceInfo.TYPE_LINE_ANALOG:
+                case AudioDeviceInfo.TYPE_LINE_DIGITAL:
+                case AudioDeviceInfo.TYPE_USB_DEVICE:
+                case AudioDeviceInfo.TYPE_USB_ACCESSORY:
+                case AudioDeviceInfo.TYPE_USB_HEADSET:
+                case AudioDeviceInfo.TYPE_BLUETOOTH_A2DP:
+                case AudioDeviceInfo.TYPE_BLUETOOTH_SCO:
+                case AudioDeviceInfo.TYPE_BLE_HEADSET:
+                case AudioDeviceInfo.TYPE_BLE_SPEAKER:
+                case AudioDeviceInfo.TYPE_HDMI:
+                case AudioDeviceInfo.TYPE_HDMI_ARC:
+                case AudioDeviceInfo.TYPE_HDMI_EARC:
+                case AudioDeviceInfo.TYPE_HEARING_AID:
+                    return "External audio output available (type " + device.getType()
+                            + "); disconnect external output and rerun speaker test";
+                default:
+                    break;
+            }
+        }
+        return null;
     }
 
     private static short[] readSamples(AudioRecord record, int samples) {
@@ -170,6 +235,7 @@ public final class AcousticStimulusProbe {
 
     private static Result unavailable(String reason) {
         return new Result(false, false, 0, 0, false, "Unknown",
-                reason, Double.NaN, Double.NaN);
+                reason, Double.NaN, Double.NaN,
+                Double.NaN, Double.NaN, Double.NaN);
     }
 }
