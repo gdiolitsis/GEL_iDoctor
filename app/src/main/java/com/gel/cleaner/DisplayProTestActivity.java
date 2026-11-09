@@ -12,6 +12,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
@@ -103,6 +104,13 @@ public void onBackPressed() {
 }
 
     @Override
+    protected void onPause() {
+        // Leaving the foreground invalidates the guided visual observation.
+        if (!testFinished) safeCancel();
+        super.onPause();
+    }
+
+    @Override
     protected void onDestroy() {
         activityAlive = false;
         h.removeCallbacksAndMessages(null);
@@ -160,7 +168,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (!AppTTS.isMuted(this)) {
+    if (d.isShowing() && !testFinished && !AppTTS.isMuted(this)) {
         AppTTS.ensureSpeak(this, text);
     }
 }, 120);
@@ -241,7 +249,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
 
         UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 
-        startTimeMs = System.currentTimeMillis();
+        startTimeMs = SystemClock.elapsedRealtime();
         stepIndex = 0;
         loopIndex = 0;
 
@@ -258,8 +266,9 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
             return;
         }
 
-        if (System.currentTimeMillis() - startTimeMs > MAX_RUNTIME_MS) {
-            showFinalQuestion();
+        if (SystemClock.elapsedRealtime() - startTimeMs > MAX_RUNTIME_MS) {
+            // A timed-out visual sequence was not fully presented.
+            safeCancel();
             return;
         }
 
@@ -378,6 +387,7 @@ yes.setOnClickListener(v -> endTest(true));
 
     Intent result = new Intent();
     result.putExtra("display_issues", issuesDetected);
+    result.putExtra("display_steps_completed", loopIndex >= LOOP_COUNT);
 
     setResult(RESULT_OK, result);
     finish();

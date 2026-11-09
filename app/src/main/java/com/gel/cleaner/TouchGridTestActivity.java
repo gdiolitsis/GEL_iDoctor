@@ -1,6 +1,6 @@
 package com.gel.cleaner;
 
-import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -11,117 +11,111 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 
 /**
- * ============================================================
- * LAB 6 — Display / Touch Grid Test
- * FINAL — TEST ONLY (NO LOGS HERE)
- * ============================================================
+ * Lab 6: explicit, per-run touch-grid sampling evidence.
+ * A fully touched grid is a bounded screen-area test, not a certificate that
+ * the entire digitizer has no dead zones, ghost touches, or timing defects.
  */
 public class TouchGridTestActivity extends GELAutoActivityHook {
+    public static final String EXTRA_TOTAL_ZONES = "lab6_touch_total_zones";
+    public static final String EXTRA_REMAINING_ZONES = "lab6_touch_remaining_zones";
 
-    // ========================================================
-    // STATIC RESULTS (READ BY ManualTestsActivity)
-    // ========================================================
+    // Retained for compatibility; do NOT consume these process-wide statics as
+    // current-session evidence in another activity.
     public static int lastTotalZones = 0;
     public static int lastRemainingZones = 0;
+    public static int getTotalZones() { return lastTotalZones; }
+    public static int getRemainingZones() { return lastRemainingZones; }
 
-    public static int getTotalZones() {
-        return lastTotalZones;
-    }
-
-    public static int getRemainingZones() {
-        return lastRemainingZones;
-    }
-
-    // ========================================================
-    // ACTIVITY
-    // ========================================================
     private TouchGridView gridView;
+    private boolean resultCommitted = false;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
+    protected void onCreate(Bundle state) {
+        super.onCreate(state);
+        lastTotalZones = Lab6Evidence.TOTAL_ZONES;
+        lastRemainingZones = Lab6Evidence.TOTAL_ZONES;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        FrameLayout root = new FrameLayout(this);
+        // Place controls OUTSIDE the grid: an overlay previously occluded cells.
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
+        root.setFitsSystemWindows(true);
 
-        gridView = new TouchGridView(this);
-        root.addView(gridView);
+        gridView = new TouchGridView();
+        root.addView(gridView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
 
+        FrameLayout controls = new FrameLayout(this);
         Button endButton = new com.gel.cleaner.GelButton(this);
-        endButton.setText("END TEST");
+        endButton.setText(AppLang.isGreek(this) ? "ΤΕΡΜΑΤΙΣΜΟΣ" : "END TEST");
         endButton.setAllCaps(false);
         endButton.setTextColor(Color.WHITE);
         endButton.setBackgroundColor(0xFF8B0000);
-
-        FrameLayout.LayoutParams lp =
-                new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.WRAP_CONTENT,
-                        FrameLayout.LayoutParams.WRAP_CONTENT
-                );
-        lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        lp.bottomMargin = dp(20);
-        endButton.setLayoutParams(lp);
-
-        endButton.setOnClickListener(v -> {
-            lastTotalZones = gridView.getTotalZones();
-            lastRemainingZones = gridView.countUncleared();
-            setResult(RESULT_CANCELED);
-            finish();
-        });
-
-        root.addView(endButton);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+        controls.addView(endButton, lp);
+        root.addView(controls, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(72)));
+        endButton.setOnClickListener(v -> finishTouch(false));
         setContentView(root);
     }
 
-    public int dp(int v) {
-        float d = getResources().getDisplayMetrics().density;
-        return (int) (v * d + 0.5f);
+    private void finishTouch(boolean completed) {
+        if (resultCommitted) return;
+        resultCommitted = true;
+        int remaining = gridView == null
+                ? Lab6Evidence.TOTAL_ZONES : gridView.countUncleared();
+        lastTotalZones = Lab6Evidence.TOTAL_ZONES;
+        lastRemainingZones = remaining;
+        Intent evidence = new Intent();
+        evidence.putExtra(EXTRA_TOTAL_ZONES, Lab6Evidence.TOTAL_ZONES);
+        evidence.putExtra(EXTRA_REMAINING_ZONES, remaining);
+        setResult(completed && remaining == 0 ? RESULT_OK : RESULT_CANCELED, evidence);
+        finish();
     }
 
-    // ========================================================
-    // TOUCH GRID VIEW
-    // ========================================================
-    private class TouchGridView extends View {
+    @Override
+    public void onBackPressed() {
+        finishTouch(false);
+    }
 
-        private final int COLS = 8;
-        private final int ROWS = 12;
+    // dp(int) is inherited from GELAutoActivityHook.
 
-        private boolean[][] cleared;
-        private Paint dotPaint;
-
-        private float cellW, cellH;
+    private final class TouchGridView extends View {
+        private final boolean[][] cleared =
+                new boolean[Lab6Evidence.GRID_ROWS][Lab6Evidence.GRID_COLUMNS];
+        private final Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private float cellW;
+        private float cellH;
         private float radius;
 
-        TouchGridView(Activity ctx) {
-            super(ctx);
-            cleared = new boolean[ROWS][COLS];
-            dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        TouchGridView() {
+            super(TouchGridTestActivity.this);
             dotPaint.setColor(Color.YELLOW);
         }
 
-        int getTotalZones() {
-            return ROWS * COLS;
-        }
-
         @Override
-        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-            cellW = w / (float) COLS;
-            cellH = h / (float) ROWS;
-            radius = Math.min(cellW, cellH) * 0.25f;
+        protected void onSizeChanged(int w, int h, int oldW, int oldH) {
+            super.onSizeChanged(w, h, oldW, oldH);
+            cellW = w / (float) Lab6Evidence.GRID_COLUMNS;
+            cellH = h / (float) Lab6Evidence.GRID_ROWS;
+            radius = Math.min(cellW, cellH) * 0.28f;
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
-            for (int r = 0; r < ROWS; r++) {
-                for (int c = 0; c < COLS; c++) {
-                    if (!cleared[r][c]) {
-                        float cx = c * cellW + cellW / 2f;
-                        float cy = r * cellH + cellH / 2f;
-                        canvas.drawCircle(cx, cy, radius, dotPaint);
+            super.onDraw(canvas);
+            for (int row = 0; row < Lab6Evidence.GRID_ROWS; row++) {
+                for (int col = 0; col < Lab6Evidence.GRID_COLUMNS; col++) {
+                    if (!cleared[row][col]) {
+                        float x = (col + 0.5f) * cellW;
+                        float y = (row + 0.5f) * cellH;
+                        canvas.drawCircle(x, y, radius, dotPaint);
                     }
                 }
             }
@@ -129,43 +123,56 @@ public class TouchGridTestActivity extends GELAutoActivityHook {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
-
-            if (event.getAction() == MotionEvent.ACTION_DOWN ||
-                event.getAction() == MotionEvent.ACTION_MOVE) {
-
-                int c = (int) (event.getX() / cellW);
-                int r = (int) (event.getY() / cellH);
-
-                if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
-                    if (!cleared[r][c]) {
-                        cleared[r][c] = true;
-                        invalidate();
-
-                        if (allCleared()) {
-                            lastTotalZones = getTotalZones();
-                            lastRemainingZones = 0;
-                            setResult(RESULT_OK);
-                            finish();
-                        }
-                    }
-                }
+            if (resultCommitted) return true;
+            // A tap obscured by an overlay is not trusted test evidence.
+            if ((event.getFlags() & MotionEvent.FLAG_WINDOW_IS_OBSCURED) != 0) {
                 return true;
             }
-            return false;
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN
+                    || action == MotionEvent.ACTION_POINTER_DOWN
+                    || action == MotionEvent.ACTION_MOVE) {
+                int pointerCount = event.getPointerCount();
+                for (int p = 0; p < pointerCount; p++) {
+                    if (action == MotionEvent.ACTION_POINTER_DOWN
+                            && p != event.getActionIndex()) continue;
+                    observePoint(event.getX(p), event.getY(p));
+                }
+                if (allCleared()) finishTouch(true);
+            }
+            return true;
+        }
+
+        private void observePoint(float x, float y) {
+            if (!(cellW > 0f && cellH > 0f)
+                    || !Float.isFinite(x) || !Float.isFinite(y)
+                    || x < 0f || y < 0f || x >= getWidth() || y >= getHeight()) {
+                return;
+            }
+            int col = (int) (x / cellW);
+            int row = (int) (y / cellH);
+            if (row >= Lab6Evidence.GRID_ROWS || col >= Lab6Evidence.GRID_COLUMNS) {
+                return;
+            }
+            float dx = x - (col + 0.5f) * cellW;
+            float dy = y - (row + 0.5f) * cellH;
+            if (dx * dx + dy * dy <= radius * radius && !cleared[row][col]) {
+                cleared[row][col] = true;
+                invalidate();
+            }
         }
 
         private boolean allCleared() {
-            for (int r = 0; r < ROWS; r++)
-                for (int c = 0; c < COLS; c++)
-                    if (!cleared[r][c]) return false;
-            return true;
+            return countUncleared() == 0;
         }
 
         int countUncleared() {
             int n = 0;
-            for (int r = 0; r < ROWS; r++)
-                for (int c = 0; c < COLS; c++)
-                    if (!cleared[r][c]) n++;
+            for (int row = 0; row < Lab6Evidence.GRID_ROWS; row++) {
+                for (int col = 0; col < Lab6Evidence.GRID_COLUMNS; col++) {
+                    if (!cleared[row][col]) n++;
+                }
+            }
             return n;
         }
     }
