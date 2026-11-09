@@ -13500,7 +13500,8 @@ private void lab14LogFinalScore(
         boolean[] collapseRisk,
         boolean smartSwelling,
         boolean[] calibrationDrift,
-        boolean[] lab14_systemLimited
+        boolean[] lab14_systemLimited,
+        boolean hasMeasuredVoltageSag
 ) {
     appendHtml("<br>");
     logLine();
@@ -13509,9 +13510,8 @@ private void lab14LogFinalScore(
 
     boolean limited = lab14_systemLimited != null
             && lab14_systemLimited.length > 0 && lab14_systemLimited[0];
-    // Legacy internal score labels are NOT independent battery health evidence.
-    boolean observed = !limited && label != null
-            && !"Unknown".equals(label) && !"Limited".equals(label);
+    // An internal grade is not evidence. Use the actual measured-sag gate.
+    boolean observed = !limited && hasMeasuredVoltageSag;
 
     logLabelWarnValue(gr ? "Ηλεκτρική απόκριση" : "Electrical response",
             Lab14CustomerGuidance.evidenceLabel(gr, limited, observed));
@@ -15924,7 +15924,8 @@ lab14LogFinalScore(
         collapseRisk,
         smartSwelling,
         calibrationDrift,
-        lab14_systemLimited
+        lab14_systemLimited,
+        hasSag
 );
 
 // ------------------------------------------------
