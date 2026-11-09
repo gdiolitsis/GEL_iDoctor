@@ -26182,10 +26182,18 @@ private void lab24RootSuspicion() {
             "com.kingroot.kinguser",
             "com.kingo.root"
     };
-    List<String> visiblePackages = lab24_getInstalledPackagesLower();
     int visibleManagerCount = 0;
     for (String pkg : rootManagerPackages) {
-        if (visiblePackages.contains(pkg)) visibleManagerCount++;
+        // Android 11+ package-visibility filters can hide installed apps.
+        // A successful targeted lookup only proves visibility, not root.
+        try {
+            getPackageManager().getPackageInfo(pkg, 0);
+            visibleManagerCount++;
+        } catch (PackageManager.NameNotFoundException ignored) {
+            // Not visible is NOT evidence the app is absent.
+        } catch (RuntimeException ignored) {
+            // Permission/OEM restrictions => unknown.
+        }
     }
     if (visibleManagerCount > 0) {
         logLabelWarnValue(gr ? "Ορατές εφαρμογές διαχείρισης" : "Visible manager packages",
@@ -26271,6 +26279,50 @@ private void lab24RootSuspicion() {
     logOk(gr ? "Το Lab 24 ολοκληρώθηκε με τεκμηριωμένα όρια."
              : "Lab 24 completed with documented evidence limits.");
     logLine();
+}
+
+// Unprivileged, bounded public filesystem check. Sandbox restrictions can
+// hide paths and a missing su path does NOT establish lack of root.
+private boolean lab24_fileExists(String path) {
+    try {
+        return path != null && new java.io.File(path).exists();
+    } catch (SecurityException ignored) {
+        return false;
+    }
+}
+
+// No hidden Android SystemProperties API or root command. Reads only
+// three explicitly allowlisted OS-reporting keys. Missing/blocked output
+// returns UNKNOWN, never "green" or "locked" by default.
+private String lab24_getProp(String key) {
+    if (!("ro.boot.verifiedbootstate".equals(key)
+            || "ro.boot.vbmeta.device_state".equals(key)
+            || "ro.boot.flash.locked".equals(key))) {
+        return null;
+    }
+    Process process = null;
+    try {
+        process = new ProcessBuilder("/system/bin/getprop", key)
+                .redirectErrorStream(true).start();
+        boolean ended = process.waitFor(
+                350L, java.util.concurrent.TimeUnit.MILLISECONDS);
+        if (!ended || process.exitValue() != 0) return null;
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(process.getInputStream(),
+                        java.nio.charset.StandardCharsets.UTF_8))) {
+            String line = reader.readLine();
+            return line == null || line.trim().isEmpty() ? null : line.trim();
+        }
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return null;
+    } catch (java.io.IOException | RuntimeException ignored) {
+        return null;
+    } finally {
+        if (process != null) {
+            try { process.destroy(); } catch (RuntimeException ignored) {}
+        }
+    }
 }
 
 // ============================================================
