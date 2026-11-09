@@ -37,7 +37,7 @@ public final class IPSPanicParser {
     // ============================================================
     public static Result analyze(Context ctx, String panicText) {
 
-        if (panicText == null || panicText.length() < 32)
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(panicText))
             return null;
 
         try {
@@ -71,22 +71,21 @@ public final class IPSPanicParser {
                 Result r = new Result();
                 r.patternId      = p.optString("id", "unknown");
                 r.domain         = p.optString("domain", "Unknown");
-                r.cause          = p.optString("cause", "Unknown");
-                r.severity       = p.optString("severity", "LOW");
-                r.confidence     = p.optString("confidence", "Low");
-                r.recommendation = p.optString(
-                        "recommendation",
-                        "Further inspection recommended."
-                );
+                // Signature match is an uncalibrated keyword hypothesis,
+                // not a hardware fault or evidence of actual repair necessity.
+                r.cause          = ApplePanicEvidencePolicy.possibleCause(
+                        p.optString("cause", "Unknown"));
+                r.severity       = "UNVERIFIED";
+                r.confidence     = ApplePanicEvidencePolicy.patternConfidence();
+                r.recommendation = ApplePanicEvidencePolicy.recommendation(false);
 
                 matches.add(r);
             }
 
             if (matches.isEmpty()) return null;
 
-            matches.sort((a, b) ->
-                    severityRank(b.severity) - severityRank(a.severity)
-            );
+            // Reference-pack severity was not physically validated.
+            // Preserve deterministic source order, not invented risk priority.
 
             Result out = new Result();
             out.primary = matches.get(0);

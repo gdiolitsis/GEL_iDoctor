@@ -433,8 +433,8 @@ msg.setText(
         + "Εάν δεν βρείτε την συσκευή σας στην λίστα των μοντέλων, "
         + "δεν σημαίνει ότι δεν μπορούμε να αναλύσουμε τα panic logs της.\n\n"
 
-        + "Τα panic logs παρέχουν τις ίδιες διαγνωστικές πληροφορίες "
-        + "σε οποιοδήποτε μοντέλο Apple, είτε πρόκειται για iPhone είτε για iPad."
+        + "Τα δεδομένα και η ερμηνεία των panic logs διαφέρουν ανά έκδοση iOS, "
+        + "μοντέλο και διαθέσιμη υπογραφή. Η ανάλυση δεν επιβεβαιώνει μόνη της βλάβη εξαρτήματος."
 
         : "Apple diagnostics in GEL are performed by analyzing device panic logs, "
         + "regardless of model, generation, iPhone or iPad.\n\n"
@@ -445,8 +445,8 @@ msg.setText(
         + "If your specific device is not listed, it does not mean "
         + "that we cannot analyze its panic logs.\n\n"
 
-        + "Panic logs contain the same diagnostic information "
-        + "for any Apple device, whether it is an iPhone or an iPad."
+        + "Panic log coverage varies by iOS version, model and available signatures. "
+        + "Log analysis alone cannot establish a component defect."
 );
 }
 
@@ -2794,7 +2794,16 @@ String[] models = "iphone".equals(type)
 // =====================
 // iPhone 16 Series
 // =====================
+"iPhone 18 Pro",
+"iPhone 18 Pro Max",
+"iPhone 17",
+"iPhone 17 Pro",
+"iPhone 17 Pro Max",
+"iPhone Air",
+"iPhone 17e",
+"iPhone 16e",
 "iPhone 16",
+"iPhone 16 Plus",
 "iPhone 16 Pro",
 "iPhone 16 Pro Max",
 
@@ -2802,6 +2811,7 @@ String[] models = "iphone".equals(type)
 // iPhone 15 Series
 // =====================
 "iPhone 15",
+"iPhone 15 Plus",
 "iPhone 15 Pro",
 "iPhone 15 Pro Max",
 
@@ -2809,6 +2819,7 @@ String[] models = "iphone".equals(type)
 // iPhone 14 Series
 // =====================
 "iPhone 14",
+"iPhone 14 Plus",
 "iPhone 14 Pro",
 "iPhone 14 Pro Max",
 
@@ -2816,6 +2827,7 @@ String[] models = "iphone".equals(type)
 // iPhone 13 Series
 // =====================
 "iPhone 13",
+"iPhone 13 mini",
 "iPhone 13 Pro",
 "iPhone 13 Pro Max",
 
@@ -2823,6 +2835,7 @@ String[] models = "iphone".equals(type)
 // iPhone 12 Series
 // =====================
 "iPhone 12",
+"iPhone 12 mini",
 "iPhone 12 Pro",
 "iPhone 12 Pro Max",
 
@@ -2930,6 +2943,22 @@ String rawModel = models[position];
 String normalizedModel = normalizeAppleModel(rawModel);
 
 saveAppleDevice(type, normalizedModel);
+
+// The menu can name a recent model even when its verified spec record
+// does not yet exist. Never substitute a different model's specs.
+com.gel.cleaner.iphone.AppleDeviceSpec selectedSpec =
+        com.gel.cleaner.iphone.AppleSpecs.get(normalizedModel);
+if ("unknown".equals(selectedSpec.type)) {
+    new AlertDialog.Builder(this)
+            .setTitle(AppLang.isGreek(this)
+                    ? "Πληροφορίες μοντέλου μη επαληθευμένες"
+                    : "Model specifications unavailable")
+            .setMessage(AppLang.isGreek(this)
+                    ? "Το μοντέλο επιλέχθηκε, αλλά δεν υπάρχει ακόμη ελεγμένη τεχνική καρτέλα. Μπορείτε να εισαγάγετε panic logs για ενδεικτική ανάλυση χωρίς αυτόματη διάγνωση εξαρτήματος."
+                    : "Model selected, but a verified technical spec record is not yet available. You can still import panic logs for limited analysis without an automatic component diagnosis.")
+            .setPositiveButton("OK", null)
+            .show();
+}
 
 TextView btn = findViewById(R.id.btnAppleDeviceDeclaration);
 if (btn != null) {
