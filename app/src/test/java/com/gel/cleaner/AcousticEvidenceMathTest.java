@@ -67,4 +67,18 @@ public class AcousticEvidenceMathTest {
         assertFalse(result.valid);
         assertFalse(result.responseObserved);
     }
+    @Test public void allFourDtMfPairsCanBeIndependentlyObserved() {
+        int[][] pairs = {{697, 1209}, {697, 1477}, {770, 1477}, {852, 1477}};
+        for (int i = 0; i < pairs.length; i++) {
+            int low = pairs[i][0], high = pairs[i][1];
+            short[] ambient = signal(4000, low, high, 0, 80, 30 + i);
+            short[] challenge = signal(12800, low, high, 5000, 80, 40 + i);
+            AcousticEvidenceMath.Assessment result =
+                    AcousticEvidenceMath.evaluate(ambient, challenge, RATE, low, high);
+            assertTrue("Pair " + i + ": " + result.reason, result.valid);
+            assertTrue("Pair " + i + ": " + result.reason, result.responseObserved);
+            assertFalse(result.clipping);
+        }
+    }
+
 }
