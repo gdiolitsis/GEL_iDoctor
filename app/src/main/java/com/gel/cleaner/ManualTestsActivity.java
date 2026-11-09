@@ -11536,7 +11536,7 @@ private void runLab13BluetoothCheckCore() {
     lab13MonitoringStarted = false;
     lab13WaitingForExternal = true;
     final int generation = ++lab13MonitorGeneration;
-    try { unregisterReceiver(lab13BtReceiver); } catch (RuntimeException ignored) {
+    try { unregisterReceiver(lab13BtReceiver); } catch (RuntimeException ignored) {}
 
 // ------------------------------------------------------------
 // REGISTER BLUETOOTH RECEIVER (LAB 13)
