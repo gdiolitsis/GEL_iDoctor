@@ -6108,19 +6108,62 @@ private void lab2SpeakerSweep() {
         AcousticStimulusProbe.Result result = AcousticStimulusProbe.run(this, true);
         logLabelValue(gr ? "Σύγχρονοι τόνοι" : "Timed tone responses",
                 result.observedTones + " / " + result.testedTones + " (4 requested)");
-        if (result.attempted && result.responseObserved) {
-            logLabelOkValue(gr ? "Ακουστικός συσχετισμός" : "Acoustic correlation",
-                    gr ? "Ανιχνεύθηκαν ζεύγη DTMF σε 4 βήματα κατά την αναπαραγωγή"
-                       : "Both DTMF frequencies observed during each of 4 challenges");
-        } else {
-            logLabelWarnValue(gr ? "Ακουστικός συσχετισμός" : "Acoustic correlation",
-                    gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟΣ — δεν τεκμηριώνεται αστοχία hardware"
-                       : "INCONCLUSIVE — no physical hardware failure established");
+        AcousticLab2Outcome.Status outcome = AcousticLab2Outcome.classify(
+                result.attempted, result.responseObserved, result.testedTones);
+        switch (outcome) {
+            case OBSERVED:
+                logLabelOkValue(gr ? "Ακουστικός συσχετισμός" : "Acoustic correlation",
+                        gr ? "Ανιχνεύθηκαν και τα 4 ζεύγη DTMF κατά την αναπαραγωγή"
+                           : "Both DTMF frequencies observed in all 4 synchronized challenges");
+                break;
+            case INCONCLUSIVE:
+                logLabelWarnValue(gr ? "Ακουστικός συσχετισμός" : "Acoustic correlation",
+                        gr ? "ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ — 4/4 δείγματα, χωρίς πλήρη συσχέτιση"
+                           : "INCONCLUSIVE — 4/4 samples, without full correlation");
+                break;
+            case PARTIAL:
+                logLabelWarnValue(gr ? "Κατάσταση Lab 2" : "Lab 2 status",
+                        gr ? "ΜΕΡΙΚΗ ΔΕΙΓΜΑΤΟΛΗΨΙΑ — δεν ολοκληρώθηκαν και οι 4 τόνοι"
+                           : "PARTIAL — all 4 tone captures were not completed");
+                break;
+            case UNAVAILABLE:
+                logLabelWarnValue(gr ? "Κατάσταση Lab 2" : "Lab 2 status",
+                        gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ — δεν λήφθηκε έγκυρο δείγμα τόνου"
+                           : "UNAVAILABLE — no valid tone sample was captured");
+                break;
         }
         if (result.testedTones > 0) {
             logLabelValue(gr ? "Ελάχιστη φασματική μεταβολή" : "Minimum spectral rise",
                     String.format(Locale.US, "%.1f / %.1f dB",
                             result.weakestLowRiseDb, result.weakestHighRiseDb));
+        }
+        if (result.testedTones > 0) {
+            // Current synchronized microphone capture, never a calibrated dB SPL value.
+            // Probe records RMS from the LAST completed tone and peak over ALL completed tones.
+            if (Double.isFinite(result.ambientMicRms)) {
+                logLabelValue(gr ? "RMS μικροφώνου — πριν τον τελευταίο τόνο"
+                                 : "Mic RMS — before last sampled tone",
+                        String.format(Locale.US, "%.1f (PCM)", result.ambientMicRms));
+            }
+            if (Double.isFinite(result.challengeMicRms)) {
+                logLabelValue(gr ? "RMS μικροφώνου — κατά τον τελευταίο τόνο"
+                                 : "Mic RMS — during last sampled tone",
+                        String.format(Locale.US, "%.1f (PCM)", result.challengeMicRms));
+            }
+            if (Double.isFinite(result.challengeMicPeak)) {
+                logLabelValue(gr ? "Μέγιστο Peak μικροφώνου — ολοκληρωμένοι τόνοι"
+                                 : "Mic peak — across captured tones",
+                        String.format(Locale.US, "%.0f (PCM)", result.challengeMicPeak));
+            }
+            if (result.clipped) {
+                logLabelWarnValue(gr ? "Ποιότητα δείγματος" : "Capture integrity",
+                        gr ? "Clipping — επανάλαβε σε χαμηλότερη ένταση"
+                           : "Clipping — repeat at lower volume");
+            } else {
+                logLabelValue(gr ? "Ποιότητα δείγματος" : "Capture integrity",
+                        gr ? "Δεν ανιχνεύθηκε clipping στα ληφθέντα δείγματα"
+                           : "No clipping detected in captured samples");
+            }
         }
         logLabelValue(gr ? "Διαδρομή εισόδου" : "Mic input route", result.inputRoute);
         logLabelValue(gr ? "Κατάσταση δείγματος" : "Sample status", result.reason);
@@ -6130,7 +6173,23 @@ private void lab2SpeakerSweep() {
                    : "Four DTMF challenges are not a calibrated frequency-response sweep "
                         + "and cannot identify an individual speaker or certify fidelity.");
         appendHtml("<br>");
-        logOk(gr ? "Η δοκιμή Lab 2 ολοκληρώθηκε." : "Lab 2 probe completed.");
+        if (outcome != AcousticLab2Outcome.Status.OBSERVED) {
+            logLabelWarnValue(gr ? "Προτεινόμενη ενέργεια" : "Recommended action",
+                    gr ? "Έλεγξε ένταση, άδεια μικροφώνου και συνδέσεις Bluetooth/USB/ακουστικών. "
+                            + "Επανάλαβε σε ήσυχο περιβάλλον. Δεν τεκμηριώνεται βλάβη ηχείου."
+                       : "Check media volume, microphone permission and Bluetooth/USB/headphone connections. "
+                            + "Retry in a quiet room. This does not establish a speaker defect.");
+        }
+        if (outcome == AcousticLab2Outcome.Status.OBSERVED
+                || outcome == AcousticLab2Outcome.Status.INCONCLUSIVE) {
+            logLabelValue(gr ? "Ολοκλήρωση δειγματοληψίας" : "Sampling completion",
+                    gr ? "Ολοκληρώθηκαν 4/4 συγχρονισμένοι τόνοι — χωρίς πιστοποίηση hardware"
+                       : "All 4 synchronized tones captured — hardware not certified");
+        } else {
+            logLabelWarnValue(gr ? "Ολοκλήρωση δειγματοληψίας" : "Sampling completion",
+                    gr ? "Η ακουστική δοκιμή δεν ολοκληρώθηκε· δεν υπάρχει τελική διάγνωση"
+                       : "Acoustic challenge incomplete; no final diagnostic verdict");
+        }
         logLine();
         } catch (RuntimeException e) {
             logLabelWarnValue("Acoustic probe", "UNAVAILABLE: "

@@ -13,11 +13,13 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build-candidate:
-    if: ${{ (startsWith(github.head_ref, 'qa/integration-') || github.head_ref == 'qa/diagnostic-evidence-runtime-20261108') && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ (startsWith(github.head_ref, 'qa/integration-') || github.head_ref == 'qa/diagnostic-evidence-runtime-20261108' || github.head_ref == 'qa/lab2-parity-restoration-20261110') && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
         with:
           distribution: temurin
@@ -54,6 +56,8 @@ jobs:
     timeout-minutes: 85
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
         with:
           distribution: temurin
