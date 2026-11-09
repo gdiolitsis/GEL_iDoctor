@@ -2421,6 +2421,15 @@ protected void onDestroy() {
         }
     } catch (Throwable ignore) {}
 
+    lab21RunGeneration++;
+    lab21Running = false;
+    lab21ActiveEvidence = null;
+    android.os.CancellationSignal oldBioSignal = lab21Cancellation;
+    lab21Cancellation = null;
+    if (oldBioSignal != null) {
+        try { oldBioSignal.cancel(); } catch (RuntimeException ignored) {}
+    }
+
     try {
         unregisterReceiver(lab13BtReceiver);
     } catch (Throwable ignore) {}
@@ -25194,610 +25203,282 @@ GELServiceLog.info("SUMMARY: REBOOT_PATTERN=" + rebootVerdict.name());
 // REAL • USER-DRIVEN • NO LIES • POLICY + INFRA CHECK (ROOT)
 // ============================================================
 private boolean lab21Running = false;
+private int lab21RunGeneration = 0;
+private Lab21BiometricEvidence lab21ActiveEvidence = null;
+private android.os.CancellationSignal lab21Cancellation = null;
 
 private void lab21ScreenLock() {
-	
-	final boolean gr = AppLang.isGreek(this);
+    final boolean gr = AppLang.isGreek(this);
+    if (lab21Running) {
+        logLabelWarnValue(gr ? "LAB 21" : "LAB 21",
+                gr ? "Υπάρχει ενεργός έλεγχος" : "A guided test is already active");
+        return;
+    }
+    lab21Running = true;
+    final int runId = ++lab21RunGeneration;
+    if (btnExport != null) {
+        btnExport.setEnabled(false);
+        btnExport.setAlpha(0.5f);
+    }
 
-// GUARD — avoid double-tap spam  
-if (lab21Running) {  
-    logWarn(gr 
-        ? "Το LAB 21 εκτελείται ήδη..." 
-        : "LAB 21 is already running...");  
-    return;  
-}  
-lab21Running = true;  
+    appendHtml("<br>");
+    logLine();
+    logSection(gr ? "LAB 21 — Κλείδωμα και βιομετρικά: αποδεικτικά Android"
+                  : "LAB 21 — Screen lock and biometrics: Android evidence");
+    logLine();
 
-appendHtml("<br>");  
-logLine();  
-logInfo(gr 
-    ? "LAB 21 — Κλείδωμα Οθόνης / Βιομετρικά (Live + Root-Aware)" 
-    : "LAB 21 — Screen Lock / Biometrics (Live + Root-Aware)");  
-logLine();
+    Boolean deviceSecure = null;
+    Boolean currentlyKeyguardLocked = null;
+    try {
+        KeyguardManager km = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+        if (km != null) {
+            deviceSecure = km.isDeviceSecure();
+            currentlyKeyguardLocked = km.isKeyguardLocked();
+        }
+    } catch (RuntimeException ignored) {
+        // A failed read remains UNKNOWN; never pretend the lock is disabled.
+    }
 
-// ------------------------------------------------------------  
-// PART A — LOCK CONFIG + STATE  
-// ------------------------------------------------------------  
-boolean secure = false;
-boolean lockedNow = false;
+    if (deviceSecure == null) {
+        logLabelWarnValue(gr ? "Κλείδωμα συσκευής" : "Device lock",
+                gr ? "ΑΓΝΩΣΤΟ / μη προσβάσιμο" : "UNKNOWN / unavailable");
+    } else {
+        logLabelValue(gr ? "Κλείδωμα συσκευής" : "Device lock",
+                deviceSecure ? (gr ? "Δηλώθηκε ασφαλές κλείδωμα"
+                                   : "Android reports secure lock configured")
+                             : (gr ? "Δεν δηλώθηκε ασφαλές κλείδωμα"
+                                   : "Secure lock not configured by Android"));
+    }
+    if (currentlyKeyguardLocked != null) {
+        logLabelValue(gr ? "Keyguard τώρα" : "Current keyguard",
+                currentlyKeyguardLocked ? (gr ? "ΕΝΕΡΓΟ" : "ACTIVE")
+                                       : (gr ? "Δεν εμφανίζεται" : "Not showing"));
+        logInfo(gr ? "Το ξεκλείδωτο τηλέφωνο όσο χρησιμοποιείται η εφαρμογή δεν σημαίνει κενό ασφάλειας."
+                   : "An unlocked phone while this app is running is not evidence of a security defect.");
+    }
+    logInfo(gr ? "Το ασφαλές κλείδωμα δεν αποδεικνύει κρυπτογράφηση, Gatekeeper ή προστασία μετά από επανεκκίνηση."
+               : "Secure-lock configuration does not prove encryption, Gatekeeper or post-reboot enforcement.");
 
-try {
-    KeyguardManager km =
-            (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
-
-    if (km != null) {
-
-        secure = km.isDeviceSecure();
-
+    boolean ready = false;
+    boolean readinessKnown = false;
+    int allowedAuthenticator = 0; // Used only on API30+.
+    if (Build.VERSION.SDK_INT >= 30) {
         try {
-            lockedNow = km.isKeyguardLocked();
-        } catch (Throwable ignore) {}
-
-        if (secure) {
-            logLabelOkValue(
-                    gr ? "Ρύθμιση κλειδώματος οθόνης" : "Screen lock configuration",
-                    gr ? "Ρυθμισμένο (PIN / Μοτίβο / Κωδικός)"
-                       : "Configured (PIN / Pattern / Password)"
-            );
-        } else {
-            logLabelErrorValue(
-                    gr ? "Ρύθμιση κλειδώματος οθόνης" : "Screen lock configuration",
-                    gr ? "ΔΕΝ έχει ρυθμιστεί"
-                       : "NOT configured"
-            );
-            logLabelWarnValue(
-                    gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Φυσική πρόσβαση με πλήρη έκθεση δεδομένων"
-                       : "Physical access with full data exposure"
-            );
-        }
-
-        if (secure) {
-
-            if (lockedNow) {
-                logLabelOkValue(
-                        gr ? "Κατάσταση" : "State",
-                        gr ? "ΚΛΕΙΔΩΜΕΝΟ (ενεργό keyguard)"
-                           : "LOCKED (keyguard active)"
-                );
-            } else {
-                logLabelWarnValue(
-                        gr ? "Κατάσταση" : "State",
-                        gr ? "ΞΕΚΛΕΙΔΩΤΟ (η συσκευή είναι ανοιχτή)"
-                           : "UNLOCKED (device currently open)"
-                );
+            android.hardware.biometrics.BiometricManager bm =
+                    getSystemService(android.hardware.biometrics.BiometricManager.class);
+            if (bm != null) {
+                int strong = bm.canAuthenticate(
+                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG);
+                int weak = bm.canAuthenticate(
+                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK);
+                readinessKnown = true;
+                if (strong == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
+                    ready = true;
+                    allowedAuthenticator =
+                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG;
+                    logLabelValue(gr ? "Βιομετρική ετοιμότητα" : "Biometric readiness",
+                            gr ? "Android: STRONG διαθέσιμο για prompt"
+                               : "Android: STRONG authenticator ready");
+                } else if (weak == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
+                    ready = true;
+                    allowedAuthenticator =
+                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK;
+                    logLabelValue(gr ? "Βιομετρική ετοιμότητα" : "Biometric readiness",
+                            gr ? "Android: WEAK διαθέσιμο για prompt"
+                               : "Android: WEAK authenticator ready");
+                } else {
+                    logLabelWarnValue(gr ? "Βιομετρική ετοιμότητα" : "Biometric readiness",
+                            gr ? "Μη διαθέσιμη τώρα (Android codes " + strong + "/" + weak + ")"
+                               : "Not ready (Android codes " + strong + "/" + weak + ")");
+                }
             }
-        }
-
+        } catch (RuntimeException ignored) {}
+    } else if (Build.VERSION.SDK_INT == 29) {
+        try {
+            android.hardware.biometrics.BiometricManager bm =
+                    getSystemService(android.hardware.biometrics.BiometricManager.class);
+            if (bm != null) {
+                int status = bm.canAuthenticate(); // API29; no int overload until API30.
+                readinessKnown = true;
+                ready = status ==
+                        android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS;
+                logLabelValue(gr ? "Βιομετρική ετοιμότητα" : "Biometric readiness",
+                        ready ? (gr ? "Android: διαθέσιμη" : "Android: ready")
+                              : (gr ? "Μη έτοιμη (κωδικός " + status + ")"
+                                    : "Not ready (code " + status + ")"));
+            }
+        } catch (RuntimeException ignored) {}
+    } else if (Build.VERSION.SDK_INT == 28) {
+        logLabelValue(gr ? "Βιομετρική ετοιμότητα" : "Biometric readiness",
+                gr ? "API28: δεν υπάρχει διαθέσιμο BiometricManager — δοκιμή κατόπιν επιλογής"
+                   : "API28: no BiometricManager — opt-in prompt available");
+        ready = true; // Only permission to TRY a system prompt, not evidence of readiness.
     } else {
-        logLabelWarnValue(
-                gr ? "Υπηρεσία Keyguard" : "Keyguard",
-                gr ? "Μη διαθέσιμη υπηρεσία"
-                   : "Service unavailable"
-        );
+        readinessKnown = true;
+        logLabelWarnValue(gr ? "BiometricPrompt" : "BiometricPrompt",
+                gr ? "Μη διαθέσιμο πριν το Android 9" : "Unavailable below Android 9");
     }
 
-} catch (Throwable e) {
-    logLabelWarnValue(
-            gr ? "Έλεγχος κλειδώματος" : "Lock detection",
-            (gr ? "Αποτυχία: " : "Failed: ") + e.getMessage()
-    );
-}
-
-// ------------------------------------------------------------  
-// PART B — BIOMETRIC CAPABILITY (FRAMEWORK, NO ANDROIDX)  
-// ------------------------------------------------------------
-
-boolean biometricSupported = false;
-
-if (Build.VERSION.SDK_INT >= 29) {
-    try {
-
-        android.hardware.biometrics.BiometricManager bm =
-                getSystemService(android.hardware.biometrics.BiometricManager.class);
-
-        if (bm != null) {
-
-            int r = bm.canAuthenticate(
-                    android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG
-            );
-
-            if (r != android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
-
-                r = bm.canAuthenticate(
-                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK
-                );
-            }
-
-            if (r == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
-
-                biometricSupported = true;
-
-                logLabelOkValue(
-                        gr ? "Βιομετρικά" : "Biometrics",
-                        gr ? "Υλικό παρόν & έτοιμο για χρήση"
-                           : "Hardware present & usable"
-                );
-
-            } else {
-
-                logLabelWarnValue(
-                        gr ? "Βιομετρικά" : "Biometrics",
-                        gr ? "Υπάρχουν αλλά δεν είναι έτοιμα"
-                           : "Present but not ready"
-                );
-            }
-
-        } else {
-
-            logLabelWarnValue(
-                    gr ? "Βιομετρικά" : "Biometrics",
-                    gr ? "Μη διαθέσιμος διαχειριστής"
-                       : "Manager unavailable"
-            );
-        }
-
-    } catch (Throwable e) {
-
-        logLabelWarnValue(
-                gr ? "Βιομετρικά" : "Biometrics",
-                (gr ? "Αποτυχία ελέγχου: " : "Check failed: ") + e.getMessage()
-        );
+    if (Build.VERSION.SDK_INT < 28 || (readinessKnown && !ready)) {
+        logLabelValue(gr ? "Πραγματική ταυτοποίηση" : "Live authentication",
+                "NOT_TESTED — unavailable / not enrolled / not ready");
+        lab21FinishWithoutPrompt(runId);
+        return;
+    }
+    if (Boolean.FALSE.equals(deviceSecure)) {
+        logLabelValue(gr ? "Πραγματική ταυτοποίηση" : "Live authentication",
+                "NOT_TESTED — secure device credential not configured");
+        lab21FinishWithoutPrompt(runId);
+        return;
     }
 
-} else {
-
-    logLabelWarnValue(
-            gr ? "Βιομετρικά" : "Biometrics",
-            gr ? "Δεν υποστηρίζονται σε αυτήν την έκδοση Android"
-               : "Not supported on this Android version"
-    );
+    final int authenticator = allowedAuthenticator;
+    new AlertDialog.Builder(this)
+            .setTitle(gr ? "LAB 21 — Πραγματικό BiometricPrompt"
+                         : "LAB 21 — Guided BiometricPrompt")
+            .setMessage(gr
+                    ? "Θέλεις να δοκιμάσεις τη βιομετρική ταυτοποίηση μέσω του Android; "
+                      + "Δεν αποθηκεύουμε βιομετρικά στοιχεία. "
+                      + "Μία επιτυχής ταυτοποίηση επιβεβαιώνει μόνο αυτό το λειτουργικό μονοπάτι, "
+                      + "όχι κάθε αισθητήρα ή όλη την ασφάλεια της συσκευής."
+                    : "Test Android biometric authentication now? We never collect or store "
+                      + "fingerprints or face data. A successful prompt confirms only this "
+                      + "OS authentication path, not every sensor or overall device security.")
+            .setPositiveButton(gr ? "ΕΝΑΡΞΗ" : "START", (d, which) ->
+                    lab21StartPrompt(runId, authenticator))
+            .setNegativeButton(gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP", (d, which) -> {
+                logLabelValue(gr ? "Πραγματική ταυτοποίηση" : "Live authentication",
+                        "NOT_TESTED — user skipped");
+                lab21FinishWithoutPrompt(runId);
+            })
+            .setOnCancelListener(d -> {
+                logLabelValue(gr ? "Πραγματική ταυτοποίηση" : "Live authentication",
+                        "NOT_TESTED — cancelled before prompt");
+                lab21FinishWithoutPrompt(runId);
+            })
+            .show();
 }
 
-// ------------------------------------------------------------  
-// PART C — ROOT-AWARE AUTH INFRA CHECK (POLICY / FILES)  
-// ------------------------------------------------------------  
-boolean hasLockDb = false;
-boolean hasGatekeeper = false;
-boolean hasKeystore = false;
+private void lab21StartPrompt(final int runId, final int authenticator) {
+    final boolean gr = AppLang.isGreek(this);
+    if (!lab21Running || lab21RunGeneration != runId
+            || isFinishing() || isDestroyed()) return;
 
-boolean root = isRootAvailable();
-
-if (root) {
-
-    logLabelOkValue(
-            gr ? "Λειτουργία Root" : "Root mode",
-            gr ? "ΔΙΑΘΕΣΙΜΗ" : "AVAILABLE"
-    );
-
-    hasLockDb     = rootPathExists("/data/system/locksettings.db");
-    hasGatekeeper = rootGlobExists("/data/system/gatekeeper*");
-    hasKeystore   = rootPathExists("/data/misc/keystore");
-
-    logLabelOkValue(
-            "Gatekeeper",
-            hasGatekeeper
-                    ? (gr ? "Εντοπίστηκε" : "Detected")
-                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
-    );
-
-    logLabelOkValue(
-            gr ? "Βάση κλειδώματος" : "Lock DB",
-            hasLockDb
-                    ? (gr ? "Εντοπίστηκε" : "Detected")
-                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
-    );
-
-    logLabelOkValue(
-            "Keystore",
-            hasKeystore
-                    ? (gr ? "Εντοπίστηκε" : "Detected")
-                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Λειτουργία Root" : "Root mode",
-            gr ? "Μη διαθέσιμη" : "Not available"
-    );
-}
-
-// ============================================================  
-// LAB 21 — TRUST BOUNDARY AWARENESS  
-// ============================================================  
-
-if (secure) {
-
-    logLabelOkValue(
-            gr ? "Προστασία μετά από επανεκκίνηση" 
-               : "Post-reboot protection",
-            gr ? "Απαιτείται ταυτοποίηση πριν την πρόσβαση στα δεδομένα"
-               : "Authentication required before data access"
-    );
-
-} else {
-
-    logLabelErrorValue(
-            gr ? "Προστασία μετά από επανεκκίνηση" 
-               : "Post-reboot protection",
-            gr ? "ΔΕΝ επιβάλλεται (τα δεδομένα εκτίθενται μετά από επανεκκίνηση)"
-               : "NOT enforced (data exposed after reboot)"
-    );
-}
-
-logLabelOkValue(
-        gr ? "Κύριο επίπεδο ασφάλειας" 
-           : "Primary security layer",
-        secure
-                ? (gr ? "Γνωστικό διαπιστευτήριο (PIN / Μοτίβο / Κωδικός)"
-                      : "Knowledge-based credential")
-                : (gr ? "ΚΑΝΕΝΑ"
-                      : "NONE")
-);
-
-logLabelOkValue(
-        gr ? "Επίπεδο ευκολίας" 
-           : "Convenience layer",
-        biometricSupported
-                ? (gr ? "Διαθέσιμα βιομετρικά"
-                      : "Biometrics available")
-                : (gr ? "Μη διαθέσιμα"
-                      : "Not available")
-);
-
-if (root) {
-
-    if (hasGatekeeper || hasLockDb) {
-
-        logLabelOkValue(
-                gr ? "Επιβολή συστήματος" 
-                   : "System enforcement",
-                gr ? "Υποδομή ταυτοποίησης ενεργή"
-                   : "Authentication infrastructure active"
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Επιβολή συστήματος" 
-                   : "System enforcement",
-                gr ? "Μη ξεκάθαρα σήματα (διαφοροποίηση ROM / κατασκευαστή)"
-                   : "Signals unclear (ROM/vendor variation)"
-        );
-    }
-}
-
-// ------------------------------------------------------------  
-// PART D — RISK SCORE (FAST, CLEAR)  
-// ------------------------------------------------------------  
-int risk = 0;
-
-if (!secure) risk += 70;
-if (secure && !lockedNow) risk += 10;
-if (secure && !biometricSupported) risk += 5;
-
-if (risk >= 70) {
-
-    logLabelErrorValue(
-            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
-            gr ? "ΥΨΗΛΗ (" + risk + "/100)"
-               : "HIGH (" + risk + "/100)"
-    );
-
-} else if (risk >= 30) {
-
-    logLabelWarnValue(
-            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
-            gr ? "ΜΕΤΡΙΑ (" + risk + "/100)"
-               : "MEDIUM (" + risk + "/100)"
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
-            gr ? "ΧΑΜΗΛΗ (" + risk + "/100)"
-               : "LOW (" + risk + "/100)"
-    );
-}
-
-// ------------------------------------------------------------
-// PART E — LIVE BIOMETRIC AUTH TEST (USER-DRIVEN, REAL)
-// ------------------------------------------------------------
-if (!secure) {
-
-    appendHtml("<br>");
-    logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
-               : "Live biometric test:");
-               logLine();
-               
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            gr ? "Παραλείφθηκε" : "Skipped"
-    );
-    logLabelWarnValue(
-            gr ? "Λόγος" : "Reason",
-            gr ? "Απαιτείται ασφαλές κλείδωμα (PIN / Μοτίβο / Κωδικός)"
-               : "Secure lock required (PIN / Pattern / Password)"
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-    logLine();
-    lab21Running = false;
-    return;
-}
-
-if (!biometricSupported) {
-
-    appendHtml("<br>");
-    logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
-               : "Live biometric test:");
-               logLine();
-               
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            gr ? "Δεν ξεκίνησε" : "Not started"
-    );
-    logLabelWarnValue(
-            gr ? "Λόγος" : "Reason",
-            gr ? "Τα βιομετρικά δεν είναι έτοιμα ή δεν είναι διαθέσιμα"
-               : "Biometrics not ready or not available"
-    );
-    logLabelOkValue(
-            gr ? "Ενέργεια" : "Action",
-            gr ? "Ρυθμίστε βιομετρικά στις Ρυθμίσεις και επανεκτελέστε το LAB 21"
-               : "Enroll biometrics in Settings and re-run LAB 21"
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-    logLine();
-    lab21Running = false;
-    return;
-}
-
-if (Build.VERSION.SDK_INT >= 28) {
+    final Lab21BiometricEvidence evidence = new Lab21BiometricEvidence();
+    if (!evidence.start()) return;
+    lab21ActiveEvidence = evidence;
+    final android.os.CancellationSignal cancellation =
+            new android.os.CancellationSignal();
+    lab21Cancellation = cancellation;
 
     try {
-
-        appendHtml("<br>");
-        logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΑΙΣΘΗΤΗΡΑ"
-                   : "LIVE SENSOR TEST");
-                   logLine();
-                   
-        logLabelOkValue(
-                gr ? "Οδηγία" : "Instruction",
-                gr ? "Τοποθετήστε δάχτυλο / πρόσωπο για ταυτοποίηση ΤΩΡΑ"
-                   : "Place finger / face for authentication NOW"
-        );
-        logLabelOkValue(
-                gr ? "Αποτέλεσμα" : "Result",
-                gr ? "Θα καταγραφεί PASS / FAIL (πραγματικός έλεγχος υλικού)"
-                   : "PASS / FAIL will be recorded (real hardware)"
-        );
-
-        Executor executor = getMainExecutor();
-        CancellationSignal cancel = new CancellationSignal();
-
+        final Executor executor = getMainExecutor();
+        android.hardware.biometrics.BiometricPrompt.Builder builder =
+                new android.hardware.biometrics.BiometricPrompt.Builder(this)
+                        .setTitle(gr ? "LAB 21 — Επιβεβαίωση μέσω Android"
+                                     : "LAB 21 — Android biometric verification")
+                        .setSubtitle(gr ? "Χρησιμοποίησε το επιλεγμένο βιομετρικό"
+                                        : "Use your enrolled biometric")
+                        .setDescription(gr ? "Χωρίς αποθήκευση βιομετρικών δεδομένων"
+                                           : "No biometric template is stored")
+                        .setNegativeButton(gr ? "Ακύρωση" : "Cancel", executor, (d, which) -> {
+                            if (lab21IsCurrent(runId, evidence) && evidence.onError(true)) {
+                                lab21FinishPrompt(runId, evidence, null);
+                            }
+                        });
+        if (Build.VERSION.SDK_INT >= 30 && authenticator != 0) {
+            builder.setAllowedAuthenticators(authenticator);
+        }
         android.hardware.biometrics.BiometricPrompt.AuthenticationCallback cb =
                 new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationFailed() {
+                        // NON-TERMINAL. Android permits the user to retry.
+                        if (lab21IsCurrent(runId, evidence)) evidence.onNonMatch();
+                    }
 
                     @Override
                     public void onAuthenticationSucceeded(
                             android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
-
-                        appendHtml("<br>");
-                        logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
-                                   : "LIVE BIOMETRIC TEST");
-                                   logLine ();
-                                   
-                        logLabelOkValue(
-                                gr ? "Αποτέλεσμα" : "Result",
-                                "PASS"
-                        );
-                        logLabelOkValue(
-                                gr ? "Αλυσίδα ελέγχου" : "Pipeline",
-                                gr ? "Αισθητήρας + ταυτοποίηση λειτουργούν σωστά"
-                                   : "Biometric sensor + auth verified functional"
-                        );
-appendHtml("<br>");
-
-                        logOk(gr ? "Συσκευές με πολλαπλά βιομετρικά"
-                                   : "Multi-biometric devices");
-                                   logLine();
-                                   
-                        logLabelWarnValue(
-                                gr ? "Σημείωση" : "Note",
-                                gr ? "Το Android ελέγχει ΕΝΑ βιομετρικό ανά εκτέλεση"
-                                   : "Android tests ONE biometric path per run"
-                        );
-                        logLabelOkValue(
-                                gr ? "Ενέργεια" : "Action",
-                                gr ? "Απενεργοποιήστε το τρέχον βιομετρικό και επανεκτελέστε το LAB 21"
-                                   : "Disable current biometric in Settings and re-run LAB 21"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Σημείωση OEM" : "OEM note",
-                                gr ? "Ο κατασκευαστής μπορεί να δίνει προτεραιότητα στον ίδιο αισθητήρα"
-                                   : "OEM may still prioritize same sensor"
-                        );
-
-                        appendHtml("<br>");
-                        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                        logLine();
-                        lab21Running = false;
-                    }
-
-                    @Override
-                    public void onAuthenticationFailed() {
-
-                        appendHtml("<br>");
-                        logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
-                                   : "LIVE BIOMETRIC TEST");
-                                   logLine();
-                                   
-                        logLabelErrorValue(
-                                gr ? "Αποτέλεσμα" : "Result",
-                                "FAIL"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Ερμηνεία" : "Meaning",
-                                gr ? "Το βιομετρικό δεν επιβεβαιώθηκε κατά τον πραγματικό έλεγχο"
-                                   : "Biometric did not authenticate during real sensor test"
-                        );
-
-                        appendHtml("<br>");
-                        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                        logLine();
-                        lab21Running = false;
+                        if (lab21IsCurrent(runId, evidence) && evidence.onAuthenticated()) {
+                            lab21FinishPrompt(runId, evidence, null);
+                        }
                     }
 
                     @Override
                     public void onAuthenticationError(int errorCode, CharSequence errString) {
-
-                        appendHtml("<br>");
-                        logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
-                                   : "LIVE BIOMETRIC TEST");
-                                   logLine();
-                                   
-                        logLabelWarnValue(
-                                gr ? "Αποτέλεσμα" : "Result",
-                                gr ? "Μη επιβεβαιωμένο"
-                                   : "Not confirmed"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Σύστημα" : "System",
-                                gr ? "Ενεργοποιήθηκε εφεδρικό διαπιστευτήριο"
-                                   : "Fallback to device credential detected"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Ερμηνεία" : "Meaning",
-                                gr ? "Ο αισθητήρας ΔΕΝ επιβεβαιώθηκε λειτουργικός"
-                                   : "Biometric sensor NOT verified functional"
-                        );
-
-                        appendHtml("<br>");
-                        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                        logLine();
-                        lab21Running = false;
+                        boolean userCancelled =
+                                errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED
+                                || errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON
+                                || errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_CANCELED;
+                        if (lab21IsCurrent(runId, evidence)
+                                && evidence.onError(userCancelled)) {
+                            lab21FinishPrompt(runId, evidence,
+                                    "Android BiometricPrompt error code " + errorCode);
+                        }
                     }
                 };
-
-        android.hardware.biometrics.BiometricPrompt prompt =
-                new android.hardware.biometrics.BiometricPrompt.Builder(this)
-                        .setTitle(gr
-                                ? "LAB 21 — Ζωντανός Έλεγχος Βιομετρικού Αισθητήρα"
-                                : "LAB 21 — Live Biometric Sensor Test")
-                        .setSubtitle(gr
-                                ? "Τοποθετήστε δάχτυλο / πρόσωπο για επιβεβαίωση"
-                                : "Place finger / face to verify sensor works")
-                        .setDescription(gr
-                                ? "Πραγματικός έλεγχος υλικού (χωρίς προσομοίωση)."
-                                : "This is a REAL hardware test (no simulation).")
-                        .setNegativeButton(
-                                gr ? "Ακύρωση ελέγχου" : "Cancel test",
-                                executor,
-                                (dialog, which) -> {
-
-                                    appendHtml("<br>");
-                                    logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
-                                               : "LIVE BIOMETRIC TEST");
-                                               logLine();
-                                               
-                                    logLabelWarnValue(
-                                            gr ? "Αποτέλεσμα" : "Result",
-                                            gr ? "Ακυρώθηκε από τον χρήστη"
-                                               : "Cancelled by user"
-                                    );
-
-                                    appendHtml("<br>");
-                                    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                                    logLine();
-                                    lab21Running = false;
-                                }
-                        )
-                        .setAllowedAuthenticators(
-                                android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG
-                        )
-                        .build();
-
-        logInfo(gr ? "Προτροπή βιομετρικού:" : "Biometric prompt:");
-        logLabelOkValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Εκκίνηση…" : "Starting…"
-        );
-
-        prompt.authenticate(cancel, executor, cb);
-
-    } catch (Throwable e) {
-
-        appendHtml("<br>");
-        logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
-                   : "Live biometric test");
-                   logLine();
-        logLabelErrorValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Αποτυχία" : "Failed"
-        );
-        logLabelWarnValue(
-                gr ? "Λόγος" : "Reason",
-                (gr ? "Σφάλμα προτροπής βιομετρικών: " : "Biometric prompt error: ") + e.getMessage()
-        );
-
-        appendHtml("<br>");
-        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-        logLine();
-        lab21Running = false;
+        builder.build().authenticate(cancellation, executor, cb);
+    } catch (RuntimeException e) {
+        if (lab21IsCurrent(runId, evidence) && evidence.onError(false)) {
+            lab21FinishPrompt(runId, evidence,
+                    "BiometricPrompt launch unavailable: " + e.getClass().getSimpleName());
+        }
     }
-
-} else {
-
-    appendHtml("<br>");
-    logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
-               : "Live biometric test:");
-               logLine();
-               
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            gr ? "Δεν υποστηρίζεται"
-               : "Not supported"
-    );
-    logLabelWarnValue(
-            gr ? "Λόγος" : "Reason",
-            gr ? "Το BiometricPrompt framework δεν υποστηρίζεται σε αυτήν την έκδοση Android"
-               : "BiometricPrompt framework not available on this Android version"
-    );
-
-            logLabelWarnValue(
-        gr ? "Απαιτούμενη ενέργεια" : "Action required",
-        gr
-                ? "Ελέγξτε τα βιομετρικά από τις ρυθμίσεις συστήματος κλειδώματος οθόνης και επανεκτελέστε το LAB 21"
-                : "Test biometrics via system lock screen settings, then re-run LAB 21"
-);
-
-    logInfo("Note");
-    logLabelOkValue(
-            gr ? "Κάλυψη" : "Coverage",
-            gr ? "Κάθε εκτέλεση του LAB 21 ελέγχει ΕΝΑ βιομετρικό μονοπάτι"
-               : "Each LAB 21 run verifies ONE biometric sensor path"
-    );
-    logLabelOkValue(
-            gr ? "Ενέργεια" : "Action",
-            gr ? "Απενεργοποιήστε το ενεργό βιομετρικό στις ρυθμίσεις, για να ελέγξετε άλλον αισθητήρα"
-               : "Disable active biometric in Settings to test another sensor"
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-    logLine();
-    lab21Running = false;
 }
+
+private boolean lab21IsCurrent(int runId, Lab21BiometricEvidence evidence) {
+    return lab21Running && lab21RunGeneration == runId
+            && lab21ActiveEvidence == evidence
+            && !isFinishing() && !isDestroyed();
+}
+
+private void lab21FinishPrompt(int runId, Lab21BiometricEvidence evidence,
+                               String platformError) {
+    if (!lab21IsCurrent(runId, evidence) || evidence.isPending()) return;
+    final boolean gr = AppLang.isGreek(this);
+    appendHtml("<br>");
+    Lab21BiometricEvidence.Outcome outcome = evidence.outcome();
+    switch (outcome) {
+        case ANDROID_AUTHENTICATED:
+            logLabelValue(gr ? "Επιβεβαίωση Android" : "Android authentication",
+                    gr ? "ΠΑΡΑΤΗΡΗΘΗΚΕ επιτυχής βιομετρική ταυτοποίηση"
+                       : "OBSERVED successful OS biometric authentication");
+            logInfo(gr ? "Δεν πιστοποιούνται όλοι οι αισθητήρες, η ακρίβεια ή η ακεραιότητα υλικού."
+                       : "Does not certify every sensor, accuracy or physical integrity.");
+            break;
+        case USER_CANCELLED:
+            logLabelWarnValue(gr ? "Βιομετρική δοκιμή" : "Biometric challenge",
+                    gr ? "ΑΚΥΡΩΘΗΚΕ — χωρίς διάγνωση βλάβης"
+                       : "CANCELLED — no hardware verdict");
+            break;
+        default:
+            logLabelWarnValue(gr ? "Βιομετρική δοκιμή" : "Biometric challenge",
+                    gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ / ΣΦΑΛΜΑ — όχι αστοχία αισθητήρα"
+                       : "UNAVAILABLE / ERROR — not evidence of a defective sensor");
+    }
+    logLabelValue(gr ? "Απόπειρες χωρίς αναγνώριση" : "Non-matching attempts",
+            String.valueOf(evidence.nonMatchingAttempts()));
+    if (platformError != null) {
+        logLabelValue(gr ? "Πληροφορία Android" : "Android detail", platformError);
+    }
+    lab21ActiveEvidence = null;
+    lab21Cancellation = null;
+    lab21FinishWithoutPrompt(runId);
+}
+
+private void lab21FinishWithoutPrompt(int runId) {
+    if (lab21RunGeneration != runId) return;
+    lab21Running = false;
+    lab21RunGeneration++;
+    logInfo(AppLang.isGreek(this)
+            ? "Το Lab 21 ολοκλήρωσε την καταγραφή των διαθέσιμων στοιχείων Android."
+            : "Lab 21 finished recording the available Android evidence.");
+    enableSingleExportButton();
 }
 
 // ============================================================
-// ROOT HELPERS — minimal, safe, no assumptions
+// // ROOT HELPERS — minimal, safe, no assumptions
 // ============================================================
 private boolean isRootAvailable() {
 try {
