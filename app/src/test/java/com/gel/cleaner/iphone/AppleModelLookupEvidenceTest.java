@@ -13,7 +13,7 @@ public class AppleModelLookupEvidenceTest {
     @Test public void plusVariantIsNotBase() {
         assertEquals("iPhone 16 Plus", AppleSpecs.get("iPhone 16 Plus").model);
     }
-    @Test public void 16eDoesNotInherit16Hardware() {
+    @Test public void iphone16eDoesNotInherit16Hardware() {
         assertEquals("unknown", AppleSpecs.get("iPhone 16e").type);
     }
     @Test public void future18ModelDoesNotInheritOlderSpecs() {
