@@ -2453,6 +2453,15 @@ protected void onDestroy() {
     lab13WaitingForExternal = false;
     lab13MonitorGeneration++;
     lab13Handler.removeCallbacksAndMessages(null);
+    lab21RunGeneration++;
+    lab21Running = false;
+    lab21ActiveEvidence = null;
+    android.os.CancellationSignal oldBioSignal = lab21Cancellation;
+    lab21Cancellation = null;
+    if (oldBioSignal != null) {
+        try { oldBioSignal.cancel(); } catch (RuntimeException ignored) {}
+    }
+
     try {
         unregisterReceiver(lab13BtReceiver);
     } catch (Throwable ignore) {}
@@ -24991,610 +25000,281 @@ GELServiceLog.info("SUMMARY: REBOOT_PATTERN=" + rebootVerdict.name());
 // REAL • USER-DRIVEN • NO LIES • POLICY + INFRA CHECK (ROOT)
 // ============================================================
 private boolean lab21Running = false;
+private int lab21RunGeneration = 0;
+private Lab21BiometricEvidence lab21ActiveEvidence = null;
+private android.os.CancellationSignal lab21Cancellation = null;
 
 private void lab21ScreenLock() {
-	
-	final boolean gr = AppLang.isGreek(this);
+    final boolean gr = AppLang.isGreek(this);
+    if (lab21Running) {
+        logLabelWarnValue(gr ? "LAB 21" : "LAB 21",
+                gr ? "Υπάρχει ενεργός έλεγχος" : "A guided test is already active");
+        return;
+    }
+    lab21Running = true;
+    final int runId = ++lab21RunGeneration;
+    if (btnExport != null) {
+        btnExport.setEnabled(false);
+        btnExport.setAlpha(0.5f);
+    }
 
-// GUARD — avoid double-tap spam  
-if (lab21Running) {  
-    logWarn(gr 
-        ? "Το LAB 21 εκτελείται ήδη..." 
-        : "LAB 21 is already running...");  
-    return;  
-}  
-lab21Running = true;  
+    appendHtml("<br>");
+    logLine();
+    logSection(gr ? "LAB 21 — Κλείδωμα και βιομετρικά: αποδεικτικά Android"
+                  : "LAB 21 — Screen lock and biometrics: Android evidence");
+    logLine();
 
-appendHtml("<br>");  
-logLine();  
-logInfo(gr 
-    ? "LAB 21 — Κλείδωμα Οθόνης / Βιομετρικά (Live + Root-Aware)" 
-    : "LAB 21 — Screen Lock / Biometrics (Live + Root-Aware)");  
-logLine();
+    Boolean deviceSecure = null;
+    Boolean currentlyKeyguardLocked = null;
+    try {
+        KeyguardManager km = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+        if (km != null) {
+            deviceSecure = km.isDeviceSecure();
+            currentlyKeyguardLocked = km.isKeyguardLocked();
+        }
+    } catch (RuntimeException ignored) {
+        // A failed read remains UNKNOWN; never pretend the lock is disabled.
+    }
 
-// ------------------------------------------------------------  
-// PART A — LOCK CONFIG + STATE  
-// ------------------------------------------------------------  
-boolean secure = false;
-boolean lockedNow = false;
+    if (deviceSecure == null) {
+        logLabelWarnValue(gr ? "Κλείδωμα συσκευής" : "Device lock",
+                gr ? "ΑΓΝΩΣΤΟ / μη προσβάσιμο" : "UNKNOWN / unavailable");
+    } else {
+        logLabelValue(gr ? "Κλείδωμα συσκευής" : "Device lock",
+                deviceSecure ? (gr ? "Δηλώθηκε ασφαλές κλείδωμα"
+                                   : "Android reports secure lock configured")
+                             : (gr ? "Δεν δηλώθηκε ασφαλές κλείδωμα"
+                                   : "Secure lock not configured by Android"));
+    }
+    if (currentlyKeyguardLocked != null) {
+        logLabelValue(gr ? "Keyguard τώρα" : "Current keyguard",
+                currentlyKeyguardLocked ? (gr ? "ΕΝΕΡΓΟ" : "ACTIVE")
+                                       : (gr ? "Δεν εμφανίζεται" : "Not showing"));
+        logInfo(gr ? "Το ξεκλείδωτο τηλέφωνο όσο χρησιμοποιείται η εφαρμογή δεν σημαίνει κενό ασφάλειας."
+                   : "An unlocked phone while this app is running is not evidence of a security defect.");
+    }
+    logInfo(gr ? "Το ασφαλές κλείδωμα δεν αποδεικνύει κρυπτογράφηση, Gatekeeper ή προστασία μετά από επανεκκίνηση."
+               : "Secure-lock configuration does not prove encryption, Gatekeeper or post-reboot enforcement.");
 
-try {
-    KeyguardManager km =
-            (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
-
-    if (km != null) {
-
-        secure = km.isDeviceSecure();
-
+    boolean ready = false;
+    boolean readinessKnown = false;
+    int allowedAuthenticator = 0; // Used only on API30+.
+    if (Build.VERSION.SDK_INT >= 30) {
         try {
-            lockedNow = km.isKeyguardLocked();
-        } catch (Throwable ignore) {}
-
-        if (secure) {
-            logLabelOkValue(
-                    gr ? "Ρύθμιση κλειδώματος οθόνης" : "Screen lock configuration",
-                    gr ? "Ρυθμισμένο (PIN / Μοτίβο / Κωδικός)"
-                       : "Configured (PIN / Pattern / Password)"
-            );
-        } else {
-            logLabelErrorValue(
-                    gr ? "Ρύθμιση κλειδώματος οθόνης" : "Screen lock configuration",
-                    gr ? "ΔΕΝ έχει ρυθμιστεί"
-                       : "NOT configured"
-            );
-            logLabelWarnValue(
-                    gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Φυσική πρόσβαση με πλήρη έκθεση δεδομένων"
-                       : "Physical access with full data exposure"
-            );
-        }
-
-        if (secure) {
-
-            if (lockedNow) {
-                logLabelOkValue(
-                        gr ? "Κατάσταση" : "State",
-                        gr ? "ΚΛΕΙΔΩΜΕΝΟ (ενεργό keyguard)"
-                           : "LOCKED (keyguard active)"
-                );
-            } else {
-                logLabelWarnValue(
-                        gr ? "Κατάσταση" : "State",
-                        gr ? "ΞΕΚΛΕΙΔΩΤΟ (η συσκευή είναι ανοιχτή)"
-                           : "UNLOCKED (device currently open)"
-                );
+            android.hardware.biometrics.BiometricManager bm =
+                    getSystemService(android.hardware.biometrics.BiometricManager.class);
+            if (bm != null) {
+                int strong = bm.canAuthenticate(
+                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG);
+                int weak = bm.canAuthenticate(
+                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK);
+                readinessKnown = true;
+                if (strong == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
+                    ready = true;
+                    allowedAuthenticator =
+                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG;
+                    logLabelValue(gr ? "Βιομετρική ετοιμότητα" : "Biometric readiness",
+                            gr ? "Android: STRONG διαθέσιμο για prompt"
+                               : "Android: STRONG authenticator ready");
+                } else if (weak == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
+                    ready = true;
+                    allowedAuthenticator =
+                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK;
+                    logLabelValue(gr ? "Βιομετρική ετοιμότητα" : "Biometric readiness",
+                            gr ? "Android: WEAK διαθέσιμο για prompt"
+                               : "Android: WEAK authenticator ready");
+                } else {
+                    logLabelWarnValue(gr ? "Βιομετρική ετοιμότητα" : "Biometric readiness",
+                            gr ? "Μη διαθέσιμη τώρα (Android codes " + strong + "/" + weak + ")"
+                               : "Not ready (Android codes " + strong + "/" + weak + ")");
+                }
             }
-        }
-
+        } catch (RuntimeException ignored) {}
+    } else if (Build.VERSION.SDK_INT == 29) {
+        try {
+            android.hardware.biometrics.BiometricManager bm =
+                    getSystemService(android.hardware.biometrics.BiometricManager.class);
+            if (bm != null) {
+                int status = bm.canAuthenticate(); // API29; no int overload until API30.
+                readinessKnown = true;
+                ready = status ==
+                        android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS;
+                logLabelValue(gr ? "Βιομετρική ετοιμότητα" : "Biometric readiness",
+                        ready ? (gr ? "Android: διαθέσιμη" : "Android: ready")
+                              : (gr ? "Μη έτοιμη (κωδικός " + status + ")"
+                                    : "Not ready (code " + status + ")"));
+            }
+        } catch (RuntimeException ignored) {}
+    } else if (Build.VERSION.SDK_INT == 28) {
+        logLabelValue(gr ? "Βιομετρική ετοιμότητα" : "Biometric readiness",
+                gr ? "API28: δεν υπάρχει διαθέσιμο BiometricManager — δοκιμή κατόπιν επιλογής"
+                   : "API28: no BiometricManager — opt-in prompt available");
+        ready = true; // Only permission to TRY a system prompt, not evidence of readiness.
     } else {
-        logLabelWarnValue(
-                gr ? "Υπηρεσία Keyguard" : "Keyguard",
-                gr ? "Μη διαθέσιμη υπηρεσία"
-                   : "Service unavailable"
-        );
+        readinessKnown = true;
+        logLabelWarnValue(gr ? "BiometricPrompt" : "BiometricPrompt",
+                gr ? "Μη διαθέσιμο πριν το Android 9" : "Unavailable below Android 9");
     }
 
-} catch (Throwable e) {
-    logLabelWarnValue(
-            gr ? "Έλεγχος κλειδώματος" : "Lock detection",
-            (gr ? "Αποτυχία: " : "Failed: ") + e.getMessage()
-    );
-}
-
-// ------------------------------------------------------------  
-// PART B — BIOMETRIC CAPABILITY (FRAMEWORK, NO ANDROIDX)  
-// ------------------------------------------------------------
-
-boolean biometricSupported = false;
-
-if (Build.VERSION.SDK_INT >= 29) {
-    try {
-
-        android.hardware.biometrics.BiometricManager bm =
-                getSystemService(android.hardware.biometrics.BiometricManager.class);
-
-        if (bm != null) {
-
-            int r = bm.canAuthenticate(
-                    android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG
-            );
-
-            if (r != android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
-
-                r = bm.canAuthenticate(
-                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK
-                );
-            }
-
-            if (r == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
-
-                biometricSupported = true;
-
-                logLabelOkValue(
-                        gr ? "Βιομετρικά" : "Biometrics",
-                        gr ? "Υλικό παρόν & έτοιμο για χρήση"
-                           : "Hardware present & usable"
-                );
-
-            } else {
-
-                logLabelWarnValue(
-                        gr ? "Βιομετρικά" : "Biometrics",
-                        gr ? "Υπάρχουν αλλά δεν είναι έτοιμα"
-                           : "Present but not ready"
-                );
-            }
-
-        } else {
-
-            logLabelWarnValue(
-                    gr ? "Βιομετρικά" : "Biometrics",
-                    gr ? "Μη διαθέσιμος διαχειριστής"
-                       : "Manager unavailable"
-            );
-        }
-
-    } catch (Throwable e) {
-
-        logLabelWarnValue(
-                gr ? "Βιομετρικά" : "Biometrics",
-                (gr ? "Αποτυχία ελέγχου: " : "Check failed: ") + e.getMessage()
-        );
+    if (Build.VERSION.SDK_INT < 28 || (readinessKnown && !ready)) {
+        logLabelValue(gr ? "Πραγματική ταυτοποίηση" : "Live authentication",
+                "NOT_TESTED — unavailable / not enrolled / not ready");
+        lab21FinishWithoutPrompt(runId);
+        return;
+    }
+    if (Boolean.FALSE.equals(deviceSecure)) {
+        logLabelValue(gr ? "Πραγματική ταυτοποίηση" : "Live authentication",
+                "NOT_TESTED — secure device credential not configured");
+        lab21FinishWithoutPrompt(runId);
+        return;
     }
 
-} else {
-
-    logLabelWarnValue(
-            gr ? "Βιομετρικά" : "Biometrics",
-            gr ? "Δεν υποστηρίζονται σε αυτήν την έκδοση Android"
-               : "Not supported on this Android version"
-    );
+    final int authenticator = allowedAuthenticator;
+    new AlertDialog.Builder(this)
+            .setTitle(gr ? "LAB 21 — Πραγματικό BiometricPrompt"
+                         : "LAB 21 — Guided BiometricPrompt")
+            .setMessage(gr
+                    ? "Θέλεις να δοκιμάσεις τη βιομετρική ταυτοποίηση μέσω του Android; "
+                      + "Δεν αποθηκεύουμε βιομετρικά στοιχεία. "
+                      + "Μία επιτυχής ταυτοποίηση επιβεβαιώνει μόνο αυτό το λειτουργικό μονοπάτι, "
+                      + "όχι κάθε αισθητήρα ή όλη την ασφάλεια της συσκευής."
+                    : "Test Android biometric authentication now? We never collect or store "
+                      + "fingerprints or face data. A successful prompt confirms only this "
+                      + "OS authentication path, not every sensor or overall device security.")
+            .setPositiveButton(gr ? "ΕΝΑΡΞΗ" : "START", (d, which) ->
+                    lab21StartPrompt(runId, authenticator))
+            .setNegativeButton(gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP", (d, which) -> {
+                logLabelValue(gr ? "Πραγματική ταυτοποίηση" : "Live authentication",
+                        "NOT_TESTED — user skipped");
+                lab21FinishWithoutPrompt(runId);
+            })
+            .setOnCancelListener(d -> {
+                logLabelValue(gr ? "Πραγματική ταυτοποίηση" : "Live authentication",
+                        "NOT_TESTED — cancelled before prompt");
+                lab21FinishWithoutPrompt(runId);
+            })
+            .show();
 }
 
-// ------------------------------------------------------------  
-// PART C — ROOT-AWARE AUTH INFRA CHECK (POLICY / FILES)  
-// ------------------------------------------------------------  
-boolean hasLockDb = false;
-boolean hasGatekeeper = false;
-boolean hasKeystore = false;
+private void lab21StartPrompt(final int runId, final int authenticator) {
+    final boolean gr = AppLang.isGreek(this);
+    if (!lab21Running || lab21RunGeneration != runId
+            || isFinishing() || isDestroyed()) return;
 
-boolean root = isRootAvailable();
-
-if (root) {
-
-    logLabelOkValue(
-            gr ? "Λειτουργία Root" : "Root mode",
-            gr ? "ΔΙΑΘΕΣΙΜΗ" : "AVAILABLE"
-    );
-
-    hasLockDb     = rootPathExists("/data/system/locksettings.db");
-    hasGatekeeper = rootGlobExists("/data/system/gatekeeper*");
-    hasKeystore   = rootPathExists("/data/misc/keystore");
-
-    logLabelOkValue(
-            "Gatekeeper",
-            hasGatekeeper
-                    ? (gr ? "Εντοπίστηκε" : "Detected")
-                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
-    );
-
-    logLabelOkValue(
-            gr ? "Βάση κλειδώματος" : "Lock DB",
-            hasLockDb
-                    ? (gr ? "Εντοπίστηκε" : "Detected")
-                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
-    );
-
-    logLabelOkValue(
-            "Keystore",
-            hasKeystore
-                    ? (gr ? "Εντοπίστηκε" : "Detected")
-                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Λειτουργία Root" : "Root mode",
-            gr ? "Μη διαθέσιμη" : "Not available"
-    );
-}
-
-// ============================================================  
-// LAB 21 — TRUST BOUNDARY AWARENESS  
-// ============================================================  
-
-if (secure) {
-
-    logLabelOkValue(
-            gr ? "Προστασία μετά από επανεκκίνηση" 
-               : "Post-reboot protection",
-            gr ? "Απαιτείται ταυτοποίηση πριν την πρόσβαση στα δεδομένα"
-               : "Authentication required before data access"
-    );
-
-} else {
-
-    logLabelErrorValue(
-            gr ? "Προστασία μετά από επανεκκίνηση" 
-               : "Post-reboot protection",
-            gr ? "ΔΕΝ επιβάλλεται (τα δεδομένα εκτίθενται μετά από επανεκκίνηση)"
-               : "NOT enforced (data exposed after reboot)"
-    );
-}
-
-logLabelOkValue(
-        gr ? "Κύριο επίπεδο ασφάλειας" 
-           : "Primary security layer",
-        secure
-                ? (gr ? "Γνωστικό διαπιστευτήριο (PIN / Μοτίβο / Κωδικός)"
-                      : "Knowledge-based credential")
-                : (gr ? "ΚΑΝΕΝΑ"
-                      : "NONE")
-);
-
-logLabelOkValue(
-        gr ? "Επίπεδο ευκολίας" 
-           : "Convenience layer",
-        biometricSupported
-                ? (gr ? "Διαθέσιμα βιομετρικά"
-                      : "Biometrics available")
-                : (gr ? "Μη διαθέσιμα"
-                      : "Not available")
-);
-
-if (root) {
-
-    if (hasGatekeeper || hasLockDb) {
-
-        logLabelOkValue(
-                gr ? "Επιβολή συστήματος" 
-                   : "System enforcement",
-                gr ? "Υποδομή ταυτοποίησης ενεργή"
-                   : "Authentication infrastructure active"
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Επιβολή συστήματος" 
-                   : "System enforcement",
-                gr ? "Μη ξεκάθαρα σήματα (διαφοροποίηση ROM / κατασκευαστή)"
-                   : "Signals unclear (ROM/vendor variation)"
-        );
-    }
-}
-
-// ------------------------------------------------------------  
-// PART D — RISK SCORE (FAST, CLEAR)  
-// ------------------------------------------------------------  
-int risk = 0;
-
-if (!secure) risk += 70;
-if (secure && !lockedNow) risk += 10;
-if (secure && !biometricSupported) risk += 5;
-
-if (risk >= 70) {
-
-    logLabelErrorValue(
-            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
-            gr ? "ΥΨΗΛΗ (" + risk + "/100)"
-               : "HIGH (" + risk + "/100)"
-    );
-
-} else if (risk >= 30) {
-
-    logLabelWarnValue(
-            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
-            gr ? "ΜΕΤΡΙΑ (" + risk + "/100)"
-               : "MEDIUM (" + risk + "/100)"
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
-            gr ? "ΧΑΜΗΛΗ (" + risk + "/100)"
-               : "LOW (" + risk + "/100)"
-    );
-}
-
-// ------------------------------------------------------------
-// PART E — LIVE BIOMETRIC AUTH TEST (USER-DRIVEN, REAL)
-// ------------------------------------------------------------
-if (!secure) {
-
-    appendHtml("<br>");
-    logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
-               : "Live biometric test:");
-               logLine();
-               
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            gr ? "Παραλείφθηκε" : "Skipped"
-    );
-    logLabelWarnValue(
-            gr ? "Λόγος" : "Reason",
-            gr ? "Απαιτείται ασφαλές κλείδωμα (PIN / Μοτίβο / Κωδικός)"
-               : "Secure lock required (PIN / Pattern / Password)"
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-    logLine();
-    lab21Running = false;
-    return;
-}
-
-if (!biometricSupported) {
-
-    appendHtml("<br>");
-    logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
-               : "Live biometric test:");
-               logLine();
-               
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            gr ? "Δεν ξεκίνησε" : "Not started"
-    );
-    logLabelWarnValue(
-            gr ? "Λόγος" : "Reason",
-            gr ? "Τα βιομετρικά δεν είναι έτοιμα ή δεν είναι διαθέσιμα"
-               : "Biometrics not ready or not available"
-    );
-    logLabelOkValue(
-            gr ? "Ενέργεια" : "Action",
-            gr ? "Ρυθμίστε βιομετρικά στις Ρυθμίσεις και επανεκτελέστε το LAB 21"
-               : "Enroll biometrics in Settings and re-run LAB 21"
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-    logLine();
-    lab21Running = false;
-    return;
-}
-
-if (Build.VERSION.SDK_INT >= 28) {
+    final Lab21BiometricEvidence evidence = new Lab21BiometricEvidence();
+    if (!evidence.start()) return;
+    lab21ActiveEvidence = evidence;
+    final android.os.CancellationSignal cancellation =
+            new android.os.CancellationSignal();
+    lab21Cancellation = cancellation;
 
     try {
-
-        appendHtml("<br>");
-        logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΑΙΣΘΗΤΗΡΑ"
-                   : "LIVE SENSOR TEST");
-                   logLine();
-                   
-        logLabelOkValue(
-                gr ? "Οδηγία" : "Instruction",
-                gr ? "Τοποθετήστε δάχτυλο / πρόσωπο για ταυτοποίηση ΤΩΡΑ"
-                   : "Place finger / face for authentication NOW"
-        );
-        logLabelOkValue(
-                gr ? "Αποτέλεσμα" : "Result",
-                gr ? "Θα καταγραφεί PASS / FAIL (πραγματικός έλεγχος υλικού)"
-                   : "PASS / FAIL will be recorded (real hardware)"
-        );
-
-        Executor executor = getMainExecutor();
-        CancellationSignal cancel = new CancellationSignal();
-
+        final Executor executor = getMainExecutor();
+        android.hardware.biometrics.BiometricPrompt.Builder builder =
+                new android.hardware.biometrics.BiometricPrompt.Builder(this)
+                        .setTitle(gr ? "LAB 21 — Επιβεβαίωση μέσω Android"
+                                     : "LAB 21 — Android biometric verification")
+                        .setSubtitle(gr ? "Χρησιμοποίησε το επιλεγμένο βιομετρικό"
+                                        : "Use your enrolled biometric")
+                        .setDescription(gr ? "Χωρίς αποθήκευση βιομετρικών δεδομένων"
+                                           : "No biometric template is stored")
+                        .setNegativeButton(gr ? "Ακύρωση" : "Cancel", executor, (d, which) -> {
+                            if (lab21IsCurrent(runId, evidence) && evidence.onError(true)) {
+                                lab21FinishPrompt(runId, evidence, null);
+                            }
+                        });
+        if (Build.VERSION.SDK_INT >= 30 && authenticator != 0) {
+            builder.setAllowedAuthenticators(authenticator);
+        }
         android.hardware.biometrics.BiometricPrompt.AuthenticationCallback cb =
                 new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationFailed() {
+                        // NON-TERMINAL. Android permits the user to retry.
+                        if (lab21IsCurrent(runId, evidence)) evidence.onNonMatch();
+                    }
 
                     @Override
                     public void onAuthenticationSucceeded(
                             android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
-
-                        appendHtml("<br>");
-                        logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
-                                   : "LIVE BIOMETRIC TEST");
-                                   logLine ();
-                                   
-                        logLabelOkValue(
-                                gr ? "Αποτέλεσμα" : "Result",
-                                "PASS"
-                        );
-                        logLabelOkValue(
-                                gr ? "Αλυσίδα ελέγχου" : "Pipeline",
-                                gr ? "Αισθητήρας + ταυτοποίηση λειτουργούν σωστά"
-                                   : "Biometric sensor + auth verified functional"
-                        );
-appendHtml("<br>");
-
-                        logOk(gr ? "Συσκευές με πολλαπλά βιομετρικά"
-                                   : "Multi-biometric devices");
-                                   logLine();
-                                   
-                        logLabelWarnValue(
-                                gr ? "Σημείωση" : "Note",
-                                gr ? "Το Android ελέγχει ΕΝΑ βιομετρικό ανά εκτέλεση"
-                                   : "Android tests ONE biometric path per run"
-                        );
-                        logLabelOkValue(
-                                gr ? "Ενέργεια" : "Action",
-                                gr ? "Απενεργοποιήστε το τρέχον βιομετρικό και επανεκτελέστε το LAB 21"
-                                   : "Disable current biometric in Settings and re-run LAB 21"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Σημείωση OEM" : "OEM note",
-                                gr ? "Ο κατασκευαστής μπορεί να δίνει προτεραιότητα στον ίδιο αισθητήρα"
-                                   : "OEM may still prioritize same sensor"
-                        );
-
-                        appendHtml("<br>");
-                        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                        logLine();
-                        lab21Running = false;
-                    }
-
-                    @Override
-                    public void onAuthenticationFailed() {
-
-                        appendHtml("<br>");
-                        logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
-                                   : "LIVE BIOMETRIC TEST");
-                                   logLine();
-                                   
-                        logLabelErrorValue(
-                                gr ? "Αποτέλεσμα" : "Result",
-                                "FAIL"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Ερμηνεία" : "Meaning",
-                                gr ? "Το βιομετρικό δεν επιβεβαιώθηκε κατά τον πραγματικό έλεγχο"
-                                   : "Biometric did not authenticate during real sensor test"
-                        );
-
-                        appendHtml("<br>");
-                        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                        logLine();
-                        lab21Running = false;
+                        if (lab21IsCurrent(runId, evidence) && evidence.onAuthenticated()) {
+                            lab21FinishPrompt(runId, evidence, null);
+                        }
                     }
 
                     @Override
                     public void onAuthenticationError(int errorCode, CharSequence errString) {
-
-                        appendHtml("<br>");
-                        logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
-                                   : "LIVE BIOMETRIC TEST");
-                                   logLine();
-                                   
-                        logLabelWarnValue(
-                                gr ? "Αποτέλεσμα" : "Result",
-                                gr ? "Μη επιβεβαιωμένο"
-                                   : "Not confirmed"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Σύστημα" : "System",
-                                gr ? "Ενεργοποιήθηκε εφεδρικό διαπιστευτήριο"
-                                   : "Fallback to device credential detected"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Ερμηνεία" : "Meaning",
-                                gr ? "Ο αισθητήρας ΔΕΝ επιβεβαιώθηκε λειτουργικός"
-                                   : "Biometric sensor NOT verified functional"
-                        );
-
-                        appendHtml("<br>");
-                        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                        logLine();
-                        lab21Running = false;
+                        boolean userCancelled =
+                                errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED
+                                || errorCode == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_CANCELED;
+                        if (lab21IsCurrent(runId, evidence)
+                                && evidence.onError(userCancelled)) {
+                            lab21FinishPrompt(runId, evidence,
+                                    "Android BiometricPrompt error code " + errorCode);
+                        }
                     }
                 };
-
-        android.hardware.biometrics.BiometricPrompt prompt =
-                new android.hardware.biometrics.BiometricPrompt.Builder(this)
-                        .setTitle(gr
-                                ? "LAB 21 — Ζωντανός Έλεγχος Βιομετρικού Αισθητήρα"
-                                : "LAB 21 — Live Biometric Sensor Test")
-                        .setSubtitle(gr
-                                ? "Τοποθετήστε δάχτυλο / πρόσωπο για επιβεβαίωση"
-                                : "Place finger / face to verify sensor works")
-                        .setDescription(gr
-                                ? "Πραγματικός έλεγχος υλικού (χωρίς προσομοίωση)."
-                                : "This is a REAL hardware test (no simulation).")
-                        .setNegativeButton(
-                                gr ? "Ακύρωση ελέγχου" : "Cancel test",
-                                executor,
-                                (dialog, which) -> {
-
-                                    appendHtml("<br>");
-                                    logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
-                                               : "LIVE BIOMETRIC TEST");
-                                               logLine();
-                                               
-                                    logLabelWarnValue(
-                                            gr ? "Αποτέλεσμα" : "Result",
-                                            gr ? "Ακυρώθηκε από τον χρήστη"
-                                               : "Cancelled by user"
-                                    );
-
-                                    appendHtml("<br>");
-                                    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                                    logLine();
-                                    lab21Running = false;
-                                }
-                        )
-                        .setAllowedAuthenticators(
-                                android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG
-                        )
-                        .build();
-
-        logInfo(gr ? "Προτροπή βιομετρικού:" : "Biometric prompt:");
-        logLabelOkValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Εκκίνηση…" : "Starting…"
-        );
-
-        prompt.authenticate(cancel, executor, cb);
-
-    } catch (Throwable e) {
-
-        appendHtml("<br>");
-        logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
-                   : "Live biometric test");
-                   logLine();
-        logLabelErrorValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Αποτυχία" : "Failed"
-        );
-        logLabelWarnValue(
-                gr ? "Λόγος" : "Reason",
-                (gr ? "Σφάλμα προτροπής βιομετρικών: " : "Biometric prompt error: ") + e.getMessage()
-        );
-
-        appendHtml("<br>");
-        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-        logLine();
-        lab21Running = false;
+        builder.build().authenticate(cancellation, executor, cb);
+    } catch (RuntimeException e) {
+        if (lab21IsCurrent(runId, evidence) && evidence.onError(false)) {
+            lab21FinishPrompt(runId, evidence,
+                    "BiometricPrompt launch unavailable: " + e.getClass().getSimpleName());
+        }
     }
-
-} else {
-
-    appendHtml("<br>");
-    logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
-               : "Live biometric test:");
-               logLine();
-               
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            gr ? "Δεν υποστηρίζεται"
-               : "Not supported"
-    );
-    logLabelWarnValue(
-            gr ? "Λόγος" : "Reason",
-            gr ? "Το BiometricPrompt framework δεν υποστηρίζεται σε αυτήν την έκδοση Android"
-               : "BiometricPrompt framework not available on this Android version"
-    );
-
-            logLabelWarnValue(
-        gr ? "Απαιτούμενη ενέργεια" : "Action required",
-        gr
-                ? "Ελέγξτε τα βιομετρικά από τις ρυθμίσεις συστήματος κλειδώματος οθόνης και επανεκτελέστε το LAB 21"
-                : "Test biometrics via system lock screen settings, then re-run LAB 21"
-);
-
-    logInfo("Note");
-    logLabelOkValue(
-            gr ? "Κάλυψη" : "Coverage",
-            gr ? "Κάθε εκτέλεση του LAB 21 ελέγχει ΕΝΑ βιομετρικό μονοπάτι"
-               : "Each LAB 21 run verifies ONE biometric sensor path"
-    );
-    logLabelOkValue(
-            gr ? "Ενέργεια" : "Action",
-            gr ? "Απενεργοποιήστε το ενεργό βιομετρικό στις ρυθμίσεις, για να ελέγξετε άλλον αισθητήρα"
-               : "Disable active biometric in Settings to test another sensor"
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-    logLine();
-    lab21Running = false;
 }
+
+private boolean lab21IsCurrent(int runId, Lab21BiometricEvidence evidence) {
+    return lab21Running && lab21RunGeneration == runId
+            && lab21ActiveEvidence == evidence
+            && !isFinishing() && !isDestroyed();
+}
+
+private void lab21FinishPrompt(int runId, Lab21BiometricEvidence evidence,
+                               String platformError) {
+    if (!lab21IsCurrent(runId, evidence) || evidence.isPending()) return;
+    final boolean gr = AppLang.isGreek(this);
+    appendHtml("<br>");
+    Lab21BiometricEvidence.Outcome outcome = evidence.outcome();
+    switch (outcome) {
+        case ANDROID_AUTHENTICATED:
+            logLabelValue(gr ? "Επιβεβαίωση Android" : "Android authentication",
+                    gr ? "ΠΑΡΑΤΗΡΗΘΗΚΕ επιτυχής βιομετρική ταυτοποίηση"
+                       : "OBSERVED successful OS biometric authentication");
+            logInfo(gr ? "Δεν πιστοποιούνται όλοι οι αισθητήρες, η ακρίβεια ή η ακεραιότητα υλικού."
+                       : "Does not certify every sensor, accuracy or physical integrity.");
+            break;
+        case USER_CANCELLED:
+            logLabelWarnValue(gr ? "Βιομετρική δοκιμή" : "Biometric challenge",
+                    gr ? "ΑΚΥΡΩΘΗΚΕ — χωρίς διάγνωση βλάβης"
+                       : "CANCELLED — no hardware verdict");
+            break;
+        default:
+            logLabelWarnValue(gr ? "Βιομετρική δοκιμή" : "Biometric challenge",
+                    gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ / ΣΦΑΛΜΑ — όχι αστοχία αισθητήρα"
+                       : "UNAVAILABLE / ERROR — not evidence of a defective sensor");
+    }
+    logLabelValue(gr ? "Απόπειρες χωρίς αναγνώριση" : "Non-matching attempts",
+            String.valueOf(evidence.nonMatchingAttempts()));
+    if (platformError != null) {
+        logLabelValue(gr ? "Πληροφορία Android" : "Android detail", platformError);
+    }
+    lab21ActiveEvidence = null;
+    lab21Cancellation = null;
+    lab21FinishWithoutPrompt(runId);
+}
+
+private void lab21FinishWithoutPrompt(int runId) {
+    if (lab21RunGeneration != runId) return;
+    lab21Running = false;
+    lab21RunGeneration++;
+    logInfo(AppLang.isGreek(this)
+            ? "Το Lab 21 ολοκλήρωσε την καταγραφή των διαθέσιμων στοιχείων Android."
+            : "Lab 21 finished recording the available Android evidence.");
+    enableSingleExportButton();
 }
 
 // ============================================================
-// ROOT HELPERS — minimal, safe, no assumptions
+// // ROOT HELPERS — minimal, safe, no assumptions
 // ============================================================
 private boolean isRootAvailable() {
 try {
@@ -25979,16 +25659,25 @@ private void lab24RootSuspicion() {
             "com.kingroot.kinguser",
             "com.kingo.root"
     };
-    List<String> visiblePackages = lab24_getInstalledPackagesLower();
     int visibleManagerCount = 0;
     for (String pkg : rootManagerPackages) {
-        if (visiblePackages.contains(pkg)) {
+        // Android 11+ package-visibility filters can hide installed apps.
+        // A successful targeted lookup only proves visibility, not root.
+        try {
+            getPackageManager().getPackageInfo(pkg, 0);
             visibleManagerCount++;
-            logLabelWarnValue(gr ? "Διαθέσιμο package διαχειριστή"
-                                  : "Visible manager package",
-                    pkg + " (presence is not proof of granted root)");
+        } catch (PackageManager.NameNotFoundException ignored) {
+            // Not visible is NOT evidence the app is absent.
+        } catch (RuntimeException ignored) {
+            // Permission/OEM restrictions => unknown.
         }
     }
+    if (visibleManagerCount > 0) {
+        logLabelWarnValue(gr ? "Ορατές εφαρμογές διαχείρισης" : "Visible manager packages",
+                gr ? (visibleManagerCount + " ενδείξεις — όχι απόδειξη root")
+                   : (visibleManagerCount + " hints — not proof of root"));
+    }
+    // Names of the user's installed packages are deliberately not exported.
     if (visibleManagerCount == 0) {
         logLabelValue(gr ? "Root manager apps" : "Root manager apps",
                 gr ? "Δεν αναφέρθηκαν στα ορατά packages — όχι έλεγχος απουσίας"
@@ -26017,17 +25706,36 @@ private void lab24RootSuspicion() {
             flashLocked != null && !flashLocked.trim().isEmpty()
                     ? flashLocked : (gr ? "Μη διαθέσιμο" : "Unavailable"));
 
-    if ("orange".equalsIgnoreCase(bootState)
-            || "red".equalsIgnoreCase(bootState)
-            || "unlocked".equalsIgnoreCase(deviceState)
-            || "0".equals(flashLocked)) {
-        logLabelWarnValue(gr ? "Παρατηρούμενη κατάσταση εκκίνησης"
-                             : "Observed boot state",
-                gr ? "Το Android αναφέρει τροποποιημένη ή μη κλειδωμένη κατάσταση· "
-                       + "απαιτείται επιβεβαίωση εμπιστοσύνης."
-                   : "OS properties report modified/unlocked state; "
-                       + "trusted verification is required.");
+    Lab24BootEvidence.Result bootEvidence =
+            Lab24BootEvidence.classify(bootState, deviceState, flashLocked);
+    switch (bootEvidence) {
+        case OS_REPORTS_LOCKED_VERIFIED:
+            logLabelValue(gr ? "Ενδείξεις Verified Boot" : "Verified Boot indicators",
+                    gr ? "Το Android αναφέρει locked/green — ΔΕΝ είναι attestation"
+                       : "Android reports locked/green — NOT cryptographic attestation");
+            break;
+        case OS_REPORTS_NONSTANDARD_TRUST:
+            logLabelWarnValue(gr ? "Ενδείξεις Verified Boot" : "Verified Boot indicators",
+                    gr ? "Μη τυπική αλυσίδα εμπιστοσύνης κατά το Android"
+                       : "Android reports a non-standard trust chain");
+            break;
+        case OS_REPORTS_UNLOCKED_OR_UNVERIFIED:
+            logLabelWarnValue(gr ? "Ενδείξεις Verified Boot" : "Verified Boot indicators",
+                    gr ? "Το Android αναφέρει unlocked ή αποτυχία επαλήθευσης — root άγνωστο"
+                       : "Android reports unlocked/verification concern — root UNKNOWN");
+            break;
+        case OS_PROPERTIES_INCONSISTENT:
+            logLabelWarnValue(gr ? "Ενδείξεις Verified Boot" : "Verified Boot indicators",
+                    gr ? "ΑΝΤΙΦΑΤΙΚΑ boot properties — απαιτείται εξωτερική επαλήθευση"
+                       : "CONFLICTING boot properties — independent verification required");
+            break;
+        default:
+            logLabelWarnValue(gr ? "Ενδείξεις Verified Boot" : "Verified Boot indicators",
+                    gr ? "ΑΓΝΩΣΤΕΣ — δεν τεκμηριώνεται unlocked ή locked"
+                       : "UNKNOWN — neither locked nor unlocked proven");
     }
+    logInfo(gr ? "Τα system properties μπορεί να απουσιάζουν, να είναι OEM-specific ή να τροποποιούνται."
+               : "System properties may be missing, OEM-specific or altered.");
 
     logLabelWarnValue(gr ? "Root / ακεραιότητα συσκευής"
                          : "Device root/integrity verification",
@@ -26050,241 +25758,52 @@ private void lab24RootSuspicion() {
     logLine();
 }
 
-// ============================================================
-// LAB 24 — INTERNAL HELPERS
-// ============================================================
+// Unprivileged, bounded public filesystem check. Sandbox restrictions can
+// hide paths and a missing su path does NOT establish lack of root.
 private boolean lab24_fileExists(String path) {
-try { return new File(path).exists(); }
-catch (Throwable t) { return false; }
-}
-
-private List<String> lab24_getInstalledPackagesLower() {
-List<String> out = new ArrayList<>();
-try {
-PackageManager pm = getPackageManager();
-List<ApplicationInfo> apps = pm.getInstalledApplications(0);
-if (apps != null) {
-for (ApplicationInfo ai : apps) {
-String p = ai.packageName;
-if (p != null) out.add(p.toLowerCase(Locale.US));
-}
-}
-} catch (Throwable ignore) {}
-return out;
-}
-
-private boolean lab24_canExecSu() {
-java.lang.Process p = null;
-try {
-p = Runtime.getRuntime().exec(new String[]{"su", "-c", "id"});
-BufferedReader br =
-new BufferedReader(
-new InputStreamReader(p.getInputStream()));
-String line = br.readLine();
-br.close();
-return line != null &&
-line.toLowerCase(Locale.US).contains("uid=0");
-} catch (Throwable t) {
-return false;
-} finally {
-if (p != null) try { p.destroy(); } catch (Throwable ignore) {}
-}
-}
-
-private String lab24_execFirstLine(String cmd) {
-java.lang.Process p = null;
-try {
-p = Runtime.getRuntime().exec(cmd);
-BufferedReader br =
-new BufferedReader(
-new InputStreamReader(p.getInputStream()));
-String line = br.readLine();
-br.close();
-return line != null ? line.trim() : null;
-} catch (Throwable t) {
-return null;
-} finally {
-if (p != null) try { p.destroy(); } catch (Throwable ignore) {}
-}
-}
-
-private String lab24_getProp(String key) {
-String v = lab24_execFirstLine("getprop " + key);
-if (v == null) return null;
-v = v.trim();
-return v.isEmpty() ? null : v.toLowerCase(Locale.US);
-}
-
-private String lab24_readOneLine(String path) {
-BufferedReader br = null;
-try {
-br = new BufferedReader(new FileReader(new File(path)));
-return br.readLine();
-} catch (Throwable t) {
-return null;
-} finally {
-if (br != null) try { br.close(); } catch (Throwable ignore) {}
-}
-}
-
-// ============================================================
-// LAB 24 — MAGISK STEALTH HEURISTICS (HONEST / HEURISTIC ONLY)
-// Detects strong indicators of hidden root environments.
-// Does NOT claim certainty.
-// ============================================================
-private int lab24_magiskStealthScore(List<String> findings) {
-
-    int score = 0;
-
-    // --------------------------------------------------------
-    // 1) Zygisk / denylist style property hints
-    // --------------------------------------------------------
     try {
-        String v;
-
-        v = lab24_getProp("ro.dalvik.vm.native.bridge");
-        if (v != null && !v.isEmpty() && !"0".equals(v)) {
-            score += 10;
-            findings.add("native.bridge is set: " + v);
-        }
-
-        v = lab24_getProp("init.svc.magiskd");
-        if (v != null) {
-            score += 35;
-            findings.add("init.svc.magiskd=" + v);
-        }
-
-        v = lab24_getProp("persist.magisk.hide");
-        if (v != null) {
-            score += 20;
-            findings.add("persist.magisk.hide detected");
-        }
-
-    } catch (Throwable ignore) {}
-
-    // --------------------------------------------------------
-    // 2) Typical Magisk / overlay / mirror traces
-    // --------------------------------------------------------
-    String[] paths = {
-            "/sbin/.magisk",
-            "/dev/.magisk_unblock",
-            "/cache/.magisk",
-            "/data/adb/magisk",
-            "/data/adb/modules",
-            "/data/adb/service.d",
-            "/data/adb/post-fs-data.d",
-            "/debug_ramdisk",
-            "/dev/zygisk",
-            "/metadata/magisk"
-    };
-
-    for (String p : paths) {
-        try {
-            if (lab24_fileExists(p)) {
-                score += 20;
-                findings.add("suspicious root path: " + p);
-            }
-        } catch (Throwable ignore) {}
+        return path != null && new java.io.File(path).exists();
+    } catch (SecurityException ignored) {
+        return false;
     }
-
-    // --------------------------------------------------------
-    // 3) Mount table traces
-    // --------------------------------------------------------
-    try {
-        String mounts = lab24_readWholeFile("/proc/self/mounts");
-        if (mounts != null) {
-            String m = mounts.toLowerCase(Locale.US);
-
-            if (m.contains("magisk")) {
-                score += 35;
-                findings.add("/proc/self/mounts contains magisk");
-            }
-
-            if (m.contains("/data/adb/modules")) {
-                score += 25;
-                findings.add("mounts reference /data/adb/modules");
-            }
-
-            if (m.contains("overlay") && m.contains("/system")) {
-                score += 10;
-                findings.add("overlay mount affecting /system detected");
-            }
-        }
-    } catch (Throwable ignore) {}
-
-    // --------------------------------------------------------
-    // 4) /proc/* cmdline / maps traces (best effort)
-    // --------------------------------------------------------
-    try {
-        String maps = lab24_readWholeFile("/proc/self/maps");
-        if (maps != null) {
-            String mm = maps.toLowerCase(Locale.US);
-
-            if (mm.contains("zygisk")) {
-                score += 25;
-                findings.add("/proc/self/maps contains zygisk");
-            }
-
-            if (mm.contains("magisk")) {
-                score += 25;
-                findings.add("/proc/self/maps contains magisk");
-            }
-        }
-    } catch (Throwable ignore) {}
-
-    // --------------------------------------------------------
-    // 5) Package hiding paradox:
-    // no Magisk package, but strong root shell / adb module traces
-    // --------------------------------------------------------
-    try {
-        boolean shellRoot = lab24_canExecSu();
-        boolean magiskPkg = false;
-
-        List<String> installed = lab24_getInstalledPackagesLower();
-        for (String p : installed) {
-            if (p == null) continue;
-            if (p.contains("magisk")) {
-                magiskPkg = true;
-                break;
-            }
-        }
-
-        boolean adbModules =
-                lab24_fileExists("/data/adb/modules") ||
-                lab24_fileExists("/data/adb/service.d") ||
-                lab24_fileExists("/data/adb/post-fs-data.d");
-
-        if (shellRoot && adbModules && !magiskPkg) {
-            score += 30;
-            findings.add("root shell + /data/adb traces present without visible Magisk package");
-        }
-
-    } catch (Throwable ignore) {}
-
-    return Math.min(score, 100);
 }
 
-private String lab24_readWholeFile(String path) {
-    BufferedReader br = null;
+// No hidden Android SystemProperties API or root command. Reads only
+// three explicitly allowlisted OS-reporting keys. Missing/blocked output
+// returns UNKNOWN, never "green" or "locked" by default.
+private String lab24_getProp(String key) {
+    if (!("ro.boot.verifiedbootstate".equals(key)
+            || "ro.boot.vbmeta.device_state".equals(key)
+            || "ro.boot.flash.locked".equals(key))) {
+        return null;
+    }
+    java.lang.Process process = null;
     try {
-        br = new BufferedReader(new FileReader(new File(path)));
-        StringBuilder sb = new StringBuilder();
-        String line;
-        int lines = 0;
-
-        while ((line = br.readLine()) != null && lines < 400) {
-            sb.append(line).append('\n');
-            lines++;
+        process = new ProcessBuilder("/system/bin/getprop", key)
+                .redirectErrorStream(true).start();
+        boolean ended = process.waitFor(
+                350L, java.util.concurrent.TimeUnit.MILLISECONDS);
+        if (!ended || process.exitValue() != 0) return null;
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(process.getInputStream(),
+                        java.nio.charset.StandardCharsets.UTF_8))) {
+            String line = reader.readLine();
+            return line == null || line.trim().isEmpty() ? null : line.trim();
         }
-
-        return sb.toString();
-    } catch (Throwable ignore) {
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return null;
+    } catch (java.io.IOException | RuntimeException ignored) {
         return null;
     } finally {
-        try { if (br != null) br.close(); } catch (Throwable ignore) {}
+        if (process != null) {
+            try { process.destroy(); } catch (RuntimeException ignored) {}
+        }
     }
 }
 
+// ============================================================
+// LAB 24 — INTERNAL HELPERS
 // ============================================================
 // LABS 25 — 30: ADVANCED / LOGS
 // ============================================================
@@ -26639,356 +26158,115 @@ private long storageLatencyProbe() {
 // ============================================================
 
 private void lab26AppsFootprint() {
-
-    if (!guardUsageAccess()) return;
-
+    final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
-
-    final boolean gr = AppLang.isGreek(this);
-
-    logInfo(gr
-            ? "LAB 26 — Ανάλυση Επιπτώσεων Εγκατεστημένων Εφαρμογών"
-            : "LAB 26 — Installed Applications Impact Analysis");
-
+    logInfo(gr ? "LAB 26 — Ορατές εφαρμογές και στοιχεία χρήσης"
+               : "LAB 26 — Visible apps and usage evidence");
     logLine();
 
-    final boolean rooted = isDeviceRooted();
-
-    // ============================================================
-    // ENGINE
-    // ============================================================
+    // Usage access is optional. No root, all-app or battery health claim.
     AppImpactEngine.ImpactResult r;
     try {
-        r = AppImpactEngine.analyze(this, rooted);
+        r = AppImpactEngine.analyze(this, false);
     } catch (Throwable t) {
-
-        logLabelErrorValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Αποτυχία ανάλυσης εφαρμογών" : "Failed to analyze applications"
-        );
-
-        logLabelWarnValue(
-                gr ? "Αιτία" : "Reason",
-                gr ? "Σφάλμα πρόσβασης PackageManager / UsageStats" : "PackageManager / UsageStats access error"
-        );
-
-        logLine();
-        appendHtml("<br>");
-        logOk(gr ? "Το Lab 26 ολοκληρώθηκε." : "Lab 26 finished.");
-        logLine();
+        logLabelWarnValue(gr ? "Κατάσταση" : "Status",
+                gr ? "INCONCLUSIVE — η συλλογή απέτυχε"
+                   : "INCONCLUSIVE — collection failed");
+        GELServiceLog.info("SUMMARY: APPS_IMPACT=INCONCLUSIVE");
+        return;
+    }
+    if (r == null || Lab26Evidence.packageCoverage(
+            r.packageQuerySucceeded, r.totalPkgs)
+            == Lab26Evidence.PackageCoverage.UNAVAILABLE) {
+        logLabelWarnValue(gr ? "Ορατότητα εφαρμογών" : "App visibility",
+                gr ? "UNAVAILABLE — δεν επιστράφηκε αξιόπιστη λίστα"
+                   : "UNAVAILABLE — no reliable package list");
+        GELServiceLog.info("SUMMARY: APPS_IMPACT=INCONCLUSIVE");
         return;
     }
 
-    if (r == null) {
-
-        logLabelErrorValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Το αποτέλεσμα ανάλυσης είναι κενό" : "Engine result is null"
-        );
-
-        logLine();
-        appendHtml("<br>");
-        logOk(gr ? "Το Lab 26 ολοκληρώθηκε." : "Lab 26 finished.");
-        logLine();
-        return;
-    }
-
-    // ============================================================
-    // OVERVIEW
-    // ============================================================
-    
-appendHtml("<br>");
-logInfo(gr ? "Επισκόπηση εγκατεστημένων" : "Installed overview");
-logLine();
-
-    logLabelOkValue(
-            gr ? "Σύνολα" : "Totals",
-            (gr
-                    ? "Όλα: " + r.totalPkgs + " | Χρήστη: " + r.userApps + " | Συστήματος: " + r.systemApps
-                    : "All: " + r.totalPkgs + " | User: " + r.userApps + " | System: " + r.systemApps)
-    );
-
-    logLabelOkValue(
-            gr ? "Usage Access" : "Usage Access",
-            r.usageAccessOk
-                    ? (gr ? "Ενεργό (OK)" : "Enabled (OK)")
-                    : (gr ? "Ανενεργό (χωρίς foreground χρόνο)" : "Disabled (no foreground time)")
-    );
-
-    logLabelOkValue(
-            gr ? "Root-aware" : "Root-aware",
-            rooted
-                    ? (gr ? "Ναι (best-effort χωρίς su)" : "Yes (best-effort without su)")
-                    : (gr ? "Όχι" : "No")
-    );
-
-    // ============================================================
-    // CAPABILITY PRESSURE (HONEST)
-    // ============================================================
-    int userApps = Math.max(1, r.userApps);
-    int pctBg   = (int) Math.round((r.bgCapable * 100.0) / userApps);
-    int pctPerm = (int) Math.round((r.permHeavy * 100.0) / userApps);
+    logLabelWarnValue(gr ? "Κάλυψη" : "Coverage",
+            gr ? "OBSERVED_LIMITED — μόνο πακέτα ορατά στην εφαρμογή"
+               : "OBSERVED_LIMITED — only packages visible to this app");
+    logLabelValue(gr ? "Ορατά πακέτα" : "Visible packages",
+            (gr ? "Σύνολο: " : "Total: ") + r.totalPkgs
+            + (gr ? " | Χρήστη: " : " | User: ") + r.userApps
+            + (gr ? " | Συστήματος: " : " | System: ") + r.systemApps);
+    logLabelWarnValue(gr ? "Όριο Android" : "Android limitation",
+            gr ? "Δεν τεκμηριώνεται πλήρης κατάλογος εφαρμογών ή μηδενικές κρυφές εφαρμογές."
+               : "No complete inventory or absence of hidden packages is established.");
 
     appendHtml("<br>");
-    logInfo(gr ? "Ενδείξεις φόρτου (βάσει δυνατοτήτων)" : "Load indicators (capability-based)");
+    logInfo(gr ? "Δηλωμένες δυνατότητες ορατών εφαρμογών"
+               : "Declared capabilities of visible apps");
     logLine();
+    logLabelValue(gr ? "Πιθανό background / Πολλές δηλώσεις"
+                     : "Background potential / Multiple declarations",
+            r.bgCapable + " / " + r.permHeavy);
+    logLabelValue("Boot / Location / Mic / Camera",
+            r.bootAware + " / " + r.locationLike + " / "
+            + r.micLike + " / " + r.cameraLike);
+    logLabelValue("Overlay / VPN / Storage / Notifications",
+            r.overlayLike + " / " + r.vpnLike + " / "
+            + r.storageLike + " / " + r.notifLike);
+    logLabelWarnValue(gr ? "Ερμηνεία" : "Interpretation",
+            gr ? "Οι δηλώσεις manifest δεν αποδεικνύουν ενεργή χρήση, φόρτο CPU ή κατανάλωση ενέργειας."
+               : "Manifest declarations do not prove active use, CPU load or energy consumption.");
 
-    logLabelOkValue(gr ? "Background-capable" : "Background-capable",
-            r.bgCapable + " (" + pctBg + "%)");
-
-    logLabelOkValue(gr ? "Permission-heavy" : "Permission-heavy",
-            r.permHeavy + " (" + pctPerm + "%)");
-            
-   appendHtml("<br>");
-    logInfo(gr ? "Χάρτης δυνατοτήτων (user apps)" : "Capability map (user apps)");
-    logLine();
-
-    logLabelOkValue(
-            gr ? "Boot / Location / Mic / Camera" : "Boot / Location / Mic / Camera",
-            r.bootAware + " | " + r.locationLike + " | " + r.micLike + " | " + r.cameraLike
-    );
-
-    logLabelOkValue(
-            gr ? "Overlay / VPN / Storage / Notifications" : "Overlay / VPN / Storage / Notifications",
-            r.overlayLike + " | " + r.vpnLike + " | " + r.storageLike + " | " + r.notifLike
-    );
-
-    // ============================================================
-    // REDUNDANCY (HONEST / HEURISTIC)
-    // ============================================================
     appendHtml("<br>");
-    logInfo(gr ? "Ενδείξεις πλεονασμού (heuristic)" : "Redundancy signals (heuristic)");
+    logInfo(gr ? "Χρόνος χρήσης από Android" : "Android-reported usage time");
     logLine();
-
-    logLabelOkValue(gr ? "Cleaners / Optimizers" : "Cleaners / Optimizers", String.valueOf(r.cleanersLike));
-    logLabelOkValue(gr ? "Launchers" : "Launchers", String.valueOf(r.launchersLike));
-    logLabelOkValue(gr ? "Antivirus suites" : "Antivirus suites", String.valueOf(r.antivirusLike));
-    logLabelOkValue(gr ? "Keyboards" : "Keyboards", String.valueOf(r.keyboardsLike));
-
-// ============================================================
-// REAL DATA (HONEST) — SINCE BOOT (TrafficStats)
-// ============================================================
-appendHtml("<br>");
-logInfo(gr ? "Κατανάλωση δεδομένων (από boot)" : "Data usage (since boot)");
-logLine();
-
-if (r.topDataConsumers != null && !r.topDataConsumers.isEmpty()) {
-
-    int limit = Math.min(10, r.topDataConsumers.size());
-    boolean foundRealData = false;
-
-    for (int i = 0; i < limit; i++) {
-
-        AppImpactEngine.AppScore a = r.topDataConsumers.get(i);
-        if (a == null) continue;
-
-        if (a.dataBytesSinceBoot < 1024) {
-            continue; // εξαφανίζουμε τα μηδενικά
-        }
-
-        foundRealData = true;
-
-        String val = humanBytes(a.dataBytesSinceBoot);
-
-        logLabelWarnValue(
-                a.safeLabel(),
-                (gr
-        ? val + " (Συνολική κίνηση δεδομένων από εκκίνηση)"
-        : val + " (Total data traffic since boot)")
-);
-
-        logInfo(a.pkg);
-    }
-
-    if (!foundRealData) {
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
-                gr
-                        ? "Δεν υπάρχουν διαθέσιμα δεδομένα κατανάλωσης.\n\n"
-                          + "Πιθανές αιτίες:\n"
-                          + "• Πρόσφατη επανεκκίνηση συσκευής\n"
-                          + "• Περιορισμοί κατασκευαστή (OEM)\n"
-                          + "• Μη διαθέσιμα UID counters στο Android"
-                        : "No data usage available.\n\n"
-                          + "Possible reasons:\n"
-                          + "• Device was recently rebooted\n"
-                          + "• OEM restrictions\n"
-                          + "• UID traffic counters not exposed by Android"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Σημείωση" : "Note",
-                gr
-                        ? "Τα δεδομένα είναι συνολικά από την τελευταία εκκίνηση της συσκευής."
-                        : "Data is cumulative since last device boot."
-        );
-    }
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            gr
-                    ? "Δεν ήταν δυνατή η ανάκτηση στατιστικών κατανάλωσης."
-                    : "Unable to retrieve usage statistics."
-    );
-}
-
-    // ============================================================
-    // BATTERY EXPOSURE (HONEST HEURISTIC)
-    // ============================================================
-    appendHtml("<br>");
-    logInfo(gr ? "Έκθεση μπαταρίας (heuristic — no mAh)" : "Battery exposure (heuristic — no mAh)");
-    logLine();
-
     if (!r.usageAccessOk) {
-
-        logLabelWarnValue(
-                gr ? "Περιορισμός" : "Limitation",
-                gr
-                        ? "Δεν υπάρχει Usage Access, άρα δεν έχουμε αξιόπιστο foreground χρόνο."
-                        : "Usage Access is off, so we do not have reliable foreground time."
-        );
-    }
-
-    if (r.topBatteryExposure != null && !r.topBatteryExposure.isEmpty()) {
-
-        int limit = Math.min(10, r.topBatteryExposure.size());
-        for (int i = 0; i < limit; i++) {
-
-            AppImpactEngine.AppScore a = r.topBatteryExposure.get(i);
-            if (a == null) continue;
-
-// =======================
-// DATA SAFETY (EXPLAINED)
-// =======================
-
-long fgMin = a.fgMs24h / 60000L;
-
-// ---------- Usage text ----------
-String usageText;
-
-if (!r.usageAccessOk) {
-
-    usageText = gr
-            ? "Χρήση (24h): δεν υπάρχουν δεδομένα (δεν έχει δοθεί Usage Access)"
-            : "Usage (24h): no data (Usage Access not granted)";
-
-} else if (fgMin <= 0) {
-
-    usageText = gr
-            ? "Χρήση (24h): δεν καταγράφηκε χρήση το τελευταίο 24ωρο"
-            : "Usage (24h): no recorded usage in the last 24h";
-
-} else {
-
-    usageText = gr
-            ? "Χρήση (24h): " + fgMin + " λεπτά"
-            : "Usage (24h): " + fgMin + " min";
-}
-
-// ---------- Data text (TrafficStats since boot) ----------
-String dataText;
-
-if (a.dataBytesSinceBoot < 1024) {
-
-    dataText = gr
-            ? "Δεδομένα: δεν υπάρχουν διαθέσιμα στοιχεία (πιθανός περιορισμός συστήματος/ROM)"
-            : "Data: not available (possible system/ROM limitation)";
-
-} else {
-
-    dataText = gr
-            ? "Δεδομένα: " + humanBytes(a.dataBytesSinceBoot)
-            : "Data: " + humanBytes(a.dataBytesSinceBoot);
-}
-
-// ---------- Final detail ----------
-String detail = gr
-        ? "Δείκτης Επιρροής: " + a.estImpactScore +
-          " | " + usageText +
-          " | " + dataText +
-          " | Ενδείξεις: " + a.tags
-        : "Impact Index: " + a.estImpactScore +
-          " | " + usageText +
-          " | " + dataText +
-          " | Indicators: " + a.tags;
-
-            logLabelWarnValue(a.safeLabel(), detail);
-            logInfo(a.pkg);
-        }
-
-        logLabelOkValue(
-                gr ? "Σημείωση" : "Note",
-                gr
-                        ? "Το «Battery exposure» είναι εκτίμηση βάσει χρήσης/δυνατοτήτων/δεδομένων — όχι πραγματικό mAh."
-                        : "'Battery exposure' is an estimate based on usage/capabilities/data — not real mAh."
-        );
-
+        logLabelWarnValue("Usage Access",
+                gr ? "Δεν έχει δοθεί — η βασική αποτύπωση παραμένει διαθέσιμη"
+                   : "Not granted — basic observation remains available");
+    } else if (!r.usageQuerySucceeded || !r.usageRecordsObserved) {
+        logLabelWarnValue(gr ? "Στοιχεία" : "Evidence",
+                gr ? "UNAVAILABLE — δεν υπάρχουν αξιοποιήσιμα στατιστικά"
+                   : "UNAVAILABLE — no usable usage records");
+    } else if (r.topBatteryExposure == null || r.topBatteryExposure.isEmpty()) {
+        logLabelWarnValue(gr ? "Χρήση" : "Usage",
+                gr ? "Δεν βρέθηκαν θετικές παρατηρήσεις σε ορατές εφαρμογές"
+                   : "No positive observations for visible apps");
     } else {
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Δεν ήταν δυνατή η κατάταξη έκθεσης μπαταρίας" : "Unable to rank battery exposure"
-        );
-    }
-
-    // ============================================================
-    // TOP CAPABILITY-HEAVY
-    // ============================================================
-    appendHtml("<br>");
-    logInfo(gr
-            ? "Top εφαρμογές με ισχυρές δυνατότητες (επισήμανση, όχι κατηγορούμενα)"
-            : "Top capability-heavy apps (flagged, not accused)");
-            logLine();
-
-    if (r.topCapabilityHeavy != null && !r.topCapabilityHeavy.isEmpty()) {
-
-        int limit = Math.min(10, r.topCapabilityHeavy.size());
-        for (int i = 0; i < limit; i++) {
-
-            AppImpactEngine.AppScore a = r.topCapabilityHeavy.get(i);
-            if (a == null) continue;
-
-            String detail =
-                    (gr
-        ? "Δείκτης Δυνατοτήτων: " + a.capabilityScore +
-          " | Επικίνδυνες Άδειες: " + a.dangerPermCount +
-          " | Παράγοντες Επιρροής: " + a.tags
-        : "Capability Index: " + a.capabilityScore +
-          " | Dangerous Permissions: " + a.dangerPermCount +
-          " | Impact Factors: " + a.tags);
-
-            logLabelWarnValue(a.safeLabel(), detail);
-            logInfo(a.pkg);
+        int n = Math.min(10, r.topBatteryExposure.size());
+        for (int i = 0; i < n; i++) {
+            AppImpactEngine.AppScore app = r.topBatteryExposure.get(i);
+            if (app == null || app.fgMs24h <= 0) continue;
+            logLabelValue(app.safeLabel(),
+                    (gr ? "Ημερήσια διαστήματα Android: " : "Android daily buckets: ")
+                    + (app.fgMs24h / 60000L) + (gr ? " λεπτά" : " min"));
         }
     }
+    logLabelWarnValue(gr ? "Χρονικό όριο" : "Time-window limit",
+            gr ? "Τα ημερήσια διαστήματα μπορεί να ξεπερνούν το ζητούμενο 24ωρο."
+               : "Daily aggregation may extend beyond the requested 24-hour window.");
 
-    // ============================================================
-    // HUMAN VERDICT
-    // ============================================================
     appendHtml("<br>");
-    logOk(gr ? "ΓΕΝΙΚΟ ΣΥΜΠΕΡΑΣΜΑ" : "TOTAL VERDICT");
+    logInfo(gr ? "Κίνηση δικτύου" : "Network traffic");
     logLine();
-
-    if (r.riskPoints >= 8) {
-        logLabelWarnValue(gr ? "Επίπεδο πίεσης" : "Pressure level", gr ? "ΥΨΗΛΟ" : "HIGH");
-    } else if (r.riskPoints >= 5) {
-        logLabelWarnValue(gr ? "Επίπεδο πίεσης" : "Pressure level", gr ? "ΜΕΤΡΙΟ" : "MODERATE");
+    if (r.topDataConsumers == null || r.topDataConsumers.isEmpty()) {
+        logLabelWarnValue(gr ? "Άλλες εφαρμογές" : "Other apps",
+                gr ? "UNAVAILABLE — το Android 7+ αποκρύπτει τα TrafficStats άλλων UID"
+                   : "UNAVAILABLE — Android 7+ hides other UIDs' TrafficStats");
     } else {
-        logLabelOkValue(gr ? "Επίπεδο πίεσης" : "Pressure level", gr ? "ΦΥΣΙΟΛΟΓΙΚΟ" : "NORMAL");
+        for (AppImpactEngine.AppScore app : r.topDataConsumers) {
+            if (app == null || app.dataBytesSinceBoot < 0) continue;
+            logLabelValue(app.safeLabel(), humanBytes(app.dataBytesSinceBoot)
+                    + (gr ? " (ίδιο UID, από boot)" : " (own UID, since boot)"));
+        }
     }
 
-    GELServiceLog.info(
-            "SUMMARY: APPS_IMPACT=" + (r.appsImpactHigh ? "HIGH" : "NORMAL")
-    );
-
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 26 ολοκληρώθηκε." : "Lab 26 finished.");
+    logInfo(gr ? "Διαγνωστικό συμπέρασμα" : "Diagnostic conclusion");
+    logLine();
+    logLabelWarnValue(gr ? "Ετυμηγορία" : "Verdict",
+            gr ? "OBSERVED_LIMITED — δεν μετρήθηκε κατανάλωση μπαταρίας, πραγματικός φόρτος ή ασφάλεια εφαρμογών"
+               : "OBSERVED_LIMITED — battery drain, actual load and app safety were not measured");
+    GELServiceLog.info("SUMMARY: APPS_IMPACT=INCONCLUSIVE");
+    logInfo(gr ? "Το Lab 26 ολοκληρώθηκε με ρητά όρια κάλυψης."
+               : "Lab 26 completed with explicit coverage limits.");
     logLine();
 }
 
@@ -27053,306 +26331,156 @@ private long dirSizeBestEffortRootFast(File root) {
 // LAB 27 — App Permissions & Privacy (FULL AUTO + RISK SCORE)
 // ============================================================
 private void lab27PermissionsPrivacy() {
-
-    // ============================================================
-    // USAGE ACCESS — MANDATORY GATE
-    // ============================================================
-    if (!hasUsageAccess()) {
-    showUsageAccessDialog();
-    return;
-}
-
     final boolean gr = AppLang.isGreek(this);
-
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 27 — Άδειες Εφαρμογών & Ιδιωτικότητα (Αυτόματη Σάρωση)"
-            : "LAB 27 — App Permissions & Privacy (Auto Scan)");
+    logInfo(gr ? "LAB 27 — Παρατηρήσιμες χορηγημένες άδειες εφαρμογών"
+               : "LAB 27 — Observable granted app permissions");
     logLine();
 
+    // PackageManager permission flags do not require Usage Access.
+    // They are not a malware check, AppOps audit, or whole-device inventory.
     PackageManager pm = getPackageManager();
     if (pm == null) {
-        logError(gr
-                ? "Το PackageManager δεν είναι διαθέσιμο."
-                : "PackageManager not available.");
+        logLabelWarnValue(gr ? "Κατάσταση" : "Status",
+                gr ? "INCONCLUSIVE — PackageManager μη διαθέσιμο"
+                   : "INCONCLUSIVE — PackageManager unavailable");
+        GELServiceLog.info("SUMMARY: PRIVACY=INCONCLUSIVE");
         return;
     }
 
-    List<String> details = new ArrayList<>();
-    Map<String, Integer> appRisk = new HashMap<>();
-
-    int totalApps = 0;
-    int flaggedApps = 0;
-
-    int riskTotal = 0;
-    int dangTotal = 0;
-
+    List<android.content.pm.PackageInfo> packages;
     try {
-
-        List<android.content.pm.PackageInfo> packs;
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packs = pm.getInstalledPackages(
+            packages = pm.getInstalledPackages(
                     PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS));
         } else {
             //noinspection deprecation
-            packs = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS);
+            packages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS);
         }
+    } catch (Throwable t) {
+        logLabelWarnValue(gr ? "Κατάσταση" : "Status",
+                gr ? "INCONCLUSIVE — δεν επιτρέπεται η ανάγνωση πληροφοριών πακέτων"
+                   : "INCONCLUSIVE — package information query failed");
+        GELServiceLog.info("SUMMARY: PRIVACY=INCONCLUSIVE");
+        return;
+    }
 
-        if (packs == null) packs = new ArrayList<>();
+    if (packages == null || Lab27PermissionEvidence.coverage(true, packages.size())
+            == Lab27PermissionEvidence.Coverage.UNAVAILABLE) {
+        logLabelWarnValue(gr ? "Κατάσταση" : "Status",
+                gr ? "UNAVAILABLE — δεν επιστράφηκε λίστα πακέτων"
+                   : "UNAVAILABLE — package list not returned");
+        GELServiceLog.info("SUMMARY: PRIVACY=INCONCLUSIVE");
+        return;
+    }
 
-        for (android.content.pm.PackageInfo p : packs) {
+    String[] groups = { "LOCATION", "MICROPHONE", "CAMERA", "SMS",
+            "CONTACTS", "CALLS", "NOTIFICATIONS" };
+    Map<String, Integer> grantsByGroup = new HashMap<>();
+    for (String key : groups) grantsByGroup.put(key, 0);
 
-            if (p == null || p.packageName == null) continue;
-            totalApps++;
+    int visiblePackages = 0;
+    int visibleUserApps = 0;
+    int userAppsWithObservedGrants = 0;
+    int unknownFlagPositions = 0;
+    List<String> localExamples = new ArrayList<>();
 
-            String pkg = p.packageName;
+    for (android.content.pm.PackageInfo p : packages) {
+        if (p == null || p.packageName == null) continue;
+        visiblePackages++;
 
-            // ============================================================
-            // EXCLUDE SYSTEM / GOOGLE / PLAY STORE APPS
-            // ============================================================
-            boolean isSystem =
-                    (p.applicationInfo != null) &&
-                    ((p.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0 ||
-                     (p.applicationInfo.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0);
+        ApplicationInfo ai = p.applicationInfo;
+        boolean system = ai != null &&
+                (ai.flags & (ApplicationInfo.FLAG_SYSTEM
+                        | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+        if (system) continue;
+        visibleUserApps++;
 
-            if (isSystem ||
-                    pkg.startsWith("com.android.") ||
-                    pkg.startsWith("com.google.android.") ||
-                    pkg.equals("com.android.vending")) {
-                continue;
-            }
+        String[] requested = p.requestedPermissions;
+        int[] flags = p.requestedPermissionsFlags;
+        if (requested == null) continue;
 
-            String[] req = p.requestedPermissions;
-            int[] grant = p.requestedPermissionsFlags;
+        List<String> appGrantedGroups = new ArrayList<>();
+        for (int i = 0; i < requested.length; i++) {
+            String group = Lab27PermissionEvidence.category(requested[i]);
+            if (group == null) continue;
 
-            if (req == null || req.length == 0) continue;
-
-            int appScore = 0;
-            int appDangerCount = 0;
-            StringBuilder sb = new StringBuilder();
-
-            for (int i = 0; i < req.length; i++) {
-
-                String perm = req[i];
-                if (perm == null) continue;
-
-                boolean granted = isGrantedFlag(grant, i);
-
-                int weight = permissionWeight(perm);
-                if (weight <= 0) continue;
-
-                if (granted) {
-                    appDangerCount++;
-                    appScore += weight;
-
-                    sb.append("• ")
-                      .append(shortPerm(perm))
-                      .append(gr ? " (χορηγήθηκε)\n" : " (granted)\n");
-                }
-            }
-
-            if (appScore > 0) {
-
-                dangTotal += appDangerCount;
-                riskTotal += appScore;
-
-                int threshold = 10;
-
-                if (appScore >= threshold) {
-
-                    flaggedApps++;
-                    appRisk.put(pkg, appScore);
-
-                    String appLabel = safeLabel(pm, pkg);
-
-                    details.add(
-                            appLabel + " (" + pkg + ")" +
-                            (gr ? " — Κίνδυνος=" : " — Risk=") +
-                            appScore + "\n" + sb.toString()
-                    );
-                }
+            Lab27PermissionEvidence.GrantState state =
+                    Lab27PermissionEvidence.granted(requested, flags, i);
+            if (state == Lab27PermissionEvidence.GrantState.UNKNOWN) {
+                unknownFlagPositions++;
+            } else if (state == Lab27PermissionEvidence.GrantState.GRANTED
+                    && !appGrantedGroups.contains(group)) {
+                appGrantedGroups.add(group);
             }
         }
 
-    } catch (SecurityException se) {
-
-        logWarn(gr
-                ? "Η σάρωση περιορίστηκε από την πολιτική ορατότητας πακέτων Android."
-                : "Permissions scan limited by Android package visibility policy.");
-
-    } catch (Exception e) {
-
-        logError(gr
-                ? "Σφάλμα σάρωσης αδειών: " + e.getMessage()
-                : "Permissions scan error: " + e.getMessage());
-    }
-
-    // ============================================================
-    // SUMMARY
-    // ============================================================
-    int maxRiskRef = 300;
-    int riskPct = Math.min(100, (riskTotal * 100) / maxRiskRef);
-
-appendHtml("<br>");
-    logInfo(gr ? "Σύνοψη Σάρωσης" : "Scan Summary");
-    logLine();
-
-    logLabelOkValue(
-            gr ? "Εφαρμογές που ελέγχθηκαν" : "Apps scanned",
-            String.valueOf(totalApps)
-    );
-
-    if (dangTotal == 0) {
-        logLabelOkValue(
-                gr ? "Επικίνδυνες άδειες (χορηγημένες)" : "Dangerous permissions granted",
-                String.valueOf(dangTotal)
-        );
-    } else if (dangTotal <= 5) {
-        logLabelWarnValue(
-                gr ? "Επικίνδυνες άδειες (χορηγημένες)" : "Dangerous permissions granted",
-                String.valueOf(dangTotal)
-        );
-    } else {
-        logLabelErrorValue(
-                gr ? "Επικίνδυνες άδειες (χορηγημένες)" : "Dangerous permissions granted",
-                String.valueOf(dangTotal)
-        );
-    }
-
-    if (flaggedApps == 0) {
-        logLabelOkValue(
-                gr ? "Εφαρμογές με αυξημένο ρίσκο" : "Flagged apps",
-                String.valueOf(flaggedApps)
-        );
-    } else if (flaggedApps <= 2) {
-        logLabelWarnValue(
-                gr ? "Εφαρμογές με αυξημένο ρίσκο" : "Flagged apps",
-                String.valueOf(flaggedApps)
-        );
-    } else {
-        logLabelErrorValue(
-                gr ? "Εφαρμογές με αυξημένο ρίσκο" : "Flagged apps",
-                String.valueOf(flaggedApps)
-        );
-    }
-
-    // ============================================================
-    // PRIVACY RISK SCORE
-    // ============================================================
-    logInfo(gr
-        ? "Δείκτης Ρίσκου Ιδιωτικότητας"
-        : "Privacy risk score");
-
-String riskLabel;
-
-if (riskPct >= 70) {
-
-    riskLabel = gr ? "Υψηλό" : "High";
-
-    logLabelErrorValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + riskPct + ")"
-    );
-
-} else if (riskPct >= 30) {
-
-    riskLabel = gr ? "Μέτριο" : "Moderate";
-
-    logLabelWarnValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + riskPct + ")"
-    );
-
-} else {
-
-    riskLabel = gr ? "Χαμηλό" : "Low";
-
-    logLabelOkValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + riskPct + ")"
-    );
-}
-
-    // ============================================================
-    // TOP OFFENDERS
-    // ============================================================
-    if (!appRisk.isEmpty()) {
-
-        appendHtml("<br>");
-        logInfo(gr
-                ? "Εφαρμογές με τον υψηλότερο δείκτη ρίσκου"
-                : "Top privacy offenders");
-                 logLine();
-
-        appRisk.entrySet()
-                .stream()
-                .sorted((a, b) -> b.getValue() - a.getValue())
-                .limit(8)
-                .forEach(e -> {
-
-                    String label = safeLabel(pm, e.getKey());
-                    String riskVal = String.valueOf(e.getValue());
-
-                    if (e.getValue() >= 60) {
-                        logLabelErrorValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
-                    } else if (e.getValue() >= 30) {
-                        logLabelWarnValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
-                    } else {
-                        logLabelOkValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
-                    }
-                });
-    }
-
-    // ============================================================
-    // FULL DETAILS
-    // ============================================================
-    if (!details.isEmpty()) {
-
-        appendHtml("<br>");
-        logInfo(gr
-                ? "Αναλυτικές Πληροφορίες (Εφαρμογές με ρίσκο)"
-                : "Permission details (flagged apps)");
-                logLine();
-
-        for (String d : details) {
-            logLabelWarnValue(gr ? "Εύρημα" : "Finding", d.trim());
+        if (!appGrantedGroups.isEmpty()) {
+            userAppsWithObservedGrants++;
+            for (String group : appGrantedGroups) {
+                grantsByGroup.put(group, grantsByGroup.get(group) + 1);
+            }
+            if (localExamples.size() < 8) {
+                localExamples.add(safeLabel(pm, p.packageName)
+                        + " — " + String.join(", ", appGrantedGroups));
+            }
         }
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Συνδυασμοί αδειών" : "Permission patterns",
-                gr
-                        ? "Δεν εντοπίστηκαν συνδυασμοί υψηλού ρίσκου"
-                        : "No high-risk permission combinations detected"
-        );
     }
 
-    // ============================================================
-    // CONTEXT NOTE
-    // ============================================================
-    appendHtml("<br>");
-    logInfo(gr ? "Σημείωση Ανάλυσης Ιδιωτικότητας" : "Privacy Analysis Note");
-    logLine();
-
-    logLabelOkValue(
-            gr ? "Διευκρίνιση" : "Clarification",
-            gr
-                    ? "Η χορήγηση αδειών δεν σημαίνει κακόβουλη συμπεριφορά."
-                    : "Granted permissions do not imply malicious behavior."
-    );
-
-    logLabelOkValue(
-            gr ? "Πεδίο Ανάλυσης" : "Scope",
-            gr
-                    ? "Το αποτέλεσμα ΔΕΝ υποδεικνύει βλάβη υλικού ή συστήματος."
-                    : "This result does NOT indicate hardware or system failure."
-    );
+    logLabelWarnValue(gr ? "Κάλυψη" : "Coverage",
+            gr ? "OBSERVED_LIMITED — μόνο εφαρμογές ορατές στο PackageManager"
+               : "OBSERVED_LIMITED — PackageManager-visible apps only");
+    logLabelValue(gr ? "Ορατά πακέτα / εφαρμογές χρήστη"
+                     : "Visible packages / user apps",
+            visiblePackages + " / " + visibleUserApps);
+    logLabelValue(gr ? "Εφαρμογές με ορατές χορηγήσεις"
+                     : "Apps with observed grants",
+            String.valueOf(userAppsWithObservedGrants));
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 27 ολοκληρώθηκε." : "Lab 27 finished.");
+    logInfo(gr ? "Παρατηρήσεις χορηγημένων αδειών"
+               : "Observed granted permission groups");
+    logLine();
+    for (String group : groups) {
+        logLabelValue(group, String.valueOf(grantsByGroup.get(group)));
+    }
+    if (unknownFlagPositions > 0) {
+        logLabelWarnValue(gr ? "Ελλιπή flags δικαιωμάτων"
+                             : "Unavailable permission flags",
+                String.valueOf(unknownFlagPositions)
+                + (gr ? " — UNKNOWN, όχι αρνητικές ή καθαρές"
+                      : " — UNKNOWN, not denied or safe"));
+    }
+
+    if (!localExamples.isEmpty()) {
+        appendHtml("<br>");
+        logInfo(gr ? "Παραδείγματα ορατών χορηγήσεων (έως 8)"
+                   : "Examples of visible grants (up to 8)");
+        logLine();
+        for (String example : localExamples) {
+            logLabelValue(gr ? "Εφαρμογή" : "App", example);
+        }
+    }
+
+    appendHtml("<br>");
+    logInfo(gr ? "Όρια ιδιωτικότητας" : "Privacy limitations");
+    logLine();
+    logLabelWarnValue(gr ? "Ειδικές προσβάσεις" : "Special access",
+            gr ? "AppOps, Προσβασιμότητα, overlays, ειδοποιήσεις και πρόσβαση χρήσης δεν επαληθεύονται πλήρως εδώ."
+               : "AppOps, Accessibility, overlays, notification access and Usage Access are not fully verified here.");
+    logLabelWarnValue(gr ? "Ερμηνεία" : "Interpretation",
+            gr ? "Η χορήγηση άδειας δεν συνεπάγεται κακόβουλη συμπεριφορά. Η μη εμφάνιση άδειας δεν πιστοποιεί ασφαλή συσκευή."
+               : "A granted permission does not imply malicious behavior. Missing observations do not certify safety.");
+    logLabelWarnValue(gr ? "Έλεγχος χρήστη" : "User review",
+            gr ? "Επιβεβαίωσε τις πραγματικές ρυθμίσεις στο Android Privacy Dashboard και στις πληροφορίες εφαρμογής."
+               : "Confirm actual controls in Android Privacy Dashboard and App info settings.");
+    logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "OBSERVED_LIMITED — κανένα ποσοστό ασφάλειας ή καθαρότητας ιδιωτικότητας"
+               : "OBSERVED_LIMITED — no privacy safety or cleanliness percentage");
+    GELServiceLog.info("SUMMARY: PRIVACY=INCONCLUSIVE");
+    logInfo(gr ? "Το Lab 27 ολοκληρώθηκε με περιορισμένη αποδεικτική κάλυψη."
+               : "Lab 27 completed with limited evidence coverage.");
     logLine();
 }
 
