@@ -14,6 +14,15 @@ public final class ThermalEvidencePolicy {
         return hiddenHigh ? Math.min(score, 75) : score;
     }
 
+    /** Severe OS thermal-protection reports cannot retain a green/high index
+     *  merely because one accessible temperature was below a local threshold.
+     *  This returns an uncalibrated snapshot index, NOT hardware health. */
+    public static int scoreWithAndroidState(int internalReadings, int peripheralReadings,
+                                            int rawScore, boolean hiddenHigh,
+                                            boolean osSevere) {
+        return score(internalReadings, peripheralReadings, rawScore, hiddenHigh || osSevere);
+    }
+
     /** A snapshot cannot demonstrate historical thermal spikes. */
     public static String pattern(int score, boolean highObserved) {
         if (score < 0) return "UNAVAILABLE";
