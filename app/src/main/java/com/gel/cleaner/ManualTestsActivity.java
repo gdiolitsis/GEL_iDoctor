@@ -24147,12 +24147,13 @@ private void lab16ThermalSnapshot() {
         }
     }
 
-    thermalDanger = thermalDanger || hiddenRisk
-            || (osThermalStatus.isObserved()
-                && osThermalStatus.value >= android.os.PowerManager.THERMAL_STATUS_SEVERE);
-    thermalScore = ThermalEvidencePolicy.score(internal.size(), peripherals.size(), thermalScore, hiddenRisk);
-    // This is a contextual, uncalibrated observation score; OS thermal stress
-    // is recorded separately and cannot certify physical sensor health.
+    boolean osSevere = osThermalStatus.isObserved()
+            && osThermalStatus.value >= android.os.PowerManager.THERMAL_STATUS_SEVERE;
+    thermalDanger = thermalDanger || hiddenRisk || osSevere;
+    thermalScore = ThermalEvidencePolicy.scoreWithAndroidState(
+            internal.size(), peripherals.size(), thermalScore, hiddenRisk, osSevere);
+    // Contextual and uncalibrated: severe OS thermal protection can NEVER
+    // coexist with an excellent/green thermal index. Physical failure remains unknown.
 
     try {
         p.edit()
@@ -24175,10 +24176,18 @@ private void lab16ThermalSnapshot() {
                 : thermalScore >= 60
                 ? (gr ? "Μέτρια" : "Moderate")
                 : (gr ? "Υψηλή" : "High");
-        logLabelOkValue(
-                gr ? "Αξιολόγηση θερμικής συμπεριφοράς" : "Thermal behaviour rating",
-                String.format(Locale.US, "%s (%d)", tLabel, thermalScore)
-        );
+        String indexText = String.format(Locale.US, "%s (%d/100 — %s)",
+                tLabel, thermalScore, gr ? "μη βαθμονομημένο" : "uncalibrated");
+        if (thermalDanger) {
+            logLabelWarnValue(
+                    gr ? "Θερμικός δείκτης παρατήρησης" : "Thermal observation index",
+                    indexText + (gr ? " | θερμική προειδοποίηση Android/αισθητήρων"
+                                    : " | Android/sensor thermal warning"));
+        } else {
+            logLabelValue(
+                    gr ? "Θερμικός δείκτης παρατήρησης" : "Thermal observation index",
+                    indexText);
+        }
     }
     GELServiceLog.info(
             "SUMMARY: THERMAL_PATTERN="
