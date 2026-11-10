@@ -20754,6 +20754,25 @@ isLab14GamaMode = gamaMode;
 // ------------------------------------------------------------
 showLab14BAdvisory(() -> {
 
+    // A new Lab 14B attempt invalidates its previous report evidence BEFORE
+    // sampling starts. A cancelled/failed rerun must not inherit an old pass.
+    // Gaming mode has its own flow and must not erase a valid Lab 14B sample.
+    if (!gamaMode) {
+        boolean invalidated = getSharedPreferences("GEL_DIAG", MODE_PRIVATE)
+                .edit()
+                .putBoolean("lab14b_rate_valid", false)
+                .remove("lab14b_consumption_per_hour")
+                .remove("lab14b_ts")
+                .commit();
+        if (!invalidated) {
+            isLab14BMode = false;
+            lab14Running = false;
+            logWarn(gr ? "Δεν ήταν δυνατή η ασφαλής έναρξη νέας καταγραφής Lab 14B"
+                       : "Could not safely invalidate prior Lab 14B evidence");
+            return;
+        }
+    }
+
     appendHtml("<br>");
 
     // 🔴 new session id (IMPORTANT)
@@ -27680,7 +27699,8 @@ if (batteryRuntimeWeak) {
 
 if (batteryConsumptionVeryHigh) {
 
-    logLabelErrorValue(
+    // A measured load-specific discharge rate is context, not a battery fault.
+    logLabelValue(
             gr ? "Κατανάλωση" : "Consumption",
             gr
                     ? "Υψηλός ρυθμός εκφόρτισης στο δοκιμαστικό φορτίο — όχι τεκμήριο φθοράς"
