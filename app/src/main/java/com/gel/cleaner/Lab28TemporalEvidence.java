@@ -7,17 +7,19 @@ public final class Lab28TemporalEvidence {
     public enum State { NO_REFERENCE, TOO_SOON, EXPIRED_OR_REBOOTED,
                         NO_COMMON_SIGNALS, OBSERVED_PAIR }
 
-    public final State state;
-    public final long elapsedMs;
-    public final double voltageDeltaMv;
-    public final double tempDeltaC;
+    public static final class Result {
+        public final State state;
+        public final long elapsedMs;
+        public final double voltageDeltaMv;
+        public final double tempDeltaC;
 
-    private Lab28TemporalEvidence(State state, long elapsedMs,
-                                  double voltageDeltaMv, double tempDeltaC) {
-        this.state = state;
-        this.elapsedMs = elapsedMs;
-        this.voltageDeltaMv = voltageDeltaMv;
-        this.tempDeltaC = tempDeltaC;
+        private Result(State state, long elapsedMs,
+                       double voltageDeltaMv, double tempDeltaC) {
+            this.state = state;
+            this.elapsedMs = elapsedMs;
+            this.voltageDeltaMv = voltageDeltaMv;
+            this.tempDeltaC = tempDeltaC;
+        }
     }
 
     public static Result compare(long beforeElapsed, long beforeWall,
