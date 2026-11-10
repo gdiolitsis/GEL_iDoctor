@@ -27165,6 +27165,15 @@ boolean silentCorruptionRisk = false;
 
 BatteryEvidenceStore.Record lab14ReportRecord =
         BatteryEvidenceStore.readLatestLab14(this);
+// Whole-device grading needs independently verified coverage of every claimed
+// hardware domain. Public API snapshots preserve useful *scoped* evidence,
+// but cannot currently establish physical NAND, radio/sensor and PMIC integrity.
+boolean validatedCapacity = lab14ReportRecord != null
+        && lab14ReportRecord.isCompletedValidRun(2L * 60L * 60L * 1000L)
+        && !Double.isNaN(lab14ReportRecord.validatedSoHPercent());
+boolean hardwareGradeSupported = Lab30HardwareCoverage.canGrade(
+        validatedCapacity, false /* physical storage */,
+        false /* radio / sensors */, false /* time-aligned power */);
 // Legacy heuristics must never masquerade as verified physical battery health.
 float finalScore = Float.NaN;
 boolean lab14CollapseRisk = false;
@@ -27443,11 +27452,14 @@ hardwareRiskScore = Math.max(
         Math.min(100, hardwareRiskScore)
 );
 
-logLabelValue(
-        gr ? "Συνολικός δείκτης κινδύνου hardware"
-           : "Unified hardware risk score",
-        hardwareRiskScore + "/100"
-);
+if (hardwareGradeSupported) {
+    logLabelValue(gr ? "Συνολικός δείκτης κινδύνου hardware" : "Unified hardware risk score",
+            hardwareRiskScore + "/100");
+} else {
+    logLabelWarnValue(gr ? "Συνολικός κίνδυνος hardware" : "Overall hardware risk",
+            gr ? "ΜΗ ΑΞΙΟΛΟΓΗΜΕΝΟΣ — ανεπαρκής κάλυψη φυσικών υποσυστημάτων"
+               : "NOT ASSESSED — insufficient physical hardware coverage");
+}
 
 // ------------------------------------------------------------
 // AUTOMATIC FAULT CLASSIFICATION ENGINE
@@ -27639,15 +27651,9 @@ if (lab29InstabilityPattern) {
 // FINAL CLASSIFICATION
 // ------------------------------------------------------------
 if (!faultDetected) {
-
-    logLabelOkValue(
-            gr ? "Συμπέρασμα"
-               : "Conclusion",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις hardware βλάβης."
-                    : "No hardware fault indicators detected."
-    );
-
+    logLabelWarnValue(gr ? "Συμπέρασμα" : "Conclusion",
+            gr ? "Ανεπαρκή τεκμήρια για αποκλεισμό βλάβης hardware."
+               : "Insufficient evidence to rule out a hardware fault.");
 } else {
 
     logLabelWarnValue(
@@ -27779,22 +27785,18 @@ if (rootConfidence > 0) {
 
 } else {
 
-    logLabelOkValue(
-            gr ? "Κατάσταση"
-               : "Status",
-            gr
-                    ? "Δεν εντοπίστηκε συγκεκριμένη αιτία."
-                    : "No specific hardware fault detected."
-    );
+    logLabelWarnValue(gr ? "Κατάσταση" : "Status",
+            gr ? "Δεν τεκμηριώθηκε συγκεκριμένη αιτία, όχι απόδειξη απουσίας βλάβης."
+               : "No specific cause established; absence of fault not proven.");
 }
 
 int adjustedRisk = Math.max(0, hardwareRiskScore - 5);
-int reliabilityScore = 100 - adjustedRisk;
+int reliabilityScore = hardwareGradeSupported ? 100 - adjustedRisk : -1;
 
 // ------------------------------------------------------------
 // CONFIDENCE-WEIGHTED ROOT CAUSE
 // ------------------------------------------------------------
-if (rootConfidence > 0) {
+if (rootConfidence > 0 && hardwareGradeSupported) {
 
     int weightedConfidence =
             (int) Math.round(
@@ -27853,7 +27855,11 @@ if (rootConfidence > 0) {
 // ------------------------------------------------------------
 // FINAL HARDWARE STATUS
 // ------------------------------------------------------------
-if (hardwareRiskScore >= 60) {
+if (!hardwareGradeSupported) {
+    logLabelWarnValue(gr ? "Κατάσταση συσκευής" : "Device hardware status",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ — απουσιάζουν επαρκή τεκμήρια"
+               : "UNVERIFIED — insufficient physical evidence");
+} else if (hardwareRiskScore >= 60) {
 
     logLabelErrorValue(
             gr ? "Κατάσταση συσκευής"
@@ -27944,7 +27950,11 @@ logInfo(gr
 String rating;
 String ratingDesc;
 
-if (reliabilityScore >= 92) {
+if (!hardwareGradeSupported) {
+    rating = "NOT RATED";
+    ratingDesc = gr ? "Ανεπαρκή τεκμήρια για βαθμό αξιοπιστίας hardware"
+                    : "Insufficient evidence for whole-device hardware reliability grade";
+} else if (reliabilityScore >= 92) {
 
     rating = "A+";
     ratingDesc = gr
@@ -28024,7 +28034,7 @@ if (hardwareRiskScore >= 60)
 // ------------------------------------------------------------
 // CERTIFICATE RESULT
 // ------------------------------------------------------------
-if (batteryScore < 0 || lab14ReportRecord == null ||
+if (!hardwareGradeSupported || batteryScore < 0 || lab14ReportRecord == null ||
         !lab14ReportRecord.isCompletedValidRun(2L * 60L * 60L * 1000L) ||
         Double.isNaN(lab14ReportRecord.validatedSoHPercent())) {
     logLabelWarnValue(
@@ -28089,7 +28099,7 @@ logLabelValue(
            : "Note",
         gr
                 ? "Η αξιολόγηση βασίζεται σε διαγνωστική ανάλυση hardware και στατιστική συνέπεια μετρήσεων."
-                : "Evaluation based on hardware diagnostics and measurement consistency."
+                : "Public Android observations do not certify whole-device hardware integrity."
 );
 
 // ------------------------------------------------------------
@@ -28118,15 +28128,12 @@ else if ("B".equals(rating)) {
 
 }
 else {
-
-    logLabelWarnValue(
-            gr ? "Συμπέρασμα τεχνικού"
-               : "Technician note",
-            gr
-                    ? "Συνιστάται παρακολούθηση ή τεχνικός έλεγχος."
-                    : "Monitoring or service inspection recommended."
-    );
-
+    logLabelWarnValue(gr ? "Συμπέρασμα τεχνικού" : "Technician note",
+            !hardwareGradeSupported
+                    ? (gr ? "Ανεπαρκή τεκμήρια για συμπέρασμα σταθερότητας hardware."
+                          : "Insufficient evidence for hardware stability verdict.")
+                    : (gr ? "Συνιστάται παρακολούθηση ή τεχνικός έλεγχος."
+                          : "Monitoring or service inspection recommended."));
 }
 
 // ------------------------------------------------------------
@@ -28449,7 +28456,7 @@ int prevAging = history.getInt("hw_last_aging_index", -1);
 
 boolean trendDetected = false;
 
-if (prevRisk >= 0) {
+if (hardwareGradeSupported && prevRisk >= 0) {
 
     int riskDiff = hardwareRiskScore - prevRisk;
 
@@ -28480,13 +28487,9 @@ if (trendDetected) {
 
 } else {
 
-    logLabelOkValue(
-            gr ? "Τάση hardware"
-               : "Hardware trend",
-            gr
-                    ? "Δεν εντοπίστηκε επιδείνωση από την προηγούμενη μέτρηση."
-                    : "No degradation trend detected since previous run."
-    );
+    logLabelWarnValue(gr ? "Τάση hardware" : "Hardware trend",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ — οι προηγούμενες εκτελέσεις δεν αποδεικνύουν σταθερότητα."
+               : "UNVERIFIED — run history cannot establish hardware stability.");
 }
 
 // ------------------------------------------------------------
@@ -28498,33 +28501,11 @@ runCount++;
 
 history.edit().putInt("hw_run_count", runCount).apply();
 
-int reliabilityIndex;
-
-if (runCount >= 10)
-    reliabilityIndex = 95;
-else if (runCount >= 7)
-    reliabilityIndex = 85;
-else if (runCount >= 5)
-    reliabilityIndex = 75;
-else if (runCount >= 3)
-    reliabilityIndex = 65;
-else
-    reliabilityIndex = 50;
-
-logLabelOkValue(
-        gr ? "Αξιοπιστία διάγνωσης"
-           : "Diagnosis reliability",
-        (reliabilityIndex >= 80
-                ? (gr ? "Υψηλή" : "High")
-                : reliabilityIndex >= 50
-                    ? (gr ? "Μέτρια" : "Moderate")
-                    : (gr ? "Χαμηλή" : "Low"))
-        + " (" + reliabilityIndex +
-        ", " +
-        (gr ? "εκτελέσεις: " : "runs: ") +
-        runCount +
-        ")"
-);
+logLabelValue(gr ? "Αριθμός προηγούμενων αναφορών" : "Recorded report runs",
+        String.valueOf(runCount));
+logLabelWarnValue(gr ? "Αξιοπιστία διάγνωσης" : "Diagnostic reliability",
+        gr ? "ΜΗ ΑΞΙΟΛΟΓΗΜΕΝΗ — το πλήθος εκτελέσεων δεν αποδεικνύει ακρίβεια."
+           : "NOT ASSESSED — number of runs does not establish accuracy.");
 
 if (runCount < 3) {
 
@@ -28538,13 +28519,9 @@ if (runCount < 3) {
 
 } else if (runCount >= 7) {
 
-    logLabelOkValue(
-            gr ? "Στατιστική αξιοπιστία"
-               : "Statistical reliability",
-            gr
-                    ? "Η διάγνωση βασίζεται σε επαρκές ιστορικό runs."
-                    : "Diagnosis based on sufficient historical runs."
-    );
+    logLabelWarnValue(gr ? "Στατιστική αξιοπιστία" : "Statistical reliability",
+            gr ? "Η επανάληψη χωρίς ανεξάρτητη επαλήθευση δεν πιστοποιεί υλικό."
+               : "Repeated runs without independent validation do not certify hardware.");
 }
 
 // ------------------------------------------------------------
@@ -28552,8 +28529,8 @@ if (runCount < 3) {
 // ------------------------------------------------------------
 
 history.edit()
-        .putInt("hw_last_risk", hardwareRiskScore)
-        .putFloat("hw_last_battery_health", finalScore)
+        .remove("hw_last_risk")
+        .remove("hw_last_battery_health")
         .putBoolean("hw_last_nand_risk", nandRisk)
         .putBoolean("hw_last_controller_risk", controllerRisk)
         .putBoolean("hw_last_thermal_risk", thermalRunawayRisk)
@@ -28564,7 +28541,7 @@ logLabelOkValue(
         gr ? "Ιστορικό hardware"
            : "Hardware history",
         gr ? "Το snapshot αποθηκεύτηκε"
-           : "Hardware snapshot stored"
+           : "Run count retained; unverified legacy hardware scores cleared"
 );
 
 // ------------------------------------------------------------
@@ -28637,13 +28614,9 @@ if (diagnosticConflict) {
 
 } else {
 
-    logLabelOkValue(
-            gr ? "Συνέπεια διάγνωσης"
-               : "Diagnostic consistency",
-            gr
-                    ? "Τα διαγνωστικά αποτελέσματα είναι συνεπή."
-                    : "Diagnostic results appear consistent."
-    );
+    logLabelWarnValue(gr ? "Συνέπεια διάγνωσης" : "Diagnostic consistency",
+            gr ? "Δεν τεκμηριώθηκε αντίφαση· η πληρότητα των δεδομένων είναι άγνωστη."
+               : "No contradiction established; evidence completeness is unknown.");
 }
 
 // ------------------------------------------------------------
@@ -28660,11 +28633,9 @@ logLabelValue(
 );
 
 // Hardware risk
-logLabelValue(
-        gr ? "Δείκτης κινδύνου hardware"
-           : "Hardware risk score",
-        hardwareRiskScore + "/100"
-);
+logLabelValue(gr ? "Δείκτης κινδύνου hardware" : "Hardware risk score",
+        hardwareGradeSupported ? hardwareRiskScore + "/100"
+                               : (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟΣ" : "UNAVAILABLE"));
 
 // Timestamp
 String ts = new java.text.SimpleDateFormat(
@@ -28720,16 +28691,13 @@ logLabelValue(
 );
 
 // Certification note
-logLabelOkValue(
-        gr ? "Πιστοποίηση"
-           : "Certification",
-        gr
-                ? "Η αξιολόγηση βασίζεται στα αποτελέσματα των διαγνωστικών εργαστηρίων GEL."
-                : "Assessment based on GEL diagnostic laboratory results."
-);
+logLabelWarnValue(gr ? "Πιστοποίηση" : "Certification",
+        gr ? "ΔΕΝ ΕΚΔΙΔΕΤΑΙ — αναφορά περιορισμένων τεκμηρίων."
+           : "NOT ISSUED — scoped evidence report, not physical hardware attestation.");
 
 appendHtml("<br>");
-logOk(gr ? "GEL Certification completed." : "GEL Certification completed.");
+logInfo(gr ? "Η αναφορά τεκμηρίων ολοκληρώθηκε χωρίς πιστοποίηση."
+           : "Evidence report completed without hardware certification.");
 logLine();
 
 appendHtml("<br>");
