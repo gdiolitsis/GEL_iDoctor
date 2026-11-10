@@ -1120,6 +1120,9 @@ private AlertDialog lab8ActiveDialog = null;
     // Serialize Labs 1/2 tone challenges and prevent incomplete PDF export.
     private final AtomicBoolean lab12AudioBusy = new AtomicBoolean(false);
     private final AtomicBoolean lab5VibrationPending = new AtomicBoolean(false);
+    private final AtomicBoolean lab5VibrationCancelled = new AtomicBoolean(false);
+    private volatile AlertDialog lab5ActiveDialog;
+    private volatile Vibrator lab5ActiveVibrator;
     private final AtomicBoolean lab3GuidedPending = new AtomicBoolean(false);
     private final AtomicBoolean lab4GuidedPending = new AtomicBoolean(false);
     private final AtomicBoolean lab4Cancelled = new AtomicBoolean(false);
@@ -2361,6 +2364,20 @@ private BatteryInfo getBatteryInfo() {
 protected void onPause() {
 
     super.onPause();
+
+    // Lab 5 is a foreground-only physical/user-reported challenge. Dismiss
+    // its prompt, cancel the haptic output, and unblock its waiting worker.
+    lab5VibrationCancelled.set(true);
+    try {
+        AlertDialog vibrationDialog = lab5ActiveDialog;
+        lab5ActiveDialog = null;
+        if (vibrationDialog != null && vibrationDialog.isShowing()) vibrationDialog.dismiss();
+    } catch (RuntimeException ignored) {}
+    try {
+        Vibrator motor = lab5ActiveVibrator;
+        lab5ActiveVibrator = null;
+        if (motor != null) motor.cancel();
+    } catch (RuntimeException ignored) {}
 
     // =========================
     // GUIDED AUDIO: stop on background, but never restore stale Lab 3
@@ -7710,6 +7727,7 @@ private void lab5Vibration() {
                    : "Vibration test is already in progress.");
         return;
     }
+    lab5VibrationCancelled.set(false);
     runOnUiThread(() -> {
         if (btnExport != null) {
             btnExport.setEnabled(false);
@@ -7728,6 +7746,7 @@ private void lab5Vibration() {
 
     final AtomicBoolean userConfirmed = new AtomicBoolean(false);
     final AtomicBoolean userResponded = new AtomicBoolean(false);
+    final AtomicBoolean vibrationRequestIssued = new AtomicBoolean(false);
 
     new Thread(() -> {
 
@@ -7759,6 +7778,7 @@ private void lab5Vibration() {
                         );
             }
 
+            if (lab5VibrationCancelled.get()) return;
             if (vibrator == null || !vibrator.hasVibrator()) {
 
                 logLabelWarnValue(
@@ -7769,6 +7789,7 @@ private void lab5Vibration() {
                 return;
             }
 
+            lab5ActiveVibrator = vibrator;
             appendHtml("<br>");
             logInfo(
                     gr
@@ -7902,6 +7923,7 @@ private void lab5Vibration() {
                             )
                             .build();
 
+            if (lab5VibrationCancelled.get()) return;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
                 VibrationEffect diagnosticEffect;
@@ -7935,7 +7957,9 @@ private void lab5Vibration() {
                 );
             }
 
+            vibrationRequestIssued.set(true);
             SystemClock.sleep(3300);
+            if (lab5VibrationCancelled.get()) return;
 
             // =====================================================
             // SECOND FALLBACK PULSE
@@ -7968,9 +7992,15 @@ private void lab5Vibration() {
             // =====================================================
             // USER CONFIRMATION
             // =====================================================
+            if (lab5VibrationCancelled.get()) return;
             final AtomicBoolean answered = new AtomicBoolean(false);
 
             runOnUiThread(() -> {
+                if (lab5VibrationCancelled.get() || !lab5VibrationPending.get()
+                        || isFinishing() || isDestroyed()) {
+                    answered.set(true);
+                    return;
+                }
 
                 AlertDialog.Builder b =
                         new AlertDialog.Builder(
@@ -8045,6 +8075,7 @@ private void lab5Vibration() {
                 b.setView(root);
 
                 final AlertDialog d = b.create();
+                lab5ActiveDialog = d;
 
                 if (d.getWindow() != null) {
                     d.getWindow().setBackgroundDrawable(
@@ -8053,7 +8084,9 @@ private void lab5Vibration() {
                 }
 
                 d.setOnDismissListener(dialog -> {
+                    if (lab5ActiveDialog == d) lab5ActiveDialog = null;
                     try { AppTTS.stop(); } catch (Throwable ignore) {}
+                    answered.set(true); // dismiss cannot leave worker waiting forever
                 });
 
                 d.setOnKeyListener((dialog, keyCode, event) -> {
@@ -8068,7 +8101,8 @@ private void lab5Vibration() {
                     return false;
                 });
 
-                if (!isFinishing() && !isDestroyed()) {
+                if (!lab5VibrationCancelled.get()
+                        && !isFinishing() && !isDestroyed()) {
                     d.show();
                     com.gel.cleaner.GelButtonLayout.fitDialog(d);
                 } else {
@@ -8088,15 +8122,19 @@ private void lab5Vibration() {
                 }, 400);
 
                 noBtn.setOnClickListener(v -> {
-                    userConfirmed.set(false);
-                    userResponded.set(true);
+                    if (!lab5VibrationCancelled.get() && vibrationRequestIssued.get()) {
+                        userConfirmed.set(false);
+                        userResponded.set(true);
+                    }
                     answered.set(true);
                     d.dismiss();
                 });
 
                 yesBtn.setOnClickListener(v -> {
-                    userConfirmed.set(true);
-                    userResponded.set(true);
+                    if (!lab5VibrationCancelled.get() && vibrationRequestIssued.get()) {
+                        userConfirmed.set(true);
+                        userResponded.set(true);
+                    }
                     answered.set(true);
                     d.dismiss();
                 });
@@ -8105,6 +8143,7 @@ private void lab5Vibration() {
             // No artificial 10-second failure.
             // Wait until the technician answers or the Activity closes.
             while (!answered.get() &&
+                    !lab5VibrationCancelled.get() &&
                     !isFinishing() &&
                     !isDestroyed()) {
 
@@ -8114,11 +8153,18 @@ private void lab5Vibration() {
             appendHtml("<br>");
             logLine();
 
-            if (!userResponded.get()) {
+            Lab5VibrationOutcome.Status result = Lab5VibrationOutcome.classify(
+                    vibrationRequestIssued.get(), lab5VibrationCancelled.get(),
+                    userResponded.get(), userConfirmed.get());
+            if (result == Lab5VibrationOutcome.Status.UNAVAILABLE) {
                 logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
-                        gr ? "Η δοκιμή ακυρώθηκε· δεν υπάρχει απάντηση χρήστη"
-                           : "CANCELLED: no user observation was provided");
-            } else if (userConfirmed.get()) {
+                        gr ? "UNAVAILABLE — δεν έγινε αποδεκτό αίτημα δόνησης"
+                           : "UNAVAILABLE — no accepted vibration request");
+            } else if (result == Lab5VibrationOutcome.Status.CANCELLED) {
+                logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                        gr ? "CANCELLED — καμία έγκυρη απάντηση χρήστη"
+                           : "CANCELLED — no valid user response");
+            } else if (result == Lab5VibrationOutcome.Status.USER_REPORTED_FELT) {
 
                 logLabelOkValue(
                         gr ? "Αποτέλεσμα (δήλωση χρήστη)" : "Result (user report)",
@@ -8175,11 +8221,13 @@ private void lab5Vibration() {
                 }
             } catch (Throwable ignore) {}
 
+            lab5ActiveVibrator = null;
+            lab5ActiveDialog = null;
             appendHtml("<br>");
-            logOk(
+            logInfo(
                     gr
-                            ? "Το Lab 5 ολοκληρώθηκε."
-                            : "Lab 5 finished."
+                            ? "Η συνεδρία Lab 5 έληξε (όχι ανεξάρτητη πιστοποίηση hardware)."
+                            : "Lab 5 session ended (not independent hardware certification)."
             );
             logLine();
 
