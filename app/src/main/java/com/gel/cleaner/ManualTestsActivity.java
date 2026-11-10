@@ -10822,18 +10822,30 @@ private void runWifiDeepScan(WifiManager wm) {
                 logLabelWarnValue(gr ? "Gateway" : "Gateway", gr ? "Δεν εντοπίστηκε" : "Not detected");
             }
 
-            // 4) Physical link rate is not an internet-throughput measurement.
+            // 4) SpeedSim legacy was not a data-transfer measurement. Preserve
+            // real Android PHY/RSSI evidence, never invent a 72/5 Mbps speed.
             WifiInfo info = wm.getConnectionInfo();
-            int link = info != null ? info.getLinkSpeed() : -1;
-            if (link > 0) {
-                logLabelValue(
-                        gr ? "Διαπραγματευμένος ρυθμός Wi-Fi" : "Negotiated Wi-Fi link rate",
-                        link + " Mbps — " + (gr ? "δεν είναι ταχύτητα Internet"
-                                                 : "not measured Internet throughput"));
+            WifiLinkEvidence linkEvidence = WifiLinkEvidence.fromAndroid(
+                    info != null ? info.getLinkSpeed() : -1,
+                    info != null ? info.getRssi() : 127);
+            if (linkEvidence.hasPhyRate()) {
+                logLabelValue(gr ? "Διαπραγματευμένος ρυθμός Wi-Fi"
+                                 : "Negotiated Wi-Fi link rate",
+                        linkEvidence.phyRateMbps + " Mbps — "
+                                + (gr ? "αναφερόμενο PHY, όχι πραγματικό Internet"
+                                      : "Android-reported PHY, not Internet throughput"));
             } else {
                 logLabelWarnValue(gr ? "Ρυθμός Wi-Fi" : "Wi-Fi link rate",
-                        gr ? "Δεν είναι διαθέσιμος" : "Unavailable");
+                        gr ? "Μη διαθέσιμος / μη έγκυρος" : "Unavailable / invalid");
             }
+            if (linkEvidence.hasRssi()) {
+                logLabelValue(gr ? "Ισχύς συνδέσμου (Android)" : "Link RSSI (Android)",
+                        linkEvidence.rssiDbm + " dBm");
+            }
+            logLabelWarnValue(gr ? "SpeedSim — εκτίμηση ταχύτητας Internet"
+                                 : "SpeedSim — Internet throughput estimate",
+                    gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — PHY/RSSI δεν πιστοποιούν ρυθμό μεταφοράς δεδομένων"
+                       : "NOT MEASURED — PHY/RSSI cannot certify data transfer throughput");
 
             // 5) OS-level default-network validation, transport and captive portal.
             // NET_CAPABILITY_INTERNET means the network is configured for internet;
@@ -11023,22 +11035,6 @@ private void runWifiDeepScan(WifiManager wm) {
         }
 
     }).start();
-}
-
-private float estimateSpeedSimMbps(
-        int linkSpeedMbps,
-        int rssiDbm) {
-
-    if (linkSpeedMbps <= 0)
-        linkSpeedMbps = 72;
-
-    float rssiFactor;
-    if (rssiDbm > -55) rssiFactor = 1.2f;
-    else if (rssiDbm > -65) rssiFactor = 1.0f;
-    else if (rssiDbm > -75) rssiFactor = 0.7f;
-    else rssiFactor = 0.4f;
-
-    return Math.max(5f, linkSpeedMbps * rssiFactor);
 }
 
 // ============================================================
