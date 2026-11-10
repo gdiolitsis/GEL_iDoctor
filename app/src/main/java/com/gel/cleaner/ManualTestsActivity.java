@@ -6248,6 +6248,38 @@ private void lab3EarpieceManual() {
         return;
     }
 
+    // Check before changing global audio settings. Never disrupt a call or
+    // a connected external output to manufacture an "earpiece" result.
+    boolean outputInventoryKnown = false;
+    boolean externalOutputPresent = false;
+    try {
+        AudioDeviceInfo[] outputs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+        outputInventoryKnown = outputs != null && outputs.length > 0;
+        if (outputs != null) {
+            for (AudioDeviceInfo output : outputs) {
+                if (output != null
+                        && AcousticOutputRoutePolicy.couldBeExternalOutput(output.getType())) {
+                    externalOutputPresent = true;
+                    break;
+                }
+            }
+        }
+    } catch (RuntimeException unavailable) {
+        outputInventoryKnown = false;
+    }
+    if (!Lab3AudioRouteGate.canStart(
+            am.getMode() == AudioManager.MODE_NORMAL,
+            outputInventoryKnown, externalOutputPresent)) {
+        logLabelWarnValue(gr ? "LAB 3 — Διαδρομή ήχου" : "LAB 3 — Audio routing",
+                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ — ενεργή κλήση, άγνωστη έξοδος ή συνδεδεμένα ακουστικά/USB/Bluetooth. "
+                        + "Η διαδρομή ήχου δεν τροποποιήθηκε."
+                   : "UNAVAILABLE — active call, unknown output route or connected wired/USB/Bluetooth audio. "
+                        + "Existing routing was not changed.");
+        lab3GuidedPending.set(false);
+        enableSingleExportButton();
+        return;
+    }
+
     // ------------------------------------------------------------
     // SAVE AUDIO STATE
     // ------------------------------------------------------------
@@ -6268,10 +6300,8 @@ private void lab3EarpieceManual() {
     );
 
     try {
-        am.stopBluetoothSco();
-        am.setBluetoothScoOn(false);
+        // Do not change microphone mute or Bluetooth SCO state for playback.
         am.setSpeakerphoneOn(false);
-        am.setMicrophoneMute(false); // 🔴 ΑΠΑΡΑΙΤΗΤΟ
         am.setMode(AudioManager.MODE_IN_COMMUNICATION);
 
     } catch (Throwable t) {
