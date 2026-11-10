@@ -1,0 +1,144 @@
+name: QA release-signed APK and Google OAuth certificate gate
+on:
+  push:
+    branches:
+      - qa/integration-gel31-localization-20261110
+    paths:
+      - '.github/workflows/qa-signed-google-access.yml'
+      - 'app/**'
+      - 'tools/webrtc/**'
+permissions:
+  contents: read
+concurrency:
+  group: gel-qa-signed-google-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-build:
+    if: github.repository == 'gdiolitsis/GEL_iDoctor'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Build unsigned release APK and test same source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          ./gradlew :app:testDebugUnitTest :app:assembleRelease --no-daemon --console=plain
+          unsigned='app/build/outputs/apk/release/app-release-unsigned.apk'
+          test -s "$unsigned"
+          mkdir -p "$RUNNER_TEMP/unsigned"
+          cp "$unsigned" "$RUNNER_TEMP/unsigned/app-release-unsigned.apk"
+          cp app/google-services.json "$RUNNER_TEMP/unsigned/google-services.json"
+          git rev-parse HEAD > "$RUNNER_TEMP/unsigned/SOURCE_COMMIT"
+          (cd "$RUNNER_TEMP/unsigned" && sha256sum app-release-unsigned.apk google-services.json > SHA256SUMS)
+      - uses: actions/upload-artifact@v6
+        with:
+          name: gel-v53-unsigned-qa-release
+          path: ${{ runner.temp }}/unsigned
+          retention-days: 14
+          if-no-files-found: error
+  isolated-sign:
+    needs: source-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      # No source checkout or project scripts run in the job that receives signing secrets.
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - uses: actions/download-artifact@v4
+        with:
+          name: gel-v53-unsigned-qa-release
+          path: ${{ runner.temp }}/unsigned
+      - name: Install signing tools and verify provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'build-tools;36.0.0'
+          (cd "$RUNNER_TEMP/unsigned" && sha256sum -c SHA256SUMS)
+          test "$(cat "$RUNNER_TEMP/unsigned/SOURCE_COMMIT")" = "$GITHUB_SHA"
+      - name: Sign with existing release keystore
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS_PASSWORD"
+          test -n "$KEY_ALIAS"
+          mkdir -p "$RUNNER_TEMP/signed"
+          keyfile="$RUNNER_TEMP/signed/keystore.jks"
+          trap 'rm -f "$keyfile"' EXIT
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$keyfile"
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          "$tools/zipalign" -f 4 "$RUNNER_TEMP/unsigned/app-release-unsigned.apk" "$RUNNER_TEMP/signed/aligned.apk"
+          "$tools/apksigner" sign \
+            --ks "$keyfile" --ks-pass "pass:$KEYSTORE_PASSWORD" \
+            --key-pass "pass:$KEY_ALIAS_PASSWORD" --ks-key-alias "$KEY_ALIAS" \
+            --out "$RUNNER_TEMP/signed/GEL_iDoctor_v53_release_signed_QA.apk" \
+            "$RUNNER_TEMP/signed/aligned.apk"
+          "$tools/apksigner" verify --verbose --print-certs \
+            "$RUNNER_TEMP/signed/GEL_iDoctor_v53_release_signed_QA.apk" \
+            > "$RUNNER_TEMP/signed/SIGNATURE_VERIFICATION.txt"
+          "$tools/aapt2" dump badging "$RUNNER_TEMP/signed/GEL_iDoctor_v53_release_signed_QA.apk" \
+            | grep -F "package: name='com.gel.iDoctor' versionCode='53'"
+          rm -f "$RUNNER_TEMP/signed/aligned.apk"
+          (cd "$RUNNER_TEMP/signed" && sha256sum GEL_iDoctor_v53_release_signed_QA.apk > SHA256SUMS)
+          cp "$RUNNER_TEMP/unsigned/SOURCE_COMMIT" "$RUNNER_TEMP/signed/SOURCE_COMMIT"
+          cp "$RUNNER_TEMP/unsigned/google-services.json" "$RUNNER_TEMP/signed/google-services.json"
+      - name: Compare signer against registered Google OAuth Android clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$RUNNER_TEMP/signed" <<'PY'
+          import json, pathlib, re, sys
+          d = pathlib.Path(sys.argv[1])
+          cert_text = (d/'SIGNATURE_VERIFICATION.txt').read_text()
+          match = re.search(r'Signer #1 certificate SHA-1 digest:\s*([0-9A-Fa-f:]+)', cert_text)
+          if not match:
+              raise SystemExit('Signer SHA-1 digest missing from apksigner output')
+          actual = match.group(1).replace(':','').lower()
+          config = json.loads((d/'google-services.json').read_text())
+          registered = sorted({o['android_info']['certificate_hash'].replace(':','').lower()
+             for c in config['client'] for o in c.get('oauth_client',[])
+             if o.get('client_type') == 1 and o.get('android_info',{}).get('package_name') == 'com.gel.iDoctor'})
+          ok = actual in registered
+          (d/'GOOGLE_OAUTH_CERT_REPORT.txt').write_text(
+             'APK signer SHA-1: '+actual+'\n'
+             +'Registered Google OAuth Android SHA-1: '+', '.join(registered)+'\n'
+             +'Package: com.gel.iDoctor\n'
+             +'OAuth certificate match: '+('YES' if ok else 'NO')+'\n'
+             +'The Play-installed APK may use another signing certificate.\n'
+             +'Static matching cannot prove Google Sign-In, Firebase, or gift entitlement.\n')
+          (d/'GOOGLE_OAUTH_MATCH').write_text('YES\n' if ok else 'NO\n')
+          print((d/'GOOGLE_OAUTH_CERT_REPORT.txt').read_text())
+          PY
+          rm -f "$RUNNER_TEMP/signed/google-services.json"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: GEL-v53-release-signed-QA-Google-check
+          path: ${{ runner.temp }}/signed
+          retention-days: 14
+          if-no-files-found: error
+      - name: Block Google-login-ready claim when OAuth SHA-1 is unregistered
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat "$RUNNER_TEMP/signed/GOOGLE_OAUTH_MATCH")" = YES || {
+            echo 'OAuth SHA mismatch. Register APK signer SHA-1 in Firebase/Google OAuth, then refresh google-services.json.'
+            exit 1
+          }
