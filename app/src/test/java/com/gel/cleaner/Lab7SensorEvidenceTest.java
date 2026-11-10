@@ -130,4 +130,22 @@ public class Lab7SensorEvidenceTest {
         assertFalse(seq.completed());
         assertEquals(0, seq.stage());
     }
+
+    @Test public void orientationAndProximityAreIndependentObservations() {
+        assertEquals(Lab7SensorEvidence.Coverage.BOTH_OBSERVED,
+                Lab7SensorEvidence.coverage(true, true));
+        assertEquals(Lab7SensorEvidence.Coverage.ORIENTATION_ONLY,
+                Lab7SensorEvidence.coverage(true, false));
+        assertEquals(Lab7SensorEvidence.Coverage.PROXIMITY_ONLY,
+                Lab7SensorEvidence.coverage(false, true));
+        assertEquals(Lab7SensorEvidence.Coverage.NONE_OBSERVED,
+                Lab7SensorEvidence.coverage(false, false));
+    }
+
+    @Test public void proximityOnlyDoesNotBecomeFullLabPass() {
+        assertNotEquals(Lab7SensorEvidence.Coverage.BOTH_OBSERVED,
+                Lab7SensorEvidence.coverage(false, true));
+        assertNotEquals(Lab7SensorEvidence.Coverage.BOTH_OBSERVED,
+                Lab7SensorEvidence.coverage(true, false));
+    }
 }

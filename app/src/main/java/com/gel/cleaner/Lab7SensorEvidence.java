@@ -7,6 +7,16 @@ public final class Lab7SensorEvidence {
     public enum Orientation { PORTRAIT, LANDSCAPE, OTHER_OR_UNSTABLE }
     public enum Proximity { NEAR, FAR, UNKNOWN }
 
+    /** Coverage of two independent guided observations, never hardware health. */
+    public enum Coverage { BOTH_OBSERVED, ORIENTATION_ONLY, PROXIMITY_ONLY, NONE_OBSERVED }
+
+    public static Coverage coverage(boolean orientationObserved, boolean proximityObserved) {
+        if (orientationObserved && proximityObserved) return Coverage.BOTH_OBSERVED;
+        if (orientationObserved) return Coverage.ORIENTATION_ONLY;
+        if (proximityObserved) return Coverage.PROXIMITY_ONLY;
+        return Coverage.NONE_OBSERVED;
+    }
+
     /** Gravity-aligned pose, not a generic device shake or UI autorotation. */
     public static Orientation gravityOrientation(float x, float y, float z) {
         if (!Float.isFinite(x) || !Float.isFinite(y) || !Float.isFinite(z)) {
