@@ -18,6 +18,25 @@ public class ThermalEvidencePolicyTest {
                 ThermalEvidencePolicy.pattern(100, false));
     }
 
+    @Test public void osSevereCapsSnapshotIndexEvenWhenSensorsAppearCool() {
+        assertEquals(75, ThermalEvidencePolicy.scoreWithAndroidState(
+                1, 0, 100, false, true));
+        assertEquals(55, ThermalEvidencePolicy.scoreWithAndroidState(
+                2, 1, 55, false, true));
+        assertEquals(100, ThermalEvidencePolicy.scoreWithAndroidState(
+                1, 0, 100, false, false));
+    }
+
+    @Test public void severeOsWithoutReadableInternalSensorIsStillUnrated() {
+        assertEquals(-1, ThermalEvidencePolicy.scoreWithAndroidState(
+                0, 1, 100, false, true));
+    }
+
+    @Test public void oldHiddenWarningRemainsEquivalent() {
+        assertEquals(75, ThermalEvidencePolicy.scoreWithAndroidState(
+                1, 1, 100, true, false));
+    }
+
     @Test public void hiddenHighSensorRemainsAWarningEvenIfNotDisplayed() {
         assertEquals(75, ThermalEvidencePolicy.score(1, 0, 100, true));
         assertEquals(50, ThermalEvidencePolicy.score(2, 1, 50, true));
