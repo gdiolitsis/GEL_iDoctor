@@ -29328,6 +29328,8 @@ logLine();
     // ------------------------------------------------------------
     String[] lines = fullLog.split("\n");
     StringBuilder warnings = new StringBuilder();
+    Lab31StructuredEvidence.Result structured =
+            Lab31StructuredEvidence.summarize(fullLog);
 
     for (String l : lines) {
 
@@ -29347,6 +29349,24 @@ logLine();
     logInfo(gr ? "Σύνοψη διαγνωστικών" : "Diagnostics summary");
     logLine();
 
+    logLabelValue(gr ? "Δομημένες καταχωρίσεις" : "Structured evidence records",
+            String.valueOf(structured.records));
+    if (structured.records == 0) {
+        logLabelWarnValue(gr ? "Κάλυψη τεκμηρίων" : "Evidence coverage",
+                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ — δεν εντοπίστηκαν καταχωρίσεις SUMMARY με γνωστή κατάσταση."
+                   : "UNAVAILABLE — no recognized structured SUMMARY states.");
+    } else {
+        logLabelValue(gr ? "Παρατηρήσεις Android" : "Observed source records",
+                String.valueOf(structured.observed));
+        if (structured.missing > 0) {
+            logLabelWarnValue(gr ? "Ανεπαρκή τεκμήρια" : "Incomplete evidence",
+                    structured.missing + (gr ? " καταχωρίσεις UNKNOWN/INCONCLUSIVE/UNAVAILABLE"
+                                             : " UNKNOWN/INCONCLUSIVE/UNAVAILABLE records"));
+        }
+        logLabelWarnValue(gr ? "Όριο αξιολόγησης" : "Review limitation",
+                gr ? "Η ύπαρξη παρατηρήσεων δεν αποδεικνύει ότι ολοκληρώθηκαν όλα τα εργαστήρια."
+                   : "Observed records do not establish complete coverage of all labs.");
+    }
     boolean issuesDetected = warnings.length() > 0;
 
     if (!issuesDetected) {
@@ -29362,8 +29382,8 @@ logLine();
         logLabelWarnValue(
                 gr ? "Κατάσταση συστήματος" : "System status",
                 gr
-                        ? "Εντοπίστηκαν προειδοποιήσεις / σφάλματα"
-                        : "Warnings / errors detected"
+                        ? "Οι μη δομημένες γραμμές περιέχουν λέξεις προειδοποίησης — απαιτείται έλεγχος"
+                        : "Unstructured logs contain warning/error keywords — manual review required"
         );
 
         for (String w : warnings.toString().split("\n")) {
@@ -29371,7 +29391,7 @@ logLine();
             if (w != null && !w.trim().isEmpty()) {
 
                 logLabelWarnValue(
-                        gr ? "Ζήτημα" : "Issue",
+                        gr ? "Γραμμή log (προς έλεγχο)" : "Log line (review only)",
                         w.trim()
                 );
             }
