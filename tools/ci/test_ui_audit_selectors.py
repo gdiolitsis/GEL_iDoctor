@@ -1,5 +1,6 @@
 import re
 import unittest
+import pathlib
 import xml.etree.ElementTree as ET
 from ui_audit_selectors import (MANUAL_ENTRY, matching, is_visible, find_visible,
                                 scroll_gesture, manual_section_pattern, incomplete_lab_names,
@@ -51,6 +52,27 @@ class SelectorsTest(unittest.TestCase):
         self.assertIsNone(matching(final_section, "Advanced / Logs — Manual Labs 25–30", re.I))
         self.assertIsNone(matching(final_section, "Προχωρημένα — Εργαστήρια 25–30", re.I))
         self.assertIsNone(matching(manual_section_pattern(21, 24), "Manual Labs 25–31", re.I))
+
+    def test_source_localization_matches_exact_final_apk_contract(self):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        el = ET.parse(root / "app/src/main/res/values-el/strings.xml").getroot()
+        en = ET.parse(root / "app/src/main/res/values/strings.xml").getroot()
+        for index, (lo, hi) in enumerate(
+                [(1, 5), (6, 9), (10, 13), (14, 17),
+                 (18, 20), (21, 24), (25, 31)], 1):
+            greek = el.find(f"string[@name='manual_cat_{index}']")
+            english = en.find(f"string[@name='manual_cat_{index}']")
+            self.assertIsNotNone(greek)
+            self.assertIsNotNone(english)
+            self.assertIn(f"Εργαστήρια {lo}–{hi}", greek.text)
+            self.assertIn(f"Manual Labs {lo}–{hi}", english.text)
+        self.assertEqual(
+            el.find("string[@name='manual_cat_7']").text,
+            "Προχωρημένα / Καταγραφές — Εργαστήρια 25–31")
+        main = (root / "app/src/main/java/com/gel/cleaner/MainActivity.java").read_text()
+        self.assertIn('btnSend.setText(gr ? "ΑΠΟΣΤΟΛΗ" : "SEND");', main)
+        self.assertIn('AppLang.isGreek(this) ? "Επικοινωνία" : "Contact"', main)
+        self.assertIn('contactItem.setContentDescription(contactLabel);', main)
 
     def test_missing_lab_sections_fail_qa_coverage(self):
         rows = [
