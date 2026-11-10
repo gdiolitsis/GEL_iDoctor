@@ -1122,6 +1122,9 @@ private AlertDialog lab8ActiveDialog = null;
     // Serialize Labs 1/2 tone challenges and prevent incomplete PDF export.
     private final AtomicBoolean lab12AudioBusy = new AtomicBoolean(false);
     private final AtomicBoolean lab5VibrationPending = new AtomicBoolean(false);
+    private final AtomicBoolean lab5VibrationCancelled = new AtomicBoolean(false);
+    private volatile AlertDialog lab5ActiveDialog;
+    private volatile Vibrator lab5ActiveVibrator;
     private final SensorRunGate lab9SensorRunGate = new SensorRunGate();
     private volatile SensorEvidenceProbe.Handle lab9SensorHandle;
     private final AtomicBoolean lab3GuidedPending = new AtomicBoolean(false);
@@ -2377,6 +2380,20 @@ protected void onPause() {
         logInfo(AppLang.isGreek(this) ? "Lab 9 — δειγματοληψία ακυρώθηκε στο παρασκήνιο"
                                       : "Lab 9 — sensor sampling cancelled on background");
     }
+
+    // Lab 5 is a foreground-only physical/user-reported challenge. Dismiss
+    // its prompt, cancel the haptic output, and unblock its waiting worker.
+    lab5VibrationCancelled.set(true);
+    try {
+        AlertDialog vibrationDialog = lab5ActiveDialog;
+        lab5ActiveDialog = null;
+        if (vibrationDialog != null && vibrationDialog.isShowing()) vibrationDialog.dismiss();
+    } catch (RuntimeException ignored) {}
+    try {
+        Vibrator motor = lab5ActiveVibrator;
+        lab5ActiveVibrator = null;
+        if (motor != null) motor.cancel();
+    } catch (RuntimeException ignored) {}
 
     // =========================
     // GUIDED AUDIO: stop on background, but never restore stale Lab 3
@@ -6719,8 +6736,9 @@ private void lab4MicBase(Runnable onFinished) {
         boolean topOk = false;
         boolean baseCompleted = false;
 
-        int bottomRms = 0, bottomPeak = 0;
-        int topRms = 0, topPeak = 0;
+        // NaN denotes unavailable; measured zero is a different result.
+        double bottomRms = Double.NaN, bottomPeak = Double.NaN;
+        double topRms = Double.NaN, topPeak = Double.NaN;
         int bottomInputRoute = -1;
         int topInputRoute = -1;
 
@@ -6743,14 +6761,23 @@ private void lab4MicBase(Runnable onFinished) {
             if (!lab4GuidedPending.get() || lab4Cancelled.get()) return;
 
             if (bottom != null) {
-                bottomRms  = (int) bottom.rms;
-                bottomPeak = (int) bottom.peak;
+                Lab4MicCaptureEvidence.State capture = Lab4MicCaptureEvidence.classify(
+                        bottom.audioRecordStarted, bottom.silenceDetected,
+                        bottom.rms, bottom.peak);
+                if (capture != Lab4MicCaptureEvidence.State.UNAVAILABLE) {
+                    bottomRms = bottom.rms;
+                    bottomPeak = bottom.peak;
+                }
                 bottomInputRoute = bottom.routedInputDeviceId;
-                bottomOk = bottom.audioRecordStarted && !bottom.silenceDetected;
+                bottomOk = capture == Lab4MicCaptureEvidence.State.AUDIO_OBSERVED;
             }
 
-            logLabelValue("MIC profile RMS",  String.valueOf(bottomRms));
-            logLabelValue("MIC profile Peak", String.valueOf(bottomPeak));
+            logLabelValue("MIC profile RMS", Double.isFinite(bottomRms)
+                    ? String.format(Locale.US, "%.1f PCM", bottomRms)
+                    : (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "UNAVAILABLE"));
+            logLabelValue("MIC profile Peak", Double.isFinite(bottomPeak)
+                    ? String.format(Locale.US, "%.1f PCM", bottomPeak)
+                    : (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "UNAVAILABLE"));
 
             logLabelValue(gr ? "Android διαδρομή MIC profile" : "Android MIC input route",
                     bottomInputRoute >= 0 ? "route id " + bottomInputRoute
@@ -6770,14 +6797,23 @@ private void lab4MicBase(Runnable onFinished) {
             if (!lab4GuidedPending.get() || lab4Cancelled.get()) return;
 
             if (top != null) {
-                topRms  = (int) top.rms;
-                topPeak = (int) top.peak;
+                Lab4MicCaptureEvidence.State capture = Lab4MicCaptureEvidence.classify(
+                        top.audioRecordStarted, top.silenceDetected,
+                        top.rms, top.peak);
+                if (capture != Lab4MicCaptureEvidence.State.UNAVAILABLE) {
+                    topRms = top.rms;
+                    topPeak = top.peak;
+                }
                 topInputRoute = top.routedInputDeviceId;
-                topOk = top.audioRecordStarted && !top.silenceDetected;
+                topOk = capture == Lab4MicCaptureEvidence.State.AUDIO_OBSERVED;
             }
 
-            logLabelValue("CAMCORDER profile RMS", String.valueOf(topRms));
-            logLabelValue("CAMCORDER profile Peak", String.valueOf(topPeak));
+            logLabelValue("CAMCORDER profile RMS", Double.isFinite(topRms)
+                    ? String.format(Locale.US, "%.1f PCM", topRms)
+                    : (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "UNAVAILABLE"));
+            logLabelValue("CAMCORDER profile Peak", Double.isFinite(topPeak)
+                    ? String.format(Locale.US, "%.1f PCM", topPeak)
+                    : (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "UNAVAILABLE"));
 
             logLabelValue(gr ? "Android διαδρομή CAMCORDER profile"
                              : "Android CAMCORDER input route",
@@ -7750,6 +7786,7 @@ private void lab5Vibration() {
                    : "Vibration test is already in progress.");
         return;
     }
+    lab5VibrationCancelled.set(false);
     runOnUiThread(() -> {
         if (btnExport != null) {
             btnExport.setEnabled(false);
@@ -7768,6 +7805,7 @@ private void lab5Vibration() {
 
     final AtomicBoolean userConfirmed = new AtomicBoolean(false);
     final AtomicBoolean userResponded = new AtomicBoolean(false);
+    final AtomicBoolean vibrationRequestIssued = new AtomicBoolean(false);
 
     new Thread(() -> {
 
@@ -7799,6 +7837,7 @@ private void lab5Vibration() {
                         );
             }
 
+            if (lab5VibrationCancelled.get()) return;
             if (vibrator == null || !vibrator.hasVibrator()) {
 
                 logLabelWarnValue(
@@ -7809,6 +7848,7 @@ private void lab5Vibration() {
                 return;
             }
 
+            lab5ActiveVibrator = vibrator;
             appendHtml("<br>");
             logInfo(
                     gr
@@ -7942,6 +7982,7 @@ private void lab5Vibration() {
                             )
                             .build();
 
+            if (lab5VibrationCancelled.get()) return;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
                 VibrationEffect diagnosticEffect;
@@ -7975,7 +8016,9 @@ private void lab5Vibration() {
                 );
             }
 
+            vibrationRequestIssued.set(true);
             SystemClock.sleep(3300);
+            if (lab5VibrationCancelled.get()) return;
 
             // =====================================================
             // SECOND FALLBACK PULSE
@@ -8008,9 +8051,15 @@ private void lab5Vibration() {
             // =====================================================
             // USER CONFIRMATION
             // =====================================================
+            if (lab5VibrationCancelled.get()) return;
             final AtomicBoolean answered = new AtomicBoolean(false);
 
             runOnUiThread(() -> {
+                if (lab5VibrationCancelled.get() || !lab5VibrationPending.get()
+                        || isFinishing() || isDestroyed()) {
+                    answered.set(true);
+                    return;
+                }
 
                 AlertDialog.Builder b =
                         new AlertDialog.Builder(
@@ -8085,6 +8134,7 @@ private void lab5Vibration() {
                 b.setView(root);
 
                 final AlertDialog d = b.create();
+                lab5ActiveDialog = d;
 
                 if (d.getWindow() != null) {
                     d.getWindow().setBackgroundDrawable(
@@ -8093,7 +8143,9 @@ private void lab5Vibration() {
                 }
 
                 d.setOnDismissListener(dialog -> {
+                    if (lab5ActiveDialog == d) lab5ActiveDialog = null;
                     try { AppTTS.stop(); } catch (Throwable ignore) {}
+                    answered.set(true); // dismiss cannot leave worker waiting forever
                 });
 
                 d.setOnKeyListener((dialog, keyCode, event) -> {
@@ -8108,7 +8160,8 @@ private void lab5Vibration() {
                     return false;
                 });
 
-                if (!isFinishing() && !isDestroyed()) {
+                if (!lab5VibrationCancelled.get()
+                        && !isFinishing() && !isDestroyed()) {
                     d.show();
                     com.gel.cleaner.GelButtonLayout.fitDialog(d);
                 } else {
@@ -8128,15 +8181,19 @@ private void lab5Vibration() {
                 }, 400);
 
                 noBtn.setOnClickListener(v -> {
-                    userConfirmed.set(false);
-                    userResponded.set(true);
+                    if (!lab5VibrationCancelled.get() && vibrationRequestIssued.get()) {
+                        userConfirmed.set(false);
+                        userResponded.set(true);
+                    }
                     answered.set(true);
                     d.dismiss();
                 });
 
                 yesBtn.setOnClickListener(v -> {
-                    userConfirmed.set(true);
-                    userResponded.set(true);
+                    if (!lab5VibrationCancelled.get() && vibrationRequestIssued.get()) {
+                        userConfirmed.set(true);
+                        userResponded.set(true);
+                    }
                     answered.set(true);
                     d.dismiss();
                 });
@@ -8145,6 +8202,7 @@ private void lab5Vibration() {
             // No artificial 10-second failure.
             // Wait until the technician answers or the Activity closes.
             while (!answered.get() &&
+                    !lab5VibrationCancelled.get() &&
                     !isFinishing() &&
                     !isDestroyed()) {
 
@@ -8154,11 +8212,18 @@ private void lab5Vibration() {
             appendHtml("<br>");
             logLine();
 
-            if (!userResponded.get()) {
+            Lab5VibrationOutcome.Status result = Lab5VibrationOutcome.classify(
+                    vibrationRequestIssued.get(), lab5VibrationCancelled.get(),
+                    userResponded.get(), userConfirmed.get());
+            if (result == Lab5VibrationOutcome.Status.UNAVAILABLE) {
                 logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
-                        gr ? "Η δοκιμή ακυρώθηκε· δεν υπάρχει απάντηση χρήστη"
-                           : "CANCELLED: no user observation was provided");
-            } else if (userConfirmed.get()) {
+                        gr ? "UNAVAILABLE — δεν έγινε αποδεκτό αίτημα δόνησης"
+                           : "UNAVAILABLE — no accepted vibration request");
+            } else if (result == Lab5VibrationOutcome.Status.CANCELLED) {
+                logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                        gr ? "CANCELLED — καμία έγκυρη απάντηση χρήστη"
+                           : "CANCELLED — no valid user response");
+            } else if (result == Lab5VibrationOutcome.Status.USER_REPORTED_FELT) {
 
                 logLabelOkValue(
                         gr ? "Αποτέλεσμα (δήλωση χρήστη)" : "Result (user report)",
@@ -8215,11 +8280,13 @@ private void lab5Vibration() {
                 }
             } catch (Throwable ignore) {}
 
+            lab5ActiveVibrator = null;
+            lab5ActiveDialog = null;
             appendHtml("<br>");
-            logOk(
+            logInfo(
                     gr
-                            ? "Το Lab 5 ολοκληρώθηκε."
-                            : "Lab 5 finished."
+                            ? "Η συνεδρία Lab 5 έληξε (όχι ανεξάρτητη πιστοποίηση hardware)."
+                            : "Lab 5 session ended (not independent hardware certification)."
             );
             logLine();
 
@@ -24211,12 +24278,13 @@ private void lab16ThermalSnapshot() {
         }
     }
 
-    thermalDanger = thermalDanger || hiddenRisk
-            || (osThermalStatus.isObserved()
-                && osThermalStatus.value >= android.os.PowerManager.THERMAL_STATUS_SEVERE);
-    thermalScore = ThermalEvidencePolicy.score(internal.size(), peripherals.size(), thermalScore, hiddenRisk);
-    // This is a contextual, uncalibrated observation score; OS thermal stress
-    // is recorded separately and cannot certify physical sensor health.
+    boolean osSevere = osThermalStatus.isObserved()
+            && osThermalStatus.value >= android.os.PowerManager.THERMAL_STATUS_SEVERE;
+    thermalDanger = thermalDanger || hiddenRisk || osSevere;
+    thermalScore = ThermalEvidencePolicy.scoreWithAndroidState(
+            internal.size(), peripherals.size(), thermalScore, hiddenRisk, osSevere);
+    // Contextual and uncalibrated: severe OS thermal protection can NEVER
+    // coexist with an excellent/green thermal index. Physical failure remains unknown.
 
     try {
         p.edit()
@@ -24239,10 +24307,18 @@ private void lab16ThermalSnapshot() {
                 : thermalScore >= 60
                 ? (gr ? "Μέτρια" : "Moderate")
                 : (gr ? "Υψηλή" : "High");
-        logLabelOkValue(
-                gr ? "Αξιολόγηση θερμικής συμπεριφοράς" : "Thermal behaviour rating",
-                String.format(Locale.US, "%s (%d)", tLabel, thermalScore)
-        );
+        String indexText = String.format(Locale.US, "%s (%d/100 — %s)",
+                tLabel, thermalScore, gr ? "μη βαθμονομημένο" : "uncalibrated");
+        if (thermalDanger) {
+            logLabelWarnValue(
+                    gr ? "Θερμικός δείκτης παρατήρησης" : "Thermal observation index",
+                    indexText + (gr ? " | θερμική προειδοποίηση Android/αισθητήρων"
+                                    : " | Android/sensor thermal warning"));
+        } else {
+            logLabelValue(
+                    gr ? "Θερμικός δείκτης παρατήρησης" : "Thermal observation index",
+                    indexText);
+        }
     }
     GELServiceLog.info(
             "SUMMARY: THERMAL_PATTERN="
@@ -27049,11 +27125,7 @@ private void lab29DeviceAuthenticity() {
     SharedPreferences p =
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
-    boolean lab14CollapseRisk =
-            p.getBoolean("lab14_collapse_risk", false);
-
-    boolean lab14SwellingSuspected =
-        p.getBoolean("lab14_swelling_risk", false);
+    // Historical flags are unversioned; do not use for physical-part diagnosis.
 
     appendHtml("<br>");
     logLine();
@@ -27067,16 +27139,9 @@ private void lab29DeviceAuthenticity() {
 
     appendHtml("<br>");
 
-if (!isDeviceRooted()) {
-
-    logLabelValue(
-            gr ? "Advanced verification"
-               : "Advanced verification",
-            gr
-                    ? "Ορισμένοι πρόσθετοι έλεγχοι δεν είναι διαθέσιμοι χωρίς root"
-                    : "Some additional checks are unavailable without root"
-    );
-}
+logLabelWarnValue(gr ? "Όριο επαλήθευσης" : "Verification boundary",
+        gr ? "Γνησιότητα ανταλλακτικών: απαιτείται ανεξάρτητη τεκμηρίωση OEM ή φυσικός έλεγχος."
+           : "Component authenticity requires independent OEM evidence or physical inspection.");
 
     // Android platform observations do not authenticate OEM replacement parts.
 
@@ -27091,27 +27156,23 @@ if (!isDeviceRooted()) {
     int batteryLevel = getBatteryPercentSafe();
     float voltage = getBatteryVoltageFiltered();
 
-    if (batteryLevel < 0 ||
-    Float.isNaN(voltage) ||
-    voltage < 2.5f ||
-    voltage > 5.5f) {
-
-        logLabelWarnValue(
-                gr ? "Μπαταρία" : "Battery",
-                gr
-                        ? "Ασυνήθιστες τιμές μέτρησης"
-                        : "Abnormal measurement values"
-        );
-
+    if (batteryLevel >= 0 && batteryLevel <= 100) {
+        logLabelValue(gr ? "Φόρτιση Android" : "Android-reported charge",
+                batteryLevel + "%");
     } else {
-
-        logLabelOkValue(
-                gr ? "Μπαταρία" : "Battery",
-                gr
-                        ? "Μετρήσεις φυσιολογικές"
-                        : "Measurements normal"
-        );
+        logLabelWarnValue(gr ? "Φόρτιση" : "Charge level",
+                gr ? "Μη διαθέσιμη" : "Unavailable");
     }
+    if (Float.isFinite(voltage) && voltage > 0f) {
+        logLabelValue(gr ? "Αναφερόμενη τάση" : "Reported pack voltage",
+                String.format(Locale.US, "%.3f V", voltage));
+    } else {
+        logLabelWarnValue(gr ? "Τάση" : "Battery voltage",
+                gr ? "Μη διαθέσιμη" : "Unavailable");
+    }
+    logLabelWarnValue(gr ? "Υγεία/προέλευση μπαταρίας" : "Battery health/origin",
+            gr ? "ΔΕΝ ΠΙΣΤΟΠΟΙΟΥΝΤΑΙ από SoC ή τάση. Η διάταξη κυψελών δεν είναι γνωστή."
+               : "NOT certified by SoC or voltage; cell configuration is unknown.");
 
     // ============================================================
     // DISPLAY
@@ -27123,30 +27184,18 @@ if (!isDeviceRooted()) {
 
     Display display = getWindowManager().getDefaultDisplay();
 
-    float refreshRate = 60f;
+    float refreshRate = Float.NaN;
 
     if (display != null)
         refreshRate = display.getRefreshRate();
 
-    if (refreshRate < 30f) {
-
-        logLabelWarnValue(
-                gr ? "Οθόνη" : "Display",
-                gr
-                        ? "Ασυνήθιστος ρυθμός ανανέωσης"
-                        : "Unusual refresh rate"
-        );
-
+    if (Float.isFinite(refreshRate) && refreshRate > 0f) {
+        logLabelValue(gr ? "Ρυθμός που αναφέρει το Android"
+                         : "Android-reported display rate",
+                String.format(Locale.US, "%.1f Hz — not panel integrity", refreshRate));
     } else {
-
-        logLabelOkValue(
-                gr ? "Οθόνη" : "Display",
-                String.format(Locale.US,
-                        gr
-                                ? "Ρυθμός: %.1f Hz"
-                                : "Rate: %.1f Hz",
-                        refreshRate)
-        );
+        logLabelWarnValue(gr ? "Οθόνη" : "Display",
+                gr ? "Ρυθμός μη διαθέσιμος" : "Refresh rate unavailable");
     }
 
     // ============================================================
@@ -27172,11 +27221,10 @@ if (!isDeviceRooted()) {
 
     } else {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Κάμερα" : "Camera",
-                gr
-                        ? "Εντοπίστηκε"
-                        : "Detected"
+                gr ? "Το Android αναφέρει δυνατότητα κάμερας· δεν δοκιμάστηκε η λειτουργία."
+                   : "Android advertises a camera feature; operation was not tested."
         );
     }
 
@@ -27235,12 +27283,10 @@ if (!isDeviceRooted()) {
 
             if (!missing) {
 
-                logLabelOkValue(
-                        gr ? "Αισθητήρες"
-                                : "Sensors",
-                        gr
-                                ? "Βασικοί αισθητήρες διαθέσιμοι"
-                                : "Core sensors available"
+                logLabelValue(
+                        gr ? "Αισθητήρες" : "Sensors",
+                        gr ? "Το Android αναφέρει βασικούς αισθητήρες· λειτουργία μη ελεγμένη."
+                           : "Android advertises common sensors; functionality unverified."
                 );
             }
         }
@@ -27290,55 +27336,25 @@ if (!isDeviceRooted()) {
     );
 
     // ============================================================
-    // FLAGS FROM OTHER LABS
     // ============================================================
-
-    boolean sensorFlaps =
-            p.getBoolean("lab28_sensor_flaps", false);
-
-    boolean radioInstability =
-            p.getBoolean("lab28_radio_instability", false);
-
-    boolean thermalSpike =
-            p.getBoolean("lab28_thermal_spike", false);
-
-    boolean rebootPattern =
-            p.getBoolean("lab28_reboot_pattern", false);
-
-    boolean instabilityPattern =
-            p.getBoolean("lab28_instability_pattern", false);
-
-int instabilityScore = 0;
-
-if (sensorFlaps) instabilityScore += 20;
-if (radioInstability) instabilityScore += 20;
-if (thermalSpike) instabilityScore += 15;
-if (rebootPattern) instabilityScore += 15;
-if (instabilityPattern) instabilityScore += 20;
-
-if (lab14CollapseRisk || lab14SwellingSuspected)
-    instabilityScore += 10;
-
-    appendHtml("<br>");
-
+    // LEGACY SOURCE LIMITATION
     // ============================================================
-    // FINAL
-    // ============================================================
-
+    // Never treat old Lab14/28 preference booleans as current faults.
+    logLabelWarnValue(gr ? "Παλιά διαγνωστικά flags" : "Legacy diagnostic flags",
+            gr ? "Δεν χρησιμοποιούνται για νέα διάγνωση hardware."
+               : "Not reused as new physical fault evidence.");
     appendHtml("<br>");
     logLine();
 
 // ============================================================
 // SAVE LAB 29 RESULTS — SINGLE SOURCE FOR LAB 30 / LAB 31
 // ============================================================
-boolean instabilityDetected = instabilityScore >= 20;
-
 p.edit()
-
         .remove("lab29_authenticity_score")
+        .remove("lab29_instability_score")
+        .remove("lab29_instability_pattern")
+        .putInt("lab29_observation_schema", Lab29ObservationCoverage.SCHEMA)
         .putBoolean("lab29_provenance_unverified", true)
-        .putInt("lab29_instability_score", instabilityScore)
-        .putBoolean("lab29_instability_pattern", instabilityDetected)
         .putLong("lab29_ts", System.currentTimeMillis())
         .apply();
 
@@ -27350,7 +27366,7 @@ logLabelWarnValue(
 logLabelValue(
         gr ? "Εύρος ελέγχου" : "Assessment scope",
         gr ? "Διατίθενται μόνο παρατηρήσεις hardware και ενδείξεις αστάθειας."
-           : "Hardware observations and instability indicators only."
+           : "Scoped Android observations only; instability and OEM origin remain unverified."
 );
 
     appendHtml("<br>");
@@ -27590,14 +27606,9 @@ String privacyFlag = colorFlagFromScore(privacyScore);
 // 9) AUTHENTICITY / REPAIR INDICATORS (LAB 29)
 // ------------------------------------------------------------
 
-boolean lab29ObservationsAvailable =
-        p.getBoolean("lab29_provenance_unverified", false);
-
-int lab29InstabilityScore =
-        p.getInt("lab29_instability_score", 0);
-
-boolean lab29InstabilityPattern =
-        p.getBoolean("lab29_instability_pattern", false);
+boolean lab29ObservationsAvailable = Lab29ObservationCoverage.isFresh(
+        p.getInt("lab29_observation_schema", 0),
+        p.getLong("lab29_ts", 0L), System.currentTimeMillis());
 
 appendHtml("<br>");
 logInfo(gr
@@ -27624,13 +27635,9 @@ if (lab29ObservationsAvailable) {
     );
 }
 
-if (lab29InstabilityPattern) {
-
-    logLabelWarnValue(
-            gr ? "Μοτίβο αστάθειας" : "Instability pattern",
-            lab29InstabilityScore + "/100"
-    );
-}
+logLabelWarnValue(gr ? "Απόδοση αστάθειας" : "Instability attribution",
+        gr ? "ΑΓΝΩΣΤΗ — δεν υπάρχουν συγχρονισμένα τεκμηριωμένα συμβάντα."
+           : "UNKNOWN — no corroborated time-aligned fault events.");
 
 // ------------------------------------------------------------
 // UNIFIED HARDWARE RISK SCORE
@@ -27665,8 +27672,7 @@ if (sensorBusInstability)
 if (thermalRunawayRisk)
     hardwareRiskScore += 10;
     
-if (lab29InstabilityPattern)
-    hardwareRiskScore += 10;
+// Stale Lab29 flags cannot contribute to device risk.
     
 // hard cap — score is always 0..100
 hardwareRiskScore = Math.max(
@@ -27857,18 +27863,8 @@ if (sensorBusInstability) {
 // ------------------------------------------------------------
 // LAB 29 INTEGRITY / INSTABILITY
 // ------------------------------------------------------------
-if (lab29InstabilityPattern) {
-
-    faultDetected = true;
-
-    logLabelWarnValue(
-            gr ? "Ακεραιότητα συσκευής"
-               : "Device integrity",
-            gr
-                    ? "Το LAB 29 εντόπισε επαναλαμβανόμενο μοτίβο αστάθειας."
-                    : "LAB 29 detected a repeated instability pattern."
-    );
-}
+// Old unversioned Lab 29 instability flags are not measured physical faults.
+// Source-bound observations remain visible in the Lab 29 section above.
 
 // ------------------------------------------------------------
 // FINAL CLASSIFICATION
@@ -28140,7 +28136,7 @@ if (pmicInstability) riskSignals++;
 if (sensorBusInstability) riskSignals++;
 
 // LAB 29 INSTABILITY
-if (lab29InstabilityPattern) riskSignals++;
+// Stale Lab29 flags cannot count as a physical risk signal.
 
 if (riskSignals == 1) {
 
@@ -29716,91 +29712,34 @@ if (lab14bConsumptionPerHour > 0f &&
 // DEVICE INTEGRITY / INSTABILITY FINDINGS
 // LAB 29 confirmed measurements — no manipulation accusation
 // ------------------------------------------------------------
-int lab29AuthenticityScore =
-        p.getInt("lab29_authenticity_score", -1);
-
-int lab29InstabilityScore =
-        p.getInt("lab29_instability_score", 0);
-
-boolean hwInstability =
-        p.getBoolean("lab29_instability_pattern", false);
+boolean lab29ScopedObservation = Lab29ObservationCoverage.isFresh(
+        p.getInt("lab29_observation_schema", 0),
+        p.getLong("lab29_ts", 0L), System.currentTimeMillis());
 
 appendHtml("<br>");
 
 // ------------------------------------------------------------
 // AUTHENTICITY / INTEGRITY RESULT
 // ------------------------------------------------------------
-if (lab29AuthenticityScore >= 0) {
-
-    if (lab29AuthenticityScore >= 90) {
-
-        logLabelOkValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100"
-        );
-
-    } else if (lab29AuthenticityScore >= 70) {
-
-        logLabelWarnValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100 — " +
-                        (gr
-                                ? "Απαιτείται επανέλεγχος αποκλίσεων"
-                                : "Detected deviations require verification")
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100 — " +
-                        (gr
-                                ? "Εντοπίστηκαν σημαντικές αποκλίσεις"
-                                : "Significant integrity deviations detected")
-        );
-    }
-
+if (lab29ScopedObservation) {
+    logLabelWarnValue(gr ? "Γνησιότητα / ακεραιότητα" : "Authenticity / integrity",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ — μόνο πρόσφατες παρατηρήσεις Android"
+               : "NOT VERIFIED — fresh scoped Android observations only");
 } else {
-
-    logLabelWarnValue(
-            gr ? "Ακεραιότητα συσκευής"
-               : "Device integrity",
-            gr
-                    ? "Δεν υπάρχουν διαθέσιμα αποτελέσματα από το LAB 29"
-                    : "No LAB 29 results available"
-    );
+    logLabelWarnValue(gr ? "Γνησιότητα / ακεραιότητα" : "Authenticity / integrity",
+            gr ? "Δεν υπάρχει πρόσφατο Lab 29 νέας μορφής"
+               : "No fresh, versioned Lab 29 observations");
 }
 
 // ------------------------------------------------------------
 // INSTABILITY FINDING
 // ------------------------------------------------------------
-if (hwInstability) {
+logLabelWarnValue(gr ? "Μοτίβο αστάθειας" : "Instability pattern",
+        gr ? "ΑΓΝΩΣΤΟ — απουσιάζουν επαληθευμένα συγχρονισμένα συμβάντα"
+           : "UNKNOWN — no validated time-aligned fault events");
 
-    logLabelWarnValue(
-            gr ? "Μοτίβο αστάθειας"
-               : "Instability pattern",
-            lab29InstabilityScore + "/100 — " +
-                    (gr
-                            ? "Απαιτείται τεχνικός επανέλεγχος"
-                            : "Technician verification recommended")
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Μοτίβο αστάθειας"
-               : "Instability pattern",
-            gr
-                    ? "Δεν εντοπίστηκε"
-                    : "Not detected"
-    );
-}
-
-    // ------------------------------------------------------------
-    // 8) EXPORT NOTE
+// ------------------------------------------------------------
+// 8) EXPORT NOTE
     // ------------------------------------------------------------
     appendHtml("<br>");
 
