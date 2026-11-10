@@ -6695,8 +6695,9 @@ private void lab4MicBase(Runnable onFinished) {
         boolean topOk = false;
         boolean baseCompleted = false;
 
-        int bottomRms = 0, bottomPeak = 0;
-        int topRms = 0, topPeak = 0;
+        // NaN denotes unavailable; measured zero is a different result.
+        double bottomRms = Double.NaN, bottomPeak = Double.NaN;
+        double topRms = Double.NaN, topPeak = Double.NaN;
         int bottomInputRoute = -1;
         int topInputRoute = -1;
 
@@ -6719,14 +6720,23 @@ private void lab4MicBase(Runnable onFinished) {
             if (!lab4GuidedPending.get() || lab4Cancelled.get()) return;
 
             if (bottom != null) {
-                bottomRms  = (int) bottom.rms;
-                bottomPeak = (int) bottom.peak;
+                Lab4MicCaptureEvidence.State capture = Lab4MicCaptureEvidence.classify(
+                        bottom.audioRecordStarted, bottom.silenceDetected,
+                        bottom.rms, bottom.peak);
+                if (capture != Lab4MicCaptureEvidence.State.UNAVAILABLE) {
+                    bottomRms = bottom.rms;
+                    bottomPeak = bottom.peak;
+                }
                 bottomInputRoute = bottom.routedInputDeviceId;
-                bottomOk = bottom.audioRecordStarted && !bottom.silenceDetected;
+                bottomOk = capture == Lab4MicCaptureEvidence.State.AUDIO_OBSERVED;
             }
 
-            logLabelValue("MIC profile RMS",  String.valueOf(bottomRms));
-            logLabelValue("MIC profile Peak", String.valueOf(bottomPeak));
+            logLabelValue("MIC profile RMS", Double.isFinite(bottomRms)
+                    ? String.format(Locale.US, "%.1f PCM", bottomRms)
+                    : (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "UNAVAILABLE"));
+            logLabelValue("MIC profile Peak", Double.isFinite(bottomPeak)
+                    ? String.format(Locale.US, "%.1f PCM", bottomPeak)
+                    : (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "UNAVAILABLE"));
 
             logLabelValue(gr ? "Android διαδρομή MIC profile" : "Android MIC input route",
                     bottomInputRoute >= 0 ? "route id " + bottomInputRoute
@@ -6746,14 +6756,23 @@ private void lab4MicBase(Runnable onFinished) {
             if (!lab4GuidedPending.get() || lab4Cancelled.get()) return;
 
             if (top != null) {
-                topRms  = (int) top.rms;
-                topPeak = (int) top.peak;
+                Lab4MicCaptureEvidence.State capture = Lab4MicCaptureEvidence.classify(
+                        top.audioRecordStarted, top.silenceDetected,
+                        top.rms, top.peak);
+                if (capture != Lab4MicCaptureEvidence.State.UNAVAILABLE) {
+                    topRms = top.rms;
+                    topPeak = top.peak;
+                }
                 topInputRoute = top.routedInputDeviceId;
-                topOk = top.audioRecordStarted && !top.silenceDetected;
+                topOk = capture == Lab4MicCaptureEvidence.State.AUDIO_OBSERVED;
             }
 
-            logLabelValue("CAMCORDER profile RMS", String.valueOf(topRms));
-            logLabelValue("CAMCORDER profile Peak", String.valueOf(topPeak));
+            logLabelValue("CAMCORDER profile RMS", Double.isFinite(topRms)
+                    ? String.format(Locale.US, "%.1f PCM", topRms)
+                    : (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "UNAVAILABLE"));
+            logLabelValue("CAMCORDER profile Peak", Double.isFinite(topPeak)
+                    ? String.format(Locale.US, "%.1f PCM", topPeak)
+                    : (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "UNAVAILABLE"));
 
             logLabelValue(gr ? "Android διαδρομή CAMCORDER profile"
                              : "Android CAMCORDER input route",
