@@ -24221,6 +24221,27 @@ private void lab17RunAuto() {
                : "Diagnostic evidence coverage conclusion");
     logLabelValue(gr ? "Πρόσφατες ενότητες" : "Fresh evidence domains",
             availableDomains + "/4");
+    // Restore the useful legacy next-step guidance without reproducing
+    // unvalidated battery-age, device-health or 0–100 scoring heuristics.
+    Lab17EvidenceChecklist.Missing required =
+            Lab17EvidenceChecklist.missing(has14, has14b, has15, has16);
+    if (required.count > 0) {
+        logLabelWarnValue(gr ? "Επόμενος έλεγχος" : "Recommended follow-up",
+                (gr ? "Εκτέλεσε μόνο τα ελλείποντα/ληγμένα: "
+                    : "Run only missing or expired tests: ")
+                        + required.names);
+        logLabelWarnValue(gr ? "Όριο αξιολόγησης" : "Evidence requirement",
+                gr ? "Κάθε δοκιμή πρέπει να έχει πρόσφατα και έγκυρα τεκμήρια· "
+                        + "η εκτέλεση μόνη της δεν ισοδυναμεί με υγεία μπαταρίας."
+                   : "Each test needs fresh valid evidence; completion alone "
+                        + "does not establish battery health.");
+    } else {
+        logLabelValue(gr ? "Επόμενος έλεγχος" : "Recommended follow-up",
+                gr ? "Υπάρχουν πρόσφατα τεκμήρια και από τα 4 πεδία — "
+                        + "δεν πιστοποιείται SoH χωρίς ανεξάρτητη μέτρηση."
+                   : "Fresh evidence in all four domains — SoH still "
+                        + "requires independent validation.");
+    }
     if (availableDomains == 0) {
         logLabelWarnValue(gr ? "Διαθεσιμότητα" : "Availability",
                 gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — δεν επιτρέπεται συνολική διάγνωση"
