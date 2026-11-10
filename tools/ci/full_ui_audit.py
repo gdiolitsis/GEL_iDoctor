@@ -182,9 +182,28 @@ try:
                 record(target,outcome(folder),folder=folder)
                 adb("shell","input","keyevent","4")
             except Exception as e: record(target,"HARNESS_OR_UI_ERROR",str(e),save(target+"-error"))
-        # Toolbar: inspect settings/contact/overflow without sending any message.
+        # Toolbar: verify Contact localization/accessibility without sending email.
         home()
-        for label,pattern in [("contact",r"^Contact$"),("overflow",r"More options|Περισσότερες επιλογές")]:
+        toolbar=find(rid("gelToolbar"))
+        contact_label="Επικοινωνία" if lang=="el" else "Contact"
+        contact_action=find_accessible_action(toolbar,contact_label) if toolbar is not None else None
+        if contact_action is None:
+            record("contact","ACCESSIBILITY_LABEL_MISSING",
+                   folder=save("contact-accessibility-failure"))
+        else:
+            tap(contact_action)
+            contact_folder=save("contact")
+            expected_send="ΑΠΟΣΤΟΛΗ" if lang=="el" else "SEND"
+            send_button=find(textmatch(r"^"+re.escape(expected_send)+r"$"),2)
+            if send_button is None:
+                record("contact-send-label","TRANSLATION_MISSING",
+                       folder=save("contact-translation-failure"))
+            else:
+                record("contact-send-label","LOCALE_VERIFIED",folder=contact_folder)
+            record("contact","UI_OPENED",folder=contact_folder)
+            adb("shell","input","keyevent","4")
+        # Overflow is an independent UI action, not the Contact button.
+        for label,pattern in [("overflow",r"More options|Περισσότερες επιλογές")]:
             home()
             n=find(lambda n: bool(search(pattern,(n.get("text","")+" "+n.get("content-desc","")).strip(),re.I)))
             if n is not None:
@@ -266,11 +285,17 @@ finally:
     crashed = "Process: "+PKG+"," in crash
     print("APP_CRASH_LOG_PRESENT="+str(crashed),flush=True)
     incomplete = incomplete_lab_names(results) if mode != "menus_only" else []
+    localization_gaps = [item["name"] for item in results
+                         if item.get("name") in ("contact", "contact-send-label")
+                         and item.get("status") in ("ACCESSIBILITY_LABEL_MISSING",
+                                                    "TRANSLATION_MISSING")]
+    print("QA_LOCALIZATION_GAPS="+json.dumps(localization_gaps),flush=True)
     print("QA_INCOMPLETE_LABS="+json.dumps(incomplete),flush=True)
     print("QA_WELCOME_OK_VERIFIED="+str(welcome_ok_observed),flush=True)
     print("QA_ACCESSIBLE_SETTINGS_VERIFIED="+str(settings_accessible),flush=True)
     if crashed: sys.exit(2)
     if incomplete: sys.exit(3)
+    if localization_gaps: sys.exit(6)
     if os.environ.get("AUDIT_REQUIRE_WELCOME_OK") == "1" and not welcome_ok_observed:
         sys.exit(4)
     if os.environ.get("AUDIT_REQUIRE_ACCESSIBLE_SETTINGS") == "1" and not settings_accessible:

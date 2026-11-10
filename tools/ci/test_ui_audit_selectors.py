@@ -1,5 +1,6 @@
 import re
 import unittest
+import pathlib
 import xml.etree.ElementTree as ET
 from ui_audit_selectors import (MANUAL_ENTRY, matching, is_visible, find_visible,
                                 scroll_gesture, manual_section_pattern, incomplete_lab_names,
@@ -38,11 +39,40 @@ class SelectorsTest(unittest.TestCase):
         root = ET.fromstring('<hierarchy><node bounds="[0,0][320,640]"/></hierarchy>')
         self.assertIsNone(scroll_gesture(root))
 
-    def test_manual_section_legacy_and_corrected_range(self):
-        pattern = manual_section_pattern(25, 31)
-        self.assertIsNotNone(matching(pattern, "Advanced / Logs — Manual Labs 25–30", re.I))
-        self.assertIsNotNone(matching(pattern, "Advanced / Logs — Manual Labs 25–31", re.I))
-        self.assertIsNone(matching(manual_section_pattern(21, 24), "Manual Labs 25–30", re.I))
+    def test_complete_31_labs_in_both_languages(self):
+        ranges = [(1, 5), (6, 9), (10, 13), (14, 17),
+                  (18, 20), (21, 24), (25, 31)]
+        for lo, hi in ranges:
+            pat = manual_section_pattern(lo, hi)
+            self.assertIsNotNone(
+                matching(pat, f"Advanced / Logs — Manual Labs {lo}–{hi}", re.I))
+            self.assertIsNotNone(
+                matching(pat, f"Προχωρημένα / Καταγραφές — Εργαστήρια {lo}–{hi}", re.I))
+        final_section = manual_section_pattern(25, 31)
+        self.assertIsNone(matching(final_section, "Advanced / Logs — Manual Labs 25–30", re.I))
+        self.assertIsNone(matching(final_section, "Προχωρημένα — Εργαστήρια 25–30", re.I))
+        self.assertIsNone(matching(manual_section_pattern(21, 24), "Manual Labs 25–31", re.I))
+
+    def test_source_localization_matches_exact_final_apk_contract(self):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        el = ET.parse(root / "app/src/main/res/values-el/strings.xml").getroot()
+        en = ET.parse(root / "app/src/main/res/values/strings.xml").getroot()
+        for index, (lo, hi) in enumerate(
+                [(1, 5), (6, 9), (10, 13), (14, 17),
+                 (18, 20), (21, 24), (25, 31)], 1):
+            greek = el.find(f"string[@name='manual_cat_{index}']")
+            english = en.find(f"string[@name='manual_cat_{index}']")
+            self.assertIsNotNone(greek)
+            self.assertIsNotNone(english)
+            self.assertIn(f"Εργαστήρια {lo}–{hi}", greek.text)
+            self.assertIn(f"Manual Labs {lo}–{hi}", english.text)
+        self.assertEqual(
+            el.find("string[@name='manual_cat_7']").text,
+            "Προχωρημένα / Καταγραφές — Εργαστήρια 25–31")
+        main = (root / "app/src/main/java/com/gel/cleaner/MainActivity.java").read_text()
+        self.assertIn('btnSend.setText(gr ? "ΑΠΟΣΤΟΛΗ" : "SEND");', main)
+        self.assertIn('AppLang.isGreek(this) ? "Επικοινωνία" : "Contact"', main)
+        self.assertIn('contactItem.setContentDescription(contactLabel);', main)
 
     def test_missing_lab_sections_fail_qa_coverage(self):
         rows = [
@@ -64,6 +94,18 @@ class SelectorsTest(unittest.TestCase):
             '<hierarchy><node clickable="true" content-desc="Settings" '
             'bounds="[270,10][315,57]"/></hierarchy>')
         self.assertIsNotNone(find_accessible_action(eng, "Settings"))
+
+    def test_contact_toolbar_action_requires_localized_accessibility(self):
+        el = ET.fromstring(
+            '<hierarchy><node clickable="true" content-desc="Επικοινωνία" '
+            'bounds="[225,10][265,57]"/></hierarchy>')
+        self.assertIsNotNone(find_accessible_action(el, "Επικοινωνία"))
+        self.assertIsNone(find_accessible_action(el, "Contact"))
+        en = ET.fromstring(
+            '<hierarchy><node clickable="true" content-desc="Contact" '
+            'bounds="[225,10][265,57]"/></hierarchy>')
+        self.assertIsNotNone(find_accessible_action(en, "Contact"))
+        self.assertIsNone(find_accessible_action(en, "Επικοινωνία"))
 
     def test_empty_toolbar_icon_does_not_pass_accessibility(self):
         root = ET.fromstring(
