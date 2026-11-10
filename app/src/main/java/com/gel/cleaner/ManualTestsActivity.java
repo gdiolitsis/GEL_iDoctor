@@ -26706,6 +26706,72 @@ private void lab28HardwareStability() {
                 String.format(Locale.US, "%.0f", cycles.value));
     }
 
+    // Longitudinal, locally stored public-API readings. This is a bounded pair
+    // of OS-reported values, NOT a measurement of PMIC, NAND or motherboard health.
+    final long nowElapsed = SystemClock.elapsedRealtime();
+    final long nowWall = System.currentTimeMillis();
+    SharedPreferences lab28History =
+            getSharedPreferences("GEL_LAB28_PUBLIC_EVIDENCE_V1", MODE_PRIVATE);
+    double currentVoltage = voltage.isObserved() ? voltage.value : Double.NaN;
+    double currentTemp = temp.isObserved() ? temp.value : Double.NaN;
+    Lab28TemporalEvidence.Result paired = Lab28TemporalEvidence.compare(
+            lab28History.getLong("elapsed_ms", -1L),
+            lab28History.getLong("wall_ms", -1L),
+            nowElapsed, nowWall,
+            lab28History.contains("voltage_mv")
+                    ? lab28History.getFloat("voltage_mv", Float.NaN) : Double.NaN,
+            currentVoltage,
+            lab28History.contains("temp_c")
+                    ? lab28History.getFloat("temp_c", Float.NaN) : Double.NaN,
+            currentTemp);
+    if (paired.state == Lab28TemporalEvidence.State.OBSERVED_PAIR) {
+        logLabelValue(gr ? "Διαδοχικές παρατηρήσεις Android"
+                         : "Sequential Android observations",
+                String.format(Locale.US, "%.1f min apart", paired.elapsedMs / 60000d));
+        if (Double.isFinite(paired.voltageDeltaMv)) {
+            logLabelValue(gr ? "Μεταβολή τάσης (αναφερόμενη)"
+                             : "Reported voltage difference",
+                    String.format(Locale.US, "%+.0f mV", paired.voltageDeltaMv));
+        }
+        if (Double.isFinite(paired.tempDeltaC)) {
+            logLabelValue(gr ? "Μεταβολή θερμοκρασίας (αναφερόμενη)"
+                             : "Reported temperature difference",
+                    String.format(Locale.US, "%+.1f °C", paired.tempDeltaC));
+        }
+        logLabelWarnValue(gr ? "Όριο χρονικής συσχέτισης" : "Temporal evidence limit",
+                gr ? "Δύο δείγματα χωρίς ελεγχόμενο φορτίο· καμία απόδειξη βλάβης PMIC/μητρικής."
+                   : "Two readings without controlled load; no PMIC/board fault established.");
+        GELServiceLog.info("SUMMARY: LAB28_SEQUENTIAL_OS_READINGS=OBSERVED; "
+                + "SOURCE=BATTERY_PUBLIC_API; HARDWARE_CAUSE=UNVERIFIED");
+    } else {
+        logLabelWarnValue(gr ? "Χρονική σύγκριση" : "Temporal comparison",
+                gr ? "ΜΗ ΕΠΑΡΚΗΣ — απαιτείται δεύτερη έγκυρη παρατήρηση "
+                        + "30 δευτ.–2 ώρες αργότερα στην ίδια εκκίνηση."
+                   : "INSUFFICIENT — retry with a second valid observation "
+                        + "30 seconds–2 hours later in the same boot.");
+        GELServiceLog.info("SUMMARY: LAB28_SEQUENTIAL_OS_READINGS=INCONCLUSIVE; "
+                + "SOURCE=BATTERY_PUBLIC_API");
+    }
+    // Do not replace a valid baseline with a rapid duplicate or an empty read.
+    if (Double.isFinite(currentVoltage) || Double.isFinite(currentTemp)) {
+        if (paired.state != Lab28TemporalEvidence.State.TOO_SOON) {
+            SharedPreferences.Editor save = lab28History.edit()
+                    .putLong("elapsed_ms", nowElapsed)
+                    .putLong("wall_ms", nowWall);
+            if (Double.isFinite(currentVoltage)) {
+                save.putFloat("voltage_mv", (float) currentVoltage);
+            } else {
+                save.remove("voltage_mv");
+            }
+            if (Double.isFinite(currentTemp)) {
+                save.putFloat("temp_c", (float) currentTemp);
+            } else {
+                save.remove("temp_c");
+            }
+            save.apply();
+        }
+    }
+
     BatteryEvidenceStore.Record batteryRecord = BatteryEvidenceStore.readLatestLab14(this);
     if (batteryRecord != null && batteryRecord.isFresh(2L * 60L * 60L * 1000L)) {
         logLabelValue(gr ? "Lab 14A — πρόσφατα τεκμήρια" : "Lab 14A — recent evidence",
