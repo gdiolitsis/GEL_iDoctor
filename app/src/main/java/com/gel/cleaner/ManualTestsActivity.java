@@ -24204,16 +24204,14 @@ private void lab17RunAuto() {
                    : "No fresh, completed and valid test evidence");
     }
 
-    boolean source14b = p.getInt("lab14b_evidence_schema", 0) == 1
-            && "BATTERY_MANAGER_CHARGE_COUNTER_ELAPSED".equals(
-                    p.getString("lab14b_rate_source", ""))
-            && p.getBoolean("lab14b_rate_valid", false);
     long ts14b = p.getLong("lab14b_ts", 0L);
     long duration14b = p.getLong("lab14b_sample_duration_ms", 0L);
     float draw14b = p.getFloat("lab14b_consumption_per_hour", -1f);
-    boolean has14b = source14b && duration14b >= 240000L
-            && ts14b > 0L && now >= ts14b && now - ts14b <= windowMs
-            && Float.isFinite(draw14b) && draw14b > 0f;
+    boolean has14b = Lab14BRateEvidence.isUsable(
+            p.getInt("lab14b_evidence_schema", 0),
+            p.getBoolean("lab14b_rate_valid", false),
+            p.getString("lab14b_rate_source", ""),
+            duration14b, ts14b, now, draw14b);
     if (has14b) {
         logLabelValue("Lab 14B", String.format(Locale.US, "%.1f mAh/h | %.1f min",
                 draw14b, duration14b / 60000.0d));
@@ -27328,16 +27326,17 @@ boolean lab14SwellingSuspected = false;
 // ------------------------------------------------------------
 
 // 🔴 RAW
-float lab14bConsumptionPerHour =
-        p.getInt("lab14b_evidence_schema", 0) == 1
-        && p.getBoolean("lab14b_rate_valid", false)
-        && "BATTERY_MANAGER_CHARGE_COUNTER_ELAPSED".equals(
-                p.getString("lab14b_rate_source", ""))
-        && p.getLong("lab14b_sample_duration_ms", 0L) >= 240000L
-        ? p.getFloat("lab14b_consumption_per_hour", -1f) : -1f;
-
-long ts14b =
-        p.getLong("lab14b_ts", 0L);
+long ts14b = p.getLong("lab14b_ts", 0L);
+float rawLab14bRate = p.getFloat("lab14b_consumption_per_hour", -1f);
+// Reject stale, future, invalid, cancelled and legacy source records.
+// A tested discharge rate is NOT calibrated capacity SoH or real-world endurance.
+float lab14bConsumptionPerHour = Lab14BRateEvidence.isUsable(
+        p.getInt("lab14b_evidence_schema", 0),
+        p.getBoolean("lab14b_rate_valid", false),
+        p.getString("lab14b_rate_source", ""),
+        p.getLong("lab14b_sample_duration_ms", 0L),
+        ts14b, System.currentTimeMillis(), rawLab14bRate)
+        ? rawLab14bRate : -1f;
 
 // ------------------------------------------------------------
 // 🔴 DERIVED (RUNTIME)
@@ -27652,8 +27651,8 @@ if (batteryRuntimeWeak) {
     logLabelWarnValue(
             gr ? "Αυτονομία" : "Battery runtime",
             gr
-                    ? "Χαμηλή διάρκεια σε πραγματική χρήση"
-                    : "Low real-world battery duration"
+                    ? "Προβολή αυτονομίας σε δοκιμαστικό φορτίο — όχι μέτρηση πραγματικής χρήσης"
+                    : "Projected test-workload runtime — not measured real-world endurance"
     );
 
     if ((batteryScore >= 0 && batteryScore < 60) || lab14CollapseRisk) {
@@ -27684,8 +27683,8 @@ if (batteryConsumptionVeryHigh) {
     logLabelErrorValue(
             gr ? "Κατανάλωση" : "Consumption",
             gr
-                    ? "Πολύ υψηλή κατανάλωση ενέργειας"
-                    : "Very high power consumption"
+                    ? "Υψηλός ρυθμός εκφόρτισης στο δοκιμαστικό φορτίο — όχι τεκμήριο φθοράς"
+                    : "Elevated discharge rate during test workload — not evidence of battery wear"
     );
 
     if (pmicInstability) {
@@ -29342,16 +29341,17 @@ private void lab31FinalSummary() {
 // ------------------------------------------------------------
 
 // 🔴 RAW (source of truth)
-float lab14bConsumptionPerHour =
-        p.getInt("lab14b_evidence_schema", 0) == 1
-        && p.getBoolean("lab14b_rate_valid", false)
-        && "BATTERY_MANAGER_CHARGE_COUNTER_ELAPSED".equals(
-                p.getString("lab14b_rate_source", ""))
-        && p.getLong("lab14b_sample_duration_ms", 0L) >= 240000L
-        ? p.getFloat("lab14b_consumption_per_hour", -1f) : -1f;
-
-long ts14b =
-        p.getLong("lab14b_ts", 0L);
+long ts14b = p.getLong("lab14b_ts", 0L);
+float rawLab14bRate = p.getFloat("lab14b_consumption_per_hour", -1f);
+// Reject stale, future, invalid, cancelled and legacy source records.
+// A tested discharge rate is NOT calibrated capacity SoH or real-world endurance.
+float lab14bConsumptionPerHour = Lab14BRateEvidence.isUsable(
+        p.getInt("lab14b_evidence_schema", 0),
+        p.getBoolean("lab14b_rate_valid", false),
+        p.getString("lab14b_rate_source", ""),
+        p.getLong("lab14b_sample_duration_ms", 0L),
+        ts14b, System.currentTimeMillis(), rawLab14bRate)
+        ? rawLab14bRate : -1f;
 
 // ------------------------------------------------------------
 // 🔴 DERIVED (RUNTIME)
@@ -29596,8 +29596,8 @@ if (lab14bConsumptionPerHour > 0f &&
         logLabelWarnValue(
                 gr ? "Τεχνικό εύρημα" : "Technician finding",
                 gr
-                        ? "Η μετρημένη αυτονομία είναι χαμηλότερη από το αναμενόμενο."
-                        : "Measured endurance is lower than expected."
+                        ? "Η προβολή από σύντομη δοκιμή δεν αποδεικνύει μετρημένη αυτονομία ή φθορά."
+                        : "Projection from a short test does not establish measured endurance or wear."
         );
     }
 
