@@ -1200,6 +1200,8 @@ private int lab13MonitorGeneration = 0;
 
 private volatile boolean lab15Running  = false;
 private volatile boolean lab15Finished = false;
+// A late runnable from a cancelled charging session must never finish a newer run.
+private int lab15SessionGeneration = 0;
 
 private volatile boolean lab15FlapUnstable = false;
 private volatile boolean lab15OverTempDuringCharge = false;
@@ -4469,6 +4471,7 @@ private void abortLab15ByUser() {
 
         lab15Running = false;
         lab15Finished = true;
+        lab15SessionGeneration++; // Invalidate any pending sample callback.
 
         try {
             if (lab15Dialog != null && lab15Dialog.isShowing())
@@ -4478,7 +4481,9 @@ private void abortLab15ByUser() {
         lab15Dialog = null;
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 15 ολοκληρώθηκε." : "Lab 15 finished.");
+        logLabelWarnValue(gr ? "Αποτέλεσμα Lab 15" : "Lab 15 result",
+                gr ? "ΑΚΥΡΩΘΗΚΕ — δεν τεκμηριώθηκε έγκυρη φόρτιση"
+                   : "CANCELLED — no valid charging observation");
         logLine();
         enableSingleExportButton();
     });
@@ -23318,6 +23323,27 @@ logInfo(
 logLine();
 
 // ================= FLAGS RESET =================
+// A new accepted attempt invalidates old charging evidence first. A failed,
+// interrupted or cancelled rerun must not borrow the previous 3-minute pass.
+boolean invalidatedLab15 = getSharedPreferences("GEL_DIAG", MODE_PRIVATE)
+        .edit()
+        .putBoolean("lab15_counter_delta_valid", false)
+        .remove("lab15_observed_delta_mah")
+        .remove("lab15_ts")
+        .putInt("lab15_charge_score", -1)
+        .commit();
+if (!invalidatedLab15) {
+    logLabelWarnValue(gr ? "Αποθήκευση τεκμηρίων" : "Evidence storage",
+            gr ? "Δεν ήταν δυνατή η ασφαλής έναρξη νέας δοκιμής"
+               : "Could not safely start a new test");
+    return;
+}
+
+final int lab15ThisGeneration = ++lab15SessionGeneration;
+if (btnExport != null) {
+    btnExport.setEnabled(false);
+    btnExport.setAlpha(0.5f);
+}
 
 lab15Running  = true;
 lab15Finished = false;
@@ -23398,8 +23424,10 @@ if (batteryLevel > 80) {
 
     lab15Running = false;
     lab15Finished = true;
+    lab15SessionGeneration++;
+    enableSingleExportButton();
     return;
-    
+
     }
 
 final String text =
@@ -23563,7 +23591,17 @@ iDoctorEngine.BatterySnapshot snapStart =
         eng.readBatterySnapshot();
 
 if (snapStart == null) {
-    logError("Battery snapshot failed");
+    logLabelWarnValue(gr ? "Αρχική μέτρηση φόρτισης" : "Initial charge snapshot",
+            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ — η δοκιμή δεν ξεκίνησε"
+               : "UNAVAILABLE — test did not start");
+    lab15Running = false;
+    lab15Finished = true;
+    lab15SessionGeneration++;
+    try {
+        if (lab15Dialog != null && lab15Dialog.isShowing()) lab15Dialog.dismiss();
+    } catch (Throwable ignored) {}
+    lab15Dialog = null;
+    enableSingleExportButton();
     return;
 }
 
@@ -23585,7 +23623,8 @@ ui.post(new Runnable() {
     @Override
     public void run() {
 
-        if (!lab15Running || lab15Finished || isFinishing()) {
+        if (!lab15Running || lab15Finished || isFinishing()
+                || lab15ThisGeneration != lab15SessionGeneration) {
     ui.removeCallbacks(this);
     return;
 }
@@ -23663,6 +23702,7 @@ if (chargingNow) {
         } catch (Throwable ignore) {}
 
         lab15Dialog = null;
+        enableSingleExportButton();
         return;
     }
 }
@@ -23915,6 +23955,7 @@ try {
 } catch (Throwable ignore) {}
 
 lab15Dialog = null;
+enableSingleExportButton();
 
         } // END run()
 
