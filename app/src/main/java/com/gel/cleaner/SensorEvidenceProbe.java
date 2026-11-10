@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Five-second, bounded, permission-free event observation of common sensors.
@@ -23,6 +24,20 @@ public final class SensorEvidenceProbe {
 
     public interface Callback {
         void onFinished(List<Result> results);
+    }
+
+    /** Cancel active observation and suppress callbacks after pause/destroy. */
+    public static final class Handle {
+        private final AtomicBoolean cancelled = new AtomicBoolean(false);
+        private volatile Runnable close;
+        private Handle() {}
+
+        public void cancel() {
+            if (cancelled.compareAndSet(false, true)) {
+                Runnable operation = close;
+                if (operation != null) operation.run();
+            }
+        }
     }
 
     public static final class Result {
@@ -77,15 +92,23 @@ public final class SensorEvidenceProbe {
         }
     }
 
-    /** Asynchronous and read-only. Always unregisters listeners after 5 seconds. */
+    /** Legacy fire-and-forget entrypoint retained for compatibility. */
     public static void sample(Context context, Callback callback) {
+        sampleCancelable(context, callback);
+    }
+
+    /** Cancellable five-second observation; never invokes callback after cancel. */
+    public static Handle sampleCancelable(Context context, Callback callback) {
         if (callback == null) throw new IllegalArgumentException("callback required");
+        Handle handle = new Handle();
         SensorManager manager = (SensorManager) context.getSystemService(
                 Context.SENSOR_SERVICE);
         Handler main = new Handler(Looper.getMainLooper());
         if (manager == null) {
-            main.post(() -> callback.onFinished(new ArrayList<>()));
-            return;
+            main.post(() -> {
+                if (!handle.cancelled.get()) callback.onFinished(new ArrayList<>());
+            });
+            return handle;
         }
 
         HandlerThread worker = new HandlerThread("GEL-Lab9-Sensors");
@@ -131,14 +154,23 @@ public final class SensorEvidenceProbe {
             }
         }
 
-        handler.postDelayed(() -> {
-            try {
-                manager.unregisterListener(listener);
-            } catch (RuntimeException ignored) {}
-            List<Result> results = new ArrayList<>();
-            for (Sample sample : samples.values()) results.add(sample.result());
+        handle.close = () -> handler.post(() -> {
+            try { manager.unregisterListener(listener); }
+            catch (RuntimeException ignored) {}
             worker.quitSafely();
-            main.post(() -> callback.onFinished(results));
+        });
+        handler.postDelayed(() -> {
+            try { manager.unregisterListener(listener); }
+            catch (RuntimeException ignored) {}
+            List<Result> results = new ArrayList<>();
+            if (!handle.cancelled.get()) {
+                for (Sample sample : samples.values()) results.add(sample.result());
+            }
+            worker.quitSafely();
+            main.post(() -> {
+                if (!handle.cancelled.get()) callback.onFinished(results);
+            });
         }, 5000L);
+        return handle;
     }
 }

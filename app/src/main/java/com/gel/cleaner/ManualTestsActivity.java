@@ -1120,6 +1120,8 @@ private AlertDialog lab8ActiveDialog = null;
     // Serialize Labs 1/2 tone challenges and prevent incomplete PDF export.
     private final AtomicBoolean lab12AudioBusy = new AtomicBoolean(false);
     private final AtomicBoolean lab5VibrationPending = new AtomicBoolean(false);
+    private final SensorRunGate lab9SensorRunGate = new SensorRunGate();
+    private volatile SensorEvidenceProbe.Handle lab9SensorHandle;
     private final AtomicBoolean lab3GuidedPending = new AtomicBoolean(false);
     private final AtomicBoolean lab4GuidedPending = new AtomicBoolean(false);
     private final AtomicBoolean lab4Cancelled = new AtomicBoolean(false);
@@ -2361,6 +2363,16 @@ private BatteryInfo getBatteryInfo() {
 protected void onPause() {
 
     super.onPause();
+
+    if (lab9SensorRunGate.isActive()) {
+        lab9SensorRunGate.cancel();
+        SensorEvidenceProbe.Handle pendingSensors = lab9SensorHandle;
+        lab9SensorHandle = null;
+        if (pendingSensors != null) pendingSensors.cancel();
+        enableSingleExportButton();
+        logInfo(AppLang.isGreek(this) ? "Lab 9 — δειγματοληψία ακυρώθηκε στο παρασκήνιο"
+                                      : "Lab 9 — sensor sampling cancelled on background");
+    }
 
     // =========================
     // GUIDED AUDIO: stop on background, but never restore stale Lab 3
@@ -10285,6 +10297,12 @@ LAB 9 — Sensors Check (LABEL / VALUE MODE)
 private void lab9SensorsCheck() {
 
     final boolean gr = AppLang.isGreek(this);
+    final long runToken = lab9SensorRunGate.begin();
+    if (runToken < 0L) {
+        logLabelWarnValue("Lab 9", gr ? "Υπάρχει ήδη ενεργή δειγματοληψία αισθητήρων"
+                                       : "A sensor observation is already active");
+        return;
+    }
     // Do not allow exporting the report before this asynchronous lab finishes.
     boolean samplingScheduled = false;
     ui.post(() -> {
@@ -10451,7 +10469,9 @@ private void lab9SensorsCheck() {
                         + "για 5 δευτερόλεπτα. Η απουσία αλλαγής δεν σημαίνει βλάβη."
                 : "Gently move the device and cover/uncover the proximity area "
                         + "for 5 seconds. No observed change does not prove failure.");
-        SensorEvidenceProbe.sample(this, samples -> {
+        lab9SensorHandle = SensorEvidenceProbe.sampleCancelable(this, samples -> {
+            if (!lab9SensorRunGate.complete(runToken)) return;
+            lab9SensorHandle = null;
             if (isFinishing() || isDestroyed()) return;
             appendHtml("<br>");
             logInfo(gr ? "Συμβάντα αισθητήρων (5 δευτ.)"
@@ -10498,7 +10518,11 @@ private void lab9SensorsCheck() {
                    : "Lab 9 inventory completed; event sample follows.");
         logLine();
         // Early returns and setup errors have no asynchronous observation pending.
-        if (!samplingScheduled) enableSingleExportButton();
+        if (!samplingScheduled) {
+            lab9SensorRunGate.cancel();
+            lab9SensorHandle = null;
+            enableSingleExportButton();
+        }
     }
 }
 
