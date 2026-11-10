@@ -3010,10 +3010,9 @@ private void routeToCallEarpiece() {
                 (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         if (am == null) return;
 
-        am.stopBluetoothSco();
-        am.setBluetoothScoOn(false);
+        // Preserve Bluetooth SCO and microphone mute; the entry preflight
+        // refuses an external route instead of taking over the connection.
         am.setSpeakerphoneOn(false);
-        am.setMicrophoneMute(false);
         am.setMode(AudioManager.MODE_IN_COMMUNICATION);
     } catch (Throwable ignore) {}
 }
@@ -3145,28 +3144,6 @@ private void resetAudioAfterLab3(
 // ============================================================
 // HARD AUDIO NORMALIZE — BEFORE MIC CAPTURE (MANDATORY)
 // ============================================================
-private void hardNormalizeAudioForMic() {
-
-    try {
-        AudioManager am =
-                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-
-        if (am == null) return;
-
-        try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-        try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-
-        try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
-        try { am.setSpeakerphoneOn(false); } catch (Throwable ignore) {}
-
-        // ?? ΤΟ ΣΗΜΑΝΤΙΚΟ
-        try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
-
-        SystemClock.sleep(300);
-
-    } catch (Throwable ignore) {}
-}
-
 // ============================================================
 // HELPERS REQUIRED BY LAB 4 PRO (STRICT – DO NOT TOUCH)
 // ============================================================
@@ -6641,13 +6618,40 @@ private void lab4MicManual() {
             btnExport.setAlpha(0.5f);
         }
     });
-    // Never commandeer an active call or another app's communication route.
+    // Preserve the user's active audio routing. Android source profiles do not
+    // identify a physical microphone, especially with external accessories.
     AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
-    if (am == null || am.getMode() != AudioManager.MODE_NORMAL) {
+    boolean normalAudio = false, inventoryKnown = false;
+    boolean externalOutput = false, micMuted = true;
+    try {
+        if (am != null) {
+            normalAudio = am.getMode() == AudioManager.MODE_NORMAL;
+            micMuted = am.isMicrophoneMute();
+            AudioDeviceInfo[] outputs = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+            inventoryKnown = outputs != null && outputs.length > 0;
+            if (outputs != null) {
+                for (AudioDeviceInfo output : outputs) {
+                    if (output != null
+                            && AcousticOutputRoutePolicy.couldBeExternalOutput(output.getType())) {
+                        externalOutput = true;
+                        break;
+                    }
+                }
+            }
+        }
+    } catch (RuntimeException ignored) {
+        inventoryKnown = false;
+    }
+    if (!Lab4AudioPreflight.canStart(normalAudio, inventoryKnown,
+                                    externalOutput, micMuted)) {
         logLabelWarnValue(AppLang.isGreek(this) ? "Διαδρομή ήχου" : "Audio state",
                 AppLang.isGreek(this)
-                        ? "Μη διαθέσιμο: ο ήχος χρησιμοποιείται ή δεν διατίθεται. Επανάλαβε μετά την κλήση."
-                        : "UNAVAILABLE: audio in use or unavailable; retry after the call.");
+                        ? "ΜΗ ΔΙΑΘΕΣΙΜΟ — ενεργή κλήση, σίγαση μικροφώνου, "
+                          + "άγνωστη ή εξωτερική διαδρομή (Bluetooth/USB/ακουστικά). "
+                          + "Καμία ρύθμιση ήχου δεν άλλαξε."
+                        : "UNAVAILABLE — active call, microphone mute, unknown "
+                          + "or external Bluetooth/USB/wired audio route. "
+                          + "No audio settings were changed.");
         finishLab4Guided();
         return;
     }
@@ -6696,7 +6700,7 @@ private void lab4MicBase(Runnable onFinished) {
                        : "Android MIC source-profile capture:");
             logLine();
 
-            hardNormalizeAudioForMic();
+            // Keep the current Android capture route; avoid global audio resets.
             MicDiagnosticEngine.Result bottom =
                     MicDiagnosticEngine.run(this, MicDiagnosticEngine.MicType.BOTTOM);
             if (!lab4GuidedPending.get() || lab4Cancelled.get()) return;
@@ -6723,7 +6727,7 @@ private void lab4MicBase(Runnable onFinished) {
                        : "Android CAMCORDER source-profile capture:");
             logLine();
 
-            hardNormalizeAudioForMic();
+            // Keep the current Android capture route; avoid global audio resets.
             MicDiagnosticEngine.Result top =
                     MicDiagnosticEngine.run(this, MicDiagnosticEngine.MicType.TOP);
             if (!lab4GuidedPending.get() || lab4Cancelled.get()) return;
@@ -6848,11 +6852,11 @@ private void lab4MicPro() {
 // 🔊 Force call audio path
 AudioManager amCall = (AudioManager) getSystemService(AUDIO_SERVICE);
 if (amCall != null) {
-    try { amCall.stopBluetoothSco(); } catch (Throwable ignore) {}
-    try { amCall.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-    try { amCall.setSpeakerphoneOn(false); } catch (Throwable ignore) {}
-    try { amCall.setMicrophoneMute(false); } catch (Throwable ignore) {}
-    try { amCall.setMode(AudioManager.MODE_IN_COMMUNICATION); } catch (Throwable ignore) {}
+    // Route to the call earpiece for the consented guided test without
+    // globally unmuting the microphone or disconnecting Bluetooth.
+    try { amCall.setSpeakerphoneOn(false); } catch (RuntimeException ignored) {}
+    try { amCall.setMode(AudioManager.MODE_IN_COMMUNICATION); }
+    catch (RuntimeException ignored) {}
 }
 
 AtomicBoolean cancelled = lab4Cancelled;
@@ -7422,8 +7426,7 @@ private void playAnswerCheckWav() {
 
     AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
     if (am != null) {
-        try { am.stopBluetoothSco(); } catch (RuntimeException ignored) {}
-        try { am.setBluetoothScoOn(false); } catch (RuntimeException ignored) {}
+        // No global Bluetooth SCO manipulation for a local playback test.
         try { am.setSpeakerphoneOn(false); } catch (RuntimeException ignored) {}
         try { am.setMode(AudioManager.MODE_IN_COMMUNICATION); }
         catch (RuntimeException ignored) {}
