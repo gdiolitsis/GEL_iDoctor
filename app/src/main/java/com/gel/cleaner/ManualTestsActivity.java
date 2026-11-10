@@ -23517,13 +23517,13 @@ root.addView(buildMuteRow());
 // TTS — GLOBAL ENGINE
 // ==========================
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
-
-    if (!AppTTS.isMuted(this)) {
-
+    if (Lab15SessionGate.mayContinue(
+            lab15ThisGeneration, lab15SessionGeneration,
+            lab15Running, lab15Finished, isFinishing() || isDestroyed())
+            && lab15Dialog != null && lab15Dialog.isShowing()
+            && !AppTTS.isMuted(this)) {
         AppTTS.ensureSpeak(this, text);
-
     }
-
 }, 120);
 
 // ============================================================
@@ -23623,8 +23623,9 @@ ui.post(new Runnable() {
     @Override
     public void run() {
 
-        if (!lab15Running || lab15Finished || isFinishing()
-                || lab15ThisGeneration != lab15SessionGeneration) {
+        if (!Lab15SessionGate.mayContinue(
+                lab15ThisGeneration, lab15SessionGeneration,
+                lab15Running, lab15Finished, isFinishing() || isDestroyed())) {
     ui.removeCallbacks(this);
     return;
 }
