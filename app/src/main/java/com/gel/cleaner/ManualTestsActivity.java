@@ -27001,16 +27001,9 @@ private void lab29DeviceAuthenticity() {
 
     appendHtml("<br>");
 
-if (!isDeviceRooted()) {
-
-    logLabelValue(
-            gr ? "Advanced verification"
-               : "Advanced verification",
-            gr
-                    ? "Ορισμένοι πρόσθετοι έλεγχοι δεν είναι διαθέσιμοι χωρίς root"
-                    : "Some additional checks are unavailable without root"
-    );
-}
+logLabelWarnValue(gr ? "Όριο επαλήθευσης" : "Verification boundary",
+        gr ? "Γνησιότητα ανταλλακτικών: απαιτείται ανεξάρτητη τεκμηρίωση OEM ή φυσικός έλεγχος."
+           : "Component authenticity requires independent OEM evidence or physical inspection.");
 
     // Android platform observations do not authenticate OEM replacement parts.
 
@@ -27025,27 +27018,23 @@ if (!isDeviceRooted()) {
     int batteryLevel = getBatteryPercentSafe();
     float voltage = getBatteryVoltageFiltered();
 
-    if (batteryLevel < 0 ||
-    Float.isNaN(voltage) ||
-    voltage < 2.5f ||
-    voltage > 5.5f) {
-
-        logLabelWarnValue(
-                gr ? "Μπαταρία" : "Battery",
-                gr
-                        ? "Ασυνήθιστες τιμές μέτρησης"
-                        : "Abnormal measurement values"
-        );
-
+    if (batteryLevel >= 0 && batteryLevel <= 100) {
+        logLabelValue(gr ? "Φόρτιση Android" : "Android-reported charge",
+                batteryLevel + "%");
     } else {
-
-        logLabelOkValue(
-                gr ? "Μπαταρία" : "Battery",
-                gr
-                        ? "Μετρήσεις φυσιολογικές"
-                        : "Measurements normal"
-        );
+        logLabelWarnValue(gr ? "Φόρτιση" : "Charge level",
+                gr ? "Μη διαθέσιμη" : "Unavailable");
     }
+    if (Float.isFinite(voltage) && voltage > 0f) {
+        logLabelValue(gr ? "Αναφερόμενη τάση" : "Reported pack voltage",
+                String.format(Locale.US, "%.3f V", voltage));
+    } else {
+        logLabelWarnValue(gr ? "Τάση" : "Battery voltage",
+                gr ? "Μη διαθέσιμη" : "Unavailable");
+    }
+    logLabelWarnValue(gr ? "Υγεία/προέλευση μπαταρίας" : "Battery health/origin",
+            gr ? "ΔΕΝ ΠΙΣΤΟΠΟΙΟΥΝΤΑΙ από SoC ή τάση. Η διάταξη κυψελών δεν είναι γνωστή."
+               : "NOT certified by SoC or voltage; cell configuration is unknown.");
 
     // ============================================================
     // DISPLAY
@@ -27057,30 +27046,18 @@ if (!isDeviceRooted()) {
 
     Display display = getWindowManager().getDefaultDisplay();
 
-    float refreshRate = 60f;
+    float refreshRate = Float.NaN;
 
     if (display != null)
         refreshRate = display.getRefreshRate();
 
-    if (refreshRate < 30f) {
-
-        logLabelWarnValue(
-                gr ? "Οθόνη" : "Display",
-                gr
-                        ? "Ασυνήθιστος ρυθμός ανανέωσης"
-                        : "Unusual refresh rate"
-        );
-
+    if (Float.isFinite(refreshRate) && refreshRate > 0f) {
+        logLabelValue(gr ? "Ρυθμός που αναφέρει το Android"
+                         : "Android-reported display rate",
+                String.format(Locale.US, "%.1f Hz — not panel integrity", refreshRate));
     } else {
-
-        logLabelOkValue(
-                gr ? "Οθόνη" : "Display",
-                String.format(Locale.US,
-                        gr
-                                ? "Ρυθμός: %.1f Hz"
-                                : "Rate: %.1f Hz",
-                        refreshRate)
-        );
+        logLabelWarnValue(gr ? "Οθόνη" : "Display",
+                gr ? "Ρυθμός μη διαθέσιμος" : "Refresh rate unavailable");
     }
 
     // ============================================================
@@ -27106,11 +27083,10 @@ if (!isDeviceRooted()) {
 
     } else {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Κάμερα" : "Camera",
-                gr
-                        ? "Εντοπίστηκε"
-                        : "Detected"
+                gr ? "Το Android αναφέρει δυνατότητα κάμερας· δεν δοκιμάστηκε η λειτουργία."
+                   : "Android advertises a camera feature; operation was not tested."
         );
     }
 
@@ -27169,12 +27145,10 @@ if (!isDeviceRooted()) {
 
             if (!missing) {
 
-                logLabelOkValue(
-                        gr ? "Αισθητήρες"
-                                : "Sensors",
-                        gr
-                                ? "Βασικοί αισθητήρες διαθέσιμοι"
-                                : "Core sensors available"
+                logLabelValue(
+                        gr ? "Αισθητήρες" : "Sensors",
+                        gr ? "Το Android αναφέρει βασικούς αισθητήρες· λειτουργία μη ελεγμένη."
+                           : "Android advertises common sensors; functionality unverified."
                 );
             }
         }
