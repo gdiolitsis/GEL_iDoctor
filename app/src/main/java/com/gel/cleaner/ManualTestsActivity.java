@@ -26987,11 +26987,7 @@ private void lab29DeviceAuthenticity() {
     SharedPreferences p =
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
-    boolean lab14CollapseRisk =
-            p.getBoolean("lab14_collapse_risk", false);
-
-    boolean lab14SwellingSuspected =
-        p.getBoolean("lab14_swelling_risk", false);
+    // Historical flags are unversioned; do not use for physical-part diagnosis.
 
     appendHtml("<br>");
     logLine();
@@ -27228,55 +27224,25 @@ if (!isDeviceRooted()) {
     );
 
     // ============================================================
-    // FLAGS FROM OTHER LABS
     // ============================================================
-
-    boolean sensorFlaps =
-            p.getBoolean("lab28_sensor_flaps", false);
-
-    boolean radioInstability =
-            p.getBoolean("lab28_radio_instability", false);
-
-    boolean thermalSpike =
-            p.getBoolean("lab28_thermal_spike", false);
-
-    boolean rebootPattern =
-            p.getBoolean("lab28_reboot_pattern", false);
-
-    boolean instabilityPattern =
-            p.getBoolean("lab28_instability_pattern", false);
-
-int instabilityScore = 0;
-
-if (sensorFlaps) instabilityScore += 20;
-if (radioInstability) instabilityScore += 20;
-if (thermalSpike) instabilityScore += 15;
-if (rebootPattern) instabilityScore += 15;
-if (instabilityPattern) instabilityScore += 20;
-
-if (lab14CollapseRisk || lab14SwellingSuspected)
-    instabilityScore += 10;
-
-    appendHtml("<br>");
-
+    // LEGACY SOURCE LIMITATION
     // ============================================================
-    // FINAL
-    // ============================================================
-
+    // Never treat old Lab14/28 preference booleans as current faults.
+    logLabelWarnValue(gr ? "Παλιά διαγνωστικά flags" : "Legacy diagnostic flags",
+            gr ? "Δεν χρησιμοποιούνται για νέα διάγνωση hardware."
+               : "Not reused as new physical fault evidence.");
     appendHtml("<br>");
     logLine();
 
 // ============================================================
 // SAVE LAB 29 RESULTS — SINGLE SOURCE FOR LAB 30 / LAB 31
 // ============================================================
-boolean instabilityDetected = instabilityScore >= 20;
-
 p.edit()
-
         .remove("lab29_authenticity_score")
+        .remove("lab29_instability_score")
+        .remove("lab29_instability_pattern")
+        .putInt("lab29_observation_schema", Lab29ObservationCoverage.SCHEMA)
         .putBoolean("lab29_provenance_unverified", true)
-        .putInt("lab29_instability_score", instabilityScore)
-        .putBoolean("lab29_instability_pattern", instabilityDetected)
         .putLong("lab29_ts", System.currentTimeMillis())
         .apply();
 
@@ -27288,7 +27254,7 @@ logLabelWarnValue(
 logLabelValue(
         gr ? "Εύρος ελέγχου" : "Assessment scope",
         gr ? "Διατίθενται μόνο παρατηρήσεις hardware και ενδείξεις αστάθειας."
-           : "Hardware observations and instability indicators only."
+           : "Scoped Android observations only; instability and OEM origin remain unverified."
 );
 
     appendHtml("<br>");
@@ -27527,14 +27493,9 @@ String privacyFlag = colorFlagFromScore(privacyScore);
 // 9) AUTHENTICITY / REPAIR INDICATORS (LAB 29)
 // ------------------------------------------------------------
 
-boolean lab29ObservationsAvailable =
-        p.getBoolean("lab29_provenance_unverified", false);
-
-int lab29InstabilityScore =
-        p.getInt("lab29_instability_score", 0);
-
-boolean lab29InstabilityPattern =
-        p.getBoolean("lab29_instability_pattern", false);
+boolean lab29ObservationsAvailable = Lab29ObservationCoverage.isFresh(
+        p.getInt("lab29_observation_schema", 0),
+        p.getLong("lab29_ts", 0L), System.currentTimeMillis());
 
 appendHtml("<br>");
 logInfo(gr
@@ -27561,13 +27522,9 @@ if (lab29ObservationsAvailable) {
     );
 }
 
-if (lab29InstabilityPattern) {
-
-    logLabelWarnValue(
-            gr ? "Μοτίβο αστάθειας" : "Instability pattern",
-            lab29InstabilityScore + "/100"
-    );
-}
+logLabelWarnValue(gr ? "Απόδοση αστάθειας" : "Instability attribution",
+        gr ? "ΑΓΝΩΣΤΗ — δεν υπάρχουν συγχρονισμένα τεκμηριωμένα συμβάντα."
+           : "UNKNOWN — no corroborated time-aligned fault events.");
 
 // ------------------------------------------------------------
 // UNIFIED HARDWARE RISK SCORE
@@ -27602,8 +27559,7 @@ if (sensorBusInstability)
 if (thermalRunawayRisk)
     hardwareRiskScore += 10;
     
-if (lab29InstabilityPattern)
-    hardwareRiskScore += 10;
+// Stale Lab29 flags cannot contribute to device risk.
     
 // hard cap — score is always 0..100
 hardwareRiskScore = Math.max(
@@ -28076,7 +28032,7 @@ if (pmicInstability) riskSignals++;
 if (sensorBusInstability) riskSignals++;
 
 // LAB 29 INSTABILITY
-if (lab29InstabilityPattern) riskSignals++;
+// Stale Lab29 flags cannot count as a physical risk signal.
 
 if (riskSignals == 1) {
 
@@ -29651,91 +29607,34 @@ if (lab14bConsumptionPerHour > 0f &&
 // DEVICE INTEGRITY / INSTABILITY FINDINGS
 // LAB 29 confirmed measurements — no manipulation accusation
 // ------------------------------------------------------------
-int lab29AuthenticityScore =
-        p.getInt("lab29_authenticity_score", -1);
-
-int lab29InstabilityScore =
-        p.getInt("lab29_instability_score", 0);
-
-boolean hwInstability =
-        p.getBoolean("lab29_instability_pattern", false);
+boolean lab29ScopedObservation = Lab29ObservationCoverage.isFresh(
+        p.getInt("lab29_observation_schema", 0),
+        p.getLong("lab29_ts", 0L), System.currentTimeMillis());
 
 appendHtml("<br>");
 
 // ------------------------------------------------------------
 // AUTHENTICITY / INTEGRITY RESULT
 // ------------------------------------------------------------
-if (lab29AuthenticityScore >= 0) {
-
-    if (lab29AuthenticityScore >= 90) {
-
-        logLabelOkValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100"
-        );
-
-    } else if (lab29AuthenticityScore >= 70) {
-
-        logLabelWarnValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100 — " +
-                        (gr
-                                ? "Απαιτείται επανέλεγχος αποκλίσεων"
-                                : "Detected deviations require verification")
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100 — " +
-                        (gr
-                                ? "Εντοπίστηκαν σημαντικές αποκλίσεις"
-                                : "Significant integrity deviations detected")
-        );
-    }
-
+if (lab29ScopedObservation) {
+    logLabelWarnValue(gr ? "Γνησιότητα / ακεραιότητα" : "Authenticity / integrity",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ — μόνο πρόσφατες παρατηρήσεις Android"
+               : "NOT VERIFIED — fresh scoped Android observations only");
 } else {
-
-    logLabelWarnValue(
-            gr ? "Ακεραιότητα συσκευής"
-               : "Device integrity",
-            gr
-                    ? "Δεν υπάρχουν διαθέσιμα αποτελέσματα από το LAB 29"
-                    : "No LAB 29 results available"
-    );
+    logLabelWarnValue(gr ? "Γνησιότητα / ακεραιότητα" : "Authenticity / integrity",
+            gr ? "Δεν υπάρχει πρόσφατο Lab 29 νέας μορφής"
+               : "No fresh, versioned Lab 29 observations");
 }
 
 // ------------------------------------------------------------
 // INSTABILITY FINDING
 // ------------------------------------------------------------
-if (hwInstability) {
+logLabelWarnValue(gr ? "Μοτίβο αστάθειας" : "Instability pattern",
+        gr ? "ΑΓΝΩΣΤΟ — απουσιάζουν επαληθευμένα συγχρονισμένα συμβάντα"
+           : "UNKNOWN — no validated time-aligned fault events");
 
-    logLabelWarnValue(
-            gr ? "Μοτίβο αστάθειας"
-               : "Instability pattern",
-            lab29InstabilityScore + "/100 — " +
-                    (gr
-                            ? "Απαιτείται τεχνικός επανέλεγχος"
-                            : "Technician verification recommended")
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Μοτίβο αστάθειας"
-               : "Instability pattern",
-            gr
-                    ? "Δεν εντοπίστηκε"
-                    : "Not detected"
-    );
-}
-
-    // ------------------------------------------------------------
-    // 8) EXPORT NOTE
+// ------------------------------------------------------------
+// 8) EXPORT NOTE
     // ------------------------------------------------------------
     appendHtml("<br>");
 
