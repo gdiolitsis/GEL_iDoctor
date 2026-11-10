@@ -27723,18 +27723,8 @@ if (sensorBusInstability) {
 // ------------------------------------------------------------
 // LAB 29 INTEGRITY / INSTABILITY
 // ------------------------------------------------------------
-if (lab29InstabilityPattern) {
-
-    faultDetected = true;
-
-    logLabelWarnValue(
-            gr ? "Ακεραιότητα συσκευής"
-               : "Device integrity",
-            gr
-                    ? "Το LAB 29 εντόπισε επαναλαμβανόμενο μοτίβο αστάθειας."
-                    : "LAB 29 detected a repeated instability pattern."
-    );
-}
+// Old unversioned Lab 29 instability flags are not measured physical faults.
+// Source-bound observations remain visible in the Lab 29 section above.
 
 // ------------------------------------------------------------
 // FINAL CLASSIFICATION
