@@ -24251,6 +24251,25 @@ private void lab17RunAuto() {
                : "Diagnostic evidence coverage conclusion");
     logLabelValue(gr ? "Πρόσφατες ενότητες" : "Fresh evidence domains",
             availableDomains + "/4");
+    // Restore useful legacy, *targeted* prerequisites without restoring the
+    // arbitrary former 0–100 battery/device score.
+    String missingCore = Lab17EvidenceChecklist.missingCoreLabs(has14, has15, has16);
+    if (missingCore.isEmpty()) {
+        logLabelValue(gr ? "Βασικά εργαστήρια" : "Core diagnostic prerequisites",
+                gr ? "14A, 15 και 16: πρόσφατα διαθέσιμα τεκμήρια"
+                   : "14A, 15 and 16: fresh evidence available");
+        logLabelWarnValue(gr ? "Όριο συμπεράσματος" : "Conclusion limit",
+                gr ? "Πλήρη βασικά τεκμήρια δεν σημαίνουν επαληθευμένη υγεία μπαταρίας."
+                   : "Core evidence coverage does not establish battery health.");
+    } else {
+        logLabelWarnValue(gr ? "Εκτέλεσε ξανά" : "Run missing prerequisites",
+                (gr ? "Μόνο τα εργαστήρια: " : "Only labs: ") + missingCore);
+    }
+    if (!has14b) {
+        logLabelWarnValue(gr ? "Πρόσθετη εκφόρτιση 14B" : "Optional Lab 14B sampling",
+                gr ? "Μη διαθέσιμη· είναι συμπληρωματική, όχι υποχρεωτική για την τριάδα 14A/15/16."
+                   : "Unavailable; optional evidence, not a prerequisite of 14A/15/16.");
+    }
     if (availableDomains == 0) {
         logLabelWarnValue(gr ? "Διαθεσιμότητα" : "Availability",
                 gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — δεν επιτρέπεται συνολική διάγνωση"
