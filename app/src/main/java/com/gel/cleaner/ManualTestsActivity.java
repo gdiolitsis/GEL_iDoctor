@@ -603,6 +603,8 @@ private boolean lab15PopupShown = false;
     // Only true when the CURRENT run returned a fresh 96-zone grid result.
     // Never infer this from TouchGridTestActivity's legacy static fields.
     private boolean lab6TouchGridObserved = false;
+    // Lab 7 phases are independently observed; stale prior runs cannot count.
+    private boolean lab7OrientationObserved = false;
     
 // ============================================================
 // BATTERY SCORE STATE
@@ -8512,7 +8514,11 @@ if (!isFinishing() && !isDestroyed()) {
         start.setOnClickListener(v -> {
             AppTTS.stop();
             d.dismiss();
-
+            lab7OrientationObserved = false;
+            if (btnExport != null) {
+                btnExport.setEnabled(false);
+                btnExport.setAlpha(0.5f);
+            }
             startActivityForResult(
                     new Intent(this, RotationCheckActivity.class),
                     7007
@@ -29954,6 +29960,7 @@ if (requestCode == 7007) {
             || "ANDROID_ACCELEROMETER".equals(orientationSource);
     boolean poseVerified = resultCode == RESULT_OK && sourceSupported
             && "timed_stable_portrait_then_landscape".equals(orientationEvidence);
+    lab7OrientationObserved = poseVerified;
 
     appendHtml("<br>");
     logLine();
@@ -30007,13 +30014,42 @@ if (requestCode == 7007) {
                         : "No second stable orientation confirmed; no hardware fault established"
         );
 
-        appendHtml("<br>");
-        logOk(gr
-                ? "Το Lab 7 ολοκληρώθηκε (περιστροφή μη επιτυχής)."
-                : "Lab 7 finished (rotation incomplete).");
-        logLine();
-
-        enableSingleExportButton();
+        // A cancelled/unverified orientation does not establish a sensor fault
+        // and must not silently prevent an independent proximity observation.
+        if (isFinishing() || isDestroyed()) {
+            enableSingleExportButton();
+            return;
+        }
+        AlertDialog nextPhase = new AlertDialog.Builder(
+                this, android.R.style.Theme_Material_Dialog_NoActionBar)
+                .setTitle(gr ? "Lab 7 — Έλεγχος εγγύτητας"
+                             : "Lab 7 — Proximity check")
+                .setMessage(gr
+                        ? "Η περιστροφή δεν επαληθεύτηκε. Μπορείς να ελέγξεις ανεξάρτητα "
+                            + "την εγγύτητα, χωρίς αυτό να μετατρέψει το αποτέλεσμα "
+                            + "της περιστροφής σε επιτυχία."
+                        : "Rotation was not verified. You may test proximity independently. "
+                            + "This cannot change the unverified rotation result into a pass.")
+                .setPositiveButton(gr ? "ΕΛΕΓΧΟΣ ΕΓΓΥΤΗΤΑΣ" : "TEST PROXIMITY",
+                        (dialog, which) -> {
+                            if (!isFinishing() && !isDestroyed()) {
+                                startActivityForResult(
+                                        new Intent(this, ProximityCheckActivity.class), 8008);
+                            } else {
+                                enableSingleExportButton();
+                            }
+                        })
+                .setNegativeButton(gr ? "ΤΕΡΜΑΤΙΣΜΟΣ" : "FINISH",
+                        (dialog, which) -> {
+                            logLabelWarnValue(gr ? "Κάλυψη Lab 7" : "Lab 7 coverage",
+                                    gr ? "ΜΕΡΙΚΟ — η εγγύτητα δεν ελέγχθηκε"
+                                       : "PARTIAL — proximity was not tested");
+                            enableSingleExportButton();
+                        })
+                .setCancelable(false)
+                .create();
+        nextPhase.show();
+        com.gel.cleaner.GelButtonLayout.fitDialog(nextPhase);
         return;
     }
 }
@@ -30062,10 +30098,30 @@ if (requestCode == 8008) {
         );
     }
 
+    Lab7SensorEvidence.Coverage coverage = Lab7SensorEvidence.coverage(
+            lab7OrientationObserved, proximityVerified);
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 7 ολοκληρώθηκε." : "Lab 7 finished.");
+    if (coverage == Lab7SensorEvidence.Coverage.BOTH_OBSERVED) {
+        logLabelValue(gr ? "Κάλυψη Lab 7" : "Lab 7 coverage",
+                gr ? "Παρατηρήθηκαν και οι δύο ακολουθίες αισθητήρων"
+                   : "Both guided sensor sequences were observed");
+        logLabelValue(gr ? "Όριο διάγνωσης" : "Diagnostic limit",
+                gr ? "Δεν αποτελεί πιστοποίηση αισθητήρων ή σβησίματος οθόνης"
+                   : "Not a sensor certification or display-off verification");
+    } else {
+        String partial = coverage == Lab7SensorEvidence.Coverage.PROXIMITY_ONLY
+                ? (gr ? "ΜΕΡΙΚΟ — εγγύτητα παρατηρήθηκε, περιστροφή μη επαληθευμένη"
+                      : "PARTIAL — proximity observed, rotation unverified")
+                : coverage == Lab7SensorEvidence.Coverage.ORIENTATION_ONLY
+                ? (gr ? "ΜΕΡΙΚΟ — περιστροφή παρατηρήθηκε, εγγύτητα μη επαληθευμένη"
+                      : "PARTIAL — rotation observed, proximity unverified")
+                : (gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ — καμία από τις δύο ακολουθίες"
+                      : "UNVERIFIED — neither guided sequence observed");
+        logLabelWarnValue(gr ? "Κάλυψη Lab 7" : "Lab 7 coverage", partial);
+    }
     logLine();
 
+    lab7OrientationObserved = false;
     enableSingleExportButton();
     return;
 }
