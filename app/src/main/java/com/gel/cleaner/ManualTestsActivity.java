@@ -2421,6 +2421,24 @@ protected void onPause() {
         abortLab13ByUser();
     }
 
+    // Lab 15 is a guided foreground measurement. Backgrounding must
+    // invalidate its callback generation, close the popup and retain no pass.
+    if (lab15Running) {
+        lab15Running = false;
+        lab15Finished = true;
+        lab15SessionGeneration++;
+        try { AppTTS.stop(); } catch (RuntimeException ignored) {}
+        try {
+            if (lab15Dialog != null && lab15Dialog.isShowing()) lab15Dialog.dismiss();
+        } catch (RuntimeException ignored) {}
+        lab15Dialog = null;
+        logLabelWarnValue(AppLang.isGreek(this) ? "Lab 15" : "Lab 15",
+                AppLang.isGreek(this)
+                        ? "ΔΙΑΚΟΠΗ — η εφαρμογή πέρασε στο παρασκήνιο, χωρίς συμπέρασμα"
+                        : "CANCELLED — application backgrounded, no diagnostic conclusion");
+        enableSingleExportButton();
+    }
+
     // =========================
     // LAB 14 / 14B
     // =========================
