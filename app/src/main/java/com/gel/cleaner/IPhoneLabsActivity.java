@@ -259,16 +259,8 @@ View importBtn = makeLabButton(
         v -> {
 
             if (!requireGelPro(gr ? "Εισαγωγή Panic Logs (TXT / ZIP)" : "Panic Log Import (TXT / ZIP)")) return;
-
-            // CLEAN PREVIOUS LOGS
-            panicLogText = null;
-            panicLogLoaded = false;
-            panicLogCount = 0;
+            // Commit only a successfully validated replacement, not a cancelled picker.
             appendMode = false;
-
-            logOk(gr
-                    ? "Τα προηγούμενα panic logs διαγράφηκαν."
-                    : "Previous panic logs cleared.");
 
             openPanicLogPicker();
         }
@@ -1204,12 +1196,6 @@ protected void onActivityResult(int requestCode,
 
     boolean gr = AppLang.isGreek(this);
 
-    if (!appendMode) {
-        panicLogCount = 0;
-        panicLogText  = null;
-        panicLogLoaded = false;
-    }
-
     if (resultCode != RESULT_OK || data == null) {
         logWarn(gr
                 ? "Η εισαγωγή ακυρώθηκε."
@@ -1293,10 +1279,9 @@ for (Uri uri : uris) {
     if (allLogs.length() + text.length() > MAX_PANIC_LOG_SIZE) {
 
         logWarn(gr
-                ? "Το μέγεθος των panic logs είναι πολύ μεγάλο. Η φόρτωση περιορίστηκε."
-                : "Panic logs too large. Import truncated.");
-
-        break;
+                ? "Υπέρβαση ορίου μεγέθους. Διατηρήθηκε η προηγούμενη ανάλυση."
+                 : "Import size limit exceeded. Previous analysis preserved.");
+        throw new java.io.IOException("Import exceeds combined panic size cap");
     }
 
     // delimiter για τα LAB parsers
@@ -1319,9 +1304,12 @@ for (Uri uri : uris) {
                     : "All files were empty.");
         }
 
-        panicLogCount = appendMode
-        ? panicLogCount + loadedCount
-        : loadedCount;
+        // The number of supported panic entries is not the number of ZIP containers.
+        // It is NOT a claim of distinct devices or independent crash events.
+        int supportedBlocks = countSupportedPanicBlocks(
+                allLogs.toString().split("(?m)^===== ZIP FILE:"));
+        if (supportedBlocks == 0) throw new java.io.IOException("No supported panic entries");
+        panicLogCount = supportedBlocks;
 
 panicLogName = (panicLogCount == 1)
         ? (gr ? "Ένα panic log"
@@ -1384,10 +1372,7 @@ logOk(gr
 logLine();
 
 } catch (Exception e) {
-
-    panicLogLoaded = false;
-    panicLogText   = null;
-
+    // Failed replacement or append must never destroy the prior valid evidence.
     logError(gr
         ? "Αποτυχία εισαγωγής panic logs."
         : "Panic logs import failed.");
