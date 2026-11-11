@@ -55,7 +55,7 @@ public class ApplePanicEvidencePolicyTest {
         String multi = "\n===== ZIP FILE: panic-a.ips =====\n"
                 + "panic(cpu 0): baseband crash without the other required token\n"
                 + "===== ZIP FILE: panic-b.ips =====\n"
-                + "panic(cpu 1): modem interface error without baseband reference\n";
+                + "panic(cpu 1): modem interface error; companion phrase absent\n";
         assertFalse(ApplePanicEvidencePolicy.tokensMatchOnePanic(
                 multi, java.util.Arrays.asList("baseband", "modem")));
     }
