@@ -22,6 +22,13 @@ public class GelButton extends AppCompatButton {
         setPadding(getPaddingLeft(), Math.max(getPaddingTop(), dp(12)),
                 getPaddingRight(), Math.max(getPaddingBottom(), dp(12)));
     }
+    @Override protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        // Apply after screen/dialog code has assigned its local legacy colours.
+        // This changes the presentation only, not any OnClickListener.
+        post(() -> GelActionButtonStyle.apply(this));
+    }
+
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
