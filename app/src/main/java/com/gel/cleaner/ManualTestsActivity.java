@@ -8056,8 +8056,8 @@ private void lab5Vibration() {
             appendHtml("<br>");
             logInfo(
                     gr
-                            ? "Έλεγχος ρυθμίσεων συστήματος:"
-                            : "System settings check:"
+                            ? "Ρυθμίσεις που επηρεάζουν τη δόνηση"
+                            : "Settings that affect vibration"
             );
             logLine();
 
