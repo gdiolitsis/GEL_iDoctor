@@ -8590,28 +8590,32 @@ tvMsg.setPadding(0, 0, 0, 32);
 root.addView(tvMsg);
 
 // ---------------------------
-// START BUTTON
+// EXIT + START (shared GEL palette and equal adaptive dimensions)
 // ---------------------------
+LinearLayout buttons = new LinearLayout(this);
+buttons.setOrientation(LinearLayout.HORIZONTAL);
+buttons.setGravity(Gravity.CENTER);
+
+Button exitBtn = new com.gel.cleaner.GelButton(this);
+exitBtn.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
+exitBtn.setAllCaps(false);
+GelActionButtonStyle.apply(exitBtn);
+
 Button startBtn = new com.gel.cleaner.GelButton(this);
-startBtn.setAllCaps(false);
 startBtn.setText(gr ? "ΕΝΑΡΞΗ ΤΕΣΤ" : "START TEST");
-startBtn.setTextColor(Color.WHITE);
-startBtn.setTextSize(16f);
+startBtn.setAllCaps(false);
+GelActionButtonStyle.apply(startBtn);
 
-GradientDrawable startBg = new GradientDrawable();
-startBg.setColor(0xFF0F8A3B);
-startBg.setCornerRadius(10);
-startBg.setStroke(3, 0xFFFFD700);
-startBtn.setBackground(startBg);
+LinearLayout.LayoutParams exitLp = new LinearLayout.LayoutParams(
+        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+exitLp.setMargins(dp(6), dp(10), dp(6), dp(4));
+LinearLayout.LayoutParams startLp = new LinearLayout.LayoutParams(
+        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+startLp.setMargins(dp(6), dp(10), dp(6), dp(4));
 
-LinearLayout.LayoutParams lpStart =
-        new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                120
-        );
-startBtn.setLayoutParams(lpStart);
-
-root.addView(startBtn);
+buttons.addView(exitBtn, exitLp);
+buttons.addView(startBtn, startLp);
+root.addView(buttons);
 
 b.setView(root);
 b.setCancelable(false);
@@ -8629,13 +8633,24 @@ d.setOnDismissListener(dialog -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 });
 
-// Κάλυψη BACK
+// The existing Android Back path remains functional. Both Back and EXIT
+// produce a neutral "NOT RUN" entry, never a hardware PASS/FAIL.
+final Runnable cancelBeforeTouch = () -> {
+    if (!d.isShowing()) return;
+    logLabelValue(
+            gr ? "LAB 6 — Δοκιμή αφής" : "LAB 6 — Touch test",
+            gr ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — ακύρωση πριν από την έναρξη"
+               : "NOT RUN — canceled before start");
+    logLine();
+    d.dismiss(); // Existing OnDismissListener stops AppTTS.
+};
+
+exitBtn.setOnClickListener(v -> cancelBeforeTouch.run());
+
 d.setOnKeyListener((dialog, keyCode, event) -> {
     if (keyCode == KeyEvent.KEYCODE_BACK &&
         event.getAction() == KeyEvent.ACTION_UP) {
-
-        try { AppTTS.stop(); } catch (Throwable ignore) {}
-        dialog.dismiss();
+        cancelBeforeTouch.run();
         return true;
     }
     return false;
