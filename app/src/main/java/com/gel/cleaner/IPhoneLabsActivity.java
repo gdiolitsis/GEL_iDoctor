@@ -147,6 +147,8 @@ private boolean looksCorruptedPanic(String text) {
     // ============================================================
     // STATE (CANONICAL)
     // ============================================================
+    // Demo evidence is UI-only. Never write simulated results to the shared report.
+    private boolean demoMode = false;
     private boolean panicLogLoaded = false;
     private String  panicLogName   = null;
     private String  panicLogText   = null;
@@ -2070,85 +2072,63 @@ private void runFinalServiceRecommendationLab() {
 // DEMO
 // ============================================================
 private void runDemoDiagnostics() {
-
-    new Thread(() -> {
-
-        boolean gr = AppLang.isGreek(this);
-
+    // Called from a user click on the main thread. The in-memory demo text
+    // and its eight bounded parsers are not a real imported iPhone report.
+    final String previousText = panicLogText;
+    final String previousName = panicLogName;
+    final boolean previousLoaded = panicLogLoaded;
+    final int previousCount = panicLogCount;
+    final boolean previousAppend = appendMode;
+    final String previousCrashType = sigCrashType;
+    final String previousDomain = sigDomain;
+    final String previousConfidence = sigConfidence;
+    final String previousKeyEvidence = sigKeyEvidence;
+    final boolean gr = AppLang.isGreek(this);
+    demoMode = true;
+    try {
         logLine();
-logInfo(gr
-        ? "DEMO MODE — ΔΙΑΓΝΩΣΗ APPLE"
-        : "DEMO MODE — APPLE DIAGNOSTICS");
+        logInfo(gr
+                ? "DEMO MODE — ΠΡΟΣΟΜΟΙΩΣΗ APPLE (όχι δεδομένα πελάτη)"
+                : "DEMO MODE — APPLE SIMULATION (not customer evidence)");
         logLine();
 
-        try {
+        panicLogText = buildDemoPanicLogs();
+        panicLogLoaded = true;
+        panicLogName = gr ? "Δοκιμαστικά panic logs" : "Simulated panic logs";
+        panicLogCount = countSupportedPanicBlocks(
+                panicLogText.split("(?m)^===== ZIP FILE:"));
+        logLabelOkValue(gr ? "Συσκευή demo:" : "Demo device:",
+                safe(detectDeviceType(panicLogText)));
+        logOk(gr ? "Φορτώθηκαν δοκιμαστικά δεδομένα μόνο για εμφάνιση."
+                 : "Simulation data loaded for on-screen demonstration only.");
 
-            // ====================================================
-            // LOAD BUILT-IN DEMO LOGS
-            // ====================================================
-
-            panicLogText   = buildDemoPanicLogs();
-            panicLogLoaded = true;
-            
-            String device = detectDeviceType(panicLogText);
-
-logLabelOkValue(
-        gr ? "Συσκευή:" : "Device:",
-        safe(device)
-);
-        
-            panicLogName   = gr
-                    ? "Ενσωματωμένα demo panic logs"
-                    : "Built-in demo panic logs";
-
-            panicLogCount = panicLogText.split("===== ZIP FILE:").length - 1;
-
-            logOk(gr
-                    ? "Φορτώθηκαν ενσωματωμένα demo panic logs."
-                    : "Built-in demo panic logs loaded.");
-
-            SystemClock.sleep(100);
-
-            // ====================================================
-            // RUN ALL LABS
-            // ====================================================
-
-            runPanicLogAnalyzer();
-            SystemClock.sleep(100);
-
-            runPanicSignatureParser();
-            SystemClock.sleep(100);
-
-            runStabilityLab();
-            SystemClock.sleep(100);
-
-            runImpactLab();
-            SystemClock.sleep(100);
-
-            runPanicFrequencyLab();
-            SystemClock.sleep(100);
-
-            runPanicClusteringLab();
-            SystemClock.sleep(100);
-
-            runRecurringDomainLab();
-            SystemClock.sleep(100);
-            
-            runFinalServiceRecommendationLab();
-
-            logOk(gr
-                    ? "Η διάγνωση των demo panic logs ολοκληρώθηκε."
-                    : "Demo panic log diagnostics completed.");
-
-        } catch (Throwable t) {
-
-            logLabelErrorValue(
-        gr ? "Αποτυχία demo διάγνωσης:" : "Demo diagnostics failed:",
-        safe(t.getMessage())
-);
-        }
-
-    }).start();
+        runPanicLogAnalyzer();
+        runPanicSignatureParser();
+        runStabilityLab();
+        runImpactLab();
+        runPanicFrequencyLab();
+        runPanicClusteringLab();
+        runRecurringDomainLab();
+        runFinalServiceRecommendationLab();
+        logWarn(gr
+                ? "Τέλος DEMO: κανένα δοκιμαστικό αποτέλεσμα δεν αποθηκεύτηκε στην αναφορά service."
+                : "DEMO finished: no simulated results were stored in the service report.");
+    } catch (Throwable t) {
+        logLabelErrorValue(gr ? "Αποτυχία demo:" : "Demo failed:", safe(t.getMessage()));
+    } finally {
+        // Restore the prior real import (if any); a demo never grants the
+        // ability to run real LABs without previously imported customer logs.
+        panicLogText = previousText;
+        panicLogLoaded = previousLoaded;
+        panicLogName = previousName;
+        panicLogCount = previousCount;
+        appendMode = previousAppend;
+        sigCrashType = previousCrashType;
+        sigDomain = previousDomain;
+        sigConfidence = previousConfidence;
+        sigKeyEvidence = previousKeyEvidence;
+        demoMode = false;
+    }
 }
 
 // ============================================================
@@ -2457,33 +2437,33 @@ private void logInfo(String msg) {
     String clean = safe(msg);
     String s = "ℹ️ " + clean;
     appendHtml(escape(s));
-    GELServiceLog.logInfo(clean);
+    if (!demoMode) GELServiceLog.logInfo(clean);
 }
 
 private void logOk(String msg) {
     String clean = safe(msg);
     String s = "✔ " + clean;
     appendHtml("<font color='#39FF14'>" + escape(s) + "</font>");
-    GELServiceLog.logOk(clean);
+    if (!demoMode) GELServiceLog.logOk(clean);
 }
 
 private void logWarn(String msg) {
     String clean = safe(msg);
     String s = "⚠ " + clean;
     appendHtml("<font color='#FFD966'>" + escape(s) + "</font>");
-    GELServiceLog.logWarn(clean);
+    if (!demoMode) GELServiceLog.logWarn(clean);
 }
 
 private void logError(String msg) {
     String clean = safe(msg);
     String s = "✖ " + clean;
     appendHtml("<font color='#FF5555'>" + escape(s) + "</font>");
-    GELServiceLog.logError(clean);
+    if (!demoMode) GELServiceLog.logError(clean);
 }
 
 private void logLine() {
     appendHtml("--------------------------------------------------");
-    GELServiceLog.logLine();
+    if (!demoMode) GELServiceLog.logLine();
 }
 
 // ============================================================
@@ -2498,7 +2478,7 @@ private void logLabelOkValue(String label, String value) {
             "<font color='#39FF14'>" + escape(v) + "</font>"
     );
 
-    GELServiceLog.logInfo(l + " " + v);
+    if (!demoMode) GELServiceLog.logInfo(l + " " + v);
 }
 
 private void logLabelWarnValue(String label, String value) {
@@ -2510,7 +2490,7 @@ private void logLabelWarnValue(String label, String value) {
             "<font color='#FFD966'>" + escape(v) + "</font>"
     );
 
-    GELServiceLog.logWarn(l + " " + v);
+    if (!demoMode) GELServiceLog.logWarn(l + " " + v);
 }
 
 private void logLabelErrorValue(String label, String value) {
@@ -2522,7 +2502,7 @@ private void logLabelErrorValue(String label, String value) {
             "<font color='#FF5555'>" + escape(v) + "</font>"
     );
 
-    GELServiceLog.logError(l + " " + v);
+    if (!demoMode) GELServiceLog.logError(l + " " + v);
 }
 
 // ------------------------------------------------------------
