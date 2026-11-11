@@ -154,8 +154,9 @@ def verify_eight_buttons():
     return "All eight lab entries visible through scrolling"
 
 def demo_only():
-    # Return to start of Labs by re-opening the screen without account actions.
+    # Reopen main to reset scroll position after visiting LAB 8.
     adb("shell","input","keyevent","4")
+    start_home()
     tap(must(by_id("btnAppleInfoContinue"),"Cannot reopen Apple Labs",10))
     guide=find(by_text(r"PANIC LOGS.*(?:Import Guide|Οδηγός Εισαγωγής)"))
     if guide is not None: tap(must(by_text(r"^OK$"),"Guide OK unreachable",8))
