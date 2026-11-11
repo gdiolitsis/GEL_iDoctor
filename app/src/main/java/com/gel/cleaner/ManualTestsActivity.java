@@ -30191,13 +30191,6 @@ if (requestCode == 8008) {
                 gr ? "Επιβεβαιώθηκε" : "Confirmed"
         );
 
-        logLabelWarnValue(
-                gr ? "Συμπεριφορά οθόνης" : "Screen behavior",
-                gr
-                        ? "Δεν μετρήθηκε η κατάσταση οθόνης· δεν επιβεβαιώθηκε σβήσιμο σε κλήση"
-                        : "Display power was not measured; call-screen blanking is unverified"
-        );
-
     } else {
 
         logLabelWarnValue(
@@ -30220,9 +30213,6 @@ if (requestCode == 8008) {
         logLabelValue(gr ? "Κάλυψη Lab 7" : "Lab 7 coverage",
                 gr ? "Παρατηρήθηκαν και οι δύο ακολουθίες αισθητήρων"
                    : "Both guided sensor sequences were observed");
-        logLabelValue(gr ? "Όριο διάγνωσης" : "Diagnostic limit",
-                gr ? "Δεν αποτελεί πιστοποίηση αισθητήρων ή σβησίματος οθόνης"
-                   : "Not a sensor certification or display-off verification");
     } else {
         String partial = coverage == Lab7SensorEvidence.Coverage.PROXIMITY_ONLY
                 ? (gr ? "ΜΕΡΙΚΟ — εγγύτητα παρατηρήθηκε, περιστροφή μη επαληθευμένη"
