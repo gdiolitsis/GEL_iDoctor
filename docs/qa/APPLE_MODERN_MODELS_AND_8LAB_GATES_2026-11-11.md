@@ -57,3 +57,29 @@ Source for first/second-generation UWB generations and regional limitations: htt
 - [ ] Human acceptance, then approved promotion to main; separately fix Google OAuth certificate registration for final signed APK.
 
 **No real iPhone or iPad hardware was instrumented by this Android-host QA change.** Imported logs are observations and depend on schema and completeness, not calibrated electrical tests.
+
+
+## Exact source-method parity check against PR #79 QA base (2026-11-11)
+
+The values below are **method characters**, including braces and whitespace, not full functional bytecode. A shorter method is not automatically loss of functionality.
+
+| Method (IPhoneLabsActivity) | Before | After | Reason |
+|---|---:|---:|---|
+| runAllAppleDiagnostics | 1,130 | 1,130 | Unchanged |
+| runPanicLogAnalyzer / Lab 1 | 3,439 | 3,439 | Unchanged |
+| runPanicSignatureParser / Lab 2 | 2,565 | 2,565 | Unchanged |
+| runStabilityLab / Lab 3 | 2,932 | 1,485 | Replaced dead HIGH/MED confidence branches; all imported patterns are UNVERIFIED under existing policy; crash classification and limitations retained |
+| runImpactLab / Lab 4 | 2,776 | 2,850 | Clarifies lack of physical proof |
+| runPanicFrequencyLab / Lab 5 | 1,232 | 1,232 | Unchanged |
+| runPanicClusteringLab / Lab 6 | 1,402 | 1,402 | Unchanged |
+| runRecurringDomainLab / Lab 7 | 2,892 | 2,974 | Repetition != physical recurrence |
+| runFinalServiceRecommendationLab / Lab 8 | 2,208 | 2,259 | No numeric physical-health claim |
+| runDemoDiagnostics | 2,153 | 2,599 | Explicit UI-only results, snapshot/restore of real import, report sinks guarded |
+| onActivityResult | 4,938 | 5,245 | Cancel/error rollback, exact supported-entry count |
+| openPanicLogPicker | 586 | 586 | Unchanged SAF selection mechanism |
+| readTextStream | 754 | 754 | Unchanged non-ZIP decoding |
+| readPanicFromZip | 1,504 | 343 | Moved bounded multi-entry streaming to **ApplePanicArchiveReader.java**, with standalone JUnit regression tests |
+
+The entire IPhoneLabsActivity file changed from 2,699 to 2,573 lines. The delta does **not** describe a loss of labs: all eight methods and their onCreate buttons remain present. The new ZIP reader lives in a separate class, so total code must account for that helper. No blanket rewrite of historical Apple parsing libraries occurred.
+
+Further blocking tests remain necessary: current real iOS panic fixtures, screenshots after expanding details, report/PDF provenance and the full four-emulator Apple-specific UI matrix. A successful compilation cannot prove an imported crash's real hardware root cause.
