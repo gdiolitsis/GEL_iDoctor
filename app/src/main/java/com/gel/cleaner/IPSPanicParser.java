@@ -42,8 +42,6 @@ public final class IPSPanicParser {
 
         try {
 
-            String textLow = panicText.toLowerCase(Locale.US);
-
             JSONObject root = loadPatterns(ctx);
             JSONArray patterns = root.getJSONArray("patterns");
 
@@ -54,19 +52,14 @@ public final class IPSPanicParser {
                 JSONObject p = patterns.getJSONObject(i);
                 JSONArray tokens = p.getJSONArray("match");
 
-                boolean allFound = true;
+                List<String> ruleTokens = new ArrayList<>();
+                for (int t = 0; t < tokens.length(); t++)
+                    ruleTokens.add(tokens.optString(t, ""));
 
-                for (int t = 0; t < tokens.length(); t++) {
-                    String token = tokens.getString(t);
-                    if (token == null) continue;
-
-                    if (!textLow.contains(token.toLowerCase(Locale.US))) {
-                        allFound = false;
-                        break;
-                    }
-                }
-
-                if (!allFound) continue;
+                // A phrase split across two different .ips files is NOT a
+                // matched signature in either incident.
+                if (!ApplePanicEvidencePolicy.tokensMatchOnePanic(panicText, ruleTokens))
+                    continue;
 
                 Result r = new Result();
                 r.patternId      = p.optString("id", "unknown");
