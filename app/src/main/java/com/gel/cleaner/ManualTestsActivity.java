@@ -1289,8 +1289,16 @@ private static class SecuritySnapshot {
 // CORE UI  
 // ============================================================  
 private ScrollView scroll;  
-private TextView txtLog;  
-private Handler ui;  
+private TextView txtLog;
+private Handler ui;
+
+// A rotation/resize is not a new customer diagnostic session.
+private static final String STATE_MANUAL_UI_LOG = "gel_manual_saved_ui_log";
+private static final String STATE_MANUAL_SERVICE_LOG = "gel_manual_saved_service_log";
+private static final String STATE_MANUAL_SERVICE_HTML = "gel_manual_saved_service_html";
+private static final String STATE_MANUAL_SERVICE_INIT = "gel_manual_saved_service_init";
+private static final String STATE_MANUAL_LOG_PANEL = "gel_manual_saved_log_panel";
+private static final int MAX_MANUAL_UI_LOG_SNAPSHOT_CHARS = 50000;  
 
 // ============================================================  
 // SECTION STATE TRACKING (AUTO-CLOSE GROUPS)  
@@ -1315,6 +1323,16 @@ protected void attachBaseContext(Context base) {
 @Override
 protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+
+    // Restore the existing evidence before starting other log-producing
+    // services. Never manufacture a fresh success from a restored session.
+    if (savedInstanceState != null) {
+        GELServiceLog.restoreCurrentIfEmpty(
+                savedInstanceState.getString(STATE_MANUAL_SERVICE_LOG),
+                savedInstanceState.getString(STATE_MANUAL_SERVICE_HTML));
+        serviceLogInit = savedInstanceState.getBoolean(STATE_MANUAL_SERVICE_INIT, false);
+        logPanelState = savedInstanceState.getInt(STATE_MANUAL_LOG_PANEL, 0);
+    }
 
     // ============================================================
     // REMOTE DIAGNOSTICS — CUSTOMER SIDE
@@ -1393,6 +1411,12 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             "<b>" + getString(R.string.manual_log_title) + "</b><br>"
     ));
 }
+if (savedInstanceState != null) {
+    CharSequence previousLog = savedInstanceState.getCharSequence(STATE_MANUAL_UI_LOG);
+    if (previousLog != null && previousLog.length() > 0) {
+        txtLog.setText(previousLog);
+    }
+}
 
 logContainer.addView(txtLog);
 logScroll.addView(logContainer);
@@ -1463,7 +1487,7 @@ UIHelpers.applyPressEffectRecursive(getWindow().getDecorView());
 final boolean gr = AppLang.isGreek(this);
 
 // 🔴 DEFAULT STATE — NORMAL LOG PANEL
-logScroll.post(() -> setLogPanelState(0));
+logScroll.post(() -> setLogPanelState(logPanelState));
 
     // ============================================================
     // TITLE
@@ -2364,6 +2388,30 @@ private BatteryInfo getBatteryInfo() {
 }
 
 // ============================================================
+// PRESERVE DIAGNOSTIC EVIDENCE DURING SYSTEM RECREATION
+// ============================================================
+@Override
+protected void onSaveInstanceState(Bundle outState) {
+    // TextView has no stable view ID; save its actual styled UI contents.
+    // Keep the snapshot bounded to avoid large Android Binder transactions.
+    if (txtLog != null) {
+        CharSequence logText = txtLog.getText();
+        if (logText != null) {
+            int length = logText.length();
+            outState.putCharSequence(STATE_MANUAL_UI_LOG,
+                    length > MAX_MANUAL_UI_LOG_SNAPSHOT_CHARS
+                            ? logText.subSequence(length - MAX_MANUAL_UI_LOG_SNAPSHOT_CHARS, length)
+                            : logText);
+        }
+    }
+    outState.putString(STATE_MANUAL_SERVICE_LOG, GELServiceLog.getAll());
+    outState.putString(STATE_MANUAL_SERVICE_HTML, GELServiceLog.getHtml());
+    outState.putBoolean(STATE_MANUAL_SERVICE_INIT, serviceLogInit);
+    outState.putInt(STATE_MANUAL_LOG_PANEL, logPanelState);
+    super.onSaveInstanceState(outState);
+}
+
+// ============================================================
 // onPause
 // ============================================================
 @Override
@@ -2551,7 +2599,11 @@ protected void onDestroy() {
     GELRemoteDiagnosticsSync.flushNow(this);
     GELRemoteDiagnosticsSync.stop(this);
 
-    GELServiceLog.clear();
+    // Do not erase Lab 1/2 evidence when Android recreates this Activity.
+    // The normal finishing path already clears the active report on onStop.
+    if (isFinishing() && !isChangingConfigurations()) {
+        GELServiceLog.clear();
+    }
 
     super.onDestroy();
 }
