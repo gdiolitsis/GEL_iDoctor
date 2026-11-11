@@ -2161,38 +2161,12 @@ private String readTextStream(InputStream input) throws Exception {
 }
 
 private String readPanicFromZip(InputStream input) throws Exception {
-    ZipInputStream zis = new ZipInputStream(new BufferedInputStream(input));
-    int scanned = 0;
-    try {
-        ZipEntry entry;
-        StringBuilder all = new StringBuilder();
-        while ((entry = zis.getNextEntry()) != null) {
-            if (++scanned > ZIP_SCAN_CAP) throw new java.io.IOException("ZIP entry limit reached");
-            if (entry.isDirectory()) continue;
-            String name = entry.getName().toLowerCase(Locale.US);
-            boolean candidate = name.contains("panic") || name.endsWith(".ips")
-                    || name.endsWith(".log") || name.endsWith(".txt");
-            if (!candidate) continue;
-            String text = readTextStream(zis);
-            if (!ApplePanicEvidencePolicy.hasPanicEvidence(text)) continue;
-            if (all.length() + text.length() > MAX_PANIC_LOG_SIZE) {
-                throw new java.io.IOException("ZIP text exceeds combined size limit");
-            }
-            all.append("\n===== ZIP FILE: ").append(name).append(" =====\n")
-                    .append(text).append("\n");
-            zis.closeEntry();
-        }
-        if (all.length() > 0) return all.toString();
-    } finally {
-        try { zis.close(); } catch (Throwable ignore) {}
-    }
-    throw new java.io.IOException(
-            AppLang.isGreek(this)
-                    ? "Δεν βρέθηκαν υποστηριζόμενα panic logs στο ZIP."
-                    : "No supported panic logs found in ZIP.");
+    // All ZIP entries, including skipped ones, are now bounded and covered by
+    // standalone regression fixtures. No archive entry is extracted to disk.
+    return ApplePanicArchiveReader.read(input, ZIP_SCAN_CAP,
+            MAX_TEXT_BYTES, MAX_PANIC_LOG_SIZE).text;
 }
 
-// ============================================================
 // ============================================================
 // SIGNATURE PARSER STATE (CANONICAL - DO NOT LOCALIZE)
 // ============================================================
