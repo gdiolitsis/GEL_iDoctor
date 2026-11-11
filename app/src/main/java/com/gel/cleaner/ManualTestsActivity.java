@@ -8793,14 +8793,28 @@ root.addView(msg);
         root.addView(buildMuteRow());
 
         // ---------------------------
-        // START BUTTON
+        // EXIT + START — common GEL Lab 3 palette and adaptive dimensions
         // ---------------------------
-        Button start = gelButton(
-                this,
-                gr ? "ΕΝΑΡΞΗ ΤΕΣΤ" : "START TEST",
-                0xFF39FF14
-        );
-        root.addView(start);
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.CENTER);
+
+        Button exit = gelButton(this, gr ? "ΕΞΟΔΟΣ" : "EXIT",
+                GelActionButtonStyle.EXIT_RED);
+        Button start = gelButton(this, gr ? "ΕΝΑΡΞΗ ΤΕΣΤ" : "START TEST",
+                GelActionButtonStyle.START_GREEN);
+        GelActionButtonStyle.apply(exit);
+        GelActionButtonStyle.apply(start);
+
+        LinearLayout.LayoutParams exitParams = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        exitParams.setMargins(dp(6), dp(10), dp(6), dp(4));
+        LinearLayout.LayoutParams startParams = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        startParams.setMargins(dp(6), dp(10), dp(6), dp(4));
+        actions.addView(exit, exitParams);
+        actions.addView(start, startParams);
+        root.addView(actions);
 
         b.setView(root);
 b.setCancelable(false);
@@ -8844,8 +8858,15 @@ if (!isFinishing() && !isDestroyed()) {
             }
         }, 120);
 
+        // EXIT follows the already-working Android Back: stop TTS and
+        // close the intro without starting orientation/proximity measurement.
+        exit.setOnClickListener(v -> {
+            try { AppTTS.stop(); } catch (Throwable ignore) {}
+            d.dismiss();
+        });
+
         // ---------------------------
-        // ACTION
+        // ACTION — original sensor launch remains unchanged
         // ---------------------------
         start.setOnClickListener(v -> {
             AppTTS.stop();
