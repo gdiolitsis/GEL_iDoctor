@@ -169,10 +169,7 @@ private void populate() {
     outAndroid.setText(
             Html.fromHtml(
                     log("Operating System", d.os) +
-                    log("Platform Tier",
-                            isProMax() ? "Pro Max — highest bin"
-                          : isPro()    ? "Pro — enhanced configuration"
-                                       : "Standard"),
+                    log("Specification Scope", "Manufacturer reference only; not measured"),
                     Html.FROM_HTML_MODE_LEGACY
             )
     );
@@ -187,10 +184,7 @@ private void populate() {
                     log("CPU Cores",
                             d.cpuCores > 0 ? String.valueOf(d.cpuCores) : null) +
                     log("Process Node", d.processNode) +
-                    log("CPU Tier",
-                            isProMax() ? "High (best silicon bin)"
-                          : isPro()    ? "Enhanced"
-                                       : "Standard"),
+                    log("CPU Reference", "Published SoC data, not a benchmark"),
                     Html.FROM_HTML_MODE_LEGACY
             )
     );
@@ -203,10 +197,7 @@ private void populate() {
                     log("GPU Cores",
                             d.gpuCores > 0 ? String.valueOf(d.gpuCores) : null) +
                     log("Metal Feature Set", d.metalFeatureSet) +
-                    log("GPU Tier",
-                            isProMax() ? "Max GPU configuration"
-                          : isPro()    ? "Pro GPU configuration"
-                                       : "Standard GPU"),
+                    log("GPU Reference", "Published GPU core count, not a benchmark"),
                     Html.FROM_HTML_MODE_LEGACY
             )
     );
@@ -215,10 +206,7 @@ private void populate() {
     show(secThermal);
     outThermal.setText(
             Html.fromHtml(
-                    log("Thermal Design",
-                            isProMax() ? "Improved heat dissipation (larger chassis)"
-                          : isPro()    ? "Enhanced thermal envelope"
-                                       : "Standard thermal design") +
+                    log("Thermal Evidence", "No physical thermal measurement") +
                     log("Thermal Notes", d.thermalNote),
                     Html.FROM_HTML_MODE_LEGACY
             )
@@ -240,10 +228,7 @@ private void populate() {
             Html.fromHtml(
                     log("Memory", d.ram) +
                     log("Memory Type", d.ramType) +
-                    log("Memory Tier",
-                            isProMax() ? "Higher RAM capacity"
-                          : isPro()    ? "Mid-High RAM capacity"
-                                       : "Base RAM capacity"),
+                    log("Memory Provenance", "RAM capacity omitted when unverified"),
                     Html.FROM_HTML_MODE_LEGACY
             )
     );
