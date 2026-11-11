@@ -13,7 +13,11 @@ public final class GelButtonLayout {
         if (dialog.getWindow() != null) {
             View root = dialog.getWindow().getDecorView();
             fit(root);
-            root.post(() -> fit(root));
+            GelActionButtonStyle.fit(root);
+            root.post(() -> {
+                fit(root);
+                GelActionButtonStyle.fit(root);
+            });
         }
     }
     public static void fit(View view) {
