@@ -157,6 +157,24 @@ public class GELServiceLog {
         return HTML.toString();  // colored html
     }
 
+    /**
+     * Restore only when Android recreated a diagnostic screen and its
+     * process-local report buffers are empty. A saved instance-state bundle
+     * is not a new diagnostic result and must never duplicate fresh entries.
+     */
+    public static synchronized void restoreCurrentIfEmpty(String plain, String html) {
+        if (LOG.length() != 0 || HTML.length() != 0) return;
+        if (plain == null || plain.isEmpty()) return;
+        String restoredPlain = plain.length() > MAX_CHARS
+                ? plain.substring(plain.length() - MAX_CHARS) : plain;
+        LOG.append(restoredPlain);
+        if (html != null && !html.isEmpty()) {
+            HTML.append(html.length() > MAX_CHARS
+                    ? html.substring(html.length() - MAX_CHARS) : html);
+        }
+        if (SUPPORT.length() == 0) SUPPORT.append(restoredPlain);
+    }
+
     // ============================================================
     // CLEAR
     // ============================================================
