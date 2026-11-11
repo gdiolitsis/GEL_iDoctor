@@ -7148,18 +7148,31 @@ runOnUiThread(() -> {
     root.setPadding(dp(26), dp(24), dp(26), dp(22));
 
     GradientDrawable bg = new GradientDrawable();
-    bg.setColor(0xFF000000);
+    bg.setColor(0xFF101010);
     bg.setCornerRadius(dp(10));
     bg.setStroke(dp(3), 0xFFFFD700);
     root.setBackground(bg);
+
+    // Match Lab 3: a visible, localized, bold heading before the instructions.
+    TextView lab4PopupTitle = new TextView(this);
+    lab4PopupTitle.setText(gr
+            ? "LAB 4 — Έλεγχος μικροφώνου / ακουστικού"
+            : "LAB 4 — Microphone / Earpiece Check");
+    lab4PopupTitle.setTextColor(Color.WHITE);
+    lab4PopupTitle.setTextSize(17f);
+    lab4PopupTitle.setTypeface(null, Typeface.BOLD);
+    lab4PopupTitle.setGravity(Gravity.CENTER);
+    lab4PopupTitle.setPadding(0, 0, 0, dp(14));
+    root.addView(lab4PopupTitle);
 
     TextView msg = new TextView(this);
     msg.setText(gr
             ? "Μίλησε στο κάτω μικρόφωνο, και άκου, αν η φωνή σου ακούγεται καθαρά, από το ακουστικό."
             : "Speak into the bottom microphone, and check, if your voice is clearly heard, from the earpiece.");
     msg.setTextColor(0xFF39FF14);
-    msg.setTextSize(15f);
+    msg.setTextSize(14.5f);
     msg.setGravity(Gravity.CENTER);
+    msg.setLineSpacing(1.1f, 1.15f);
     msg.setPadding(0, 0, 0, dp(18));
     root.addView(msg);
 
@@ -7169,16 +7182,18 @@ runOnUiThread(() -> {
     btnRow.setOrientation(LinearLayout.HORIZONTAL);
     btnRow.setGravity(Gravity.CENTER);
 
-    LinearLayout.LayoutParams lp =
-            new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-    lp.setMargins(dp(12), dp(8), dp(12), dp(8));
+    // Match Lab 3: equal-width, adaptive action controls.
+    LinearLayout.LayoutParams exitButtonLp =
+            new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+    exitButtonLp.setMargins(dp(6), dp(6), dp(6), dp(6));
+    LinearLayout.LayoutParams startButtonLp =
+            new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+    startButtonLp.setMargins(dp(6), dp(6), dp(6), dp(6));
 
     Button exitBtn = new com.gel.cleaner.GelButton(this);
-    exitBtn.setText("EXIT");
+    exitBtn.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
     exitBtn.setTextColor(Color.WHITE);
+    exitBtn.setTextSize(14f);
     exitBtn.setAllCaps(false);
 
     GradientDrawable exitBg = new GradientDrawable();
@@ -7186,19 +7201,20 @@ runOnUiThread(() -> {
     exitBg.setCornerRadius(dp(10));
     exitBg.setStroke(dp(3), 0xFFFFD700);
     exitBtn.setBackground(exitBg);
-    exitBtn.setLayoutParams(lp);
+    exitBtn.setLayoutParams(exitButtonLp);
 
     Button startBtn = new com.gel.cleaner.GelButton(this);
-    startBtn.setText("START");
-    startBtn.setTextColor(Color.WHITE);
+    startBtn.setText(gr ? "ΕΝΑΡΞΗ" : "START");
+    startBtn.setTextColor(Color.BLACK);
+    startBtn.setTextSize(14f);
     startBtn.setAllCaps(false);
 
     GradientDrawable startBg = new GradientDrawable();
-    startBg.setColor(0xFF0B5F3B);
+    startBg.setColor(0xFF39FF14);
     startBg.setCornerRadius(dp(10));
     startBg.setStroke(dp(3), 0xFFFFD700);
     startBtn.setBackground(startBg);
-    startBtn.setLayoutParams(lp);
+    startBtn.setLayoutParams(startButtonLp);
 
     btnRow.addView(exitBtn);
     btnRow.addView(startBtn);
