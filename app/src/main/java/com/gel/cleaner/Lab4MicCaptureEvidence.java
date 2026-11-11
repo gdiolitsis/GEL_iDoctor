@@ -7,7 +7,7 @@ public final class Lab4MicCaptureEvidence {
                                  double rms, double peak) {
         if (!recordingStarted || !Double.isFinite(rms) || !Double.isFinite(peak)
                 || rms < 0 || peak < 0) return State.UNAVAILABLE;
-        return silenceDetected || rms == 0 || peak == 0
+        return silenceDetected || !MicCaptureSignalPolicy.aboveMinimalFloor(rms, peak)
                 ? State.SILENCE_OBSERVED : State.AUDIO_OBSERVED;
     }
 }

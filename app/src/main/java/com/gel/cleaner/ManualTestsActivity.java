@@ -6077,6 +6077,64 @@ private boolean guardUsageAccess() {
 // ============================================================
 // LAB 1 - Speaker Tone Test (AUTO) — WITH AUDIO PATH CHECK
 // ============================================================
+/** A positive listening report is green USER_REPORTED evidence, not a DSP result. */
+private void requestSpeakerUserEvidence(int lab, int detectedTones) {
+    runOnUiThread(() -> {
+        if (isFinishing() || isDestroyed()) {
+            lab12AudioBusy.set(false);
+            enableSingleExportButton();
+            return;
+        }
+        boolean gr = AppLang.isGreek(this);
+        boolean multi = lab == 2;
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle(gr ? "Lab " + lab + " — Επιβεβαίωση ακρόασης"
+                             : "Lab " + lab + " — Listening confirmation")
+                .setMessage(multi
+                        ? (gr ? "Ακούσατε καθαρά και τους τέσσερις δοκιμαστικούς τόνους; Μη μετρήσετε φωνητικές οδηγίες."
+                              : "Did you hear all four test tones clearly? Do not count voice prompts.")
+                        : (gr ? "Ακούσατε καθαρά τον δοκιμαστικό τόνο; Μη μετρήσετε φωνητικές οδηγίες."
+                              : "Did you hear the test tone clearly? Do not count voice prompts."))
+                .setPositiveButton(multi ? (gr ? "ΚΑΙ ΤΟΥΣ 4" : "ALL 4")
+                                         : (gr ? "ΝΑΙ" : "YES"),
+                        (d, w) -> recordSpeakerUserEvidence(
+                                lab, detectedTones, UserAcousticEvidence.Answer.ALL, gr))
+                .setNegativeButton(multi ? (gr ? "ΚΑΝΕΝΑΝ" : "NONE")
+                                         : (gr ? "ΟΧΙ" : "NO"),
+                        (d, w) -> recordSpeakerUserEvidence(
+                                lab, detectedTones, UserAcousticEvidence.Answer.NONE, gr));
+        if (multi) {
+            builder.setNeutralButton(gr ? "ΜΕΡΙΚΟΥΣ" : "SOME",
+                    (d, w) -> recordSpeakerUserEvidence(
+                            lab, detectedTones, UserAcousticEvidence.Answer.SOME, gr));
+        }
+        try {
+            AlertDialog dialog = builder.create();
+            dialog.setOnDismissListener(ignored -> {
+                lab12AudioBusy.set(false);
+                enableSingleExportButton();
+            });
+            dialog.show();
+        } catch (RuntimeException e) {
+            lab12AudioBusy.set(false);
+            enableSingleExportButton();
+        }
+    });
+}
+
+private void recordSpeakerUserEvidence(int lab, int detectedTones,
+                                       UserAcousticEvidence.Answer answer, boolean gr) {
+    String label = gr ? "Ακουστική επιβεβαίωση χρήστη" : "User listening confirmation";
+    String message = UserAcousticEvidence.message(lab, lab == 1 ? 1 : 4,
+                                                   detectedTones, answer, gr);
+    if (UserAcousticEvidence.isPositive(answer)) {
+        logLabelOkValue(label, message);
+    } else {
+        logLabelValue(label, message);
+    }
+    logLine();
+}
+
 private void lab1SpeakerTone() {
     if (!guardMic(this::lab1SpeakerTone)) return;
     if (lab3GuidedPending.get() || lab4GuidedPending.get()) {
@@ -6106,8 +6164,10 @@ private void lab1SpeakerTone() {
     logLine();
 
     new Thread(() -> {
+        AcousticStimulusProbe.Result sampleForUser = null;
         try {
         AcousticStimulusProbe.Result result = AcousticStimulusProbe.run(this, false);
+        sampleForUser = result;
         if (result.attempted && result.responseObserved) {
             logLabelOkValue(gr ? "Σύμπτωση ερεθίσματος–απόκρισης"
                                : "Stimulus/response correlation",
@@ -6188,8 +6248,12 @@ private void lab1SpeakerTone() {
                     (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ: " : "UNAVAILABLE: ")
                     + e.getClass().getSimpleName());
         } finally {
-            lab12AudioBusy.set(false);
-            runOnUiThread(this::enableSingleExportButton);
+            if (sampleForUser != null && sampleForUser.attempted) {
+                requestSpeakerUserEvidence(1, sampleForUser.observedTones);
+            } else {
+                lab12AudioBusy.set(false);
+                runOnUiThread(this::enableSingleExportButton);
+            }
         }
     }, "GEL-Lab1-AudioEvidence").start();
 }
@@ -6226,8 +6290,10 @@ private void lab2SpeakerSweep() {
     logLine();
 
     new Thread(() -> {
+        AcousticStimulusProbe.Result sampleForUser = null;
         try {
         AcousticStimulusProbe.Result result = AcousticStimulusProbe.run(this, true);
+        sampleForUser = result;
         logLabelValue(gr ? "Σύγχρονοι τόνοι" : "Timed tone responses",
                 result.observedTones + " / " + result.testedTones
                         + (gr ? " (ζητήθηκαν 4)" : " (4 requested)"));
@@ -6324,8 +6390,12 @@ private void lab2SpeakerSweep() {
                     (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ: " : "UNAVAILABLE: ")
                     + e.getClass().getSimpleName());
         } finally {
-            lab12AudioBusy.set(false);
-            runOnUiThread(this::enableSingleExportButton);
+            if (sampleForUser != null && sampleForUser.attempted) {
+                requestSpeakerUserEvidence(2, sampleForUser.observedTones);
+            } else {
+                lab12AudioBusy.set(false);
+                runOnUiThread(this::enableSingleExportButton);
+            }
         }
     }, "GEL-Lab2-AudioEvidence").start();
 }
@@ -6832,6 +6902,8 @@ private void lab4MicManual() {
         return;
     }
     lab4Cancelled.set(false);
+    lab4LoopHeardClearly = false;
+    lastAnswerHeardClearly = false;
     lab4OriginalMode = am.getMode();
     lab4OriginalSpeaker = am.isSpeakerphoneOn();
     lab4OriginalMute = am.isMicrophoneMute();
@@ -7031,6 +7103,7 @@ if (bottomOk && topOk) {
    ============================================================ */
 
 private volatile boolean lastAnswerHeardClearly = false;
+private volatile boolean lab4LoopHeardClearly = false;
 
 private void lab4MicPro() {
     if (!lab4GuidedPending.get() || lab4Cancelled.get()) return;
@@ -7415,6 +7488,7 @@ logLine();
 if (AudioChallengeEvidence.microphoneLoop(loopEvidence.attempted, heardClearly.get())
         == AudioChallengeEvidence.Result.USER_REPORTED_RESPONSE) {
 
+    lab4LoopHeardClearly = true;
     logLabelOkValue(
             gr ? "Ακουστική επανάληψη (δήλωση χρήστη)" : "Voice loop (user report)",
             gr
@@ -7424,7 +7498,7 @@ if (AudioChallengeEvidence.microphoneLoop(loopEvidence.attempted, heardClearly.g
                       + "no physical bottom mic, earpiece or carrier-call certification."
     );
 
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Όρια επαλήθευσης" : "Verification limits",
             gr
                     ? "Οι φυσικές είσοδοι, η δρομολόγηση OEM και η ποιότητα κλήσης παραμένουν μη επαληθευμένες."
@@ -7885,6 +7959,14 @@ private void lab4ResultEarpiece() {
         );
     }
 
+    if (lab4LoopHeardClearly && lastAnswerHeardClearly) {
+        logLabelOkValue(gr ? "Συνολικό αποτέλεσμα επιβεβαίωσης" : "Combined user confirmation",
+                gr ? "ΘΕΤΙΚΟ — ο χρήστης άκουσε καθαρά και τις δύο ακουστικές δοκιμές. "
+                     + "Οι αυτόματες μετρήσεις καταγράφονται ξεχωριστά· δεν πιστοποιείται μεμονωμένο φυσικό μικρόφωνο ή πραγματική κλήση."
+                   : "POSITIVE USER_REPORTED — both audio challenges were clearly heard. "
+                     + "Automated measurements remain separate; no individual physical mic or actual call certified.");
+    }
+
     logLine();
 
     appendHtml("<br>");
@@ -7974,8 +8056,8 @@ private void lab5Vibration() {
             appendHtml("<br>");
             logInfo(
                     gr
-                            ? "Έλεγχος ρυθμίσεων συστήματος:"
-                            : "System settings check:"
+                            ? "Ρυθμίσεις που επηρεάζουν τη δόνηση"
+                            : "Settings that affect vibration"
             );
             logLine();
 

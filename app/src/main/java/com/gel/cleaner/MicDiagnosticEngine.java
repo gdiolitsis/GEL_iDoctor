@@ -44,7 +44,7 @@ public final class MicDiagnosticEngine {
     private static final int FORMAT = AudioFormat.ENCODING_PCM_16BIT;
 
     private static final int TEST_DURATION_MS = 1800;
-    private static final double SILENCE_RMS_THRESHOLD = 200.0;
+    // MicCaptureSignalPolicy owns the common minimum PCM gate.
     private static final double GOOD_RMS_THRESHOLD = 800.0;
     private static final double STRONG_RMS_THRESHOLD = 1500.0;
 
@@ -178,7 +178,7 @@ public final class MicDiagnosticEngine {
             }
 
             double rms = Math.sqrt(sumSquares / samples);
-            boolean silence = rms < SILENCE_RMS_THRESHOLD;
+            boolean silence = !MicCaptureSignalPolicy.aboveMinimalFloor(rms, peak);
 
             String confidence;
             Result.Status status;
@@ -186,8 +186,8 @@ public final class MicDiagnosticEngine {
 
             if (silence) {
                 confidence = "LOW";
-                status = Result.Status.ERROR;
-                note = "No usable microphone signal detected";
+                status = Result.Status.WARN;
+                note = "Signal below 20 PCM minimum; no hardware failure established";
             } else if (rms >= STRONG_RMS_THRESHOLD) {
                 confidence = "HIGH";
                 status = Result.Status.OK;
@@ -197,9 +197,11 @@ public final class MicDiagnosticEngine {
                 status = Result.Status.OK;
                 note = "Samples captured via selected profile; physical mic identity unknown";
             } else {
+                // The recording contains measurable signal above the minimum
+                // floor. LOW confidence describes the level, not a defect.
                 confidence = "LOW";
-                status = Result.Status.WARN;
-                note = "Low input signal under current conditions";
+                status = Result.Status.OK;
+                note = "Low-level microphone signal observed; source and quality unverified";
             }
 
             return new Result(
