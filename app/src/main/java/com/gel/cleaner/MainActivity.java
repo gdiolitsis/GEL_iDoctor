@@ -2783,6 +2783,17 @@ new ColorDrawable(Color.TRANSPARENT));
 // --------------------------------------------
 d.show();
 com.gel.cleaner.GelButtonLayout.fitDialog(d);
+
+// Both model families must be reachable. Dismiss the parent dialog before
+// opening the scrollable model selector to avoid stacked/dialog-hidden UI.
+iphoneBtn.setOnClickListener(v -> {
+    d.dismiss();
+    showAppleModelPicker("iphone");
+});
+ipadBtn.setOnClickListener(v -> {
+    d.dismiss();
+    showAppleModelPicker("ipad");
+});
 }
 
 // =========================================================
