@@ -2,7 +2,7 @@ name: QA release-signed APK and Google OAuth certificate gate
 on:
   push:
     branches:
-      - qa/integration-gel31-localization-20261110
+      - qa/apple-final-signed-candidate-20261111
     paths:
       - '.github/workflows/qa-signed-google-access.yml'
       - 'app/**'
