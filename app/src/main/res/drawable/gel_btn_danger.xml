@@ -4,8 +4,9 @@
 
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#8B0000"/>  <!-- Dark red (very strong) -->
+            <solid android:color="#E60000"/>  <!-- Dark red (very strong) -->
             <corners android:radius="10dp"/>
+            <stroke android:width="3dp" android:color="#FFD700"/>
             <padding
                 android:left="6dp"
                 android:top="6dp"

@@ -6587,13 +6587,13 @@ LinearLayout btnRow = new LinearLayout(this);
 btnRow.setOrientation(LinearLayout.HORIZONTAL);
 btnRow.setGravity(Gravity.CENTER);
 
-LinearLayout.LayoutParams btnLp =
-        new LinearLayout.LayoutParams(
-                0,
-                dp(48),
-                1f
-        );
-btnLp.setMargins(dp(6), dp(6), dp(6), dp(6));
+// Each action gets independent equal-weight, wrap-content layout params.
+LinearLayout.LayoutParams exitLp =
+        new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+exitLp.setMargins(dp(6), dp(6), dp(6), dp(6));
+LinearLayout.LayoutParams startLp =
+        new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+startLp.setMargins(dp(6), dp(6), dp(6), dp(6));
 
 // ---------- EXIT ----------
 Button exitBtn = new com.gel.cleaner.GelButton(this);
@@ -6603,11 +6603,11 @@ exitBtn.setTextSize(14f);
 exitBtn.setTextColor(Color.WHITE);
 
 GradientDrawable exitBg = new GradientDrawable();
-exitBg.setColor(0xFF8B0000);
+exitBg.setColor(GelActionButtonStyle.EXIT_RED);
 exitBg.setCornerRadius(dp(10));
 exitBg.setStroke(dp(3), 0xFFFFD700);
 exitBtn.setBackground(exitBg);
-exitBtn.setLayoutParams(btnLp);
+exitBtn.setLayoutParams(exitLp);
 
 // ---------- START ----------
 Button start = new com.gel.cleaner.GelButton(this);
@@ -6621,7 +6621,7 @@ startBg.setColor(0xFF39FF14);
 startBg.setCornerRadius(dp(10));
 startBg.setStroke(dp(3), 0xFFFFD700);
 start.setBackground(startBg);
-start.setLayoutParams(btnLp);
+start.setLayoutParams(startLp);
 
 btnRow.addView(exitBtn);
 btnRow.addView(start);
@@ -7197,7 +7197,7 @@ runOnUiThread(() -> {
     exitBtn.setAllCaps(false);
 
     GradientDrawable exitBg = new GradientDrawable();
-    exitBg.setColor(0xFF8B0000);
+    exitBg.setColor(GelActionButtonStyle.EXIT_RED);
     exitBg.setCornerRadius(dp(10));
     exitBg.setStroke(dp(3), 0xFFFFD700);
     exitBtn.setBackground(exitBg);
@@ -7210,7 +7210,7 @@ runOnUiThread(() -> {
     startBtn.setAllCaps(false);
 
     GradientDrawable startBg = new GradientDrawable();
-    startBg.setColor(0xFF39FF14);
+    startBg.setColor(GelActionButtonStyle.START_GREEN);
     startBg.setCornerRadius(dp(10));
     startBg.setStroke(dp(3), 0xFFFFD700);
     startBtn.setBackground(startBg);
