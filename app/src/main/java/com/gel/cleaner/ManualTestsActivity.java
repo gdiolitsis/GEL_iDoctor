@@ -9147,7 +9147,8 @@ private void showLab8IntroAndStart(
                     ManualTestsActivity.this,
                     android.R.style.Theme_Material_Dialog_NoActionBar
             );
-    b.setCancelable(false);
+    // Back must always be able to cancel before any camera is opened.
+    b.setCancelable(true);
 
     LinearLayout root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
@@ -9188,31 +9189,37 @@ root.addView(msg);
     root.addView(buildMuteRow());
 
     // ---------------------------
-    // START BUTTON
+    // EXIT + START (same style / same adaptive dimensions as Lab 3)
     // ---------------------------
+    LinearLayout actionRow = new LinearLayout(this);
+    actionRow.setOrientation(LinearLayout.HORIZONTAL);
+    actionRow.setGravity(Gravity.CENTER);
+
+    Button exit = new com.gel.cleaner.GelButton(this);
+    exit.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
+    exit.setAllCaps(false);
+    GelActionButtonStyle.apply(exit);
+
     Button start = new com.gel.cleaner.GelButton(this);
     start.setText(gr ? "ΕΝΑΡΞΗ ΤΕΣΤ" : "START TEST");
     start.setAllCaps(false);
-    start.setTextColor(Color.WHITE);
+    GelActionButtonStyle.apply(start);
 
-    GradientDrawable startBg = new GradientDrawable();
-    startBg.setColor(0xFF39FF14);
-    startBg.setCornerRadius(dp(10));
-    startBg.setStroke(dp(3), 0xFFFFD700);
-    start.setBackground(startBg);
-
-    LinearLayout.LayoutParams lp =
-            new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(56)
-            );
-    lp.setMargins(0, dp(14), 0, 0);
-    start.setLayoutParams(lp);
-    root.addView(start);
+    LinearLayout.LayoutParams exitLp = new LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+    exitLp.setMargins(dp(6), dp(14), dp(6), 0);
+    LinearLayout.LayoutParams startLp = new LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+    startLp.setMargins(dp(6), dp(14), dp(6), 0);
+    actionRow.addView(exit, exitLp);
+    actionRow.addView(start, startLp);
+    root.addView(actionRow);
 
     b.setView(root);
 
 final AlertDialog d = b.create();
+// Tapping outside must not lose progress; physical/gesture Back cancels.
+d.setCanceledOnTouchOutside(false);
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
@@ -9220,12 +9227,25 @@ if (d.getWindow() != null) {
     );
 }
 
-// STOP TTS όταν κλείσει
+// Both EXIT and Android Back call Dialog.cancel(). The dialog's OnCancel
+// fires only for cancellation, never for START -> dismiss.
+d.setOnCancelListener(dialog -> {
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+    logLabelWarnValue(
+            gr ? "LAB 8 — Εκτέλεση" : "LAB 8 — Execution",
+            gr ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — ακυρώθηκε πριν από τον έλεγχο καμερών"
+               : "NOT RUN — canceled before camera testing");
+    logLine();
+    enableSingleExportButton();
+});
+
 d.setOnDismissListener(dialog -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 });
 
-// START BUTTON
+exit.setOnClickListener(v -> d.cancel());
+
+// START BUTTON: retains the original camera sequence unchanged.
 start.setOnClickListener(v -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
     d.dismiss();
