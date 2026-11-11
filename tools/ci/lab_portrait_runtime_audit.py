@@ -66,7 +66,15 @@ def snapshot(name):
 
 def foreground_labs():
     activities = adb("shell", "dumpsys", "activity", "activities")
-    return "ManualTestsActivity" in activities and "mResumed" not in "" # inspect top separately
+    # Check the actual resumed Activity, not historical task stack entries.
+    resumed = [line for line in activities.splitlines()
+               if any(token in line for token in (
+                   "topResumedActivity", "mResumedActivity", "ResumedActivity:"))]
+    if resumed: return any("ManualTestsActivity" in line for line in resumed)
+    window = adb("shell", "dumpsys", "window", "windows")
+    focused = [line for line in window.splitlines()
+               if "mCurrentFocus" in line or "mFocusedApp" in line]
+    return any("ManualTestsActivity" in line for line in focused)
 
 def record(stage, detail):
     steps.append({"stage": stage, "detail": detail})
