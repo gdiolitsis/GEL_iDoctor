@@ -2271,6 +2271,8 @@ private static void registerModernVerifiedModels() {
         modern4.has5G = true;
         modern4.hasLTE = true;
         modern4.cellular = "5G / LTE (band support varies by region)";
+        modern4.modem = "Apple C1";
+        modern4.uwb = "Second-generation Ultra Wideband chip";
         modern4.wifi = "Wi-Fi 7";
         modern4.bluetooth = "Bluetooth 6";
         modern4.hasNFC = true;
