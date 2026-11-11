@@ -13443,81 +13443,25 @@ if (powerValid) {
 boolean rValid =
         internalResistance != null &&
         internalResistance.length > 0 &&
-        !Float.isNaN(internalResistance[0]);
+        Float.isFinite(internalResistance[0]);
 
 if (rValid) {
-
-    float rMilli = internalResistance[0] * 1000f;
-
-    if (rMilli >= 1f && rMilli <= 300f) {
-
-        String rLabel;
-
-        if (rMilli < 50f) {
-            rLabel = "Excellent";
-        } else if (rMilli < 90f) {
-            rLabel = "Good";
-        } else if (rMilli < 140f) {
-            rLabel = "Normal";
-        } else {
-            rLabel = "High";
-        }
-
-        String text = String.format(
-                Locale.US,
-                "%.1f mΩ (%s)",
-                rMilli,
-                rLabel
-        );
-
-        if ("Excellent".equals(rLabel) ||
-            "Good".equals(rLabel)) {
-
-            logLabelOkValue(
-                gr ? "Αντίσταση υπό φορτίο"
-                   : "Dynamic resistance",
-                text
-            );
-
-        } else if ("Normal".equals(rLabel)) {
-
-            logLabelValue(
-                gr ? "Αντίσταση υπό φορτίο"
-                   : "Dynamic resistance",
-                text
-            );
-
-        } else {
-
-            logLabelWarnValue(
-                gr ? "Αντίσταση υπό φορτίο"
-                   : "Dynamic resistance",
-                text
-            );
-        }
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Αντίσταση υπό φορτίο"
-                   : "Dynamic resistance",
-                gr ? "Μη αξιόπιστη μέτρηση"
-                   : "Unreliable measurement"
-        );
-    }
-
- } else {
-    // The previous fixed-2A denominator was not a measured current step.
-    // Dynamic R = DeltaV / DeltaI requires aligned, observed current values.
+    // Current code computes voltage sag / |net battery current|. The source
+    // does NOT contain a synchronized before/after current step (Delta I).
+    // Preserve the raw exploratory ratio but never grade cell ESR or SoH.
+    double proxyMilliOhm = internalResistance[0] * 1000.0d;
     logLabelWarnValue(
-            gr ? "Δυναμική αντίσταση" : "Dynamic resistance",
-            gr ? "Δεν προσδιορίζεται χωρίς συγχρονισμένη μεταβολή ρεύματος"
-               : "Not established without synchronized current change"
-    );
+            gr ? "Λόγος ΔV/|I| (ΟΧΙ εσωτερική αντίσταση)" : "ΔV/|I| ratio (NOT internal resistance)",
+            Lab14DerivedRatioPolicy.describeVoltageCurrentProxy(proxyMilliOhm, gr));
+} else {
+    logLabelWarnValue(
+            gr ? "Δυναμική αντίσταση κυψελών" : "Battery-cell dynamic resistance",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ — λείπει συγχρονισμένη μεταβολή ρεύματος (ΔI)"
+               : "NOT VERIFIED — aligned current step (Delta I) unavailable");
 }
 
-// =====================================================
-// =====================================================
+// ============================================================
+// ============================================================
 // VOLTAGE RECOVERY (FINAL + FALLBACK)
 // =====================================================
 
@@ -13791,63 +13735,20 @@ if (drainValid) {
 // =====================================================
 // 🔴 ENERGY (FINAL — VALIDATED + INTERPRETED)
 // =====================================================
-boolean energyValid =
-        !Float.isNaN(energyEfficiency) &&
-        energyEfficiency > 10f &&
-        energyEfficiency < 5000f;
-
+boolean energyValid = Lab14DerivedRatioPolicy.usableDischargeToSagRatio(energyEfficiency);
 if (energyValid) {
-
-    String energyLabel;
-
-    if (energyEfficiency >= 1000f) {
-        energyLabel = "Efficient";
-    } else if (energyEfficiency >= 500f) {
-        energyLabel = "Normal";
-    } else {
-        energyLabel = "Inefficient";
-    }
-
-    String text = String.format(
-            Locale.US,
-            "%.0f mAh/V (%s)",
-            energyEfficiency,
-            energyLabel
-    );
-
-    if ("Efficient".equals(energyLabel)) {
-
-        logLabelOkValue(
-                gr ? "Ενεργειακή αποδοτικότητα"
-                   : "Energy efficiency",
-                text
-        );
-
-    } else if ("Normal".equals(energyLabel)) {
-
-        logLabelValue(
-                gr ? "Ενεργειακή αποδοτικότητα"
-                   : "Energy efficiency",
-                text
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Ενεργειακή αποδοτικότητα"
-                   : "Energy efficiency",
-                text
-        );
-    }
-
-} else {
-
+    // (mAh / h) / V = mAh/(h·V); no energy input/output was measured.
+    // Avoid the old arbitrary "Efficient/Normal/Inefficient" tiers.
     logLabelWarnValue(
-            gr ? "Ενεργειακή αποδοτικότητα"
-               : "Energy efficiency",
-            gr ? "Μη διαθέσιμη / μη αξιόπιστη"
-               : "N/A / unreliable"
-    );
+            gr ? "Πειραματικός λόγος αποφόρτισης/πτώσης τάσης"
+               : "Exploratory discharge-rate / sag ratio",
+            Lab14DerivedRatioPolicy.describeDischargeToSagRatio(energyEfficiency, gr));
+} else {
+    logLabelWarnValue(
+            gr ? "Πειραματικός λόγος αποφόρτισης/πτώσης τάσης"
+               : "Exploratory discharge-rate / sag ratio",
+            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ — δεν είναι μέτρηση ενεργειακής απόδοσης"
+               : "UNAVAILABLE — no energy efficiency was measured");
 }
 
 // =====================================================
