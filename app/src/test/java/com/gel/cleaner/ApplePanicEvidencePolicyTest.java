@@ -51,6 +51,32 @@ public class ApplePanicEvidencePolicyTest {
     @Test public void limitationExplicitlyMentionsNoDeviceValidation() {
         assertTrue(ApplePanicEvidencePolicy.limitation(false).contains("not been independently verified"));
     }
+    @Test public void signatureCannotBorrowKeywordsFromDifferentImportedPanicFiles() {
+        String multi = "\n===== ZIP FILE: panic-a.ips =====\n"
+                + "panic(cpu 0): baseband crash without the other required token\n"
+                + "===== ZIP FILE: panic-b.ips =====\n"
+                + "panic(cpu 1): modem interface error; companion phrase absent\n";
+        assertFalse(ApplePanicEvidencePolicy.tokensMatchOnePanic(
+                multi, java.util.Arrays.asList("baseband", "modem")));
+    }
+    @Test public void signatureCanMatchWithinSameVerifiedPanicEntry() {
+        String multi = "\n===== ZIP FILE: panic-a.ips =====\n"
+                + "panic(cpu 0): baseband modem controller timeout reported on restart\n"
+                + "===== ZIP FILE: unrelated.txt =====\n"
+                + "This is generic thermal logging with no panic structure.\n";
+        assertTrue(ApplePanicEvidencePolicy.tokensMatchOnePanic(
+                multi, java.util.Arrays.asList("baseband", "modem")));
+    }
+    @Test public void standalonePanicStillMatchesAndUnsupportedTextNeverDoes() {
+        java.util.List<String> tokens = java.util.Arrays.asList("watchdog", "timeout");
+        assertTrue(ApplePanicEvidencePolicy.tokensMatchOnePanic(
+                "panic(cpu 0): watchdog timeout observed during restart; trace id 12345", tokens));
+        assertFalse(ApplePanicEvidencePolicy.tokensMatchOnePanic(
+                "not a panic report: watchdog timeout is ordinary app telemetry", tokens));
+        assertFalse(ApplePanicEvidencePolicy.tokensMatchOnePanic(
+                "panic(cpu 0): watchdog timeout observed during restart; trace id 12345",
+                java.util.Collections.emptyList()));
+    }
     @Test public void scopedResultLabels() {
         assertEquals("IMPORTED_PANIC_LOG_OBSERVED",ApplePanicEvidencePolicy.evidenceClass(true));
         assertEquals("UNVERIFIED_OR_UNSUPPORTED",ApplePanicEvidencePolicy.evidenceClass(false));

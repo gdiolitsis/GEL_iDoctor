@@ -14,14 +14,15 @@ public class AppleModelLookupEvidenceTest {
         assertEquals("iPhone 16 Plus", AppleSpecs.get("iPhone 16 Plus").model);
     }
     @Test public void iphone16eDoesNotInherit16Hardware() {
-        assertEquals("unknown", AppleSpecs.get("iPhone 16e").type);
+        assertEquals("iPhone 16e", AppleSpecs.get("iPhone 16e").model);
     }
-    @Test public void future18ModelDoesNotInheritOlderSpecs() {
-        assertEquals("unknown", AppleSpecs.get("iPhone 18 Pro").type);
+    @Test public void official18ModelDoesNotInheritOlderSpecs() {
+        assertEquals("iPhone 18 Pro", AppleSpecs.get("iPhone 18 Pro").model);
     }
-    @Test public void future17ModelDoesNotInheritOlderSpecs() {
-        assertEquals("unknown", AppleSpecs.get("iPhone 17 Pro Max").type);
+    @Test public void official17ModelDoesNotInheritOlderSpecs() {
+        assertEquals("iPhone 17 Pro Max", AppleSpecs.get("iPhone 17 Pro Max").model);
     }
+    @Test public void unknownBase18StaysUnknown() { assertEquals("unknown", AppleSpecs.get("iPhone 18").type); }
     @Test public void mini7DoesNotInheritMini6Hardware() {
         assertEquals("unknown", AppleSpecs.get("iPad mini 7").type);
     }

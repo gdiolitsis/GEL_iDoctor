@@ -2708,7 +2708,7 @@ bg.setStroke(dp(3), 0xFFFFD700);
 root.setBackground(bg);
 
 TextView title = new TextView(this);
-title.setText("Select your Apple device");
+title.setText(AppLang.isGreek(this) ? "Επιλέξτε συσκευή Apple" : "Select your Apple device");
 title.setTextColor(Color.WHITE);
 title.setTextSize(20f);
 title.setTypeface(null, Typeface.BOLD);
@@ -2783,6 +2783,17 @@ new ColorDrawable(Color.TRANSPARENT));
 // --------------------------------------------
 d.show();
 com.gel.cleaner.GelButtonLayout.fitDialog(d);
+
+// Both model families must be reachable. Dismiss the parent dialog before
+// opening the scrollable model selector to avoid stacked/dialog-hidden UI.
+iphoneBtn.setOnClickListener(v -> {
+    d.dismiss();
+    showAppleModelPicker("iphone");
+});
+ipadBtn.setOnClickListener(v -> {
+    d.dismiss();
+    showAppleModelPicker("ipad");
+});
 }
 
 // =========================================================
@@ -2794,10 +2805,12 @@ String[] models = "iphone".equals(type)
 ? new String[]{
 
 // =====================
-// iPhone 16 Series
+// Official Apple 2026 models
 // =====================
+"iPhone Duo",
 "iPhone 18 Pro",
 "iPhone 18 Pro Max",
+// Official Apple 2025–2026 models
 "iPhone 17",
 "iPhone 17 Pro",
 "iPhone 17 Pro Max",
@@ -2896,7 +2909,7 @@ bg.setStroke(dp(3), 0xFFFFD700);
 root.setBackground(bg);
 
 TextView title = new TextView(this);
-title.setText("Select Apple Model");
+title.setText(AppLang.isGreek(this) ? "Επιλέξτε μοντέλο Apple" : "Select Apple Model");
 title.setTextColor(Color.WHITE);
 
 root.addView(title);
@@ -2970,7 +2983,7 @@ btn.setText("🍎 " + type.toUpperCase(Locale.US)
 
 Toast.makeText(
 this,
-"Selected: " + rawModel,
+(AppLang.isGreek(this) ? "Επιλέχθηκε: " : "Selected: ") + rawModel,
 Toast.LENGTH_SHORT
 ).show();
 
