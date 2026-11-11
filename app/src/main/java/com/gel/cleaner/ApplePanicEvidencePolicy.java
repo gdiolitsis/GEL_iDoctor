@@ -1,6 +1,7 @@
 package com.gel.cleaner;
 
 import java.util.Locale;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -19,6 +20,32 @@ public final class ApplePanicEvidencePolicy {
         return low.contains("panic(cpu")
                 || low.contains("panicstring")
                 || BUG_TYPE_210.matcher(text).find();
+    }
+
+    /**
+     * A multi-file archive is not one panic incident. Every keyword required by
+     * a signature must occur within the SAME structurally eligible panic block.
+     * Distinct imported files must never contribute complementary tokens.
+     */
+    public static boolean tokensMatchOnePanic(String importedText, List<String> tokens) {
+        if (importedText == null || tokens == null || tokens.isEmpty()) return false;
+        String[] blocks = importedText.split("(?m)^===== ZIP FILE:");
+        for (String block : blocks) {
+            if (!hasPanicEvidence(block)) continue;
+            String low = block.toLowerCase(Locale.ROOT);
+            boolean matched = true;
+            boolean any = false;
+            for (String token : tokens) {
+                if (token == null || token.trim().isEmpty()) continue;
+                any = true;
+                if (!low.contains(token.toLowerCase(Locale.ROOT))) {
+                    matched = false;
+                    break;
+                }
+            }
+            if (any && matched) return true;
+        }
+        return false;
     }
 
     public static String evidenceClass(boolean hasPanic) {
