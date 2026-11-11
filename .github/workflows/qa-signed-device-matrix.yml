@@ -1,0 +1,84 @@
+name: Signed APK real-artifact emulator matrix (Android + Apple)
+on:
+  push:
+    branches:
+      - qa/firebase-google-oauth-signed-20261111
+    paths:
+      - '.github/workflows/qa-signed-device-matrix.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: gel-signed-matrix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  signed-emulator:
+    if: github.repository == 'gdiolitsis/GEL_iDoctor'
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [30, 36]
+        language: [el, en]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
+    steps:
+      - name: Checkout audit scripts at reviewed QA source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Use JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Download the exact owner-installed signed APK, verify provenance and cert
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/signed"
+          gh run download 42985806361 \
+             --repo "$GITHUB_REPOSITORY" \
+             --name GEL-v53-release-signed-QA-Google-check \
+             --dir "$RUNNER_TEMP/signed"
+          signed="$RUNNER_TEMP/signed/GEL_iDoctor_v53_release_signed_QA.apk"
+          test -s "$signed"
+          (cd "$RUNNER_TEMP/signed" && sha256sum -c SHA256SUMS)
+          grep -qx YES "$RUNNER_TEMP/signed/GOOGLE_OAUTH_MATCH"
+          test "$(cat "$RUNNER_TEMP/signed/SOURCE_COMMIT")" = "3edef623c97fb983ae0318df9b40819834dd4e76"
+          # Only this new workflow may differ from the tested signed artifact.
+          git diff --exit-code 3edef623c97fb983ae0318df9b40819834dd4e76 HEAD -- app/ tools/ci/
+          sdkmanager 'build-tools;36.0.0'
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$signed" \
+            | tee "$RUNNER_TEMP/signed/RECHECKED_CERT.txt"
+          grep -q 'Signer #1 certificate SHA-1 digest: 95e8acb44b45b2b7664e52b31bb0d69786a9e8dd' \
+            "$RUNNER_TEMP/signed/RECHECKED_CERT.txt"
+          echo "EXACT_RELEASE_SIGNED_APK_PROVENANCE=PASS"
+      - name: Validate selectors and install exact signed APK on AVD
+        timeout-minutes: 90
+        env:
+          AUDIT_SCOPE: full
+          AUDIT_REQUIRE_WELCOME_OK: '1'
+          AUDIT_REQUIRE_ACCESSIBLE_SETTINGS: '1'
+          AUDIT_APPLE_MODE: '1'
+        run: |
+          set -euo pipefail
+          python3 tools/ci/test_ui_audit_selectors.py
+          bash tools/ci/full_ui_audit.sh \
+            "$RUNNER_TEMP/signed/GEL_iDoctor_v53_release_signed_QA.apk" \
+            "${{ matrix.api }}" "${{ matrix.language }}"
+      - name: Upload emulator screenshots, XML and complete logcat
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: GEL-v53-SIGNED-actual-apk-api${{ matrix.api }}-${{ matrix.language }}
+          path: |
+            ${{ runner.temp }}/full-ui-audit
+            ${{ runner.temp }}/signed/RECHECKED_CERT.txt
+            ${{ runner.temp }}/signed/SOURCE_COMMIT
+          if-no-files-found: warn
+          retention-days: 14
