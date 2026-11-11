@@ -197,9 +197,11 @@ public final class MicDiagnosticEngine {
                 status = Result.Status.OK;
                 note = "Samples captured via selected profile; physical mic identity unknown";
             } else {
+                // The recording contains measurable signal above the minimum
+                // floor. LOW confidence describes the level, not a defect.
                 confidence = "LOW";
-                status = Result.Status.WARN;
-                note = "Low input signal under current conditions";
+                status = Result.Status.OK;
+                note = "Low-level microphone signal observed; source and quality unverified";
             }
 
             return new Result(
