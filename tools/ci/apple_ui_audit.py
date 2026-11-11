@@ -143,9 +143,14 @@ def labs():
     guide = find(by_text(r"PANIC LOGS.*(?:Import Guide|Οδηγός Εισαγωγής)"))
     if guide is not None:
         tap(must(by_text(r"^OK$"),"Apple panic guide OK missing", 8))
-    must(by_text(r"GEL (?:iPhone Diagnostics|Διαγνωστικά iPhone)"),
-         "iPhone Labs screen not reached", 3)
-    return "Apple Labs navigation"
+    # The lab heading may have scrolled out of the accessibility tree after
+    # dismissing the import guide. Verify the actual foreground Activity and
+    # the first lab control, not an off-screen heading.
+    activities = adb("shell", "dumpsys", "activity", "activities")
+    if "IPhoneLabsActivity" not in activities:
+        raise AssertionError("iPhone Labs Activity is not foreground")
+    must(by_text(r"^LAB\\s*1\\s*-"), "LAB 1 control missing after opening Apple Labs", 3)
+    return "Apple Labs Activity and LAB 1 visible"
 
 def verify_eight_buttons():
     for i in range(1, 9):
