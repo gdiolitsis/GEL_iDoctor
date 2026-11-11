@@ -94,3 +94,14 @@
 
 ## Decision
 **Δεν έχουμε εξαντλήσει όλες τις νόμιμες έμμεσες μεθόδους**. Υπάρχουν επιπλέον εφικτά πειράματα και μεθοδολογικά κέρδη, αλλά πολλά από τα API-based primitives έχουν ήδη υλοποιηθεί. Η σωστή πορεία δεν είναι να προσθέσουμε εντυπωσιακά labels ή άκριτα ποσοστά: είναι διαδοχικές μικρές, ελεγχόμενες προσθήκες με ασφαλή διακοπή και cross-lab επαλήθευση — *31 turbo labs, όχι 31 placebo labs*.
+
+
+## P0 source-integrity findings from deeper Lab 14 / Lab 30 review
+**Lab 14 — uncalibrated physical interpretation in a live output path.**
+- `ManualTestsActivity.lab14LogStressResult` shows a qualitative `Excellent/Good/Normal/High` “Dynamic resistance” at 1–300 mΩ from `internalResistance[0]`. In the current upstream calculation, `internalResistance[0]` is assigned from `sagFiltered / abs(currentNow)`, **not** the required paired `ΔV/ΔI`. A measured current step is not established. The existing user-facing quality grades therefore cannot be treated as a calibrated battery-cell ESR/SoH finding. Keep voltage/current observations, remove unsupported physical-quality verdicts.
+- `lab14EnergyEfficiency = mahPerHour / finalSag`; output name “Energy efficiency” and “Efficient/Normal/Inefficient” thresholds 500/1000 are unsupported. Its actual units are `mAh/(h·V)`, not `mAh/V`, and not thermodynamic/charger efficiency. A derived ratio can remain as an experimental readout only if transparently labeled non-calibrated or removed from the customer-facing conclusion with its source preserved.
+- Reference: https://www.ni.com/docs/sq-MK/bundle/battery-cell-quality-toolkit/page/direct-current-internal-resistance.html (DCIR = ΔV/ΔI under a controlled current pulse); https://developer.android.com/reference/android/os/BatteryManager (CURRENT_NOW is instantaneous *net* battery current, not current-step delta).
+**Lab 30 — dormant legacy heuristics, not active verified diagnosis.**
+- At method entry, `finalScore = NaN`, `lab14CollapseRisk`, `lab14SwellingSuspected`, `nandRisk`, `controllerRisk`, `pmicInstability`, `sensorBusInstability`, and `thermalRunawayRisk` are initialized false; `hardwareGradeSupported` calls `Lab30HardwareCoverage.canGrade(validatedCapacity, false, false, false)` and therefore cannot grant a whole-device grade.
+- Old root-cause branches still contain unsupported “Battery degradation”, “NAND/controller”, “PMIC” and weighted confidence 60–95; under the current literal gates they are **dormant**. They must not be re-enabled unless real independent, calibrated evidence exists. Regression tests should assert `UNKNOWN` for uncorroborated device-wide claims.
+**Action:** Isolate Lab14 physics-label correction in its own Draft QA PR with old/new method diff and tests. Do **not** amend the already-signed APK in place or merge to main as part of a research-only PR.
