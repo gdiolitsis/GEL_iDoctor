@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "172626247066-unt1mh7eem2f0os8bum8eshfqaof4t8n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gel.iDoctor",
+            "certificate_hash": "95e8acb44b45b2b7664e52b31bb0d69786a9e8dd"
+          }
+        },
+        {
           "client_id": "172626247066-6l3holm8d1hnjffs6r2b5mddn0sp1b1d.apps.googleusercontent.com",
           "client_type": 3
         }
