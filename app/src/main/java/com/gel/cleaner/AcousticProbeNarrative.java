@@ -75,7 +75,7 @@ public final class AcousticProbeNarrative {
             return "Η διαδρομή ήχου, η άδεια μικροφώνου ή η καταγραφή δεν ήταν διαθέσιμη.";
         // Other low-level DSP errors stay unavailable; do not translate them
         // to a manufactured hardware fault or silently claim success.
-        return "Η ακουστική ανάλυση δεν ολοκληρώθηκε με επαληθεύσιμη αιτιολόγηση.";
+        return "Δεν ολοκληρώθηκε η ακουστική ανάλυση με επαληθεύσιμη αιτιολόγηση.";
     }
 
     public static String route(String raw, boolean greek) {
