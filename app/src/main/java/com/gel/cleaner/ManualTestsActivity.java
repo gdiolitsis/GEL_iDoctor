@@ -10136,17 +10136,17 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                 String.valueOf(s.droppedFrames)
         );
 
-    if (s.frames > 0 && s.blackFrames == 0)
+    // Darkness describes the sampled scene, not a failed frame stream.
+    if (s.validLumaFrames > 0)
         logLabelValue(
-                gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
-                "0"
+                gr ? "Πολύ σκοτεινά καρέ" : "Very dark frames",
+                s.blackFrames + "/" + s.validLumaFrames
         );
     else {
         logLabelWarnValue(
-                gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
-                String.valueOf(s.blackFrames)
+                gr ? "Φωτεινότητα δείγματος" : "Sample brightness",
+                gr ? "Δεν υπάρχουν έγκυρα δείγματα" : "No valid samples"
         );
-        overall.streamIssueCount++;
     }
 
     logLabelValue(
@@ -10228,6 +10228,15 @@ private void lab8FinalizePreviewOutcome(Lab8Session s, Lab8Overall overall) {
         logLabelWarnValue(gr ? "Προεπισκόπηση" : "Preview",
                 gr ? "ΑΝΕΠΑΡΚΗ ΣΤΟΙΧΕΙΑ — χωρίς διάγνωση βλάβης"
                    : "INCONCLUSIVE — no hardware verdict");
+    }
+    if (s.blackFrames > 0 && s.validLumaFrames > 0) {
+        logInfo(gr
+                ? "Το δείγμα περιείχε πολύ σκοτεινά καρέ. Αν η κάμερα έβλεπε σκοτεινή επιφάνεια "
+                  + "ή ο φακός ήταν καλυμμένος, αυτό είναι αναμενόμενο. Διαφορετικά, επανάλαβε "
+                  + "το τεστ σε φωτεινό χώρο, με τον φακό ελεύθερο από εμπόδια."
+                : "The sample contained very dark frames. This is expected if the camera faced "
+                  + "a dark surface or the lens was covered. Otherwise, repeat the test in a "
+                  + "well-lit place with nothing obstructing the lens.");
     }
 }
 
