@@ -173,7 +173,9 @@
         <activity
             android:name=".IPhoneLabsActivity"
             android:exported="false"
-            android:theme="@style/Theme.GEL.DarkGold" />
+            android:theme="@style/Theme.GEL.DarkGold"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout" />
 
         <!-- ZXing supplies a landscape-only default. Let the scanner follow
              the device/window orientation, including large Android 16 screens.
@@ -226,9 +228,14 @@
             android:name=".DiagnosisMenuActivity"
             android:exported="false"/>
 
+        <!-- Keep Android 31-Lab sessions upright even when the phone is moved
+             to the ear. Handle configuration changes without destroying
+             active prompts or wiping already collected evidence. -->
         <activity
             android:name=".ManualTestsActivity"
-            android:exported="false"/>
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
         <!-- ================= REMOTE DEVICE DIAGNOSTICS & SUPPORT / TECHNICIAN ================= -->
         <activity
@@ -291,24 +298,28 @@
             android:name=".TouchGridTestActivity"
             android:exported="false"
             android:theme="@style/Theme.GEL.DarkGold"
+            android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
         <activity
             android:name=".DisplayProTestActivity"
             android:exported="false"
             android:theme="@style/Theme.GEL.DarkGold"
+            android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
         <activity
             android:name=".RotationCheckActivity"
             android:exported="false"
             android:theme="@style/Theme.GEL.DarkGold"
+            android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
         <activity
             android:name=".ProximityCheckActivity"
             android:exported="false"
             android:theme="@style/Theme.GEL.DarkGold"
+            android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
         <activity android:name="com.gel.cleaner.GelProAccountActivity" android:exported="false" />
