@@ -49,18 +49,43 @@ public class TouchGridTestActivity extends GELAutoActivityHook {
         root.addView(gridView, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
 
+        // Dedicated adaptive control row: never clip the localized stop label.
+        // A fixed-height 72dp footer could clip a button when font scaling or
+        // the general GelButton minimum/padding policy increased its height.
         FrameLayout controls = new FrameLayout(this);
-        Button endButton = new com.gel.cleaner.GelButton(this);
-        endButton.setText(AppLang.isGreek(this) ? "ΤΕΡΜΑΤΙΣΜΟΣ" : "END TEST");
+        controls.setPadding(dp(12), dp(8), dp(12), dp(8));
+
+        // Use a plain Android Button for this full-screen diagnostic action.
+        // Its explicitly set text and contrast remain visible under theme changes.
+        Button endButton = new Button(this);
+        String stopLabel = AppLang.isGreek(this) ? "ΤΕΡΜΑΤΙΣΜΟΣ" : "END TEST";
+        endButton.setText(stopLabel);
+        endButton.setContentDescription(stopLabel);
         endButton.setAllCaps(false);
         endButton.setTextColor(Color.WHITE);
-        endButton.setBackgroundColor(0xFF8B0000);
+        endButton.setTextSize(16f);
+        endButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        endButton.setGravity(Gravity.CENTER);
+        endButton.setSingleLine(false);
+        endButton.setHorizontallyScrolling(false);
+        endButton.setMinHeight(dp(56));
+        endButton.setMinWidth(dp(168));
+        endButton.setPadding(dp(18), dp(14), dp(18), dp(14));
+
+        android.graphics.drawable.GradientDrawable endBackground =
+                new android.graphics.drawable.GradientDrawable();
+        endBackground.setColor(0xFF8B0000);
+        endBackground.setCornerRadius(dp(12));
+        endBackground.setStroke(dp(3), 0xFFFFD700);
+        endButton.setBackground(endBackground);
+
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
         controls.addView(endButton, lp);
         root.addView(controls, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(72)));
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
         endButton.setOnClickListener(v -> finishTouch(false));
         setContentView(root);
     }

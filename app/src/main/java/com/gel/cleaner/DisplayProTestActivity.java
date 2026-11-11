@@ -215,10 +215,17 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         root.setBackgroundColor(Color.BLACK);
 
         hint = new TextView(this);
-        hint.setTextColor(Color.WHITE);
+        // Bright yellow alone disappears on a pure-white or green panel.
+        // Keep a small near-opaque black backing under the caption only.
+        hint.setTextColor(Color.YELLOW);
+        hint.setTypeface(null, Typeface.BOLD);
         hint.setTextSize(16f);
-        hint.setPadding(dp(24), dp(24), dp(24), dp(24));
+        hint.setPadding(dp(14), dp(10), dp(14), dp(10));
         hint.setGravity(Gravity.CENTER);
+        GradientDrawable hintBackground = new GradientDrawable();
+        hintBackground.setColor(0xF0000000);
+        hintBackground.setCornerRadius(dp(10));
+        hint.setBackground(hintBackground);
         root.addView(hint);
 
         Button exitBtn = new com.gel.cleaner.GelButton(this);
@@ -284,6 +291,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         TestStep s = steps[stepIndex];
         s.apply(root);
 
+        // The caption's dark backing preserves contrast on every test colour.
         hint.setText(
                 s.label + "\n\n" +
                 (AppLang.isGreek(this) ? "Κύκλος " : "Cycle ") +
