@@ -284,6 +284,10 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         TestStep s = steps[stepIndex];
         s.apply(root);
 
+        // Keep step instructions legible on white while preserving the exact
+        // #FFFFFF / #000000 diagnostic background colours.
+        hint.setTextColor(s instanceof SolidStep && ((SolidStep) s).color == Color.WHITE
+                ? Color.BLACK : Color.WHITE);
         hint.setText(
                 s.label + "\n\n" +
                 (AppLang.isGreek(this) ? "Κύκλος " : "Cycle ") +
