@@ -2794,10 +2794,12 @@ String[] models = "iphone".equals(type)
 ? new String[]{
 
 // =====================
-// iPhone 16 Series
+// Official Apple 2026 models
 // =====================
+"iPhone Duo",
 "iPhone 18 Pro",
 "iPhone 18 Pro Max",
+// Official Apple 2025–2026 models
 "iPhone 17",
 "iPhone 17 Pro",
 "iPhone 17 Pro Max",
