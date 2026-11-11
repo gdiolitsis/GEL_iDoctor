@@ -51,6 +51,11 @@ public class DisplayProTestActivity extends GELAutoActivityHook {
     private int loopIndex = 0;
     private long startTimeMs;
 
+    // The override affects only this Activity, not Settings.System.
+    private boolean brightnessOverrideActive = false;
+    private float savedWindowBrightness =
+            WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+
     private TestStep[] steps;
     private final Handler h = new Handler(Looper.getMainLooper());
 
@@ -80,12 +85,46 @@ public class DisplayProTestActivity extends GELAutoActivityHook {
     }
 
     // ============================================================
+    // TEMPORARY VISUAL-TEST BRIGHTNESS
+    // ============================================================
+    // Temporarily request maximum brightness for the actual visual patterns.
+    // The system may still impose thermal/power restrictions on physical luminance.
+    private boolean applyTemporaryDisplayBrightness() {
+        if (brightnessOverrideActive) return true;
+        WindowManager.LayoutParams params = getWindow().getAttributes();
+        savedWindowBrightness = params.screenBrightness;
+        brightnessOverrideActive = true;
+        try {
+            params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
+            getWindow().setAttributes(params);
+            return true;
+        } catch (RuntimeException ignored) {
+            restorePreviousDisplayBrightness();
+            return false;
+        }
+    }
+
+    // Restoring -1 resumes the user's existing manual/automatic system policy.
+    private void restorePreviousDisplayBrightness() {
+        if (!brightnessOverrideActive) return;
+        brightnessOverrideActive = false;
+        try {
+            WindowManager.LayoutParams params = getWindow().getAttributes();
+            params.screenBrightness = savedWindowBrightness;
+            getWindow().setAttributes(params);
+        } catch (RuntimeException ignored) {
+            // No global settings were modified and this window is closing.
+        }
+    }
+
+    // ============================================================
     // SAFE CANCEL — THE ONLY CANCEL PATH
     // ============================================================
     private void safeCancel() {
 
         if (testFinished) return;
         testFinished = true;
+        restorePreviousDisplayBrightness();
 
         try { h.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
         try { AppTTS.stop(); } catch (Throwable ignore) {}
@@ -107,12 +146,14 @@ public void onBackPressed() {
     protected void onPause() {
         // Leaving the foreground invalidates the guided visual observation.
         if (!testFinished) safeCancel();
+        restorePreviousDisplayBrightness();
         super.onPause();
     }
 
     @Override
     protected void onDestroy() {
         activityAlive = false;
+        restorePreviousDisplayBrightness();
         h.removeCallbacksAndMessages(null);
         AppTTS.stop();
         super.onDestroy();
@@ -127,12 +168,18 @@ public void onBackPressed() {
 
         final String text =
                 gr
-                        ? "Η δοκιμή αυτή οδηγεί την οθόνη στη μέγιστη φωτεινότητα\n"
-                        + "και μπορεί να καταπονήσει προσωρινά πάνελ OLED.\n\n"
-                        + "Συνέχισε μόνο αν κατανοείς και αποδέχεσαι τον κίνδυνο."
-                        : "This test drives the display at maximum brightness\n"
-                        + "and may temporarily stress OLED panels.\n\n"
-                        + "Proceed only if you understand and accept this.";
+                        ? "Η δοκιμή ζητά προσωρινά μέγιστη φωτεινότητα\n"
+                        + "μόνο κατά την προβολή των μοτίβων και μπορεί να\n"
+                        + "καταπονήσει προσωρινά πάνελ OLED.\n\n"
+                        + "Στο τέλος επανέρχεται η προηγούμενη φωτεινότητα,\n"
+                        + "χωρίς αλλαγή στις ρυθμίσεις της συσκευής.\n\n"
+                        + "Συνέχισε μόνο αν αποδέχεσαι τον κίνδυνο."
+                        : "The test temporarily requests maximum brightness\n"
+                        + "only while showing patterns and may stress OLED\n"
+                        + "panels.\n\n"
+                        + "Your previous brightness setting resumes afterwards;\n"
+                        + "device brightness preferences are unchanged.\n\n"
+                        + "Proceed only if you accept this.";
 
         AlertDialog.Builder b =
                 new AlertDialog.Builder(this,
@@ -207,9 +254,12 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         };
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.screenBrightness = 1f;
-        getWindow().setAttributes(lp);
+        if (!applyTemporaryDisplayBrightness()) {
+            GELServiceLog.logInfo(
+                    "LAB Display Pro Test — temporary window brightness unavailable");
+            safeCancel();
+            return;
+        }
 
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
@@ -312,6 +362,8 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
             return;
         }
 
+        // Pattern presentation is complete: restore before displaying the dialog.
+        restorePreviousDisplayBrightness();
         final boolean gr = AppLang.isGreek(this);
 
         final String text =
@@ -379,6 +431,7 @@ yes.setOnClickListener(v -> endTest(true));
 
     if (testFinished) return;
     testFinished = true;
+    restorePreviousDisplayBrightness();
 
     try { h.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
     try { AppTTS.stop(); } catch (Throwable ignore) {}
