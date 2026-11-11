@@ -43,3 +43,8 @@ grep -q arm64-v8a "$out/abis.txt"
 adb install --no-incremental -g "$apk"
 adb shell dumpsys package com.gel.iDoctor > "$out/package.txt"
 python3 tools/ci/full_ui_audit.py "$out" "$language"
+# Apple-mode evidence runs on the same disposable emulator after Android QA.
+# Do not describe green Android lab exploration as a verified iPhone import test.
+if [ "${AUDIT_APPLE_MODE:-0}" = 1 ]; then
+  python3 tools/ci/apple_ui_audit.py "$out" "$language"
+fi
