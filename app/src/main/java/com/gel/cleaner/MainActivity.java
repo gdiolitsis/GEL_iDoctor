@@ -2708,7 +2708,7 @@ bg.setStroke(dp(3), 0xFFFFD700);
 root.setBackground(bg);
 
 TextView title = new TextView(this);
-title.setText("Select your Apple device");
+title.setText(AppLang.isGreek(this) ? "Επιλέξτε συσκευή Apple" : "Select your Apple device");
 title.setTextColor(Color.WHITE);
 title.setTextSize(20f);
 title.setTypeface(null, Typeface.BOLD);
@@ -2909,7 +2909,7 @@ bg.setStroke(dp(3), 0xFFFFD700);
 root.setBackground(bg);
 
 TextView title = new TextView(this);
-title.setText("Select Apple Model");
+title.setText(AppLang.isGreek(this) ? "Επιλέξτε μοντέλο Apple" : "Select Apple Model");
 title.setTextColor(Color.WHITE);
 
 root.addView(title);
@@ -2983,7 +2983,7 @@ btn.setText("🍎 " + type.toUpperCase(Locale.US)
 
 Toast.makeText(
 this,
-"Selected: " + rawModel,
+(AppLang.isGreek(this) ? "Επιλέχθηκε: " : "Selected: ") + rawModel,
 Toast.LENGTH_SHORT
 ).show();
 
