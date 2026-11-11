@@ -10443,6 +10443,8 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 if (!isFinishing() && !isDestroyed()) {
     d.show();
     com.gel.cleaner.GelButtonLayout.fitDialog(d);
+    AppTTS.speak(this, messageText,
+            () -> d.isShowing() && !isFinishing() && !isDestroyed());
 }
         
         yes.setOnClickListener(v -> {
