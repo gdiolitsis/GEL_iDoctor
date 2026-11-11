@@ -78,6 +78,7 @@ jobs:
           AUDIT_SCOPE: full
           AUDIT_REQUIRE_WELCOME_OK: '1'
           AUDIT_REQUIRE_ACCESSIBLE_SETTINGS: '1'
+          AUDIT_APPLE_MODE: ${{ startsWith(github.head_ref, 'qa/integration-apple-') && '1' || '0' }}
         run: |
           set -euo pipefail
           python3 tools/ci/test_ui_audit_selectors.py
