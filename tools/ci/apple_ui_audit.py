@@ -149,7 +149,7 @@ def labs():
     activities = adb("shell", "dumpsys", "activity", "activities")
     if "IPhoneLabsActivity" not in activities:
         raise AssertionError("iPhone Labs Activity is not foreground")
-    must(by_text(r"^LAB\\s*1\\s*-"), "LAB 1 control missing after opening Apple Labs", 3)
+    must(by_text(r"^LAB\s*1\s*-"), "LAB 1 control missing after opening Apple Labs", 3)
     return "Apple Labs Activity and LAB 1 visible"
 
 def verify_eight_buttons():
