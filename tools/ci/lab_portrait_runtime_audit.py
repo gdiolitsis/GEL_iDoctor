@@ -116,10 +116,10 @@ try:
     # Verify both historical logs before the Lab 3 modal hides the panel.
     before = snapshot("labs-1-2-before-earpiece")
     for num in (1, 2):
-        if not re.search(r"LAB\\s*"+str(num)+r"\\s*[—-]", before, flags=re.I):
+        if not re.search(r"LAB\s*"+str(num)+r"\s*[—-]", before, flags=re.I):
             raise AssertionError("Earlier Lab "+str(num)+" log missing BEFORE Lab 3")
 
-    control = find(r"^3\\.", 10)
+    control = find(r"^3\.", 10)
     if control is None: raise AssertionError("Lab 3 earpiece entry missing")
     tap(control)
     time.sleep(1.3)
@@ -154,7 +154,7 @@ try:
         raise AssertionError("ManualTestsActivity exited when dismissing Lab 3 prompt")
     after = snapshot("labs-1-2-after-earpiece-and-rotation")
     for num in (1, 2):
-        if not re.search(r"LAB\\s*"+str(num)+r"\\s*[—-]", after, flags=re.I):
+        if not re.search(r"LAB\s*"+str(num)+r"\s*[—-]", after, flags=re.I):
             raise AssertionError("Lab "+str(num)+" history was erased by rotation")
 
     record("result", "PASS: portrait/log-lifecycle regression in emulator; physical earpiece unverified")
