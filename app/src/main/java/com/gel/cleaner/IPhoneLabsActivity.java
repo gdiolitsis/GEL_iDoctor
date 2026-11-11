@@ -220,9 +220,9 @@ sub.setLayoutParams(new LinearLayout.LayoutParams(
 
 sub.setText(gr
         ? "Εργαστηριακή διάγνωση iPhone μέσω αρχείων συστήματος\n"
-          + "Ανάλυση logs επιπέδου service (χωρίς άμεση πρόσβαση στη συσκευή)"
+          + "Ανάλυση εισαγόμενων logs· χωρίς άμεσο έλεγχο υλικού"
         : "Laboratory diagnostics for iPhone using system files\n"
-          + "Service-grade log analysis (no direct device access)"
+          + "Imported diagnostic-log analysis; no direct hardware test"
 );
 
 sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
@@ -294,8 +294,8 @@ root.addView(appendBtn);
 root.addView(makeLabButton(
         gr ? "AUTO — Εκτέλεση όλων των εργαστηρίων"
            : "AUTO — Run All Labs",
-        gr ? "Πλήρης διάγνωση όλων των panic logs"
-           : "Full diagnostics across all panic logs",
+        gr ? "Ανάλυση των υποστηριζόμενων εισαγόμενων panic logs"
+           : "Analyze supported imported panic logs",
         true,
         v -> runAllAppleDiagnostics()
 ));
@@ -374,8 +374,8 @@ root.addView(makeLabButton(
 root.addView(makeLabButton(
         gr ? "LAB 8 - Τελική Σύσταση Service"
            : "LAB 8 - Final Service Recommendation",
-        gr ? "Ολοκληρωμένη τεχνική αξιολόγηση βάσει όλων των εργαστηρίων"
-           : "Integrated technical verdict based on all analysis",
+        gr ? "Σύνοψη ενδείξεων με σαφείς περιορισμούς διάγνωσης"
+           : "Evidence summary with explicit diagnostic limitations",
         true,
         v -> runFinalServiceRecommendationLab()
 ));
@@ -842,7 +842,7 @@ return
         "to detect stability patterns.\n\n" +
 
         "Tip:\n" +
-        "More logs improve diagnostic accuracy.";
+        "More logs may reveal repetition, but do not establish the hardware cause.";
 }
 
 private String getPanicGuideTextGR() {
@@ -867,7 +867,7 @@ return
         "για εντοπισμό μοτίβων αστάθειας.\n\n" +
 
         "Συμβουλή:\n" +
-        "Όσο περισσότερα logs, τόσο πιο αξιόπιστη η διάγνωση.";
+        "Περισσότερα logs μπορεί να δείξουν επανάληψη, όχι να αποδείξουν την αιτία βλάβης.";
 }
 
 // =========================================================
