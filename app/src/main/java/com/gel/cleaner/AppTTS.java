@@ -8,6 +8,8 @@ import android.os.Looper;
 
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BooleanSupplier;
 
 /*
  ============================================================
@@ -31,6 +33,8 @@ public final class AppTTS {
     private static TextToSpeech tts;
     private static final AtomicBoolean ready = new AtomicBoolean(false);
     private static boolean muted = false;
+    private static final AtomicLong speechGeneration = new AtomicLong();
+    private static final int MAX_INIT_RETRIES = 50;
 
     private AppTTS() {}
 
@@ -96,8 +100,20 @@ public final class AppTTS {
     // SPEAK
     // ============================================================
     public static void speak(Context ctx, String text) {
+        speak(ctx, text, () -> true);
+    }
+
+    /** Keep delayed initialization tied to the dialog that requested speech. */
+    public static void speak(Context ctx, String text, BooleanSupplier stillVisible) {
+        long generation = speechGeneration.incrementAndGet();
+        speakWhenReady(ctx, text, stillVisible, generation, MAX_INIT_RETRIES);
+    }
+
+    private static void speakWhenReady(Context ctx, String text,
+            BooleanSupplier stillVisible, long generation, int retriesLeft) {
 
         if (text == null || text.trim().isEmpty()) return;
+        if (generation != speechGeneration.get() || !stillVisible.getAsBoolean()) return;
 
         init(ctx);
 
@@ -105,9 +121,12 @@ public final class AppTTS {
         if (tts == null) return;
 
         if (!ready.get()) {
-            // Retry once shortly after init
-            new Handler(Looper.getMainLooper())
-                    .postDelayed(() -> speak(ctx, text), 200);
+            // Cancelable, bounded wait: stop/mute/new speech invalidates old requests.
+            if (retriesLeft > 0) {
+                new Handler(Looper.getMainLooper()).postDelayed(
+                        () -> speakWhenReady(ctx, text, stillVisible,
+                                generation, retriesLeft - 1), 200);
+            }
             return;
         }
 
@@ -150,15 +169,14 @@ public final class AppTTS {
 
         prefs.edit().putBoolean(PREF_TTS_MUTED, m).apply();
 
-        if (m && tts != null) {
-            try { tts.stop(); } catch (Throwable ignore) {}
-        }
+        if (m) stop();
     }
 
     // ============================================================
     // STOP
     // ============================================================
     public static void stop() {
+        speechGeneration.incrementAndGet();
         if (tts != null) {
             try { tts.stop(); } catch (Throwable ignore) {}
         }
@@ -168,6 +186,7 @@ public final class AppTTS {
     // SHUTDOWN
     // ============================================================
     public static void shutdown() {
+        speechGeneration.incrementAndGet();
 
         if (tts != null) {
             try {
