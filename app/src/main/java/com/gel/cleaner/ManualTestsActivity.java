@@ -8667,7 +8667,8 @@ if (!isFinishing() && !isDestroyed()) {
                 && !isFinishing()
                 && !isDestroyed()
                 && !AppTTS.isMuted(this)) {
-            AppTTS.ensureSpeak(this, message);
+            AppTTS.speak(this, message,
+                    () -> d.isShowing() && !isFinishing() && !isDestroyed());
         }
     }, 400);
 }
@@ -8854,7 +8855,8 @@ if (!isFinishing() && !isDestroyed()) {
         // ---------------------------
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (d.isShowing() && !AppTTS.isMuted(this)) {
-                AppTTS.ensureSpeak(this, messageText);
+                AppTTS.speak(this, messageText,
+                        () -> d.isShowing() && !isFinishing() && !isDestroyed());
             }
         }, 120);
 
@@ -9302,6 +9304,8 @@ start.setOnClickListener(v -> {
 if (!isFinishing() && !isDestroyed()) {
     d.show();
     com.gel.cleaner.GelButtonLayout.fitDialog(d);
+    AppTTS.speak(this, messageText,
+            () -> d.isShowing() && !isFinishing() && !isDestroyed());
 }
 
 }  
