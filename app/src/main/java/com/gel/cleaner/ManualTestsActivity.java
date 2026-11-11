@@ -6120,6 +6120,13 @@ private void lab1SpeakerTone() {
         }
         logLabelValue(gr ? "Αριθμός επαληθευμένων τόνων" : "Correlated tones",
                 result.observedTones + "/" + result.testedTones);
+        if (result.responseObserved) {
+            logLabelOkValue(gr ? "Συμπέρασμα Lab 1" : "Lab 1 conclusion",
+                    AcousticProbeNarrative.lab1Conclusion(result.attempted, result.responseObserved, gr));
+        } else {
+            logLabelWarnValue(gr ? "Συμπέρασμα Lab 1" : "Lab 1 conclusion",
+                    AcousticProbeNarrative.lab1Conclusion(result.attempted, result.responseObserved, gr));
+        }
         if (result.testedTones > 0) {
             logLabelValue(gr ? "Άνοδος στο φάσμα (σε σχέση με περιβάλλον)"
                              : "Spectral rise vs ambient",
@@ -6147,10 +6154,13 @@ private void lab1SpeakerTone() {
                             : (gr ? "Δεν ανιχνεύθηκε clipping στο δείγμα"
                                   : "No clipping detected in sample"));
         }
-        logLabelValue(gr ? "Διαδρομή μικροφώνου" : "Mic input route", result.inputRoute);
-        logLabelValue(gr ? "Μέθοδος" : "Method",
-                "AudioRecord during ToneGenerator, baseline OFF / challenge ON");
-        logLabelValue(gr ? "Αιτιολόγηση" : "Reason", result.reason);
+        logLabelValue(gr ? "Διαδρομή μικροφώνου" : "Mic input route",
+                AcousticProbeNarrative.route(result.inputRoute, gr));
+        logLabelValue(gr ? "Μέθοδος" : "Method", gr
+                ? "Συγχρονισμένη καταγραφή AudioRecord ενώ αναπαράγεται τόνος ToneGenerator, πριν/κατά τον τόνο"
+                : "AudioRecord during ToneGenerator, ambient OFF / challenge ON");
+        logLabelValue(gr ? "Αιτιολόγηση" : "Reason",
+                AcousticProbeNarrative.reason(result.reason, gr));
         if (!result.responseObserved) {
             logLabelWarnValue(gr ? "Προτεινόμενη ενέργεια" : "Recommended action",
                     gr ? "Έλεγξε την ένταση, αποσύνδεσε Bluetooth/ακουστικά/USB ήχο, "
@@ -6174,7 +6184,8 @@ private void lab1SpeakerTone() {
         }
         logLine();
         } catch (RuntimeException e) {
-            logLabelWarnValue("Acoustic probe", "UNAVAILABLE: "
+            logLabelWarnValue(gr ? "Ακουστική δοκιμή" : "Acoustic probe",
+                    (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ: " : "UNAVAILABLE: ")
                     + e.getClass().getSimpleName());
         } finally {
             lab12AudioBusy.set(false);
@@ -6218,7 +6229,8 @@ private void lab2SpeakerSweep() {
         try {
         AcousticStimulusProbe.Result result = AcousticStimulusProbe.run(this, true);
         logLabelValue(gr ? "Σύγχρονοι τόνοι" : "Timed tone responses",
-                result.observedTones + " / " + result.testedTones + " (4 requested)");
+                result.observedTones + " / " + result.testedTones
+                        + (gr ? " (ζητήθηκαν 4)" : " (4 requested)"));
         AcousticLab2Outcome.Status outcome = AcousticLab2Outcome.classify(
                 result.attempted, result.responseObserved, result.testedTones);
         switch (outcome) {
@@ -6229,8 +6241,8 @@ private void lab2SpeakerSweep() {
                 break;
             case INCONCLUSIVE:
                 logLabelWarnValue(gr ? "Ακουστικός συσχετισμός" : "Acoustic correlation",
-                        gr ? "ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ — 4/4 δείγματα, χωρίς πλήρη συσχέτιση"
-                           : "INCONCLUSIVE — 4/4 samples, without full correlation");
+                        AcousticProbeNarrative.lab2Conclusion(result.attempted,
+                                result.observedTones, result.testedTones, gr));
                 break;
             case PARTIAL:
                 logLabelWarnValue(gr ? "Κατάσταση Lab 2" : "Lab 2 status",
@@ -6276,8 +6288,13 @@ private void lab2SpeakerSweep() {
                            : "No clipping detected in captured samples");
             }
         }
-        logLabelValue(gr ? "Διαδρομή εισόδου" : "Mic input route", result.inputRoute);
-        logLabelValue(gr ? "Κατάσταση δείγματος" : "Sample status", result.reason);
+        logLabelValue(gr ? "Διαδρομή εισόδου" : "Mic input route",
+                AcousticProbeNarrative.route(result.inputRoute, gr));
+        logLabelValue(gr ? "Αιτιολόγηση" : "Reason",
+                AcousticProbeNarrative.reason(result.reason, gr));
+        logLabelValue(gr ? "Συμπέρασμα Lab 2" : "Lab 2 conclusion",
+                AcousticProbeNarrative.lab2Conclusion(
+                        result.attempted, result.observedTones, result.testedTones, gr));
         logLabelWarnValue(gr ? "Περιορισμός" : "Limitations",
                 gr ? "Οι 4 τόνοι DTMF δεν αποτελούν σαρωτή πλήρους ακουστικού φάσματος, "
                         + "ούτε αποδεικνύουν την ποιότητα ή την προέλευση του ηχείου."
@@ -6303,7 +6320,8 @@ private void lab2SpeakerSweep() {
         }
         logLine();
         } catch (RuntimeException e) {
-            logLabelWarnValue("Acoustic probe", "UNAVAILABLE: "
+            logLabelWarnValue(gr ? "Ακουστική δοκιμή" : "Acoustic probe",
+                    (gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ: " : "UNAVAILABLE: ")
                     + e.getClass().getSimpleName());
         } finally {
             lab12AudioBusy.set(false);
