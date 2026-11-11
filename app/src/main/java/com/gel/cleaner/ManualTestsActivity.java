@@ -1114,6 +1114,8 @@ private AlertDialog lab8ActiveDialog = null;
     // ============================================================
     private volatile boolean lab3WaitingUser = false;
     private volatile int lab3RoutedOutputType = -1;
+    private volatile String lab3PlaybackFailureCode = "";
+    private volatile int lab3LastPlaybackHeadFrames = 0;
     private int lab3OldMode = AudioManager.MODE_NORMAL;
     private boolean lab3OldSpeaker = false;
     private boolean lab3OldMicMute = false;
@@ -3163,20 +3165,24 @@ private void restoreLab3Audio() {
  * Earpiece-only, OEM safe.
  */
 private boolean playEarpieceBeep() {
-
+    // Preserve the backup's 8 kHz / 400 ms voice-call tone and audio route.
+    // Unlike the old code, verify that write() and play() were accepted, but
+    // recognize the legitimate static pre-write STATE_NO_STATIC_DATA.
     int sampleRate = 8000;
     int durationMs = 400;
     int samples = sampleRate * durationMs / 1000;
 
     short[] buffer = new short[samples];
     double freq = 1000.0;
-
     for (int i = 0; i < samples; i++) {
         buffer[i] = (short)
                 (Math.sin(2 * Math.PI * i * freq / sampleRate) * 32767);
     }
 
+    lab3PlaybackFailureCode = "";
+    lab3LastPlaybackHeadFrames = 0;
     AudioTrack track = null;
+    String stage = "NOT_CREATED";
     try {
         track = new AudioTrack(
                 AudioManager.STREAM_VOICE_CALL,
@@ -3186,22 +3192,44 @@ private boolean playEarpieceBeep() {
                 buffer.length * 2,
                 AudioTrack.MODE_STATIC
         );
-        if (track.getState() != AudioTrack.STATE_INITIALIZED) return false;
+        if (!Lab3StaticAudioTrackPolicy.canAcceptStaticWrite(track.getState())) {
+            lab3PlaybackFailureCode = "NOT_CREATED";
+            return false;
+        }
+        stage = "WRITE_INCOMPLETE";
         int written = track.write(buffer, 0, buffer.length);
-        if (written != buffer.length) return false;
+        if (written != buffer.length) {
+            lab3PlaybackFailureCode = "WRITE_INCOMPLETE";
+            return false;
+        }
+        if (!Lab3StaticAudioTrackPolicy.canRequestPlayback(
+                track.getState(), written, buffer.length)) {
+            lab3PlaybackFailureCode = "NOT_READY_AFTER_WRITE";
+            return false;
+        }
+        stage = "PLAY_EXCEPTION";
         track.play();
-        if (track.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) return false;
-        AudioDeviceInfo routed = track.getRoutedDevice();
-        if (routed != null) lab3RoutedOutputType = routed.getType();
+        // Do not treat getPlayState() immediately after play() as an acoustic
+        // test. The old working code did not fail based on that snapshot.
         SystemClock.sleep(durationMs + 100);
-        // Playback API accepted samples; does NOT confirm audible hardware route.
+        try {
+            lab3LastPlaybackHeadFrames = Math.max(0, track.getPlaybackHeadPosition());
+            AudioDeviceInfo routed = track.getRoutedDevice();
+            if (routed != null) lab3RoutedOutputType = routed.getType();
+        } catch (RuntimeException ignored) {
+            // Routing/position metadata are optional; the user's audible
+            // confirmation is still mandatory and cannot prove a chipset.
+        }
         return true;
     } catch (RuntimeException e) {
+        lab3PlaybackFailureCode = stage;
+        android.util.Log.w("GEL-Lab3-Audio",
+                "AudioTrack failed at " + stage + ": " + e.getClass().getSimpleName());
         return false;
     } finally {
         if (track != null) {
-            try { track.stop(); } catch (Throwable ignore) {}
-            try { track.release(); } catch (Throwable ignore) {}
+            try { track.stop(); } catch (RuntimeException ignored) {}
+            try { track.release(); } catch (RuntimeException ignored) {}
         }
     }
 }
@@ -6302,6 +6330,8 @@ private void lab3EarpieceManual() {
         return;
     }
     lab3RoutedOutputType = -1;
+    lab3PlaybackFailureCode = "";
+    lab3LastPlaybackHeadFrames = 0;
     lab3Cancelled = false;
     runOnUiThread(() -> {
         if (btnExport != null) {
@@ -6588,7 +6618,13 @@ start.setOnClickListener(v -> {
     if (lab3Cancelled || !lab3GuidedPending.get()) return;
     if (!lab3Started.compareAndSet(false, true)) return;
     try { AppTTS.stop(); } catch (Throwable ignore) {}
-    d.dismiss();
+    // The backup kept the guide visible during the three tones.
+    // Do NOT dismiss the lab as soon as START is tapped.
+    start.setEnabled(false);
+    start.setAlpha(0.5f);
+    msg.setText(gr
+            ? "Εκτελείται η δοκιμή ακουστικού...\nΆφησε τη συσκευή στο αυτί."
+            : "Earpiece test in progress...\nKeep the phone at your ear.");
 
     new Thread(() -> {
         int acceptedPlaybackRequests = 0;
@@ -6606,7 +6642,7 @@ start.setOnClickListener(v -> {
                         : "Tone " + i + " / 3");
 
                 if (!playEarpieceBeep()) {
-                    throw new IllegalStateException("Android playback request rejected");
+                    throw new IllegalStateException("AudioTrack " + lab3PlaybackFailureCode);
                 }
                 acceptedPlaybackRequests++;
                 SystemClock.sleep(650);
@@ -6617,17 +6653,17 @@ start.setOnClickListener(v -> {
                     : "Android accepted three playback requests; audibility was not automatically verified.");
 
         } catch (Throwable t) {
-
+            if (lab3Cancelled || !lab3GuidedPending.get())
+                lab3PlaybackFailureCode = "SESSION_CANCELLED";
             logError(gr
-                    ? "Αποτυχία αναπαραγωγής τόνων ακουστικού."
-                    : "Earpiece tone playback failed.");
-
-            logLabelWarnValue(
-                    gr ? "Πιθανή αιτία" : "Possible cause",
-                    gr
-                            ? "Αποτυχία δρομολόγησης ήχου, περιορισμός συστήματος ή μη διαθέσιμη έξοδος ακουστικού."
-                            : "Audio routing failure, system-level restriction or unavailable earpiece output."
-            );
+                    ? "Η εκτέλεση του τόνου ακουστικού δεν ολοκληρώθηκε."
+                    : "Earpiece tone playback did not complete.");
+            logLabelWarnValue(gr ? "Αιτιολόγηση" : "Reason",
+                    Lab3StaticAudioTrackPolicy.failureExplanation(
+                            lab3PlaybackFailureCode, gr));
+            logLabelWarnValue(gr ? "Διαγνωστικό στάδιο" : "Technical stage",
+                    lab3PlaybackFailureCode.isEmpty() ? "UNKNOWN"
+                                                      : lab3PlaybackFailureCode);
 
         } finally {
 
@@ -6651,13 +6687,29 @@ start.setOnClickListener(v -> {
                     return;
                 }
                 if (allRequestsAccepted) {
+                    logLabelValue(gr ? "Πρόοδος αναπαραγωγής Android" : "Android playback-head frames",
+                            String.valueOf(lab3LastPlaybackHeadFrames)
+                                    + (gr ? " καρέ (όχι πιστοποίηση ακουστότητας)"
+                                          : " frames (not proof of audibility)"));
+                    try { d.dismiss(); } catch (RuntimeException ignored) {}
                     askUserEarpieceConfirmation(true);
                 } else {
                     logLabelWarnValue(gr ? "LAB 3 — Αποτέλεσμα" : "LAB 3 — Result",
-                            gr ? "Μη επαληθευμένο: αποτυχία αναπαραγωγής ή διαδρομής ήχου"
-                               : "UNAVAILABLE: playback failed; no earpiece hardware verdict");
+                            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ — το Android δεν ολοκλήρωσε την αναπαραγωγή"
+                               : "UNVERIFIED — Android did not complete tone playback");
                     lab3GuidedPending.set(false);
                     enableSingleExportButton();
+                    try { d.dismiss(); } catch (RuntimeException ignored) {}
+                    if (!isFinishing() && !isDestroyed() && !lab3Cancelled) {
+                        new AlertDialog.Builder(ManualTestsActivity.this)
+                                .setTitle(gr ? "Lab 3 — Χωρίς αποτέλεσμα" : "Lab 3 — No result")
+                                .setMessage(Lab3StaticAudioTrackPolicy.failureExplanation(
+                                        lab3PlaybackFailureCode, gr))
+                                .setPositiveButton(gr ? "ΕΠΑΝΑΛΗΨΗ" : "RETRY",
+                                        (dialog, which) -> lab3EarpieceManual())
+                                .setNegativeButton(gr ? "ΚΛΕΙΣΙΜΟ" : "CLOSE", null)
+                                .show();
+                    }
                 }
             });
         }
