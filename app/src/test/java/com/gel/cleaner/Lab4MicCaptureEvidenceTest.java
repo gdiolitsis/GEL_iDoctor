@@ -20,6 +20,22 @@ public class Lab4MicCaptureEvidenceTest {
         assertEquals(Lab4MicCaptureEvidence.State.SILENCE_OBSERVED,
                 Lab4MicCaptureEvidence.classify(true, false, 0, 0));
     }
+    @Test public void lowLevelFloorIsConsistentWithXiaomiProfileReadings() {
+        assertEquals(Lab4MicCaptureEvidence.State.SILENCE_OBSERVED,
+                Lab4MicCaptureEvidence.classify(true, false, 19.99, 32));
+        assertEquals(Lab4MicCaptureEvidence.State.AUDIO_OBSERVED,
+                Lab4MicCaptureEvidence.classify(true, false, 20.0, 30));
+        assertEquals(Lab4MicCaptureEvidence.State.AUDIO_OBSERVED,
+                Lab4MicCaptureEvidence.classify(true, false, 90.2, 300));
+        assertEquals(Lab4MicCaptureEvidence.State.AUDIO_OBSERVED,
+                Lab4MicCaptureEvidence.classify(true, false, 151.4, 841));
+    }
+    @Test public void silenceAndInvalidCaptureCannotBeUpgradedByHighRms() {
+        assertEquals(Lab4MicCaptureEvidence.State.SILENCE_OBSERVED,
+                Lab4MicCaptureEvidence.classify(true, true, 151.4, 841));
+        assertEquals(Lab4MicCaptureEvidence.State.UNAVAILABLE,
+                Lab4MicCaptureEvidence.classify(false, false, 151.4, 841));
+    }
     @Test public void nonzeroProfileAudioIsObservedNotPhysicalMicCertification() {
         assertEquals(Lab4MicCaptureEvidence.State.AUDIO_OBSERVED,
                 Lab4MicCaptureEvidence.classify(true, false, 41.3, 1800));
