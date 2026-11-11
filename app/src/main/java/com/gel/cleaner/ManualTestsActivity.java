@@ -29985,9 +29985,6 @@ if (requestCode == REQ_LAB6_TOUCH) {
         logLabelOkValue(gr ? "Δειγματοληψία αφής" : "Touch grid sampling",
                 gr ? "Καταγράφηκαν και οι 96 στόχοι της ορατής περιοχής"
                    : "All 96 visible-area targets registered touch events");
-        logLabelValue(gr ? "Περιορισμός" : "Limitation",
-                gr ? "Δεν επαληθεύτηκαν ολόκληρος ο digitizer, ghost touches ή ακρίβεια αφής"
-                   : "Not a full digitizer, ghost-touch or touch-accuracy certification");
     } else if (touch == Lab6Evidence.Touch.USER_STOPPED_INCOMPLETE) {
         logLabelWarnValue(gr ? "Δοκιμή αφής" : "Touch sampling",
                 gr ? "Διακόπηκε από τον χρήστη — χωρίς διάγνωση βλάβης"
@@ -30034,9 +30031,6 @@ if (requestCode == REQ_LAB6_COLOR) {
         logLabelValue(gr ? "Απάντηση χρήστη" : "User response",
                 gr ? "Δεν ανέφερε ορατές ανωμαλίες στο παρουσιασμένο μοτίβο"
                    : "No visible artifacts reported during the presented patterns");
-        logLabelValue(gr ? "Περιορισμός" : "Limitation",
-                gr ? "Δεν μετρήθηκαν φωτεινότητα, burn-in ή χρωματική ακρίβεια"
-                   : "Brightness, burn-in and color accuracy were not instrumentally measured");
     } else if (visual == Lab6Evidence.Visual.USER_REPORTED_ISSUE) {
         logLabelWarnValue(gr ? "Απάντηση χρήστη" : "User response",
                 gr ? "Αναφέρθηκε οπτική ανωμαλία — τύπος και αιτία μη επαληθευμένα"
@@ -30058,9 +30052,6 @@ if (requestCode == REQ_LAB6_COLOR) {
         logLabelValue(gr ? "Πρωτόκολλο" : "Guided protocol",
                 gr ? "Ολοκληρώθηκε πλέγμα αφής και καταγράφηκε υποκειμενική απάντηση"
                    : "Touch grid sampled and subjective visual answer recorded");
-        logLabelValue(gr ? "Διαγνωστικό όριο" : "Diagnostic limit",
-                gr ? "Δεν αποτελεί συνολική πιστοποίηση υγείας οθόνης"
-                   : "Does not certify full display hardware health");
     } else {
         logLabelWarnValue(gr ? "Πρωτόκολλο" : "Guided protocol",
                 gr ? "ΜΕΡΙΚΟ / ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ — όχι hardware PASS ή FAIL"
