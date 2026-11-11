@@ -186,6 +186,19 @@ public abstract class GELAutoActivityHook extends AppCompatActivity
     }
 
     // ============================================================
+    // SHARED START / EXIT VISUALS
+    // ============================================================
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && getWindow() != null) {
+            // Covers platform Buttons in XML / full-screen tests as well as
+            // custom GelButtons. Never changes the buttons' click actions.
+            GelActionButtonStyle.fit(getWindow().getDecorView());
+        }
+    }
+
+    // ============================================================
     // CONFIG CHANGES
     // ============================================================
     @Override
