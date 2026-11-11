@@ -3,6 +3,7 @@ package com.gel.cleaner;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.view.ContextThemeWrapper;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -66,14 +67,66 @@ public class GelActionButtonStyleTest {
         assertTrue(GelActionButtonStyle.apply(start));
         assertEquals(Color.WHITE, exit.getCurrentTextColor());
         assertEquals(Color.BLACK, start.getCurrentTextColor());
-        assertTrue(exit.getBackground() instanceof GradientDrawable);
-        assertTrue(start.getBackground() instanceof GradientDrawable);
-        assertEquals(GelActionButtonStyle.EXIT_RED,
-                ((GradientDrawable) exit.getBackground()).getColor().getDefaultColor());
-        assertEquals(GelActionButtonStyle.START_GREEN,
-                ((GradientDrawable) start.getBackground()).getColor().getDefaultColor());
+        assertEquals(GelActionButtonStyle.EXIT_RED, buttonFill(exit));
+        assertEquals(GelActionButtonStyle.START_GREEN, buttonFill(start));
         assertTrue(exit.getMinHeight() > 0);
         assertEquals(exit.getMinHeight(), start.getMinHeight());
+    }
+
+    private int buttonFill(Button button) {
+        assertTrue(button.getBackground() instanceof RippleDrawable);
+        RippleDrawable ripple = (RippleDrawable) button.getBackground();
+        assertTrue(ripple.getDrawable(0) instanceof GradientDrawable);
+        return ((GradientDrawable) ripple.getDrawable(0)).getColor().getDefaultColor();
+    }
+
+    @Test public void allRedAndGreenButtonsGetUnifiedPaletteRegardlessOfText() {
+        Context ctx = themedContext();
+        Button no = new GelButton(ctx);
+        no.setText("ΟΧΙ");
+        GradientDrawable oldRed = new GradientDrawable();
+        oldRed.setColor(0xFF8B0000);
+        no.setBackground(oldRed);
+
+        Button yes = new GelButton(ctx);
+        yes.setText("ΝΑΙ");
+        GradientDrawable oldGreen = new GradientDrawable();
+        oldGreen.setColor(0xFF0B5F3B);
+        yes.setBackground(oldGreen);
+
+        assertTrue(GelActionButtonStyle.apply(no));
+        assertTrue(GelActionButtonStyle.apply(yes));
+        assertEquals(GelActionButtonStyle.EXIT_RED, buttonFill(no));
+        assertEquals(GelActionButtonStyle.START_GREEN, buttonFill(yes));
+        assertEquals(Color.WHITE, no.getCurrentTextColor());
+        assertEquals(Color.BLACK, yes.getCurrentTextColor());
+        assertEquals("ΟΧΙ", no.getText().toString());
+        assertEquals("ΝΑΙ", yes.getText().toString());
+
+        Button neutral = new GelButton(ctx);
+        neutral.setText("ΛΕΠΤΟΜΕΡΕΙΕΣ");
+        GradientDrawable blue = new GradientDrawable();
+        blue.setColor(0xFF00BFFF);
+        neutral.setBackground(blue);
+        assertFalse(GelActionButtonStyle.apply(neutral));
+        assertSame(blue, neutral.getBackground());
+    }
+
+    @Test public void shadesAndTransparentDecorationsDoNotProduceFalseActionColors() {
+        assertEquals(GelActionButtonStyle.Role.EXIT,
+                GelActionButtonStyle.colorRole(0xFFB00020));
+        assertEquals(GelActionButtonStyle.Role.EXIT,
+                GelActionButtonStyle.colorRole(0xFFE60000));
+        assertEquals(GelActionButtonStyle.Role.START,
+                GelActionButtonStyle.colorRole(0xFF0F8A3B));
+        assertEquals(GelActionButtonStyle.Role.START,
+                GelActionButtonStyle.colorRole(0xFF39FF14));
+        assertEquals(GelActionButtonStyle.Role.NONE,
+                GelActionButtonStyle.colorRole(0xFFFFD700));
+        assertEquals(GelActionButtonStyle.Role.NONE,
+                GelActionButtonStyle.colorRole(0xFF00BFFF));
+        assertEquals(GelActionButtonStyle.Role.NONE,
+                GelActionButtonStyle.colorRole(0x4400FF9C));
     }
 
     @Test public void pairedButtonsGrowEquallyWithoutLosingClickListeners() {
