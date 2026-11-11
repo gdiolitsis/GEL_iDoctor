@@ -125,6 +125,7 @@ public class DisplayProTestActivity extends GELAutoActivityHook {
         if (testFinished) return;
         testFinished = true;
         restorePreviousDisplayBrightness();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         try { h.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
         try { AppTTS.stop(); } catch (Throwable ignore) {}
@@ -362,8 +363,10 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
             return;
         }
 
-        // Pattern presentation is complete: restore before displaying the dialog.
+        // Pattern presentation is complete: do not keep screen forced bright/on
+        // while waiting for a user response in the final dialog.
         restorePreviousDisplayBrightness();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         final boolean gr = AppLang.isGreek(this);
 
         final String text =
@@ -432,6 +435,7 @@ yes.setOnClickListener(v -> endTest(true));
     if (testFinished) return;
     testFinished = true;
     restorePreviousDisplayBrightness();
+    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
     try { h.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
     try { AppTTS.stop(); } catch (Throwable ignore) {}
