@@ -2077,7 +2077,19 @@ iphone11ProMax.thermalNote =
 iphone11ProMax.notes =
         "Largest iPhone 11; best battery life of the series and flagship endurance.";
 
-MAP.put("iphone 11 pro max", iphone11ProMax);  
+MAP.put("iphone 11 pro max", iphone11ProMax);
+        // Apple Support (109512): UWB exists on all listed iPhone 11–16
+        // family variants, except the separately registered 16e.
+        // Region-dependent availability; no physical radio test is claimed.
+        for (Map.Entry<String, AppleDeviceSpec> entry : MAP.entrySet()) {
+            String key = entry.getKey();
+            if (key.matches("iphone (11|12|13|14)( .*)?")) {
+                entry.getValue().uwb = "Apple first-generation Ultra Wideband chip (region-dependent)";
+            } else if (key.matches("iphone (15|16)( .*)?")) {
+                entry.getValue().uwb = "Apple second-generation Ultra Wideband chip (region-dependent)";
+            }
+        }
+  
 }
 
 private static void registerModernVerifiedModels() {
@@ -2188,6 +2200,7 @@ private static void registerModernVerifiedModels() {
         modern2.cellular = "5G / LTE (band support varies by region)";
         modern2.wifi = "Wi-Fi 7";
         modern2.bluetooth = "Bluetooth 6";
+        modern2.uwb = "Second-generation Ultra Wideband chip (region-dependent)";
         modern2.hasNFC = true;
         modern2.hasESim = true;
         modern2.port = "USB-C";
@@ -2231,6 +2244,7 @@ private static void registerModernVerifiedModels() {
         modern3.cellular = "5G / LTE (band support varies by region)";
         modern3.wifi = "Wi-Fi 7";
         modern3.bluetooth = "Bluetooth 6";
+        modern3.uwb = "Second-generation Ultra Wideband chip (region-dependent)";
         modern3.hasNFC = true;
         modern3.hasESim = true;
         modern3.port = "USB-C";
