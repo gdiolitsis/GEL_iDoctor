@@ -1647,7 +1647,6 @@ private void runStabilityLab() {
     if (!guardPanicLog()) return;
 
     boolean gr = AppLang.isGreek(this);
-
     appendHtml("<br>");
     logLine();
     logInfo(gr
@@ -1655,87 +1654,23 @@ private void runStabilityLab() {
             : "LAB 3 — System Stability Evaluation");
     logLine();
 
-    logOk(gr
-            ? "Αξιολόγηση εάν το crash υποδηλώνει ευρύτερη αστάθεια συστήματος."
-            : "Evaluating whether the crash indicates broader system instability.");
-
+    // A parsed panic is an imported observation, not an independently
+    // measured failure rate or a calibrated risk probability.
     parseAndCacheSignature(panicLogText);
-
-    if ("High".equalsIgnoreCase(sigConfidence)
-            && ("Kernel Panic".equalsIgnoreCase(sigCrashType)
-            || "Watchdog / Hang".equalsIgnoreCase(sigCrashType))) {
-
-        logError(gr
-                ? "Εντοπίστηκαν ισχυρές ενδείξεις αστάθειας συστήματος."
-                : "High system instability indicators detected.");
-
-        logWarn(gr
-                ? "Τέτοια crashes συχνά σχετίζονται με επανεκκινήσεις ή παγώματα."
-                : "Such crashes are often associated with unexpected reboots or system freezes.");
-
-        logLabelWarnValue(
-        gr ? "Με απλά λόγια:" : "In simple terms:",
-        gr
-                ? "Η συσκευή δεν κατάφερε να διατηρήσει σταθερή λειτουργία υπό συγκεκριμένες συνθήκες."
-                : "The device could not maintain stable operation under certain conditions."
-);
-
-} else if ("Medium".equalsIgnoreCase(sigConfidence)) {
-
-    logWarn(gr
-            ? "Εντοπίστηκε μέτριος κίνδυνος αστάθειας."
-            : "Moderate stability risk detected.");
-
-    logLabelOkValue(
-            gr ? "Ερμηνεία:" : "Interpretation:",
-            gr
-                    ? "Το σύστημα ενδέχεται να γίνει ασταθές σε συγκεκριμένα σενάρια."
-                    : "The system may become unstable under specific scenarios."
-    );
-
-} else {
-
-    logOk(gr
-            ? "Η συνολική σταθερότητα δεν προσδιορίζεται μόνο από τα εισαγόμενα logs."
-            : "Overall stability cannot be determined from imported logs alone.");
-}
-
-logLabelOkValue(
-        gr ? "Τύπος Crash:" : "Crash Type:",
-        safe(sigCrashType)
-);
-
-if ("High".equalsIgnoreCase(sigConfidence)) {
-
-    logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
-    );
-
-}
-else if ("Medium".equalsIgnoreCase(sigConfidence)) {
-
+    logLabelOkValue(gr ? "Τύπος Crash:" : "Crash Type:", safe(sigCrashType));
     logLabelWarnValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
-    );
-
-}
-else {
-
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ" : ApplePanicEvidencePolicy.patternConfidence());
+    logLabelWarnValue(
+            gr ? "Σταθερότητα συσκευής:" : "Device stability:",
+            gr
+                    ? "Δεν μπορεί να μετρηθεί από εισαγόμενα panic logs. Η συχνότητα πραγματικών επανεκκινήσεων και τα συμπτώματα απαιτούν επιβεβαίωση."
+                    : "Cannot be measured from imported panic logs. Actual restart frequency and symptoms need corroboration.");
     logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
-    );
-
-}
-
-logLabelOkValue(
-        gr ? "Επόμενο βήμα:" : "Next step:",
-        gr
-                ? "Το LAB 4 θα αναλύσει ποια περιοχή hardware ενδέχεται να εμπλέκεται."
-                : "LAB 4 will analyze which hardware area is most likely involved in the crash."
-);
+            gr ? "Επόμενο βήμα:" : "Next step:",
+            gr
+                    ? "Το LAB 4 καταγράφει ενδεικτικούς όρους υποσυστημάτων, όχι διάγνωση εξαρτήματος."
+                    : "LAB 4 records subsystem keyword hints, not a component diagnosis.");
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 3 ολοκληρώθηκε." : "Lab 3 finished.");
@@ -1806,14 +1741,14 @@ else if ("Thermal / Cooling".equals(sigDomain)
             gr ? "Ερμηνεία:" : "Interpretation:",
             gr
                     ? "Υποδεικνύεται επίδραση λόγω φόρτου ή stress συστήματος."
-                    : "System stress-related impact suggested."
+                    : "Terms related to system stress were observed; a root cause remains unverified."
     );
 
     logLabelOkValue(
             gr ? "Συνήθης αιτία:" : "Typical cause:",
             gr
-                    ? "Συχνά σχετίζεται με θερμοκρασία, φόρτο ή παρατεταμένη χρήση."
-                    : "Often linked to heat, load, or prolonged usage."
+                    ? "Πιθανή συσχέτιση με θερμοκρασία ή φόρτο χρειάζεται ανεξάρτητη επιβεβαίωση."
+                    : "Possible heat or load correlation requires independent confirmation."
     );
 
 }
@@ -2058,8 +1993,8 @@ private void runRecurringDomainLab() {
         }
 
         logWarn(gr
-                ? "Αυτό δεν επιβεβαιώνει βλάβη, αλλά δείχνει σταθερή επανάληψη."
-                : "This does not confirm hardware failure, but indicates stable recurrence.");
+                ? "Η επανάληψη αφορά λέξεις στα εισαγόμενα αρχεία· δεν αποδεικνύει επανεμφάνιση βλάβης στην ίδια συσκευή."
+                : "This is a recurring keyword pattern in imported files, not evidence of a recurring fault on one verified device.");
 
     } else if (max >= 2) {
 
@@ -2124,8 +2059,8 @@ private void runFinalServiceRecommendationLab() {
             ApplePanicEvidencePolicy.limitation(gr));
     logLabelWarnValue(gr ? "Σύσταση:" : "Recommendation:",
             ApplePanicEvidencePolicy.recommendation(gr));
-    logLabelWarnValue(gr ? "Βαθμός υγείας / 100:" : "Device health score / 100:",
-            gr ? "Δεν υπολογίζεται από panic logs" : "Not calculable from panic logs");
+    logLabelWarnValue(gr ? "Φυσική κατάσταση συσκευής:" : "Physical device condition:",
+            gr ? "Μη μετρημένη — απαιτούνται πραγματικά διαγνωστικά δεδομένα" : "Not measured — requires real diagnostic evidence");
     logOk(gr ? "Η τεχνική σύνοψη ολοκληρώθηκε με τους παραπάνω περιορισμούς."
              : "Technical summary completed with the stated limitations.");
     logLine();
