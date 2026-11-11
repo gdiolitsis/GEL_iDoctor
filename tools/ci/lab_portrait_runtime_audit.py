@@ -113,27 +113,49 @@ try:
             raise AssertionError("Lab "+str(num)+" did not write a diagnostic log")
         record("lab-"+str(num), "Diagnostic observation log present (not a hardware pass)")
 
-    # Reach the guided earpiece prompt, reproducing the user's reported entry
-    # sequence without claiming that a virtual microphone heard real tones.
-    control = find(r"^3\.", 10)
+    # Verify both historical logs before the Lab 3 modal hides the panel.
+    before = snapshot("labs-1-2-before-earpiece")
+    for num in (1, 2):
+        if not re.search(r"LAB\\s*"+str(num)+r"\\s*[—-]", before, flags=re.I):
+            raise AssertionError("Earlier Lab "+str(num)+" log missing BEFORE Lab 3")
+
+    control = find(r"^3\\.", 10)
     if control is None: raise AssertionError("Lab 3 earpiece entry missing")
     tap(control)
-    time.sleep(2)
-    before = snapshot("lab-3-before-rotation")
-    for num in (1, 2):
-        if not re.search(r"LAB\s*"+str(num)+r"\s*[—-]", before, flags=re.I):
-            raise AssertionError("Earlier Lab "+str(num)+" log missing BEFORE rotation")
+    time.sleep(1.3)
+
+    # Explicitly press START if Android exposes an earpiece output. No YES
+    # or NO hearing judgement is ever automated by an emulator.
+    start_button = find(r"^(?:START|ΕΝΑΡΞΗ)$")
+    if start_button is not None:
+        tap(start_button)
+        record("lab-3-start", "Physical earpiece stimulus requested, audibility UNVERIFIED")
+    else:
+        record("lab-3-start", "Inconclusive: emulator did not expose START, no hardware claim")
+    time.sleep(.7)
 
     for target in (1, 0, 1, 0):
         adb("shell", "settings", "put", "system", "user_rotation", str(target))
         time.sleep(1.4)
         if not foreground_labs():
             raise AssertionError("ManualTestsActivity lost foreground on rotation "+str(target))
-        after = snapshot("rotate-"+str(target)+"-"+str(len(steps)))
-        for num in (1, 2):
-            if not re.search(r"LAB\s*"+str(num)+r"\s*[—-]", after, flags=re.I):
-                raise AssertionError("Lab "+str(num)+" history was erased after rotation")
-        record("rotation-"+str(target), "Manual Labs foreground; Lab 1 and 2 logs retained")
+        snapshot("rotate-"+str(target)+"-"+str(len(steps)))
+        record("rotation-"+str(target), "Manual Labs stayed foreground during forced rotation")
+
+    # The earpiece confirmation may be a modal, hiding the log TextView
+    # from Accessibility. Cancel it (never answer a subjective YES/NO),
+    # then check the *actual historic* Lab 1/2 logs on the visible panel.
+    time.sleep(3)
+    pending_dialog = find(r"^(?:EXIT|ΕΞΟΔΟΣ|YES|ΝΑΙ|NO|ΟΧΙ|START|ΕΝΑΡΞΗ)$")
+    if pending_dialog is not None:
+        adb("shell", "input", "keyevent", "4")
+        time.sleep(.9)
+    if not foreground_labs():
+        raise AssertionError("ManualTestsActivity exited when dismissing Lab 3 prompt")
+    after = snapshot("labs-1-2-after-earpiece-and-rotation")
+    for num in (1, 2):
+        if not re.search(r"LAB\\s*"+str(num)+r"\\s*[—-]", after, flags=re.I):
+            raise AssertionError("Lab "+str(num)+" history was erased by rotation")
 
     record("result", "PASS: portrait/log-lifecycle regression in emulator; physical earpiece unverified")
 except Exception as exc:
