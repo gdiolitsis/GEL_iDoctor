@@ -112,7 +112,7 @@ def pick(model, family="iphone"):
     tap(must(by_id("btnAppleDeviceDeclaration"), "Missing Apple declare control", 10))
     family_pattern = r"iPHONE$" if family=="iphone" else r"iPAD$"
     tap(must(by_text(family_pattern), "Apple family button missing: " + family, 3))
-    must(by_text(r"^Select Apple Model$"), "Family button did not open model picker")
+    must(by_text(r"^(?:Select Apple Model|Επιλέξτε μοντέλο Apple)$"), "Family button did not open model picker")
     tap(must(by_text("^"+re.escape(model)+"$"), "Model cannot be selected: "+model, 12))
     declaration = must(by_id("btnAppleDeviceDeclaration"),
                        "Model selection did not return to Apple home", 10)
