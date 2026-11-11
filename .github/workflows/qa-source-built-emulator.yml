@@ -79,6 +79,7 @@ jobs:
           AUDIT_SCOPE: full
           AUDIT_REQUIRE_WELCOME_OK: '1'
           AUDIT_REQUIRE_ACCESSIBLE_SETTINGS: '1'
+          AUDIT_LABS_PORTRAIT: ${{ startsWith(github.head_ref, 'qa/labs-portrait-') && '1' || '0' }}
           AUDIT_APPLE_MODE: ${{ (startsWith(github.head_ref, 'qa/integration-apple-') || startsWith(github.head_ref, 'qa/lab14-') || startsWith(github.head_ref, 'qa/labs-portrait-')) && '1' || '0' }}
         run: |
           set -euo pipefail
