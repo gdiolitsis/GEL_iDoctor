@@ -239,10 +239,7 @@ private void populate() {
             Html.fromHtml(
                     log("Storage Options", d.storageOptions) +
                     log("Base Storage", d.storageBase) +
-                    log("Storage Tier",
-                            isProMax() ? "Higher maximum capacity available"
-                          : isPro()    ? "Expanded capacity options"
-                                       : "Standard capacity range"),
+                    log("Storage Provenance", "Published configuration options; not measured installed storage"),
                     Html.FROM_HTML_MODE_LEGACY
             )
     );
