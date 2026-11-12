@@ -6085,8 +6085,11 @@ if (am != null) {
 }
 
 tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
-tg.startTone(ToneGenerator.TONE_DTMF_1, 1200);
-            SystemClock.sleep(1400);
+// Keep the same test tone playing while the original MicDiagnosticEngine samples.
+// Previously the 1200 ms tone ended BEFORE microphone recording began.
+if (!tg.startTone(ToneGenerator.TONE_DTMF_1)) {
+    throw new IllegalStateException("DTMF tone playback could not start");
+}
 
             // ------------------------------------------------------------
             // MIC ANALYSIS
@@ -6105,6 +6108,8 @@ SystemClock.sleep(250);
 
 MicDiagnosticEngine.Result r =
         MicDiagnosticEngine.run(this);
+// Stop immediately after the 1800 ms mic recording (not after report formatting).
+tg.stopTone();
 
 if (r == null) {
     logLabelErrorValue(
@@ -6265,6 +6270,7 @@ gr ? "Αποτυχία δρομολόγησης ήχου ή περιορισμό
 } finally {
 
     if (tg != null) {
+        try { tg.stopTone(); } catch (Throwable ignore) {}
         tg.release();
     }
 
