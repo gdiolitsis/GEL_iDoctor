@@ -21728,27 +21728,23 @@ if (!Float.isNaN(perHour)) {
     );
 }
 
-// 🔴 THERMAL
-if (!Float.isNaN(tempRise)) {
-
-    String tempStr =
-            (tempRise < 0.1f)
-            ? "≈0.0°C"
-            : String.format(Locale.US, "%.1f°C", tempRise);
-
-    logLabelValue(
-            gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
-            tempStr
-    );
+// Display the SIGNED observations, not a false "drop" when voltage rose
+// or "zero temperature rise" when the sensor actually cooled.
+if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
+    float signedTemp = endTemp[0] - startTemp[0];
+    if (Math.abs(signedTemp) <= 25f) {
+        logLabelNeutralValue(gr ? "Μεταβολή θερμοκρασίας" : "Temperature change",
+                String.format(Locale.US, "%+.1f°C", signedTemp));
+    }
+}
+if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
+    float signedVolt = endVolt[0] - startVolt[0];
+    if (Math.abs(signedVolt) <= 0.5f) {
+        logLabelNeutralValue(gr ? "Μεταβολή τάσης" : "Voltage change",
+                String.format(Locale.US, "%+.3f V", signedVolt));
+    }
 }
 
-// 🔴 VOLTAGE
-if (!Float.isNaN(voltDrop)) {
-    logLabelValue(
-            gr ? "Πτώση τάσης" : "Voltage drop",
-            String.format(Locale.US, "%.3f V", voltDrop)
-    );
-}
 
 appendHtml("<br>");
 
