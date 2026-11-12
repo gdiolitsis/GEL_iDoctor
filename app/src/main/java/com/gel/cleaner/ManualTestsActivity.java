@@ -11486,7 +11486,7 @@ private void lab12CallFunctionInterpretation() {
 
     // Optional, explicit user action only; ACTION_DIAL does not place a call,
     // access call logs or record audio. No phone number is provided or stored.
-    new AlertDialog.Builder(this)
+    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
             .setTitle(gr ? "LAB 12 — Πραγματική δοκιμή κλήσης (προαιρετικά)"
                          : "LAB 12 — Optional live-call check")
             .setMessage(gr
@@ -11561,7 +11561,7 @@ private void lab12AfterDialerReturn() {
         return;
     }
     // A dialer return does NOT prove the user placed or finished a call.
-    new AlertDialog.Builder(this)
+    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
             .setTitle(gr ? "LAB 12 — Επιβεβαίωση από χρήστη" : "LAB 12 — User confirmation")
             .setMessage(gr ? "Πραγματοποιήθηκε και ολοκληρώθηκε πραγματική κλήση; "
                             + "Αν άνοιξες απλώς τον τηλεφωνητή, πάτησε ΟΧΙ."
@@ -11579,7 +11579,7 @@ private void lab12AfterDialerReturn() {
 
 private void lab12AskHearOtherParty() {
     final boolean gr = AppLang.isGreek(this);
-    new AlertDialog.Builder(this)
+    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
             .setTitle(gr ? "LAB 12 — Ήχος λήψης" : "LAB 12 — Receive audio")
             .setMessage(gr ? "Κατά την πραγματική κλήση ΑΚΟΥΓΕΣ καθαρά τον συνομιλητή σου; "
                             + "Η επιλεγμένη διαδρομή (ακουστικό, Bluetooth ή ηχείο) δεν έχει πιστοποιηθεί."
@@ -11596,7 +11596,7 @@ private void lab12AskHearOtherParty() {
 
 private void lab12AskOtherPartyHeard(boolean heardOther) {
     final boolean gr = AppLang.isGreek(this);
-    new AlertDialog.Builder(this)
+    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
             .setTitle(gr ? "LAB 12 — Ήχος μετάδοσης" : "LAB 12 — Transmit audio")
             .setMessage(gr ? "Ο συνομιλητής σου επιβεβαίωσε ότι ΑΚΟΥΓΕ εσένα; "
                             + "Απάντησε μόνο βάσει πραγματικής συνομιλίας."
