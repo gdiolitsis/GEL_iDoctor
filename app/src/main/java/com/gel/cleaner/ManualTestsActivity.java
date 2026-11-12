@@ -11802,14 +11802,17 @@ private void showLab13GatePopup() {
     Button skip = gelButton(
         this,
         gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP",
-        0xFF444444
+        0xFFE60000
 );
 
     Button cont = gelButton(
         this,
         gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE",
-        0xFF0F8A3B
+        0xFF39FF14
 );
+
+    skip.setTextColor(Color.WHITE);
+    cont.setTextColor(Color.BLACK);
 
     LinearLayout.LayoutParams lp =
         new LinearLayout.LayoutParams(0, dp(52), 1f);
@@ -11842,8 +11845,10 @@ buttons.addView(cont);
                 "NOT_TESTED — cancelled before monitoring");
         enableSingleExportButton();
     });
+    gate.setOnDismissListener(dialog -> AppTTS.stop());
     gate.show();
     com.gel.cleaner.GelButtonLayout.fitDialog(gate);
+    AppTTS.speak(this, titleText + ". " + messageText);
 
     // ---------------------------
     // ACTIONS
