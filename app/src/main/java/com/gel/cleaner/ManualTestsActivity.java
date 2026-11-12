@@ -4008,6 +4008,13 @@ private void logLabelValue(String label, String value) {
     logLabelOkValue(label, value);
 }
 
+// Neutral observation/unknown: neither a hardware PASS nor a warning.
+private void logLabelNeutralValue(String label, String value) {
+    logLabel(label, value, "#EEEEEE");
+    expandLogPanel();
+    scrollLogToBottom();
+}
+
 // ---------------- OVERLOADS ----------------
 private void logOk(String label, String value) {
     logLabelOkValue(label, value);
@@ -10853,8 +10860,7 @@ private void lab9SensorsCheck() {
 
         // Enumeration proves only that Android advertises a sensor.
         // It is not a live functional challenge or hardware-health certificate.
-        logLabelWarnValue(
-                gr ? "Συνολική εκτίμηση" : "Overall assessment",
+        logLabelNeutralValue(gr ? "Συνολική εκτίμηση" : "Overall assessment",
                 gr
                         ? "Καταγράφηκαν οι αναφερόμενοι αισθητήρες. Η λειτουργία τους "
                                 + "δεν επαληθεύεται μόνο από τη λίστα."
@@ -10876,11 +10882,11 @@ private void lab9SensorsCheck() {
                        : "Sensor event observations (5 seconds)");
             for (SensorEvidenceProbe.Result sample : samples) {
                 if (!sample.advertised || !sample.listenerRegistered) {
-                    logLabelWarnValue(sample.name,
+                    logLabelNeutralValue(sample.name,
                             gr ? "Δεν διατέθηκε ροή συμβάντων"
                                : "Event stream not available");
                 } else if (sample.events == 0) {
-                    logLabelWarnValue(sample.name,
+                    logLabelNeutralValue(sample.name,
                             gr ? "Μηδέν συμβάντα στο δείγμα — όχι τεκμήριο φυσικής βλάβης"
                                : "No events during window — not proof of physical failure");
                 } else {
@@ -10899,7 +10905,7 @@ private void lab9SensorsCheck() {
                             sample.name + ": " + sample.invalidEvents);
                 }
             }
-            logLabelWarnValue(gr ? "Όρια καταγραφής" : "Sampling limitation",
+            logLabelNeutralValue(gr ? "Όρια καταγραφής" : "Sampling limitation",
                     gr ? "Περιορισμένη χρονικά καταγραφή API, όχι βαθμονόμηση ή "
                             + "πιστοποίηση λειτουργίας όλων των αισθητήρων."
                        : "Time-bounded API observation, not calibration or "
@@ -10939,8 +10945,7 @@ private void checkSensor(SensorManager sm, int type, String name) {
                 gr ? "Διαθέσιμος" : "Available"
         );
     } else {
-        logLabelWarnValue(
-                name,
+        logLabelNeutralValue(name,
                 gr
                         ? "Δεν αναφέρθηκε (ενδέχεται περιορισμένες ή μη διαθέσιμες λειτουργίες)"
                         : "Not reported (dependent features may be limited or missing)"
