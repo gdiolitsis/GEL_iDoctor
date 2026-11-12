@@ -11302,10 +11302,30 @@ private void runWifiDeepScan(WifiManager wm) {
                 logLabelValue(gr ? "Ισχύς συνδέσμου (Android)" : "Link RSSI (Android)",
                         linkEvidence.rssiDbm + " dBm");
             }
-            logLabelWarnValue(gr ? "SpeedSim — εκτίμηση ταχύτητας Internet"
-                                 : "SpeedSim — Internet throughput estimate",
-                    gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — PHY/RSSI δεν πιστοποιούν ρυθμό μεταφοράς δεδομένων"
-                       : "NOT MEASURED — PHY/RSSI cannot certify data transfer throughput");
+            // SpeedSim 2.0: a bounded, qualitative response observation; never invent Mbps.
+            // The two one-shot TCP/DNS observations are not a throughput or stability measurement.
+            if (pingMs > 0f && dnsMs > 0f) {
+                final boolean responsive = pingMs <= 80f && dnsMs <= 400f;
+                final boolean delayed = pingMs > 200f || dnsMs > 1000f;
+                final String observation = gr
+                        ? (responsive ? "Χαμηλή καθυστέρηση στο συγκεκριμένο δείγμα"
+                                     : delayed ? "Αυξημένη καθυστέρηση στο συγκεκριμένο δείγμα"
+                                               : "Μέτρια απόκριση στο συγκεκριμένο δείγμα")
+                        : (responsive ? "Low latency in this particular sample"
+                                     : delayed ? "Elevated latency in this particular sample"
+                                               : "Moderate responsiveness in this particular sample");
+                logLabelNeutralValue(gr ? "SpeedSim — απόκριση TCP/DNS" : "SpeedSim — TCP/DNS response",
+                        observation + (gr
+                                ? " — όχι μέτρηση Download/Upload σε Mbps"
+                                : " — not measured download/upload throughput in Mbps"));
+            } else {
+                logLabelNeutralValue(gr ? "SpeedSim — απόκριση TCP/DNS" : "SpeedSim — TCP/DNS response",
+                        gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — δεν τεκμηριώνεται βλάβη ή ρυθμός Internet"
+                           : "INSUFFICIENT DATA — no internet fault or throughput verdict");
+            }
+            logLabelNeutralValue(gr ? "Πραγματική ταχύτητα Internet" : "Actual internet throughput",
+                    gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — απαιτεί προαιρετικό ενεργό Download/Upload test"
+                       : "NOT MEASURED — requires an optional active download/upload test");
 
             // 5) OS-level default-network validation, transport and captive portal.
             // NET_CAPABILITY_INTERNET means the network is configured for internet;
