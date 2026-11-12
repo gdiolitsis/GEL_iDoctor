@@ -309,7 +309,8 @@ private GLSurfaceView gpuView;
 
 private int cores = Runtime.getRuntime().availableProcessors();
 
-private long lab14B_startMah = -1L;
+private long lab14B_startMah = -1L; // duration-mode baseline for both 14B and 14Γ
+private long lab14DurationStartMs = 0L;
 private long lab14B_endMah = -1L;
 double rateSum = 0;
 int rateSamples = 0;
@@ -17974,7 +17975,7 @@ if (!Float.isNaN(startBatteryTemp) &&
 // ----------------------------------------------------
 long drainNow = 0L;
 
-if (isLab14BMode) {
+if (isLab14BMode || isLab14GamaMode) {
 
     iDoctorEngine.BatterySnapshot snapNow =
             iDoctorEngine.get(ManualTestsActivity.this)
@@ -17982,9 +17983,9 @@ if (isLab14BMode) {
 
     if (snapNow != null &&
         snapNow.chargeNowMah > 0 &&
-        startMah > 0) {
+        lab14B_startMah > 0) {
 
-        long diff = startMah - snapNow.chargeNowMah;
+        long diff = lab14B_startMah - snapNow.chargeNowMah;
 
         if (diff > 0 && diff < 10000) { // 🔴 HARD FILTER
             drainNow = diff;
@@ -18015,22 +18016,26 @@ if (isLab14BMode) {
 // ----------------------------------------------------
 double drainPerHour = Double.NaN;
 
-// 🔴 REQUIRE MIN WINDOW
-if (elapsed >= 10) {
+// Quantized charge counters must not generate fictitious startup consumption.
+final boolean durationMode = isLab14BMode || isLab14GamaMode;
+long elapsedForRate = durationMode && lab14DurationStartMs > 0L
+        ? (SystemClock.elapsedRealtime() - lab14DurationStartMs) / 1000L
+        : elapsed;
+if (elapsedForRate >= (durationMode ? 60 : 10)) {
 
     if (drainNow > 0) {
 
         double rate =
-                (drainNow * 3600.0) / elapsed;
+                (drainNow * 3600.0) / elapsedForRate;
 
         // 🔴 HARD FILTER
         if (rate >= 10 && rate <= 8000) {
             drainPerHour = rate;
         }
 
-    } else {
+    } else if (!durationMode) {
 
-        // 🔴 FALLBACK → current (converted properly)
+        // Instantaneous current is not a measured duration-mode discharge rate.
 float currentFallback = lab14Current();
 
 if (!Float.isNaN(currentFallback) &&
@@ -21105,6 +21110,8 @@ synchronized (lab14Lock) {
 
 isLab14BMode = !gamaMode;
 isLab14GamaMode = gamaMode;
+lab14B_startMah = -1L;
+lab14DurationStartMs = 0L;
 
 // ------------------------------------------------------------
 // 🔴 START FLOW
@@ -21174,6 +21181,8 @@ synchronized (lab14Lock) {
         }
 
 startMah[0] = snap0.chargeNowMah;
+lab14B_startMah = startMah[0];
+lab14DurationStartMs = SystemClock.elapsedRealtime();
 
 // ------------------------------------------------
 // VERIFIED FULL CAPACITY — UNKNOWN UNDER PUBLIC SDK
@@ -22017,6 +22026,8 @@ try {
     lab14Running = false;
     isLab14BMode = false;
     isLab14GamaMode = false;
+    lab14B_startMah = -1L;
+    lab14DurationStartMs = 0L;
 
     appendHtml("<br>");
 
