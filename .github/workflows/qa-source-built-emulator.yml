@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build-candidate:
-    if: ${{ ((startsWith(github.head_ref, 'qa/integration-') || startsWith(github.head_ref, 'qa/lab14-') || (startsWith(github.head_ref, 'qa/labs-portrait-') || startsWith(github.head_ref, 'qa/lab3-backup-'))) || github.head_ref == 'qa/diagnostic-evidence-runtime-20261108' || github.head_ref == 'qa/lab2-parity-restoration-20261110') && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ ((startsWith(github.head_ref, 'qa/integration-') || startsWith(github.head_ref, 'qa/lab14-') || (startsWith(github.head_ref, 'qa/labs-portrait-') || startsWith(github.head_ref, 'qa/lab3-backup-'))) || github.head_ref == 'qa/diagnostic-evidence-runtime-20261108' || github.head_ref == 'qa/lab2-parity-restoration-20261110' || github.head_ref == 'qa/labs1-2-audio-preflight-popups-20261113') && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
