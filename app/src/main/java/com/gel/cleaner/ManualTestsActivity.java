@@ -11502,6 +11502,37 @@ private void runWifiDeepScan(WifiManager wm) {
 // ============================================================
 private void lab11MobileDataDiagnostic() {
     final boolean gr = AppLang.isGreek(this);
+    // Inform before checking the DEFAULT route; never change Wi-Fi/mobile settings automatically.
+    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
+            .setTitle(gr ? "LAB 11 — Πριν από τον έλεγχο κινητού δικτύου"
+                         : "LAB 11 — Before testing cellular connectivity")
+            .setMessage(gr
+                    ? "Για να ελέγξουμε τη διαδρομή δεδομένων κινητής, απενεργοποίησε προσωρινά το Wi-Fi "
+                      + "και, εφόσον έχεις ενεργή SIM και πακέτο δεδομένων, ενεργοποίησε τα δεδομένα κινητής. "
+                      + "Μπορείς να χρησιμοποιήσεις τις Γρήγορες ρυθμίσεις του Android. "
+                      + "Έπειτα πάτησε ΣΥΝΕΧΕΙΑ. Αν δεν έχεις SIM/δεδομένα, πάτησε ΠΑΡΑΛΕΙΨΗ. "
+                      + "Μετά τον έλεγχο ενεργοποίησε ξανά το Wi-Fi αν το επιθυμείς. "
+                      + "Δεν αλλάζουμε καμία ρύθμιση αυτόματα και δεν εκτελούμε speed test."
+                    : "To check the cellular data route, temporarily switch Wi-Fi off and, if you "
+                      + "have a working SIM/data plan, turn on mobile data using Android Quick Settings. "
+                      + "Then choose CONTINUE. Choose SKIP without a SIM/data plan. "
+                      + "You can restore Wi-Fi afterwards. No settings are changed automatically and no speed test runs.")
+            .setPositiveButton(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE", (dialog, which) -> lab11RunMobileDataSnapshot())
+            .setNegativeButton(gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP", (dialog, which) -> lab11RecordSkipped())
+            .setOnCancelListener(dialog -> lab11RecordSkipped())
+            .show();
+}
+
+private void lab11RecordSkipped() {
+    final boolean gr = AppLang.isGreek(this);
+    logLabelNeutralValue("LAB 11", gr
+            ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — ο χρήστης παρέλειψε τον έλεγχο κινητού δικτύου"
+            : "NOT TESTED — cellular assessment skipped by user");
+    enableSingleExportButton();
+}
+
+private void lab11RunMobileDataSnapshot() {
+    final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
     logSection(gr ? "LAB 11 — Κινητό Δίκτυο: Παρατηρήσεις Android"
