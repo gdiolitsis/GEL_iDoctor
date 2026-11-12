@@ -17590,8 +17590,7 @@ lab14LogFinalScore(
         collapseRisk,
         smartSwelling,
         calibrationDrift,
-        lab14_systemLimited,
-        hasSag
+        lab14_systemLimited
 );
 
 // ------------------------------------------------
@@ -22064,6 +22063,12 @@ logLabelValue(
     logLine();
 
     return true;
+}
+
+// Compatibility adapter for legacy Lab 14B advisory (restoration QA).
+// The old advisory has no 14Γ argument; route-specific labels require separate review.
+private boolean checkLab14BConditions() {
+    return checkLab14BConditions(false);
 }
 
 // ============================================================
