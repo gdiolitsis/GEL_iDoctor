@@ -6086,6 +6086,10 @@ private boolean guardUsageAccess() {
 // LAB 1 - Speaker Tone Test (AUTO) — WITH AUDIO PATH CHECK
 // ============================================================
 /** A positive listening report is green USER_REPORTED evidence, not a DSP result. */
+/**
+ * Shared readable GEL confirmation for Labs 1 and 2.
+ * This records user testimony only, not an automatic speaker-health verdict.
+ */
 private void requestSpeakerUserEvidence(int lab, int detectedTones) {
     runOnUiThread(() -> {
         if (isFinishing() || isDestroyed()) {
@@ -6093,36 +6097,71 @@ private void requestSpeakerUserEvidence(int lab, int detectedTones) {
             enableSingleExportButton();
             return;
         }
-        boolean gr = AppLang.isGreek(this);
-        boolean multi = lab == 2;
-        AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                .setTitle(gr ? "Lab " + lab + " — Επιβεβαίωση ακρόασης"
-                             : "Lab " + lab + " — Listening confirmation")
-                .setMessage(multi
-                        ? (gr ? "Ακούσατε καθαρά και τους τέσσερις δοκιμαστικούς τόνους; Μη μετρήσετε φωνητικές οδηγίες."
-                              : "Did you hear all four test tones clearly? Do not count voice prompts.")
-                        : (gr ? "Ακούσατε καθαρά τον δοκιμαστικό τόνο; Μη μετρήσετε φωνητικές οδηγίες."
-                              : "Did you hear the test tone clearly? Do not count voice prompts."))
-                .setPositiveButton(multi ? (gr ? "ΚΑΙ ΤΟΥΣ 4" : "ALL 4")
-                                         : (gr ? "ΝΑΙ" : "YES"),
-                        (d, w) -> recordSpeakerUserEvidence(
-                                lab, detectedTones, UserAcousticEvidence.Answer.ALL, gr))
-                .setNegativeButton(multi ? (gr ? "ΚΑΝΕΝΑΝ" : "NONE")
-                                         : (gr ? "ΟΧΙ" : "NO"),
-                        (d, w) -> recordSpeakerUserEvidence(
-                                lab, detectedTones, UserAcousticEvidence.Answer.NONE, gr));
+        final boolean gr = AppLang.isGreek(this);
+        final boolean multi = lab == 2;
+        LinearLayout root = buildGELPopupRoot(this);
+        root.addView(buildPopupHeader(this,
+                gr ? "LAB " + lab + " — Επιβεβαίωση ακρόασης"
+                   : "LAB " + lab + " — Listening confirmation"));
+
+        TextView msg = new TextView(this);
+        msg.setText(multi
+                ? (gr ? "Άκουσες καθαρά και τους τέσσερις δοκιμαστικούς τόνους; Μην υπολογίσεις φωνητικές οδηγίες."
+                      : "Did you clearly hear all four test tones? Do not count voice prompts.")
+                : (gr ? "Άκουσες καθαρά τον δοκιμαστικό τόνο; Μην υπολογίσεις φωνητικές οδηγίες."
+                      : "Did you clearly hear the test tone? Do not count voice prompts."));
+        msg.setTextColor(0xFF39FF14);
+        msg.setTextSize(16f);
+        msg.setGravity(Gravity.CENTER);
+        msg.setPadding(0, dp(16), 0, dp(12));
+        root.addView(msg);
+
+        Button no = gelButton(this,
+                multi ? (gr ? "ΚΑΝΕΝΑΝ" : "NONE") : (gr ? "ΟΧΙ" : "NO"),
+                0xFFE60000);
+        no.setTextColor(Color.WHITE);
+        root.addView(no);
+
+        Button some = null;
         if (multi) {
-            builder.setNeutralButton(gr ? "ΜΕΡΙΚΟΥΣ" : "SOME",
-                    (d, w) -> recordSpeakerUserEvidence(
-                            lab, detectedTones, UserAcousticEvidence.Answer.SOME, gr));
+            some = gelButton(this, gr ? "ΜΕΡΙΚΟΥΣ" : "SOME", 0xFFFFD700);
+            some.setTextColor(Color.BLACK);
+            root.addView(some);
         }
+
+        Button yes = gelButton(this,
+                multi ? (gr ? "ΚΑΙ ΤΟΥΣ 4" : "ALL 4") : (gr ? "ΝΑΙ" : "YES"),
+                0xFF39FF14);
+        yes.setTextColor(Color.BLACK);
+        root.addView(yes);
+
         try {
-            AlertDialog dialog = builder.create();
+            final AlertDialog dialog =
+                    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
+                            .setView(root).create();
             dialog.setOnDismissListener(ignored -> {
                 lab12AudioBusy.set(false);
                 enableSingleExportButton();
             });
+            no.setOnClickListener(v -> {
+                recordSpeakerUserEvidence(lab, detectedTones, UserAcousticEvidence.Answer.NONE, gr);
+                dialog.dismiss();
+            });
+            if (some != null) {
+                some.setOnClickListener(v -> {
+                    recordSpeakerUserEvidence(lab, detectedTones, UserAcousticEvidence.Answer.SOME, gr);
+                    dialog.dismiss();
+                });
+            }
+            yes.setOnClickListener(v -> {
+                recordSpeakerUserEvidence(lab, detectedTones, UserAcousticEvidence.Answer.ALL, gr);
+                dialog.dismiss();
+            });
             dialog.show();
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            }
+            com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
         } catch (RuntimeException e) {
             lab12AudioBusy.set(false);
             enableSingleExportButton();
@@ -6138,12 +6177,73 @@ private void recordSpeakerUserEvidence(int lab, int detectedTones,
     if (UserAcousticEvidence.isPositive(answer)) {
         logLabelOkValue(label, message);
     } else {
-        logLabelValue(label, message);
+        logLabelNeutralValue(label, message);
     }
     logLine();
 }
 
+/**
+ * Run before attempting a speaker challenge. Never change the user's volume
+ * programmatically; request an explicit media-volume adjustment and a retry.
+ */
+private boolean ensureSpeakerMediaVolume(int lab, Runnable retry) {
+    if (isFinishing() || isDestroyed()) return false;
+    AudioManager manager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+    if (manager == null) return true; // Probe reports unavailable audio service.
+    int volume;
+    try {
+        volume = manager.getStreamVolume(AudioManager.STREAM_MUSIC);
+    } catch (RuntimeException e) {
+        return true; // Let the probe report an unavailable audio route.
+    }
+    if (volume > 0) return true;
+
+    final boolean gr = AppLang.isGreek(this);
+    logLabelNeutralValue(gr ? "LAB " + lab + " — Ένταση πολυμέσων"
+                            : "LAB " + lab + " — Media volume",
+            gr ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — η ένταση πολυμέσων είναι μηδέν"
+               : "NOT TESTED — media stream volume is zero");
+    LinearLayout root = buildGELPopupRoot(this);
+    root.addView(buildPopupHeader(this,
+            gr ? "LAB " + lab + " — Απαιτείται ήχος"
+               : "LAB " + lab + " — Media volume required"));
+    TextView msg = new TextView(this);
+    msg.setText(gr
+            ? "Η ένταση ΠΟΛΥΜΕΣΩΝ είναι μηδέν, επομένως δεν μπορεί να ακουστεί δοκιμαστικός τόνος.\n"
+              + "Πάτησε το πλήκτρο αύξησης έντασης και βεβαιώσου ότι ανεβαίνει η ένταση πολυμέσων, όχι μόνο του κουδουνίσματος. "
+              + "Έπειτα πάτησε ΕΠΑΝΑΛΗΨΗ. Η εφαρμογή δεν αλλάζει μόνη της την ένταση."
+            : "MEDIA volume is zero, so the test tone cannot be heard.\n"
+              + "Use the volume-up key and check that MEDIA volume, not only ringtone volume, is raised. "
+              + "Then choose RETRY. The app never changes your volume automatically.");
+    msg.setTextColor(0xFF39FF14);
+    msg.setTextSize(16f);
+    msg.setGravity(Gravity.CENTER);
+    msg.setPadding(0, dp(16), 0, dp(12));
+    root.addView(msg);
+    Button cancel = gelButton(this, gr ? "ΚΛΕΙΣΙΜΟ" : "CLOSE", 0xFFE60000);
+    cancel.setTextColor(Color.WHITE);
+    Button again = gelButton(this, gr ? "ΕΠΑΝΑΛΗΨΗ" : "RETRY", 0xFF39FF14);
+    again.setTextColor(Color.BLACK);
+    root.addView(cancel);
+    root.addView(again);
+
+    AlertDialog dialog = new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
+            .setView(root).create();
+    cancel.setOnClickListener(v -> dialog.dismiss());
+    again.setOnClickListener(v -> {
+        dialog.dismiss();
+        if (!isFinishing() && !isDestroyed()) retry.run();
+    });
+    dialog.show();
+    if (dialog.getWindow() != null) {
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    }
+    com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
+    return false;
+}
+
 private void lab1SpeakerTone() {
+    if (!ensureSpeakerMediaVolume(1, this::lab1SpeakerTone)) return;
     if (!guardMic(this::lab1SpeakerTone)) return;
     if (lab3GuidedPending.get() || lab4GuidedPending.get()) {
         logWarn(AppLang.isGreek(this)
@@ -6270,6 +6370,7 @@ private void lab1SpeakerTone() {
 // LAB 2 — MULTI-TONE CORRELATED AUDIO TEST (NOT CALIBRATED SWEEP)
 // ============================================================
 private void lab2SpeakerSweep() {
+    if (!ensureSpeakerMediaVolume(2, this::lab2SpeakerSweep)) return;
     if (!guardMic(this::lab2SpeakerSweep)) return;
     if (lab3GuidedPending.get() || lab4GuidedPending.get()) {
         logWarn(AppLang.isGreek(this)
