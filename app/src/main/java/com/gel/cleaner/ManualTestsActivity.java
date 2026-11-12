@@ -6122,11 +6122,13 @@ private void requestSpeakerUserEvidence(int lab, int detectedTones) {
         no.setTextColor(Color.WHITE);
         root.addView(no);
 
-        Button some = null;
+        final Button some;
         if (multi) {
             some = gelButton(this, gr ? "ΜΕΡΙΚΟΥΣ" : "SOME", 0xFFFFD700);
             some.setTextColor(Color.BLACK);
             root.addView(some);
+        } else {
+            some = null;
         }
 
         Button yes = gelButton(this,
