@@ -22089,16 +22089,16 @@ private void showLab14BAdvisory(Runnable onContinue, boolean gamaMode) {
     final String text = gr
             ? (gamaMode
                 ? "Η δοκιμή εφαρμόζει συνθετικό φόρτο CPU/βίντεο τύπου gaming για 5 λεπτά. "
-                  + "ΔΕΝ είναι δοκιμή πραγματικών 3D γραφικών ούτε βαθμονόμηση GPU.\\n\\n"
+                  + "ΔΕΝ είναι δοκιμή πραγματικών 3D γραφικών ούτε βαθμονόμηση GPU.\n\n"
                 : "Η δοκιμή εφαρμόζει ήπιο συνθετικό φόρτο καθημερινής χρήσης για 5 λεπτά. "
-                  + "Δεν αναπαριστά όλες τις πραγματικές συνθήκες χρήσης.\\n\\n")
-              + "Προϋποθέσεις:\\n• Μπαταρία τουλάχιστον 30%\\n"
-              + "• Η συσκευή να μην φορτίζει\\n• Airplane Mode ενεργό για συγκρίσιμες μετρήσεις."
+                  + "Δεν αναπαριστά όλες τις πραγματικές συνθήκες χρήσης.\n\n")
+              + "Προϋποθέσεις:\n• Μπαταρία τουλάχιστον 30%\n"
+              + "• Η συσκευή να μην φορτίζει\n• Airplane Mode ενεργό για συγκρίσιμες μετρήσεις."
             : (gamaMode
-                ? "Five-minute synthetic CPU/video gaming-like load. This is NOT a real 3D GPU benchmark.\\n\\n"
-                : "Five-minute light daily-use-like synthetic load. Not all real-world use is reproduced.\\n\\n")
-              + "Requirements:\\n• Battery at least 30%\\n• Device not charging"
-              + "\\n• Airplane mode on for comparable samples.";
+                ? "Five-minute synthetic CPU/video gaming-like load. This is NOT a real 3D GPU benchmark.\n\n"
+                : "Five-minute light daily-use-like synthetic load. Not all real-world use is reproduced.\n\n")
+              + "Requirements:\n• Battery at least 30%\n• Device not charging"
+              + "\n• Airplane mode on for comparable samples.";
 
     int percent = getBatteryPercentSafe();
 
