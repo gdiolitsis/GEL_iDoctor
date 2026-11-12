@@ -13025,8 +13025,8 @@ private void showBatterySuiteMenu() {
     root.addView(
             makeTestButton(
                     gr
-                    ? "14 GAMA. Προσομοίωση διάρκειας μπαταρίας σε Gaming"
-                    : "14 GAMA. Gaming Battery Endurance Simulation",
+                    ? "14Γ. Προσομοίωση διάρκειας μπαταρίας σε Gaming"
+                    : "14C. Gaming Battery Endurance Simulation",
                     this::lab14GamingDurationTest
             )
     );
@@ -20950,7 +20950,7 @@ private boolean ensurePermissions(String[] permissions, Runnable afterGranted) {
 // ============================================================
 // LAB 14B — CONDITIONS CHECK (STRAITJACKET MODE)
 // ============================================================
-private boolean checkLab14BConditions() {
+private boolean checkLab14BConditions(boolean gamaMode) {
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -20976,8 +20976,8 @@ private boolean checkLab14BConditions() {
     logLine();
 
     logInfo(gr
-            ? "LAB 14B - Έλεγχος συνθηκών δοκιμής"
-            : "LAB 14B - Test conditions check");
+            ? (gamaMode ? "LAB 14Γ - Έλεγχος συνθηκών δοκιμής" : "LAB 14B - Έλεγχος συνθηκών δοκιμής")
+            : (gamaMode ? "LAB 14C - Test conditions check" : "LAB 14B - Test conditions check"));
 
     logLine();
 
@@ -21008,8 +21008,8 @@ private boolean checkLab14BConditions() {
     if (percent < 30) {
 
         logWarn(gr
-                ? "Το LAB 14B απαιτεί τουλάχιστον 30% μπαταρία."
-                : "LAB 14B requires at least 30% battery.");
+                ? "Το LAB " + (gamaMode ? "14Γ" : "14B") + " απαιτεί τουλάχιστον 30% μπαταρία."
+                : "LAB " + (gamaMode ? "14C" : "14B") + " requires at least 30% battery.");
 
         logWarn(gr
                 ? "Κάτω από αυτό το επίπεδο μπορεί να επέμβει system protection."
@@ -21255,10 +21255,10 @@ logLine();
 logOk(
     gr
     ? (wasGama
-        ? "LAB 14 GAMA ξεκίνησε"
+        ? "LAB 14Γ ξεκίνησε"
         : "LAB 14B ξεκίνησε")
     : (wasGama
-        ? "LAB 14 GAMA started"
+        ? "LAB 14C started"
         : "LAB 14B started")
 );
 
@@ -22030,10 +22030,10 @@ try {
     logOk(
         gr
         ? (wasGama
-            ? "Το Lab 14 GAMA ολοκληρώθηκε."
+            ? "Το Lab 14Γ ολοκληρώθηκε."
             : "Το Lab 14B ολοκληρώθηκε.")
         : (wasGama
-            ? "Lab 14 GAMA finished."
+            ? "Lab 14C finished."
             : "Lab 14B finished.")
     );
 
@@ -22056,14 +22056,14 @@ try {
 
 }, 300000L);
 
-}); // showLab14BAdvisory
+}, gamaMode); // showLab14BAdvisory
 
 } // runLab14DurationMode
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (STABILIZED MODE)
 // ============================================================
-private void showLab14BAdvisory(Runnable onContinue) {
+private void showLab14BAdvisory(Runnable onContinue, boolean gamaMode) {
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -22081,27 +22081,24 @@ private void showLab14BAdvisory(Runnable onContinue) {
             buildPopupHeader(
                     this,
                     gr
-                    ? "Έλεγχος κατανάλωσης και διάρκειας μπαταρίας"
-                    : "Battery usage and duration test"
+                    ? (gamaMode ? "LAB 14Γ — Φόρτος τύπου gaming" : "LAB 14B — Καθημερινή χρήση")
+                    : (gamaMode ? "LAB 14C — Gaming-like workload" : "LAB 14B — Daily usage")
             )
     );
 
-    final String text =
-            gr
-            ? "Η δοκιμή προσομοιώνει καθημερινή χρήση για 5 λεπτά "
-              + "ώστε να εκτιμηθούν κατανάλωση, διάρκεια και συμπεριφορά μπαταρίας.\n\n"
-              + "Προϋποθέσεις:\n"
-              + "• Μπαταρία τουλάχιστον 30%\n"
-              + "• Η συσκευή να μην φορτίζει\n"
-              + "• Airplane Mode ενεργό για σταθερότητα runs."
-
-            : "This test simulates 5 minutes of real device usage "
-              + "to estimate battery consumption, endurance "
-              + "and battery behavior.\n\n"
-              + "Requirements:\n"
-              + "• Battery at least 30%\n"
-              + "• Device not charging\n"
-              + "• Airplane Mode enabled for run stability.";
+    final String text = gr
+            ? (gamaMode
+                ? "Η δοκιμή εφαρμόζει συνθετικό φόρτο CPU/βίντεο τύπου gaming για 5 λεπτά. "
+                  + "ΔΕΝ είναι δοκιμή πραγματικών 3D γραφικών ούτε βαθμονόμηση GPU.\\n\\n"
+                : "Η δοκιμή εφαρμόζει ήπιο συνθετικό φόρτο καθημερινής χρήσης για 5 λεπτά. "
+                  + "Δεν αναπαριστά όλες τις πραγματικές συνθήκες χρήσης.\\n\\n")
+              + "Προϋποθέσεις:\\n• Μπαταρία τουλάχιστον 30%\\n"
+              + "• Η συσκευή να μην φορτίζει\\n• Airplane Mode ενεργό για συγκρίσιμες μετρήσεις."
+            : (gamaMode
+                ? "Five-minute synthetic CPU/video gaming-like load. This is NOT a real 3D GPU benchmark.\\n\\n"
+                : "Five-minute light daily-use-like synthetic load. Not all real-world use is reproduced.\\n\\n")
+              + "Requirements:\\n• Battery at least 30%\\n• Device not charging"
+              + "\\n• Airplane mode on for comparable samples.";
 
     int percent = getBatteryPercentSafe();
 
@@ -22379,7 +22376,7 @@ private void showLab14BAdvisory(Runnable onContinue) {
 
         if (onContinue != null) {
 
-            if (!checkLab14BConditions()) {
+            if (!checkLab14BConditions(gamaMode)) {
 
                 logWarn(gr
                         ? "Οι συνθήκες άλλαξαν — το τεστ ακυρώθηκε"
@@ -22436,10 +22433,10 @@ private void startLab14DurationPopup(long durationSec, boolean gamaMode) {
     title.setText(
     gr
     ? (wasGama
-        ? "LAB 14 GAMA — Διάρκεια μπαταρίας σε Gaming "
+        ? "LAB 14Γ — Συνθετικός φόρτος τύπου Gaming"
         : "LAB 14B — Διάρκεια μπαταρίας σε καθημερινή χρήση")
     : (wasGama
-        ? "LAB 14 GAMA — Gaming battery endurance"
+        ? "LAB 14C — Gaming-like battery usage"
         : "LAB 14B — Daily battery usage & duration")
 );
     title.setTextColor(Color.WHITE);
