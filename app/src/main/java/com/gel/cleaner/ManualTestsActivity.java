@@ -309,7 +309,8 @@ private GLSurfaceView gpuView;
 
 private int cores = Runtime.getRuntime().availableProcessors();
 
-private long lab14B_startMah = -1L;
+private long lab14B_startMah = -1L; // duration-mode baseline for both 14B and 14Γ
+private long lab14DurationStartMs = 0L;
 private long lab14B_endMah = -1L;
 double rateSum = 0;
 int rateSamples = 0;
@@ -4006,6 +4007,13 @@ private void logLabelErrorValue(String label, String value) {
 // ---------------- COMPATIBILITY ----------------
 private void logLabelValue(String label, String value) {
     logLabelOkValue(label, value);
+}
+
+// Neutral observation/unknown: neither a hardware PASS nor a warning.
+private void logLabelNeutralValue(String label, String value) {
+    logLabel(label, value, "#EEEEEE");
+    expandLogPanel();
+    scrollLogToBottom();
 }
 
 // ---------------- OVERLOADS ----------------
@@ -10853,8 +10861,7 @@ private void lab9SensorsCheck() {
 
         // Enumeration proves only that Android advertises a sensor.
         // It is not a live functional challenge or hardware-health certificate.
-        logLabelWarnValue(
-                gr ? "Συνολική εκτίμηση" : "Overall assessment",
+        logLabelNeutralValue(gr ? "Συνολική εκτίμηση" : "Overall assessment",
                 gr
                         ? "Καταγράφηκαν οι αναφερόμενοι αισθητήρες. Η λειτουργία τους "
                                 + "δεν επαληθεύεται μόνο από τη λίστα."
@@ -10876,11 +10883,11 @@ private void lab9SensorsCheck() {
                        : "Sensor event observations (5 seconds)");
             for (SensorEvidenceProbe.Result sample : samples) {
                 if (!sample.advertised || !sample.listenerRegistered) {
-                    logLabelWarnValue(sample.name,
+                    logLabelNeutralValue(sample.name,
                             gr ? "Δεν διατέθηκε ροή συμβάντων"
                                : "Event stream not available");
                 } else if (sample.events == 0) {
-                    logLabelWarnValue(sample.name,
+                    logLabelNeutralValue(sample.name,
                             gr ? "Μηδέν συμβάντα στο δείγμα — όχι τεκμήριο φυσικής βλάβης"
                                : "No events during window — not proof of physical failure");
                 } else {
@@ -10899,7 +10906,7 @@ private void lab9SensorsCheck() {
                             sample.name + ": " + sample.invalidEvents);
                 }
             }
-            logLabelWarnValue(gr ? "Όρια καταγραφής" : "Sampling limitation",
+            logLabelNeutralValue(gr ? "Όρια καταγραφής" : "Sampling limitation",
                     gr ? "Περιορισμένη χρονικά καταγραφή API, όχι βαθμονόμηση ή "
                             + "πιστοποίηση λειτουργίας όλων των αισθητήρων."
                        : "Time-bounded API observation, not calibration or "
@@ -10939,8 +10946,7 @@ private void checkSensor(SensorManager sm, int type, String name) {
                 gr ? "Διαθέσιμος" : "Available"
         );
     } else {
-        logLabelWarnValue(
-                name,
+        logLabelNeutralValue(name,
                 gr
                         ? "Δεν αναφέρθηκε (ενδέχεται περιορισμένες ή μη διαθέσιμες λειτουργίες)"
                         : "Not reported (dependent features may be limited or missing)"
@@ -11297,10 +11303,30 @@ private void runWifiDeepScan(WifiManager wm) {
                 logLabelValue(gr ? "Ισχύς συνδέσμου (Android)" : "Link RSSI (Android)",
                         linkEvidence.rssiDbm + " dBm");
             }
-            logLabelWarnValue(gr ? "SpeedSim — εκτίμηση ταχύτητας Internet"
-                                 : "SpeedSim — Internet throughput estimate",
-                    gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — PHY/RSSI δεν πιστοποιούν ρυθμό μεταφοράς δεδομένων"
-                       : "NOT MEASURED — PHY/RSSI cannot certify data transfer throughput");
+            // SpeedSim 2.0: a bounded, qualitative response observation; never invent Mbps.
+            // The two one-shot TCP/DNS observations are not a throughput or stability measurement.
+            if (pingMs > 0f && dnsMs > 0f) {
+                final boolean responsive = pingMs <= 80f && dnsMs <= 400f;
+                final boolean delayed = pingMs > 200f || dnsMs > 1000f;
+                final String observation = gr
+                        ? (responsive ? "Χαμηλή καθυστέρηση στο συγκεκριμένο δείγμα"
+                                     : delayed ? "Αυξημένη καθυστέρηση στο συγκεκριμένο δείγμα"
+                                               : "Μέτρια απόκριση στο συγκεκριμένο δείγμα")
+                        : (responsive ? "Low latency in this particular sample"
+                                     : delayed ? "Elevated latency in this particular sample"
+                                               : "Moderate responsiveness in this particular sample");
+                logLabelNeutralValue(gr ? "SpeedSim — απόκριση TCP/DNS" : "SpeedSim — TCP/DNS response",
+                        observation + (gr
+                                ? " — όχι μέτρηση Download/Upload σε Mbps"
+                                : " — not measured download/upload throughput in Mbps"));
+            } else {
+                logLabelNeutralValue(gr ? "SpeedSim — απόκριση TCP/DNS" : "SpeedSim — TCP/DNS response",
+                        gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — δεν τεκμηριώνεται βλάβη ή ρυθμός Internet"
+                           : "INSUFFICIENT DATA — no internet fault or throughput verdict");
+            }
+            logLabelNeutralValue(gr ? "Πραγματική ταχύτητα Internet" : "Actual internet throughput",
+                    gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — απαιτεί προαιρετικό ενεργό Download/Upload test"
+                       : "NOT MEASURED — requires an optional active download/upload test");
 
             // 5) OS-level default-network validation, transport and captive portal.
             // NET_CAPABILITY_INTERNET means the network is configured for internet;
@@ -11496,6 +11522,37 @@ private void runWifiDeepScan(WifiManager wm) {
 // LAB 11 — Mobile Data Diagnostic
 // ============================================================
 private void lab11MobileDataDiagnostic() {
+    final boolean gr = AppLang.isGreek(this);
+    // Inform before checking the DEFAULT route; never change Wi-Fi/mobile settings automatically.
+    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
+            .setTitle(gr ? "LAB 11 — Πριν από τον έλεγχο κινητού δικτύου"
+                         : "LAB 11 — Before testing cellular connectivity")
+            .setMessage(gr
+                    ? "Για να ελέγξουμε τη διαδρομή δεδομένων κινητής, απενεργοποίησε προσωρινά το Wi-Fi "
+                      + "και, εφόσον έχεις ενεργή SIM και πακέτο δεδομένων, ενεργοποίησε τα δεδομένα κινητής. "
+                      + "Μπορείς να χρησιμοποιήσεις τις Γρήγορες ρυθμίσεις του Android. "
+                      + "Έπειτα πάτησε ΣΥΝΕΧΕΙΑ. Αν δεν έχεις SIM/δεδομένα, πάτησε ΠΑΡΑΛΕΙΨΗ. "
+                      + "Μετά τον έλεγχο ενεργοποίησε ξανά το Wi-Fi αν το επιθυμείς. "
+                      + "Δεν αλλάζουμε καμία ρύθμιση αυτόματα και δεν εκτελούμε speed test."
+                    : "To check the cellular data route, temporarily switch Wi-Fi off and, if you "
+                      + "have a working SIM/data plan, turn on mobile data using Android Quick Settings. "
+                      + "Then choose CONTINUE. Choose SKIP without a SIM/data plan. "
+                      + "You can restore Wi-Fi afterwards. No settings are changed automatically and no speed test runs.")
+            .setPositiveButton(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE", (dialog, which) -> lab11RunMobileDataSnapshot())
+            .setNegativeButton(gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP", (dialog, which) -> lab11RecordSkipped())
+            .setOnCancelListener(dialog -> lab11RecordSkipped())
+            .show();
+}
+
+private void lab11RecordSkipped() {
+    final boolean gr = AppLang.isGreek(this);
+    logLabelNeutralValue("LAB 11", gr
+            ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — ο χρήστης παρέλειψε τον έλεγχο κινητού δικτύου"
+            : "NOT TESTED — cellular assessment skipped by user");
+    enableSingleExportButton();
+}
+
+private void lab11RunMobileDataSnapshot() {
     final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
@@ -11788,7 +11845,7 @@ private void lab12CallFunctionInterpretation() {
 
     // Optional, explicit user action only; ACTION_DIAL does not place a call,
     // access call logs or record audio. No phone number is provided or stored.
-    new AlertDialog.Builder(this)
+    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
             .setTitle(gr ? "LAB 12 — Πραγματική δοκιμή κλήσης (προαιρετικά)"
                          : "LAB 12 — Optional live-call check")
             .setMessage(gr
@@ -11863,7 +11920,7 @@ private void lab12AfterDialerReturn() {
         return;
     }
     // A dialer return does NOT prove the user placed or finished a call.
-    new AlertDialog.Builder(this)
+    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
             .setTitle(gr ? "LAB 12 — Επιβεβαίωση από χρήστη" : "LAB 12 — User confirmation")
             .setMessage(gr ? "Πραγματοποιήθηκε και ολοκληρώθηκε πραγματική κλήση; "
                             + "Αν άνοιξες απλώς τον τηλεφωνητή, πάτησε ΟΧΙ."
@@ -11881,7 +11938,7 @@ private void lab12AfterDialerReturn() {
 
 private void lab12AskHearOtherParty() {
     final boolean gr = AppLang.isGreek(this);
-    new AlertDialog.Builder(this)
+    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
             .setTitle(gr ? "LAB 12 — Ήχος λήψης" : "LAB 12 — Receive audio")
             .setMessage(gr ? "Κατά την πραγματική κλήση ΑΚΟΥΓΕΣ καθαρά τον συνομιλητή σου; "
                             + "Η επιλεγμένη διαδρομή (ακουστικό, Bluetooth ή ηχείο) δεν έχει πιστοποιηθεί."
@@ -11898,7 +11955,7 @@ private void lab12AskHearOtherParty() {
 
 private void lab12AskOtherPartyHeard(boolean heardOther) {
     final boolean gr = AppLang.isGreek(this);
-    new AlertDialog.Builder(this)
+    new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
             .setTitle(gr ? "LAB 12 — Ήχος μετάδοσης" : "LAB 12 — Transmit audio")
             .setMessage(gr ? "Ο συνομιλητής σου επιβεβαίωσε ότι ΑΚΟΥΓΕ εσένα; "
                             + "Απάντησε μόνο βάσει πραγματικής συνομιλίας."
@@ -11935,12 +11992,12 @@ private void lab12ReportGuided(Lab12CallEvidence.Guided outcome) {
                        : "Two-way communication problem reported — no confirmed device fault");
             break;
         case INCONCLUSIVE:
-            logLabelWarnValue(gr ? "Δοκιμή κλήσης" : "Call check",
+            logLabelNeutralValue(gr ? "Δοκιμή κλήσης" : "Call check",
                     gr ? "Ανεπαρκής ή διακοπείσα επιβεβαίωση — ΑΓΝΩΣΤΟ"
                        : "Incomplete or interrupted confirmation — INCONCLUSIVE");
             break;
         default:
-            logLabelValue(gr ? "Δοκιμή πραγματικής κλήσης" : "Actual call test",
+            logLabelNeutralValue(gr ? "Δοκιμή πραγματικής κλήσης" : "Actual call test",
                     gr ? "ΔΕΝ ΠΡΑΓΜΑΤΟΠΟΙΗΘΗΚΕ / ΔΕΝ ΕΠΑΛΗΘΕΥΤΗΚΕ"
                        : "NOT PERFORMED / NOT VERIFIED");
     }
@@ -12031,12 +12088,12 @@ private void showLab13GatePopup() {
 
     final String titleText =
             gr
-                    ? "LAB 13 — Έλεγχος Εξωτερικής Συσκευηςής Bluetooth"
+                    ? "LAB 13 — Έλεγχος Εξωτερικής Συσκευής Bluetooth"
                     : "LAB 13 — External Bluetooth Device Check";
 
     final String messageText =
             gr
-                    ? "Σύνδεσε ΜΙΑ εξωτερική συσκευη Bluetooth.\n\n"
+                    ? "Σύνδεσε ΜΙΑ εξωτερική συσκευή Bluetooth.\n\n"
                       + "π.χ. ακουστικά, σύστημα αυτοκινήτου, πληκτρολόγιο.\n\n"
                       + "Το τεστ, αξιολογεί τη σταθερότητα της σύνδεσης Bluetooth.\n\n"
                       + "Αν δεν έχεις συνδεδεμένη εξωτερική συσκευή,\n"
@@ -12104,14 +12161,17 @@ private void showLab13GatePopup() {
     Button skip = gelButton(
         this,
         gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP",
-        0xFF444444
+        0xFFE60000
 );
 
     Button cont = gelButton(
         this,
         gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE",
-        0xFF0F8A3B
+        0xFF39FF14
 );
+
+    skip.setTextColor(Color.WHITE);
+    cont.setTextColor(Color.BLACK);
 
     LinearLayout.LayoutParams lp =
         new LinearLayout.LayoutParams(0, dp(52), 1f);
@@ -12140,12 +12200,15 @@ buttons.addView(cont);
     }
 
     gate.setOnCancelListener(dialog -> {
-        logLabelValue(gr ? "Εξωτερική δοκιμή Bluetooth" : "Bluetooth external test",
-                "NOT_TESTED — cancelled before monitoring");
+        logLabelNeutralValue(gr ? "Εξωτερική δοκιμή Bluetooth" : "Bluetooth external test",
+                gr ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — ακύρωση πριν από την παρακολούθηση"
+                   : "NOT TESTED — cancelled before monitoring");
         enableSingleExportButton();
     });
+    gate.setOnDismissListener(dialog -> AppTTS.stop());
     gate.show();
     com.gel.cleaner.GelButtonLayout.fitDialog(gate);
+    AppTTS.speak(this, titleText + ". " + messageText);
 
     // ---------------------------
     // ACTIONS
@@ -12278,14 +12341,16 @@ private void runLab13BluetoothCheckCore() {
     // SYSTEM-ONLY MODE (Skip external device test)
     // ------------------------------------------------------------
     if (lab13SkipExternalTest) {
-        logWarn(gr
+        logInfo(gr
                 ? "Το τεστ εξωτερικής Bluetooth συσκευής παραλείφθηκε από τον χρήστη."
                 : "External Bluetooth device test skipped by user.");
-        logLabelValue(gr ? "Εξωτερικό Bluetooth" : "External Bluetooth",
-                "NOT_TESTED — no peripheral connection verified");
+        logLabelNeutralValue(gr ? "Εξωτερικό Bluetooth" : "External Bluetooth",
+                gr ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — δεν επαληθεύτηκε σύνδεση εξωτερικής συσκευής"
+                   : "NOT TESTED — no peripheral connection verified");
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
+        logInfo(gr ? "Ο βασικός έλεγχος Bluetooth ολοκληρώθηκε· η εξωτερική δοκιμή δεν έγινε."
+                   : "System-only Bluetooth assessment completed; peripheral test not performed.");
         logLine();
         enableSingleExportButton();
         return;
@@ -12960,8 +13025,8 @@ private void showBatterySuiteMenu() {
     root.addView(
             makeTestButton(
                     gr
-                    ? "14 GAMA. Προσομοίωση διάρκειας μπαταρίας σε Gaming"
-                    : "14 GAMA. Gaming Battery Endurance Simulation",
+                    ? "14Γ. Προσομοίωση διάρκειας μπαταρίας σε Gaming"
+                    : "14C. Gaming Battery Endurance Simulation",
                     this::lab14GamingDurationTest
             )
     );
@@ -17910,7 +17975,7 @@ if (!Float.isNaN(startBatteryTemp) &&
 // ----------------------------------------------------
 long drainNow = 0L;
 
-if (isLab14BMode) {
+if (isLab14BMode || isLab14GamaMode) {
 
     iDoctorEngine.BatterySnapshot snapNow =
             iDoctorEngine.get(ManualTestsActivity.this)
@@ -17918,9 +17983,9 @@ if (isLab14BMode) {
 
     if (snapNow != null &&
         snapNow.chargeNowMah > 0 &&
-        startMah > 0) {
+        lab14B_startMah > 0) {
 
-        long diff = startMah - snapNow.chargeNowMah;
+        long diff = lab14B_startMah - snapNow.chargeNowMah;
 
         if (diff > 0 && diff < 10000) { // 🔴 HARD FILTER
             drainNow = diff;
@@ -17951,22 +18016,26 @@ if (isLab14BMode) {
 // ----------------------------------------------------
 double drainPerHour = Double.NaN;
 
-// 🔴 REQUIRE MIN WINDOW
-if (elapsed >= 10) {
+// Quantized charge counters must not generate fictitious startup consumption.
+final boolean durationMode = isLab14BMode || isLab14GamaMode;
+long elapsedForRate = durationMode && lab14DurationStartMs > 0L
+        ? (SystemClock.elapsedRealtime() - lab14DurationStartMs) / 1000L
+        : elapsed;
+if (elapsedForRate >= (durationMode ? 60 : 10)) {
 
     if (drainNow > 0) {
 
         double rate =
-                (drainNow * 3600.0) / elapsed;
+                (drainNow * 3600.0) / elapsedForRate;
 
         // 🔴 HARD FILTER
         if (rate >= 10 && rate <= 8000) {
             drainPerHour = rate;
         }
 
-    } else {
+    } else if (!durationMode) {
 
-        // 🔴 FALLBACK → current (converted properly)
+        // Instantaneous current is not a measured duration-mode discharge rate.
 float currentFallback = lab14Current();
 
 if (!Float.isNaN(currentFallback) &&
@@ -20881,7 +20950,7 @@ private boolean ensurePermissions(String[] permissions, Runnable afterGranted) {
 // ============================================================
 // LAB 14B — CONDITIONS CHECK (STRAITJACKET MODE)
 // ============================================================
-private boolean checkLab14BConditions() {
+private boolean checkLab14BConditions(boolean gamaMode) {
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -20907,8 +20976,8 @@ private boolean checkLab14BConditions() {
     logLine();
 
     logInfo(gr
-            ? "LAB 14B - Έλεγχος συνθηκών δοκιμής"
-            : "LAB 14B - Test conditions check");
+            ? (gamaMode ? "LAB 14Γ - Έλεγχος συνθηκών δοκιμής" : "LAB 14B - Έλεγχος συνθηκών δοκιμής")
+            : (gamaMode ? "LAB 14C - Test conditions check" : "LAB 14B - Test conditions check"));
 
     logLine();
 
@@ -20939,8 +21008,8 @@ private boolean checkLab14BConditions() {
     if (percent < 30) {
 
         logWarn(gr
-                ? "Το LAB 14B απαιτεί τουλάχιστον 30% μπαταρία."
-                : "LAB 14B requires at least 30% battery.");
+                ? "Το LAB " + (gamaMode ? "14Γ" : "14B") + " απαιτεί τουλάχιστον 30% μπαταρία."
+                : "LAB " + (gamaMode ? "14C" : "14B") + " requires at least 30% battery.");
 
         logWarn(gr
                 ? "Κάτω από αυτό το επίπεδο μπορεί να επέμβει system protection."
@@ -21041,6 +21110,8 @@ synchronized (lab14Lock) {
 
 isLab14BMode = !gamaMode;
 isLab14GamaMode = gamaMode;
+lab14B_startMah = -1L;
+lab14DurationStartMs = 0L;
 
 // ------------------------------------------------------------
 // 🔴 START FLOW
@@ -21110,6 +21181,8 @@ synchronized (lab14Lock) {
         }
 
 startMah[0] = snap0.chargeNowMah;
+lab14B_startMah = startMah[0];
+lab14DurationStartMs = SystemClock.elapsedRealtime();
 
 // ------------------------------------------------
 // VERIFIED FULL CAPACITY — UNKNOWN UNDER PUBLIC SDK
@@ -21182,10 +21255,10 @@ logLine();
 logOk(
     gr
     ? (wasGama
-        ? "LAB 14 GAMA ξεκίνησε"
+        ? "LAB 14Γ ξεκίνησε"
         : "LAB 14B ξεκίνησε")
     : (wasGama
-        ? "LAB 14 GAMA started"
+        ? "LAB 14C started"
         : "LAB 14B started")
 );
 
@@ -21655,27 +21728,23 @@ if (!Float.isNaN(perHour)) {
     );
 }
 
-// 🔴 THERMAL
-if (!Float.isNaN(tempRise)) {
-
-    String tempStr =
-            (tempRise < 0.1f)
-            ? "≈0.0°C"
-            : String.format(Locale.US, "%.1f°C", tempRise);
-
-    logLabelValue(
-            gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
-            tempStr
-    );
+// Display the SIGNED observations, not a false "drop" when voltage rose
+// or "zero temperature rise" when the sensor actually cooled.
+if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
+    float signedTemp = endTemp[0] - startTemp[0];
+    if (Math.abs(signedTemp) <= 25f) {
+        logLabelNeutralValue(gr ? "Μεταβολή θερμοκρασίας" : "Temperature change",
+                String.format(Locale.US, "%+.1f°C", signedTemp));
+    }
+}
+if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
+    float signedVolt = endVolt[0] - startVolt[0];
+    if (Math.abs(signedVolt) <= 0.5f) {
+        logLabelNeutralValue(gr ? "Μεταβολή τάσης" : "Voltage change",
+                String.format(Locale.US, "%+.3f V", signedVolt));
+    }
 }
 
-// 🔴 VOLTAGE
-if (!Float.isNaN(voltDrop)) {
-    logLabelValue(
-            gr ? "Πτώση τάσης" : "Voltage drop",
-            String.format(Locale.US, "%.3f V", voltDrop)
-    );
-}
 
 appendHtml("<br>");
 
@@ -21953,16 +22022,18 @@ try {
     lab14Running = false;
     isLab14BMode = false;
     isLab14GamaMode = false;
+    lab14B_startMah = -1L;
+    lab14DurationStartMs = 0L;
 
     appendHtml("<br>");
 
     logOk(
         gr
         ? (wasGama
-            ? "Το Lab 14 GAMA ολοκληρώθηκε."
+            ? "Το Lab 14Γ ολοκληρώθηκε."
             : "Το Lab 14B ολοκληρώθηκε.")
         : (wasGama
-            ? "Lab 14 GAMA finished."
+            ? "Lab 14C finished."
             : "Lab 14B finished.")
     );
 
@@ -21985,14 +22056,14 @@ try {
 
 }, 300000L);
 
-}); // showLab14BAdvisory
+}, gamaMode); // showLab14BAdvisory
 
 } // runLab14DurationMode
 
 // ============================================================
 // LAB 14B — PRE TEST ADVISORY (STABILIZED MODE)
 // ============================================================
-private void showLab14BAdvisory(Runnable onContinue) {
+private void showLab14BAdvisory(Runnable onContinue, boolean gamaMode) {
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -22010,27 +22081,24 @@ private void showLab14BAdvisory(Runnable onContinue) {
             buildPopupHeader(
                     this,
                     gr
-                    ? "Έλεγχος κατανάλωσης και διάρκειας μπαταρίας"
-                    : "Battery usage and duration test"
+                    ? (gamaMode ? "LAB 14Γ — Φόρτος τύπου gaming" : "LAB 14B — Καθημερινή χρήση")
+                    : (gamaMode ? "LAB 14C — Gaming-like workload" : "LAB 14B — Daily usage")
             )
     );
 
-    final String text =
-            gr
-            ? "Η δοκιμή προσομοιώνει καθημερινή χρήση για 5 λεπτά "
-              + "ώστε να εκτιμηθούν κατανάλωση, διάρκεια και συμπεριφορά μπαταρίας.\n\n"
-              + "Προϋποθέσεις:\n"
-              + "• Μπαταρία τουλάχιστον 30%\n"
-              + "• Η συσκευή να μην φορτίζει\n"
-              + "• Airplane Mode ενεργό για σταθερότητα runs."
-
-            : "This test simulates 5 minutes of real device usage "
-              + "to estimate battery consumption, endurance "
-              + "and battery behavior.\n\n"
-              + "Requirements:\n"
-              + "• Battery at least 30%\n"
-              + "• Device not charging\n"
-              + "• Airplane Mode enabled for run stability.";
+    final String text = gr
+            ? (gamaMode
+                ? "Η δοκιμή εφαρμόζει συνθετικό φόρτο CPU/βίντεο τύπου gaming για 5 λεπτά. "
+                  + "ΔΕΝ είναι δοκιμή πραγματικών 3D γραφικών ούτε βαθμονόμηση GPU.\n\n"
+                : "Η δοκιμή εφαρμόζει ήπιο συνθετικό φόρτο καθημερινής χρήσης για 5 λεπτά. "
+                  + "Δεν αναπαριστά όλες τις πραγματικές συνθήκες χρήσης.\n\n")
+              + "Προϋποθέσεις:\n• Μπαταρία τουλάχιστον 30%\n"
+              + "• Η συσκευή να μην φορτίζει\n• Airplane Mode ενεργό για συγκρίσιμες μετρήσεις."
+            : (gamaMode
+                ? "Five-minute synthetic CPU/video gaming-like load. This is NOT a real 3D GPU benchmark.\n\n"
+                : "Five-minute light daily-use-like synthetic load. Not all real-world use is reproduced.\n\n")
+              + "Requirements:\n• Battery at least 30%\n• Device not charging"
+              + "\n• Airplane mode on for comparable samples.";
 
     int percent = getBatteryPercentSafe();
 
@@ -22308,7 +22376,7 @@ private void showLab14BAdvisory(Runnable onContinue) {
 
         if (onContinue != null) {
 
-            if (!checkLab14BConditions()) {
+            if (!checkLab14BConditions(gamaMode)) {
 
                 logWarn(gr
                         ? "Οι συνθήκες άλλαξαν — το τεστ ακυρώθηκε"
@@ -22365,10 +22433,10 @@ private void startLab14DurationPopup(long durationSec, boolean gamaMode) {
     title.setText(
     gr
     ? (wasGama
-        ? "LAB 14 GAMA — Διάρκεια μπαταρίας σε Gaming "
+        ? "LAB 14Γ — Συνθετικός φόρτος τύπου Gaming"
         : "LAB 14B — Διάρκεια μπαταρίας σε καθημερινή χρήση")
     : (wasGama
-        ? "LAB 14 GAMA — Gaming battery endurance"
+        ? "LAB 14C — Gaming-like battery usage"
         : "LAB 14B — Daily battery usage & duration")
 );
     title.setTextColor(Color.WHITE);

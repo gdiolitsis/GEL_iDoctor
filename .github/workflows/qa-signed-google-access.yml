@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - qa/integration-gel31-localization-20261110
+      - qa/integration-gel31-midpoint-20261112
     paths:
       - '.github/workflows/qa-signed-google-access.yml'
       - 'app/**'
