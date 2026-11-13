@@ -27992,55 +27992,18 @@ appendHtml("<br>");
 
                     @Override
                     public void onAuthenticationFailed() {
-
-                        appendHtml("<br>");
-                        logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
-                                   : "LIVE BIOMETRIC TEST");
-                                   logLine();
-                                   
-                        logLabelErrorValue(
-                                gr ? "Αποτέλεσμα" : "Result",
-                                "FAIL"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Ερμηνεία" : "Meaning",
-                                gr ? "Το βιομετρικό δεν επιβεβαιώθηκε κατά τον πραγματικό έλεγχο"
-                                   : "Biometric did not authenticate during real sensor test"
-                        );
-
-                        appendHtml("<br>");
-                        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                        logLine();
-                        lab21Running = false;
+                        // Non-match is retryable; native BiometricPrompt stays open.
+                        logInfo(gr ? "Μη ταύτιση δείγματος — δοκιμάστε ξανά."
+                                   : "Sample not matched — retry within the same prompt.");
                     }
 
-                    @Override
+                                        @Override
                     public void onAuthenticationError(int errorCode, CharSequence errString) {
-
-                        appendHtml("<br>");
-                        logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
-                                   : "LIVE BIOMETRIC TEST");
-                                   logLine();
-                                   
-                        logLabelWarnValue(
-                                gr ? "Αποτέλεσμα" : "Result",
-                                gr ? "Μη επιβεβαιωμένο"
-                                   : "Not confirmed"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Σύστημα" : "System",
-                                gr ? "Ενεργοποιήθηκε εφεδρικό διαπιστευτήριο"
-                                   : "Fallback to device credential detected"
-                        );
-                        logLabelWarnValue(
-                                gr ? "Ερμηνεία" : "Meaning",
-                                gr ? "Ο αισθητήρας ΔΕΝ επιβεβαιώθηκε λειτουργικός"
-                                   : "Biometric sensor NOT verified functional"
-                        );
-
-                        appendHtml("<br>");
-                        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                        logLine();
+                        // Cancellation, timeouts and OS errors do not prove sensor failure.
+                        logInfo((gr ? "Βιομετρική προτροπή μη ολοκληρωμένη (κωδικός "
+                                    : "Biometric prompt not completed (code ")
+                                + errorCode + "): "
+                                + (errString == null ? "" : errString.toString()));
                         lab21Running = false;
                     }
                 };
@@ -28066,16 +28029,10 @@ appendHtml("<br>");
                                                : "LIVE BIOMETRIC TEST");
                                                logLine();
                                                
-                                    logLabelWarnValue(
-                                            gr ? "Αποτέλεσμα" : "Result",
-                                            gr ? "Ακυρώθηκε από τον χρήστη"
-                                               : "Cancelled by user"
-                                    );
-
-                                    appendHtml("<br>");
-                                    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
-                                    logLine();
-                                    lab21Running = false;
+                                    logInfo(gr ? "Ο χρήστης ακύρωσε τη βιομετρική προτροπή."
+                                                : "Biometric prompt cancelled by user.");
+                                     appendHtml("<br>");
+                                     lab21Running = false;
                                 }
                         )
                         ;
@@ -28085,9 +28042,9 @@ appendHtml("<br>");
         android.hardware.biometrics.BiometricPrompt prompt = nativePromptBuilder.build();
 
         logInfo(gr ? "Προτροπή βιομετρικού:" : "Biometric prompt:");
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Κατάσταση" : "Status",
-                gr ? "Εκκίνηση…" : "Starting…"
+                gr ? "Εμφάνιση προτροπής…" : "Opening prompt…"
         );
 
         prompt.authenticate(cancel, executor, cb);
