@@ -176,3 +176,13 @@ Latest application patch `8d966118bfdb395367a1cef88255dee3ec5b5765` is scoped to
 ### Lab 8 — owner clarification (13 Nov 2026)
 
 During physical review, the camera produced dark/black frames because the **phone was resting on a black table**. This environmental cause is explicitly confirmed by the owner. **Do not classify these frames as hardware failure, broken camera stream, or an unresolved user-reported defect.** No software change is required to "fix" this incident. Keep Camera2 sampling intact; separately verify the existing UI/TTS/EXIT/Back controls and avoid turning low scene brightness alone into a failing diagnosis on future runs.
+
+
+## 13 Nov 2026 — APK artifact cleanup and mandatory log color policy
+
+- **Owner rule:** no additional APK at each incremental source patch. The source-built Android UI workflow is gated off for `qa/gel31-surgical-rebuild-20261113` (`b564b610`). Re-enable only when all 31 Labs and cross-cutting UX fixes are consolidated and ready for one full APK acceptance run.
+- **Actual cleanup completed:** GitHub Actions [run 43421807680](https://github.com/gdiolitsis/GEL_iDoctor/actions/runs/43421807680) deleted **18** `gel-v53-source-built-debug-apk` artifacts scoped to the current experimental QA branch. Sampled successful/aborted source-build runs were rechecked and have **zero** remaining interim APK artifacts. Emulator logs/screenshots and other artifacts remain for QA evidence. The cleanup workflow itself was removed immediately afterward. The protected known-good backup, main, and releases were not changed.
+- **Never treat green CI as final APK provenance:** each candidate must have an exact accepted commit, matching source SHA/hash, full JUnit/emulator and physical-device/PDF QA plus owner signoff. Earlier green candidate builds are explicitly UNAPPROVED.
+- **Mandatory for every Lab 1–31:** [Color/evidence policy and 31-Lab static severity audit](GEL31_LOG_COLOR_EVIDENCE_POLICY_20261113.md). White/gray for informational / unmeasured / skipped / canceled / unsupported; green only for a scoped verified positive; yellow only for real actionable uncertainty; red only for substantiated material failure or safety concern.
+- **Source changes:** `db6c094d` changed `logLabelValue` from incorrectly green to neutral white; `4dd2915c` corrected 19 callsites in Labs 4/5/6/7/12/13 without changing the diagnostic algorithms. Remaining warning/error callsites still need per-Lab semantic review; no mass removal.
+- **Acceptance still open:** no full 31-Lab color semantics review, final build or real-device acceptance has been declared. This checkpoint is source and workflow hygiene only.
