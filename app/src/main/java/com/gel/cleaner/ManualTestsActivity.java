@@ -6939,12 +6939,12 @@ private void lab4MicBase(Runnable onFinished) {
 
         boolean bottomOk = false;
         boolean topOk = false;
-        boolean fallbackUsed = false;
+        boolean bottomCaptured = false;
+        boolean topCaptured = false;
 
         int bottomRms = 0, bottomPeak = 0;
         int topRms = 0, topPeak = 0;
 
-        boolean stopBaseHere = false;
 
         try {
 
@@ -6961,8 +6961,14 @@ private void lab4MicBase(Runnable onFinished) {
                     MicDiagnosticEngine.run(this, MicDiagnosticEngine.MicType.BOTTOM);
 
             if (bottom != null) {
+                bottomCaptured = bottom.audioRecordStarted;
                 bottomRms  = (int) bottom.rms;
                 bottomPeak = (int) bottom.peak;
+            }
+            if (!bottomCaptured) {
+                logLabelWarnValue(gr ? "Δειγματοληψία κάτω μικροφώνου" : "Bottom mic capture",
+                        gr ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — χωρίς συμπέρασμα λειτουργίας"
+                           : "NOT CAPTURED — no functional verdict");
             }
 
             logLabelOkValue("Bottom RMS",  String.valueOf(bottomRms));
@@ -6983,8 +6989,14 @@ private void lab4MicBase(Runnable onFinished) {
                     MicDiagnosticEngine.run(this, MicDiagnosticEngine.MicType.TOP);
 
             if (top != null) {
+                topCaptured = top.audioRecordStarted;
                 topRms  = (int) top.rms;
                 topPeak = (int) top.peak;
+            }
+            if (!topCaptured) {
+                logLabelWarnValue(gr ? "Δειγματοληψία άνω μικροφώνου" : "Top mic capture",
+                        gr ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — χωρίς συμπέρασμα λειτουργίας"
+                           : "NOT CAPTURED — no functional verdict");
             }
 
             logLabelOkValue(
@@ -7010,16 +7022,16 @@ if (bottomOk && topOk) {
 
     logLabelOkValue(
             gr ? "Κατάσταση" : "Status",
-            gr ? "Και τα δύο μικρόφωνα λειτουργούν κανονικά"
-               : "Both microphones are operational"
+            gr ? "Καταγράφηκε ακουστικό σήμα στις δύο διαδρομές εισόδου"
+               : "Acoustic input was observed on both capture paths"
     );
 
 } else if (bottomOk || topOk) {
 
     logLabelWarnValue(
             gr ? "Κατάσταση" : "Status",
-            gr ? "Μερική λειτουργία μικροφώνων"
-               : "Partial microphone operation detected"
+            gr ? "Ακουστικό σήμα μόνο σε μία διαδρομή — απαιτείται διερεύνηση"
+               : "Acoustic input on one capture path only — further testing needed"
     );
 
 } else {
@@ -7044,14 +7056,27 @@ if (bottomOk && topOk) {
     );
 }
 
+        } catch (Throwable failure) {
+            logLabelWarnValue(gr ? "Εκτέλεση Lab 4 BASE" : "Lab 4 BASE execution",
+                    gr ? "Διακόπηκε από σφάλμα καταγραφής — δεν επιβεβαιώθηκε λειτουργία"
+                       : "Capture failed — no functional verdict");
         } finally {
-
+            // Zero samples and permission/AudioRecord failure are never permission
+            // to advance into the human-guided PRO audio loop.
+            final boolean mayAdvance = bottomCaptured && topCaptured
+                    && !isFinishing() && !isDestroyed();
             appendHtml("<br>");
-            logOk(gr ? "Το Lab 4 BASE ολοκληρώθηκε." : "Lab 4 BASE finished.");
+            logInfo(gr ? "Η φάση Lab 4 BASE έληξε." : "Lab 4 BASE phase ended.");
             logLine();
-
-            if (onFinished != null && !fallbackUsed) {
-                runOnUiThread(onFinished);
+            if (mayAdvance && onFinished != null) {
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) onFinished.run();
+                });
+            } else {
+                logLabelWarnValue(gr ? "Lab 4 PRO" : "Lab 4 PRO",
+                        gr ? "Δεν ξεκίνησε: η BASE δεν ολοκλήρωσε και τις δύο καταγραφές"
+                           : "Not started: BASE did not complete both captures");
+                runOnUiThread(this::enableSingleExportButton);
             }
         }
 
