@@ -31012,22 +31012,16 @@ private void lab29DeviceAuthenticity() {
             ? "LAB 29 — Παρατηρήσεις Hardware (όχι πιστοποίηση γνησιότητας)"
             : "LAB 29 — Hardware observations (not OEM certification)");
     logInfo(gr
-        ? "SAFE MODE — εμφανίζονται μόνο επιβεβαιωμένα ευρήματα"
-        : "SAFE MODE — only confirmed findings are reported");
+        ? "SAFE MODE — εμφανίζονται μόνο δηλωμένες παρατηρήσεις Android, όχι πιστοποίηση υλικού"
+        : "SAFE MODE — Android-exposed observations only, not component certification");
     logLine();
 
     appendHtml("<br>");
 
-if (!isDeviceRooted()) {
-
-    logLabelValue(
-            gr ? "Advanced verification"
-               : "Advanced verification",
-            gr
-                    ? "Ορισμένοι πρόσθετοι έλεγχοι δεν είναι διαθέσιμοι χωρίς root"
-                    : "Some additional checks are unavailable without root"
-    );
-}
+logLabelValue(
+        gr ? "Έλεγχος γνησιότητας OEM" : "OEM authenticity verification",
+        gr ? "Δεν παρέχεται από δημόσια Android APIs· το root δεν πιστοποιεί ανταλλακτικά."
+           : "Unavailable through public Android APIs; root access does not certify parts.");
 
     // Android platform observations do not authenticate OEM replacement parts.
 
@@ -31047,7 +31041,7 @@ if (!isDeviceRooted()) {
     voltage < 2.5f ||
     voltage > 5.5f) {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Μπαταρία" : "Battery",
                 gr
                         ? "Ασυνήθιστες τιμές μέτρησης"
@@ -31056,7 +31050,7 @@ if (!isDeviceRooted()) {
 
     } else {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Μπαταρία" : "Battery",
                 gr
                         ? "Μετρήσεις φυσιολογικές"
@@ -31074,14 +31068,18 @@ if (!isDeviceRooted()) {
 
     Display display = getWindowManager().getDefaultDisplay();
 
-    float refreshRate = 60f;
+    float refreshRate = Float.NaN; // Never invent a 60 Hz reading if the display is unavailable.
 
     if (display != null)
         refreshRate = display.getRefreshRate();
 
-    if (refreshRate < 30f) {
+    if (Float.isNaN(refreshRate) || refreshRate <= 0f) {
+        logLabelValue(gr ? "Οθόνη" : "Display",
+                gr ? "Δεν υπάρχει έγκυρη μέτρηση ρυθμού ανανέωσης."
+                   : "Display refresh rate unavailable.");
+    } else if (refreshRate < 30f) {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Οθόνη" : "Display",
                 gr
                         ? "Ασυνήθιστος ρυθμός ανανέωσης"
@@ -31090,7 +31088,7 @@ if (!isDeviceRooted()) {
 
     } else {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Οθόνη" : "Display",
                 String.format(Locale.US,
                         gr
@@ -31114,7 +31112,7 @@ if (!isDeviceRooted()) {
 
     if (!cameraAvailable) {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Κάμερα" : "Camera",
                 gr
                         ? "Δεν εντοπίστηκε"
@@ -31123,7 +31121,7 @@ if (!isDeviceRooted()) {
 
     } else {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Κάμερα" : "Camera",
                 gr
                         ? "Εντοπίστηκε"
@@ -31159,7 +31157,7 @@ if (!isDeviceRooted()) {
 
             if (proximity == null) {
                 missing = true;
-                logLabelWarnValue(
+                logLabelValue(
                         "Proximity",
                         gr ? "Δεν εντοπίστηκε"
                                 : "Not detected"
@@ -31168,7 +31166,7 @@ if (!isDeviceRooted()) {
 
             if (light == null) {
                 missing = true;
-                logLabelWarnValue(
+                logLabelValue(
                         "Light",
                         gr ? "Δεν εντοπίστηκε"
                                 : "Not detected"
@@ -31177,7 +31175,7 @@ if (!isDeviceRooted()) {
 
             if (accel == null) {
                 missing = true;
-                logLabelWarnValue(
+                logLabelValue(
                         "Accelerometer",
                         gr ? "Δεν εντοπίστηκε"
                                 : "Not detected"
@@ -31186,7 +31184,7 @@ if (!isDeviceRooted()) {
 
             if (!missing) {
 
-                logLabelOkValue(
+                logLabelValue(
                         gr ? "Αισθητήρες"
                                 : "Sensors",
                         gr
@@ -31214,7 +31212,7 @@ if (!isDeviceRooted()) {
             || fingerprint.length() < 10
             || fingerprint.contains("unknown")) {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Fingerprint"
                         : "Fingerprint",
                 gr
@@ -31224,7 +31222,7 @@ if (!isDeviceRooted()) {
 
     } else {
 
-        logLabelOkValue(
+        logLabelValue(
                 "Fingerprint",
                 fingerprint
         );
@@ -31241,34 +31239,21 @@ if (!isDeviceRooted()) {
     );
 
     // ============================================================
-    // FLAGS FROM OTHER LABS
+    // LEGACY CROSS-LAB HINTS — NO COMPOSITE HARDWARE SCORE
     // ============================================================
-
-    boolean sensorFlaps =
-            p.getBoolean("lab28_sensor_flaps", false);
-
-    boolean radioInstability =
-            p.getBoolean("lab28_radio_instability", false);
-
-    boolean thermalSpike =
-            p.getBoolean("lab28_thermal_spike", false);
-
-    boolean rebootPattern =
-            p.getBoolean("lab28_reboot_pattern", false);
-
-    boolean instabilityPattern =
-            p.getBoolean("lab28_instability_pattern", false);
-
-int instabilityScore = 0;
-
-if (sensorFlaps) instabilityScore += 20;
-if (radioInstability) instabilityScore += 20;
-if (thermalSpike) instabilityScore += 15;
-if (rebootPattern) instabilityScore += 15;
-if (instabilityPattern) instabilityScore += 20;
-
-if (lab14CollapseRisk || lab14SwellingSuspected)
-    instabilityScore += 10;
+    // These old preference booleans were not timestamped/provenanced as
+    // independent device-wide measurements. Never promote them to a diagnosis.
+    boolean legacyHints = lab14CollapseRisk || lab14SwellingSuspected
+            || p.getBoolean("lab28_sensor_flaps", false)
+            || p.getBoolean("lab28_radio_instability", false)
+            || p.getBoolean("lab28_thermal_spike", false)
+            || p.getBoolean("lab28_reboot_pattern", false)
+            || p.getBoolean("lab28_instability_pattern", false);
+    if (legacyHints) {
+        logLabelValue(gr ? "Παλαιότερες ενδείξεις" : "Legacy symptom flags",
+                gr ? "Υπάρχουν μη πιστοποιημένες ενδείξεις· απαιτείται έλεγχος προέλευσης, χρόνου και πραγματικού συμβάντος."
+                   : "Unverified prior flags exist; event, source and timestamp require confirmation.");
+    }
 
     appendHtml("<br>");
 
@@ -31280,20 +31265,17 @@ if (lab14CollapseRisk || lab14SwellingSuspected)
     logLine();
 
 // ============================================================
-// SAVE LAB 29 RESULTS — SINGLE SOURCE FOR LAB 30 / LAB 31
+// SAVE LAB 29 COVERAGE — invalidate historical numerical conclusions
 // ============================================================
-boolean instabilityDetected = instabilityScore >= 20;
-
 p.edit()
-
         .remove("lab29_authenticity_score")
+        .remove("lab29_instability_score")
+        .remove("lab29_instability_pattern")
         .putBoolean("lab29_provenance_unverified", true)
-        .putInt("lab29_instability_score", instabilityScore)
-        .putBoolean("lab29_instability_pattern", instabilityDetected)
         .putLong("lab29_ts", System.currentTimeMillis())
         .apply();
 
-logLabelWarnValue(
+logLabelValue(
         gr ? "Γνησιότητα ανταλλακτικών" : "Replacement part authenticity",
         gr ? "ΔΕΝ ΕΠΑΛΗΘΕΥΕΤΑΙ από ενδείξεις Android. Απαιτείται τεκμηρίωση OEM ή φυσική επιθεώρηση."
            : "NOT VERIFIABLE from Android readings. OEM documentation or physical inspection required."
@@ -31305,9 +31287,9 @@ logLabelValue(
 );
 
     appendHtml("<br>");
-    logOk(gr
-            ? "Το Lab 29 ολοκληρώθηκε."
-            : "Lab 29 finished.");
+    logInfo(gr
+            ? "Το Lab 29 ολοκληρώθηκε: καταγραφή χαρακτηριστικών, όχι πιστοποίηση υλικού."
+            : "Lab 29 completed: characteristics recorded, not hardware certified.");
     logLine();
 }
 
