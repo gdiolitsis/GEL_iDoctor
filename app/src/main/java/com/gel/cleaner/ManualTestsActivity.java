@@ -28232,8 +28232,8 @@ try {
 
             logLabelWarnValue(
                     gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Ημερομηνία patch παλαιότερη από έξι μήνες; ελέγξτε τη διαθεσιμότητα ενημερώσεων"
-                       : "Reported patch date getting older; check available updates"
+                    gr ? "Η αναφερόμενη ημερομηνία patch είναι παλαιότερη από τρεις μήνες· ελέγξτε τις διαθέσιμες ενημερώσεις"
+                       : "Reported patch date is over three months old; check available updates"
             );
 
         } else {
