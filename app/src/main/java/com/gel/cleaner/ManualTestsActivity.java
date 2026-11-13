@@ -31304,8 +31304,8 @@ private void lab30CombineFindings() {
 final boolean grGate = AppLang.isGreek(this);
 
 if (!requireGelPro(
-        grGate ? "LAB 30 — GEL Device Certification"
-               : "LAB 30 — GEL Device Certification")) {
+        grGate ? "LAB 30 — Διαγνωστική Σύνοψη Τεκμηρίων / Evidence Summary"
+               : "LAB 30 — Διαγνωστική Σύνοψη Τεκμηρίων / Evidence Summary")) {
     return;
 }
 
@@ -31313,12 +31313,11 @@ SharedPreferences p =
         getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
         
 boolean silentCorruptionRisk =
-        p.getBoolean("lab27_silent_corruption_risk", false);
+        false /* Unsupported legacy hardware-cause flag: lab27_silent_corruption_risk */;
 
 // battery data
 
-float finalScore =
-        p.getFloat("lab14_health_score", Float.NaN);
+float finalScore = Float.NaN; // Legacy Lab14 score is NOT a measured battery SoH.
 
 boolean lab14CollapseRisk =
         p.getBoolean("lab14_collapse_risk", false);
@@ -31368,32 +31367,35 @@ if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
 
 // stability flags
 boolean pmicInstability =
-        p.getBoolean("lab28_pmic_instability", false);
+        false /* Unsupported legacy hardware-cause flag: lab28_pmic_instability */;
 
 boolean sensorBusInstability =
-        p.getBoolean("lab28_sensor_bus_instability", false);
+        false /* Unsupported legacy hardware-cause flag: lab28_sensor_bus_instability */;
 
 boolean sensorFlaps =
-        p.getBoolean("lab28_sensor_flaps", false);
+        false /* Unsupported legacy hardware-cause flag: lab28_sensor_flaps */;
 
 // storage / controller
 boolean nandRisk =
-        p.getBoolean("lab27_nand_risk", false);
+        false /* Unsupported legacy hardware-cause flag: lab27_nand_risk */;
 
 boolean controllerRisk =
-        p.getBoolean("lab27_controller_risk", false);
+        false /* Unsupported legacy hardware-cause flag: lab27_controller_risk */;
 
 // thermal
 boolean thermalRunawayRisk =
-        p.getBoolean("lab24_thermal_runaway", false);
+        false /* Unsupported legacy hardware-cause flag: lab24_thermal_runaway */;
 
     final boolean gr = AppLang.isGreek(this);
+    logLabelValue(gr ? "Όριο αξιολόγησης" : "Assessment limit",
+            gr ? "Η εφαρμογή παρουσιάζει δεδομένα Android και μη βαθμονομημένους δείκτες. Δεν πιστοποιεί φυσική υγεία εξαρτημάτων ή απουσία βλαβών."
+               : "Android observations and uncalibrated indices only. No component certification or proof of zero hardware faults.");
 
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 30 — Αυτόματη Τελική Σύνοψη Διάγνωσης (ΠΛΗΡΩΣ ΑΥΤΟΜΑΤΗ)"
-            : "LAB 30 — Auto Final Diagnosis Summary (FULL AUTO)");
+            ? "LAB 30 — Αυτόματη Σύνοψη Ενδείξεων (όχι πιστοποίηση hardware)"
+            : "LAB 30 — Automatic Evidence Summary (not hardware certification)");
     logLine();
 
     // ============================================================
@@ -31429,7 +31431,7 @@ float avgThermal = avgOf(cpu, gpu, skin, pmic, batTemp);
 
 int thermalScore = Lab30ScoreEvidence.hasThermalReadings(maxThermal, avgThermal, cpu, gpu, skin, pmic)
         ? scoreThermals(maxThermal, avgThermal) : -1;
-String thermalFlag = thermalScore < 0 ? "⚪" : colorFlagFromScore(thermalScore);
+String thermalFlag = thermalScore < 0 ? "⚪" : "⚪";
 
 // ------------------------------------------------------------
 // 2) BATTERY HEALTH (light auto inference — FIXED)
@@ -31439,7 +31441,7 @@ boolean charging = isChargingNow();
 int batteryScore = Lab30ScoreEvidence.hasBatteryReadings(batTemp, (float) batteryPercent)
         ? scoreBattery(batTemp, (float) batteryPercent, charging) : -1;
 
-String batteryFlag = batteryScore < 0 ? "⚪" : colorFlagFromScore(batteryScore);
+String batteryFlag = batteryScore < 0 ? "⚪" : "⚪";
 
 // ------------------------------------------------------------
 // 🔴 PRIMARY: CONSUMPTION-BASED FLAGS
@@ -31478,42 +31480,42 @@ boolean batteryRuntimeGood =
 // ------------------------------------------------------------
 StorageSnapshot st = readStorageSnapshot();
 int storageScore = scoreStorage(st.pctFree, st.totalBytes);
-String storageFlag = colorFlagFromScore(storageScore);
+String storageFlag = "⚪";
 
 // ------------------------------------------------------------
 // 4) APPS FOOTPRINT
 // ------------------------------------------------------------
 AppsSnapshot ap = readAppsSnapshot();
 int appsScore = scoreApps(ap.userApps, ap.totalApps);
-String appsFlag = colorFlagFromScore(appsScore);
+String appsFlag = "⚪";
 
 // ------------------------------------------------------------
 // 5) RAM HEALTH
 // ------------------------------------------------------------
 RamSnapshot rm = readRamSnapshot();
 int ramScore = scoreRam(rm.pctFree);
-String ramFlag = colorFlagFromScore(ramScore);
+String ramFlag = "⚪";
 
 // ------------------------------------------------------------
 // 6) UPTIME / STABILITY
 // ------------------------------------------------------------
 long upMs = SystemClock.elapsedRealtime();
 int stabilityScore = scoreStability(upMs);
-String stabilityFlag = colorFlagFromScore(stabilityScore);
+String stabilityFlag = "⚪";
 
 // ------------------------------------------------------------
 // 7) SECURITY (lockscreen + patch + adb/dev + root)
 // ------------------------------------------------------------
 SecuritySnapshot sec = readSecuritySnapshot();
 int securityScore = scoreSecurity(sec);
-String securityFlag = colorFlagFromScore(securityScore);
+String securityFlag = "⚪";
 
 // ------------------------------------------------------------
 // 8) PRIVACY (dangerous granted perms to user apps)
 // ------------------------------------------------------------
 PrivacySnapshot pr = readPrivacySnapshot();
 int privacyScore = scorePrivacy(convertToEnginePrivacy(pr));
-String privacyFlag = colorFlagFromScore(privacyScore);
+String privacyFlag = "⚪";
 
 // ------------------------------------------------------------
 // 9) AUTHENTICITY / REPAIR INDICATORS (LAB 29)
@@ -31526,7 +31528,7 @@ int lab29InstabilityScore =
         p.getInt("lab29_instability_score", 0);
 
 boolean lab29InstabilityPattern =
-        p.getBoolean("lab29_instability_pattern", false);
+        false /* Lab29 legacy instability score has no verified provenance */;
 
 appendHtml("<br>");
 logInfo(gr
@@ -31604,9 +31606,9 @@ hardwareRiskScore = Math.max(
 );
 
 logLabelValue(
-        gr ? "Συνολικός δείκτης κινδύνου hardware"
-           : "Unified hardware risk score",
-        hardwareRiskScore + "/100"
+        gr ? "Μη βαθμονομημένη καταμέτρηση ενδείξεων (όχι πιθανότητα βλάβης)"
+           : "Uncalibrated historical symptom tally (not failure probability)",
+        hardwareRiskScore + (gr ? " μονάδες ενδείξεων (όχι πιθανότητα)" : " symptom points (not probability)")
 );
 
 // ------------------------------------------------------------
@@ -31685,7 +31687,7 @@ if (batteryRuntimeWeak) {
 
 if (batteryConsumptionVeryHigh) {
 
-    logLabelErrorValue(
+    logLabelWarnValue(
             gr ? "Κατανάλωση" : "Consumption",
             gr
                     ? "Πολύ υψηλή κατανάλωση ενέργειας"
@@ -31800,12 +31802,12 @@ if (lab29InstabilityPattern) {
 // ------------------------------------------------------------
 if (!faultDetected) {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Συμπέρασμα"
                : "Conclusion",
             gr
                     ? "Δεν εντοπίστηκαν ενδείξεις hardware βλάβης."
-                    : "No hardware fault indicators detected."
+                    : "Unavailable or absent indicators are not proof of hardware health."
     );
 
 } else {
@@ -31939,12 +31941,12 @@ if (rootConfidence > 0) {
 
 } else {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Κατάσταση"
                : "Status",
             gr
                     ? "Δεν εντοπίστηκε συγκεκριμένη αιτία."
-                    : "No specific hardware fault detected."
+                    : "No independently confirmed physical root cause from this coverage."
     );
 }
 
@@ -31979,12 +31981,12 @@ if (rootConfidence > 0) {
 
     if (weightedConfidence >= 80) {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Ερμηνεία"
                    : "Interpretation",
                 gr
-                        ? "Η εκτίμηση αιτίας θεωρείται αξιόπιστη."
-                        : "Root cause estimation considered reliable."
+                        ? "Η προτεινόμενη αιτία δεν έχει επαληθευτεί με άμεση μέτρηση."
+                        : "The suggested cause is unvalidated and requires direct testing."
         );
 
     } else if (weightedConfidence >= 60) {
@@ -32015,12 +32017,12 @@ if (rootConfidence > 0) {
 // ------------------------------------------------------------
 if (hardwareRiskScore >= 60) {
 
-    logLabelErrorValue(
+    logLabelWarnValue(
             gr ? "Κατάσταση συσκευής"
                : "Device hardware status",
             gr
-                    ? "Υψηλός κίνδυνος hardware αστοχίας."
-                    : "High hardware failure risk detected."
+                    ? "Υψηλή συσσώρευση ενδείξεων χωρίς τεκμηρίωση συγκεκριμένης βλάβης."
+                    : "Uncalibrated symptom tally is high; hardware cause is unknown."
     );
 
 } else if (hardwareRiskScore >= 30) {
@@ -32029,18 +32031,18 @@ if (hardwareRiskScore >= 60) {
             gr ? "Κατάσταση συσκευής"
                : "Device hardware status",
             gr
-                    ? "Μέτριος κίνδυνος hardware υποβάθμισης."
-                    : "Moderate hardware degradation risk."
+                    ? "Χρειάζεται έλεγχος αναφορών· δεν μετρήθηκε υποβάθμιση υλικού."
+                    : "Some symptom reports need checking; no degradation measured."
     );
 
 } else {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Κατάσταση συσκευής"
                : "Device hardware status",
             gr
-                    ? "Η συσκευή φαίνεται hardware-stable."
-                    : "Device hardware appears stable."
+                    ? "Δεν επιβεβαιώθηκε ανεξάρτητα η κατάσταση εξαρτημάτων."
+                    : "Component condition was not independently verified."
     );
 }
 
@@ -32083,7 +32085,7 @@ if (riskSignals == 1) {
                     : "Only a single risk indicator detected."
     );
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Ερμηνεία"
                : "Interpretation",
             gr
@@ -32098,8 +32100,8 @@ if (riskSignals == 1) {
 // ------------------------------------------------------------
 logLine();
 logInfo(gr
-        ? "Συνολική αξιολόγηση αξιοπιστίας συσκευής:"
-        : "Device reliability rating:");
+        ? "Εσωτερική κατάταξη αναφορών (όχι βαθμός υγείας):"
+        : "Internal uncalibrated symptom ranking (not hardware grade):");
 
 String rating;
 String ratingDesc;
@@ -32108,46 +32110,46 @@ if (reliabilityScore >= 92) {
 
     rating = "A+";
     ratingDesc = gr
-            ? "Εξαιρετική αξιοπιστία hardware"
-            : "Excellent hardware reliability";
+            ? "Υψηλός εσωτερικός δείκτης· χωρίς πιστοποίηση hardware"
+            : "High internal heuristic index; no hardware certification";
 
 }
 else if (reliabilityScore >= 85) {
 
     rating = "A";
     ratingDesc = gr
-            ? "Πολύ καλή κατάσταση hardware"
-            : "Very good hardware condition";
+            ? "Εσωτερικός δείκτης· η κατάσταση εξαρτημάτων παραμένει άγνωστη"
+            : "Internal heuristic index only; component state unverified";
 
 }
 else if (reliabilityScore >= 70) {
 
     rating = "B";
     ratingDesc = gr
-            ? "Καλή κατάσταση με φυσιολογική φθορά"
-            : "Good condition with normal wear";
+            ? "Εσωτερικός δείκτης· δεν έχει μετρηθεί φθορά"
+            : "Internal heuristic only; wear not measured";
 
 }
 else if (reliabilityScore >= 55) {
 
     rating = "C";
     ratingDesc = gr
-            ? "Μέτρια φθορά hardware"
-            : "Moderate hardware wear";
+            ? "Εσωτερικός δείκτης· δεν έχει επιβεβαιωθεί φθορά"
+            : "Internal heuristic only; no calibrated wear measurement";
 
 }
 else {
 
     rating = "D";
     ratingDesc = gr
-            ? "Αυξημένος κίνδυνος hardware αστοχίας"
-            : "Elevated hardware failure risk";
+            ? "Εσωτερικός δείκτης· δεν εκτιμάται πιθανότητα αστοχίας"
+            : "Internal heuristic only; no calibrated failure probability";
 
 }
 
 logLabelValue(
-        gr ? "Βαθμολογία συσκευής"
-           : "Device rating",
+        gr ? "Κατηγορία μη βαθμονομημένων συμπτωμάτων"
+           : "Uncalibrated symptom category",
         rating
 );
 
@@ -32163,8 +32165,8 @@ logLabelValue(
 appendHtml("<br>");
 logLine();
 logInfo(gr
-        ? "Πιστοποιητικό Ακεραιότητας Υλικού GEL"
-        : "GEL Hardware Integrity Certificate");
+        ? "Κάλυψη ενδείξεων GEL — ΟΧΙ πιστοποιητικό hardware"
+        : "GEL evidence coverage — NO hardware certificate");
 logLine();
 
 boolean certificateWarning = false;
@@ -32186,18 +32188,18 @@ if (hardwareRiskScore >= 60)
 // ------------------------------------------------------------
 if (!certificateWarning && reliabilityScore >= 85) {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Κατάσταση Πιστοποιητικού"
                : "Certificate status",
             gr
-                    ? "Η συσκευή πέρασε όλους τους ελέγχους ακεραιότητας."
-                    : "Device passed all integrity checks."
+                    ? "ΔΕΝ ΠΙΣΤΟΠΟΙΗΘΗΚΕ: οι έλεγχοι Android δεν αποδεικνύουν πλήρη ακεραιότητα."
+                    : "NOT CERTIFIED: public Android checks do not prove device-wide integrity."
     );
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Κατηγορία"
                : "Category",
-            "GEL VERIFIED DEVICE"
+            "EVIDENCE SUMMARY ONLY"
     );
 
 } else if (!certificateWarning) {
@@ -32206,14 +32208,14 @@ if (!certificateWarning && reliabilityScore >= 85) {
             gr ? "Κατάσταση Πιστοποιητικού"
                : "Certificate status",
             gr
-                    ? "Η συσκευή είναι λειτουργική αλλά παρουσιάζει ενδείξεις φυσιολογικής φθοράς."
-                    : "Device functional but shows normal wear indicators."
+                    ? "Η λειτουργικότητα και η φυσική φθορά δεν αποδεικνύονται από τον δείκτη."
+                    : "Functional condition and component wear have not been established."
     );
 
     logLabelValue(
             gr ? "Κατηγορία"
                : "Category",
-            "GEL VERIFIED (USED DEVICE)"
+            "EVIDENCE SUMMARY ONLY"
     );
 
 } else {
@@ -32241,8 +32243,8 @@ logLabelValue(
         gr ? "Σημείωση"
            : "Note",
         gr
-                ? "Η αξιολόγηση βασίζεται σε διαγνωστική ανάλυση hardware και στατιστική συνέπεια μετρήσεων."
-                : "Evaluation based on hardware diagnostics and measurement consistency."
+                ? "Η αναφορά είναι πληροφοριακή· η προέλευση και η πληρότητα μετρήσεων χρειάζονται έλεγχο."
+                : "This is an informational report; source validity and missing tests must be reviewed."
 );
 
 // ------------------------------------------------------------
@@ -32250,12 +32252,12 @@ logLabelValue(
 // ------------------------------------------------------------
 if ("A+".equals(rating) || "A".equals(rating)) {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Συμπέρασμα τεχνικού"
                : "Technician note",
             gr
                     ? "Η συσκευή εμφανίζει πολύ καλή σταθερότητα hardware."
-                    : "Device hardware appears stable."
+                    : "Component condition was not independently verified."
     );
 
 }
@@ -32303,7 +32305,7 @@ appendHtml("<br>");
 logInfo(gr ? "Θερμικά" : "Thermals");
 logLine();
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κατάσταση" : "Status",
         thermalScore < 0
                 ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
@@ -32323,30 +32325,30 @@ if (zones == null || zones.isEmpty()) {
 
 } else {
 
-    logLabelOkValue(gr ? "Ζώνες" : "Zones", String.valueOf(zones.size()));
-    logLabelOkValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
-    logLabelOkValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
+    logLabelValue(gr ? "Ζώνες" : "Zones", String.valueOf(zones.size()));
+    logLabelValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
+    logLabelValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
 
-    if (cpu  != null) logLabelOkValue("CPU",  fmt1(cpu)  + "°C");
-    if (gpu  != null) logLabelOkValue("GPU",  fmt1(gpu)  + "°C");
-    if (pmic != null) logLabelOkValue("PMIC", fmt1(pmic) + "°C");
-    if (skin != null) logLabelOkValue(gr ? "Επιφάνεια" : "Skin", fmt1(skin) + "°C");
+    if (cpu  != null) logLabelValue("CPU",  fmt1(cpu)  + "°C");
+    if (gpu  != null) logLabelValue("GPU",  fmt1(gpu)  + "°C");
+    if (pmic != null) logLabelValue("PMIC", fmt1(pmic) + "°C");
+    if (skin != null) logLabelValue(gr ? "Επιφάνεια" : "Skin", fmt1(skin) + "°C");
 
-    logLabelOkValue(gr ? "Μπαταρία" : "Battery", fmt1(batTemp) + "°C");
+    logLabelValue(gr ? "Μπαταρία" : "Battery", fmt1(batTemp) + "°C");
 }
 
 appendHtml("<br>");
 logInfo(gr ? "Μπαταρία" : "Battery");
 logLine();
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κατάσταση" : "Status",
         batteryScore < 0
                 ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
                 : batteryFlag + " (" + batteryScore + ")"
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Στοιχεία" : "State",
         (gr ? "Επίπεδο=" : "Level=") +
         (batteryPercent >= 0 ? fmt1((float) batteryPercent) + "%" : (gr ? "Άγνωστο" : "Unknown")) +
@@ -32359,12 +32361,12 @@ appendHtml("<br>");
 logInfo(gr ? "Αποθήκευση" : "Storage");
 logLine();
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κατάσταση" : "Status",
         storageFlag + " (" + storageScore + ")"
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Χρήση" : "Usage",
         (gr ? "Ελεύθερο=" : "Free=") + st.pctFree + "% | " +
         (gr ? "Χρησιμοποιείται=" : "Used=") +
@@ -32375,12 +32377,12 @@ appendHtml("<br>");
 logInfo(gr ? "Αποτύπωμα Εφαρμογών" : "Apps footprint");
 logLine();
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κατάσταση" : "Status",
         appsFlag + " (" + appsScore + ")"
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Μετρήσεις" : "Counts",
         "User=" + ap.userApps +
         " | System=" + ap.systemApps +
@@ -32391,12 +32393,12 @@ appendHtml("<br>");
 logInfo("RAM");
 logLine();
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κατάσταση" : "Status",
         ramFlag + " (" + ramScore + ")"
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Ελεύθερη" : "Free",
         rm.pctFree + "% (" +
         humanBytes(rm.freeBytes) + " / " + humanBytes(rm.totalBytes) + ")"
@@ -32406,12 +32408,12 @@ appendHtml("<br>");
 logInfo(gr ? "Σταθερότητα / Χρόνος λειτουργίας" : "Stability / Uptime");
 logLine();
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κατάσταση" : "Status",
         stabilityFlag + " (" + stabilityScore + ")"
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Χρόνος λειτουργίας" : "Uptime",
         formatUptime(upMs)
 );
@@ -32420,15 +32422,15 @@ if (upMs < 2 * 60 * 60 * 1000L) {
     logLabelWarnValue(
             gr ? "Σημείωση" : "Note",
             gr
-                    ? "Πρόσφατη επανεκκίνηση (<2h) — πιθανή απόκρυψη αστάθειας"
-                    : "Recent reboot (<2h) — instability may be masked"
+                    ? "Πρόσφατη εκκίνηση — χρονική πληροφορία, όχι ένδειξη βλάβης"
+                    : "Recent restart is a timestamp observation, not evidence of instability"
     );
 } else if (upMs > 7L * 24L * 60L * 60L * 1000L) {
     logLabelWarnValue(
             gr ? "Σημείωση" : "Note",
             gr
-                    ? "Μεγάλος χρόνος λειτουργίας (>7 ημέρες) — συνιστάται επανεκκίνηση πριν από έλεγχο"
-                    : "Long uptime (>7 days) — reboot recommended before deep servicing"
+                    ? "Χρόνος λειτουργίας άνω των 7 ημερών — δεν αποδεικνύει βλάβη"
+                    : "Uptime over seven days does not establish hardware instability"
     );
 }
 
@@ -32436,24 +32438,24 @@ appendHtml("<br>");
 logInfo(gr ? "Ασφάλεια" : "Security");
 logLine();
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κατάσταση" : "Status",
         securityFlag + " (" + securityScore + ")"
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κλείδωμα συσκευής" : "Secure lock",
         String.valueOf(sec.lockSecure)
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Ενημέρωση ασφαλείας" : "Patch level",
         sec.securityPatch == null
                 ? (gr ? "Άγνωστο" : "Unknown")
                 : sec.securityPatch
 );
 
-logLabelOkValue(
+logLabelValue(
         "ADB / Dev",
         "USB=" + sec.adbUsbOn +
         " | Wi-Fi=" + sec.adbWifiOn +
@@ -32470,12 +32472,12 @@ appendHtml("<br>");
 logInfo(gr ? "Ιδιωτικότητα" : "Privacy");
 logLine();
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κατάσταση" : "Status",
         privacyFlag + " (" + privacyScore + ")"
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Επικίνδυνες άδειες" : "Dangerous permissions",
         "Location=" + pr.userAppsWithLocation +
         " | Mic=" + pr.userAppsWithMic +
@@ -32500,11 +32502,11 @@ appendHtml("<br>");
 logInfo(gr ? "Τελικές Βαθμολογίες" : "FINAL Scores");
 logLine();
 
-logLabelOkValue(
-        gr ? "Υγεία συσκευής" : "Device health",
+logLabelValue(
+        gr ? "Μη βαθμονομημένος σύνθετος δείκτης" : "Uncalibrated composite index",
         deviceHealthScore < 0
                 ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : colorFlagFromScore(deviceHealthScore) + " (" + deviceHealthScore + ")"
+                : "⚪" + " (" + deviceHealthScore + ")"
 );
 
 String deviceClass;
@@ -32512,11 +32514,11 @@ String deviceClass;
 if (deviceHealthScore < 0)
     deviceClass = "INSUFFICIENT DATA";
 else if (deviceHealthScore >= 90)
-    deviceClass = "GEL CERTIFIED";
+    deviceClass = "NOT CERTIFIED — INTERNAL INDEX";
 else if (deviceHealthScore >= 75)
-    deviceClass = "GEL VERIFIED";
+    deviceClass = "NOT VERIFIED — INTERNAL INDEX";
 else
-    deviceClass = "INSPECTION ADVISED";
+    deviceClass = "UNVERIFIED — REVIEW IF SYMPTOMS";
 
 logLabelValue(
         gr ? "Κατηγορία συσκευής"
@@ -32524,32 +32526,28 @@ logLabelValue(
         deviceClass
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Απόδοση" : "Performance",
         performanceScore < 0
                 ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : colorFlagFromScore(performanceScore) + " (" + performanceScore + ")"
+                : "⚪" + " (" + performanceScore + ")"
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Ασφάλεια" : "Security",
         securityFlag
                 + " (" + securityScore + ")"
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Ιδιωτικότητα" : "Privacy",
         privacyFlag
                 + " (" + privacyScore + ")"
 );
 
-String verdict =
-        finalVerdict(
-                deviceHealthScore,
-                securityScore,
-                privacyScore,
-                performanceScore
-        );
+String verdict = gr
+        ? "Σύνοψη ενδείξεων, όχι πιστοποίηση υλικού ή οριστική διάγνωση. Τα μη μετρημένα στοιχεία παραμένουν άγνωστα."
+        : "Evidence summary only; not a hardware certificate or definitive diagnosis. Unmeasured areas remain unknown.";
 
 appendHtml("<br>");
 logInfo(gr ? "Τελικό Συμπέρασμα" : "Final verdict");
@@ -32567,7 +32565,7 @@ if (deviceHealthScore < 0) {
                 verdict
         );
     } else {
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Αποτέλεσμα" : "Result",
                 verdict
         );
@@ -32582,7 +32580,7 @@ if (deviceHealthScore < 0) {
 
 } else {
 
-    logLabelErrorValue(
+    logLabelWarnValue(
             gr ? "Αποτέλεσμα" : "Result",
             verdict
     );
@@ -32594,7 +32592,7 @@ if (deviceHealthScore < 0) {
 SharedPreferences history =
         getSharedPreferences("gel_hw_history", MODE_PRIVATE);
 
-int prevRisk = history.getInt("hw_last_risk", -1);
+int prevRisk = -1; // Old heuristic risk snapshots have no comparable provenance.
 float prevBattery = history.getFloat("hw_last_battery_health", -1f);
 int prevAging = history.getInt("hw_last_aging_index", -1);
 
@@ -32631,7 +32629,7 @@ if (trendDetected) {
 
 } else {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Τάση hardware"
                : "Hardware trend",
             gr
@@ -32662,9 +32660,9 @@ else if (runCount >= 3)
 else
     reliabilityIndex = 50;
 
-logLabelOkValue(
-        gr ? "Αξιοπιστία διάγνωσης"
-           : "Diagnosis reliability",
+logLabelValue(
+        gr ? "Πλήθος επαναλήψεων (όχι αξιοπιστία διάγνωσης)"
+           : "Run count (not diagnostic reliability)",
         (reliabilityIndex >= 80
                 ? (gr ? "Υψηλή" : "High")
                 : reliabilityIndex >= 50
@@ -32689,12 +32687,12 @@ if (runCount < 3) {
 
 } else if (runCount >= 7) {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Στατιστική αξιοπιστία"
                : "Statistical reliability",
             gr
-                    ? "Η διάγνωση βασίζεται σε επαρκές ιστορικό runs."
-                    : "Diagnosis based on sufficient historical runs."
+                    ? "Οι πολλές επαναλήψεις δεν πιστοποιούν την εγκυρότητα της μεθόδου."
+                    : "Repeating unvalidated tests does not improve their scientific validity."
     );
 }
 
@@ -32703,15 +32701,15 @@ if (runCount < 3) {
 // ------------------------------------------------------------
 
 history.edit()
-        .putInt("hw_last_risk", hardwareRiskScore)
-        .putFloat("hw_last_battery_health", finalScore)
-        .putBoolean("hw_last_nand_risk", nandRisk)
-        .putBoolean("hw_last_controller_risk", controllerRisk)
-        .putBoolean("hw_last_thermal_risk", thermalRunawayRisk)
+        .remove("hw_last_risk")
+        .remove("hw_last_battery_health")
+        .remove("hw_last_nand_risk")
+        .remove("hw_last_controller_risk")
+        .remove("hw_last_thermal_risk")
         .putLong("hw_last_timestamp", System.currentTimeMillis())
         .apply();
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Ιστορικό hardware"
            : "Hardware history",
         gr ? "Το snapshot αποθηκεύτηκε"
@@ -32788,7 +32786,7 @@ if (diagnosticConflict) {
 
 } else {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Συνέπεια διάγνωσης"
                : "Diagnostic consistency",
             gr
@@ -32801,12 +32799,12 @@ if (diagnosticConflict) {
 // GEL DIAGNOSTIC CERTIFICATION
 // ------------------------------------------------------------
 logLine();
-logInfo("GEL Hardware Diagnostic Certification");
+logInfo("GEL Diagnostic Evidence Report — NOT CERTIFIED");
 
 // Device rating
 logLabelValue(
-        gr ? "Βαθμολογία συσκευής"
-           : "Device rating",
+        gr ? "Κατηγορία μη βαθμονομημένων συμπτωμάτων"
+           : "Uncalibrated symptom category",
         rating
 );
 
@@ -32814,7 +32812,7 @@ logLabelValue(
 logLabelValue(
         gr ? "Δείκτης κινδύνου hardware"
            : "Hardware risk score",
-        hardwareRiskScore + "/100"
+        hardwareRiskScore + (gr ? " μονάδες ενδείξεων (όχι πιθανότητα)" : " symptom points (not probability)")
 );
 
 // Timestamp
@@ -32871,20 +32869,20 @@ logLabelValue(
 );
 
 // Certification note
-logLabelOkValue(
-        gr ? "Πιστοποίηση"
-           : "Certification",
+logLabelValue(
+        gr ? "Περιορισμοί αναφοράς"
+           : "Report limitation",
         gr
                 ? "Η αξιολόγηση βασίζεται στα αποτελέσματα των διαγνωστικών εργαστηρίων GEL."
                 : "Assessment based on GEL diagnostic laboratory results."
 );
 
 appendHtml("<br>");
-logOk(gr ? "GEL Certification completed." : "GEL Certification completed.");
+logInfo(gr ? "Συντάχθηκε πληροφοριακή αναφορά GEL — όχι πιστοποίηση." : "GEL evidence report compiled — no hardware certification.");
 logLine();
 
 appendHtml("<br>");
-logOk(gr ? "Το Lab 30 ολοκληρώθηκε." : "Lab 30 finished.");
+logInfo(gr ? "Το Lab 30 ολοκληρώθηκε ως πληροφοριακή σύνοψη." : "Lab 30 evidence summary finished.");
 logLine();
 }
 
