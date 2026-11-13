@@ -390,3 +390,8 @@ Ten static source-preservation assertions were inspected at this stage for Lab28
 **Updated exact source section counts:** Lab28 main **565→544 lines**, nested helpers **81→98**, Lab29 main **320→310**, Lab30 main **1591→1597**, Lab30 helpers **477→486**, Lab31 main **386→267**. Standalone new policies + test sources are separately added files (not accounted for inside these section counts). Lab31 lines increased by 2 only for filtering old final summaries; there is no removed export logic.
 
 **Static assertions:** 9/9 targeted source checks passed for typed warn/error prefixes, preserved neutral logging, one GELServiceLog write, Lab31 excluding prior reports with export retained, Lab28 self-filter, Lab29 unknown fallback, and Lab30 non-certification wording. Exact-head CI and UI/emulator/physical/PDF checks remain required. No main merge, APK signing or Play rollout has been performed.
+
+
+## 13 Nov 2026 — Apple eight-Lab surgical carryover
+
+The existing QA branch now contains independent, bounded Apple-mode source repairs and official model references, **without importing the shortened historic PR #80 Lab8 method**. Full per-method baseline→QA parity, helper extraction, commit trail, linked test evidence, and honest acceptance status are documented in [APPLE_8LAB_SURGICAL_CONTINUATION_20261113.md](APPLE_8LAB_SURGICAL_CONTINUATION_20261113.md). Apple model cards remain reference data, not measured hardware health. Intermediate CI passed after DEMO isolation; current exact-head build/emulator/real iOS fixtures and exported service report verification are still required. No signed APK, main merge or Play rollout.
