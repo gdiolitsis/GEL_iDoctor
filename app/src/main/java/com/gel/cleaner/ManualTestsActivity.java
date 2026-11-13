@@ -18999,7 +18999,6 @@ if (!isLab14BMode &&
     logLabelValue(gr ? "Κατάσταση δοκιμής" : "Test status",
         gr ? "ΑΝΕΠΑΡΚΕΣ ΦΟΡΤΙΟ — η εκτέλεση δεν ολοκληρώθηκε" 
            : "INSUFFICIENT LOAD — run not completed");
-        : "Insufficient load — test aborted");
 
     // 🔴 STATE
     lab14Cancelled = true;
