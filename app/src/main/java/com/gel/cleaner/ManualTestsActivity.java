@@ -29700,8 +29700,8 @@ private long storageLatencyProbe() {
 
 private void lab26AppsFootprint() {
 
-    if (!guardUsageAccess()) return;
-
+    // Usage Access is optional; app inventory/capabilities are independent.
+    // AppImpactEngine handles missing UsageStats as unavailable, not a failure.
     appendHtml("<br>");
     logLine();
 
@@ -29772,6 +29772,12 @@ logLine();
     );
 
     logLabelValue(
+            gr ? "Κάλυψη απογραφής" : "Inventory coverage",
+            gr ? "Μόνο εφαρμογές ορατές μέσω PackageManager· όχι απαραίτητα όλες οι εγκατεστημένες"
+               : "Only PackageManager-visible apps; may omit other installed packages"
+    );
+
+    logLabelValue(
             gr ? "Usage Access" : "Usage Access",
             r.usageAccessOk
                     ? (gr ? "Ενεργό (OK)" : "Enabled (OK)")
@@ -29788,19 +29794,20 @@ logLine();
     // ============================================================
     // CAPABILITY PRESSURE (HONEST)
     // ============================================================
-    int userApps = Math.max(1, r.userApps);
-    int pctBg   = (int) Math.round((r.bgCapable * 100.0) / userApps);
-    int pctPerm = (int) Math.round((r.permHeavy * 100.0) / userApps);
+    int pctBg   = r.userApps > 0
+            ? (int) Math.round((r.bgCapable * 100.0) / r.userApps) : -1;
+    int pctPerm = r.userApps > 0
+            ? (int) Math.round((r.permHeavy * 100.0) / r.userApps) : -1;
 
     appendHtml("<br>");
     logInfo(gr ? "Ενδείξεις φόρτου (βάσει δυνατοτήτων)" : "Load indicators (capability-based)");
     logLine();
 
     logLabelValue(gr ? "Background-capable" : "Background-capable",
-            r.bgCapable + " (" + pctBg + "%)");
+            r.bgCapable + " (" + (pctBg < 0 ? (gr ? "άγνωστο" : "unknown") : pctBg + "%") + ")");
 
     logLabelValue(gr ? "Permission-heavy" : "Permission-heavy",
-            r.permHeavy + " (" + pctPerm + "%)");
+            r.permHeavy + " (" + (pctPerm < 0 ? (gr ? "άγνωστο" : "unknown") : pctPerm + "%") + ")");
             
    appendHtml("<br>");
     logInfo(gr ? "Χάρτης δυνατοτήτων (user apps)" : "Capability map (user apps)");
@@ -29892,11 +29899,11 @@ if (r.topDataConsumers != null && !r.topDataConsumers.isEmpty()) {
 
 } else {
 
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Κατάσταση" : "Status",
             gr
-                    ? "Δεν ήταν δυνατή η ανάκτηση στατιστικών κατανάλωσης."
-                    : "Unable to retrieve usage statistics."
+                    ? "Δεν υπάρχουν προσβάσιμα στατιστικά κατανάλωσης· δεν θεωρείται μηδενική χρήση."
+                    : "No accessible usage statistics; not evidence of zero usage."
     );
 }
 
@@ -30037,7 +30044,11 @@ String detail = gr
     logInfo(gr ? "Ενδεικτική σύνοψη δυνατοτήτων" : "Indicative capability summary");
     logLine();
 
-    if (r.riskPoints >= 8) {
+    if (r.userApps <= 0) {
+        logLabelValue(gr ? "Ενδεικτική κατάταξη δυνατοτήτων" : "Indicative capability ranking",
+                gr ? "ΑΓΝΩΣΤΟ — μη διαθέσιμη απογραφή εφαρμογών χρήστη"
+                   : "UNKNOWN — no accessible user-app inventory");
+    } else if (r.riskPoints >= 8) {
         logLabelValue(gr ? "Ενδεικτική κατάταξη δυνατοτήτων" : "Indicative capability ranking", gr ? "ΥΨΗΛΟ" : "HIGH");
     } else if (r.riskPoints >= 5) {
         logLabelValue(gr ? "Ενδεικτική κατάταξη δυνατοτήτων" : "Indicative capability ranking", gr ? "ΜΕΤΡΙΟ" : "MODERATE");
@@ -30046,7 +30057,8 @@ String detail = gr
     }
 
     GELServiceLog.info(
-            "SUMMARY: APPS_IMPACT=" + (r.appsImpactHigh ? "HEURISTIC_HIGH" : "HEURISTIC_NOT_ELEVATED")
+            "SUMMARY: APPS_IMPACT=" + (r.userApps <= 0 ? "UNKNOWN_COVERAGE"
+                    : r.appsImpactHigh ? "HEURISTIC_HIGH" : "HEURISTIC_NOT_ELEVATED")
     );
 
     appendHtml("<br>");
