@@ -273,15 +273,8 @@ View importBtn = makeLabButton(
 
             if (!requireGelPro(gr ? "Εισαγωγή Panic Logs (TXT / ZIP)" : "Panic Log Import (TXT / ZIP)")) return;
 
-            // CLEAN PREVIOUS LOGS
-            panicLogText = null;
-            panicLogLoaded = false;
-            panicLogCount = 0;
+            // Do not clear existing customer evidence until a valid replacement commits.
             appendMode = false;
-
-            logOk(gr
-                    ? "Τα προηγούμενα panic logs διαγράφηκαν."
-                    : "Previous panic logs cleared.");
 
             openPanicLogPicker();
         }
@@ -1220,13 +1213,7 @@ protected void onActivityResult(int requestCode,
 
     boolean gr = AppLang.isGreek(this);
 
-    if (!appendMode) {
-        panicLogCount = 0;
-        panicLogText  = null;
-        panicLogLoaded = false;
-    }
-
-    if (resultCode != RESULT_OK || data == null) {
+     if (resultCode != RESULT_OK || data == null) {
         logWarn(gr
                 ? "Η εισαγωγή ακυρώθηκε."
                 : "Panic log import cancelled.");
@@ -1304,11 +1291,10 @@ for (Uri uri : uris) {
 
     if (allLogs.length() + text.length() > MAX_PANIC_LOG_SIZE) {
 
-        logWarn(gr
-                ? "Το μέγεθος των panic logs είναι πολύ μεγάλο. Η φόρτωση περιορίστηκε."
-                : "Panic logs too large. Import truncated.");
-
-        break;
+        // Partial imports are not valid replacements: preserve the prior session.
+        throw new java.io.IOException(gr
+                ? "Υπέρβαση ορίου εισαγωγής. Διατηρήθηκε η προηγούμενη ανάλυση."
+                : "Import size cap exceeded. Previous analysis preserved.");
     }
 
     // delimiter για τα LAB parsers
@@ -1397,10 +1383,7 @@ logLine();
 
 } catch (Exception e) {
 
-    panicLogLoaded = false;
-    panicLogText   = null;
-
-    logError(gr
+     logError(gr
         ? "Αποτυχία εισαγωγής panic logs."
         : "Panic logs import failed.");
 
