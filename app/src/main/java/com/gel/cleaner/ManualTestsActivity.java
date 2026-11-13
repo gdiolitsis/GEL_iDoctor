@@ -25902,14 +25902,10 @@ if (snap != null) {
 
     } else {
 
-        int pct = Math.max(1, getBatteryPercentSafe());
-        lab14bBaselineMah =
-        (long) (snap.chargeNowMah / (pct / 100.0f));
-        
-
-        if (snap.chargeNowMah > 0) {
-            lab14bBaselineMah =
-                 (long) (snap.chargeNowMah / (pct / 100.0f));
+        int pct = getBatteryPercentSafe();
+        if (snap.chargeNowMah > 0 && pct >= 5 && pct <= 100) {
+            // Capacity approximation only; never a measured full-charge value.
+            lab14bBaselineMah = (long) (snap.chargeNowMah / (pct / 100.0f));
         }
     }
 }
@@ -25999,16 +25995,16 @@ final boolean has16 =
 // FRESHNESS
 // ------------------------------------------------------------
 final boolean fresh14 =
-        has14 && (now - ts14) <= WINDOW_MS;
+        has14 && ts14 <= now && (now - ts14) <= WINDOW_MS;
 
 final boolean fresh14b =
-        has14b && (now - ts14b) <= WINDOW_MS;
+        has14b && ts14b <= now && (now - ts14b) <= WINDOW_MS;
 
 final boolean fresh15 =
-        has15 && (now - ts15) <= WINDOW_MS;
+        has15 && ts15 <= now && (now - ts15) <= WINDOW_MS;
 
 final boolean fresh16 =
-        has16 && (now - ts16) <= WINDOW_MS;
+        has16 && ts16 <= now && (now - ts16) <= WINDOW_MS;
 
     // ------------------------------------------------------------
     // HIGH VARIABILITY CONFIRMATION (LAB 14 INTELLIGENCE)
@@ -26042,11 +26038,13 @@ final boolean fresh16 =
         msg.append(gr ? "• LAB 14A: " : "• LAB 14A: ");
 
         if (!has14) {
-            msg.append("<font color='#FF4444'>")
-               .append(gr ? "Απουσιάζει" : "Missing")
+            msg.append("<font color='#FFFFFF'>")
+               .append(ts14 > 0
+                       ? (gr ? "Μη διαθέσιμο μετρημένο SoH" : "Measured SoH unavailable")
+                       : (gr ? "Απουσιάζει" : "Missing"))
                .append("</font><br>");
         } else if (!fresh14) {
-            msg.append("<font color='#FF4444'>")
+            msg.append("<font color='#FFFFFF'>")
                .append(gr ? "Έληξε (" : "Expired (")
                .append(lab17_age(now - ts14))
                .append(")</font><br>");
@@ -26063,11 +26061,11 @@ final boolean fresh16 =
         msg.append(gr ? "• LAB 15: " : "• LAB 15: ");
 
         if (!has15) {
-            msg.append("<font color='#FF4444'>")
+            msg.append("<font color='#FFFFFF'>")
                .append(gr ? "Απουσιάζει" : "Missing")
                .append("</font><br>");
         } else if (!fresh15) {
-            msg.append("<font color='#FF4444'>")
+            msg.append("<font color='#FFFFFF'>")
                .append(gr ? "Έληξε (" : "Expired (")
                .append(lab17_age(now - ts15))
                .append(")</font><br>");
@@ -26084,11 +26082,11 @@ final boolean fresh16 =
         msg.append(gr ? "• LAB 16: " : "• LAB 16: ");
 
         if (!has16) {
-            msg.append("<font color='#FF4444'>")
+            msg.append("<font color='#FFFFFF'>")
                .append(gr ? "Απουσιάζει" : "Missing")
                .append("</font><br>");
         } else if (!fresh16) {
-            msg.append("<font color='#FF4444'>")
+            msg.append("<font color='#FFFFFF'>")
                .append(gr ? "Έληξε (" : "Expired (")
                .append(lab17_age(now - ts16))
                .append(")</font><br>");
@@ -26104,7 +26102,15 @@ final boolean fresh16 =
         // --------------------------------------------------------
         // SMART DECISION
         // --------------------------------------------------------
-        if ((fresh14 && fresh15) && !fresh16) {
+        if (!has14) {
+            msg.append(gr
+                    ? "Δεν υπάρχει βαθμονομημένη μέτρηση SoH για έγκυρο σύνθετο ποσοστό. "
+                      + "Μια επανεκτέλεση του Lab 14 δεν εγγυάται πρόσβαση σε SoH. "
+                      + "Τα επιμέρους εργαστήρια διατηρούν τις μετρήσεις τους.<br>"
+                    : "There is no calibrated SoH measurement for a composite percentage. "
+                      + "Repeating Lab 14 cannot guarantee SoH access. "
+                      + "Individual laboratory results remain available.<br>");
+        } else if ((fresh14 && fresh15) && !fresh16) {
 
             msg.append(
                     gr
@@ -26260,8 +26266,8 @@ if (lab14Aging >= 0) {
 // ================= SUMMARY =================
 logLine();
 logInfo(gr
-        ? "LAB 14 — Υγεία μπαταρίας"
-        : "LAB 14 — Battery health");
+        ? "LAB 14 — Εμπειρικά στοιχεία μπαταρίας (όχι μετρημένο SoH)"
+        : "LAB 14 — Battery proxy evidence (not measured SoH)");
 
 String agingText;
 
@@ -26279,8 +26285,8 @@ if (lab14Aging >= 0) {
     agingText = gr ? "Μ/Δ" : "N/A";
 }
 
-logLabelOkValue(
-        gr ? "Υγεία" : "Health",
+logLabelValue(
+        gr ? "Παλαιός εμπειρικός δείκτης" : "Legacy heuristic index",
         String.format(
                 Locale.US,
                 "%s (%.0f) | %s: %s",
@@ -26449,8 +26455,8 @@ if (lab16Thermal >= 85) {
 // ================= FINAL SCORE =================
 logLine();
 logInfo(gr
-        ? "Τελικός Δείκτης Αξιοπιστίας Μπαταρίας"
-        : "Final Battery Reliability Score");
+        ? "Μη βαθμονομημένος σύνθετος δείκτης — όχι υγεία μπαταρίας"
+        : "Uncalibrated composite index — not battery health");
 
 String finalText = String.format(
         Locale.US,
@@ -26459,27 +26465,9 @@ String finalText = String.format(
         fFinalScore
 );
 
-if (fFinalScore >= 80) {
-
-    logLabelOkValue(
-            gr ? "Κατάσταση" : "Status",
-            finalText
-    );
-
-} else if (fFinalScore >= 60) {
-
-    logLabelWarnValue(
-            gr ? "Κατάσταση" : "Status",
-            finalText
-    );
-
-} else {
-
-    logLabelErrorValue(
-            gr ? "Κατάσταση" : "Status",
-            finalText
-    );
-}
+// Legacy weighted number is not calibrated against physical battery health.
+logInfo((gr ? "Ενδεικτική κατάταξη: " : "Indicative ranking: ")
+        + finalText + (gr ? " (όχι πιστοποίηση)" : " (not certification)"));
 
 // ================= DIAGNOSIS =================
 appendHtml("<br>");
@@ -26621,15 +26609,19 @@ logLine();
                 // ------------------------------------------------------------
                 try {
                     p.edit()
-                            .putInt("lab17_final_score", fFinalScore)
-                            .putString("lab17_category", fCategory)
-                            .putLong("lab17_ts", System.currentTimeMillis())
+                            .remove("lab17_final_score")
+                            .remove("lab17_category")
+                            .remove("lab17_ts")
+                            .putInt("lab17_heuristic_index", fFinalScore)
+                            .putString("lab17_heuristic_category", fCategory)
+                            .putLong("lab17_heuristic_ts", System.currentTimeMillis())
                             .apply();
                 } catch (Throwable ignore) {}
 
                 // ================= FINAL =================
                 appendHtml("<br>");
-                logOk(gr ? "Το Lab 17 ολοκληρώθηκε." : "Lab 17 finished.");
+                logInfo(gr ? "Η ενδεικτική ανάλυση Lab 17 ολοκληρώθηκε."
+                           : "Lab 17 indicative analysis completed.");
                 logLine();
 
             });
