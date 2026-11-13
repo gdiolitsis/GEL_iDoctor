@@ -6437,7 +6437,6 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                             ? (gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΑΝ" : "NOT_MEASURED")
                             : confirmed + "/4");
             if (confirmed != 4) {
-                runOnUiThread(() -> showLab2HearingQuestion());
                 logWarn(gr
                         ? "Δεν επιβεβαιώθηκαν αυτόματα και οι τέσσερις τόνοι. "
                           + "Η μέτρηση RMS δεν ταυτοποιεί τη συχνότητα και μπορεί να επηρεάζεται από θόρυβο."
@@ -6596,100 +6595,6 @@ appendHtml("<br>");
         }
 
     }).start();
-}
-
-/**
- * Ask only when automatic Lab 2 evidence is inconclusive.
- * User observation is recorded separately from microphone measurements.
- */
-private void showLab2HearingQuestion() {
-    if (isFinishing() || isDestroyed()) return;
-    final boolean gr = AppLang.isGreek(this);
-    final String question = gr
-            ? "Άκουσες και τους τέσσερις τόνους από το ηχείο;"
-            : "Did you hear all four tones from the speaker?";
-
-    LinearLayout root = new LinearLayout(this);
-    root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(dp(22), dp(22), dp(22), dp(22));
-    GradientDrawable background = new GradientDrawable();
-    background.setColor(0xFF101010);
-    background.setCornerRadius(dp(12));
-    background.setStroke(dp(3), 0xFFFFD700);
-    root.setBackground(background);
-
-    TextView title = new TextView(this);
-    title.setText(gr ? "LAB 2 — Επιβεβαίωση ακρόασης" : "LAB 2 — Hearing confirmation");
-    title.setTextColor(Color.WHITE);
-    title.setTextSize(18f);
-    title.setTypeface(null, Typeface.BOLD);
-    title.setGravity(Gravity.CENTER);
-    root.addView(title);
-
-    TextView message = new TextView(this);
-    message.setText(question);
-    message.setTextColor(0xFF39FF14);
-    message.setTextSize(16f);
-    message.setGravity(Gravity.CENTER);
-    message.setPadding(0, dp(16), 0, dp(12));
-    root.addView(message);
-    root.addView(buildMuteRow());
-
-    final AlertDialog dialog = new AlertDialog.Builder(
-            this, android.R.style.Theme_Material_Dialog_NoActionBar)
-            .setView(root).create();
-    dialog.setOnDismissListener(ignored -> {
-        try { AppTTS.stop(); } catch (Throwable ignoredTts) {}
-    });
-
-    String[] labels = gr
-            ? new String[]{"ΝΑΙ — ΚΑΙ ΤΟΥΣ 4", "ΟΧΙ — ΟΧΙ ΟΛΟΥΣ", "ΔΕΝ ΕΙΜΑΙ ΣΙΓΟΥΡΟΣ"}
-            : new String[]{"YES — ALL 4", "NO — NOT ALL", "NOT SURE"};
-    for (int index = 0; index < labels.length; index++) {
-        final int answer = index;
-        Button button = new com.gel.cleaner.GelButton(this);
-        button.setText(labels[index]);
-        button.setAllCaps(false);
-        button.setTypeface(null, Typeface.BOLD);
-        button.setTextColor(index == 0 ? Color.BLACK : Color.WHITE);
-        GradientDrawable buttonBackground = new GradientDrawable();
-        buttonBackground.setColor(index == 0 ? 0xFF39FF14
-                : index == 1 ? 0xFFE60000 : 0xFF303030);
-        buttonBackground.setCornerRadius(dp(10));
-        buttonBackground.setStroke(dp(2), 0xFFFFD700);
-        button.setBackground(buttonBackground);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        params.setMargins(0, dp(8), 0, 0);
-        root.addView(button, params);
-        button.setOnClickListener(view -> {
-            if (answer == 0) {
-                logLabelOkValue(gr ? "Παρατήρηση χρήστη" : "User observation",
-                        gr ? "Άκουσε και τους 4 τόνους" : "Heard all 4 tones");
-            } else if (answer == 1) {
-                logLabelWarnValue(gr ? "Παρατήρηση χρήστη" : "User observation",
-                        gr ? "Δεν άκουσε όλους τους τόνους" : "Did not hear all tones");
-            } else {
-                logLabelWarnValue(gr ? "Παρατήρηση χρήστη" : "User observation",
-                        gr ? "Αβέβαιη ακρόαση" : "Uncertain hearing");
-            }
-            dialog.dismiss();
-        });
-    }
-    dialog.setOnCancelListener(ignored ->
-            logLabelWarnValue(gr ? "Παρατήρηση χρήστη" : "User observation",
-                    gr ? "Δεν δόθηκε απάντηση" : "No answer"));
-    dialog.setCanceledOnTouchOutside(false);
-    dialog.show();
-    if (dialog.getWindow() != null) {
-        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-    }
-    com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
-    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-        if (dialog.isShowing() && !AppTTS.isMuted(this)) {
-            AppTTS.ensureSpeak(this, question);
-        }
-    }, 250);
 }
 
 /* ============================================================
