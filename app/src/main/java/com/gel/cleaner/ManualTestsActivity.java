@@ -913,8 +913,12 @@ private boolean oldKeepScreenOn = false;
                 gelButton(
                         this,
                         "GEL PRO",
-                        0xFF0F8A3B
+                        0xFF0B5D1E // dark green / white text: high contrast
                 );
+        ((com.gel.cleaner.GelButton) notNowBtn).setSupportBackgroundTintList(null);
+        notNowBtn.setBackgroundTintList(null);
+        ((com.gel.cleaner.GelButton) proBtn).setSupportBackgroundTintList(null);
+        proBtn.setBackgroundTintList(null);
         root.addView(proBtn);
 
         final TextView finalHeaderTitle = headerTitle;
