@@ -26804,7 +26804,7 @@ private void lab18StorageSnapshot() {
         // BASIC SNAPSHOT
         // ------------------------------------------------------------
         logInfo(gr ? "Χρήση αποθηκευτικού χώρου:" : "Storage usage:");
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Χρήση" : "Usage",
                 humanBytes(used) + (gr ? " χρησιμοποιούνται / " : " used / ") +
                 humanBytes(total) +
@@ -26827,12 +26827,12 @@ private void lab18StorageSnapshot() {
 
         if (critical) {
 
-            logLabelErrorValue(
+            logLabelWarnValue(
                     gr ? "Κατάσταση" : "Status",
                     gr ? "Κρίσιμα χαμηλός διαθέσιμος χώρος"
                        : "Critically low storage"
             );
-            logLabelErrorValue(
+            logLabelWarnValue(
                     gr ? "Επίπτωση" : "Impact",
                     gr ? "Η σταθερότητα του συστήματος μπορεί να επηρεαστεί"
                        : "System stability may be affected"
@@ -26860,8 +26860,8 @@ private void lab18StorageSnapshot() {
 
             logLabelOkValue(
                     gr ? "Κατάσταση" : "Status",
-                    gr ? "Υγιές επίπεδο αποθηκευτικού χώρου για καθημερινή χρήση"
-                       : "Healthy storage level for daily usage"
+                    gr ? "Επαρκής ελεύθερος χώρος τώρα· δεν ελέγχθηκε η υγεία NAND"
+                       : "Sufficient free space now; NAND health was not measured"
             );
         }
 
@@ -26877,8 +26877,8 @@ if (rooted) {
 
     appendHtml("<br>");
     logInfo(gr
-            ? "Προχωρημένη ανάλυση αποθηκευτικού χώρου (root access):"
-            : "Advanced storage analysis (root access):");
+            ? "Στοιχεία χωρητικότητας (root mode, χωρίς μετρήσεις φθοράς NAND):"
+            : "Capacity context (root mode; no NAND wear measurement):");
             logLine();
 
     wearSignals = detectStorageWearSignals();
@@ -26906,8 +26906,8 @@ if (!wearSignals)
     nandScore = Math.min(nandScore, 40);
 
 logLabelValue(
-        gr ? "Δείκτης πιθανής φθοράς NAND"
-           : "Possible NAND degradation index",
+        gr ? "Ενδεικτική πίεση ελεύθερου χώρου (A)"
+           : "Indicative free-space pressure (A)",
         nandScore + "/100"
 );
 
@@ -26919,19 +26919,14 @@ if (nandScore >= 70) {
             gr ? "Ένδειξη αποθηκευτικού χώρου"
                : "Storage integrity",
             gr
-                    ? "Εντοπίστηκε μοτίβο που μπορεί να σχετίζεται με φθορά NAND ή controller."
-                    : "Pattern may indicate NAND or storage controller degradation."
+                    ? "Πολύ χαμηλός διαθέσιμος χώρος — αυτό δεν αποδεικνύει φθορά NAND."
+                    : "Very low free space; this does not prove NAND wear."
     );
 
 } else {
 
-    logLabelOkValue(
-            gr ? "Ακεραιότητα αποθηκευτικού χώρου"
-               : "Storage integrity",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις φθοράς NAND."
-                    : "No NAND degradation indicators detected."
-    );
+    logInfo(gr ? "Φθορά NAND: δεν μετρήθηκε από το Android ή το συγκεκριμένο τεστ."
+               : "NAND wear: not measured by Android or this test.");
 }
 
 
@@ -26950,8 +26945,8 @@ if (wearSignals)
     controllerScore += 30;
 
 logLabelValue(
-        gr ? "Δείκτης σταθερότητας controller"
-           : "Storage controller stability index",
+        gr ? "Ενδεικτική πίεση ελεύθερου χώρου (B)"
+           : "Indicative free-space pressure (B)",
         controllerScore + "/100"
 );
 
@@ -26963,19 +26958,14 @@ if (controllerScore >= 60) {
             gr ? "Controller αποθήκευσης"
                : "Storage controller",
             gr
-                    ? "Πιθανή αστάθεια controller αποθήκευσης."
-                    : "Possible storage controller instability detected."
+                    ? "Χαμηλός χώρος μπορεί να περιορίσει εγγραφές· ο controller δεν ελέγχθηκε."
+                    : "Low space can constrain writes; controller was not tested."
     );
 
 } else {
 
-    logLabelOkValue(
-            gr ? "Controller αποθήκευσης"
-               : "Storage controller",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις αστάθειας."
-                    : "Controller behaviour appears stable."
-    );
+    logInfo(gr ? "Σταθερότητα controller: δεν μετρήθηκε."
+               : "Controller stability: not measured.");
 }
 
 
@@ -26995,8 +26985,8 @@ if (wearSignals)
     fsScore += 30;
 
 logLabelValue(
-        gr ? "Δείκτης ακεραιότητας filesystem"
-           : "Filesystem integrity index",
+        gr ? "Ενδεικτική πίεση ελεύθερου χώρου (C)"
+           : "Indicative free-space pressure (C)",
         fsScore + "/100"
 );
 
@@ -27008,19 +26998,14 @@ if (fsScore >= 60) {
             gr ? "Ακεραιότητα filesystem"
                : "Filesystem integrity",
             gr
-                    ? "Εντοπίστηκε μοτίβο που μπορεί να οδηγήσει σε σφάλματα filesystem."
-                    : "Pattern detected that may lead to filesystem errors."
+                    ? "Ο χαμηλός χώρος μπορεί να εμποδίσει εγγραφές· δεν μετρήθηκε αλλοίωση filesystem."
+                    : "Low free space may block writes; filesystem corruption was not measured."
     );
 
 } else {
 
-    logLabelOkValue(
-            gr ? "Ακεραιότητα filesystem"
-               : "Filesystem integrity",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις πιθανής αλλοίωσης."
-                    : "No filesystem corruption indicators detected."
-    );
+    logInfo(gr ? "Ακεραιότητα filesystem: δεν εκτελέστηκε ανεξάρτητη δοκιμή."
+               : "Filesystem integrity: no independent test was performed.");
 }
 
 
@@ -27040,8 +27025,8 @@ if (controllerRisk)
     corruptionScore += 35;
 
 logLabelValue(
-        gr ? "Δείκτης κινδύνου σιωπηλής αλλοίωσης δεδομένων"
-           : "Silent data corruption risk index",
+        gr ? "Ενδεικτική πίεση ελεύθερου χώρου (D)"
+           : "Indicative free-space pressure (D)",
         corruptionScore + "/100"
 );
 
@@ -27053,19 +27038,14 @@ if (corruptionScore >= 60) {
             gr ? "Κίνδυνος σιωπηλής αλλοίωσης δεδομένων"
                : "Silent data corruption risk",
             gr
-                    ? "Πιθανή φθορά NAND ή controller μπορεί να προκαλέσει αλλοίωση αρχείων."
-                    : "Possible NAND or controller degradation may lead to silent file corruption."
+                    ? "Συστήνεται ελευθέρωση χώρου· δεν υπάρχουν μετρήσεις αλλοίωσης αρχείων."
+                    : "Freeing storage is advisable; file corruption was not measured."
     );
 
 } else {
 
-    logLabelOkValue(
-            gr ? "Ακεραιότητα δεδομένων"
-               : "Data integrity",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις σιωπηλής αλλοίωσης."
-                    : "No silent corruption indicators detected."
-    );
+    logInfo(gr ? "Ακεραιότητα δεδομένων: δεν ελέγχθηκε σε αυτό το Lab."
+               : "Data integrity: not verified in this Lab.");
 }
 }
 
@@ -27077,7 +27057,7 @@ if (corruptionScore >= 60) {
         logLine();
 
         if (critical) {
-            logLabelErrorValue(
+            logLabelWarnValue(
                     gr ? "Ενέργεια" : "Action",
                     gr
                             ? "Συνιστάται άμεσος καθαρισμός"
@@ -27093,17 +27073,19 @@ if (corruptionScore >= 60) {
         } else {
             logLabelOkValue(
                     gr ? "Ενέργεια" : "Action",
-                    gr ? "Δεν απαιτείται ενέργεια"
-                       : "No action required"
+                    gr ? "Δεν απαιτείται καθαρισμός λόγω έλλειψης χώρου"
+                       : "No low-space cleanup needed"
             );
         }
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 18 ολοκληρώθηκε." : "Lab 18 finished.");
+        logInfo(gr ? "Το Lab 18 ολοκληρώθηκε ως έλεγχος διαθέσιμου χώρου."
+                   : "Lab 18 completed as an available-storage check.");
         logLine();
 
-    } catch (Throwable ignore) {
-        // silent
+    } catch (Throwable ignored) {
+        logInfo(gr ? "Αποτυχία ανάγνωσης χωρητικότητας — δεν ολοκληρώθηκε η μέτρηση."
+                   : "Storage capacity unavailable — measurement not completed.");
     }
 }
 
