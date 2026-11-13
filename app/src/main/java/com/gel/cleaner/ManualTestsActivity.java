@@ -4213,7 +4213,7 @@ private void showLab15ConditionCheck(Runnable startAction) {
 
     int white = 0xFFFFFFFF;
     int green = 0xFF39FF14;
-    int red   = 0xFFFF4444;
+    int neutral = 0xFFFFFFFF;
 
     int start;
 
@@ -4225,11 +4225,11 @@ private void showLab15ConditionCheck(Runnable startAction) {
     sb.setSpan(new ForegroundColorSpan(white), start, sb.length(), 0);
 
     start = sb.length();
-    sb.append(percent + "%\n");
+    sb.append(percent >= 0 ? percent + "%\n" : (gr ? "Μη διαθέσιμη\n" : "Unavailable\n"));
 
     sb.setSpan(
             new ForegroundColorSpan(
-                    badBat ? red : green
+                    badBat ? neutral : green
             ),
             start,
             sb.length(),
@@ -4246,7 +4246,7 @@ private void showLab15ConditionCheck(Runnable startAction) {
 
     sb.setSpan(
             new ForegroundColorSpan(
-                    hasWarn ? red : green
+                    hasWarn ? neutral : green
             ),
             start,
             sb.length(),
@@ -24959,7 +24959,7 @@ lab15StatusText.setText(
                 ? "Αναμονή για σύνδεση φορτιστή…"
                 : "Waiting for charging connection…"
 );
-lab15StatusText.setTextColor(0xFFFF4444);
+lab15StatusText.setTextColor(Color.WHITE);
 lab15StatusText.setTextSize(15f);
 lab15StatusText.setGravity(Gravity.CENTER);
 lab15StatusText.setPadding(0, dp(10), 0, 0);
@@ -25108,6 +25108,7 @@ if (snapStart == null) {
 final long[] startTs = { -1 };
 final boolean[] wasCharging = { false };
 final long[] unplugTs = { -1 };
+final long[] pausedChargeMs = { 0L };
 final String[] dotFrames = { "•", "• •", "• • •" };
 
 // Sample the same engine and source at the start and end of actual charging.
@@ -25137,7 +25138,9 @@ ui.post(new Runnable() {
 // ------------------------------------------------------------
 if (chargingNow) {
 
-    // reset unplug timer
+    // Do not include unplugged time in 180s of active charging.
+    if (unplugTs[0] >= 0 && startTs[0] >= 0)
+        pausedChargeMs[0] += Math.max(0L, now - unplugTs[0]);
     unplugTs[0] = -1;
 
     if (!wasCharging[0]) {
@@ -25206,6 +25209,9 @@ if (chargingNow) {
         enableSingleExportButton();
         return;
     }
+
+    if (lab15Running && !lab15Finished) ui.postDelayed(this, 500);
+    return; // No test success during a charger disconnection.
 }
 
 // temp peak tracking while charging
@@ -25223,7 +25229,7 @@ if (startTs[0] < 0) {
     return;
 }
 
-int elapsed = (int) ((now - startTs[0]) / 1000);
+int elapsed = (int) ((now - startTs[0] - pausedChargeMs[0]) / 1000);
 int shown   = Math.min(elapsed, LAB15_TOTAL_SECONDS);
 
 lab15CounterText.setText(
@@ -25273,20 +25279,21 @@ final float endBatteryTempFinal   = getBatteryTempEngineSafe();
 // Battery temperature + thermal correlation
 // ------------------------------------------------------------
 
-logLabelOkValue(
-        gr ? "Τελική θερμοκρασία μπαταρίας" : "End battery temperature",
-        String.format(Locale.US, "%.1f°C", lab15batTempEnd)
-);
+if (Float.isFinite(lab15batTempEnd)) {
+    logLabelOkValue(gr ? "Τελική θερμοκρασία μπαταρίας" : "End battery temperature",
+            String.format(Locale.US, "%.1f°C", lab15batTempEnd));
+} else {
+    logInfo(gr ? "Τελική θερμοκρασία: άγνωστη" : "End temperature: unavailable");
+}
 
 // ------------------------------------------------------------
 // Thermal correlation analysis
 // ------------------------------------------------------------
 
-logLab15ThermalCorrelation(
-        lab15batTempStart,
-        lab15batTempPeak,
-        lab15batTempEnd
-);
+if (Float.isFinite(lab15batTempStart) && Float.isFinite(lab15batTempEnd))
+    logLab15ThermalCorrelation(lab15batTempStart, lab15batTempPeak, lab15batTempEnd);
+else
+    logInfo(gr ? "Θερμική συσχέτιση: ανεπαρκή δεδομένα." : "Thermal correlation: insufficient data.");
 
 // ------------------------------------------------------------
 // Thermal verdict
@@ -25315,7 +25322,7 @@ if (lab15OverTempDuringCharge) {
             )
     );
 
-} else {
+} else if (Float.isFinite(lab15batTempStart) && Float.isFinite(lab15batTempEnd)) {
 
     logLabelOkValue(
             gr ? "Θερμοκρασία κατά την φορτιση"
@@ -25368,13 +25375,14 @@ if (comparableCounters) {
 
     lab15_strengthKnown = true;
 
+    // Net gain (mAh), not input charging power; system load affects the rate.
     long deltaMah = endInfo.chargeNowMah - startMah[0];
-long dtMs = Math.max(1, SystemClock.elapsedRealtime() - startTs[0]);
+long dtMs = Math.max(1L, SystemClock.elapsedRealtime() - startTs[0] - pausedChargeMs[0]);
 double minutes = dtMs / 60000.0;
 double mahPerMin = (minutes > 0) ? (deltaMah / minutes) : -1;
 
     logLabelOkValue(
-            gr ? "Είσοδος φόρτισης" : "Charging input",
+            gr ? "Καθαρή αύξηση φορτίου" : "Net charge gain",
             String.format(
                     Locale.US,
                     gr
@@ -25391,28 +25399,24 @@ double mahPerMin = (minutes > 0) ? (deltaMah / minutes) : -1;
 // ------------------------------------------------------------
 if (lab15_strengthKnown && mahPerMin < 1 && !lab15FlapUnstable) {
 
-    logLabelWarnValue(
-            gr ? "Ελεγκτής φόρτισης" : "Charging controller",
-            gr
-                    ? "Πιθανή δυσλειτουργία IC φόρτισης (PMIC)"
-                    : "Possible charging IC / PMIC limitation"
-    );
+    logInfo(gr ? "Μικρή καθαρή αύξηση φορτίου: δεν τεκμηριώνει βλάβη PMIC."
+               : "Low net charge gain alone cannot diagnose a PMIC fault.");
 }
 
 if (mahPerMin >= 20.0) {
-    logLabelOkValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΙΣΧΥΡΗ" : "STRONG");
+    logLabelOkValue(gr ? "Ρυθμός καθαρής φόρτισης" : "Net charge rate", gr ? "ΥΨΗΛΟΣ (ενδεικτικό)" : "HIGH (indicative)");
     lab15_strengthWeak = false;
 
 } else if (mahPerMin >= 10.0) {
-    logLabelOkValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΚΑΝΟΝΙΚΗ" : "NORMAL");
+    logLabelOkValue(gr ? "Ρυθμός καθαρής φόρτισης" : "Net charge rate", gr ? "ΣΥΝΗΘΗΣ (ενδεικτικό)" : "TYPICAL (indicative)");
     lab15_strengthWeak = false;
 
 } else if (mahPerMin >= 5.0) {
-    logLabelWarnValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΜΕΤΡΙΑ" : "MODERATE");
+    logLabelWarnValue(gr ? "Ρυθμός καθαρής φόρτισης" : "Net charge rate", gr ? "ΜΕΤΡΙΟΣ (ενδεικτικό)" : "MODERATE (indicative)");
     lab15_strengthWeak = true;
 
 } else {
-    logLabelErrorValue(gr ? "Ισχύς φόρτισης" : "Charging strength", gr ? "ΑΣΘΕΝΗΣ" : "WEAK");
+    logLabelWarnValue(gr ? "Ρυθμός καθαρής φόρτισης" : "Net charge rate", gr ? "ΧΑΜΗΛΟΣ (ενδεικτικό)" : "LOW (indicative)");
     lab15_strengthWeak = true;
 }
 
@@ -25421,12 +25425,8 @@ if (mahPerMin >= 20.0) {
 // ------------------------------------------------------------
 if (lab15_strengthKnown && mahPerMin < 6 && mahPerMin > 1 && !lab15OverTempDuringCharge) {
 
-    logLabelWarnValue(
-            gr ? "Θύρα φόρτισης" : "Charging port",
-            gr
-                    ? "Πιθανή απώλεια ισχύος (καλώδιο / θύρα USB)"
-                    : "Possible power loss (cable / USB port)"
-    );
+    logInfo(gr ? "Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη καλωδίου ή θύρας."
+               : "A low net rate alone cannot prove a cable or USB-port defect.");
 }
 
 } else {
@@ -25467,8 +25467,8 @@ if (!lab15_strengthKnown) {
     logLabelWarnValue(
             gr ? "Σύστημα φόρτισης" : "Charging system",
             gr
-                    ? "Εντοπίστηκαν πιθανά ζητήματα"
-                    : "Potential issues detected"
+                    ? "Παρατηρήθηκαν ενδείξεις για επανέλεγχο, όχι απόδειξη βλάβης"
+                    : "Follow-up observations, not proof of a hardware fault"
     );
 
     logLabelWarnValue(
