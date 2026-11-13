@@ -33874,63 +33874,35 @@ if (requestCode == 7007) {
 
     appendHtml("<br>");
     logLine();
-    logSection(gr
-            ? "LAB 7 — Περιστροφή & Αισθητήρας Εγγύτητας"
-            : "LAB 7 — Rotation & Proximity Sensors");
+    logSection(gr ? "LAB 7 — Περιστροφή & Εγγύτητα"
+                  : "LAB 7 — Rotation & Proximity");
     logLine();
 
     if (resultCode == RESULT_OK) {
-
-        logLabelOkValue(
-                gr ? "Ανίχνευση περιστροφής" : "Rotation detection",
-                gr ? "Εντοπίστηκε μέσω επιταχυνσιόμετρου" : "Detected via accelerometer"
-        );
-
-        logLabelOkValue(
-                gr ? "Αλλαγή προσανατολισμού" : "Orientation change",
-                gr ? "Επιβεβαιώθηκε" : "Confirmed"
-        );
-
-        logLabelOkValue(
-                gr ? "Αισθητήρες κίνησης" : "Motion sensors",
-                gr ? "Λειτουργούν κανονικά" : "Responding normally"
-        );
-
-        logLabelOkValue(
-                gr ? "Επόμενο βήμα" : "Next step",
-                gr ? "Έλεγχος αισθητήρα εγγύτητας" : "Proximity sensor test"
-        );
-
-        // AUTO-START PROXIMITY TEST
-        startActivityForResult(
-                new Intent(this, ProximityCheckActivity.class),
-                8008
-        );
-        return;
-
+        logLabelValue(gr ? "Περιστροφή" : "Rotation",
+                gr ? "Παρατηρήθηκε σταθερή αλλαγή βαρύτητας: όρθια → πλαγιαστή θέση"
+                   : "Observed stable gravity change: upright → sideways posture");
+        logInfo(gr ? "Η οθόνη της εφαρμογής παρέμεινε κατακόρυφη. "
+                     + "Δεν πιστοποιείται η αυτόματη περιστροφή του Android."
+                   : "The app remained in portrait. Android auto-rotate itself was not certified.");
+    } else if (resultCode == RESULT_FIRST_USER) {
+        logLabelWarnValue(gr ? "Περιστροφή" : "Rotation",
+                gr ? "ΠΑΡΑΛΕΙΦΘΗΚΕ — συνεχίζεται ανεξάρτητα ο έλεγχος εγγύτητας"
+                   : "SKIPPED — proceeding to independent proximity test");
     } else {
-
-        logLabelErrorValue(
-                gr ? "Ανίχνευση περιστροφής" : "Rotation detection",
-                gr ? "Δεν εντοπίστηκε" : "Not detected"
-        );
-
-        logLabelWarnValue(
-                gr ? "Πιθανή αιτία" : "Possible cause",
-                gr
-                        ? "Η αυτόματη περιστροφή είναι απενεργοποιημένη ή υπάρχει βλάβη αισθητήρα"
-                        : "Auto-rotate disabled or sensor malfunction"
-        );
-
-        appendHtml("<br>");
-        logOk(gr
-                ? "Το Lab 7 ολοκληρώθηκε (περιστροφή μη επιτυχής)."
-                : "Lab 7 finished (rotation incomplete).");
+        logLabelWarnValue(gr ? "Περιστροφή" : "Rotation",
+                gr ? "ΜΗ ΟΛΟΚΛΗΡΩΜΕΝΗ — χωρίς συμπέρασμα βλάβης"
+                   : "NOT COMPLETED — no hardware fault inferred");
         logLine();
-
         enableSingleExportButton();
         return;
     }
+
+    // Proximity is a separate experiment, never evidence for rotation.
+    startActivityForResult(
+            new Intent(this, ProximityCheckActivity.class),
+            8008);
+    return;
 }
 
 // ============================================================
@@ -33940,43 +33912,23 @@ if (requestCode == 7007) {
 if (requestCode == 8008) {
 
     if (resultCode == RESULT_OK) {
-
-        logLabelOkValue(
-                gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
-                gr ? "Ανταποκρίθηκε σωστά" : "Responded correctly"
-        );
-
-        logLabelOkValue(
-                gr ? "Ανίχνευση Κοντά / Μακριά" : "Near / Far detection",
-                gr ? "Επιβεβαιώθηκε" : "Confirmed"
-        );
-
-        logLabelOkValue(
-                gr ? "Συμπεριφορά οθόνης" : "Screen behavior",
-                gr
-                        ? "Η οθόνη έκλεισε όταν καλύφθηκε ο αισθητήρας"
-                        : "Turned off when sensor was covered"
-        );
-
+        logLabelValue(gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
+                gr ? "Παρατηρήθηκε ακολουθία ΜΑΚΡΙΑ → ΚΟΝΤΑ → ΜΑΚΡΙΑ"
+                   : "Observed FAR → NEAR → FAR transitions");
+        logInfo(gr ? "Μετρήθηκε αλλαγή ένδειξης αισθητήρα. "
+                     + "Δεν ελέγχθηκε αν σβήνει η οθόνη σε πραγματική τηλεφωνική κλήση."
+                   : "Sensor transitions were observed. "
+                     + "In-call screen blanking was not tested.");
     } else {
-
-        logLabelErrorValue(
-                gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
-                gr ? "Δεν εντοπίστηκε απόκριση" : "No response detected"
-        );
-
-        logLabelWarnValue(
-                gr ? "Πιθανή αιτία" : "Possible cause",
-                gr
-                        ? "Εμπόδιο στον αισθητήρα ή πιθανή βλάβη υλικού"
-                        : "Sensor obstruction or hardware fault"
-        );
+        logLabelWarnValue(gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
+                gr ? "ΜΗ ΟΛΟΚΛΗΡΩΜΕΝΟΣ — καμία διάγνωση βλάβης"
+                   : "NOT COMPLETED — no fault diagnosis");
     }
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 7 ολοκληρώθηκε." : "Lab 7 finished.");
+    logInfo(gr ? "Το Lab 7 κατέγραψε τις διαθέσιμες παρατηρήσεις."
+               : "Lab 7 recorded the available observations.");
     logLine();
-
     enableSingleExportButton();
     return;
 }
