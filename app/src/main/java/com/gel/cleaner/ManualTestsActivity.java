@@ -33432,6 +33432,7 @@ logLine();
     // 1) READ FULL LOG
     // ------------------------------------------------------------
     String fullLog = GELServiceLog.getAll();
+    if (fullLog == null) fullLog = "";
 
     if (fullLog.trim().isEmpty()) {
         logWarn(gr
@@ -33441,62 +33442,49 @@ logLine();
     }
 
     // ------------------------------------------------------------
-    // 2) DETECT WARNINGS / ERRORS
-    // ------------------------------------------------------------
-    String[] lines = fullLog.split("\n");
-    StringBuilder warnings = new StringBuilder();
-
-    for (String l : lines) {
-
-        if (l == null) continue;
-
-        String low = l.toLowerCase(Locale.US);
-
-        if (low.contains("warning") || low.contains("error")) {
-            warnings.append(l).append("\n");
+    // 2) EXPLICIT LOG SEVERITY (not English/Greek keyword guesses)
+    // ============================================================
+    // logWarn()/logError() append these exact prefixes to GELServiceLog.
+    // logLabelWarnValue() emits plain label/value text, so its severity
+    // cannot be reconstructed reliably from keywords in a PDF export.
+    String[] lines = fullLog.split("\\n");
+    StringBuilder explicitAlerts = new StringBuilder();
+    for (String line : lines) {
+        if (line == null) continue;
+        String t = line.trim();
+        if (t.startsWith("⚠ ") || t.startsWith("✖ ")) {
+            explicitAlerts.append(t).append("\\n");
         }
     }
 
-    // ------------------------------------------------------------
-    // 3) PRINT WARNINGS SUMMARY
-    // ------------------------------------------------------------
+    // ============================================================
+    // 3) EVIDENCE COVERAGE, NOT A DEVICE-WIDE PASS
+    // ============================================================
     appendHtml("<br>");
     logInfo(gr ? "Σύνοψη διαγνωστικών" : "Diagnostics summary");
     logLine();
 
-    boolean issuesDetected = warnings.length() > 0;
+    logLabelValue(
+            gr ? "Ερμηνεία αρχείου" : "Log interpretation",
+            gr ? "Εντοπίζονται μόνο ρητές σημάνσεις ⚠ / ✖. Οι τιμές με ετικέτα και τα μη εκτελεσμένα τεστ απαιτούν ξεχωριστό έλεγχο."
+               : "Only explicit ⚠ / ✖ log markers can be identified here; label severities and missing tests need separate review.");
 
-    if (!issuesDetected) {
-
-        logLabelOkValue(
-                gr ? "Κατάσταση συστήματος" : "System status",
-                gr
-                        ? "Δεν εντοπίστηκαν προειδοποιήσεις ή σφάλματα"
-                        : "No warnings or errors detected"
-        );
-
+    if (explicitAlerts.length() == 0) {
+        logLabelValue(gr ? "Σύνοψη" : "Summary",
+                gr ? "Καμία ρητή σήμανση ⚠ / ✖ στο διαθέσιμο αρχείο — ΔΕΝ σημαίνει ότι η συσκευή πιστοποιήθηκε."
+                   : "No explicit ⚠ / ✖ markers in the available log — NOT a clean hardware certification.");
     } else {
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση συστήματος" : "System status",
-                gr
-                        ? "Εντοπίστηκαν προειδοποιήσεις / σφάλματα"
-                        : "Warnings / errors detected"
-        );
-
-        for (String w : warnings.toString().split("\n")) {
-
-            if (w != null && !w.trim().isEmpty()) {
-
-                logLabelWarnValue(
-                        gr ? "Ζήτημα" : "Issue",
-                        w.trim()
-                );
+        logLabelWarnValue(gr ? "Αναφορές προς έλεγχο" : "Entries for review",
+                gr ? "Υπάρχουν καταγραφές με ρητή σήμανση προσοχής/σφάλματος."
+                   : "Explicit caution/error entries exist; they do not independently identify a hardware cause.");
+        for (String entry : explicitAlerts.toString().split("\\n")) {
+            if (!entry.trim().isEmpty()) {
+                logLabelWarnValue(gr ? "Καταγραφή" : "Log entry", entry.trim());
             }
         }
     }
 
-// ------------------------------------------------------------
+    // ------------------------------------------------------------
 // 4) BATTERY FINDINGS — INFORMATIONAL ONLY
 // LAB 30 remains the single source of truth for device scoring.
 // ------------------------------------------------------------
@@ -33528,8 +33516,11 @@ if (!Float.isNaN(historicalIndex)) {
 // ------------------------------------------------------------
 // BATTERY ENDURANCE FINDING — INFORMATIONAL ONLY
 // ------------------------------------------------------------
+long lab14bAgeMs = System.currentTimeMillis() - ts14b;
 if (lab14bConsumptionPerHour > 0f &&
-    lab14bEstimatedHours > 0f) {
+    lab14bEstimatedHours > 0f &&
+    lab14bBaselineMah > 0f && ts14b > 0L &&
+    lab14bAgeMs >= 0L && lab14bAgeMs <= 24L * 60L * 60L * 1000L) {
 
     String enduranceText = String.format(
             Locale.US,
@@ -33569,8 +33560,8 @@ if (lab14bConsumptionPerHour > 0f &&
 
     logLabelValue(
             gr ? "Εκτιμώμενη αυτονομία" : "Estimated endurance",
-            gr ? "ΔΕΝ ΕΚΤΙΜΗΘΗΚΕ — ανεπαρκή δεδομένα LAB 14B"
-               : "NOT ESTIMATED — insufficient LAB 14B data"
+            gr ? "ΔΕΝ ΕΚΤΙΜΗΘΗΚΕ — ανεπαρκή ή παλαιά δεδομένα LAB 14B"
+               : "NOT ESTIMATED — insufficient or stale LAB 14B evidence"
     );
 }
    
@@ -33592,73 +33583,25 @@ appendHtml("<br>");
 // ------------------------------------------------------------
 // AUTHENTICITY / INTEGRITY RESULT
 // ------------------------------------------------------------
+// Android identity, fingerprint and availability cannot establish OEM
+// part origin or past repair. Retain legacy fields only as audit history.
+logLabelValue(
+        gr ? "Γνησιότητα / ακεραιότητα OEM" : "OEM authenticity / physical integrity",
+        gr ? "ΑΓΝΩΣΤΟ — απαιτείται τεκμηρίωση OEM ή φυσικός έλεγχος."
+           : "UNKNOWN — requires OEM provenance or physical inspection.");
 if (lab29AuthenticityScore >= 0) {
-
-    if (lab29AuthenticityScore >= 90) {
-
-        logLabelOkValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100"
-        );
-
-    } else if (lab29AuthenticityScore >= 70) {
-
-        logLabelWarnValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100 — " +
-                        (gr
-                                ? "Απαιτείται επανέλεγχος αποκλίσεων"
-                                : "Detected deviations require verification")
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100 — " +
-                        (gr
-                                ? "Εντοπίστηκαν σημαντικές αποκλίσεις"
-                                : "Significant integrity deviations detected")
-        );
-    }
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Ακεραιότητα συσκευής"
-               : "Device integrity",
-            gr
-                    ? "Δεν υπάρχουν διαθέσιμα αποτελέσματα από το LAB 29"
-                    : "No LAB 29 results available"
-    );
+    logLabelValue(gr ? "Παλαιός μη βαθμονομημένος δείκτης" : "Legacy uncalibrated index",
+            lab29AuthenticityScore + "/100 — " +
+            (gr ? "όχι απόδειξη γνησιότητας ή επισκευής" : "not authenticity or repair evidence"));
 }
-
-// ------------------------------------------------------------
-// INSTABILITY FINDING
-// ------------------------------------------------------------
-if (hwInstability) {
-
-    logLabelWarnValue(
-            gr ? "Μοτίβο αστάθειας"
-               : "Instability pattern",
-            lab29InstabilityScore + "/100 — " +
-                    (gr
-                            ? "Απαιτείται τεχνικός επανέλεγχος"
-                            : "Technician verification recommended")
-    );
-
+if (hwInstability || lab29InstabilityScore > 0) {
+    logLabelValue(gr ? "Παλαιές ενδείξεις" : "Legacy instability hints",
+            gr ? "Μη επαληθευμένα στοιχεία προηγούμενης μορφής — απαιτούν επιβεβαίωση."
+               : "Old unverified indicators require source and timestamp validation.");
 } else {
-
-    logLabelOkValue(
-            gr ? "Μοτίβο αστάθειας"
-               : "Instability pattern",
-            gr
-                    ? "Δεν εντοπίστηκε"
-                    : "Not detected"
-    );
+    logLabelValue(gr ? "Σταθερότητα εξαρτημάτων" : "Component stability",
+            gr ? "ΔΕΝ ΠΙΣΤΟΠΟΙΗΘΗΚΕ — η έλλειψη ενδείξεων δεν αποτελεί μέτρηση."
+               : "NOT CERTIFIED — no recorded hint is not a component health measurement.");
 }
 
     // ------------------------------------------------------------
@@ -33666,21 +33609,21 @@ if (hwInstability) {
     // ------------------------------------------------------------
     appendHtml("<br>");
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Εξαγωγή"
                     : "Export",
             gr
-                    ? "Χρησιμοποιήστε το κουμπί παρακάτω για δημιουργία επίσημου PDF report"
-                    : "Use the button below to generate the official PDF report"
+                    ? "Χρησιμοποιήστε το κουμπί για εξαγωγή αρχείου τεκμηρίων PDF (όχι πιστοποιητικό hardware)"
+                    : "Use the button to export the evidence PDF (not a hardware certificate)"
     );
 
     // enable export button
     enableSingleExportButton();
 
     appendHtml("<br>");
-    logOk(gr
-            ? "Το Lab 31 ολοκληρώθηκε."
-            : "Lab 31 finished.");
+    logInfo(gr
+            ? "Το Lab 31 ολοκληρώθηκε: διαθέσιμες παρατηρήσεις και περιορισμοί τεκμηριώθηκαν."
+            : "Lab 31 complete: available observations and limitations recorded.");
     logLine();
 }
 
