@@ -255,6 +255,12 @@ try:
     adb("shell","settings","put","system","user_rotation","0")
     adb("shell","svc","wifi","disable"); adb("shell","svc","data","disable")
     home(); record("offline-relaunch","UI_OPENED",folder=save("offline-relaunch"))
+except Exception:
+    # Preserve the original failure and its stack trace in CI logs and artifacts.
+    failure = traceback.format_exc()
+    print("UI_AUDIT_EXCEPTION="+failure, flush=True)
+    (out/"audit-exception.txt").write_text(failure, encoding="utf-8")
+    raise
 finally:
     try: save("final-state")
     except Exception: pass
