@@ -33583,9 +33583,9 @@ logLine();
     // ------------------------------------------------------------
     // 2) EXPLICIT LOG SEVERITY (not English/Greek keyword guesses)
     // ============================================================
-    // logWarn()/logError() append these exact prefixes to GELServiceLog.
-    // logLabelWarnValue() emits plain label/value text, so its severity
-    // cannot be reconstructed reliably from keywords in a PDF export.
+    // logWarn()/logError() and labeled warning/error results now retain
+    // typed ⚠ / ✖ prefixes in GELServiceLog. Legacy untyped rows remain
+    // outside this explicit-severity index; missing tests are not a pass.
     String[] lines = fullLog.split("\\n");
     StringBuilder explicitAlerts = new StringBuilder();
     for (String line : lines) {
@@ -33605,8 +33605,8 @@ logLine();
 
     logLabelValue(
             gr ? "Ερμηνεία αρχείου" : "Log interpretation",
-            gr ? "Εντοπίζονται μόνο ρητές σημάνσεις ⚠ / ✖. Οι τιμές με ετικέτα και τα μη εκτελεσμένα τεστ απαιτούν ξεχωριστό έλεγχο."
-               : "Only explicit ⚠ / ✖ log markers can be identified here; label severities and missing tests need separate review.");
+            gr ? "Καταγράφονται οι ρητές σημάνσεις ⚠ / ✖, μαζί με τις έγχρωμες προειδοποιήσεις και αστοχίες. Παλαιές εγγραφές χωρίς σήμανση και μη εκτελεσμένα τεστ απαιτούν έλεγχο."
+               : "Explicit ⚠ / ✖ events include labeled warnings/errors. Legacy untyped entries and unperformed tests still require review.");
 
     if (explicitAlerts.length() == 0) {
         logLabelValue(gr ? "Σύνοψη" : "Summary",
