@@ -11,6 +11,12 @@ public final class RamEvidencePolicy {
 
     private RamEvidencePolicy() {}
 
+    /** -1 means unavailable/inconsistent swap data, not zero usage. */
+    public static long observedSwapUsedKb(long totalKb, long freeKb) {
+        if (totalKb < 0 || freeKb < 0 || freeKb > totalKb) return -1L;
+        return totalKb - freeKb;
+    }
+
     public static Assessment assess(int availablePercent, boolean androidLowMemory) {
         if (availablePercent < 0 || availablePercent > 100) {
             return Assessment.INSUFFICIENT_DATA;
