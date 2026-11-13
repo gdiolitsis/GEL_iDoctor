@@ -28,8 +28,10 @@ android {
         applicationId = "com.gel.iDoctor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 53
-        versionName = "5.3"
+        // QA-only Gradle overrides; defaults remain unchanged for release/main.
+        // A higher QA versionCode allows a signed in-place update of installed v53.
+        versionCode = (project.findProperty('gelQaVersionCode') ?: '53').toString().toInteger()
+        versionName = (project.findProperty('gelQaVersionName') ?: '5.3').toString()
 
 // ✅ SINGLE SOURCE OF ABI TRUTH
         ndk {
