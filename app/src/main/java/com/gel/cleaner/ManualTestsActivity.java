@@ -33641,70 +33641,29 @@ logLine();
 // 4) BATTERY FINDINGS — INFORMATIONAL ONLY
 // LAB 30 remains the single source of truth for device scoring.
 // ------------------------------------------------------------
-float batteryScore =
-        p.getFloat("lab14_health_score", -1f);
+float batteryScore = p.getFloat("lab14_health_score", -1f);
+float batteryHealth = p.getFloat("lab14_health_percent", -1f);
 
-float batteryHealth =
-        p.getFloat("lab14_health_percent", -1f);
-        
-// ------------------------------------------------------------
-// TECHNICIAN FINDINGS — NO DEVICE RE-SCORING
-// ------------------------------------------------------------
+// Historical 0–100 values came from stress heuristics, not a capacity test.
+// Preserve their existence for audit; never turn them into proven battery wear.
 appendHtml("<br>");
-logInfo(gr
-        ? "Ευρήματα τεχνικού ελέγχου"
-        : "Technician findings");
+logInfo(gr ? "Ευρήματα τεχνικού ελέγχου" : "Technician findings");
 logLine();
 
-// ------------------------------------------------------------
-// BATTERY FINDING
-// ------------------------------------------------------------
-float finalBatteryHealth = -1f;
+float historicalIndex = batteryHealth >= 0f && batteryHealth <= 100f
+        ? batteryHealth
+        : (batteryScore >= 0f && batteryScore <= 100f ? batteryScore : Float.NaN);
 
-if (batteryHealth >= 0f && batteryHealth <= 100f) {
-    finalBatteryHealth = batteryHealth;
-} else if (batteryScore >= 0f && batteryScore <= 100f) {
-    finalBatteryHealth = batteryScore;
-}
-
-if (finalBatteryHealth >= 0f) {
-
-    if (finalBatteryHealth >= 80f) {
-
-        logLabelOkValue(
-                gr ? "Κατάσταση μπαταρίας" : "Battery condition",
-                gr
-                        ? "Δεν εντοπίστηκαν σημαντικές ενδείξεις φθοράς"
-                        : "No significant battery wear indicators detected"
-        );
-
-    } else if (finalBatteryHealth >= 60f) {
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση μπαταρίας" : "Battery condition",
-                gr
-                        ? "Εντοπίστηκαν ενδείξεις μέτριας υποβάθμισης"
-                        : "Moderate degradation indicators detected"
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Κατάσταση μπαταρίας" : "Battery condition",
-                gr
-                        ? "Εντοπίστηκαν σημαντικές ενδείξεις φθοράς"
-                        : "Significant battery wear indicators detected"
-        );
-    }
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Κατάσταση μπαταρίας" : "Battery condition",
-            gr
-                    ? "Δεν υπάρχουν επαρκή δεδομένα από το LAB 14"
-                    : "Insufficient LAB 14 data"
-    );
+logLabelValue(
+        gr ? "Υγεία μπαταρίας (SoH)" : "Battery state of health (SoH)",
+        gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — απαιτείται ανεξάρτητη χωρητικότητα/τεχνικός έλεγχος"
+           : "NOT MEASURED — requires independent capacity evidence/technician assessment");
+if (!Float.isNaN(historicalIndex)) {
+    logLabelValue(
+            gr ? "Ιστορικός πειραματικός δείκτης" : "Legacy experimental index",
+            String.format(Locale.US,
+                    gr ? "%.0f/100 (μη βαθμονομημένο, όχι SoH)"
+                       : "%.0f/100 (uncalibrated, not SoH)", historicalIndex));
 }
 
 // ------------------------------------------------------------
@@ -33722,34 +33681,10 @@ if (lab14bConsumptionPerHour > 0f &&
             lab14bConsumptionPerHour
     );
 
-    if (lab14bEstimatedHours >= 7f) {
-
-        logLabelOkValue(
-                gr ? "Εκτιμώμενη αυτονομία" : "Estimated endurance",
-                enduranceText
-        );
-
-    } else if (lab14bEstimatedHours >= 5f) {
-
-        logLabelWarnValue(
-                gr ? "Εκτιμώμενη αυτονομία" : "Estimated endurance",
-                enduranceText
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Εκτιμώμενη αυτονομία" : "Estimated endurance",
-                enduranceText
-        );
-
-        logLabelWarnValue(
-                gr ? "Τεχνικό εύρημα" : "Technician finding",
-                gr
-                        ? "Η μετρημένη αυτονομία είναι χαμηλότερη από το αναμενόμενο."
-                        : "Measured endurance is lower than expected."
-        );
-    }
+    logLabelValue(
+            gr ? "Εκτιμώμενη αυτονομία (όχι μέτρηση)" : "Estimated endurance (not measured)",
+            enduranceText + (gr ? " — προβολή σεναρίου" : " — scenario projection")
+    );
 
     float currentPercent =
             (float) getBatteryPercentSafe();
@@ -33773,12 +33708,10 @@ if (lab14bConsumptionPerHour > 0f &&
 
 } else {
 
-    logLabelWarnValue(
-            gr ? "Εκτιμώμενη αυτονομία"
-               : "Estimated endurance",
-            gr
-                    ? "Δεν υπάρχουν έγκυρα δεδομένα από το LAB 14B"
-                    : "No valid LAB 14B endurance data"
+    logLabelValue(
+            gr ? "Εκτιμώμενη αυτονομία" : "Estimated endurance",
+            gr ? "ΔΕΝ ΕΚΤΙΜΗΘΗΚΕ — ανεπαρκή δεδομένα LAB 14B"
+               : "NOT ESTIMATED — insufficient LAB 14B data"
     );
 }
    
