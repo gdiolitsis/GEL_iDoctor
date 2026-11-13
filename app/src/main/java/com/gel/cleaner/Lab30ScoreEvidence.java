@@ -41,6 +41,11 @@ public final class Lab30ScoreEvidence {
         return totalPackages > 0 && userPackages >= 0 && userPackages <= totalPackages;
     }
 
+    /** A permission sample with missing grants/counters is not full privacy coverage. */
+    public static boolean hasPrivacyCoverage(int visibleUserApps, boolean incomplete) {
+        return visibleUserApps > 0 && !incomplete;
+    }
+
     public static int performanceScore(int storage, int ram, int apps, int thermal) {
         if (storage < 0 || ram < 0 || apps < 0 || thermal < 0) return -1;
         return Math.round(storage * 0.35f + ram * 0.35f
