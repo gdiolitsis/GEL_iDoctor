@@ -51,6 +51,10 @@ public class DisplayProTestActivity extends GELAutoActivityHook {
     // True only after all configured visual pattern cycles were presented.
     private boolean fullPatternSequenceShown = false;
     private long startTimeMs;
+    // Preserve this Activity window's original policy, not global brightness.
+    private boolean displayOverrideApplied = false;
+    private float previousWindowBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+    private boolean previousKeepScreenOn = false;
 
     private TestStep[] steps;
     private final Handler h = new Handler(Looper.getMainLooper());
@@ -95,6 +99,7 @@ public class DisplayProTestActivity extends GELAutoActivityHook {
                 "LAB Display Pro Test — CANCELED by user"
         );
 
+        restoreDisplayWindowPolicy();
         setResult(RESULT_CANCELED);
         finish();
     }
@@ -105,11 +110,43 @@ public void onBackPressed() {
 }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        // Interrupted visual presentation cannot count as a fully observed test.
+        if (displayOverrideApplied && !testFinished) safeCancel();
+    }
+
+    @Override
     protected void onDestroy() {
         activityAlive = false;
         h.removeCallbacksAndMessages(null);
+        restoreDisplayWindowPolicy(); // Backup cleanup for forced Activity destruction.
         AppTTS.stop();
         super.onDestroy();
+    }
+
+    private void applyDisplayWindowPolicy() {
+        if (displayOverrideApplied) return;
+        WindowManager.LayoutParams current = getWindow().getAttributes();
+        previousWindowBrightness = current.screenBrightness;
+        previousKeepScreenOn = (current.flags &
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) != 0;
+        displayOverrideApplied = true;
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        WindowManager.LayoutParams override = getWindow().getAttributes();
+        override.screenBrightness = 1f;
+        getWindow().setAttributes(override);
+    }
+
+    private void restoreDisplayWindowPolicy() {
+        if (!displayOverrideApplied) return;
+        displayOverrideApplied = false;
+        WindowManager.LayoutParams current = getWindow().getAttributes();
+        current.screenBrightness = previousWindowBrightness;
+        getWindow().setAttributes(current);
+        if (!previousKeepScreenOn) {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
     }
 
     // ============================================================
@@ -203,10 +240,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF39FF14);
                         gr ? "Κύκλος καταπόνησης OLED" : "Burn-in stress cycle")
         };
 
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.screenBrightness = 1f;
-        getWindow().setAttributes(lp);
+        applyDisplayWindowPolicy();
 
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
@@ -402,6 +436,7 @@ yes.setOnClickListener(v -> {
     result.putExtra("display_issues", issuesDetected);
     result.putExtra("display_steps_completed", fullPatternSequenceShown);
 
+    restoreDisplayWindowPolicy();
     setResult(RESULT_OK, result);
     finish();
 }
