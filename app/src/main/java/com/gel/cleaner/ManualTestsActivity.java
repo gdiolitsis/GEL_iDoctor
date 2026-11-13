@@ -6733,7 +6733,7 @@ start.setOnClickListener(v -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 
     new Thread(() -> {
-        boolean playbackCompleted = false;
+        final boolean[] playbackCompleted = {false};
         try {
 
             logInfo(gr
@@ -6753,7 +6753,7 @@ start.setOnClickListener(v -> {
             logOk(gr
                     ? "Η αναπαραγωγή τόνων ολοκληρώθηκε."
                     : "Earpiece tone playback completed.");
-            playbackCompleted = true;
+            playbackCompleted[0] = true;
 
         } catch (Throwable t) {
 
@@ -6775,7 +6775,7 @@ start.setOnClickListener(v -> {
 
             runOnUiThread(() -> {
                 try { d.dismiss(); } catch (Throwable ignore) {}
-                if (playbackCompleted) {
+                if (playbackCompleted[0]) {
                     askUserEarpieceConfirmation();
                 } else {
                     logWarn(gr
