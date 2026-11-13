@@ -48,7 +48,7 @@ This log records **only observations attributable to this v54 candidate**; obser
 | **V54-REPORT-04** | Localization / P3 | REAL_DEVICE_OBSERVED | Mixed Greek + untranslated tokens `UNVERIFIED`, `NOT measured device health`, `Watchdog / Hang`, etc. Some are precise technical literals; assess per term and localize explanatory narrative, retaining canonical tokens where needed. **Open — language consistency audit.** |
 | **V54-CI-01** | Android 16 EN emulator / P1 investigation | CI_OBSERVED | Source-built v54 emulator run `43507250439` FAILED Apple UI audit with `APPLE_UI_QA_FAILURES=["apple-demo-ui"]` while other main-UI checks reported no app crash. **Open — distinguish automation navigation/selector issue from actual DEMO screen failure.** |
 | **V54-CI-02** | Android 11 EN emulator / P1 investigation | CI_OBSERVED | Same run FAILED Apple UI audit `APPLE_UI_QA_FAILURES=["enter-apple-mode"]` despite main UI opening without reported crash. **Open — inspect captured emulator evidence before assigning application root cause.** |
-| **V54-CI-03** | Android 11/16 EL emulator / awaiting result | CI_OBSERVED | At initial filing, Greek emulator jobs were still in progress. **Not passed / not failed yet.** Update this entry when finished. |
+| **V54-CI-03** | Android 11/16 EL emulator / incomplete (cancelled) | CI_OBSERVED | At initial filing the Greek jobs were in progress; final status of that attempt: **both CANCELLED**, not PASS. The reason for cancellation has not been assigned to an app defect. Full Greek acceptance must be rerun on the exact same candidate when appropriate. |
 
 **Source ground truth:** [IPhoneLabsActivity.java](https://github.com/gdiolitsis/GEL_iDoctor/blob/cf14d9814ab6d8c96725a6fd0ea52769224446ac/app/src/main/java/com/gel/cleaner/IPhoneLabsActivity.java), [ApplePanicEvidencePolicy.java](https://github.com/gdiolitsis/GEL_iDoctor/blob/cf14d9814ab6d8c96725a6fd0ea52769224446ac/app/src/main/java/com/gel/cleaner/ApplePanicEvidencePolicy.java), [IPSPanicParser.java](https://github.com/gdiolitsis/GEL_iDoctor/blob/cf14d9814ab6d8c96725a6fd0ea52769224446ac/app/src/main/java/com/gel/cleaner/IPSPanicParser.java), [ips_panic_patterns.json](https://github.com/gdiolitsis/GEL_iDoctor/blob/cf14d9814ab6d8c96725a6fd0ea52769224446ac/app/src/main/assets/ips_panic_patterns.json), [service report source](https://github.com/gdiolitsis/GEL_iDoctor/blob/cf14d9814ab6d8c96725a6fd0ea52769224446ac/app/src/main/java/com/gel/cleaner/ServiceReportActivity.java).
 
@@ -77,3 +77,11 @@ This log records **only observations attributable to this v54 candidate**; obser
 6. **Privacy:** Keep user-provided screenshots/reports in chat; do not silently publish them to a public repository.
 
 **This document is an acceptance register, not a claim that v54 is QA-complete.**
+
+### Final status of original emulator attempt 43507250439 (updated)
+
+- Android 16 / English: **FAIL** (Apple UI audit: `apple-demo-ui`); main UI tests had no detected app crash.
+- Android 11 / English: **FAIL** (Apple UI audit: `enter-apple-mode`); main UI tests had no detected app crash.
+- Android 11 / Greek: **CANCELLED** (no valid final verdict).
+- Android 16 / Greek: **CANCELLED** (no valid final verdict).
+- The build-and-sign job: **PASS**. **The combined emulator matrix did NOT PASS.** Neither English audit failure is yet proven to be a real-device UI bug; inspect navigation/automation evidence before deciding. Do not treat canceled Greek runs as success.
