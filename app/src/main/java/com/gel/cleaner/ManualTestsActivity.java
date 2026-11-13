@@ -30042,9 +30042,8 @@ private void lab27PermissionsPrivacy() {
 
     PackageManager pm = getPackageManager();
     if (pm == null) {
-        logError(gr
-                ? "Το PackageManager δεν είναι διαθέσιμο."
-                : "PackageManager not available.");
+        logInfo(gr ? "Το PackageManager δεν είναι διαθέσιμο — δεν έγινε απογραφή."
+                   : "PackageManager unavailable — inventory not performed.");
         return;
     }
 
@@ -30056,6 +30055,8 @@ private void lab27PermissionsPrivacy() {
 
     int riskTotal = 0;
     int dangTotal = 0;
+    boolean grantFlagsIncomplete = false;
+    boolean visibilityIncomplete = false;
 
     try {
 
@@ -30097,6 +30098,9 @@ private void lab27PermissionsPrivacy() {
             int[] grant = p.requestedPermissionsFlags;
 
             if (req == null || req.length == 0) continue;
+            if (grant == null || grant.length < req.length) {
+                grantFlagsIncomplete = true; // Missing flags cannot be treated as denied.
+            }
 
             int appScore = 0;
             int appDangerCount = 0;
@@ -30138,7 +30142,7 @@ private void lab27PermissionsPrivacy() {
 
                     details.add(
                             appLabel + " (" + pkg + ")" +
-                            (gr ? " — Κίνδυνος=" : " — Risk=") +
+                            (gr ? " — Ενδεικτικό βάρος αδειών=" : " — Indicative permission weight=") +
                             appScore + "\n" + sb.toString()
                     );
                 }
@@ -30146,14 +30150,16 @@ private void lab27PermissionsPrivacy() {
         }
 
     } catch (SecurityException se) {
+        visibilityIncomplete = true;
 
-        logWarn(gr
+        logInfo(gr
                 ? "Η σάρωση περιορίστηκε από την πολιτική ορατότητας πακέτων Android."
                 : "Permissions scan limited by Android package visibility policy.");
 
     } catch (Exception e) {
+        visibilityIncomplete = true;
 
-        logError(gr
+        logInfo(gr
                 ? "Σφάλμα σάρωσης αδειών: " + e.getMessage()
                 : "Permissions scan error: " + e.getMessage());
     }
@@ -30161,88 +30167,46 @@ private void lab27PermissionsPrivacy() {
     // ============================================================
     // SUMMARY
     // ============================================================
-    int maxRiskRef = 300;
-    int riskPct = Math.min(100, (riskTotal * 100) / maxRiskRef);
+    // Historical permission weights are an *ordering heuristic*, not a
+    // calibrated probability of abuse or a whole-device privacy percentage.
 
 appendHtml("<br>");
     logInfo(gr ? "Σύνοψη Σάρωσης" : "Scan Summary");
     logLine();
 
-    logLabelOkValue(
-            gr ? "Εφαρμογές που ελέγχθηκαν" : "Apps scanned",
+    logLabelValue(
+            gr ? "Ορατές εφαρμογές που απογράφηκαν" : "Visible apps inventoried",
             String.valueOf(totalApps)
     );
 
-    if (dangTotal == 0) {
-        logLabelOkValue(
-                gr ? "Επικίνδυνες άδειες (χορηγημένες)" : "Dangerous permissions granted",
-                String.valueOf(dangTotal)
-        );
-    } else if (dangTotal <= 5) {
-        logLabelWarnValue(
-                gr ? "Επικίνδυνες άδειες (χορηγημένες)" : "Dangerous permissions granted",
-                String.valueOf(dangTotal)
-        );
-    } else {
-        logLabelErrorValue(
-                gr ? "Επικίνδυνες άδειες (χορηγημένες)" : "Dangerous permissions granted",
-                String.valueOf(dangTotal)
-        );
+    logLabelValue(
+            gr ? "Επιλεγμένες χορηγημένες άδειες (ορατών εφαρμογών)"
+               : "Selected granted permissions (visible apps)",
+            String.valueOf(dangTotal)
+    );
+    logLabelValue(
+            gr ? "Εφαρμογές με αυξημένο βάρος αδειών" : "Apps with higher permission weight",
+            String.valueOf(flaggedApps)
+    );
+    if (grantFlagsIncomplete || visibilityIncomplete) {
+        logInfo(gr ? "Κάλυψη: μερική. Ελλιπείς ενδείξεις αδειών ή περιορισμένη ορατότητα."
+                   : "Coverage: partial. Permission flags or package visibility incomplete.");
     }
-
-    if (flaggedApps == 0) {
-        logLabelOkValue(
-                gr ? "Εφαρμογές με αυξημένο ρίσκο" : "Flagged apps",
-                String.valueOf(flaggedApps)
-        );
-    } else if (flaggedApps <= 2) {
-        logLabelWarnValue(
-                gr ? "Εφαρμογές με αυξημένο ρίσκο" : "Flagged apps",
-                String.valueOf(flaggedApps)
-        );
-    } else {
-        logLabelErrorValue(
-                gr ? "Εφαρμογές με αυξημένο ρίσκο" : "Flagged apps",
-                String.valueOf(flaggedApps)
-        );
-    }
+    logInfo(gr ? "Η απογραφή εξαιρεί εφαρμογές συστήματος και εφαρμογές που δεν εμφανίζονται στο Android."
+               : "System apps and packages not visible to Android package queries are outside this inventory.");
 
     // ============================================================
-    // PRIVACY RISK SCORE
+    // PERMISSION WEIGHT — HEURISTIC, NOT PRIVACY PROBABILITY
     // ============================================================
-    logInfo(gr
-        ? "Δείκτης Ρίσκου Ιδιωτικότητας"
-        : "Privacy risk score");
-
-String riskLabel;
-
-if (riskPct >= 70) {
-
-    riskLabel = gr ? "Υψηλό" : "High";
-
-    logLabelErrorValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + riskPct + ")"
+    logInfo(gr ? "Προέλευση κατάταξης αδειών" : "Permission ranking provenance");
+    logLabelValue(
+            gr ? "Σύνολο εσωτερικών βαρών αδειών" : "Sum of internal permission weights",
+            String.valueOf(riskTotal)
     );
-
-} else if (riskPct >= 30) {
-
-    riskLabel = gr ? "Μέτριο" : "Moderate";
-
-    logLabelWarnValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + riskPct + ")"
-    );
-
-} else {
-
-    riskLabel = gr ? "Χαμηλό" : "Low";
-
-    logLabelOkValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + riskPct + ")"
-    );
-}
+    logInfo(gr ? "Το βάρος προκύπτει από την παρουσία χορηγημένων αδειών. "
+                 + "Δεν μετρήθηκε χρήση αδειών, κακόβουλη συμπεριφορά ή κίνδυνος σε ποσοστό."
+               : "Weights reflect granted permission presence. "
+                 + "Permission use, malicious behavior and percentage risk were not measured.");
 
     // ============================================================
     // TOP OFFENDERS
@@ -30251,8 +30215,8 @@ if (riskPct >= 70) {
 
         appendHtml("<br>");
         logInfo(gr
-                ? "Εφαρμογές με τον υψηλότερο δείκτη ρίσκου"
-                : "Top privacy offenders");
+                ? "Εφαρμογές με μεγαλύτερο ενδεικτικό βάρος αδειών"
+                : "Highest indicative permission weights");
                  logLine();
 
         appRisk.entrySet()
@@ -30264,12 +30228,11 @@ if (riskPct >= 70) {
                     String label = safeLabel(pm, e.getKey());
                     String riskVal = String.valueOf(e.getValue());
 
-                    if (e.getValue() >= 60) {
-                        logLabelErrorValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
-                    } else if (e.getValue() >= 30) {
+                    logLabelValue(label,
+                            (gr ? "Βάρος αδειών " : "Permission weight ") + riskVal); else if (e.getValue() >= 30) {
                         logLabelWarnValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
                     } else {
-                        logLabelOkValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
+                        logLabelValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
                     }
                 });
     }
@@ -30281,17 +30244,17 @@ if (riskPct >= 70) {
 
         appendHtml("<br>");
         logInfo(gr
-                ? "Αναλυτικές Πληροφορίες (Εφαρμογές με ρίσκο)"
-                : "Permission details (flagged apps)");
+                ? "Αναλυτικές πληροφορίες χορηγημένων αδειών"
+                : "Selected granted permission details");
                 logLine();
 
         for (String d : details) {
-            logLabelWarnValue(gr ? "Εύρημα" : "Finding", d.trim());
+            logLabelValue(gr ? "Καταγραφή αδειών" : "Permission record", d.trim());
         }
 
     } else {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Συνδυασμοί αδειών" : "Permission patterns",
                 gr
                         ? "Δεν εντοπίστηκαν συνδυασμοί υψηλού ρίσκου"
@@ -30306,14 +30269,14 @@ if (riskPct >= 70) {
     logInfo(gr ? "Σημείωση Ανάλυσης Ιδιωτικότητας" : "Privacy Analysis Note");
     logLine();
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Διευκρίνιση" : "Clarification",
             gr
                     ? "Η χορήγηση αδειών δεν σημαίνει κακόβουλη συμπεριφορά."
                     : "Granted permissions do not imply malicious behavior."
     );
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Πεδίο Ανάλυσης" : "Scope",
             gr
                     ? "Το αποτέλεσμα ΔΕΝ υποδεικνύει βλάβη υλικού ή συστήματος."
@@ -30321,7 +30284,8 @@ if (riskPct >= 70) {
     );
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 27 ολοκληρώθηκε." : "Lab 27 finished.");
+    logInfo(gr ? "Το Lab 27 ολοκλήρωσε την απογραφή των διαθέσιμων αδειών."
+           : "Lab 27 inventoried accessible permission information.");
     logLine();
 }
 
