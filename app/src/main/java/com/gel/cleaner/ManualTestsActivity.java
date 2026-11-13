@@ -5300,7 +5300,8 @@ private void showUsageAccessDialog() {
     Button continueBtn = new com.gel.cleaner.GelButton(this);
     continueBtn.setText(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE");
     continueBtn.setAllCaps(false);
-    continueBtn.setTextColor(Color.WHITE);
+    // High-luminance green needs dark lettering (contrast > 12:1).
+    continueBtn.setTextColor(Color.BLACK);
     continueBtn.setTextSize(16f);
     continueBtn.setTypeface(null, Typeface.BOLD);
     continueBtn.setLayoutParams(btnLp);
@@ -5309,6 +5310,8 @@ private void showUsageAccessDialog() {
     contBg.setColor(0xFF00E676);
     contBg.setCornerRadius(dp(10));
     contBg.setStroke(dp(3), 0xFFFFD700);
+    ((com.gel.cleaner.GelButton) continueBtn).setSupportBackgroundTintList(null);
+    continueBtn.setBackgroundTintList(null);
     continueBtn.setBackground(contBg);
 
     Button skipBtn = new com.gel.cleaner.GelButton(this);
@@ -5323,6 +5326,8 @@ private void showUsageAccessDialog() {
     skipBg.setColor(0xFFC62828);
     skipBg.setCornerRadius(dp(10));
     skipBg.setStroke(dp(3), 0xFFFFD700);
+    ((com.gel.cleaner.GelButton) skipBtn).setSupportBackgroundTintList(null);
+    skipBtn.setBackgroundTintList(null);
     skipBtn.setBackground(skipBg);
 
     btnRow.addView(skipBtn);
