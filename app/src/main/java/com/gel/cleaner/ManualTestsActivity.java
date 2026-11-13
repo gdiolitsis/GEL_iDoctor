@@ -4825,8 +4825,8 @@ int pctFree = (int) ((free * 100L) / total);
 private static class MemSnapshot {
     long memFreeKb;
     long cachedKb;
-    long swapTotalKb;
-    long swapFreeKb;
+    long swapTotalKb = -1L; // missing source != zero swap
+    long swapFreeKb = -1L;
 }
 
 // ------------------------------------------------------------
@@ -27253,10 +27253,8 @@ private void lab19RamSnapshot() {
                            : "Low-level /proc/meminfo readings unavailable.");
             } else {
 
-            long swapUsedKb = 0;
-            if (snap.swapTotalKb > 0 && snap.swapFreeKb >= 0) {
-                swapUsedKb = Math.max(0, snap.swapTotalKb - snap.swapFreeKb);
-            }
+            long swapUsedKb = RamEvidencePolicy.observedSwapUsedKb(
+                    snap.swapTotalKb, snap.swapFreeKb);
 
             String pressureLevel =
                     pressureLevel(
@@ -27268,8 +27266,9 @@ private void lab19RamSnapshot() {
             String pressureHuman =
                     humanPressureLabel(pressureLevel);
 
-            String zramDep =
-                    zramDependency(swapUsedKb, total);
+            String zramDep = swapUsedKb >= 0
+                    ? zramDependency(swapUsedKb, total)
+                    : null;
 
             appendHtml("<br>");
             logInfo(gr
@@ -27282,10 +27281,16 @@ private void lab19RamSnapshot() {
                     pressureHuman
             );
 
-            logLabelValue(
-                    "ZRAM / Swap dependency",
-                    zramDep
-            );
+            if (zramDep != null) {
+                logLabelValue(
+                        gr ? "Αναλογία Swap προς RAM (ενδεικτική)"
+                           : "Swap-to-RAM ratio (heuristic)",
+                        zramDep
+                );
+            } else {
+                logInfo(gr ? "Χρήση Swap: δεν διαβάστηκαν συγκρίσιμες τιμές SwapTotal/SwapFree"
+                           : "Swap usage: comparable SwapTotal/SwapFree readings unavailable");
+            }
 
             if (swapUsedKb > 0) {
                 logLabelValue(
