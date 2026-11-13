@@ -4297,6 +4297,12 @@ private void showLab15ConditionCheck(Runnable startAction) {
     cancel.setLayoutParams(lp);
     go.setLayoutParams(lp);
 
+    // Suppress theme-level tint overriding semantic dark-red/green action colors.
+    ((com.gel.cleaner.GelButton) cancel).setSupportBackgroundTintList(null);
+    cancel.setBackgroundTintList(null);
+    ((com.gel.cleaner.GelButton) go).setSupportBackgroundTintList(null);
+    go.setBackgroundTintList(null);
+
     row.addView(cancel);
 
     if (ok)
@@ -4684,7 +4690,11 @@ private Button makeTestButtonGreenGold(String text, Runnable action) {
 Button btn = new com.gel.cleaner.GelButton(this);
 btn.setText(text);  
 btn.setAllCaps(false);  
-btn.setTextColor(0xFF8B0000); // Red text  
+// Keep the original dark-red label on active green, but make disabled text readable.
+btn.setTextColor(new ColorStateList(
+        new int[][]{{-android.R.attr.state_enabled}, {}},
+        new int[]{Color.WHITE, 0xFF8B0000}
+));  
 btn.setTextSize(15f);  
 btn.setTypeface(null, Typeface.BOLD);  
 btn.setElevation(dp(3)); // premium shadow  
@@ -4728,6 +4738,8 @@ RippleDrawable ripple = new RippleDrawable(
         null  
 );  
 
+((com.gel.cleaner.GelButton) btn).setSupportBackgroundTintList(null);
+btn.setBackgroundTintList(null);
 btn.setBackground(ripple);  
 
 LinearLayout.LayoutParams lp =  
@@ -5448,9 +5460,11 @@ private void showLab28Popup() {
         okBtn.setTextSize(15f);
 
         GradientDrawable okBg = new GradientDrawable();
-        okBg.setColor(0xFF0F8A3B);
+        okBg.setColor(0xFF0B5D1E); // Dark green, readable white OK label.
         okBg.setCornerRadius(dp(10));
         okBg.setStroke(dp(3), 0xFFFFD700);
+        ((com.gel.cleaner.GelButton) okBtn).setSupportBackgroundTintList(null);
+        okBtn.setBackgroundTintList(null);
         okBtn.setBackground(okBg);
 
         LinearLayout.LayoutParams lpOk =
@@ -25048,6 +25062,8 @@ GradientDrawable exitBg = new GradientDrawable();
 exitBg.setColor(0xFF8B0000);          // dark red
 exitBg.setCornerRadius(dp(10));
 exitBg.setStroke(dp(3), 0xFFFFD700);  // gold border
+((com.gel.cleaner.GelButton) exitBtn).setSupportBackgroundTintList(null);
+exitBtn.setBackgroundTintList(null);
 exitBtn.setBackground(exitBg);
 
 LinearLayout.LayoutParams lpExit =
