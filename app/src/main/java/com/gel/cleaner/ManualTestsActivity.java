@@ -21847,6 +21847,7 @@ synchronized (lab14Lock) {
 
             lab14Running = false;
             isLab14BMode = false;
+            isLab14GamaMode = false;
             return;
         }
 
@@ -22461,9 +22462,11 @@ if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
         tempRise = 0f;
     }
 
-    // 🔴 extra safety: unrealistic jump protection
+    // Never truncate a potentially important thermal rise to 15°C.
+    // Retain the observed magnitude and request verification if unusually large.
     if (tempRise > 15f) {
-        tempRise = 15f;
+        logWarn(gr ? "Ασυνήθιστα μεγάλη άνοδος θερμοκρασίας — διακόψτε το φορτίο και ελέγξτε την πηγή"
+                   : "Unusually large thermal rise — stop the load and verify the source");
     }
 }
 
@@ -22472,16 +22475,12 @@ if (!Float.isNaN(startTemp[0]) && !Float.isNaN(endTemp[0])) {
 // ------------------------
 if (!Float.isNaN(startVolt[0]) && !Float.isNaN(endVolt[0])) {
 
-    voltDrop = Math.abs(startVolt[0] - endVolt[0]);
+    // Signed change: voltage can also increase between snapshots.
+    voltDrop = startVolt[0] - endVolt[0];
 
-    // ignore ADC / rounding noise
-    if (voltDrop < 0.005f) {
+    // ignore ADC / rounding noise but do not invent a sag on a voltage rise
+    if (Math.abs(voltDrop) < 0.005f) {
         voltDrop = 0f;
-    }
-
-    // 🔴 clamp unrealistic spikes
-    if (voltDrop > 0.5f) {
-        voltDrop = 0.5f;
     }
 }
 
@@ -22557,8 +22556,8 @@ if (!Float.isNaN(tempRise)) {
 // 🔴 VOLTAGE
 if (!Float.isNaN(voltDrop)) {
     logLabelValue(
-            gr ? "Πτώση τάσης" : "Voltage drop",
-            String.format(Locale.US, "%.3f V", voltDrop)
+            gr ? "Μεταβολή τάσης (+πτώση/-άνοδος)" : "Voltage change (+drop/-rise)",
+            String.format(Locale.US, "%+.3f V", voltDrop)
     );
 }
 
@@ -22742,9 +22741,9 @@ if (!isLab14GamaMode) {
 // ------------------------------------------------
 appendHtml("<br>");
 
-logOk(gr
-        ? "Συμπέρασμα απόδοσης μπαταρίας"
-        : "Battery performance verdict");
+logInfo(gr
+        ? "Πειραματικός δείκτης κατανάλωσης Ω — όχι αξιολόγηση υγείας μπαταρίας"
+        : "Experimental consumption index Ω — not a battery-health verdict");
 
 logLine();
 
@@ -22760,7 +22759,7 @@ float screenFactor = screen / 6.5f;
 screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
 
 // 🔴 FIXED DAILY BASELINE (NO GAMING LOGIC)
-float referencePerHour = 500f;
+float referencePerHour = 500f; // synthetic scenario constant, not device-specific evidence
 
 // 🔴 base expected
 float expectedPerHour =
@@ -22879,6 +22878,8 @@ logLabelValue(
 String verdict;
 String humanVerdict;
 String proPrompt = null;
+logInfo(gr ? "Σημείο αναφοράς 500 mAh/h (μοντέλο, όχι εργοστασιακή προδιαγραφή)"
+           : "Reference 500 mAh/h (model assumption, not an OEM specification)");
 
 // ------------------------------------------------------------
 // 🔴 PERFORMANCE ZONES
@@ -22971,8 +22972,8 @@ logLabelValue(
 
 // 🔴 Real consumption
 logLabelValue(
-        gr ? "Πραγματική κατανάλωση"
-           : "Actual consumption",
+        gr ? "Εκτιμώμενος ρυθμός κατανάλωσης"
+           : "Estimated consumption rate",
         Float.isNaN(correctedPerHour) ? (gr ? "Μ/Δ" : "N/A")
                 : String.format(Locale.US, "%.0f mAh/h", correctedPerHour)
 );
@@ -23007,7 +23008,7 @@ if (Float.isNaN(omega)) {
 
 if (proPrompt != null && !proPrompt.isEmpty()) {
     appendHtml("<br>");
-    logOk(proPrompt);
+    logInfo(proPrompt);
     }
 
 appendHtml("<br>");
@@ -23031,7 +23032,7 @@ if (omega < 0.85f) {
         batteryIssue = true;
     }
 
-} else {
+} else if (!Float.isNaN(omega)) {
 
     if (loadScore >= 1.4f) {
         systemIssue = true;
@@ -23046,33 +23047,33 @@ if (omega < 0.85f && loadScore >= 1.4f) {
 // 🔴 OUTPUT
 if (batteryIssue && systemIssue) {
 
-    logWarn(gr
-            ? "Συνδυασμένο πρόβλημα: μπαταρία και σύστημα"
-            : "Combined issue: battery and system");
+    logLabelValue(gr ? "Μοντέλο Ω" : "Ω model",
+            gr ? "Υψηλή εκτιμώμενη κατανάλωση και φόρτος — όχι απόδειξη βλάβης"
+               : "High estimated consumption and load — not evidence of a fault");
 
-    logWarn(gr
-            ? "Η απόδοση είναι χαμηλή και το σύστημα λειτουργεί με υψηλό φορτίο"
-            : "Performance is low and system operates under high load");
+    logLabelValue(gr ? "Ερμηνεία" : "Interpretation",
+            gr ? "Η απόκλιση στο μοντέλο μπορεί να οφείλεται και στη χρήση/θερμοκρασία"
+               : "Model deviation may also reflect usage or temperature");
 
 } else if (batteryIssue) {
 
-    logWarn(gr
-            ? "Μειωμένη απόδοση μπαταρίας"
-            : "Reduced battery performance");
+    logLabelValue(gr ? "Μοντέλο Ω" : "Ω model",
+            gr ? "Απόκλιση από το υποθετικό σημείο αναφοράς — η υγεία μπαταρίας δεν μετρήθηκε"
+               : "Deviation from synthetic reference — battery health not measured");
 
-    logWarn(gr
-            ? "Η κατανάλωση είναι αυξημένη χωρίς έντονο φορτίο συστήματος"
-            : "Power consumption is high without heavy system load");
+    logLabelValue(gr ? "Ερμηνεία" : "Interpretation",
+            gr ? "Επαναλάβετε στις ίδιες συνθήκες· δεν αποδεικνύεται φθορά μπαταρίας"
+               : "Repeat under comparable conditions; battery wear is not proven");
 
 } else if (systemIssue) {
 
-    logWarn(gr
-            ? "Αυξημένη κατανάλωση συστήματος"
-            : "High system consumption detected");
+    logLabelValue(gr ? "Πιθανός φόρτος" : "Possible system load",
+            gr ? "Υψηλή τιμή στο μοντέλο, χωρίς αιτιώδη πιστοποίηση"
+               : "High model indicator without causal validation");
 
-    logWarn(gr
-            ? "Η μπαταρία αποδίδει κανονικά αλλά το σύστημα καταναλώνει περισσότερη ενέργεια"
-            : "Battery performs normally but system consumes more power");
+    logLabelValue(gr ? "Ερμηνεία" : "Interpretation",
+            gr ? "Παρατηρήθηκε φόρτος μοντέλου· δεν αποδείχθηκε η κατάσταση της μπαταρίας"
+               : "Model load observed; battery condition was not established");
 
 } else {
 
