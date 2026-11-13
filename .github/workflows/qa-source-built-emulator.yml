@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build-candidate:
-    if: ${{ startsWith(github.head_ref, 'qa/integration-') && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ (startsWith(github.head_ref, 'qa/integration-') || startsWith(github.head_ref, 'qa/gel31-surgical-rebuild-')) && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
