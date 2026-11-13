@@ -29320,7 +29320,7 @@ private void lab25CrashHistory() {
             : "LAB 25 — Available crash / ANR evidence");
     logLine();
 
-    logLabelWarnValue(gr ? "Κάλυψη" : "Coverage", gr
+    logLabelValue(gr ? "Κάλυψη" : "Coverage", gr
             ? "Το Android περιορίζει την πρόσβαση. Ο έλεγχος δεν αποτελεί πλήρες ιστορικό όλων των εφαρμογών ή πιστοποίηση σταθερότητας."
             : "Android restricts access. This is not a complete history of all apps or a stability certification.");
 
@@ -29340,7 +29340,7 @@ private void lab25CrashHistory() {
                 ? "Τρέχον στιγμιότυπο: " + visible + " ορατές εγγραφές. Η πρόσβαση μπορεί να περιορίζεται στο iDoctor· δεν είναι ιστορικό της συσκευής."
                 : "Current snapshot: " + visible + " visible records. Access may be limited to iDoctor; this is not device history.");
     } catch (RuntimeException unavailable) {
-        logLabelWarnValue(gr ? "Τρέχον στιγμιότυπο" : "Current snapshot",
+        logLabelValue(gr ? "Τρέχον στιγμιότυπο" : "Current snapshot",
                 gr ? "Μη διαθέσιμα δεδομένα." : "Data unavailable.");
     }
 
@@ -29399,25 +29399,25 @@ private void lab25CrashHistory() {
                 : "Crash events in available records: " + crashes);
         logInfo("ANR: " + anrs);
         logInfo(gr ? "Συμβάντα συστήματος: " + system : "System events: " + system);
-        logLabelWarnValue(gr ? "Περιορισμός" : "Limitation", gr
+        logLabelValue(gr ? "Περιορισμός" : "Limitation", gr
                 ? "Οι καταγραφές μπορεί να έχουν διαγραφεί ή να μην τηρούνται από τον κατασκευαστή. Μηδενικές καταγραφές δεν αποδεικνύουν απουσία crash."
                 : "Records may have been removed or not retained by the manufacturer. Zero records do not prove absence of crashes.");
     } else {
-        logLabelWarnValue(gr ? "Σύνοψη ιστορικού" : "History summary", unavailable);
+        logLabelValue(gr ? "Σύνοψη ιστορικού" : "History summary", unavailable);
         if (!records.isEmpty()) logInfo(gr
                 ? "Ακολουθούν μόνο οι εγγραφές που ήταν προσβάσιμες· δεν αποτελούν πλήρες σύνολο."
                 : "Only accessible records follow; these are not a complete total.");
     }
     for (String record : records)
         logLabelWarnValue(gr ? "Προσβάσιμη καταγραφή" : "Accessible record", record);
-    logLabelWarnValue(gr ? "Δείκτης κινδύνου σταθερότητας" : "Stability risk score", gr
+    logLabelValue(gr ? "Δείκτης κινδύνου σταθερότητας" : "Stability risk score", gr
             ? "Δεν υπολογίζεται: οι διαθέσιμες καταγραφές δεν επαρκούν για αξιόπιστη συνολική βαθμολογία."
             : "Not calculated: available records do not support a reliable overall score.");
 
     appendHtml("<br>");
     logInfo(gr ? "Στιγμιαία δοκιμή I/O αποθηκευτικού" : "Storage I/O spot test");
     long latency = storageLatencyProbe();
-    if (latency < 0) logLabelWarnValue(gr ? "Μέτρηση" : "Reading",
+    if (latency < 0) logLabelValue(gr ? "Μέτρηση" : "Reading",
             gr ? "Μη διαθέσιμα δεδομένα." : "Data unavailable.");
     else {
         logInfo("I/O: " + latency + " ms");
