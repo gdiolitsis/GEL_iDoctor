@@ -1881,9 +1881,9 @@ private void runPanicFrequencyLab() {
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
     if (countSupportedPanicBlocks(blocks) <= 1) {
-        logWarn(gr
-                ? "Δεν υπάρχουν πολλαπλά logs για σύγκριση."
-                : "No multiple logs detected for comparison.");
+        logInfo(gr
+                ? "Μη διαθέσιμη σύγκριση: χρειάζονται δύο αναγνωρισμένα panic blocks."
+                : "Comparison unavailable: two eligible panic blocks are required.");
         return;
     }
 
@@ -1901,14 +1901,11 @@ for (String block : blocks) {
         crashCount.put(key, crashCount.getOrDefault(key, 0) + 1);
     }
 
-    logInfo(gr ? "Συχνότητα Crash Types:" : "Crash Type Frequency:");
+    logInfo(gr ? "Πλήθος τύπων στα εισαγόμενα αρχεία:" : "Imported crash-type counts:");
 
 for (String k : crashCount.keySet()) {
 
-    logLabelOkValue(
-            safe(k),
-            String.valueOf(crashCount.get(k))
-    );
+    logInfo(safe(k) + ": " + String.valueOf(crashCount.get(k)));
 
 }
 
@@ -1935,9 +1932,9 @@ private void runPanicClusteringLab() {
 String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
 if (countSupportedPanicBlocks(blocks) <= 1) {
-    logWarn(gr
-            ? "Δεν υπάρχουν πολλαπλά logs για clustering."
-            : "No multiple logs available for clustering.");
+    logInfo(gr
+            ? "Μη διαθέσιμη ομαδοποίηση: χρειάζονται δύο αναγνωρισμένα panic blocks."
+            : "Clustering unavailable: two eligible panic blocks are required.");
     return;
 }
 
@@ -1956,26 +1953,16 @@ for (String block : blocks) {
     domainCount.put(key, domainCount.getOrDefault(key, 0) + 1);
 }
 
-    logInfo(gr ? "Συχνότητα Domain:" : "Domain Frequency:");
+    logInfo(gr ? "Πλήθος κατηγοριών όρων (όχι βλάβες):"
+               : "Keyword-category counts (not hardware failures):");
 
 for (String k : domainCount.keySet()) {
 
     int count = domainCount.get(k);
 
-    if (count >= 2) {
-
-        logLabelErrorValue(
-                safe(k) + ":",
-                String.valueOf(count)
-        );
-
-    } else {
-
-        logLabelOkValue(
-                safe(k) + ":",
-                String.valueOf(count)
-        );
-    }
+    // The same keyword category in two imported records is not a
+    // confirmed hardware fault or a positive measured device-health result.
+    logInfo(safe(k) + ": " + String.valueOf(count));
 }
 
     appendHtml("<br>");
