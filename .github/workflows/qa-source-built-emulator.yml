@@ -92,6 +92,7 @@ jobs:
           AUDIT_SCOPE: full
           AUDIT_REQUIRE_WELCOME_OK: '1'
           AUDIT_REQUIRE_ACCESSIBLE_SETTINGS: '1'
+          AUDIT_APPLE_MODE: '1'  # only executes on the final consolidated emulator run
         run: |
           set -euo pipefail
           python3 tools/ci/test_ui_audit_selectors.py
