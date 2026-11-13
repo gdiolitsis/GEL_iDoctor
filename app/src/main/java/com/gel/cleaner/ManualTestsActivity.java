@@ -27555,9 +27555,7 @@ private void lab21ScreenLock() {
 
 // GUARD — avoid double-tap spam  
 if (lab21Running) {  
-    logWarn(gr 
-        ? "Το LAB 21 εκτελείται ήδη..." 
-        : "LAB 21 is already running...");  
+    logInfo(gr ? "Το LAB 21 ήδη εκτελείται." : "LAB 21 already running.");  
     return;  
 }  
 lab21Running = true;  
@@ -27601,8 +27599,8 @@ try {
             );
             logLabelWarnValue(
                     gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Φυσική πρόσβαση με πλήρη έκθεση δεδομένων"
-                       : "Physical access with full data exposure"
+                    gr ? "Δεν υπάρχει ασφαλές κλείδωμα· δεν ελέγχθηκε η κρυπτογράφηση"
+                       : "No secure screen lock; encryption was not checked"
             );
         }
 
@@ -27624,7 +27622,7 @@ try {
         }
 
     } else {
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Υπηρεσία Keyguard" : "Keyguard",
                 gr ? "Μη διαθέσιμη υπηρεσία"
                    : "Service unavailable"
@@ -27632,7 +27630,7 @@ try {
     }
 
 } catch (Throwable e) {
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Έλεγχος κλειδώματος" : "Lock detection",
             (gr ? "Αποτυχία: " : "Failed: ") + e.getMessage()
     );
@@ -27689,7 +27687,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 
         } else {
 
-            logLabelWarnValue(
+            logLabelValue(
                     gr ? "Βιομετρικά" : "Biometrics",
                     gr ? "Μη διαθέσιμος διαχειριστής"
                        : "Manager unavailable"
@@ -27698,7 +27696,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 
     } catch (Throwable e) {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Βιομετρικά" : "Biometrics",
                 (gr ? "Αποτυχία ελέγχου: " : "Check failed: ") + e.getMessage()
         );
@@ -27769,11 +27767,11 @@ if (root) {
 
 if (secure) {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Προστασία μετά από επανεκκίνηση" 
                : "Post-reboot protection",
-            gr ? "Απαιτείται ταυτοποίηση πριν την πρόσβαση στα δεδομένα"
-               : "Authentication required before data access"
+            gr ? "Υπάρχει κλείδωμα με διαπιστευτήριο· δεν εξετάστηκε η κρυπτογράφηση"
+               : "A secure credential is configured; storage encryption was not assessed"
     );
 
 } else {
@@ -27819,7 +27817,7 @@ if (root) {
 
     } else {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Επιβολή συστήματος" 
                    : "System enforcement",
                 gr ? "Μη ξεκάθαρα σήματα (διαφοροποίηση ROM / κατασκευαστή)"
@@ -27845,7 +27843,7 @@ if (!secure) {
                : "Live biometric test:");
                logLine();
                
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Κατάσταση" : "Status",
             gr ? "Παραλείφθηκε" : "Skipped"
     );
@@ -27856,7 +27854,7 @@ if (!secure) {
     );
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
+    logInfo(gr ? "Το Lab 21 κατέγραψε την κατάσταση ελέγχου." : "Lab 21 recorded test status.");
     logLine();
     lab21Running = false;
     return;
@@ -27869,7 +27867,7 @@ if (!biometricSupported) {
                : "Live biometric test:");
                logLine();
                
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Κατάσταση" : "Status",
             gr ? "Δεν ξεκίνησε" : "Not started"
     );
@@ -27885,7 +27883,7 @@ if (!biometricSupported) {
     );
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
+    logInfo(gr ? "Το Lab 21 κατέγραψε την κατάσταση ελέγχου." : "Lab 21 recorded test status.");
     logLine();
     lab21Running = false;
     return;
@@ -27900,15 +27898,15 @@ if (Build.VERSION.SDK_INT >= 28) {
                    : "LIVE SENSOR TEST");
                    logLine();
                    
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Οδηγία" : "Instruction",
                 gr ? "Τοποθετήστε δάχτυλο / πρόσωπο για ταυτοποίηση ΤΩΡΑ"
                    : "Place finger / face for authentication NOW"
         );
         logLabelOkValue(
                 gr ? "Αποτέλεσμα" : "Result",
-                gr ? "Θα καταγραφεί PASS / FAIL (πραγματικός έλεγχος υλικού)"
-                   : "PASS / FAIL will be recorded (real hardware)"
+                gr ? "Θα ελεγχθεί ένα μονοπάτι ταυτοποίησης, όχι η πλήρης υγεία των αισθητήρων"
+                   : "Only one biometric authentication path will be observed, not full hardware health"
         );
 
         Executor executor = getMainExecutor();
@@ -27920,6 +27918,7 @@ if (Build.VERSION.SDK_INT >= 28) {
                     @Override
                     public void onAuthenticationSucceeded(
                             android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
+                        if (!lab21Running) return;
 
                         appendHtml("<br>");
                         logInfo(gr ? "ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΒΙΟΜΕΤΡΙΚΟΥ"
@@ -27937,7 +27936,7 @@ if (Build.VERSION.SDK_INT >= 28) {
                         );
 appendHtml("<br>");
 
-                        logOk(gr ? "Συσκευές με πολλαπλά βιομετρικά"
+                        logInfo(gr ? "Περιορισμός πολλαπλών βιομετρικών"
                                    : "Multi-biometric devices");
                                    logLine();
                                    
@@ -27948,8 +27947,8 @@ appendHtml("<br>");
                         );
                         logLabelOkValue(
                                 gr ? "Ενέργεια" : "Action",
-                                gr ? "Απενεργοποιήστε το τρέχον βιομετρικό και επανεκτελέστε το LAB 21"
-                                   : "Disable current biometric in Settings and re-run LAB 21"
+                                gr ? "Για άλλο βιομετρικό μονοπάτι, χρησιμοποιήστε τις ρυθμίσεις ασφαλείας Android"
+                                   : "Use Android biometric settings to investigate another modality"
                         );
                         logLabelWarnValue(
                                 gr ? "Σημείωση OEM" : "OEM note",
@@ -27958,13 +27957,14 @@ appendHtml("<br>");
                         );
 
                         appendHtml("<br>");
-                        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
+                        logInfo(gr ? "Το Lab 21 κατέγραψε την κατάσταση ελέγχου." : "Lab 21 recorded test status.");
                         logLine();
                         lab21Running = false;
                     }
 
                     @Override
                     public void onAuthenticationFailed() {
+                        if (!lab21Running) return;
                         // Non-match is retryable; native BiometricPrompt stays open.
                         logInfo(gr ? "Μη ταύτιση δείγματος — δοκιμάστε ξανά."
                                    : "Sample not matched — retry within the same prompt.");
@@ -27972,6 +27972,7 @@ appendHtml("<br>");
 
                                         @Override
                     public void onAuthenticationError(int errorCode, CharSequence errString) {
+                        if (!lab21Running) return;
                         // Cancellation, timeouts and OS errors do not prove sensor failure.
                         logInfo((gr ? "Βιομετρική προτροπή μη ολοκληρωμένη (κωδικός "
                                     : "Biometric prompt not completed (code ")
@@ -28028,17 +28029,17 @@ appendHtml("<br>");
         logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
                    : "Live biometric test");
                    logLine();
-        logLabelErrorValue(
+        logLabelValue(
                 gr ? "Κατάσταση" : "Status",
                 gr ? "Αποτυχία" : "Failed"
         );
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Λόγος" : "Reason",
                 (gr ? "Σφάλμα προτροπής βιομετρικών: " : "Biometric prompt error: ") + e.getMessage()
         );
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
+        logInfo(gr ? "Το Lab 21 κατέγραψε την κατάσταση ελέγχου." : "Lab 21 recorded test status.");
         logLine();
         lab21Running = false;
     }
@@ -28050,18 +28051,18 @@ appendHtml("<br>");
                : "Live biometric test:");
                logLine();
                
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Κατάσταση" : "Status",
             gr ? "Δεν υποστηρίζεται"
                : "Not supported"
     );
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Λόγος" : "Reason",
             gr ? "Το BiometricPrompt framework δεν υποστηρίζεται σε αυτήν την έκδοση Android"
                : "BiometricPrompt framework not available on this Android version"
     );
 
-            logLabelWarnValue(
+            logLabelValue(
         gr ? "Απαιτούμενη ενέργεια" : "Action required",
         gr
                 ? "Ελέγξτε τα βιομετρικά από τις ρυθμίσεις συστήματος κλειδώματος οθόνης και επανεκτελέστε το LAB 21"
@@ -28069,7 +28070,7 @@ appendHtml("<br>");
 );
 
     logInfo("Note");
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Κάλυψη" : "Coverage",
             gr ? "Κάθε εκτέλεση του LAB 21 ελέγχει ΕΝΑ βιομετρικό μονοπάτι"
                : "Each LAB 21 run verifies ONE biometric sensor path"
@@ -28081,7 +28082,7 @@ appendHtml("<br>");
     );
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 21 ολοκληρώθηκε." : "Lab 21 finished.");
+    logInfo(gr ? "Το Lab 21 κατέγραψε την κατάσταση ελέγχου." : "Lab 21 recorded test status.");
     logLine();
     lab21Running = false;
 }
