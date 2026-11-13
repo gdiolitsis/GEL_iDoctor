@@ -12088,16 +12088,16 @@ private void lab13BluetoothConnectivityCheck() {
     try { enabled = ba.isEnabled(); } catch (Throwable ignore) {}
 
     if (!enabled) {
-        logError(gr
+        logWarn(gr
                 ? "Το Bluetooth είναι ΚΛΕΙΣΤΟ. Ενεργοποίησέ το και ξαναδοκίμασε."
                 : "Bluetooth is OFF. Please enable Bluetooth and retry.");
         logLine();
         return;
     }
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Κατάσταση Bluetooth" : "Bluetooth State",
-            gr ? "ΕΝΕΡΓΟ" : "ENABLED"
+            gr ? "ΕΝΕΡΓΟ (κατά Android)" : "ENABLED (Android reported)"
     );
 
     // RESET STATE
@@ -12233,6 +12233,14 @@ buttons.addView(cont);
         );
     }
 
+    final boolean[] gateActionChosen = {false};
+    gate.setOnCancelListener(dialog -> {
+        if (!gateActionChosen[0]) {
+            logLabelValue(gr ? "Εξωτερική συσκευή" : "External device",
+                    gr ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — ακύρωση" : "NOT TESTED — canceled");
+            enableSingleExportButton();
+        }
+    });
     gate.setOnDismissListener(dialog -> {
         try { AppTTS.stop(); } catch (Throwable ignore) {}
     });
@@ -12248,6 +12256,7 @@ buttons.addView(cont);
     // ACTIONS
     // ---------------------------
     skip.setOnClickListener(v -> {
+        gateActionChosen[0] = true;
         AppTTS.stop();
         lab13SkipExternalTest = true;
         gate.dismiss();
@@ -12255,6 +12264,7 @@ buttons.addView(cont);
     });
 
     cont.setOnClickListener(v -> {
+        gateActionChosen[0] = true;
         AppTTS.stop();
         lab13SkipExternalTest = false;
         gate.dismiss();
@@ -12283,7 +12293,7 @@ private void runLab13BluetoothCheckCore() {
         logLine();
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
+        logInfo(gr ? "Το Lab 13 κατέγραψε τα διαθέσιμα στοιχεία." : "Lab 13 recorded available evidence.");
         logLine();
         enableSingleExportButton();
         return;
@@ -12297,13 +12307,13 @@ private void runLab13BluetoothCheckCore() {
         logLine();
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
+        logInfo(gr ? "Το Lab 13 κατέγραψε τα διαθέσιμα στοιχεία." : "Lab 13 recorded available evidence.");
         logLine();
         enableSingleExportButton();
         return;
     }
 
-    logOk(gr ? "Το Bluetooth υποστηρίζεται." : "Bluetooth supported.");
+    logInfo(gr ? "Το Bluetooth δηλώνεται ως υποστηριζόμενο." : "Bluetooth is reported as supported.");
 
     boolean enabled = false;
     try { enabled = lab13Ba.isEnabled(); } catch (Throwable ignore) {}
@@ -12349,7 +12359,7 @@ private void runLab13BluetoothCheckCore() {
         logLine();
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
+        logInfo(gr ? "Το Lab 13 κατέγραψε τα διαθέσιμα στοιχεία." : "Lab 13 recorded available evidence.");
         logLine();
         enableSingleExportButton();
         return;
@@ -12361,15 +12371,11 @@ private void runLab13BluetoothCheckCore() {
 
         if (bonded == null || bonded.isEmpty()) {
 
-            logWarn(gr
-                    ? "Συζευγμένες συσκευές Bluetooth: 0 (δεν βρέθηκαν)."
-                    : "Paired Bluetooth devices: 0 (no paired devices found).");
+            logLabelValue(gr ? "Συζευγμένες συσκευές" : "Paired devices", "0");
 
         } else {
 
-            logOk(gr
-                    ? "Βρέθηκαν Συζευγμένες συσκευές Bluetooth: " + bonded.size()
-                    : "Paired Bluetooth devices detected: " + bonded.size());
+            logLabelValue(gr ? "Συζευγμένες συσκευές" : "Paired devices", String.valueOf(bonded.size()));
 
             for (BluetoothDevice d : bonded) {
 
@@ -12396,7 +12402,8 @@ private void runLab13BluetoothCheckCore() {
                     } catch (Throwable ignore) {}
                 }
 
-                logInfo("• " + name + " [" + typeStr + "] (" + addr + ")");
+                // Paired-device identifiers are not exported to reports or logs.
+                logInfo((gr ? "• Τύπος συζευγμένης συσκευής: " : "• Paired-device type: ") + typeStr);
             }
         }
 
@@ -12424,7 +12431,7 @@ private void runLab13BluetoothCheckCore() {
                   + "External device connection stability was not verified.");
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
+        logInfo(gr ? "Το Lab 13 κατέγραψε τα διαθέσιμα στοιχεία." : "Lab 13 recorded available evidence.");
         logLine();
         enableSingleExportButton();
         return;
@@ -12723,7 +12730,8 @@ private void startLab13Monitor60s() {
 }
 
     if (lab13CounterText != null) {
-        lab13CounterText.setText("Monitoring: 0 / 60 sec");
+        lab13CounterText.setText(AppLang.isGreek(this)
+                ? "Παρακολούθηση: 0 / 60 δευτ." : "Monitoring: 0 / 60 sec");
     }
 
     try { lab13Handler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
@@ -12784,7 +12792,9 @@ private void startLab13Monitor60s() {
 
             if (lab13CounterText != null) {
                 lab13CounterText.setText(
-                        "Monitoring: " + lab13Seconds + " / 60 sec"
+                        AppLang.isGreek(ManualTestsActivity.this)
+                                ? "Παρακολούθηση: " + lab13Seconds + " / 60 δευτ."
+                                : "Monitoring: " + lab13Seconds + " / 60 sec"
                 );
             }
 
@@ -12841,7 +12851,7 @@ if (lab13StatusText != null) {
                 gr ? "Αναμονή για εξωτερική συσκευή Bluetooth..."
                    : "Waiting for an external Bluetooth device..."
         );
-        lab13StatusText.setTextColor(0xFFFFD966); // yellow (info/wait)
+        lab13StatusText.setTextColor(0xFFAAAAAA); // neutral waiting state
     }
 }
 
@@ -12920,12 +12930,12 @@ private void lab13FinishAndReport(boolean adapterStable) {
         logInfo(gr ? "LAB 13 — Αποτελέσματα"
                    : "LAB 13 — Results");
 
-        logWarn(gr
-                ? "Δεν συνδέθηκε καμία εξωτερική Bluetooth συσκευή."
-                : "No external Bluetooth device was connected.");
+        logLabelValue(gr ? "Εξωτερική συσκευή" : "External device",
+                gr ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — δεν παρατηρήθηκε σύνδεση"
+                   : "NOT TESTED — no connection observed");
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
+        logInfo(gr ? "Το Lab 13 κατέγραψε τα διαθέσιμα στοιχεία." : "Lab 13 recorded available evidence.");
         logLine();
         return;
     }
@@ -12937,26 +12947,16 @@ private void lab13FinishAndReport(boolean adapterStable) {
     // ============================================================
     // 1️⃣ Adapter Stability (COLOR)
     // ============================================================
-    if (adapterStable) {
-        logLabelOkValue(
-                gr ? "Σταθερότητα Bluetooth adapter"
-                   : "Adapter stability",
-                gr ? "Σταθερή" : "Stable"
-        );
-    } else {
-        logLabelErrorValue(
-                gr ? "Σταθερότητα Bluetooth adapter"
-                   : "Adapter stability",
-                gr ? "Μη σταθερή" : "Unstable"
-        );
-    }
+    logLabelValue(gr ? "Adapter στο τελευταίο δείγμα" : "Adapter at last sample",
+            adapterStable ? (gr ? "ΕΝΕΡΓΟΣ" : "ON")
+                          : (gr ? "ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ" : "NOT CONFIRMED"));
 
     // ============================================================
     // 2️⃣ Disconnect Events (SEVERITY)
     // ============================================================
     if (lab13DisconnectEvents == 0) {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Αποσυνδέσεις" : "Disconnect events",
                 "0"
         );
@@ -12970,7 +12970,7 @@ private void lab13FinishAndReport(boolean adapterStable) {
 
     } else {
 
-        logLabelErrorValue(
+        logLabelWarnValue(
                 gr ? "Αποσυνδέσεις" : "Disconnect events",
                 String.valueOf(lab13DisconnectEvents)
         );
@@ -12988,7 +12988,7 @@ private void lab13FinishAndReport(boolean adapterStable) {
 
     } else {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Επανασυνδέσεις" : "Reconnect events",
                 String.valueOf(lab13ReconnectEvents)
         );
@@ -13009,11 +13009,10 @@ private void lab13FinishAndReport(boolean adapterStable) {
 
     if (flapping) {
 
-        logLabelErrorValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Connection flapping (συχνές αποσυνδέσεις & επανασυνδέσεις)"
-                        : "Connection flapping (frequent disconnect/reconnect)"
+        logLabelWarnValue(
+                gr ? "Παρατήρηση" : "Observation",
+                gr ? "Συχνές μεταβολές σύνδεσης — ελέγξτε περιβάλλον RF"
+                   : "Frequent connection changes — check RF environment"
         );
 
         logWarn(gr
@@ -13022,11 +13021,10 @@ private void lab13FinishAndReport(boolean adapterStable) {
 
     } else if (fullLoss) {
 
-        logLabelErrorValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Πλήρης απώλεια σύνδεσης"
-                        : "Full connection loss"
+        logLabelWarnValue(
+                gr ? "Παρατήρηση" : "Observation",
+                gr ? "Επαναλαμβανόμενες αποσυνδέσεις χωρίς καταγεγραμμένη επανασύνδεση"
+                   : "Repeated disconnections without recorded reconnection"
         );
 
     } else if (lab13DisconnectEvents > 0) {
@@ -13041,10 +13039,9 @@ private void lab13FinishAndReport(boolean adapterStable) {
     } else {
 
         logLabelOkValue(
-                gr ? "Διάγνωση" : "Diagnosis",
-                gr
-                        ? "Σταθερή σύνδεση Bluetooth"
-                        : "Stable Bluetooth connection"
+                gr ? "Παρατήρηση 60 δευτερολέπτων" : "60-second observation",
+                gr ? "Δεν καταγράφηκε αποσύνδεση κατά την παρακολούθηση"
+                   : "No disconnection transition recorded during monitoring"
         );
     }
 
@@ -13063,7 +13060,7 @@ private void lab13FinishAndReport(boolean adapterStable) {
     );
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
+    logInfo(gr ? "Το Lab 13 κατέγραψε τα διαθέσιμα στοιχεία." : "Lab 13 recorded available evidence.");
     logLine();
 }
 
@@ -13103,7 +13100,9 @@ AppTTS.stop();
     // ABORT LOG
     // ------------------------------------------------------------
     appendHtml("<br>");
-    logWarn("Lab 13 aborted by user.");
+    logInfo(AppLang.isGreek(this)
+            ? "Lab 13: ΔΕΝ ΕΛΕΓΧΘΗΚΕ — ακύρωση από τον χρήστη."
+            : "Lab 13: NOT TESTED — canceled by user.");
     logLine();
 }
 
