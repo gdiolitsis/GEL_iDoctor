@@ -14,6 +14,16 @@ public class ThermalEvidencePolicyTest {
                 ThermalEvidencePolicy.pattern(-1, true)); // OS severe or observed hot zone
     }
 
+    @Test public void snapshotNormalRequiresInternalCoverageAndNoWarning() {
+        assertEquals(false, ThermalEvidencePolicy.supportsScopedNormal(0, 0, -1f, false));
+        assertEquals(false, ThermalEvidencePolicy.supportsScopedNormal(1, 0, 29f, false));
+        assertEquals(false, ThermalEvidencePolicy.supportsScopedNormal(1, 1, Float.NaN, false));
+        assertEquals(false, ThermalEvidencePolicy.supportsScopedNormal(1, 1, 50f, false));
+        assertEquals(false, ThermalEvidencePolicy.supportsScopedNormal(1, 1, 30f, true));
+        assertEquals(true, ThermalEvidencePolicy.supportsScopedNormal(1, 1, 30f, false));
+        assertEquals(true, ThermalEvidencePolicy.supportsScopedNormal(3, 2, 44.9f, false));
+    }
+
     @Test public void visibleReadingsCanBeScoredButDoNotProveFullCoverage() {
         assertEquals(100, ThermalEvidencePolicy.score(1, 0, 100, false));
         assertEquals(80, ThermalEvidencePolicy.score(2, 1, 80, false));
