@@ -25669,20 +25669,45 @@ private void lab16ThermalSnapshot() {
     logInfo(gr ? "Θερμική σύνοψη:" : "Thermal summary:");
     logLine();
 
-    if (observedCount == 0) {
-        logInfo(gr ? "Κατάσταση: δεν υπάρχουν διαθέσιμες θερμικές μετρήσεις"
-                   : "Status: no thermal readings available");
-    } else if (danger) {
+    // The Android thermal state may report severe protection even when
+    // no physical sensor temperatures are exposed. Never bury that warning.
+    if (danger) {
+        boolean osSevere = osThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE;
         logLabelWarnValue(
                 gr ? "Κατάσταση" : "Status",
-                gr ? "Ανιχνεύθηκε αυξημένη θερμοκρασία σε διαθέσιμο αισθητήρα"
-                   : "Elevated reading detected from an available sensor"
+                osSevere
+                        ? (gr ? "Το Android αναφέρει σοβαρή θερμική προστασία"
+                              : "Android reports severe thermal protection")
+                        : (gr ? "Ανιχνεύθηκε αυξημένη θερμοκρασία σε διαθέσιμο αισθητήρα"
+                              : "Elevated reading detected from an available sensor")
         );
         logLabelWarnValue(
                 gr ? "Αντίδραση συστήματος" : "System response",
-                gr ? "Ενδέχεται να ενεργοποιηθεί θερμική προστασία"
-                   : "Thermal protection may activate"
+                osSevere
+                        ? (gr ? "Ο σοβαρός θερμικός περιορισμός αναφέρεται ήδη από το Android"
+                              : "Severe thermal limiting is already reported by Android")
+                        : (gr ? "Ενδέχεται να ενεργοποιηθεί θερμική προστασία"
+                              : "Thermal protection may activate")
         );
+    } else if (peakTemp >= 45f
+            || osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE) {
+        logLabelWarnValue(
+                gr ? "Κατάσταση" : "Status",
+                osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE
+                        ? (gr ? "Το Android αναφέρει θερμικό περιορισμό· δεν τεκμηριώνεται βλάβη"
+                              : "Android reports thermal limiting; hardware fault is not established")
+                        : (gr ? "Αυξημένη ένδειξη σε διαθέσιμο αισθητήρα· χρειάζεται παρακολούθηση"
+                              : "Elevated available sensor reading; monitoring warranted")
+        );
+    } else if (observedCount == 0) {
+        logInfo(gr ? "Κατάσταση: δεν υπάρχουν διαθέσιμες θερμικές μετρήσεις"
+                   : "Status: no thermal readings available");
+    } else if (!ThermalEvidencePolicy.supportsScopedNormal(
+            observedCount, chipReadings, peakTemp, false)) {
+        // Peripheral/battery observations are not a CPU/GPU health check.
+        logInfo(gr
+                ? "Κατάσταση: διαθέσιμες μόνο μερικές ενδείξεις, χωρίς CPU/GPU· άγνωστο"
+                : "Status: limited peripheral readings, no CPU/GPU coverage; unknown");
     } else {
         logLabelOkValue(
                 gr ? "Κατάσταση" : "Status",
