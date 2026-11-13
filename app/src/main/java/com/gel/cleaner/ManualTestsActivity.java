@@ -6984,13 +6984,13 @@ private void lab4MicBase(Runnable onFinished) {
                 bottomPeak = (int) bottom.peak;
             }
             if (!bottomCaptured) {
-                logLabelWarnValue(gr ? "Δειγματοληψία κάτω μικροφώνου" : "Bottom mic capture",
+                logLabelValue(gr ? "Δειγματοληψία κάτω μικροφώνου" : "Bottom mic capture",
                         gr ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — χωρίς συμπέρασμα λειτουργίας"
                            : "NOT CAPTURED — no functional verdict");
             }
 
-            logLabelOkValue("Bottom RMS",  String.valueOf(bottomRms));
-            logLabelOkValue("Bottom Peak", String.valueOf(bottomPeak));
+            logLabelValue("Bottom RMS",  String.valueOf(bottomRms));
+            logLabelValue("Bottom Peak", String.valueOf(bottomPeak));
 
             bottomOk = bottomRms > 0 || bottomPeak > 0;
 
@@ -7012,17 +7012,17 @@ private void lab4MicBase(Runnable onFinished) {
                 topPeak = (int) top.peak;
             }
             if (!topCaptured) {
-                logLabelWarnValue(gr ? "Δειγματοληψία άνω μικροφώνου" : "Top mic capture",
+                logLabelValue(gr ? "Δειγματοληψία άνω μικροφώνου" : "Top mic capture",
                         gr ? "ΔΕΝ ΕΚΤΕΛΕΣΤΗΚΕ — χωρίς συμπέρασμα λειτουργίας"
                            : "NOT CAPTURED — no functional verdict");
             }
 
-            logLabelOkValue(
+            logLabelValue(
         gr ? "RMS (Άνω Μικρόφωνο)" : "Top RMS",
         String.valueOf(topRms)
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Peak (Άνω Μικρόφωνο)" : "Top Peak",
         String.valueOf(topPeak)
 );
@@ -7091,7 +7091,7 @@ if (bottomOk && topOk) {
                     if (!isFinishing() && !isDestroyed()) onFinished.run();
                 });
             } else {
-                logLabelWarnValue(gr ? "Lab 4 PRO" : "Lab 4 PRO",
+                logLabelValue(gr ? "Lab 4 PRO" : "Lab 4 PRO",
                         gr ? "Δεν ξεκίνησε: η BASE δεν ολοκλήρωσε και τις δύο καταγραφές"
                            : "Not started: BASE did not complete both captures");
                 runOnUiThread(this::enableSingleExportButton);
@@ -7352,7 +7352,7 @@ try {
 
 // A canceled, failed, or empty recording must never reach a YES/NO result.
 if (cancelled.get() || isFinishing() || isDestroyed() || capturedBytes <= 0) {
-    logLabelWarnValue(gr ? "LAB 4 PRO — Ηχογράφηση" : "LAB 4 PRO — Capture",
+    logLabelValue(gr ? "LAB 4 PRO — Ηχογράφηση" : "LAB 4 PRO — Capture",
             gr ? "Δεν ολοκληρώθηκε έγκυρη δειγματοληψία — χωρίς επιβεβαίωση"
                : "No valid capture completed — no confirmation requested");
     runOnUiThread(this::enableSingleExportButton);
@@ -8076,10 +8076,10 @@ private void lab5Vibration() {
 
             if (vibrator == null || !vibrator.hasVibrator()) {
 
-                logError(
-                        gr
-                                ? "Δεν εντοπίστηκε μοτέρ δόνησης"
-                                : "No vibration motor detected"
+                logLabelValue(
+                        gr ? "Υποστήριξη δόνησης" : "Vibration support",
+                        gr ? "Δεν δηλώνεται μηχανισμός δόνησης — ΔΕΝ ΕΛΕΓΧΘΗΚΕ"
+                           : "No vibration feature reported — NOT TESTED"
                 );
                 return;
             }
@@ -8447,7 +8447,7 @@ private void lab5Vibration() {
 
             if (lab5Cancelled.get() || !answered.get()
                     || isFinishing() || isDestroyed()) {
-                logLabelWarnValue(gr ? "LAB 5" : "LAB 5",
+                logLabelValue(gr ? "LAB 5" : "LAB 5",
                         gr ? "Διακόπηκε — δεν καταχωρίστηκε απάντηση για τη δόνηση"
                            : "Canceled — no vibration answer recorded");
                 return;
@@ -8520,7 +8520,7 @@ private void lab5Vibration() {
                 logInfo(gr ? "Το Lab 5 ολοκληρώθηκε με αναφορά χρήστη."
                            : "Lab 5 completed with a user report.");
             } else {
-                logLabelWarnValue(gr ? "LAB 5" : "LAB 5",
+                logLabelValue(gr ? "LAB 5" : "LAB 5",
                         gr ? "Μη ολοκληρωμένη δοκιμή — ΑΓΝΩΣΤΟ"
                            : "Incomplete test — UNKNOWN");
             }
@@ -11854,7 +11854,7 @@ private void lab12OpenDialer() {
         startActivityForResult(new Intent(Intent.ACTION_DIAL), REQ_LAB12_DIALER);
     } catch (RuntimeException e) {
         lab12DialerPending = false;
-        logLabelWarnValue(gr ? "Τηλεφωνητής" : "Dialer",
+        logLabelValue(gr ? "Τηλεφωνητής" : "Dialer",
                 gr ? "Δεν άνοιξε — η κλήση δεν επαληθεύτηκε"
                    : "Unavailable — call not verified");
         lab12ReportGuided(Lab12CallEvidence.Guided.NOT_TESTED);
@@ -11968,9 +11968,9 @@ private void lab13BluetoothConnectivityCheck() {
     logLine();
 
     if (ba == null) {
-        logError(gr
-                ? "Το Bluetooth ΔΕΝ υποστηρίζεται σε αυτή τη συσκευή."
-                : "Bluetooth NOT supported on this device.");
+        logLabelValue(gr ? "Υποστήριξη Bluetooth" : "Bluetooth support",
+                gr ? "Δεν δηλώνεται Bluetooth στη συσκευή — ΔΕΝ ΕΛΕΓΧΘΗΚΕ"
+                   : "No Bluetooth feature reported — NOT TESTED");
         logLine();
         return;
     }
@@ -12182,9 +12182,9 @@ private void runLab13BluetoothCheckCore() {
 
     // BASIC SUPPORT
     if (lab13Ba == null) {
-        logError(gr
-                ? "Το Bluetooth ΔΕΝ υποστηρίζεται σε αυτή τη συσκευή."
-                : "Bluetooth NOT supported on this device.");
+        logLabelValue(gr ? "Υποστήριξη Bluetooth" : "Bluetooth support",
+                gr ? "Δεν δηλώνεται Bluetooth στη συσκευή — ΔΕΝ ΕΛΕΓΧΘΗΚΕ"
+                   : "No Bluetooth feature reported — NOT TESTED");
         logLine();
 
         appendHtml("<br>");
@@ -33879,7 +33879,7 @@ if (requestCode == REQ_LAB6_TOUCH) {
                 gr ? "Δεν αποδεικνύεται απουσία ghost touches ή πλήρης ακεραιότητα digitizer"
                    : "Does not prove absence of ghost touches or full digitizer integrity");
     } else if (resultCode == RESULT_CANCELED) {
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Έλεγχος αφής" : "Touch grid test",
                 gr ? "Διακόπηκε — δεν προκύπτει διάγνωση βλάβης"
                    : "Stopped — no hardware fault inferred");
@@ -33927,7 +33927,7 @@ if (requestCode == REQ_LAB6_TOUCH) {
 if (requestCode == REQ_LAB6_COLOR) {
 
     if (resultCode == RESULT_CANCELED) {
-        logLabelWarnValue("LAB 6 PRO",
+        logLabelValue("LAB 6 PRO",
                 gr ? "Ακυρώθηκε από τον χρήστη" : "Canceled by user");
         logLabelValue(gr ? "Οπτικός έλεγχος" : "Visual inspection",
                 gr ? "ΔΕΝ ΟΛΟΚΛΗΡΩΘΗΚΕ — χωρίς διάγνωση" : "NOT COMPLETED — no diagnosis");
@@ -33941,7 +33941,7 @@ if (requestCode == REQ_LAB6_COLOR) {
             && data.hasExtra("display_issues")
             && data.hasExtra("display_steps_completed");
     if (!freshReport) {
-        logLabelWarnValue("LAB 6 PRO",
+        logLabelValue("LAB 6 PRO",
                 gr ? "Δεν παραλήφθηκε πλήρες αποτέλεσμα — ΑΓΝΩΣΤΟ"
                    : "No complete result was returned — UNKNOWN");
         appendHtml("<br>");
@@ -34022,11 +34022,11 @@ if (requestCode == 7007) {
                      + "Δεν πιστοποιείται η αυτόματη περιστροφή του Android."
                    : "The app remained in portrait. Android auto-rotate itself was not certified.");
     } else if (resultCode == RESULT_FIRST_USER) {
-        logLabelWarnValue(gr ? "Περιστροφή" : "Rotation",
+        logLabelValue(gr ? "Περιστροφή" : "Rotation",
                 gr ? "ΠΑΡΑΛΕΙΦΘΗΚΕ — συνεχίζεται ανεξάρτητα ο έλεγχος εγγύτητας"
                    : "SKIPPED — proceeding to independent proximity test");
     } else {
-        logLabelWarnValue(gr ? "Περιστροφή" : "Rotation",
+        logLabelValue(gr ? "Περιστροφή" : "Rotation",
                 gr ? "ΜΗ ΟΛΟΚΛΗΡΩΜΕΝΗ — χωρίς συμπέρασμα βλάβης"
                    : "NOT COMPLETED — no hardware fault inferred");
         logLine();
