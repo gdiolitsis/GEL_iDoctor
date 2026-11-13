@@ -246,14 +246,13 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF39FF14);
         root.setBackgroundColor(Color.BLACK);
 
         hint = new TextView(this);
-        hint.setTextColor(Color.WHITE);
+        // Preserve the original full-screen test patterns: never place a
+        // translucent background over the display under inspection.
+        // Only the instruction/cycle letters change from backup white to
+        // high-contrast yellow with a black text shadow.
+        hint.setTextColor(0xFFFFD700);
+        hint.setShadowLayer(4f, 2f, 2f, Color.BLACK);
         hint.setTextSize(16f);
-        // The current pattern may be pure white; always back labels with black.
-        GradientDrawable hintBg = new GradientDrawable();
-        hintBg.setColor(0xE6000000);
-        hintBg.setCornerRadius(dp(10));
-        hintBg.setStroke(dp(2), 0xFFFFD700);
-        hint.setBackground(hintBg);
         hint.setPadding(dp(24), dp(24), dp(24), dp(24));
         hint.setGravity(Gravity.CENTER);
         root.addView(hint);
