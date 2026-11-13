@@ -32835,8 +32835,8 @@ history.edit()
 logLabelValue(
         gr ? "Ιστορικό hardware"
            : "Hardware history",
-        gr ? "Το snapshot αποθηκεύτηκε"
-           : "Hardware snapshot stored"
+        gr ? "Καταγράφηκε χρόνος εκτέλεσης· δεν αποθηκεύτηκαν συγκρίσιμες μετρήσεις hardware"
+           : "Run timestamp recorded; no comparable hardware health metrics stored"
 );
 
 // ------------------------------------------------------------
@@ -32913,8 +32913,8 @@ if (diagnosticConflict) {
             gr ? "Συνέπεια διάγνωσης"
                : "Diagnostic consistency",
             gr
-                    ? "Τα διαγνωστικά αποτελέσματα είναι συνεπή."
-                    : "Diagnostic results appear consistent."
+                    ? "Δεν τεκμηριώθηκαν επαληθευμένες αντιφάσεις· δεν αξιολογήθηκε συνολική συνέπεια όλων των εργαστηρίων."
+                    : "No verified contradictions established; cross-lab completeness remains unknown."
     );
 }
 
