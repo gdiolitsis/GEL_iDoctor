@@ -33759,6 +33759,17 @@ if (requestCode == REQ_LAB6_TOUCH) {
                    : "Missing or inconsistent evidence — UNKNOWN");
     }
 
+    // END TEST / Android Back must end the session, not launch another test.
+    // Missing or contradictory grid evidence must also never auto-advance.
+    if (resultCode != RESULT_OK || !valid || remaining != 0) {
+        appendHtml("<br>");
+        logInfo(gr ? "Το Lab 6 PRO μπορεί να ξεκινήσει σε νέα δοκιμή."
+                   : "Lab 6 PRO remains available on a new test run.");
+        logLine();
+        enableSingleExportButton();
+        return;
+    }
+
     // Keep the original independent visual-inspection stage available.
     appendHtml("<br>");
     logLabelValue(
@@ -33780,82 +33791,81 @@ if (requestCode == REQ_LAB6_TOUCH) {
 if (requestCode == REQ_LAB6_COLOR) {
 
     if (resultCode == RESULT_CANCELED) {
-
-        logLabelWarnValue(
-                "LAB 6 PRO",
-                gr ? "Ακυρώθηκε από τον χρήστη" : "Canceled by user"
-        );
-
-        logLabelWarnValue(
-                gr ? "Οπτικός έλεγχος" : "Visual inspection",
-                gr ? "Δεν πραγματοποιήθηκε" : "Not performed"
-        );
-
+        logLabelWarnValue("LAB 6 PRO",
+                gr ? "Ακυρώθηκε από τον χρήστη" : "Canceled by user");
+        logLabelValue(gr ? "Οπτικός έλεγχος" : "Visual inspection",
+                gr ? "ΔΕΝ ΟΛΟΚΛΗΡΩΘΗΚΕ — χωρίς διάγνωση" : "NOT COMPLETED — no diagnosis");
         appendHtml("<br>");
         logLine();
         enableSingleExportButton();
         return;
     }
 
-    boolean issues =
-            data != null && data.getBooleanExtra("display_issues", false);
+    boolean freshReport = resultCode == RESULT_OK && data != null
+            && data.hasExtra("display_issues")
+            && data.hasExtra("display_steps_completed");
+    if (!freshReport) {
+        logLabelWarnValue("LAB 6 PRO",
+                gr ? "Δεν παραλήφθηκε πλήρες αποτέλεσμα — ΑΓΝΩΣΤΟ"
+                   : "No complete result was returned — UNKNOWN");
+        appendHtml("<br>");
+        logLine();
+        enableSingleExportButton();
+        return;
+    }
 
-    if (!issues) {
+    boolean issues = data.getBooleanExtra("display_issues", false);
+    boolean allPatternsShown = data.getBooleanExtra("display_steps_completed", false);
 
-        logLabelOkValue(
-                gr ? "Οπτικός έλεγχος" : "Visual inspection",
-                gr ? "Δεν αναφέρθηκαν ανωμαλίες" : "No visible artifacts reported"
-        );
-
-        logLabelOkValue(
-                gr ? "Ομοιομορφία οθόνης" : "Display uniformity",
-                "OK"
-        );
-
-        logLabelOkValue(
-                gr ? "Burn-in / banding" : "Burn-in / banding",
-                gr ? "Δεν παρατηρήθηκε" : "Not observed"
-        );
-
+    if (!allPatternsShown) {
+        logLabelWarnValue(gr ? "Κάλυψη οπτικού ελέγχου" : "Visual coverage",
+                gr ? "Δεν προβλήθηκαν όλοι οι κύκλοι μοτίβων"
+                   : "Not all visual pattern cycles were shown");
     } else {
+        logLabelValue(gr ? "Κάλυψη οπτικού ελέγχου" : "Visual coverage",
+                gr ? "Παρουσιάστηκαν και οι τρεις κύκλοι μοτίβων"
+                   : "All three visual pattern cycles were presented");
+    }
 
-        logLabelWarnValue(
-                gr ? "Οπτικός έλεγχος" : "Visual inspection",
-                gr ? "Αναφέρθηκαν οπτικές ανωμαλίες" : "User reported visual anomalies"
-        );
-
-        logInfo(gr ? "Πιθανά ευρήματα:" : "Possible findings:");
-
-        logLabelWarnValue("• Issue",
-                gr ? "Burn-in / αποτύπωση εικόνας" : "Burn-in / image retention");
-
-        logLabelWarnValue("• Issue",
-                gr ? "Color banding / διαβαθμίσεις" : "Color banding / gradient steps");
-
-        logLabelWarnValue("• Issue",
-                gr ? "Λεκέδες / mura / μετατόπιση χρώματος"
-                   : "Screen stains / mura / tint shift");
+    if (issues) {
+        logLabelWarnValue(gr ? "Παρατήρηση χρήστη" : "User observation",
+                gr ? "Αναφέρθηκαν οπτικές ανωμαλίες — απαιτείται επανέλεγχος"
+                   : "Visual anomalies reported — recheck recommended");
+        logInfo(gr ? "Πιθανές κατηγορίες για διερεύνηση: burn-in, banding, mura, ανομοιομορφία."
+                   : "Potential categories to investigate: burn-in, banding, mura, unevenness.");
+    } else if (allPatternsShown) {
+        logLabelValue(gr ? "Παρατήρηση χρήστη" : "User observation",
+                gr ? "Δεν αναφέρθηκαν ανωμαλίες στα παρουσιασμένα μοτίβα"
+                   : "No anomalies reported in the displayed patterns");
+        logInfo(gr ? "Δεν έγινε όργανο-μέτρηση φωτεινότητας, χρώματος ή burn-in."
+                   : "No instrumental brightness, color accuracy, or burn-in measurement.");
+    } else {
+        logLabelWarnValue(gr ? "Παρατήρηση χρήστη" : "User observation",
+                gr ? "Χωρίς αναφορά προβλήματος, αλλά ο οπτικός έλεγχος είναι μερικός"
+                   : "No issue reported, but the visual examination was partial");
     }
 
     appendHtml("<br>");
     logSection(gr ? "LAB 6 — Τελικό Αποτέλεσμα" : "LAB 6 — Final Result");
     logLine();
-
-    logLabelOkValue(
-            gr ? "Έλεγχος οθόνης" : "Display test",
-            gr
-                    ? "Ολοκληρώθηκε έλεγχος αφής και οπτικής επιθεώρησης"
-                    : "Touch integrity and visual inspection completed"
-    );
-
+    if (allPatternsShown) {
+        logLabelValue(gr ? "Οπτικός έλεγχος" : "Visual inspection",
+                gr ? "Ολοκληρώθηκε η παρουσίαση — συμπέρασμα μόνο βάσει παρατήρησης χρήστη"
+                   : "Pattern presentation complete — user observation only");
+    } else {
+        logLabelWarnValue(gr ? "Οπτικός έλεγχος" : "Visual inspection",
+                gr ? "ΜΗ ΟΛΟΚΛΗΡΩΜΕΝΟΣ — χωρίς πράσινη διάγνωση"
+                   : "INCOMPLETE — no positive hardware verdict");
+    }
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 6 ολοκληρώθηκε." : "Lab 6 finished.");
+    logInfo(gr ? "Το Lab 6 κατέγραψε τα διαθέσιμα ευρήματα."
+               : "Lab 6 recorded the available evidence.");
     logLine();
-
     enableSingleExportButton();
     return;
 }
 
+// ============================================================
 // ============================================================
 // LAB 7 — Rotation + Proximity Sensors
 // ============================================================
