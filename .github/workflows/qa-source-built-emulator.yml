@@ -31,7 +31,22 @@ jobs:
           set -euo pipefail
           sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
           bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
-          ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon --console=plain
+          # Maven Central can return HTTP 429 under GitHub runner fan-out.
+          # Retry ONLY that transient rate-limit; never hide compilation/test failures.
+          attempt=1
+          while true; do
+            gradle_log="$RUNNER_TEMP/gel-gradle-attempt-${attempt}.log"
+            if ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon --console=plain 2>&1 | tee "$gradle_log"; then
+              break
+            fi
+            if [ "$attempt" -ge 3 ] || ! grep -Eqi '(status code 429|HTTP 429|Too Many Requests)' "$gradle_log"; then
+              echo "Gradle failed without a retryable Maven 429, or attempts exhausted" >&2
+              exit 1
+            fi
+            echo "Maven dependency request was rate-limited (429); retrying same tests after backoff" >&2
+            sleep $((attempt * 30))
+            attempt=$((attempt + 1))
+          done
           apk="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$apk"
           mkdir -p "$RUNNER_TEMP/candidate-apk"
