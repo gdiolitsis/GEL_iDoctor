@@ -31139,27 +31139,35 @@ logLabelValue(
     int batteryLevel = getBatteryPercentSafe();
     float voltage = getBatteryVoltageFiltered();
 
-    if (batteryLevel < 0 ||
-    Float.isNaN(voltage) ||
-    voltage < 2.5f ||
-    voltage > 5.5f) {
-
+    boolean levelObserved = batteryLevel >= 0 && batteryLevel <= 100;
+    boolean voltageObserved = Float.isFinite(voltage) && voltage > 0f;
+    if (levelObserved) {
         logLabelValue(
-                gr ? "Μπαταρία" : "Battery",
-                gr
-                        ? "Ασυνήθιστες τιμές μέτρησης"
-                        : "Abnormal measurement values"
+                gr ? "Στάθμη μπαταρίας" : "Battery level",
+                batteryLevel + "%"
         );
-
     } else {
-
         logLabelValue(
-                gr ? "Μπαταρία" : "Battery",
-                gr
-                        ? "Μετρήσεις φυσιολογικές"
-                        : "Measurements normal"
+                gr ? "Στάθμη μπαταρίας" : "Battery level",
+                gr ? "Μη διαθέσιμη" : "Unavailable"
         );
     }
+    if (voltageObserved) {
+        logLabelValue(
+                gr ? "Αναφερόμενη τάση" : "Reported voltage",
+                String.format(Locale.US, "%.2f V", voltage)
+        );
+    } else {
+        logLabelValue(
+                gr ? "Αναφερόμενη τάση" : "Reported voltage",
+                gr ? "Μη διαθέσιμη" : "Unavailable"
+        );
+    }
+    logLabelValue(
+            gr ? "Όριο μέτρησης" : "Measurement limitation",
+            gr ? "Η στάθμη και η τάση δεν πιστοποιούν υγεία, γνησιότητα, φυσική βλάβη ή χωρητικότητα μπαταρίας"
+               : "Level and voltage do not establish battery health, authenticity, failure or capacity"
+    );
 
     // ============================================================
     // DISPLAY
