@@ -4274,7 +4274,7 @@ private void showLab15ConditionCheck(Runnable startAction) {
             gelButton(
                     this,
                     gr ? "Ακύρωση" : "Cancel",
-                    0xFF8B0000
+                    0xFFE60000
             );
 
     Button go =
@@ -4693,7 +4693,7 @@ btn.setAllCaps(false);
 // Keep the original dark-red label on active green, but make disabled text readable.
 btn.setTextColor(new ColorStateList(
         new int[][]{{-android.R.attr.state_enabled}, {}},
-        new int[]{Color.WHITE, 0xFF8B0000}
+        new int[]{Color.WHITE, Color.BLACK}
 ));  
 btn.setTextSize(15f);  
 btn.setTypeface(null, Typeface.BOLD);  
@@ -5335,7 +5335,7 @@ private void showUsageAccessDialog() {
     skipBtn.setLayoutParams(btnLp);
 
     GradientDrawable skipBg = new GradientDrawable();
-    skipBg.setColor(0xFFC62828);
+    skipBg.setColor(0xFFE60000); // vivid red / white text
     skipBg.setCornerRadius(dp(10));
     skipBg.setStroke(dp(3), 0xFFFFD700);
     ((com.gel.cleaner.GelButton) skipBtn).setSupportBackgroundTintList(null);
@@ -25059,7 +25059,7 @@ exitBtn.setTextColor(Color.WHITE);
 exitBtn.setTypeface(null, Typeface.BOLD);
 
 GradientDrawable exitBg = new GradientDrawable();
-exitBg.setColor(0xFF8B0000);          // dark red
+exitBg.setColor(0xFFE60000);          // vivid red / white text
 exitBg.setCornerRadius(dp(10));
 exitBg.setStroke(dp(3), 0xFFFFD700);  // gold border
 ((com.gel.cleaner.GelButton) exitBtn).setSupportBackgroundTintList(null);
@@ -26666,7 +26666,7 @@ private void lab17_showPopup(String titleText, String msgText) {
     Button exit = gelButton(
             this,
             gr ? "Έξοδος" : "Exit",
-            0xFF8B0000
+            0xFFE60000
     );
 
     LinearLayout.LayoutParams lpExit =
