@@ -26668,6 +26668,8 @@ private void lab17_showPopup(String titleText, String msgText) {
             gr ? "Έξοδος" : "Exit",
             0xFFE60000
     );
+    ((com.gel.cleaner.GelButton) exit).setSupportBackgroundTintList(null);
+    exit.setBackgroundTintList(null);
 
     LinearLayout.LayoutParams lpExit =
             new LinearLayout.LayoutParams(
