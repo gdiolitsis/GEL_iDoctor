@@ -10973,7 +10973,10 @@ private void lab10WifiConnectivityCheck() {
     int freqMhz = 0;
     try { freqMhz = info.getFrequency(); } catch (Throwable ignore) {}
 
-    String band = (freqMhz > 3000) ? (gr ? "5 GHz" : "5 GHz") : (gr ? "2.4 GHz" : "2.4 GHz");
+    String band = (freqMhz >= 5925 && freqMhz <= 7125) ? "6 GHz"
+            : (freqMhz >= 4900 && freqMhz <= 5900) ? "5 GHz"
+            : (freqMhz >= 2400 && freqMhz <= 2500) ? "2.4 GHz"
+            : (gr ? "Άγνωστη" : "Unknown");
 
     // ---------------- IDENTIFIERS ----------------
     logLabelValue(gr ? "SSID" : "SSID", ssid);
@@ -10982,34 +10985,24 @@ private void lab10WifiConnectivityCheck() {
         logLabelValue(gr ? "BSSID" : "BSSID", bssid);
 
     // ---------------- BAND ----------------
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Μπάντα" : "Band",
             band + (freqMhz > 0 ? " (" + freqMhz + " MHz)" : "")
     );
 
     // ---------------- LINK SPEED ----------------
-    if (speed >= 150) {
-        logLabelOkValue(gr ? "Ταχύτητα Link" : "Link speed", speed + " Mbps");
-    } else if (speed >= 54) {
-        logLabelWarnValue(gr ? "Ταχύτητα Link" : "Link speed", speed + " Mbps");
-    } else {
-        logLabelErrorValue(gr ? "Ταχύτητα Link" : "Link speed", speed + " Mbps");
-    }
+    logLabelValue(gr ? "Ταχύτητα Link (PHY, όχι Internet)" : "Link speed (PHY, not Internet)",
+            speed > 0 ? speed + " Mbps" : (gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN"));
 
     // ---------------- SIGNAL (RSSI) ----------------
-    if (rssi >= -60) {
-        logLabelOkValue(gr ? "Ισχύς Σήματος" : "Signal strength", rssi + " dBm");
-    } else if (rssi >= -75) {
-        logLabelWarnValue(gr ? "Ισχύς Σήματος" : "Signal strength", rssi + " dBm");
-    } else {
-        logLabelErrorValue(gr ? "Ισχύς Σήματος" : "Signal strength", rssi + " dBm");
-    }
+    logLabelValue(gr ? "Ισχύς Σήματος" : "Signal strength",
+            (rssi > -127 && rssi < 0) ? rssi + " dBm" : (gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN"));
 
     // SSID status — single line
     if ("Unknown".equalsIgnoreCase(ssid)) {
-        logLabelWarnValue(gr ? "SSID" : "SSID", gr ? "Κρυφό από Android policy απορρήτου" : "Hidden by Android privacy policy");
+        logLabelValue(gr ? "SSID" : "SSID", gr ? "Μη διαθέσιμο (άδεια/πολιτική/δίκτυο)" : "Unavailable (permission/policy/network)");
     } else {
-        logLabelOkValue(gr ? "SSID" : "SSID", gr ? "Ανάγνωση OK" : "Read OK");
+        logLabelValue(gr ? "SSID" : "SSID", gr ? "Διαβάστηκε" : "Read from Android");
     }
 
     // Signal quality — single line
@@ -11027,10 +11020,10 @@ private void lab10WifiConnectivityCheck() {
         DhcpInfo dh = wm.getDhcpInfo();
 
         if (dh != null) {
-            logLabelOkValue(gr ? "IP" : "IP",           ipToStr(dh.ipAddress));
-            logLabelOkValue(gr ? "Gateway" : "Gateway", ipToStr(dh.gateway));
-            logLabelOkValue(gr ? "DNS1" : "DNS1",       ipToStr(dh.dns1));
-            logLabelOkValue(gr ? "DNS2" : "DNS2",       ipToStr(dh.dns2));
+            logLabelValue(gr ? "IP" : "IP",           ipToStr(dh.ipAddress));
+            logLabelValue(gr ? "Gateway" : "Gateway", ipToStr(dh.gateway));
+            logLabelValue(gr ? "DNS1" : "DNS1",       ipToStr(dh.dns1));
+            logLabelValue(gr ? "DNS2" : "DNS2",       ipToStr(dh.dns2));
         } else {
             logLabelWarnValue(gr ? "DHCP" : "DHCP", gr ? "Δεν υπάρχουν στοιχεία" : "Info not available");
         }
@@ -11170,7 +11163,7 @@ private void runWifiDeepScan(WifiManager wm) {
 
         try {
             logLine();
-            logOk(gr ? "Network DeepScan v3.0 ξεκίνησε..." : "Network DeepScan v3.0 started...");
+            logInfo(gr ? "Network DeepScan v3.0 ξεκίνησε..." : "Network DeepScan v3.0 started...");
 
             String gatewayStr = null;
             try {
@@ -11214,13 +11207,17 @@ private void runWifiDeepScan(WifiManager wm) {
             int rssi = info != null ? info.getRssi() : -80;
 
             float speedSim = estimateSpeedSimMbps(link, rssi);
-            logLabelOkValue(
-                    gr ? "SpeedSim" : "SpeedSim",
-                    String.format(Locale.US, gr ? "~%.2f Mbps (εκτίμηση)" : "~%.2f Mbps (heuristic)", speedSim)
+            logLabelValue(
+                    gr ? "SpeedSim (όχι speed test)" : "SpeedSim (not a speed test)",
+                    Float.isNaN(speedSim)
+                            ? (gr ? "ΑΓΝΩΣΤΟ — ανεπαρκή στοιχεία PHY/RSSI" : "UNKNOWN — PHY/RSSI unavailable")
+                            : String.format(Locale.US,
+                                    gr ? "~%.2f Mbps (μη βαθμονομημένη εκτίμηση, όχι μέτρηση)"
+                                       : "~%.2f Mbps (uncalibrated estimate, not measured)", speedSim)
             );
 
             // Finish
-            logLabelOkValue(gr ? "DeepScan" : "DeepScan", gr ? "Ολοκληρώθηκε" : "Finished");
+            logLabelValue(gr ? "DeepScan" : "DeepScan", gr ? "Οι δοκιμές εκτελέστηκαν — δείτε τα επιμέρους ευρήματα" : "Probes executed — see individual evidence");
 
             // ====================================================
             // INTERNET AVAILABILITY
@@ -11235,6 +11232,7 @@ private void runWifiDeepScan(WifiManager wm) {
                 } else {
 
                     boolean hasInternet = false;
+                    boolean validated = false;
                     String transport = gr ? "ΑΓΝΩΣΤΟ" : "UNKNOWN";
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -11244,6 +11242,7 @@ private void runWifiDeepScan(WifiManager wm) {
                         if (caps != null) {
                             hasInternet =
                                     caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+                            validated = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
 
                             if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))
                                 transport = gr ? "Wi-Fi" : "Wi-Fi";
@@ -11259,10 +11258,16 @@ private void runWifiDeepScan(WifiManager wm) {
                         }
                     }
 
-                    if (!hasInternet)
-                        logError(gr ? "Δεν βρέθηκε ενεργή σύνδεση Internet (OS-level)." : "No active Internet connection detected (OS-level).");
+                    if (validated)
+                        logLabelOkValue(gr ? "Επικύρωση Internet από Android" : "Android Internet validation",
+                                (gr ? "VALIDATED στο ενεργό δίκτυο (" : "VALIDATED on active network (") + transport + ")");
+                    else if (hasInternet)
+                        logLabelValue(gr ? "Επικύρωση Internet από Android" : "Android Internet validation",
+                                (gr ? "Δυνατότητα INTERNET χωρίς επικύρωση (" : "INTERNET capability without validation (") + transport + ")");
                     else
-                        logOk((gr ? "Internet ενεργό (" : "Internet connectivity active (") + transport + ").");
+                        logLabelValue(gr ? "Επικύρωση Internet από Android" : "Android Internet validation",
+                                gr ? "Δεν τεκμηριώθηκε ενεργό Internet — όχι διάγνωση βλάβης Wi-Fi"
+                                   : "Active Internet not established — not a Wi-Fi fault diagnosis");
                 }
 
             } catch (Throwable e) {
@@ -11354,7 +11359,7 @@ private void runWifiDeepScan(WifiManager wm) {
 }
 
             appendHtml("<br>");
-            logOk(gr ? "Το Lab 10 ολοκληρώθηκε." : "Lab 10 finished.");
+            logInfo(gr ? "Το Lab 10 ολοκληρώθηκε." : "Lab 10 finished.");
             logLine();
 
         } catch (Throwable e) {
@@ -11380,8 +11385,8 @@ private float estimateSpeedSimMbps(
         int linkSpeedMbps,
         int rssiDbm) {
 
-    if (linkSpeedMbps <= 0)
-        linkSpeedMbps = 72;
+    if (linkSpeedMbps <= 0 || rssiDbm <= -127 || rssiDbm >= 0)
+        return Float.NaN;
 
     float rssiFactor;
     if (rssiDbm > -55) rssiFactor = 1.2f;
@@ -11389,7 +11394,7 @@ private float estimateSpeedSimMbps(
     else if (rssiDbm > -75) rssiFactor = 0.7f;
     else rssiFactor = 0.4f;
 
-    return Math.max(5f, linkSpeedMbps * rssiFactor);
+    return Math.min(linkSpeedMbps, Math.max(0f, linkSpeedMbps * rssiFactor));
 }
 
 // ============================================================
