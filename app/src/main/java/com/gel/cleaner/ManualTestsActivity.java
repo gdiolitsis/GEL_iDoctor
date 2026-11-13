@@ -27625,6 +27625,7 @@ logLine();
 // PART A — LOCK CONFIG + STATE  
 // ------------------------------------------------------------  
 boolean secure = false;
+boolean secureKnown = false;
 boolean lockedNow = false;
 
 try {
@@ -27634,6 +27635,7 @@ try {
     if (km != null) {
 
         secure = km.isDeviceSecure();
+        secureKnown = true;
 
         try {
             lockedNow = km.isKeyguardLocked();
@@ -27822,30 +27824,38 @@ if (root) {
 if (secure) {
 
     logLabelValue(
-            gr ? "Προστασία μετά από επανεκκίνηση" 
+            gr ? "Προστασία μετά από επανεκκίνηση"
                : "Post-reboot protection",
             gr ? "Υπάρχει κλείδωμα με διαπιστευτήριο· δεν εξετάστηκε η κρυπτογράφηση"
                : "A secure credential is configured; storage encryption was not assessed"
     );
 
-} else {
+} else if (secureKnown) {
 
     logLabelWarnValue(
-            gr ? "Προστασία μετά από επανεκκίνηση" 
+            gr ? "Προστασία μετά από επανεκκίνηση"
                : "Post-reboot protection",
             gr ? "Δεν έχει ρυθμιστεί ασφαλές κλείδωμα· η κρυπτογράφηση δεν ελέγχθηκε"
                : "No secure lock configured; encryption not assessed"
+    );
+} else {
+    logLabelValue(
+            gr ? "Προστασία μετά από επανεκκίνηση"
+               : "Post-reboot protection",
+            gr ? "Άγνωστη — δεν διαβάστηκε η κατάσταση Keyguard"
+               : "Unknown — Keyguard status unreadable"
     );
 }
 
 logLabelValue(
         gr ? "Κύριο επίπεδο ασφάλειας" 
            : "Primary security layer",
-        secure
-                ? (gr ? "Γνωστικό διαπιστευτήριο (PIN / Μοτίβο / Κωδικός)"
-                      : "Knowledge-based credential")
-                : (gr ? "ΚΑΝΕΝΑ"
-                      : "NONE")
+        !secureKnown
+                ? (gr ? "ΑΓΝΩΣΤΟ — δεν διαβάστηκε το Keyguard" : "UNKNOWN — Keyguard unreadable")
+                : secure
+                    ? (gr ? "Γνωστικό διαπιστευτήριο (PIN / Μοτίβο / Κωδικός)"
+                          : "Knowledge-based credential")
+                    : (gr ? "ΚΑΝΕΝΑ" : "NONE")
 );
 
 logLabelValue(
@@ -27890,7 +27900,7 @@ logInfo(gr ? "Ποσοστιαία ασφάλεια συσκευής: δεν τ�
 // ------------------------------------------------------------
 // PART E — LIVE BIOMETRIC AUTH TEST (USER-DRIVEN, REAL)
 // ------------------------------------------------------------
-if (!secure) {
+if (!secureKnown || !secure) {
 
     appendHtml("<br>");
     logInfo(gr ? "Ζωντανός έλεγχος βιομετρικών:"
@@ -27901,11 +27911,19 @@ if (!secure) {
             gr ? "Κατάσταση" : "Status",
             gr ? "Παραλείφθηκε" : "Skipped"
     );
-    logLabelWarnValue(
-            gr ? "Λόγος" : "Reason",
-            gr ? "Απαιτείται ασφαλές κλείδωμα (PIN / Μοτίβο / Κωδικός)"
-               : "Secure lock required (PIN / Pattern / Password)"
-    );
+    if (secureKnown) {
+        logLabelWarnValue(
+                gr ? "Λόγος" : "Reason",
+                gr ? "Απαιτείται ασφαλές κλείδωμα (PIN / Μοτίβο / Κωδικός)"
+                   : "Secure lock required (PIN / Pattern / Password)"
+        );
+    } else {
+        logLabelValue(
+                gr ? "Λόγος" : "Reason",
+                gr ? "Η κατάσταση Keyguard δεν είναι διαθέσιμη· ο έλεγχος βιομετρικών δεν εκτελέστηκε"
+                   : "Keyguard state unavailable; biometric test was not attempted"
+        );
+    }
 
     appendHtml("<br>");
     logInfo(gr ? "Το Lab 21 κατέγραψε την κατάσταση ελέγχου." : "Lab 21 recorded test status.");
