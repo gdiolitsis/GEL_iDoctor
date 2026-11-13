@@ -80,18 +80,31 @@ public final class IPSPanicParser {
                     severityRank(b.severity) - severityRank(a.severity)
             );
 
-            Result out = new Result();
-            out.primary = matches.get(0);
-
-            for (int i = 1; i < matches.size(); i++) {
-                out.secondary.add(matches.get(i));
-            }
-
-            return out;
+            return assembleMatches(matches);
 
         } catch (Throwable ignore) {
             return null;
         }
+    }
+
+    /**
+     * Preserve the multi-match interface AND populate the flat fields consumed
+     * by Apple Lab 1. Previously the wrapper's fields stayed null, making a
+     * successfully matched panic pattern appear as "unknown" in the report.
+     */
+    static Result assembleMatches(List<Result> matches) {
+        if (matches == null || matches.isEmpty()) return null;
+        Result best = matches.get(0);
+        Result out = new Result();
+        out.primary = best;
+        out.patternId = best.patternId;
+        out.domain = best.domain;
+        out.cause = best.cause;
+        out.severity = best.severity;
+        out.confidence = best.confidence;
+        out.recommendation = best.recommendation;
+        for (int i = 1; i < matches.size(); i++) out.secondary.add(matches.get(i));
+        return out;
     }
 
     // ============================================================
