@@ -104,10 +104,12 @@ public boolean onCreateOptionsMenu(Menu menu) {
     settingsItem.setContentDescription(settingsLabel);
     settingsItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
-// 🔽 CONTACT BUTTON
-menu.add(0, 1002, 1, "Contact")
-        .setIcon(R.drawable.ic_contact_gel)
-        .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+// Contact action: preserve its icon/handler and localize the visible and accessible name.
+final String contactLabel = AppLang.isGreek(this) ? "Επικοινωνία" : "Contact";
+MenuItem contactItem = menu.add(0, 1002, 1, contactLabel);
+contactItem.setIcon(R.drawable.ic_contact_gel);
+contactItem.setContentDescription(contactLabel);
+contactItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
     // Closed Test / trusted tester entitlement.
     menu.add(
@@ -510,7 +512,7 @@ private void showContactDeveloperDialog() {
     btnCancel.setBackground(makeGelBtn(0xFFAA1111));
 
     Button btnSend = new com.gel.cleaner.GelButton(this);
-    btnSend.setText(gr ? "Αποστολή" : "Send");
+    btnSend.setText(gr ? "ΑΠΟΣΤΟΛΗ" : "SEND");
     btnSend.setTextColor(Color.WHITE);
     btnSend.setAllCaps(false);
     btnSend.setBackground(makeGelBtn(0xFF00FF7F));
@@ -556,7 +558,7 @@ try {
     startActivity(intent);
 } catch (Exception e) {
     Toast.makeText(this,
-            "No email app found",
+            gr ? "Δεν βρέθηκε εφαρμογή email" : "No email app found",
             Toast.LENGTH_SHORT).show();
 }
 
