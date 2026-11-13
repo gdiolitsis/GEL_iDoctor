@@ -6718,15 +6718,8 @@ exitBtn.setOnClickListener(v -> {
     runOnUiThread(this::enableSingleExportButton);
 });
 
-start.setOnClickListener(v -> {
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-    d.dismiss();
-
-    // 👉 εδώ συνεχίζεις το test
-});
-
 // ------------------------------------------------------------
-// START ACTION
+// START ACTION — single listener; preserve the actual audio test.
 // ------------------------------------------------------------
 start.setOnClickListener(v -> {
 
