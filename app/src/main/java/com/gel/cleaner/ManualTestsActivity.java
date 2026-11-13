@@ -6337,10 +6337,17 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                     ToneGenerator.TONE_DTMF_9
             };
 
+            int requestedTones = 0;
             for (int t : tones) {
-                tg.startTone(t, 500);
+                if (!tg.startTone(t, 500)) {
+                    throw new IllegalStateException("ToneGenerator could not start tone " + (requestedTones + 1));
+                }
+                requestedTones++;
                 SystemClock.sleep(550);
             }
+            logInfo(gr
+                    ? "Ζητήθηκε επιτυχώς η αναπαραγωγή 4 τόνων (όχι ακουστική επιβεβαίωση)."
+                    : "Playback of 4 tones was requested successfully (not acoustic verification).");
 
 // ----------------------------------------------------
 // MIC FEEDBACK ANALYSIS
@@ -6401,20 +6408,22 @@ if (conf.contains("LOW") || conf.contains("WEAK")
 // ----------------------------------------------------
 // HARD GATE — ABSOLUTE SILENCE ONLY
 // ----------------------------------------------------
-if (rms == 0 && peak == 0) {
+// Threshold 20 applies to microphone RMS in this engine's raw units.
+// This capture occurs AFTER the tones: it cannot verify individual tones.
+if (rms <= 20) {
 
 appendHtml("<br>");
     logLabelErrorValue(
             gr ? "Έξοδος Ηχείου" : "Speaker output",
-            gr ? "Δεν ανιχνεύθηκε ακουστικό σήμα"
-               : "No acoustic output detected"
+            gr ? "Δεν επιβεβαιώθηκε σήμα πάνω από το όριο RMS 20"
+               : "Signal above RMS threshold 20 was not confirmed"
     );
 
     logLabelWarnValue(
             gr ? "Πιθανή αιτία" : "Possible cause",
             gr
-                    ? "Βλάβη ηχείου, σίγαση εξόδου ή πλήρης ακουστική απομόνωση"
-                    : "Speaker hardware failure, muted output path, or extreme isolation"
+                    ? "Χαμηλή μέτρηση μικροφώνου μετά τους τόνους — δεν τεκμηριώνεται βλάβη ηχείου"
+                    : "Low microphone reading after tones — speaker failure is not established"
     );
 
     logLabelOkValue(
@@ -6438,8 +6447,8 @@ appendHtml("<br>");
     logLabelOkValue(
             gr ? "Έξοδος Ηχείου" : "Speaker output",
             gr
-                    ? "Ανιχνεύθηκε ακουστικό σήμα με χαμηλή αξιοπιστία."
-                    : "Acoustic signal detected with LOW confidence"
+                    ? "RMS πάνω από 20 μετά την αναπαραγωγή, με χαμηλή αξιοπιστία — οι τόνοι δεν επιβεβαιώθηκαν."
+                    : "RMS above 20 after playback, LOW confidence — tones not verified"
     );
 
     logLabelWarnValue(
@@ -6455,15 +6464,15 @@ appendHtml("<br>");
     logLabelOkValue(
             gr ? "Έξοδος Ηχείου" : "Speaker output",
             gr
-                    ? "Ανιχνεύθηκε ακουστικό σήμα"
-                    : "Acoustic signal detected"
+                    ? "RMS πάνω από 20 μετά την αναπαραγωγή (όχι επιβεβαίωση τόνων)"
+                    : "RMS above 20 after playback (not tone verification)"
     );
 
     logLabelOkValue(
             gr ? "Σημείωση" : "Note",
             gr
-                    ? "Η σάρωση συχνοτήτων ολοκληρώθηκε επιτυχώς."
-                    : "Frequency sweep detected successfully across multiple tones."
+                    ? "Οι τέσσερις τόνοι ζητήθηκαν, αλλά η μεταγενέστερη μέτρηση δεν πιστοποιεί κάθε συχνότητα."
+                    : "Four tones were requested, but the later measurement cannot verify each frequency."
     );
 }
 
