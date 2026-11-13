@@ -354,6 +354,7 @@ private static class PrivacySnapshot {
 
     // 🔴 ΠΡΟΣΘΗΚΗ (απαραίτητα για compile)
     int totalUserAppsChecked = 0;
+    boolean coverageIncomplete = false;
 
     int userAppsWithLocation = 0;
     int userAppsWithMic = 0;
@@ -31627,7 +31628,9 @@ String securityFlag = "⚪";
 // 8) PRIVACY (dangerous granted perms to user apps)
 // ------------------------------------------------------------
 PrivacySnapshot pr = readPrivacySnapshot();
-int privacyScore = scorePrivacy(convertToEnginePrivacy(pr));
+int privacyScore = Lab30ScoreEvidence.hasPrivacyCoverage(
+        pr.totalUserAppsChecked, pr.coverageIncomplete)
+        ? scorePrivacy(convertToEnginePrivacy(pr)) : -1;
 String privacyFlag = "⚪";
 
 // ------------------------------------------------------------
@@ -32587,11 +32590,14 @@ logLine();
 
 logLabelValue(
         gr ? "Κατάσταση" : "Status",
-        privacyFlag + " (" + privacyScore + ")"
+        privacyScore < 0
+                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — ελλιπής απογραφή αδειών"
+                      : "INSUFFICIENT DATA — incomplete permissions sample")
+                : privacyFlag + " (" + privacyScore + ")"
 );
 
 logLabelValue(
-        gr ? "Επικίνδυνες άδειες" : "Dangerous permissions",
+        gr ? "Χορηγημένες άδειες στο ορατό δείγμα" : "Granted permissions in visible sample",
         "Location=" + pr.userAppsWithLocation +
         " | Mic=" + pr.userAppsWithMic +
         " | Camera=" + pr.userAppsWithCamera +
@@ -32654,8 +32660,9 @@ logLabelValue(
 
 logLabelValue(
         gr ? "Ιδιωτικότητα" : "Privacy",
-        privacyFlag
-                + " (" + privacyScore + ")"
+        privacyScore < 0
+                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
+                : privacyFlag + " (" + privacyScore + ")"
 );
 
 String verdict = gr
@@ -33154,7 +33161,10 @@ for (android.content.pm.PackageInfo pi : packs) {
 
     String[] req = pi.requestedPermissions;    
     int[] flags = pi.requestedPermissionsFlags;    
-    if (req == null || flags == null) continue;    
+    if (req == null || flags == null || flags.length < req.length) {
+        p.coverageIncomplete = true; // Incomplete grants must not become false zeroes.
+        continue;
+    }
 
     boolean loc = false, mic = false, cam = false, sms = false;    
 
@@ -33180,7 +33190,9 @@ for (android.content.pm.PackageInfo pi : packs) {
     if (sms) p.userAppsWithSms++;    
 }
 
-} catch (Throwable ignored) {}
+} catch (Throwable ignored) {
+    p.coverageIncomplete = true;
+}
 return p;
 
 }
