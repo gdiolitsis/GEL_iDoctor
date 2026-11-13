@@ -1,0 +1,48 @@
+name: One-time purge unapproved GEL31 QA APK artifacts
+on:
+  push:
+    branches:
+      - qa/gel31-surgical-rebuild-20261113
+    paths:
+      - .github/workflows/qa-apk-artifact-purge-once.yml
+permissions:
+  contents: read
+  actions: write
+jobs:
+  purge-qa-apk-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Purge ONLY interim APKs from this isolated QA branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          expected='gdiolitsis/GEL_iDoctor'
+          branch='qa/gel31-surgical-rebuild-20261113'
+          if [[ "$GITHUB_REPOSITORY" != "$expected" || "$GITHUB_REF" != "refs/heads/$branch" ]]; then
+            echo 'Repository or branch guard failed: refusing deletion' >&2
+            exit 1
+          fi
+          echo 'Scoped cleanup: only gel-v53-source-built-debug-apk from Candidate source-built Android UI QA runs on this branch.'
+          mapfile -t runs < <(
+            gh api --paginate "/repos/$expected/actions/runs?per_page=100&branch=qa%2Fgel31-surgical-rebuild-20261113&event=pull_request" \
+              --jq '.workflow_runs[] | select(.name == "Candidate source-built Android UI QA" and .head_branch == "qa/gel31-surgical-rebuild-20261113") | .id'
+          )
+          total=0
+          for run in "${runs[@]}"; do
+            [[ "$run" =~ ^[0-9]+$ ]] || { echo "Invalid run ID: $run" >&2; exit 1; }
+            mapfile -t artifact_ids < <(
+              gh api --paginate "/repos/$expected/actions/runs/$run/artifacts?per_page=100" \
+                --jq '.artifacts[] | select(.name == "gel-v53-source-built-debug-apk" and .expired == false) | .id'
+            )
+            for artifact in "${artifact_ids[@]}"; do
+              [[ "$artifact" =~ ^[0-9]+$ ]] || { echo "Invalid artifact ID: $artifact" >&2; exit 1; }
+              gh api --method DELETE "/repos/$expected/actions/artifacts/$artifact" >/dev/null
+              echo "Deleted unapproved QA APK artifact $artifact from run $run"
+              total=$((total + 1))
+            done
+          done
+          echo "Total interim QA APK artifacts removed: $total"
+          echo 'Protected backup artifacts, releases, emulator audit evidence and source files were not touched.'
