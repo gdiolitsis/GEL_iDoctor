@@ -1669,9 +1669,9 @@ private void runStabilityLab() {
             : "LAB 3 — System Stability Evaluation");
     logLine();
 
-    logOk(gr
-            ? "Αξιολόγηση εάν το crash υποδηλώνει ευρύτερη αστάθεια συστήματος."
-            : "Evaluating whether the crash indicates broader system instability.");
+    logInfo(gr
+            ? "Ανάλυση εισαγόμενου συμβάντος· η σταθερότητα της συσκευής δεν μετρήθηκε."
+            : "Review of an imported event; physical device stability was not measured.");
 
     parseAndCacheSignature(panicLogText);
 
@@ -1679,42 +1679,42 @@ private void runStabilityLab() {
             && ("Kernel Panic".equalsIgnoreCase(sigCrashType)
             || "Watchdog / Hang".equalsIgnoreCase(sigCrashType))) {
 
-        logError(gr
-                ? "Εντοπίστηκαν ισχυρές ενδείξεις αστάθειας συστήματος."
-                : "High system instability indicators detected.");
+        logWarn(gr
+                ? "Το αρχείο περιέχει υπογραφή panic· η βαρύτητα για τη συσκευή παραμένει ανεπιβεβαίωτη."
+                : "A panic signature appears in the file; actual device severity remains unverified.");
 
         logWarn(gr
-                ? "Τέτοια crashes συχνά σχετίζονται με επανεκκινήσεις ή παγώματα."
-                : "Such crashes are often associated with unexpected reboots or system freezes.");
+                ? "Ορισμένα συμβάντα μπορεί να σχετίζονται με επανεκκινήσεις· χρειάζεται ιστορικό και πραγματικά συμπτώματα."
+                : "Some events can accompany restarts; actual history and symptoms require corroboration.");
 
         logLabelWarnValue(
         gr ? "Με απλά λόγια:" : "In simple terms:",
         gr
-                ? "Η συσκευή δεν κατάφερε να διατηρήσει σταθερή λειτουργία υπό συγκεκριμένες συνθήκες."
-                : "The device could not maintain stable operation under certain conditions."
+                ? "Δεν μπορεί να διαπιστωθεί πραγματική αστάθεια μόνο από το εισαγόμενο αρχείο."
+                : "Actual device instability cannot be established from the imported log alone."
 );
 
 } else if ("Medium".equalsIgnoreCase(sigConfidence)) {
 
-    logWarn(gr
-            ? "Εντοπίστηκε μέτριος κίνδυνος αστάθειας."
-            : "Moderate stability risk detected.");
+    logInfo(gr
+            ? "Εμφανίστηκε ενδεικτική κατηγορία συμβάντος, όχι βαθμονομημένος κίνδυνος."
+            : "A heuristic event category appeared, not a calibrated instability risk.");
 
     logLabelOkValue(
             gr ? "Ερμηνεία:" : "Interpretation:",
             gr
-                    ? "Το σύστημα ενδέχεται να γίνει ασταθές σε συγκεκριμένα σενάρια."
-                    : "The system may become unstable under specific scenarios."
+                    ? "Η συμπεριφορά της συσκευής δεν τεκμηριώνεται χωρίς επαλήθευση συμβάντων και συμπτωμάτων."
+                    : "Device behavior needs verified event history and symptoms."
     );
 
 } else {
 
-    logOk(gr
-            ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις συνεχιζόμενης αστάθειας."
-            : "No strong indicators of ongoing system instability found.");
+    logInfo(gr
+            ? "Δεν υπάρχουν αρκετά δεδομένα για συμπέρασμα σταθερότητας ή απουσίας βλάβης."
+            : "Insufficient data to conclude stability or absence of hardware faults.");
 }
 
-logLabelOkValue(
+logLabelWarnValue(
         gr ? "Τύπος Crash:" : "Crash Type:",
         safe(sigCrashType)
 );
@@ -1722,24 +1722,24 @@ logLabelOkValue(
 if ("High".equalsIgnoreCase(sigConfidence)) {
 
     logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 
 }
 else if ("Medium".equalsIgnoreCase(sigConfidence)) {
 
     logLabelWarnValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 
 }
 else {
 
     logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 
 }
@@ -1747,8 +1747,8 @@ else {
 logLabelOkValue(
         gr ? "Επόμενο βήμα:" : "Next step:",
         gr
-                ? "Το LAB 4 θα αναλύσει ποια περιοχή hardware ενδέχεται να εμπλέκεται."
-                : "LAB 4 will analyze which hardware area is most likely involved in the crash."
+                ? "Το LAB 4 καταγράφει όρους πιθανών υποσυστημάτων, όχι βλάβη εξαρτήματος."
+                : "LAB 4 records subsystem keyword hints, not a component fault diagnosis."
 );
 
     appendHtml("<br>");
