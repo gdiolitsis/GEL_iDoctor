@@ -10675,17 +10675,17 @@ private void lab9SensorsCheck() {
     appendHtml("<br>");
     logLine();
     logSection(gr
-            ? "LAB 9 — Αισθητήρες (Παρουσία & Πλήρης Ανάλυση)"
-            : "LAB 9 — Sensors Presence & Full Analysis");
+            ? "LAB 9 — Αισθητήρες (Απογραφή ενδείξεων Android)"
+            : "LAB 9 — Sensors Reported by Android");
     logLine();
 
     try {
 
         SensorManager sm = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (sm == null) {
-            logLabelErrorValue(
+            logLabelValue(
                     gr ? "SensorManager" : "SensorManager",
-                    gr ? "Μη διαθέσιμο (πρόβλημα framework)" : "Not available (framework issue)"
+                    gr ? "Μη διαθέσιμο — δεν έγινε έλεγχος" : "Unavailable — check not performed"
             );
             return;
         }
@@ -10693,7 +10693,7 @@ private void lab9SensorsCheck() {
         List<Sensor> sensors = sm.getSensorList(Sensor.TYPE_ALL);
         int total = (sensors == null ? 0 : sensors.size());
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Σύνολο αισθητήρων" : "Total sensors reported",
                 String.valueOf(total)
         );
@@ -10708,9 +10708,9 @@ private void lab9SensorsCheck() {
         checkSensor(sm, Sensor.TYPE_PROXIMITY, gr ? "Εγγύτητας" : "Proximity");
 
         if (sensors == null || sensors.isEmpty()) {
-            logLabelErrorValue(
+            logLabelValue(
                     gr ? "Λίστα αισθητήρων" : "Sensor list",
-                    gr ? "Δεν αναφέρθηκαν αισθητήρες από το σύστημα" : "No sensors reported by the system"
+                    gr ? "Το Android δεν επέστρεψε αισθητήρες — λειτουργία άγνωστη" : "Android returned no sensors — functionality unknown"
             );
             return;
         }
@@ -10721,7 +10721,7 @@ private void lab9SensorsCheck() {
         // RAW SENSOR LIST
         // ------------------------------------------------------------
         for (Sensor s : sensors) {
-            logOk(
+            logLabelValue(
                     gr ? "Αισθητήρας" : "Sensor",
                     "type=" + s.getType()
                             + " | name=" + s.getName()
@@ -10774,83 +10774,84 @@ private void lab9SensorsCheck() {
         logLine();
 
         if (hasVirtualGyro)
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Εικονικό γυροσκόπιο" : "Virtual Gyroscope",
-                    gr ? "Εντοπίστηκε (sensor fusion — αναμενόμενο)" : "Detected (sensor fusion — expected behavior)"
+                    gr ? "Ένδειξη ονόματος (λειτουργία μη ελεγμένη)" : "Name-based indication (operation not tested)"
             );
         else
-            logLabelWarnValue(
+            logLabelValue(
                     gr ? "Εικονικό γυροσκόπιο" : "Virtual Gyroscope",
-                    gr ? "Δεν αναφέρθηκε" : "Not reported"
+                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
             );
 
         if (hasDualALS)
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Αισθητήρες φωτός" : "Ambient Light Sensors",
-                    gr ? "Διπλός ALS (μπροστά + πίσω)" : "Dual ALS (front + rear)"
+                    gr ? "2+ καταχωρίσεις ALS — θέσεις μη επιβεβαιωμένες" : "2+ ALS entries — locations not verified"
             );
         else
-            logLabelWarnValue(
+            logLabelValue(
                     gr ? "Αισθητήρες φωτός" : "Ambient Light Sensors",
-                    gr ? "Μονός ALS" : "Single ALS"
+                    gr ? "Καταχωρίσεις ALS κατά όνομα: " + alsCount : "ALS entries by name: " + alsCount
             );
 
         if (hasSAR)
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Αισθητήρες SAR" : "SAR Sensors",
-                    gr ? "Υπάρχουν (proximity / RF tuning)" : "Present (proximity / RF tuning)"
+                    gr ? "Ονομασία SAR/RF — χρήση μη ελεγμένη" : "SAR/RF name — use not tested"
             );
         else
-            logLabelWarnValue(
+            logLabelValue(
                     gr ? "Αισθητήρες SAR" : "SAR Sensors",
-                    gr ? "Δεν αναφέρθηκαν" : "Not reported"
+                    gr ? "Δεν αναφέρθηκαν — πιθανώς μη εκτεθειμένοι" : "Not reported — may not be exposed"
             );
 
         if (hasPickup)
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Pickup sensor" : "Pickup Sensor",
-                    gr ? "Υπάρχει (lift-to-wake υποστήριξη)" : "Present (lift-to-wake supported)"
+                    gr ? "Ονομασία Pickup — lift-to-wake μη ελεγμένο" : "Pickup name — lift-to-wake not tested"
             );
         else
-            logLabelWarnValue(
+            logLabelValue(
                     gr ? "Pickup sensor" : "Pickup Sensor",
-                    gr ? "Δεν αναφέρθηκε" : "Not reported"
+                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
             );
 
         if (hasLargeTouch)
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Large area touch" : "Large Area Touch",
-                    gr ? "Υπάρχει (palm rejection / ακρίβεια)" : "Present (palm rejection / accuracy)"
+                    gr ? "Ονομασία Large Touch — απόκριση μη ελεγμένη" : "Large Touch name — response not tested"
             );
         else
-            logLabelWarnValue(
+            logLabelValue(
                     gr ? "Large area touch" : "Large Area Touch",
-                    gr ? "Δεν αναφέρθηκε" : "Not reported"
+                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
             );
 
         if (hasGameRotation)
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Game rotation vector" : "Game Rotation Vector",
-                    gr ? "Υπάρχει (gaming orientation)" : "Present (gaming orientation)"
+                    gr ? "Ονομασία Game Rotation — απόκριση μη ελεγμένη" : "Game Rotation name — response not tested"
             );
         else
-            logLabelWarnValue(
+            logLabelValue(
                     gr ? "Game rotation vector" : "Game Rotation Vector",
-                    gr ? "Δεν αναφέρθηκε" : "Not reported"
+                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
             );
 
-        logLabelOkValue(
-                gr ? "Συνολική εκτίμηση" : "Overall Assessment",
+        logLabelValue(
+                gr ? "Όριο συμπεράσματος" : "Interpretation scope",
                 gr
-                        ? "Το sensor suite είναι πλήρες και υγιές για αυτή τη συσκευή"
-                        : "Sensor suite complete and healthy for this device"
+                        ? "Απογράφηκαν οι δηλωμένοι αισθητήρες. Η απόκριση και η υγεία τους ΔΕΝ ελέγχθηκαν."
+                        : "Reported sensors inventoried. Their response and health were NOT tested."
         );
 
     } catch (Throwable e) {
-        logError(gr ? "Σφάλμα ανάλυσης αισθητήρων" : "Sensors analysis error", e.getMessage());
+        logWarn((gr ? "Η απογραφή αισθητήρων διακόπηκε — επανέλεγχος: "
+                    : "Sensor inventory interrupted — retry: ") + String.valueOf(e.getMessage()));
     } finally {
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 9 ολοκληρώθηκε." : "Lab 9 finished.");
+        logInfo(gr ? "Το Lab 9 ολοκληρώθηκε." : "Lab 9 finished.");
         logLine();
         enableSingleExportButton();
     }
@@ -10866,16 +10867,17 @@ private void checkSensor(SensorManager sm, int type, String name) {
     boolean ok = sm.getDefaultSensor(type) != null;
 
     if (ok) {
-        logLabelOkValue(
+        logLabelValue(
                 name,
-                gr ? "Διαθέσιμος" : "Available"
+                gr ? "Δηλώνεται από Android — απόκριση μη ελεγμένη"
+                   : "Reported by Android — response not tested"
         );
     } else {
-        logLabelWarnValue(
+        logLabelValue(
                 name,
                 gr
-                        ? "Δεν αναφέρθηκε (ενδέχεται περιορισμένες ή μη διαθέσιμες λειτουργίες)"
-                        : "Not reported (dependent features may be limited or missing)"
+                        ? "Δεν αναφέρθηκε — η πραγματική απόκριση παραμένει άγνωστη"
+                        : "Not reported — actual response remains unknown"
         );
     }
 }
