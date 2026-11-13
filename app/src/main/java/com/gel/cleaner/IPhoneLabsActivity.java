@@ -1771,9 +1771,9 @@ private void runImpactLab() {
             : "LAB 4 — Impact Analysis");
     logLine();
 
-    logOk(gr
-            ? "Αξιολόγηση πιθανών επιπτώσεων σε hardware ή σύστημα."
-            : "Evaluating which hardware or system areas may be affected.");
+    logInfo(gr
+            ? "Καταγραφή όρων υποσυστημάτων στα εισαγόμενα logs· όχι έλεγχος hardware."
+            : "Imported-log subsystem keywords; no hardware test performed.");
 
     parseAndCacheSignature(panicLogText);
 
@@ -1798,11 +1798,11 @@ if ("Power / PMIC".equals(sigDomain)
                     : "This does not confirm a faulty component."
     );
 
-    logLabelErrorValue(
+    logLabelWarnValue(
             gr ? "Τεχνική ένδειξη:" : "Technical indication:",
             gr
-                    ? "Υποδεικνύεται κρίσιμη διαδρομή σχετιζόμενη με hardware."
-                    : "A critical hardware-related path is suggested."
+                    ? "Εντοπίστηκαν όροι υποσυστήματος, όχι επιβεβαιωμένο κρίσιμο κύκλωμα."
+                    : "Subsystem terms were found; a critical hardware path is not established."
     );
 
     logLabelWarnValue(
@@ -1819,15 +1819,15 @@ else if ("Thermal / Cooling".equals(sigDomain)
     logLabelWarnValue(
             gr ? "Ερμηνεία:" : "Interpretation:",
             gr
-                    ? "Υποδεικνύεται επίδραση λόγω φόρτου ή stress συστήματος."
-                    : "System stress-related impact suggested."
+                    ? "Παρατηρήθηκαν όροι που μπορεί να σχετίζονται με φόρτο· καμία φυσική επίπτωση δεν επιβεβαιώθηκε."
+                    : "Load-related terms were observed; no physical impact has been confirmed."
     );
 
     logLabelOkValue(
             gr ? "Συνήθης αιτία:" : "Typical cause:",
             gr
-                    ? "Συχνά σχετίζεται με θερμοκρασία, φόρτο ή παρατεταμένη χρήση."
-                    : "Often linked to heat, load, or prolonged usage."
+                    ? "Η συσχέτιση με θερμοκρασία ή φόρτο απαιτεί ανεξάρτητη επιβεβαίωση."
+                    : "A heat or load correlation requires independent corroboration."
     );
 
 }
@@ -1836,8 +1836,8 @@ else {
     logLabelOkValue(
             gr ? "Ερμηνεία:" : "Interpretation:",
             gr
-                    ? "Δεν εντοπίστηκε σαφής επίπτωση hardware μόνο από αυτό το log."
-                    : "No clear hardware impact identified from this log alone."
+                    ? "Το εισαγόμενο αρχείο δεν μετρά την κατάσταση του υλικού."
+                    : "The imported file does not measure hardware condition."
     );
 }
 
