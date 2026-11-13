@@ -1232,7 +1232,7 @@ private static class TelephonySnapshot {
 
 private static class StorageSnapshot {  
     long totalBytes, freeBytes, usedBytes;  
-    int pctFree;  
+    int pctFree = -1; // Unknown until StatFs validates input  
 }  
 
 private static class AppsSnapshot {  
@@ -1241,7 +1241,7 @@ private static class AppsSnapshot {
 
 private static class RamSnapshot {  
     long totalBytes, freeBytes;  
-    int pctFree;  
+    int pctFree = -1; // Unknown until ActivityManager validates input  
 }  
 
 private static class SecuritySnapshot {  
@@ -31509,12 +31509,14 @@ boolean thermalRunawayRisk =
             : "LAB 30 — Automatic Evidence Summary (not hardware certification)");
     logLine();
 
-    // ============================================================
-    // USAGE ACCESS — REQUIRED
-    // ============================================================
+    // Lab 30 is a read-only summary of independent Android measurements.
+    // Usage Access is not a prerequisite for thermal, storage, RAM or security evidence.
     if (!hasUsageAccess()) {
-        showUsageAccessDialog();
-        return;
+        logLabelValue(
+                gr ? "Στατιστικά χρήσης εφαρμογών" : "App usage statistics",
+                gr ? "Δεν έχει δοθεί Usage Access· τα ανεξάρτητα δεδομένα συστήματος παραμένουν διαθέσιμα."
+                   : "Usage Access not granted; independent system readings remain available."
+        );
     }
     
 // ------------------------------------------------------------
@@ -33008,7 +33010,8 @@ StatFs fs = new StatFs(Environment.getDataDirectory().getAbsolutePath());
 s.totalBytes = fs.getBlockCountLong() * fs.getBlockSizeLong();
 s.freeBytes  = fs.getAvailableBlocksLong() * fs.getBlockSizeLong();
 s.usedBytes  = s.totalBytes - s.freeBytes;
-s.pctFree = (s.totalBytes > 0) ? (int)((s.freeBytes * 100L) / s.totalBytes) : 0;
+s.pctFree = Lab30ScoreEvidence.hasStorageReadings(s.totalBytes, s.freeBytes)
+        ? (int)((s.freeBytes * 100L) / s.totalBytes) : -1;
 } catch (Throwable ignored) {}
 return s;
 }
@@ -33038,7 +33041,8 @@ if (am != null) {
 am.getMemoryInfo(mi);
 r.totalBytes = mi.totalMem;
 r.freeBytes  = mi.availMem;
-r.pctFree = (r.totalBytes > 0) ? (int)((r.freeBytes * 100L) / r.totalBytes) : 0;
+r.pctFree = Lab30ScoreEvidence.hasRamReadings(r.totalBytes, r.freeBytes)
+        ? (int)((r.freeBytes * 100L) / r.totalBytes) : -1;
 }
 } catch (Throwable ignored) {}
 return r;
@@ -33223,8 +33227,8 @@ private int scoreStorage(int pctFree, long totalBytes) {
     int s = 100;
 
     // 🔴 invalid data guard
-    if (pctFree < 0 || pctFree > 100) {
-        return 50; // neutral fallback
+    if (pctFree < 0 || pctFree > 100 || totalBytes <= 0) {
+        return -1; // missing evidence must not become a reassuring heuristic
     }
 
     // 🔴 free space impact
@@ -33254,6 +33258,7 @@ private int scoreStorage(int pctFree, long totalBytes) {
 }
 
 private int scoreApps(int userApps, int totalApps) {
+if (!Lab30ScoreEvidence.hasAppInventory(totalApps, userApps)) return -1;
 int s = 100;
 if (userApps > 140) s -= 50;
 else if (userApps > 110) s -= 35;
@@ -33266,6 +33271,7 @@ return clampScore(s);
 }
 
 private int scoreRam(int pctFree) {
+if (pctFree < 0 || pctFree > 100) return -1;
 int s = 100;
 if (pctFree < 8) s -= 60;
 else if (pctFree < 12) s -= 40;
