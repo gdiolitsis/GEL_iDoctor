@@ -4341,7 +4341,10 @@ private void showLab15ConditionCheck(Runnable startAction) {
     }, 120);
 
 
-    dlg.setOnDismissListener(d -> AppTTS.stop());
+    dlg.setOnDismissListener(d -> {
+        AppTTS.stop();
+        lab15PopupShown = false;
+    });
     
     dlg.setOnCancelListener(d -> AppTTS.stop());
 
@@ -4359,8 +4362,12 @@ private void showLab15ConditionCheck(Runnable startAction) {
         AppTTS.stop();
         dlg.dismiss();
 
-        if (startAction != null)
-            startAction.run();
+        lab15PopupShown = true; // Allow exactly one accepted launch.
+        try {
+            if (startAction != null) startAction.run();
+        } finally {
+            lab15PopupShown = false;
+        }
 
     });
 }
@@ -4385,12 +4392,13 @@ private void abortLab15ByUser() {
             return;
         }
 
-        logWarn(gr
-                ? "Το LAB 15 ακυρώθηκε από τον χρήστη."
-                : "LAB 15 cancelled by user.");
+        logInfo(gr
+                ? "Το LAB 15 ακυρώθηκε — η μέτρηση δεν ολοκληρώθηκε."
+                : "LAB 15 cancelled — measurement not completed.");
 
         lab15Running = false;
         lab15Finished = true;
+        lab15PopupShown = false;
 
         try {
             if (lab15Dialog != null && lab15Dialog.isShowing())
@@ -4400,7 +4408,7 @@ private void abortLab15ByUser() {
         lab15Dialog = null;
 
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 15 ολοκληρώθηκε." : "Lab 15 finished.");
+        logInfo(gr ? "Lab 15: Χωρίς τελικό αποτέλεσμα." : "Lab 15: No final result.");
         logLine();
         enableSingleExportButton();
     });
@@ -24840,6 +24848,14 @@ logLine();
 
 // ================= FLAGS RESET =================
 
+// Invalidate earlier successful Lab 15 evidence when a real rerun begins.
+p.edit().remove("lab15_charge_score")
+        .remove("lab15_system_limited")
+        .remove("lab15_overtemp")
+        .remove("lab15_strength_label")
+        .remove("lab15_ts")
+        .apply();
+
 lab15Running  = true;
 lab15Finished = false;
 lab15FlapUnstable = false;
@@ -24902,25 +24918,15 @@ root.addView(title);
 
 int batteryLevel = getBatteryPercentSafe();
 
-if (batteryLevel > 80) {
-
-    logLabelWarnValue(
-            gr ? "Δοκιμή φόρτισης" : "Charging test",
-            gr ? "Παραλείφθηκε — η μπαταρία είναι πάνω από 80%"
-               : "Skipped — battery above 80%"
-    );
-
-    logLabelWarnValue(
-            gr ? "Σημείωση" : "Note",
-            gr
-                    ? "Η δοκιμή φόρτισης είναι αξιόπιστη μόνο μεταξύ 20% και 80%."
-                    : "Charging diagnostics are reliable only between 20% and 80% battery level."
-    );
-
+if (batteryLevel < 20 || batteryLevel > 80) {
+    logInfo(gr
+            ? "Η δοκιμή δεν εκτελέστηκε: απαιτείται ένδειξη μπαταρίας 20%–80%."
+            : "Test not run: battery level must be between 20% and 80%.");
     lab15Running = false;
     lab15Finished = true;
+    lab15PopupShown = false;
+    enableSingleExportButton();
     return;
-    
     }
 
 final String text =
@@ -25084,7 +25090,16 @@ iDoctorEngine.BatterySnapshot snapStart =
         eng.readBatterySnapshot();
 
 if (snapStart == null) {
-    logError("Battery snapshot failed");
+    logInfo(gr ? "Δεν υπάρχουν δεδομένα μπαταρίας· το τεστ δεν ολοκληρώθηκε."
+               : "Battery data unavailable; the test was not completed.");
+    lab15Running = false;
+    lab15Finished = true;
+    lab15PopupShown = false;
+    try {
+        if (lab15Dialog != null && lab15Dialog.isShowing()) lab15Dialog.dismiss();
+    } catch (Throwable ignore) {}
+    lab15Dialog = null;
+    enableSingleExportButton();
     return;
 }
 
@@ -25095,7 +25110,9 @@ final boolean[] wasCharging = { false };
 final long[] unplugTs = { -1 };
 final String[] dotFrames = { "•", "• •", "• • •" };
 
-final long startMah = snapStart.chargeNowMah;
+// Sample the same engine and source at the start and end of actual charging.
+final long[] startMah = { -1L };
+final String[] startCounterSource = { null };
 
 ui.post(new Runnable() {
 
@@ -25127,6 +25144,10 @@ if (chargingNow) {
 
         wasCharging[0] = true;
         startTs[0] = now;
+
+        iDoctorEngine.BatterySnapshot chargeStart = eng.readBatterySnapshot();
+        startMah[0] = (chargeStart == null) ? -1L : chargeStart.chargeNowMah;
+        startCounterSource[0] = (chargeStart == null) ? null : chargeStart.source;
 
         lab15batTempStart = getBatteryTemperature();
         lab15batTempPeak  = lab15batTempStart;
@@ -25166,14 +25187,14 @@ if (chargingNow) {
         lab15StatusText.setText(gr
                 ? "Η φόρτιση διακόπηκε."
                 : "Charging disconnected.");
-        lab15StatusText.setTextColor(0xFFFF4444);
+        lab15StatusText.setTextColor(Color.WHITE);
 
-        logError(gr
-                ? "Ο φορτιστής αποσυνδέθηκε για περισσότερο από 10 δευτερόλεπτα."
-                : "Charger disconnected for more than 10 seconds.");
-        logError(gr
-                ? "Η δοκιμή φόρτισης ακυρώθηκε."
-                : "Charging test aborted.");
+        logInfo(gr
+                ? "Η φόρτιση διακόπηκε για πάνω από 10 δευτερόλεπτα."
+                : "Charging connection absent for more than 10 seconds.");
+        logInfo(gr
+                ? "Το τεστ δεν ολοκληρώθηκε — δεν αποδείχθηκε βλάβη θύρας."
+                : "Test not completed — no charging port defect is established.");
 
         try {
             if (lab15Dialog != null && lab15Dialog.isShowing())
@@ -25181,6 +25202,8 @@ if (chargingNow) {
         } catch (Throwable ignore) {}
 
         lab15Dialog = null;
+        lab15PopupShown = false;
+        enableSingleExportButton();
         return;
     }
 }
@@ -25333,17 +25356,22 @@ if (lab15FlapUnstable) {
 // ------------------------------------------------------------
 // CHARGING INPUT & STRENGTH
 // ------------------------------------------------------------
-BatteryInfo endInfo = getBatteryInfo();
+iDoctorEngine.BatterySnapshot endInfo = eng.readBatterySnapshot();
+boolean comparableCounters =
+        startMah[0] > 0L && endInfo != null &&
+        endInfo.chargeNowMah > startMah[0] &&
+        startCounterSource[0] != null &&
+        startCounterSource[0].equals(endInfo.source) &&
+        startTs[0] > 0L;
 
-if (startMah > 0 && endInfo != null &&
-        endInfo.currentChargeMah > startMah && startTs[0] > 0) {
+if (comparableCounters) {
 
     lab15_strengthKnown = true;
 
-    long deltaMah = lab14DeltaMah;
+    long deltaMah = endInfo.chargeNowMah - startMah[0];
 long dtMs = Math.max(1, SystemClock.elapsedRealtime() - startTs[0]);
 double minutes = dtMs / 60000.0;
-double mahPerMin = (minutes > 0) ? (lab14DeltaMah / minutes) : -1;
+double mahPerMin = (minutes > 0) ? (deltaMah / minutes) : -1;
 
     logLabelOkValue(
             gr ? "Είσοδος φόρτισης" : "Charging input",
@@ -25352,7 +25380,7 @@ double mahPerMin = (minutes > 0) ? (lab14DeltaMah / minutes) : -1;
                     gr
                             ? "+%d mAh σε %.1f λεπτά (%.1f mAh/min)"
                             : "+%d mAh in %.1f min (%.1f mAh/min)",
-                    lab14DeltaMah,
+                    deltaMah,
                     minutes,
                     mahPerMin
             )
@@ -25404,14 +25432,11 @@ if (lab15_strengthKnown && mahPerMin < 6 && mahPerMin > 1 && !lab15OverTempDurin
 } else {
 
     lab15_strengthKnown = false;
-    lab15_strengthWeak  = true;
+    lab15_strengthWeak  = false; // Unknown is not weak.
 
-    logLabelWarnValue(
-            gr ? "Ισχύς φόρτισης" : "Charging strength",
-            gr
-                    ? "Δεν ήταν δυνατή η αξιόπιστη εκτίμηση"
-                    : "Unable to estimate accurately"
-    );
+    logInfo(gr
+            ? "Καθαρή αύξηση φορτίου: άγνωστη — μη συγκρίσιμα ή ανεπαρκή δεδομένα."
+            : "Net charge gain: unknown — charge counters unavailable or not comparable.");
 }
 
 // ------------------------------------------------------------
@@ -25422,13 +25447,17 @@ appendHtml("<br>");
 logInfo(gr ? "Απόφαση LAB:" : "LAB decision:");
 logLine();
 
-if (!lab15OverTempDuringCharge && !lab15FlapUnstable && !lab15_strengthWeak) {
+if (!lab15_strengthKnown) {
+    logInfo(gr
+            ? "Σύστημα φόρτισης: δεν πιστοποιήθηκε λόγω ανεπαρκών δεδομένων."
+            : "Charging system: not verified due to insufficient data.");
+} else if (!lab15OverTempDuringCharge && !lab15FlapUnstable && !lab15_strengthWeak) {
 
     logLabelOkValue(
             gr ? "Σύστημα φόρτισης" : "Charging system",
             gr
-                    ? "OK — δεν απαιτείται καθαρισμός ή αντικατάσταση"
-                    : "OK — no cleaning or replacement required"
+                    ? "Δεν παρατηρήθηκε πρόβλημα στο τρίλεπτο τεστ — όχι πλήρης πιστοποίηση"
+                    : "No issue observed during 3-minute test — not full certification"
     );
 
     logLabelOkValue(gr ? "Σταθερότητα" : "Stability", "OK");
@@ -25461,7 +25490,8 @@ boolean chargingGlitchDetected =
 
 GELServiceLog.info(
         "SUMMARY: CHARGING_STABILITY=" +
-                (chargingGlitchDetected ? "UNSTABLE" : "STABLE")
+                (!lab15_strengthKnown ? "UNKNOWN" :
+                (chargingGlitchDetected ? "OBSERVED_ISSUES" : "NO_ISSUE_OBSERVED"))
 );
 
 appendHtml("<br>");
@@ -25473,6 +25503,8 @@ logLine();
 // ------------------------------------------------------------
 try {
 
+    if (lab15_strengthKnown) {
+    // Historical score is heuristic, not physical charging-power measurement.
     int chargeScore = 100;
 
     if (lab15_strengthWeak)          chargeScore -= 25;
@@ -25491,6 +25523,7 @@ try {
             )
             .putLong("lab15_ts", System.currentTimeMillis())
             .apply();
+    }
 
 } catch (Throwable ignore) {}
 
