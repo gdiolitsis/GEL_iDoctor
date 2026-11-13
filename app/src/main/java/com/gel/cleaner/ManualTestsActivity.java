@@ -3772,8 +3772,12 @@ private void logLabelErrorValue(String label, String value) {
 }
 
 // ---------------- COMPATIBILITY ----------------
+// Neutral observations (counts, raw metrics, unavailable data) MUST NOT inherit
+// green OK coloring. Reserve green for a verified positive conclusion.
 private void logLabelValue(String label, String value) {
-    logLabelOkValue(label, value);
+    logLabel(label, value, "#E6E6E6");
+    expandLogPanel();
+    scrollLogToBottom();
 }
 
 // ---------------- OVERLOADS ----------------
