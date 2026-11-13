@@ -1151,6 +1151,7 @@ private boolean lab13LastConnected = false;
 private int lab13DisconnectEvents = 0;
 private int lab13ReconnectEvents  = 0;
 private int lab13Seconds = 0;
+private int lab13MonitorSampleCount = 0;
 private long lab13StartMs = 0L;
 
 // flags
@@ -2349,6 +2350,7 @@ protected void onPause() {
         lab13Running = false;
         lab13MonitoringStarted = false;
         try { lab13Handler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
+        try { AppTTS.stop(); } catch (Throwable ignore) {}
         try { unregisterReceiver(lab13BtReceiver); } catch (Throwable ignore) {}
         try {
             if (lab13Dialog != null && lab13Dialog.isShowing()) lab13Dialog.dismiss();
@@ -12720,6 +12722,7 @@ private void startLab13Monitor60s() {
     lab13Running = true;
     lab13StartMs = SystemClock.elapsedRealtime();
     lab13Seconds = 0;
+    lab13MonitorSampleCount = 0;
 
     lab13DisconnectEvents = 0;
     lab13ReconnectEvents = 0;
@@ -12810,7 +12813,10 @@ private void startLab13Monitor60s() {
             // ------------------------------------------------------------
             // TIME
             // ------------------------------------------------------------
-            lab13Seconds++;
+            // Clock duration is elapsed wall time, not number of Handler ticks.
+            lab13Seconds = (int) Math.min(60L, Math.max(0L,
+                    (SystemClock.elapsedRealtime() - lab13StartMs) / 1000L));
+            lab13MonitorSampleCount++;
 
             if (lab13CounterText != null) {
                 lab13CounterText.setText(
@@ -12965,6 +12971,8 @@ private void lab13FinishAndReport(boolean adapterStable) {
     logLine();
     logInfo(gr ? "LAB 13 — Αποτελέσματα (60s monitor)"
                : "LAB 13 — Results (60s monitor)");
+    logLabelValue(gr ? "Δείγματα κατά την παρακολούθηση" : "Monitoring samples",
+            String.valueOf(lab13MonitorSampleCount));
 
     // ============================================================
     // 1️⃣ Adapter Stability (COLOR)
@@ -13060,11 +13068,19 @@ private void lab13FinishAndReport(boolean adapterStable) {
 
     } else {
 
-        logLabelOkValue(
-                gr ? "Παρατήρηση 60 δευτερολέπτων" : "60-second observation",
-                gr ? "Δεν καταγράφηκε αποσύνδεση κατά την παρακολούθηση"
-                   : "No disconnection transition recorded during monitoring"
-        );
+        if (lab13MonitorSampleCount >= 50) {
+            logLabelOkValue(
+                    gr ? "Παρατήρηση 60 δευτερολέπτων" : "60-second observation",
+                    gr ? "Δεν καταγράφηκε αποσύνδεση στα διαθέσιμα δείγματα"
+                       : "No disconnection transition captured in observed samples"
+            );
+        } else {
+            logLabelValue(
+                    gr ? "Παρατήρηση 60 δευτερολέπτων" : "60-second observation",
+                    gr ? "ΑΝΕΠΑΡΚΗ ΔΕΙΓΜΑΤΑ — δεν τεκμηριώνεται σταθερότητα"
+                       : "INSUFFICIENT SAMPLES — stability not established"
+            );
+        }
     }
 
     // ============================================================
