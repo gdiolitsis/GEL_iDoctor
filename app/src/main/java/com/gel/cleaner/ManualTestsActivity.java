@@ -28926,8 +28926,8 @@ risk = Math.max(0, Math.min(100, risk));
 
 logInfo(gr ? "Έλεγχος Root:" : "Root Scan:");  
 if (rootFindings.isEmpty()) {  
-    logOk(gr ? "Δεν εντοπίστηκαν ισχυρά ίχνη root."
-             : "No strong root traces detected.");  
+    logInfo(gr ? "Δεν παρατηρήθηκαν ισχυρά root ίχνη· η απουσία τους δεν αποδεικνύει unrooted."
+               : "No strong root traces observed; their absence does not prove unrooted.");  
 } else {  
     for (String s : rootFindings)
         logWarn("• " + s);  
@@ -28938,9 +28938,8 @@ logInfo(gr ? "Bootloader / Verified Boot:"
 
 if (blFindings.isEmpty()) {
 
-    logOk(gr
-            ? "Δεν εντοπίστηκαν ανωμαλίες bootloader."
-            : "No bootloader anomalies detected.");
+    logInfo(gr ? "Δεν υπάρχουν αναγνώσιμα στοιχεία bootloader/Verified Boot."
+               : "No readable bootloader/Verified Boot data.");
 
 } else {
 
@@ -28952,7 +28951,7 @@ if (blFindings.isEmpty()) {
             l.contains("vbmeta.device_state=locked") ||
             l.contains("flash.locked=1")) {
 
-            logOk("• " + s);
+            logInfo("• " + s);
 
         } else {
 
@@ -28965,9 +28964,8 @@ logInfo(gr ? "Boot Animation / Splash:"
            : "Boot Animation / Splash:");  
 if (animFindings.isEmpty()) {
 
-    logOk(gr
-            ? "Δεν εντοπίστηκαν ίχνη προσαρμοσμένης εκκίνησης."
-            : "No custom animation traces detected.");
+    logInfo(gr ? "Δεν παρατηρήθηκαν ορατές διαδρομές boot animation."
+               : "No visible boot-animation paths observed.");
 
 } else {
 
@@ -28977,7 +28975,7 @@ if (animFindings.isEmpty()) {
 
         if (l.contains("stock bootanimation")) {
 
-            logOk("• " + s);
+            logInfo("• " + s);
 
         } else {
 
@@ -28991,9 +28989,8 @@ logInfo(gr ? "Magisk / Stealth heuristics:"
 
 if (magiskStealthFindings.isEmpty()) {
 
-    logOk(gr
-            ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις stealth root."
-            : "No strong stealth root indicators detected.");
+    logInfo(gr ? "Δεν εντοπίστηκαν ισχυρά ίχνη stealth root στους προσβάσιμους ελέγχους."
+               : "No strong stealth-root traces seen in accessible checks.");
 
 } else {
 
@@ -29007,7 +29004,7 @@ if (magiskStealthFindings.isEmpty()) {
             "locked".equals(vbmeta) &&
             "1".equals(flashL)) {
 
-            logOk("• " + s);
+            logInfo("• " + s);
 
         } else {
 
@@ -29017,58 +29014,58 @@ if (magiskStealthFindings.isEmpty()) {
 }
 
 // ------------------------------------------------------------
-// RISK SCORE (colored VALUE only)
+// ROOT / VERIFIED BOOT — EVIDENCE, NOT FABRICATED SECURITY PERCENTAGE
 // ------------------------------------------------------------
-
+// The legacy path, bootanimation and property counters are not physically
+// calibrated. Keep every probe above; never use the sum to certify safety.
 appendHtml("<br>");
-if (risk >= 70) {
-    logLabelErrorValue(
-            gr ? "Εκτιμιση κινδύνου" : "Risk netdict",
-            risk + " / 100"
-    );
-} else if (risk >= 35) {
-    logLabelWarnValue(
-            gr ? "Εκτιμιση κινδύνου" : "Risk netdict",
-            risk + " / 100"
-    );
+logInfo(gr ? "Σύνοψη τεκμηρίωσης Root / Verified Boot"
+           : "Root / Verified Boot evidence summary");
+
+if (suExec) {
+    logLabelWarnValue(gr ? "Πρόσβαση root" : "Root access",
+            gr ? "Εκτελέστηκε su με uid=0 — προνομιούχο shell επιβεβαιώθηκε"
+               : "su returned uid=0 — privileged shell confirmed");
+} else if (suFound || pkgHit || !magiskStealthFindings.isEmpty()) {
+    logLabelWarnValue(gr ? "Ενδείξεις root" : "Root indicators",
+            gr ? "Βρέθηκαν ίχνη, αλλά δεν επιβεβαιώθηκε εκτέλεση root shell"
+               : "Indicators observed, but root-shell execution not confirmed");
 } else {
-    logLabelOkValue(
-            gr ? "Εκτιμιση κινδύνου" : "Risk netdict",
-            risk + " / 100"
-    );
+    logLabelValue(gr ? "Ενδείξεις root" : "Root indicators",
+            gr ? "Δεν εντοπίστηκαν στους προσβάσιμους ελέγχους· κατάσταση root άγνωστη"
+               : "None found in accessible checks; rootedness unverified");
 }
 
-// ------------------------------------------------------------
-// STATUS (GEL LABEL/VALUE STYLE)
-// ------------------------------------------------------------
-
-if (risk >= 70 || suExec || pkgHit) {
-
-    logLabelErrorValue(
-            gr ? "Τελική κατάσταση" : "Final status",
-            gr ? "ROOT / ΤΡΟΠΟΠΟΙΗΜΕΝΟ ΣΥΣΤΗΜΑ (υψηλή βεβαιότητα)"
-               : "ROOTED / SYSTEM MODIFIED (high confidence)"
-    );
-
-} else if (risk >= 35) {
-
-    logLabelWarnValue(
-            gr ? "Τελική κατάσταση" : "Final status",
-            gr ? "ΥΠΟΠΤΟ (πιθανό root / ξεκλείδωτος bootloader / custom ROM)"
-               : "SUSPICIOUS (possible root / unlocked / custom ROM)"
-    );
-
+boolean bootFailed = "red".equals(vbState);
+boolean bootUnlocked = "orange".equals(vbState)
+        || "unlocked".equals(vbmeta) || "0".equals(flashL);
+if (bootFailed) {
+    logLabelErrorValue(gr ? "Verified Boot" : "Verified Boot",
+            gr ? "Το Android αναφέρει RED — απαιτείται έλεγχος της εκκίνησης"
+               : "Android reports RED — investigate boot verification");
+} else if (bootUnlocked) {
+    logLabelWarnValue(gr ? "Bootloader / Verified Boot" : "Bootloader / Verified Boot",
+            gr ? "Το Android αναφέρει ξεκλείδωτη κατάσταση· δεν αποδεικνύει root"
+               : "Android reports an unlocked state; this does not prove root");
+} else if ("yellow".equals(vbState)) {
+    logLabelValue(gr ? "Verified Boot" : "Verified Boot",
+            gr ? "YELLOW: αναφερόμενη προσαρμοσμένη ρίζα εμπιστοσύνης· κατάσταση root άγνωστη"
+               : "YELLOW: custom root of trust reported; root status unknown");
+} else if ("green".equals(vbState)) {
+    logLabelValue(gr ? "Verified Boot" : "Verified Boot",
+            gr ? "GREEN: δηλώνεται από το Android, όχι ανεξάρτητη επιβεβαίωση"
+               : "GREEN: OS-reported, not independently attested");
 } else {
-
-    logLabelOkValue(
-            gr ? "Τελική κατάσταση" : "Final status",
-            gr ? "ΑΣΦΑΛΕΣ (δεν βρέθηκαν σημαντικές ενδείξεις τροποποίησης)"
-               : "SAFE (no significant modification evidence)"
-    );
+    logLabelValue(gr ? "Verified Boot" : "Verified Boot",
+            gr ? "Μη διαθέσιμη ή μη αναγνωρισμένη κατάσταση"
+               : "Unavailable or unrecognized state");
 }
+logInfo(gr ? "Δεν εκδόθηκε αυθαίρετος συνολικός δείκτης ασφάλειας."
+           : "No arbitrary whole-device security score was issued.");
 
 appendHtml("<br>");
-logOk(gr ? "Το Lab 24 ολοκληρώθηκε." : "Lab 24 finished.");
+logInfo(gr ? "Το Lab 24 κατέγραψε τις διαθέσιμες ενδείξεις."
+           : "Lab 24 recorded available indicators.");
 logLine();
 }
 
