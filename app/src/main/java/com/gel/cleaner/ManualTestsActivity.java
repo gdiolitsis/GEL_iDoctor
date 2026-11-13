@@ -26550,19 +26550,18 @@ logLine();
 
                 if (!overallDeviceConcern) {
 
-                    logLabelOkValue(
-                            gr ? "Συνολική κατάσταση" : "Overall status",
+                    // The combined thresholds are legacy heuristics, not proof
+                    // that all hardware or critical thermal zones were tested.
+                    logLabelValue(
+                            gr ? "Συνολική ένδειξη" : "Combined observation",
                             gr
-                                    ? "Δεν εντοπίστηκαν κρίσιμα προβλήματα (μπαταρία / φόρτιση / θερμικά)"
-                                    : "No critical issues detected (battery / charging / thermal)"
+                                    ? "Ο μη βαθμονομημένος συνδυασμός δεν έδωσε πρόσθετη προειδοποίηση· δεν πιστοποιείται υγεία συσκευής"
+                                    : "No additional alert from uncalibrated indicators; device health is not certified"
                     );
 
-                    logLabelOkValue(
-                            gr ? "Παρακολούθηση" : "Monitoring",
-                            gr
-                                    ? "Ελέγχθηκαν εσωτερικά chips και κρίσιμα περιφερειακά"
-                                    : "Internal chips and critical peripherals checked"
-                    );
+                    logInfo(gr
+                            ? "Κάλυψη: μόνο διαθέσιμες μετρήσεις μπαταρίας, φόρτισης και θερμικών"
+                            : "Coverage: available battery, charging and thermal observations only");
 
                 } else {
 
