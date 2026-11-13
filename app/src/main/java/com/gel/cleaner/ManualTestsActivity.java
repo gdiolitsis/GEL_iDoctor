@@ -8635,6 +8635,12 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 if (!isFinishing() && !isDestroyed()) {
     d.show();
     com.gel.cleaner.GelButtonLayout.fitDialog(d);
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        if (d.isShowing() && !isFinishing() && !isDestroyed()
+                && !AppTTS.isMuted(this)) {
+            AppTTS.ensureSpeak(this, message);
+        }
+    }, 250);
 }
 
 // ---------------------------
