@@ -2341,6 +2341,20 @@ protected void onPause() {
         restoreLab3Audio();
     } catch (Throwable ignore) {}
 
+    // LAB 5 — physical interruption is not a failed vibration response.
+    if (lab5Running.get()) {
+        lab5Cancelled.set(true);
+        try {
+            Vibrator active = lab5ActiveVibrator;
+            if (active != null) active.cancel();
+        } catch (Throwable ignore) {}
+        try {
+            AlertDialog open = lab5ActiveDialog;
+            if (open != null && open.isShowing()) open.dismiss();
+        } catch (Throwable ignore) {}
+        try { AppTTS.stop(); } catch (Throwable ignore) {}
+    }
+
     // =========================
     // LAB 14 / 14B
     // =========================
@@ -8002,7 +8016,15 @@ private void lab4ResultEarpiece() {
    LAB 5 — Vibration Motor Test
    UNIVERSAL OEM-SAFE TEST + USER CONFIRM
    ============================================================ */
+// Lab 5 is user-guided: an aborted test must not become an implicit NO.
+private final AtomicBoolean lab5Running = new AtomicBoolean(false);
+private final AtomicBoolean lab5Cancelled = new AtomicBoolean(false);
+private volatile Vibrator lab5ActiveVibrator;
+private volatile AlertDialog lab5ActiveDialog;
+
 private void lab5Vibration() {
+    if (!lab5Running.compareAndSet(false, true)) return;
+    lab5Cancelled.set(false);
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -8020,6 +8042,7 @@ private void lab5Vibration() {
     new Thread(() -> {
 
         Vibrator vibrator = null;
+        boolean confirmationCompleted = false;
 
         try {
 
@@ -8056,6 +8079,9 @@ private void lab5Vibration() {
                 );
                 return;
             }
+
+            lab5ActiveVibrator = vibrator;
+            if (lab5Cancelled.get() || isFinishing() || isDestroyed()) return;
 
             appendHtml("<br>");
             logInfo(
@@ -8224,6 +8250,7 @@ private void lab5Vibration() {
             }
 
             SystemClock.sleep(3300);
+            if (lab5Cancelled.get() || isFinishing() || isDestroyed()) return;
 
             // =====================================================
             // SECOND FALLBACK PULSE
@@ -8253,12 +8280,19 @@ private void lab5Vibration() {
 
             } catch (Throwable ignore) {}
 
+            if (lab5Cancelled.get() || isFinishing() || isDestroyed()) return;
+
             // =====================================================
             // USER CONFIRMATION
             // =====================================================
             final AtomicBoolean answered = new AtomicBoolean(false);
 
             runOnUiThread(() -> {
+                if (lab5Cancelled.get() || !lab5Running.get()
+                        || isFinishing() || isDestroyed()) {
+                    answered.set(true);
+                    return;
+                }
 
                 AlertDialog.Builder b =
                         new AlertDialog.Builder(
@@ -8308,7 +8342,7 @@ private void lab5Vibration() {
                 noBtn.setTextColor(Color.WHITE);
 
                 GradientDrawable noBg = new GradientDrawable();
-                noBg.setColor(0xFF8B0000);
+                noBg.setColor(0xFFE60000);
                 noBg.setCornerRadius(dp(10));
                 noBg.setStroke(dp(3), 0xFFFFD700);
                 noBtn.setBackground(noBg);
@@ -8317,10 +8351,10 @@ private void lab5Vibration() {
                 Button yesBtn = new com.gel.cleaner.GelButton(this);
                 yesBtn.setText(gr ? "ΝΑΙ" : "YES");
                 yesBtn.setAllCaps(false);
-                yesBtn.setTextColor(Color.WHITE);
+                yesBtn.setTextColor(Color.BLACK);
 
                 GradientDrawable yesBg = new GradientDrawable();
-                yesBg.setColor(0xFF0B5F3B);
+                yesBg.setColor(0xFF39FF14);
                 yesBg.setCornerRadius(dp(10));
                 yesBg.setStroke(dp(3), 0xFFFFD700);
                 yesBtn.setBackground(yesBg);
@@ -8333,6 +8367,7 @@ private void lab5Vibration() {
                 b.setView(root);
 
                 final AlertDialog d = b.create();
+                lab5ActiveDialog = d;
 
                 if (d.getWindow() != null) {
                     d.getWindow().setBackgroundDrawable(
@@ -8341,13 +8376,19 @@ private void lab5Vibration() {
                 }
 
                 d.setOnDismissListener(dialog -> {
+                    if (lab5ActiveDialog == d) lab5ActiveDialog = null;
                     try { AppTTS.stop(); } catch (Throwable ignore) {}
+                    if (!answered.get()) {
+                        lab5Cancelled.set(true);
+                        answered.set(true);
+                    }
                 });
 
                 d.setOnKeyListener((dialog, keyCode, event) -> {
                     if (keyCode == KeyEvent.KEYCODE_BACK &&
                             event.getAction() == KeyEvent.ACTION_UP) {
 
+                        lab5Cancelled.set(true);
                         try { AppTTS.stop(); } catch (Throwable ignore) {}
                         answered.set(true);
                         dialog.dismiss();
@@ -8356,16 +8397,18 @@ private void lab5Vibration() {
                     return false;
                 });
 
-                if (!isFinishing() && !isDestroyed()) {
+                if (!lab5Cancelled.get() && !isFinishing() && !isDestroyed()) {
                     d.show();
                     com.gel.cleaner.GelButtonLayout.fitDialog(d);
                 } else {
+                    lab5Cancelled.set(true);
                     answered.set(true);
                     return;
                 }
 
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    if (d.isShowing() && !AppTTS.isMuted(this)) {
+                    if (d.isShowing() && !lab5Cancelled.get()
+                            && !AppTTS.isMuted(this)) {
                         AppTTS.ensureSpeak(
                                 this,
                                 gr
@@ -8376,12 +8419,14 @@ private void lab5Vibration() {
                 }, 400);
 
                 noBtn.setOnClickListener(v -> {
+                    if (lab5Cancelled.get() || !d.isShowing()) return;
                     userConfirmed.set(false);
                     answered.set(true);
                     d.dismiss();
                 });
 
                 yesBtn.setOnClickListener(v -> {
+                    if (lab5Cancelled.get() || !d.isShowing()) return;
                     userConfirmed.set(true);
                     answered.set(true);
                     d.dismiss();
@@ -8390,13 +8435,20 @@ private void lab5Vibration() {
 
             // No artificial 10-second failure.
             // Wait until the technician answers or the Activity closes.
-            while (!answered.get() &&
-                    !isFinishing() &&
-                    !isDestroyed()) {
+            while (!answered.get() && !lab5Cancelled.get() &&
+                    !isFinishing() && !isDestroyed()) {
 
                 SystemClock.sleep(80);
             }
 
+            if (lab5Cancelled.get() || !answered.get()
+                    || isFinishing() || isDestroyed()) {
+                logLabelWarnValue(gr ? "LAB 5" : "LAB 5",
+                        gr ? "Διακόπηκε — δεν καταχωρίστηκε απάντηση για τη δόνηση"
+                           : "Canceled — no vibration answer recorded");
+                return;
+            }
+            confirmationCompleted = true;
             appendHtml("<br>");
             logLine();
 
@@ -8411,11 +8463,11 @@ private void lab5Vibration() {
 
             } else {
 
-                logLabelErrorValue(
+                logLabelWarnValue(
                         gr ? "Αποτέλεσμα" : "Result",
                         gr
-                                ? "Η δόνηση δεν επιβεβαιώθηκε από τον χρήστη."
-                                : "Vibration was not confirmed by the user."
+                                ? "Ο χρήστης δεν αισθάνθηκε δόνηση — δεν αποδεικνύεται βλάβη μοτέρ."
+                                : "User did not feel vibration — motor failure is not proven."
                 );
 
                 logLabelWarnValue(
@@ -8436,11 +8488,9 @@ private void lab5Vibration() {
 
         } catch (Throwable t) {
 
-            logError(
-                    gr
-                            ? "Η δοκιμή δόνησης απέτυχε"
-                            : "Vibration test failed"
-            );
+            logLabelWarnValue(gr ? "Εκτέλεση δοκιμής δόνησης" : "Vibration test execution",
+                    gr ? "Η δοκιμή διακόπηκε χωρίς αξιόπιστο αποτέλεσμα"
+                       : "Test interrupted without reliable evidence");
 
             logLabelWarnValue(
                     gr ? "Πιθανή αιτία" : "Possible cause",
@@ -8458,13 +8508,18 @@ private void lab5Vibration() {
                     vibrator.cancel();
                 }
             } catch (Throwable ignore) {}
+            lab5ActiveVibrator = null;
+            lab5Running.set(false);
 
             appendHtml("<br>");
-            logOk(
-                    gr
-                            ? "Το Lab 5 ολοκληρώθηκε."
-                            : "Lab 5 finished."
-            );
+            if (confirmationCompleted) {
+                logInfo(gr ? "Το Lab 5 ολοκληρώθηκε με αναφορά χρήστη."
+                           : "Lab 5 completed with a user report.");
+            } else {
+                logLabelWarnValue(gr ? "LAB 5" : "LAB 5",
+                        gr ? "Μη ολοκληρωμένη δοκιμή — ΑΓΝΩΣΤΟ"
+                           : "Incomplete test — UNKNOWN");
+            }
             logLine();
 
             runOnUiThread(this::enableSingleExportButton);
