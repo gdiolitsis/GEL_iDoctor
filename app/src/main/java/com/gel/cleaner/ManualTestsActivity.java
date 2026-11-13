@@ -28460,7 +28460,7 @@ private void lab23DeveloperOptionsRisk() {
 
     } catch (Throwable e) {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "USB Debugging" : "USB Debugging",
                 gr ? "Αδυναμία ανάγνωσης (περιορισμός κατασκευαστή)"
                    : "Unable to read (OEM restriction)"
@@ -28506,7 +28506,7 @@ try {
 
 } catch (Throwable e) {
 
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Επιλογές προγραμματιστή" : "Developer options",
             gr ? "Αδυναμία ανάγνωσης"
                : "Unable to read"
@@ -28545,10 +28545,30 @@ if (adbWifi) {
 // ============================================================
 // 4) ADB PAIRING MODE (Wireless Debugging)
 // ============================================================
+// Keep quick localhost checks responsive. The wider OEM-dependent
+// pairing-port probe runs off the UI thread and remains informational.
 boolean adbPairing =
-        isPortOpen(3700, 200) ||
-        isPortOpen(7460, 200) ||
-        scanPairingPortRange();
+        isPortOpen(3700, 80) ||
+        isPortOpen(7460, 80);
+
+if (!adbPairing) {
+    logInfo(gr ? "Πρόσθετη τοπική σάρωση θυρών στο παρασκήνιο..."
+               : "Additional local port check running asynchronously...");
+    new Thread(() -> {
+        boolean extraResponded = scanPairingPortRange();
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) return;
+            logLabelValue(
+                    gr ? "Πρόσθετες τοπικές θύρες" : "Additional local ports",
+                    extraResponded
+                            ? (gr ? "Βρέθηκε ανταποκρινόμενη TCP θύρα· η υπηρεσία δεν ταυτοποιήθηκε"
+                                  : "A TCP port responded; service identity not verified")
+                            : (gr ? "Δεν απάντησε καμία από τις δοκιμασμένες θύρες· Wireless debugging άγνωστο"
+                                  : "No probed port responded; wireless debugging status unknown")
+            );
+        });
+    }, "GEL-Lab23-PortProbe").start();
+}
 
 if (adbPairing) {
 
@@ -28567,8 +28587,8 @@ if (adbPairing) {
 
     logLabelValue(
             gr ? "Δοκιμασμένες τοπικές θύρες" : "Probed local ports",
-            gr ? "Δεν απάντησαν — δεν τεκμηριώνεται κατάσταση pairing"
-               : "No response — pairing state not established"
+            gr ? "Οι αρχικές θύρες δεν απάντησαν· εκκρεμεί πρόσθετη τοπική σάρωση"
+               : "Initial ports did not respond; additional local probe pending"
     );
 }
 
@@ -28586,27 +28606,20 @@ logInfo(gr ? "Προτεινόμενες ενέργειες"
            : "Recommended actions");
            logLine();
 
-if (usbDebug || devOpts) {
-
-    logLabelWarnValue(
-            gr ? "Απενεργοποίηση" : "Disable",
-            gr ? "Ρυθμίσεις > Σύστημα > Επιλογές προγραμματιστή > OFF"
-               : "Settings > System > Developer options > OFF"
-    );
-
+if (usbDebug) {
     logLabelWarnValue(
             "USB Debugging",
-            gr ? "Απενεργοποιήστε το"
-               : "Turn OFF"
+            gr ? "Είναι ενεργό — απενεργοποιήστε το αν δεν το χρειάζεστε"
+               : "Enabled — turn off when it is no longer needed"
     );
-
-    } else {
-
-    logLabelOkValue(
-            "USB Debugging",
-            gr ? "Απενεργοποιημένο"
-               : "Disabled"
-    );
+} else {
+    logLabelValue("USB Debugging",
+            gr ? "Δηλώθηκε ανενεργό ή μη αναγνώσιμο — δεν αποτελεί έλεγχο όλων των ADB διαδρομών"
+               : "Reported off or unreadable — not verification of every ADB path");
+}
+if (devOpts) {
+    logInfo(gr ? "Οι επιλογές προγραμματιστή μπορούν να παραμείνουν ενεργές για νόμιμη χρήση."
+               : "Developer options may be enabled for legitimate use.");
 }
 
 if (adbWifi || adbPairing) {
