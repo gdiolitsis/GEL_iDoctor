@@ -9,6 +9,9 @@ public class ThermalEvidencePolicyTest {
         assertEquals(-1, ThermalEvidencePolicy.score(0, 1, 100, false)); // battery-only
         assertEquals(-1, ThermalEvidencePolicy.score(0, 0, 100, true)); // hidden warning not full coverage
         assertEquals("UNAVAILABLE", ThermalEvidencePolicy.pattern(-1, false));
+        assertEquals(-1, ThermalEvidencePolicy.score(0, 3, 100, false)); // peripherals only
+        assertEquals("THERMAL_WARNING_WITH_LIMITED_COVERAGE",
+                ThermalEvidencePolicy.pattern(-1, true)); // OS severe or observed hot zone
     }
 
     @Test public void visibleReadingsCanBeScoredButDoNotProveFullCoverage() {
