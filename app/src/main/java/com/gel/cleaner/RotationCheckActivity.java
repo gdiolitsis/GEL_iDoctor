@@ -108,6 +108,34 @@ public class RotationCheckActivity extends GELAutoActivityHook
         });
 
         root.addView(end);
+
+        // Keep the proximity sensor test accessible even when rotation
+        // evidence cannot be collected; this is NOT a rotation success.
+        Button proximityOnly = new com.gel.cleaner.GelButton(this);
+        proximityOnly.setText(AppLang.isGreek(this)
+                ? "ΣΥΝΕΧΕΙΑ ΜΕ ΕΓΓΥΤΗΤΑ" : "CONTINUE WITH PROXIMITY");
+        proximityOnly.setAllCaps(false);
+        proximityOnly.setTextColor(Color.BLACK);
+        proximityOnly.setTextSize(15f);
+        proximityOnly.setTypeface(null, Typeface.BOLD);
+        GradientDrawable greenBtn = new GradientDrawable();
+        greenBtn.setColor(0xFF39FF14);
+        greenBtn.setCornerRadius(dp(14));
+        greenBtn.setStroke(dp(3), 0xFFFFD700);
+        proximityOnly.setBackground(greenBtn);
+        FrameLayout.LayoutParams proximityLp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT);
+        proximityLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        proximityLp.leftMargin = dp(24);
+        proximityLp.rightMargin = dp(24);
+        proximityLp.bottomMargin = dp(96);
+        proximityOnly.setLayoutParams(proximityLp);
+        proximityOnly.setOnClickListener(v -> {
+            setResult(RESULT_FIRST_USER);
+            finish();
+        });
+        root.addView(proximityOnly);
         setContentView(root);
     }
 
