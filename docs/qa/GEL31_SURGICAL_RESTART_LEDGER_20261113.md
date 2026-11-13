@@ -84,6 +84,12 @@ Every row begins as **REVIEW**, not as permission to wholesale copy the historic
 - Review of PR #107 diff: the Lab 1 change aligns `ToneGenerator` playback with `MicDiagnosticEngine.run(this)`, checks `startTone()` return value, stops playback after capture, and retains cleanup in `finally`. **Physical audio validation and full helper/method accounting remain pending.**
 - Do not mark any other Lab complete from the whole-file net delta. The per-method and dedicated-helper before/after counts, negative-path checks, PDF/log output, TTS and real-device evidence remain mandatory.
 
+### ManualTestsActivity source-parity scan (13 Nov 2026)
+
+- Exact backup: **33,567 physical lines / 982,195 characters**; QA branch: **33,573 physical lines / 982,548 characters**; net **+6 lines / +353 characters**.
+- Source-level method extraction found **72 named `lab*` methods in both revisions**. Among those, **only `lab1SpeakerTone` differs**: **314→320 physical method lines; 9,269→9,622 characters**. The other 71 matched method bodies by size, not yet by functional/runtime behavior; this scan does not cover non-`lab*` helpers, resources, or other files.
+- This is **evidence that Labs 2–31 have not been modified in `ManualTestsActivity.java` on this QA branch**, not evidence that their previously reported defects are repaired. Do not approve a final 31-Lab APK from this branch without the remaining surgical fixes and tests.
+
 ## One-change-at-a-time tracking
 
 | Patch | Source | Change | Main method before→after | Helpers before→after | Unit/Build | Emulator EL/EN | Xiaomi | Decision |
