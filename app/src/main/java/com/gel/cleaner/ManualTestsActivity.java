@@ -28418,7 +28418,7 @@ private void lab23DeveloperOptionsRisk() {
     logLine();
     logInfo(gr 
             ? "LAB 23 — Κίνδυνος από επιλογές Προγραμματιστή"
-            : "LAB 22 — Developer Options Risk");
+            : "LAB 23 — Developer Options Status");
     logLine();
 
     int risk = 0;
@@ -28450,7 +28450,7 @@ private void lab23DeveloperOptionsRisk() {
 
         } else {
 
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Κατάσταση USB Debugging" : "Status",
                     gr ? "ΑΝΕΝΕΡΓΟ"
                        : "OFF"
@@ -28465,7 +28465,7 @@ private void lab23DeveloperOptionsRisk() {
                    : "Unable to read (OEM restriction)"
         );
 
-        risk += 5;
+        // Unknown setting access is not a measured security risk.
     }
 
 // ============================================================
@@ -28483,23 +28483,20 @@ try {
 
     if (devOpts) {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Επιλογές προγραμματιστή" : "Developer options",
                 gr ? "ΕΝΕΡΓΟΠΟΙΗΜΕΝΕΣ"
                    : "ENABLED"
         );
 
-        logLabelWarnValue(
-                gr ? "Κίνδυνος" : "Risk",
-                gr ? "Έκθεση σε προχωρημένες ρυθμίσεις συστήματος"
-                   : "Advanced system settings exposed"
-        );
+        logInfo(gr ? "Οι επιλογές προγραμματιστή δεν αποδεικνύουν από μόνες τους παραβίαση."
+                   : "Developer options alone do not establish a security compromise.");
 
         risk += 20;
 
     } else {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Επιλογές προγραμματιστή" : "Developer options",
                 gr ? "ΑΝΕΝΕΡΓΕΣ"
                    : "OFF"
@@ -28514,7 +28511,7 @@ try {
                : "Unable to read"
     );
 
-    risk += 5;
+    // Unknown setting access is not a measured security risk.
 }
 
 // ============================================================
@@ -28524,26 +28521,23 @@ boolean adbWifi = isPortOpen(5555, 200);
 
 if (adbWifi) {
 
-    logLabelErrorValue(
-            gr ? "ADB μέσω Wi-Fi" : "ADB over Wi-Fi",
-            gr ? "ΕΝΕΡΓΟ (θύρα 5555)"
-               : "ACTIVE (port 5555)"
+    logLabelValue(
+            gr ? "Τοπική TCP θύρα 5555" : "Local TCP port 5555",
+            gr ? "Απαντά — δεν επαληθεύτηκε ότι πρόκειται για ADB"
+               : "Responding — ADB service identity not verified"
     );
 
-    logLabelErrorValue(
-            gr ? "Κίνδυνος" : "Risk",
-            gr ? "Δυνατότητα απομακρυσμένου debugging στο τοπικό δίκτυο"
-               : "Remote debugging possible on local network"
-    );
+    logInfo(gr ? "Έλεγχος μόνο σε 127.0.0.1· δεν αποδεικνύει πρόσβαση από δίκτυο."
+               : "Localhost-only probe; no external network exposure established.");
 
     risk += 40;
 
 } else {
 
-    logLabelOkValue(
-            gr ? "ADB μέσω Wi-Fi" : "ADB over Wi-Fi",
-            gr ? "ΑΝΕΝΕΡΓΟ"
-               : "OFF"
+    logLabelValue(
+            gr ? "Τοπική TCP θύρα 5555" : "Local TCP port 5555",
+            gr ? "Δεν απαντά — η κατάσταση ασύρματου ADB παραμένει άγνωστη"
+               : "Not responding — wireless ADB state remains unknown"
     );
 }
 
@@ -28557,63 +28551,31 @@ boolean adbPairing =
 
 if (adbPairing) {
 
-    logLabelWarnValue(
-            gr ? "ADB σύζευξη / Ασύρματο debugging" : "ADB pairing / wireless debugging",
-            gr ? "ΕΝΕΡΓΟ"
-               : "ACTIVE"
+    logLabelValue(
+            gr ? "Δοκιμασμένες τοπικές θύρες" : "Probed local ports",
+            gr ? "Κάποια θύρα απαντά — δεν ταυτοποιήθηκε υπηρεσία ADB"
+               : "A port responded — no ADB service identity verified"
     );
 
-    logLabelWarnValue(
-            gr ? "Κίνδυνος" : "Risk",
-            gr ? "Η συσκευή είναι ανιχνεύσιμη για σύζευξη"
-               : "Device discoverable for pairing"
-    );
+    logInfo(gr ? "Δεν ελέγχθηκε εξωτερική ανιχνευσιμότητα ή εξουσιοδότηση ADB."
+               : "External discoverability or ADB authorization was not tested.");
 
     risk += 25;
 
 } else {
 
-    logLabelOkValue(
-            gr ? "ADB σύζευξη / Ασύρματο debugging" : "ADB pairing / wireless debugging",
-            gr ? "ΑΝΕΝΕΡΓΟ"
-               : "OFF"
+    logLabelValue(
+            gr ? "Δοκιμασμένες τοπικές θύρες" : "Probed local ports",
+            gr ? "Δεν απάντησαν — δεν τεκμηριώνεται κατάσταση pairing"
+               : "No response — pairing state not established"
     );
 }
 
 // ============================================================
-// 5) FINAL RISK SCORE
+// 5) EVIDENCE LIMITS — NO ARBITRARY WHOLE-DEVICE SCORE
 // ============================================================
-risk = Math.min(100, risk);
-
-String level;
-if (risk <= 10)       level = gr ? "ΧΑΜΗΛΟ" : "LOW";
-else if (risk <= 30)  level = gr ? "ΜΕΤΡΙΟ" : "MEDIUM";
-else if (risk <= 60)  level = gr ? "ΥΨΗΛΟ" : "HIGH";
-else                  level = gr ? "ΚΡΙΣΙΜΟ" : "CRITICAL";
-
-
-if (risk >= 70) {
-	
-appendHtml("<br>");
-    logLabelErrorValue(
-            gr ? "Δείκτης κινδύνου ασφάλειας" : "Security risk score",
-            risk + "/100 (" + level + ")"
-    );
-
-} else if (risk >= 30) {
-
-    logLabelWarnValue(
-            gr ? "Δείκτης κινδύνου ασφάλειας" : "Security risk score",
-            risk + "/100 (" + level + ")"
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Δείκτης κινδύνου ασφάλειας" : "Security risk score",
-            risk + "/100 (" + level + ")"
-    );
-}
+logInfo(gr ? "Δεν υπολογίζεται ποσοστό ασφάλειας από flags και τοπικές TCP θύρες."
+           : "No whole-device security percentage from flags or localhost TCP probes.");
 
 // ============================================================
 // 6) ACTION RECOMMENDATIONS
@@ -28647,57 +28609,19 @@ if (usbDebug || devOpts) {
 }
 
 if (adbWifi || adbPairing) {
-
-    logLabelErrorValue(
-            gr ? "Ασύρματο debugging"
-               : "Wireless debugging",
-            gr ? "Απενεργοποιήστε άμεσα (Επιλογές προγραμματιστή)"
-               : "Disable immediately (Developer options)"
-    );
-
-    logLabelWarnValue(
-            gr ? "Συμβουλή" : "Tip",
-            gr ? "Η επανεκκίνηση καθαρίζει ενεργό TCP/IP debugging"
-               : "Reboot clears active TCP/IP debugging"
-    );
-
+    logInfo(gr ? "Ελέγξτε την πραγματική ρύθμιση Wireless debugging στις Ρυθμίσεις Android."
+               : "Check actual Wireless debugging in Android Settings.");
 } else {
-
-    logLabelOkValue(
-            gr ? "Ασύρματο debugging"
-               : "Wireless debugging",
-            gr ? "Δεν είναι ενεργό"
-               : "Not active"
-    );
+    logInfo(gr ? "Οι τοπικές δοκιμές θυρών δεν τεκμηριώνουν απενεργοποιημένο ADB."
+               : "Local port probes do not prove that wireless ADB is off.");
 }
 
-if (risk >= 60) {
-
-    logLabelErrorValue(
-            gr ? "Επείγον" : "Urgency",
-            gr ? "Πολύ υψηλό — απενεργοποιήστε άμεσα τις λειτουργίες ADB"
-               : "Very high — disable ADB features immediately"
-    );
-
-} else if (risk >= 30) {
-
-    logLabelWarnValue(
-            gr ? "Επείγον" : "Urgency",
-            gr ? "Μερική έκθεση — ελέγξτε τις ρυθμίσεις"
-               : "Partial exposure — review settings"
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Συνολικά" : "Overall",
-            gr ? "Το επίπεδο κινδύνου είναι αποδεκτό"
-               : "Risk level acceptable"
-    );
-}
+logInfo(gr ? "Σύνοψη: τα στοιχεία αφορούν ρυθμίσεις, όχι τεχνική πιστοποίηση ασφάλειας."
+           : "Summary: observed settings, not device-security certification.");
 
 appendHtml("<br>");
-logOk(gr ? "Το Lab 23 ολοκληρώθηκε." : "Lab 23 finished.");
+logInfo(gr ? "Το Lab 23 ολοκληρώθηκε ως έλεγχος ρυθμίσεων."
+           : "Lab 23 completed as a configuration check.");
 logLine();
 }
 
