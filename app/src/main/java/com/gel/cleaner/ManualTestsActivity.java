@@ -27594,7 +27594,7 @@ try {
                        : "Configured (PIN / Pattern / Password)"
             );
         } else {
-            logLabelErrorValue(
+            logLabelWarnValue(
                     gr ? "Ρύθμιση κλειδώματος οθόνης" : "Screen lock configuration",
                     gr ? "ΔΕΝ έχει ρυθμιστεί"
                        : "NOT configured"
@@ -27615,7 +27615,7 @@ try {
                            : "LOCKED (keyguard active)"
                 );
             } else {
-                logLabelWarnValue(
+                logLabelValue(
                         gr ? "Κατάσταση" : "State",
                         gr ? "ΞΕΚΛΕΙΔΩΤΟ (η συσκευή είναι ανοιχτή)"
                            : "UNLOCKED (device currently open)"
@@ -27672,18 +27672,18 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 
                 biometricSupported = true;
 
-                logLabelOkValue(
+                logLabelValue(
                         gr ? "Βιομετρικά" : "Biometrics",
-                        gr ? "Υλικό παρόν & έτοιμο για χρήση"
-                           : "Hardware present & usable"
+                        gr ? "Δυνατή ταυτοποίηση Android· εκκρεμεί ζωντανή δοκιμή"
+                           : "Android auth available; live test pending"
                 );
 
             } else {
 
-                logLabelWarnValue(
+                logLabelValue(
                         gr ? "Βιομετρικά" : "Biometrics",
-                        gr ? "Υπάρχουν αλλά δεν είναι έτοιμα"
-                           : "Present but not ready"
+                        gr ? "Η βιομετρική ταυτοποίηση δεν είναι διαθέσιμη (κωδικός " + r + ")"
+                           : "Biometric auth not available (code " + r + ")"
                 );
             }
 
@@ -27725,7 +27725,7 @@ boolean root = isRootAvailable();
 
 if (root) {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Λειτουργία Root" : "Root mode",
             gr ? "ΔΙΑΘΕΣΙΜΗ" : "AVAILABLE"
     );
@@ -27734,21 +27734,21 @@ if (root) {
     hasGatekeeper = rootGlobExists("/data/system/gatekeeper*");
     hasKeystore   = rootPathExists("/data/misc/keystore");
 
-    logLabelOkValue(
+    logLabelValue(
             "Gatekeeper",
             hasGatekeeper
                     ? (gr ? "Εντοπίστηκε" : "Detected")
                     : (gr ? "Δεν εντοπίστηκε" : "Not detected")
     );
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Βάση κλειδώματος" : "Lock DB",
             hasLockDb
                     ? (gr ? "Εντοπίστηκε" : "Detected")
                     : (gr ? "Δεν εντοπίστηκε" : "Not detected")
     );
 
-    logLabelOkValue(
+    logLabelValue(
             "Keystore",
             hasKeystore
                     ? (gr ? "Εντοπίστηκε" : "Detected")
@@ -27757,7 +27757,7 @@ if (root) {
 
 } else {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Λειτουργία Root" : "Root mode",
             gr ? "Μη διαθέσιμη" : "Not available"
     );
@@ -27778,15 +27778,15 @@ if (secure) {
 
 } else {
 
-    logLabelErrorValue(
+    logLabelWarnValue(
             gr ? "Προστασία μετά από επανεκκίνηση" 
                : "Post-reboot protection",
-            gr ? "ΔΕΝ επιβάλλεται (τα δεδομένα εκτίθενται μετά από επανεκκίνηση)"
-               : "NOT enforced (data exposed after reboot)"
+            gr ? "Δεν έχει ρυθμιστεί ασφαλές κλείδωμα· η κρυπτογράφηση δεν ελέγχθηκε"
+               : "No secure lock configured; encryption not assessed"
     );
 }
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κύριο επίπεδο ασφάλειας" 
            : "Primary security layer",
         secure
@@ -27796,7 +27796,7 @@ logLabelOkValue(
                       : "NONE")
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Επίπεδο ευκολίας" 
            : "Convenience layer",
         biometricSupported
@@ -27810,7 +27810,7 @@ if (root) {
 
     if (hasGatekeeper || hasLockDb) {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Επιβολή συστήματος" 
                    : "System enforcement",
                 gr ? "Υποδομή ταυτοποίησης ενεργή"
@@ -27831,36 +27831,9 @@ if (root) {
 // ------------------------------------------------------------  
 // PART D — RISK SCORE (FAST, CLEAR)  
 // ------------------------------------------------------------  
-int risk = 0;
-
-if (!secure) risk += 70;
-if (secure && !lockedNow) risk += 10;
-if (secure && !biometricSupported) risk += 5;
-
-if (risk >= 70) {
-
-    logLabelErrorValue(
-            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
-            gr ? "ΥΨΗΛΗ (" + risk + "/100)"
-               : "HIGH (" + risk + "/100)"
-    );
-
-} else if (risk >= 30) {
-
-    logLabelWarnValue(
-            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
-            gr ? "ΜΕΤΡΙΑ (" + risk + "/100)"
-               : "MEDIUM (" + risk + "/100)"
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Δείκτης επίδρασης ασφάλειας" : "Security impact score",
-            gr ? "ΧΑΜΗΛΗ (" + risk + "/100)"
-               : "LOW (" + risk + "/100)"
-    );
-}
+// Observed lock/biometric settings cannot justify a global 0–100 score.
+logInfo(gr ? "Ποσοστιαία ασφάλεια συσκευής: δεν τεκμηριώνεται από το Lab 21."
+           : "Whole-device security percentage: not established by Lab 21.");
 
 // ------------------------------------------------------------
 // PART E — LIVE BIOMETRIC AUTH TEST (USER-DRIVEN, REAL)
@@ -27959,8 +27932,8 @@ if (Build.VERSION.SDK_INT >= 28) {
                         );
                         logLabelOkValue(
                                 gr ? "Αλυσίδα ελέγχου" : "Pipeline",
-                                gr ? "Αισθητήρας + ταυτοποίηση λειτουργούν σωστά"
-                                   : "Biometric sensor + auth verified functional"
+                                gr ? "Μία ταυτοποίηση συστήματος πέτυχε"
+                                   : "One system biometric authentication succeeded"
                         );
 appendHtml("<br>");
 
