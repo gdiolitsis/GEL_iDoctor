@@ -34,6 +34,17 @@ public class Lab28LogEvidencePolicyTest {
         assertFalse(trimmed.contains("Random reboots"));
     }
 
+    @Test public void interruptedPriorReportMustNotHideFollowingLabs() {
+        String history = "ℹ LAB 28 — Hardware Stability & Interconnect Integrity\n"
+                + "⚠ Random reboots or sudden resets detected\n"
+                + "ℹ LAB 30 — Automatic Evidence Summary\n"
+                + "ℹ Independent thermal evidence\n";
+        String trimmed = Lab28LogEvidencePolicy.withoutLab28Reports(history);
+        assertFalse(trimmed.contains("Random reboots"));
+        assertTrue(trimmed.contains("LAB 30"));
+        assertTrue(trimmed.contains("Independent thermal evidence"));
+    }
+
     @Test public void preservesOtherLabsAndEmptyInputs() {
         assertEquals("", Lab28LogEvidencePolicy.withoutLab28Reports(null));
         assertEquals("", Lab28LogEvidencePolicy.withoutLab28Reports(""));
