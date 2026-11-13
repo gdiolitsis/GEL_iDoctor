@@ -30126,14 +30126,8 @@ private long dirSizeBestEffortRootFast(File root) {
 // ============================================================
 private void lab27PermissionsPrivacy() {
 
-    // ============================================================
-    // USAGE ACCESS — MANDATORY GATE
-    // ============================================================
-    if (!hasUsageAccess()) {
-    showUsageAccessDialog();
-    return;
-}
-
+    // PackageManager permission inventory is independent of Usage Access.
+    // Never block accessible evidence or interrupt the user unnecessarily.
     final boolean gr = AppLang.isGreek(this);
 
     appendHtml("<br>");
@@ -30154,6 +30148,7 @@ private void lab27PermissionsPrivacy() {
     Map<String, Integer> appRisk = new HashMap<>();
 
     int totalApps = 0;
+    int scannedUserApps = 0;
     int flaggedApps = 0;
 
     int riskTotal = 0;
@@ -30197,6 +30192,7 @@ private void lab27PermissionsPrivacy() {
                 continue;
             }
 
+            scannedUserApps++;
             String[] req = p.requestedPermissions;
             int[] grant = p.requestedPermissionsFlags;
 
@@ -30278,8 +30274,12 @@ appendHtml("<br>");
     logLine();
 
     logLabelValue(
-            gr ? "Ορατές εφαρμογές που απογράφηκαν" : "Visible apps inventoried",
+            gr ? "Ορατά πακέτα (μαζί με εξαιρούμενα συστήματος)" : "Visible packages (including excluded system apps)",
             String.valueOf(totalApps)
+    );
+    logLabelValue(
+            gr ? "Ορατές εφαρμογές χρήστη που εξετάστηκαν" : "Visible user apps examined",
+            String.valueOf(scannedUserApps)
     );
 
     logLabelValue(
@@ -30291,7 +30291,7 @@ appendHtml("<br>");
             gr ? "Εφαρμογές με αυξημένο βάρος αδειών" : "Apps with higher permission weight",
             String.valueOf(flaggedApps)
     );
-    if (grantFlagsIncomplete || visibilityIncomplete) {
+    if (grantFlagsIncomplete || visibilityIncomplete || scannedUserApps == 0) {
         logInfo(gr ? "Κάλυψη: μερική. Ελλιπείς ενδείξεις αδειών ή περιορισμένη ορατότητα."
                    : "Coverage: partial. Permission flags or package visibility incomplete.");
     }
@@ -30356,8 +30356,8 @@ appendHtml("<br>");
         logLabelValue(
                 gr ? "Συνδυασμοί αδειών" : "Permission patterns",
                 gr
-                        ? "Δεν εντοπίστηκαν συνδυασμοί υψηλού ρίσκου"
-                        : "No high-risk permission combinations detected"
+                        ? "Δεν εμφανίστηκαν επιλεγμένα βάρη χορηγημένων αδειών στο ορατό δείγμα· δεν αποδεικνύει ότι δεν υπάρχουν κίνδυνοι"
+                        : "No selected granted-permission weights found in the visible sample; does not establish absence of risks"
         );
     }
 
