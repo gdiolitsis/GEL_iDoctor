@@ -25593,6 +25593,20 @@ private void lab16ThermalSnapshot() {
     float  peakTemp = -1f;
     String peakSrc  = "N/A";
     final int observedCount = internal.size() + peripherals.size();
+    // A battery reading alone does not establish CPU/GPU thermal coverage.
+    int chipReadings = 0;
+    for (ThermalEntry sample : internal) {
+        if ("CPU".equals(sample.label) || "GPU".equals(sample.label)) chipReadings++;
+    }
+
+    // Android thermal-protection state is distinct from sysfs sensor readings.
+    int osThermalStatus = -1;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        try {
+            PowerManager power = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (power != null) osThermalStatus = power.getCurrentThermalStatus();
+        } catch (Throwable ignored) {}
+    }
 
     // ------------------------------------------------------------
     // BASIC + CRITICAL THERMALS
@@ -25601,7 +25615,7 @@ private void lab16ThermalSnapshot() {
 
     for (ThermalEntry t : internal) {
 
-        logLabelOkValue(
+        logLabelValue(
                 t.label,
                 String.format(Locale.US, "%.1f°C", t.temp)
         );
@@ -25614,7 +25628,7 @@ private void lab16ThermalSnapshot() {
 
     for (ThermalEntry t : peripherals) {
 
-        logLabelOkValue(
+        logLabelValue(
                 t.label,
                 String.format(Locale.US, "%.1f°C", t.temp)
         );
@@ -25630,17 +25644,16 @@ private void lab16ThermalSnapshot() {
     // ------------------------------------------------------------
     // SUMMARY
     // ------------------------------------------------------------
-    boolean danger = peakTemp >= 55f;
+    boolean danger = peakTemp >= 55f
+            || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+            && osThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE);
 
     logInfo(gr ? "Θερμική σύνοψη:" : "Thermal summary:");
     logLine();
 
     if (observedCount == 0) {
-        logLabelWarnValue(
-                gr ? "Κατάσταση" : "Status",
-                gr ? "Δεν υπάρχουν διαθέσιμες θερμικές μετρήσεις"
-                   : "No thermal readings available"
-        );
+        logInfo(gr ? "Κατάσταση: δεν υπάρχουν διαθέσιμες θερμικές μετρήσεις"
+                   : "Status: no thermal readings available");
     } else if (danger) {
         logLabelWarnValue(
                 gr ? "Κατάσταση" : "Status",
@@ -25659,12 +25672,29 @@ private void lab16ThermalSnapshot() {
                    : "No high reading among available sensors"
         );
     }
-    logLabelWarnValue(
-            gr ? "Κάλυψη" : "Coverage",
-            (gr ? "Μετρήσεις από " : "Readings from ") + observedCount
-                    + (gr ? " διαθέσιμους αισθητήρες· δεν πιστοποιείται πλήρης κάλυψη"
-                          : " available sensors; full hardware coverage is not verified")
-    );
+    logInfo((gr ? "Κάλυψη: " : "Coverage: ") + observedCount
+            + (gr ? " διαθέσιμες ενδείξεις, " : " available readings, ")
+            + chipReadings + (gr ? " CPU/GPU· δεν πιστοποιείται πλήρης κάλυψη"
+                               : " CPU/GPU; full hardware coverage is not verified"));
+
+    if (osThermalStatus >= 0) {
+        String osState = osThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE
+                ? (gr ? "ΣΟΒΑΡΗ ΘΕΡΜΙΚΗ ΠΡΟΣΤΑΣΙΑ" : "SEVERE THERMAL PROTECTION")
+                : osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE
+                ? (gr ? "Θερμικός περιορισμός" : "Thermal limiting")
+                : (gr ? "Χωρίς σοβαρό θερμικό περιορισμό τώρα"
+                      : "No severe thermal limitation currently");
+        if (osThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE) {
+            logLabelErrorValue(gr ? "Κατάσταση Android" : "Android thermal status", osState);
+        } else if (osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE) {
+            logLabelWarnValue(gr ? "Κατάσταση Android" : "Android thermal status", osState);
+        } else {
+            logInfo((gr ? "Κατάσταση Android: " : "Android thermal status: ") + osState);
+        }
+    } else {
+        logInfo(gr ? "Κατάσταση θερμικής προστασίας Android: μη διαθέσιμη"
+                   : "Android thermal protection status: unavailable");
+    }
 
     // ------------------------------------------------------------
     // PEAK TEMPERATURE
@@ -25695,7 +25725,7 @@ private void lab16ThermalSnapshot() {
 
         } else {
 
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
                     peakText
             );
@@ -25710,10 +25740,10 @@ private void lab16ThermalSnapshot() {
     if (hiddenRisk) {
 
         logLabelWarnValue(
-                gr ? "Κρυφοί αισθητήρες" : "Hidden sensors",
+                gr ? "Πρόσθετες θερμικές ζώνες" : "Additional thermal zones",
                 gr
-                        ? "Ανιχνεύθηκε αυξημένη θερμοκρασία (μη εμφανιζόμενα στοιχεία)"
-                        : "Elevated temperature detected (non-displayed components)"
+                        ? "Αυξημένη ένδειξη σε προσβάσιμη ζώνη που δεν εμφανίζεται παραπάνω"
+                        : "Elevated reading in an accessible zone not displayed above"
         );
 
         logLabelWarnValue(
@@ -25724,11 +25754,8 @@ private void lab16ThermalSnapshot() {
         );
 
     } else {
-        logLabelWarnValue(
-                gr ? "Κρυφοί αισθητήρες" : "Hidden sensors",
-                gr ? "Δεν τεκμηριώνεται κάλυψη μη προσβάσιμων αισθητήρων"
-                   : "Unexposed sensors cannot be assessed"
-        );
+        logInfo(gr ? "Μη προσβάσιμοι θερμικοί αισθητήρες: άγνωστοι"
+                   : "Unexposed thermal sensors: unknown");
     }
 
     // ------------------------------------------------------------
@@ -25755,13 +25782,16 @@ private void lab16ThermalSnapshot() {
         }
     }
 
-    thermalDanger = thermalDanger || hiddenRisk;
-    thermalScore = ThermalEvidencePolicy.score(internal.size(), peripherals.size(), thermalScore, hiddenRisk);
+    thermalDanger = thermalDanger || hiddenRisk || danger;
+    thermalScore = ThermalEvidencePolicy.score(chipReadings, peripherals.size(), thermalScore, hiddenRisk);
 
     try {
         p.edit()
                 .putInt("lab16_thermal_score", thermalScore)
                 .putBoolean("lab16_thermal_danger", thermalDanger)
+                .putInt("lab16_os_thermal_status", osThermalStatus)
+                .putInt("lab16_chip_readings", chipReadings)
+                .putInt("lab16_total_readings", observedCount)
                 .putFloat("lab16_peak_temp", peakTemp)
                 .putString("lab16_peak_source", peakSrc)
                 .putLong("lab16_last_ts", System.currentTimeMillis())
@@ -25769,20 +25799,20 @@ private void lab16ThermalSnapshot() {
     } catch (Throwable ignore) {}
 
     if (thermalScore < 0) {
-        logLabelWarnValue(
-                gr ? "Αξιολόγηση θερμικής συμπεριφοράς" : "Thermal behaviour rating",
-                gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA"
-        );
+        logInfo(gr
+                ? "Θερμικός δείκτης στιγμιοτύπου: άγνωστος (χωρίς διαθέσιμη ένδειξη CPU/GPU)"
+                : "Thermal snapshot index: unknown (no accessible CPU/GPU reading)");
     } else {
         String tLabel = thermalScore >= 80
                 ? (gr ? "Εντός παρατηρημένων ορίων" : "Within observed limits")
                 : thermalScore >= 60
                 ? (gr ? "Μέτρια" : "Moderate")
                 : (gr ? "Υψηλή" : "High");
-        logLabelOkValue(
-                gr ? "Αξιολόγηση θερμικής συμπεριφοράς" : "Thermal behaviour rating",
-                String.format(Locale.US, "%s (%d)", tLabel, thermalScore)
-        );
+        logInfo((gr ? "Μη βαθμονομημένος θερμικός δείκτης στιγμιοτύπου: "
+                    : "Uncalibrated thermal snapshot index: ")
+                + String.format(Locale.US, "%s (%d/100)", tLabel, thermalScore)
+                + (gr ? " — δεν αποτελεί πιστοποίηση υγείας"
+                      : " — not a hardware-health certification"));
     }
     GELServiceLog.info(
             "SUMMARY: THERMAL_PATTERN="
@@ -25790,7 +25820,8 @@ private void lab16ThermalSnapshot() {
     );
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 16 ολοκληρώθηκε." : "Lab 16 finished.");
+    logInfo(gr ? "Το Lab 16 ολοκληρώθηκε ως θερμικό στιγμιότυπο."
+               : "Lab 16 completed as a thermal snapshot.");
     logLine();
 }
 
