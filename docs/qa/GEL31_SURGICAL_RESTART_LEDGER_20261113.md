@@ -328,3 +328,53 @@ During physical review, the camera produced dark/black frames because the **phon
 **CI:** `PRO access and button validation` [run 43494206800](https://github.com/gdiolitsis/GEL_iDoctor/actions/runs/43494206800) completed **successfully** on that exact source SHA. Job log explicitly confirms `:app:compileDebugJavaWithJavac`, `:app:testDebugUnitTest`, and `BUILD SUCCESSFUL in 37s`. Earlier changed source checkpoints also passed. The source-built Android emulator workflow was intentionally **skipped**, according to the agreed one-APK-at-end rule.
 
 **Still open:** Android 11 phone / Android 16 tablet (Greek/English), Lab21 real biometric prompt and cancellation/lifecycle, Lab19 malformed/partial OEM meminfo, Lab22 absent/future patches, Lab23 settings unreadable and async ports, Lab25 cache readback failure, Labs26/27 denied Usage Access and Android package visibility, exporter/PDF captions/log severity, Xiaomi owner acceptance, and full 31-Lab regression. A successful compile or JUnit run does not certify any of those runtime results.
+
+## Labs 28–31 — final source-parity review (13 Nov 2026)
+
+The QA branch remains isolated from `main` and protected 8 November backup `69fb2ab85d0528937dc257fc19abc6722462cfc8`. This is **source review, not device acceptance**. The current code keeps the original measurement paths wherever legitimate and states unknown where evidence is unavailable.
+
+### Lab 28 — stop report-feedback false positives
+
+- **Root cause:** `Lab28EvidenceReader.readFromGELServiceLog()` scanned plain current-process GEL log lines for English keyword mentions (for example `random reboots` or `thermal spike`). The lab itself wrote phrases such as “Random reboots or sudden resets detected”, so a subsequent run could recycle its own prior output as a fresh observed symptom.
+- **Surgical fix:** new pure Java `Lab28LogEvidencePolicy.withoutLab28Reports()` removes prior Lab28 sections and its current open header before parsing. If a previous Lab28 run ended unexpectedly, the helper resumes collecting at the next recognizably labeled Lab 1–31 section. This **does not authenticate external log mentions**; the analyst output was relabeled in Greek and English as **unverified mentions**, not observed hardware failures.
+- **Tests:** `Lab28LogEvidencePolicyTest` covers completed English Lab28 reports, open/current Greek sections, preserve-non-Lab28 evidence, empty input, and interrupted Lab28 followed by Lab30. Raw GELServiceLog collection, positive-vs-negative keyword filtering, `showLab28Popup()`, TTS/mute/Back/OK, thermal zone sampling, symptom tallies, technician notes and completion path were retained. Actual repeated real-device operation and PDF verification remain open.
+- **Changes:** `3329ba90` new source policy; `60f4f38c` and `95fca01d` tests + corrected Java line separators; `a4381330` main-source reader/output correction; `d47751ab` + `432ca58c` interrupted-report recovery/tests; `11a5762e` bilingual unverified-symptom wording.
+
+### Lab 29 — factual capabilities, no fake OEM authenticity
+
+- Reviewed existing changes against backup: reported battery level/voltage, display's actual refresh rate, camera feature availability, and sensor presence are retained. The old fallback “60 Hz” without a reading is gone. OEM replacement-part authenticity is explicitly **not verifiable** through these checks.
+- Stale `lab29_authenticity_score`, `lab29_instability_score`, and unverified instability flags are removed/invalidated on the Lab29 result path. The old separate private `lab29AuthenticityCheck()` source definition remains present; no separate patch or execution-path claim was made in this continuation. UI, language, logs, service report still require runtime acceptance.
+
+### Lab 30 — no hardware-health certificate from partial indices
+
+- Existing cross-lab heuristic accumulation and source readers remain available. A narrow source patch `9f2e323e` corrects two unsupported conclusions: lack of verified contradictions is **not** full diagnostic consistency; `gel_hw_history` now stores only a timestamp and clears legacy incomparable hardware values, so it must not claim “Hardware snapshot stored”.
+- Remaining model-based projections, internal scores and legacy unused helpers are **not calibrated hardware certification**. Explicit visual/PDF audit of severity and missing evidence remains mandatory.
+
+### Lab 31 — restored feature-parity accounting for large reduction
+
+- Existing final summary uses a pre-report snapshot of `GELServiceLog`, preserves the original Lab14B endurance projection only with evidence freshness/known capacity, explicitly marks SoH as not measured, marks old Lab29 OEM/instability fields unverified, and preserves the original `enableSingleExportButton()` path.
+- The reduction from backup is due to replacement of legacy *unproven positive/negative conclusions* (keyword-derived “no warnings”, fake green battery SoH/capacity, unverified OEM authenticity/stability) with a scoped evidence summary. **This does not itself prove GUI or report-output parity.** The remaining source recognises explicit `⚠` and `✖` lines only; many `logLabelWarnValue()` label/value events do not carry typed severity into the plain report. This is an **open report-accuracy gate**, not a completed feature; do not turn absence of such markers into “PASS”.
+- As of this review no separate Lab29/31 production method was modified.
+
+### Exact original-backup vs QA size inventory
+
+Counts use source slices with named anchors; therefore these are *source section lines* and may include trailing comments, not necessarily just executable lines:
+
+| Section | Backup lines / chars | QA lines / chars | Functional preservation note |
+|---|---:|---:|---|
+| Lab 28 **main method** | 565 / 16,738 | 544 / 17,821 | Popup, sampled thermal zones, scoring and notes retained; ambiguous labels corrected |
+| Lab 28 **nested helpers** | 81 / 2,680 | 98 / 3,693 | Reader retained and augmented with filtering; new independent policy + tests are additional files |
+| Lab 29 **main method** | 320 / 9,055 | 310 / 10,081 | Actual Android capabilities and output remained; false OEM claims removed |
+| Lab 30 **main method** | 1,591 / 44,456 | 1,597 / 46,844 | Combined engine and read paths remain; two final claims neutralized |
+| Lab 30 **auxiliary methods** | 477 / 12,798 | 486 / 13,243 | Retained; formal runtime feature coverage still required |
+| Lab 31 **main method** | 386 / 11,473 | 265 / 10,481 | LCS audit: 168 common lines, 218 original removed, 97 added; removed fake health/authenticity/risk assertions, preserved log snapshot, honest endurance, and single export control |
+
+Ten static source-preservation assertions were inspected at this stage for Lab28 log filtering/popup/thermal reader, Lab29 independent reported signals and no fabricated OEM score, Lab30 neutral coverage/snapshot, and Lab31 SoH/explicit severity/export. **Static comparison is not a substitute for regression QA.**
+
+### Gates remaining (all 31 Labs)
+
+1. Exact *latest production-source SHA* compile, Java unit tests, backend checks; then one consolidated source-built QA APK (not one APK per patch).
+2. Android 11 phone / Android 16 tablet, EL/EN layout (no white-on-white dialogs), TTS, mute, Exit/Back/cancel and re-entry after every lab; Lab28 repeated-session test to rule out self-generated false symptoms.
+3. Xiaomi physical runs and neutral/green/yellow/red evidence mapping; confirm real sensors, thermal state, optional permissions/denials, late callbacks and interrupted tests.
+4. Exported service/PDF full fidelity: reported data vs estimates vs unavailable, no missed warnings because label-based severity lacks typed metadata, no absent-data “all clear”.
+5. Owner review before any `main` merge, signed tester APK or Play publication. Draft PR #107 stays unmerged.
