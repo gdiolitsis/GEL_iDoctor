@@ -27643,8 +27643,10 @@ try {
 // ------------------------------------------------------------
 
 boolean biometricSupported = false;
+int biometricAuthenticatorMask =
+        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG;
 
-if (Build.VERSION.SDK_INT >= 29) {
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
     try {
 
         android.hardware.biometrics.BiometricManager bm =
@@ -27652,15 +27654,18 @@ if (Build.VERSION.SDK_INT >= 29) {
 
         if (bm != null) {
 
-            int r = bm.canAuthenticate(
-                    android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG
-            );
-
-            if (r != android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
-
+            int r;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 r = bm.canAuthenticate(
-                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK
-                );
+                        android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG);
+                if (r != android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
+                    biometricAuthenticatorMask =
+                            android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK;
+                    r = bm.canAuthenticate(biometricAuthenticatorMask);
+                }
+            } else {
+                // Android 10: only the no-argument API is supported.
+                r = bm.canAuthenticate();
             }
 
             if (r == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
@@ -27699,13 +27704,14 @@ if (Build.VERSION.SDK_INT >= 29) {
         );
     }
 
+} else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P && secure) {
+    // Android 9 native prompt is available but enrollment is not inferred.
+    biometricSupported = true;
+    logInfo(gr ? "Android 9: διαθεσιμότητα βιομετρικών προς έλεγχο από την προτροπή."
+               : "Android 9: biometric availability to be checked by the native prompt.");
 } else {
-
-    logLabelWarnValue(
-            gr ? "Βιομετρικά" : "Biometrics",
-            gr ? "Δεν υποστηρίζονται σε αυτήν την έκδοση Android"
-               : "Not supported on this Android version"
-    );
+    logInfo(gr ? "Διαχειριστής βιομετρικών μη διαθέσιμος στο Android."
+               : "Biometric manager unavailable on this Android version.");
 }
 
 // ------------------------------------------------------------  
@@ -28039,7 +28045,7 @@ appendHtml("<br>");
                     }
                 };
 
-        android.hardware.biometrics.BiometricPrompt prompt =
+        android.hardware.biometrics.BiometricPrompt.Builder nativePromptBuilder =
                 new android.hardware.biometrics.BiometricPrompt.Builder(this)
                         .setTitle(gr
                                 ? "LAB 21 — Ζωντανός Έλεγχος Βιομετρικού Αισθητήρα"
@@ -28072,10 +28078,11 @@ appendHtml("<br>");
                                     lab21Running = false;
                                 }
                         )
-                        .setAllowedAuthenticators(
-                                android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG
-                        )
-                        .build();
+                        ;
+        // Only Android 11+ supports builder authenticator masks.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+            nativePromptBuilder.setAllowedAuthenticators(biometricAuthenticatorMask);
+        android.hardware.biometrics.BiometricPrompt prompt = nativePromptBuilder.build();
 
         logInfo(gr ? "Προτροπή βιομετρικού:" : "Biometric prompt:");
         logLabelOkValue(
