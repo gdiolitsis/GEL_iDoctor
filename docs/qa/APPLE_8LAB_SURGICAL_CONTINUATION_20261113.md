@@ -25,14 +25,14 @@ Counts are **brace-delimited main method source lines / characters** (not whole 
 | 2 — Signature Parser | 104 / 2565 | 104 / 2795 |
 | 3 — Stability | 98 / 2914 | 98 / 3261 |
 | 4 — Impact | 94 / 2751 | 94 / 2898 |
-| 5 — Frequency | 50 / 1202 | 50 / 1232 |
-| 6 — Clustering | 62 / 1373 | 62 / 1403 |
+| 5 — Frequency | 50 / 1202 | 47 / 1269 |
+| 6 — Clustering | 62 / 1373 | 52 / 1455 |
 | 7 — Recurrence | 105 / 2839 | 105 / 3141 |
 | 8 — Service Summary | 375 / 10572 | 362 / 11894 |
 | DEMO (outside 8 Labs) | 81 / 2153 | 59 / 2599 |
 | ZIP import method | 49 / 1205 | 5 / 264 |
 
-**Whole `IPhoneLabsActivity.java`:** baseline **3052 / 88859** → QA **2984 / 92434** lines / characters. The ZIP entry method shrink is an **extraction**, not a dropped feature: old `readPanicFromZip` 49 lines, new adapter 5 lines **plus** separate ~79-line `ApplePanicArchiveReader` and eight tests. DEMO lost repeated sleeps/background-thread scaffolding but retained every Lab call, adding finally restoration and sink gates. The Apple Lab 8 from historic PR #80 had been reduced to about 53 source-section lines; this surgical branch **did not import that abbreviated method**: legacy Lab8 remains 362 main-method lines with counters, domain breakdown and evidence-scope verdict edits.
+**Whole `IPhoneLabsActivity.java`:** baseline **3052 / 88859** → QA **2971 / 92523** lines / characters. The ZIP entry method shrink is an **extraction**, not a dropped feature: old `readPanicFromZip` 49 lines, new adapter 5 lines **plus** separate ~79-line `ApplePanicArchiveReader` and eight tests. DEMO lost repeated sleeps/background-thread scaffolding but retained every Lab call, adding finally restoration and sink gates. The Apple Lab 8 from historic PR #80 had been reduced to about 53 source-section lines; this surgical branch **did not import that abbreviated method**: legacy Lab8 remains 362 main-method lines with counters, domain breakdown and evidence-scope verdict edits.
 
 ## Model provenance
 - iPhone Duo: https://www.apple.com/iphone-duo/specs/ (including Touch ID in side key; dual OLED)
@@ -62,3 +62,9 @@ Counts are **brace-delimited main method source lines / characters** (not whole 
 
 
 **Latest resolved CI evidence:** The exact final **application source** at SHA `c223f1955d7b4b6391854f6bab26d0a0353ada0f` passed GitHub [PRO/access run 43502376077](https://github.com/gdiolitsis/GEL_iDoctor/actions/runs/43502376077): `:app:compileDebugJavaWithJavac`, `:app:processDebugResources`, `:app:testDebugUnitTest`, and `BUILD SUCCESSFUL in 40s` (30 Gradle tasks executed). This confirms the three preceding model-regression failures were resolved in that source snapshot; no change to Java/Android production source occurred in subsequent documentation-only commits. Apple-specific Android 11/16 EL/EN UI, real anonymized .ips/ZIP import, physical symptom corroboration and PDF report consistency remain **UNVERIFIED**, as does a final signed APK.
+
+## Final Apple source-color and UI-harness follow-up
+
+- Surgical Lab 5/6 fix `24ec3da`: previously **a repeated category in imported logs was rendered RED**, and a singleton was rendered GREEN, implying unsupported measured fault/health status. Original crash/domain counting and parser paths are preserved, but each observed category/count is now **neutral information**. Missing multiple eligible blocks is neutral, not a hardware warning. Source-size table above refreshed against this exact QA change; runtime PDF/UI semantics still pending verification.
+- Apple-only disposable-emulator script `tools/ci/apple_ui_audit.py` was added via `1f8a6f2` and included conditionally in `full_ui_audit.sh` via `4a465ab`. The workflow now sets `AUDIT_APPLE_MODE=1` via `29b0c10` **but the intermediate branch APK build gate remains OFF**. A final consolidated APK + API30/API36 EL/EN emulator run will be needed to produce screenshot/coverage proof; no such evidence has been claimed here.
+- The **latest production source SHA has advanced** to `24ec3da3802e70cbff2959f157b1c68509e667ce` after previously successful `c223f19` Java tests. Therefore the old green CI does not by itself certify the latest Lab5/6 edit; inspect the new exact-head Actions run before signoff. 
