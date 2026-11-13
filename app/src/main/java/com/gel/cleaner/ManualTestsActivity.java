@@ -1217,8 +1217,11 @@ private static class TelephonySnapshot {
     int serviceState = ServiceState.STATE_OUT_OF_SERVICE;  
     boolean inService = false;  
     int dataState = TelephonyManager.DATA_UNKNOWN;  
-    boolean hasInternet = false;  
-}  
+    boolean hasInternet = false;
+    boolean defaultCellular = false;
+    boolean defaultWifi = false;
+    boolean defaultNetworkValidated = false;
+}
 
 // ================= SNAPSHOTS CONTAINERS =================  
 
@@ -3641,7 +3644,13 @@ if (cm != null) {
                     caps != null &&  
                     caps.hasCapability(  
                             NetworkCapabilities.NET_CAPABILITY_INTERNET  
-                    );  
+                    );
+            if (caps != null) {
+                s.defaultCellular = caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR);
+                s.defaultWifi = caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+                s.defaultNetworkValidated =
+                        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+            }  
         }  
     } catch (Throwable ignored) {}  
 }  
@@ -11416,8 +11425,8 @@ private void lab11MobileDataDiagnostic() {
     // ------------------------------------------------------------
     if (s.airplaneOn) {
         logInfo(gr
-                ? "Η Λειτουργία Πτήσης είναι ΕΝΕΡΓΗ. Τα ραδιο-interfaces είναι σκόπιμα απενεργοποιημένα."
-                : "Airplane mode is ENABLED. Radio interfaces are intentionally disabled.");
+                ? "Η Λειτουργία Πτήσης είναι ΕΝΕΡΓΗ. Τα κινητά δεδομένα συνήθως απενεργοποιούνται· το Wi-Fi μπορεί να παραμένει ενεργό."
+                : "Airplane mode is ENABLED. Cellular data is normally disabled; Wi-Fi may remain enabled.");
         return;
     }
 
@@ -11429,7 +11438,7 @@ private void lab11MobileDataDiagnostic() {
         switch (s.simState) {
 
             case TelephonyManager.SIM_STATE_ABSENT:
-                logLabelWarnValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΑΠΟΥΣΑ" : "ABSENT");
+                logLabelValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΑΠΟΥΣΑ — χωρίς δοκιμή" : "ABSENT — not tested");
                 return;
 
             case TelephonyManager.SIM_STATE_PIN_REQUIRED:
@@ -11467,7 +11476,13 @@ private void lab11MobileDataDiagnostic() {
     }
 
     // SIM ready
-    logLabelOkValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ" : "READY");
+    logLabelValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ (κατά Android)" : "READY (Android reported)");
+
+// Ask only when Wi-Fi is actually the active default network.
+    if (s.defaultWifi) {
+        showLab11MobileDataPreparation();
+        return;
+    }
 
     // ------------------------------------------------------------
     // Service state (legacy domain — informational)
@@ -11480,7 +11495,7 @@ private void lab11MobileDataDiagnostic() {
 );
 
 if (!s.inService) {
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Σημείωση (Legacy Service)" : "Legacy Service Note",
             gr
                     ? "Η legacy κατάσταση υπηρεσίας δεν αναφέρεται ως ενεργή. "
@@ -11515,94 +11530,54 @@ if (!s.inService) {
     // ------------------------------------------------------------
     // Internet routing context (best effort)
     // ------------------------------------------------------------
-    if (s.hasInternet) {
-        logLabelOkValue(gr ? "Internet Context" : "Internet Context",
-                gr ? "ΔΙΑΘΕΣΙΜΟ (system routing)" : "AVAILABLE (system routing)");
-    } else {
-        logLabelWarnValue(gr ? "Internet Context" : "Internet Context",
-                gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ" : "NOT AVAILABLE");
-    }
+    String networkRoute = s.defaultCellular ? "CELLULAR"
+            : s.defaultWifi ? "Wi-Fi" : (gr ? "ΑΓΝΩΣΤΗ/ΑΛΛΗ" : "UNKNOWN/OTHER");
+    logLabelValue(gr ? "Προεπιλεγμένη διαδρομή" : "Default network route", networkRoute);
+    logLabelValue(gr ? "Επικύρωση Internet (προεπιλεγμένο δίκτυο)"
+                     : "Internet validation (default network)",
+            s.defaultNetworkValidated
+                    ? (gr ? "VALIDATED κατά Android" : "Android VALIDATED")
+                    : (gr ? "Δεν επιβεβαιώθηκε" : "Not validated"));
 
 // ------------------------------------------------------------
 // VERDICT ENGINE (GEL)
 // ------------------------------------------------------------
+// Internet on the default Wi-Fi/VPN route is NOT a cellular-only result.
 
-boolean hasSim = s.simReady;
-boolean inService = s.inService;
+boolean cellularValidated = s.simReady && s.defaultCellular && s.defaultNetworkValidated;
 boolean dataConnected = s.dataState == TelephonyManager.DATA_CONNECTED;
-boolean hasInternet = s.hasInternet;
 
 String verdict;
 String recommendation;
 
-// =====================
-// CASE 1 — FULL OK
-// =====================
-if (hasSim && (inService || hasInternet)) {
-
+if (cellularValidated) {
     verdict = gr
-            ? "Το δίκτυο λειτουργεί κανονικά."
-            : "Network is operating normally.";
-
+            ? "Το Android επικύρωσε πρόσβαση Internet μέσω της ενεργής διαδρομής κινητής. Δεν μετρήθηκε ταχύτητα ή ποιότητα κλήσεων."
+            : "Android validated Internet over the active cellular route. Speed and call quality were not tested.";
     recommendation = gr
-            ? "Δεν απαιτείται ενέργεια."
-            : "No action required.";
-}
-
-// =====================
-// CASE 2 — NO INTERNET
-// =====================
-else if (!hasInternet) {
-
+            ? "Δεν προκύπτει πρόβλημα επικύρωσης Internet σε αυτή τη μέτρηση."
+            : "This check found no Internet validation issue.";
+} else if (s.defaultCellular) {
     verdict = gr
-            ? "Δεν υπάρχει πρόσβαση στο διαδίκτυο."
-            : "No internet access detected.";
-
+            ? "Η ενεργή διαδρομή είναι κινητή, αλλά το Android δεν επιβεβαίωσε πρόσβαση Internet."
+            : "Cellular is the active route, but Android did not validate Internet access.";
     recommendation = gr
-            ? "Έλεγχος Wi-Fi ή ενεργοποίηση δεδομένων κινητής."
-            : "Check Wi-Fi or enable mobile data.";
-}
-
-// =====================
-// CASE 3 — NO SERVICE
-// =====================
-else if (hasSim && !inService) {
-
+            ? "Ελέγξτε προσωρινά κάλυψη, ρυθμίσεις δεδομένων και πάροχο· αυτό δεν αποδεικνύει βλάβη συσκευής."
+            : "Check coverage, mobile-data settings and carrier; this does not prove a device fault.";
+} else if (!dataConnected) {
     verdict = gr
-            ? "Η SIM είναι ενεργή αλλά δεν υπάρχει υπηρεσία δικτύου."
-            : "SIM is ready but no network service.";
-
+            ? "Δεν καταγράφηκε ενεργή σύνδεση δεδομένων κινητής. Άγνωστο αν είναι σκόπιμα κλειστά."
+            : "No active cellular data connection was reported. It may be intentionally disabled.";
     recommendation = gr
-            ? "Μετακινηθείτε σε περιοχή με σήμα ή ελέγξτε τον πάροχο."
-            : "Move to better signal area or check carrier.";
-}
-
-// =====================
-// CASE 4 — DATA OFF
-// =====================
-else if (hasSim && !dataConnected) {
-
+            ? "Εάν επιθυμείτε τη δοκιμή, ενεργοποιήστε τα δεδομένα κινητής και επαναλάβετε."
+            : "If you want to test mobile data, enable it and repeat.";
+} else {
     verdict = gr
-            ? "Τα δεδομένα κινητής είναι απενεργοποιημένα."
-            : "Mobile data is disabled.";
-
+            ? "Το Android δηλώνει κινητά δεδομένα συνδεδεμένα, αλλά η προεπιλεγμένη διαδρομή δεν επιβεβαιώθηκε ως κινητή."
+            : "Android reports cellular data connected, but the default route was not confirmed cellular.";
     recommendation = gr
-            ? "Ενεργοποιήστε mobile data αν απαιτείται."
-            : "Enable mobile data if needed.";
-}
-
-// =====================
-// FALLBACK
-// =====================
-else {
-
-    verdict = gr
-            ? "Μερική κατάσταση δικτύου."
-            : "Partial network state.";
-
-    recommendation = gr
-            ? "Ελέγξτε SIM, δεδομένα και σήμα."
-            : "Check SIM, data and signal.";
+            ? "Δεν τεκμηριώθηκε ανεξάρτητη πρόσβαση Internet μέσω κινητής."
+            : "Independent cellular Internet access was not established.";
 }
 
 // ------------------------------------------------------------
@@ -11610,12 +11585,129 @@ else {
 // ------------------------------------------------------------
 appendHtml("<br>");
 
-logLabelValue(gr ? "Συμπέρασμα" : "Verdict", verdict);
+if (cellularValidated) {
+    logLabelOkValue(gr ? "Συμπέρασμα" : "Verdict", verdict);
+} else {
+    logLabelValue(gr ? "Συμπέρασμα" : "Verdict", verdict);
+}
 logLabelValue(gr ? "Πρόταση" : "Recommendation", recommendation);
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 11 ολοκληρώθηκε." : "Lab 11 finished.");
+    logInfo(gr ? "Το Lab 11 κατέγραψε τις διαθέσιμες ενδείξεις." : "Lab 11 recorded the available evidence.");
     logLine();
+}
+
+// ============================================================
+// ------------------------------------------------------------
+// LAB 11 — Optional mobile-data preparation (EL/EN, GEL dark dialog)
+// ------------------------------------------------------------
+private void showLab11MobileDataPreparation() {
+    if (isFinishing() || isDestroyed()) return;
+
+    final boolean gr = AppLang.isGreek(this);
+    final String message = gr
+            ? "Για ανεξάρτητο έλεγχο των δεδομένων κινητής, κλείστε προσωρινά το Wi-Fi "
+              + "και διατηρήστε ενεργά τα δεδομένα κινητής.\n\n"
+              + "Η εφαρμογή δεν θα αλλάξει μόνη της τις ρυθμίσεις σας. "
+              + "Μπορείτε να παραλείψετε τη δοκιμή χωρίς αρνητική διάγνωση."
+            : "To check mobile data independently, temporarily turn off Wi-Fi "
+              + "and keep mobile data enabled.\n\n"
+              + "The app will not change your settings. "
+              + "You may skip this check without a negative diagnosis.";
+
+    final LinearLayout root = buildGELPopupRoot(this);
+    final ScrollView scroll = new ScrollView(this);
+    scroll.setFillViewport(false);
+    final LinearLayout content = new LinearLayout(this);
+    content.setOrientation(LinearLayout.VERTICAL);
+
+    TextView title = new TextView(this);
+    title.setText(gr ? "LAB 11 — ΠΡΟΕΤΟΙΜΑΣΙΑ ΚΙΝΗΤΩΝ ΔΕΔΟΜΕΝΩΝ"
+                     : "LAB 11 — MOBILE DATA PREPARATION");
+    title.setTextColor(0xFFFFD700);
+    title.setTypeface(null, Typeface.BOLD);
+    title.setTextSize(19f);
+    title.setGravity(Gravity.CENTER);
+    title.setPadding(0, 0, 0, dp(14));
+    content.addView(title);
+
+    TextView instructions = new TextView(this);
+    instructions.setText(message);
+    instructions.setTextColor(Color.WHITE);
+    instructions.setTextSize(16f);
+    instructions.setLineSpacing(dp(3), 1f);
+    instructions.setPadding(0, 0, 0, dp(12));
+    content.addView(instructions);
+
+    TextView status = new TextView(this);
+    status.setTextColor(0xFFFFD700);
+    status.setTextSize(15f);
+    status.setPadding(0, 0, 0, dp(6));
+    content.addView(status);
+
+    Button settings = gelButton(this, gr ? "ΡΥΘΜΙΣΕΙΣ Wi-Fi" : "WI-FI SETTINGS", 0xFF39FF14);
+    Button retry = gelButton(this, gr ? "ΕΠΑΝΕΛΕΓΧΟΣ" : "RECHECK", 0xFF39FF14);
+    Button skip = gelButton(this, gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP", 0xFFE60000);
+    content.addView(settings);
+    content.addView(retry);
+    content.addView(skip);
+    scroll.addView(content);
+    root.addView(scroll);
+
+    final AlertDialog.Builder builder = new AlertDialog.Builder(
+            this, android.R.style.Theme_Material_Dialog_NoActionBar);
+    builder.setView(root);
+    builder.setCancelable(true);
+    final AlertDialog dialog = builder.create();
+
+    final boolean[] handled = {false};
+    final Runnable skipNeutral = () -> {
+        if (handled[0]) return;
+        handled[0] = true;
+        logLabelValue(gr ? "Δεδομένα κινητής" : "Mobile data",
+                gr ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — ο χρήστης παρέλειψε την προετοιμασία"
+                   : "NOT TESTED — user skipped preparation");
+        logLine();
+        try { AppTTS.stop(); } catch (Throwable ignore) {}
+    };
+    dialog.setOnCancelListener(d -> skipNeutral.run());
+    skip.setOnClickListener(v -> {
+        skipNeutral.run();
+        dialog.dismiss();
+    });
+    settings.setOnClickListener(v -> {
+        try {
+            startActivity(new Intent(android.provider.Settings.ACTION_WIFI_SETTINGS));
+        } catch (Throwable e) {
+            status.setText(gr ? "Δεν άνοιξαν οι ρυθμίσεις. Κλείστε χειροκίνητα το Wi-Fi."
+                              : "Settings unavailable. Please turn off Wi-Fi manually.");
+        }
+    });
+    retry.setOnClickListener(v -> {
+        TelephonySnapshot current = getTelephonySnapshot();
+        if (current.defaultWifi) {
+            status.setText(gr
+                    ? "Το Wi-Fi χρησιμοποιείται ακόμη. Κλείστε το ή επιλέξτε ΠΑΡΑΛΕΙΨΗ."
+                    : "Wi-Fi is still the active route. Turn it off or choose SKIP.");
+            return;
+        }
+        handled[0] = true;
+        dialog.dismiss();
+        if (!isFinishing() && !isDestroyed()) {
+            lab11MobileDataDiagnostic();
+        }
+    });
+
+    dialog.show();
+    com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
+    if (dialog.getWindow() != null) {
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        int safeWidth = Math.min(dm.widthPixels - dp(24), dp(560));
+        int safeHeight = (int) (dm.heightPixels * 0.85f);
+        dialog.getWindow().setLayout(Math.max(dp(280), safeWidth), safeHeight);
+    }
+    speakOnce(message);
 }
 
 // ============================================================
