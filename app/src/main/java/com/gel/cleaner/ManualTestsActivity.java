@@ -33492,13 +33492,24 @@ return String.format(Locale.US, "%.1f", v);
 }
 
 // ============================================================
-// LAB 31 — FINAL TECHNICIAN SUMMARY (READ-ONLY)
-// Does NOT modify GELServiceLog — only reads it.
-// Exports via ServiceReportActivity.
+// LAB 31 — FINAL TECHNICIAN SUMMARY (EVIDENCE SNAPSHOT)
+// Reads existing log before writing the summary; its result labels are appended
+// to GELServiceLog for ServiceReportActivity export.
 // ============================================================
 private void lab31FinalSummary() {
 
     final boolean gr = AppLang.isGreek(this);
+
+    // Capture prior evidence before writing ANY header or label to the same log.
+    String fullLog = GELServiceLog.getAll();
+    if (fullLog == null) fullLog = "";
+    if (fullLog.trim().isEmpty()) {
+        appendHtml("<font color='#FFD966'>" + (gr
+                ? "Δεν βρέθηκαν διαγνωστικά δεδομένα. Εκτελέστε πρώτα τα Manual Tests."
+                : "No diagnostic data found. Please run Manual Tests first.")
+                + "</font>");
+        return; // Do not contaminate an empty log with a fake report entry.
+    }
 
     SharedPreferences p =
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
@@ -33552,23 +33563,15 @@ appendHtml("<br>");
 logLine();
 
 logInfo(gr
-        ? "LAB 31 — ΤΕΛΙΚΗ ΤΕΧΝΙΚΗ ΑΝΑΦΟΡΑ (ΜΟΝΟ ΑΝΑΓΝΩΣΗ)"
-        : "LAB 31 — FINAL TECHNICAL REPORT (READ-ONLY)");
+        ? "LAB 31 — ΤΕΛΙΚΗ ΣΥΝΟΨΗ ΥΠΑΡΧΟΝΤΩΝ ΤΕΚΜΗΡΙΩΝ"
+        : "LAB 31 — FINAL EXISTING-EVIDENCE SUMMARY");
 
 logLine();
 
     // ------------------------------------------------------------
-    // 1) READ FULL LOG
+    // 1) USE IMMUTABLE PRE-REPORT SNAPSHOT
+    // The history captured above excludes the current Lab 31 header.
     // ------------------------------------------------------------
-    String fullLog = GELServiceLog.getAll();
-    if (fullLog == null) fullLog = "";
-
-    if (fullLog.trim().isEmpty()) {
-        logWarn(gr
-                ? "Δεν βρέθηκαν διαγνωστικά δεδομένα. Εκτελέστε πρώτα τα Manual Tests."
-                : "No diagnostic data found. Please run Manual Tests first.");
-        return;
-    }
 
     // ------------------------------------------------------------
     // 2) EXPLICIT LOG SEVERITY (not English/Greek keyword guesses)
