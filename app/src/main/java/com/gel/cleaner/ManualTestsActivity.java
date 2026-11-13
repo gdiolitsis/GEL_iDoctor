@@ -2982,7 +2982,14 @@ private void playEarpieceBeep() {
     );
 
     try {
-        track.write(buffer, 0, buffer.length);
+        if (track.getState() != AudioTrack.STATE_INITIALIZED) {
+            throw new IllegalStateException("Earpiece AudioTrack initialization failed");
+        }
+        int written = track.write(buffer, 0, buffer.length);
+        if (written != buffer.length) {
+            throw new IllegalStateException(
+                    "Earpiece AudioTrack incomplete write: " + written + "/" + buffer.length);
+        }
         track.play();
         SystemClock.sleep(durationMs + 100);
     } finally {
@@ -6726,6 +6733,7 @@ start.setOnClickListener(v -> {
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 
     new Thread(() -> {
+        boolean playbackCompleted = false;
         try {
 
             logInfo(gr
@@ -6745,6 +6753,7 @@ start.setOnClickListener(v -> {
             logOk(gr
                     ? "Η αναπαραγωγή τόνων ολοκληρώθηκε."
                     : "Earpiece tone playback completed.");
+            playbackCompleted = true;
 
         } catch (Throwable t) {
 
@@ -6766,7 +6775,14 @@ start.setOnClickListener(v -> {
 
             runOnUiThread(() -> {
                 try { d.dismiss(); } catch (Throwable ignore) {}
-                askUserEarpieceConfirmation();
+                if (playbackCompleted) {
+                    askUserEarpieceConfirmation();
+                } else {
+                    logWarn(gr
+                            ? "Δεν ζητήθηκε επιβεβαίωση ακοής επειδή απέτυχε η αναπαραγωγή."
+                            : "Hearing confirmation was not requested because playback failed.");
+                    enableSingleExportButton();
+                }
             });
         }
 
