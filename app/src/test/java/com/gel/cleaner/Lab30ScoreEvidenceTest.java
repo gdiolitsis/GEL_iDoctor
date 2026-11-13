@@ -38,6 +38,12 @@ public class Lab30ScoreEvidenceTest {
         assertTrue(Lab30ScoreEvidence.hasAppInventory(2, 0));
     }
 
+    @Test public void absentOrPartialPermissionInventoryIsNotCleanPrivacy() {
+        assertFalse(Lab30ScoreEvidence.hasPrivacyCoverage(0, false));
+        assertFalse(Lab30ScoreEvidence.hasPrivacyCoverage(8, true));
+        assertTrue(Lab30ScoreEvidence.hasPrivacyCoverage(8, false));
+    }
+
     @Test public void missingCoreEvidenceBlocksCombinedScores() {
         assertEquals(-1, Lab30ScoreEvidence.performanceScore(100,100,100,-1));
         assertEquals(-1, Lab30ScoreEvidence.deviceHealthScore(-1,100,100,100));
