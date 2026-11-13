@@ -9,6 +9,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -27,8 +28,10 @@ public class ProximityCheckActivity extends GELAutoActivityHook
     private SensorManager sensorManager;
     private Sensor proximity;
 
-    private boolean initialRead = false;
-    private float initialValue = 0f;
+    // Require observed FAR -> NEAR -> FAR, never infer screen blackout.
+    private int stage = 0;
+    private long stageChangeMs = 0L;
+    private static final long MIN_TRANSITION_MS = 120L;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,10 +51,11 @@ public class ProximityCheckActivity extends GELAutoActivityHook
         // INFO TEXT
         // ======================
         TextView info = new TextView(this);
-        info.setText(
-                "Place your hand over the front sensor area\n" +
-                "(near the earpiece / front camera)"
-        );
+        info.setText(AppLang.isGreek(this)
+                ? "Άφησε πρώτα ελεύθερο τον αισθητήρα.\n"
+                  + "Μετά κάλυψε την περιοχή του ακουστικού και απομάκρυνε ξανά το χέρι."
+                : "First leave the sensor uncovered.\n"
+                  + "Then cover the earpiece sensor area and uncover it again.");
         info.setTextSize(18f);
         info.setTextColor(Color.WHITE);
         info.setGravity(Gravity.CENTER);
@@ -69,14 +73,14 @@ public class ProximityCheckActivity extends GELAutoActivityHook
         // END TEST BUTTON
         // ======================
         Button end = new com.gel.cleaner.GelButton(this);
-        end.setText("END TEST");
+        end.setText(AppLang.isGreek(this) ? "ΤΕΛΟΣ ΤΕΣΤ" : "END TEST");
         end.setAllCaps(false);
         end.setTextColor(Color.WHITE);
         end.setTextSize(15f);
         end.setTypeface(null, Typeface.BOLD);
 
         GradientDrawable redBtn = new GradientDrawable();
-        redBtn.setColor(0xFF8B0000);
+        redBtn.setColor(0xFFE60000);
         redBtn.setCornerRadius(dp(14));
         redBtn.setStroke(dp(3), 0xFFFFD700);
         end.setBackground(redBtn);
@@ -104,6 +108,8 @@ public class ProximityCheckActivity extends GELAutoActivityHook
     @Override
     protected void onResume() {
         super.onResume();
+        stage = 0;
+        stageChangeMs = 0L;
         if (sensorManager != null && proximity != null) {
             sensorManager.registerListener(
                     this,
@@ -123,17 +129,27 @@ public class ProximityCheckActivity extends GELAutoActivityHook
 
     @Override
     public void onSensorChanged(SensorEvent event) {
+        if (event == null || event.values.length == 0
+                || event.sensor != proximity || isFinishing()) return;
+        float value = event.values[0];
+        float maxRange = proximity.getMaximumRange();
+        if (!Float.isFinite(value) || !Float.isFinite(maxRange)
+                || maxRange <= 0f || value < 0f) return;
 
-        float v = event.values[0];
-
-        if (!initialRead) {
-            initialValue = v;
-            initialRead = true;
-            return;
-        }
-
-        // Near / Far state change
-        if (Math.abs(v - initialValue) > 0.5f) {
+        boolean near = value < maxRange - Math.min(0.1f, maxRange * 0.05f);
+        long nowMs = SystemClock.elapsedRealtime();
+        if (stage == 0) {
+            if (!near) {
+                stage = 1;
+                stageChangeMs = nowMs;
+            }
+        } else if (stage == 1) {
+            if (near && nowMs - stageChangeMs >= MIN_TRANSITION_MS) {
+                stage = 2;
+                stageChangeMs = nowMs;
+            }
+        } else if (stage == 2 && !near
+                && nowMs - stageChangeMs >= MIN_TRANSITION_MS) {
             setResult(RESULT_OK);
             finish();
         }
