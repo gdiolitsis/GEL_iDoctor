@@ -13529,28 +13529,28 @@ logLabelValue(
         String.format(
                 Locale.US,
                 gr
-                        ? "φόρτιση=%d mAh, ποσοστό=%d%%, κατάσταση=Αποφόρτιση, θερμοκρασία=%.1f°C"
-                        : "charge=%d mAh, level=%d%%, status=Discharging, temp=%.1f°C",
+                        ? "φόρτιση=%d mAh, ποσοστό=%d%%, θερμοκρασία=%s"
+                        : "charge=%d mAh, level=%d%%, temperature=%s",
                 startMah,
                 Math.max(0, batteryPercent),
-                Float.isNaN(tempStart) ? Float.NaN : tempStart
+                Float.isNaN(tempStart)
+                        ? (gr ? "Μ/Δ" : "N/A")
+                        : String.format(Locale.US, "%.1f°C", tempStart)
         )
 );
 
 if (baselineFullMah > 0) {
-    logLabelOkValue(
-            gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
-            baselineFullMah + (gr
-                    ? " mAh"
-                    : " mAh")
-    );
+    String capacitySource = start.chargeFullMah > 0
+            ? (gr ? "τιμή Android charge_full" : "Android charge_full report")
+            : start.chargeDesignMah > 0
+            ? (gr ? "ονομαστική σχεδίασης" : "design specification")
+            : (gr ? "εκτίμηση από στάθμη/charge_now" : "extrapolated from level/charge_now");
+    logLabelValue(gr ? "Χωρητικότητα αναφοράς" : "Capacity reference",
+            baselineFullMah + " mAh (" + capacitySource + ")");
 } else {
-    logLabelWarnValue(
-            gr ? "Αναφερόμενη πλήρης χωρητικότητα" : "Battery capacity baseline",
-            gr
-                    ? "Μη διαθέσιμη"
-                    : "N/A"
-    );
+    logLabelValue(gr ? "Χωρητικότητα αναφοράς" : "Capacity reference",
+            gr ? "Μ/Δ — δεν τεκμηριώθηκε χωρητικότητα"
+               : "N/A — capacity not established");
 }
 
 logLabelValue(
