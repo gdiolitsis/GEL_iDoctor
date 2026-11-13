@@ -10174,12 +10174,17 @@ if (!isFinishing() && !isDestroyed()) {
 no.setOnClickListener(v -> {
     AppTTS.stop();
     d.dismiss();
-    logWarn(gr
-        ? "Το LAB 8.1 παραλείφθηκε από τον χρήστη."
-        : "LAB 8.1 skipped by user.");
-    
+    // Skipping is not evidence of camera capability or test completion.
+    logLabelValue(
+            gr ? "Ανάλυση δυνατοτήτων κάμερας (Lab 8.1)"
+               : "Camera capabilities analysis (Lab 8.1)",
+            gr ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — παράλειψη χρήστη"
+               : "NOT_TESTED — user skipped");
+    logInfo(gr
+            ? "Δεν πραγματοποιήθηκε ανάλυση δυνατοτήτων κάμερας στο Lab 8.1."
+            : "No Lab 8.1 camera capabilities analysis was performed.");
+
     logLine();
-    logOk(gr ? "Το Lab 8.1 ολοκληρώθηκε." : "Lab 8.1 finished.");
     logLine();
     enableSingleExportButton();
 });
