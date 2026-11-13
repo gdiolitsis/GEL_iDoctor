@@ -1,6 +1,6 @@
 // GDiolitsis Engine Lab (GEL) — Author & Developer
 // ============================================================
-// iPhoneSpecs.java — FACTORY KNOWLEDGE BASE (iPhone 15 Series)
+// iPhoneSpecs.java — Apple model-reference catalogue (historical + 2025–2026 verified)
 // ============================================================
 
 package com.gel.cleaner.iphone;
@@ -13,7 +13,9 @@ public final class iPhoneSpecs {
     private static final Map<String, AppleDeviceSpec> MAP = new HashMap<>();
 
     static {
-      
+
+        registerModernVerifiedModels();
+
 // =========================================================
 // 📱 iPHONE 16 SERIES — FULL SPECS
 // =========================================================
@@ -2075,70 +2077,424 @@ iphone11ProMax.thermalNote =
 iphone11ProMax.notes =
         "Largest iPhone 11; best battery life of the series and flagship endurance.";
 
-MAP.put("iphone 11 pro max", iphone11ProMax);  
+MAP.put("iphone 11 pro max", iphone11ProMax);
+        // Apple Support (109512): UWB exists on all listed iPhone 11–16
+        // family variants, except the separately registered 16e.
+        // Region-dependent availability; no physical radio test is claimed.
+        for (Map.Entry<String, AppleDeviceSpec> entry : MAP.entrySet()) {
+            String key = entry.getKey();
+            if (key.matches("iphone (11|12|13|14)( .*)?")) {
+                entry.getValue().uwb = "Apple first-generation Ultra Wideband chip (region-dependent)";
+            } else if (key.matches("iphone (15|16)( .*)?")) {
+                entry.getValue().uwb = "Apple second-generation Ultra Wideband chip (region-dependent)";
+            }
+        }
+  
 }
 
+private static void registerModernVerifiedModels() {
+        // =============================================================
+        // Verified Apple 2025–2026 references. Only published values are stored.
+        // Unverified RAM, mAh, voltage, model identifier, SIM regions and
+        // component health deliberately remain unset. Never infer from siblings.
+        // =============================================================
+        AppleDeviceSpec modern0 = new AppleDeviceSpec("iphone", "iPhone 16e");
+        modern0.year = "2025";
+        modern0.os = "iOS";
+        modern0.soc = "A18";
+        modern0.chipset = "A18";
+        modern0.cpu = "Apple CPU";
+        modern0.cpuCores = 6;
+        modern0.gpu = "Apple GPU";
+        modern0.gpuCores = 4;
+        modern0.storageBase = "128";
+        modern0.storageOptions = "128 / 256 / 512 GB";
+        modern0.screen = "6.1\"";
+        modern0.display = "Super Retina XDR OLED";
+        modern0.resolution = "2532 × 1170";
+        modern0.has5G = true;
+        modern0.hasLTE = true;
+        modern0.cellular = "5G / LTE (band support varies by region)";
+        modern0.wifi = "Wi-Fi 6";
+        modern0.bluetooth = "Bluetooth 5.3";
+        modern0.modem = "Apple C1";
+        modern0.hasNFC = true;
+        modern0.hasESim = true;
+        modern0.port = "USB-C";
+        modern0.hasAirDrop = true;
+        modern0.hasAirPlay = true;
+        modern0.hasFaceID = true;
+        modern0.hasTouchID = false;
+        modern0.biometrics = "Face ID";
+        modern0.hasFastCharge = true;
+        modern0.hasWirelessCharge = true;
+        modern0.cameraMain = "48 MP Fusion Main (single physical rear camera)";
+        modern0.cameraFront = "12 MP TrueDepth";
+        modern0.cameraVariants = "Single rear camera with 2x optical-quality crop; not a separate telephoto lens";
+        modern0.batteryChemistry = "Rechargeable lithium-ion (manufacturer description)";
+        modern0.batteryNotes = "No validated physical battery capacity / voltage in this reference; no battery-health measurement.";
+        modern0.notes = "Apple manufacturer specification: https://support.apple.com/en-us/122208 . Reference only; not a physical device measurement. Region-specific hardware and SIM may differ.";
+        modern0.isPro = false;
+        modern0.isProMax = false;
+        MAP.put("iphone 16e", modern0);
+
+        AppleDeviceSpec modern1 = new AppleDeviceSpec("iphone", "iPhone 17");
+        modern1.year = "2025";
+        modern1.os = "iOS";
+        modern1.soc = "A19";
+        modern1.chipset = "A19";
+        modern1.cpu = "Apple CPU";
+        modern1.cpuCores = 6;
+        modern1.gpu = "Apple GPU";
+        modern1.gpuCores = 5;
+        modern1.storageBase = "256";
+        modern1.storageOptions = "256 / 512 GB";
+        modern1.screen = "6.3\"";
+        modern1.display = "Super Retina XDR OLED";
+        modern1.resolution = "2622 × 1206";
+        modern1.refreshRate = "Adaptive ProMotion, up to 120 Hz";
+        modern1.has5G = true;
+        modern1.hasLTE = true;
+        modern1.cellular = "5G / LTE (band support varies by region)";
+        modern1.wifi = "Wi-Fi 7";
+        modern1.bluetooth = "Bluetooth 6";
+        modern1.uwb = "Second-generation Ultra Wideband chip";
+        modern1.hasNFC = true;
+        modern1.hasESim = true;
+        modern1.port = "USB-C";
+        modern1.hasAirDrop = true;
+        modern1.hasAirPlay = true;
+        modern1.hasFaceID = true;
+        modern1.hasTouchID = false;
+        modern1.biometrics = "Face ID";
+        modern1.hasFastCharge = true;
+        modern1.hasWirelessCharge = true;
+        modern1.cameraMain = "48 MP Fusion Main";
+        modern1.cameraUltraWide = "48 MP Fusion Ultra Wide";
+        modern1.cameraFront = "18 MP Center Stage";
+        modern1.cameraVariants = "Dual Fusion rear cameras";
+        modern1.batteryChemistry = "Rechargeable lithium-ion (manufacturer description)";
+        modern1.batteryNotes = "No validated physical battery capacity / voltage in this reference; no battery-health measurement.";
+        modern1.notes = "Apple manufacturer specification: https://support.apple.com/el-gr/125089 . Reference only; not a physical device measurement. Region-specific hardware and SIM may differ.";
+        modern1.isPro = false;
+        modern1.isProMax = false;
+        MAP.put("iphone 17", modern1);
+
+        AppleDeviceSpec modern2 = new AppleDeviceSpec("iphone", "iPhone 17 Pro");
+        modern2.year = "2025";
+        modern2.os = "iOS";
+        modern2.soc = "A19 Pro";
+        modern2.chipset = "A19 Pro";
+        modern2.cpu = "Apple CPU";
+        modern2.cpuCores = 6;
+        modern2.gpu = "Apple GPU";
+        modern2.gpuCores = 6;
+        modern2.storageBase = "256";
+        modern2.storageOptions = "256 / 512 GB / 1 TB";
+        modern2.screen = "6.3\"";
+        modern2.display = "Super Retina XDR OLED";
+        modern2.resolution = "2622 × 1206";
+        modern2.refreshRate = "Adaptive ProMotion, up to 120 Hz";
+        modern2.has5G = true;
+        modern2.hasLTE = true;
+        modern2.cellular = "5G / LTE (band support varies by region)";
+        modern2.wifi = "Wi-Fi 7";
+        modern2.bluetooth = "Bluetooth 6";
+        modern2.uwb = "Second-generation Ultra Wideband chip (region-dependent)";
+        modern2.hasNFC = true;
+        modern2.hasESim = true;
+        modern2.port = "USB-C";
+        modern2.hasAirDrop = true;
+        modern2.hasAirPlay = true;
+        modern2.hasFaceID = true;
+        modern2.hasTouchID = false;
+        modern2.biometrics = "Face ID";
+        modern2.hasFastCharge = true;
+        modern2.hasWirelessCharge = true;
+        modern2.cameraMain = "48 MP Fusion Main";
+        modern2.cameraUltraWide = "48 MP Fusion Ultra Wide";
+        modern2.cameraTele = "48 MP Fusion Telephoto (4x; optical-quality 8x)";
+        modern2.cameraFront = "18 MP Center Stage";
+        modern2.cameraVariants = "Three separate 48 MP rear cameras";
+        modern2.batteryChemistry = "Rechargeable lithium-ion (manufacturer description)";
+        modern2.batteryNotes = "No validated physical battery capacity / voltage in this reference; no battery-health measurement.";
+        modern2.thermalNote = "Manufacturer reference: vapor-chamber cooling (not a measured temperature)";
+        modern2.notes = "Apple manufacturer specification: https://support.apple.com/el-gr/125090 . Reference only; not a physical device measurement. Region-specific hardware and SIM may differ.";
+        modern2.isPro = true;
+        modern2.isProMax = false;
+        MAP.put("iphone 17 pro", modern2);
+
+        AppleDeviceSpec modern3 = new AppleDeviceSpec("iphone", "iPhone 17 Pro Max");
+        modern3.year = "2025";
+        modern3.os = "iOS";
+        modern3.soc = "A19 Pro";
+        modern3.chipset = "A19 Pro";
+        modern3.cpu = "Apple CPU";
+        modern3.cpuCores = 6;
+        modern3.gpu = "Apple GPU";
+        modern3.gpuCores = 6;
+        modern3.storageBase = "256";
+        modern3.storageOptions = "256 / 512 GB / 1 / 2 TB";
+        modern3.screen = "6.9\"";
+        modern3.display = "Super Retina XDR OLED";
+        modern3.resolution = "2868 × 1320";
+        modern3.refreshRate = "Adaptive ProMotion, up to 120 Hz";
+        modern3.has5G = true;
+        modern3.hasLTE = true;
+        modern3.cellular = "5G / LTE (band support varies by region)";
+        modern3.wifi = "Wi-Fi 7";
+        modern3.bluetooth = "Bluetooth 6";
+        modern3.uwb = "Second-generation Ultra Wideband chip (region-dependent)";
+        modern3.hasNFC = true;
+        modern3.hasESim = true;
+        modern3.port = "USB-C";
+        modern3.hasAirDrop = true;
+        modern3.hasAirPlay = true;
+        modern3.hasFaceID = true;
+        modern3.hasTouchID = false;
+        modern3.biometrics = "Face ID";
+        modern3.hasFastCharge = true;
+        modern3.hasWirelessCharge = true;
+        modern3.cameraMain = "48 MP Fusion Main";
+        modern3.cameraUltraWide = "48 MP Fusion Ultra Wide";
+        modern3.cameraTele = "48 MP Fusion Telephoto (4x; optical-quality 8x)";
+        modern3.cameraFront = "18 MP Center Stage";
+        modern3.cameraVariants = "Three separate 48 MP rear cameras";
+        modern3.batteryChemistry = "Rechargeable lithium-ion (manufacturer description)";
+        modern3.batteryNotes = "No validated physical battery capacity / voltage in this reference; no battery-health measurement.";
+        modern3.notes = "Apple manufacturer specification: https://support.apple.com/el-gr/125091 . Reference only; not a physical device measurement. Region-specific hardware and SIM may differ.";
+        modern3.isPro = false;
+        modern3.isProMax = true;
+        MAP.put("iphone 17 pro max", modern3);
+
+        AppleDeviceSpec modern4 = new AppleDeviceSpec("iphone", "iPhone Air");
+        modern4.year = "2025";
+        modern4.os = "iOS";
+        modern4.soc = "A19 Pro";
+        modern4.chipset = "A19 Pro";
+        modern4.cpu = "Apple CPU";
+        modern4.cpuCores = 6;
+        modern4.gpu = "Apple GPU";
+        modern4.gpuCores = 5;
+        modern4.storageBase = "256";
+        modern4.storageOptions = "256 / 512 GB / 1 TB";
+        modern4.screen = "6.5\"";
+        modern4.display = "Super Retina XDR OLED";
+        modern4.resolution = "2736 × 1260";
+        modern4.refreshRate = "Adaptive ProMotion, up to 120 Hz";
+        modern4.has5G = true;
+        modern4.hasLTE = true;
+        modern4.cellular = "5G / LTE (band support varies by region)";
+        modern4.modem = "Apple C1";
+        modern4.uwb = "Second-generation Ultra Wideband chip";
+        modern4.wifi = "Wi-Fi 7";
+        modern4.bluetooth = "Bluetooth 6";
+        modern4.hasNFC = true;
+        modern4.hasESim = true;
+        modern4.simSlots = "eSIM only (no physical SIM)";
+        modern4.port = "USB-C";
+        modern4.hasAirDrop = true;
+        modern4.hasAirPlay = true;
+        modern4.hasFaceID = true;
+        modern4.hasTouchID = false;
+        modern4.biometrics = "Face ID";
+        modern4.hasFastCharge = true;
+        modern4.hasWirelessCharge = true;
+        modern4.cameraMain = "48 MP Fusion Main (single physical rear camera)";
+        modern4.cameraFront = "18 MP Center Stage";
+        modern4.cameraVariants = "Single rear camera; 2x optical-quality crop, not dedicated telephoto";
+        modern4.batteryChemistry = "Rechargeable lithium-ion (manufacturer description)";
+        modern4.batteryNotes = "No validated physical battery capacity / voltage in this reference; no battery-health measurement.";
+        modern4.notes = "Apple manufacturer specification: https://www.apple.com/iphone-air/specs/ . Reference only; not a physical device measurement. Region-specific hardware and SIM may differ.";
+        modern4.isPro = false;
+        modern4.isProMax = false;
+        MAP.put("iphone air", modern4);
+
+        AppleDeviceSpec modern5 = new AppleDeviceSpec("iphone", "iPhone 17e");
+        modern5.year = "2026";
+        modern5.os = "iOS";
+        modern5.soc = "A19";
+        modern5.chipset = "A19";
+        modern5.cpu = "Apple CPU";
+        modern5.cpuCores = 6;
+        modern5.gpu = "Apple GPU";
+        modern5.gpuCores = 4;
+        modern5.storageBase = "256";
+        modern5.storageOptions = "256 / 512 GB";
+        modern5.screen = "6.1\"";
+        modern5.display = "Super Retina XDR OLED";
+        modern5.resolution = "2532 × 1170";
+        modern5.has5G = true;
+        modern5.hasLTE = true;
+        modern5.cellular = "5G / LTE (band support varies by region)";
+        modern5.wifi = "Wi-Fi 6";
+        modern5.bluetooth = "Bluetooth 5.3";
+        modern5.modem = "Apple C1X";
+        modern5.hasNFC = true;
+        modern5.hasESim = true;
+        modern5.port = "USB-C";
+        modern5.hasAirDrop = true;
+        modern5.hasAirPlay = true;
+        modern5.hasFaceID = true;
+        modern5.hasTouchID = false;
+        modern5.biometrics = "Face ID";
+        modern5.hasFastCharge = true;
+        modern5.hasWirelessCharge = true;
+        modern5.cameraMain = "48 MP Fusion Main (single physical rear camera)";
+        modern5.cameraFront = "12 MP TrueDepth";
+        modern5.cameraVariants = "Single rear camera; 2x optical-quality crop, not dedicated telephoto";
+        modern5.batteryChemistry = "Rechargeable lithium-ion (manufacturer description)";
+        modern5.batteryNotes = "No validated physical battery capacity / voltage in this reference; no battery-health measurement.";
+        modern5.notes = "Apple manufacturer specification: https://support.apple.com/el-gr/126470 . Reference only; not a physical device measurement. Region-specific hardware and SIM may differ.";
+        modern5.isPro = false;
+        modern5.isProMax = false;
+        MAP.put("iphone 17e", modern5);
+
+        AppleDeviceSpec modern6 = new AppleDeviceSpec("iphone", "iPhone 18 Pro");
+        modern6.year = "2026";
+        modern6.os = "iOS";
+        modern6.soc = "A20 Pro";
+        modern6.chipset = "A20 Pro";
+        modern6.cpu = "Apple CPU";
+        modern6.cpuCores = 6;
+        modern6.gpu = "Apple GPU";
+        modern6.gpuCores = 7;
+        modern6.storageBase = "256";
+        modern6.storageOptions = "256 / 512 GB / 1 / 2 TB";
+        modern6.screen = "6.3\"";
+        modern6.display = "Super Retina XDR OLED";
+        modern6.resolution = "2622 × 1206";
+        modern6.refreshRate = "Adaptive ProMotion, up to 120 Hz";
+        modern6.has5G = true;
+        modern6.hasLTE = true;
+        modern6.cellular = "5G / LTE (band support varies by region)";
+        modern6.wifi = "Wi-Fi 7";
+        modern6.bluetooth = "Bluetooth 6";
+        modern6.modem = "Apple C2";
+        modern6.uwb = "Second-generation Ultra Wideband chip";
+        modern6.hasNFC = true;
+        modern6.hasESim = true;
+        modern6.port = "USB-C";
+        modern6.hasAirDrop = true;
+        modern6.hasAirPlay = true;
+        modern6.hasFaceID = true;
+        modern6.hasTouchID = false;
+        modern6.biometrics = "Face ID";
+        modern6.hasFastCharge = true;
+        modern6.hasWirelessCharge = true;
+        modern6.cameraMain = "48 MP Fusion Main, variable aperture";
+        modern6.cameraUltraWide = "48 MP Fusion Ultra Wide";
+        modern6.cameraTele = "48 MP Fusion Telephoto (4x; optical-quality 8x)";
+        modern6.cameraFront = "18 MP Center Stage";
+        modern6.cameraVariants = "Three separate 48 MP rear cameras";
+        modern6.batteryChemistry = "Rechargeable lithium-ion (manufacturer description)";
+        modern6.batteryNotes = "No validated physical battery capacity / voltage in this reference; no battery-health measurement.";
+        modern6.thermalNote = "Manufacturer reference: next-generation vapor chamber; not a physical thermal measurement";
+        modern6.notes = "Apple manufacturer specification: https://www.apple.com/iphone-18-pro/specs/ . Reference only; not a physical device measurement. Region-specific hardware and SIM may differ.";
+        modern6.isPro = true;
+        modern6.isProMax = false;
+        MAP.put("iphone 18 pro", modern6);
+
+        AppleDeviceSpec modern7 = new AppleDeviceSpec("iphone", "iPhone 18 Pro Max");
+        modern7.year = "2026";
+        modern7.os = "iOS";
+        modern7.soc = "A20 Pro";
+        modern7.chipset = "A20 Pro";
+        modern7.cpu = "Apple CPU";
+        modern7.cpuCores = 6;
+        modern7.gpu = "Apple GPU";
+        modern7.gpuCores = 7;
+        modern7.storageBase = "256";
+        modern7.storageOptions = "256 / 512 GB / 1 / 2 TB";
+        modern7.screen = "6.9\"";
+        modern7.display = "Super Retina XDR OLED";
+        modern7.resolution = "2868 × 1320";
+        modern7.refreshRate = "Adaptive ProMotion, up to 120 Hz";
+        modern7.has5G = true;
+        modern7.hasLTE = true;
+        modern7.cellular = "5G / LTE (band support varies by region)";
+        modern7.wifi = "Wi-Fi 7";
+        modern7.bluetooth = "Bluetooth 6";
+        modern7.modem = "Apple C2";
+        modern7.uwb = "Second-generation Ultra Wideband chip";
+        modern7.hasNFC = true;
+        modern7.hasESim = true;
+        modern7.port = "USB-C";
+        modern7.hasAirDrop = true;
+        modern7.hasAirPlay = true;
+        modern7.hasFaceID = true;
+        modern7.hasTouchID = false;
+        modern7.biometrics = "Face ID";
+        modern7.hasFastCharge = true;
+        modern7.hasWirelessCharge = true;
+        modern7.cameraMain = "48 MP Fusion Main, variable aperture";
+        modern7.cameraUltraWide = "48 MP Fusion Ultra Wide";
+        modern7.cameraTele = "48 MP Fusion Telephoto (4x; optical-quality 8x)";
+        modern7.cameraFront = "18 MP Center Stage";
+        modern7.cameraVariants = "Three separate 48 MP rear cameras";
+        modern7.batteryChemistry = "Rechargeable lithium-ion (manufacturer description)";
+        modern7.batteryNotes = "No validated physical battery capacity / voltage in this reference; no battery-health measurement.";
+        modern7.thermalNote = "Manufacturer reference: next-generation vapor chamber; not a physical thermal measurement";
+        modern7.notes = "Apple manufacturer specification: https://www.apple.com/iphone-18-pro/specs/ . Reference only; not a physical device measurement. Region-specific hardware and SIM may differ.";
+        modern7.isPro = false;
+        modern7.isProMax = true;
+        MAP.put("iphone 18 pro max", modern7);
+
+        AppleDeviceSpec modern8 = new AppleDeviceSpec("iphone", "iPhone Duo");
+        modern8.year = "2026";
+        modern8.os = "iOS";
+        modern8.soc = "A20 Pro";
+        modern8.chipset = "A20 Pro";
+        modern8.cpu = "Apple CPU";
+        modern8.cpuCores = 6;
+        modern8.gpu = "Apple GPU";
+        modern8.gpuCores = 7;
+        modern8.storageBase = "256";
+        modern8.storageOptions = "256 / 512 GB / 1 / 2 TB";
+        modern8.screen = "7.6\" inner / 5.4\" outer";
+        modern8.display = "Dual Super Retina XDR folding OLED";
+        modern8.resolution = "1878 × 2670 inner / 1398 × 2034 outer";
+        modern8.refreshRate = "Adaptive ProMotion, up to 120 Hz (both displays)";
+        modern8.displayVariants = "Foldable inner display and separate outer OLED display";
+        modern8.has5G = true;
+        modern8.hasLTE = true;
+        modern8.cellular = "5G / LTE (band support varies by region)";
+        modern8.wifi = "Wi-Fi 7";
+        modern8.bluetooth = "Bluetooth 6";
+        modern8.modem = "Apple C2";
+        modern8.uwb = "Second-generation Ultra Wideband chip";
+        modern8.hasNFC = true;
+        modern8.hasESim = true;
+        modern8.port = "USB-C";
+        modern8.usbStandard = "USB 3 (up to 10 Gb/s)";
+        modern8.hasAirDrop = true;
+        modern8.hasAirPlay = true;
+        modern8.hasFaceID = false;
+        modern8.hasTouchID = true;
+        modern8.biometrics = "Touch ID (side button)";
+        modern8.hasFastCharge = true;
+        modern8.hasWirelessCharge = true;
+        modern8.cameraMain = "48 MP Fusion Main";
+        modern8.cameraUltraWide = "48 MP Fusion Ultra Wide";
+        modern8.cameraFront = "12 MP Center Stage outer + under-display inner FaceTime camera";
+        modern8.cameraVariants = "Dual Fusion rear cameras; separate inner and outer front cameras";
+        modern8.batteryChemistry = "Rechargeable lithium-ion (manufacturer description)";
+        modern8.batteryNotes = "No validated physical battery capacity / voltage in this reference; no battery-health measurement.";
+        modern8.thermalNote = "Manufacturer reference: custom vapor chamber; not a physical thermal measurement";
+        modern8.notes = "Apple manufacturer specification: https://www.apple.com/iphone-duo/specs/ . Reference only; not a physical device measurement. Region-specific hardware and SIM may differ.";
+        modern8.isPro = false;
+        modern8.isProMax = false;
+        MAP.put("iphone duo", modern8);
+    }
+
 public static AppleDeviceSpec get(String modelName) {
-
-    if (modelName == null)
+    if (modelName == null || modelName.trim().isEmpty())
         return AppleDeviceSpec.unknown();
-
-    String m = modelName.trim().toLowerCase();
-
-    // =====================================================
-    // SERIES RESOLUTION — CRITICAL
-    // =====================================================
-
-    if (m.contains("iphone 16 pro max"))
-        return MAP.get("iphone 16 pro max");
-
-    if (m.contains("iphone 16 pro"))
-        return MAP.get("iphone 16 pro");
-
-    if (m.contains("iphone 16 plus"))
-        return MAP.get("iphone 16 plus");
-
-    if (m.contains("iphone 16"))
-        return MAP.get("iphone 16");
-    
-    if (m.contains("iphone 15")) {
-        if (m.contains("pro max")) return MAP.get("iphone 15 pro max");
-        if (m.contains("pro"))     return MAP.get("iphone 15 pro");
-        if (m.contains("plus"))    return MAP.get("iphone 15 plus");
-        return MAP.get("iphone 15");
-    }
-
-    if (m.contains("iphone 14")) {
-        if (m.contains("pro max")) return MAP.get("iphone 14 pro max");
-        if (m.contains("pro"))     return MAP.get("iphone 14 pro");
-        if (m.contains("plus"))    return MAP.get("iphone 14 plus");
-        return MAP.get("iphone 14");
-    }
-
-    if (m.contains("iphone 13")) {
-        if (m.contains("pro max")) return MAP.get("iphone 13 pro max");
-        if (m.contains("pro"))     return MAP.get("iphone 13 pro");
-        if (m.contains("mini"))    return MAP.get("iphone 13 mini");
-        return MAP.get("iphone 13");
-    }
-
-    if (m.contains("iphone 12")) {
-        if (m.contains("pro max")) return MAP.get("iphone 12 pro max");
-        if (m.contains("pro"))     return MAP.get("iphone 12 pro");
-        if (m.contains("mini"))    return MAP.get("iphone 12 mini");
-        return MAP.get("iphone 12");
-    }
-
-    if (m.contains("iphone 11")) {
-        if (m.contains("pro max")) return MAP.get("iphone 11 pro max");
-        if (m.contains("pro"))     return MAP.get("iphone 11 pro");
-        return MAP.get("iphone 11");
-    }
-
-    // =====================================================
-    // FALLBACK (exact key)
-    // =====================================================
-    AppleDeviceSpec d = MAP.get(m);
-    return d != null ? d : AppleDeviceSpec.unknown();
+    // Exact canonical match only. In particular, iPhone 16e must never
+    // silently inherit the hardware specifications of iPhone 16.
+    String key = modelName.trim().toLowerCase(java.util.Locale.ROOT)
+            .replaceAll("\\s+", " ");
+    AppleDeviceSpec spec = MAP.get(key);
+    return spec != null ? spec : AppleDeviceSpec.unknown();
 }
 }
