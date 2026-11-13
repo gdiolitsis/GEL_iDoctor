@@ -3733,14 +3733,18 @@ private void appendHtml(String html) {
 
 // ---------------- CORE ----------------
 private void logLabel(String label, String value, String color) {
+    logLabel(label, value, color, GelDiagnosticSeverity.Level.NEUTRAL);
+}
 
+// Preserve the same colored screen layout and emit exactly one report line.
+// Explicit typed severity survives PDF/plain-log export for Lab 31.
+private void logLabel(String label, String value, String color,
+                      GelDiagnosticSeverity.Level severity) {
     appendHtml(
             escape(label) + ": " +
             "<font color='" + color + "'>" + escape(value) + "</font>"
     );
-
-    // 🔥 PDF
-    GELServiceLog.add(label + ": " + value);
+    GELServiceLog.add(GelDiagnosticSeverity.plainLine(severity, label, value));
 }
 
 // ---------------- SIMPLE ----------------
@@ -3801,13 +3805,13 @@ private void logLabelOkValue(String label, String value) {
 }
 
 private void logLabelWarnValue(String label, String value) {
-    logLabel(label, value, "#FFD700");
+    logLabel(label, value, "#FFD700", GelDiagnosticSeverity.Level.WARNING);
     expandLogPanel();
     scrollLogToBottom();
 }
 
 private void logLabelErrorValue(String label, String value) {
-    logLabel(label, value, "#FF5555");
+    logLabel(label, value, "#FF5555", GelDiagnosticSeverity.Level.ERROR);
     expandLogPanel();
     scrollLogToBottom();
 }
