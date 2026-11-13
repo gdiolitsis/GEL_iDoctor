@@ -11544,12 +11544,12 @@ private void showLab13GatePopup() {
 
     final String titleText =
             gr
-                    ? "LAB 13 — Έλεγχος Εξωτερικής Συσκευηςής Bluetooth"
+                    ? "LAB 13 — Έλεγχος Εξωτερικής Συσκευής Bluetooth"
                     : "LAB 13 — External Bluetooth Device Check";
 
     final String messageText =
             gr
-                    ? "Σύνδεσε ΜΙΑ εξωτερική συσκευη Bluetooth.\n\n"
+                    ? "Σύνδεσε ΜΙΑ εξωτερική συσκευή Bluetooth.\n\n"
                       + "π.χ. ακουστικά, σύστημα αυτοκινήτου, πληκτρολόγιο.\n\n"
                       + "Το τεστ, αξιολογεί τη σταθερότητα της σύνδεσης Bluetooth.\n\n"
                       + "Αν δεν έχεις συνδεδεμένη εξωτερική συσκευή,\n"
@@ -11617,13 +11617,13 @@ private void showLab13GatePopup() {
     Button skip = gelButton(
         this,
         gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP",
-        0xFF444444
+        0xFFE60000
 );
 
     Button cont = gelButton(
         this,
         gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE",
-        0xFF0F8A3B
+        0xFF39FF14
 );
 
     LinearLayout.LayoutParams lp =
@@ -11652,8 +11652,16 @@ buttons.addView(cont);
         );
     }
 
+    gate.setOnDismissListener(dialog -> {
+        try { AppTTS.stop(); } catch (Throwable ignore) {}
+    });
     gate.show();
     com.gel.cleaner.GelButtonLayout.fitDialog(gate);
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        if (gate.isShowing() && !AppTTS.isMuted(this)) {
+            AppTTS.ensureSpeak(this, messageText);
+        }
+    }, 120);
 
     // ---------------------------
     // ACTIONS
