@@ -6337,17 +6337,100 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                     ToneGenerator.TONE_DTMF_9
             };
 
-            int requestedTones = 0;
-            for (int t : tones) {
-                if (!tg.startTone(t, 500)) {
-                    throw new IllegalStateException("ToneGenerator could not start tone " + (requestedTones + 1));
+            // Capture acoustic feedback WHILE each tone is playing, not afterward.
+            // This is an RMS/noise-floor screen, not frequency-selective proof.
+            final int sampleRate = 44100;
+            final int minBytes = AudioRecord.getMinBufferSize(
+                    sampleRate, AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT);
+            AudioRecord capture = null;
+            int confirmed = 0;
+            int measured = 0;
+            double noiseRms = Double.NaN;
+            try {
+                if (minBytes > 0) {
+                    capture = new AudioRecord(
+                            MediaRecorder.AudioSource.MIC, sampleRate,
+                            AudioFormat.CHANNEL_IN_MONO,
+                            AudioFormat.ENCODING_PCM_16BIT,
+                            Math.max(minBytes * 2, 4096));
+                    if (capture.getState() == AudioRecord.STATE_INITIALIZED) {
+                        capture.startRecording();
+                        if (capture.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
+                            throw new IllegalStateException("Lab 2 capture did not start");
+                        }
+                        short[] pcm = new short[Math.max(1024, minBytes / 2)];
+                        // Pre-tone ambient baseline, 250 ms.
+                        long baselineEnd = SystemClock.elapsedRealtime() + 250;
+                        double baseSquares = 0;
+                        long baseSamples = 0;
+                        while (SystemClock.elapsedRealtime() < baselineEnd) {
+                            int n = capture.read(pcm, 0, pcm.length);
+                            if (n <= 0) break;
+                            for (int k = 0; k < n; k++) {
+                                baseSquares += (double) pcm[k] * pcm[k];
+                            }
+                            baseSamples += n;
+                        }
+                        if (baseSamples > 0) {
+                            noiseRms = Math.sqrt(baseSquares / baseSamples);
+                            logLabelValue(gr ? "RMS περιβάλλοντος" : "Ambient RMS",
+                                    String.format(Locale.US, "%.1f", noiseRms));
+                        }
+                        for (int index = 0; index < tones.length; index++) {
+                            if (!tg.startTone(tones[index], 500)) {
+                                throw new IllegalStateException("Tone start failed: " + (index + 1));
+                            }
+                            long toneEnd = SystemClock.elapsedRealtime() + 500;
+                            double sum = 0;
+                            long count = 0;
+                            while (SystemClock.elapsedRealtime() < toneEnd) {
+                                int n = capture.read(pcm, 0, pcm.length);
+                                if (n <= 0) break;
+                                for (int k = 0; k < n; k++) {
+                                    sum += (double) pcm[k] * pcm[k];
+                                }
+                                count += n;
+                            }
+                            tg.stopTone();
+                            double toneRms = count > 0 ? Math.sqrt(sum / count) : 0;
+                            boolean detected = count > 0 && toneRms > 20.0
+                                    && !Double.isNaN(noiseRms)
+                                    && toneRms > noiseRms * 1.5;
+                            if (count > 0) measured++;
+                            if (detected) confirmed++;
+                            logLabelValue(
+                                    (gr ? "Τόνος " : "Tone ") + (index + 1) + " RMS",
+                                    String.format(Locale.US, "%.1f — %s", toneRms,
+                                            detected
+                                                    ? (gr ? "ένδειξη ήχου" : "acoustic indication")
+                                                    : (gr ? "μη επιβεβαιωμένος" : "unconfirmed")));
+                            SystemClock.sleep(50);
+                        }
+                    }
                 }
-                requestedTones++;
-                SystemClock.sleep(550);
+            } finally {
+                if (capture != null) {
+                    try { capture.stop(); } catch (Throwable ignore) {}
+                    try { capture.release(); } catch (Throwable ignore) {}
+                }
+                try { tg.stopTone(); } catch (Throwable ignore) {}
             }
-            logInfo(gr
-                    ? "Ζητήθηκε επιτυχώς η αναπαραγωγή 4 τόνων (όχι ακουστική επιβεβαίωση)."
-                    : "Playback of 4 tones was requested successfully (not acoustic verification).");
+            logLabelValue(gr ? "Τόνοι με ακουστική ένδειξη" : "Tones with acoustic indication",
+                    confirmed + "/4");
+            if (confirmed != 4) {
+                logWarn(gr
+                        ? "Δεν επιβεβαιώθηκαν αυτόματα και οι τέσσερις τόνοι. "
+                          + "Η μέτρηση RMS δεν ταυτοποιεί τη συχνότητα και μπορεί να επηρεάζεται από θόρυβο."
+                        : "Not all four tones were acoustically indicated. "
+                          + "RMS cannot identify frequencies and may include ambient noise.");
+            } else {
+                logInfo(gr
+                        ? "Και οι τέσσερις τόνοι παρουσίασαν αυξημένο RMS κατά την αναπαραγωγή. "
+                          + "Δεν αποτελεί απόλυτη απόδειξη σωστής συχνότητας."
+                        : "All four tones raised RMS during playback. "
+                          + "This is not definitive frequency verification.");
+            }
 
 // ----------------------------------------------------
 // MIC FEEDBACK ANALYSIS
