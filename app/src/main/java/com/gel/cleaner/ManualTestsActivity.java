@@ -13266,7 +13266,7 @@ private void lab14BatteryHealthStressTest_REAL() {
     // --------------------------------------------------
     if (isChargingNowSafe()) {
 
-        logError(gr
+        logWarn(gr
                 ? "Η δοκιμή απαιτεί να μην φορτίζει η συσκευή."
                 : "Device must NOT be charging.");
 
@@ -13879,9 +13879,8 @@ if (!sagValid) {
 
     if ("Critical".equals(labelSafe)) {
 
-        logLabelErrorValue(
-                gr ? "Πτώση τάσης υπό φορτίο"
-                   : "Voltage sag under load",
+        logLabelWarnValue(
+                gr ? "Πτώση τάσης υπό φορτίο (πειραματική)" : "Voltage sag (experimental)",
                 sagText
         );
 
@@ -13904,9 +13903,8 @@ if (!sagValid) {
     } else {
 
         // Excellent
-        logLabelOkValue(
-                gr ? "Πτώση τάσης υπό φορτίο"
-                   : "Voltage sag under load",
+        logLabelValue(
+                gr ? "Πτώση τάσης υπό φορτίο (πειραματική)" : "Voltage sag (experimental)",
                 sagText
         );
     }
@@ -15551,9 +15549,8 @@ if (!hasReliableSag) {
 
     if ("Critical".equals(sagLabel)) {
 
-        logLabelErrorValue(
-                gr ? "Πτώση τάσης υπό φορτίο"
-                   : "Voltage sag under load",
+        logLabelWarnValue(
+                gr ? "Πτώση τάσης υπό φορτίο (πειραματική)" : "Voltage sag (experimental)",
                 sagText
         );
 
@@ -15567,9 +15564,8 @@ if (!hasReliableSag) {
 
     } else {
 
-        logLabelOkValue(
-                gr ? "Πτώση τάσης υπό φορτίο"
-                   : "Voltage sag under load",
+        logLabelValue(
+                gr ? "Πτώση τάσης υπό φορτίο (πειραματική)" : "Voltage sag (experimental)",
                 sagText
         );
     }
@@ -18969,8 +18965,9 @@ if (!isLab14BMode &&
     elapsed >= 25 &&
     lab14WeakLoadCounter >= scoreAbortThreshold + 2) {
 
-    logError(gr
-        ? "Ανεπαρκές φορτίο — το test ακυρώθηκε"
+    logLabelValue(gr ? "Κατάσταση δοκιμής" : "Test status",
+        gr ? "ΑΝΕΠΑΡΚΕΣ ΦΟΡΤΙΟ — η εκτέλεση δεν ολοκληρώθηκε" 
+           : "INSUFFICIENT LOAD — run not completed");
         : "Insufficient load — test aborted");
 
     // 🔴 STATE
@@ -21033,10 +21030,9 @@ if (lab14_systemLimited[0]) {
 
 } else {
 
-    logLabelErrorValue(
-            gr ? "Έγκυρη εκτέλεση"
-               : "Valid run",
-            gr ? "Όχι" : "No"
+    logLabelValue(
+            gr ? "Έγκυρη εκτέλεση" : "Valid run",
+            gr ? "ΟΧΙ — ανεπαρκή δεδομένα" : "NO — insufficient evidence"
     );
 
 }
