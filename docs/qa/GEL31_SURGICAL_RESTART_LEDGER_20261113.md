@@ -19,8 +19,8 @@
 | ID | Scope | Required surgical repair; retain old working behavior | Historical PRs | State |
 |---|---|---|---|---|
 | UX-01 | Labs 1–2 | **NO user YES/NO/ALL/SOME listening popup.** Purely automatic test; retain original log/RMS/Peak/route safety. Fix microphone capture timing rather than replacing entire Lab. | #59, #60, #84, #85, #103, #106 | Lab 1 synchronized timing present; Lab 2 unrequested popup removed. Source review completed; device acoustic validation pending. |
-| UX-02 | Lab 3 | Keep guided tone sequence; fix first-tone AudioTrack static write/state error and dialog closure; preserve audible instructions, route restoration. Prevent inadvertent landscape and loss of Labs 1–2 logs. | #67, #83, #84 | To reimplement on backup |
-| UX-03 | Lab 4 | Preserve base/PRO functionality; do not advance if recording fails/cancels. Keep source-bound PCM and route safety; preserve original prompts, TTS and exit. | #71, #73, earlier #46 | To evaluate/apply |
+| UX-02 | Lab 3 | Keep guided tone sequence; fix first-tone AudioTrack static write/state error and dialog closure; preserve audible instructions, route restoration. Prevent inadvertent landscape and loss of Labs 1–2 logs. | #67, #83, #84 | Source patched: AudioTrack write guard, cancel-aware three-tone workflow, double-start prevention, actual original audio mode restoration and single intro TTS. Landscape/log survival still requires physical verification. |
+| UX-03 | Lab 4 | Preserve base/PRO functionality; do not advance if recording fails/cancels. Keep source-bound PCM and route safety; preserve original prompts, TTS and exit. | #71, #73, earlier #46 | Source patched: BASE requires both successful AudioRecord starts; PRO validates PCM and audio I/O, rejects timeout/cancel/zero capture; WAV failure cannot reach confirmation; localization and contrast fixed. Device-route and emulator testing pending. |
 | UX-04 | Lab 6 | Add EXIT to intro (Back already works). Fix invisible touch STOP caption, white-on-white step text; restore spoken guidance when unmuted. Keep 96-zone grid and all pattern steps. Preserve/restore temporary brightness and screen-on policies. | #47, #86–#88, #93–#94 | Source patched: localized STOP, fresh counts, canceled exit, partial-display coverage, contrast/TTS. Device acceptance pending; brightness lifecycle still to verify. |
 | UX-05 | Lab 7 | Add intro EXIT; leave working Back and TTS untouched; sensor result is not proof of in-call screen-off. Offer proximity independently if rotation unavailable, without false pass. | #75, #89, #95 | Source patched: stable portrait→landscape postures, FAR→NEAR→FAR, separate proximity choice, neutral cancellation and truthful logs. Hardware acceptance pending. |
 | UX-06 | Lab 8 | Add intro EXIT and functioning Back; preserve Camera2/TTS. **Owner-confirmed black frames occurred because the phone was placed on a black table**; this is NOT a confirmed camera defect and does not authorize changing the camera pipeline. | #48, #92, #96, #98 | Dark-frame incident explained by test environment — **no camera fix needed for that event**. Intro EXIT/Back/TTS visible in source; device verification pending. |
@@ -143,6 +143,35 @@ Every row begins as **REVIEW**, not as permission to wholesale copy the historic
 | GEL buttons | Shared green/black legibility, red/white for Labs 6/7/8/8.1/13 | `9c605e30` | Contrast and text clipping across Android 11/16, EL/EN, large fonts |
 
 **Gate still open:** exact-head Gradle/JUnit build, four emulator UI sweeps, real-device Xiaomi trial, exported service PDF and full regression across all 31 Labs. Do not conflate CI success with hardware/clinical-style measurement proof.
+
+### Source-verified Lab 3/4 continuation after black-table clarification
+
+Latest application patch `8d966118bfdb395367a1cef88255dee3ec5b5765` is scoped to the original Lab 3/4 flow and helpers. These changes are **not** new tests of speaker/microphone hardware; actual Xiaomi and emulator validation remains mandatory.
+
+| Method, including relevant audio helpers | Original backup lines / chars | Latest QA lines / chars |
+|---|---:|---:|
+| `lab3EarpieceManual` | 307 / 8,746 | 307 / 9,381 |
+| `playEarpieceBeep` | 32 / 888 | 39 / 1,256 |
+| `resetAudioAfterLab3` | 21 / 658 | 21 / 697 |
+| `lab4MicManual` | 6 / 123 | 6 / 123 |
+| `lab4MicBase` | 135 / 3,927 | 160 / 5,669 |
+| `lab4MicPro` | 588 / 17,709 | 625 / 20,055 |
+| `playAnswerCheckWav` | 59 / 1,698 | 68 / 2,164 |
+| `showAnswerCheckConfirmation` | 161 / 4,138 | 169 / 4,571 |
+| `lab4ResultEarpiece` | 37 / 1,057 | 37 / 1,057 (unchanged) |
+| `lab8CameraHardwareCheck` | 261 / 9,118 | 261 / 9,118 (unchanged) |
+
+`ManualTestsActivity.java` total: original **33,567 lines / 982,195 chars**; QA source at the above application head **34,019 lines / 1,009,695 chars**. Per-method sizes include their own brace-enclosed bodies; same file has additional helpers, so do not sum these as the whole file.
+
+- `51b52f4d`: cancel-aware Lab 3, avoids stale confirmation and duplicate audio tasks, restores the captured pre-test mode instead of force-setting MODE_NORMAL.
+- `2a123561`: Lab 4 BASE records whether each AudioRecord actually started, stops PRO progression after incomplete capture or exception, and does not claim microphone hardware certification from raw RMS alone.
+- `e04f45ff`: Lab 4 PRO checks AudioRecord/AudioTrack state, requires PCM data, handles partial write/read errors, reliably releases both audio objects, times out unanswered prompts neutrally, and prevents cancel→YES.
+- `8d966118`: Lab 4 sampled WAV playback failures do not prompt a misleading hearing confirmation, final dialog Back is neutral; user feedback is explicitly subjective.
+
+**Incident closed for Lab 8:** Black frames were caused by the phone resting on a black table, confirmed by owner; **no camera pipeline patch authorized or needed for that observation**.
+
+**Still required:** exact final SHA build/CI Android 11 (EL/EN), Android 16 (EL/EN), physical Xiaomi (Lab 3 first-tone output / no landscape / logs persistence; Lab 4 BASE no permission/null sample; PRO cancellation/timeout/no input/last WAV), report/PDF localization, no external routing regression, safe restoration of device audio policies, no main merge.
+
 
 ### Lab 8 — owner clarification (13 Nov 2026)
 
