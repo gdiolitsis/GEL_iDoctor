@@ -4823,8 +4823,8 @@ int pctFree = (int) ((free * 100L) / total);
 // ============================================================
 
 private static class MemSnapshot {
-    long memFreeKb;
-    long cachedKb;
+    long memFreeKb = -1L;
+    long cachedKb = -1L;
     long swapTotalKb = -1L; // missing source != zero swap
     long swapFreeKb = -1L;
 }
@@ -4877,7 +4877,7 @@ private long extractKb(String line) {
         String n = line.replaceAll("[^0-9]", "");
         return Long.parseLong(n);
     } catch (Throwable t) {
-        return 0;
+        return -1L; // invalid / unreadable is not a measured zero
     }
 }
 
@@ -27256,15 +27256,12 @@ private void lab19RamSnapshot() {
             long swapUsedKb = RamEvidencePolicy.observedSwapUsedKb(
                     snap.swapTotalKb, snap.swapFreeKb);
 
-            String pressureLevel =
-                    pressureLevel(
-                            snap.memFreeKb,
-                            snap.cachedKb,
-                            swapUsedKb
-                    );
-
+            // Incomplete raw counters cannot support a derived pressure grade.
             String pressureHuman =
-                    humanPressureLabel(pressureLevel);
+                    (snap.memFreeKb >= 0 && snap.cachedKb >= 0 && swapUsedKb >= 0)
+                            ? humanPressureLabel(pressureLevel(
+                                    snap.memFreeKb, snap.cachedKb, swapUsedKb))
+                            : (gr ? "Άγνωστο — ελλιπείς μετρήσεις" : "Unknown — incomplete readings");
 
             String zramDep = swapUsedKb >= 0
                     ? zramDependency(swapUsedKb, total)
