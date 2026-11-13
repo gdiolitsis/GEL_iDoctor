@@ -913,7 +913,7 @@ private boolean oldKeepScreenOn = false;
                 gelButton(
                         this,
                         "GEL PRO",
-                        0xFF0B5D1E // dark green / white text: high contrast
+                        0xFF39FF14 // neon green / black text: high contrast
                 );
         ((com.gel.cleaner.GelButton) notNowBtn).setSupportBackgroundTintList(null);
         notNowBtn.setBackgroundTintList(null);
@@ -2674,10 +2674,12 @@ b.setTextColor(0xFFFFFFFF);
 b.setTypeface(null, Typeface.BOLD);  
 
 GradientDrawable bg = new GradientDrawable();  
-bg.setColor(0xFF8B0000);  
+bg.setColor(0xFFE60000);  
 bg.setCornerRadius(dp(10));  
 bg.setStroke(dp(3), 0xFFFFD700);  
-b.setBackground(bg);  
+((com.gel.cleaner.GelButton) b).setSupportBackgroundTintList(null);
+    b.setBackgroundTintList(null);
+    b.setBackground(bg);  
 
 LinearLayout.LayoutParams lp =  
         new LinearLayout.LayoutParams(  
@@ -2806,7 +2808,7 @@ root.addView(buildMuteRow());
         noBtn.setTextColor(Color.WHITE);
 
         GradientDrawable noBg = new GradientDrawable();
-        noBg.setColor(0xFF8B0000);
+        noBg.setColor(0xFFE60000);
         noBg.setCornerRadius(dp(10));
         noBg.setStroke(dp(3), 0xFFFFD700);
         noBtn.setBackground(noBg);
@@ -2816,10 +2818,11 @@ root.addView(buildMuteRow());
         Button yesBtn = new com.gel.cleaner.GelButton(this);
         yesBtn.setText(gr ? "ΝΑΙ" : "YES");
         yesBtn.setAllCaps(false);
-        yesBtn.setTextColor(Color.WHITE);
+        yesBtn.setTextColor(Color.BLACK);
+        yesBtn.setTypeface(null, Typeface.BOLD);
 
         GradientDrawable yesBg = new GradientDrawable();
-        yesBg.setColor(0xFF0B5F3B);
+        yesBg.setColor(0xFF39FF14);
         yesBg.setCornerRadius(dp(10));
         yesBg.setStroke(dp(3), 0xFFFFD700);
         yesBtn.setBackground(yesBg);
@@ -3156,7 +3159,7 @@ private AlertDialog buildInfoDialog(
     exit.setTextColor(Color.WHITE);
 
     GradientDrawable exitBg = new GradientDrawable();
-    exitBg.setColor(0xFF8B0000);
+    exitBg.setColor(0xFFE60000);
     exitBg.setCornerRadius(dp(10));
     exitBg.setStroke(dp(3), 0xFFFFD700);
     exit.setBackground(exitBg);
@@ -4285,7 +4288,7 @@ private void showLab15ConditionCheck(Runnable startAction) {
             gelButton(
                     this,
                     gr ? "Συνέχεια" : "Continue",
-                    0xFF0B5D1E
+                    0xFF39FF14
             );
 
 
@@ -5192,6 +5195,8 @@ private Button gelButton(Context ctx, String text, int bgColor) {
     bg.setCornerRadius(dp(10));
     bg.setStroke(dp(3), 0xFFFFD700);
 
+    ((com.gel.cleaner.GelButton) b).setSupportBackgroundTintList(null);
+    b.setBackgroundTintList(null);
     b.setBackground(bg);
 
     LinearLayout.LayoutParams lp =
@@ -5460,11 +5465,12 @@ private void showLab28Popup() {
         Button okBtn = new com.gel.cleaner.GelButton(this);
         okBtn.setText("OK");
         okBtn.setAllCaps(false);
-        okBtn.setTextColor(Color.WHITE);
+        okBtn.setTextColor(Color.BLACK);
+        okBtn.setTypeface(null, Typeface.BOLD);
         okBtn.setTextSize(15f);
 
         GradientDrawable okBg = new GradientDrawable();
-        okBg.setColor(0xFF0B5D1E); // Dark green, readable white OK label.
+        okBg.setColor(0xFF39FF14); // Neon green with black label.
         okBg.setCornerRadius(dp(10));
         okBg.setStroke(dp(3), 0xFFFFD700);
         ((com.gel.cleaner.GelButton) okBtn).setSupportBackgroundTintList(null);
@@ -6827,7 +6833,7 @@ exitBtn.setTextSize(14f);
 exitBtn.setTextColor(Color.WHITE);
 
 GradientDrawable exitBg = new GradientDrawable();
-exitBg.setColor(0xFF8B0000);
+exitBg.setColor(0xFFE60000);
 exitBg.setCornerRadius(dp(10));
 exitBg.setStroke(dp(3), 0xFFFFD700);
 exitBtn.setBackground(exitBg);
@@ -9739,9 +9745,10 @@ root.addView(hint);
     Button yes = new com.gel.cleaner.GelButton(this);
     yes.setText(gr ? "ΒΛΕΠΩ ΕΙΚΟΝΑ" : "I SEE IMAGE");
     yes.setAllCaps(false);
-    yes.setTextColor(0xFFFFFFFF);
+    yes.setTextColor(Color.BLACK);
+    yes.setTypeface(null, Typeface.BOLD);
     GradientDrawable yesBg = new GradientDrawable();
-    yesBg.setColor(0xFF0B5F3B);
+    yesBg.setColor(0xFF39FF14);
     yesBg.setCornerRadius(dp(10));
     yesBg.setStroke(dp(3), 0xFFFFD700);
     yes.setBackground(yesBg);
@@ -9751,7 +9758,7 @@ root.addView(hint);
     no.setAllCaps(false);
     no.setTextColor(0xFFFFFFFF);
     GradientDrawable noBg = new GradientDrawable();
-    noBg.setColor(0xFF8B0000);
+    noBg.setColor(0xFFE60000);
     noBg.setCornerRadius(dp(10));
     noBg.setStroke(dp(3), 0xFFFFD700);
     no.setBackground(noBg);
@@ -12643,7 +12650,7 @@ root.addView(buildMuteRow());
 // EXIT BUTTON
 // ---------------------------
 Button exitBtn = gelButton(this, gr ? "ΕΞΟΔΟΣ ΤΕΣΤ" : "EXIT TEST",
-        0xFF8B0000
+        0xFFE60000
 );
 LinearLayout.LayoutParams lpExit =
         new LinearLayout.LayoutParams(
@@ -18282,7 +18289,7 @@ private void startLab14SharedUI(long durationSec, boolean gr) {
             gelButton(
                     this,
                     gr ? "Έξοδος τεστ" : "Exit test",
-                    0xFF8B0000
+                    0xFFE60000
             );
 
     LinearLayout.LayoutParams btnLp =
@@ -20528,10 +20535,10 @@ LinearLayout row = new LinearLayout(this);
 row.setOrientation(LinearLayout.HORIZONTAL);
 
 Button cancel =
-        gelButton(this, gr ? "Ακύρωση" : "Cancel", 0xFF8B0000);
+        gelButton(this, gr ? "Ακύρωση" : "Cancel", 0xFFE60000);
 
 Button start =
-        gelButton(this, gr ? "Έναρξη" : "Start", 0xFF0B5D1E);
+        gelButton(this, gr ? "Έναρξη" : "Start", 0xFF39FF14);
 
 // 🔴 LAYOUT LOGIC
 if (canStart) {
@@ -20765,14 +20772,14 @@ private void showLab14PreTestAdvisory(Runnable onContinue) {
     Button btnRestart = gelButton(
             this,
             gr ? "Έξοδος για επανεκκίνηση" : "Exit for restart",
-            0xFF8B0000
+            0xFFE60000
     );
 
     Button btnContinue = gelButton(
             this,
             gr ? "Συνέχεια παρόλα αυτά"
                : "Continue anyway",
-            0xFF0B5D1E
+            0xFF39FF14
     );
 
     LinearLayout.LayoutParams lp =
@@ -23483,7 +23490,7 @@ private void showLab14BAdvisory(Runnable onContinue) {
                         gr
                         ? "Έναρξη 5λεπτου τεστ"
                         : "Start 5-minute test",
-                        0xFF0B5D1E
+                        0xFF39FF14
                 );
 
     } else {
@@ -23492,7 +23499,7 @@ private void showLab14BAdvisory(Runnable onContinue) {
                 gelButton(
                         this,
                         gr ? "Έξοδος" : "Exit",
-                        0xFF8B0000
+                        0xFFE60000
                 );
     }
 
@@ -23696,7 +23703,7 @@ statusText.setText(
     Button exitBtn = gelButton(
             this,
             gr ? "Έξοδος τεστ" : "Exit test",
-            0xFF8B0000
+            0xFFE60000
     );
 
     exitBtn.setOnClickListener(v -> {
