@@ -21829,6 +21829,7 @@ synchronized (lab14Lock) {
         final long[] endMah = new long[]{ -1L };
 
         final long[] baselineMah = new long[]{-1L};
+        final String[] capacityProvenance = new String[]{"UNKNOWN"};
 
         final float[] startVolt = new float[]{ Float.NaN };
         final float[] endVolt = new float[]{ Float.NaN };
@@ -21841,9 +21842,8 @@ synchronized (lab14Lock) {
 
         if (snap0 == null || snap0.chargeNowMah <= 0) {
 
-            logError(gr
-                    ? "Αποτυχία αρχικής ανάγνωσης μπαταρίας"
-                    : "Initial battery snapshot failed");
+            logLabelValue(gr ? "Δεδομένα μπαταρίας" : "Battery data",
+                    gr ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — αποτυχία ανάγνωσης" : "NOT TESTED — snapshot unavailable");
 
             lab14Running = false;
             isLab14BMode = false;
@@ -21858,19 +21858,22 @@ startMah[0] = snap0.chargeNowMah;
 if (snap0.chargeFullMah > 1000) {
 
     lab14bBaselineMah = snap0.chargeFullMah;
+    capacityProvenance[0] = "ANDROID_FULL_REPORTED";
 
 } else if (snap0.chargeDesignMah > 1000) {
 
     lab14bBaselineMah = snap0.chargeDesignMah;
+    capacityProvenance[0] = "DESIGN_NOMINAL";
 
 } else {
 
-    int pct = Math.max(1, getBatteryPercentSafe());
+    int pct = getBatteryPercentSafe();
 
-    if (snap0.chargeNowMah > 0 && pct > 0) {
+    if (snap0.chargeNowMah > 0 && pct > 5 && pct <= 100) {
 
         lab14bBaselineMah =
                 (long) (snap0.chargeNowMah / (pct / 100.0f));
+        capacityProvenance[0] = "EXTRAPOLATED_FROM_LEVEL";
 
     } else {
 
@@ -21885,12 +21888,17 @@ if (lab14bBaselineMah < 1000) {
 
     lab14bBaselineMah = -1L;
 
-    logWarn(
-    gr
-    ? "Η χωρητικότητα της μπαταρίας δεν είναι διαθέσιμη — η εκτίμηση βασίζεται στην πραγματική κατανάλωση"
-    : "Battery capacity not available — estimation based on real usage"
-);
+    logInfo(gr
+            ? "Χωρητικότητα μη διαθέσιμη — δεν υπολογίζεται αυτονομία στο 100%."
+            : "Capacity unavailable — full-charge endurance cannot be projected.");
 }
+
+// The local model must use the actual selected reference, not an unassigned -1.
+baselineMah[0] = lab14bBaselineMah;
+logLabelValue(gr ? "Χωρητικότητα αναφοράς (14B/Γ)" : "Capacity reference (14B/G)",
+        baselineMah[0] > 0
+                ? baselineMah[0] + " mAh (" + capacityProvenance[0] + ")"
+                : (gr ? "Μ/Δ — δεν τεκμηριώθηκε χωρητικότητα" : "N/A — capacity unavailable"));
 
 // ------------------------------------------------
 // 🔴 START TEMP (LOCK SOURCE)
@@ -21950,7 +21958,7 @@ startLab14DurationPopup(
 
 logLine();
 
-logOk(
+logInfo(
     gr
     ? (wasGama
         ? "LAB 14 GAMA ξεκίνησε"
@@ -23107,8 +23115,8 @@ float safePerHour =
         Float.isNaN(correctedPerHour) ? -1f : correctedPerHour;
 
 float safeEstimated =
-        (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f && baselineMah[0] > 0)
-                ? (baselineMah[0] / correctedPerHour)
+        (!Float.isNaN(estimatedHours) && estimatedHours > 0f)
+                ? estimatedHours
                 : -1f;
 
 float safeLight =
