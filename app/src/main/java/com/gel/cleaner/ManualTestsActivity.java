@@ -11830,12 +11830,17 @@ private void runLab13BluetoothCheckCore() {
     // SYSTEM-ONLY MODE (Skip external device test)
     // ------------------------------------------------------------
     if (lab13SkipExternalTest) {
-        logWarn(gr
-                ? "Το τεστ εξωτερικής Bluetooth συσκευής παραλείφθηκε από τον χρήστη."
-                : "External Bluetooth device test skipped by user.");
-        logOk(gr
-                ? "Συνέχεια μόνο με έλεγχο Bluetooth του συστήματος."
-                : "Proceeded with system Bluetooth connection check only.");
+        // A skipped external-device test is NOT_TESTED, not a pass or failure.
+        logLabelValue(
+                gr ? "Έλεγχος εξωτερικής συσκευής Bluetooth"
+                   : "External Bluetooth device test",
+                gr ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ (παράλειψη χρήστη)"
+                   : "NOT_TESTED (user skipped)");
+        logInfo(gr
+                ? "Εκτελέστηκε μόνο ο έλεγχος Bluetooth του συστήματος. "
+                  + "Δεν τεκμηριώνεται σταθερότητα σύνδεσης εξωτερικής συσκευής."
+                : "System Bluetooth checks only. "
+                  + "External device connection stability was not verified.");
 
         appendHtml("<br>");
         logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
