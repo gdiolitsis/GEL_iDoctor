@@ -30513,7 +30513,7 @@ private void lab28HardwareStability() {
         symptomScore += 25;
     } else {
         logLabelValue(gr ? "Επανεκκινήσεις" : "Reboots",
-                gr ? "Καμία ανωμαλία" : "No confirmed reboot in the available log; history incomplete");
+                gr ? "Δεν επιβεβαιώθηκε επανεκκίνηση στο διαθέσιμο log· το ιστορικό είναι ελλιπές" : "No confirmed reboot in the available log; history incomplete");
     }
 
     if (signalDrops) {
@@ -30523,7 +30523,7 @@ private void lab28HardwareStability() {
         symptomScore += 20;
     } else {
         logLabelValue(gr ? "Δίκτυο" : "Radio",
-                gr ? "Σήμα σταθερό" : "Signal stability not measured");
+                gr ? "Δεν μετρήθηκε η σταθερότητα του σήματος" : "Signal stability not measured");
     }
 
     if (sensorFlaps) {
@@ -30533,7 +30533,7 @@ private void lab28HardwareStability() {
         symptomScore += 15;
     } else {
         logLabelValue(gr ? "Αισθητήρες" : "Sensors",
-                gr ? "Σταθερή λειτουργία" : "Sensor stability not measured");
+                gr ? "Δεν μετρήθηκε η σταθερότητα αισθητήρων" : "Sensor stability not measured");
     }
 
     if (thermalSpikes) {
@@ -30543,7 +30543,7 @@ private void lab28HardwareStability() {
         symptomScore += 20;
     } else {
         logLabelValue(gr ? "Θερμικά" : "Thermal",
-                gr ? "Θερμική συμπεριφορά φυσιολογική"
+                gr ? "Δεν μετρήθηκε συνεχής θερμική συμπεριφορά"
                    : "Thermal behaviour normal");
     }
 
@@ -30554,7 +30554,7 @@ private void lab28HardwareStability() {
         symptomScore += 20;
     } else {
         logLabelValue(gr ? "Τροφοδοσία" : "Power",
-                gr ? "Σταθερή συμπεριφορά"
+                gr ? "Δεν μετρήθηκε η σταθερότητα τροφοδοσίας"
                    : "Power stability not measured");
     }
 
@@ -30636,7 +30636,7 @@ if (pmicInstability) {
             gr ? "Σταθερότητα ελεγκτή τροφοδοσίας (PMIC)"
                : "Power controller stability (PMIC)",
             gr
-                    ? "Δεν εντοπίστηκαν ανωμαλίες ελεγκτή."
+                    ? "Δεν μετρήθηκε ανεξάρτητα η κατάσταση PMIC."
                     : "PMIC condition not independently measured."
     );
 }
@@ -30672,7 +30672,7 @@ if (signalDrops && randomReboots && !thermalSpikes) {
             gr ? "Baseband"
                : "Baseband",
             gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις αστάθειας."
+                    ? "Δεν επαληθεύτηκε ανεξάρτητα η σταθερότητα baseband."
                     : "No baseband instability indicators."
     );
 }
@@ -30727,7 +30727,7 @@ if (!isDeviceRooted()) {
                 gr ? "Δίαυλος αισθητήρων"
                    : "Sensor bus integrity",
                 gr
-                        ? "Δεν εντοπίστηκαν ανωμαλίες επικοινωνίας."
+                        ? "Δεν επαληθεύτηκε ανεξάρτητα η επικοινωνία διαύλου αισθητήρων."
                         : "No sensor communication issues detected."
         );
     }
@@ -30752,7 +30752,7 @@ if (!isDeviceRooted()) {
                 gr ? "Αποθηκευτικός χώρος"
                    : "Storage subsystem",
                 gr
-                        ? "Πιθανή αστάθεια NAND / controller."
+                        ? "Η άγνωστη αιτία crash δεν τεκμηριώνει φθορά NAND ή controller."
                         : "Unknown crash cause does not prove storage degradation."
         );
     }
@@ -30812,7 +30812,7 @@ if (thermalScore >= 60) {
             gr ? "Κίνδυνος θερμικής αστάθειας"
                : "Thermal runaway risk",
             gr
-                    ? "Εντοπίστηκε μοτίβο θερμικής αστάθειας στο hardware."
+                    ? "Συσχετισμός ενδείξεων — δεν έχει επιβεβαιωθεί θερμική αστοχία υλικού."
                     : "Hardware pattern indicates possible thermal runaway."
     );
 
@@ -30822,7 +30822,7 @@ if (thermalScore >= 60) {
             gr ? "Θερμική σταθερότητα"
                : "Thermal stability",
             gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις θερμικής αστάθειας."
+                    ? "Δεν τεκμηριώνεται θερμική σταθερότητα από αυτά τα δεδομένα."
                     : "No thermal runaway indicators detected."
     );
 }
@@ -30854,7 +30854,7 @@ if (randomReboots)
     boardScore += 10;
 
 logLabelValue(
-        gr ? "Δείκτης πιθανής επέμβασης μητρικής"
+        gr ? "Άθροισμα ενδείξεων (όχι απόδειξη επισκευής μητρικής)"
            : "Symptom index, not evidence of board repair",
         boardScore + "/100"
 );
@@ -30867,7 +30867,7 @@ if (boardScore >= 60) {
             gr ? "Μητρική πλακέτα"
                : "Mainboard integrity",
             gr
-                    ? "Εντοπίστηκε μοτίβο αστάθειας που συναντάται σε συσκευές μετά από επέμβαση μητρικής."
+                    ? "Οι ενδείξεις του log δεν μπορούν να αποδείξουν παλαιότερη επέμβαση στη μητρική."
                     : "Log co-occurrence cannot prove past board repair."
     );
 
@@ -30914,7 +30914,7 @@ if (randomReboots)
     hiddenScore += 10;
 
 logLabelValue(
-        gr ? "Δείκτης κρυφής αστάθειας υλικού"
+        gr ? "Μη βαθμονομημένο άθροισμα συμπτωμάτων (όχι πρόβλεψη βλάβης)"
            : "Uncalibrated symptom tally, not fault prediction",
         hiddenScore + "/100"
 );
@@ -30927,7 +30927,7 @@ if (hiddenScore >= 60) {
             gr ? "Πρόβλεψη βλάβης υλικού"
                : "Hardware risk prediction",
             gr
-                    ? "Εντοπίστηκε μοτίβο που μπορεί να οδηγήσει σε μελλοντική αστοχία hardware."
+                    ? "Οι συσχετίσεις του log δεν επιτρέπουν πρόβλεψη μελλοντικής αστοχίας υλικού."
                     : "Log correlations cannot predict future hardware failure."
     );
 
@@ -30937,7 +30937,7 @@ if (hiddenScore >= 60) {
             gr ? "Σταθερότητα υλικού"
                : "Hardware stability",
             gr
-                    ? "Δεν εντοπίστηκαν πρώιμες ενδείξεις αστοχίας."
+                    ? "Δεν υποστηρίζεται πρόβλεψη μελλοντικής βλάβης από το log."
                     : "No hardware prediction is supported by this log."
     );
 }
@@ -30956,11 +30956,11 @@ if (hiddenScore >= 60) {
 
     appendHtml("<br>");
     if (finalScore >= 40)
-        logLabelWarnValue(gr ? "Τελική Εκτίμηση Σταθερότητας"
+        logLabelWarnValue(gr ? "Μη βαθμονομημένη κατάταξη αναφορών"
                              : "Uncalibrated symptom screening",
                 finalScore + "/100 (" + finalLevel + ")");
     else
-        logLabelValue(gr ? "Τελική Εκτίμηση Σταθερότητας"
+        logLabelValue(gr ? "Μη βαθμονομημένη κατάταξη αναφορών"
                            : "Uncalibrated symptom screening",
                 finalScore + "/100 (" + finalLevel + ")");
 
@@ -30988,7 +30988,7 @@ if (hiddenScore >= 60) {
     } else {
 
         logLabelValue(gr ? "Εύρημα" : "Finding",
-                gr ? "Δεν εντοπίστηκαν σοβαρά μοτίβα αστάθειας."
+                gr ? "Δεν καταγράφηκε ισχυρό μοτίβο στις διαθέσιμες αναφορές· δεν πιστοποιείται υγεία."
                    : "No significant instability patterns detected.");
     }
 
