@@ -27,11 +27,14 @@ public class RotationCheckActivity extends GELAutoActivityHook
     private SensorManager sensorManager;
     private Sensor accelerometer;
 
-    private float lastX = 0f;
-    private float lastY = 0f;
-    private boolean initialized = false;
-
-    private static final float ROTATION_THRESHOLD = 4.0f;
+    // A sudden jolt is not a sustained portrait-to-landscape posture change.
+    // Prefer the gravity sensor where Android exposes it; accelerometer is a fallback.
+    private boolean portraitConfirmed = false;
+    private int portraitSamples = 0;
+    private int landscapeSamples = 0;
+    private static final int STABLE_SAMPLES = 3;
+    private static final float MIN_AXIS_GRAVITY = 6.5f;
+    private static final float MAX_FACE_UP_GRAVITY = 6.0f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +44,10 @@ public class RotationCheckActivity extends GELAutoActivityHook
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         if (sensorManager != null) {
-            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+            if (accelerometer == null) {
+                accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            }
         }
 
         FrameLayout root = new FrameLayout(this);
@@ -51,10 +57,11 @@ public class RotationCheckActivity extends GELAutoActivityHook
         // INFO TEXT
         // ======================
         TextView info = new TextView(this);
-        info.setText(
-                "Rotate the device slowly\n" +
-                "from portrait to landscape"
-        );
+        info.setText(AppLang.isGreek(this)
+                ? "Κράτησε τη συσκευή όρθια και μετά γύρισέ την αργά στο πλάι.\n"
+                  + "Η εικόνα παραμένει κατακόρυφη. Δεν αρκεί ένα απότομο τίναγμα."
+                : "Hold the device upright, then turn it slowly sideways.\n"
+                  + "The screen stays portrait. A sudden jolt is not enough.");
         info.setTextSize(18f);
         info.setTextColor(Color.WHITE);
         info.setGravity(Gravity.CENTER);
@@ -72,14 +79,14 @@ public class RotationCheckActivity extends GELAutoActivityHook
         // END TEST BUTTON
         // ======================
         Button end = new com.gel.cleaner.GelButton(this);
-        end.setText("END TEST");
+        end.setText(AppLang.isGreek(this) ? "ΤΕΛΟΣ ΤΕΣΤ" : "END TEST");
         end.setAllCaps(false);
         end.setTextColor(Color.WHITE);
         end.setTextSize(15f);
         end.setTypeface(null, Typeface.BOLD);
 
         GradientDrawable redBtn = new GradientDrawable();
-        redBtn.setColor(0xFF8B0000);
+        redBtn.setColor(0xFFE60000);
         redBtn.setCornerRadius(dp(14));
         redBtn.setStroke(dp(3), 0xFFFFD700);
         end.setBackground(redBtn);
@@ -107,6 +114,9 @@ public class RotationCheckActivity extends GELAutoActivityHook
     @Override
     protected void onResume() {
         super.onResume();
+        portraitConfirmed = false;
+        portraitSamples = 0;
+        landscapeSamples = 0;
         if (sensorManager != null && accelerometer != null) {
             sensorManager.registerListener(
                     this,
@@ -126,21 +136,29 @@ public class RotationCheckActivity extends GELAutoActivityHook
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-
+        if (event == null || event.values.length < 3
+                || event.sensor != accelerometer || isFinishing()) return;
         float x = event.values[0];
         float y = event.values[1];
+        float z = event.values[2];
+        if (!Float.isFinite(x) || !Float.isFinite(y) || !Float.isFinite(z)) return;
 
-        if (!initialized) {
-            lastX = x;
-            lastY = y;
-            initialized = true;
+        boolean upright = Math.abs(z) < MAX_FACE_UP_GRAVITY;
+        boolean portrait = upright && Math.abs(y) > MIN_AXIS_GRAVITY
+                && Math.abs(y) > 1.35f * Math.abs(x);
+        boolean landscape = upright && Math.abs(x) > MIN_AXIS_GRAVITY
+                && Math.abs(x) > 1.35f * Math.abs(y);
+
+        if (!portraitConfirmed) {
+            portraitSamples = portrait ? portraitSamples + 1 : 0;
+            if (portraitSamples >= STABLE_SAMPLES) {
+                portraitConfirmed = true;
+                landscapeSamples = 0;
+            }
             return;
         }
-
-        float dx = Math.abs(x - lastX);
-        float dy = Math.abs(y - lastY);
-
-        if (dx > ROTATION_THRESHOLD || dy > ROTATION_THRESHOLD) {
+        landscapeSamples = landscape ? landscapeSamples + 1 : 0;
+        if (landscapeSamples >= STABLE_SAMPLES) {
             setResult(RESULT_OK);
             finish();
         }
