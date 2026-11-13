@@ -26281,7 +26281,7 @@ int finalScore = Math.max(0, Math.min(100, baseScore - fPenaltyExtra));
                     (lab14Health >= 80f) && thermalDanger;
 
             final boolean batteryBadButThermalOk =
-                    (lab14Health < 70f) && (lab16Thermal >= 75);
+                    (lab14Health < 70f) && (lab16Thermal >= 75) && !lab16ThermalDanger;
 
             final boolean overallDeviceConcern =
                     thermalDanger ||
@@ -26383,7 +26383,14 @@ logInfo(gr
 
 String thermalLabel;
 
-if (lab16Thermal >= 85) {
+if (lab16ThermalDanger) {
+    // A high heuristic score cannot override observed OS/sensor danger.
+    thermalLabel = gr ? "Υπάρχει θερμική προειδοποίηση" : "Thermal warning observed";
+    logLabelWarnValue(
+            gr ? "Θερμική κατάσταση" : "Thermal",
+            thermalLabel + " (" + lab16Thermal + ")"
+    );
+} else if (lab16Thermal >= 85) {
 
     thermalLabel = gr ? "Άριστη" : "Excellent";
 
