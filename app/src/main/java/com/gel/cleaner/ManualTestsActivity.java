@@ -13409,9 +13409,9 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
     }
 
     if (start.chargeNowMah <= 0) {
-        logError(gr
-                ? "Μη διαθέσιμο charge counter"
-                : "Charge counter unavailable");
+        logLabelValue(gr ? "Μετρητής φόρτισης" : "Charge counter",
+                gr ? "Μη διαθέσιμος — δεν πραγματοποιείται η παρούσα δοκιμή"
+                   : "Unavailable — this test cannot proceed");
         return;
     }
 
@@ -13505,26 +13505,26 @@ logLine();
 
 final int cores = Runtime.getRuntime().availableProcessors();
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Λειτουργία" : "Mode",
         rooted
                 ? (gr ? "Προηγμένη (Root access)" : "Advanced (Rooted)")
                 : (gr ? "Τυπική (Χωρίς Root)" : "Standard (Unrooted)")
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Διάρκεια δοκιμής" : "Duration",
         durationSec + (gr
                 ? " δευτ. (εργαστηριακή λειτουργία)"
                 : " sec (laboratory mode)")
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Προφίλ καταπόνησης" : "Stress profile",
         "Fast phase + adaptive load + CPU/GPU + memory + bandwidth + vibration + video"
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Αρχικές συνθήκες" : "Start conditions",
         String.format(
                 Locale.US,
@@ -13533,7 +13533,7 @@ logLabelOkValue(
                         : "charge=%d mAh, level=%d%%, status=Discharging, temp=%.1f°C",
                 startMah,
                 Math.max(0, batteryPercent),
-                Float.isNaN(tempStart) ? 0f : tempStart
+                Float.isNaN(tempStart) ? Float.NaN : tempStart
         )
 );
 
@@ -13553,7 +13553,7 @@ if (baselineFullMah > 0) {
     );
 }
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Κύκλοι φόρτισης" : "Cycle count",
         cycles > 0
                 ? String.valueOf(cycles)
@@ -14445,15 +14445,15 @@ if (lab14_systemLimited[0]) {
 } else if (normalAgeingPattern) {
 
     recommendation = gr
-            ? "Φυσιολογική γήρανση μπαταρίας. Η συνολική ηλεκτρική και θερμική συμπεριφορά παραμένει φυσιολογική. Δεν απαιτείται αντικατάσταση. Συνεχίστε κανονικά τη χρήση της συσκευής."
-            : "Normal battery ageing. Overall electrical and thermal behaviour remains normal. Battery replacement is not required. Continue normal device use.";
+            ? "Δεν καταγράφηκε έντονη απόκλιση στη συγκεκριμένη δοκιμή. Δεν μετρήθηκε η πραγματική χωρητικότητα ή το SoH."
+            : "No pronounced deviation in this trial. Actual battery capacity and SoH were not measured.";
 
 // 🔴 PRIORITY 3 — CRITICAL
 } else if ("Critical".equals(labelSafe)) {
 
     recommendation = gr
-            ? "Συνιστάται άμεσος τεχνικός έλεγχος ή αντικατάσταση μπαταρίας."
-            : "Immediate battery service or replacement is recommended.";
+            ? "Αυξημένη πτώση τάσης υπό φορτίο — συνιστάται τεχνικός έλεγχος και επανάληψη με συγκρίσιμες συνθήκες. Δεν αποδεικνύεται ανάγκη αντικατάστασης."
+            : "Increased load-voltage sag — technician assessment and repeated comparable testing are recommended. Replacement is not established.";
 
 // 🔴 PRIORITY 3 — WEAK
 } else if ("Weak".equals(labelSafe)) {
@@ -14466,8 +14466,8 @@ if (lab14_systemLimited[0]) {
 } else if (calibrationDrift != null && calibrationDrift.length > 0 && calibrationDrift[0]) {
 
     recommendation = gr
-            ? "Πιθανή απόκλιση βαθμονόμησης. Συνιστάται πλήρης κύκλος φόρτισης/εκφόρτισης."
-            : "Possible calibration drift. Full charge-discharge cycle recommended.";
+            ? "Πιθανή ασυμφωνία ενδείξεων — επαναλάβετε τη μέτρηση. Δεν απαιτείται πλήρης εκφόρτιση."
+            : "Possible gauge discrepancy — repeat the observation. A full discharge is not required.";
 
 // 🔴 PRIORITY 5 — UNKNOWN
 } else if ("Unknown".equals(labelSafe)) {
@@ -14480,8 +14480,8 @@ if (lab14_systemLimited[0]) {
 } else {
 
     recommendation = gr
-            ? "Η μπαταρία λειτουργεί εντός φυσιολογικών ορίων."
-            : "Battery operates within normal parameters.";
+            ? "Δεν εντοπίστηκε συγκεκριμένη ανωμαλία στα διαθέσιμα δείγματα. Η συνολική υγεία δεν πιστοποιήθηκε."
+            : "No specific anomaly in available samples; overall battery health was not certified.";
 }
 
 // ----------------------------------------------------
@@ -14491,7 +14491,7 @@ String recLabel = gr ? "Σύσταση" : "Recommendation";
 
 if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
 
-    logLabelErrorValue(recLabel, recommendation);
+    logLabelWarnValue(recLabel, recommendation);
 
 } else if ("Weak".equals(labelSafe) ||
            "Unknown".equals(labelSafe) ||
@@ -14501,7 +14501,7 @@ if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
 
 } else {
 
-    logLabelOkValue(recLabel, recommendation);
+    logLabelValue(recLabel, recommendation);
 }
 
 // =====================================================
@@ -14525,8 +14525,8 @@ if (lab14_systemLimited[0]) {
 } else if (normalAgeingPattern) {
 
     summary = gr
-            ? "Φυσιολογική γήρανση μπαταρίας — συνεχίστε κανονικά τη χρήση."
-            : "Normal battery ageing — continue normal use.";
+            ? "Χωρίς έντονη μεταβολή στην παρούσα δοκιμή — το SoH δεν μετρήθηκε."
+            : "No pronounced change in this trial — SoH was not measured.";
 
 } else {
 
@@ -14545,7 +14545,7 @@ String summaryLabel =
 
 if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
 
-    logLabelErrorValue(summaryLabel, summary);
+    logLabelWarnValue(summaryLabel, summary);
 
 } else if ("Weak".equals(labelSafe) ||
            "Unknown".equals(labelSafe)) {
@@ -14556,7 +14556,7 @@ if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
            "Good".equals(labelSafe) ||
            "Normal".equals(labelSafe)) {
 
-    logLabelOkValue(summaryLabel, summary);
+    logLabelValue(summaryLabel, summary);
 
 } else {
 
@@ -16590,7 +16590,7 @@ if (aging != null &&
 }
 
 // ----------------------------------------------------
-// BATTERY HEALTH ESTIMATION (SOH - TRIMMED FINAL)
+// Experimental stress response index — NOT directly measured battery SoH
 // ----------------------------------------------------
 
 float health = 100f;
@@ -16701,6 +16701,7 @@ health =
                 Math.min(100f, health)
         );
 
+// Experimental uncalibrated proxy only. This is not measured battery SoH.
 lab14HealthPercent = health;
 
 // ----------------------------------------------------
@@ -17309,17 +17310,10 @@ lab14LogSave(
         lab14_systemLimited
 );
 
-// store health only full run
-if (!partial &&
-    !lab14_systemLimited[0]) {
-
-   SharedPreferences.Editor e = p.edit();
-   e.putFloat(
-      "lab14_health_percent",
-      lab14HealthPercent
-   );
-   e.apply();
-}
+// Do not persist the proxy as measured battery health, even on full runs.
+ // Drop legacy values so later reports cannot reuse stale false SoH.
+ try { p.edit().remove("lab14_health_percent").apply(); }
+ catch (Throwable ignored) {}
 
 
 // RUN COUNT
