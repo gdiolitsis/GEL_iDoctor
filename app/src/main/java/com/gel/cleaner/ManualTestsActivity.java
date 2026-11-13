@@ -3026,8 +3026,8 @@ private void resetAudioAfterLab3(
         try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
         try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
 
-        // Force clean baseline
-        try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
+        // Restore the actual pre-test mode; MODE_NORMAL is not always the prior state.
+        try { am.setMode(oldMode); } catch (Throwable ignore) {}
         try { am.setSpeakerphoneOn(oldSpeaker); } catch (Throwable ignore) {}
         try { am.setMicrophoneMute(oldMicMute); } catch (Throwable ignore) {}
 
@@ -6677,8 +6677,6 @@ private void lab3EarpieceManual() {
                 : "Put the phone earpiece to your ear.\n"
                   + "Press start to begin the test.";
 
-        final String ttsText = bodyText; // ΜΙΑ πηγή αλήθειας
-
         // ------------------------------------------------------------
         // DIALOG
         // ------------------------------------------------------------
@@ -6775,6 +6773,7 @@ b.setView(root);
 b.setCancelable(false);
 
 final AlertDialog d = b.create();
+final AtomicBoolean lab3Cancelled = new AtomicBoolean(false);
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
@@ -6792,12 +6791,14 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
     if (keyCode == KeyEvent.KEYCODE_BACK &&
         event.getAction() == KeyEvent.ACTION_UP) {
 
+        lab3Cancelled.set(true);
         appendHtml("<br>");
         logWarn(gr ? "Η δοκιμή ακυρώθηκε από τον χρήστη."
                    : "Test canceled by user.");
         logLine();
-
         try { AppTTS.stop(); } catch (Throwable ignore) {}
+        restoreLab3Audio();
+        enableSingleExportButton();
         dialog.dismiss();
         return true;
     }
@@ -6824,7 +6825,7 @@ if (!isFinishing() && !isDestroyed()) {
 // ---------------------------
 
 exitBtn.setOnClickListener(v -> {
-
+    lab3Cancelled.set(true);
     appendHtml("<br>");
     logWarn(gr ? "Η δοκιμή ακυρώθηκε από τον χρήστη."
                : "Test canceled by user.");
@@ -6832,7 +6833,7 @@ exitBtn.setOnClickListener(v -> {
 
     try { AppTTS.stop(); } catch (Throwable ignore) {}
     d.dismiss();
-
+    restoreLab3Audio();
     runOnUiThread(this::enableSingleExportButton);
 });
 
@@ -6840,7 +6841,8 @@ exitBtn.setOnClickListener(v -> {
 // START ACTION — single listener; preserve the actual audio test.
 // ------------------------------------------------------------
 start.setOnClickListener(v -> {
-
+    if (!start.isEnabled() || lab3Cancelled.get()) return;
+    start.setEnabled(false); // Double-taps must not launch overlapping audio sessions.
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 
     new Thread(() -> {
@@ -6852,6 +6854,7 @@ start.setOnClickListener(v -> {
                     : "Playing earpiece test tones.");
 
             for (int i = 1; i <= 3; i++) {
+                if (lab3Cancelled.get() || isFinishing() || isDestroyed()) break;
 
                 logInfo(gr
                         ? "Τόνος " + i + " / 3"
@@ -6861,10 +6864,12 @@ start.setOnClickListener(v -> {
                 SystemClock.sleep(650);
             }
 
-            logOk(gr
-                    ? "Η αναπαραγωγή τόνων ολοκληρώθηκε."
-                    : "Earpiece tone playback completed.");
-            playbackCompleted[0] = true;
+            if (!lab3Cancelled.get() && !isFinishing() && !isDestroyed()) {
+                logOk(gr
+                        ? "Η αναπαραγωγή τόνων ολοκληρώθηκε."
+                        : "Earpiece tone playback completed.");
+                playbackCompleted[0] = true;
+            }
 
         } catch (Throwable t) {
 
@@ -6886,7 +6891,9 @@ start.setOnClickListener(v -> {
 
             runOnUiThread(() -> {
                 try { d.dismiss(); } catch (Throwable ignore) {}
-                if (playbackCompleted[0]) {
+                if (lab3Cancelled.get() || isFinishing() || isDestroyed()) {
+                    enableSingleExportButton();
+                } else if (playbackCompleted[0]) {
                     askUserEarpieceConfirmation();
                 } else {
                     logWarn(gr
@@ -6899,15 +6906,6 @@ start.setOnClickListener(v -> {
 
     }).start();
 });
-
-// ------------------------------------------------------------
-// TTS INTRO — DIALOG BOUND (GLOBAL MUTE SAFE)
-// ------------------------------------------------------------
-new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (d.isShowing() && !AppTTS.isMuted(this)) {
-        AppTTS.ensureSpeak(this, ttsText);
-    }
-}, 120);
 
 });   // <-- ΚΛΕΙΝΕΙ ΤΟ runOnUiThread
 }   
