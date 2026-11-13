@@ -18,14 +18,14 @@
 
 | ID | Scope | Required surgical repair; retain old working behavior | Historical PRs | State |
 |---|---|---|---|---|
-| UX-01 | Labs 1–2 | **NO user YES/NO/ALL/SOME listening popup.** Purely automatic test; retain original log/RMS/Peak/route safety. Fix microphone capture timing rather than replacing entire Lab. | #59, #60, #84, #85, #103, #106 | Lab 1 timing patch proposed (#106); physical validation pending |
+| UX-01 | Labs 1–2 | **NO user YES/NO/ALL/SOME listening popup.** Purely automatic test; retain original log/RMS/Peak/route safety. Fix microphone capture timing rather than replacing entire Lab. | #59, #60, #84, #85, #103, #106 | Lab 1 synchronized timing present; Lab 2 unrequested popup removed. Source review completed; device acoustic validation pending. |
 | UX-02 | Lab 3 | Keep guided tone sequence; fix first-tone AudioTrack static write/state error and dialog closure; preserve audible instructions, route restoration. Prevent inadvertent landscape and loss of Labs 1–2 logs. | #67, #83, #84 | To reimplement on backup |
 | UX-03 | Lab 4 | Preserve base/PRO functionality; do not advance if recording fails/cancels. Keep source-bound PCM and route safety; preserve original prompts, TTS and exit. | #71, #73, earlier #46 | To evaluate/apply |
-| UX-04 | Lab 6 | Add EXIT to intro (Back already works). Fix invisible touch STOP caption, white-on-white step text; restore spoken guidance when unmuted. Keep 96-zone grid and all pattern steps. Preserve/restore temporary brightness and screen-on policies. | #47, #86–#88, #93–#94 | To evaluate/apply |
-| UX-05 | Lab 7 | Add intro EXIT; leave working Back and TTS untouched; sensor result is not proof of in-call screen-off. Offer proximity independently if rotation unavailable, without false pass. | #75, #89, #95 | To evaluate/apply |
+| UX-04 | Lab 6 | Add EXIT to intro (Back already works). Fix invisible touch STOP caption, white-on-white step text; restore spoken guidance when unmuted. Keep 96-zone grid and all pattern steps. Preserve/restore temporary brightness and screen-on policies. | #47, #86–#88, #93–#94 | Source patched: localized STOP, fresh counts, canceled exit, partial-display coverage, contrast/TTS. Device acceptance pending; brightness lifecycle still to verify. |
+| UX-05 | Lab 7 | Add intro EXIT; leave working Back and TTS untouched; sensor result is not proof of in-call screen-off. Offer proximity independently if rotation unavailable, without false pass. | #75, #89, #95 | Source patched: stable portrait→landscape postures, FAR→NEAR→FAR, separate proximity choice, neutral cancellation and truthful logs. Hardware acceptance pending. |
 | UX-06 | Lab 8 | Add intro EXIT and functioning Back; do not trap user. Restore intro TTS. Dark frames alone must not be labeled camera-stream failure; preserve Camera2 samples. | #48, #92, #96, #98 | To evaluate/apply |
 | UX-07 | Lab 8.1 | Restore intro TTS in Greek and English without altering underlying camera capability check. | #97 | To evaluate/apply |
-| UX-08 | Lab 12 | Four unreadable/light popups: fix local text/background contrast; preserve original call-consent and all actions. | #50, #100 | To evaluate/apply |
+| UX-08 | Lab 12 | Four unreadable/light popups: fix local text/background contrast; preserve original call-consent and all actions. | #50, #100 | Four explicit dark GEL optional-call prompts and truth-model/JUnit source added; actual call and Back/skip emulator/real-device validation pending. |
 | UX-09 | Lab 13 | Restore intro TTS and red SKIP/green CONTINUE; finish NOT_TESTED peripheral check neutrally, translate stray English statuses. | #51, #101, #102 | To evaluate/apply |
 | UX-10 | Global button style | Red action = #E60000 / white bold / gold outline; green = #39FF14 / black bold / gold outline; ensure labels are legible at large fonts. Do not change diagnostic statuses based on button colors. | #90–#91 | To evaluate/apply; avoid broad intrusive refactor |
 | UX-11 | Main toolbar/contact | Greek contact action and `ΑΠΟΣΤΟΛΗ` vs English `SEND`; correct accessibility labels. | #79 | Present in QA branch (`MainActivity.java`: `contactLabel`, `btnSend`); real-device/APK verification pending |
@@ -84,11 +84,11 @@ Every row begins as **REVIEW**, not as permission to wholesale copy the historic
 - Review of PR #107 diff: the Lab 1 change aligns `ToneGenerator` playback with `MicDiagnosticEngine.run(this)`, checks `startTone()` return value, stops playback after capture, and retains cleanup in `finally`. **Physical audio validation and full helper/method accounting remain pending.**
 - Do not mark any other Lab complete from the whole-file net delta. The per-method and dedicated-helper before/after counts, negative-path checks, PDF/log output, TTS and real-device evidence remain mandatory.
 
-### ManualTestsActivity source-parity scan (13 Nov 2026)
+### Historical initial ManualTestsActivity source-parity scan (13 Nov 2026; superseded by later patches)
 
 - Exact backup: **33,567 physical lines / 982,195 characters**; QA branch: **33,573 physical lines / 982,548 characters**; net **+6 lines / +353 characters**.
 - Source-level method extraction found **72 named `lab*` methods in both revisions**. Among those, **only `lab1SpeakerTone` differs**: **314→320 physical method lines; 9,269→9,622 characters**. The other 71 matched method bodies by size, not yet by functional/runtime behavior; this scan does not cover non-`lab*` helpers, resources, or other files.
-- This is **evidence that Labs 2–31 have not been modified in `ManualTestsActivity.java` on this QA branch**, not evidence that their previously reported defects are repaired. Do not approve a final 31-Lab APK from this branch without the remaining surgical fixes and tests.
+- At **that initial SHA**, the unchanged Lab 2–31 bodies had not been repaired. **This statement is historical**: later scoped Lab 2/6/7/12 fixes changed the branch, as accounted below. Do not approve a final 31-Lab APK from an initial-only scan.
 
 ## One-change-at-a-time tracking
 
@@ -103,3 +103,43 @@ Every row begins as **REVIEW**, not as permission to wholesale copy the historic
 - Changes in a historical PR description are research proposals, not automatically approved code.
 - A smaller method may reflect extracted helpers; compare dependency totals before asserting loss.
 - A larger method is not proof of added capability: verify feature presence, absence of regressions, accurate reports, and real device observations.
+
+
+## Continuation checkpoint — source changes through `30ee5fff6737b31b65e131c88a4f3ab11c7b2a47`
+
+**Scope only:** original source and procedures were retained wherever practicable. No `main` merge, backup modification or Play publication. Source-built CI for the checkpoint was **in progress when this ledger was updated**; it must not be reported as completed by this note.
+
+### Exact backup → current physical size (lines / characters)
+
+| Source | Immutable backup | Current QA |
+|---|---:|---:|
+| `ManualTestsActivity.java` entire file | 33,567 / 982,195 | 33,942 / 1,004,397 |
+| `TouchGridTestActivity.java` entire file | 173 / 5,396 | 189 / 6,265 |
+| `DisplayProTestActivity.java` entire file | 535 / 17,106 | 559 / 18,209 |
+| `RotationCheckActivity.java` entire file | 159 / 4,683 | 205 / 7,511 |
+| `ProximityCheckActivity.java` entire file | 152 / 4,502 | 168 / 5,556 |
+
+| Method in `ManualTestsActivity.java` | Immutable backup | Current QA |
+|---|---:|---:|
+| `lab1SpeakerTone` | 314 / 9,269 | 320 / 9,622 |
+| `lab2SpeakerSweep` | 191 / 5,650 | 301 / 12,379 |
+| `lab6DisplayTouch` | 134 / 3,504 | 159 / 4,428 |
+| `lab7RotationAndProximityManual` | 164 / 4,915 | 176 / 5,482 |
+| `lab12CallFunctionInterpretation` | 114 / 4,640 | 117 / 4,789 |
+| `lab13BluetoothConnectivityCheck` | 64 / 1,717 | 64 / 1,717 |
+| `lab8CameraHardwareCheck` | 261 / 9,118 | 261 / 9,118 |
+
+**Helper accounting:** Lab 6 uses the complete `TouchGridTestActivity` and `DisplayProTestActivity` shown above; Lab 7 uses complete `RotationCheckActivity` and `ProximityCheckActivity` shown above. Lab 12 now has **additional** dialog, evidence-model and call-return helpers, rather than a replacement of the 114-line passive snapshot method. The former Lab 2 `showLab2HearingQuestion` popup helper (95 lines including spacer) was deliberately removed because the owner prohibited user confirmation in the autonomous speaker tests; the four-tone sampling remains. These are counts of source text, **not tests of scientific correctness or functionality**.
+
+### Current surgical patch ledger
+
+| Area | Changes | Source commits | Required negative cases |
+|---|---|---|---|
+| Lab 2 | Removed unintended prompt, kept simultaneous RMS capture and threshold 20 | `eea2b220` | Muted media, ambient noise, denied mic, frequency mismatch; no invented tone certainties |
+| Lab 6 touch | Localized END, 96-zone grid, fresh Intent result data, canceled/Back neutral, no forced Pro start | `46f73cc1`, `613045f3`, `47087e34`, `006bcb61` | 0/96 canceled, partial cancellation, full 96/96, rapid repeat, missing/stale data, logs/PDF |
+| Lab 6 PRO | Visible directions on white pattern, green/black and red/white buttons, dialog Back, coverage flag after three complete cycles | `b216dcba`, `03eb27a7`, `006bcb61` | Back on intro/final, interrupted pattern, runtime limit, inaccurate no-issue pass, light/dark and large fonts |
+| Lab 7 | Stable gravity orientation, separate proximity navigation, FAR→NEAR→FAR, no fabricated screen-off verdict | `d901f10b`, `ddfb48ef`, `f8b71dd5`, `30ee5fff` | Jolt, face-up, missing rotation/gravity sensor, skip-only proximity, sensor unavailable, no in-call blanking proof |
+| Lab 12 | Optional four-dialog readable call flow, explicit opt-in, NO automatic outgoing calls, standalone JUnit truth model | `f2e1d510`, `7d99cf77`, `2bdb225d` | No dialer, no real call, Back/skip, one-way audio, permission unavailable, export restored |
+| GEL buttons | Shared green/black legibility, red/white for Labs 6/7/8/8.1/13 | `9c605e30` | Contrast and text clipping across Android 11/16, EL/EN, large fonts |
+
+**Gate still open:** exact-head Gradle/JUnit build, four emulator UI sweeps, real-device Xiaomi trial, exported service PDF and full regression across all 31 Labs. Do not conflate CI success with hardware/clinical-style measurement proof.
