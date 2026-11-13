@@ -28501,11 +28501,17 @@ private void lab23DeveloperOptionsRisk() {
         int adb = Settings.Global.getInt(
                 getContentResolver(),
                 Settings.Global.ADB_ENABLED,
-                0
+                -1
         );
         usbDebug = (adb == 1);
 
-        if (usbDebug) {
+        if (adb < 0) {
+            logLabelValue(
+                    gr ? "Κατάσταση USB Debugging" : "USB Debugging status",
+                    gr ? "ΑΓΝΩΣΤΗ — δεν διαβάστηκε η ρύθμιση"
+                       : "UNKNOWN — setting unreadable"
+            );
+        } else if (usbDebug) {
 
             logLabelWarnValue(
                     gr ? "Κατάσταση USB Debugging" : "Status",
@@ -28550,11 +28556,17 @@ try {
     int dev = Settings.Global.getInt(
             getContentResolver(),
             Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-            0
+            -1
     );
     devOpts = (dev == 1);
 
-    if (devOpts) {
+    if (dev < 0) {
+        logLabelValue(
+                gr ? "Επιλογές προγραμματιστή" : "Developer options",
+                gr ? "ΑΓΝΩΣΤΗ κατάσταση — δεν διαβάστηκε η ρύθμιση"
+                   : "UNKNOWN status — setting unreadable"
+        );
+    } else if (devOpts) {
 
         logLabelValue(
                 gr ? "Επιλογές προγραμματιστή" : "Developer options",
