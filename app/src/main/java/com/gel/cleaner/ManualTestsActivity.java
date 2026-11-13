@@ -30229,11 +30229,7 @@ appendHtml("<br>");
                     String riskVal = String.valueOf(e.getValue());
 
                     logLabelValue(label,
-                            (gr ? "Βάρος αδειών " : "Permission weight ") + riskVal); else if (e.getValue() >= 30) {
-                        logLabelWarnValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
-                    } else {
-                        logLabelValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
-                    }
+                            (gr ? "Βάρος αδειών " : "Permission weight ") + riskVal);
                 });
     }
 
