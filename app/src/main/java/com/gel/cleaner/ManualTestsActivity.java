@@ -8670,18 +8670,18 @@ private void lab7RotationAndProximityManual() {
         gr
                 ? "Βήμα 1:\n"
                   + "Περιστρέψτε αργά τη συσκευή.\n"
-                  + "Η οθόνη πρέπει να ακολουθεί τον προσανατολισμό.\n\n"
+                  + "Παρατήρησε την ένδειξη αισθητήρα. Η οθόνη της δοκιμής παραμένει σε κατακόρυφο προσανατολισμό.\n\n"
                   + "Βήμα 2:\n"
                   + "Καλύψτε με το χέρι σας τον αισθητήρα εγγύτητας, "
                   + "στο επάνω μέρος της οθόνης, στην περιοχή ειδοποιήσεων.\n"
-                  + "Η οθόνη πρέπει να σβήσει."
+                  + "Η ένδειξη εγγύτητας πρέπει να αλλάξει. Το Android δεν εγγυάται ότι θα σβήσει η οθόνη εκτός κλήσης."
                 : "Step 1:\n"
                   + "Rotate the device slowly.\n"
-                  + "The screen should rotate accordingly.\n\n"
+                  + "Observe the sensor reading. The test screen stays in portrait orientation.\n\n"
                   + "Step 2:\n"
                   + "Cover the proximity sensor with your hand, "
                   + "at the top of the screen, to the notification area.\n"
-                  + "The screen should turn off.";
+                  + "The proximity reading should change. Android does not guarantee screen-off outside a call.";
 
         AlertDialog.Builder b =
                 new AlertDialog.Builder(
