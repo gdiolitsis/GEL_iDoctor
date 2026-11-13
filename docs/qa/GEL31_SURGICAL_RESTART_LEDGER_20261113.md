@@ -78,6 +78,12 @@ Every row begins as **REVIEW**, not as permission to wholesale copy the historic
 - PR #99 concerns a separate SOKRATES document and is deliberately excluded from the GEL application repair backlog.
 - Cross-cutting release, signing, PRO access, export tests, policy, locale, AppTTS lifecycle and Android 11/16 QA: PR #58, #78–#79, #96, #102.
 
+## Baseline file-size guard — verified 13 Nov 2026
+
+- `app/src/main/java/com/gel/cleaner/MainActivity.java`: exact backup mirror **3,102 physical lines / 91,798 characters**; PR #107 **3,104 physical lines / 92,066 characters**; net **+2 lines / +268 characters**. This is a *whole-file* measurement, **not** a per-Lab functional parity result.
+- Review of PR #107 diff: the Lab 1 change aligns `ToneGenerator` playback with `MicDiagnosticEngine.run(this)`, checks `startTone()` return value, stops playback after capture, and retains cleanup in `finally`. **Physical audio validation and full helper/method accounting remain pending.**
+- Do not mark any other Lab complete from the whole-file net delta. The per-method and dedicated-helper before/after counts, negative-path checks, PDF/log output, TTS and real-device evidence remain mandatory.
+
 ## One-change-at-a-time tracking
 
 | Patch | Source | Change | Main method before→after | Helpers before→after | Unit/Build | Emulator EL/EN | Xiaomi | Decision |
