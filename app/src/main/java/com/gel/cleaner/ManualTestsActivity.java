@@ -7162,24 +7162,24 @@ runOnUiThread(() -> {
     lp.setMargins(dp(12), dp(8), dp(12), dp(8));
 
     Button exitBtn = new com.gel.cleaner.GelButton(this);
-    exitBtn.setText("EXIT");
+    exitBtn.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
     exitBtn.setTextColor(Color.WHITE);
     exitBtn.setAllCaps(false);
 
     GradientDrawable exitBg = new GradientDrawable();
-    exitBg.setColor(0xFF8B0000);
+    exitBg.setColor(0xFFE60000);
     exitBg.setCornerRadius(dp(10));
     exitBg.setStroke(dp(3), 0xFFFFD700);
     exitBtn.setBackground(exitBg);
     exitBtn.setLayoutParams(lp);
 
     Button startBtn = new com.gel.cleaner.GelButton(this);
-    startBtn.setText("START");
-    startBtn.setTextColor(Color.WHITE);
+    startBtn.setText(gr ? "ΕΝΑΡΞΗ" : "START");
+    startBtn.setTextColor(Color.BLACK);
     startBtn.setAllCaps(false);
 
     GradientDrawable startBg = new GradientDrawable();
-    startBg.setColor(0xFF0B5F3B);
+    startBg.setColor(0xFF39FF14);
     startBg.setCornerRadius(dp(10));
     startBg.setStroke(dp(3), 0xFFFFD700);
     startBtn.setBackground(startBg);
@@ -7239,12 +7239,12 @@ if (!isFinishing() && !isDestroyed()) {
 }
 
     new Handler(Looper.getMainLooper()).postDelayed(() -> {
-        AppTTS.ensureSpeak(
-                this,
-                gr
-                        ? "Μίλησε στο κάτω μικρόφωνο, και άκου, αν η φωνή σου ακούγεται καθαρά, από το ακουστικό."
-            : "Speak into the bottom microphone, and check, if your voice is clearly heard, from the earpiece.");
-            
+        if (d.isShowing() && !cancelled.get() && !isFinishing()
+                && !isDestroyed() && !AppTTS.isMuted(this)) {
+            AppTTS.ensureSpeak(this, gr
+                    ? "Μίλησε στο κάτω μικρόφωνο, και άκου, αν η φωνή σου ακούγεται καθαρά, από το ακουστικό."
+                    : "Speak into the bottom microphone, and check, if your voice is clearly heard, from the earpiece.");
+        }
     }, 500);
 });
 
@@ -7257,15 +7257,17 @@ while (!started.get() && !cancelled.get()
     SystemClock.sleep(80);
 }
 
-if (cancelled.get()) {
-
+if (cancelled.get() || !started.get() || isFinishing() || isDestroyed()) {
+    cancelled.set(true);
+    runOnUiThread(() -> {
+        AlertDialog open = dialogRef.get();
+        if (open != null && open.isShowing()) open.dismiss();
+    });
     appendHtml("<br>");
-
     logWarn(gr
-            ? "LAB 4 PRO — Διακόπηκε από τον χρήστη"
-            : "LAB 4 PRO — Interrupted by user");
+            ? "LAB 4 PRO — Ακυρώθηκε ή δεν ξεκίνησε η καταγραφή"
+            : "LAB 4 PRO — Canceled or recording not started");
     logLine();
-
     runOnUiThread(this::enableSingleExportButton);
     return;
 }
@@ -7275,47 +7277,69 @@ if (cancelled.get()) {
 // ==========================
 int sampleRate = 16000;
 int minBuf = AudioRecord.getMinBufferSize(
-        sampleRate,
-        AudioFormat.CHANNEL_IN_MONO,
-        AudioFormat.ENCODING_PCM_16BIT
-);
+        sampleRate, AudioFormat.CHANNEL_IN_MONO,
+        AudioFormat.ENCODING_PCM_16BIT);
+if (minBuf <= 0) {
+    throw new IllegalStateException("Lab 4 PRO AudioRecord buffer unavailable");
+}
 
-AudioRecord recorder = new AudioRecord(
-        MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-        sampleRate,
-        AudioFormat.CHANNEL_IN_MONO,
-        AudioFormat.ENCODING_PCM_16BIT,
-        minBuf
-);
+AudioRecord recorder = null;
+AudioTrack track = null;
+long capturedBytes = 0L;
+try {
+    recorder = new AudioRecord(
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+            sampleRate, AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT, minBuf);
+    track = new AudioTrack(
+            AudioManager.STREAM_VOICE_CALL,
+            sampleRate, AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT, minBuf, AudioTrack.MODE_STREAM);
 
-AudioTrack track = new AudioTrack(
-        AudioManager.STREAM_VOICE_CALL,
-        sampleRate,
-        AudioFormat.CHANNEL_OUT_MONO,
-        AudioFormat.ENCODING_PCM_16BIT,
-        minBuf,
-        AudioTrack.MODE_STREAM
-);
+    if (recorder.getState() != AudioRecord.STATE_INITIALIZED
+            || track.getState() != AudioTrack.STATE_INITIALIZED) {
+        throw new IllegalStateException("Lab 4 PRO audio I/O not initialized");
+    }
 
-byte[] buffer = new byte[minBuf];
+    byte[] buffer = new byte[minBuf];
+    recorder.startRecording();
+    if (recorder.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
+        throw new IllegalStateException("Lab 4 PRO microphone did not start");
+    }
+    track.play();
+    long loopUntil = SystemClock.uptimeMillis() + 5000;
 
-recorder.startRecording();
-track.play();
-
-long loopUntil = SystemClock.uptimeMillis() + 5000;
-
-while (SystemClock.uptimeMillis() < loopUntil && !cancelled.get()) {
-
-    int read = recorder.read(buffer, 0, buffer.length);
-    if (read > 0) {
-        track.write(buffer, 0, read);
+    while (SystemClock.uptimeMillis() < loopUntil && !cancelled.get()
+            && !isFinishing() && !isDestroyed()) {
+        int read = recorder.read(buffer, 0, buffer.length);
+        if (read < 0) throw new IllegalStateException("Lab 4 PRO read error: " + read);
+        if (read > 0) {
+            int written = track.write(buffer, 0, read);
+            if (written != read) {
+                throw new IllegalStateException("Lab 4 PRO audio output incomplete");
+            }
+            capturedBytes += read;
+        }
+    }
+} finally {
+    if (recorder != null) {
+        try { recorder.stop(); } catch (Throwable ignore) {}
+        try { recorder.release(); } catch (Throwable ignore) {}
+    }
+    if (track != null) {
+        try { track.stop(); } catch (Throwable ignore) {}
+        try { track.release(); } catch (Throwable ignore) {}
     }
 }
 
-try { recorder.stop(); } catch (Throwable ignore) {}
-try { recorder.release(); } catch (Throwable ignore) {}
-try { track.stop(); } catch (Throwable ignore) {}
-try { track.release(); } catch (Throwable ignore) {}
+// A canceled, failed, or empty recording must never reach a YES/NO result.
+if (cancelled.get() || isFinishing() || isDestroyed() || capturedBytes <= 0) {
+    logLabelWarnValue(gr ? "LAB 4 PRO — Ηχογράφηση" : "LAB 4 PRO — Capture",
+            gr ? "Δεν ολοκληρώθηκε έγκυρη δειγματοληψία — χωρίς επιβεβαίωση"
+               : "No valid capture completed — no confirmation requested");
+    runOnUiThread(this::enableSingleExportButton);
+    return;
+}
 
 // ==========================
 // POPUP 2 — CONFIRMATION (SAFE VERSION)
@@ -7370,7 +7394,7 @@ runOnUiThread(() -> {
     noBtn.setTextColor(Color.WHITE);
 
     GradientDrawable noBg = new GradientDrawable();
-    noBg.setColor(0xFF8B0000);
+    noBg.setColor(0xFFE60000);
     noBg.setCornerRadius(dp(10));
     noBg.setStroke(dp(3), 0xFFFFD700);
     noBtn.setBackground(noBg);
@@ -7379,10 +7403,10 @@ runOnUiThread(() -> {
     Button yesBtn = new com.gel.cleaner.GelButton(this);
     yesBtn.setText(gr ? "ΝΑΙ" : "YES");
     yesBtn.setAllCaps(false);
-    yesBtn.setTextColor(Color.WHITE);
+    yesBtn.setTextColor(Color.BLACK);
 
     GradientDrawable yesBg = new GradientDrawable();
-    yesBg.setColor(0xFF0B5F3B);
+    yesBg.setColor(0xFF39FF14);
     yesBg.setCornerRadius(dp(10));
     yesBg.setStroke(dp(3), 0xFFFFD700);
     yesBtn.setBackground(yesBg);
@@ -7463,11 +7487,24 @@ dialogRef.set(null);
 // ==========================
 // WAIT (SAFE — NO DEADLOCK)
 // ==========================
-while (!answered.get() && !cancelled.get()) {
+long answerDeadline = SystemClock.uptimeMillis() + 45000;
+while (!answered.get() && !cancelled.get() && !isFinishing()
+        && !isDestroyed() && SystemClock.uptimeMillis() < answerDeadline) {
     SystemClock.sleep(80);
 }
-
-if (cancelled.get()) return;
+if (!answered.get()) {
+    cancelled.set(true);
+    runOnUiThread(() -> {
+        AlertDialog open = dialogRef.get();
+        if (open != null && open.isShowing()) open.dismiss();
+    });
+}
+if (cancelled.get()) {
+    logWarn(gr ? "LAB 4 PRO — Δεν ολοκληρώθηκε η επιβεβαίωση χρήστη"
+               : "LAB 4 PRO — User confirmation incomplete");
+    runOnUiThread(this::enableSingleExportButton);
+    return;
+}
 
 // -----------------------------------------
 // UI STABILIZATION BEFORE STAGE 2
@@ -7490,8 +7527,8 @@ if (heardClearly.get()) {
     logLabelOkValue(
             gr ? "Αποτέλεσμα" : "Result",
             gr
-                    ? "Ο χρήστης επιβεβαίωσε καθαρή ακουστική επανάληψη. Το κάτω μικρόφωνο λειτουργεί σωστά."
-                    : "User confirmed clear acoustic loop. Bottom microphone is functioning properly."
+                    ? "Ο χρήστης ανέφερε καθαρή ακουστική επανάληψη — δεν πιστοποιεί μεμονωμένο φυσικό μικρόφωνο."
+                    : "User reported a clear acoustic loop — not proof of a specific physical microphone."
     );
 
     logLabelOkValue(
