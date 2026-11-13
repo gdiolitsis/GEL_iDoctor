@@ -21,14 +21,35 @@ public final class Lab28LogEvidencePolicy {
                 continue;
             }
             if (insideLab28) {
-                if (normal.contains("lab 28: log triage complete")
-                        || normal.contains("lab 28: ολοκληρώθηκε η διαλογή")) {
+                if (isOtherLabHeader(normal)) {
+                    // Previous Lab 28 may have been interrupted before its footer.
+                    // Never discard a later Lab's evidence merely because of that.
                     insideLab28 = false;
+                } else {
+                    if (normal.contains("lab 28: log triage complete")
+                            || normal.contains("lab 28: ολοκληρώθηκε η διαλογή")) {
+                        insideLab28 = false;
+                    }
+                    continue;
                 }
-                continue;
             }
             out.append(row).append('\n');
         }
         return out.toString();
+    }
+
+    private static boolean isOtherLabHeader(String raw) {
+        String line = raw.trim();
+        if (line.startsWith("ℹ")) line = line.substring(1).trim();
+        if (!line.startsWith("lab ")) return false;
+        int dash = line.indexOf('—', 4);
+        if (dash < 0) dash = line.indexOf('-', 4);
+        if (dash < 0) return false;
+        try {
+            int lab = Integer.parseInt(line.substring(4, dash).trim());
+            return lab >= 1 && lab <= 31 && lab != 28;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
     }
 }
