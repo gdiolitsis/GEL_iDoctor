@@ -33507,8 +33507,10 @@ private void lab31FinalSummary() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    // Capture prior evidence before writing ANY header or label to the same log.
-    String fullLog = GELServiceLog.getAll();
+    // Capture prior evidence before writing ANY header or label.
+    // Exclude earlier Lab 31 summaries; their replayed alerts are not new findings.
+    String fullLog = Lab31ReportEvidencePolicy.withoutPriorSummaries(
+            GELServiceLog.getAll());
     if (fullLog == null) fullLog = "";
     if (fullLog.trim().isEmpty()) {
         appendHtml("<font color='#FFD966'>" + (gr
