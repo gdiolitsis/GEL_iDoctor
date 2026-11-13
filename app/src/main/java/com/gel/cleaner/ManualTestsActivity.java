@@ -28182,7 +28182,7 @@ try {
 
 } catch (Throwable e) {
 
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Ανάγνωση patch" : "Patch read",
             (gr ? "Αποτυχία (" : "Failed (") + e.getMessage() + ")"
     );
@@ -28232,23 +28232,23 @@ try {
 
             logLabelWarnValue(
                     gr ? "Κίνδυνος" : "Risk",
-                    gr ? "ΜΕΤΡΙΩΣ ΠΑΛΙΑ"
-                       : "MODERATELY OUTDATED"
+                    gr ? "Ημερομηνία patch παλαιότερη από έξι μήνες; ελέγξτε τη διαθεσιμότητα ενημερώσεων"
+                       : "Reported patch date getting older; check available updates"
             );
 
         } else {
 
             logLabelWarnValue(
                     gr ? "Ηλικία patch" : "Patch age",
-                    gr ? "ΠΑΛΙΑ (λείπουν πρόσφατες διορθώσεις ασφαλείας)"
-                       : "OUTDATED (missing recent security fixes)"
+                    gr ? "ΠΑΛΙΑ αναφερόμενη ημερομηνία patch — δεν αποδεικνύει εκμεταλλεύσιμη ευπάθεια"
+                       : "Old reported patch date — does not prove an exploitable vulnerability"
             );
         }
         }
     }
 } catch (Throwable e) {
 
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Ανάλυση ηλικίας ενημέρωσης" : "Patch age analysis",
             (gr ? "Αποτυχία (" : "Failed (") + e.getMessage() + ")"
     );
@@ -28346,7 +28346,7 @@ try {
 
 } catch (Throwable e) {
 
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Ανίχνευση Play Protect" : "Play Protect detection",
             (gr ? "Αποτυχία (" : "Failed (") + e.getMessage() + ")"
     );
@@ -28384,7 +28384,7 @@ logLabelValue(
            : "Settings > About phone > Android version > Security patch level"
 );
 
-logLabelWarnValue(
+logLabelValue(
         gr ? "Σημείωση" : "Note",
         gr ? "Πολύ παλιά επίπεδα ενημέρωσης αυξάνουν την έκθεση σε exploits"
            : "Very old patch levels increase exploit exposure"
