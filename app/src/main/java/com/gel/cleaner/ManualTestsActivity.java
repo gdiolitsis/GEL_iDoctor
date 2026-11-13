@@ -22353,10 +22353,10 @@ if (rateSamples >= 5) { // 🔴 όχι απλά >0
 // ------------------------------------------------
 // 🔴 SANITY CLAMP (CRITICAL)
 // ------------------------------------------------
-if (!Float.isNaN(perHour)) {
-
-    if (perHour < 50f) perHour = 50f;
-    if (perHour > 5000f) perHour = 5000f; // 🔴 anti-bug spike
+if (!Float.isNaN(perHour) &&
+        (Float.isInfinite(perHour) || perHour <= 0f || perHour > 20000f)) {
+    // Invalid or implausible rate: UNKNOWN, never fabricate 50 or 5000 mAh/h.
+    perHour = Float.NaN;
 }
 
 // --------------------------------------
@@ -22408,7 +22408,7 @@ logLabelValue(
     : "Corrected consumption",
     String.format(
         Locale.US,
-        "%.0f mAh/h",
+        Float.isNaN(correctedPerHour) ? "N/A" : "%.0f mAh/h",
         correctedPerHour
     )
 );
@@ -22556,61 +22556,26 @@ if (!Float.isNaN(voltDrop)) {
 
 appendHtml("<br>");
 
-logOk(gr
-        ? "Εκτίμηση πλήρους διάρκειας μπαταρίας"
-        : "Estimated full battery duration");
+logInfo(gr
+        ? "Προβολή διάρκειας μπαταρίας (εκτίμηση, όχι μέτρηση)"
+        : "Battery endurance projection (estimate, not measured)");
 
 logLine();
 
 float finalHours = Float.NaN;
 
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
-
-    if (baselineMah[0] > 1000L) {
-
-        // ✅ REAL CAPACITY
-        finalHours = baselineMah[0] / correctedPerHour;
-
-    } else {
-
-        // 🔴 PURE PHYSICS FALLBACK
-        float screen = getScreenSizeInches();
-        if (screen <= 0f) screen = 6.5f;
-
-        float screenFactor = screen / 6.5f;
-        screenFactor = Math.max(0.85f, Math.min(1.25f, screenFactor));
-
-        float adjustedPerHour = correctedPerHour * screenFactor;
-
-        float pctPerHour = adjustedPerHour / 45f;
-
-        finalHours = 100f / pctPerHour;
-
-        logWarn(gr
-            ? "Χωρητικότητα μη διαθέσιμη — εκτίμηση βάσει κατανάλωσης"
-            : "Capacity unavailable — estimation based on consumption");
-    }
-
-    // 🔴 CRITICAL: pass finalHours downstream
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f &&
+        baselineMah[0] > 1000L) {
+    // Capacity-backed scenario projection, not an actual 100% endurance run.
+    finalHours = baselineMah[0] / correctedPerHour;
     estimatedHours = finalHours;
-
-    logLabelValue(
-            gr ? "Εκτιμώμενη διάρκεια στο 100%" : "Estimated duration at 100%",
-            String.format(
-                    Locale.US,
-                    "%.1f %s",
-                    finalHours,
-                    gr ? "ώρες" : "hours"
-            )
-    );
-
+    logLabelValue(gr ? "Εκτιμώμενη διάρκεια στο 100% (μοντέλο)" : "Projected duration at 100% (model)",
+            String.format(Locale.US, gr ? "%.1f ώρες (εκτίμηση)" : "%.1f hours (estimate)", finalHours));
 } else {
-
-    logWarn(
-            gr
-            ? "Αδυναμία εκτίμησης διάρκειας"
-            : "Unable to estimate duration"
-    );
+    estimatedHours = Float.NaN;
+    logLabelValue(gr ? "Εκτίμηση διάρκειας" : "Endurance projection",
+            gr ? "Μ/Δ — χωρίς έγκυρη χωρητικότητα και ρυθμό κατανάλωσης"
+               : "N/A — valid capacity and consumption rate required");
 }
                 
 appendHtml("<br>");
@@ -22853,11 +22818,11 @@ float omega =
         (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f
          && !Float.isNaN(expectedPerHour) && expectedPerHour > 0f)
                 ? (expectedPerHour / correctedPerHour)
-                : 1f;
+                : Float.NaN;
 
-if (Float.isNaN(omega)) omega = 1f;
-
-omega = Math.max(0.40f, Math.min(1.60f, omega));
+// Missing observations stay unknown; never convert them to the "perfect" index 1.
+if (!Float.isNaN(omega))
+    omega = Math.max(0.40f, Math.min(1.60f, omega));
 
 float relativePct =
         (omega - 1f) * 100f;
@@ -22910,7 +22875,12 @@ String proPrompt = null;
 // ------------------------------------------------------------
 // 🔴 PERFORMANCE ZONES
 // ------------------------------------------------------------
-if (omega >= 1.20f) {
+if (Float.isNaN(omega)) {
+    verdict = gr ? "Μ/Δ — ανεπαρκή στοιχεία" : "N/A — insufficient data";
+    humanVerdict = gr
+            ? "Δεν υπολογίστηκε δείκτης Ω· καμία διάγνωση μπαταρίας."
+            : "Ω index unavailable; no battery diagnosis.";
+} else if (omega >= 1.20f) {
 
     verdict = gr
             ? "Εξαιρετική απόδοση"
@@ -22975,7 +22945,8 @@ if (omega >= 1.20f) {
 logLabelValue(
         gr ? "Δείκτης απόδοσης μπαταρίας Ω"
            : "Battery performance index Ω",
-        String.format(Locale.US, "%.2f", omega)
+        Float.isNaN(omega) ? (gr ? "Μ/Δ" : "N/A")
+                : String.format(Locale.US, "%.2f", omega)
 );
 
 // 🔴 Expected consumption (dynamic)
@@ -22994,14 +22965,16 @@ logLabelValue(
 logLabelValue(
         gr ? "Πραγματική κατανάλωση"
            : "Actual consumption",
-        String.format(Locale.US, "%.0f mAh/h", correctedPerHour)
+        Float.isNaN(correctedPerHour) ? (gr ? "Μ/Δ" : "N/A")
+                : String.format(Locale.US, "%.0f mAh/h", correctedPerHour)
 );
 
 // 🔴 Relative %
 logLabelValue(
         gr ? "Σχετική απόδοση"
            : "Relative performance",
-        String.format(Locale.US, "%+.0f%%", relativePct)
+        Float.isNaN(relativePct) ? (gr ? "Μ/Δ" : "N/A")
+                : String.format(Locale.US, "%+.0f%%", relativePct)
 );
 
 // 🔴 Verdict
@@ -23016,14 +22989,12 @@ appendHtml("<br>");
 // ------------------------------------------------------------
 // 🔴 Human interpretation
 // ------------------------------------------------------------
-if (Float.isNaN(omega)) omega = 1f;
-
-if (omega >= 0.85f) {
-    logOk(humanVerdict);
+if (Float.isNaN(omega)) {
+    logInfo(humanVerdict);
 } else if (omega >= 0.65f) {
-    logWarn(humanVerdict);
+    logLabelValue(gr ? "Ερμηνεία μοντέλου Ω" : "Ω model interpretation", humanVerdict);
 } else {
-    logError(humanVerdict);
+    logWarn(humanVerdict);
 }
 
 if (proPrompt != null && !proPrompt.isEmpty()) {
@@ -23033,9 +23004,9 @@ if (proPrompt != null && !proPrompt.isEmpty()) {
 
 appendHtml("<br>");
 
-logOk(gr
-        ? "Ανάλυση αιτίας"
-        : "Root cause analysis");
+logInfo(gr
+        ? "Πιθανοί παράγοντες (όχι αιτιώδης διάγνωση)"
+        : "Possible factors (not a causal diagnosis)");
 
 logLine();
 
@@ -23097,16 +23068,16 @@ if (batteryIssue && systemIssue) {
 
 } else {
 
-    logOk(gr
-            ? "Ισορροπημένη λειτουργία συστήματος και μπαταρίας"
-            : "Balanced system and battery behaviour");
+    logLabelValue(gr ? "Ερμηνεία" : "Interpretation",
+            gr ? "Δεν τεκμηριώθηκε συγκεκριμένη ανωμαλία στο μοντέλο· όχι πιστοποίηση υγείας"
+               : "No specific model anomaly established; not a battery-health certification");
 }
 
 appendHtml("<br>");
 
-logOk(gr
-        ? "Κλίμακα ερμηνείας δείκτη Ω"
-        : "Ω interpretation scale");
+logInfo(gr
+        ? "Πειραματική κλίμακα Ω (μη βαθμονομημένη)"
+        : "Experimental Ω scale (uncalibrated)");
 
 logLine();
 
