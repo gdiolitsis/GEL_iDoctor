@@ -5538,7 +5538,7 @@ boolean lab14CollapseRisk =
         p.getBoolean("lab14_collapse_risk", false);
 
 boolean lab14SwellingSuspected =
-        p.getBoolean("lab14_swelling_risk", false);
+        p.getBoolean("lab14_physical_swelling_confirmed", false);
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -14721,8 +14721,8 @@ private void lab14LogSave(
             p.edit()
                     .putBoolean("lab14_unstable_measurement", variability)
                     .putBoolean("lab14_collapse_risk", collapse)
-                    .putBoolean("lab14_swelling_risk", smartSwelling)
-                    .putBoolean("lab14_calibration_drift", calibration)
+                    .remove("lab14_swelling_risk").putBoolean("lab14_stress_proxy_flag", smartSwelling)
+                    .remove("lab14_calibration_drift").putBoolean("lab14_gauge_discrepancy_proxy", calibration)
                     .putBoolean("lab14_battery_auth_suspect", batteryAuthenticitySuspicion)
                     .putLong("lab14_last_ts", System.currentTimeMillis())
                     .apply();
@@ -16993,8 +16993,8 @@ runOnUiThread(() -> {
                 : "Declared capacity check",
 
                 gr
-                ? "Η δηλωμένη χωρητικότητα φαίνεται ρεαλιστική."
-                : "Declared battery capacity appears realistic."
+                ? "Δεν εντοπίστηκε αντίφαση στο δείγμα· η χωρητικότητα δεν επαληθεύτηκε."
+                : "No conflict seen in sample; full capacity not verified."
             );
         }
     }
@@ -17077,36 +17077,36 @@ if (hasSag &&
     if (finalSag < 0.05f) {
 
         siText = gr
-                ? "Καλή δομική σταθερότητα"
-                : "Good structural integrity";
+                ? "Μικρή πτώση τάσης — η φυσική δομή κυψελών δεν ελέγχθηκε"
+                : "Low sag — physical cell integrity not tested";
 
-        logLabelOkValue(
-                gr ? "Δομική ακεραιότητα μπαταρίας"
-                   : "Battery structural integrity",
+        logLabelValue(
+                gr ? "Έμμεση απόκριση τάσης"
+                   : "Indirect voltage response",
                 siText
         );
 
     } else if (finalSag < 0.12f) {
 
         siText = gr
-                ? "Μέτρια δομική κατάσταση"
-                : "Moderate structural condition";
+                ? "Μέτρια πτώση τάσης — η δομή κυψελών είναι άγνωστη"
+                : "Moderate sag — cell structure unknown";
 
         logLabelValue(
-                gr ? "Δομική ακεραιότητα μπαταρίας"
-                   : "Battery structural integrity",
+                gr ? "Έμμεση απόκριση τάσης"
+                   : "Indirect voltage response",
                 siText
         );
 
     } else {
 
         siText = gr
-                ? "Πιθανή φθορά κυψελών"
-                : "Possible cell degradation";
+                ? "Αυξημένη πτώση τάσης — δεν αποδεικνύεται φθορά κυψελών"
+                : "Elevated sag — cell degradation not established";
 
         logLabelWarnValue(
-                gr ? "Δομική ακεραιότητα μπαταρίας"
-                   : "Battery structural integrity",
+                gr ? "Έμμεση απόκριση τάσης"
+                   : "Indirect voltage response",
                 siText
         );
     }
@@ -17114,8 +17114,8 @@ if (hasSag &&
 } else {
 
     logLabelWarnValue(
-            gr ? "Δομική ακεραιότητα μπαταρίας"
-               : "Battery structural integrity",
+            gr ? "Έμμεση απόκριση τάσης"
+               : "Indirect voltage response",
             gr
                     ? "Ανεπαρκή δεδομένα"
                     : "Insufficient data"
@@ -17133,29 +17133,29 @@ if (hasSag &&
     if (cellImbalanceRisk[0]) {
 
         logLabelWarnValue(
-                gr ? "Ισορροπία κυψελών μπαταρίας"
-                   : "Battery cell balance",
+                gr ? "Έμμεσος δείκτης (όχι μέτρηση κυψελών)"
+                   : "Indirect proxy (not cell measurement)",
                 gr
-                        ? "Εντοπίστηκε πιθανή ασυμμετρία κυψελών"
-                        : "Possible lithium cell imbalance detected"
+                        ? "Ασυνήθιστη έμμεση απόκριση — δεν μετρήθηκαν ξεχωριστές κυψέλες"
+                        : "Unusual indirect response — individual cells not measured"
         );
 
     } else {
 
-        logLabelOkValue(
-                gr ? "Ισορροπία κυψελών μπαταρίας"
-                   : "Battery cell balance",
+        logLabelValue(
+                gr ? "Έμμεσος δείκτης (όχι μέτρηση κυψελών)"
+                   : "Indirect proxy (not cell measurement)",
                 gr
-                        ? "Δεν εντοπίστηκε ανισορροπία"
-                        : "No imbalance detected"
+                        ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — δεν διατίθενται τάσεις ανά κυψέλη"
+                        : "NOT TESTED — no per-cell voltage evidence"
         );
     }
 
 } else {
 
     logLabelWarnValue(
-            gr ? "Ισορροπία κυψελών μπαταρίας"
-               : "Battery cell balance",
+            gr ? "Έμμεσος δείκτης (όχι μέτρηση κυψελών)"
+               : "Indirect proxy (not cell measurement)",
             gr
                     ? "Ανεπαρκή δεδομένα"
                     : "Insufficient data"
@@ -31105,7 +31105,7 @@ private void lab29DeviceAuthenticity() {
             p.getBoolean("lab14_collapse_risk", false);
 
     boolean lab14SwellingSuspected =
-        p.getBoolean("lab14_swelling_risk", false);
+        p.getBoolean("lab14_physical_swelling_confirmed", false);
 
     appendHtml("<br>");
     logLine();
@@ -31443,7 +31443,7 @@ boolean lab14CollapseRisk =
         p.getBoolean("lab14_collapse_risk", false);
 
 boolean lab14SwellingSuspected =
-        p.getBoolean("lab14_swelling_risk", false);
+        p.getBoolean("lab14_physical_swelling_confirmed", false);
         
 // ------------------------------------------------------------
 // 🔴 LAB14B (CLEAN READ)
