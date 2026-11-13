@@ -48,6 +48,8 @@ public class DisplayProTestActivity extends GELAutoActivityHook {
     private TextView hint;
     private int stepIndex = 0;
     private int loopIndex = 0;
+    // True only after all configured visual pattern cycles were presented.
+    private boolean fullPatternSequenceShown = false;
     private long startTimeMs;
 
     private TestStep[] steps;
@@ -129,7 +131,7 @@ public void onBackPressed() {
         AlertDialog.Builder b =
                 new AlertDialog.Builder(this,
                         android.R.style.Theme_Material_Dialog_NoActionBar);
-        b.setCancelable(false);
+        b.setCancelable(true);
 
         LinearLayout root = buildPopupRoot(this);
         root.addView(buildHeader(
@@ -155,6 +157,8 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF39FF14);
         if (d.getWindow() != null)
             d.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
+        d.setCanceledOnTouchOutside(false);
+        d.setOnCancelListener(ignored -> safeCancel());
         d.show();
 
         com.gel.cleaner.GelButtonLayout.fitDialog(d);
@@ -251,6 +255,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF39FF14);
         startTimeMs = System.currentTimeMillis();
         stepIndex = 0;
         loopIndex = 0;
+        fullPatternSequenceShown = false;
 
         runStep();
     }
@@ -274,6 +279,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF39FF14);
             stepIndex = 0;
             loopIndex++;
             if (loopIndex >= LOOP_COUNT) {
+                fullPatternSequenceShown = true;
                 showFinalQuestion();
                 return;
             }
@@ -314,7 +320,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF39FF14);
         AlertDialog.Builder b =
                 new AlertDialog.Builder(this,
                         android.R.style.Theme_Material_Dialog_NoActionBar);
-        b.setCancelable(false);
+        b.setCancelable(true);
 
         LinearLayout root = buildPopupRoot(this);
         root.addView(buildHeader(
@@ -348,6 +354,8 @@ root.addView(buildMuteRow());
         if (d.getWindow() != null)
             d.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
+        d.setCanceledOnTouchOutside(false);
+        d.setOnCancelListener(ignored -> safeCancel());
         d.show();
 
         com.gel.cleaner.GelButtonLayout.fitDialog(d);
@@ -359,8 +367,14 @@ root.addView(buildMuteRow());
     }
 }, 120);
 
-no.setOnClickListener(v -> endTest(false));
-yes.setOnClickListener(v -> endTest(true));
+no.setOnClickListener(v -> {
+    d.dismiss();
+    endTest(false);
+});
+yes.setOnClickListener(v -> {
+    d.dismiss();
+    endTest(true);
+});
 }
 
     // ============================================================
@@ -386,6 +400,7 @@ yes.setOnClickListener(v -> endTest(true));
 
     Intent result = new Intent();
     result.putExtra("display_issues", issuesDetected);
+    result.putExtra("display_steps_completed", fullPatternSequenceShown);
 
     setResult(RESULT_OK, result);
     finish();
