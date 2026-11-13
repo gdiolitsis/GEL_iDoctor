@@ -5107,7 +5107,8 @@ private Button gelButton(Context ctx, String text, int bgColor) {
     Button b = new com.gel.cleaner.GelButton(ctx);
     b.setText(text);
     b.setAllCaps(false);
-    b.setTextColor(Color.WHITE);
+    // Neon green demands black lettering; dark/red backgrounds retain white.
+    b.setTextColor(bgColor == 0xFF39FF14 ? Color.BLACK : Color.WHITE);
     b.setTextSize(15f);
     b.setTypeface(null, Typeface.BOLD);
 
@@ -8472,11 +8473,11 @@ root.addView(tvMsg);
 Button startBtn = new com.gel.cleaner.GelButton(this);
 startBtn.setAllCaps(false);
 startBtn.setText(gr ? "ΕΝΑΡΞΗ ΤΕΣΤ" : "START TEST");
-startBtn.setTextColor(Color.WHITE);
+startBtn.setTextColor(Color.BLACK);
 startBtn.setTextSize(16f);
 
 GradientDrawable startBg = new GradientDrawable();
-startBg.setColor(0xFF0F8A3B);
+startBg.setColor(0xFF39FF14);
 startBg.setCornerRadius(10);
 startBg.setStroke(3, 0xFFFFD700);
 startBtn.setBackground(startBg);
@@ -9099,7 +9100,7 @@ root.addView(msg);
     Button start = new com.gel.cleaner.GelButton(this);
     start.setText(gr ? "ΕΝΑΡΞΗ ΤΕΣΤ" : "START TEST");
     start.setAllCaps(false);
-    start.setTextColor(Color.WHITE);
+    start.setTextColor(Color.BLACK);
 
     GradientDrawable startBg = new GradientDrawable();
     startBg.setColor(0xFF39FF14);
@@ -10227,11 +10228,11 @@ root.addView(msg);
         Button yes = new com.gel.cleaner.GelButton(this);
         yes.setText(gr ? "ΣΥΝΕΧΕΙΑ" : "CONTINUE");
         yes.setAllCaps(false);
-        yes.setTextColor(Color.WHITE);
+        yes.setTextColor(Color.BLACK);
         yes.setLayoutParams(lp);
 
         GradientDrawable yesBg = new GradientDrawable();
-        yesBg.setColor(0xFF0B5F3B);
+        yesBg.setColor(0xFF39FF14);
         yesBg.setCornerRadius(dp(10));
         yesBg.setStroke(dp(3), 0xFFFFD700);
         yes.setBackground(yesBg);
@@ -10243,7 +10244,7 @@ root.addView(msg);
         no.setLayoutParams(lp);
 
         GradientDrawable noBg = new GradientDrawable();
-        noBg.setColor(0xFF8B0000);
+        noBg.setColor(0xFFE60000);
         noBg.setCornerRadius(dp(10));
         noBg.setStroke(dp(3), 0xFFFFD700);
         no.setBackground(noBg);
