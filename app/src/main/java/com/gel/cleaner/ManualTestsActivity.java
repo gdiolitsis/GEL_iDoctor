@@ -6346,6 +6346,7 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
             AudioRecord capture = null;
             int confirmed = 0;
             int measured = 0;
+            boolean playbackAttempted = false;
             double noiseRms = Double.NaN;
             try {
                 if (minBytes > 0) {
@@ -6377,6 +6378,7 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                             logLabelValue(gr ? "RMS περιβάλλοντος" : "Ambient RMS",
                                     String.format(Locale.US, "%.1f", noiseRms));
                         }
+                        playbackAttempted = true;
                         for (int index = 0; index < tones.length; index++) {
                             if (!tg.startTone(tones[index], 500)) {
                                 throw new IllegalStateException("Tone start failed: " + (index + 1));
@@ -6410,6 +6412,20 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                     }
                 }
             } finally {
+                if (!playbackAttempted) {
+                    // A denied/unavailable mic must not suppress the speaker test.
+                    logWarn(gr
+                            ? "Η ταυτόχρονη μέτρηση μικροφώνου δεν ήταν διαθέσιμη. "
+                              + "Αναπαράγονται οι τόνοι χωρίς ακουστική επιβεβαίωση."
+                            : "Concurrent microphone capture unavailable. "
+                              + "Playing tones without acoustic verification.");
+                    for (int index = 0; index < tones.length; index++) {
+                        try {
+                            if (!tg.startTone(tones[index], 500)) break;
+                            SystemClock.sleep(550);
+                        } catch (Throwable ignored) { break; }
+                    }
+                }
                 if (capture != null) {
                     try { capture.stop(); } catch (Throwable ignore) {}
                     try { capture.release(); } catch (Throwable ignore) {}
@@ -6417,7 +6433,9 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                 try { tg.stopTone(); } catch (Throwable ignore) {}
             }
             logLabelValue(gr ? "Τόνοι με ακουστική ένδειξη" : "Tones with acoustic indication",
-                    confirmed + "/4");
+                    measured == 0
+                            ? (gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΑΝ" : "NOT_MEASURED")
+                            : confirmed + "/4");
             if (confirmed != 4) {
                 logWarn(gr
                         ? "Δεν επιβεβαιώθηκαν αυτόματα και οι τέσσερις τόνοι. "
