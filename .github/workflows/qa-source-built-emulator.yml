@@ -16,51 +16,92 @@ jobs:
     # QA surgical rebuild is intentionally NOT built for each intermediate commit.
     # Restore qa/gel31-surgical-rebuild- gating only once all 31 Labs are ready
     # for a single combined APK, tests and emulator acceptance run.
-    if: ${{ startsWith(github.head_ref, 'qa/integration-') && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.head_ref == 'qa/gel31-surgical-rebuild-20261113' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
-      - name: Verify promoted WebRTC and build fresh QA APK
+      - name: Check update keystore certificate matches installed v53 (fail closed)
         env:
-          GH_TOKEN: ${{ github.token }}
+          KEYSTORE_B64: \${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: \${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: \${{ secrets.KEY_ALIAS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/gel-qa-signing.jks"
+          test -s "$RUNNER_TEMP/gel-qa-signing.jks"
+          expected='73b2c36144a1c814c92fea0ee71a6be408c2f111db20bddea24f95ad958b0964'
+          actual="$(keytool -list -v -keystore "$RUNNER_TEMP/gel-qa-signing.jks" \
+            -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" \
+            | awk '/SHA256:/ {print $2; exit}' | tr -d ':\r ' | tr '[:upper:]' '[:lower:]')"
+          if [ "$actual" != "$expected" ]; then
+            echo "SIGNING_CERT_MISMATCH: cannot update current v53 with this key; aborting" >&2
+            exit 1
+          fi
+          echo "MATCHES_INSTALLED_V53_CERTIFICATE=YES"
+
+      - name: Build, align, sign and verify one v54 QA release APK
+        env:
+          GH_TOKEN: \${{ github.token }}
+          KEYSTORE_PASSWORD: \${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS_PASSWORD: \${{ secrets.KEY_ALIAS_PASSWORD }}
+          KEY_ALIAS: \${{ secrets.KEY_ALIAS }}
+        shell: bash
         run: |
           set -euo pipefail
           sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
           bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
-          # Maven Central can return HTTP 429 under GitHub runner fan-out.
-          # Retry ONLY that transient rate-limit; never hide compilation/test failures.
           attempt=1
           while true; do
-            gradle_log="$RUNNER_TEMP/gel-gradle-attempt-${attempt}.log"
-            if ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon --console=plain 2>&1 | tee "$gradle_log"; then
-              break
-            fi
-            if [ "$attempt" -ge 3 ] || ! grep -Eqi '(status code 429|HTTP 429|Too Many Requests)' "$gradle_log"; then
-              echo "Gradle failed without a retryable Maven 429, or attempts exhausted" >&2
+            log="$RUNNER_TEMP/gel-gradle-qa-$attempt.log"
+            if ./gradlew -PgelQaVersionCode=54 -PgelQaVersionName=5.3-QA1 \
+              :app:testDebugUnitTest :app:assembleRelease --no-daemon --console=plain 2>&1 | tee "$log"; then break; fi
+            if [ "$attempt" -ge 3 ] || ! grep -Eqi '(status code 429|HTTP 429|Too Many Requests)' "$log"; then
+              echo "Gradle failed; will not sign candidate" >&2
               exit 1
             fi
-            echo "Maven dependency request was rate-limited (429); retrying same tests after backoff" >&2
             sleep $((attempt * 30))
             attempt=$((attempt + 1))
           done
-          apk="app/build/outputs/apk/debug/app-debug.apk"
-          test -s "$apk"
-          mkdir -p "$RUNNER_TEMP/candidate-apk"
-          cp "$apk" "$RUNNER_TEMP/candidate-apk/GEL_iDoctor_v53_source_debug.apk"
-          (cd "$RUNNER_TEMP/candidate-apk" && sha256sum GEL_iDoctor_v53_source_debug.apk > SHA256SUMS)
-          git rev-parse HEAD > "$RUNNER_TEMP/candidate-apk/SOURCE_COMMIT"
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          unsigned='app/build/outputs/apk/release/app-release-unsigned.apk'
+          test -s "$unsigned"
+          out="$RUNNER_TEMP/candidate-apk"
+          mkdir -p "$out"
+          "$tools/zipalign" -f 4 "$unsigned" "$out/gel-v54-aligned.apk"
+          "$tools/apksigner" sign \
+            --ks "$RUNNER_TEMP/gel-qa-signing.jks" \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEY_ALIAS_PASSWORD \
+            --ks-key-alias "$KEY_ALIAS" \
+            --out "$out/GEL_iDoctor_v54_signed_QA.apk" "$out/gel-v54-aligned.apk"
+          "$tools/apksigner" verify --verbose "$out/GEL_iDoctor_v54_signed_QA.apk"
+          "$tools/zipalign" -c 4 "$out/GEL_iDoctor_v54_signed_QA.apk"
+          expected='73b2c36144a1c814c92fea0ee71a6be408c2f111db20bddea24f95ad958b0964'
+          actual="$("$tools/apksigner" verify --print-certs "$out/GEL_iDoctor_v54_signed_QA.apk" \
+            | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}')"
+          test -n "$actual" && test "$actual" = "$expected"
+          "$tools/aapt2" dump badging "$out/GEL_iDoctor_v54_signed_QA.apk" > "$out/APK_BADGING.txt"
+          grep -F "package: name='com.gel.iDoctor' versionCode='54' versionName='5.3-QA1'" "$out/APK_BADGING.txt"
+          (cd "$out" && sha256sum GEL_iDoctor_v54_signed_QA.apk > SHA256SUMS)
+          git rev-parse HEAD > "$out/SOURCE_COMMIT"
+          printf '%s\n' "$actual" > "$out/SIGNER_CERT_SHA256"
+          rm -f "$out/gel-v54-aligned.apk" "$RUNNER_TEMP/gel-qa-signing.jks"
+          echo "SIGNED_QA_UPDATE_WITH_INSTALLED_CERTIFICATE=PASS"
       - uses: actions/upload-artifact@v6
         with:
-          name: gel-v53-source-built-debug-apk
+          name: gel-v54-signed-source-qa-apk
           path: ${{ runner.temp }}/candidate-apk
-          retention-days: 14
+          retention-days: 7
   emulator:
     needs: build-candidate
     strategy:
@@ -72,6 +113,8 @@ jobs:
     timeout-minutes: 85
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
         with:
           distribution: temurin
@@ -79,14 +122,14 @@ jobs:
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
       - uses: actions/download-artifact@v4
         with:
-          name: gel-v53-source-built-debug-apk
+          name: gel-v54-signed-source-qa-apk
           path: ${{ runner.temp }}/candidate-apk
       - name: Verify exact downloaded candidate
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/candidate-apk"
           sha256sum --check SHA256SUMS
-          test -s GEL_iDoctor_v53_source_debug.apk
+          test -s GEL_iDoctor_v54_signed_QA.apk
       - name: Check selectors and explore candidate UI
         env:
           AUDIT_SCOPE: full
@@ -97,11 +140,11 @@ jobs:
           set -euo pipefail
           python3 tools/ci/test_ui_audit_selectors.py
           bash tools/ci/full_ui_audit.sh \
-            "$RUNNER_TEMP/candidate-apk/GEL_iDoctor_v53_source_debug.apk" \
+            "$RUNNER_TEMP/candidate-apk/GEL_iDoctor_v54_signed_QA.apk" \
             "${{ matrix.api }}" "${{ matrix.language }}"
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: GEL-v53-candidate-QA-api${{ matrix.api }}-${{ matrix.language }}
+          name: GEL-v54-signed-candidate-QA-api${{ matrix.api }}-${{ matrix.language }}
           path: ${{ runner.temp }}/full-ui-audit
           retention-days: 14
