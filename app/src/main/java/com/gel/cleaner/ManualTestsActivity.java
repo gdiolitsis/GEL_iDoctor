@@ -14044,23 +14044,22 @@ if (rValid) {
 
     if (!Float.isNaN(finalSag)) {
 
+        // Hypothetical 2 A denominator; never report as measured ESR.
         float rEst = finalSag * 1000f / 2.0f;
 
         logLabelValue(
-            gr ? "Αντίσταση υπό φορτίο"
-               : "Dynamic resistance",
+            gr ? "Πειραματικός δείκτης ΔV/2A" : "Experimental ΔV/2A proxy",
             String.format(
                Locale.US,
-               "~%.0f mΩ (estimated)",
+               gr ? "~%.0f mΩ (υπόθεση 2 A, όχι ESR)" : "~%.0f mΩ (assumed 2 A, not ESR)",
                rEst
             )
         );
 
     } else {
 
-        logLabelWarnValue(
-            gr ? "Αντίσταση υπό φορτίο"
-               : "Dynamic resistance",
+        logLabelValue(
+            gr ? "Δυναμικός δείκτης αντίστασης" : "Dynamic resistance proxy",
             "N/A"
         );
     }
@@ -14582,7 +14581,7 @@ private void lab14LogFinalScore(
     logInfo(gr ? "Τελικό αποτέλεσμα" : "Final result");
     logLine();
 
-    String condLabel = gr ? "Κατάσταση μπαταρίας" : "Battery condition";
+    String condLabel = gr ? "Πειραματική κατηγορία απόκρισης" : "Experimental stress-response category";
 
     // 🔴 SAFE LABEL
     String lbl =
@@ -14606,35 +14605,24 @@ private void lab14LogFinalScore(
             calibrationDrift[0];
 
     // ----------------------------------------------------
-    // 🔴 MAIN LABEL (WITH LIMITER PRIORITY)
-    // ----------------------------------------------------
-    if (limiter || "Critical".equals(lbl)) {
-
-        logLabelErrorValue(condLabel, lbl);
-
-    } else if ("Weak".equals(lbl) || "Unknown".equals(lbl)) {
-
-        logLabelWarnValue(condLabel, lbl);
-
-    } else if ("Excellent".equals(lbl) ||
-               "Good".equals(lbl) ||
-               "Normal".equals(lbl)) {
-
-        logLabelOkValue(condLabel, lbl);
-
-    } else {
-
-        logLabelValue(condLabel, lbl);
+    // Experimental classification only: a short stress trial does not certify SoH.
+    logLabelValue(condLabel,
+            lbl + (gr ? " — απόκριση σε αυτό το φορτίο, όχι SoH"
+                      : " — response under this load, not SoH"));
+    if ("Critical".equals(lbl)) {
+        logLabelWarnValue(gr ? "Αυξημένη μεταβολή τάσης" : "Elevated voltage response",
+                gr ? "Επαναλάβετε τη δοκιμή και ζητήστε τεχνική εκτίμηση εάν υπάρχουν συμπτώματα"
+                   : "Repeat the test; seek technician assessment if symptoms persist");
     }
 
     // ----------------------------------------------------
     // 🔴 COLLAPSE
     // ----------------------------------------------------
     logLabelValue(
-            gr ? "Κατάρρευση τάσης" : "Voltage collapse",
+            gr ? "Πειραματική ένδειξη απότομης πτώσης τάσης" : "Experimental voltage-drop flag",
             collapse
-                    ? (gr ? "Υψηλός κίνδυνος" : "High risk")
-                    : (gr ? "Δεν εντοπίστηκε" : "Not detected")
+                    ? (gr ? "Παρατηρήθηκε μοτίβο — απαιτείται επαλήθευση" : "Pattern flagged — verification required")
+                    : (gr ? "Δεν επισημάνθηκε στο συγκεκριμένο τεστ" : "Not flagged in this trial")
     );
 
     // ----------------------------------------------------
@@ -14643,19 +14631,18 @@ private void lab14LogFinalScore(
     if (smartSwelling) {
 
         logLabelWarnValue(
-                gr ? "Διόγκωση μπαταρίας" : "Battery swelling",
+                gr ? "Έμμεση ένδειξη δοκιμής" : "Indirect stress indicator",
                 gr
-                        ? "Πιθανές ενδείξεις — απαιτείται έλεγχος"
-                        : "Possible indicators — verification recommended"
+                        ? "Ασυνήθιστη απόκριση· ΔΕΝ είναι μέτρηση φυσικής διόγκωσης. Απαιτείται επιθεώρηση από τεχνικό εάν υπάρχει φυσικό σύμπτωμα."
+                        : "Unusual response; NOT a physical swelling measurement. Seek technician inspection if there is a physical symptom."
         );
 
     } else {
 
         logLabelValue(
-                gr ? "Διόγκωση μπαταρίας" : "Battery swelling",
-                gr
-                        ? "Δεν εντοπίστηκαν αξιόπιστες ενδείξεις"
-                        : "No reliable indicators detected"
+                gr ? "Φυσική διόγκωση" : "Physical swelling",
+                gr ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — απαιτείται φυσική επιθεώρηση"
+                   : "NOT TESTED — physical inspection required"
         );
     }
 
@@ -14663,10 +14650,10 @@ private void lab14LogFinalScore(
     // 🔴 CALIBRATION
     // ----------------------------------------------------
     logLabelValue(
-            gr ? "Απόκλιση βαθμονόμησης" : "Calibration drift",
+            gr ? "Πιθανή απόκλιση ένδειξης" : "Possible gauge discrepancy",
             calibration
-                    ? (gr ? "Εντοπίστηκε" : "Detected")
-                    : (gr ? "Κανονική" : "Normal")
+                    ? (gr ? "Πειραματική ένδειξη — όχι επιβεβαιωμένη βαθμονόμηση" : "Experimental indication — calibration not verified")
+                    : (gr ? "Δεν τεκμηριώθηκε σε αυτή τη δοκιμή" : "Not established in this trial")
     );
 
     // ----------------------------------------------------
@@ -14677,8 +14664,8 @@ private void lab14LogFinalScore(
         logLabelWarnValue(
                 gr ? "Περιορισμός συστήματος" : "System limitation",
                 gr
-                        ? "Το BMS περιόρισε το ρεύμα — μειωμένη αξιοπιστία"
-                        : "BMS current limiting detected — reduced accuracy"
+                        ? "Παρατηρήθηκε περιορισμός φορτίου — αιτία μη επιβεβαιωμένη"
+                        : "Load limitation observed — cause unverified"
         );
     }
 }
