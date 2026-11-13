@@ -8371,10 +8371,29 @@ startBtn.setLayoutParams(lpStart);
 
 root.addView(startBtn);
 
+// Explicit EXIT: do not force the user to begin a touch test to leave.
+Button exitBtn = new com.gel.cleaner.GelButton(this);
+exitBtn.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
+exitBtn.setTextColor(Color.WHITE);
+exitBtn.setTextSize(16f);
+GradientDrawable exitBg = new GradientDrawable();
+exitBg.setColor(0xFFE60000);
+exitBg.setCornerRadius(10);
+exitBg.setStroke(3, 0xFFFFD700);
+exitBtn.setBackground(exitBg);
+LinearLayout.LayoutParams lpExit = new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT, 120);
+lpExit.topMargin = dp(12);
+root.addView(exitBtn, lpExit);
+
 b.setView(root);
 b.setCancelable(false);
 
 final AlertDialog d = b.create();
+exitBtn.setOnClickListener(v -> {
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+    d.dismiss();
+});
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
