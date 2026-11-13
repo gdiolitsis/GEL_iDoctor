@@ -52,10 +52,16 @@ public class TouchGridTestActivity extends GELAutoActivityHook {
         root.addView(gridView);
 
         Button endButton = new com.gel.cleaner.GelButton(this);
-        endButton.setText("END TEST");
+        endButton.setText(AppLang.isGreek(this) ? "ΤΕΛΟΣ ΤΕΣΤ" : "END TEST");
         endButton.setAllCaps(false);
         endButton.setTextColor(Color.WHITE);
-        endButton.setBackgroundColor(0xFF8B0000);
+        endButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        android.graphics.drawable.GradientDrawable endBackground =
+                new android.graphics.drawable.GradientDrawable();
+        endBackground.setColor(0xFFE60000);
+        endBackground.setCornerRadius(dp(10));
+        endBackground.setStroke(dp(2), 0xFFFFD700);
+        endButton.setBackground(endBackground);
 
         FrameLayout.LayoutParams lp =
                 new FrameLayout.LayoutParams(
