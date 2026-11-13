@@ -51,3 +51,11 @@ Counts are **brace-delimited main method source lines / characters** (not whole 
 - **No final signed APK, `main` merge, or Play release without the owner's explicit approval.** One consolidated QA APK after coherent verification, never an APK per patch.
 
 **Resume point:** Verify latest exact SHA CI and Apple-specific UI audit, review remaining renderer/provenance semantics, run real panic fixtures and PDF evidence, then advance to one full Android+Apple QA APK. Re-read this file before another session if the chat is interrupted.
+
+## CI finding and isolated repairs — 13 Nov 2026
+
+- GitHub [PRO/access run 43501964709](https://github.com/gdiolitsis/GEL_iDoctor/actions/runs/43501964709) compiled Java but **failed 3 of 127 unit tests**, specifically `AppleCatalogueLookupTest.rejectsUnknownPadMiniGeneration`, `AppleModelLookupEvidenceTest.mini7DoesNotInheritMini6Hardware` and `AppleModelLookupEvidenceTest.localeAgnosticInTurkish`. These are real source regressions exposed by Apple model identity tests, not false-positive tests to disable.
+- Surgical fix `3482142`: replace overbroad `iPadSpecs.get` condition `m.contains("ipad mini")` with `m.equals("ipad mini 6")`, so an unrecognized "iPad mini 7" cannot inherit mini 6 physical specifications. Exact one-line diff matches historical QA's vetted fix.
+- Surgical fix `c223f19`: `AppleSpecs.normalize` now uses `toLowerCase(Locale.ROOT)`, not the user's locale, avoiding Turkish-I model lookup failure. Exact one-line diff.
+- New code head for verification: `c223f1955d7b4b6391854f6bab26d0a0353ada0f`; its [CI run 43502376077](https://github.com/gdiolitsis/GEL_iDoctor/actions/runs/43502376077) was **in progress when this checkpoint was written**. Do not claim all tests passed until actual conclusion inspected.
+- **Do not merge to main or build a signed candidate on failures.** The intermediate candidate Android emulator workflow remains deliberately skipped until the consolidated source is acceptance-ready.
