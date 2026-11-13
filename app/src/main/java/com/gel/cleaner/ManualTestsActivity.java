@@ -29503,12 +29503,13 @@ private void lab25CrashHistory() {
     logInfo(gr ? "Στιγμιαία δοκιμή I/O αποθηκευτικού" : "Storage I/O spot test");
     long latency = storageLatencyProbe();
     if (latency < 0) logLabelValue(gr ? "Μέτρηση" : "Reading",
-            gr ? "Μη διαθέσιμα δεδομένα." : "Data unavailable.");
+            gr ? "Η δοκιμή ανάγνωσης/εγγραφής δεν επαληθεύτηκε· η αιτία παραμένει άγνωστη."
+               : "Write/read spot test not verified; cause remains unknown.");
     else {
         logInfo("I/O: " + latency + " ms");
         logInfo(gr
-                ? "Μεμονωμένη μέτρηση αρχείου της εφαρμογής. Δεν αποδεικνύει φθορά NAND ή συνολική σταθερότητα συσκευής."
-                : "A single measurement of an app file. It does not establish NAND wear or overall device stability.");
+                ? "Μεμονωμένη εγγραφή/ανάγνωση 4 KB με επαληθευμένα bytes. Δεν πιστοποιεί υγεία NAND ή συνολική σταθερότητα."
+                : "One 4 KB file write/read with verified byte match. Not NAND health or whole-device stability.");
     }
     GELServiceLog.info("SUMMARY: CRASH_ORIGIN=UNCLEAR; HISTORY_COVERAGE="
             + (coverage.complete() ? "AVAILABLE_RECORDS_ONLY" : "UNAVAILABLE_OR_PARTIAL"));
@@ -29667,7 +29668,15 @@ private long storageLatencyProbe() {
         fos.getFD().sync();
 
         fis = new FileInputStream(f);
-        fis.read(data);
+        byte[] readBack = new byte[data.length];
+        int received = 0;
+        while (received < readBack.length) {
+            int n = fis.read(readBack, received, readBack.length - received);
+            if (n <= 0) break;
+            received += n;
+        }
+        if (!StorageIoEvidencePolicy.readbackMatches(data, readBack, received))
+            return -1L; // Unverified readback is not a successful I/O sample.
 
         long t1 = System.nanoTime();
 
