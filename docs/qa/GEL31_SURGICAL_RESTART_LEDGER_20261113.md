@@ -287,3 +287,44 @@ During physical review, the camera produced dark/black frames because the **phon
 - Source-level LCS audit against original backup: **254 unchanged**, **78 deleted and 60 added** textual lines within Lab18 (net −18). Deletions replace scientifically unsupported green claims (“NAND intact”, “controller stable”, “no filesystem/silent corruption”) and causal hardware-fault language with explicit unmeasured states. No StatFs sampling, available-space math, root conditional, original A–D numeric calculations, low-capacity prompts or completion/error handling was removed in today's patch. Reduced source size is therefore attributable to replacement of unsupported result text/boilerplate, not a missing measurement path; actual functional QA remains pending.
 - The four *legacy numerical indices* still reflect combinations of free-space percentages rather than independent NAND/controller/file-integrity tests. Their labels say **free-space pressure only** and no longer describe NAND health, controller instability, filesystem corruption or silent data corruption. Separate actual file-checksum read/write probes would be needed to claim file integrity. No such new measurement has been implemented here.
 - **Open gates:** exact-head Gradle/JUnit and Android 11/16 EL/EN, root/nonroot paths, 4.9%/5%/7%/12%/15% free-space boundaries, StatFs errors, export/PDF, user-facing Greek/English rendering and Xiaomi inspection. No APK creation, main merge or Play publication.
+
+
+## Labs 19–27 — surgical continuation and exact-head CI (13 Nov 2026)
+
+**Scope:** all patches below are in draft PR #107 at `qa/gel31-surgical-rebuild-20261113`. Exact original backup is still `69fb2ab85d0528937dc257fc19abc6722462cfc8`. No edits to `main`, protected backup, Play releases or Google Play Console; no intermediate QA APK generated.
+
+### Surgical source changes in this continuation
+
+| Lab | Scoped commits | Outcome and retained functions |
+|---|---|---|
+| **19 — RAM** | `f306944`, `7902c4b`, `4d88fd2`, `473e426` | `MemSnapshot` now marks missing mem/swap values as unavailable (−1), not measured zero; malformed numeric parsing also stays unknown. Only comparable `SwapTotal` and `SwapFree` can produce used-swap values; incomplete counters cannot yield a “Low” derived pressure grade. `ActivityManager.MemoryInfo`, original optional `/proc/meminfo` reads, root ZRAM/swap checks and UI remain. `RamEvidencePolicyTest` adds negative cases for missing, inconsistent, complete and genuine-zero swap counts. |
+| **20 — Uptime** | no new change this continuation | Confirmed the existing current source records `elapsedRealtime()`, does not reconstruct a reboot-event history from one uptime sample and treats inaccessible `oom_kill` counts as unknown. Earlier corrections remain subject to runtime QA; no unrelated modifications. |
+| **21 — Lock/Biometrics** | `6f239d9` | An unavailable/failed Keyguard read no longer means “NO PIN / no secure lock”; it is unknown, and native biometric prompting is not started on unverified state. Original biometric API checks, success/non-match/error/cancel callbacks, root infrastructure probes and user-facing path were retained. Actual live biometric/Back/lifecycle QA pending. |
+| **22 — Security patch** | `ee742c6` | Patch-age decision thresholds now use actual elapsed days (≤90 and ≤180) instead of floored `days/30` display-months; avoids classifying 119 days as within 3 months. Existing Play Protect accessibility caveats and manual verification remain. |
+| **23 — Developer options** | `39d5b18` | Missing `Settings.Global.ADB_ENABLED` or `DEVELOPMENT_SETTINGS_ENABLED` flags are **UNKNOWN** rather than default OFF. Port 5555 and pairing probes, guarded asynchronous scan and existing guidance remain. Readable flags are still configuration evidence, not ADB-exposure certification. |
+| **24 — Root / Verified Boot** | no new change this continuation | Inspected current source: root indicators and bootloader/Verified Boot are separately reported; old fabricated security-percentage verdict remains suppressed. Original indicators and helper routines remain but require source/physical-path QA before acceptance. |
+| **25 — Crash/I/O** | `33f0d1a`, `36fb5e7`, `c578607` | Original crash, ANR, DropBox coverage and app-cache 4 KB I/O test retained. A spot I/O sample now requires a full byte-for-byte readback after `FileDescriptor.sync()` before returning latency; short reads or mismatches become unknown, not success. New `StorageIoEvidencePolicyTest` checks matched, partial, corrupted, null and empty cases. This is a single app-private file round-trip, **not NAND health**. |
+| **26 — Apps footprint** | `59f8b5b` | **Removed only the blocking Usage Access preflight**: PackageManager-visible app inventory/capability signals can be inspected without UsageStats permission, while foreground time remains unavailable without it. Reports package visibility limitations and unknown percentage/ranking if no user-app coverage, rather than dividing by fictitious 1 or declaring “NORMAL”. Original AppImpactEngine and all Top Apps / traffic / heuristics remain. |
+| **27 — Privacy permissions** | `62a9c93` | **Removed only the blocking Usage Access preflight** for independent visible PackageManager permission enumeration. Explicitly counts visible packages including excluded system apps and user apps actually scanned. Missing/incomplete grants/visibility and empty findings do not prove a risk-free device; retained declared/granted permission scan, weighted ordering, top apps and full details. |
+
+**Exact immutable backup vs QA source section inventory** (bounded each from its `labN` method entry to the next lab entry, thus includes intervening helpers/section headings; these are **not isolated main-method line counts**):
+
+| Lab | Backup lines/chars | QA lines/chars |
+|---|---:|---:|
+| 19 | 245 / 8,801 | 259 / 9,927 |
+| 20 | 208 / 7,760 | 196 / 7,778 |
+| 21 | 656 / 22,817 | 612 / 22,603 |
+| 22 | 262 / 7,805 | 271 / 8,788 |
+| 23 | 335 / 8,590 | 284 / 9,394 |
+| 24 | 634 / 17,599 | 631 / 19,039 |
+| 25 | 293 / 11,874 | 302 / 12,356 |
+| 26 | 415 / 13,372 | 430 / 14,501 |
+| 27 | 370 / 11,693 | 330 / 11,988 |
+
+**Dedicated helper inventory:** Lab19 `MemSnapshot/readMemSnapshotSafe/extractKb/pressureLevel/zramDependency/humanPressureLabel` remains **107→107 source lines** (missing-data semantics changed in place); Lab19 root RAM helper block **37→37 lines**, byte-identical to backup; Lab20 OOM counter helper **17→17 lines**, byte-identical. Two new small pure-Java evidence classes/tests explicitly extend functionality without replacing these helpers. The historic reductions in Labs 20/21/23/24/27 largely reflect replacing unsupported colored scores, duplicated verdict text and API claims with qualified evidence; nonetheless source size is **not** a functional acceptance test and every original button/prompt/diagnostic path still needs runtime verification.
+
+**Source invariants:** 8/8 targeted static assertions passed at QA head `62a9c93ce8466edcf112de3a03514150c229ac4c`, checking Lab19 missing swap/parse, Lab21 Keyguard and all three biometric callbacks, Lab22 cutoff, Lab23 unknown flags, Lab25 readback, Lab26/27 no forced UsageStats gate with original inventory kept. These are source assertions, not UI/hardware validation.
+
+**CI:** `PRO access and button validation` [run 43494206800](https://github.com/gdiolitsis/GEL_iDoctor/actions/runs/43494206800) completed **successfully** on that exact source SHA. Job log explicitly confirms `:app:compileDebugJavaWithJavac`, `:app:testDebugUnitTest`, and `BUILD SUCCESSFUL in 37s`. Earlier changed source checkpoints also passed. The source-built Android emulator workflow was intentionally **skipped**, according to the agreed one-APK-at-end rule.
+
+**Still open:** Android 11 phone / Android 16 tablet (Greek/English), Lab21 real biometric prompt and cancellation/lifecycle, Lab19 malformed/partial OEM meminfo, Lab22 absent/future patches, Lab23 settings unreadable and async ports, Lab25 cache readback failure, Labs26/27 denied Usage Access and Android package visibility, exporter/PDF captions/log severity, Xiaomi owner acceptance, and full 31-Lab regression. A successful compile or JUnit run does not certify any of those runtime results.
