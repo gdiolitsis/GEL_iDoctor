@@ -10158,6 +10158,11 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
 if (!isFinishing() && !isDestroyed()) {
     d.show();
     com.gel.cleaner.GelButtonLayout.fitDialog(d);
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        if (d.isShowing() && !AppTTS.isMuted(this)) {
+            AppTTS.ensureSpeak(this, messageText);
+        }
+    }, 120);
 }
         
         yes.setOnClickListener(v -> {
