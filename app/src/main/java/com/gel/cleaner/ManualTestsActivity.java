@@ -28275,6 +28275,7 @@ try {
 
         long diffDays   = (now - patchTime) / (1000L * 60 * 60 * 24);
         long diffMonths = diffDays / 30;
+        // Use actual elapsed days for alert boundaries; the display months are approximate.
         if (diffDays < 0) {
             logInfo(gr ? "Η ημερομηνία patch είναι μελλοντική — δεν εκδόθηκε αξιολόγηση."
                        : "Patch date is in the future — no freshness verdict issued.");
@@ -28292,7 +28293,7 @@ try {
         logInfo(gr ? "Κατάσταση ενημέρωσης"
                    : "Patch status");
 
-        if (diffMonths <= 3) {
+        if (diffDays <= 90L) {
 
             logLabelValue(
                     gr ? "Ημερομηνία patch" : "Patch date",
@@ -28300,7 +28301,7 @@ try {
                        : "Recent as reported by Android — does not prove absence of vulnerabilities"
             );
 
-        } else if (diffMonths <= 6) {
+        } else if (diffDays <= 180L) {
 
             logLabelWarnValue(
                     gr ? "Κίνδυνος" : "Risk",
