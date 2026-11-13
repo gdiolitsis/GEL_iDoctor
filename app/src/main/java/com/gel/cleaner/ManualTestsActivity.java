@@ -7737,6 +7737,7 @@ private void playAnswerCheckWav() {
     final int resId = gr ? R.raw.answercheck_el : R.raw.answercheck_en;
 
     MediaPlayer mp = new MediaPlayer();
+    boolean playbackStarted = false;
 
     try {
         AssetFileDescriptor afd =
@@ -7755,16 +7756,24 @@ private void playAnswerCheckWav() {
 
         mp.prepare();
         mp.start();
+        playbackStarted = true;
 
         int dur = 0;
         try { dur = mp.getDuration(); } catch (Throwable ignore) {}
         SystemClock.sleep(dur > 0 ? dur : 1800);
 
-    } catch (Throwable ignore) {
-
+    } catch (Throwable failure) {
+        logLabelWarnValue(
+                gr ? "LAB 4 PRO — Αναπαραγωγή" : "LAB 4 PRO — Playback",
+                gr ? "Δεν αναπαράχθηκε έγκυρα το δείγμα — χωρίς επιβεβαίωση ακοής"
+                   : "Reference sample failed — no hearing confirmation");
     } finally {
         try { mp.stop(); } catch (Throwable ignore) {}
         try { mp.release(); } catch (Throwable ignore) {}
+    }
+    if (!playbackStarted || isFinishing() || isDestroyed()) {
+        runOnUiThread(this::enableSingleExportButton);
+        return;
     }
 
     // ❗ ΔΕΝ αλλάζουμε route εδώ
@@ -7802,7 +7811,7 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
                         android.R.style.Theme_Material_Dialog_NoActionBar
                 );
 
-        b.setCancelable(false);
+        b.setCancelable(true);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -7847,7 +7856,7 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
         noBtn.setTextColor(Color.WHITE);
 
         GradientDrawable noBg = new GradientDrawable();
-        noBg.setColor(0xFF8B0000);
+        noBg.setColor(0xFFE60000);
         noBg.setCornerRadius(dp(10));
         noBg.setStroke(dp(3), 0xFFFFD700);
 
@@ -7857,10 +7866,10 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
         Button yesBtn = new com.gel.cleaner.GelButton(this);
         yesBtn.setText(gr ? "ΝΑΙ" : "YES");
         yesBtn.setAllCaps(false);
-        yesBtn.setTextColor(Color.WHITE);
+        yesBtn.setTextColor(Color.BLACK);
 
         GradientDrawable yesBg = new GradientDrawable();
-        yesBg.setColor(0xFF0B5F3B);
+        yesBg.setColor(0xFF39FF14);
         yesBg.setCornerRadius(dp(10));
         yesBg.setStroke(dp(3), 0xFFFFD700);
 
@@ -7882,6 +7891,14 @@ private void showAnswerCheckConfirmation(Runnable onAnswered) {
             );
         }
 
+        d.setCanceledOnTouchOutside(false);
+        d.setOnCancelListener(dialog -> {
+            try { AppTTS.stop(); } catch (Throwable ignore) {}
+            logLabelWarnValue(gr ? "LAB 4 PRO — Επιβεβαίωση" : "LAB 4 PRO — Confirmation",
+                    gr ? "Ακυρώθηκε — δεν καταγράφηκε αποτέλεσμα ακρόασης"
+                       : "Canceled — no hearing result recorded");
+            enableSingleExportButton();
+        });
         d.setOnDismissListener(dialog -> {
             try { AppTTS.stop(); } catch (Throwable ignore) {}
         });
