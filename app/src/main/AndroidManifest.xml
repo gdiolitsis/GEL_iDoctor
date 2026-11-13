@@ -226,9 +226,13 @@
             android:name=".DiagnosisMenuActivity"
             android:exported="false"/>
 
+        <!-- Preserve an active diagnostic screen when the phone is raised to
+             the ear. Sensor measurements still observe physical movement. -->
         <activity
             android:name=".ManualTestsActivity"
-            android:exported="false"/>
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
         <!-- ================= REMOTE DEVICE DIAGNOSTICS & SUPPORT / TECHNICIAN ================= -->
         <activity
