@@ -33506,77 +33506,59 @@ final boolean gr = AppLang.isGreek(this);
 
 if (requestCode == REQ_LAB6_TOUCH) {
 
-    int total = TouchGridTestActivity.getTotalZones();
-    int remaining = TouchGridTestActivity.getRemainingZones();
+    // Use data produced by THIS grid run, not process-static counts from a prior run.
+    boolean fresh = data != null
+            && data.hasExtra(TouchGridTestActivity.EXTRA_TOTAL_ZONES)
+            && data.hasExtra(TouchGridTestActivity.EXTRA_REMAINING_ZONES);
+    int total = fresh ? data.getIntExtra(TouchGridTestActivity.EXTRA_TOTAL_ZONES, -1) : -1;
+    int remaining = fresh ? data.getIntExtra(TouchGridTestActivity.EXTRA_REMAINING_ZONES, -1) : -1;
+    boolean valid = fresh && total == 96 && remaining >= 0 && remaining <= total;
 
     appendHtml("<br>");
     logLine();
     logSection(gr ? "LAB 6 — Οθόνη / Αφή" : "LAB 6 — Display / Touch");
     logLine();
 
-    if (resultCode == RESULT_OK) {
-
+    if (resultCode == RESULT_OK && valid && remaining == 0) {
         logLabelOkValue(
                 gr ? "Έλεγχος αφής" : "Touch grid test",
-                gr ? "Ολοκληρώθηκε" : "Completed"
-        );
-
-        logLabelOkValue(
-                gr ? "Ζώνες οθόνης" : "Screen zones",
-                gr ? "Όλες οι ζώνες ανταποκρίθηκαν" : "All zones responded"
-        );
-
-        logLabelOkValue(
-                gr ? "Νεκρές ζώνες" : "Dead zones",
-                gr ? "Δεν εντοπίστηκαν" : "Not detected"
-        );
-
+                gr ? "Καταγράφηκαν και οι 96 ζώνες" : "All 96 targets registered");
+        logLabelValue(
+                gr ? "Περιορισμός" : "Limitation",
+                gr ? "Δεν αποδεικνύεται απουσία ghost touches ή πλήρης ακεραιότητα digitizer"
+                   : "Does not prove absence of ghost touches or full digitizer integrity");
+    } else if (resultCode == RESULT_CANCELED) {
+        logLabelWarnValue(
+                gr ? "Έλεγχος αφής" : "Touch grid test",
+                gr ? "Διακόπηκε — δεν προκύπτει διάγνωση βλάβης"
+                   : "Stopped — no hardware fault inferred");
+        if (valid) {
+            logLabelValue(
+                    gr ? "Στόχοι που πατήθηκαν" : "Targets touched",
+                    (total - remaining) + " / " + total);
+        }
     } else {
-
         logLabelWarnValue(
                 gr ? "Έλεγχος αφής" : "Touch grid test",
-                gr ? "Μη ολοκληρωμένος" : "Incomplete"
-        );
-
-        logLabelErrorValue(
-                gr ? "Μη ανταποκρινόμενες ζώνες" : "Unresponsive zones",
-                remaining + " / " + total
-        );
-
-        logInfo(gr ? "Ερμηνεία:" : "Interpretation:");
-
-        logLabelWarnValue(
-                gr ? "Πιθανή αιτία" : "Possible cause",
-                gr
-                        ? "Τοπικές νεκρές ζώνες digitizer"
-                        : "Localized digitizer dead zones"
-        );
-
-        logLabelOkValue(
-                gr ? "Σύσταση" : "Recommendation",
-                gr
-                        ? "Επαναλάβετε χειροκίνητα τον έλεγχο για επιβεβαίωση"
-                        : "Manual re-test to confirm behavior"
-        );
+                gr ? "Μη επαρκή ή ασυνεπή δεδομένα — ΑΓΝΩΣΤΟ"
+                   : "Missing or inconsistent evidence — UNKNOWN");
     }
 
+    // Keep the original independent visual-inspection stage available.
     appendHtml("<br>");
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Επόμενο βήμα" : "Next step",
-            gr
-                    ? "LAB 6 PRO — Χρώμα & Ομοιομορφία Οθόνης"
-                    : "LAB 6 PRO — Display Color & Uniformity"
-    );
+            gr ? "LAB 6 PRO — Χρώμα & Ομοιομορφία Οθόνης"
+               : "LAB 6 PRO — Display Color & Uniformity");
     logLine();
 
     startActivityForResult(
             new Intent(this, DisplayProTestActivity.class),
-            REQ_LAB6_COLOR
-    );
-
+            REQ_LAB6_COLOR);
     return;
 }
 
+// ============================================================
 // ============================================================
 // LAB 6 PRO — DISPLAY COLOR / UNIFORMITY / ARTIFACTS
 // ============================================================
