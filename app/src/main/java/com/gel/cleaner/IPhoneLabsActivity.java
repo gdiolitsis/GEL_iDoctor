@@ -1260,14 +1260,19 @@ for (Uri uri : uris) {
     if (is == null) continue;
 
     String text;
-
-    if (looksLikeZip(safeName)) {
-        text = readPanicFromZip(is);
-    } else {
-        text = readTextStream(is);
+    try {
+        // SAF providers can return opaque names: inspect the ZIP magic, too.
+        BufferedInputStream source = new BufferedInputStream(is);
+        source.mark(8);
+        int first = source.read(), second = source.read();
+        source.reset();
+        boolean zipMagic = first == 'P' && second == 'K';
+        text = (zipMagic || looksLikeZip(safeName))
+                ? readPanicFromZip(source)
+                : readTextStream(source);
+    } finally {
+        try { is.close(); } catch (Throwable ignore) {}
     }
-
-    try { is.close(); } catch (Throwable ignore) {}
 
     if (text == null || text.trim().isEmpty()) {
 
@@ -1286,6 +1291,13 @@ for (Uri uri : uris) {
                 safe(safeName)
         );
 
+        continue;
+    }
+    // An arbitrary text file (or Jetsam-only report) is not panic evidence.
+    if (!ApplePanicEvidencePolicy.hasPanicEvidence(text)) {
+        logLabelWarnValue(
+                gr ? "Δεν βρέθηκε πραγματικό panic:" : "No supported panic evidence:",
+                safe(safeName));
         continue;
     }
 
@@ -1317,9 +1329,12 @@ for (Uri uri : uris) {
                     : "All files were empty.");
         }
 
-        panicLogCount = appendMode
-        ? panicLogCount + loadedCount
-        : loadedCount;
+        // Count eligible entries, not ZIP containers or unsupported wrappers.
+        int supportedBlocks = countSupportedPanicBlocks(
+                allLogs.toString().split("(?m)^===== ZIP FILE:"));
+        if (supportedBlocks == 0)
+            throw new java.io.IOException("No supported panic entries");
+        panicLogCount = supportedBlocks;
 
 panicLogName = (panicLogCount == 1)
         ? (gr ? "Ένα panic log"
@@ -1840,6 +1855,15 @@ if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
 // ============================================================
 // LAB 5 — PANIC FREQUENCY ANALYZER (Multi-File Correlation)
 // ============================================================
+private int countSupportedPanicBlocks(String[] blocks) {
+    int valid = 0;
+    if (blocks != null) {
+        for (String block : blocks)
+            if (ApplePanicEvidencePolicy.hasPanicEvidence(block)) valid++;
+    }
+    return valid;
+}
+
 private void runPanicFrequencyLab() {
     if (!guardPanicLog()) return;
 
@@ -1854,7 +1878,7 @@ private void runPanicFrequencyLab() {
 
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
-    if (blocks.length <= 1) {
+    if (countSupportedPanicBlocks(blocks) <= 1) {
         logWarn(gr
                 ? "Δεν υπάρχουν πολλαπλά logs για σύγκριση."
                 : "No multiple logs detected for comparison.");
@@ -1865,7 +1889,7 @@ java.util.Map<String, Integer> crashCount = new java.util.HashMap<>();
 
 for (String block : blocks) {
 
-    if (block == null || block.trim().isEmpty())
+    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
         continue;
 
     resetSignatureCache();
@@ -1908,7 +1932,7 @@ private void runPanicClusteringLab() {
 
 String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
-if (blocks.length <= 1) {
+if (countSupportedPanicBlocks(blocks) <= 1) {
     logWarn(gr
             ? "Δεν υπάρχουν πολλαπλά logs για clustering."
             : "No multiple logs available for clustering.");
@@ -1919,7 +1943,7 @@ java.util.Map<String, Integer> domainCount = new java.util.HashMap<>();
 
 for (String block : blocks) {
 
-    if (block == null || block.trim().isEmpty())
+    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
         continue;
 
     resetSignatureCache();
@@ -2564,7 +2588,8 @@ private String readTextStream(InputStream is) throws Exception {
 
     while ((read = bis.read(buf)) != -1) {
         total += read;
-        if (total > MAX_TEXT_BYTES) break;
+        if (total > MAX_TEXT_BYTES)
+            throw new java.io.IOException("Imported text exceeds size cap; no partial evidence accepted");
         bos.write(buf, 0, read);
     }
 
@@ -2579,55 +2604,12 @@ private String readTextStream(InputStream is) throws Exception {
 }
 
 private String readPanicFromZip(InputStream is) throws Exception {
-
-    ZipInputStream zis = new ZipInputStream(new BufferedInputStream(is));
-    ZipEntry entry;
-    int scanned = 0;
-
-    try {
-
-StringBuilder all = new StringBuilder();
-
-while ((entry = zis.getNextEntry()) != null && scanned < ZIP_SCAN_CAP) {
-
-    scanned++;
-
-    String name = entry.getName().toLowerCase(Locale.US);
-
-    boolean candidate =
-            name.contains("panic") ||
-            name.endsWith(".ips") ||
-            name.endsWith(".log") ||
-            name.endsWith(".txt");
-
-    if (!candidate) continue;
-
-    String text = readTextStream(zis);
-
-    if (text != null && !text.trim().isEmpty()) {
-
-        all.append("\n\n===== ZIP FILE: ")
-           .append(name)
-           .append(" =====\n\n")
-           .append(text);
-    }
+    // Count every entry, bound decompression and keep the parent ZIP stream alive.
+    return ApplePanicArchiveReader.read(is, ZIP_SCAN_CAP,
+            MAX_TEXT_BYTES, MAX_PANIC_LOG_SIZE).text;
 }
 
-if (all.length() > 0) {
-    return all.toString();
-}
-
-    } finally {
-        try { zis.close(); } catch (Throwable ignore) {}
-    }
-
-    throw new Exception(
-            AppLang.isGreek(this)
-                    ? "Δεν βρέθηκε αναγνώσιμο panic log μέσα στο ZIP (πιθανώς κατεστραμμένο αρχείο)."
-                    : "No readable panic entry found in ZIP (file may be corrupted)."
-    );
-}
-
+// ============================================================
 // ============================================================
 // SIGNATURE PARSER STATE (CANONICAL - DO NOT LOCALIZE)
 // ============================================================
