@@ -410,3 +410,17 @@ The Apple source-only continuation in [APPLE_8LAB_SURGICAL_CONTINUATION_20261113
 
 
 **Apple source CI final status (13 Nov):** Exact production-source SHA `24ec3da3802e70cbff2959f157b1c68509e667ce` passed [run 43502939219](https://github.com/gdiolitsis/GEL_iDoctor/actions/runs/43502939219): Java compile, `testDebugUnitTest`, `BUILD SUCCESSFUL in 39s`. This resolves the prior pending status for that source; only documentation commits follow. The unified Android+Apple emulator UI matrix, real .ips import fixtures, PDF report consistency, physical-device acceptance and owner-approved signed QA APK are **not** passed by this green unit build.
+
+
+### 13 Nov 2026 — Owner's currently installed GitHub APK: signing continuity reference
+
+The owner supplied the currently installed, Google-login-working artifact `GEL_iDoctor_v53_release_signed_QA.apk` for independent local metadata inspection, alongside their Firebase `google-services.json`. **No credentials, signing key or Firebase configuration file is committed to the repository.**
+
+- Actual packaged manifest: `com.gel.iDoctor`, `versionCode=53`, `versionName=5.3`, `minSdkVersion=26`, `targetSdkVersion=36`.
+- Actual APK signed with APK Signing Block v2 **and** v3; both list the same signing certificate as its JAR certificate:
+  - Signing cert **SHA-1:** `95:E8:AC:B4:4B:45:B2:B7:66:4E:52:B3:1B:B0:D6:97:86:A9:E8:DD`
+  - Signing cert **SHA-256:** `73:B2:C3:61:44:A1:C8:14:C9:2F:EA:0E:E7:1A:6B:E4:08:C2:F1:11:DB:20:BD:DE:A2:4F:95:AD:95:8B:09:64`
+- Artifact file **SHA-256** (identity of uploaded QA APK bytes, not the signing-certificate fingerprint): `586FDFC73E23068F644A8E90A8596DD1D17690FB36862B4778CC6AEA92959B56`.
+- The SHA-1 exactly matches one Android OAuth certificate fingerprint registered for package `com.gel.iDoctor` in the user's supplied Firebase project. This corroborates working Google login, **not** Play Store signing-key equivalence.
+- **Mandatory next-candidate gate:** prove that the proposed GitHub release signing keystore actually emits *this exact signing certificate SHA-256*. Repository workflow references signing secrets, but existence/equivalence of those secrets was **not verified**. A new APK signed by an unrelated cert cannot update the installed app in place. Keep unchanged package identity, do not lower versionCode (prefer >53 for a new installable upgrade), verify the exact APK with `apksigner verify --verbose --print-certs`, `aapt2 dump badging`, and a non-destructive upgrade test. **Never advise uninstalling the existing functional APK as a workaround** without explicit user approval and data backup.
+- This checkpoint is a signing reference only: no new APK built, signing key obtained, emulator acceptance completed, or Play/main changed by this inspection.
