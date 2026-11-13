@@ -14,6 +14,16 @@ public final class ThermalEvidencePolicy {
         return hiddenHigh ? Math.min(score, 75) : score;
     }
 
+    /** A green snapshot observation requires actual accessible CPU/GPU data,
+     *  a plausible finite temperature, and no current Android thermal limitation.
+     *  This never certifies the whole device or unexposed sensors. */
+    public static boolean supportsScopedNormal(int totalReadings, int internalReadings,
+                                               float peakC, boolean osLimited) {
+        return totalReadings > 0 && internalReadings > 0
+                && Float.isFinite(peakC) && peakC >= 0f && peakC < 45f
+                && !osLimited;
+    }
+
     /** A snapshot cannot demonstrate historical thermal spikes. */
     public static String pattern(int score, boolean highObserved) {
         // Never hide a real critical reading or Android thermal warning
