@@ -11478,6 +11478,9 @@ logLabelValue(gr ? "Πρόταση" : "Recommendation", recommendation);
 // ============================================================
 // LAB 12 — Call Function Interpretation (Laboratory)
 // ============================================================
+private static final int REQ_LAB12_DIALER = 12120;
+private boolean lab12DialerPending = false;
+
 private void lab12CallFunctionInterpretation() {
 
     final boolean gr = AppLang.isGreek(this);
@@ -11498,6 +11501,7 @@ private void lab12CallFunctionInterpretation() {
         logInfo(gr
                 ? "Η Λειτουργία Πτήσης είναι ΕΝΕΡΓΗ. Τα voice radio interfaces είναι σκόπιμα απενεργοποιημένα."
                 : "Airplane mode is ENABLED. Voice radio interfaces are intentionally disabled.");
+        runOnUiThread(this::lab12ShowCallConsent);
         return;
     }
 
@@ -11516,6 +11520,7 @@ private void lab12CallFunctionInterpretation() {
                   + "Δεν βγαίνει λειτουργικό συμπέρασμα."
                 : "Voice service availability depends on SIM readiness. "
                   + "No functional verdict inferred.");
+        runOnUiThread(this::lab12ShowCallConsent);
         return;
     }
 
@@ -11591,6 +11596,206 @@ private void lab12CallFunctionInterpretation() {
     appendHtml("<br>");
     logOk(gr ? "Το Lab 12 ολοκληρώθηκε." : "Lab 12 finished.");
     logLine();
+    runOnUiThread(this::lab12ShowCallConsent);
+}
+
+
+/**
+ * Four optional call prompts use an explicit dark GEL surface. No call is
+ * initiated by the app: the user must place one in the empty dialer.
+ */
+private void lab12ShowDialog(String titleText, String messageText,
+                             String positiveText, Runnable positive,
+                             String negativeText, Runnable negative,
+                             Runnable canceled) {
+    if (isFinishing() || isDestroyed()) {
+        if (canceled != null) canceled.run();
+        return;
+    }
+    LinearLayout panel = new LinearLayout(this);
+    panel.setOrientation(LinearLayout.VERTICAL);
+    panel.setPadding(dp(22), dp(20), dp(22), dp(20));
+    GradientDrawable panelBg = new GradientDrawable();
+    panelBg.setColor(0xFF101010);
+    panelBg.setCornerRadius(dp(12));
+    panelBg.setStroke(dp(3), 0xFFFFD700);
+    panel.setBackground(panelBg);
+
+    TextView heading = new TextView(this);
+    heading.setText(titleText);
+    heading.setTextColor(Color.WHITE);
+    heading.setTypeface(null, Typeface.BOLD);
+    heading.setTextSize(18f);
+    heading.setGravity(Gravity.CENTER);
+    panel.addView(heading);
+
+    TextView message = new TextView(this);
+    message.setText(messageText);
+    message.setTextColor(0xFF39FF14);
+    message.setTextSize(15f);
+    message.setLineSpacing(0f, 1.12f);
+    message.setPadding(0, dp(14), 0, dp(14));
+    panel.addView(message);
+
+    AlertDialog dialog = new AlertDialog.Builder(
+            this, android.R.style.Theme_Material_Dialog_NoActionBar)
+            .setView(panel).create();
+    dialog.setCanceledOnTouchOutside(false);
+    dialog.setOnCancelListener(ignored -> {
+        if (canceled != null) canceled.run();
+    });
+
+    Button yes = lab12DialogButton(positiveText, 0xFF39FF14, Color.BLACK);
+    Button no = lab12DialogButton(negativeText, 0xFFE60000, Color.WHITE);
+    LinearLayout.LayoutParams yesLp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    yesLp.bottomMargin = dp(10);
+    panel.addView(yes, yesLp);
+    panel.addView(no, new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+    yes.setOnClickListener(v -> {
+        dialog.dismiss();
+        if (positive != null) positive.run();
+    });
+    no.setOnClickListener(v -> {
+        dialog.dismiss();
+        if (negative != null) negative.run();
+    });
+    dialog.show();
+    if (dialog.getWindow() != null) {
+        dialog.getWindow().setBackgroundDrawable(
+                new ColorDrawable(Color.TRANSPARENT));
+    }
+    com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
+}
+
+private Button lab12DialogButton(String label, int bgColor, int textColor) {
+    Button button = new com.gel.cleaner.GelButton(this);
+    button.setText(label);
+    button.setAllCaps(false);
+    button.setTextColor(textColor);
+    button.setTypeface(null, Typeface.BOLD);
+    button.setTextSize(15f);
+    GradientDrawable bg = new GradientDrawable();
+    bg.setColor(bgColor);
+    bg.setCornerRadius(dp(10));
+    bg.setStroke(dp(2), 0xFFFFD700);
+    button.setBackground(bg);
+    return button;
+}
+
+private void lab12ShowCallConsent() {
+    if (lab12DialerPending || isFinishing() || isDestroyed()) return;
+    final boolean gr = AppLang.isGreek(this);
+    lab12ShowDialog(
+            gr ? "LAB 12 — Προαιρετική πραγματική κλήση" : "LAB 12 — Optional real call",
+            gr ? "Θέλεις να ελέγξεις πραγματική κλήση με άτομο που συμφωνεί; "
+                 + "Θα ανοίξει κενός τηλεφωνητής. Εσύ αποφασίζεις αν θα καλέσεις. "
+                 + "Μη χρησιμοποιείς αριθμούς έκτακτης ανάγκης. Ενδέχεται να υπάρχουν χρεώσεις. "
+                 + "Δεν καταγράφονται αριθμοί, ήχος ή συνομιλίες."
+               : "Test a real call with a consenting person? An empty dialer will open; "
+                 + "you decide whether to call. Do not test with emergency numbers. "
+                 + "Carrier charges may apply. No numbers, audio or conversations are recorded.",
+            gr ? "ΑΝΟΙΓΜΑ ΤΗΛΕΦΩΝΟΥ" : "OPEN DIALER",
+            this::lab12OpenDialer,
+            gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP",
+            () -> lab12ReportGuided(Lab12CallEvidence.Guided.NOT_TESTED),
+            () -> lab12ReportGuided(Lab12CallEvidence.Guided.NOT_TESTED));
+}
+
+private void lab12OpenDialer() {
+    if (lab12DialerPending) return;
+    final boolean gr = AppLang.isGreek(this);
+    lab12DialerPending = true;
+    if (btnExport != null) {
+        btnExport.setEnabled(false);
+        btnExport.setAlpha(0.5f);
+    }
+    try {
+        // ACTION_DIAL without a number never calls or verifies a connection.
+        startActivityForResult(new Intent(Intent.ACTION_DIAL), REQ_LAB12_DIALER);
+    } catch (RuntimeException e) {
+        lab12DialerPending = false;
+        logLabelWarnValue(gr ? "Τηλεφωνητής" : "Dialer",
+                gr ? "Δεν άνοιξε — η κλήση δεν επαληθεύτηκε"
+                   : "Unavailable — call not verified");
+        lab12ReportGuided(Lab12CallEvidence.Guided.NOT_TESTED);
+    }
+}
+
+private void lab12AfterDialerReturn() {
+    final boolean gr = AppLang.isGreek(this);
+    lab12ShowDialog(
+            gr ? "LAB 12 — Έγινε πραγματική κλήση;" : "LAB 12 — Was a call made?",
+            gr ? "Πραγματοποίησες και ολοκλήρωσες πραγματική κλήση; "
+                 + "Αν άνοιξες μόνο τον τηλεφωνητή, επίλεξε ΟΧΙ."
+               : "Did you complete a real call? Choose NO if you only opened the dialer.",
+            gr ? "ΝΑΙ" : "YES",
+            this::lab12AskHearOther,
+            gr ? "ΟΧΙ" : "NO",
+            () -> lab12ReportGuided(Lab12CallEvidence.Guided.NOT_TESTED),
+            () -> lab12ReportGuided(Lab12CallEvidence.Guided.INCONCLUSIVE));
+}
+
+private void lab12AskHearOther() {
+    final boolean gr = AppLang.isGreek(this);
+    lab12ShowDialog(
+            gr ? "LAB 12 — Ήχος λήψης" : "LAB 12 — Receive audio",
+            gr ? "Κατά την πραγματική κλήση άκουγες καθαρά τον συνομιλητή σου; "
+                 + "Δεν έχει ταυτοποιηθεί η συγκεκριμένη διαδρομή ήχου."
+               : "Could you hear the other person clearly during the call? "
+                 + "The specific audio route is not independently verified.",
+            gr ? "ΝΑΙ" : "YES",
+            () -> lab12AskOtherHeardUser(true),
+            gr ? "ΟΧΙ" : "NO",
+            () -> lab12AskOtherHeardUser(false),
+            () -> lab12ReportGuided(Lab12CallEvidence.Guided.INCONCLUSIVE));
+}
+
+private void lab12AskOtherHeardUser(boolean heardOther) {
+    final boolean gr = AppLang.isGreek(this);
+    lab12ShowDialog(
+            gr ? "LAB 12 — Ήχος μετάδοσης" : "LAB 12 — Transmit audio",
+            gr ? "Ο συνομιλητής επιβεβαίωσε ότι σε άκουγε; "
+                 + "Απάντησε μόνο βάσει της πραγματικής συνομιλίας."
+               : "Did the other person confirm they could hear you? "
+                 + "Answer only from the actual call.",
+            gr ? "ΝΑΙ" : "YES",
+            () -> lab12ReportGuided(Lab12CallEvidence.userReport(true, true, heardOther, true)),
+            gr ? "ΟΧΙ" : "NO",
+            () -> lab12ReportGuided(Lab12CallEvidence.userReport(true, true, heardOther, false)),
+            () -> lab12ReportGuided(Lab12CallEvidence.Guided.INCONCLUSIVE));
+}
+
+private void lab12ReportGuided(Lab12CallEvidence.Guided outcome) {
+    final boolean gr = AppLang.isGreek(this);
+    lab12DialerPending = false;
+    appendHtml("<br>");
+    switch (outcome) {
+        case USER_REPORTED_TWO_WAY_AUDIO:
+            logLabelValue(gr ? "Πραγματική κλήση (αναφορά χρήστη)" : "Real call (user report)",
+                    gr ? "Αναφέρθηκε αμφίδρομος ήχος — όχι ανεξάρτητη μέτρηση"
+                       : "Two-way audio reported — not independently measured");
+            break;
+        case USER_REPORTED_ONE_WAY_OR_AUDIO_ISSUE:
+            logLabelWarnValue(gr ? "Πραγματική κλήση (αναφορά χρήστη)" : "Real call (user report)",
+                    gr ? "Αναφέρθηκε πρόβλημα ήχου — δεν αποδεικνύεται βλάβη συσκευής"
+                       : "Audio issue reported — not proof of device failure");
+            break;
+        case INCONCLUSIVE:
+            logLabelWarnValue(gr ? "Πραγματική κλήση" : "Real call",
+                    gr ? "Διακοπή ή ελλιπής απάντηση — ΑΓΝΩΣΤΟ"
+                       : "Canceled or incomplete response — UNKNOWN");
+            break;
+        default:
+            logLabelValue(gr ? "Πραγματική κλήση" : "Real call",
+                    gr ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ" : "NOT TESTED");
+    }
+    logInfo(gr ? "Η εφαρμογή δεν καταγράφει τηλεφωνικούς αριθμούς, ήχο ή περιεχόμενο κλήσης."
+               : "No phone numbers, audio, or call content are recorded by the app.");
+    logLine();
+    enableSingleExportButton();
 }
 
 // ============================================================
@@ -33497,6 +33702,15 @@ short[] buffer = new short[samples];
 @Override
 protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
+
+    // Returning from an empty dialer is not proof a call was placed.
+    if (requestCode == REQ_LAB12_DIALER) {
+        if (lab12DialerPending) {
+            lab12DialerPending = false;
+            lab12AfterDialerReturn();
+        }
+        return;
+    }
 
 // ============================================================
 // LAB 6 — TOUCH GRID
