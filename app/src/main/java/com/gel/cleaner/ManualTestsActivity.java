@@ -8991,9 +8991,35 @@ root.addView(msg);
     start.setLayoutParams(lp);
     root.addView(start);
 
+    Button exit = new com.gel.cleaner.GelButton(this);
+    exit.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
+    exit.setAllCaps(false);
+    exit.setTextColor(Color.WHITE);
+    GradientDrawable exitBg = new GradientDrawable();
+    exitBg.setColor(0xFFE60000);
+    exitBg.setCornerRadius(dp(10));
+    exitBg.setStroke(dp(3), 0xFFFFD700);
+    exit.setBackground(exitBg);
+    LinearLayout.LayoutParams exitLp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, dp(56));
+    exitLp.setMargins(0, dp(12), 0, 0);
+    root.addView(exit, exitLp);
+
     b.setView(root);
 
 final AlertDialog d = b.create();
+exit.setOnClickListener(v -> {
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+    d.dismiss();
+});
+d.setOnKeyListener((dialog, keyCode, event) -> {
+    if (keyCode == KeyEvent.KEYCODE_BACK
+            && event.getAction() == KeyEvent.ACTION_UP) {
+        d.dismiss();
+        return true;
+    }
+    return false;
+});
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
@@ -9016,6 +9042,11 @@ start.setOnClickListener(v -> {
 if (!isFinishing() && !isDestroyed()) {
     d.show();
     com.gel.cleaner.GelButtonLayout.fitDialog(d);
+    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        if (d.isShowing() && !AppTTS.isMuted(this)) {
+            AppTTS.ensureSpeak(this, messageText);
+        }
+    }, 120);
 }
 
 }  
