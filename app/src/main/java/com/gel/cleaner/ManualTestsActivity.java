@@ -28205,8 +28205,7 @@ try {
         if (diffDays < 0) {
             logInfo(gr ? "Η ημερομηνία patch είναι μελλοντική — δεν εκδόθηκε αξιολόγηση."
                        : "Patch date is in the future — no freshness verdict issued.");
-            return;
-        }
+        } else {
 
         logInfo(gr ? "Ηλικία ενημέρωσης ασφαλείας"
                    : "Patch age");
@@ -28243,6 +28242,7 @@ try {
                     gr ? "ΠΑΛΙΑ (λείπουν πρόσφατες διορθώσεις ασφαλείας)"
                        : "OUTDATED (missing recent security fixes)"
             );
+        }
         }
     }
 } catch (Throwable e) {
