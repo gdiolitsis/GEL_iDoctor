@@ -27115,11 +27115,8 @@ private void lab19RamSnapshot() {
                 (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
         if (am == null) {
-            logLabelErrorValue(
-                    gr ? "Υπηρεσία" : "Service",
-                    gr ? "Η υπηρεσία μνήμης δεν είναι διαθέσιμη"
-                       : "Memory service not available"
-            );
+            logInfo(gr ? "Υπηρεσία RAM μη διαθέσιμη — το Lab 19 δεν εκτελέστηκε."
+                       : "RAM service unavailable — Lab 19 not run.");
             return;
         }
 
@@ -27128,6 +27125,11 @@ private void lab19RamSnapshot() {
 
         long total = mi.totalMem;
         long free  = mi.availMem;
+        if (total <= 0L || free < 0L || free > total) {
+            logInfo(gr ? "Οι μετρήσεις RAM δεν είναι έγκυρες — δεν εκδόθηκε συμπέρασμα."
+                       : "RAM readings invalid — no outcome issued.");
+            return;
+        }
         long used  = total - free;
 
         int pctFree = (int) ((free * 100L) / Math.max(1L, total));
@@ -27136,7 +27138,7 @@ private void lab19RamSnapshot() {
         // BASIC SNAPSHOT
         // ------------------------------------------------------------
         logInfo(gr ? "Τρέχουσα χρήση RAM:" : "Current RAM usage:");
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Χρήση" : "Usage",
                 humanBytes(used) +
                         (gr ? " χρησιμοποιούνται / " : " used / ") +
@@ -27171,20 +27173,20 @@ private void lab19RamSnapshot() {
                 );
                 break;
             case NO_OS_LOW_MEMORY_SIGNAL:
-                logLabelOkValue(
+                logLabelValue(
                         gr ? "Κατάσταση" : "Status",
                         gr ? "Δεν αναφέρθηκε κατάσταση low-memory από Android"
                            : "Android has not reported a low-memory condition"
                 );
                 break;
             default:
-                logLabelWarnValue(
+                logLabelValue(
                         gr ? "Κατάσταση" : "Status",
                         gr ? "Μη επαρκή στοιχεία για πίεση RAM"
                            : "Insufficient RAM pressure evidence"
                 );
         }
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Όρια ελέγχου" : "Assessment limits",
                 gr ? "Δεν μετρήθηκαν καθυστέρηση UI, κλεισίματα εφαρμογών ή ποιότητα multitasking"
                    : "UI lag, app terminations and multitasking quality were not measured"
@@ -27196,6 +27198,11 @@ private void lab19RamSnapshot() {
         try {
 
             MemSnapshot snap = readMemSnapshotSafe();
+
+            if (snap.memFreeKb <= 0 && snap.cachedKb <= 0 && snap.swapTotalKb <= 0) {
+                logInfo(gr ? "Χαμηλού επιπέδου στοιχεία /proc/meminfo: μη διαθέσιμα."
+                           : "Low-level /proc/meminfo readings unavailable.");
+            } else {
 
             long swapUsedKb = 0;
             if (snap.swapTotalKb > 0 && snap.swapFreeKb >= 0) {
@@ -27221,39 +27228,43 @@ private void lab19RamSnapshot() {
                     : "Memory pressure indicators:");
                     logLine();
 
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Επίπεδο πίεσης" : "Pressure level",
                     pressureHuman
             );
 
-            logLabelOkValue(
+            logLabelValue(
                     "ZRAM / Swap dependency",
                     zramDep
             );
 
             if (swapUsedKb > 0) {
-                logLabelWarnValue(
+                logLabelValue(
                         gr ? "Χρήση Swap" : "Swap used",
                         humanBytes(swapUsedKb * 1024L)
                 );
             }
 
             if (snap.memFreeKb > 0) {
-                logLabelOkValue(
+                logLabelValue(
                         "MemFree",
                         humanBytes(snap.memFreeKb * 1024L)
                 );
             }
 
             if (snap.cachedKb > 0) {
-                logLabelOkValue(
+                logLabelValue(
                         "Cached",
                         humanBytes(snap.cachedKb * 1024L) +
                                 (gr ? " (επανακτήσιμη)" : " (reclaimable)")
                 );
             }
+            }
 
-        } catch (Throwable ignore) {}
+        } catch (Throwable ignored) {
+            logInfo(gr ? "Τα προαιρετικά στοιχεία μνήμης δεν ήταν προσβάσιμα."
+                       : "Optional low-level RAM metrics inaccessible.");
+        }
 
         // ------------------------------------------------------------
         // ANDROID LOW-MEMORY SIGNAL
@@ -27291,12 +27302,12 @@ private void lab19RamSnapshot() {
 
             if (zramActive || swapActive) {
 
-                logLabelWarnValue(
+                logLabelValue(
                         gr ? "Επέκταση μνήμης" : "Memory extension",
                         gr ? "Εντοπίστηκε συμπίεση / swap"
                            : "Compression / swap detected"
                 );
-                logLabelOkValue(
+                logLabelValue(
                         gr ? "Επίδραση" : "Effect",
                         gr
                                 ? "Βελτιώνει τη σταθερότητα αλλά μπορεί να μειώσει την απόδοση"
@@ -27305,7 +27316,7 @@ private void lab19RamSnapshot() {
 
             } else {
 
-                logLabelOkValue(
+                logLabelValue(
                         gr ? "Επέκταση μνήμης" : "Memory extension",
                         gr
                                 ? "Δεν εντοπίστηκε swap ή συμπίεση"
@@ -27315,7 +27326,7 @@ private void lab19RamSnapshot() {
 
             long cachedKb = readCachedMemoryKbSafe();
             if (cachedKb > 0) {
-                logLabelOkValue(
+                logLabelValue(
                         gr ? "Cached μνήμη" : "Cached memory",
                         humanBytes(cachedKb * 1024L) +
                                 (gr ? " (επανακτήσιμη από το σύστημα)"
@@ -27326,7 +27337,7 @@ private void lab19RamSnapshot() {
 
     } catch (Throwable t) {
 
-        logLabelErrorValue(
+        logLabelValue(
                 gr ? "Στιγμιότυπο RAM" : "RAM snapshot",
                 gr ? "Αποτυχία ανάγνωσης κατάστασης μνήμης"
                    : "Failed to read memory state"
@@ -27334,7 +27345,8 @@ private void lab19RamSnapshot() {
     }
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 19 ολοκληρώθηκε." : "Lab 19 finished.");
+    logInfo(gr ? "Το Lab 19 ολοκληρώθηκε ως στιγμιότυπο μνήμης."
+               : "Lab 19 completed as a memory snapshot.");
     logLine();
 }
 
