@@ -2804,6 +2804,19 @@ String[] models = "iphone".equals(type)
 ? new String[]{
 
 // =====================
+// Apple manufacturer-verified 2025–2026 models
+// =====================
+"iPhone Duo",
+"iPhone 18 Pro",
+"iPhone 18 Pro Max",
+"iPhone 17",
+"iPhone 17 Pro",
+"iPhone 17 Pro Max",
+"iPhone Air",
+"iPhone 17e",
+"iPhone 16e",
+
+// =====================
 // iPhone 16 Series
 // =====================
 "iPhone 16",
@@ -2893,7 +2906,7 @@ bg.setStroke(dp(3), 0xFFFFD700);
 root.setBackground(bg);
 
 TextView title = new TextView(this);
-title.setText("Select Apple Model");
+title.setText(AppLang.isGreek(this) ? "Επιλέξτε μοντέλο Apple" : "Select Apple Model");
 title.setTextColor(Color.WHITE);
 
 root.addView(title);
@@ -2951,7 +2964,7 @@ btn.setText("🍎 " + type.toUpperCase(Locale.US)
 
 Toast.makeText(
 this,
-"Selected: " + rawModel,
+(AppLang.isGreek(this) ? "Επιλέχθηκε: " : "Selected: ") + rawModel,
 Toast.LENGTH_SHORT
 ).show();
 
