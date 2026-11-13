@@ -28,8 +28,8 @@
 | UX-08 | Lab 12 | Four unreadable/light popups: fix local text/background contrast; preserve original call-consent and all actions. | #50, #100 | To evaluate/apply |
 | UX-09 | Lab 13 | Restore intro TTS and red SKIP/green CONTINUE; finish NOT_TESTED peripheral check neutrally, translate stray English statuses. | #51, #101, #102 | To evaluate/apply |
 | UX-10 | Global button style | Red action = #E60000 / white bold / gold outline; green = #39FF14 / black bold / gold outline; ensure labels are legible at large fonts. Do not change diagnostic statuses based on button colors. | #90–#91 | To evaluate/apply; avoid broad intrusive refactor |
-| UX-11 | Main toolbar/contact | Greek contact action and `ΑΠΟΣΤΟΛΗ` vs English `SEND`; correct accessibility labels. | #79 | To evaluate/apply |
-| UX-12 | Labs group title | Correct Greek/English last section to Labs **25–31**, not 25–30. | #79 | To evaluate/apply |
+| UX-11 | Main toolbar/contact | Greek contact action and `ΑΠΟΣΤΟΛΗ` vs English `SEND`; correct accessibility labels. | #79 | Present in QA branch (`MainActivity.java`: `contactLabel`, `btnSend`); real-device/APK verification pending |
+| UX-12 | Labs group title | Correct Greek/English last section to Labs **25–31**, not 25–30. | #79 | Present in QA branch (`values/strings.xml`, `values-el/strings.xml`: `manual_cat_7`); APK verification pending |
 | UX-13 | All Labs | Keep logs on rotation/recreation and protect active session; no landscape induced by moving phone to ear. Keep sensor physical-rotation experiment working even if UI locked portrait. | #83 | To evaluate/apply |
 | UX-14 | Reports | Preserve complete PDF and Greek evidence interpretation; audit truncation and stale/missing data. | #84, #65, #79, #102 | To evaluate/apply |
 
