@@ -8549,10 +8549,22 @@ root.addView(msg);
         );
         root.addView(start);
 
+        // Explicit exit preserves the working Android Back and TTS lifecycle.
+        Button exit = gelButton(
+                this,
+                gr ? "ΕΞΟΔΟΣ" : "EXIT",
+                0xFFE60000
+        );
+        root.addView(exit);
+
         b.setView(root);
 b.setCancelable(false);
 
 final AlertDialog d = b.create();
+exit.setOnClickListener(v -> {
+    try { AppTTS.stop(); } catch (Throwable ignore) {}
+    d.dismiss();
+});
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
