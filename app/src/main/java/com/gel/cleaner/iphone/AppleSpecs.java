@@ -72,7 +72,7 @@ public final class AppleSpecs {
     private static String normalize(String s) {
         return s
                 .trim()
-                .toLowerCase()
+                .toLowerCase(java.util.Locale.ROOT)
                 .replace("series", "")
                 .replaceAll("\\s+", " ")
                 .trim();
