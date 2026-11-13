@@ -2344,6 +2344,24 @@ protected void onPause() {
         restoreLab3Audio();
     } catch (Throwable ignore) {}
 
+    // Lab 13 — a backgrounded monitor is incomplete, never a hardware failure.
+    if (lab13Running || (lab13Dialog != null && lab13Dialog.isShowing())) {
+        lab13Running = false;
+        lab13MonitoringStarted = false;
+        try { lab13Handler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
+        try { unregisterReceiver(lab13BtReceiver); } catch (Throwable ignore) {}
+        try {
+            if (lab13Dialog != null && lab13Dialog.isShowing()) lab13Dialog.dismiss();
+        } catch (Throwable ignore) {}
+        lab13Dialog = null;
+        logLabelValue(
+                AppLang.isGreek(this) ? "Lab 13 — παρακολούθηση" : "Lab 13 — monitoring",
+                AppLang.isGreek(this)
+                        ? "ΔΕΝ ΟΛΟΚΛΗΡΩΘΗΚΕ — η εφαρμογή πέρασε στο παρασκήνιο"
+                        : "NOT COMPLETED — app moved to background");
+        enableSingleExportButton();
+    }
+
     // LAB 5 — physical interruption is not a failed vibration response.
     if (lab5Running.get()) {
         lab5Cancelled.set(true);
@@ -2401,6 +2419,10 @@ protected void onDestroy() {
             ui.removeCallbacksAndMessages(null);
         }
     } catch (Throwable ignore) {}
+
+    lab13Running = false;
+    lab13MonitoringStarted = false;
+    try { lab13Handler.removeCallbacksAndMessages(null); } catch (Throwable ignore) {}
 
     try {
         unregisterReceiver(lab13BtReceiver);
@@ -12287,9 +12309,9 @@ private void runLab13BluetoothCheckCore() {
         lab13Bm = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         lab13Ba = (lab13Bm != null) ? lab13Bm.getAdapter() : null;
     } catch (Throwable e) {
-        logError(gr
-                ? "Αποτυχία πρόσβασης BluetoothManager: " + (e.getMessage() != null ? e.getMessage() : "")
-                : "BluetoothManager access failed: " + (e.getMessage() != null ? e.getMessage() : ""));
+        logWarn(gr
+                ? "Δεν διαβάστηκε το BluetoothManager — επαναλάβετε αν χρειάζεται: " + (e.getMessage() != null ? e.getMessage() : "")
+                : "BluetoothManager unavailable — retry if needed: " + (e.getMessage() != null ? e.getMessage() : ""));
         logLine();
 
         appendHtml("<br>");
