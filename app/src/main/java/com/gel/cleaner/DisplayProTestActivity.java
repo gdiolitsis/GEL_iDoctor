@@ -143,8 +143,8 @@ LinearLayout buttons = new LinearLayout(this);
 buttons.setOrientation(LinearLayout.HORIZONTAL);
 buttons.setGravity(Gravity.CENTER);
 
-Button cancel = gelButton(gr ? "ΑΚΥΡΩΣΗ" : "CANCEL", 0xFFB00020);
-Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
+Button cancel = gelButton(gr ? "ΑΚΥΡΩΣΗ" : "CANCEL", 0xFFE60000);
+Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF39FF14);
 
         setDualButtons(cancel, start, buttons);
         root.addView(buttons);
@@ -160,7 +160,8 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (!AppTTS.isMuted(this)) {
+    if (d.isShowing() && !testFinished && activityAlive
+            && !isFinishing() && !isDestroyed() && !AppTTS.isMuted(this)) {
         AppTTS.ensureSpeak(this, text);
     }
 }, 120);
@@ -209,6 +210,12 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         hint = new TextView(this);
         hint.setTextColor(Color.WHITE);
         hint.setTextSize(16f);
+        // The current pattern may be pure white; always back labels with black.
+        GradientDrawable hintBg = new GradientDrawable();
+        hintBg.setColor(0xE6000000);
+        hintBg.setCornerRadius(dp(10));
+        hintBg.setStroke(dp(2), 0xFFFFD700);
+        hint.setBackground(hintBg);
         hint.setPadding(dp(24), dp(24), dp(24), dp(24));
         hint.setGravity(Gravity.CENTER);
         root.addView(hint);
@@ -220,7 +227,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         exitBtn.setTextSize(15f);
 
         GradientDrawable exitBg = new GradientDrawable();
-        exitBg.setColor(0xFF8B0000);
+        exitBg.setColor(0xFFE60000);
         exitBg.setCornerRadius(dp(14));
         exitBg.setStroke(dp(3), 0xFFFFD700);
         exitBtn.setBackground(exitBg);
@@ -329,8 +336,8 @@ root.addView(buildMuteRow());
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         buttons.setGravity(Gravity.CENTER);
 
-        Button no  = gelButton(gr ? "ΟΧΙ\nΟΚ" : "NO\nOK", 0xFF0F8A3B);
-        Button yes = gelButton(gr ? "ΝΑΙ\nΠρόβλημα" : "YES\nIssue", 0xFFB00020);
+        Button no  = gelButton(gr ? "ΟΧΙ\nΟΚ" : "NO\nOK", 0xFF39FF14);
+        Button yes = gelButton(gr ? "ΝΑΙ\nΠρόβλημα" : "YES\nIssue", 0xFFE60000);
 
         setDualButtons(no, yes, buttons);
         root.addView(buttons);
@@ -346,7 +353,8 @@ root.addView(buildMuteRow());
         com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (!testFinished && !AppTTS.isMuted(this)) {
+    if (d.isShowing() && !testFinished && activityAlive
+            && !isFinishing() && !isDestroyed() && !AppTTS.isMuted(this)) {
         AppTTS.ensureSpeak(this, text);
     }
 }, 120);
@@ -481,7 +489,8 @@ private LinearLayout buildMuteRow() {
         Button b = new com.gel.cleaner.GelButton(this);
         b.setText(text);
         b.setAllCaps(false);
-        b.setTextColor(Color.WHITE);
+        b.setTextColor(color == 0xFF39FF14 ? Color.BLACK : Color.WHITE);
+        b.setTypeface(null, Typeface.BOLD);
         b.setTextSize(15f);
 
         GradientDrawable bg = new GradientDrawable();
