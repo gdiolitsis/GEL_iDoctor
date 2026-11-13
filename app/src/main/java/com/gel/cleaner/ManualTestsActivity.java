@@ -25826,7 +25826,7 @@ private void lab16ThermalSnapshot() {
     }
 
     thermalDanger = thermalDanger || hiddenRisk || danger;
-    thermalScore = ThermalEvidencePolicy.score(chipReadings, peripherals.size(), thermalScore, hiddenRisk);
+    thermalScore = ThermalEvidencePolicy.score(chipReadings, peripherals.size(), thermalScore, thermalDanger);
 
     try {
         p.edit()
