@@ -30504,12 +30504,12 @@ private void lab28HardwareStability() {
     // STAGE A — SYMPTOM SCORE
     // ============================================================
     appendHtml("<br>");
-    logInfo(gr ? "Παρατηρούμενα συμπτώματα" : "Observed symptom signals");
+    logInfo(gr ? "Μη επαληθευμένες αναφορές συμπτωμάτων" : "Unverified symptom mentions in GEL logs");
     logLine();
 
     if (randomReboots) {
         logLabelWarnValue(gr ? "Επανεκκινήσεις" : "Reboots",
-                gr ? "Τυχαίες επανεκκινήσεις ή resets"
+                gr ? "Αναφορά πιθανών επανεκκινήσεων στο log — όχι επαληθευμένο συμβάν"
                    : "Reboot-related mention in GEL log (not independently verified)");
         symptomScore += 25;
     } else {
@@ -30519,7 +30519,7 @@ private void lab28HardwareStability() {
 
     if (signalDrops) {
         logLabelWarnValue(gr ? "Δίκτυο" : "Radio",
-                gr ? "Αστάθεια σήματος ή δικτύου"
+                gr ? "Αναφορά πιθανής αστάθειας δικτύου — χωρίς ανεξάρτητη επαλήθευση"
                    : "Radio-related mention in GEL log (not independently verified)");
         symptomScore += 20;
     } else {
@@ -30529,7 +30529,7 @@ private void lab28HardwareStability() {
 
     if (sensorFlaps) {
         logLabelWarnValue(gr ? "Αισθητήρες" : "Sensors",
-                gr ? "Διακοπτόμενες μετρήσεις αισθητήρων"
+                gr ? "Αναφορά διακοπών αισθητήρων — χωρίς ανεξάρτητη επαλήθευση"
                    : "Sensor-related mention in GEL log (not independently verified)");
         symptomScore += 15;
     } else {
@@ -30539,7 +30539,7 @@ private void lab28HardwareStability() {
 
     if (thermalSpikes) {
         logLabelWarnValue(gr ? "Θερμικά" : "Thermal",
-                gr ? "Απότομες θερμικές αιχμές"
+                gr ? "Αναφορά πιθανών θερμικών αιχμών — χωρίς ανεξάρτητη επαλήθευση"
                    : "Thermal-spike mention in GEL log (not independently verified)");
         symptomScore += 20;
     } else {
@@ -30550,7 +30550,7 @@ private void lab28HardwareStability() {
 
     if (powerGlitches > 0) {
         logLabelWarnValue(gr ? "Τροφοδοσία" : "Power",
-                gr ? "Αστάθεια φόρτισης ή ρεύματος"
+                gr ? "Αναφορά πιθανών διακοπών φόρτισης — χωρίς ανεξάρτητη επαλήθευση"
                    : "Charging-related mention in GEL log (not independently verified)");
         symptomScore += 20;
     } else {
@@ -30584,7 +30584,7 @@ private void lab28HardwareStability() {
 // HARDWARE PATTERN ANALYSIS
 // ============================================================
 appendHtml("<br>");
-logInfo(gr ? "Ανάλυση μοτίβων υλικού" : "Hardware instability patterns");
+logInfo(gr ? "Ανάλυση μοτίβων υλικού" : "Possible hardware-related log mentions (not diagnoses)");
 logLine();
 
 boolean pmicInstability = false;
@@ -30975,7 +30975,7 @@ if (hiddenScore >= 60) {
     if (finalScore >= 60) {
 
         logLabelWarnValue(gr ? "Εύρημα" : "Finding",
-                gr ? "Εντοπίστηκε μοτίβο αστάθειας"
+                gr ? "Υπάρχει μη επαληθευμένη συσσώρευση αναφορών στο διαθέσιμο log"
                    : "Unverified pattern of mentions in accessible GEL logs");
 
         logLabelValue(gr ? "Σημαντικό" : "Important",
