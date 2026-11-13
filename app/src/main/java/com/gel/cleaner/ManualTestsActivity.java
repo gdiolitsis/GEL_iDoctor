@@ -33453,7 +33453,7 @@ logLine();
         if (line == null) continue;
         String t = line.trim();
         if (t.startsWith("⚠ ") || t.startsWith("✖ ")) {
-            explicitAlerts.append(t).append("\\n");
+            explicitAlerts.append(t).append((char) 10);
         }
     }
 
