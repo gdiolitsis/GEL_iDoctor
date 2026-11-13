@@ -2708,7 +2708,7 @@ bg.setStroke(dp(3), 0xFFFFD700);
 root.setBackground(bg);
 
 TextView title = new TextView(this);
-title.setText("Select your Apple device");
+title.setText(AppLang.isGreek(this) ? "Επιλέξτε συσκευή Apple" : "Select your Apple device");
 title.setTextColor(Color.WHITE);
 title.setTextSize(20f);
 title.setTypeface(null, Typeface.BOLD);
@@ -2783,6 +2783,16 @@ new ColorDrawable(Color.TRANSPARENT));
 // --------------------------------------------
 d.show();
 com.gel.cleaner.GelButtonLayout.fitDialog(d);
+
+// Restore both original family selectors without modifying any model data.
+iphoneBtn.setOnClickListener(v -> {
+    d.dismiss();
+    showAppleModelPicker("iphone");
+});
+ipadBtn.setOnClickListener(v -> {
+    d.dismiss();
+    showAppleModelPicker("ipad");
+});
 }
 
 // =========================================================
