@@ -10898,7 +10898,7 @@ private void lab10WifiConnectivityCheck() {
             (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
 
     if (wm == null) {
-        logError(gr ? "WifiManager δεν είναι διαθέσιμο." : "WifiManager not available.");
+        logInfo(gr ? "WifiManager μη διαθέσιμο — ο έλεγχος δεν πραγματοποιήθηκε." : "WifiManager unavailable — check not performed.");
         return;
     }
 
@@ -10952,7 +10952,7 @@ private void lab10WifiConnectivityCheck() {
             }
 
         } catch (Throwable e) {
-            logWarn((gr ? "Έλεγχος Location απέτυχε: " : "Location services check failed: ") + e.getMessage());
+            logInfo((gr ? "Κατάσταση Location μη διαθέσιμη: " : "Location status unavailable: ") + e.getMessage());
         }
     }
 
@@ -10961,7 +10961,7 @@ private void lab10WifiConnectivityCheck() {
     // ------------------------------------------------------------
     WifiInfo info = wm.getConnectionInfo();
     if (info == null) {
-        logLabelErrorValue(gr ? "Wi-Fi" : "Wi-Fi", gr ? "Δεν υπάρχουν στοιχεία σύνδεσης" : "Connection info not available");
+        logLabelValue(gr ? "Wi-Fi" : "Wi-Fi", gr ? "Δεν υπάρχουν στοιχεία σύνδεσης — κατάσταση άγνωστη" : "Connection info unavailable — status unknown");
         return;
     }
 
@@ -11006,12 +11006,15 @@ private void lab10WifiConnectivityCheck() {
     }
 
     // Signal quality — single line
-    if (rssi > -65)
-        logLabelOkValue(gr ? "Σήμα Wi-Fi" : "Wi-Fi signal", gr ? "Ισχυρό" : "Strong");
-    else if (rssi > -80)
-        logLabelWarnValue(gr ? "Σήμα Wi-Fi" : "Wi-Fi signal", gr ? "Μέτριο" : "Moderate");
+    if (rssi <= -127 || rssi >= 0)
+        logLabelValue(gr ? "Σήμα Wi-Fi" : "Wi-Fi signal", gr ? "Άγνωστο" : "Unknown");
+    else if (rssi <= -80)
+        logLabelWarnValue(gr ? "Σήμα Wi-Fi" : "Wi-Fi signal",
+                gr ? "Ασθενές στην τρέχουσα θέση — δοκιμάστε κοντά στο router"
+                   : "Weak at this location — retry closer to router");
     else
-        logLabelErrorValue(gr ? "Σήμα Wi-Fi" : "Wi-Fi signal", gr ? "Αδύναμο" : "Weak");
+        logLabelValue(gr ? "Σήμα Wi-Fi" : "Wi-Fi signal",
+                rssi > -65 ? (gr ? "Ισχυρό" : "Strong") : (gr ? "Μέτριο" : "Moderate"));
 
     // ------------------------------------------------------------
     // 3) DHCP / LAN info — unified label/value format
@@ -11025,11 +11028,11 @@ private void lab10WifiConnectivityCheck() {
             logLabelValue(gr ? "DNS1" : "DNS1",       ipToStr(dh.dns1));
             logLabelValue(gr ? "DNS2" : "DNS2",       ipToStr(dh.dns2));
         } else {
-            logLabelWarnValue(gr ? "DHCP" : "DHCP", gr ? "Δεν υπάρχουν στοιχεία" : "Info not available");
+            logLabelValue(gr ? "DHCP" : "DHCP", gr ? "Δεν υπάρχουν στοιχεία — άγνωστη μέθοδος ρύθμισης" : "No info — configuration method unknown");
         }
 
     } catch (Throwable e) {
-        logLabelErrorValue(gr ? "DHCP" : "DHCP", (gr ? "Αποτυχία ανάγνωσης: " : "Read failed: ") + e.getMessage());
+        logLabelWarnValue(gr ? "DHCP" : "DHCP", (gr ? "Δεν διαβάστηκε — επανέλεγχος: " : "Not read — retry: ") + e.getMessage());
     }
 
     // ------------------------------------------------------------
@@ -11112,9 +11115,9 @@ public void onRequestPermissionsResult(
 
         } else {
 
-            logLabelErrorValue(
+            logLabelValue(
                     gr ? "Άδεια Τοποθεσίας" : "Location Permission",
-                    gr ? "Αρνήθηκε" : "Denied"
+                    gr ? "Δεν δόθηκε — έλεγχος SSID μη ολοκληρωμένος" : "Not granted — SSID check incomplete"
             );
 
             pendingLab10AfterPermission = null;
@@ -11179,26 +11182,26 @@ private void runWifiDeepScan(WifiManager wm) {
             // 1) Internet ping
             float pingMs = tcpLatencyMs("8.8.8.8", 53, 1500);
             if (pingMs > 0)
-                logLabelOkValue(gr ? "Ping 8.8.8.8" : "Ping 8.8.8.8", String.format(Locale.US, "%.1f ms", pingMs));
+                logLabelValue(gr ? "TCP 8.8.8.8:53 (όχι ICMP)" : "TCP 8.8.8.8:53 (not ICMP)", String.format(Locale.US, "%.1f ms", pingMs));
             else
-                logLabelWarnValue(gr ? "Ping 8.8.8.8" : "Ping 8.8.8.8", gr ? "Απέτυχε" : "Failed");
+                logLabelValue(gr ? "TCP 8.8.8.8:53 (όχι ICMP)" : "TCP 8.8.8.8:53 (not ICMP)", gr ? "Μη προσβάσιμο — η θύρα μπορεί να φιλτράρεται" : "Not reached — port may be blocked");
 
             // 2) DNS resolve
             float dnsMs = dnsResolveMs("google.com");
             if (dnsMs > 0)
-                logLabelOkValue(gr ? "DNS google.com" : "DNS google.com", String.format(Locale.US, "%.0f ms", dnsMs));
+                logLabelValue(gr ? "DNS google.com" : "DNS google.com", String.format(Locale.US, "%.0f ms", dnsMs));
             else
-                logLabelWarnValue(gr ? "DNS google.com" : "DNS google.com", gr ? "Απέτυχε" : "Resolve failed");
+                logLabelWarnValue(gr ? "DNS google.com" : "DNS google.com", gr ? "Δεν επιλύθηκε — ελέγξτε δίκτυο/DNS" : "Not resolved — check network/DNS");
 
             // 3) Gateway ping
             if (gatewayStr != null) {
                 float gwMs = tcpLatencyMs(gatewayStr, 80, 1200);
                 if (gwMs > 0)
-                    logLabelOkValue(gr ? "Ping Gateway" : "Gateway ping", String.format(Locale.US, "%.1f ms", gwMs));
+                    logLabelValue(gr ? "TCP Gateway:80" : "Gateway TCP:80", String.format(Locale.US, "%.1f ms", gwMs));
                 else
-                    logLabelWarnValue(gr ? "Ping Gateway" : "Gateway ping", gr ? "Απέτυχε" : "Failed");
+                    logLabelValue(gr ? "TCP Gateway:80" : "Gateway TCP:80", gr ? "Θύρα 80 μη προσβάσιμη — όχι διάγνωση router" : "Port 80 not reached — not a router fault diagnosis");
             } else {
-                logLabelWarnValue(gr ? "Gateway" : "Gateway", gr ? "Δεν εντοπίστηκε" : "Not detected");
+                logLabelValue(gr ? "Gateway" : "Gateway", gr ? "Δεν αναφέρθηκε" : "Not reported");
             }
 
             // 4) Speed heuristic
@@ -11228,7 +11231,7 @@ private void runWifiDeepScan(WifiManager wm) {
                                 getSystemService(CONNECTIVITY_SERVICE);
 
                 if (cm == null) {
-                    logError(gr ? "ConnectivityManager δεν είναι διαθέσιμο." : "ConnectivityManager not available.");
+                    logInfo(gr ? "ConnectivityManager μη διαθέσιμο — δεν ελέγχθηκε η επικύρωση δικτύου." : "ConnectivityManager unavailable — network validation not tested.");
                 } else {
 
                     boolean hasInternet = false;
@@ -11271,7 +11274,7 @@ private void runWifiDeepScan(WifiManager wm) {
                 }
 
             } catch (Throwable e) {
-                logError((gr ? "Σφάλμα ελέγχου Internet: " : "Internet quick check error: ") + e.getMessage());
+                logWarn((gr ? "Έλεγχος Internet μη ολοκληρωμένος — επανάληψη: " : "Internet check incomplete — retry: ") + e.getMessage());
             }
 
             // ====================================================
@@ -11313,20 +11316,16 @@ private void runWifiDeepScan(WifiManager wm) {
                     }
                 } catch (Throwable ignore) {}
 
-                if (cleartextAllowed)
-                    logLabelWarnValue(
-    gr ? "Cleartext traffic (μη κρυπτογραφημένη μεταφορά δεδομένων)"
-       : "Cleartext traffic",
-    gr ? "Επιτρέπεται από το Network Security Policy"
-       : "Allowed by network security policy"
-);
-                else
-                    logLabelOkValue(
-                            gr ? "Cleartext traffic (μη κρυπτογραφημένη μεταφορά δεδομένων)" : "Cleartext traffic",
-                            gr ? "Δεν επιτρέπεται (enforced encryption)" : "Not allowed (encrypted traffic enforced)"
-                    );
+                logLabelValue(
+                        gr ? "Πολιτική cleartext (όχι πραγματικό traffic)" : "Cleartext policy (not traffic observation)",
+                        cleartextAllowed
+                                ? (gr ? "Επιτρέπεται — δεν αποδεικνύεται πραγματική μετάδοση"
+                                      : "Allowed — actual traffic not observed")
+                                : (gr ? "Απαγορεύεται από την πολιτική εφαρμογής — δεν αποδεικνύεται πλήρης κρυπτογράφηση"
+                                      : "Blocked by app policy — full encryption not proven")
+                );
 
-                // BACKGROUND NETWORK (BOOT)
+                                // BACKGROUND NETWORK (BOOT)
                 boolean bgPossible =
                         pm2.checkPermission(
                                 Manifest.permission.RECEIVE_BOOT_COMPLETED,
@@ -11334,7 +11333,7 @@ private void runWifiDeepScan(WifiManager wm) {
                         ) == PackageManager.PERMISSION_GRANTED;
 
                 logLabelValue(
-                        gr ? "Δυνατότητα εκτέλεσης δικτύου στο παρασκήνιο" : "Background network capability",
+                        gr ? "Άδεια εκκίνησης BOOT (όχι απόδειξη δικτύου)" : "BOOT permission (not network activity proof)",
                         bgPossible
                                 ? (gr ? "Δηλωμένο RECEIVE_BOOT_COMPLETED (εκκίνηση στο boot)"
               : "RECEIVE_BOOT_COMPLETED declared")
@@ -11342,7 +11341,7 @@ private void runWifiDeepScan(WifiManager wm) {
               : "No BOOT-TIME RECEIVER declared")
 );
 
-                logLabelOkValue(
+                logLabelValue(
         gr ? "Συνολική Εκτίμηση" : "Assessment",
         gr ? "Ολοκληρώθηκε η αποτύπωση έκθεσης δικτύου & ιδιωτικότητας"
            : "Network / privacy exposure snapshot completed"
@@ -11367,9 +11366,9 @@ private void runWifiDeepScan(WifiManager wm) {
             logLine();
             logInfo(gr ? "DeepScan" : "DeepScan");
 
-            logLabelErrorValue(
+            logLabelWarnValue(
                     gr ? "Κατάσταση" : "Status",
-                    gr ? "Απέτυχε" : "Failed"
+                    gr ? "Η εκτέλεση διακόπηκε — επανέλεγχος" : "Execution interrupted — retry"
             );
 
             logLabelWarnValue(
