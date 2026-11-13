@@ -11744,9 +11744,9 @@ private void lab12CallFunctionInterpretation() {
     // SIM availability (context only)
     // ------------------------------------------------------------
     if (s.simReady) {
-        logLabelOkValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ" : "READY");
+        logLabelValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ (κατά Android)" : "READY (Android reported)");
     } else {
-        logLabelWarnValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΜΗ ΕΤΟΙΜΗ" : "NOT READY");
+        logLabelValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΜΗ ΕΤΟΙΜΗ — χωρίς διάγνωση κλήσης" : "NOT READY — no call diagnosis");
     }
 
     if (!s.simReady) {
@@ -11763,12 +11763,12 @@ private void lab12CallFunctionInterpretation() {
     // Legacy voice service state (informational)
     // ------------------------------------------------------------
     if (s.inService) {
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Φωνητική Υπηρεσία (legacy)" : "Voice Service (legacy)",
                 gr ? "ΣΕ ΥΠΗΡΕΣΙΑ" : "IN SERVICE"
         );
     } else {
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Φωνητική Υπηρεσία (legacy)" : "Voice Service (legacy)",
                 gr ? "ΔΕΝ ΑΝΑΦΕΡΕΤΑΙ ΩΣ ΣΕ ΥΠΗΡΕΣΙΑ" : "NOT REPORTED AS IN SERVICE"
         );
@@ -11786,30 +11786,30 @@ private void lab12CallFunctionInterpretation() {
     // Internet context (IMS relevance)
     // ------------------------------------------------------------
     if (s.hasInternet) {
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Κατάσταση Σύνδεσης Internet"
                : "Internet Context",
-            gr ? "ΔΙΑΘΕΣΙΜΗ (system routing)"
-               : "AVAILABLE (system routing)"
+            gr ? "Δηλωμένη δυνατότητα Internet (όχι επαλήθευση κλήσης)"
+               : "Internet capability reported (not call verification)"
     );
 } else {
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Κατάσταση Σύνδεσης Internet"
                : "Internet Context",
-            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΗ"
-               : "NOT AVAILABLE"
+            gr ? "Δεν αναφέρθηκε δυνατότητα Internet — άγνωστη λειτουργία φωνής"
+               : "Internet capability not reported — voice operation unknown"
     );
 }
 
     if (s.hasInternet) {
-        logOk(gr
-                ? "Εντοπίστηκε ενεργό internet routing. "
+        logInfo(gr
+                ? "Το Android αναφέρει δυνατότητα Internet στο ενεργό δίκτυο. "
                   + "Κλήσεις μέσω IMS (VoLTE / VoWiFi) μπορεί να υποστηρίζονται, ανάλογα με τον πάροχο."
                 : "Active internet routing detected. "
                   + "IMS-based calling (VoLTE / VoWiFi) may be supported depending on carrier configuration.");
     } else {
-        logOk(gr
-                ? "Δεν εντοπίστηκε ενεργό internet routing. "
+        logInfo(gr
+                ? "Δεν αναφέρθηκε δυνατότητα Internet στο ενεργό δίκτυο. "
                   + "Οι κλασικές κλήσεις μπορεί να λειτουργούν κανονικά, αν τις υποστηρίζει το δίκτυο."
                 : "No active internet routing detected. "
                   + "Legacy voice calling may still function if supported by the network.");
@@ -11818,7 +11818,7 @@ private void lab12CallFunctionInterpretation() {
     // ------------------------------------------------------------
     // Laboratory conclusion
     // ------------------------------------------------------------
-    logOk(gr
+    logInfo(gr
             ? "Η εργαστηριακή ερμηνεία ολοκληρώθηκε. "
               + "Αυτό το τεστ δεν ξεκινά ούτε επιβεβαιώνει πραγματική κλήση."
             : "Laboratory interpretation complete. "
@@ -11829,7 +11829,7 @@ private void lab12CallFunctionInterpretation() {
             : "Call audio routing and microphone/earpiece paths are examined separately (LAB 3).");
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 12 ολοκληρώθηκε." : "Lab 12 finished.");
+    logInfo(gr ? "Η παθητική απογραφή Lab 12 ολοκληρώθηκε." : "Lab 12 passive inventory complete.");
     logLine();
     runOnUiThread(this::lab12ShowCallConsent);
 }
@@ -11858,7 +11858,7 @@ private void lab12ShowDialog(String titleText, String messageText,
 
     TextView heading = new TextView(this);
     heading.setText(titleText);
-    heading.setTextColor(Color.WHITE);
+    heading.setTextColor(0xFFFFD700);
     heading.setTypeface(null, Typeface.BOLD);
     heading.setTextSize(18f);
     heading.setGravity(Gravity.CENTER);
@@ -11866,7 +11866,7 @@ private void lab12ShowDialog(String titleText, String messageText,
 
     TextView message = new TextView(this);
     message.setText(messageText);
-    message.setTextColor(0xFF39FF14);
+    message.setTextColor(Color.WHITE);
     message.setTextSize(15f);
     message.setLineSpacing(0f, 1.12f);
     message.setPadding(0, dp(14), 0, dp(14));
@@ -11876,6 +11876,9 @@ private void lab12ShowDialog(String titleText, String messageText,
             this, android.R.style.Theme_Material_Dialog_NoActionBar)
             .setView(panel).create();
     dialog.setCanceledOnTouchOutside(false);
+    dialog.setOnDismissListener(ignored -> {
+        try { AppTTS.stop(); } catch (Throwable ignoredError) {}
+    });
     dialog.setOnCancelListener(ignored -> {
         if (canceled != null) canceled.run();
     });
@@ -11903,6 +11906,7 @@ private void lab12ShowDialog(String titleText, String messageText,
                 new ColorDrawable(Color.TRANSPARENT));
     }
     com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
+    speakOnce(messageText);
 }
 
 private Button lab12DialogButton(String label, int bgColor, int textColor) {
@@ -12019,7 +12023,7 @@ private void lab12ReportGuided(Lab12CallEvidence.Guided outcome) {
                        : "Audio issue reported — not proof of device failure");
             break;
         case INCONCLUSIVE:
-            logLabelWarnValue(gr ? "Πραγματική κλήση" : "Real call",
+            logLabelValue(gr ? "Πραγματική κλήση" : "Real call",
                     gr ? "Διακοπή ή ελλιπής απάντηση — ΑΓΝΩΣΤΟ"
                        : "Canceled or incomplete response — UNKNOWN");
             break;
