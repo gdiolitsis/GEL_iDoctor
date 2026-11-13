@@ -250,7 +250,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF39FF14);
         // translucent background over the display under inspection.
         // Only the instruction/cycle letters change from backup white to
         // high-contrast yellow with a black text shadow.
-        hint.setTextColor(0xFFFFD700);
+        hint.setTextColor(Color.YELLOW);
         hint.setShadowLayer(4f, 2f, 2f, Color.BLACK);
         hint.setTextSize(16f);
         hint.setPadding(dp(24), dp(24), dp(24), dp(24));
