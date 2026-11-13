@@ -16,7 +16,10 @@ public final class ThermalEvidencePolicy {
 
     /** A snapshot cannot demonstrate historical thermal spikes. */
     public static String pattern(int score, boolean highObserved) {
-        if (score < 0) return "UNAVAILABLE";
+        // Never hide a real critical reading or Android thermal warning
+        // solely because accessible CPU/GPU coverage is insufficient.
+        if (score < 0) return highObserved
+                ? "THERMAL_WARNING_WITH_LIMITED_COVERAGE" : "UNAVAILABLE";
         return highObserved ? "ELEVATED_READING_OBSERVED" : "NO_ELEVATED_READING_OBSERVED";
     }
 }
