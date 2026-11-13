@@ -30510,7 +30510,7 @@ private void lab28HardwareStability() {
     if (randomReboots) {
         logLabelWarnValue(gr ? "Επανεκκινήσεις" : "Reboots",
                 gr ? "Τυχαίες επανεκκινήσεις ή resets"
-                   : "Random reboots or sudden resets detected");
+                   : "Reboot-related mention in GEL log (not independently verified)");
         symptomScore += 25;
     } else {
         logLabelValue(gr ? "Επανεκκινήσεις" : "Reboots",
@@ -30520,7 +30520,7 @@ private void lab28HardwareStability() {
     if (signalDrops) {
         logLabelWarnValue(gr ? "Δίκτυο" : "Radio",
                 gr ? "Αστάθεια σήματος ή δικτύου"
-                   : "Network or signal instability detected");
+                   : "Radio-related mention in GEL log (not independently verified)");
         symptomScore += 20;
     } else {
         logLabelValue(gr ? "Δίκτυο" : "Radio",
@@ -30530,7 +30530,7 @@ private void lab28HardwareStability() {
     if (sensorFlaps) {
         logLabelWarnValue(gr ? "Αισθητήρες" : "Sensors",
                 gr ? "Διακοπτόμενες μετρήσεις αισθητήρων"
-                   : "Intermittent sensor readings detected");
+                   : "Sensor-related mention in GEL log (not independently verified)");
         symptomScore += 15;
     } else {
         logLabelValue(gr ? "Αισθητήρες" : "Sensors",
@@ -30540,18 +30540,18 @@ private void lab28HardwareStability() {
     if (thermalSpikes) {
         logLabelWarnValue(gr ? "Θερμικά" : "Thermal",
                 gr ? "Απότομες θερμικές αιχμές"
-                   : "Abnormal thermal spikes detected");
+                   : "Thermal-spike mention in GEL log (not independently verified)");
         symptomScore += 20;
     } else {
         logLabelValue(gr ? "Θερμικά" : "Thermal",
                 gr ? "Δεν μετρήθηκε συνεχής θερμική συμπεριφορά"
-                   : "Thermal behaviour normal");
+                   : "Continuous thermal behaviour was not measured");
     }
 
     if (powerGlitches > 0) {
         logLabelWarnValue(gr ? "Τροφοδοσία" : "Power",
                 gr ? "Αστάθεια φόρτισης ή ρεύματος"
-                   : "Power or charging instability detected");
+                   : "Charging-related mention in GEL log (not independently verified)");
         symptomScore += 20;
     } else {
         logLabelValue(gr ? "Τροφοδοσία" : "Power",
@@ -30674,7 +30674,7 @@ if (signalDrops && randomReboots && !thermalSpikes) {
                : "Baseband",
             gr
                     ? "Δεν επαληθεύτηκε ανεξάρτητα η σταθερότητα baseband."
-                    : "No baseband instability indicators."
+                    : "Baseband stability was not independently verified."
     );
 }
 
@@ -30729,7 +30729,7 @@ if (!isDeviceRooted()) {
                    : "Sensor bus integrity",
                 gr
                         ? "Δεν επαληθεύτηκε ανεξάρτητα η επικοινωνία διαύλου αισθητήρων."
-                        : "No sensor communication issues detected."
+                        : "Sensor-bus communication was not independently verified."
         );
     }
 }
@@ -30814,7 +30814,7 @@ if (thermalScore >= 60) {
                : "Thermal runaway risk",
             gr
                     ? "Συσχετισμός ενδείξεων — δεν έχει επιβεβαιωθεί θερμική αστοχία υλικού."
-                    : "Hardware pattern indicates possible thermal runaway."
+                    : "Log mentions cannot establish a thermal-runaway hardware condition."
     );
 
 } else {
@@ -30824,7 +30824,7 @@ if (thermalScore >= 60) {
                : "Thermal stability",
             gr
                     ? "Δεν τεκμηριώνεται θερμική σταθερότητα από αυτά τα δεδομένα."
-                    : "No thermal runaway indicators detected."
+                    : "Continuous thermal-runaway monitoring was not performed."
     );
 }
     
@@ -30976,7 +30976,7 @@ if (hiddenScore >= 60) {
 
         logLabelWarnValue(gr ? "Εύρημα" : "Finding",
                 gr ? "Εντοπίστηκε μοτίβο αστάθειας"
-                   : "Multi-source instability pattern detected");
+                   : "Unverified pattern of mentions in accessible GEL logs");
 
         logLabelValue(gr ? "Σημαντικό" : "Important",
                 gr ? "ΔΕΝ αποτελεί διάγνωση υλικού."
@@ -30990,7 +30990,7 @@ if (hiddenScore >= 60) {
 
         logLabelValue(gr ? "Εύρημα" : "Finding",
                 gr ? "Δεν καταγράφηκε ισχυρό μοτίβο στις διαθέσιμες αναφορές· δεν πιστοποιείται υγεία."
-                   : "No significant instability patterns detected.");
+                   : "No strong pattern of mentions in accessible logs; hardware health unknown.");
     }
 
     appendHtml("<br>");
@@ -31033,7 +31033,10 @@ private static class Lab28EvidenceReader {
         if (log == null || log.trim().isEmpty())
             return ev;
 
-        final String L = log.toLowerCase(Locale.US);
+        // Discard previous (and current open) Lab 28 report sections:
+        // this lab's own prose must not become new evidence on reruns.
+        final String L = Lab28LogEvidencePolicy.withoutLab28Reports(log)
+                .toLowerCase(Locale.US);
 
         ev.thermalSpikes = containsPositiveLogMention(L,
                 "thermal spike","thermal spikes","abnormal thermal",
