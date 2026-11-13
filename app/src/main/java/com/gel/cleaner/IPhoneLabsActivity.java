@@ -2111,7 +2111,7 @@ private void runFinalServiceRecommendationLab() {
 // ------------------------------------------------------------
 // SPLIT LOGS
 // ------------------------------------------------------------
-String[] blocks = panicLogText.split("===== ZIP FILE:");
+String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
 java.util.Map<String,Integer> domainCount = new java.util.HashMap<>();
 java.util.Map<String,Integer> crashCount  = new java.util.HashMap<>();
@@ -2125,7 +2125,7 @@ int criticalCrashCount = 0;
 // ------------------------------------------------------------
 for (String block : blocks) {
 
-    if (block == null || block.trim().isEmpty()) continue;
+    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
 
     resetSignatureCache();
     parseAndCacheSignature(block);
@@ -2182,7 +2182,7 @@ for (java.util.Map.Entry<String,Integer> e : domainCount.entrySet()) {
     int percent = (int)(ratio * 100);
 
     // ------------------------------------------------------------
-    // STABILITY SCORE
+    // UNCALIBRATED LEGACY KEYWORD INDEX — retained for research; NOT device health
     // ------------------------------------------------------------
     int score = 100;
 
@@ -2207,25 +2207,17 @@ else if (max >= 2) {
     // ------------------------------------------------------------
     // SUMMARY
     // ------------------------------------------------------------
-    logLabelOkValue(
-        gr ? "Συνολικά logs:" : "Total logs:",
-        String.valueOf(total)
-);
+    logInfo((gr ? "Αναγνωρισμένα panic blocks: " : "Eligible panic blocks: ")
+        + total);
 
-logLabelWarnValue(
-        gr ? "Κυρίαρχο domain:" : "Dominant domain:",
-        safe(dominant) + " (" + max + "/" + total + ")"
-);
+logInfo((gr ? "Συχνότερη κατηγορία όρων: " : "Most common keyword category: ")
+        + safe(dominant) + " (" + max + "/" + total + ")");
 
-logLabelOkValue(
-        gr ? "Ποσοστό επανάληψης:" : "Repetition ratio:",
-        percent + "%"
-);
+logInfo((gr ? "Ποσοστό της κατηγορίας στο εισαγόμενο δείγμα: "
+            : "Category share among imported entries: ") + percent + "%");
 
-logLabelOkValue(
-        gr ? "Δείκτης Σταθερότητας:" : "Stability Index:",
-        score + " / 100"
-);
+logInfo((gr ? "Μη βαθμονομημένος δείκτης όρων: " : "Uncalibrated keyword index: ")
+        + score + "/100 (NOT measured device health)");
 appendHtml("<br>");
 
 boolean singleLog = total == 1;
@@ -2236,9 +2228,9 @@ if (singleLog) {
             ? "Η αξιολόγηση βασίζεται σε ένα μόνο panic log."
             : "Evaluation is based on a single panic log.");
 
-    logOk(gr
-            ? "Η τεχνική εκτίμηση προκύπτει από την ανάλυση crash υπογραφής."
-            : "Technical estimation is based on crash signature analysis.");
+    logInfo(gr
+            ? "Μία υπογραφή δεν παρέχει ποσοστό πραγματικής αστάθειας ή βλάβης."
+            : "One imported signature does not establish a physical fault or stability rate.");
 
     appendHtml("<br>");
 }
@@ -2262,19 +2254,19 @@ if (dominant != null && (
 logLabelWarnValue(
         gr ? "Μοτίβο crash:" : "Crash pattern:",
         gr
-                ? "Εντοπίστηκε επαναλαμβανόμενο μοτίβο."
-                : "Recurring crash pattern detected."
+                ? (singleLog ? "Ένα μόνο εισαγόμενο συμβάν, όχι επανάληψη."
+                             : "Επαναλαμβάνεται κατηγορία όρων στα αρχεία, όχι αποδεδειγμένη βλάβη.")
+                : (singleLog ? "Only one imported event; recurrence is not established."
+                             : "Keyword categories recur across imports; hardware recurrence is unverified.")
 );
 
 logLabelWarnValue(
-        gr ? "Κυρίαρχο υποσύστημα:" : "Dominant subsystem:",
+        gr ? "Συχνότερο keyword domain:" : "Most common keyword domain:",
         safe(domainText)
 );
 
-logLabelWarnValue(
-        gr ? "Σταθερότητα συστήματος:" : "System stability:",
-        score + "/100"
-);
+logInfo((gr ? "Μη βαθμονομημένος δείκτης λέξεων: "
+            : "Uncalibrated keyword index: ") + score + "/100 (not physical health)");
 
 logLabelOkValue(
         gr ? "Σύσταση:" : "Recommendation:",
@@ -2299,32 +2291,29 @@ else if (ratio < 0.4 && domainCount.size() >= 3) {
 
 if (likelyHardware) {
 
-    logLabelErrorValue(
-            gr ? "Τύπος προβλήματος:" : "Issue type:",
+    logLabelWarnValue(
+            gr ? "Υπόθεση υποσυστήματος:" : "Subsystem hypothesis:",
             gr
-                    ? "Πιθανή βλάβη υλικού."
-                    : "Probable hardware fault."
+                    ? "Ομάδα λέξεων που χρειάζεται ανεξάρτητο έλεγχο· δεν διαγνώστηκε βλάβη υλικού."
+                    : "Keyword grouping needs corroboration; no hardware failure was diagnosed."
     );
 
 }
 else if (likelySoftware) {
 
     logLabelWarnValue(
-            gr ? "Τύπος προβλήματος:" : "Issue type:",
+            gr ? "Υπόθεση λογισμικού:" : "Software hypothesis:",
             gr
-                    ? "Πιθανό πρόβλημα λογισμικού."
-                    : "Likely software instability."
+                    ? "Το μοτίβο λέξεων δεν επιβεβαιώνει αιτία λογισμικού."
+                    : "Keyword patterns do not establish a software root cause."
     );
 
 }
 else {
 
-    logLabelOkValue(
-            gr ? "Τύπος προβλήματος:" : "Issue type:",
-            gr
-                    ? "Μη καθορισμένη αιτία."
-                    : "Cause not clearly determined."
-    );
+    logInfo(gr
+            ? "Αιτία: Μη επαληθευμένη από τα εισαγόμενα αρχεία."
+            : "Cause: Unverified from imported files.");
 }
 
     // ------------------------------------------------------------
@@ -2383,10 +2372,8 @@ if (dominant != null) {
         suspect = "Camera / Sensors / Peripheral bus";
 }
 
-    logLabelWarnValue(
-        gr ? "Πιθανό υποσύστημα:" : "Probable subsystem:",
-        safe(suspect)
-);
+    logInfo((gr ? "Υπόθεση από λέξεις του log (όχι διάγνωση εξαρτήματος): "
+              : "Log keyword hint (not a component diagnosis): ") + safe(suspect));
 
 appendHtml("<br>");
 
@@ -2395,56 +2382,56 @@ appendHtml("<br>");
     // ------------------------------------------------------------
     if (score >= 85) {
 
-        logOk(gr
-                ? "Υψηλή σταθερότητα συστήματος."
-                : "High system stability.");
+        logInfo(gr
+                ? "Υψηλή τιμή μόνο του μη βαθμονομημένου δείκτη λέξεων· σταθερότητα συσκευής άγνωστη."
+                : "High uncalibrated keyword index only; actual device stability unknown.");
 
-        logOk(gr
-                ? "Δεν εντοπίστηκαν σοβαρά επαναλαμβανόμενα μοτίβα."
-                : "No significant recurring crash patterns detected.");
+        logInfo(gr
+                ? "Δεν κυριάρχησαν οι σταθμισμένες λέξεις σε αυτά τα αρχεία· δεν αποκλείεται βλάβη."
+                : "Weighted keywords did not dominate this sample; hardware faults are not ruled out.");
 
     }
     else if (score >= 60) {
 
-        logWarn(gr
-                ? "Μέτρια ένδειξη αστάθειας."
-                : "Moderate instability indicators detected.");
+        logInfo(gr
+                ? "Μεσαία τιμή μη βαθμονομημένου δείκτη, όχι μέτρηση αστάθειας."
+                : "Midrange uncalibrated index, not measured instability.");
 
-        logOk(gr
-                ? "Συνιστάται παρακολούθηση εάν τα συμπτώματα συνεχιστούν."
-                : "Monitoring is advised if symptoms persist.");
+        logInfo(gr
+                ? "Αν υπάρχουν πραγματικά συμπτώματα, συσχετίστε τα με τεχνικό."
+                : "Correlate persistent real-world symptoms with a technician.");
 
     }
     else if (score >= 40) {
 
-        logWarn(gr
-                ? "Αυξημένες ενδείξεις αστάθειας."
-                : "Elevated instability indicators detected.");
+        logInfo(gr
+                ? "Χαμηλή τιμή μη βαθμονομημένου δείκτη· η κατάσταση συσκευής παραμένει άγνωστη."
+                : "Low uncalibrated keyword index; physical condition remains unknown.");
 
-        logWarn(gr
-                ? "Εντοπίστηκε επαναλαμβανόμενο domain με σημαντική συχνότητα."
-                : "Recurring hardware domain detected.");
+        logInfo(gr
+                ? "Εμφανίζεται επανάληψη κατηγορίας όρων· δεν τεκμηριώνει επαναλαμβανόμενη βλάβη."
+                : "A keyword category repeats; this does not establish a recurring hardware fault.");
 
-        logOk(gr
-                ? "Συνιστάται τεχνικός έλεγχος."
-                : "Professional inspection recommended.");
+        logInfo(gr
+                ? "Τεχνικός έλεγχος ενδείκνυται εφόσον επιβεβαιώνονται πραγματικά συμπτώματα."
+                : "Technician evaluation is appropriate if real symptoms are confirmed.");
              
    appendHtml("<br>");
    
     }
     else {
 
-        logError(gr
-                ? "Χαμηλή σταθερότητα συστήματος."
-                : "Low system stability detected.");
+        logInfo(gr
+                ? "Πολύ χαμηλή τιμή του ανεπαλήθευτου δείκτη λέξεων· όχι διάγνωση αστάθειας."
+                : "Very low unvalidated keyword index; not a device-instability diagnosis.");
 
-        logWarn(gr
-                ? "Εντοπίστηκαν επαναλαμβανόμενα κρίσιμα μοτίβα crash."
-                : "Recurring critical crash patterns detected.");
+        logInfo(gr
+                ? "Καταγράφηκε επανάληψη όρων υψηλής βαρύτητας στα εισαγόμενα αρχεία."
+                : "High-weight terms recur within imported files; physical severity unverified.");
 
-        logError(gr
-                ? "Συνιστάται άμεσος τεχνικός έλεγχος."
-                : "Immediate technical inspection recommended.");
+        logInfo(gr
+                ? "Απαιτείται συσχέτιση με πραγματικές επανεκκινήσεις και συμπτώματα πριν από σύσταση επισκευής."
+                : "Verify real restarts and symptoms before recommending a repair.");
     }
 
     appendHtml("<br>");
