@@ -22,6 +22,22 @@ public class Lab30ScoreEvidenceTest {
                 null, null, 32f, null));
         assertTrue(Lab30ScoreEvidence.hasBatteryReadings(30f, 80f));
     }
+    @Test public void missingStorageAndRamCannotBecomeZeroPercent() {
+        assertFalse(Lab30ScoreEvidence.hasStorageReadings(0, 0));
+        assertFalse(Lab30ScoreEvidence.hasStorageReadings(100, -1));
+        assertFalse(Lab30ScoreEvidence.hasStorageReadings(100, 101));
+        assertTrue(Lab30ScoreEvidence.hasStorageReadings(100, 0));
+        assertTrue(Lab30ScoreEvidence.hasStorageReadings(100, 100));
+        assertFalse(Lab30ScoreEvidence.hasRamReadings(0, 0));
+        assertFalse(Lab30ScoreEvidence.hasRamReadings(100, -1));
+        assertFalse(Lab30ScoreEvidence.hasRamReadings(100, 101));
+        assertTrue(Lab30ScoreEvidence.hasRamReadings(100, 0));
+        assertTrue(Lab30ScoreEvidence.hasRamReadings(100, 55));
+        assertFalse(Lab30ScoreEvidence.hasAppInventory(0, 0));
+        assertFalse(Lab30ScoreEvidence.hasAppInventory(2, 3));
+        assertTrue(Lab30ScoreEvidence.hasAppInventory(2, 0));
+    }
+
     @Test public void missingCoreEvidenceBlocksCombinedScores() {
         assertEquals(-1, Lab30ScoreEvidence.performanceScore(100,100,100,-1));
         assertEquals(-1, Lab30ScoreEvidence.deviceHealthScore(-1,100,100,100));
