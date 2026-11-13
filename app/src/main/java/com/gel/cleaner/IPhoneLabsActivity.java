@@ -2006,7 +2006,7 @@ private void runRecurringDomainLab() {
 
     for (String block : blocks) {
 
-        if (block == null || block.trim().isEmpty())
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
             continue;
 
         resetSignatureCache();
@@ -2019,9 +2019,9 @@ private void runRecurringDomainLab() {
     }
 
     if (total <= 1) {
-        logOk(gr
-                ? "Απαιτούνται πολλαπλά logs για ανίχνευση μοτίβου."
-                : "Multiple logs are required for pattern detection.");
+        logInfo(gr
+                ? "Απαιτούνται τουλάχιστον δύο έγκυρα panic blocks για σύγκριση."
+                : "At least two eligible panic blocks are required for comparison.");
         return;
     }
 
@@ -2045,8 +2045,8 @@ private void runRecurringDomainLab() {
             String.valueOf(total)
     );
 
-    logLabelWarnValue(
-            gr ? "Κυρίαρχο domain:" : "Dominant domain:",
+    logLabelOkValue(
+            gr ? "Συχνότερη κατηγορία όρων:" : "Most common keyword category:",
             safe(dominant) + " (" + max + "/" + total + ")"
     );
 
@@ -2061,30 +2061,30 @@ private void runRecurringDomainLab() {
     if (ratio >= 0.5) {
 
         if (isHighRiskDomain(dominant)) {
-            logError(gr
-                    ? "Εντοπίστηκε ισχυρό επαναλαμβανόμενο hardware pattern."
-                    : "Strong recurring hardware pattern detected.");
+            logInfo(gr
+                    ? "Επαναλήφθηκε κατηγορία λέξεων υλικού σε εισαγόμενα αρχεία· δεν πιστοποιείται βλάβη."
+                    : "Hardware-related keywords repeat across imports; no hardware fault is established.");
         } else {
-            logWarn(gr
-                    ? "Εντοπίστηκε επαναλαμβανόμενο μοτίβο domain."
-                    : "Recurring domain pattern detected.");
+            logInfo(gr
+                    ? "Επαναλαμβάνονται όροι της ίδιας κατηγορίας στα εισαγόμενα αρχεία."
+                    : "A keyword category recurs among imported entries.");
         }
 
         logWarn(gr
-                ? "Αυτό δεν επιβεβαιώνει βλάβη, αλλά δείχνει σταθερή επανάληψη."
-                : "This does not confirm hardware failure, but indicates stable recurrence.");
+                ? "Η επανάληψη λέξεων δεν αποδεικνύει επανεμφάνιση βλάβης στην ίδια συσκευή."
+                : "Repeated keywords do not prove a recurring fault on one verified device.");
 
     } else if (max >= 2) {
 
-        logWarn(gr
-                ? "Μερική επανάληψη domain εντοπίστηκε."
-                : "Partial domain recurrence detected.");
+        logInfo(gr
+                ? "Μερική επανάληψη κατηγορίας όρων στα εισαγόμενα αρχεία."
+                : "Partial keyword-category repetition in imported entries.");
 
     } else {
 
-        logOk(gr
-                ? "Δεν εντοπίστηκε επαναλαμβανόμενο domain."
-                : "No recurring domain pattern detected.");
+        logInfo(gr
+                ? "Δεν επαναλήφθηκε κατηγορία όρων στο παρόν δείγμα· η υγεία συσκευής παραμένει άγνωστη."
+                : "No category repeats in this imported sample; device health remains unknown.");
     }
 
     appendHtml("<br>");
