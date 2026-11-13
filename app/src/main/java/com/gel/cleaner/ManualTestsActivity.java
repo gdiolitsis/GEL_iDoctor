@@ -23987,12 +23987,15 @@ private void promptRestoreNormalMode() {
     Button noBtn = new com.gel.cleaner.GelButton(this);
     noBtn.setText(gr ? "ΟΧΙ" : "NO");
     noBtn.setTextColor(Color.WHITE);
+    noBtn.setTypeface(null, Typeface.BOLD);
+    ((com.gel.cleaner.GelButton) noBtn).setSupportBackgroundTintList(null);
+    noBtn.setBackgroundTintList(null);
     noBtn.setAllCaps(false);
 
     GradientDrawable noBg =
             new GradientDrawable();
 
-    noBg.setColor(0xFF8B0000);
+    noBg.setColor(0xFFE60000);
     noBg.setCornerRadius(dp(10));
     noBg.setStroke(
             dp(3),
@@ -24005,13 +24008,16 @@ private void promptRestoreNormalMode() {
     // YES button
     Button yesBtn = new com.gel.cleaner.GelButton(this);
     yesBtn.setText(gr ? "ΝΑΙ" : "YES");
-    yesBtn.setTextColor(Color.WHITE);
+    yesBtn.setTextColor(Color.BLACK);
+    yesBtn.setTypeface(null, Typeface.BOLD);
+    ((com.gel.cleaner.GelButton) yesBtn).setSupportBackgroundTintList(null);
+    yesBtn.setBackgroundTintList(null);
     yesBtn.setAllCaps(false);
 
     GradientDrawable yesBg =
             new GradientDrawable();
 
-    yesBg.setColor(0xFF0B5F3B);
+    yesBg.setColor(0xFF39FF14);
     yesBg.setCornerRadius(dp(10));
     yesBg.setStroke(
             dp(3),
@@ -24161,12 +24167,15 @@ private void showAirplaneModePrompt() {
     Button noBtn = new com.gel.cleaner.GelButton(this);
     noBtn.setText(gr?"ΟΧΙ":"NO");
     noBtn.setTextColor(Color.WHITE);
+    noBtn.setTypeface(null, Typeface.BOLD);
+    ((com.gel.cleaner.GelButton) noBtn).setSupportBackgroundTintList(null);
+    noBtn.setBackgroundTintList(null);
     noBtn.setAllCaps(false);
 
     GradientDrawable noBg =
             new GradientDrawable();
 
-    noBg.setColor(0xFF8B0000);
+    noBg.setColor(0xFFE60000);
     noBg.setCornerRadius(dp(10));
     noBg.setStroke(dp(3),0xFFFFD700);
 
@@ -24176,13 +24185,16 @@ private void showAirplaneModePrompt() {
     // YES green
     Button yesBtn = new com.gel.cleaner.GelButton(this);
     yesBtn.setText(gr?"ΝΑΙ":"YES");
-    yesBtn.setTextColor(Color.WHITE);
+    yesBtn.setTextColor(Color.BLACK);
+    yesBtn.setTypeface(null, Typeface.BOLD);
+    ((com.gel.cleaner.GelButton) yesBtn).setSupportBackgroundTintList(null);
+    yesBtn.setBackgroundTintList(null);
     yesBtn.setAllCaps(false);
 
     GradientDrawable yesBg =
             new GradientDrawable();
 
-    yesBg.setColor(0xFF0B5F3B);
+    yesBg.setColor(0xFF39FF14);
     yesBg.setCornerRadius(dp(10));
     yesBg.setStroke(dp(3),0xFFFFD700);
 
