@@ -27372,7 +27372,7 @@ private void lab20UptimeHints() {
         String upStr = formatUptime(upMs);
 
         logInfo(gr ? "Χρόνος λειτουργίας συστήματος:" : "System uptime:");
-        logLabelOkValue("Uptime", upStr);
+        logLabelValue("Uptime", upStr);
 
         boolean veryRecentReboot =
                 upMs < 2L * 60L * 60L * 1000L;        // < 2 hours
@@ -27390,17 +27390,11 @@ private void lab20UptimeHints() {
 
         if (veryRecentReboot) {
 
-            logLabelWarnValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Εντοπίστηκε πρόσφατη επανεκκίνηση"
-                       : "Recent reboot detected"
-            );
-            logLabelWarnValue(
-                    gr ? "Επίπτωση" : "Impact",
-                    gr ? "Ορισμένα προβλήματα μπορεί να καλύπτονται προσωρινά"
-                       : "Some issues may be temporarily masked"
-            );
-            logLabelOkValue(
+            logInfo(gr ? "Πρόσφατη εκκίνηση συσκευής — όχι ένδειξη βλάβης."
+                       : "Device booted recently — not evidence of a fault.");
+            logInfo(gr ? "Το μικρό uptime δεν αποδεικνύει ιστορική σταθερότητα."
+                       : "Short uptime cannot establish historical stability.");
+            logLabelValue(
                     gr ? "Σημείωση" : "Note",
                     gr
                             ? "Οι διαγνώσεις είναι έγκυρες αλλά όχι πλήρως αντιπροσωπευτικές ακόμη"
@@ -27409,35 +27403,29 @@ private void lab20UptimeHints() {
 
         } else if (veryLongUptime) {
 
-            logLabelWarnValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Μεγάλος χρόνος λειτουργίας"
-                       : "Long uptime detected"
-            );
-            logLabelWarnValue(
-                    gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Συσσώρευση φόρτου παρασκηνίου και πίεσης μνήμης"
-                       : "Background load and memory pressure may accumulate"
-            );
+            logInfo(gr ? "Μεγάλος χρόνος συνεχούς λειτουργίας — δεν αποδεικνύει πρόβλημα."
+                       : "Long continuous uptime — not proof of a problem.");
+            logInfo(gr ? "Ο φόρτος παρασκηνίου και η πίεση RAM απαιτούν ανεξάρτητες μετρήσεις."
+                       : "Background load and RAM pressure require independent evidence.");
 
             if (extremeUptime) {
 
-                logLabelErrorValue(
-                        gr ? "Σοβαρότητα" : "Severity",
+                logLabelValue(
+                        gr ? "Διάρκεια" : "Duration",
                         gr
                                 ? "Εξαιρετικά μεγάλος χρόνος λειτουργίας (> 14 ημέρες)"
                                 : "Extremely long uptime (> 14 days)"
                 );
-                logLabelErrorValue(
-                        gr ? "Σύσταση" : "Recommendation",
+                logLabelValue(
+                        gr ? "Προαιρετική ενέργεια" : "Optional action",
                         gr
-                                ? "Συνιστάται έντονα επανεκκίνηση πριν από τελικά συμπεράσματα"
-                                : "Reboot strongly recommended before final conclusions"
+                                ? "Επανεκκίνηση μόνο αν εμφανίζονται συμπτώματα· το uptime δεν είναι βλάβη"
+                                : "Reboot only if symptoms justify it; uptime itself is not a fault"
                 );
 
             } else {
 
-                logLabelOkValue(
+                logLabelValue(
                         gr ? "Σύσταση" : "Recommendation",
                         gr
                                 ? "Μια επανεκκίνηση μπορεί να βοηθήσει στην επαναφορά της κατάστασης"
@@ -27447,11 +27435,11 @@ private void lab20UptimeHints() {
 
         } else {
 
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Κατάσταση" : "Status",
                     gr
-                            ? "Χρόνος λειτουργίας εντός υγιούς διαγνωστικού εύρους"
-                            : "Uptime within healthy diagnostic range"
+                            ? "Η τρέχουσα διάρκεια λειτουργίας καταγράφηκε"
+                            : "Current uptime duration recorded"
             );
         }
 
@@ -27466,43 +27454,42 @@ private void lab20UptimeHints() {
                     : "Advanced uptime signals (root access):");
                     logLine();
 
-            boolean lowMemoryPressure =
-                    readLowMemoryKillCountSafe() < 5;
+            int oomKillCount = readLowMemoryKillCountSafe();
+            boolean hasObservedOomKills = oomKillCount >= 5;
+            // /proc/vmstat 'oom_kill' is a counter, not a causal analysis
+            // or a direct Android app-management diagnosis.
 
             // Root access alone does not provide reboot history. A short
             // uptime proves only that the device booted recently.
-            logLabelWarnValue(
+            logLabelValue(
                     gr ? "Ιστορικό επανεκκινήσεων" : "Reboot history",
                     gr ? "Δεν υπάρχουν επαληθευμένα συμβάντα επανεκκινήσεων"
                        : "No verified reboot event history available"
             );
 
-            if (!lowMemoryPressure) {
+            if (hasObservedOomKills) {
 
                 logLabelWarnValue(
                         gr ? "Πίεση μνήμης" : "Memory pressure",
                         gr
-                                ? "Εντοπίστηκαν συμβάντα πίεσης στο παρασκήνιο"
-                                : "Background pressure events detected"
+                                ? "Αναφέρθηκαν τουλάχιστον 5 OOM kills από /proc/vmstat"
+                                : "At least 5 OOM kills reported by /proc/vmstat"
                 );
-                logLabelWarnValue(
-                        gr ? "Συμπεριφορά συστήματος" : "System behaviour",
-                        gr
-                                ? "Επιθετική διαχείριση εφαρμογών στο παρασκήνιο"
-                                : "Aggressive background app management"
-                );
+                logInfo(gr ? "Η μέτρηση δεν αποδεικνύει βλάβη RAM ή ποια εφαρμογή τερματίστηκε."
+                           : "The count does not prove RAM failure or identify a terminated app.");
 
+            } else if (oomKillCount >= 0) {
+                logLabelValue(
+                        "oom_kill",
+                        (gr ? "Μετρημένες εγγραφές από /proc/vmstat: "
+                            : "Entries reported by /proc/vmstat: ") + oomKillCount
+                );
             } else {
-
-                logLabelOkValue(
-                        gr ? "Πίεση μνήμης" : "Memory pressure",
-                        gr
-                                ? "Δεν εντοπίστηκαν σημαντικά σήματα πίεσης"
-                                : "No significant pressure signals detected"
-                );
+                logInfo(gr ? "Ιστορικό OOM kills: μη διαθέσιμο"
+                           : "OOM kill counter: unavailable");
             }
 
-            logLabelWarnValue(
+            logLabelValue(
                     gr ? "Ερμηνεία" : "Interpretation",
                     gr ? "Το uptime δεν αποδεικνύει συχνότητα επανεκκινήσεων"
                        : "Uptime does not establish reboot frequency"
@@ -27511,7 +27498,7 @@ private void lab20UptimeHints() {
 
     } catch (Throwable t) {
 
-        logLabelErrorValue(
+        logLabelValue(
                 gr ? "Ανάλυση uptime" : "Uptime analysis",
                 gr
                         ? "Αποτυχία αξιολόγησης χρόνου λειτουργίας"
@@ -27531,7 +27518,7 @@ logLine();
 RebootHistoryEvidence.Verdict rebootVerdict =
         RebootHistoryEvidence.classify(-1, 0L);
 if (rebootVerdict == RebootHistoryEvidence.Verdict.INSUFFICIENT_DATA) {
-    logLabelWarnValue(
+    logLabelValue(
             "REBOOT_PATTERN",
             gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ ΙΣΤΟΡΙΚΟ" : "HISTORY UNAVAILABLE"
     );
@@ -27547,7 +27534,8 @@ if (rebootVerdict == RebootHistoryEvidence.Verdict.INSUFFICIENT_DATA) {
 GELServiceLog.info("SUMMARY: REBOOT_PATTERN=" + rebootVerdict.name());
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 20 ολοκληρώθηκε." : "Lab 20 finished.");
+    logInfo(gr ? "Το Lab 20 ολοκληρώθηκε ως στιγμιότυπο uptime."
+               : "Lab 20 completed as an uptime snapshot.");
     logLine();
 }
 
