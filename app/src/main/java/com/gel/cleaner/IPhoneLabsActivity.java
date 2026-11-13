@@ -1426,9 +1426,9 @@ private void runPanicLogAnalyzer() {
             : "LAB 1 — Panic Log Analyzer");
     logLine();
 
-    logOk(gr
-            ? "Αρχικός έλεγχος του panic log σε γνωστά μοτίβα crash."
-            : "Initial screening of the panic log against known crash patterns.");
+    logInfo(gr
+            ? "Σύγκριση λέξεων εισαγόμενου panic log με κανόνες· όχι φυσικός έλεγχος συσκευής."
+            : "Rule-based screening of an imported panic log; no device hardware test.");
 
     IPSPanicParser.Result r = IPSPanicParser.analyze(this, panicLogText);
 
@@ -1484,54 +1484,54 @@ logLabelWarnValue(
         safe(r.domain)
 );
 
-logLabelOkValue(
-        gr ? "Αναφερόμενη Αιτία:" : "Reported Cause:",
-        safe(r.cause)
+logLabelWarnValue(
+        gr ? "Υπόθεση κανόνα:" : "Rule-based cause hypothesis:",
+        ApplePanicEvidencePolicy.possibleCause(r.cause)
 );
 
 // Severity
 if ("High".equalsIgnoreCase(r.severity)) {
-    logLabelErrorValue(
-            gr ? "Σοβαρότητα:" : "Severity:",
+    logLabelWarnValue(
+            gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
             safe(r.severity)
     );
 }
 else if ("Medium".equalsIgnoreCase(r.severity)) {
     logLabelWarnValue(
-            gr ? "Σοβαρότητα:" : "Severity:",
+            gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
             safe(r.severity)
     );
 }
 else {
-    logLabelOkValue(
-            gr ? "Σοβαρότητα:" : "Severity:",
+    logLabelWarnValue(
+            gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
             safe(r.severity)
     );
 }
 
 // Confidence
 if ("High".equalsIgnoreCase(r.confidence)) {
-    logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence:",
-            safe(r.confidence)
+    logLabelWarnValue(
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 else if ("Medium".equalsIgnoreCase(r.confidence)) {
     logLabelWarnValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence:",
-            safe(r.confidence)
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 else {
-    logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence:",
-            safe(r.confidence)
+    logLabelWarnValue(
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 
-logLabelOkValue(
-        gr ? "Αρχική Σύσταση:" : "Initial Recommendation:",
-        safe(r.recommendation)
+logLabelWarnValue(
+        gr ? "Επόμενο τεχνικό βήμα:" : "Next technician step:",
+        ApplePanicEvidencePolicy.recommendation(gr)
 );
 
 logLabelOkValue(
@@ -1561,9 +1561,9 @@ private void runPanicSignatureParser() {
             : "LAB 2 — Panic Signature Parser");
     logLine();
 
-    logOk(gr
-            ? "Ερμηνεία της συμπεριφοράς του crash με βάση τα διαθέσιμα στοιχεία."
-            : "Interpreting crash behavior using contextual evidence.");
+    logInfo(gr
+            ? "Καταγραφή ενδείξεων από εισαγόμενα logs· όχι απόδειξη πραγματικής βλάβης."
+            : "Imported-log clues only; not evidence of confirmed physical failure.");
 
     parseAndCacheSignature(panicLogText);
 
@@ -1576,22 +1576,22 @@ private void runPanicSignatureParser() {
 if ("Kernel Panic".equalsIgnoreCase(sigCrashType)
         || "Watchdog / Hang".equalsIgnoreCase(sigCrashType)) {
 
-    logLabelErrorValue(
-            gr ? "Τύπος Crash:" : "Crash Type:",
+    logLabelWarnValue(
+            gr ? "Τύπος στο αρχείο:" : "Imported crash type:",
             safe(sigCrashType)
     );
 
     logLabelWarnValue(
-            gr ? "Σημασία:" : "Implication:",
+            gr ? "Τι καταγράφει:" : "What the file indicates:",
             gr
-                    ? "Σοβαρή διακοπή λειτουργίας σε επίπεδο συστήματος."
-                    : "Serious system-level interruption."
+                    ? "Περιέχει όρους διακοπής συστήματος· η λειτουργική κατάσταση χρειάζεται επαλήθευση."
+                    : "System interruption terms appear; real device operation needs corroboration."
     );
 }
 else {
 
-    logLabelOkValue(
-            gr ? "Τύπος Crash:" : "Crash Type:",
+    logLabelWarnValue(
+            gr ? "Τύπος στο αρχείο:" : "Imported crash type:",
             safe(sigCrashType)
     );
 }
@@ -1612,23 +1612,23 @@ logLabelWarnValue(
 // Confidence
 if ("High".equalsIgnoreCase(sigConfidence)) {
 
-    logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+    logLabelWarnValue(
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 else if ("Medium".equalsIgnoreCase(sigConfidence)) {
 
     logLabelWarnValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 else {
 
-    logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+    logLabelWarnValue(
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 
