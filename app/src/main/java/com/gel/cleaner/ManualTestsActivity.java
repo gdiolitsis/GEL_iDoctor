@@ -25310,16 +25310,18 @@ float dtCharge =
 
 if (lab15OverTempDuringCharge) {
 
+    // The 45°C observation is genuine even if the starting ΔT is unavailable.
+    String elevatedTemp = Float.isFinite(dtCharge)
+            ? String.format(Locale.US,
+                    gr ? "ΥΨΗΛΗ (ΔT +%.1f°C) — Ανιχνεύθηκε αυξημένη θερμοκρασία"
+                       : "HOT (ΔT +%.1f°C) — Elevated temperature detected",
+                    Math.max(0f, dtCharge))
+            : (gr ? "ΥΨΗΛΗ — Ανιχνεύθηκε αυξημένη θερμοκρασία"
+                  : "HOT — Elevated temperature detected");
     logLabelErrorValue(
             gr ? "Θερμοκρασία κατά την φορτιση"
                : "Temperature during charging",
-            String.format(
-                    Locale.US,
-                    gr
-                            ? "ΥΨΗΛΗ (ΔT +%.1f°C) — Ανιχνεύθηκε αυξημένη θερμοκρασία"
-                            : "HOT (ΔT +%.1f°C) — Elevated temperature detected",
-                    Math.max(0f, dtCharge)
-            )
+            elevatedTemp
     );
 
 } else if (Float.isFinite(lab15batTempStart) && Float.isFinite(lab15batTempEnd)) {
