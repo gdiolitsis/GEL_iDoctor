@@ -11671,6 +11671,9 @@ private void showLab11MobileDataPreparation() {
         try { AppTTS.stop(); } catch (Throwable ignore) {}
     };
     dialog.setOnCancelListener(d -> skipNeutral.run());
+    dialog.setOnDismissListener(d -> {
+        if (!handled[0]) skipNeutral.run();
+    });
     skip.setOnClickListener(v -> {
         skipNeutral.run();
         dialog.dismiss();
@@ -11685,10 +11688,14 @@ private void showLab11MobileDataPreparation() {
     });
     retry.setOnClickListener(v -> {
         TelephonySnapshot current = getTelephonySnapshot();
-        if (current.defaultWifi) {
+        if (!current.defaultCellular) {
             status.setText(gr
-                    ? "Το Wi-Fi χρησιμοποιείται ακόμη. Κλείστε το ή επιλέξτε ΠΑΡΑΛΕΙΨΗ."
-                    : "Wi-Fi is still the active route. Turn it off or choose SKIP.");
+                    ? (current.defaultWifi
+                        ? "Το Wi-Fi χρησιμοποιείται ακόμη. Κλείστε το ή επιλέξτε ΠΑΡΑΛΕΙΨΗ."
+                        : "Δεν εντοπίστηκε ενεργή διαδρομή κινητής. Ενεργοποιήστε τα δεδομένα ή επιλέξτε ΠΑΡΑΛΕΙΨΗ.")
+                    : (current.defaultWifi
+                        ? "Wi-Fi is still the active route. Turn it off or choose SKIP."
+                        : "No active cellular route detected. Enable mobile data or choose SKIP."));
             return;
         }
         handled[0] = true;
