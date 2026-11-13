@@ -4800,8 +4800,8 @@ return false;
 // LAB 18 — STORAGE HEALTH HELPERS
 // ============================================================
 
-// Heuristic ONLY — real NAND wear is not exposed on consumer devices
-private boolean detectStorageWearSignals() {
+// Observable free-space pressure only; not NAND wear/controller-health evidence.
+private boolean detectCriticalFreeSpacePressure() {
 try {
 StatFs s = new StatFs(Environment.getDataDirectory().getAbsolutePath());
 long total = s.getBlockCountLong();
@@ -26915,32 +26915,32 @@ private void lab18StorageSnapshot() {
         }
 
         // ------------------------------------------------------------
-        // ROOT AWARE INTELLIGENCE
+        // LEGACY ROOT-CONDITIONAL CAPACITY CONTEXT (NO ROOT-ONLY WEAR EVIDENCE)
         // ------------------------------------------------------------
         boolean rooted = isDeviceRooted();
 
-boolean wearSignals = false;
+boolean criticalFreeSpacePressure = false;
 boolean controllerRisk = false;
 
 if (rooted) {
 
     appendHtml("<br>");
     logInfo(gr
-            ? "Στοιχεία χωρητικότητας (root mode, χωρίς μετρήσεις φθοράς NAND):"
-            : "Capacity context (root mode; no NAND wear measurement):");
+            ? "Στοιχεία ελεύθερου χώρου (χωρίς μέτρηση φθοράς NAND):"
+            : "Free-space context (NAND wear not measured):");
             logLine();
 
-    wearSignals = detectStorageWearSignals();
+    criticalFreeSpacePressure = detectCriticalFreeSpacePressure();
     boolean reservedPressure = pctFree < 12;
             
 // ------------------------------------------------------------
-// EARLY STORAGE DEGRADATION INDICATORS
+// LEGACY CAPACITY PRESSURE INDEX A (NOT NAND DEGRADATION)
 // ------------------------------------------------------------
 boolean nandRisk = false;
 int nandScore = 0;
 
 // primary signal
-if (wearSignals)
+if (criticalFreeSpacePressure)
     nandScore += 60;
 
 // secondary contextual signals
@@ -26950,8 +26950,8 @@ if (reservedPressure)
 if (pctFree < 5)
     nandScore += 25;
 
-// prevent false NAND diagnosis when wearSignals not present
-if (!wearSignals)
+// prevent false NAND diagnosis when criticalFreeSpacePressure not present
+if (!criticalFreeSpacePressure)
     nandScore = Math.min(nandScore, 40);
 
 logLabelValue(
@@ -26965,8 +26965,8 @@ if (nandScore >= 70) {
     nandRisk = true;
 
     logLabelWarnValue(
-            gr ? "Ένδειξη αποθηκευτικού χώρου"
-               : "Storage integrity",
+            gr ? "Πίεση ελεύθερου χώρου"
+               : "Free-space pressure",
             gr
                     ? "Πολύ χαμηλός διαθέσιμος χώρος — αυτό δεν αποδεικνύει φθορά NAND."
                     : "Very low free space; this does not prove NAND wear."
@@ -26980,7 +26980,7 @@ if (nandScore >= 70) {
 
 
 // ------------------------------------------------------------
-// STORAGE CONTROLLER INSTABILITY DETECTOR
+// LEGACY CAPACITY PRESSURE INDEX B (NOT A CONTROLLER TEST)
 // ------------------------------------------------------------
 int controllerScore = 0;
 
@@ -26990,7 +26990,7 @@ if (pctFree < 10)
 if (pctFree < 7)
     controllerScore += 30;
 
-if (wearSignals)
+if (criticalFreeSpacePressure)
     controllerScore += 30;
 
 logLabelValue(
@@ -27004,8 +27004,8 @@ if (controllerScore >= 60) {
     controllerRisk = true;
 
     logLabelWarnValue(
-            gr ? "Controller αποθήκευσης"
-               : "Storage controller",
+            gr ? "Διαθέσιμος χώρος (όχι έλεγχος controller)"
+               : "Available space (controller not tested)",
             gr
                     ? "Χαμηλός χώρος μπορεί να περιορίσει εγγραφές· ο controller δεν ελέγχθηκε."
                     : "Low space can constrain writes; controller was not tested."
@@ -27019,7 +27019,7 @@ if (controllerScore >= 60) {
 
 
 // ------------------------------------------------------------
-// FILESYSTEM CORRUPTION EARLY DETECTOR
+// LEGACY CAPACITY PRESSURE INDEX C (NOT A FILESYSTEM TEST)
 // ------------------------------------------------------------
 boolean fsCorruptionRisk = false;
 int fsScore = 0;
@@ -27030,7 +27030,7 @@ if (pctFree < 10)
 if (pctFree < 7)
     fsScore += 30;
 
-if (wearSignals)
+if (criticalFreeSpacePressure)
     fsScore += 30;
 
 logLabelValue(
@@ -27044,8 +27044,8 @@ if (fsScore >= 60) {
     fsCorruptionRisk = true;
 
     logLabelWarnValue(
-            gr ? "Ακεραιότητα filesystem"
-               : "Filesystem integrity",
+            gr ? "Διαθέσιμος χώρος (όχι έλεγχος filesystem)"
+               : "Available space (filesystem not tested)",
             gr
                     ? "Ο χαμηλός χώρος μπορεί να εμποδίσει εγγραφές· δεν μετρήθηκε αλλοίωση filesystem."
                     : "Low free space may block writes; filesystem corruption was not measured."
@@ -27059,7 +27059,7 @@ if (fsScore >= 60) {
 
 
 // ------------------------------------------------------------
-// SILENT DATA CORRUPTION PREDICTOR
+// LEGACY CAPACITY PRESSURE INDEX D (NOT CORRUPTION PREDICTION)
 // ------------------------------------------------------------
 boolean silentCorruptionRisk = false;
 int corruptionScore = 0;
@@ -27067,7 +27067,7 @@ int corruptionScore = 0;
 if (pctFree < 12)
     corruptionScore += 30;
 
-if (wearSignals)
+if (criticalFreeSpacePressure)
     corruptionScore += 35;
 
 if (controllerRisk)
@@ -27084,8 +27084,8 @@ if (corruptionScore >= 60) {
     silentCorruptionRisk = true;
 
     logLabelWarnValue(
-            gr ? "Κίνδυνος σιωπηλής αλλοίωσης δεδομένων"
-               : "Silent data corruption risk",
+            gr ? "Πίεση χώρου (χωρίς έλεγχο ακεραιότητας)"
+               : "Free-space pressure (integrity not tested)",
             gr
                     ? "Συστήνεται ελευθέρωση χώρου· δεν υπάρχουν μετρήσεις αλλοίωσης αρχείων."
                     : "Freeing storage is advisable; file corruption was not measured."
