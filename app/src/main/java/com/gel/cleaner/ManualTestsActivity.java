@@ -29629,33 +29629,35 @@ private void lab26AppsFootprint() {
         r = AppImpactEngine.analyze(this, rooted);
     } catch (Throwable t) {
 
-        logLabelErrorValue(
+        logLabelValue(
                 gr ? "Κατάσταση" : "Status",
                 gr ? "Αποτυχία ανάλυσης εφαρμογών" : "Failed to analyze applications"
         );
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Αιτία" : "Reason",
                 gr ? "Σφάλμα πρόσβασης PackageManager / UsageStats" : "PackageManager / UsageStats access error"
         );
 
         logLine();
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 26 ολοκληρώθηκε." : "Lab 26 finished.");
+        logInfo(gr ? "Το Lab 26 κατέγραψε τα διαθέσιμα στοιχεία."
+           : "Lab 26 recorded available evidence.");
         logLine();
         return;
     }
 
     if (r == null) {
 
-        logLabelErrorValue(
+        logLabelValue(
                 gr ? "Κατάσταση" : "Status",
                 gr ? "Το αποτέλεσμα ανάλυσης είναι κενό" : "Engine result is null"
         );
 
         logLine();
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 26 ολοκληρώθηκε." : "Lab 26 finished.");
+        logInfo(gr ? "Το Lab 26 κατέγραψε τα διαθέσιμα στοιχεία."
+           : "Lab 26 recorded available evidence.");
         logLine();
         return;
     }
@@ -29668,21 +29670,21 @@ appendHtml("<br>");
 logInfo(gr ? "Επισκόπηση εγκατεστημένων" : "Installed overview");
 logLine();
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Σύνολα" : "Totals",
             (gr
                     ? "Όλα: " + r.totalPkgs + " | Χρήστη: " + r.userApps + " | Συστήματος: " + r.systemApps
                     : "All: " + r.totalPkgs + " | User: " + r.userApps + " | System: " + r.systemApps)
     );
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Usage Access" : "Usage Access",
             r.usageAccessOk
                     ? (gr ? "Ενεργό (OK)" : "Enabled (OK)")
                     : (gr ? "Ανενεργό (χωρίς foreground χρόνο)" : "Disabled (no foreground time)")
     );
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Root-aware" : "Root-aware",
             rooted
                     ? (gr ? "Ναι (best-effort χωρίς su)" : "Yes (best-effort without su)")
@@ -29700,22 +29702,22 @@ logLine();
     logInfo(gr ? "Ενδείξεις φόρτου (βάσει δυνατοτήτων)" : "Load indicators (capability-based)");
     logLine();
 
-    logLabelOkValue(gr ? "Background-capable" : "Background-capable",
+    logLabelValue(gr ? "Background-capable" : "Background-capable",
             r.bgCapable + " (" + pctBg + "%)");
 
-    logLabelOkValue(gr ? "Permission-heavy" : "Permission-heavy",
+    logLabelValue(gr ? "Permission-heavy" : "Permission-heavy",
             r.permHeavy + " (" + pctPerm + "%)");
             
    appendHtml("<br>");
     logInfo(gr ? "Χάρτης δυνατοτήτων (user apps)" : "Capability map (user apps)");
     logLine();
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Boot / Location / Mic / Camera" : "Boot / Location / Mic / Camera",
             r.bootAware + " | " + r.locationLike + " | " + r.micLike + " | " + r.cameraLike
     );
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Overlay / VPN / Storage / Notifications" : "Overlay / VPN / Storage / Notifications",
             r.overlayLike + " | " + r.vpnLike + " | " + r.storageLike + " | " + r.notifLike
     );
@@ -29727,10 +29729,10 @@ logLine();
     logInfo(gr ? "Ενδείξεις πλεονασμού (heuristic)" : "Redundancy signals (heuristic)");
     logLine();
 
-    logLabelOkValue(gr ? "Cleaners / Optimizers" : "Cleaners / Optimizers", String.valueOf(r.cleanersLike));
-    logLabelOkValue(gr ? "Launchers" : "Launchers", String.valueOf(r.launchersLike));
-    logLabelOkValue(gr ? "Antivirus suites" : "Antivirus suites", String.valueOf(r.antivirusLike));
-    logLabelOkValue(gr ? "Keyboards" : "Keyboards", String.valueOf(r.keyboardsLike));
+    logLabelValue(gr ? "Cleaners / Optimizers" : "Cleaners / Optimizers", String.valueOf(r.cleanersLike));
+    logLabelValue(gr ? "Launchers" : "Launchers", String.valueOf(r.launchersLike));
+    logLabelValue(gr ? "Antivirus suites" : "Antivirus suites", String.valueOf(r.antivirusLike));
+    logLabelValue(gr ? "Keyboards" : "Keyboards", String.valueOf(r.keyboardsLike));
 
 // ============================================================
 // REAL DATA (HONEST) — SINCE BOOT (TrafficStats)
@@ -29757,7 +29759,7 @@ if (r.topDataConsumers != null && !r.topDataConsumers.isEmpty()) {
 
         String val = humanBytes(a.dataBytesSinceBoot);
 
-        logLabelWarnValue(
+        logLabelValue(
                 a.safeLabel(),
                 (gr
         ? val + " (Συνολική κίνηση δεδομένων από εκκίνηση)"
@@ -29769,7 +29771,7 @@ if (r.topDataConsumers != null && !r.topDataConsumers.isEmpty()) {
 
     if (!foundRealData) {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Κατάσταση" : "Status",
                 gr
                         ? "Δεν υπάρχουν διαθέσιμα δεδομένα κατανάλωσης.\n\n"
@@ -29786,7 +29788,7 @@ if (r.topDataConsumers != null && !r.topDataConsumers.isEmpty()) {
 
     } else {
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Σημείωση" : "Note",
                 gr
                         ? "Τα δεδομένα είναι συνολικά από την τελευταία εκκίνηση της συσκευής."
@@ -29813,7 +29815,7 @@ if (r.topDataConsumers != null && !r.topDataConsumers.isEmpty()) {
 
     if (!r.usageAccessOk) {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Περιορισμός" : "Limitation",
                 gr
                         ? "Δεν υπάρχει Usage Access, άρα δεν έχουμε αξιόπιστο foreground χρόνο."
@@ -29884,11 +29886,11 @@ String detail = gr
           " | " + dataText +
           " | Indicators: " + a.tags;
 
-            logLabelWarnValue(a.safeLabel(), detail);
+            logLabelValue(a.safeLabel(), detail);
             logInfo(a.pkg);
         }
 
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Σημείωση" : "Note",
                 gr
                         ? "Το «Battery exposure» είναι εκτίμηση βάσει χρήσης/δυνατοτήτων/δεδομένων — όχι πραγματικό mAh."
@@ -29897,7 +29899,7 @@ String detail = gr
 
     } else {
 
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Κατάσταση" : "Status",
                 gr ? "Δεν ήταν δυνατή η κατάταξη έκθεσης μπαταρίας" : "Unable to rank battery exposure"
         );
@@ -29929,7 +29931,7 @@ String detail = gr
           " | Dangerous Permissions: " + a.dangerPermCount +
           " | Impact Factors: " + a.tags);
 
-            logLabelWarnValue(a.safeLabel(), detail);
+            logLabelValue(a.safeLabel(), detail);
             logInfo(a.pkg);
         }
     }
@@ -29938,23 +29940,24 @@ String detail = gr
     // HUMAN VERDICT
     // ============================================================
     appendHtml("<br>");
-    logOk(gr ? "ΓΕΝΙΚΟ ΣΥΜΠΕΡΑΣΜΑ" : "TOTAL VERDICT");
+    logInfo(gr ? "Ενδεικτική σύνοψη δυνατοτήτων" : "Indicative capability summary");
     logLine();
 
     if (r.riskPoints >= 8) {
-        logLabelWarnValue(gr ? "Επίπεδο πίεσης" : "Pressure level", gr ? "ΥΨΗΛΟ" : "HIGH");
+        logLabelValue(gr ? "Ενδεικτική κατάταξη δυνατοτήτων" : "Indicative capability ranking", gr ? "ΥΨΗΛΟ" : "HIGH");
     } else if (r.riskPoints >= 5) {
-        logLabelWarnValue(gr ? "Επίπεδο πίεσης" : "Pressure level", gr ? "ΜΕΤΡΙΟ" : "MODERATE");
+        logLabelValue(gr ? "Ενδεικτική κατάταξη δυνατοτήτων" : "Indicative capability ranking", gr ? "ΜΕΤΡΙΟ" : "MODERATE");
     } else {
-        logLabelOkValue(gr ? "Επίπεδο πίεσης" : "Pressure level", gr ? "ΦΥΣΙΟΛΟΓΙΚΟ" : "NORMAL");
+        logLabelValue(gr ? "Ενδεικτική κατάταξη δυνατοτήτων" : "Indicative capability ranking", gr ? "ΦΥΣΙΟΛΟΓΙΚΟ" : "NORMAL");
     }
 
     GELServiceLog.info(
-            "SUMMARY: APPS_IMPACT=" + (r.appsImpactHigh ? "HIGH" : "NORMAL")
+            "SUMMARY: APPS_IMPACT=" + (r.appsImpactHigh ? "HEURISTIC_HIGH" : "HEURISTIC_NOT_ELEVATED")
     );
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 26 ολοκληρώθηκε." : "Lab 26 finished.");
+    logInfo(gr ? "Το Lab 26 κατέγραψε τα διαθέσιμα στοιχεία."
+           : "Lab 26 recorded available evidence.");
     logLine();
 }
 
