@@ -1,0 +1,37 @@
+name: Labs 28-29 structured evidence contract
+
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/gel/cleaner/ManualTestsActivity.java'
+      - 'app/src/main/java/com/gel/cleaner/LabEvidenceFreshness.java'
+      - 'app/src/main/java/com/gel/cleaner/UsedDevicePrecheckPolicy.java'
+      - 'app/src/test/java/com/gel/cleaner/LabEvidenceFreshnessTest.java'
+      - 'app/src/test/java/com/gel/cleaner/UsedDevicePrecheckPolicyTest.java'
+      - '.github/workflows/labs28-29-contract-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-unit-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Compile actual Android source and run unit tests — no APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          ./gradlew :app:compileDebugJavaWithJavac :app:testDebugUnitTest --no-daemon --console=plain
