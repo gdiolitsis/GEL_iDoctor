@@ -33233,17 +33233,17 @@ if (technicianLab28Fresh) {
                 (measuredUptime / 3600000L) + (gr ? " ώρες" : " hours"));
     }
     if (p.contains("lab28_obs_battery_c")) {
-        logLabelOkValue(gr ? "Θερμοκρασία μπαταρίας" : "Battery temperature",
+        logLabelValue(gr ? "Θερμοκρασία μπαταρίας" : "Battery temperature",
                 String.format(Locale.US, "%.1f °C",
                         p.getFloat("lab28_obs_battery_c", Float.NaN)));
     }
     if (p.contains("lab28_obs_cpu_c")) {
-        logLabelOkValue(gr ? "Θερμοκρασία CPU" : "CPU temperature",
+        logLabelValue(gr ? "Θερμοκρασία CPU" : "CPU temperature",
                 String.format(Locale.US, "%.1f °C",
                         p.getFloat("lab28_obs_cpu_c", Float.NaN)));
     }
     if (p.contains("lab28_obs_gpu_c")) {
-        logLabelOkValue(gr ? "Θερμοκρασία GPU" : "GPU temperature",
+        logLabelValue(gr ? "Θερμοκρασία GPU" : "GPU temperature",
                 String.format(Locale.US, "%.1f °C",
                         p.getFloat("lab28_obs_gpu_c", Float.NaN)));
     }
