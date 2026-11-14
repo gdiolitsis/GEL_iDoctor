@@ -2195,20 +2195,14 @@ for (String block : blocks) {
 String dominant = null;
 int max = 0;
 
-boolean highRiskFound = false;
-
+// A concerning keyword is not enough to break a statistical tie.
 for (java.util.Map.Entry<String,Integer> e : domainCount.entrySet()) {
-
-    if (isHighRiskDomain(e.getKey()) && !highRiskFound) {
-        dominant = e.getKey();
-        max = e.getValue();
-        highRiskFound = true;
-    }
-    else if (!highRiskFound && e.getValue() > max) {
+    if (e.getValue() > max) {
         dominant = e.getKey();
         max = e.getValue();
     }
 }
+if (max < 2) dominant = null; // no repeated keyword category
 
     double ratio = (double) max / (double) total;
     int percent = (int)(ratio * 100);
@@ -2221,7 +2215,7 @@ for (java.util.Map.Entry<String,Integer> e : domainCount.entrySet()) {
     score -= (highConfidenceCount * 15);
     score -= (criticalCrashCount * 10);
 
-    if (total > 1 && ratio >= 0.5) {
+    if (total > 1 && max >= 2 && ratio >= 0.5) {
 
     if (isHighRiskDomain(dominant))
         score -= 30;
@@ -2239,14 +2233,18 @@ else if (max >= 2) {
     // ------------------------------------------------------------
     // SUMMARY
     // ------------------------------------------------------------
-    logInfo((gr ? "Αναγνωρισμένα panic blocks: " : "Eligible panic blocks: ")
-        + total);
+    logLabelOkValue(gr ? "Αναγνωρισμένα panic blocks:" : "Eligible panic blocks:",
+            String.valueOf(total));
 
-logInfo((gr ? "Συχνότερη κατηγορία όρων: " : "Most common keyword category: ")
-        + safe(dominant) + " (" + max + "/" + total + ")");
-
-logInfo((gr ? "Ποσοστό της κατηγορίας στο εισαγόμενο δείγμα: "
-            : "Category share among imported entries: ") + percent + "%");
+if (max >= 2) {
+    logLabelOkValue(gr ? "Επαναλαμβανόμενη κατηγορία:" : "Repeated category:",
+            safe(dominant) + " (" + max + "/" + total + ")");
+    logLabelOkValue(gr ? "Μερίδιο στο εισαγόμενο δείγμα:" : "Share among imported entries:",
+            percent + "%");
+} else {
+    logInfo(gr ? "Δεν προκύπτει επαναλαμβανόμενο domain από τα εισαγόμενα συμβάντα."
+               : "No repeated domain is established by these imported incidents.");
+}
 
 logInfo((gr ? "Μη βαθμονομημένος δείκτης όρων: " : "Uncalibrated keyword index: ")
         + score + "/100 (NOT measured device health)");
@@ -2361,13 +2359,14 @@ if (dominant != null) {
     // ------------------------------------------------------------
     // EXTRA SERVICE PATTERNS (πιο αξιόπιστα από domain)
     // ------------------------------------------------------------
-    if (text.contains("baseband") || text.contains("commcenter"))
+    if (ApplePanicEvidencePolicy.hasExplicitBasebandFaultHint(panicLogText))
         suspect = "Cellular / Baseband";
 
     else if (text.contains("nvme") || text.contains("apfs"))
         suspect = "Storage / NAND";
 
-    else if (text.contains("watchdog") && text.contains("thermal"))
+    else if (ApplePanicEvidencePolicy.tokensMatchOnePanic(
+            panicLogText, java.util.Arrays.asList("watchdog", "thermal")))
         suspect = "Thermal / Power management";
 
     else if (text.contains("applecam") || text.contains("cam_i2c"))
