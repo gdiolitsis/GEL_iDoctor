@@ -12433,15 +12433,19 @@ private void runLab13BluetoothCheckCore() {
         return;
     }
 
-    logInfo(gr ? "Το Bluetooth δηλώνεται ως υποστηριζόμενο." : "Bluetooth is reported as supported.");
+    // BluetoothAdapter present: Android reports Bluetooth support, not external-link health.
+    logLabelOkValue(gr ? "Υποστήριξη Bluetooth" : "Bluetooth support",
+            gr ? "ΝΑΙ (διαθέσιμος adapter)" : "YES (adapter available)");
 
     boolean enabled = false;
     try { enabled = lab13Ba.isEnabled(); } catch (Throwable ignore) {}
 
-    logLabelValue(
-            gr ? "Ενεργό" : "Enabled",
-            enabled ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
-    );
+    // Only a confirmed enabled state is a positive inventory value.
+    if (enabled) {
+        logLabelOkValue(gr ? "Ενεργό" : "Enabled", gr ? "Ναι" : "Yes");
+    } else {
+        logLabelValue(gr ? "Ενεργό" : "Enabled", gr ? "Όχι" : "No");
+    }
 
     int state = BluetoothAdapter.STATE_OFF;
     try { state = lab13Ba.getState(); } catch (Throwable ignore) {}
@@ -12457,20 +12461,23 @@ private void runLab13BluetoothCheckCore() {
         stateStr = gr ? "ΚΛΕΙΣΤΟ" : "OFF";
     }
 
-    logLabelValue(
-            gr ? "Κατάσταση" : "State",
-            stateStr
-    );
+    if (state == BluetoothAdapter.STATE_ON) {
+        logLabelOkValue(gr ? "Κατάσταση" : "State", stateStr);
+    } else {
+        logLabelValue(gr ? "Κατάσταση" : "State", stateStr);
+    }
 
     boolean le = false;
     try {
         le = getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
     } catch (Throwable ignore) {}
 
-    logLabelValue(
-            gr ? "Υποστήριξη BLE" : "BLE Support",
-            le ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
-    );
+    // BLE feature declaration is green when present, not a BLE-connectivity test.
+    if (le) {
+        logLabelOkValue(gr ? "Υποστήριξη BLE" : "BLE Support", gr ? "Ναι" : "Yes");
+    } else {
+        logLabelValue(gr ? "Υποστήριξη BLE" : "BLE Support", gr ? "Όχι" : "No");
+    }
 
     if (!enabled) {
         logWarn(gr
@@ -12551,7 +12558,9 @@ private void runLab13BluetoothCheckCore() {
                   + "External device connection stability was not verified.");
 
         appendHtml("<br>");
-        logInfo(gr ? "Το Lab 13 κατέγραψε τα διαθέσιμα στοιχεία." : "Lab 13 recorded available evidence.");
+        // Only system inventory completed. The skipped external-device test remains untested.
+        logOk(gr ? "Το Lab 13 ολοκλήρωσε την καταγραφή των διαθέσιμων στοιχείων Bluetooth (χωρίς δοκιμή εξωτερικής σύνδεσης)."
+                 : "Lab 13 finished collecting available Bluetooth evidence (external connection not tested).");
         logLine();
         enableSingleExportButton();
         return;
