@@ -6,6 +6,11 @@ package com.gel.cleaner;
  * A clear blacklist lookup is NOT proof of title or lawful ownership.
  */
 final class UsedDevicePrecheckPolicy {
+    // Operator must identify which authoritative source was consulted.
+    // This is an operator record, not an automated official registry connection.
+    static final int OFFICIAL_SOURCE_UNSPECIFIED = 0;
+    static final int OFFICIAL_SOURCE_GSMA_REPORTED = 1;
+    static final int OFFICIAL_SOURCE_PROVIDER_REPORTED = 2;
     static final int IMEI_UNKNOWN = 0;
     static final int IMEI_NOT_FLAGGED_REPORTED = 1;
     static final int IMEI_FLAGGED_REPORTED = 2;
@@ -15,6 +20,17 @@ final class UsedDevicePrecheckPolicy {
     static final int HOLD_FOR_REVIEW = 2;
 
     private UsedDevicePrecheckPolicy() { }
+
+    static int evaluateWithOfficialSource(int imeiStatus, int officialSource,
+                                          boolean identifiersMatch,
+                                          boolean ownershipDocumentsSeen,
+                                          boolean ownerAccountsRemovedAndSetupPassed) {
+        if (officialSource != OFFICIAL_SOURCE_GSMA_REPORTED
+                && officialSource != OFFICIAL_SOURCE_PROVIDER_REPORTED)
+            return INCOMPLETE;
+        return evaluate(imeiStatus, identifiersMatch,
+                ownershipDocumentsSeen, ownerAccountsRemovedAndSetupPassed);
+    }
 
     static int evaluate(int imeiStatus,
                         boolean identifiersMatch,
