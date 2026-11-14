@@ -25942,8 +25942,13 @@ private void lab16ThermalSnapshot() {
     );
 
     appendHtml("<br>");
-    logInfo(gr ? "Το Lab 16 ολοκληρώθηκε ως θερμικό στιγμιότυπο."
-               : "Lab 16 completed as a thermal snapshot.");
+    if (observedCount > 0) {
+        logOk(gr ? "Το Lab 16 ολοκληρώθηκε (καταγραφή θερμικού στιγμιοτύπου)."
+                 : "Lab 16 finished (thermal snapshot recorded).");
+    } else {
+        logInfo(gr ? "Το Lab 16 δεν κατέγραψε επαρκείς θερμικές μετρήσεις."
+                   : "Lab 16 had insufficient thermal measurements.");
+    }
     logLine();
 }
 
@@ -26748,8 +26753,8 @@ logLine();
 
                 // ================= FINAL =================
                 appendHtml("<br>");
-                logInfo(gr ? "Η ενδεικτική ανάλυση Lab 17 ολοκληρώθηκε."
-                           : "Lab 17 indicative analysis completed.");
+                logOk(gr ? "Το Lab 17 ολοκληρώθηκε (ενδεικτική ανάλυση διαθέσιμων μετρήσεων)."
+                         : "Lab 17 finished (indicative analysis of available readings).");
                 logLine();
 
             });
@@ -27207,8 +27212,8 @@ if (corruptionScore >= 60) {
         }
 
         appendHtml("<br>");
-        logInfo(gr ? "Το Lab 18 ολοκληρώθηκε ως έλεγχος διαθέσιμου χώρου."
-                   : "Lab 18 completed as an available-storage check.");
+        logOk(gr ? "Το Lab 18 ολοκληρώθηκε (απογραφή διαθέσιμου αποθηκευτικού χώρου)."
+                 : "Lab 18 finished (available-storage inventory).");
         logLine();
 
     } catch (Throwable ignored) {
@@ -27229,6 +27234,7 @@ if (corruptionScore >= 60) {
 private void lab19RamSnapshot() {
 
     final boolean gr = AppLang.isGreek(this);
+    boolean ramSnapshotCaptured = false;
 
     appendHtml("<br>");
     logLine();
@@ -27259,6 +27265,7 @@ private void lab19RamSnapshot() {
             return;
         }
         long used  = total - free;
+        ramSnapshotCaptured = true;
 
         int pctFree = (int) ((free * 100L) / Math.max(1L, total));
 
@@ -27475,8 +27482,13 @@ private void lab19RamSnapshot() {
     }
 
     appendHtml("<br>");
-    logInfo(gr ? "Το Lab 19 ολοκληρώθηκε ως στιγμιότυπο μνήμης."
-               : "Lab 19 completed as a memory snapshot.");
+    if (ramSnapshotCaptured) {
+        logOk(gr ? "Το Lab 19 ολοκληρώθηκε (έγκυρο στιγμιότυπο RAM)."
+                 : "Lab 19 finished (valid RAM snapshot).");
+    } else {
+        logInfo(gr ? "Το Lab 19 δεν ολοκληρώθηκε — δεν συλλέχθηκε έγκυρο στιγμιότυπο RAM."
+                   : "Lab 19 incomplete — no valid RAM snapshot captured.");
+    }
     logLine();
 }
 
@@ -27487,6 +27499,7 @@ private void lab19RamSnapshot() {
 private void lab20UptimeHints() {
 
     final boolean gr = AppLang.isGreek(this);
+    boolean uptimeCaptured = false;
 
 
     appendHtml("<br>");
@@ -27499,6 +27512,7 @@ private void lab20UptimeHints() {
     try {
 
         long upMs = SystemClock.elapsedRealtime();
+        uptimeCaptured = upMs >= 0L;
         String upStr = formatUptime(upMs);
 
         logInfo(gr ? "Χρόνος λειτουργίας συστήματος:" : "System uptime:");
@@ -27664,8 +27678,13 @@ if (rebootVerdict == RebootHistoryEvidence.Verdict.INSUFFICIENT_DATA) {
 GELServiceLog.info("SUMMARY: REBOOT_PATTERN=" + rebootVerdict.name());
 
     appendHtml("<br>");
-    logInfo(gr ? "Το Lab 20 ολοκληρώθηκε ως στιγμιότυπο uptime."
-               : "Lab 20 completed as an uptime snapshot.");
+    if (uptimeCaptured) {
+        logOk(gr ? "Το Lab 20 ολοκληρώθηκε (καταγραφή χρόνου λειτουργίας)."
+                 : "Lab 20 finished (system uptime recorded).");
+    } else {
+        logInfo(gr ? "Το Lab 20 δεν ολοκληρώθηκε — δεν συλλέχθηκε χρόνος λειτουργίας."
+                   : "Lab 20 incomplete — no uptime reading recorded.");
+    }
     logLine();
 }
 
@@ -28105,7 +28124,8 @@ appendHtml("<br>");
                         );
 
                         appendHtml("<br>");
-                        logInfo(gr ? "Το Lab 21 κατέγραψε την κατάσταση ελέγχου." : "Lab 21 recorded test status.");
+                        logOk(gr ? "Το Lab 21 ολοκληρώθηκε (επιτυχής ζωντανή βιομετρική ταυτοποίηση)."
+                                      : "Lab 21 finished (live biometric authentication succeeded).");
                         logLine();
                         lab21Running = false;
                     }
@@ -28546,8 +28566,10 @@ logLabelValue(
 );
 
 appendHtml("<br>");
-logInfo(gr ? "Το Lab 22 ολοκληρώθηκε με όρια πρόσβασης στην κατάσταση Play Protect."
-           : "Lab 22 completed with limited Play Protect visibility.");
+logOk(gr ? "Το Lab 22 ολοκληρώθηκε (απογραφή ενδείξεων ενημερώσεων ασφαλείας)."
+         : "Lab 22 finished (security-update indicator inventory).");
+logInfo(gr ? "Η κατάσταση Play Protect δεν πιστοποιήθηκε ανεξάρτητα."
+           : "Play Protect status was not independently certified.");
 logLine();
 
 }
@@ -28795,8 +28817,8 @@ logInfo(gr ? "Σύνοψη: τα στοιχεία αφορούν ρυθμίσε�
            : "Summary: observed settings, not device-security certification.");
 
 appendHtml("<br>");
-logInfo(gr ? "Το Lab 23 ολοκληρώθηκε ως έλεγχος ρυθμίσεων."
-           : "Lab 23 completed as a configuration check.");
+logOk(gr ? "Το Lab 23 ολοκληρώθηκε (έλεγχος προσβάσιμων ρυθμίσεων)."
+         : "Lab 23 finished (accessible-settings check).");
 logLine();
 }
 
@@ -29225,8 +29247,10 @@ logInfo(gr ? "Δεν εκδόθηκε αυθαίρετος συνολικός δ
            : "No arbitrary whole-device security score was issued.");
 
 appendHtml("<br>");
-logInfo(gr ? "Το Lab 24 κατέγραψε τις διαθέσιμες ενδείξεις."
-           : "Lab 24 recorded available indicators.");
+logOk(gr ? "Το Lab 24 ολοκληρώθηκε (απογραφή προσβάσιμων ενδείξεων)."
+         : "Lab 24 finished (accessible indicators inventoried).");
+logInfo(gr ? "Δεν πιστοποιήθηκε συνολικά η ασφάλεια ή η ακεραιότητα της συσκευής."
+           : "Overall device security and integrity were not certified.");
 logLine();
 }
 
@@ -29590,8 +29614,13 @@ private void lab25CrashHistory() {
     GELServiceLog.info("SUMMARY: CRASH_ORIGIN=UNCLEAR; HISTORY_COVERAGE="
             + (coverage.complete() ? "AVAILABLE_RECORDS_ONLY" : "UNAVAILABLE_OR_PARTIAL"));
     appendHtml("<br>");
-    logInfo(gr ? "Το Lab 25 ολοκληρώθηκε με τους παραπάνω περιορισμούς."
-            : "Lab 25 finished with the limitations above.");
+    if (coverage.complete()) {
+        logOk(gr ? "Το Lab 25 ολοκληρώθηκε (εξετάστηκαν τα προσβάσιμα συμβάντα)."
+                 : "Lab 25 finished (accessible events reviewed).");
+    } else {
+        logInfo(gr ? "Το Lab 25 κατέγραψε μερικό ιστορικό — δεν ολοκληρώθηκε πλήρης απογραφή συμβάντων."
+                   : "Lab 25 recorded partial history — full event inventory unavailable.");
+    }
     logLine();
 } // END lab25CrashHistory()
 
@@ -30135,8 +30164,13 @@ String detail = gr
     );
 
     appendHtml("<br>");
-    logInfo(gr ? "Το Lab 26 κατέγραψε τα διαθέσιμα στοιχεία."
-           : "Lab 26 recorded available evidence.");
+    if (r.userApps > 0) {
+        logOk(gr ? "Το Lab 26 ολοκληρώθηκε (ανάλυση ορατών εφαρμογών)."
+                 : "Lab 26 finished (visible-app analysis).");
+    } else {
+        logInfo(gr ? "Το Lab 26 δεν είχε επαρκή απογραφή εφαρμογών χρήστη."
+                   : "Lab 26 had insufficient user-app inventory.");
+    }
     logLine();
 }
 
@@ -30455,8 +30489,13 @@ appendHtml("<br>");
     );
 
     appendHtml("<br>");
-    logInfo(gr ? "Το Lab 27 ολοκλήρωσε την απογραφή των διαθέσιμων αδειών."
-           : "Lab 27 inventoried accessible permission information.");
+    if (scannedUserApps > 0) {
+    logOk(gr ? "Το Lab 27 ολοκληρώθηκε (απογραφή προσβάσιμων αδειών)."
+             : "Lab 27 finished (accessible permissions inventoried).");
+} else {
+    logInfo(gr ? "Το Lab 27 δεν είχε ορατές εφαρμογές χρήστη για απογραφή αδειών."
+               : "Lab 27 had no visible user apps for permission inventory.");
+}
     logLine();
 }
 
@@ -31065,8 +31104,10 @@ if (hiddenScore >= 60) {
     }
 
     appendHtml("<br>");
-    logInfo(gr ? "Lab 28: ολοκληρώθηκε η διαλογή αναφορών, όχι έλεγχος υγείας hardware."
-               : "Lab 28: log triage complete; device hardware was not certified.");
+    logOk(gr ? "Το Lab 28 ολοκληρώθηκε (διαλογή προσβάσιμων αναφορών)."
+         : "Lab 28 finished (accessible-log triage).");
+logInfo(gr ? "Δεν πραγματοποιήθηκε πιστοποίηση υγείας υλικού."
+           : "Device hardware health was not certified.");
     logLine();
 }
 
@@ -31473,9 +31514,10 @@ logLabelValue(
 );
 
     appendHtml("<br>");
-    logInfo(gr
-            ? "Το Lab 29 ολοκληρώθηκε: καταγραφή χαρακτηριστικών, όχι πιστοποίηση υλικού."
-            : "Lab 29 completed: characteristics recorded, not hardware certified.");
+    logOk(gr ? "Το Lab 29 ολοκληρώθηκε (καταγραφή προσβάσιμων χαρακτηριστικών)."
+         : "Lab 29 finished (accessible device characteristics recorded).");
+logInfo(gr ? "Η γνησιότητα και η κατάσταση ανταλλακτικών δεν πιστοποιήθηκαν."
+           : "OEM authenticity and replacement-part condition were not certified.");
     logLine();
 }
 
@@ -33082,7 +33124,8 @@ logInfo(gr ? "Συντάχθηκε πληροφοριακή αναφορά GEL �
 logLine();
 
 appendHtml("<br>");
-logInfo(gr ? "Το Lab 30 ολοκληρώθηκε ως πληροφοριακή σύνοψη." : "Lab 30 evidence summary finished.");
+logOk(gr ? "Το Lab 30 ολοκληρώθηκε (σύνταξη πληροφοριακής σύνοψης)."
+         : "Lab 30 finished (evidence summary compiled).");
 logLine();
 }
 
@@ -33835,9 +33878,10 @@ if (hwInstability || lab29InstabilityScore > 0) {
     enableSingleExportButton();
 
     appendHtml("<br>");
-    logInfo(gr
-            ? "Το Lab 31 ολοκληρώθηκε: διαθέσιμες παρατηρήσεις και περιορισμοί τεκμηριώθηκαν."
-            : "Lab 31 complete: available observations and limitations recorded.");
+    logOk(gr ? "Το Lab 31 ολοκληρώθηκε (σύνταξη τελικής σύνοψης παρατηρήσεων)."
+         : "Lab 31 finished (final observation summary compiled).");
+logInfo(gr ? "Καταγράφηκαν τα όρια τεκμηρίωσης· η αναφορά δεν πιστοποιεί υγιές hardware."
+           : "Evidence limitations recorded; the report does not certify healthy hardware.");
     logLine();
 }
 
