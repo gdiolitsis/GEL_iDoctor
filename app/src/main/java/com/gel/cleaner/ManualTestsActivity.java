@@ -11904,7 +11904,7 @@ private void lab12CallFunctionInterpretation() {
     // Internet context (IMS relevance)
     // ------------------------------------------------------------
     if (s.hasInternet) {
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Κατάσταση Σύνδεσης Internet"
                : "Internet Context",
             gr ? "Δηλωμένη δυνατότητα Internet (όχι επαλήθευση κλήσης)"
@@ -12132,7 +12132,7 @@ private void lab12ReportGuided(Lab12CallEvidence.Guided outcome) {
     appendHtml("<br>");
     switch (outcome) {
         case USER_REPORTED_TWO_WAY_AUDIO:
-            logLabelValue(gr ? "Πραγματική κλήση (αναφορά χρήστη)" : "Real call (user report)",
+            logLabelOkValue(gr ? "Πραγματική κλήση (αναφορά χρήστη)" : "Real call (user report)",
                     gr ? "Αναφέρθηκε αμφίδρομος ήχος — όχι ανεξάρτητη μέτρηση"
                        : "Two-way audio reported — not independently measured");
             break;
