@@ -11083,10 +11083,19 @@ private void lab10WifiConnectivityCheck() {
             : (gr ? "Άγνωστη" : "Unknown");
 
     // ---------------- IDENTIFIERS ----------------
-    logLabelValue(gr ? "SSID" : "SSID", ssid);
+    // Green is reserved for a real identifier returned by Android.
+    // Redacted/unavailable values remain white.
+    if (Lab10WifiLogValuePolicy.hasSsid(ssid))
+        logLabelOkValue(gr ? "SSID" : "SSID", ssid);
+    else
+        logLabelValue(gr ? "SSID" : "SSID", ssid);
 
-    if (bssid != null)
-        logLabelValue(gr ? "BSSID" : "BSSID", bssid);
+    if (Lab10WifiLogValuePolicy.hasBssid(bssid))
+        logLabelOkValue(gr ? "BSSID" : "BSSID", bssid);
+    else
+        logLabelValue(gr ? "BSSID" : "BSSID",
+                bssid != null && !bssid.trim().isEmpty()
+                        ? bssid : (gr ? "Μη διαθέσιμο" : "Unavailable"));
 
     // ---------------- BAND ----------------
     if (freqMhz > 0)
@@ -11135,10 +11144,27 @@ private void lab10WifiConnectivityCheck() {
         DhcpInfo dh = wm.getDhcpInfo();
 
         if (dh != null) {
-            logLabelValue(gr ? "IP" : "IP",           ipToStr(dh.ipAddress));
-            logLabelValue(gr ? "Gateway" : "Gateway", ipToStr(dh.gateway));
-            logLabelValue(gr ? "DNS1" : "DNS1",       ipToStr(dh.dns1));
-            logLabelValue(gr ? "DNS2" : "DNS2",       ipToStr(dh.dns2));
+            // These are DHCP-reported configuration fields, NOT proof of
+            // Internet connectivity; the DeepScan validates that separately.
+            if (Lab10WifiLogValuePolicy.hasDhcpAddress(dh.ipAddress))
+                logLabelOkValue(gr ? "IP" : "IP", ipToStr(dh.ipAddress));
+            else
+                logLabelValue(gr ? "IP" : "IP", ipToStr(dh.ipAddress));
+
+            if (Lab10WifiLogValuePolicy.hasDhcpAddress(dh.gateway))
+                logLabelOkValue(gr ? "Gateway" : "Gateway", ipToStr(dh.gateway));
+            else
+                logLabelValue(gr ? "Gateway" : "Gateway", ipToStr(dh.gateway));
+
+            if (Lab10WifiLogValuePolicy.hasDhcpAddress(dh.dns1))
+                logLabelOkValue("DNS1", ipToStr(dh.dns1));
+            else
+                logLabelValue("DNS1", ipToStr(dh.dns1));
+
+            if (Lab10WifiLogValuePolicy.hasDhcpAddress(dh.dns2))
+                logLabelOkValue("DNS2", ipToStr(dh.dns2));
+            else
+                logLabelValue("DNS2", ipToStr(dh.dns2));
         } else {
             logLabelValue(gr ? "DHCP" : "DHCP", gr ? "Δεν υπάρχουν στοιχεία — άγνωστη μέθοδος ρύθμισης" : "No info — configuration method unknown");
         }
@@ -11411,12 +11437,17 @@ private void runWifiDeepScan(WifiManager wm) {
                                 ai.packageName
                         ) == PackageManager.PERMISSION_GRANTED;
 
-                logLabelValue(
-                        gr ? "Δυνατότητα Internet" : "Internet capability",
-                        hasInternetPerm
-                                ? (gr ? "Άδεια INTERNET δηλωμένη" : "INTERNET permission declared")
-                                : (gr ? "Δεν δηλώθηκε άδεια INTERNET" : "No INTERNET permission declared")
-                );
+                if (hasInternetPerm) {
+                    logLabelOkValue(
+                            gr ? "Δυνατότητα Internet" : "Internet capability",
+                            gr ? "Άδεια INTERNET δηλωμένη" : "INTERNET permission declared"
+                    );
+                } else {
+                    logLabelValue(
+                            gr ? "Δυνατότητα Internet" : "Internet capability",
+                            gr ? "Δεν δηλώθηκε άδεια INTERNET" : "No INTERNET permission declared"
+                    );
+                }
 
                 // CLEARTEXT TRAFFIC
                 boolean cleartextAllowed = true;
@@ -11454,10 +11485,10 @@ private void runWifiDeepScan(WifiManager wm) {
               : "No BOOT-TIME RECEIVER declared")
 );
 
-                logLabelValue(
-        gr ? "Συνολική Εκτίμηση" : "Assessment",
-        gr ? "Ολοκληρώθηκε η αποτύπωση έκθεσης δικτύου & ιδιωτικότητας"
-           : "Network / privacy exposure snapshot completed"
+                logLabelOkValue(
+        gr ? "Ολοκλήρωση απογραφής" : "Inventory completion",
+        gr ? "Καταγράφηκαν οι δηλωμένες πολιτικές δικτύου & ιδιωτικότητας"
+           : "Reported network / privacy policies inventoried"
 );
 
 } catch (Throwable e) {
