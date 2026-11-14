@@ -6469,7 +6469,7 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                         }
                         if (baseSamples > 0) {
                             noiseRms = Math.sqrt(baseSquares / baseSamples);
-                            logLabelValue(gr ? "RMS περιβάλλοντος" : "Ambient RMS",
+                            logLabelOkValue(gr ? "RMS περιβάλλοντος" : "Ambient RMS",
                                     String.format(Locale.US, "%.1f", noiseRms));
                         }
                         playbackAttempted = true;
@@ -6495,12 +6495,13 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                                     && toneRms > noiseRms * 1.5;
                             if (count > 0) measured++;
                             if (detected) confirmed++;
-                            logLabelValue(
-                                    (gr ? "Τόνος " : "Tone ") + (index + 1) + " RMS",
-                                    String.format(Locale.US, "%.1f — %s", toneRms,
-                                            detected
-                                                    ? (gr ? "ένδειξη ήχου" : "acoustic indication")
-                                                    : (gr ? "μη επιβεβαιωμένος" : "unconfirmed")));
+                            String toneLabel = (gr ? "Τόνος " : "Tone ") + (index + 1) + " RMS";
+                            String toneValue = String.format(Locale.US, "%.1f — %s", toneRms,
+                                    detected
+                                            ? (gr ? "ένδειξη ήχου" : "acoustic indication")
+                                            : (gr ? "μη επιβεβαιωμένος" : "unconfirmed"));
+                            if (detected) logLabelOkValue(toneLabel, toneValue);
+                            else logLabelValue(toneLabel, toneValue);
                             SystemClock.sleep(50);
                         }
                     }
@@ -6526,10 +6527,12 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                 }
                 try { tg.stopTone(); } catch (Throwable ignore) {}
             }
-            logLabelValue(gr ? "Τόνοι με ακουστική ένδειξη" : "Tones with acoustic indication",
-                    measured == 0
-                            ? (gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΑΝ" : "NOT_MEASURED")
-                            : confirmed + "/4");
+            String toneCountLabel = gr ? "Τόνοι με ακουστική ένδειξη" : "Tones with acoustic indication";
+            String toneCountValue = measured == 0
+                    ? (gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΑΝ" : "NOT_MEASURED")
+                    : confirmed + "/4";
+            if (measured > 0 && confirmed == 4) logLabelOkValue(toneCountLabel, toneCountValue);
+            else logLabelValue(toneCountLabel, toneCountValue);
             if (confirmed != 4) {
                 logWarn(gr
                         ? "Δεν επιβεβαιώθηκαν αυτόματα και οι τέσσερις τόνοι. "
@@ -7064,8 +7067,13 @@ private void lab4MicBase(Runnable onFinished) {
                            : "NOT CAPTURED — no functional verdict");
             }
 
-            logLabelValue("Bottom RMS",  String.valueOf(bottomRms));
-            logLabelValue("Bottom Peak", String.valueOf(bottomPeak));
+            if (bottomCaptured) {
+                logLabelOkValue("Bottom RMS", String.valueOf(bottomRms));
+                logLabelOkValue("Bottom Peak", String.valueOf(bottomPeak));
+            } else {
+                logLabelValue("Bottom RMS", String.valueOf(bottomRms));
+                logLabelValue("Bottom Peak", String.valueOf(bottomPeak));
+            }
 
             bottomOk = bottomRms > 0 || bottomPeak > 0;
 
@@ -7092,15 +7100,17 @@ private void lab4MicBase(Runnable onFinished) {
                            : "NOT CAPTURED — no functional verdict");
             }
 
-            logLabelValue(
-        gr ? "RMS (Άνω Μικρόφωνο)" : "Top RMS",
-        String.valueOf(topRms)
-);
-
-logLabelValue(
-        gr ? "Peak (Άνω Μικρόφωνο)" : "Top Peak",
-        String.valueOf(topPeak)
-);
+            if (topCaptured) {
+                logLabelOkValue(gr ? "RMS (Άνω Μικρόφωνο)" : "Top RMS",
+                        String.valueOf(topRms));
+                logLabelOkValue(gr ? "Peak (Άνω Μικρόφωνο)" : "Top Peak",
+                        String.valueOf(topPeak));
+            } else {
+                logLabelValue(gr ? "RMS (Άνω Μικρόφωνο)" : "Top RMS",
+                        String.valueOf(topRms));
+                logLabelValue(gr ? "Peak (Άνω Μικρόφωνο)" : "Top Peak",
+                        String.valueOf(topPeak));
+            }
 
             topOk = topRms > 0 || topPeak > 0;
 
