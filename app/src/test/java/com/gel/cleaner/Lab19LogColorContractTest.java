@@ -28,7 +28,7 @@ public final class Lab19LogColorContractTest {
         String block = t.substring(a, b);
         assertTrue(block.contains("logLabelOkValue("));
         assertTrue(block.contains("τρέχον στιγμιότυπο"));
-        assertFalse(block.contains("RAM health"));
+        assertTrue(block.contains("No low-memory flag in the current snapshot"));
     }
 
     @Test public void highAndMediumHeuristicsAreWarningsNotGreenHealth() throws Exception {
@@ -51,7 +51,7 @@ public final class Lab19LogColorContractTest {
 
     @Test public void rootEvidenceIsGreenButUnsupportedEffectStaysNeutral() throws Exception {
         String t = lab19();
-        assertTrue(t.contains("logLabelOkValue(\n                        gr ? \"Επέκταση μνήμη\""));
+        assertTrue(t.contains("logLabelOkValue(\n                        gr ? \"Επέκταση μνήμης\""));
         assertTrue(t.contains("logLabelOkValue(\n                        gr ? \"Cached μνήμη\""));
         assertTrue(t.contains("logLabelValue(\n                        gr ? \"Επίδραση\""));
     }
