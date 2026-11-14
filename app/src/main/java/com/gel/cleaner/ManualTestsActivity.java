@@ -3413,11 +3413,18 @@ private static class CameraHumanSummary {
     String flash;
     String realLifeUse;
     String verdict;
+    boolean photoResolutionKnown;
+    boolean videoResolutionKnown;
+    boolean rawSupported;
+    boolean manualSupported;
+    boolean eisSupported;
+    boolean flashSupported;
 }
 
 private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
 
     CameraHumanSummary h = new CameraHumanSummary();
+    final boolean gr = AppLang.isGreek(this);
 
     // ------------------------------------------------------------
     // CAPS
@@ -3435,7 +3442,11 @@ private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
         }
     }
 
-    h.manualMode = manual ? "Supported" : "Not supported";
+    h.manualSupported = manual;
+    h.rawSupported = hasRaw;
+    h.manualMode = manual
+            ? (gr ? "Υποστηρίζεται" : "Supported")
+            : (gr ? "Δεν υποστηρίζεται — όχι βλάβη" : "Not supported — not a fault");
 
     // ------------------------------------------------------------
     // PHOTO QUALITY (MP)
@@ -3456,18 +3467,19 @@ private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
         }
     }
 
+    h.photoResolutionKnown = maxPhoto != null;
     if (maxPhoto != null) {
-        int mp = (maxPhoto.getWidth() * maxPhoto.getHeight()) / 1_000_000;
-        h.photoQuality = mp + " MP photos (very good)";
+        double mp = ((double) maxPhoto.getWidth() * maxPhoto.getHeight()) / 1_000_000d;
+        h.photoQuality = String.format(Locale.US, "%.1f MP (%d x %d)",
+                mp, maxPhoto.getWidth(), maxPhoto.getHeight());
     } else {
-        h.photoQuality = "Standard photos";
+        h.photoQuality = gr ? "Δεν αναφέρθηκε μέγιστη ανάλυση JPEG"
+                            : "Max JPEG resolution not reported";
     }
 
 // ------------------------------------------------------------
 // PROFESSIONAL PHOTOS (RAW)
 // ------------------------------------------------------------
-final boolean gr = AppLang.isGreek(this);
-
 h.professionalPhotos = hasRaw
         ? (gr
             ? "Υποστηρίζεται λήψη RAW (ασυμπίεστων) φωτογραφιών"
@@ -3488,12 +3500,15 @@ h.professionalPhotos = hasRaw
         }
     }
 
+    h.videoResolutionKnown = maxWidth > 0;
     if (maxWidth >= 3840)
-        h.videoQuality = "4K (very high)";
+        h.videoQuality = gr ? "4K (δηλωμένη δυνατότητα)" : "4K (reported capability)";
     else if (maxWidth >= 1920)
-        h.videoQuality = "Full HD (high)";
+        h.videoQuality = gr ? "Full HD (δηλωμένη δυνατότητα)" : "Full HD (reported capability)";
+    else if (maxWidth > 0)
+        h.videoQuality = gr ? "Χαμηλότερη από Full HD (δηλωμένη)" : "Below Full HD (reported)";
     else
-        h.videoQuality = "HD (basic)";
+        h.videoQuality = gr ? "Δεν αναφέρθηκαν μεγέθη βίντεο" : "Video sizes not reported";
 
 // ------------------------------------------------------------
 // FPS / SMOOTHNESS / SLOW MOTION
@@ -3566,6 +3581,7 @@ if (stabModes != null) {
     }
 }
 
+h.eisSupported = stab;
 h.stabilization = stab
         ? (gr ? "Υποστηρίζεται ηλεκτρονική σταθεροποίηση (EIS)"
               : "Electronic stabilization (EIS) supported")
@@ -3577,7 +3593,8 @@ h.stabilization = stab
 // ------------------------------------------------------------
 Boolean flashAvail = cc.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
 
-h.flash = Boolean.TRUE.equals(flashAvail)
+h.flashSupported = Boolean.TRUE.equals(flashAvail);
+h.flash = h.flashSupported
         ? (gr ? "Διαθέσιμο φλας"
               : "Flash available")
         : (gr ? "Δεν υπάρχει φλας"
@@ -10669,18 +10686,49 @@ private void lab8_1DumpOneCameraCapabilities(CameraManager cm, Lab8Cam cam) {
     logInfo(gr ? "ΤΕΛΙΚΟ ΑΝΘΡΩΠΙΝΟ ΣΥΜΠΕΡΑΣΜΑ" : "FINAL HUMAN VERDICT");
     logLine();
 
-    logLabelValue(gr ? "Ποιότητα φωτογραφίας" : "Photo quality", h.photoQuality);
-    logLabelValue(gr ? "Επαγγελματικές φωτογραφίες" : "Professional photos", h.professionalPhotos);
-    logLabelValue(gr ? "Ποιότητα βίντεο" : "Video quality", h.videoQuality);
-    logLabelValue(gr ? "Ομαλότητα βίντεο" : "Video smoothness", h.videoSmoothness);
+    // Green denotes a positively reported capability, not a guarantee
+    // of image quality. Unknown/unsupported optional capabilities stay white.
+    if (h.photoResolutionKnown)
+        logLabelOkValue(gr ? "Μέγιστη ανάλυση JPEG" : "Max JPEG resolution", h.photoQuality);
+    else
+        logLabelValue(gr ? "Μέγιστη ανάλυση JPEG" : "Max JPEG resolution", h.photoQuality);
+
+    if (h.rawSupported)
+        logLabelOkValue(gr ? "Υποστήριξη RAW" : "RAW capability", h.professionalPhotos);
+    else
+        logLabelValue(gr ? "Υποστήριξη RAW" : "RAW capability", h.professionalPhotos);
+
+    if (h.videoResolutionKnown)
+        logLabelOkValue(gr ? "Δηλωμένη ανάλυση βίντεο" : "Reported video resolution", h.videoQuality);
+    else
+        logLabelValue(gr ? "Δηλωμένη ανάλυση βίντεο" : "Reported video resolution", h.videoQuality);
+
+    // FPS range and slow-motion claims are interpretations, not recorded
+    // video tests; preserve their neutral color.
+    logLabelValue(gr ? "Ομαλότητα βίντεο (εκτίμηση)" : "Video smoothness (estimated)", h.videoSmoothness);
     logLabelValue(gr ? "Αργή κίνηση (slow motion)" : "Slow motion", h.slowMotion);
-    logLabelValue(gr ? "Σταθεροποίηση" : "Stabilization", h.stabilization);
-    logLabelValue(gr ? "Χειροκίνητη λειτουργία" : "Manual mode", h.manualMode);
-    logLabelValue(gr ? "Φλας" : "Flash", h.flash);
-    logLabelValue(gr ? "Χρήση στην πράξη" : "Real life use", h.realLifeUse);
+
+    if (h.eisSupported)
+        logLabelOkValue(gr ? "Σταθεροποίηση" : "Stabilization", h.stabilization);
+    else
+        logLabelValue(gr ? "Σταθεροποίηση" : "Stabilization", h.stabilization);
+
+    if (h.manualSupported)
+        logLabelOkValue(gr ? "Χειροκίνητη λειτουργία" : "Manual mode", h.manualMode);
+    else
+        logLabelValue(gr ? "Χειροκίνητη λειτουργία" : "Manual mode", h.manualMode);
+
+    if (h.flashSupported)
+        logLabelOkValue(gr ? "Φλας" : "Flash", h.flash);
+    else
+        logLabelValue(gr ? "Φλας" : "Flash", h.flash);
+
+    logLabelValue(gr ? "Χρήση στην πράξη (εκτίμηση)" : "Real-life use (estimate)", h.realLifeUse);
+    logInfo(gr ? "Τα χαρακτηριστικά προέρχονται από Camera2· δεν μετρήθηκε αντικειμενική ποιότητα εικόνας."
+               : "Camera2 reports these capabilities; objective image quality was not measured.");
 
     logLine();
-    logLabelOkValue(gr ? "Συμπέρασμα" : "Verdict", h.verdict);
+    logLabelOkValue(gr ? "Συμπέρασμα δυνατοτήτων" : "Capability conclusion", h.verdict);
     logLine();
 }
 
