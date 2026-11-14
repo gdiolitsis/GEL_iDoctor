@@ -6932,18 +6932,24 @@ exitBtn.setOnClickListener(v -> {
 // START ACTION
 // ------------------------------------------------------------
 start.setOnClickListener(v -> {
-
+    if (lab3Cancelled.get() || lab3Running.getAndSet(true)) return;
+    start.setEnabled(false);
+    msg.setText(bodyText);
+    msg.setTextColor(0xFF39FF14);
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 
     new Thread(() -> {
+        final boolean[] playbackCompleted = {false};
         try {
+            // Re-establish the backup earpiece route before each retry.
+            routeToCallEarpiece();
 
             logInfo(gr
                     ? "Αναπαραγωγή δοκιμαστικών τόνων ακουστικού."
                     : "Playing earpiece test tones.");
 
             for (int i = 1; i <= 3; i++) {
-
+                if (lab3Cancelled.get() || isFinishing() || isDestroyed()) break;
                 logInfo(gr
                         ? "Τόνος " + i + " / 3"
                         : "Tone " + i + " / 3");
@@ -6952,15 +6958,20 @@ start.setOnClickListener(v -> {
                 SystemClock.sleep(650);
             }
 
-            logOk(gr
-                    ? "Η αναπαραγωγή τόνων ολοκληρώθηκε."
-                    : "Earpiece tone playback completed.");
+            if (!lab3Cancelled.get() && !isFinishing() && !isDestroyed()) {
+                playbackCompleted[0] = true;
+                logOk(gr
+                        ? "Η αναπαραγωγή τόνων ολοκληρώθηκε."
+                        : "Earpiece tone playback completed.");
+            }
 
         } catch (Throwable t) {
 
             logError(gr
-                    ? "Αποτυχία αναπαραγωγής τόνων ακουστικού."
-                    : "Earpiece tone playback failed.");
+                    ? "Δεν ολοκληρώθηκε η αναπαραγωγή τόνων ακουστικού."
+                    : "Earpiece tone playback did not complete.");
+            logLabelWarnValue(gr ? "Τύπος σφάλματος" : "Error type",
+                    t.getClass().getSimpleName());
 
             logLabelWarnValue(
                     gr ? "Πιθανή αιτία" : "Possible cause",
@@ -6975,8 +6986,22 @@ start.setOnClickListener(v -> {
             resetAudioAfterLab3(am, lab3OldMode, lab3OldSpeaker, lab3OldMicMute);
 
             runOnUiThread(() -> {
-                try { d.dismiss(); } catch (Throwable ignore) {}
-                askUserEarpieceConfirmation();
+                if (lab3Cancelled.get() || isFinishing() || isDestroyed()) {
+                    enableSingleExportButton();
+                } else if (playbackCompleted[0]) {
+                    d.dismiss();
+                    askUserEarpieceConfirmation();
+                } else if (d.isShowing()) {
+                    // An AudioTrack failure must not silently close the Lab.
+                    msg.setText(gr
+                            ? "Η αναπαραγωγή δεν ολοκληρώθηκε. ΕΝΑΡΞΗ για επανάληψη ή ΕΞΟΔΟΣ."
+                            : "Playback incomplete. Choose START to retry or EXIT.");
+                    msg.setTextColor(0xFFFFD966);
+                    lab3Running.set(false);
+                    start.setEnabled(true);
+                } else {
+                    enableSingleExportButton();
+                }
             });
         }
 
