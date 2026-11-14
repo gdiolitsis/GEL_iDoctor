@@ -31408,21 +31408,32 @@ boolean lab29BuyerFresh = lab29ObservationsAvailable
                 p.getLong("lab29_precheck_elapsed_ms", -1L),
                 evidenceWallNow, evidenceElapsedNow);
 if (lab29BuyerFresh) {
-    int imeiStatus = p.getInt("lab29_precheck_imei_status",
-            UsedDevicePrecheckPolicy.IMEI_UNKNOWN);
-    int buyerStatus = p.getInt("lab29_precheck_status",
-            UsedDevicePrecheckPolicy.INCOMPLETE);
+    int officialSource = p.getInt("lab29_precheck_official_source",
+            UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED);
+    int imeiStatus = officialSource == UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED
+            ? UsedDevicePrecheckPolicy.IMEI_UNKNOWN
+            : p.getInt("lab29_precheck_imei_status",
+                    UsedDevicePrecheckPolicy.IMEI_UNKNOWN);
+    logLabelValue(gr ? "Πηγή ελέγχου IMEI" : "IMEI check source",
+            officialSource == UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_GSMA_REPORTED
+                ? "GSMA Device Check"
+                : officialSource == UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_PROVIDER_REPORTED
+                ? (gr ? "Πάροχος κινητής" : "Network provider")
+                : (gr ? "Δεν καταχωρίστηκε" : "Not recorded"));
+    int buyerStatus = officialSource == UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED
+            ? UsedDevicePrecheckPolicy.INCOMPLETE
+            : p.getInt("lab29_precheck_status", UsedDevicePrecheckPolicy.INCOMPLETE);
     if (imeiStatus == UsedDevicePrecheckPolicy.IMEI_FLAGGED_REPORTED) {
-        logLabelErrorValue(gr ? "IMEI κατά δήλωση αγοραστή" : "Buyer-reported IMEI",
-                gr ? "Αναφέρθηκε αποκλεισμός — διασταύρωση με πάροχο πριν την αγορά."
-                   : "Block reported — confirm with carrier before purchase.");
+        logLabelErrorValue(gr ? "Κατάσταση IMEI" : "IMEI status",
+                gr ? "ΑΠΟΚΛΕΙΣΜΕΝΟΣ στην καταχωρισμένη επίσημη πηγή."
+                   : "FLAGGED at the recorded official source.");
     } else if (imeiStatus == UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED) {
-        logLabelOkValue(gr ? "IMEI κατά δήλωση αγοραστή" : "Buyer-reported IMEI",
-                gr ? "Ο αγοραστής αναφέρει μη καταχώριση σε λίστα αποκλεισμού."
-                   : "Buyer reports no block-list entry.");
+        logLabelOkValue(gr ? "Κατάσταση IMEI" : "IMEI status",
+                gr ? "ΜΗ ΑΠΟΚΛΕΙΣΜΕΝΟΣ στην καταχωρισμένη επίσημη πηγή."
+                   : "NOT FLAGGED at the recorded official source.");
     } else {
         logLabelValue(gr ? "Έλεγχος IMEI" : "IMEI lookup",
-                gr ? "Άγνωστος / μη επαληθευμένος." : "Unknown / not verified.");
+                gr ? "ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ." : "UNVERIFIED.");
     }
     logLabelValue(gr ? "Συμφωνία αναγνωριστικών" : "Identifier comparison",
             p.getBoolean("lab29_precheck_identifiers", false)
@@ -31438,8 +31449,8 @@ if (lab29BuyerFresh) {
                 : (gr ? "Δεν επιβεβαιώθηκε" : "Not confirmed"));
     if (buyerStatus == UsedDevicePrecheckPolicy.HOLD_FOR_REVIEW) {
         logLabelErrorValue(gr ? "Απόφαση προελέγχου" : "Pre-purchase triage",
-                gr ? "ΜΗΝ ΠΡΟΧΩΡΗΣΕΤΕ πριν διευκρινιστεί ο δηλωμένος αποκλεισμός IMEI."
-                   : "DO NOT PROCEED until the reported IMEI block is resolved.");
+                gr ? "ΑΠΟΚΛΕΙΣΜΕΝΟΣ IMEI — απαιτείται επιβεβαίωση της καταχώρισης."
+                   : "IMEI FLAGGED — confirm the recorded result.");
     } else if (buyerStatus == UsedDevicePrecheckPolicy.USER_REPORTED_CHECKLIST_COMPLETE) {
         logLabelOkValue(gr ? "Checklist αγοραστή" : "Buyer checklist",
                 gr ? "Δηλώθηκε ολοκληρωμένο — δεν πιστοποιείται νομιμότητα."
@@ -33238,7 +33249,7 @@ if (lab14bConsumptionPerHour > 0f &&
 // 7) TECHNICIAN INTAKE — LABS 28 AND 29 ARE INDEPENDENT EVIDENCE AXES
 // ------------------------------------------------------------
 // A system-reported device model does not prove genuine parts; a buyer's IMEI
-// lookup is not proof of theft, lawful ownership, or a global blacklist clearance.
+// Report only the recorded official-source IMEI status, not hypothetical outcomes.
 // No personally identifying IMEI or seller documents are saved in these prefs.
 final long technicianWallNow = System.currentTimeMillis();
 final long technicianElapsedNow = SystemClock.elapsedRealtime();
@@ -33342,6 +33353,12 @@ boolean technicianBuyerFresh = technicianLab29Fresh
 int technicianImeiStatus = technicianBuyerFresh
         ? p.getInt("lab29_precheck_imei_status", UsedDevicePrecheckPolicy.IMEI_UNKNOWN)
         : UsedDevicePrecheckPolicy.IMEI_UNKNOWN;
+int technicianOfficialSource = technicianBuyerFresh
+        ? p.getInt("lab29_precheck_official_source",
+                UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED)
+        : UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED;
+if (technicianOfficialSource == UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED)
+    technicianImeiStatus = UsedDevicePrecheckPolicy.IMEI_UNKNOWN;
 boolean technicianMatch = technicianBuyerFresh
         && p.getBoolean("lab29_precheck_identifiers", false);
 boolean technicianDocuments = technicianBuyerFresh
@@ -33350,25 +33367,31 @@ boolean technicianTransfer = technicianBuyerFresh
         && p.getBoolean("lab29_precheck_transfer", false);
 
 int technicianDisposition = TechnicianPrecheckAssessment.disposition(
-        technicianLab29Fresh, technicianBuyerFresh, technicianImeiStatus,
+        technicianLab29Fresh, technicianBuyerFresh, technicianOfficialSource, technicianImeiStatus,
         technicianMatch, technicianDocuments, technicianTransfer);
 
-logLabelValue(gr ? "Νόμιμη κυριότητα / τυχόν κλοπή" : "Lawful ownership / possible theft",
-        gr ? "ΔΕΝ ΠΙΣΤΟΠΟΙΕΙΤΑΙ από τα διαθέσιμα Android δεδομένα."
-           : "NOT DETERMINABLE from available Android data.");
+logLabelValue(gr ? "Έλεγχος κατάστασης IMEI" : "IMEI status check",
+        gr ? "Σύμφωνα με το καταχωρισμένο αποτέλεσμα επίσημης πηγής."
+           : "As reported from the recorded official source.");
 if (technicianBuyerFresh) {
+    logLabelValue(gr ? "Πηγή ελέγχου IMEI" : "IMEI check source",
+            technicianOfficialSource == UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_GSMA_REPORTED
+                ? "GSMA Device Check"
+                : technicianOfficialSource == UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_PROVIDER_REPORTED
+                ? (gr ? "Πάροχος κινητής" : "Network provider")
+                : (gr ? "Δεν καταχωρίστηκε" : "Not recorded"));
     if (technicianImeiStatus == UsedDevicePrecheckPolicy.IMEI_FLAGGED_REPORTED) {
         logLabelErrorValue(gr ? "Εξωτερικός έλεγχος IMEI (κατά δήλωση)" : "External IMEI check (buyer reported)",
-                gr ? "ΔΗΛΩΘΗΚΕ αποκλεισμός IMEI. Δεν αποδεικνύεται αυτόματα κλοπή."
-                   : "IMEI block REPORTED. Theft is not thereby established.");
+                gr ? "ΑΠΟΚΛΕΙΣΜΕΝΟΣ στην καταχωρισμένη επίσημη πηγή."
+                   : "FLAGGED at the recorded official source.");
     } else if (technicianImeiStatus == UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED) {
         logLabelOkValue(gr ? "Εξωτερικός έλεγχος IMEI (κατά δήλωση)" : "External IMEI check (buyer reported)",
-                gr ? "Ο αγοραστής αναφέρει μη καταχώριση αποκλεισμού. Δεν αποδεικνύεται νόμιμη κυριότητα."
-                   : "Buyer reports no block-list hit; ownership remains unverified.");
+                gr ? "ΜΗ ΑΠΟΚΛΕΙΣΜΕΝΟΣ στην καταχωρισμένη επίσημη πηγή."
+                   : "NOT FLAGGED at the recorded official source.");
     } else {
         logLabelValue(gr ? "Κατάσταση IMEI" : "IMEI check status",
-                gr ? "Δεν έχει δηλωθεί αξιόπιστος εξωτερικός έλεγχος."
-                   : "No reliable external check reported.");
+                gr ? "ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ."
+                   : "UNVERIFIED.");
     }
     logLabelValue(gr ? "Συμφωνία αναγνωριστικών" : "Identifier comparison",
             technicianMatch ? (gr ? "Ελέγχθηκε κατά δήλωση" : "Buyer reports checked")
@@ -33390,8 +33413,8 @@ logInfo(gr ? "Σύσταση παραλαβής συσκευής" : "Technician 
 if (technicianDisposition
         == TechnicianPrecheckAssessment.REPORTED_IMEI_BLOCK_REQUIRES_REVIEW) {
     logLabelErrorValue(gr ? "Έλεγχος προέλευσης πριν την παραλαβή" : "Provenance review before intake",
-            gr ? "ΣΤΑΣΗ ΓΙΑ ΕΠΑΛΗΘΕΥΣΗ — επιβεβαίωση αποκλεισμού με πάροχο/αρμόδιο φορέα και έλεγχος δικαιώματος επισκευής."
-               : "HOLD FOR VERIFICATION — confirm reported block with carrier/authority and right to authorize repair.");
+            gr ? "ΕΠΙΒΕΒΑΙΩΣΗ ΚΑΤΑΧΩΡΙΣΗΣ — επανέλεγχος του αποτελέσματος IMEI στην επίσημη πηγή."
+               : "CONFIRM RECORD — recheck the IMEI result at the official source.");
 } else if (technicianDisposition
         == TechnicianPrecheckAssessment.BUYER_REPORTED_CHECKLIST_COMPLETE) {
     logLabelOkValue(gr ? "Κατάσταση checklist" : "Checklist status",
@@ -33399,12 +33422,12 @@ if (technicianDisposition
                : "BUYER-REPORTED complete; no independent certification.");
 } else {
     logLabelValue(gr ? "Έγγραφα / προέλευση πριν την παραλαβή" : "Documents / provenance before intake",
-            gr ? "ΑΝΕΠΑΡΚΗ ΣΤΟΙΧΕΙΑ — επαλήθευση ταυτότητας εντολέα, παραστατικών και IMEI όπου απαιτείται."
-               : "INSUFFICIENT EVIDENCE — verify authorized customer, paperwork and IMEI as appropriate.");
+            gr ? "ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ IMEI — απαιτείται αποτέλεσμα επίσημης πηγής."
+               : "UNVERIFIED IMEI — official-source result needed.");
 }
 logLabelValue(gr ? "Ανεξάρτητες αξιολογήσεις" : "Independent assessments",
-        gr ? "Γνήσια συσκευή μπορεί να έχει αμφισβητούμενη προέλευση· μη γνήσιο εξάρτημα δεν αποδεικνύει κλοπή."
-           : "An authentic device can have disputed provenance; a non-OEM part does not establish theft.");
+        gr ? "Η γνησιότητα εξαρτημάτων και η κατάσταση αποκλεισμού IMEI ελέγχονται ανεξάρτητα."
+           : "Component authenticity and IMEI block-list status are separate checks.");
 
 // ------------------------------------------------------------
 // ------------------------------------------------------------
