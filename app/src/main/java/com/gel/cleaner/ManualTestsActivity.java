@@ -27308,10 +27308,11 @@ private void lab19RamSnapshot() {
                 );
                 break;
             case NO_OS_LOW_MEMORY_SIGNAL:
-                logLabelValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Δεν αναφέρθηκε κατάσταση low-memory από Android"
-                           : "Android has not reported a low-memory condition"
+                // Green only for the observed Android flag, never for RAM health.
+                logLabelOkValue(
+                        gr ? "Σήμα Android" : "Android signal",
+                        gr ? "Δεν δηλώθηκε κατάσταση low-memory στο τρέχον στιγμιότυπο"
+                           : "No low-memory flag in the current snapshot"
                 );
                 break;
             default:
@@ -27343,11 +27344,15 @@ private void lab19RamSnapshot() {
                     snap.swapTotalKb, snap.swapFreeKb);
 
             // Incomplete raw counters cannot support a derived pressure grade.
-            String pressureHuman =
+            // The pressure score is heuristic and is NOT the OS lowMemory signal.
+            String pressureGrade =
                     (snap.memFreeKb >= 0 && snap.cachedKb >= 0 && swapUsedKb >= 0)
-                            ? humanPressureLabel(pressureLevel(
-                                    snap.memFreeKb, snap.cachedKb, swapUsedKb))
-                            : (gr ? "Άγνωστο — ελλιπείς μετρήσεις" : "Unknown — incomplete readings");
+                            ? pressureLevel(snap.memFreeKb, snap.cachedKb, swapUsedKb)
+                            : null;
+            String pressureHuman = pressureGrade != null
+                    ? humanPressureLabel(pressureGrade)
+                    : (gr ? "Άγνωστο — ελλιπείς μετρήσεις"
+                          : "Unknown — incomplete readings");
 
             String zramDep = swapUsedKb >= 0
                     ? zramDependency(swapUsedKb, total)
@@ -27359,17 +27364,35 @@ private void lab19RamSnapshot() {
                     : "Memory pressure indicators:");
                     logLine();
 
-            logLabelValue(
-                    gr ? "Επίπεδο πίεσης" : "Pressure level",
-                    pressureHuman
-            );
+            if ("High".equals(pressureGrade) || "Medium".equals(pressureGrade)) {
+                logLabelWarnValue(
+                        gr ? "Ενδεικτική πίεση μνήμης" : "Heuristic memory pressure",
+                        pressureHuman
+                );
+            } else {
+                // A low or missing heuristic score does not certify stable RAM.
+                logLabelValue(
+                        gr ? "Ενδεικτική πίεση μνήμης" : "Heuristic memory pressure",
+                        pressureHuman
+                );
+            }
 
             if (zramDep != null) {
-                logLabelValue(
-                        gr ? "Αναλογία Swap προς RAM (ενδεικτική)"
-                           : "Swap-to-RAM ratio (heuristic)",
-                        zramDep
-                );
+                // Translate the raw English grade; it is NOT measured hardware health.
+                String swapRatioLabel = humanPressureLabel(zramDep);
+                if ("High".equals(zramDep) || "Medium".equals(zramDep)) {
+                    logLabelWarnValue(
+                            gr ? "Ενδεικτική αναλογία Swap/RAM"
+                               : "Heuristic Swap/RAM ratio",
+                            swapRatioLabel
+                    );
+                } else {
+                    logLabelValue(
+                            gr ? "Ενδεικτική αναλογία Swap/RAM"
+                               : "Heuristic Swap/RAM ratio",
+                            swapRatioLabel
+                    );
+                }
             } else {
                 logInfo(gr ? "Χρήση Swap: δεν διαβάστηκαν συγκρίσιμες τιμές SwapTotal/SwapFree"
                            : "Swap usage: comparable SwapTotal/SwapFree readings unavailable");
@@ -27439,7 +27462,7 @@ private void lab19RamSnapshot() {
 
             if (zramActive || swapActive) {
 
-                logLabelValue(
+                logLabelOkValue(
                         gr ? "Επέκταση μνήμης" : "Memory extension",
                         gr ? "Εντοπίστηκε συμπίεση / swap"
                            : "Compression / swap detected"
@@ -27463,7 +27486,7 @@ private void lab19RamSnapshot() {
 
             long cachedKb = readCachedMemoryKbSafe();
             if (cachedKb > 0) {
-                logLabelValue(
+                logLabelOkValue(
                         gr ? "Cached μνήμη" : "Cached memory",
                         humanBytes(cachedKb * 1024L) +
                                 (gr ? " (επανακτήσιμη από το σύστημα)"
