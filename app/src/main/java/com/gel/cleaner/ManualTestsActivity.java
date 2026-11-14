@@ -27821,7 +27821,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 
                 biometricSupported = true;
 
-                logLabelValue(
+                logLabelOkValue(
                         gr ? "Βιομετρικά" : "Biometrics",
                         gr ? "Δυνατή ταυτοποίηση Android· εκκρεμεί ζωντανή δοκιμή"
                            : "Android auth available; live test pending"
@@ -27917,12 +27917,15 @@ if (root) {
 // ============================================================  
 
 if (secure) {
-
+    // Keyguard secure proves an enrolled credential, not encryption status.
+    logLabelOkValue(
+            gr ? "Διαπιστευτήριο συσκευής" : "Device credential",
+            gr ? "Ρυθμισμένο ασφαλές κλείδωμα" : "Secure device lock configured"
+    );
     logLabelValue(
-            gr ? "Προστασία μετά από επανεκκίνηση"
-               : "Post-reboot protection",
-            gr ? "Υπάρχει κλείδωμα με διαπιστευτήριο· δεν εξετάστηκε η κρυπτογράφηση"
-               : "A secure credential is configured; storage encryption was not assessed"
+            gr ? "Κρυπτογράφηση μετά από επανεκκίνηση"
+               : "Post-reboot encryption",
+            gr ? "Δεν ελέγχθηκε" : "Not assessed"
     );
 
 } else if (secureKnown) {
@@ -27942,26 +27945,33 @@ if (secure) {
     );
 }
 
-logLabelValue(
-        gr ? "Κύριο επίπεδο ασφάλειας" 
-           : "Primary security layer",
-        !secureKnown
-                ? (gr ? "ΑΓΝΩΣΤΟ — δεν διαβάστηκε το Keyguard" : "UNKNOWN — Keyguard unreadable")
-                : secure
-                    ? (gr ? "Γνωστικό διαπιστευτήριο (PIN / Μοτίβο / Κωδικός)"
-                          : "Knowledge-based credential")
+if (secureKnown && secure) {
+    logLabelOkValue(
+            gr ? "Κύριο επίπεδο ασφάλειας" : "Primary security layer",
+            gr ? "Γνωστικό διαπιστευτήριο (PIN / Μοτίβο / Κωδικός)"
+               : "Knowledge-based credential (PIN / Pattern / Password)"
+    );
+} else {
+    logLabelValue(
+            gr ? "Κύριο επίπεδο ασφάλειας" : "Primary security layer",
+            !secureKnown
+                    ? (gr ? "ΑΓΝΩΣΤΟ — δεν διαβάστηκε το Keyguard"
+                          : "UNKNOWN — Keyguard unreadable")
                     : (gr ? "ΚΑΝΕΝΑ" : "NONE")
-);
+    );
+}
 
-logLabelValue(
-        gr ? "Επίπεδο ευκολίας" 
-           : "Convenience layer",
-        biometricSupported
-                ? (gr ? "Διαθέσιμα βιομετρικά"
-                      : "Biometrics available")
-                : (gr ? "Μη διαθέσιμα"
-                      : "Not available")
-);
+if (biometricSupported) {
+    logLabelOkValue(
+            gr ? "Επίπεδο ευκολίας" : "Convenience layer",
+            gr ? "Διαθέσιμα βιομετρικά" : "Biometrics available"
+    );
+} else {
+    logLabelValue(
+            gr ? "Επίπεδο ευκολίας" : "Convenience layer",
+            gr ? "Μη διαθέσιμα" : "Not available"
+    );
+}
 
 if (root) {
 
@@ -28043,7 +28053,7 @@ if (!biometricSupported) {
             gr ? "Τα βιομετρικά δεν είναι έτοιμα ή δεν είναι διαθέσιμα"
                : "Biometrics not ready or not available"
     );
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Ενέργεια" : "Action",
             gr ? "Ρυθμίστε βιομετρικά στις Ρυθμίσεις και επανεκτελέστε το LAB 21"
                : "Enroll biometrics in Settings and re-run LAB 21"
@@ -28070,8 +28080,8 @@ if (Build.VERSION.SDK_INT >= 28) {
                 gr ? "Τοποθετήστε δάχτυλο / πρόσωπο για ταυτοποίηση ΤΩΡΑ"
                    : "Place finger / face for authentication NOW"
         );
-        logLabelOkValue(
-                gr ? "Αποτέλεσμα" : "Result",
+        logLabelValue(
+                gr ? "Έκταση ελέγχου" : "Test scope",
                 gr ? "Θα ελεγχθεί ένα μονοπάτι ταυτοποίησης, όχι η πλήρης υγεία των αισθητήρων"
                    : "Only one biometric authentication path will be observed, not full hardware health"
         );
@@ -28107,17 +28117,17 @@ appendHtml("<br>");
                                    : "Multi-biometric devices");
                                    logLine();
                                    
-                        logLabelWarnValue(
+                        logLabelValue(
                                 gr ? "Σημείωση" : "Note",
                                 gr ? "Το Android ελέγχει ΕΝΑ βιομετρικό ανά εκτέλεση"
                                    : "Android tests ONE biometric path per run"
                         );
-                        logLabelOkValue(
+                        logLabelValue(
                                 gr ? "Ενέργεια" : "Action",
                                 gr ? "Για άλλο βιομετρικό μονοπάτι, χρησιμοποιήστε τις ρυθμίσεις ασφαλείας Android"
                                    : "Use Android biometric settings to investigate another modality"
                         );
-                        logLabelWarnValue(
+                        logLabelValue(
                                 gr ? "Σημείωση OEM" : "OEM note",
                                 gr ? "Ο κατασκευαστής μπορεί να δίνει προτεραιότητα στον ίδιο αισθητήρα"
                                    : "OEM may still prioritize same sensor"
@@ -28243,7 +28253,7 @@ appendHtml("<br>");
             gr ? "Κάθε εκτέλεση του LAB 21 ελέγχει ΕΝΑ βιομετρικό μονοπάτι"
                : "Each LAB 21 run verifies ONE biometric sensor path"
     );
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Ενέργεια" : "Action",
             gr ? "Απενεργοποιήστε το ενεργό βιομετρικό στις ρυθμίσεις, για να ελέγξετε άλλον αισθητήρα"
                : "Disable active biometric in Settings to test another sensor"
