@@ -28583,243 +28583,145 @@ logLine();
 // ============================================================
 
 private void lab23DeveloperOptionsRisk() {
-	
-	final boolean gr = AppLang.isGreek(this);
-	
-	appendHtml("<br>");
+    final boolean gr = AppLang.isGreek(this);
+
+    appendHtml("<br>");
     logLine();
-    logInfo(gr 
-            ? "LAB 23 — Κίνδυνος από επιλογές Προγραμματιστή"
-            : "LAB 23 — Developer Options Status");
+    logInfo(gr ? "LAB 23 — Έλεγχος ρυθμίσεων πρόσβασης"
+               : "LAB 23 — Access settings check");
     logLine();
 
-    int risk = 0;
-    boolean usbDebug = false;
-
+    // Preserve the real Android settings checks. An unavailable setting
+    // remains UNKNOWN, not a warning or proof of compromise.
+    int usbState = -1;
     try {
-        int adb = Settings.Global.getInt(
+        usbState = Settings.Global.getInt(
+                getContentResolver(), Settings.Global.ADB_ENABLED, -1);
+    } catch (Throwable ignored) {
+        // Show a clear neutral user-facing result below.
+    }
+
+    int developerState = -1;
+    try {
+        developerState = Settings.Global.getInt(
                 getContentResolver(),
-                Settings.Global.ADB_ENABLED,
-                -1
-        );
-        usbDebug = (adb == 1);
-
-        if (adb < 0) {
-            logLabelValue(
-                    gr ? "Κατάσταση USB Debugging" : "USB Debugging status",
-                    gr ? "ΑΓΝΩΣΤΗ — δεν διαβάστηκε η ρύθμιση"
-                       : "UNKNOWN — setting unreadable"
-            );
-        } else if (usbDebug) {
-
-            logLabelWarnValue(
-                    gr ? "Κατάσταση USB Debugging" : "Status",
-                    gr ? "ΕΝΕΡΓΟΠΟΙΗΜΕΝΟ"
-                       : "ENABLED"
-            );
-
-            logLabelWarnValue(
-                    gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Επιφάνεια επίθεσης με φυσική πρόσβαση"
-                       : "Physical access attack surface"
-            );
-
-            risk += 30;
-
-        } else {
-
-            logLabelOkValue(
-                    gr ? "Κατάσταση USB Debugging" : "Status",
-                    gr ? "ΑΝΕΝΕΡΓΟ"
-                       : "OFF"
-            );
-        }
-
-    } catch (Throwable e) {
-
-        logLabelValue(
-                gr ? "USB Debugging" : "USB Debugging",
-                gr ? "Αδυναμία ανάγνωσης (περιορισμός κατασκευαστή)"
-                   : "Unable to read (OEM restriction)"
-        );
-
-        // Unknown setting access is not a measured security risk.
+                Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, -1);
+    } catch (Throwable ignored) {
+        // This is not evidence of a security failure.
     }
 
-// ============================================================
-// 2) DEVELOPER OPTIONS FLAG
-// ============================================================
-boolean devOpts = false;
-
-try {
-    int dev = Settings.Global.getInt(
-            getContentResolver(),
-            Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-            -1
-    );
-    devOpts = (dev == 1);
-
-    if (dev < 0) {
-        logLabelValue(
-                gr ? "Επιλογές προγραμματιστή" : "Developer options",
-                gr ? "ΑΓΝΩΣΤΗ κατάσταση — δεν διαβάστηκε η ρύθμιση"
-                   : "UNKNOWN status — setting unreadable"
-        );
-    } else if (devOpts) {
-
-        logLabelValue(
-                gr ? "Επιλογές προγραμματιστή" : "Developer options",
-                gr ? "ΕΝΕΡΓΟΠΟΙΗΜΕΝΕΣ"
-                   : "ENABLED"
-        );
-
-        logInfo(gr ? "Οι επιλογές προγραμματιστή δεν αποδεικνύουν από μόνες τους παραβίαση."
-                   : "Developer options alone do not establish a security compromise.");
-
-        risk += 20;
-
-    } else {
-
+    logInfo(gr ? "1. Πρόσβαση από υπολογιστή μέσω καλωδίου"
+               : "1. Computer access through a cable");
+    if (usbState == 0) {
         logLabelOkValue(
-                gr ? "Επιλογές προγραμματιστή" : "Developer options",
-                gr ? "ΑΝΕΝΕΡΓΕΣ"
-                   : "OFF"
-        );
+                gr ? "Προχωρημένος έλεγχος μέσω καλωδίου" : "Advanced cable access",
+                gr ? "Απενεργοποιημένος" : "Off");
+    } else if (usbState == 1) {
+        logLabelWarnValue(
+                gr ? "Προχωρημένος έλεγχος μέσω καλωδίου" : "Advanced cable access",
+                gr ? "Ενεργός — αν δεν τον χρειάζεστε, απενεργοποιήστε τον"
+                   : "On — turn it off when you do not need it");
+    } else {
+        logLabelValue(
+                gr ? "Προχωρημένος έλεγχος μέσω καλωδίου" : "Advanced cable access",
+                gr ? "Δεν ήταν δυνατό να διαβαστεί η ρύθμιση"
+                   : "The setting could not be read");
     }
 
-} catch (Throwable e) {
+    logInfo(gr ? "2. Επιλογές προγραμματιστή"
+               : "2. Developer options");
+    if (developerState == 1) {
+        logLabelValue(
+                gr ? "Κατάσταση" : "Status",
+                gr ? "Ενεργοποιημένες — αυτό από μόνο του δεν σημαίνει κίνδυνο"
+                   : "On — this alone does not mean there is a security problem");
+    } else if (developerState == 0) {
+        logLabelValue(
+                gr ? "Κατάσταση" : "Status",
+                gr ? "Απενεργοποιημένες" : "Off");
+    } else {
+        logLabelValue(
+                gr ? "Κατάσταση" : "Status",
+                gr ? "Δεν ήταν δυνατό να διαβαστεί η ρύθμιση"
+                   : "The setting could not be read");
+    }
 
-    logLabelValue(
-            gr ? "Επιλογές προγραμματιστή" : "Developer options",
-            gr ? "Αδυναμία ανάγνωσης"
-               : "Unable to read"
-    );
-
-    // Unknown setting access is not a measured security risk.
-}
-
-// ============================================================
-// 3) ADB OVER WI-FI (TCP/IP 5555)
-// ============================================================
-boolean adbWifi = isPortOpen(5555, 200);
-
-if (adbWifi) {
-
-    logLabelValue(
-            gr ? "Τοπική TCP θύρα 5555" : "Local TCP port 5555",
-            gr ? "Απαντά — δεν επαληθεύτηκε ότι πρόκειται για ADB"
-               : "Responding — ADB service identity not verified"
-    );
-
-    logInfo(gr ? "Έλεγχος μόνο σε 127.0.0.1· δεν αποδεικνύει πρόσβαση από δίκτυο."
-               : "Localhost-only probe; no external network exposure established.");
-
-    risk += 40;
-
-} else {
-
-    logLabelValue(
-            gr ? "Τοπική TCP θύρα 5555" : "Local TCP port 5555",
-            gr ? "Δεν απαντά — η κατάσταση ασύρματου ADB παραμένει άγνωστη"
-               : "Not responding — wireless ADB state remains unknown"
-    );
-}
-
-// ============================================================
-// 4) ADB PAIRING MODE (Wireless Debugging)
-// ============================================================
-// Keep quick localhost checks responsive. The wider OEM-dependent
-// pairing-port probe runs off the UI thread and remains informational.
-boolean adbPairing =
-        isPortOpen(3700, 80) ||
-        isPortOpen(7460, 80);
-
-if (!adbPairing) {
-    logInfo(gr ? "Πρόσθετη τοπική σάρωση θυρών στο παρασκήνιο..."
-               : "Additional local port check running asynchronously...");
+    // Keep all existing local connectivity probes as developer-only evidence.
+    // A responsive LOCAL port is neither verified wireless debugging nor
+    // proof that this device is accessible from another device.
+    // Do not print port numbers, ADB, TCP, guesses or a fake safety score
+    // in the user-facing report. Do not append results after completion.
+    final int finalUsbState = usbState;
+    final int finalDeveloperState = developerState;
     new Thread(() -> {
-        boolean extraResponded = scanPairingPortRange();
+        final boolean local5555 = isPortOpen(5555, 200);
+        final boolean local3700 = isPortOpen(3700, 80);
+        final boolean local7460 = isPortOpen(7460, 80);
+        final boolean pairingProbe = local3700 || local7460;
+        final boolean extraResponse = pairingProbe ? false : scanPairingPortRange();
+
+        android.util.Log.d("GEL-Lab23",
+                "Local-only connectivity probes (NOT wireless access verification): "
+                + "5555=" + local5555 + ", 3700=" + local3700
+                + ", 7460=" + local7460 + ", additional=" + extraResponse);
+
         runOnUiThread(() -> {
             if (isFinishing() || isDestroyed()) return;
+
+            logLine();
+            logInfo(gr ? "3. Ασύρματη πρόσβαση για προχωρημένο έλεγχο"
+                       : "3. Advanced wireless access");
             logLabelValue(
-                    gr ? "Πρόσθετες τοπικές θύρες" : "Additional local ports",
-                    extraResponded
-                            ? (gr ? "Βρέθηκε ανταποκρινόμενη TCP θύρα· η υπηρεσία δεν ταυτοποιήθηκε"
-                                  : "A TCP port responded; service identity not verified")
-                            : (gr ? "Δεν απάντησε καμία από τις δοκιμασμένες θύρες· Wireless debugging άγνωστο"
-                                  : "No probed port responded; wireless debugging status unknown")
-            );
+                    gr ? "Κατάσταση" : "Status",
+                    gr ? "Δεν μπορεί να επιβεβαιωθεί από αυτό το εργαστήριο"
+                       : "This lab cannot verify its status");
+
+            logLine();
+            logInfo(gr ? "Τι μπορείτε να κάνετε" : "What you can do");
+            logInfo(gr
+                    ? "Ανοίξτε Ρυθμίσεις → Επιλογές προγραμματιστή → Ασύρματη αποσφαλμάτωση. Αν δεν τη χρησιμοποιείτε, βεβαιωθείτε ότι είναι απενεργοποιημένη."
+                    : "Open Settings → Developer options → Wireless debugging. If you do not use it, make sure it is turned off.");
+
+            if (finalUsbState == 1) {
+                logInfo(gr
+                        ? "Αν δεν χρειάζεστε τον προχωρημένο έλεγχο μέσω καλωδίου, απενεργοποιήστε και αυτή τη ρύθμιση."
+                        : "If you do not need advanced access through a cable, turn that setting off too.");
+            } else if (finalUsbState < 0) {
+                logInfo(gr
+                        ? "Ελέγξτε επίσης στις ίδιες ρυθμίσεις αν η Αποσφαλμάτωση USB είναι απενεργοποιημένη."
+                        : "Also check that USB debugging is turned off in the same settings.");
+            }
+
+            logLine();
+            logInfo(gr ? "Συμπέρασμα" : "Conclusion");
+            if (finalUsbState == 0 && finalDeveloperState == 1) {
+                logInfo(gr
+                        ? "Μπορείτε να είστε ήσυχοι για αυτό που επιβεβαιώσαμε: ο προχωρημένος έλεγχος μέσω καλωδίου είναι απενεργοποιημένος. Το ότι έχετε ενεργές τις Επιλογές προγραμματιστή δεν σημαίνει ότι κάποιος έχει παραβιάσει το κινητό σας."
+                        : "Reassuring result: advanced access through a cable is off. Having Developer options on does not mean that anyone has compromised your phone.");
+            } else if (finalUsbState == 0) {
+                logInfo(gr
+                        ? "Καλή ένδειξη: ο προχωρημένος έλεγχος μέσω καλωδίου είναι απενεργοποιημένος. Δεν χρειάζεται κάποια αλλαγή σε αυτή τη ρύθμιση."
+                        : "Good sign: advanced access through a cable is off. No change to this setting is needed.");
+            } else if (finalUsbState == 1) {
+                logInfo(gr
+                        ? "Η πρόσβαση για προχωρημένο έλεγχο μέσω καλωδίου είναι ενεργή. Αυτό δεν σημαίνει ότι το κινητό έχει παραβιαστεί. Αν δεν τη χρειάζεστε, απενεργοποιήστε τη."
+                        : "Advanced cable access is on. This does not mean the phone has been compromised. Turn it off if you do not need it.");
+            } else {
+                logInfo(gr
+                        ? "Δεν μπορέσαμε να επιβεβαιώσουμε τη ρύθμιση πρόσβασης μέσω καλωδίου. Αυτό από μόνο του δεν αποτελεί ένδειξη παραβίασης."
+                        : "We could not verify the cable access setting. This alone is not evidence of a compromise.");
+            }
+
+            logInfo(gr
+                    ? "Η ασύρματη πρόσβαση χρειάζεται έλεγχο στις ρυθμίσεις. Το εργαστήριο δεν μπορεί να πιστοποιήσει τη συνολική ασφάλεια της συσκευής."
+                    : "Check wireless access in Settings. This lab cannot certify the device's overall security.");
+
+            appendHtml("<br>");
+            logOk(gr ? "Το Lab 23 ολοκληρώθηκε — ελέγχθηκαν οι διαθέσιμες ρυθμίσεις πρόσβασης."
+                     : "Lab 23 completed — available access settings were checked.");
+            logLine();
         });
     }, "GEL-Lab23-PortProbe").start();
-}
-
-if (adbPairing) {
-
-    logLabelValue(
-            gr ? "Δοκιμασμένες τοπικές θύρες" : "Probed local ports",
-            gr ? "Κάποια θύρα απαντά — δεν ταυτοποιήθηκε υπηρεσία ADB"
-               : "A port responded — no ADB service identity verified"
-    );
-
-    logInfo(gr ? "Δεν ελέγχθηκε εξωτερική ανιχνευσιμότητα ή εξουσιοδότηση ADB."
-               : "External discoverability or ADB authorization was not tested.");
-
-    risk += 25;
-
-} else {
-
-    logLabelValue(
-            gr ? "Δοκιμασμένες τοπικές θύρες" : "Probed local ports",
-            gr ? "Οι αρχικές θύρες δεν απάντησαν· εκκρεμεί πρόσθετη τοπική σάρωση"
-               : "Initial ports did not respond; additional local probe pending"
-    );
-}
-
-// ============================================================
-// 5) EVIDENCE LIMITS — NO ARBITRARY WHOLE-DEVICE SCORE
-// ============================================================
-logInfo(gr ? "Δεν υπολογίζεται ποσοστό ασφάλειας από flags και τοπικές TCP θύρες."
-           : "No whole-device security percentage from flags or localhost TCP probes.");
-
-// ============================================================
-// 6) ACTION RECOMMENDATIONS
-// ============================================================
-appendHtml("<br>");
-logInfo(gr ? "Προτεινόμενες ενέργειες"
-           : "Recommended actions");
-           logLine();
-
-if (usbDebug) {
-    logLabelWarnValue(
-            "USB Debugging",
-            gr ? "Είναι ενεργό — απενεργοποιήστε το αν δεν το χρειάζεστε"
-               : "Enabled — turn off when it is no longer needed"
-    );
-} else {
-    logLabelValue("USB Debugging",
-            gr ? "Δηλώθηκε ανενεργό ή μη αναγνώσιμο — δεν αποτελεί έλεγχο όλων των ADB διαδρομών"
-               : "Reported off or unreadable — not verification of every ADB path");
-}
-if (devOpts) {
-    logInfo(gr ? "Οι επιλογές προγραμματιστή μπορούν να παραμείνουν ενεργές για νόμιμη χρήση."
-               : "Developer options may be enabled for legitimate use.");
-}
-
-if (adbWifi || adbPairing) {
-    logInfo(gr ? "Ελέγξτε την πραγματική ρύθμιση Wireless debugging στις Ρυθμίσεις Android."
-               : "Check actual Wireless debugging in Android Settings.");
-} else {
-    logInfo(gr ? "Οι τοπικές δοκιμές θυρών δεν τεκμηριώνουν απενεργοποιημένο ADB."
-               : "Local port probes do not prove that wireless ADB is off.");
-}
-
-logInfo(gr ? "Σύνοψη: τα στοιχεία αφορούν ρυθμίσεις, όχι τεχνική πιστοποίηση ασφάλειας."
-           : "Summary: observed settings, not device-security certification.");
-
-appendHtml("<br>");
-logOk(gr ? "Το Lab 23 ολοκληρώθηκε (έλεγχος προσβάσιμων ρυθμίσεων)."
-         : "Lab 23 finished (accessible-settings check).");
-logLine();
 }
 
 
