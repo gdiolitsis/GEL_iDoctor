@@ -7169,7 +7169,12 @@ if (bottomOk && topOk) {
             final boolean mayAdvance = bottomCaptured && topCaptured
                     && !isFinishing() && !isDestroyed();
             appendHtml("<br>");
-            logInfo(gr ? "Η φάση Lab 4 BASE έληξε." : "Lab 4 BASE phase ended.");
+            if (mayAdvance) {
+                logOk(gr ? "Το Lab 4 BASE ολοκληρώθηκε." : "Lab 4 BASE finished.");
+            } else {
+                logInfo(gr ? "Η φάση Lab 4 BASE έληξε χωρίς δύο ολοκληρωμένες καταγραφές."
+                           : "Lab 4 BASE ended without both completed captures.");
+            }
             logLine();
             if (mayAdvance && onFinished != null) {
                 runOnUiThread(() -> {
@@ -8602,8 +8607,8 @@ private void lab5Vibration() {
 
             appendHtml("<br>");
             if (confirmationCompleted) {
-                logInfo(gr ? "Το Lab 5 ολοκληρώθηκε με αναφορά χρήστη."
-                           : "Lab 5 completed with a user report.");
+                logOk(gr ? "Το Lab 5 ολοκληρώθηκε με αναφορά χρήστη."
+                         : "Lab 5 completed with a user report.");
             } else {
                 logLabelValue(gr ? "LAB 5" : "LAB 5",
                         gr ? "Μη ολοκληρωμένη δοκιμή — ΑΓΝΩΣΤΟ"
@@ -8788,6 +8793,8 @@ startBtn.setOnClickListener(v -> {
 // ============================================================
 // LAB 7 — Rotation + Proximity Sensors (MANUAL • MODERN)
 // ============================================================
+private boolean lab7RotationVerified = false;
+
 private void lab7RotationAndProximityManual() {
 
     runOnUiThread(() -> {
@@ -8957,6 +8964,7 @@ if (!isFinishing() && !isDestroyed()) {
             AppTTS.stop();
             d.dismiss();
 
+            lab7RotationVerified = false;
             startActivityForResult(
                     new Intent(this, RotationCheckActivity.class),
                     7007
@@ -10757,6 +10765,7 @@ LAB 9 — Sensors Check (LABEL / VALUE MODE)
 private void lab9SensorsCheck() {
 
     final boolean gr = AppLang.isGreek(this);
+    boolean inventoryFinished = false;
 
     appendHtml("<br>");
     logLine();
@@ -10933,13 +10942,20 @@ private void lab9SensorsCheck() {
                         ? "Απογράφηκαν οι δηλωμένοι αισθητήρες. Η απόκριση και η υγεία τους ΔΕΝ ελέγχθηκαν."
                         : "Reported sensors inventoried. Their response and health were NOT tested."
         );
+        inventoryFinished = true;
 
     } catch (Throwable e) {
         logWarn((gr ? "Η απογραφή αισθητήρων διακόπηκε — επανέλεγχος: "
                     : "Sensor inventory interrupted — retry: ") + String.valueOf(e.getMessage()));
     } finally {
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 9 ολοκληρώθηκε." : "Lab 9 finished.");
+        if (inventoryFinished) {
+            logOk(gr ? "Το Lab 9 ολοκληρώθηκε (απογραφή αισθητήρων)."
+                     : "Lab 9 finished (sensor inventory).");
+        } else {
+            logInfo(gr ? "Το Lab 9 δεν ολοκληρώθηκε — η απογραφή αισθητήρων έμεινε ελλιπής."
+                       : "Lab 9 incomplete — sensor inventory not finished.");
+        }
         logLine();
         enableSingleExportButton();
     }
@@ -11243,7 +11259,8 @@ public void onRequestPermissionsResult(
             );
 
             appendHtml("<br>");
-            logOk(gr ? "Το Lab 13 ολοκληρώθηκε." : "Lab 13 finished.");
+            logInfo(gr ? "Το Lab 13 δεν ολοκληρώθηκε — δεν χορηγήθηκε άδεια Bluetooth."
+                       : "Lab 13 incomplete — Bluetooth permission not granted.");
             logLine();
         }
 
@@ -11454,7 +11471,8 @@ private void runWifiDeepScan(WifiManager wm) {
 }
 
             appendHtml("<br>");
-            logInfo(gr ? "Το Lab 10 ολοκληρώθηκε." : "Lab 10 finished.");
+            logOk(gr ? "Το Lab 10 ολοκληρώθηκε (καταγράφηκαν οι διαθέσιμες ενδείξεις)."
+                     : "Lab 10 finished (available observations recorded).");
             logLine();
 
         } catch (Throwable e) {
@@ -11680,7 +11698,13 @@ if (cellularValidated) {
 logLabelValue(gr ? "Πρόταση" : "Recommendation", recommendation);
 
     appendHtml("<br>");
-    logInfo(gr ? "Το Lab 11 κατέγραψε τις διαθέσιμες ενδείξεις." : "Lab 11 recorded the available evidence.");
+    if (cellularValidated) {
+        logOk(gr ? "Το Lab 11 ολοκληρώθηκε (επιβεβαιώθηκε η σύνδεση δεδομένων κινητής)."
+                 : "Lab 11 finished (cellular connectivity validated).");
+    } else {
+        logInfo(gr ? "Το Lab 11 κατέγραψε διαθέσιμα στοιχεία, χωρίς επιβεβαίωση σύνδεσης κινητής."
+                   : "Lab 11 recorded evidence without validated cellular connectivity.");
+    }
     logLine();
 }
 
@@ -11923,7 +11947,8 @@ private void lab12CallFunctionInterpretation() {
             : "Call audio routing and microphone/earpiece paths are examined separately (LAB 3).");
 
     appendHtml("<br>");
-    logInfo(gr ? "Η παθητική απογραφή Lab 12 ολοκληρώθηκε." : "Lab 12 passive inventory complete.");
+    logOk(gr ? "Το Lab 12 ολοκλήρωσε την παθητική απογραφή (όχι έλεγχο πραγματικής κλήσης)."
+             : "Lab 12 passive inventory finished (not a real-call test).");
     logLine();
     runOnUiThread(this::lab12ShowCallConsent);
 }
@@ -12127,6 +12152,14 @@ private void lab12ReportGuided(Lab12CallEvidence.Guided outcome) {
     }
     logInfo(gr ? "Η εφαρμογή δεν καταγράφει τηλεφωνικούς αριθμούς, ήχο ή περιεχόμενο κλήσης."
                : "No phone numbers, audio, or call content are recorded by the app.");
+    if (outcome == Lab12CallEvidence.Guided.USER_REPORTED_TWO_WAY_AUDIO
+            || outcome == Lab12CallEvidence.Guided.USER_REPORTED_ONE_WAY_OR_AUDIO_ISSUE) {
+        logOk(gr ? "Το Lab 12 ολοκληρώθηκε με αναφορά χρήστη για πραγματική κλήση."
+                 : "Lab 12 finished with a user-reported real-call result.");
+    } else {
+        logInfo(gr ? "Ο προαιρετικός έλεγχος πραγματικής κλήσης δεν ολοκληρώθηκε."
+                   : "Optional real-call check not completed.");
+    }
     logLine();
     enableSingleExportButton();
 }
@@ -13168,7 +13201,13 @@ private void lab13FinishAndReport(boolean adapterStable) {
     );
 
     appendHtml("<br>");
-    logInfo(gr ? "Το Lab 13 κατέγραψε τα διαθέσιμα στοιχεία." : "Lab 13 recorded available evidence.");
+    if (lab13Seconds >= 60 && lab13MonitorSampleCount > 0) {
+        logOk(gr ? "Το Lab 13 ολοκληρώθηκε (παρακολούθηση Bluetooth 60 δευτερολέπτων)."
+                 : "Lab 13 finished (60-second Bluetooth monitor).");
+    } else {
+        logInfo(gr ? "Το Lab 13 κατέγραψε διαθέσιμα στοιχεία — η παρακολούθηση δεν τεκμηριώθηκε πλήρως."
+                   : "Lab 13 recorded available evidence — monitoring incomplete.");
+    }
     logLine();
 }
 
@@ -17381,6 +17420,16 @@ lab14LogReliabilitySummary(
     lab14_systemLimited,
     lab14Conf
 );
+
+appendHtml("<br>");
+if (!lab14Cancelled && !partial && countableRun) {
+    logOk(gr ? "Το Lab 14A ολοκληρώθηκε (έγκυρη καταγραφή δοκιμής καταπόνησης)."
+             : "Lab 14A finished (valid stress-test capture).");
+} else {
+    logInfo(gr ? "Το Lab 14A έληξε χωρίς πλήρη αξιόπιστη μέτρηση — διαθέσιμες ενδείξεις μόνο."
+               : "Lab 14A ended without a complete reliable measurement — available evidence only.");
+}
+logLine();
 
 // ------------------------------------------------
 // STOP (NORMAL EXIT)
@@ -34022,8 +34071,13 @@ if (requestCode == REQ_LAB6_COLOR) {
                    : "INCOMPLETE — no positive hardware verdict");
     }
     appendHtml("<br>");
-    logInfo(gr ? "Το Lab 6 κατέγραψε τα διαθέσιμα ευρήματα."
-               : "Lab 6 recorded the available evidence.");
+    if (allPatternsShown) {
+        logOk(gr ? "Το Lab 6 ολοκληρώθηκε (παρουσιάστηκαν τα μοτίβα)."
+                 : "Lab 6 finished (patterns presented).");
+    } else {
+        logInfo(gr ? "Το Lab 6 δεν ολοκληρώθηκε — καταγράφηκαν μόνο τα διαθέσιμα ευρήματα."
+                   : "Lab 6 incomplete — available observations only.");
+    }
     logLine();
     enableSingleExportButton();
     return;
@@ -34042,6 +34096,7 @@ if (requestCode == 7007) {
                   : "LAB 7 — Rotation & Proximity");
     logLine();
 
+    lab7RotationVerified = resultCode == RESULT_OK;
     if (resultCode == RESULT_OK) {
         logLabelOkValue(gr ? "Περιστροφή" : "Rotation",
                 gr ? "Παρατηρήθηκε σταθερή αλλαγή βαρύτητας: όρθια → πλαγιαστή θέση"
@@ -34090,8 +34145,14 @@ if (requestCode == 8008) {
     }
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 7 κατέγραψε τις διαθέσιμες παρατηρήσεις."
-             : "Lab 7 recorded the available observations.");
+    if (resultCode == RESULT_OK && lab7RotationVerified) {
+        logOk(gr ? "Το Lab 7 ολοκληρώθηκε (περιστροφή και εγγύτητα)."
+                 : "Lab 7 finished (rotation and proximity).");
+    } else {
+        logInfo(gr ? "Το Lab 7 ολοκληρώθηκε μερικώς — δεν επαληθεύτηκαν και οι δύο δοκιμές."
+                   : "Lab 7 partially completed — both checks were not verified.");
+    }
+    lab7RotationVerified = false;
     logLine();
     enableSingleExportButton();
     return;
