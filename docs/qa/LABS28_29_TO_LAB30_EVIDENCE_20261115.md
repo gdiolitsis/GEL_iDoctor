@@ -15,9 +15,9 @@
 
 ### Lab 29 — Used-device pre-purchase check
 - Versioned, same-boot Android-reported manufacturer/model/device identifier; not independently authenticated.
-- Optional manual checklist from buyer: external IMEI block-list status, matching identifiers, seen documentation/seller checks, and successful new-owner setup after seller account removal.
+- Optional manual checklist: record the result from an **official GSMA Device Check or mobile provider source**, matching identifiers, purchase paperwork and successful device handover; the app does not directly query any official registry.
 - Buyer entries carry timestamp+elapsed clock, and are associated with the current Lab 29 run. The app never reads, stores, uploads or sends IMEI numbers or seller identity.
-- A reported blocked IMEI results in red hold-for-review; a fully ticked list is explicitly **buyer-reported**, not proof of ownership or lawful provenance.
+- The operator records the consulted official source, and the app shows **ΑΠΟΚΛΕΙΣΜΕΝΟΣ / ΜΗ ΑΠΟΚΛΕΙΣΜΕΝΟΣ / ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ**. Missing source means **ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ**.
 - The previous `lab29_authenticity_score` and `lab29_instability_score` are invalidated and **must not** influence Lab 30.
 
 ## QA matrix
@@ -31,8 +31,8 @@
 | System reboot / clock jump / >24 h old Lab 28 | Missing/stale section, not positive |
 | Lab 29 runs and buyer skips checklist | Android model/observations only; buyer claims unknown |
 | Buyer declares a clear lookup but no FRP handover | Incomplete; not approved |
-| Buyer reports a block-list hit | Red caution even when all other items ticked |
-| Buyer marks all four checks | Green **user-reported checklist complete**, no legal/OEM certificate |
+| Operator records officially sourced blocked result | Red IMEI blocked even when all other items ticked |
+| Buyer records all checks and names official IMEI source | Green completed checklist; explicit official source |
 | Re-run Lab 29 after prior completed checklist | Old buyer assertions cleared |
 | Old preference keys from pre-2026 versions | No restored uncalibrated score |
 | GR/EN, Android 11/16, landscape and back | Readable dialog; SKIP/RECORD accessible; back behaves as skip |
@@ -44,17 +44,16 @@ same versioned, same-boot preferences used by Lab 30; it is not inferred from
 previous final-report prose. `Lab31ReportEvidencePolicy` continues filtering
 old Lab 31 summaries and the existing PDF export button is unchanged.
 
-Three distinct questions, never rolled into a single "authenticity/theft" score:
+Three independent records, never rolled into a speculative combined score:
 
 1. **Technical measurements (Lab 28):** recorded uptime and available battery,
    CPU and GPU temperatures; unverified log keyword mentions marked neutral,
    without future-fault or repair-history attribution.
 2. **Device/OEM identity (Lab 29):** Android-reported manufacturer/model/device,
    identified explicitly as self-reported and **NOT OEM part certification**.
-3. **Lawful provenance and handover (Lab 29):** buyer-reported multi-IMEI external
-   lookup, identifier comparison, paperwork/seller check, and fresh activation/FRP.
-   A reported blocked IMEI triggers **HOLD FOR VERIFICATION**; it is not
-   independent proof of theft. A reported clear IMEI is not ownership proof.
+3. **IMEI source and device handover (Lab 29):** operator-recorded multi-IMEI external
+   official-source result, identifier comparison, paperwork and fresh activation/FRP.
+   A reported blocked IMEI triggers **CONFIRM SOURCE RESULT**. The report shows only the operator-recorded official-source outcome.
    Independently authentic devices can have disputed provenance.
 
 ### Additional technician acceptance cases
@@ -62,9 +61,9 @@ Three distinct questions, never rolled into a single "authenticity/theft" score:
 |---|---|
 | Lab 28 not run, Lab 29 run | Lab 28 explicitly unknown, Lab 29 shown |
 | Lab 29 not run, Lab 28 run | Raw Lab 28 readings, ownership/OEM status unknown |
-| Reported IMEI blocked, all other checkboxes ticked | Red *reported block; confirm with carrier/authority*, never "stolen confirmed" |
-| Reported clean IMEI, paperwork missing | Incomplete, never "legal device" |
-| Reported checklist complete | Buyer-reported only; no declaration of legal ownership |
+| Recorded official-source IMEI blocked | Red **ΑΠΟΚΛΕΙΣΜΕΝΟΣ**, source shown |
+| Recorded official-source IMEI not flagged | Green **ΜΗ ΑΠΟΚΛΕΙΣΜΕΝΟΣ**, source shown |
+| Official source missing | IMEI not verified, regardless of other checkboxes |
 | Device identity corresponds to a known manufacturer | OEM authenticity still unverified |
 | Phone restarted after Labs 28–29 | Both sections stale/unknown, not silently reused |
 | Repeated Lab 31 + export | No stale Lab 31 warnings carried into new summary; technician details captured in GELServiceLog for export |
@@ -72,7 +71,13 @@ Three distinct questions, never rolled into a single "authenticity/theft" score:
 
 The pure `TechnicianPrecheckAssessment` policy and JUnit tests cover missing,
 stale, partial, clean and reported-block outcomes; this is service-intake triage,
-**never a determination that a phone is stolen or counterfeit**.
+**never a substitute for a source-backed IMEI check or OEM assessment**.
+
+## Output wording policy
+Only report the official-source status actually entered by the operator:
+**IMEI BLOCKED / NOT BLOCKED / UNVERIFIED**, with source shown.
+Avoid irrelevant conjectures and do not claim live registry verification.
+No unsupported extrapolations about different providers or hypothetical future events.
 
 ## Verification state
 - Source-level changes prepared, not a confirmed APK or device acceptance.
