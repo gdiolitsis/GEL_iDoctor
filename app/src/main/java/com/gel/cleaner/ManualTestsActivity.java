@@ -26883,7 +26883,7 @@ private void lab18StorageSnapshot() {
         // BASIC SNAPSHOT
         // ------------------------------------------------------------
         logInfo(gr ? "Χρήση αποθηκευτικού χώρου:" : "Storage usage:");
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Χρήση" : "Usage",
                 humanBytes(used) + (gr ? " χρησιμοποιούνται / " : " used / ") +
                 humanBytes(total) +
@@ -27217,7 +27217,7 @@ private void lab19RamSnapshot() {
         // BASIC SNAPSHOT
         // ------------------------------------------------------------
         logInfo(gr ? "Τρέχουσα χρήση RAM:" : "Current RAM usage:");
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Χρήση" : "Usage",
                 humanBytes(used) +
                         (gr ? " χρησιμοποιούνται / " : " used / ") +
@@ -27320,21 +27320,21 @@ private void lab19RamSnapshot() {
             }
 
             if (swapUsedKb > 0) {
-                logLabelValue(
+                logLabelOkValue(
                         gr ? "Χρήση Swap" : "Swap used",
                         humanBytes(swapUsedKb * 1024L)
                 );
             }
 
             if (snap.memFreeKb > 0) {
-                logLabelValue(
+                logLabelOkValue(
                         "MemFree",
                         humanBytes(snap.memFreeKb * 1024L)
                 );
             }
 
             if (snap.cachedKb > 0) {
-                logLabelValue(
+                logLabelOkValue(
                         "Cached",
                         humanBytes(snap.cachedKb * 1024L) +
                                 (gr ? " (επανακτήσιμη)" : " (reclaimable)")
@@ -27453,7 +27453,7 @@ private void lab20UptimeHints() {
         String upStr = formatUptime(upMs);
 
         logInfo(gr ? "Χρόνος λειτουργίας συστήματος:" : "System uptime:");
-        logLabelValue("Uptime", upStr);
+        logLabelOkValue("Uptime", upStr);
 
         boolean veryRecentReboot =
                 upMs < 2L * 60L * 60L * 1000L;        // < 2 hours
@@ -27516,7 +27516,7 @@ private void lab20UptimeHints() {
 
         } else {
 
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Κατάσταση" : "Status",
                     gr
                             ? "Η τρέχουσα διάρκεια λειτουργίας καταγράφηκε"
