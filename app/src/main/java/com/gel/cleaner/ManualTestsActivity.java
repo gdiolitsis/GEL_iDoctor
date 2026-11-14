@@ -11563,7 +11563,7 @@ private void lab11MobileDataDiagnostic() {
     }
 
     // SIM ready
-    logLabelValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ (κατά Android)" : "READY (Android reported)");
+    logLabelOkValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ (κατά Android)" : "READY (Android reported)");
 
 // Ask only when Wi-Fi is actually the active default network.
     if (s.defaultWifi) {
@@ -11838,7 +11838,7 @@ private void lab12CallFunctionInterpretation() {
     // SIM availability (context only)
     // ------------------------------------------------------------
     if (s.simReady) {
-        logLabelValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ (κατά Android)" : "READY (Android reported)");
+        logLabelOkValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΕΤΟΙΜΗ (κατά Android)" : "READY (Android reported)");
     } else {
         logLabelValue(gr ? "Κατάσταση SIM" : "SIM State", gr ? "ΜΗ ΕΤΟΙΜΗ — χωρίς διάγνωση κλήσης" : "NOT READY — no call diagnosis");
     }
@@ -11857,7 +11857,7 @@ private void lab12CallFunctionInterpretation() {
     // Legacy voice service state (informational)
     // ------------------------------------------------------------
     if (s.inService) {
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Φωνητική Υπηρεσία (legacy)" : "Voice Service (legacy)",
                 gr ? "ΣΕ ΥΠΗΡΕΣΙΑ" : "IN SERVICE"
         );
@@ -12182,7 +12182,7 @@ private void lab13BluetoothConnectivityCheck() {
         return;
     }
 
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Κατάσταση Bluetooth" : "Bluetooth State",
             gr ? "ΕΝΕΡΓΟ (κατά Android)" : "ENABLED (Android reported)"
     );
@@ -12462,7 +12462,7 @@ private void runLab13BluetoothCheckCore() {
 
         } else {
 
-            logLabelValue(gr ? "Συζευγμένες συσκευές" : "Paired devices", String.valueOf(bonded.size()));
+            logLabelOkValue(gr ? "Συζευγμένες συσκευές" : "Paired devices", String.valueOf(bonded.size()));
 
             for (BluetoothDevice d : bonded) {
 
@@ -13034,22 +13034,29 @@ private void lab13FinishAndReport(boolean adapterStable) {
     logLine();
     logInfo(gr ? "LAB 13 — Αποτελέσματα (60s monitor)"
                : "LAB 13 — Results (60s monitor)");
-    logLabelValue(gr ? "Δείγματα κατά την παρακολούθηση" : "Monitoring samples",
-            String.valueOf(lab13MonitorSampleCount));
+    if (lab13MonitorSampleCount > 0)
+        logLabelOkValue(gr ? "Δείγματα κατά την παρακολούθηση" : "Monitoring samples",
+                String.valueOf(lab13MonitorSampleCount));
+    else
+        logLabelValue(gr ? "Δείγματα κατά την παρακολούθηση" : "Monitoring samples",
+                "0");
 
     // ============================================================
     // 1️⃣ Adapter Stability (COLOR)
     // ============================================================
-    logLabelValue(gr ? "Adapter στο τελευταίο δείγμα" : "Adapter at last sample",
-            adapterStable ? (gr ? "ΕΝΕΡΓΟΣ" : "ON")
-                          : (gr ? "ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ" : "NOT CONFIRMED"));
+    if (adapterStable)
+        logLabelOkValue(gr ? "Adapter στο τελευταίο δείγμα" : "Adapter at last sample",
+                gr ? "ΕΝΕΡΓΟΣ" : "ON");
+    else
+        logLabelValue(gr ? "Adapter στο τελευταίο δείγμα" : "Adapter at last sample",
+                gr ? "ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ" : "NOT CONFIRMED");
 
     // ============================================================
     // 2️⃣ Disconnect Events (SEVERITY)
     // ============================================================
     if (lab13DisconnectEvents == 0) {
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Αποσυνδέσεις" : "Disconnect events",
                 "0"
         );
