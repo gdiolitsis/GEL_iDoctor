@@ -28959,11 +28959,11 @@ logLine();
 logInfo(gr ? "3. Τι σημαίνει για εσάς" : "3. What this means for you");
 if (bootProtected && !suExec && !meaningfulRootHint) {
     logInfo(gr
-            ? "Τα αποτελέσματα είναι ενθαρρυντικά. Δεν βρέθηκε ένδειξη παραβίασης σε αυτόν τον έλεγχο."
-            : "The findings are reassuring. This check found no indication of a compromise.");
+            ? "Τα αποτελέσματα είναι ενθαρρυντικά. Δεν διαπιστώθηκε πρόβλημα στους ελέγχους που πραγματοποιήθηκαν."
+            : "The findings are reassuring. No problem was identified in the checks performed.");
     logInfo(gr
-            ? "Μπορείτε να είστε πιο ήσυχοι. Η προστασία εκκίνησης φαίνεται ενεργή και δεν διαπιστώσαμε πλήρη πρόσβαση στο σύστημα. Κανένα μεμονωμένο εργαστήριο, όμως, δεν εγγυάται απόλυτη ασφάλεια."
-            : "You can feel more reassured. Startup protection appears enabled, and full system access was not confirmed. No single lab can guarantee complete security.");
+            ? "Η προστασία εκκίνησης φαίνεται ενεργή και δεν διαπιστώσαμε πλήρη πρόσβαση στο σύστημα. Δεν απαιτείται άλλη ενέργεια από αυτή τη δοκιμή."
+            : "Startup protection appears enabled, and full system access was not confirmed. No further action is needed based on this test.");
 } else if (bootFailed || bootUnlocked || suExec) {
     logInfo(gr
             ? "Ορισμένα αποτελέσματα χρειάζονται επιπλέον έλεγχο. Αυτό δεν αποδεικνύει από μόνο του ότι κάποιος παραβίασε το κινητό σας."
@@ -31452,10 +31452,7 @@ if (lab14CollapseRisk || finalScore < 60 || lab14SwellingSuspected) {
                 : "Possible signs of battery wear.";
     }
 
-    logLabelWarnValue(
-            gr ? "Μπαταρία" : "Battery",
-            msg
-    );
+    /* A numerical battery heuristic is not a confirmed hardware fault */;
 }
 
 // ------------------------------------------------------------
@@ -32189,16 +32186,11 @@ logInfo(gr ? "Τελικό Συμπέρασμα" : "Final verdict");
 logLine();
 
 if (deviceHealthScore < 0) {
-    logLabelWarnValue(
-            gr ? "Αποτέλεσμα" : "Result", verdict
-    );
+    logLabelValue( gr ? "Αποτέλεσμα" : "Result", verdict );
 } else if (deviceHealthScore >= 80) {
 
     if (securityScore < 55 || privacyScore < 55) {
-        logLabelWarnValue(
-                gr ? "Αποτέλεσμα" : "Result",
-                verdict
-        );
+        logLabelValue( gr ? "Αποτέλεσμα" : "Result", verdict );
     } else {
         logLabelValue(
                 gr ? "Αποτέλεσμα" : "Result",
@@ -32208,17 +32200,11 @@ if (deviceHealthScore < 0) {
 
 } else if (deviceHealthScore >= 55) {
 
-    logLabelWarnValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            verdict
-    );
+    logLabelValue( gr ? "Αποτέλεσμα" : "Result", verdict );
 
 } else {
 
-    logLabelWarnValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            verdict
-    );
+    logLabelValue( gr ? "Αποτέλεσμα" : "Result", verdict );
 }
 
 // ------------------------------------------------------------
