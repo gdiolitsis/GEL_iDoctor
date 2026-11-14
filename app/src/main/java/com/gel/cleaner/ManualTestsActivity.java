@@ -9599,7 +9599,7 @@ private void lab8RunNextCamera(
                 "YES"
         );
     else
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Χειροκίνητος αισθητήρας" : "Manual sensor",
                 "NO"
         );
@@ -9871,23 +9871,30 @@ cam.runtimeSession = s;
     };
 
     yes.setOnClickListener(v -> {
+    if (finished.get()) return;
     AppTTS.stop();
     overall.previewOkCount++;
     s.userConfirmedPreview = Boolean.TRUE;
+    lab8ReportUserConfirmedCameraVerdict(s, overall);
     finishAndNext.run();
 });
 
 no.setOnClickListener(v -> {
+    if (finished.get()) return;
     AppTTS.stop();
     overall.previewFailCount++;
     s.userConfirmedPreview = Boolean.FALSE;
+    lab8ReportUserConfirmedCameraVerdict(s, overall);
     finishAndNext.run();
 });
 
     // Start camera when texture is ready
     if (tv.isAvailable()) {
         lab8StartCamera2Session(s, overall, enableButtons, () -> {
-            overall.streamIssueCount++;
+            if (!s.cameraStreamFailure) {
+                s.cameraStreamFailure = true;
+                overall.streamIssueCount++;
+            }
             enableButtons.run();
         });
     } else {
@@ -9895,7 +9902,10 @@ no.setOnClickListener(v -> {
             @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) {
                 if (finished.get()) return;
                 lab8StartCamera2Session(s, overall, enableButtons, () -> {
-                    overall.streamIssueCount++;
+                    if (!s.cameraStreamFailure) {
+                        s.cameraStreamFailure = true;
+                        overall.streamIssueCount++;
+                    }
                     enableButtons.run();
                 });
             }
@@ -10171,11 +10181,12 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
     // ------------------------------------------------------------
     long durMs = Math.max(1, SystemClock.elapsedRealtime() - s.sampleStartMs);
     float fps = (s.frames * 1000f) / durMs;
+    s.sampledFps = fps;
 
     // Stream sampling
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Δειγματοληψία ροής" : "Stream sampling",
-            "5s"
+            String.format(Locale.US, "%.1f s", durMs / 1000f)
     );
 
     if (s.frames > 0)
@@ -10211,18 +10222,9 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                 String.valueOf(s.droppedFrames)
         );
 
-    if (s.blackFrames == 0)
-        logLabelOkValue(
-                gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
-                "0"
-        );
-    else {
-        logLabelWarnValue(
-                gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
-                String.valueOf(s.blackFrames)
-        );
-        overall.streamIssueCount++;
-    }
+    // Dark YUV samples are interpreted only *after* the user reports
+    // whether the live image was visible. Incidental samples do not
+    // become warnings or "stream issues" by themselves.
 
     logLabelOkValue(
             gr ? "Εύρος φωτεινότητας (min / max)" : "Luma range (min / max)",
@@ -10257,56 +10259,90 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                         : "YES — professional uncompressed photos"
         );
     else
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Υποστήριξη RAW" : "RAW support",
-                gr
-                        ? "ΟΧΙ — μόνο JPEG"
-                        : "NO — professional uncompressed photos not supported (JPEG only)"
+                gr ? "Δεν αναφέρεται RAW — δεν αποτελεί βλάβη" 
+                   : "RAW not reported — not a fault"
         );
 
-    // User confirmation
-    if (s.userConfirmedPreview != null) {
-        if (s.userConfirmedPreview)
-            logLabelOkValue(
-                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                    gr ? "Η προεπισκόπηση ήταν ορατή" : "Live preview visible"
+    // The user has not answered yet. Do NOT issue a camera verdict here.
+    // The user-confirmation click handler will append it afterward.
+    s.sampleCompleted = true;
+    
+} // ✅ ΤΕΛΟΣ lab8StopAndReportSample (αυτό έλειπε)
+
+// ============================================================
+// LAB 8 — FINAL VERDICT AFTER USER CONFIRMATION (EL/EN)
+// ============================================================
+private void lab8ReportUserConfirmedCameraVerdict(Lab8Session s, Lab8Overall overall) {
+    final boolean gr = AppLang.isGreek(this);
+
+    if (s.userConfirmedPreview == null) return;
+
+    // Incidental very dark YUV samples are NOT "black preview": a few
+    // can occur during auto exposure or in a dark scene. Keep their
+    // count in the session, but omit the misleading low-count UI warning.
+    if (s.sampleCompleted && s.frames > 0L) {
+        if (s.blackFrames == 0L) {
+            logLabelOkValue(gr ? "Πολύ σκοτεινά δείγματα" : "Very dark samples", "0");
+        } else if (!Lab8CameraEvidencePolicy.isIncidentalDarkSample(
+                s.blackFrames, s.frames)) {
+            logLabelWarnValue(
+                    gr ? "Δείγματα χαμηλής φωτεινότητας" : "Low-luminance samples",
+                    s.blackFrames + " / " + s.frames
+                        + (gr ? " — δεν αποδεικνύουν διακοπή εικόνας"
+                              : " — not proof of preview failure")
             );
-        else
-            logLabelErrorValue(
-                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                    gr ? "Η προεπισκόπηση ΔΕΝ ήταν ορατή" : "Preview NOT visible"
-            );
+        }
     }
 
-    // ------------------------------------------------------------
-    // Final verdict (per camera)
-    // ------------------------------------------------------------
-    boolean ok =
-            (s.frames > 0) &&
-            (s.blackFrames == 0) &&
-            (s.droppedFrames == 0) &&
-            (s.latencyCount == 0 || (s.latencySumMs / Math.max(1, s.latencyCount)) <= 250) &&
-            (s.userConfirmedPreview != null && s.userConfirmedPreview);
-
-    s.verdictOk = ok;
-
-    if (ok) {
-        logLabelOkValue(
-                gr ? "Τελικό αποτέλεσμα" : "Verdict",
-                gr ? "OK — Η διαδρομή κάμερας λειτουργεί σωστά"
-                   : "OK — Camera path operational"
-        );
+    if (Boolean.TRUE.equals(s.userConfirmedPreview)) {
+        logLabelOkValue(gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
+                gr ? "Ο χρήστης είδε καθαρή ζωντανή εικόνα"
+                   : "User confirmed a clear live image");
     } else {
-        logLabelWarnValue(
-                gr ? "Τελικό αποτέλεσμα" : "Verdict",
-                gr ? "Εντοπίστηκαν θέματα — έλεγξε τα παραπάνω"
-                   : "Issues detected — review above"
-        );
+        logLabelErrorValue(gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
+                gr ? "Ο χρήστης ΔΕΝ είδε κανονική ζωντανή εικόνα"
+                   : "User did NOT see a normal live preview");
     }
 
+    Lab8CameraEvidencePolicy.Verdict verdict =
+            Lab8CameraEvidencePolicy.evaluate(
+                    s.userConfirmedPreview,
+                    s.sampleCompleted,
+                    s.cameraStreamFailure,
+                    s.frames,
+                    s.sampledFps,
+                    s.droppedFrames,
+                    s.blackFrames
+            );
+    s.verdictOk = verdict == Lab8CameraEvidencePolicy.Verdict.CONFIRMED_PREVIEW;
+    switch (verdict) {
+        case CONFIRMED_PREVIEW:
+            logLabelOkValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Η ζωντανή εικόνα επιβεβαιώθηκε και η διαθέσιμη δειγματοληψία ήταν ομαλή"
+                       : "Live preview confirmed; available stream sample was consistent");
+            break;
+        case RETEST_STREAM_EVIDENCE:
+            overall.streamIssueCount++;
+            logLabelWarnValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Ο χρήστης επιβεβαίωσε εικόνα· οι τεχνικές ενδείξεις ροής χρειάζονται επανέλεγχο, όχι διάγνωση βλάβης"
+                       : "User confirmed preview; stream telemetry needs rechecking, not a hardware diagnosis");
+            break;
+        case USER_REPORTED_PREVIEW_FAILURE:
+            logLabelWarnValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Η ζωντανή εικόνα δεν επιβεβαιώθηκε από τον χρήστη — απαιτείται επανέλεγχος"
+                       : "Live preview not confirmed by user — retest required");
+            break;
+        default:
+            logLabelValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Μη ολοκληρωμένη μέτρηση Camera2 — καμία διάγνωση υλικού"
+                       : "Camera2 sampling incomplete — no hardware verdict");
+            break;
+    }
     logLine();
     appendHtml("<br>");
-} // ✅ ΤΕΛΟΣ lab8StopAndReportSample (αυτό έλειπε)
+}
 
 // ============================================================
 // LAB 8 — Close session safely
@@ -10369,6 +10405,9 @@ private static class Lab8Session {
     int latencyCount;
 
     long lastFrameTsNs;
+    float sampledFps;
+    boolean sampleCompleted = false;
+    boolean cameraStreamFailure = false;
 
     Boolean userConfirmedPreview = null;
     boolean verdictOk = false;
