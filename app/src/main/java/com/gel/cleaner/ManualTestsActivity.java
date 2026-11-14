@@ -10841,10 +10841,10 @@ private void lab9SensorsCheck() {
             String name   = s.getName()   != null ? s.getName().toLowerCase(Locale.US)   : "";
             String vendor = s.getVendor() != null ? s.getVendor().toLowerCase(Locale.US) : "";
 
-            if (name.contains("virtual") && name.contains("gyro"))
-                hasVirtualGyro = true;
-
-            if (name.contains("gyroscope") && vendor.contains("xiaomi"))
+            // "Xiaomi gyroscope" alone does NOT establish a virtual gyro:
+            // name-based inventory classifications require the literal marker.
+            if (name.contains("virtual")
+                    && (name.contains("gyro") || name.contains("gyroscope")))
                 hasVirtualGyro = true;
 
             if (name.contains("ambient") && name.contains("light"))
