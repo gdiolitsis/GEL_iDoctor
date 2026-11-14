@@ -10780,7 +10780,7 @@ private void lab9SensorsCheck() {
         if (sm == null) {
             logLabelValue(
                     gr ? "SensorManager" : "SensorManager",
-                    gr ? "Μη διαθέσιμο — δεν έγινε έλεγχος" : "Unavailable — check not performed"
+                    gr ? "Μη διαθέσιμο — η απογραφή δεν πραγματοποιήθηκε" : "Unavailable — inventory not performed"
             );
             return;
         }
@@ -10805,7 +10805,7 @@ private void lab9SensorsCheck() {
         if (sensors == null || sensors.isEmpty()) {
             logLabelValue(
                     gr ? "Λίστα αισθητήρων" : "Sensor list",
-                    gr ? "Το Android δεν επέστρεψε αισθητήρες — λειτουργία άγνωστη" : "Android returned no sensors — functionality unknown"
+                    gr ? "Το Android επέστρεψε κενή λίστα αισθητήρων" : "Android returned an empty sensor list"
             );
             return;
         }
@@ -10871,20 +10871,20 @@ private void lab9SensorsCheck() {
         logLine();
 
         if (hasVirtualGyro)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Εικονικό γυροσκόπιο" : "Virtual Gyroscope",
-                    gr ? "Ένδειξη ονόματος (λειτουργία μη ελεγμένη)" : "Name-based indication (operation not tested)"
+                    gr ? "Σχετική καταχώριση στην απογραφή" : "Related entry listed by Android"
             );
         else
             logLabelValue(
                     gr ? "Εικονικό γυροσκόπιο" : "Virtual Gyroscope",
-                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
+                    gr ? "Δεν βρέθηκε σχετική καταχώριση" : "No related entry found"
             );
 
         if (hasDualALS)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Αισθητήρες φωτός" : "Ambient Light Sensors",
-                    gr ? "2+ καταχωρίσεις ALS — θέσεις μη επιβεβαιωμένες" : "2+ ALS entries — locations not verified"
+                    gr ? "2+ καταχωρίσεις με ονομασία ALS" : "2+ entries named ALS"
             );
         else
             logLabelValue(
@@ -10893,55 +10893,49 @@ private void lab9SensorsCheck() {
             );
 
         if (hasSAR)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Αισθητήρες SAR" : "SAR Sensors",
-                    gr ? "Ονομασία SAR/RF — χρήση μη ελεγμένη" : "SAR/RF name — use not tested"
+                    gr ? "Καταχωρίσεις με ονομασία SAR/RF" : "Entries named SAR/RF"
             );
         else
             logLabelValue(
                     gr ? "Αισθητήρες SAR" : "SAR Sensors",
-                    gr ? "Δεν αναφέρθηκαν — πιθανώς μη εκτεθειμένοι" : "Not reported — may not be exposed"
+                    gr ? "Δεν βρέθηκε σχετική καταχώριση" : "No related entry found"
             );
 
         if (hasPickup)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Pickup sensor" : "Pickup Sensor",
-                    gr ? "Ονομασία Pickup — lift-to-wake μη ελεγμένο" : "Pickup name — lift-to-wake not tested"
+                    gr ? "Καταχώριση με ονομασία Pickup" : "Entry named Pickup"
             );
         else
             logLabelValue(
                     gr ? "Pickup sensor" : "Pickup Sensor",
-                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
+                    gr ? "Δεν βρέθηκε σχετική καταχώριση" : "No related entry found"
             );
 
         if (hasLargeTouch)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Large area touch" : "Large Area Touch",
-                    gr ? "Ονομασία Large Touch — απόκριση μη ελεγμένη" : "Large Touch name — response not tested"
+                    gr ? "Καταχώριση με ονομασία Large Touch" : "Entry named Large Touch"
             );
         else
             logLabelValue(
                     gr ? "Large area touch" : "Large Area Touch",
-                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
+                    gr ? "Δεν βρέθηκε σχετική καταχώριση" : "No related entry found"
             );
 
         if (hasGameRotation)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Game rotation vector" : "Game Rotation Vector",
-                    gr ? "Ονομασία Game Rotation — απόκριση μη ελεγμένη" : "Game Rotation name — response not tested"
+                    gr ? "Καταχώριση με ονομασία Game Rotation" : "Entry named Game Rotation"
             );
         else
             logLabelValue(
                     gr ? "Game rotation vector" : "Game Rotation Vector",
-                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
+                    gr ? "Δεν βρέθηκε σχετική καταχώριση" : "No related entry found"
             );
 
-        logLabelValue(
-                gr ? "Όριο συμπεράσματος" : "Interpretation scope",
-                gr
-                        ? "Απογράφηκαν οι δηλωμένοι αισθητήρες. Η απόκριση και η υγεία τους ΔΕΝ ελέγχθηκαν."
-                        : "Reported sensors inventoried. Their response and health were NOT tested."
-        );
         inventoryFinished = true;
 
     } catch (Throwable e) {
@@ -10980,8 +10974,8 @@ private void checkSensor(SensorManager sm, int type, String name) {
         logLabelValue(
                 name,
                 gr
-                        ? "Δεν αναφέρθηκε — η πραγματική απόκριση παραμένει άγνωστη"
-                        : "Not reported — actual response remains unknown"
+                        ? "Δεν αναφέρθηκε από το Android"
+                        : "Not reported by Android"
         );
     }
 }
