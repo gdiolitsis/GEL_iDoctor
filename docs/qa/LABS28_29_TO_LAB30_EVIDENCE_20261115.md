@@ -38,6 +38,42 @@
 | GR/EN, Android 11/16, landscape and back | Readable dialog; SKIP/RECORD accessible; back behaves as skip |
 | Lab 30 → Lab 31 → PDF | Both Lab 28 and 29 sections present; final export retains provenance caveats |
 
+## Lab 31 — Technician's independent intake assessment
+The existing Lab 31 now receives both Lab 28 and Lab 29 evidence directly from the
+same versioned, same-boot preferences used by Lab 30; it is not inferred from
+previous final-report prose. `Lab31ReportEvidencePolicy` continues filtering
+old Lab 31 summaries and the existing PDF export button is unchanged.
+
+Three distinct questions, never rolled into a single "authenticity/theft" score:
+
+1. **Technical measurements (Lab 28):** recorded uptime and available battery,
+   CPU and GPU temperatures; unverified log keyword mentions marked neutral,
+   without future-fault or repair-history attribution.
+2. **Device/OEM identity (Lab 29):** Android-reported manufacturer/model/device,
+   identified explicitly as self-reported and **NOT OEM part certification**.
+3. **Lawful provenance and handover (Lab 29):** buyer-reported multi-IMEI external
+   lookup, identifier comparison, paperwork/seller check, and fresh activation/FRP.
+   A reported blocked IMEI triggers **HOLD FOR VERIFICATION**; it is not
+   independent proof of theft. A reported clear IMEI is not ownership proof.
+   Independently authentic devices can have disputed provenance.
+
+### Additional technician acceptance cases
+| Situation | Lab 31 expected |
+|---|---|
+| Lab 28 not run, Lab 29 run | Lab 28 explicitly unknown, Lab 29 shown |
+| Lab 29 not run, Lab 28 run | Raw Lab 28 readings, ownership/OEM status unknown |
+| Reported IMEI blocked, all other checkboxes ticked | Red *reported block; confirm with carrier/authority*, never "stolen confirmed" |
+| Reported clean IMEI, paperwork missing | Incomplete, never "legal device" |
+| Reported checklist complete | Buyer-reported only; no declaration of legal ownership |
+| Device identity corresponds to a known manufacturer | OEM authenticity still unverified |
+| Phone restarted after Labs 28–29 | Both sections stale/unknown, not silently reused |
+| Repeated Lab 31 + export | No stale Lab 31 warnings carried into new summary; technician details captured in GELServiceLog for export |
+| CPU/GPU temperature high | Raw numeric readings neutral, not false healthy/OK status |
+
+The pure `TechnicianPrecheckAssessment` policy and JUnit tests cover missing,
+stale, partial, clean and reported-block outcomes; this is service-intake triage,
+**never a determination that a phone is stolen or counterfeit**.
+
 ## Verification state
 - Source-level changes prepared, not a confirmed APK or device acceptance.
 - Unit tests: `LabEvidenceFreshnessTest` and `UsedDevicePrecheckPolicyTest`.
