@@ -30813,6 +30813,9 @@ p.edit()
         .putBoolean("lab29_provenance_unverified", true)
         .putInt("lab29_obs_schema", 1)
         .putLong("lab29_obs_elapsed_ms", SystemClock.elapsedRealtime())
+        .putString("lab29_obs_manufacturer", Build.MANUFACTURER)
+        .putString("lab29_obs_model", Build.MODEL)
+        .putString("lab29_obs_device", Build.DEVICE)
         .putInt("lab29_precheck_schema", 1)
         .putInt("lab29_precheck_status", UsedDevicePrecheckPolicy.INCOMPLETE)
         .putBoolean("lab29_precheck_user_reported", false)
@@ -31353,9 +31356,14 @@ logInfo(gr ? "LAB 29 — Προέλεγχος αγοράς μεταχειρισ�
            : "LAB 29 — Used-device pre-purchase check");
 logLine();
 if (lab29ObservationsAvailable) {
+    logLabelValue(gr ? "Δηλωμένο μοντέλο (Lab 29)" : "Android-reported model (Lab 29)",
+            p.getString("lab29_obs_manufacturer", "") + " / "
+                    + p.getString("lab29_obs_model", ""));
+    logLabelValue(gr ? "Κωδικός συσκευής (Lab 29)" : "Android-reported device (Lab 29)",
+            p.getString("lab29_obs_device", ""));
     logLabelValue(gr ? "Ταυτότητα υλικού" : "Hardware identity",
-            gr ? "Έγινε καταγραφή στοιχείων Android, όχι OEM πιστοποίηση."
-               : "Android-reported identity captured; not OEM certification.");
+            gr ? "Καταγραφή Android, όχι ανεξάρτητη πιστοποίηση κατασκευαστή."
+               : "Android-reported identity, not independent OEM certification.");
 } else {
     logLabelValue(gr ? "Στοιχεία Lab 29" : "Lab 29 observations",
             gr ? "Δεν υπάρχουν πρόσφατες παρατηρήσεις της ίδιας εκκίνησης."
