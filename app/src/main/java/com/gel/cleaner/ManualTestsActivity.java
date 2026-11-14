@@ -32466,16 +32466,19 @@ if (zones == null || zones.isEmpty()) {
 
 } else {
 
-    logLabelValue(gr ? "Ζώνες" : "Zones", String.valueOf(zones.size()));
-    logLabelValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
-    logLabelValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
+    logLabelOkValue(gr ? "Ζώνες" : "Zones", String.valueOf(zones.size()));
+    logLabelOkValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
+    logLabelOkValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
 
-    if (cpu  != null) logLabelValue("CPU",  fmt1(cpu)  + "°C");
-    if (gpu  != null) logLabelValue("GPU",  fmt1(gpu)  + "°C");
-    if (pmic != null) logLabelValue("PMIC", fmt1(pmic) + "°C");
-    if (skin != null) logLabelValue(gr ? "Επιφάνεια" : "Skin", fmt1(skin) + "°C");
+    if (cpu  != null) logLabelOkValue("CPU",  fmt1(cpu)  + "°C");
+    if (gpu  != null) logLabelOkValue("GPU",  fmt1(gpu)  + "°C");
+    if (pmic != null) logLabelOkValue("PMIC", fmt1(pmic) + "°C");
+    if (skin != null) logLabelOkValue(gr ? "Επιφάνεια" : "Skin", fmt1(skin) + "°C");
 
-    logLabelValue(gr ? "Μπαταρία" : "Battery", fmt1(batTemp) + "°C");
+    if (!Float.isNaN(batTemp))
+        logLabelOkValue(gr ? "Μπαταρία" : "Battery", fmt1(batTemp) + "°C");
+    else
+        logLabelValue(gr ? "Μπαταρία" : "Battery", gr ? "Μ/Δ" : "N/A");
 }
 
 appendHtml("<br>");
@@ -32507,12 +32510,14 @@ logLabelValue(
         storageFlag + " (" + storageScore + ")"
 );
 
-logLabelValue(
-        gr ? "Χρήση" : "Usage",
-        (gr ? "Ελεύθερο=" : "Free=") + st.pctFree + "% | " +
-        (gr ? "Χρησιμοποιείται=" : "Used=") +
-        humanBytes(st.usedBytes) + " / " + humanBytes(st.totalBytes)
-);
+if (st.totalBytes > 0)
+    logLabelOkValue(
+            gr ? "Χρήση" : "Usage",
+            (gr ? "Ελεύθερο=" : "Free=") + st.pctFree + "% | " +
+            (gr ? "Χρησιμοποιείται=" : "Used=") +
+            humanBytes(st.usedBytes) + " / " + humanBytes(st.totalBytes));
+else
+    logLabelValue(gr ? "Χρήση" : "Usage", gr ? "Μ/Δ" : "N/A");
 
 appendHtml("<br>");
 logInfo(gr ? "Αποτύπωμα Εφαρμογών" : "Apps footprint");
@@ -32539,11 +32544,12 @@ logLabelValue(
         ramFlag + " (" + ramScore + ")"
 );
 
-logLabelValue(
-        gr ? "Ελεύθερη" : "Free",
-        rm.pctFree + "% (" +
-        humanBytes(rm.freeBytes) + " / " + humanBytes(rm.totalBytes) + ")"
-);
+if (rm.totalBytes > 0)
+    logLabelOkValue(gr ? "Ελεύθερη" : "Free",
+            rm.pctFree + "% (" +
+            humanBytes(rm.freeBytes) + " / " + humanBytes(rm.totalBytes) + ")");
+else
+    logLabelValue(gr ? "Ελεύθερη" : "Free", gr ? "Μ/Δ" : "N/A");
 
 appendHtml("<br>");
 logInfo(gr ? "Σταθερότητα / Χρόνος λειτουργίας" : "Stability / Uptime");
@@ -32554,10 +32560,10 @@ logLabelValue(
         stabilityFlag + " (" + stabilityScore + ")"
 );
 
-logLabelValue(
-        gr ? "Χρόνος λειτουργίας" : "Uptime",
-        formatUptime(upMs)
-);
+if (upMs > 0)
+    logLabelOkValue(gr ? "Χρόνος λειτουργίας" : "Uptime", formatUptime(upMs));
+else
+    logLabelValue(gr ? "Χρόνος λειτουργίας" : "Uptime", gr ? "Άγνωστο" : "Unknown");
 
 if (upMs < 2 * 60 * 60 * 1000L) {
     logLabelWarnValue(
