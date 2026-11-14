@@ -9017,7 +9017,7 @@ private void lab8CameraHardwareCheck() {
         logWarn(gr
                 ? "Το Camera2 δεν υποστηρίζεται σε αυτήν την έκδοση Android."
                 : "Camera2 not supported on this Android version.");
-        logOk(gr
+        logInfo(gr
                 ? "Fallback: άνοιγμα εφαρμογής κάμερας (βασικός έλεγχος)."
                 : "Fallback: opening system camera app (basic check).");
         try {
@@ -9031,7 +9031,8 @@ private void lab8CameraHardwareCheck() {
                     : "Camera app may be missing or blocked.");
 
             appendHtml("<br>");
-            logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+            logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
             logLine();
             enableSingleExportButton();
         }
@@ -9047,7 +9048,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Δεν εντοπίστηκε υλικό κάμερας στη συσκευή."
                 : "No camera hardware detected on this device.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9061,7 +9063,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Το CameraManager δεν είναι διαθέσιμο."
                 : "CameraManager unavailable.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9091,7 +9094,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Αποτυχία καταγραφής camera IDs."
                 : "Failed to enumerate cameras.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9102,7 +9106,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Δεν βρέθηκαν προσβάσιμα camera IDs."
                 : "No accessible camera IDs found.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9210,7 +9215,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Δεν βρέθηκαν αξιοποιήσιμες περιγραφές καμερών."
                 : "No usable camera descriptors.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -10623,7 +10629,7 @@ private void startLab8_1CameraCapabilities() {
                 gr ? "Λείπει το context καμερών" : "Missing camera context"
         );
 
-        logOk(gr
+        logInfo(gr
                 ? "Παρακαλώ εκτέλεσε ξανά το LAB 8."
                 : "Please re-run LAB 8.");
 
