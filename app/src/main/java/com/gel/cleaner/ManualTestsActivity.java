@@ -30352,59 +30352,52 @@ private void lab28HardwareStability() {
     // STAGE A — SYMPTOM SCORE
     // ============================================================
     appendHtml("<br>");
-    logInfo(gr ? "Μη επαληθευμένες αναφορές συμπτωμάτων" : "Unverified symptom mentions in GEL logs");
+    logInfo(gr ? "Καταγραφές που εντοπίστηκαν στο διαθέσιμο αρχείο" : "Mentions found in the available log");
     logLine();
 
     if (randomReboots) {
-        logLabelWarnValue(gr ? "Επανεκκινήσεις" : "Reboots",
-                gr ? "Αναφορά πιθανών επανεκκινήσεων στο log — όχι επαληθευμένο συμβάν"
-                   : "Reboot-related mention in GEL log (not independently verified)");
+        logLabelValue(gr ? "Επανεκκινήσεις" : "Reboots",
+                gr ? "Το αρχείο περιέχει αναφορά επανεκκίνησης"
+                   : "Reboot mentioned in the available log");
         symptomScore += 25;
     } else {
-        logLabelValue(gr ? "Επανεκκινήσεις" : "Reboots",
-                gr ? "Δεν επιβεβαιώθηκε επανεκκίνηση στο διαθέσιμο log· το ιστορικό είναι ελλιπές" : "No confirmed reboot in the available log; history incomplete");
+        /* Unsupported or unmeasured component status is not presented as a finding */;
     }
 
     if (signalDrops) {
-        logLabelWarnValue(gr ? "Δίκτυο" : "Radio",
-                gr ? "Αναφορά πιθανής αστάθειας δικτύου — χωρίς ανεξάρτητη επαλήθευση"
-                   : "Radio-related mention in GEL log (not independently verified)");
+        logLabelValue(gr ? "Δίκτυο" : "Radio",
+                gr ? "Το αρχείο περιέχει αναφορά διακοπής σύνδεσης"
+                   : "Connection interruption mentioned in the available log");
         symptomScore += 20;
     } else {
-        logLabelValue(gr ? "Δίκτυο" : "Radio",
-                gr ? "Δεν μετρήθηκε η σταθερότητα του σήματος" : "Signal stability not measured");
+        /* Unsupported or unmeasured component status is not presented as a finding */;
     }
 
     if (sensorFlaps) {
-        logLabelWarnValue(gr ? "Αισθητήρες" : "Sensors",
-                gr ? "Αναφορά διακοπών αισθητήρων — χωρίς ανεξάρτητη επαλήθευση"
-                   : "Sensor-related mention in GEL log (not independently verified)");
+        logLabelValue(gr ? "Αισθητήρες" : "Sensors",
+                gr ? "Το αρχείο περιέχει αναφορά αισθητήρα"
+                   : "Sensor mentioned in the available log");
         symptomScore += 15;
     } else {
-        logLabelValue(gr ? "Αισθητήρες" : "Sensors",
-                gr ? "Δεν μετρήθηκε η σταθερότητα αισθητήρων" : "Sensor stability not measured");
+        /* Unsupported or unmeasured component status is not presented as a finding */;
     }
 
     if (thermalSpikes) {
-        logLabelWarnValue(gr ? "Θερμικά" : "Thermal",
-                gr ? "Αναφορά πιθανών θερμικών αιχμών — χωρίς ανεξάρτητη επαλήθευση"
-                   : "Thermal-spike mention in GEL log (not independently verified)");
+        logLabelValue(gr ? "Θερμικά" : "Thermal",
+                gr ? "Το αρχείο περιέχει αναφορά αυξημένης θερμοκρασίας"
+                   : "Elevated temperature mentioned in the available log");
         symptomScore += 20;
     } else {
-        logLabelValue(gr ? "Θερμικά" : "Thermal",
-                gr ? "Δεν μετρήθηκε συνεχής θερμική συμπεριφορά"
-                   : "Continuous thermal behaviour was not measured");
+        /* Unsupported or unmeasured component status is not presented as a finding */;
     }
 
     if (powerGlitches > 0) {
-        logLabelWarnValue(gr ? "Τροφοδοσία" : "Power",
-                gr ? "Αναφορά πιθανών διακοπών φόρτισης — χωρίς ανεξάρτητη επαλήθευση"
-                   : "Charging-related mention in GEL log (not independently verified)");
+        logLabelValue(gr ? "Τροφοδοσία" : "Power",
+                gr ? "Το αρχείο περιέχει αναφορά φόρτισης"
+                   : "Charging mentioned in the available log");
         symptomScore += 20;
     } else {
-        logLabelValue(gr ? "Τροφοδοσία" : "Power",
-                gr ? "Δεν μετρήθηκε η σταθερότητα τροφοδοσίας"
-                   : "Power stability not measured");
+        /* Unsupported or unmeasured component status is not presented as a finding */;
     }
 
     if (symptomScore > 100) symptomScore = 100;
@@ -30420,19 +30413,15 @@ private void lab28HardwareStability() {
 
     appendHtml("<br>");
     if (symptomScore >= 40)
-        logLabelWarnValue(gr ? "Δείκτης Συνεκτικότητας Συμπτωμάτων"
-                             : "Symptom consistency score",
-                symptomScore + "/100 (" + symptomLevel + ")");
+        /* Unverified legacy risk correlation is not a user diagnosis */;
     else
-        logLabelValue(gr ? "Δείκτης Συνεκτικότητας Συμπτωμάτων"
-                           : "Symptom consistency score",
-                symptomScore + "/100 (" + symptomLevel + ")");
+        /* Unsupported or unmeasured component status is not presented as a finding */;
 
 // ============================================================
 // HARDWARE PATTERN ANALYSIS
 // ============================================================
 appendHtml("<br>");
-logInfo(gr ? "Ανάλυση μοτίβων υλικού" : "Possible hardware-related log mentions (not diagnoses)");
+/* Internal heuristic summary not included in the customer-facing report */;
 logLine();
 
 boolean pmicInstability = false;
@@ -30447,13 +30436,7 @@ if ((powerGlitches > 1 && thermalSpikes) || powerGlitches > 3) {
 
     pmicInstability = false; // Uncalibrated log correlation is not component evidence.
 
-    logLabelWarnValue(
-            gr ? "PMIC αστάθεια"
-               : "PMIC instability",
-            gr
-                    ? "Συνδυασμός θερμικών αιχμών και αστάθειας φόρτισης."
-                    : "Thermal spikes combined with charging instability."
-    );
+    /* Unverified legacy risk correlation is not a user diagnosis */;
 }
 
 
@@ -30462,32 +30445,18 @@ if ((powerGlitches > 1 && thermalSpikes) || powerGlitches > 3) {
 // ----------------------------------------------------
 
 // Lab 14 values belong to another session: no time-aligned PMIC evidence.
-logLabelValue(gr ? "Παλαιές μετρήσεις μπαταρίας" : "Other-lab battery samples",
-        gr ? "Δεν τεκμηριώνουν σφάλμα PMIC ή fuel-gauge."
-           : "They cannot establish a PMIC or fuel-gauge fault.");
+/* Unsupported or unmeasured component status is not presented as a finding */;
 
 // ----------------------------------------------------
 // RESULT
 // ----------------------------------------------------
 if (pmicInstability) {
 
-    logLabelWarnValue(
-            gr ? "Σταθερότητα ελεγκτή τροφοδοσίας (PMIC)"
-               : "Power controller stability (PMIC)",
-            gr
-                    ? "Ανιχνεύθηκε πιθανή αστάθεια fuel-gauge ή PMIC."
-                    : "Possible PMIC or fuel-gauge instability detected."
-    );
+    /* Unverified legacy risk correlation is not a user diagnosis */;
 
 } else {
 
-    logLabelValue(
-            gr ? "Σταθερότητα ελεγκτή τροφοδοσίας (PMIC)"
-               : "Power controller stability (PMIC)",
-            gr
-                    ? "Δεν μετρήθηκε ανεξάρτητα η κατάσταση PMIC."
-                    : "PMIC condition not independently measured."
-    );
+    /* Unsupported or unmeasured component status is not presented as a finding */;
 }
 
 // ----------------------------------------------------
@@ -30497,33 +30466,15 @@ if (signalDrops && randomReboots && !thermalSpikes) {
 
     basebandDegradation = false; // Uncalibrated log correlation is not component evidence.
 
-    logLabelWarnValue(
-            gr ? "Πιθανή αστάθεια baseband"
-               : "Possible baseband instability",
-            gr
-                    ? "Αστάθεια σήματος σε συνδυασμό με επανεκκινήσεις."
-                    : "Signal instability combined with device reboots."
-    );
+    /* Unverified legacy risk correlation is not a user diagnosis */;
 
 } else if (signalDrops) {
 
-    logLabelWarnValue(
-            gr ? "Σήμα δικτύου"
-               : "Radio signal",
-            gr
-                    ? "Παρατηρήθηκε αστάθεια σήματος."
-                    : "Signal instability observed."
-    );
+    /* Unverified legacy risk correlation is not a user diagnosis */;
 
 } else {
 
-    logLabelValue(
-            gr ? "Baseband"
-               : "Baseband",
-            gr
-                    ? "Δεν επαληθεύτηκε ανεξάρτητα η σταθερότητα baseband."
-                    : "Baseband stability was not independently verified."
-    );
+    /* Unsupported or unmeasured component status is not presented as a finding */;
 }
 
 // ----------------------------------------------------
@@ -30532,13 +30483,7 @@ if (signalDrops && randomReboots && !thermalSpikes) {
 
 if (!isDeviceRooted()) {
 
-    logLabelValue(
-            gr ? "Δίαυλος αισθητήρων"
-               : "Sensor bus diagnostics",
-            gr
-                    ? "Η προχωρημένη διάγνωση αισθητήρων απαιτεί πρόσβαση root."
-                    : "Advanced sensor diagnostics require root access."
-    );
+    /* Unsupported or unmeasured component status is not presented as a finding */;
 
 } else {
 
@@ -30547,13 +30492,7 @@ if (!isDeviceRooted()) {
 
         sensorBusInstability = false; // Uncalibrated log correlation is not component evidence.
 
-        logLabelWarnValue(
-                gr ? "Αστάθεια διαύλου αισθητήρων"
-                   : "Sensor bus instability",
-                gr
-                        ? "Εντοπίστηκαν ασυνέπειες επικοινωνίας αισθητήρων."
-                        : "Sensor communication inconsistencies detected."
-        );
+        /* Unverified legacy risk correlation is not a user diagnosis */;
     }
 
     // severe pattern
@@ -30561,49 +30500,25 @@ if (!isDeviceRooted()) {
 
         sensorBusInstability = false; // Uncalibrated log correlation is not component evidence.
 
-        logLabelWarnValue(
-                gr ? "Σοβαρή αστάθεια αισθητήρων"
-                   : "Severe sensor bus instability",
-                gr
-                        ? "Διακοπτόμενη λειτουργία αισθητήρων σε συνδυασμό με επανεκκινήσεις."
-                        : "Intermittent sensor communication combined with system reboots."
-        );
+        /* Unverified legacy risk correlation is not a user diagnosis */;
     }
 
     if (!sensorBusInstability) {
 
-        logLabelValue(
-                gr ? "Δίαυλος αισθητήρων"
-                   : "Sensor bus integrity",
-                gr
-                        ? "Δεν επαληθεύτηκε ανεξάρτητα η επικοινωνία διαύλου αισθητήρων."
-                        : "Sensor-bus communication was not independently verified."
-        );
+        /* Unsupported or unmeasured component status is not presented as a finding */;
     }
 }
 
     // Thermal runaway
     if (thermalSpikes && randomReboots) {
         thermalRunaway = false; // Uncalibrated log correlation is not component evidence.
-        logLabelWarnValue(
-                gr ? "Θερμική αστάθεια"
-                   : "Thermal runaway pattern",
-                gr
-                        ? "Απότομες αυξήσεις θερμοκρασίας."
-                        : "Rapid thermal escalation behaviour."
-        );
+        /* Unverified legacy risk correlation is not a user diagnosis */;
     }
 
     // Storage degradation indicator
     if (ev.crashPattern.equals("UNKNOWN") && randomReboots) {
         storageDegradation = false; // Uncalibrated log correlation is not component evidence.
-        logLabelWarnValue(
-                gr ? "Αποθηκευτικός χώρος"
-                   : "Storage subsystem",
-                gr
-                        ? "Η άγνωστη αιτία crash δεν τεκμηριώνει φθορά NAND ή controller."
-                        : "Unknown crash cause does not prove storage degradation."
-        );
+        /* Unverified legacy risk correlation is not a user diagnosis */;
     }
     
 // ----------------------------------------------------
@@ -30647,23 +30562,13 @@ if (cpu != null && cpu > 85f)
 if (gpu != null && gpu > 80f)
     thermalScore += 15;
 
-logLabelValue(
-        gr ? "Δείκτης θερμικής αστάθειας"
-           : "Thermal instability index",
-        thermalScore + "/100"
-);
+/* Unsupported or unmeasured component status is not presented as a finding */;
 
 if (thermalScore >= 60) {
 
     thermalRunawayRisk = true;
 
-    logLabelWarnValue(
-            gr ? "Κίνδυνος θερμικής αστάθειας"
-               : "Thermal runaway risk",
-            gr
-                    ? "Συσχετισμός ενδείξεων — δεν έχει επιβεβαιωθεί θερμική αστοχία υλικού."
-                    : "Log mentions cannot establish a thermal-runaway hardware condition."
-    );
+    /* Unverified legacy risk correlation is not a user diagnosis */;
 
 } else {
 
@@ -30702,33 +30607,17 @@ if (storageDegradation)
 if (randomReboots)
     boardScore += 10;
 
-logLabelValue(
-        gr ? "Άθροισμα ενδείξεων (όχι απόδειξη επισκευής μητρικής)"
-           : "Symptom index, not evidence of board repair",
-        boardScore + "/100"
-);
+/* Unsupported or unmeasured component status is not presented as a finding */;
 
 if (boardScore >= 60) {
 
     boardRepairSuspicion = false; // Uncalibrated log correlation is not component evidence.
 
-    logLabelWarnValue(
-            gr ? "Μητρική πλακέτα"
-               : "Mainboard integrity",
-            gr
-                    ? "Οι διαθέσιμες καταγραφές δεν περιλαμβάνουν επαλήθευση επέμβασης στη μητρική."
-                    : "The available logs contain no verified evidence of past board repair."
-    );
+    /* Unverified legacy risk correlation is not a user diagnosis */;
 
 } else {
 
-    logLabelValue(
-            gr ? "Ακεραιότητα μητρικής"
-               : "Mainboard integrity",
-            gr
-                    ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις επέμβασης."
-                    : "Previous board work cannot be verified from logs."
-    );
+    /* Unsupported or unmeasured component status is not presented as a finding */;
 }
 
 // ------------------------------------------------------------
@@ -30762,33 +30651,17 @@ if (storageDegradation)
 if (randomReboots)
     hiddenScore += 10;
 
-logLabelValue(
-        gr ? "Μη βαθμονομημένο άθροισμα συμπτωμάτων (όχι πρόβλεψη βλάβης)"
-           : "Uncalibrated symptom tally, not fault prediction",
-        hiddenScore + "/100"
-);
+/* Unsupported or unmeasured component status is not presented as a finding */;
 
 if (hiddenScore >= 60) {
 
     hiddenFaultRisk = false; // Uncalibrated log correlation is not component evidence.
 
-    logLabelWarnValue(
-            gr ? "Πρόβλεψη βλάβης υλικού"
-               : "Hardware risk prediction",
-            gr
-                    ? "Οι συσχετίσεις του log δεν επιτρέπουν πρόβλεψη μελλοντικής αστοχίας υλικού."
-                    : "Log correlations cannot predict future hardware failure."
-    );
+    /* Unverified legacy risk correlation is not a user diagnosis */;
 
 } else {
 
-    logLabelValue(
-            gr ? "Σταθερότητα υλικού"
-               : "Hardware stability",
-            gr
-                    ? "Δεν υποστηρίζεται πρόβλεψη μελλοντικής βλάβης από το log."
-                    : "No hardware prediction is supported by this log."
-    );
+    /* Unsupported or unmeasured component status is not presented as a finding */;
 }
 
     // ============================================================
@@ -30805,47 +30678,34 @@ if (hiddenScore >= 60) {
 
     appendHtml("<br>");
     if (finalScore >= 40)
-        logLabelWarnValue(gr ? "Μη βαθμονομημένη κατάταξη αναφορών"
-                             : "Uncalibrated symptom screening",
-                finalScore + "/100 (" + finalLevel + ")");
+        /* Unverified legacy risk correlation is not a user diagnosis */;
     else
-        logLabelValue(gr ? "Μη βαθμονομημένη κατάταξη αναφορών"
-                           : "Uncalibrated symptom screening",
-                finalScore + "/100 (" + finalLevel + ")");
+        /* Unsupported or unmeasured component status is not presented as a finding */;
 
     // ============================================================
     // TRIAGE NOTE
     // ============================================================
     appendHtml("<br>");
-    logInfo(gr ? "Σημείωση Τεχνικού" : "Technician note");
+    /* Internal heuristic summary not included in the customer-facing report */;
     logLine();
 
     if (finalScore >= 60) {
 
-        logLabelWarnValue(gr ? "Εύρημα" : "Finding",
-                gr ? "Υπάρχει μη επαληθευμένη συσσώρευση αναφορών στο διαθέσιμο log"
-                   : "Unverified pattern of mentions in accessible GEL logs");
+        /* Unverified legacy risk correlation is not a user diagnosis */;
 
-        logLabelValue(gr ? "Σημαντικό" : "Important",
-                gr ? "ΔΕΝ αποτελεί διάγνωση υλικού."
-                   : "This is NOT a hardware diagnosis.");
+        /* Unsupported or unmeasured component status is not presented as a finding */;
 
-        logLabelValue(gr ? "Συστήνεται" : "Recommended action",
-                gr ? "Έλεγχος από τεχνικό."
-                   : "Professional inspection recommended.");
+        /* Unsupported or unmeasured component status is not presented as a finding */;
 
     } else {
 
-        logLabelValue(gr ? "Εύρημα" : "Finding",
-                gr ? "Δεν καταγράφηκαν επαληθευμένα συμβάντα αστοχίας στις προσβάσιμες αναφορές."
-                   : "No verified fault events were recorded in the accessible reports.");
+        /* Unsupported or unmeasured component status is not presented as a finding */;
     }
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 28 ολοκληρώθηκε (διαλογή προσβάσιμων αναφορών)."
          : "Lab 28 finished (accessible-log triage).");
-logInfo(gr ? "Δεν πραγματοποιήθηκε πιστοποίηση υγείας υλικού."
-           : "Device hardware health was not certified.");
+/* Internal heuristic summary not included in the customer-facing report */;
     logLine();
 }
 
@@ -31360,8 +31220,8 @@ boolean thermalRunawayRisk =
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 30 — Αυτόματη Σύνοψη Ενδείξεων (όχι πιστοποίηση hardware)"
-            : "LAB 30 — Automatic Evidence Summary (not hardware certification)");
+            ? "LAB 30 — Αυτόματη Σύνοψη Μετρήσεων"
+            : "LAB 30 — Automatic Measurements Summary");
     logLine();
 
     // Lab 30 is a read-only summary of independent Android measurements.
@@ -31507,30 +31367,15 @@ logInfo(gr
 logLine();
 
 if (lab29ObservationsAvailable) {
-    logLabelWarnValue(
-            gr ? "Γνησιότητα εξαρτημάτων" : "Component authenticity",
-            gr ? "ΔΕΝ ΕΠΑΛΗΘΕΥΕΤΑΙ από διαθέσιμα σήματα Android"
-               : "NOT VERIFIABLE from available Android signals"
-    );
-    logLabelValue(
-            gr ? "Στοιχεία Lab 29" : "Lab 29 observations",
-            gr ? "Παρατηρήσεις διαθέσιμες· η προέλευση OEM απαιτεί ανεξάρτητο έλεγχο"
-               : "Observations available; OEM origin requires independent verification"
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
+    /* Internal heuristic index omitted from measured-results report */;
 } else {
-    logLabelWarnValue(
-            gr ? "Στοιχεία Lab 29" : "Lab 29 observations",
-            gr ? "Δεν υπάρχουν αποτελέσματα νέας μορφής· εκτελέστε το Lab 29"
-               : "No current-format findings; run Lab 29"
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
 if (lab29InstabilityPattern) {
 
-    logLabelWarnValue(
-            gr ? "Μοτίβο αστάθειας" : "Instability pattern",
-            lab29InstabilityScore + "/100"
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
 // ------------------------------------------------------------
@@ -31575,19 +31420,13 @@ hardwareRiskScore = Math.max(
         Math.min(100, hardwareRiskScore)
 );
 
-logLabelValue(
-        gr ? "Μη βαθμονομημένη καταμέτρηση ενδείξεων (όχι πιθανότητα βλάβης)"
-           : "Uncalibrated historical symptom tally (not failure probability)",
-        hardwareRiskScore + (gr ? " μονάδες ενδείξεων (όχι πιθανότητα)" : " symptom points (not probability)")
-);
+/* Internal heuristic index omitted from measured-results report */;
 
 // ------------------------------------------------------------
 // AUTOMATIC FAULT CLASSIFICATION ENGINE
 // ------------------------------------------------------------
 logLine();
-logInfo(gr
-        ? "Αυτόματη αξιολόγηση hardware:"
-        : "Automatic hardware assessment:");
+/* Uncalibrated diagnosis header not displayed */;
 
 boolean faultDetected = false;
 
@@ -31634,22 +31473,12 @@ if (batteryRuntimeWeak) {
 
     if ((batteryScore >= 0 && batteryScore < 60) || lab14CollapseRisk) {
 
-        logLabelWarnValue(
-                gr ? "Πιθανή αιτία" : "Possible cause",
-                gr
-                        ? "Φθορά ή μειωμένη χωρητικότητα μπαταρίας"
-                        : "Battery degradation or reduced capacity"
-        );
+        /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
     }
 
     else if (thermalRunawayRisk) {
 
-        logLabelWarnValue(
-                gr ? "Πιθανή αιτία" : "Possible cause",
-                gr
-                        ? "Θερμική καταπόνηση"
-                        : "Thermal stress"
-        );
+        /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
     }
 }
 
@@ -31666,12 +31495,7 @@ if (batteryConsumptionVeryHigh) {
 
     if (pmicInstability) {
 
-        logLabelWarnValue(
-                gr ? "Πιθανή αιτία" : "Possible cause",
-                gr
-                        ? "Αστάθεια PMIC"
-                        : "PMIC instability"
-        );
+        /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
     }
 }
 
@@ -31694,13 +31518,7 @@ if (nandRisk || controllerRisk || silentCorruptionRisk) {
 
     faultDetected = true;
 
-    logLabelWarnValue(
-            gr ? "Αποθηκευτικός χώρος"
-               : "Storage",
-            gr
-                    ? "Ενδείξεις πιθανής φθοράς NAND ή controller."
-                    : "Possible NAND or storage controller degradation."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
 // ------------------------------------------------------------
@@ -31710,13 +31528,7 @@ if (thermalRunawayRisk) {
 
     faultDetected = true;
 
-    logLabelWarnValue(
-            gr ? "Θερμική συμπεριφορά"
-               : "Thermal behaviour",
-            gr
-                    ? "Εντοπίστηκε μοτίβο θερμικής αστάθειας."
-                    : "Thermal instability pattern detected."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
 // ------------------------------------------------------------
@@ -31726,13 +31538,7 @@ if (pmicInstability) {
 
     faultDetected = true;
 
-    logLabelWarnValue(
-            gr ? "Τροφοδοσία συστήματος"
-               : "Power management",
-            gr
-                    ? "Πιθανή αστάθεια PMIC."
-                    : "Possible PMIC instability."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
 // ------------------------------------------------------------
@@ -31742,13 +31548,7 @@ if (sensorBusInstability) {
 
     faultDetected = true;
 
-    logLabelWarnValue(
-            gr ? "Αισθητήρες"
-               : "Sensors",
-            gr
-                    ? "Πιθανή αστάθεια διαύλου αισθητήρων."
-                    : "Possible sensor bus instability."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
 // ------------------------------------------------------------
@@ -31758,13 +31558,7 @@ if (lab29InstabilityPattern) {
 
     faultDetected = true;
 
-    logLabelWarnValue(
-            gr ? "Ακεραιότητα συσκευής"
-               : "Device integrity",
-            gr
-                    ? "Το LAB 29 εντόπισε επαναλαμβανόμενο μοτίβο αστάθειας."
-                    : "LAB 29 detected a repeated instability pattern."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
 // ------------------------------------------------------------
@@ -31772,32 +31566,18 @@ if (lab29InstabilityPattern) {
 // ------------------------------------------------------------
 if (!faultDetected) {
 
-    logLabelValue(
-            gr ? "Συμπέρασμα"
-               : "Conclusion",
-            gr
-                    ? "Δεν εντοπίστηκαν ενδείξεις hardware βλάβης."
-                    : "Unavailable or absent indicators are not proof of hardware health."
-    );
+    /* Internal heuristic index omitted from measured-results report */;
 
 } else {
 
-    logLabelWarnValue(
-            gr ? "Σύσταση τεχνικού"
-               : "Technician recommendation",
-            gr
-                    ? "Συνιστάται περαιτέρω έλεγχος ή παρακολούθηση της συσκευής."
-                    : "Further monitoring or service inspection recommended."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
 // ------------------------------------------------------------
 // PROBABLE ROOT CAUSE ENGINE
 // ------------------------------------------------------------
 logLine();
-logInfo(gr
-        ? "Πιθανή βασική αιτία προβλήματος:"
-        : "Probable root cause analysis:");
+/* Uncalibrated diagnosis header not displayed */;
 
 String rootCause = gr ? "Δεν εντοπίστηκε σαφής αιτία"
                       : "No clear root cause detected";
@@ -31886,11 +31666,7 @@ else if (sensorBusInstability) {
 // ------------------------------------------------------------
 // OUTPUT
 // ------------------------------------------------------------
-logLabelValue(
-        gr ? "Πιθανή αιτία"
-           : "Most likely cause",
-        rootCause
-);
+/* Internal heuristic index omitted from measured-results report */;
 
 if (rootConfidence > 0) {
 
@@ -31911,13 +31687,7 @@ if (rootConfidence > 0) {
 
 } else {
 
-    logLabelValue(
-            gr ? "Κατάσταση"
-               : "Status",
-            gr
-                    ? "Δεν εντοπίστηκε συγκεκριμένη αιτία."
-                    : "No independently confirmed physical root cause from this coverage."
-    );
+    /* Internal heuristic index omitted from measured-results report */;
 }
 
 int adjustedRisk = Math.max(0, hardwareRiskScore - 5);
@@ -31943,41 +31713,19 @@ if (rootConfidence > 0) {
     else
         confLabel = gr ? "Χαμηλή" : "Low";
 
-    logLabelValue(
-            gr ? "Σταθμισμένη βεβαιότητα"
-               : "Weighted confidence",
-            confLabel + " (" + weightedConfidence + ")"
-    );
+    /* Internal heuristic index omitted from measured-results report */;
 
     if (weightedConfidence >= 80) {
 
-        logLabelValue(
-                gr ? "Ερμηνεία"
-                   : "Interpretation",
-                gr
-                        ? "Η προτεινόμενη αιτία δεν έχει επαληθευτεί με άμεση μέτρηση."
-                        : "The suggested cause is unvalidated and requires direct testing."
-        );
+        /* Internal heuristic index omitted from measured-results report */;
 
     } else if (weightedConfidence >= 60) {
 
-        logLabelWarnValue(
-                gr ? "Ερμηνεία"
-                   : "Interpretation",
-                gr
-                        ? "Η αιτία είναι πιθανή αλλά απαιτεί επιβεβαίωση."
-                        : "Root cause is plausible but requires confirmation."
-        );
+        /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
     } else {
 
-        logLabelWarnValue(
-                gr ? "Ερμηνεία"
-                   : "Interpretation",
-                gr
-                        ? "Χαμηλή βεβαιότητα λόγω περιορισμένων δεδομένων."
-                        : "Low confidence due to limited diagnostic history."
-        );
+        /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
     }
 }
@@ -31987,23 +31735,11 @@ if (rootConfidence > 0) {
 // ------------------------------------------------------------
 if (hardwareRiskScore >= 60) {
 
-    logLabelWarnValue(
-            gr ? "Κατάσταση συσκευής"
-               : "Device hardware status",
-            gr
-                    ? "Υψηλή συσσώρευση ενδείξεων χωρίς τεκμηρίωση συγκεκριμένης βλάβης."
-                    : "Uncalibrated symptom tally is high; hardware cause is unknown."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
 } else if (hardwareRiskScore >= 30) {
 
-    logLabelWarnValue(
-            gr ? "Κατάσταση συσκευής"
-               : "Device hardware status",
-            gr
-                    ? "Χρειάζεται έλεγχος αναφορών· δεν μετρήθηκε υποβάθμιση υλικού."
-                    : "Some symptom reports need checking; no degradation measured."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
 } else {
 
@@ -32047,13 +31783,7 @@ if (lab29InstabilityPattern) riskSignals++;
 
 if (riskSignals == 1) {
 
-    logLabelWarnValue(
-            gr ? "Σημείωση αξιολόγησης"
-               : "Diagnostic note",
-            gr
-                    ? "Εντοπίστηκε μόνο ένας μεμονωμένος δείκτης κινδύνου."
-                    : "Only a single risk indicator detected."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
     logLabelValue(
             gr ? "Ερμηνεία"
@@ -32069,9 +31799,7 @@ if (riskSignals == 1) {
 // DEVICE RELIABILITY RATING
 // ------------------------------------------------------------
 logLine();
-logInfo(gr
-        ? "Εσωτερική κατάταξη αναφορών (όχι βαθμός υγείας):"
-        : "Internal uncalibrated symptom ranking (not hardware grade):");
+/* Uncalibrated diagnosis header not displayed */;
 
 String rating;
 String ratingDesc;
@@ -32117,11 +31845,7 @@ else {
 
 }
 
-logLabelValue(
-        gr ? "Κατηγορία μη βαθμονομημένων συμπτωμάτων"
-           : "Uncalibrated symptom category",
-        rating
-);
+/* Internal heuristic index omitted from measured-results report */;
 
 logLabelValue(
         gr ? "Ερμηνεία"
@@ -32134,9 +31858,7 @@ logLabelValue(
 // ------------------------------------------------------------
 appendHtml("<br>");
 logLine();
-logInfo(gr
-        ? "Κάλυψη ενδείξεων GEL — ΟΧΙ πιστοποιητικό hardware"
-        : "GEL evidence coverage — NO hardware certificate");
+/* Uncalibrated diagnosis header not displayed */;
 logLine();
 
 boolean certificateWarning = false;
@@ -32158,51 +31880,21 @@ if (hardwareRiskScore >= 60)
 // ------------------------------------------------------------
 if (!certificateWarning && reliabilityScore >= 85) {
 
-    logLabelValue(
-            gr ? "Κατάσταση Πιστοποιητικού"
-               : "Certificate status",
-            gr
-                    ? "ΔΕΝ ΠΙΣΤΟΠΟΙΗΘΗΚΕ: οι έλεγχοι Android δεν αποδεικνύουν πλήρη ακεραιότητα."
-                    : "NOT CERTIFIED: public Android checks do not prove device-wide integrity."
-    );
+    /* Internal heuristic index omitted from measured-results report */;
 
-    logLabelValue(
-            gr ? "Κατηγορία"
-               : "Category",
-            "EVIDENCE SUMMARY ONLY"
-    );
+    /* Internal heuristic index omitted from measured-results report */;
 
 } else if (!certificateWarning) {
 
-    logLabelWarnValue(
-            gr ? "Κατάσταση Πιστοποιητικού"
-               : "Certificate status",
-            gr
-                    ? "Η λειτουργικότητα και η φυσική φθορά δεν αποδεικνύονται από τον δείκτη."
-                    : "Functional condition and component wear have not been established."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
-    logLabelValue(
-            gr ? "Κατηγορία"
-               : "Category",
-            "EVIDENCE SUMMARY ONLY"
-    );
+    /* Internal heuristic index omitted from measured-results report */;
 
 } else {
 
-    logLabelWarnValue(
-        gr ? "Κατάσταση Πιστοποιητικού"
-           : "Certificate status",
-        gr
-                ? "Εντοπίστηκαν αποκλίσεις ακεραιότητας ή ενδείξεις αστάθειας hardware."
-                : "Integrity deviations or hardware instability indicators detected."
-);
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
-    logLabelValue(
-            gr ? "Κατηγορία"
-               : "Category",
-            "GEL INSPECTION RECOMMENDED"
-    );
+    /* Internal heuristic index omitted from measured-results report */;
 
 }
 
@@ -32222,35 +31914,17 @@ logLabelValue(
 // ------------------------------------------------------------
 if ("A+".equals(rating) || "A".equals(rating)) {
 
-    logLabelValue(
-            gr ? "Συμπέρασμα τεχνικού"
-               : "Technician note",
-            gr
-                    ? "Η συσκευή εμφανίζει πολύ καλή σταθερότητα hardware."
-                    : "Component condition was not independently verified."
-    );
+    /* Internal heuristic index omitted from measured-results report */;
 
 }
 else if ("B".equals(rating)) {
 
-    logLabelWarnValue(
-            gr ? "Συμπέρασμα τεχνικού"
-               : "Technician note",
-            gr
-                    ? "Παρατηρείται φυσιολογική φθορά."
-                    : "Normal wear detected."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
 }
 else {
 
-    logLabelWarnValue(
-            gr ? "Συμπέρασμα τεχνικού"
-               : "Technician note",
-            gr
-                    ? "Συνιστάται παρακολούθηση ή τεχνικός έλεγχος."
-                    : "Monitoring or service inspection recommended."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
 }
 
@@ -32284,7 +31958,7 @@ logLabelValue(
 
 if (zones == null || zones.isEmpty()) {
 
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Ζώνες" : "Zones",
             gr
                     ? (Float.isNaN(batTemp) ? "Δεν υπάρχουν διαθέσιμες θερμικές μετρήσεις"
@@ -32395,19 +32069,9 @@ else
     logLabelValue(gr ? "Χρόνος λειτουργίας" : "Uptime", gr ? "Άγνωστο" : "Unknown");
 
 if (upMs < 2 * 60 * 60 * 1000L) {
-    logLabelWarnValue(
-            gr ? "Σημείωση" : "Note",
-            gr
-                    ? "Πρόσφατη εκκίνηση — χρονική πληροφορία, όχι ένδειξη βλάβης"
-                    : "Recent restart is a timestamp observation, not evidence of instability"
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 } else if (upMs > 7L * 24L * 60L * 60L * 1000L) {
-    logLabelWarnValue(
-            gr ? "Σημείωση" : "Note",
-            gr
-                    ? "Χρόνος λειτουργίας άνω των 7 ημερών — δεν αποδεικνύει βλάβη"
-                    : "Uptime over seven days does not establish hardware instability"
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
 appendHtml("<br>");
@@ -32439,10 +32103,10 @@ logLabelValue(
 );
 
 if (sec.rootSuspected)
-    logLabelWarnValue(gr ? "Root" : "Root", gr ? "Εντοπίστηκαν ενδείξεις root" : "Suspicion flags detected");
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
 if (sec.testKeys)
-    logLabelWarnValue(gr ? "Build" : "Build", gr ? "Υπογεγραμμένο με test-keys (κίνδυνος custom ROM)" : "Signed with test-keys (custom ROM risk)");
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
 appendHtml("<br>");
 logInfo(gr ? "Ιδιωτικότητα" : "Privacy");
@@ -32472,21 +32136,16 @@ appendHtml("<br>");
 logLine();
 
 logInfo(gr
-        ? "ΤΕΛΙΚΗ ΔΙΑΓΝΩΣΗ ΣΥΣΚΕΥΗΣ"
-        : "FINAL DEVICE DIAGNOSIS");
+        ? "ΣΥΝΟΨΗ ΜΕΤΡΗΣΕΩΝ ΣΥΣΚΕΥΗΣ"
+        : "DEVICE MEASUREMENTS SUMMARY");
 
 logLine();
 
 appendHtml("<br>");
-logInfo(gr ? "Τελικές Βαθμολογίες" : "FINAL Scores");
+/* Uncalibrated diagnosis header not displayed */;
 logLine();
 
-logLabelValue(
-        gr ? "Μη βαθμονομημένος σύνθετος δείκτης" : "Uncalibrated composite index",
-        deviceHealthScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : "⚪" + " (" + deviceHealthScore + ")"
-);
+/* Internal heuristic index omitted from measured-results report */;
 
 String deviceClass;
 
@@ -32499,11 +32158,7 @@ else if (deviceHealthScore >= 75)
 else
     deviceClass = "UNVERIFIED — REVIEW IF SYMPTOMS";
 
-logLabelValue(
-        gr ? "Κατηγορία συσκευής"
-           : "Device classification",
-        deviceClass
-);
+/* Internal heuristic index omitted from measured-results report */;
 
 logLabelValue(
         gr ? "Απόδοση" : "Performance",
@@ -32526,7 +32181,7 @@ logLabelValue(
 );
 
 String verdict = gr
-        ? "Η σύνοψη παρουσιάζει τα αποτελέσματα των μετρήσεων που ολοκληρώθηκαν."
+        ? "Η σύνοψη παρουσιάζει τα διαθέσιμα αποτελέσματα των εργαστηρίων."
         : "This summary presents results from completed measurements.";
 
 appendHtml("<br>");
@@ -32599,13 +32254,7 @@ if (prevRisk >= 0) {
 
 if (trendDetected) {
 
-    logLabelWarnValue(
-            gr ? "Τάση υποβάθμισης hardware"
-               : "Hardware degradation trend",
-            gr
-                    ? "Τα δεδομένα δείχνουν πιθανή επιδείνωση της συσκευής."
-                    : "Device metrics show a degradation trend."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
 } else {
 
@@ -32657,23 +32306,11 @@ logLabelValue(
 
 if (runCount < 3) {
 
-    logLabelWarnValue(
-            gr ? "Σημείωση αξιοπιστίας"
-               : "Reliability note",
-            gr
-                    ? "Η διάγνωση βασίζεται σε περιορισμένο ιστορικό."
-                    : "Diagnosis based on limited history."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
 } else if (runCount >= 7) {
 
-    logLabelValue(
-            gr ? "Στατιστική αξιοπιστία"
-               : "Statistical reliability",
-            gr
-                    ? "Οι πολλές επαναλήψεις δεν πιστοποιούν την εγκυρότητα της μεθόδου."
-                    : "Repeating unvalidated tests does not improve their scientific validity."
-    );
+    /* Internal heuristic index omitted from measured-results report */;
 }
 
 // ------------------------------------------------------------
@@ -32713,13 +32350,7 @@ if (lab14CollapseRisk) {
     diagnosticConflict = true;
     conflictScore += 30;
 
-    logLabelWarnValue(
-            gr ? "Αστάθεια κυψελών"
-               : "Cell instability",
-            gr
-                    ? "Εντοπίστηκε πιθανή αστάθεια κυψελών μπαταρίας."
-                    : "Possible battery cell instability detected."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 }
 
 // Storage healthy but controller risk
@@ -32740,29 +32371,13 @@ if (!sensorFlaps && sensorBusInstability) {
     conflictScore += 20;
 }
 
-logLabelValue(
-        gr ? "Δείκτης ασυνέπειας διάγνωσης"
-           : "Diagnostic inconsistency index",
-        conflictScore + "/100"
-);
+/* Internal heuristic index omitted from measured-results report */;
 
 if (diagnosticConflict) {
 
-    logLabelWarnValue(
-            gr ? "Συνέπεια διάγνωσης"
-               : "Diagnostic consistency",
-            gr
-                    ? "Εντοπίστηκαν αντικρουόμενα διαγνωστικά ευρήματα."
-                    : "Conflicting diagnostic indicators detected."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
-    logLabelWarnValue(
-            gr ? "Σύσταση"
-               : "Recommendation",
-            gr
-                    ? "Συνιστάται επανάληψη τεστ για επιβεβαίωση."
-                    : "Repeat diagnostics to confirm results."
-    );
+    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
 
 } else {
 
@@ -32779,21 +32394,13 @@ if (diagnosticConflict) {
 // GEL DIAGNOSTIC CERTIFICATION
 // ------------------------------------------------------------
 logLine();
-logInfo("GEL Diagnostic Evidence Report — NOT CERTIFIED");
+/* Uncalibrated diagnosis header not displayed */;
 
 // Device rating
-logLabelValue(
-        gr ? "Κατηγορία μη βαθμονομημένων συμπτωμάτων"
-           : "Uncalibrated symptom category",
-        rating
-);
+/* Internal heuristic index omitted from measured-results report */;
 
 // Hardware risk
-logLabelValue(
-        gr ? "Δείκτης κινδύνου hardware"
-           : "Hardware risk score",
-        hardwareRiskScore + (gr ? " μονάδες ενδείξεων (όχι πιθανότητα)" : " symptom points (not probability)")
-);
+/* Internal heuristic index omitted from measured-results report */;
 
 // Timestamp
 String ts = new java.text.SimpleDateFormat(
