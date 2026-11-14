@@ -11083,10 +11083,25 @@ private void lab10WifiConnectivityCheck() {
             : (gr ? "Άγνωστη" : "Unknown");
 
     // ---------------- IDENTIFIERS ----------------
-    logLabelValue(gr ? "SSID" : "SSID", ssid);
+    // An SSID/BSSID can be masked by Android. Color only a real,
+    // non-placeholder identifier; green means "reported", not "secure".
+    boolean knownSsid = ssid != null && !ssid.isEmpty()
+            && !"Unknown".equalsIgnoreCase(ssid);
+    if (knownSsid) {
+        logLabelOkValue(gr ? "SSID" : "SSID", ssid);
+    } else {
+        logLabelValue(gr ? "SSID" : "SSID", gr ? "Μη διαθέσιμο" : "Unavailable");
+    }
 
-    if (bssid != null)
-        logLabelValue(gr ? "BSSID" : "BSSID", bssid);
+    boolean knownBssid = bssid != null
+            && bssid.matches("(?i)([0-9a-f]{2}:){5}[0-9a-f]{2}")
+            && !"02:00:00:00:00:00".equalsIgnoreCase(bssid)
+            && !"00:00:00:00:00:00".equalsIgnoreCase(bssid);
+    if (knownBssid) {
+        logLabelOkValue(gr ? "BSSID" : "BSSID", bssid);
+    } else {
+        logLabelValue(gr ? "BSSID" : "BSSID", gr ? "Μη διαθέσιμο" : "Unavailable");
+    }
 
     // ---------------- BAND ----------------
     if (freqMhz > 0)
@@ -11110,13 +11125,7 @@ private void lab10WifiConnectivityCheck() {
         logLabelValue(gr ? "Ισχύς Σήματος" : "Signal strength",
                 gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN");
 
-    // SSID status — single line
-    if ("Unknown".equalsIgnoreCase(ssid)) {
-        logLabelValue(gr ? "SSID" : "SSID", gr ? "Μη διαθέσιμο (άδεια/πολιτική/δίκτυο)" : "Unavailable (permission/policy/network)");
-    } else {
-        logLabelOkValue(gr ? "SSID" : "SSID", gr ? "Διαβάστηκε" : "Read from Android");
-    }
-
+    // Presence is already shown once above, alongside the SSID itself.
     // Signal quality — single line
     if (rssi <= -127 || rssi >= 0)
         logLabelValue(gr ? "Σήμα Wi-Fi" : "Wi-Fi signal", gr ? "Άγνωστο" : "Unknown");
@@ -11135,10 +11144,26 @@ private void lab10WifiConnectivityCheck() {
         DhcpInfo dh = wm.getDhcpInfo();
 
         if (dh != null) {
-            logLabelValue(gr ? "IP" : "IP",           ipToStr(dh.ipAddress));
-            logLabelValue(gr ? "Gateway" : "Gateway", ipToStr(dh.gateway));
-            logLabelValue(gr ? "DNS1" : "DNS1",       ipToStr(dh.dns1));
-            logLabelValue(gr ? "DNS2" : "DNS2",       ipToStr(dh.dns2));
+            // Zero is a missing/unspecified IPv4 address, never a green server.
+            if (dh.ipAddress != 0)
+                logLabelOkValue(gr ? "IP" : "IP", ipToStr(dh.ipAddress));
+            else
+                logLabelValue(gr ? "IP" : "IP", gr ? "Μη διαθέσιμη" : "Unavailable");
+
+            if (dh.gateway != 0)
+                logLabelOkValue(gr ? "Gateway" : "Gateway", ipToStr(dh.gateway));
+            else
+                logLabelValue(gr ? "Gateway" : "Gateway", gr ? "Μη διαθέσιμο" : "Unavailable");
+
+            if (dh.dns1 != 0)
+                logLabelOkValue(gr ? "DNS1" : "DNS1", ipToStr(dh.dns1));
+            else
+                logLabelValue(gr ? "DNS1" : "DNS1", gr ? "Μη διαθέσιμο" : "Unavailable");
+
+            if (dh.dns2 != 0)
+                logLabelOkValue(gr ? "DNS2" : "DNS2", ipToStr(dh.dns2));
+            else
+                logLabelValue(gr ? "DNS2" : "DNS2", gr ? "Μη δηλωμένο" : "Not configured");
         } else {
             logLabelValue(gr ? "DHCP" : "DHCP", gr ? "Δεν υπάρχουν στοιχεία — άγνωστη μέθοδος ρύθμισης" : "No info — configuration method unknown");
         }
@@ -11411,12 +11436,17 @@ private void runWifiDeepScan(WifiManager wm) {
                                 ai.packageName
                         ) == PackageManager.PERMISSION_GRANTED;
 
-                logLabelValue(
-                        gr ? "Δυνατότητα Internet" : "Internet capability",
-                        hasInternetPerm
-                                ? (gr ? "Άδεια INTERNET δηλωμένη" : "INTERNET permission declared")
-                                : (gr ? "Δεν δηλώθηκε άδεια INTERNET" : "No INTERNET permission declared")
-                );
+                // A granted app permission is an observed capability, not
+                // proof of Internet connectivity or privacy/security.
+                if (hasInternetPerm) {
+                    logLabelOkValue(
+                            gr ? "Άδεια Internet εφαρμογής" : "App Internet permission",
+                            gr ? "INTERNET δηλωμένη" : "INTERNET declared");
+                } else {
+                    logLabelValue(
+                            gr ? "Άδεια Internet εφαρμογής" : "App Internet permission",
+                            gr ? "Δεν δηλώθηκε INTERNET" : "INTERNET not declared");
+                }
 
                 // CLEARTEXT TRAFFIC
                 boolean cleartextAllowed = true;
@@ -11454,10 +11484,10 @@ private void runWifiDeepScan(WifiManager wm) {
               : "No BOOT-TIME RECEIVER declared")
 );
 
-                logLabelValue(
-        gr ? "Συνολική Εκτίμηση" : "Assessment",
-        gr ? "Ολοκληρώθηκε η αποτύπωση έκθεσης δικτύου & ιδιωτικότητας"
-           : "Network / privacy exposure snapshot completed"
+                logLabelOkValue(
+        gr ? "Αποτύπωση δηλωμένων πολιτικών" : "Declared-policy snapshot",
+        gr ? "Η καταγραφή ολοκληρώθηκε (όχι έλεγχος πραγματικής κίνησης)"
+           : "Inventory complete (actual traffic not inspected)"
 );
 
 } catch (Throwable e) {
@@ -11630,19 +11660,41 @@ if (!s.inService) {
             break;
     }
 
-    logLabelValue(gr ? "Κατάσταση Δεδομένων" : "Data State", dataStateLabel);
+    if (s.dataState == TelephonyManager.DATA_CONNECTED) {
+        logLabelOkValue(gr ? "Κατάσταση Δεδομένων" : "Data State", dataStateLabel);
+    } else {
+        logLabelValue(gr ? "Κατάσταση Δεδομένων" : "Data State", dataStateLabel);
+    }
 
     // ------------------------------------------------------------
     // Internet routing context (best effort)
     // ------------------------------------------------------------
     String networkRoute = s.defaultCellular ? "CELLULAR"
             : s.defaultWifi ? "Wi-Fi" : (gr ? "ΑΓΝΩΣΤΗ/ΑΛΛΗ" : "UNKNOWN/OTHER");
-    logLabelValue(gr ? "Προεπιλεγμένη διαδρομή" : "Default network route", networkRoute);
-    logLabelValue(gr ? "Επικύρωση Internet (προεπιλεγμένο δίκτυο)"
-                     : "Internet validation (default network)",
-            s.defaultNetworkValidated
-                    ? (gr ? "VALIDATED κατά Android" : "Android VALIDATED")
-                    : (gr ? "Δεν επιβεβαιώθηκε" : "Not validated"));
+    if (s.defaultCellular) {
+        logLabelOkValue(gr ? "Προεπιλεγμένη διαδρομή" : "Default network route",
+                networkRoute);
+    } else {
+        logLabelValue(gr ? "Προεπιλεγμένη διαδρομή" : "Default network route",
+                networkRoute);
+    }
+
+    String validationLabel = s.defaultNetworkValidated
+            ? (gr ? "VALIDATED κατά Android" : "Android VALIDATED")
+            : (gr ? "Δεν επιβεβαιώθηκε" : "Not validated");
+    // In this cellular lab, default-network VALIDATED is a green cellular
+    // result only when the actual default transport is also CELLULAR.
+    if (s.defaultCellular && s.defaultNetworkValidated) {
+        logLabelOkValue(
+                gr ? "Επικύρωση Internet (προεπιλεγμένο δίκτυο)"
+                   : "Internet validation (default network)",
+                validationLabel);
+    } else {
+        logLabelValue(
+                gr ? "Επικύρωση Internet (προεπιλεγμένο δίκτυο)"
+                   : "Internet validation (default network)",
+                validationLabel);
+    }
 
 // ------------------------------------------------------------
 // VERDICT ENGINE (GEL)
