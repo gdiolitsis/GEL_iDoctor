@@ -6164,8 +6164,8 @@ logLabelErrorValue(
 
 logLabelWarnValue(
         gr ? "Παρατήρηση" : "Note",
-        gr ? "Η διαδρομή ήχου, ενδέχεται να είναι μπλοκαρισμένη, ή εκτός δρομολόγησης."
-           : "Audio path, may be blocked, or not properly routed."
+        gr ? "Ελέγξτε την ένταση και την επιλεγμένη έξοδο ήχου και επαναλάβετε τη δοκιμή."
+           : "Check volume and the selected audio output, then repeat the test."
 );
 
     logLine();
@@ -6277,8 +6277,8 @@ appendHtml("<br>");
 
     logLabelWarnValue(
             gr ? "Πιθανή αιτία" : "Possible cause",
-            gr ? "Πιθανή βλάβη ηχείου ή έντονη ακουστική απομόνωση"
-               : "Speaker hardware failure or severe acoustic isolation"
+            gr ? "Δεν καταγράφηκε ακουστικό σήμα κατά τη δοκιμή"
+               : "No acoustic signal was recorded during this test"
     );
 
     logLabelOkValue(
@@ -6298,10 +6298,10 @@ logLabelErrorValue(
 logLabelWarnValue(
         gr ? "Παρατήρηση" : "Note",
         gr
-                ? "Αυτό μπορεί να οφείλεται σε χαμηλή ένταση, ακουστική απομόνωση, "
-                  + "DSP φιλτράρισμα ή πιθανή βλάβη ηχείου."
-                : "This may be caused by low volume level, acoustic isolation, "
-                  + "DSP filtering, or possible speaker hardware issue."
+                ? "Ελέγξτε την ένταση και τη διαδρομή του ήχου. "
+                  + "Επαναλάβετε τη δοκιμή σε ήσυχο περιβάλλον."
+                : "Check volume and audio routing. "
+                  + "Repeat the test in a quiet environment."
 );
 
     logLine();
@@ -6324,8 +6324,8 @@ if (conf.contains("LOW")) {
 
     logLabelWarnValue(
             gr ? "Σημείωση" : "Note",
-            gr ? "Η χαμηλή αξιοπιστία μπορεί να οφείλεται, σε DSP φιλτράρισμα, "
-                 + "ακύρωση θορύβου, ή θέση μικροφώνου"
+            gr ? "Καταγράφηκε ακουστικό σήμα με περιορισμένη σαφήνεια. "
+                 + "Επαναλάβετε τη δοκιμή αν χρειάζεται."
                : "Low confidence may be caused, by DSP filtering, noise cancellation, "
                  + "microphone placement, or acoustic design"
     );
@@ -6536,15 +6536,15 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
             if (confirmed != 4) {
                 logWarn(gr
                         ? "Δεν επιβεβαιώθηκαν αυτόματα και οι τέσσερις τόνοι. "
-                          + "Η μέτρηση RMS δεν ταυτοποιεί τη συχνότητα και μπορεί να επηρεάζεται από θόρυβο."
+                          + "Η δοκιμή κατέγραψε τη στάθμη ήχου, όχι την ακριβή συχνότητα κάθε τόνου."
                         : "Not all four tones were acoustically indicated. "
-                          + "RMS cannot identify frequencies and may include ambient noise.");
+                          + "The test recorded audio level, not the exact frequency of each tone.");
             } else {
                 logInfo(gr
                         ? "Και οι τέσσερις τόνοι παρουσίασαν αυξημένο RMS κατά την αναπαραγωγή. "
-                          + "Δεν αποτελεί απόλυτη απόδειξη σωστής συχνότητας."
+                          + "Καταγράφηκε αύξηση της στάθμης ήχου."
                         : "All four tones raised RMS during playback. "
-                          + "This is not definitive frequency verification.");
+                          + "An increase in audio level was recorded.");
             }
 
 // ----------------------------------------------------
@@ -6652,8 +6652,8 @@ appendHtml("<br>");
     logLabelWarnValue(
             gr ? "Σημείωση" : "Note",
             gr
-                    ? "Η χαμηλή αξιοπιστία μπορεί να οφείλεται, σε DSP φιλτράρισμα, ακύρωση θορύβου, περιοσισμό απόκρισης συχνότητας, ή θέση μικροφώνου."
-                    : "Low confidence may be caused, by DSP filtering, noise cancellation, speaker frequency limits, or microphone placement."
+                    ? "Καταγράφηκε ακουστικό σήμα με περιορισμένη σαφήνεια. ακύρωση θορύβου, περιοσισμό απόκρισης συχνότητας, ή θέση μικροφώνου."
+                    : "The reading had low clarity. Repeat the test in a quiet place."
     );
 
 } else {
@@ -6976,8 +6976,8 @@ start.setOnClickListener(v -> {
             logLabelWarnValue(
                     gr ? "Πιθανή αιτία" : "Possible cause",
                     gr
-                            ? "Αποτυχία δρομολόγησης ήχου, περιορισμός συστήματος ή μη διαθέσιμη έξοδος ακουστικού."
-                            : "Audio routing failure, system-level restriction or unavailable earpiece output."
+                            ? "Η αναπαραγωγή από το ακουστικό δεν ολοκληρώθηκε. Επαναλάβετε τη δοκιμή."
+                            : "Earpiece playback did not complete. Repeat the test."
             );
 
         } finally {
@@ -7148,8 +7148,8 @@ if (bottomOk && topOk) {
 
     logWarn(
             gr
-                    ? "Πιθανός περιορισμός firmware ή δικαιωμάτων."
-                    : "Possible firmware or permission restriction."
+                    ? "Επαναλάβετε τη δοκιμή μικροφώνου."
+                    : "Repeat the microphone test."
     );
 
     logOk(
@@ -7635,16 +7635,16 @@ if (heardClearly.get()) {
     logLabelOkValue(
             gr ? "Αποτέλεσμα" : "Result",
             gr
-                    ? "Ο χρήστης ανέφερε καθαρή ακουστική επανάληψη — δεν πιστοποιεί μεμονωμένο φυσικό μικρόφωνο."
-                    : "User reported a clear acoustic loop — not proof of a specific physical microphone."
+                    ? "Ο χρήστης επιβεβαίωσε καθαρή αναπαραγωγή του ηχογραφημένου δείγματος."
+                    : "The user confirmed clear playback of the recorded sample."
     );
 
     logLabelOkValue(
             gr ? "Σημείωση" : "Note",
             gr
-                    ? "Αν παρουσιαστούν προβλήματα σε πραγματικές συνομιλίες, "
-                      + "ενδέχεται να σχετίζονται με το δίκτυο, ή codec, η προβλημα στο μικρόφωνο του συνομιλητη"
-                    : "If issues occur during real calls, they may be related to network, or codec, or other's party microphone issue"
+                    ? "Η δοκιμή αναπαραγωγής ολοκληρώθηκε επιτυχώς. "
+                      + "Δεν απαιτείται άλλη ενέργεια για το συγκεκριμένο αποτέλεσμα."
+                    : "Playback passed the user confirmation. No further action is needed for this result."
     );
 
 } else {
@@ -7658,8 +7658,8 @@ if (heardClearly.get()) {
 
 logWarn(
         gr
-                ? "Σε ορισμένες συσκευές, η συμπεριφορά μπορεί να επηρεάζεται, από τις ρυθμίσεις ήχου, "
-                  + "περιορισμούς firmware, ή αυτόματη καταστολή ηχούς."
+                ? "Η ακουστική επανάληψη δεν επιβεβαιώθηκε. "
+                  + "Ελέγξτε τις ρυθμίσεις ήχου και επαναλάβετε τη δοκιμή."
                 : "On some devices, behavior may be influenced, by audio settings, "
                   + "firmware restrictions, or echo cancellation mechanisms."
 );
@@ -8560,17 +8560,17 @@ private void lab5Vibration() {
                 logLabelWarnValue(
                         gr ? "Αποτέλεσμα" : "Result",
                         gr
-                                ? "Ο χρήστης δεν αισθάνθηκε δόνηση — δεν αποδεικνύεται βλάβη μοτέρ."
-                                : "User did not feel vibration — motor failure is not proven."
+                                ? "Ο χρήστης δεν αισθάνθηκε δόνηση κατά τη δοκιμή."
+                                : "The user did not feel vibration during the test."
                 );
 
                 logLabelWarnValue(
                         gr ? "Πιθανές αιτίες" : "Possible causes",
                         gr
-                                ? "Απενεργοποιημένες ρυθμίσεις δόνησης, περιορισμός firmware, "
-                                  + "ή πιθανή μηχανική φθορά."
-                                : "Disabled vibration settings, firmware restriction, "
-                                  + "or possible mechanical wear."
+                                ? "Ελέγξτε αν είναι ενεργή η δόνηση στις ρυθμίσεις, "
+                                  + "και επαναλάβετε τη δοκιμή."
+                                : "Check whether vibration is enabled in Settings, "
+                                  + "then repeat the test."
                 );
 
                 logOk(
@@ -8814,14 +8814,14 @@ private void lab7RotationAndProximityManual() {
                   + "Βήμα 2:\n"
                   + "Καλύψτε με το χέρι σας τον αισθητήρα εγγύτητας, "
                   + "στο επάνω μέρος της οθόνης, στην περιοχή ειδοποιήσεων.\n"
-                  + "Η ένδειξη εγγύτητας πρέπει να αλλάξει. Το Android δεν εγγυάται ότι θα σβήσει η οθόνη εκτός κλήσης."
+                  + "Παρατηρήστε αν αλλάζει η ένδειξη του αισθητήρα εγγύτητας."
                 : "Step 1:\n"
                   + "Rotate the device slowly.\n"
                   + "Observe the sensor reading. The test screen stays in portrait orientation.\n\n"
                   + "Step 2:\n"
                   + "Cover the proximity sensor with your hand, "
                   + "at the top of the screen, to the notification area.\n"
-                  + "The proximity reading should change. Android does not guarantee screen-off outside a call.";
+                  + "Check whether the proximity sensor reading changes.";
 
         AlertDialog.Builder b =
                 new AlertDialog.Builder(
@@ -9010,8 +9010,8 @@ private void lab8CameraHardwareCheck() {
                     ? "Αποτυχία εκκίνησης εφαρμογής κάμερας."
                     : "Failed to launch camera app.");
             logWarn(gr
-                    ? "Η εφαρμογή κάμερας μπορεί να λείπει ή να είναι μπλοκαρισμένη."
-                    : "Camera app may be missing or blocked.");
+                    ? "Δεν ήταν δυνατή η εκκίνηση της εφαρμογής κάμερας από αυτή τη δοκιμή."
+                    : "The camera app could not be started from this test.");
 
             appendHtml("<br>");
             logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
@@ -9443,10 +9443,10 @@ private void lab8RunNextCamera(
 
         logWarn(
                 gr
-                        ? "Τυχόν κρυφές βοηθητικές κάμερες που δεν εκτίθενται "
-                          + "από τον κατασκευαστή δεν αξιολογούνται ως αποτυχία."
-                        : "Any hidden auxiliary cameras not exposed by the manufacturer "
-                          + "are not evaluated as a failure."
+                        ? "Η απογραφή αφορά τις κάμερες που εμφανίζει "
+                          + "το Android στην εφαρμογή."
+                        : "The inventory includes cameras exposed by Android "
+                          + "to this app."
         );
 
         if (overall.previewOkCount == overall.total && overall.total > 0)
@@ -10900,7 +10900,7 @@ private void lab9SensorsCheck() {
         else
             logLabelValue(
                     gr ? "Αισθητήρες SAR" : "SAR Sensors",
-                    gr ? "Δεν αναφέρθηκαν — πιθανώς μη εκτεθειμένοι" : "Not reported — may not be exposed"
+                    gr ? "Δεν αναφέρθηκαν από το Android" : "Not reported — may not be exposed"
             );
 
         if (hasPickup)
@@ -10939,8 +10939,8 @@ private void lab9SensorsCheck() {
         logLabelValue(
                 gr ? "Όριο συμπεράσματος" : "Interpretation scope",
                 gr
-                        ? "Απογράφηκαν οι δηλωμένοι αισθητήρες. Η απόκριση και η υγεία τους ΔΕΝ ελέγχθηκαν."
-                        : "Reported sensors inventoried. Their response and health were NOT tested."
+                        ? "Καταγράφηκαν οι αισθητήρες που δηλώνει το Android."
+                        : "Sensors reported by Android were recorded."
         );
         inventoryFinished = true;
 
@@ -10980,8 +10980,8 @@ private void checkSensor(SensorManager sm, int type, String name) {
         logLabelValue(
                 name,
                 gr
-                        ? "Δεν αναφέρθηκε — η πραγματική απόκριση παραμένει άγνωστη"
-                        : "Not reported — actual response remains unknown"
+                        ? "Δεν αναφέρθηκε από το Android"
+                        : "Not reported by Android"
         );
     }
 }
@@ -11382,7 +11382,7 @@ private void runWifiDeepScan(WifiManager wm) {
                                 (gr ? "Δυνατότητα INTERNET χωρίς επικύρωση (" : "INTERNET capability without validation (") + transport + ")");
                     else
                         logLabelValue(gr ? "Επικύρωση Internet από Android" : "Android Internet validation",
-                                gr ? "Δεν τεκμηριώθηκε ενεργό Internet — όχι διάγνωση βλάβης Wi-Fi"
+                                gr ? "Δεν επιβεβαιώθηκε σύνδεση στο Internet κατά τη δοκιμή"
                                    : "Active Internet not established — not a Wi-Fi fault diagnosis");
                 }
 
@@ -11671,7 +11671,7 @@ if (cellularValidated) {
             : "Check coverage, mobile-data settings and carrier; this does not prove a device fault.";
 } else if (!dataConnected) {
     verdict = gr
-            ? "Δεν καταγράφηκε ενεργή σύνδεση δεδομένων κινητής. Άγνωστο αν είναι σκόπιμα κλειστά."
+            ? "Δεν καταγράφηκε ενεργή σύνδεση δεδομένων κινητής κατά τη δοκιμή."
             : "No active cellular data connection was reported. It may be intentionally disabled.";
     recommendation = gr
             ? "Εάν επιθυμείτε τη δοκιμή, ενεργοποιήστε τα δεδομένα κινητής και επαναλάβετε."
@@ -13149,7 +13149,7 @@ private void lab13FinishAndReport(boolean adapterStable) {
         );
 
         logWarn(gr
-                ? "Πιθανό πρόβλημα εξωτερικής συσκευής ή RF παρεμβολή."
+                ? "Η σύνδεση με την εξωτερική συσκευή δεν ολοκληρώθηκε σε αυτή τη δοκιμή."
                 : "Likely external device instability or RF interference.");
 
     } else if (fullLoss) {
@@ -14551,8 +14551,8 @@ if (lab14_systemLimited[0]) {
 } else if (normalAgeingPattern) {
 
     recommendation = gr
-            ? "Δεν καταγράφηκε έντονη απόκλιση στη συγκεκριμένη δοκιμή. Δεν μετρήθηκε η πραγματική χωρητικότητα ή το SoH."
-            : "No pronounced deviation in this trial. Actual battery capacity and SoH were not measured.";
+            ? "Δεν καταγράφηκε έντονη απόκλιση στις μετρήσεις της συγκεκριμένης δοκιμής."
+            : "No significant deviation was recorded during this test.";
 
 // 🔴 PRIORITY 3 — CRITICAL
 } else if ("Critical".equals(labelSafe)) {
@@ -14586,8 +14586,8 @@ if (lab14_systemLimited[0]) {
 } else {
 
     recommendation = gr
-            ? "Δεν εντοπίστηκε συγκεκριμένη ανωμαλία στα διαθέσιμα δείγματα. Η συνολική υγεία δεν πιστοποιήθηκε."
-            : "No specific anomaly in available samples; overall battery health was not certified.";
+            ? "Δεν εντοπίστηκε συγκεκριμένη ανωμαλία στις μετρήσεις της δοκιμής."
+            : "No abnormality was detected in the test readings.";
 }
 
 // ----------------------------------------------------
@@ -17083,8 +17083,8 @@ runOnUiThread(() -> {
                 : "Declared capacity check",
 
                 gr
-                ? "Η δηλωμένη χωρητικότητα πιθανόν δεν είναι ρεαλιστική."
-                : "Declared battery capacity may be unrealistic."
+                ? "Η δηλωμένη χωρητικότητα διαφέρει από τις συγκρίσιμες μετρήσεις της δοκιμής."
+                : "Reported capacity differs from the comparable test readings."
             );
 
         } else {
@@ -17130,8 +17130,8 @@ if (hasSag &&
         logLabelWarnValue(
             gr ? "Διάγνωση":"Diagnosis",
             gr
-              ? "Έντονη πτώση τάσης — πιθανή φθορά κυψελών"
-              : "Severe voltage sag — degraded battery cells"
+              ? "Μετρήθηκε έντονη πτώση τάσης κατά την καταπόνηση"
+              : "A substantial voltage drop was measured under load"
         );
 
     } else if (finalSag > 0.10f) {
@@ -17139,8 +17139,8 @@ if (hasSag &&
         logLabelWarnValue(
             gr ? "Διάγνωση":"Diagnosis",
             gr
-              ? "Αυξημένη πτώση τάσης — πιθανή γήρανση"
-              : "Elevated voltage sag — possible aging"
+              ? "Μετρήθηκε αυξημένη πτώση τάσης κατά την καταπόνηση"
+              : "An increased voltage drop was measured under load"
         );
 
     } else {
@@ -17179,8 +17179,8 @@ if (hasSag &&
     if (finalSag < 0.05f) {
 
         siText = gr
-                ? "Μικρή πτώση τάσης — η φυσική δομή κυψελών δεν ελέγχθηκε"
-                : "Low sag — physical cell integrity not tested";
+                ? "Μικρή πτώση τάσης κατά τη δοκιμή"
+                : "Small voltage drop during the test";
 
         logLabelValue(
                 gr ? "Έμμεση απόκριση τάσης"
@@ -17191,8 +17191,8 @@ if (hasSag &&
     } else if (finalSag < 0.12f) {
 
         siText = gr
-                ? "Μέτρια πτώση τάσης — η δομή κυψελών είναι άγνωστη"
-                : "Moderate sag — cell structure unknown";
+                ? "Μέτρια πτώση τάσης κατά τη δοκιμή"
+                : "Moderate voltage drop during the test";
 
         logLabelValue(
                 gr ? "Έμμεση απόκριση τάσης"
@@ -17203,8 +17203,8 @@ if (hasSag &&
     } else {
 
         siText = gr
-                ? "Αυξημένη πτώση τάσης — δεν αποδεικνύεται φθορά κυψελών"
-                : "Elevated sag — cell degradation not established";
+                ? "Αυξημένη πτώση τάσης κατά τη δοκιμή"
+                : "Increased voltage drop during the test";
 
         logLabelWarnValue(
                 gr ? "Έμμεση απόκριση τάσης"
@@ -25541,7 +25541,7 @@ if (mahPerMin >= 20.0) {
 // ------------------------------------------------------------
 if (lab15_strengthKnown && mahPerMin < 6 && mahPerMin > 1 && !lab15OverTempDuringCharge) {
 
-    logInfo(gr ? "Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη καλωδίου ή θύρας."
+    logInfo(gr ? "Καταγράφηκε χαμηλός καθαρός ρυθμός φόρτισης στη συγκεκριμένη δοκιμή."
                : "A low net rate alone cannot prove a cable or USB-port defect.");
 }
 
@@ -25765,8 +25765,8 @@ private void lab16ThermalSnapshot() {
                 osSevere
                         ? (gr ? "Ο σοβαρός θερμικός περιορισμός αναφέρεται ήδη από το Android"
                               : "Severe thermal limiting is already reported by Android")
-                        : (gr ? "Ενδέχεται να ενεργοποιηθεί θερμική προστασία"
-                              : "Thermal protection may activate")
+                        : (gr ? "Καταγράφηκε αυξημένη θερμοκρασία"
+                              : "An elevated temperature was recorded")
         );
     } else if (peakTemp >= 45f
             || osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE) {
@@ -25871,13 +25871,13 @@ private void lab16ThermalSnapshot() {
         logLabelWarnValue(
                 gr ? "Κίνδυνος" : "Risk",
                 gr
-                        ? "Ενδέχεται να ενεργοποιηθούν μηχανισμοί θερμικής προστασίας"
-                        : "Thermal protection mechanisms may activate"
+                        ? "Καταγράφηκε αυξημένη θερμοκρασία στην πρόσθετη θερμική ζώνη"
+                        : "An elevated reading was recorded in the additional thermal zone"
         );
 
     } else {
-        logInfo(gr ? "Μη προσβάσιμοι θερμικοί αισθητήρες: άγνωστοι"
-                   : "Unexposed thermal sensors: unknown");
+        logInfo(gr ? "Ολοκληρώθηκε η ανάγνωση των διαθέσιμων θερμικών αισθητήρων"
+                   : "Available thermal sensors were read");
     }
 
     // ------------------------------------------------------------
@@ -26232,7 +26232,7 @@ final boolean fresh16 =
         if (!has14) {
             msg.append(gr
                     ? "Δεν υπάρχει βαθμονομημένη μέτρηση SoH για έγκυρο σύνθετο ποσοστό. "
-                      + "Μια επανεκτέλεση του Lab 14 δεν εγγυάται πρόσβαση σε SoH. "
+                      + "Η επανάληψη του Lab 14 πραγματοποιεί νέα μέτρηση. "
                       + "Τα επιμέρους εργαστήρια διατηρούν τις μετρήσεις τους.<br>"
                     : "There is no calibrated SoH measurement for a composite percentage. "
                       + "Repeating Lab 14 cannot guarantee SoH access. "
@@ -26639,8 +26639,8 @@ logLine();
                     logLabelValue(
                             gr ? "Συνολική ένδειξη" : "Combined observation",
                             gr
-                                    ? "Ο μη βαθμονομημένος συνδυασμός δεν έδωσε πρόσθετη προειδοποίηση· δεν πιστοποιείται υγεία συσκευής"
-                                    : "No additional alert from uncalibrated indicators; device health is not certified"
+                                    ? "Δεν προέκυψε πρόσθετη παρατήρηση από τις διαθέσιμες μετρήσεις"
+                                    : "No additional finding from the available measurements"
                     );
 
                     logInfo(gr
@@ -26972,8 +26972,8 @@ private void lab18StorageSnapshot() {
             );
             logLabelWarnValue(
                     gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Πιθανά κρασαρίσματα εφαρμογών, αποτυχία ενημερώσεων ή επιβράδυνση UI"
-                       : "Apps may crash, updates may fail, UI may slow down"
+                    gr ? "Συνιστάται να ελευθερώσετε χώρο πριν εγκαταστήσετε νέες εφαρμογές ή ενημερώσεις"
+                       : "Free storage space before installing new apps or updates"
             );
 
         } else if (pressure) {
@@ -26993,8 +26993,8 @@ private void lab18StorageSnapshot() {
 
             logLabelOkValue(
                     gr ? "Κατάσταση" : "Status",
-                    gr ? "Επαρκής ελεύθερος χώρος τώρα· δεν ελέγχθηκε η υγεία NAND"
-                       : "Sufficient free space now; NAND health was not measured"
+                    gr ? "Επαρκής ελεύθερος χώρος κατά τη μέτρηση"
+                       : "Sufficient free storage at the time of measurement"
             );
         }
 
@@ -27052,8 +27052,8 @@ if (nandScore >= 70) {
             gr ? "Πίεση ελεύθερου χώρου"
                : "Free-space pressure",
             gr
-                    ? "Πολύ χαμηλός διαθέσιμος χώρος — αυτό δεν αποδεικνύει φθορά NAND."
-                    : "Very low free space; this does not prove NAND wear."
+                    ? "Πολύ χαμηλός διαθέσιμος χώρος — συνιστάται να ελευθερώσετε χώρο."
+                    : "Very little free storage is available — free some space."
     );
 
 } else {
@@ -27091,8 +27091,8 @@ if (controllerScore >= 60) {
             gr ? "Διαθέσιμος χώρος (όχι έλεγχος controller)"
                : "Available space (controller not tested)",
             gr
-                    ? "Χαμηλός χώρος μπορεί να περιορίσει εγγραφές· ο controller δεν ελέγχθηκε."
-                    : "Low space can constrain writes; controller was not tested."
+                    ? "Καταγράφηκε χαμηλός διαθέσιμος χώρος."
+                    : "Low free storage was recorded."
     );
 
 } else {
@@ -27131,7 +27131,7 @@ if (fsScore >= 60) {
             gr ? "Διαθέσιμος χώρος (όχι έλεγχος filesystem)"
                : "Available space (filesystem not tested)",
             gr
-                    ? "Ο χαμηλός χώρος μπορεί να εμποδίσει εγγραφές· δεν μετρήθηκε αλλοίωση filesystem."
+                    ? "Καταγράφηκε χαμηλός διαθέσιμος χώρος."
                     : "Low free space may block writes; filesystem corruption was not measured."
     );
 
@@ -27536,8 +27536,8 @@ private void lab20UptimeHints() {
 
             logInfo(gr ? "Πρόσφατη εκκίνηση συσκευής — όχι ένδειξη βλάβης."
                        : "Device booted recently — not evidence of a fault.");
-            logInfo(gr ? "Το μικρό uptime δεν αποδεικνύει ιστορική σταθερότητα."
-                       : "Short uptime cannot establish historical stability.");
+            logInfo(gr ? "Καταγράφηκε πρόσφατη εκκίνηση της συσκευής."
+                       : "The phone was started recently.");
             logLabelValue(
                     gr ? "Σημείωση" : "Note",
                     gr
@@ -27547,8 +27547,8 @@ private void lab20UptimeHints() {
 
         } else if (veryLongUptime) {
 
-            logInfo(gr ? "Μεγάλος χρόνος συνεχούς λειτουργίας — δεν αποδεικνύει πρόβλημα."
-                       : "Long continuous uptime — not proof of a problem.");
+            logInfo(gr ? "Καταγράφηκε μεγάλος χρόνος συνεχούς λειτουργίας."
+                       : "A long period of continuous operation was recorded.");
             logInfo(gr ? "Ο φόρτος παρασκηνίου και η πίεση RAM απαιτούν ανεξάρτητες μετρήσεις."
                        : "Background load and RAM pressure require independent evidence.");
 
@@ -27572,8 +27572,8 @@ private void lab20UptimeHints() {
                 logLabelValue(
                         gr ? "Σύσταση" : "Recommendation",
                         gr
-                                ? "Μια επανεκκίνηση μπορεί να βοηθήσει στην επαναφορά της κατάστασης"
-                                : "A reboot can help reset system state"
+                                ? "Δεν απαιτείται ενέργεια μόνο λόγω της διάρκειας λειτουργίας"
+                                : "No action is required merely because the phone has been running for a long time"
                 );
             }
 
@@ -27635,8 +27635,8 @@ private void lab20UptimeHints() {
 
             logLabelValue(
                     gr ? "Ερμηνεία" : "Interpretation",
-                    gr ? "Το uptime δεν αποδεικνύει συχνότητα επανεκκινήσεων"
-                       : "Uptime does not establish reboot frequency"
+                    gr ? "Η μέτρηση αφορά τη διάρκεια από την τελευταία εκκίνηση"
+                       : "The reading shows time since the last restart"
             );
         }
 
@@ -27989,7 +27989,7 @@ if (root) {
 // PART D — RISK SCORE (FAST, CLEAR)  
 // ------------------------------------------------------------  
 // Observed lock/biometric settings cannot justify a global 0–100 score.
-logInfo(gr ? "Ποσοστιαία ασφάλεια συσκευής: δεν τεκμηριώνεται από το Lab 21."
+logInfo(gr ? "Ο έλεγχος κατέγραψε τις διαθέσιμες ρυθμίσεις κλειδώματος."
            : "Whole-device security percentage: not established by Lab 21.");
 
 // ------------------------------------------------------------
@@ -28311,267 +28311,131 @@ try { if (br != null) br.close(); } catch (Throwable ignore) {}
 LAB 22 — Security Patch + Play Protect (Realtime)
 ============================================================ */
 private void lab22SecurityPatchAndPlayProtect() {
-	
-	final boolean gr = AppLang.isGreek(this);
+    final boolean gr = AppLang.isGreek(this);
 
     appendHtml("<br>");
     logLine();
-    logInfo(gr 
-            ? "LAB 22 — Ενημέρωση Ασφαλείας + Play Protect (Σε πραγματικό χρόνο)"
-            : "LAB 22 — OS Security Patch and Available Play Protect Indicators");
+    logInfo(gr ? "LAB 22 — Έλεγχος ασφάλειας Android"
+               : "LAB 22 — Android security check");
     logLine();
 
-// ------------------------------------------------------------
-// 1) Security Patch Level (raw)
-// ------------------------------------------------------------
-String patch = null;
+    // 1. Read Android's reported patch date. This is NOT proof that all
+    // security vulnerabilities are fixed, nor evidence of malware.
+    logInfo(gr ? "1. Ενημερώσεις ασφαλείας" : "1. Security updates");
 
-try {
-    patch = android.os.Build.VERSION.SECURITY_PATCH;
-
-    logInfo(gr ? "Επίπεδο ενημέρωσης ασφαλείας"
-               : "Security patch level");
-
-    if (patch != null && !patch.isEmpty()) {
-
-        logLabelOkValue(
-                gr ? "Αναφέρεται" : "Reported",
-                patch
-        );
-
-    } else {
-
-        logLabelValue(
-                gr ? "Αναφέρεται" : "Reported",
-                gr ? "Δεν παρέχεται από το σύστημα"
-                   : "Not provided by system"
-        );
-    }
-
-} catch (Throwable e) {
-
-    logLabelValue(
-            gr ? "Ανάγνωση patch" : "Patch read",
-            (gr ? "Αποτυχία (" : "Failed (") + e.getMessage() + ")"
-    );
-}
-
-// ------------------------------------------------------------
-// 2) Patch Freshness Intelligence (AGE + RISK)
-// ------------------------------------------------------------
-try {
-    if (patch != null && !patch.isEmpty()) {
-
-        SimpleDateFormat sdf =
-                new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-        sdf.setLenient(false);
-
-        long patchTime = sdf.parse(patch).getTime();
-        long now = System.currentTimeMillis();
-
-        long diffDays   = (now - patchTime) / (1000L * 60 * 60 * 24);
-        long diffMonths = diffDays / 30;
-        // Use actual elapsed days for alert boundaries; the display months are approximate.
-        if (diffDays < 0) {
-            logInfo(gr ? "Η ημερομηνία patch είναι μελλοντική — δεν εκδόθηκε αξιολόγηση."
-                       : "Patch date is in the future — no freshness verdict issued.");
-        } else {
-
-        logInfo(gr ? "Ηλικία ενημέρωσης ασφαλείας"
-                   : "Patch age");
-
-        logLabelValue(
-                gr ? "Εκτίμηση" : "Estimated",
-                gr ? diffMonths + " μήνες"
-                   : diffMonths + " months"
-        );
-
-        logInfo(gr ? "Κατάσταση ενημέρωσης"
-                   : "Patch status");
-
-        if (diffDays <= 90L) {
-
-            logLabelValue(
-                    gr ? "Ημερομηνία patch" : "Patch date",
-                    gr ? "Πρόσφατη κατά τη δήλωση Android — δεν τεκμηριώνει απουσία ευπαθειών"
-                       : "Recent as reported by Android — does not prove absence of vulnerabilities"
-            );
-
-        } else if (diffDays <= 180L) {
-
-            logLabelWarnValue(
-                    gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Η αναφερόμενη ημερομηνία patch είναι παλαιότερη από τρεις μήνες· ελέγξτε τις διαθέσιμες ενημερώσεις"
-                       : "Reported patch date is over three months old; check available updates"
-            );
-
-        } else {
-
-            logLabelWarnValue(
-                    gr ? "Ηλικία patch" : "Patch age",
-                    gr ? "ΠΑΛΙΑ αναφερόμενη ημερομηνία patch — δεν αποδεικνύει εκμεταλλεύσιμη ευπάθεια"
-                       : "Old reported patch date — does not prove an exploitable vulnerability"
-            );
-        }
-        }
-    }
-} catch (Throwable e) {
-
-    logLabelValue(
-            gr ? "Ανάλυση ηλικίας ενημέρωσης" : "Patch age analysis",
-            (gr ? "Αποτυχία (" : "Failed (") + e.getMessage() + ")"
-    );
-}
-
-// ------------------------------------------------------------
-// 3) Play Protect Detection (best effort, non-root)
-// ------------------------------------------------------------
-try {
-    PackageManager pm = getPackageManager();
-
-    boolean gmsPresent;
+    String patch = null;
     try {
-        pm.getPackageInfo("com.google.android.gms", 0);
-        gmsPresent = true;
-    } catch (Throwable ignore) {
-        gmsPresent = false;
+        patch = android.os.Build.VERSION.SECURITY_PATCH;
+    } catch (Throwable ignored) {
+        // The user receives a neutral explanation, not an internal error.
     }
 
-    logInfo(gr ? "Play Protect" : "Play Protect");
-
-    if (!gmsPresent) {
-
+    if (patch == null || patch.trim().isEmpty()) {
         logLabelValue(
-                gr ? "Υπηρεσίες Google Play" : "Google Play Services",
-                gr ? "Μη ορατές ή μη διαθέσιμες στην εφαρμογή"
-                   : "Not visible or not available to this app"
+                gr ? "Τελευταία αναφερόμενη ενημέρωση" : "Last reported security update",
+                gr ? "Δεν ήταν δυνατή η ανάγνωση της ημερομηνίας"
+                   : "The date could not be read"
         );
-
-        logLabelValue(
-                "Play Protect",
-                gr ? "Κατάσταση άγνωστη — απαιτείται έλεγχος στο Play Store"
-                   : "Status unknown — check in Play Store"
-        );
-
     } else {
-
-        int verify = -1;
         try {
-            verify = Settings.Global.getInt(
-                    getContentResolver(),
-                    "package_verifier_enable",
-                    -1
-            );
-        } catch (Throwable ignore) {}
+            SimpleDateFormat input = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            input.setLenient(false);
+            Date parsedDate = input.parse(patch);
+            if (parsedDate == null) {
+                throw new java.text.ParseException("No date", 0);
+            }
 
-        if (verify == 1) {
-
+            String displayDate = new SimpleDateFormat("dd/MM/yyyy", Locale.US)
+                    .format(parsedDate);
             logLabelValue(
-                    gr ? "Ρύθμιση ελεγκτή πακέτων" : "Package verifier setting",
-                    gr ? "Ενεργή τιμή Android — δεν πιστοποιεί Play Protect"
-                       : "Android flag enabled — does not verify Play Protect status"
+                    gr ? "Τελευταία αναφερόμενη ενημέρωση" : "Last reported security update",
+                    displayDate
             );
 
-        } else if (verify == 0) {
+            long ageDays = (System.currentTimeMillis() - parsedDate.getTime())
+                    / (24L * 60L * 60L * 1000L);
 
-            logLabelValue(
-                    gr ? "Ρύθμιση ελεγκτή πακέτων" : "Package verifier setting",
-                    gr ? "Ανενεργή τιμή Android — η κατάσταση Play Protect παραμένει άγνωστη"
-                       : "Android flag disabled — Play Protect status remains unknown"
-            );
-
-        } else {
-
-            Intent i = new Intent();
-            i.setClassName(
-                    "com.google.android.gms",
-                    "com.google.android.gms.security.settings.VerifyAppsSettingsActivity"
-            );
-
-            if (i.resolveActivity(pm) != null) {
-
-                logLabelOkValue(
-                        gr ? "Μονάδα" : "Module",
-                        gr ? "Εντοπίστηκε (διαθέσιμη δραστηριότητα ρυθμίσεων)"
-                           : "Detected (settings activity present)"
-                );
-
+            if (ageDays < 0L) {
                 logLabelValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Άγνωστη (OEM / περιορισμένη έκδοση)"
-                           : "Unknown (OEM / restricted build)"
+                        gr ? "Αξιολόγηση ενημέρωσης" : "Update assessment",
+                        gr ? "Η αναφερόμενη ημερομηνία είναι μελλοντική και δεν μπορεί να αξιολογηθεί"
+                           : "The reported date is in the future and cannot be assessed"
                 );
-
+            } else if (ageDays > 90L) {
+                long approximateMonths = ageDays / 30L;
+                logLabelWarnValue(
+                        gr ? "Προσοχή" : "Attention",
+                        gr ? "Η ενημέρωση είναι περίπου " + approximateMonths + " μηνών."
+                           : "The update is approximately " + approximateMonths + " months old."
+                );
+                logInfo(gr
+                        ? "Η συσκευή ενδέχεται να μην περιλαμβάνει πρόσφατες διορθώσεις ασφαλείας. Συνιστάται να ελέγξετε αν υπάρχει νεότερη ενημέρωση."
+                        : "The device may be missing recent security fixes. Check whether a newer update is available.");
             } else {
-
                 logLabelValue(
-                        "Play Protect",
-                        gr ? "Η κατάσταση δεν είναι σαφής"
-                           : "Status unclear"
+                        gr ? "Αξιολόγηση ενημέρωσης" : "Update assessment",
+                        gr ? "Η αναφερόμενη ενημέρωση είναι πρόσφατη. Αυτό δεν εγγυάται ότι δεν υπάρχουν κίνδυνοι."
+                           : "The reported update is recent. This does not guarantee that there are no security risks."
                 );
             }
+        } catch (Throwable ignored) {
+            logLabelValue(
+                    gr ? "Τελευταία αναφερόμενη ενημέρωση" : "Last reported security update",
+                    gr ? "Η ημερομηνία δεν μπόρεσε να αξιολογηθεί"
+                       : "The date could not be assessed"
+            );
         }
     }
 
-} catch (Throwable e) {
+    // 2. Presence of settings does not prove Play Protect is enabled.
+    // The Android package verifier flag must NOT be presented as proof.
+    logLine();
+    logInfo(gr ? "2. Προστασία από κακόβουλες εφαρμογές"
+               : "2. Protection from harmful apps");
+
+    boolean settingsAvailable = false;
+    try {
+        PackageManager pm = getPackageManager();
+        Intent settingsIntent = new Intent();
+        settingsIntent.setClassName(
+                "com.google.android.gms",
+                "com.google.android.gms.security.settings.VerifyAppsSettingsActivity"
+        );
+        settingsAvailable = settingsIntent.resolveActivity(pm) != null;
+    } catch (Throwable ignored) {
+        // Unknown remains unknown. No elevated privileges or scan attempted.
+    }
 
     logLabelValue(
-            gr ? "Ανίχνευση Play Protect" : "Play Protect detection",
-            (gr ? "Αποτυχία (" : "Failed (") + e.getMessage() + ")"
+            "Play Protect",
+            gr ? "Δεν επιβεβαιώθηκε η κατάστασή του."
+               : "Its status was not verified."
     );
-}
 
-// ------------------------------------------------------------
-// 4) Trust Boundary Clarification
-// ------------------------------------------------------------
-logLine();
-logInfo(gr ? "Πεδίο ασφάλειας"
-           : "Security scope");
+    if (settingsAvailable) {
+        logInfo(gr
+                ? "Εντοπίστηκε πρόσβαση σε σχετικές ρυθμίσεις, αλλά δεν γνωρίζουμε αν η προστασία είναι ενεργή. Δεν πραγματοποιήθηκε σάρωση από το εργαστήριο."
+                : "Relevant settings were found, but we do not know whether protection is active. This lab did not scan the device.");
+    } else {
+        logInfo(gr
+                ? "Δεν επιβεβαιώθηκε πρόσβαση στις σχετικές ρυθμίσεις. Δεν γνωρίζουμε αν η προστασία είναι ενεργή. Δεν πραγματοποιήθηκε σάρωση από το εργαστήριο."
+                : "Access to the relevant settings was not verified. We do not know whether protection is active. This lab did not scan the device.");
+    }
 
-logLabelValue(
-        "Play Protect",
-        gr ? "Έλεγχος κακόβουλου λογισμικού και επαλήθευση εφαρμογών"
-           : "Malware scanning and app verification"
-);
+    // 3. Two short, actionable instructions; no technical jargon.
+    logLine();
+    logInfo(gr ? "3. Τι πρέπει να κάνετε" : "3. What you should do");
+    logInfo(gr ? "Ελέγξτε αν υπάρχει νεότερη ενημέρωση Android."
+               : "Check whether a newer Android update is available.");
+    logInfo(gr
+            ? "Ανοίξτε Play Store → Προφίλ → Play Protect → Ρυθμίσεις και βεβαιωθείτε ότι η σάρωση εφαρμογών είναι ενεργή."
+            : "Open Play Store → Profile → Play Protect → Settings and make sure app scanning is enabled.");
 
-logLabelValue(
-        gr ? "Περιορισμός" : "Limitation",
-        gr ? "ΔΕΝ επιδιορθώνει ευπάθειες συστήματος ή σφάλματα firmware"
-           : "Does NOT patch system vulnerabilities or firmware flaws"
-);
-
-// ------------------------------------------------------------
-// 5) Manual Guidance (Technician)
-// ------------------------------------------------------------
-logLine();
-logInfo(gr ? "Χειροκίνητη επαλήθευση"
-           : "Manual verification");
-
-logLabelValue(
-        gr ? "Έλεγχος 1" : "Check 1",
-        gr ? "Ρυθμίσεις > Πληροφορίες τηλεφώνου > Έκδοση Android > Επίπεδο ενημέρωσης ασφαλείας"
-           : "Settings > About phone > Android version > Security patch level"
-);
-
-logLabelValue(
-        gr ? "Σημείωση" : "Note",
-        gr ? "Πολύ παλιά επίπεδα ενημέρωσης αυξάνουν την έκθεση σε exploits"
-           : "Very old patch levels increase exploit exposure"
-);
-
-logLabelValue(
-        gr ? "Έλεγχος 2" : "Check 2",
-        gr ? "Google Play Store > Play Protect > Έλεγχος ότι η σάρωση είναι ενεργή"
-           : "Google Play Store > Play Protect > Verify scanning enabled"
-);
-
-appendHtml("<br>");
-logOk(gr ? "Το Lab 22 ολοκληρώθηκε (απογραφή ενδείξεων ενημερώσεων ασφαλείας)."
-         : "Lab 22 finished (security-update indicator inventory).");
-logInfo(gr ? "Η κατάσταση Play Protect δεν πιστοποιήθηκε ανεξάρτητα."
-           : "Play Protect status was not independently certified.");
-logLine();
-
+    appendHtml("<br>");
+    logOk(gr
+            ? "Το Lab 22 ολοκληρώθηκε — καταγράφηκαν τα διαθέσιμα στοιχεία ασφάλειας."
+            : "Lab 22 completed — available security information was recorded.");
+    logLine();
 }
 
 // ============================================================
@@ -28713,8 +28577,8 @@ private void lab23DeveloperOptionsRisk() {
             }
 
             logInfo(gr
-                    ? "Η ασύρματη πρόσβαση χρειάζεται έλεγχο στις ρυθμίσεις. Το εργαστήριο δεν μπορεί να πιστοποιήσει τη συνολική ασφάλεια της συσκευής."
-                    : "Check wireless access in Settings. This lab cannot certify the device's overall security.");
+                    ? "Αν δεν χρησιμοποιείτε ασύρματο έλεγχο από υπολογιστή, διατηρήστε την αντίστοιχη ρύθμιση απενεργοποιημένη."
+                    : "If you do not use wireless computer debugging, keep that setting disabled.");
 
             appendHtml("<br>");
             logOk(gr ? "Το Lab 23 ολοκληρώθηκε — ελέγχθηκαν οι διαθέσιμες ρυθμίσεις πρόσβασης."
@@ -28774,8 +28638,8 @@ private void lab24RootSuspicion() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 24 — Έλεγχος Root / Ακεραιότητας Bootloader (ΑΥΤΟΜΑΤΟ)."
-            : "LAB 24 — Root / Bootloader Integrity Scan (AUTO).");
+            ? "LAB 24 — Έλεγχος προστασίας του συστήματος"
+            : "LAB 24 — System protection check");
     logLine();
 
 // ---------------------------  
@@ -29009,151 +28873,123 @@ if ("1".equals(flashL)) {
 // never below zero
 risk = Math.max(0, Math.min(100, risk));
 
-logInfo(gr ? "Έλεγχος Root:" : "Root Scan:");  
-if (rootFindings.isEmpty()) {  
-    logInfo(gr ? "Δεν παρατηρήθηκαν ισχυρά root ίχνη· η απουσία τους δεν αποδεικνύει unrooted."
-               : "No strong root traces observed; their absence does not prove unrooted.");  
-} else {  
-    for (String s : rootFindings)
-        logWarn("• " + s);  
-}  
-
-logInfo(gr ? "Bootloader / Verified Boot:"
-           : "Bootloader / Verified Boot:");
-
-if (blFindings.isEmpty()) {
-
-    logInfo(gr ? "Δεν υπάρχουν αναγνώσιμα στοιχεία bootloader/Verified Boot."
-               : "No readable bootloader/Verified Boot data.");
-
-} else {
-
-    for (String s : blFindings) {
-
-        String l = s.toLowerCase(Locale.US);
-
-        if (l.contains("verifiedbootstate=green") ||
-            l.contains("vbmeta.device_state=locked") ||
-            l.contains("flash.locked=1")) {
-
-            logInfo("• " + s);
-
-        } else {
-
-            logWarn("• " + s);
-        }
-    }
-}
-
-logInfo(gr ? "Boot Animation / Splash:"
-           : "Boot Animation / Splash:");  
-if (animFindings.isEmpty()) {
-
-    logInfo(gr ? "Δεν παρατηρήθηκαν ορατές διαδρομές boot animation."
-               : "No visible boot-animation paths observed.");
-
-} else {
-
-    for (String s : animFindings) {
-
-        String l = s.toLowerCase(Locale.US);
-
-        if (l.contains("stock bootanimation")) {
-
-            logInfo("• " + s);
-
-        } else {
-
-            logWarn("• " + s);
-        }
-    }
-}
-
-logInfo(gr ? "Magisk / Stealth heuristics:"
-           : "Magisk / Stealth heuristics:");
-
-if (magiskStealthFindings.isEmpty()) {
-
-    logInfo(gr ? "Δεν εντοπίστηκαν ισχυρά ίχνη stealth root στους προσβάσιμους ελέγχους."
-               : "No strong stealth-root traces seen in accessible checks.");
-
-} else {
-
-    for (String s : magiskStealthFindings) {
-
-        String l = s.toLowerCase(Locale.US);
-
-        if ((l.contains("/debug_ramdisk") ||
-             l.contains("overlay mount")) &&
-            "green".equals(vbState) &&
-            "locked".equals(vbmeta) &&
-            "1".equals(flashL)) {
-
-            logInfo("• " + s);
-
-        } else {
-
-            logWarn("• " + s);
-        }
-    }
-}
-
 // ------------------------------------------------------------
-// ROOT / VERIFIED BOOT — EVIDENCE, NOT FABRICATED SECURITY PERCENTAGE
+// Human-readable results, based strictly on independently observed flags.
+// Never treat harmless system folders or generic overlay hints as proof
+// of root, infection, hacking, or a fully safe phone.
 // ------------------------------------------------------------
-// The legacy path, bootanimation and property counters are not physically
-// calibrated. Keep every probe above; never use the sum to certify safety.
-appendHtml("<br>");
-logInfo(gr ? "Σύνοψη τεκμηρίωσης Root / Verified Boot"
-           : "Root / Verified Boot evidence summary");
-
-if (suExec) {
-    logLabelWarnValue(gr ? "Πρόσβαση root" : "Root access",
-            gr ? "Εκτελέστηκε su με uid=0 — προνομιούχο shell επιβεβαιώθηκε"
-               : "su returned uid=0 — privileged shell confirmed");
-} else if (suFound || pkgHit || !magiskStealthFindings.isEmpty()) {
-    logLabelWarnValue(gr ? "Ενδείξεις root" : "Root indicators",
-            gr ? "Βρέθηκαν ίχνη, αλλά δεν επιβεβαιώθηκε εκτέλεση root shell"
-               : "Indicators observed, but root-shell execution not confirmed");
-} else {
-    logLabelValue(gr ? "Ενδείξεις root" : "Root indicators",
-            gr ? "Δεν εντοπίστηκαν στους προσβάσιμους ελέγχους· κατάσταση root άγνωστη"
-               : "None found in accessible checks; rootedness unverified");
-}
-
 boolean bootFailed = "red".equals(vbState);
 boolean bootUnlocked = "orange".equals(vbState)
-        || "unlocked".equals(vbmeta) || "0".equals(flashL);
-if (bootFailed) {
-    logLabelErrorValue(gr ? "Verified Boot" : "Verified Boot",
-            gr ? "Το Android αναφέρει RED — απαιτείται έλεγχος της εκκίνησης"
-               : "Android reports RED — investigate boot verification");
-} else if (bootUnlocked) {
-    logLabelWarnValue(gr ? "Bootloader / Verified Boot" : "Bootloader / Verified Boot",
-            gr ? "Το Android αναφέρει ξεκλείδωτη κατάσταση· δεν αποδεικνύει root"
-               : "Android reports an unlocked state; this does not prove root");
-} else if ("yellow".equals(vbState)) {
-    logLabelValue(gr ? "Verified Boot" : "Verified Boot",
-            gr ? "YELLOW: αναφερόμενη προσαρμοσμένη ρίζα εμπιστοσύνης· κατάσταση root άγνωστη"
-               : "YELLOW: custom root of trust reported; root status unknown");
-} else if ("green".equals(vbState)) {
-    logLabelValue(gr ? "Verified Boot" : "Verified Boot",
-            gr ? "GREEN: δηλώνεται από το Android, όχι ανεξάρτητη επιβεβαίωση"
-               : "GREEN: OS-reported, not independently attested");
-} else {
-    logLabelValue(gr ? "Verified Boot" : "Verified Boot",
-            gr ? "Μη διαθέσιμη ή μη αναγνωρισμένη κατάσταση"
-               : "Unavailable or unrecognized state");
+        || "unlocked".equals(vbmeta)
+        || "0".equals(flashL)
+        || (cmdline != null
+            && (cmdline.toLowerCase(Locale.US).contains("verifiedbootstate=orange")
+                || cmdline.toLowerCase(Locale.US).contains("vbmeta.device_state=unlocked")
+                || cmdline.toLowerCase(Locale.US).contains("bootloader=unlocked")));
+boolean alternativeBootTrust = "yellow".equals(vbState);
+boolean bootProtected = "green".equals(vbState)
+        && "locked".equals(vbmeta)
+        && "1".equals(flashL)
+        && !bootUnlocked;
+
+// A normal debug_ramdisk directory, an overlay mount or a native bridge
+// is not proof of root. Only stronger specific observations require review.
+boolean meaningfulRootHint = suFound || pkgHit
+        || "0".equals(roSecure) || "1".equals(roDebug);
+for (String finding : magiskStealthFindings) {
+    String hint = finding.toLowerCase(Locale.US);
+    if (hint.contains("magisk")
+            || hint.contains("zygisk")
+            || hint.contains("/data/adb/")
+            || hint.contains("root shell +")) {
+        meaningfulRootHint = true;
+    }
 }
-logInfo(gr ? "Δεν εκδόθηκε αυθαίρετος συνολικός δείκτης ασφάλειας."
-           : "No arbitrary whole-device security score was issued.");
+
+logInfo(gr ? "1. Προστασία κατά την εκκίνηση"
+           : "1. Protection when starting the phone");
+if (bootFailed) {
+    logLabelErrorValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Το Android αναφέρει πρόβλημα στον έλεγχο εκκίνησης. Χρειάζεται τεχνικός έλεγχος."
+               : "Android reports a startup verification problem. A technician should check it.");
+} else if (bootUnlocked) {
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Η συσκευή αναφέρει ότι επιτρέπει σημαντικές αλλαγές στο λογισμικό της. Αν δεν το επιλέξατε, ζητήστε έλεγχο."
+               : "The phone reports that major software changes are permitted. If you did not choose this, have it checked.");
+} else if (alternativeBootTrust) {
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Η εκκίνηση ελέγχεται με διαφορετική ρύθμιση από τη συνηθισμένη. Αν δεν το γνωρίζετε, ζητήστε έλεγχο."
+               : "Startup uses a different verification configuration. If unexpected, have it checked.");
+} else if (bootProtected) {
+    logLabelOkValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Το Android αναφέρει ότι η προστασία εκκίνησης είναι ενεργή και η συσκευή κλειδωμένη απέναντι σε αλλαγές του συστήματος."
+               : "Android reports startup protection is on and the device is locked against system changes.");
+} else {
+    logLabelValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Δεν ήταν δυνατό να επιβεβαιωθούν όλες οι ρυθμίσεις προστασίας εκκίνησης."
+               : "Not all startup protection settings could be verified.");
+}
+
+logLine();
+logInfo(gr ? "2. Πρόσβαση με πλήρη δικαιώματα"
+           : "2. Full system access");
+if (suExec) {
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Επιβεβαιώθηκε δυνατότητα πλήρους πρόσβασης στο σύστημα. Αν δεν την ενεργοποιήσατε εσείς, ζητήστε τεχνικό έλεγχο."
+               : "Full system access was confirmed. If you did not enable it, have the phone checked.");
+} else if (meaningfulRootHint) {
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Βρέθηκαν ενδείξεις αλλαγών στο σύστημα, αλλά δεν επιβεβαιώθηκε πλήρης πρόσβαση. Χρειάζεται περαιτέρω έλεγχος."
+               : "Possible system changes were indicated, but full access was not confirmed. Further checking is needed.");
+} else {
+    logLabelOkValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις πλήρους πρόσβασης στους διαθέσιμους ελέγχους."
+               : "No strong signs of full system access were found in the available checks.");
+}
+
+logLine();
+logInfo(gr ? "3. Τι σημαίνει για εσάς" : "3. What this means for you");
+if (bootProtected && !suExec && !meaningfulRootHint) {
+    logInfo(gr
+            ? "Τα αποτελέσματα είναι ενθαρρυντικά. Δεν βρέθηκε ένδειξη παραβίασης σε αυτόν τον έλεγχο."
+            : "The findings are reassuring. This check found no indication of a compromise.");
+    logInfo(gr
+            ? "Μπορείτε να είστε πιο ήσυχοι. Η προστασία εκκίνησης φαίνεται ενεργή και δεν διαπιστώσαμε πλήρη πρόσβαση στο σύστημα. Κανένα μεμονωμένο εργαστήριο, όμως, δεν εγγυάται απόλυτη ασφάλεια."
+            : "You can feel more reassured. Startup protection appears enabled, and full system access was not confirmed. No single lab can guarantee complete security.");
+} else if (bootFailed || bootUnlocked || suExec) {
+    logInfo(gr
+            ? "Ορισμένα αποτελέσματα χρειάζονται επιπλέον έλεγχο. Αυτό δεν αποδεικνύει από μόνο του ότι κάποιος παραβίασε το κινητό σας."
+            : "Some findings need additional checking. They do not by themselves prove that someone has compromised the phone.");
+    logInfo(gr
+            ? "Αν δεν κάνατε εσείς αλλαγές στο λογισμικό, απευθυνθείτε σε τεχνικό πριν επιχειρήσετε διορθώσεις."
+            : "If you did not change the phone software, consult a technician before attempting repairs.");
+} else if (meaningfulRootHint || alternativeBootTrust) {
+    logInfo(gr
+            ? "Υπάρχουν στοιχεία που χρειάζονται επιβεβαίωση, όχι απόδειξη παραβίασης. Αν δεν γνωρίζετε να έχετε κάνει αλλαγές στο σύστημα, ζητήστε επιπλέον έλεγχο."
+            : "Some findings need verification, not proof of compromise. If you did not knowingly modify the system, request a further check.");
+} else {
+    logInfo(gr
+            ? "Δεν εντοπίσαμε αποδεδειγμένη παραβίαση, αλλά ο έλεγχος δεν μπόρεσε να επιβεβαιώσει όλες τις ρυθμίσεις."
+            : "No compromise was demonstrated, but not every setting could be verified.");
+}
+logInfo(gr
+        ? "Φροντίστε να εγκαθιστάτε τις διαθέσιμες ενημερώσεις Android."
+        : "Keep available Android updates installed.");
 
 appendHtml("<br>");
-logOk(gr ? "Το Lab 24 ολοκληρώθηκε (απογραφή προσβάσιμων ενδείξεων)."
-         : "Lab 24 finished (accessible indicators inventoried).");
-logInfo(gr ? "Δεν πιστοποιήθηκε συνολικά η ασφάλεια ή η ακεραιότητα της συσκευής."
-           : "Overall device security and integrity were not certified.");
+logOk(gr
+        ? "Το Lab 24 ολοκληρώθηκε — ελέγχθηκαν τα διαθέσιμα στοιχεία προστασίας του συστήματος."
+        : "Lab 24 completed — available system protection indicators were checked.");
 logLine();
+
 }
 
 
@@ -29487,8 +29323,8 @@ private void lab25CrashHistory() {
         logInfo("ANR: " + anrs);
         logInfo(gr ? "Συμβάντα συστήματος: " + system : "System events: " + system);
         logLabelValue(gr ? "Περιορισμός" : "Limitation", gr
-                ? "Οι καταγραφές μπορεί να έχουν διαγραφεί ή να μην τηρούνται από τον κατασκευαστή. Μηδενικές καταγραφές δεν αποδεικνύουν απουσία crash."
-                : "Records may have been removed or not retained by the manufacturer. Zero records do not prove absence of crashes.");
+                ? "Καταμετρήθηκαν τα συμβάντα που υπήρχαν στο διαθέσιμο ιστορικό."
+                : "Events present in the accessible history were counted.");
     } else {
         logLabelValue(gr ? "Σύνοψη ιστορικού" : "History summary", unavailable);
         if (!records.isEmpty()) logInfo(gr
@@ -29510,8 +29346,8 @@ private void lab25CrashHistory() {
     else {
         logInfo("I/O: " + latency + " ms");
         logInfo(gr
-                ? "Μεμονωμένη εγγραφή/ανάγνωση 4 KB με επαληθευμένα bytes. Δεν πιστοποιεί υγεία NAND ή συνολική σταθερότητα."
-                : "One 4 KB file write/read with verified byte match. Not NAND health or whole-device stability.");
+                ? "Επαληθεύτηκε εγγραφή και ανάγνωση 4 KB χωρίς διαφορά στα δεδομένα."
+                : "A 4 KB write-and-read test passed the byte comparison.");
     }
     GELServiceLog.info("SUMMARY: CRASH_ORIGIN=UNCLEAR; HISTORY_COVERAGE="
             + (coverage.complete() ? "AVAILABLE_RECORDS_ONLY" : "UNAVAILABLE_OR_PARTIAL"));
@@ -29879,12 +29715,12 @@ if (r.topDataConsumers != null && !r.topDataConsumers.isEmpty()) {
         logLabelValue(
                 gr ? "Κατάσταση" : "Status",
                 gr
-                        ? "Δεν υπάρχουν διαθέσιμα δεδομένα κατανάλωσης.\n\n"
+                        ? "Δεν επιστράφηκαν δεδομένα χρήσης από το Android.\n"
                           + "Πιθανές αιτίες:\n"
                           + "• Πρόσφατη επανεκκίνηση συσκευής\n"
                           + "• Περιορισμοί κατασκευαστή (OEM)\n"
                           + "• Μη διαθέσιμα UID counters στο Android"
-                        : "No data usage available.\n\n"
+                        : "Android did not return data-usage readings.\n"
                           + "Possible reasons:\n"
                           + "• Device was recently rebooted\n"
                           + "• OEM restrictions\n"
@@ -30364,8 +30200,8 @@ appendHtml("<br>");
         logLabelValue(
                 gr ? "Συνδυασμοί αδειών" : "Permission patterns",
                 gr
-                        ? "Δεν εμφανίστηκαν επιλεγμένα βάρη χορηγημένων αδειών στο ορατό δείγμα· δεν αποδεικνύει ότι δεν υπάρχουν κίνδυνοι"
-                        : "No selected granted-permission weights found in the visible sample; does not establish absence of risks"
+                        ? "Δεν βρέθηκαν οι συγκεκριμένοι συνδυασμοί αδειών στις εφαρμογές που ελέγχθηκαν"
+                        : "The selected permission combinations were not found in the apps checked"
         );
     }
 
@@ -30379,8 +30215,8 @@ appendHtml("<br>");
     logLabelValue(
             gr ? "Διευκρίνιση" : "Clarification",
             gr
-                    ? "Η χορήγηση αδειών δεν σημαίνει κακόβουλη συμπεριφορά."
-                    : "Granted permissions do not imply malicious behavior."
+                    ? "Καταγράφηκαν μόνο οι άδειες που έχουν δοθεί στις εφαρμογές."
+                    : "Only granted app permissions were recorded."
     );
 
     logLabelValue(
@@ -30880,8 +30716,8 @@ if (boardScore >= 60) {
             gr ? "Μητρική πλακέτα"
                : "Mainboard integrity",
             gr
-                    ? "Οι ενδείξεις του log δεν μπορούν να αποδείξουν παλαιότερη επέμβαση στη μητρική."
-                    : "Log co-occurrence cannot prove past board repair."
+                    ? "Οι διαθέσιμες καταγραφές δεν περιλαμβάνουν επαλήθευση επέμβασης στη μητρική."
+                    : "The available logs contain no verified evidence of past board repair."
     );
 
 } else {
@@ -31001,8 +30837,8 @@ if (hiddenScore >= 60) {
     } else {
 
         logLabelValue(gr ? "Εύρημα" : "Finding",
-                gr ? "Δεν καταγράφηκε ισχυρό μοτίβο στις διαθέσιμες αναφορές· δεν πιστοποιείται υγεία."
-                   : "No strong pattern of mentions in accessible logs; hardware health unknown.");
+                gr ? "Δεν καταγράφηκαν επαληθευμένα συμβάντα αστοχίας στις προσβάσιμες αναφορές."
+                   : "No verified fault events were recorded in the accessible reports.");
     }
 
     appendHtml("<br>");
@@ -31418,8 +31254,8 @@ logLabelValue(
     appendHtml("<br>");
     logOk(gr ? "Το Lab 29 ολοκληρώθηκε (καταγραφή προσβάσιμων χαρακτηριστικών)."
          : "Lab 29 finished (accessible device characteristics recorded).");
-logInfo(gr ? "Η γνησιότητα και η κατάσταση ανταλλακτικών δεν πιστοποιήθηκαν."
-           : "OEM authenticity and replacement-part condition were not certified.");
+logInfo(gr ? "Καταγράφηκαν τα χαρακτηριστικά που παρέχει το Android."
+           : "Characteristics exposed by Android were recorded.");
     logLine();
 }
 
@@ -31518,8 +31354,8 @@ boolean thermalRunawayRisk =
 
     final boolean gr = AppLang.isGreek(this);
     logLabelValue(gr ? "Όριο αξιολόγησης" : "Assessment limit",
-            gr ? "Η εφαρμογή παρουσιάζει δεδομένα Android και μη βαθμονομημένους δείκτες. Δεν πιστοποιεί φυσική υγεία εξαρτημάτων ή απουσία βλαβών."
-               : "Android observations and uncalibrated indices only. No component certification or proof of zero hardware faults.");
+            gr ? "Η σύνοψη βασίζεται στις μετρήσεις που ολοκληρώθηκαν στα επιμέρους εργαστήρια."
+               : "This summary uses the available measurements from completed labs.");
 
     appendHtml("<br>");
     logLine();
@@ -32690,8 +32526,8 @@ logLabelValue(
 );
 
 String verdict = gr
-        ? "Σύνοψη ενδείξεων, όχι πιστοποίηση υλικού ή οριστική διάγνωση. Τα μη μετρημένα στοιχεία παραμένουν άγνωστα."
-        : "Evidence summary only; not a hardware certificate or definitive diagnosis. Unmeasured areas remain unknown.";
+        ? "Η σύνοψη παρουσιάζει τα αποτελέσματα των μετρήσεων που ολοκληρώθηκαν."
+        : "This summary presents results from completed measurements.";
 
 appendHtml("<br>");
 logInfo(gr ? "Τελικό Συμπέρασμα" : "Final verdict");
@@ -33630,8 +33466,8 @@ logLine();
 
     if (explicitAlerts.length() == 0) {
         logLabelValue(gr ? "Σύνοψη" : "Summary",
-                gr ? "Καμία ρητή σήμανση ⚠ / ✖ στο διαθέσιμο αρχείο — ΔΕΝ σημαίνει ότι η συσκευή πιστοποιήθηκε."
-                   : "No explicit ⚠ / ✖ markers in the available log — NOT a clean hardware certification.");
+                gr ? "Δεν υπάρχουν καταγεγραμμένες προειδοποιήσεις ή σφάλματα στο διαθέσιμο αρχείο."
+                   : "No warnings or errors were recorded in the available log.");
     } else {
         logLabelWarnValue(gr ? "Αναφορές προς έλεγχο" : "Entries for review",
                 gr ? "Υπάρχουν καταγραφές με ρητή σήμανση προσοχής/σφάλματος."
@@ -33759,8 +33595,8 @@ if (hwInstability || lab29InstabilityScore > 0) {
                : "Old unverified indicators require source and timestamp validation.");
 } else {
     logLabelValue(gr ? "Σταθερότητα εξαρτημάτων" : "Component stability",
-            gr ? "ΔΕΝ ΠΙΣΤΟΠΟΙΗΘΗΚΕ — η έλλειψη ενδείξεων δεν αποτελεί μέτρηση."
-               : "NOT CERTIFIED — no recorded hint is not a component health measurement.");
+            gr ? "Δεν υπάρχουν επαληθευμένες μετρήσεις σταθερότητας εξαρτημάτων."
+               : "No verified component-stability readings were available.");
 }
 
     // ------------------------------------------------------------
@@ -33782,8 +33618,8 @@ if (hwInstability || lab29InstabilityScore > 0) {
     appendHtml("<br>");
     logOk(gr ? "Το Lab 31 ολοκληρώθηκε (σύνταξη τελικής σύνοψης παρατηρήσεων)."
          : "Lab 31 finished (final observation summary compiled).");
-logInfo(gr ? "Καταγράφηκαν τα όρια τεκμηρίωσης· η αναφορά δεν πιστοποιεί υγιές hardware."
-           : "Evidence limitations recorded; the report does not certify healthy hardware.");
+logInfo(gr ? "Η αναφορά συγκέντρωσε τα διαθέσιμα αποτελέσματα των εργαστηρίων."
+           : "The report gathered the available results from completed labs.");
     logLine();
 }
 
