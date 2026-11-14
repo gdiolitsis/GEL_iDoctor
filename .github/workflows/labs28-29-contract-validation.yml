@@ -5,9 +5,8 @@ on:
     paths:
       - 'app/src/main/java/com/gel/cleaner/ManualTestsActivity.java'
       - 'app/src/main/java/com/gel/cleaner/LabEvidenceFreshness.java'
-      - 'app/src/main/java/com/gel/cleaner/UsedDevicePrecheckPolicy.java'
       - 'app/src/test/java/com/gel/cleaner/LabEvidenceFreshnessTest.java'
-      - 'app/src/test/java/com/gel/cleaner/UsedDevicePrecheckPolicyTest.java'
+      - 'tools/ci/test_lab29_guidance_privacy_contract.py'
       - '.github/workflows/labs28-29-contract-validation.yml'
 
 permissions:
@@ -27,6 +26,8 @@ jobs:
           java-version: '17'
           cache: gradle
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Enforce Lab29 guide-only privacy and Labs28-31 technical evidence
+        run: python3 tools/ci/test_lab29_guidance_privacy_contract.py
       - name: Compile actual Android source and run unit tests — no APK
         env:
           GH_TOKEN: ${{ github.token }}
