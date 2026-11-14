@@ -111,3 +111,18 @@ The v54 change to `logLabelValue()` was not sufficient by itself: hundreds of la
 - Labs 15–31 separately contain neutralized or removed legacy footers (not changed by this commit) and still need per-path semantic verification, particularly Labs 21/24/26/27/28 where completion messages were altered.
 
 **Acceptance gates:** GitHub exact-head Android Java/Unit CI result, EL/EN visual logs in Android 11/16 and physical Xiaomi, all cancellation/error branches, plus PDF consistency. **Not closed or deployed as an APK.** Keep original backup and `main` untouched. This patch does not address the independent Lab 11 throughput measurement proposal.
+
+
+### Continuation — Labs 15–31 scoped footer recovery
+
+**Source commit** [`3f1a432056efe747fb71897a893ea0f506a1340b`](https://github.com/gdiolitsis/GEL_iDoctor/commit/3f1a432056efe747fb71897a893ea0f506a1340b), same QA-only branch, follows `e91d8a3`. This supersedes the *historical pending* note above for the main direct log paths, but **does not establish runtime acceptance**.
+
+- **Lab 15:** original green completion already present on normal measurement path, unchanged.
+- **Labs 16–20:** restored scoped green footers; thermal and RAM require observed/valid data, uptime requires a recorded reading, storage footer is within its successful snapshot try path, and Lab 17 announces only completion of indicative analysis.
+- **Lab 21:** only actual native biometric authentication-success callback gets green final footer. All skipped, unconfigured, canceled and error cases remain non-green.
+- **Labs 22–24:** procedure/inventory completion green, but Play Protect, root/Verified Boot security and whole-device safety limitations remain separate neutral text, not green certification.
+- **Lab 25:** green only when `coverage.complete()`; partial history remains neutral.
+- **Labs 26–27:** green for nonempty visible-user-app / accessible-permission inventories; empty/unavailable coverage stays neutral.
+- **Labs 28–31:** successful logging/triage, inventory and summary compilation are green *procedural* milestones, with separate white notes that hardware health, OEM provenance and completeness were not certified.
+
+Both surgical source commits altered only `ManualTestsActivity.java` completion logging and narrowly needed guards. The full 31-Lab completion-footer **source pass** is now prepared, but *not* fully accepted: helper/sub-activity/PDF paths and end-user visual effects need separate checks. The already installed signed-v54 APK remains unchanged. Never infer PASS on Xiaomi from a green Gradle job.
