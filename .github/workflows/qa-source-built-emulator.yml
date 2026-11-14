@@ -13,10 +13,10 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build-candidate:
-    # QA surgical rebuild is intentionally NOT built for each intermediate commit.
+    # Disabled for interim surgical QA commits; no signed APK per formatting patch.
     # Restore qa/gel31-surgical-rebuild- gating only once all 31 Labs are ready
     # for a single combined APK, tests and emulator acceptance run.
-    if: ${{ github.head_ref == 'qa/gel31-surgical-rebuild-20261113' && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ false && github.head_ref == 'qa/gel31-surgical-rebuild-20261113' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
