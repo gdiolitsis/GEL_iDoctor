@@ -1,85 +1,76 @@
-# Labs 28 + 29 → Lab 30 — structured evidence contract (2026-11-15)
+# Labs 28–29 → Labs 30–31 — evidence and buyer privacy contract (2026-11-15)
 
-## Branch ancestry
-- Parent: `qa/logs-evidence-only-20261114` (PR #123; current evidence-only Lab 28)
-- New integration branch: `qa/integration-labs28-29-report30-20261115`
-- Carefully ported **only the used-device buyer checklist** of Lab 29 from PR #124 without replacing the recent Lab 28 or 29 evidence-only code.
-- Keep `main`, protected backup and research-only PR #45 unchanged.
+## Branch safety
 
-## What Lab 30 receives
-### Lab 28 — System records and measurements
-- Versioned, wall-clock + elapsed-realtime-timestamped same-boot snapshot of uptime.
-- Battery temperature (where valid) and CPU/GPU thermal-zone readings (when available).
-- A **separate, unverified keyword-mention mask** from accessible historical logs, labeled non-diagnostic. Never turn a keyword like `uptime` or `proximity` into a confirmed fault, PMIC/NAND failure, motherboard repair, or health score.
-- Missing and expired data remain **unknown**, not green.
+- Based on `qa/logs-evidence-only-20261114` (PR #123).
+- PR #125 is a draft. The protected backup, research-only PR #45 and `main` are untouched.
+- Retain the existing Android observations in Lab 29 and all measurements in Lab 28.
 
-### Lab 29 — Used-device pre-purchase check
-- Versioned, same-boot Android-reported manufacturer/model/device identifier; not independently authenticated.
-- Optional manual checklist: record the result from an **official GSMA Device Check or mobile provider source**, matching identifiers, purchase paperwork and successful device handover; the app does not directly query any official registry.
-- Buyer entries carry timestamp+elapsed clock, and are associated with the current Lab 29 run. The app never reads, stores, uploads or sends IMEI numbers or seller identity.
-- The operator records the consulted official source, and the app shows **ΑΠΟΚΛΕΙΣΜΕΝΟΣ / ΜΗ ΑΠΟΚΛΕΙΣΜΕΝΟΣ / ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ**. Missing source means **ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ**.
-- The previous `lab29_authenticity_score` and `lab29_instability_score` are invalidated and **must not** influence Lab 30.
+## Lab 28: structured Android measurements
 
-## QA matrix
-| Scenario | Required result in Lab 30 |
+Lab 28 records same-boot, timestamped uptime and available battery/CPU/GPU temperatures.
+It keeps keyword mentions from old logs **separate from actual measurements**. No
+component-health certificate, hidden failure prediction or fabricated numerical score.
+
+Both Lab 30 and Lab 31 consume the fresh Lab 28 snapshot independently using
+`LabEvidenceFreshness`, with a 24-hour and same-boot freshness check.
+
+## Lab 29: private external IMEI guidance, never a result
+
+**User decision:** GEL iDoctor only teaches the buyer how to check IMEI privately.
+
+1. Open the system dialer and enter `*#06#`; read or copy all available IMEIs.
+2. Open the external CheckMEND consumer report page in the system browser:
+   `https://www.checkmend.com/eu/consumer/report`
+3. The buyer independently fills in IMEI and requested personal data directly on
+   the provider's site, pays the provider directly if desired and reads the result there.
+4. No return-to-app questions or result entry. The purchaser owns their decision.
+
+### Data-minimization requirements
+
+- The Android app never reads, requests, receives, records, uploads, or forwards the
+  external IMEI result, provider credentials, buyer personal data or payment details.
+- No `CheckBox`, `EditText` or status selector in the IMEI guidance dialog.
+- The external URL has **no query parameters**, so the app passes no device identifiers.
+- No `SharedPreferences` state for blocked/clear/unknown result, source of check,
+  documents, seller verification, purchase approval or FRP outcome.
+- On opening `ManualTestsActivity`, legacy QA buyer-check preference keys are
+  cleared in order to remove obsolete data from earlier experiments.
+- Technical Android observations from Lab 29 (manufacturer/model/device, battery,
+  basic hardware availability) still report to Labs 30 and 31, with their existing
+  evidence limitations. Neither receives IMEI status.
+- An external provider may collect/payment-process buyer data under its own terms;
+  that occurs outside GEL.
+
+## What Labs 30 and 31 say
+
+Lab 30: the Lab 29 section displays Android-reported observations, and a short
+neutral line that buyer IMEI checks are performed outside GEL and no result is
+collected.
+
+Lab 31: retains all technician technical measurements from Labs 28–29, and states
+that external IMEI results are private and are not part of the GEL service report.
+
+There are no verdicts, alerts, scores or warnings derived from what the external
+website may have returned.
+
+## QA acceptance
+
+| Scenario | Expected |
 |---|---|
-| Neither Lab 28 nor 29 run | Separate neutral/unknown sections for both |
-| Only Lab 28 run | Fresh uptime and available raw temperatures; Lab 29 unknown |
-| Lab 28 lacks CPU/GPU readings | No invented CPU/GPU values |
-| Lab 28 log mentions reboot or proximity | Neutral, unverified mentions; no hardware-fault claim |
-| Lab 28 repeated on same boot | New snapshot replaces prior values; missing sensors do not inherit old data |
-| System reboot / clock jump / >24 h old Lab 28 | Missing/stale section, not positive |
-| Lab 29 runs and buyer skips checklist | Android model/observations only; buyer claims unknown |
-| Buyer declares a clear lookup but no FRP handover | Incomplete; not approved |
-| Operator records officially sourced blocked result | Red IMEI blocked even when all other items ticked |
-| Buyer records all checks and names official IMEI source | Green completed checklist; explicit official source |
-| Re-run Lab 29 after prior completed checklist | Old buyer assertions cleared |
-| Old preference keys from pre-2026 versions | No restored uncalibrated score |
-| GR/EN, Android 11/16, landscape and back | Readable dialog; SKIP/RECORD accessible; back behaves as skip |
-| Lab 30 → Lab 31 → PDF | Both Lab 28 and 29 sections present; final export retains provenance caveats |
+| User runs only Lab 28 | Technical evidence in Lab 30 and 31, no IMEI results |
+| User runs Lab 29 | Android characteristics; instruction dialog with external link |
+| User taps external-check button | System browser opens CheckMEND page without query parameters |
+| User returns to GEL | No result question, no result stored |
+| User closes/presses Android Back | Dialog exits cleanly, no persisted result |
+| Buyer does not make a purchase | No prompt or warning in GEL |
+| Upgrade from an earlier QA build | Legacy `lab29_precheck_*` keys removed on activity creation |
+| Lab 30/31/PDF | No IMEI outcomes from buyer or provider; only independent technical findings |
+| Android 11/16, EL/EN | Dialog readable; buttons usable; link opens externally |
+| Build | Compile/JUnit plus CI privacy-contract assertions pass |
 
-## Lab 31 — Technician's independent intake assessment
-The existing Lab 31 now receives both Lab 28 and Lab 29 evidence directly from the
-same versioned, same-boot preferences used by Lab 30; it is not inferred from
-previous final-report prose. `Lab31ReportEvidencePolicy` continues filtering
-old Lab 31 summaries and the existing PDF export button is unchanged.
+## Release gate
 
-Three independent records, never rolled into a speculative combined score:
-
-1. **Technical measurements (Lab 28):** recorded uptime and available battery,
-   CPU and GPU temperatures; unverified log keyword mentions marked neutral,
-   without future-fault or repair-history attribution.
-2. **Device/OEM identity (Lab 29):** Android-reported manufacturer/model/device,
-   identified explicitly as self-reported and **NOT OEM part certification**.
-3. **IMEI source and device handover (Lab 29):** operator-recorded multi-IMEI external
-   official-source result, identifier comparison, paperwork and fresh activation/FRP.
-   A reported blocked IMEI triggers **CONFIRM SOURCE RESULT**. The report shows only the operator-recorded official-source outcome.
-   Independently authentic devices can have disputed provenance.
-
-### Additional technician acceptance cases
-| Situation | Lab 31 expected |
-|---|---|
-| Lab 28 not run, Lab 29 run | Lab 28 explicitly unknown, Lab 29 shown |
-| Lab 29 not run, Lab 28 run | Raw Lab 28 readings, ownership/OEM status unknown |
-| Recorded official-source IMEI blocked | Red **ΑΠΟΚΛΕΙΣΜΕΝΟΣ**, source shown |
-| Recorded official-source IMEI not flagged | Green **ΜΗ ΑΠΟΚΛΕΙΣΜΕΝΟΣ**, source shown |
-| Official source missing | IMEI not verified, regardless of other checkboxes |
-| Device identity corresponds to a known manufacturer | OEM authenticity still unverified |
-| Phone restarted after Labs 28–29 | Both sections stale/unknown, not silently reused |
-| Repeated Lab 31 + export | No stale Lab 31 warnings carried into new summary; technician details captured in GELServiceLog for export |
-| CPU/GPU temperature high | Raw numeric readings neutral, not false healthy/OK status |
-
-The pure `TechnicianPrecheckAssessment` policy and JUnit tests cover missing,
-stale, partial, clean and reported-block outcomes; this is service-intake triage,
-**never a substitute for a source-backed IMEI check or OEM assessment**.
-
-## Output wording policy
-Only report the official-source status actually entered by the operator:
-**IMEI BLOCKED / NOT BLOCKED / UNVERIFIED**, with source shown.
-Avoid irrelevant conjectures and do not claim live registry verification.
-No unsupported extrapolations about different providers or hypothetical future events.
-
-## Verification state
-- Source-level changes prepared, not a confirmed APK or device acceptance.
-- Unit tests: `LabEvidenceFreshnessTest` and `UsedDevicePrecheckPolicyTest`.
-- Requires exact-head Gradle compile/JUnit and Android 11/16, EL/EN emulator + physical device acceptance.
+This is a source change, not confirmation of an installable signed APK.
+Complete exact-head compilation and unit tests, Android emulator/physical-device
+acceptance, and PDF export checks before merge.
