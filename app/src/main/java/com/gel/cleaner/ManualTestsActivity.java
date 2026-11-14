@@ -28308,270 +28308,136 @@ try { if (br != null) br.close(); } catch (Throwable ignore) {}
 }
 
 /* ============================================================
-LAB 22 — Security Patch + Play Protect (Realtime)
+LAB 22 — Android security updates and Play Protect
+Plain-language report. Never infer Play Protect protection or a completed
+malware scan from Android settings or a visible settings Activity.
 ============================================================ */
 private void lab22SecurityPatchAndPlayProtect() {
-	
-	final boolean gr = AppLang.isGreek(this);
+    final boolean gr = AppLang.isGreek(this);
 
     appendHtml("<br>");
     logLine();
-    logInfo(gr 
-            ? "LAB 22 — Ενημέρωση Ασφαλείας + Play Protect (Σε πραγματικό χρόνο)"
-            : "LAB 22 — OS Security Patch and Available Play Protect Indicators");
+    logInfo(gr ? "LAB 22 — Έλεγχος ασφάλειας Android"
+               : "LAB 22 — Android security check");
     logLine();
 
-// ------------------------------------------------------------
-// 1) Security Patch Level (raw)
-// ------------------------------------------------------------
-String patch = null;
+    // 1. Read Android's reported patch date. This is NOT proof that all
+    // security vulnerabilities are fixed, nor evidence of malware.
+    logInfo(gr ? "1. Ενημερώσεις ασφαλείας" : "1. Security updates");
 
-try {
-    patch = android.os.Build.VERSION.SECURITY_PATCH;
-
-    logInfo(gr ? "Επίπεδο ενημέρωσης ασφαλείας"
-               : "Security patch level");
-
-    if (patch != null && !patch.isEmpty()) {
-
-        logLabelOkValue(
-                gr ? "Αναφέρεται" : "Reported",
-                patch
-        );
-
-    } else {
-
-        logLabelValue(
-                gr ? "Αναφέρεται" : "Reported",
-                gr ? "Δεν παρέχεται από το σύστημα"
-                   : "Not provided by system"
-        );
-    }
-
-} catch (Throwable e) {
-
-    logLabelValue(
-            gr ? "Ανάγνωση patch" : "Patch read",
-            (gr ? "Αποτυχία (" : "Failed (") + e.getMessage() + ")"
-    );
-}
-
-// ------------------------------------------------------------
-// 2) Patch Freshness Intelligence (AGE + RISK)
-// ------------------------------------------------------------
-try {
-    if (patch != null && !patch.isEmpty()) {
-
-        SimpleDateFormat sdf =
-                new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-        sdf.setLenient(false);
-
-        long patchTime = sdf.parse(patch).getTime();
-        long now = System.currentTimeMillis();
-
-        long diffDays   = (now - patchTime) / (1000L * 60 * 60 * 24);
-        long diffMonths = diffDays / 30;
-        // Use actual elapsed days for alert boundaries; the display months are approximate.
-        if (diffDays < 0) {
-            logInfo(gr ? "Η ημερομηνία patch είναι μελλοντική — δεν εκδόθηκε αξιολόγηση."
-                       : "Patch date is in the future — no freshness verdict issued.");
-        } else {
-
-        logInfo(gr ? "Ηλικία ενημέρωσης ασφαλείας"
-                   : "Patch age");
-
-        logLabelValue(
-                gr ? "Εκτίμηση" : "Estimated",
-                gr ? diffMonths + " μήνες"
-                   : diffMonths + " months"
-        );
-
-        logInfo(gr ? "Κατάσταση ενημέρωσης"
-                   : "Patch status");
-
-        if (diffDays <= 90L) {
-
-            logLabelValue(
-                    gr ? "Ημερομηνία patch" : "Patch date",
-                    gr ? "Πρόσφατη κατά τη δήλωση Android — δεν τεκμηριώνει απουσία ευπαθειών"
-                       : "Recent as reported by Android — does not prove absence of vulnerabilities"
-            );
-
-        } else if (diffDays <= 180L) {
-
-            logLabelWarnValue(
-                    gr ? "Κίνδυνος" : "Risk",
-                    gr ? "Η αναφερόμενη ημερομηνία patch είναι παλαιότερη από τρεις μήνες· ελέγξτε τις διαθέσιμες ενημερώσεις"
-                       : "Reported patch date is over three months old; check available updates"
-            );
-
-        } else {
-
-            logLabelWarnValue(
-                    gr ? "Ηλικία patch" : "Patch age",
-                    gr ? "ΠΑΛΙΑ αναφερόμενη ημερομηνία patch — δεν αποδεικνύει εκμεταλλεύσιμη ευπάθεια"
-                       : "Old reported patch date — does not prove an exploitable vulnerability"
-            );
-        }
-        }
-    }
-} catch (Throwable e) {
-
-    logLabelValue(
-            gr ? "Ανάλυση ηλικίας ενημέρωσης" : "Patch age analysis",
-            (gr ? "Αποτυχία (" : "Failed (") + e.getMessage() + ")"
-    );
-}
-
-// ------------------------------------------------------------
-// 3) Play Protect Detection (best effort, non-root)
-// ------------------------------------------------------------
-try {
-    PackageManager pm = getPackageManager();
-
-    boolean gmsPresent;
+    String patch = null;
     try {
-        pm.getPackageInfo("com.google.android.gms", 0);
-        gmsPresent = true;
-    } catch (Throwable ignore) {
-        gmsPresent = false;
+        patch = android.os.Build.VERSION.SECURITY_PATCH;
+    } catch (Throwable ignored) {
+        // The user receives a neutral explanation, not an internal error.
     }
 
-    logInfo(gr ? "Play Protect" : "Play Protect");
-
-    if (!gmsPresent) {
-
+    if (patch == null || patch.trim().isEmpty()) {
         logLabelValue(
-                gr ? "Υπηρεσίες Google Play" : "Google Play Services",
-                gr ? "Μη ορατές ή μη διαθέσιμες στην εφαρμογή"
-                   : "Not visible or not available to this app"
+                gr ? "Τελευταία αναφερόμενη ενημέρωση" : "Last reported security update",
+                gr ? "Δεν ήταν δυνατή η ανάγνωση της ημερομηνίας"
+                   : "The date could not be read"
         );
-
-        logLabelValue(
-                "Play Protect",
-                gr ? "Κατάσταση άγνωστη — απαιτείται έλεγχος στο Play Store"
-                   : "Status unknown — check in Play Store"
-        );
-
     } else {
-
-        int verify = -1;
         try {
-            verify = Settings.Global.getInt(
-                    getContentResolver(),
-                    "package_verifier_enable",
-                    -1
-            );
-        } catch (Throwable ignore) {}
+            SimpleDateFormat input = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            input.setLenient(false);
+            Date parsedDate = input.parse(patch);
+            if (parsedDate == null) {
+                throw new java.text.ParseException("No date", 0);
+            }
 
-        if (verify == 1) {
-
+            String displayDate = new SimpleDateFormat("dd/MM/yyyy", Locale.US)
+                    .format(parsedDate);
             logLabelValue(
-                    gr ? "Ρύθμιση ελεγκτή πακέτων" : "Package verifier setting",
-                    gr ? "Ενεργή τιμή Android — δεν πιστοποιεί Play Protect"
-                       : "Android flag enabled — does not verify Play Protect status"
+                    gr ? "Τελευταία αναφερόμενη ενημέρωση" : "Last reported security update",
+                    displayDate
             );
 
-        } else if (verify == 0) {
+            long ageDays = (System.currentTimeMillis() - parsedDate.getTime())
+                    / (24L * 60L * 60L * 1000L);
 
-            logLabelValue(
-                    gr ? "Ρύθμιση ελεγκτή πακέτων" : "Package verifier setting",
-                    gr ? "Ανενεργή τιμή Android — η κατάσταση Play Protect παραμένει άγνωστη"
-                       : "Android flag disabled — Play Protect status remains unknown"
-            );
-
-        } else {
-
-            Intent i = new Intent();
-            i.setClassName(
-                    "com.google.android.gms",
-                    "com.google.android.gms.security.settings.VerifyAppsSettingsActivity"
-            );
-
-            if (i.resolveActivity(pm) != null) {
-
-                logLabelOkValue(
-                        gr ? "Μονάδα" : "Module",
-                        gr ? "Εντοπίστηκε (διαθέσιμη δραστηριότητα ρυθμίσεων)"
-                           : "Detected (settings activity present)"
-                );
-
+            if (ageDays < 0L) {
                 logLabelValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Άγνωστη (OEM / περιορισμένη έκδοση)"
-                           : "Unknown (OEM / restricted build)"
+                        gr ? "Αξιολόγηση ενημέρωσης" : "Update assessment",
+                        gr ? "Η αναφερόμενη ημερομηνία είναι μελλοντική και δεν μπορεί να αξιολογηθεί"
+                           : "The reported date is in the future and cannot be assessed"
                 );
-
+            } else if (ageDays > 90L) {
+                long approximateMonths = ageDays / 30L;
+                logLabelWarnValue(
+                        gr ? "Προσοχή" : "Attention",
+                        gr ? "Η ενημέρωση είναι περίπου " + approximateMonths + " μηνών."
+                           : "The update is approximately " + approximateMonths + " months old."
+                );
+                logInfo(gr
+                        ? "Η συσκευή ενδέχεται να μην περιλαμβάνει πρόσφατες διορθώσεις ασφαλείας. Συνιστάται να ελέγξετε αν υπάρχει νεότερη ενημέρωση."
+                        : "The device may be missing recent security fixes. Check whether a newer update is available.");
             } else {
-
                 logLabelValue(
-                        "Play Protect",
-                        gr ? "Η κατάσταση δεν είναι σαφής"
-                           : "Status unclear"
+                        gr ? "Αξιολόγηση ενημέρωσης" : "Update assessment",
+                        gr ? "Η αναφερόμενη ενημέρωση είναι πρόσφατη. Αυτό δεν εγγυάται ότι δεν υπάρχουν κίνδυνοι."
+                           : "The reported update is recent. This does not guarantee that there are no security risks."
                 );
             }
+        } catch (Throwable ignored) {
+            logLabelValue(
+                    gr ? "Τελευταία αναφερόμενη ενημέρωση" : "Last reported security update",
+                    gr ? "Η ημερομηνία δεν μπόρεσε να αξιολογηθεί"
+                       : "The date could not be assessed"
+            );
         }
     }
 
-} catch (Throwable e) {
+    // 2. Presence of settings does not prove Play Protect is enabled.
+    // The Android package verifier flag must NOT be presented as proof.
+    logLine();
+    logInfo(gr ? "2. Προστασία από κακόβουλες εφαρμογές"
+               : "2. Protection from harmful apps");
+
+    boolean settingsAvailable = false;
+    try {
+        PackageManager pm = getPackageManager();
+        Intent settingsIntent = new Intent();
+        settingsIntent.setClassName(
+                "com.google.android.gms",
+                "com.google.android.gms.security.settings.VerifyAppsSettingsActivity"
+        );
+        settingsAvailable = settingsIntent.resolveActivity(pm) != null;
+    } catch (Throwable ignored) {
+        // Unknown remains unknown. No elevated privileges or scan attempted.
+    }
 
     logLabelValue(
-            gr ? "Ανίχνευση Play Protect" : "Play Protect detection",
-            (gr ? "Αποτυχία (" : "Failed (") + e.getMessage() + ")"
+            "Play Protect",
+            gr ? "Δεν επιβεβαιώθηκε η κατάστασή του."
+               : "Its status was not verified."
     );
-}
 
-// ------------------------------------------------------------
-// 4) Trust Boundary Clarification
-// ------------------------------------------------------------
-logLine();
-logInfo(gr ? "Πεδίο ασφάλειας"
-           : "Security scope");
+    if (settingsAvailable) {
+        logInfo(gr
+                ? "Εντοπίστηκε πρόσβαση σε σχετικές ρυθμίσεις, αλλά δεν γνωρίζουμε αν η προστασία είναι ενεργή. Δεν πραγματοποιήθηκε σάρωση από το εργαστήριο."
+                : "Relevant settings were found, but we do not know whether protection is active. This lab did not scan the device.");
+    } else {
+        logInfo(gr
+                ? "Δεν επιβεβαιώθηκε πρόσβαση στις σχετικές ρυθμίσεις. Δεν γνωρίζουμε αν η προστασία είναι ενεργή. Δεν πραγματοποιήθηκε σάρωση από το εργαστήριο."
+                : "Access to the relevant settings was not verified. We do not know whether protection is active. This lab did not scan the device.");
+    }
 
-logLabelValue(
-        "Play Protect",
-        gr ? "Έλεγχος κακόβουλου λογισμικού και επαλήθευση εφαρμογών"
-           : "Malware scanning and app verification"
-);
+    // 3. Two short, actionable instructions; no technical jargon.
+    logLine();
+    logInfo(gr ? "3. Τι πρέπει να κάνετε" : "3. What you should do");
+    logInfo(gr ? "Ελέγξτε αν υπάρχει νεότερη ενημέρωση Android."
+               : "Check whether a newer Android update is available.");
+    logInfo(gr
+            ? "Ανοίξτε Play Store → Προφίλ → Play Protect → Ρυθμίσεις και βεβαιωθείτε ότι η σάρωση εφαρμογών είναι ενεργή."
+            : "Open Play Store → Profile → Play Protect → Settings and make sure app scanning is enabled.");
 
-logLabelValue(
-        gr ? "Περιορισμός" : "Limitation",
-        gr ? "ΔΕΝ επιδιορθώνει ευπάθειες συστήματος ή σφάλματα firmware"
-           : "Does NOT patch system vulnerabilities or firmware flaws"
-);
-
-// ------------------------------------------------------------
-// 5) Manual Guidance (Technician)
-// ------------------------------------------------------------
-logLine();
-logInfo(gr ? "Χειροκίνητη επαλήθευση"
-           : "Manual verification");
-
-logLabelValue(
-        gr ? "Έλεγχος 1" : "Check 1",
-        gr ? "Ρυθμίσεις > Πληροφορίες τηλεφώνου > Έκδοση Android > Επίπεδο ενημέρωσης ασφαλείας"
-           : "Settings > About phone > Android version > Security patch level"
-);
-
-logLabelValue(
-        gr ? "Σημείωση" : "Note",
-        gr ? "Πολύ παλιά επίπεδα ενημέρωσης αυξάνουν την έκθεση σε exploits"
-           : "Very old patch levels increase exploit exposure"
-);
-
-logLabelValue(
-        gr ? "Έλεγχος 2" : "Check 2",
-        gr ? "Google Play Store > Play Protect > Έλεγχος ότι η σάρωση είναι ενεργή"
-           : "Google Play Store > Play Protect > Verify scanning enabled"
-);
-
-appendHtml("<br>");
-logOk(gr ? "Το Lab 22 ολοκληρώθηκε (απογραφή ενδείξεων ενημερώσεων ασφαλείας)."
-         : "Lab 22 finished (security-update indicator inventory).");
-logInfo(gr ? "Η κατάσταση Play Protect δεν πιστοποιήθηκε ανεξάρτητα."
-           : "Play Protect status was not independently certified.");
-logLine();
-
+    appendHtml("<br>");
+    logOk(gr
+            ? "Το Lab 22 ολοκληρώθηκε — καταγράφηκαν τα διαθέσιμα στοιχεία ασφάλειας."
+            : "Lab 22 completed — available security information was recorded.");
+    logLine();
 }
 
 // ============================================================
