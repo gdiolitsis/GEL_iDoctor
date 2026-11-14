@@ -36,7 +36,7 @@ public final class Lab23PlainLanguageAccessContractTest {
         assertTrue(s.contains("Μπορείτε να είστε ήσυχοι για αυτό που επιβεβαιώσαμε"));
         assertTrue(s.contains("Το ότι έχετε ενεργές τις Επιλογές προγραμματιστή δεν σημαίνει ότι κάποιος έχει παραβιάσει το κινητό σας."));
         assertTrue(s.contains("Αυτό δεν σημαίνει ότι το κινητό έχει παραβιαστεί."));
-        assertTrue(s.contains("Το εργαστήριο δεν μπορεί να πιστοποιήσει τη συνολική ασφάλεια της συσκευής."));
+        assertTrue(s.contains("Αν δεν χρησιμοποιείτε ασύρματο έλεγχο από υπολογιστή, διατηρήστε την αντίστοιχη ρύθμιση απενεργοποιημένη."));
     }
 
     @Test public void localProbesRemainButDoNotMasqueradeAsSecurityFindings() throws Exception {
