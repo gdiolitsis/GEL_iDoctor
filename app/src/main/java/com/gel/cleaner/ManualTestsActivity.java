@@ -33205,45 +33205,179 @@ if (lab14bConsumptionPerHour > 0f &&
 }
    
 // ------------------------------------------------------------
-// DEVICE INTEGRITY / INSTABILITY FINDINGS
-// LAB 29 confirmed measurements — no manipulation accusation
+// 7) TECHNICIAN INTAKE — LABS 28 AND 29 ARE INDEPENDENT EVIDENCE AXES
 // ------------------------------------------------------------
-int lab29AuthenticityScore =
-        p.getInt("lab29_authenticity_score", -1);
+// A system-reported device model does not prove genuine parts; a buyer's IMEI
+// lookup is not proof of theft, lawful ownership, or a global blacklist clearance.
+// No personally identifying IMEI or seller documents are saved in these prefs.
+final long technicianWallNow = System.currentTimeMillis();
+final long technicianElapsedNow = SystemClock.elapsedRealtime();
 
-int lab29InstabilityScore =
-        p.getInt("lab29_instability_score", 0);
+// ------------------------------------------------------------
+// A) LAB 28 — MEASURED DEVICE CONDITIONS (NOT ROOT-CAUSE DIAGNOSES)
+// ------------------------------------------------------------
+appendHtml("<br>");
+logInfo(gr ? "LAB 28 — Τεχνικές μετρήσεις προς τον επισκευαστή"
+           : "LAB 28 — Technician's measured device conditions");
+logLine();
 
-boolean hwInstability =
-        p.getBoolean("lab29_instability_pattern", false);
+boolean technicianLab28Fresh = LabEvidenceFreshness.isFresh(
+        p.getInt("lab28_obs_schema", 0),
+        p.getLong("lab28_obs_wall_ms", 0L),
+        p.getLong("lab28_obs_elapsed_ms", -1L),
+        technicianWallNow, technicianElapsedNow);
+if (technicianLab28Fresh) {
+    long measuredUptime = p.getLong("lab28_obs_uptime_ms", -1L);
+    if (measuredUptime >= 0L) {
+        logLabelOkValue(gr ? "Uptime στο Lab 28" : "Lab 28 recorded uptime",
+                (measuredUptime / 3600000L) + (gr ? " ώρες" : " hours"));
+    }
+    if (p.contains("lab28_obs_battery_c")) {
+        logLabelOkValue(gr ? "Θερμοκρασία μπαταρίας" : "Battery temperature",
+                String.format(Locale.US, "%.1f °C",
+                        p.getFloat("lab28_obs_battery_c", Float.NaN)));
+    }
+    if (p.contains("lab28_obs_cpu_c")) {
+        logLabelOkValue(gr ? "Θερμοκρασία CPU" : "CPU temperature",
+                String.format(Locale.US, "%.1f °C",
+                        p.getFloat("lab28_obs_cpu_c", Float.NaN)));
+    }
+    if (p.contains("lab28_obs_gpu_c")) {
+        logLabelOkValue(gr ? "Θερμοκρασία GPU" : "GPU temperature",
+                String.format(Locale.US, "%.1f °C",
+                        p.getFloat("lab28_obs_gpu_c", Float.NaN)));
+    }
+    int mentionMask = p.getInt("lab28_obs_mention_mask", 0);
+    if (mentionMask != 0) {
+        StringBuilder mentions = new StringBuilder();
+        if ((mentionMask & 1) != 0) mentions.append(gr ? "επανεκκινήσεις, " : "reboots, ");
+        if ((mentionMask & 2) != 0) mentions.append(gr ? "δίκτυο, " : "network, ");
+        if ((mentionMask & 4) != 0) mentions.append(gr ? "αισθητήρες, " : "sensors, ");
+        if ((mentionMask & 8) != 0) mentions.append(gr ? "θερμοκρασία, " : "temperature, ");
+        if ((mentionMask & 16) != 0) mentions.append(gr ? "φόρτιση, " : "charging, ");
+        logLabelValue(gr ? "Ανεπιβεβαίωτες αναφορές logs" : "Unverified log mentions",
+                mentions.substring(0, mentions.length() - 2));
+    } else {
+        logLabelValue(gr ? "Αναφορές στα logs" : "Log mentions",
+                gr ? "Δεν αναγνωρίστηκαν σχετικές λέξεις· αυτό δεν αποδεικνύει απουσία βλάβης."
+                   : "No matching keywords; this does not establish an absence of faults.");
+    }
+    logLabelValue(gr ? "Όριο τεχνικού ευρήματος" : "Technical evidence limit",
+            gr ? "Οι μετρήσεις δεν αποδεικνύουν προηγούμενη επέμβαση στη μητρική ή γνησιότητα εξαρτημάτων."
+               : "Readings cannot establish past motherboard repair or original component provenance.");
+} else {
+    logLabelValue(gr ? "Στοιχεία Lab 28" : "Lab 28 evidence",
+            gr ? "Δεν υπάρχουν πρόσφατες μετρήσεις της ίδιας εκκίνησης."
+               : "No fresh same-boot measurements available.");
+}
+
+// ------------------------------------------------------------
+// B) LAB 29 — TWO INDEPENDENT QUESTIONS: OEM IDENTITY AND OWNERSHIP
+// ------------------------------------------------------------
+appendHtml("<br>");
+logInfo(gr ? "LAB 29 — Ταυτότητα, προέλευση και μεταβίβαση"
+           : "LAB 29 — Device identity, provenance and handover");
+logLine();
+boolean technicianLab29Fresh = LabEvidenceFreshness.isFresh(
+        p.getInt("lab29_obs_schema", 0),
+        p.getLong("lab29_ts", 0L),
+        p.getLong("lab29_obs_elapsed_ms", -1L),
+        technicianWallNow, technicianElapsedNow);
+if (technicianLab29Fresh) {
+    logLabelValue(gr ? "Στοιχεία κατασκευαστή κατά Android" : "Android-reported manufacturer/model",
+            p.getString("lab29_obs_manufacturer", "") + " / "
+                    + p.getString("lab29_obs_model", ""));
+    logLabelValue(gr ? "Κωδικός συσκευής κατά Android" : "Android-reported device code",
+            p.getString("lab29_obs_device", ""));
+    logLabelValue(gr ? "Γνησιότητα συσκευής / ανταλλακτικών" : "Device / component authenticity",
+            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ — απαιτούνται τεκμήρια κατασκευαστή ή φυσικός έλεγχος."
+               : "UNVERIFIED — OEM evidence or physical inspection is required.");
+} else {
+    logLabelValue(gr ? "Στοιχεία Lab 29" : "Lab 29 evidence",
+            gr ? "Δεν υπάρχουν πρόσφατες παρατηρήσεις της ίδιας εκκίνησης."
+               : "No recent same-boot observations.");
+    logLabelValue(gr ? "Γνησιότητα συσκευής / ανταλλακτικών" : "Device / component authenticity",
+            gr ? "ΑΓΝΩΣΤΗ — δεν έχει πιστοποιηθεί."
+               : "UNKNOWN — not independently authenticated.");
+}
+
+boolean technicianBuyerFresh = technicianLab29Fresh
+        && p.getBoolean("lab29_precheck_user_reported", false)
+        && LabEvidenceFreshness.isReportedBuyerCheckFresh(
+                p.getInt("lab29_precheck_schema", 0),
+                p.getLong("lab29_ts", 0L),
+                p.getLong("lab29_precheck_ts", 0L),
+                p.getLong("lab29_precheck_elapsed_ms", -1L),
+                technicianWallNow, technicianElapsedNow);
+int technicianImeiStatus = technicianBuyerFresh
+        ? p.getInt("lab29_precheck_imei_status", UsedDevicePrecheckPolicy.IMEI_UNKNOWN)
+        : UsedDevicePrecheckPolicy.IMEI_UNKNOWN;
+boolean technicianMatch = technicianBuyerFresh
+        && p.getBoolean("lab29_precheck_identifiers", false);
+boolean technicianDocuments = technicianBuyerFresh
+        && p.getBoolean("lab29_precheck_documents", false);
+boolean technicianTransfer = technicianBuyerFresh
+        && p.getBoolean("lab29_precheck_transfer", false);
+
+int technicianDisposition = TechnicianPrecheckAssessment.disposition(
+        technicianLab29Fresh, technicianBuyerFresh, technicianImeiStatus,
+        technicianMatch, technicianDocuments, technicianTransfer);
+
+logLabelValue(gr ? "Νόμιμη κυριότητα / τυχόν κλοπή" : "Lawful ownership / possible theft",
+        gr ? "ΔΕΝ ΠΙΣΤΟΠΟΙΕΙΤΑΙ από τα διαθέσιμα Android δεδομένα."
+           : "NOT DETERMINABLE from available Android data.");
+if (technicianBuyerFresh) {
+    if (technicianImeiStatus == UsedDevicePrecheckPolicy.IMEI_FLAGGED_REPORTED) {
+        logLabelErrorValue(gr ? "Εξωτερικός έλεγχος IMEI (κατά δήλωση)" : "External IMEI check (buyer reported)",
+                gr ? "ΔΗΛΩΘΗΚΕ αποκλεισμός IMEI. Δεν αποδεικνύεται αυτόματα κλοπή."
+                   : "IMEI block REPORTED. Theft is not thereby established.");
+    } else if (technicianImeiStatus == UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED) {
+        logLabelOkValue(gr ? "Εξωτερικός έλεγχος IMEI (κατά δήλωση)" : "External IMEI check (buyer reported)",
+                gr ? "Ο αγοραστής αναφέρει μη καταχώριση αποκλεισμού. Δεν αποδεικνύεται νόμιμη κυριότητα."
+                   : "Buyer reports no block-list hit; ownership remains unverified.");
+    } else {
+        logLabelValue(gr ? "Κατάσταση IMEI" : "IMEI check status",
+                gr ? "Δεν έχει δηλωθεί αξιόπιστος εξωτερικός έλεγχος."
+                   : "No reliable external check reported.");
+    }
+    logLabelValue(gr ? "Συμφωνία αναγνωριστικών" : "Identifier comparison",
+            technicianMatch ? (gr ? "Ελέγχθηκε κατά δήλωση" : "Buyer reports checked")
+                            : (gr ? "Εκκρεμεί" : "Pending"));
+    logLabelValue(gr ? "Παραστατικά και πωλητής" : "Purchase documents and seller",
+            technicianDocuments ? (gr ? "Ελέγχθηκαν κατά δήλωση" : "Buyer reports checked")
+                                : (gr ? "Εκκρεμεί" : "Pending"));
+    logLabelValue(gr ? "Αφαίρεση λογαριασμών / νέα ενεργοποίηση" : "Account removal / new activation",
+            technicianTransfer ? (gr ? "Δηλώθηκε επιτυχής" : "Buyer reports success")
+                               : (gr ? "Δεν έχει επιβεβαιωθεί" : "Not confirmed"));
+} else {
+    logLabelValue(gr ? "Εξωτερικός έλεγχος / έγγραφα / FRP" : "External IMEI / paperwork / FRP",
+            gr ? "Δεν υπάρχουν πρόσφατες δηλώσεις για την τρέχουσα εκτέλεση."
+               : "No fresh buyer statements for this run.");
+}
 
 appendHtml("<br>");
-
-// ------------------------------------------------------------
-// AUTHENTICITY / INTEGRITY RESULT
-// ------------------------------------------------------------
-// Android identity, fingerprint and availability cannot establish OEM
-// part origin or past repair. Retain legacy fields only as audit history.
-logLabelValue(
-        gr ? "Γνησιότητα / ακεραιότητα OEM" : "OEM authenticity / physical integrity",
-        gr ? "ΑΓΝΩΣΤΟ — απαιτείται τεκμηρίωση OEM ή φυσικός έλεγχος."
-           : "UNKNOWN — requires OEM provenance or physical inspection.");
-if (lab29AuthenticityScore >= 0) {
-    logLabelValue(gr ? "Παλαιός μη βαθμονομημένος δείκτης" : "Legacy uncalibrated index",
-            lab29AuthenticityScore + "/100 — " +
-            (gr ? "όχι απόδειξη γνησιότητας ή επισκευής" : "not authenticity or repair evidence"));
-}
-if (hwInstability || lab29InstabilityScore > 0) {
-    logLabelValue(gr ? "Παλαιές ενδείξεις" : "Legacy instability hints",
-            gr ? "Μη επαληθευμένα στοιχεία προηγούμενης μορφής — απαιτούν επιβεβαίωση."
-               : "Old unverified indicators require source and timestamp validation.");
+logInfo(gr ? "Σύσταση παραλαβής συσκευής" : "Technician intake guidance");
+if (technicianDisposition
+        == TechnicianPrecheckAssessment.REPORTED_IMEI_BLOCK_REQUIRES_REVIEW) {
+    logLabelErrorValue(gr ? "Έλεγχος προέλευσης πριν την παραλαβή" : "Provenance review before intake",
+            gr ? "ΣΤΑΣΗ ΓΙΑ ΕΠΑΛΗΘΕΥΣΗ — επιβεβαίωση αποκλεισμού με πάροχο/αρμόδιο φορέα και έλεγχος δικαιώματος επισκευής."
+               : "HOLD FOR VERIFICATION — confirm reported block with carrier/authority and right to authorize repair.");
+} else if (technicianDisposition
+        == TechnicianPrecheckAssessment.BUYER_REPORTED_CHECKLIST_COMPLETE) {
+    logLabelOkValue(gr ? "Κατάσταση checklist" : "Checklist status",
+            gr ? "Ολοκληρώθηκε ΚΑΤΑ ΔΗΛΩΣΗ αγοραστή, όχι ανεξάρτητη πιστοποίηση."
+               : "BUYER-REPORTED complete; no independent certification.");
 } else {
-    logLabelValue(gr ? "Σταθερότητα εξαρτημάτων" : "Component stability",
-            gr ? "Δεν υπάρχουν επαληθευμένες μετρήσεις σταθερότητας εξαρτημάτων."
-               : "No verified component-stability readings were available.");
+    logLabelValue(gr ? "Έγγραφα / προέλευση πριν την παραλαβή" : "Documents / provenance before intake",
+            gr ? "ΑΝΕΠΑΡΚΗ ΣΤΟΙΧΕΙΑ — επαλήθευση ταυτότητας εντολέα, παραστατικών και IMEI όπου απαιτείται."
+               : "INSUFFICIENT EVIDENCE — verify authorized customer, paperwork and IMEI as appropriate.");
 }
+logLabelValue(gr ? "Ανεξάρτητες αξιολογήσεις" : "Independent assessments",
+        gr ? "Γνήσια συσκευή μπορεί να έχει αμφισβητούμενη προέλευση· μη γνήσιο εξάρτημα δεν αποδεικνύει κλοπή."
+           : "An authentic device can have disputed provenance; a non-OEM part does not establish theft.");
 
-    // ------------------------------------------------------------
+// ------------------------------------------------------------
+// ------------------------------------------------------------
     // 8) EXPORT NOTE
     // ------------------------------------------------------------
     appendHtml("<br>");
