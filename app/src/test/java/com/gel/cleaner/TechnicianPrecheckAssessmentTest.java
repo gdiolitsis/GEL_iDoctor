@@ -36,4 +36,17 @@ public class TechnicianPrecheckAssessmentTest {
                 TechnicianPrecheckAssessment.disposition(true, true, UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_GSMA_REPORTED,
                         UsedDevicePrecheckPolicy.IMEI_UNKNOWN, true, true, true));
     }
+    @Test public void unknownOfficialSourceNeverClaimsConfirmedStatus() {
+        assertEquals(TechnicianPrecheckAssessment.MANUAL_CHECKS_INCOMPLETE,
+                TechnicianPrecheckAssessment.disposition(true, true,
+                        UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED,
+                        UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED,
+                        true, true, true));
+        assertEquals(TechnicianPrecheckAssessment.MANUAL_CHECKS_INCOMPLETE,
+                TechnicianPrecheckAssessment.disposition(true, true,
+                        UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED,
+                        UsedDevicePrecheckPolicy.IMEI_FLAGGED_REPORTED,
+                        true, true, true));
+    }
+
 }
