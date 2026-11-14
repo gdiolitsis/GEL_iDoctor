@@ -29239,34 +29239,49 @@ private void lab25CrashHistory() {
     final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
-    logInfo(gr ? "LAB 25 — Διαθέσιμα στοιχεία crash / παγώματος"
-            : "LAB 25 — Available crash / ANR evidence");
+    logInfo(gr ? "LAB 25 — Σφάλματα εφαρμογών και έλεγχος αποθήκευσης"
+               : "LAB 25 — App errors and storage check");
     logLine();
 
-    logLabelValue(gr ? "Κάλυψη" : "Coverage", gr
-            ? "Το Android περιορίζει την πρόσβαση. Ο έλεγχος δεν αποτελεί πλήρες ιστορικό όλων των εφαρμογών ή πιστοποίηση σταθερότητας."
-            : "Android restricts access. This is not a complete history of all apps or a stability certification.");
-
-    // This API may be restricted to our UID. It is not a historical query.
+    // Current error-state snapshot is not historical data. A null response
+    // is unavailable data; only a non-null empty list means no visible errors.
+    logInfo(gr ? "1. Τρέχοντα σφάλματα εφαρμογών"
+               : "1. Current app errors");
     try {
         ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
         if (am == null) throw new IllegalStateException("Service unavailable");
         List<ActivityManager.ProcessErrorStateInfo> errors = am.getProcessesInErrorState();
-        int visible = 0;
-        if (errors != null) for (ActivityManager.ProcessErrorStateInfo error : errors) {
-            if (error == null) continue;
-            visible++;
-            logLabelWarnValue(error.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING
-                    ? "ANR" : "ERROR", safeStr(error.processName) + " — " + safeStr(error.shortMsg));
+        if (errors == null) {
+            logLabelValue(gr ? "Τρέχουσα κατάσταση" : "Current status",
+                    gr ? "Το Android δεν επέστρεψε στοιχεία για αυτή τη μέτρηση."
+                       : "Android did not return data for this reading.");
+        } else {
+            int visible = 0;
+            for (ActivityManager.ProcessErrorStateInfo error : errors) {
+                if (error == null) continue;
+                visible++;
+                logLabelWarnValue(
+                        error.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING
+                                ? (gr ? "Εφαρμογή που δεν ανταποκρίνεται" : "App not responding")
+                                : (gr ? "Σφάλμα εφαρμογής" : "App error"),
+                        safeStr(error.processName) + " — " + safeStr(error.shortMsg));
+            }
+            if (visible == 0) {
+                logLabelOkValue(gr ? "Τρέχουσα κατάσταση" : "Current status",
+                        gr ? "Δεν εμφανίζονται σφάλματα εφαρμογών αυτή τη στιγμή."
+                           : "No app errors are visible right now.");
+            } else {
+                logLabelWarnValue(gr ? "Τρέχουσες εγγραφές" : "Current entries",
+                        (gr ? "Καταγράφηκαν: " : "Recorded: ") + visible);
+            }
         }
-        logInfo(gr
-                ? "Τρέχον στιγμιότυπο: " + visible + " ορατές εγγραφές. Η πρόσβαση μπορεί να περιορίζεται στο iDoctor· δεν είναι ιστορικό της συσκευής."
-                : "Current snapshot: " + visible + " visible records. Access may be limited to iDoctor; this is not device history.");
     } catch (RuntimeException unavailable) {
-        logLabelValue(gr ? "Τρέχον στιγμιότυπο" : "Current snapshot",
-                gr ? "Μη διαθέσιμα δεδομένα." : "Data unavailable.");
+        logLabelValue(gr ? "Τρέχουσα κατάσταση" : "Current status",
+                gr ? "Η μέτρηση δεν ήταν διαθέσιμη." : "The reading was unavailable.");
     }
 
+    // Query Android's available historical entries only when access is granted.
+    // No access is never interpreted as zero crashes.
     String[] tags = {"system_app_crash", "data_app_crash", "system_app_anr",
             "data_app_anr", "system_server_crash", "system_server_wtf", "system_server_anr"};
     GelCrashCoverage coverage = new GelCrashCoverage(tags.length);
@@ -29276,11 +29291,16 @@ private void lab25CrashHistory() {
             == android.content.pm.PackageManager.PERMISSION_GRANTED;
     if (!allowed && checkSelfPermission("android.permission.READ_DROPBOX_DATA")
             == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-        android.app.AppOpsManager ops = (android.app.AppOpsManager) getSystemService(APP_OPS_SERVICE);
+        android.app.AppOpsManager ops =
+                (android.app.AppOpsManager) getSystemService(APP_OPS_SERVICE);
         try {
-            allowed = ops != null && ops.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    android.os.Process.myUid(), getPackageName()) == android.app.AppOpsManager.MODE_ALLOWED;
-        } catch (RuntimeException ignored) { allowed = false; }
+            allowed = ops != null && ops.checkOpNoThrow(
+                    android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(), getPackageName())
+                    == android.app.AppOpsManager.MODE_ALLOWED;
+        } catch (RuntimeException ignored) {
+            allowed = false;
+        }
     }
     DropBoxManager dropbox = (DropBoxManager) getSystemService(DROPBOX_SERVICE);
     if (allowed && dropbox != null) for (String tag : tags) {
@@ -29290,10 +29310,13 @@ private void lab25CrashHistory() {
             int scanned = 0;
             while (true) {
                 DropBoxManager.Entry entry = dropbox.getNextEntry(tag, since);
-                if (entry == null) { complete = true; break; }
+                if (entry == null) {
+                    complete = true;
+                    break;
+                }
                 try {
                     long timestamp = entry.getTimeMillis();
-                    // Bounded work; a truncated query is never reported as complete.
+                    // A bounded or interrupted query cannot imply a complete history.
                     if (scanned >= 50 || timestamp <= since) break;
                     scanned++;
                     since = timestamp;
@@ -29301,64 +29324,77 @@ private void lab25CrashHistory() {
                     else if (tag.endsWith("_anr")) anrs++;
                     else crashes++;
                     records.add(tag + " — " + java.text.DateFormat.getDateTimeInstance()
-                            .format(new java.util.Date(timestamp)) + ": " + readDropBoxEntry(entry));
+                            .format(new java.util.Date(timestamp)) + ": "
+                            + readDropBoxEntry(entry));
                 } finally {
                     entry.close();
                 }
             }
         } catch (RuntimeException unavailable) {
-            // Permission failures and partial reads must not become healthy zero counts.
+            // Restricted data is not a measured healthy zero.
         }
         coverage.recordQuery(complete);
     }
 
     appendHtml("<br>");
-    logInfo(gr ? "Διαθέσιμο ιστορικό Android DropBox" : "Available Android DropBox history");
-    logLine();
-    String unavailable = gr ? "Μη διαθέσιμα δεδομένα — ανεπαρκής πρόσβαση ή ελλιπής ανάγνωση."
-            : "Data unavailable — insufficient access or incomplete reading.";
+    logInfo(gr ? "2. Προηγούμενα καταγεγραμμένα συμβάντα"
+               : "2. Previously recorded events");
     if (coverage.complete()) {
-        logInfo(gr ? "Συμβάντα crash στις διαθέσιμες καταγραφές: " + crashes
-                : "Crash events in available records: " + crashes);
-        logInfo("ANR: " + anrs);
-        logInfo(gr ? "Συμβάντα συστήματος: " + system : "System events: " + system);
-        logLabelValue(gr ? "Περιορισμός" : "Limitation", gr
-                ? "Καταμετρήθηκαν τα συμβάντα που υπήρχαν στο διαθέσιμο ιστορικό."
-                : "Events present in the accessible history were counted.");
+        if (crashes == 0)
+            logLabelOkValue(gr ? "Σφάλματα εφαρμογών" : "App crashes", "0");
+        else
+            logLabelWarnValue(gr ? "Σφάλματα εφαρμογών" : "App crashes",
+                    String.valueOf(crashes));
+        if (anrs == 0)
+            logLabelOkValue(gr ? "Παγώματα εφαρμογών" : "App freezes", "0");
+        else
+            logLabelWarnValue(gr ? "Παγώματα εφαρμογών" : "App freezes",
+                    String.valueOf(anrs));
+        if (system == 0)
+            logLabelOkValue(gr ? "Συμβάντα συστήματος" : "System events", "0");
+        else
+            logLabelWarnValue(gr ? "Συμβάντα συστήματος" : "System events",
+                    String.valueOf(system));
     } else {
-        logLabelValue(gr ? "Σύνοψη ιστορικού" : "History summary", unavailable);
-        if (!records.isEmpty()) logInfo(gr
-                ? "Ακολουθούν μόνο οι εγγραφές που ήταν προσβάσιμες· δεν αποτελούν πλήρες σύνολο."
-                : "Only accessible records follow; these are not a complete total.");
+        logLabelValue(gr ? "Διαθέσιμο ιστορικό" : "Available history",
+                gr ? "Το Android δεν παρείχε πλήρες ιστορικό στην εφαρμογή."
+                   : "Android did not provide a complete history to the app.");
+        if (!records.isEmpty()) {
+            logLabelValue(gr ? "Εγγραφές που διαβάστηκαν" : "Entries read",
+                    String.valueOf(records.size()));
+        }
     }
+    // Real entries are retained for service review; their presence, not an
+    // invented hardware explanation, is the reason for any caution color.
     for (String record : records)
-        logLabelWarnValue(gr ? "Προσβάσιμη καταγραφή" : "Accessible record", record);
-    logLabelValue(gr ? "Δείκτης κινδύνου σταθερότητας" : "Stability risk score", gr
-            ? "Δεν υπολογίζεται: οι διαθέσιμες καταγραφές δεν επαρκούν για αξιόπιστη συνολική βαθμολογία."
-            : "Not calculated: available records do not support a reliable overall score.");
+        logLabelWarnValue(gr ? "Καταγεγραμμένο συμβάν" : "Recorded event", record);
 
     appendHtml("<br>");
-    logInfo(gr ? "Στιγμιαία δοκιμή I/O αποθηκευτικού" : "Storage I/O spot test");
+    logInfo(gr ? "3. Έλεγχος εγγραφής και ανάγνωσης αρχείου"
+               : "3. File write-and-read check");
     long latency = storageLatencyProbe();
-    if (latency < 0) logLabelValue(gr ? "Μέτρηση" : "Reading",
-            gr ? "Η δοκιμή ανάγνωσης/εγγραφής δεν επαληθεύτηκε· η αιτία παραμένει άγνωστη."
-               : "Write/read spot test not verified; cause remains unknown.");
-    else {
-        logInfo("I/O: " + latency + " ms");
-        logInfo(gr
-                ? "Επαληθεύτηκε εγγραφή και ανάγνωση 4 KB χωρίς διαφορά στα δεδομένα."
-                : "A 4 KB write-and-read test passed the byte comparison.");
+    if (latency < 0) {
+        logLabelWarnValue(gr ? "Δοκιμή αποθήκευσης" : "Storage test",
+                gr ? "Η δοκιμή δεν ολοκληρώθηκε επιτυχώς. Επαναλάβετε τον έλεγχο."
+                   : "The test did not complete successfully. Run the check again.");
+    } else {
+        logLabelOkValue(gr ? "Δοκιμή αποθήκευσης" : "Storage test",
+                gr ? "Επιτυχής εγγραφή και ανάγνωση αρχείου 4 KB."
+                   : "Successfully wrote and read a 4 KB file.");
+        logLabelOkValue(gr ? "Έλεγχος δεδομένων" : "Data verification",
+                gr ? "Τα δεδομένα που διαβάστηκαν ταιριάζουν ακριβώς."
+                   : "The data read back matched exactly.");
+        logLabelOkValue(gr ? "Χρόνος δοκιμής" : "Test duration",
+                latency == 0 ? (gr ? "Λιγότερο από 1 ms" : "Less than 1 ms")
+                             : latency + " ms");
     }
+
+    // Keep existing machine-readable coverage evidence unchanged.
     GELServiceLog.info("SUMMARY: CRASH_ORIGIN=UNCLEAR; HISTORY_COVERAGE="
             + (coverage.complete() ? "AVAILABLE_RECORDS_ONLY" : "UNAVAILABLE_OR_PARTIAL"));
     appendHtml("<br>");
-    if (coverage.complete()) {
-        logOk(gr ? "Το Lab 25 ολοκληρώθηκε (εξετάστηκαν τα προσβάσιμα συμβάντα)."
-                 : "Lab 25 finished (accessible events reviewed).");
-    } else {
-        logInfo(gr ? "Το Lab 25 κατέγραψε μερικό ιστορικό — δεν ολοκληρώθηκε πλήρης απογραφή συμβάντων."
-                   : "Lab 25 recorded partial history — full event inventory unavailable.");
-    }
+    logOk(gr ? "Το Lab 25 ολοκληρώθηκε — ελέγχθηκαν τα διαθέσιμα συμβάντα και η αποθήκευση."
+             : "Lab 25 completed — available events and storage were checked.");
     logLine();
 } // END lab25CrashHistory()
 
