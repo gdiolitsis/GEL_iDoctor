@@ -3067,8 +3067,8 @@ private void resetAudioAfterLab3(
         try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
         try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
 
-        // Force clean baseline
-        try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
+        // Restore the actual pre-test mode, not a forced default.
+        try { am.setMode(oldMode); } catch (Throwable ignore) {}
         try { am.setSpeakerphoneOn(oldSpeaker); } catch (Throwable ignore) {}
         try { am.setMicrophoneMute(oldMicMute); } catch (Throwable ignore) {}
 
@@ -6863,6 +6863,8 @@ b.setView(root);
 b.setCancelable(false);
 
 final AlertDialog d = b.create();
+final AtomicBoolean lab3Cancelled = new AtomicBoolean(false);
+final AtomicBoolean lab3Running = new AtomicBoolean(false);
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
@@ -6880,12 +6882,15 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
     if (keyCode == KeyEvent.KEYCODE_BACK &&
         event.getAction() == KeyEvent.ACTION_UP) {
 
+        lab3Cancelled.set(true);
         appendHtml("<br>");
         logWarn(gr ? "Η δοκιμή ακυρώθηκε από τον χρήστη."
                    : "Test canceled by user.");
         logLine();
 
         try { AppTTS.stop(); } catch (Throwable ignore) {}
+        restoreLab3Audio();
+        enableSingleExportButton();
         dialog.dismiss();
         return true;
     }
@@ -6912,23 +6917,15 @@ if (!isFinishing() && !isDestroyed()) {
 // ---------------------------
 
 exitBtn.setOnClickListener(v -> {
-
+    if (lab3Cancelled.getAndSet(true)) return;
     appendHtml("<br>");
     logWarn(gr ? "Η δοκιμή ακυρώθηκε από τον χρήστη."
                : "Test canceled by user.");
     logLine();
-
     try { AppTTS.stop(); } catch (Throwable ignore) {}
     d.dismiss();
-
+    restoreLab3Audio();
     runOnUiThread(this::enableSingleExportButton);
-});
-
-start.setOnClickListener(v -> {
-    try { AppTTS.stop(); } catch (Throwable ignore) {}
-    d.dismiss();
-
-    // 👉 εδώ συνεχίζεις το test
 });
 
 // ------------------------------------------------------------
@@ -6987,14 +6984,6 @@ start.setOnClickListener(v -> {
 });
 
 // ------------------------------------------------------------
-// TTS INTRO — DIALOG BOUND (GLOBAL MUTE SAFE)
-// ------------------------------------------------------------
-new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (d.isShowing() && !AppTTS.isMuted(this)) {
-        AppTTS.ensureSpeak(this, ttsText);
-    }
-}, 120);
-
 });   // <-- ΚΛΕΙΝΕΙ ΤΟ runOnUiThread
 }   
 
