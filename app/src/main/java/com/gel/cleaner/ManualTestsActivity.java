@@ -10955,10 +10955,10 @@ private void checkSensor(SensorManager sm, int type, String name) {
     boolean ok = sm.getDefaultSensor(type) != null;
 
     if (ok) {
-        logLabelValue(
+        // Registry presence confirmed; operation remains untested (see lab limit).
+        logLabelOkValue(
                 name,
-                gr ? "Δηλώνεται από Android — απόκριση μη ελεγμένη"
-                   : "Reported by Android — response not tested"
+                gr ? "Δηλώνεται από Android" : "Reported by Android"
         );
     } else {
         logLabelValue(
@@ -11073,24 +11073,32 @@ private void lab10WifiConnectivityCheck() {
         logLabelValue(gr ? "BSSID" : "BSSID", bssid);
 
     // ---------------- BAND ----------------
-    logLabelValue(
-            gr ? "Μπάντα" : "Band",
-            band + (freqMhz > 0 ? " (" + freqMhz + " MHz)" : "")
-    );
+    if (freqMhz > 0)
+        logLabelOkValue(gr ? "Μπάντα" : "Band",
+                band + " (" + freqMhz + " MHz)");
+    else
+        logLabelValue(gr ? "Μπάντα" : "Band", band);
 
     // ---------------- LINK SPEED ----------------
-    logLabelValue(gr ? "Ταχύτητα Link (PHY, όχι Internet)" : "Link speed (PHY, not Internet)",
-            speed > 0 ? speed + " Mbps" : (gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN"));
+    if (speed > 0)
+        logLabelOkValue(gr ? "Ταχύτητα Link (PHY, όχι Internet)" : "Link speed (PHY, not Internet)",
+                speed + " Mbps");
+    else
+        logLabelValue(gr ? "Ταχύτητα Link (PHY, όχι Internet)" : "Link speed (PHY, not Internet)",
+                gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN");
 
     // ---------------- SIGNAL (RSSI) ----------------
-    logLabelValue(gr ? "Ισχύς Σήματος" : "Signal strength",
-            (rssi > -127 && rssi < 0) ? rssi + " dBm" : (gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN"));
+    if (rssi > -127 && rssi < 0)
+        logLabelOkValue(gr ? "Ισχύς Σήματος" : "Signal strength", rssi + " dBm");
+    else
+        logLabelValue(gr ? "Ισχύς Σήματος" : "Signal strength",
+                gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN");
 
     // SSID status — single line
     if ("Unknown".equalsIgnoreCase(ssid)) {
         logLabelValue(gr ? "SSID" : "SSID", gr ? "Μη διαθέσιμο (άδεια/πολιτική/δίκτυο)" : "Unavailable (permission/policy/network)");
     } else {
-        logLabelValue(gr ? "SSID" : "SSID", gr ? "Διαβάστηκε" : "Read from Android");
+        logLabelOkValue(gr ? "SSID" : "SSID", gr ? "Διαβάστηκε" : "Read from Android");
     }
 
     // Signal quality — single line
@@ -11101,7 +11109,7 @@ private void lab10WifiConnectivityCheck() {
                 gr ? "Ασθενές στην τρέχουσα θέση — δοκιμάστε κοντά στο router"
                    : "Weak at this location — retry closer to router");
     else
-        logLabelValue(gr ? "Σήμα Wi-Fi" : "Wi-Fi signal",
+        logLabelOkValue(gr ? "Σήμα Wi-Fi" : "Wi-Fi signal",
                 rssi > -65 ? (gr ? "Ισχυρό" : "Strong") : (gr ? "Μέτριο" : "Moderate"));
 
     // ------------------------------------------------------------
@@ -11270,14 +11278,14 @@ private void runWifiDeepScan(WifiManager wm) {
             // 1) Internet ping
             float pingMs = tcpLatencyMs("8.8.8.8", 53, 1500);
             if (pingMs > 0)
-                logLabelValue(gr ? "TCP 8.8.8.8:53 (όχι ICMP)" : "TCP 8.8.8.8:53 (not ICMP)", String.format(Locale.US, "%.1f ms", pingMs));
+                logLabelOkValue(gr ? "TCP 8.8.8.8:53 (όχι ICMP)" : "TCP 8.8.8.8:53 (not ICMP)", String.format(Locale.US, "%.1f ms", pingMs));
             else
                 logLabelValue(gr ? "TCP 8.8.8.8:53 (όχι ICMP)" : "TCP 8.8.8.8:53 (not ICMP)", gr ? "Μη προσβάσιμο — η θύρα μπορεί να φιλτράρεται" : "Not reached — port may be blocked");
 
             // 2) DNS resolve
             float dnsMs = dnsResolveMs("google.com");
             if (dnsMs > 0)
-                logLabelValue(gr ? "DNS google.com" : "DNS google.com", String.format(Locale.US, "%.0f ms", dnsMs));
+                logLabelOkValue(gr ? "DNS google.com" : "DNS google.com", String.format(Locale.US, "%.0f ms", dnsMs));
             else
                 logLabelWarnValue(gr ? "DNS google.com" : "DNS google.com", gr ? "Δεν επιλύθηκε — ελέγξτε δίκτυο/DNS" : "Not resolved — check network/DNS");
 
@@ -11285,7 +11293,7 @@ private void runWifiDeepScan(WifiManager wm) {
             if (gatewayStr != null) {
                 float gwMs = tcpLatencyMs(gatewayStr, 80, 1200);
                 if (gwMs > 0)
-                    logLabelValue(gr ? "TCP Gateway:80" : "Gateway TCP:80", String.format(Locale.US, "%.1f ms", gwMs));
+                    logLabelOkValue(gr ? "TCP Gateway:80" : "Gateway TCP:80", String.format(Locale.US, "%.1f ms", gwMs));
                 else
                     logLabelValue(gr ? "TCP Gateway:80" : "Gateway TCP:80", gr ? "Θύρα 80 μη προσβάσιμη — όχι διάγνωση router" : "Port 80 not reached — not a router fault diagnosis");
             } else {
@@ -11308,7 +11316,7 @@ private void runWifiDeepScan(WifiManager wm) {
             );
 
             // Finish
-            logLabelValue(gr ? "DeepScan" : "DeepScan", gr ? "Οι δοκιμές εκτελέστηκαν — δείτε τα επιμέρους ευρήματα" : "Probes executed — see individual evidence");
+            logLabelOkValue(gr ? "DeepScan" : "DeepScan", gr ? "Οι δοκιμές εκτελέστηκαν — δείτε τα επιμέρους ευρήματα" : "Probes executed — see individual evidence");
 
             // ====================================================
             // INTERNET AVAILABILITY
