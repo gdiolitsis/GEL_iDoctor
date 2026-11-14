@@ -33971,7 +33971,7 @@ if (requestCode == REQ_LAB6_COLOR) {
                 gr ? "Δεν προβλήθηκαν όλοι οι κύκλοι μοτίβων"
                    : "Not all visual pattern cycles were shown");
     } else {
-        logLabelValue(gr ? "Κάλυψη οπτικού ελέγχου" : "Visual coverage",
+        logLabelOkValue(gr ? "Κάλυψη οπτικού ελέγχου" : "Visual coverage",
                 gr ? "Παρουσιάστηκαν και οι τρεις κύκλοι μοτίβων"
                    : "All three visual pattern cycles were presented");
     }
@@ -33983,7 +33983,7 @@ if (requestCode == REQ_LAB6_COLOR) {
         logInfo(gr ? "Πιθανές κατηγορίες για διερεύνηση: burn-in, banding, mura, ανομοιομορφία."
                    : "Potential categories to investigate: burn-in, banding, mura, unevenness.");
     } else if (allPatternsShown) {
-        logLabelValue(gr ? "Παρατήρηση χρήστη" : "User observation",
+        logLabelOkValue(gr ? "Παρατήρηση χρήστη" : "User observation",
                 gr ? "Δεν αναφέρθηκαν ανωμαλίες στα παρουσιασμένα μοτίβα"
                    : "No anomalies reported in the displayed patterns");
         logInfo(gr ? "Δεν έγινε όργανο-μέτρηση φωτεινότητας, χρώματος ή burn-in."
@@ -33998,9 +33998,10 @@ if (requestCode == REQ_LAB6_COLOR) {
     logSection(gr ? "LAB 6 — Τελικό Αποτέλεσμα" : "LAB 6 — Final Result");
     logLine();
     if (allPatternsShown) {
-        logLabelValue(gr ? "Οπτικός έλεγχος" : "Visual inspection",
-                gr ? "Ολοκληρώθηκε η παρουσίαση — συμπέρασμα μόνο βάσει παρατήρησης χρήστη"
-                   : "Pattern presentation complete — user observation only");
+        logLabelOkValue(gr ? "Οπτικός έλεγχος" : "Visual inspection",
+                gr ? "Ολοκληρώθηκε η παρουσίαση" : "Pattern presentation completed");
+        logInfo(gr ? "Συμπέρασμα μόνο βάσει παρατήρησης χρήστη."
+                   : "Conclusion based on user observation only.");
     } else {
         logLabelWarnValue(gr ? "Οπτικός έλεγχος" : "Visual inspection",
                 gr ? "ΜΗ ΟΛΟΚΛΗΡΩΜΕΝΟΣ — χωρίς πράσινη διάγνωση"
@@ -34028,7 +34029,7 @@ if (requestCode == 7007) {
     logLine();
 
     if (resultCode == RESULT_OK) {
-        logLabelValue(gr ? "Περιστροφή" : "Rotation",
+        logLabelOkValue(gr ? "Περιστροφή" : "Rotation",
                 gr ? "Παρατηρήθηκε σταθερή αλλαγή βαρύτητας: όρθια → πλαγιαστή θέση"
                    : "Observed stable gravity change: upright → sideways posture");
         logInfo(gr ? "Η οθόνη της εφαρμογής παρέμεινε κατακόρυφη. "
@@ -34061,13 +34062,13 @@ if (requestCode == 7007) {
 if (requestCode == 8008) {
 
     if (resultCode == RESULT_OK) {
-        logLabelValue(gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
+        logLabelOkValue(gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
                 gr ? "Παρατηρήθηκε ακολουθία ΜΑΚΡΙΑ → ΚΟΝΤΑ → ΜΑΚΡΙΑ"
                    : "Observed FAR → NEAR → FAR transitions");
-        logInfo(gr ? "Μετρήθηκε αλλαγή ένδειξης αισθητήρα. "
-                     + "Δεν ελέγχθηκε αν σβήνει η οθόνη σε πραγματική τηλεφωνική κλήση."
-                   : "Sensor transitions were observed. "
-                     + "In-call screen blanking was not tested.");
+        logOk(gr ? "Μετρήθηκε αλλαγή ένδειξης αισθητήρα."
+                 : "Sensor indication change was measured.");
+        logInfo(gr ? "Δεν ελέγχθηκε αν σβήνει η οθόνη σε πραγματική τηλεφωνική κλήση."
+                   : "In-call screen blanking was not tested.");
     } else {
         logLabelWarnValue(gr ? "Αισθητήρας εγγύτητας" : "Proximity sensor",
                 gr ? "ΜΗ ΟΛΟΚΛΗΡΩΜΕΝΟΣ — καμία διάγνωση βλάβης"
@@ -34075,8 +34076,8 @@ if (requestCode == 8008) {
     }
 
     appendHtml("<br>");
-    logInfo(gr ? "Το Lab 7 κατέγραψε τις διαθέσιμες παρατηρήσεις."
-               : "Lab 7 recorded the available observations.");
+    logOk(gr ? "Το Lab 7 κατέγραψε τις διαθέσιμες παρατηρήσεις."
+             : "Lab 7 recorded the available observations.");
     logLine();
     enableSingleExportButton();
     return;
