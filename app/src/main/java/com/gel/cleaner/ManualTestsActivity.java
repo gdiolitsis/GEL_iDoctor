@@ -30714,6 +30714,7 @@ p.edit()
         .putInt("lab29_precheck_schema", 1)
         .putInt("lab29_precheck_status", UsedDevicePrecheckPolicy.INCOMPLETE)
         .putBoolean("lab29_precheck_user_reported", false)
+        .remove("lab29_precheck_ts")
         .putInt("lab29_instability_score", instabilityScore)
         .putBoolean("lab29_instability_pattern", instabilityDetected)
         .putLong("lab29_ts", System.currentTimeMillis())
@@ -31166,8 +31167,8 @@ boolean lab29InstabilityPattern =
 
 appendHtml("<br>");
 logInfo(gr
-        ? "Αυθεντικότητα / Ακεραιότητα συσκευής"
-        : "Device authenticity / integrity");
+        ? "Προέλεγχος μεταχειρισμένης / Ταυτότητα υλικού"
+        : "Used-device precheck / Hardware identity");
 logLine();
 
 if (lab29ObservationsAvailable) {
@@ -31195,6 +31196,27 @@ if (lab29InstabilityPattern) {
             gr ? "Μοτίβο αστάθειας" : "Instability pattern",
             lab29InstabilityScore + "/100"
     );
+}
+
+// Purchase readiness is buyer-reported only; never present it as legality proof.
+int lab29PurchaseStatus = p.getInt("lab29_precheck_status",
+        UsedDevicePrecheckPolicy.INCOMPLETE);
+boolean lab29BuyerReported = p.getBoolean("lab29_precheck_user_reported", false);
+if (lab29BuyerReported
+        && lab29PurchaseStatus == UsedDevicePrecheckPolicy.HOLD_FOR_REVIEW) {
+    logLabelErrorValue(gr ? "Προέλεγχος αγοράς" : "Pre-purchase check",
+            gr ? "Ο αγοραστής δήλωσε αποκλεισμένο IMEI — απαιτείται επιβεβαίωση παρόχου."
+               : "Buyer reported a blocked IMEI — carrier verification needed.");
+} else if (lab29BuyerReported
+        && lab29PurchaseStatus == UsedDevicePrecheckPolicy.USER_REPORTED_CHECKLIST_COMPLETE) {
+    logLabelOkValue(gr ? "Δηλώσεις αγοραστή" : "Buyer-reported checks",
+            gr ? "Ολοκληρωμένο χειροκίνητο checklist — όχι βεβαίωση νομιμότητας."
+               : "Manual checklist complete — not legal certification.");
+} else {
+    logLabel(gr ? "Προέλεγχος αγοράς" : "Pre-purchase check",
+            gr ? "Χωρίς επαρκή στοιχεία εξωτερικής επαλήθευσης."
+               : "Insufficient independently verified purchase evidence.",
+            "#FFFFFF");
 }
 
 // ------------------------------------------------------------
@@ -33283,9 +33305,6 @@ if (lab14bConsumptionPerHour > 0f &&
 // DEVICE INTEGRITY / INSTABILITY FINDINGS
 // LAB 29 confirmed measurements — no manipulation accusation
 // ------------------------------------------------------------
-int lab29AuthenticityScore =
-        p.getInt("lab29_authenticity_score", -1);
-
 int lab29InstabilityScore =
         p.getInt("lab29_instability_score", 0);
 
@@ -33295,51 +33314,37 @@ boolean hwInstability =
 appendHtml("<br>");
 
 // ------------------------------------------------------------
-// AUTHENTICITY / INTEGRITY RESULT
+// USED-DEVICE PURCHASE CHECK (BUYER-REPORTED, NOT LEGAL CERTIFICATION)
 // ------------------------------------------------------------
-if (lab29AuthenticityScore >= 0) {
+int lab29PurchaseStatus = p.getInt("lab29_precheck_status",
+        UsedDevicePrecheckPolicy.INCOMPLETE);
+boolean lab29BuyerReported = p.getBoolean("lab29_precheck_user_reported", false);
+boolean lab29HardwareObserved = p.getBoolean("lab29_provenance_unverified", false);
 
-    if (lab29AuthenticityScore >= 90) {
-
-        logLabelOkValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100"
-        );
-
-    } else if (lab29AuthenticityScore >= 70) {
-
-        logLabelWarnValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100 — " +
-                        (gr
-                                ? "Απαιτείται επανέλεγχος αποκλίσεων"
-                                : "Detected deviations require verification")
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Ακεραιότητα συσκευής"
-                   : "Device integrity",
-                lab29AuthenticityScore + "/100 — " +
-                        (gr
-                                ? "Εντοπίστηκαν σημαντικές αποκλίσεις"
-                                : "Significant integrity deviations detected")
-        );
-    }
-
+if (lab29BuyerReported
+        && lab29PurchaseStatus == UsedDevicePrecheckPolicy.HOLD_FOR_REVIEW) {
+    logLabelErrorValue(gr ? "Προέλεγχος αγοράς" : "Pre-purchase check",
+            gr ? "Δηλώθηκε αποκλεισμένο IMEI — απαιτείται επαλήθευση με πάροχο πριν την αγορά."
+               : "Blocked IMEI reported — confirm with carrier before purchase.");
+} else if (lab29BuyerReported
+        && lab29PurchaseStatus == UsedDevicePrecheckPolicy.USER_REPORTED_CHECKLIST_COMPLETE) {
+    logLabelOkValue(gr ? "Checklist αγοραστή" : "Buyer checklist",
+            gr ? "Δηλώθηκε πλήρης έλεγχος από τον αγοραστή, όχι πιστοποίηση κυριότητας."
+               : "Buyer reports all checks complete; ownership not certified.");
+} else if (lab29HardwareObserved) {
+    logLabel(gr ? "Προέλεγχος αγοράς" : "Pre-purchase check",
+            gr ? "Μόνο στοιχεία Android — εξωτερική επαλήθευση εκκρεμεί."
+               : "Android observations only — independent checks still pending.",
+            "#FFFFFF");
 } else {
-
-    logLabelWarnValue(
-            gr ? "Ακεραιότητα συσκευής"
-               : "Device integrity",
-            gr
-                    ? "Δεν υπάρχουν διαθέσιμα αποτελέσματα από το LAB 29"
-                    : "No LAB 29 results available"
-    );
+    logLabel(gr ? "Προέλεγχος αγοράς" : "Pre-purchase check",
+            gr ? "Δεν εκτελέστηκε ακόμη το Lab 29."
+               : "Lab 29 has not been run yet.", "#FFFFFF");
 }
+logLabel(gr ? "Όριο αξιολόγησης" : "Assessment limitation",
+        gr ? "Δεν πιστοποιείται γνησιότητα ανταλλακτικών ή νόμιμη κυριότητα."
+           : "Replacement part authenticity and legal ownership are not certified.",
+        "#FFFFFF");
 
 // ------------------------------------------------------------
 // INSTABILITY FINDING
@@ -33357,12 +33362,11 @@ if (hwInstability) {
 
 } else {
 
-    logLabelOkValue(
+    logLabel(
             gr ? "Μοτίβο αστάθειας"
                : "Instability pattern",
-            gr
-                    ? "Δεν εντοπίστηκε"
-                    : "Not detected"
+            gr ? "Δεν αναφέρθηκε από τα διαθέσιμα σήματα"
+               : "Not reported by available signals", "#FFFFFF"
     );
 }
 
