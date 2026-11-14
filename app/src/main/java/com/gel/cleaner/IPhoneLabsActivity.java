@@ -1751,7 +1751,7 @@ logLabelWarnValue(
 
 if ("High".equalsIgnoreCase(sigConfidence)) {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
             ApplePanicEvidencePolicy.patternConfidence()
     );
@@ -1759,7 +1759,7 @@ if ("High".equalsIgnoreCase(sigConfidence)) {
 }
 else if ("Medium".equalsIgnoreCase(sigConfidence)) {
 
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
             ApplePanicEvidencePolicy.patternConfidence()
     );
@@ -1767,7 +1767,7 @@ else if ("Medium".equalsIgnoreCase(sigConfidence)) {
 }
 else {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
             ApplePanicEvidencePolicy.patternConfidence()
     );
@@ -2878,6 +2878,15 @@ private void logLine() {
 // ============================================================
 // LABEL + VALUE HELPERS (WHITE LABEL + COLORED VALUE)
 // ============================================================
+// Neutral factual, unavailable or unverified values must remain white.
+private void logLabelValue(String label, String value) {
+    String l = safe(label);
+    String v = safe(value);
+    appendHtml("<font color='#FFFFFF'>" + escape(l) + "</font> " +
+            "<font color='#FFFFFF'>" + escape(v) + "</font>");
+    if (!demoMode) GELServiceLog.logInfo(l + " " + v);
+}
+
 private void logLabelOkValue(String label, String value) {
     String l = safe(label);
     String v = safe(value);
