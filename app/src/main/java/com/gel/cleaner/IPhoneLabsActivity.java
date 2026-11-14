@@ -1478,6 +1478,13 @@ logLabelOkValue(
         "Pattern ID:",
         safe(r.patternId)
 );
+if (r.secondary != null) {
+    for (IPSPanicParser.Result other : r.secondary) {
+        if (other != null && other.patternId != null)
+            logLabelOkValue(gr ? "Επιπλέον μοτίβο:" : "Additional matched pattern:",
+                    safe(other.patternId));
+    }
+}
 
 logLabelWarnValue(
         gr ? "Πιθανό Domain:" : "Domain (hint):",
@@ -1565,6 +1572,29 @@ private void runPanicSignatureParser() {
             ? "Καταγραφή ενδείξεων από εισαγόμενα logs· όχι απόδειξη πραγματικής βλάβης."
             : "Imported-log clues only; not evidence of confirmed physical failure.");
 
+    // Treat each imported incident independently, never as a composite crash.
+    String[] separatePanicBlocks = panicLogText.split("(?m)^===== ZIP FILE:");
+    if (countSupportedPanicBlocks(separatePanicBlocks) > 1) {
+        int incidentNumber = 0;
+        for (String block : separatePanicBlocks) {
+            if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
+            incidentNumber++;
+            parseAndCacheSignature(block);
+            logLabelWarnValue(
+                    gr ? "Συμβάν " + incidentNumber + " — τύπος:" : "Incident " + incidentNumber + " — type:",
+                    safe(sigCrashType));
+            logLabelWarnValue(
+                    gr ? "Συμβάν " + incidentNumber + " — υπόδειξη περιοχής:" : "Incident " + incidentNumber + " — domain hint:",
+                    safe(sigDomain));
+        }
+        logInfo(gr
+                ? "Τα συμβάντα εξετάστηκαν χωριστά. Δεν ενώνουμε λέξεις από διαφορετικά logs για να συμπεράνουμε βλάβη."
+                : "Entries were interpreted separately. Keywords from different panic files do not establish a combined fault.");
+        appendHtml("<br>");
+        logOk(gr ? "Το Lab 2 ολοκληρώθηκε." : "Lab 2 finished.");
+        logLine();
+        return;
+    }
     parseAndCacheSignature(panicLogText);
 
     logLabelOkValue(
@@ -1905,7 +1935,12 @@ for (String block : blocks) {
 
 for (String k : crashCount.keySet()) {
 
-    logInfo(safe(k) + ": " + String.valueOf(crashCount.get(k)));
+    if ("Unknown".equalsIgnoreCase(k) || "Unknown / Generic".equalsIgnoreCase(k)) {
+        logInfo(safe(k) + ": " + crashCount.get(k));
+    } else {
+        logLabelOkValue(gr ? "Καταγεγραμμένος τύπος:" : "Observed type:",
+                safe(k) + ": " + crashCount.get(k));
+    }
 
 }
 
@@ -1962,7 +1997,12 @@ for (String k : domainCount.keySet()) {
 
     // The same keyword category in two imported records is not a
     // confirmed hardware fault or a positive measured device-health result.
-    logInfo(safe(k) + ": " + String.valueOf(count));
+    if ("Unknown".equalsIgnoreCase(k)) {
+        logInfo(safe(k) + ": " + count);
+    } else {
+        logLabelOkValue(gr ? "Κατηγορία όρων:" : "Keyword category:",
+                safe(k) + ": " + count);
+    }
 }
 
     appendHtml("<br>");
@@ -2032,20 +2072,25 @@ private void runRecurringDomainLab() {
             String.valueOf(total)
     );
 
-    logLabelOkValue(
-            gr ? "Συχνότερη κατηγορία όρων:" : "Most common keyword category:",
-            safe(dominant) + " (" + max + "/" + total + ")"
-    );
-
-    logLabelOkValue(
-            gr ? "Ποσοστό επανάληψης:" : "Repetition ratio:",
-            percent + "%"
-    );
+    if (max >= 2) {
+        logLabelOkValue(
+                gr ? "Επαναλαμβανόμενη κατηγορία:" : "Repeated keyword category:",
+                safe(dominant) + " (" + max + "/" + total + ")"
+        );
+        logLabelOkValue(
+                gr ? "Μερίδιο στο εισαγόμενο δείγμα:" : "Share in imported sample:",
+                percent + "%"
+        );
+    } else {
+        logInfo(gr
+                ? "Δεν υπάρχει επαναλαμβανόμενη κατηγορία: κάθε κατηγορία εμφανίστηκε μόνο μία φορά."
+                : "No repeated category: each keyword category occurred only once.");
+    }
 
     // -------------------------------
     // PATTERN INTERPRETATION
     // -------------------------------
-    if (ratio >= 0.5) {
+    if (max >= 2 && ratio >= 0.5) {
 
         if (isHighRiskDomain(dominant)) {
             logInfo(gr
@@ -2585,6 +2630,16 @@ private void parseAndCacheSignature(String text) {
 
     if (text == null || text.trim().isEmpty()) return;
 
+    // Never merge separate incidents into one combined panic signature.
+    if (text.contains("===== ZIP FILE:")
+            && countSupportedPanicBlocks(text.split("(?m)^===== ZIP FILE:")) > 1) {
+        sigCrashType = "Multiple separate panic entries";
+        sigDomain = "Mixed evidence — per-entry evaluation required";
+        sigConfidence = CONF_LOW;
+        sigKeyEvidence = "Multiple independent panic entries";
+        return;
+    }
+
         String low = text.toLowerCase(Locale.US);
 
         boolean isWatchdog   = low.contains("watchdog") || low.contains("0x8badf00d");
@@ -2593,7 +2648,7 @@ private void parseAndCacheSignature(String text) {
         boolean isThermal    = low.contains("thermal") && (low.contains("shutdown") || low.contains("throttle"));
         boolean isI2C        = low.contains("i2c") || low.contains("bus error");
         boolean isNand       = low.contains("nand") || low.contains("apfs") || low.contains("nvme") || low.contains("storage");
-        boolean isBaseband   = low.contains("baseband") || low.contains("commcenter");
+        boolean isBaseband   = ApplePanicEvidencePolicy.hasExplicitBasebandFaultHint(text);
         boolean isPower      = low.contains("power") && (low.contains("pmu") || low.contains("brownout") || low.contains("sudden"));
         boolean isGpu        = low.contains("gpu") || low.contains("agx") || low.contains("metal");
         boolean isSensor     = low.contains("sensor") || low.contains("mic") || low.contains("camera") || low.contains("touch");
@@ -2607,9 +2662,7 @@ private void parseAndCacheSignature(String text) {
         low.contains("bug_type\":210") ||
         low.contains("bug_type: 210");
         boolean isNVME = low.contains("nvme") || low.contains("apfs_vfsop");
-        boolean isWatchdogBaseband =
-        low.contains("baseband watchdog") ||
-        (low.contains("baseband") && low.contains("watchdog"));
+        boolean isWatchdogBaseband = isBaseband && isWatchdog;
 
         if (isWatchdog) sigCrashType = "Watchdog / Hang";
         else if (isUserSpaceWatchdog) sigCrashType = "Userspace Watchdog Timeout";
