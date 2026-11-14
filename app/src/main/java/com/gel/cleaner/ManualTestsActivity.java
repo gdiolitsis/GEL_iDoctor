@@ -28872,8 +28872,8 @@ private void lab24RootSuspicion() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 24 — Έλεγχος Root / Ακεραιότητας Bootloader (ΑΥΤΟΜΑΤΟ)."
-            : "LAB 24 — Root / Bootloader Integrity Scan (AUTO).");
+            ? "LAB 24 — Έλεγχος προστασίας του συστήματος"
+            : "LAB 24 — System protection check");
     logLine();
 
 // ---------------------------  
@@ -29107,151 +29107,123 @@ if ("1".equals(flashL)) {
 // never below zero
 risk = Math.max(0, Math.min(100, risk));
 
-logInfo(gr ? "Έλεγχος Root:" : "Root Scan:");  
-if (rootFindings.isEmpty()) {  
-    logInfo(gr ? "Δεν παρατηρήθηκαν ισχυρά root ίχνη· η απουσία τους δεν αποδεικνύει unrooted."
-               : "No strong root traces observed; their absence does not prove unrooted.");  
-} else {  
-    for (String s : rootFindings)
-        logWarn("• " + s);  
-}  
-
-logInfo(gr ? "Bootloader / Verified Boot:"
-           : "Bootloader / Verified Boot:");
-
-if (blFindings.isEmpty()) {
-
-    logInfo(gr ? "Δεν υπάρχουν αναγνώσιμα στοιχεία bootloader/Verified Boot."
-               : "No readable bootloader/Verified Boot data.");
-
-} else {
-
-    for (String s : blFindings) {
-
-        String l = s.toLowerCase(Locale.US);
-
-        if (l.contains("verifiedbootstate=green") ||
-            l.contains("vbmeta.device_state=locked") ||
-            l.contains("flash.locked=1")) {
-
-            logInfo("• " + s);
-
-        } else {
-
-            logWarn("• " + s);
-        }
-    }
-}
-
-logInfo(gr ? "Boot Animation / Splash:"
-           : "Boot Animation / Splash:");  
-if (animFindings.isEmpty()) {
-
-    logInfo(gr ? "Δεν παρατηρήθηκαν ορατές διαδρομές boot animation."
-               : "No visible boot-animation paths observed.");
-
-} else {
-
-    for (String s : animFindings) {
-
-        String l = s.toLowerCase(Locale.US);
-
-        if (l.contains("stock bootanimation")) {
-
-            logInfo("• " + s);
-
-        } else {
-
-            logWarn("• " + s);
-        }
-    }
-}
-
-logInfo(gr ? "Magisk / Stealth heuristics:"
-           : "Magisk / Stealth heuristics:");
-
-if (magiskStealthFindings.isEmpty()) {
-
-    logInfo(gr ? "Δεν εντοπίστηκαν ισχυρά ίχνη stealth root στους προσβάσιμους ελέγχους."
-               : "No strong stealth-root traces seen in accessible checks.");
-
-} else {
-
-    for (String s : magiskStealthFindings) {
-
-        String l = s.toLowerCase(Locale.US);
-
-        if ((l.contains("/debug_ramdisk") ||
-             l.contains("overlay mount")) &&
-            "green".equals(vbState) &&
-            "locked".equals(vbmeta) &&
-            "1".equals(flashL)) {
-
-            logInfo("• " + s);
-
-        } else {
-
-            logWarn("• " + s);
-        }
-    }
-}
-
 // ------------------------------------------------------------
-// ROOT / VERIFIED BOOT — EVIDENCE, NOT FABRICATED SECURITY PERCENTAGE
+// Human-readable results, based strictly on independently observed flags.
+// Never treat harmless system folders or generic overlay hints as proof
+// of root, infection, hacking, or a fully safe phone.
 // ------------------------------------------------------------
-// The legacy path, bootanimation and property counters are not physically
-// calibrated. Keep every probe above; never use the sum to certify safety.
-appendHtml("<br>");
-logInfo(gr ? "Σύνοψη τεκμηρίωσης Root / Verified Boot"
-           : "Root / Verified Boot evidence summary");
-
-if (suExec) {
-    logLabelWarnValue(gr ? "Πρόσβαση root" : "Root access",
-            gr ? "Εκτελέστηκε su με uid=0 — προνομιούχο shell επιβεβαιώθηκε"
-               : "su returned uid=0 — privileged shell confirmed");
-} else if (suFound || pkgHit || !magiskStealthFindings.isEmpty()) {
-    logLabelWarnValue(gr ? "Ενδείξεις root" : "Root indicators",
-            gr ? "Βρέθηκαν ίχνη, αλλά δεν επιβεβαιώθηκε εκτέλεση root shell"
-               : "Indicators observed, but root-shell execution not confirmed");
-} else {
-    logLabelValue(gr ? "Ενδείξεις root" : "Root indicators",
-            gr ? "Δεν εντοπίστηκαν στους προσβάσιμους ελέγχους· κατάσταση root άγνωστη"
-               : "None found in accessible checks; rootedness unverified");
-}
-
 boolean bootFailed = "red".equals(vbState);
 boolean bootUnlocked = "orange".equals(vbState)
-        || "unlocked".equals(vbmeta) || "0".equals(flashL);
-if (bootFailed) {
-    logLabelErrorValue(gr ? "Verified Boot" : "Verified Boot",
-            gr ? "Το Android αναφέρει RED — απαιτείται έλεγχος της εκκίνησης"
-               : "Android reports RED — investigate boot verification");
-} else if (bootUnlocked) {
-    logLabelWarnValue(gr ? "Bootloader / Verified Boot" : "Bootloader / Verified Boot",
-            gr ? "Το Android αναφέρει ξεκλείδωτη κατάσταση· δεν αποδεικνύει root"
-               : "Android reports an unlocked state; this does not prove root");
-} else if ("yellow".equals(vbState)) {
-    logLabelValue(gr ? "Verified Boot" : "Verified Boot",
-            gr ? "YELLOW: αναφερόμενη προσαρμοσμένη ρίζα εμπιστοσύνης· κατάσταση root άγνωστη"
-               : "YELLOW: custom root of trust reported; root status unknown");
-} else if ("green".equals(vbState)) {
-    logLabelValue(gr ? "Verified Boot" : "Verified Boot",
-            gr ? "GREEN: δηλώνεται από το Android, όχι ανεξάρτητη επιβεβαίωση"
-               : "GREEN: OS-reported, not independently attested");
-} else {
-    logLabelValue(gr ? "Verified Boot" : "Verified Boot",
-            gr ? "Μη διαθέσιμη ή μη αναγνωρισμένη κατάσταση"
-               : "Unavailable or unrecognized state");
+        || "unlocked".equals(vbmeta)
+        || "0".equals(flashL)
+        || (cmdline != null
+            && (cmdline.toLowerCase(Locale.US).contains("verifiedbootstate=orange")
+                || cmdline.toLowerCase(Locale.US).contains("vbmeta.device_state=unlocked")
+                || cmdline.toLowerCase(Locale.US).contains("bootloader=unlocked")));
+boolean alternativeBootTrust = "yellow".equals(vbState);
+boolean bootProtected = "green".equals(vbState)
+        && "locked".equals(vbmeta)
+        && "1".equals(flashL)
+        && !bootUnlocked;
+
+// A normal debug_ramdisk directory, an overlay mount or a native bridge
+// is not proof of root. Only stronger specific observations require review.
+boolean meaningfulRootHint = suFound || pkgHit
+        || "0".equals(roSecure) || "1".equals(roDebug);
+for (String finding : magiskStealthFindings) {
+    String hint = finding.toLowerCase(Locale.US);
+    if (hint.contains("magisk")
+            || hint.contains("zygisk")
+            || hint.contains("/data/adb/")
+            || hint.contains("root shell +")) {
+        meaningfulRootHint = true;
+    }
 }
-logInfo(gr ? "Δεν εκδόθηκε αυθαίρετος συνολικός δείκτης ασφάλειας."
-           : "No arbitrary whole-device security score was issued.");
+
+logInfo(gr ? "1. Προστασία κατά την εκκίνηση"
+           : "1. Protection when starting the phone");
+if (bootFailed) {
+    logLabelErrorValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Το Android αναφέρει πρόβλημα στον έλεγχο εκκίνησης. Χρειάζεται τεχνικός έλεγχος."
+               : "Android reports a startup verification problem. A technician should check it.");
+} else if (bootUnlocked) {
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Η συσκευή αναφέρει ότι επιτρέπει σημαντικές αλλαγές στο λογισμικό της. Αν δεν το επιλέξατε, ζητήστε έλεγχο."
+               : "The phone reports that major software changes are permitted. If you did not choose this, have it checked.");
+} else if (alternativeBootTrust) {
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Η εκκίνηση ελέγχεται με διαφορετική ρύθμιση από τη συνηθισμένη. Αν δεν το γνωρίζετε, ζητήστε έλεγχο."
+               : "Startup uses a different verification configuration. If unexpected, have it checked.");
+} else if (bootProtected) {
+    logLabelOkValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Το Android αναφέρει ότι η προστασία εκκίνησης είναι ενεργή και η συσκευή κλειδωμένη απέναντι σε αλλαγές του συστήματος."
+               : "Android reports startup protection is on and the device is locked against system changes.");
+} else {
+    logLabelValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Δεν ήταν δυνατό να επιβεβαιωθούν όλες οι ρυθμίσεις προστασίας εκκίνησης."
+               : "Not all startup protection settings could be verified.");
+}
+
+logLine();
+logInfo(gr ? "2. Πρόσβαση με πλήρη δικαιώματα"
+           : "2. Full system access");
+if (suExec) {
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Επιβεβαιώθηκε δυνατότητα πλήρους πρόσβασης στο σύστημα. Αν δεν την ενεργοποιήσατε εσείς, ζητήστε τεχνικό έλεγχο."
+               : "Full system access was confirmed. If you did not enable it, have the phone checked.");
+} else if (meaningfulRootHint) {
+    logLabelWarnValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Βρέθηκαν ενδείξεις αλλαγών στο σύστημα, αλλά δεν επιβεβαιώθηκε πλήρης πρόσβαση. Χρειάζεται περαιτέρω έλεγχος."
+               : "Possible system changes were indicated, but full access was not confirmed. Further checking is needed.");
+} else {
+    logLabelOkValue(
+            gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις πλήρους πρόσβασης στους διαθέσιμους ελέγχους."
+               : "No strong signs of full system access were found in the available checks.");
+}
+
+logLine();
+logInfo(gr ? "3. Τι σημαίνει για εσάς" : "3. What this means for you");
+if (bootProtected && !suExec && !meaningfulRootHint) {
+    logInfo(gr
+            ? "Τα αποτελέσματα είναι ενθαρρυντικά. Δεν βρέθηκε ένδειξη παραβίασης σε αυτόν τον έλεγχο."
+            : "The findings are reassuring. This check found no indication of a compromise.");
+    logInfo(gr
+            ? "Μπορείτε να είστε πιο ήσυχοι. Η προστασία εκκίνησης φαίνεται ενεργή και δεν διαπιστώσαμε πλήρη πρόσβαση στο σύστημα. Κανένα μεμονωμένο εργαστήριο, όμως, δεν εγγυάται απόλυτη ασφάλεια."
+            : "You can feel more reassured. Startup protection appears enabled, and full system access was not confirmed. No single lab can guarantee complete security.");
+} else if (bootFailed || bootUnlocked || suExec) {
+    logInfo(gr
+            ? "Ορισμένα αποτελέσματα χρειάζονται επιπλέον έλεγχο. Αυτό δεν αποδεικνύει από μόνο του ότι κάποιος παραβίασε το κινητό σας."
+            : "Some findings need additional checking. They do not by themselves prove that someone has compromised the phone.");
+    logInfo(gr
+            ? "Αν δεν κάνατε εσείς αλλαγές στο λογισμικό, απευθυνθείτε σε τεχνικό πριν επιχειρήσετε διορθώσεις."
+            : "If you did not change the phone software, consult a technician before attempting repairs.");
+} else if (meaningfulRootHint || alternativeBootTrust) {
+    logInfo(gr
+            ? "Υπάρχουν στοιχεία που χρειάζονται επιβεβαίωση, όχι απόδειξη παραβίασης. Αν δεν γνωρίζετε να έχετε κάνει αλλαγές στο σύστημα, ζητήστε επιπλέον έλεγχο."
+            : "Some findings need verification, not proof of compromise. If you did not knowingly modify the system, request a further check.");
+} else {
+    logInfo(gr
+            ? "Δεν εντοπίσαμε αποδεδειγμένη παραβίαση, αλλά ο έλεγχος δεν μπόρεσε να επιβεβαιώσει όλες τις ρυθμίσεις."
+            : "No compromise was demonstrated, but not every setting could be verified.");
+}
+logInfo(gr
+        ? "Φροντίστε να εγκαθιστάτε τις διαθέσιμες ενημερώσεις Android."
+        : "Keep available Android updates installed.");
 
 appendHtml("<br>");
-logOk(gr ? "Το Lab 24 ολοκληρώθηκε (απογραφή προσβάσιμων ενδείξεων)."
-         : "Lab 24 finished (accessible indicators inventoried).");
-logInfo(gr ? "Δεν πιστοποιήθηκε συνολικά η ασφάλεια ή η ακεραιότητα της συσκευής."
-           : "Overall device security and integrity were not certified.");
+logOk(gr
+        ? "Το Lab 24 ολοκληρώθηκε — ελέγχθηκαν τα διαθέσιμα στοιχεία προστασίας του συστήματος."
+        : "Lab 24 completed — available system protection indicators were checked.");
 logLine();
+
 }
 
 
@@ -29370,6 +29342,8 @@ private int lab24_magiskStealthScore(List<String> findings) {
     // --------------------------------------------------------
     // 2) Typical Magisk / overlay / mirror traces
     // --------------------------------------------------------
+    // Android itself may provide an empty /debug_ramdisk directory.
+    // Its existence is not a root indicator and must not be scored.
     String[] paths = {
             "/sbin/.magisk",
             "/dev/.magisk_unblock",
@@ -29378,7 +29352,6 @@ private int lab24_magiskStealthScore(List<String> findings) {
             "/data/adb/modules",
             "/data/adb/service.d",
             "/data/adb/post-fs-data.d",
-            "/debug_ramdisk",
             "/dev/zygisk",
             "/metadata/magisk"
     };
@@ -29410,9 +29383,17 @@ private int lab24_magiskStealthScore(List<String> findings) {
                 findings.add("mounts reference /data/adb/modules");
             }
 
-            if (m.contains("overlay") && m.contains("/system")) {
-                score += 10;
-                findings.add("overlay mount affecting /system detected");
+            // Scan individual mount entries, not unrelated matches from
+            // different lines. An overlay is context only, not proof of root.
+            for (String line : mounts.split("\\n")) {
+                String[] columns = line.trim().split("\\s+");
+                if (columns.length >= 3
+                        && "overlay".equalsIgnoreCase(columns[2])
+                        && ("/system".equals(columns[1])
+                            || columns[1].startsWith("/system/"))) {
+                    findings.add("overlay mount affecting /system detected (informational)");
+                    break;
+                }
             }
         }
     } catch (Throwable ignore) {}
