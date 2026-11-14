@@ -30858,6 +30858,9 @@ logLabelValue(
     appendHtml("<br>");
     logInfo(gr ? "Καταγράφηκαν τα προσβάσιμα χαρακτηριστικά του Android."
                : "Accessible Android device characteristics were recorded.");
+    logOk(gr ? "Το Lab 29 ολοκληρώθηκε — τεχνική καταγραφή και οδηγίες ελέγχου IMEI."
+             : "Lab 29 completed — technical observations and IMEI-check guidance.");
+    logLine();
     showLab29ExternalGuidanceDialog(gr);
 }
 
@@ -31232,7 +31235,7 @@ if (lab28EvidenceFresh) {
 }
 
 // ------------------------------------------------------------
-// 10) LAB 29 — DEVICE IDENTITY AND BUYER-REPORTED PRE-PURCHASE CHECKS
+// 10) LAB 29 — ANDROID DEVICE OBSERVATIONS AND EXTERNAL IMEI GUIDANCE
 // ------------------------------------------------------------
 boolean lab29ObservationsAvailable = LabEvidenceFreshness.isFresh(
         p.getInt("lab29_obs_schema", 0),
@@ -33044,9 +33047,8 @@ if (lab14bConsumptionPerHour > 0f &&
 // ------------------------------------------------------------
 // 7) TECHNICIAN INTAKE — LABS 28 AND 29 ARE INDEPENDENT EVIDENCE AXES
 // ------------------------------------------------------------
-// A system-reported device model does not prove genuine parts; a buyer's IMEI
-// Report only the recorded official-source IMEI status, not hypothetical outcomes.
-// No personally identifying IMEI or seller documents are saved in these prefs.
+// Android metadata is independent of the buyer's private external IMEI check.
+// This app no longer records or reports any external IMEI-check outcomes.
 final long technicianWallNow = System.currentTimeMillis();
 final long technicianElapsedNow = SystemClock.elapsedRealtime();
 
@@ -33109,11 +33111,11 @@ if (technicianLab28Fresh) {
 }
 
 // ------------------------------------------------------------
-// B) LAB 29 — TWO INDEPENDENT QUESTIONS: OEM IDENTITY AND OWNERSHIP
+// B) LAB 29 — ANDROID-REPORTED DEVICE DATA (NO EXTERNAL IMEI RESULT)
 // ------------------------------------------------------------
 appendHtml("<br>");
-logInfo(gr ? "LAB 29 — Ταυτότητα, προέλευση και μεταβίβαση"
-           : "LAB 29 — Device identity, provenance and handover");
+logInfo(gr ? "LAB 29 — Δηλωμένη ταυτότητα συσκευής"
+           : "LAB 29 — Android-reported device identity");
 logLine();
 boolean technicianLab29Fresh = LabEvidenceFreshness.isFresh(
         p.getInt("lab29_obs_schema", 0),
@@ -33140,8 +33142,8 @@ if (technicianLab29Fresh) {
 
 appendHtml("<br>");
 logLabelValue(gr ? "Ανεξάρτητος έλεγχος IMEI" : "Independent IMEI check",
-        gr ? "Ο αγοραστής ελέγχει ιδιωτικά στην εξωτερική υπηρεσία. Δεν συλλέγουμε IMEI, στοιχεία πληρωμής ή αποτέλεσμα."
-           : "The buyer checks privately with the external service. GEL collects no IMEI, payment details or result.");
+        gr ? "Παρέχονται μόνο οδηγίες προς εξωτερική υπηρεσία. Δεν συλλέγονται IMEI, στοιχεία πληρωμής ή αποτελέσματα."
+           : "Only external-service guidance is provided; no IMEI, payment details or results are collected.");
 logLabelValue(gr ? "Αναφορά στον τεχνικό" : "Technician report",
         gr ? "Περιλαμβάνονται μόνο τα τεχνικά ευρήματα των εργαστηρίων, όχι αποτέλεσμα εξωτερικού ελέγχου IMEI."
            : "Only the labs' technical findings are included, not the external IMEI outcome.");
