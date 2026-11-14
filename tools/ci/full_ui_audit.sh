@@ -43,3 +43,8 @@ grep -q arm64-v8a "$out/abis.txt"
 adb install --no-incremental -g "$apk"
 adb shell dumpsys package com.gel.iDoctor > "$out/package.txt"
 python3 tools/ci/full_ui_audit.py "$out" "$language"
+# Run the Apple model and eight-Lab UI audit on the SAME disposable emulator.
+# This is NOT direct measurement of a physical iPhone.
+if [ "${AUDIT_APPLE_MODE:-0}" = 1 ]; then
+  python3 tools/ci/apple_ui_audit.py "$out" "$language"
+fi

@@ -51,7 +51,7 @@ def scroll_gesture(root, up=True):
 def manual_section_pattern(lo, hi):
     """Allow the shipped 25-30 label and the corrected 25-31 label."""
     end = r"(?:30|31)" if (lo, hi) == (25, 31) else str(hi)
-    return r"Manual Labs\s*" + str(lo) + r"\s*[–—-]\s*" + end
+    return r"(?:Manual Labs|Εργαστήρια)\s*" + str(lo) + r"\s*[–—-]\s*" + end
 
 
 def incomplete_lab_names(results):

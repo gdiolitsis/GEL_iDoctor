@@ -42,8 +42,6 @@ public final class IPSPanicParser {
 
         try {
 
-            String textLow = panicText.toLowerCase(Locale.US);
-
             JSONObject root = loadPatterns(ctx);
             JSONArray patterns = root.getJSONArray("patterns");
 
@@ -54,19 +52,13 @@ public final class IPSPanicParser {
                 JSONObject p = patterns.getJSONObject(i);
                 JSONArray tokens = p.getJSONArray("match");
 
-                boolean allFound = true;
+                List<String> ruleTokens = new ArrayList<>();
+                for (int t = 0; t < tokens.length(); t++)
+                    ruleTokens.add(tokens.optString(t, ""));
 
-                for (int t = 0; t < tokens.length(); t++) {
-                    String token = tokens.getString(t);
-                    if (token == null) continue;
-
-                    if (!textLow.contains(token.toLowerCase(Locale.US))) {
-                        allFound = false;
-                        break;
-                    }
-                }
-
-                if (!allFound) continue;
+                // Required tokens must match within the same real panic entry.
+                if (!ApplePanicEvidencePolicy.tokensMatchOnePanic(panicText, ruleTokens))
+                    continue;
 
                 Result r = new Result();
                 r.patternId      = p.optString("id", "unknown");
@@ -88,18 +80,31 @@ public final class IPSPanicParser {
                     severityRank(b.severity) - severityRank(a.severity)
             );
 
-            Result out = new Result();
-            out.primary = matches.get(0);
-
-            for (int i = 1; i < matches.size(); i++) {
-                out.secondary.add(matches.get(i));
-            }
-
-            return out;
+            return assembleMatches(matches);
 
         } catch (Throwable ignore) {
             return null;
         }
+    }
+
+    /**
+     * Preserve the multi-match interface AND populate the flat fields consumed
+     * by Apple Lab 1. Previously the wrapper's fields stayed null, making a
+     * successfully matched panic pattern appear as "unknown" in the report.
+     */
+    static Result assembleMatches(List<Result> matches) {
+        if (matches == null || matches.isEmpty()) return null;
+        Result best = matches.get(0);
+        Result out = new Result();
+        out.primary = best;
+        out.patternId = best.patternId;
+        out.domain = best.domain;
+        out.cause = best.cause;
+        out.severity = best.severity;
+        out.confidence = best.confidence;
+        out.recommendation = best.recommendation;
+        for (int i = 1; i < matches.size(); i++) out.secondary.add(matches.get(i));
+        return out;
     }
 
     // ============================================================

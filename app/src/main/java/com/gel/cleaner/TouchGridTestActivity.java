@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
+import android.content.Intent;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -23,6 +24,8 @@ public class TouchGridTestActivity extends GELAutoActivityHook {
     // ========================================================
     // STATIC RESULTS (READ BY ManualTestsActivity)
     // ========================================================
+    public static final String EXTRA_TOTAL_ZONES = "lab6_total_zones";
+    public static final String EXTRA_REMAINING_ZONES = "lab6_remaining_zones";
     public static int lastTotalZones = 0;
     public static int lastRemainingZones = 0;
 
@@ -42,6 +45,9 @@ public class TouchGridTestActivity extends GELAutoActivityHook {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // A new session must not inherit the previous grid's static counters.
+        lastTotalZones = 0;
+        lastRemainingZones = 0;
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -52,10 +58,16 @@ public class TouchGridTestActivity extends GELAutoActivityHook {
         root.addView(gridView);
 
         Button endButton = new com.gel.cleaner.GelButton(this);
-        endButton.setText("END TEST");
+        endButton.setText(AppLang.isGreek(this) ? "ΤΕΛΟΣ ΤΕΣΤ" : "END TEST");
         endButton.setAllCaps(false);
         endButton.setTextColor(Color.WHITE);
-        endButton.setBackgroundColor(0xFF8B0000);
+        endButton.setTypeface(null, android.graphics.Typeface.BOLD);
+        android.graphics.drawable.GradientDrawable endBackground =
+                new android.graphics.drawable.GradientDrawable();
+        endBackground.setColor(0xFFE60000);
+        endBackground.setCornerRadius(dp(10));
+        endBackground.setStroke(dp(2), 0xFFFFD700);
+        endButton.setBackground(endBackground);
 
         FrameLayout.LayoutParams lp =
                 new FrameLayout.LayoutParams(
@@ -66,15 +78,22 @@ public class TouchGridTestActivity extends GELAutoActivityHook {
         lp.bottomMargin = dp(20);
         endButton.setLayoutParams(lp);
 
-        endButton.setOnClickListener(v -> {
-            lastTotalZones = gridView.getTotalZones();
-            lastRemainingZones = gridView.countUncleared();
-            setResult(RESULT_CANCELED);
-            finish();
-        });
+        endButton.setOnClickListener(v -> finishTouchGrid(false));
 
         root.addView(endButton);
         setContentView(root);
+    }
+
+    private void finishTouchGrid(boolean allTouched) {
+        int total = gridView.getTotalZones();
+        int remaining = gridView.countUncleared();
+        lastTotalZones = total;
+        lastRemainingZones = remaining;
+        Intent result = new Intent();
+        result.putExtra(EXTRA_TOTAL_ZONES, total);
+        result.putExtra(EXTRA_REMAINING_ZONES, remaining);
+        setResult(allTouched && remaining == 0 ? RESULT_OK : RESULT_CANCELED, result);
+        finish();
     }
 
     public int dp(int v) {
@@ -142,10 +161,7 @@ public class TouchGridTestActivity extends GELAutoActivityHook {
                         invalidate();
 
                         if (allCleared()) {
-                            lastTotalZones = getTotalZones();
-                            lastRemainingZones = 0;
-                            setResult(RESULT_OK);
-                            finish();
+                            finishTouchGrid(true);
                         }
                     }
                 }

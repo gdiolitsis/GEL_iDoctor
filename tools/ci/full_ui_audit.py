@@ -19,8 +19,22 @@ def adb(*args, binary=False, timeout=35):
     return subprocess.check_output(["adb", *args], timeout=timeout, stderr=subprocess.PIPE,
         **({} if binary else {"text":True, "errors":"replace"}))
 def tree():
-    adb("shell","uiautomator","dump","/sdcard/gel-audit.xml")
-    return ET.fromstring(adb("exec-out","cat","/sdcard/gel-audit.xml",binary=True))
+    # UIAutomator can briefly produce an empty/stale dump while the first-run
+    # dialog is attaching (observed API36 EL). Never parse it as valid UI.
+    last_error = None
+    for attempt in range(4):
+        try:
+            adb("shell","uiautomator","dump","/sdcard/gel-audit.xml")
+            payload = adb("exec-out","cat","/sdcard/gel-audit.xml",binary=True)
+            if not payload.lstrip().startswith(b"<?xml") and not payload.lstrip().startswith(b"<hierarchy"):
+                raise ValueError("UIAutomator dump is not XML: "+repr(payload[:120]))
+            return ET.fromstring(payload)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
+                ET.ParseError, ValueError) as exc:
+            last_error = exc
+            print("UI_DUMP_RETRY attempt=%d error=%r" % (attempt+1, exc), flush=True)
+            time.sleep(1)
+    raise RuntimeError("UIAutomator dump unavailable after 4 attempts") from last_error
 def tap(n):
     print("UI_TAP "+json.dumps({"text":n.get("text",""),"id":n.get("resource-id",""),"bounds":n.get("bounds","")},ensure_ascii=False),flush=True)
     b=list(map(int,re.findall(r"\d+",n.get("bounds",""))))
@@ -255,6 +269,12 @@ try:
     adb("shell","settings","put","system","user_rotation","0")
     adb("shell","svc","wifi","disable"); adb("shell","svc","data","disable")
     home(); record("offline-relaunch","UI_OPENED",folder=save("offline-relaunch"))
+except Exception:
+    # Preserve the original failure and its stack trace in CI logs and artifacts.
+    failure = traceback.format_exc()
+    print("UI_AUDIT_EXCEPTION="+failure, flush=True)
+    (out/"audit-exception.txt").write_text(failure, encoding="utf-8")
+    raise
 finally:
     try: save("final-state")
     except Exception: pass

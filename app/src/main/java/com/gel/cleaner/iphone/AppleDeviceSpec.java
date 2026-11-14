@@ -79,6 +79,7 @@ public class AppleDeviceSpec {
     public String  modem;
     public String  wifi;
     public String  bluetooth;
+    public String  uwb;           // Verified Apple model reference only; null means unverified
     public boolean hasNFC;
     public boolean hasAirDrop;
     public boolean hasAirPlay;

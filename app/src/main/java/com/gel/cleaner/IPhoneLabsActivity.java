@@ -162,6 +162,8 @@ private boolean looksCorruptedPanic(String text) {
     // ============================================================
     // STATE (CANONICAL)
     // ============================================================
+    // UI-only simulation: do not emit demo observations to real service reports.
+    private boolean demoMode = false;
     private boolean panicLogLoaded = false;
     private String  panicLogName   = null;
     private String  panicLogText   = null;
@@ -273,15 +275,8 @@ View importBtn = makeLabButton(
 
             if (!requireGelPro(gr ? "Εισαγωγή Panic Logs (TXT / ZIP)" : "Panic Log Import (TXT / ZIP)")) return;
 
-            // CLEAN PREVIOUS LOGS
-            panicLogText = null;
-            panicLogLoaded = false;
-            panicLogCount = 0;
+            // Do not clear existing customer evidence until a valid replacement commits.
             appendMode = false;
-
-            logOk(gr
-                    ? "Τα προηγούμενα panic logs διαγράφηκαν."
-                    : "Previous panic logs cleared.");
 
             openPanicLogPicker();
         }
@@ -1220,13 +1215,7 @@ protected void onActivityResult(int requestCode,
 
     boolean gr = AppLang.isGreek(this);
 
-    if (!appendMode) {
-        panicLogCount = 0;
-        panicLogText  = null;
-        panicLogLoaded = false;
-    }
-
-    if (resultCode != RESULT_OK || data == null) {
+     if (resultCode != RESULT_OK || data == null) {
         logWarn(gr
                 ? "Η εισαγωγή ακυρώθηκε."
                 : "Panic log import cancelled.");
@@ -1273,14 +1262,19 @@ for (Uri uri : uris) {
     if (is == null) continue;
 
     String text;
-
-    if (looksLikeZip(safeName)) {
-        text = readPanicFromZip(is);
-    } else {
-        text = readTextStream(is);
+    try {
+        // SAF providers can return opaque names: inspect the ZIP magic, too.
+        BufferedInputStream source = new BufferedInputStream(is);
+        source.mark(8);
+        int first = source.read(), second = source.read();
+        source.reset();
+        boolean zipMagic = first == 'P' && second == 'K';
+        text = (zipMagic || looksLikeZip(safeName))
+                ? readPanicFromZip(source)
+                : readTextStream(source);
+    } finally {
+        try { is.close(); } catch (Throwable ignore) {}
     }
-
-    try { is.close(); } catch (Throwable ignore) {}
 
     if (text == null || text.trim().isEmpty()) {
 
@@ -1301,14 +1295,20 @@ for (Uri uri : uris) {
 
         continue;
     }
+    // An arbitrary text file (or Jetsam-only report) is not panic evidence.
+    if (!ApplePanicEvidencePolicy.hasPanicEvidence(text)) {
+        logLabelWarnValue(
+                gr ? "Δεν βρέθηκε πραγματικό panic:" : "No supported panic evidence:",
+                safe(safeName));
+        continue;
+    }
 
     if (allLogs.length() + text.length() > MAX_PANIC_LOG_SIZE) {
 
-        logWarn(gr
-                ? "Το μέγεθος των panic logs είναι πολύ μεγάλο. Η φόρτωση περιορίστηκε."
-                : "Panic logs too large. Import truncated.");
-
-        break;
+        // Partial imports are not valid replacements: preserve the prior session.
+        throw new java.io.IOException(gr
+                ? "Υπέρβαση ορίου εισαγωγής. Διατηρήθηκε η προηγούμενη ανάλυση."
+                : "Import size cap exceeded. Previous analysis preserved.");
     }
 
     // delimiter για τα LAB parsers
@@ -1331,9 +1331,12 @@ for (Uri uri : uris) {
                     : "All files were empty.");
         }
 
-        panicLogCount = appendMode
-        ? panicLogCount + loadedCount
-        : loadedCount;
+        // Count eligible entries, not ZIP containers or unsupported wrappers.
+        int supportedBlocks = countSupportedPanicBlocks(
+                allLogs.toString().split("(?m)^===== ZIP FILE:"));
+        if (supportedBlocks == 0)
+            throw new java.io.IOException("No supported panic entries");
+        panicLogCount = supportedBlocks;
 
 panicLogName = (panicLogCount == 1)
         ? (gr ? "Ένα panic log"
@@ -1397,10 +1400,7 @@ logLine();
 
 } catch (Exception e) {
 
-    panicLogLoaded = false;
-    panicLogText   = null;
-
-    logError(gr
+     logError(gr
         ? "Αποτυχία εισαγωγής panic logs."
         : "Panic logs import failed.");
 
@@ -1426,9 +1426,9 @@ private void runPanicLogAnalyzer() {
             : "LAB 1 — Panic Log Analyzer");
     logLine();
 
-    logOk(gr
-            ? "Αρχικός έλεγχος του panic log σε γνωστά μοτίβα crash."
-            : "Initial screening of the panic log against known crash patterns.");
+    logInfo(gr
+            ? "Σύγκριση λέξεων εισαγόμενου panic log με κανόνες· όχι φυσικός έλεγχος συσκευής."
+            : "Rule-based screening of an imported panic log; no device hardware test.");
 
     IPSPanicParser.Result r = IPSPanicParser.analyze(this, panicLogText);
 
@@ -1484,54 +1484,54 @@ logLabelWarnValue(
         safe(r.domain)
 );
 
-logLabelOkValue(
-        gr ? "Αναφερόμενη Αιτία:" : "Reported Cause:",
-        safe(r.cause)
+logLabelWarnValue(
+        gr ? "Υπόθεση κανόνα:" : "Rule-based cause hypothesis:",
+        ApplePanicEvidencePolicy.possibleCause(r.cause)
 );
 
 // Severity
 if ("High".equalsIgnoreCase(r.severity)) {
-    logLabelErrorValue(
-            gr ? "Σοβαρότητα:" : "Severity:",
+    logLabelWarnValue(
+            gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
             safe(r.severity)
     );
 }
 else if ("Medium".equalsIgnoreCase(r.severity)) {
     logLabelWarnValue(
-            gr ? "Σοβαρότητα:" : "Severity:",
+            gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
             safe(r.severity)
     );
 }
 else {
-    logLabelOkValue(
-            gr ? "Σοβαρότητα:" : "Severity:",
+    logLabelWarnValue(
+            gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
             safe(r.severity)
     );
 }
 
 // Confidence
 if ("High".equalsIgnoreCase(r.confidence)) {
-    logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence:",
-            safe(r.confidence)
+    logLabelWarnValue(
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 else if ("Medium".equalsIgnoreCase(r.confidence)) {
     logLabelWarnValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence:",
-            safe(r.confidence)
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 else {
-    logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence:",
-            safe(r.confidence)
+    logLabelWarnValue(
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 
-logLabelOkValue(
-        gr ? "Αρχική Σύσταση:" : "Initial Recommendation:",
-        safe(r.recommendation)
+logLabelWarnValue(
+        gr ? "Επόμενο τεχνικό βήμα:" : "Next technician step:",
+        ApplePanicEvidencePolicy.recommendation(gr)
 );
 
 logLabelOkValue(
@@ -1561,9 +1561,9 @@ private void runPanicSignatureParser() {
             : "LAB 2 — Panic Signature Parser");
     logLine();
 
-    logOk(gr
-            ? "Ερμηνεία της συμπεριφοράς του crash με βάση τα διαθέσιμα στοιχεία."
-            : "Interpreting crash behavior using contextual evidence.");
+    logInfo(gr
+            ? "Καταγραφή ενδείξεων από εισαγόμενα logs· όχι απόδειξη πραγματικής βλάβης."
+            : "Imported-log clues only; not evidence of confirmed physical failure.");
 
     parseAndCacheSignature(panicLogText);
 
@@ -1576,22 +1576,22 @@ private void runPanicSignatureParser() {
 if ("Kernel Panic".equalsIgnoreCase(sigCrashType)
         || "Watchdog / Hang".equalsIgnoreCase(sigCrashType)) {
 
-    logLabelErrorValue(
-            gr ? "Τύπος Crash:" : "Crash Type:",
+    logLabelWarnValue(
+            gr ? "Τύπος στο αρχείο:" : "Imported crash type:",
             safe(sigCrashType)
     );
 
     logLabelWarnValue(
-            gr ? "Σημασία:" : "Implication:",
+            gr ? "Τι καταγράφει:" : "What the file indicates:",
             gr
-                    ? "Σοβαρή διακοπή λειτουργίας σε επίπεδο συστήματος."
-                    : "Serious system-level interruption."
+                    ? "Περιέχει όρους διακοπής συστήματος· η λειτουργική κατάσταση χρειάζεται επαλήθευση."
+                    : "System interruption terms appear; real device operation needs corroboration."
     );
 }
 else {
 
-    logLabelOkValue(
-            gr ? "Τύπος Crash:" : "Crash Type:",
+    logLabelWarnValue(
+            gr ? "Τύπος στο αρχείο:" : "Imported crash type:",
             safe(sigCrashType)
     );
 }
@@ -1612,23 +1612,23 @@ logLabelWarnValue(
 // Confidence
 if ("High".equalsIgnoreCase(sigConfidence)) {
 
-    logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+    logLabelWarnValue(
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 else if ("Medium".equalsIgnoreCase(sigConfidence)) {
 
     logLabelWarnValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 else {
 
-    logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+    logLabelWarnValue(
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 }
 
@@ -1669,9 +1669,9 @@ private void runStabilityLab() {
             : "LAB 3 — System Stability Evaluation");
     logLine();
 
-    logOk(gr
-            ? "Αξιολόγηση εάν το crash υποδηλώνει ευρύτερη αστάθεια συστήματος."
-            : "Evaluating whether the crash indicates broader system instability.");
+    logInfo(gr
+            ? "Ανάλυση εισαγόμενου συμβάντος· η σταθερότητα της συσκευής δεν μετρήθηκε."
+            : "Review of an imported event; physical device stability was not measured.");
 
     parseAndCacheSignature(panicLogText);
 
@@ -1679,42 +1679,42 @@ private void runStabilityLab() {
             && ("Kernel Panic".equalsIgnoreCase(sigCrashType)
             || "Watchdog / Hang".equalsIgnoreCase(sigCrashType))) {
 
-        logError(gr
-                ? "Εντοπίστηκαν ισχυρές ενδείξεις αστάθειας συστήματος."
-                : "High system instability indicators detected.");
+        logWarn(gr
+                ? "Το αρχείο περιέχει υπογραφή panic· η βαρύτητα για τη συσκευή παραμένει ανεπιβεβαίωτη."
+                : "A panic signature appears in the file; actual device severity remains unverified.");
 
         logWarn(gr
-                ? "Τέτοια crashes συχνά σχετίζονται με επανεκκινήσεις ή παγώματα."
-                : "Such crashes are often associated with unexpected reboots or system freezes.");
+                ? "Ορισμένα συμβάντα μπορεί να σχετίζονται με επανεκκινήσεις· χρειάζεται ιστορικό και πραγματικά συμπτώματα."
+                : "Some events can accompany restarts; actual history and symptoms require corroboration.");
 
         logLabelWarnValue(
         gr ? "Με απλά λόγια:" : "In simple terms:",
         gr
-                ? "Η συσκευή δεν κατάφερε να διατηρήσει σταθερή λειτουργία υπό συγκεκριμένες συνθήκες."
-                : "The device could not maintain stable operation under certain conditions."
+                ? "Δεν μπορεί να διαπιστωθεί πραγματική αστάθεια μόνο από το εισαγόμενο αρχείο."
+                : "Actual device instability cannot be established from the imported log alone."
 );
 
 } else if ("Medium".equalsIgnoreCase(sigConfidence)) {
 
-    logWarn(gr
-            ? "Εντοπίστηκε μέτριος κίνδυνος αστάθειας."
-            : "Moderate stability risk detected.");
+    logInfo(gr
+            ? "Εμφανίστηκε ενδεικτική κατηγορία συμβάντος, όχι βαθμονομημένος κίνδυνος."
+            : "A heuristic event category appeared, not a calibrated instability risk.");
 
     logLabelOkValue(
             gr ? "Ερμηνεία:" : "Interpretation:",
             gr
-                    ? "Το σύστημα ενδέχεται να γίνει ασταθές σε συγκεκριμένα σενάρια."
-                    : "The system may become unstable under specific scenarios."
+                    ? "Η συμπεριφορά της συσκευής δεν τεκμηριώνεται χωρίς επαλήθευση συμβάντων και συμπτωμάτων."
+                    : "Device behavior needs verified event history and symptoms."
     );
 
 } else {
 
-    logOk(gr
-            ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις συνεχιζόμενης αστάθειας."
-            : "No strong indicators of ongoing system instability found.");
+    logInfo(gr
+            ? "Δεν υπάρχουν αρκετά δεδομένα για συμπέρασμα σταθερότητας ή απουσίας βλάβης."
+            : "Insufficient data to conclude stability or absence of hardware faults.");
 }
 
-logLabelOkValue(
+logLabelWarnValue(
         gr ? "Τύπος Crash:" : "Crash Type:",
         safe(sigCrashType)
 );
@@ -1722,24 +1722,24 @@ logLabelOkValue(
 if ("High".equalsIgnoreCase(sigConfidence)) {
 
     logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 
 }
 else if ("Medium".equalsIgnoreCase(sigConfidence)) {
 
     logLabelWarnValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 
 }
 else {
 
     logLabelOkValue(
-            gr ? "Επίπεδο Βεβαιότητας:" : "Confidence Level:",
-            safe(sigConfidence)
+            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+            ApplePanicEvidencePolicy.patternConfidence()
     );
 
 }
@@ -1747,8 +1747,8 @@ else {
 logLabelOkValue(
         gr ? "Επόμενο βήμα:" : "Next step:",
         gr
-                ? "Το LAB 4 θα αναλύσει ποια περιοχή hardware ενδέχεται να εμπλέκεται."
-                : "LAB 4 will analyze which hardware area is most likely involved in the crash."
+                ? "Το LAB 4 καταγράφει όρους πιθανών υποσυστημάτων, όχι βλάβη εξαρτήματος."
+                : "LAB 4 records subsystem keyword hints, not a component fault diagnosis."
 );
 
     appendHtml("<br>");
@@ -1771,9 +1771,9 @@ private void runImpactLab() {
             : "LAB 4 — Impact Analysis");
     logLine();
 
-    logOk(gr
-            ? "Αξιολόγηση πιθανών επιπτώσεων σε hardware ή σύστημα."
-            : "Evaluating which hardware or system areas may be affected.");
+    logInfo(gr
+            ? "Καταγραφή όρων υποσυστημάτων στα εισαγόμενα logs· όχι έλεγχος hardware."
+            : "Imported-log subsystem keywords; no hardware test performed.");
 
     parseAndCacheSignature(panicLogText);
 
@@ -1798,11 +1798,11 @@ if ("Power / PMIC".equals(sigDomain)
                     : "This does not confirm a faulty component."
     );
 
-    logLabelErrorValue(
+    logLabelWarnValue(
             gr ? "Τεχνική ένδειξη:" : "Technical indication:",
             gr
-                    ? "Υποδεικνύεται κρίσιμη διαδρομή σχετιζόμενη με hardware."
-                    : "A critical hardware-related path is suggested."
+                    ? "Εντοπίστηκαν όροι υποσυστήματος, όχι επιβεβαιωμένο κρίσιμο κύκλωμα."
+                    : "Subsystem terms were found; a critical hardware path is not established."
     );
 
     logLabelWarnValue(
@@ -1819,15 +1819,15 @@ else if ("Thermal / Cooling".equals(sigDomain)
     logLabelWarnValue(
             gr ? "Ερμηνεία:" : "Interpretation:",
             gr
-                    ? "Υποδεικνύεται επίδραση λόγω φόρτου ή stress συστήματος."
-                    : "System stress-related impact suggested."
+                    ? "Παρατηρήθηκαν όροι που μπορεί να σχετίζονται με φόρτο· καμία φυσική επίπτωση δεν επιβεβαιώθηκε."
+                    : "Load-related terms were observed; no physical impact has been confirmed."
     );
 
     logLabelOkValue(
             gr ? "Συνήθης αιτία:" : "Typical cause:",
             gr
-                    ? "Συχνά σχετίζεται με θερμοκρασία, φόρτο ή παρατεταμένη χρήση."
-                    : "Often linked to heat, load, or prolonged usage."
+                    ? "Η συσχέτιση με θερμοκρασία ή φόρτο απαιτεί ανεξάρτητη επιβεβαίωση."
+                    : "A heat or load correlation requires independent corroboration."
     );
 
 }
@@ -1836,8 +1836,8 @@ else {
     logLabelOkValue(
             gr ? "Ερμηνεία:" : "Interpretation:",
             gr
-                    ? "Δεν εντοπίστηκε σαφής επίπτωση hardware μόνο από αυτό το log."
-                    : "No clear hardware impact identified from this log alone."
+                    ? "Το εισαγόμενο αρχείο δεν μετρά την κατάσταση του υλικού."
+                    : "The imported file does not measure hardware condition."
     );
 }
 
@@ -1857,6 +1857,15 @@ if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
 // ============================================================
 // LAB 5 — PANIC FREQUENCY ANALYZER (Multi-File Correlation)
 // ============================================================
+private int countSupportedPanicBlocks(String[] blocks) {
+    int valid = 0;
+    if (blocks != null) {
+        for (String block : blocks)
+            if (ApplePanicEvidencePolicy.hasPanicEvidence(block)) valid++;
+    }
+    return valid;
+}
+
 private void runPanicFrequencyLab() {
     if (!guardPanicLog()) return;
 
@@ -1871,10 +1880,10 @@ private void runPanicFrequencyLab() {
 
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
-    if (blocks.length <= 1) {
-        logWarn(gr
-                ? "Δεν υπάρχουν πολλαπλά logs για σύγκριση."
-                : "No multiple logs detected for comparison.");
+    if (countSupportedPanicBlocks(blocks) <= 1) {
+        logInfo(gr
+                ? "Μη διαθέσιμη σύγκριση: χρειάζονται δύο αναγνωρισμένα panic blocks."
+                : "Comparison unavailable: two eligible panic blocks are required.");
         return;
     }
 
@@ -1882,7 +1891,7 @@ java.util.Map<String, Integer> crashCount = new java.util.HashMap<>();
 
 for (String block : blocks) {
 
-    if (block == null || block.trim().isEmpty())
+    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
         continue;
 
     resetSignatureCache();
@@ -1892,14 +1901,11 @@ for (String block : blocks) {
         crashCount.put(key, crashCount.getOrDefault(key, 0) + 1);
     }
 
-    logInfo(gr ? "Συχνότητα Crash Types:" : "Crash Type Frequency:");
+    logInfo(gr ? "Πλήθος τύπων στα εισαγόμενα αρχεία:" : "Imported crash-type counts:");
 
 for (String k : crashCount.keySet()) {
 
-    logLabelOkValue(
-            safe(k),
-            String.valueOf(crashCount.get(k))
-    );
+    logInfo(safe(k) + ": " + String.valueOf(crashCount.get(k)));
 
 }
 
@@ -1925,10 +1931,10 @@ private void runPanicClusteringLab() {
 
 String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
-if (blocks.length <= 1) {
-    logWarn(gr
-            ? "Δεν υπάρχουν πολλαπλά logs για clustering."
-            : "No multiple logs available for clustering.");
+if (countSupportedPanicBlocks(blocks) <= 1) {
+    logInfo(gr
+            ? "Μη διαθέσιμη ομαδοποίηση: χρειάζονται δύο αναγνωρισμένα panic blocks."
+            : "Clustering unavailable: two eligible panic blocks are required.");
     return;
 }
 
@@ -1936,7 +1942,7 @@ java.util.Map<String, Integer> domainCount = new java.util.HashMap<>();
 
 for (String block : blocks) {
 
-    if (block == null || block.trim().isEmpty())
+    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
         continue;
 
     resetSignatureCache();
@@ -1947,26 +1953,16 @@ for (String block : blocks) {
     domainCount.put(key, domainCount.getOrDefault(key, 0) + 1);
 }
 
-    logInfo(gr ? "Συχνότητα Domain:" : "Domain Frequency:");
+    logInfo(gr ? "Πλήθος κατηγοριών όρων (όχι βλάβες):"
+               : "Keyword-category counts (not hardware failures):");
 
 for (String k : domainCount.keySet()) {
 
     int count = domainCount.get(k);
 
-    if (count >= 2) {
-
-        logLabelErrorValue(
-                safe(k) + ":",
-                String.valueOf(count)
-        );
-
-    } else {
-
-        logLabelOkValue(
-                safe(k) + ":",
-                String.valueOf(count)
-        );
-    }
+    // The same keyword category in two imported records is not a
+    // confirmed hardware fault or a positive measured device-health result.
+    logInfo(safe(k) + ": " + String.valueOf(count));
 }
 
     appendHtml("<br>");
@@ -1997,7 +1993,7 @@ private void runRecurringDomainLab() {
 
     for (String block : blocks) {
 
-        if (block == null || block.trim().isEmpty())
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
             continue;
 
         resetSignatureCache();
@@ -2010,9 +2006,9 @@ private void runRecurringDomainLab() {
     }
 
     if (total <= 1) {
-        logOk(gr
-                ? "Απαιτούνται πολλαπλά logs για ανίχνευση μοτίβου."
-                : "Multiple logs are required for pattern detection.");
+        logInfo(gr
+                ? "Απαιτούνται τουλάχιστον δύο έγκυρα panic blocks για σύγκριση."
+                : "At least two eligible panic blocks are required for comparison.");
         return;
     }
 
@@ -2036,8 +2032,8 @@ private void runRecurringDomainLab() {
             String.valueOf(total)
     );
 
-    logLabelWarnValue(
-            gr ? "Κυρίαρχο domain:" : "Dominant domain:",
+    logLabelOkValue(
+            gr ? "Συχνότερη κατηγορία όρων:" : "Most common keyword category:",
             safe(dominant) + " (" + max + "/" + total + ")"
     );
 
@@ -2052,30 +2048,30 @@ private void runRecurringDomainLab() {
     if (ratio >= 0.5) {
 
         if (isHighRiskDomain(dominant)) {
-            logError(gr
-                    ? "Εντοπίστηκε ισχυρό επαναλαμβανόμενο hardware pattern."
-                    : "Strong recurring hardware pattern detected.");
+            logInfo(gr
+                    ? "Επαναλήφθηκε κατηγορία λέξεων υλικού σε εισαγόμενα αρχεία· δεν πιστοποιείται βλάβη."
+                    : "Hardware-related keywords repeat across imports; no hardware fault is established.");
         } else {
-            logWarn(gr
-                    ? "Εντοπίστηκε επαναλαμβανόμενο μοτίβο domain."
-                    : "Recurring domain pattern detected.");
+            logInfo(gr
+                    ? "Επαναλαμβάνονται όροι της ίδιας κατηγορίας στα εισαγόμενα αρχεία."
+                    : "A keyword category recurs among imported entries.");
         }
 
         logWarn(gr
-                ? "Αυτό δεν επιβεβαιώνει βλάβη, αλλά δείχνει σταθερή επανάληψη."
-                : "This does not confirm hardware failure, but indicates stable recurrence.");
+                ? "Η επανάληψη λέξεων δεν αποδεικνύει επανεμφάνιση βλάβης στην ίδια συσκευή."
+                : "Repeated keywords do not prove a recurring fault on one verified device.");
 
     } else if (max >= 2) {
 
-        logWarn(gr
-                ? "Μερική επανάληψη domain εντοπίστηκε."
-                : "Partial domain recurrence detected.");
+        logInfo(gr
+                ? "Μερική επανάληψη κατηγορίας όρων στα εισαγόμενα αρχεία."
+                : "Partial keyword-category repetition in imported entries.");
 
     } else {
 
-        logOk(gr
-                ? "Δεν εντοπίστηκε επαναλαμβανόμενο domain."
-                : "No recurring domain pattern detected.");
+        logInfo(gr
+                ? "Δεν επαναλήφθηκε κατηγορία όρων στο παρόν δείγμα· η υγεία συσκευής παραμένει άγνωστη."
+                : "No category repeats in this imported sample; device health remains unknown.");
     }
 
     appendHtml("<br>");
@@ -2102,7 +2098,7 @@ private void runFinalServiceRecommendationLab() {
 // ------------------------------------------------------------
 // SPLIT LOGS
 // ------------------------------------------------------------
-String[] blocks = panicLogText.split("===== ZIP FILE:");
+String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
 java.util.Map<String,Integer> domainCount = new java.util.HashMap<>();
 java.util.Map<String,Integer> crashCount  = new java.util.HashMap<>();
@@ -2116,7 +2112,7 @@ int criticalCrashCount = 0;
 // ------------------------------------------------------------
 for (String block : blocks) {
 
-    if (block == null || block.trim().isEmpty()) continue;
+    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
 
     resetSignatureCache();
     parseAndCacheSignature(block);
@@ -2173,7 +2169,7 @@ for (java.util.Map.Entry<String,Integer> e : domainCount.entrySet()) {
     int percent = (int)(ratio * 100);
 
     // ------------------------------------------------------------
-    // STABILITY SCORE
+    // UNCALIBRATED LEGACY KEYWORD INDEX — retained for research; NOT device health
     // ------------------------------------------------------------
     int score = 100;
 
@@ -2198,25 +2194,17 @@ else if (max >= 2) {
     // ------------------------------------------------------------
     // SUMMARY
     // ------------------------------------------------------------
-    logLabelOkValue(
-        gr ? "Συνολικά logs:" : "Total logs:",
-        String.valueOf(total)
-);
+    logInfo((gr ? "Αναγνωρισμένα panic blocks: " : "Eligible panic blocks: ")
+        + total);
 
-logLabelWarnValue(
-        gr ? "Κυρίαρχο domain:" : "Dominant domain:",
-        safe(dominant) + " (" + max + "/" + total + ")"
-);
+logInfo((gr ? "Συχνότερη κατηγορία όρων: " : "Most common keyword category: ")
+        + safe(dominant) + " (" + max + "/" + total + ")");
 
-logLabelOkValue(
-        gr ? "Ποσοστό επανάληψης:" : "Repetition ratio:",
-        percent + "%"
-);
+logInfo((gr ? "Ποσοστό της κατηγορίας στο εισαγόμενο δείγμα: "
+            : "Category share among imported entries: ") + percent + "%");
 
-logLabelOkValue(
-        gr ? "Δείκτης Σταθερότητας:" : "Stability Index:",
-        score + " / 100"
-);
+logInfo((gr ? "Μη βαθμονομημένος δείκτης όρων: " : "Uncalibrated keyword index: ")
+        + score + "/100 (NOT measured device health)");
 appendHtml("<br>");
 
 boolean singleLog = total == 1;
@@ -2227,9 +2215,9 @@ if (singleLog) {
             ? "Η αξιολόγηση βασίζεται σε ένα μόνο panic log."
             : "Evaluation is based on a single panic log.");
 
-    logOk(gr
-            ? "Η τεχνική εκτίμηση προκύπτει από την ανάλυση crash υπογραφής."
-            : "Technical estimation is based on crash signature analysis.");
+    logInfo(gr
+            ? "Μία υπογραφή δεν παρέχει ποσοστό πραγματικής αστάθειας ή βλάβης."
+            : "One imported signature does not establish a physical fault or stability rate.");
 
     appendHtml("<br>");
 }
@@ -2253,19 +2241,19 @@ if (dominant != null && (
 logLabelWarnValue(
         gr ? "Μοτίβο crash:" : "Crash pattern:",
         gr
-                ? "Εντοπίστηκε επαναλαμβανόμενο μοτίβο."
-                : "Recurring crash pattern detected."
+                ? (singleLog ? "Ένα μόνο εισαγόμενο συμβάν, όχι επανάληψη."
+                             : "Επαναλαμβάνεται κατηγορία όρων στα αρχεία, όχι αποδεδειγμένη βλάβη.")
+                : (singleLog ? "Only one imported event; recurrence is not established."
+                             : "Keyword categories recur across imports; hardware recurrence is unverified.")
 );
 
 logLabelWarnValue(
-        gr ? "Κυρίαρχο υποσύστημα:" : "Dominant subsystem:",
+        gr ? "Συχνότερο keyword domain:" : "Most common keyword domain:",
         safe(domainText)
 );
 
-logLabelWarnValue(
-        gr ? "Σταθερότητα συστήματος:" : "System stability:",
-        score + "/100"
-);
+logInfo((gr ? "Μη βαθμονομημένος δείκτης λέξεων: "
+            : "Uncalibrated keyword index: ") + score + "/100 (not physical health)");
 
 logLabelOkValue(
         gr ? "Σύσταση:" : "Recommendation:",
@@ -2290,32 +2278,29 @@ else if (ratio < 0.4 && domainCount.size() >= 3) {
 
 if (likelyHardware) {
 
-    logLabelErrorValue(
-            gr ? "Τύπος προβλήματος:" : "Issue type:",
+    logLabelWarnValue(
+            gr ? "Υπόθεση υποσυστήματος:" : "Subsystem hypothesis:",
             gr
-                    ? "Πιθανή βλάβη υλικού."
-                    : "Probable hardware fault."
+                    ? "Ομάδα λέξεων που χρειάζεται ανεξάρτητο έλεγχο· δεν διαγνώστηκε βλάβη υλικού."
+                    : "Keyword grouping needs corroboration; no hardware failure was diagnosed."
     );
 
 }
 else if (likelySoftware) {
 
     logLabelWarnValue(
-            gr ? "Τύπος προβλήματος:" : "Issue type:",
+            gr ? "Υπόθεση λογισμικού:" : "Software hypothesis:",
             gr
-                    ? "Πιθανό πρόβλημα λογισμικού."
-                    : "Likely software instability."
+                    ? "Το μοτίβο λέξεων δεν επιβεβαιώνει αιτία λογισμικού."
+                    : "Keyword patterns do not establish a software root cause."
     );
 
 }
 else {
 
-    logLabelOkValue(
-            gr ? "Τύπος προβλήματος:" : "Issue type:",
-            gr
-                    ? "Μη καθορισμένη αιτία."
-                    : "Cause not clearly determined."
-    );
+    logInfo(gr
+            ? "Αιτία: Μη επαληθευμένη από τα εισαγόμενα αρχεία."
+            : "Cause: Unverified from imported files.");
 }
 
     // ------------------------------------------------------------
@@ -2374,10 +2359,8 @@ if (dominant != null) {
         suspect = "Camera / Sensors / Peripheral bus";
 }
 
-    logLabelWarnValue(
-        gr ? "Πιθανό υποσύστημα:" : "Probable subsystem:",
-        safe(suspect)
-);
+    logInfo((gr ? "Υπόθεση από λέξεις του log (όχι διάγνωση εξαρτήματος): "
+              : "Log keyword hint (not a component diagnosis): ") + safe(suspect));
 
 appendHtml("<br>");
 
@@ -2386,56 +2369,56 @@ appendHtml("<br>");
     // ------------------------------------------------------------
     if (score >= 85) {
 
-        logOk(gr
-                ? "Υψηλή σταθερότητα συστήματος."
-                : "High system stability.");
+        logInfo(gr
+                ? "Υψηλή τιμή μόνο του μη βαθμονομημένου δείκτη λέξεων· σταθερότητα συσκευής άγνωστη."
+                : "High uncalibrated keyword index only; actual device stability unknown.");
 
-        logOk(gr
-                ? "Δεν εντοπίστηκαν σοβαρά επαναλαμβανόμενα μοτίβα."
-                : "No significant recurring crash patterns detected.");
+        logInfo(gr
+                ? "Δεν κυριάρχησαν οι σταθμισμένες λέξεις σε αυτά τα αρχεία· δεν αποκλείεται βλάβη."
+                : "Weighted keywords did not dominate this sample; hardware faults are not ruled out.");
 
     }
     else if (score >= 60) {
 
-        logWarn(gr
-                ? "Μέτρια ένδειξη αστάθειας."
-                : "Moderate instability indicators detected.");
+        logInfo(gr
+                ? "Μεσαία τιμή μη βαθμονομημένου δείκτη, όχι μέτρηση αστάθειας."
+                : "Midrange uncalibrated index, not measured instability.");
 
-        logOk(gr
-                ? "Συνιστάται παρακολούθηση εάν τα συμπτώματα συνεχιστούν."
-                : "Monitoring is advised if symptoms persist.");
+        logInfo(gr
+                ? "Αν υπάρχουν πραγματικά συμπτώματα, συσχετίστε τα με τεχνικό."
+                : "Correlate persistent real-world symptoms with a technician.");
 
     }
     else if (score >= 40) {
 
-        logWarn(gr
-                ? "Αυξημένες ενδείξεις αστάθειας."
-                : "Elevated instability indicators detected.");
+        logInfo(gr
+                ? "Χαμηλή τιμή μη βαθμονομημένου δείκτη· η κατάσταση συσκευής παραμένει άγνωστη."
+                : "Low uncalibrated keyword index; physical condition remains unknown.");
 
-        logWarn(gr
-                ? "Εντοπίστηκε επαναλαμβανόμενο domain με σημαντική συχνότητα."
-                : "Recurring hardware domain detected.");
+        logInfo(gr
+                ? "Εμφανίζεται επανάληψη κατηγορίας όρων· δεν τεκμηριώνει επαναλαμβανόμενη βλάβη."
+                : "A keyword category repeats; this does not establish a recurring hardware fault.");
 
-        logOk(gr
-                ? "Συνιστάται τεχνικός έλεγχος."
-                : "Professional inspection recommended.");
+        logInfo(gr
+                ? "Τεχνικός έλεγχος ενδείκνυται εφόσον επιβεβαιώνονται πραγματικά συμπτώματα."
+                : "Technician evaluation is appropriate if real symptoms are confirmed.");
              
    appendHtml("<br>");
    
     }
     else {
 
-        logError(gr
-                ? "Χαμηλή σταθερότητα συστήματος."
-                : "Low system stability detected.");
+        logInfo(gr
+                ? "Πολύ χαμηλή τιμή του ανεπαλήθευτου δείκτη λέξεων· όχι διάγνωση αστάθειας."
+                : "Very low unvalidated keyword index; not a device-instability diagnosis.");
 
-        logWarn(gr
-                ? "Εντοπίστηκαν επαναλαμβανόμενα κρίσιμα μοτίβα crash."
-                : "Recurring critical crash patterns detected.");
+        logInfo(gr
+                ? "Καταγράφηκε επανάληψη όρων υψηλής βαρύτητας στα εισαγόμενα αρχεία."
+                : "High-weight terms recur within imported files; physical severity unverified.");
 
-        logError(gr
-                ? "Συνιστάται άμεσος τεχνικός έλεγχος."
-                : "Immediate technical inspection recommended.");
+        logInfo(gr
+                ? "Απαιτείται συσχέτιση με πραγματικές επανεκκινήσεις και συμπτώματα πριν από σύσταση επισκευής."
+                : "Verify real restarts and symptoms before recommending a repair.");
     }
 
     appendHtml("<br>");
@@ -2463,85 +2446,63 @@ logLabelOkValue(
 }
 
 private void runDemoDiagnostics() {
-
-    new Thread(() -> {
-
-        boolean gr = AppLang.isGreek(this);
-
+    // Called from a user click on the main thread. The in-memory demo text
+    // and its eight bounded parsers are not a real imported iPhone report.
+    final String previousText = panicLogText;
+    final String previousName = panicLogName;
+    final boolean previousLoaded = panicLogLoaded;
+    final int previousCount = panicLogCount;
+    final boolean previousAppend = appendMode;
+    final String previousCrashType = sigCrashType;
+    final String previousDomain = sigDomain;
+    final String previousConfidence = sigConfidence;
+    final String previousKeyEvidence = sigKeyEvidence;
+    final boolean gr = AppLang.isGreek(this);
+    demoMode = true;
+    try {
         logLine();
-logInfo(gr
-        ? "DEMO MODE — ΔΙΑΓΝΩΣΗ APPLE"
-        : "DEMO MODE — APPLE DIAGNOSTICS");
+        logInfo(gr
+                ? "DEMO MODE — ΠΡΟΣΟΜΟΙΩΣΗ APPLE (όχι δεδομένα πελάτη)"
+                : "DEMO MODE — APPLE SIMULATION (not customer evidence)");
         logLine();
 
-        try {
+        panicLogText = buildDemoPanicLogs();
+        panicLogLoaded = true;
+        panicLogName = gr ? "Δοκιμαστικά panic logs" : "Simulated panic logs";
+        panicLogCount = countSupportedPanicBlocks(
+                panicLogText.split("(?m)^===== ZIP FILE:"));
+        logLabelOkValue(gr ? "Συσκευή demo:" : "Demo device:",
+                safe(detectDeviceType(panicLogText)));
+        logOk(gr ? "Φορτώθηκαν δοκιμαστικά δεδομένα μόνο για εμφάνιση."
+                 : "Simulation data loaded for on-screen demonstration only.");
 
-            // ====================================================
-            // LOAD BUILT-IN DEMO LOGS
-            // ====================================================
-
-            panicLogText   = buildDemoPanicLogs();
-            panicLogLoaded = true;
-            
-            String device = detectDeviceType(panicLogText);
-
-logLabelOkValue(
-        gr ? "Συσκευή:" : "Device:",
-        safe(device)
-);
-        
-            panicLogName   = gr
-                    ? "Ενσωματωμένα demo panic logs"
-                    : "Built-in demo panic logs";
-
-            panicLogCount = panicLogText.split("===== ZIP FILE:").length - 1;
-
-            logOk(gr
-                    ? "Φορτώθηκαν ενσωματωμένα demo panic logs."
-                    : "Built-in demo panic logs loaded.");
-
-            SystemClock.sleep(100);
-
-            // ====================================================
-            // RUN ALL LABS
-            // ====================================================
-
-            runPanicLogAnalyzer();
-            SystemClock.sleep(100);
-
-            runPanicSignatureParser();
-            SystemClock.sleep(100);
-
-            runStabilityLab();
-            SystemClock.sleep(100);
-
-            runImpactLab();
-            SystemClock.sleep(100);
-
-            runPanicFrequencyLab();
-            SystemClock.sleep(100);
-
-            runPanicClusteringLab();
-            SystemClock.sleep(100);
-
-            runRecurringDomainLab();
-            SystemClock.sleep(100);
-            
-            runFinalServiceRecommendationLab();
-
-            logOk(gr
-                    ? "Η διάγνωση των demo panic logs ολοκληρώθηκε."
-                    : "Demo panic log diagnostics completed.");
-
-        } catch (Throwable t) {
-
-            logLabelErrorValue(
-        gr ? "Αποτυχία demo διάγνωσης:" : "Demo diagnostics failed:",
-        safe(t.getMessage())
-);
-        }
-
-    }).start();
+        runPanicLogAnalyzer();
+        runPanicSignatureParser();
+        runStabilityLab();
+        runImpactLab();
+        runPanicFrequencyLab();
+        runPanicClusteringLab();
+        runRecurringDomainLab();
+        runFinalServiceRecommendationLab();
+        logWarn(gr
+                ? "Τέλος DEMO: κανένα δοκιμαστικό αποτέλεσμα δεν αποθηκεύτηκε στην αναφορά service."
+                : "DEMO finished: no simulated results were stored in the service report.");
+    } catch (Throwable t) {
+        logLabelErrorValue(gr ? "Αποτυχία demo:" : "Demo failed:", safe(t.getMessage()));
+    } finally {
+        // Restore the prior real import (if any); a demo never grants the
+        // ability to run real LABs without previously imported customer logs.
+        panicLogText = previousText;
+        panicLogLoaded = previousLoaded;
+        panicLogName = previousName;
+        panicLogCount = previousCount;
+        appendMode = previousAppend;
+        sigCrashType = previousCrashType;
+        sigDomain = previousDomain;
+        sigConfidence = previousConfidence;
+        sigKeyEvidence = previousKeyEvidence;
+        demoMode = false;
+    }
 }
 
 // ============================================================
@@ -2581,7 +2542,8 @@ private String readTextStream(InputStream is) throws Exception {
 
     while ((read = bis.read(buf)) != -1) {
         total += read;
-        if (total > MAX_TEXT_BYTES) break;
+        if (total > MAX_TEXT_BYTES)
+            throw new java.io.IOException("Imported text exceeds size cap; no partial evidence accepted");
         bos.write(buf, 0, read);
     }
 
@@ -2596,55 +2558,12 @@ private String readTextStream(InputStream is) throws Exception {
 }
 
 private String readPanicFromZip(InputStream is) throws Exception {
-
-    ZipInputStream zis = new ZipInputStream(new BufferedInputStream(is));
-    ZipEntry entry;
-    int scanned = 0;
-
-    try {
-
-StringBuilder all = new StringBuilder();
-
-while ((entry = zis.getNextEntry()) != null && scanned < ZIP_SCAN_CAP) {
-
-    scanned++;
-
-    String name = entry.getName().toLowerCase(Locale.US);
-
-    boolean candidate =
-            name.contains("panic") ||
-            name.endsWith(".ips") ||
-            name.endsWith(".log") ||
-            name.endsWith(".txt");
-
-    if (!candidate) continue;
-
-    String text = readTextStream(zis);
-
-    if (text != null && !text.trim().isEmpty()) {
-
-        all.append("\n\n===== ZIP FILE: ")
-           .append(name)
-           .append(" =====\n\n")
-           .append(text);
-    }
+    // Count every entry, bound decompression and keep the parent ZIP stream alive.
+    return ApplePanicArchiveReader.read(is, ZIP_SCAN_CAP,
+            MAX_TEXT_BYTES, MAX_PANIC_LOG_SIZE).text;
 }
 
-if (all.length() > 0) {
-    return all.toString();
-}
-
-    } finally {
-        try { zis.close(); } catch (Throwable ignore) {}
-    }
-
-    throw new Exception(
-            AppLang.isGreek(this)
-                    ? "Δεν βρέθηκε αναγνώσιμο panic log μέσα στο ZIP (πιθανώς κατεστραμμένο αρχείο)."
-                    : "No readable panic entry found in ZIP (file may be corrupted)."
-    );
-}
-
+// ============================================================
 // ============================================================
 // SIGNATURE PARSER STATE (CANONICAL - DO NOT LOCALIZE)
 // ============================================================
@@ -2875,33 +2794,33 @@ private void logInfo(String msg) {
     String clean = safe(msg);
     String s = "ℹ️ " + clean;
     appendHtml(escape(s));
-    GELServiceLog.logInfo(clean);
+    if (!demoMode) GELServiceLog.logInfo(clean);
 }
 
 private void logOk(String msg) {
     String clean = safe(msg);
     String s = "✔ " + clean;
     appendHtml("<font color='#39FF14'>" + escape(s) + "</font>");
-    GELServiceLog.logOk(clean);
+    if (!demoMode) GELServiceLog.logOk(clean);
 }
 
 private void logWarn(String msg) {
     String clean = safe(msg);
     String s = "⚠ " + clean;
     appendHtml("<font color='#FFD966'>" + escape(s) + "</font>");
-    GELServiceLog.logWarn(clean);
+    if (!demoMode) GELServiceLog.logWarn(clean);
 }
 
 private void logError(String msg) {
     String clean = safe(msg);
     String s = "✖ " + clean;
     appendHtml("<font color='#FF5555'>" + escape(s) + "</font>");
-    GELServiceLog.logError(clean);
+    if (!demoMode) GELServiceLog.logError(clean);
 }
 
 private void logLine() {
     appendHtml("--------------------------------------------------");
-    GELServiceLog.logLine();
+    if (!demoMode) GELServiceLog.logLine();
 }
 
 // ============================================================
@@ -2916,7 +2835,7 @@ private void logLabelOkValue(String label, String value) {
             "<font color='#39FF14'>" + escape(v) + "</font>"
     );
 
-    GELServiceLog.logInfo(l + " " + v);
+    if (!demoMode) GELServiceLog.logInfo(l + " " + v);
 }
 
 private void logLabelWarnValue(String label, String value) {
@@ -2928,7 +2847,7 @@ private void logLabelWarnValue(String label, String value) {
             "<font color='#FFD966'>" + escape(v) + "</font>"
     );
 
-    GELServiceLog.logWarn(l + " " + v);
+    if (!demoMode) GELServiceLog.logWarn(l + " " + v);
 }
 
 private void logLabelErrorValue(String label, String value) {
@@ -2940,7 +2859,7 @@ private void logLabelErrorValue(String label, String value) {
             "<font color='#FF5555'>" + escape(v) + "</font>"
     );
 
-    GELServiceLog.logError(l + " " + v);
+    if (!demoMode) GELServiceLog.logError(l + " " + v);
 }
 
 // ------------------------------------------------------------

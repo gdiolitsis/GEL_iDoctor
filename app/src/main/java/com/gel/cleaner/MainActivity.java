@@ -104,10 +104,12 @@ public boolean onCreateOptionsMenu(Menu menu) {
     settingsItem.setContentDescription(settingsLabel);
     settingsItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
-// 🔽 CONTACT BUTTON
-menu.add(0, 1002, 1, "Contact")
-        .setIcon(R.drawable.ic_contact_gel)
-        .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+// Contact action: preserve its icon/handler and localize the visible and accessible name.
+final String contactLabel = AppLang.isGreek(this) ? "Επικοινωνία" : "Contact";
+MenuItem contactItem = menu.add(0, 1002, 1, contactLabel);
+contactItem.setIcon(R.drawable.ic_contact_gel);
+contactItem.setContentDescription(contactLabel);
+contactItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
     // Closed Test / trusted tester entitlement.
     menu.add(
@@ -510,7 +512,7 @@ private void showContactDeveloperDialog() {
     btnCancel.setBackground(makeGelBtn(0xFFAA1111));
 
     Button btnSend = new com.gel.cleaner.GelButton(this);
-    btnSend.setText(gr ? "Αποστολή" : "Send");
+    btnSend.setText(gr ? "ΑΠΟΣΤΟΛΗ" : "SEND");
     btnSend.setTextColor(Color.WHITE);
     btnSend.setAllCaps(false);
     btnSend.setBackground(makeGelBtn(0xFF00FF7F));
@@ -556,7 +558,7 @@ try {
     startActivity(intent);
 } catch (Exception e) {
     Toast.makeText(this,
-            "No email app found",
+            gr ? "Δεν βρέθηκε εφαρμογή email" : "No email app found",
             Toast.LENGTH_SHORT).show();
 }
 
@@ -2706,7 +2708,7 @@ bg.setStroke(dp(3), 0xFFFFD700);
 root.setBackground(bg);
 
 TextView title = new TextView(this);
-title.setText("Select your Apple device");
+title.setText(AppLang.isGreek(this) ? "Επιλέξτε συσκευή Apple" : "Select your Apple device");
 title.setTextColor(Color.WHITE);
 title.setTextSize(20f);
 title.setTypeface(null, Typeface.BOLD);
@@ -2781,6 +2783,16 @@ new ColorDrawable(Color.TRANSPARENT));
 // --------------------------------------------
 d.show();
 com.gel.cleaner.GelButtonLayout.fitDialog(d);
+
+// Restore both original family selectors without modifying any model data.
+iphoneBtn.setOnClickListener(v -> {
+    d.dismiss();
+    showAppleModelPicker("iphone");
+});
+ipadBtn.setOnClickListener(v -> {
+    d.dismiss();
+    showAppleModelPicker("ipad");
+});
 }
 
 // =========================================================
@@ -2790,6 +2802,19 @@ private void showAppleModelPicker(String type) {
 
 String[] models = "iphone".equals(type)
 ? new String[]{
+
+// =====================
+// Apple manufacturer-verified 2025–2026 models
+// =====================
+"iPhone Duo",
+"iPhone 18 Pro",
+"iPhone 18 Pro Max",
+"iPhone 17",
+"iPhone 17 Pro",
+"iPhone 17 Pro Max",
+"iPhone Air",
+"iPhone 17e",
+"iPhone 16e",
 
 // =====================
 // iPhone 16 Series
@@ -2881,7 +2906,7 @@ bg.setStroke(dp(3), 0xFFFFD700);
 root.setBackground(bg);
 
 TextView title = new TextView(this);
-title.setText("Select Apple Model");
+title.setText(AppLang.isGreek(this) ? "Επιλέξτε μοντέλο Apple" : "Select Apple Model");
 title.setTextColor(Color.WHITE);
 
 root.addView(title);
@@ -2939,7 +2964,7 @@ btn.setText("🍎 " + type.toUpperCase(Locale.US)
 
 Toast.makeText(
 this,
-"Selected: " + rawModel,
+(AppLang.isGreek(this) ? "Επιλέχθηκε: " : "Selected: ") + rawModel,
 Toast.LENGTH_SHORT
 ).show();
 

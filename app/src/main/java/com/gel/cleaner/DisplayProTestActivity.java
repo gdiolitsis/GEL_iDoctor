@@ -48,7 +48,13 @@ public class DisplayProTestActivity extends GELAutoActivityHook {
     private TextView hint;
     private int stepIndex = 0;
     private int loopIndex = 0;
+    // True only after all configured visual pattern cycles were presented.
+    private boolean fullPatternSequenceShown = false;
     private long startTimeMs;
+    // Preserve this Activity window's original policy, not global brightness.
+    private boolean displayOverrideApplied = false;
+    private float previousWindowBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+    private boolean previousKeepScreenOn = false;
 
     private TestStep[] steps;
     private final Handler h = new Handler(Looper.getMainLooper());
@@ -93,6 +99,7 @@ public class DisplayProTestActivity extends GELAutoActivityHook {
                 "LAB Display Pro Test — CANCELED by user"
         );
 
+        restoreDisplayWindowPolicy();
         setResult(RESULT_CANCELED);
         finish();
     }
@@ -103,11 +110,43 @@ public void onBackPressed() {
 }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        // Interrupted visual presentation cannot count as a fully observed test.
+        if (displayOverrideApplied && !testFinished) safeCancel();
+    }
+
+    @Override
     protected void onDestroy() {
         activityAlive = false;
         h.removeCallbacksAndMessages(null);
+        restoreDisplayWindowPolicy(); // Backup cleanup for forced Activity destruction.
         AppTTS.stop();
         super.onDestroy();
+    }
+
+    private void applyDisplayWindowPolicy() {
+        if (displayOverrideApplied) return;
+        WindowManager.LayoutParams current = getWindow().getAttributes();
+        previousWindowBrightness = current.screenBrightness;
+        previousKeepScreenOn = (current.flags &
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) != 0;
+        displayOverrideApplied = true;
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        WindowManager.LayoutParams override = getWindow().getAttributes();
+        override.screenBrightness = 1f;
+        getWindow().setAttributes(override);
+    }
+
+    private void restoreDisplayWindowPolicy() {
+        if (!displayOverrideApplied) return;
+        displayOverrideApplied = false;
+        WindowManager.LayoutParams current = getWindow().getAttributes();
+        current.screenBrightness = previousWindowBrightness;
+        getWindow().setAttributes(current);
+        if (!previousKeepScreenOn) {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
     }
 
     // ============================================================
@@ -129,7 +168,7 @@ public void onBackPressed() {
         AlertDialog.Builder b =
                 new AlertDialog.Builder(this,
                         android.R.style.Theme_Material_Dialog_NoActionBar);
-        b.setCancelable(false);
+        b.setCancelable(true);
 
         LinearLayout root = buildPopupRoot(this);
         root.addView(buildHeader(
@@ -143,8 +182,8 @@ LinearLayout buttons = new LinearLayout(this);
 buttons.setOrientation(LinearLayout.HORIZONTAL);
 buttons.setGravity(Gravity.CENTER);
 
-Button cancel = gelButton(gr ? "ΑΚΥΡΩΣΗ" : "CANCEL", 0xFFB00020);
-Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
+Button cancel = gelButton(gr ? "ΑΚΥΡΩΣΗ" : "CANCEL", 0xFFE60000);
+Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF39FF14);
 
         setDualButtons(cancel, start, buttons);
         root.addView(buttons);
@@ -155,12 +194,15 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         if (d.getWindow() != null)
             d.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
+        d.setCanceledOnTouchOutside(false);
+        d.setOnCancelListener(ignored -> safeCancel());
         d.show();
 
         com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (!AppTTS.isMuted(this)) {
+    if (d.isShowing() && !testFinished && activityAlive
+            && !isFinishing() && !isDestroyed() && !AppTTS.isMuted(this)) {
         AppTTS.ensureSpeak(this, text);
     }
 }, 120);
@@ -198,16 +240,18 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
                         gr ? "Κύκλος καταπόνησης OLED" : "Burn-in stress cycle")
         };
 
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.screenBrightness = 1f;
-        getWindow().setAttributes(lp);
+        applyDisplayWindowPolicy();
 
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
 
         hint = new TextView(this);
-        hint.setTextColor(Color.WHITE);
+        // Preserve the original full-screen test patterns: never place a
+        // translucent background over the display under inspection.
+        // Only the instruction/cycle letters change from backup white to
+        // high-contrast yellow with a black text shadow.
+        hint.setTextColor(Color.YELLOW);
+        hint.setShadowLayer(4f, 2f, 2f, Color.BLACK);
         hint.setTextSize(16f);
         hint.setPadding(dp(24), dp(24), dp(24), dp(24));
         hint.setGravity(Gravity.CENTER);
@@ -220,7 +264,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         exitBtn.setTextSize(15f);
 
         GradientDrawable exitBg = new GradientDrawable();
-        exitBg.setColor(0xFF8B0000);
+        exitBg.setColor(0xFFE60000);
         exitBg.setCornerRadius(dp(14));
         exitBg.setStroke(dp(3), 0xFFFFD700);
         exitBtn.setBackground(exitBg);
@@ -244,6 +288,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         startTimeMs = System.currentTimeMillis();
         stepIndex = 0;
         loopIndex = 0;
+        fullPatternSequenceShown = false;
 
         runStep();
     }
@@ -267,6 +312,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
             stepIndex = 0;
             loopIndex++;
             if (loopIndex >= LOOP_COUNT) {
+                fullPatternSequenceShown = true;
                 showFinalQuestion();
                 return;
             }
@@ -307,7 +353,7 @@ Button start  = gelButton(gr ? "ΕΝΑΡΞΗ" : "START",  0xFF0F8A3B);
         AlertDialog.Builder b =
                 new AlertDialog.Builder(this,
                         android.R.style.Theme_Material_Dialog_NoActionBar);
-        b.setCancelable(false);
+        b.setCancelable(true);
 
         LinearLayout root = buildPopupRoot(this);
         root.addView(buildHeader(
@@ -329,8 +375,8 @@ root.addView(buildMuteRow());
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         buttons.setGravity(Gravity.CENTER);
 
-        Button no  = gelButton(gr ? "ΟΧΙ\nΟΚ" : "NO\nOK", 0xFF0F8A3B);
-        Button yes = gelButton(gr ? "ΝΑΙ\nΠρόβλημα" : "YES\nIssue", 0xFFB00020);
+        Button no  = gelButton(gr ? "ΟΧΙ\nΟΚ" : "NO\nOK", 0xFF39FF14);
+        Button yes = gelButton(gr ? "ΝΑΙ\nΠρόβλημα" : "YES\nIssue", 0xFFE60000);
 
         setDualButtons(no, yes, buttons);
         root.addView(buttons);
@@ -341,18 +387,27 @@ root.addView(buildMuteRow());
         if (d.getWindow() != null)
             d.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
+        d.setCanceledOnTouchOutside(false);
+        d.setOnCancelListener(ignored -> safeCancel());
         d.show();
 
         com.gel.cleaner.GelButtonLayout.fitDialog(d);
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-    if (!testFinished && !AppTTS.isMuted(this)) {
+    if (d.isShowing() && !testFinished && activityAlive
+            && !isFinishing() && !isDestroyed() && !AppTTS.isMuted(this)) {
         AppTTS.ensureSpeak(this, text);
     }
 }, 120);
 
-no.setOnClickListener(v -> endTest(false));
-yes.setOnClickListener(v -> endTest(true));
+no.setOnClickListener(v -> {
+    d.dismiss();
+    endTest(false);
+});
+yes.setOnClickListener(v -> {
+    d.dismiss();
+    endTest(true);
+});
 }
 
     // ============================================================
@@ -378,7 +433,9 @@ yes.setOnClickListener(v -> endTest(true));
 
     Intent result = new Intent();
     result.putExtra("display_issues", issuesDetected);
+    result.putExtra("display_steps_completed", fullPatternSequenceShown);
 
+    restoreDisplayWindowPolicy();
     setResult(RESULT_OK, result);
     finish();
 }
@@ -481,7 +538,8 @@ private LinearLayout buildMuteRow() {
         Button b = new com.gel.cleaner.GelButton(this);
         b.setText(text);
         b.setAllCaps(false);
-        b.setTextColor(Color.WHITE);
+        b.setTextColor(color == 0xFF39FF14 ? Color.BLACK : Color.WHITE);
+        b.setTypeface(null, Typeface.BOLD);
         b.setTextSize(15f);
 
         GradientDrawable bg = new GradientDrawable();

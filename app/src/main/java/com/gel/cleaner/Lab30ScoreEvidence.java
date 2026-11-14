@@ -26,6 +26,26 @@ public final class Lab30ScoreEvidence {
                 && temp > 0f && temp <= 100f && pct >= 0f && pct <= 100f;
     }
 
+    /** A failed/hidden StatFs snapshot is unknown, not 0% free space. */
+    public static boolean hasStorageReadings(long totalBytes, long availableBytes) {
+        return totalBytes > 0L && availableBytes >= 0L && availableBytes <= totalBytes;
+    }
+
+    /** A missing ActivityManager reading is unknown, not 0% available RAM. */
+    public static boolean hasRamReadings(long totalBytes, long availableBytes) {
+        return totalBytes > 0L && availableBytes >= 0L && availableBytes <= totalBytes;
+    }
+
+    /** Visibility-limited inventory cannot be used without any visible packages. */
+    public static boolean hasAppInventory(int totalPackages, int userPackages) {
+        return totalPackages > 0 && userPackages >= 0 && userPackages <= totalPackages;
+    }
+
+    /** A permission sample with missing grants/counters is not full privacy coverage. */
+    public static boolean hasPrivacyCoverage(int visibleUserApps, boolean incomplete) {
+        return visibleUserApps > 0 && !incomplete;
+    }
+
     public static int performanceScore(int storage, int ram, int apps, int thermal) {
         if (storage < 0 || ram < 0 || apps < 0 || thermal < 0) return -1;
         return Math.round(storage * 0.35f + ram * 0.35f

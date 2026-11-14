@@ -43,6 +43,9 @@ class SelectorsTest(unittest.TestCase):
         self.assertIsNotNone(matching(pattern, "Advanced / Logs — Manual Labs 25–30", re.I))
         self.assertIsNotNone(matching(pattern, "Advanced / Logs — Manual Labs 25–31", re.I))
         self.assertIsNone(matching(manual_section_pattern(21, 24), "Manual Labs 25–30", re.I))
+        self.assertIsNotNone(matching(manual_section_pattern(1, 5), "Ήχος & Δόνηση — Εργαστήρια 1–5", re.I))
+        self.assertIsNotNone(matching(manual_section_pattern(25, 31), "Προχωρημένα / Καταγραφές — Εργαστήρια 25–31", re.I))
+        self.assertIsNone(matching(manual_section_pattern(21, 24), "Εργαστήρια 25–31", re.I))
 
     def test_missing_lab_sections_fail_qa_coverage(self):
         rows = [

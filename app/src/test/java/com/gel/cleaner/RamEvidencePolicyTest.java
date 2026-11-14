@@ -16,6 +16,15 @@ public class RamEvidencePolicyTest {
                 RamEvidencePolicy.assess(35, true));
     }
 
+    @Test public void missingOrInconsistentSwapCannotBeReportedAsZero() {
+        assertEquals(-1L, RamEvidencePolicy.observedSwapUsedKb(-1, -1));
+        assertEquals(-1L, RamEvidencePolicy.observedSwapUsedKb(1024, -1));
+        assertEquals(-1L, RamEvidencePolicy.observedSwapUsedKb(1024, 2048));
+        assertEquals(0L, RamEvidencePolicy.observedSwapUsedKb(0, 0));
+        assertEquals(0L, RamEvidencePolicy.observedSwapUsedKb(1024, 1024));
+        assertEquals(768L, RamEvidencePolicy.observedSwapUsedKb(1024, 256));
+    }
+
     @Test public void invalidPercentIsNotHealthy() {
         assertEquals(RamEvidencePolicy.Assessment.INSUFFICIENT_DATA,
                 RamEvidencePolicy.assess(-1, false));

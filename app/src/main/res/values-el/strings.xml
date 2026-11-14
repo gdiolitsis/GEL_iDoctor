@@ -201,13 +201,13 @@ GDiolitsis Engine Lab (GEL) — Author &amp; Developer
 </string>
 
    <!-- 7 CATEGORIES -->
-    <string name="manual_cat_1">Ήχος &amp; Δόνηση — Manual Labs 1–5</string>
-    <string name="manual_cat_2">Οθόνη &amp; Αισθητήρες — Manual Labs 6–9</string>
-    <string name="manual_cat_3">Ασύρματα &amp; Συνδεσιμότητα — Manual Labs 10–13</string>
-    <string name="manual_cat_4">Μπαταρία &amp; Θερμοκρασία — Manual Labs 14–17</string>
-    <string name="manual_cat_5">Αποθήκευση &amp; Απόδοση — Manual Labs 18–20</string>
-    <string name="manual_cat_6">Ασφάλεια &amp; Υγεία Συστήματος — Manual Labs 21–24</string>
-    <string name="manual_cat_7">Advanced / Logs — Manual Labs 25–31</string>
+    <string name="manual_cat_1">Ήχος &amp; Δόνηση — Εργαστήρια 1–5</string>
+    <string name="manual_cat_2">Οθόνη &amp; Αισθητήρες — Εργαστήρια 6–9</string>
+    <string name="manual_cat_3">Ασύρματα &amp; Συνδεσιμότητα — Εργαστήρια 10–13</string>
+    <string name="manual_cat_4">Μπαταρία &amp; Θερμοκρασία — Εργαστήρια 14–17</string>
+    <string name="manual_cat_5">Αποθήκευση &amp; Απόδοση — Εργαστήρια 18–20</string>
+    <string name="manual_cat_6">Ασφάλεια &amp; Υγεία Συστήματος — Εργαστήρια 21–24</string>
+    <string name="manual_cat_7">Προχωρημένα / Καταγραφές — Εργαστήρια 25–31</string>
 
     <!-- LOG -->
     <string name="manual_log_title">Καταγραφή Manual Tests</string>

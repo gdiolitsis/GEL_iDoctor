@@ -371,14 +371,15 @@ private void saveModelCapacity(long v) {
 
     if (bi.chargeNowMah <= 0) {
 
+        // Standard power_supply charge_now is µAh. energy_now is µWh,
+        // NOT charge; never silently mix energy and charge units.
         long rawNow = readSysLongSafe(
-                "/sys/class/power_supply/battery/charge_now",
-                "/sys/class/power_supply/battery/energy_now"
+                "/sys/class/power_supply/battery/charge_now"
         );
+        long nowMah = normalizeMah(rawNow);
 
-        if (rawNow > 0) {
-
-            bi.chargeNowMah = rawNow;
+        if (nowMah > 0) {
+            bi.chargeNowMah = nowMah;
             gotCounterFromSysfs = true;
         }
     }
@@ -386,12 +387,11 @@ private void saveModelCapacity(long v) {
     if (bi.chargeFullMah <= 0) {
 
         long rawFull = readSysLongSafe(
-                "/sys/class/power_supply/battery/charge_full",
-                "/sys/class/power_supply/battery/energy_full"
+                "/sys/class/power_supply/battery/charge_full"
         );
-
-        if (rawFull > 0) {
-            bi.chargeFullMah = rawFull;
+        long fullMah = normalizeMah(rawFull);
+        if (fullMah > 0) {
+            bi.chargeFullMah = fullMah;
         }
     }
 
@@ -405,11 +405,11 @@ private void saveModelCapacity(long v) {
         bi.internalResistance = lastInternalResistanceMilliOhm;
     }
 
-    if (bi.chargeFullMah <= 0 && bi.chargeDesignMah > 0) {
-        bi.chargeFullMah = bi.chargeDesignMah;
-    }
+    // Design capacity is nominal specification, NOT measured full capacity.
+    // If charge_full is missing, leave it unknown rather than inventing SoH.
 
-    if (bi.source == null || bi.source.trim().isEmpty()) {
+    if (bi.source == null || bi.source.trim().isEmpty()
+            || "N/A".equals(bi.source)) {
         bi.source = gotCounterFromSysfs
                 ? "SYSFS_COUNTER"
                 : "BATTERY_MANAGER";
@@ -2604,19 +2604,21 @@ public int getBatterySOH() {
 }
 
     private long normalizeMah(long raw) {
-        if (raw <= 0) return -1;
-        if (raw > 200000) return raw / 1000;
-        return raw;
+        // Android CHARGE_COUNTER and Linux power_supply CHARGE_* are µAh.
+        // Convert explicitly to mAh; never infer the source unit from magnitude.
+        if (raw < 1000L) return -1L;
+        long mah = raw / 1000L;
+        return mah > 0L ? mah : -1L;
     }
 
     private float normalizeCurrentMa(long raw) {
-        if (raw == Long.MIN_VALUE || raw == 0) return Float.NaN;
-
-        float current = (float) raw;
-        if (Math.abs(raw) > 10000L) current = current / 1000f;
-
-        if (Math.abs(current) > 100000f) return Float.NaN;
-        return current;
+        // Android CURRENT_NOW and standard power_supply CURRENT_NOW are µA.
+        // Sign is preserved: positive charging, negative discharging.
+        if (raw == Long.MIN_VALUE || raw == 0L) return Float.NaN;
+        double current = raw / 1000.0;
+        if (!Double.isFinite(current) || Math.abs(current) > 100000.0)
+            return Float.NaN;
+        return (float) current;
     }
 
     private float normalizeVoltageMv(long raw) {

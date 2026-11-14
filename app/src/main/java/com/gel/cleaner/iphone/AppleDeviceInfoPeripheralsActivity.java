@@ -270,10 +270,7 @@ private void setupPeripheralsToggles() {
         section(headerScreen, txtScreen,
                 log("Display Type", d.display) +
                         log("Resolution", d.resolution) +
-                        log("Refresh Rate",
-                                (isPro() || isProMax())
-                                        ? "Up to 120 Hz (ProMotion)"
-                                        : (d.refreshRate != null ? d.refreshRate : "60 Hz"))
+                        log("Refresh Rate", d.refreshRate)
         );
 
         // ------------------------------------------------------------
@@ -282,10 +279,8 @@ private void setupPeripheralsToggles() {
         section(headerCamera, txtCamera,
                 log("Main Camera", d.cameraMain) +
                         log("Ultra-Wide Camera", d.cameraUltraWide) +
-                        log("Telephoto Camera",
-                                (isPro() || isProMax())
-                                        ? (d.cameraTele != null ? d.cameraTele : "Present")
-                                        : "Not available") +
+                        log("Dedicated Telephoto Camera", d.cameraTele) +
+                        log("Camera Arrangement", d.cameraVariants) +
                         log("Front Camera", d.cameraFront) +
                         log("Video Recording", d.cameraVideo)
         );
@@ -311,12 +306,7 @@ private void setupPeripheralsToggles() {
         // THERMAL / SUSTAINED PERFORMANCE
         // ------------------------------------------------------------
         section(headerThermal, txtThermal,
-                log("Thermal Design",
-                        isProMax()
-                                ? "Enhanced heat dissipation (larger chassis)"
-                                : isPro()
-                                ? "Improved sustained performance"
-                                : (d.thermalNote != null ? d.thermalNote : "Standard thermal profile"))
+                log("Thermal Reference", d.thermalNote)
         );
 
         // ------------------------------------------------------------
@@ -341,10 +331,7 @@ private void setupPeripheralsToggles() {
         // AUDIO (UNIFIED)
         // ------------------------------------------------------------
         section(headerAudioUnified, txtAudio,
-                log("Speakers",
-                        (isPro() || isProMax())
-                                ? (d.speakers != null ? d.speakers + " (higher output tuning)" : "Enhanced stereo speakers")
-                                : d.speakers) +
+                log("Speakers", d.speakers) +
                         log("Microphones", d.microphones) +
                         log("Dolby Audio", yes(d.hasDolby))
         );
@@ -384,10 +371,7 @@ private void setupPeripheralsToggles() {
         // UWB
         // ------------------------------------------------------------
         section(headerUwb, txtUwb,
-                log("Ultra-Wideband",
-                        (isPro() || isProMax())
-                                ? "Supported (precision ranging)"
-                                : "Not supported")
+                log("Ultra-Wideband", d.uwb)
         );
 
         // ------------------------------------------------------------
@@ -425,7 +409,7 @@ private void setupPeripheralsToggles() {
         // ROOT
         // ------------------------------------------------------------
         section(headerRoot, txtRoot,
-                log("Root Access", "Not applicable (iOS)")
+                log("iOS Jailbreak Status", "Not measured; cannot infer from imported panic logs")
         );
 
         // ------------------------------------------------------------
