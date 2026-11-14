@@ -2809,7 +2809,7 @@ root.addView(buildMuteRow());
         noBtn.setTextColor(Color.WHITE);
 
         GradientDrawable noBg = new GradientDrawable();
-        noBg.setColor(0xFFE60000);
+        noBg.setColor(0xFF8B0000);
         noBg.setCornerRadius(dp(10));
         noBg.setStroke(dp(3), 0xFFFFD700);
         noBtn.setBackground(noBg);
@@ -2819,11 +2819,10 @@ root.addView(buildMuteRow());
         Button yesBtn = new com.gel.cleaner.GelButton(this);
         yesBtn.setText(gr ? "ΝΑΙ" : "YES");
         yesBtn.setAllCaps(false);
-        yesBtn.setTextColor(Color.BLACK);
-        yesBtn.setTypeface(null, Typeface.BOLD);
+        yesBtn.setTextColor(Color.WHITE);
 
         GradientDrawable yesBg = new GradientDrawable();
-        yesBg.setColor(0xFF39FF14);
+        yesBg.setColor(0xFF0B5F3B);
         yesBg.setCornerRadius(dp(10));
         yesBg.setStroke(dp(3), 0xFFFFD700);
         yesBtn.setBackground(yesBg);
@@ -3031,14 +3030,7 @@ private void playEarpieceBeep() {
     );
 
     try {
-        if (track.getState() != AudioTrack.STATE_INITIALIZED) {
-            throw new IllegalStateException("Earpiece AudioTrack initialization failed");
-        }
-        int written = track.write(buffer, 0, buffer.length);
-        if (written != buffer.length) {
-            throw new IllegalStateException(
-                    "Earpiece AudioTrack incomplete write: " + written + "/" + buffer.length);
-        }
+        track.write(buffer, 0, buffer.length);
         track.play();
         SystemClock.sleep(durationMs + 100);
     } finally {
@@ -3075,7 +3067,7 @@ private void resetAudioAfterLab3(
         try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
         try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
 
-        // Restore the actual pre-test mode; MODE_NORMAL is not always the prior state.
+        // Restore the actual pre-test mode, not a forced default.
         try { am.setMode(oldMode); } catch (Throwable ignore) {}
         try { am.setSpeakerphoneOn(oldSpeaker); } catch (Throwable ignore) {}
         try { am.setMicrophoneMute(oldMicMute); } catch (Throwable ignore) {}
@@ -6773,6 +6765,8 @@ private void lab3EarpieceManual() {
                 : "Put the phone earpiece to your ear.\n"
                   + "Press start to begin the test.";
 
+        final String ttsText = bodyText; // ΜΙΑ πηγή αλήθειας
+
         // ------------------------------------------------------------
         // DIALOG
         // ------------------------------------------------------------
@@ -6841,7 +6835,7 @@ exitBtn.setTextSize(14f);
 exitBtn.setTextColor(Color.WHITE);
 
 GradientDrawable exitBg = new GradientDrawable();
-exitBg.setColor(0xFFE60000);
+exitBg.setColor(0xFF8B0000);
 exitBg.setCornerRadius(dp(10));
 exitBg.setStroke(dp(3), 0xFFFFD700);
 exitBtn.setBackground(exitBg);
@@ -6870,6 +6864,7 @@ b.setCancelable(false);
 
 final AlertDialog d = b.create();
 final AtomicBoolean lab3Cancelled = new AtomicBoolean(false);
+final AtomicBoolean lab3Running = new AtomicBoolean(false);
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
@@ -6892,6 +6887,7 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
         logWarn(gr ? "Η δοκιμή ακυρώθηκε από τον χρήστη."
                    : "Test canceled by user.");
         logLine();
+
         try { AppTTS.stop(); } catch (Throwable ignore) {}
         restoreLab3Audio();
         enableSingleExportButton();
@@ -6921,12 +6917,11 @@ if (!isFinishing() && !isDestroyed()) {
 // ---------------------------
 
 exitBtn.setOnClickListener(v -> {
-    lab3Cancelled.set(true);
+    if (lab3Cancelled.getAndSet(true)) return;
     appendHtml("<br>");
     logWarn(gr ? "Η δοκιμή ακυρώθηκε από τον χρήστη."
                : "Test canceled by user.");
     logLine();
-
     try { AppTTS.stop(); } catch (Throwable ignore) {}
     d.dismiss();
     restoreLab3Audio();
@@ -6934,16 +6929,20 @@ exitBtn.setOnClickListener(v -> {
 });
 
 // ------------------------------------------------------------
-// START ACTION — single listener; preserve the actual audio test.
+// START ACTION
 // ------------------------------------------------------------
 start.setOnClickListener(v -> {
-    if (!start.isEnabled() || lab3Cancelled.get()) return;
-    start.setEnabled(false); // Double-taps must not launch overlapping audio sessions.
+    if (lab3Cancelled.get() || lab3Running.getAndSet(true)) return;
+    start.setEnabled(false);
+    msg.setText(bodyText);
+    msg.setTextColor(0xFF39FF14);
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 
     new Thread(() -> {
         final boolean[] playbackCompleted = {false};
         try {
+            // Re-establish the backup earpiece route before each retry.
+            routeToCallEarpiece();
 
             logInfo(gr
                     ? "Αναπαραγωγή δοκιμαστικών τόνων ακουστικού."
@@ -6951,7 +6950,6 @@ start.setOnClickListener(v -> {
 
             for (int i = 1; i <= 3; i++) {
                 if (lab3Cancelled.get() || isFinishing() || isDestroyed()) break;
-
                 logInfo(gr
                         ? "Τόνος " + i + " / 3"
                         : "Tone " + i + " / 3");
@@ -6961,17 +6959,19 @@ start.setOnClickListener(v -> {
             }
 
             if (!lab3Cancelled.get() && !isFinishing() && !isDestroyed()) {
+                playbackCompleted[0] = true;
                 logOk(gr
                         ? "Η αναπαραγωγή τόνων ολοκληρώθηκε."
                         : "Earpiece tone playback completed.");
-                playbackCompleted[0] = true;
             }
 
         } catch (Throwable t) {
 
             logError(gr
-                    ? "Αποτυχία αναπαραγωγής τόνων ακουστικού."
-                    : "Earpiece tone playback failed.");
+                    ? "Δεν ολοκληρώθηκε η αναπαραγωγή τόνων ακουστικού."
+                    : "Earpiece tone playback did not complete.");
+            logLabelWarnValue(gr ? "Τύπος σφάλματος" : "Error type",
+                    t.getClass().getSimpleName());
 
             logLabelWarnValue(
                     gr ? "Πιθανή αιτία" : "Possible cause",
@@ -6986,15 +6986,20 @@ start.setOnClickListener(v -> {
             resetAudioAfterLab3(am, lab3OldMode, lab3OldSpeaker, lab3OldMicMute);
 
             runOnUiThread(() -> {
-                try { d.dismiss(); } catch (Throwable ignore) {}
                 if (lab3Cancelled.get() || isFinishing() || isDestroyed()) {
                     enableSingleExportButton();
                 } else if (playbackCompleted[0]) {
+                    d.dismiss();
                     askUserEarpieceConfirmation();
+                } else if (d.isShowing()) {
+                    // An AudioTrack failure must not silently close the Lab.
+                    msg.setText(gr
+                            ? "Η αναπαραγωγή δεν ολοκληρώθηκε. ΕΝΑΡΞΗ για επανάληψη ή ΕΞΟΔΟΣ."
+                            : "Playback incomplete. Choose START to retry or EXIT.");
+                    msg.setTextColor(0xFFFFD966);
+                    lab3Running.set(false);
+                    start.setEnabled(true);
                 } else {
-                    logWarn(gr
-                            ? "Δεν ζητήθηκε επιβεβαίωση ακοής επειδή απέτυχε η αναπαραγωγή."
-                            : "Hearing confirmation was not requested because playback failed.");
                     enableSingleExportButton();
                 }
             });
@@ -7003,6 +7008,7 @@ start.setOnClickListener(v -> {
     }).start();
 });
 
+// ------------------------------------------------------------
 });   // <-- ΚΛΕΙΝΕΙ ΤΟ runOnUiThread
 }   
 
