@@ -1579,8 +1579,8 @@ logScroll.post(() -> setLogPanelState(0));
     labsContainer.addView(body5);
 
     body5.addView(makeTestButton(
-            gr ? "18. Έλεγχος Υγείας Αποθηκευτικού Χώρου"
-               : "18. Storage Health Inspection",
+            gr ? "18. Απογραφή Αποθηκευτικού Χώρου"
+               : "18. Storage Inventory",
             this::lab18StorageSnapshot));
 
     body5.addView(makeTestButton(
@@ -26917,8 +26917,8 @@ private void lab18StorageSnapshot() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 18 — Έλεγχος Υγείας Εσωτερικού Αποθηκευτικού Χώρου"
-            : "LAB 18 — Internal Storage Health Inspection");
+            ? "LAB 18 — Απογραφή Εσωτερικού Αποθηκευτικού Χώρου"
+            : "LAB 18 — Internal Storage Inventory");
     logLine();
 
     try {
@@ -26993,8 +26993,8 @@ private void lab18StorageSnapshot() {
 
             logLabelOkValue(
                     gr ? "Κατάσταση" : "Status",
-                    gr ? "Επαρκής ελεύθερος χώρος τώρα· δεν ελέγχθηκε η υγεία NAND"
-                       : "Sufficient free space now; NAND health was not measured"
+                    gr ? "Επαρκής ελεύθερος χώρος τώρα"
+                       : "Sufficient free space now"
             );
         }
 
@@ -27010,8 +27010,8 @@ if (rooted) {
 
     appendHtml("<br>");
     logInfo(gr
-            ? "Στοιχεία ελεύθερου χώρου (χωρίς μέτρηση φθοράς NAND):"
-            : "Free-space context (NAND wear not measured):");
+            ? "Στοιχεία ελεύθερου χώρου:"
+            : "Free-space context:");
             logLine();
 
     criticalFreeSpacePressure = detectCriticalFreeSpacePressure();
@@ -27052,14 +27052,10 @@ if (nandScore >= 70) {
             gr ? "Πίεση ελεύθερου χώρου"
                : "Free-space pressure",
             gr
-                    ? "Πολύ χαμηλός διαθέσιμος χώρος — αυτό δεν αποδεικνύει φθορά NAND."
-                    : "Very low free space; this does not prove NAND wear."
+                    ? "Πολύ χαμηλός διαθέσιμος χώρος."
+                    : "Very low free space."
     );
 
-} else {
-
-    logInfo(gr ? "Φθορά NAND: δεν μετρήθηκε από το Android ή το συγκεκριμένο τεστ."
-               : "NAND wear: not measured by Android or this test.");
 }
 
 
