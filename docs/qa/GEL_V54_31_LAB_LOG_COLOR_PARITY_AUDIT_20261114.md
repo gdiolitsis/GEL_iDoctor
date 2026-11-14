@@ -89,3 +89,25 @@ The v54 change to `logLabelValue()` was not sufficient by itself: hundreds of la
 5. **Diagnostic correctness:** camera black-frame false positives, Apple panic classifier and other previously documented issues need independent fixes; color correctness does **not** close them.
 
 **Disposition:** targeted QA source improvements are prepared, **not deployed, merged, published or proven on-device**. All 31 Labs have been classified for direct central logging; further subactivity/helper scans and final UI verification remain required.
+
+
+## 14 Nov — restore terminal completion banners against original backup
+
+**Owner observed on physical Xiaomi signed v54:** many Labs up through 14 no longer end with the original fully green `Το Lab Χ ολοκληρώθηκε.` footer. **Confirmed regression:** immutable backup Lab 11 used `logOk` on completion; installed v54 used neutral `logInfo` about available indications. Green completion describes *execution of an evidenced procedure*, NOT independently certified healthy hardware. Never green-label skipped, interrupted or unverified hardware tests.
+
+**Candidate QA source commit:** [`e91d8a325be9cbd5f303491c40bdcbc6a733fa54`](https://github.com/gdiolitsis/GEL_iDoctor/commit/e91d8a325be9cbd5f303491c40bdcbc6a733fa54), **PR #107 only, not installed v54/main/Play**. Exact GitHub diff touches only `ManualTestsActivity.java` and terminal source logging/state guards. No diagnostic computation or threshold was intentionally changed.
+
+- Lab 4 BASE: green after two completed microphone captures; otherwise neutral and no PRO advancement.
+- Lab 5: green when a user actually completed vibration feedback; cancellation remains neutral; user report is not hardware proof.
+- Lab 6: green only if patterns completed; partial display inspection stays neutral.
+- Lab 7: green only if both rotation and proximity report `RESULT_OK`; skipped/incomplete steps neutral.
+- Lab 9: remove false-positive unconditional green inside `finally`; full enumerated sensor inventory green, unavailable/error neutral.
+- Lab 10: the completed DeepScan procedure gets a green footer; individual unavailable measurements retain their own severity and limitations.
+- Lab 11: verified `CELLULAR` default route with `VALIDATED` gets green footer; other routing not green.
+- Lab 12: successfully completed passive inventory has scoped green footer; optional real-call check gets green only after a completed user-reported result; skip/cancel neutral.
+- Lab 13: denied Bluetooth permission no longer generates a green completion; 60-second monitor with observed samples gets green footer.
+- Lab 14A: only noncancelled, nonpartial, countable stress capture gets green; limited/partial stays neutral. Lab 14B/GAMA old green completion retained.
+- Labs 1–3 and 8 already retain some original green completion paths; **not all existing green returns have been audited for false-positive early exits**.
+- Labs 15–31 separately contain neutralized or removed legacy footers (not changed by this commit) and still need per-path semantic verification, particularly Labs 21/24/26/27/28 where completion messages were altered.
+
+**Acceptance gates:** GitHub exact-head Android Java/Unit CI result, EL/EN visual logs in Android 11/16 and physical Xiaomi, all cancellation/error branches, plus PDF consistency. **Not closed or deployed as an APK.** Keep original backup and `main` untouched. This patch does not address the independent Lab 11 throughput measurement proposal.
