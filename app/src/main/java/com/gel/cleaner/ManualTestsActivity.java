@@ -3816,6 +3816,15 @@ private void logLabelErrorValue(String label, String value) {
     scrollLogToBottom();
 }
 
+// ---------------- INFORMATION-ONLY VALUE COLOR ----------------
+// Cyan distinguishes an informational state from an OK (green) or warning
+// (yellow). Keep neutral severity in exported service logs and reports.
+private void logLabelInfoValue(String label, String value) {
+    logLabel(label, value, "#87CEFA", GelDiagnosticSeverity.Level.NEUTRAL);
+    expandLogPanel();
+    scrollLogToBottom();
+}
+
 // ---------------- COMPATIBILITY ----------------
 // Neutral observations (counts, raw metrics, unavailable data) MUST NOT inherit
 // green OK coloring. Reserve green for a verified positive conclusion.
@@ -27605,10 +27614,10 @@ private void lab20UptimeHints() {
 
             // Root access alone does not provide reboot history. A short
             // uptime proves only that the device booted recently.
-            logLabelValue(
+            logLabelInfoValue(
                     gr ? "Ιστορικό επανεκκινήσεων" : "Reboot history",
-                    gr ? "Δεν υπάρχουν επαληθευμένα συμβάντα επανεκκινήσεων"
-                       : "No verified reboot event history available"
+                    gr ? "Δεν συλλέχθηκε επαληθευμένο ιστορικό επανεκκινήσεων"
+                       : "Verified reboot event history was not collected"
             );
 
             if (hasObservedOomKills) {
@@ -27662,8 +27671,9 @@ logLine();
 RebootHistoryEvidence.Verdict rebootVerdict =
         RebootHistoryEvidence.classify(-1, 0L);
 if (rebootVerdict == RebootHistoryEvidence.Verdict.INSUFFICIENT_DATA) {
-    logLabelValue(
-            "REBOOT_PATTERN",
+    // Informational blue value, *not* a successful reboot-history test.
+    logLabelInfoValue(
+            gr ? "Ιστορικό επανεκκινήσεων" : "Reboot history",
             gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ ΙΣΤΟΡΙΚΟ" : "HISTORY UNAVAILABLE"
     );
 } else {
