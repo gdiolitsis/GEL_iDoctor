@@ -1653,8 +1653,8 @@ logScroll.post(() -> setLogPanelState(0));
             this::lab28HardwareStability));
 
     body7.addView(makeTestButton(
-            gr ? "29. Παρατηρήσεις Hardware\nΗ γνησιότητα απαιτεί εξωτερικό έλεγχο"
-               : "29. Hardware Observations\nOEM origin requires external verification",
+            gr ? "29. Προέλεγχος Μεταχειρισμένης\nΤαυτότητα, IMEI & μεταβίβαση"
+               : "29. Used Device Pre-Purchase Check\nIdentity, IMEI & transfer",
             this::lab29DeviceAuthenticity));
 
     body7.addView(makeTestButton(
@@ -29989,6 +29989,7 @@ private void lab28HardwareStability() {
     appendHtml("<br>");
     logInfo(gr ? "1. Άμεσες μετρήσεις" : "1. Direct measurements");
     long elapsed = android.os.SystemClock.elapsedRealtime();
+    float lab28ObservedBatteryC = Float.NaN;
     long hours = elapsed / 3600000L;
     long minutes = (elapsed / 60000L) % 60L;
     logLabelOkValue(gr ? "Χρόνος από την τελευταία εκκίνηση"
@@ -30003,6 +30004,7 @@ private void lab28HardwareStability() {
                     android.os.BatteryManager.EXTRA_TEMPERATURE, Integer.MIN_VALUE);
             float batteryC = batteryDeciC / 10f;
             if (batteryDeciC != Integer.MIN_VALUE && batteryC >= 5f && batteryC <= 85f) {
+                lab28ObservedBatteryC = batteryC;
                 logLabelOkValue(gr ? "Θερμοκρασία μπαταρίας" : "Battery temperature",
                         fmt1(batteryC) + " °C");
             }
@@ -30387,6 +30389,31 @@ if (hiddenScore >= 60) {
     }
 
     appendHtml("<br>");
+    // Structured same-boot evidence for Lab 30. Text mentions are deliberately
+    // distinct from actual Android measurements and are never graded as faults.
+    int lab28MentionMask = (randomReboots ? 1 : 0)
+            | (signalDrops ? 2 : 0)
+            | (sensorFlaps ? 4 : 0)
+            | (thermalSpikes ? 8 : 0)
+            | (powerGlitches > 0 ? 16 : 0);
+    SharedPreferences.Editor lab28Report = getSharedPreferences("GEL_DIAG", MODE_PRIVATE)
+            .edit()
+            .putInt("lab28_obs_schema", 1)
+            .putLong("lab28_obs_wall_ms", System.currentTimeMillis())
+            .putLong("lab28_obs_elapsed_ms", SystemClock.elapsedRealtime())
+            .putLong("lab28_obs_uptime_ms", elapsed)
+            .putInt("lab28_obs_mention_mask", lab28MentionMask)
+            .remove("lab28_obs_battery_c")
+            .remove("lab28_obs_cpu_c")
+            .remove("lab28_obs_gpu_c");
+    if (Float.isFinite(lab28ObservedBatteryC))
+        lab28Report.putFloat("lab28_obs_battery_c", lab28ObservedBatteryC);
+    if (cpu != null && Float.isFinite(cpu) && cpu >= 5f && cpu <= 115f)
+        lab28Report.putFloat("lab28_obs_cpu_c", cpu);
+    if (gpu != null && Float.isFinite(gpu) && gpu >= 5f && gpu <= 115f)
+        lab28Report.putFloat("lab28_obs_gpu_c", gpu);
+    lab28Report.apply();
+
     logOk(gr ? "Το Lab 28 ολοκληρώθηκε — καταγράφηκαν διαθέσιμες μετρήσεις και αναφορές."
          : "Lab 28 completed — available measurements and records were logged.");
 /* Internal heuristic summary not included in the customer-facing report */;
@@ -30510,8 +30537,8 @@ private void lab29DeviceAuthenticity() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 29 — Παρατηρήσεις Hardware (όχι πιστοποίηση γνησιότητας)"
-            : "LAB 29 — Hardware observations (not OEM certification)");
+            ? "LAB 29 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής"
+            : "LAB 29 — Used-device pre-purchase check");
     logInfo(gr
         ? "SAFE MODE — εμφανίζονται μόνο δηλωμένες παρατηρήσεις Android, όχι πιστοποίηση υλικού"
         : "SAFE MODE — Android-exposed observations only, not component certification");
@@ -30524,6 +30551,9 @@ logLabelValue(
         gr ? "Δεν παρέχεται από δημόσια Android APIs· το root δεν πιστοποιεί ανταλλακτικά."
            : "Unavailable through public Android APIs; root access does not certify parts.");
 
+    // Manufacturer and model are Android-reported metadata, not an OEM authentication.
+    logLabelValue(gr ? "Κατασκευαστής / Μοντέλο" : "Manufacturer / Model",
+            Build.MANUFACTURER + " / " + Build.MODEL);
     // Android platform observations do not authenticate OEM replacement parts.
 
     // ============================================================
@@ -30781,6 +30811,17 @@ p.edit()
         .remove("lab29_instability_score")
         .remove("lab29_instability_pattern")
         .putBoolean("lab29_provenance_unverified", true)
+        .putInt("lab29_obs_schema", 1)
+        .putLong("lab29_obs_elapsed_ms", SystemClock.elapsedRealtime())
+        .putInt("lab29_precheck_schema", 1)
+        .putInt("lab29_precheck_status", UsedDevicePrecheckPolicy.INCOMPLETE)
+        .putBoolean("lab29_precheck_user_reported", false)
+        .remove("lab29_precheck_ts")
+        .remove("lab29_precheck_elapsed_ms")
+        .remove("lab29_precheck_imei_status")
+        .remove("lab29_precheck_identifiers")
+        .remove("lab29_precheck_documents")
+        .remove("lab29_precheck_transfer")
         .putLong("lab29_ts", System.currentTimeMillis())
         .apply();
 
@@ -30796,13 +30837,221 @@ logLabelValue(
 );
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 29 ολοκληρώθηκε (καταγραφή προσβάσιμων χαρακτηριστικών)."
-         : "Lab 29 finished (accessible device characteristics recorded).");
-logInfo(gr ? "Καταγράφηκαν τα χαρακτηριστικά που παρέχει το Android."
-           : "Characteristics exposed by Android were recorded.");
-    logLine();
+    logInfo(gr ? "Καταγράφηκαν τα προσβάσιμα χαρακτηριστικά του Android."
+               : "Accessible Android device characteristics were recorded.");
+    showLab29PrecheckDialog(gr);
 }
 
+// ============================================================
+private void showLab29PrecheckDialog(boolean gr) {
+    runOnUiThread(() -> {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(22), dp(20), dp(22), dp(16));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF101010);
+        bg.setCornerRadius(dp(12));
+        bg.setStroke(dp(3), 0xFFFFD700);
+        root.setBackground(bg);
+
+        TextView title = new TextView(this);
+        title.setText(gr ? "LAB 29 — Πριν πληρώσεις" : "LAB 29 — Before you pay");
+        title.setTextSize(18f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setTextColor(Color.WHITE);
+        root.addView(title);
+
+        TextView note = new TextView(this);
+        note.setText(gr
+                ? "Προαιρετικές δηλώσεις δικού σου ελέγχου. Δεν αποτελούν επαλήθευση από το GEL. Για IMEI πληκτρολόγησε *#06# στην εφαρμογή κλήσεων (έλεγξε ΟΛΑ τα IMEI). Η GSMA μπορεί να απαιτεί εξουσιοδοτημένη πρόσβαση. Επαναφορά μόνο με συναίνεση πωλητή, αφού σωθούν τα δεδομένα."
+                : "Optional buyer-reported checks, not GEL verification. Dial *#06# in the phone app and check ALL IMEIs. GSMA access may require authorization. Reset only with seller consent after backing up data.");
+        note.setTextSize(13f);
+        note.setPadding(0, dp(8), 0, dp(8));
+        note.setTextColor(Color.WHITE);
+        // Keep guidance and the external-link button inside the scroll area.
+        // This leaves SKIP and RECORD reachable on short/landscape displays.
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout checks = new LinearLayout(this);
+        checks.setOrientation(LinearLayout.VERTICAL);
+        checks.addView(note);
+        scroll.addView(checks);
+        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Math.min(dp(420), getResources().getDisplayMetrics().heightPixels * 2 / 5));
+        root.addView(scroll, scrollLp);
+
+        CheckBox imeiClear = lab29CheckBox(gr
+                ? "Εξωτερικός έλεγχος: ΚΑΝΕΝΑ IMEI δεν εμφανίζεται σε λίστα αποκλεισμού"
+                : "External lookup: NO IMEI is reported on a block list");
+        CheckBox imeiFlagged = lab29CheckBox(gr
+                ? "Εξωτερικός έλεγχος: κάποιο IMEI εμφανίζεται αποκλεισμένο"
+                : "External lookup: an IMEI is reported blocked");
+        CheckBox identifiers = lab29CheckBox(gr
+                ? "IMEI συσκευής συμφωνεί με τα διαθέσιμα έγγραφα / ετικέτες"
+                : "IMEIs agree with available paperwork / device labels");
+        CheckBox documents = lab29CheckBox(gr
+                ? "Είδα παραστατικό και εξακρίβωσα στοιχεία πωλητή"
+                : "I checked purchase evidence and seller identity");
+        CheckBox transfer = lab29CheckBox(gr
+                ? "Ο πωλητής αφαίρεσε λογαριασμούς και μετά από επαναφορά ολοκληρώθηκε νέα ενεργοποίηση"
+                : "Seller removed accounts and fresh activation succeeded after reset");
+        imeiClear.setOnCheckedChangeListener((v, checked) -> {
+            if (checked) imeiFlagged.setChecked(false);
+        });
+        imeiFlagged.setOnCheckedChangeListener((v, checked) -> {
+            if (checked) imeiClear.setChecked(false);
+        });
+        checks.addView(imeiClear);
+        checks.addView(imeiFlagged);
+        checks.addView(identifiers);
+        checks.addView(documents);
+        checks.addView(transfer);
+
+        Button source = lab29DialogButton(gr
+                ? "ΠΛΗΡΟΦΟΡΙΕΣ GSMA (εξωτερικά)"
+                : "GSMA INFORMATION (external)");
+        checks.addView(source);
+        source.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW,
+                        Uri.parse("https://devicecheck.gsma.com/rtlapp/faqs/")));
+            } catch (Throwable ignored) {
+                Toast.makeText(this,
+                        gr ? "Δεν είναι διαθέσιμος browser" : "No browser available",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.CENTER);
+        Button skip = lab29DialogButton(gr ? "ΠΑΡΑΛΕΙΨΗ" : "SKIP");
+        Button save = lab29DialogButton(gr ? "ΚΑΤΑΓΡΑΦΗ" : "RECORD");
+        actions.addView(skip, new LinearLayout.LayoutParams(0, dp(50), 1f));
+        actions.addView(save, new LinearLayout.LayoutParams(0, dp(50), 1f));
+        root.addView(actions);
+
+        final AlertDialog dialog = new AlertDialog.Builder(
+                this, android.R.style.Theme_Material_Dialog_NoActionBar)
+                .setView(root).setCancelable(true).create();
+        // Android Back performs the same neutral skip as the visible SKIP control.
+        dialog.setOnCancelListener(d -> {
+            logLabel(gr ? "Χειροκίνητος προέλεγχος" : "Manual buyer checks",
+                    gr ? "Παραλείφθηκε — εξωτερικά στοιχεία μη επιβεβαιωμένα."
+                       : "Skipped — external checks not verified.", "#FFFFFF");
+            logOk(gr ? "Το Lab 29 ολοκληρώθηκε (χωρίς εξωτερική επαλήθευση)."
+                     : "Lab 29 completed (external checks unverified).");
+            logLine();
+        });
+        skip.setOnClickListener(v -> {
+            dialog.dismiss();
+            logLabel(gr ? "Χειροκίνητος προέλεγχος" : "Manual buyer checks",
+                    gr ? "Παραλείφθηκε — άγνωστη κατάσταση IMEI, κυριότητας και μεταβίβασης."
+                       : "Skipped — IMEI, ownership and transfer remain unknown.",
+                    "#FFFFFF");
+            logOk(gr ? "Το Lab 29 ολοκληρώθηκε (χωρίς επαλήθευση αγοράς)."
+                     : "Lab 29 completed (purchase checks not verified).");
+            logLine();
+        });
+        save.setOnClickListener(v -> {
+            int imeiStatus = imeiFlagged.isChecked()
+                    ? UsedDevicePrecheckPolicy.IMEI_FLAGGED_REPORTED
+                    : imeiClear.isChecked()
+                    ? UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED
+                    : UsedDevicePrecheckPolicy.IMEI_UNKNOWN;
+            int assessment = UsedDevicePrecheckPolicy.evaluate(
+                    imeiStatus, identifiers.isChecked(),
+                    documents.isChecked(), transfer.isChecked());
+
+            getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
+                    .putInt("lab29_precheck_schema", 1)
+                    .putInt("lab29_precheck_status", assessment)
+                    .putBoolean("lab29_precheck_user_reported", true)
+                    .putLong("lab29_precheck_ts", System.currentTimeMillis())
+                    .putLong("lab29_precheck_elapsed_ms", SystemClock.elapsedRealtime())
+                    .putInt("lab29_precheck_imei_status", imeiStatus)
+                    .putBoolean("lab29_precheck_identifiers", identifiers.isChecked())
+                    .putBoolean("lab29_precheck_documents", documents.isChecked())
+                    .putBoolean("lab29_precheck_transfer", transfer.isChecked())
+                    // Only check states: NEVER save IMEI, documents or owner identity.
+                    .apply();
+            dialog.dismiss();
+
+            logInfo(gr ? "Δηλώσεις αγοραστή (όχι αυτόματη επαλήθευση)"
+                       : "Buyer statements (not automated verification)");
+            if (imeiStatus == UsedDevicePrecheckPolicy.IMEI_FLAGGED_REPORTED) {
+                logLabelErrorValue(gr ? "IMEI / μητρώο" : "IMEI / registry",
+                        gr ? "ΔΗΛΩΘΗΚΕ αποκλεισμός — απαιτείται έλεγχος με πάροχο."
+                           : "Block-list hit REPORTED — confirm with carrier.");
+            } else if (imeiStatus == UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED) {
+                logLabelOkValue(gr ? "IMEI / μητρώο" : "IMEI / registry",
+                        gr ? "Ο χρήστης δήλωσε ότι δεν υπάρχει καταχώριση αποκλεισμού."
+                           : "Buyer reports no block-list hit.");
+            } else {
+                logLabel(gr ? "IMEI / μητρώο" : "IMEI / registry",
+                        gr ? "Δεν ελέγχθηκε / δεν επιβεβαιώθηκε."
+                           : "Not checked / unverified.", "#FFFFFF");
+            }
+            logLabel(gr ? "Συμφωνία αναγνωριστικών" : "Identifier match",
+                    identifiers.isChecked() ? (gr ? "Δηλώθηκε" : "Buyer reported")
+                                            : (gr ? "Εκκρεμεί" : "Pending"), "#FFFFFF");
+            logLabel(gr ? "Έγγραφα πωλητή" : "Seller paperwork",
+                    documents.isChecked() ? (gr ? "Ελέγχθηκαν κατά δήλωση" : "Buyer reports checked")
+                                          : (gr ? "Εκκρεμούν" : "Pending"), "#FFFFFF");
+            logLabel(gr ? "Μεταβίβαση / FRP" : "Transfer / FRP",
+                    transfer.isChecked() ? (gr ? "Δηλώθηκε επιτυχής ενεργοποίηση" : "Buyer reports setup passed")
+                                         : (gr ? "Δεν επιβεβαιώθηκε" : "Not confirmed"), "#FFFFFF");
+
+            if (assessment == UsedDevicePrecheckPolicy.HOLD_FOR_REVIEW) {
+                logLabelErrorValue(gr ? "Προέλεγχος αγοράς" : "Purchase screening",
+                        gr ? "ΜΗΝ ΠΡΟΧΩΡΗΣΕΤΕ πριν διευκρινιστεί ο δηλωμένος αποκλεισμός."
+                           : "DO NOT PROCEED until the reported block is resolved.");
+            } else if (assessment == UsedDevicePrecheckPolicy.USER_REPORTED_CHECKLIST_COMPLETE) {
+                logLabelOkValue(gr ? "Χειροκίνητος προέλεγχος" : "Buyer checklist",
+                        gr ? "Όλα τα σημεία δηλώθηκαν ελεγμένα από τον αγοραστή."
+                           : "All items reported checked by the buyer.");
+            } else {
+                logLabel(gr ? "Προέλεγχος αγοράς" : "Purchase screening",
+                        gr ? "ΕΛΛΙΠΗΣ — απαιτούνται πρόσθετες επαληθεύσεις πριν την πληρωμή."
+                           : "INCOMPLETE — further checks needed before payment.",
+                        "#FFFFFF");
+            }
+            logLabel(gr ? "Νομικό όριο" : "Legal limitation",
+                    gr ? "Ούτε καθαρό IMEI ούτε το checklist πιστοποιούν κυριότητα ή γνήσια ανταλλακτικά."
+                       : "Neither a clear IMEI nor this checklist certifies ownership or genuine parts.",
+                    "#FFFFFF");
+            logOk(gr ? "Το Lab 29 ολοκληρώθηκε (με δηλώσεις αγοραστή)."
+                     : "Lab 29 completed (buyer statements recorded).");
+            logLine();
+        });
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+    });
+}
+
+private CheckBox lab29CheckBox(String text) {
+    CheckBox box = new CheckBox(this);
+    box.setText(text);
+    box.setTextColor(Color.WHITE);
+    box.setTextSize(14f);
+    box.setPadding(dp(3), dp(8), dp(3), dp(8));
+    return box;
+}
+
+private Button lab29DialogButton(String text) {
+    Button btn = new com.gel.cleaner.GelButton(this);
+    btn.setText(text);
+    btn.setAllCaps(false);
+    btn.setTextColor(Color.WHITE);
+    btn.setTextSize(12f);
+    btn.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+    return btn;
+}
+
+// ============================================================
 // ============================================================
 // LAB 30 — Auto Final Diagnosis Summary (GEL Universal AUTO Edition)
 // Combines Thermals + Battery + Storage + RAM + Apps + Uptime +
@@ -31032,36 +31281,146 @@ int privacyScore = Lab30ScoreEvidence.hasPrivacyCoverage(
 String privacyFlag = "⚪";
 
 // ------------------------------------------------------------
-// 9) AUTHENTICITY / REPAIR INDICATORS (LAB 29)
+// 9) LAB 28 — STRUCTURED ACTUAL READINGS AND NON-DIAGNOSTIC MENTIONS
 // ------------------------------------------------------------
+final long evidenceWallNow = System.currentTimeMillis();
+final long evidenceElapsedNow = SystemClock.elapsedRealtime();
+boolean lab28EvidenceFresh = LabEvidenceFreshness.isFresh(
+        p.getInt("lab28_obs_schema", 0),
+        p.getLong("lab28_obs_wall_ms", 0L),
+        p.getLong("lab28_obs_elapsed_ms", -1L),
+        evidenceWallNow, evidenceElapsedNow);
+appendHtml("<br>");
+logInfo(gr ? "LAB 28 — Καταγραφές λειτουργίας και μετρήσεις"
+           : "LAB 28 — System records and measurements");
+logLine();
+if (lab28EvidenceFresh) {
+    long measuredUptime = p.getLong("lab28_obs_uptime_ms", -1L);
+    if (measuredUptime >= 0L) {
+        logLabelOkValue(gr ? "Uptime κατά τον έλεγχο" : "Uptime at Lab 28",
+                (measuredUptime / 3600000L) + (gr ? " ώρες" : " hours"));
+    }
+    if (p.contains("lab28_obs_battery_c")) {
+        logLabelOkValue(gr ? "Θερμοκρασία μπαταρίας (Lab 28)" : "Battery temperature (Lab 28)",
+                String.format(Locale.US, "%.1f °C", p.getFloat("lab28_obs_battery_c", Float.NaN)));
+    }
+    if (p.contains("lab28_obs_cpu_c")) {
+        logLabelOkValue(gr ? "Θερμοκρασία CPU (Lab 28)" : "CPU temperature (Lab 28)",
+                String.format(Locale.US, "%.1f °C", p.getFloat("lab28_obs_cpu_c", Float.NaN)));
+    }
+    if (p.contains("lab28_obs_gpu_c")) {
+        logLabelOkValue(gr ? "Θερμοκρασία GPU (Lab 28)" : "GPU temperature (Lab 28)",
+                String.format(Locale.US, "%.1f °C", p.getFloat("lab28_obs_gpu_c", Float.NaN)));
+    }
+    int lab28MentionMask = p.getInt("lab28_obs_mention_mask", 0);
+    if (lab28MentionMask != 0) {
+        StringBuilder mentions = new StringBuilder();
+        if ((lab28MentionMask & 1) != 0) mentions.append(gr ? "επανεκκινήσεις, " : "reboots, ");
+        if ((lab28MentionMask & 2) != 0) mentions.append(gr ? "σύνδεση, " : "network, ");
+        if ((lab28MentionMask & 4) != 0) mentions.append(gr ? "αισθητήρες, " : "sensors, ");
+        if ((lab28MentionMask & 8) != 0) mentions.append(gr ? "θερμοκρασία, " : "temperature, ");
+        if ((lab28MentionMask & 16) != 0) mentions.append(gr ? "φόρτιση, " : "charging, ");
+        logLabelValue(gr ? "Λέξεις στο ιστορικό (μη επαληθευμένες)"
+                         : "Unverified log mentions",
+                mentions.substring(0, mentions.length() - 2));
+    } else {
+        logLabelValue(gr ? "Αναφορές συμπτωμάτων" : "Symptom mentions",
+                gr ? "Δεν βρέθηκαν σχετικές λέξεις — δεν αποδεικνύεται απουσία βλάβης."
+                   : "No matching keywords — absence of a fault was not established.");
+    }
+    logLabelValue(gr ? "Ερμηνεία Lab 28" : "Lab 28 limitation",
+            gr ? "Μετρήσεις Android, όχι πιστοποίηση υγείας ή αιτίας βλάβης."
+               : "Android measurements, not a hardware-health or root-cause certification.");
+} else {
+    logLabelValue(gr ? "Στοιχεία Lab 28" : "Lab 28 evidence",
+            gr ? "Δεν υπάρχουν πρόσφατες, δομημένες μετρήσεις της ίδιας εκκίνησης."
+               : "No fresh, same-boot structured measurements available.");
+}
 
-boolean lab29ObservationsAvailable =
-        p.getBoolean("lab29_provenance_unverified", false);
-
-int lab29InstabilityScore =
-        p.getInt("lab29_instability_score", 0);
-
-boolean lab29InstabilityPattern =
-        false /* Lab29 legacy instability score has no verified provenance */;
+// ------------------------------------------------------------
+// 10) LAB 29 — DEVICE IDENTITY AND BUYER-REPORTED PRE-PURCHASE CHECKS
+// ------------------------------------------------------------
+boolean lab29ObservationsAvailable = LabEvidenceFreshness.isFresh(
+        p.getInt("lab29_obs_schema", 0),
+        p.getLong("lab29_ts", 0L),
+        p.getLong("lab29_obs_elapsed_ms", -1L),
+        evidenceWallNow, evidenceElapsedNow);
+int lab29InstabilityScore = 0; // Removed legacy score has no observed provenance.
+boolean lab29InstabilityPattern = false; // Never import false hardware scores.
 
 appendHtml("<br>");
-logInfo(gr
-        ? "Αυθεντικότητα / Ακεραιότητα συσκευής"
-        : "Device authenticity / integrity");
+logInfo(gr ? "LAB 29 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής"
+           : "LAB 29 — Used-device pre-purchase check");
 logLine();
-
 if (lab29ObservationsAvailable) {
-    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
-    /* Internal heuristic index omitted from measured-results report */;
+    logLabelValue(gr ? "Ταυτότητα υλικού" : "Hardware identity",
+            gr ? "Έγινε καταγραφή στοιχείων Android, όχι OEM πιστοποίηση."
+               : "Android-reported identity captured; not OEM certification.");
 } else {
-    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
+    logLabelValue(gr ? "Στοιχεία Lab 29" : "Lab 29 observations",
+            gr ? "Δεν υπάρχουν πρόσφατες παρατηρήσεις της ίδιας εκκίνησης."
+               : "No recent same-boot observations.");
 }
-
-if (lab29InstabilityPattern) {
-
-    /* Unconfirmed hardware suspicion omitted from customer-facing diagnostics */;
+boolean lab29BuyerFresh = lab29ObservationsAvailable
+        && p.getBoolean("lab29_precheck_user_reported", false)
+        && LabEvidenceFreshness.isReportedBuyerCheckFresh(
+                p.getInt("lab29_precheck_schema", 0),
+                p.getLong("lab29_ts", 0L),
+                p.getLong("lab29_precheck_ts", 0L),
+                p.getLong("lab29_precheck_elapsed_ms", -1L),
+                evidenceWallNow, evidenceElapsedNow);
+if (lab29BuyerFresh) {
+    int imeiStatus = p.getInt("lab29_precheck_imei_status",
+            UsedDevicePrecheckPolicy.IMEI_UNKNOWN);
+    int buyerStatus = p.getInt("lab29_precheck_status",
+            UsedDevicePrecheckPolicy.INCOMPLETE);
+    if (imeiStatus == UsedDevicePrecheckPolicy.IMEI_FLAGGED_REPORTED) {
+        logLabelErrorValue(gr ? "IMEI κατά δήλωση αγοραστή" : "Buyer-reported IMEI",
+                gr ? "Αναφέρθηκε αποκλεισμός — διασταύρωση με πάροχο πριν την αγορά."
+                   : "Block reported — confirm with carrier before purchase.");
+    } else if (imeiStatus == UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED) {
+        logLabelOkValue(gr ? "IMEI κατά δήλωση αγοραστή" : "Buyer-reported IMEI",
+                gr ? "Ο αγοραστής αναφέρει μη καταχώριση σε λίστα αποκλεισμού."
+                   : "Buyer reports no block-list entry.");
+    } else {
+        logLabelValue(gr ? "Έλεγχος IMEI" : "IMEI lookup",
+                gr ? "Άγνωστος / μη επαληθευμένος." : "Unknown / not verified.");
+    }
+    logLabelValue(gr ? "Συμφωνία αναγνωριστικών" : "Identifier comparison",
+            p.getBoolean("lab29_precheck_identifiers", false)
+                ? (gr ? "Ελέγχθηκε κατά δήλωση αγοραστή" : "Buyer reports checked")
+                : (gr ? "Εκκρεμεί" : "Pending"));
+    logLabelValue(gr ? "Παραστατικό / πωλητής" : "Purchase evidence / seller",
+            p.getBoolean("lab29_precheck_documents", false)
+                ? (gr ? "Ελέγχθηκε κατά δήλωση αγοραστή" : "Buyer reports checked")
+                : (gr ? "Εκκρεμεί" : "Pending"));
+    logLabelValue(gr ? "Μεταβίβαση / FRP" : "Transfer / FRP",
+            p.getBoolean("lab29_precheck_transfer", false)
+                ? (gr ? "Επιτυχής ενεργοποίηση κατά δήλωση" : "Buyer reports successful setup")
+                : (gr ? "Δεν επιβεβαιώθηκε" : "Not confirmed"));
+    if (buyerStatus == UsedDevicePrecheckPolicy.HOLD_FOR_REVIEW) {
+        logLabelErrorValue(gr ? "Απόφαση προελέγχου" : "Pre-purchase triage",
+                gr ? "ΜΗΝ ΠΡΟΧΩΡΗΣΕΤΕ πριν διευκρινιστεί ο δηλωμένος αποκλεισμός IMEI."
+                   : "DO NOT PROCEED until the reported IMEI block is resolved.");
+    } else if (buyerStatus == UsedDevicePrecheckPolicy.USER_REPORTED_CHECKLIST_COMPLETE) {
+        logLabelOkValue(gr ? "Checklist αγοραστή" : "Buyer checklist",
+                gr ? "Δηλώθηκε ολοκληρωμένο — δεν πιστοποιείται νομιμότητα."
+                   : "Buyer-reported complete — legality not certified.");
+    } else {
+        logLabelValue(gr ? "Προέλεγχος αγοράς" : "Pre-purchase triage",
+                gr ? "Ελλιπής — χρειάζονται πρόσθετοι έλεγχοι."
+                   : "Incomplete — additional verification needed.");
+    }
+} else {
+    logLabelValue(gr ? "Εξωτερικοί έλεγχοι αγοραστή" : "Buyer's external checks",
+            gr ? "Δεν έχουν επιβεβαιωθεί για αυτή την εκτέλεση."
+               : "Not reported for this run.");
 }
+logLabelValue(gr ? "Όριο ελέγχου" : "Evidence limitation",
+        gr ? "Δεν βεβαιώνεται νόμιμη κυριότητα ούτε γνησιότητα ανταλλακτικών."
+           : "Neither legal ownership nor genuine OEM parts are certified.");
 
+// ------------------------------------------------------------
 // ------------------------------------------------------------
 // UNIFIED HARDWARE RISK SCORE
 // ------------------------------------------------------------
