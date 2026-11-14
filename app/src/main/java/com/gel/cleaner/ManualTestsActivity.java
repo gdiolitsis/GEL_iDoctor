@@ -29791,8 +29791,7 @@ appendHtml("<br>");
 logInfo(gr ? "Επισκόπηση εγκατεστημένων" : "Installed overview");
 logLine();
 
-    logLabelValue(
-            gr ? "Σύνολα" : "Totals",
+    logLabelOkValue(gr ? "Σύνολα" : "Totals",
             (gr
                     ? "Όλα: " + r.totalPkgs + " | Χρήστη: " + r.userApps + " | Συστήματος: " + r.systemApps
                     : "All: " + r.totalPkgs + " | User: " + r.userApps + " | System: " + r.systemApps)
@@ -29830,23 +29829,21 @@ logLine();
     logInfo(gr ? "Ενδείξεις φόρτου (βάσει δυνατοτήτων)" : "Load indicators (capability-based)");
     logLine();
 
-    logLabelValue(gr ? "Background-capable" : "Background-capable",
+    logLabelOkValue(gr ? "Background-capable" : "Background-capable",
             r.bgCapable + " (" + (pctBg < 0 ? (gr ? "άγνωστο" : "unknown") : pctBg + "%") + ")");
 
-    logLabelValue(gr ? "Permission-heavy" : "Permission-heavy",
+    logLabelOkValue(gr ? "Permission-heavy" : "Permission-heavy",
             r.permHeavy + " (" + (pctPerm < 0 ? (gr ? "άγνωστο" : "unknown") : pctPerm + "%") + ")");
             
    appendHtml("<br>");
     logInfo(gr ? "Χάρτης δυνατοτήτων (user apps)" : "Capability map (user apps)");
     logLine();
 
-    logLabelValue(
-            gr ? "Boot / Location / Mic / Camera" : "Boot / Location / Mic / Camera",
+    logLabelOkValue(gr ? "Boot / Location / Mic / Camera" : "Boot / Location / Mic / Camera",
             r.bootAware + " | " + r.locationLike + " | " + r.micLike + " | " + r.cameraLike
     );
 
-    logLabelValue(
-            gr ? "Overlay / VPN / Storage / Notifications" : "Overlay / VPN / Storage / Notifications",
+    logLabelOkValue(gr ? "Overlay / VPN / Storage / Notifications" : "Overlay / VPN / Storage / Notifications",
             r.overlayLike + " | " + r.vpnLike + " | " + r.storageLike + " | " + r.notifLike
     );
 
@@ -29857,10 +29854,10 @@ logLine();
     logInfo(gr ? "Ενδείξεις πλεονασμού (heuristic)" : "Redundancy signals (heuristic)");
     logLine();
 
-    logLabelValue(gr ? "Cleaners / Optimizers" : "Cleaners / Optimizers", String.valueOf(r.cleanersLike));
-    logLabelValue(gr ? "Launchers" : "Launchers", String.valueOf(r.launchersLike));
-    logLabelValue(gr ? "Antivirus suites" : "Antivirus suites", String.valueOf(r.antivirusLike));
-    logLabelValue(gr ? "Keyboards" : "Keyboards", String.valueOf(r.keyboardsLike));
+    logLabelOkValue(gr ? "Cleaners / Optimizers" : "Cleaners / Optimizers", String.valueOf(r.cleanersLike));
+    logLabelOkValue(gr ? "Launchers" : "Launchers", String.valueOf(r.launchersLike));
+    logLabelOkValue(gr ? "Antivirus suites" : "Antivirus suites", String.valueOf(r.antivirusLike));
+    logLabelOkValue(gr ? "Keyboards" : "Keyboards", String.valueOf(r.keyboardsLike));
 
 // ============================================================
 // REAL DATA (HONEST) — SINCE BOOT (TrafficStats)
@@ -30303,22 +30300,18 @@ appendHtml("<br>");
     logInfo(gr ? "Σύνοψη Σάρωσης" : "Scan Summary");
     logLine();
 
-    logLabelValue(
-            gr ? "Ορατά πακέτα (μαζί με εξαιρούμενα συστήματος)" : "Visible packages (including excluded system apps)",
+    logLabelOkValue(gr ? "Ορατά πακέτα (μαζί με εξαιρούμενα συστήματος)" : "Visible packages (including excluded system apps)",
             String.valueOf(totalApps)
     );
-    logLabelValue(
-            gr ? "Ορατές εφαρμογές χρήστη που εξετάστηκαν" : "Visible user apps examined",
+    logLabelOkValue(gr ? "Ορατές εφαρμογές χρήστη που εξετάστηκαν" : "Visible user apps examined",
             String.valueOf(scannedUserApps)
     );
 
-    logLabelValue(
-            gr ? "Επιλεγμένες χορηγημένες άδειες (ορατών εφαρμογών)"
+    logLabelOkValue(gr ? "Επιλεγμένες χορηγημένες άδειες (ορατών εφαρμογών)"
                : "Selected granted permissions (visible apps)",
             String.valueOf(dangTotal)
     );
-    logLabelValue(
-            gr ? "Εφαρμογές με αυξημένο βάρος αδειών" : "Apps with higher permission weight",
+    logLabelOkValue(gr ? "Εφαρμογές με αυξημένο βάρος αδειών" : "Apps with higher permission weight",
             String.valueOf(flaggedApps)
     );
     if (grantFlagsIncomplete || visibilityIncomplete || scannedUserApps == 0) {
