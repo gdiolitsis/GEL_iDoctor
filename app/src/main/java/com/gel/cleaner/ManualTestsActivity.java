@@ -31168,7 +31168,7 @@ logLabelValue(
     boolean levelObserved = batteryLevel >= 0 && batteryLevel <= 100;
     boolean voltageObserved = Float.isFinite(voltage) && voltage > 0f;
     if (levelObserved) {
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Στάθμη μπαταρίας" : "Battery level",
                 batteryLevel + "%"
         );
@@ -31179,7 +31179,7 @@ logLabelValue(
         );
     }
     if (voltageObserved) {
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Αναφερόμενη τάση" : "Reported voltage",
                 String.format(Locale.US, "%.2f V", voltage)
         );
@@ -31225,7 +31225,7 @@ logLabelValue(
 
     } else {
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Οθόνη" : "Display",
                 String.format(Locale.US,
                         gr
@@ -31258,7 +31258,7 @@ logLabelValue(
 
     } else {
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Κάμερα" : "Camera",
                 gr
                         ? "Εντοπίστηκε"
@@ -31321,7 +31321,7 @@ logLabelValue(
 
             if (!missing) {
 
-                logLabelValue(
+                logLabelOkValue(
                         gr ? "Αισθητήρες"
                                 : "Sensors",
                         gr
