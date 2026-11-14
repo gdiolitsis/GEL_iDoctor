@@ -30822,6 +30822,7 @@ p.edit()
         .remove("lab29_precheck_ts")
         .remove("lab29_precheck_elapsed_ms")
         .remove("lab29_precheck_imei_status")
+        .remove("lab29_precheck_official_source")
         .remove("lab29_precheck_identifiers")
         .remove("lab29_precheck_documents")
         .remove("lab29_precheck_transfer")
@@ -30884,12 +30885,26 @@ private void showLab29PrecheckDialog(boolean gr) {
                 Math.min(dp(420), getResources().getDisplayMetrics().heightPixels * 2 / 5));
         root.addView(scroll, scrollLp);
 
+        CheckBox sourceGsma = lab29CheckBox(gr
+                ? "Έλεγχος στην επίσημη GSMA Device Check"
+                : "Result from official GSMA Device Check");
+        CheckBox sourceProvider = lab29CheckBox(gr
+                ? "Έλεγχος μέσω παρόχου κινητής"
+                : "Result from a mobile network provider");
+        sourceGsma.setOnCheckedChangeListener((v, checked) -> {
+            if (checked) sourceProvider.setChecked(false);
+        });
+        sourceProvider.setOnCheckedChangeListener((v, checked) -> {
+            if (checked) sourceGsma.setChecked(false);
+        });
+        checks.addView(sourceGsma);
+        checks.addView(sourceProvider);
         CheckBox imeiClear = lab29CheckBox(gr
-                ? "Εξωτερικός έλεγχος: ΚΑΝΕΝΑ IMEI δεν εμφανίζεται σε λίστα αποκλεισμού"
-                : "External lookup: NO IMEI is reported on a block list");
+                ? "Επίσημη πηγή: κανένα IMEI δεν εμφανίζεται αποκλεισμένο"
+                : "Official source: NO IMEI is flagged");
         CheckBox imeiFlagged = lab29CheckBox(gr
-                ? "Εξωτερικός έλεγχος: κάποιο IMEI εμφανίζεται αποκλεισμένο"
-                : "External lookup: an IMEI is reported blocked");
+                ? "Επίσημη πηγή: τουλάχιστον ένα IMEI εμφανίζεται ΑΠΟΚΛΕΙΣΜΕΝΟ"
+                : "Official source: at least one IMEI is FLAGGED");
         CheckBox identifiers = lab29CheckBox(gr
                 ? "IMEI συσκευής συμφωνεί με τα διαθέσιμα έγγραφα / ετικέτες"
                 : "IMEIs agree with available paperwork / device labels");
@@ -30912,13 +30927,13 @@ private void showLab29PrecheckDialog(boolean gr) {
         checks.addView(transfer);
 
         Button source = lab29DialogButton(gr
-                ? "ΠΛΗΡΟΦΟΡΙΕΣ GSMA (εξωτερικά)"
-                : "GSMA INFORMATION (external)");
+                ? "ΕΠΙΣΗΜΟ GSMA DEVICE CHECK (εξωτερικά)"
+                : "OFFICIAL GSMA DEVICE CHECK (external)");
         checks.addView(source);
         source.setOnClickListener(v -> {
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW,
-                        Uri.parse("https://devicecheck.gsma.com/rtlapp/faqs/")));
+                        Uri.parse("https://devicecheck.gsma.com/rtlapp/index")));
             } catch (Throwable ignored) {
                 Toast.makeText(this,
                         gr ? "Δεν είναι διαθέσιμος browser" : "No browser available",
@@ -30958,13 +30973,20 @@ private void showLab29PrecheckDialog(boolean gr) {
             logLine();
         });
         save.setOnClickListener(v -> {
-            int imeiStatus = imeiFlagged.isChecked()
+            int officialSource = sourceGsma.isChecked()
+                    ? UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_GSMA_REPORTED
+                    : sourceProvider.isChecked()
+                    ? UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_PROVIDER_REPORTED
+                    : UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED;
+            int imeiStatus = officialSource == UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED
+                    ? UsedDevicePrecheckPolicy.IMEI_UNKNOWN
+                    : imeiFlagged.isChecked()
                     ? UsedDevicePrecheckPolicy.IMEI_FLAGGED_REPORTED
                     : imeiClear.isChecked()
                     ? UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED
                     : UsedDevicePrecheckPolicy.IMEI_UNKNOWN;
-            int assessment = UsedDevicePrecheckPolicy.evaluate(
-                    imeiStatus, identifiers.isChecked(),
+            int assessment = UsedDevicePrecheckPolicy.evaluateWithOfficialSource(
+                    imeiStatus, officialSource, identifiers.isChecked(),
                     documents.isChecked(), transfer.isChecked());
 
             getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
@@ -30974,6 +30996,7 @@ private void showLab29PrecheckDialog(boolean gr) {
                     .putLong("lab29_precheck_ts", System.currentTimeMillis())
                     .putLong("lab29_precheck_elapsed_ms", SystemClock.elapsedRealtime())
                     .putInt("lab29_precheck_imei_status", imeiStatus)
+                    .putInt("lab29_precheck_official_source", officialSource)
                     .putBoolean("lab29_precheck_identifiers", identifiers.isChecked())
                     .putBoolean("lab29_precheck_documents", documents.isChecked())
                     .putBoolean("lab29_precheck_transfer", transfer.isChecked())
@@ -30983,18 +31006,25 @@ private void showLab29PrecheckDialog(boolean gr) {
 
             logInfo(gr ? "Δηλώσεις αγοραστή (όχι αυτόματη επαλήθευση)"
                        : "Buyer statements (not automated verification)");
+            logLabel(gr ? "Επίσημη πηγή (κατά καταχώριση)" : "Official source (operator entered)",
+                    officialSource == UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_GSMA_REPORTED
+                        ? "GSMA Device Check"
+                        : officialSource == UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_PROVIDER_REPORTED
+                        ? (gr ? "Πάροχος κινητής" : "Mobile provider")
+                        : (gr ? "Χωρίς επίσημη πηγή" : "No official source recorded"),
+                    "#FFFFFF");
             if (imeiStatus == UsedDevicePrecheckPolicy.IMEI_FLAGGED_REPORTED) {
                 logLabelErrorValue(gr ? "IMEI / μητρώο" : "IMEI / registry",
-                        gr ? "ΔΗΛΩΘΗΚΕ αποκλεισμός — απαιτείται έλεγχος με πάροχο."
-                           : "Block-list hit REPORTED — confirm with carrier.");
+                        gr ? "ΑΠΟΚΛΕΙΣΜΕΝΟΣ στην καταχωρισμένη πηγή — διασταύρωση με πάροχο."
+                           : "FLAGGED at recorded source — provider confirmation required.");
             } else if (imeiStatus == UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED) {
                 logLabelOkValue(gr ? "IMEI / μητρώο" : "IMEI / registry",
-                        gr ? "Ο χρήστης δήλωσε ότι δεν υπάρχει καταχώριση αποκλεισμού."
-                           : "Buyer reports no block-list hit.");
+                        gr ? "ΜΗ ΑΠΟΚΛΕΙΣΜΕΝΟΣ στην πηγή που καταχώρισε ο ελεγκτής."
+                           : "NOT FLAGGED at operator-recorded official source.");
             } else {
                 logLabel(gr ? "IMEI / μητρώο" : "IMEI / registry",
-                        gr ? "Δεν ελέγχθηκε / δεν επιβεβαιώθηκε."
-                           : "Not checked / unverified.", "#FFFFFF");
+                        gr ? "ΜΗ ΕΠΙΒΕΒΑΙΩΜΕΝΟΣ — δεν υπάρχει επίσημο αποτέλεσμα."
+                           : "UNVERIFIED — official-source result missing.", "#FFFFFF");
             }
             logLabel(gr ? "Συμφωνία αναγνωριστικών" : "Identifier match",
                     identifiers.isChecked() ? (gr ? "Δηλώθηκε" : "Buyer reported")
