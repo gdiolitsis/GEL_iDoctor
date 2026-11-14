@@ -1647,9 +1647,9 @@ logScroll.post(() -> setLogPanelState(0));
     body7.addView(makeTestButton(
             gr
                     ? (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  28. Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων\nΥποψία Κόλλησης / (Βάσει Συμπτωμάτων)"
+                      + "PRO  28. Καταγραφές λειτουργίας και μετρήσεις"
                     : (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  28. Hardware Stability & Interconnect Integrity\nSolder / (SYMPTOM-BASED)",
+                      + "PRO  28. System records and measurements",
             this::lab28HardwareStability));
 
     body7.addView(makeTestButton(
@@ -5440,8 +5440,8 @@ private void showLab28Popup() {
         LinearLayout header = buildPopupHeader(
         this,
         gr
-                ? "LAB 28 — Τεχνική Ανάλυση"
-                : "LAB 28 — Technician Analysis"
+                ? "LAB 28 — Διαθέσιμες μετρήσεις"
+                : "LAB 28 — Available measurements"
 );
         root.addView(header);
 
@@ -5548,23 +5548,13 @@ if (!isFinishing() && !isDestroyed()) {
 // ============================================================
 
 private String getLab28TextEN() {
-    return
-        "For improved diagnostic accuracy, it is recommended to run all labs, before this test. " +
-        "This lab, performs symptom-based analysis only. " +
-        "It does not diagnose hardware faults, and does not confirm solder or interconnect defects. " +
-        "Results, may indicate behavioral patterns, consistent with intermittent contact issues, " +
-        "such as, unstable operation, random reboots, or signal drops. " +
-        "Use this lab, strictly as a triage tool, and not as a final hardware diagnosis.";
+    return "This lab displays available readings and recorded observations from earlier tests. " +
+           "Only recorded measurements are reported. A mention in a log is not a diagnosis of a hardware fault.";
 }
 
 private String getLab28TextGR() {
-    return
-        "Για βελτιωμένη διαγνωστική ακρίβεια, συνιστάται η εκτέλεση όλων των labs, πριν από αυτό το τεστ. " +
-        "Το lab αυτό, πραγματοποιεί αποκλειστικά ανάλυση, βασισμένη σε συμπτώματα. " +
-        "Δεν διαγιγνώσκει βλάβες υλικού, και δεν επιβεβαιώνει προβλήματα κόλλησης ή διασύνδεσης. " +
-        "Τα αποτελέσματα, μπορεί να υποδεικνύουν πρότυπα συμπεριφοράς, συμβατά με διακοπτόμενη επαφή. " +
-        "όπως, ασταθή λειτουργία, τυχαίες επανεκκινήσεις, ή απώλειες σήματος. " +
-        "Χρησιμοποίησε το lab, αυστηρά ως εργαλείο προελέγχου, και όχι ως τελική διάγνωση υλικού.";
+    return "Το εργαστήριο εμφανίζει διαθέσιμες μετρήσεις και καταγραφές από προηγούμενους ελέγχους. " +
+           "Παρουσιάζουμε όσα μετρήθηκαν, χωρίς προβλέψεις για υποθετικές βλάβες.";
 }
 
 // ============================================================
@@ -29956,8 +29946,8 @@ private void lab28HardwareStability() {
     final boolean gr = AppLang.isGreek(this);
 
     if (!requireGelPro(
-            gr ? "LAB 28 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων"
-               : "LAB 28 — Hardware Stability & Interconnect Integrity")) {
+            gr ? "LAB 28 — Καταγραφές λειτουργίας και μετρήσεις"
+               : "LAB 28 — System records and measurements")) {
         return;
     }
 
@@ -29969,11 +29959,11 @@ private void lab28HardwareStability() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 28 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων"
-            : "LAB 28 — Hardware Stability & Interconnect Integrity");
-    logOk(gr
-            ? "Λειτουργία τεχνικού — Ανάλυση βασισμένη σε συμπτώματα ΜΟΝΟ."
-            : "Technician mode — symptom-based analysis ONLY.");
+            ? "LAB 28 — Καταγραφές λειτουργίας και μετρήσεις"
+            : "LAB 28 — System records and measurements");
+    logInfo(gr
+            ? "Εμφανίζονται μόνο καταγραφές και πραγματικές μετρήσεις."
+            : "Only recorded events and actual measurements are displayed.");
     logLine();
 
     int symptomScore = 0;
@@ -29981,8 +29971,8 @@ private void lab28HardwareStability() {
 
     Lab28Evidence ev = Lab28EvidenceReader.readFromGELServiceLog();
     logLabelValue(gr ? "Προέλευση στοιχείων" : "Evidence provenance",
-            gr ? "Ενδείξεις από μη δομημένο ιστορικό GEL — όχι μετρημένη κατάσταση εξαρτημάτων."
-               : "Unstructured GEL log mentions, not independently measured component condition.");
+            gr ? "Καταγραφές από προηγούμενα εργαστήρια του GEL iDoctor."
+               : "Records from earlier GEL iDoctor labs.");
 
     randomReboots = ev.rebootPattern;
     signalDrops   = ev.radioInstability;
@@ -29991,14 +29981,41 @@ private void lab28HardwareStability() {
 
     if (ev.chargingGlitch) powerGlitches++;
 
-    // Technician popup
+    // Technician popup retains its existing voice and mute controls.
     showLab28Popup();
+
+    // Actual values available without root: uptime and battery temperature.
+    // Display readouts as measurements, never as a device-wide health grade.
+    appendHtml("<br>");
+    logInfo(gr ? "1. Άμεσες μετρήσεις" : "1. Direct measurements");
+    long elapsed = android.os.SystemClock.elapsedRealtime();
+    long hours = elapsed / 3600000L;
+    long minutes = (elapsed / 60000L) % 60L;
+    logLabelOkValue(gr ? "Χρόνος από την τελευταία εκκίνηση"
+                       : "Time since last startup",
+            gr ? hours + " ώρες και " + minutes + " λεπτά"
+               : hours + " hours and " + minutes + " minutes");
+    try {
+        android.content.Intent battery = registerReceiver(null,
+                new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
+        if (battery != null) {
+            int batteryDeciC = battery.getIntExtra(
+                    android.os.BatteryManager.EXTRA_TEMPERATURE, Integer.MIN_VALUE);
+            float batteryC = batteryDeciC / 10f;
+            if (batteryDeciC != Integer.MIN_VALUE && batteryC >= 5f && batteryC <= 85f) {
+                logLabelOkValue(gr ? "Θερμοκρασία μπαταρίας" : "Battery temperature",
+                        fmt1(batteryC) + " °C");
+            }
+        }
+    } catch (RuntimeException ignored) {
+        // Missing temperature is not a hardware error.
+    }
 
     // ============================================================
     // STAGE A — SYMPTOM SCORE
     // ============================================================
     appendHtml("<br>");
-    logInfo(gr ? "Καταγραφές που εντοπίστηκαν στο διαθέσιμο αρχείο" : "Mentions found in the available log");
+    logInfo(gr ? "2. Αναφορές προηγούμενων εργαστηρίων" : "2. Records from earlier labs");
     logLine();
 
     if (randomReboots) {
@@ -30044,6 +30061,13 @@ private void lab28HardwareStability() {
         symptomScore += 20;
     } else {
         /* Unsupported or unmeasured component status is not presented as a finding */;
+    }
+
+    if (!randomReboots && !signalDrops && !sensorFlaps && !thermalSpikes
+            && powerGlitches == 0) {
+        logLabelValue(gr ? "Καταγραφές" : "Records",
+                gr ? "Καμία σχετική αναφορά στο διαθέσιμο ιστορικό."
+                   : "No matching entries in the available history.");
     }
 
     if (symptomScore > 100) symptomScore = 100;
@@ -30208,6 +30232,27 @@ if (cpu != null && cpu > 85f)
 if (gpu != null && gpu > 80f)
     thermalScore += 15;
 
+// The sensor values are the evidence. The uncalibrated aggregate
+// thermalScore is not a measurement of component health.
+if (cpu != null && !Float.isNaN(cpu) && !Float.isInfinite(cpu)
+        && cpu >= 5f && cpu <= 115f) {
+    if (cpu <= 85f)
+        logLabelOkValue(gr ? "Θερμοκρασία CPU" : "CPU temperature",
+                fmt1(cpu) + " °C");
+    else
+        logLabelValue(gr ? "Θερμοκρασία CPU" : "CPU temperature",
+                fmt1(cpu) + " °C");
+}
+if (gpu != null && !Float.isNaN(gpu) && !Float.isInfinite(gpu)
+        && gpu >= 5f && gpu <= 115f) {
+    if (gpu <= 80f)
+        logLabelOkValue(gr ? "Θερμοκρασία GPU" : "GPU temperature",
+                fmt1(gpu) + " °C");
+    else
+        logLabelValue(gr ? "Θερμοκρασία GPU" : "GPU temperature",
+                fmt1(gpu) + " °C");
+}
+
 /* Unsupported or unmeasured component status is not presented as a finding */;
 
 if (thermalScore >= 60) {
@@ -30217,14 +30262,7 @@ if (thermalScore >= 60) {
     /* Unverified legacy risk correlation is not a user diagnosis */;
 
 } else {
-
-    logLabelValue(
-            gr ? "Θερμική σταθερότητα"
-               : "Thermal stability",
-            gr
-                    ? "Δεν τεκμηριώνεται θερμική σταθερότητα από αυτά τα δεδομένα."
-                    : "Continuous thermal-runaway monitoring was not performed."
-    );
+    // No thermal diagnosis is implied by the absence of a heuristic alert.
 }
     
 // ------------------------------------------------------------
@@ -30349,8 +30387,8 @@ if (hiddenScore >= 60) {
     }
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 28 ολοκληρώθηκε (διαλογή προσβάσιμων αναφορών)."
-         : "Lab 28 finished (accessible-log triage).");
+    logOk(gr ? "Το Lab 28 ολοκληρώθηκε — καταγράφηκαν διαθέσιμες μετρήσεις και αναφορές."
+         : "Lab 28 completed — available measurements and records were logged.");
 /* Internal heuristic summary not included in the customer-facing report */;
     logLine();
 }
