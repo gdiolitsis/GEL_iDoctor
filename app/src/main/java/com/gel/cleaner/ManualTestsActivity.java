@@ -28265,7 +28265,7 @@ try {
 
     if (patch != null && !patch.isEmpty()) {
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Αναφέρεται" : "Reported",
                 patch
         );
@@ -28421,7 +28421,7 @@ try {
 
             if (i.resolveActivity(pm) != null) {
 
-                logLabelValue(
+                logLabelOkValue(
                         gr ? "Μονάδα" : "Module",
                         gr ? "Εντοπίστηκε (διαθέσιμη δραστηριότητα ρυθμίσεων)"
                            : "Detected (settings activity present)"
@@ -28557,7 +28557,7 @@ private void lab23DeveloperOptionsRisk() {
 
         } else {
 
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Κατάσταση USB Debugging" : "Status",
                     gr ? "ΑΝΕΝΕΡΓΟ"
                        : "OFF"
@@ -28609,7 +28609,7 @@ try {
 
     } else {
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Επιλογές προγραμματιστή" : "Developer options",
                 gr ? "ΑΝΕΝΕΡΓΕΣ"
                    : "OFF"
