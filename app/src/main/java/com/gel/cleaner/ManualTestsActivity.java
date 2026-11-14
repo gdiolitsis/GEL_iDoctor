@@ -13623,12 +13623,12 @@ if (baselineFullMah > 0) {
                : "N/A — capacity not established");
 }
 
-logLabelValue(
-        gr ? "Κύκλοι φόρτισης" : "Cycle count",
-        cycles > 0
-                ? String.valueOf(cycles)
-                : (gr ? "Μη διαθέσιμο" : "N/A")
-);
+if (cycles > 0)
+    logLabelOkValue(gr ? "Κύκλοι φόρτισης" : "Cycle count",
+            String.valueOf(cycles));
+else
+    logLabelValue(gr ? "Κύκλοι φόρτισης" : "Cycle count",
+            gr ? "Μη διαθέσιμο" : "N/A");
 
 // 🔴 REAL THREADS — SINGLE SOURCE OF TRUTH
 int startThreads =
@@ -15646,24 +15646,21 @@ if (!hasReliableSag) {
 // ----------------------------------------------------
 if (!Float.isNaN(sag1)) {
 
-    logLabelValue(
-            "Sag 1",
+    logLabelOkValue("Sag 1",
             String.format(Locale.US,"%.3f V", sag1)
     );
 }
 
 if (!Float.isNaN(sag2)) {
 
-    logLabelValue(
-            "Sag 2",
+    logLabelOkValue("Sag 2",
             String.format(Locale.US,"%.3f V", sag2)
     );
 }
 
 if (!Float.isNaN(sagAvg)) {
 
-    logLabelValue(
-            "Sag Avg",
+    logLabelOkValue("Sag Avg",
             String.format(Locale.US,"%.3f V", sagAvg)
     );
 }
@@ -24771,32 +24768,27 @@ private void lab14LogVoltageBehaviorSummary(
     float worstSag =
             Math.max(0f, worstDelta);
 
-    logLabelValue(
-            gr ? "Τάση έναρξης" : "Start voltage",
+    logLabelOkValue(gr ? "Τάση έναρξης" : "Start voltage",
             String.format(Locale.US, "%.3f V", voltageStart)
     );
 
-    logLabelValue(
-            gr ? "Πρώτη τάση hard stress" : "First hard-load voltage",
+    logLabelOkValue(gr ? "Πρώτη τάση hard stress" : "First hard-load voltage",
             String.format(Locale.US, "%.3f V", lab14FirstHardVoltage)
     );
 
     if (!Float.isNaN(lab14MidHardVoltage)) {
-        logLabelValue(
-                gr ? "Μέση τάση hard stress" : "Mid-run hard voltage",
+        logLabelOkValue(gr ? "Μέση τάση hard stress" : "Mid-run hard voltage",
                 String.format(Locale.US, "%.3f V", lab14MidHardVoltage)
         );
     }
 
     if (!Float.isNaN(lab14LateHardVoltage)) {
-        logLabelValue(
-                gr ? "Τελική τάση hard stress" : "Late-run hard voltage",
+        logLabelOkValue(gr ? "Τελική τάση hard stress" : "Late-run hard voltage",
                 String.format(Locale.US, "%.3f V", lab14LateHardVoltage)
         );
     }
 
-    logLabelValue(
-            gr ? "Χαμηλότερη τάση" : "Lowest hard-load voltage",
+    logLabelOkValue(gr ? "Χαμηλότερη τάση" : "Lowest hard-load voltage",
             String.format(Locale.US, "%.3f V", lab14LowestHardVoltage)
     );
 
@@ -24809,8 +24801,7 @@ private void lab14LogVoltageBehaviorSummary(
                         : "Not calculated — initial voltage settling detected"
         );
 
-        logLabelValue(
-                gr ? "Αρχική μεταβολή τάσης" : "Initial voltage change",
+        logLabelOkValue(gr ? "Αρχική μεταβολή τάσης" : "Initial voltage change",
                 String.format(
                         Locale.US,
                         "+%.3f V",
@@ -24826,8 +24817,7 @@ private void lab14LogVoltageBehaviorSummary(
         );
     }
 
-    logLabelValue(
-            gr ? "Μέγιστη πτώση" : "Worst sag",
+    logLabelOkValue(gr ? "Μέγιστη πτώση" : "Worst sag",
             String.format(Locale.US, "%.3f V", worstSag)
     );
 
@@ -25665,10 +25655,14 @@ private void lab16ThermalSnapshot() {
 
     for (ThermalEntry t : internal) {
 
-        logLabelValue(
-                t.label,
-                String.format(Locale.US, "%.1f°C", t.temp)
-        );
+        // Preserve the existing peak-temperature severity thresholds:
+        // measured normal values green; genuinely elevated readings caution/failure.
+        if (t.temp >= 55f)
+            logLabelErrorValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
+        else if (t.temp >= 45f)
+            logLabelWarnValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
+        else
+            logLabelOkValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
 
         if (t.temp > peakTemp) {
             peakTemp = t.temp;
@@ -25678,10 +25672,14 @@ private void lab16ThermalSnapshot() {
 
     for (ThermalEntry t : peripherals) {
 
-        logLabelValue(
-                t.label,
-                String.format(Locale.US, "%.1f°C", t.temp)
-        );
+        // Preserve the existing peak-temperature severity thresholds:
+        // measured normal values green; genuinely elevated readings caution/failure.
+        if (t.temp >= 55f)
+            logLabelErrorValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
+        else if (t.temp >= 45f)
+            logLabelWarnValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
+        else
+            logLabelOkValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
 
         if (t.temp > peakTemp) {
             peakTemp = t.temp;
