@@ -30762,11 +30762,12 @@ private void showLab29PrecheckDialog(boolean gr) {
         note.setTextSize(13f);
         note.setPadding(0, dp(8), 0, dp(8));
         note.setTextColor(Color.WHITE);
-        root.addView(note);
-
+        // Keep guidance and the external-link button inside the scroll area.
+        // This leaves SKIP and RECORD reachable on short/landscape displays.
         ScrollView scroll = new ScrollView(this);
         LinearLayout checks = new LinearLayout(this);
         checks.setOrientation(LinearLayout.VERTICAL);
+        checks.addView(note);
         scroll.addView(checks);
         LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -30803,7 +30804,7 @@ private void showLab29PrecheckDialog(boolean gr) {
         Button source = lab29DialogButton(gr
                 ? "ΠΛΗΡΟΦΟΡΙΕΣ GSMA (εξωτερικά)"
                 : "GSMA INFORMATION (external)");
-        root.addView(source);
+        checks.addView(source);
         source.setOnClickListener(v -> {
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW,
