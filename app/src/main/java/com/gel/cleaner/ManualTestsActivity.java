@@ -10321,8 +10321,8 @@ private void lab8ReportUserConfirmedCameraVerdict(Lab8Session s, Lab8Overall ove
 
     if (Boolean.TRUE.equals(s.userConfirmedPreview)) {
         logLabelOkValue(gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                gr ? "Ο χρήστης είδε καθαρή ζωντανή εικόνα"
-                   : "User confirmed a clear live image");
+                gr ? "Ο χρήστης επιβεβαίωσε ορατή ζωντανή εικόνα"
+                   : "User confirmed that live preview was visible");
     } else {
         logLabelErrorValue(gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
                 gr ? "Ο χρήστης ΔΕΝ είδε κανονική ζωντανή εικόνα"
