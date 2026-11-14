@@ -38,4 +38,19 @@ public class UsedDevicePrecheckPolicyTest {
         assertEquals(UsedDevicePrecheckPolicy.INCOMPLETE,
                 UsedDevicePrecheckPolicy.evaluate(-1, true, true, true));
     }
+    @Test public void missingOfficialSourceCannotMakeChecklistComplete() {
+        assertEquals(UsedDevicePrecheckPolicy.INCOMPLETE,
+                UsedDevicePrecheckPolicy.evaluateWithOfficialSource(
+                        UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED,
+                        UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_UNSPECIFIED,
+                        true, true, true));
+    }
+    @Test public void recordedOfficialGsmaResultCanBeUsed() {
+        assertEquals(UsedDevicePrecheckPolicy.USER_REPORTED_CHECKLIST_COMPLETE,
+                UsedDevicePrecheckPolicy.evaluateWithOfficialSource(
+                        UsedDevicePrecheckPolicy.IMEI_NOT_FLAGGED_REPORTED,
+                        UsedDevicePrecheckPolicy.OFFICIAL_SOURCE_GSMA_REPORTED,
+                        true, true, true));
+    }
+
 }
