@@ -9419,7 +9419,7 @@ private void lab8RunNextCamera(
         logInfo(gr ? "ΣΥΝΟΨΗ LAB 8:" : "LAB 8 summary:");
         logLine();
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Προσβάσιμες κάμερες που ελέγχθηκαν"
                    : "Accessible cameras tested",
                 String.valueOf(overall.total)
@@ -9602,19 +9602,19 @@ private void lab8RunNextCamera(
                 "YES"
         );
     else
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Αισθητήρας βάθους" : "Depth output",
                 "NO"
         );
 
     if (cam.focal != null)
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Εστιακή απόσταση" : "Focal length",
                 String.format(Locale.US, "%.2f mm", cam.focal)
         );
 
     if (cam.preview != null)
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Ανάλυση προεπισκόπησης" : "Preview size",
                 cam.preview.getWidth() + " x " + cam.preview.getHeight()
         );
@@ -9624,7 +9624,7 @@ private void lab8RunNextCamera(
     if (cam.hasFlash) {
         lab8TryTorchToggle(cam.id, cam, overall);
     } else {
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Φλας" : "Flash",
                 gr ? "Δεν υπάρχει" : "Not available"
         );
@@ -10216,7 +10216,7 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
         overall.streamIssueCount++;
     }
 
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Εύρος φωτεινότητας (min / max)" : "Luma range (min / max)",
             s.minLuma + " / " + s.maxLuma
     );
@@ -10572,7 +10572,7 @@ private void startLab8_1CameraCapabilities() {
             ? "Αυτή η ενότητα εξηγεί τις δυνατότητες της κάμερας με απλά λόγια."
             : "This section explains camera abilities in plain language.");
 
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Κάμερες που ανιχνεύθηκαν" : "Cameras detected",
             String.valueOf(lab8CamsFor81.size())
     );
@@ -10779,7 +10779,7 @@ private void lab9SensorsCheck() {
         List<Sensor> sensors = sm.getSensorList(Sensor.TYPE_ALL);
         int total = (sensors == null ? 0 : sensors.size());
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Σύνολο αισθητήρων" : "Total sensors reported",
                 String.valueOf(total)
         );
@@ -10807,7 +10807,9 @@ private void lab9SensorsCheck() {
         // RAW SENSOR LIST
         // ------------------------------------------------------------
         for (Sensor s : sensors) {
-            logLabelValue(
+            // A green value confirms only that Android enumerated the entry;
+            // it is not a functional or device-health certification.
+            logLabelOkValue(
                     gr ? "Αισθητήρας" : "Sensor",
                     "type=" + s.getType()
                             + " | name=" + s.getName()
@@ -10937,7 +10939,7 @@ private void lab9SensorsCheck() {
                     : "Sensor inventory interrupted — retry: ") + String.valueOf(e.getMessage()));
     } finally {
         appendHtml("<br>");
-        logInfo(gr ? "Το Lab 9 ολοκληρώθηκε." : "Lab 9 finished.");
+        logOk(gr ? "Το Lab 9 ολοκληρώθηκε." : "Lab 9 finished.");
         logLine();
         enableSingleExportButton();
     }
