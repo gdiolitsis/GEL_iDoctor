@@ -77,6 +77,29 @@ public class ApplePanicEvidencePolicyTest {
                 "panic(cpu 0): watchdog timeout observed during restart; trace id 12345",
                 java.util.Collections.emptyList()));
     }
+    @Test public void demoBasebandVersionIsMetadataNotFailure() {
+        String example = "panic(cpu 2): Kernel panic: watchdog timeout\n"
+                + "Boot args: -v\nBaseband version: 3.20.01\n";
+        assertFalse(ApplePanicEvidencePolicy.hasExplicitBasebandFaultHint(example));
+    }
+    @Test public void explicitBasebandPanicIsStillRecognizedAsHint() {
+        assertTrue(ApplePanicEvidencePolicy.hasExplicitBasebandFaultHint(
+                "panic(cpu 0): baseband watchdog failure during actual modem operation"));
+    }
+    @Test public void independentDemoEventsCannotFormOneCombinedCause() {
+        String multi = "===== ZIP FILE: PanicLog1 =====\n"
+                + "panic(cpu 2): Kernel panic: watchdog timeout\n"
+                + "Baseband version: 3.20.01\n"
+                + "===== ZIP FILE: PanicLog2 =====\n"
+                + "panicString: panic(cpu 0): thermal shutdown\n";
+        assertFalse(ApplePanicEvidencePolicy.hasExplicitBasebandFaultHint(multi));
+        assertFalse(ApplePanicEvidencePolicy.tokensMatchOnePanic(
+                multi, java.util.Arrays.asList("watchdog", "thermal")));
+        assertTrue(ApplePanicEvidencePolicy.tokensMatchOnePanic(
+                multi, java.util.Arrays.asList("panic(cpu", "watchdog timeout")));
+        assertTrue(ApplePanicEvidencePolicy.tokensMatchOnePanic(
+                multi, java.util.Arrays.asList("panicString", "thermal shutdown")));
+    }
     @Test public void scopedResultLabels() {
         assertEquals("IMPORTED_PANIC_LOG_OBSERVED",ApplePanicEvidencePolicy.evidenceClass(true));
         assertEquals("UNVERIFIED_OR_UNSUPPORTED",ApplePanicEvidencePolicy.evidenceClass(false));
