@@ -303,10 +303,13 @@
             android:theme="@style/Theme.GEL.DarkGold"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
+        <!-- LAB 7 measures physical posture using gravity/accelerometer,
+             not Android UI auto-rotation. Keep the test screen stable. -->
         <activity
             android:name=".RotationCheckActivity"
             android:exported="false"
             android:theme="@style/Theme.GEL.DarkGold"
+            android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
         <activity

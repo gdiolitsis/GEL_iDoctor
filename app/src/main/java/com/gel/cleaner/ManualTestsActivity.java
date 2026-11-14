@@ -8810,14 +8810,16 @@ private void lab7RotationAndProximityManual() {
         gr
                 ? "Βήμα 1:\n"
                   + "Περιστρέψτε αργά τη συσκευή.\n"
-                  + "Παρατήρησε την ένδειξη αισθητήρα. Η οθόνη της δοκιμής παραμένει σε κατακόρυφο προσανατολισμό.\n\n"
+                  + "Η οθόνη της δοκιμής είναι σκόπιμα κλειδωμένη σε κατακόρυφη προβολή (portrait). "
+                  + "Δεν θα περιστραφεί όταν γυρίσεις το κινητό — μετράμε την κίνηση από τον αισθητήρα, όχι το auto-rotate του Android.\n\n"
                   + "Βήμα 2:\n"
                   + "Καλύψτε με το χέρι σας τον αισθητήρα εγγύτητας, "
                   + "στο επάνω μέρος της οθόνης, στην περιοχή ειδοποιήσεων.\n"
                   + "Η ένδειξη εγγύτητας πρέπει να αλλάξει. Το Android δεν εγγυάται ότι θα σβήσει η οθόνη εκτός κλήσης."
                 : "Step 1:\n"
                   + "Rotate the device slowly.\n"
-                  + "Observe the sensor reading. The test screen stays in portrait orientation.\n\n"
+                  + "The test screen is intentionally locked to portrait. "
+                  + "It will not rotate when you turn the phone — we measure the sensor, not Android auto-rotate.\n\n"
                   + "Step 2:\n"
                   + "Cover the proximity sensor with your hand, "
                   + "at the top of the screen, to the notification area.\n"
@@ -34140,14 +34142,19 @@ if (requestCode == 7007) {
                   : "LAB 7 — Rotation & Proximity");
     logLine();
 
+    logLabelValue(
+            gr ? "Προσανατολισμός οθόνης δοκιμής" : "Test screen orientation",
+            gr ? "Κλειδωμένος σε portrait για σταθερή μέτρηση — η οθόνη δεν περιστρέφεται"
+               : "Locked to portrait for a stable test — the screen does not rotate");
     lab7RotationVerified = resultCode == RESULT_OK;
     if (resultCode == RESULT_OK) {
         logLabelOkValue(gr ? "Περιστροφή" : "Rotation",
                 gr ? "Παρατηρήθηκε σταθερή αλλαγή βαρύτητας: όρθια → πλαγιαστή θέση"
                    : "Observed stable gravity change: upright → sideways posture");
-        logInfo(gr ? "Η οθόνη της εφαρμογής παρέμεινε κατακόρυφη. "
-                     + "Δεν πιστοποιείται η αυτόματη περιστροφή του Android."
-                   : "The app remained in portrait. Android auto-rotate itself was not certified.");
+        logInfo(gr ? "Η αλλαγή στάσης μετρήθηκε από αισθητήρα. "
+                     + "Δεν ελέγχθηκε η αυτόματη περιστροφή του Android."
+                   : "Posture change was measured by a sensor. "
+                     + "Android auto-rotate was not tested.");
     } else if (resultCode == RESULT_FIRST_USER) {
         logLabelValue(gr ? "Περιστροφή" : "Rotation",
                 gr ? "ΠΑΡΑΛΕΙΦΘΗΚΕ — συνεχίζεται ανεξάρτητα ο έλεγχος εγγύτητας"
