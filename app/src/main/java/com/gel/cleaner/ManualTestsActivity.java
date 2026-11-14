@@ -3413,11 +3413,18 @@ private static class CameraHumanSummary {
     String flash;
     String realLifeUse;
     String verdict;
+    boolean photoResolutionKnown;
+    boolean videoResolutionKnown;
+    boolean rawSupported;
+    boolean manualSupported;
+    boolean eisSupported;
+    boolean flashSupported;
 }
 
 private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
 
     CameraHumanSummary h = new CameraHumanSummary();
+    final boolean gr = AppLang.isGreek(this);
 
     // ------------------------------------------------------------
     // CAPS
@@ -3435,7 +3442,11 @@ private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
         }
     }
 
-    h.manualMode = manual ? "Supported" : "Not supported";
+    h.manualSupported = manual;
+    h.rawSupported = hasRaw;
+    h.manualMode = manual
+            ? (gr ? "Υποστηρίζεται" : "Supported")
+            : (gr ? "Δεν υποστηρίζεται — όχι βλάβη" : "Not supported — not a fault");
 
     // ------------------------------------------------------------
     // PHOTO QUALITY (MP)
@@ -3456,18 +3467,19 @@ private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
         }
     }
 
+    h.photoResolutionKnown = maxPhoto != null;
     if (maxPhoto != null) {
-        int mp = (maxPhoto.getWidth() * maxPhoto.getHeight()) / 1_000_000;
-        h.photoQuality = mp + " MP photos (very good)";
+        double mp = ((double) maxPhoto.getWidth() * maxPhoto.getHeight()) / 1_000_000d;
+        h.photoQuality = String.format(Locale.US, "%.1f MP (%d x %d)",
+                mp, maxPhoto.getWidth(), maxPhoto.getHeight());
     } else {
-        h.photoQuality = "Standard photos";
+        h.photoQuality = gr ? "Δεν αναφέρθηκε μέγιστη ανάλυση JPEG"
+                            : "Max JPEG resolution not reported";
     }
 
 // ------------------------------------------------------------
 // PROFESSIONAL PHOTOS (RAW)
 // ------------------------------------------------------------
-final boolean gr = AppLang.isGreek(this);
-
 h.professionalPhotos = hasRaw
         ? (gr
             ? "Υποστηρίζεται λήψη RAW (ασυμπίεστων) φωτογραφιών"
@@ -3488,12 +3500,15 @@ h.professionalPhotos = hasRaw
         }
     }
 
+    h.videoResolutionKnown = maxWidth > 0;
     if (maxWidth >= 3840)
-        h.videoQuality = "4K (very high)";
+        h.videoQuality = gr ? "4K (δηλωμένη δυνατότητα)" : "4K (reported capability)";
     else if (maxWidth >= 1920)
-        h.videoQuality = "Full HD (high)";
+        h.videoQuality = gr ? "Full HD (δηλωμένη δυνατότητα)" : "Full HD (reported capability)";
+    else if (maxWidth > 0)
+        h.videoQuality = gr ? "Χαμηλότερη από Full HD (δηλωμένη)" : "Below Full HD (reported)";
     else
-        h.videoQuality = "HD (basic)";
+        h.videoQuality = gr ? "Δεν αναφέρθηκαν μεγέθη βίντεο" : "Video sizes not reported";
 
 // ------------------------------------------------------------
 // FPS / SMOOTHNESS / SLOW MOTION
@@ -3566,6 +3581,7 @@ if (stabModes != null) {
     }
 }
 
+h.eisSupported = stab;
 h.stabilization = stab
         ? (gr ? "Υποστηρίζεται ηλεκτρονική σταθεροποίηση (EIS)"
               : "Electronic stabilization (EIS) supported")
@@ -3577,7 +3593,8 @@ h.stabilization = stab
 // ------------------------------------------------------------
 Boolean flashAvail = cc.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
 
-h.flash = Boolean.TRUE.equals(flashAvail)
+h.flashSupported = Boolean.TRUE.equals(flashAvail);
+h.flash = h.flashSupported
         ? (gr ? "Διαθέσιμο φλας"
               : "Flash available")
         : (gr ? "Δεν υπάρχει φλας"
@@ -9000,7 +9017,7 @@ private void lab8CameraHardwareCheck() {
         logWarn(gr
                 ? "Το Camera2 δεν υποστηρίζεται σε αυτήν την έκδοση Android."
                 : "Camera2 not supported on this Android version.");
-        logOk(gr
+        logInfo(gr
                 ? "Fallback: άνοιγμα εφαρμογής κάμερας (βασικός έλεγχος)."
                 : "Fallback: opening system camera app (basic check).");
         try {
@@ -9014,7 +9031,8 @@ private void lab8CameraHardwareCheck() {
                     : "Camera app may be missing or blocked.");
 
             appendHtml("<br>");
-            logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+            logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
             logLine();
             enableSingleExportButton();
         }
@@ -9030,7 +9048,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Δεν εντοπίστηκε υλικό κάμερας στη συσκευή."
                 : "No camera hardware detected on this device.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9044,7 +9063,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Το CameraManager δεν είναι διαθέσιμο."
                 : "CameraManager unavailable.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9074,7 +9094,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Αποτυχία καταγραφής camera IDs."
                 : "Failed to enumerate cameras.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9085,7 +9106,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Δεν βρέθηκαν προσβάσιμα camera IDs."
                 : "No accessible camera IDs found.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9193,7 +9215,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Δεν βρέθηκαν αξιοποιήσιμες περιγραφές καμερών."
                 : "No usable camera descriptors.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9599,7 +9622,7 @@ private void lab8RunNextCamera(
                 "YES"
         );
     else
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Χειροκίνητος αισθητήρας" : "Manual sensor",
                 "NO"
         );
@@ -9871,23 +9894,30 @@ cam.runtimeSession = s;
     };
 
     yes.setOnClickListener(v -> {
+    if (finished.get()) return;
     AppTTS.stop();
     overall.previewOkCount++;
     s.userConfirmedPreview = Boolean.TRUE;
+    lab8ReportUserConfirmedCameraVerdict(s, overall);
     finishAndNext.run();
 });
 
 no.setOnClickListener(v -> {
+    if (finished.get()) return;
     AppTTS.stop();
     overall.previewFailCount++;
     s.userConfirmedPreview = Boolean.FALSE;
+    lab8ReportUserConfirmedCameraVerdict(s, overall);
     finishAndNext.run();
 });
 
     // Start camera when texture is ready
     if (tv.isAvailable()) {
         lab8StartCamera2Session(s, overall, enableButtons, () -> {
-            overall.streamIssueCount++;
+            if (!s.cameraStreamFailure) {
+                s.cameraStreamFailure = true;
+                overall.streamIssueCount++;
+            }
             enableButtons.run();
         });
     } else {
@@ -9895,7 +9925,10 @@ no.setOnClickListener(v -> {
             @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) {
                 if (finished.get()) return;
                 lab8StartCamera2Session(s, overall, enableButtons, () -> {
-                    overall.streamIssueCount++;
+                    if (!s.cameraStreamFailure) {
+                        s.cameraStreamFailure = true;
+                        overall.streamIssueCount++;
+                    }
                     enableButtons.run();
                 });
             }
@@ -10171,11 +10204,12 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
     // ------------------------------------------------------------
     long durMs = Math.max(1, SystemClock.elapsedRealtime() - s.sampleStartMs);
     float fps = (s.frames * 1000f) / durMs;
+    s.sampledFps = fps;
 
     // Stream sampling
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Δειγματοληψία ροής" : "Stream sampling",
-            "5s"
+            String.format(Locale.US, "%.1f s", durMs / 1000f)
     );
 
     if (s.frames > 0)
@@ -10211,18 +10245,9 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                 String.valueOf(s.droppedFrames)
         );
 
-    if (s.blackFrames == 0)
-        logLabelOkValue(
-                gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
-                "0"
-        );
-    else {
-        logLabelWarnValue(
-                gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
-                String.valueOf(s.blackFrames)
-        );
-        overall.streamIssueCount++;
-    }
+    // Dark YUV samples are interpreted only *after* the user reports
+    // whether the live image was visible. Incidental samples do not
+    // become warnings or "stream issues" by themselves.
 
     logLabelOkValue(
             gr ? "Εύρος φωτεινότητας (min / max)" : "Luma range (min / max)",
@@ -10257,56 +10282,90 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                         : "YES — professional uncompressed photos"
         );
     else
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Υποστήριξη RAW" : "RAW support",
-                gr
-                        ? "ΟΧΙ — μόνο JPEG"
-                        : "NO — professional uncompressed photos not supported (JPEG only)"
+                gr ? "Δεν αναφέρεται RAW — δεν αποτελεί βλάβη" 
+                   : "RAW not reported — not a fault"
         );
 
-    // User confirmation
-    if (s.userConfirmedPreview != null) {
-        if (s.userConfirmedPreview)
-            logLabelOkValue(
-                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                    gr ? "Η προεπισκόπηση ήταν ορατή" : "Live preview visible"
+    // The user has not answered yet. Do NOT issue a camera verdict here.
+    // The user-confirmation click handler will append it afterward.
+    s.sampleCompleted = true;
+    
+} // ✅ ΤΕΛΟΣ lab8StopAndReportSample (αυτό έλειπε)
+
+// ============================================================
+// LAB 8 — FINAL VERDICT AFTER USER CONFIRMATION (EL/EN)
+// ============================================================
+private void lab8ReportUserConfirmedCameraVerdict(Lab8Session s, Lab8Overall overall) {
+    final boolean gr = AppLang.isGreek(this);
+
+    if (s.userConfirmedPreview == null) return;
+
+    // Incidental very dark YUV samples are NOT "black preview": a few
+    // can occur during auto exposure or in a dark scene. Keep their
+    // count in the session, but omit the misleading low-count UI warning.
+    if (s.sampleCompleted && s.frames > 0L) {
+        if (s.blackFrames == 0L) {
+            logLabelOkValue(gr ? "Πολύ σκοτεινά δείγματα" : "Very dark samples", "0");
+        } else if (!Lab8CameraEvidencePolicy.isIncidentalDarkSample(
+                s.blackFrames, s.frames)) {
+            logLabelWarnValue(
+                    gr ? "Δείγματα χαμηλής φωτεινότητας" : "Low-luminance samples",
+                    s.blackFrames + " / " + s.frames
+                        + (gr ? " — δεν αποδεικνύουν διακοπή εικόνας"
+                              : " — not proof of preview failure")
             );
-        else
-            logLabelErrorValue(
-                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                    gr ? "Η προεπισκόπηση ΔΕΝ ήταν ορατή" : "Preview NOT visible"
-            );
+        }
     }
 
-    // ------------------------------------------------------------
-    // Final verdict (per camera)
-    // ------------------------------------------------------------
-    boolean ok =
-            (s.frames > 0) &&
-            (s.blackFrames == 0) &&
-            (s.droppedFrames == 0) &&
-            (s.latencyCount == 0 || (s.latencySumMs / Math.max(1, s.latencyCount)) <= 250) &&
-            (s.userConfirmedPreview != null && s.userConfirmedPreview);
-
-    s.verdictOk = ok;
-
-    if (ok) {
-        logLabelOkValue(
-                gr ? "Τελικό αποτέλεσμα" : "Verdict",
-                gr ? "OK — Η διαδρομή κάμερας λειτουργεί σωστά"
-                   : "OK — Camera path operational"
-        );
+    if (Boolean.TRUE.equals(s.userConfirmedPreview)) {
+        logLabelOkValue(gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
+                gr ? "Ο χρήστης επιβεβαίωσε ορατή ζωντανή εικόνα"
+                   : "User confirmed that live preview was visible");
     } else {
-        logLabelWarnValue(
-                gr ? "Τελικό αποτέλεσμα" : "Verdict",
-                gr ? "Εντοπίστηκαν θέματα — έλεγξε τα παραπάνω"
-                   : "Issues detected — review above"
-        );
+        logLabelErrorValue(gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
+                gr ? "Ο χρήστης ΔΕΝ είδε κανονική ζωντανή εικόνα"
+                   : "User did NOT see a normal live preview");
     }
 
+    Lab8CameraEvidencePolicy.Verdict verdict =
+            Lab8CameraEvidencePolicy.evaluate(
+                    s.userConfirmedPreview,
+                    s.sampleCompleted,
+                    s.cameraStreamFailure,
+                    s.frames,
+                    s.sampledFps,
+                    s.droppedFrames,
+                    s.blackFrames
+            );
+    s.verdictOk = verdict == Lab8CameraEvidencePolicy.Verdict.CONFIRMED_PREVIEW;
+    switch (verdict) {
+        case CONFIRMED_PREVIEW:
+            logLabelOkValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Η ζωντανή εικόνα επιβεβαιώθηκε και η διαθέσιμη δειγματοληψία ήταν ομαλή"
+                       : "Live preview confirmed; available stream sample was consistent");
+            break;
+        case RETEST_STREAM_EVIDENCE:
+            overall.streamIssueCount++;
+            logLabelWarnValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Ο χρήστης επιβεβαίωσε εικόνα· οι τεχνικές ενδείξεις ροής χρειάζονται επανέλεγχο, όχι διάγνωση βλάβης"
+                       : "User confirmed preview; stream telemetry needs rechecking, not a hardware diagnosis");
+            break;
+        case USER_REPORTED_PREVIEW_FAILURE:
+            logLabelWarnValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Η ζωντανή εικόνα δεν επιβεβαιώθηκε από τον χρήστη — απαιτείται επανέλεγχος"
+                       : "Live preview not confirmed by user — retest required");
+            break;
+        default:
+            logLabelValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Μη ολοκληρωμένη μέτρηση Camera2 — καμία διάγνωση υλικού"
+                       : "Camera2 sampling incomplete — no hardware verdict");
+            break;
+    }
     logLine();
     appendHtml("<br>");
-} // ✅ ΤΕΛΟΣ lab8StopAndReportSample (αυτό έλειπε)
+}
 
 // ============================================================
 // LAB 8 — Close session safely
@@ -10369,6 +10428,9 @@ private static class Lab8Session {
     int latencyCount;
 
     long lastFrameTsNs;
+    float sampledFps;
+    boolean sampleCompleted = false;
+    boolean cameraStreamFailure = false;
 
     Boolean userConfirmedPreview = null;
     boolean verdictOk = false;
@@ -10567,7 +10629,7 @@ private void startLab8_1CameraCapabilities() {
                 gr ? "Λείπει το context καμερών" : "Missing camera context"
         );
 
-        logOk(gr
+        logInfo(gr
                 ? "Παρακαλώ εκτέλεσε ξανά το LAB 8."
                 : "Please re-run LAB 8.");
 
@@ -10630,18 +10692,49 @@ private void lab8_1DumpOneCameraCapabilities(CameraManager cm, Lab8Cam cam) {
     logInfo(gr ? "ΤΕΛΙΚΟ ΑΝΘΡΩΠΙΝΟ ΣΥΜΠΕΡΑΣΜΑ" : "FINAL HUMAN VERDICT");
     logLine();
 
-    logLabelValue(gr ? "Ποιότητα φωτογραφίας" : "Photo quality", h.photoQuality);
-    logLabelValue(gr ? "Επαγγελματικές φωτογραφίες" : "Professional photos", h.professionalPhotos);
-    logLabelValue(gr ? "Ποιότητα βίντεο" : "Video quality", h.videoQuality);
-    logLabelValue(gr ? "Ομαλότητα βίντεο" : "Video smoothness", h.videoSmoothness);
+    // Green denotes a positively reported capability, not a guarantee
+    // of image quality. Unknown/unsupported optional capabilities stay white.
+    if (h.photoResolutionKnown)
+        logLabelOkValue(gr ? "Μέγιστη ανάλυση JPEG" : "Max JPEG resolution", h.photoQuality);
+    else
+        logLabelValue(gr ? "Μέγιστη ανάλυση JPEG" : "Max JPEG resolution", h.photoQuality);
+
+    if (h.rawSupported)
+        logLabelOkValue(gr ? "Υποστήριξη RAW" : "RAW capability", h.professionalPhotos);
+    else
+        logLabelValue(gr ? "Υποστήριξη RAW" : "RAW capability", h.professionalPhotos);
+
+    if (h.videoResolutionKnown)
+        logLabelOkValue(gr ? "Δηλωμένη ανάλυση βίντεο" : "Reported video resolution", h.videoQuality);
+    else
+        logLabelValue(gr ? "Δηλωμένη ανάλυση βίντεο" : "Reported video resolution", h.videoQuality);
+
+    // FPS range and slow-motion claims are interpretations, not recorded
+    // video tests; preserve their neutral color.
+    logLabelValue(gr ? "Ομαλότητα βίντεο (εκτίμηση)" : "Video smoothness (estimated)", h.videoSmoothness);
     logLabelValue(gr ? "Αργή κίνηση (slow motion)" : "Slow motion", h.slowMotion);
-    logLabelValue(gr ? "Σταθεροποίηση" : "Stabilization", h.stabilization);
-    logLabelValue(gr ? "Χειροκίνητη λειτουργία" : "Manual mode", h.manualMode);
-    logLabelValue(gr ? "Φλας" : "Flash", h.flash);
-    logLabelValue(gr ? "Χρήση στην πράξη" : "Real life use", h.realLifeUse);
+
+    if (h.eisSupported)
+        logLabelOkValue(gr ? "Σταθεροποίηση" : "Stabilization", h.stabilization);
+    else
+        logLabelValue(gr ? "Σταθεροποίηση" : "Stabilization", h.stabilization);
+
+    if (h.manualSupported)
+        logLabelOkValue(gr ? "Χειροκίνητη λειτουργία" : "Manual mode", h.manualMode);
+    else
+        logLabelValue(gr ? "Χειροκίνητη λειτουργία" : "Manual mode", h.manualMode);
+
+    if (h.flashSupported)
+        logLabelOkValue(gr ? "Φλας" : "Flash", h.flash);
+    else
+        logLabelValue(gr ? "Φλας" : "Flash", h.flash);
+
+    logLabelValue(gr ? "Χρήση στην πράξη (εκτίμηση)" : "Real-life use (estimate)", h.realLifeUse);
+    logInfo(gr ? "Τα χαρακτηριστικά προέρχονται από Camera2· δεν μετρήθηκε αντικειμενική ποιότητα εικόνας."
+               : "Camera2 reports these capabilities; objective image quality was not measured.");
 
     logLine();
-    logLabelOkValue(gr ? "Συμπέρασμα" : "Verdict", h.verdict);
+    logLabelOkValue(gr ? "Συμπέρασμα δυνατοτήτων" : "Capability conclusion", h.verdict);
     logLine();
 }
 
