@@ -82,7 +82,7 @@ The v54 change to `logLabelValue()` was not sufficient by itself: hundreds of la
 
 ## Remaining acceptance gates — do NOT mark this CLOSED prematurely
 
-1. **Exact-HEAD Java compile/unit test CI:** not yet confirmed at documentation time. Existing PRO-access workflow may check Android source; record actual outcome instead of inferring from the workflow name.
+1. **Latest application-source Java compile/unit test CI: PASS.** [GitHub run 43535670305](https://github.com/gdiolitsis/GEL_iDoctor/actions/runs/43535670305), triggered from source commit `3f866b8b5eab664a956c86b416220ced9b8687ea`, completed `:app:compileDebugJavaWithJavac`, `:app:testDebugUnitTest`, `BUILD SUCCESSFUL in 40s`. Later GitHub changes are documentation-only. This passes source compilation and unit tests, **not** visual acceptance of 31 Labs.
 2. **Cross-branch tests:** compare the protected backup and new source for each Lab's method+helper dependencies, no regression in original calculations, TTS, dialogs, Exit, user controls, popups and locale.
 3. **Physical screenshot parity:** Android 13 Xiaomi, both Greek and English; verify WHITE labels/GREEN measured values and neutral WHITE unknowns across **all 31 Labs**. The previous v54 APK remains unchanged during testing.
 4. **PDF path:** on-screen color changes are not automatically equivalent to PDF color preservation. TXT clipping and HTML PDF export failure remain independent open issues.
