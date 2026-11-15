@@ -42,6 +42,8 @@ public final class AppImpactEngine {
         // capability
         public int capabilityScore;
         public int dangerPermCount;
+        // Granted permission evidence, not a score or assertion of misuse.
+        public final ArrayList<String> grantedSensitivePermissions = new ArrayList<>();
 
         public boolean hasBoot;
         public boolean hasLocation;
@@ -108,6 +110,9 @@ public final class AppImpactEngine {
         public ArrayList<AppScore> topCapabilityHeavy = new ArrayList<>();
         public ArrayList<AppScore> topDataConsumers   = new ArrayList<>();
         public ArrayList<AppScore> topBatteryExposure = new ArrayList<>();
+        // Reuse the PackageManager scan; do not make Lab 26 query all apps twice.
+        public final ArrayList<AppScore> userAppsWithGrantedSensitivePermissions = new ArrayList<>();
+        public int permissionGrantFlagsUnavailableApps = 0;
 
         // ROOT top lists
         public ArrayList<AppScore> topBatteryByDumpsys = new ArrayList<>();
@@ -118,6 +123,42 @@ public final class AppImpactEngine {
         // verdict points
         public int riskPoints;
         public boolean appsImpactHigh;
+    }
+
+    // A disclosure-only allowlist. None of these permissions alone proves misuse.
+    static boolean isSensitivePermissionForDisclosure(String p) {
+        if (p == null) return false;
+        switch (p) {
+            case "android.permission.CAMERA":
+            case "android.permission.RECORD_AUDIO":
+            case "android.permission.ACCESS_FINE_LOCATION":
+            case "android.permission.ACCESS_COARSE_LOCATION":
+            case "android.permission.ACCESS_BACKGROUND_LOCATION":
+            case "android.permission.READ_CONTACTS":
+            case "android.permission.WRITE_CONTACTS":
+            case "android.permission.READ_SMS":
+            case "android.permission.RECEIVE_SMS":
+            case "android.permission.SEND_SMS":
+            case "android.permission.READ_CALL_LOG":
+            case "android.permission.WRITE_CALL_LOG":
+            case "android.permission.READ_PHONE_STATE":
+            case "android.permission.CALL_PHONE":
+            case "android.permission.READ_CALENDAR":
+            case "android.permission.WRITE_CALENDAR":
+            case "android.permission.READ_MEDIA_IMAGES":
+            case "android.permission.READ_MEDIA_VIDEO":
+            case "android.permission.READ_MEDIA_AUDIO":
+            case "android.permission.READ_MEDIA_VISUAL_USER_SELECTED":
+            case "android.permission.BODY_SENSORS":
+            case "android.permission.BODY_SENSORS_BACKGROUND":
+            case "android.permission.BLUETOOTH_SCAN":
+            case "android.permission.BLUETOOTH_CONNECT":
+            case "android.permission.NEARBY_WIFI_DEVICES":
+            case "android.permission.POST_NOTIFICATIONS":
+                return true;
+            default:
+                return false;
+        }
     }
 
     // ============================================================
@@ -229,6 +270,7 @@ public final class AppImpactEngine {
             // PERMISSIONS (requested) — capability intelligence
             // -----------------------------
             String[] reqPerms = null;
+            int[] reqGrantFlags = null;
             try {
                 PackageInfo pi;
                 if (Build.VERSION.SDK_INT >= 33) {
@@ -240,7 +282,10 @@ public final class AppImpactEngine {
                     //noinspection deprecation
                     pi = pm.getPackageInfo(pkg, PackageManager.GET_PERMISSIONS);
                 }
-                if (pi != null) reqPerms = pi.requestedPermissions;
+                if (pi != null) {
+                    reqPerms = pi.requestedPermissions;
+                    reqGrantFlags = pi.requestedPermissionsFlags;
+                }
             } catch (Throwable ignore) {}
 
             int dangerCount = 0;
@@ -255,8 +300,24 @@ public final class AppImpactEngine {
             boolean hasPostNotif = false;
 
             if (reqPerms != null) {
-                for (String p : reqPerms) {
+                if (!isSystem && (reqGrantFlags == null ||
+                        reqGrantFlags.length < reqPerms.length)) {
+                    out.permissionGrantFlagsUnavailableApps++;
+                }
+                for (int permIndex = 0; permIndex < reqPerms.length; permIndex++) {
+                    String p = reqPerms[permIndex];
                     if (p == null) continue;
+
+                    // Actual PackageManager granted flag, NOT a requested capability.
+                    if (!isSystem && reqGrantFlags != null
+                            && permIndex < reqGrantFlags.length
+                            && (reqGrantFlags[permIndex]
+                                    & PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0
+                            && isSensitivePermissionForDisclosure(p)) {
+                        s.grantedSensitivePermissions.add(
+                                p.startsWith("android.permission.")
+                                        ? p.substring("android.permission.".length()) : p);
+                    }
 
                     if ("android.permission.RECEIVE_BOOT_COMPLETED".equals(p)) hasBoot = true;
 
@@ -401,6 +462,9 @@ public final class AppImpactEngine {
             if (!isSystem) {
                 allUser.add(s);
                 uidMap.put(s.uid, s);
+                if (!s.grantedSensitivePermissions.isEmpty()) {
+                    out.userAppsWithGrantedSensitivePermissions.add(s);
+                }
             }
         }
 
