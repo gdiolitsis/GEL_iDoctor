@@ -14043,10 +14043,8 @@ logLabelOkValue(
                 : "Max brightness + keep screen on"
 );
 
-logLabelOkValue(
-        gr ? "Θερμικά πεδία" : "Thermal domains",
-        "CPU / GPU / SKIN / PMIC / BATT"
-);
+// Actual CPU/GPU measurements are logged individually when available;
+// no blanket claim of SKIN/PMIC/BATT sensor measurement.
 
 logLine();
 
@@ -15051,12 +15049,12 @@ private void lab14LogFinalScore(
     // ----------------------------------------------------
     // 🔴 CALIBRATION
     // ----------------------------------------------------
-    logLabelValue(
-            gr ? "Πιθανή απόκλιση ένδειξης" : "Possible gauge discrepancy",
-            calibration
-                    ? (gr ? "Πειραματική ένδειξη — όχι επιβεβαιωμένη βαθμονόμηση" : "Experimental indication — calibration not verified")
-                    : (gr ? "Δεν τεκμηριώθηκε σε αυτή τη δοκιμή" : "Not established in this trial")
-    );
+    if (calibration) {
+        logLabelWarnValue(
+                gr ? "Ενδεικτική απόκλιση στάθμης φόρτισης" : "Indicative charge-level deviation",
+                gr ? "Παρατηρήθηκε ασυνέπεια στην ένδειξη — απαιτείται επανάληψη για επιβεβαίωση"
+                   : "Gauge inconsistency observed — repeat to confirm");
+    }
 
     // ----------------------------------------------------
     // 🔴 SYSTEM LIMIT
@@ -17398,11 +17396,13 @@ if (hasSag &&
             finalSag
         );
 
-    logLabelOkValue(
-        gr ? "Γρήγορη δοκιμή καταπόνησης"
-           : "Fast stress test",
-        "Sag=" + sagText
-    );
+    if (finalSag >= 0.080f) {
+        logLabelWarnValue(gr ? "Γρήγορη δοκιμή καταπόνησης" : "Fast stress test",
+                "Sag=" + sagText);
+    } else {
+        logLabelOkValue(gr ? "Γρήγορη δοκιμή καταπόνησης" : "Fast stress test",
+                "Sag=" + sagText);
+    }
 
 
     if (finalSag > 0.18f) {
