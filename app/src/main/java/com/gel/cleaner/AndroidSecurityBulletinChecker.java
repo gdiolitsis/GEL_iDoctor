@@ -20,6 +20,7 @@ final class AndroidSecurityBulletinChecker {
 
     private static final int MAX_RESPONSE_BYTES = 750_000;
     private static final Pattern ROW = Pattern.compile("(?is)<tr\\b[^>]*>(.*?)</tr\\s*>");
+    private static final Pattern TABLE_CELL = Pattern.compile("(?is)<td\\b[^>]*>(.*?)</td\\s*>");
     private static final Pattern BULLETIN_LINK = Pattern.compile(
             "(?i)(?:/docs/security/bulletin/)(?:20\\d{2}/)?(20\\d{2}-(?:0[1-9]|1[0-2])-01)(?!\\d)");
     private static final Pattern PATCH_LEVEL = Pattern.compile(
@@ -73,7 +74,17 @@ final class AndroidSecurityBulletinChecker {
             Matcher link = BULLETIN_LINK.matcher(row);
             if (!link.find()) continue;
             String bulletinMonth = link.group(1).substring(0, 7);
-            Matcher dates = PATCH_LEVEL.matcher(row);
+            // The actual level is in the LAST table cell, not the URL or title.
+            // A bulletin URL itself contains a yyyy-MM-01 date and is NOT evidence.
+            Matcher cells = TABLE_CELL.matcher(row);
+            String patchCell = null;
+            int columnCount = 0;
+            while (cells.find()) {
+                patchCell = cells.group(1);
+                columnCount++;
+            }
+            if (columnCount < 2 || patchCell == null) continue;
+            Matcher dates = PATCH_LEVEL.matcher(patchCell);
             while (dates.find()) {
                 String candidate = dates.group();
                 if (!candidate.startsWith(bulletinMonth)) continue;
