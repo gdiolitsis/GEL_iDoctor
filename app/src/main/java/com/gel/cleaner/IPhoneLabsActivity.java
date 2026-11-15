@@ -1479,7 +1479,7 @@ logLabelOkValue(
         safe(r.patternId)
 );
 if (r.secondary != null) {
-    for (IPSPanicParser.Result other : r.secondary) {
+    for (com.gel.cleaner.IPSPanicParser.Result other : r.secondary) {
         if (other != null && other.patternId != null)
             logLabelOkValue(gr ? "Επιπλέον μοτίβο:" : "Additional matched pattern:",
                     safe(other.patternId));
