@@ -31163,7 +31163,7 @@ private void showLab29ExternalGuidanceDialog(boolean gr) {
                   + "3. Open the external checking service; enter the IMEI and any required details there.\n"
                   + "4. If you choose to proceed, pay the provider directly on its website.\n"
                   + "5. Read your report on the provider's website. No result needs to be shared with this app.");
-        instructions.setTextColor(Color.WHITE);
+        instructions.setTextColor(0xFF39FF14); // Neon green for Lab 29 instructions.
         instructions.setTextSize(14f);
         instructions.setPadding(0, dp(14), 0, dp(14));
         scroll.addView(instructions);
@@ -31173,12 +31173,16 @@ private void showLab29ExternalGuidanceDialog(boolean gr) {
 
         Button open = lab29DialogButton(gr
                 ? "ΑΝΟΙΓΜΑ ΕΞΩΤΕΡΙΚΟΥ ΕΛΕΓΧΟΥ"
-                : "OPEN EXTERNAL IMEI CHECK");
-        root.addView(open, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(52)));
-        Button close = lab29DialogButton(gr ? "ΕΞΟΔΟΣ" : "EXIT");
-        root.addView(close, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(52)));
+                : "OPEN EXTERNAL IMEI CHECK", false);
+        LinearLayout.LayoutParams openParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        openParams.topMargin = dp(12);
+        root.addView(open, openParams);
+        Button close = lab29DialogButton(gr ? "ΕΞΟΔΟΣ" : "EXIT", true);
+        LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        closeParams.topMargin = dp(12);
+        root.addView(close, closeParams);
 
         final AlertDialog dialog = new AlertDialog.Builder(
                 this, android.R.style.Theme_Material_Dialog_NoActionBar)
@@ -31203,13 +31207,17 @@ private void showLab29ExternalGuidanceDialog(boolean gr) {
 }
 
 // Only an external provider displays the result; GEL records no IMEI answers.
-private Button lab29DialogButton(String text) {
+private Button lab29DialogButton(String text, boolean isExit) {
     Button btn = new com.gel.cleaner.GelButton(this);
     btn.setText(text);
     btn.setAllCaps(false);
-    btn.setTextColor(Color.WHITE);
+    btn.setTextColor(isExit ? Color.WHITE : Color.BLACK);
     btn.setTextSize(12f);
-    btn.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+    GradientDrawable buttonBg = new GradientDrawable();
+    buttonBg.setColor(isExit ? 0xFFD50000 : 0xFF00CC24);
+    buttonBg.setCornerRadius(dp(12));
+    buttonBg.setStroke(dp(2), 0xFFFFD700);
+    btn.setBackground(buttonBg);
     return btn;
 }
 
