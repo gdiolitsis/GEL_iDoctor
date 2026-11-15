@@ -27556,9 +27556,6 @@ private void lab19RamSnapshot() {
                 // No low-level observation: omit it from the human report.
             } else {
 
-            long swapUsedKb = RamEvidencePolicy.observedSwapUsedKb(
-                    snap.swapTotalKb, snap.swapFreeKb);
-
             // Preserve directly observed memory quantities. Old heuristics
             // treated low MemFree and swap usage as a high-pressure warning,
             // even if Android reported ample available RAM and no lowMemory.
