@@ -31,13 +31,13 @@ public class Lab31ReportEvidencePolicyTest {
     }
 
     @Test public void newLab30SummaryStrippedButOlderLab30CertificationRetained() {
-        String log = "ℹ LAB 30 — Auto Final Diagnosis Summary\\n"
-                + "✓ Old certification measured score\\n"
-                + "ℹ LAB 30 — FINAL EXISTING-EVIDENCE SUMMARY\\n"
-                + "⚠ Prior report warning should not replay\\n"
-                + "ℹ Lab 30 complete: observations recorded.\\n"
-                + "ℹ LAB 25 — Crash history\\n"
-                + "✓ Fresh crash-history data\\n";
+        String log = "ℹ LAB 30 — Auto Final Diagnosis Summary\n"
+                + "✓ Old certification measured score\n"
+                + "ℹ LAB 30 — FINAL EXISTING-EVIDENCE SUMMARY\n"
+                + "⚠ Prior report warning should not replay\n"
+                + "ℹ Lab 30 complete: observations recorded.\n"
+                + "ℹ LAB 25 — Crash history\n"
+                + "✓ Fresh crash-history data\n";
         String actual = Lab31ReportEvidencePolicy.withoutPriorSummaries(log);
         assertTrue(actual.contains("Old certification measured score"));
         assertFalse(actual.contains("Prior report warning should not replay"));
