@@ -176,7 +176,11 @@ public final class ApplePanicHardwareHints {
     private static String diagnosticText(String full) {
         // Prefer the actual panicString section over unrelated first-line metadata.
         Matcher marker = Pattern.compile("(?i)[\"']?panicString[\"']?\\s*[:=]\\s*").matcher(full);
-        if (marker.find()) return full.substring(marker.end());
+        if (marker.find()) {
+            // Apple IPS JSON stores panicString line breaks as escaped "\\n".
+            // Normalize only for the diagnostic scan; never persist log content.
+            return full.substring(marker.end()).replace("\\n", "\n").replace("\\r", "\r");
+        }
         Matcher p = Pattern.compile("(?i)panic\\s*\\(cpu").matcher(full);
         if (p.find()) return full.substring(p.start());
         return full;
@@ -249,6 +253,7 @@ public final class ApplePanicHardwareHints {
         } else if (fourteenPro) {
             if (code == 0x41L) { gr="επικοινωνία μπαταρίας"; en="battery communication"; }
             else if (code == 0x40000L) { gr="θύρα φόρτισης"; en="charging port"; }
+            else if (code == 0x20000L) { gr="γυροσκόπιο / κάτω πλακέτα"; en="gyroscope / lower board"; }
             else if (code == 0x80000L) { gr="εμπρόσθιοι αισθητήρες"; en="front sensors"; }
             else if (code == 0x100000L) { gr="καλωδιοταινία κουμπιού ενεργοποίησης"; en="power-button flex"; }
             else if (code == 0xC0000L) { gr="θύρα φόρτισης και εμπρόσθιοι αισθητήρες"; en="charging port and front sensors"; }
