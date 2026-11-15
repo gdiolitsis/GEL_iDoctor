@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import static org.junit.Assert.*;
 
-/** Lab 28 shows direct observations and never grades unseen hardware health. */
+/** Current Lab 27 shows direct observations and never grades unseen hardware health. */
 public final class Lab28DirectEvidenceReportContractTest {
     private static String source() throws Exception {
         Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
@@ -17,21 +17,21 @@ public final class Lab28DirectEvidenceReportContractTest {
     private static String lab() throws Exception {
         String src = source();
         int a = src.indexOf("private void lab28HardwareStability() {");
-        int b = src.indexOf("// LAB 28 — Helpers", a);
+        int b = src.indexOf("// LAB 27 — Helpers", a);
         assertTrue(a >= 0 && b > a);
         return src.substring(a, b);
     }
 
     @Test public void titleMatchesActualObservedScope() throws Exception {
         String s = source();
-        assertTrue(s.contains("\"28. Καταγραφές λειτουργίας και μετρήσεις\""));
-        assertFalse(s.contains("PRO  28. Καταγραφές λειτουργίας και μετρήσεις"));
-        assertTrue(s.contains("LAB 28 — Καταγραφές λειτουργίας και μετρήσεις"));
-        assertFalse(s.contains("PRO  28. Σταθερότητα Υλικού & Ακεραιότητα"));
+        assertTrue(s.contains("\"27. Καταγραφές λειτουργίας και μετρήσεις\""));
+        assertFalse(s.contains("PRO  27. Καταγραφές λειτουργίας και μετρήσεις"));
+        assertTrue(s.contains("LAB 27 — Καταγραφές λειτουργίας και μετρήσεις"));
+        assertFalse(s.contains("PRO  27. Σταθερότητα Υλικού & Ακεραιότητα"));
         assertTrue(s.contains("Το εργαστήριο εμφανίζει διαθέσιμες μετρήσεις"));
     }
 
-    @Test public void proAccessIsOnLab29NotLab28() throws Exception {
+    @Test public void proAccessIsOnCurrentLab28NotLab27() throws Exception {
         String s = source();
         String lab28 = lab();
         int a = s.indexOf("private void lab29DeviceAuthenticity() {");
@@ -39,7 +39,7 @@ public final class Lab28DirectEvidenceReportContractTest {
         assertTrue(a >= 0 && b > a);
         assertFalse(lab28.contains("requireGelPro("));
         assertTrue(s.substring(a, b).contains("requireGelPro("));
-        assertTrue(s.contains("PRO  29. Προέλεγχος Μεταχειρισμένης"));
+        assertTrue(s.contains("PRO  28. Προέλεγχος Μεταχειρισμένης"));
     }
 
     @Test public void temperatureAndUptimeReadingsHaveEvidenceBasedColors() throws Exception {
@@ -64,13 +64,13 @@ public final class Lab28DirectEvidenceReportContractTest {
         assertFalse(s.contains("Δεν τεκμηριώνεται θερμική σταθερότητα από αυτά τα δεδομένα."));
         assertFalse(s.contains("Δείκτης Συνεκτικότητας Συμπτωμάτων"));
         assertFalse(s.contains("Δείκτης κινδύνου υλικού"));
-        assertTrue(s.contains("logOk(gr ? \"Το Lab 28 ολοκληρώθηκε — καταγράφηκαν διαθέσιμες μετρήσεις και αναφορές.\""));
+        assertTrue(s.contains("logOk(gr ? \"Το Lab 27 ολοκληρώθηκε — καταγράφηκαν διαθέσιμες μετρήσεις και αναφορές.\""));
     }
 
     @Test public void futureHardwareScenariosAreNotShownAsPopupFacts() throws Exception {
         String s = source();
         int a = s.indexOf("private String getLab28TextEN()");
-        int b = s.indexOf("// LAB 29 —", a);
+        int b = s.indexOf("// LAB 28 —", a);
         assertTrue(a >= 0 && b > a);
         String popup = s.substring(a, b);
         assertFalse(popup.contains("solder or interconnect defects"));
