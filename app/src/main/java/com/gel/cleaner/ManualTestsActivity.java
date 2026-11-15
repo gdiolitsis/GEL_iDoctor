@@ -394,6 +394,7 @@ private boolean gr;
 
 private long startMah;
 private long baselineFullMah;
+private volatile boolean lab14HasReportedCapacity;
 private long t0;
 private int batteryPercent;
 private long cycles;
@@ -1002,29 +1003,25 @@ private boolean oldKeepScreenOn = false;
                                 ? "Επαγγελματική διάγνωση μπαταρίας\n\n" +
                                   "Το LAB 14A πραγματοποιεί προηγμένο stress test και αξιολογεί:\n\n" +
                                   "✓ Πτώση τάσης υπό φορτίο (Voltage Sag)\n" +
-                                  "✓ Δυναμική / εσωτερική αντίσταση μπαταρίας\n" +
+                                  "✓ Πειραματικός δείκτης μεταβολής τάσης (όχι ESR)\n" +
                                   "✓ Ανάκαμψη τάσης μετά από φορτίο\n" +
                                   "✓ Ικανότητα παροχής ισχύος\n" +
                                   "✓ Θερμική συμπεριφορά υπό καταπόνηση\n" +
-                                  "✓ Ισορροπία και ηλεκτρική συμπεριφορά κυψελών\n" +
                                   "✓ Ενδείξεις Voltage Collapse\n" +
-                                  "✓ Ενδείξεις διόγκωσης / αστάθειας\n" +
-                                  "✓ Calibration Drift\n" +
+                                  "✓ Ενδείξεις απόκλισης στάθμης φόρτισης\n" +
                                   "✓ Σύγκριση επαναλαμβανόμενων διαγνωστικών μετρήσεων\n\n" +
-                                  "Τελική αξιολόγηση κατάστασης μπαταρίας"
+                                  "Πειραματική αξιολόγηση απόκρισης σε φορτίο (όχι SoH)"
                                 : "Professional battery diagnostics\n\n" +
                                   "LAB 14A performs an advanced stress test and evaluates:\n\n" +
                                   "✓ Voltage sag under load\n" +
-                                  "✓ Dynamic / internal battery resistance\n" +
+                                  "✓ Experimental voltage-response proxy (not ESR)\n" +
                                   "✓ Voltage recovery after load\n" +
                                   "✓ Power delivery capability\n" +
                                   "✓ Thermal behavior under stress\n" +
-                                  "✓ Cell balance and electrical behavior\n" +
                                   "✓ Voltage collapse indicators\n" +
-                                  "✓ Swelling / instability indicators\n" +
-                                  "✓ Calibration drift\n" +
+                                  "✓ Charge level deviation indicators\n" +
                                   "✓ Comparison of repeated diagnostic measurements\n\n" +
-                                  "Final battery condition assessment"
+                                  "Experimental load response assessment (not SoH)"
                 );
             }
 
@@ -4849,6 +4846,7 @@ int pctFree = (int) ((free * 100L) / total);
 
 private static class MemSnapshot {
     long memFreeKb = -1L;
+    long memAvailableKb = -1L;
     long cachedKb = -1L;
     long swapTotalKb = -1L; // missing source != zero swap
     long swapFreeKb = -1L;
@@ -4872,6 +4870,9 @@ private MemSnapshot readMemSnapshotSafe() {
 
             if (line.startsWith("MemFree:"))
                 m.memFreeKb = extractKb(line);
+
+            else if (line.startsWith("MemAvailable:"))
+                m.memAvailableKb = extractKb(line);
 
             else if (line.startsWith("Cached:"))
                 m.cachedKb = extractKb(line);
@@ -13733,6 +13734,7 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
     // 🔴 BASELINE CAPACITY
     // --------------------------------------------------
     baselineFullMah = -1;
+    lab14HasReportedCapacity = start.chargeFullMah > 0 || start.chargeDesignMah > 0;
 
     if (start.chargeFullMah > 0) {
         baselineFullMah = start.chargeFullMah;
@@ -13799,60 +13801,65 @@ logLine();
 
 final int cores = Runtime.getRuntime().availableProcessors();
 
-logLabelValue(
+logLabelOkValue(
         gr ? "Λειτουργία" : "Mode",
         rooted
                 ? (gr ? "Προηγμένη (Root access)" : "Advanced (Rooted)")
                 : (gr ? "Τυπική (Χωρίς Root)" : "Standard (Unrooted)")
 );
 
-logLabelValue(
+logLabelOkValue(
         gr ? "Διάρκεια δοκιμής" : "Duration",
         durationSec + (gr
                 ? " δευτ. (εργαστηριακή λειτουργία)"
                 : " sec (laboratory mode)")
 );
 
-logLabelValue(
+logLabelOkValue(
         gr ? "Προφίλ καταπόνησης" : "Stress profile",
         "Fast phase + adaptive load + CPU/GPU + memory + bandwidth + vibration + video"
 );
 
-logLabelValue(
-        gr ? "Αρχικές συνθήκες" : "Start conditions",
-        String.format(
-                Locale.US,
-                gr
-                        ? "φόρτιση=%d mAh, ποσοστό=%d%%, θερμοκρασία=%s"
-                        : "charge=%d mAh, level=%d%%, temperature=%s",
-                startMah,
-                Math.max(0, batteryPercent),
-                Float.isNaN(tempStart)
-                        ? (gr ? "Μ/Δ" : "N/A")
-                        : String.format(Locale.US, "%.1f°C", tempStart)
-        )
-);
-
-if (baselineFullMah > 0) {
-    String capacitySource = start.chargeFullMah > 0
-            ? (gr ? "τιμή Android charge_full" : "Android charge_full report")
-            : start.chargeDesignMah > 0
-            ? (gr ? "ονομαστική σχεδίασης" : "design specification")
-            : (gr ? "εκτίμηση από στάθμη/charge_now" : "extrapolated from level/charge_now");
-    logLabelValue(gr ? "Χωρητικότητα αναφοράς" : "Capacity reference",
-            baselineFullMah + " mAh (" + capacitySource + ")");
+if (!Float.isNaN(tempStart)) {
+    logLabelOkValue(
+            gr ? "Αρχικές συνθήκες" : "Start conditions",
+            String.format(Locale.US,
+                    gr ? "φόρτιση=%d mAh, ποσοστό=%d%%, θερμοκρασία=%.1f°C"
+                       : "charge=%d mAh, level=%d%%, temperature=%.1f°C",
+                    startMah, Math.max(0, batteryPercent), tempStart));
 } else {
-    logLabelValue(gr ? "Χωρητικότητα αναφοράς" : "Capacity reference",
-            gr ? "Μ/Δ — δεν τεκμηριώθηκε χωρητικότητα"
-               : "N/A — capacity not established");
+    logLabelOkValue(
+            gr ? "Αρχικές συνθήκες" : "Start conditions",
+            String.format(Locale.US,
+                    gr ? "φόρτιση=%d mAh, ποσοστό=%d%%"
+                       : "charge=%d mAh, level=%d%%",
+                    startMah, Math.max(0, batteryPercent)));
 }
 
+if (baselineFullMah > 0) {
+    if (start.chargeFullMah > 0) {
+        logLabelOkValue(gr ? "Χωρητικότητα πλήρους φόρτισης (Android)" : "Full-charge capacity (Android)",
+                baselineFullMah + (gr ? " mAh — αναφορά συστήματος, όχι μέτρηση SoH"
+                                       : " mAh — reported by Android, not measured SoH"));
+    } else if (start.chargeDesignMah > 0) {
+        logLabelOkValue(gr ? "Ονομαστική χωρητικότητα σχεδίασης" : "Reported design capacity",
+                baselineFullMah + (gr ? " mAh — ονομαστική τιμή, όχι σημερινή υγεία"
+                                       : " mAh — nominal value, not current health"));
+    } else {
+        // A valid, mathematically derived reference from the charge counter and
+        // reported SoC. Green means the computation completed with input data;
+        // it does not claim lab-measured full capacity or battery SoH.
+        logLabelOkValue(gr ? "Υπολογισμένη χωρητικότητα αναφοράς" : "Calculated reference capacity",
+                baselineFullMah + (gr
+                        ? " mAh — charge_now / στάθμη φόρτισης (πιθανή απόκλιση)"
+                        : " mAh — charge_now / charge level (approximate)"));
+    }
+}
+
+// Show cycle count only when Android reports a real value.
 if (cycles > 0)
     logLabelOkValue(gr ? "Κύκλοι φόρτισης" : "Cycle count",
             String.valueOf(cycles));
-else
-    logLabelValue(gr ? "Κύκλοι φόρτισης" : "Cycle count",
-            gr ? "Μη διαθέσιμο" : "N/A");
 
 // 🔴 REAL THREADS — SINGLE SOURCE OF TRUTH
 int startThreads =
@@ -13884,12 +13891,6 @@ if (cpuTempStart != null && !Float.isNaN(cpuTempStart)) {
             String.format(Locale.US, "%.1f°C", cpuTempStart)
     );
 
-} else {
-
-    logLabelWarnValue(
-            gr ? "Θερμοκρασία CPU (έναρξη)" : "CPU temperature (start)",
-            gr ? "Μη διαθέσιμη" : "N/A"
-    );
 }
 
 // 🔴 GPU TEMP
@@ -13900,12 +13901,6 @@ if (gpuTempStart != null && !Float.isNaN(gpuTempStart)) {
             String.format(Locale.US, "%.1f°C", gpuTempStart)
     );
 
-} else {
-
-    logLabelWarnValue(
-            gr ? "Θερμοκρασία GPU (έναρξη)" : "GPU temperature (start)",
-            gr ? "Μη διαθέσιμη" : "N/A"
-    );
 }
 
 logLabelOkValue(
@@ -13915,10 +13910,8 @@ logLabelOkValue(
                 : "Max brightness + keep screen on"
 );
 
-logLabelOkValue(
-        gr ? "Θερμικά πεδία" : "Thermal domains",
-        "CPU / GPU / SKIN / PMIC / BATT"
-);
+// Actual CPU/GPU measurements are logged individually when available;
+// no blanket claim of SKIN/PMIC/BATT sensor measurement.
 
 logLine();
 
@@ -14240,7 +14233,7 @@ if (powerValid) {
 
     } else if ("Normal".equals(powerLabel)) {
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Ικανότητα ισχύος" : "Power capability",
                 powerTextLocal
         );
@@ -14396,7 +14389,7 @@ if (voltageRecovery != null &&
 
         } else if ("Normal".equals(recLabel)) {
 
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Ανάκαμψη τάσης"
                        : "Voltage recovery",
                     text
@@ -14442,7 +14435,7 @@ if (speedValid) {
 
     if (spd > 0.0001f && spd < 1.0f) {
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Ταχύτητα ανάκαμψης"
                    : "Recovery speed",
                 String.format(Locale.US, "%.4f V/sec", spd)
@@ -14593,7 +14586,7 @@ if (drainValid) {
 
         } else if ("Normal".equals(drainLabel)) {
 
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Ρυθμός αποφόρτισης"
                        : "Drain rate",
                     text
@@ -14601,7 +14594,8 @@ if (drainValid) {
 
         } else {
 
-            logLabelWarnValue(
+            // Low drain is not evidence of wear; do not flag it as a fault.
+            logLabelValue(
                     gr ? "Ρυθμός αποφόρτισης"
                        : "Drain rate",
                     text
@@ -14682,12 +14676,7 @@ if (energyValid) {
 
 } else {
 
-    logLabelWarnValue(
-            gr ? "Ενεργειακή αποδοτικότητα"
-               : "Energy efficiency",
-            gr ? "Μη διαθέσιμη / μη αξιόπιστη"
-               : "N/A / unreliable"
-    );
+    // No computed efficiency metric: do not emit a fake diagnostic entry.
 }
 
 // =====================================================
@@ -14750,8 +14739,8 @@ if (lab14_systemLimited[0]) {
 } else if ("Weak".equals(labelSafe)) {
 
     recommendation = gr
-            ? "Ενδείξεις αυξημένης φθοράς. Συνιστάται επανάληψη του διαγνωστικού ελέγχου και τεχνική αξιολόγηση. Δεν προτείνεται αντικατάσταση χωρίς επιβεβαιωμένα ευρήματα."
-            : "Increased battery wear indicators detected. A repeat diagnostic test and professional evaluation are recommended. Replacement is not advised without confirmed findings.";
+            ? "Στη συγκεκριμένη δοκιμή μετρήθηκε αυξημένη πτώση τάσης. Επαναλάβετε σε συγκρίσιμες συνθήκες πριν συναχθεί συμπέρασμα για φθορά. Δεν τεκμηριώνεται ανάγκη αντικατάστασης."
+            : "Voltage sag was elevated in this trial. Repeat under comparable conditions before inferring wear. Replacement is not established.";
 
 // 🔴 PRIORITY 4 — CALIBRATION
 } else if (calibrationDrift != null && calibrationDrift.length > 0 && calibrationDrift[0]) {
@@ -14898,9 +14887,15 @@ private void lab14LogFinalScore(
 
     // ----------------------------------------------------
     // Experimental classification only: a short stress trial does not certify SoH.
-    logLabelValue(condLabel,
-            lbl + (gr ? " — απόκριση σε αυτό το φορτίο, όχι SoH"
-                      : " — response under this load, not SoH"));
+    String categoryText = lbl + (gr ? " — απόκριση σε αυτό το φορτίο, όχι SoH"
+                                    : " — response under this load, not SoH");
+    if ("Critical".equals(lbl) || "Weak".equals(lbl)) {
+        logLabelWarnValue(condLabel, categoryText);
+    } else if ("Excellent".equals(lbl) || "Good".equals(lbl) || "Normal".equals(lbl)) {
+        logLabelOkValue(condLabel, categoryText);
+    } else {
+        logLabelValue(condLabel, categoryText);
+    }
     if ("Critical".equals(lbl)) {
         logLabelWarnValue(gr ? "Αυξημένη μεταβολή τάσης" : "Elevated voltage response",
                 gr ? "Επαναλάβετε τη δοκιμή και ζητήστε τεχνική εκτίμηση εάν υπάρχουν συμπτώματα"
@@ -14910,43 +14905,23 @@ private void lab14LogFinalScore(
     // ----------------------------------------------------
     // 🔴 COLLAPSE
     // ----------------------------------------------------
-    logLabelValue(
-            gr ? "Πειραματική ένδειξη απότομης πτώσης τάσης" : "Experimental voltage-drop flag",
-            collapse
-                    ? (gr ? "Παρατηρήθηκε μοτίβο — απαιτείται επαλήθευση" : "Pattern flagged — verification required")
-                    : (gr ? "Δεν επισημάνθηκε στο συγκεκριμένο τεστ" : "Not flagged in this trial")
-    );
-
-    // ----------------------------------------------------
-    // 🔴 SWELLING
-    // ----------------------------------------------------
-    if (smartSwelling) {
-
-        logLabelWarnValue(
-                gr ? "Έμμεση ένδειξη δοκιμής" : "Indirect stress indicator",
-                gr
-                        ? "Ασυνήθιστη απόκριση· ΔΕΝ είναι μέτρηση φυσικής διόγκωσης. Απαιτείται επιθεώρηση από τεχνικό εάν υπάρχει φυσικό σύμπτωμα."
-                        : "Unusual response; NOT a physical swelling measurement. Seek technician inspection if there is a physical symptom."
-        );
-
+    if (collapse) {
+        logLabelWarnValue(gr ? "Πειραματική ένδειξη απότομης πτώσης τάσης" : "Experimental voltage-drop flag",
+                gr ? "Παρατηρήθηκε μοτίβο — απαιτείται επαλήθευση" : "Pattern flagged — verification required");
     } else {
-
-        logLabelValue(
-                gr ? "Φυσική διόγκωση" : "Physical swelling",
-                gr ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — απαιτείται φυσική επιθεώρηση"
-                   : "NOT TESTED — physical inspection required"
-        );
+        logLabelOkValue(gr ? "Πειραματική ένδειξη απότομης πτώσης τάσης" : "Experimental voltage-drop flag",
+                gr ? "Δεν καταγράφηκε τέτοιο μοτίβο στη δοκιμή" : "No such pattern recorded in this trial");
     }
 
     // ----------------------------------------------------
     // 🔴 CALIBRATION
     // ----------------------------------------------------
-    logLabelValue(
-            gr ? "Πιθανή απόκλιση ένδειξης" : "Possible gauge discrepancy",
-            calibration
-                    ? (gr ? "Πειραματική ένδειξη — όχι επιβεβαιωμένη βαθμονόμηση" : "Experimental indication — calibration not verified")
-                    : (gr ? "Δεν τεκμηριώθηκε σε αυτή τη δοκιμή" : "Not established in this trial")
-    );
+    if (calibration) {
+        logLabelWarnValue(
+                gr ? "Ενδεικτική απόκλιση στάθμης φόρτισης" : "Indicative charge-level deviation",
+                gr ? "Παρατηρήθηκε ασυνέπεια στην ένδειξη — απαιτείται επανάληψη για επιβεβαίωση"
+                   : "Gauge inconsistency observed — repeat to confirm");
+    }
 
     // ----------------------------------------------------
     // 🔴 SYSTEM LIMIT
@@ -17234,6 +17209,7 @@ res.batteryBehaviourWarning =
 
 final long baselineFullFinal = baselineFullMah;
 final long drainMahFinal = drainMah;
+final boolean hasReportedCapacityForComparison = lab14HasReportedCapacity;
 
 
 // ----------------------------
@@ -17255,34 +17231,18 @@ runOnUiThread(() -> {
     }
 
 
-    if (validDrain &&
-        !lab14_systemLimited[0] &&
-        baselineFullFinal > 100 &&
-        drainMahFinal > 0) {
-
+    // Only Android-reported capacity participates in this limited consistency
+    // check. Level-derived estimates are not declared or verified capacity.
+    if (hasReportedCapacityForComparison && validDrain &&
+            !lab14_systemLimited[0] && baselineFullFinal > 100 && drainMahFinal > 0) {
         if (unrealCapFinal) {
-
-            logLabelWarnValue(
-                gr
-                ? "Έλεγχος δηλωμένης χωρητικότητας"
-                : "Declared capacity check",
-
-                gr
-                ? "Η δηλωμένη χωρητικότητα διαφέρει από τις συγκρίσιμες μετρήσεις της δοκιμής."
-                : "Reported capacity differs from the comparable test readings."
-            );
-
+            logLabelWarnValue(gr ? "Συνοχή αναφερόμενης χωρητικότητας" : "Reported capacity consistency",
+                    gr ? "Ασυμβατότητα δείγματος — προτείνεται επανάληψη"
+                       : "Sample inconsistency — retesting recommended");
         } else {
-
-            logLabelOkValue(
-                gr
-                ? "Έλεγχος δηλωμένης χωρητικότητας"
-                : "Declared capacity check",
-
-                gr
-                ? "Δεν εντοπίστηκε αντίφαση στο δείγμα· η χωρητικότητα δεν επαληθεύτηκε."
-                : "No conflict seen in sample; full capacity not verified."
-            );
+            logLabelOkValue(gr ? "Συνοχή αναφερόμενης χωρητικότητας" : "Reported capacity consistency",
+                    gr ? "Δεν εντοπίστηκε ασυμβατότητα (όχι μέτρηση πραγματικής χωρητικότητας)"
+                       : "No sample inconsistency (not a measurement of actual capacity)");
         }
     }
 
@@ -17303,11 +17263,13 @@ if (hasSag &&
             finalSag
         );
 
-    logLabelValue(
-        gr ? "Γρήγορη δοκιμή καταπόνησης"
-           : "Fast stress test",
-        "Sag=" + sagText
-    );
+    if (finalSag >= 0.080f) {
+        logLabelWarnValue(gr ? "Γρήγορη δοκιμή καταπόνησης" : "Fast stress test",
+                "Sag=" + sagText);
+    } else {
+        logLabelOkValue(gr ? "Γρήγορη δοκιμή καταπόνησης" : "Fast stress test",
+                "Sag=" + sagText);
+    }
 
 
     if (finalSag > 0.18f) {
@@ -17403,46 +17365,6 @@ if (hasSag &&
     logLabelWarnValue(
             gr ? "Έμμεση απόκριση τάσης"
                : "Indirect voltage response",
-            gr
-                    ? "Ανεπαρκή δεδομένα"
-                    : "Insufficient data"
-    );
-}
-
-// =====================================================
-// 🔴 CELL BALANCE (FINAL - no legacy sag1/sag2)
-// =====================================================
-
-if (hasSag &&
-    validDrain &&
-    !lab14_systemLimited[0]) {
-
-    if (cellImbalanceRisk[0]) {
-
-        logLabelWarnValue(
-                gr ? "Έμμεσος δείκτης (όχι μέτρηση κυψελών)"
-                   : "Indirect proxy (not cell measurement)",
-                gr
-                        ? "Ασυνήθιστη έμμεση απόκριση — δεν μετρήθηκαν ξεχωριστές κυψέλες"
-                        : "Unusual indirect response — individual cells not measured"
-        );
-
-    } else {
-
-        logLabelValue(
-                gr ? "Έμμεσος δείκτης (όχι μέτρηση κυψελών)"
-                   : "Indirect proxy (not cell measurement)",
-                gr
-                        ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — δεν διατίθενται τάσεις ανά κυψέλη"
-                        : "NOT TESTED — no per-cell voltage evidence"
-        );
-    }
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Έμμεσος δείκτης (όχι μέτρηση κυψελών)"
-               : "Indirect proxy (not cell measurement)",
             gr
                     ? "Ανεπαρκή δεδομένα"
                     : "Insufficient data"
@@ -25045,15 +24967,22 @@ private void lab14LogVoltageBehaviorSummary(
 
     } else {
 
-        logLabelValue(
-                gr ? "Αρχική πτώση" : "Initial hard sag",
-                String.format(Locale.US, "%.3f V", initialSag)
-        );
+        if (initialSag >= 0.080f) {
+            logLabelWarnValue(gr ? "Αρχική πτώση" : "Initial hard sag",
+                    String.format(Locale.US, "%.3f V", initialSag));
+        } else {
+            logLabelOkValue(gr ? "Αρχική πτώση" : "Initial hard sag",
+                    String.format(Locale.US, "%.3f V", initialSag));
+        }
     }
 
-    logLabelOkValue(gr ? "Μέγιστη πτώση" : "Worst sag",
-            String.format(Locale.US, "%.3f V", worstSag)
-    );
+    if (worstSag >= 0.080f) {
+        logLabelWarnValue(gr ? "Μέγιστη πτώση" : "Worst sag",
+                String.format(Locale.US, "%.3f V", worstSag));
+    } else {
+        logLabelOkValue(gr ? "Μέγιστη πτώση" : "Worst sag",
+                String.format(Locale.US, "%.3f V", worstSag));
+    }
 
     String behavior;
 
@@ -25091,12 +25020,10 @@ private void lab14LogVoltageBehaviorSummary(
                 behavior
         );
 
+    } else if (behavior.contains("Προοδευτική") || behavior.startsWith("Progressive")) {
+        logLabelWarnValue(gr ? "Συμπεριφορά" : "Behavior", behavior);
     } else {
-
-        logLabelOkValue(
-                gr ? "Συμπεριφορά" : "Behavior",
-                behavior
-        );
+        logLabelOkValue(gr ? "Συμπεριφορά" : "Behavior", behavior);
     }
 }
 
@@ -25996,11 +25923,13 @@ private void lab16ThermalSnapshot() {
         } else if (osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE) {
             logLabelWarnValue(gr ? "Κατάσταση Android" : "Android thermal status", osState);
         } else {
-            logInfo((gr ? "Κατάσταση Android: " : "Android thermal status: ") + osState);
+            // Android reports no active moderate/severe thermal limitation.
+            logLabelOkValue(gr ? "Κατάσταση Android" : "Android thermal status", osState);
         }
     } else {
-        logInfo(gr ? "Κατάσταση θερμικής προστασίας Android: μη διαθέσιμη"
-                   : "Android thermal protection status: unavailable");
+        // An unavailable OS state is neutral, never evidence of normality.
+        logLabelValue(gr ? "Κατάσταση Android" : "Android thermal status",
+                gr ? "Μη διαθέσιμη" : "Unavailable");
     }
 
     // ------------------------------------------------------------
@@ -26032,7 +25961,7 @@ private void lab16ThermalSnapshot() {
 
         } else {
 
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
                     peakText
             );
@@ -26105,22 +26034,10 @@ private void lab16ThermalSnapshot() {
                 .apply();
     } catch (Throwable ignore) {}
 
-    if (thermalScore < 0) {
-        logInfo(gr
-                ? "Θερμικός δείκτης στιγμιοτύπου: άγνωστος (χωρίς διαθέσιμη ένδειξη CPU/GPU)"
-                : "Thermal snapshot index: unknown (no accessible CPU/GPU reading)");
-    } else {
-        String tLabel = thermalScore >= 80
-                ? (gr ? "Εντός παρατηρημένων ορίων" : "Within observed limits")
-                : thermalScore >= 60
-                ? (gr ? "Μέτρια" : "Moderate")
-                : (gr ? "Υψηλή" : "High");
-        logInfo((gr ? "Μη βαθμονομημένος θερμικός δείκτης στιγμιοτύπου: "
-                    : "Uncalibrated thermal snapshot index: ")
-                + String.format(Locale.US, "%s (%d/100)", tLabel, thermalScore)
-                + (gr ? " — δεν αποτελεί πιστοποίηση υγείας"
-                      : " — not a hardware-health certification"));
-    }
+    // Do not show the synthetic/un-calibrated 0-100 score or an
+    // "unknown index" placeholder. The underlying value remains internal
+    // for existing cross-lab evidence compatibility, never presented as a
+    // measured percentage or a health certificate.
     GELServiceLog.info(
             "SUMMARY: THERMAL_PATTERN="
                     + ThermalEvidencePolicy.pattern(thermalScore, thermalDanger)
@@ -27469,43 +27386,24 @@ private void lab19RamSnapshot() {
         logInfo(gr ? "Αξιολόγηση πίεσης RAM:" : "RAM pressure assessment:");
         logLine();
 
-        RamEvidencePolicy.Assessment ramAssessment =
-                RamEvidencePolicy.assess(pctFree, mi.lowMemory);
-        switch (ramAssessment) {
-            case ANDROID_LOW_MEMORY:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Το Android αναφέρει κατάσταση χαμηλής μνήμης"
-                           : "Android reports a low-memory condition"
-                );
-                break;
-            case LOW_AVAILABLE_RAM:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Μικρό διαθέσιμο περιθώριο RAM — χωρίς σήμα low-memory από Android"
-                           : "Low available RAM headroom — no Android low-memory signal"
-                );
-                break;
-            case NO_OS_LOW_MEMORY_SIGNAL:
-                // Green only for the observed Android flag, never for RAM health.
-                logLabelOkValue(
-                        gr ? "Σήμα Android" : "Android signal",
-                        gr ? "Δεν δηλώθηκε κατάσταση low-memory στο τρέχον στιγμιότυπο"
-                           : "No low-memory flag in the current snapshot"
-                );
-                break;
-            default:
-                logLabelValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Μη επαρκή στοιχεία για πίεση RAM"
-                           : "Insufficient RAM pressure evidence"
-                );
+        // Report ONLY the Android lowMemory flag. A device-specific
+        // threshold is informative but must not manufacture another alarm.
+        if (mi.lowMemory) {
+            logLabelWarnValue(
+                    gr ? "Σήμα Android" : "Android signal",
+                    gr ? "Το Android αναφέρει κατάσταση χαμηλής μνήμης"
+                       : "Android reports a low-memory condition");
+        } else {
+            logLabelOkValue(
+                    gr ? "Σήμα Android" : "Android signal",
+                    gr ? "Δεν δηλώθηκε κατάσταση low-memory στο τρέχον στιγμιότυπο"
+                       : "No low-memory flag in the current snapshot");
         }
-        logLabelValue(
-                gr ? "Όρια ελέγχου" : "Assessment limits",
-                gr ? "Δεν μετρήθηκαν καθυστέρηση UI, κλεισίματα εφαρμογών ή ποιότητα multitasking"
-                   : "UI lag, app terminations and multitasking quality were not measured"
-        );
+        if (mi.threshold > 0L) {
+            logLabelOkValue(
+                    gr ? "Όριο χαμηλής μνήμης Android" : "Android low-memory threshold",
+                    humanBytes(mi.threshold));
+        }
 
         // ------------------------------------------------------------
         // MEMORY PRESSURE INDICATORS (LOW-LEVEL)
@@ -27514,74 +27412,38 @@ private void lab19RamSnapshot() {
 
             MemSnapshot snap = readMemSnapshotSafe();
 
-            if (snap.memFreeKb <= 0 && snap.cachedKb <= 0 && snap.swapTotalKb <= 0) {
-                logInfo(gr ? "Χαμηλού επιπέδου στοιχεία /proc/meminfo: μη διαθέσιμα."
-                           : "Low-level /proc/meminfo readings unavailable.");
+            if (snap.memFreeKb <= 0 && snap.memAvailableKb <= 0 &&
+                    snap.cachedKb <= 0 && snap.swapTotalKb <= 0) {
+                // No low-level observation: omit it from the human report.
             } else {
 
             long swapUsedKb = RamEvidencePolicy.observedSwapUsedKb(
                     snap.swapTotalKb, snap.swapFreeKb);
 
-            // Incomplete raw counters cannot support a derived pressure grade.
-            // The pressure score is heuristic and is NOT the OS lowMemory signal.
-            String pressureGrade =
-                    (snap.memFreeKb >= 0 && snap.cachedKb >= 0 && swapUsedKb >= 0)
-                            ? pressureLevel(snap.memFreeKb, snap.cachedKb, swapUsedKb)
-                            : null;
-            String pressureHuman = pressureGrade != null
-                    ? humanPressureLabel(pressureGrade)
-                    : (gr ? "Άγνωστο — ελλιπείς μετρήσεις"
-                          : "Unknown — incomplete readings");
-
-            String zramDep = swapUsedKb >= 0
-                    ? zramDependency(swapUsedKb, total)
-                    : null;
+            // Preserve directly observed memory quantities. Old heuristics
+            // treated low MemFree and swap usage as a high-pressure warning,
+            // even if Android reported ample available RAM and no lowMemory.
+            // This is not defensible: cache and zRAM are normal mechanisms.
+            long swapUsedKb = RamEvidencePolicy.observedSwapUsedKb(
+                    snap.swapTotalKb, snap.swapFreeKb);
 
             appendHtml("<br>");
-            logInfo(gr
-                    ? "Δείκτες πίεσης μνήμης:"
-                    : "Memory pressure indicators:");
-                    logLine();
+            logInfo(gr ? "Πρόσθετες μετρήσεις μνήμης:"
+                       : "Additional memory observations:");
+            logLine();
 
-            if ("High".equals(pressureGrade) || "Medium".equals(pressureGrade)) {
-                logLabelWarnValue(
-                        gr ? "Ενδεικτική πίεση μνήμης" : "Heuristic memory pressure",
-                        pressureHuman
-                );
-            } else {
-                // A low or missing heuristic score does not certify stable RAM.
-                logLabelValue(
-                        gr ? "Ενδεικτική πίεση μνήμης" : "Heuristic memory pressure",
-                        pressureHuman
-                );
-            }
-
-            if (zramDep != null) {
-                // Translate the raw English grade; it is NOT measured hardware health.
-                String swapRatioLabel = humanPressureLabel(zramDep);
-                if ("High".equals(zramDep) || "Medium".equals(zramDep)) {
-                    logLabelWarnValue(
-                            gr ? "Ενδεικτική αναλογία Swap/RAM"
-                               : "Heuristic Swap/RAM ratio",
-                            swapRatioLabel
-                    );
-                } else {
-                    logLabelValue(
-                            gr ? "Ενδεικτική αναλογία Swap/RAM"
-                               : "Heuristic Swap/RAM ratio",
-                            swapRatioLabel
-                    );
-                }
-            } else {
-                logInfo(gr ? "Χρήση Swap: δεν διαβάστηκαν συγκρίσιμες τιμές SwapTotal/SwapFree"
-                           : "Swap usage: comparable SwapTotal/SwapFree readings unavailable");
-            }
-
-            if (swapUsedKb > 0) {
+            if (snap.memAvailableKb > 0) {
                 logLabelOkValue(
-                        gr ? "Χρήση Swap" : "Swap used",
-                        humanBytes(swapUsedKb * 1024L)
-                );
+                        "MemAvailable (kernel)",
+                        humanBytes(snap.memAvailableKb * 1024L));
+            }
+
+            if (swapUsedKb >= 0 && snap.swapTotalKb > 0) {
+                // Directly observed SwapTotal - SwapFree; not a heuristic
+                // grade, a RAM-health rating or a synthetic Swap/RAM index.
+                logLabelOkValue(
+                        gr ? "Swap σε χρήση" : "Swap in use",
+                        humanBytes(swapUsedKb * 1024L));
             }
 
             if (snap.memFreeKb > 0) {
@@ -27595,14 +27457,13 @@ private void lab19RamSnapshot() {
                 logLabelOkValue(
                         "Cached",
                         humanBytes(snap.cachedKb * 1024L) +
-                                (gr ? " (επανακτήσιμη)" : " (reclaimable)")
+                                (gr ? " (cache, εν μέρει επανακτήσιμη)" : " (cache, partly reclaimable)")
                 );
             }
             }
 
         } catch (Throwable ignored) {
-            logInfo(gr ? "Τα προαιρετικά στοιχεία μνήμης δεν ήταν προσβάσιμα."
-                       : "Optional low-level RAM metrics inaccessible.");
+            // Optional kernel observations unavailable: no diagnostic entry.
         }
 
         // ------------------------------------------------------------
@@ -28120,11 +27981,6 @@ if (root) {
 // ============================================================  
 
 if (secure) {
-    // Keyguard secure proves an enrolled credential, not encryption status.
-    logLabelOkValue(
-            gr ? "Διαπιστευτήριο συσκευής" : "Device credential",
-            gr ? "Ρυθμισμένο ασφαλές κλείδωμα" : "Secure device lock configured"
-    );
     logLabelValue(
             gr ? "Κρυπτογράφηση μετά από επανεκκίνηση"
                : "Post-reboot encryption",
@@ -28145,22 +28001,6 @@ if (secure) {
                : "Post-reboot protection",
             gr ? "Άγνωστη — δεν διαβάστηκε η κατάσταση Keyguard"
                : "Unknown — Keyguard status unreadable"
-    );
-}
-
-if (secureKnown && secure) {
-    logLabelOkValue(
-            gr ? "Κύριο επίπεδο ασφάλειας" : "Primary security layer",
-            gr ? "Γνωστικό διαπιστευτήριο (PIN / Μοτίβο / Κωδικός)"
-               : "Knowledge-based credential (PIN / Pattern / Password)"
-    );
-} else {
-    logLabelValue(
-            gr ? "Κύριο επίπεδο ασφάλειας" : "Primary security layer",
-            !secureKnown
-                    ? (gr ? "ΑΓΝΩΣΤΟ — δεν διαβάστηκε το Keyguard"
-                          : "UNKNOWN — Keyguard unreadable")
-                    : (gr ? "ΚΑΝΕΝΑ" : "NONE")
     );
 }
 
