@@ -28657,9 +28657,9 @@ private void lab22SecurityPatchAndPlayProtect() {
             ? "Το Lab 22 ολοκληρώθηκε — καταγράφηκαν τα διαθέσιμα στοιχεία ασφάλειας."
             : "Lab 22 completed — available security information was recorded.");
     logLine();
-}
         });
     }, "gel-lab22-bulletin").start();
+}
 
 // ============================================================
 // LAB 23 — Developer Options / ADB Risk Note + UI BUBBLES + AUTO-FIX HINTS
