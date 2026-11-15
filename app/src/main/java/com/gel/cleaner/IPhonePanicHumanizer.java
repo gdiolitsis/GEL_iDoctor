@@ -75,6 +75,35 @@ public final class IPhonePanicHumanizer {
         }
     }
 
+    /** An interpretation of an imported log, never a live-device diagnosis. */
+    public static String meaning(String raw, boolean greek) {
+        String term = text(raw);
+        if ("Watchdog / Hang".equals(term) || "Userspace Watchdog Timeout".equals(term)
+                || "Baseband Watchdog".equals(term)) {
+            return greek
+                    ? "Το αρχείο αναφέρει ότι μια λειτουργία δεν αποκρίθηκε στον προβλεπόμενο χρόνο. Δεν αποδεικνύεται ότι υπάρχει χαλασμένο εξάρτημα."
+                    : "The file reports a function that did not respond in time. This does not establish a defective component.";
+        }
+        if ("Thermal Shutdown / Throttle".equals(term)) {
+            return greek
+                    ? "Το αρχείο αναφέρει θερμικό συμβάν ή περιορισμό λειτουργίας. Δεν έχουμε μετρήσει τη θερμοκρασία της συσκευής ούτε επιβεβαιώσει βλάβη."
+                    : "The file reports a thermal event or throttling. Device temperature and hardware condition have not been measured.";
+        }
+        if ("Multiple separate panic entries".equals(term)) {
+            return greek
+                    ? "Υπάρχουν διαφορετικά αρχεία. Κάθε συμβάν αξιολογείται μόνο του, ώστε να μη συνδυαστούν άσχετες ενδείξεις."
+                    : "There are distinct records. Each is reviewed separately so unrelated clues are not combined.";
+        }
+        if ("Kernel Panic".equals(term)) {
+            return greek
+                    ? "Έχει καταγραφεί σοβαρή διακοπή του λειτουργικού. Το αρχείο δεν αποδεικνύει την αιτία ή την κατάσταση ενός εξαρτήματος."
+                    : "A serious operating-system interruption is recorded. The cause and physical component condition remain unverified.";
+        }
+        return greek
+                ? "Πρόκειται για ένδειξη μέσα σε αρχείο καταγραφής, όχι αποτέλεσμα φυσικού ελέγχου της συσκευής."
+                : "This is a log observation, not a physical device test.";
+    }
+
     public static String certainty(String raw, boolean greek) {
         if (!"UNVERIFIED".equalsIgnoreCase(text(raw))) return text(raw);
         return greek ? "Η αιτία δεν έχει επιβεβαιωθεί" : "The cause has not been verified";
