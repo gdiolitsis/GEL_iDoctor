@@ -26095,7 +26095,7 @@ private void lab16ThermalSnapshot() {
 
         } else {
 
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
                     peakText
             );
