@@ -27,6 +27,9 @@ public final class IPSPanicParser {
         out.severity       = core.primary.severity;
         out.confidence     = core.primary.confidence;
         out.recommendation = core.primary.recommendation;
+        // Preserve additional matched panic patterns from the core parser.
+        // The inherited secondary list holds core Result objects, not proxy Results.
+        out.secondary.addAll(core.secondary);
 
         return out;
     }
