@@ -56,8 +56,36 @@ public class IPhonePanicHumanizerTest {
         assertTrue(IPhonePanicHumanizer.possibleCause(
                 "Watchdog timeout reported in a panic entry; component cause unknown", true)
                 .contains("Δεν προκύπτει ποιο εξάρτημα"));
-        assertTrue(IPhonePanicHumanizer.possibleCause("thermal shutdown recorded", true)
+        assertTrue(IPhonePanicHumanizer.possibleCause("Thermal shutdown reported in a panic entry; sensor fault unconfirmed", true)
                 .contains("Δεν επιβεβαιώνεται"));
+    }
+
+    @Test public void allNineRuleFamiliesHaveGreekInterpretations() {
+        String[] domains = {
+                "Thermal / Sensors", "Power / PMIC", "System / Watchdog",
+                "Storage / NAND", "Baseband / Modem", "Memory / RAM",
+                "Kernel / OS", "Thermal / Shutdown", "Kernel / OS Core"
+        };
+        String[] causes = {
+                "Thermal sensor not responding (I2C line)",
+                "Power management instability",
+                "System freeze or watchdog deadlock",
+                "Storage read/write failure",
+                "Baseband processor crash or communication failure",
+                "Unrecoverable memory fault detected",
+                "Kernel assertion failure",
+                "Watchdog timeout reported in a panic entry; component cause unknown",
+                "Thermal shutdown reported in a panic entry; sensor fault unconfirmed"
+        };
+        for (String domain : domains) {
+            String translated = IPhonePanicHumanizer.domain(domain, true);
+            assertTrue(translated, translated.contains("("));
+        }
+        for (String cause : causes) {
+            String translated = IPhonePanicHumanizer.possibleCause(cause, true);
+            assertFalse(translated, translated.contains("Τεχνική περιγραφή:"));
+            assertTrue(translated, translated.contains("Δεν ") || translated.contains("δεν "));
+        }
     }
 
     @Test public void englishOutputRemainsAvailable() {
