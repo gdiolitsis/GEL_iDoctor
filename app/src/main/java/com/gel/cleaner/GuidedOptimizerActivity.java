@@ -3266,7 +3266,7 @@ private void addActionButtons(LinearLayout root, Runnable okAction) {
         d.setCornerRadius(25);
         b.setBackground(d);
         b.setOnTouchListener(UIHelpers.pressEffect());
-        return b;
+        return withGuidedOptimizerButtonGap(b);
     }
 
     private Button mkRedBtn(String t) {
@@ -3279,7 +3279,7 @@ private void addActionButtons(LinearLayout root, Runnable okAction) {
         d.setCornerRadius(25);
         b.setBackground(d);
         b.setOnTouchListener(UIHelpers.pressEffect());
-        return b;
+        return withGuidedOptimizerButtonGap(b);
     }
 
     private Button mkBlackGoldBtn(String t) {
@@ -3292,7 +3292,18 @@ private void addActionButtons(LinearLayout root, Runnable okAction) {
         d.setCornerRadius(25);
         b.setBackground(d);
         b.setOnTouchListener(UIHelpers.pressEffect());
-        return b;
+        return withGuidedOptimizerButtonGap(b);
+    }
+
+    // Consistent 8dp vertical gap for all Guided Optimizer action buttons.
+    // Horizontal app-detail pairs already set their own side margins.
+    private Button withGuidedOptimizerButtonGap(Button button) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(8);
+        button.setLayoutParams(params);
+        return button;
     }
 
     private CheckBox mkCheck(String t) {
