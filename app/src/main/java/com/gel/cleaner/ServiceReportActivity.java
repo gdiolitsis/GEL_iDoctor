@@ -30,6 +30,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -58,6 +59,14 @@ public class ServiceReportActivity extends GELAutoActivityHook {
     private AppCompatButton btnTxt;
     private AppCompatButton btnHtml;
     private ProgressBar exportProgress;
+
+    // Keep the WebView alive while the Android print service prepares the PDF.
+    private WebView htmlPrintWebView;
+    private final android.os.Handler htmlPrintHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable htmlPrintTimeout;
+    private boolean htmlPrintRequested;
+    private Runnable reportAuthorisationTimeout;
 
     // STEP 2 — billing/report entitlement bridge.
     private GelBillingManager billingManager;
@@ -309,19 +318,54 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         final String identity = singleReportIdentity;
         final String attempt = exportAttempt;
         lockExportUI(true);
-        GelReportStore.prepare(this, identity, attempt, choice == 2, (ok,code,message) -> {
+
+        // Server verification is separate from WebView loading. It also needs
+        // a bounded wait, otherwise Firebase/network outages leave the spinner
+        // visible indefinitely with both export buttons disabled.
+        cancelReportAuthorisationTimeout();
+        final Runnable authTimeout = () -> {
+            if (!attempt.equals(exportAttempt) || reportAuthorisationTimeout == null) return;
+            reportAuthorisationTimeout = null;
+            reportServerAuthorised = false;
             lockExportUI(false);
-            if (isFinishing()) return;
-            if (!ok) {
-                if (choice == 1 && "RESOURCE_EXHAUSTED".equals(code)) {
-                    pendingSingleReportExport = true; billingManager.launchSingleReportPurchase(this);
-                } else if (choice == 2 && "PERMISSION_DENIED".equals(code)) billingManager.launchCustomReportsPurchase(this);
-                else Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-                return;
-            }
-            reportServerAuthorised = true;
-            continuePreparedExport();
-        });
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Η επαλήθευση αναφοράς καθυστέρησε. Δοκιμάστε ξανά."
+                    : "Report verification timed out. Please retry.",
+                    Toast.LENGTH_LONG).show();
+        };
+        reportAuthorisationTimeout = authTimeout;
+        htmlPrintHandler.postDelayed(authTimeout, 30000L);
+
+        try {
+            GelReportStore.prepare(this, identity, attempt, choice == 2, (ok,code,message) ->
+                    runOnUiThread(() -> {
+                        // Ignore a late response after the timeout or a new
+                        // export attempt. Do not start a second export.
+                        if (reportAuthorisationTimeout != authTimeout) return;
+                        cancelReportAuthorisationTimeout();
+                        lockExportUI(false);
+                        if (isFinishing() || isDestroyed()) return;
+                        if (!ok) {
+                            if (choice == 1 && "RESOURCE_EXHAUSTED".equals(code)) {
+                                pendingSingleReportExport = true;
+                                billingManager.launchSingleReportPurchase(this);
+                            } else if (choice == 2 && "PERMISSION_DENIED".equals(code)) {
+                                billingManager.launchCustomReportsPurchase(this);
+                            } else {
+                                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                            }
+                            return;
+                        }
+                        reportServerAuthorised = true;
+                        continuePreparedExport();
+                    }));
+        } catch (Exception e) {
+            cancelReportAuthorisationTimeout();
+            lockExportUI(false);
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Η επαλήθευση της αναφοράς απέτυχε."
+                    : "Report verification failed.", Toast.LENGTH_LONG).show();
+        }
     }
 
     private void continuePreparedExport() {
@@ -2044,84 +2088,141 @@ GELServiceLog.clear();
     // HTML PDF ENGINE — MULTI PAGE + COLORED
     // ==========================================================
 private void exportHtmlPdf(String report) {
+    // The platform PrintManager opens an Android print/save UI. We cannot
+    // claim a file was saved until the user confirms "Save as PDF" there.
+    final boolean gr = AppLang.isGreek(this);
+    try {
+        cleanupHtmlPrintWebView();
+        htmlPrintRequested = false;
 
-    WebView webView = new WebView(this);
-    webView.getSettings().setJavaScriptEnabled(false);
-
-    String html = buildHtmlReport(report);
-
-    webView.setVisibility(View.INVISIBLE);
-    webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-
-    webView.setWebViewClient(new WebViewClient() {
-
-        @Override
-        public void onPageFinished(WebView view, String url) {
-
-            try {
-
-                android.print.PrintManager printManager =
-                        (android.print.PrintManager) getSystemService(Context.PRINT_SERVICE);
-
-                android.print.PrintDocumentAdapter adapter =
-                        view.createPrintDocumentAdapter("GEL_Service_Report");
-
-                android.print.PrintAttributes attributes =
-                        new android.print.PrintAttributes.Builder()
-                                .setMediaSize(android.print.PrintAttributes.MediaSize.ISO_A4)
-                                .setResolution(new android.print.PrintAttributes.Resolution("pdf", "pdf", 300, 300))
-                                .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS)
-                                .build();
-
-                // 🔥 αυτό κάνει όλη τη δουλειά (NO manual callbacks)
-                printManager.print(
-                        "GEL_Service_Report",
-                        adapter,
-                        attributes
-                );
-
-                runOnUiThread(() -> {
-
-                    boolean gr = AppLang.isGreek(ServiceReportActivity.this);
-
-                    String msg = gr
-                            ? "Το HTML PDF αποθηκεύτηκε στα Downloads."
-                                            : "HTML PDF saved to Downloads.";
-
-                    Toast.makeText(
-                            ServiceReportActivity.this,
-                            msg,
-                            Toast.LENGTH_LONG
-                    ).show();
-
-                    lockExportUI(false);
-                });
-
-            } catch (Exception e) {
-
-                runOnUiThread(() -> {
-
-                    boolean gr = AppLang.isGreek(ServiceReportActivity.this);
-
-                    String msg = gr
-                            ? "Σφάλμα κατά την εξαγωγή PDF."
-                            : "Error exporting PDF.";
-
-                    Toast.makeText(
-                            ServiceReportActivity.this,
-                            msg,
-                            Toast.LENGTH_LONG
-                    ).show();
-
-                    lockExportUI(false);
-                });
-
-                e.printStackTrace();
-            }
+        // A detached, unreferenced WebView may never complete loading on
+        // some devices. Keep a dedicated, INVISIBLE view in the view tree.
+        final FrameLayout contentRoot = findViewById(android.R.id.content);
+        if (contentRoot == null) {
+            throw new IllegalStateException("Print container unavailable");
         }
-    });
 
-    webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+        final WebView webView = new WebView(this);
+        htmlPrintWebView = webView;
+        webView.getSettings().setJavaScriptEnabled(false);
+        webView.setVisibility(View.INVISIBLE);
+        webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                Math.max(1, getResources().getDisplayMetrics().widthPixels),
+                Math.max(1, getResources().getDisplayMetrics().heightPixels));
+        contentRoot.addView(webView, params);
+
+        // A stalled or failed WebView must never leave both export buttons locked.
+        htmlPrintTimeout = () -> {
+            if (htmlPrintWebView != webView || htmlPrintRequested) return;
+            failHtmlPrint(gr
+                    ? "Η προετοιμασία HTML PDF δεν ολοκληρώθηκε. Δοκιμάστε ξανά."
+                    : "HTML PDF preparation timed out. Please retry.");
+        };
+        htmlPrintHandler.postDelayed(htmlPrintTimeout, 20000L);
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (view != htmlPrintWebView || htmlPrintRequested || isFinishing() || isDestroyed()) {
+                    return;
+                }
+                htmlPrintRequested = true; // exactly one print job per tap
+                cancelHtmlPrintTimeout();
+                try {
+                    android.print.PrintManager pm =
+                            (android.print.PrintManager) getSystemService(Context.PRINT_SERVICE);
+                    if (pm == null) throw new IllegalStateException("Print service unavailable");
+
+                    android.print.PrintDocumentAdapter adapter =
+                            view.createPrintDocumentAdapter("GEL_Service_Report");
+                    android.print.PrintAttributes attrs =
+                            new android.print.PrintAttributes.Builder()
+                                    .setMediaSize(android.print.PrintAttributes.MediaSize.ISO_A4)
+                                    .setResolution(new android.print.PrintAttributes.Resolution(
+                                            "pdf", "pdf", 300, 300))
+                                    .setMinMargins(android.print.PrintAttributes.Margins.NO_MARGINS)
+                                    .build();
+
+                    android.print.PrintJob job =
+                            pm.print("GEL_Service_Report", adapter, attrs);
+                    if (job == null) throw new IllegalStateException("Print job not created");
+
+                    // This confirms only that the system print UI was requested.
+                    // Saving/cancelling is controlled by the user in Android.
+                    lockExportUI(false);
+                    Toast.makeText(ServiceReportActivity.this,
+                            gr ? "Επιλέξτε «Αποθήκευση ως PDF» στο παράθυρο εκτύπωσης."
+                               : "Choose 'Save as PDF' in the print dialog.",
+                            Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    failHtmlPrint((gr ? "Δεν άνοιξε η εκτύπωση HTML PDF: "
+                                      : "Could not open HTML PDF printing: ")
+                            + (e.getMessage() == null ? e.getClass().getSimpleName()
+                                                      : e.getMessage()));
+                }
+            }
+
+            @Override
+            public void onReceivedError(WebView view,
+                                        android.webkit.WebResourceRequest request,
+                                        android.webkit.WebResourceError error) {
+                if (request != null && request.isForMainFrame()
+                        && view == htmlPrintWebView && !htmlPrintRequested) {
+                    failHtmlPrint(gr ? "Αποτυχία φόρτωσης HTML για PDF."
+                                     : "Failed to load HTML for PDF.");
+                }
+            }
+        });
+
+        webView.loadDataWithBaseURL(null, buildHtmlReport(report),
+                "text/html", "UTF-8", null);
+
+    } catch (Exception e) {
+        failHtmlPrint((gr ? "Σφάλμα HTML PDF: " : "HTML PDF error: ")
+                + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+    }
+}
+
+private void cancelReportAuthorisationTimeout() {
+    if (reportAuthorisationTimeout != null) {
+        htmlPrintHandler.removeCallbacks(reportAuthorisationTimeout);
+        reportAuthorisationTimeout = null;
+    }
+}
+
+private void cancelHtmlPrintTimeout() {
+    if (htmlPrintTimeout != null) {
+        htmlPrintHandler.removeCallbacks(htmlPrintTimeout);
+        htmlPrintTimeout = null;
+    }
+}
+
+private void cleanupHtmlPrintWebView() {
+    cancelHtmlPrintTimeout();
+    if (htmlPrintWebView == null) return;
+    WebView webView = htmlPrintWebView;
+    htmlPrintWebView = null;
+    try {
+        webView.stopLoading();
+        webView.setWebViewClient(new WebViewClient());
+        android.view.ViewParent parent = webView.getParent();
+        if (parent instanceof android.view.ViewGroup) {
+            ((android.view.ViewGroup) parent).removeView(webView);
+        }
+        webView.destroy();
+    } catch (Exception ignored) {}
+}
+
+private void failHtmlPrint(String message) {
+    cancelHtmlPrintTimeout();
+    cleanupHtmlPrintWebView();
+    htmlPrintRequested = false;
+    lockExportUI(false);
+    if (!isFinishing() && !isDestroyed()) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
 }
 
 private String buildHtmlReport(String report) {
@@ -2833,6 +2934,8 @@ private void sharePdf(Uri uri) {
 
     @Override
     protected void onDestroy() {
+        cancelReportAuthorisationTimeout();
+        cleanupHtmlPrintWebView();
         if (billingManager != null) {
             billingManager.close();
             billingManager = null;
