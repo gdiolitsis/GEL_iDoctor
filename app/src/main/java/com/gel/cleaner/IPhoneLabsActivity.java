@@ -1492,31 +1492,31 @@ if (r.secondary != null) {
     }
 }
 
-logLabelWarnValue(
+logLabelValue(
         gr ? "Πιθανό Domain:" : "Domain (hint):",
         IPhonePanicHumanizer.domain(r.domain, gr)
 );
 
-logLabelWarnValue(
+logLabelValue(
         gr ? "Υπόθεση κανόνα:" : "Rule-based cause hypothesis:",
         IPhonePanicHumanizer.possibleCause(r.cause, gr)
 );
 
 // Severity
 if ("High".equalsIgnoreCase(r.severity)) {
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
             IPhonePanicHumanizer.ruleWeight(r.severity, gr)
     );
 }
 else if ("Medium".equalsIgnoreCase(r.severity)) {
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
             IPhonePanicHumanizer.ruleWeight(r.severity, gr)
     );
 }
 else {
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
             IPhonePanicHumanizer.ruleWeight(r.severity, gr)
     );
@@ -1524,25 +1524,25 @@ else {
 
 // Confidence
 if ("High".equalsIgnoreCase(r.confidence)) {
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
             IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 }
 else if ("Medium".equalsIgnoreCase(r.confidence)) {
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
             IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 }
 else {
-    logLabelWarnValue(
+    logLabelValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
             IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 }
 
-logLabelWarnValue(
+logLabelValue(
         gr ? "Επόμενο τεχνικό βήμα:" : "Next technician step:",
         ApplePanicEvidencePolicy.recommendation(gr)
 );
@@ -1586,12 +1586,15 @@ private void runPanicSignatureParser() {
             if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
             incidentNumber++;
             parseAndCacheSignature(block);
-            logLabelWarnValue(
+            logLabelOkValue(
                     gr ? "Συμβάν " + incidentNumber + " — τύπος:" : "Incident " + incidentNumber + " — type:",
                     IPhonePanicHumanizer.event(sigCrashType, gr));
-            logLabelWarnValue(
+            logLabelOkValue(
                     gr ? "Συμβάν " + incidentNumber + " — υπόδειξη περιοχής:" : "Incident " + incidentNumber + " — domain hint:",
                     IPhonePanicHumanizer.domain(sigDomain, gr));
+            logLabelValue(
+                    gr ? "Συμβάν " + incidentNumber + " — με απλά λόγια:" : "Incident " + incidentNumber + " — in plain language:",
+                    IPhonePanicHumanizer.meaning(sigCrashType, gr));
         }
         logInfo(gr
                 ? "Τα συμβάντα εξετάστηκαν χωριστά. Δεν ενώνουμε λέξεις από διαφορετικά logs για να συμπεράνουμε βλάβη."
@@ -2219,6 +2222,9 @@ if (max < 2) dominant = null; // no repeated keyword category
         logLabelOkValue(
                 gr ? "Είδος συμβάντος στο αρχείο:" : "Recorded event type:",
                 IPhonePanicHumanizer.event(e.getKey(), gr) + " — " + e.getValue());
+        logLabelValue(
+                gr ? "Τι σημαίνει:" : "What it means:",
+                IPhonePanicHumanizer.meaning(e.getKey(), gr));
     }
 
 if (max >= 2) {
