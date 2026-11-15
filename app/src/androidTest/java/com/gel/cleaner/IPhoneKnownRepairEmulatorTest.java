@@ -66,7 +66,7 @@ public class IPhoneKnownRepairEmulatorTest {
                     setPrivateField(activity, "panicLogText", DOCUMENTED_REPAIR_CASE);
                     setPrivateField(activity, "panicLogLoaded", true);
                     setPrivateField(activity, "panicLogName",
-                            "public-repair-case-mic2-reconstruction.txt");
+                            "public-repair-case.txt");
                     setPrivateField(activity, "panicLogCount", 1);
                     Method method = activity.getClass()
                             .getDeclaredMethod("runAllAppleDiagnostics");
@@ -104,7 +104,11 @@ public class IPhoneKnownRepairEmulatorTest {
             // Separate classification of generic event and part-level diagnosis.
             // The current nine JSON rules may identify Watchdog without the mic2
             // sensor or its physical flex; that is a meaningful NEGATIVE result.
-            boolean specificSensorNamed = output.contains("mic2");
+            boolean specificSensorNamed =
+                    output.contains("Missing sensor(s): mic2")
+                    || output.contains("αισθητήρας mic2")
+                    || output.contains("αισθητήρα mic2")
+                    || output.contains("sensor mic2");
             boolean powerFlexIdentified =
                     output.toLowerCase(java.util.Locale.ROOT).contains("power-button flex")
                     || output.contains("καλωδιοταινία κουμπιού");
