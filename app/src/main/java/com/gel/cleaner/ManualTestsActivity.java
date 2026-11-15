@@ -27470,6 +27470,9 @@ try { if (br != null) br.close(); } catch (Throwable ignore) {}
 /* ============================================================
 LAB 22 — Security Patch + Play Protect (Realtime)
 ============================================================ */
+// Invalidates older bulletin callbacks if this Lab is re-run.
+private int lab22BulletinRunId = 0;
+
 private void lab22SecurityPatchAndPlayProtect() {
 	
 	final boolean gr = AppLang.isGreek(this);
@@ -27717,9 +27720,71 @@ logLabelOkValue(
            : "Google Play Store > Play Protect > Verify scanning enabled"
 );
 
-appendHtml("<br>");
-logOk(gr ? "Το Lab 22 ολοκληρώθηκε." : "Lab 22 finished.");
-logLine();
+// ------------------------------------------------------------
+// 6) Official Android Security Bulletin: asynchronous HTTPS only.
+// Never imply that a published AOSP patch is available as an OTA
+// for this exact manufacturer/model.
+// ------------------------------------------------------------
+final String installedPatch = patch;
+final int requestId = ++lab22BulletinRunId;
+logInfo(gr ? "Διασταύρωση με το επίσημο Android Security Bulletin"
+           : "Cross-check with official Android Security Bulletin");
+
+new Thread(() -> {
+    final java.time.LocalDate latest =
+            AndroidSecurityBulletinChecker.fetchLatestPublishedPatchLevel();
+
+    runOnUiThread(() -> {
+        if (isFinishing() || isDestroyed() || requestId != lab22BulletinRunId) return;
+
+        if (latest == null) {
+            // No guessed dates, no old cached data disguised as a fresh check.
+            logLabel(
+                    gr ? "Online διασταύρωση" : "Online cross-check",
+                    gr ? "Δεν ήταν δυνατή η επαλήθευση του επίσημου δελτίου"
+                       : "Official bulletin could not be verified",
+                    "#FFFFFF"
+            );
+        } else {
+            logLabelOkValue(
+                    gr ? "Νεότερο δημοσιευμένο επίπεδο Android" : "Latest published Android patch level",
+                    latest.toString()
+            );
+
+            try {
+                java.time.LocalDate installed =
+                        java.time.LocalDate.parse(installedPatch);
+                if (installed.isBefore(latest)) {
+                    logLabelWarnValue(
+                            gr ? "Σύγκριση επιπέδου ασφαλείας" : "Security patch comparison",
+                            gr ? "Παλαιότερο από το επίσημο δημοσιευμένο επίπεδο"
+                               : "Older than the published Android patch level"
+                    );
+                    logInfo(gr
+                            ? "Η σύγκριση δεν επιβεβαιώνει ότι διατίθεται αναβάθμιση για το συγκεκριμένο μοντέλο."
+                            : "This comparison does not confirm an available update for this model.");
+                } else {
+                    logLabelOkValue(
+                            gr ? "Σύγκριση επιπέδου ασφαλείας" : "Security patch comparison",
+                            gr ? "Ίσο ή νεότερο από το τελευταίο δημοσιευμένο επίπεδο"
+                               : "At least as recent as the latest published level"
+                    );
+                }
+            } catch (Exception ignored) {
+                logLabel(
+                        gr ? "Σύγκριση επιπέδου ασφαλείας" : "Security patch comparison",
+                        gr ? "Δεν υπάρχει έγκυρη ημερομηνία ενημέρωσης στη συσκευή"
+                           : "Device patch date is unavailable or invalid",
+                        "#FFFFFF"
+                );
+            }
+        }
+
+        appendHtml("<br>");
+        logOk(gr ? "Το Lab 22 ολοκληρώθηκε." : "Lab 22 finished.");
+        logLine();
+    });
+}, "gel-lab22-official-bulletin").start();
 
 }
 
