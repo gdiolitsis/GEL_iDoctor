@@ -784,8 +784,8 @@ private boolean oldKeepScreenOn = false;
 
         final boolean[] popupGreek = { AppLang.isGreek(this) };
 
-        final boolean isLab28 =
-                featureName != null && featureName.contains("28");
+        final boolean isLab29 =
+                featureName != null && featureName.contains("29");
 
         final boolean isLab30 =
                 featureName != null && featureName.contains("30");
@@ -793,9 +793,9 @@ private boolean oldKeepScreenOn = false;
         final String featureEl;
         final String featureEn;
 
-        if (isLab28) {
-            featureEl = "LAB 28 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων";
-            featureEn = "LAB 28 — Hardware Stability & Interconnect Integrity";
+        if (isLab29) {
+            featureEl = "LAB 29 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής";
+            featureEn = "LAB 29 — Used-device pre-purchase check";
         } else if (isLab30) {
             featureEl = "LAB 30 — GEL Device Certification";
             featureEn = "LAB 30 — GEL Device Certification";
@@ -938,35 +938,21 @@ private boolean oldKeepScreenOn = false;
 
             feature.setText(gr ? featureEl : featureEn);
 
-            if (isLab28) {
+            if (isLab29) {
                 msg.setText(
                         gr
-                                ? "Προηγμένη ανάλυση συμπτωμάτων για τεχνικούς\n\n" +
-                                  "Το LAB 28 συσχετίζει ευρήματα από τα διαγνωστικά της συσκευής και ελέγχει για μοτίβα αστάθειας όπως:\n\n" +
-                                  "✓ Τυχαίες επανεκκινήσεις ή ξαφνικά resets\n" +
-                                  "✓ Αστάθεια δικτύου και απώλειες σήματος\n" +
-                                  "✓ Διακοπτόμενη ή ασταθή συμπεριφορά αισθητήρων\n" +
-                                  "✓ Ασυνήθιστες θερμικές μεταβολές\n" +
-                                  "✓ Αστάθεια φόρτισης και power glitches\n" +
-                                  "✓ Ενδείξεις αστάθειας PMIC / fuel-gauge\n" +
-                                  "✓ Ενδείξεις πιθανής αστάθειας baseband\n" +
-                                  "✓ Πιθανά μοτίβα διακοπτόμενης επαφής ή διασύνδεσης\n" +
-                                  "✓ Συσχέτιση πολλαπλών πηγών διαγνωστικών δεδομένων\n\n" +
-                                  "Τελική εκτίμηση σταθερότητας υλικού\n\n" +
-                                  "Το LAB 28 είναι εργαλείο τεχνικού προελέγχου βάσει συμπτωμάτων. Δεν επιβεβαιώνει από μόνο του βλάβη κόλλησης ή συγκεκριμένη βλάβη hardware."
-                                : "Advanced symptom analysis for technicians\n\n" +
-                                  "LAB 28 correlates diagnostic findings across the device and checks for instability patterns such as:\n\n" +
-                                  "✓ Random reboots or sudden resets\n" +
-                                  "✓ Network and signal instability\n" +
-                                  "✓ Intermittent sensor behaviour\n" +
-                                  "✓ Abnormal thermal patterns\n" +
-                                  "✓ Charging instability and power glitches\n" +
-                                  "✓ PMIC / fuel-gauge instability indicators\n" +
-                                  "✓ Possible baseband instability indicators\n" +
-                                  "✓ Patterns consistent with intermittent contact or interconnect issues\n" +
-                                  "✓ Correlation of multiple diagnostic evidence sources\n\n" +
-                                  "Final hardware stability assessment\n\n" +
-                                  "LAB 28 is a symptom-based technician triage tool. It does not by itself confirm solder defects or a specific hardware fault."
+                                ? "Επαγγελματικός προέλεγχος αγοράς μεταχειρισμένης συσκευής\n\n" +
+                                  "Το LAB 29 καταγράφει τα διαθέσιμα στοιχεία Android και αναγνωρίζει τον δηλωμένο κωδικό μοντέλου.\n\n" +
+                                  "✓ Σύγκριση τεχνικών χαρακτηριστικών με τεκμηριωμένες εργοστασιακές προδιαγραφές, εφόσον υπάρχει διαθέσιμο προφίλ μοντέλου.\n" +
+                                  "✓ Διαχωρισμός συμφωνιών, αποκλίσεων και στοιχείων που δεν επαληθεύονται.\n" +
+                                  "✓ Οδηγίες για ανεξάρτητο έλεγχο IMEI από εξωτερική υπηρεσία, χωρίς καταχώριση αποτελέσματος στο GEL.\n\n" +
+                                  "Η ζωντανή διαδικτυακή αναζήτηση όλων των μοντέλων δεν είναι ακόμη ενεργή. Ο έλεγχος δεν πιστοποιεί κυριότητα, νόμιμη προέλευση ή γνησιότητα ανταλλακτικών."
+                                : "Professional used-device pre-purchase check\n\n" +
+                                  "LAB 29 records Android-exposed device data and the reported model identifier.\n\n" +
+                                  "✓ Compare available measurements with documented factory specifications when a sourced model profile is available.\n" +
+                                  "✓ Separate matches, deviations and unavailable verification.\n" +
+                                  "✓ Guide the buyer to an independent external IMEI check without recording the provider's result in GEL.\n\n" +
+                                  "Live internet-wide model lookup is not enabled yet. This check does not certify ownership, legal provenance or genuine replacement parts."
                 );
 
             } else if (isLab30) {
@@ -1659,16 +1645,16 @@ logScroll.post(() -> setLogPanelState(0));
             this::lab27PermissionsPrivacy));
 
     body7.addView(makeTestButton(
-            gr
-                    ? (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  28. Καταγραφές λειτουργίας και μετρήσεις"
-                    : (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  28. System records and measurements",
+            gr ? "28. Καταγραφές λειτουργίας και μετρήσεις"
+               : "28. System records and measurements",
             this::lab28HardwareStability));
 
     body7.addView(makeTestButton(
-            gr ? "29. Προέλεγχος Μεταχειρισμένης\nΤαυτότητα, IMEI & μεταβίβαση"
-               : "29. Used Device Pre-Purchase Check\nIdentity, IMEI & transfer",
+            gr
+                    ? (isGelProActive() ? "" : "🔒 ")
+                      + "PRO  29. Προέλεγχος Μεταχειρισμένης\nΤαυτότητα, IMEI & μεταβίβαση"
+                    : (isGelProActive() ? "" : "🔒 ")
+                      + "PRO  29. Used Device Pre-Purchase Check\nIdentity, IMEI & transfer",
             this::lab29DeviceAuthenticity));
 
     body7.addView(makeTestButton(
@@ -30155,12 +30141,6 @@ private void lab28HardwareStability() {
 
     final boolean gr = AppLang.isGreek(this);
 
-    if (!requireGelPro(
-            gr ? "LAB 28 — Καταγραφές λειτουργίας και μετρήσεις"
-               : "LAB 28 — System records and measurements")) {
-        return;
-    }
-
     boolean randomReboots = false;
     boolean signalDrops = false;
     boolean sensorFlaps = false;
@@ -30732,6 +30712,11 @@ private static class Lab28EvidenceReader {
 // Only confirmed signals — no heuristics
 // ============================================================
 private void lab29DeviceAuthenticity() {
+    if (!requireGelPro(AppLang.isGreek(this)
+            ? "LAB 29 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής"
+            : "LAB 29 — Used-device pre-purchase check")) {
+        return;
+    }
     // Only warn when the connection is not validated; an offline OEM profile
     // can still be compared without pretending that a live lookup took place.
     Lab29ConnectivityGate.runOrPrompt(this, this::runLab29DeviceAuthenticity);
