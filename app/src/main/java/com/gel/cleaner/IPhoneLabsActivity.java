@@ -2155,7 +2155,6 @@ java.util.Map<String,Integer> domainCount = new java.util.HashMap<>();
 java.util.Map<String,Integer> crashCount  = new java.util.HashMap<>();
 
 int total = 0;
-int highConfidenceCount = 0;
 int criticalCrashCount = 0;
 
 // ------------------------------------------------------------
@@ -2178,9 +2177,6 @@ for (String block : blocks) {
 
         domainCount.put(domain,
                 domainCount.getOrDefault(domain,0) + 1);
-
-        if (isHighConfidence(sigConfidence))
-            highConfidenceCount++;
 
         if (isCriticalCrash(sigCrashType))
             criticalCrashCount++;
@@ -2214,33 +2210,16 @@ if (max < 2) dominant = null; // no repeated keyword category
     int percent = (int)(ratio * 100);
 
     // ------------------------------------------------------------
-    // UNCALIBRATED LEGACY KEYWORD INDEX — retained for research; NOT device health
-    // ------------------------------------------------------------
-    int score = 100;
-
-    score -= (highConfidenceCount * 15);
-    score -= (criticalCrashCount * 10);
-
-    if (total > 1 && max >= 2 && ratio >= 0.5) {
-
-    if (isHighRiskDomain(dominant))
-        score -= 30;
-    else
-        score -= 15;
-
-}
-else if (max >= 2) {
-
-    score -= 10;
-}
-
-    if (score < 0) score = 0;
-    
-    // ------------------------------------------------------------
     // SUMMARY
     // ------------------------------------------------------------
-    logLabelOkValue(gr ? "Αναγνωρισμένα panic blocks:" : "Eligible panic blocks:",
+    logLabelOkValue(gr ? "Αρχεία συμβάντων που αναλύθηκαν:" : "Incident files reviewed:",
             String.valueOf(total));
+
+    for (java.util.Map.Entry<String, Integer> e : new java.util.TreeMap<>(crashCount).entrySet()) {
+        logLabelOkValue(
+                gr ? "Είδος συμβάντος στο αρχείο:" : "Recorded event type:",
+                IPhonePanicHumanizer.event(e.getKey(), gr) + " — " + e.getValue());
+    }
 
 if (max >= 2) {
     logLabelOkValue(gr ? "Επαναλαμβανόμενη κατηγορία:" : "Repeated category:",
@@ -2252,8 +2231,9 @@ if (max >= 2) {
                : "No repeated domain is established by these imported incidents.");
 }
 
-logInfo((gr ? "Μη βαθμονομημένος δείκτης όρων: " : "Uncalibrated keyword index: ")
-        + score + "/100 (NOT measured device health)");
+logInfo(gr
+        ? "Τα αρχεία περιέχουν τεχνικές ενδείξεις, όχι μετρημένο ποσοστό υγείας ή σταθερότητας συσκευής."
+        : "The imported files contain technical clues, not a measured health or stability percentage.");
 appendHtml("<br>");
 
 boolean singleLog = total == 1;
@@ -2277,10 +2257,7 @@ if (singleLog) {
 
 boolean criticalCrash = criticalCrashCount > 0;
 
-if (dominant != null && (
-        (ratio >= 0.5 && score < 60) ||
-        (singleLog && (score < 60 || criticalCrash))
-)) {
+if (dominant != null && ratio >= 0.5) {
 
     String domainText = safe(dominant);
 
@@ -2301,8 +2278,9 @@ logLabelWarnValue(
         IPhonePanicHumanizer.domain(domainText, gr)
 );
 
-logInfo((gr ? "Μη βαθμονομημένος δείκτης λέξεων: "
-            : "Uncalibrated keyword index: ") + score + "/100 (not physical health)");
+logInfo(gr
+        ? "Η επανάληψη μιας κατηγορίας είναι ένδειξη στο δείγμα, όχι διάγνωση βλάβης."
+        : "A recurring keyword category is an observation in the sample, not a hardware diagnosis.");
 
 logLabelOkValue(
         gr ? "Σύσταση:" : "Recommendation:",
@@ -2415,61 +2393,35 @@ if (dominant != null) {
 appendHtml("<br>");
 
     // ------------------------------------------------------------
-    // FINAL VERDICT
+    // QUALITATIVE CONCLUSION — evidence, limits and action.
     // ------------------------------------------------------------
-    if (score >= 85) {
+    logLabelValue(
+            gr ? "Με απλά λόγια:" : "In plain language:",
+            gr
+                    ? "Εξετάστηκαν " + total + " ανεξάρτητες καταγραφές. Αυτές δείχνουν τι αναφέρθηκε στα αρχεία, όχι τη σημερινή κατάσταση του iPhone."
+                    : total + " separate records were reviewed. They describe what was logged, not the iPhone's current condition.");
 
+    if (max >= 2) {
         logInfo(gr
-                ? "Υψηλή τιμή μόνο του μη βαθμονομημένου δείκτη λέξεων· σταθερότητα συσκευής άγνωστη."
-                : "High uncalibrated keyword index only; actual device stability unknown.");
-
+                ? "Μία κατηγορία ενδείξεων εμφανίζεται σε περισσότερα από ένα αρχεία. Δεν γνωρίζουμε αν πρόκειται για επαναλαμβανόμενη βλάβη της ίδιας συσκευής."
+                : "A keyword category recurs in the files. This does not establish a recurring fault on a verified device.");
+    } else {
         logInfo(gr
-                ? "Δεν κυριάρχησαν οι σταθμισμένες λέξεις σε αυτά τα αρχεία· δεν αποκλείεται βλάβη."
-                : "Weighted keywords did not dominate this sample; hardware faults are not ruled out.");
-
+                ? "Δεν επαναλήφθηκε ίδια κατηγορία ενδείξεων στο εισαγόμενο δείγμα. Αυτό δεν αποκλείει βλάβη."
+                : "No keyword category repeated in the imported sample. This does not rule out a fault.");
     }
-    else if (score >= 60) {
 
-        logInfo(gr
-                ? "Μεσαία τιμή μη βαθμονομημένου δείκτη, όχι μέτρηση αστάθειας."
-                : "Midrange uncalibrated index, not measured instability.");
+    logLabelValue(
+            gr ? "Τι δεν έχει επιβεβαιωθεί:" : "Not established:",
+            gr
+                    ? "Η αιτία του συμβάντος, η ύπαρξη ελαττωματικού εξαρτήματος και η συνολική υγεία της συσκευής."
+                    : "The incident's root cause, any defective component, and the device's overall health.");
 
-        logInfo(gr
-                ? "Αν υπάρχουν πραγματικά συμπτώματα, συσχετίστε τα με τεχνικό."
-                : "Correlate persistent real-world symptoms with a technician.");
-
-    }
-    else if (score >= 40) {
-
-        logInfo(gr
-                ? "Χαμηλή τιμή μη βαθμονομημένου δείκτη· η κατάσταση συσκευής παραμένει άγνωστη."
-                : "Low uncalibrated keyword index; physical condition remains unknown.");
-
-        logInfo(gr
-                ? "Εμφανίζεται επανάληψη κατηγορίας όρων· δεν τεκμηριώνει επαναλαμβανόμενη βλάβη."
-                : "A keyword category repeats; this does not establish a recurring hardware fault.");
-
-        logInfo(gr
-                ? "Τεχνικός έλεγχος ενδείκνυται εφόσον επιβεβαιώνονται πραγματικά συμπτώματα."
-                : "Technician evaluation is appropriate if real symptoms are confirmed.");
-             
-   appendHtml("<br>");
-   
-    }
-    else {
-
-        logInfo(gr
-                ? "Πολύ χαμηλή τιμή του ανεπαλήθευτου δείκτη λέξεων· όχι διάγνωση αστάθειας."
-                : "Very low unvalidated keyword index; not a device-instability diagnosis.");
-
-        logInfo(gr
-                ? "Καταγράφηκε επανάληψη όρων υψηλής βαρύτητας στα εισαγόμενα αρχεία."
-                : "High-weight terms recur within imported files; physical severity unverified.");
-
-        logInfo(gr
-                ? "Απαιτείται συσχέτιση με πραγματικές επανεκκινήσεις και συμπτώματα πριν από σύσταση επισκευής."
-                : "Verify real restarts and symptoms before recommending a repair.");
-    }
+    logLabelValue(
+            gr ? "Πότε χρειάζεται τεχνικός:" : "When to seek service:",
+            gr
+                    ? "Αν παρατηρούνται επανεκκινήσεις, υπερθέρμανση ή άλλα επαναλαμβανόμενα συμπτώματα, συσχετίστε τα με τις ημερομηνίες και το περιεχόμενο των logs."
+                    : "If restarts, overheating or other repeated symptoms occur, compare their dates with the recorded incidents.");
 
     appendHtml("<br>");
 
