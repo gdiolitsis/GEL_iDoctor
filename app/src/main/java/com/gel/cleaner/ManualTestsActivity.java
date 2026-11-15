@@ -1593,8 +1593,8 @@ logScroll.post(() -> setLogPanelState(0));
     labsContainer.addView(body5);
 
     body5.addView(makeTestButton(
-            gr ? "18. Έλεγχος Υγείας Αποθηκευτικού Χώρου"
-               : "18. Storage Health Inspection",
+            gr ? "18. Απογραφή Αποθηκευτικού Χώρου"
+               : "18. Storage Inventory",
             this::lab18StorageSnapshot));
 
     body5.addView(makeTestButton(
@@ -2823,7 +2823,7 @@ root.addView(buildMuteRow());
         noBtn.setTextColor(Color.WHITE);
 
         GradientDrawable noBg = new GradientDrawable();
-        noBg.setColor(0xFFE60000);
+        noBg.setColor(0xFF8B0000);
         noBg.setCornerRadius(dp(10));
         noBg.setStroke(dp(3), 0xFFFFD700);
         noBtn.setBackground(noBg);
@@ -2833,11 +2833,10 @@ root.addView(buildMuteRow());
         Button yesBtn = new com.gel.cleaner.GelButton(this);
         yesBtn.setText(gr ? "ΝΑΙ" : "YES");
         yesBtn.setAllCaps(false);
-        yesBtn.setTextColor(Color.BLACK);
-        yesBtn.setTypeface(null, Typeface.BOLD);
+        yesBtn.setTextColor(Color.WHITE);
 
         GradientDrawable yesBg = new GradientDrawable();
-        yesBg.setColor(0xFF39FF14);
+        yesBg.setColor(0xFF0B5F3B);
         yesBg.setCornerRadius(dp(10));
         yesBg.setStroke(dp(3), 0xFFFFD700);
         yesBtn.setBackground(yesBg);
@@ -3045,14 +3044,7 @@ private void playEarpieceBeep() {
     );
 
     try {
-        if (track.getState() != AudioTrack.STATE_INITIALIZED) {
-            throw new IllegalStateException("Earpiece AudioTrack initialization failed");
-        }
-        int written = track.write(buffer, 0, buffer.length);
-        if (written != buffer.length) {
-            throw new IllegalStateException(
-                    "Earpiece AudioTrack incomplete write: " + written + "/" + buffer.length);
-        }
+        track.write(buffer, 0, buffer.length);
         track.play();
         SystemClock.sleep(durationMs + 100);
     } finally {
@@ -3089,7 +3081,7 @@ private void resetAudioAfterLab3(
         try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
         try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
 
-        // Restore the actual pre-test mode; MODE_NORMAL is not always the prior state.
+        // Restore the actual pre-test mode, not a forced default.
         try { am.setMode(oldMode); } catch (Throwable ignore) {}
         try { am.setSpeakerphoneOn(oldSpeaker); } catch (Throwable ignore) {}
         try { am.setMicrophoneMute(oldMicMute); } catch (Throwable ignore) {}
@@ -3427,11 +3419,18 @@ private static class CameraHumanSummary {
     String flash;
     String realLifeUse;
     String verdict;
+    boolean photoResolutionKnown;
+    boolean videoResolutionKnown;
+    boolean rawSupported;
+    boolean manualSupported;
+    boolean eisSupported;
+    boolean flashSupported;
 }
 
 private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
 
     CameraHumanSummary h = new CameraHumanSummary();
+    final boolean gr = AppLang.isGreek(this);
 
     // ------------------------------------------------------------
     // CAPS
@@ -3449,7 +3448,11 @@ private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
         }
     }
 
-    h.manualMode = manual ? "Supported" : "Not supported";
+    h.manualSupported = manual;
+    h.rawSupported = hasRaw;
+    h.manualMode = manual
+            ? (gr ? "Υποστηρίζεται" : "Supported")
+            : (gr ? "Δεν υποστηρίζεται — όχι βλάβη" : "Not supported — not a fault");
 
     // ------------------------------------------------------------
     // PHOTO QUALITY (MP)
@@ -3470,18 +3473,19 @@ private CameraHumanSummary buildHumanSummary(CameraCharacteristics cc) {
         }
     }
 
+    h.photoResolutionKnown = maxPhoto != null;
     if (maxPhoto != null) {
-        int mp = (maxPhoto.getWidth() * maxPhoto.getHeight()) / 1_000_000;
-        h.photoQuality = mp + " MP photos (very good)";
+        double mp = ((double) maxPhoto.getWidth() * maxPhoto.getHeight()) / 1_000_000d;
+        h.photoQuality = String.format(Locale.US, "%.1f MP (%d x %d)",
+                mp, maxPhoto.getWidth(), maxPhoto.getHeight());
     } else {
-        h.photoQuality = "Standard photos";
+        h.photoQuality = gr ? "Δεν αναφέρθηκε μέγιστη ανάλυση JPEG"
+                            : "Max JPEG resolution not reported";
     }
 
 // ------------------------------------------------------------
 // PROFESSIONAL PHOTOS (RAW)
 // ------------------------------------------------------------
-final boolean gr = AppLang.isGreek(this);
-
 h.professionalPhotos = hasRaw
         ? (gr
             ? "Υποστηρίζεται λήψη RAW (ασυμπίεστων) φωτογραφιών"
@@ -3502,12 +3506,15 @@ h.professionalPhotos = hasRaw
         }
     }
 
+    h.videoResolutionKnown = maxWidth > 0;
     if (maxWidth >= 3840)
-        h.videoQuality = "4K (very high)";
+        h.videoQuality = gr ? "4K (δηλωμένη δυνατότητα)" : "4K (reported capability)";
     else if (maxWidth >= 1920)
-        h.videoQuality = "Full HD (high)";
+        h.videoQuality = gr ? "Full HD (δηλωμένη δυνατότητα)" : "Full HD (reported capability)";
+    else if (maxWidth > 0)
+        h.videoQuality = gr ? "Χαμηλότερη από Full HD (δηλωμένη)" : "Below Full HD (reported)";
     else
-        h.videoQuality = "HD (basic)";
+        h.videoQuality = gr ? "Δεν αναφέρθηκαν μεγέθη βίντεο" : "Video sizes not reported";
 
 // ------------------------------------------------------------
 // FPS / SMOOTHNESS / SLOW MOTION
@@ -3580,6 +3587,7 @@ if (stabModes != null) {
     }
 }
 
+h.eisSupported = stab;
 h.stabilization = stab
         ? (gr ? "Υποστηρίζεται ηλεκτρονική σταθεροποίηση (EIS)"
               : "Electronic stabilization (EIS) supported")
@@ -3591,7 +3599,8 @@ h.stabilization = stab
 // ------------------------------------------------------------
 Boolean flashAvail = cc.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
 
-h.flash = Boolean.TRUE.equals(flashAvail)
+h.flashSupported = Boolean.TRUE.equals(flashAvail);
+h.flash = h.flashSupported
         ? (gr ? "Διαθέσιμο φλας"
               : "Flash available")
         : (gr ? "Δεν υπάρχει φλας"
@@ -3826,6 +3835,15 @@ private void logLabelWarnValue(String label, String value) {
 
 private void logLabelErrorValue(String label, String value) {
     logLabel(label, value, "#FF5555", GelDiagnosticSeverity.Level.ERROR);
+    expandLogPanel();
+    scrollLogToBottom();
+}
+
+// ---------------- INFORMATION-ONLY VALUE COLOR ----------------
+// Cyan distinguishes an informational state from an OK (green) or warning
+// (yellow). Keep neutral severity in exported service logs and reports.
+private void logLabelInfoValue(String label, String value) {
+    logLabel(label, value, "#87CEFA", GelDiagnosticSeverity.Level.NEUTRAL);
     expandLogPanel();
     scrollLogToBottom();
 }
@@ -6777,6 +6795,8 @@ private void lab3EarpieceManual() {
                 : "Put the phone earpiece to your ear.\n"
                   + "Press start to begin the test.";
 
+        final String ttsText = bodyText; // ΜΙΑ πηγή αλήθειας
+
         // ------------------------------------------------------------
         // DIALOG
         // ------------------------------------------------------------
@@ -6845,7 +6865,7 @@ exitBtn.setTextSize(14f);
 exitBtn.setTextColor(Color.WHITE);
 
 GradientDrawable exitBg = new GradientDrawable();
-exitBg.setColor(0xFFE60000);
+exitBg.setColor(0xFF8B0000);
 exitBg.setCornerRadius(dp(10));
 exitBg.setStroke(dp(3), 0xFFFFD700);
 exitBtn.setBackground(exitBg);
@@ -6874,6 +6894,7 @@ b.setCancelable(false);
 
 final AlertDialog d = b.create();
 final AtomicBoolean lab3Cancelled = new AtomicBoolean(false);
+final AtomicBoolean lab3Running = new AtomicBoolean(false);
 
 if (d.getWindow() != null) {
     d.getWindow().setBackgroundDrawable(
@@ -6896,6 +6917,7 @@ d.setOnKeyListener((dialog, keyCode, event) -> {
         logWarn(gr ? "Η δοκιμή ακυρώθηκε από τον χρήστη."
                    : "Test canceled by user.");
         logLine();
+
         try { AppTTS.stop(); } catch (Throwable ignore) {}
         restoreLab3Audio();
         enableSingleExportButton();
@@ -6925,12 +6947,11 @@ if (!isFinishing() && !isDestroyed()) {
 // ---------------------------
 
 exitBtn.setOnClickListener(v -> {
-    lab3Cancelled.set(true);
+    if (lab3Cancelled.getAndSet(true)) return;
     appendHtml("<br>");
     logWarn(gr ? "Η δοκιμή ακυρώθηκε από τον χρήστη."
                : "Test canceled by user.");
     logLine();
-
     try { AppTTS.stop(); } catch (Throwable ignore) {}
     d.dismiss();
     restoreLab3Audio();
@@ -6938,16 +6959,20 @@ exitBtn.setOnClickListener(v -> {
 });
 
 // ------------------------------------------------------------
-// START ACTION — single listener; preserve the actual audio test.
+// START ACTION
 // ------------------------------------------------------------
 start.setOnClickListener(v -> {
-    if (!start.isEnabled() || lab3Cancelled.get()) return;
-    start.setEnabled(false); // Double-taps must not launch overlapping audio sessions.
+    if (lab3Cancelled.get() || lab3Running.getAndSet(true)) return;
+    start.setEnabled(false);
+    msg.setText(bodyText);
+    msg.setTextColor(0xFF39FF14);
     try { AppTTS.stop(); } catch (Throwable ignore) {}
 
     new Thread(() -> {
         final boolean[] playbackCompleted = {false};
         try {
+            // Re-establish the backup earpiece route before each retry.
+            routeToCallEarpiece();
 
             logInfo(gr
                     ? "Αναπαραγωγή δοκιμαστικών τόνων ακουστικού."
@@ -6955,7 +6980,6 @@ start.setOnClickListener(v -> {
 
             for (int i = 1; i <= 3; i++) {
                 if (lab3Cancelled.get() || isFinishing() || isDestroyed()) break;
-
                 logInfo(gr
                         ? "Τόνος " + i + " / 3"
                         : "Tone " + i + " / 3");
@@ -6965,17 +6989,19 @@ start.setOnClickListener(v -> {
             }
 
             if (!lab3Cancelled.get() && !isFinishing() && !isDestroyed()) {
+                playbackCompleted[0] = true;
                 logOk(gr
                         ? "Η αναπαραγωγή τόνων ολοκληρώθηκε."
                         : "Earpiece tone playback completed.");
-                playbackCompleted[0] = true;
             }
 
         } catch (Throwable t) {
 
             logError(gr
-                    ? "Αποτυχία αναπαραγωγής τόνων ακουστικού."
-                    : "Earpiece tone playback failed.");
+                    ? "Δεν ολοκληρώθηκε η αναπαραγωγή τόνων ακουστικού."
+                    : "Earpiece tone playback did not complete.");
+            logLabelWarnValue(gr ? "Τύπος σφάλματος" : "Error type",
+                    t.getClass().getSimpleName());
 
             logLabelWarnValue(
                     gr ? "Πιθανή αιτία" : "Possible cause",
@@ -6990,15 +7016,20 @@ start.setOnClickListener(v -> {
             resetAudioAfterLab3(am, lab3OldMode, lab3OldSpeaker, lab3OldMicMute);
 
             runOnUiThread(() -> {
-                try { d.dismiss(); } catch (Throwable ignore) {}
                 if (lab3Cancelled.get() || isFinishing() || isDestroyed()) {
                     enableSingleExportButton();
                 } else if (playbackCompleted[0]) {
+                    d.dismiss();
                     askUserEarpieceConfirmation();
+                } else if (d.isShowing()) {
+                    // An AudioTrack failure must not silently close the Lab.
+                    msg.setText(gr
+                            ? "Η αναπαραγωγή δεν ολοκληρώθηκε. ΕΝΑΡΞΗ για επανάληψη ή ΕΞΟΔΟΣ."
+                            : "Playback incomplete. Choose START to retry or EXIT.");
+                    msg.setTextColor(0xFFFFD966);
+                    lab3Running.set(false);
+                    start.setEnabled(true);
                 } else {
-                    logWarn(gr
-                            ? "Δεν ζητήθηκε επιβεβαίωση ακοής επειδή απέτυχε η αναπαραγωγή."
-                            : "Hearing confirmation was not requested because playback failed.");
                     enableSingleExportButton();
                 }
             });
@@ -7007,6 +7038,7 @@ start.setOnClickListener(v -> {
     }).start();
 });
 
+// ------------------------------------------------------------
 });   // <-- ΚΛΕΙΝΕΙ ΤΟ runOnUiThread
 }   
 
@@ -9004,7 +9036,7 @@ private void lab8CameraHardwareCheck() {
         logWarn(gr
                 ? "Το Camera2 δεν υποστηρίζεται σε αυτήν την έκδοση Android."
                 : "Camera2 not supported on this Android version.");
-        logOk(gr
+        logInfo(gr
                 ? "Fallback: άνοιγμα εφαρμογής κάμερας (βασικός έλεγχος)."
                 : "Fallback: opening system camera app (basic check).");
         try {
@@ -9034,7 +9066,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Δεν εντοπίστηκε υλικό κάμερας στη συσκευή."
                 : "No camera hardware detected on this device.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9048,7 +9081,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Το CameraManager δεν είναι διαθέσιμο."
                 : "CameraManager unavailable.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9078,7 +9112,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Αποτυχία καταγραφής camera IDs."
                 : "Failed to enumerate cameras.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9089,7 +9124,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Δεν βρέθηκαν προσβάσιμα camera IDs."
                 : "No accessible camera IDs found.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9197,7 +9233,8 @@ private void lab8CameraHardwareCheck() {
                 ? "Δεν βρέθηκαν αξιοποιήσιμες περιγραφές καμερών."
                 : "No usable camera descriptors.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logInfo(gr ? "Το Lab 8 δεν ολοκληρώθηκε — δεν ελέγχθηκε η λειτουργία κάμερας."
+                       : "Lab 8 incomplete — camera operation was not tested.");
         logLine();
         enableSingleExportButton();
         return;
@@ -9603,7 +9640,7 @@ private void lab8RunNextCamera(
                 "YES"
         );
     else
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Χειροκίνητος αισθητήρας" : "Manual sensor",
                 "NO"
         );
@@ -9875,23 +9912,30 @@ cam.runtimeSession = s;
     };
 
     yes.setOnClickListener(v -> {
+    if (finished.get()) return;
     AppTTS.stop();
     overall.previewOkCount++;
     s.userConfirmedPreview = Boolean.TRUE;
+    lab8ReportUserConfirmedCameraVerdict(s, overall);
     finishAndNext.run();
 });
 
 no.setOnClickListener(v -> {
+    if (finished.get()) return;
     AppTTS.stop();
     overall.previewFailCount++;
     s.userConfirmedPreview = Boolean.FALSE;
+    lab8ReportUserConfirmedCameraVerdict(s, overall);
     finishAndNext.run();
 });
 
     // Start camera when texture is ready
     if (tv.isAvailable()) {
         lab8StartCamera2Session(s, overall, enableButtons, () -> {
-            overall.streamIssueCount++;
+            if (!s.cameraStreamFailure) {
+                s.cameraStreamFailure = true;
+                overall.streamIssueCount++;
+            }
             enableButtons.run();
         });
     } else {
@@ -9899,7 +9943,10 @@ no.setOnClickListener(v -> {
             @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int h) {
                 if (finished.get()) return;
                 lab8StartCamera2Session(s, overall, enableButtons, () -> {
-                    overall.streamIssueCount++;
+                    if (!s.cameraStreamFailure) {
+                        s.cameraStreamFailure = true;
+                        overall.streamIssueCount++;
+                    }
                     enableButtons.run();
                 });
             }
@@ -10175,11 +10222,12 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
     // ------------------------------------------------------------
     long durMs = Math.max(1, SystemClock.elapsedRealtime() - s.sampleStartMs);
     float fps = (s.frames * 1000f) / durMs;
+    s.sampledFps = fps;
 
     // Stream sampling
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Δειγματοληψία ροής" : "Stream sampling",
-            "5s"
+            String.format(Locale.US, "%.1f s", durMs / 1000f)
     );
 
     if (s.frames > 0)
@@ -10215,18 +10263,9 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                 String.valueOf(s.droppedFrames)
         );
 
-    if (s.blackFrames == 0)
-        logLabelOkValue(
-                gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
-                "0"
-        );
-    else {
-        logLabelWarnValue(
-                gr ? "Μαύρα καρέ (ύποπτα)" : "Black frames (suspected)",
-                String.valueOf(s.blackFrames)
-        );
-        overall.streamIssueCount++;
-    }
+    // Dark YUV samples are interpreted only *after* the user reports
+    // whether the live image was visible. Incidental samples do not
+    // become warnings or "stream issues" by themselves.
 
     logLabelOkValue(
             gr ? "Εύρος φωτεινότητας (min / max)" : "Luma range (min / max)",
@@ -10261,56 +10300,90 @@ private void lab8StopAndReportSample(Lab8Session s, Lab8Overall overall) {
                         : "YES — professional uncompressed photos"
         );
     else
-        logLabelWarnValue(
+        logLabelValue(
                 gr ? "Υποστήριξη RAW" : "RAW support",
-                gr
-                        ? "ΟΧΙ — μόνο JPEG"
-                        : "NO — professional uncompressed photos not supported (JPEG only)"
+                gr ? "Δεν αναφέρεται RAW — δεν αποτελεί βλάβη" 
+                   : "RAW not reported — not a fault"
         );
 
-    // User confirmation
-    if (s.userConfirmedPreview != null) {
-        if (s.userConfirmedPreview)
-            logLabelOkValue(
-                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                    gr ? "Η προεπισκόπηση ήταν ορατή" : "Live preview visible"
+    // The user has not answered yet. Do NOT issue a camera verdict here.
+    // The user-confirmation click handler will append it afterward.
+    s.sampleCompleted = true;
+    
+} // ✅ ΤΕΛΟΣ lab8StopAndReportSample (αυτό έλειπε)
+
+// ============================================================
+// LAB 8 — FINAL VERDICT AFTER USER CONFIRMATION (EL/EN)
+// ============================================================
+private void lab8ReportUserConfirmedCameraVerdict(Lab8Session s, Lab8Overall overall) {
+    final boolean gr = AppLang.isGreek(this);
+
+    if (s.userConfirmedPreview == null) return;
+
+    // Incidental very dark YUV samples are NOT "black preview": a few
+    // can occur during auto exposure or in a dark scene. Keep their
+    // count in the session, but omit the misleading low-count UI warning.
+    if (s.sampleCompleted && s.frames > 0L) {
+        if (s.blackFrames == 0L) {
+            logLabelOkValue(gr ? "Πολύ σκοτεινά δείγματα" : "Very dark samples", "0");
+        } else if (!Lab8CameraEvidencePolicy.isIncidentalDarkSample(
+                s.blackFrames, s.frames)) {
+            logLabelWarnValue(
+                    gr ? "Δείγματα χαμηλής φωτεινότητας" : "Low-luminance samples",
+                    s.blackFrames + " / " + s.frames
+                        + (gr ? " — δεν αποδεικνύουν διακοπή εικόνας"
+                              : " — not proof of preview failure")
             );
-        else
-            logLabelErrorValue(
-                    gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
-                    gr ? "Η προεπισκόπηση ΔΕΝ ήταν ορατή" : "Preview NOT visible"
-            );
+        }
     }
 
-    // ------------------------------------------------------------
-    // Final verdict (per camera)
-    // ------------------------------------------------------------
-    boolean ok =
-            (s.frames > 0) &&
-            (s.blackFrames == 0) &&
-            (s.droppedFrames == 0) &&
-            (s.latencyCount == 0 || (s.latencySumMs / Math.max(1, s.latencyCount)) <= 250) &&
-            (s.userConfirmedPreview != null && s.userConfirmedPreview);
-
-    s.verdictOk = ok;
-
-    if (ok) {
-        logLabelOkValue(
-                gr ? "Τελικό αποτέλεσμα" : "Verdict",
-                gr ? "OK — Η διαδρομή κάμερας λειτουργεί σωστά"
-                   : "OK — Camera path operational"
-        );
+    if (Boolean.TRUE.equals(s.userConfirmedPreview)) {
+        logLabelOkValue(gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
+                gr ? "Ο χρήστης επιβεβαίωσε ορατή ζωντανή εικόνα"
+                   : "User confirmed that live preview was visible");
     } else {
-        logLabelWarnValue(
-                gr ? "Τελικό αποτέλεσμα" : "Verdict",
-                gr ? "Εντοπίστηκαν θέματα — έλεγξε τα παραπάνω"
-                   : "Issues detected — review above"
-        );
+        logLabelErrorValue(gr ? "Επιβεβαίωση χρήστη" : "User confirmation",
+                gr ? "Ο χρήστης ΔΕΝ είδε κανονική ζωντανή εικόνα"
+                   : "User did NOT see a normal live preview");
     }
 
+    Lab8CameraEvidencePolicy.Verdict verdict =
+            Lab8CameraEvidencePolicy.evaluate(
+                    s.userConfirmedPreview,
+                    s.sampleCompleted,
+                    s.cameraStreamFailure,
+                    s.frames,
+                    s.sampledFps,
+                    s.droppedFrames,
+                    s.blackFrames
+            );
+    s.verdictOk = verdict == Lab8CameraEvidencePolicy.Verdict.CONFIRMED_PREVIEW;
+    switch (verdict) {
+        case CONFIRMED_PREVIEW:
+            logLabelOkValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Η ζωντανή εικόνα επιβεβαιώθηκε και η διαθέσιμη δειγματοληψία ήταν ομαλή"
+                       : "Live preview confirmed; available stream sample was consistent");
+            break;
+        case RETEST_STREAM_EVIDENCE:
+            overall.streamIssueCount++;
+            logLabelWarnValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Ο χρήστης επιβεβαίωσε εικόνα· οι τεχνικές ενδείξεις ροής χρειάζονται επανέλεγχο, όχι διάγνωση βλάβης"
+                       : "User confirmed preview; stream telemetry needs rechecking, not a hardware diagnosis");
+            break;
+        case USER_REPORTED_PREVIEW_FAILURE:
+            logLabelWarnValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Η ζωντανή εικόνα δεν επιβεβαιώθηκε από τον χρήστη — απαιτείται επανέλεγχος"
+                       : "Live preview not confirmed by user — retest required");
+            break;
+        default:
+            logLabelValue(gr ? "Τελικό αποτέλεσμα" : "Final result",
+                    gr ? "Μη ολοκληρωμένη μέτρηση Camera2 — καμία διάγνωση υλικού"
+                       : "Camera2 sampling incomplete — no hardware verdict");
+            break;
+    }
     logLine();
     appendHtml("<br>");
-} // ✅ ΤΕΛΟΣ lab8StopAndReportSample (αυτό έλειπε)
+}
 
 // ============================================================
 // LAB 8 — Close session safely
@@ -10373,6 +10446,9 @@ private static class Lab8Session {
     int latencyCount;
 
     long lastFrameTsNs;
+    float sampledFps;
+    boolean sampleCompleted = false;
+    boolean cameraStreamFailure = false;
 
     Boolean userConfirmedPreview = null;
     boolean verdictOk = false;
@@ -10571,7 +10647,7 @@ private void startLab8_1CameraCapabilities() {
                 gr ? "Λείπει το context καμερών" : "Missing camera context"
         );
 
-        logOk(gr
+        logInfo(gr
                 ? "Παρακαλώ εκτέλεσε ξανά το LAB 8."
                 : "Please re-run LAB 8.");
 
@@ -10634,18 +10710,49 @@ private void lab8_1DumpOneCameraCapabilities(CameraManager cm, Lab8Cam cam) {
     logInfo(gr ? "ΤΕΛΙΚΟ ΑΝΘΡΩΠΙΝΟ ΣΥΜΠΕΡΑΣΜΑ" : "FINAL HUMAN VERDICT");
     logLine();
 
-    logLabelValue(gr ? "Ποιότητα φωτογραφίας" : "Photo quality", h.photoQuality);
-    logLabelValue(gr ? "Επαγγελματικές φωτογραφίες" : "Professional photos", h.professionalPhotos);
-    logLabelValue(gr ? "Ποιότητα βίντεο" : "Video quality", h.videoQuality);
-    logLabelValue(gr ? "Ομαλότητα βίντεο" : "Video smoothness", h.videoSmoothness);
+    // Green denotes a positively reported capability, not a guarantee
+    // of image quality. Unknown/unsupported optional capabilities stay white.
+    if (h.photoResolutionKnown)
+        logLabelOkValue(gr ? "Μέγιστη ανάλυση JPEG" : "Max JPEG resolution", h.photoQuality);
+    else
+        logLabelValue(gr ? "Μέγιστη ανάλυση JPEG" : "Max JPEG resolution", h.photoQuality);
+
+    if (h.rawSupported)
+        logLabelOkValue(gr ? "Υποστήριξη RAW" : "RAW capability", h.professionalPhotos);
+    else
+        logLabelValue(gr ? "Υποστήριξη RAW" : "RAW capability", h.professionalPhotos);
+
+    if (h.videoResolutionKnown)
+        logLabelOkValue(gr ? "Δηλωμένη ανάλυση βίντεο" : "Reported video resolution", h.videoQuality);
+    else
+        logLabelValue(gr ? "Δηλωμένη ανάλυση βίντεο" : "Reported video resolution", h.videoQuality);
+
+    // FPS range and slow-motion claims are interpretations, not recorded
+    // video tests; preserve their neutral color.
+    logLabelValue(gr ? "Ομαλότητα βίντεο (εκτίμηση)" : "Video smoothness (estimated)", h.videoSmoothness);
     logLabelValue(gr ? "Αργή κίνηση (slow motion)" : "Slow motion", h.slowMotion);
-    logLabelValue(gr ? "Σταθεροποίηση" : "Stabilization", h.stabilization);
-    logLabelValue(gr ? "Χειροκίνητη λειτουργία" : "Manual mode", h.manualMode);
-    logLabelValue(gr ? "Φλας" : "Flash", h.flash);
-    logLabelValue(gr ? "Χρήση στην πράξη" : "Real life use", h.realLifeUse);
+
+    if (h.eisSupported)
+        logLabelOkValue(gr ? "Σταθεροποίηση" : "Stabilization", h.stabilization);
+    else
+        logLabelValue(gr ? "Σταθεροποίηση" : "Stabilization", h.stabilization);
+
+    if (h.manualSupported)
+        logLabelOkValue(gr ? "Χειροκίνητη λειτουργία" : "Manual mode", h.manualMode);
+    else
+        logLabelValue(gr ? "Χειροκίνητη λειτουργία" : "Manual mode", h.manualMode);
+
+    if (h.flashSupported)
+        logLabelOkValue(gr ? "Φλας" : "Flash", h.flash);
+    else
+        logLabelValue(gr ? "Φλας" : "Flash", h.flash);
+
+    logLabelValue(gr ? "Χρήση στην πράξη (εκτίμηση)" : "Real-life use (estimate)", h.realLifeUse);
+    logInfo(gr ? "Τα χαρακτηριστικά προέρχονται από Camera2· δεν μετρήθηκε αντικειμενική ποιότητα εικόνας."
+               : "Camera2 reports these capabilities; objective image quality was not measured.");
 
     logLine();
-    logLabelOkValue(gr ? "Συμπέρασμα" : "Verdict", h.verdict);
+    logLabelOkValue(gr ? "Συμπέρασμα δυνατοτήτων" : "Capability conclusion", h.verdict);
     logLine();
 }
 
@@ -10784,7 +10891,7 @@ private void lab9SensorsCheck() {
         if (sm == null) {
             logLabelValue(
                     gr ? "SensorManager" : "SensorManager",
-                    gr ? "Μη διαθέσιμο — δεν έγινε έλεγχος" : "Unavailable — check not performed"
+                    gr ? "Μη διαθέσιμο — η απογραφή δεν πραγματοποιήθηκε" : "Unavailable — inventory not performed"
             );
             return;
         }
@@ -10809,7 +10916,7 @@ private void lab9SensorsCheck() {
         if (sensors == null || sensors.isEmpty()) {
             logLabelValue(
                     gr ? "Λίστα αισθητήρων" : "Sensor list",
-                    gr ? "Το Android δεν επέστρεψε αισθητήρες — λειτουργία άγνωστη" : "Android returned no sensors — functionality unknown"
+                    gr ? "Το Android επέστρεψε κενή λίστα αισθητήρων" : "Android returned an empty sensor list"
             );
             return;
         }
@@ -10845,10 +10952,10 @@ private void lab9SensorsCheck() {
             String name   = s.getName()   != null ? s.getName().toLowerCase(Locale.US)   : "";
             String vendor = s.getVendor() != null ? s.getVendor().toLowerCase(Locale.US) : "";
 
-            if (name.contains("virtual") && name.contains("gyro"))
-                hasVirtualGyro = true;
-
-            if (name.contains("gyroscope") && vendor.contains("xiaomi"))
+            // "Xiaomi gyroscope" alone does NOT establish a virtual gyro:
+            // name-based inventory classifications require the literal marker.
+            if (name.contains("virtual")
+                    && (name.contains("gyro") || name.contains("gyroscope")))
                 hasVirtualGyro = true;
 
             if (name.contains("ambient") && name.contains("light"))
@@ -10875,20 +10982,20 @@ private void lab9SensorsCheck() {
         logLine();
 
         if (hasVirtualGyro)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Εικονικό γυροσκόπιο" : "Virtual Gyroscope",
-                    gr ? "Ένδειξη ονόματος (λειτουργία μη ελεγμένη)" : "Name-based indication (operation not tested)"
+                    gr ? "Σχετική καταχώριση στην απογραφή" : "Related entry listed by Android"
             );
         else
             logLabelValue(
                     gr ? "Εικονικό γυροσκόπιο" : "Virtual Gyroscope",
-                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
+                    gr ? "Δεν βρέθηκε σχετική καταχώριση" : "No related entry found"
             );
 
         if (hasDualALS)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Αισθητήρες φωτός" : "Ambient Light Sensors",
-                    gr ? "2+ καταχωρίσεις ALS — θέσεις μη επιβεβαιωμένες" : "2+ ALS entries — locations not verified"
+                    gr ? "2+ καταχωρίσεις με ονομασία ALS" : "2+ entries named ALS"
             );
         else
             logLabelValue(
@@ -11087,10 +11194,25 @@ private void lab10WifiConnectivityCheck() {
             : (gr ? "Άγνωστη" : "Unknown");
 
     // ---------------- IDENTIFIERS ----------------
-    logLabelValue(gr ? "SSID" : "SSID", ssid);
+    // An SSID/BSSID can be masked by Android. Color only a real,
+    // non-placeholder identifier; green means "reported", not "secure".
+    boolean knownSsid = ssid != null && !ssid.isEmpty()
+            && !"Unknown".equalsIgnoreCase(ssid);
+    if (knownSsid) {
+        logLabelOkValue(gr ? "SSID" : "SSID", ssid);
+    } else {
+        logLabelValue(gr ? "SSID" : "SSID", gr ? "Μη διαθέσιμο" : "Unavailable");
+    }
 
-    if (bssid != null)
-        logLabelValue(gr ? "BSSID" : "BSSID", bssid);
+    boolean knownBssid = bssid != null
+            && bssid.matches("(?i)([0-9a-f]{2}:){5}[0-9a-f]{2}")
+            && !"02:00:00:00:00:00".equalsIgnoreCase(bssid)
+            && !"00:00:00:00:00:00".equalsIgnoreCase(bssid);
+    if (knownBssid) {
+        logLabelOkValue(gr ? "BSSID" : "BSSID", bssid);
+    } else {
+        logLabelValue(gr ? "BSSID" : "BSSID", gr ? "Μη διαθέσιμο" : "Unavailable");
+    }
 
     // ---------------- BAND ----------------
     if (freqMhz > 0)
@@ -11114,13 +11236,7 @@ private void lab10WifiConnectivityCheck() {
         logLabelValue(gr ? "Ισχύς Σήματος" : "Signal strength",
                 gr ? "ΑΓΝΩΣΤΗ" : "UNKNOWN");
 
-    // SSID status — single line
-    if ("Unknown".equalsIgnoreCase(ssid)) {
-        logLabelValue(gr ? "SSID" : "SSID", gr ? "Μη διαθέσιμο (άδεια/πολιτική/δίκτυο)" : "Unavailable (permission/policy/network)");
-    } else {
-        logLabelOkValue(gr ? "SSID" : "SSID", gr ? "Διαβάστηκε" : "Read from Android");
-    }
-
+    // Presence is already shown once above, alongside the SSID itself.
     // Signal quality — single line
     if (rssi <= -127 || rssi >= 0)
         logLabelValue(gr ? "Σήμα Wi-Fi" : "Wi-Fi signal", gr ? "Άγνωστο" : "Unknown");
@@ -11139,10 +11255,26 @@ private void lab10WifiConnectivityCheck() {
         DhcpInfo dh = wm.getDhcpInfo();
 
         if (dh != null) {
-            logLabelValue(gr ? "IP" : "IP",           ipToStr(dh.ipAddress));
-            logLabelValue(gr ? "Gateway" : "Gateway", ipToStr(dh.gateway));
-            logLabelValue(gr ? "DNS1" : "DNS1",       ipToStr(dh.dns1));
-            logLabelValue(gr ? "DNS2" : "DNS2",       ipToStr(dh.dns2));
+            // Zero is a missing/unspecified IPv4 address, never a green server.
+            if (dh.ipAddress != 0)
+                logLabelOkValue(gr ? "IP" : "IP", ipToStr(dh.ipAddress));
+            else
+                logLabelValue(gr ? "IP" : "IP", gr ? "Μη διαθέσιμη" : "Unavailable");
+
+            if (dh.gateway != 0)
+                logLabelOkValue(gr ? "Gateway" : "Gateway", ipToStr(dh.gateway));
+            else
+                logLabelValue(gr ? "Gateway" : "Gateway", gr ? "Μη διαθέσιμο" : "Unavailable");
+
+            if (dh.dns1 != 0)
+                logLabelOkValue(gr ? "DNS1" : "DNS1", ipToStr(dh.dns1));
+            else
+                logLabelValue(gr ? "DNS1" : "DNS1", gr ? "Μη διαθέσιμο" : "Unavailable");
+
+            if (dh.dns2 != 0)
+                logLabelOkValue(gr ? "DNS2" : "DNS2", ipToStr(dh.dns2));
+            else
+                logLabelValue(gr ? "DNS2" : "DNS2", gr ? "Μη δηλωμένο" : "Not configured");
         } else {
             logLabelValue(gr ? "DHCP" : "DHCP", gr ? "Δεν υπάρχουν στοιχεία — άγνωστη μέθοδος ρύθμισης" : "No info — configuration method unknown");
         }
@@ -11415,12 +11547,17 @@ private void runWifiDeepScan(WifiManager wm) {
                                 ai.packageName
                         ) == PackageManager.PERMISSION_GRANTED;
 
-                logLabelValue(
-                        gr ? "Δυνατότητα Internet" : "Internet capability",
-                        hasInternetPerm
-                                ? (gr ? "Άδεια INTERNET δηλωμένη" : "INTERNET permission declared")
-                                : (gr ? "Δεν δηλώθηκε άδεια INTERNET" : "No INTERNET permission declared")
-                );
+                // A granted app permission is an observed capability, not
+                // proof of Internet connectivity or privacy/security.
+                if (hasInternetPerm) {
+                    logLabelOkValue(
+                            gr ? "Άδεια Internet εφαρμογής" : "App Internet permission",
+                            gr ? "INTERNET δηλωμένη" : "INTERNET declared");
+                } else {
+                    logLabelValue(
+                            gr ? "Άδεια Internet εφαρμογής" : "App Internet permission",
+                            gr ? "Δεν δηλώθηκε INTERNET" : "INTERNET not declared");
+                }
 
                 // CLEARTEXT TRAFFIC
                 boolean cleartextAllowed = true;
@@ -11458,10 +11595,10 @@ private void runWifiDeepScan(WifiManager wm) {
               : "No BOOT-TIME RECEIVER declared")
 );
 
-                logLabelValue(
-        gr ? "Συνολική Εκτίμηση" : "Assessment",
-        gr ? "Ολοκληρώθηκε η αποτύπωση έκθεσης δικτύου & ιδιωτικότητας"
-           : "Network / privacy exposure snapshot completed"
+                logLabelOkValue(
+        gr ? "Αποτύπωση δηλωμένων πολιτικών" : "Declared-policy snapshot",
+        gr ? "Η καταγραφή ολοκληρώθηκε (όχι έλεγχος πραγματικής κίνησης)"
+           : "Inventory complete (actual traffic not inspected)"
 );
 
 } catch (Throwable e) {
@@ -11634,19 +11771,41 @@ if (!s.inService) {
             break;
     }
 
-    logLabelValue(gr ? "Κατάσταση Δεδομένων" : "Data State", dataStateLabel);
+    if (s.dataState == TelephonyManager.DATA_CONNECTED) {
+        logLabelOkValue(gr ? "Κατάσταση Δεδομένων" : "Data State", dataStateLabel);
+    } else {
+        logLabelValue(gr ? "Κατάσταση Δεδομένων" : "Data State", dataStateLabel);
+    }
 
     // ------------------------------------------------------------
     // Internet routing context (best effort)
     // ------------------------------------------------------------
     String networkRoute = s.defaultCellular ? "CELLULAR"
             : s.defaultWifi ? "Wi-Fi" : (gr ? "ΑΓΝΩΣΤΗ/ΑΛΛΗ" : "UNKNOWN/OTHER");
-    logLabelValue(gr ? "Προεπιλεγμένη διαδρομή" : "Default network route", networkRoute);
-    logLabelValue(gr ? "Επικύρωση Internet (προεπιλεγμένο δίκτυο)"
-                     : "Internet validation (default network)",
-            s.defaultNetworkValidated
-                    ? (gr ? "VALIDATED κατά Android" : "Android VALIDATED")
-                    : (gr ? "Δεν επιβεβαιώθηκε" : "Not validated"));
+    if (s.defaultCellular) {
+        logLabelOkValue(gr ? "Προεπιλεγμένη διαδρομή" : "Default network route",
+                networkRoute);
+    } else {
+        logLabelValue(gr ? "Προεπιλεγμένη διαδρομή" : "Default network route",
+                networkRoute);
+    }
+
+    String validationLabel = s.defaultNetworkValidated
+            ? (gr ? "VALIDATED κατά Android" : "Android VALIDATED")
+            : (gr ? "Δεν επιβεβαιώθηκε" : "Not validated");
+    // In this cellular lab, default-network VALIDATED is a green cellular
+    // result only when the actual default transport is also CELLULAR.
+    if (s.defaultCellular && s.defaultNetworkValidated) {
+        logLabelOkValue(
+                gr ? "Επικύρωση Internet (προεπιλεγμένο δίκτυο)"
+                   : "Internet validation (default network)",
+                validationLabel);
+    } else {
+        logLabelValue(
+                gr ? "Επικύρωση Internet (προεπιλεγμένο δίκτυο)"
+                   : "Internet validation (default network)",
+                validationLabel);
+    }
 
 // ------------------------------------------------------------
 // VERDICT ENGINE (GEL)
@@ -11908,7 +12067,7 @@ private void lab12CallFunctionInterpretation() {
     // Internet context (IMS relevance)
     // ------------------------------------------------------------
     if (s.hasInternet) {
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Κατάσταση Σύνδεσης Internet"
                : "Internet Context",
             gr ? "Δηλωμένη δυνατότητα Internet (όχι επαλήθευση κλήσης)"
@@ -12136,7 +12295,7 @@ private void lab12ReportGuided(Lab12CallEvidence.Guided outcome) {
     appendHtml("<br>");
     switch (outcome) {
         case USER_REPORTED_TWO_WAY_AUDIO:
-            logLabelValue(gr ? "Πραγματική κλήση (αναφορά χρήστη)" : "Real call (user report)",
+            logLabelOkValue(gr ? "Πραγματική κλήση (αναφορά χρήστη)" : "Real call (user report)",
                     gr ? "Αναφέρθηκε αμφίδρομος ήχος — όχι ανεξάρτητη μέτρηση"
                        : "Two-way audio reported — not independently measured");
             break;
@@ -12437,15 +12596,19 @@ private void runLab13BluetoothCheckCore() {
         return;
     }
 
-    logInfo(gr ? "Το Bluetooth δηλώνεται ως υποστηριζόμενο." : "Bluetooth is reported as supported.");
+    // BluetoothAdapter present: Android reports Bluetooth support, not external-link health.
+    logLabelOkValue(gr ? "Υποστήριξη Bluetooth" : "Bluetooth support",
+            gr ? "ΝΑΙ (διαθέσιμος adapter)" : "YES (adapter available)");
 
     boolean enabled = false;
     try { enabled = lab13Ba.isEnabled(); } catch (Throwable ignore) {}
 
-    logLabelValue(
-            gr ? "Ενεργό" : "Enabled",
-            enabled ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
-    );
+    // Only a confirmed enabled state is a positive inventory value.
+    if (enabled) {
+        logLabelOkValue(gr ? "Ενεργό" : "Enabled", gr ? "Ναι" : "Yes");
+    } else {
+        logLabelValue(gr ? "Ενεργό" : "Enabled", gr ? "Όχι" : "No");
+    }
 
     int state = BluetoothAdapter.STATE_OFF;
     try { state = lab13Ba.getState(); } catch (Throwable ignore) {}
@@ -12461,20 +12624,23 @@ private void runLab13BluetoothCheckCore() {
         stateStr = gr ? "ΚΛΕΙΣΤΟ" : "OFF";
     }
 
-    logLabelValue(
-            gr ? "Κατάσταση" : "State",
-            stateStr
-    );
+    if (state == BluetoothAdapter.STATE_ON) {
+        logLabelOkValue(gr ? "Κατάσταση" : "State", stateStr);
+    } else {
+        logLabelValue(gr ? "Κατάσταση" : "State", stateStr);
+    }
 
     boolean le = false;
     try {
         le = getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
     } catch (Throwable ignore) {}
 
-    logLabelValue(
-            gr ? "Υποστήριξη BLE" : "BLE Support",
-            le ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No")
-    );
+    // BLE feature declaration is green when present, not a BLE-connectivity test.
+    if (le) {
+        logLabelOkValue(gr ? "Υποστήριξη BLE" : "BLE Support", gr ? "Ναι" : "Yes");
+    } else {
+        logLabelValue(gr ? "Υποστήριξη BLE" : "BLE Support", gr ? "Όχι" : "No");
+    }
 
     if (!enabled) {
         logWarn(gr
@@ -12555,7 +12721,9 @@ private void runLab13BluetoothCheckCore() {
                   + "External device connection stability was not verified.");
 
         appendHtml("<br>");
-        logInfo(gr ? "Το Lab 13 κατέγραψε τα διαθέσιμα στοιχεία." : "Lab 13 recorded available evidence.");
+        // Only system inventory completed. The skipped external-device test remains untested.
+        logOk(gr ? "Το Lab 13 ολοκλήρωσε την καταγραφή των διαθέσιμων στοιχείων Bluetooth (χωρίς δοκιμή εξωτερικής σύνδεσης)."
+                 : "Lab 13 finished collecting available Bluetooth evidence (external connection not tested).");
         logLine();
         enableSingleExportButton();
         return;
@@ -26921,8 +27089,8 @@ private void lab18StorageSnapshot() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 18 — Έλεγχος Υγείας Εσωτερικού Αποθηκευτικού Χώρου"
-            : "LAB 18 — Internal Storage Health Inspection");
+            ? "LAB 18 — Απογραφή Εσωτερικού Αποθηκευτικού Χώρου"
+            : "LAB 18 — Internal Storage Inventory");
     logLine();
 
     try {
@@ -27014,8 +27182,8 @@ if (rooted) {
 
     appendHtml("<br>");
     logInfo(gr
-            ? "Στοιχεία ελεύθερου χώρου (χωρίς μέτρηση φθοράς NAND):"
-            : "Free-space context (NAND wear not measured):");
+            ? "Στοιχεία ελεύθερου χώρου:"
+            : "Free-space context:");
             logLine();
 
     criticalFreeSpacePressure = detectCriticalFreeSpacePressure();
@@ -27312,10 +27480,11 @@ private void lab19RamSnapshot() {
                 );
                 break;
             case NO_OS_LOW_MEMORY_SIGNAL:
-                logLabelValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Δεν αναφέρθηκε κατάσταση low-memory από Android"
-                           : "Android has not reported a low-memory condition"
+                // Green only for the observed Android flag, never for RAM health.
+                logLabelOkValue(
+                        gr ? "Σήμα Android" : "Android signal",
+                        gr ? "Δεν δηλώθηκε κατάσταση low-memory στο τρέχον στιγμιότυπο"
+                           : "No low-memory flag in the current snapshot"
                 );
                 break;
             default:
@@ -27347,11 +27516,15 @@ private void lab19RamSnapshot() {
                     snap.swapTotalKb, snap.swapFreeKb);
 
             // Incomplete raw counters cannot support a derived pressure grade.
-            String pressureHuman =
+            // The pressure score is heuristic and is NOT the OS lowMemory signal.
+            String pressureGrade =
                     (snap.memFreeKb >= 0 && snap.cachedKb >= 0 && swapUsedKb >= 0)
-                            ? humanPressureLabel(pressureLevel(
-                                    snap.memFreeKb, snap.cachedKb, swapUsedKb))
-                            : (gr ? "Άγνωστο — ελλιπείς μετρήσεις" : "Unknown — incomplete readings");
+                            ? pressureLevel(snap.memFreeKb, snap.cachedKb, swapUsedKb)
+                            : null;
+            String pressureHuman = pressureGrade != null
+                    ? humanPressureLabel(pressureGrade)
+                    : (gr ? "Άγνωστο — ελλιπείς μετρήσεις"
+                          : "Unknown — incomplete readings");
 
             String zramDep = swapUsedKb >= 0
                     ? zramDependency(swapUsedKb, total)
@@ -27363,17 +27536,35 @@ private void lab19RamSnapshot() {
                     : "Memory pressure indicators:");
                     logLine();
 
-            logLabelValue(
-                    gr ? "Επίπεδο πίεσης" : "Pressure level",
-                    pressureHuman
-            );
+            if ("High".equals(pressureGrade) || "Medium".equals(pressureGrade)) {
+                logLabelWarnValue(
+                        gr ? "Ενδεικτική πίεση μνήμης" : "Heuristic memory pressure",
+                        pressureHuman
+                );
+            } else {
+                // A low or missing heuristic score does not certify stable RAM.
+                logLabelValue(
+                        gr ? "Ενδεικτική πίεση μνήμης" : "Heuristic memory pressure",
+                        pressureHuman
+                );
+            }
 
             if (zramDep != null) {
-                logLabelValue(
-                        gr ? "Αναλογία Swap προς RAM (ενδεικτική)"
-                           : "Swap-to-RAM ratio (heuristic)",
-                        zramDep
-                );
+                // Translate the raw English grade; it is NOT measured hardware health.
+                String swapRatioLabel = humanPressureLabel(zramDep);
+                if ("High".equals(zramDep) || "Medium".equals(zramDep)) {
+                    logLabelWarnValue(
+                            gr ? "Ενδεικτική αναλογία Swap/RAM"
+                               : "Heuristic Swap/RAM ratio",
+                            swapRatioLabel
+                    );
+                } else {
+                    logLabelValue(
+                            gr ? "Ενδεικτική αναλογία Swap/RAM"
+                               : "Heuristic Swap/RAM ratio",
+                            swapRatioLabel
+                    );
+                }
             } else {
                 logInfo(gr ? "Χρήση Swap: δεν διαβάστηκαν συγκρίσιμες τιμές SwapTotal/SwapFree"
                            : "Swap usage: comparable SwapTotal/SwapFree readings unavailable");
@@ -27443,7 +27634,7 @@ private void lab19RamSnapshot() {
 
             if (zramActive || swapActive) {
 
-                logLabelValue(
+                logLabelOkValue(
                         gr ? "Επέκταση μνήμης" : "Memory extension",
                         gr ? "Εντοπίστηκε συμπίεση / swap"
                            : "Compression / swap detected"
@@ -27467,7 +27658,7 @@ private void lab19RamSnapshot() {
 
             long cachedKb = readCachedMemoryKbSafe();
             if (cachedKb > 0) {
-                logLabelValue(
+                logLabelOkValue(
                         gr ? "Cached μνήμη" : "Cached memory",
                         humanBytes(cachedKb * 1024L) +
                                 (gr ? " (επανακτήσιμη από το σύστημα)"
@@ -27609,10 +27800,10 @@ private void lab20UptimeHints() {
 
             // Root access alone does not provide reboot history. A short
             // uptime proves only that the device booted recently.
-            logLabelValue(
+            logLabelInfoValue(
                     gr ? "Ιστορικό επανεκκινήσεων" : "Reboot history",
-                    gr ? "Δεν υπάρχουν επαληθευμένα συμβάντα επανεκκινήσεων"
-                       : "No verified reboot event history available"
+                    gr ? "Δεν συλλέχθηκε επαληθευμένο ιστορικό επανεκκινήσεων"
+                       : "Verified reboot event history was not collected"
             );
 
             if (hasObservedOomKills) {
@@ -27666,8 +27857,9 @@ logLine();
 RebootHistoryEvidence.Verdict rebootVerdict =
         RebootHistoryEvidence.classify(-1, 0L);
 if (rebootVerdict == RebootHistoryEvidence.Verdict.INSUFFICIENT_DATA) {
-    logLabelValue(
-            "REBOOT_PATTERN",
+    // Informational blue value, *not* a successful reboot-history test.
+    logLabelInfoValue(
+            gr ? "Ιστορικό επανεκκινήσεων" : "Reboot history",
             gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ ΙΣΤΟΡΙΚΟ" : "HISTORY UNAVAILABLE"
     );
 } else {
@@ -27825,7 +28017,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 
                 biometricSupported = true;
 
-                logLabelValue(
+                logLabelOkValue(
                         gr ? "Βιομετρικά" : "Biometrics",
                         gr ? "Δυνατή ταυτοποίηση Android· εκκρεμεί ζωντανή δοκιμή"
                            : "Android auth available; live test pending"
@@ -27921,12 +28113,15 @@ if (root) {
 // ============================================================  
 
 if (secure) {
-
+    // Keyguard secure proves an enrolled credential, not encryption status.
+    logLabelOkValue(
+            gr ? "Διαπιστευτήριο συσκευής" : "Device credential",
+            gr ? "Ρυθμισμένο ασφαλές κλείδωμα" : "Secure device lock configured"
+    );
     logLabelValue(
-            gr ? "Προστασία μετά από επανεκκίνηση"
-               : "Post-reboot protection",
-            gr ? "Υπάρχει κλείδωμα με διαπιστευτήριο· δεν εξετάστηκε η κρυπτογράφηση"
-               : "A secure credential is configured; storage encryption was not assessed"
+            gr ? "Κρυπτογράφηση μετά από επανεκκίνηση"
+               : "Post-reboot encryption",
+            gr ? "Δεν ελέγχθηκε" : "Not assessed"
     );
 
 } else if (secureKnown) {
@@ -27946,26 +28141,33 @@ if (secure) {
     );
 }
 
-logLabelValue(
-        gr ? "Κύριο επίπεδο ασφάλειας" 
-           : "Primary security layer",
-        !secureKnown
-                ? (gr ? "ΑΓΝΩΣΤΟ — δεν διαβάστηκε το Keyguard" : "UNKNOWN — Keyguard unreadable")
-                : secure
-                    ? (gr ? "Γνωστικό διαπιστευτήριο (PIN / Μοτίβο / Κωδικός)"
-                          : "Knowledge-based credential")
+if (secureKnown && secure) {
+    logLabelOkValue(
+            gr ? "Κύριο επίπεδο ασφάλειας" : "Primary security layer",
+            gr ? "Γνωστικό διαπιστευτήριο (PIN / Μοτίβο / Κωδικός)"
+               : "Knowledge-based credential (PIN / Pattern / Password)"
+    );
+} else {
+    logLabelValue(
+            gr ? "Κύριο επίπεδο ασφάλειας" : "Primary security layer",
+            !secureKnown
+                    ? (gr ? "ΑΓΝΩΣΤΟ — δεν διαβάστηκε το Keyguard"
+                          : "UNKNOWN — Keyguard unreadable")
                     : (gr ? "ΚΑΝΕΝΑ" : "NONE")
-);
+    );
+}
 
-logLabelValue(
-        gr ? "Επίπεδο ευκολίας" 
-           : "Convenience layer",
-        biometricSupported
-                ? (gr ? "Διαθέσιμα βιομετρικά"
-                      : "Biometrics available")
-                : (gr ? "Μη διαθέσιμα"
-                      : "Not available")
-);
+if (biometricSupported) {
+    logLabelOkValue(
+            gr ? "Επίπεδο ευκολίας" : "Convenience layer",
+            gr ? "Διαθέσιμα βιομετρικά" : "Biometrics available"
+    );
+} else {
+    logLabelValue(
+            gr ? "Επίπεδο ευκολίας" : "Convenience layer",
+            gr ? "Μη διαθέσιμα" : "Not available"
+    );
+}
 
 if (root) {
 
@@ -28047,7 +28249,7 @@ if (!biometricSupported) {
             gr ? "Τα βιομετρικά δεν είναι έτοιμα ή δεν είναι διαθέσιμα"
                : "Biometrics not ready or not available"
     );
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Ενέργεια" : "Action",
             gr ? "Ρυθμίστε βιομετρικά στις Ρυθμίσεις και επανεκτελέστε το LAB 21"
                : "Enroll biometrics in Settings and re-run LAB 21"
@@ -28074,8 +28276,8 @@ if (Build.VERSION.SDK_INT >= 28) {
                 gr ? "Τοποθετήστε δάχτυλο / πρόσωπο για ταυτοποίηση ΤΩΡΑ"
                    : "Place finger / face for authentication NOW"
         );
-        logLabelOkValue(
-                gr ? "Αποτέλεσμα" : "Result",
+        logLabelValue(
+                gr ? "Έκταση ελέγχου" : "Test scope",
                 gr ? "Θα ελεγχθεί ένα μονοπάτι ταυτοποίησης, όχι η πλήρης υγεία των αισθητήρων"
                    : "Only one biometric authentication path will be observed, not full hardware health"
         );
@@ -28111,17 +28313,17 @@ appendHtml("<br>");
                                    : "Multi-biometric devices");
                                    logLine();
                                    
-                        logLabelWarnValue(
+                        logLabelValue(
                                 gr ? "Σημείωση" : "Note",
                                 gr ? "Το Android ελέγχει ΕΝΑ βιομετρικό ανά εκτέλεση"
                                    : "Android tests ONE biometric path per run"
                         );
-                        logLabelOkValue(
+                        logLabelValue(
                                 gr ? "Ενέργεια" : "Action",
                                 gr ? "Για άλλο βιομετρικό μονοπάτι, χρησιμοποιήστε τις ρυθμίσεις ασφαλείας Android"
                                    : "Use Android biometric settings to investigate another modality"
                         );
-                        logLabelWarnValue(
+                        logLabelValue(
                                 gr ? "Σημείωση OEM" : "OEM note",
                                 gr ? "Ο κατασκευαστής μπορεί να δίνει προτεραιότητα στον ίδιο αισθητήρα"
                                    : "OEM may still prioritize same sensor"
@@ -28247,7 +28449,7 @@ appendHtml("<br>");
             gr ? "Κάθε εκτέλεση του LAB 21 ελέγχει ΕΝΑ βιομετρικό μονοπάτι"
                : "Each LAB 21 run verifies ONE biometric sensor path"
     );
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Ενέργεια" : "Action",
             gr ? "Απενεργοποιήστε το ενεργό βιομετρικό στις ρυθμίσεις, για να ελέγξετε άλλον αισθητήρα"
                : "Disable active biometric in Settings to test another sensor"
@@ -33428,14 +33630,19 @@ if (requestCode == 7007) {
                   : "LAB 7 — Rotation & Proximity");
     logLine();
 
+    logLabelValue(
+            gr ? "Προσανατολισμός οθόνης δοκιμής" : "Test screen orientation",
+            gr ? "Κλειδωμένος σε portrait για σταθερή μέτρηση — η οθόνη δεν περιστρέφεται"
+               : "Locked to portrait for a stable test — the screen does not rotate");
     lab7RotationVerified = resultCode == RESULT_OK;
     if (resultCode == RESULT_OK) {
         logLabelOkValue(gr ? "Περιστροφή" : "Rotation",
                 gr ? "Παρατηρήθηκε σταθερή αλλαγή βαρύτητας: όρθια → πλαγιαστή θέση"
                    : "Observed stable gravity change: upright → sideways posture");
-        logInfo(gr ? "Η οθόνη της εφαρμογής παρέμεινε κατακόρυφη. "
-                     + "Δεν πιστοποιείται η αυτόματη περιστροφή του Android."
-                   : "The app remained in portrait. Android auto-rotate itself was not certified.");
+        logInfo(gr ? "Η αλλαγή στάσης μετρήθηκε από αισθητήρα. "
+                     + "Δεν ελέγχθηκε η αυτόματη περιστροφή του Android."
+                   : "Posture change was measured by a sensor. "
+                     + "Android auto-rotate was not tested.");
     } else if (resultCode == RESULT_FIRST_USER) {
         logLabelValue(gr ? "Περιστροφή" : "Rotation",
                 gr ? "ΠΑΡΑΛΕΙΦΘΗΚΕ — συνεχίζεται ανεξάρτητα ο έλεγχος εγγύτητας"
