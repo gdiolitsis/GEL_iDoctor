@@ -36,22 +36,18 @@ public final class Lab23PlainLanguageAccessContractTest {
         assertTrue(s.contains("Μπορείτε να είστε ήσυχοι για αυτό που επιβεβαιώσαμε"));
         assertTrue(s.contains("Το ότι έχετε ενεργές τις Επιλογές προγραμματιστή δεν σημαίνει ότι κάποιος έχει παραβιάσει το κινητό σας."));
         assertTrue(s.contains("Αυτό δεν σημαίνει ότι το κινητό έχει παραβιαστεί."));
-        assertTrue(s.contains("Αν δεν χρησιμοποιείτε ασύρματο έλεγχο από υπολογιστή, διατηρήστε την αντίστοιχη ρύθμιση απενεργοποιημένη."));
+        assertFalse(s.contains("Ασύρματη πρόσβαση για προχωρημένο έλεγχο"));
     }
 
-    @Test public void localProbesRemainButDoNotMasqueradeAsSecurityFindings() throws Exception {
+    @Test public void noUnverifiedWirelessSectionOrBackgroundPortProbes() throws Exception {
         String s = lab();
-        assertTrue(s.contains("isPortOpen(5555, 200)"));
-        assertTrue(s.contains("isPortOpen(3700, 80)"));
-        assertTrue(s.contains("isPortOpen(7460, 80)"));
-        assertTrue(s.contains("scanPairingPortRange()"));
-        assertTrue(s.contains("android.util.Log.d(\"GEL-Lab23\""));
-        assertTrue(s.contains("runOnUiThread(() -> {"));
-        assertTrue(s.contains("Δεν μπορεί να επιβεβαιωθεί από αυτό το εργαστήριο"));
-        assertFalse(s.contains("Τοπική TCP θύρα"));
-        assertFalse(s.contains("Τοπικές θύρες"));
-        assertFalse(s.contains("Ποσοστό ασφάλειας"));
-        assertTrue(s.contains("Ανοίξτε Ρυθμίσεις → Επιλογές προγραμματιστή → Ασύρματη αποσφαλμάτωση."));
+        assertTrue(s.contains("if (developerState == 1) {\n        logLabelOkValue("));
+        assertTrue(s.contains("if (developerState == 0) {\n        logLabelOkValue("));
+        assertTrue(s.contains("if (usbState == 0) {\n        logLabelOkValue("));
+        assertFalse(s.contains("isPortOpen("));
+        assertFalse(s.contains("scanPairingPortRange()"));
+        assertFalse(s.contains("Local-only connectivity probes"));
+        assertFalse(s.contains("3. Ασύρματη πρόσβαση"));
+        assertFalse(s.contains("Δεν μπορεί να επιβεβαιωθεί από αυτό το εργαστήριο"));
         assertTrue(s.contains("Το Lab 23 ολοκληρώθηκε — ελέγχθηκαν οι διαθέσιμες ρυθμίσεις πρόσβασης."));
-    }
-}
+    }}
