@@ -6346,10 +6346,13 @@ if (conf.contains("LOW")) {
 
     logLabelWarnValue(
             gr ? "Σημείωση" : "Note",
-            gr ? "Καταγράφηκε ακουστικό σήμα με περιορισμένη σαφήνεια. "
-                 + "Επαναλάβετε τη δοκιμή αν χρειάζεται."
-               : "Low confidence may be caused, by DSP filtering, noise cancellation, "
-                 + "microphone placement, or acoustic design"
+            gr ? "Η ένδειξη LOW αφορά την αξιοπιστία της μέτρησης. "
+                 + "Αυτό μπορεί να οφείλεται σε ακύρωση θορύβου, "
+                 + "επεξεργασία ήχου (DSP), περιορισμένη απόκριση συχνοτήτων "
+                 + "ή στη θέση του μικροφώνου."
+               : "LOW describes measurement confidence. Possible reasons include "
+                 + "noise cancellation, audio processing (DSP), limited frequency response "
+                 + "or microphone placement."
     );
 
 } else {
@@ -6667,15 +6670,24 @@ appendHtml("<br>");
     logLabelOkValue(
             gr ? "Έξοδος Ηχείου" : "Speaker output",
             gr
-                    ? "RMS πάνω από 20 μετά την αναπαραγωγή, με χαμηλή αξιοπιστία — οι τόνοι δεν επιβεβαιώθηκαν."
-                    : "RMS above 20 after playback, LOW confidence — tones not verified"
+                    ? (confirmed == 4
+                            ? "Καταγράφηκε ακουστική ένδειξη σε 4/4 τόνους. Η πρόσθετη μέτρηση μικροφώνου είχε LOW αξιοπιστία."
+                            : "Καταγράφηκε RMS πάνω από 20 στη μεταγενέστερη μέτρηση μικροφώνου με LOW αξιοπιστία.")
+                    : (confirmed == 4
+                            ? "Acoustic indication recorded for 4/4 tones. The later microphone reading had LOW confidence."
+                            : "RMS above 20 recorded in the later microphone reading with LOW confidence.")
     );
 
     logLabelWarnValue(
             gr ? "Σημείωση" : "Note",
             gr
-                    ? "Καταγράφηκε ακουστικό σήμα με περιορισμένη σαφήνεια. ακύρωση θορύβου, περιοσισμό απόκρισης συχνότητας, ή θέση μικροφώνου."
-                    : "The reading had low clarity. Repeat the test in a quiet place."
+                    ? "Η ένδειξη LOW αφορά την αξιοπιστία της πρόσθετης μέτρησης μικροφώνου. "
+                      + "Αυτό μπορεί να οφείλεται σε ακύρωση θορύβου, "
+                      + "επεξεργασία ήχου (DSP), περιορισμένη απόκριση συχνοτήτων "
+                      + "ή στη θέση του μικροφώνου."
+                    : "LOW describes the confidence of the additional microphone reading. "
+                      + "It may result from noise cancellation, audio processing (DSP), "
+                      + "limited frequency response or microphone placement."
     );
 
 } else {
