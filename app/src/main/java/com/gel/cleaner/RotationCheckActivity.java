@@ -59,9 +59,13 @@ public class RotationCheckActivity extends GELAutoActivityHook
         TextView info = new TextView(this);
         info.setText(AppLang.isGreek(this)
                 ? "Κράτησε τη συσκευή όρθια και μετά γύρισέ την αργά στο πλάι.\n"
-                  + "Η εικόνα παραμένει κατακόρυφη. Δεν αρκεί ένα απότομο τίναγμα."
-                : "Hold the device upright, then turn it slowly sideways.\n"
-                  + "The screen stays portrait. A sudden jolt is not enough.");
+                  + "Η οθόνη είναι σκόπιμα κλειδωμένη σε κατακόρυφη προβολή (portrait) και δεν θα περιστραφεί. "
+                  + "Μετράμε την κίνηση από τον αισθητήρα, όχι το auto-rotate του Android. "
+                  + "Ένα απότομο τίναγμα δεν αρκεί."
+                : "Hold the device upright, then slowly turn it sideways.\n"
+                  + "This test screen is intentionally locked to portrait and will not rotate. "
+                  + "Physical movement is measured by the sensor, not Android auto-rotate. "
+                  + "A sudden jolt is not enough.");
         info.setTextSize(18f);
         info.setTextColor(Color.WHITE);
         info.setGravity(Gravity.CENTER);
