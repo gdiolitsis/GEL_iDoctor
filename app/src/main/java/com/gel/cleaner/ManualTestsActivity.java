@@ -6333,9 +6333,13 @@ if (conf.contains("LOW")) {
     logLabelWarnValue(
             gr ? "Σημείωση" : "Note",
             gr ? "Καταγράφηκε ακουστικό σήμα με περιορισμένη σαφήνεια. "
-                 + "Επαναλάβετε τη δοκιμή αν χρειάζεται."
-               : "Low confidence may be caused, by DSP filtering, noise cancellation, "
-                 + "microphone placement, or acoustic design"
+                 + "Αυτό μπορεί να οφείλεται στην ακύρωση θορύβου, στην επεξεργασία ήχου (DSP), "
+                 + "στη θέση του μικροφώνου ή στην ακουστική του χώρου. "
+                 + "Δεν τεκμηριώνεται βλάβη του ηχείου."
+               : "An acoustic signal was detected with limited clarity. "
+                 + "This may be caused by noise cancellation, audio processing (DSP), "
+                 + "microphone placement, or room acoustics. "
+                 + "It does not establish a speaker fault."
     );
 
 } else {
@@ -6660,8 +6664,14 @@ appendHtml("<br>");
     logLabelWarnValue(
             gr ? "Σημείωση" : "Note",
             gr
-                    ? "Καταγράφηκε ακουστικό σήμα με περιορισμένη σαφήνεια. ακύρωση θορύβου, περιοσισμό απόκρισης συχνότητας, ή θέση μικροφώνου."
-                    : "The reading had low clarity. Repeat the test in a quiet place."
+                    ? "Καταγράφηκε ακουστικό σήμα με περιορισμένη σαφήνεια. "
+                      + "Αυτό μπορεί να οφείλεται στην ακύρωση θορύβου, στην περιορισμένη απόκριση συχνοτήτων, "
+                      + "στη θέση του μικροφώνου ή στον θόρυβο του περιβάλλοντος. "
+                      + "Δεν τεκμηριώνεται βλάβη του ηχείου."
+                    : "An acoustic signal was detected with limited clarity. "
+                      + "This may be caused by noise cancellation, limited frequency response, "
+                      + "microphone placement, or background noise. "
+                      + "It does not establish a speaker fault."
     );
 
 } else {
