@@ -13935,39 +13935,40 @@ logLine();
 
 final int cores = Runtime.getRuntime().availableProcessors();
 
-logLabelValue(
+logLabelOkValue(
         gr ? "Λειτουργία" : "Mode",
         rooted
                 ? (gr ? "Προηγμένη (Root access)" : "Advanced (Rooted)")
                 : (gr ? "Τυπική (Χωρίς Root)" : "Standard (Unrooted)")
 );
 
-logLabelValue(
+logLabelOkValue(
         gr ? "Διάρκεια δοκιμής" : "Duration",
         durationSec + (gr
                 ? " δευτ. (εργαστηριακή λειτουργία)"
                 : " sec (laboratory mode)")
 );
 
-logLabelValue(
+logLabelOkValue(
         gr ? "Προφίλ καταπόνησης" : "Stress profile",
         "Fast phase + adaptive load + CPU/GPU + memory + bandwidth + vibration + video"
 );
 
-logLabelOkValue(
-        gr ? "Αρχικές συνθήκες" : "Start conditions",
-        String.format(
-                Locale.US,
-                gr
-                        ? "φόρτιση=%d mAh, ποσοστό=%d%%, θερμοκρασία=%s"
-                        : "charge=%d mAh, level=%d%%, temperature=%s",
-                startMah,
-                Math.max(0, batteryPercent),
-                Float.isNaN(tempStart)
-                        ? (gr ? "Μ/Δ" : "N/A")
-                        : String.format(Locale.US, "%.1f°C", tempStart)
-        )
-);
+if (!Float.isNaN(tempStart)) {
+    logLabelOkValue(
+            gr ? "Αρχικές συνθήκες" : "Start conditions",
+            String.format(Locale.US,
+                    gr ? "φόρτιση=%d mAh, ποσοστό=%d%%, θερμοκρασία=%.1f°C"
+                       : "charge=%d mAh, level=%d%%, temperature=%.1f°C",
+                    startMah, Math.max(0, batteryPercent), tempStart));
+} else {
+    logLabelOkValue(
+            gr ? "Αρχικές συνθήκες" : "Start conditions",
+            String.format(Locale.US,
+                    gr ? "φόρτιση=%d mAh, ποσοστό=%d%%"
+                       : "charge=%d mAh, level=%d%%",
+                    startMah, Math.max(0, batteryPercent)));
+}
 
 if (baselineFullMah > 0) {
     if (start.chargeFullMah > 0) {
@@ -13979,20 +13980,20 @@ if (baselineFullMah > 0) {
                 baselineFullMah + (gr ? " mAh — ονομαστική τιμή, όχι σημερινή υγεία"
                                        : " mAh — nominal value, not current health"));
     } else {
-        // Inferred from charge counter / state-of-charge; not a measured capacity.
-        logLabelValue(gr ? "Εκτιμώμενη χωρητικότητα πλήρους φόρτισης" : "Estimated full-charge capacity",
+        // A valid, mathematically derived reference from the charge counter and
+        // reported SoC. Green means the computation completed with input data;
+        // it does not claim lab-measured full capacity or battery SoH.
+        logLabelOkValue(gr ? "Υπολογισμένη χωρητικότητα αναφοράς" : "Calculated reference capacity",
                 baselineFullMah + (gr
-                        ? " mAh — εκτίμηση από charge_now / ποσοστό, όχι επαληθευμένη χωρητικότητα"
-                        : " mAh — extrapolated from charge_now / percent, not verified capacity"));
+                        ? " mAh — charge_now / στάθμη φόρτισης (πιθανή απόκλιση)"
+                        : " mAh — charge_now / charge level (approximate)"));
     }
 }
 
+// Show cycle count only when Android reports a real value.
 if (cycles > 0)
     logLabelOkValue(gr ? "Κύκλοι φόρτισης" : "Cycle count",
             String.valueOf(cycles));
-else
-    logLabelValue(gr ? "Κύκλοι φόρτισης" : "Cycle count",
-            gr ? "Μη διαθέσιμο" : "N/A");
 
 // 🔴 REAL THREADS — SINGLE SOURCE OF TRUTH
 int startThreads =
