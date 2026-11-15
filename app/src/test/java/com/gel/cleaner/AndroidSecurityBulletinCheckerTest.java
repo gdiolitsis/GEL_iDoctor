@@ -51,6 +51,13 @@ public class AndroidSecurityBulletinCheckerTest {
     }
 
     @Test
+    public void doesNotTreatTheBulletinUrlAsAnActualPatchLevel() {
+        // The linked bulletin URL contains 2026-11-01, but the patch column is empty.
+        String html = row("/docs/security/bulletin/2026/2026-11-01", "");
+        assertNull(AndroidSecurityBulletinChecker.parseLatestPublishedPatchLevel(html, TODAY));
+    }
+
+    @Test
     public void recognizesAbsoluteBulletinLinks() {
         String html = row(
                 "https://source.android.com/docs/security/bulletin/2026/2026-11-01",
