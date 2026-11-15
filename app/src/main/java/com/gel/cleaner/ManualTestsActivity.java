@@ -6335,12 +6335,12 @@ if (conf.contains("LOW")) {
 
     logLabelWarnValue(
             gr ? "Σημείωση" : "Note",
-            gr ? "Καταγράφηκε ακουστικό σήμα με περιορισμένη σαφήνεια. "
-                 + "Αυτό μπορεί να οφείλεται στην ακύρωση θορύβου, στην περιορισμένη απόκριση συχνοτήτων, "
-                 + "στη θέση του μικροφώνου ή στον θόρυβο του περιβάλλοντος."
-               : "An acoustic signal was detected with limited clarity. "
-                 + "This may be caused by noise cancellation, limited frequency response, "
-                 + "microphone placement, or background noise."
+            gr ? "Η ένδειξη LOW αφορά την αξιοπιστία της μέτρησης και όχι απόδειξη βλάβης. "
+                 + "Πιθανοί παράγοντες είναι η ακύρωση θορύβου, η επεξεργασία ήχου (DSP), "
+                 + "η απόκριση συχνοτήτων και η θέση του μικροφώνου."
+               : "LOW describes measurement confidence, not a confirmed hardware fault. "
+                 + "Possible factors include noise cancellation, audio processing (DSP), "
+                 + "frequency response and microphone placement."
     );
 
 } else {
@@ -6665,12 +6665,12 @@ appendHtml("<br>");
     logLabelWarnValue(
             gr ? "Σημείωση" : "Note",
             gr
-                    ? "Καταγράφηκε ακουστικό σήμα με περιορισμένη σαφήνεια. "
-                      + "Αυτό μπορεί να οφείλεται στην ακύρωση θορύβου, στην περιορισμένη απόκριση συχνοτήτων, "
-                      + "στη θέση του μικροφώνου ή στον θόρυβο του περιβάλλοντος."
-                    : "An acoustic signal was detected with limited clarity. "
-                      + "This may be caused by noise cancellation, limited frequency response, "
-                      + "microphone placement, or background noise."
+                    ? "Η ένδειξη LOW αφορά την αξιοπιστία της πρόσθετης μέτρησης μικροφώνου μετά την αναπαραγωγή. "
+                      + "Δεν επιβεβαιώνει ούτε απορρίπτει ξεχωριστά τους τέσσερις τόνους. "
+                      + "Πιθανοί παράγοντες είναι ακύρωση θορύβου, DSP και η θέση του μικροφώνου."
+                    : "LOW describes the confidence of the microphone reading after playback. "
+                      + "It does not individually verify or reject the four tones. "
+                      + "Noise cancellation, DSP and microphone placement can affect it."
     );
 
 } else {
