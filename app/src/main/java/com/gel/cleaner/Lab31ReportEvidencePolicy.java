@@ -12,7 +12,9 @@ public final class Lab31ReportEvidencePolicy {
         boolean insideSummary = false;
         for (String row : original.split("\\r?\\n", -1)) {
             String line = row.toLowerCase(Locale.US).trim();
-            if (line.contains("lab 31 —") || line.contains("lab 31 -")) {
+            // New report is Lab 30. Old APK history may still contain Lab 31.
+            // Do not discard a legacy Lab 30 certification merely by its number.
+            if (isPriorReportHeader(line)) {
                 insideSummary = true;
                 continue;
             }
@@ -21,7 +23,9 @@ public final class Lab31ReportEvidencePolicy {
                     insideSummary = false;
                 } else {
                     if (line.contains("lab 31 complete")
-                            || line.contains("lab 31 ολοκληρώθηκε")) {
+                            || line.contains("lab 31 ολοκληρώθηκε")
+                            || line.contains("lab 30 complete")
+                            || line.contains("lab 30 ολοκληρώθηκε")) {
                         insideSummary = false;
                     }
                     continue;
@@ -30,6 +34,19 @@ public final class Lab31ReportEvidencePolicy {
             out.append(row).append('\n');
         }
         return out.toString();
+    }
+
+    private static boolean isPriorReportHeader(String line) {
+        boolean legacy31 = line.contains("lab 31 —") || line.contains("lab 31 -");
+        boolean current30 = line.contains("lab 30 —") || line.contains("lab 30 -");
+        return legacy31 || (current30 && (
+                line.contains("τελικη συνοψη υπαρχοντων τεκμηριων")
+                || line.contains("τελική σύνοψη υπαρχόντων τεκμηρίων")
+                || line.contains("final existing-evidence summary")
+                || line.contains("τελικη τεχνικη αναφορα")
+                || line.contains("τελική τεχνική αναφορά")
+                || line.contains("final technical report")
+        ));
     }
 
     private static boolean isOtherLabHeader(String raw) {
@@ -41,7 +58,7 @@ public final class Lab31ReportEvidencePolicy {
         if (dash < 0) return false;
         try {
             int n = Integer.parseInt(line.substring(4, dash).trim());
-            return n >= 1 && n <= 31 && n != 31;
+            return n >= 1 && n <= 31 && !isPriorReportHeader(line);
         } catch (NumberFormatException ignored) {
             return false;
         }
