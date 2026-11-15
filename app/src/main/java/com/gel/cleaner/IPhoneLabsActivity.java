@@ -1595,6 +1595,7 @@ private void runPanicSignatureParser() {
             logLabelValue(
                     gr ? "Συμβάν " + incidentNumber + " — με απλά λόγια:" : "Incident " + incidentNumber + " — in plain language:",
                     IPhonePanicHumanizer.meaning(sigCrashType, gr));
+            logApplePanicEvidence(block, gr, gr ? "Συμβάν " + incidentNumber : "Incident " + incidentNumber, null);
         }
         logInfo(gr
                 ? "Τα συμβάντα εξετάστηκαν χωριστά. Δεν ενώνουμε λέξεις από διαφορετικά logs για να συμπεράνουμε βλάβη."
@@ -1679,6 +1680,9 @@ if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
             IPhonePanicHumanizer.evidence(sigKeyEvidence, gr)
     );
 }
+
+// Lab 2: make the exact missing sensor / SMC bitmask visible, not just "Watchdog".
+logApplePanicEvidence(panicLogText, gr, gr ? "Εύρημα" : "Finding", null);
 
 // Next step
 logLabelOkValue(
@@ -1888,6 +1892,14 @@ if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
     );
 }
 
+    // Model-scoped hardware clues are observational, not a confirmed repair.
+    java.util.Set<String> lab4Findings = new java.util.LinkedHashSet<>();
+    String[] lab4Blocks = panicLogText.split("(?m)^===== ZIP FILE:");
+    for (String block : lab4Blocks) {
+        if (ApplePanicEvidencePolicy.hasPanicEvidence(block)) {
+            logApplePanicEvidence(block, gr, gr ? "Τεχνική ένδειξη" : "Technical clue", lab4Findings);
+        }
+    }
     appendHtml("<br>");
     logOk(gr ? "Το Lab 4 ολοκληρώθηκε." : "Lab 4 finished.");
     logLine();
@@ -2417,6 +2429,15 @@ appendHtml("<br>");
                 : "No keyword category repeated in the imported sample. This does not rule out a fault.");
     }
 
+    // Explain unique, observed clues without merging tokens across separate logs.
+    java.util.Set<String> summaryFindings = new java.util.LinkedHashSet<>();
+    for (String block : blocks) {
+        if (ApplePanicEvidencePolicy.hasPanicEvidence(block)) {
+            logApplePanicEvidence(block, gr,
+                    gr ? "Τεκμηριωμένη ένδειξη" : "Extracted clue", summaryFindings);
+        }
+    }
+
     logLabelValue(
             gr ? "Τι δεν έχει επιβεβαιωθεί:" : "Not established:",
             gr
@@ -2582,6 +2603,42 @@ private String sigCrashType   = CRASH_UNKNOWN;
 private String sigDomain      = CRASH_UNKNOWN;
 private String sigConfidence  = CONF_LOW;
 private String sigKeyEvidence = "";
+
+/**
+ * Print only evidence actually present within this panic block.
+ * A repeated code is shown once per summary and is never counted as a
+ * confirmed failure or as a measured repair probability.
+ */
+private void logApplePanicEvidence(String block, boolean gr, String heading,
+        java.util.Set<String> alreadyShown) {
+    ApplePanicHardwareHints.Assessment findings =
+            ApplePanicHardwareHints.examineOne(block);
+    int rendered = 0;
+    for (ApplePanicHardwareHints.Finding finding : findings.findings) {
+        String key = findings.modelIdentifier + "|" + finding.code;
+        if (alreadyShown != null && !alreadyShown.add(key)) continue;
+        if (rendered++ >= 12) {
+            logInfo(gr
+                    ? "Επιπλέον ευρήματα παραλείφθηκαν από τη σύντομη προβολή."
+                    : "Additional findings omitted from the short display.");
+            break;
+        }
+        logLabelOkValue(heading + ":", finding.code);
+        if (!"Unknown".equals(findings.modelIdentifier)) {
+            logLabelValue(gr ? "Κωδικός συσκευής:" : "Device identifier:",
+                    findings.modelIdentifier);
+        }
+        logLabelValue(gr ? "Τι μπορεί να αφορά:" : "What it may concern:",
+                finding.area(gr));
+        logLabelValue(gr ? "Ασφαλές επόμενο βήμα:" : "Safe next check:",
+                finding.action(gr));
+    }
+    if (rendered > 0) {
+        logInfo(gr
+                ? "Τα παραπάνω είναι ενδείξεις από αρχεία. Δεν αποδεικνύουν χαλασμένο εξάρτημα ούτε πιστοποιούν επισκευή."
+                : "These are clues from imported files; no failed component or completed repair has been verified.");
+    }
+}
 
 private void parseAndCacheSignature(String text) {
 
