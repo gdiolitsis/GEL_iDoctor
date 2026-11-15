@@ -104,16 +104,17 @@ public class IPhoneKnownRepairEmulatorTest {
             // Separate classification of generic event and part-level diagnosis.
             // The current nine JSON rules may identify Watchdog without the mic2
             // sensor or its physical flex; that is a meaningful NEGATIVE result.
-            boolean specificSensorNamed =
-                    output.contains("Missing sensor(s): mic2")
-                    || output.contains("αισθητήρας mic2")
-                    || output.contains("αισθητήρα mic2")
-                    || output.contains("sensor mic2");
+            boolean specificSensorNamed = output.contains("MIC2")
+                    && output.contains("πίσω μικρόφωνο");
             boolean powerFlexIdentified =
                     output.toLowerCase(java.util.Locale.ROOT).contains("power-button flex")
                     || output.contains("καλωδιοταινία κουμπιού");
             Log.i(TAG, "GENERAL_WATCHDOG_RECOGNIZED=true");
             Log.i(TAG, "SPECIFIC_MIC2_RECOGNIZED=" + specificSensorNamed);
+            assertTrue("Concrete mic2 sensor not shown to user: " + output,
+                    specificSensorNamed);
+            assertTrue("Source-backed iPhone 11 flex area not shown: " + output,
+                    powerFlexIdentified);
             Log.i(TAG, "CONFIRMED_REPAIR_PART_IDENTIFIED=" + powerFlexIdentified);
             Log.i(TAG, "CASE_SOURCE=https://www.ifixit.com/Answers/View/805260/");
             Log.i(TAG, "CASE_TYPE=ABRIDGED_RECONSTRUCTION_NOT_ORIGINAL_FULL_LOG");
@@ -121,4 +122,107 @@ public class IPhoneKnownRepairEmulatorTest {
                     output.contains("75/100"));
         }
     }
+    /**
+     * Test the same full 8-Lab Android Activity against five independent panic
+     * signature reconstructions. Every case has an explicit expected result.
+     * Does not alter PRO entitlement or use a customer device.
+     */
+    @Test
+    public void multiplePublishedSignatureFamiliesReachAllEightLabs() throws Exception {
+        final String[][] cases = {
+                {
+                    "14-plus-wireless",
+                    "iPhone14,8",
+                    "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "
+                        + "S.sensor array 0 - 4 is 0x0, 0x400000, 0x0, 0x0, 0x0",
+                    "SMC 0x400000", "πηνίο ασύρματης φόρτισης"
+                },
+                {
+                    "14-pro-same-code-not-mapped",
+                    "iPhone15,2",
+                    "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "
+                        + "S.sensor array 0 - 4 is 0x0, 0x400000, 0x0, 0x0, 0x0",
+                    "SMC 0x400000", "δεν υπάρχει ασφαλής"
+                },
+                {
+                    "13-pro-charge-port",
+                    "iPhone14,2",
+                    "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "
+                        + "S.sensor array 0 - 4 is 0x0, 0x800, 0x0, 0x0, 0x0",
+                    "SMC 0x800", "θύρα φόρτισης"
+                },
+                {
+                    "16-pro-decimal-code",
+                    "iPhone17,1",
+                    "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "
+                        + "S.sensor array 0 - 4 is 0, 3145728, 0, 0, 0",
+                    "SMC 0x300000", "θύρα φόρτισης"
+                },
+                {
+                    "watchdog-no-missing-sensor",
+                    "iPhone12,1",
+                    "userspace watchdog timeout: no successful checkins from SpringBoard",
+                    "WATCHDOG_NO_MISSING_SENSOR", "χωρίς συγκεκριμένο ελλείποντα αισθητήρα"
+                }
+        };
+        for (String[] row : cases) {
+            Context context = ApplicationProvider.getApplicationContext();
+            context.getSharedPreferences("gel_prefs", Context.MODE_PRIVATE)
+                    .edit().putBoolean("panic_guide_hidden", true).commit();
+            String excerpt = "{\"product\":\"" + row[1] + "\",\"panicString\":\""
+                    + "panic(cpu 0 caller 0x0): " + row[2] + "\"}";
+            try (ActivityScenario<IPhoneLabsActivity> scenario =
+                    ActivityScenario.launch(IPhoneLabsActivity.class)) {
+                scenario.onActivity(activity -> {
+                    try {
+                        TextView view = (TextView) getPrivateField(activity, "txtLog");
+                        view.setText("");
+                        setPrivateField(activity, "panicLogText", excerpt);
+                        setPrivateField(activity, "panicLogLoaded", true);
+                        setPrivateField(activity, "panicLogName", "qa-source-backed.txt");
+                        setPrivateField(activity, "panicLogCount", 1);
+                        Method method = activity.getClass()
+                                .getDeclaredMethod("runAllAppleDiagnostics");
+                        method.setAccessible(true);
+                        method.invoke(activity);
+                    } catch (Exception e) {
+                        throw new AssertionError("Could not start all 8 Labs for " + row[0], e);
+                    }
+                });
+                AtomicReference<String> logText = new AtomicReference<>("");
+                boolean finished = false;
+                for (int attempt = 0; attempt < 70; attempt++) {
+                    scenario.onActivity(activity -> {
+                        try {
+                            TextView view = (TextView) getPrivateField(activity, "txtLog");
+                            logText.set(view.getText().toString());
+                        } catch (Exception e) {
+                            throw new AssertionError(e);
+                        }
+                    });
+                    String output = logText.get();
+                    if (output.contains("Lab 8 ολοκληρώθηκε")
+                            || output.contains("Lab 8 finished")) {
+                        finished = true;
+                        break;
+                    }
+                    Thread.sleep(300);
+                }
+                String result = logText.get();
+                assertTrue("8 Labs never finished for " + row[0], finished);
+                assertTrue("Missing specific evidence " + row[3] + " for " + row[0]
+                                + " / output=" + result, result.contains(row[3]));
+                assertTrue("Missing safe area interpretation for " + row[0]
+                                + " / output=" + result, result.contains(row[4]));
+                assertFalse("Uncalibrated health percentage reappeared",
+                        result.contains("75/100"));
+                if (row[0].equals("watchdog-no-missing-sensor")) {
+                    assertFalse("Invented missing mic2 code on bare watchdog",
+                            result.contains("MIC2"));
+                }
+                Log.i(TAG, "MATRIX_CASE=" + row[0] + " RESULT=PASS CODE=" + row[3]);
+            }
+        }
+    }
+
 }
