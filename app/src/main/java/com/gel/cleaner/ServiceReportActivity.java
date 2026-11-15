@@ -66,6 +66,7 @@ public class ServiceReportActivity extends GELAutoActivityHook {
             new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable htmlPrintTimeout;
     private boolean htmlPrintRequested;
+    private Runnable reportAuthorisationTimeout;
 
     // STEP 2 — billing/report entitlement bridge.
     private GelBillingManager billingManager;
@@ -317,19 +318,54 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         final String identity = singleReportIdentity;
         final String attempt = exportAttempt;
         lockExportUI(true);
-        GelReportStore.prepare(this, identity, attempt, choice == 2, (ok,code,message) -> {
+
+        // Server verification is separate from WebView loading. It also needs
+        // a bounded wait, otherwise Firebase/network outages leave the spinner
+        // visible indefinitely with both export buttons disabled.
+        cancelReportAuthorisationTimeout();
+        final Runnable authTimeout = () -> {
+            if (!attempt.equals(exportAttempt) || reportAuthorisationTimeout == null) return;
+            reportAuthorisationTimeout = null;
+            reportServerAuthorised = false;
             lockExportUI(false);
-            if (isFinishing()) return;
-            if (!ok) {
-                if (choice == 1 && "RESOURCE_EXHAUSTED".equals(code)) {
-                    pendingSingleReportExport = true; billingManager.launchSingleReportPurchase(this);
-                } else if (choice == 2 && "PERMISSION_DENIED".equals(code)) billingManager.launchCustomReportsPurchase(this);
-                else Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-                return;
-            }
-            reportServerAuthorised = true;
-            continuePreparedExport();
-        });
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Η επαλήθευση αναφοράς καθυστέρησε. Δοκιμάστε ξανά."
+                    : "Report verification timed out. Please retry.",
+                    Toast.LENGTH_LONG).show();
+        };
+        reportAuthorisationTimeout = authTimeout;
+        htmlPrintHandler.postDelayed(authTimeout, 30000L);
+
+        try {
+            GelReportStore.prepare(this, identity, attempt, choice == 2, (ok,code,message) ->
+                    runOnUiThread(() -> {
+                        // Ignore a late response after the timeout or a new
+                        // export attempt. Do not start a second export.
+                        if (reportAuthorisationTimeout != authTimeout) return;
+                        cancelReportAuthorisationTimeout();
+                        lockExportUI(false);
+                        if (isFinishing() || isDestroyed()) return;
+                        if (!ok) {
+                            if (choice == 1 && "RESOURCE_EXHAUSTED".equals(code)) {
+                                pendingSingleReportExport = true;
+                                billingManager.launchSingleReportPurchase(this);
+                            } else if (choice == 2 && "PERMISSION_DENIED".equals(code)) {
+                                billingManager.launchCustomReportsPurchase(this);
+                            } else {
+                                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                            }
+                            return;
+                        }
+                        reportServerAuthorised = true;
+                        continuePreparedExport();
+                    }));
+        } catch (Exception e) {
+            cancelReportAuthorisationTimeout();
+            lockExportUI(false);
+            Toast.makeText(this, AppLang.isGreek(this)
+                    ? "Η επαλήθευση της αναφοράς απέτυχε."
+                    : "Report verification failed.", Toast.LENGTH_LONG).show();
+        }
     }
 
     private void continuePreparedExport() {
@@ -2149,6 +2185,13 @@ private void exportHtmlPdf(String report) {
     }
 }
 
+private void cancelReportAuthorisationTimeout() {
+    if (reportAuthorisationTimeout != null) {
+        htmlPrintHandler.removeCallbacks(reportAuthorisationTimeout);
+        reportAuthorisationTimeout = null;
+    }
+}
+
 private void cancelHtmlPrintTimeout() {
     if (htmlPrintTimeout != null) {
         htmlPrintHandler.removeCallbacks(htmlPrintTimeout);
@@ -2891,6 +2934,7 @@ private void sharePdf(Uri uri) {
 
     @Override
     protected void onDestroy() {
+        cancelReportAuthorisationTimeout();
         cleanupHtmlPrintWebView();
         if (billingManager != null) {
             billingManager.close();
