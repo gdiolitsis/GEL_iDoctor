@@ -51,14 +51,21 @@ public final class IPhonePanicHumanizer {
         }
         switch (term) {
             case "Kernel / OS Core": return "Πυρήνας λειτουργικού συστήματος (Kernel / OS Core)";
+            case "Kernel / OS": return "Πυρήνας του iOS (Kernel / OS)";
+            case "System / Watchdog": return "Έλεγχος απόκρισης συστήματος (System / Watchdog)";
+            case "Thermal / Sensors": return "Αισθητήρες θερμοκρασίας (Thermal / Sensors)";
+            case "Thermal / Shutdown": return "Θερμική προστασία και διακοπή (Thermal / Shutdown)";
             case "Thermal / Cooling": return "Θερμική διαχείριση (Thermal / Cooling)";
             case "Thermal": return "Θερμική διαχείριση (Thermal)";
+            case "Memory / RAM": return "Μνήμη λειτουργίας (Memory / RAM)";
             case "Memory / OS Pressure": return "Διαχείριση μνήμης (Memory / OS Pressure)";
             case "Memory": return "Διαχείριση μνήμης (Memory)";
             case "GPU / Graphics":
             case "GPU": return "Γραφικά / επεξεργαστής γραφικών (GPU)";
+            case "Baseband / Modem":
             case "Baseband / Cellular":
             case "Baseband": return "Λειτουργίες κινητής τηλεφωνίας (Baseband)";
+            case "Storage / NAND":
             case "Storage / NAND / FS":
             case "Storage": return "Αποθηκευτικός χώρος (Storage / NAND)";
             case "Power / PMIC":
@@ -115,22 +122,38 @@ public final class IPhonePanicHumanizer {
         if ("HIGH".equalsIgnoreCase(term)) return "Υψηλό βάρος κανόνα (όχι βαρύτητα βλάβης)";
         if ("MEDIUM".equalsIgnoreCase(term)) return "Μεσαίο βάρος κανόνα (όχι βαρύτητα βλάβης)";
         if ("LOW".equalsIgnoreCase(term)) return "Χαμηλό βάρος κανόνα (όχι βαρύτητα βλάβης)";
+        if ("CRITICAL".equalsIgnoreCase(term)) return "Πολύ υψηλό βάρος κανόνα (όχι διάγνωση βλάβης)";
         return term;
     }
 
+    /** All nine OEM-independent JSON keyword rules have a conservative Greek explanation. */
     public static String possibleCause(String raw, boolean greek) {
         if (!greek) return ApplePanicEvidencePolicy.possibleCause(raw);
         String term = text(raw);
-        if ("Unknown".equals(term))
-            return "Το αρχείο δεν επιτρέπει να προσδιορίσουμε την αιτία.";
-        String lower = term.toLowerCase(Locale.ROOT);
-        if (lower.contains("watchdog") && lower.contains("timeout"))
-            return "Το αρχείο αναφέρει ότι μια λειτουργία δεν αποκρίθηκε έγκαιρα. "
-                    + "Δεν προκύπτει ποιο εξάρτημα, αν κάποιο, ευθύνεται.";
-        if (lower.contains("thermal"))
-            return "Το αρχείο περιέχει θερμική ένδειξη. Δεν επιβεβαιώνεται "
-                    + "υπερθέρμανση ή βλάβη της συσκευής χωρίς πρόσθετο έλεγχο.";
-        return "Ο κανόνας δίνει μη επιβεβαιωμένη υπόθεση. Τεχνική περιγραφή: " + term;
+        switch (term) {
+            case "Thermal sensor not responding (I2C line)":
+                return "Ο κανόνας βρήκε όρους πιθανής δυσκολίας επικοινωνίας με αισθητήρα θερμοκρασίας. Δεν έχει επιβεβαιωθεί βλάβη αισθητήρα.";
+            case "Power management instability":
+                return "Εντοπίστηκαν όροι σχετικοί με τη διαχείριση ενέργειας. Δεν αποδεικνύεται βλάβη της τροφοδοσίας.";
+            case "System freeze or watchdog deadlock":
+                return "Το αρχείο περιέχει ένδειξη μη απόκρισης λειτουργίας. Δεν αποδεικνύει ελαττωματικό εξάρτημα.";
+            case "Storage read/write failure":
+                return "Υπάρχουν όροι που παραπέμπουν σε σφάλμα ανάγνωσης ή εγγραφής. Δεν μετρήθηκε η υγεία του αποθηκευτικού μέσου.";
+            case "Baseband processor crash or communication failure":
+                return "Η καταγραφή περιέχει όρους δικτύου κινητής τηλεφωνίας. Δεν επιβεβαιώθηκε βλάβη μόντεμ.";
+            case "Unrecoverable memory fault detected":
+                return "Ο κανόνας εντόπισε όρους σχετικούς με πρόβλημα μνήμης. Δεν επιβεβαιώνεται φυσική βλάβη RAM.";
+            case "Kernel assertion failure":
+                return "Το αρχείο αναφέρει αστοχία εσωτερικού ελέγχου του λειτουργικού. Δεν προκύπτει φυσική αιτία.";
+            case "Watchdog timeout reported in a panic entry; component cause unknown":
+                return "Το αρχείο αναφέρει ότι μια λειτουργία δεν αποκρίθηκε έγκαιρα. Δεν προκύπτει ποιο εξάρτημα, αν κάποιο, ευθύνεται.";
+            case "Thermal shutdown reported in a panic entry; sensor fault unconfirmed":
+                return "Το αρχείο αναφέρει θερμική διακοπή. Δεν επιβεβαιώνεται υπερθέρμανση ή βλάβη αισθητήρα χωρίς πρόσθετο έλεγχο.";
+            case "Unknown":
+                return "Το αρχείο δεν επιτρέπει να προσδιορίσουμε την αιτία.";
+            default:
+                return "Ο κανόνας προτείνει μια μη επιβεβαιωμένη υπόθεση. Τεχνική περιγραφή: " + term;
+        }
     }
 
     public static String evidence(String raw, boolean greek) {
