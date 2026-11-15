@@ -24,10 +24,22 @@ public final class Lab28DirectEvidenceReportContractTest {
 
     @Test public void titleMatchesActualObservedScope() throws Exception {
         String s = source();
-        assertTrue(s.contains("PRO  28. Καταγραφές λειτουργίας και μετρήσεις"));
+        assertTrue(s.contains("\"28. Καταγραφές λειτουργίας και μετρήσεις\""));
+        assertFalse(s.contains("PRO  28. Καταγραφές λειτουργίας και μετρήσεις"));
         assertTrue(s.contains("LAB 28 — Καταγραφές λειτουργίας και μετρήσεις"));
         assertFalse(s.contains("PRO  28. Σταθερότητα Υλικού & Ακεραιότητα"));
         assertTrue(s.contains("Το εργαστήριο εμφανίζει διαθέσιμες μετρήσεις"));
+    }
+
+    @Test public void proAccessIsOnLab29NotLab28() throws Exception {
+        String s = source();
+        String lab28 = lab();
+        int a = s.indexOf("private void lab29DeviceAuthenticity() {");
+        int b = s.indexOf("private void runLab29DeviceAuthenticity()", a);
+        assertTrue(a >= 0 && b > a);
+        assertFalse(lab28.contains("requireGelPro("));
+        assertTrue(s.substring(a, b).contains("requireGelPro("));
+        assertTrue(s.contains("PRO  29. Προέλεγχος Μεταχειρισμένης"));
     }
 
     @Test public void temperatureAndUptimeReadingsHaveEvidenceBasedColors() throws Exception {
