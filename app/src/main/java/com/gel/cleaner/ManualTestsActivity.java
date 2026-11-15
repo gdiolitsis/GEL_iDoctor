@@ -30732,6 +30732,12 @@ private static class Lab28EvidenceReader {
 // Only confirmed signals — no heuristics
 // ============================================================
 private void lab29DeviceAuthenticity() {
+    // Only warn when the connection is not validated; an offline OEM profile
+    // can still be compared without pretending that a live lookup took place.
+    Lab29ConnectivityGate.runOrPrompt(this, this::runLab29DeviceAuthenticity);
+}
+
+private void runLab29DeviceAuthenticity() {
 
     final boolean gr = AppLang.isGreek(this);
 
