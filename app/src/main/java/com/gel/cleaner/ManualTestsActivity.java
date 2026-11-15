@@ -27524,43 +27524,18 @@ private void lab19RamSnapshot() {
         logInfo(gr ? "Αξιολόγηση πίεσης RAM:" : "RAM pressure assessment:");
         logLine();
 
-        // Real Android low-memory evidence takes precedence. Use the
-        // platform's own device-specific threshold rather than an arbitrary
-        // percentage cut-off for warning about low available RAM.
-        RamEvidencePolicy.Assessment ramAssessment =
-                mi.lowMemory ? RamEvidencePolicy.Assessment.ANDROID_LOW_MEMORY
-                : (mi.threshold > 0L && mi.availMem <= mi.threshold)
-                ? RamEvidencePolicy.Assessment.LOW_AVAILABLE_RAM
-                : RamEvidencePolicy.Assessment.NO_OS_LOW_MEMORY_SIGNAL;
-        switch (ramAssessment) {
-            case ANDROID_LOW_MEMORY:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Το Android αναφέρει κατάσταση χαμηλής μνήμης"
-                           : "Android reports a low-memory condition"
-                );
-                break;
-            case LOW_AVAILABLE_RAM:
-                logLabelWarnValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Μικρό διαθέσιμο περιθώριο RAM — χωρίς σήμα low-memory από Android"
-                           : "Low available RAM headroom — no Android low-memory signal"
-                );
-                break;
-            case NO_OS_LOW_MEMORY_SIGNAL:
-                // Green only for the observed Android flag, never for RAM health.
-                logLabelOkValue(
-                        gr ? "Σήμα Android" : "Android signal",
-                        gr ? "Δεν δηλώθηκε κατάσταση low-memory στο τρέχον στιγμιότυπο"
-                           : "No low-memory flag in the current snapshot"
-                );
-                break;
-            default:
-                logLabelValue(
-                        gr ? "Κατάσταση" : "Status",
-                        gr ? "Μη επαρκή στοιχεία για πίεση RAM"
-                           : "Insufficient RAM pressure evidence"
-                );
+        // Report ONLY the Android lowMemory flag. A device-specific
+        // threshold is informative but must not manufacture another alarm.
+        if (mi.lowMemory) {
+            logLabelWarnValue(
+                    gr ? "Σήμα Android" : "Android signal",
+                    gr ? "Το Android αναφέρει κατάσταση χαμηλής μνήμης"
+                       : "Android reports a low-memory condition");
+        } else {
+            logLabelOkValue(
+                    gr ? "Σήμα Android" : "Android signal",
+                    gr ? "Δεν δηλώθηκε κατάσταση low-memory στο τρέχον στιγμιότυπο"
+                       : "No low-memory flag in the current snapshot");
         }
         if (mi.threshold > 0L) {
             logLabelOkValue(
