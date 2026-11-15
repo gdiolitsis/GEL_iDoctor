@@ -1,4 +1,4 @@
-name: Candidate source-built Android UI QA
+name: Candidate source-built Android UI QA v55 consolidated
 on:
   pull_request:
     paths:
@@ -14,8 +14,8 @@ concurrency:
 jobs:
   build-candidate:
     # Owner requested one consolidated signed QA APK to test accumulated changes.
-    # Restricted to the surgical QA PR branch; never publish or merge to main.
-    if: ${{ github.head_ref == 'qa/gel31-surgical-rebuild-20261113' && github.event.pull_request.head.repo.full_name == github.repository }}
+    # Restricted to the consolidated v55 candidate PR branch; never publish or merge to main.
+    if: ${{ github.head_ref == 'qa/v55-all-labs-signed-candidate-20261115' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
