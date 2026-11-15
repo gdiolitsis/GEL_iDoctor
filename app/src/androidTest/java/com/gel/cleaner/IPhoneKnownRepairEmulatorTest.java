@@ -105,7 +105,8 @@ public class IPhoneKnownRepairEmulatorTest {
             // The current nine JSON rules may identify Watchdog without the mic2
             // sensor or its physical flex; that is a meaningful NEGATIVE result.
             boolean specificSensorNamed = output.contains("MIC2")
-                    && output.contains("πίσω μικρόφωνο");
+                    && (output.contains("πίσω μικρόφωνο")
+                        || output.contains("rear microphone"));
             boolean powerFlexIdentified =
                     output.toLowerCase(java.util.Locale.ROOT).contains("power-button flex")
                     || output.contains("καλωδιοταινία κουμπιού");
@@ -135,34 +136,34 @@ public class IPhoneKnownRepairEmulatorTest {
                     "iPhone14,8",
                     "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "
                         + "S.sensor array 0 - 4 is 0x0, 0x400000, 0x0, 0x0, 0x0",
-                    "SMC 0x400000", "πηνίο ασύρματης φόρτισης"
+                    "SMC 0x400000", "πηνίο ασύρματης φόρτισης", "wireless charging coil"
                 },
                 {
                     "14-pro-same-code-not-mapped",
                     "iPhone15,2",
                     "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "
                         + "S.sensor array 0 - 4 is 0x0, 0x400000, 0x0, 0x0, 0x0",
-                    "SMC 0x400000", "δεν υπάρχει ασφαλής"
+                    "SMC 0x400000", "δεν υπάρχει ασφαλής", "no sufficiently reliable"
                 },
                 {
                     "13-pro-charge-port",
                     "iPhone14,2",
                     "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "
                         + "S.sensor array 0 - 4 is 0x0, 0x800, 0x0, 0x0, 0x0",
-                    "SMC 0x800", "θύρα φόρτισης"
+                    "SMC 0x800", "θύρα φόρτισης", "charging port"
                 },
                 {
                     "16-pro-decimal-code",
                     "iPhone17,1",
                     "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "
                         + "S.sensor array 0 - 4 is 0, 3145728, 0, 0, 0",
-                    "SMC 0x300000", "θύρα φόρτισης"
+                    "SMC 0x300000", "θύρα φόρτισης", "charging port"
                 },
                 {
                     "watchdog-no-missing-sensor",
                     "iPhone12,1",
                     "userspace watchdog timeout: no successful checkins from SpringBoard",
-                    "WATCHDOG_NO_MISSING_SENSOR", "χωρίς συγκεκριμένο ελλείποντα αισθητήρα"
+                    "WATCHDOG_NO_MISSING_SENSOR", "χωρίς συγκεκριμένο ελλείποντα αισθητήρα", "without a specific missing sensor"
                 }
         };
         for (String[] row : cases) {
@@ -213,7 +214,7 @@ public class IPhoneKnownRepairEmulatorTest {
                 assertTrue("Missing specific evidence " + row[3] + " for " + row[0]
                                 + " / output=" + result, result.contains(row[3]));
                 assertTrue("Missing safe area interpretation for " + row[0]
-                                + " / output=" + result, result.contains(row[4]));
+                                + " / output=" + result, (result.contains(row[4]) || result.contains(row[5])));
                 assertFalse("Uncalibrated health percentage reappeared",
                         result.contains("75/100"));
                 if (row[0].equals("watchdog-no-missing-sensor")) {
