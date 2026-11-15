@@ -1016,29 +1016,25 @@ private boolean oldKeepScreenOn = false;
                                 ? "Επαγγελματική διάγνωση μπαταρίας\n\n" +
                                   "Το LAB 14A πραγματοποιεί προηγμένο stress test και αξιολογεί:\n\n" +
                                   "✓ Πτώση τάσης υπό φορτίο (Voltage Sag)\n" +
-                                  "✓ Δυναμική / εσωτερική αντίσταση μπαταρίας\n" +
+                                  "✓ Πειραματικός δείκτης μεταβολής τάσης (όχι ESR)\n" +
                                   "✓ Ανάκαμψη τάσης μετά από φορτίο\n" +
                                   "✓ Ικανότητα παροχής ισχύος\n" +
                                   "✓ Θερμική συμπεριφορά υπό καταπόνηση\n" +
-                                  "✓ Ισορροπία και ηλεκτρική συμπεριφορά κυψελών\n" +
                                   "✓ Ενδείξεις Voltage Collapse\n" +
-                                  "✓ Ενδείξεις διόγκωσης / αστάθειας\n" +
-                                  "✓ Calibration Drift\n" +
+                                  "✓ Ενδείξεις απόκλισης στάθμης φόρτισης\n" +
                                   "✓ Σύγκριση επαναλαμβανόμενων διαγνωστικών μετρήσεων\n\n" +
-                                  "Τελική αξιολόγηση κατάστασης μπαταρίας"
+                                  "Πειραματική αξιολόγηση απόκρισης σε φορτίο (όχι SoH)"
                                 : "Professional battery diagnostics\n\n" +
                                   "LAB 14A performs an advanced stress test and evaluates:\n\n" +
                                   "✓ Voltage sag under load\n" +
-                                  "✓ Dynamic / internal battery resistance\n" +
+                                  "✓ Experimental voltage-response proxy (not ESR)\n" +
                                   "✓ Voltage recovery after load\n" +
                                   "✓ Power delivery capability\n" +
                                   "✓ Thermal behavior under stress\n" +
-                                  "✓ Cell balance and electrical behavior\n" +
                                   "✓ Voltage collapse indicators\n" +
-                                  "✓ Swelling / instability indicators\n" +
-                                  "✓ Calibration drift\n" +
+                                  "✓ Charge level deviation indicators\n" +
                                   "✓ Comparison of repeated diagnostic measurements\n\n" +
-                                  "Final battery condition assessment"
+                                  "Experimental load response assessment (not SoH)"
                 );
             }
 
@@ -13972,17 +13968,21 @@ logLabelValue(
 );
 
 if (baselineFullMah > 0) {
-    String capacitySource = start.chargeFullMah > 0
-            ? (gr ? "τιμή Android charge_full" : "Android charge_full report")
-            : start.chargeDesignMah > 0
-            ? (gr ? "ονομαστική σχεδίασης" : "design specification")
-            : (gr ? "εκτίμηση από στάθμη/charge_now" : "extrapolated from level/charge_now");
-    logLabelValue(gr ? "Χωρητικότητα αναφοράς" : "Capacity reference",
-            baselineFullMah + " mAh (" + capacitySource + ")");
-} else {
-    logLabelValue(gr ? "Χωρητικότητα αναφοράς" : "Capacity reference",
-            gr ? "Μ/Δ — δεν τεκμηριώθηκε χωρητικότητα"
-               : "N/A — capacity not established");
+    if (start.chargeFullMah > 0) {
+        logLabelOkValue(gr ? "Χωρητικότητα πλήρους φόρτισης (Android)" : "Full-charge capacity (Android)",
+                baselineFullMah + (gr ? " mAh — αναφορά συστήματος, όχι μέτρηση SoH"
+                                       : " mAh — reported by Android, not measured SoH"));
+    } else if (start.chargeDesignMah > 0) {
+        logLabelOkValue(gr ? "Ονομαστική χωρητικότητα σχεδίασης" : "Reported design capacity",
+                baselineFullMah + (gr ? " mAh — ονομαστική τιμή, όχι σημερινή υγεία"
+                                       : " mAh — nominal value, not current health"));
+    } else {
+        // Inferred from charge counter / state-of-charge; not a measured capacity.
+        logLabelValue(gr ? "Εκτιμώμενη χωρητικότητα πλήρους φόρτισης" : "Estimated full-charge capacity",
+                baselineFullMah + (gr
+                        ? " mAh — εκτίμηση από charge_now / ποσοστό, όχι επαληθευμένη χωρητικότητα"
+                        : " mAh — extrapolated from charge_now / percent, not verified capacity"));
+    }
 }
 
 if (cycles > 0)
@@ -14820,12 +14820,7 @@ if (energyValid) {
 
 } else {
 
-    logLabelWarnValue(
-            gr ? "Ενεργειακή αποδοτικότητα"
-               : "Energy efficiency",
-            gr ? "Μη διαθέσιμη / μη αξιόπιστη"
-               : "N/A / unreliable"
-    );
+    // No computed efficiency metric: do not emit a fake diagnostic entry.
 }
 
 // =====================================================
@@ -14888,8 +14883,8 @@ if (lab14_systemLimited[0]) {
 } else if ("Weak".equals(labelSafe)) {
 
     recommendation = gr
-            ? "Ενδείξεις αυξημένης φθοράς. Συνιστάται επανάληψη του διαγνωστικού ελέγχου και τεχνική αξιολόγηση. Δεν προτείνεται αντικατάσταση χωρίς επιβεβαιωμένα ευρήματα."
-            : "Increased battery wear indicators detected. A repeat diagnostic test and professional evaluation are recommended. Replacement is not advised without confirmed findings.";
+            ? "Στη συγκεκριμένη δοκιμή μετρήθηκε αυξημένη πτώση τάσης. Επαναλάβετε σε συγκρίσιμες συνθήκες πριν συναχθεί συμπέρασμα για φθορά. Δεν τεκμηριώνεται ανάγκη αντικατάστασης."
+            : "Voltage sag was elevated in this trial. Repeat under comparable conditions before inferring wear. Replacement is not established.";
 
 // 🔴 PRIORITY 4 — CALIBRATION
 } else if (calibrationDrift != null && calibrationDrift.length > 0 && calibrationDrift[0]) {
@@ -15054,27 +15049,6 @@ private void lab14LogFinalScore(
                     ? (gr ? "Παρατηρήθηκε μοτίβο — απαιτείται επαλήθευση" : "Pattern flagged — verification required")
                     : (gr ? "Δεν επισημάνθηκε στο συγκεκριμένο τεστ" : "Not flagged in this trial")
     );
-
-    // ----------------------------------------------------
-    // 🔴 SWELLING
-    // ----------------------------------------------------
-    if (smartSwelling) {
-
-        logLabelWarnValue(
-                gr ? "Έμμεση ένδειξη δοκιμής" : "Indirect stress indicator",
-                gr
-                        ? "Ασυνήθιστη απόκριση· ΔΕΝ είναι μέτρηση φυσικής διόγκωσης. Απαιτείται επιθεώρηση από τεχνικό εάν υπάρχει φυσικό σύμπτωμα."
-                        : "Unusual response; NOT a physical swelling measurement. Seek technician inspection if there is a physical symptom."
-        );
-
-    } else {
-
-        logLabelValue(
-                gr ? "Φυσική διόγκωση" : "Physical swelling",
-                gr ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — απαιτείται φυσική επιθεώρηση"
-                   : "NOT TESTED — physical inspection required"
-        );
-    }
 
     // ----------------------------------------------------
     // 🔴 CALIBRATION
@@ -17372,6 +17346,8 @@ res.batteryBehaviourWarning =
 
 final long baselineFullFinal = baselineFullMah;
 final long drainMahFinal = drainMah;
+final boolean hasReportedCapacityForComparison =
+        start.chargeFullMah > 0 || start.chargeDesignMah > 0;
 
 
 // ----------------------------
@@ -17393,34 +17369,18 @@ runOnUiThread(() -> {
     }
 
 
-    if (validDrain &&
-        !lab14_systemLimited[0] &&
-        baselineFullFinal > 100 &&
-        drainMahFinal > 0) {
-
+    // Only Android-reported capacity participates in this limited consistency
+    // check. Level-derived estimates are not declared or verified capacity.
+    if (hasReportedCapacityForComparison && validDrain &&
+            !lab14_systemLimited[0] && baselineFullFinal > 100 && drainMahFinal > 0) {
         if (unrealCapFinal) {
-
-            logLabelWarnValue(
-                gr
-                ? "Έλεγχος δηλωμένης χωρητικότητας"
-                : "Declared capacity check",
-
-                gr
-                ? "Η δηλωμένη χωρητικότητα διαφέρει από τις συγκρίσιμες μετρήσεις της δοκιμής."
-                : "Reported capacity differs from the comparable test readings."
-            );
-
+            logLabelWarnValue(gr ? "Συνοχή αναφερόμενης χωρητικότητας" : "Reported capacity consistency",
+                    gr ? "Ασυμβατότητα δείγματος — προτείνεται επανάληψη"
+                       : "Sample inconsistency — retesting recommended");
         } else {
-
-            logLabelOkValue(
-                gr
-                ? "Έλεγχος δηλωμένης χωρητικότητας"
-                : "Declared capacity check",
-
-                gr
-                ? "Δεν εντοπίστηκε αντίφαση στο δείγμα· η χωρητικότητα δεν επαληθεύτηκε."
-                : "No conflict seen in sample; full capacity not verified."
-            );
+            logLabelOkValue(gr ? "Συνοχή αναφερόμενης χωρητικότητας" : "Reported capacity consistency",
+                    gr ? "Δεν εντοπίστηκε ασυμβατότητα (όχι μέτρηση πραγματικής χωρητικότητας)"
+                       : "No sample inconsistency (not a measurement of actual capacity)");
         }
     }
 
@@ -17541,46 +17501,6 @@ if (hasSag &&
     logLabelWarnValue(
             gr ? "Έμμεση απόκριση τάσης"
                : "Indirect voltage response",
-            gr
-                    ? "Ανεπαρκή δεδομένα"
-                    : "Insufficient data"
-    );
-}
-
-// =====================================================
-// 🔴 CELL BALANCE (FINAL - no legacy sag1/sag2)
-// =====================================================
-
-if (hasSag &&
-    validDrain &&
-    !lab14_systemLimited[0]) {
-
-    if (cellImbalanceRisk[0]) {
-
-        logLabelWarnValue(
-                gr ? "Έμμεσος δείκτης (όχι μέτρηση κυψελών)"
-                   : "Indirect proxy (not cell measurement)",
-                gr
-                        ? "Ασυνήθιστη έμμεση απόκριση — δεν μετρήθηκαν ξεχωριστές κυψέλες"
-                        : "Unusual indirect response — individual cells not measured"
-        );
-
-    } else {
-
-        logLabelValue(
-                gr ? "Έμμεσος δείκτης (όχι μέτρηση κυψελών)"
-                   : "Indirect proxy (not cell measurement)",
-                gr
-                        ? "ΔΕΝ ΕΛΕΓΧΘΗΚΕ — δεν διατίθενται τάσεις ανά κυψέλη"
-                        : "NOT TESTED — no per-cell voltage evidence"
-        );
-    }
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Έμμεσος δείκτης (όχι μέτρηση κυψελών)"
-               : "Indirect proxy (not cell measurement)",
             gr
                     ? "Ανεπαρκή δεδομένα"
                     : "Insufficient data"
