@@ -4858,6 +4858,7 @@ int pctFree = (int) ((free * 100L) / total);
 
 private static class MemSnapshot {
     long memFreeKb = -1L;
+    long memAvailableKb = -1L;
     long cachedKb = -1L;
     long swapTotalKb = -1L; // missing source != zero swap
     long swapFreeKb = -1L;
@@ -4881,6 +4882,9 @@ private MemSnapshot readMemSnapshotSafe() {
 
             if (line.startsWith("MemFree:"))
                 m.memFreeKb = extractKb(line);
+
+            else if (line.startsWith("MemAvailable:"))
+                m.memAvailableKb = extractKb(line);
 
             else if (line.startsWith("Cached:"))
                 m.cachedKb = extractKb(line);
@@ -27520,8 +27524,14 @@ private void lab19RamSnapshot() {
         logInfo(gr ? "Αξιολόγηση πίεσης RAM:" : "RAM pressure assessment:");
         logLine();
 
+        // Real Android low-memory evidence takes precedence. Use the
+        // platform's own device-specific threshold rather than an arbitrary
+        // percentage cut-off for warning about low available RAM.
         RamEvidencePolicy.Assessment ramAssessment =
-                RamEvidencePolicy.assess(pctFree, mi.lowMemory);
+                mi.lowMemory ? RamEvidencePolicy.Assessment.ANDROID_LOW_MEMORY
+                : (mi.threshold > 0L && mi.availMem <= mi.threshold)
+                ? RamEvidencePolicy.Assessment.LOW_AVAILABLE_RAM
+                : RamEvidencePolicy.Assessment.NO_OS_LOW_MEMORY_SIGNAL;
         switch (ramAssessment) {
             case ANDROID_LOW_MEMORY:
                 logLabelWarnValue(
@@ -27552,11 +27562,11 @@ private void lab19RamSnapshot() {
                            : "Insufficient RAM pressure evidence"
                 );
         }
-        logLabelValue(
-                gr ? "Όρια ελέγχου" : "Assessment limits",
-                gr ? "Δεν μετρήθηκαν καθυστέρηση UI, κλεισίματα εφαρμογών ή ποιότητα multitasking"
-                   : "UI lag, app terminations and multitasking quality were not measured"
-        );
+        if (mi.threshold > 0L) {
+            logLabelOkValue(
+                    gr ? "Όριο χαμηλής μνήμης Android" : "Android low-memory threshold",
+                    humanBytes(mi.threshold));
+        }
 
         // ------------------------------------------------------------
         // MEMORY PRESSURE INDICATORS (LOW-LEVEL)
@@ -27565,74 +27575,41 @@ private void lab19RamSnapshot() {
 
             MemSnapshot snap = readMemSnapshotSafe();
 
-            if (snap.memFreeKb <= 0 && snap.cachedKb <= 0 && snap.swapTotalKb <= 0) {
-                logInfo(gr ? "Χαμηλού επιπέδου στοιχεία /proc/meminfo: μη διαθέσιμα."
-                           : "Low-level /proc/meminfo readings unavailable.");
+            if (snap.memFreeKb <= 0 && snap.memAvailableKb <= 0 &&
+                    snap.cachedKb <= 0 && snap.swapTotalKb <= 0) {
+                // No low-level observation: omit it from the human report.
             } else {
 
             long swapUsedKb = RamEvidencePolicy.observedSwapUsedKb(
                     snap.swapTotalKb, snap.swapFreeKb);
 
-            // Incomplete raw counters cannot support a derived pressure grade.
-            // The pressure score is heuristic and is NOT the OS lowMemory signal.
-            String pressureGrade =
-                    (snap.memFreeKb >= 0 && snap.cachedKb >= 0 && swapUsedKb >= 0)
-                            ? pressureLevel(snap.memFreeKb, snap.cachedKb, swapUsedKb)
-                            : null;
-            String pressureHuman = pressureGrade != null
-                    ? humanPressureLabel(pressureGrade)
-                    : (gr ? "Άγνωστο — ελλιπείς μετρήσεις"
-                          : "Unknown — incomplete readings");
-
-            String zramDep = swapUsedKb >= 0
-                    ? zramDependency(swapUsedKb, total)
-                    : null;
+            // Preserve directly observed memory quantities. Old heuristics
+            // treated low MemFree and swap usage as a high-pressure warning,
+            // even if Android reported ample available RAM and no lowMemory.
+            // This is not defensible: cache and zRAM are normal mechanisms.
+            long swapUsedKb = RamEvidencePolicy.observedSwapUsedKb(
+                    snap.swapTotalKb, snap.swapFreeKb);
 
             appendHtml("<br>");
-            logInfo(gr
-                    ? "Δείκτες πίεσης μνήμης:"
-                    : "Memory pressure indicators:");
-                    logLine();
+            logInfo(gr ? "Πρόσθετες μετρήσεις μνήμης:"
+                       : "Additional memory observations:");
+            logLine();
 
-            if ("High".equals(pressureGrade) || "Medium".equals(pressureGrade)) {
-                logLabelWarnValue(
-                        gr ? "Ενδεικτική πίεση μνήμης" : "Heuristic memory pressure",
-                        pressureHuman
-                );
-            } else {
-                // A low or missing heuristic score does not certify stable RAM.
-                logLabelValue(
-                        gr ? "Ενδεικτική πίεση μνήμης" : "Heuristic memory pressure",
-                        pressureHuman
-                );
-            }
-
-            if (zramDep != null) {
-                // Translate the raw English grade; it is NOT measured hardware health.
-                String swapRatioLabel = humanPressureLabel(zramDep);
-                if ("High".equals(zramDep) || "Medium".equals(zramDep)) {
-                    logLabelWarnValue(
-                            gr ? "Ενδεικτική αναλογία Swap/RAM"
-                               : "Heuristic Swap/RAM ratio",
-                            swapRatioLabel
-                    );
-                } else {
-                    logLabelValue(
-                            gr ? "Ενδεικτική αναλογία Swap/RAM"
-                               : "Heuristic Swap/RAM ratio",
-                            swapRatioLabel
-                    );
-                }
-            } else {
-                logInfo(gr ? "Χρήση Swap: δεν διαβάστηκαν συγκρίσιμες τιμές SwapTotal/SwapFree"
-                           : "Swap usage: comparable SwapTotal/SwapFree readings unavailable");
-            }
-
-            if (swapUsedKb > 0) {
+            if (snap.memAvailableKb > 0) {
                 logLabelOkValue(
-                        gr ? "Χρήση Swap" : "Swap used",
-                        humanBytes(swapUsedKb * 1024L)
-                );
+                        "MemAvailable (kernel)",
+                        humanBytes(snap.memAvailableKb * 1024L));
+            }
+
+            if (swapUsedKb >= 0 && snap.swapTotalKb > 0) {
+                // This percentage is a quantity ratio, NOT a pressure grade.
+                // It can exceed 100% on some memory-compression configurations.
+                double ratioPct = 100.0 * swapUsedKb * 1024.0 / total;
+                logLabelOkValue(
+                        gr ? "Χρήση Swap/RAM" : "Used Swap / physical RAM",
+                        String.format(Locale.US, "%.0f%% (%s Swap / %s RAM)",
+                                ratioPct, humanBytes(swapUsedKb * 1024L),
+                                humanBytes(total)));
             }
 
             if (snap.memFreeKb > 0) {
@@ -27646,14 +27623,13 @@ private void lab19RamSnapshot() {
                 logLabelOkValue(
                         "Cached",
                         humanBytes(snap.cachedKb * 1024L) +
-                                (gr ? " (επανακτήσιμη)" : " (reclaimable)")
+                                (gr ? " (cache, εν μέρει επανακτήσιμη)" : " (cache, partly reclaimable)")
                 );
             }
             }
 
         } catch (Throwable ignored) {
-            logInfo(gr ? "Τα προαιρετικά στοιχεία μνήμης δεν ήταν προσβάσιμα."
-                       : "Optional low-level RAM metrics inaccessible.");
+            // Optional kernel observations unavailable: no diagnostic entry.
         }
 
         // ------------------------------------------------------------
