@@ -50,7 +50,7 @@ def scroll_gesture(root, up=True):
 
 def manual_section_pattern(lo, hi):
     """Find exactly the displayed laboratory group in either language."""
-    end = r"(?:30|31)" if (lo, hi) == (25, 31) else str(hi)
+    end = str(hi)
     return r"(?:Manual Labs|Εργαστήρια)\s*" + str(lo) + r"\s*[–—-]\s*" + end
 
 
