@@ -262,8 +262,10 @@ public final class Lab29FactorySpecAudit {
         positive(rows, "Υπέρυθρες", "IR blaster", "Ναι / Yes", m.irBlaster);
         positive(rows, "Δακτυλικό αποτύπωμα", "Fingerprint",
                 "Ναι / Yes", m.fingerprint);
-        positive(rows, "Wi-Fi", "Wi-Fi", "2.4 και 5 GHz / 2.4 and 5 GHz",
-                m.wifi); // Mere Wi-Fi presence does NOT verify both bands.
+        positive(rows, "Παρουσία Wi-Fi", "Wi-Fi present", "Ναι / Yes",
+                m.wifi);
+        add(rows, "Μπάντες Wi-Fi", "Wi-Fi supported bands", "2.4 και 5 GHz / 2.4 and 5 GHz",
+                "", Verdict.UNKNOWN); // Presence does not establish both bands.
         positive(rows, "Bluetooth", "Bluetooth available", "Ναι / Yes",
                 m.bluetooth);
         add(rows, "Έκδοση Bluetooth", "Bluetooth version", "5.0",
