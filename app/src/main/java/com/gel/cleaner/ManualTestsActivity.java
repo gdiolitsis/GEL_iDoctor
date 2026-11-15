@@ -27804,7 +27804,7 @@ private void lab23DeveloperOptionsRisk() {
     logLine();
     logInfo(gr 
             ? "LAB 23 — Κίνδυνος από επιλογές Προγραμματιστή"
-            : "LAB 22 — Developer Options Risk");
+            : "LAB 23 — Developer Options Risk");
     logLine();
 
     int risk = 0;
@@ -27940,7 +27940,8 @@ logInfo(gr ? "Προτεινόμενες ενέργειες"
            : "Recommended actions");
            logLine();
 
-if (usbDebug || devOpts) {
+// Developer Options on their own do not justify disabling debugging.
+if (usbDebug) {
 
     logLabelWarnValue(
             gr ? "Απενεργοποίηση" : "Disable",
@@ -27954,13 +27955,6 @@ if (usbDebug || devOpts) {
                : "Turn OFF"
     );
 
-    } else {
-
-    logLabelOkValue(
-            "USB Debugging",
-            gr ? "Απενεργοποιημένο"
-               : "Disabled"
-    );
 }
 
 if (risk >= 60) {
