@@ -47,7 +47,9 @@ public final class Lab22PlainLanguageReportContractTest {
         assertTrue(s.contains("settingsIntent.resolveActivity(pm) != null"));
         assertTrue(s.contains("logLabelValue(\n            \"Play Protect\""));
         assertFalse("A settings screen cannot certify Play Protect", s.contains("package_verifier_enable"));
-        assertFalse("No automatic Play Protect success can be reported", s.contains("logLabelOkValue("));
+        // Online AOSP bulletin values may be green, but unknown Play Protect is NEVER green.
+        assertTrue(s.contains("AndroidSecurityBulletinChecker.fetchLatestPublishedPatchLevel()"));
+        assertFalse(s.contains("logLabelOkValue(\n            \"Play Protect\""));
         assertFalse("No Play Protect failure is established by unknown status", s.contains("logLabelErrorValue("));
     }
 
