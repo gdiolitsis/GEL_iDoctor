@@ -7,60 +7,48 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import static org.junit.Assert.*;
 
-/** Records grants; never infers unnecessary, harmful or abused permissions. */
+/** Historical Lab27 grant contract, migrated to the existing Lab26 inventory. */
 public final class Lab27GrantedPermissionsContractTest {
-    private static String source() throws Exception {
-        Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
-        if (!Files.isRegularFile(p)) p = Paths.get("src/main/java/com/gel/cleaner/ManualTestsActivity.java");
+    private static String source(String name) throws Exception {
+        Path p = Paths.get("app/src/main/java/com/gel/cleaner/" + name);
+        if (!Files.isRegularFile(p)) p = Paths.get("src/main/java/com/gel/cleaner/" + name);
         return new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
     }
 
-    private static String lab() throws Exception {
-        String s = source();
-        int a = s.indexOf("private void lab27PermissionsPrivacy() {");
-        int b = s.indexOf("// INTERNAL helpers for Lab 27", a);
+    @Test public void lab27PermissionsIsRemovedAndFindingsLiveInLab26() throws Exception {
+        String s = source("ManualTestsActivity.java");
+        assertFalse(s.contains("private void lab27PermissionsPrivacy()"));
+        assertFalse(s.contains("this::lab27PermissionsPrivacy"));
+        assertFalse(s.contains("27. Χορηγημένες άδειες εφαρμογών"));
+        int a = s.indexOf("private void lab26AppsFootprint()");
+        int b = s.indexOf("// ROOT HELPER — BEST EFFORT DIRECTORY SIZE", a);
         assertTrue(a >= 0 && b > a);
-        return s.substring(a, b);
+        String lab26 = s.substring(a, b);
+        assertTrue(lab26.contains("5. Χορηγημένες ευαίσθητες άδειες"));
+        assertTrue(lab26.contains("r.userAppsWithGrantedSensitivePermissions"));
+        assertTrue(lab26.contains("r.permissionGrantFlagsUnavailableApps"));
+        assertTrue(lab26.contains("Η χορήγηση αδειών δεν αποδεικνύει κατάχρηση"));
+        assertFalse(lab26.contains("Δείκτης κινδύνου"));
+        assertFalse(lab26.contains("permissionWeight("));
     }
 
-    @Test public void titlePromisesAnInventoryNotAnAppRiskDiagnosis() throws Exception {
-        String s = source();
-        assertTrue(s.contains("27. Χορηγημένες άδειες εφαρμογών"));
-        String l = lab();
-        assertTrue(l.contains("LAB 27 — Χορηγημένες άδειες εφαρμογών"));
-        assertFalse(l.contains("Αυτόματη Σάρωση"));
+    @Test public void actualGrantedFlagCheckedAndOnlyForVisibleUserApps() throws Exception {
+        String s = source("AppImpactEngine.java");
+        assertTrue(s.contains("requestedPermissionsFlags"));
+        assertTrue(s.contains("PackageInfo.REQUESTED_PERMISSION_GRANTED"));
+        assertTrue(s.contains("isSensitivePermissionForDisclosure(p)"));
+        assertTrue(s.contains("!isSystem && reqGrantFlags != null"));
+        assertTrue(s.contains("userAppsWithGrantedSensitivePermissions.add(s)"));
     }
 
-    @Test public void usesRealGrantedFlagAndRuntimePermissionsOnly() throws Exception {
-        String l = lab();
-        assertTrue(l.contains("PackageManager.GET_PERMISSIONS"));
-        assertTrue(l.contains("requestedPermissionsFlags"));
-        assertTrue(l.contains("android.content.pm.PermissionInfo.PROTECTION_DANGEROUS"));
-        assertTrue(l.contains("isGrantedFlag(flags, i)"));
-        assertTrue(l.contains("if (flags == null || i >= flags.length)"));
-        assertFalse(l.contains("permissionWeight("));
-        assertFalse(l.contains("Επικίνδυνες"));
-    }
-
-    @Test public void verifiedCountsGreenIndividualGrantNamesNeutral() throws Exception {
-        String l = lab();
-        assertTrue(l.contains("logLabelOkValue(gr ? \"Ορατές εφαρμογές\""));
-        assertTrue(l.contains("logLabelOkValue(gr ? \"Εφαρμογές χρήστη που εξετάστηκαν\""));
-        assertTrue(l.contains("logLabelOkValue(gr ? \"Χορηγημένες ευαίσθητες άδειες\""));
-        assertTrue(l.contains("Math.min(8, details.size())"));
-        assertTrue(l.contains("logLabelValue(gr ? \"Εφαρμογή\""));
-        assertTrue(l.contains("lab27PermissionLabel(permission, gr)"));
-        assertFalse(l.contains("Βάρος αδειών"));
-        assertFalse(l.contains("Δείκτης κινδύνου"));
-        assertFalse(l.contains("1827"));
-    }
-
-    @Test public void avoidsCertifyingPermissionNeedOrAbuse() throws Exception {
-        String l = lab();
-        assertTrue(l.contains("Η αναγκαιότητά τους δεν ελέγχθηκε."));
-        assertFalse(l.contains("περιττές άδειες"));
-        assertFalse(l.contains("κακόβουλη συμπεριφορά"));
-        assertTrue(l.contains("logOk(gr ? \"Το Lab 27 ολοκληρώθηκε"));
-        assertTrue(l.contains("SUMMARY: GRANTED_RUNTIME_PERMISSIONS="));
+    @Test public void retainedImprovedLabsAndThirtyLabMenu() throws Exception {
+        String s = source("ManualTestsActivity.java");
+        assertTrue(s.contains("27. Καταγραφές λειτουργίας και μετρήσεις"));
+        assertTrue(s.contains("28. Προέλεγχος Μεταχειρισμένης"));
+        assertTrue(s.contains("29. GEL Device Certification"));
+        assertTrue(s.contains("30. Τελική Τεχνική Αναφορά"));
+        assertTrue(s.contains("Lab29FactorySpecAudit.capture(this)"));
+        assertTrue(s.contains("showLab29ExternalGuidanceDialog(gr)"));
+        assertTrue(s.contains("Lab31ReportEvidencePolicy.withoutPriorSummaries"));
     }
 }
