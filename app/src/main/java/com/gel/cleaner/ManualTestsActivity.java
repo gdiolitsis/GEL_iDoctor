@@ -27968,12 +27968,6 @@ if (root) {
                     : (gr ? "Δεν εντοπίστηκε" : "Not detected")
     );
 
-} else {
-
-    logLabelValue(
-            gr ? "Λειτουργία Root" : "Root mode",
-            gr ? "Μη διαθέσιμη" : "Not available"
-    );
 }
 
 // ============================================================  
@@ -28001,18 +27995,6 @@ if (secure) {
                : "Post-reboot protection",
             gr ? "Άγνωστη — δεν διαβάστηκε η κατάσταση Keyguard"
                : "Unknown — Keyguard status unreadable"
-    );
-}
-
-if (biometricSupported) {
-    logLabelOkValue(
-            gr ? "Επίπεδο ευκολίας" : "Convenience layer",
-            gr ? "Διαθέσιμα βιομετρικά" : "Biometrics available"
-    );
-} else {
-    logLabelValue(
-            gr ? "Επίπεδο ευκολίας" : "Convenience layer",
-            gr ? "Μη διαθέσιμα" : "Not available"
     );
 }
 
