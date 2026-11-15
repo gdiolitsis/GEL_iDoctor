@@ -26057,11 +26057,13 @@ private void lab16ThermalSnapshot() {
         } else if (osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE) {
             logLabelWarnValue(gr ? "Κατάσταση Android" : "Android thermal status", osState);
         } else {
-            logInfo((gr ? "Κατάσταση Android: " : "Android thermal status: ") + osState);
+            // Android reports no active moderate/severe thermal limitation.
+            logLabelOkValue(gr ? "Κατάσταση Android" : "Android thermal status", osState);
         }
     } else {
-        logInfo(gr ? "Κατάσταση θερμικής προστασίας Android: μη διαθέσιμη"
-                   : "Android thermal protection status: unavailable");
+        // An unavailable OS state is neutral, never evidence of normality.
+        logLabelValue(gr ? "Κατάσταση Android" : "Android thermal status",
+                gr ? "Μη διαθέσιμη" : "Unavailable");
     }
 
     // ------------------------------------------------------------
@@ -26166,22 +26168,10 @@ private void lab16ThermalSnapshot() {
                 .apply();
     } catch (Throwable ignore) {}
 
-    if (thermalScore < 0) {
-        logInfo(gr
-                ? "Θερμικός δείκτης στιγμιοτύπου: άγνωστος (χωρίς διαθέσιμη ένδειξη CPU/GPU)"
-                : "Thermal snapshot index: unknown (no accessible CPU/GPU reading)");
-    } else {
-        String tLabel = thermalScore >= 80
-                ? (gr ? "Εντός παρατηρημένων ορίων" : "Within observed limits")
-                : thermalScore >= 60
-                ? (gr ? "Μέτρια" : "Moderate")
-                : (gr ? "Υψηλή" : "High");
-        logInfo((gr ? "Μη βαθμονομημένος θερμικός δείκτης στιγμιοτύπου: "
-                    : "Uncalibrated thermal snapshot index: ")
-                + String.format(Locale.US, "%s (%d/100)", tLabel, thermalScore)
-                + (gr ? " — δεν αποτελεί πιστοποίηση υγείας"
-                      : " — not a hardware-health certification"));
-    }
+    // Do not show the synthetic/un-calibrated 0-100 score or an
+    // "unknown index" placeholder. The underlying value remains internal
+    // for existing cross-lab evidence compatibility, never presented as a
+    // measured percentage or a health certificate.
     GELServiceLog.info(
             "SUMMARY: THERMAL_PATTERN="
                     + ThermalEvidencePolicy.pattern(thermalScore, thermalDanger)
