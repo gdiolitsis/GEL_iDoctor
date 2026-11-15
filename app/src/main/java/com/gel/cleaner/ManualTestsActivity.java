@@ -27869,19 +27869,13 @@ try {
 
     if (devOpts) {
 
-        logLabelWarnValue(
+        // Enabled Developer Options alone do not demonstrate a security failure.
+        // Color only the measured value green; do not add an invented risk.
+        logLabelOkValue(
                 gr ? "Επιλογές προγραμματιστή" : "Developer options",
                 gr ? "ΕΝΕΡΓΟΠΟΙΗΜΕΝΕΣ"
                    : "ENABLED"
         );
-
-        logLabelWarnValue(
-                gr ? "Κίνδυνος" : "Risk",
-                gr ? "Έκθεση σε προχωρημένες ρυθμίσεις συστήματος"
-                   : "Advanced system settings exposed"
-        );
-
-        risk += 20;
 
     } else {
 
@@ -27904,70 +27898,7 @@ try {
 }
 
 // ============================================================
-// 3) ADB OVER WI-FI (TCP/IP 5555)
-// ============================================================
-boolean adbWifi = isPortOpen(5555, 200);
-
-if (adbWifi) {
-
-    logLabelErrorValue(
-            gr ? "ADB μέσω Wi-Fi" : "ADB over Wi-Fi",
-            gr ? "ΕΝΕΡΓΟ (θύρα 5555)"
-               : "ACTIVE (port 5555)"
-    );
-
-    logLabelErrorValue(
-            gr ? "Κίνδυνος" : "Risk",
-            gr ? "Δυνατότητα απομακρυσμένου debugging στο τοπικό δίκτυο"
-               : "Remote debugging possible on local network"
-    );
-
-    risk += 40;
-
-} else {
-
-    logLabelOkValue(
-            gr ? "ADB μέσω Wi-Fi" : "ADB over Wi-Fi",
-            gr ? "ΑΝΕΝΕΡΓΟ"
-               : "OFF"
-    );
-}
-
-// ============================================================
-// 4) ADB PAIRING MODE (Wireless Debugging)
-// ============================================================
-boolean adbPairing =
-        isPortOpen(3700, 200) ||
-        isPortOpen(7460, 200) ||
-        scanPairingPortRange();
-
-if (adbPairing) {
-
-    logLabelWarnValue(
-            gr ? "ADB σύζευξη / Ασύρματο debugging" : "ADB pairing / wireless debugging",
-            gr ? "ΕΝΕΡΓΟ"
-               : "ACTIVE"
-    );
-
-    logLabelWarnValue(
-            gr ? "Κίνδυνος" : "Risk",
-            gr ? "Η συσκευή είναι ανιχνεύσιμη για σύζευξη"
-               : "Device discoverable for pairing"
-    );
-
-    risk += 25;
-
-} else {
-
-    logLabelOkValue(
-            gr ? "ADB σύζευξη / Ασύρματο debugging" : "ADB pairing / wireless debugging",
-            gr ? "ΑΝΕΝΕΡΓΟ"
-               : "OFF"
-    );
-}
-
-// ============================================================
-// 5) FINAL RISK SCORE
+// 3) FINAL RISK SCORE (only remaining observable signals)
 // ============================================================
 risk = Math.min(100, risk);
 
@@ -28002,7 +27933,7 @@ appendHtml("<br>");
 }
 
 // ============================================================
-// 6) ACTION RECOMMENDATIONS
+// 4) ACTION RECOMMENDATIONS
 // ============================================================
 appendHtml("<br>");
 logInfo(gr ? "Προτεινόμενες ενέργειες"
@@ -28029,31 +27960,6 @@ if (usbDebug || devOpts) {
             "USB Debugging",
             gr ? "Απενεργοποιημένο"
                : "Disabled"
-    );
-}
-
-if (adbWifi || adbPairing) {
-
-    logLabelErrorValue(
-            gr ? "Ασύρματο debugging"
-               : "Wireless debugging",
-            gr ? "Απενεργοποιήστε άμεσα (Επιλογές προγραμματιστή)"
-               : "Disable immediately (Developer options)"
-    );
-
-    logLabelWarnValue(
-            gr ? "Συμβουλή" : "Tip",
-            gr ? "Η επανεκκίνηση καθαρίζει ενεργό TCP/IP debugging"
-               : "Reboot clears active TCP/IP debugging"
-    );
-
-} else {
-
-    logLabelOkValue(
-            gr ? "Ασύρματο debugging"
-               : "Wireless debugging",
-            gr ? "Δεν είναι ενεργό"
-               : "Not active"
     );
 }
 
