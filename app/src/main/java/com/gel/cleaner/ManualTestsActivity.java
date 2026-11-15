@@ -3399,6 +3399,7 @@ private static class CameraHumanSummary {
     String professionalPhotos;    // "RAW uncompressed photos supported"
     String videoQuality;          // "4K (very high)" / "Full HD (high)"
     String videoSmoothness;
+    int reportedMaxFps;          // Camera2 AE range upper bound; not measured playback FPS
     String slowMotion;
     String stabilization;
     String manualMode;
@@ -3516,6 +3517,8 @@ if (fpsRanges != null) {
     }
 }
 
+h.reportedMaxFps = maxFps;
+
 if (maxFps >= 120) {
 
     h.videoSmoothness = gr
@@ -3548,9 +3551,11 @@ if (maxFps >= 120) {
 
 } else {
 
-    h.videoSmoothness = gr
-            ? "Βασική απόδοση βίντεο"
-            : "Basic video performance";
+    h.videoSmoothness = maxFps > 0
+            ? (gr ? "Περιορισμένη ομαλότητα βίντεο (έως " + maxFps + " FPS)"
+                  : "Limited video smoothness (up to " + maxFps + " FPS)")
+            : (gr ? "Δεν αναφέρθηκαν FPS — η ομαλότητα δεν μπορεί να εκτιμηθεί"
+                  : "FPS not reported — smoothness cannot be estimated");
 
     h.slowMotion = gr
             ? "Δεν υποστηρίζεται slow motion"
@@ -3609,9 +3614,11 @@ if (maxFps >= 60 && stab) {
 
 } else {
 
-    h.realLifeUse = gr
-            ? "Βασική χρήση χωρίς απαιτήσεις."
-            : "Basic usage only.";
+    h.realLifeUse = maxFps > 0
+            ? (gr ? "Περιορισμένες δυνατότητες για βασική χρήση."
+                  : "Limited capabilities for basic use.")
+            : (gr ? "Δεν υπάρχουν αρκετά στοιχεία FPS για εκτίμηση χρήσης."
+                  : "Insufficient FPS information for a use estimate.");
 }
 
 // ------------------------------------------------------------
@@ -10719,9 +10726,16 @@ private void lab8_1DumpOneCameraCapabilities(CameraManager cm, Lab8Cam cam) {
     else
         logLabelValue(gr ? "Δηλωμένη ανάλυση βίντεο" : "Reported video resolution", h.videoQuality);
 
-    // FPS range and slow-motion claims are interpretations, not recorded
-    // video tests; preserve their neutral color.
-    logLabelValue(gr ? "Ομαλότητα βίντεο (εκτίμηση)" : "Video smoothness (estimated)", h.videoSmoothness);
+    // FPS is a Camera2 reported AE capability, not measured recorded footage.
+    // Positive estimated capacity is green; limited (<30 FPS) is yellow;
+    // missing FPS data remains neutral white. Never call a limitation a failure.
+    if (h.reportedMaxFps >= 30)
+        logLabelOkValue(gr ? "Ομαλότητα βίντεο (εκτίμηση)" : "Video smoothness (estimated)", h.videoSmoothness);
+    else if (h.reportedMaxFps > 0)
+        logLabelWarnValue(gr ? "Ομαλότητα βίντεο (εκτίμηση)" : "Video smoothness (estimated)", h.videoSmoothness);
+    else
+        logLabelValue(gr ? "Ομαλότητα βίντεο (εκτίμηση)" : "Video smoothness (estimated)", h.videoSmoothness);
+
     logLabelValue(gr ? "Αργή κίνηση (slow motion)" : "Slow motion", h.slowMotion);
 
     if (h.eisSupported)
@@ -10739,7 +10753,14 @@ private void lab8_1DumpOneCameraCapabilities(CameraManager cm, Lab8Cam cam) {
     else
         logLabelValue(gr ? "Φλας" : "Flash", h.flash);
 
-    logLabelValue(gr ? "Χρήση στην πράξη (εκτίμηση)" : "Real-life use (estimate)", h.realLifeUse);
+    // Both front and rear cameras use the same, evidence-based color policy.
+    if (h.reportedMaxFps >= 30)
+        logLabelOkValue(gr ? "Χρήση στην πράξη (εκτίμηση)" : "Real-life use (estimate)", h.realLifeUse);
+    else if (h.reportedMaxFps > 0)
+        logLabelWarnValue(gr ? "Χρήση στην πράξη (εκτίμηση)" : "Real-life use (estimate)", h.realLifeUse);
+    else
+        logLabelValue(gr ? "Χρήση στην πράξη (εκτίμηση)" : "Real-life use (estimate)", h.realLifeUse);
+
     logInfo(gr ? "Τα χαρακτηριστικά προέρχονται από Camera2· δεν μετρήθηκε αντικειμενική ποιότητα εικόνας."
                : "Camera2 reports these capabilities; objective image quality was not measured.");
 
