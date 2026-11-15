@@ -13952,7 +13952,7 @@ logLabelValue(
         "Fast phase + adaptive load + CPU/GPU + memory + bandwidth + vibration + video"
 );
 
-logLabelValue(
+logLabelOkValue(
         gr ? "Αρχικές συνθήκες" : "Start conditions",
         String.format(
                 Locale.US,
@@ -14022,12 +14022,6 @@ if (cpuTempStart != null && !Float.isNaN(cpuTempStart)) {
             String.format(Locale.US, "%.1f°C", cpuTempStart)
     );
 
-} else {
-
-    logLabelWarnValue(
-            gr ? "Θερμοκρασία CPU (έναρξη)" : "CPU temperature (start)",
-            gr ? "Μη διαθέσιμη" : "N/A"
-    );
 }
 
 // 🔴 GPU TEMP
@@ -14038,12 +14032,6 @@ if (gpuTempStart != null && !Float.isNaN(gpuTempStart)) {
             String.format(Locale.US, "%.1f°C", gpuTempStart)
     );
 
-} else {
-
-    logLabelWarnValue(
-            gr ? "Θερμοκρασία GPU (έναρξη)" : "GPU temperature (start)",
-            gr ? "Μη διαθέσιμη" : "N/A"
-    );
 }
 
 logLabelOkValue(
@@ -14378,7 +14366,7 @@ if (powerValid) {
 
     } else if ("Normal".equals(powerLabel)) {
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Ικανότητα ισχύος" : "Power capability",
                 powerTextLocal
         );
@@ -14534,7 +14522,7 @@ if (voltageRecovery != null &&
 
         } else if ("Normal".equals(recLabel)) {
 
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Ανάκαμψη τάσης"
                        : "Voltage recovery",
                     text
@@ -14580,7 +14568,7 @@ if (speedValid) {
 
     if (spd > 0.0001f && spd < 1.0f) {
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Ταχύτητα ανάκαμψης"
                    : "Recovery speed",
                 String.format(Locale.US, "%.4f V/sec", spd)
@@ -14731,7 +14719,7 @@ if (drainValid) {
 
         } else if ("Normal".equals(drainLabel)) {
 
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Ρυθμός αποφόρτισης"
                        : "Drain rate",
                     text
@@ -14739,7 +14727,8 @@ if (drainValid) {
 
         } else {
 
-            logLabelWarnValue(
+            // Low drain is not evidence of wear; do not flag it as a fault.
+            logLabelValue(
                     gr ? "Ρυθμός αποφόρτισης"
                        : "Drain rate",
                     text
@@ -15031,9 +15020,15 @@ private void lab14LogFinalScore(
 
     // ----------------------------------------------------
     // Experimental classification only: a short stress trial does not certify SoH.
-    logLabelValue(condLabel,
-            lbl + (gr ? " — απόκριση σε αυτό το φορτίο, όχι SoH"
-                      : " — response under this load, not SoH"));
+    String categoryText = lbl + (gr ? " — απόκριση σε αυτό το φορτίο, όχι SoH"
+                                    : " — response under this load, not SoH");
+    if ("Critical".equals(lbl) || "Weak".equals(lbl)) {
+        logLabelWarnValue(condLabel, categoryText);
+    } else if ("Excellent".equals(lbl) || "Good".equals(lbl) || "Normal".equals(lbl)) {
+        logLabelOkValue(condLabel, categoryText);
+    } else {
+        logLabelValue(condLabel, categoryText);
+    }
     if ("Critical".equals(lbl)) {
         logLabelWarnValue(gr ? "Αυξημένη μεταβολή τάσης" : "Elevated voltage response",
                 gr ? "Επαναλάβετε τη δοκιμή και ζητήστε τεχνική εκτίμηση εάν υπάρχουν συμπτώματα"
@@ -15043,12 +15038,13 @@ private void lab14LogFinalScore(
     // ----------------------------------------------------
     // 🔴 COLLAPSE
     // ----------------------------------------------------
-    logLabelValue(
-            gr ? "Πειραματική ένδειξη απότομης πτώσης τάσης" : "Experimental voltage-drop flag",
-            collapse
-                    ? (gr ? "Παρατηρήθηκε μοτίβο — απαιτείται επαλήθευση" : "Pattern flagged — verification required")
-                    : (gr ? "Δεν επισημάνθηκε στο συγκεκριμένο τεστ" : "Not flagged in this trial")
-    );
+    if (collapse) {
+        logLabelWarnValue(gr ? "Πειραματική ένδειξη απότομης πτώσης τάσης" : "Experimental voltage-drop flag",
+                gr ? "Παρατηρήθηκε μοτίβο — απαιτείται επαλήθευση" : "Pattern flagged — verification required");
+    } else {
+        logLabelOkValue(gr ? "Πειραματική ένδειξη απότομης πτώσης τάσης" : "Experimental voltage-drop flag",
+                gr ? "Δεν καταγράφηκε τέτοιο μοτίβο στη δοκιμή" : "No such pattern recorded in this trial");
+    }
 
     // ----------------------------------------------------
     // 🔴 CALIBRATION
@@ -17401,7 +17397,7 @@ if (hasSag &&
             finalSag
         );
 
-    logLabelValue(
+    logLabelOkValue(
         gr ? "Γρήγορη δοκιμή καταπόνησης"
            : "Fast stress test",
         "Sag=" + sagText
@@ -25103,15 +25099,22 @@ private void lab14LogVoltageBehaviorSummary(
 
     } else {
 
-        logLabelValue(
-                gr ? "Αρχική πτώση" : "Initial hard sag",
-                String.format(Locale.US, "%.3f V", initialSag)
-        );
+        if (initialSag >= 0.080f) {
+            logLabelWarnValue(gr ? "Αρχική πτώση" : "Initial hard sag",
+                    String.format(Locale.US, "%.3f V", initialSag));
+        } else {
+            logLabelOkValue(gr ? "Αρχική πτώση" : "Initial hard sag",
+                    String.format(Locale.US, "%.3f V", initialSag));
+        }
     }
 
-    logLabelOkValue(gr ? "Μέγιστη πτώση" : "Worst sag",
-            String.format(Locale.US, "%.3f V", worstSag)
-    );
+    if (worstSag >= 0.080f) {
+        logLabelWarnValue(gr ? "Μέγιστη πτώση" : "Worst sag",
+                String.format(Locale.US, "%.3f V", worstSag));
+    } else {
+        logLabelOkValue(gr ? "Μέγιστη πτώση" : "Worst sag",
+                String.format(Locale.US, "%.3f V", worstSag));
+    }
 
     String behavior;
 
@@ -25149,12 +25152,10 @@ private void lab14LogVoltageBehaviorSummary(
                 behavior
         );
 
+    } else if (behavior.contains("Προοδευτική") || behavior.startsWith("Progressive")) {
+        logLabelWarnValue(gr ? "Συμπεριφορά" : "Behavior", behavior);
     } else {
-
-        logLabelOkValue(
-                gr ? "Συμπεριφορά" : "Behavior",
-                behavior
-        );
+        logLabelOkValue(gr ? "Συμπεριφορά" : "Behavior", behavior);
     }
 }
 
