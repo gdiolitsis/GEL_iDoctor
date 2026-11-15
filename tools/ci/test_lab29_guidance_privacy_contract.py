@@ -13,7 +13,7 @@ def section(start, end):
 
 guidance = section(
     "private void showLab29ExternalGuidanceDialog(boolean gr)",
-    "private Button lab29DialogButton(String text)"
+    "// Only an external provider displays the result; GEL records no IMEI answers."
 )
 lab30 = section("private void lab30CombineFindings()", "private void lab31FinalSummary()")
 lab31 = section("private void lab31FinalSummary()", "private void enableSingleExportButton()")
