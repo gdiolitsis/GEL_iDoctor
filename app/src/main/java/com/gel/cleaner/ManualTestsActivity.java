@@ -28119,11 +28119,6 @@ if (root) {
 // ============================================================  
 
 if (secure) {
-    // Keyguard secure proves an enrolled credential, not encryption status.
-    logLabelOkValue(
-            gr ? "Διαπιστευτήριο συσκευής" : "Device credential",
-            gr ? "Ρυθμισμένο ασφαλές κλείδωμα" : "Secure device lock configured"
-    );
     logLabelValue(
             gr ? "Κρυπτογράφηση μετά από επανεκκίνηση"
                : "Post-reboot encryption",
@@ -28144,22 +28139,6 @@ if (secure) {
                : "Post-reboot protection",
             gr ? "Άγνωστη — δεν διαβάστηκε η κατάσταση Keyguard"
                : "Unknown — Keyguard status unreadable"
-    );
-}
-
-if (secureKnown && secure) {
-    logLabelOkValue(
-            gr ? "Κύριο επίπεδο ασφάλειας" : "Primary security layer",
-            gr ? "Γνωστικό διαπιστευτήριο (PIN / Μοτίβο / Κωδικός)"
-               : "Knowledge-based credential (PIN / Pattern / Password)"
-    );
-} else {
-    logLabelValue(
-            gr ? "Κύριο επίπεδο ασφάλειας" : "Primary security layer",
-            !secureKnown
-                    ? (gr ? "ΑΓΝΩΣΤΟ — δεν διαβάστηκε το Keyguard"
-                          : "UNKNOWN — Keyguard unreadable")
-                    : (gr ? "ΚΑΝΕΝΑ" : "NONE")
     );
 }
 
