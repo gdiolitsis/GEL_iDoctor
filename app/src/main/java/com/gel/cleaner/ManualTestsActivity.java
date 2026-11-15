@@ -394,6 +394,7 @@ private boolean gr;
 
 private long startMah;
 private long baselineFullMah;
+private volatile boolean lab14HasReportedCapacity;
 private long t0;
 private int batteryPercent;
 private long cycles;
@@ -13867,6 +13868,7 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
     // 🔴 BASELINE CAPACITY
     // --------------------------------------------------
     baselineFullMah = -1;
+    lab14HasReportedCapacity = start.chargeFullMah > 0 || start.chargeDesignMah > 0;
 
     if (start.chargeFullMah > 0) {
         baselineFullMah = start.chargeFullMah;
@@ -17342,8 +17344,7 @@ res.batteryBehaviourWarning =
 
 final long baselineFullFinal = baselineFullMah;
 final long drainMahFinal = drainMah;
-final boolean hasReportedCapacityForComparison =
-        start.chargeFullMah > 0 || start.chargeDesignMah > 0;
+final boolean hasReportedCapacityForComparison = lab14HasReportedCapacity;
 
 
 // ----------------------------
