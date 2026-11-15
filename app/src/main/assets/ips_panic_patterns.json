@@ -77,6 +77,26 @@
       "cause": "Kernel assertion failure",
       "recommendation": "Evaluate software integrity; hardware correlation possible",
       "match": ["assert", "kernel"]
+    },
+
+    {
+      "id": "IPS-WATCHDOG-TIMEOUT-008",
+      "domain": "System / Watchdog",
+      "severity": "MEDIUM",
+      "confidence": "UNVERIFIED",
+      "cause": "Watchdog timeout reported in a panic entry; component cause unknown",
+      "recommendation": "Correlate the incident with real system history and symptoms",
+      "match": ["panic(cpu", "watchdog timeout"]
+    },
+
+    {
+      "id": "IPS-THERMAL-SHUTDOWN-009",
+      "domain": "Thermal / Shutdown",
+      "severity": "MEDIUM",
+      "confidence": "UNVERIFIED",
+      "cause": "Thermal shutdown reported in a panic entry; sensor fault unconfirmed",
+      "recommendation": "Review temperature context, timestamps and recurrence with a technician",
+      "match": ["panicString", "thermal shutdown"]
     }
 
   ]
