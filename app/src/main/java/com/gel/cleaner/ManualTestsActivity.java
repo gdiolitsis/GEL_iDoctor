@@ -8846,14 +8846,14 @@ private void lab7RotationAndProximityManual() {
         gr
                 ? "Βήμα 1:\n"
                   + "Περιστρέψτε αργά τη συσκευή.\n"
-                  + "Παρατήρησε την ένδειξη αισθητήρα. Η οθόνη της δοκιμής παραμένει σε κατακόρυφο προσανατολισμό.\n\n"
+                  + "Η οθόνη είναι κλειδωμένη σε portrait. Η κίνηση μετριέται από τον αισθητήρα, όχι από το auto-rotate του Android.\n\n"
                   + "Βήμα 2:\n"
                   + "Καλύψτε με το χέρι σας τον αισθητήρα εγγύτητας, "
                   + "στο επάνω μέρος της οθόνης, στην περιοχή ειδοποιήσεων.\n"
                   + "Παρατηρήστε αν αλλάζει η ένδειξη του αισθητήρα εγγύτητας."
                 : "Step 1:\n"
                   + "Rotate the device slowly.\n"
-                  + "Observe the sensor reading. The test screen stays in portrait orientation.\n\n"
+                  + "The screen stays in portrait. The sensor measures posture, not Android auto-rotate.\n\n"
                   + "Step 2:\n"
                   + "Cover the proximity sensor with your hand, "
                   + "at the top of the screen, to the notification area.\n"
@@ -27228,13 +27228,7 @@ if (nandScore >= 70) {
                     : "Very little free storage is available — free some space."
     );
 
-} else {
-
-    logInfo(gr ? "Φθορά NAND: δεν μετρήθηκε από το Android ή το συγκεκριμένο τεστ."
-               : "NAND wear: not measured by Android or this test.");
 }
-
-
 // ------------------------------------------------------------
 // LEGACY CAPACITY PRESSURE INDEX B (NOT A CONTROLLER TEST)
 // ------------------------------------------------------------
