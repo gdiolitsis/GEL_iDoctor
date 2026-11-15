@@ -1430,6 +1430,12 @@ private void runPanicLogAnalyzer() {
             ? "Σύγκριση λέξεων εισαγόμενου panic log με κανόνες· όχι φυσικός έλεγχος συσκευής."
             : "Rule-based screening of an imported panic log; no device hardware test.");
 
+    int importedEvents = countSupportedPanicBlocks(panicLogText.split("(?m)^===== ZIP FILE:"));
+    if (importedEvents > 1) {
+        logInfo(gr
+                ? "Εισήχθησαν " + importedEvents + " διαφορετικά συμβάντα. Η αρχική αναγνώριση μοτίβων δεν αποτελεί κοινή διάγνωση· τα αρχεία αναλύονται χωριστά στο LAB 2."
+                : importedEvents + " distinct incidents were imported. Initial pattern matching is not a combined diagnosis; LAB 2 reviews each incident separately.");
+    }
     IPSPanicParser.Result r = IPSPanicParser.analyze(this, panicLogText);
 
     if (r == null) {
@@ -1488,31 +1494,31 @@ if (r.secondary != null) {
 
 logLabelWarnValue(
         gr ? "Πιθανό Domain:" : "Domain (hint):",
-        safe(r.domain)
+        IPhonePanicHumanizer.domain(r.domain, gr)
 );
 
 logLabelWarnValue(
         gr ? "Υπόθεση κανόνα:" : "Rule-based cause hypothesis:",
-        ApplePanicEvidencePolicy.possibleCause(r.cause)
+        IPhonePanicHumanizer.possibleCause(r.cause, gr)
 );
 
 // Severity
 if ("High".equalsIgnoreCase(r.severity)) {
     logLabelWarnValue(
             gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
-            safe(r.severity)
+            IPhonePanicHumanizer.ruleWeight(r.severity, gr)
     );
 }
 else if ("Medium".equalsIgnoreCase(r.severity)) {
     logLabelWarnValue(
             gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
-            safe(r.severity)
+            IPhonePanicHumanizer.ruleWeight(r.severity, gr)
     );
 }
 else {
     logLabelWarnValue(
             gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
-            safe(r.severity)
+            IPhonePanicHumanizer.ruleWeight(r.severity, gr)
     );
 }
 
@@ -1520,19 +1526,19 @@ else {
 if ("High".equalsIgnoreCase(r.confidence)) {
     logLabelWarnValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            ApplePanicEvidencePolicy.patternConfidence()
+            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 }
 else if ("Medium".equalsIgnoreCase(r.confidence)) {
     logLabelWarnValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            ApplePanicEvidencePolicy.patternConfidence()
+            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 }
 else {
     logLabelWarnValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            ApplePanicEvidencePolicy.patternConfidence()
+            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 }
 
@@ -1582,10 +1588,10 @@ private void runPanicSignatureParser() {
             parseAndCacheSignature(block);
             logLabelWarnValue(
                     gr ? "Συμβάν " + incidentNumber + " — τύπος:" : "Incident " + incidentNumber + " — type:",
-                    safe(sigCrashType));
+                    IPhonePanicHumanizer.event(sigCrashType, gr));
             logLabelWarnValue(
                     gr ? "Συμβάν " + incidentNumber + " — υπόδειξη περιοχής:" : "Incident " + incidentNumber + " — domain hint:",
-                    safe(sigDomain));
+                    IPhonePanicHumanizer.domain(sigDomain, gr));
         }
         logInfo(gr
                 ? "Τα συμβάντα εξετάστηκαν χωριστά. Δεν ενώνουμε λέξεις από διαφορετικά logs για να συμπεράνουμε βλάβη."
@@ -1608,7 +1614,7 @@ if ("Kernel Panic".equalsIgnoreCase(sigCrashType)
 
     logLabelWarnValue(
             gr ? "Τύπος στο αρχείο:" : "Imported crash type:",
-            safe(sigCrashType)
+            IPhonePanicHumanizer.event(sigCrashType, gr)
     );
 
     logLabelWarnValue(
@@ -1622,14 +1628,14 @@ else {
 
     logLabelWarnValue(
             gr ? "Τύπος στο αρχείο:" : "Imported crash type:",
-            safe(sigCrashType)
+            IPhonePanicHumanizer.event(sigCrashType, gr)
     );
 }
 
 // Subsystem hint
 logLabelWarnValue(
         gr ? "Πιθανό Υποσύστημα:" : "Subsystem Hint:",
-        safe(sigDomain)
+        IPhonePanicHumanizer.domain(sigDomain, gr)
 );
 
 logLabelWarnValue(
@@ -1644,21 +1650,21 @@ if ("High".equalsIgnoreCase(sigConfidence)) {
 
     logLabelWarnValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            ApplePanicEvidencePolicy.patternConfidence()
+            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 }
 else if ("Medium".equalsIgnoreCase(sigConfidence)) {
 
     logLabelWarnValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            ApplePanicEvidencePolicy.patternConfidence()
+            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 }
 else {
 
     logLabelWarnValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            ApplePanicEvidencePolicy.patternConfidence()
+            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 }
 
@@ -1667,7 +1673,7 @@ if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
 
     logLabelOkValue(
             gr ? "Βασικά Στοιχεία:" : "Key Evidence Found:",
-            safe(sigKeyEvidence)
+            IPhonePanicHumanizer.evidence(sigKeyEvidence, gr)
     );
 }
 
@@ -1745,15 +1751,15 @@ private void runStabilityLab() {
 }
 
 logLabelWarnValue(
-        gr ? "Τύπος Crash:" : "Crash Type:",
-        safe(sigCrashType)
+        gr ? "Είδος καταγεγραμμένου συμβάντος:" : "Recorded incident type:",
+        IPhonePanicHumanizer.event(sigCrashType, gr)
 );
 
 if ("High".equalsIgnoreCase(sigConfidence)) {
 
     logLabelValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            ApplePanicEvidencePolicy.patternConfidence()
+            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 
 }
@@ -1761,7 +1767,7 @@ else if ("Medium".equalsIgnoreCase(sigConfidence)) {
 
     logLabelValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            ApplePanicEvidencePolicy.patternConfidence()
+            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 
 }
@@ -1769,7 +1775,7 @@ else {
 
     logLabelValue(
             gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            ApplePanicEvidencePolicy.patternConfidence()
+            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
     );
 
 }
@@ -1808,13 +1814,13 @@ private void runImpactLab() {
     parseAndCacheSignature(panicLogText);
 
     logLabelOkValue(
-        gr ? "Τύπος Crash:" : "Crash Type:",
-        safe(sigCrashType)
+        gr ? "Είδος καταγεγραμμένου συμβάντος:" : "Recorded incident type:",
+        IPhonePanicHumanizer.event(sigCrashType, gr)
 );
 
 logLabelWarnValue(
-        gr ? "Πιθανό Domain:" : "Suspected Domain:",
-        safe(sigDomain)
+        gr ? "Κατηγορία ενδείξεων:" : "Indicated keyword category:",
+        IPhonePanicHumanizer.domain(sigDomain, gr)
 );
 
 if ("Power / PMIC".equals(sigDomain)
@@ -1875,7 +1881,7 @@ if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
 
     logLabelOkValue(
             gr ? "Υποστηρικτικά Στοιχεία:" : "Supporting Evidence:",
-            safe(sigKeyEvidence)
+            IPhonePanicHumanizer.evidence(sigKeyEvidence, gr)
     );
 }
 
@@ -1936,10 +1942,10 @@ for (String block : blocks) {
 for (String k : crashCount.keySet()) {
 
     if ("Unknown".equalsIgnoreCase(k) || "Unknown / Generic".equalsIgnoreCase(k)) {
-        logInfo(safe(k) + ": " + crashCount.get(k));
+        logInfo(IPhonePanicHumanizer.event(k, gr) + ": " + crashCount.get(k));
     } else {
         logLabelOkValue(gr ? "Καταγεγραμμένος τύπος:" : "Observed type:",
-                safe(k) + ": " + crashCount.get(k));
+                IPhonePanicHumanizer.event(k, gr) + ": " + crashCount.get(k));
     }
 
 }
@@ -1998,10 +2004,10 @@ for (String k : domainCount.keySet()) {
     // The same keyword category in two imported records is not a
     // confirmed hardware fault or a positive measured device-health result.
     if ("Unknown".equalsIgnoreCase(k)) {
-        logInfo(safe(k) + ": " + count);
+        logInfo(IPhonePanicHumanizer.domain(k, gr) + ": " + count);
     } else {
         logLabelOkValue(gr ? "Κατηγορία όρων:" : "Keyword category:",
-                safe(k) + ": " + count);
+                IPhonePanicHumanizer.domain(k, gr) + ": " + count);
     }
 }
 
@@ -2075,7 +2081,7 @@ private void runRecurringDomainLab() {
     if (max >= 2) {
         logLabelOkValue(
                 gr ? "Επαναλαμβανόμενη κατηγορία:" : "Repeated keyword category:",
-                safe(dominant) + " (" + max + "/" + total + ")"
+                IPhonePanicHumanizer.domain(dominant, gr) + " (" + max + "/" + total + ")"
         );
         logLabelOkValue(
                 gr ? "Μερίδιο στο εισαγόμενο δείγμα:" : "Share in imported sample:",
@@ -2238,7 +2244,7 @@ else if (max >= 2) {
 
 if (max >= 2) {
     logLabelOkValue(gr ? "Επαναλαμβανόμενη κατηγορία:" : "Repeated category:",
-            safe(dominant) + " (" + max + "/" + total + ")");
+            IPhonePanicHumanizer.domain(dominant, gr) + " (" + max + "/" + total + ")");
     logLabelOkValue(gr ? "Μερίδιο στο εισαγόμενο δείγμα:" : "Share among imported entries:",
             percent + "%");
 } else {
@@ -2292,7 +2298,7 @@ logLabelWarnValue(
 
 logLabelWarnValue(
         gr ? "Συχνότερο keyword domain:" : "Most common keyword domain:",
-        safe(domainText)
+        IPhonePanicHumanizer.domain(domainText, gr)
 );
 
 logInfo((gr ? "Μη βαθμονομημένος δείκτης λέξεων: "
@@ -2404,7 +2410,7 @@ if (dominant != null) {
 }
 
     logInfo((gr ? "Υπόθεση από λέξεις του log (όχι διάγνωση εξαρτήματος): "
-              : "Log keyword hint (not a component diagnosis): ") + safe(suspect));
+              : "Log keyword hint (not a component diagnosis): ") + IPhonePanicHumanizer.domain(suspect, gr));
 
 appendHtml("<br>");
 
