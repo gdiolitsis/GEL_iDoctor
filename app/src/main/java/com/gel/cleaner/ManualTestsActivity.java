@@ -36,19 +36,18 @@
 // LAB 23  — Audio Routing Diagnostics
 // LAB 24  — Root Detection & Security Risk
 //
-// LAB 25  — Crash Log Detection
-// LAB 26  — System Integrity Scan
-// LAB 27  — Power Management Behaviour
-// LAB 28  — Background Activity Check
-//
-// LAB 29  — Service Log Aggregation
-// LAB 30  — Final Technician Summary
+// LAB 25  — Crash / Freeze History
+// LAB 26  — Installed Applications Impact & Granted Permissions
+// LAB 27  — Hardware Stability & Interconnect Integrity
+// LAB 28  — Hardware Observations
+// LAB 29  — GEL Device Certification
+// LAB 30  — Final Technical Report
 //
 // ============================================================
 // NOTE
 // This activity contains all manual diagnostics used by
 // GEL service mode. Each LAB produces structured logs
-// consumed by LAB 30 for the final technician report.
+// consumed by LAB 29 for the final technician report.
 // ============================================================
 
 package com.gel.cleaner;
@@ -793,11 +792,11 @@ private boolean oldKeepScreenOn = false;
         final String featureEn;
 
         if (isLab28) {
-            featureEl = "LAB 28 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων";
-            featureEn = "LAB 28 — Hardware Stability & Interconnect Integrity";
+            featureEl = "LAB 27 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων";
+            featureEn = "LAB 27 — Hardware Stability & Interconnect Integrity";
         } else if (isLab30) {
-            featureEl = "LAB 30 — GEL Device Certification";
-            featureEn = "LAB 30 — GEL Device Certification";
+            featureEl = "LAB 29 — GEL Device Certification";
+            featureEn = "LAB 29 — GEL Device Certification";
         } else {
             featureEl = "LAB 14A — Υγεία και Καταπόνηση Μπαταρίας";
             featureEn = "LAB 14A — Battery Health and Stress Diagnosis";
@@ -937,7 +936,7 @@ private boolean oldKeepScreenOn = false;
                 msg.setText(
                         gr
                                 ? "Προηγμένη ανάλυση συμπτωμάτων για τεχνικούς\n\n" +
-                                  "Το LAB 28 συσχετίζει ευρήματα από τα διαγνωστικά της συσκευής και ελέγχει για μοτίβα αστάθειας όπως:\n\n" +
+                                  "Το LAB 27 συσχετίζει ευρήματα από τα διαγνωστικά της συσκευής και ελέγχει για μοτίβα αστάθειας όπως:\n\n" +
                                   "✓ Τυχαίες επανεκκινήσεις ή ξαφνικά resets\n" +
                                   "✓ Αστάθεια δικτύου και απώλειες σήματος\n" +
                                   "✓ Διακοπτόμενη ή ασταθή συμπεριφορά αισθητήρων\n" +
@@ -948,9 +947,9 @@ private boolean oldKeepScreenOn = false;
                                   "✓ Πιθανά μοτίβα διακοπτόμενης επαφής ή διασύνδεσης\n" +
                                   "✓ Συσχέτιση πολλαπλών πηγών διαγνωστικών δεδομένων\n\n" +
                                   "Τελική εκτίμηση σταθερότητας υλικού\n\n" +
-                                  "Το LAB 28 είναι εργαλείο τεχνικού προελέγχου βάσει συμπτωμάτων. Δεν επιβεβαιώνει από μόνο του βλάβη κόλλησης ή συγκεκριμένη βλάβη hardware."
+                                  "Το LAB 27 είναι εργαλείο τεχνικού προελέγχου βάσει συμπτωμάτων. Δεν επιβεβαιώνει από μόνο του βλάβη κόλλησης ή συγκεκριμένη βλάβη hardware."
                                 : "Advanced symptom analysis for technicians\n\n" +
-                                  "LAB 28 correlates diagnostic findings across the device and checks for instability patterns such as:\n\n" +
+                                  "LAB 27 correlates diagnostic findings across the device and checks for instability patterns such as:\n\n" +
                                   "✓ Random reboots or sudden resets\n" +
                                   "✓ Network and signal instability\n" +
                                   "✓ Intermittent sensor behaviour\n" +
@@ -961,14 +960,14 @@ private boolean oldKeepScreenOn = false;
                                   "✓ Patterns consistent with intermittent contact or interconnect issues\n" +
                                   "✓ Correlation of multiple diagnostic evidence sources\n\n" +
                                   "Final hardware stability assessment\n\n" +
-                                  "LAB 28 is a symptom-based technician triage tool. It does not by itself confirm solder defects or a specific hardware fault."
+                                  "LAB 27 is a symptom-based technician triage tool. It does not by itself confirm solder defects or a specific hardware fault."
                 );
 
             } else if (isLab30) {
                 msg.setText(
                         gr
                                 ? "Ολοκληρωμένη αξιολόγηση και πιστοποίηση συσκευής\n\n" +
-                                  "Το LAB 30 συνδυάζει τα διαγνωστικά δεδομένα της συσκευής και δημιουργεί συνολική επαγγελματική αξιολόγηση:\n\n" +
+                                  "Το LAB 29 συνδυάζει τα διαγνωστικά δεδομένα της συσκευής και δημιουργεί συνολική επαγγελματική αξιολόγηση:\n\n" +
                                   "✓ Συνολική βαθμολογία υγείας συσκευής\n" +
                                   "✓ Αξιολόγηση κατάστασης μπαταρίας\n" +
                                   "✓ Έλεγχος θερμικής συμπεριφοράς\n" +
@@ -986,7 +985,7 @@ private boolean oldKeepScreenOn = false;
                                   "GEL Hardware Diagnostic Certification\n" +
                                   "με ημερομηνία/ώρα και μοναδικό Diagnostic ID."
                                 : "Comprehensive device assessment and certification\n\n" +
-                                  "LAB 30 combines diagnostic data across the device to generate a professional overall assessment:\n\n" +
+                                  "LAB 29 combines diagnostic data across the device to generate a professional overall assessment:\n\n" +
                                   "✓ Overall device health score\n" +
                                   "✓ Battery condition assessment\n" +
                                   "✓ Thermal behavior evaluation\n" +
@@ -1128,7 +1127,7 @@ private boolean oldKeepScreenOn = false;
     private boolean serviceLogInit = false;
 
     // ============================================================
-    // GLOBAL FINAL SCORE FIELDS (used by Lab 29 PDF Report)
+    // GLOBAL FINAL SCORE FIELDS (used by Lab 28 PDF Report)
     // ============================================================
     private String lastScoreHealth      = "N/A";
     private String lastScorePerformance = "N/A";
@@ -1631,35 +1630,30 @@ logScroll.post(() -> setLogPanelState(0));
             this::lab26AppsFootprint));
 
     body7.addView(makeTestButton(
-            gr ? "27. Δικαιώματα Εφαρμογών & Απόρρητο"
-               : "27. App Permissions & Privacy",
-            this::lab27PermissionsPrivacy));
+            gr
+                    ? (isGelProActive() ? "" : "🔒 ")
+                      + "PRO  27. Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων\nΥποψία Κόλλησης / (Βάσει Συμπτωμάτων)"
+                    : (isGelProActive() ? "" : "🔒 ")
+                      + "PRO  27. Hardware Stability & Interconnect Integrity\nSolder / (SYMPTOM-BASED)",
+            this::lab27HardwareStability));
+
+    body7.addView(makeTestButton(
+            gr ? "28. Παρατηρήσεις Hardware\nΗ γνησιότητα απαιτεί εξωτερικό έλεγχο"
+               : "28. Hardware Observations\nOEM origin requires external verification",
+            this::lab28DeviceAuthenticity));
 
     body7.addView(makeTestButton(
             gr
                     ? (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  28. Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων\nΥποψία Κόλλησης / (Βάσει Συμπτωμάτων)"
+                      + "PRO  29. GEL Device Certification"
                     : (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  28. Hardware Stability & Interconnect Integrity\nSolder / (SYMPTOM-BASED)",
-            this::lab28HardwareStability));
+                      + "PRO  29. GEL Device Certification",
+            this::lab29CombineFindings));
 
     body7.addView(makeTestButton(
-            gr ? "29. Παρατηρήσεις Hardware\nΗ γνησιότητα απαιτεί εξωτερικό έλεγχο"
-               : "29. Hardware Observations\nOEM origin requires external verification",
-            this::lab29DeviceAuthenticity));
-
-    body7.addView(makeTestButton(
-            gr
-                    ? (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  30. GEL Device Certification"
-                    : (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  30. GEL Device Certification",
-            this::lab30CombineFindings));
-
-    body7.addView(makeTestButton(
-            gr ? "31. Τελική Τεχνική Αναφορά"
-               : "31. FINAL TECH SUMMARY",
-            this::lab31FinalSummary));
+            gr ? "30. Τελική Τεχνική Αναφορά"
+               : "30. FINAL TECH SUMMARY",
+            this::lab30FinalSummary));
 
     if (!serviceLogInit) {
         GELServiceLog.section(
@@ -5316,9 +5310,9 @@ skipBtn.setOnClickListener(v -> {
 }
 
 // ============================================================
-// LAB 28 — TECHNICIAN POPUP (FINAL / CHECKBOX MUTE)
+// LAB 27 — TECHNICIAN POPUP (FINAL / CHECKBOX MUTE)
 // ============================================================
-private void showLab28Popup() {
+private void showLab27Popup() {
 
     runOnUiThread(() -> {
 
@@ -5342,15 +5336,15 @@ private void showLab28Popup() {
         LinearLayout header = buildPopupHeader(
         this,
         gr
-                ? "LAB 28 — Τεχνική Ανάλυση"
-                : "LAB 28 — Technician Analysis"
+                ? "LAB 27 — Τεχνική Ανάλυση"
+                : "LAB 27 — Technician Analysis"
 );
         root.addView(header);
 
         // ==========================
         // MESSAGE
         // ==========================
-        final String text = gr ? getLab28TextGR() : getLab28TextEN();
+        final String text = gr ? getLab27TextGR() : getLab27TextEN();
 
         TextView msg = new TextView(this);
         msg.setText(text);
@@ -5443,10 +5437,10 @@ if (!isFinishing() && !isDestroyed()) {
 }
 
 // ============================================================
-// TEXT HELPERS — LAB 28
+// TEXT HELPERS — LAB 27
 // ============================================================
 
-private String getLab28TextEN() {
+private String getLab27TextEN() {
     return
         "For improved diagnostic accuracy, it is recommended to run all labs, before this test. " +
         "This lab, performs symptom-based analysis only. " +
@@ -5456,7 +5450,7 @@ private String getLab28TextEN() {
         "Use this lab, strictly as a triage tool, and not as a final hardware diagnosis.";
 }
 
-private String getLab28TextGR() {
+private String getLab27TextGR() {
     return
         "Για βελτιωμένη διαγνωστική ακρίβεια, συνιστάται η εκτέλεση όλων των labs, πριν από αυτό το τεστ. " +
         "Το lab αυτό, πραγματοποιεί αποκλειστικά ανάλυση, βασισμένη σε συμπτώματα. " +
@@ -5467,10 +5461,10 @@ private String getLab28TextGR() {
 }
 
 // ============================================================
-// LAB 29 — Device Authenticity & Repair Analysis
+// LAB 28 — Device Authenticity & Repair Analysis
 // SERVICE LEVEL — COMPONENT & BOARD INSPECTION (LOGIC BASED)
 // ============================================================
-private void lab29AuthenticityCheck() {
+private void lab28AuthenticityCheck() {
 	
 SharedPreferences p =
         getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
@@ -5486,8 +5480,8 @@ boolean lab14SwellingSuspected =
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 29 — Έλεγχος γνησιότητας συσκευής & πιθανών επισκευών"
-            : "LAB 29 — Device authenticity & repair inspection");
+            ? "LAB 28 — Έλεγχος γνησιότητας συσκευής & πιθανών επισκευών"
+            : "LAB 28 — Device authenticity & repair inspection");
     logLine();
 
     int manipulationScore = 0;
@@ -5695,7 +5689,7 @@ if (calibrationDrift[0]) {
     }
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 29 ολοκληρώθηκε." : "Lab 29 finished.");
+    logOk(gr ? "Το Lab 28 ολοκληρώθηκε." : "Lab 28 finished.");
     logLine();
 }
 
@@ -29286,6 +29280,51 @@ String detail = gr
     }
 
     // ============================================================
+    // GRANTED SENSITIVE PERMISSIONS (from the SAME PackageManager scan)
+    // This is evidence of Android-granted permissions, not an accusation
+    // and not a test of whether each permission is necessary.
+    // ============================================================
+    appendHtml("<br>");
+    logInfo(gr ? "Χορηγημένες ευαίσθητες άδειες εφαρμογών"
+               : "Granted sensitive application permissions");
+    logLine();
+
+    List<AppImpactEngine.AppScore> grantedApps =
+            new ArrayList<>(r.userAppsWithGrantedSensitivePermissions);
+    Collections.sort(grantedApps,
+            (a, b) -> a.safeLabel().compareToIgnoreCase(b.safeLabel()));
+    logLabelOkValue(
+            gr ? "Εφαρμογές με καταγεγραμμένες χορηγημένες άδειες"
+               : "Apps with recorded granted permissions",
+            String.valueOf(grantedApps.size())
+    );
+
+    int grantDisplayLimit = Math.min(20, grantedApps.size());
+    for (int i = 0; i < grantDisplayLimit; i++) {
+        AppImpactEngine.AppScore item = grantedApps.get(i);
+        logLabelOkValue(
+                (gr ? "Εφαρμογή" : "App") + " — " + item.safeLabel(),
+                TextUtils.join(", ", item.grantedSensitivePermissions)
+        );
+    }
+    if (grantedApps.size() > grantDisplayLimit) {
+        logLabelOkValue(
+                gr ? "Εμφανίζονται" : "Displayed",
+                grantDisplayLimit + " / " + grantedApps.size()
+        );
+    }
+    if (r.permissionGrantFlagsUnavailableApps > 0) {
+        logInfo(gr
+                ? "Σε " + r.permissionGrantFlagsUnavailableApps
+                  + " εφαρμογές δεν υπήρχαν πλήρεις σημαίες χορήγησης αδειών."
+                : r.permissionGrantFlagsUnavailableApps
+                  + " apps lacked complete permission grant flags.");
+    }
+    logInfo(gr
+            ? "Η καταγραφή δεν τεκμηριώνει κατάχρηση ή ότι μια άδεια είναι περιττή."
+            : "A granted permission alone does not demonstrate misuse or redundancy.");
+
+    // ============================================================
     // HUMAN VERDICT
     // ============================================================
     appendHtml("<br>");
@@ -29367,387 +29406,16 @@ private long dirSizeBestEffortRootFast(File root) {
 }
 
 // ============================================================
-// LAB 27 — App Permissions & Privacy (FULL AUTO + RISK SCORE)
-// ============================================================
-private void lab27PermissionsPrivacy() {
-
-    // ============================================================
-    // USAGE ACCESS — MANDATORY GATE
-    // ============================================================
-    if (!hasUsageAccess()) {
-    showUsageAccessDialog();
-    return;
-}
-
-    final boolean gr = AppLang.isGreek(this);
-
-    appendHtml("<br>");
-    logLine();
-    logInfo(gr
-            ? "LAB 27 — Άδειες Εφαρμογών & Ιδιωτικότητα (Αυτόματη Σάρωση)"
-            : "LAB 27 — App Permissions & Privacy (Auto Scan)");
-    logLine();
-
-    PackageManager pm = getPackageManager();
-    if (pm == null) {
-        logError(gr
-                ? "Το PackageManager δεν είναι διαθέσιμο."
-                : "PackageManager not available.");
-        return;
-    }
-
-    List<String> details = new ArrayList<>();
-    Map<String, Integer> appRisk = new HashMap<>();
-
-    int totalApps = 0;
-    int flaggedApps = 0;
-
-    int riskTotal = 0;
-    int dangTotal = 0;
-
-    try {
-
-        List<android.content.pm.PackageInfo> packs;
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packs = pm.getInstalledPackages(
-                    PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS));
-        } else {
-            //noinspection deprecation
-            packs = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS);
-        }
-
-        if (packs == null) packs = new ArrayList<>();
-
-        for (android.content.pm.PackageInfo p : packs) {
-
-            if (p == null || p.packageName == null) continue;
-            totalApps++;
-
-            String pkg = p.packageName;
-
-            // ============================================================
-            // EXCLUDE SYSTEM / GOOGLE / PLAY STORE APPS
-            // ============================================================
-            boolean isSystem =
-                    (p.applicationInfo != null) &&
-                    ((p.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0 ||
-                     (p.applicationInfo.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0);
-
-            if (isSystem ||
-                    pkg.startsWith("com.android.") ||
-                    pkg.startsWith("com.google.android.") ||
-                    pkg.equals("com.android.vending")) {
-                continue;
-            }
-
-            String[] req = p.requestedPermissions;
-            int[] grant = p.requestedPermissionsFlags;
-
-            if (req == null || req.length == 0) continue;
-
-            int appScore = 0;
-            int appDangerCount = 0;
-            StringBuilder sb = new StringBuilder();
-
-            for (int i = 0; i < req.length; i++) {
-
-                String perm = req[i];
-                if (perm == null) continue;
-
-                boolean granted = isGrantedFlag(grant, i);
-
-                int weight = permissionWeight(perm);
-                if (weight <= 0) continue;
-
-                if (granted) {
-                    appDangerCount++;
-                    appScore += weight;
-
-                    sb.append("• ")
-                      .append(shortPerm(perm))
-                      .append(gr ? " (χορηγήθηκε)\n" : " (granted)\n");
-                }
-            }
-
-            if (appScore > 0) {
-
-                dangTotal += appDangerCount;
-                riskTotal += appScore;
-
-                int threshold = 10;
-
-                if (appScore >= threshold) {
-
-                    flaggedApps++;
-                    appRisk.put(pkg, appScore);
-
-                    String appLabel = safeLabel(pm, pkg);
-
-                    details.add(
-                            appLabel + " (" + pkg + ")" +
-                            (gr ? " — Κίνδυνος=" : " — Risk=") +
-                            appScore + "\n" + sb.toString()
-                    );
-                }
-            }
-        }
-
-    } catch (SecurityException se) {
-
-        logWarn(gr
-                ? "Η σάρωση περιορίστηκε από την πολιτική ορατότητας πακέτων Android."
-                : "Permissions scan limited by Android package visibility policy.");
-
-    } catch (Exception e) {
-
-        logError(gr
-                ? "Σφάλμα σάρωσης αδειών: " + e.getMessage()
-                : "Permissions scan error: " + e.getMessage());
-    }
-
-    // ============================================================
-    // SUMMARY
-    // ============================================================
-    int maxRiskRef = 300;
-    int riskPct = Math.min(100, (riskTotal * 100) / maxRiskRef);
-
-appendHtml("<br>");
-    logInfo(gr ? "Σύνοψη Σάρωσης" : "Scan Summary");
-    logLine();
-
-    logLabelOkValue(
-            gr ? "Εφαρμογές που ελέγχθηκαν" : "Apps scanned",
-            String.valueOf(totalApps)
-    );
-
-    if (dangTotal == 0) {
-        logLabelOkValue(
-                gr ? "Επικίνδυνες άδειες (χορηγημένες)" : "Dangerous permissions granted",
-                String.valueOf(dangTotal)
-        );
-    } else if (dangTotal <= 5) {
-        logLabelWarnValue(
-                gr ? "Επικίνδυνες άδειες (χορηγημένες)" : "Dangerous permissions granted",
-                String.valueOf(dangTotal)
-        );
-    } else {
-        logLabelErrorValue(
-                gr ? "Επικίνδυνες άδειες (χορηγημένες)" : "Dangerous permissions granted",
-                String.valueOf(dangTotal)
-        );
-    }
-
-    if (flaggedApps == 0) {
-        logLabelOkValue(
-                gr ? "Εφαρμογές με αυξημένο ρίσκο" : "Flagged apps",
-                String.valueOf(flaggedApps)
-        );
-    } else if (flaggedApps <= 2) {
-        logLabelWarnValue(
-                gr ? "Εφαρμογές με αυξημένο ρίσκο" : "Flagged apps",
-                String.valueOf(flaggedApps)
-        );
-    } else {
-        logLabelErrorValue(
-                gr ? "Εφαρμογές με αυξημένο ρίσκο" : "Flagged apps",
-                String.valueOf(flaggedApps)
-        );
-    }
-
-    // ============================================================
-    // PRIVACY RISK SCORE
-    // ============================================================
-    logInfo(gr
-        ? "Δείκτης Ρίσκου Ιδιωτικότητας"
-        : "Privacy risk score");
-
-String riskLabel;
-
-if (riskPct >= 70) {
-
-    riskLabel = gr ? "Υψηλό" : "High";
-
-    logLabelErrorValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + riskPct + ")"
-    );
-
-} else if (riskPct >= 30) {
-
-    riskLabel = gr ? "Μέτριο" : "Moderate";
-
-    logLabelWarnValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + riskPct + ")"
-    );
-
-} else {
-
-    riskLabel = gr ? "Χαμηλό" : "Low";
-
-    logLabelOkValue(
-            gr ? "Ρίσκο" : "Risk",
-            riskLabel + " (" + riskPct + ")"
-    );
-}
-
-    // ============================================================
-    // TOP OFFENDERS
-    // ============================================================
-    if (!appRisk.isEmpty()) {
-
-        appendHtml("<br>");
-        logInfo(gr
-                ? "Εφαρμογές με τον υψηλότερο δείκτη ρίσκου"
-                : "Top privacy offenders");
-                 logLine();
-
-        appRisk.entrySet()
-                .stream()
-                .sorted((a, b) -> b.getValue() - a.getValue())
-                .limit(8)
-                .forEach(e -> {
-
-                    String label = safeLabel(pm, e.getKey());
-                    String riskVal = String.valueOf(e.getValue());
-
-                    if (e.getValue() >= 60) {
-                        logLabelErrorValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
-                    } else if (e.getValue() >= 30) {
-                        logLabelWarnValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
-                    } else {
-                        logLabelOkValue(label, (gr ? "Ρίσκο " : "Risk ") + riskVal);
-                    }
-                });
-    }
-
-    // ============================================================
-    // FULL DETAILS
-    // ============================================================
-    if (!details.isEmpty()) {
-
-        appendHtml("<br>");
-        logInfo(gr
-                ? "Αναλυτικές Πληροφορίες (Εφαρμογές με ρίσκο)"
-                : "Permission details (flagged apps)");
-                logLine();
-
-        for (String d : details) {
-            logLabelWarnValue(gr ? "Εύρημα" : "Finding", d.trim());
-        }
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Συνδυασμοί αδειών" : "Permission patterns",
-                gr
-                        ? "Δεν εντοπίστηκαν συνδυασμοί υψηλού ρίσκου"
-                        : "No high-risk permission combinations detected"
-        );
-    }
-
-    // ============================================================
-    // CONTEXT NOTE
-    // ============================================================
-    appendHtml("<br>");
-    logInfo(gr ? "Σημείωση Ανάλυσης Ιδιωτικότητας" : "Privacy Analysis Note");
-    logLine();
-
-    logLabelOkValue(
-            gr ? "Διευκρίνιση" : "Clarification",
-            gr
-                    ? "Η χορήγηση αδειών δεν σημαίνει κακόβουλη συμπεριφορά."
-                    : "Granted permissions do not imply malicious behavior."
-    );
-
-    logLabelOkValue(
-            gr ? "Πεδίο Ανάλυσης" : "Scope",
-            gr
-                    ? "Το αποτέλεσμα ΔΕΝ υποδεικνύει βλάβη υλικού ή συστήματος."
-                    : "This result does NOT indicate hardware or system failure."
-    );
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 27 ολοκληρώθηκε." : "Lab 27 finished.");
-    logLine();
-}
-
-// ============================================================
-// INTERNAL helpers for Lab 27 (keep inside same lab block)
-// ============================================================
-
-private boolean isGrantedFlag(int[] flags, int i) {
-try {
-if (flags == null || i < 0 || i >= flags.length) return false;
-return (flags[i] & android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0;
-} catch (Exception e) {
-return false;
-}
-}
-
-private String safeLabel(PackageManager pm, String pkg) {
-try {
-ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
-CharSequence cs = pm.getApplicationLabel(ai);
-return cs != null ? cs.toString() : pkg;
-} catch (Exception e) {
-return pkg;
-}
-}
-
-// Weight per dangerous/sensitive permission
-private int permissionWeight(String p) {
-if (p == null) return 0;
-
-// VERY HIGH RISK
-if (p.equals(Manifest.permission.READ_SMS)) return 25;
-if (p.equals(Manifest.permission.RECEIVE_SMS)) return 20;
-if (p.equals(Manifest.permission.SEND_SMS)) return 25;
-if (p.equals(Manifest.permission.READ_CALL_LOG)) return 25;
-if (p.equals(Manifest.permission.WRITE_CALL_LOG)) return 25;
-if (p.equals(Manifest.permission.CALL_PHONE)) return 15;
-
-// HIGH RISK
-if (p.equals(Manifest.permission.RECORD_AUDIO)) return 20;
-if (p.equals(Manifest.permission.CAMERA)) return 18;
-if (p.equals(Manifest.permission.ACCESS_FINE_LOCATION)) return 18;
-if (p.equals(Manifest.permission.ACCESS_COARSE_LOCATION)) return 12;
-if (p.equals(Manifest.permission.READ_CONTACTS)) return 15;
-if (p.equals(Manifest.permission.WRITE_CONTACTS)) return 15;
-if (p.equals(Manifest.permission.GET_ACCOUNTS)) return 10;
-
-// STORAGE (legacy)
-if (p.equals(Manifest.permission.READ_EXTERNAL_STORAGE)) return 10;
-if (p.equals(Manifest.permission.WRITE_EXTERNAL_STORAGE)) return 12;
-
-// BACKGROUND / SUSPICIOUS
-if (p.equals(Manifest.permission.REQUEST_INSTALL_PACKAGES)) return 20;
-if (p.equals(Manifest.permission.SYSTEM_ALERT_WINDOW)) return 15;
-if (p.equals(Manifest.permission.PACKAGE_USAGE_STATS)) return 15;
-if (p.equals(Manifest.permission.BIND_ACCESSIBILITY_SERVICE)) return 25;
-
-return 0;
-
-}
-
-private String shortPerm(String p) {
-if (p == null) return "";
-int i = p.lastIndexOf('.');
-return (i >= 0 && i < p.length() - 1) ? p.substring(i + 1) : p;
-}
-
-// ============================================================
-// LAB 28 — Hardware Stability & Interconnect / humidity Integrity
+// LAB 27 — Hardware Stability & Interconnect / humidity Integrity
 // TECHNICIAN MODE — SYMPTOM-BASED TRIAGE ONLY
 // ============================================================
-private void lab28HardwareStability() {
+private void lab27HardwareStability() {
 
     final boolean gr = AppLang.isGreek(this);
 
     if (!requireGelPro(
-            gr ? "LAB 28 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων"
-               : "LAB 28 — Hardware Stability & Interconnect Integrity")) {
+            gr ? "LAB 27 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων"
+               : "LAB 27 — Hardware Stability & Interconnect Integrity")) {
         return;
     }
 
@@ -29759,8 +29427,8 @@ private void lab28HardwareStability() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 28 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων"
-            : "LAB 28 — Hardware Stability & Interconnect Integrity");
+            ? "LAB 27 — Σταθερότητα Υλικού & Ακεραιότητα Διασυνδέσεων"
+            : "LAB 27 — Hardware Stability & Interconnect Integrity");
     logOk(gr
             ? "Λειτουργία τεχνικού — Ανάλυση βασισμένη σε συμπτώματα ΜΟΝΟ."
             : "Technician mode — symptom-based analysis ONLY.");
@@ -29769,7 +29437,7 @@ private void lab28HardwareStability() {
     int symptomScore = 0;
     int powerGlitches = 0;
 
-    Lab28Evidence ev = Lab28EvidenceReader.readFromGELServiceLog();
+    Lab27Evidence ev = Lab27EvidenceReader.readFromGELServiceLog();
 
     randomReboots = ev.rebootPattern;
     signalDrops   = ev.radioInstability;
@@ -29779,7 +29447,7 @@ private void lab28HardwareStability() {
     if (ev.chargingGlitch) powerGlitches++;
 
     // Technician popup
-    showLab28Popup();
+    showLab27Popup();
 
     // ============================================================
     // STAGE A — SYMPTOM SCORE
@@ -30300,15 +29968,15 @@ if (hiddenScore >= 60) {
     }
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 28 ολοκληρώθηκε." : "Lab 28 finished.");
+    logOk(gr ? "Το Lab 27 ολοκληρώθηκε." : "Lab 27 finished.");
     logLine();
 }
 
 // ============================================================
-// LAB 28 — Helpers
+// LAB 27 — Helpers
 // ============================================================
 
-private static class Lab28Evidence {
+private static class Lab27Evidence {
     boolean thermalSpikes;
     boolean chargingGlitch;
     boolean radioInstability;
@@ -30321,11 +29989,11 @@ private static class Lab28Evidence {
     String crashPattern; // SOFTWARE, MIXED, UNKNOWN
 }
 
-private static class Lab28EvidenceReader {
+private static class Lab27EvidenceReader {
 
-    static Lab28Evidence readFromGELServiceLog() {
+    static Lab27Evidence readFromGELServiceLog() {
 
-        Lab28Evidence ev = new Lab28Evidence();
+        Lab27Evidence ev = new Lab27Evidence();
         ev.crashPattern = "UNKNOWN";
 
         String log;
@@ -30385,10 +30053,10 @@ private static class Lab28EvidenceReader {
 }
 
 // ============================================================
-// LAB 29 — Device Authenticity & Parts Integrity (SAFE MODE)
+// LAB 28 — Device Authenticity & Parts Integrity (SAFE MODE)
 // Only confirmed signals — no heuristics
 // ============================================================
-private void lab29DeviceAuthenticity() {
+private void lab28DeviceAuthenticity() {
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -30404,8 +30072,8 @@ private void lab29DeviceAuthenticity() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 29 — Παρατηρήσεις Hardware (όχι πιστοποίηση γνησιότητας)"
-            : "LAB 29 — Hardware observations (not OEM certification)");
+            ? "LAB 28 — Παρατηρήσεις Hardware (όχι πιστοποίηση γνησιότητας)"
+            : "LAB 28 — Hardware observations (not OEM certification)");
     logInfo(gr
         ? "SAFE MODE — εμφανίζονται μόνο επιβεβαιωμένα ευρήματα"
         : "SAFE MODE — only confirmed findings are reported");
@@ -30675,7 +30343,8 @@ if (lab14CollapseRisk || lab14SwellingSuspected)
     logLine();
 
 // ============================================================
-// SAVE LAB 29 RESULTS — SINGLE SOURCE FOR LAB 30 / LAB 31
+// Visible Lab 28 writes legacy "lab29_*" preference keys used by Labs 29/30.
+// Keep key names stable to preserve stored measurements and reader compatibility.
 // ============================================================
 boolean instabilityDetected = instabilityScore >= 20;
 
@@ -30701,24 +30370,24 @@ logLabelValue(
 
     appendHtml("<br>");
     logOk(gr
-            ? "Το Lab 29 ολοκληρώθηκε."
-            : "Lab 29 finished.");
+            ? "Το Lab 28 ολοκληρώθηκε."
+            : "Lab 28 finished.");
     logLine();
 }
 
 // ============================================================
-// LAB 30 — Auto Final Diagnosis Summary (GEL Universal AUTO Edition)
+// LAB 29 — Auto Final Diagnosis Summary (GEL Universal AUTO Edition)
 // Combines Thermals + Battery + Storage + RAM + Apps + Uptime +
 // Security + Privacy + Root + Stability into final scores.
 // NOTE (GEL RULE): Whole block ready for copy-paste.
 // ============================================================
-private void lab30CombineFindings() {
+private void lab29CombineFindings() {
 
 final boolean grGate = AppLang.isGreek(this);
 
 if (!requireGelPro(
-        grGate ? "LAB 30 — GEL Device Certification"
-               : "LAB 30 — GEL Device Certification")) {
+        grGate ? "LAB 29 — GEL Device Certification"
+               : "LAB 29 — GEL Device Certification")) {
     return;
 }
 
@@ -30805,8 +30474,8 @@ boolean thermalRunawayRisk =
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 30 — Αυτόματη Τελική Σύνοψη Διάγνωσης (ΠΛΗΡΩΣ ΑΥΤΟΜΑΤΗ)"
-            : "LAB 30 — Auto Final Diagnosis Summary (FULL AUTO)");
+            ? "LAB 29 — Αυτόματη Τελική Σύνοψη Διάγνωσης (ΠΛΗΡΩΣ ΑΥΤΟΜΑΤΗ)"
+            : "LAB 29 — Auto Final Diagnosis Summary (FULL AUTO)");
     logLine();
 
     // ============================================================
@@ -30929,7 +30598,7 @@ int privacyScore = scorePrivacy(convertToEnginePrivacy(pr));
 String privacyFlag = colorFlagFromScore(privacyScore);
 
 // ------------------------------------------------------------
-// 9) AUTHENTICITY / REPAIR INDICATORS (LAB 29)
+// 9) AUTHENTICITY / REPAIR INDICATORS (LAB 28)
 // ------------------------------------------------------------
 
 boolean lab29ObservationsAvailable =
@@ -30954,15 +30623,15 @@ if (lab29ObservationsAvailable) {
                : "NOT VERIFIABLE from available Android signals"
     );
     logLabelValue(
-            gr ? "Στοιχεία Lab 29" : "Lab 29 observations",
+            gr ? "Στοιχεία Lab 28" : "Lab 28 observations",
             gr ? "Παρατηρήσεις διαθέσιμες· η προέλευση OEM απαιτεί ανεξάρτητο έλεγχο"
                : "Observations available; OEM origin requires independent verification"
     );
 } else {
     logLabelWarnValue(
-            gr ? "Στοιχεία Lab 29" : "Lab 29 observations",
-            gr ? "Δεν υπάρχουν αποτελέσματα νέας μορφής· εκτελέστε το Lab 29"
-               : "No current-format findings; run Lab 29"
+            gr ? "Στοιχεία Lab 28" : "Lab 28 observations",
+            gr ? "Δεν υπάρχουν αποτελέσματα νέας μορφής· εκτελέστε το Lab 28"
+               : "No current-format findings; run Lab 28"
     );
 }
 
@@ -31193,7 +30862,7 @@ if (sensorBusInstability) {
 }
 
 // ------------------------------------------------------------
-// LAB 29 INTEGRITY / INSTABILITY
+// LAB 28 INTEGRITY / INSTABILITY
 // ------------------------------------------------------------
 if (lab29InstabilityPattern) {
 
@@ -31203,8 +30872,8 @@ if (lab29InstabilityPattern) {
             gr ? "Ακεραιότητα συσκευής"
                : "Device integrity",
             gr
-                    ? "Το LAB 29 εντόπισε επαναλαμβανόμενο μοτίβο αστάθειας."
-                    : "LAB 29 detected a repeated instability pattern."
+                    ? "Το LAB 28 εντόπισε επαναλαμβανόμενο μοτίβο αστάθειας."
+                    : "LAB 28 detected a repeated instability pattern."
     );
 }
 
@@ -31483,7 +31152,7 @@ if (pmicInstability) riskSignals++;
 // SENSOR BUS
 if (sensorBusInstability) riskSignals++;
 
-// LAB 29 INSTABILITY
+// LAB 28 INSTABILITY
 if (lab29InstabilityPattern) riskSignals++;
 
 if (riskSignals == 1) {
@@ -32297,12 +31966,12 @@ logOk(gr ? "GEL Certification completed." : "GEL Certification completed.");
 logLine();
 
 appendHtml("<br>");
-logOk(gr ? "Το Lab 30 ολοκληρώθηκε." : "Lab 30 finished.");
+logOk(gr ? "Το Lab 29 ολοκληρώθηκε." : "Lab 29 finished.");
 logLine();
 }
 
 // ============================================================
-// ======= LAB 30 INTERNAL AUTO HELPERS (SAFE, NO IMPORTS) =====
+// ======= LAB 29 INTERNAL AUTO HELPERS (SAFE, NO IMPORTS) =====
 // ============================================================
 
 private StorageSnapshot readStorageSnapshot() {
@@ -32778,11 +32447,11 @@ return String.format(Locale.US, "%.1f", v);
 }
 
 // ============================================================
-// LAB 31 — FINAL TECHNICIAN SUMMARY (READ-ONLY)
+// LAB 30 — FINAL TECHNICIAN SUMMARY (READ-ONLY)
 // Does NOT modify GELServiceLog — only reads it.
 // Exports via ServiceReportActivity.
 // ============================================================
-private void lab31FinalSummary() {
+private void lab30FinalSummary() {
 
     final boolean gr = AppLang.isGreek(this);
 
@@ -32838,8 +32507,8 @@ appendHtml("<br>");
 logLine();
 
 logInfo(gr
-        ? "LAB 31 — ΤΕΛΙΚΗ ΤΕΧΝΙΚΗ ΑΝΑΦΟΡΑ (ΜΟΝΟ ΑΝΑΓΝΩΣΗ)"
-        : "LAB 31 — FINAL TECHNICAL REPORT (READ-ONLY)");
+        ? "LAB 30 — ΤΕΛΙΚΗ ΤΕΧΝΙΚΗ ΑΝΑΦΟΡΑ (ΜΟΝΟ ΑΝΑΓΝΩΣΗ)"
+        : "LAB 30 — FINAL TECHNICAL REPORT (READ-ONLY)");
 
 logLine();
 
@@ -32913,7 +32582,7 @@ logLine();
 
 // ------------------------------------------------------------
 // 4) BATTERY FINDINGS — INFORMATIONAL ONLY
-// LAB 30 remains the single source of truth for device scoring.
+// LAB 29 remains the single source of truth for device scoring.
 // ------------------------------------------------------------
 float batteryScore =
         p.getFloat("lab14_health_score", -1f);
@@ -33058,7 +32727,7 @@ if (lab14bConsumptionPerHour > 0f &&
    
 // ------------------------------------------------------------
 // DEVICE INTEGRITY / INSTABILITY FINDINGS
-// LAB 29 confirmed measurements — no manipulation accusation
+// LAB 28 confirmed measurements — no manipulation accusation
 // ------------------------------------------------------------
 int lab29AuthenticityScore =
         p.getInt("lab29_authenticity_score", -1);
@@ -33113,8 +32782,8 @@ if (lab29AuthenticityScore >= 0) {
             gr ? "Ακεραιότητα συσκευής"
                : "Device integrity",
             gr
-                    ? "Δεν υπάρχουν διαθέσιμα αποτελέσματα από το LAB 29"
-                    : "No LAB 29 results available"
+                    ? "Δεν υπάρχουν διαθέσιμα αποτελέσματα από το LAB 28"
+                    : "No LAB 28 results available"
     );
 }
 
@@ -33161,8 +32830,8 @@ if (hwInstability) {
 
     appendHtml("<br>");
     logOk(gr
-            ? "Το Lab 31 ολοκληρώθηκε."
-            : "Lab 31 finished.");
+            ? "Το Lab 30 ολοκληρώθηκε."
+            : "Lab 30 finished.");
     logLine();
 }
 
