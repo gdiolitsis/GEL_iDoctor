@@ -151,13 +151,13 @@ jobs:
   iphone-repair-case:
     # Independent of the signed v55 candidate and the owner's PRO entitlement.
     # Test APK is temporary and is never distributed.
-    if: \${{ github.head_ref == 'feature/lab29-oem-spec-compare-shared-engine-20261115' && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.head_ref == 'feature/lab29-oem-spec-compare-shared-engine-20261115' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: \${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
         with:
           distribution: temurin
@@ -202,5 +202,5 @@ jobs:
         if: always()
         with:
           name: iphone-repair-case-emulator-evidence
-          path: \${{ runner.temp }}/iphone-panic-case
+          path: ${{ runner.temp }}/iphone-panic-case
           retention-days: 7
