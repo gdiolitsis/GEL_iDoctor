@@ -11010,10 +11010,15 @@ private void lab9SensorsCheck() {
                     gr ? "Αισθητήρες φωτός" : "Ambient Light Sensors",
                     gr ? "2+ καταχωρίσεις με ονομασία ALS" : "2+ entries named ALS"
             );
+        else if (alsCount > 0)
+            logLabelOkValue(
+                    gr ? "Αισθητήρες φωτός" : "Ambient Light Sensors",
+                    gr ? "Καταχωρίσεις ALS κατά όνομα: " + alsCount : "ALS entries by name: " + alsCount
+            );
         else
             logLabelValue(
                     gr ? "Αισθητήρες φωτός" : "Ambient Light Sensors",
-                    gr ? "Καταχωρίσεις ALS κατά όνομα: " + alsCount : "ALS entries by name: " + alsCount
+                    gr ? "Δεν βρέθηκε καταχώριση ALS κατά όνομα" : "No ALS-named entry found"
             );
 
         if (hasSAR)
@@ -11060,7 +11065,7 @@ private void lab9SensorsCheck() {
                     gr ? "Δεν βρέθηκε σχετική καταχώριση" : "No related entry found"
             );
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Αποτέλεσμα απογραφής" : "Inventory result",
                 gr
                         ? "Καταγράφηκαν οι αισθητήρες που δηλώνει το Android."
