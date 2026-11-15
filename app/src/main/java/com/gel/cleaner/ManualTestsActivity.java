@@ -28345,6 +28345,8 @@ try { if (br != null) br.close(); } catch (Throwable ignore) {}
 /* ============================================================
 LAB 22 — Security Patch + Play Protect (Realtime)
 ============================================================ */
+private int lab22BulletinRunId = 0;
+
 private void lab22SecurityPatchAndPlayProtect() {
     final boolean gr = AppLang.isGreek(this);
 
@@ -28466,12 +28468,59 @@ private void lab22SecurityPatchAndPlayProtect() {
             ? "Ανοίξτε Play Store → Προφίλ → Play Protect → Ρυθμίσεις και βεβαιωθείτε ότι η σάρωση εφαρμογών είναι ενεργή."
             : "Open Play Store → Profile → Play Protect → Settings and make sure app scanning is enabled.");
 
+    // The AOSP bulletin is a published patch level, NOT proof that the
+    // manufacturer offers an OTA update to this particular device.
+    logLine();
+    logInfo(gr ? "4. Online σύγκριση με επίσημο δελτίο Android"
+               : "4. Online comparison with official Android bulletin");
+    final String installedPatch = patch;
+    final int requestId = ++lab22BulletinRunId;
+    new Thread(() -> {
+        final java.time.LocalDate latest =
+                AndroidSecurityBulletinChecker.fetchLatestPublishedPatchLevel();
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed() || requestId != lab22BulletinRunId) return;
+            if (latest == null) {
+                logLabelValue(
+                        gr ? "Online διασταύρωση" : "Online verification",
+                        gr ? "Δεν ήταν δυνατή η ανάγνωση του επίσημου δελτίου"
+                           : "Official bulletin could not be verified");
+            } else {
+                logLabelOkValue(
+                        gr ? "Νεότερο δημοσιευμένο επίπεδο Android"
+                           : "Latest published Android patch level",
+                        latest.toString());
+                try {
+                    java.time.LocalDate local = java.time.LocalDate.parse(installedPatch);
+                    if (local.isBefore(latest)) {
+                        logLabelWarnValue(
+                                gr ? "Σύγκριση ενημερώσεων" : "Patch comparison",
+                                gr ? "Παλαιότερο από το δημοσιευμένο επίπεδο Android"
+                                   : "Older than the published Android patch level");
+                        logInfo(gr
+                                ? "Δεν επιβεβαιώθηκε διαθέσιμη αναβάθμιση για το συγκεκριμένο μοντέλο."
+                                : "This does not confirm an available update for this model.");
+                    } else {
+                        logLabelOkValue(
+                                gr ? "Σύγκριση ενημερώσεων" : "Patch comparison",
+                                gr ? "Ίσο ή νεότερο από το δημοσιευμένο επίπεδο"
+                                   : "Same as or newer than the published level");
+                    }
+                } catch (Exception ignored) {
+                    logLabelValue(
+                            gr ? "Σύγκριση ενημερώσεων" : "Patch comparison",
+                            gr ? "Η ημερομηνία της συσκευής δεν επαληθεύτηκε"
+                               : "Device patch date was not verified");
+                }
+            }
     appendHtml("<br>");
     logOk(gr
             ? "Το Lab 22 ολοκληρώθηκε — καταγράφηκαν τα διαθέσιμα στοιχεία ασφάλειας."
             : "Lab 22 completed — available security information was recorded.");
     logLine();
 }
+        });
+    }, "gel-lab22-bulletin").start();
 
 // ============================================================
 // LAB 23 — Developer Options / ADB Risk Note + UI BUBBLES + AUTO-FIX HINTS
