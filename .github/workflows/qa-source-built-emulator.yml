@@ -197,10 +197,10 @@ jobs:
             -e class com.gel.cleaner.IPhoneKnownRepairEmulatorTest \
             com.gel.iDoctor.test/androidx.test.runner.AndroidJUnitRunner \
             | tee "$RUNNER_TEMP/iphone-panic-case/instrumentation.txt"
-          grep -q '^OK (1 test)' "$RUNNER_TEMP/iphone-panic-case/instrumentation.txt"
+          grep -q '^OK (2 tests)' "$RUNNER_TEMP/iphone-panic-case/instrumentation.txt"
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: iphone-repair-case-emulator-evidence
+          name: iphone-repair-case-matrix-emulator-evidence
           path: ${{ runner.temp }}/iphone-panic-case
           retention-days: 7
