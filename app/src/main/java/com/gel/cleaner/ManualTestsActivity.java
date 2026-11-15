@@ -27602,14 +27602,11 @@ private void lab19RamSnapshot() {
             }
 
             if (swapUsedKb >= 0 && snap.swapTotalKb > 0) {
-                // This percentage is a quantity ratio, NOT a pressure grade.
-                // It can exceed 100% on some memory-compression configurations.
-                double ratioPct = 100.0 * swapUsedKb * 1024.0 / total;
+                // Directly observed SwapTotal - SwapFree; not a heuristic
+                // grade, a RAM-health rating or a synthetic Swap/RAM index.
                 logLabelOkValue(
-                        gr ? "Χρήση Swap/RAM" : "Used Swap / physical RAM",
-                        String.format(Locale.US, "%.0f%% (%s Swap / %s RAM)",
-                                ratioPct, humanBytes(swapUsedKb * 1024L),
-                                humanBytes(total)));
+                        gr ? "Swap σε χρήση" : "Swap in use",
+                        humanBytes(swapUsedKb * 1024L));
             }
 
             if (snap.memFreeKb > 0) {
