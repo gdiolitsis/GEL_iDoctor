@@ -51,8 +51,8 @@ public final class Lab9SensorInventoryOnlyContractTest {
         assertTrue(s.contains("if (hasPickup)\n            logLabelOkValue("));
         assertTrue(s.contains("if (hasLargeTouch)\n            logLabelOkValue("));
         assertTrue(s.contains("if (hasGameRotation)\n            logLabelOkValue("));
-        assertTrue(s.contains("if (alsCount > 0)\\n            logLabelOkValue("));
-        assertTrue(s.contains("logLabelOkValue(\\n                gr ? \\"Αποτέλεσμα απογραφής\\""));
+        assertTrue(s.contains("if (alsCount > 0)\n            logLabelOkValue("));
+        assertTrue(s.contains("logLabelOkValue(\n                gr ? \"Αποτέλεσμα απογραφής\""));
         assertTrue(s.contains("Δεν βρέθηκε καταχώριση ALS κατά όνομα"));
         assertTrue(s.contains("Δεν βρέθηκε σχετική καταχώριση"));
         assertTrue(s.contains("Το Lab 9 ολοκληρώθηκε (απογραφή αισθητήρων)."));
