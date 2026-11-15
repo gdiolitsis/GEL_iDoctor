@@ -207,7 +207,7 @@ GDiolitsis Engine Lab (GEL) — Author &amp; Developer
     <string name="manual_cat_4">Μπαταρία &amp; Θερμοκρασία — Εργαστήρια 14–17</string>
     <string name="manual_cat_5">Αποθήκευση &amp; Απόδοση — Εργαστήρια 18–20</string>
     <string name="manual_cat_6">Ασφάλεια &amp; Υγεία Συστήματος — Εργαστήρια 21–24</string>
-    <string name="manual_cat_7">Προχωρημένα / Καταγραφές — Εργαστήρια 25–31</string>
+    <string name="manual_cat_7">Προχωρημένα / Καταγραφές — Εργαστήρια 25–30</string>
 
     <!-- LOG -->
     <string name="manual_log_title">Καταγραφή Manual Tests</string>
