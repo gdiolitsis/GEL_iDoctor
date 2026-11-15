@@ -11482,12 +11482,79 @@ private void runWifiDeepScan(WifiManager wm) {
                                        : "~%.2f Mbps (uncalibrated estimate, not measured)", speedSim)
             );
 
+
+            // Android 12+: report the security of the currently connected Wi-Fi link.
+            // This is link-layer evidence, NOT a router audit or proof of total security.
+            int wifiSecurityType = WifiInfo.SECURITY_TYPE_UNKNOWN;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    WifiInfo connectedInfo = wm.getConnectionInfo();
+                    if (connectedInfo != null) {
+                        wifiSecurityType = connectedInfo.getCurrentSecurityType();
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            switch (wifiSecurityType) {
+                case WifiInfo.SECURITY_TYPE_OPEN:
+                    logLabelWarnValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            gr ? "OPEN — χωρίς κρυπτογράφηση ασύρματης σύνδεσης"
+                               : "OPEN — wireless link is not encrypted");
+                    break;
+                case WifiInfo.SECURITY_TYPE_WEP:
+                    logLabelWarnValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            gr ? "WEP — παρωχημένος και ευάλωτος μηχανισμός"
+                               : "WEP — obsolete, vulnerable security");
+                    break;
+                case WifiInfo.SECURITY_TYPE_SAE:
+                    logLabelOkValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            "WPA3-Personal (SAE)");
+                    break;
+                case WifiInfo.SECURITY_TYPE_EAP_WPA3_ENTERPRISE:
+                    logLabelOkValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            "WPA3-Enterprise");
+                    break;
+                case WifiInfo.SECURITY_TYPE_EAP_WPA3_ENTERPRISE_192_BIT:
+                    logLabelOkValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            "WPA3-Enterprise 192-bit");
+                    break;
+                case WifiInfo.SECURITY_TYPE_PASSPOINT_R1_R2:
+                    logLabelOkValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            "Passpoint R1/R2");
+                    break;
+                case WifiInfo.SECURITY_TYPE_PASSPOINT_R3:
+                    logLabelOkValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            "Passpoint R3");
+                    break;
+                case WifiInfo.SECURITY_TYPE_PSK:
+                    logLabelValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            gr ? "PSK — η ακριβής έκδοση WPA δεν επιβεβαιώθηκε"
+                               : "PSK — exact WPA version not verified");
+                    break;
+                case WifiInfo.SECURITY_TYPE_OWE:
+                    logLabelValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            gr ? "OWE — κρυπτογράφηση χωρίς ταυτοποίηση δικτύου"
+                               : "OWE — encryption without network authentication");
+                    break;
+                case WifiInfo.SECURITY_TYPE_EAP:
+                    logLabelValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            gr ? "Enterprise EAP — οι ρυθμίσεις ασφάλειας δεν ελέγχθηκαν"
+                               : "Enterprise EAP — security settings not audited");
+                    break;
+                default:
+                    logLabelValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            gr ? "Μη διαθέσιμος — δεν επιβεβαιώθηκε προστασία ασύρματης σύνδεσης"
+                               : "Unavailable — wireless security not verified");
+                    break;
+            }
+
             // Finish
             logLabelOkValue(gr ? "DeepScan" : "DeepScan", gr ? "Οι δοκιμές εκτελέστηκαν — δείτε τα επιμέρους ευρήματα" : "Probes executed — see individual evidence");
 
             // ====================================================
             // INTERNET AVAILABILITY
             // ====================================================
+            boolean wifiInternetValidated = false;
             try {
                 ConnectivityManager cm =
                         (ConnectivityManager)
@@ -11509,6 +11576,8 @@ private void runWifiDeepScan(WifiManager wm) {
                             hasInternet =
                                     caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
                             validated = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                            wifiInternetValidated = validated
+                                    && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
 
                             if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))
                                 transport = gr ? "Wi-Fi" : "Wi-Fi";
@@ -11600,14 +11669,19 @@ private void runWifiDeepScan(WifiManager wm) {
                                 ai.packageName
                         ) == PackageManager.PERMISSION_GRANTED;
 
-                logLabelValue(
-                        gr ? "Άδεια εκκίνησης BOOT (όχι απόδειξη δικτύου)" : "BOOT permission (not network activity proof)",
-                        bgPossible
-                                ? (gr ? "Δηλωμένο RECEIVE_BOOT_COMPLETED (εκκίνηση στο boot)"
-              : "RECEIVE_BOOT_COMPLETED declared")
-        : (gr ? "Δεν υπάρχει BOOT RECEIVER δηλωμένο"
-              : "No BOOT-TIME RECEIVER declared")
-);
+                // Green means the requested capability was positively detected;
+                // it does not mean network activity, elevated privilege, or safety.
+                if (bgPossible) {
+                    logLabelOkValue(
+                            gr ? "Άδεια εκκίνησης BOOT (όχι απόδειξη δικτύου)" : "BOOT permission (not network activity proof)",
+                            gr ? "RECEIVE_BOOT_COMPLETED δηλωμένη (όχι απόδειξη εκτέλεσης)"
+                               : "RECEIVE_BOOT_COMPLETED declared (not proof of execution)");
+                } else {
+                    logLabelValue(
+                            gr ? "Άδεια εκκίνησης BOOT (όχι απόδειξη δικτύου)" : "BOOT permission (not network activity proof)",
+                            gr ? "RECEIVE_BOOT_COMPLETED δεν δηλώνεται"
+                               : "RECEIVE_BOOT_COMPLETED not declared");
+                }
 
                 logLabelOkValue(
         gr ? "Αποτύπωση δηλωμένων πολιτικών" : "Declared-policy snapshot",
@@ -11624,6 +11698,71 @@ private void runWifiDeepScan(WifiManager wm) {
                                                     : "Unknown error"))
     );
 }
+
+
+            // Conclusion: keep availability separate from link protection.
+            // Neither declared app permissions nor probe success prove a safe router.
+            logLine();
+            logInfo(gr ? "Συμπέρασμα Lab 10" : "Lab 10 conclusion");
+            if (wifiInternetValidated) {
+                logLabelOkValue(
+                        gr ? "Συνδεσιμότητα" : "Connectivity",
+                        gr ? "Το Android επιβεβαίωσε πρόσβαση στο Internet μέσω Wi-Fi"
+                           : "Android validated Internet access over Wi-Fi");
+            } else {
+                logLabelValue(
+                        gr ? "Συνδεσιμότητα" : "Connectivity",
+                        gr ? "Δεν επιβεβαιώθηκε επικυρωμένη πρόσβαση Internet μέσω Wi-Fi"
+                           : "Validated Internet access over Wi-Fi not established");
+            }
+
+            switch (wifiSecurityType) {
+                case WifiInfo.SECURITY_TYPE_OPEN:
+                    logLabelWarnValue(
+                            gr ? "Προστασία Wi-Fi" : "Wi-Fi protection",
+                            gr ? "Ανοιχτό δίκτυο: δεν υπάρχει κρυπτογράφηση της ασύρματης ζεύξης"
+                               : "Open network: wireless link is not encrypted");
+                    break;
+                case WifiInfo.SECURITY_TYPE_WEP:
+                    logLabelWarnValue(
+                            gr ? "Προστασία Wi-Fi" : "Wi-Fi protection",
+                            gr ? "Η σύνδεση χρησιμοποιεί WEP: απαιτείται αναβάθμιση σε σύγχρονο μηχανισμό"
+                               : "WEP detected: migrate to a modern wireless security protocol");
+                    break;
+                case WifiInfo.SECURITY_TYPE_SAE:
+                case WifiInfo.SECURITY_TYPE_EAP_WPA3_ENTERPRISE:
+                case WifiInfo.SECURITY_TYPE_EAP_WPA3_ENTERPRISE_192_BIT:
+                case WifiInfo.SECURITY_TYPE_PASSPOINT_R1_R2:
+                case WifiInfo.SECURITY_TYPE_PASSPOINT_R3:
+                    logLabelOkValue(
+                            gr ? "Προστασία Wi-Fi" : "Wi-Fi protection",
+                            gr ? "Το Android αναφέρει προστατευμένη ασύρματη ζεύξη. Η συνολική ασφάλεια δικτύου δεν ελέγχθηκε."
+                               : "Android reports a protected wireless link. Overall network security was not audited.");
+                    break;
+                case WifiInfo.SECURITY_TYPE_OWE:
+                    logLabelValue(
+                            gr ? "Προστασία Wi-Fi" : "Wi-Fi protection",
+                            gr ? "OWE: κρυπτογράφηση χωρίς ταυτοποίηση σημείου πρόσβασης — όχι πλήρης πιστοποίηση ασφάλειας"
+                               : "OWE: encryption without access-point authentication; not a full security assessment");
+                    break;
+                case WifiInfo.SECURITY_TYPE_PSK:
+                case WifiInfo.SECURITY_TYPE_EAP:
+                    logLabelValue(
+                            gr ? "Προστασία Wi-Fi" : "Wi-Fi protection",
+                            gr ? "Αναφέρθηκε μηχανισμός ασφάλειας, αλλά η ακριβής ισχύς της προστασίας δεν τεκμηριώθηκε"
+                               : "A security mechanism was reported, but its effective strength was not verified");
+                    break;
+                default:
+                    logLabelValue(
+                            gr ? "Προστασία Wi-Fi" : "Wi-Fi protection",
+                            gr ? "Δεν υπάρχουν επαρκή στοιχεία για συμπέρασμα ασφάλειας"
+                               : "Insufficient evidence for a security conclusion");
+                    break;
+            }
+
+            logInfo(gr
+                    ? "Το Lab 10 δεν ελέγχει ευπάθειες router, συσκευές του LAN ή πραγματικό traffic."
+                    : "Lab 10 does not audit router vulnerabilities, LAN devices, or actual traffic.");
 
             appendHtml("<br>");
             logOk(gr ? "Το Lab 10 ολοκληρώθηκε (καταγράφηκαν οι διαθέσιμες ενδείξεις)."
