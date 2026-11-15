@@ -28530,12 +28530,12 @@ private void lab23DeveloperOptionsRisk() {
     logInfo(gr ? "2. Επιλογές προγραμματιστή"
                : "2. Developer options");
     if (developerState == 1) {
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Κατάσταση" : "Status",
                 gr ? "Ενεργοποιημένες — αυτό από μόνο του δεν σημαίνει κίνδυνο"
                    : "On — this alone does not mean there is a security problem");
     } else if (developerState == 0) {
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Κατάσταση" : "Status",
                 gr ? "Απενεργοποιημένες" : "Off");
     } else {
@@ -28545,84 +28545,46 @@ private void lab23DeveloperOptionsRisk() {
                    : "The setting could not be read");
     }
 
-    // Keep all existing local connectivity probes as developer-only evidence.
-    // A responsive LOCAL port is neither verified wireless debugging nor
-    // proof that this device is accessible from another device.
-    // Do not print port numbers, ADB, TCP, guesses or a fake safety score
-    // in the user-facing report. Do not append results after completion.
-    final int finalUsbState = usbState;
-    final int finalDeveloperState = developerState;
-    new Thread(() -> {
-        final boolean local5555 = isPortOpen(5555, 200);
-        final boolean local3700 = isPortOpen(3700, 80);
-        final boolean local7460 = isPortOpen(7460, 80);
-        final boolean pairingProbe = local3700 || local7460;
-        final boolean extraResponse = pairingProbe ? false : scanPairingPortRange();
+    // Only measured Android settings appear in the report. Developer Options
+    // alone are not proof of compromise; local port probes cannot establish
+    // wireless ADB availability, so they are deliberately not performed.
+    logLine();
+    logInfo(gr ? "Τι μπορείτε να κάνετε" : "What you can do");
+    if (usbState == 1) {
+        logInfo(gr
+                ? "Αν δεν χρειάζεστε τον προχωρημένο έλεγχο μέσω καλωδίου, απενεργοποιήστε αυτή τη ρύθμιση."
+                : "Turn off advanced cable access when you do not need it.");
+    } else if (usbState < 0) {
+        logInfo(gr
+                ? "Ελέγξτε στις Επιλογές προγραμματιστή αν η Αποσφαλμάτωση USB είναι απενεργοποιημένη."
+                : "Check that USB debugging is off in Developer options.");
+    }
 
-        android.util.Log.d("GEL-Lab23",
-                "Local-only connectivity probes (NOT wireless access verification): "
-                + "5555=" + local5555 + ", 3700=" + local3700
-                + ", 7460=" + local7460 + ", additional=" + extraResponse);
+    logLine();
+    logInfo(gr ? "Συμπέρασμα" : "Conclusion");
+    if (usbState == 0 && developerState == 1) {
+        logInfo(gr
+                ? "Μπορείτε να είστε ήσυχοι για αυτό που επιβεβαιώσαμε: ο προχωρημένος έλεγχος μέσω καλωδίου είναι απενεργοποιημένος. Το ότι έχετε ενεργές τις Επιλογές προγραμματιστή δεν σημαίνει ότι κάποιος έχει παραβιάσει το κινητό σας."
+                : "Reassuring result: advanced access through a cable is off. Having Developer options on does not mean that anyone has compromised your phone.");
+    } else if (usbState == 0) {
+        logInfo(gr
+                ? "Καλή ένδειξη: ο προχωρημένος έλεγχος μέσω καλωδίου είναι απενεργοποιημένος. Δεν χρειάζεται κάποια αλλαγή σε αυτή τη ρύθμιση."
+                : "Good sign: advanced access through a cable is off. No change to this setting is needed.");
+    } else if (usbState == 1) {
+        logInfo(gr
+                ? "Η πρόσβαση για προχωρημένο έλεγχο μέσω καλωδίου είναι ενεργή. Αυτό δεν σημαίνει ότι το κινητό έχει παραβιαστεί. Αν δεν τη χρειάζεστε, απενεργοποιήστε τη."
+                : "Advanced cable access is on. This does not mean the phone has been compromised. Turn it off if you do not need it.");
+    } else {
+        logInfo(gr
+                ? "Δεν μπορέσαμε να επιβεβαιώσουμε τη ρύθμιση πρόσβασης μέσω καλωδίου. Αυτό από μόνο του δεν αποτελεί ένδειξη παραβίασης."
+                : "We could not verify the cable access setting. This alone is not evidence of a compromise.");
+    }
 
-        runOnUiThread(() -> {
-            if (isFinishing() || isDestroyed()) return;
-
-            logLine();
-            logInfo(gr ? "3. Ασύρματη πρόσβαση για προχωρημένο έλεγχο"
-                       : "3. Advanced wireless access");
-            logLabelValue(
-                    gr ? "Κατάσταση" : "Status",
-                    gr ? "Δεν μπορεί να επιβεβαιωθεί από αυτό το εργαστήριο"
-                       : "This lab cannot verify its status");
-
-            logLine();
-            logInfo(gr ? "Τι μπορείτε να κάνετε" : "What you can do");
-            logInfo(gr
-                    ? "Ανοίξτε Ρυθμίσεις → Επιλογές προγραμματιστή → Ασύρματη αποσφαλμάτωση. Αν δεν τη χρησιμοποιείτε, βεβαιωθείτε ότι είναι απενεργοποιημένη."
-                    : "Open Settings → Developer options → Wireless debugging. If you do not use it, make sure it is turned off.");
-
-            if (finalUsbState == 1) {
-                logInfo(gr
-                        ? "Αν δεν χρειάζεστε τον προχωρημένο έλεγχο μέσω καλωδίου, απενεργοποιήστε και αυτή τη ρύθμιση."
-                        : "If you do not need advanced access through a cable, turn that setting off too.");
-            } else if (finalUsbState < 0) {
-                logInfo(gr
-                        ? "Ελέγξτε επίσης στις ίδιες ρυθμίσεις αν η Αποσφαλμάτωση USB είναι απενεργοποιημένη."
-                        : "Also check that USB debugging is turned off in the same settings.");
-            }
-
-            logLine();
-            logInfo(gr ? "Συμπέρασμα" : "Conclusion");
-            if (finalUsbState == 0 && finalDeveloperState == 1) {
-                logInfo(gr
-                        ? "Μπορείτε να είστε ήσυχοι για αυτό που επιβεβαιώσαμε: ο προχωρημένος έλεγχος μέσω καλωδίου είναι απενεργοποιημένος. Το ότι έχετε ενεργές τις Επιλογές προγραμματιστή δεν σημαίνει ότι κάποιος έχει παραβιάσει το κινητό σας."
-                        : "Reassuring result: advanced access through a cable is off. Having Developer options on does not mean that anyone has compromised your phone.");
-            } else if (finalUsbState == 0) {
-                logInfo(gr
-                        ? "Καλή ένδειξη: ο προχωρημένος έλεγχος μέσω καλωδίου είναι απενεργοποιημένος. Δεν χρειάζεται κάποια αλλαγή σε αυτή τη ρύθμιση."
-                        : "Good sign: advanced access through a cable is off. No change to this setting is needed.");
-            } else if (finalUsbState == 1) {
-                logInfo(gr
-                        ? "Η πρόσβαση για προχωρημένο έλεγχο μέσω καλωδίου είναι ενεργή. Αυτό δεν σημαίνει ότι το κινητό έχει παραβιαστεί. Αν δεν τη χρειάζεστε, απενεργοποιήστε τη."
-                        : "Advanced cable access is on. This does not mean the phone has been compromised. Turn it off if you do not need it.");
-            } else {
-                logInfo(gr
-                        ? "Δεν μπορέσαμε να επιβεβαιώσουμε τη ρύθμιση πρόσβασης μέσω καλωδίου. Αυτό από μόνο του δεν αποτελεί ένδειξη παραβίασης."
-                        : "We could not verify the cable access setting. This alone is not evidence of a compromise.");
-            }
-
-            logInfo(gr
-                    ? "Αν δεν χρησιμοποιείτε ασύρματο έλεγχο από υπολογιστή, διατηρήστε την αντίστοιχη ρύθμιση απενεργοποιημένη."
-                    : "If you do not use wireless computer debugging, keep that setting disabled.");
-
-            appendHtml("<br>");
-            logOk(gr ? "Το Lab 23 ολοκληρώθηκε — ελέγχθηκαν οι διαθέσιμες ρυθμίσεις πρόσβασης."
-                     : "Lab 23 completed — available access settings were checked.");
-            logLine();
-        });
-    }, "GEL-Lab23-PortProbe").start();
+    appendHtml("<br>");
+    logOk(gr ? "Το Lab 23 ολοκληρώθηκε — ελέγχθηκαν οι διαθέσιμες ρυθμίσεις πρόσβασης."
+             : "Lab 23 completed — available access settings were checked.");
+    logLine();
 }
-
 
 // ============================================================
 // UI BUBBLES (GEL)
@@ -28636,30 +28598,6 @@ private String riskBubble(int risk) {
     if (risk <= 30) return "[MEDIUM]";
     if (risk <= 60) return "[HIGH]";
     return "[CRITICAL]";
-}
-
-// ============================================================
-// HELPERS — PORT CHECK (LOCALHOST)
-// ============================================================
-private boolean isPortOpen(int port, int timeoutMs) {
-Socket s = null;
-try {
-s = new Socket();
-s.connect(new InetSocketAddress("127.0.0.1", port), timeoutMs);
-return true;
-} catch (Exception e) {
-return false;
-} finally {
-if (s != null) try { s.close(); } catch (Exception ignored) {}
-}
-}
-
-// Scan pairing port range 7460-7490 (best-effort)
-private boolean scanPairingPortRange() {
-for (int p = 7460; p <= 7490; p++) {
-if (isPortOpen(p, 80)) return true;
-}
-return false;
 }
 
 // ============================================================
