@@ -11017,9 +11017,9 @@ private void lab9SensorsCheck() {
             );
 
         if (hasSAR)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Αισθητήρες SAR" : "SAR Sensors",
-                    gr ? "Ονομασία SAR/RF — χρήση μη ελεγμένη" : "SAR/RF name — use not tested"
+                    gr ? "Βρέθηκε καταχώριση με ονομασία SAR/RF" : "SAR/RF entry reported by Android"
             );
         else
             logLabelValue(
@@ -11028,40 +11028,40 @@ private void lab9SensorsCheck() {
             );
 
         if (hasPickup)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Pickup sensor" : "Pickup Sensor",
-                    gr ? "Ονομασία Pickup — lift-to-wake μη ελεγμένο" : "Pickup name — lift-to-wake not tested"
+                    gr ? "Βρέθηκε καταχώριση με ονομασία Pickup" : "Pickup entry reported by Android"
             );
         else
             logLabelValue(
                     gr ? "Pickup sensor" : "Pickup Sensor",
-                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
+                    gr ? "Δεν βρέθηκε σχετική καταχώριση" : "No related entry found"
             );
 
         if (hasLargeTouch)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Large area touch" : "Large Area Touch",
-                    gr ? "Ονομασία Large Touch — απόκριση μη ελεγμένη" : "Large Touch name — response not tested"
+                    gr ? "Βρέθηκε καταχώριση με ονομασία Large Touch" : "Large Touch entry reported by Android"
             );
         else
             logLabelValue(
                     gr ? "Large area touch" : "Large Area Touch",
-                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
+                    gr ? "Δεν βρέθηκε σχετική καταχώριση" : "No related entry found"
             );
 
         if (hasGameRotation)
-            logLabelValue(
+            logLabelOkValue(
                     gr ? "Game rotation vector" : "Game Rotation Vector",
-                    gr ? "Ονομασία Game Rotation — απόκριση μη ελεγμένη" : "Game Rotation name — response not tested"
+                    gr ? "Βρέθηκε καταχώριση με ονομασία Game Rotation" : "Game Rotation entry reported by Android"
             );
         else
             logLabelValue(
                     gr ? "Game rotation vector" : "Game Rotation Vector",
-                    gr ? "Δεν αναφέρθηκε — όχι απόδειξη βλάβης" : "Not reported — no fault established"
+                    gr ? "Δεν βρέθηκε σχετική καταχώριση" : "No related entry found"
             );
 
         logLabelValue(
-                gr ? "Όριο συμπεράσματος" : "Interpretation scope",
+                gr ? "Αποτέλεσμα απογραφής" : "Inventory result",
                 gr
                         ? "Καταγράφηκαν οι αισθητήρες που δηλώνει το Android."
                         : "Sensors reported by Android were recorded."
