@@ -240,8 +240,8 @@ try:
                     record("settings","ACCESSIBLE_ACTION_OPENED",folder=save("settings"))
                     tap(n)
                     record("settings-save","ACTION_EXECUTED",folder=save("settings-save"))
-    sections=[(1,5),(6,9),(10,13),(14,17),(18,20),(21,24),(25,31)]
-    for number in (range(1,32) if mode != "menus_only" else []):
+    sections=[(1,5),(6,9),(10,13),(14,17),(18,20),(21,24),(25,30)]
+    for number in (range(1,31) if mode != "menus_only" else []):
         try:
             manual()
             lo,hi=next((a,b) for a,b in sections if a<=number<=b)
