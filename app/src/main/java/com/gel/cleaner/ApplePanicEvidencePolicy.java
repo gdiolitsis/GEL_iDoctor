@@ -48,6 +48,30 @@ public final class ApplePanicEvidencePolicy {
         return false;
     }
 
+    /**
+     * Only explicit failure wording inside an eligible panic entry is a
+     * baseband diagnostic hint. "Baseband version" alone is metadata.
+     */
+    public static boolean hasExplicitBasebandFaultHint(String importedText) {
+        if (importedText == null) return false;
+        String[] blocks = importedText.split("(?m)^===== ZIP FILE:");
+        for (String block : blocks) {
+            if (!hasPanicEvidence(block)) continue;
+            String low = block.toLowerCase(Locale.ROOT);
+            if (low.contains("baseband panic")
+                    || low.contains("baseband crash")
+                    || low.contains("baseband watchdog")
+                    || low.contains("baseband failure")
+                    || low.contains("baseband timeout")
+                    || low.contains("modem panic")
+                    || low.contains("modem crash")
+                    || low.contains("modem failure")
+                    || low.contains("modem timeout")
+                    || low.contains("commcenter crash")) return true;
+        }
+        return false;
+    }
+
     public static String evidenceClass(boolean hasPanic) {
         return hasPanic ? "IMPORTED_PANIC_LOG_OBSERVED" : "UNVERIFIED_OR_UNSUPPORTED";
     }
