@@ -1862,6 +1862,9 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
         try {
             String text = GELServiceLog.getAll();
             String[] lines = text.split("\\n+");
+            // Same source-grounded value colors as the HTML export.
+            java.util.List<GELServiceLog.PdfRow> pdfRows = GELServiceLog.getPdfRows();
+            int rowIndex = 0;
 
             PdfDocument pdf = new PdfDocument();
 
@@ -1922,6 +1925,28 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                     );
                 }
 
+                while (rowIndex < pdfRows.size()
+                        && pdfRows.get(rowIndex).text.trim().isEmpty()) rowIndex++;
+                GELServiceLog.PdfRow matchedRow = rowIndex < pdfRows.size()
+                        ? pdfRows.get(rowIndex++) : null;
+                // Never guess a color if this text is not the same stored row.
+                if (matchedRow != null
+                        && !cleanLine.equals(matchedRow.text.trim())) matchedRow = null;
+                String printValue = null;
+                Integer printColor = matchedRow == null ? null
+                        : pdfValuePrintColor(matchedRow.valueColor);
+                if (printColor != null) {
+                    if (matchedRow.valueStart >= 0
+                            && matchedRow.valueStart < matchedRow.text.length()) {
+                        printValue = matchedRow.text.substring(matchedRow.valueStart).trim();
+                    } else {
+                        int colon = cleanLine.indexOf(':');
+                        if (colon >= 0 && colon + 1 < cleanLine.length()) {
+                            printValue = cleanLine.substring(colon + 1).trim();
+                        }
+                    }
+                }
+
                 String formatted = formatPdfLine(cleanLine);
                 String[] subLines = formatted.split("\\n");
 
@@ -1950,7 +1975,8 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                         );
                     }
 
-                    drawLineWithColoredEmoji(canvas, sub, marginX, y, textPaint, emojiPaint);
+                    drawLineWithColoredEmoji(canvas, sub, marginX, y, textPaint, emojiPaint,
+                            printValue, printColor);
                     y += lineHeight;
                 }
             }
@@ -2246,6 +2272,19 @@ private void failHtmlPrint(String message) {
  * Map only known screen value colors to a high-contrast print palette.
  * Unknown/neutral values always stay neutral on white paper.
  */
+/**
+ * Identical meaning and white-paper contrast to HTML PDF palette.
+ * Only screen-provided colors qualify; metrics never self-classify as healthy.
+ */
+private static Integer pdfValuePrintColor(String screenColor) {
+    if ("#39FF14".equalsIgnoreCase(screenColor)) return 0xFF0B7729;
+    if ("#FFD700".equalsIgnoreCase(screenColor)
+            || "#FFD966".equalsIgnoreCase(screenColor)) return 0xFF855700;
+    if ("#FF5555".equalsIgnoreCase(screenColor)) return 0xFFAA1630;
+    if ("#87CEFA".equalsIgnoreCase(screenColor)) return 0xFF176293;
+    return null;
+}
+
 private static String pdfValueCssClass(String screenColor) {
     if ("#39FF14".equalsIgnoreCase(screenColor)) return "value-ok";
     if ("#FFD700".equalsIgnoreCase(screenColor)
@@ -2527,7 +2566,9 @@ private String buildHtmlReport(String report) {
             int x,
             int y,
             Paint textPaint,
-            Paint emojiPaint
+            Paint emojiPaint,
+            String valueText,
+            Integer valueColor
     ) {
         String emoji = null;
         String rest = line;
@@ -2554,7 +2595,18 @@ private String buildHtmlReport(String report) {
             rest = line.substring(1).trim();
         }
 
-        canvas.drawText(rest, dx, y, textPaint);
+        // Source-matched value only; keep the label and original emoji neutral.
+        // Any unexpected formatting leaves the old plain rendering unchanged.
+        if (valueColor != null && valueText != null && !valueText.isEmpty()
+                && rest.endsWith(valueText)) {
+            String label = rest.substring(0, rest.length() - valueText.length());
+            canvas.drawText(label, dx, y, textPaint);
+            Paint valuePaint = new Paint(textPaint);
+            valuePaint.setColor(valueColor);
+            canvas.drawText(valueText, dx + textPaint.measureText(label), y, valuePaint);
+        } else {
+            canvas.drawText(rest, dx, y, textPaint);
+        }
     }
 
     private void updatePreview() {
