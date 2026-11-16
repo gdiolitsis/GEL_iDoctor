@@ -65,8 +65,14 @@ public final class LabsEvidenceOnlyReportContractTest {
         assertFalse(twentyThree.contains("δεν μπορεί να πιστοποιήσει τη συνολική ασφάλεια της συσκευής"));
 
         String twentyFour = section("private void lab24RootSuspicion()", "// LAB 24 — INTERNAL HELPERS");
-        assertTrue(twentyFour.contains("Τα αποτελέσματα είναι ενθαρρυντικά."));
+        // Root, Bootloader and Verified Boot are evaluated separately;
+        // no false blanket certification follows from absent root indicators.
         assertTrue(twentyFour.contains("boolean suExec = lab24_canExecSu();"));
+        assertTrue(twentyFour.contains("boolean bootSignalsConflict"));
+        assertTrue(twentyFour.contains("Δεν βρέθηκαν ισχυρές ενδείξεις Root στους διαθέσιμους ελέγχους"));
+        assertTrue(twentyFour.contains("Δεν διαπιστώθηκε συγκεκριμένη ανωμαλία στους ελέγχους"));
+        assertTrue(twentyFour.contains("Ανεπαρκή στοιχεία για ενιαίο συμπέρασμα ασφάλειας"));
+        assertTrue(twentyFour.contains("Δεν αποτελεί γενική πιστοποίηση ασφάλειας."));
         assertTrue(twentyFour.contains("logLabelOkValue("));
         assertFalse(twentyFour.contains("logInfo(gr ? \"Δεν εκδόθηκε αυθαίρετος συνολικός δείκτης ασφάλειας.\""));
     }
