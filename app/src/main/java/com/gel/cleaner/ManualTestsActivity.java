@@ -1627,9 +1627,15 @@ logScroll.post(() -> setLogPanelState(0));
     labsContainer.addView(body7);
 
     body7.addView(makeTestButton(
-            gr ? "25. Ιστορικό Κρασαρισμάτων / Παγώματος"
-               : "25. Crash / Freeze History",
+            gr ? "25. Έλεγχος κρίσιμων σφαλμάτων Android"
+               : "25. Critical Android crash evidence",
             this::lab25CrashHistory));
+
+    // Optional evidence review. The ordinary lab never forces a report picker.
+    body7.addView(makeTestButton(
+            gr ? "↳ Προαιρετικά: Ανάλυση αναφοράς Android"
+               : "↳ Optional: Analyze Android bugreport",
+            this::lab25ChooseBugReport));
 
     body7.addView(makeTestButton(
             gr ? "26. Απογραφή εφαρμογών και στοιχεία χρήσης"
@@ -29834,54 +29840,46 @@ private void lab25CrashHistory() {
     final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
-    logInfo(gr ? "LAB 25 — Σφάλματα εφαρμογών και έλεγχος αποθήκευσης"
-               : "LAB 25 — App errors and storage check");
+    logInfo(gr ? "LAB 25 — Κρίσιμα σφάλματα Android"
+               : "LAB 25 — Critical Android errors");
     logLine();
 
-    // Current error-state snapshot is not historical data. A null response
-    // is unavailable data; only a non-null empty list means no visible errors.
-    logInfo(gr ? "1. Τρέχοντα σφάλματα εφαρμογών"
-               : "1. Current app errors");
+    // This API normally sees only our UID. No visible errors != stable phone.
+    logInfo(gr ? "1. Τρέχοντα σφάλματα κρίσιμων υπηρεσιών"
+               : "1. Current critical-service errors");
+    java.util.Set<String> roles = lab25DefaultRoles();
     try {
         ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
-        if (am == null) throw new IllegalStateException("Service unavailable");
+        if (am == null) throw new IllegalStateException("ActivityManager unavailable");
         List<ActivityManager.ProcessErrorStateInfo> errors = am.getProcessesInErrorState();
-        if (errors == null) {
-            logLabelValue(gr ? "Τρέχουσα κατάσταση" : "Current status",
-                    gr ? "Το Android δεν επέστρεψε στοιχεία για αυτή τη μέτρηση."
-                       : "Android did not return data for this reading.");
-        } else {
-            int visible = 0;
-            for (ActivityManager.ProcessErrorStateInfo error : errors) {
-                if (error == null) continue;
-                visible++;
-                logLabelWarnValue(
-                        error.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING
-                                ? (gr ? "Εφαρμογή που δεν ανταποκρίνεται" : "App not responding")
-                                : (gr ? "Σφάλμα εφαρμογής" : "App error"),
-                        safeStr(error.processName) + " — " + safeStr(error.shortMsg));
-            }
-            if (visible == 0) {
-                logLabelOkValue(gr ? "Τρέχουσα κατάσταση" : "Current status",
-                        gr ? "Δεν εμφανίζονται σφάλματα εφαρμογών αυτή τη στιγμή."
-                           : "No app errors are visible right now.");
-            } else {
-                logLabelWarnValue(gr ? "Τρέχουσες εγγραφές" : "Current entries",
-                        (gr ? "Καταγράφηκαν: " : "Recorded: ") + visible);
-            }
+        int count = 0;
+        if (errors != null) for (ActivityManager.ProcessErrorStateInfo error : errors) {
+            if (error == null || (error.condition != ActivityManager.ProcessErrorStateInfo.CRASHED
+                    && error.condition != ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING)) continue;
+            CriticalSystemCrashEvidence.Event e = CriticalSystemCrashEvidence.currentError(
+                    error.processName, error.condition == ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING, roles);
+            if (e == null) continue;
+            count++;
+            logLabelValue(gr ? "Παρατηρήθηκε" : "Observed", lab25Describe(e, gr));
+        }
+        if (count == 0) {
+            logLabelValue(gr ? "Τρέχουσα κατάσταση" : "Current state",
+                    gr ? "Δεν εμφανίζεται κρίσιμο σφάλμα στις προσβάσιμες διεργασίες. "
+                         + "Δεν είναι πλήρης έλεγχος του Android."
+                       : "No critical error in accessible processes; not a complete Android check.");
         }
     } catch (RuntimeException unavailable) {
-        logLabelValue(gr ? "Τρέχουσα κατάσταση" : "Current status",
-                gr ? "Η μέτρηση δεν ήταν διαθέσιμη." : "The reading was unavailable.");
+        logLabelValue(gr ? "Τρέχουσα κατάσταση" : "Current state",
+                gr ? "Μη διαθέσιμα δεδομένα." : "Data unavailable.");
     }
 
     // Query Android's available historical entries only when access is granted.
     // No access is never interpreted as zero crashes.
     String[] tags = {"system_app_crash", "data_app_crash", "system_app_anr",
-            "data_app_anr", "system_server_crash", "system_server_wtf", "system_server_anr"};
+            "data_app_anr", "system_server_crash", "system_server_anr"};
     GelCrashCoverage coverage = new GelCrashCoverage(tags.length);
     List<String> records = new ArrayList<>();
-    int crashes = 0, anrs = 0, system = 0;
+    List<CriticalSystemCrashEvidence.Event> criticalEvents = new ArrayList<>();
     boolean allowed = checkSelfPermission("android.permission.READ_LOGS")
             == android.content.pm.PackageManager.PERMISSION_GRANTED;
     if (!allowed && checkSelfPermission("android.permission.READ_DROPBOX_DATA")
@@ -29915,12 +29913,12 @@ private void lab25CrashHistory() {
                     if (scanned >= 50 || timestamp <= since) break;
                     scanned++;
                     since = timestamp;
-                    if (tag.startsWith("system_server")) system++;
-                    else if (tag.endsWith("_anr")) anrs++;
-                    else crashes++;
-                    records.add(tag + " — " + java.text.DateFormat.getDateTimeInstance()
-                            .format(new java.util.Date(timestamp)) + ": "
-                            + readDropBoxEntry(entry));
+                    // Only process-attributed CRASH/ANR of a critical service is relevant.
+                    // Never forward raw stack traces or other personal report content.
+                    CriticalSystemCrashEvidence.Event evidence =
+                            CriticalSystemCrashEvidence.dropBoxEvent(
+                                    tag, timestamp, lab25ReadDropBoxHeader(entry), roles);
+                    if (evidence != null) criticalEvents.add(evidence);
                 } finally {
                     entry.close();
                 }
@@ -29932,41 +29930,41 @@ private void lab25CrashHistory() {
     }
 
     appendHtml("<br>");
-    logInfo(gr ? "2. Προηγούμενα καταγεγραμμένα συμβάντα"
-               : "2. Previously recorded events");
-    if (coverage.complete()) {
-        if (crashes == 0)
-            logLabelOkValue(gr ? "Σφάλματα εφαρμογών" : "App crashes", "0");
-        else
-            logLabelWarnValue(gr ? "Σφάλματα εφαρμογών" : "App crashes",
-                    String.valueOf(crashes));
-        if (anrs == 0)
-            logLabelOkValue(gr ? "Παγώματα εφαρμογών" : "App freezes", "0");
-        else
-            logLabelWarnValue(gr ? "Παγώματα εφαρμογών" : "App freezes",
-                    String.valueOf(anrs));
-        if (system == 0)
-            logLabelOkValue(gr ? "Συμβάντα συστήματος" : "System events", "0");
-        else
-            logLabelWarnValue(gr ? "Συμβάντα συστήματος" : "System events",
-                    String.valueOf(system));
+    logInfo(gr ? "2. Ιστορικό κρίσιμων σφαλμάτων Android"
+               : "2. Critical Android error history");
+    CriticalSystemCrashEvidence.Summary history =
+            CriticalSystemCrashEvidence.fromEvents(criticalEvents, "Android DropBox");
+    if (!history.events.isEmpty()) {
+        lab25ShowCriticalEvidence(history, gr);
     } else {
         logLabelValue(gr ? "Διαθέσιμο ιστορικό" : "Available history",
-                gr ? "Το Android δεν παρείχε πλήρες ιστορικό στην εφαρμογή."
-                   : "Android did not provide a complete history to the app.");
-        if (!records.isEmpty()) {
-            logLabelValue(gr ? "Εγγραφές που διαβάστηκαν" : "Entries read",
-                    String.valueOf(records.size()));
-        }
+                coverage.complete()
+                    ? (gr ? "Δεν βρέθηκε κρίσιμο συμβάν στις προσβάσιμες καταγραφές. "
+                            + "Δεν πιστοποιείται απουσία παλαιότερων crashes."
+                          : "No critical entry in accessible records; earlier crashes are not ruled out.")
+                    : (gr ? "Το Android δεν έδωσε πλήρες ιστορικό. "
+                            + "Δεν μπορούμε να αποκλείσουμε παλαιότερα σφάλματα."
+                          : "Android did not provide full history; prior failures cannot be ruled out."));
     }
-    // Real entries are retained for service review; their presence, not an
-    // invented hardware explanation, is the reason for any caution color.
-    for (String record : records)
-        logLabelWarnValue(gr ? "Καταγεγραμμένο συμβάν" : "Recorded event", record);
+    if (!coverage.complete() && !history.events.isEmpty()) {
+        logLabelValue(gr ? "Κάλυψη" : "Coverage",
+                gr ? "Μερική ανάγνωση — ίσως υπάρχουν επιπλέον συμβάντα."
+                   : "Partial read — additional events may exist.");
+    }
+    logLabelValue(gr ? "Για τον υποψήφιο αγοραστή" : "For a prospective buyer",
+            gr ? "Ένα σπάνιο crash Launcher/System UI δεν τεκμηριώνει βλάβη υλικού. "
+                    + "Το άδειο ιστορικό δεν είναι πιστοποιητικό υγείας."
+               : "An isolated Launcher/System UI crash is not proof of hardware failure. "
+                    + "An empty history is not a health certificate.");
+    logLabelValue(gr ? "Προαιρετική ανάλυση" : "Optional analysis",
+            gr ? "Με το ξεχωριστό κουμπί μπορείτε να επιλέξετε δική σας "
+                    + "αναφορά σφαλμάτων Android (.zip ή .txt). Η ανάλυση γίνεται τοπικά."
+               : "Use the separate button to select your Android bugreport "
+                    + "(.zip or .txt). Analysis stays on-device.");
 
     appendHtml("<br>");
-    logInfo(gr ? "3. Έλεγχος εγγραφής και ανάγνωσης αρχείου"
-               : "3. File write-and-read check");
+    logInfo(gr ? "3. Ανεξάρτητη δοκιμή αρχείου (όχι διάγνωση crash)"
+               : "3. Independent file test (not crash diagnosis)");
     long latency = storageLatencyProbe();
     if (latency < 0) {
         logLabelWarnValue(gr ? "Δοκιμή αποθήκευσης" : "Storage test",
@@ -29988,10 +29986,160 @@ private void lab25CrashHistory() {
     GELServiceLog.info("SUMMARY: CRASH_ORIGIN=UNCLEAR; HISTORY_COVERAGE="
             + (coverage.complete() ? "AVAILABLE_RECORDS_ONLY" : "UNAVAILABLE_OR_PARTIAL"));
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 25 ολοκληρώθηκε — ελέγχθηκαν τα διαθέσιμα συμβάντα και η αποθήκευση."
-             : "Lab 25 completed — available events and storage were checked.");
+    logOk(gr ? "Το Lab 25 ολοκληρώθηκε — παρουσιάστηκαν μόνο τεκμηριωμένα κρίσιμα ευρήματα."
+             : "Lab 25 completed — only evidenced critical findings were presented.");
     logLine();
 } // END lab25CrashHistory()
+
+
+private java.util.Set<String> lab25DefaultRoles() {
+    java.util.Set<String> found = new java.util.HashSet<>();
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        try {
+            android.app.role.RoleManager rm =
+                    (android.app.role.RoleManager) getSystemService(Context.ROLE_SERVICE);
+            if (rm != null) {
+                String[][] roles = {
+                        {android.app.role.RoleManager.ROLE_HOME, "HOME"},
+                        {android.app.role.RoleManager.ROLE_SMS, "MESSAGING"},
+                        {android.app.role.RoleManager.ROLE_DIALER, "DIALER"}
+                };
+                for (String[] role : roles) {
+                    if (rm.isRoleAvailable(role[0])) for (String pkg : rm.getRoleHolders(role[0]))
+                        if (pkg != null && !pkg.trim().isEmpty()) found.add(role[1] + "=" + pkg);
+                }
+            }
+        } catch (RuntimeException ignored) { }
+    }
+    try {
+        String pkg = android.provider.Telephony.Sms.getDefaultSmsPackage(this);
+        if (pkg != null) found.add("MESSAGING=" + pkg);
+    } catch (RuntimeException ignored) { }
+    try {
+        android.telecom.TelecomManager tm =
+                (android.telecom.TelecomManager) getSystemService(TELECOM_SERVICE);
+        String pkg = tm == null ? null : tm.getDefaultDialerPackage();
+        if (pkg != null) found.add("DIALER=" + pkg);
+    } catch (RuntimeException ignored) { }
+    try {
+        Intent home = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+        android.content.pm.ResolveInfo ri = getPackageManager().resolveActivity(home, 0);
+        if (ri != null && ri.activityInfo != null && ri.activityInfo.packageName != null
+                && !"android".equals(ri.activityInfo.packageName))
+            found.add("HOME=" + ri.activityInfo.packageName);
+    } catch (RuntimeException ignored) { }
+    return found;
+}
+
+private String lab25Describe(CriticalSystemCrashEvidence.Event e, boolean gr) {
+    String role = e.role;
+    String component = "ANDROID_CORE".equals(role) ? (gr ? "Υπηρεσίες Android" : "Android core")
+            : "SYSTEM_UI".equals(role) ? "System UI"
+            : "HOME".equals(role) ? (gr ? "Αρχική οθόνη" : "Home screen")
+            : "MESSAGING".equals(role) ? (gr ? "Μηνύματα" : "Messages")
+            : "DIALER".equals(role) ? (gr ? "Τηλέφωνο" : "Phone")
+            : "TELEPHONY_SERVICE".equals(role) ? (gr ? "Τηλεφωνία" : "Telephony")
+            : "SETTINGS".equals(role) ? (gr ? "Ρυθμίσεις" : "Settings") : role;
+    return component + " (" + e.process + ") — "
+            + ("ANR".equals(e.kind) ? "ANR" : "crash")
+            + (e.when.isEmpty() ? "" : " — " + e.when);
+}
+
+private void lab25ShowCriticalEvidence(CriticalSystemCrashEvidence.Summary s, boolean gr) {
+    logLabelValue(gr ? "Κρίσιμα καταγεγραμμένα συμβάντα" : "Critical recorded events",
+            String.valueOf(s.events.size()));
+    int shown = 0;
+    for (CriticalSystemCrashEvidence.Event e : s.events) {
+        if (shown++ >= 10) break;
+        logLabelValue(gr ? "Συμβάν" : "Event", lab25Describe(e, gr));
+    }
+    if (s.events.size() > 10) logLabelValue(gr ? "Κάλυψη οθόνης" : "Display",
+            gr ? "Πρόσθετες εγγραφές παραλείφθηκαν από την προβολή."
+               : "Additional entries omitted from display.");
+    if (s.hasVerifiedRecurrence()) {
+        logLabelWarnValue(gr ? "Συμπέρασμα για αγοραστή" : "Buyer conclusion",
+                gr ? "Επαναλαμβανόμενα τεκμηριωμένα συμβάντα στην ίδια κρίσιμη υπηρεσία. "
+                        + "Συνιστάται περαιτέρω έλεγχος πριν από αγορά. "
+                        + "Δεν αποδεικνύεται βλάβη υλικού."
+                   : "Repeated evidenced events in one critical service. "
+                        + "Further checks before purchase are advisable; no hardware fault is proved.");
+    } else {
+        logLabelValue(gr ? "Συμπέρασμα για αγοραστή" : "Buyer conclusion",
+                gr ? "Μεμονωμένο ή μη χρονολογημένο συμβάν: δεν αποδεικνύεται "
+                        + "γενικευμένη αστάθεια της συσκευής."
+                   : "An isolated or undated event does not prove general device instability.");
+    }
+}
+
+// Short bounded header for process attribution; never show raw report excerpts.
+private String lab25ReadDropBoxHeader(DropBoxManager.Entry entry) {
+    try (InputStream is = entry.getInputStream()) {
+        if (is == null) return "";
+        byte[] bytes = new byte[4096];
+        int total = 0, n;
+        while (total < bytes.length
+                && (n = is.read(bytes, total, bytes.length - total)) > 0) total += n;
+        return new String(bytes, 0, total, java.nio.charset.StandardCharsets.UTF_8);
+    } catch (IOException | RuntimeException ex) { return ""; }
+}
+
+private void lab25ChooseBugReport() {
+    final boolean gr = AppLang.isGreek(this);
+    logLabelValue(gr ? "Ιδιωτικότητα" : "Privacy",
+            gr ? "Επιλέξτε μόνο δική σας αναφορά Android. "
+                    + "Το αρχείο αναλύεται τοπικά και δεν αποθηκεύονται πλήρη logs."
+               : "Choose only your own Android report. Analyzed locally, without storing full logs.");
+    try {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[] {
+                "application/zip", "application/x-zip-compressed",
+                "application/octet-stream", "text/plain"});
+        startActivityForResult(intent, 25025);
+    } catch (RuntimeException ex) {
+        logLabelValue(gr ? "Επιλογέας αρχείων" : "File picker",
+                gr ? "Δεν ήταν διαθέσιμος." : "Unavailable.");
+    }
+}
+
+private void lab25ReadBugReport(Uri uri) {
+    final boolean gr = AppLang.isGreek(this);
+    final java.util.Set<String> roles = lab25DefaultRoles();
+    logLabelValue(gr ? "Ανάγνωση" : "Reading",
+            gr ? "Επεξεργασία επιλεγμένου αρχείου τοπικά."
+               : "Processing user-selected file locally.");
+    new Thread(() -> {
+        CriticalSystemCrashEvidence.Summary result = null;
+        try (InputStream input = getContentResolver().openInputStream(uri)) {
+            result = CriticalSystemCrashEvidence.parseUserReport(input, roles);
+        } catch (IOException | RuntimeException ignored) { }
+        final CriticalSystemCrashEvidence.Summary s = result;
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) return;
+            appendHtml("<br>");
+            logInfo(gr ? "LAB 25 — Ανάλυση αναφοράς Android"
+                       : "LAB 25 — Android report analysis");
+            if (s == null) {
+                logLabelValue(gr ? "Ανάλυση" : "Analysis",
+                        gr ? "Το αρχείο δεν αναγνώστηκε ή υπερβαίνει τα όρια. "
+                                + "Δεν εξάγεται συμπέρασμα."
+                           : "Unreadable or oversized file. No verdict.");
+            } else {
+                logLabelValue(gr ? "Πηγή" : "Source",
+                        gr ? "Αρχείο επιλογής χρήστη. Η γνησιότητά του δεν επαληθεύτηκε."
+                           : "User-selected file. Its authenticity was not verified.");
+                if (!s.events.isEmpty()) lab25ShowCriticalEvidence(s, gr);
+                else logLabelValue(gr ? "Συμπέρασμα για αγοραστή" : "Buyer conclusion",
+                        gr ? "Δεν βρέθηκαν τεκμηριωμένα κρίσιμα σφάλματα στο επιλεγμένο αρχείο. "
+                                + "Δεν πιστοποιείται η απουσία σφαλμάτων."
+                           : "No evidenced critical crash in selected file. "
+                                + "Absence of failures is NOT certified.");
+            }
+            logLine();
+        });
+    }, "gel-lab25-local-report").start();
+}
 
 // ============================================================
 // SMALL helper
@@ -33746,6 +33894,12 @@ short[] buffer = new short[samples];
 @Override
 protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
+
+    if (requestCode == 25025) {
+        if (resultCode == RESULT_OK && data != null && data.getData() != null)
+            lab25ReadBugReport(data.getData());
+        return;
+    }
 
     // Returning from an empty dialer is not proof a call was placed.
     if (requestCode == REQ_LAB12_DIALER) {
