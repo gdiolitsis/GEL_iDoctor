@@ -14707,8 +14707,9 @@ if (drainValid) {
 
         } else {
 
-            // Low drain is not evidence of wear; do not flag it as a fault.
-            logLabelValue(
+            // Valid low drain under this stress profile: color the recorded value,
+            // but do not interpret it as a battery-health (SoH) verdict.
+            logLabelOkValue(
                     gr ? "Ρυθμός αποφόρτισης"
                        : "Drain rate",
                     text
@@ -14894,7 +14895,7 @@ if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
 
 } else {
 
-    logLabelValue(recLabel, recommendation);
+    logLabelOkValue(recLabel, recommendation);
 }
 
 // =====================================================
@@ -14943,7 +14944,8 @@ if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
     logLabelWarnValue(summaryLabel, summary);
 
 } else if ("Weak".equals(labelSafe) ||
-           "Unknown".equals(labelSafe)) {
+           "Unknown".equals(labelSafe) ||
+           (calibrationDrift != null && calibrationDrift.length > 0 && calibrationDrift[0])) {
 
     logLabelWarnValue(summaryLabel, summary);
 
@@ -14951,7 +14953,7 @@ if (lab14_systemLimited[0] || "Critical".equals(labelSafe)) {
            "Good".equals(labelSafe) ||
            "Normal".equals(labelSafe)) {
 
-    logLabelValue(summaryLabel, summary);
+    logLabelOkValue(summaryLabel, summary);
 
 } else {
 
