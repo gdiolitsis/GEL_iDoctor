@@ -12,8 +12,9 @@ public final class Lab31ReportEvidencePolicy {
         boolean insideSummary = false;
         for (String row : original.split("\\r?\\n", -1)) {
             String line = row.toLowerCase(Locale.US).trim();
-            // New report is Lab 30. Old APK history may still contain Lab 31.
-            // Do not discard a legacy Lab 30 certification merely by its number.
+            // New report is Lab 29. Prior builds may contain Lab 30 / Lab 31.
+            // Identify final report by its distinctive title, NOT number alone:
+            // Lab 29 was formerly also the device-certification lab.
             if (isPriorReportHeader(line)) {
                 insideSummary = true;
                 continue;
@@ -25,7 +26,9 @@ public final class Lab31ReportEvidencePolicy {
                     if (line.contains("lab 31 complete")
                             || line.contains("lab 31 ολοκληρώθηκε")
                             || line.contains("lab 30 complete")
-                            || line.contains("lab 30 ολοκληρώθηκε")) {
+                            || line.contains("lab 30 ολοκληρώθηκε")
+                            || line.contains("lab 29 complete")
+                            || line.contains("lab 29 ολοκληρώθηκε")) {
                         insideSummary = false;
                     }
                     continue;
@@ -38,8 +41,9 @@ public final class Lab31ReportEvidencePolicy {
 
     private static boolean isPriorReportHeader(String line) {
         boolean legacy31 = line.contains("lab 31 —") || line.contains("lab 31 -");
-        boolean current30 = line.contains("lab 30 —") || line.contains("lab 30 -");
-        return legacy31 || (current30 && (
+        boolean final29or30 = line.contains("lab 29 —") || line.contains("lab 29 -")
+                || line.contains("lab 30 —") || line.contains("lab 30 -");
+        return legacy31 || (final29or30 && (
                 line.contains("τελικη συνοψη υπαρχοντων τεκμηριων")
                 || line.contains("τελική σύνοψη υπαρχόντων τεκμηρίων")
                 || line.contains("final existing-evidence summary")
