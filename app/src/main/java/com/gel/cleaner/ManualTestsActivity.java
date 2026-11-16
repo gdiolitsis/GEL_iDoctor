@@ -14130,6 +14130,17 @@ startLab14SharedUI(durationSec, gr);
 }
 }
 
+// Keep the existing internal stress thresholds unchanged, while avoiding
+// presentation of an experimental voltage-sag category as a battery-health
+// or immediate safety verdict.
+private String lab14DisplayStressClass(String internalLabel, boolean gr) {
+    if ("Critical".equals(internalLabel)) {
+        return gr ? "Αυξημένη πτώση τάσης — επανέλεγχος"
+                  : "Elevated voltage sag — retest";
+    }
+    return internalLabel == null ? "Unknown" : internalLabel;
+}
+
 // ============================================================
 // LAB 14 — LOG STRESS RESULT (HEADER)
 // ============================================================
@@ -14298,7 +14309,7 @@ if (!sagValid) {
             Locale.US,
             "%.3f V (%s)",
             finalSag,
-            labelSafe
+            lab14DisplayStressClass(labelSafe, gr)
     );
 
 
@@ -14336,61 +14347,25 @@ if (!sagValid) {
 }
 
 // =====================================================
-// 🔴 POWER (FINAL — DYNAMIC + SAFE)
+// POWER CALCULATION — IN-TEST RESULT, NOT BATTERY-HEALTH GRADE
 // =====================================================
 boolean powerValid =
         !Float.isNaN(res.powerMw) &&
-        res.powerMw >= 1500f &&   // 🔴 real load threshold
-        res.powerMw < 15000f;     // 🔴 sanity cap
+        res.powerMw >= 1500f &&
+        res.powerMw < 15000f;
 
 if (powerValid) {
-
-    String powerLabel;
-
-    if (res.powerMw >= 7000f) {
-        powerLabel = "High";
-    } else if (res.powerMw >= 3500f) {
-        powerLabel = "Normal";
-    } else {
-        powerLabel = "Low";
-    }
-
-    String powerTextLocal = String.format(
-            Locale.US,
-            "%.0f mW (%s)",
-            res.powerMw,
-            powerLabel
+    logLabelOkValue(
+            gr ? "Υπολογισμένη ικανότητα ισχύος κατά τη δοκιμή"
+               : "Calculated power capability during test",
+            String.format(Locale.US, "%.0f mW", res.powerMw)
     );
-
-    if ("High".equals(powerLabel)) {
-
-        logLabelOkValue(
-                gr ? "Ικανότητα ισχύος" : "Power capability",
-                powerTextLocal
-        );
-
-    } else if ("Normal".equals(powerLabel)) {
-
-        logLabelOkValue(
-                gr ? "Ικανότητα ισχύος" : "Power capability",
-                powerTextLocal
-        );
-
-    } else {
-
-        logLabelWarnValue(
-                gr ? "Ικανότητα ισχύος" : "Power capability",
-                powerTextLocal
-        );
-    }
-
 } else {
-
-    logLabelWarnValue(
-            gr ? "Ικανότητα ισχύος" : "Power capability",
-            gr
-                    ? "Μη αξιόπιστη μέτρηση"
-                    : "Unreliable measurement"
+    logLabelValue(
+            gr ? "Υπολογισμένη ικανότητα ισχύος κατά τη δοκιμή"
+               : "Calculated power capability during test",
+            gr ? "Μη διαθέσιμο έγκυρο αποτέλεσμα"
+               : "No valid calculated result"
     );
 }
 
@@ -14948,13 +14923,15 @@ if (lab14_systemLimited[0]) {
 
 } else {
 
-    summary = String.format(
-            Locale.US,
-            gr
-                    ? "Κατάσταση: %s"
-                    : "Status: %s",
-            labelSafe
-    );
+    summary = "Critical".equals(labelSafe)
+            ? (gr
+                ? "Αυξημένη πτώση τάσης υπό φορτίο — απαιτείται επανέλεγχος σε συγκρίσιμες συνθήκες."
+                : "Elevated load-voltage sag — retest under comparable conditions.")
+            : String.format(
+                    Locale.US,
+                    gr ? "Κατάσταση απόκρισης: %s" : "Response category: %s",
+                    lab14DisplayStressClass(labelSafe, gr)
+              );
 }
 
 // ----------------------------------------------------
@@ -15025,8 +15002,9 @@ private void lab14LogFinalScore(
 
     // ----------------------------------------------------
     // Experimental classification only: a short stress trial does not certify SoH.
-    String categoryText = lbl + (gr ? " — απόκριση σε αυτό το φορτίο, όχι SoH"
-                                    : " — response under this load, not SoH");
+    String categoryText = lab14DisplayStressClass(lbl, gr)
+            + (gr ? " — απόκριση σε αυτό το φορτίο, όχι SoH"
+                  : " — response under this load, not SoH");
     if ("Critical".equals(lbl) || "Weak".equals(lbl)) {
         logLabelWarnValue(condLabel, categoryText);
     } else if ("Excellent".equals(lbl) || "Good".equals(lbl) || "Normal".equals(lbl)) {
@@ -15071,6 +15049,26 @@ private void lab14LogFinalScore(
                 gr
                         ? "Παρατηρήθηκε περιορισμός φορτίου — αιτία μη επιβεβαιωμένη"
                         : "Load limitation observed — cause unverified"
+        );
+    }
+
+    // Use guidance is deliberately conditional. A stress trial does not
+    // certify cell integrity or replace symptoms/physical inspection.
+    if (!limiter && !collapse && !smartSwelling && !calibration
+            && !"Unknown".equals(lbl)
+            && !"Insufficient electrical data".equals(lbl)
+            && !"Low confidence".equals(lbl)) {
+        logLabelValue(
+                gr ? "Συνέχιση χρήσης" : "Continued use",
+                gr
+                        ? "Με βάση τη συγκεκριμένη δοκιμή, δεν προκύπτει λόγος διακοπής της συνήθους χρήσης. "
+                          + "Μπορεί να συνεχιστεί η χρήση με ασφάλεια εφόσον δεν υπάρχουν ανησυχητικά συμπτώματα "
+                          + "(υπερθέρμανση, διόγκωση, οσμή ή απρόσμενες διακοπές). "
+                          + "Η δοκιμή δεν αποτελεί πιστοποίηση γενικής ασφάλειας."
+                        : "This test found no reason by itself to discontinue ordinary use. "
+                          + "Normal use may continue safely provided there are no warning symptoms "
+                          + "(overheating, swelling, unusual smell or unexpected shutdowns). "
+                          + "This test does not certify overall battery safety."
         );
     }
 }
@@ -15951,7 +15949,7 @@ if (!hasReliableSag) {
             Locale.US,
             "%.3f V (%s)",
             finalSag,
-            sagLabel
+            lab14DisplayStressClass(sagLabel, gr)
     );
 
     if ("Critical".equals(sagLabel)) {
@@ -17535,12 +17533,12 @@ if (!hasSag || !validDrain || lab14_systemLimited[0]) {
 
 } else {
 
-    logLabelOkValue(
+    logLabelValue(
             gr ? "Συμπεριφορά μπαταρίας"
                : "Battery behaviour",
             gr
-                    ? "Η συμπεριφορά φαίνεται φυσιολογική"
-                    : "Electrical behaviour appears normal"
+                    ? "Δεν καταγράφηκε πρόσθετη ηλεκτρική ανωμαλία στις ελεγχόμενες ενδείξεις"
+                    : "No additional electrical anomaly was recorded in the checked indicators"
     );
 }
 
