@@ -10747,17 +10747,6 @@ private void lab8_1DumpOneCameraCapabilities(CameraManager cm, Lab8Cam cam) {
     else
         logLabelValue(gr ? "Φλας" : "Flash", h.flash);
 
-    // Both front and rear cameras use the same, evidence-based color policy.
-    if (h.reportedMaxFps >= 30)
-        logLabelOkValue(gr ? "Χρήση στην πράξη (εκτίμηση)" : "Real-life use (estimate)", h.realLifeUse);
-    else if (h.reportedMaxFps > 0)
-        logLabelWarnValue(gr ? "Χρήση στην πράξη (εκτίμηση)" : "Real-life use (estimate)", h.realLifeUse);
-    else
-        logLabelValue(gr ? "Χρήση στην πράξη (εκτίμηση)" : "Real-life use (estimate)", h.realLifeUse);
-
-    logInfo(gr ? "Τα χαρακτηριστικά προέρχονται από Camera2· δεν μετρήθηκε αντικειμενική ποιότητα εικόνας."
-               : "Camera2 reports these capabilities; objective image quality was not measured.");
-
     logLine();
     logLabelOkValue(gr ? "Συμπέρασμα δυνατοτήτων" : "Capability conclusion", h.verdict);
     logLine();
