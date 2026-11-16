@@ -28,3 +28,17 @@ Critical services: actual default HOME, SMS, DIALER (via Android roles and publi
 - PR remains unmerged until acceptance; main and protected backup untouched.
 
 Official APIs: https://developer.android.com/reference/android/os/DropBoxManager ; https://developer.android.com/reference/android/app/ActivityManager ; https://developer.android.com/studio/debug/bug-report .
+
+
+## Lab 28 PRO — mandatory Lab 25 prerequisite for used-device pre-purchase checks
+
+The PRO used-device precheck remains locked behind the existing `requireGelPro` entitlement. After entitlement verification, and **before** any network/IMEI guidance or completion, Lab 28 must verify that Lab 25 actually executed on this device boot within the existing `LabEvidenceFreshness` (24-hour maximum, clock-drift-protected) window.
+
+- **Not run, stale, missing or structurally invalid Lab25 evidence:** Lab 28 is blocked, invalidates stale `lab29_obs_schema` precheck output, and opens a black/gold dialog with **RUN LAB 25** (green) and **EXIT** (red). Selecting RUN executes Lab25; the user may then relaunch Lab28. The deferred network callback checks the same gate again.
+- **Lab25 ran but Android denied historical crash records:** Lab28 **can** proceed (the prerequisite is execution, not a made-up healthy result). It must explicitly say **INSUFFICIENT CRASH HISTORY** and must not convert missing records into green device health.
+- **Lab25 evidence found:** Lab28 displays source, bounded event count, independent incident count, coverage, and the actual buyer risk category. A serious watchdog/kernel panic, repeated faults and multiple independently timed faults remain yellow warnings. A user-selected report's origin is marked unverified.
+- User-selected bugreport import is **optional**; importing an empty/unrelated report must never overwrite an earlier stronger failure, and a report alone cannot satisfy the mandatory initial Lab25 execution.
+- No raw diagnostic logs, IMEI strings or private report data are copied into the buyer evidence snapshot. The original external IMEI-check guidance is retained and no external result is fabricated or collected.
+- This changes the scope of **Lab 28 only** and its consumer-facing label, not the existing Lab 27 removal/renumbering proposal (which remains a separate later decision).
+
+Acceptance: compiler and unit tests, stale data blocked, same-boot fresh state accepted, denied history shown as unknown, meaningful positive incident escalated to caution, access to PRO not bypassed, pop-up colors correct, EL/EN, user report authenticity disclosed and no raw data exported.
