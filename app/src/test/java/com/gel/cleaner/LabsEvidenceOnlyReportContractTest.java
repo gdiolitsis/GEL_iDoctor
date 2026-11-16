@@ -84,10 +84,10 @@ public final class LabsEvidenceOnlyReportContractTest {
         String thirty = section("private void lab30CombineFindings()", "private void lab31FinalSummary()");
         assertFalse(thirty.contains("lab28_obs_mention_mask"));
         assertFalse(thirty.contains("Λέξεις στο ιστορικό (μη επαληθευμένες)"));
-        assertTrue(thirty.contains("LAB 28 — Αυτόματη Σύνοψη Μετρήσεων"));
+        assertTrue(thirty.contains("LAB 27 — Αυτόματη Σύνοψη Μετρήσεων"));
         assertFalse(thirty.contains("logInfo(gr\n        ? \"Πιθανή βασική αιτία προβλήματος:\""));
         assertFalse(thirty.contains("logLabelWarnValue(gr ? \"Root\" : \"Root\""));
-        assertTrue(thirty.contains("Το Lab 28 ολοκληρώθηκε"));
+        assertTrue(thirty.contains("Το Lab 27 ολοκληρώθηκε"));
     }
 
     @Test public void finalReportSummarizesRecordedResultsWithoutImaginaryProblems() throws Exception {
