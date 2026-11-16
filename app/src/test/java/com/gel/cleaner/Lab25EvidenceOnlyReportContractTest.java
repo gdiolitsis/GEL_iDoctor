@@ -49,7 +49,12 @@ public final class Lab25EvidenceOnlyReportContractTest {
     @Test public void rareEventsAreNeutralAndRecurrenceAloneNeedsCheck() throws Exception {
         String s = lab();
         assertTrue(s.contains("if (s.hasVerifiedRecurrence())"));
-        assertTrue(s.contains("logLabelWarnValue(gr ? \"Συμπέρασμα για αγοραστή\""));
+        assertTrue(s.contains("if (s.hasStrongInstabilityIndications())"));
+        assertTrue(s.contains("ΙΣΧΥΡΕΣ ΕΝΔΕΙΞΕΙΣ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΗΣ ΑΣΤΑΘΕΙΑΣ"));
+        assertTrue(s.contains("logLabelWarnValue(gr ? \"ΠΡΟΕΙΔΟΠΟΙΗΣΗ ΑΓΟΡΑΣΤΗ\""));
+        assertTrue(s.contains("Συνιστάται να μη γίνει αγορά χωρίς πρόσθετο έλεγχο."));
+        assertTrue(s.contains("Ανεξάρτητα χρονολογημένα επεισόδια"));
+        assertTrue(s.contains("if (s.hasSeriousSystemIncident())"));
         assertTrue(s.contains("Μεμονωμένο ή μη χρονολογημένο συμβάν"));
         assertTrue(s.contains("Δεν αποδεικνύεται βλάβη υλικού."));
         assertTrue(s.contains("Το άδειο ιστορικό δεν είναι πιστοποιητικό υγείας."));
