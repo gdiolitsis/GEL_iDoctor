@@ -38,11 +38,13 @@ class SelectorsTest(unittest.TestCase):
         root = ET.fromstring('<hierarchy><node bounds="[0,0][320,640]"/></hierarchy>')
         self.assertIsNone(scroll_gesture(root))
 
-    def test_manual_section_exact_thirty_lab_range_in_both_languages(self):
-        pattern = manual_section_pattern(25, 30)
-        self.assertIsNotNone(matching(pattern, "Advanced / Logs — Manual Labs 25–30", re.I))
-        self.assertIsNotNone(matching(pattern, "Προχωρημένα / Καταγραφές — Εργαστήρια 25–30", re.I))
+    def test_manual_section_exact_twenty_nine_lab_range_in_both_languages(self):
+        pattern = manual_section_pattern(25, 29)
+        self.assertIsNotNone(matching(pattern, "Advanced / Logs — Manual Labs 25–29", re.I))
+        self.assertIsNotNone(matching(pattern, "Προχωρημένα / Καταγραφές — Εργαστήρια 25–29", re.I))
+        self.assertIsNone(matching(pattern, "Manual Labs 25–30", re.I))
         self.assertIsNone(matching(pattern, "Manual Labs 25–31", re.I))
+        self.assertIsNone(matching(pattern, "Εργαστήρια 25–30", re.I))
         self.assertIsNone(matching(pattern, "Εργαστήρια 25–31", re.I))
         self.assertIsNotNone(matching(manual_section_pattern(1, 5),
                                       "Ήχος & Δόνηση — Εργαστήρια 1–5", re.I))
