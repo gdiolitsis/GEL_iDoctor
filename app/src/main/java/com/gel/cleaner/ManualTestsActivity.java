@@ -15087,7 +15087,9 @@ private void lab14LogSave(
         boolean[] calibrationDrift,
         boolean batteryAuthenticitySuspicion,
         boolean partial,
-        boolean[] lab14_systemLimited
+        boolean[] lab14_systemLimited,
+        float observedSagVolts,
+        double observedDrainMahPerHour
 ) {
 
     // 🔴 SAFE FLAGS
@@ -15135,6 +15137,15 @@ private void lab14LogSave(
                             validDrain ? System.currentTimeMillis() : 0L)
                     .putString("lab14_stress_response_class",
                             validDrain ? lab14LastLabel : "Unknown")
+                    .putFloat("lab14_stress_sag_volts",
+                            validDrain && Float.isFinite(observedSagVolts)
+                                    && observedSagVolts > 0f
+                                    ? observedSagVolts : -1f)
+                    .putFloat("lab14_stress_drain_mah_per_hour",
+                            validDrain && Double.isFinite(observedDrainMahPerHour)
+                                    && observedDrainMahPerHour > 0d
+                                    && observedDrainMahPerHour <= 20000d
+                                    ? (float) observedDrainMahPerHour : -1f)
                     .apply();
 
             logLabelOkValue(
@@ -17646,7 +17657,9 @@ lab14LogSave(
         calibrationDrift,
         false,
         partial,
-        lab14_systemLimited
+        lab14_systemLimited,
+        finalSag,
+        mahPerHour
 );
 
 // Do not persist the proxy as measured battery health, even on full runs.
@@ -25186,6 +25199,11 @@ p.edit().remove("lab15_charge_score")
         .remove("lab15_overtemp")
         .remove("lab15_strength_label")
         .remove("lab15_ts")
+        .remove("lab15_evidence_rate_known")
+        .remove("lab15_net_rate_mah_per_min")
+        .remove("lab15_rate_band")
+        .remove("lab15_flap_observed")
+        .remove("lab15_overtemp_observed")
         .apply();
 
 lab15Running  = true;
@@ -25739,6 +25757,7 @@ boolean comparableCounters =
         startCounterSource[0].equals(endInfo.source) &&
         startTs[0] > 0L;
 
+double lab15ObservedNetMahPerMinute = Double.NaN;
 if (comparableCounters) {
 
     lab15_strengthKnown = true;
@@ -25748,6 +25767,7 @@ if (comparableCounters) {
 long dtMs = Math.max(1L, SystemClock.elapsedRealtime() - startTs[0] - pausedChargeMs[0]);
 double minutes = dtMs / 60000.0;
 double mahPerMin = (minutes > 0) ? (deltaMah / minutes) : -1;
+lab15ObservedNetMahPerMinute = mahPerMin;
 
     logLabelOkValue(
             gr ? "Καθαρή αύξηση φορτίου" : "Net charge gain",
@@ -25968,6 +25988,24 @@ try {
             .apply();
     }
 
+    // Direct observations for Lab 17, independent of heuristic chargeScore.
+    // A completed 3-minute run can have unknown current/rate; preserve that
+    // as UNKNOWN instead of falsely declaring the test missing or normal.
+    String lab15RateBand = !lab15_strengthKnown || !Double.isFinite(lab15ObservedNetMahPerMinute)
+            ? "UNKNOWN"
+            : lab15ObservedNetMahPerMinute >= 20d ? "HIGH"
+            : lab15ObservedNetMahPerMinute >= 10d ? "TYPICAL"
+            : lab15ObservedNetMahPerMinute >= 5d ? "MODERATE" : "LOW";
+    p.edit()
+            .putBoolean("lab15_evidence_rate_known", lab15_strengthKnown)
+            .putFloat("lab15_net_rate_mah_per_min",
+                    lab15_strengthKnown && Double.isFinite(lab15ObservedNetMahPerMinute)
+                            ? (float) lab15ObservedNetMahPerMinute : -1f)
+            .putString("lab15_rate_band", lab15RateBand)
+            .putBoolean("lab15_flap_observed", lab15FlapUnstable)
+            .putBoolean("lab15_overtemp_observed", lab15OverTempDuringCharge)
+            .putLong("lab15_ts", System.currentTimeMillis())
+            .apply();
 } catch (Throwable ignore) {}
 
 // ------------------------------------------------------------
@@ -26245,6 +26283,11 @@ private void lab16ThermalSnapshot() {
                 .putInt("lab16_total_readings", observedCount)
                 .putFloat("lab16_peak_temp", peakTemp)
                 .putString("lab16_peak_source", peakSrc)
+                .putBoolean("lab16_evidence_available",
+                        observedCount > 0 || osThermalStatus >= 0 || hiddenRisk)
+                .putBoolean("lab16_thermal_warning",
+                        danger || hiddenRisk || peakTemp >= 45f
+                                || osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE)
                 .putLong("lab16_last_ts", System.currentTimeMillis())
                 .apply();
     } catch (Throwable ignore) {}
