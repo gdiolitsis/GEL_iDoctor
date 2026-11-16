@@ -41,12 +41,14 @@ public final class Lab27GrantedPermissionsContractTest {
         assertTrue(s.contains("userAppsWithGrantedSensitivePermissions.add(s)"));
     }
 
-    @Test public void retainedImprovedLabsAndThirtyLabMenu() throws Exception {
+    @Test public void retainedImprovedLabsAndTwentyNineLabMenu() throws Exception {
         String s = source("ManualTestsActivity.java");
-        assertTrue(s.contains("27. Καταγραφές λειτουργίας και μετρήσεις"));
-        assertTrue(s.contains("28. Προέλεγχος Μεταχειρισμένης"));
-        assertTrue(s.contains("29. GEL Device Certification"));
-        assertTrue(s.contains("30. Τελική Τεχνική Αναφορά"));
+        assertFalse(s.contains("27. Καταγραφές λειτουργίας και μετρήσεις"));
+        assertFalse(s.contains("private void lab28HardwareStability()"));
+        assertTrue(s.contains("27. Προέλεγχος Μεταχειρισμένης"));
+        assertTrue(s.contains("28. GEL Device Certification"));
+        assertTrue(s.contains("29. Τελική Τεχνική Αναφορά"));
+        assertFalse(s.contains("30. Τελική Τεχνική Αναφορά"));
         assertTrue(s.contains("Lab29FactorySpecAudit.capture(this)"));
         assertTrue(s.contains("showLab29ExternalGuidanceDialog(gr)"));
         assertTrue(s.contains("Lab31ReportEvidencePolicy.withoutPriorSummaries"));
