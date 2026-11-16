@@ -29,8 +29,10 @@ public final class Lab15ChargingAdviceContractTest {
         assertTrue(decision.contains("δεν αποδεικνύει βλάβη της συσκευής"));
         assertTrue(decision.contains("άλλο συμβατό καλώδιο και φορτιστή"));
         assertTrue(decision.contains("Επαναλάβετε τη δοκιμή χωρίς έντονη χρήση"));
-        assertTrue(decision.indexOf("άλλο συμβατό καλώδιο και φορτιστή") <
-                   decision.indexOf("ζητήστε τεχνικό έλεγχο", decision.indexOf("else if (lab15_strengthWeak)")));
+        String weakRateCase = decision.substring(decision.indexOf("else if (lab15_strengthWeak)"));
+        assertTrue(weakRateCase.indexOf("άλλο συμβατό καλώδιο και φορτιστή") >= 0);
+        assertTrue(weakRateCase.indexOf("άλλο συμβατό καλώδιο και φορτιστή") <
+                   weakRateCase.indexOf("ζητήστε τεχνικό έλεγχο"));
         assertTrue(decision.contains("Ο καθαρός ρυθμός δεν είναι η ισχύς του φορτιστή"));
         assertFalse(decision.contains("Συνιστάται περαιτέρω έλεγχος ή επανάληψη δοκιμής"));
     }
