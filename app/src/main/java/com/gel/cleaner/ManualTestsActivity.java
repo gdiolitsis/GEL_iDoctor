@@ -29876,7 +29876,9 @@ private void lab25CrashHistory() {
     // Query Android's available historical entries only when access is granted.
     // No access is never interpreted as zero crashes.
     String[] tags = {"system_app_crash", "data_app_crash", "system_app_anr",
-            "data_app_anr", "system_server_crash", "system_server_anr"};
+            "data_app_anr", "system_app_native_crash", "data_app_native_crash",
+            "system_server_crash", "system_server_native_crash", "system_server_anr",
+            "system_server_watchdog", "SYSTEM_TOMBSTONE", "SYSTEM_LAST_KMSG"};
     GelCrashCoverage coverage = new GelCrashCoverage(tags.length);
     List<String> records = new ArrayList<>();
     List<CriticalSystemCrashEvidence.Event> criticalEvents = new ArrayList<>();
@@ -30020,6 +30022,8 @@ private java.util.Set<String> lab25DefaultRoles() {
 private String lab25Describe(CriticalSystemCrashEvidence.Event e, boolean gr) {
     String role = e.role;
     String component = "ANDROID_CORE".equals(role) ? (gr ? "Υπηρεσίες Android" : "Android core")
+            : "ANDROID_KERNEL".equals(role) ? (gr ? "Πυρήνας Android" : "Android kernel")
+            : "DISPLAY_COMPOSITOR".equals(role) ? "SurfaceFlinger"
             : "SYSTEM_UI".equals(role) ? "System UI"
             : "HOME".equals(role) ? (gr ? "Αρχική οθόνη" : "Home screen")
             : "MESSAGING".equals(role) ? (gr ? "Μηνύματα" : "Messages")
@@ -30027,7 +30031,10 @@ private String lab25Describe(CriticalSystemCrashEvidence.Event e, boolean gr) {
             : "TELEPHONY_SERVICE".equals(role) ? (gr ? "Τηλεφωνία" : "Telephony")
             : "SETTINGS".equals(role) ? (gr ? "Ρυθμίσεις" : "Settings") : role;
     return component + " (" + e.process + ") — "
-            + ("ANR".equals(e.kind) ? "ANR" : "crash")
+            + ("ANR".equals(e.kind) ? "ANR"
+               : "WATCHDOG".equals(e.kind) ? "watchdog"
+               : "KERNEL_PANIC".equals(e.kind) ? "kernel panic"
+               : "NATIVE_CRASH".equals(e.kind) ? "native crash" : "crash")
             + (e.when.isEmpty() ? "" : " — " + e.when);
 }
 
