@@ -62,6 +62,16 @@ public class ServiceReportActivity extends GELAutoActivityHook {
 
     // Keep the WebView alive while the Android print service prepares the PDF.
     private WebView htmlPrintWebView;
+
+    // LocaleHelper.apply() creates a configuration Context. Android's PrintManager
+    // requires the original Activity-bound base context, not that locale wrapper.
+    private Context originalActivityPrintContext;
+
+    @Override
+    protected void attachBaseContext(Context base) {
+        originalActivityPrintContext = base;
+        super.attachBaseContext(base);
+    }
     private final android.os.Handler htmlPrintHandler =
             new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable htmlPrintTimeout;
@@ -2131,8 +2141,15 @@ private void exportHtmlPdf(String report) {
                 htmlPrintRequested = true; // exactly one print job per tap
                 cancelHtmlPrintTimeout();
                 try {
+                    // Use the Activity-bound base Context saved before locale wrapping.
+                    // A PrintManager obtained from createConfigurationContext() throws
+                    // "Can print only from an activity" even inside an Activity.
+                    final Context printContext = originalActivityPrintContext;
+                    if (printContext == null) {
+                        throw new IllegalStateException("Original activity print context unavailable");
+                    }
                     android.print.PrintManager pm =
-                            (android.print.PrintManager) getSystemService(Context.PRINT_SERVICE);
+                            (android.print.PrintManager) printContext.getSystemService(Context.PRINT_SERVICE);
                     if (pm == null) throw new IllegalStateException("Print service unavailable");
 
                     android.print.PrintDocumentAdapter adapter =
