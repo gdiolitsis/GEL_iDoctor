@@ -1,0 +1,92 @@
+name: Stage 1 — 29 labs source-built Android UI QA
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'tools/ci/**'
+      - '.github/workflows/qa-stage1-29-labs.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: stage1-29-labs-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  source-build:
+    # This is the owner's first migration stage only. No main merge or release signing.
+    if: ${{ github.head_ref == 'qa/remove-lab27-renumber-25-29-20261116' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Check exactly 29 labs and selector contract
+        run: python3 tools/ci/test_ui_audit_selectors.py
+      - name: Build and unit-test this exact source commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon --console=plain
+          mkdir -p "$RUNNER_TEMP/stage1-apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/stage1-apk/GEL_iDoctor_stage1_29labs_debug.apk"
+          (cd "$RUNNER_TEMP/stage1-apk" && sha256sum GEL_iDoctor_stage1_29labs_debug.apk > SHA256SUMS)
+          git rev-parse HEAD > "$RUNNER_TEMP/stage1-apk/SOURCE_COMMIT"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: stage1-29labs-exact-source-debug-apk
+          path: ${{ runner.temp }}/stage1-apk
+          retention-days: 7
+  emulator:
+    needs: source-build
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [30, 36]
+        language: [el, en]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - uses: actions/download-artifact@v4
+        with:
+          name: stage1-29labs-exact-source-debug-apk
+          path: ${{ runner.temp }}/stage1-apk
+      - name: Verify APK from the tested source commit
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/stage1-apk"
+          sha256sum --check SHA256SUMS
+          test "$(cat SOURCE_COMMIT)" = "$GITHUB_SHA" || test "$(cat SOURCE_COMMIT)" = "${{ github.event.pull_request.head.sha }}"
+          test -s GEL_iDoctor_stage1_29labs_debug.apk
+      - name: Explore all 29 labs and UI in chosen Android/language
+        env:
+          AUDIT_SCOPE: full
+          AUDIT_REQUIRE_WELCOME_OK: '1'
+          AUDIT_REQUIRE_ACCESSIBLE_SETTINGS: '1'
+          AUDIT_APPLE_MODE: '0'
+        run: |
+          set -euo pipefail
+          bash tools/ci/full_ui_audit.sh "$RUNNER_TEMP/stage1-apk/GEL_iDoctor_stage1_29labs_debug.apk" ${{ matrix.api }} ${{ matrix.language }}
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: stage1-29labs-ui-api${{ matrix.api }}-${{ matrix.language }}
+          path: ${{ runner.temp }}/full-ui-audit
+          retention-days: 14
