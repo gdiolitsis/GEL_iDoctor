@@ -6666,10 +6666,8 @@ appendHtml("<br>");
             gr ? "Σημείωση" : "Note",
             gr
                     ? "Η ένδειξη LOW αφορά την αξιοπιστία της πρόσθετης μέτρησης μικροφώνου μετά την αναπαραγωγή. "
-                      + "Δεν επιβεβαιώνει ούτε απορρίπτει ξεχωριστά τους τέσσερις τόνους. "
                       + "Πιθανοί παράγοντες είναι ακύρωση θορύβου, DSP και η θέση του μικροφώνου."
                     : "LOW describes the confidence of the microphone reading after playback. "
-                      + "It does not individually verify or reject the four tones. "
                       + "Noise cancellation, DSP and microphone placement can affect it."
     );
 
