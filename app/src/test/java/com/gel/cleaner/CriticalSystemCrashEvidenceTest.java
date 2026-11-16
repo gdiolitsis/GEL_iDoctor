@@ -108,6 +108,44 @@ public final class CriticalSystemCrashEvidenceTest {
         assertEquals(0, report("ordinary logcat without errors\n").events.size());
     }
 
+    @Test public void nativeSystemProcessCrashRequiresTombstoneAndSignal() throws Exception {
+        String nativeFailure = "11-16 12:10:05.000 F DEBUG: "
+                + "pid: 122, tid: 122, name: surfaceflinger  >>> surfaceflinger <<<\\n"
+                + "11-16 12:10:05.010 F DEBUG: signal 11 (SIGSEGV), code 1\\n";
+        CriticalSystemCrashEvidence.Summary s = report(nativeFailure);
+        assertEquals(1, s.events.size());
+        assertEquals("DISPLAY_COMPOSITOR", s.events.get(0).role);
+        assertEquals("NATIVE_CRASH", s.events.get(0).kind);
+        assertEquals(0, report("pid: 122, name: surfaceflinger >>> surfaceflinger <<<\\n"
+                + "normal process activity without signal\\n").events.size());
+    }
+
+    @Test public void watchdogAndKernelPanicAreStrongButNotHardwareProof() throws Exception {
+        CriticalSystemCrashEvidence.Summary s = report(
+                "11-16 12:13:01.000 E Watchdog: *** WATCHDOG KILLING SYSTEM PROCESS: Blocked in handler\\n"
+                + "11-16 12:15:01.000 E kernel: Kernel panic - not syncing: watchdog timeout\\n");
+        assertEquals(2, s.events.size());
+        assertEquals("WATCHDOG", s.events.get(0).kind);
+        assertEquals("ANDROID_KERNEL", s.events.get(1).role);
+        assertEquals("KERNEL_PANIC", s.events.get(1).kind);
+        assertFalse(s.hasVerifiedRecurrence());
+    }
+
+    @Test public void dropboxNativeTombstoneNeedsAttributedProcessAndSignal() {
+        String payload = "pid: 122, tid: 122, name: surfaceflinger >>> surfaceflinger <<<\\n"
+                + "signal 11 (SIGSEGV), code 1\\n";
+        CriticalSystemCrashEvidence.Event e = CriticalSystemCrashEvidence.dropBoxEvent(
+                "SYSTEM_TOMBSTONE", 12345678L, payload, ROLES);
+        assertNotNull(e);
+        assertEquals("DISPLAY_COMPOSITOR", e.role);
+        assertNull(CriticalSystemCrashEvidence.dropBoxEvent(
+                "SYSTEM_TOMBSTONE", 12345678L, "surfaceflinger appears here", ROLES));
+        assertNotNull(CriticalSystemCrashEvidence.dropBoxEvent(
+                "system_server_watchdog", 12345678L, "Watchdog killing system server", ROLES));
+        assertNull(CriticalSystemCrashEvidence.dropBoxEvent(
+                "SYSTEM_LAST_KMSG", 12345678L, "normal boot", ROLES));
+    }
+
     private static CriticalSystemCrashEvidence.Summary report(String text) throws Exception {
         return CriticalSystemCrashEvidence.parseUserReport(
                 new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)), ROLES);
