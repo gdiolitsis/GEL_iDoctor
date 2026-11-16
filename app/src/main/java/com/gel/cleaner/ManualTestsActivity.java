@@ -26294,7 +26294,7 @@ private void lab17RunAuto() {
     final long lastValidStressTs = lab14Records.getLong("lab14_valid_stress_ts", 0L);
     final long legacyCompletedStressTs = lab14Records.getLong("lab14_last_ts", 0L);
     // Read the old completion timestamp for existing installations as well.
-    final long ts14 = lastValidStressTs > 0L
+    final long ts14 = lab14Records.contains("lab14_valid_stress_ts")
             ? lastValidStressTs : legacyCompletedStressTs;
     final String lab14StressClass =
             lab14Records.getString("lab14_stress_response_class", null);
@@ -26620,7 +26620,9 @@ final boolean fresh16 =
     // ------------------------------------------------------------
     // Public Android data cannot supply a calibrated SoH. Never synthesize
     // a battery-health percentage or evaluate a stale legacy heuristic as SoH.
-    if (lab14Health < 0f) {
+    // Every accepted fresh stress run uses the evidence-only result path,
+    // including installations with stale legacy numeric health scores.
+    if (fresh14) {
         appendHtml("<br>");
         logLine();
         logInfo(gr ? "LAB 17 — Συνδυασμός διαθέσιμων αποτελεσμάτων"
