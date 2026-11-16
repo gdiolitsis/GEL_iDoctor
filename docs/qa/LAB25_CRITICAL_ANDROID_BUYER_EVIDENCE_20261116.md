@@ -13,8 +13,11 @@ Critical services: actual default HOME, SMS, DIALER (via Android roles and publi
 
 ## Display rules
 - No records / no permissions: **neutral/white**. Never an all-clear.
-- One dated or undated fault: **neutral/white**, with scope and no hardware-failure claim.
-- Repeated, independently timestamped entries for the same critical process: **yellow**, recommend additional validation before a used-device purchase. Not red or a hardware diagnosis.
+- One ordinary crash or an undated record: **neutral/white**, with source and limitation; never assert hardware failure.
+- Two time-separated recorded incidents in one critical process: **yellow**, recommend further diagnosis before purchase.
+- Three or more independent, dated incidents (with recurrence in at least one critical process) spanning at least five minutes: **prominent yellow buyer warning**: "Strong indications of repeated Android instability — do not buy without further diagnostic checks." No claim about hardware cause.
+- Even a single explicit kernel panic or system watchdog: **yellow**, because it is a serious observed system event requiring investigation, though it need not indicate defective hardware.
+- Multiple representations of one incident from separate buffers are coalesced when attributable to the same process within a short interval; undated duplicates do not contribute to recurrence.
 - Green: only a directly confirmed successful file round-trip, not the absence of crashes.
 - Raw bugreport content may contain private data. Never include it in GEL logs, exports, uploads or analytics.
 
