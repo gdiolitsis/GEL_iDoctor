@@ -29994,23 +29994,9 @@ private void lab25CrashHistory() {
 
 private java.util.Set<String> lab25DefaultRoles() {
     java.util.Set<String> found = new java.util.HashSet<>();
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        try {
-            android.app.role.RoleManager rm =
-                    (android.app.role.RoleManager) getSystemService(Context.ROLE_SERVICE);
-            if (rm != null) {
-                String[][] roles = {
-                        {android.app.role.RoleManager.ROLE_HOME, "HOME"},
-                        {android.app.role.RoleManager.ROLE_SMS, "MESSAGING"},
-                        {android.app.role.RoleManager.ROLE_DIALER, "DIALER"}
-                };
-                for (String[] role : roles) {
-                    if (rm.isRoleAvailable(role[0])) for (String pkg : rm.getRoleHolders(role[0]))
-                        if (pkg != null && !pkg.trim().isEmpty()) found.add(role[1] + "=" + pkg);
-                }
-            }
-        } catch (RuntimeException ignored) { }
-    }
+    // RoleManager.getRoleHolders() is a hidden @SystemApi requiring
+    // MANAGE_ROLE_HOLDERS. Do NOT call it (even via reflection) from a
+    // Play-distributed app. Resolve the actual defaults with public APIs.
     try {
         String pkg = android.provider.Telephony.Sms.getDefaultSmsPackage(this);
         if (pkg != null) found.add("MESSAGING=" + pkg);
