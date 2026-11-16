@@ -52,11 +52,15 @@ for key in (
     assert f'.putInt("{key}"' not in src, f"Status still saved: {key}"
     assert f'.putBoolean("{key}"' not in src, f"Buyer check still saved: {key}"
 
-assert src.count("private void lab28HardwareStability()") == 1
+# Legacy Lab27 has been intentionally removed. Privacy/IMEI checks remain
+# mandatory for the renumbered buyer and technical-summary methods.
+assert src.count("private void lab28HardwareStability()") == 0
+assert "this::lab28HardwareStability" not in src
 assert src.count("private void lab29DeviceAuthenticity()") == 1
 assert src.count("private void lab30CombineFindings()") == 1
 assert src.count("private void lab31FinalSummary()") == 1
-assert "lab28_obs_mention_mask" in src
+assert "27. Καταγραφές λειτουργίας και μετρήσεις" not in src
 assert "lab29_obs_manufacturer" in lab30
 assert "lab29_obs_manufacturer" in lab31
-print("Lab29 guidance-only privacy contract: PASS")
+assert "Uri.parse(\"https://www.checkmend.com/eu/consumer/report\")" in guidance
+print("Buyer guidance privacy and 29-lab count contract: PASS")
