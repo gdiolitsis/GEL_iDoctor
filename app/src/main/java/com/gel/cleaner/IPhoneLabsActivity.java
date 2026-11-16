@@ -2100,7 +2100,7 @@ private void runFinalServiceRecommendationLab() {
         thermalObserved |= "Thermal Shutdown / Throttle".equals(sigCrashType);
 
         // Only independently extracted model-scoped codes, never conjectured
-        // hardware/software probabilities or generic fault-score heuristics.
+        // speculative probability estimates or arbitrary risk ratings.
         ApplePanicHardwareHints.Assessment hints = ApplePanicHardwareHints.examineOne(block);
         for (ApplePanicHardwareHints.Finding finding : hints.findings) {
             uniqueTechnicalCodes.add(finding.code);
