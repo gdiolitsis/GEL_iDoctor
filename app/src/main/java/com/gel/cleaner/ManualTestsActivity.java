@@ -1614,8 +1614,8 @@ logScroll.post(() -> setLogPanelState(0));
             this::lab23DeveloperOptionsRisk));
 
     body6.addView(makeTestButton(
-            gr ? "24. Ένδειξη Root / Ξεκλείδωτου Bootloader"
-               : "24. Root / Bootloader Suspicion",
+            gr ? "24. Έλεγχος Root, Bootloader & Verified Boot"
+               : "24. Root, Bootloader & Verified Boot Check",
             this::lab24RootSuspicion));
 
     // ============================================================
@@ -29195,8 +29195,8 @@ private void lab24RootSuspicion() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 24 — Έλεγχος προστασίας του συστήματος"
-            : "LAB 24 — System protection check");
+            ? "LAB 24 — Έλεγχος Root, Bootloader & Verified Boot"
+            : "LAB 24 — Root, Bootloader & Verified Boot Check");
     logLine();
 
 // ---------------------------  
@@ -29463,83 +29463,121 @@ for (String finding : magiskStealthFindings) {
     }
 }
 
-logInfo(gr ? "1. Προστασία κατά την εκκίνηση"
-           : "1. Protection when starting the phone");
-if (bootFailed) {
-    logLabelErrorValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr ? "Το Android αναφέρει πρόβλημα στον έλεγχο εκκίνησης. Χρειάζεται τεχνικός έλεγχος."
-               : "Android reports a startup verification problem. A technician should check it.");
+// Keep three separate conclusions. OEM unlock *allowed* is not "unlocked".
+// Verified Boot YELLOW is valid alternate trust, not a failed verification.
+boolean reportedLocked = "locked".equalsIgnoreCase(vbmeta) || "1".equals(flashL);
+boolean reportedUnlocked = "unlocked".equalsIgnoreCase(vbmeta) || "0".equals(flashL);
+boolean vbGreen = "green".equalsIgnoreCase(vbState);
+boolean vbYellow = "yellow".equalsIgnoreCase(vbState);
+boolean vbOrange = "orange".equalsIgnoreCase(vbState);
+boolean bootSignalsConflict = (reportedLocked && reportedUnlocked)
+        || ((vbGreen || vbYellow) && reportedUnlocked)
+        || (vbOrange && reportedLocked);
+
+logInfo(gr ? "1. Κατάσταση Bootloader" : "1. Bootloader state");
+if (bootSignalsConflict) {
+    logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Αντιφατικές ενδείξεις Android — μη επιβεβαιωμένη κατάσταση"
+               : "Conflicting Android signals — state not confirmed");
 } else if (bootUnlocked) {
-    logLabelWarnValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr ? "Η συσκευή αναφέρει ότι επιτρέπει σημαντικές αλλαγές στο λογισμικό της. Αν δεν το επιλέξατε, ζητήστε έλεγχο."
-               : "The phone reports that major software changes are permitted. If you did not choose this, have it checked.");
-} else if (alternativeBootTrust) {
-    logLabelWarnValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr ? "Η εκκίνηση ελέγχεται με διαφορετική ρύθμιση από τη συνηθισμένη. Αν δεν το γνωρίζετε, ζητήστε έλεγχο."
-               : "Startup uses a different verification configuration. If unexpected, have it checked.");
-} else if (bootProtected) {
-    logLabelOkValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr ? "Το Android αναφέρει ότι η προστασία εκκίνησης είναι ενεργή και η συσκευή κλειδωμένη απέναντι σε αλλαγές του συστήματος."
-               : "Android reports startup protection is on and the device is locked against system changes.");
+    logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Ξεκλείδωτος (αναφορά Android)" : "Unlocked (Android-reported)");
+} else if ("locked".equalsIgnoreCase(vbmeta) && "1".equals(flashL)) {
+    logLabelOkValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Κλειδωμένος (συμφωνούν οι ενδείξεις Android)"
+               : "Locked (Android signals agree)");
 } else {
-    logLabelValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr ? "Δεν ήταν δυνατό να επιβεβαιωθούν όλες οι ρυθμίσεις προστασίας εκκίνησης."
-               : "Not all startup protection settings could be verified.");
-}
-
-logLine();
-logInfo(gr ? "2. Πρόσβαση με πλήρη δικαιώματα"
-           : "2. Full system access");
-if (suExec) {
-    logLabelWarnValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr ? "Επιβεβαιώθηκε δυνατότητα πλήρους πρόσβασης στο σύστημα. Αν δεν την ενεργοποιήσατε εσείς, ζητήστε τεχνικό έλεγχο."
-               : "Full system access was confirmed. If you did not enable it, have the phone checked.");
-} else if (meaningfulRootHint) {
-    logLabelWarnValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr ? "Βρέθηκαν ενδείξεις αλλαγών στο σύστημα, αλλά δεν επιβεβαιώθηκε πλήρης πρόσβαση. Χρειάζεται περαιτέρω έλεγχος."
-               : "Possible system changes were indicated, but full access was not confirmed. Further checking is needed.");
-} else {
-    logLabelOkValue(
-            gr ? "Αποτέλεσμα" : "Result",
-            gr ? "Δεν εντοπίστηκαν ισχυρές ενδείξεις πλήρους πρόσβασης στους διαθέσιμους ελέγχους."
-               : "No strong signs of full system access were found in the available checks.");
-}
-
-logLine();
-logInfo(gr ? "3. Τι σημαίνει για εσάς" : "3. What this means for you");
-if (bootProtected && !suExec && !meaningfulRootHint) {
-    logInfo(gr
-            ? "Τα αποτελέσματα είναι ενθαρρυντικά. Δεν διαπιστώθηκε πρόβλημα στους ελέγχους που πραγματοποιήθηκαν."
-            : "The findings are reassuring. No problem was identified in the checks performed.");
-    logInfo(gr
-            ? "Η προστασία εκκίνησης φαίνεται ενεργή και δεν διαπιστώσαμε πλήρη πρόσβαση στο σύστημα. Δεν απαιτείται άλλη ενέργεια από αυτή τη δοκιμή."
-            : "Startup protection appears enabled, and full system access was not confirmed. No further action is needed based on this test.");
-} else if (bootFailed || bootUnlocked || suExec) {
-    logInfo(gr
-            ? "Ορισμένα αποτελέσματα χρειάζονται επιπλέον έλεγχο. Αυτό δεν αποδεικνύει από μόνο του ότι κάποιος παραβίασε το κινητό σας."
-            : "Some findings need additional checking. They do not by themselves prove that someone has compromised the phone.");
-    logInfo(gr
-            ? "Αν δεν κάνατε εσείς αλλαγές στο λογισμικό, απευθυνθείτε σε τεχνικό πριν επιχειρήσετε διορθώσεις."
-            : "If you did not change the phone software, consult a technician before attempting repairs.");
-} else if (meaningfulRootHint || alternativeBootTrust) {
-    logInfo(gr
-            ? "Υπάρχουν στοιχεία που χρειάζονται επιβεβαίωση, όχι απόδειξη παραβίασης. Αν δεν γνωρίζετε να έχετε κάνει αλλαγές στο σύστημα, ζητήστε επιπλέον έλεγχο."
-            : "Some findings need verification, not proof of compromise. If you did not knowingly modify the system, request a further check.");
-} else {
-    logInfo(gr
-            ? "Δεν εντοπίσαμε αποδεδειγμένη παραβίαση, αλλά ο έλεγχος δεν μπόρεσε να επιβεβαιώσει όλες τις ρυθμίσεις."
-            : "No compromise was demonstrated, but not every setting could be verified.");
+    logLabelValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Μη επιβεβαιωμένος — ανεπαρκή στοιχεία κλειδώματος"
+               : "Not verified — insufficient lock-state evidence");
 }
 logInfo(gr
-        ? "Φροντίστε να εγκαθιστάτε τις διαθέσιμες ενημερώσεις Android."
-        : "Keep available Android updates installed.");
+        ? "Η επιλογή OEM unlocking δεν αποδεικνύει ότι ο Bootloader έχει ξεκλειδωθεί."
+        : "The OEM unlocking option does not prove the bootloader is unlocked.");
+logLine();
+
+logInfo(gr ? "2. Verified Boot — επαλήθευση εκκίνησης"
+           : "2. Verified Boot — startup verification");
+if (bootSignalsConflict) {
+    logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Οι ενδείξεις κλειδώματος και Verified Boot διαφωνούν"
+               : "Bootloader and Verified Boot signals disagree");
+} else if (bootFailed) {
+    logLabelErrorValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "RED — αναφέρεται αποτυχία επαλήθευσης εκκίνησης"
+               : "RED — boot verification failure reported");
+} else if (vbOrange) {
+    logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "ORANGE — ακεραιότητα εκκίνησης μη εγγυημένη"
+               : "ORANGE — boot integrity not guaranteed");
+} else if (vbYellow) {
+    logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "YELLOW — επαλήθευση με εναλλακτικό κλειδί, όχι αποτυχία"
+               : "YELLOW — verified using alternative key, not a failure");
+} else if (vbGreen) {
+    logLabelOkValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "GREEN — επιτυχής επαλήθευση σύμφωνα με το Android"
+               : "GREEN — verified according to Android");
+} else {
+    logLabelValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Μη διαθέσιμη ή άγνωστη κατάσταση Verified Boot"
+               : "Verified Boot state unavailable or unknown");
+}
+logLine();
+
+logInfo(gr ? "3. Ένδειξη Root / πλήρης πρόσβαση"
+           : "3. Root / elevated-access indications");
+if (suExec) {
+    logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Επιβεβαιώθηκε εκτέλεση su — διαθέσιμη αυξημένη πρόσβαση"
+               : "su executed — elevated access available");
+} else if (meaningfulRootHint) {
+    logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Ενδείξεις Root, χωρίς επιβεβαίωση πλήρους πρόσβασης"
+               : "Root indicators found, full access unconfirmed");
+} else {
+    logLabelOkValue(gr ? "Αποτέλεσμα" : "Result",
+            gr ? "Δεν βρέθηκαν ισχυρές ενδείξεις Root στους διαθέσιμους ελέγχους"
+               : "No strong Root indicators in available checks");
+}
+logInfo(gr ? "Η απουσία ενδείξεων δεν αποκλείει κρυμμένο Root."
+           : "No indicators does not rule out hidden Root.");
+logLine();
+
+logInfo(gr ? "4. Συμπέρασμα και σύσταση"
+           : "4. Conclusion and recommendation");
+if (bootSignalsConflict) {
+    logLabelWarnValue(gr ? "Συμπέρασμα" : "Conclusion",
+            gr ? "Αντιφατικές ενδείξεις εκκίνησης — χρειάζεται επαλήθευση"
+               : "Conflicting startup readings — verification needed");
+    logInfo(gr ? "Ελέγξτε με επίσημα εργαλεία κατασκευαστή ή τεχνικό."
+               : "Check using manufacturer tools or qualified assistance.");
+} else if (bootFailed || bootUnlocked || suExec) {
+    logLabelWarnValue(gr ? "Συμπέρασμα" : "Conclusion",
+            gr ? "Καταγράφηκε συγκεκριμένη ένδειξη αλλαγμένης προστασίας ή αυξημένης πρόσβασης"
+               : "Evidence of altered boot protection or elevated access");
+    logInfo(gr
+            ? "Αν δεν κάνατε εσείς αλλαγές, ζητήστε έλεγχο. Δεν αποδεικνύεται παραβίαση από τρίτο."
+            : "If the changes were not yours, seek an assessment. Third-party compromise is not proven.");
+} else if (alternativeBootTrust || meaningfulRootHint) {
+    logLabelWarnValue(gr ? "Συμπέρασμα" : "Conclusion",
+            gr ? "Ενδείξεις προς επαλήθευση, όχι αποδεδειγμένη παραβίαση"
+               : "Findings to verify, not proven compromise");
+    logInfo(gr ? "Αν δεν γνωρίζετε τη διαμόρφωση, ζητήστε επιπλέον έλεγχο."
+               : "If you do not recognize this configuration, seek a review.");
+} else if (bootProtected) {
+    logLabelOkValue(gr ? "Συμπέρασμα" : "Conclusion",
+            gr ? "Δεν διαπιστώθηκε συγκεκριμένη ανωμαλία στους ελέγχους"
+               : "No specific anomaly in available checks");
+    logInfo(gr ? "Δεν αποτελεί γενική πιστοποίηση ασφάλειας."
+               : "This is not a comprehensive security certification.");
+} else {
+    logLabelValue(gr ? "Συμπέρασμα" : "Conclusion",
+            gr ? "Ανεπαρκή στοιχεία για ενιαίο συμπέρασμα ασφάλειας"
+               : "Insufficient evidence for an overall security conclusion");
+}
+logInfo(gr ? "Εγκαταστήστε τις διαθέσιμες ενημερώσεις Android."
+           : "Keep Android updated.");
 
 appendHtml("<br>");
 logOk(gr
