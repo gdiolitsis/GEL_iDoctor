@@ -26,9 +26,13 @@ public class GELServiceLog {
     public static final class PdfRow {
         public final String text;
         public final String valueColor;
-        private PdfRow(String text, String valueColor) {
+        // Exact value offset for iPhone labels that do not use a colon.
+        // -1 means legacy label:value rendering (Android labs).
+        public final int valueStart;
+        private PdfRow(String text, String valueColor, int valueStart) {
             this.text = text;
             this.valueColor = valueColor;
+            this.valueStart = valueStart;
         }
     }
     private static final ArrayList<PdfRow> PDF_ROWS = new ArrayList<>();
@@ -44,7 +48,7 @@ public class GELServiceLog {
     private static synchronized void addPlain(String line) {
         if (line == null) return;
         LOG.append(line).append('\n');
-        PDF_ROWS.add(new PdfRow(line, null));
+        PDF_ROWS.add(new PdfRow(line, null, -1));
         SUPPORT.append(line).append('\n');
         if (SUPPORT.length() > MAX_CHARS) SUPPORT.delete(0, SUPPORT.length() - MAX_CHARS);
         ensureLimit();
@@ -90,7 +94,7 @@ public class GELServiceLog {
                 chars -= lineChars;
                 PDF_ROWS.remove(0);
             } else {
-                PDF_ROWS.set(0, new PdfRow(first.text.substring(chars), null));
+                PDF_ROWS.set(0, new PdfRow(first.text.substring(chars), null, -1));
                 chars = 0;
             }
         }
@@ -101,18 +105,60 @@ public class GELServiceLog {
      * the plain-text diagnostics that other laboratories use as evidence.
      */
     public static synchronized void addStyledValue(String plainLine, String valueColor) {
+        addStyledValue(plainLine, valueColor, -1);
+    }
+
+    /**
+     * The optional offset identifies the start of the VALUE after a label,
+     * including iPhone entries that historically used "ℹ Label Value" rather
+     * than "Label: Value". PDF rendering never guesses from diagnostic text.
+     */
+    public static synchronized void addStyledValue(
+            String plainLine, String valueColor, int valueStart) {
         if (plainLine == null || plainLine.trim().isEmpty()) return;
         String clean = sanitize(plainLine);
         addPlain(clean);
         String color = valueColor != null && valueColor.matches("#[0-9A-Fa-f]{6}")
                 ? valueColor : null;
+        int safeOffset = valueStart >= 0 && valueStart < clean.length()
+                ? valueStart : -1;
         int last = PDF_ROWS.size() - 1;
         if (last >= 0 && PDF_ROWS.get(last).text.equals(clean)) {
-            PDF_ROWS.set(last, new PdfRow(clean, color));
+            PDF_ROWS.set(last, new PdfRow(clean, color, safeOffset));
         }
         // Preserve existing in-app HTML compatibility; the printable palette
         // is calculated independently for contrast against white paper.
         addHtml("<font color='#FFFFFF'>" + escape(clean) + "</font>");
+    }
+
+    /**
+     * iPhone Labs retain the PRECISE existing plain report text, including
+     * informational / warning / error markers. Only the PDF's field value
+     * receives the color recorded on screen; its label remains neutral.
+     */
+    private static synchronized void addIPhoneLabelValue(
+            String prefix, String label, String value, String valueColor) {
+        String formatted = sanitize(label + " " + value);
+        String cleanValue = sanitize(value);
+        String line = prefix + formatted;
+        int valueOffset = cleanValue.isEmpty() ? -1
+                : line.length() - cleanValue.length();
+        addStyledValue(line, valueColor, valueOffset);
+    }
+
+    public static synchronized void iPhoneInfoValue(
+            String label, String value, String valueColor) {
+        addIPhoneLabelValue("ℹ ", label, value, valueColor);
+    }
+
+    public static synchronized void iPhoneWarnValue(
+            String label, String value, String valueColor) {
+        addIPhoneLabelValue("⚠ ", label, value, valueColor);
+    }
+
+    public static synchronized void iPhoneErrorValue(
+            String label, String value, String valueColor) {
+        addIPhoneLabelValue("✖ ", label, value, valueColor);
     }
 
     public static synchronized List<PdfRow> getPdfRows() {
