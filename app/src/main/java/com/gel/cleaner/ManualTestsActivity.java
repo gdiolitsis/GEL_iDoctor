@@ -1650,9 +1650,9 @@ logScroll.post(() -> setLogPanelState(0));
     body7.addView(makeTestButton(
             gr
                     ? (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  28. Προέλεγχος Μεταχειρισμένης\nΤαυτότητα, IMEI & μεταβίβαση"
+                      + "PRO  28. Προέλεγχος Μεταχειρισμένης\nIMEI, μεταβίβαση & σφάλματα Android"
                     : (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  28. Used Device Pre-Purchase Check\nIdentity, IMEI & transfer",
+                      + "PRO  28. Used Device Pre-Purchase Check\nIMEI, transfer & Android crashes",
             this::lab29DeviceAuthenticity));
 
     body7.addView(makeTestButton(
