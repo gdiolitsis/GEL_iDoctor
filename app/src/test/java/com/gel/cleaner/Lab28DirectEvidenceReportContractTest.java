@@ -7,74 +7,62 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import static org.junit.Assert.*;
 
-/** Current Lab 27 shows direct observations and never grades unseen hardware health. */
+/** First 30->29 migration stage: removed Lab27 must not leave stale findings. */
 public final class Lab28DirectEvidenceReportContractTest {
     private static String source() throws Exception {
         Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
-        if (!Files.isRegularFile(p)) p = Paths.get("src/main/java/com/gel/cleaner/ManualTestsActivity.java");
+        if (!Files.isRegularFile(p))
+            p = Paths.get("src/main/java/com/gel/cleaner/ManualTestsActivity.java");
         return new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
     }
-    private static String lab() throws Exception {
-        String src = source();
-        int a = src.indexOf("private void lab28HardwareStability() {");
-        int b = src.indexOf("// LAB 27 — Helpers", a);
-        assertTrue(a >= 0 && b > a);
-        return src.substring(a, b);
-    }
 
-    @Test public void titleMatchesActualObservedScope() throws Exception {
+    @Test public void obsoleteLab27IsUnreachableAndItsTextParserIsGone() throws Exception {
         String s = source();
-        assertTrue(s.contains("\"27. Καταγραφές λειτουργίας και μετρήσεις\""));
-        assertFalse(s.contains("PRO  27. Καταγραφές λειτουργίας και μετρήσεις"));
-        assertTrue(s.contains("LAB 27 — Καταγραφές λειτουργίας και μετρήσεις"));
-        assertFalse(s.contains("PRO  27. Σταθερότητα Υλικού & Ακεραιότητα"));
-        assertTrue(s.contains("Το εργαστήριο εμφανίζει διαθέσιμες μετρήσεις"));
+        assertFalse(s.contains("private void lab28HardwareStability()"));
+        assertFalse(s.contains("this::lab28HardwareStability"));
+        assertFalse(s.contains("private void showLab28Popup()"));
+        assertFalse(s.contains("private static class Lab28EvidenceReader"));
+        assertFalse(s.contains("27. Καταγραφές λειτουργίας και μετρήσεις"));
+        assertFalse(s.contains("Λέξεις στο ιστορικό (μη επαληθευμένες)"));
     }
 
-    @Test public void proAccessIsOnCurrentLab28NotLab27() throws Exception {
+    @Test public void survivingLabsAndIndependentEvidenceArePreserved() throws Exception {
         String s = source();
-        String lab28 = lab();
-        int a = s.indexOf("private void lab29DeviceAuthenticity() {");
-        int b = s.indexOf("private void runLab29DeviceAuthenticity()", a);
-        assertTrue(a >= 0 && b > a);
-        assertFalse(lab28.contains("requireGelPro("));
-        assertTrue(s.substring(a, b).contains("requireGelPro("));
-        assertTrue(s.contains("PRO  28. Προέλεγχος Μεταχειρισμένης"));
+        assertTrue(s.contains("this::lab25CrashHistory"));
+        assertTrue(s.contains("this::lab26AppsFootprint"));
+        assertTrue(s.contains("this::lab29DeviceAuthenticity"));
+        assertTrue(s.contains("this::lab30CombineFindings"));
+        assertTrue(s.contains("this::lab31FinalSummary"));
+        assertTrue(s.contains("Map<String, Float> zones = null;"));
+        assertTrue(s.contains("readThermalZones()"));
+        assertTrue(s.contains("lab14BatteryTemp()"));
+        assertTrue(s.contains("Lab29FactorySpecAudit.capture(this)"));
     }
 
-    @Test public void temperatureAndUptimeReadingsHaveEvidenceBasedColors() throws Exception {
-        String s = lab();
-        assertTrue(s.contains("android.os.SystemClock.elapsedRealtime()"));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Χρόνος από την τελευταία εκκίνηση\""));
-        assertTrue(s.contains("android.os.BatteryManager.EXTRA_TEMPERATURE"));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Θερμοκρασία μπαταρίας\""));
-        assertTrue(s.contains("Map<String, Float> zones = readThermalZones();"));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Θερμοκρασία CPU\""));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Θερμοκρασία GPU\""));
-        assertTrue(s.contains("logLabelValue(gr ? \"Θερμοκρασία CPU\""));
-        assertTrue(s.contains("logLabelValue(gr ? \"Θερμοκρασία GPU\""));
-    }
-
-    @Test public void retainedLogReaderDoesNotClaimHardwareDefect() throws Exception {
-        String s = lab();
-        assertTrue(s.contains("Lab28EvidenceReader.readFromGELServiceLog()"));
-        assertTrue(s.contains("Το αρχείο περιέχει αναφορά επανεκκίνησης"));
-        assertTrue(s.contains("Καμία σχετική αναφορά στο διαθέσιμο ιστορικό."));
-        assertFalse(s.contains("logLabelWarnValue("));
-        assertFalse(s.contains("Δεν τεκμηριώνεται θερμική σταθερότητα από αυτά τα δεδομένα."));
-        assertFalse(s.contains("Δείκτης Συνεκτικότητας Συμπτωμάτων"));
-        assertFalse(s.contains("Δείκτης κινδύνου υλικού"));
-        assertTrue(s.contains("logOk(gr ? \"Το Lab 27 ολοκληρώθηκε — καταγράφηκαν διαθέσιμες μετρήσεις και αναφορές.\""));
-    }
-
-    @Test public void futureHardwareScenariosAreNotShownAsPopupFacts() throws Exception {
+    @Test public void noStaleOld27SnapshotInSurvivingSummaries() throws Exception {
         String s = source();
-        int a = s.indexOf("private String getLab28TextEN()");
-        int b = s.indexOf("// LAB 28 —", a);
+        int a = s.indexOf("private void lab30CombineFindings()");
+        int b = s.indexOf("private void lab31FinalSummary()", a);
         assertTrue(a >= 0 && b > a);
-        String popup = s.substring(a, b);
-        assertFalse(popup.contains("solder or interconnect defects"));
-        assertFalse(popup.contains("διακοπτόμενη επαφή"));
-        assertTrue(popup.contains("χωρίς προβλέψεις για υποθετικές βλάβες"));
+        String cert = s.substring(a, b);
+        String report = s.substring(b);
+        assertFalse(cert.contains("p.getInt(\"lab28_obs_schema\""));
+        assertFalse(cert.contains("p.getFloat(\"lab28_obs_cpu_c\""));
+        assertFalse(cert.contains("p.getInt(\"lab28_obs_mention_mask\""));
+        assertFalse(report.contains("p.getInt(\"lab28_obs_mention_mask\""));
+        assertFalse(report.contains("LAB 27 — System records and measurements"));
+    }
+
+    @Test public void menuHasFiveRealLabsInLastGroupAndProRemains() throws Exception {
+        String s = source();
+        int a = s.indexOf("25. Έλεγχος κρίσιμων σφαλμάτων Android");
+        int b = s.indexOf("if (!serviceLogInit)", a);
+        assertTrue(a > 0 && b > a);
+        String menu = s.substring(a, b);
+        assertTrue(menu.contains("26. Απογραφή εφαρμογών και στοιχεία χρήσης"));
+        assertTrue(menu.contains("PRO  27. Προέλεγχος Μεταχειρισμένης"));
+        assertTrue(menu.contains("PRO  28. GEL Device Certification"));
+        assertTrue(menu.contains("29. Τελική Τεχνική Αναφορά"));
+        assertFalse(menu.contains("30. Τελική Τεχνική Αναφορά"));
     }
 }
