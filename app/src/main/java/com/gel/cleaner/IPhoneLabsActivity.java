@@ -338,10 +338,10 @@ root.addView(makeLabButton(
 
 // 4) Stability (guard)
 root.addView(makeLabButton(
-        gr ? "LAB 3 - Αξιολόγηση Σταθερότητας Συστήματος"
-           : "LAB 3 - System Stability Evaluation",
-        gr ? "Αξιολόγηση σταθερότητας iOS από διαθέσιμα logs"
-           : "Evaluate iOS stability from available logs",
+        gr ? "LAB 3 - Αξιολόγηση Ιστορικού Συμβάντων"
+           : "LAB 3 - Incident History Review",
+        gr ? "Εξέταση καταγεγραμμένων συμβάντων, όχι μέτρηση σταθερότητας"
+           : "Review recorded incidents, not a live stability measurement",
         true,
         v -> runStabilityLab()
 ));
@@ -350,8 +350,8 @@ root.addView(makeLabButton(
 root.addView(makeLabButton(
         gr ? "LAB 4 - Ανάλυση Επιπτώσεων"
            : "LAB 4 - Impact Analysis",
-        gr ? "Συσχέτιση crash με πιθανό hardware domain"
-           : "Correlate crash with probable hardware domain",
+        gr ? "Κατηγορίες ενδείξεων ανά log, όχι διάγνωση εξαρτήματος"
+           : "Subsystem clues per log, not component diagnosis",
         true,
         v -> runImpactLab()
 ));
@@ -390,8 +390,8 @@ root.addView(makeLabButton(
 root.addView(makeLabButton(
         gr ? "LAB 8 - Τελική Σύσταση Service"
            : "LAB 8 - Final Service Recommendation",
-        gr ? "Ολοκληρωμένη τεχνική αξιολόγηση βάσει όλων των εργαστηρίων"
-           : "Integrated technical verdict based on all analysis",
+        gr ? "Σύντομο τεχνικό συμπέρασμα και επόμενοι έλεγχοι"
+           : "Concise evidence summary and next checks",
         true,
         v -> runFinalServiceRecommendationLab()
 ));
@@ -1586,10 +1586,10 @@ private void runPanicSignatureParser() {
             if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
             incidentNumber++;
             parseAndCacheSignature(block);
-            logLabelOkValue(
+            logLabelWarnValue(
                     gr ? "Συμβάν " + incidentNumber + " — τύπος:" : "Incident " + incidentNumber + " — type:",
                     IPhonePanicHumanizer.event(sigCrashType, gr));
-            logLabelOkValue(
+            logLabelValue(
                     gr ? "Συμβάν " + incidentNumber + " — υπόδειξη περιοχής:" : "Incident " + incidentNumber + " — domain hint:",
                     IPhonePanicHumanizer.domain(sigDomain, gr));
             logLabelValue(
@@ -1698,101 +1698,58 @@ logLabelOkValue(
 }
 
 // ============================================================
-// LAB 3 — SYSTEM STABILITY EVALUATION
+// LAB 3 — INCIDENT HISTORY REVIEW (NOT A LIVE STABILITY MEASUREMENT)
 // ============================================================
 private void runStabilityLab() {
     if (!guardPanicLog()) return;
 
-    boolean gr = AppLang.isGreek(this);
-
+    final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 3 — Αξιολόγηση Σταθερότητας Συστήματος"
-            : "LAB 3 — System Stability Evaluation");
+            ? "LAB 3 — Αξιολόγηση Ιστορικού Συμβάντων"
+            : "LAB 3 — Incident History Review");
     logLine();
 
-    logInfo(gr
-            ? "Ανάλυση εισαγόμενου συμβάντος· η σταθερότητα της συσκευής δεν μετρήθηκε."
-            : "Review of an imported event; physical device stability was not measured.");
+    // Distinct imported records must remain distinct: do not classify their
+    // combined text as one physical-device instability result.
+    String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
+    int total = countSupportedPanicBlocks(blocks);
+    logLabelOkValue(gr ? "Καταγραφές που εξετάστηκαν:" : "Eligible records reviewed:",
+            String.valueOf(total));
 
-    parseAndCacheSignature(panicLogText);
+    int incident = 0;
+    for (String block : blocks) {
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
+        incident++;
+        resetSignatureCache();
+        parseAndCacheSignature(block);
+        String label = gr ? "Συμβάν " + incident + " — τύπος:" : "Incident " + incident + " — type:";
+        if ("Unknown / Generic".equalsIgnoreCase(sigCrashType)
+                || "Unknown".equalsIgnoreCase(sigCrashType)) {
+            logLabelValue(label, IPhonePanicHumanizer.event(sigCrashType, gr));
+        } else {
+            logLabelWarnValue(label, IPhonePanicHumanizer.event(sigCrashType, gr));
+        }
+    }
 
-    if ("High".equalsIgnoreCase(sigConfidence)
-            && ("Kernel Panic".equalsIgnoreCase(sigCrashType)
-            || "Watchdog / Hang".equalsIgnoreCase(sigCrashType))) {
+    logLabelValue(gr ? "Ερμηνεία ιστορικού:" : "History interpretation:",
+            total > 1
+                    ? (gr
+                        ? "Οι καταγραφές εξετάζονται ανεξάρτητα· διαφορετικά συμβάντα δεν αποτελούν κοινή διάγνωση."
+                        : "Records are reviewed separately; distinct events do not form a combined diagnosis.")
+                    : (gr
+                        ? "Εξετάστηκε η διαθέσιμη καταγραφή, χωρίς να τεκμηριώνεται συχνότητα ή επανάληψη."
+                        : "The available record was reviewed; frequency or recurrence is not established."));
 
-        logWarn(gr
-                ? "Το αρχείο περιέχει υπογραφή panic· η βαρύτητα για τη συσκευή παραμένει ανεπιβεβαίωτη."
-                : "A panic signature appears in the file; actual device severity remains unverified.");
-
-        logWarn(gr
-                ? "Ορισμένα συμβάντα μπορεί να σχετίζονται με επανεκκινήσεις· χρειάζεται ιστορικό και πραγματικά συμπτώματα."
-                : "Some events can accompany restarts; actual history and symptoms require corroboration.");
-
-        logLabelWarnValue(
-        gr ? "Με απλά λόγια:" : "In simple terms:",
-        gr
-                ? "Δεν μπορεί να διαπιστωθεί πραγματική αστάθεια μόνο από το εισαγόμενο αρχείο."
-                : "Actual device instability cannot be established from the imported log alone."
-);
-
-} else if ("Medium".equalsIgnoreCase(sigConfidence)) {
-
-    logInfo(gr
-            ? "Εμφανίστηκε ενδεικτική κατηγορία συμβάντος, όχι βαθμονομημένος κίνδυνος."
-            : "A heuristic event category appeared, not a calibrated instability risk.");
-
-    logLabelOkValue(
-            gr ? "Ερμηνεία:" : "Interpretation:",
+    logLabelValue(gr ? "Όριο ελέγχου:" : "Scope of review:",
             gr
-                    ? "Η συμπεριφορά της συσκευής δεν τεκμηριώνεται χωρίς επαλήθευση συμβάντων και συμπτωμάτων."
-                    : "Device behavior needs verified event history and symptoms."
-    );
-
-} else {
-
-    logInfo(gr
-            ? "Δεν υπάρχουν αρκετά δεδομένα για συμπέρασμα σταθερότητας ή απουσίας βλάβης."
-            : "Insufficient data to conclude stability or absence of hardware faults.");
-}
-
-logLabelWarnValue(
-        gr ? "Είδος καταγεγραμμένου συμβάντος:" : "Recorded incident type:",
-        IPhonePanicHumanizer.event(sigCrashType, gr)
-);
-
-if ("High".equalsIgnoreCase(sigConfidence)) {
-
-    logLabelValue(
-            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
-    );
-
-}
-else if ("Medium".equalsIgnoreCase(sigConfidence)) {
-
-    logLabelValue(
-            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
-    );
-
-}
-else {
-
-    logLabelValue(
-            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
-    );
-
-}
-
-logLabelOkValue(
-        gr ? "Επόμενο βήμα:" : "Next step:",
-        gr
-                ? "Το LAB 4 καταγράφει όρους πιθανών υποσυστημάτων, όχι βλάβη εξαρτήματος."
-                : "LAB 4 records subsystem keyword hints, not a component fault diagnosis."
-);
+                    ? "Η τρέχουσα σταθερότητα του iPhone δεν μετρήθηκε και δεν ταυτοποιήθηκε ελαττωματικό εξάρτημα."
+                    : "Current iPhone stability was not measured and no defective component was identified.");
+    logLabelValue(gr ? "Επόμενο βήμα:" : "Next step:",
+            gr
+                    ? "Το LAB 4 καταγράφει τις κατηγορίες ενδείξεων για κάθε συμβάν χωριστά."
+                    : "LAB 4 records subsystem clues for each incident separately.");
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 3 ολοκληρώθηκε." : "Lab 3 finished.");
@@ -1800,106 +1757,65 @@ logLabelOkValue(
 }
 
 // ============================================================
-// LAB 4 — IMPACT ANALYSIS
+// LAB 4 — INCIDENT-SCOPED SUBSYSTEM CLUES (NO COMPONENT DIAGNOSIS)
 // ============================================================
 private void runImpactLab() {
     if (!guardPanicLog()) return;
 
-    boolean gr = AppLang.isGreek(this);
-
+    final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 4 — Ανάλυση Επιπτώσεων"
-            : "LAB 4 — Impact Analysis");
+    logInfo(gr ? "LAB 4 — Ανάλυση Επιπτώσεων" : "LAB 4 — Impact Analysis");
     logLine();
 
     logInfo(gr
-            ? "Καταγραφή όρων υποσυστημάτων στα εισαγόμενα logs· όχι έλεγχος hardware."
-            : "Imported-log subsystem keywords; no hardware test performed.");
+            ? "Καταγεγραμμένες κατηγορίες ανά panic log· δεν πραγματοποιήθηκε φυσικός έλεγχος εξαρτημάτων."
+            : "Recorded keyword categories per panic file; no physical component test was performed.");
 
-    parseAndCacheSignature(panicLogText);
-
-    logLabelOkValue(
-        gr ? "Είδος καταγεγραμμένου συμβάντος:" : "Recorded incident type:",
-        IPhonePanicHumanizer.event(sigCrashType, gr)
-);
-
-logLabelWarnValue(
-        gr ? "Κατηγορία ενδείξεων:" : "Indicated keyword category:",
-        IPhonePanicHumanizer.domain(sigDomain, gr)
-);
-
-if ("Power / PMIC".equals(sigDomain)
-        || "Storage / NAND / FS".equals(sigDomain)
-        || "Baseband / Cellular".equals(sigDomain)) {
-
-    logLabelOkValue(
-            gr ? "Σημαντική διευκρίνιση:" : "Important clarification:",
-            gr
-                    ? "Αυτό δεν επιβεβαιώνει ελαττωματικό εξάρτημα."
-                    : "This does not confirm a faulty component."
-    );
-
-    logLabelWarnValue(
-            gr ? "Τεχνική ένδειξη:" : "Technical indication:",
-            gr
-                    ? "Εντοπίστηκαν όροι υποσυστήματος, όχι επιβεβαιωμένο κρίσιμο κύκλωμα."
-                    : "Subsystem terms were found; a critical hardware path is not established."
-    );
-
-    logLabelWarnValue(
-            gr ? "Σύσταση:" : "Recommendation:",
-            gr
-                    ? "Εάν τα crashes επαναλαμβάνονται, συνιστάται τεχνικός έλεγχος."
-                    : "If crashes repeat, professional inspection is advised."
-    );
-
-}
-else if ("Thermal / Cooling".equals(sigDomain)
-        || "Memory / OS Pressure".equals(sigDomain)) {
-
-    logLabelWarnValue(
-            gr ? "Ερμηνεία:" : "Interpretation:",
-            gr
-                    ? "Παρατηρήθηκαν όροι που μπορεί να σχετίζονται με φόρτο· καμία φυσική επίπτωση δεν επιβεβαιώθηκε."
-                    : "Load-related terms were observed; no physical impact has been confirmed."
-    );
-
-    logLabelOkValue(
-            gr ? "Συνήθης αιτία:" : "Typical cause:",
-            gr
-                    ? "Η συσχέτιση με θερμοκρασία ή φόρτο απαιτεί ανεξάρτητη επιβεβαίωση."
-                    : "A heat or load correlation requires independent corroboration."
-    );
-
-}
-else {
-
-    logLabelOkValue(
-            gr ? "Ερμηνεία:" : "Interpretation:",
-            gr
-                    ? "Το εισαγόμενο αρχείο δεν μετρά την κατάσταση του υλικού."
-                    : "The imported file does not measure hardware condition."
-    );
-}
-
-if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
-
-    logLabelOkValue(
-            gr ? "Υποστηρικτικά Στοιχεία:" : "Supporting Evidence:",
-            IPhonePanicHumanizer.evidence(sigKeyEvidence, gr)
-    );
-}
-
-    // Model-scoped hardware clues are observational, not a confirmed repair.
-    java.util.Set<String> lab4Findings = new java.util.LinkedHashSet<>();
-    String[] lab4Blocks = panicLogText.split("(?m)^===== ZIP FILE:");
-    for (String block : lab4Blocks) {
-        if (ApplePanicEvidencePolicy.hasPanicEvidence(block)) {
-            logApplePanicEvidence(block, gr, gr ? "Τεχνική ένδειξη" : "Technical clue", lab4Findings);
+    String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
+    java.util.Set<String> shownCodes = new java.util.LinkedHashSet<>();
+    int incident = 0;
+    for (String block : blocks) {
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
+        incident++;
+        resetSignatureCache();
+        parseAndCacheSignature(block);
+        String heading = gr ? "Συμβάν " + incident : "Incident " + incident;
+        if ("Unknown".equalsIgnoreCase(sigCrashType)
+                || "Unknown / Generic".equalsIgnoreCase(sigCrashType)) {
+            logLabelValue(heading + " — " + (gr ? "τύπος:" : "type:"),
+                    IPhonePanicHumanizer.event(sigCrashType, gr));
+        } else {
+            logLabelWarnValue(heading + " — " + (gr ? "τύπος:" : "type:"),
+                    IPhonePanicHumanizer.event(sigCrashType, gr));
         }
+
+        // Domain is an observed *category of terms*, NOT a identified faulty part.
+        if ("Unknown".equalsIgnoreCase(sigDomain)) {
+            logLabelValue(heading + " — " + (gr ? "περιοχή:" : "area:"),
+                    gr ? "Δεν προέκυψε κατηγορία όρων σε αυτό το αρχείο."
+                       : "No subsystem keyword category was identified in this file.");
+        } else {
+            logLabelValue(heading + " — " + (gr ? "κατηγορία ενδείξεων:" : "keyword category:"),
+                    IPhonePanicHumanizer.domain(sigDomain, gr));
+        }
+
+        // Keep complete model-scoped technical hints in this specialist lab,
+        // but never combine keywords from separate panic records.
+        logApplePanicEvidence(block, gr,
+                heading + (gr ? " — τεχνική ένδειξη" : " — technical clue"), shownCodes);
     }
+
+    logLabelValue(gr ? "Εξάρτημα:" : "Component:",
+            gr
+                    ? "Δεν ταυτοποιήθηκε συγκεκριμένο ελαττωματικό εξάρτημα από τα αρχεία."
+                    : "The imported files did not identify a specific defective component.");
+    if (incident > 1) {
+        logInfo(gr
+                ? "Οι ενδείξεις Watchdog, Thermal ή άλλων κατηγοριών δεν συνδυάζονται μεταξύ διαφορετικών αρχείων."
+                : "Watchdog, thermal or other clues from separate files are not combined into one cause.");
+    }
+
     appendHtml("<br>");
     logOk(gr ? "Το Lab 4 ολοκληρώθηκε." : "Lab 4 finished.");
     logLine();
@@ -1959,7 +1875,7 @@ for (String k : crashCount.keySet()) {
     if ("Unknown".equalsIgnoreCase(k) || "Unknown / Generic".equalsIgnoreCase(k)) {
         logInfo(IPhonePanicHumanizer.event(k, gr) + ": " + crashCount.get(k));
     } else {
-        logLabelOkValue(gr ? "Καταγεγραμμένος τύπος:" : "Observed type:",
+        logLabelWarnValue(gr ? "Καταγεγραμμένος τύπος:" : "Observed type:",
                 IPhonePanicHumanizer.event(k, gr) + ": " + crashCount.get(k));
     }
 
@@ -2021,7 +1937,7 @@ for (String k : domainCount.keySet()) {
     if ("Unknown".equalsIgnoreCase(k)) {
         logInfo(IPhonePanicHumanizer.domain(k, gr) + ": " + count);
     } else {
-        logLabelOkValue(gr ? "Κατηγορία όρων:" : "Keyword category:",
+        logLabelValue(gr ? "Κατηγορία όρων:" : "Keyword category:",
                 IPhonePanicHumanizer.domain(k, gr) + ": " + count);
     }
 }
@@ -2094,7 +2010,7 @@ private void runRecurringDomainLab() {
     );
 
     if (max >= 2) {
-        logLabelOkValue(
+        logLabelValue(
                 gr ? "Επαναλαμβανόμενη κατηγορία:" : "Repeated keyword category:",
                 IPhonePanicHumanizer.domain(dominant, gr) + " (" + max + "/" + total + ")"
         );
@@ -2146,328 +2062,128 @@ private void runRecurringDomainLab() {
 }
 
 // ============================================================
-// LAB 8 — FINAL SERVICE RECOMMENDATION (Complete Engine)
+// LAB 8 — FINAL SERVICE SUMMARY (EVIDENCE ONLY; CONCISE)
 // ============================================================
 private void runFinalServiceRecommendationLab() {
-
     if (!guardPanicLog()) return;
 
-    boolean gr = AppLang.isGreek(this);
-
+    final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 8 — Τελική Σύσταση Service"
-            : "LAB 8 — Final Service Recommendation");
+    logInfo(gr ? "LAB 8 — Τελική Σύσταση Service"
+               : "LAB 8 — Final Service Recommendation");
     logLine();
 
-// ------------------------------------------------------------
-// SPLIT LOGS
-// ------------------------------------------------------------
-String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
+    // Every file contributes at most one incident. Unlike a combined scan,
+    // this cannot synthesize a watchdog+thermal failure across separate logs.
+    String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
+    java.util.Map<String, Integer> crashCount = new java.util.TreeMap<>();
+    java.util.Map<String, Integer> domainCount = new java.util.TreeMap<>();
+    java.util.Set<String> uniqueTechnicalCodes = new java.util.LinkedHashSet<>();
+    int total = 0;
+    boolean watchdogObserved = false;
+    boolean thermalObserved = false;
 
-java.util.Map<String,Integer> domainCount = new java.util.HashMap<>();
-java.util.Map<String,Integer> crashCount  = new java.util.HashMap<>();
-
-int total = 0;
-int criticalCrashCount = 0;
-
-// ------------------------------------------------------------
-// PARSE LOGS
-// ------------------------------------------------------------
-for (String block : blocks) {
-
-    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
-
-    resetSignatureCache();
-    parseAndCacheSignature(block);
-
-    total++;
-
-        String domain = normalizeDomain(sigDomain);
-        String crash  = sigCrashType;
-
-        crashCount.put(crash,
-                crashCount.getOrDefault(crash,0) + 1);
-
-        domainCount.put(domain,
-                domainCount.getOrDefault(domain,0) + 1);
-
-        if (isCriticalCrash(sigCrashType))
-            criticalCrashCount++;
-    }
-
-    if (total == 0) {
-
-        logWarn(gr
-                ? "Δεν βρέθηκαν έγκυρα logs."
-                : "No valid logs found.");
-
-        return;
-    }
-
-    // ------------------------------------------------------------
-    // DOMINANT DOMAIN
-    // ------------------------------------------------------------
-String dominant = null;
-int max = 0;
-
-// A concerning keyword is not enough to break a statistical tie.
-for (java.util.Map.Entry<String,Integer> e : domainCount.entrySet()) {
-    if (e.getValue() > max) {
-        dominant = e.getKey();
-        max = e.getValue();
-    }
-}
-if (max < 2) dominant = null; // no repeated keyword category
-
-    double ratio = (double) max / (double) total;
-    int percent = (int)(ratio * 100);
-
-    // ------------------------------------------------------------
-    // SUMMARY
-    // ------------------------------------------------------------
-    logLabelOkValue(gr ? "Αρχεία συμβάντων που αναλύθηκαν:" : "Incident files reviewed:",
-            String.valueOf(total));
-
-    for (java.util.Map.Entry<String, Integer> e : new java.util.TreeMap<>(crashCount).entrySet()) {
-        logLabelOkValue(
-                gr ? "Είδος συμβάντος στο αρχείο:" : "Recorded event type:",
-                IPhonePanicHumanizer.event(e.getKey(), gr) + " — " + e.getValue());
-        logLabelValue(
-                gr ? "Τι σημαίνει:" : "What it means:",
-                IPhonePanicHumanizer.meaning(e.getKey(), gr));
-    }
-
-if (max >= 2) {
-    logLabelOkValue(gr ? "Επαναλαμβανόμενη κατηγορία:" : "Repeated category:",
-            IPhonePanicHumanizer.domain(dominant, gr) + " (" + max + "/" + total + ")");
-    logLabelOkValue(gr ? "Μερίδιο στο εισαγόμενο δείγμα:" : "Share among imported entries:",
-            percent + "%");
-} else {
-    logInfo(gr ? "Δεν προκύπτει επαναλαμβανόμενο domain από τα εισαγόμενα συμβάντα."
-               : "No repeated domain is established by these imported incidents.");
-}
-
-logInfo(gr
-        ? "Τα αρχεία περιέχουν τεχνικές ενδείξεις, όχι μετρημένο ποσοστό υγείας ή σταθερότητας συσκευής."
-        : "The imported files contain technical clues, not a measured health or stability percentage.");
-appendHtml("<br>");
-
-boolean singleLog = total == 1;
-
-if (singleLog) {
-
-    logWarn(gr
-            ? "Η αξιολόγηση βασίζεται σε ένα μόνο panic log."
-            : "Evaluation is based on a single panic log.");
-
-    logInfo(gr
-            ? "Μία υπογραφή δεν παρέχει ποσοστό πραγματικής αστάθειας ή βλάβης."
-            : "One imported signature does not establish a physical fault or stability rate.");
-
-    appendHtml("<br>");
-}
-    
-// ------------------------------------------------------------
-// SYNTHESIS (REAL DIAGNOSTIC RESULT)
-// ------------------------------------------------------------
-
-boolean criticalCrash = criticalCrashCount > 0;
-
-if (dominant != null && ratio >= 0.5) {
-
-    String domainText = safe(dominant);
-
-    logInfo(gr ? "Τεχνικό συμπέρασμα:" : "Technical conclusion:");
-    logLine();
-
-logLabelWarnValue(
-        gr ? "Μοτίβο crash:" : "Crash pattern:",
-        gr
-                ? (singleLog ? "Ένα μόνο εισαγόμενο συμβάν, όχι επανάληψη."
-                             : "Επαναλαμβάνεται κατηγορία όρων στα αρχεία, όχι αποδεδειγμένη βλάβη.")
-                : (singleLog ? "Only one imported event; recurrence is not established."
-                             : "Keyword categories recur across imports; hardware recurrence is unverified.")
-);
-
-logLabelWarnValue(
-        gr ? "Συχνότερο keyword domain:" : "Most common keyword domain:",
-        IPhonePanicHumanizer.domain(domainText, gr)
-);
-
-logInfo(gr
-        ? "Η επανάληψη μιας κατηγορίας είναι ένδειξη στο δείγμα, όχι διάγνωση βλάβης."
-        : "A recurring keyword category is an observation in the sample, not a hardware diagnosis.");
-
-logLabelOkValue(
-        gr ? "Σύσταση:" : "Recommendation:",
-        gr
-                ? "Εάν τα crashes συνεχιστούν, συνιστάται τεχνικός έλεγχος."
-                : "If crashes persist, professional inspection is recommended."
-);
-}
-    
-// ------------------------------------------------------------
-// HARDWARE vs SOFTWARE PROBABILITY
-// ------------------------------------------------------------
-boolean likelyHardware = false;
-boolean likelySoftware = false;
-
-if (dominant != null && ratio >= 0.6 && isHighRiskDomain(dominant)) {
-    likelyHardware = true;
-}
-else if (ratio < 0.4 && domainCount.size() >= 3) {
-    likelySoftware = true;
-}
-
-if (likelyHardware) {
-
-    logLabelWarnValue(
-            gr ? "Υπόθεση υποσυστήματος:" : "Subsystem hypothesis:",
-            gr
-                    ? "Ομάδα λέξεων που χρειάζεται ανεξάρτητο έλεγχο· δεν διαγνώστηκε βλάβη υλικού."
-                    : "Keyword grouping needs corroboration; no hardware failure was diagnosed."
-    );
-
-}
-else if (likelySoftware) {
-
-    logLabelWarnValue(
-            gr ? "Υπόθεση λογισμικού:" : "Software hypothesis:",
-            gr
-                    ? "Το μοτίβο λέξεων δεν επιβεβαιώνει αιτία λογισμικού."
-                    : "Keyword patterns do not establish a software root cause."
-    );
-
-}
-else {
-
-    logInfo(gr
-            ? "Αιτία: Μη επαληθευμένη από τα εισαγόμενα αρχεία."
-            : "Cause: Unverified from imported files.");
-}
-
-    // ------------------------------------------------------------
-    // HARDWARE SUSPECT MAPPER
-    // ------------------------------------------------------------
-    String suspect = "Unknown";
-
-if (dominant != null) {
-
-    String d = dominant.toLowerCase();
-    String text = panicLogText.toLowerCase();
-
-    // ------------------------------------------------------------
-    // EXTRA SERVICE PATTERNS (πιο αξιόπιστα από domain)
-    // ------------------------------------------------------------
-    if (ApplePanicEvidencePolicy.hasExplicitBasebandFaultHint(panicLogText))
-        suspect = "Cellular / Baseband";
-
-    else if (text.contains("nvme") || text.contains("apfs"))
-        suspect = "Storage / NAND";
-
-    else if (ApplePanicEvidencePolicy.tokensMatchOnePanic(
-            panicLogText, java.util.Arrays.asList("watchdog", "thermal")))
-        suspect = "Thermal / Power management";
-
-    else if (text.contains("applecam") || text.contains("cam_i2c"))
-        suspect = "Camera module";
-
-    else if (text.contains("sep panic") || text.contains("sepd"))
-        suspect = "FaceID / Secure Enclave";
-
-    else if (text.contains("mic") && text.contains("i2c"))
-        suspect = "Microphone / Audio flex";
-
-    else if (text.contains("thermalmonitord"))
-        suspect = "Thermal sensor subsystem";
-
-    // ------------------------------------------------------------
-    // DOMAIN FALLBACK
-    // ------------------------------------------------------------
-    else if (d.contains("storage") || d.contains("nand") || d.contains("nvme"))
-        suspect = "Storage / NAND";
-
-    else if (d.contains("baseband"))
-        suspect = "Cellular / Modem";
-
-    else if (d.contains("power") || d.contains("pmic"))
-        suspect = "Power / PMIC";
-
-    else if (d.contains("thermal"))
-        suspect = "Thermal subsystem";
-
-    else if (d.contains("gpu"))
-        suspect = "GPU / Graphics";
-
-    else if (d.contains("i2c") || d.contains("sensor"))
-        suspect = "Camera / Sensors / Peripheral bus";
-}
-
-    logInfo((gr ? "Υπόθεση από λέξεις του log (όχι διάγνωση εξαρτήματος): "
-              : "Log keyword hint (not a component diagnosis): ") + IPhonePanicHumanizer.domain(suspect, gr));
-
-appendHtml("<br>");
-
-    // ------------------------------------------------------------
-    // QUALITATIVE CONCLUSION — evidence, limits and action.
-    // ------------------------------------------------------------
-    logLabelValue(
-            gr ? "Με απλά λόγια:" : "In plain language:",
-            gr
-                    ? "Εξετάστηκαν " + total + " ανεξάρτητες καταγραφές. Αυτές δείχνουν τι αναφέρθηκε στα αρχεία, όχι τη σημερινή κατάσταση του iPhone."
-                    : total + " separate records were reviewed. They describe what was logged, not the iPhone's current condition.");
-
-    if (max >= 2) {
-        logInfo(gr
-                ? "Μία κατηγορία ενδείξεων εμφανίζεται σε περισσότερα από ένα αρχεία. Δεν γνωρίζουμε αν πρόκειται για επαναλαμβανόμενη βλάβη της ίδιας συσκευής."
-                : "A keyword category recurs in the files. This does not establish a recurring fault on a verified device.");
-    } else {
-        logInfo(gr
-                ? "Δεν επαναλήφθηκε ίδια κατηγορία ενδείξεων στο εισαγόμενο δείγμα. Αυτό δεν αποκλείει βλάβη."
-                : "No keyword category repeated in the imported sample. This does not rule out a fault.");
-    }
-
-    // Explain unique, observed clues without merging tokens across separate logs.
-    java.util.Set<String> summaryFindings = new java.util.LinkedHashSet<>();
     for (String block : blocks) {
-        if (ApplePanicEvidencePolicy.hasPanicEvidence(block)) {
-            logApplePanicEvidence(block, gr,
-                    gr ? "Τεκμηριωμένη ένδειξη" : "Extracted clue", summaryFindings);
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
+        resetSignatureCache();
+        parseAndCacheSignature(block);
+        total++;
+        crashCount.put(sigCrashType, crashCount.getOrDefault(sigCrashType, 0) + 1);
+        String domain = normalizeDomain(sigDomain);
+        if (!"Unknown".equalsIgnoreCase(domain)) {
+            domainCount.put(domain, domainCount.getOrDefault(domain, 0) + 1);
+        }
+        watchdogObserved |= "Watchdog / Hang".equals(sigCrashType)
+                || "Userspace Watchdog Timeout".equals(sigCrashType)
+                || "Baseband Watchdog".equals(sigCrashType);
+        thermalObserved |= "Thermal Shutdown / Throttle".equals(sigCrashType);
+
+        // Only independently extracted model-scoped codes, never conjectured
+        // hardware/software probabilities or generic fault-score heuristics.
+        ApplePanicHardwareHints.Assessment hints = ApplePanicHardwareHints.examineOne(block);
+        for (ApplePanicHardwareHints.Finding finding : hints.findings) {
+            uniqueTechnicalCodes.add(finding.code);
         }
     }
 
-    logLabelValue(
-            gr ? "Τι δεν έχει επιβεβαιωθεί:" : "Not established:",
+    if (total == 0) {
+        logInfo(gr ? "Δεν βρέθηκαν αναγνωρίσιμα panic logs."
+                   : "No eligible panic logs were found.");
+        appendHtml("<br>");
+        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logLine();
+        return;
+    }
+
+    logLabelOkValue(gr ? "Αρχεία συμβάντων που αναλύθηκαν:"
+                       : "Incident files reviewed:", String.valueOf(total));
+
+    // A recorded interruption warrants caution, never a green health verdict.
+    for (java.util.Map.Entry<String, Integer> e : crashCount.entrySet()) {
+        String observedType = IPhonePanicHumanizer.event(e.getKey(), gr)
+                + " — " + e.getValue();
+        if ("Unknown".equalsIgnoreCase(e.getKey())
+                || "Unknown / Generic".equalsIgnoreCase(e.getKey())) {
+            logLabelValue(gr ? "Είδος συμβάντος στο αρχείο:" : "Recorded event type:",
+                    observedType);
+        } else {
+            logLabelWarnValue(gr ? "Είδος συμβάντος στο αρχείο:" : "Recorded event type:",
+                    observedType);
+        }
+        logLabelValue(gr ? "Τι σημαίνει:" : "What it means:",
+                IPhonePanicHumanizer.meaning(e.getKey(), gr));
+    }
+
+    // Identified keyword categories are not damaged physical components.
+    for (java.util.Map.Entry<String, Integer> e : domainCount.entrySet()) {
+        logLabelValue(gr ? "Κατηγορία ενδείξεων:" : "Observed keyword category:",
+                IPhonePanicHumanizer.domain(e.getKey(), gr) + " — " + e.getValue());
+    }
+
+    boolean repeatedCategory = false;
+    for (Integer count : domainCount.values()) {
+        if (count != null && count >= 2) repeatedCategory = true;
+    }
+    logLabelValue(gr ? "Επανάληψη στο δείγμα:" : "Recurrence in sample:",
+            repeatedCategory
+                    ? (gr ? "Υπάρχει κοινή κατηγορία όρων σε διαφορετικά αρχεία· όχι αποδεδειγμένη επανάληψη βλάβης."
+                          : "A keyword category appears in multiple records, not a confirmed recurring fault.")
+                    : (gr ? "Δεν επαναλήφθηκε η ίδια γνωστή κατηγορία ενδείξεων στα εισαγόμενα αρχεία."
+                          : "No known keyword category recurred in the imported files."));
+
+    if (!uniqueTechnicalCodes.isEmpty()) {
+        logLabelOkValue(gr ? "Ακριβείς τεχνικοί κωδικοί:" : "Exact technical codes:",
+                android.text.TextUtils.join(", ", uniqueTechnicalCodes));
+        logInfo(gr
+                ? "Οι κωδικοί είναι ενδείξεις μέσα στα αρχεία, όχι αποδεδειγμένες βλάβες."
+                : "These codes are imported-log clues, not confirmed hardware defects.");
+    }
+
+    // One actionable service path, grounded only in event types actually observed.
+    logLabelValue(gr ? "Προτεινόμενος έλεγχος:" : "Next technical check:",
             gr
-                    ? "Η αιτία του συμβάντος, η ύπαρξη ελαττωματικού εξαρτήματος και η συνολική υγεία της συσκευής."
-                    : "The incident's root cause, any defective component, and the device's overall health.");
+                    ? "Συσχετίστε ημερομηνίες, έκδοση iOS, νέα panic logs και πραγματικά συμπτώματα."
+                    : "Correlate incident dates, iOS version, further panic logs and observed symptoms.");
+    if (watchdogObserved) {
+        logLabelValue(gr ? "Για τα Watchdog:" : "For watchdog records:",
+                gr ? "Ελέγξτε αν υπήρξαν μη αποκρίσεις ή επανεκκινήσεις στις αντίστοιχες ημερομηνίες."
+                   : "Check for unresponsive behavior or restarts on the recorded dates.");
+    }
+    if (thermalObserved) {
+        logLabelValue(gr ? "Για το Thermal:" : "For thermal records:",
+                gr ? "Ελέγξτε τις συνθήκες χρήσης και τυχόν πραγματικά θερμικά συμπτώματα· θερμοκρασία δεν μετρήθηκε."
+                   : "Review usage conditions and real thermal symptoms; no temperature was measured.");
+    }
 
-    logLabelValue(
-            gr ? "Πότε χρειάζεται τεχνικός:" : "When to seek service:",
+    logLabelValue(gr ? "Τι δεν έχει επιβεβαιωθεί:" : "Not established:",
             gr
-                    ? "Αν παρατηρούνται επανεκκινήσεις, υπερθέρμανση ή άλλα επαναλαμβανόμενα συμπτώματα, συσχετίστε τα με τις ημερομηνίες και το περιεχόμενο των logs."
-                    : "If restarts, overheating or other repeated symptoms occur, compare their dates with the recorded incidents.");
-
-    appendHtml("<br>");
-
-    // ------------------------------------------------------------
-    // PROFESSIONAL NOTE
-    // ------------------------------------------------------------
-    logLabelOkValue(
-        gr ? "Τελική σημείωση:" : "Final note:",
-        gr
-                ? "Η ανάλυση βασίζεται σε διαθέσιμα panic logs και δεν αντικαθιστά φυσικό τεχνικό έλεγχο."
-                : "This analysis is based on panic logs and does not replace physical inspection."
-);
-
-logLabelOkValue(
-        gr ? "Διευκρίνιση:" : "Clarification:",
-        gr
-                ? "Τα συμπεράσματα πρέπει να συσχετίζονται με τα πραγματικά συμπτώματα της συσκευής."
-                : "Conclusions must be correlated with actual device symptoms."
-);
+                    ? "Η αιτία των συμβάντων, συγκεκριμένο ελαττωματικό εξάρτημα ή η σημερινή υγεία του iPhone."
+                    : "Root cause, a defective component, or the iPhone's current health.");
+    logLabelValue(gr ? "Πότε χρειάζεται τεχνικός:" : "When to seek service:",
+            gr
+                    ? "Αν υπάρχουν επανεκκινήσεις, υπερθέρμανση ή άλλα επαναλαμβανόμενα συμπτώματα, απαιτείται έλεγχος με πραγματικά δεδομένα."
+                    : "If restarts, overheating or other symptoms recur, verify them with real-device evidence.");
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
