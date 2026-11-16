@@ -146,6 +146,63 @@ public final class CriticalSystemCrashEvidenceTest {
                 "SYSTEM_LAST_KMSG", 12345678L, "normal boot", ROLES));
     }
 
+
+    @Test public void duplicatedLogEntriesWithinSameIncidentDoNotCreateBuyerAlarm() throws Exception {
+        String duplicate = "11-16 10:00:00.000 E AndroidRuntime: FATAL EXCEPTION: main\n"
+                + "Process: com.android.systemui, PID: 42\n"
+                + "11-16 10:00:05.000 E AndroidRuntime: FATAL EXCEPTION: main\n"
+                + "Process: com.android.systemui, PID: 42\n"
+                + "11-16 10:00:10.000 E ActivityManager: ANR in com.android.systemui\n";
+        CriticalSystemCrashEvidence.Summary s = report(duplicate);
+        assertEquals(3, s.events.size());
+        assertEquals(1, s.independentIncidentCount());
+        assertFalse(s.hasVerifiedRecurrence());
+        assertFalse(s.hasStrongInstabilityIndications());
+    }
+
+    @Test public void twoIndependentCriticalFailuresAreCautionButNotStrongAlarm() throws Exception {
+        String twice = "11-16 10:00:00.000 E AndroidRuntime: FATAL EXCEPTION: main\n"
+                + "Process: com.miui.home, PID: 10\n"
+                + "11-16 10:02:00.000 E AndroidRuntime: FATAL EXCEPTION: main\n"
+                + "Process: com.miui.home, PID: 12\n";
+        CriticalSystemCrashEvidence.Summary s = report(twice);
+        assertEquals(2, s.independentIncidentCount());
+        assertTrue(s.hasVerifiedRecurrence());
+        assertFalse(s.hasStrongInstabilityIndications());
+    }
+
+    @Test public void threeGenuinelyTimeSeparatedCriticalFailuresTriggerStrongBuyerWarning() throws Exception {
+        String many = "11-16 10:00:00.000 E AndroidRuntime: FATAL EXCEPTION: main\n"
+                + "Process: com.android.systemui, PID: 10\n"
+                + "11-16 10:03:00.000 E AndroidRuntime: FATAL EXCEPTION: main\n"
+                + "Process: com.android.systemui, PID: 11\n"
+                + "11-16 10:08:00.000 E AndroidRuntime: FATAL EXCEPTION: main\n"
+                + "Process: com.android.systemui, PID: 12\n";
+        CriticalSystemCrashEvidence.Summary s = report(many);
+        assertEquals(3, s.independentIncidentCount());
+        assertTrue(s.hasVerifiedRecurrence());
+        assertTrue(s.hasStrongInstabilityIndications());
+    }
+
+    @Test public void seriousLowLevelEventNeedsInvestigationWithoutHardwareDiagnosis() throws Exception {
+        CriticalSystemCrashEvidence.Summary s =
+                report("11-16 10:00:00.000 E kernel: Kernel panic - not syncing: fatal exception\n");
+        assertEquals(1, s.events.size());
+        assertTrue(s.hasSeriousSystemIncident());
+        assertFalse(s.hasVerifiedRecurrence());
+        assertFalse(s.hasStrongInstabilityIndications());
+    }
+
+    @Test public void missingTimestampsCannotProveRepeatedCrashes() throws Exception {
+        CriticalSystemCrashEvidence.Summary s = report("FATAL EXCEPTION: main\n"
+                + "Process: com.android.systemui\n"
+                + "ANR in com.miui.home\n");
+        assertEquals(2, s.events.size());
+        assertEquals(0, s.independentIncidentCount());
+        assertFalse(s.hasVerifiedRecurrence());
+        assertFalse(s.hasStrongInstabilityIndications());
+    }
+
     private static CriticalSystemCrashEvidence.Summary report(String text) throws Exception {
         return CriticalSystemCrashEvidence.parseUserReport(
                 new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)), ROLES);
