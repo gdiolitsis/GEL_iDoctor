@@ -5,61 +5,74 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
 import static org.junit.Assert.*;
 
-/** Lab 25: a checked result is not a speculative hardware diagnosis. */
+/** Lab25 reports evidence, not app churn or an invented stability certificate. */
 public final class Lab25EvidenceOnlyReportContractTest {
-    private static String lab() throws Exception {
+    private static String source() throws Exception {
         Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
         if (!Files.isRegularFile(p)) p = Paths.get("src/main/java/com/gel/cleaner/ManualTestsActivity.java");
-        String whole = new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
+        return new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
+    }
+
+    private static String lab() throws Exception {
+        String whole = source();
         int a = whole.indexOf("private void lab25CrashHistory() {");
         int b = whole.indexOf("// SMALL helper", a);
         assertTrue(a >= 0 && b > a);
         return whole.substring(a, b);
     }
 
-    @Test public void onlyActuallyReturnedCurrentSnapshotCanShowZeroErrors() throws Exception {
+    @Test public void onlyCriticalProcessesAndRealErrorStatesAreIncluded() throws Exception {
         String s = lab();
-        assertTrue(s.contains("if (errors == null) {"));
-        assertTrue(s.contains("Το Android δεν επέστρεψε στοιχεία για αυτή τη μέτρηση."));
-        assertTrue(s.contains("if (visible == 0) {"));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Τρέχουσα κατάσταση\""));
-        assertTrue(s.contains("Δεν εμφανίζονται σφάλματα εφαρμογών αυτή τη στιγμή."));
-        assertTrue(s.contains("logLabelWarnValue(\n                        error.condition"));
+        assertTrue(s.contains("lab25DefaultRoles()"));
+        assertTrue(s.contains("CriticalSystemCrashEvidence.currentError("));
+        assertTrue(s.contains("ActivityManager.ProcessErrorStateInfo.CRASHED"));
+        assertTrue(s.contains("ActivityManager.ProcessErrorStateInfo.NOT_RESPONDING"));
+        assertFalse(s.contains("Δεν εμφανίζονται σφάλματα εφαρμογών αυτή τη στιγμή."));
+        assertTrue(s.contains("Δεν είναι πλήρης έλεγχος του Android."));
     }
 
-    @Test public void unavailableHistoryIsNeutralNotAFailureOrZeroCrashes() throws Exception {
+    @Test public void privilegedSystemHistoryIsNeverAssumedComplete() throws Exception {
         String s = lab();
-        assertTrue(s.contains("GelCrashCoverage coverage = new GelCrashCoverage(tags.length);"));
+        assertTrue(s.contains("CriticalSystemCrashEvidence.dropBoxEvent("));
         assertTrue(s.contains("coverage.recordQuery(complete);"));
-        assertTrue(s.contains("if (coverage.complete()) {"));
-        assertTrue(s.contains("logLabelValue(gr ? \"Διαθέσιμο ιστορικό\""));
-        assertTrue(s.contains("Το Android δεν παρείχε πλήρες ιστορικό στην εφαρμογή."));
+        assertTrue(s.contains("if (!coverage.complete() && !history.events.isEmpty())"));
+        assertTrue(s.contains("Το Android δεν έδωσε πλήρες ιστορικό."));
+        assertFalse(s.contains("if (crashes == 0)"));
+        assertFalse(s.contains("if (system == 0)"));
         assertFalse(s.contains("Δείκτης κινδύνου σταθερότητας"));
-        assertFalse(s.contains("Η πρόσβαση μπορεί να περιορίζεται"));
+        assertFalse(s.contains("system_server_wtf"));
     }
 
-    @Test public void actualEventsGetWarningsAndZeroConfirmedCountsAreGreen() throws Exception {
+    @Test public void rareEventsAreNeutralAndRecurrenceAloneNeedsCheck() throws Exception {
         String s = lab();
-        assertTrue(s.contains("if (crashes == 0)"));
-        assertTrue(s.contains("if (anrs == 0)"));
-        assertTrue(s.contains("if (system == 0)"));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Σφάλματα εφαρμογών\""));
-        assertTrue(s.contains("logLabelWarnValue(gr ? \"Καταγεγραμμένο συμβάν\""));
+        assertTrue(s.contains("if (s.hasVerifiedRecurrence())"));
+        assertTrue(s.contains("logLabelWarnValue(gr ? \"Συμπέρασμα για αγοραστή\""));
+        assertTrue(s.contains("Μεμονωμένο ή μη χρονολογημένο συμβάν"));
+        assertTrue(s.contains("Δεν αποδεικνύεται βλάβη υλικού."));
+        assertTrue(s.contains("Το άδειο ιστορικό δεν είναι πιστοποιητικό υγείας."));
     }
 
-    @Test public void verifiedFourKbReadWriteAndLatencyAreGreen() throws Exception {
-        String s = lab();
+    @Test public void userMayChooseLocalReportButNoSilentUploadOrForcedPicker() throws Exception {
+        String s = source();
+        assertTrue(s.contains("lab25ChooseBugReport"));
+        assertTrue(s.contains("this::lab25CrashHistory"));
+        assertTrue(s.contains("this::lab25ChooseBugReport"));
+        assertTrue(s.contains("Intent.ACTION_OPEN_DOCUMENT"));
+        assertTrue(s.contains("CriticalSystemCrashEvidence.parseUserReport(input, roles)"));
+        assertTrue(s.contains("if (requestCode == 25025)"));
+        assertTrue(s.contains("Αρχείο επιλογής χρήστη. Η γνησιότητά του δεν επαληθεύτηκε."));
+        assertFalse(lab().contains("startActivityForResult(intent, 25025)"));
+    }
+
+    @Test public void preservedFileReadbackMustActuallyBeVerified() throws Exception {
+        String s = source();
         assertTrue(s.contains("long latency = storageLatencyProbe();"));
-        assertTrue(s.contains("if (latency < 0) {"));
-        assertTrue(s.contains("logLabelWarnValue(gr ? \"Δοκιμή αποθήκευσης\""));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Δοκιμή αποθήκευσης\""));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Έλεγχος δεδομένων\""));
+        assertTrue(s.contains("StorageIoEvidencePolicy.readbackMatches(data, readBack, received)"));
         assertTrue(s.contains("Τα δεδομένα που διαβάστηκαν ταιριάζουν ακριβώς."));
-        assertTrue(s.contains("Λιγότερο από 1 ms"));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Χρόνος δοκιμής\""));
-        assertTrue(s.contains("Το Lab 25 ολοκληρώθηκε — ελέγχθηκαν τα διαθέσιμα συμβάντα και η αποθήκευση."));
-        assertTrue(s.contains("GELServiceLog.info(\"SUMMARY: CRASH_ORIGIN=UNCLEAR"));
+        assertTrue(s.contains("3. Ανεξάρτητη δοκιμή αρχείου (όχι διάγνωση crash)"));
+        assertTrue(s.contains("SUMMARY: CRASH_ORIGIN=UNCLEAR; HISTORY_COVERAGE="));
     }
 }
