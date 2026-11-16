@@ -31140,7 +31140,10 @@ private boolean lab28HasFreshLab25Evidence() {
                     p.getLong("lab25_obs_elapsed_ms", -1L),
                     System.currentTimeMillis(), SystemClock.elapsedRealtime())
             && Lab25BuyerEvidence.isKnown(p.getString("lab25_obs_level", ""))
-            && Lab25BuyerEvidence.isKnownCoverage(p.getString("lab25_obs_coverage", ""));
+            && Lab25BuyerEvidence.isKnownCoverage(p.getString("lab25_obs_coverage", ""))
+            && Lab25BuyerEvidence.validCounts(
+                    p.getInt("lab25_obs_entries", -1),
+                    p.getInt("lab25_obs_independent", -1));
 }
 
 private boolean lab28RequireExecutedLab25() {
@@ -31186,11 +31189,11 @@ private void showLab28RequiresLab25Dialog(boolean gr) {
         TextView message = new TextView(this);
         message.setText(gr
                 ? "Πριν από τον προέλεγχο μεταχειρισμένης συσκευής πρέπει να εκτελεστεί το Lab 25, "
-                        + "που αναζητά κρίσιμα σφάλματα Android.\\n\\n"
+                        + "που αναζητά κρίσιμα σφάλματα Android.\n\n"
                         + "Η επιτυχής εκτέλεση δεν σημαίνει ότι διαβάστηκε πλήρες ιστορικό. "
                         + "Αν η πρόσβαση είναι περιορισμένη, ο αγοραστής θα ενημερωθεί."
                 : "Lab 25 must run before this used-device pre-purchase check. "
-                        + "It examines critical Android errors.\\n\\n"
+                        + "It examines critical Android errors.\n\n"
                         + "Completing the lab does not mean complete crash history was accessible. "
                         + "Any coverage limitations will be disclosed to the buyer.");
         message.setTextColor(0xFF39FF14);
@@ -31281,10 +31284,15 @@ private void lab28ShowLab25BuyerAssessment(boolean gr) {
             String.valueOf(independent));
     if (Lab25BuyerEvidence.LIMITED.equals(coverage)) {
         logLabelValue(gr ? "Κάλυψη ιστορικού" : "History coverage",
-                gr ? "ΑΝΕΠΑΡΚΗ ΣΤΟΙΧΕΙΑ: το Android δεν επέτρεψε πλήρη ανάγνωση. "
-                        + "Δεν πιστοποιείται απουσία κρασαρισμάτων."
-                   : "INSUFFICIENT EVIDENCE: Android did not allow a complete read. "
-                        + "Absence of crashes is not certified.");
+                count > 0
+                  ? (gr ? "ΜΕΡΙΚΗ ΚΑΛΥΨΗ: τα παρακάτω σφάλματα καταγράφηκαν, "
+                             + "αλλά δεν ανακτήθηκε ολόκληρο το ιστορικό."
+                        : "PARTIAL COVERAGE: recorded incidents are shown, "
+                             + "but the full history is not accessible.")
+                  : (gr ? "ΑΝΕΠΑΡΚΗ ΣΤΟΙΧΕΙΑ ΙΣΤΟΡΙΚΟΥ: η πρόσβαση περιορίζεται από το Android. "
+                             + "Δεν πιστοποιείται απουσία κρασαρισμάτων."
+                        : "INSUFFICIENT CRASH HISTORY: Android restricts access. "
+                             + "Absence of crashes is not certified."));
     } else {
         logLabelValue(gr ? "Κάλυψη ιστορικού" : "History coverage",
                 gr ? "Ελέγχθηκαν διαθέσιμα στοιχεία — όχι ολόκληρο το ιστορικό της συσκευής."
