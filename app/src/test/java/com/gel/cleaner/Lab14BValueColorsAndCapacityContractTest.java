@@ -76,4 +76,18 @@ public final class Lab14BValueColorsAndCapacityContractTest {
         assertTrue(s.contains("float referencePerHour = 500f;"));
         assertTrue(s.contains("float omega ="));
     }
+    @Test public void potentialFactorsAreRemovedButProFollowUpAndOmegaScaleRemain() throws Exception {
+        String s = section(source(),
+                "private boolean checkLab14BConditions() {",
+                "// LAB 14B — PRE TEST ADVISORY");
+        assertFalse(s.contains("Πιθανοί παράγοντες (όχι αιτιώδης διάγνωση)"));
+        assertFalse(s.contains("Possible factors (not a causal diagnosis)"));
+        assertFalse(s.contains("boolean batteryIssue = false;"));
+        assertFalse(s.contains("boolean systemIssue = false;"));
+        assertTrue(s.contains("logInfo(proPrompt);"));
+        assertTrue(s.contains("Συνιστάται εκτέλεση LAB14 Pro"));
+        assertTrue(s.contains("Πειραματική κλίμακα Ω (μη βαθμονομημένη)"));
+        assertTrue(s.contains("logLabelWarnValue(gr ? \"Συμπέρασμα\""));
+    }
+
 }
