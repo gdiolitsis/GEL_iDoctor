@@ -31118,6 +31118,135 @@ private Button lab29DialogButton(String text, boolean isExit) {
 // Security + Privacy + Root + Stability into final scores.
 // NOTE (GEL RULE): Whole block ready for copy-paste.
 // ============================================================
+// ============================================================
+// Stage 2A: Lab25 feeds DEVICE CERTIFICATION, never buyer Lab28 directly.
+// Internal method numbers retain legacy names to minimize source churn.
+// ============================================================
+private boolean lab29RequireLab25Evidence() {
+    SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+    if (lab28HasFreshLab25Evidence()) return true;
+    p.edit().remove("lab29_technical_schema").apply();
+    boolean gr = AppLang.isGreek(this);
+    appendHtml("<br>");
+    logInfo(gr ? "GEL Device Certification — Προαπαιτούμενο Lab 25"
+               : "GEL Device Certification — Lab 25 prerequisite");
+    logLabelValue(gr ? "Απαιτούμενη ενέργεια" : "Required action",
+            gr ? "Εκτελέστε πρώτα το Lab 25 και επαναλάβετε την τεχνική πιστοποίηση."
+               : "Run Lab 25 first, then repeat Device Certification.");
+    showLab29RequiresLab25Dialog(gr);
+    return false;
+}
+
+private void showLab29RequiresLab25Dialog(boolean gr) {
+    runOnUiThread(() -> {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(20), dp(18), dp(20), dp(16));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF101010);
+        bg.setCornerRadius(dp(12));
+        bg.setStroke(dp(3), 0xFFFFD700);
+        root.setBackground(bg);
+
+        TextView title = new TextView(this);
+        title.setText(gr ? "GEL Device Certification — Lab 25"
+                         : "GEL Device Certification — Lab 25");
+        title.setTextColor(Color.WHITE);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setTextSize(17f);
+        title.setGravity(Gravity.CENTER);
+        root.addView(title);
+
+        TextView message = new TextView(this);
+        message.setText(gr
+                ? "Πρώτα απαιτείται έλεγχος των κρίσιμων σφαλμάτων Android στο Lab 25. "
+                  + "Η τεχνική αξιολόγηση θα χρησιμοποιήσει τα πραγματικά ευρήματα."
+                : "Run Lab 25 first to inspect critical Android errors. "
+                  + "The technical assessment will use its actual findings.");
+        message.setTextColor(0xFF39FF14);
+        message.setTextSize(15f);
+        message.setPadding(0, dp(18), 0, dp(18));
+        root.addView(message);
+
+        Button run = lab29DialogButton(gr ? "ΕΚΤΕΛΕΣΗ LAB 25" : "RUN LAB 25", false);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        root.addView(run, lp);
+        Button exit = lab29DialogButton(gr ? "ΕΞΟΔΟΣ" : "EXIT", true);
+        LinearLayout.LayoutParams exitParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        exitParams.topMargin = dp(12);
+        root.addView(exit, exitParams);
+        AlertDialog dialog = new AlertDialog.Builder(this,
+                android.R.style.Theme_Material_Dialog_NoActionBar)
+                .setView(root).setCancelable(true).create();
+        run.setOnClickListener(v -> { dialog.dismiss(); lab25CrashHistory(); });
+        exit.setOnClickListener(v -> dialog.dismiss());
+        if (isFinishing() || isDestroyed()) return;
+        dialog.show();
+        if (dialog.getWindow() != null)
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    });
+}
+
+private void lab29DisplayLab25Findings(SharedPreferences p, boolean gr) {
+    String category = Lab29TechnicalAssessment.summarize(
+            p.getString("lab25_obs_level", ""),
+            p.getString("lab25_obs_coverage", ""));
+    appendHtml("<br>");
+    logInfo(gr ? "Ευρήματα Lab 25 — Σταθερότητα Android"
+               : "Lab 25 findings — Android stability");
+    if (Lab29TechnicalAssessment.STRONG_INSTABILITY.equals(category)) {
+        logLabelWarnValue(gr ? "Επαναλαμβανόμενη αστάθεια" : "Repeated instability",
+                gr ? "ΙΣΧΥΡΕΣ ΕΝΔΕΙΞΕΙΣ: καταγράφηκαν πολλαπλά ανεξάρτητα "
+                       + "σφάλματα κρίσιμων υπηρεσιών Android. Συνιστάται περαιτέρω έλεγχος."
+                   : "STRONG INDICATIONS: multiple independent critical Android failures "
+                       + "were recorded. Further checks are recommended.");
+    } else if (Lab29TechnicalAssessment.REVIEW_REQUIRED.equals(category)) {
+        logLabelWarnValue(gr ? "Κρίσιμα σφάλματα Android" : "Critical Android incidents",
+                gr ? "Καταγράφηκαν επαναλαμβανόμενα ή σοβαρά συμβάντα. "
+                       + "Συνιστάται περαιτέρω τεχνικός έλεγχος."
+                   : "Repeated or serious failures were recorded. "
+                       + "Further technical checks are recommended.");
+    } else if (Lab29TechnicalAssessment.ISOLATED_EVENT.equals(category)) {
+        logLabelValue(gr ? "Καταγεγραμμένα συμβάντα" : "Recorded incidents",
+                gr ? "Μεμονωμένο ή μη χρονολογημένο συμβάν."
+                   : "Isolated or undated incident.");
+    } else if (Lab29TechnicalAssessment.LIMITED_CRASH_HISTORY.equals(category)) {
+        logLabelValue(gr ? "Κάλυψη ιστορικού" : "History coverage",
+                gr ? "Το Lab 25 ολοκληρώθηκε, αλλά το διαθέσιμο ιστορικό ήταν περιορισμένο."
+                   : "Lab 25 completed, but historical coverage was limited.");
+    } else {
+        logLabelOkValue(gr ? "Προσβάσιμα συμβάντα" : "Accessible incidents",
+                gr ? "Δεν εντοπίστηκαν κρίσιμα σφάλματα στα στοιχεία που εξετάστηκαν."
+                   : "No critical errors found in the inspected records.");
+    }
+    logLabelValue(gr ? "Ανεξάρτητα χρονολογημένα επεισόδια" : "Independent dated incidents",
+            String.valueOf(p.getInt("lab25_obs_independent", 0)));
+}
+
+private void lab29SaveTechnicalAssessmentFromLab25(SharedPreferences p) {
+    long inputWall = p.getLong("lab25_obs_wall_ms", 0L);
+    long inputElapsed = p.getLong("lab25_obs_elapsed_ms", -1L);
+    String category = Lab29TechnicalAssessment.summarize(
+            p.getString("lab25_obs_level", ""),
+            p.getString("lab25_obs_coverage", ""));
+    if (!lab28HasFreshLab25Evidence() || !Lab29TechnicalAssessment.known(category)) {
+        p.edit().remove("lab29_technical_schema").apply();
+        return;
+    }
+    p.edit()
+            .putInt("lab29_technical_schema", Lab29TechnicalAssessment.SCHEMA)
+            .putLong("lab29_technical_wall_ms", System.currentTimeMillis())
+            .putLong("lab29_technical_elapsed_ms", SystemClock.elapsedRealtime())
+            .putLong("lab29_technical_source25_wall_ms", inputWall)
+            .putLong("lab29_technical_source25_elapsed_ms", inputElapsed)
+            .putString("lab29_technical_level", category)
+            .putString("lab29_technical_history_coverage",
+                    p.getString("lab25_obs_coverage", Lab25BuyerEvidence.LIMITED))
+            .apply();
+}
+
 private void lab30CombineFindings() {
 
 final boolean grGate = AppLang.isGreek(this);
@@ -31127,6 +31256,10 @@ if (!requireGelPro(
                : "LAB 28 — Διαγνωστική Σύνοψη Τεκμηρίων / Evidence Summary")) {
     return;
 }
+
+// The technical certification consumes the latest genuine Lab25 diagnostic,
+// not a previously reported buyer assessment or a duplicated log reference.
+if (!lab29RequireLab25Evidence()) return;
 
 SharedPreferences p =
         getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
@@ -31216,6 +31349,9 @@ boolean thermalRunawayRisk =
             ? "LAB 28 — Αυτόματη Σύνοψη Μετρήσεων"
             : "LAB 28 — Automatic Measurements Summary");
     logLine();
+
+    // Concrete crash-history finding is one input to this technical assessment.
+    lab29DisplayLab25Findings(p, gr);
 
     // Lab 28 is a read-only summary of independent Android measurements.
     // Usage Access is not a prerequisite for thermal, storage, RAM or security evidence.
@@ -32459,6 +32595,9 @@ logInfo(gr ? "Συντάχθηκε πληροφοριακή αναφορά GEL �
 logLine();
 
 appendHtml("<br>");
+// Snapshot is finalized only after the report has been assembled.
+lab29SaveTechnicalAssessmentFromLab25(p);
+
 logOk(gr ? "Το Lab 28 ολοκληρώθηκε (σύνταξη πληροφοριακής σύνοψης)."
          : "Lab 28 finished (evidence summary compiled).");
 logLine();
