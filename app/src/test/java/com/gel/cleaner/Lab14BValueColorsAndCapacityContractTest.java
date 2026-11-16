@@ -45,7 +45,7 @@ public final class Lab14BValueColorsAndCapacityContractTest {
         assertTrue(s.contains("logLabelOkValue(\n            gr ? \"Κατανάλωση\""));
         assertTrue(s.contains("logLabelOkValue(gr ? \"Άνοδος θερμοκρασίας\""));
         assertTrue(s.contains("logLabelWarnValue(gr ? \"Άνοδος θερμοκρασίας\""));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Μεταβολή τάσης (+πτώση/-άνοδος)\""));
+        assertTrue(s.contains("logLabelOkValue(\n            gr ? \"Μεταβολή τάσης (+πτώση/-άνοδος)\""));
         assertTrue(s.contains("logLabelValue(gr ? \"Διορθωμένη κατανάλωση\""));
         assertTrue(s.contains("gr ? \"Μ/Δ\" : \"N/A\""));
     }
