@@ -22045,10 +22045,11 @@ private boolean checkLab14BConditions() {
     // ------------------------------------------------------------
     // BATTERY LEVEL
     // ------------------------------------------------------------
-    logLabelValue(
-            gr ? "Επίπεδο μπαταρίας" : "Battery level",
-            percent + "%"
-    );
+    if (percent >= 30) {
+        logLabelOkValue(gr ? "Επίπεδο μπαταρίας" : "Battery level", percent + "%");
+    } else {
+        logLabelWarnValue(gr ? "Επίπεδο μπαταρίας" : "Battery level", percent + "%");
+    }
 
     if (percent < 30) {
 
@@ -22066,10 +22067,11 @@ private boolean checkLab14BConditions() {
 // ------------------------------------------------------------
 // AIRPLANE MODE
 // ------------------------------------------------------------
-logLabelValue(
-        "Airplane mode",
-        airplaneMode ? "ON" : "OFF"
-);
+if (airplaneMode) {
+    logLabelOkValue("Airplane mode", "ON");
+} else {
+    logLabelWarnValue("Airplane mode", "OFF");
+}
 
     if (!airplaneMode) {
 
@@ -22333,7 +22335,7 @@ logInfo(
         : "LAB 14B started")
 );
 
-logLabelValue(
+logLabelOkValue(
     gr ? "Λειτουργία" : "Mode",
     gr
     ? (wasGama
@@ -22662,11 +22664,27 @@ endVolt[0] = volt;
 // ------------------------------------------------
 // 🔴 DEBUG
 // ------------------------------------------------
-logLabelValue("Start Temp", String.valueOf(startTemp[0]));
-logLabelValue("End Temp", String.valueOf(endTemp[0]));
+if (!Float.isNaN(startTemp[0])) {
+    logLabelOkValue("Start Temp", String.valueOf(startTemp[0]));
+} else {
+    logLabelValue("Start Temp", gr ? "Μ/Δ" : "N/A");
+}
+if (!Float.isNaN(endTemp[0])) {
+    logLabelOkValue("End Temp", String.valueOf(endTemp[0]));
+} else {
+    logLabelValue("End Temp", gr ? "Μ/Δ" : "N/A");
+}
 
-logLabelValue("Start Volt", String.valueOf(startVolt[0]));
-logLabelValue("End Volt", String.valueOf(endVolt[0]));
+if (!Float.isNaN(startVolt[0])) {
+    logLabelOkValue("Start Volt", String.valueOf(startVolt[0]));
+} else {
+    logLabelValue("Start Volt", gr ? "Μ/Δ" : "N/A");
+}
+if (!Float.isNaN(endVolt[0])) {
+    logLabelOkValue("End Volt", String.valueOf(endVolt[0]));
+} else {
+    logLabelValue("End Volt", gr ? "Μ/Δ" : "N/A");
+}
 
 // ------------------------------------------------
 // REAL DRAIN + AUTO SWITCH
@@ -22775,16 +22793,13 @@ if (lab14SpikeMah > 0.8f && !Float.isNaN(perHour)) {
     }
 }
 
-logLabelValue(
-    gr
-    ? "Διορθωμένη κατανάλωση"
-    : "Corrected consumption",
-    String.format(
-        Locale.US,
-        Float.isNaN(correctedPerHour) ? "N/A" : "%.0f mAh/h",
-        correctedPerHour
-    )
-);
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
+    logLabelOkValue(gr ? "Διορθωμένη κατανάλωση" : "Corrected consumption",
+            String.format(Locale.US, "%.0f mAh/h", correctedPerHour));
+} else {
+    logLabelValue(gr ? "Διορθωμένη κατανάλωση" : "Corrected consumption",
+            gr ? "Μ/Δ" : "N/A");
+}
 
 // ------------------------------------------------
 // FINAL ESTIMATION (NO REDECLARATION)
@@ -22866,7 +22881,7 @@ if (fakeCounter) {
 // 🔴 SAFE OUTPUT
 if (!Float.isNaN(perHour)) {
 
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Κατανάλωση" : "Consumption",
             String.format(Locale.US, "%.0f mAh/h", perHour)
     );
@@ -22876,7 +22891,7 @@ if (!Float.isNaN(perHour)) {
     // ----------------------------------------
     if (lab14SpikeMah > 0.8f) {
 
-        logLabelValue(
+        logLabelWarnValue(
                 gr
                 ? "Έξτρα κατανάλωση από απότομα φορτία"
                 : "Extra consumption from load spikes",
@@ -22911,15 +22926,16 @@ if (!Float.isNaN(tempRise)) {
             ? "≈0.0°C"
             : String.format(Locale.US, "%.1f°C", tempRise);
 
-    logLabelValue(
-            gr ? "Άνοδος θερμοκρασίας" : "Temperature rise",
-            tempStr
-    );
+    if (tempRise > 15f) {
+        logLabelWarnValue(gr ? "Άνοδος θερμοκρασίας" : "Temperature rise", tempStr);
+    } else {
+        logLabelOkValue(gr ? "Άνοδος θερμοκρασίας" : "Temperature rise", tempStr);
+    }
 }
 
 // 🔴 VOLTAGE
 if (!Float.isNaN(voltDrop)) {
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Μεταβολή τάσης (+πτώση/-άνοδος)" : "Voltage change (+drop/-rise)",
             String.format(Locale.US, "%+.3f V", voltDrop)
     );
@@ -22940,7 +22956,7 @@ if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f &&
     // Capacity-backed scenario projection, not an actual 100% endurance run.
     finalHours = baselineMah[0] / correctedPerHour;
     estimatedHours = finalHours;
-    logLabelValue(gr ? "Εκτιμώμενη διάρκεια στο 100% (μοντέλο)" : "Projected duration at 100% (model)",
+    logLabelOkValue(gr ? "Εκτιμώμενη διάρκεια στο 100% (μοντέλο)" : "Projected duration at 100% (model)",
             String.format(Locale.US, gr ? "%.1f ώρες (εκτίμηση)" : "%.1f hours (estimate)", finalHours));
 } else {
     estimatedHours = Float.NaN;
@@ -23017,15 +23033,15 @@ if (!Float.isNaN(baseHours) && baseHours > 0f) {
     normalUsage = baseHours * normalMul;
     heavyUsage = baseHours * heavyMul;
 
-    logLabelValue(labelLight,
+    logLabelOkValue(labelLight,
             String.format(Locale.US, "%.1f %s",
                     lightUsage, gr ? "ώρες" : "hours"));
 
-    logLabelValue(labelNormal,
+    logLabelOkValue(labelNormal,
             String.format(Locale.US, "%.1f %s",
                     normalUsage, gr ? "ώρες" : "hours"));
 
-    logLabelValue(labelHeavy,
+    logLabelOkValue(labelHeavy,
             String.format(Locale.US, "%.1f %s",
                     heavyUsage, gr ? "ώρες" : "hours"));
 
@@ -23067,36 +23083,34 @@ logOk(gr
 
 logLine();
 
-logLabelValue(
-        gr ? "Μπαταρία" : "Battery",
-        String.format(Locale.US, "%.0f%%", battPct)
-);
+if (battPct > 0f) {
+    logLabelOkValue(gr ? "Μπαταρία" : "Battery", String.format(Locale.US, "%.0f%%", battPct));
+} else {
+    logLabelValue(gr ? "Μπαταρία" : "Battery", gr ? "Μ/Δ" : "N/A");
+}
 
 String na = gr ? "Μ/Δ" : "N/A";
 
-logLabelValue(
-        labelLight,
-        Float.isNaN(lightRemaining)
-                ? na
-                : String.format(Locale.US, "%.1f %s",
-                        lightRemaining, gr ? "ώρες" : "hours")
-);
+if (!Float.isNaN(lightRemaining)) {
+    logLabelOkValue(labelLight, String.format(Locale.US, "%.1f %s",
+            lightRemaining, gr ? "ώρες" : "hours"));
+} else {
+    logLabelValue(labelLight, na);
+}
 
-logLabelValue(
-        labelNormal,
-        Float.isNaN(normalRemaining)
-                ? na
-                : String.format(Locale.US, "%.1f %s",
-                        normalRemaining, gr ? "ώρες" : "hours")
-);
+if (!Float.isNaN(normalRemaining)) {
+    logLabelOkValue(labelNormal, String.format(Locale.US, "%.1f %s",
+            normalRemaining, gr ? "ώρες" : "hours"));
+} else {
+    logLabelValue(labelNormal, na);
+}
 
-logLabelValue(
-        labelHeavy,
-        Float.isNaN(heavyRemaining)
-                ? na
-                : String.format(Locale.US, "%.1f %s",
-                        heavyRemaining, gr ? "ώρες" : "hours")
-);
+if (!Float.isNaN(heavyRemaining)) {
+    logLabelOkValue(labelHeavy, String.format(Locale.US, "%.1f %s",
+            heavyRemaining, gr ? "ώρες" : "hours"));
+} else {
+    logLabelValue(labelHeavy, na);
+}
 
 if (!isLab14GamaMode) {
     
@@ -23230,10 +23244,11 @@ if (loadScore >= 1.6f) {
     loadLevel = gr ? "Χαμηλό" : "Low";
 }
 
-logLabelValue(
-        gr ? "Φόρτος συστήματος" : "System load",
-        loadLevel
-);
+if (loadScore >= 1.6f) {
+    logLabelWarnValue(gr ? "Φόρτος συστήματος" : "System load", loadLevel);
+} else {
+    logLabelOkValue(gr ? "Φόρτος συστήματος" : "System load", loadLevel);
+}
 
 // ------------------------------------------------------------
 // 🔴 Ω PERFORMANCE ZONES (FINAL VERDICT - CLEAN)
@@ -23315,15 +23330,18 @@ if (Float.isNaN(omega)) {
 // ------------------------------------------------------------
 // 🔴 LOG OUTPUT (UPDATED FOR CONSUMPTION MODEL)
 // ------------------------------------------------------------
-logLabelValue(
-        gr ? "Δείκτης απόδοσης μπαταρίας Ω"
-           : "Battery performance index Ω",
-        Float.isNaN(omega) ? (gr ? "Μ/Δ" : "N/A")
-                : String.format(Locale.US, "%.2f", omega)
-);
+if (Float.isNaN(omega)) {
+    logLabelValue(gr ? "Δείκτης απόδοσης μπαταρίας Ω" : "Battery performance index Ω", gr ? "Μ/Δ" : "N/A");
+} else if (omega < 0.85f) {
+    logLabelWarnValue(gr ? "Δείκτης απόδοσης μπαταρίας Ω" : "Battery performance index Ω",
+            String.format(Locale.US, "%.2f", omega));
+} else {
+    logLabelOkValue(gr ? "Δείκτης απόδοσης μπαταρίας Ω" : "Battery performance index Ω",
+            String.format(Locale.US, "%.2f", omega));
+}
 
 // 🔴 Expected consumption (dynamic)
-logLabelValue(
+logLabelOkValue(
         gr
         ? (wasGama
            ? "Αναμενόμενη κατανάλωση gaming"
@@ -23335,27 +23353,30 @@ logLabelValue(
 );
 
 // 🔴 Real consumption
-logLabelValue(
-        gr ? "Εκτιμώμενος ρυθμός κατανάλωσης"
-           : "Estimated consumption rate",
-        Float.isNaN(correctedPerHour) ? (gr ? "Μ/Δ" : "N/A")
-                : String.format(Locale.US, "%.0f mAh/h", correctedPerHour)
-);
+if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
+    logLabelOkValue(gr ? "Εκτιμώμενος ρυθμός κατανάλωσης" : "Estimated consumption rate",
+            String.format(Locale.US, "%.0f mAh/h", correctedPerHour));
+} else {
+    logLabelValue(gr ? "Εκτιμώμενος ρυθμός κατανάλωσης" : "Estimated consumption rate", gr ? "Μ/Δ" : "N/A");
+}
 
 // 🔴 Relative %
-logLabelValue(
-        gr ? "Σχετική απόδοση"
-           : "Relative performance",
-        Float.isNaN(relativePct) ? (gr ? "Μ/Δ" : "N/A")
-                : String.format(Locale.US, "%+.0f%%", relativePct)
-);
+if (Float.isNaN(relativePct)) {
+    logLabelValue(gr ? "Σχετική απόδοση" : "Relative performance", gr ? "Μ/Δ" : "N/A");
+} else if (relativePct < 0f) {
+    logLabelWarnValue(gr ? "Σχετική απόδοση" : "Relative performance",
+            String.format(Locale.US, "%+.0f%%", relativePct));
+} else {
+    logLabelOkValue(gr ? "Σχετική απόδοση" : "Relative performance",
+            String.format(Locale.US, "%+.0f%%", relativePct));
+}
 
 // 🔴 Verdict
-logLabelValue(
-        gr ? "Συμπέρασμα"
-           : "Verdict",
-        verdict
-);
+if (!Float.isNaN(omega) && omega < 0.85f) {
+    logLabelWarnValue(gr ? "Συμπέρασμα" : "Verdict", verdict);
+} else {
+    logLabelValue(gr ? "Συμπέρασμα" : "Verdict", verdict);
+}
 
 appendHtml("<br>");
 
@@ -23364,7 +23385,9 @@ appendHtml("<br>");
 // ------------------------------------------------------------
 if (Float.isNaN(omega)) {
     logInfo(humanVerdict);
-} else if (omega >= 0.65f) {
+} else if (omega >= 0.65f && omega < 0.85f) {
+    logLabelWarnValue(gr ? "Ερμηνεία μοντέλου Ω" : "Ω model interpretation", humanVerdict);
+} else if (omega >= 0.85f) {
     logLabelValue(gr ? "Ερμηνεία μοντέλου Ω" : "Ω model interpretation", humanVerdict);
 } else {
     logWarn(humanVerdict);
