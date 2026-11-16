@@ -429,9 +429,9 @@ logInfo(gr
 
 logLine();
 
-logOk(gr
-        ? "Εισήγαγε panic log για να ξεκινήσει η ανάλυση."
-        : "Import a panic log to begin analysis.");
+logInfo(gr
+        ? "Για πραγματική ανάλυση εισήγαγε panic log· για δοκιμή επίλεξε DEMO."
+        : "Import a panic log for real analysis, or select DEMO to explore the labs.");
 
  // ============================================================
 // EXPORT SERVICE REPORT BUTTON (iPhone Labs)
@@ -1469,28 +1469,28 @@ private void runPanicLogAnalyzer() {
         ? "Δεν εντοπίστηκε γνωστή υπογραφή panic."
         : "No known panic signature matched.");
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Τι σημαίνει αυτό:" : "What this means:",
         gr
-                ? "Το log είναι έγκυρο αλλά δεν αντιστοιχεί σε προκαθορισμένο μοτίβο crash."
-                : "The log is valid but does not match a predefined crash pattern."
+                ? "Το εισαγόμενο αρχείο δεν αντιστοιχεί σε γνωστό μοτίβο GEL."
+                : "The imported file does not match a recognized GEL pattern."
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Γιατί έχει σημασία:" : "Why this matters:",
         gr
                 ? "Ορισμένα crashes απαιτούν συμπεριφορική ανάλυση."
                 : "Some crashes require behavioral analysis."
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Επόμενο βήμα:" : "Next step:",
         gr
                 ? "Το επόμενο LAB θα αναλύσει τη συμπεριφορά του crash."
                 : "The next lab will analyze crash behavior."
 );
 
-logLabelOkValue(
+logLabelValue(
         gr ? "Αρχείο που αναλύθηκε:" : "File analyzed:",
         safe(panicLogName)
 );
@@ -1501,18 +1501,23 @@ logLabelOkValue(
         return;
     }
 
-    logOk(gr
-            ? "Εντοπίστηκε υπογραφή panic."
-            : "Panic signature matched.");
-
     logLabelOkValue(
-        "Pattern ID:",
-        safe(r.patternId)
+            gr ? "Ανάλυση κανόνων:" : "GEL rule analysis:",
+            gr ? "Ολοκληρώθηκε η αντιστοίχιση μοτίβου GEL."
+               : "GEL pattern matching completed.");
+    logLabelWarnValue(
+            gr ? "Ένδειξη στο αρχείο:" : "Imported-file clue:",
+            gr ? "Βρέθηκε αντιστοίχιση σε μοτίβο panic· δεν έγινε έλεγχος φυσικής συσκευής."
+               : "A panic pattern matched; no physical device was tested.");
+
+    logLabelValue(
+            gr ? "Αναγνωριστικό κανόνα GEL:" : "GEL rule identifier:",
+            safe(r.patternId)
 );
 if (r.secondary != null) {
     for (com.gel.cleaner.IPSPanicParser.Result other : r.secondary) {
         if (other != null && other.patternId != null)
-            logLabelOkValue(gr ? "Επιπλέον μοτίβο:" : "Additional matched pattern:",
+            logLabelValue(gr ? "Πρόσθετος κανόνας GEL:" : "Additional GEL rule:",
                     safe(other.patternId));
     }
 }
@@ -1527,25 +1532,7 @@ logLabelValue(
         IPhonePanicHumanizer.possibleCause(r.cause, gr)
 );
 
-// Severity
-if ("High".equalsIgnoreCase(r.severity)) {
-    logLabelValue(
-            gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
-            IPhonePanicHumanizer.ruleWeight(r.severity, gr)
-    );
-}
-else if ("Medium".equalsIgnoreCase(r.severity)) {
-    logLabelValue(
-            gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
-            IPhonePanicHumanizer.ruleWeight(r.severity, gr)
-    );
-}
-else {
-    logLabelValue(
-            gr ? "Βάρος κανόνα (όχι βαρύτητα βλάβης):" : "Rule weight (not device severity):",
-            IPhonePanicHumanizer.ruleWeight(r.severity, gr)
-    );
-}
+// Parser rule weight does not represent measured device-fault severity.
 
 // Confidence
 if ("High".equalsIgnoreCase(r.confidence)) {
@@ -1615,16 +1602,16 @@ private void runPanicSignatureParser() {
                     gr ? "Συμβάν " + incidentNumber + " — τύπος:" : "Incident " + incidentNumber + " — type:",
                     IPhonePanicHumanizer.event(sigCrashType, gr));
             logLabelValue(
-                    gr ? "Συμβάν " + incidentNumber + " — υπόδειξη περιοχής:" : "Incident " + incidentNumber + " — domain hint:",
-                    IPhonePanicHumanizer.domain(sigDomain, gr));
-            logLabelValue(
                     gr ? "Συμβάν " + incidentNumber + " — με απλά λόγια:" : "Incident " + incidentNumber + " — in plain language:",
                     IPhonePanicHumanizer.meaning(sigCrashType, gr));
-            logApplePanicEvidence(block, gr, gr ? "Συμβάν " + incidentNumber : "Incident " + incidentNumber, null);
+
         }
         logInfo(gr
                 ? "Τα συμβάντα εξετάστηκαν χωριστά. Δεν ενώνουμε λέξεις από διαφορετικά logs για να συμπεράνουμε βλάβη."
                 : "Entries were interpreted separately. Keywords from different panic files do not establish a combined fault.");
+        logLabelValue(gr ? "Εξειδικευμένη ανάλυση:" : "Detailed analysis:",
+                gr ? "Οι τεχνικές ενδείξεις κάθε αρχείου παρουσιάζονται στο LAB 4."
+                   : "Each file's technical clues are presented in LAB 4.");
         appendHtml("<br>");
         logOk(gr ? "Το Lab 2 ολοκληρώθηκε." : "Lab 2 finished.");
         logLine();
@@ -1706,8 +1693,10 @@ if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
     );
 }
 
-// Lab 2: make the exact missing sensor / SMC bitmask visible, not just "Watchdog".
-logApplePanicEvidence(panicLogText, gr, gr ? "Εύρημα" : "Finding", null);
+// Per-file sensor/SMC clue detail remains in specialist Lab 4.
+logLabelValue(gr ? "Εξειδικευμένη ανάλυση:" : "Detailed analysis:",
+        gr ? "Οι τεχνικές ενδείξεις ανά αρχείο παρουσιάζονται στο LAB 4."
+           : "Per-file technical clues are presented in LAB 4.");
 
 // Next step
 logLabelOkValue(
@@ -1806,15 +1795,6 @@ private void runImpactLab() {
         resetSignatureCache();
         parseAndCacheSignature(block);
         String heading = gr ? "Συμβάν " + incident : "Incident " + incident;
-        if ("Unknown".equalsIgnoreCase(sigCrashType)
-                || "Unknown / Generic".equalsIgnoreCase(sigCrashType)) {
-            logLabelValue(heading + " — " + (gr ? "τύπος:" : "type:"),
-                    IPhonePanicHumanizer.event(sigCrashType, gr));
-        } else {
-            logLabelWarnValue(heading + " — " + (gr ? "τύπος:" : "type:"),
-                    IPhonePanicHumanizer.event(sigCrashType, gr));
-        }
-
         // Domain is an observed *category of terms*, NOT a identified faulty part.
         if ("Unknown".equalsIgnoreCase(sigDomain)) {
             logLabelValue(heading + " — " + (gr ? "περιοχή:" : "area:"),
@@ -1830,6 +1810,10 @@ private void runImpactLab() {
         logApplePanicEvidence(block, gr,
                 heading + (gr ? " — τεχνική ένδειξη" : " — technical clue"), shownCodes);
     }
+
+    logInfo(gr
+            ? "Οι τεχνικές ενδείξεις προκύπτουν από κανόνες GEL για κάθε αρχείο· δεν είναι πιστοποιημένοι κωδικοί βλάβης Apple."
+            : "Technical clues are GEL rules applied to each file, not Apple-certified hardware fault codes.");
 
     logLabelValue(gr ? "Εξάρτημα:" : "Component:",
             gr
@@ -2124,8 +2108,8 @@ private void runFinalServiceRecommendationLab() {
                 || "Baseband Watchdog".equals(sigCrashType);
         thermalObserved |= "Thermal Shutdown / Throttle".equals(sigCrashType);
 
-        // Only independently extracted model-scoped codes, never conjectured
-        // speculative probability estimates or arbitrary risk ratings.
+        // GEL clue IDs derived by rules from individual imported records,
+        // not necessarily literal Apple diagnostic codes or hardware faults.
         ApplePanicHardwareHints.Assessment hints = ApplePanicHardwareHints.examineOne(block);
         for (ApplePanicHardwareHints.Finding finding : hints.findings) {
             uniqueTechnicalCodes.add(finding.code);
@@ -2178,11 +2162,11 @@ private void runFinalServiceRecommendationLab() {
                           : "No known keyword category recurred in the imported files."));
 
     if (!uniqueTechnicalCodes.isEmpty()) {
-        logLabelOkValue(gr ? "Ακριβείς τεχνικοί κωδικοί:" : "Exact technical codes:",
+        logLabelValue(gr ? "Ενδείξεις που αναγνώρισε το GEL:" : "GEL-recognized clues:",
                 android.text.TextUtils.join(", ", uniqueTechnicalCodes));
         logInfo(gr
-                ? "Οι κωδικοί είναι ενδείξεις μέσα στα αρχεία, όχι αποδεδειγμένες βλάβες."
-                : "These codes are imported-log clues, not confirmed hardware defects.");
+                ? "Οι ενδείξεις προέρχονται από κανόνες GEL που εφαρμόστηκαν στα αρχεία· δεν είναι απαραίτητα κωδικοί Apple ή αποδεδειγμένες βλάβες."
+                : "These clues are generated by GEL rules applied to the files, not necessarily Apple codes or verified defects.");
     }
 
     // One actionable service path, grounded only in event types actually observed.
@@ -2363,7 +2347,7 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
                     : "Additional findings omitted from the short display.");
             break;
         }
-        logLabelOkValue(heading + ":", finding.code);
+        logLabelValue(heading + (gr ? " — ένδειξη GEL:" : " — GEL clue:"), finding.code);
         if (!"Unknown".equals(findings.modelIdentifier)) {
             logLabelValue(gr ? "Κωδικός συσκευής:" : "Device identifier:",
                     findings.modelIdentifier);
@@ -2373,10 +2357,10 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
         logLabelValue(gr ? "Ασφαλές επόμενο βήμα:" : "Safe next check:",
                 finding.action(gr));
     }
-    if (rendered > 0) {
+    if (rendered > 0 && alreadyShown == null) {
         logInfo(gr
-                ? "Τα παραπάνω είναι ενδείξεις από αρχεία. Δεν αποδεικνύουν χαλασμένο εξάρτημα ούτε πιστοποιούν επισκευή."
-                : "These are clues from imported files; no failed component or completed repair has been verified.");
+                ? "Οι ενδείξεις αποδίδονται από κανόνες GEL βάσει των αρχείων, όχι από πιστοποίηση βλάβης ή επισκευής."
+                : "These are GEL rule-based clues from imported files, not verified component failures or repairs.");
     }
 }
 
