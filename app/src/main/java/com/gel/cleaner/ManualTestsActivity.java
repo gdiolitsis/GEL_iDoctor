@@ -25817,7 +25817,7 @@ if (!lab15_strengthKnown) {
     logLabelWarnValue(
             gr ? "Σύσταση" : "Recommendation",
             gr
-                    ? "Ελέγξτε πρώτα με άλλο συμβατό καλώδιο και φορτιστή. Επαναλάβετε τη δοκιμή χωρίς έντονη χρήση· αν ο χαμηλός ρυθμός επιμένει, ζητήστε τεχνικό έλεγχο."
+                    ? "Ελέγξτε πρώτα με άλλο συμβατό καλώδιο και φορτιστή. Επαναλάβετε τη δοκιμή χωρίς έντονη χρήση· αν ο μέτριος ή χαμηλός ρυθμός επιμένει, ζητήστε τεχνικό έλεγχο."
                     : "First try another compatible cable and charger. Repeat without heavy device use; seek technical inspection if the low rate persists.");
 } else {
     logLabelOkValue(
