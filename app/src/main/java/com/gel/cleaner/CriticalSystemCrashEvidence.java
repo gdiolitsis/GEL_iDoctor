@@ -82,18 +82,66 @@ public final class CriticalSystemCrashEvidence {
         }
 
         /**
-         * Two distinct timestamped occurrences for the SAME critical process.
-         * Multiple copies of an undated stack trace must not be counted as recurrence.
+         * Count distinct *time-separated* critical incidents, not individual log lines.
+         * One actual crash often appears in more than one Android log buffer.
+         * Missing dates, same-time duplicate entries and different manifestations
+         * of the same process failure do not inflate the incident count.
          */
+        public int independentIncidentCount() {
+            return independentIncidents().size();
+        }
+
         public boolean hasVerifiedRecurrence() {
-            for (Event a : events) {
-                if (a.when.isEmpty()) continue;
-                for (Event b : events) {
-                    if (a == b || b.when.isEmpty()) continue;
-                    if (a.process.equals(b.process) && !a.when.equals(b.when)) return true;
+            List<Event> incidents = independentIncidents();
+            for (int i = 0; i < incidents.size(); i++) {
+                for (int j = i + 1; j < incidents.size(); j++) {
+                    if (incidents.get(i).process.equalsIgnoreCase(incidents.get(j).process))
+                        return true;
                 }
             }
             return false;
+        }
+
+        /** Repeated failures with meaningful temporal separation. This is a
+         * buyer warning based on observable instability, NOT a hardware diagnosis. */
+        public boolean hasStrongInstabilityIndications() {
+            List<Event> incidents = independentIncidents();
+            if (incidents.size() < 3 || !hasVerifiedRecurrence()) return false;
+            long earliest = Long.MAX_VALUE, latest = Long.MIN_VALUE;
+            for (Event e : incidents) {
+                long time = eventSecondOfYear(e.when);
+                if (time < 0L) continue;
+                earliest = Math.min(earliest, time);
+                latest = Math.max(latest, time);
+            }
+            return latest - earliest >= 5L * 60L;
+        }
+
+        public boolean hasSeriousSystemIncident() {
+            for (Event e : events) {
+                if ("KERNEL_PANIC".equals(e.kind) || "WATCHDOG".equals(e.kind))
+                    return true;
+            }
+            return false;
+        }
+
+        private List<Event> independentIncidents() {
+            List<Event> independent = new ArrayList<>();
+            for (Event candidate : events) {
+                long time = eventSecondOfYear(candidate.when);
+                if (time < 0L) continue;
+                boolean sameIncident = false;
+                for (Event previous : independent) {
+                    long prevTime = eventSecondOfYear(previous.when);
+                    if (candidate.process.equalsIgnoreCase(previous.process)
+                            && Math.abs(time - prevTime) < 30L) {
+                        sameIncident = true;
+                        break;
+                    }
+                }
+                if (!sameIncident) independent.add(candidate);
+            }
+            return independent;
         }
     }
 
@@ -272,6 +320,36 @@ public final class CriticalSystemCrashEvidence {
         if (events.size() >= MAX_EVENTS) return;
         String role = criticalRole(process, holders);
         if (role != null) events.add(new Event(role, process, kind, when, source));
+    }
+
+    /**
+     * Normalized month/day/clock time for conservative record de-duplication.
+     * Diagnostic reports may omit the year or supply DropBox epoch millis.
+     * We do not infer an absolute event year from yearless Android logcat.
+     * Events on the same month/day/clock from different years may be merged
+     * conservatively rather than manufacturing repeat crashes.
+     */
+    private static long eventSecondOfYear(String when) {
+        if (when == null || when.trim().isEmpty()) return -1L;
+        try {
+            String value = when.trim();
+            if (value.matches("\\d{12,17}")) {
+                java.text.SimpleDateFormat format =
+                        new java.text.SimpleDateFormat("MM-dd HH:mm:ss", Locale.US);
+                value = format.format(new java.util.Date(Long.parseLong(value)));
+            } else if (value.matches("\\d{4}-\\d\\d-\\d\\d[ T].*")) {
+                value = value.substring(5).replace('T', ' ');
+            }
+            if (value.length() < 14) return -1L;
+            java.text.SimpleDateFormat formatter =
+                    new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+            formatter.setLenient(false);
+            java.util.Date date = formatter.parse("2000-" + value.substring(0, 14));
+            if (date == null) return -1L;
+            return date.getTime() / 1000L;
+        } catch (RuntimeException | java.text.ParseException ignored) {
+            return -1L;
+        }
     }
 
     private static String timeFrom(String line) {
