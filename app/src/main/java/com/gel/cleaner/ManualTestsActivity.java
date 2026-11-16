@@ -3731,7 +3731,8 @@ private void logLabel(String label, String value, String color,
             escape(label) + ": " +
             "<font color='" + color + "'>" + escape(value) + "</font>"
     );
-    GELServiceLog.add(GelDiagnosticSeverity.plainLine(severity, label, value));
+    GELServiceLog.addStyledValue(
+            GelDiagnosticSeverity.plainLine(severity, label, value), color);
 }
 
 // ---------------- SIMPLE ----------------

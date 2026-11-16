@@ -2242,10 +2242,30 @@ private void failHtmlPrint(String message) {
     }
 }
 
+/**
+ * Map only known screen value colors to a high-contrast print palette.
+ * Unknown/neutral values always stay neutral on white paper.
+ */
+private static String pdfValueCssClass(String screenColor) {
+    if ("#39FF14".equalsIgnoreCase(screenColor)) return "value-ok";
+    if ("#FFD700".equalsIgnoreCase(screenColor)
+            || "#FFD966".equalsIgnoreCase(screenColor)) return "value-warn";
+    if ("#FF5555".equalsIgnoreCase(screenColor)) return "value-err";
+    if ("#87CEFA".equalsIgnoreCase(screenColor)) return "value-info";
+    if ("#E6E6E6".equalsIgnoreCase(screenColor)) return "value";
+    return null;
+}
+
 private String buildHtmlReport(String report) {
 
     String[] lines = report.split("\\n");
     StringBuilder body = new StringBuilder();
+
+    // Preserve the exact per-value coloring captured when each Lab emitted
+    // its log. No color is inferred from numeric thresholds or label text.
+    // Preview only normalizes repeated blank lines, so skip metadata blanks.
+    java.util.List<GELServiceLog.PdfRow> pdfRows = GELServiceLog.getPdfRows();
+    int pdfRowIndex = 0;
 
     // =========================================================
     // HEADER (PRODUCTION GEL STYLE)
@@ -2307,9 +2327,31 @@ private String buildHtmlReport(String report) {
             continue;
         }
 
+        // Advance the parallel metadata stream only for nonblank exported
+        // lines. If a report line differs from its source, default to neutral.
+        while (pdfRowIndex < pdfRows.size()
+                && pdfRows.get(pdfRowIndex).text.trim().isEmpty()) {
+            pdfRowIndex++;
+        }
+        GELServiceLog.PdfRow pdfRow = pdfRowIndex < pdfRows.size()
+                ? pdfRows.get(pdfRowIndex++) : null;
+        String valueCss = pdfRow != null && line.equals(pdfRow.text.trim())
+                ? pdfValueCssClass(pdfRow.valueColor) : null;
+
         String escaped = escapeHtml(line);
 
-        if (line.startsWith("✔")) {
+        if (valueCss != null && line.contains(":")) {
+            // Keep field labels black; color only the value as in the UI.
+            String[] parts = line.split(":", 2);
+            body.append("<div class='row'><span class='label'>")
+                    .append(escapeHtml(parts[0].trim()))
+                    .append(":</span> <span class='")
+                    .append(valueCss)
+                    .append("'>")
+                    .append(escapeHtml(parts.length > 1 ? parts[1].trim() : ""))
+                    .append("</span></div>");
+        }
+        else if (line.startsWith("✔")) {
             body.append("<div class='ok'>").append(escaped).append("</div>");
         }
         else if (line.startsWith("⚠")) {
@@ -2417,6 +2459,10 @@ private String buildHtmlReport(String report) {
             + ".row{margin:4px 0;}"
             + ".label{font-weight:700;color:#000;}"
             + ".value{color:#222;}"
+            + ".value-ok{color:#0b7729;font-weight:700;}"
+            + ".value-warn{color:#855700;font-weight:700;}"
+            + ".value-err{color:#aa1630;font-weight:700;}"
+            + ".value-info{color:#176293;font-weight:700;}"
             + ".space{height:10px;}"
 
             // SECTIONS
