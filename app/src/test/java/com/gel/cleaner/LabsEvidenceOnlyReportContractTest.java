@@ -72,15 +72,16 @@ public final class LabsEvidenceOnlyReportContractTest {
     }
 
     @Test public void summaryDoesNotExposeHeuristicHardwarePredictionsAsWarnings() throws Exception {
-        String twentyEight = section("private void lab28HardwareStability()", "// LAB 27 — Helpers");
-        assertTrue(twentyEight.contains("Το αρχείο περιέχει αναφορά επανεκκίνησης"));
-        assertFalse(twentyEight.contains("logLabelWarnValue("));
-
+        // The old Lab 27 is deliberately removed; stale text-keyword heuristics
+        // must not reappear as diagnostic warnings in the surviving summaries.
+        assertFalse(source().contains("private void lab28HardwareStability()"));
         String thirty = section("private void lab30CombineFindings()", "private void lab31FinalSummary()");
-        assertTrue(thirty.contains("LAB 29 — Αυτόματη Σύνοψη Μετρήσεων"));
+        assertFalse(thirty.contains("lab28_obs_mention_mask"));
+        assertFalse(thirty.contains("Λέξεις στο ιστορικό (μη επαληθευμένες)"));
+        assertTrue(thirty.contains("LAB 28 — Αυτόματη Σύνοψη Μετρήσεων"));
         assertFalse(thirty.contains("logInfo(gr\n        ? \"Πιθανή βασική αιτία προβλήματος:\""));
         assertFalse(thirty.contains("logLabelWarnValue(gr ? \"Root\" : \"Root\""));
-        assertTrue(thirty.contains("Το Lab 29 ολοκληρώθηκε"));
+        assertTrue(thirty.contains("Το Lab 28 ολοκληρώθηκε"));
     }
 
     @Test public void finalReportSummarizesRecordedResultsWithoutImaginaryProblems() throws Exception {
