@@ -40,11 +40,11 @@ public final class Lab81CameraEstimateColorContractTest {
         assertTrue(render.contains("logLabelValue(gr ? \"Ομαλότητα βίντεο (εκτίμηση)\""));
     }
 
-    @Test public void estimatedRealLifeUseHasGreenYellowNeutralBranches() throws Exception {
+    @Test public void redundantRealLifeEstimateIsOmittedInBothCameraReports() throws Exception {
         String render = renderer(source());
-        assertTrue(render.contains("logLabelOkValue(gr ? \"Χρήση στην πράξη (εκτίμηση)\""));
-        assertTrue(render.contains("logLabelWarnValue(gr ? \"Χρήση στην πράξη (εκτίμηση)\""));
-        assertTrue(render.contains("logLabelValue(gr ? \"Χρήση στην πράξη (εκτίμηση)\""));
+        assertFalse(render.contains("Χρήση στην πράξη (εκτίμηση)"));
+        assertFalse(render.contains("Real-life use (estimate)"));
+        assertTrue(render.contains("logLabelOkValue(gr ? \"Συμπέρασμα δυνατοτήτων\""));
     }
 
     @Test public void unreportedFpsNeverBecomesPositiveMeasurement() throws Exception {
@@ -52,6 +52,8 @@ public final class Lab81CameraEstimateColorContractTest {
         assertTrue(src.contains("h.reportedMaxFps = maxFps;"));
         assertTrue(src.contains("Δεν αναφέρθηκαν FPS — η ομαλότητα δεν μπορεί να εκτιμηθεί"));
         assertTrue(src.contains("Δεν υπάρχουν αρκετά στοιχεία FPS για εκτίμηση χρήσης."));
-        assertTrue(renderer(src).contains("δεν μετρήθηκε αντικειμενική ποιότητα εικόνας."));
+        assertFalse(renderer(src).contains("δεν μετρήθηκε αντικειμενική ποιότητα εικόνας."));
+        assertFalse(renderer(src).contains("objective image quality was not measured."));
+        assertTrue(renderer(src).contains("logLabelValue(gr ? \"Ομαλότητα βίντεο (εκτίμηση)\""));
     }
 }
