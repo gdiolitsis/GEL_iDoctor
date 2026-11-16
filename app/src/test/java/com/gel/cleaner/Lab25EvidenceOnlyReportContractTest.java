@@ -64,7 +64,8 @@ public final class Lab25EvidenceOnlyReportContractTest {
         assertTrue(s.contains("CriticalSystemCrashEvidence.parseUserReport(input, roles)"));
         assertTrue(s.contains("if (requestCode == 25025)"));
         assertTrue(s.contains("Αρχείο επιλογής χρήστη. Η γνησιότητά του δεν επαληθεύτηκε."));
-        assertFalse(lab().contains("startActivityForResult(intent, 25025)"));
+        String automatic = lab().substring(0, lab().indexOf("private java.util.Set<String> lab25DefaultRoles()"));
+        assertFalse(automatic.contains("startActivityForResult("));
     }
 
     @Test public void preservedFileReadbackMustActuallyBeVerified() throws Exception {
