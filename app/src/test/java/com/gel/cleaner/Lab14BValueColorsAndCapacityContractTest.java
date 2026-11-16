@@ -94,4 +94,60 @@ public final class Lab14BValueColorsAndCapacityContractTest {
         assertTrue(s.contains("logLabelWarnValue(gr ? \"Συμπέρασμα\""));
     }
 
+    @Test public void gammaColorContractCoversAllAvailableValues() throws Exception {
+        String full = source();
+        String conditions = section(full,
+                "private boolean checkLab14BConditions() {",
+                "// LAB 14B — battery duration estimation");
+        assertTrue(conditions.contains("isLab14GamaMode ? \"LAB 14 GAMMA\" : \"LAB 14B\""));
+        assertTrue(conditions.contains("logInfo(labName + (gr"));
+        assertTrue(conditions.contains("logLabelOkValue(\"Airplane mode\", \"ON\")"));
+        String advisory = section(full,
+                "private void showLab14BAdvisory(Runnable onContinue)",
+                "// 🔥 LAB 14B — SIMPLIFIED");
+        assertTrue(advisory.contains("isLab14GamaMode ? \"Η δοκιμή προσομοιώνει gaming χρήση"));
+        assertTrue(advisory.contains("isLab14GamaMode ? \"This test simulates 5 minutes of gaming usage"));
+
+        String duration = section(full,
+                "private void runLab14DurationMode(boolean gamaMode)",
+                "if (!isLab14GamaMode) {");
+        for (String measured : new String[] {
+                "Επίπεδο μπαταρίας", "Χωρητικότητα αναφοράς (14B/Γ)",
+                "Start Temp", "End Temp", "Start Volt", "End Volt",
+                "Διορθωμένη κατανάλωση", "Κατανάλωση",
+                "Άνοδος θερμοκρασίας", "Μεταβολή τάσης (+πτώση/-άνοδος)",
+                "Εκτιμώμενη διάρκεια στο 100% (μοντέλο)", "Μπαταρία" }) {
+            assertTrue("Missing GAMMA data field: " + measured,
+                    conditions.contains(measured) || duration.contains(measured));
+        }
+        for (String colored : new String[] {
+                "logLabelOkValue(\"Start Temp\"", "logLabelOkValue(\"End Temp\"",
+                "logLabelOkValue(\"Start Volt\"", "logLabelOkValue(\"End Volt\"",
+                "logLabelOkValue(gr ? \"Διορθωμένη κατανάλωση\"",
+                "logLabelOkValue(gr ? \"Άνοδος θερμοκρασίας\"",
+                "logLabelOkValue(gr ? \"Εκτιμώμενη διάρκεια στο 100% (μοντέλο)\"",
+                "logLabelOkValue(gr ? \"Μπαταρία\"",
+                "logLabelOkValue(labelLight,", "logLabelOkValue(labelNormal,",
+                "logLabelOkValue(labelHeavy," }) {
+            assertTrue("Missing green available value: " + colored, duration.contains(colored));
+        }
+        // Every white value in the shared 14B/GAMMA path must be explicitly unavailable.
+        java.util.regex.Matcher neutral = java.util.regex.Pattern.compile(
+                "logLabelValue\\s*\\((.*?)\\);", java.util.regex.Pattern.DOTALL)
+                .matcher(duration);
+        int checked = 0;
+        while (neutral.find()) {
+            checked++;
+            String call = neutral.group(1);
+            assertTrue("Unexpected uncolored value: " + call,
+                    call.contains("Μ/Δ") || call.contains("N/A")
+                    || call.contains(", na") || call.contains("ΔΕΝ ΕΛΕΓΧΘΗΚΕ")
+                    || call.contains("NOT TESTED"));
+        }
+        assertTrue("No unavailable-value fallback examined", checked > 0);
+        assertFalse("Misspelled GAMMA label", full.contains("LAB 14 GAMA"));
+        assertTrue(duration.contains("heavyMul = 0.70f"));
+        assertTrue(duration.contains("lightMul = 1.15f"));
+    }
+
 }
