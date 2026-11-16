@@ -30039,8 +30039,12 @@ private String lab25Describe(CriticalSystemCrashEvidence.Event e, boolean gr) {
 }
 
 private void lab25ShowCriticalEvidence(CriticalSystemCrashEvidence.Summary s, boolean gr) {
-    logLabelValue(gr ? "Κρίσιμα καταγεγραμμένα συμβάντα" : "Critical recorded events",
+    // Source and coverage are essential to a prospective buyer's judgment.
+    logLabelValue(gr ? "Πηγή συμβάντων" : "Evidence source", s.source);
+    logLabelValue(gr ? "Καταγεγραμμένες εγγραφές" : "Recorded entries",
             String.valueOf(s.events.size()));
+    logLabelValue(gr ? "Ανεξάρτητα χρονολογημένα επεισόδια" : "Independent timestamped incidents",
+            String.valueOf(s.independentIncidentCount()));
     int shown = 0;
     for (CriticalSystemCrashEvidence.Event e : s.events) {
         if (shown++ >= 10) break;
@@ -30049,13 +30053,32 @@ private void lab25ShowCriticalEvidence(CriticalSystemCrashEvidence.Summary s, bo
     if (s.events.size() > 10) logLabelValue(gr ? "Κάλυψη οθόνης" : "Display",
             gr ? "Πρόσθετες εγγραφές παραλείφθηκαν από την προβολή."
                : "Additional entries omitted from display.");
-    if (s.hasVerifiedRecurrence()) {
-        logLabelWarnValue(gr ? "Συμπέρασμα για αγοραστή" : "Buyer conclusion",
+
+    if (s.hasStrongInstabilityIndications()) {
+        logLabelWarnValue(gr ? "ΠΡΟΕΙΔΟΠΟΙΗΣΗ ΑΓΟΡΑΣΤΗ" : "BUYER WARNING",
+                gr ? "ΙΣΧΥΡΕΣ ΕΝΔΕΙΞΕΙΣ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΗΣ ΑΣΤΑΘΕΙΑΣ: "
+                        + "πολλαπλά, χρονικά ανεξάρτητα σφάλματα κρίσιμων υπηρεσιών Android. "
+                        + "Συνιστάται να μη γίνει αγορά χωρίς πρόσθετο έλεγχο. "
+                        + "Δεν έχει αποδειχθεί η αιτία ή βλάβη υλικού."
+                   : "STRONG INDICATIONS OF REPEATED INSTABILITY: multiple independent, "
+                        + "time-separated failures of critical Android services. "
+                        + "Further diagnosis is recommended before purchase. "
+                        + "Neither the cause nor a hardware defect is established.");
+    } else if (s.hasVerifiedRecurrence()) {
+        logLabelWarnValue(gr ? "Σύσταση προς αγοραστή" : "Buyer advisory",
                 gr ? "Επαναλαμβανόμενα τεκμηριωμένα συμβάντα στην ίδια κρίσιμη υπηρεσία. "
-                        + "Συνιστάται περαιτέρω έλεγχος πριν από αγορά. "
+                        + "Προτείνεται επιπλέον έλεγχος πριν από αγορά. "
                         + "Δεν αποδεικνύεται βλάβη υλικού."
-                   : "Repeated evidenced events in one critical service. "
-                        + "Further checks before purchase are advisable; no hardware fault is proved.");
+                   : "Repeated evidenced incidents in one critical service. "
+                        + "Additional checks before purchase are advisable; "
+                        + "hardware failure is not established.");
+    } else if (s.hasSeriousSystemIncident()) {
+        logLabelWarnValue(gr ? "Σοβαρό συμβάν συστήματος" : "Serious system incident",
+                gr ? "Καταγράφηκε kernel panic ή system watchdog. "
+                        + "Απαιτείται έλεγχος αιτίας, ακόμη και αν το συμβάν είναι μεμονωμένο. "
+                        + "Δεν αποδεικνύεται ελαττωματικό υλικό."
+                   : "A kernel panic or system watchdog was recorded. "
+                        + "Investigate the cause even if isolated; hardware failure is not established.");
     } else {
         logLabelValue(gr ? "Συμπέρασμα για αγοραστή" : "Buyer conclusion",
                 gr ? "Μεμονωμένο ή μη χρονολογημένο συμβάν: δεν αποδεικνύεται "
