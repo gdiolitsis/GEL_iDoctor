@@ -13869,26 +13869,10 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
     batteryPercent = Math.max(0, getBatteryPercentSafe());
 
     // --------------------------------------------------
-    // 🔴 BASELINE CAPACITY
+    // 🔴 BASELINE CAPACITY — SHARED EXACTLY WITH LAB 14B/Γ
     // --------------------------------------------------
-    baselineFullMah = -1;
     lab14HasReportedCapacity = start.chargeFullMah > 0 || start.chargeDesignMah > 0;
-
-    if (start.chargeFullMah > 0) {
-        baselineFullMah = start.chargeFullMah;
-
-    } else if (start.chargeDesignMah > 0) {
-        baselineFullMah = start.chargeDesignMah;
-
-    } else if (start.chargeNowMah > 0 && batteryPercent > 5) {
-
-        float percent = batteryPercent / 100.0f;
-
-        if (percent > 0.01f) {
-            baselineFullMah =
-                    (long) (start.chargeNowMah / percent);
-        }
-    }
+    baselineFullMah = lab14CommonReferenceCapacityMah(start, batteryPercent);
 
     boolean rooted = idoctor.isDeviceRooted();
     Float cpuTempStart = readCpuTempSafe();
@@ -22091,6 +22075,23 @@ logLabelValue(
 }
 
 // ============================================================
+// LAB 14A / 14B / 14Γ — ONE CAPACITY REFERENCE CALCULATION
+// ============================================================
+// Both tests use the same precedence and extrapolation arithmetic.
+// Different snapshots (charge_now and SoC) can still yield slightly
+// different valid results; never silently replace one with the other.
+private long lab14CommonReferenceCapacityMah(
+        iDoctorEngine.BatterySnapshot snapshot, int levelPercent) {
+    if (snapshot == null) return -1L;
+    if (snapshot.chargeFullMah > 0L) return snapshot.chargeFullMah;
+    if (snapshot.chargeDesignMah > 0L) return snapshot.chargeDesignMah;
+    if (snapshot.chargeNowMah > 0L && levelPercent > 5 && levelPercent <= 100) {
+        return (long) (snapshot.chargeNowMah / (levelPercent / 100.0f));
+    }
+    return -1L;
+}
+
+// ============================================================
 // LAB 14B — battery duration estimation
 // ============================================================
 private void lab14BBatteryDurationTest() {
@@ -22208,32 +22209,16 @@ synchronized (lab14Lock) {
 startMah[0] = snap0.chargeNowMah;
 
 // ------------------------------------------------
-// 🔴 BASELINE CAPACITY (DYNAMIC, NO HARDCODE)
+// 🔴 BASELINE CAPACITY — SAME CALCULATION AS LAB 14A
 // ------------------------------------------------
-if (snap0.chargeFullMah > 1000) {
-
-    lab14bBaselineMah = snap0.chargeFullMah;
+final int capacityLevel = getBatteryPercentSafe();
+lab14bBaselineMah = lab14CommonReferenceCapacityMah(snap0, capacityLevel);
+if (snap0.chargeFullMah > 0L) {
     capacityProvenance[0] = "ANDROID_FULL_REPORTED";
-
-} else if (snap0.chargeDesignMah > 1000) {
-
-    lab14bBaselineMah = snap0.chargeDesignMah;
+} else if (snap0.chargeDesignMah > 0L) {
     capacityProvenance[0] = "DESIGN_NOMINAL";
-
-} else {
-
-    int pct = getBatteryPercentSafe();
-
-    if (snap0.chargeNowMah > 0 && pct > 5 && pct <= 100) {
-
-        lab14bBaselineMah =
-                (long) (snap0.chargeNowMah / (pct / 100.0f));
-        capacityProvenance[0] = "EXTRAPOLATED_FROM_LEVEL";
-
-    } else {
-
-        lab14bBaselineMah = -1L; // ❗ no fake capacity
-    }
+} else if (lab14bBaselineMah > 0L) {
+    capacityProvenance[0] = "EXTRAPOLATED_FROM_LEVEL";
 }
 
 // ------------------------------------------------
@@ -22248,12 +22233,22 @@ if (lab14bBaselineMah < 1000) {
             : "Capacity unavailable — full-charge endurance cannot be projected.");
 }
 
-// The local model must use the actual selected reference, not an unassigned -1.
+// The model uses the same fresh snapshot formula as 14A, not a forced copy
+// of an earlier test. State the provenance in the user's language.
 baselineMah[0] = lab14bBaselineMah;
-logLabelValue(gr ? "Χωρητικότητα αναφοράς (14B/Γ)" : "Capacity reference (14B/G)",
-        baselineMah[0] > 0
-                ? baselineMah[0] + " mAh (" + capacityProvenance[0] + ")"
-                : (gr ? "Μ/Δ — δεν τεκμηριώθηκε χωρητικότητα" : "N/A — capacity unavailable"));
+if (baselineMah[0] > 0L) {
+    String referenceSource = "ANDROID_FULL_REPORTED".equals(capacityProvenance[0])
+            ? (gr ? "αναφορά πλήρους φόρτισης Android" : "Android full-charge report")
+            : "DESIGN_NOMINAL".equals(capacityProvenance[0])
+            ? (gr ? "ονομαστική χωρητικότητα σχεδίασης" : "nominal design capacity")
+            : (gr ? "charge_now / ποσοστό φόρτισης" : "charge_now / charge level");
+    logLabelOkValue(gr ? "Χωρητικότητα αναφοράς (14B/Γ)" : "Capacity reference (14B/G)",
+            baselineMah[0] + " mAh — " + referenceSource);
+} else {
+    logLabelValue(gr ? "Χωρητικότητα αναφοράς (14B/Γ)" : "Capacity reference (14B/G)",
+            gr ? "Μ/Δ — δεν τεκμηριώθηκε χωρητικότητα"
+               : "N/A — capacity unavailable");
+}
 
 // ------------------------------------------------
 // 🔴 START TEMP (LOCK SOURCE)
