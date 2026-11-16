@@ -85,7 +85,11 @@ public final class Lab14BValueColorsAndCapacityContractTest {
         assertFalse(s.contains("boolean batteryIssue = false;"));
         assertFalse(s.contains("boolean systemIssue = false;"));
         assertTrue(s.contains("logInfo(proPrompt);"));
-        assertTrue(s.contains("Συνιστάται εκτέλεση LAB14 Pro"));
+        assertTrue(s.contains("Συνιστάται εκτέλεση Lab 14A Pro"));
+        assertTrue(s.contains("Συνιστάται πλήρης διάγνωση μέσω Lab 14A Pro"));
+        assertTrue(s.contains("Recommended: run Lab 14A Pro"));
+        assertTrue(s.contains("Recommended: full diagnosis via Lab 14A Pro"));
+        assertFalse(s.contains("LAB14 Pro"));
         assertTrue(s.contains("Πειραματική κλίμακα Ω (μη βαθμονομημένη)"));
         assertTrue(s.contains("logLabelWarnValue(gr ? \"Συμπέρασμα\""));
     }
