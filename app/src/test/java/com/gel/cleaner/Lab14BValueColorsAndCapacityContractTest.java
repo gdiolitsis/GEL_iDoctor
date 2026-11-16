@@ -42,7 +42,7 @@ public final class Lab14BValueColorsAndCapacityContractTest {
         assertTrue(s.contains("logLabelOkValue(\"Start Volt\", String.valueOf(startVolt[0]))"));
         assertTrue(s.contains("logLabelOkValue(\"End Volt\", String.valueOf(endVolt[0]))"));
         assertTrue(s.contains("logLabelOkValue(gr ? \"Διορθωμένη κατανάλωση\""));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Κατανάλωση\""));
+        assertTrue(s.contains("logLabelOkValue(\n            gr ? \"Κατανάλωση\""));
         assertTrue(s.contains("logLabelOkValue(gr ? \"Άνοδος θερμοκρασίας\""));
         assertTrue(s.contains("logLabelWarnValue(gr ? \"Άνοδος θερμοκρασίας\""));
         assertTrue(s.contains("logLabelOkValue(gr ? \"Μεταβολή τάσης (+πτώση/-άνοδος)\""));
