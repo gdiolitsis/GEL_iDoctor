@@ -2487,6 +2487,33 @@ private static void registerModernVerifiedModels() {
         MAP.put("iphone duo", modern8);
     }
 
+/**
+ * Resolve an exact identifier reported by an imported iPhone panic log.
+ * This is a catalogue lookup, NOT proof that the imported file originated
+ * from the physical handset in the technician's hands.
+ *
+ * Unknown, malformed and conflicting catalogue identifiers remain unresolved.
+ */
+public static String marketingNameForIdentifier(String identifier) {
+    if (identifier == null ||
+            !identifier.trim().matches("(?i)iphone\\d{1,2},\\d{1,2}")) {
+        return null;
+    }
+    String name = null;
+    for (AppleDeviceSpec candidate : MAP.values()) {
+        if (candidate == null || candidate.identifier == null
+                || !candidate.identifier.equalsIgnoreCase(identifier.trim())) {
+            continue;
+        }
+        if (candidate.model == null || candidate.model.trim().isEmpty()) continue;
+        if (name != null && !name.equals(candidate.model)) {
+            return null; // conflicting catalogue identities: never guess
+        }
+        name = candidate.model;
+    }
+    return name;
+}
+
 public static AppleDeviceSpec get(String modelName) {
     if (modelName == null || modelName.trim().isEmpty())
         return AppleDeviceSpec.unknown();
