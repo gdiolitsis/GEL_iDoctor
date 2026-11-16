@@ -504,6 +504,35 @@ GELServiceLog.section(AppLang.isGreek(this)
 
 } // onCreate ends here
 
+/**
+ * Show the source-reported device identity before the panic Labs.
+ * Do not present one common iPhone model for files with inconsistent
+ * identifiers or records that do not provide a model field.
+ */
+private void logPanicModelIdentity(String importedLogs, boolean gr) {
+    ApplePanicModelEvidence.Result models = ApplePanicModelEvidence.analyze(importedLogs);
+    if (models.identifiers.isEmpty()) return; // no model observation to report
+
+    if (models.hasConsistentModel()) {
+        String identifier = models.identifiers.keySet().iterator().next();
+        logLabelOkValue(
+                gr ? "Μοντέλο σύμφωνα με τα panic logs:" : "Model reported in panic logs:",
+                ApplePanicModelEvidence.displayName(identifier));
+    } else if (models.identifiers.size() == 1 && !models.conflictingFields) {
+        String identifier = models.identifiers.keySet().iterator().next();
+        logLabelValue(
+                gr ? "Μοντέλο σε μέρος των αρχείων:" : "Model in some imported files:",
+                ApplePanicModelEvidence.displayName(identifier) + " ("
+                        + models.recordsWithModel + "/" + models.eligibleRecords + ")");
+    } else {
+        logLabelWarnValue(gr ? "Διαφορετικοί κωδικοί συσκευής:" : "Conflicting device identifiers:",
+                android.text.TextUtils.join(", ", models.identifiers.keySet()));
+    }
+    logInfo(gr
+            ? "Τα στοιχεία μοντέλου προέρχονται από τα αρχεία και δεν επαληθεύουν την ταυτότητα της φυσικής συσκευής."
+            : "Model details come from imported files; they do not authenticate the physical handset.");
+}
+
 private String detectDeviceType(String text) {
 
     if (text == null) return "Unknown";
@@ -1357,7 +1386,6 @@ logOk(gr
         : "Import completed.");
         
 String device = detectDeviceType(panicLogText);
-String model  = extractModelIdentifier(panicLogText);
 String kernel = extractKernelVersion(panicLogText);
 String board  = extractBoardId(panicLogText);
 
@@ -1366,10 +1394,7 @@ logLabelOkValue(
         safe(device)
 );
 
-logLabelOkValue(
-        "Model Identifier:",
-        safe(model)
-);
+logPanicModelIdentity(panicLogText, gr);
 
 logLabelOkValue(
         gr ? "Kernel:" : "Kernel:",
@@ -2216,8 +2241,7 @@ private void runDemoDiagnostics() {
         panicLogName = gr ? "Δοκιμαστικά panic logs" : "Simulated panic logs";
         panicLogCount = countSupportedPanicBlocks(
                 panicLogText.split("(?m)^===== ZIP FILE:"));
-        logLabelOkValue(gr ? "Συσκευή demo:" : "Demo device:",
-                safe(detectDeviceType(panicLogText)));
+        logPanicModelIdentity(panicLogText, gr);
         logOk(gr ? "Φορτώθηκαν δοκιμαστικά δεδομένα μόνο για εμφάνιση."
                  : "Simulation data loaded for on-screen demonstration only.");
 
