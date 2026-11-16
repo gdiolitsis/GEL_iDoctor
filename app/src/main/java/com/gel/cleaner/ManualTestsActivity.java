@@ -11514,19 +11514,25 @@ private void runWifiDeepScan(WifiManager wm) {
                             "Passpoint R3");
                     break;
                 case WifiInfo.SECURITY_TYPE_PSK:
-                    logLabelValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
-                            gr ? "PSK — η ακριβής έκδοση WPA δεν επιβεβαιώθηκε"
-                               : "PSK — exact WPA version not verified");
+                    logLabelOkValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            "PSK");
+                    logLabelValue(gr ? "Διευκρίνιση WPA" : "WPA detail",
+                            gr ? "Η ακριβής έκδοση WPA δεν επιβεβαιώθηκε"
+                               : "Exact WPA version was not verified");
                     break;
                 case WifiInfo.SECURITY_TYPE_OWE:
-                    logLabelValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
-                            gr ? "OWE — κρυπτογράφηση χωρίς ταυτοποίηση δικτύου"
-                               : "OWE — encryption without network authentication");
+                    logLabelOkValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            "OWE");
+                    logLabelValue(gr ? "Διευκρίνιση OWE" : "OWE detail",
+                            gr ? "Κρυπτογράφηση χωρίς ταυτοποίηση σημείου πρόσβασης"
+                               : "Encryption without access-point authentication");
                     break;
                 case WifiInfo.SECURITY_TYPE_EAP:
-                    logLabelValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
-                            gr ? "Enterprise EAP — οι ρυθμίσεις ασφάλειας δεν ελέγχθηκαν"
-                               : "Enterprise EAP — security settings not audited");
+                    logLabelOkValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
+                            "Enterprise EAP");
+                    logLabelValue(gr ? "Διευκρίνιση EAP" : "EAP detail",
+                            gr ? "Οι ρυθμίσεις ασφάλειας δεν ελέγχθηκαν"
+                               : "Security settings were not audited");
                     break;
                 default:
                     logLabelValue(gr ? "Τύπος ασφάλειας Wi-Fi" : "Wi-Fi security type",
@@ -11727,17 +11733,23 @@ private void runWifiDeepScan(WifiManager wm) {
                                : "Android reports a protected wireless link. Overall network security was not audited.");
                     break;
                 case WifiInfo.SECURITY_TYPE_OWE:
-                    logLabelValue(
+                    logLabelOkValue(
                             gr ? "Προστασία Wi-Fi" : "Wi-Fi protection",
-                            gr ? "OWE: κρυπτογράφηση χωρίς ταυτοποίηση σημείου πρόσβασης — όχι πλήρης πιστοποίηση ασφάλειας"
-                               : "OWE: encryption without access-point authentication; not a full security assessment");
+                            gr ? "Το Android αναφέρει κρυπτογράφηση OWE"
+                               : "Android reports OWE encryption");
+                    logLabelValue(gr ? "Όριο προστασίας" : "Protection limitation",
+                            gr ? "Δεν επιβεβαιώνεται ταυτοποίηση σημείου πρόσβασης"
+                               : "Access-point authentication is not established");
                     break;
                 case WifiInfo.SECURITY_TYPE_PSK:
                 case WifiInfo.SECURITY_TYPE_EAP:
-                    logLabelValue(
+                    logLabelOkValue(
                             gr ? "Προστασία Wi-Fi" : "Wi-Fi protection",
-                            gr ? "Αναφέρθηκε μηχανισμός ασφάλειας, αλλά η ακριβής ισχύς της προστασίας δεν τεκμηριώθηκε"
-                               : "A security mechanism was reported, but its effective strength was not verified");
+                            gr ? "Το Android αναφέρει μηχανισμό ασφάλειας ασύρματης σύνδεσης"
+                               : "Android reports a wireless-link security mechanism");
+                    logLabelValue(gr ? "Όριο συμπεράσματος" : "Evidence limitation",
+                            gr ? "Η ακριβής ισχύς της προστασίας δεν τεκμηριώθηκε"
+                               : "Effective protection strength was not verified");
                     break;
                 default:
                     logLabelValue(
