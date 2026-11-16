@@ -107,6 +107,10 @@ dependencies {
     // -------------------------------------------------
     implementation "com.android.installreferrer:installreferrer:2.2"
 
+    // LAB 22 — official Google services Verify Apps enrollment state.
+    // Play Integrity's richer Play Protect verdict needs a configured backend.
+    implementation 'com.google.android.gms:play-services-safetynet:18.1.0'
+
     implementation "androidx.work:work-runtime:2.9.0"
 
     // -------------------------------------------------
