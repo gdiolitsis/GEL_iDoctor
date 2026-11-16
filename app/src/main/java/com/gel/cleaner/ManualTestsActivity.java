@@ -943,13 +943,13 @@ private boolean oldKeepScreenOn = false;
                 msg.setText(
                         gr
                                 ? "Επαγγελματικός προέλεγχος αγοράς μεταχειρισμένης συσκευής\n\n" +
-                                  "Το LAB 28 καταγράφει τα διαθέσιμα στοιχεία Android και αναγνωρίζει τον δηλωμένο κωδικό μοντέλου.\n\n" +
+                                  "Το LAB 27 καταγράφει τα διαθέσιμα στοιχεία Android και αναγνωρίζει τον δηλωμένο κωδικό μοντέλου.\n\n" +
                                   "✓ Σύγκριση τεχνικών χαρακτηριστικών με τεκμηριωμένες εργοστασιακές προδιαγραφές, εφόσον υπάρχει διαθέσιμο προφίλ μοντέλου.\n" +
                                   "✓ Διαχωρισμός συμφωνιών, αποκλίσεων και στοιχείων που δεν επαληθεύονται.\n" +
                                   "✓ Οδηγίες για ανεξάρτητο έλεγχο IMEI από εξωτερική υπηρεσία, χωρίς καταχώριση αποτελέσματος στο GEL.\n\n" +
                                   "Η ζωντανή διαδικτυακή αναζήτηση όλων των μοντέλων δεν είναι ακόμη ενεργή. Ο έλεγχος δεν πιστοποιεί κυριότητα, νόμιμη προέλευση ή γνησιότητα ανταλλακτικών."
                                 : "Professional used-device pre-purchase check\n\n" +
-                                  "LAB 28 records Android-exposed device data and the reported model identifier.\n\n" +
+                                  "LAB 27 records Android-exposed device data and the reported model identifier.\n\n" +
                                   "✓ Compare available measurements with documented factory specifications when a sourced model profile is available.\n" +
                                   "✓ Separate matches, deviations and unavailable verification.\n" +
                                   "✓ Guide the buyer to an independent external IMEI check without recording the provider's result in GEL.\n\n" +
@@ -960,7 +960,7 @@ private boolean oldKeepScreenOn = false;
                 msg.setText(
                         gr
                                 ? "Ολοκληρωμένη αξιολόγηση και πιστοποίηση συσκευής\n\n" +
-                                  "Το LAB 29 συνδυάζει τα διαγνωστικά δεδομένα της συσκευής και δημιουργεί συνολική επαγγελματική αξιολόγηση:\n\n" +
+                                  "Το LAB 28 συνδυάζει τα διαγνωστικά δεδομένα της συσκευής και δημιουργεί συνολική επαγγελματική αξιολόγηση:\n\n" +
                                   "✓ Συνολική βαθμολογία υγείας συσκευής\n" +
                                   "✓ Αξιολόγηση κατάστασης μπαταρίας\n" +
                                   "✓ Έλεγχος θερμικής συμπεριφοράς\n" +
@@ -978,7 +978,7 @@ private boolean oldKeepScreenOn = false;
                                   "GEL Hardware Diagnostic Certification\n" +
                                   "με ημερομηνία/ώρα και μοναδικό Diagnostic ID."
                                 : "Comprehensive device assessment and certification\n\n" +
-                                  "LAB 29 combines diagnostic data across the device to generate a professional overall assessment:\n\n" +
+                                  "LAB 28 combines diagnostic data across the device to generate a professional overall assessment:\n\n" +
                                   "✓ Overall device health score\n" +
                                   "✓ Battery condition assessment\n" +
                                   "✓ Thermal behavior evaluation\n" +
