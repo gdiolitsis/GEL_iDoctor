@@ -33,6 +33,16 @@ public final class CriticalSystemCrashEvidence {
             Pattern.compile("(?i)\\bProcess:\\s*([A-Za-z0-9_.:]+)");
     private static final Pattern ANR =
             Pattern.compile("(?i)\\bANR in\\s+([A-Za-z0-9_.:]+)");
+    // Text structures emitted by AOSP tombstones and watchdog diagnostic records.
+    // The process identity and an explicit signal must occur in close proximity.
+    private static final Pattern NATIVE_PROCESS =
+            Pattern.compile("(?i)\\b(?:pid:\\s*\\d+.*?>>>\\s*|Cmdline:\\s*)([A-Za-z0-9_./:-]+)");
+    private static final Pattern NATIVE_SIGNAL =
+            Pattern.compile("(?i)\\bsignal\\s+(?:6|7|8|11)\\s*\\(SIG(?:ABRT|BUS|FPE|SEGV)\\)");
+    private static final Pattern KERNEL_PANIC =
+            Pattern.compile("(?i)\\bKernel panic\\s*-\\s*not syncing");
+    private static final Pattern WATCHDOG_KILL =
+            Pattern.compile("(?i)\\bWATCHDOG KILLING SYSTEM PROCESS\\b");
     private static final Pattern DATE =
             Pattern.compile("(?:\\d{4}-\\d\\d-\\d\\d[ T]\\d\\d:\\d\\d:\\d\\d"
                     + "|\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d(?:\\.\\d+)?)");
@@ -90,6 +100,9 @@ public final class CriticalSystemCrashEvidence {
     public static String criticalRole(String rawProcess, Set<String> roleHolders) {
         if (rawProcess == null) return null;
         String process = rawProcess.trim().toLowerCase(Locale.US);
+        if (process.equals("kernel")) return "ANDROID_KERNEL";
+        if (process.equals("surfaceflinger") || process.equals("/system/bin/surfaceflinger"))
+            return "DISPLAY_COMPOSITOR";
         if (process.equals("system_server")) return "ANDROID_CORE";
         if (process.equals("com.android.systemui") || process.startsWith("com.android.systemui:"))
             return "SYSTEM_UI";
@@ -123,18 +136,34 @@ public final class CriticalSystemCrashEvidence {
                                      Set<String> roleHolders) {
         if (tag == null || timestamp <= 0L) return null;
         String type;
-        if (tag.endsWith("_crash")) type = "CRASH";
+        if (tag.endsWith("_native_crash")) type = "NATIVE_CRASH";
+        else if (tag.endsWith("_crash")) type = "CRASH";
         else if (tag.endsWith("_anr")) type = "ANR";
-        else return null; // e.g. system_server_wtf is NOT proof of a crash
+        else if (tag.equals("system_server_watchdog")) type = "WATCHDOG";
+        else if (tag.equals("SYSTEM_TOMBSTONE")) type = "NATIVE_CRASH";
+        else if (tag.equals("SYSTEM_LAST_KMSG")) type = "KERNEL_PANIC";
+        else return null; // A generic WTF/log message is NOT proof of a crash
         String process;
-        if (tag.startsWith("system_server_")) {
+        String header = excerpt == null ? "" : excerpt;
+        if (tag.equals("SYSTEM_LAST_KMSG")) {
+            if (!KERNEL_PANIC.matcher(header).find()) return null;
+            process = "kernel";
+        } else if (tag.equals("SYSTEM_TOMBSTONE")) {
+            if (!NATIVE_SIGNAL.matcher(header).find()) return null;
+            Matcher nativeProcess = NATIVE_PROCESS.matcher(header);
+            if (!nativeProcess.find()) return null;
+            process = nativeProcess.group(1);
+        } else if (tag.startsWith("system_server_")) {
             process = "system_server";
         } else if (tag.startsWith("system_app_") || tag.startsWith("data_app_")) {
-            Matcher m = PROCESS.matcher(excerpt == null ? "" : excerpt);
+            Matcher m = PROCESS.matcher(header);
             if (m.find()) process = m.group(1);
             else {
-                m = ANR.matcher(excerpt == null ? "" : excerpt);
-                if (!m.find()) return null;
+                m = ANR.matcher(header);
+                if (!m.find()) {
+                    m = NATIVE_PROCESS.matcher(header);
+                    if (!m.find() || !NATIVE_SIGNAL.matcher(header).find()) return null;
+                }
                 process = m.group(1);
             }
         } else return null;
@@ -185,6 +214,9 @@ public final class CriticalSystemCrashEvidence {
         String line;
         String pendingCrashWhen = "";
         int remainingProcessLines = 0;
+        String nativeCandidate = "";
+        String nativeWhen = "";
+        int remainingNativeLines = 0;
         int totalChars = 0;
         int totalLines = 0;
         while ((line = reader.readLine()) != null) {
@@ -206,6 +238,29 @@ public final class CriticalSystemCrashEvidence {
             Matcher anr = ANR.matcher(line);
             if (anr.find()) {
                 add(events, anr.group(1), "ANR", timeFrom(line), source, roleHolders);
+            }
+
+            // Separate observed native crashes from normal process restarts.
+            Matcher tombstoneProcess = NATIVE_PROCESS.matcher(line);
+            if (tombstoneProcess.find()) {
+                nativeCandidate = tombstoneProcess.group(1);
+                nativeWhen = timeFrom(line);
+                remainingNativeLines = 12;
+            } else if (remainingNativeLines > 0) remainingNativeLines--;
+
+            if (remainingNativeLines > 0 && NATIVE_SIGNAL.matcher(line).find()) {
+                add(events, nativeCandidate, "NATIVE_CRASH",
+                        nativeWhen.isEmpty() ? timeFrom(line) : nativeWhen,
+                        source, roleHolders);
+                remainingNativeLines = 0;
+            }
+            // Highly specific system-server watchdog escalation. "watchdog"
+            // alone, or one application appearing frozen, is not sufficient.
+            if (WATCHDOG_KILL.matcher(line).find()) {
+                add(events, "system_server", "WATCHDOG", timeFrom(line), source, roleHolders);
+            }
+            if (KERNEL_PANIC.matcher(line).find()) {
+                add(events, "kernel", "KERNEL_PANIC", timeFrom(line), source, roleHolders);
             }
         }
         if (totalLines == 0) throw new IOException("Empty report");
