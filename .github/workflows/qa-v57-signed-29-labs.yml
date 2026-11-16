@@ -4,7 +4,7 @@ on:
     paths:
       - 'app/**'
       - 'tools/ci/**'
-      - '.github/workflows/qa-source-built-emulator.yml'
+      - '.github/workflows/qa-v57-signed-29-labs.yml'
 permissions:
   contents: read
   actions: read
@@ -84,13 +84,17 @@ jobs:
             --ks-key-alias "$KEY_ALIAS" \
             --out "$out/GEL_iDoctor_v57_signed_QA.apk" "$out/gel-v57-aligned.apk"
           "$tools/apksigner" verify --verbose "$out/GEL_iDoctor_v57_signed_QA.apk"
-          "$tools/zipalign" -c 4 "$out/GEL_iDoctor_v57_signed_QA.apk"
+          "$tools/zipalign" -c -v 4 "$out/GEL_iDoctor_v57_signed_QA.apk"
           expected='73b2c36144a1c814c92fea0ee71a6be408c2f111db20bddea24f95ad958b0964'
           actual="$("$tools/apksigner" verify --print-certs "$out/GEL_iDoctor_v57_signed_QA.apk" \
             | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}')"
-          test -n "$actual" && test "$actual" = "$expected"
+          if [ -z "$actual" ] || [ "$actual" != "$expected" ]; then
+            echo "SIGNED_APK_CERTIFICATE_MISMATCH_OR_UNREADABLE" >&2
+            exit 1
+          fi
+          echo "SIGNED_APK_CERTIFICATE=PASS"
           "$tools/aapt2" dump badging "$out/GEL_iDoctor_v57_signed_QA.apk" > "$out/APK_BADGING.txt"
-          grep -F "package: name='com.gel.iDoctor' versionCode='56' versionName='5.3-QA3'" "$out/APK_BADGING.txt"
+          grep -F "package: name='com.gel.iDoctor' versionCode='57' versionName='5.3-QA4'" "$out/APK_BADGING.txt"
           (cd "$out" && sha256sum GEL_iDoctor_v57_signed_QA.apk > SHA256SUMS)
           git rev-parse HEAD > "$out/SOURCE_COMMIT"
           printf '%s\n' "$actual" > "$out/SIGNER_CERT_SHA256"
