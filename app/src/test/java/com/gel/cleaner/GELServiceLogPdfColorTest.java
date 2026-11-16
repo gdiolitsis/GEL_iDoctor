@@ -99,6 +99,34 @@ public final class GELServiceLogPdfColorTest {
         GELServiceLog.clear();
     }
 
+    @Test public void txtPdfUsesSameActualValuePaletteWithoutChangingMeasurements() throws Exception {
+        Path p = Paths.get("app/src/main/java/com/gel/cleaner/ServiceReportActivity.java");
+        if (!Files.isRegularFile(p)) p = Paths.get("src/main/java/com/gel/cleaner/ServiceReportActivity.java");
+        String src = new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
+        assertTrue(src.contains("pdfValuePrintColor(matchedRow.valueColor)"));
+        assertTrue(src.contains("cleanLine.equals(matchedRow.text.trim())"));
+        assertTrue(src.contains("printValue, printColor"));
+        assertTrue(src.contains("rest.endsWith(valueText)"));
+        assertTrue(src.contains("canvas.drawText(valueText, dx + textPaint.measureText(label), y, valuePaint)"));
+        assertTrue(src.contains("if (\"#39FF14\".equalsIgnoreCase(screenColor)) return 0xFF0B7729"));
+        assertTrue(src.contains("if (\"#FF5555\".equalsIgnoreCase(screenColor)) return 0xFFAA1630"));
+    }
+
+    @Test public void openingIPhoneScreenDoesNotPersistRepeatedHeadersIntoCustomerReport() throws Exception {
+        Path p = Paths.get("app/src/main/java/com/gel/cleaner/IPhoneLabsActivity.java");
+        if (!Files.isRegularFile(p)) p = Paths.get("src/main/java/com/gel/cleaner/IPhoneLabsActivity.java");
+        String src = new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
+        int begin = src.indexOf("GEL iPhone Labs — έτοιμο.");
+        int end = src.indexOf("} // onCreate ends here", begin);
+        assertTrue(begin > 0 && end > begin);
+        String welcome = src.substring(begin, end);
+        assertTrue(welcome.contains("appendHtml(escape(gr"));
+        assertFalse(welcome.contains("GELServiceLog.section("));
+        assertFalse(welcome.contains("logInfo(gr"));
+        assertTrue(src.contains("if (!demoMode) GELServiceLog.iPhoneInfoValue"));
+        assertTrue(src.contains("DEMO finished: no simulated results were stored"));
+    }
+
     @Test public void printableHtmlConsumesExactSourceColorsNotValueHeuristics() throws Exception {
         Path p = Paths.get("app/src/main/java/com/gel/cleaner/ServiceReportActivity.java");
         if (!Files.isRegularFile(p)) p = Paths.get("src/main/java/com/gel/cleaner/ServiceReportActivity.java");
