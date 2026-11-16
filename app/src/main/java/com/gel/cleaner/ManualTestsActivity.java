@@ -25442,6 +25442,14 @@ final String[] dotFrames = { "•", "• •", "• • •" };
 final long[] startMah = { -1L };
 final String[] startCounterSource = { null };
 
+// Charger evidence: PUBLIC Android observations only. Never call battery-side
+// net current an adapter output rating, cable quality or negotiated USB-PD power.
+final BatteryManager chargerBatteryManager =
+        (BatteryManager) getSystemService(Context.BATTERY_SERVICE);
+final long[] netCurrentSumUa = { 0L };
+final int[] netCurrentSamples = { 0 };
+final int[] chargingPlugSource = { 0 };
+
 ui.post(new Runnable() {
 
     int dotStep = 0;
@@ -25555,6 +25563,30 @@ if (startTs[0] < 0) {
     ui.postDelayed(this, 500);
     return;
 }
+
+// Capture charging-source classification when reported by Android.
+try {
+    Intent state = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+    if (state != null) {
+        int plugged = state.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+        if (plugged != 0) chargingPlugSource[0] = plugged;
+    }
+} catch (Throwable ignored) {}
+
+// BatteryManager CURRENT_NOW is signed NET battery current (microamperes),
+// not adapter input current. Ignore missing/zero/implausible sensor values;
+// do not silently substitute a fabricated charging current.
+try {
+    if (chargingNow && chargerBatteryManager != null) {
+        long currentUa = chargerBatteryManager.getLongProperty(
+                BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+        if (currentUa != Long.MIN_VALUE && currentUa != 0L
+                && currentUa >= -20000000L && currentUa <= 20000000L) {
+            netCurrentSumUa[0] += currentUa;
+            netCurrentSamples[0]++;
+        }
+    }
+} catch (Throwable ignored) {}
 
 int elapsed = (int) ((now - startTs[0] - pausedChargeMs[0]) / 1000);
 int shown   = Math.min(elapsed, LAB15_TOTAL_SECONDS);
@@ -25767,6 +25799,61 @@ if (lab15_strengthKnown && mahPerMin < 6 && mahPerMin > 1 && !lab15OverTempDurin
             ? "Καθαρή αύξηση φορτίου: άγνωστη — μη συγκρίσιμα ή ανεπαρκή δεδομένα."
             : "Net charge gain: unknown — charge counters unavailable or not comparable.");
 }
+
+// ------------------------------------------------------------
+// CHARGER / CABLE CHECK: OBSERVABLE ANDROID EVIDENCE ONLY
+// ------------------------------------------------------------
+appendHtml("<br>");
+logInfo(gr
+        ? "Έλεγχος παροχής φόρτισης (έμμεσος — δεν πιστοποιεί φορτιστή ή καλώδιο)"
+        : "Charging supply check (indirect — not charger or cable certification)");
+logLine();
+
+String powerSource = null;
+switch (chargingPlugSource[0]) {
+    case BatteryManager.BATTERY_PLUGGED_AC:
+        powerSource = gr ? "Τροφοδοσία AC (αναφορά Android)" : "AC power (Android report)";
+        break;
+    case BatteryManager.BATTERY_PLUGGED_USB:
+        powerSource = gr ? "Σύνδεση USB (αναφορά Android)" : "USB connection (Android report)";
+        break;
+    case BatteryManager.BATTERY_PLUGGED_WIRELESS:
+        powerSource = gr ? "Ασύρματη φόρτιση (αναφορά Android)"
+                         : "Wireless charging (Android report)";
+        break;
+    default:
+        // Android may report newer/combined sources: do not guess the type.
+        break;
+}
+if (powerSource != null) {
+    logLabelOkValue(gr ? "Πηγή φόρτισης" : "Charging source", powerSource);
+}
+
+if (netCurrentSamples[0] >= 10) {
+    double avgNetMa = netCurrentSumUa[0] / (1000.0 * netCurrentSamples[0]);
+    String batteryNetCurrent = String.format(
+            Locale.US, "%.0f mA (%s)", avgNetMa,
+            gr ? "ρεύμα μπαταρίας" : "battery-side current");
+    if (avgNetMa > 0.0) {
+        logLabelOkValue(
+                gr ? "Μέσο καθαρό ρεύμα προς μπαταρία" : "Average net battery current",
+                batteryNetCurrent);
+    } else {
+        logLabelWarnValue(
+                gr ? "Μέσο καθαρό ρεύμα προς μπαταρία" : "Average net battery current",
+                batteryNetCurrent);
+        logInfo(gr
+                ? "Οι δειγματοληψίες δεν δείχνουν θετικό καθαρό ρεύμα· η αιτία δεν εντοπίζεται."
+                : "Samples do not show positive net battery current; the cause is unknown.");
+    }
+} else {
+    logInfo(gr
+            ? "Δεν υπάρχουν αρκετές έγκυρες ενδείξεις ρεύματος για πρόσθετη εκτίμηση."
+            : "Not enough valid current readings for an additional estimate.");
+}
+logInfo(gr
+        ? "Οι ενδείξεις αφορούν τη μπαταρία, όχι την πραγματική ισχύ εξόδου φορτιστή. Για έλεγχο φορτιστή ή καλωδίου, επαναλάβετε με άλλο συμβατό σετ σε παρόμοιες συνθήκες."
+        : "These are battery-side readings, not actual charger output power. To compare charger or cable performance, repeat with a different compatible set under similar conditions.");
 
 // ------------------------------------------------------------
 // FINAL LAB 15 DECISION
