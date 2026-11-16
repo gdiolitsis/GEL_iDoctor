@@ -53,4 +53,18 @@ public final class Lab27GrantedPermissionsContractTest {
         assertTrue(s.contains("showLab29ExternalGuidanceDialog(gr)"));
         assertTrue(s.contains("Lab31ReportEvidencePolicy.withoutPriorSummaries"));
     }
+    @Test public void proLockDialogUsesRenumberedLabelsInBothLanguages() throws Exception {
+        String s = source("ManualTestsActivity.java");
+        int a = s.indexOf("private void showGelProLockedDialog(String featureName)");
+        int b = s.indexOf("// LAB 3 — STATE (CLASS LEVEL)", a);
+        assertTrue(a >= 0 && b > a);
+        String popup = s.substring(a, b);
+        assertTrue(popup.contains("Το LAB 27 καταγράφει τα διαθέσιμα στοιχεία Android"));
+        assertTrue(popup.contains("LAB 27 records Android-exposed device data"));
+        assertTrue(popup.contains("Το LAB 28 συνδυάζει τα διαγνωστικά δεδομένα"));
+        assertTrue(popup.contains("LAB 28 combines diagnostic data across the device"));
+        assertFalse(popup.contains("Το LAB 28 καταγράφει τα διαθέσιμα στοιχεία Android"));
+        assertFalse(popup.contains("LAB 29 combines diagnostic data across the device"));
+    }
+
 }
