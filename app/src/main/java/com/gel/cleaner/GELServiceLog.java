@@ -7,6 +7,8 @@ package com.gel.cleaner;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GELServiceLog {
 
@@ -16,6 +18,20 @@ public class GELServiceLog {
     private static final StringBuilder SUPPORT = new StringBuilder(4096); // bounded current-process support history
     private static final StringBuilder LOG  = new StringBuilder(4096); // plain text
     private static final StringBuilder HTML = new StringBuilder(4096); // colored html
+
+    /**
+     * Ordered PDF value-color evidence, kept in lockstep with LOG.
+     * Plain log text remains unchanged for all consumers (including Lab 29).
+     */
+    public static final class PdfRow {
+        public final String text;
+        public final String valueColor;
+        private PdfRow(String text, String valueColor) {
+            this.text = text;
+            this.valueColor = valueColor;
+        }
+    }
+    private static final ArrayList<PdfRow> PDF_ROWS = new ArrayList<>();
 
     private static final SimpleDateFormat TS =
             new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
@@ -28,6 +44,7 @@ public class GELServiceLog {
     private static synchronized void addPlain(String line) {
         if (line == null) return;
         LOG.append(line).append('\n');
+        PDF_ROWS.add(new PdfRow(line, null));
         SUPPORT.append(line).append('\n');
         if (SUPPORT.length() > MAX_CHARS) SUPPORT.delete(0, SUPPORT.length() - MAX_CHARS);
         ensureLimit();
@@ -55,11 +72,51 @@ public class GELServiceLog {
         if (LOG.length() > MAX_CHARS) {
             int cut = (int) (MAX_CHARS * 0.20);
             LOG.delete(0, cut);
+            trimPdfRowsFromHead(cut);
         }
         if (HTML.length() > MAX_CHARS) {
             int cut = (int) (MAX_CHARS * 0.20);
             HTML.delete(0, cut);
         }
+    }
+
+    // Advance the styled row snapshot by the same number of characters
+    // truncated from the oldest end of the plain-text service log.
+    private static void trimPdfRowsFromHead(int chars) {
+        while (chars > 0 && !PDF_ROWS.isEmpty()) {
+            PdfRow first = PDF_ROWS.get(0);
+            int lineChars = first.text.length() + 1; // LOG appends one newline
+            if (chars >= lineChars) {
+                chars -= lineChars;
+                PDF_ROWS.remove(0);
+            } else {
+                PDF_ROWS.set(0, new PdfRow(first.text.substring(chars), null));
+                chars = 0;
+            }
+        }
+    }
+
+    /**
+     * Preserve a screen log's actual value color without putting markup in
+     * the plain-text diagnostics that other laboratories use as evidence.
+     */
+    public static synchronized void addStyledValue(String plainLine, String valueColor) {
+        if (plainLine == null || plainLine.trim().isEmpty()) return;
+        String clean = sanitize(plainLine);
+        addPlain(clean);
+        String color = valueColor != null && valueColor.matches("#[0-9A-Fa-f]{6}")
+                ? valueColor : null;
+        int last = PDF_ROWS.size() - 1;
+        if (last >= 0 && PDF_ROWS.get(last).text.equals(clean)) {
+            PDF_ROWS.set(last, new PdfRow(clean, color));
+        }
+        // Preserve existing in-app HTML compatibility; the printable palette
+        // is calculated independently for contrast against white paper.
+        addHtml("<font color='#FFFFFF'>" + escape(clean) + "</font>");
+    }
+
+    public static synchronized List<PdfRow> getPdfRows() {
+        return new ArrayList<>(PDF_ROWS);
     }
 
     // ============================================================
@@ -163,6 +220,7 @@ public class GELServiceLog {
     public static synchronized void clear() {
         LOG.setLength(0);
         HTML.setLength(0);
+        PDF_ROWS.clear();
     }
 
     // ============================================================
