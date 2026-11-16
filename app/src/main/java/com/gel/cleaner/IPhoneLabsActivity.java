@@ -2629,7 +2629,7 @@ private void logLabelValue(String label, String value) {
     String v = safe(value);
     appendHtml("<font color='#FFFFFF'>" + escape(l) + "</font> " +
             "<font color='#FFFFFF'>" + escape(v) + "</font>");
-    if (!demoMode) GELServiceLog.logInfo(l + " " + v);
+    if (!demoMode) GELServiceLog.iPhoneInfoValue(l, v, "#FFFFFF");
 }
 
 private void logLabelOkValue(String label, String value) {
@@ -2641,7 +2641,7 @@ private void logLabelOkValue(String label, String value) {
             "<font color='#39FF14'>" + escape(v) + "</font>"
     );
 
-    if (!demoMode) GELServiceLog.logInfo(l + " " + v);
+    if (!demoMode) GELServiceLog.iPhoneInfoValue(l, v, "#39FF14");
 }
 
 private void logLabelWarnValue(String label, String value) {
@@ -2653,7 +2653,7 @@ private void logLabelWarnValue(String label, String value) {
             "<font color='#FFD966'>" + escape(v) + "</font>"
     );
 
-    if (!demoMode) GELServiceLog.logWarn(l + " " + v);
+    if (!demoMode) GELServiceLog.iPhoneWarnValue(l, v, "#FFD966");
 }
 
 private void logLabelErrorValue(String label, String value) {
@@ -2665,7 +2665,7 @@ private void logLabelErrorValue(String label, String value) {
             "<font color='#FF5555'>" + escape(v) + "</font>"
     );
 
-    if (!demoMode) GELServiceLog.logError(l + " " + v);
+    if (!demoMode) GELServiceLog.iPhoneErrorValue(l, v, "#FF5555");
 }
 
 // ------------------------------------------------------------
