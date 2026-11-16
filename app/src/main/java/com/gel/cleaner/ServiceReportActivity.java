@@ -2252,7 +2252,8 @@ private static String pdfValueCssClass(String screenColor) {
             || "#FFD966".equalsIgnoreCase(screenColor)) return "value-warn";
     if ("#FF5555".equalsIgnoreCase(screenColor)) return "value-err";
     if ("#87CEFA".equalsIgnoreCase(screenColor)) return "value-info";
-    if ("#E6E6E6".equalsIgnoreCase(screenColor)) return "value";
+    if ("#E6E6E6".equalsIgnoreCase(screenColor)
+            || "#FFFFFF".equalsIgnoreCase(screenColor)) return "value";
     return null;
 }
 
@@ -2340,7 +2341,19 @@ private String buildHtmlReport(String report) {
 
         String escaped = escapeHtml(line);
 
-        if (valueCss != null && line.contains(":")) {
+        if (valueCss != null && pdfRow != null
+                && pdfRow.valueStart >= 0 && pdfRow.valueStart < line.length()) {
+            // iPhone labels often have no colon ("ℹ Label Value").
+            // Offset comes directly from the logging helper, never guessed.
+            body.append("<div class='row'><span class='label'>")
+                    .append(escapeHtml(line.substring(0, pdfRow.valueStart)))
+                    .append("</span><span class='")
+                    .append(valueCss)
+                    .append("'>")
+                    .append(escapeHtml(line.substring(pdfRow.valueStart)))
+                    .append("</span></div>");
+        }
+        else if (valueCss != null && line.contains(":")) {
             // Keep field labels black; color only the value as in the UI.
             String[] parts = line.split(":", 2);
             body.append("<div class='row'><span class='label'>")
