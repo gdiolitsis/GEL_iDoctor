@@ -23309,8 +23309,8 @@ if (Float.isNaN(omega)) {
             : "Performance is below expected and indicates increased power consumption.";
 
     proPrompt = gr
-            ? "Συνιστάται εκτέλεση LAB14 Pro για ανάλυση κατανάλωσης και συμπεριφοράς."
-            : "Recommended: run LAB14 Pro for deeper consumption analysis.";
+            ? "Συνιστάται εκτέλεση Lab 14A Pro για ανάλυση κατανάλωσης και συμπεριφοράς."
+            : "Recommended: run Lab 14A Pro for deeper consumption analysis.";
 
 } else {
 
@@ -23323,8 +23323,8 @@ if (Float.isNaN(omega)) {
             : "Power consumption is significantly higher than expected.";
 
     proPrompt = gr
-            ? "Συνιστάται πλήρης διάγνωση μέσω LAB14 Pro."
-            : "Recommended: full diagnosis via LAB14 Pro.";
+            ? "Συνιστάται πλήρης διάγνωση μέσω Lab 14A Pro."
+            : "Recommended: full diagnosis via Lab 14A Pro.";
 }
 
 // ------------------------------------------------------------
