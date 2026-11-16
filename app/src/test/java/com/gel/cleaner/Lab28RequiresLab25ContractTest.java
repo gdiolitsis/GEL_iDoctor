@@ -1,5 +1,4 @@
 package com.gel.cleaner;
-
 import org.junit.Test;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -7,91 +6,54 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import static org.junit.Assert.*;
 
-/** Stage-1 renumbering contract: PRO Lab 27 cannot complete without Lab 25. */
+/** v57: actual Lab25 -> PRO Lab27 -> PRO Lab28, no bypass or forged prior report. */
 public final class Lab28RequiresLab25ContractTest {
-    private static String source() throws Exception {
+    static String source() throws Exception {
         Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
         if (!Files.isRegularFile(p)) p = Paths.get("src/main/java/com/gel/cleaner/ManualTestsActivity.java");
         return new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
     }
-
-    private static String segment(String s, String begin, String end) {
-        int a = s.indexOf(begin);
-        int b = s.indexOf(end, a + begin.length());
-        assertTrue("Missing section: " + begin, a >= 0 && b > a);
-        return s.substring(a, b);
+    static String section(String s,String start,String end) {
+        int a=s.indexOf(start),b=s.indexOf(end,a+start.length());
+        assertTrue(start,a>=0&&b>a);
+        return s.substring(a,b);
     }
-
-    @Test public void proEntitlementRemainsFirstAndLab25IsRequiredBeforeConnectivity() throws Exception {
-        String s = source();
-        String gate = segment(s, "private void lab29DeviceAuthenticity() {",
-                "private void runLab29DeviceAuthenticity() {");
-        int entitlement = gate.indexOf("requireGelPro(");
-        int prerequisite = gate.indexOf("if (!lab28RequireExecutedLab25()) return;");
-        int connectivity = gate.indexOf("Lab29ConnectivityGate.runOrPrompt(");
-        assertTrue(entitlement >= 0);
-        assertTrue(prerequisite > entitlement);
-        assertTrue(connectivity > prerequisite);
+    @Test public void lab27ProThenLab25ThenSourceBoundTechnicalSnapshot() throws Exception {
+        String s=source(), m=section(s,"private void lab30CombineFindings()","private void lab31FinalSummary()");
+        int pro=m.indexOf("requireGelPro("), pre=m.indexOf("if (!lab29RequireLab25Evidence()) return;");
+        int find=m.indexOf("lab29DisplayLab25Findings(p, gr);");
+        int save=m.indexOf("lab29SaveTechnicalAssessmentFromLab25(p);");
+        assertTrue(pro>=0&&pre>pro&&find>pre&&save>find);
+        assertTrue(m.contains("Το Lab 27 ολοκληρώθηκε"));
     }
-
-    @Test public void deferredRunnerRechecksPrerequisiteAndShowsBuyerEvidence() throws Exception {
-        String s = source();
-        String run = segment(s, "private void runLab29DeviceAuthenticity() {",
-                "private void showLab29ExternalGuidanceDialog(boolean gr)");
-        int recheck = run.indexOf("if (!lab28RequireExecutedLab25()) return;");
-        int report = run.indexOf("lab28ShowLab25BuyerAssessment(gr);");
-        int completion = run.indexOf("Το Lab 27 ολοκληρώθηκε");
-        assertTrue(recheck >= 0 && report > recheck);
-        assertTrue(completion > report);
-        assertTrue(run.contains("showLab29ExternalGuidanceDialog(gr);"));
+    @Test public void lab28ProThenCertificateGateAlsoAfterConnectivity() throws Exception {
+        String s=source();
+        String entry=section(s,"private void lab29DeviceAuthenticity()","private void runLab29DeviceAuthenticity()");
+        int pro=entry.indexOf("requireGelPro("),pre=entry.indexOf("if (!lab28RequireCertification()) return;");
+        assertTrue(pro>=0&&pre>pro&&entry.indexOf("Lab29ConnectivityGate.runOrPrompt(")>pre);
+        String buyer=section(s,"private void runLab29DeviceAuthenticity()","private void showLab29ExternalGuidanceDialog(boolean gr)");
+        assertTrue(buyer.contains("if (!lab28RequireCertification()) return;"));
+        assertTrue(buyer.contains("lab28ShowCertificationResult(gr);"));
+        assertTrue(buyer.contains("showLab29ExternalGuidanceDialog(gr);"));
+        assertTrue(buyer.contains("Το Lab 28 ολοκληρώθηκε"));
     }
-
-    @Test public void lab25RunPersistsOnlyVerifiedSummaryAndRestrictedCoverage() throws Exception {
-        String s = source();
-        String lab = segment(s, "private void lab25CrashHistory() {",
-                "} // END lab25CrashHistory()");
-        assertTrue(lab.contains("lab25SaveBuyerEvidence(history,"));
-        assertTrue(lab.contains("Lab25BuyerEvidence.LIMITED"));
-        assertTrue(lab.contains("Lab25BuyerEvidence.ACCESSIBLE"));
-        String persistence = segment(s, "private void lab25SaveBuyerEvidence(",
-                "private void lab28ShowLab25BuyerAssessment(");
-        assertTrue(persistence.contains("putInt(\"lab25_obs_schema\""));
-        assertTrue(persistence.contains("putLong(\"lab25_obs_wall_ms\""));
-        assertTrue(persistence.contains("putLong(\"lab25_obs_elapsed_ms\""));
-        assertTrue(persistence.contains("putString(\"lab25_obs_coverage\""));
-        assertTrue(persistence.contains("putString(\"lab25_obs_level\""));
-        assertTrue(persistence.contains("putInt(\"lab25_obs_independent\""));
-        assertTrue(persistence.contains("if (!lab28HasFreshLab25Evidence()) return;"));
-        assertFalse(persistence.contains("putString(\"lab25_raw_stack_trace\""));
+    @Test public void currentCertificationRequiresSameBootAndUnchangedLab25Source() throws Exception {
+        String s=source(),gate=section(s,"private boolean lab28HasFreshCertificationEvidence()","private void lab29DeviceAuthenticity()");
+        assertTrue(gate.contains("Lab29TechnicalAssessment.isCurrent("));
+        assertTrue(gate.contains("lab29_technical_source25_wall_ms"));
+        assertTrue(gate.contains("lab25_obs_elapsed_ms"));
+        assertTrue(gate.contains("if (lab28HasFreshCertificationEvidence()) return true;"));
+        assertTrue(gate.contains("remove(\"lab29_obs_schema\")"));
+        assertTrue(gate.contains("ΕΚΤΕΛΕΣΗ LAB 27"));
+        assertTrue(gate.contains("lab30CombineFindings();"));
     }
-
-    @Test public void blockedRunExplainsNextActionWithoutOpeningImeICheck() throws Exception {
-        String s = source();
-        String gate = segment(s, "private boolean lab28RequireExecutedLab25() {",
-                "private void showLab28RequiresLab25Dialog(boolean gr)");
+    @Test public void missingLab25HasExplicitExitAndRunLab25Action() throws Exception {
+        String s=source(),gate=section(s,"private boolean lab29RequireLab25Evidence()","private void lab30CombineFindings()");
         assertTrue(gate.contains("if (lab28HasFreshLab25Evidence()) return true;"));
-        assertTrue(gate.contains(".remove(\"lab29_obs_schema\")"));
-        assertTrue(gate.contains("Εκτέλεσε το Lab 25"));
-        assertTrue(gate.contains("showLab28RequiresLab25Dialog(gr);"));
-        assertTrue(gate.contains("return false;"));
-        String dialog = segment(s, "private void showLab28RequiresLab25Dialog(boolean gr)",
-                "// Store only categorical evidence");
-        assertTrue(dialog.contains("ΕΚΤΕΛΕΣΗ LAB 25"));
-        assertTrue(dialog.contains("lab25CrashHistory();"));
-        assertTrue(dialog.contains("lab29DialogButton(gr ? \"ΕΞΟΔΟΣ\" : \"EXIT\", true)"));
-        assertTrue(dialog.contains("bg.setColor(0xFF101010);"));
-        assertTrue(dialog.contains("message.setTextColor(0xFF39FF14);"));
-    }
-
-    @Test public void buyerIsWarnedAndNoHistoryNeverMeansNoCrashes() throws Exception {
-        String s = source();
-        String report = segment(s, "private void lab28ShowLab25BuyerAssessment(boolean gr)",
-                "private void lab29DeviceAuthenticity() {");
-        assertTrue(report.contains("ΑΝΕΠΑΡΚΗ ΣΤΟΙΧΕΙΑ ΙΣΤΟΡΙΚΟΥ"));
-        assertTrue(report.contains("ΙΣΧΥΡΕΣ ΕΝΔΕΙΞΕΙΣ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΗΣ ΑΣΤΑΘΕΙΑΣ"));
-        assertTrue(report.contains("Συνιστάται πρόσθετος έλεγχος πριν την αγορά."));
-        assertTrue(report.contains("Αναφορά χρήστη (μη επαληθευμένη γνησιότητα)"));
-        assertTrue(report.contains("Αυτό ΔΕΝ αποδεικνύει"));
-        assertFalse(report.contains("Δεν υπάρχουν κρασαρίσματα"));
+        assertTrue(gate.contains("showLab29RequiresLab25Dialog(gr);"));
+        assertTrue(gate.contains("ΕΚΤΕΛΕΣΗ LAB 25"));
+        assertTrue(gate.contains("lab25CrashHistory();"));
+        assertTrue(gate.contains("ΕΞΟΔΟΣ"));
+        assertFalse(gate.contains("Δεν υπάρχουν κρασαρίσματα"));
     }
 }

@@ -45,8 +45,8 @@ public final class Lab27GrantedPermissionsContractTest {
         String s = source("ManualTestsActivity.java");
         assertFalse(s.contains("27. Καταγραφές λειτουργίας και μετρήσεις"));
         assertFalse(s.contains("private void lab28HardwareStability()"));
-        assertTrue(s.contains("27. Προέλεγχος Μεταχειρισμένης"));
-        assertTrue(s.contains("28. GEL Device Certification"));
+        assertTrue(s.contains("PRO  28. Προέλεγχος Μεταχειρισμένης"));
+        assertTrue(s.contains("PRO  27. GEL Device Certification"));
         assertTrue(s.contains("29. Τελική Τεχνική Αναφορά"));
         assertFalse(s.contains("30. Τελική Τεχνική Αναφορά"));
         assertTrue(s.contains("Lab29FactorySpecAudit.capture(this)"));
@@ -59,11 +59,11 @@ public final class Lab27GrantedPermissionsContractTest {
         int b = s.indexOf("// LAB 3 — STATE (CLASS LEVEL)", a);
         assertTrue(a >= 0 && b > a);
         String popup = s.substring(a, b);
-        assertTrue(popup.contains("Το LAB 27 καταγράφει τα διαθέσιμα στοιχεία Android"));
-        assertTrue(popup.contains("LAB 27 records Android-exposed device data"));
-        assertTrue(popup.contains("Το LAB 28 συνδυάζει τα διαγνωστικά δεδομένα"));
-        assertTrue(popup.contains("LAB 28 combines diagnostic data across the device"));
-        assertFalse(popup.contains("Το LAB 28 καταγράφει τα διαθέσιμα στοιχεία Android"));
+        assertTrue(popup.contains("Το LAB 28 καταγράφει τα διαθέσιμα στοιχεία Android"));
+        assertTrue(popup.contains("LAB 28 records Android-exposed device data"));
+        assertTrue(popup.contains("Το LAB 27 συνδυάζει τις διαθέσιμες καταγραφές"));
+        assertTrue(popup.contains("LAB 27 combines available GEL Labs observations"));
+        assertFalse(popup.contains("Το LAB 29 καταγράφει τα διαθέσιμα στοιχεία Android"));
         assertFalse(popup.contains("LAB 29 combines diagnostic data across the device"));
     }
 

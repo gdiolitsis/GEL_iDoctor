@@ -60,8 +60,8 @@ public final class Lab28DirectEvidenceReportContractTest {
         assertTrue(a > 0 && b > a);
         String menu = s.substring(a, b);
         assertTrue(menu.contains("26. Απογραφή εφαρμογών και στοιχεία χρήσης"));
-        assertTrue(menu.contains("PRO  27. Προέλεγχος Μεταχειρισμένης"));
-        assertTrue(menu.contains("PRO  28. GEL Device Certification"));
+        assertTrue(menu.contains("PRO  28. Προέλεγχος Μεταχειρισμένης"));
+        assertTrue(menu.contains("PRO  27. GEL Device Certification"));
         assertTrue(menu.contains("29. Τελική Τεχνική Αναφορά"));
         assertFalse(menu.contains("30. Τελική Τεχνική Αναφορά"));
     }

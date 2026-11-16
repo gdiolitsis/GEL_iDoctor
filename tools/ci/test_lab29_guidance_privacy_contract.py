@@ -60,7 +60,8 @@ assert src.count("private void lab29DeviceAuthenticity()") == 1
 assert src.count("private void lab30CombineFindings()") == 1
 assert src.count("private void lab31FinalSummary()") == 1
 assert "27. Καταγραφές λειτουργίας και μετρήσεις" not in src
-assert "lab29_obs_manufacturer" in lab30
+assert "lab29DisplayLab25Findings(p, gr);" in lab30
+assert "lab29SaveTechnicalAssessmentFromLab25(p);" in lab30
 assert "lab29_obs_manufacturer" in lab31
 assert "Uri.parse(\"https://www.checkmend.com/eu/consumer/report\")" in guidance
 print("Buyer guidance privacy and 29-lab count contract: PASS")

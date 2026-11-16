@@ -786,20 +786,20 @@ private boolean oldKeepScreenOn = false;
         final boolean[] popupGreek = { AppLang.isGreek(this) };
 
         final boolean isUsedDeviceLab =
-                featureName != null && featureName.contains("27");
+                featureName != null && featureName.contains("28");
 
         final boolean isCertificationLab =
-                featureName != null && featureName.contains("28");
+                featureName != null && featureName.contains("27");
 
         final String featureEl;
         final String featureEn;
 
         if (isUsedDeviceLab) {
-            featureEl = "LAB 27 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής";
-            featureEn = "LAB 27 — Used-device pre-purchase check";
+            featureEl = "LAB 28 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής";
+            featureEn = "LAB 28 — Used-device pre-purchase check";
         } else if (isCertificationLab) {
-            featureEl = "LAB 28 — GEL Device Certification";
-            featureEn = "LAB 28 — GEL Device Certification";
+            featureEl = "LAB 27 — GEL Device Certification";
+            featureEn = "LAB 27 — GEL Device Certification";
         } else {
             featureEl = "LAB 14A — Υγεία και Καταπόνηση Μπαταρίας";
             featureEn = "LAB 14A — Battery Health and Stress Diagnosis";
@@ -943,13 +943,13 @@ private boolean oldKeepScreenOn = false;
                 msg.setText(
                         gr
                                 ? "Επαγγελματικός προέλεγχος αγοράς μεταχειρισμένης συσκευής\n\n" +
-                                  "Το LAB 27 καταγράφει τα διαθέσιμα στοιχεία Android και αναγνωρίζει τον δηλωμένο κωδικό μοντέλου.\n\n" +
+                                  "Το LAB 28 καταγράφει τα διαθέσιμα στοιχεία Android και αναγνωρίζει τον δηλωμένο κωδικό μοντέλου.\n\n" +
                                   "✓ Σύγκριση τεχνικών χαρακτηριστικών με τεκμηριωμένες εργοστασιακές προδιαγραφές, εφόσον υπάρχει διαθέσιμο προφίλ μοντέλου.\n" +
                                   "✓ Διαχωρισμός συμφωνιών, αποκλίσεων και στοιχείων που δεν επαληθεύονται.\n" +
                                   "✓ Οδηγίες για ανεξάρτητο έλεγχο IMEI από εξωτερική υπηρεσία, χωρίς καταχώριση αποτελέσματος στο GEL.\n\n" +
                                   "Η ζωντανή διαδικτυακή αναζήτηση όλων των μοντέλων δεν είναι ακόμη ενεργή. Ο έλεγχος δεν πιστοποιεί κυριότητα, νόμιμη προέλευση ή γνησιότητα ανταλλακτικών."
                                 : "Professional used-device pre-purchase check\n\n" +
-                                  "LAB 27 records Android-exposed device data and the reported model identifier.\n\n" +
+                                  "LAB 28 records Android-exposed device data and the reported model identifier.\n\n" +
                                   "✓ Compare available measurements with documented factory specifications when a sourced model profile is available.\n" +
                                   "✓ Separate matches, deviations and unavailable verification.\n" +
                                   "✓ Guide the buyer to an independent external IMEI check without recording the provider's result in GEL.\n\n" +
@@ -959,42 +959,20 @@ private boolean oldKeepScreenOn = false;
             } else if (isCertificationLab) {
                 msg.setText(
                         gr
-                                ? "Ολοκληρωμένη αξιολόγηση και πιστοποίηση συσκευής\n\n" +
-                                  "Το LAB 28 συνδυάζει τα διαγνωστικά δεδομένα της συσκευής και δημιουργεί συνολική επαγγελματική αξιολόγηση:\n\n" +
-                                  "✓ Συνολική βαθμολογία υγείας συσκευής\n" +
-                                  "✓ Αξιολόγηση κατάστασης μπαταρίας\n" +
-                                  "✓ Έλεγχος θερμικής συμπεριφοράς\n" +
-                                  "✓ Αξιολόγηση RAM και αποθηκευτικού χώρου\n" +
-                                  "✓ Ανάλυση σταθερότητας hardware\n" +
-                                  "✓ Αξιολόγηση απόδοσης συσκευής\n" +
-                                  "✓ Έλεγχος ασφάλειας και Root indicators\n" +
-                                  "✓ Αξιολόγηση ιδιωτικότητας\n" +
-                                  "✓ Hardware Risk Score\n" +
-                                  "✓ Συσχέτιση αποτελεσμάτων από πολλαπλά GEL Labs\n" +
-                                  "✓ Έλεγχος συνέπειας και ιστορικής τάσης διαγνώσεων\n" +
-                                  "✓ Τελικό διαγνωστικό συμπέρασμα\n\n" +
-                                  "GEL Device Classification\n" +
-                                  "GEL CERTIFIED • GEL VERIFIED • INSPECTION ADVISED\n\n" +
-                                  "GEL Hardware Diagnostic Certification\n" +
-                                  "με ημερομηνία/ώρα και μοναδικό Diagnostic ID."
-                                : "Comprehensive device assessment and certification\n\n" +
-                                  "LAB 28 combines diagnostic data across the device to generate a professional overall assessment:\n\n" +
-                                  "✓ Overall device health score\n" +
-                                  "✓ Battery condition assessment\n" +
-                                  "✓ Thermal behavior evaluation\n" +
-                                  "✓ RAM and storage assessment\n" +
-                                  "✓ Hardware stability analysis\n" +
-                                  "✓ Device performance score\n" +
-                                  "✓ Security and Root indicator assessment\n" +
-                                  "✓ Privacy assessment\n" +
-                                  "✓ Hardware Risk Score\n" +
-                                  "✓ Correlation of results across multiple GEL Labs\n" +
-                                  "✓ Diagnostic consistency and historical trend analysis\n" +
-                                  "✓ Final diagnostic verdict\n\n" +
-                                  "GEL Device Classification\n" +
-                                  "GEL CERTIFIED • GEL VERIFIED • INSPECTION ADVISED\n\n" +
-                                  "GEL Hardware Diagnostic Certification\n" +
-                                  "with diagnostic timestamp and unique Diagnostic ID."
+                                ? "GEL Device Certification — τεχνική σύνοψη τεκμηρίων\n\n" +
+                                  "Το LAB 27 συνδυάζει τις διαθέσιμες καταγραφές των GEL Labs και τα πραγματικά ευρήματα κρίσιμων συμβάντων του Lab 25.\n\n" +
+                                  "✓ Έλεγχος πρόσφατης εκτέλεσης του Lab 25.\n" +
+                                  "✓ Διαχωρισμός μετρήσεων, προειδοποιήσεων και μη διαθέσιμων στοιχείων.\n" +
+                                  "✓ Σύνοψη τεχνικών ευρημάτων με την πηγή τους.\n" +
+                                  "✓ Διαβίβαση τεκμηριωμένου συμπεράσματος στο Lab 28.\n\n" +
+                                  "Η σύνοψη δεν πιστοποιεί απουσία βλάβης, γνησιότητα εξαρτημάτων ή μελλοντική σταθερότητα."
+                                : "GEL Device Certification — technical evidence summary\n\n" +
+                                  "LAB 27 combines available GEL Labs observations with actual critical Android incidents from Lab 25.\n\n" +
+                                  "✓ Require a recent Lab 25 execution.\n" +
+                                  "✓ Distinguish observed results, cautions and unavailable evidence.\n" +
+                                  "✓ Summarize technical findings and provenance.\n" +
+                                  "✓ Hand off a source-bound assessment to Lab 28.\n\n" +
+                                  "This summary does not certify freedom from faults, authentic parts or future stability."
                 );
 
             } else {
@@ -1642,21 +1620,21 @@ logScroll.post(() -> setLogPanelState(0));
                : "26. App inventory and usage information",
             this::lab26AppsFootprint));
 
-    body7.addView(makeTestButton(
+        body7.addView(makeTestButton(
             gr
                     ? (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  27. Προέλεγχος Μεταχειρισμένης\nIMEI, μεταβίβαση & σφάλματα Android"
+                      + "PRO  27. GEL Device Certification"
                     : (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  27. Used Device Pre-Purchase Check\nIMEI, transfer & Android crashes",
-            this::lab29DeviceAuthenticity));
+                      + "PRO  27. GEL Device Certification",
+            this::lab30CombineFindings));
 
     body7.addView(makeTestButton(
             gr
                     ? (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  28. GEL Device Certification"
+                      + "PRO  28. Προέλεγχος Μεταχειρισμένης\nIMEI, μεταβίβαση & τεχνική αξιολόγηση"
                     : (isGelProActive() ? "" : "🔒 ")
-                      + "PRO  28. GEL Device Certification",
-            this::lab30CombineFindings));
+                      + "PRO  28. Used Device Pre-Purchase Check\nIMEI, transfer & technical assessment",
+            this::lab29DeviceAuthenticity));
 
     body7.addView(makeTestButton(
             gr ? "29. Τελική Τεχνική Αναφορά"
@@ -30400,12 +30378,12 @@ private long dirSizeBestEffortRootFast(File root) {
 }
 
 // ============================================================
-// LAB 27 — Device Authenticity & Parts Integrity (SAFE MODE)
+// LAB 28 — Device Authenticity & Parts Integrity (SAFE MODE)
 // Only confirmed signals — no heuristics
 // ============================================================
 
 /**
- * LAB 27 PRO pre-purchase dependency: a *recent executed* Lab 25 is mandatory.
+ * LAB 28 PRO pre-purchase dependency: a *recent executed* Lab 25 is mandatory.
  * Running a diagnostic with restricted Android logs counts as execution,
  * but NEVER means the phone has no crash history.
  */
@@ -30423,27 +30401,42 @@ private boolean lab28HasFreshLab25Evidence() {
                     p.getInt("lab25_obs_independent", -1));
 }
 
-private boolean lab28RequireExecutedLab25() {
-    if (lab28HasFreshLab25Evidence()) return true;
+// The buyer check consumes only the completed Certification assessment.
+// Lab25 timestamps are consulted solely to reject a stale certification.
+private boolean lab28HasFreshCertificationEvidence() {
+    SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+    return Lab29TechnicalAssessment.isCurrent(
+            p.getInt("lab29_technical_schema", 0),
+            p.getLong("lab29_technical_wall_ms", 0L),
+            p.getLong("lab29_technical_elapsed_ms", -1L),
+            p.getLong("lab29_technical_source25_wall_ms", 0L),
+            p.getLong("lab29_technical_source25_elapsed_ms", -1L),
+            p.getLong("lab25_obs_wall_ms", 0L),
+            p.getLong("lab25_obs_elapsed_ms", -1L),
+            System.currentTimeMillis(), SystemClock.elapsedRealtime())
+            && Lab29TechnicalAssessment.known(
+                    p.getString("lab29_technical_level", ""))
+            && Lab25BuyerEvidence.isKnownCoverage(
+                    p.getString("lab29_technical_history_coverage", ""));
+}
+
+private boolean lab28RequireCertification() {
+    if (lab28HasFreshCertificationEvidence()) return true;
     final boolean gr = AppLang.isGreek(this);
-    // Old Lab28 observations must not be reused as a completed new pre-purchase check.
+    // Buyer observations from a previous certification are not valid for this run.
     getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
-            .remove("lab29_obs_schema")
-            .remove("lab29_ts")
-            .apply();
+            .remove("lab29_obs_schema").remove("lab29_ts").apply();
     appendHtml("<br>");
-    logInfo(gr ? "LAB 27 PRO — Απαραίτητος προέλεγχος" : "LAB 27 PRO — Required prerequisite");
-    logLabelValue(gr ? "Κατάσταση Lab 25" : "Lab 25 status",
-            gr ? "Δεν έχει εκτελεστεί πρόσφατα σε αυτή την εκκίνηση της συσκευής."
-               : "Not recently executed during this device boot.");
+    logInfo(gr ? "LAB 28 PRO — Προαπαιτούμενο Device Certification"
+               : "LAB 28 PRO — Device Certification prerequisite");
     logLabelValue(gr ? "Απαιτούμενη ενέργεια" : "Required action",
-            gr ? "Εκτέλεσε το Lab 25 για τα κρίσιμα σφάλματα Android και μετά επανάλαβε το Lab 27."
-               : "Run Lab 25 for critical Android crashes, then repeat Lab 27.");
-    showLab28RequiresLab25Dialog(gr);
+            gr ? "Εκτέλεσε πρώτα το Lab 27 — GEL Device Certification."
+               : "Run Lab 27 — GEL Device Certification first.");
+    showLab28RequiresCertificationDialog(gr);
     return false;
 }
 
-private void showLab28RequiresLab25Dialog(boolean gr) {
+private void showLab28RequiresCertificationDialog(boolean gr) {
     runOnUiThread(() -> {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -30453,47 +30446,39 @@ private void showLab28RequiresLab25Dialog(boolean gr) {
         bg.setCornerRadius(dp(12));
         bg.setStroke(dp(3), 0xFFFFD700);
         root.setBackground(bg);
-
         TextView title = new TextView(this);
-        title.setText(gr ? "LAB 27 PRO — Προαπαιτούμενο Lab 25"
-                         : "LAB 27 PRO — Lab 25 prerequisite");
-        title.setTextSize(17f);
-        title.setTypeface(null, Typeface.BOLD);
+        title.setText(gr ? "LAB 28 PRO — Απαιτείται Lab 27"
+                         : "LAB 28 PRO — Lab 27 required");
         title.setTextColor(Color.WHITE);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setTextSize(17f);
         title.setGravity(Gravity.CENTER);
         root.addView(title);
 
         TextView message = new TextView(this);
         message.setText(gr
-                ? "Πριν από τον προέλεγχο μεταχειρισμένης συσκευής πρέπει να εκτελεστεί το Lab 25, "
-                        + "που αναζητά κρίσιμα σφάλματα Android.\n\n"
-                        + "Η επιτυχής εκτέλεση δεν σημαίνει ότι διαβάστηκε πλήρες ιστορικό. "
-                        + "Αν η πρόσβαση είναι περιορισμένη, ο αγοραστής θα ενημερωθεί."
-                : "Lab 25 must run before this used-device pre-purchase check. "
-                        + "It examines critical Android errors.\n\n"
-                        + "Completing the lab does not mean complete crash history was accessible. "
-                        + "Any coverage limitations will be disclosed to the buyer.");
+                ? "Ο προέλεγχος αγοράς απαιτεί πρώτα ολοκλήρωση του GEL Device "
+                  + "Certification (Lab 27). Η πιστοποίηση αξιολογεί και "
+                  + "τα ευρήματα του Lab 25."
+                : "Complete GEL Device Certification (Lab 27) before the "
+                  + "buyer check. Certification also evaluates Lab 25 findings.");
         message.setTextColor(0xFF39FF14);
         message.setTextSize(15f);
         message.setPadding(0, dp(18), 0, dp(18));
         root.addView(message);
 
-        Button run = lab29DialogButton(gr ? "ΕΚΤΕΛΕΣΗ LAB 25" : "RUN LAB 25", false);
-        LinearLayout.LayoutParams runParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
-        root.addView(run, runParams);
+        Button run = lab29DialogButton(gr ? "ΕΚΤΕΛΕΣΗ LAB 27" : "RUN LAB 27", false);
+        root.addView(run, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52)));
         Button exit = lab29DialogButton(gr ? "ΕΞΟΔΟΣ" : "EXIT", true);
-        LinearLayout.LayoutParams exitParams = new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
-        exitParams.topMargin = dp(12);
-        root.addView(exit, exitParams);
+        lp.topMargin = dp(12);
+        root.addView(exit, lp);
         AlertDialog dialog = new AlertDialog.Builder(
                 this, android.R.style.Theme_Material_Dialog_NoActionBar)
                 .setView(root).setCancelable(true).create();
-        run.setOnClickListener(v -> {
-            dialog.dismiss();
-            lab25CrashHistory();
-        });
+        run.setOnClickListener(v -> { dialog.dismiss(); lab30CombineFindings(); });
         exit.setOnClickListener(v -> dialog.dismiss());
         if (isFinishing() || isDestroyed()) return;
         dialog.show();
@@ -30531,92 +30516,63 @@ private void lab25SaveBuyerEvidence(CriticalSystemCrashEvidence.Summary report,
             .apply();
 }
 
-private void lab28ShowLab25BuyerAssessment(boolean gr) {
+private void lab28ShowCertificationResult(boolean gr) {
     SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+    String level = p.getString("lab29_technical_level", "");
+    String coverage = p.getString("lab29_technical_history_coverage", "");
     appendHtml("<br>");
-    logInfo(gr ? "Υποχρεωτικός έλεγχος κρίσιμων σφαλμάτων — Lab 25"
-               : "Mandatory critical Android crash check — Lab 25");
-    logLabelOkValue(gr ? "Εκτέλεση Lab 25" : "Lab 25 execution",
-            gr ? "Ολοκληρώθηκε σε αυτή την εκκίνηση" : "Completed during this device boot");
-    String coverage = p.getString("lab25_obs_coverage", Lab25BuyerEvidence.LIMITED);
-    String source = p.getString("lab25_obs_source", "");
-    String level = p.getString("lab25_obs_level", "");
-    int count = p.getInt("lab25_obs_entries", 0);
-    int independent = p.getInt("lab25_obs_independent", 0);
-    if (!Lab25BuyerEvidence.validCounts(count, independent)) {
-        logLabelValue(gr ? "Κάλυψη Lab 25" : "Lab 25 coverage",
-                gr ? "Μη έγκυρη καταγραφή — απαιτείται επανάληψη."
-                   : "Invalid record — repeat Lab 25.");
-        return;
-    }
-    logLabelValue(gr ? "Προέλευση" : "Source",
-            "USER_SELECTED_REPORT".equals(source)
-                    ? (gr ? "Αναφορά χρήστη (μη επαληθευμένη γνησιότητα)"
-                          : "User-selected report (authenticity unverified)")
-                    : (gr ? "Προσβάσιμες καταγραφές Android"
-                          : "Accessible Android logs"));
-    logLabelValue(gr ? "Καταγεγραμμένα κρίσιμα συμβάντα" : "Recorded critical events",
-            String.valueOf(count));
-    logLabelValue(gr ? "Ανεξάρτητα χρονολογημένα επεισόδια" : "Independent timestamped incidents",
-            String.valueOf(independent));
-    if (Lab25BuyerEvidence.LIMITED.equals(coverage)) {
-        logLabelValue(gr ? "Κάλυψη ιστορικού" : "History coverage",
-                count > 0
-                  ? (gr ? "ΜΕΡΙΚΗ ΚΑΛΥΨΗ: τα παρακάτω σφάλματα καταγράφηκαν, "
-                             + "αλλά δεν ανακτήθηκε ολόκληρο το ιστορικό."
-                        : "PARTIAL COVERAGE: recorded incidents are shown, "
-                             + "but the full history is not accessible.")
-                  : (gr ? "ΑΝΕΠΑΡΚΗ ΣΤΟΙΧΕΙΑ ΙΣΤΟΡΙΚΟΥ: η πρόσβαση περιορίζεται από το Android. "
-                             + "Δεν πιστοποιείται απουσία κρασαρισμάτων."
-                        : "INSUFFICIENT CRASH HISTORY: Android restricts access. "
-                             + "Absence of crashes is not certified."));
+    logInfo(gr ? "GEL Device Certification — Τεχνικό συμπέρασμα Lab 27"
+               : "GEL Device Certification — Lab 27 technical conclusion");
+    logLabelOkValue(gr ? "Εκτέλεση τεχνικού ελέγχου" : "Technical check",
+            gr ? "Ολοκληρώθηκε στην παρούσα εκκίνηση"
+               : "Completed during this device boot");
+    if (Lab29TechnicalAssessment.STRONG_INSTABILITY.equals(level)) {
+        logLabelWarnValue(gr ? "Τεχνικό συμπέρασμα" : "Technical conclusion",
+                gr ? "ΙΣΧΥΡΕΣ ΕΝΔΕΙΞΕΙΣ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΗΣ ΑΣΤΑΘΕΙΑΣ. "
+                     + "Η τεχνική αξιολόγηση συστήνει περαιτέρω έλεγχο πριν από αγορά."
+                   : "STRONG INDICATIONS OF REPEATED INSTABILITY. "
+                     + "Further checks before purchase are recommended.");
+    } else if (Lab29TechnicalAssessment.REVIEW_REQUIRED.equals(level)) {
+        logLabelWarnValue(gr ? "Τεχνικό συμπέρασμα" : "Technical conclusion",
+                gr ? "Η τεχνική αξιολόγηση κατέγραψε σοβαρά ή επαναλαμβανόμενα "
+                     + "σφάλματα κρίσιμων υπηρεσιών Android."
+                   : "The assessment recorded serious or recurrent "
+                     + "critical Android failures.");
+    } else if (Lab29TechnicalAssessment.ISOLATED_EVENT.equals(level)) {
+        logLabelValue(gr ? "Τεχνικό συμπέρασμα" : "Technical conclusion",
+                gr ? "Μεμονωμένο καταγεγραμμένο σφάλμα χωρίς τεκμηριωμένη επανάληψη."
+                   : "An isolated recorded fault without evidenced recurrence.");
+    } else if (Lab29TechnicalAssessment.LIMITED_CRASH_HISTORY.equals(level)) {
+        logLabelValue(gr ? "Τεχνικό συμπέρασμα" : "Technical conclusion",
+                gr ? "Ο τεχνικός έλεγχος ολοκληρώθηκε· το ιστορικό σφαλμάτων "
+                     + "ήταν περιορισμένο."
+                   : "Technical check completed; available crash history was limited.");
     } else {
-        logLabelValue(gr ? "Κάλυψη ιστορικού" : "History coverage",
-                gr ? "Ελέγχθηκαν διαθέσιμα στοιχεία — όχι ολόκληρο το ιστορικό της συσκευής."
-                   : "Available records inspected; not a complete device history.");
+        logLabelOkValue(gr ? "Σταθερότητα Android" : "Android stability",
+                gr ? "Δεν εντοπίστηκαν κρίσιμα σφάλματα στα στοιχεία που εξετάστηκαν."
+                   : "No critical Android faults found in the examined evidence.");
     }
-    if (Lab25BuyerEvidence.STRONG.equals(level)) {
-        logLabelWarnValue(gr ? "ΠΡΟΕΙΔΟΠΟΙΗΣΗ ΑΓΟΡΑΣΤΗ" : "BUYER WARNING",
-                gr ? "ΙΣΧΥΡΕΣ ΕΝΔΕΙΞΕΙΣ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΗΣ ΑΣΤΑΘΕΙΑΣ ANDROID. "
-                        + "Μην προχωρήσεις σε αγορά χωρίς πρόσθετη διάγνωση. "
-                        + "Δεν αποδεικνύεται η αιτία ή βλάβη υλικού."
-                   : "STRONG INDICATIONS OF REPEATED ANDROID INSTABILITY. "
-                        + "Do not purchase without further diagnosis. "
-                        + "The cause and hardware failure are not established.");
-    } else if (Lab25BuyerEvidence.SERIOUS.equals(level)) {
-        logLabelWarnValue(gr ? "Σοβαρό συμβάν Android" : "Serious Android incident",
-                gr ? "Καταγράφηκε kernel panic ή watchdog. "
-                        + "Συνιστάται διερεύνηση πριν την αγορά· δεν αποδεικνύεται βλάβη υλικού."
-                   : "A kernel panic or watchdog was recorded. "
-                        + "Investigate before purchase; hardware failure is not established.");
-    } else if (Lab25BuyerEvidence.REPEATED.equals(level)) {
-        logLabelWarnValue(gr ? "Σύσταση αγοράς" : "Buyer advisory",
-                gr ? "Επαναλαμβανόμενα, ανεξάρτητα σφάλματα κρίσιμης υπηρεσίας. "
-                        + "Συνιστάται πρόσθετος έλεγχος πριν την αγορά."
-                   : "Repeated independent critical-service failures. "
-                        + "Further checks before purchase are advised.");
-    } else if (Lab25BuyerEvidence.ISOLATED.equals(level)) {
-        logLabelValue(gr ? "Συμπέρασμα" : "Conclusion",
-                gr ? "Μεμονωμένο ή μη χρονολογημένο συμβάν. "
-                        + "Δεν αποδεικνύεται γενικευμένη αστάθεια."
-                   : "Isolated or undated event. General instability is not established.");
-    } else {
-        logLabelValue(gr ? "Συμπέρασμα" : "Conclusion",
-                gr ? "Δεν εντοπίστηκε κρίσιμο σφάλμα στα προσβάσιμα στοιχεία. "
-                        + "Αυτό ΔΕΝ αποδεικνύει ότι η συσκευή δεν έχει κρασάρει."
-                   : "No critical failure found in accessible records. "
-                        + "This does NOT prove the device has never crashed.");
+    if (Lab25BuyerEvidence.LIMITED.equals(coverage)
+            && !Lab29TechnicalAssessment.LIMITED_CRASH_HISTORY.equals(level)) {
+        logLabelValue(gr ? "Διαθέσιμο ιστορικό" : "Available crash history",
+                gr ? "Μερική κάλυψη καταγραφών." : "Partial log coverage.");
     }
+    // Never invent the result of an external IMEI/FRP/ownership check.
+    logLabelValue(gr ? "Έλεγχος μεταβίβασης" : "Transfer checks",
+            gr ? "IMEI, κυριότητα και ενεργοποίηση μετά από επαναφορά "
+                 + "αξιολογούνται ξεχωριστά."
+               : "IMEI status, ownership and activation after reset "
+                 + "are assessed separately.");
 }
 
 private void lab29DeviceAuthenticity() {
     if (!requireGelPro(AppLang.isGreek(this)
-            ? "LAB 27 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής"
-            : "LAB 27 — Used-device pre-purchase check")) {
+            ? "LAB 28 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής"
+            : "LAB 28 — Used-device pre-purchase check")) {
         return;
     }
-    // A PRO entitlement alone does not satisfy the used-device crash check.
-    if (!lab28RequireExecutedLab25()) return;
+    // PRO access alone does not satisfy the Device Certification prerequisite.
+    if (!lab28RequireCertification()) return;
     // Only warn when the connection is not validated; an offline OEM profile
     // can still be compared without pretending that a live lookup took place.
     Lab29ConnectivityGate.runOrPrompt(this, this::runLab29DeviceAuthenticity);
@@ -30625,7 +30581,7 @@ private void lab29DeviceAuthenticity() {
 private void runLab29DeviceAuthenticity() {
 
     // Recheck after any deferred connectivity callback, not just on the button click.
-    if (!lab28RequireExecutedLab25()) return;
+    if (!lab28RequireCertification()) return;
     final boolean gr = AppLang.isGreek(this);
 
     SharedPreferences p =
@@ -30640,8 +30596,8 @@ private void runLab29DeviceAuthenticity() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 27 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής"
-            : "LAB 27 — Used-device pre-purchase check");
+            ? "LAB 28 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής"
+            : "LAB 28 — Used-device pre-purchase check");
     logInfo(gr
         ? "SAFE MODE — εμφανίζονται μόνο δηλωμένες παρατηρήσεις Android, όχι πιστοποίηση υλικού"
         : "SAFE MODE — Android-exposed observations only, not component certification");
@@ -30659,8 +30615,8 @@ logLabelValue(
             Build.MANUFACTURER + " / " + Build.MODEL);
     // Android platform observations do not authenticate OEM replacement parts.
 
-    // Buyer must see the Lab25 finding, not merely a checked-off prerequisite.
-    lab28ShowLab25BuyerAssessment(gr);
+    // Buyer sees the Certification verdict, not raw Lab25 data.
+    lab28ShowCertificationResult(gr);
 
     // ============================================================
     // BATTERY
@@ -30910,7 +30866,7 @@ logLabelValue(
     logLine();
 
 // ============================================================
-// SAVE LAB 27 COVERAGE — invalidate historical numerical conclusions
+// SAVE LAB 28 COVERAGE — invalidate historical numerical conclusions
 // ============================================================
 p.edit()
         .remove("lab29_authenticity_score")
@@ -31002,8 +30958,8 @@ logLabelValue(
         }
     } catch (Throwable compareError) {
         logLabelValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
-                gr ? "Δεν ήταν διαθέσιμη. Οι υπόλοιποι έλεγχοι του Lab 27 διατηρούνται."
-                   : "Unavailable. The other Lab 27 checks remain unaffected.");
+                gr ? "Δεν ήταν διαθέσιμη. Οι υπόλοιποι έλεγχοι του Lab 28 διατηρούνται."
+                   : "Unavailable. The other Lab 28 checks remain unaffected.");
     }
     logLabelValue(gr ? "Όριο συμπεράσματος" : "Conclusion limitation",
             gr ? "Συμφωνία χαρακτηριστικών δεν αποδεικνύει γνήσια εξαρτήματα, νόμιμη κυριότητα ή καλή λειτουργία."
@@ -31013,8 +30969,8 @@ logLabelValue(
     appendHtml("<br>");
     logInfo(gr ? "Καταγράφηκαν τα προσβάσιμα χαρακτηριστικά του Android."
                : "Accessible Android device characteristics were recorded.");
-    logOk(gr ? "Το Lab 27 ολοκληρώθηκε — τεχνικός προέλεγχος, εκτέλεση Lab 25 και οδηγίες ελέγχου IMEI."
-             : "Lab 27 completed — pre-purchase observations, Lab 25 execution and IMEI-check guidance.");
+    logOk(gr ? "Το Lab 28 ολοκληρώθηκε — αξιολόγηση Lab 27 και οδηγίες ελέγχου IMEI."
+             : "Lab 28 completed — Lab 27 assessment and IMEI-check guidance.");
     logLine();
     showLab29ExternalGuidanceDialog(gr);
 }
@@ -31032,8 +30988,8 @@ private void showLab29ExternalGuidanceDialog(boolean gr) {
         root.setBackground(bg);
 
         TextView title = new TextView(this);
-        title.setText(gr ? "LAB 27 — Έλεγχος IMEI από τον αγοραστή"
-                         : "LAB 27 — Independent IMEI check");
+        title.setText(gr ? "LAB 28 — Έλεγχος IMEI από τον αγοραστή"
+                         : "LAB 28 — Independent IMEI check");
         title.setTextSize(17f);
         title.setTypeface(null, Typeface.BOLD);
         title.setTextColor(Color.WHITE);
@@ -31053,7 +31009,7 @@ private void showLab29ExternalGuidanceDialog(boolean gr) {
                   + "3. Open the external checking service; enter the IMEI and any required details there.\n"
                   + "4. If you choose to proceed, pay the provider directly on its website.\n"
                   + "5. Read your report on the provider's website. No result needs to be shared with this app.");
-        instructions.setTextColor(0xFF39FF14); // Neon green for Lab 27 instructions.
+        instructions.setTextColor(0xFF39FF14); // Neon green for Lab 28 instructions.
         instructions.setTextSize(14f);
         instructions.setPadding(0, dp(14), 0, dp(14));
         scroll.addView(instructions);
@@ -31118,15 +31074,148 @@ private Button lab29DialogButton(String text, boolean isExit) {
 // Security + Privacy + Root + Stability into final scores.
 // NOTE (GEL RULE): Whole block ready for copy-paste.
 // ============================================================
+// ============================================================
+// Stage 2A: Lab25 feeds DEVICE CERTIFICATION, never buyer Lab28 directly.
+// Internal method numbers retain legacy names to minimize source churn.
+// ============================================================
+private boolean lab29RequireLab25Evidence() {
+    SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+    if (lab28HasFreshLab25Evidence()) return true;
+    p.edit().remove("lab29_technical_schema").apply();
+    boolean gr = AppLang.isGreek(this);
+    appendHtml("<br>");
+    logInfo(gr ? "GEL Device Certification — Προαπαιτούμενο Lab 25"
+               : "GEL Device Certification — Lab 25 prerequisite");
+    logLabelValue(gr ? "Απαιτούμενη ενέργεια" : "Required action",
+            gr ? "Εκτελέστε πρώτα το Lab 25 και επαναλάβετε την τεχνική πιστοποίηση."
+               : "Run Lab 25 first, then repeat Device Certification.");
+    showLab29RequiresLab25Dialog(gr);
+    return false;
+}
+
+private void showLab29RequiresLab25Dialog(boolean gr) {
+    runOnUiThread(() -> {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(20), dp(18), dp(20), dp(16));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF101010);
+        bg.setCornerRadius(dp(12));
+        bg.setStroke(dp(3), 0xFFFFD700);
+        root.setBackground(bg);
+
+        TextView title = new TextView(this);
+        title.setText(gr ? "GEL Device Certification — Lab 25"
+                         : "GEL Device Certification — Lab 25");
+        title.setTextColor(Color.WHITE);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setTextSize(17f);
+        title.setGravity(Gravity.CENTER);
+        root.addView(title);
+
+        TextView message = new TextView(this);
+        message.setText(gr
+                ? "Πρώτα απαιτείται έλεγχος των κρίσιμων σφαλμάτων Android στο Lab 25. "
+                  + "Η τεχνική αξιολόγηση θα χρησιμοποιήσει τα πραγματικά ευρήματα."
+                : "Run Lab 25 first to inspect critical Android errors. "
+                  + "The technical assessment will use its actual findings.");
+        message.setTextColor(0xFF39FF14);
+        message.setTextSize(15f);
+        message.setPadding(0, dp(18), 0, dp(18));
+        root.addView(message);
+
+        Button run = lab29DialogButton(gr ? "ΕΚΤΕΛΕΣΗ LAB 25" : "RUN LAB 25", false);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        root.addView(run, lp);
+        Button exit = lab29DialogButton(gr ? "ΕΞΟΔΟΣ" : "EXIT", true);
+        LinearLayout.LayoutParams exitParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        exitParams.topMargin = dp(12);
+        root.addView(exit, exitParams);
+        AlertDialog dialog = new AlertDialog.Builder(this,
+                android.R.style.Theme_Material_Dialog_NoActionBar)
+                .setView(root).setCancelable(true).create();
+        run.setOnClickListener(v -> { dialog.dismiss(); lab25CrashHistory(); });
+        exit.setOnClickListener(v -> dialog.dismiss());
+        if (isFinishing() || isDestroyed()) return;
+        dialog.show();
+        if (dialog.getWindow() != null)
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    });
+}
+
+private void lab29DisplayLab25Findings(SharedPreferences p, boolean gr) {
+    String category = Lab29TechnicalAssessment.summarize(
+            p.getString("lab25_obs_level", ""),
+            p.getString("lab25_obs_coverage", ""));
+    appendHtml("<br>");
+    logInfo(gr ? "Ευρήματα Lab 25 — Σταθερότητα Android"
+               : "Lab 25 findings — Android stability");
+    if (Lab29TechnicalAssessment.STRONG_INSTABILITY.equals(category)) {
+        logLabelWarnValue(gr ? "Επαναλαμβανόμενη αστάθεια" : "Repeated instability",
+                gr ? "ΙΣΧΥΡΕΣ ΕΝΔΕΙΞΕΙΣ: καταγράφηκαν πολλαπλά ανεξάρτητα "
+                       + "σφάλματα κρίσιμων υπηρεσιών Android. Συνιστάται περαιτέρω έλεγχος."
+                   : "STRONG INDICATIONS: multiple independent critical Android failures "
+                       + "were recorded. Further checks are recommended.");
+    } else if (Lab29TechnicalAssessment.REVIEW_REQUIRED.equals(category)) {
+        logLabelWarnValue(gr ? "Κρίσιμα σφάλματα Android" : "Critical Android incidents",
+                gr ? "Καταγράφηκαν επαναλαμβανόμενα ή σοβαρά συμβάντα. "
+                       + "Συνιστάται περαιτέρω τεχνικός έλεγχος."
+                   : "Repeated or serious failures were recorded. "
+                       + "Further technical checks are recommended.");
+    } else if (Lab29TechnicalAssessment.ISOLATED_EVENT.equals(category)) {
+        logLabelValue(gr ? "Καταγεγραμμένα συμβάντα" : "Recorded incidents",
+                gr ? "Μεμονωμένο ή μη χρονολογημένο συμβάν."
+                   : "Isolated or undated incident.");
+    } else if (Lab29TechnicalAssessment.LIMITED_CRASH_HISTORY.equals(category)) {
+        logLabelValue(gr ? "Κάλυψη ιστορικού" : "History coverage",
+                gr ? "Το Lab 25 ολοκληρώθηκε, αλλά το διαθέσιμο ιστορικό ήταν περιορισμένο."
+                   : "Lab 25 completed, but historical coverage was limited.");
+    } else {
+        logLabelOkValue(gr ? "Προσβάσιμα συμβάντα" : "Accessible incidents",
+                gr ? "Δεν εντοπίστηκαν κρίσιμα σφάλματα στα στοιχεία που εξετάστηκαν."
+                   : "No critical errors found in the inspected records.");
+    }
+    logLabelValue(gr ? "Ανεξάρτητα χρονολογημένα επεισόδια" : "Independent dated incidents",
+            String.valueOf(p.getInt("lab25_obs_independent", 0)));
+}
+
+private void lab29SaveTechnicalAssessmentFromLab25(SharedPreferences p) {
+    long inputWall = p.getLong("lab25_obs_wall_ms", 0L);
+    long inputElapsed = p.getLong("lab25_obs_elapsed_ms", -1L);
+    String category = Lab29TechnicalAssessment.summarize(
+            p.getString("lab25_obs_level", ""),
+            p.getString("lab25_obs_coverage", ""));
+    if (!lab28HasFreshLab25Evidence() || !Lab29TechnicalAssessment.known(category)) {
+        p.edit().remove("lab29_technical_schema").apply();
+        return;
+    }
+    p.edit()
+            .putInt("lab29_technical_schema", Lab29TechnicalAssessment.SCHEMA)
+            .putLong("lab29_technical_wall_ms", System.currentTimeMillis())
+            .putLong("lab29_technical_elapsed_ms", SystemClock.elapsedRealtime())
+            .putLong("lab29_technical_source25_wall_ms", inputWall)
+            .putLong("lab29_technical_source25_elapsed_ms", inputElapsed)
+            .putString("lab29_technical_level", category)
+            .putString("lab29_technical_history_coverage",
+                    p.getString("lab25_obs_coverage", Lab25BuyerEvidence.LIMITED))
+            .apply();
+}
+
 private void lab30CombineFindings() {
 
 final boolean grGate = AppLang.isGreek(this);
 
 if (!requireGelPro(
-        grGate ? "LAB 28 — Διαγνωστική Σύνοψη Τεκμηρίων / Evidence Summary"
-               : "LAB 28 — Διαγνωστική Σύνοψη Τεκμηρίων / Evidence Summary")) {
+        grGate ? "LAB 27 — Διαγνωστική Σύνοψη Τεκμηρίων / Evidence Summary"
+               : "LAB 27 — Διαγνωστική Σύνοψη Τεκμηρίων / Evidence Summary")) {
     return;
 }
+
+// The technical certification consumes the latest genuine Lab25 diagnostic,
+// not a previously reported buyer assessment or a duplicated log reference.
+if (!lab29RequireLab25Evidence()) return;
 
 SharedPreferences p =
         getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
@@ -31213,11 +31302,14 @@ boolean thermalRunawayRisk =
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 28 — Αυτόματη Σύνοψη Μετρήσεων"
-            : "LAB 28 — Automatic Measurements Summary");
+            ? "LAB 27 — Αυτόματη Σύνοψη Μετρήσεων"
+            : "LAB 27 — Automatic Measurements Summary");
     logLine();
 
-    // Lab 28 is a read-only summary of independent Android measurements.
+    // Concrete crash-history finding is one input to this technical assessment.
+    lab29DisplayLab25Findings(p, gr);
+
+    // Lab 27 is a read-only summary of independent Android measurements.
     // Usage Access is not a prerequisite for thermal, storage, RAM or security evidence.
     if (!hasUsageAccess()) {
         logLabelValue(
@@ -31348,40 +31440,10 @@ final long evidenceWallNow = System.currentTimeMillis();
 final long evidenceElapsedNow = SystemClock.elapsedRealtime();
 
 // ------------------------------------------------------------
-// 10) LAB 27 — ANDROID DEVICE OBSERVATIONS AND EXTERNAL IMEI GUIDANCE
-// ------------------------------------------------------------
-boolean lab29ObservationsAvailable = LabEvidenceFreshness.isFresh(
-        p.getInt("lab29_obs_schema", 0),
-        p.getLong("lab29_ts", 0L),
-        p.getLong("lab29_obs_elapsed_ms", -1L),
-        evidenceWallNow, evidenceElapsedNow);
-int lab29InstabilityScore = 0; // Removed legacy score has no observed provenance.
-boolean lab29InstabilityPattern = false; // Never import false hardware scores.
+// Device Certification precedes buyer checks. Never import IMEI/transfer results.
+// Historic unverified instability pattern is not admissible evidence.
+boolean lab29InstabilityPattern = false;
 
-appendHtml("<br>");
-logInfo(gr ? "LAB 27 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής"
-           : "LAB 27 — Used-device pre-purchase check");
-logLine();
-if (lab29ObservationsAvailable) {
-    logLabelValue(gr ? "Δηλωμένο μοντέλο (Lab 27)" : "Android-reported model (Lab 27)",
-            p.getString("lab29_obs_manufacturer", "") + " / "
-                    + p.getString("lab29_obs_model", ""));
-    logLabelValue(gr ? "Κωδικός συσκευής (Lab 27)" : "Android-reported device (Lab 27)",
-            p.getString("lab29_obs_device", ""));
-    logLabelValue(gr ? "Ταυτότητα υλικού" : "Hardware identity",
-            gr ? "Καταγραφή Android, όχι ανεξάρτητη πιστοποίηση κατασκευαστή."
-               : "Android-reported identity, not independent OEM certification.");
-} else {
-    logLabelValue(gr ? "Στοιχεία Lab 27" : "Lab 27 observations",
-            gr ? "Δεν υπάρχουν πρόσφατες παρατηρήσεις της ίδιας εκκίνησης."
-               : "No recent same-boot observations.");
-}
-appendHtml("<br>");
-logLabelValue(gr ? "Εξωτερικός έλεγχος IMEI" : "External IMEI check",
-        gr ? "Το Lab 27 παρέχει οδηγίες και εξωτερικό σύνδεσμο. Η εφαρμογή δεν ζητά ούτε καταγράφει αποτελέσματα."
-           : "Lab 27 provides instructions and an external link. The app neither requests nor records results.");
-
-// ------------------------------------------------------------
 // ------------------------------------------------------------
 // UNIFIED HARDWARE RISK SCORE
 // ------------------------------------------------------------
@@ -32459,13 +32521,16 @@ logInfo(gr ? "Συντάχθηκε πληροφοριακή αναφορά GEL �
 logLine();
 
 appendHtml("<br>");
-logOk(gr ? "Το Lab 28 ολοκληρώθηκε (σύνταξη πληροφοριακής σύνοψης)."
-         : "Lab 28 finished (evidence summary compiled).");
+// Snapshot is finalized only after the report has been assembled.
+lab29SaveTechnicalAssessmentFromLab25(p);
+
+logOk(gr ? "Το Lab 27 ολοκληρώθηκε (σύνταξη πληροφοριακής σύνοψης)."
+         : "Lab 27 finished (evidence summary compiled).");
 logLine();
 }
 
 // ============================================================
-// ======= LAB 28 INTERNAL AUTO HELPERS (SAFE, NO IMPORTS) =====
+// ======= LAB 27 INTERNAL AUTO HELPERS (SAFE, NO IMPORTS) =====
 // ============================================================
 
 private StorageSnapshot readStorageSnapshot() {
