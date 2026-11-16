@@ -36,7 +36,7 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         assertTrue(lab.contains("parseAndCacheSignature(block)"));
         assertFalse(lab.contains("parseAndCacheSignature(panicLogText)"));
         assertTrue(lab.contains("Η τρέχουσα σταθερότητα του iPhone δεν μετρήθηκε"));
-        assertTrue(lab.contains("Τα"));
+        assertTrue(lab.contains("Οι καταγραφές εξετάζονται ανεξάρτητα"));
         assertTrue(lab.contains("Το Lab 3 ολοκληρώθηκε."));
     }
 
