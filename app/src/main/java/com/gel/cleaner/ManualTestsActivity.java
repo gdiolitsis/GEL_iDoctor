@@ -28929,39 +28929,70 @@ private void lab22SecurityPatchAndPlayProtect() {
         }
     }
 
-    // 2. Presence of settings does not prove Play Protect is enabled.
-    // The Android package verifier flag must NOT be presented as proof.
+    // 2. Ask Google Play services about Verify Apps enrollment via the
+    // documented SafetyNet Verify Apps API. Its response is an actual
+    // service-side signal, unlike Play Store presence or Android global flags.
+    // Legacy Verify Apps is not a full Play Integrity Play Protect verdict;
+    // do not claim it performed a device malware scan or certified safety.
     logLine();
     logInfo(gr ? "2. Προστασία από κακόβουλες εφαρμογές"
                : "2. Protection from harmful apps");
 
-    boolean settingsAvailable = false;
+    final int requestId = ++lab22BulletinRunId;
+    final java.util.concurrent.atomic.AtomicBoolean verifyAppsResolved =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+    final Runnable verifyAppsUnavailable = () -> {
+        if (!verifyAppsResolved.compareAndSet(false, true)) return;
+        if (isFinishing() || isDestroyed() || requestId != lab22BulletinRunId) return;
+        logLabelValue(
+                gr ? "Επαλήθευση εφαρμογών Google" : "Google Verify Apps",
+                gr ? "Δεν ήταν δυνατή η επιβεβαίωση της κατάστασης"
+                   : "Status could not be verified");
+        logInfo(gr
+                ? "Η μη διαθέσιμη απάντηση δεν σημαίνει ότι η προστασία είναι ανενεργή."
+                : "An unavailable response does not mean protection is disabled.");
+    };
+
     try {
-        PackageManager pm = getPackageManager();
-        Intent settingsIntent = new Intent();
-        settingsIntent.setClassName(
-                "com.google.android.gms",
-                "com.google.android.gms.security.settings.VerifyAppsSettingsActivity"
-        );
-        settingsAvailable = settingsIntent.resolveActivity(pm) != null;
+        // Timeout protects the UX if Google Play services never responds.
+        ui.postDelayed(verifyAppsUnavailable, 8000L);
+        com.google.android.gms.safetynet.SafetyNet.getClient(this)
+                .isVerifyAppsEnabled()
+                .addOnCompleteListener(this, task -> {
+                    if (!verifyAppsResolved.compareAndSet(false, true)) return;
+                    if (isFinishing() || isDestroyed() || requestId != lab22BulletinRunId) return;
+                    try {
+                        if (!task.isSuccessful() || task.getResult() == null) {
+                            logLabelValue(
+                                    gr ? "Επαλήθευση εφαρμογών Google" : "Google Verify Apps",
+                                    gr ? "Δεν ήταν δυνατή η επιβεβαίωση της κατάστασης"
+                                       : "Status could not be verified");
+                            return;
+                        }
+                        boolean enabled = task.getResult().isVerifyAppsEnabled();
+                        if (enabled) {
+                            logLabelOkValue(
+                                    gr ? "Επαλήθευση εφαρμογών Google" : "Google Verify Apps",
+                                    gr ? "Ενεργή (επιβεβαιώθηκε από υπηρεσίες Google)"
+                                       : "Enabled (confirmed by Google services)");
+                        } else {
+                            logLabelWarnValue(
+                                    gr ? "Επαλήθευση εφαρμογών Google" : "Google Verify Apps",
+                                    gr ? "Ανενεργή — ενεργοποιήστε τη σάρωση στο Play Protect"
+                                       : "Disabled — enable scanning in Play Protect");
+                        }
+                        logInfo(gr
+                                ? "Ελέγχθηκε η ρύθμιση επαλήθευσης, όχι η παρουσία κακόβουλου λογισμικού. Δεν πραγματοποιήθηκε σάρωση."
+                                : "Verification enrollment was checked, not malware presence. No scan was performed.");
+                    } catch (Throwable error) {
+                        logLabelValue(
+                                gr ? "Επαλήθευση εφαρμογών Google" : "Google Verify Apps",
+                                gr ? "Δεν ήταν δυνατή η ανάγνωση της απάντησης"
+                                   : "Could not read the verification response");
+                    }
+                });
     } catch (Throwable ignored) {
-        // Unknown remains unknown. No elevated privileges or scan attempted.
-    }
-
-    logLabelValue(
-            "Play Protect",
-            gr ? "Δεν επιβεβαιώθηκε η κατάστασή του."
-               : "Its status was not verified."
-    );
-
-    if (settingsAvailable) {
-        logInfo(gr
-                ? "Εντοπίστηκε πρόσβαση σε σχετικές ρυθμίσεις, αλλά δεν γνωρίζουμε αν η προστασία είναι ενεργή. Δεν πραγματοποιήθηκε σάρωση από το εργαστήριο."
-                : "Relevant settings were found, but we do not know whether protection is active. This lab did not scan the device.");
-    } else {
-        logInfo(gr
-                ? "Δεν επιβεβαιώθηκε πρόσβαση στις σχετικές ρυθμίσεις. Δεν γνωρίζουμε αν η προστασία είναι ενεργή. Δεν πραγματοποιήθηκε σάρωση από το εργαστήριο."
-                : "Access to the relevant settings was not verified. We do not know whether protection is active. This lab did not scan the device.");
+        verifyAppsUnavailable.run();
     }
 
     // 3. Two short, actionable instructions; no technical jargon.
@@ -28979,7 +29010,6 @@ private void lab22SecurityPatchAndPlayProtect() {
     logInfo(gr ? "4. Online σύγκριση με επίσημο δελτίο Android"
                : "4. Online comparison with official Android bulletin");
     final String installedPatch = patch;
-    final int requestId = ++lab22BulletinRunId;
     new Thread(() -> {
         final java.time.LocalDate latest =
                 AndroidSecurityBulletinChecker.fetchLatestPublishedPatchLevel();
