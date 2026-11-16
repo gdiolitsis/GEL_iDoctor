@@ -13869,10 +13869,26 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
     batteryPercent = Math.max(0, getBatteryPercentSafe());
 
     // --------------------------------------------------
-    // 🔴 BASELINE CAPACITY — SHARED EXACTLY WITH LAB 14B/Γ
+    // 🔴 BASELINE CAPACITY
     // --------------------------------------------------
+    baselineFullMah = -1;
     lab14HasReportedCapacity = start.chargeFullMah > 0 || start.chargeDesignMah > 0;
-    baselineFullMah = lab14CommonReferenceCapacityMah(start, batteryPercent);
+
+    if (start.chargeFullMah > 0) {
+        baselineFullMah = start.chargeFullMah;
+
+    } else if (start.chargeDesignMah > 0) {
+        baselineFullMah = start.chargeDesignMah;
+
+    } else if (start.chargeNowMah > 0 && batteryPercent > 5) {
+
+        float percent = batteryPercent / 100.0f;
+
+        if (percent > 0.01f) {
+            baselineFullMah =
+                    (long) (start.chargeNowMah / percent);
+        }
+    }
 
     boolean rooted = idoctor.isDeviceRooted();
     Float cpuTempStart = readCpuTempSafe();
@@ -22075,23 +22091,6 @@ logLabelValue(
 }
 
 // ============================================================
-// LAB 14A / 14B / 14Γ — ONE CAPACITY REFERENCE CALCULATION
-// ============================================================
-// Both tests use the same precedence and extrapolation arithmetic.
-// Different snapshots (charge_now and SoC) can still yield slightly
-// different valid results; never silently replace one with the other.
-private long lab14CommonReferenceCapacityMah(
-        iDoctorEngine.BatterySnapshot snapshot, int levelPercent) {
-    if (snapshot == null) return -1L;
-    if (snapshot.chargeFullMah > 0L) return snapshot.chargeFullMah;
-    if (snapshot.chargeDesignMah > 0L) return snapshot.chargeDesignMah;
-    if (snapshot.chargeNowMah > 0L && levelPercent > 5 && levelPercent <= 100) {
-        return (long) (snapshot.chargeNowMah / (levelPercent / 100.0f));
-    }
-    return -1L;
-}
-
-// ============================================================
 // LAB 14B — battery duration estimation
 // ============================================================
 private void lab14BBatteryDurationTest() {
@@ -22209,16 +22208,32 @@ synchronized (lab14Lock) {
 startMah[0] = snap0.chargeNowMah;
 
 // ------------------------------------------------
-// 🔴 BASELINE CAPACITY — SAME CALCULATION AS LAB 14A
+// 🔴 BASELINE CAPACITY (DYNAMIC, NO HARDCODE)
 // ------------------------------------------------
-final int capacityLevel = getBatteryPercentSafe();
-lab14bBaselineMah = lab14CommonReferenceCapacityMah(snap0, capacityLevel);
-if (snap0.chargeFullMah > 0L) {
+if (snap0.chargeFullMah > 1000) {
+
+    lab14bBaselineMah = snap0.chargeFullMah;
     capacityProvenance[0] = "ANDROID_FULL_REPORTED";
-} else if (snap0.chargeDesignMah > 0L) {
+
+} else if (snap0.chargeDesignMah > 1000) {
+
+    lab14bBaselineMah = snap0.chargeDesignMah;
     capacityProvenance[0] = "DESIGN_NOMINAL";
-} else if (lab14bBaselineMah > 0L) {
-    capacityProvenance[0] = "EXTRAPOLATED_FROM_LEVEL";
+
+} else {
+
+    int pct = getBatteryPercentSafe();
+
+    if (snap0.chargeNowMah > 0 && pct > 5 && pct <= 100) {
+
+        lab14bBaselineMah =
+                (long) (snap0.chargeNowMah / (pct / 100.0f));
+        capacityProvenance[0] = "EXTRAPOLATED_FROM_LEVEL";
+
+    } else {
+
+        lab14bBaselineMah = -1L; // ❗ no fake capacity
+    }
 }
 
 // ------------------------------------------------
