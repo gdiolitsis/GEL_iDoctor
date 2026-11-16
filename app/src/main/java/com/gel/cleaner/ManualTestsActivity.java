@@ -26341,6 +26341,9 @@ private void lab17RunAuto() {
             ? lastValidStressTs : legacyCompletedStressTs;
     final String lab14StressClass =
             lab14Records.getString("lab14_stress_response_class", null);
+    final float lab14SagVolts = lab14Records.getFloat("lab14_stress_sag_volts", -1f);
+    final float lab14DrainMahPerHour =
+            lab14Records.getFloat("lab14_stress_drain_mah_per_hour", -1f);
     final float lab14Health = p.getFloat("lab14_health_score", -1f);
     final int lab14Aging = p.getInt("lab14_aging_index", -1);
 
@@ -26467,12 +26470,28 @@ if (lab14bEstimatedHours > 0f && battPct > 0f) {
     final String lab15StrengthLabel =
             p.getString("lab15_strength_label", null);
     final long ts15 = p.getLong("lab15_ts", 0L);
+    // Actual recorded Lab 15 observations; historical run categories are
+    // accepted as limited evidence but never converted into a fake current.
+    final String lab15RateBand = p.getString("lab15_rate_band", null);
+    final float lab15NetRate = p.getFloat("lab15_net_rate_mah_per_min", -1f);
+    final boolean lab15RateKnown = p.getBoolean("lab15_evidence_rate_known", false);
+    final boolean lab15ObservedDisconnect = p.getBoolean("lab15_flap_observed", false);
+    final boolean lab15ObservedOvertemp = p.getBoolean("lab15_overtemp_observed",
+            p.getBoolean("lab15_overtemp", false));
 
-    // LAB 16
+    // LAB 16: prefer measured thermal details over a synthetic score.
     final int lab16Thermal = p.getInt("lab16_thermal_score", -1);
-    final boolean lab16ThermalDanger =
-            p.getBoolean("lab16_thermal_danger", false);
+    final boolean lab16ThermalDanger = p.getBoolean("lab16_thermal_danger", false);
     final long ts16 = p.getLong("lab16_last_ts", 0L);
+    final int lab16OsThermalStatus = p.getInt("lab16_os_thermal_status", -1);
+    final int lab16AvailableSensors = p.getInt("lab16_total_readings", 0);
+    final int lab16ChipSensors = p.getInt("lab16_chip_readings", 0);
+    final float lab16PeakTemp = p.getFloat("lab16_peak_temp", -1f);
+    final boolean lab16HasEvidence = p.getBoolean("lab16_evidence_available",
+            lab16AvailableSensors > 0 || lab16OsThermalStatus >= 0);
+    final boolean lab16ThermalWarning = p.getBoolean("lab16_thermal_warning",
+            lab16ThermalDanger || lab16PeakTemp >= 45f
+                    || lab16OsThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE);
 
     // ------------------------------------------------------------
 // PRESENCE + FRESHNESS CHECK (CLEAN)
@@ -26485,10 +26504,10 @@ final boolean has14b =
         (ts14b > 0L);
 
 final boolean has15 =
-        (lab15Charge >= 0 && ts15 > 0L);
+        ts15 > 0L; // completed charging observation, even when rate is unknown.
 
 final boolean has16 =
-        (lab16Thermal >= 0 && ts16 > 0L);
+        ts16 > 0L; // completed thermal snapshot, even with limited sensor access.
 
 // ------------------------------------------------------------
 // FRESHNESS
@@ -26672,70 +26691,202 @@ final boolean fresh16 =
                    : "LAB 17 — Combined available observations");
         logLine();
 
-        logLabelOkValue(
-                gr ? "Lab 14A — δοκιμή καταπόνησης" : "Lab 14A — stress test",
+        // LAB 14A: confirmed stress-test execution and its own observations.
+        logLabelOkValue(gr ? "Lab 14A — δοκιμή καταπόνησης" : "Lab 14A — stress test",
                 gr ? "Ολοκληρώθηκε (πριν " + lab17_age(now - ts14) + ")"
                    : "Completed (" + lab17_age(now - ts14) + " ago)");
+        boolean stressClassKnown = lab14StressClass != null
+                && ("Excellent".equals(lab14StressClass)
+                    || "Good".equals(lab14StressClass)
+                    || "Normal".equals(lab14StressClass)
+                    || "Weak".equals(lab14StressClass)
+                    || "Critical".equals(lab14StressClass));
+        boolean stressClassWarn = "Weak".equals(lab14StressClass)
+                || "Critical".equals(lab14StressClass);
+        boolean stressSagWarn = Float.isFinite(lab14SagVolts)
+                && lab14SagVolts >= 0.080f;
+        boolean stressConcern = stressClassWarn || stressSagWarn
+                || lab14Unstable || lab14CollapseObserved || lab14GaugeDiscrepancy;
 
-        if (lab14StressClass != null && !lab14StressClass.trim().isEmpty()
-                && !"Unknown".equals(lab14StressClass)) {
-            String stressClassText = lab14DisplayStressClass(lab14StressClass, gr)
-                    + (gr ? " — πειραματική απόκριση, όχι SoH"
-                          : " — observed stress response, not SoH");
-            if ("Weak".equals(lab14StressClass)
-                    || "Critical".equals(lab14StressClass)) {
+        if (stressClassKnown) {
+            String observedClass = lab14DisplayStressClass(lab14StressClass, gr)
+                    + (gr ? " — απόκριση στο συγκεκριμένο φορτίο, όχι SoH"
+                          : " — response to this load, not SoH");
+            if (stressClassWarn) {
                 logLabelWarnValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
-                        stressClassText);
+                        observedClass);
             } else {
                 logLabelOkValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
-                        stressClassText);
+                        observedClass);
             }
+        } else {
+            // Legacy completed runs did not persist their stress category.
+            logLabelValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
+                    gr ? "Δεν αποθηκεύτηκε ξεχωριστή κατηγορία — όχι μέτρηση SoH"
+                       : "Separate category not stored — not an SoH measurement");
+        }
+        if (Float.isFinite(lab14SagVolts) && lab14SagVolts > 0f) {
+            String sagText = String.format(Locale.US, "%.3f V", lab14SagVolts);
+            if (stressSagWarn) {
+                logLabelWarnValue(gr ? "Πτώση τάσης Lab 14A" : "Lab 14A voltage sag",
+                        sagText);
+            } else {
+                logLabelOkValue(gr ? "Πτώση τάσης Lab 14A" : "Lab 14A voltage sag",
+                        sagText);
+            }
+        }
+        if (Float.isFinite(lab14DrainMahPerHour) && lab14DrainMahPerHour > 0f) {
+            logLabelOkValue(gr ? "Ρυθμός αποφόρτισης Lab 14A" : "Lab 14A drain rate",
+                    String.format(Locale.US, "%.0f mAh/h", lab14DrainMahPerHour));
         }
         if (lab14Unstable) {
             logLabelWarnValue(gr ? "Επαναληψιμότητα Lab 14A" : "Lab 14A repeatability",
-                    gr ? "Καταγράφηκε μεταβλητότητα — χρειάζεται σύγκριση"
-                       : "Variation recorded — compare repeated runs");
+                    gr ? "Μεταβλητότητα μεταξύ εκτελέσεων — χρειάζεται σύγκριση"
+                       : "Variation between runs — comparison needed");
         }
         if (lab14CollapseObserved) {
             logLabelWarnValue(gr ? "Απότομη πτώση τάσης" : "Abrupt voltage drop",
-                    gr ? "Καταγράφηκε ένδειξη προς επαλήθευση"
-                       : "A pattern was recorded for verification");
+                    gr ? "Ένδειξη προς επαλήθευση" : "Finding requires verification");
         }
         if (lab14GaugeDiscrepancy) {
             logLabelWarnValue(gr ? "Ένδειξη στάθμης μπαταρίας" : "Battery gauge reading",
-                    gr ? "Παρατηρήθηκε ασυμφωνία — επαναλάβετε για επιβεβαίωση"
-                       : "Possible discrepancy — repeat to verify");
+                    gr ? "Ασυμφωνία προς επιβεβαίωση" : "Possible discrepancy to verify");
         }
 
-        // LAB 15's existing numeric score is a heuristic, not charging watts.
-        if (lab15StrengthLabel == null) {
-            logLabelValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                    gr ? "Η δοκιμή ολοκληρώθηκε — δεν υπάρχει κατηγορία ρυθμού"
-                       : "Test completed — rate category unavailable");
-        } else if ("WEAK".equals(lab15StrengthLabel) || lab15SystemLimited) {
-            logLabelWarnValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                    gr ? "Μέτριος/χαμηλός καθαρός ρυθμός ή περιορισμός — ελέγξτε πρώτα φορτιστή και καλώδιο"
-                       : "Moderate/low net rate or limitation — check charger and cable first");
+        // LAB 15: measured NET charging gain and observed charging events.
+        boolean chargeRateWarn = "MODERATE".equals(lab15RateBand)
+                || "LOW".equals(lab15RateBand)
+                || (lab15RateBand == null && "WEAK".equals(lab15StrengthLabel));
+        boolean chargeConcern = chargeRateWarn || lab15ObservedDisconnect
+                || lab15ObservedOvertemp || lab15SystemLimited;
+        boolean chargeRateAvailable = lab15RateKnown
+                && Float.isFinite(lab15NetRate) && lab15NetRate >= 0f
+                && lab15RateBand != null && !"UNKNOWN".equals(lab15RateBand);
+
+        if (chargeRateAvailable) {
+            String bandText = "HIGH".equals(lab15RateBand)
+                    ? (gr ? "Υψηλός" : "High")
+                    : "TYPICAL".equals(lab15RateBand)
+                    ? (gr ? "Συνήθης" : "Typical")
+                    : "MODERATE".equals(lab15RateBand)
+                    ? (gr ? "Μέτριος" : "Moderate")
+                    : (gr ? "Χαμηλός" : "Low");
+            String rateText = String.format(Locale.US, "%s — %.1f mAh/min",
+                    bandText, lab15NetRate);
+            if (chargeRateWarn) {
+                logLabelWarnValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
+                        rateText);
+            } else {
+                logLabelOkValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
+                        rateText);
+            }
+        } else if (lab15RateBand == null && lab15StrengthLabel != null) {
+            // Legacy evidence: preserve the category without inventing mAh/min.
+            if (chargeRateWarn) {
+                logLabelWarnValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
+                        gr ? "Καταγράφηκε μέτριος/χαμηλός ρυθμός (παλαιότερη δοκιμή)"
+                           : "Moderate/low rate recorded (legacy run)");
+            } else {
+                logLabelOkValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
+                        gr ? "Δεν καταγράφηκε χαμηλός ρυθμός (παλαιότερη δοκιμή)"
+                           : "No low rate recorded (legacy run)");
+            }
         } else {
-            logLabelOkValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                    gr ? "Δεν παρατηρήθηκε χαμηλός καθαρός ρυθμός"
-                       : "No low net charging rate was flagged");
+            logLabelValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
+                    gr ? "Η δοκιμή εκτελέστηκε, αλλά ο καθαρός ρυθμός δεν τεκμηριώθηκε"
+                       : "Test completed, but net charging rate was unavailable");
         }
-        if (lab16ThermalDanger || lab16Thermal < 60) {
+        if (lab15ObservedOvertemp) {
+            logLabelWarnValue(gr ? "Lab 15 — θέρμανση φόρτισης" : "Lab 15 — charging heat",
+                    gr ? "Καταγράφηκε αυξημένη θερμοκρασία"
+                       : "Elevated temperature recorded");
+        }
+        if (lab15ObservedDisconnect) {
+            logLabelWarnValue(gr ? "Lab 15 — σύνδεση φόρτισης" : "Lab 15 — charging link",
+                    gr ? "Καταγράφηκαν διακοπές σύνδεσης"
+                       : "Charging interruptions recorded");
+        }
+
+        // LAB 16: use the actual OS thermal state, sensor coverage, and peak
+        // temperature. No synthetic 0–100 thermal score participates.
+        boolean thermalConcern = lab16ThermalWarning;
+        if (lab16OsThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE) {
+            logLabelErrorValue(gr ? "Lab 16 — θερμική κατάσταση" : "Lab 16 — thermal state",
+                    gr ? "Το Android ανέφερε σοβαρή θερμική προστασία"
+                       : "Android reported severe thermal protection");
+        } else if (thermalConcern) {
             logLabelWarnValue(gr ? "Lab 16 — θερμική κατάσταση" : "Lab 16 — thermal state",
-                    gr ? "Καταγράφηκε θερμική προειδοποίηση"
-                       : "Thermal warning recorded");
+                    gr ? "Αυξημένη ένδειξη ή θερμικός περιορισμός"
+                       : "Elevated reading or thermal limitation");
+        } else if (!lab16HasEvidence) {
+            logLabelValue(gr ? "Lab 16 — θερμική κατάσταση" : "Lab 16 — thermal state",
+                    gr ? "Δεν διατέθηκαν επαρκή θερμικά δεδομένα"
+                       : "No sufficient thermal evidence available");
+        } else if (lab16AvailableSensors > 0 && lab16ChipSensors == 0
+                && lab16OsThermalStatus < 0) {
+            logLabelValue(gr ? "Lab 16 — θερμική κατάσταση" : "Lab 16 — thermal state",
+                    gr ? "Μερική κάλυψη αισθητήρων — δεν ελέγχθηκαν CPU/GPU"
+                       : "Limited sensor coverage — CPU/GPU not checked");
         } else {
             logLabelOkValue(gr ? "Lab 16 — θερμική κατάσταση" : "Lab 16 — thermal state",
-                    gr ? "Δεν αναφέρθηκε θερμική προειδοποίηση στον έλεγχο"
-                       : "No thermal warning reported during the check");
+                    gr ? "Δεν αναφέρθηκε θερμική προειδοποίηση στα διαθέσιμα δεδομένα"
+                       : "No thermal warning in available readings");
+        }
+        if (Float.isFinite(lab16PeakTemp) && lab16PeakTemp > 0f) {
+            String peak = String.format(Locale.US, "%.1f°C", lab16PeakTemp);
+            if (lab16PeakTemp >= 55f) {
+                logLabelErrorValue(gr ? "Lab 16 — μέγιστη θερμοκρασία"
+                        : "Lab 16 — peak temperature", peak);
+            } else if (lab16PeakTemp >= 45f) {
+                logLabelWarnValue(gr ? "Lab 16 — μέγιστη θερμοκρασία"
+                        : "Lab 16 — peak temperature", peak);
+            } else {
+                logLabelOkValue(gr ? "Lab 16 — μέγιστη θερμοκρασία"
+                        : "Lab 16 — peak temperature", peak);
+            }
         }
 
+        // Cross-lab synthesis: combine recorded findings, never numeric weights.
+        appendHtml("<br>");
+        logInfo(gr ? "Συνδυαστικό συμπέρασμα" : "Cross-lab conclusion");
+        boolean completeCoverage = stressClassKnown && chargeRateAvailable
+                && lab16HasEvidence
+                && (lab16ChipSensors > 0 || lab16OsThermalStatus >= 0);
+        if (chargeConcern && thermalConcern) {
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Η φόρτιση και η θερμική συμπεριφορά χρειάζονται επανέλεγχο"
+                       : "Charging and thermal behavior require follow-up");
+        } else if (chargeConcern && stressConcern) {
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Υπάρχουν ενδείξεις προς επανέλεγχο στη φόρτιση και στην απόκριση καταπόνησης"
+                       : "Charging and stress response both show findings to review");
+        } else if (chargeConcern) {
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Η φόρτιση χρειάζεται επανέλεγχο· δεν τεκμηριώνεται βλάβη της συσκευής"
+                       : "Charging needs follow-up; no device fault has been established");
+        } else if (thermalConcern || stressConcern) {
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Υπάρχει ένδειξη καταπόνησης ή θερμοκρασίας προς επαλήθευση"
+                       : "Stress or thermal findings warrant verification");
+        } else if (!completeCoverage) {
+            logLabelValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Δεν προέκυψε καταγεγραμμένη προειδοποίηση, αλλά η κάλυψη είναι μερική"
+                       : "No recorded warning, but diagnostic coverage is incomplete");
+        } else {
+            logLabelOkValue(gr ? "Αποτέλεσμα" : "Result",
+                    gr ? "Δεν προέκυψε συγκεκριμένη ανωμαλία στα καταγεγραμμένα ευρήματα"
+                       : "No specific anomaly in the recorded observations");
+        }
+        if (chargeConcern) {
+            logLabelWarnValue(gr ? "Προτεινόμενος έλεγχος" : "Recommended check",
+                    gr ? "Δοκιμή με άλλο συμβατό καλώδιο/φορτιστή και επανάληψη με χαμηλό φόρτο"
+                       : "Repeat with another compatible cable/charger under light use");
+        }
         logInfo(gr
                 ? "Το Lab 17 συνδυάζει καταγεγραμμένα ευρήματα. Δεν υπολογίζει ποσοστό υγείας μπαταρίας (SoH)."
                 : "Lab 17 combines recorded findings. It does not calculate battery state of health (SoH).");
 
-        // Invalidate legacy composite numbers, which are not measured SoH.
+        // Invalidate legacy numeric composites; they were not measured SoH.
         p.edit().remove("lab17_final_score").remove("lab17_category")
                 .remove("lab17_ts").remove("lab17_heuristic_index")
                 .remove("lab17_heuristic_category").remove("lab17_heuristic_ts")
