@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import static org.junit.Assert.*;
 
-/** Cross-lab source contract: PRO Lab 28 cannot complete without Lab 25. */
+/** Stage-1 renumbering contract: PRO Lab 27 cannot complete without Lab 25. */
 public final class Lab28RequiresLab25ContractTest {
     private static String source() throws Exception {
         Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
@@ -40,7 +40,7 @@ public final class Lab28RequiresLab25ContractTest {
                 "private void showLab29ExternalGuidanceDialog(boolean gr)");
         int recheck = run.indexOf("if (!lab28RequireExecutedLab25()) return;");
         int report = run.indexOf("lab28ShowLab25BuyerAssessment(gr);");
-        int completion = run.indexOf("Το Lab 28 ολοκληρώθηκε");
+        int completion = run.indexOf("Το Lab 27 ολοκληρώθηκε");
         assertTrue(recheck >= 0 && report > recheck);
         assertTrue(completion > report);
         assertTrue(run.contains("showLab29ExternalGuidanceDialog(gr);"));
