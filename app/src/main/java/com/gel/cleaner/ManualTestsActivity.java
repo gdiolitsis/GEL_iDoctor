@@ -25777,35 +25777,55 @@ logInfo(gr ? "Απόφαση LAB:" : "LAB decision:");
 logLine();
 
 if (!lab15_strengthKnown) {
+    // Missing comparable counter values: neither a weak-rate nor a defect verdict.
     logInfo(gr
             ? "Σύστημα φόρτισης: δεν πιστοποιήθηκε λόγω ανεπαρκών δεδομένων."
             : "Charging system: not verified due to insufficient data.");
-} else if (!lab15OverTempDuringCharge && !lab15FlapUnstable && !lab15_strengthWeak) {
-
+} else if (lab15OverTempDuringCharge) {
+    logLabelWarnValue(
+            gr ? "Εύρημα φόρτισης" : "Charging observation",
+            gr
+                    ? "Αυξημένη θερμοκρασία κατά τη φόρτιση — η αιτία δεν προσδιορίστηκε"
+                    : "Elevated temperature during charging — cause not determined");
+    logLabelWarnValue(
+            gr ? "Σύσταση" : "Recommendation",
+            gr
+                    ? "Διακόψτε τη φόρτιση και αφήστε τη συσκευή να κρυώσει. Ελέγξτε φορτιστή και καλώδιο· αν επαναληφθεί, ζητήστε τεχνικό έλεγχο."
+                    : "Stop charging and let the device cool. Check the charger and cable; seek a technician if this recurs.");
+} else if (lab15FlapUnstable) {
+    logLabelWarnValue(
+            gr ? "Εύρημα φόρτισης" : "Charging observation",
+            gr
+                    ? "Παρατηρήθηκαν διακοπές σύνδεσης — δεν εντοπίστηκε η αιτία"
+                    : "Charging connection interruptions observed — cause not identified");
+    logLabelWarnValue(
+            gr ? "Σύσταση" : "Recommendation",
+            gr
+                    ? "Δοκιμάστε άλλο συμβατό καλώδιο και φορτιστή, ελέγξτε οπτικά τη θύρα και επαναλάβετε. Αν συνεχιστούν οι διακοπές, ζητήστε τεχνικό έλεγχο."
+                    : "Try another compatible cable and charger, visually inspect the port, and repeat. Seek a technician if interruptions persist.");
+} else if (lab15_strengthWeak) {
+    // A modest NET increase over three minutes is not charger input power,
+    // and cannot attribute the cause to a battery, connector, cable or charger.
+    logLabelWarnValue(
+            gr ? "Εύρημα φόρτισης" : "Charging observation",
+            gr
+                    ? "Μέτριος ή χαμηλός καθαρός ρυθμός στο τρίλεπτο — δεν αποδεικνύει βλάβη της συσκευής"
+                    : "Moderate or low net charging rate over three minutes — not proof of a device defect");
+    logInfo(gr
+            ? "Ο καθαρός ρυθμός δεν είναι η ισχύς του φορτιστή. Μπορεί να επηρεάζεται από καλώδιο, φορτιστή και παράλληλη κατανάλωση της συσκευής."
+            : "Net charge gain is not charger input power. Cable, charger and concurrent device usage may affect it.");
+    logLabelWarnValue(
+            gr ? "Σύσταση" : "Recommendation",
+            gr
+                    ? "Ελέγξτε πρώτα με άλλο συμβατό καλώδιο και φορτιστή. Επαναλάβετε τη δοκιμή χωρίς έντονη χρήση· αν ο χαμηλός ρυθμός επιμένει, ζητήστε τεχνικό έλεγχο."
+                    : "First try another compatible cable and charger. Repeat without heavy device use; seek technical inspection if the low rate persists.");
+} else {
     logLabelOkValue(
             gr ? "Σύστημα φόρτισης" : "Charging system",
             gr
                     ? "Δεν παρατηρήθηκε πρόβλημα στο τρίλεπτο τεστ — όχι πλήρης πιστοποίηση"
-                    : "No issue observed during 3-minute test — not full certification"
-    );
-
+                    : "No issue observed during 3-minute test — not full certification");
     logLabelOkValue(gr ? "Σταθερότητα" : "Stability", "OK");
-
-} else {
-
-    logLabelWarnValue(
-            gr ? "Σύστημα φόρτισης" : "Charging system",
-            gr
-                    ? "Παρατηρήθηκαν ενδείξεις για επανέλεγχο, όχι απόδειξη βλάβης"
-                    : "Follow-up observations, not proof of a hardware fault"
-    );
-
-    logLabelWarnValue(
-            gr ? "Σύσταση" : "Recommendation",
-            gr
-                    ? "Συνιστάται περαιτέρω έλεγχος ή επανάληψη δοκιμής"
-                    : "Further inspection or repeat test recommended"
-    );
 }
 
 // ------------------------------------------------------------
