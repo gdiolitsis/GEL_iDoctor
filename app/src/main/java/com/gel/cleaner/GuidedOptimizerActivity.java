@@ -2986,8 +2986,8 @@ private void showLabRecommendation() {
                 ? "LAB 25 — Ανάλυση κρασαρισμάτων"
                 : "LAB 25 — Crash intelligence analysis");
         labs.add(gr
-                ? "LAB 30 — Τελική τεχνική αναφορά"
-                : "LAB 30 — Final technical report");
+                ? "LAB 29 — Τελική τεχνική αναφορά"
+                : "LAB 29 — Final technical report");
     }
 
     if (s.contains("data") || s.contains("wifi")) {
@@ -3021,8 +3021,8 @@ private void showLabRecommendation() {
     }
 
     labs.add(gr
-            ? "LAB 29 — Τελική σύνοψη υγείας"
-            : "LAB 29 — Final health summary");
+            ? "LAB 28 — GEL Device Certification"
+            : "LAB 28 — GEL Device Certification");
 
     StringBuilder sb = new StringBuilder();
 
