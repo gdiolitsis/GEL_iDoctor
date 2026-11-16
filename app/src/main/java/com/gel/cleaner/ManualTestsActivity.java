@@ -655,7 +655,7 @@ private float lab14MaxSpikeExcess = 0f;
 private int pendingRestartLab14Mode = 0;
 // 0 = none
 // 1 = LAB 14B
-// 2 = LAB 14 GAMA
+// 2 = LAB 14 GAMMA
 
 private int lab14TempSource = -1;
 private boolean lab14UseSnapshotTemp = false;
@@ -21998,6 +21998,7 @@ private boolean ensurePermissions(String[] permissions, Runnable afterGranted) {
 private boolean checkLab14BConditions() {
 
     final boolean gr = AppLang.isGreek(this);
+    final String labName = isLab14GamaMode ? "LAB 14 GAMMA" : "LAB 14B";
 
     int percent = (int) getCurrentBatteryPercent();
 
@@ -22020,9 +22021,9 @@ private boolean checkLab14BConditions() {
     appendHtml("<br>");
     logLine();
 
-    logInfo(gr
-            ? "LAB 14B - Έλεγχος συνθηκών δοκιμής"
-            : "LAB 14B - Test conditions check");
+    logInfo(labName + (gr
+            ? " - Έλεγχος συνθηκών δοκιμής"
+            : " - Test conditions check"));
 
     logLine();
 
@@ -22054,8 +22055,8 @@ private boolean checkLab14BConditions() {
     if (percent < 30) {
 
         logWarn(gr
-                ? "Το LAB 14B απαιτεί τουλάχιστον 30% μπαταρία."
-                : "LAB 14B requires at least 30% battery.");
+                ? "Το " + labName + " απαιτεί τουλάχιστον 30% μπαταρία."
+                : labName + " requires at least 30% battery.");
 
         logWarn(gr
                 ? "Κάτω από αυτό το επίπεδο μπορεί να επέμβει system protection."
@@ -22100,7 +22101,7 @@ private void lab14BBatteryDurationTest() {
 }
 
 // ============================================================
-// LAB 14 GAMA
+// LAB 14 GAMMA
 // ============================================================
 private void lab14GamingDurationTest() {
     runLab14DurationMode(true);
@@ -22328,10 +22329,10 @@ logLine();
 logInfo(
     gr
     ? (wasGama
-        ? "LAB 14 GAMA ξεκίνησε"
+        ? "LAB 14 GAMMA ξεκίνησε"
         : "LAB 14B ξεκίνησε")
     : (wasGama
-        ? "LAB 14 GAMA started"
+        ? "LAB 14 GAMMA started"
         : "LAB 14B started")
 );
 
@@ -23565,14 +23566,16 @@ private void showLab14BAdvisory(Runnable onContinue) {
 
     final String text =
             gr
-            ? "Η δοκιμή προσομοιώνει καθημερινή χρήση για 5 λεπτά "
+            ? (isLab14GamaMode ? "Η δοκιμή προσομοιώνει gaming χρήση για 5 λεπτά "
+                                 : "Η δοκιμή προσομοιώνει καθημερινή χρήση για 5 λεπτά ")
               + "ώστε να εκτιμηθούν κατανάλωση, διάρκεια και συμπεριφορά μπαταρίας.\n\n"
               + "Προϋποθέσεις:\n"
               + "• Μπαταρία τουλάχιστον 30%\n"
               + "• Η συσκευή να μην φορτίζει\n"
               + "• Airplane Mode ενεργό για σταθερότητα runs."
 
-            : "This test simulates 5 minutes of real device usage "
+            : (isLab14GamaMode ? "This test simulates 5 minutes of gaming usage "
+                                 : "This test simulates 5 minutes of real device usage ")
               + "to estimate battery consumption, endurance "
               + "and battery behavior.\n\n"
               + "Requirements:\n"
@@ -23913,10 +23916,10 @@ private void startLab14DurationPopup(long durationSec, boolean gamaMode) {
     title.setText(
     gr
     ? (wasGama
-        ? "LAB 14 GAMA — Διάρκεια μπαταρίας σε Gaming "
+        ? "LAB 14 GAMMA — Διάρκεια μπαταρίας σε Gaming "
         : "LAB 14B — Διάρκεια μπαταρίας σε καθημερινή χρήση")
     : (wasGama
-        ? "LAB 14 GAMA — Gaming battery endurance"
+        ? "LAB 14 GAMMA — Gaming battery endurance"
         : "LAB 14B — Daily battery usage & duration")
 );
     title.setTextColor(Color.WHITE);
