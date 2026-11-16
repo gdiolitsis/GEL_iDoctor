@@ -15130,6 +15130,11 @@ private void lab14LogSave(
                     .remove("lab14_calibration_drift").putBoolean("lab14_gauge_discrepancy_proxy", calibration)
                     .putBoolean("lab14_battery_auth_suspect", batteryAuthenticitySuspicion)
                     .putLong("lab14_last_ts", System.currentTimeMillis())
+                    // A completed stress run is evidence of execution, never measured SoH.
+                    .putLong("lab14_valid_stress_ts",
+                            validDrain ? System.currentTimeMillis() : 0L)
+                    .putString("lab14_stress_response_class",
+                            validDrain ? lab14LastLabel : "Unknown")
                     .apply();
 
             logLabelOkValue(
@@ -26283,14 +26288,26 @@ private void lab17RunAuto() {
     // ------------------------------------------------------------
     SharedPreferences p = getSharedPreferences(PREF, MODE_PRIVATE);
 
-    // LAB 14 results
+    // LAB 14A saves stress evidence in lab14_prefs, NOT GEL_DIAG.
+    // Completion does not require the obsolete/uncalibrated SoH percentage.
+    final SharedPreferences lab14Records = getSharedPreferences(LAB14_PREFS, MODE_PRIVATE);
+    final long lastValidStressTs = lab14Records.getLong("lab14_valid_stress_ts", 0L);
+    final long legacyCompletedStressTs = lab14Records.getLong("lab14_last_ts", 0L);
+    // Read the old completion timestamp for existing installations as well.
+    final long ts14 = lastValidStressTs > 0L
+            ? lastValidStressTs : legacyCompletedStressTs;
+    final String lab14StressClass =
+            lab14Records.getString("lab14_stress_response_class", null);
     final float lab14Health = p.getFloat("lab14_health_score", -1f);
     final int lab14Aging = p.getInt("lab14_aging_index", -1);
-    final long ts14 = p.getLong("lab14_last_ts", 0L);
 
     // LAB 14 reliability flag (future-safe)
     final boolean lab14Unstable =
-            p.getBoolean("lab14_unstable_measurement", false);
+            lab14Records.getBoolean("lab14_unstable_measurement", false);
+    final boolean lab14CollapseObserved =
+            lab14Records.getBoolean("lab14_collapse_risk", false);
+    final boolean lab14GaugeDiscrepancy =
+            lab14Records.getBoolean("lab14_gauge_discrepancy_proxy", false);
             
 // ------------------------------------------------------------
 // 🔴 MULTIPLIERS (LOCAL SAFE)
@@ -26418,7 +26435,7 @@ if (lab14bEstimatedHours > 0f && battPct > 0f) {
 // PRESENCE + FRESHNESS CHECK (CLEAN)
 // ------------------------------------------------------------
 final boolean has14 =
-        (lab14Health >= 0f && ts14 > 0L);
+        ts14 > 0L; // LAB 14A stress execution, not calibrated SoH.
 
 final boolean has14b =
         (lab14bConsumptionPerHour > 0f) &&
@@ -26478,9 +26495,8 @@ final boolean fresh16 =
 
         if (!has14) {
             msg.append("<font color='#FFFFFF'>")
-               .append(ts14 > 0
-                       ? (gr ? "Μη διαθέσιμο μετρημένο SoH" : "Measured SoH unavailable")
-                       : (gr ? "Απουσιάζει" : "Missing"))
+               .append(gr ? "Δεν βρέθηκε αποθηκευμένη δοκιμή καταπόνησης"
+                          : "No saved stress test found")
                .append("</font><br>");
         } else if (!fresh14) {
             msg.append("<font color='#FFFFFF'>")
@@ -26543,12 +26559,10 @@ final boolean fresh16 =
         // --------------------------------------------------------
         if (!has14) {
             msg.append(gr
-                    ? "Δεν υπάρχει βαθμονομημένη μέτρηση SoH για έγκυρο σύνθετο ποσοστό. "
-                      + "Η επανάληψη του Lab 14 πραγματοποιεί νέα μέτρηση. "
-                      + "Τα επιμέρους εργαστήρια διατηρούν τις μετρήσεις τους.<br>"
-                    : "There is no calibrated SoH measurement for a composite percentage. "
-                      + "Repeating Lab 14 cannot guarantee SoH access. "
-                      + "Individual laboratory results remain available.<br>");
+                    ? "Απουσιάζει πρόσφατη αποθηκευμένη εκτέλεση του Lab 14A. "
+                      + "Απαιτείται δοκιμή καταπόνησης, όχι μέτρηση SoH.<br>"
+                    : "No recent saved Lab 14A stress run was found. "
+                      + "Stress evidence is required, not a measured SoH value.<br>");
         } else if ((fresh14 && fresh15) && !fresh16) {
 
             msg.append(
@@ -26598,6 +26612,94 @@ final boolean fresh16 =
                         : "LAB 17 — Prerequisites Check",
                 msg.toString()
         );
+        return;
+    }
+
+    // ------------------------------------------------------------
+    // CURRENT 14A PATH — EVIDENCE-ONLY CROSS-LAB SUMMARY
+    // ------------------------------------------------------------
+    // Public Android data cannot supply a calibrated SoH. Never synthesize
+    // a battery-health percentage or evaluate a stale legacy heuristic as SoH.
+    if (lab14Health < 0f) {
+        appendHtml("<br>");
+        logLine();
+        logInfo(gr ? "LAB 17 — Συνδυασμός διαθέσιμων αποτελεσμάτων"
+                   : "LAB 17 — Combined available observations");
+        logLine();
+
+        logLabelOkValue(
+                gr ? "Lab 14A — δοκιμή καταπόνησης" : "Lab 14A — stress test",
+                gr ? "Ολοκληρώθηκε (πριν " + lab17_age(now - ts14) + ")"
+                   : "Completed (" + lab17_age(now - ts14) + " ago)");
+
+        if (lab14StressClass != null && !lab14StressClass.trim().isEmpty()
+                && !"Unknown".equals(lab14StressClass)) {
+            String stressClassText = lab14DisplayStressClass(lab14StressClass, gr)
+                    + (gr ? " — πειραματική απόκριση, όχι SoH"
+                          : " — observed stress response, not SoH");
+            if ("Weak".equals(lab14StressClass)
+                    || "Critical".equals(lab14StressClass)) {
+                logLabelWarnValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
+                        stressClassText);
+            } else {
+                logLabelOkValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
+                        stressClassText);
+            }
+        }
+        if (lab14Unstable) {
+            logLabelWarnValue(gr ? "Επαναληψιμότητα Lab 14A" : "Lab 14A repeatability",
+                    gr ? "Καταγράφηκε μεταβλητότητα — χρειάζεται σύγκριση"
+                       : "Variation recorded — compare repeated runs");
+        }
+        if (lab14CollapseObserved) {
+            logLabelWarnValue(gr ? "Απότομη πτώση τάσης" : "Abrupt voltage drop",
+                    gr ? "Καταγράφηκε ένδειξη προς επαλήθευση"
+                       : "A pattern was recorded for verification");
+        }
+        if (lab14GaugeDiscrepancy) {
+            logLabelWarnValue(gr ? "Ένδειξη στάθμης μπαταρίας" : "Battery gauge reading",
+                    gr ? "Παρατηρήθηκε ασυμφωνία — επαναλάβετε για επιβεβαίωση"
+                       : "Possible discrepancy — repeat to verify");
+        }
+
+        // LAB 15's existing numeric score is a heuristic, not charging watts.
+        if (lab15StrengthLabel == null) {
+            logLabelValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
+                    gr ? "Η δοκιμή ολοκληρώθηκε — δεν υπάρχει κατηγορία ρυθμού"
+                       : "Test completed — rate category unavailable");
+        } else if ("WEAK".equals(lab15StrengthLabel) || lab15SystemLimited) {
+            logLabelWarnValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
+                    gr ? "Μέτριος/χαμηλός καθαρός ρυθμός ή περιορισμός — ελέγξτε πρώτα φορτιστή και καλώδιο"
+                       : "Moderate/low net rate or limitation — check charger and cable first");
+        } else {
+            logLabelOkValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
+                    gr ? "Δεν παρατηρήθηκε χαμηλός καθαρός ρυθμός"
+                       : "No low net charging rate was flagged");
+        }
+        if (lab16ThermalDanger || lab16Thermal < 60) {
+            logLabelWarnValue(gr ? "Lab 16 — θερμική κατάσταση" : "Lab 16 — thermal state",
+                    gr ? "Καταγράφηκε θερμική προειδοποίηση"
+                       : "Thermal warning recorded");
+        } else {
+            logLabelOkValue(gr ? "Lab 16 — θερμική κατάσταση" : "Lab 16 — thermal state",
+                    gr ? "Δεν αναφέρθηκε θερμική προειδοποίηση στον έλεγχο"
+                       : "No thermal warning reported during the check");
+        }
+
+        logInfo(gr
+                ? "Το Lab 17 συνδυάζει καταγεγραμμένα ευρήματα. Δεν υπολογίζει ποσοστό υγείας μπαταρίας (SoH)."
+                : "Lab 17 combines recorded findings. It does not calculate battery state of health (SoH).");
+
+        // Invalidate legacy composite numbers, which are not measured SoH.
+        p.edit().remove("lab17_final_score").remove("lab17_category")
+                .remove("lab17_ts").remove("lab17_heuristic_index")
+                .remove("lab17_heuristic_category").remove("lab17_heuristic_ts")
+                .putLong("lab17_evidence_only_ts", now).apply();
+
+        appendHtml("<br>");
+        logOk(gr ? "Το Lab 17 ολοκληρώθηκε (συνδυασμός πραγματικών ευρημάτων)."
+                 : "Lab 17 finished (combined observed evidence).");
+        logLine();
         return;
     }
 
