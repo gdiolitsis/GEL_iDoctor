@@ -82,7 +82,7 @@ public final class Lab15FastChargerContextContractTest {
         int hot = s.indexOf("if (lab15ObservedOvertemp || thermalConcern || lab14StressThermalWarning) {");
         int low = s.indexOf("} else if (chargeRateWarn) {\n                if (\"YES\"");
         assertTrue("Cooling/heat must take precedence over fast-charger suggestion", hot > 0 && low > hot);
-        assertTrue(s.contains("δεν αποδεικνύεται η αιτία"));
+        assertTrue(s.contains("η αιτία δεν αποδεικνύεται"));
         assertTrue(s.contains("δεν αποδεικνύει βλάβη"));
         assertTrue(s.contains("Lab17ChargingContext.evaluate("));
         assertTrue(s.contains("!chargeEvaluation.unknownChargerWithSlowRate"));
