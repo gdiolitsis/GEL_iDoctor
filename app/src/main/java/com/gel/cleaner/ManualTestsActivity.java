@@ -26858,9 +26858,10 @@ final boolean fresh16 =
         boolean completeCoverage = stressClassKnown && chargeRateAvailable
                 && lab16HasEvidence
                 && (lab16ChipSensors > 0 || lab16OsThermalStatus >= 0);
-        Lab17CombinedConclusion.Decision conclusion = Lab17CombinedConclusion.evaluate(
-                gr, lab14StressClass, independentStressConcern, chargeConcern,
-                thermalConcern, completeCoverage);
+        Lab17CombinedConclusion.Decision conclusion = Lab17CombinedConclusion.evaluateDetailed(
+                gr, lab14StressClass, lab14Unstable,
+                lab14CollapseObserved, lab14GaugeDiscrepancy, lab14StressProxyFlag,
+                chargeConcern, thermalConcern, completeCoverage);
         if (conclusion.tone == Lab17CombinedConclusion.Tone.CAUTION) {
             logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result", conclusion.message);
         } else if (conclusion.tone == Lab17CombinedConclusion.Tone.POSITIVE) {
