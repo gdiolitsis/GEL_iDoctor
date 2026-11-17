@@ -29,6 +29,9 @@ public final class Lab17StressEvidencePrerequisiteContractTest {
         assertTrue(save.contains("putString(\"lab14_stress_response_class\""));
         assertTrue(save.contains("putFloat(\"lab14_stress_sag_volts\""));
         assertTrue(save.contains("putFloat(\"lab14_stress_drain_mah_per_hour\""));
+        assertTrue(save.contains("putBoolean(\"lab14_electrical_behaviour_warning\""));
+        assertTrue(save.contains("putBoolean(\"lab14_stress_thermal_warning\""));
+        assertTrue(save.contains("putBoolean(\"lab14_thermal_rise_valid\""));
         String invocation = block(s, "// SAVE\n", "// RUN COUNT\n");
         assertTrue(invocation.contains("getSharedPreferences(LAB14_PREFS, MODE_PRIVATE)"));
         assertTrue(invocation.contains("lab14LogSave("));
@@ -90,9 +93,12 @@ public final class Lab17StressEvidencePrerequisiteContractTest {
         assertTrue(evidence.contains("lab15ObservedDisconnect"));
         assertTrue(evidence.contains("lab16PeakTemp"));
         assertTrue(evidence.contains("lab16OsThermalStatus"));
-        assertTrue(evidence.contains("Lab17CombinedConclusion.evaluate("));
+        assertTrue(evidence.contains("Lab17CombinedConclusion.evaluateDetailed("));
         assertTrue(evidence.contains("independentStressConcern"));
         assertTrue(evidence.contains("lab14StressProxyFlag"));
+        assertTrue(evidence.contains("lab14ElectricalWarning"));
+        assertTrue(evidence.contains("lab14StressThermalWarning"));
+        assertTrue(evidence.contains("lab14ThermalRiseValid"));
         assertTrue(evidence.contains("boolean completeCoverage ="));
         assertTrue(evidence.contains("thermalConcern, completeCoverage"));
         assertTrue(evidence.contains("Συνδυαστικό συμπέρασμα"));
