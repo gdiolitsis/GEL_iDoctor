@@ -7,6 +7,8 @@ on:
       - 'app/src/main/java/com/gel/cleaner/IPhonePanicServiceSummary.java'
       - 'app/src/test/java/com/gel/cleaner/IPhonePanicServiceSummaryTest.java'
       - 'app/src/test/java/com/gel/cleaner/IPhoneLab8HumanPresentationContractTest.java'
+      - 'app/src/test/java/com/gel/cleaner/IPhoneDemoEvidencePresentationContractTest.java'
+      - 'app/src/test/java/com/gel/cleaner/IPhoneHumanReadableReportContractTest.java'
       - '.github/workflows/qa-v59-iphone-human-verdict.yml'
 
 permissions:
