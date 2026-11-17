@@ -4602,11 +4602,9 @@ private boolean detectHiddenThermalAnomaly(float thresholdC) {
 
                 if (c <= 0 || c > 120) continue;
 
-                String t = type.toLowerCase(Locale.US);
-
-                if (t.contains("battery") ||
-                        t.contains("cpu") ||
-                        t.contains("gpu")) {
+                if (Lab16ThermalCorrelation.alreadyDisplayedZoneType(type)) {
+                    // Battery/CPU/GPU/PMIC/charger/skin already included in
+                    // their named sector readings. Avoid false extra warning.
                     continue;
                 }
 
@@ -26061,7 +26059,9 @@ private void lab16ThermalSnapshot() {
         Lab16ThermalCorrelation.capture(sectorTemps, entry.label, entry.temp);
     }
     // Hidden-zone check remains independent of named thermal sectors.
-    final boolean hiddenRisk = detectHiddenThermalAnomaly(55f);
+    // Unnamed vendor zones have unknown limits; use a conservative screening
+    // threshold, not the battery/surface threshold for their temperature.
+    final boolean hiddenRisk = detectHiddenThermalAnomaly(80f);
     final Lab16ThermalCorrelation.Summary sectorSummary =
             Lab16ThermalCorrelation.evaluate(sectorTemps, -1, hiddenRisk);
 
