@@ -27,7 +27,9 @@ public final class IPhoneHumanReadableReportContractTest {
         String text = lab8();
         assertFalse(text.contains("score"));
         assertFalse(text.contains("/100"));
-        assertTrue(text.contains("Τι δεν έχει επιβεβαιωθεί:"));
+        assertTrue(text.contains("IPhonePanicServiceSummary.interpret("));
+        assertTrue(text.contains("human.whatItMeans"));
+        assertTrue(text.contains("human.repairAdvice"));
         assertTrue(text.contains("Πότε χρειάζεται τεχνικός:"));
         assertTrue(text.contains("IPhonePanicHumanizer.meaning(e.getKey(), gr)"));
     }
