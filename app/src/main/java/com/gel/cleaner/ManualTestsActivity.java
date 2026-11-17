@@ -26341,6 +26341,10 @@ private void lab17RunAuto() {
             lab14Records.getBoolean("lab14_collapse_risk", false);
     final boolean lab14GaugeDiscrepancy =
             lab14Records.getBoolean("lab14_gauge_discrepancy_proxy", false);
+    // Conservative independent signal; this is an experimental proxy, not
+    // proof of physical battery swelling.
+    final boolean lab14StressProxyFlag =
+            lab14Records.getBoolean("lab14_stress_proxy_flag", false);
             
 // ------------------------------------------------------------
 // 🔴 MULTIPLIERS (LOCAL SAFE)
@@ -26688,12 +26692,16 @@ final boolean fresh16 =
                     || "Normal".equals(lab14StressClass)
                     || "Weak".equals(lab14StressClass)
                     || "Critical".equals(lab14StressClass));
-        boolean stressClassWarn = "Weak".equals(lab14StressClass)
-                || "Critical".equals(lab14StressClass);
+        boolean stressClassWarn = "Critical".equals(lab14StressClass);
         boolean stressSagWarn = Float.isFinite(lab14SagVolts)
                 && lab14SagVolts >= 0.080f;
-        boolean stressConcern = stressClassWarn || stressSagWarn
-                || lab14Unstable || lab14CollapseObserved || lab14GaugeDiscrepancy;
+        // A Weak category or a single moderate voltage sag is not, by itself,
+        // independent evidence of battery danger or system malfunction.
+        // Actual saved electrical/proxy/repeatability flags still override
+        // the positive combined conclusion.
+        boolean independentStressConcern = lab14Unstable
+                || lab14CollapseObserved || lab14GaugeDiscrepancy
+                || lab14StressProxyFlag;
 
         if (stressClassKnown) {
             String observedClass = lab14DisplayStressClass(lab14StressClass, gr)
@@ -26701,6 +26709,10 @@ final boolean fresh16 =
                           : " — response to this load, not SoH");
             if (stressClassWarn) {
                 logLabelWarnValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
+                        observedClass);
+            } else if ("Weak".equals(lab14StressClass)) {
+                // Measured under-load limitation, not a proven defect.
+                logLabelValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
                         observedClass);
             } else {
                 logLabelOkValue(gr ? "Απόκριση Lab 14A" : "Lab 14A response",
@@ -26715,7 +26727,8 @@ final boolean fresh16 =
         if (Float.isFinite(lab14SagVolts) && lab14SagVolts > 0f) {
             String sagText = String.format(Locale.US, "%.3f V", lab14SagVolts);
             if (stressSagWarn) {
-                logLabelWarnValue(gr ? "Πτώση τάσης Lab 14A" : "Lab 14A voltage sag",
+                // Record the increased reading without asserting a failure.
+                logLabelValue(gr ? "Πτώση τάσης Lab 14A" : "Lab 14A voltage sag",
                         sagText);
             } else {
                 logLabelOkValue(gr ? "Πτώση τάσης Lab 14A" : "Lab 14A voltage sag",
@@ -26738,6 +26751,11 @@ final boolean fresh16 =
         if (lab14GaugeDiscrepancy) {
             logLabelWarnValue(gr ? "Ένδειξη στάθμης μπαταρίας" : "Battery gauge reading",
                     gr ? "Ασυμφωνία προς επιβεβαίωση" : "Possible discrepancy to verify");
+        }
+        if (lab14StressProxyFlag) {
+            logLabelWarnValue(gr ? "Πρόσθετος δείκτης Lab 14A" : "Lab 14A proxy indicator",
+                    gr ? "Καταγράφηκε έμμεση ένδειξη προς επαλήθευση — όχι επιβεβαίωση φυσικής βλάβης"
+                       : "An indirect signal was flagged for verification — not proof of physical damage");
         }
 
         // LAB 15: measured NET charging gain and observed charging events.
@@ -26833,36 +26851,22 @@ final boolean fresh16 =
             }
         }
 
-        // Cross-lab synthesis: combine recorded findings, never numeric weights.
+        // Intelligent combination of independent Lab 14A / 15 / 16 evidence.
+        // Do not treat a single voltage-sag figure as proof of device harm.
         appendHtml("<br>");
         logInfo(gr ? "Συνδυαστικό συμπέρασμα" : "Cross-lab conclusion");
         boolean completeCoverage = stressClassKnown && chargeRateAvailable
                 && lab16HasEvidence
                 && (lab16ChipSensors > 0 || lab16OsThermalStatus >= 0);
-        if (chargeConcern && thermalConcern) {
-            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
-                    gr ? "Η φόρτιση και η θερμική συμπεριφορά χρειάζονται επανέλεγχο"
-                       : "Charging and thermal behavior require follow-up");
-        } else if (chargeConcern && stressConcern) {
-            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
-                    gr ? "Υπάρχουν ενδείξεις προς επανέλεγχο στη φόρτιση και στην απόκριση καταπόνησης"
-                       : "Charging and stress response both show findings to review");
-        } else if (chargeConcern) {
-            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
-                    gr ? "Η φόρτιση χρειάζεται επανέλεγχο· δεν τεκμηριώνεται βλάβη της συσκευής"
-                       : "Charging needs follow-up; no device fault has been established");
-        } else if (thermalConcern || stressConcern) {
-            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result",
-                    gr ? "Υπάρχει ένδειξη καταπόνησης ή θερμοκρασίας προς επαλήθευση"
-                       : "Stress or thermal findings warrant verification");
-        } else if (!completeCoverage) {
-            logLabelValue(gr ? "Αποτέλεσμα" : "Result",
-                    gr ? "Δεν προέκυψε καταγεγραμμένη προειδοποίηση, αλλά η κάλυψη είναι μερική"
-                       : "No recorded warning, but diagnostic coverage is incomplete");
+        Lab17CombinedConclusion.Decision conclusion = Lab17CombinedConclusion.evaluate(
+                gr, lab14StressClass, independentStressConcern, chargeConcern,
+                thermalConcern, completeCoverage);
+        if (conclusion.tone == Lab17CombinedConclusion.Tone.CAUTION) {
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result", conclusion.message);
+        } else if (conclusion.tone == Lab17CombinedConclusion.Tone.POSITIVE) {
+            logLabelOkValue(gr ? "Αποτέλεσμα" : "Result", conclusion.message);
         } else {
-            logLabelOkValue(gr ? "Αποτέλεσμα" : "Result",
-                    gr ? "Δεν προέκυψε συγκεκριμένη ανωμαλία στα καταγεγραμμένα ευρήματα"
-                       : "No specific anomaly in the recorded observations");
+            logLabelValue(gr ? "Αποτέλεσμα" : "Result", conclusion.message);
         }
         if (chargeConcern) {
             logLabelWarnValue(gr ? "Προτεινόμενος έλεγχος" : "Recommended check",
