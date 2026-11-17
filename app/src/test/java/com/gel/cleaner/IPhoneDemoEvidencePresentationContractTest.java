@@ -62,7 +62,9 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         assertFalse(lab.contains("likelySoftware"));
         assertFalse(lab.contains("panicLogText.toLowerCase()"));
         assertTrue(lab.contains("IPhonePanicHumanizer.meaning(e.getKey(), gr)"));
-        assertTrue(lab.contains("Τι δεν έχει επιβεβαιωθεί:"));
+        assertTrue(lab.contains("IPhonePanicServiceSummary.interpret("));
+        assertTrue(lab.contains("human.repairAdvice"));
+        assertTrue(lab.contains("human.whenToSeekHelp"));
         assertTrue(lab.contains("Πότε χρειάζεται τεχνικός:"));
         assertTrue(lab.contains("Για τα Watchdog:"));
         assertTrue(lab.contains("Για το Thermal:"));
