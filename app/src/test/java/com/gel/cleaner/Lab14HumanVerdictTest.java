@@ -17,7 +17,7 @@ public final class Lab14HumanVerdictTest {
         assertTrue(d.message.contains("Μπορείς να συνεχίσεις"));
         assertTrue(d.message.contains("εφόσον"));
         assertTrue(d.message.contains("δεν προκύπτει άμεση ανάγκη αντικατάστασης"));
-        assertFalse(d.message.contains("φυσιολογική φθορά"));
+        assertTrue(d.message.contains("ενδείξεις φυσιολογικής φθοράς"));
     }
 
     @Test public void severeSagNeverGetsGreenReassurance() {
