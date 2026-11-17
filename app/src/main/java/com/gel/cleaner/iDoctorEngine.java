@@ -982,6 +982,7 @@ if (!out.battery.valid) {
         public String abi = "N/A";
         public String hardware = "N/A";
         public String modelName = "N/A";
+        public String socModel = "N/A";
         public String governor = "N/A";
 
         public long currentFreqKHz = -1;
@@ -1005,6 +1006,11 @@ if (!out.battery.valid) {
         s.cores = Runtime.getRuntime().availableProcessors();
         s.abi = joinAbis();
         s.hardware = safeNonEmpty(Build.HARDWARE, "N/A");
+        // API 31+ exposes the SoC model separately from generic /proc/cpuinfo.
+        if (Build.VERSION.SDK_INT >= 31) {
+            try { s.socModel = safeNonEmpty(Build.SOC_MODEL, "N/A"); }
+            catch (Throwable ignored) { }
+        }
 
         String cpuinfo = readTextFile("/proc/cpuinfo", 32 * 1024);
         if (cpuinfo != null && !cpuinfo.isEmpty()) {
@@ -1633,6 +1639,8 @@ if (!out.battery.valid) {
         public Boolean flash = null;
 
         public int jpegModeCount = 0;
+        // Largest JPEG mode exposed through Camera2, NOT authenticated sensor MP.
+        public long maxJpegPixels = -1L;
         public int videoModeCount = 0;
         public String maxVideoResolution = "N/A";
 
@@ -1691,6 +1699,13 @@ if (!out.battery.valid) {
                         android.util.Size[] jpegSizes =
                                 map.getOutputSizes(android.graphics.ImageFormat.JPEG);
                         cu.jpegModeCount = jpegSizes != null ? jpegSizes.length : 0;
+                        if (jpegSizes != null) {
+                            for (android.util.Size jpegSize : jpegSizes) {
+                                if (jpegSize == null) continue;
+                                long pixels = (long) jpegSize.getWidth() * jpegSize.getHeight();
+                                if (pixels > cu.maxJpegPixels) cu.maxJpegPixels = pixels;
+                            }
+                        }
 
                         android.util.Size[] videoSizes =
                                 map.getOutputSizes(android.media.MediaRecorder.class);
