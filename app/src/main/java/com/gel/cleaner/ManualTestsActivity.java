@@ -25338,12 +25338,14 @@ final String text =
                   + "Το σύστημα θα παρακολουθεί τη συμπεριφορά φόρτισης\n"
                   + "για τα επόμενα 3 λεπτά.\n\n"
                   + "Κράτησε τη συσκευή συνδεδεμένη\n"
-                  + "καθ’ όλη τη διάρκεια του τεστ."
+                  + "καθ’ όλη τη διάρκεια του τεστ.\n\n"
+                  + "Αν ζεσταθεί υπερβολικά στο χέρι, αποσύνδεσε αμέσως τον φορτιστή και βγες από το τεστ."
                 : "Connect the charger to the device’s charging port.\n\n"
                   + "The system will monitor charging behavior\n"
                   + "for the next 3 minutes.\n\n"
                   + "Please keep the device connected\n"
-                  + "during the entire test.";
+                  + "during the entire test.\n\n"
+                  + "If the phone becomes excessively hot to touch, unplug the charger and exit the test immediately.";
                   
 TextView msg = new TextView(this);
 msg.setText(text);
@@ -26017,8 +26019,10 @@ boolean chargingGlitchDetected =
 
 GELServiceLog.info(
         "SUMMARY: CHARGING_STABILITY=" +
-                (!lab15_strengthKnown ? "UNKNOWN" :
-                (chargingGlitchDetected ? "OBSERVED_ISSUES" : "NO_ISSUE_OBSERVED"))
+                ((lab15OverTempDuringCharge || lab15FlapUnstable || lab15_systemLimited)
+                        ? "OBSERVED_ISSUES"
+                        : (!lab15_strengthKnown ? "UNKNOWN"
+                        : (chargingGlitchDetected ? "OBSERVED_ISSUES" : "NO_ISSUE_OBSERVED")))
 );
 
 appendHtml("<br>");
