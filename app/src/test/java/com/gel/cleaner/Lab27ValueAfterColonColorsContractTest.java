@@ -55,6 +55,25 @@ public final class Lab27ValueAfterColonColorsContractTest {
         assertTrue(lab.contains("logLabelErrorValue("));
     }
 
+    @Test public void thermalValuesUseLab16SensorSpecificColorSemantics() throws Exception {
+        String src = activity();
+        int start = src.indexOf("private void lab27ThermalIsElevated(");
+        int end = src.indexOf("private void lab27DisplayFactorySpecs(", start);
+        assertTrue(start >= 0 && end > start);
+        String thermal = src.substring(start, end);
+        assertTrue(thermal.contains("Lab16ThermalCorrelation.level(sector, celsius)"));
+        assertTrue(thermal.contains("Lab16ThermalCorrelation.Level.ELEVATED"));
+        assertTrue(thermal.contains("Lab16ThermalCorrelation.Level.HIGH"));
+        assertTrue(thermal.contains("logLabelWarnValue(label, value)"));
+        assertTrue(thermal.contains("logLabelOkValue(label, value)"));
+        assertTrue(thermal.contains("logLabelValue(label, AppLang.isGreek(this)"));
+        String lab = src.substring(src.indexOf("private void lab30CombineFindings()"), start);
+        assertTrue(lab.contains("lab27LogThermalValue(\"CPU\""));
+        assertTrue(lab.contains("lab27LogThermalValue(\"GPU\""));
+        assertTrue(lab.contains("lab27LogThermalValue(\"PMIC\""));
+        assertTrue(lab.contains("lab27LogThermalValue(gr ? \"Μπαταρία\""));
+    }
+
     @Test public void oemMetricsAndMissingDataHaveSeparateColorSemantics() throws Exception {
         String src = activity();
         int start = src.indexOf("private void lab27DisplayFactorySpecs(boolean gr)");
