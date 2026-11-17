@@ -58,10 +58,13 @@ public final class Lab17ThermalChargingSourceContractTest {
         assertTrue(lab17.contains("Αν το κινητό υποστηρίζει ταχεία φόρτιση"));
         assertTrue(lab17.contains("lab15ObservedOvertemp"));
         assertTrue(lab17.contains("lab15ObservedDisconnect"));
-        int coolBeforeCharge = lab17.indexOf("else if (thermalConcern || lab14StressThermalWarning)");
+        int coolBeforeCharge = lab17.indexOf("if (lab15ObservedOvertemp || thermalConcern || lab14StressThermalWarning)");
         int fastCharging = lab17.indexOf("else if (chargeRateWarn)");
         assertTrue("Cool-down warning must outrank fast-charger suggestion",
                 coolBeforeCharge >= 0 && fastCharging > coolBeforeCharge);
+        assertTrue(lab17.contains("chargeEvaluation.chargingConcern"));
+        assertTrue(lab17.contains("!chargeEvaluation.unknownChargerWithSlowRate"));
+        assertTrue(lab17.contains("chargeEvaluation.description"));
         assertFalse(lab17.contains("Ο φορτιστής σου είναι χαλασμένος"));
     }
 
