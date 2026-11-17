@@ -32412,18 +32412,40 @@ if (zones == null || zones.isEmpty()) {
 } else {
 
     logLabelOkValue(gr ? "Ζώνες" : "Zones", String.valueOf(zones.size()));
-    logLabelOkValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
-    logLabelOkValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
 
-    if (cpu  != null) logLabelOkValue("CPU",  fmt1(cpu)  + "°C");
-    if (gpu  != null) logLabelOkValue("GPU",  fmt1(gpu)  + "°C");
-    if (pmic != null) logLabelOkValue("PMIC", fmt1(pmic) + "°C");
-    if (skin != null) logLabelOkValue(gr ? "Επιφάνεια" : "Skin", fmt1(skin) + "°C");
+    // Use the same sensor-specific warning bands as Lab 16.
+    // Merely reading a sensor does not make an elevated temperature green.
+    boolean elevatedThermalSector =
+            lab27ThermalIsElevated(cpu, Lab16ThermalCorrelation.CPU)
+            || lab27ThermalIsElevated(gpu, Lab16ThermalCorrelation.GPU)
+            || lab27ThermalIsElevated(pmic, Lab16ThermalCorrelation.PMIC)
+            || lab27ThermalIsElevated(skin, Lab16ThermalCorrelation.SURFACE)
+            || lab27ThermalIsElevated(batTemp, Lab16ThermalCorrelation.BATTERY);
 
-    if (!Float.isNaN(batTemp))
-        logLabelOkValue(gr ? "Μπαταρία" : "Battery", fmt1(batTemp) + "°C");
-    else
+    if (elevatedThermalSector) {
+        logLabelWarnValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
+        logLabelWarnValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
+    } else if (Lab16ThermalCorrelation.plausible(maxThermal)
+            && Lab16ThermalCorrelation.plausible(avgThermal)) {
+        logLabelOkValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
+        logLabelOkValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
+    } else {
+        logLabelValue(gr ? "Μέγιστη" : "Max", gr ? "Μ/Δ" : "N/A");
+        logLabelValue(gr ? "Μέση" : "Average", gr ? "Μ/Δ" : "N/A");
+    }
+
+    if (cpu != null) lab27LogThermalValue("CPU", cpu, Lab16ThermalCorrelation.CPU);
+    if (gpu != null) lab27LogThermalValue("GPU", gpu, Lab16ThermalCorrelation.GPU);
+    if (pmic != null) lab27LogThermalValue("PMIC", pmic, Lab16ThermalCorrelation.PMIC);
+    if (skin != null) lab27LogThermalValue(gr ? "Επιφάνεια" : "Skin",
+            skin, Lab16ThermalCorrelation.SURFACE);
+
+    if (!Float.isNaN(batTemp)) {
+        lab27LogThermalValue(gr ? "Μπαταρία" : "Battery", batTemp,
+                Lab16ThermalCorrelation.BATTERY);
+    } else {
         logLabelValue(gr ? "Μπαταρία" : "Battery", gr ? "Μ/Δ" : "N/A");
+    }
 }
 
 appendHtml("<br>");
@@ -32971,6 +32993,27 @@ lab29SaveTechnicalAssessmentFromLab25(p);
 logOk(gr ? "Το Lab 27 ολοκληρώθηκε (σύνταξη πληροφοριακής σύνοψης)."
          : "Lab 27 finished (evidence summary compiled).");
 logLine();
+}
+
+private boolean lab27ThermalIsElevated(Float celsius, int sector) {
+    if (celsius == null) return false;
+    Lab16ThermalCorrelation.Level level =
+            Lab16ThermalCorrelation.level(sector, celsius);
+    return level == Lab16ThermalCorrelation.Level.ELEVATED
+            || level == Lab16ThermalCorrelation.Level.HIGH;
+}
+
+private void lab27LogThermalValue(String label, Float celsius, int sector) {
+    if (celsius == null || !Lab16ThermalCorrelation.plausible(celsius)) {
+        logLabelValue(label, AppLang.isGreek(this) ? "Μ/Δ" : "N/A");
+        return;
+    }
+    String value = fmt1(celsius) + "°C";
+    if (lab27ThermalIsElevated(celsius, sector)) {
+        logLabelWarnValue(label, value);
+    } else {
+        logLabelOkValue(label, value);
+    }
 }
 
 private void lab27DisplayFactorySpecs(boolean gr) {
