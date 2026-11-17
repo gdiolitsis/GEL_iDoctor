@@ -13515,20 +13515,20 @@ private void lab14ShowRecoveryWaitDialog(boolean gamaMode) {
                 message = grLocal
                         ? "Περίμενε τουλάχιστον 5 λεπτά από την προηγούμενη δοκιμή. "
                           + "Για πιο συγκρίσιμες μετρήσεις, απόφυγε παιχνίδια και βαριές εφαρμογές "
-                          + "κατά την αναμονή. Αν τα χρησιμοποιήσεις, μπορεί να επηρεαστεί το αποτέλεσμα.\\n\\n"
+                          + "κατά την αναμονή. Αν τα χρησιμοποιήσεις, μπορεί να επηρεαστεί το αποτέλεσμα.\n\n"
                           + "Υπολειπόμενος χρόνος: " + counter
                         : "Wait at least five minutes after the previous test. "
                           + "For comparable measurements, avoid games and heavy apps during this interval. "
-                          + "Using them can affect the results.\\n\\n"
+                          + "Using them can affect the results.\n\n"
                           + "Time remaining: " + counter;
             } else if (d.status == Lab14RecoveryGate.Status.WAIT_TEMPERATURE) {
                 message = String.format(Locale.US, grLocal
                         ? "Ολοκληρώθηκε η πεντάλεπτη αναμονή, αλλά η θερμοκρασία μπαταρίας "
-                          + "παραμένει υψηλή: %.1f°C.\\n\\n"
+                          + "παραμένει υψηλή: %.1f°C.\n\n"
                           + "Για νέα δοκιμή απαιτείται θερμοκρασία κάτω από 45°C. "
                           + "Σταμάτησε τις απαιτητικές εφαρμογές και δοκίμασε ξανά."
                         : "The five-minute wait is over, but the battery temperature "
-                          + "is still high: %.1f°C.\\n\\n"
+                          + "is still high: %.1f°C.\n\n"
                           + "Start a new test only below 45°C. Close demanding apps and retry.",
                         d.currentC);
             } else if (d.status == Lab14RecoveryGate.Status.TEMPERATURE_UNAVAILABLE) {
@@ -13543,12 +13543,12 @@ private void lab14ShowRecoveryWaitDialog(boolean gamaMode) {
             } else {
                 message = String.format(Locale.US, grLocal
                         ? "Ολοκληρώθηκε η πεντάλεπτη αναμονή. "
-                          + "Τρέχουσα θερμοκρασία μπαταρίας: %.1f°C.\\n\\n"
+                          + "Τρέχουσα θερμοκρασία μπαταρίας: %.1f°C.\n\n"
                           + "Μπορείς να προχωρήσεις στον προέλεγχο. "
                           + "Αν έπαιξες παιχνίδι στο μεταξύ, η προηγούμενη χρήση "
                           + "μπορεί να επηρεάσει την εκτίμηση αυτονομίας."
                         : "The five-minute wait is over. "
-                          + "Current battery temperature: %.1f°C.\\n\\n"
+                          + "Current battery temperature: %.1f°C.\n\n"
                           + "You can proceed to the pre-test check. Gaming during "
                           + "the waiting period may affect the endurance estimate.",
                         d.currentC);
