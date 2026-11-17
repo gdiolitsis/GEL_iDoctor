@@ -26080,6 +26080,10 @@ private void lab16ThermalSnapshot() {
         } catch (Throwable ignored) {}
     }
 
+    // The OS state is sampled independently of the accessible sensors.
+    final Lab16ThermalCorrelation.Summary currentThermalProfile =
+            Lab16ThermalCorrelation.evaluate(sectorTemps, osThermalStatus, hiddenRisk);
+
     // ------------------------------------------------------------
     // BASIC + CRITICAL THERMALS
     // ------------------------------------------------------------
@@ -26182,6 +26186,23 @@ private void lab16ThermalSnapshot() {
                 gr ? "Δεν εντοπίστηκε υψηλή ένδειξη στους διαθέσιμους αισθητήρες"
                    : "No high reading among available sensors"
         );
+    }
+    // Independent thermal domains and co-occurrence: a single sensor
+    // snapshot cannot prove the direction or cause of heat transfer.
+    appendHtml("<br>");
+    logInfo(gr ? "Συνδυαστική θερμική εικόνα" : "Combined thermal readings");
+    if (currentThermalProfile.hasWarning()) {
+        logLabelWarnValue(gr ? "Διαθέσιμα ευρήματα" : "Available findings",
+                currentThermalProfile.combinedMessage(gr));
+    } else if (currentThermalProfile.measuredCount > 0) {
+        logLabelOkValue(gr ? "Διαθέσιμα ευρήματα" : "Available findings",
+                currentThermalProfile.combinedMessage(gr));
+    } else {
+        logLabelValue(gr ? "Διαθέσιμα ευρήματα" : "Available findings",
+                currentThermalProfile.combinedMessage(gr));
+    }
+    for (Lab16ThermalCorrelation.Pair pair : currentThermalProfile.elevatedPairs) {
+        logLabelWarnValue(pair.names(gr), pair.details(gr));
     }
     logInfo((gr ? "Κάλυψη: " : "Coverage: ") + observedCount
             + (gr ? " διαθέσιμες ενδείξεις, " : " available readings, ")
@@ -26514,8 +26535,27 @@ if (lab14bEstimatedHours > 0f && battPct > 0f) {
     final boolean lab16HasEvidence = p.getBoolean("lab16_evidence_available",
             lab16AvailableSensors > 0 || lab16OsThermalStatus >= 0);
     final boolean lab16ThermalWarning = p.getBoolean("lab16_thermal_warning",
-            lab16ThermalDanger || lab16PeakTemp >= 45f
-                    || lab16OsThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE);
+            lab16ThermalDanger || lab16OsThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE);
+    final String lab16PeakSource = p.getString("lab16_peak_source", null);
+    final boolean lab16DetailedAvailable = p.getBoolean("lab16_detailed_sectors_v1", false);
+    final float[] lab16Temperatures = Lab16ThermalCorrelation.emptyTemperatures();
+    if (lab16DetailedAvailable) {
+        lab16Temperatures[Lab16ThermalCorrelation.BATTERY] =
+                p.getFloat("lab16_temp_battery", Float.NaN);
+        lab16Temperatures[Lab16ThermalCorrelation.CPU] =
+                p.getFloat("lab16_temp_cpu", Float.NaN);
+        lab16Temperatures[Lab16ThermalCorrelation.GPU] =
+                p.getFloat("lab16_temp_gpu", Float.NaN);
+        lab16Temperatures[Lab16ThermalCorrelation.CHARGER] =
+                p.getFloat("lab16_temp_charger", Float.NaN);
+        lab16Temperatures[Lab16ThermalCorrelation.PMIC] =
+                p.getFloat("lab16_temp_pmic", Float.NaN);
+        lab16Temperatures[Lab16ThermalCorrelation.SURFACE] =
+                p.getFloat("lab16_temp_surface", Float.NaN);
+    }
+    final Lab16ThermalCorrelation.Summary lab16ThermalProfile =
+            Lab16ThermalCorrelation.evaluate(lab16Temperatures, lab16OsThermalStatus,
+                    p.getBoolean("lab16_hidden_zone_warning", false));
 
     // ------------------------------------------------------------
 // PRESENCE + FRESHNESS CHECK (CLEAN)
@@ -26854,7 +26894,42 @@ final boolean fresh16 =
 
         // LAB 16: use the actual OS thermal state, sensor coverage, and peak
         // temperature. No synthetic 0–100 thermal score participates.
-        boolean thermalConcern = lab16ThermalWarning;
+        boolean thermalConcern = lab16ThermalWarning
+                || (lab16DetailedAvailable && lab16ThermalProfile.hasWarning());
+
+        if (lab16DetailedAvailable) {
+            appendHtml("<br>");
+            logInfo(gr ? "Lab 16 — θερμοκρασίες ανά τομέα"
+                       : "Lab 16 — temperatures by area");
+            for (int zone = 0; zone < Lab16ThermalCorrelation.N; zone++) {
+                Lab16ThermalCorrelation.Level level = lab16ThermalProfile.levels[zone];
+                if (level == Lab16ThermalCorrelation.Level.UNKNOWN) continue;
+                String label = Lab16ThermalCorrelation.label(zone, gr);
+                String value = String.format(Locale.US, "%.1f°C",
+                        lab16ThermalProfile.temperatures[zone]);
+                if (level == Lab16ThermalCorrelation.Level.ELEVATED
+                        || level == Lab16ThermalCorrelation.Level.HIGH) {
+                    logLabelWarnValue(label, value);
+                } else {
+                    logLabelOkValue(label, value);
+                }
+            }
+            if (lab16ThermalProfile.measuredCount > 0
+                    || lab16ThermalProfile.hasWarning()) {
+                logInfo(gr ? "Συσχετίσεις αυξημένων θερμοκρασιών"
+                           : "Elevated temperature correlations");
+                if (lab16ThermalProfile.hasWarning()) {
+                    logLabelWarnValue(gr ? "Θερμική εικόνα" : "Thermal picture",
+                            lab16ThermalProfile.combinedMessage(gr));
+                } else {
+                    logLabelOkValue(gr ? "Θερμική εικόνα" : "Thermal picture",
+                            lab16ThermalProfile.combinedMessage(gr));
+                }
+                for (Lab16ThermalCorrelation.Pair pair : lab16ThermalProfile.elevatedPairs) {
+                    logLabelWarnValue(pair.names(gr), pair.details(gr));
+                }
+            }
+        }
         if (lab16OsThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE) {
             logLabelErrorValue(gr ? "Lab 16 — θερμική κατάσταση" : "Lab 16 — thermal state",
                     gr ? "Το Android ανέφερε σοβαρή θερμική προστασία"
@@ -26879,15 +26954,17 @@ final boolean fresh16 =
         }
         if (Float.isFinite(lab16PeakTemp) && lab16PeakTemp > 0f) {
             String peak = String.format(Locale.US, "%.1f°C", lab16PeakTemp);
-            if (lab16PeakTemp >= 55f) {
-                logLabelErrorValue(gr ? "Lab 16 — μέγιστη θερμοκρασία"
-                        : "Lab 16 — peak temperature", peak);
-            } else if (lab16PeakTemp >= 45f) {
-                logLabelWarnValue(gr ? "Lab 16 — μέγιστη θερμοκρασία"
-                        : "Lab 16 — peak temperature", peak);
+            Lab16ThermalCorrelation.Level peakLevel = Lab16ThermalCorrelation.level(
+                    Lab16ThermalCorrelation.index(lab16PeakSource), lab16PeakTemp);
+            String peakLabel = (gr ? "Lab 16 — μέγιστη θερμοκρασία" : "Lab 16 — peak temperature")
+                    + (lab16PeakSource == null ? "" : " (" + lab16PeakSource + ")");
+            if (peakLevel == Lab16ThermalCorrelation.Level.ELEVATED
+                    || peakLevel == Lab16ThermalCorrelation.Level.HIGH) {
+                logLabelWarnValue(peakLabel, peak);
+            } else if (peakLevel == Lab16ThermalCorrelation.Level.NORMAL) {
+                logLabelOkValue(peakLabel, peak);
             } else {
-                logLabelOkValue(gr ? "Lab 16 — μέγιστη θερμοκρασία"
-                        : "Lab 16 — peak temperature", peak);
+                logLabelValue(peakLabel, peak);
             }
         }
 
@@ -26896,24 +26973,51 @@ final boolean fresh16 =
         appendHtml("<br>");
         logInfo(gr ? "Συνδυαστικό συμπέρασμα" : "Cross-lab conclusion");
         boolean completeCoverage = stressClassKnown && chargeRateAvailable
-                && lab16HasEvidence
-                && (lab16ChipSensors > 0 || lab16OsThermalStatus >= 0);
+                && lab16HasEvidence && lab16DetailedAvailable
+                && (lab16ThermalProfile.hasChipReading() || lab16OsThermalStatus >= 0);
         Lab17CombinedConclusion.Decision conclusion = Lab17CombinedConclusion.evaluateDetailed(
                 gr, lab14StressClass, lab14Unstable,
                 lab14CollapseObserved, lab14GaugeDiscrepancy, lab14StressProxyFlag,
                 lab14ElectricalWarning, lab14StressThermalWarning,
                 lab14ThermalRiseValid, chargeConcern, thermalConcern, completeCoverage);
+        // The final plain-language verdict names the measured hot domains.
+        // All simultaneously elevated combinations are listed just above.
+        String conclusionText = conclusion.message;
+        if (thermalConcern && lab16DetailedAvailable) {
+            conclusionText += " " + lab16ThermalProfile.combinedMessage(gr);
+            if (!lab16ThermalProfile.elevatedPairs.isEmpty()) {
+                Lab16ThermalCorrelation.Pair first = lab16ThermalProfile.elevatedPairs.get(0);
+                conclusionText += " " + first.names(gr) + ": " + first.details(gr);
+            }
+        }
         if (conclusion.tone == Lab17CombinedConclusion.Tone.CAUTION) {
-            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result", conclusion.message);
+            logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result", conclusionText);
         } else if (conclusion.tone == Lab17CombinedConclusion.Tone.POSITIVE) {
-            logLabelOkValue(gr ? "Αποτέλεσμα" : "Result", conclusion.message);
+            logLabelOkValue(gr ? "Αποτέλεσμα" : "Result", conclusionText);
         } else {
-            logLabelValue(gr ? "Αποτέλεσμα" : "Result", conclusion.message);
+            logLabelValue(gr ? "Αποτέλεσμα" : "Result", conclusionText);
         }
         if (chargeConcern) {
+            String chargeAdvice;
+            if (lab15ObservedOvertemp) {
+                chargeAdvice = gr
+                        ? "Άφησε τη συσκευή να κρυώσει πριν επαναλάβεις τη φόρτιση. Αν επιμένει η υπερθέρμανση, ζήτησε τεχνικό έλεγχο."
+                        : "Let the device cool before charging again. If overheating persists, seek technical inspection.";
+            } else if (lab15ObservedDisconnect) {
+                chargeAdvice = gr
+                        ? "Δοκίμασε διαφορετικό συμβατό καλώδιο και φορτιστή· έλεγξε τη σύνδεση για επαναλαμβανόμενες διακοπές."
+                        : "Try another compatible cable and charger; inspect the connection for repeated interruptions.";
+            } else if (chargeRateWarn) {
+                chargeAdvice = gr
+                        ? "Αν το κινητό υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Επανάλαβε χωρίς έντονη χρήση και σε συγκρίσιμη στάθμη φόρτισης. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
+                        : "If the device supports fast charging, try a reliable compatible fast charger and suitable cable. Retest without heavy use at a comparable charge level. Low net charge gain does not prove a fault.";
+            } else {
+                chargeAdvice = gr
+                        ? "Επανάλαβε τον έλεγχο με συμβατό φορτιστή και καλώδιο υπό συγκρίσιμες συνθήκες."
+                        : "Repeat with a compatible charger and cable under comparable conditions.";
+            }
             logLabelWarnValue(gr ? "Προτεινόμενος έλεγχος" : "Recommended check",
-                    gr ? "Δοκιμή με άλλο συμβατό καλώδιο/φορτιστή και επανάληψη με χαμηλό φόρτο"
-                       : "Repeat with another compatible cable/charger under light use");
+                    chargeAdvice);
         }
         logInfo(gr
                 ? "Το Lab 17 συνδυάζει καταγεγραμμένα ευρήματα. Δεν υπολογίζει ποσοστό υγείας μπαταρίας (SoH)."
