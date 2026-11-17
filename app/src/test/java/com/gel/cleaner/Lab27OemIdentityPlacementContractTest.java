@@ -43,6 +43,15 @@ public final class Lab27OemIdentityPlacementContractTest {
         assertTrue(certification.contains("gradeForMeasuredSnapshot(deviceHealthScore)"));
     }
 
+    @Test public void unknownOemRowsStillDisplayActualAvailableHardwareEvidence() throws Exception {
+        String certification = section(source(),
+                "private void lab30CombineFindings()", "private void lab31FinalSummary()");
+        assertTrue(certification.contains("String partialObservation ="));
+        assertTrue(certification.contains("specRow.observed.trim().isEmpty()"));
+        assertTrue(certification.contains("Δεν τεκμηριώθηκε πλήρης συμφωνία"));
+        assertTrue(certification.contains("logLabelValue(rowName,"));
+    }
+
     @Test public void usedDeviceCheckKeepsBuyerControlsWithoutRepeatingOemTable() throws Exception {
         String s = source();
         String buyer = section(s,
