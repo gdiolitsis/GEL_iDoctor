@@ -5,6 +5,7 @@ on:
     paths:
       - 'app/src/main/java/com/gel/cleaner/Lab17CombinedConclusion.java'
       - 'app/src/test/java/com/gel/cleaner/Lab17CombinedEvidenceMatrixTest.java'
+      - 'app/src/test/java/com/gel/cleaner/Lab17CombinedConclusionTest.java'
       - '.github/workflows/qa-v59-lab17-system-verdict.yml'
 
 permissions:
