@@ -66,7 +66,7 @@ public final class IPhonePanicServiceSummaryTest {
 
     @Test public void inputsDoNotInflateKnownIncidentsBeyondFiles() {
         IPhonePanicServiceSummary.Result r = result(true,2,99,99,false,true);
-        assertTrue(r.whatWeFound.contains("2 Watchdog"));
+        assertTrue(r.whatWeFound.contains("2 αρχεία αναφέρουν μη απόκριση"));
         assertFalse(r.whatWeFound.contains("99"));
     }
 
