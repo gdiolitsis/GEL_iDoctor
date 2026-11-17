@@ -26678,8 +26678,8 @@ final boolean fresh16 =
     if (fresh14) {
         appendHtml("<br>");
         logLine();
-        logInfo(gr ? "LAB 17 — Συνδυασμός διαθέσιμων αποτελεσμάτων"
-                   : "LAB 17 — Combined available observations");
+        logInfo(gr ? "LAB 17 — Ευφυής Ανάλυση Υγείας Συστήματος"
+                   : "LAB 17 — Intelligent System Health Analysis");
         logLine();
 
         // LAB 14A: confirmed stress-test execution and its own observations.
