@@ -62,7 +62,7 @@ public final class Lab14HumanVerdict {
 
         if ("Weak".equals(stressClass)) {
             return new Decision(Tone.POSITIVE, greek
-                    ? "Η μπαταρία σου παρουσίασε αυξημένη πτώση τάσης υπό φορτίο, όμως στη συγκεκριμένη δοκιμή δεν καταγράφηκαν άλλες ανησυχητικές ηλεκτρικές ή θερμικές ενδείξεις. Μπορείς να συνεχίσεις την κανονική χρήση, εφόσον δεν εμφανίζει υπερθέρμανση, διόγκωση, ασυνήθιστη οσμή ή ξαφνικά σβησίματα. Από αυτά τα ευρήματα δεν προκύπτει άμεση ανάγκη αντικατάστασης."
+                    ? "Η μπαταρία σου παρουσιάζει ενδείξεις φυσιολογικής φθοράς, με αυξημένη πτώση τάσης υπό φορτίο. Στη συγκεκριμένη δοκιμή η θερμοκρασία και οι υπόλοιπες ηλεκτρικές ενδείξεις παρέμειναν σε αποδεκτά επίπεδα. Μπορείς να συνεχίσεις να τη χρησιμοποιείς κανονικά, εφόσον δεν παρουσιάζει υπερθέρμανση, διόγκωση, ασυνήθιστη οσμή ή απρόσμενες διακοπές λειτουργίας. Δεν προκύπτει προς το παρόν ανάγκη αντικατάστασης."
                     : "Your battery showed elevated voltage sag under load, but this trial recorded no additional concerning electrical or thermal findings. You can continue normal use provided there is no overheating, swelling, unusual smell or unexpected shutdown. These findings do not establish an immediate need for replacement.");
         }
 
