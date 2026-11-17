@@ -67,11 +67,13 @@ public final class Lab14BatteryStressEvidencePresentationTest {
         String s = source();
         String block = section(s, "private void lab14LogFinalScore(",
                 "// LAB 14 — LOG SAVE");
-        assertTrue(block.contains("!limiter && !collapse && !smartSwelling && !calibration"));
-        assertTrue(block.contains("Μπορεί να συνεχιστεί η χρήση με ασφάλεια εφόσον"));
-        assertTrue(block.contains("υπερθέρμανση, διόγκωση, οσμή ή απρόσμενες διακοπές"));
-        assertTrue(block.contains("Η δοκιμή δεν αποτελεί πιστοποίηση γενικής ασφάλειας"));
-        assertTrue(block.contains("δεν προκύπτει λόγος διακοπής της συνήθους χρήσης"));
+        assertTrue(block.contains("Lab14HumanVerdict.evaluate("));
+        assertTrue(block.contains("fullValidRun, limiter, collapse, smartSwelling,"));
+        assertTrue(block.contains("calibration, electricalBehaviourFlag, thermalRiseC, batteryPeakC"));
+        assertTrue(block.contains("if (humanVerdict.tone == Lab14HumanVerdict.Tone.POSITIVE)"));
+        assertTrue(block.contains("logLabelOkValue(humanLabel, humanVerdict.message);"));
+        assertTrue(block.contains("logLabelWarnValue(humanLabel, humanVerdict.message);"));
+        assertTrue(block.contains("logLabelValue(humanLabel, humanVerdict.message);"));
     }
 
     @Test public void noAdditionalAnomalyDoesNotClaimCompletelyHealthyBattery() throws Exception {
