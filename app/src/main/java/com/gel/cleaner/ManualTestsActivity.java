@@ -31336,68 +31336,12 @@ logLabelValue(
            : "Hardware observations and instability indicators only."
 );
 
-    // OEM specification comparison: SAME iDoctorEngine hardware collectors as
-    // DeviceInfoInternalActivity and DeviceInfoPeripheralsActivity.
-    // Comparisons are not certifications of OEM parts or legal ownership.
-    appendHtml("<br>");
-    logLine();
-    logInfo(gr ? "Εργοστασιακές προδιαγραφές — ανεξάρτητος έλεγχος"
-               : "Factory specifications — independent comparison");
-    try {
-        Lab29FactorySpecAudit.Report factory = Lab29FactorySpecAudit.capture(this);
-        if (factory.supportedModel) {
-            logLabelOkValue(gr ? "Εργοστασιακό μοντέλο αναφοράς" : "OEM reference model",
-                    factory.modelName);
-            logLabelValue(gr ? "Πηγή κατασκευαστή" : "Manufacturer source",
-                    factory.officialSource);
-            for (Lab29FactorySpecAudit.Row specRow : factory.rows) {
-                String rowName = gr ? specRow.greek : specRow.english;
-                String observation = specRow.observed == null || specRow.observed.isEmpty()
-                        ? (gr ? "Δεν διατίθεται αξιόπιστη μέτρηση"
-                              : "No reliable reading available")
-                        : specRow.observed;
-                String expected = gr ? "Προδιαγραφή: " : "OEM: ";
-                if (specRow.verdict == Lab29FactorySpecAudit.Verdict.MATCH) {
-                    logLabelOkValue(rowName, observation + " — "
-                            + (gr ? "Συμφωνεί" : "Matches") + " ("
-                            + expected + specRow.expected + ")");
-                } else if (specRow.verdict == Lab29FactorySpecAudit.Verdict.DEVIATION) {
-                    logLabelErrorValue(rowName, observation + " — "
-                            + (gr ? "Απόκλιση προς επανέλεγχο" : "Deviation for review")
-                            + " (" + expected + specRow.expected + ")");
-                } else {
-                    logLabelValue(rowName,
-                            (gr ? "Δεν επαληθεύτηκε" : "Not verified")
-                            + " (" + expected + specRow.expected + ")");
-                }
-            }
-            logLabelValue(gr ? "Κάλυψη σύγκρισης" : "Comparison coverage",
-                    factory.matches + " " + (gr ? "συμφωνίες" : "matches") + " / "
-                    + factory.deviations + " " + (gr ? "αποκλίσεις" : "deviations")
-                    + " / " + factory.unknowns + " "
-                    + (gr ? "μη επαληθεύσιμα" : "unverified"));
-            if (factory.deviations > 0) {
-                logLabelErrorValue(gr ? "Συμπέρασμα" : "Conclusion",
-                        factory.conclusion(gr));
-            } else if (factory.matches > 0) {
-                logLabelOkValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
-                        factory.conclusion(gr));
-            } else {
-                logLabelValue(gr ? "Συμπέρασμα" : "Conclusion", factory.conclusion(gr));
-            }
-        } else {
-            logLabelValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
-                    factory.conclusion(gr));
-        }
-    } catch (Throwable compareError) {
-        logLabelValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
-                gr ? "Δεν ήταν διαθέσιμη. Οι υπόλοιποι έλεγχοι του Lab 28 διατηρούνται."
-                   : "Unavailable. The other Lab 28 checks remain unaffected.");
-    }
-    logLabelValue(gr ? "Όριο συμπεράσματος" : "Conclusion limitation",
-            gr ? "Συμφωνία χαρακτηριστικών δεν αποδεικνύει γνήσια εξαρτήματα, νόμιμη κυριότητα ή καλή λειτουργία."
-               : "Matching characteristics do not prove genuine parts, legal ownership or functional health.");
-    logLine();
+    // OEM comparison moved to Lab 27; used-device checks remain here.
+    logLabelValue(
+            gr ? "Τεχνική ταυτοποίηση μοντέλου" : "Model identity assessment",
+            gr ? "Η σύγκριση εργοστασιακών προδιαγραφών περιλαμβάνεται στο Lab 27."
+               : "The OEM specification comparison is included in Lab 27."
+    );
 
     appendHtml("<br>");
     logInfo(gr ? "Καταγράφηκαν τα προσβάσιμα χαρακτηριστικά του Android."
@@ -33008,12 +32952,86 @@ logInfo(gr ? "Συντάχθηκε πληροφοριακή αναφορά GEL �
 logLine();
 
 appendHtml("<br>");
+// Model identity is reported independently of the numerical condition grade.
+lab27DisplayFactorySpecs(gr);
+
 // Snapshot is finalized only after the report has been assembled.
 lab29SaveTechnicalAssessmentFromLab25(p);
 
 logOk(gr ? "Το Lab 27 ολοκληρώθηκε (σύνταξη πληροφοριακής σύνοψης)."
          : "Lab 27 finished (evidence summary compiled).");
 logLine();
+}
+
+private void lab27DisplayFactorySpecs(boolean gr) {
+    // Compare Android-reported specifications to published OEM profile.
+    // No claim of cryptographic authenticity, genuine replacement parts,
+    // lawful ownership, or independently certified hardware.
+
+    // OEM specification comparison: SAME iDoctorEngine hardware collectors as
+    // DeviceInfoInternalActivity and DeviceInfoPeripheralsActivity.
+    // Comparisons are not certifications of OEM parts or legal ownership.
+    appendHtml("<br>");
+    logLine();
+    logInfo(gr ? "Εργοστασιακές προδιαγραφές — τεχνική ταυτοποίηση μοντέλου"
+               : "Factory specifications — device model identity");
+    try {
+        Lab29FactorySpecAudit.Report factory = Lab29FactorySpecAudit.capture(this);
+        if (factory.supportedModel) {
+            logLabelOkValue(gr ? "Εργοστασιακό μοντέλο αναφοράς" : "OEM reference model",
+                    factory.modelName);
+            logLabelValue(gr ? "Πηγή κατασκευαστή" : "Manufacturer source",
+                    factory.officialSource);
+            for (Lab29FactorySpecAudit.Row specRow : factory.rows) {
+                String rowName = gr ? specRow.greek : specRow.english;
+                String observation = specRow.observed == null || specRow.observed.isEmpty()
+                        ? (gr ? "Δεν διατίθεται αξιόπιστη μέτρηση"
+                              : "No reliable reading available")
+                        : specRow.observed;
+                String expected = gr ? "Προδιαγραφή: " : "OEM: ";
+                if (specRow.verdict == Lab29FactorySpecAudit.Verdict.MATCH) {
+                    logLabelOkValue(rowName, observation + " — "
+                            + (gr ? "Συμφωνεί" : "Matches") + " ("
+                            + expected + specRow.expected + ")");
+                } else if (specRow.verdict == Lab29FactorySpecAudit.Verdict.DEVIATION) {
+                    logLabelErrorValue(rowName, observation + " — "
+                            + (gr ? "Απόκλιση προς επανέλεγχο" : "Deviation for review")
+                            + " (" + expected + specRow.expected + ")");
+                } else {
+                    logLabelValue(rowName,
+                            (gr ? "Δεν επαληθεύτηκε" : "Not verified")
+                            + " (" + expected + specRow.expected + ")");
+                }
+            }
+            logLabelValue(gr ? "Κάλυψη σύγκρισης" : "Comparison coverage",
+                    factory.matches + " " + (gr ? "συμφωνίες" : "matches") + " / "
+                    + factory.deviations + " " + (gr ? "αποκλίσεις" : "deviations")
+                    + " / " + factory.unknowns + " "
+                    + (gr ? "μη επαληθεύσιμα" : "unverified"));
+            if (factory.deviations > 0) {
+                logLabelErrorValue(gr ? "Συμπέρασμα" : "Conclusion",
+                        factory.conclusion(gr));
+            } else if (factory.matches > 0) {
+                logLabelOkValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
+                        factory.conclusion(gr));
+            } else {
+                logLabelValue(gr ? "Συμπέρασμα" : "Conclusion", factory.conclusion(gr));
+            }
+        } else {
+            logLabelValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
+                    factory.conclusion(gr));
+        }
+    } catch (Throwable compareError) {
+        logLabelValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
+                gr ? "Δεν ήταν διαθέσιμη. Οι υπόλοιποι έλεγχοι του Lab 28 διατηρούνται."
+                   : "Unavailable. The other Lab 27 checks remain unaffected.");
+    }
+    logLabelValue(gr ? "Όριο συμπεράσματος" : "Conclusion limitation",
+            gr ? "Συμφωνία χαρακτηριστικών δεν αποδεικνύει γνήσια εξαρτήματα, νόμιμη κυριότητα ή καλή λειτουργία."
+               : "Matching characteristics do not prove genuine parts, legal ownership or functional health.");
+    logLine();
+
+
 }
 
 // ============================================================
