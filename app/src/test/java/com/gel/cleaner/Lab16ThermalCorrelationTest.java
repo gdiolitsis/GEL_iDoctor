@@ -56,6 +56,12 @@ public final class Lab16ThermalCorrelationTest {
         assertTrue(unique.contains("1-3")); // CPU + charger
         assertTrue(unique.contains("3-4")); // charger + PMIC
         assertTrue(unique.contains("0-5")); // battery + surface
+        for (Lab16ThermalCorrelation.Pair pair : d.elevatedPairs) {
+            assertFalse("Missing domain-specific explanation for " + pair.names(true),
+                    pair.details(true).contains("Δύο θερμικοί τομείς"));
+            assertFalse("English pair fallback for " + pair.names(false),
+                    pair.details(false).contains("Two thermal areas"));
+        }
     }
 
     @Test public void noSectorIsInferredFromMissingData() {
