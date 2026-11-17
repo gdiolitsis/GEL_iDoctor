@@ -66,9 +66,59 @@ public final class Lab16ThermalCorrelation {
                         ? "Αυξημένες ενδείξεις μπαταρίας και επιφάνειας· ο χρήστης μπορεί να αισθάνεται τη συσκευή θερμότερη."
                         : "Battery and surface readings are elevated; the device may feel warm.";
             }
+            if (matches(BATTERY, CPU)) {
+                return gr
+                        ? "Η μπαταρία και η CPU είναι θερμότερες ταυτόχρονα. Δεν γνωρίζουμε αν συνδέονται αιτιωδώς· σύγκρινε μετρήσεις σε ηρεμία."
+                        : "Battery and CPU are simultaneously warm. Causation is unknown; compare against an idle reading.";
+            }
+            if (matches(BATTERY, GPU)) {
+                return gr
+                        ? "Η μπαταρία και η GPU παρουσιάζουν αυξημένες ενδείξεις. Χρειάζεται σύγκριση με χαμηλό φόρτο πριν αποδοθεί αιτία."
+                        : "Battery and GPU temperatures are both elevated. Compare under low load before attributing a cause.";
+            }
+            if (matches(BATTERY, PMIC)) {
+                return gr
+                        ? "Συνυπάρχουν υψηλότερες ενδείξεις στη μπαταρία και στο κύκλωμα διαχείρισης ισχύος· δεν αποδεικνύεται ηλεκτρική βλάβη."
+                        : "Battery and power-management temperatures are elevated together; an electrical fault is not proven.";
+            }
+            if (matches(CPU, PMIC)) {
+                return gr
+                        ? "Η CPU και η περιοχή διαχείρισης ισχύος θερμαίνονται ταυτόχρονα· έλεγξε ξανά σε κατάσταση ηρεμίας, χωρίς αυτόματη διάγνωση βλάβης."
+                        : "CPU and power-management readings are both elevated; repeat at idle without presuming a hardware defect.";
+            }
+            if (matches(CPU, SURFACE)) {
+                return gr
+                        ? "Η αυξημένη ένδειξη CPU συνυπάρχει με θερμότερη επιφάνεια. Δεν αποδεικνύεται ότι η CPU προκάλεσε τη θέρμανση."
+                        : "CPU and device-surface readings are elevated together; the CPU is not established as the cause.";
+            }
+            if (matches(GPU, CHARGER)) {
+                return gr
+                        ? "Η GPU και η εσωτερική περιοχή φόρτισης παρουσιάζουν αυξημένες ενδείξεις. Απαιτείται έλεγχος υπό χαμηλό φορτίο."
+                        : "GPU and internal charging-zone temperatures are elevated together; compare under light load.";
+            }
+            if (matches(GPU, PMIC)) {
+                return gr
+                        ? "Η GPU και η διαχείριση ισχύος παρουσιάζουν ταυτόχρονα αυξημένες ενδείξεις· δεν πιστοποιείται αιτιώδης σχέση."
+                        : "GPU and power-management readings are elevated simultaneously; causation is not established.";
+            }
+            if (matches(GPU, SURFACE)) {
+                return gr
+                        ? "Η αυξημένη ένδειξη GPU συνυπάρχει με θερμότερη επιφάνεια· η προέλευση της θερμότητας παραμένει άγνωστη."
+                        : "GPU and surface readings are elevated together; the source of the surface heat is unknown.";
+            }
+            if (matches(CHARGER, SURFACE)) {
+                return gr
+                        ? "Θέρμανση στην εσωτερική περιοχή φόρτισης και στην επιφάνεια· έλεγξε και κατά φόρτιση και χωρίς φορτιστή."
+                        : "The internal charging zone and device surface are warm; compare while charging and unplugged.";
+            }
+            if (matches(PMIC, SURFACE)) {
+                return gr
+                        ? "Η περιοχή διαχείρισης ισχύος και η επιφάνεια παρουσιάζουν αυξημένες ενδείξεις· χρειάζεται επανάληψη για εντοπισμό μοτίβου."
+                        : "Power-management and surface temperatures are elevated together; repeat to establish a pattern.";
+            }
             return gr
-                    ? "Ταυτόχρονα αυξημένες ενδείξεις σε δύο τομείς. Ένα στιγμιότυπο δεν τεκμηριώνει αιτία."
-                    : "Two areas show elevated readings at the same time. One snapshot cannot establish causation.";
+                    ? "Δύο θερμικοί τομείς έχουν αυξημένες ενδείξεις στο ίδιο στιγμιότυπο· η αιτία δεν επιβεβαιώνεται."
+                    : "Two thermal areas are elevated in the same snapshot; the cause is unverified.";
         }
         private boolean matches(int a, int b) {
             return (first == a && second == b) || (first == b && second == a);
