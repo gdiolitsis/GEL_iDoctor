@@ -85,7 +85,15 @@ public final class Lab29FactorySpecAudit {
     /** Test-friendly container. All values originate from the common iDoctorEngine. */
     public static final class Measurements {
         public String manufacturer, model, abi;
+        // Existing iDoctorEngine fields also displayed by the Internal/Peripherals screens.
+        public String socModel, cpuModel, cpuHardware, board;
+        public String gpuName, gpuEglHardware, gpuDriver;
         public int cores = -1, widthPx = -1, heightPx = -1, ramMb = -1;
+        public long maxRearJpegPixels = -1L, maxFrontJpegPixels = -1L;
+        public long batteryDesignMah = -1L;
+        public int wifiFrequencyMhz = -1;
+        public Boolean wifi24GHzSupported = null, wifi5GHzSupported = null;
+        public boolean nfcSupported, fmFeatureReported;
         public double storageGb = Double.NaN;
         public float activeRefreshHz = Float.NaN, maxRefreshHz = Float.NaN;
         public boolean rearCamera, frontCamera, rearFlash;
@@ -107,11 +115,26 @@ public final class Lab29FactorySpecAudit {
             iDoctorEngine.SystemSnapshot s = engine.readSystemSnapshot();
             m.manufacturer = s.manufacturer;
             m.model = s.model;
+            m.board = s.board;
         } catch (Throwable ignored) { }
         try {
             iDoctorEngine.CpuSnapshot s = engine.readCpuSnapshot();
             m.cores = s.cores;
             m.abi = s.abi;
+            m.socModel = s.socModel;
+            m.cpuModel = s.modelName;
+            m.cpuHardware = s.hardware;
+        } catch (Throwable ignored) { }
+        try {
+            iDoctorEngine.GpuSnapshot s = engine.readGpuSnapshot();
+            m.gpuName = s.gpuName;
+            m.gpuEglHardware = s.eglHardware;
+            m.gpuDriver = s.driver;
+        } catch (Throwable ignored) { }
+        try {
+            // Design capacity comes from the device's telemetry, never from
+            // the model's published reference profile (no circular match).
+            m.batteryDesignMah = engine.readBatterySnapshot().chargeDesignMah;
         } catch (Throwable ignored) { }
         try {
             iDoctorEngine.MemorySnapshot s = engine.readMemorySnapshot();
@@ -136,8 +159,16 @@ public final class Lab29FactorySpecAudit {
                 if ("Back".equals(unit.facing)) {
                     m.rearCamera = true;
                     if (Boolean.TRUE.equals(unit.flash)) m.rearFlash = true;
+                    if (unit.maxJpegPixels > m.maxRearJpegPixels) {
+                        m.maxRearJpegPixels = unit.maxJpegPixels;
+                    }
                 }
-                if ("Front".equals(unit.facing)) m.frontCamera = true;
+                if ("Front".equals(unit.facing)) {
+                    m.frontCamera = true;
+                    if (unit.maxJpegPixels > m.maxFrontJpegPixels) {
+                        m.maxFrontJpegPixels = unit.maxJpegPixels;
+                    }
+                }
             }
         } catch (Throwable ignored) { }
         try {
@@ -153,11 +184,16 @@ public final class Lab29FactorySpecAudit {
             m.irBlaster = s.irBlaster;
             m.fingerprint = s.fingerprint;
             m.gps = s.gpsHw;
+            m.nfcSupported = s.nfcSupported;
+            m.fmFeatureReported = s.fmRadio;
         } catch (Throwable ignored) { }
         try {
             iDoctorEngine.ConnectivitySnapshot s = engine.readConnectivitySnapshot();
             m.wifi = s.wifiSupported;
             m.bluetooth = s.bluetoothSupported;
+            m.wifiFrequencyMhz = s.frequencyMhz;
+            m.wifi24GHzSupported = s.wifi24GHzSupported;
+            m.wifi5GHzSupported = s.wifi5GHzSupported;
         } catch (Throwable ignored) { }
         return evaluate(m);
     }
@@ -191,10 +227,20 @@ public final class Lab29FactorySpecAudit {
         add(rows, "Αρχιτεκτονική CPU", "CPU architecture", "64-bit ARM",
                 safe(m.abi),
                 safe(m.abi).contains("arm64-v8a") ? Verdict.MATCH : Verdict.UNKNOWN);
+        // Official Qualcomm product brief maps SM4450 to Snapdragon 4 Gen 2.
+        // "qcom" and generic board properties alone do NOT prove this SoC.
+        String cpuEvidence = observed(m.socModel, m.cpuModel, m.cpuHardware, m.board);
+        boolean known4450 = containsText(cpuEvidence, "SM4450")
+                || containsText(cpuEvidence, "Snapdragon 4 Gen 2");
         add(rows, "Μοντέλο επεξεργαστή", "Chipset model", "Snapdragon 4 Gen 2",
-                "", Verdict.UNKNOWN);
+                cpuEvidence, known4450 ? Verdict.MATCH : Verdict.UNKNOWN);
+
+        // GPU model is often exposed as EGL/Vulkan platform metadata only.
+        // Accept an explicit Adreno identifier; NEVER infer it from "qcom".
+        String gpuEvidence = observed(m.gpuName, m.gpuEglHardware, m.gpuDriver);
         add(rows, "Γραφικά GPU", "GPU model", "Qualcomm Adreno",
-                "", Verdict.UNKNOWN);
+                gpuEvidence, containsText(gpuEvidence, "Adreno")
+                        ? Verdict.MATCH : Verdict.UNKNOWN);
 
         String ram = m.ramMb > 0 ? m.ramMb + " MiB (system available)" : "";
         // Kernel-visible RAM is below marketed capacity due to reserved memory.
@@ -241,12 +287,18 @@ public final class Lab29FactorySpecAudit {
                 m.frontCamera);
         positive(rows, "Φλας πίσω κάμερας", "Rear camera flash",
                 "Ναι / Yes", m.rearFlash);
+        // Camera2 reports JPEG OUTPUT modes. A 12.5 MP binned JPEG does not
+        // disprove a genuine 50 MP sensor; output sizes don't certify the sensor.
         add(rows, "Κύρια κάμερα", "Main camera resolution", "50 MP",
-                "", Verdict.UNKNOWN);
+                jpegObservation(m.maxRearJpegPixels),
+                withinJpegMp(m.maxRearJpegPixels, 48d, 52.5d)
+                        ? Verdict.MATCH : Verdict.UNKNOWN);
         add(rows, "Κάμερα βάθους", "Depth camera resolution", "2 MP",
-                "", Verdict.UNKNOWN);
+                "", Verdict.UNKNOWN); // Camera2 does not label a lens as "depth 2 MP".
         add(rows, "Selfie", "Selfie camera resolution", "5 MP",
-                "", Verdict.UNKNOWN);
+                jpegObservation(m.maxFrontJpegPixels),
+                withinJpegMp(m.maxFrontJpegPixels, 4.5d, 5.5d)
+                        ? Verdict.MATCH : Verdict.UNKNOWN);
 
         positive(rows, "Επιταχυνσιόμετρο", "Accelerometer",
                 "Ναι / Yes", m.accelerometer);
@@ -264,8 +316,12 @@ public final class Lab29FactorySpecAudit {
                 "Ναι / Yes", m.fingerprint);
         positive(rows, "Παρουσία Wi-Fi", "Wi-Fi present", "Ναι / Yes",
                 m.wifi);
+        // These official WifiManager capability APIs independently check each band.
+        // Current connection frequency alone only proves the active band.
+        boolean dualBandConfirmed = Boolean.TRUE.equals(m.wifi24GHzSupported)
+                && Boolean.TRUE.equals(m.wifi5GHzSupported);
         add(rows, "Μπάντες Wi-Fi", "Wi-Fi supported bands", "2.4 και 5 GHz / 2.4 and 5 GHz",
-                "", Verdict.UNKNOWN); // Presence does not establish both bands.
+                wifiObservation(m), dualBandConfirmed ? Verdict.MATCH : Verdict.UNKNOWN);
         positive(rows, "Bluetooth", "Bluetooth available", "Ναι / Yes",
                 m.bluetooth);
         add(rows, "Έκδοση Bluetooth", "Bluetooth version", "5.0",
@@ -276,17 +332,71 @@ public final class Lab29FactorySpecAudit {
         // FM are OEM claims but these shared readers cannot authenticate
         // the physical part/specification. Never turn absence into a fail.
         add(rows, "NFC (αγορά)", "NFC (market dependent)", "Ανάλογα την περιοχή",
-                "", Verdict.UNKNOWN);
+                m.nfcSupported ? "NFC adapter reported" : "",
+                m.nfcSupported ? Verdict.MATCH : Verdict.UNKNOWN);
+        // Only reported hardware design capacity, not runtime battery health,
+        // can support a cautious consistency check with nominal 5000 mAh.
         add(rows, "Μπαταρία", "Factory battery capacity", "5000 mAh (typ.)",
-                "", Verdict.UNKNOWN);
+                m.batteryDesignMah > 0
+                    ? m.batteryDesignMah + " mAh (reported design capacity)" : "",
+                m.batteryDesignMah >= 4700L && m.batteryDesignMah <= 5300L
+                    ? Verdict.MATCH : Verdict.UNKNOWN);
         add(rows, "Θύρα USB", "USB connector", "USB-C",
                 "", Verdict.UNKNOWN);
         add(rows, "Υποδοχή 3.5 mm", "3.5 mm jack", "Ναι / Yes",
                 "", Verdict.UNKNOWN);
         add(rows, "FM", "FM radio", "Ναι / Yes",
-                "", Verdict.UNKNOWN);
+                m.fmFeatureReported ? "Android FM feature declared" : "",
+                m.fmFeatureReported ? Verdict.MATCH : Verdict.UNKNOWN);
 
         return new Report(model, source, rows, true);
+    }
+
+    /** Avoid treating missing/unreadable device fields as positive matches. */
+    private static String observed(String... fields) {
+        StringBuilder out = new StringBuilder();
+        if (fields == null) return "";
+        for (String field : fields) {
+            String v = safe(field);
+            if (v.isEmpty() || "unknown".equalsIgnoreCase(v)) continue;
+            if (out.length() > 0) out.append(" | ");
+            out.append(v);
+        }
+        return out.toString();
+    }
+
+    private static boolean containsText(String value, String needle) {
+        return value != null && value.toLowerCase(Locale.US)
+                .contains(needle.toLowerCase(Locale.US));
+    }
+
+    private static boolean withinJpegMp(long pixels, double min, double max) {
+        if (pixels <= 0L) return false;
+        double mp = pixels / 1_000_000d;
+        return mp >= min && mp <= max;
+    }
+
+    private static String jpegObservation(long pixels) {
+        return pixels > 0L
+                ? String.format(Locale.US, "%.1f MP (max JPEG output; sensor unverified)",
+                        pixels / 1_000_000d)
+                : "";
+    }
+
+    private static String wifiObservation(Measurements m) {
+        StringBuilder b = new StringBuilder();
+        if (m.wifi24GHzSupported != null) {
+            b.append("2.4 GHz capability: ").append(m.wifi24GHzSupported ? "yes" : "not reported");
+        }
+        if (m.wifi5GHzSupported != null) {
+            if (b.length() > 0) b.append(" | ");
+            b.append("5 GHz capability: ").append(m.wifi5GHzSupported ? "yes" : "not reported");
+        }
+        if (m.wifiFrequencyMhz >= 2400 && m.wifiFrequencyMhz <= 7100) {
+            if (b.length() > 0) b.append(" | ");
+            b.append("Active connection: ").append(m.wifiFrequencyMhz).append(" MHz");
+        }
+        return b.toString();
     }
 
     private static boolean near(float a, float b) {
