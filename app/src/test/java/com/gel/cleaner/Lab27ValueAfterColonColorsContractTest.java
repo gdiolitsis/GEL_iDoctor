@@ -57,7 +57,7 @@ public final class Lab27ValueAfterColonColorsContractTest {
 
     @Test public void thermalValuesUseLab16SensorSpecificColorSemantics() throws Exception {
         String src = activity();
-        int start = src.indexOf("private void lab27ThermalIsElevated(");
+        int start = src.indexOf("private boolean lab27ThermalIsElevated(");
         int end = src.indexOf("private void lab27DisplayFactorySpecs(", start);
         assertTrue(start >= 0 && end > start);
         String thermal = src.substring(start, end);
