@@ -78,6 +78,18 @@ public final class Lab16ThermalCorrelationTest {
         assertFalse(d.combinedMessage(true).contains("Περιοχή φόρτισης"));
     }
 
+    @Test public void alreadyReportedThermalZonesAreNeverWarnedAsAdditionalHiddenSources() {
+        for (String name : new String[] {
+                "battery", "batt_therm", "cpu_thermal", "GPU-therm",
+                "pmic", "usb_port", "charger", "skin", "shell"
+        }) {
+            assertTrue(name, Lab16ThermalCorrelation.alreadyDisplayedZoneType(name));
+        }
+        assertFalse(Lab16ThermalCorrelation.alreadyDisplayedZoneType("modem"));
+        assertFalse(Lab16ThermalCorrelation.alreadyDisplayedZoneType("soc_misc"));
+        assertFalse(Lab16ThermalCorrelation.alreadyDisplayedZoneType(null));
+    }
+
     @Test public void duplicateVendorZonesKeepHottestAvailableReading() {
         float[] t=Lab16ThermalCorrelation.emptyTemperatures();
         Lab16ThermalCorrelation.capture(t,"Charger",47f);
