@@ -79,10 +79,14 @@ public final class Lab15FastChargerContextContractTest {
         assertTrue(s.contains("p.getString(\"lab15_charger_type\", \"UNKNOWN\")"));
         assertTrue(s.contains("Lab 15 — ταχυφορτιστής (δήλωση)"));
         assertTrue(s.contains("NO (user reported)"));
-        int hot = s.indexOf("if (lab15ObservedOvertemp) {\n                chargeAdvice");
+        int hot = s.indexOf("if (lab15ObservedOvertemp || thermalConcern || lab14StressThermalWarning) {");
         int low = s.indexOf("} else if (chargeRateWarn) {\n                if (\"YES\"");
         assertTrue("Cooling/heat must take precedence over fast-charger suggestion", hot > 0 && low > hot);
         assertTrue(s.contains("δεν αποδεικνύεται η αιτία"));
         assertTrue(s.contains("δεν αποδεικνύει βλάβη"));
+        assertTrue(s.contains("Lab17ChargingContext.evaluate("));
+        assertTrue(s.contains("!chargeEvaluation.unknownChargerWithSlowRate"));
+        assertTrue(s.contains("chargeEvaluation.slowRateNeedsReview"));
+        assertTrue(s.contains("chargeEvaluation.slowNetRate"));
     }
 }
