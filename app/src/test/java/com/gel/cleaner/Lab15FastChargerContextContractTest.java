@@ -38,6 +38,7 @@ public final class Lab15FastChargerContextContractTest {
         assertTrue(s.contains("selected == fastNoId ? \"NO\" : \"UNKNOWN\""));
         assertTrue(s.contains("lab15ChargerType = \"UNKNOWN\""));
         assertTrue(s.contains("buildGELPopupRoot(this)"));
+        assertTrue(s.contains("Επίλεξε: Ναι, Όχι ή Δεν γνωρίζω."));
     }
 
     @Test public void lab15OnlyPersistsAnswerForCurrentCompletedRun() throws Exception {
