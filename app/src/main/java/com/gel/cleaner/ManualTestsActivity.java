@@ -16503,48 +16503,15 @@ if (!lab14_systemLimited[0] &&
 int swellingScore = 0;
 
 // ----------------------------------------------------
-// RECOVERY RATIO CHECK
-// ----------------------------------------------------
-
-float recoveryRatio = Float.NaN;
-
-if (!Float.isNaN(voltageRecovery[0]) &&
-    hasSag &&
-    finalSag > 0f) {
-
-    recoveryRatio = voltageRecovery[0] / finalSag;
-}
-
-// ----------------------------------------------------
-// COLLAPSE DETECTOR (FINAL)
+// VOLTAGE DROP / RECOVERY WARNING: COMBINED EVIDENCE
+// Preserve the original 2-of-3 evidence threshold. A low
+// recovery/sag ratio by itself is not proof of voltage collapse.
 // ----------------------------------------------------
 
 collapseRisk[0] = false;
-
-if (!lab14_systemLimited[0] &&
-    hasSag &&
-    !Float.isNaN(voltageRecovery[0]) &&
-    !Float.isNaN(internalResistance[0])) {
-
-    boolean weakRecovery =
-            voltageRecovery[0] < 0.035f; // λίγο πιο αυστηρό
-
-    boolean heavySag =
-            finalSag > 0.06f; // όχι 0.01
-
-    boolean highESR =
-            internalResistance[0] > 0.09f &&
-            internalResistance[0] < 0.30f;
-
-    int flags = 0;
-
-    if (weakRecovery) flags++;
-    if (heavySag) flags++;
-    if (highESR) flags++;
-
-    if (flags >= 2) {
-        collapseRisk[0] = true;
-    }
+if (!lab14_systemLimited[0] && hasSag) {
+    collapseRisk[0] = Lab14VoltageDropEvidence.hasCorroboratedConcern(
+            finalSag, voltageRecovery[0], internalResistance[0]);
 }
 
 // ----------------------------------------------------
@@ -16651,27 +16618,10 @@ if (!Float.isNaN(internalResistance[0]) &&
 }
 
 // ----------------------------------------------------
-// COLLAPSE VIA RECOVERY RATIO (FINAL)
+// Ratio-only override removed (previously < 40% unconditionally
+// asserted collapse risk). The measured sag and recovery remain
+// unchanged; a warning now requires the combined evidence above.
 // ----------------------------------------------------
-
-if (!Float.isNaN(voltageRecovery[0]) &&
-    voltageRecovery[0] >= 0.002f &&   // 🔴 reject noise
-    hasSag &&
-    finalSag >= 0.02f &&              // 🔴 strong sag only
-    finalSag < 1.0f &&                // 🔴 sanity upper bound
-    validDrain &&
-    !lab14_systemLimited[0]) {
-
-    recoveryRatio =
-            voltageRecovery[0] / finalSag;
-
-    if (!Float.isNaN(recoveryRatio) &&
-        recoveryRatio >= 0f &&
-        recoveryRatio < 0.4f) {
-
-        collapseRisk[0] = true;
-    }
-}
 
 // ----------------------------------------------------
 // SAVE RUN / CONFIDENCE (FINAL)
