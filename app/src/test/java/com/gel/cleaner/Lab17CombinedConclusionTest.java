@@ -26,7 +26,9 @@ public final class Lab17CombinedConclusionTest {
     @Test public void normalCombinedEvidenceGetsGroundedGreen() {
         Lab17CombinedConclusion.Decision d = greek("Normal", false, false, false, true);
         assertEquals(Lab17CombinedConclusion.Tone.POSITIVE, d.tone);
-        assertTrue(d.message.contains("για τους τομείς που ελέγχθηκαν"));
+        assertTrue(d.message.contains("Συμπέρασμα για το σύστημα:"));
+        assertTrue(d.message.contains("στους τομείς τροφοδοσίας, φόρτισης και θερμικής συμπεριφοράς"));
+        assertTrue(d.message.contains("Η εκτίμηση περιορίζεται στους ελέγχους που πραγματοποιήθηκαν."));
     }
 
     @Test public void genuineBatteryConcernOverridesWeakReassurance() {

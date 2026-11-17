@@ -26,12 +26,45 @@ public final class Lab17CombinedEvidenceMatrixTest {
         assertFalse(d.message.contains("όλο το σύστημα"));
     }
 
-    @Test public void normalOrGoodExcellentEvidenceIsGreen() {
+    @Test public void normalOrGoodExcellentEvidenceIsGreenAndNamesSystemOperation() {
         for (String cls : new String[] {"Normal", "Good", "Excellent"}) {
             Lab17CombinedConclusion.Decision d = decide(cls,
                     false,false,false,false,false,false,true,false,false,true);
             assertEquals(cls, Lab17CombinedConclusion.Tone.POSITIVE, d.tone);
+            assertTrue(cls, d.message.contains("Συμπέρασμα για το σύστημα:"));
+            assertTrue(cls, d.message.contains("λειτουργία του συστήματος"));
+            assertTrue(cls, d.message.contains("τροφοδοσίας, φόρτισης και θερμικής συμπεριφοράς"));
+            assertTrue(cls, d.message.contains("περιορίζεται στους ελέγχους"));
+            assertFalse(cls, d.message.contains("όλα τα υποσυστήματα"));
+            assertFalse(cls, d.message.contains("υγεία ολόκληρης της συσκευής"));
         }
+    }
+
+    @Test public void normalSystemVerdictDoesNotMaskPartialCoverageOrWarnings() {
+        Lab17CombinedConclusion.Decision partial=decide("Normal",
+                false,false,false,false,false,false,true,false,false,false);
+        assertEquals(Lab17CombinedConclusion.Tone.NEUTRAL, partial.tone);
+        assertFalse(partial.message.contains("Συμπέρασμα για το σύστημα:"));
+
+        Lab17CombinedConclusion.Decision hot=decide("Normal",
+                false,false,false,false,false,false,true,false,true,true);
+        assertEquals(Lab17CombinedConclusion.Tone.CAUTION,hot.tone);
+        assertFalse(hot.message.contains("ικανοποιητική."));
+
+        Lab17CombinedConclusion.Decision charging=decide("Normal",
+                false,false,false,false,false,false,true,true,false,true);
+        assertEquals(Lab17CombinedConclusion.Tone.CAUTION,charging.tone);
+        assertFalse(charging.message.contains("Συμπέρασμα για το σύστημα:"));
+    }
+
+    @Test public void explicitSystemVerdictAlsoExistsInEnglish() {
+        Lab17CombinedConclusion.Decision d=Lab17CombinedConclusion.evaluateDetailed(
+                false,"Normal",false,false,false,false,false,false,true,false,false,true);
+        assertEquals(Lab17CombinedConclusion.Tone.POSITIVE,d.tone);
+        assertTrue(d.message.contains("System verdict:"));
+        assertTrue(d.message.contains("System operation"));
+        assertTrue(d.message.contains("tested power, charging and thermal areas"));
+        assertTrue(d.message.contains("limited to the tests performed"));
     }
 
     @Test public void everyIndependentBatterySignalOverridesWeakReassurance() {

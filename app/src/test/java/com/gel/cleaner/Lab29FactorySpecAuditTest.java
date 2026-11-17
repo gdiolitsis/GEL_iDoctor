@@ -25,6 +25,93 @@ public class Lab29FactorySpecAuditTest {
         return m;
     }
 
+    private static Lab29FactorySpecAudit.Row row(
+            Lab29FactorySpecAudit.Report report, String english) {
+        for (Lab29FactorySpecAudit.Row r : report.rows) {
+            if (english.equals(r.english)) return r;
+        }
+        throw new AssertionError("Missing comparison row: " + english);
+    }
+
+    @Test public void chipsetRequiresRealSocIdentifierNotGenericQualcommHardware() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.socModel = "SM4450";
+        assertEquals(Lab29FactorySpecAudit.Verdict.MATCH,
+                row(Lab29FactorySpecAudit.evaluate(m), "Chipset model").verdict);
+        m.socModel = "unknown";
+        m.cpuHardware = "qcom";
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(Lab29FactorySpecAudit.evaluate(m), "Chipset model").verdict);
+        assertTrue(row(Lab29FactorySpecAudit.evaluate(m), "Chipset model")
+                .observed.contains("qcom"));
+    }
+
+    @Test public void adrenoMustBeActuallyReportedAndVisibleInTheResult() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.gpuName = "Adreno (TM) 613";
+        Lab29FactorySpecAudit.Row gpu = row(Lab29FactorySpecAudit.evaluate(m), "GPU model");
+        assertEquals(Lab29FactorySpecAudit.Verdict.MATCH, gpu.verdict);
+        assertTrue(gpu.observed.contains("Adreno"));
+        m.gpuName = "qcom";
+        m.gpuDriver = "N/A";
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(Lab29FactorySpecAudit.evaluate(m), "GPU model").verdict);
+        assertTrue(row(Lab29FactorySpecAudit.evaluate(m), "GPU model")
+                .observed.contains("qcom"));
+    }
+
+    @Test public void cameraJpegModesAreShownButDoNotCertifyBinnedSensorResolution() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.maxRearJpegPixels = 50_000_000L;
+        m.maxFrontJpegPixels = 5_000_000L;
+        Lab29FactorySpecAudit.Report r = Lab29FactorySpecAudit.evaluate(m);
+        assertEquals(Lab29FactorySpecAudit.Verdict.MATCH,
+                row(r, "Main camera resolution").verdict);
+        assertEquals(Lab29FactorySpecAudit.Verdict.MATCH,
+                row(r, "Selfie camera resolution").verdict);
+        assertTrue(row(r, "Main camera resolution").observed.contains("max JPEG output"));
+        m.maxRearJpegPixels = 12_500_000L; // 50MP sensors can expose 12.5MP binning.
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(Lab29FactorySpecAudit.evaluate(m), "Main camera resolution").verdict);
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(Lab29FactorySpecAudit.evaluate(m), "Depth camera resolution").verdict);
+    }
+
+    @Test public void onlyBothReportedWifiCapabilityBandsMakeDualBandMatch() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.wifiFrequencyMhz = 5180;
+        Lab29FactorySpecAudit.Row partial = row(Lab29FactorySpecAudit.evaluate(m),
+                "Wi-Fi supported bands");
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN, partial.verdict);
+        assertTrue(partial.observed.contains("5180"));
+        m.wifi24GHzSupported = true;
+        m.wifi5GHzSupported = true;
+        assertEquals(Lab29FactorySpecAudit.Verdict.MATCH,
+                row(Lab29FactorySpecAudit.evaluate(m), "Wi-Fi supported bands").verdict);
+        m.wifi24GHzSupported = null;
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(Lab29FactorySpecAudit.evaluate(m), "Wi-Fi supported bands").verdict);
+    }
+
+    @Test public void availableNfcFmAndBatteryNominalReadingsAreExplicit() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.nfcSupported = true;
+        m.fmFeatureReported = true;
+        m.batteryDesignMah = 5000L;
+        Lab29FactorySpecAudit.Report r = Lab29FactorySpecAudit.evaluate(m);
+        assertEquals(Lab29FactorySpecAudit.Verdict.MATCH,
+                row(r, "NFC (market dependent)").verdict);
+        assertEquals(Lab29FactorySpecAudit.Verdict.MATCH,
+                row(r, "FM radio").verdict);
+        assertEquals(Lab29FactorySpecAudit.Verdict.MATCH,
+                row(r, "Factory battery capacity").verdict);
+        m.batteryDesignMah = 3900L;
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(Lab29FactorySpecAudit.evaluate(m), "Factory battery capacity").verdict);
+        assertTrue(row(Lab29FactorySpecAudit.evaluate(m), "Factory battery capacity")
+                .observed.contains("3900"));
+    }
+
     @Test public void matchingSupportedProfileReportsOnlyMeasuredMatches() {
         Lab29FactorySpecAudit.Report r = Lab29FactorySpecAudit.evaluate(sample());
         assertTrue(r.supportedModel);

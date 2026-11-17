@@ -25260,6 +25260,7 @@ p.edit().remove("lab15_charge_score")
         .remove("lab15_flap_observed")
         .remove("lab15_overtemp_observed")
         .remove("lab15_charger_type")
+        .remove("lab15_diagnostic_outcome_v1")
         .apply();
 
 lab15Running  = true;
@@ -26067,6 +26068,13 @@ try {
             : lab15ObservedNetMahPerMinute >= 20d ? "HIGH"
             : lab15ObservedNetMahPerMinute >= 10d ? "TYPICAL"
             : lab15ObservedNetMahPerMinute >= 5d ? "MODERATE" : "LOW";
+    // Only Lab 15 interprets the user's charger declaration.
+    // Lab 17 receives this evidence-based outcome, not the questionnaire.
+    Lab17ChargingContext.Decision lab15Assessed = Lab17ChargingContext.evaluate(
+            gr, lab15ChargerType, lab15RateBand, null,
+            lab15OverTempDuringCharge, lab15FlapUnstable, lab15_systemLimited);
+    String lab15Outcome = Lab17ChargingContext.resultCode(lab15Assessed,
+            lab15_strengthKnown && Double.isFinite(lab15ObservedNetMahPerMinute));
     p.edit()
             .putBoolean("lab15_evidence_rate_known", lab15_strengthKnown)
             .putFloat("lab15_net_rate_mah_per_min",
@@ -26074,6 +26082,8 @@ try {
                             ? (float) lab15ObservedNetMahPerMinute : -1f)
             .putString("lab15_rate_band", lab15RateBand)
             .putString("lab15_charger_type", lab15ChargerType)
+            .putString("lab15_diagnostic_outcome_v1", lab15Outcome)
+            .putBoolean("lab15_system_limited", lab15_systemLimited)
             .putBoolean("lab15_flap_observed", lab15FlapUnstable)
             .putBoolean("lab15_overtemp_observed", lab15OverTempDuringCharge)
             .putLong("lab15_ts", System.currentTimeMillis())
@@ -26590,7 +26600,8 @@ if (lab14bEstimatedHours > 0f && battPct > 0f) {
     // Actual recorded Lab 15 observations; historical run categories are
     // accepted as limited evidence but never converted into a fake current.
     final String lab15RateBand = p.getString("lab15_rate_band", null);
-    final String lab15ChargerReported = p.getString("lab15_charger_type", "UNKNOWN");
+    final String lab15DiagnosticOutcome =
+            p.getString("lab15_diagnostic_outcome_v1", null);
     final float lab15NetRate = p.getFloat("lab15_net_rate_mah_per_min", -1f);
     final boolean lab15RateKnown = p.getBoolean("lab15_evidence_rate_known", false);
     final boolean lab15ObservedDisconnect = p.getBoolean("lab15_flap_observed", false);
@@ -26911,75 +26922,74 @@ final boolean fresh16 =
                        : "Elevated thermal response during the stress trial");
         }
 
-        // LAB 15: measured NET charging gain and observed charging events.
-        // Charger type is context supplied by the user, not a measured protocol.
-        // Do not automatically promote slow NET charging to system malfunction.
-        Lab17ChargingContext.Decision chargeEvaluation = Lab17ChargingContext.evaluate(
-                gr, lab15ChargerReported, lab15RateBand, lab15StrengthLabel,
-                lab15ObservedOvertemp, lab15ObservedDisconnect, lab15SystemLimited);
+        // LAB 15: combine its FINAL diagnostic outcome, not its questionnaire.
+        // Genuine heat/disconnection/Android limiting cannot be overridden.
+        Lab17ChargingContext.Decision chargeEvaluation =
+                Lab17ChargingContext.fromLab15Result(
+                        lab15DiagnosticOutcome, lab15RateBand, lab15StrengthLabel,
+                        lab15ObservedOvertemp, lab15ObservedDisconnect,
+                        lab15SystemLimited);
         boolean chargeRateWarn = chargeEvaluation.slowNetRate;
         boolean chargeConcern = chargeEvaluation.chargingConcern;
         boolean chargeRateAvailable = lab15RateKnown
                 && Float.isFinite(lab15NetRate) && lab15NetRate >= 0f
                 && lab15RateBand != null && !"UNKNOWN".equals(lab15RateBand);
 
-        if (chargeRateAvailable) {
-            String bandText = "HIGH".equals(lab15RateBand)
-                    ? (gr ? "Υψηλός" : "High")
-                    : "TYPICAL".equals(lab15RateBand)
-                    ? (gr ? "Συνήθης" : "Typical")
-                    : "MODERATE".equals(lab15RateBand)
-                    ? (gr ? "Μέτριος" : "Moderate")
-                    : (gr ? "Χαμηλός" : "Low");
-            String rateText = String.format(Locale.US, "%s — %.1f mAh/min",
-                    bandText, lab15NetRate);
-            if (chargeEvaluation.slowRateNeedsReview) {
-                logLabelWarnValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        rateText);
-            } else if (chargeRateWarn) {
-                // A reported regular/unknown charger does not establish phone failure.
-                logLabelValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        rateText);
-            } else {
-                logLabelOkValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        rateText);
-            }
-        } else if (lab15RateBand == null && lab15StrengthLabel != null) {
-            // Legacy evidence: preserve the category without inventing mAh/min.
-            if (chargeEvaluation.slowRateNeedsReview) {
-                logLabelWarnValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        gr ? "Καταγράφηκε μέτριος/χαμηλός ρυθμός (παλαιότερη δοκιμή)"
-                           : "Moderate/low rate recorded (legacy run)");
-            } else if (chargeRateWarn) {
-                logLabelValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        gr ? "Καταγράφηκε μέτριος/χαμηλός ρυθμός (παλαιότερη δοκιμή)"
-                           : "Moderate/low rate recorded (legacy run)");
-            } else {
-                logLabelOkValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        gr ? "Δεν καταγράφηκε χαμηλός ρυθμός (παλαιότερη δοκιμή)"
-                           : "No low rate recorded (legacy run)");
-            }
-        } else {
-            logLabelValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                    gr ? "Η δοκιμή εκτελέστηκε, αλλά ο καθαρός ρυθμός δεν τεκμηριώθηκε"
-                       : "Test completed, but net charging rate was unavailable");
-        }
-        logLabelValue(gr ? "Lab 15 — ταχυφορτιστής (δήλωση)" : "Lab 15 — fast charger (reported)",
-                "YES".equals(lab15ChargerReported)
-                        ? (gr ? "ΝΑΙ (δεν επαληθεύτηκε η ενεργοποίηση ταχυφόρτισης)"
-                              : "YES (fast-charge negotiation not verified)")
-                        : "NO".equals(lab15ChargerReported)
-                        ? (gr ? "ΟΧΙ (δήλωση χρήστη)" : "NO (user reported)")
-                        : (gr ? "Άγνωστο / δεν δηλώθηκε" : "Unknown / not reported"));
+        // Lab 17 presents ONLY the consolidated Lab 15 finding.
+        // Charging accessories, the user's answer and troubleshooting belong
+        // solely to Lab 15, which already displays that supporting detail.
+        StringBuilder chargingOutcome = new StringBuilder();
         if (lab15ObservedOvertemp) {
-            logLabelWarnValue(gr ? "Lab 15 — θέρμανση φόρτισης" : "Lab 15 — charging heat",
-                    gr ? "Καταγράφηκε αυξημένη θερμοκρασία"
-                       : "Elevated temperature recorded");
+            chargingOutcome.append(gr ? "Αυξημένη θερμοκρασία κατά τη φόρτιση. "
+                                      : "Elevated temperature during charging. ");
         }
         if (lab15ObservedDisconnect) {
-            logLabelWarnValue(gr ? "Lab 15 — σύνδεση φόρτισης" : "Lab 15 — charging link",
-                    gr ? "Καταγράφηκαν διακοπές σύνδεσης"
-                       : "Charging interruptions recorded");
+            chargingOutcome.append(gr ? "Παρατηρήθηκαν διακοπές σύνδεσης φόρτισης. "
+                                      : "Charging connection interruptions observed. ");
+        }
+        if (lab15SystemLimited) {
+            chargingOutcome.append(gr ? "Το Android περιόρισε τη φόρτιση. "
+                                      : "Android limited charging. ");
+        }
+        if (chargeRateAvailable) {
+            String measuredNetRate = String.format(Locale.US, "%.1f mAh/min", lab15NetRate);
+            if (chargeEvaluation.slowRateNeedsReview) {
+                chargingOutcome.append(gr
+                        ? "Ο χαμηλός καθαρός ρυθμός (" + measuredNetRate
+                          + ") χρειάζεται επανέλεγχο, όχι απόδειξη βλάβης."
+                        : "Low net charge gain (" + measuredNetRate
+                          + ") needs review, not proof of a device fault.");
+            } else if (chargeEvaluation.unknownChargerWithSlowRate) {
+                chargingOutcome.append(gr
+                        ? "Χαμηλός καθαρός ρυθμός (" + measuredNetRate
+                          + ")· δεν επαρκούν στοιχεία για ασφαλή ερμηνεία της ταχύτητας."
+                        : "Low net charge gain (" + measuredNetRate
+                          + "); evidence is insufficient to interpret charging speed.");
+            } else if (chargeRateWarn) {
+                chargingOutcome.append(gr
+                        ? "Χαμηλός καθαρός ρυθμός (" + measuredNetRate
+                          + ")· δεν τεκμηριώθηκε δυσλειτουργία της συσκευής."
+                        : "Low net charge gain (" + measuredNetRate
+                          + "); no device malfunction was established.");
+            } else {
+                chargingOutcome.append(gr
+                        ? "Ο καθαρός ρυθμός φόρτισης ήταν ικανοποιητικός (" + measuredNetRate + ")."
+                        : "Net charging rate was satisfactory (" + measuredNetRate + ").");
+            }
+        } else {
+            chargingOutcome.append(gr
+                    ? "Ο καθαρός ρυθμός φόρτισης δεν τεκμηριώθηκε."
+                    : "Net charging rate was not established.");
+        }
+        if (chargeEvaluation.chargingConcern) {
+            logLabelWarnValue(gr ? "Lab 15 — αποτέλεσμα φόρτισης" : "Lab 15 — charging result",
+                    chargingOutcome.toString().trim());
+        } else if (!chargeRateAvailable || chargeRateWarn) {
+            logLabelValue(gr ? "Lab 15 — αποτέλεσμα φόρτισης" : "Lab 15 — charging result",
+                    chargingOutcome.toString().trim());
+        } else {
+            logLabelOkValue(gr ? "Lab 15 — αποτέλεσμα φόρτισης" : "Lab 15 — charging result",
+                    chargingOutcome.toString().trim());
         }
 
         // LAB 16: use the actual OS thermal state, sensor coverage, and peak
@@ -27078,9 +27088,6 @@ final boolean fresh16 =
         // The final plain-language verdict names the measured hot domains.
         // All simultaneously elevated combinations are listed just above.
         String conclusionText = conclusion.message;
-        if (chargeEvaluation.slowNetRate && !chargeEvaluation.description.isEmpty()) {
-            conclusionText += " " + chargeEvaluation.description;
-        }
         if (thermalConcern && lab16DetailedAvailable) {
             conclusionText += " " + lab16ThermalProfile.combinedMessage(gr);
             if (!lab16ThermalProfile.elevatedPairs.isEmpty()) {
@@ -27095,61 +27102,8 @@ final boolean fresh16 =
         } else {
             logLabelValue(gr ? "Αποτέλεσμα" : "Result", conclusionText);
         }
-        // A heat warning wins over connection instability and slow charging,
-        // even when it originates from Lab 16 rather than Lab 15.
-        if (chargeConcern || chargeRateWarn || thermalConcern || lab14StressThermalWarning) {
-            String chargeAdvice;
-            if (lab15ObservedOvertemp || thermalConcern || lab14StressThermalWarning) {
-                chargeAdvice = gr
-                        ? "Προτεραιότητα στη θερμική ασφάλεια: αν φορτίζει, αποσύνδεσε τον φορτιστή και άφησε τη συσκευή να κρυώσει. Φορτιστής, καλώδιο ή θύρα μπορεί να συμβάλλουν στη θέρμανση, αλλά η αιτία δεν αποδεικνύεται. Επανάλαβε μόνο όταν κρυώσει· αν επαναληφθεί, ζήτησε τεχνικό έλεγχο."
-                        : "Thermal safety first: if charging, unplug the charger and let the device cool. Charger, cable or port may contribute to heating, but the cause is unproven. Retest only after cooling; seek inspection if it recurs.";
-                if (lab15ObservedDisconnect) {
-                    chargeAdvice += gr
-                            ? " Καταγράφηκαν επίσης διακοπές φόρτισης: μετά την ψύξη έλεγξε τη σύνδεση και δοκίμασε άλλο συμβατό καλώδιο/φορτιστή."
-                            : " Charging interruptions were also observed: after cooling, inspect the connection and try another compatible cable/charger.";
-                }
-            } else if (lab15ObservedDisconnect) {
-                chargeAdvice = gr
-                        ? "Δοκίμασε διαφορετικό συμβατό καλώδιο και φορτιστή· έλεγξε τη σύνδεση για επαναλαμβανόμενες διακοπές."
-                        : "Try another compatible cable and charger; inspect the connection for repeated interruptions.";
-            } else if (thermalConcern || lab14StressThermalWarning) {
-                chargeAdvice = gr
-                        ? "Προτεραιότητα έχει να κρυώσει η συσκευή. Επανάλαβε τη μέτρηση σε ηρεμία πριν δοκιμάσεις ταχύτερη φόρτιση."
-                        : "Allow the device to cool first. Retest at rest before trying faster charging.";
-            } else if (lab15SystemLimited) {
-                chargeAdvice = gr
-                        ? "Καταγράφηκε περιορισμός φόρτισης από το σύστημα. Επανάλαβε με τη συσκευή σε ηρεμία και φυσιολογική θερμοκρασία. Ο περιορισμός δεν αποδεικνύει βλάβη φορτιστή ή κινητού."
-                        : "System-limited charging was observed. Retest while idle and at normal temperature. This limit does not prove a charger or phone defect.";
-            } else if (chargeRateWarn) {
-                if ("YES".equals(lab15ChargerReported)) {
-                    chargeAdvice = gr
-                            ? "Δηλώθηκε ταχυφορτιστής, όχι όμως επαληθευμένη ταχυφόρτιση. Έλεγξε συμβατότητα, καλώδιο, ρυθμίσεις και θερμοκρασία και επανάλαβε με άλλο αξιόπιστο συμβατό σετ. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
-                            : "A fast charger was reported, but fast charging was not verified. Check compatibility, cable, settings and temperature; retest with another reliable compatible set. Low net charge gain does not prove a fault.";
-                } else if ("NO".equals(lab15ChargerReported)) {
-                    chargeAdvice = gr
-                            ? "Δηλώθηκε απουσία ταχυφορτιστή. Αν το κινητό υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
-                            : "No fast charger was reported. If the phone supports fast charging, try a reliable compatible fast charger and suitable cable. A low net rate does not prove a fault.";
-                } else {
-                    chargeAdvice = gr
-                            ? "Αν το κινητό υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Επανάλαβε χωρίς έντονη χρήση και σε συγκρίσιμη στάθμη φόρτισης. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
-                            : "If the device supports fast charging, try a reliable compatible fast charger and suitable cable. Retest without heavy use at a comparable charge level. Low net charge gain does not prove a fault.";
-                }
-            } else {
-                chargeAdvice = gr
-                        ? "Επανάλαβε τον έλεγχο με συμβατό φορτιστή και καλώδιο υπό συγκρίσιμες συνθήκες."
-                        : "Repeat with a compatible charger and cable under comparable conditions.";
-            }
-            if (chargeEvaluation.independentConcern || chargeEvaluation.slowRateNeedsReview
-                    || thermalConcern || lab14StressThermalWarning) {
-                logLabelWarnValue(gr ? "Προτεινόμενος έλεγχος" : "Recommended check",
-                        chargeAdvice);
-            } else {
-                // An isolated slow rate on a regular/unknown charger is context,
-                // not by itself an observed failure of the mobile device.
-                logLabelValue(gr ? "Προτεινόμενος έλεγχος" : "Recommended check",
-                        chargeAdvice);
-            }
-        }
+        // All charger-specific recommendations are already in Lab 15.
+        // Lab 17 is the system-level synthesis, not a second charger lab.
         logInfo(gr
                 ? "Το Lab 17 συνδυάζει καταγεγραμμένα ευρήματα. Δεν υπολογίζει ποσοστό υγείας μπαταρίας (SoH)."
                 : "Lab 17 combines recorded findings. It does not calculate battery state of health (SoH).");
@@ -31336,68 +31290,12 @@ logLabelValue(
            : "Hardware observations and instability indicators only."
 );
 
-    // OEM specification comparison: SAME iDoctorEngine hardware collectors as
-    // DeviceInfoInternalActivity and DeviceInfoPeripheralsActivity.
-    // Comparisons are not certifications of OEM parts or legal ownership.
-    appendHtml("<br>");
-    logLine();
-    logInfo(gr ? "Εργοστασιακές προδιαγραφές — ανεξάρτητος έλεγχος"
-               : "Factory specifications — independent comparison");
-    try {
-        Lab29FactorySpecAudit.Report factory = Lab29FactorySpecAudit.capture(this);
-        if (factory.supportedModel) {
-            logLabelOkValue(gr ? "Εργοστασιακό μοντέλο αναφοράς" : "OEM reference model",
-                    factory.modelName);
-            logLabelValue(gr ? "Πηγή κατασκευαστή" : "Manufacturer source",
-                    factory.officialSource);
-            for (Lab29FactorySpecAudit.Row specRow : factory.rows) {
-                String rowName = gr ? specRow.greek : specRow.english;
-                String observation = specRow.observed == null || specRow.observed.isEmpty()
-                        ? (gr ? "Δεν διατίθεται αξιόπιστη μέτρηση"
-                              : "No reliable reading available")
-                        : specRow.observed;
-                String expected = gr ? "Προδιαγραφή: " : "OEM: ";
-                if (specRow.verdict == Lab29FactorySpecAudit.Verdict.MATCH) {
-                    logLabelOkValue(rowName, observation + " — "
-                            + (gr ? "Συμφωνεί" : "Matches") + " ("
-                            + expected + specRow.expected + ")");
-                } else if (specRow.verdict == Lab29FactorySpecAudit.Verdict.DEVIATION) {
-                    logLabelErrorValue(rowName, observation + " — "
-                            + (gr ? "Απόκλιση προς επανέλεγχο" : "Deviation for review")
-                            + " (" + expected + specRow.expected + ")");
-                } else {
-                    logLabelValue(rowName,
-                            (gr ? "Δεν επαληθεύτηκε" : "Not verified")
-                            + " (" + expected + specRow.expected + ")");
-                }
-            }
-            logLabelValue(gr ? "Κάλυψη σύγκρισης" : "Comparison coverage",
-                    factory.matches + " " + (gr ? "συμφωνίες" : "matches") + " / "
-                    + factory.deviations + " " + (gr ? "αποκλίσεις" : "deviations")
-                    + " / " + factory.unknowns + " "
-                    + (gr ? "μη επαληθεύσιμα" : "unverified"));
-            if (factory.deviations > 0) {
-                logLabelErrorValue(gr ? "Συμπέρασμα" : "Conclusion",
-                        factory.conclusion(gr));
-            } else if (factory.matches > 0) {
-                logLabelOkValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
-                        factory.conclusion(gr));
-            } else {
-                logLabelValue(gr ? "Συμπέρασμα" : "Conclusion", factory.conclusion(gr));
-            }
-        } else {
-            logLabelValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
-                    factory.conclusion(gr));
-        }
-    } catch (Throwable compareError) {
-        logLabelValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
-                gr ? "Δεν ήταν διαθέσιμη. Οι υπόλοιποι έλεγχοι του Lab 28 διατηρούνται."
-                   : "Unavailable. The other Lab 28 checks remain unaffected.");
-    }
-    logLabelValue(gr ? "Όριο συμπεράσματος" : "Conclusion limitation",
-            gr ? "Συμφωνία χαρακτηριστικών δεν αποδεικνύει γνήσια εξαρτήματα, νόμιμη κυριότητα ή καλή λειτουργία."
-               : "Matching characteristics do not prove genuine parts, legal ownership or functional health.");
-    logLine();
+    // OEM comparison moved to Lab 27; used-device checks remain here.
+    logLabelValue(
+            gr ? "Τεχνική ταυτοποίηση μοντέλου" : "Model identity assessment",
+            gr ? "Η σύγκριση εργοστασιακών προδιαγραφών περιλαμβάνεται στο Lab 27."
+               : "The OEM specification comparison is included in Lab 27."
+    );
 
     appendHtml("<br>");
     logInfo(gr ? "Καταγράφηκαν τα προσβάσιμα χαρακτηριστικά του Android."
@@ -32343,11 +32241,9 @@ else {
 
 /* Internal heuristic index omitted from measured-results report */;
 
-logLabelValue(
-        gr ? "Ερμηνεία"
-           : "Interpretation",
-        ratingDesc
-);
+// The old risk-only grade is retained internally for backup comparison.
+// It is not an observed measurement and must not conflict with the
+// measured-snapshot A+–D grade shown in the final summary.
 
 // ------------------------------------------------------------
 // GEL HARDWARE INTEGRITY CERTIFICATE
@@ -32432,6 +32328,10 @@ int performanceScore = Lab30ScoreEvidence.performanceScore(
 int deviceHealthScore = Lab30ScoreEvidence.deviceHealthScore(
         thermalScore, batteryScore, performanceScore, stabilityScore);
 
+// Restore the old A+–D presentation using the existing evidence-gated
+// numeric snapshot, rather than the unverified legacy hardware-risk flags.
+final String snapshotGrade = Lab30ScoreEvidence.gradeForMeasuredSnapshot(deviceHealthScore);
+
 // ------------------------------------------------------------
 // PRINT DETAILS
 // ------------------------------------------------------------
@@ -32466,18 +32366,40 @@ if (zones == null || zones.isEmpty()) {
 } else {
 
     logLabelOkValue(gr ? "Ζώνες" : "Zones", String.valueOf(zones.size()));
-    logLabelOkValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
-    logLabelOkValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
 
-    if (cpu  != null) logLabelOkValue("CPU",  fmt1(cpu)  + "°C");
-    if (gpu  != null) logLabelOkValue("GPU",  fmt1(gpu)  + "°C");
-    if (pmic != null) logLabelOkValue("PMIC", fmt1(pmic) + "°C");
-    if (skin != null) logLabelOkValue(gr ? "Επιφάνεια" : "Skin", fmt1(skin) + "°C");
+    // Use the same sensor-specific warning bands as Lab 16.
+    // Merely reading a sensor does not make an elevated temperature green.
+    boolean elevatedThermalSector =
+            lab27ThermalIsElevated(cpu, Lab16ThermalCorrelation.CPU)
+            || lab27ThermalIsElevated(gpu, Lab16ThermalCorrelation.GPU)
+            || lab27ThermalIsElevated(pmic, Lab16ThermalCorrelation.PMIC)
+            || lab27ThermalIsElevated(skin, Lab16ThermalCorrelation.SURFACE)
+            || lab27ThermalIsElevated(batTemp, Lab16ThermalCorrelation.BATTERY);
 
-    if (!Float.isNaN(batTemp))
-        logLabelOkValue(gr ? "Μπαταρία" : "Battery", fmt1(batTemp) + "°C");
-    else
+    if (elevatedThermalSector) {
+        logLabelWarnValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
+        logLabelWarnValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
+    } else if (Lab16ThermalCorrelation.plausible(maxThermal)
+            && Lab16ThermalCorrelation.plausible(avgThermal)) {
+        logLabelOkValue(gr ? "Μέγιστη" : "Max", fmt1(maxThermal) + "°C");
+        logLabelOkValue(gr ? "Μέση" : "Average", fmt1(avgThermal) + "°C");
+    } else {
+        logLabelValue(gr ? "Μέγιστη" : "Max", gr ? "Μ/Δ" : "N/A");
+        logLabelValue(gr ? "Μέση" : "Average", gr ? "Μ/Δ" : "N/A");
+    }
+
+    if (cpu != null) lab27LogThermalValue("CPU", cpu, Lab16ThermalCorrelation.CPU);
+    if (gpu != null) lab27LogThermalValue("GPU", gpu, Lab16ThermalCorrelation.GPU);
+    if (pmic != null) lab27LogThermalValue("PMIC", pmic, Lab16ThermalCorrelation.PMIC);
+    if (skin != null) lab27LogThermalValue(gr ? "Επιφάνεια" : "Skin",
+            skin, Lab16ThermalCorrelation.SURFACE);
+
+    if (!Float.isNaN(batTemp)) {
+        lab27LogThermalValue(gr ? "Μπαταρία" : "Battery", batTemp,
+                Lab16ThermalCorrelation.BATTERY);
+    } else {
         logLabelValue(gr ? "Μπαταρία" : "Battery", gr ? "Μ/Δ" : "N/A");
+    }
 }
 
 appendHtml("<br>");
@@ -32509,14 +32431,21 @@ logLabelValue(
         storageFlag + " (" + storageScore + ")"
 );
 
-if (st.totalBytes > 0)
-    logLabelOkValue(
-            gr ? "Χρήση" : "Usage",
-            (gr ? "Ελεύθερο=" : "Free=") + st.pctFree + "% | " +
-            (gr ? "Χρησιμοποιείται=" : "Used=") +
-            humanBytes(st.usedBytes) + " / " + humanBytes(st.totalBytes));
-else
+if (st.totalBytes > 0) {
+    String storageUsage = (gr ? "Ελεύθερο=" : "Free=")
+            + st.pctFree + "% | " +
+            (gr ? "Χρησιμοποιείται=" : "Used=")
+            + humanBytes(st.usedBytes) + " / " + humanBytes(st.totalBytes);
+    if (st.pctFree >= 0 && st.pctFree < 10) {
+        logLabelWarnValue(gr ? "Χρήση" : "Usage", storageUsage);
+    } else if (st.pctFree >= 10) {
+        logLabelOkValue(gr ? "Χρήση" : "Usage", storageUsage);
+    } else {
+        logLabelValue(gr ? "Χρήση" : "Usage", storageUsage);
+    }
+} else {
     logLabelValue(gr ? "Χρήση" : "Usage", gr ? "Μ/Δ" : "N/A");
+}
 
 appendHtml("<br>");
 logInfo(gr ? "Αποτύπωμα Εφαρμογών" : "Apps footprint");
@@ -32579,10 +32508,13 @@ logLabelValue(
         securityFlag + " (" + securityScore + ")"
 );
 
-logLabelValue(
-        gr ? "Κλείδωμα συσκευής" : "Secure lock",
-        String.valueOf(sec.lockSecure)
-);
+if (sec.lockSecure) {
+    logLabelOkValue(gr ? "Κλείδωμα συσκευής" : "Secure lock",
+            gr ? "Ενεργό" : "Enabled");
+} else {
+    logLabelWarnValue(gr ? "Κλείδωμα συσκευής" : "Secure lock",
+            gr ? "Δεν υπάρχει ασφαλές κλείδωμα" : "No secure screen lock");
+}
 
 logLabelValue(
         gr ? "Ενημέρωση ασφαλείας" : "Patch level",
@@ -32655,6 +32587,58 @@ else
     deviceClass = "UNVERIFIED — REVIEW IF SYMPTOMS";
 
 /* Internal heuristic index omitted from measured-results report */;
+
+// The original Lab30 had both a letter grade and a 0–100 assessment.
+// Show both again, while being explicit about what the numbers measure.
+// No measured thermal/battery/performance/uptime coverage => no grade.
+appendHtml("<br>");
+logInfo(gr ? "Βαθμολογία συσκευής — διαθέσιμες μετρήσεις"
+           : "Device grade — available measurements");
+if (snapshotGrade == null) {
+    logLabelValue(
+            gr ? "Βαθμολογία συσκευής" : "Device grade",
+            gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA"
+    );
+    logLabelValue(
+            gr ? "Συνολικός δείκτης" : "Overall index",
+            gr ? "ΔΕΝ ΥΠΟΛΟΓΙΣΤΗΚΕ" : "NOT CALCULATED"
+    );
+} else {
+    if (deviceHealthScore >= 85) {
+        logLabelOkValue(
+                gr ? "Βαθμολογία συσκευής" : "Device grade",
+                snapshotGrade
+        );
+        logLabelOkValue(
+                gr ? "Συνολικός δείκτης" : "Overall index",
+                deviceHealthScore + "/100"
+        );
+    } else {
+        logLabelValue(
+                gr ? "Βαθμολογία συσκευής" : "Device grade",
+                snapshotGrade
+        );
+        logLabelValue(
+                gr ? "Συνολικός δείκτης" : "Overall index",
+                deviceHealthScore + "/100"
+        );
+    }
+}
+logLabelValue(
+        gr ? "Βάση βαθμολογίας" : "Rating basis",
+        gr ? "Θερμοκρασίες, τρέχουσα κατάσταση μπαταρίας, διαθέσιμος χώρος, RAM, εφαρμογές και χρόνος λειτουργίας."
+           : "Temperatures, current battery readings, free storage, RAM, app inventory and uptime."
+);
+logLabelValue(
+        gr ? "Ιστορικό Lab 25" : "Lab 25 history",
+        gr ? "Τα καταγεγραμμένα συμβάντα αξιολογούνται χωριστά στην αρχή της αναφοράς."
+           : "Recorded events are assessed separately at the start of this report."
+);
+logLabelValue(
+        gr ? "Όριο βαθμολογίας" : "Grade scope",
+        gr ? "Ο δείκτης αποτυπώνει το διαθέσιμο δείγμα μετρήσεων, όχι πιστοποίηση εξαρτημάτων ή μέτρηση φθοράς μπαταρίας."
+           : "The index describes the available snapshot; it does not certify component health or measure battery wear."
+);
 
 logLabelValue(
         gr ? "Απόδοση" : "Performance",
@@ -32954,12 +32938,128 @@ logInfo(gr ? "Συντάχθηκε πληροφοριακή αναφορά GEL �
 logLine();
 
 appendHtml("<br>");
+// Model identity is reported independently of the numerical condition grade.
+lab27DisplayFactorySpecs(gr);
+
 // Snapshot is finalized only after the report has been assembled.
 lab29SaveTechnicalAssessmentFromLab25(p);
 
 logOk(gr ? "Το Lab 27 ολοκληρώθηκε (σύνταξη πληροφοριακής σύνοψης)."
          : "Lab 27 finished (evidence summary compiled).");
 logLine();
+}
+
+private boolean lab27ThermalIsElevated(Float celsius, int sector) {
+    if (celsius == null) return false;
+    Lab16ThermalCorrelation.Level level =
+            Lab16ThermalCorrelation.level(sector, celsius);
+    return level == Lab16ThermalCorrelation.Level.ELEVATED
+            || level == Lab16ThermalCorrelation.Level.HIGH;
+}
+
+private void lab27LogThermalValue(String label, Float celsius, int sector) {
+    if (celsius == null || !Lab16ThermalCorrelation.plausible(celsius)) {
+        logLabelValue(label, AppLang.isGreek(this) ? "Μ/Δ" : "N/A");
+        return;
+    }
+    String value = fmt1(celsius) + "°C";
+    if (lab27ThermalIsElevated(celsius, sector)) {
+        logLabelWarnValue(label, value);
+    } else {
+        logLabelOkValue(label, value);
+    }
+}
+
+private void lab27DisplayFactorySpecs(boolean gr) {
+    // Compare Android-reported specifications to published OEM profile.
+    // No claim of cryptographic authenticity, genuine replacement parts,
+    // lawful ownership, or independently certified hardware.
+
+    // OEM specification comparison: SAME iDoctorEngine hardware collectors as
+    // DeviceInfoInternalActivity and DeviceInfoPeripheralsActivity.
+    // Comparisons are not certifications of OEM parts or legal ownership.
+    appendHtml("<br>");
+    logLine();
+    logInfo(gr ? "Εργοστασιακές προδιαγραφές — τεχνική ταυτοποίηση μοντέλου"
+               : "Factory specifications — device model identity");
+    try {
+        Lab29FactorySpecAudit.Report factory = Lab29FactorySpecAudit.capture(this);
+        if (factory.supportedModel) {
+            logLabelOkValue(gr ? "Εργοστασιακό μοντέλο αναφοράς" : "OEM reference model",
+                    factory.modelName);
+            logLabelValue(gr ? "Πηγή κατασκευαστή" : "Manufacturer source",
+                    factory.officialSource);
+            for (Lab29FactorySpecAudit.Row specRow : factory.rows) {
+                String rowName = gr ? specRow.greek : specRow.english;
+                String observation = specRow.observed == null || specRow.observed.isEmpty()
+                        ? (gr ? "Δεν διατίθεται αξιόπιστη μέτρηση"
+                              : "No reliable reading available")
+                        : specRow.observed;
+                String expected = gr ? "Προδιαγραφή: " : "OEM: ";
+                if (specRow.verdict == Lab29FactorySpecAudit.Verdict.MATCH) {
+                    logLabelOkValue(rowName, observation + " — "
+                            + (gr ? "Συμφωνεί" : "Matches") + " ("
+                            + expected + specRow.expected + ")");
+                } else if (specRow.verdict == Lab29FactorySpecAudit.Verdict.DEVIATION) {
+                    logLabelErrorValue(rowName, observation + " — "
+                            + (gr ? "Απόκλιση προς επανέλεγχο" : "Deviation for review")
+                            + " (" + expected + specRow.expected + ")");
+                } else {
+                    // Unknown does not mean the Android reader returned nothing.
+                    // Preserve partial GPU/SoC/camera/network observations in white.
+                    String partialObservation =
+                            specRow.observed == null || specRow.observed.trim().isEmpty()
+                                    ? (gr ? "Δεν επαληθεύτηκε" : "Not verified")
+                                    : observation + (gr
+                                            ? " — Δεν τεκμηριώθηκε πλήρης συμφωνία"
+                                            : " — Full match not established");
+                    logLabelValue(rowName,
+                            partialObservation + " (" + expected + specRow.expected + ")");
+                }
+            }
+            // Each result class keeps its own value color after the colon.
+            // Green = measured agreement, red = observed deviation,
+            // neutral white = coverage not established.
+            if (factory.matches > 0) {
+                logLabelOkValue(gr ? "Συμφωνίες προδιαγραφών" : "Specification matches",
+                        String.valueOf(factory.matches));
+            } else {
+                logLabelValue(gr ? "Συμφωνίες προδιαγραφών" : "Specification matches",
+                        String.valueOf(factory.matches));
+            }
+            if (factory.deviations > 0) {
+                logLabelErrorValue(gr ? "Αποκλίσεις προδιαγραφών" : "Specification deviations",
+                        String.valueOf(factory.deviations));
+            } else {
+                logLabelOkValue(gr ? "Αποκλίσεις προδιαγραφών" : "Specification deviations",
+                        "0");
+            }
+            logLabelValue(gr ? "Μη επαληθευμένα χαρακτηριστικά" : "Unverified specifications",
+                    String.valueOf(factory.unknowns));
+            if (factory.deviations > 0) {
+                logLabelErrorValue(gr ? "Συμπέρασμα" : "Conclusion",
+                        factory.conclusion(gr));
+            } else if (factory.matches > 0) {
+                logLabelOkValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
+                        factory.conclusion(gr));
+            } else {
+                logLabelValue(gr ? "Συμπέρασμα" : "Conclusion", factory.conclusion(gr));
+            }
+        } else {
+            logLabelValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
+                    factory.conclusion(gr));
+        }
+    } catch (Throwable compareError) {
+        logLabelValue(gr ? "Σύγκριση προδιαγραφών" : "Specification comparison",
+                gr ? "Δεν ήταν διαθέσιμη. Οι υπόλοιποι έλεγχοι του Lab 28 διατηρούνται."
+                   : "Unavailable. The other Lab 27 checks remain unaffected.");
+    }
+    logLabelValue(gr ? "Όριο συμπεράσματος" : "Conclusion limitation",
+            gr ? "Συμφωνία χαρακτηριστικών δεν αποδεικνύει γνήσια εξαρτήματα, νόμιμη κυριότητα ή καλή λειτουργία."
+               : "Matching characteristics do not prove genuine parts, legal ownership or functional health.");
+    logLine();
+
+
 }
 
 // ============================================================
@@ -33453,283 +33553,74 @@ return String.format(Locale.US, "%.1f", v);
 // to GELServiceLog for ServiceReportActivity export.
 // ============================================================
 private void lab31FinalSummary() {
-
     final boolean gr = AppLang.isGreek(this);
 
-    // Capture prior evidence before writing ANY header or label.
-    // Exclude earlier Lab 29 summaries; their replayed alerts are not new findings.
-    String fullLog = Lab31ReportEvidencePolicy.withoutPriorSummaries(
+    // Read BEFORE writing this report. Never promote our own earlier
+    // summaries to fresh warning/error findings.
+    String sourceLog = Lab31ReportEvidencePolicy.withoutPriorSummaries(
             GELServiceLog.getAll());
-    if (fullLog == null) fullLog = "";
-    if (fullLog.trim().isEmpty()) {
-        appendHtml("<font color='#FFD966'>" + (gr
-                ? "Δεν βρέθηκαν διαγνωστικά δεδομένα. Εκτελέστε πρώτα τα Manual Tests."
-                : "No diagnostic data found. Please run Manual Tests first.")
-                + "</font>");
-        return; // Do not contaminate an empty log with a fake report entry.
-    }
+    java.util.List<Lab29TechnicianAlerts.Finding> findings =
+            Lab29TechnicianAlerts.collect(sourceLog);
 
-    SharedPreferences p =
-            getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
-
-// ------------------------------------------------------------
-// LAB14B READ (CLEAN + DERIVED)
-// ------------------------------------------------------------
-
-// 🔴 RAW (source of truth)
-float lab14bConsumptionPerHour =
-        p.getFloat("lab14b_consumption_per_hour", -1f);
-
-long ts14b =
-        p.getLong("lab14b_ts", 0L);
-
-// ------------------------------------------------------------
-// 🔴 DERIVED (RUNTIME)
-// ------------------------------------------------------------
-float lab14bEstimatedHours = -1f;
-float lab14bRemainingNormal = -1f;
-
-if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
-
-    lab14bEstimatedHours =
-            lab14bBaselineMah / lab14bConsumptionPerHour;
-
-    float battPct = (float) getBatteryPercentSafe();
-
-    if (battPct > 0f) {
-
-        float factor = battPct / 100f;
-
-        lab14bRemainingNormal =
-                lab14bEstimatedHours * factor; // ✅ FIX
-    }
-
-} else {
-
-    // 🔴 fallback για παλιές εκδόσεις (optional)
-    lab14bEstimatedHours =
-            p.getFloat("lab14b_estimated_hours", -1f);
-
-    lab14bRemainingNormal =
-            p.getFloat("lab14b_remaining_normal", -1f);
-}
-
-// ------------------------------------------------------------
-// 🔴 LOG HEADER
-// ------------------------------------------------------------
-appendHtml("<br>");
-logLine();
-
-logInfo(gr
-        ? "LAB 29 — ΤΕΛΙΚΗ ΣΥΝΟΨΗ ΥΠΑΡΧΟΝΤΩΝ ΤΕΚΜΗΡΙΩΝ"
-        : "LAB 29 — FINAL EXISTING-EVIDENCE SUMMARY");
-
-logLine();
-
-    // ------------------------------------------------------------
-    // 1) USE IMMUTABLE PRE-REPORT SNAPSHOT
-    // The history captured above excludes the current Lab 29 header.
-    // ------------------------------------------------------------
-
-    // ------------------------------------------------------------
-    // 2) EXPLICIT LOG SEVERITY (not English/Greek keyword guesses)
-    // ============================================================
-    // logWarn()/logError() and labeled warning/error results now retain
-    // typed ⚠ / ✖ prefixes in GELServiceLog. Legacy untyped rows remain
-    // outside this explicit-severity index; missing tests are not a pass.
-    String[] lines = fullLog.split("\\n");
-    StringBuilder explicitAlerts = new StringBuilder();
-    for (String line : lines) {
-        if (line == null) continue;
-        String t = line.trim();
-        if (t.startsWith("⚠ ") || t.startsWith("✖ ")) {
-            explicitAlerts.append(t).append((char) 10);
-        }
-    }
-
-    // ============================================================
-    // 3) EVIDENCE COVERAGE, NOT A DEVICE-WIDE PASS
-    // ============================================================
     appendHtml("<br>");
-    logInfo(gr ? "Σύνοψη διαγνωστικών" : "Diagnostics summary");
+    logLine();
+    logInfo(gr ? "LAB 29 — ΤΕΧΝΙΚΗ ΣΥΝΟΨΗ ΠΡΟΕΙΔΟΠΟΙΗΣΕΩΝ ΚΑΙ ΑΣΤΟΧΙΩΝ"
+               : "LAB 29 — TECHNICIAN WARNING AND FAILURE SUMMARY");
     logLine();
 
-    logLabelValue(
-            gr ? "Ερμηνεία αρχείου" : "Log interpretation",
-            gr ? "Καταγράφονται οι ρητές σημάνσεις ⚠ / ✖, μαζί με τις έγχρωμες προειδοποιήσεις και αστοχίες. Παλαιές εγγραφές χωρίς σήμανση και μη εκτελεσμένα τεστ απαιτούν έλεγχο."
-               : "Explicit ⚠ / ✖ events include labeled warnings/errors. Legacy untyped entries and unperformed tests still require review.");
+    if (sourceLog == null || sourceLog.trim().isEmpty()) {
+        logLabelValue(gr ? "Διαγνωστικές καταγραφές" : "Diagnostic records",
+                gr ? "Δεν υπάρχουν καταγραφές εργαστηρίων για αξιολόγηση."
+                   : "No lab records are available for review.");
+        return;
+    }
 
-    if (explicitAlerts.length() == 0) {
-        logLabelValue(gr ? "Σύνοψη" : "Summary",
-                gr ? "Δεν υπάρχουν καταγεγραμμένες προειδοποιήσεις ή σφάλματα στο διαθέσιμο αρχείο."
-                   : "No warnings or errors were recorded in the available log.");
+    // Do not invent fault interpretations, SoH estimates, OEM/IMEI findings,
+    // execution scores or cross-lab health conclusions in the technician report.
+    // Only source-lab ⚠ and ✖ observations are eligible.
+    int errors = Lab29TechnicianAlerts.count(
+            findings, Lab29TechnicianAlerts.Severity.ERROR);
+    int warnings = Lab29TechnicianAlerts.count(
+            findings, Lab29TechnicianAlerts.Severity.WARNING);
+
+    if (errors == 0 && warnings == 0) {
+        logLabelValue(gr ? "Ευρήματα προς έλεγχο" : "Findings for review",
+                gr ? "Δεν καταγράφηκαν προειδοποιήσεις ή αστοχίες στο διαθέσιμο αρχείο."
+                   : "No warnings or failures were recorded in the available log.");
     } else {
-        logLabelWarnValue(gr ? "Αναφορές προς έλεγχο" : "Entries for review",
-                gr ? "Υπάρχουν καταγραφές με ρητή σήμανση προσοχής/σφάλματος."
-                   : "Explicit caution/error entries exist; they do not independently identify a hardware cause.");
-        for (String entry : explicitAlerts.toString().split("\\n")) {
-            if (!entry.trim().isEmpty()) {
-                logLabelWarnValue(gr ? "Καταγραφή" : "Log entry", entry.trim());
+        if (errors > 0) {
+            appendHtml("<br>");
+            logInfo(gr ? "Αστοχίες εργαστηρίων" : "Lab failures");
+            logLine();
+            for (Lab29TechnicianAlerts.Finding finding : findings) {
+                if (finding.severity != Lab29TechnicianAlerts.Severity.ERROR) continue;
+                String label = finding.sourceLab.isEmpty()
+                        ? (gr ? "Αστοχία" : "Failure") : finding.sourceLab;
+                logLabelErrorValue(label, finding.message);
+            }
+        }
+        if (warnings > 0) {
+            appendHtml("<br>");
+            logInfo(gr ? "Προειδοποιήσεις εργαστηρίων" : "Lab warnings");
+            logLine();
+            for (Lab29TechnicianAlerts.Finding finding : findings) {
+                if (finding.severity != Lab29TechnicianAlerts.Severity.WARNING) continue;
+                String label = finding.sourceLab.isEmpty()
+                        ? (gr ? "Προειδοποίηση" : "Warning") : finding.sourceLab;
+                logLabelWarnValue(label, finding.message);
             }
         }
     }
 
-    // ------------------------------------------------------------
-// 4) BATTERY FINDINGS — INFORMATIONAL ONLY
-// LAB 28 remains the single source of truth for device scoring.
-// ------------------------------------------------------------
-float batteryScore = p.getFloat("lab14_health_score", -1f);
-float batteryHealth = p.getFloat("lab14_health_percent", -1f);
-
-// Historical 0–100 values came from stress heuristics, not a capacity test.
-// Preserve their existence for audit; never turn them into proven battery wear.
-appendHtml("<br>");
-logInfo(gr ? "Ευρήματα τεχνικού ελέγχου" : "Technician findings");
-logLine();
-
-float historicalIndex = batteryHealth >= 0f && batteryHealth <= 100f
-        ? batteryHealth
-        : (batteryScore >= 0f && batteryScore <= 100f ? batteryScore : Float.NaN);
-
-logLabelValue(
-        gr ? "Υγεία μπαταρίας (SoH)" : "Battery state of health (SoH)",
-        gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — απαιτείται ανεξάρτητη χωρητικότητα/τεχνικός έλεγχος"
-           : "NOT MEASURED — requires independent capacity evidence/technician assessment");
-if (!Float.isNaN(historicalIndex)) {
-    logLabelValue(
-            gr ? "Ιστορικός πειραματικός δείκτης" : "Legacy experimental index",
-            String.format(Locale.US,
-                    gr ? "%.0f/100 (μη βαθμονομημένο, όχι SoH)"
-                       : "%.0f/100 (uncalibrated, not SoH)", historicalIndex));
-}
-
-// ------------------------------------------------------------
-// BATTERY ENDURANCE FINDING — INFORMATIONAL ONLY
-// ------------------------------------------------------------
-long lab14bAgeMs = System.currentTimeMillis() - ts14b;
-if (lab14bConsumptionPerHour > 0f &&
-    lab14bEstimatedHours > 0f &&
-    lab14bBaselineMah > 0f && ts14b > 0L &&
-    lab14bAgeMs >= 0L && lab14bAgeMs <= 24L * 60L * 60L * 1000L) {
-
-    String enduranceText = String.format(
-            Locale.US,
-            gr
-                    ? "%.1f ώρες στο 100%% | %.0f mAh/h"
-                    : "%.1f hours at 100%% | %.0f mAh/h",
-            lab14bEstimatedHours,
-            lab14bConsumptionPerHour
-    );
-
-    logLabelValue(
-            gr ? "Εκτιμώμενη αυτονομία (όχι μέτρηση)" : "Estimated endurance (not measured)",
-            enduranceText + (gr ? " — προβολή σεναρίου" : " — scenario projection")
-    );
-
-    float currentPercent =
-            (float) getBatteryPercentSafe();
-
-    if (lab14bRemainingNormal > 0f &&
-        currentPercent > 0f) {
-
-        logLabelValue(
-                gr ? "Υπόλοιπο κανονικής χρήσης"
-                   : "Remaining normal use",
-                String.format(
-                        Locale.US,
-                        gr
-                                ? "%.1f ώρες στο %.0f%%"
-                                : "%.1f hours at %.0f%%",
-                        lab14bRemainingNormal,
-                        currentPercent
-                )
-        );
-    }
-
-} else {
-
-    logLabelValue(
-            gr ? "Εκτιμώμενη αυτονομία" : "Estimated endurance",
-            gr ? "ΔΕΝ ΕΚΤΙΜΗΘΗΚΕ — ανεπαρκή ή παλαιά δεδομένα LAB 14B"
-               : "NOT ESTIMATED — insufficient or stale LAB 14B evidence"
-    );
-}
-   
-// ------------------------------------------------------------
-// 7) TECHNICIAN INTAKE — LABS 28 AND 29 ARE INDEPENDENT EVIDENCE AXES
-// ------------------------------------------------------------
-// Android metadata is independent of the buyer's private external IMEI check.
-// This app no longer records or reports any external IMEI-check outcomes.
-final long technicianWallNow = System.currentTimeMillis();
-final long technicianElapsedNow = SystemClock.elapsedRealtime();
-
-// ------------------------------------------------------------
-// Former Lab27 duplicated existing measurements and unverified text mentions;
-// no historical symptom mask is forwarded into the final technician report.
-// All other independent lab findings remain available.
-// ------------------------------------------------------------
-// B) LAB 27 — ANDROID-REPORTED DEVICE DATA (NO EXTERNAL IMEI RESULT)
-// ------------------------------------------------------------
-appendHtml("<br>");
-logInfo(gr ? "LAB 27 — Δηλωμένη ταυτότητα συσκευής"
-           : "LAB 27 — Android-reported device identity");
-logLine();
-boolean technicianLab29Fresh = LabEvidenceFreshness.isFresh(
-        p.getInt("lab29_obs_schema", 0),
-        p.getLong("lab29_ts", 0L),
-        p.getLong("lab29_obs_elapsed_ms", -1L),
-        technicianWallNow, technicianElapsedNow);
-if (technicianLab29Fresh) {
-    logLabelValue(gr ? "Στοιχεία κατασκευαστή κατά Android" : "Android-reported manufacturer/model",
-            p.getString("lab29_obs_manufacturer", "") + " / "
-                    + p.getString("lab29_obs_model", ""));
-    logLabelValue(gr ? "Κωδικός συσκευής κατά Android" : "Android-reported device code",
-            p.getString("lab29_obs_device", ""));
-    logLabelValue(gr ? "Γνησιότητα συσκευής / ανταλλακτικών" : "Device / component authenticity",
-            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ — απαιτούνται τεκμήρια κατασκευαστή ή φυσικός έλεγχος."
-               : "UNVERIFIED — OEM evidence or physical inspection is required.");
-} else {
-    logLabelValue(gr ? "Στοιχεία Lab 27" : "Lab 27 evidence",
-            gr ? "Δεν υπάρχουν πρόσφατες παρατηρήσεις της ίδιας εκκίνησης."
-               : "No recent same-boot observations.");
-    logLabelValue(gr ? "Γνησιότητα συσκευής / ανταλλακτικών" : "Device / component authenticity",
-            gr ? "ΑΓΝΩΣΤΗ — δεν έχει πιστοποιηθεί."
-               : "UNKNOWN — not independently authenticated.");
-}
-
-appendHtml("<br>");
-logLabelValue(gr ? "Ανεξάρτητος έλεγχος IMEI" : "Independent IMEI check",
-        gr ? "Παρέχονται μόνο οδηγίες προς εξωτερική υπηρεσία. Δεν συλλέγονται IMEI, στοιχεία πληρωμής ή αποτελέσματα."
-           : "Only external-service guidance is provided; no IMEI, payment details or results are collected.");
-logLabelValue(gr ? "Αναφορά στον τεχνικό" : "Technician report",
-        gr ? "Περιλαμβάνονται μόνο τα τεχνικά ευρήματα των εργαστηρίων, όχι αποτέλεσμα εξωτερικού ελέγχου IMEI."
-           : "Only the labs' technical findings are included, not the external IMEI outcome.");
-
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// 8) EXPORT NOTE
-    // ------------------------------------------------------------
-    appendHtml("<br>");
-
-    logLabelValue(
-            gr ? "Εξαγωγή"
-                    : "Export",
-            gr
-                    ? "Χρησιμοποιήστε το κουμπί για εξαγωγή αρχείου τεκμηρίων PDF (όχι πιστοποιητικό hardware)"
-                    : "Use the button to export the evidence PDF (not a hardware certificate)"
-    );
-
-    // enable export button
+    // Keep the existing service export without duplicating any data here.
     enableSingleExportButton();
-
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 29 ολοκληρώθηκε (σύνταξη τελικής σύνοψης παρατηρήσεων)."
-         : "Lab 29 finished (final observation summary compiled).");
-logInfo(gr ? "Η αναφορά συγκέντρωσε τα διαθέσιμα αποτελέσματα των εργαστηρίων."
-           : "The report gathered the available results from completed labs.");
+    logOk(gr ? "Το Lab 29 ολοκληρώθηκε — σύνοψη τεχνικών ευρημάτων."
+             : "Lab 29 completed — technician findings summary.");
     logLine();
 }
 
+// ============================================================
 // ============================================================
 // ENABLE EXISTING EXPORT BUTTON — No duplicates!
 // ============================================================

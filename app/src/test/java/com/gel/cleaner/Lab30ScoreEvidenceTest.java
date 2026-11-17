@@ -44,6 +44,21 @@ public class Lab30ScoreEvidenceTest {
         assertTrue(Lab30ScoreEvidence.hasPrivacyCoverage(8, false));
     }
 
+    @Test public void measuredDeviceGradesRetainOriginalBandsWithoutGuessingMissingData() {
+        assertNull(Lab30ScoreEvidence.gradeForMeasuredSnapshot(-1));
+        assertNull(Lab30ScoreEvidence.gradeForMeasuredSnapshot(101));
+        assertEquals("D", Lab30ScoreEvidence.gradeForMeasuredSnapshot(0));
+        assertEquals("D", Lab30ScoreEvidence.gradeForMeasuredSnapshot(54));
+        assertEquals("C", Lab30ScoreEvidence.gradeForMeasuredSnapshot(55));
+        assertEquals("C", Lab30ScoreEvidence.gradeForMeasuredSnapshot(69));
+        assertEquals("B", Lab30ScoreEvidence.gradeForMeasuredSnapshot(70));
+        assertEquals("B", Lab30ScoreEvidence.gradeForMeasuredSnapshot(84));
+        assertEquals("A", Lab30ScoreEvidence.gradeForMeasuredSnapshot(85));
+        assertEquals("A", Lab30ScoreEvidence.gradeForMeasuredSnapshot(91));
+        assertEquals("A+", Lab30ScoreEvidence.gradeForMeasuredSnapshot(92));
+        assertEquals("A+", Lab30ScoreEvidence.gradeForMeasuredSnapshot(100));
+    }
+
     @Test public void missingCoreEvidenceBlocksCombinedScores() {
         assertEquals(-1, Lab30ScoreEvidence.performanceScore(100,100,100,-1));
         assertEquals(-1, Lab30ScoreEvidence.deviceHealthScore(-1,100,100,100));

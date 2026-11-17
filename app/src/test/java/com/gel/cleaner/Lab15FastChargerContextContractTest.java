@@ -74,19 +74,35 @@ public final class Lab15FastChargerContextContractTest {
         assertTrue(s.contains("Αν η συσκευή υποστηρίζει ταχεία φόρτιση"));
     }
 
-    @Test public void lab17ReadsSameRunAndHonorsCoolingFirst() throws Exception {
-        String s = section(source(), "private void lab17RunAuto()", "// START LAB 17");
-        assertTrue(s.contains("p.getString(\"lab15_charger_type\", \"UNKNOWN\")"));
-        assertTrue(s.contains("Lab 15 — ταχυφορτιστής (δήλωση)"));
-        assertTrue(s.contains("NO (user reported)"));
-        int hot = s.indexOf("if (lab15ObservedOvertemp || thermalConcern || lab14StressThermalWarning) {");
-        int low = s.indexOf("} else if (chargeRateWarn) {\n                if (\"YES\"");
-        assertTrue("Cooling/heat must take precedence over fast-charger suggestion", hot > 0 && low > hot);
-        assertTrue(s.contains("η αιτία δεν αποδεικνύεται"));
-        assertTrue(s.contains("δεν αποδεικνύει βλάβη"));
-        assertTrue(s.contains("Lab17ChargingContext.evaluate("));
-        assertTrue(s.contains("!chargeEvaluation.unknownChargerWithSlowRate"));
-        assertTrue(s.contains("chargeEvaluation.slowRateNeedsReview"));
-        assertTrue(s.contains("chargeEvaluation.slowNetRate"));
+    @Test public void lab15OwnsChargerAnswerAndStoresOnlyItsInterpretationForLab17() throws Exception {
+        String all = source();
+        String lab15 = section(all, "private void lab15ChargingSystemSmart()", "private void lab16ThermalSnapshot()");
+        String lab17 = section(all, "private void lab17RunAuto()", "// START LAB 17");
+
+        assertTrue(lab15.contains("Lab17ChargingContext.evaluate("));
+        assertTrue(lab15.contains("gr, lab15ChargerType, lab15RateBand"));
+        assertTrue(lab15.contains("Lab17ChargingContext.resultCode("));
+        assertTrue(lab15.contains(".putString(\"lab15_diagnostic_outcome_v1\", lab15Outcome)"));
+        assertTrue(lab15.contains(".remove(\"lab15_diagnostic_outcome_v1\")"));
+        assertTrue(lab15.contains(".putBoolean(\"lab15_system_limited\", lab15_systemLimited)"));
+
+        assertTrue(lab17.contains("p.getString(\"lab15_diagnostic_outcome_v1\", null)"));
+        assertTrue(lab17.contains("Lab17ChargingContext.fromLab15Result("));
+        assertTrue(lab17.contains("Lab 15 — αποτέλεσμα φόρτισης"));
+        assertTrue(lab17.contains("chargeEvaluation.chargingConcern"));
+        assertTrue(lab17.contains("!chargeEvaluation.unknownChargerWithSlowRate"));
+        assertTrue(lab17.contains("lab15ObservedOvertemp"));
+        assertTrue(lab17.contains("lab15ObservedDisconnect"));
+        assertTrue(lab17.contains("lab15SystemLimited"));
+
+        // The original answer and detailed charger troubleshooting stay in 15.
+        assertFalse(lab17.contains("lab15_charger_type"));
+        assertFalse(lab17.contains("lab15ChargerType"));
+        assertFalse(lab17.contains("lab15ChargerReported"));
+        assertFalse(lab17.contains("ταχυφορτιστή"));
+        assertFalse(lab17.contains("fast charger"));
+        assertFalse(lab17.contains("Προτεινόμενος έλεγχος"));
+        assertFalse(lab17.contains("Recommended check"));
+        assertFalse(lab17.contains("chargeEvaluation.description"));
     }
 }
