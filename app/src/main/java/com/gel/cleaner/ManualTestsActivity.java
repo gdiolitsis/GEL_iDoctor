@@ -31784,8 +31784,13 @@ String thermalFlag = thermalScore < 0 ? "⚪" : "⚪";
 // ------------------------------------------------------------
 boolean charging = isChargingNow();
 
-int batteryScore = Lab30ScoreEvidence.hasBatteryReadings(batTemp, (float) batteryPercent)
-        ? scoreBattery(batTemp, (float) batteryPercent, charging) : -1;
+// Read the CURRENT Android battery level for this LAB 27 run. The old class
+// field was only updated by running Lab 14 and otherwise defaulted to 0%.
+// A screenshot showed 0% here while Android reported 78%.
+final int lab27ObservedBatteryPct = getBatteryPercentSafe();
+int batteryScore = Lab30ScoreEvidence.hasBatteryReadings(batTemp,
+        (float) lab27ObservedBatteryPct)
+        ? scoreBattery(batTemp, (float) lab27ObservedBatteryPct, charging) : -1;
 
 String batteryFlag = batteryScore < 0 ? "⚪" : "⚪";
 
@@ -32494,7 +32499,9 @@ logLabelValue(
 logLabelValue(
         gr ? "Στοιχεία" : "State",
         (gr ? "Επίπεδο=" : "Level=") +
-        (batteryPercent >= 0 ? fmt1((float) batteryPercent) + "%" : (gr ? "Άγνωστο" : "Unknown")) +
+        (lab27ObservedBatteryPct >= 0
+                ? fmt1((float) lab27ObservedBatteryPct) + "%"
+                : (gr ? "Άγνωστο" : "Unknown")) +
         " | Temp=" + fmt1(batTemp) + "°C" +
         " | " + (gr ? "Φόρτιση=" : "Charging=") +
         (charging ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No"))
@@ -32636,6 +32643,47 @@ logInfo(gr
         : "DEVICE MEASUREMENTS SUMMARY");
 
 logLine();
+
+// Restore the requested old Lab 30 A+..D device grade, but now strictly
+// as an evidence-scoped snapshot. No verified component-health claim.
+String lab25Classification = Lab29TechnicalAssessment.summarize(
+        p.getString("lab25_obs_level", ""),
+        p.getString("lab25_obs_coverage", ""));
+boolean lab27CriticalHistory =
+        Lab29TechnicalAssessment.REVIEW_REQUIRED.equals(lab25Classification)
+        || Lab29TechnicalAssessment.STRONG_INSTABILITY.equals(lab25Classification);
+Lab27DeviceRating.Result lab27Rating = Lab27DeviceRating.evaluate(
+        thermalScore, batteryScore, performanceScore, stabilityScore,
+        Lab30ScoreEvidence.hasStorageReadings(st.totalBytes, st.freeBytes),
+        Lab30ScoreEvidence.hasRamReadings(rm.totalBytes, rm.freeBytes),
+        Lab30ScoreEvidence.hasAppInventory(ap.totalApps, ap.userApps),
+        lab27CriticalHistory || lab14CollapseRisk);
+appendHtml("<br>");
+logInfo(gr ? "Βαθμολογία συσκευής — από μετρήσεις"
+           : "Device rating — based on measurements");
+if (!lab27Rating.hasEnoughEvidence) {
+    logLabelValue(gr ? "Βαθμολογία συσκευής" : "Device rating",
+            gr ? "Δεν υπολογίστηκε — λείπουν βασικά δεδομένα μετρήσεων"
+               : "Not calculated — core measurement data unavailable");
+} else if (lab27Rating.independentWarning) {
+    logLabelWarnValue(gr ? "Βαθμολογία συσκευής" : "Device rating",
+            (gr ? "Απαιτείται επανέλεγχος — δείκτης στιγμιαίων μετρήσεων "
+                : "Review required — snapshot measurement index ")
+                    + lab27Rating.score + "/100");
+} else {
+    // Informational white, not green hardware certification.
+    logLabelValue(gr ? "Βαθμολογία συσκευής" : "Device rating",
+            lab27Rating.grade + " (" + lab27Rating.score + "/100)");
+}
+logLabelValue(gr ? "Τι αξιολογεί" : "What is assessed",
+        gr
+                ? "Ενδεικτικός συνδυασμός θερμοκρασιών, στιγμιαίας κατάστασης μπαταρίας, απόδοσης και χρόνου λειτουργίας. Δεν μετρά SoH, φθορά NAND ή κατάσταση όλων των εξαρτημάτων· δεν αποτελεί πιστοποίηση συσκευής."
+                : "Indicative combination of temperatures, battery snapshot, performance and uptime. It does not measure SoH, NAND wear or all component health; it is not device certification.");
+if (Lab29TechnicalAssessment.LIMITED_CRASH_HISTORY.equals(lab25Classification)) {
+    logLabelValue(gr ? "Κάλυψη ιστορικού" : "History coverage",
+            gr ? "Περιορισμένο ιστορικό σφαλμάτων: η βαθμολογία δεν αποκλείει μη καταγεγραμμένη αστάθεια."
+               : "Limited crash history: this rating cannot rule out unrecorded instability.");
+}
 
 appendHtml("<br>");
 /* Uncalibrated diagnosis header not displayed */;
