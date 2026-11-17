@@ -27,12 +27,14 @@ public final class Lab15ChargingAdviceContractTest {
         assertTrue(decision.contains("else if (lab15_strengthWeak)"));
         assertTrue(decision.contains("Μέτριος ή χαμηλός καθαρός ρυθμός"));
         assertTrue(decision.contains("δεν αποδεικνύει βλάβη της συσκευής"));
-        assertTrue(decision.contains("άλλο συμβατό καλώδιο και φορτιστή"));
-        assertTrue(decision.contains("Επαναλάβετε τη δοκιμή χωρίς έντονη χρήση"));
+        assertTrue(decision.contains("Αν η συσκευή υποστηρίζει ταχεία φόρτιση"));
+        assertTrue(decision.contains("συμβατό ταχυφορτιστή και κατάλληλο καλώδιο"));
+        assertTrue(decision.contains("Επανάλαβε χωρίς έντονη χρήση"));
         String weakRateCase = decision.substring(decision.indexOf("else if (lab15_strengthWeak)"));
-        assertTrue(weakRateCase.indexOf("άλλο συμβατό καλώδιο και φορτιστή") >= 0);
-        assertTrue(weakRateCase.indexOf("άλλο συμβατό καλώδιο και φορτιστή") <
-                   weakRateCase.indexOf("ζητήστε τεχνικό έλεγχο"));
+        assertTrue(weakRateCase.indexOf("συμβατό ταχυφορτιστή") >= 0);
+        assertTrue(weakRateCase.indexOf("συμβατό ταχυφορτιστή") <
+                   weakRateCase.indexOf("ζήτησε τεχνικό έλεγχο"));
+        assertTrue(weakRateCase.contains("ιδανικά σε παρόμοια στάθμη φόρτισης και θερμοκρασία"));
         assertTrue(decision.contains("Ο καθαρός ρυθμός δεν είναι η ισχύς του φορτιστή"));
         assertFalse(decision.contains("Συνιστάται περαιτέρω έλεγχος ή επανάληψη δοκιμής"));
     }
