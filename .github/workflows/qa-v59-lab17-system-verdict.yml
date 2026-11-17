@@ -1,0 +1,37 @@
+name: v59 Lab17 explicit system health exact-source QA
+
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/gel/cleaner/Lab17CombinedConclusion.java'
+      - 'app/src/test/java/com/gel/cleaner/Lab17CombinedEvidenceMatrixTest.java'
+      - '.github/workflows/qa-v59-lab17-system-verdict.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  compile-and-unit-tests:
+    if: ${{ github.head_ref == 'qa/v59-lab17-explicit-system-verdict-20261117' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Compile full application and run all unit tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon --console=plain
