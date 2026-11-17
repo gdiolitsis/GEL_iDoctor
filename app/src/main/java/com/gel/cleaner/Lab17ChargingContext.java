@@ -1,10 +1,10 @@
 package com.gel.cleaner;
 
 /**
- * Context-aware interpretation of Lab 15 evidence for Lab 17.
- * The user's charger answer is not a measured charging protocol, input power,
- * proof of compatibility, or an OEM expected charge rate. Actual thermal,
- * connection and system-limiting findings always take precedence.
+ * Lab 15 alone interprets the user's charger declaration. It persists a
+ * neutral outcome code so Lab 17 needs only the diagnostic result, not the
+ * declaration, charger-specific advice, or unverified charging protocol.
+ * Genuine heat, disconnection and Android limiting always take precedence.
  */
 public final class Lab17ChargingContext {
     private Lab17ChargingContext() {}
@@ -58,5 +58,39 @@ public final class Lab17ChargingContext {
                     : "Charger type is unknown. Low net charge gain does not establish a defect, and the expected charging speed cannot be reliably assessed.";
         }
         return new Decision(slow, independent, needsReview, unknownWithSlow, explanation);
+    }
+
+    /**
+     * Persist only Lab 15's diagnostic interpretation. The user-reported
+     * charger type remains Lab 15 context, not a Lab 17 input or disclosure.
+     */
+    public static String resultCode(Decision assessed, boolean comparableRate) {
+        if (assessed == null) return "RATE_UNAVAILABLE";
+        if (assessed.independentConcern) return "OBSERVED_WARNING";
+        if (!comparableRate) return "RATE_UNAVAILABLE";
+        if (assessed.slowRateNeedsReview) return "SLOW_REVIEW";
+        if (assessed.unknownChargerWithSlowRate) return "SLOW_CONTEXT_UNKNOWN";
+        if (assessed.slowNetRate) return "SLOW_NO_FAULT_ESTABLISHED";
+        return "NO_ISSUE_OBSERVED";
+    }
+
+    /**
+     * Read the saved LAB 15 *outcome*, not the original questionnaire.
+     * Historic v59 records without the new code remain neutral for an
+     * isolated slow rate. Never convert unknown context into "fault".
+     */
+    public static Decision fromLab15Result(
+            String savedCode, String rateBand, String legacyStrength,
+            boolean chargingOvertemp, boolean disconnects, boolean limited) {
+        boolean slow = "MODERATE".equals(rateBand)
+                || "LOW".equals(rateBand)
+                || (rateBand == null && "WEAK".equals(legacyStrength));
+        boolean independent = chargingOvertemp || disconnects || limited
+                || "OBSERVED_WARNING".equals(savedCode);
+        boolean review = slow && "SLOW_REVIEW".equals(savedCode);
+        boolean contextualSlow = "SLOW_NO_FAULT_ESTABLISHED".equals(savedCode);
+        // Fail closed on a missing/invalid code, not as a device failure.
+        boolean incompleteSlowContext = slow && !review && !contextualSlow;
+        return new Decision(slow, independent, review, incompleteSlowContext, "");
     }
 }
