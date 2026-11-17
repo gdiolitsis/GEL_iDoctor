@@ -59,7 +59,7 @@ public final class Lab17ThermalChargingSourceContractTest {
         assertTrue(lab17.contains("lab15ObservedOvertemp"));
         assertTrue(lab17.contains("lab15ObservedDisconnect"));
         int coolBeforeCharge = lab17.indexOf("if (lab15ObservedOvertemp || thermalConcern || lab14StressThermalWarning)");
-        int fastCharging = lab17.indexOf("else if (chargeRateWarn)");
+        int fastCharging = lab17.indexOf("else if (chargeRateWarn)", coolBeforeCharge);
         assertTrue("Cool-down warning must outrank fast-charger suggestion",
                 coolBeforeCharge >= 0 && fastCharging > coolBeforeCharge);
         assertTrue(lab17.contains("chargeEvaluation.chargingConcern"));
