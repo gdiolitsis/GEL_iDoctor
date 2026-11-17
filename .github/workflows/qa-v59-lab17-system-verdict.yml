@@ -11,6 +11,7 @@ on:
       - 'app/src/test/java/com/gel/cleaner/Lab17ChargingContextTest.java'
       - 'app/src/test/java/com/gel/cleaner/Lab15FastChargerContextContractTest.java'
       - 'app/src/test/java/com/gel/cleaner/Lab17ThermalChargingSourceContractTest.java'
+      - 'app/src/test/java/com/gel/cleaner/Lab17StressEvidencePrerequisiteContractTest.java'
       - '.github/workflows/qa-v59-lab17-system-verdict.yml'
 
 permissions:
