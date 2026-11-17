@@ -85,7 +85,7 @@ public final class Lab17CombinedConclusionTest {
         assertTrue(s.contains("17. Intelligent System Health Analysis"));
         assertTrue(s.contains("LAB 17 — Ευφυής Ανάλυση Υγείας Συστήματος"));
         assertTrue(s.contains("LAB 17 — Intelligent System Health Analysis"));
-        assertTrue(s.contains("Lab17CombinedConclusion.evaluate("));
+        assertTrue(s.contains("Lab17CombinedConclusion.evaluateDetailed("));
         assertTrue(s.contains("lab14StressClass"));
         assertTrue(s.contains("lab14CollapseObserved"));
         assertFalse(s.contains("Υπάρχει ένδειξη καταπόνησης ή θερμοκρασίας προς επαλήθευση"));
