@@ -31,6 +31,9 @@ public final class Lab17CombinedConclusion {
             boolean corroboratedVoltageFlag,
             boolean gaugeDiscrepancyFlag,
             boolean experimentalStressProxyFlag,
+            boolean electricalBehaviourFlag,
+            boolean stressThermalConcern,
+            boolean stressThermalEvidenceAvailable,
             boolean chargingConcern,
             boolean thermalConcern,
             boolean completeCoverage) {
@@ -38,17 +41,14 @@ public final class Lab17CombinedConclusion {
         boolean directBatteryConcern = "Critical".equals(stressClass)
                 || corroboratedVoltageFlag
                 || gaugeDiscrepancyFlag
-                || experimentalStressProxyFlag;
-        boolean known = "Weak".equals(stressClass)
-                || "Critical".equals(stressClass)
-                || "Normal".equals(stressClass)
-                || "Good".equals(stressClass)
-                || "Excellent".equals(stressClass);
+                || experimentalStressProxyFlag
+                || electricalBehaviourFlag;
+        boolean anyThermalConcern = thermalConcern || stressThermalConcern;
         boolean weak = "Weak".equals(stressClass);
 
         // Independent abnormalities always win over the word "Weak" or an
         // unremarkable result from another lab. Mention the affected domains.
-        if (directBatteryConcern || chargingConcern || thermalConcern) {
+        if (directBatteryConcern || chargingConcern || anyThermalConcern) {
             StringBuilder msg = new StringBuilder();
             if (gr) {
                 if (directBatteryConcern) {
@@ -63,15 +63,21 @@ public final class Lab17CombinedConclusion {
                     if (experimentalStressProxyFlag) {
                         msg.append("Υπάρχει πρόσθετος έμμεσος δείκτης προς επιβεβαίωση, όχι απόδειξη φυσικής βλάβης. ");
                     }
+                    if (electricalBehaviourFlag) {
+                        msg.append("Το 14Α κατέγραψε πρόσθετη ηλεκτρική συμπεριφορά προς επανέλεγχο. ");
+                    }
                 } else if (weak) {
                     msg.append("Η μπαταρία μπορεί να παρουσιάζει φυσιολογική φθορά υπό φορτίο. ");
                 }
                 if (chargingConcern) msg.append("Η φόρτιση παρουσιάζει εύρημα που χρειάζεται επανέλεγχο. ");
-                if (thermalConcern) msg.append("Η θερμική συμπεριφορά παρουσιάζει εύρημα που χρειάζεται επανέλεγχο. ");
-                if (!thermalConcern && !chargingConcern && directBatteryConcern) {
+                if (stressThermalConcern) {
+                    msg.append("Κατά το 14Α καταγράφηκε αυξημένη θερμική απόκριση υπό φορτίο. ");
+                }
+                if (thermalConcern) msg.append("Το 16 κατέγραψε θερμικό εύρημα που χρειάζεται επανέλεγχο. ");
+                if (!anyThermalConcern && !chargingConcern && directBatteryConcern) {
                     msg.append("Δεν καταγράφηκε πρόσθετη προειδοποίηση στη φόρτιση ή στη θερμική συμπεριφορά. ");
                 }
-                if (!directBatteryConcern && !chargingConcern && thermalConcern) {
+                if (!directBatteryConcern && !chargingConcern && anyThermalConcern) {
                     msg.append("Δεν αποδίδουμε το θερμικό εύρημα αυτόματα στη φθορά της μπαταρίας. ");
                 }
                 if (unstableBetweenRuns) {
@@ -89,15 +95,21 @@ public final class Lab17CombinedConclusion {
                     if (experimentalStressProxyFlag) {
                         msg.append("An additional indirect indicator needs verification; it is not proof of physical damage. ");
                     }
+                    if (electricalBehaviourFlag) {
+                        msg.append("Lab 14A recorded additional electrical behaviour requiring follow-up. ");
+                    }
                 } else if (weak) {
                     msg.append("The battery may show ordinary ageing under load. ");
                 }
                 if (chargingConcern) msg.append("Charging has a finding that needs follow-up. ");
-                if (thermalConcern) msg.append("Thermal behaviour has a finding that needs follow-up. ");
-                if (!thermalConcern && !chargingConcern && directBatteryConcern) {
+                if (stressThermalConcern) {
+                    msg.append("Lab 14A recorded elevated temperature response under load. ");
+                }
+                if (thermalConcern) msg.append("Lab 16 recorded a thermal finding needing follow-up. ");
+                if (!anyThermalConcern && !chargingConcern && directBatteryConcern) {
                     msg.append("No additional charging or thermal warning was recorded. ");
                 }
-                if (!directBatteryConcern && !chargingConcern && thermalConcern) {
+                if (!directBatteryConcern && !chargingConcern && anyThermalConcern) {
                     msg.append("A thermal finding cannot automatically be attributed to battery ageing. ");
                 }
                 if (unstableBetweenRuns) {
@@ -106,6 +118,12 @@ public final class Lab17CombinedConclusion {
                 msg.append("These readings establish neither a specific fault nor its cause.");
             }
             return new Decision(Tone.CAUTION, msg.toString());
+        }
+
+        if (!stressThermalEvidenceAvailable) {
+            return new Decision(Tone.NEUTRAL, gr
+                    ? "Το 14Α δεν διέθετε επαρκή μέτρηση θερμικής μεταβολής υπό φορτίο. Δεν καταγράφηκε συγκεκριμένη δυσλειτουργία φόρτισης ή θερμοκρασίας, αλλά δεν δικαιολογείται συνολικό πράσινο συμπέρασμα χωρίς επαλήθευση αυτής της μέτρησης."
+                    : "Lab 14A lacked a reliable under-load temperature-change reading. No specific charging or thermal malfunction was recorded, but an overall positive conclusion requires this reading to be verified.");
         }
 
         if (unstableBetweenRuns) {
