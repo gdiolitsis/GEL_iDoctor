@@ -4391,7 +4391,10 @@ private void showLab15ConditionCheck(Runnable startAction) {
                     + "Απαιτείται μπαταρία μεταξύ 20 και 80 τοις εκατό. "
                     : "Condition check. "
                     + "Battery must be between 20 and 80 percent. ")
-            + sb.toString();
+            + sb.toString()
+            + (gr
+                    ? " Ο φορτιστής που θα χρησιμοποιήσεις είναι ταχυφορτιστής; Επίλεξε: Ναι, Όχι ή Δεν γνωρίζω."
+                    : " Is the charger you will use a fast charger? Choose Yes, No, or I don't know.");
 
 
     new Handler(Looper.getMainLooper()).postDelayed(() -> {
