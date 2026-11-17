@@ -23841,6 +23841,12 @@ private void showLab14BAdvisory(Runnable onContinue) {
         if (!allowContinue)
             return;
 
+        // A different test must not have started while this dialog was open.
+        if (lab14Running) {
+            logWarn(gr ? "Υπάρχει ήδη ενεργή δοκιμή." : "Another test is already running.");
+            return;
+        }
+
         // User may spend >5 minutes in the advisory. Recheck at actual launch.
         if (!lab14RecoveryDecision().mayStart()) {
             lab14ShowRecoveryWaitDialog(isLab14GamaMode);
