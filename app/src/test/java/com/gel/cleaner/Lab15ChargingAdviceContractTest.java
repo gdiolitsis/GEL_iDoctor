@@ -31,9 +31,15 @@ public final class Lab15ChargingAdviceContractTest {
         assertTrue(decision.contains("συμβατό ταχυφορτιστή και κατάλληλο καλώδιο"));
         assertTrue(decision.contains("Επανάλαβε χωρίς έντονη χρήση"));
         String weakRateCase = decision.substring(decision.indexOf("else if (lab15_strengthWeak)"));
-        assertTrue(weakRateCase.indexOf("συμβατό ταχυφορτιστή") >= 0);
-        assertTrue(weakRateCase.indexOf("συμβατό ταχυφορτιστή") <
-                   weakRateCase.indexOf("ζήτησε τεχνικό έλεγχο"));
+        // Guidance depends on the user-reported charger. A YES answer
+        // first recommends checking the already-reported fast-charge setup;
+        // NO/UNKNOWN may conditionally suggest trying compatible fast charging.
+        assertTrue(weakRateCase.contains("if (\"YES\".equals(lab15ChargerType))"));
+        assertTrue(weakRateCase.contains("else if (\"NO\".equals(lab15ChargerType))"));
+        String noCase = weakRateCase.substring(
+                weakRateCase.indexOf("else if (\"NO\".equals(lab15ChargerType))"));
+        assertTrue(noCase.contains("συμβατό ταχυφορτιστή"));
+        assertTrue(noCase.contains("Αν η συσκευή υποστηρίζει ταχεία φόρτιση"));
         assertTrue(weakRateCase.contains("ιδανικά σε παρόμοια στάθμη φόρτισης και θερμοκρασία"));
         assertTrue(decision.contains("Ο καθαρός ρυθμός δεν είναι η ισχύς του φορτιστή"));
         assertFalse(decision.contains("Συνιστάται περαιτέρω έλεγχος ή επανάληψη δοκιμής"));
@@ -48,7 +54,7 @@ public final class Lab15ChargingAdviceContractTest {
         assertTrue(decision.contains("else if (lab15FlapUnstable)"));
         assertTrue(decision.contains("ελέγξτε οπτικά τη θύρα"));
         assertTrue(decision.contains("δεν εντοπίστηκε η αιτία"));
-        assertTrue(decision.contains("if (!lab15_strengthKnown)"));
+        assertTrue(decision.contains("if (!lab15_strengthKnown && !lab15OverTempDuringCharge && !lab15FlapUnstable)"));
         assertTrue(decision.contains("else {"));
         assertTrue(decision.contains("Δεν παρατηρήθηκε πρόβλημα στο τρίλεπτο τεστ"));
     }
