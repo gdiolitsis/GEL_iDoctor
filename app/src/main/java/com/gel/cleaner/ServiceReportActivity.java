@@ -2345,11 +2345,11 @@ private String buildHtmlReport(String report) {
     body.append(escapeHtml(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date())));
     body.append("<br><br>");
 
-    body.append("Device / Συσκευή:<br>");
+    body.append("Host / Συσκευή GEL:<br>");
     body.append(escapeHtml(android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL));
     body.append("<br><br>");
 
-    body.append("Android / Έκδοση:<br>");
+    body.append("Host Android / Android GEL:<br>");
     body.append(escapeHtml(android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")"));
 
     body.append("</div>");
@@ -2519,14 +2519,14 @@ private String buildHtmlReport(String report) {
 
             // SECTIONS
             + ".section-title{margin-top:22px;margin-bottom:10px;font-weight:700;font-size:15px;}"
-            + ".line{height:22px;border-bottom:1px solid #333;}"
+            + ".line{height:18px;border-bottom:1px solid #333;}"
 
             // SIGNATURES
-            + ".signatures{margin-top:40px;}"
-            + ".sig-row{display:flex;justify-content:space-between;gap:40px;margin-bottom:40px;}"
+            + ".signatures{margin-top:14px;break-inside:avoid;page-break-inside:avoid;}"
+            + ".sig-row{display:flex;justify-content:space-between;gap:40px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;}"
             + ".sig-block{width:45%;}"
-            + ".sig-block-full{width:60%;margin-top:30px;}"
-            + ".sig-line{border-bottom:2px solid #000;height:40px;margin-bottom:6px;}"
+            + ".sig-block-full{width:60%;margin-top:12px;break-inside:avoid;page-break-inside:avoid;}"
+            + ".sig-line{border-bottom:2px solid #000;height:24px;margin-bottom:6px;}"
             + ".sig-label{font-size:11px;color:#333;}"
 
             + "</style></head><body>"
@@ -2679,10 +2679,10 @@ private String buildHtmlReport(String report) {
         String dateLine = "Date / Ημερομηνία: " +
                 java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
 
-        String deviceLine = "Device / Συσκευή: " +
+        String deviceLine = "Host / Συσκευή GEL: " +
                 android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
 
-        String osLine = "Android / Έκδοση: " +
+        String osLine = "Host Android / Android GEL: " +
                 android.os.Build.VERSION.RELEASE +
                 " (API " + android.os.Build.VERSION.SDK_INT + ")";
 
@@ -2805,10 +2805,10 @@ private String buildHtmlReport(String report) {
             String dateLine = "Date / Ημερομηνία: " +
                     java.text.DateFormat.getDateTimeInstance().format(new java.util.Date());
 
-            String deviceLine = "Device / Συσκευή: " +
+            String deviceLine = "Host / Συσκευή GEL: " +
                     android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
 
-            String osLine = "Android / Έκδοση: " +
+            String osLine = "Host Android / Android GEL: " +
                     android.os.Build.VERSION.RELEASE +
                     " (API " + android.os.Build.VERSION.SDK_INT + ")";
 
