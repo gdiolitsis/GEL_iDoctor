@@ -32343,11 +32343,9 @@ else {
 
 /* Internal heuristic index omitted from measured-results report */;
 
-logLabelValue(
-        gr ? "Ερμηνεία"
-           : "Interpretation",
-        ratingDesc
-);
+// The old risk-only grade is retained internally for backup comparison.
+// It is not an observed measurement and must not conflict with the
+// measured-snapshot A+–D grade shown in the final summary.
 
 // ------------------------------------------------------------
 // GEL HARDWARE INTEGRITY CERTIFICATE
@@ -32431,6 +32429,10 @@ int performanceScore = Lab30ScoreEvidence.performanceScore(
         storageScore, ramScore, appsScore, thermalScore);
 int deviceHealthScore = Lab30ScoreEvidence.deviceHealthScore(
         thermalScore, batteryScore, performanceScore, stabilityScore);
+
+// Restore the old A+–D presentation using the existing evidence-gated
+// numeric snapshot, rather than the unverified legacy hardware-risk flags.
+final String snapshotGrade = Lab30ScoreEvidence.gradeForMeasuredSnapshot(deviceHealthScore);
 
 // ------------------------------------------------------------
 // PRINT DETAILS
@@ -32655,6 +32657,58 @@ else
     deviceClass = "UNVERIFIED — REVIEW IF SYMPTOMS";
 
 /* Internal heuristic index omitted from measured-results report */;
+
+// The original Lab30 had both a letter grade and a 0–100 assessment.
+// Show both again, while being explicit about what the numbers measure.
+// No measured thermal/battery/performance/uptime coverage => no grade.
+appendHtml("<br>");
+logInfo(gr ? "Βαθμολογία συσκευής — διαθέσιμες μετρήσεις"
+           : "Device grade — available measurements");
+if (snapshotGrade == null) {
+    logLabelValue(
+            gr ? "Βαθμολογία συσκευής" : "Device grade",
+            gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA"
+    );
+    logLabelValue(
+            gr ? "Συνολικός δείκτης" : "Overall index",
+            gr ? "ΔΕΝ ΥΠΟΛΟΓΙΣΤΗΚΕ" : "NOT CALCULATED"
+    );
+} else {
+    if (deviceHealthScore >= 85) {
+        logLabelOkValue(
+                gr ? "Βαθμολογία συσκευής" : "Device grade",
+                snapshotGrade
+        );
+        logLabelOkValue(
+                gr ? "Συνολικός δείκτης" : "Overall index",
+                deviceHealthScore + "/100"
+        );
+    } else {
+        logLabelValue(
+                gr ? "Βαθμολογία συσκευής" : "Device grade",
+                snapshotGrade
+        );
+        logLabelValue(
+                gr ? "Συνολικός δείκτης" : "Overall index",
+                deviceHealthScore + "/100"
+        );
+    }
+}
+logLabelValue(
+        gr ? "Βάση βαθμολογίας" : "Rating basis",
+        gr ? "Θερμοκρασίες, τρέχουσα κατάσταση μπαταρίας, διαθέσιμος χώρος, RAM, εφαρμογές και χρόνος λειτουργίας."
+           : "Temperatures, current battery readings, free storage, RAM, app inventory and uptime."
+);
+logLabelValue(
+        gr ? "Ιστορικό Lab 25" : "Lab 25 history",
+        gr ? "Τα καταγεγραμμένα συμβάντα αξιολογούνται χωριστά στην αρχή της αναφοράς."
+           : "Recorded events are assessed separately at the start of this report."
+);
+logLabelValue(
+        gr ? "Όριο βαθμολογίας" : "Grade scope",
+        gr ? "Ο δείκτης αποτυπώνει το διαθέσιμο δείγμα μετρήσεων, όχι πιστοποίηση εξαρτημάτων ή μέτρηση φθοράς μπαταρίας."
+           : "The index describes the available snapshot; it does not certify component health or measure battery wear."
+);
 
 logLabelValue(
         gr ? "Απόδοση" : "Performance",
