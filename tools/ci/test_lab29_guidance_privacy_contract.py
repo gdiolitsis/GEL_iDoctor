@@ -62,6 +62,16 @@ assert src.count("private void lab31FinalSummary()") == 1
 assert "27. Καταγραφές λειτουργίας και μετρήσεις" not in src
 assert "lab29DisplayLab25Findings(p, gr);" in lab30
 assert "lab29SaveTechnicalAssessmentFromLab25(p);" in lab30
-assert "lab29_obs_manufacturer" in lab31
+# Lab 29 (previously Lab 31) is the technician-only WARNING / ERROR index.
+# Android model identity is now supplied by Lab 27; repeating that metadata
+# here is a regression, not a privacy requirement.
+assert "lab29_obs_manufacturer" not in lab31
+assert "lab29_obs_model" not in lab31
+assert "lab29_obs_device" not in lab31
+assert "Lab29TechnicianAlerts.collect(sourceLog)" in lab31
+assert "Lab31ReportEvidencePolicy.withoutPriorSummaries(" in lab31
+assert "logLabelErrorValue(label, finding.message)" in lab31
+assert "logLabelWarnValue(label, finding.message)" in lab31
+assert "enableSingleExportButton()" in lab31
 assert "Uri.parse(\"https://www.checkmend.com/eu/consumer/report\")" in guidance
 print("Buyer guidance privacy and 29-lab count contract: PASS")
