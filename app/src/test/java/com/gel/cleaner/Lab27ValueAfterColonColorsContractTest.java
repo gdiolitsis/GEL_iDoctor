@@ -58,9 +58,9 @@ public final class Lab27ValueAfterColonColorsContractTest {
     @Test public void oemMetricsAndMissingDataHaveSeparateColorSemantics() throws Exception {
         String src = activity();
         int start = src.indexOf("private void lab27DisplayFactorySpecs(boolean gr)");
-        int end = src.indexOf("// LAB 27 INTERNAL AUTO HELPERS", start);
-        assertTrue(start >= 0);
-        String factory = src.substring(start, end > start ? end : src.length());
+        int end = src.indexOf("private StorageSnapshot readStorageSnapshot()", start);
+        assertTrue(start >= 0 && end > start);
+        String factory = src.substring(start, end);
         assertTrue(factory.contains("logLabelOkValue(rowName, observation"));
         assertTrue(factory.contains("logLabelErrorValue(rowName, observation"));
         assertTrue(factory.contains("logLabelValue(rowName,"));
