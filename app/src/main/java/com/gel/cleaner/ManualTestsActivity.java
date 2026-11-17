@@ -33599,283 +33599,74 @@ return String.format(Locale.US, "%.1f", v);
 // to GELServiceLog for ServiceReportActivity export.
 // ============================================================
 private void lab31FinalSummary() {
-
     final boolean gr = AppLang.isGreek(this);
 
-    // Capture prior evidence before writing ANY header or label.
-    // Exclude earlier Lab 29 summaries; their replayed alerts are not new findings.
-    String fullLog = Lab31ReportEvidencePolicy.withoutPriorSummaries(
+    // Read BEFORE writing this report. Never promote our own earlier
+    // summaries to fresh warning/error findings.
+    String sourceLog = Lab31ReportEvidencePolicy.withoutPriorSummaries(
             GELServiceLog.getAll());
-    if (fullLog == null) fullLog = "";
-    if (fullLog.trim().isEmpty()) {
-        appendHtml("<font color='#FFD966'>" + (gr
-                ? "Δεν βρέθηκαν διαγνωστικά δεδομένα. Εκτελέστε πρώτα τα Manual Tests."
-                : "No diagnostic data found. Please run Manual Tests first.")
-                + "</font>");
-        return; // Do not contaminate an empty log with a fake report entry.
-    }
+    java.util.List<Lab29TechnicianAlerts.Finding> findings =
+            Lab29TechnicianAlerts.collect(sourceLog);
 
-    SharedPreferences p =
-            getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
-
-// ------------------------------------------------------------
-// LAB14B READ (CLEAN + DERIVED)
-// ------------------------------------------------------------
-
-// 🔴 RAW (source of truth)
-float lab14bConsumptionPerHour =
-        p.getFloat("lab14b_consumption_per_hour", -1f);
-
-long ts14b =
-        p.getLong("lab14b_ts", 0L);
-
-// ------------------------------------------------------------
-// 🔴 DERIVED (RUNTIME)
-// ------------------------------------------------------------
-float lab14bEstimatedHours = -1f;
-float lab14bRemainingNormal = -1f;
-
-if (lab14bConsumptionPerHour > 0f && lab14bBaselineMah > 0f) {
-
-    lab14bEstimatedHours =
-            lab14bBaselineMah / lab14bConsumptionPerHour;
-
-    float battPct = (float) getBatteryPercentSafe();
-
-    if (battPct > 0f) {
-
-        float factor = battPct / 100f;
-
-        lab14bRemainingNormal =
-                lab14bEstimatedHours * factor; // ✅ FIX
-    }
-
-} else {
-
-    // 🔴 fallback για παλιές εκδόσεις (optional)
-    lab14bEstimatedHours =
-            p.getFloat("lab14b_estimated_hours", -1f);
-
-    lab14bRemainingNormal =
-            p.getFloat("lab14b_remaining_normal", -1f);
-}
-
-// ------------------------------------------------------------
-// 🔴 LOG HEADER
-// ------------------------------------------------------------
-appendHtml("<br>");
-logLine();
-
-logInfo(gr
-        ? "LAB 29 — ΤΕΛΙΚΗ ΣΥΝΟΨΗ ΥΠΑΡΧΟΝΤΩΝ ΤΕΚΜΗΡΙΩΝ"
-        : "LAB 29 — FINAL EXISTING-EVIDENCE SUMMARY");
-
-logLine();
-
-    // ------------------------------------------------------------
-    // 1) USE IMMUTABLE PRE-REPORT SNAPSHOT
-    // The history captured above excludes the current Lab 29 header.
-    // ------------------------------------------------------------
-
-    // ------------------------------------------------------------
-    // 2) EXPLICIT LOG SEVERITY (not English/Greek keyword guesses)
-    // ============================================================
-    // logWarn()/logError() and labeled warning/error results now retain
-    // typed ⚠ / ✖ prefixes in GELServiceLog. Legacy untyped rows remain
-    // outside this explicit-severity index; missing tests are not a pass.
-    String[] lines = fullLog.split("\\n");
-    StringBuilder explicitAlerts = new StringBuilder();
-    for (String line : lines) {
-        if (line == null) continue;
-        String t = line.trim();
-        if (t.startsWith("⚠ ") || t.startsWith("✖ ")) {
-            explicitAlerts.append(t).append((char) 10);
-        }
-    }
-
-    // ============================================================
-    // 3) EVIDENCE COVERAGE, NOT A DEVICE-WIDE PASS
-    // ============================================================
     appendHtml("<br>");
-    logInfo(gr ? "Σύνοψη διαγνωστικών" : "Diagnostics summary");
+    logLine();
+    logInfo(gr ? "LAB 29 — ΤΕΧΝΙΚΗ ΣΥΝΟΨΗ ΠΡΟΕΙΔΟΠΟΙΗΣΕΩΝ ΚΑΙ ΑΣΤΟΧΙΩΝ"
+               : "LAB 29 — TECHNICIAN WARNING AND FAILURE SUMMARY");
     logLine();
 
-    logLabelValue(
-            gr ? "Ερμηνεία αρχείου" : "Log interpretation",
-            gr ? "Καταγράφονται οι ρητές σημάνσεις ⚠ / ✖, μαζί με τις έγχρωμες προειδοποιήσεις και αστοχίες. Παλαιές εγγραφές χωρίς σήμανση και μη εκτελεσμένα τεστ απαιτούν έλεγχο."
-               : "Explicit ⚠ / ✖ events include labeled warnings/errors. Legacy untyped entries and unperformed tests still require review.");
+    if (sourceLog == null || sourceLog.trim().isEmpty()) {
+        logLabelValue(gr ? "Διαγνωστικές καταγραφές" : "Diagnostic records",
+                gr ? "Δεν υπάρχουν καταγραφές εργαστηρίων για αξιολόγηση."
+                   : "No lab records are available for review.");
+        return;
+    }
 
-    if (explicitAlerts.length() == 0) {
-        logLabelValue(gr ? "Σύνοψη" : "Summary",
-                gr ? "Δεν υπάρχουν καταγεγραμμένες προειδοποιήσεις ή σφάλματα στο διαθέσιμο αρχείο."
-                   : "No warnings or errors were recorded in the available log.");
+    // Do not invent fault interpretations, SoH estimates, OEM/IMEI findings,
+    // execution scores or cross-lab health conclusions in the technician report.
+    // Only source-lab ⚠ and ✖ observations are eligible.
+    int errors = Lab29TechnicianAlerts.count(
+            findings, Lab29TechnicianAlerts.Severity.ERROR);
+    int warnings = Lab29TechnicianAlerts.count(
+            findings, Lab29TechnicianAlerts.Severity.WARNING);
+
+    if (errors == 0 && warnings == 0) {
+        logLabelValue(gr ? "Ευρήματα προς έλεγχο" : "Findings for review",
+                gr ? "Δεν καταγράφηκαν προειδοποιήσεις ή αστοχίες στο διαθέσιμο αρχείο."
+                   : "No warnings or failures were recorded in the available log.");
     } else {
-        logLabelWarnValue(gr ? "Αναφορές προς έλεγχο" : "Entries for review",
-                gr ? "Υπάρχουν καταγραφές με ρητή σήμανση προσοχής/σφάλματος."
-                   : "Explicit caution/error entries exist; they do not independently identify a hardware cause.");
-        for (String entry : explicitAlerts.toString().split("\\n")) {
-            if (!entry.trim().isEmpty()) {
-                logLabelWarnValue(gr ? "Καταγραφή" : "Log entry", entry.trim());
+        if (errors > 0) {
+            appendHtml("<br>");
+            logInfo(gr ? "Αστοχίες εργαστηρίων" : "Lab failures");
+            logLine();
+            for (Lab29TechnicianAlerts.Finding finding : findings) {
+                if (finding.severity != Lab29TechnicianAlerts.Severity.ERROR) continue;
+                String label = finding.sourceLab.isEmpty()
+                        ? (gr ? "Αστοχία" : "Failure") : finding.sourceLab;
+                logLabelErrorValue(label, finding.message);
+            }
+        }
+        if (warnings > 0) {
+            appendHtml("<br>");
+            logInfo(gr ? "Προειδοποιήσεις εργαστηρίων" : "Lab warnings");
+            logLine();
+            for (Lab29TechnicianAlerts.Finding finding : findings) {
+                if (finding.severity != Lab29TechnicianAlerts.Severity.WARNING) continue;
+                String label = finding.sourceLab.isEmpty()
+                        ? (gr ? "Προειδοποίηση" : "Warning") : finding.sourceLab;
+                logLabelWarnValue(label, finding.message);
             }
         }
     }
 
-    // ------------------------------------------------------------
-// 4) BATTERY FINDINGS — INFORMATIONAL ONLY
-// LAB 28 remains the single source of truth for device scoring.
-// ------------------------------------------------------------
-float batteryScore = p.getFloat("lab14_health_score", -1f);
-float batteryHealth = p.getFloat("lab14_health_percent", -1f);
-
-// Historical 0–100 values came from stress heuristics, not a capacity test.
-// Preserve their existence for audit; never turn them into proven battery wear.
-appendHtml("<br>");
-logInfo(gr ? "Ευρήματα τεχνικού ελέγχου" : "Technician findings");
-logLine();
-
-float historicalIndex = batteryHealth >= 0f && batteryHealth <= 100f
-        ? batteryHealth
-        : (batteryScore >= 0f && batteryScore <= 100f ? batteryScore : Float.NaN);
-
-logLabelValue(
-        gr ? "Υγεία μπαταρίας (SoH)" : "Battery state of health (SoH)",
-        gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — απαιτείται ανεξάρτητη χωρητικότητα/τεχνικός έλεγχος"
-           : "NOT MEASURED — requires independent capacity evidence/technician assessment");
-if (!Float.isNaN(historicalIndex)) {
-    logLabelValue(
-            gr ? "Ιστορικός πειραματικός δείκτης" : "Legacy experimental index",
-            String.format(Locale.US,
-                    gr ? "%.0f/100 (μη βαθμονομημένο, όχι SoH)"
-                       : "%.0f/100 (uncalibrated, not SoH)", historicalIndex));
-}
-
-// ------------------------------------------------------------
-// BATTERY ENDURANCE FINDING — INFORMATIONAL ONLY
-// ------------------------------------------------------------
-long lab14bAgeMs = System.currentTimeMillis() - ts14b;
-if (lab14bConsumptionPerHour > 0f &&
-    lab14bEstimatedHours > 0f &&
-    lab14bBaselineMah > 0f && ts14b > 0L &&
-    lab14bAgeMs >= 0L && lab14bAgeMs <= 24L * 60L * 60L * 1000L) {
-
-    String enduranceText = String.format(
-            Locale.US,
-            gr
-                    ? "%.1f ώρες στο 100%% | %.0f mAh/h"
-                    : "%.1f hours at 100%% | %.0f mAh/h",
-            lab14bEstimatedHours,
-            lab14bConsumptionPerHour
-    );
-
-    logLabelValue(
-            gr ? "Εκτιμώμενη αυτονομία (όχι μέτρηση)" : "Estimated endurance (not measured)",
-            enduranceText + (gr ? " — προβολή σεναρίου" : " — scenario projection")
-    );
-
-    float currentPercent =
-            (float) getBatteryPercentSafe();
-
-    if (lab14bRemainingNormal > 0f &&
-        currentPercent > 0f) {
-
-        logLabelValue(
-                gr ? "Υπόλοιπο κανονικής χρήσης"
-                   : "Remaining normal use",
-                String.format(
-                        Locale.US,
-                        gr
-                                ? "%.1f ώρες στο %.0f%%"
-                                : "%.1f hours at %.0f%%",
-                        lab14bRemainingNormal,
-                        currentPercent
-                )
-        );
-    }
-
-} else {
-
-    logLabelValue(
-            gr ? "Εκτιμώμενη αυτονομία" : "Estimated endurance",
-            gr ? "ΔΕΝ ΕΚΤΙΜΗΘΗΚΕ — ανεπαρκή ή παλαιά δεδομένα LAB 14B"
-               : "NOT ESTIMATED — insufficient or stale LAB 14B evidence"
-    );
-}
-   
-// ------------------------------------------------------------
-// 7) TECHNICIAN INTAKE — LABS 28 AND 29 ARE INDEPENDENT EVIDENCE AXES
-// ------------------------------------------------------------
-// Android metadata is independent of the buyer's private external IMEI check.
-// This app no longer records or reports any external IMEI-check outcomes.
-final long technicianWallNow = System.currentTimeMillis();
-final long technicianElapsedNow = SystemClock.elapsedRealtime();
-
-// ------------------------------------------------------------
-// Former Lab27 duplicated existing measurements and unverified text mentions;
-// no historical symptom mask is forwarded into the final technician report.
-// All other independent lab findings remain available.
-// ------------------------------------------------------------
-// B) LAB 27 — ANDROID-REPORTED DEVICE DATA (NO EXTERNAL IMEI RESULT)
-// ------------------------------------------------------------
-appendHtml("<br>");
-logInfo(gr ? "LAB 27 — Δηλωμένη ταυτότητα συσκευής"
-           : "LAB 27 — Android-reported device identity");
-logLine();
-boolean technicianLab29Fresh = LabEvidenceFreshness.isFresh(
-        p.getInt("lab29_obs_schema", 0),
-        p.getLong("lab29_ts", 0L),
-        p.getLong("lab29_obs_elapsed_ms", -1L),
-        technicianWallNow, technicianElapsedNow);
-if (technicianLab29Fresh) {
-    logLabelValue(gr ? "Στοιχεία κατασκευαστή κατά Android" : "Android-reported manufacturer/model",
-            p.getString("lab29_obs_manufacturer", "") + " / "
-                    + p.getString("lab29_obs_model", ""));
-    logLabelValue(gr ? "Κωδικός συσκευής κατά Android" : "Android-reported device code",
-            p.getString("lab29_obs_device", ""));
-    logLabelValue(gr ? "Γνησιότητα συσκευής / ανταλλακτικών" : "Device / component authenticity",
-            gr ? "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΗ — απαιτούνται τεκμήρια κατασκευαστή ή φυσικός έλεγχος."
-               : "UNVERIFIED — OEM evidence or physical inspection is required.");
-} else {
-    logLabelValue(gr ? "Στοιχεία Lab 27" : "Lab 27 evidence",
-            gr ? "Δεν υπάρχουν πρόσφατες παρατηρήσεις της ίδιας εκκίνησης."
-               : "No recent same-boot observations.");
-    logLabelValue(gr ? "Γνησιότητα συσκευής / ανταλλακτικών" : "Device / component authenticity",
-            gr ? "ΑΓΝΩΣΤΗ — δεν έχει πιστοποιηθεί."
-               : "UNKNOWN — not independently authenticated.");
-}
-
-appendHtml("<br>");
-logLabelValue(gr ? "Ανεξάρτητος έλεγχος IMEI" : "Independent IMEI check",
-        gr ? "Παρέχονται μόνο οδηγίες προς εξωτερική υπηρεσία. Δεν συλλέγονται IMEI, στοιχεία πληρωμής ή αποτελέσματα."
-           : "Only external-service guidance is provided; no IMEI, payment details or results are collected.");
-logLabelValue(gr ? "Αναφορά στον τεχνικό" : "Technician report",
-        gr ? "Περιλαμβάνονται μόνο τα τεχνικά ευρήματα των εργαστηρίων, όχι αποτέλεσμα εξωτερικού ελέγχου IMEI."
-           : "Only the labs' technical findings are included, not the external IMEI outcome.");
-
-// ------------------------------------------------------------
-// ------------------------------------------------------------
-// 8) EXPORT NOTE
-    // ------------------------------------------------------------
-    appendHtml("<br>");
-
-    logLabelValue(
-            gr ? "Εξαγωγή"
-                    : "Export",
-            gr
-                    ? "Χρησιμοποιήστε το κουμπί για εξαγωγή αρχείου τεκμηρίων PDF (όχι πιστοποιητικό hardware)"
-                    : "Use the button to export the evidence PDF (not a hardware certificate)"
-    );
-
-    // enable export button
+    // Keep the existing service export without duplicating any data here.
     enableSingleExportButton();
-
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 29 ολοκληρώθηκε (σύνταξη τελικής σύνοψης παρατηρήσεων)."
-         : "Lab 29 finished (final observation summary compiled).");
-logInfo(gr ? "Η αναφορά συγκέντρωσε τα διαθέσιμα αποτελέσματα των εργαστηρίων."
-           : "The report gathered the available results from completed labs.");
+    logOk(gr ? "Το Lab 29 ολοκληρώθηκε — σύνοψη τεχνικών ευρημάτων."
+             : "Lab 29 completed — technician findings summary.");
     logLine();
 }
 
+// ============================================================
 // ============================================================
 // ENABLE EXISTING EXPORT BUTTON — No duplicates!
 // ============================================================

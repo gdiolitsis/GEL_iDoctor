@@ -50,6 +50,9 @@ public final class Lab31ReportEvidencePolicy {
                 || line.contains("τελικη τεχνικη αναφορα")
                 || line.contains("τελική τεχνική αναφορά")
                 || line.contains("final technical report")
+                || line.contains("τεχνικη συνοψη προειδοποιησεων και αστοχιων")
+                || line.contains("τεχνική σύνοψη προειδοποιήσεων και αστοχιών")
+                || line.contains("technician warning and failure summary")
         ));
     }
 
