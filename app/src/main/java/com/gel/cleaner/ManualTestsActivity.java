@@ -27007,6 +27007,10 @@ final boolean fresh16 =
                 chargeAdvice = gr
                         ? "Δοκίμασε διαφορετικό συμβατό καλώδιο και φορτιστή· έλεγξε τη σύνδεση για επαναλαμβανόμενες διακοπές."
                         : "Try another compatible cable and charger; inspect the connection for repeated interruptions.";
+            } else if (thermalConcern || lab14StressThermalWarning) {
+                chargeAdvice = gr
+                        ? "Προτεραιότητα έχει να κρυώσει η συσκευή. Επανάλαβε τη μέτρηση σε ηρεμία πριν δοκιμάσεις ταχύτερη φόρτιση."
+                        : "Allow the device to cool first. Retest at rest before trying faster charging.";
             } else if (chargeRateWarn) {
                 chargeAdvice = gr
                         ? "Αν το κινητό υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Επανάλαβε χωρίς έντονη χρήση και σε συγκρίσιμη στάθμη φόρτισης. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
