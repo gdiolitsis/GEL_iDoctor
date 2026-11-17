@@ -1289,6 +1289,9 @@ if (!out.battery.valid) {
         public int rssiDbm = -1;
         public int frequencyMhz = -1;
         public String wifiBand = "N/A";
+        // Nullable because unavailable/blocked APIs must not become false evidence.
+        public Boolean wifi24GHzSupported = null;
+        public Boolean wifi5GHzSupported = null;
         public String wifiStandard = "N/A";
         public String wifiMac = "N/A";
 
@@ -1312,6 +1315,12 @@ if (!out.battery.valid) {
             s.wifiSupported = pm.hasSystemFeature(PackageManager.FEATURE_WIFI);
 
             if (wm != null) {
+                try { s.wifi5GHzSupported = wm.is5GHzBandSupported(); }
+                catch (Throwable ignored) { }
+                if (Build.VERSION.SDK_INT >= 31) {
+                    try { s.wifi24GHzSupported = wm.is24GHzBandSupported(); }
+                    catch (Throwable ignored) { }
+                }
                 try {
                     s.wifiEnabled = wm.isWifiEnabled();
                 } catch (Throwable ignore) { }
