@@ -56,7 +56,8 @@ public final class Lab17StressEvidencePrerequisiteContractTest {
         assertTrue("Evidence-only branch must precede legacy score", entry >= 0 && earlyReturn > entry && oldModel > earlyReturn);
         String evidence = run.substring(entry, earlyReturn);
         assertTrue(evidence.contains("Lab 14A — δοκιμή καταπόνησης"));
-        assertTrue(evidence.contains("Lab 15 — φόρτιση"));
+        assertTrue(evidence.contains("Lab 15 — αποτέλεσμα φόρτισης"));
+        assertTrue(evidence.contains("Lab17ChargingContext.fromLab15Result("));
         assertTrue(evidence.contains("Lab 16 — θερμική κατάσταση"));
         assertTrue(evidence.contains("Δεν υπολογίζει ποσοστό υγείας μπαταρίας (SoH)"));
         assertTrue(evidence.contains("lab17_evidence_only_ts"));
@@ -103,7 +104,10 @@ public final class Lab17StressEvidencePrerequisiteContractTest {
         assertTrue(evidence.contains("boolean completeCoverage ="));
         assertTrue(evidence.contains("thermalConcern, completeCoverage"));
         assertTrue(evidence.contains("Συνδυαστικό συμπέρασμα"));
-        assertTrue(evidence.contains("συμβατό ταχυφορτιστή"));
+        assertTrue(evidence.contains("lab15DiagnosticOutcome"));
+        assertFalse(evidence.contains("lab15ChargerReported"));
+        assertFalse(evidence.contains("lab15_charger_type"));
+        assertFalse(evidence.contains("συμβατό ταχυφορτιστή"));
         assertTrue(evidence.contains("lab15ObservedOvertemp"));
         assertTrue(evidence.contains("lab15ObservedDisconnect"));
         assertFalse(evidence.contains("lab14Health * 0.50f"));
