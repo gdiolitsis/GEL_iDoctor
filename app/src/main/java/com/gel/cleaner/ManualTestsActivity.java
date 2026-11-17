@@ -26049,6 +26049,22 @@ private void lab16ThermalSnapshot() {
     float  peakTemp = -1f;
     String peakSrc  = "N/A";
     final int observedCount = internal.size() + peripherals.size();
+
+    // Collect every *available* Lab 16 sector separately, keeping the hottest
+    // reading when a vendor exposes several zones with the same label.
+    // Never infer an absent sensor from the maximum or another sensor.
+    final float[] sectorTemps = Lab16ThermalCorrelation.emptyTemperatures();
+    for (ThermalEntry entry : internal) {
+        Lab16ThermalCorrelation.capture(sectorTemps, entry.label, entry.temp);
+    }
+    for (ThermalEntry entry : peripherals) {
+        Lab16ThermalCorrelation.capture(sectorTemps, entry.label, entry.temp);
+    }
+    // Hidden-zone check remains independent of named thermal sectors.
+    final boolean hiddenRisk = detectHiddenThermalAnomaly(55f);
+    final Lab16ThermalCorrelation.Summary sectorSummary =
+            Lab16ThermalCorrelation.evaluate(sectorTemps, -1, hiddenRisk);
+
     // A battery reading alone does not establish CPU/GPU thermal coverage.
     int chipReadings = 0;
     for (ThermalEntry sample : internal) {
@@ -26071,14 +26087,17 @@ private void lab16ThermalSnapshot() {
 
     for (ThermalEntry t : internal) {
 
-        // Preserve the existing peak-temperature severity thresholds:
-        // measured normal values green; genuinely elevated readings caution/failure.
-        if (t.temp >= 55f)
-            logLabelErrorValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
-        else if (t.temp >= 45f)
+        // Sector-specific screening: a 55C chip reading is not directly
+        // comparable with a 55C battery or device-surface reading.
+        int sensorIndex = Lab16ThermalCorrelation.index(t.label);
+        Lab16ThermalCorrelation.Level grade =
+                Lab16ThermalCorrelation.level(sensorIndex, t.temp);
+        if (grade == Lab16ThermalCorrelation.Level.ELEVATED
+                || grade == Lab16ThermalCorrelation.Level.HIGH) {
             logLabelWarnValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
-        else
+        } else {
             logLabelOkValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
+        }
 
         if (t.temp > peakTemp) {
             peakTemp = t.temp;
@@ -26088,14 +26107,17 @@ private void lab16ThermalSnapshot() {
 
     for (ThermalEntry t : peripherals) {
 
-        // Preserve the existing peak-temperature severity thresholds:
-        // measured normal values green; genuinely elevated readings caution/failure.
-        if (t.temp >= 55f)
-            logLabelErrorValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
-        else if (t.temp >= 45f)
+        // Sector-specific screening: a 55C chip reading is not directly
+        // comparable with a 55C battery or device-surface reading.
+        int sensorIndex = Lab16ThermalCorrelation.index(t.label);
+        Lab16ThermalCorrelation.Level grade =
+                Lab16ThermalCorrelation.level(sensorIndex, t.temp);
+        if (grade == Lab16ThermalCorrelation.Level.ELEVATED
+                || grade == Lab16ThermalCorrelation.Level.HIGH) {
             logLabelWarnValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
-        else
+        } else {
             logLabelOkValue(t.label, String.format(Locale.US, "%.1f°C", t.temp));
+        }
 
         if (t.temp > peakTemp) {
             peakTemp = t.temp;
@@ -26108,9 +26130,9 @@ private void lab16ThermalSnapshot() {
     // ------------------------------------------------------------
     // SUMMARY
     // ------------------------------------------------------------
-    boolean danger = peakTemp >= 55f
-            || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-            && osThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE);
+    // Use Android's confirmed thermal limitation for severe system impact.
+    // An isolated hot sensor is caution, not proof that the OS throttled.
+    boolean danger = osThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE;
 
     logInfo(gr ? "Θερμική σύνοψη:" : "Thermal summary:");
     logLine();
@@ -26135,7 +26157,7 @@ private void lab16ThermalSnapshot() {
                         : (gr ? "Καταγράφηκε αυξημένη θερμοκρασία"
                               : "An elevated temperature was recorded")
         );
-    } else if (peakTemp >= 45f
+    } else if (sectorSummary.elevatedCount > 0 || hiddenRisk
             || osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE) {
         logLabelWarnValue(
                 gr ? "Κατάσταση" : "Status",
@@ -26148,8 +26170,8 @@ private void lab16ThermalSnapshot() {
     } else if (observedCount == 0) {
         logInfo(gr ? "Κατάσταση: δεν υπάρχουν διαθέσιμες θερμικές μετρήσεις"
                    : "Status: no thermal readings available");
-    } else if (!ThermalEvidencePolicy.supportsScopedNormal(
-            observedCount, chipReadings, peakTemp, false)) {
+    } else if (!sectorSummary.hasChipReading()
+            && osThermalStatus < 0) {
         // Peripheral/battery observations are not a CPU/GPU health check.
         logInfo(gr
                 ? "Κατάσταση: διαθέσιμες μόνο μερικές ενδείξεις, χωρίς CPU/GPU· άγνωστο"
@@ -26200,34 +26222,22 @@ private void lab16ThermalSnapshot() {
                 peakSrc
         );
 
-        if (peakTemp >= 55f) {
-
-            logLabelErrorValue(
-                    gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
-                    peakText
-            );
-
-        } else if (peakTemp >= 45f) {
-
-            logLabelWarnValue(
-                    gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
-                    peakText
-            );
-
+        Lab16ThermalCorrelation.Level peakLevel = Lab16ThermalCorrelation.level(
+                Lab16ThermalCorrelation.index(peakSrc), peakTemp);
+        if (peakLevel == Lab16ThermalCorrelation.Level.ELEVATED
+                || peakLevel == Lab16ThermalCorrelation.Level.HIGH) {
+            logLabelWarnValue(gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
+                    peakText);
         } else {
-
-            logLabelOkValue(
-                    gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
-                    peakText
-            );
+            logLabelOkValue(gr ? "Μέγιστη θερμοκρασία" : "Peak temperature",
+                    peakText);
         }
     }
 
     // ------------------------------------------------------------
     // HIDDEN THERMAL SAFETY CHECK
     // ------------------------------------------------------------
-    boolean hiddenRisk = detectHiddenThermalAnomaly(55f);
-
+    // Computed once at snapshot start, not remeasured halfway through.
     if (hiddenRisk) {
 
         logLabelWarnValue(
@@ -26285,10 +26295,20 @@ private void lab16ThermalSnapshot() {
                 .putInt("lab16_total_readings", observedCount)
                 .putFloat("lab16_peak_temp", peakTemp)
                 .putString("lab16_peak_source", peakSrc)
+                // All six domain temperatures preserved independently for Lab17.
+                // NaN denotes a sector not accessible in this snapshot.
+                .putFloat("lab16_temp_battery", sectorTemps[Lab16ThermalCorrelation.BATTERY])
+                .putFloat("lab16_temp_cpu", sectorTemps[Lab16ThermalCorrelation.CPU])
+                .putFloat("lab16_temp_gpu", sectorTemps[Lab16ThermalCorrelation.GPU])
+                .putFloat("lab16_temp_charger", sectorTemps[Lab16ThermalCorrelation.CHARGER])
+                .putFloat("lab16_temp_pmic", sectorTemps[Lab16ThermalCorrelation.PMIC])
+                .putFloat("lab16_temp_surface", sectorTemps[Lab16ThermalCorrelation.SURFACE])
+                .putBoolean("lab16_detailed_sectors_v1", true)
+                .putBoolean("lab16_hidden_zone_warning", hiddenRisk)
                 .putBoolean("lab16_evidence_available",
                         observedCount > 0 || osThermalStatus >= 0 || hiddenRisk)
                 .putBoolean("lab16_thermal_warning",
-                        danger || hiddenRisk || peakTemp >= 45f
+                        danger || hiddenRisk || sectorSummary.elevatedCount > 0
                                 || osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE)
                 .putLong("lab16_last_ts", System.currentTimeMillis())
                 .apply();
