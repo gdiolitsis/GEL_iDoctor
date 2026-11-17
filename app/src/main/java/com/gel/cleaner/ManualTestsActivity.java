@@ -662,6 +662,12 @@ private boolean lab14UseSnapshotTemp = false;
 
 private boolean isLab14GamaMode = false;
 
+// Shared cool-down gate for the 14A / 14B / 14 GAMMA suite.
+private static final String LAB14_RECOVERY_PREFS = "lab14_recovery";
+private volatile String lab14RecoveryActiveMode = null;
+private volatile float lab14RecoveryBaselineTemp = Float.NaN;
+private AlertDialog lab14RecoveryDialog;
+
 private AlertDialog batterySuiteDialog;
 
 private Handler usageHandler;
@@ -2391,6 +2397,10 @@ protected void onPause() {
 // ============================================================
 @Override
 protected void onDestroy() {
+
+    try {
+        if (lab14RecoveryDialog != null) lab14RecoveryDialog.dismiss();
+    } catch (Throwable ignore) {}
 
     try {
         if (ui != null) {
@@ -13414,6 +13424,151 @@ AppTTS.stop();
 }
 
 // ============================================================
+// LAB 14 — MEASUREMENT RECOVERY BETWEEN STRESS / ENDURANCE MODES
+// ============================================================
+// Only the last finished/aborted ACTIVE load is stored. The persistent
+// monotonic end timestamp survives leaving the app and process recreation.
+private float lab14RecoveryReadTemperature() {
+    float temp = getBatteryTemperature();
+    if (!Lab14RecoveryGate.validBatteryTemp(temp)) {
+        temp = getBatteryTempEngineSafe();
+    }
+    return Lab14RecoveryGate.validBatteryTemp(temp) ? temp : Float.NaN;
+}
+
+private void lab14RecoveryMarkStart(String mode, float baselineC) {
+    synchronized (lab14Lock) {
+        lab14RecoveryBaselineTemp = Lab14RecoveryGate.validBatteryTemp(baselineC)
+                ? baselineC : lab14RecoveryReadTemperature();
+        lab14RecoveryActiveMode = mode;
+    }
+}
+
+private void lab14RecoveryMarkStop() {
+    final String mode;
+    final float baseline;
+    synchronized (lab14Lock) {
+        mode = lab14RecoveryActiveMode;
+        if (mode == null) return;
+        baseline = lab14RecoveryBaselineTemp;
+        lab14RecoveryActiveMode = null; // idempotent across completion, cancel and onStop
+        lab14RecoveryBaselineTemp = Float.NaN;
+    }
+    try {
+        getSharedPreferences(LAB14_RECOVERY_PREFS, MODE_PRIVATE).edit()
+                .putString("last_mode", mode)
+                .putLong("last_stop_elapsed", SystemClock.elapsedRealtime())
+                .putLong("last_stop_wall", System.currentTimeMillis())
+                .putFloat("baseline_temp_c", baseline)
+                .commit(); // persist before returning to the selector
+    } catch (Throwable ignored) {
+        // Never pretend the reference time was stored if persistence failed.
+    }
+}
+
+private Lab14RecoveryGate.Decision lab14RecoveryDecision() {
+    SharedPreferences p = getSharedPreferences(LAB14_RECOVERY_PREFS, MODE_PRIVATE);
+    return Lab14RecoveryGate.evaluate(
+            p.getLong("last_stop_elapsed", 0L),
+            p.getLong("last_stop_wall", 0L),
+            SystemClock.elapsedRealtime(),
+            System.currentTimeMillis(),
+            p.getFloat("baseline_temp_c", Float.NaN),
+            lab14RecoveryReadTemperature());
+}
+
+private void lab14ShowRecoveryWaitDialog(boolean gamaMode) {
+    if (lab14RecoveryDialog != null && lab14RecoveryDialog.isShowing()) return;
+    final boolean grLocal = AppLang.isGreek(this);
+
+    AlertDialog.Builder builder = new AlertDialog.Builder(
+            this, android.R.style.Theme_Material_Dialog_NoActionBar);
+    builder.setCancelable(true);
+    LinearLayout root = buildGELPopupRoot(this);
+    root.addView(buildPopupHeader(this, grLocal
+            ? "Ανάπαυση μπαταρίας πριν από το " + (gamaMode ? "14Γ" : "14Β")
+            : "Battery rest before " + (gamaMode ? "14 GAMMA" : "14B")));
+
+    TextView info = new TextView(this);
+    info.setTextColor(Color.WHITE);
+    info.setTextSize(15f);
+    info.setPadding(dp(4), dp(12), dp(4), dp(16));
+    root.addView(info);
+
+    Button proceed = gelButton(this, grLocal
+            ? "Συνέχεια στον προέλεγχο" : "Continue to pre-test check", 0xFF39FF14);
+    Button exit = gelButton(this, grLocal ? "Έξοδος" : "Exit", 0xFFE60000);
+    root.addView(proceed);
+    root.addView(exit);
+    builder.setView(root);
+
+    final AlertDialog dialog = builder.create();
+    final Handler refresh = new Handler(Looper.getMainLooper());
+    final Runnable update = new Runnable() {
+        @Override public void run() {
+            if (!dialog.isShowing() || isFinishing() || isDestroyed()) return;
+            Lab14RecoveryGate.Decision d = lab14RecoveryDecision();
+            String message;
+            if (d.status == Lab14RecoveryGate.Status.WAIT_TIME) {
+                long secs = (d.remainingMs + 999L) / 1000L;
+                String counter = String.format(Locale.US, "%02d:%02d", secs / 60L, secs % 60L);
+                message = grLocal
+                        ? "Το κινητό ανακάμπτει από την προηγούμενη δοκιμή. "
+                          + "Περίμενε τουλάχιστον 5 λεπτά για πιο συγκρίσιμες μετρήσεις.\n\n"
+                          + "Υπολειπόμενος χρόνος: " + counter
+                        : "The device is recovering from the previous test. "
+                          + "Allow at least 5 minutes for more comparable readings.\n\n"
+                          + "Time remaining: " + counter;
+            } else if (d.status == Lab14RecoveryGate.Status.WAIT_TEMPERATURE) {
+                message = String.format(Locale.US, grLocal
+                        ? "Πέρασαν τα 5 λεπτά, αλλά η μπαταρία παραμένει θερμότερη από την αρχική κατάσταση.\n\n"
+                          + "Αρχική: %.1f°C   Τώρα: %.1f°C\n"
+                          + "Περίμενε να επιστρέψει έως 2°C πάνω από την αρχική τιμή και κάτω από 45°C."
+                        : "Five minutes have passed, but battery temperature is still elevated.\n\n"
+                          + "Baseline: %.1f°C   Now: %.1f°C\n"
+                          + "Wait until it is within 2°C above baseline and below 45°C.",
+                        d.baselineC, d.currentC);
+            } else if (d.status == Lab14RecoveryGate.Status.TEMPERATURE_UNAVAILABLE) {
+                message = grLocal
+                        ? "Τα 5 λεπτά ολοκληρώθηκαν, όμως δεν είναι διαθέσιμη αξιόπιστη αρχική ή τρέχουσα "
+                          + "θερμοκρασία μπαταρίας. Δεν μπορεί να επιβεβαιωθεί θερμική σταθεροποίηση. "
+                          + "Δοκίμασε ξανά όταν είναι διαθέσιμη η μέτρηση."
+                        : "Five minutes have passed, but a reliable initial or current battery temperature "
+                          + "is unavailable. Thermal recovery cannot be verified. Retry when temperature is readable.";
+            } else {
+                message = grLocal
+                        ? "Ολοκληρώθηκε η ανάπαυση των 5 λεπτών και η θερμοκρασία "
+                          + "επανήλθε σε αποδεκτό επίπεδο. Μπορείς να προχωρήσεις στον προέλεγχο."
+                        : "The 5-minute rest is complete and battery temperature has returned "
+                          + "to an acceptable range. You can proceed to the pre-test check.";
+            }
+            info.setText(message);
+            proceed.setEnabled(d.mayStart());
+            proceed.setAlpha(d.mayStart() ? 1f : 0.45f);
+            refresh.postDelayed(this, 1000L);
+        }
+    };
+    dialog.setOnDismissListener(v -> {
+        refresh.removeCallbacks(update);
+        if (lab14RecoveryDialog == dialog) lab14RecoveryDialog = null;
+    });
+    exit.setOnClickListener(v -> dialog.dismiss());
+    proceed.setOnClickListener(v -> {
+        // Recheck when tapped, not only when the previous UI refresh ran.
+        if (!lab14RecoveryDecision().mayStart()) return;
+        dialog.dismiss();
+        runLab14DurationMode(gamaMode);
+    });
+    lab14RecoveryDialog = dialog;
+    dialog.show();
+    if (dialog.getWindow() != null) {
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+    }
+    com.gel.cleaner.GelButtonLayout.fitDialog(dialog);
+    update.run();
+}
+
+// ============================================================
 // LAB 14 — BATTERY DIAGNOSTICS SUITE
 // ============================================================
 private void showBatterySuiteMenu() {
@@ -13905,6 +14060,7 @@ if (DEBUG_MODE) appendLog("ENGINE", "START");
 // 🔴 START ENGINE
 // ------------------------------------------------------------
 lab14Engine.startDrainSession();
+lab14RecoveryMarkStart("14A", startBatteryTemp);
 
 // --------------------------------------------------
 // 🔴 REAL STRESS START (RESTORED)
@@ -15353,6 +15509,7 @@ private void lab14StopAllStress() {
         try { restoreBrightnessAndKeepOn(); } catch (Throwable ignore) {}
 
     } catch (Throwable ignore) {}
+    lab14RecoveryMarkStop();
 }
 
 // ------------------------------------------------------------
@@ -21921,7 +22078,19 @@ private void lab14GamingDurationTest() {
 private void runLab14DurationMode(boolean gamaMode) {
 
     final boolean gr = AppLang.isGreek(this);
-    
+
+    // Do not interrupt a running sibling test to enter a new mode.
+    if (lab14Running) {
+        logWarn(gr ? "Ολοκλήρωσε πρώτα την τρέχουσα δοκιμή."
+                   : "Finish the current test before starting another.");
+        return;
+    }
+    // Run BEFORE the destructive old-session reset or advisory popup.
+    if (!lab14RecoveryDecision().mayStart()) {
+        lab14ShowRecoveryWaitDialog(gamaMode);
+        return;
+    }
+
      boolean wasGama = gamaMode;
     
 // ------------------------------------------------------------
@@ -22105,6 +22274,7 @@ isLab14BMode = !gamaMode;
 isLab14GamaMode = gamaMode;
 lab14Cancelled = false;
 lab14Running = true;
+lab14RecoveryMarkStart(gamaMode ? "14G" : "14B", startTemp[0]);
 
 // 🔴 FORCE SOFT PROFILE (CRITICAL)
 lab14BoostActive = false;
@@ -23309,6 +23479,9 @@ try {
         }
     } catch (Throwable ignore) {}
 
+    // Also handle a completion path that did not call the common stop helper.
+    lab14RecoveryMarkStop();
+
     lab14Cancelled = false;
     lab14Running = false;
     isLab14BMode = false;
@@ -23667,6 +23840,12 @@ private void showLab14BAdvisory(Runnable onContinue) {
 
         if (!allowContinue)
             return;
+
+        // User may spend >5 minutes in the advisory. Recheck at actual launch.
+        if (!lab14RecoveryDecision().mayStart()) {
+            lab14ShowRecoveryWaitDialog(isLab14GamaMode);
+            return;
+        }
 
         if (onContinue != null) {
 
