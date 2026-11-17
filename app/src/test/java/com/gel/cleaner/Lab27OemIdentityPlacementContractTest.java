@@ -43,6 +43,24 @@ public final class Lab27OemIdentityPlacementContractTest {
         assertTrue(certification.contains("gradeForMeasuredSnapshot(deviceHealthScore)"));
     }
 
+    @Test public void factoryCaptureReusesCommonEngineForPreviouslyMissingMeasurements() throws Exception {
+        Path file = Paths.get("app/src/main/java/com/gel/cleaner/Lab29FactorySpecAudit.java");
+        if (!Files.isRegularFile(file)) file = Paths.get(
+                "src/main/java/com/gel/cleaner/Lab29FactorySpecAudit.java");
+        String audit = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+        assertTrue(audit.contains("engine.readCpuSnapshot()"));
+        assertTrue(audit.contains("s.socModel"));
+        assertTrue(audit.contains("engine.readGpuSnapshot()"));
+        assertTrue(audit.contains("s.gpuName"));
+        assertTrue(audit.contains("engine.readCameraSnapshot()"));
+        assertTrue(audit.contains("unit.maxJpegPixels"));
+        assertTrue(audit.contains("engine.readConnectivitySnapshot()"));
+        assertTrue(audit.contains("s.wifi24GHzSupported"));
+        assertTrue(audit.contains("s.wifi5GHzSupported"));
+        assertTrue(audit.contains("engine.readBatterySnapshot().chargeDesignMah"));
+        assertTrue(audit.contains("s.nfcSupported"));
+    }
+
     @Test public void unknownOemRowsStillDisplayActualAvailableHardwareEvidence() throws Exception {
         String certification = section(source(),
                 "private void lab30CombineFindings()", "private void lab31FinalSummary()");
