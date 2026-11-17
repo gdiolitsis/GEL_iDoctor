@@ -81,8 +81,8 @@ public final class Lab17CombinedConclusion {
 
         if (weak) {
             return new Decision(Tone.POSITIVE, gr
-                    ? "Η μπαταρία παρουσιάζει ενδείξεις που μπορεί να σχετίζονται με φυσιολογική φθορά, αλλά δεν καταγράφηκε δυσλειτουργία στη φόρτιση ή σοβαρή θερμική ένδειξη. Ο συνδυασμός των αποτελεσμάτων δείχνει ικανοποιητική λειτουργία στους τομείς που ελέγχθηκαν. Δεν προκύπτει από αυτές τις δοκιμές ανάγκη αντικατάστασης της μπαταρίας."
-                    : "The battery shows signs that may reflect ordinary ageing, but no charging malfunction or serious thermal finding was recorded. Together, the results indicate satisfactory operation in the areas tested. These tests do not establish a need to replace the battery.");
+                    ? "Η μπαταρία παρουσιάζει ενδείξεις που μπορεί να σχετίζονται με φυσιολογική φθορά, αλλά δεν καταγράφηκε δυσλειτουργία στη φόρτιση ή σοβαρή θερμική ένδειξη. Στη συγκεκριμένη αξιολόγηση, η απόκριση της μπαταρίας δεν φάνηκε να δημιουργεί πρόβλημα στη λειτουργία των ελεγχόμενων υποσυστημάτων. Ο συνδυασμός των αποτελεσμάτων δείχνει ικανοποιητική λειτουργία στους τομείς που ελέγχθηκαν. Δεν προκύπτει από αυτές τις δοκιμές ανάγκη αντικατάστασης της μπαταρίας."
+                    : "The battery shows signs that may reflect ordinary ageing, but no charging malfunction or serious thermal finding was recorded. The battery response did not appear to impair the systems evaluated in this trial. Together, the results indicate satisfactory operation in the areas tested. These tests do not establish a need to replace the battery.");
         }
 
         return new Decision(Tone.POSITIVE, gr
