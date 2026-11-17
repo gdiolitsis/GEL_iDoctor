@@ -46,6 +46,21 @@ public final class Lab30ScoreEvidence {
         return visibleUserApps > 0 && !incomplete;
     }
 
+    /**
+     * Human-readable grade for the available diagnostic snapshot (0..100).
+     * This is NOT a component-health certificate, a battery SoH measurement,
+     * or the legacy risk-only 'reliabilityScore'.
+     * Missing inputs (-1) must never produce a reassuring A+.
+     */
+    public static String gradeForMeasuredSnapshot(int score) {
+        if (score < 0 || score > 100) return null;
+        if (score >= 92) return "A+";
+        if (score >= 85) return "A";
+        if (score >= 70) return "B";
+        if (score >= 55) return "C";
+        return "D";
+    }
+
     public static int performanceScore(int storage, int ram, int apps, int thermal) {
         if (storage < 0 || ram < 0 || apps < 0 || thermal < 0) return -1;
         return Math.round(storage * 0.35f + ram * 0.35f
