@@ -20,6 +20,105 @@ public final class Lab17CombinedConclusion {
         }
     }
 
+    /**
+     * Full evidence-based reasoning. Repeatability is measurement quality,
+     * not an independent electrical fault. Voltage, gauge and stress proxies
+     * must remain distinguishable rather than being presented as proof of harm.
+     */
+    public static Decision evaluateDetailed(
+            boolean gr, String stressClass,
+            boolean unstableBetweenRuns,
+            boolean corroboratedVoltageFlag,
+            boolean gaugeDiscrepancyFlag,
+            boolean experimentalStressProxyFlag,
+            boolean chargingConcern,
+            boolean thermalConcern,
+            boolean completeCoverage) {
+
+        boolean directBatteryConcern = "Critical".equals(stressClass)
+                || corroboratedVoltageFlag
+                || gaugeDiscrepancyFlag
+                || experimentalStressProxyFlag;
+        boolean known = "Weak".equals(stressClass)
+                || "Critical".equals(stressClass)
+                || "Normal".equals(stressClass)
+                || "Good".equals(stressClass)
+                || "Excellent".equals(stressClass);
+        boolean weak = "Weak".equals(stressClass);
+
+        // Independent abnormalities always win over the word "Weak" or an
+        // unremarkable result from another lab. Mention the affected domains.
+        if (directBatteryConcern || chargingConcern || thermalConcern) {
+            StringBuilder msg = new StringBuilder();
+            if (gr) {
+                if (directBatteryConcern) {
+                    if ("Critical".equals(stressClass)) {
+                        msg.append("Η απόκριση της μπαταρίας στο φορτίο χαρακτηρίστηκε κρίσιμη και χρειάζεται επανέλεγχο. ");
+                    } else if (corroboratedVoltageFlag) {
+                        msg.append("Η απόκριση της μπαταρίας στην καταπόνηση χρειάζεται επανέλεγχο: καταγράφηκε συνδυασμένη ηλεκτρική ένδειξη. ");
+                    }
+                    if (gaugeDiscrepancyFlag) {
+                        msg.append("Η ένδειξη στάθμης φόρτισης παρουσίασε πιθανή ασυμφωνία. ");
+                    }
+                    if (experimentalStressProxyFlag) {
+                        msg.append("Υπάρχει πρόσθετος έμμεσος δείκτης προς επιβεβαίωση, όχι απόδειξη φυσικής βλάβης. ");
+                    }
+                } else if (weak) {
+                    msg.append("Η μπαταρία μπορεί να παρουσιάζει φυσιολογική φθορά υπό φορτίο. ");
+                }
+                if (chargingConcern) msg.append("Η φόρτιση παρουσιάζει εύρημα που χρειάζεται επανέλεγχο. ");
+                if (thermalConcern) msg.append("Η θερμική συμπεριφορά παρουσιάζει εύρημα που χρειάζεται επανέλεγχο. ");
+                if (!thermalConcern && !chargingConcern && directBatteryConcern) {
+                    msg.append("Δεν καταγράφηκε πρόσθετη προειδοποίηση στη φόρτιση ή στη θερμική συμπεριφορά. ");
+                }
+                if (!directBatteryConcern && !chargingConcern && thermalConcern) {
+                    msg.append("Δεν αποδίδουμε το θερμικό εύρημα αυτόματα στη φθορά της μπαταρίας. ");
+                }
+                if (unstableBetweenRuns) {
+                    msg.append("Υπάρχει επίσης μεταβλητότητα μεταξύ εκτελέσεων, επομένως χρειάζεται συγκρίσιμη επανάληψη. ");
+                }
+                msg.append("Από τις διαθέσιμες δοκιμές δεν αποδεικνύεται συγκεκριμένη βλάβη ούτε η αιτία της.");
+            } else {
+                if (directBatteryConcern) {
+                    if ("Critical".equals(stressClass)) {
+                        msg.append("The battery's response under load was critical and requires follow-up. ");
+                    } else if (corroboratedVoltageFlag) {
+                        msg.append("The battery's stress response requires follow-up after corroborated electrical findings. ");
+                    }
+                    if (gaugeDiscrepancyFlag) msg.append("The battery gauge showed a possible discrepancy. ");
+                    if (experimentalStressProxyFlag) {
+                        msg.append("An additional indirect indicator needs verification; it is not proof of physical damage. ");
+                    }
+                } else if (weak) {
+                    msg.append("The battery may show ordinary ageing under load. ");
+                }
+                if (chargingConcern) msg.append("Charging has a finding that needs follow-up. ");
+                if (thermalConcern) msg.append("Thermal behaviour has a finding that needs follow-up. ");
+                if (!thermalConcern && !chargingConcern && directBatteryConcern) {
+                    msg.append("No additional charging or thermal warning was recorded. ");
+                }
+                if (!directBatteryConcern && !chargingConcern && thermalConcern) {
+                    msg.append("A thermal finding cannot automatically be attributed to battery ageing. ");
+                }
+                if (unstableBetweenRuns) {
+                    msg.append("Variation between trials also calls for a repeat under comparable conditions. ");
+                }
+                msg.append("These readings establish neither a specific fault nor its cause.");
+            }
+            return new Decision(Tone.CAUTION, msg.toString());
+        }
+
+        if (unstableBetweenRuns) {
+            return new Decision(Tone.NEUTRAL, gr
+                    ? "Η μπαταρία μπορεί να παρουσιάζει φθορά, όμως οι διαφορές μεταξύ εκτελέσεων δεν επιτρέπουν ασφαλή συνδυαστική αξιολόγηση. Δεν καταγράφηκε συγκεκριμένη δυσλειτουργία φόρτισης ή θερμοκρασίας. Επανάλαβε το 14Α σε συγκρίσιμες συνθήκες."
+                    : "The battery may show ageing, but variation between trials prevents a reliable combined assessment. No specific charging or thermal malfunction was recorded. Repeat Lab 14A under comparable conditions.");
+        }
+
+        // Use the existing limited-coverage and positive wording for a stable
+        // three-lab reading; no global system-health or SoH guarantee.
+        return evaluate(gr, stressClass, false, false, false, completeCoverage);
+    }
+
     public static Decision evaluate(boolean gr, String stressClass,
                                     boolean independentStressConcern,
                                     boolean chargingConcern,
@@ -81,8 +180,8 @@ public final class Lab17CombinedConclusion {
 
         if (weak) {
             return new Decision(Tone.POSITIVE, gr
-                    ? "Η μπαταρία παρουσιάζει ενδείξεις που μπορεί να σχετίζονται με φυσιολογική φθορά, αλλά δεν καταγράφηκε δυσλειτουργία στη φόρτιση ή σοβαρή θερμική ένδειξη. Στη συγκεκριμένη αξιολόγηση, η απόκριση της μπαταρίας δεν φάνηκε να δημιουργεί πρόβλημα στη λειτουργία των ελεγχόμενων υποσυστημάτων. Ο συνδυασμός των αποτελεσμάτων δείχνει ικανοποιητική λειτουργία στους τομείς που ελέγχθηκαν. Δεν προκύπτει από αυτές τις δοκιμές ανάγκη αντικατάστασης της μπαταρίας."
-                    : "The battery shows signs that may reflect ordinary ageing, but no charging malfunction or serious thermal finding was recorded. The battery response did not appear to impair the systems evaluated in this trial. Together, the results indicate satisfactory operation in the areas tested. These tests do not establish a need to replace the battery.");
+                    ? "Η μπαταρία παρουσιάζει ενδείξεις που μπορεί να σχετίζονται με φυσιολογική φθορά, αλλά δεν καταγράφηκε δυσλειτουργία στη φόρτιση ή σοβαρή θερμική ένδειξη. Στη συγκεκριμένη αξιολόγηση, δεν προέκυψε ότι η φθορά της μπαταρίας επηρεάζει αρνητικά τη λειτουργία του συστήματος στους τομείς που ελέγχθηκαν. Ο συνδυασμός των αποτελεσμάτων δείχνει ικανοποιητική λειτουργία στους τομείς που ελέγχθηκαν. Δεν προκύπτει από αυτές τις δοκιμές ανάγκη αντικατάστασης της μπαταρίας."
+                    : "The battery shows signs that may reflect ordinary ageing, but no charging malfunction or serious thermal finding was recorded. This assessment found no evidence that battery ageing is adversely affecting system operation in the areas tested. Together, the results indicate satisfactory operation in the areas tested. These tests do not establish a need to replace the battery.");
         }
 
         return new Decision(Tone.POSITIVE, gr
