@@ -14807,7 +14807,11 @@ private void lab14LogFinalScore(
         boolean[] collapseRisk,
         boolean smartSwelling,
         boolean[] calibrationDrift,
-        boolean[] lab14_systemLimited
+        boolean[] lab14_systemLimited,
+        boolean fullValidRun,
+        float thermalRiseC,
+        float batteryPeakC,
+        boolean electricalBehaviourFlag
 ) {
 
     appendHtml("<br>");
@@ -14890,24 +14894,20 @@ private void lab14LogFinalScore(
         );
     }
 
-    // Use guidance is deliberately conditional. A stress trial does not
-    // certify cell integrity or replace symptoms/physical inspection.
-    if (!limiter && !collapse && !smartSwelling && !calibration
-            && !"Unknown".equals(lbl)
-            && !"Insufficient electrical data".equals(lbl)
-            && !"Low confidence".equals(lbl)) {
-        logLabelValue(
-                gr ? "Συνέχιση χρήσης" : "Continued use",
-                gr
-                        ? "Με βάση τη συγκεκριμένη δοκιμή, δεν προκύπτει λόγος διακοπής της συνήθους χρήσης. "
-                          + "Μπορεί να συνεχιστεί η χρήση με ασφάλεια εφόσον δεν υπάρχουν ανησυχητικά συμπτώματα "
-                          + "(υπερθέρμανση, διόγκωση, οσμή ή απρόσμενες διακοπές). "
-                          + "Η δοκιμή δεν αποτελεί πιστοποίηση γενικής ασφάλειας."
-                        : "This test found no reason by itself to discontinue ordinary use. "
-                          + "Normal use may continue safely provided there are no warning symptoms "
-                          + "(overheating, swelling, unusual smell or unexpected shutdowns). "
-                          + "This test does not certify overall battery safety."
-        );
+    // Human-readable verdict is separate from the experimental sag class.
+    // A green value is allowed only when the full run and independent
+    // electrical/thermal flags support routine continued use.
+    Lab14HumanVerdict.Decision humanVerdict = Lab14HumanVerdict.evaluate(
+            gr, lbl, fullValidRun, limiter, collapse, smartSwelling,
+            calibration, electricalBehaviourFlag, thermalRiseC, batteryPeakC);
+
+    String humanLabel = gr ? "Συμπέρασμα για τη χρήση" : "Continued-use conclusion";
+    if (humanVerdict.tone == Lab14HumanVerdict.Tone.POSITIVE) {
+        logLabelOkValue(humanLabel, humanVerdict.message);
+    } else if (humanVerdict.tone == Lab14HumanVerdict.Tone.CAUTION) {
+        logLabelWarnValue(humanLabel, humanVerdict.message);
+    } else {
+        logLabelValue(humanLabel, humanVerdict.message);
     }
 }
 
@@ -17475,7 +17475,12 @@ lab14LogFinalScore(
         collapseRisk,
         smartSwelling,
         calibrationDrift,
-        lab14_systemLimited
+        lab14_systemLimited,
+        !partial && validDrain && !lab14Cancelled,
+        Float.isFinite(res.tempStart) && Float.isFinite(res.tempEnd)
+                ? res.tempEnd - res.tempStart : Float.NaN,
+        lab14TempPeak,
+        lab14BatteryBehaviourWarning
 );
 
 // ------------------------------------------------
