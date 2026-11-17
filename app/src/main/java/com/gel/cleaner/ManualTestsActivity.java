@@ -15092,7 +15092,10 @@ private void lab14LogSave(
         boolean partial,
         boolean[] lab14_systemLimited,
         float observedSagVolts,
-        double observedDrainMahPerHour
+        double observedDrainMahPerHour,
+        boolean electricalBehaviourWarning,
+        float thermalRiseC,
+        float batteryPeakC
 ) {
 
     // 🔴 SAFE FLAGS
@@ -15134,6 +15137,14 @@ private void lab14LogSave(
                     .remove("lab14_swelling_risk").putBoolean("lab14_stress_proxy_flag", smartSwelling)
                     .remove("lab14_calibration_drift").putBoolean("lab14_gauge_discrepancy_proxy", calibration)
                     .putBoolean("lab14_battery_auth_suspect", batteryAuthenticitySuspicion)
+                    // Persist the same independent thermal/electrical observations
+                    // used by Lab14HumanVerdict; Lab17 must not lose a warning.
+                    .putBoolean("lab14_electrical_behaviour_warning", electricalBehaviourWarning)
+                    .putBoolean("lab14_thermal_rise_valid",
+                            Float.isFinite(thermalRiseC) && thermalRiseC >= -2f && thermalRiseC <= 20f)
+                    .putBoolean("lab14_stress_thermal_warning",
+                            (Float.isFinite(thermalRiseC) && thermalRiseC >= 6.5f)
+                            || (Float.isFinite(batteryPeakC) && batteryPeakC >= 45f))
                     .putLong("lab14_last_ts", System.currentTimeMillis())
                     // A completed stress run is evidence of execution, never measured SoH.
                     .putLong("lab14_valid_stress_ts",
@@ -17618,7 +17629,11 @@ lab14LogSave(
         partial,
         lab14_systemLimited,
         finalSag,
-        mahPerHour
+        mahPerHour,
+        lab14BatteryBehaviourWarning,
+        Float.isFinite(res.tempStart) && Float.isFinite(res.tempEnd)
+                ? res.tempEnd - res.tempStart : Float.NaN,
+        lab14TempPeak
 );
 
 // Do not persist the proxy as measured battery health, even on full runs.
@@ -26345,6 +26360,14 @@ private void lab17RunAuto() {
     // proof of physical battery swelling.
     final boolean lab14StressProxyFlag =
             lab14Records.getBoolean("lab14_stress_proxy_flag", false);
+    final boolean lab14ElectricalWarning =
+            lab14Records.getBoolean("lab14_electrical_behaviour_warning", false);
+    final boolean lab14StressThermalWarning =
+            lab14Records.getBoolean("lab14_stress_thermal_warning", false);
+    // Unknown for legacy runs: no guarantee that their stress-test thermal
+    // evidence satisfies the newer human-readable conclusion requirements.
+    final boolean lab14ThermalRiseValid =
+            lab14Records.getBoolean("lab14_thermal_rise_valid", false);
             
 // ------------------------------------------------------------
 // 🔴 MULTIPLIERS (LOCAL SAFE)
@@ -26697,11 +26720,8 @@ final boolean fresh16 =
                 && lab14SagVolts >= 0.080f;
         // A Weak category or a single moderate voltage sag is not, by itself,
         // independent evidence of battery danger or system malfunction.
-        // Actual saved electrical/proxy/repeatability flags still override
-        // the positive combined conclusion.
-        boolean independentStressConcern = lab14Unstable
-                || lab14CollapseObserved || lab14GaugeDiscrepancy
-                || lab14StressProxyFlag;
+        // Actual saved electrical/thermal/proxy evidence must override the
+        // positive cross-lab conclusion. Repeatability alone is uncertainty.
 
         if (stressClassKnown) {
             String observedClass = lab14DisplayStressClass(lab14StressClass, gr)
@@ -26756,6 +26776,16 @@ final boolean fresh16 =
             logLabelWarnValue(gr ? "Πρόσθετος δείκτης Lab 14A" : "Lab 14A proxy indicator",
                     gr ? "Καταγράφηκε έμμεση ένδειξη προς επαλήθευση — όχι επιβεβαίωση φυσικής βλάβης"
                        : "An indirect signal was flagged for verification — not proof of physical damage");
+        }
+        if (lab14ElectricalWarning) {
+            logLabelWarnValue(gr ? "Ηλεκτρική απόκριση Lab 14A" : "Lab 14A electrical response",
+                    gr ? "Παρατηρήθηκε πρόσθετη ηλεκτρική ένδειξη προς επανέλεγχο"
+                       : "An additional electrical finding requires follow-up");
+        }
+        if (lab14StressThermalWarning) {
+            logLabelWarnValue(gr ? "Θερμική απόκριση Lab 14A" : "Lab 14A thermal response",
+                    gr ? "Αυξημένη θερμική ένδειξη κατά την καταπόνηση"
+                       : "Elevated thermal response during the stress trial");
         }
 
         // LAB 15: measured NET charging gain and observed charging events.
@@ -26861,7 +26891,8 @@ final boolean fresh16 =
         Lab17CombinedConclusion.Decision conclusion = Lab17CombinedConclusion.evaluateDetailed(
                 gr, lab14StressClass, lab14Unstable,
                 lab14CollapseObserved, lab14GaugeDiscrepancy, lab14StressProxyFlag,
-                chargeConcern, thermalConcern, completeCoverage);
+                lab14ElectricalWarning, lab14StressThermalWarning,
+                lab14ThermalRiseValid, chargeConcern, thermalConcern, completeCoverage);
         if (conclusion.tone == Lab17CombinedConclusion.Tone.CAUTION) {
             logLabelWarnValue(gr ? "Αποτέλεσμα" : "Result", conclusion.message);
         } else if (conclusion.tone == Lab17CombinedConclusion.Tone.POSITIVE) {
