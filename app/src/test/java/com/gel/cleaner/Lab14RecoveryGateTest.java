@@ -30,22 +30,30 @@ public final class Lab14RecoveryGateTest {
         assertEquals(1L, d.remainingMs);
     }
 
-    @Test public void fiveMinutesPlusTemperatureRecoveryOpensGate() {
-        assertTrue(decide(300000L, 35f, 37f).mayStart());
+    @Test public void fiveMinutesOpenGateEvenWhenUserPlayedGameAfterPriorRun() {
+        // Baseline 35C; device may now be +4C after a game. Do not block it
+        // solely because the thermal difference from baseline exceeds 2C.
+        assertEquals(Lab14RecoveryGate.Status.READY, decide(300000L, 35f, 39f).status);
+        assertTrue(decide(360000L, 35f, 39f).mayStart());
         assertTrue(decide(360000L, 35f, 33f).mayStart());
+        assertTrue(decide(360000L, Float.NaN, 39f).mayStart());
     }
 
-    @Test public void aFiveMinuteWaitDoesNotReplaceThermalCheck() {
-        assertEquals(Lab14RecoveryGate.Status.WAIT_TEMPERATURE, decide(600000L, 35f, 37.1f).status);
+    @Test public void onlyHighAbsoluteTemperatureBlocksAfterFiveMinutes() {
+        assertEquals(Lab14RecoveryGate.Status.READY, decide(600000L, 35f, 44.9f).status);
         assertEquals(Lab14RecoveryGate.Status.WAIT_TEMPERATURE, decide(600000L, 44f, 45f).status);
-        assertEquals(Lab14RecoveryGate.Status.WAIT_TEMPERATURE, decide(600000L, 42f, 44.9f).status);
+        assertEquals(Lab14RecoveryGate.Status.WAIT_TEMPERATURE, decide(600000L, 35f, 48f).status);
+        assertFalse(decide(600000L, 35f, 48f).mayStart());
     }
 
-    @Test public void unavailableThermometerRemainsUnknownNotGreen() {
-        assertEquals(Lab14RecoveryGate.Status.TEMPERATURE_UNAVAILABLE,
-                decide(300000L, Float.NaN, 35f).status);
-        assertEquals(Lab14RecoveryGate.Status.TEMPERATURE_UNAVAILABLE,
-                decide(300000L, 35f, Float.NaN).status);
+    @Test public void unavailableThermometerIsDisclosedButDoesNotCauseEndlessWait() {
+        // Current reading is valid: no baseline needed for this rule.
+        assertEquals(Lab14RecoveryGate.Status.READY, decide(300000L, Float.NaN, 35f).status);
+        Lab14RecoveryGate.Decision d = decide(300000L, 35f, Float.NaN);
+        assertEquals(Lab14RecoveryGate.Status.TEMPERATURE_UNAVAILABLE, d.status);
+        assertTrue(d.mayStart());
+        // Time requirement is independent of sensor availability.
+        assertEquals(Lab14RecoveryGate.Status.WAIT_TIME, decide(250000L, 35f, Float.NaN).status);
     }
 
     @Test public void monotonicClockSurvivesProcessRestartAndWallClockDisagreementWithinTolerance() {
@@ -80,5 +88,8 @@ public final class Lab14RecoveryGateTest {
         assertTrue(s.contains("getSharedPreferences(LAB14_RECOVERY_PREFS, MODE_PRIVATE)"));
         assertTrue(s.contains("refresh.postDelayed(this, 1000L);"));
         assertTrue(s.contains("lab14RecoveryDialog.dismiss();"));
+        assertTrue(s.contains("τουλάχιστον 5 λεπτά"));
+        assertFalse(s.contains("εντός 2°C"));
+        assertFalse(s.contains("έως 2°C πάνω"));
     }
 }
