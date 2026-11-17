@@ -74,7 +74,7 @@ public final class Lab15FastChargerContextContractTest {
     }
 
     @Test public void lab17ReadsSameRunAndHonorsCoolingFirst() throws Exception {
-        String s = section(source(), "private void lab17RunAuto()", "// ------------------------------------------------------------\n    // START LAB 17");
+        String s = section(source(), "private void lab17RunAuto()", "// START LAB 17");
         assertTrue(s.contains("p.getString(\"lab15_charger_type\", \"UNKNOWN\")"));
         assertTrue(s.contains("Lab 15 — ταχυφορτιστής (δήλωση)"));
         assertTrue(s.contains("NO (user reported)"));
