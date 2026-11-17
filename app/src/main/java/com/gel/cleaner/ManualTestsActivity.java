@@ -25260,6 +25260,7 @@ p.edit().remove("lab15_charge_score")
         .remove("lab15_flap_observed")
         .remove("lab15_overtemp_observed")
         .remove("lab15_charger_type")
+        .remove("lab15_diagnostic_outcome_v1")
         .apply();
 
 lab15Running  = true;
@@ -26067,6 +26068,13 @@ try {
             : lab15ObservedNetMahPerMinute >= 20d ? "HIGH"
             : lab15ObservedNetMahPerMinute >= 10d ? "TYPICAL"
             : lab15ObservedNetMahPerMinute >= 5d ? "MODERATE" : "LOW";
+    // Only Lab 15 interprets the user's charger declaration.
+    // Lab 17 receives this evidence-based outcome, not the questionnaire.
+    Lab17ChargingContext.Decision lab15Assessed = Lab17ChargingContext.evaluate(
+            gr, lab15ChargerType, lab15RateBand, null,
+            lab15OverTempDuringCharge, lab15FlapUnstable, lab15_systemLimited);
+    String lab15Outcome = Lab17ChargingContext.resultCode(lab15Assessed,
+            lab15_strengthKnown && Double.isFinite(lab15ObservedNetMahPerMinute));
     p.edit()
             .putBoolean("lab15_evidence_rate_known", lab15_strengthKnown)
             .putFloat("lab15_net_rate_mah_per_min",
@@ -26074,6 +26082,8 @@ try {
                             ? (float) lab15ObservedNetMahPerMinute : -1f)
             .putString("lab15_rate_band", lab15RateBand)
             .putString("lab15_charger_type", lab15ChargerType)
+            .putString("lab15_diagnostic_outcome_v1", lab15Outcome)
+            .putBoolean("lab15_system_limited", lab15_systemLimited)
             .putBoolean("lab15_flap_observed", lab15FlapUnstable)
             .putBoolean("lab15_overtemp_observed", lab15OverTempDuringCharge)
             .putLong("lab15_ts", System.currentTimeMillis())
@@ -26590,7 +26600,8 @@ if (lab14bEstimatedHours > 0f && battPct > 0f) {
     // Actual recorded Lab 15 observations; historical run categories are
     // accepted as limited evidence but never converted into a fake current.
     final String lab15RateBand = p.getString("lab15_rate_band", null);
-    final String lab15ChargerReported = p.getString("lab15_charger_type", "UNKNOWN");
+    final String lab15DiagnosticOutcome =
+            p.getString("lab15_diagnostic_outcome_v1", null);
     final float lab15NetRate = p.getFloat("lab15_net_rate_mah_per_min", -1f);
     final boolean lab15RateKnown = p.getBoolean("lab15_evidence_rate_known", false);
     final boolean lab15ObservedDisconnect = p.getBoolean("lab15_flap_observed", false);
@@ -26911,75 +26922,74 @@ final boolean fresh16 =
                        : "Elevated thermal response during the stress trial");
         }
 
-        // LAB 15: measured NET charging gain and observed charging events.
-        // Charger type is context supplied by the user, not a measured protocol.
-        // Do not automatically promote slow NET charging to system malfunction.
-        Lab17ChargingContext.Decision chargeEvaluation = Lab17ChargingContext.evaluate(
-                gr, lab15ChargerReported, lab15RateBand, lab15StrengthLabel,
-                lab15ObservedOvertemp, lab15ObservedDisconnect, lab15SystemLimited);
+        // LAB 15: combine its FINAL diagnostic outcome, not its questionnaire.
+        // Genuine heat/disconnection/Android limiting cannot be overridden.
+        Lab17ChargingContext.Decision chargeEvaluation =
+                Lab17ChargingContext.fromLab15Result(
+                        lab15DiagnosticOutcome, lab15RateBand, lab15StrengthLabel,
+                        lab15ObservedOvertemp, lab15ObservedDisconnect,
+                        lab15SystemLimited);
         boolean chargeRateWarn = chargeEvaluation.slowNetRate;
         boolean chargeConcern = chargeEvaluation.chargingConcern;
         boolean chargeRateAvailable = lab15RateKnown
                 && Float.isFinite(lab15NetRate) && lab15NetRate >= 0f
                 && lab15RateBand != null && !"UNKNOWN".equals(lab15RateBand);
 
-        if (chargeRateAvailable) {
-            String bandText = "HIGH".equals(lab15RateBand)
-                    ? (gr ? "Υψηλός" : "High")
-                    : "TYPICAL".equals(lab15RateBand)
-                    ? (gr ? "Συνήθης" : "Typical")
-                    : "MODERATE".equals(lab15RateBand)
-                    ? (gr ? "Μέτριος" : "Moderate")
-                    : (gr ? "Χαμηλός" : "Low");
-            String rateText = String.format(Locale.US, "%s — %.1f mAh/min",
-                    bandText, lab15NetRate);
-            if (chargeEvaluation.slowRateNeedsReview) {
-                logLabelWarnValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        rateText);
-            } else if (chargeRateWarn) {
-                // A reported regular/unknown charger does not establish phone failure.
-                logLabelValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        rateText);
-            } else {
-                logLabelOkValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        rateText);
-            }
-        } else if (lab15RateBand == null && lab15StrengthLabel != null) {
-            // Legacy evidence: preserve the category without inventing mAh/min.
-            if (chargeEvaluation.slowRateNeedsReview) {
-                logLabelWarnValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        gr ? "Καταγράφηκε μέτριος/χαμηλός ρυθμός (παλαιότερη δοκιμή)"
-                           : "Moderate/low rate recorded (legacy run)");
-            } else if (chargeRateWarn) {
-                logLabelValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        gr ? "Καταγράφηκε μέτριος/χαμηλός ρυθμός (παλαιότερη δοκιμή)"
-                           : "Moderate/low rate recorded (legacy run)");
-            } else {
-                logLabelOkValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                        gr ? "Δεν καταγράφηκε χαμηλός ρυθμός (παλαιότερη δοκιμή)"
-                           : "No low rate recorded (legacy run)");
-            }
-        } else {
-            logLabelValue(gr ? "Lab 15 — φόρτιση" : "Lab 15 — charging",
-                    gr ? "Η δοκιμή εκτελέστηκε, αλλά ο καθαρός ρυθμός δεν τεκμηριώθηκε"
-                       : "Test completed, but net charging rate was unavailable");
-        }
-        logLabelValue(gr ? "Lab 15 — ταχυφορτιστής (δήλωση)" : "Lab 15 — fast charger (reported)",
-                "YES".equals(lab15ChargerReported)
-                        ? (gr ? "ΝΑΙ (δεν επαληθεύτηκε η ενεργοποίηση ταχυφόρτισης)"
-                              : "YES (fast-charge negotiation not verified)")
-                        : "NO".equals(lab15ChargerReported)
-                        ? (gr ? "ΟΧΙ (δήλωση χρήστη)" : "NO (user reported)")
-                        : (gr ? "Άγνωστο / δεν δηλώθηκε" : "Unknown / not reported"));
+        // Lab 17 presents ONLY the consolidated Lab 15 finding.
+        // Charging accessories, the user's answer and troubleshooting belong
+        // solely to Lab 15, which already displays that supporting detail.
+        StringBuilder chargingOutcome = new StringBuilder();
         if (lab15ObservedOvertemp) {
-            logLabelWarnValue(gr ? "Lab 15 — θέρμανση φόρτισης" : "Lab 15 — charging heat",
-                    gr ? "Καταγράφηκε αυξημένη θερμοκρασία"
-                       : "Elevated temperature recorded");
+            chargingOutcome.append(gr ? "Αυξημένη θερμοκρασία κατά τη φόρτιση. "
+                                      : "Elevated temperature during charging. ");
         }
         if (lab15ObservedDisconnect) {
-            logLabelWarnValue(gr ? "Lab 15 — σύνδεση φόρτισης" : "Lab 15 — charging link",
-                    gr ? "Καταγράφηκαν διακοπές σύνδεσης"
-                       : "Charging interruptions recorded");
+            chargingOutcome.append(gr ? "Παρατηρήθηκαν διακοπές σύνδεσης φόρτισης. "
+                                      : "Charging connection interruptions observed. ");
+        }
+        if (lab15SystemLimited) {
+            chargingOutcome.append(gr ? "Το Android περιόρισε τη φόρτιση. "
+                                      : "Android limited charging. ");
+        }
+        if (chargeRateAvailable) {
+            String measuredNetRate = String.format(Locale.US, "%.1f mAh/min", lab15NetRate);
+            if (chargeEvaluation.slowRateNeedsReview) {
+                chargingOutcome.append(gr
+                        ? "Ο χαμηλός καθαρός ρυθμός (" + measuredNetRate
+                          + ") χρειάζεται επανέλεγχο, όχι απόδειξη βλάβης."
+                        : "Low net charge gain (" + measuredNetRate
+                          + ") needs review, not proof of a device fault.");
+            } else if (chargeEvaluation.unknownChargerWithSlowRate) {
+                chargingOutcome.append(gr
+                        ? "Χαμηλός καθαρός ρυθμός (" + measuredNetRate
+                          + ")· δεν επαρκούν στοιχεία για ασφαλή ερμηνεία της ταχύτητας."
+                        : "Low net charge gain (" + measuredNetRate
+                          + "); evidence is insufficient to interpret charging speed.");
+            } else if (chargeRateWarn) {
+                chargingOutcome.append(gr
+                        ? "Χαμηλός καθαρός ρυθμός (" + measuredNetRate
+                          + ")· δεν τεκμηριώθηκε δυσλειτουργία της συσκευής."
+                        : "Low net charge gain (" + measuredNetRate
+                          + "); no device malfunction was established.");
+            } else {
+                chargingOutcome.append(gr
+                        ? "Ο καθαρός ρυθμός φόρτισης ήταν ικανοποιητικός (" + measuredNetRate + ")."
+                        : "Net charging rate was satisfactory (" + measuredNetRate + ").");
+            }
+        } else {
+            chargingOutcome.append(gr
+                    ? "Ο καθαρός ρυθμός φόρτισης δεν τεκμηριώθηκε."
+                    : "Net charging rate was not established.");
+        }
+        if (chargeEvaluation.chargingConcern) {
+            logLabelWarnValue(gr ? "Lab 15 — αποτέλεσμα φόρτισης" : "Lab 15 — charging result",
+                    chargingOutcome.toString().trim());
+        } else if (!chargeRateAvailable || chargeRateWarn) {
+            logLabelValue(gr ? "Lab 15 — αποτέλεσμα φόρτισης" : "Lab 15 — charging result",
+                    chargingOutcome.toString().trim());
+        } else {
+            logLabelOkValue(gr ? "Lab 15 — αποτέλεσμα φόρτισης" : "Lab 15 — charging result",
+                    chargingOutcome.toString().trim());
         }
 
         // LAB 16: use the actual OS thermal state, sensor coverage, and peak
@@ -27078,9 +27088,6 @@ final boolean fresh16 =
         // The final plain-language verdict names the measured hot domains.
         // All simultaneously elevated combinations are listed just above.
         String conclusionText = conclusion.message;
-        if (chargeEvaluation.slowNetRate && !chargeEvaluation.description.isEmpty()) {
-            conclusionText += " " + chargeEvaluation.description;
-        }
         if (thermalConcern && lab16DetailedAvailable) {
             conclusionText += " " + lab16ThermalProfile.combinedMessage(gr);
             if (!lab16ThermalProfile.elevatedPairs.isEmpty()) {
@@ -27095,61 +27102,8 @@ final boolean fresh16 =
         } else {
             logLabelValue(gr ? "Αποτέλεσμα" : "Result", conclusionText);
         }
-        // A heat warning wins over connection instability and slow charging,
-        // even when it originates from Lab 16 rather than Lab 15.
-        if (chargeConcern || chargeRateWarn || thermalConcern || lab14StressThermalWarning) {
-            String chargeAdvice;
-            if (lab15ObservedOvertemp || thermalConcern || lab14StressThermalWarning) {
-                chargeAdvice = gr
-                        ? "Προτεραιότητα στη θερμική ασφάλεια: αν φορτίζει, αποσύνδεσε τον φορτιστή και άφησε τη συσκευή να κρυώσει. Φορτιστής, καλώδιο ή θύρα μπορεί να συμβάλλουν στη θέρμανση, αλλά η αιτία δεν αποδεικνύεται. Επανάλαβε μόνο όταν κρυώσει· αν επαναληφθεί, ζήτησε τεχνικό έλεγχο."
-                        : "Thermal safety first: if charging, unplug the charger and let the device cool. Charger, cable or port may contribute to heating, but the cause is unproven. Retest only after cooling; seek inspection if it recurs.";
-                if (lab15ObservedDisconnect) {
-                    chargeAdvice += gr
-                            ? " Καταγράφηκαν επίσης διακοπές φόρτισης: μετά την ψύξη έλεγξε τη σύνδεση και δοκίμασε άλλο συμβατό καλώδιο/φορτιστή."
-                            : " Charging interruptions were also observed: after cooling, inspect the connection and try another compatible cable/charger.";
-                }
-            } else if (lab15ObservedDisconnect) {
-                chargeAdvice = gr
-                        ? "Δοκίμασε διαφορετικό συμβατό καλώδιο και φορτιστή· έλεγξε τη σύνδεση για επαναλαμβανόμενες διακοπές."
-                        : "Try another compatible cable and charger; inspect the connection for repeated interruptions.";
-            } else if (thermalConcern || lab14StressThermalWarning) {
-                chargeAdvice = gr
-                        ? "Προτεραιότητα έχει να κρυώσει η συσκευή. Επανάλαβε τη μέτρηση σε ηρεμία πριν δοκιμάσεις ταχύτερη φόρτιση."
-                        : "Allow the device to cool first. Retest at rest before trying faster charging.";
-            } else if (lab15SystemLimited) {
-                chargeAdvice = gr
-                        ? "Καταγράφηκε περιορισμός φόρτισης από το σύστημα. Επανάλαβε με τη συσκευή σε ηρεμία και φυσιολογική θερμοκρασία. Ο περιορισμός δεν αποδεικνύει βλάβη φορτιστή ή κινητού."
-                        : "System-limited charging was observed. Retest while idle and at normal temperature. This limit does not prove a charger or phone defect.";
-            } else if (chargeRateWarn) {
-                if ("YES".equals(lab15ChargerReported)) {
-                    chargeAdvice = gr
-                            ? "Δηλώθηκε ταχυφορτιστής, όχι όμως επαληθευμένη ταχυφόρτιση. Έλεγξε συμβατότητα, καλώδιο, ρυθμίσεις και θερμοκρασία και επανάλαβε με άλλο αξιόπιστο συμβατό σετ. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
-                            : "A fast charger was reported, but fast charging was not verified. Check compatibility, cable, settings and temperature; retest with another reliable compatible set. Low net charge gain does not prove a fault.";
-                } else if ("NO".equals(lab15ChargerReported)) {
-                    chargeAdvice = gr
-                            ? "Δηλώθηκε απουσία ταχυφορτιστή. Αν το κινητό υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
-                            : "No fast charger was reported. If the phone supports fast charging, try a reliable compatible fast charger and suitable cable. A low net rate does not prove a fault.";
-                } else {
-                    chargeAdvice = gr
-                            ? "Αν το κινητό υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Επανάλαβε χωρίς έντονη χρήση και σε συγκρίσιμη στάθμη φόρτισης. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
-                            : "If the device supports fast charging, try a reliable compatible fast charger and suitable cable. Retest without heavy use at a comparable charge level. Low net charge gain does not prove a fault.";
-                }
-            } else {
-                chargeAdvice = gr
-                        ? "Επανάλαβε τον έλεγχο με συμβατό φορτιστή και καλώδιο υπό συγκρίσιμες συνθήκες."
-                        : "Repeat with a compatible charger and cable under comparable conditions.";
-            }
-            if (chargeEvaluation.independentConcern || chargeEvaluation.slowRateNeedsReview
-                    || thermalConcern || lab14StressThermalWarning) {
-                logLabelWarnValue(gr ? "Προτεινόμενος έλεγχος" : "Recommended check",
-                        chargeAdvice);
-            } else {
-                // An isolated slow rate on a regular/unknown charger is context,
-                // not by itself an observed failure of the mobile device.
-                logLabelValue(gr ? "Προτεινόμενος έλεγχος" : "Recommended check",
-                        chargeAdvice);
-            }
-        }
+        // All charger-specific recommendations are already in Lab 15.
+        // Lab 17 is the system-level synthesis, not a second charger lab.
         logInfo(gr
                 ? "Το Lab 17 συνδυάζει καταγεγραμμένα ευρήματα. Δεν υπολογίζει ποσοστό υγείας μπαταρίας (SoH)."
                 : "Lab 17 combines recorded findings. It does not calculate battery state of health (SoH).");

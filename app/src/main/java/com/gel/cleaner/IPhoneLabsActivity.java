@@ -2111,6 +2111,8 @@ private void runFinalServiceRecommendationLab() {
     int total = 0;
     boolean watchdogObserved = false;
     boolean thermalObserved = false;
+    int watchdogFiles = 0;
+    int thermalFiles = 0;
 
     for (String block : blocks) {
         if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
@@ -2122,10 +2124,14 @@ private void runFinalServiceRecommendationLab() {
         if (!"Unknown".equalsIgnoreCase(domain)) {
             domainCount.put(domain, domainCount.getOrDefault(domain, 0) + 1);
         }
-        watchdogObserved |= "Watchdog / Hang".equals(sigCrashType)
+        boolean isWatchdog = "Watchdog / Hang".equals(sigCrashType)
                 || "Userspace Watchdog Timeout".equals(sigCrashType)
                 || "Baseband Watchdog".equals(sigCrashType);
-        thermalObserved |= "Thermal Shutdown / Throttle".equals(sigCrashType);
+        boolean isThermal = "Thermal Shutdown / Throttle".equals(sigCrashType);
+        watchdogObserved |= isWatchdog;
+        thermalObserved |= isThermal;
+        if (isWatchdog) watchdogFiles++;
+        if (isThermal) thermalFiles++;
 
         // GEL clue IDs derived by rules from individual imported records,
         // not necessarily literal Apple diagnostic codes or hardware faults.
@@ -2144,6 +2150,37 @@ private void runFinalServiceRecommendationLab() {
         return;
     }
 
+    // Human-first summary. This interprets only imported historical records.
+    // Never turn absence of repeated clues into proof of device health.
+    boolean repeatedCategory = false;
+    for (Integer count : domainCount.values()) {
+        if (count != null && count >= 2) repeatedCategory = true;
+    }
+    IPhonePanicServiceSummary.Result human = IPhonePanicServiceSummary.interpret(
+            gr, total, watchdogFiles, thermalFiles, repeatedCategory, !domainCount.isEmpty());
+    appendHtml("<br>");
+    logInfo(gr ? "Συνολικό συμπέρασμα — με απλά λόγια"
+               : "Overall conclusion — in plain language");
+    logLabelValue(gr ? "Τι βρήκαμε:" : "What we found:", human.whatWeFound);
+    if (human.repeatedClueNeedsReview) {
+        logLabelWarnValue(gr ? "Τι σημαίνει για εσένα:" : "What it means for you:",
+                human.whatItMeans);
+    } else {
+        logLabelValue(gr ? "Τι σημαίνει για εσένα:" : "What it means for you:",
+                human.whatItMeans);
+    }
+    logLabelValue(gr ? "Χρειάζεται επισκευή;" : "Is a repair needed?",
+            human.repairAdvice);
+    logLabelValue(gr ? "Πότε χρειάζεται τεχνικός:" : "When to seek service:",
+            human.whenToSeekHelp);
+    if (demoMode) {
+        logInfo(gr
+                ? "Αυτό το συμπέρασμα αφορά μόνο τα δοκιμαστικά DEMO αρχεία, όχι πραγματική συσκευή."
+                : "This conclusion applies to DEMO files only, not a real device.");
+    }
+
+    appendHtml("<br>");
+    logInfo(gr ? "Αναλυτικά ευρήματα των αρχείων" : "Detailed findings from the files");
     logLabelOkValue(gr ? "Αρχεία συμβάντων που αναλύθηκαν:"
                        : "Incident files reviewed:", String.valueOf(total));
 
@@ -2169,10 +2206,6 @@ private void runFinalServiceRecommendationLab() {
                 IPhonePanicHumanizer.domain(e.getKey(), gr) + " — " + e.getValue());
     }
 
-    boolean repeatedCategory = false;
-    for (Integer count : domainCount.values()) {
-        if (count != null && count >= 2) repeatedCategory = true;
-    }
     logLabelValue(gr ? "Επανάληψη στο δείγμα:" : "Recurrence in sample:",
             repeatedCategory
                     ? (gr ? "Υπάρχει κοινή κατηγορία όρων σε διαφορετικά αρχεία· όχι αποδεδειγμένη επανάληψη βλάβης."
@@ -2203,15 +2236,6 @@ private void runFinalServiceRecommendationLab() {
                 gr ? "Ελέγξτε τις συνθήκες χρήσης και τυχόν πραγματικά θερμικά συμπτώματα· θερμοκρασία δεν μετρήθηκε."
                    : "Review usage conditions and real thermal symptoms; no temperature was measured.");
     }
-
-    logLabelValue(gr ? "Τι δεν έχει επιβεβαιωθεί:" : "Not established:",
-            gr
-                    ? "Η αιτία των συμβάντων, συγκεκριμένο ελαττωματικό εξάρτημα ή η σημερινή υγεία του iPhone."
-                    : "Root cause, a defective component, or the iPhone's current health.");
-    logLabelValue(gr ? "Πότε χρειάζεται τεχνικός:" : "When to seek service:",
-            gr
-                    ? "Αν υπάρχουν επανεκκινήσεις, υπερθέρμανση ή άλλα επαναλαμβανόμενα συμπτώματα, απαιτείται έλεγχος με πραγματικά δεδομένα."
-                    : "If restarts, overheating or other symptoms recur, verify them with real-device evidence.");
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");

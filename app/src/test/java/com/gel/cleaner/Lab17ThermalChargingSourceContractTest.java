@@ -47,25 +47,29 @@ public final class Lab17ThermalChargingSourceContractTest {
         assertTrue(lab17.contains("Lab16ThermalCorrelation.index(lab16PeakSource)"));
     }
 
-    @Test public void speedChargeAdviceIsConditionalAndOnlyForSlowCharging() throws Exception {
+    @Test public void lab17ReadsChargingVerdictNotUserDeclarationOrDuplicateAdvice() throws Exception {
         String s=source();
         String lab15=section(s,"private void lab15ChargingSystemSmart()","private void lab16ThermalSnapshot()");
         String lab17=section(s,"private void lab17RunAuto()","private void lab17_showPopup(");
         assertTrue(lab15.contains("} else if (lab15_strengthWeak) {"));
         assertTrue(lab15.contains("Αν η συσκευή υποστηρίζει ταχεία φόρτιση"));
         assertTrue(lab15.contains("κατάλληλο καλώδιο"));
-        assertTrue(lab17.contains("else if (chargeRateWarn)"));
-        assertTrue(lab17.contains("Αν το κινητό υποστηρίζει ταχεία φόρτιση"));
+        assertTrue(lab15.contains("Lab17ChargingContext.resultCode("));
+        assertTrue(lab15.contains(".putString(\"lab15_diagnostic_outcome_v1\", lab15Outcome)"));
+        assertTrue(lab17.contains("Lab17ChargingContext.fromLab15Result("));
+        assertTrue(lab17.contains("chargeEvaluation.chargingConcern"));
+        assertTrue(lab17.contains("chargeEvaluation.unknownChargerWithSlowRate"));
         assertTrue(lab17.contains("lab15ObservedOvertemp"));
         assertTrue(lab17.contains("lab15ObservedDisconnect"));
-        int coolBeforeCharge = lab17.indexOf("if (lab15ObservedOvertemp || thermalConcern || lab14StressThermalWarning)");
-        int fastCharging = lab17.indexOf("else if (chargeRateWarn)", coolBeforeCharge);
-        assertTrue("Cool-down warning must outrank fast-charger suggestion",
-                coolBeforeCharge >= 0 && fastCharging > coolBeforeCharge);
-        assertTrue(lab17.contains("chargeEvaluation.chargingConcern"));
-        assertTrue(lab17.contains("!chargeEvaluation.unknownChargerWithSlowRate"));
-        assertTrue(lab17.contains("chargeEvaluation.description"));
-        assertFalse(lab17.contains("Ο φορτιστής σου είναι χαλασμένος"));
+        assertTrue(lab17.contains("lab15SystemLimited"));
+        assertTrue(lab17.contains("conclusionText = conclusion.message"));
+        assertFalse(lab17.contains("lab15_charger_type"));
+        assertFalse(lab17.contains("lab15ChargerType"));
+        assertFalse(lab17.contains("ταχυφορτιστή"));
+        assertFalse(lab17.contains("Αν το κινητό υποστηρίζει ταχεία φόρτιση"));
+        assertFalse(lab17.contains("Προτεινόμενος έλεγχος"));
+        assertFalse(lab17.contains("Recommended check"));
+        assertFalse(lab17.contains("chargeEvaluation.description"));
     }
 
     @Test public void intelligentTitleAndEvidenceRequirementStayIntact() throws Exception {
