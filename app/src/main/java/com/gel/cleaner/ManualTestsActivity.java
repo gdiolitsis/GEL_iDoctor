@@ -13513,34 +13513,45 @@ private void lab14ShowRecoveryWaitDialog(boolean gamaMode) {
                 long secs = (d.remainingMs + 999L) / 1000L;
                 String counter = String.format(Locale.US, "%02d:%02d", secs / 60L, secs % 60L);
                 message = grLocal
-                        ? "Το κινητό ανακάμπτει από την προηγούμενη δοκιμή. "
-                          + "Περίμενε τουλάχιστον 5 λεπτά για πιο συγκρίσιμες μετρήσεις.\n\n"
+                        ? "Περίμενε τουλάχιστον 5 λεπτά από την προηγούμενη δοκιμή. "
+                          + "Για πιο συγκρίσιμες μετρήσεις, απόφυγε παιχνίδια και βαριές εφαρμογές "
+                          + "κατά την αναμονή. Αν τα χρησιμοποιήσεις, μπορεί να επηρεαστεί το αποτέλεσμα.\\n\\n"
                           + "Υπολειπόμενος χρόνος: " + counter
-                        : "The device is recovering from the previous test. "
-                          + "Allow at least 5 minutes for more comparable readings.\n\n"
+                        : "Wait at least five minutes after the previous test. "
+                          + "For comparable measurements, avoid games and heavy apps during this interval. "
+                          + "Using them can affect the results.\\n\\n"
                           + "Time remaining: " + counter;
             } else if (d.status == Lab14RecoveryGate.Status.WAIT_TEMPERATURE) {
                 message = String.format(Locale.US, grLocal
-                        ? "Πέρασαν τα 5 λεπτά, αλλά η μπαταρία παραμένει θερμότερη από την αρχική κατάσταση.\n\n"
-                          + "Αρχική: %.1f°C   Τώρα: %.1f°C\n"
-                          + "Περίμενε να επιστρέψει έως 2°C πάνω από την αρχική τιμή και κάτω από 45°C."
-                        : "Five minutes have passed, but battery temperature is still elevated.\n\n"
-                          + "Baseline: %.1f°C   Now: %.1f°C\n"
-                          + "Wait until it is within 2°C above baseline and below 45°C.",
-                        d.baselineC, d.currentC);
+                        ? "Ολοκληρώθηκε η πεντάλεπτη αναμονή, αλλά η θερμοκρασία μπαταρίας "
+                          + "παραμένει υψηλή: %.1f°C.\\n\\n"
+                          + "Για νέα δοκιμή απαιτείται θερμοκρασία κάτω από 45°C. "
+                          + "Σταμάτησε τις απαιτητικές εφαρμογές και δοκίμασε ξανά."
+                        : "The five-minute wait is over, but the battery temperature "
+                          + "is still high: %.1f°C.\\n\\n"
+                          + "Start a new test only below 45°C. Close demanding apps and retry.",
+                        d.currentC);
             } else if (d.status == Lab14RecoveryGate.Status.TEMPERATURE_UNAVAILABLE) {
                 message = grLocal
-                        ? "Τα 5 λεπτά ολοκληρώθηκαν, όμως δεν είναι διαθέσιμη αξιόπιστη αρχική ή τρέχουσα "
-                          + "θερμοκρασία μπαταρίας. Δεν μπορεί να επιβεβαιωθεί θερμική σταθεροποίηση. "
-                          + "Δοκίμασε ξανά όταν είναι διαθέσιμη η μέτρηση."
-                        : "Five minutes have passed, but a reliable initial or current battery temperature "
-                          + "is unavailable. Thermal recovery cannot be verified. Retry when temperature is readable.";
+                        ? "Ολοκληρώθηκε η πεντάλεπτη αναμονή. Η τρέχουσα θερμοκρασία "
+                          + "μπαταρίας δεν είναι διαθέσιμη. Μπορείς να συνεχίσεις, "
+                          + "αλλά δεν έχει επαληθευτεί η θερμική κατάσταση. "
+                          + "Απόφυγε απαιτητική χρήση για πιο αξιόπιστη μέτρηση."
+                        : "The five-minute wait is over. Current battery temperature is "
+                          + "unavailable. You may continue, but thermal conditions have "
+                          + "not been verified. Avoid heavy use for a more reliable measurement.";
             } else {
-                message = grLocal
-                        ? "Ολοκληρώθηκε η ανάπαυση των 5 λεπτών και η θερμοκρασία "
-                          + "επανήλθε σε αποδεκτό επίπεδο. Μπορείς να προχωρήσεις στον προέλεγχο."
-                        : "The 5-minute rest is complete and battery temperature has returned "
-                          + "to an acceptable range. You can proceed to the pre-test check.";
+                message = String.format(Locale.US, grLocal
+                        ? "Ολοκληρώθηκε η πεντάλεπτη αναμονή. "
+                          + "Τρέχουσα θερμοκρασία μπαταρίας: %.1f°C.\\n\\n"
+                          + "Μπορείς να προχωρήσεις στον προέλεγχο. "
+                          + "Αν έπαιξες παιχνίδι στο μεταξύ, η προηγούμενη χρήση "
+                          + "μπορεί να επηρεάσει την εκτίμηση αυτονομίας."
+                        : "The five-minute wait is over. "
+                          + "Current battery temperature: %.1f°C.\\n\\n"
+                          + "You can proceed to the pre-test check. Gaming during "
+                          + "the waiting period may affect the endurance estimate.",
+                        d.currentC);
             }
             info.setText(message);
             proceed.setEnabled(d.mayStart());
