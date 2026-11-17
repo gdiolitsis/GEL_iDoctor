@@ -1,15 +1,15 @@
 package com.gel.cleaner;
 
 /**
- * Minimum recovery interval and battery-temperature baseline check between
- * Lab 14A, 14B and 14 GAMMA runs. This is a measurement-quality gate, not a
- * battery safety or device-health certification.
+ * Minimum recovery interval between Lab 14A, 14B and 14 GAMMA, with
+ * an independent absolute-temperature guard. The former baseline +2 C
+ * requirement was removed: ordinary user activity can change temperature
+ * during the rest interval. This is NOT a battery safety certification.
  */
 public final class Lab14RecoveryGate {
     private Lab14RecoveryGate() {}
 
     public static final long MIN_REST_MS = 5L * 60L * 1000L;
-    public static final float MAX_ABOVE_BASELINE_C = 2.0f;
     public static final float MAX_START_TEMP_C = 45.0f;
     private static final long BOOT_WALL_TOLERANCE_MS = 120000L;
 
@@ -31,7 +31,9 @@ public final class Lab14RecoveryGate {
         }
 
         public boolean mayStart() {
-            return status == Status.READY;
+            // Missing temperature is a measurement limitation, not a reason
+            // to lock the user into an endless cooldown screen.
+            return status == Status.READY || status == Status.TEMPERATURE_UNAVAILABLE;
         }
     }
 
@@ -64,15 +66,16 @@ public final class Lab14RecoveryGate {
             return new Decision(Status.WAIT_TIME, remaining, baselineC, currentC);
         }
 
-        // Do not report "thermally stable" when the baseline or sensor is
-        // unavailable. Prompt for retry; never silently invent a temperature.
-        if (!validBatteryTemp(baselineC) || !validBatteryTemp(currentC)) {
+        // No comparison to pre-test baseline. Someone may have played a
+        // game during the five minutes: +2 C alone is not grounds to block.
+        // Only the current absolute temperature can hold the next run.
+        // If the sensor is unavailable, allow an informed user to continue
+        // without silently treating missing evidence as "thermally stable".
+        if (!validBatteryTemp(currentC)) {
             return new Decision(Status.TEMPERATURE_UNAVAILABLE, 0L, baselineC, currentC);
         }
 
-        // Cooling below baseline is acceptable; only residual heat matters.
-        if (currentC > baselineC + MAX_ABOVE_BASELINE_C
-                || currentC >= MAX_START_TEMP_C) {
+        if (currentC >= MAX_START_TEMP_C) {
             return new Decision(Status.WAIT_TEMPERATURE, 0L, baselineC, currentC);
         }
 
