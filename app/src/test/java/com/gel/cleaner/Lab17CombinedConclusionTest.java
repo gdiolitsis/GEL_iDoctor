@@ -83,6 +83,8 @@ public final class Lab17CombinedConclusionTest {
         String s = new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
         assertTrue(s.contains("17. Ευφυής Ανάλυση Υγείας Συστήματος"));
         assertTrue(s.contains("17. Intelligent System Health Analysis"));
+        assertTrue(s.contains("LAB 17 — Ευφυής Ανάλυση Υγείας Συστήματος"));
+        assertTrue(s.contains("LAB 17 — Intelligent System Health Analysis"));
         assertTrue(s.contains("Lab17CombinedConclusion.evaluate("));
         assertTrue(s.contains("lab14StressClass"));
         assertTrue(s.contains("lab14CollapseObserved"));
