@@ -202,8 +202,11 @@ public final class Lab17CombinedConclusion {
                     : "The battery shows signs that may reflect ordinary ageing, but no charging malfunction or serious thermal finding was recorded. This assessment found no evidence that battery ageing is adversely affecting system operation in the areas tested. Together, the results indicate satisfactory operation in the areas tested. These tests do not establish a need to replace the battery.");
         }
 
+        // Unlike the ageing-specific path above, the normal/healthy battery
+        // path previously omitted the actual SYSTEM verdict promised by Lab 17.
+        // Describe only the battery/charging/thermal functions directly tested.
         return new Decision(Tone.POSITIVE, gr
-                ? "Η μπαταρία ανταποκρίθηκε ικανοποιητικά στο συγκεκριμένο φορτίο και δεν καταγράφηκαν προβλήματα φόρτισης ή σοβαρές θερμικές ενδείξεις. Ο συνδυασμός των αποτελεσμάτων είναι θετικός για τους τομείς που ελέγχθηκαν."
-                : "The battery responded satisfactorily under the tested load, with no recorded charging issues or serious thermal findings. Combined results are positive for the areas tested.");
+                ? "Η μπαταρία ανταποκρίθηκε ικανοποιητικά στο συγκεκριμένο φορτίο, χωρίς τεκμηριωμένη δυσλειτουργία φόρτισης ή θερμική προειδοποίηση στις διαθέσιμες μετρήσεις. Συμπέρασμα για το σύστημα: Η λειτουργία του συστήματος στους τομείς τροφοδοσίας, φόρτισης και θερμικής συμπεριφοράς είναι ικανοποιητική. Δεν καταγράφηκε ένδειξη ότι οι συγκεκριμένοι τομείς επηρεάζουν αρνητικά τη λειτουργία του συστήματος. Η εκτίμηση περιορίζεται στους ελέγχους που πραγματοποιήθηκαν."
+                : "The battery responded satisfactorily under the tested load, without a documented charging malfunction or thermal warning in the available readings. System verdict: System operation is satisfactory in the tested power, charging and thermal areas. No indication was recorded that these areas adversely affect system operation. This assessment is limited to the tests performed.");
     }
 }
