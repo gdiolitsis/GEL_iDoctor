@@ -92,8 +92,13 @@ public final class LabsEvidenceOnlyReportContractTest {
 
     @Test public void finalReportSummarizesRecordedResultsWithoutImaginaryProblems() throws Exception {
         String thirtyOne = section("private void lab31FinalSummary()", "// ENABLE EXISTING EXPORT BUTTON");
-        assertTrue(thirtyOne.contains("Δεν υπάρχουν καταγεγραμμένες προειδοποιήσεις ή σφάλματα στο διαθέσιμο αρχείο."));
-        assertTrue(thirtyOne.contains("Η αναφορά συγκέντρωσε τα διαθέσιμα αποτελέσματα"));
+        assertTrue(thirtyOne.contains("Δεν καταγράφηκαν προειδοποιήσεις ή αστοχίες στο διαθέσιμο αρχείο."));
+        assertTrue(thirtyOne.contains("Lab29TechnicianAlerts.collect(sourceLog)"));
+        assertTrue(thirtyOne.contains("logLabelErrorValue(label, finding.message)"));
+        assertTrue(thirtyOne.contains("logLabelWarnValue(label, finding.message)"));
+        assertFalse(thirtyOne.contains("Η αναφορά συγκέντρωσε τα διαθέσιμα αποτελέσματα"));
+        assertFalse(thirtyOne.contains("Γνησιότητα συσκευής / ανταλλακτικών"));
+        assertFalse(thirtyOne.contains("Υγεία μπαταρίας (SoH)"));
         assertFalse(thirtyOne.contains("η αναφορά δεν πιστοποιεί υγιές hardware"));
         assertTrue(thirtyOne.contains("enableSingleExportButton()"));
     }
