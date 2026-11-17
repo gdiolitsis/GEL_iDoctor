@@ -32998,9 +32998,16 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                             + (gr ? "Απόκλιση προς επανέλεγχο" : "Deviation for review")
                             + " (" + expected + specRow.expected + ")");
                 } else {
+                    // Unknown does not mean the Android reader returned nothing.
+                    // Preserve partial GPU/SoC/camera/network observations in white.
+                    String partialObservation =
+                            specRow.observed == null || specRow.observed.trim().isEmpty()
+                                    ? (gr ? "Δεν επαληθεύτηκε" : "Not verified")
+                                    : observation + (gr
+                                            ? " — Δεν τεκμηριώθηκε πλήρης συμφωνία"
+                                            : " — Full match not established");
                     logLabelValue(rowName,
-                            (gr ? "Δεν επαληθεύτηκε" : "Not verified")
-                            + " (" + expected + specRow.expected + ")");
+                            partialObservation + " (" + expected + specRow.expected + ")");
                 }
             }
             logLabelValue(gr ? "Κάλυψη σύγκρισης" : "Comparison coverage",
