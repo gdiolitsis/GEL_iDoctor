@@ -90,7 +90,9 @@ public final class Lab17StressEvidencePrerequisiteContractTest {
         assertTrue(evidence.contains("lab15ObservedDisconnect"));
         assertTrue(evidence.contains("lab16PeakTemp"));
         assertTrue(evidence.contains("lab16OsThermalStatus"));
-        assertTrue(evidence.contains("chargeConcern && thermalConcern"));
+        assertTrue(evidence.contains("Lab17CombinedConclusion.evaluate("));
+        assertTrue(evidence.contains("independentStressConcern"));
+        assertTrue(evidence.contains("lab14StressProxyFlag"));
         assertTrue(evidence.contains("!completeCoverage"));
         assertTrue(evidence.contains("Συνδυαστικό συμπέρασμα"));
         assertTrue(evidence.contains("άλλο συμβατό καλώδιο/φορτιστή"));
