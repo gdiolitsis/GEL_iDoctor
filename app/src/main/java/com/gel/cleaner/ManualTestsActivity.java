@@ -1177,6 +1177,8 @@ private float endBatteryTemp   = Float.NaN;
 private boolean lab15_strengthKnown = false;
 private boolean lab15_strengthWeak  = false;
 private boolean lab15_systemLimited = false;
+// User-reported charger type is context, not verified fast-charge negotiation.
+private String lab15ChargerType = "UNKNOWN";
 
 private static final int LAB15_TOTAL_SECONDS = 180;
 
@@ -4143,6 +4145,7 @@ private void printHealthCheckboxMap(String decision) {
 private void showLab15ConditionCheck(Runnable startAction) {
 
     final boolean gr = AppLang.isGreek(this);
+    lab15ChargerType = "UNKNOWN"; // Never reuse a response from an older run.
 
     int percent = getBatteryPercentSafe();
 
@@ -4281,6 +4284,45 @@ private void showLab15ConditionCheck(Runnable startAction) {
 
     root.addView(msg);
 
+    // Record what the user knows about THIS charger's fast-charge capability.
+    // This is self-report only: it cannot establish the phone's negotiated mode.
+    TextView fastChargeQuestion = new TextView(this);
+    fastChargeQuestion.setText(gr
+            ? "Ο φορτιστής που θα χρησιμοποιήσεις είναι ταχυφορτιστής;"
+            : "Is the charger you will use a fast charger?");
+    fastChargeQuestion.setTextColor(Color.WHITE);
+    fastChargeQuestion.setTextSize(15f);
+    fastChargeQuestion.setPadding(0, dp(14), 0, dp(5));
+    root.addView(fastChargeQuestion);
+
+    android.widget.RadioGroup chargerChoices = new android.widget.RadioGroup(this);
+    chargerChoices.setOrientation(android.widget.RadioGroup.VERTICAL);
+    final int fastYesId = View.generateViewId();
+    final int fastNoId = View.generateViewId();
+    final int fastUnknownId = View.generateViewId();
+    android.widget.RadioButton fastYes = new android.widget.RadioButton(this);
+    fastYes.setId(fastYesId);
+    fastYes.setText(gr ? "ΝΑΙ" : "YES");
+    fastYes.setTextColor(Color.WHITE);
+    fastYes.setTextSize(15f);
+    fastYes.setButtonTintList(android.content.res.ColorStateList.valueOf(0xFF39FF14));
+    chargerChoices.addView(fastYes);
+    android.widget.RadioButton fastNo = new android.widget.RadioButton(this);
+    fastNo.setId(fastNoId);
+    fastNo.setText(gr ? "ΟΧΙ" : "NO");
+    fastNo.setTextColor(Color.WHITE);
+    fastNo.setTextSize(15f);
+    fastNo.setButtonTintList(android.content.res.ColorStateList.valueOf(0xFF39FF14));
+    chargerChoices.addView(fastNo);
+    android.widget.RadioButton fastUnknown = new android.widget.RadioButton(this);
+    fastUnknown.setId(fastUnknownId);
+    fastUnknown.setText(gr ? "ΔΕΝ ΓΝΩΡΙΖΩ" : "I DON'T KNOW");
+    fastUnknown.setTextColor(Color.WHITE);
+    fastUnknown.setTextSize(15f);
+    fastUnknown.setButtonTintList(android.content.res.ColorStateList.valueOf(0xFF39FF14));
+    chargerChoices.addView(fastUnknown);
+    chargerChoices.check(fastUnknownId);
+    root.addView(chargerChoices);
 
     root.addView(buildMuteRow());
 
@@ -4384,6 +4426,10 @@ private void showLab15ConditionCheck(Runnable startAction) {
 
     go.setOnClickListener(v -> {
 
+        // Persist only when user actually accepts this pre-test dialog.
+        int selected = chargerChoices.getCheckedRadioButtonId();
+        lab15ChargerType = selected == fastYesId ? "YES"
+                : selected == fastNoId ? "NO" : "UNKNOWN";
         AppTTS.stop();
         dlg.dismiss();
 
@@ -25190,6 +25236,12 @@ logInfo(
 );
 
 logLine();
+logLabelValue(gr ? "Ταχυφορτιστής (δήλωση χρήστη)" : "Fast charger (user report)",
+        "YES".equals(lab15ChargerType)
+                ? (gr ? "ΝΑΙ — χωρίς τεχνική επαλήθευση" : "YES — not technically verified")
+                : "NO".equals(lab15ChargerType)
+                ? (gr ? "ΟΧΙ — δήλωση χρήστη" : "NO — user report")
+                : (gr ? "ΔΕΝ ΓΝΩΡΙΖΩ — άγνωστο" : "I DON'T KNOW — unknown"));
 
 // ================= FLAGS RESET =================
 
@@ -25204,6 +25256,7 @@ p.edit().remove("lab15_charge_score")
         .remove("lab15_rate_band")
         .remove("lab15_flap_observed")
         .remove("lab15_overtemp_observed")
+        .remove("lab15_charger_type")
         .apply();
 
 lab15Running  = true;
@@ -25890,7 +25943,8 @@ appendHtml("<br>");
 logInfo(gr ? "Απόφαση LAB:" : "LAB decision:");
 logLine();
 
-if (!lab15_strengthKnown) {
+if (!lab15_strengthKnown && !lab15OverTempDuringCharge && !lab15FlapUnstable) {
+    // Missing charge counters must NOT hide observed heat or disconnections.
     // Missing comparable counter values: neither a weak-rate nor a defect verdict.
     logInfo(gr
             ? "Σύστημα φόρτισης: δεν πιστοποιήθηκε λόγω ανεπαρκών δεδομένων."
@@ -25904,8 +25958,8 @@ if (!lab15_strengthKnown) {
     logLabelWarnValue(
             gr ? "Σύσταση" : "Recommendation",
             gr
-                    ? "Διακόψτε τη φόρτιση και αφήστε τη συσκευή να κρυώσει. Ελέγξτε φορτιστή και καλώδιο· αν επαναληφθεί, ζητήστε τεχνικό έλεγχο."
-                    : "Stop charging and let the device cool. Check the charger and cable; seek a technician if this recurs.");
+                    ? "Διακόψτε τη φόρτιση και αφήστε τη συσκευή να κρυώσει. Ελέγξτε φορτιστή και καλώδιο· αν επαναληφθεί, ζητήστε τεχνικό έλεγχο. Ελαττωματικός ή ασύμβατος φορτιστής, καλώδιο ή επαφή στη θύρα μπορεί να συμβάλλει στη θέρμανση, αλλά η αιτία δεν αποδεικνύεται από τη θερμοκρασία."
+                    : "Stop charging and let the device cool. Check the charger and cable; seek a technician if this recurs. A damaged or incompatible charger, cable or port connection may contribute to heat, but temperature alone cannot establish the cause.");
 } else if (lab15FlapUnstable) {
     logLabelWarnValue(
             gr ? "Εύρημα φόρτισης" : "Charging observation",
@@ -25928,11 +25982,21 @@ if (!lab15_strengthKnown) {
     logInfo(gr
             ? "Ο καθαρός ρυθμός δεν είναι η ισχύς του φορτιστή. Μπορεί να επηρεάζεται από καλώδιο, φορτιστή και παράλληλη κατανάλωση της συσκευής."
             : "Net charge gain is not charger input power. Cable, charger and concurrent device usage may affect it.");
-    logLabelWarnValue(
-            gr ? "Σύσταση" : "Recommendation",
-            gr
-                    ? "Αν η συσκευή υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Διαφορετικά χρησιμοποίησε άλλο συμβατό φορτιστή. Επανάλαβε χωρίς έντονη χρήση, ιδανικά σε παρόμοια στάθμη φόρτισης και θερμοκρασία· αν ο χαμηλός ρυθμός επιμένει, ζήτησε τεχνικό έλεγχο."
-                    : "If your device supports fast charging, try a reliable compatible fast charger and suitable cable. Otherwise use another compatible charger. Retest without heavy use, ideally at a comparable charge level and temperature; seek technical inspection if the low rate persists.");
+    String lowRateAdvice;
+    if ("YES".equals(lab15ChargerType)) {
+        lowRateAdvice = gr
+                ? "Δήλωσες ταχυφορτιστή, αλλά δεν επιβεβαιώθηκε ενεργή ταχυφόρτιση. Έλεγξε συμβατότητα φορτιστή/καλωδίου, ρυθμίσεις και θερμοκρασία. Δοκίμασε άλλο αξιόπιστο συμβατό σετ σε παρόμοιες συνθήκες, χωρίς έντονη χρήση. Αν επιμένει, ζήτησε τεχνικό έλεγχο."
+                : "You reported a fast charger, but fast charging was not verified. Check charger/cable compatibility, settings and temperature. Retest with a different reliable compatible set under similar conditions and light use. Seek technical inspection if it persists.";
+    } else if ("NO".equals(lab15ChargerType)) {
+        lowRateAdvice = gr
+                ? "Δήλωσες ότι δεν χρησιμοποιείς ταχυφορτιστή: ο χαμηλός ρυθμός δεν σημαίνει βλάβη. Αν η συσκευή υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Επανάλαβε χωρίς έντονη χρήση, ιδανικά σε παρόμοια στάθμη φόρτισης και θερμοκρασία."
+                : "You reported not using a fast charger; a low net rate does not imply a fault. If the phone supports fast charging, try a reliable compatible fast charger and suitable cable. Retest under light use at a comparable charge level and temperature.";
+    } else {
+        lowRateAdvice = gr
+                ? "Αν η συσκευή υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Διαφορετικά χρησιμοποίησε άλλο συμβατό φορτιστή. Επανάλαβε χωρίς έντονη χρήση, ιδανικά σε παρόμοια στάθμη φόρτισης και θερμοκρασία· αν ο χαμηλός ρυθμός επιμένει, ζήτησε τεχνικό έλεγχο."
+                : "If your device supports fast charging, try a reliable compatible fast charger and suitable cable. Otherwise use another compatible charger. Retest without heavy use, ideally at a comparable charge level and temperature; seek technical inspection if the low rate persists.";
+    }
+    logLabelWarnValue(gr ? "Σύσταση" : "Recommendation", lowRateAdvice);
 } else {
     logLabelOkValue(
             gr ? "Σύστημα φόρτισης" : "Charging system",
@@ -26002,6 +26066,7 @@ try {
                     lab15_strengthKnown && Double.isFinite(lab15ObservedNetMahPerMinute)
                             ? (float) lab15ObservedNetMahPerMinute : -1f)
             .putString("lab15_rate_band", lab15RateBand)
+            .putString("lab15_charger_type", lab15ChargerType)
             .putBoolean("lab15_flap_observed", lab15FlapUnstable)
             .putBoolean("lab15_overtemp_observed", lab15OverTempDuringCharge)
             .putLong("lab15_ts", System.currentTimeMillis())
@@ -26518,6 +26583,7 @@ if (lab14bEstimatedHours > 0f && battPct > 0f) {
     // Actual recorded Lab 15 observations; historical run categories are
     // accepted as limited evidence but never converted into a fake current.
     final String lab15RateBand = p.getString("lab15_rate_band", null);
+    final String lab15ChargerReported = p.getString("lab15_charger_type", "UNKNOWN");
     final float lab15NetRate = p.getFloat("lab15_net_rate_mah_per_min", -1f);
     final boolean lab15RateKnown = p.getBoolean("lab15_evidence_rate_known", false);
     final boolean lab15ObservedDisconnect = p.getBoolean("lab15_flap_observed", false);
@@ -26881,6 +26947,13 @@ final boolean fresh16 =
                     gr ? "Η δοκιμή εκτελέστηκε, αλλά ο καθαρός ρυθμός δεν τεκμηριώθηκε"
                        : "Test completed, but net charging rate was unavailable");
         }
+        logLabelValue(gr ? "Lab 15 — ταχυφορτιστής (δήλωση)" : "Lab 15 — fast charger (reported)",
+                "YES".equals(lab15ChargerReported)
+                        ? (gr ? "ΝΑΙ (δεν επαληθεύτηκε η ενεργοποίηση ταχυφόρτισης)"
+                              : "YES (fast-charge negotiation not verified)")
+                        : "NO".equals(lab15ChargerReported)
+                        ? (gr ? "ΟΧΙ (δήλωση χρήστη)" : "NO (user reported)")
+                        : (gr ? "Άγνωστο / δεν δηλώθηκε" : "Unknown / not reported"));
         if (lab15ObservedOvertemp) {
             logLabelWarnValue(gr ? "Lab 15 — θέρμανση φόρτισης" : "Lab 15 — charging heat",
                     gr ? "Καταγράφηκε αυξημένη θερμοκρασία"
@@ -27003,8 +27076,8 @@ final boolean fresh16 =
             String chargeAdvice;
             if (lab15ObservedOvertemp) {
                 chargeAdvice = gr
-                        ? "Άφησε τη συσκευή να κρυώσει πριν επαναλάβεις τη φόρτιση. Αν επιμένει η υπερθέρμανση, ζήτησε τεχνικό έλεγχο."
-                        : "Let the device cool before charging again. If overheating persists, seek technical inspection.";
+                        ? "Διακόψε τη φόρτιση και άφησε τη συσκευή να κρυώσει. Έλεγξε συμβατό φορτιστή, καλώδιο και θύρα: μπορεί να συμβάλλουν στη θέρμανση, αλλά δεν αποδεικνύεται η αιτία. Αν επαναληφθεί, ζήτησε τεχνικό έλεγχο."
+                        : "Stop charging and let the device cool. Check compatible charger, cable and port: they may contribute to heating, but causation is not established. Seek inspection if it recurs.";
             } else if (lab15ObservedDisconnect) {
                 chargeAdvice = gr
                         ? "Δοκίμασε διαφορετικό συμβατό καλώδιο και φορτιστή· έλεγξε τη σύνδεση για επαναλαμβανόμενες διακοπές."
@@ -27014,9 +27087,19 @@ final boolean fresh16 =
                         ? "Προτεραιότητα έχει να κρυώσει η συσκευή. Επανάλαβε τη μέτρηση σε ηρεμία πριν δοκιμάσεις ταχύτερη φόρτιση."
                         : "Allow the device to cool first. Retest at rest before trying faster charging.";
             } else if (chargeRateWarn) {
-                chargeAdvice = gr
-                        ? "Αν το κινητό υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Επανάλαβε χωρίς έντονη χρήση και σε συγκρίσιμη στάθμη φόρτισης. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
-                        : "If the device supports fast charging, try a reliable compatible fast charger and suitable cable. Retest without heavy use at a comparable charge level. Low net charge gain does not prove a fault.";
+                if ("YES".equals(lab15ChargerReported)) {
+                    chargeAdvice = gr
+                            ? "Δηλώθηκε ταχυφορτιστής, όχι όμως επαληθευμένη ταχυφόρτιση. Έλεγξε συμβατότητα, καλώδιο, ρυθμίσεις και θερμοκρασία και επανάλαβε με άλλο αξιόπιστο συμβατό σετ. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
+                            : "A fast charger was reported, but fast charging was not verified. Check compatibility, cable, settings and temperature; retest with another reliable compatible set. Low net charge gain does not prove a fault.";
+                } else if ("NO".equals(lab15ChargerReported)) {
+                    chargeAdvice = gr
+                            ? "Δηλώθηκε απουσία ταχυφορτιστή. Αν το κινητό υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
+                            : "No fast charger was reported. If the phone supports fast charging, try a reliable compatible fast charger and suitable cable. A low net rate does not prove a fault.";
+                } else {
+                    chargeAdvice = gr
+                            ? "Αν το κινητό υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Επανάλαβε χωρίς έντονη χρήση και σε συγκρίσιμη στάθμη φόρτισης. Ο χαμηλός καθαρός ρυθμός δεν αποδεικνύει βλάβη."
+                            : "If the device supports fast charging, try a reliable compatible fast charger and suitable cable. Retest without heavy use at a comparable charge level. Low net charge gain does not prove a fault.";
+                }
             } else {
                 chargeAdvice = gr
                         ? "Επανάλαβε τον έλεγχο με συμβατό φορτιστή και καλώδιο υπό συγκρίσιμες συνθήκες."
