@@ -28,10 +28,10 @@ public final class ApplePanicHardwareHints {
     private static final Pattern KNOWN_SENSOR = Pattern.compile(
             "(?i)\\b(mic1|mic2|prs0|tg0b|tg0v)\\b");
     private static final Pattern SMC_ARRAY = Pattern.compile(
-            "(?i)\\bS\\.sensor\\s+array\\s+0\\s*-\\s*4\\s+is\\s*"
+            "(?i)\\bS\\.sensor\\s+array\\s+0\\s*-\\s*\\d{1,2}\\s+is\\s*"
             + "(0x[0-9a-f]+|\\d+)\\s*,\\s*(0x[0-9a-f]+|\\d+)");
     private static final Pattern FALLBACK_ARRAY = Pattern.compile(
-            "(?i)\\bsensor\\s+array\\s+0\\s*-\\s*4\\s+is\\s*"
+            "(?i)\\bsensor\\s+array\\s+0\\s*-\\s*\\d{1,2}\\s+is\\s*"
             + "(0x[0-9a-f]+|\\d+)\\s*,\\s*(0x[0-9a-f]+|\\d+)");
 
     public static final class Finding {
