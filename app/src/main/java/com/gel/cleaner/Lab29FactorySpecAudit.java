@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * LAB 29 — OEM-published specification comparison, NOT OEM part authentication.
+ * LAB 27 — OEM-published device-model specification consistency, NOT OEM part authentication.
  *
  * Data is read through iDoctorEngine: the SAME shared readers already consumed
  * by DeviceInfoInternalActivity and DeviceInfoPeripheralsActivity. No duplicate
@@ -96,7 +96,7 @@ public final class Lab29FactorySpecAudit {
     /**
      * DeviceInfo Internal uses readSystem/Cpu/Memory/StorageSnapshot.
      * DeviceInfo Peripherals uses readScreen/Camera/Sensor/Peripheral/
-     * ConnectivitySnapshot. LAB 29 invokes those same source methods.
+     * ConnectivitySnapshot. LAB 27 invokes those same source methods.
      */
     public static Report capture(Context context) {
         Measurements m = new Measurements();
