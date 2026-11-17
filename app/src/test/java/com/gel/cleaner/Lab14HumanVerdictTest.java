@@ -16,7 +16,7 @@ public final class Lab14HumanVerdictTest {
         assertTrue(d.message.contains("αυξημένη πτώση τάσης"));
         assertTrue(d.message.contains("Μπορείς να συνεχίσεις"));
         assertTrue(d.message.contains("εφόσον"));
-        assertTrue(d.message.contains("δεν προκύπτει άμεση ανάγκη αντικατάστασης"));
+        assertTrue(d.message.contains("Δεν προκύπτει προς το παρόν ανάγκη αντικατάστασης"));
         assertTrue(d.message.contains("ενδείξεις φυσιολογικής φθοράς"));
     }
 
