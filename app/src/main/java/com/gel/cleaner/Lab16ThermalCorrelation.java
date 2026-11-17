@@ -227,6 +227,22 @@ public final class Lab16ThermalCorrelation {
         }
     }
 
+    /**
+     * The Lab16 screen already displays these named Android thermal zones.
+     * Treating the same physical reading as "hidden" is double counting.
+     * Match the same labels understood by buildThermalInternal and
+     * buildThermalPeripheralsCritical. Unknown labels remain inspectable.
+     */
+    public static boolean alreadyDisplayedZoneType(String vendorType) {
+        if (vendorType == null) return false;
+        String t = vendorType.toLowerCase(Locale.US);
+        return t.contains("battery") || t.contains("batt")
+                || t.contains("cpu") || t.contains("gpu")
+                || t.contains("pmic") || t.contains("charger")
+                || t.contains("usb") || t.contains("skin")
+                || t.contains("shell");
+    }
+
     public static boolean plausible(float temp) {
         return Float.isFinite(temp) && temp > 0f && temp <= 120f;
     }
