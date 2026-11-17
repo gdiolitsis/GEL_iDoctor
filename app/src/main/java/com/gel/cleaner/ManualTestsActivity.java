@@ -32455,14 +32455,21 @@ logLabelValue(
         storageFlag + " (" + storageScore + ")"
 );
 
-if (st.totalBytes > 0)
-    logLabelOkValue(
-            gr ? "Χρήση" : "Usage",
-            (gr ? "Ελεύθερο=" : "Free=") + st.pctFree + "% | " +
-            (gr ? "Χρησιμοποιείται=" : "Used=") +
-            humanBytes(st.usedBytes) + " / " + humanBytes(st.totalBytes));
-else
+if (st.totalBytes > 0) {
+    String storageUsage = (gr ? "Ελεύθερο=" : "Free=")
+            + st.pctFree + "% | " +
+            (gr ? "Χρησιμοποιείται=" : "Used=")
+            + humanBytes(st.usedBytes) + " / " + humanBytes(st.totalBytes);
+    if (st.pctFree >= 0 && st.pctFree < 10) {
+        logLabelWarnValue(gr ? "Χρήση" : "Usage", storageUsage);
+    } else if (st.pctFree >= 10) {
+        logLabelOkValue(gr ? "Χρήση" : "Usage", storageUsage);
+    } else {
+        logLabelValue(gr ? "Χρήση" : "Usage", storageUsage);
+    }
+} else {
     logLabelValue(gr ? "Χρήση" : "Usage", gr ? "Μ/Δ" : "N/A");
+}
 
 appendHtml("<br>");
 logInfo(gr ? "Αποτύπωμα Εφαρμογών" : "Apps footprint");
@@ -32525,10 +32532,13 @@ logLabelValue(
         securityFlag + " (" + securityScore + ")"
 );
 
-logLabelValue(
-        gr ? "Κλείδωμα συσκευής" : "Secure lock",
-        String.valueOf(sec.lockSecure)
-);
+if (sec.lockSecure) {
+    logLabelOkValue(gr ? "Κλείδωμα συσκευής" : "Secure lock",
+            gr ? "Ενεργό" : "Enabled");
+} else {
+    logLabelWarnValue(gr ? "Κλείδωμα συσκευής" : "Secure lock",
+            gr ? "Δεν υπάρχει ασφαλές κλείδωμα" : "No secure screen lock");
+}
 
 logLabelValue(
         gr ? "Ενημέρωση ασφαλείας" : "Patch level",
@@ -33010,11 +33020,25 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                             partialObservation + " (" + expected + specRow.expected + ")");
                 }
             }
-            logLabelValue(gr ? "Κάλυψη σύγκρισης" : "Comparison coverage",
-                    factory.matches + " " + (gr ? "συμφωνίες" : "matches") + " / "
-                    + factory.deviations + " " + (gr ? "αποκλίσεις" : "deviations")
-                    + " / " + factory.unknowns + " "
-                    + (gr ? "μη επαληθεύσιμα" : "unverified"));
+            // Each result class keeps its own value color after the colon.
+            // Green = measured agreement, red = observed deviation,
+            // neutral white = coverage not established.
+            if (factory.matches > 0) {
+                logLabelOkValue(gr ? "Συμφωνίες προδιαγραφών" : "Specification matches",
+                        String.valueOf(factory.matches));
+            } else {
+                logLabelValue(gr ? "Συμφωνίες προδιαγραφών" : "Specification matches",
+                        String.valueOf(factory.matches));
+            }
+            if (factory.deviations > 0) {
+                logLabelErrorValue(gr ? "Αποκλίσεις προδιαγραφών" : "Specification deviations",
+                        String.valueOf(factory.deviations));
+            } else {
+                logLabelOkValue(gr ? "Αποκλίσεις προδιαγραφών" : "Specification deviations",
+                        "0");
+            }
+            logLabelValue(gr ? "Μη επαληθευμένα χαρακτηριστικά" : "Unverified specifications",
+                    String.valueOf(factory.unknowns));
             if (factory.deviations > 0) {
                 logLabelErrorValue(gr ? "Συμπέρασμα" : "Conclusion",
                         factory.conclusion(gr));
