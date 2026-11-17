@@ -25933,8 +25933,8 @@ if (!lab15_strengthKnown) {
     logLabelWarnValue(
             gr ? "Σύσταση" : "Recommendation",
             gr
-                    ? "Ελέγξτε πρώτα με άλλο συμβατό καλώδιο και φορτιστή. Επαναλάβετε τη δοκιμή χωρίς έντονη χρήση· αν ο μέτριος ή χαμηλός ρυθμός επιμένει, ζητήστε τεχνικό έλεγχο."
-                    : "First try another compatible cable and charger. Repeat without heavy device use; seek technical inspection if the low rate persists.");
+                    ? "Αν η συσκευή υποστηρίζει ταχεία φόρτιση, δοκίμασε αξιόπιστο συμβατό ταχυφορτιστή και κατάλληλο καλώδιο. Διαφορετικά χρησιμοποίησε άλλο συμβατό φορτιστή. Επανάλαβε χωρίς έντονη χρήση, ιδανικά σε παρόμοια στάθμη φόρτισης και θερμοκρασία· αν ο χαμηλός ρυθμός επιμένει, ζήτησε τεχνικό έλεγχο."
+                    : "If your device supports fast charging, try a reliable compatible fast charger and suitable cable. Otherwise use another compatible charger. Retest without heavy use, ideally at a comparable charge level and temperature; seek technical inspection if the low rate persists.");
 } else {
     logLabelOkValue(
             gr ? "Σύστημα φόρτισης" : "Charging system",
@@ -26263,27 +26263,17 @@ private void lab16ThermalSnapshot() {
     // THERMAL SCORE
     // ------------------------------------------------------------
     int thermalScore = 100;
-    boolean thermalDanger = false;
-
-    for (ThermalEntry t : internal) {
-        if (t.temp >= 55f) {
+    boolean thermalDanger = hiddenRisk || danger;
+    for (int zone = 0; zone < Lab16ThermalCorrelation.N; zone++) {
+        Lab16ThermalCorrelation.Level level = sectorSummary.levels[zone];
+        if (level == Lab16ThermalCorrelation.Level.HIGH) {
             thermalScore -= 25;
             thermalDanger = true;
-        } else if (t.temp >= 45f) {
+        } else if (level == Lab16ThermalCorrelation.Level.ELEVATED) {
             thermalScore -= 10;
         }
     }
 
-    for (ThermalEntry t : peripherals) {
-        if (t.temp >= 55f) {
-            thermalScore -= 25;
-            thermalDanger = true;
-        } else if (t.temp >= 45f) {
-            thermalScore -= 10;
-        }
-    }
-
-    thermalDanger = thermalDanger || hiddenRisk || danger;
     thermalScore = ThermalEvidencePolicy.score(chipReadings, peripherals.size(), thermalScore, thermalDanger);
 
     try {
