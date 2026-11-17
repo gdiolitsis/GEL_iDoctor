@@ -9,10 +9,21 @@ import static org.junit.Assert.*;
 
 /** Lab14A: 40% recovery ratio alone is not evidence of voltage collapse. */
 public final class Lab14VoltageDropEvidenceTest {
-    @Test public void screenshotReadingWithThreeDegreeTemperatureRiseDoesNotFlagCollapse() {
+    @Test public void screenshotVoltageReadingsDoNotFlagCollapseWithoutCorroboration() {
         // 0.043 / 0.116 = 37.1%; hypothetical 2A proxy 0.058 ohm.
         assertFalse(Lab14VoltageDropEvidence.hasCorroboratedConcern(
                 0.116f, 0.043f, 0.058f));
+    }
+
+    @Test public void screenshotRunWithAcceptableThermalRiseGetsConditionalPositiveVerdict() {
+        boolean voltageConcern = Lab14VoltageDropEvidence.hasCorroboratedConcern(
+                0.116f, 0.043f, 0.058f);
+        Lab14HumanVerdict.Decision d = Lab14HumanVerdict.evaluate(true, "Weak",
+                true, false, voltageConcern, false, false, false, 3.0f, 40.0f);
+        assertEquals(Lab14HumanVerdict.Tone.POSITIVE, d.tone);
+        assertTrue(d.message.contains("ενδείξεις φυσιολογικής φθοράς"));
+        assertTrue(d.message.contains("Μπορείς να συνεχίσεις"));
+        assertTrue(d.message.contains("εφόσον"));
     }
 
     @Test public void weakAbsoluteRecoveryPlusHighSagRemainsWarning() {
