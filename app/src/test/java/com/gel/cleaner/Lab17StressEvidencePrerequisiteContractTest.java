@@ -94,7 +94,8 @@ public final class Lab17StressEvidencePrerequisiteContractTest {
         assertTrue(evidence.contains("lab16PeakTemp"));
         assertTrue(evidence.contains("lab16OsThermalStatus"));
         assertTrue(evidence.contains("Lab17CombinedConclusion.evaluateDetailed("));
-        assertTrue(evidence.contains("independentStressConcern"));
+        assertTrue(evidence.contains("lab14CollapseObserved"));
+        assertTrue(evidence.contains("lab14Unstable"));
         assertTrue(evidence.contains("lab14StressProxyFlag"));
         assertTrue(evidence.contains("lab14ElectricalWarning"));
         assertTrue(evidence.contains("lab14StressThermalWarning"));
