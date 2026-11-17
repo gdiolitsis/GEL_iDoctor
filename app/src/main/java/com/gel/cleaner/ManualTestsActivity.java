@@ -26972,9 +26972,11 @@ final boolean fresh16 =
         // Do not treat a single voltage-sag figure as proof of device harm.
         appendHtml("<br>");
         logInfo(gr ? "Συνδυαστικό συμπέρασμα" : "Cross-lab conclusion");
+        // A normal Android thermal status does not replace a missing CPU/GPU
+        // thermometer. Keep positive system-health claims scoped to evidence.
         boolean completeCoverage = stressClassKnown && chargeRateAvailable
                 && lab16HasEvidence && lab16DetailedAvailable
-                && (lab16ThermalProfile.hasChipReading() || lab16OsThermalStatus >= 0);
+                && lab16ThermalProfile.hasChipReading();
         Lab17CombinedConclusion.Decision conclusion = Lab17CombinedConclusion.evaluateDetailed(
                 gr, lab14StressClass, lab14Unstable,
                 lab14CollapseObserved, lab14GaugeDiscrepancy, lab14StressProxyFlag,
