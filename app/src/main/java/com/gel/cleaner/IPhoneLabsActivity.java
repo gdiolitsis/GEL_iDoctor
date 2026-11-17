@@ -628,9 +628,20 @@ try {
 
     runFinalServiceRecommendationLab();
 
-    logOk(AppLang.isGreek(this)
-            ? "Ο πλήρης έλεγχος ολοκληρώθηκε."
-            : "Full diagnostics completed.");
+    int comparableLogs = countSupportedPanicBlocks(
+            panicLogText.split("(?m)^===== ZIP FILE:"));
+    if (comparableLogs >= 2) {
+        logOk(AppLang.isGreek(this)
+                ? "Ο πλήρης έλεγχος ολοκληρώθηκε."
+                : "Full diagnostics completed.");
+    } else {
+        logOk(AppLang.isGreek(this)
+                ? "Η ανάλυση του διαθέσιμου panic log ολοκληρώθηκε."
+                : "Available panic log analysis completed.");
+        logInfo(AppLang.isGreek(this)
+                ? "Τα συγκριτικά Labs 5–7 δεν εκτελέστηκαν: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs."
+                : "Comparative Labs 5–7 were not executed: at least two eligible panic logs are required.");
+    }
 
 } catch (Throwable t) {
 
@@ -1402,10 +1413,14 @@ logLabelOkValue(
         safe(kernel)
 );
 
-logLabelOkValue(
-        "Board ID:",
-        safe(board)
-);
+// Missing Board ID is missing evidence, not a positive result.
+if (board == null || board.trim().isEmpty()
+        || "Unknown".equalsIgnoreCase(board.trim())
+        || "N/A".equalsIgnoreCase(board.trim())) {
+    logLabelValue("Board ID:", safe(board));
+} else {
+    logLabelOkValue("Board ID:", safe(board));
+}
 
 // 👇 νέο μήνυμα με το όνομα των logs
 logLabelOkValue(
@@ -1859,8 +1874,9 @@ private void runPanicFrequencyLab() {
 
     if (countSupportedPanicBlocks(blocks) <= 1) {
         logInfo(gr
-                ? "Μη διαθέσιμη σύγκριση: χρειάζονται δύο αναγνωρισμένα panic blocks."
-                : "Comparison unavailable: two eligible panic blocks are required.");
+                ? "Το Lab 5 δεν εκτελέστηκε: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs για σύγκριση."
+                : "Lab 5 not executed: at least two eligible panic logs are needed for comparison.");
+        logLine();
         return;
     }
 
@@ -1915,8 +1931,9 @@ String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
 if (countSupportedPanicBlocks(blocks) <= 1) {
     logInfo(gr
-            ? "Μη διαθέσιμη ομαδοποίηση: χρειάζονται δύο αναγνωρισμένα panic blocks."
-            : "Clustering unavailable: two eligible panic blocks are required.");
+            ? "Το Lab 6 δεν εκτελέστηκε: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs για ομαδοποίηση."
+            : "Lab 6 not executed: at least two eligible panic logs are needed for clustering.");
+    logLine();
     return;
 }
 
@@ -1994,8 +2011,9 @@ private void runRecurringDomainLab() {
 
     if (total <= 1) {
         logInfo(gr
-                ? "Απαιτούνται τουλάχιστον δύο έγκυρα panic blocks για σύγκριση."
-                : "At least two eligible panic blocks are required for comparison.");
+                ? "Το Lab 7 δεν εκτελέστηκε: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs για έλεγχο επανάληψης."
+                : "Lab 7 not executed: at least two eligible panic logs are needed to check repetition.");
+        logLine();
         return;
     }
 
