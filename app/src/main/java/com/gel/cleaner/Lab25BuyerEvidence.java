@@ -13,6 +13,7 @@ final class Lab25BuyerEvidence {
     static final String LIMITED = "LIMITED";
     static final String ACCESSIBLE = "ACCESSIBLE_RECORDS_ONLY";
     static final String USER_REPORT = "USER_SELECTED_REPORT";
+    static final String SHIZUKU_BUFFER = "SHIZUKU_SHELL_CRASH_BUFFER";
 
     static final String NONE = "NO_CRITICAL_RECORDS";
     static final String ISOLATED = "ISOLATED";
@@ -45,7 +46,7 @@ final class Lab25BuyerEvidence {
 
     static boolean isKnownCoverage(String coverage) {
         return LIMITED.equals(coverage) || ACCESSIBLE.equals(coverage)
-                || USER_REPORT.equals(coverage);
+                || USER_REPORT.equals(coverage) || SHIZUKU_BUFFER.equals(coverage);
     }
 
     static int rank(String result) {
