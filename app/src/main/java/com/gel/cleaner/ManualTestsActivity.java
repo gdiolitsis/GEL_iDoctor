@@ -1644,6 +1644,20 @@ logScroll.post(() -> setLogPanelState(0));
                : "29. FINAL TECH SUMMARY",
             this::lab31FinalSummary));
 
+    // Report shared by the owner through Android Sharesheet. Explicit consent
+    // was granted in Lab25SharedReportActivity; no automatic file scanning.
+    if (savedInstanceState == null && getIntent() != null &&
+            Lab25SharedReportActivity.ACTION_IMPORT_LAB25.equals(getIntent().getAction())) {
+        final Uri sharedReport = getIntent().getData();
+        if (sharedReport != null && "content".equalsIgnoreCase(sharedReport.getScheme())) {
+            ui.post(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                lab25CrashHistory();
+                lab25ReadBugReport(sharedReport);
+            });
+        }
+    }
+
     if (!serviceLogInit) {
         GELServiceLog.section(
                 gr

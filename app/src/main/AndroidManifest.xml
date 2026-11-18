@@ -226,6 +226,22 @@
             android:name=".DiagnosisMenuActivity"
             android:exported="false"/>
 
+        <!-- Import a user-shared bugreport directly into existing Lab 25:
+             no new Lab, no broad file access or implicit analysis. -->
+        <activity
+            android:name=".Lab25SharedReportActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GEL.DarkGold">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="application/zip"/>
+                <data android:mimeType="application/x-zip-compressed"/>
+                <data android:mimeType="application/octet-stream"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
+        </activity>
+
         <!-- Preserve an active diagnostic screen when the phone is raised to
              the ear. Sensor measurements still observe physical movement. -->
         <activity
