@@ -73,6 +73,14 @@ public final class GelShizukuSetupGuideContractTest {
         assertTrue(ui.contains("follow its setup instructions"));
         assertTrue(ui.contains("Android will briefly"));
         assertTrue(ui.contains("Με το Πίσω επιστρέφεις εδώ"));
+        // Only the introduction uses neon green; title and instructions stay white.
+        assertTrue(ui.contains("+ \"and follow its setup instructions.\", false, 0xFF39FF14)"));
+        assertTrue(ui.contains("guideText(panel, value, title, Color.WHITE)"));
+        assertTrue(ui.contains("t.setTextColor(textColor)"));
+        assertTrue(ui.contains("guideText(panel, gr ? \"Βοήθεια για βαθύτερο έλεγχο\""));
+        assertTrue(ui.contains(": \"Help with deeper diagnostics\", true)"));
+        assertTrue(ui.contains("bg.setColor(Color.BLACK)"));
+        assertTrue(ui.contains("bg.setStroke(dp(2), 0xFFFFD700)"));
         assertFalse(ui.contains("Οδηγός Shizuku — έναρξη"));
         // Keep real permission, privacy disclosure and opting out intact.
         assertTrue(ui.contains("σε κάμερα, μικρόφωνο ή τοποθεσία μπορεί να φανούν"));
