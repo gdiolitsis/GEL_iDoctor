@@ -1,6 +1,11 @@
 package com.gel.cleaner;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.provider.Settings;
+import android.os.Build;
+import android.view.Gravity;
+import android.widget.ScrollView;
 import android.app.AlertDialog;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -31,6 +36,9 @@ public final class GelShizukuUi {
         // This Activity entry offers enhanced diagnostics at most once.
         // Reopening the manual control remains possible after a decline.
         private boolean entryOfferShown;
+        private boolean openGuideOnMissingService;
+        private AlertDialog setupDialog;
+        private TextView setupStatus;
 
         public Widget(Activity activity, LinearLayout container, boolean gr, EventSink sink) {
             this.activity = activity;
@@ -47,7 +55,7 @@ public final class GelShizukuUi {
             session = new GelShizukuDiagnosticSession(activity, this::onStatus);
             action.setOnClickListener(v -> {
                 if (session.isReady()) session.stop();
-                else if (session.hasRememberedConsent()) session.requestFromUser();
+                else if (session.hasRememberedConsent()) showSetupGuide();
                 else showConsent();
             });
         }
@@ -60,6 +68,8 @@ public final class GelShizukuUi {
         private void onStatus(String status) {
             if (activity.isFinishing() || activity.isDestroyed()) return;
             if ("READY".equals(status)) {
+                openGuideOnMissingService = false;
+                if (setupDialog != null && setupDialog.isShowing()) setupDialog.dismiss();
                 action.setText(gr ? "Shizuku ενεργό — πάτησε για τερματισμό"
                         : "Shizuku active — tap to end session");
                 sink.onEvent("Shizuku (ADB Shell)",
@@ -80,13 +90,20 @@ public final class GelShizukuUi {
                         ? "Η συνεδρία διεκόπη. Τα εργαστήρια λειτουργούν κανονικά."
                         : "Disconnected. Standard Labs are unaffected.", false);
             } else if ("SHIZUKU_NOT_RUNNING".equals(status)) {
-                action.setText(gr ? "Shizuku ανενεργό — πάτησε για επανασύνδεση"
+                if (setupStatus != null) setupStatus.setText(gr
+                        ? "Το Shizuku δεν έχει ξεκινήσει ακόμη. Ακολούθησε τα βήματα παρακάτω."
+                        : "Shizuku has not started. Follow the steps below.");
+                action.setText(gr ? "Οδηγός Shizuku — έναρξη"
                         : "Shizuku not running — tap to reconnect");
                 sink.onEvent("Shizuku", gr
                         ? "Εγκατάστησε/ξεκίνησε την εφαρμογή Shizuku. "
                           + "Σε Android 11+ χρησιμοποιείται η σύζευξη Ασύρματου debugging."
                         : "Install and start Shizuku first; Android 11+ supports "
                           + "wireless-debugging pairing.", false);
+                if (openGuideOnMissingService) {
+                    openGuideOnMissingService = false;
+                    showSetupGuide();
+                }
             } else if ("ADB_SHELL_ONLY".equals(status)) {
                 action.setText(gr ? "Shizuku — απαιτείται λειτουργία ADB"
                         : "Shizuku — ADB mode required");
@@ -101,6 +118,9 @@ public final class GelShizukuUi {
                         ? "Δεν εγκρίθηκε πρόσβαση. Συνεχίζουμε με τα κανονικά Labs."
                         : "Permission not granted; normal Labs continue.", false);
             } else if ("PERMISSION_UNAVAILABLE".equals(status)) {
+                if (setupStatus != null) setupStatus.setText(gr
+                        ? "Χρειάζεται έγκριση πρόσβασης από την εφαρμογή Shizuku."
+                        : "The Shizuku app must grant access.");
                 action.setText(gr ? "Shizuku — απαιτείται νέα έγκριση"
                         : "Shizuku — permission needed");
                 sink.onEvent("Shizuku", gr
@@ -203,12 +223,177 @@ public final class GelShizukuUi {
             cancel.setOnClickListener(v -> dialog.dismiss());
             allow.setOnClickListener(v -> {
                 dialog.dismiss();
+                openGuideOnMissingService = true;
                 session.requestFromUser();
             });
             dialog.show();
             if (dialog.getWindow() != null)
                 dialog.getWindow().setBackgroundDrawable(
                         new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        /**
+         * Step-by-step help stays visible in GEL while users temporarily open
+         * Android Settings or the official Shizuku manager. Never download or
+         * install a package silently; never imply Android permission is granted.
+         */
+        private void showSetupGuide() {
+            if (activity.isFinishing() || activity.isDestroyed()
+                    || (setupDialog != null && setupDialog.isShowing())) return;
+            ScrollView scroll = new ScrollView(activity);
+            LinearLayout panel = new LinearLayout(activity);
+            panel.setOrientation(LinearLayout.VERTICAL);
+            panel.setPadding(dp(18), dp(16), dp(18), dp(16));
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(Color.BLACK);
+            bg.setCornerRadius(dp(12));
+            bg.setStroke(dp(2), 0xFFFFD700);
+            panel.setBackground(bg);
+            scroll.addView(panel);
+            guideText(panel, gr ? "Βοήθεια για βαθύτερο έλεγχο"
+                    : "Help with deeper diagnostics", true);
+            guideText(panel, gr
+                    ? "Θα σε καθοδηγήσω βήμα προς βήμα. Οι οδηγίες ανοίγουν μέσα "
+                      + "στο iDoctor. Για την εγκατάσταση και τη σύνδεση, "
+                      + "το Android πρέπει να ανοίξει προσωρινά δικές του οθόνες. "
+                      + "Με το Πίσω επιστρέφεις εδώ."
+                    : "Follow this guide inside iDoctor. Installation and pairing "
+                      + "require Android's own installer and settings screens. "
+                      + "Press Back to return here.", false);
+
+            guideText(panel, gr
+                    ? "1. Εγκατάστησε το Shizuku μόνο από την επίσημη σελίδα, "
+                      + "αν δεν το έχεις ήδη. Δεν απαιτείται Google Play."
+                    : "1. If needed, install Shizuku from its official website. "
+                      + "Google Play is not required.", false);
+            guideButton(panel, gr ? "ΕΠΙΣΗΜΗ ΣΕΛΙΔΑ ΛΗΨΗΣ" : "OFFICIAL DOWNLOAD",
+                    () -> openOfficialHelp(true));
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                guideText(panel, gr
+                        ? "2. Συνδέσου σε Wi-Fi και άνοιξε τις Επιλογές "
+                          + "προγραμματιστή → Ασύρματος εντοπισμός σφαλμάτων. "
+                          + "Ενεργοποίησέ τον και, αν ζητηθεί, κάνε σύζευξη "
+                          + "με κωδικό μέσω της εφαρμογής Shizuku."
+                        : "2. Connect to Wi-Fi. In Developer options, turn on "
+                          + "Wireless debugging and pair using the code in Shizuku "
+                          + "if requested.", false);
+            } else {
+                guideText(panel, gr
+                        ? "2. Σε Android 10 ή παλιότερο, η έναρξη Shizuku χωρίς "
+                          + "root απαιτεί υπολογιστή. Το iDoctor δεν μπορεί να "
+                          + "παρακάμψει αυτόν τον περιορισμό."
+                        : "2. On Android 10 or older, non-root Shizuku startup "
+                          + "requires a computer. iDoctor cannot bypass this.", false);
+            }
+            guideButton(panel, gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ ANDROID"
+                    : "OPEN ANDROID SETTINGS", () -> openDeveloperSettings());
+            guideButton(panel, gr ? "ΑΝΑΛΥΤΙΚΕΣ ΟΔΗΓΙΕΣ"
+                    : "DETAILED INSTRUCTIONS", () -> openOfficialHelp(false));
+
+            guideText(panel, gr
+                    ? "3. Άνοιξε το Shizuku, ολοκλήρωσε τη σύζευξη και πάτησε "
+                      + "Start. Μετά επέστρεψε στο iDoctor."
+                    : "3. Open Shizuku, finish pairing and tap Start. Then "
+                      + "return to iDoctor.", false);
+            guideButton(panel, gr ? "ΑΝΟΙΓΜΑ SHIZUKU"
+                    : "OPEN SHIZUKU", () -> openShizukuManager());
+
+            guideText(panel, gr
+                    ? "4. Πάτησε «Έλεγχος σύνδεσης». Αν χρειάζεται άδεια, "
+                      + "θα εμφανιστεί το κανονικό παράθυρο του Shizuku."
+                    : "4. Tap Check connection. If permission is needed, "
+                      + "Shizuku will display its own approval dialog.", false);
+            setupStatus = new TextView(activity);
+            setupStatus.setTextColor(Color.WHITE);
+            setupStatus.setTextSize(14f);
+            setupStatus.setText(gr ? "Δεν έχει επιβεβαιωθεί ενεργή σύνδεση."
+                    : "No active connection has been verified.");
+            setupStatus.setPadding(0, dp(10), 0, dp(10));
+            panel.addView(setupStatus);
+            guideButton(panel, gr ? "ΕΛΕΓΧΟΣ ΣΥΝΔΕΣΗΣ"
+                    : "CHECK CONNECTION", () -> {
+                        setupStatus.setText(gr ? "Έλεγχος σύνδεσης..."
+                                : "Checking connection...");
+                        // Only after an explicit user tap. Shizuku's own
+                        // permission and ADB UID checks remain mandatory.
+                        session.requestFromUser();
+                    });
+            guideButton(panel, gr ? "ΣΥΝΕΧΕΙΑ ΧΩΡΙΣ SHIZUKU"
+                    : "CONTINUE WITHOUT SHIZUKU", () -> {
+                        if (setupDialog != null) setupDialog.dismiss();
+                    });
+
+            setupDialog = new AlertDialog.Builder(activity,
+                    android.R.style.Theme_Material_Dialog_NoActionBar)
+                    .setView(scroll).create();
+            setupDialog.setOnDismissListener(d -> {
+                setupStatus = null;
+                setupDialog = null;
+            });
+            setupDialog.show();
+            if (setupDialog.getWindow() != null)
+                setupDialog.getWindow().setBackgroundDrawable(
+                        new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        private void guideText(LinearLayout panel, String value, boolean title) {
+            TextView t = new TextView(activity);
+            t.setText(value);
+            t.setTextColor(Color.WHITE);
+            t.setTextSize(title ? 19f : 14f);
+            if (title) t.setTypeface(null, Typeface.BOLD);
+            t.setPadding(0, dp(7), 0, dp(7));
+            panel.addView(t);
+        }
+
+        private void guideButton(LinearLayout panel, String label, Runnable click) {
+            Button b = new GelButton(activity);
+            b.setAllCaps(false);
+            b.setText(label);
+            b.setTextColor(Color.WHITE);
+            b.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(52));
+            lp.topMargin = dp(6);
+            panel.addView(b, lp);
+            b.setOnClickListener(v -> click.run());
+        }
+
+        private void openOfficialHelp(boolean download) {
+            Intent intent = new Intent(activity, ShizukuOfficialHelpActivity.class);
+            intent.putExtra(ShizukuOfficialHelpActivity.EXTRA_DOWNLOAD, download);
+            activity.startActivity(intent);
+        }
+
+        private void openDeveloperSettings() {
+            try {
+                activity.startActivity(new Intent(
+                        Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS));
+            } catch (RuntimeException noDirectSettings) {
+                try {
+                    activity.startActivity(new Intent(Settings.ACTION_SETTINGS));
+                } catch (RuntimeException ignored) {
+                    if (setupStatus != null)
+                        setupStatus.setText(gr ? "Δεν άνοιξαν οι Ρυθμίσεις Android."
+                                : "Could not open Android Settings.");
+                }
+            }
+        }
+
+        private void openShizukuManager() {
+            try {
+                Intent launch = activity.getPackageManager().getLaunchIntentForPackage(
+                        "moe.shizuku.privileged.api");
+                if (launch != null) {
+                    activity.startActivity(launch);
+                    return;
+                }
+            } catch (RuntimeException ignored) { }
+            if (setupStatus != null)
+                setupStatus.setText(gr
+                        ? "Δεν βρέθηκε το Shizuku. Δες πρώτα την επίσημη σελίδα λήψης."
+                        : "Shizuku was not found. Open the official download page first.");
         }
 
         public boolean isReady() { return session.isReady(); }
