@@ -8,7 +8,7 @@ Stacked on #167. No renumbering or new Lab; unchanged normal Android diagnostics
 
 | Lab | Probe | Strongest defensible interpretation |
 | --- | --- | --- |
-| 18 | UFS kernel health descriptor from fixed /dev/sys/block/bootdevice or enumerated /sys/bus/platform/devices UFS nodes | Controller-reported endurance-used bands A/B and pre-EOL state, **not exact NAND remaining life** |
+| 18 | UFS kernel health descriptor from fixed UFS sysfs nodes, or eMMC EXT_CSD `life_time` / `pre_eol_info` from fixed internal MMC-card sysfs nodes | Controller-reported endurance-used bands A/B and pre-EOL state, **not exact NAND remaining life** |
 | 19 | Bounded Android event log, explicit `lmk_kill` or `am_kill_for_memory` tags | Observed process terminations from a *sampled* period, not defective physical RAM |
 | 26 | Bounded `dumpsys appops`, parsed in the ADB UserService | Attributed package / camera, microphone, location `Access` timestamps only, not permission misuse |
 | 14 A/B/Γ | Existing Shizuku reported `charge_full` / `charge_full_design` | Distinguish reported full-charge estimate, nominal specification and extrapolated values |
@@ -21,7 +21,7 @@ The former `waitFor()`-before-drain design could deadlock on large `dumpsys` res
 
 ## Tests
 
-- JVM parsing regressions for UFS lifetime 1/5/10/11, pre-EOL 1/2/3 and reserved values.
+- JVM parsing regressions for UFS and eMMC lifetime 1/5/10/11, pre-EOL 1/2/3 and reserved values.
 - Distinguish explicit memory-pressure kill tags from generic process restarts.
 - AppOps parsing only permits validated package/op/timestamp records.
 - Contract tests for fixed operation IDs, strict consent, shell-only UID, immutable lab count and nominal-capacity provenance.
@@ -30,7 +30,7 @@ The former `waitFor()`-before-drain design could deadlock on large `dumpsys` res
 
 1. Android Java/AIDL/manifest build and JVM tests on the *actual* stacked PR HEAD.
 2. Permission grant / deny / revoke / binder death / user exit on Android 11, 13 and 16.
-3. Real UFS or eMMC device: only show UFS bands when a readable, valid descriptor actually exists. eMMC support is **not** asserted.
+3. Real UFS and eMMC devices: display only a valid, readable device-specific wear descriptor. ADB shell access and OEM kernel exposure are **not** guaranteed.
 4. AppOps on several OEMs: verify AOSP output and that the 384-KiB output/time safety cap does not invalidate too many devices. Values not exposed => no rows.
 5. Sample memory kills using real Android event-log data; never convert absent tags to zero lifetime kills.
 6. Check final logs and PDF color semantic parity plus no duplicate rows.
@@ -38,6 +38,7 @@ The former `waitFor()`-before-drain design could deadlock on large `dumpsys` res
 8. Only then consider signed QA APK; do not auto-merge to main or publish.
 
 References:
+- AOSP eMMC kernel sysfs implementation: https://android.googlesource.com/platform/packages/services/Car/+/master/service/src/com/android/car/storagemonitoring/EMmcWearInformationProvider.java
 - Android kernel sysfs-driver-ufs ABI: https://android.googlesource.com/kernel/common/+/refs/heads/android-mainline/Documentation/ABI/testing/sysfs-driver-ufs
 - AOSP AppOps developer guidance: https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/core/java/android/app/AppOps.md
 - Android memory-pressure documentation: https://developer.android.com/topic/performance/memory/guide/system-wide-memory
