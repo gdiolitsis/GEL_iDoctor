@@ -11,6 +11,8 @@ import static org.junit.Assert.*;
 public final class Lab25SharedReportRouteContractTest {
     private static String source(String path) throws Exception {
         Path file = Paths.get(path);
+        if (!Files.isRegularFile(file) && path.startsWith("app/"))
+            file = Paths.get(path.substring(4));
         if (!Files.isRegularFile(file)) file = Paths.get("../../" + path);
         return new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
     }
