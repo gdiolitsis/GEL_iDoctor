@@ -121,17 +121,20 @@ public final class GelShizukuUi {
 
             TextView body = new TextView(activity);
             body.setText(gr
-                    ? "Προαιρετική ανάγνωση μέσω ADB Shell: αναφερόμενη χωρητικότητα "
-                      + "μπαταρίας, κρίσιμα συμβάντα, θερμική κατάσταση, RAM "
-                      + "και λόγος εκκίνησης. Χωρίς root, αλλαγές ρυθμίσεων "
-                      + "ή αποθήκευση πλήρων logs. Η ξεχωριστή έγκριση "
-                      + "της υπηρεσίας Shizuku είναι επίσης απαραίτητη. "
-                      + "Όλα τα Labs λειτουργούν και χωρίς αυτήν."
-                    : "Optional read-only ADB Shell access to reported battery "
-                      + "capacity, critical incidents, thermal state, RAM and "
-                      + "boot reason. No root, system modification or full-log "
-                      + "storage. The Shizuku app also asks for its own permission. "
-                      + "All Labs work without it.");
+                    ? "Προαιρετική, μόνο για ανάγνωση, πρόσβαση ADB Shell σε χωρητικότητα "
+                      + "μπαταρίας, UFS/NAND, κρίσιμα σφάλματα, θερμική κατάσταση, "
+                      + "πίεση RAM, λόγο εκκίνησης και χρόνους AppOps. "
+                      + "Οι διαθέσιμοι χρόνοι και τα ονόματα εφαρμογών ενδέχεται "
+                      + "να εμφανίζονται στα logs/PDF της διάγνωσης. "
+                      + "Χωρίς root, αλλαγές συστήματος ή πλήρη καταγραφή logs. "
+                      + "Απαιτείται και ξεχωριστή έγκριση από το Shizuku. "
+                      + "Τα 29 Labs λειτουργούν κανονικά χωρίς αυτό."
+                    : "Optional read-only ADB Shell access to battery capacity, "
+                      + "UFS/NAND wear indicators, critical crashes, thermal state, "
+                      + "RAM-pressure events, boot reason and AppOps access times. "
+                      + "App names and access times may appear in diagnostic "
+                      + "logs/PDF exports. No root, system changes or full-log capture. "
+                      + "Shizuku requests separate permission. All 29 Labs work without it.");
             body.setTextColor(Color.WHITE);
             body.setTextSize(14f);
             body.setPadding(0, dp(14), 0, dp(14));

@@ -142,7 +142,12 @@ public final class Lab14BValueColorsAndCapacityContractTest {
             assertTrue("Unexpected uncolored value: " + call,
                     call.contains("Μ/Δ") || call.contains("N/A")
                     || call.contains(", na") || call.contains("ΔΕΝ ΕΛΕΓΧΘΗΚΕ")
-                    || call.contains("NOT TESTED"));
+                    || call.contains("NOT TESTED")
+                    // Nominal design and level-derived reference values are available
+                    // but neutral: green would imply validated current battery health.
+                    || (call.contains("Χωρητικότητα αναφοράς (14B/Γ)")
+                        && call.contains("baselineMah[0]")
+                        && call.contains("referenceSource")));
         }
         assertTrue("No unavailable-value fallback examined", checked > 0);
         assertFalse("Misspelled GAMMA label", full.contains("LAB 14 GAMA"));

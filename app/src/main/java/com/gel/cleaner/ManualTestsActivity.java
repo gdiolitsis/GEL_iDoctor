@@ -13924,7 +13924,7 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
     // 🔴 BASELINE CAPACITY
     // --------------------------------------------------
     baselineFullMah = -1;
-    lab14HasReportedCapacity = start.chargeFullMah > 0 || start.chargeDesignMah > 0;
+    lab14HasReportedCapacity = start.chargeFullMah > 0;
 
     if (start.chargeFullMah > 0) {
         baselineFullMah = start.chargeFullMah;
@@ -13956,7 +13956,7 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
     } else if (gauge14A != null && start.chargeFullMah <= 0 &&
             start.chargeDesignMah <= 0 && gauge14A.designMah > 1000) {
         baselineFullMah = gauge14A.designMah;
-        lab14HasReportedCapacity = true;
+        // DESIGN is a specification, never current reported full capacity.
         logLabelValue(gr ? "Ονομαστική χωρητικότητα Shizuku"
                 : "Nominal design capacity via Shizuku",
                 baselineFullMah + " mAh — design, not measured full capacity");
@@ -22206,8 +22206,15 @@ if (baselineMah[0] > 0L) {
             : "DESIGN_NOMINAL".equals(capacityProvenance[0])
             ? (gr ? "ονομαστική χωρητικότητα σχεδίασης" : "nominal design capacity")
             : (gr ? "charge_now / ποσοστό φόρτισης" : "charge_now / charge level");
-    logLabelOkValue(gr ? "Χωρητικότητα αναφοράς (14B/Γ)" : "Capacity reference (14B/G)",
-            baselineMah[0] + " mAh — " + referenceSource);
+    if ("SHIZUKU_DESIGN_NOMINAL".equals(capacityProvenance[0])
+            || "DESIGN_NOMINAL".equals(capacityProvenance[0])
+            || "EXTRAPOLATED_FROM_LEVEL".equals(capacityProvenance[0])) {
+        logLabelValue(gr ? "Χωρητικότητα αναφοράς (14B/Γ)" : "Capacity reference (14B/G)",
+                baselineMah[0] + " mAh — " + referenceSource);
+    } else {
+        logLabelOkValue(gr ? "Χωρητικότητα αναφοράς (14B/Γ)" : "Capacity reference (14B/G)",
+                baselineMah[0] + " mAh — " + referenceSource);
+    }
 } else {
     logLabelValue(gr ? "Χωρητικότητα αναφοράς (14B/Γ)" : "Capacity reference (14B/G)",
             gr ? "Μ/Δ — δεν τεκμηριώθηκε χωρητικότητα"
@@ -26010,6 +26017,60 @@ private void gelShizukuSupplement(int op) {
                 logLabelValue(gr ? "Συγκεντρωτική RAM (Shizuku)"
                                  : "Aggregate RAM (Shizuku)", gr ? "Μ/Δ" : "N/A");
             }
+        } else if (op == GelShizukuEvidence.UFS) {
+            GelShizukuEvidence.StorageWear wear = GelShizukuEvidence.parseStorageWear(wire);
+            if (wear == null) return; // no unsupported NAND health claim
+            logInfo((gr ? "Αναφερόμενες ενδείξεις φθοράς ελεγκτή " :
+                            "Reported storage-controller wear: ") +
+                    ("EMMC".equals(wear.technology) ? "eMMC" : "UFS"));
+            if (wear.hasEol()) {
+                String result = wear.preEol == 1
+                        ? (gr ? "Κανονική ένδειξη Pre-EOL" : "Normal Pre-EOL indication")
+                        : wear.preEol == 2
+                        ? (gr ? "Προειδοποίηση ορίου ζωής" : "Lifetime threshold warning")
+                        : (gr ? "Επείγουσα ένδειξη ορίου ζωής" : "Urgent end-of-life indicator");
+                if (wear.preEol >= 2)
+                    logLabelWarnValue(wear.technology + " Pre-EOL", result + " (" + wear.preEol + ")");
+                else
+                    logLabelOkValue("UFS Pre-EOL", result + " (" + wear.preEol + ")");
+            }
+            if (wear.lifetimeA > 0) {
+                String interval = GelShizukuEvidence.StorageWear.lifetimeInterval(wear.lifetimeA);
+                if (wear.lifetimeA >= 10) logLabelWarnValue(wear.technology + " Lifetime A", interval);
+                else logLabelOkValue("UFS Lifetime A", interval);
+            }
+            if (wear.lifetimeB > 0) {
+                String interval = GelShizukuEvidence.StorageWear.lifetimeInterval(wear.lifetimeB);
+                if (wear.lifetimeB >= 10) logLabelWarnValue(wear.technology + " Lifetime B", interval);
+                else logLabelOkValue("UFS Lifetime B", interval);
+            }
+            logInfo(gr ? "Ενδείξεις κατηγοριών φθοράς του ελεγκτή, όχι ακριβές ποσοστό υγείας ή ανεξάρτητη πιστοποίηση NAND."
+                       : "Controller-reported endurance bands, not exact health percent or independent NAND certification.");
+        } else if (op == GelShizukuEvidence.LOW_MEMORY) {
+            int observed = GelShizukuEvidence.parseLmkCount(wire);
+            if (observed > 0) {
+                logLabelValue(gr ? "Καταγεγραμμένοι τερματισμοί λόγω πίεσης RAM"
+                                      : "Observed memory-pressure process kills",
+                        observed + (gr ? " συμβάντα σε περιορισμένο δείγμα Android events"
+                                       : " events in bounded Android events sample"));
+                logInfo(gr ? "Τα συμβάντα αφορούν προηγούμενες διεργασίες, όχι αποδεδειγμένη βλάβη RAM."
+                           : "Observed process terminations are not proof of faulty RAM hardware.");
+            }
+        } else if (op == GelShizukuEvidence.APP_OPS) {
+            java.util.List<GelShizukuEvidence.AppOpAccess> accesses =
+                    GelShizukuEvidence.parseAppOps(wire);
+            if (!accesses.isEmpty()) {
+                logInfo(gr ? "Καταγεγραμμένες προσβάσεις ευαίσθητων λειτουργιών — Shizuku"
+                           : "Recorded sensitive-operation accesses — Shizuku");
+                int shown = 0;
+                for (GelShizukuEvidence.AppOpAccess access : accesses) {
+                    if (shown++ >= 12) break;
+                    logLabelValue(access.packageName + " / " + access.operation,
+                            access.timestamp);
+                }
+                logInfo(gr ? "Μερικό δείγμα AppOps. Το γεγονός πρόσβασης δεν αποδεικνύει κατάχρηση."
+                           : "Partial AppOps sample. Access alone does not establish misuse.");
+            }
         } else if (op == GelShizukuEvidence.BOOT) {
             String reason = GelShizukuEvidence.parseBootReason(wire);
             logLabelValue(gr ? "Λόγος εκκίνησης (Shizuku)"
@@ -27665,6 +27726,7 @@ private void lab18StorageSnapshot() {
             ? "LAB 18 — Απογραφή Εσωτερικού Αποθηκευτικού Χώρου"
             : "LAB 18 — Internal Storage Inventory");
     logLine();
+    gelShizukuSupplement(GelShizukuEvidence.UFS);
 
     try {
 
@@ -28009,6 +28071,7 @@ private void lab19RamSnapshot() {
             : "LAB 19 — Live RAM Health Snapshot");
     logLine();
     gelShizukuSupplement(GelShizukuEvidence.MEMORY);
+    gelShizukuSupplement(GelShizukuEvidence.LOW_MEMORY);
 
     try {
 
@@ -30489,6 +30552,7 @@ private void lab26AppsFootprint() {
     logInfo(gr ? "LAB 26 — Απογραφή εφαρμογών και στοιχεία χρήσης"
                : "LAB 26 — App inventory and usage information");
     logLine();
+    gelShizukuSupplement(GelShizukuEvidence.APP_OPS);
 
     // Preserve existing AppImpactEngine capabilities. Its heuristic rankings
     // do not measure battery draw, background activity or malicious behavior.

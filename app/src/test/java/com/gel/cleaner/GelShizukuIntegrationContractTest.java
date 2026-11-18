@@ -35,6 +35,7 @@ public final class GelShizukuIntegrationContractTest {
         assertTrue(session.contains("Shizuku.requestPermission(REQUEST_CODE)"));
         assertTrue(session.contains("Shizuku.checkSelfPermission()"));
         assertTrue(session.contains("Shizuku.getUid() != 2000"));
+        assertTrue(session.contains("operation > GelShizukuEvidence.APP_OPS"));
         assertTrue(session.contains("Shizuku.bindUserService(args, connection)"));
         assertTrue(session.contains(".daemon(false)"));
         assertTrue(session.contains("Shizuku.unbindUserService(args, connection, true)"));
@@ -58,6 +59,14 @@ public final class GelShizukuIntegrationContractTest {
         assertTrue(service.contains("case GelShizukuEvidence.THERMAL:"));
         assertTrue(service.contains("case GelShizukuEvidence.MEMORY:"));
         assertTrue(service.contains("case GelShizukuEvidence.BOOT:"));
+        assertTrue(service.contains("case GelShizukuEvidence.UFS:"));
+        assertTrue(service.contains("case GelShizukuEvidence.LOW_MEMORY:"));
+        assertTrue(service.contains("case GelShizukuEvidence.APP_OPS:"));
+        assertTrue(service.contains("gel-shell-readonly-drain"));
+        assertTrue(service.contains("health_descriptor"));
+        assertTrue(service.contains("APPOPS|SAMPLED"));
+        assertTrue(service.contains("LMK|"));
+        assertFalse(service.contains("Runtime.getRuntime().exec"));
         assertFalse(service.contains("sh\", \"-c"));
         assertTrue(service.contains("MAX_OUTPUT"));
     }
@@ -75,6 +84,11 @@ public final class GelShizukuIntegrationContractTest {
         assertTrue(activity.contains("gelShizukuSupplement(GelShizukuEvidence.THERMAL)"));
         assertTrue(activity.contains("gelShizukuSupplement(GelShizukuEvidence.MEMORY)"));
         assertTrue(activity.contains("gelShizukuSupplement(GelShizukuEvidence.BOOT)"));
+        assertTrue(activity.contains("gelShizukuSupplement(GelShizukuEvidence.UFS)"));
+        assertTrue(activity.contains("gelShizukuSupplement(GelShizukuEvidence.LOW_MEMORY)"));
+        assertTrue(activity.contains("gelShizukuSupplement(GelShizukuEvidence.APP_OPS)"));
+        assertTrue(activity.contains("lab14HasReportedCapacity = start.chargeFullMah > 0;"));
+        assertFalse(activity.contains("lab14HasReportedCapacity = start.chargeFullMah > 0 || start.chargeDesignMah > 0;"));
         assertTrue(activity.contains("CriticalSystemCrashEvidence.fromShizukuCrashBuffer(wire)"));
         assertFalse(activity.contains("this::lab25ChooseBugReport"));
     }
