@@ -39,3 +39,16 @@
 - GitHub Release και F-Droid εμφάνιζαν προεπιλεγμένο λευκό AlertDialog με αόρατη/δυσανάγνωστη περιγραφή.
 - Διορθώθηκε με απευθείας επίσημο GitHub releases/latest στην ίδια οθόνη iDoctor, κουμπί fallback για browser και custom GEL black/gold dialog με ρητά χρώματα κειμένου/κουμπιών. Το Android εγκαθιστά μόνο μετά από ρητή έγκριση του χρήστη.
 - Μη θεωρηθεί η συγκεκριμένη QA διόρθωση ενσωματωμένη στο ήδη υπογεγραμμένο APK v62. Απαιτούνται νέος έλεγχος και επόμενη υπογεγραμμένη QA κατασκευή.
+
+## Real-device finding: MIUI / Xiaomi pairing, 18 Νοεμβρίου 2026
+
+The physical-device screenshot of Shizuku's pairing page highlights:
+- pairing code entered through **Shizuku's notification**
+- Shizuku may need local-network access and unrestricted background battery mode when the system suppresses background networking
+- some MIUI models may require **Android** notification-shade style to enter the code
+
+The in-app guide now explains the universal 6-digit notification flow and adds an **initially collapsed Xiaomi / Redmi / POCO help section only when Android Build.MANUFACTURER / BRAND identifies that family** (Android 11+). Greek and English strings are both included.
+
+The advanced troubleshooting options are conditional, not requirements: do not require blanket battery-optimization removal, notification-style changes or USB debugging (Security options) from users with functioning pairing. The security-options switch is discussed only when Shizuku itself reports limited ADB permissions. No code is read/stored by GEL, no settings changed silently.
+
+Official grounding: https://shizuku.rikka.app/guide/setup/ (wireless debugging and MIUI FAQ). On other devices the extra panel is not displayed, keeping the guide concise. It remains necessary to verify device detection and settings labels with actual MIUI and HyperOS hardware; no real-device pass claim from JVM CI.
