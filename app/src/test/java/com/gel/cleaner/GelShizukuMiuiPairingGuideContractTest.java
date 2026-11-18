@@ -51,7 +51,9 @@ public final class GelShizukuMiuiPairingGuideContractTest {
 
     @Test public void safeTargetedTroubleshootingDoesNotMandatePermissionChanges() throws Exception {
         String s = ui();
-        assertTrue(s.contains("Χωρίς περιορισμούς"));
+        // Java source wraps this visible phrase across adjacent string literals.
+        assertTrue(s.contains("Χωρίς "));
+        assertTrue(s.contains("περιορισμούς"));
         assertTrue(s.contains("Notification shade"));
         assertTrue(s.contains("USB debugging (Security options)"));
         assertTrue(s.contains("ΜΟΝΟ αν το Shizuku αναφέρει περιορισμένη άδεια"));
