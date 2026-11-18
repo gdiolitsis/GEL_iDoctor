@@ -266,6 +266,7 @@ public final class GelShizukuUi {
                       + "αν δεν το έχεις ήδη. Δεν απαιτείται Google Play."
                     : "1. If needed, install Shizuku from its official website. "
                       + "Google Play is not required.", false);
+            guideText(panel, "shizuku.rikka.app/download/", false);
             guideButton(panel, gr ? "ΕΠΙΣΗΜΗ ΣΕΛΙΔΑ ΛΗΨΗΣ" : "OFFICIAL DOWNLOAD",
                     () -> openOfficialHelp(true));
 
@@ -288,6 +289,7 @@ public final class GelShizukuUi {
             }
             guideButton(panel, gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ ANDROID"
                     : "OPEN ANDROID SETTINGS", () -> openDeveloperSettings());
+            guideText(panel, "shizuku.rikka.app/guide/setup/", false);
             guideButton(panel, gr ? "ΑΝΑΛΥΤΙΚΕΣ ΟΔΗΓΙΕΣ"
                     : "DETAILED INSTRUCTIONS", () -> openOfficialHelp(false));
 
@@ -321,6 +323,8 @@ public final class GelShizukuUi {
                     });
             guideButton(panel, gr ? "ΣΥΝΕΧΕΙΑ ΧΩΡΙΣ SHIZUKU"
                     : "CONTINUE WITHOUT SHIZUKU", () -> {
+                        // This explicit choice revokes GEL's local opt-in.
+                        session.stop();
                         if (setupDialog != null) setupDialog.dismiss();
                     });
 
@@ -403,7 +407,10 @@ public final class GelShizukuUi {
         public void readAsync(int operation, GelShizukuDiagnosticSession.EvidenceCallback callback) {
             session.readAsync(operation, callback);
         }
-        public void close() { session.close(); }
+        public void close() {
+            if (setupDialog != null && setupDialog.isShowing()) setupDialog.dismiss();
+            session.close();
+        }
 
         private int dp(float size) {
             return (int) (size * activity.getResources().getDisplayMetrics().density + 0.5f);
