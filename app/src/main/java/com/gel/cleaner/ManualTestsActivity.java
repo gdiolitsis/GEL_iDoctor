@@ -393,6 +393,9 @@ private int durationSec;
 private boolean gr;
 
 private long startMah;
+// Each 14A, 14B and 14Γ run gets its own timed discharge evidence.
+private volatile Lab14DischargeTrace lab14ATrace;
+private volatile Lab14DischargeTrace lab14DurationTrace;
 private long baselineFullMah;
 private volatile boolean lab14HasReportedCapacity;
 private long t0;
@@ -13870,6 +13873,8 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
 
     // 🔴 BASE VALUES
     startMah = start.chargeNowMah;
+    lab14ATrace = new Lab14DischargeTrace();
+    lab14ATrace.addSample(SystemClock.elapsedRealtime(), start.chargeNowMah, start.currentMa, start.charging);
     cycles = start.cycleCount;
 
     Float tStart0 = idoctor.getBatteryTempUnified();
@@ -16028,6 +16033,10 @@ if (invalidStructure) {
 
 // 🔴 END CHARGE (PRIMARY)
 final long endMah = snapEnd.chargeNowMah;
+if (lab14ATrace != null) {
+    lab14ATrace.addSample(SystemClock.elapsedRealtime(),
+            snapEnd.chargeNowMah, snapEnd.currentMa, snapEnd.charging);
+}
 
 // 🔴 PRIMARY DRAIN (MOST RELIABLE)
 long directDrainMah = -1;
@@ -16206,27 +16215,30 @@ if (samplingValid && lab14DeltaMah > 0 && dtMs > 0) {
             (lab14DeltaMah * 3600000.0) / dtMs;
 }
 
-// 🔴 TAKE MAX CREDIBLE
-double bestRate = 0;
-
-if (!Double.isNaN(directRate))
-    bestRate = Math.max(bestRate, directRate);
-
-if (!Double.isNaN(engineRate))
-    bestRate = Math.max(bestRate, engineRate);
-
-if (!Double.isNaN(sampleRate))
-    bestRate = Math.max(bestRate, sampleRate);
-
-if (bestRate > 0) {
-
+// FULL-DURATION DISCHARGE EVIDENCE — never choose the maximum of
+// unrelated rates or certify a run from sparse / contradictory samples.
+Lab14DischargeTrace.Result trace14A = lab14ATrace == null
+        ? Lab14DischargeTrace.Result.unavailable("NO_SESSION")
+        : lab14ATrace.evaluate(dtMs);
+double bestRate = trace14A.valid ? trace14A.rateMahPerHour : 0d;
+if (bestRate > 0d && bestRate <= 20000d) {
     mahPerHour = bestRate;
-
-    drainMah = Math.round(
-            (float)(bestRate * dtMs / 3600000.0)
-    );
-
-    validDrain = true;
+    drainMah = Math.round((float) (bestRate * dtMs / 3600000.0));
+    validDrain = drainMah > 0;
+} else {
+    mahPerHour = 0d;
+    drainMah = 0;
+    validDrain = false;
+}
+if (!trace14A.valid) {
+    logInfo(gr
+            ? "Κατανάλωση 14A: Μ/Δ — ανεπαρκής ή ασυνεπής χρονική κάλυψη (" + trace14A.reason + ")"
+            : "14A consumption: N/A — insufficient or inconsistent time coverage (" + trace14A.reason + ")");
+} else {
+    logInfo(String.format(Locale.US,
+            gr ? "14A: Συνεχής καταγραφή %s, κάλυψη charge %.0f%% / ρεύματος %.0f%%"
+               : "14A: continuous %s trace, charge %.0f%% / current %.0f%% coverage",
+            trace14A.source, trace14A.counterCoveragePct, trace14A.currentCoveragePct));
 }
 
 // ----------------------------------------------------
@@ -17772,6 +17784,11 @@ iDoctorEngine.BatterySnapshot snapNow =
         iDoctorEngine.get(ManualTestsActivity.this)
                 .readBatterySnapshotLab();
 
+if (snapNow != null && lab14ATrace != null) {
+    lab14ATrace.addSample(SystemClock.elapsedRealtime(),
+            snapNow.chargeNowMah, snapNow.currentMa, snapNow.charging);
+}
+
 if (snapNow != null &&
     snapNow.chargeNowMah > 0 &&
     snapNow.chargeNowMah < 100000) {
@@ -18211,6 +18228,11 @@ try {
     iDoctorEngine.BatterySnapshot snapNow =
             iDoctorEngine.get(ManualTestsActivity.this)
                     .readBatterySnapshotLab();
+
+if (snapNow != null && lab14ATrace != null) {
+    lab14ATrace.addSample(SystemClock.elapsedRealtime(),
+            snapNow.chargeNowMah, snapNow.currentMa, snapNow.charging);
+}
 
     if (snapNow != null &&
         snapNow.chargeNowMah > 0 &&
@@ -18917,90 +18939,31 @@ if (!Float.isNaN(startBatteryTemp) &&
 // ----------------------------------------------------
 // 🔴 DRAIN (FIXED - REAL CONSUMPTION)
 // ----------------------------------------------------
-long drainNow = 0L;
-
-if (isLab14BMode) {
-
-    iDoctorEngine.BatterySnapshot snapNow =
-            iDoctorEngine.get(ManualTestsActivity.this)
-                    .readBatterySnapshotLab();
-
-    if (snapNow != null &&
-        snapNow.chargeNowMah > 0 &&
-        startMah > 0) {
-
-        long diff = startMah - snapNow.chargeNowMah;
-
-        if (diff > 0 && diff < 10000) { // 🔴 HARD FILTER
-            drainNow = diff;
-        }
-    }
-
-} else {
-
-    // 🔴 NORMAL MODE → use FIRST vs LAST (όχι max/min)
-    if (!lab14ChargeSamples.isEmpty() &&
-        startMah > 0) {
-
-        long last =
-                lab14ChargeSamples.get(
-                        lab14ChargeSamples.size() - 1
-                );
-
-        long diff = startMah - last;
-
-        if (diff > 0 && diff < 10000) { // 🔴 HARD FILTER
-            drainNow = diff;
-        }
-    }
-}
-
-// ----------------------------------------------------
-// 🔴 RATE (FIXED - CONSISTENT)
-// ----------------------------------------------------
 double drainPerHour = Double.NaN;
-
-// 🔴 REQUIRE MIN WINDOW
-if (elapsed >= 10) {
-
-    if (drainNow > 0) {
-
-        double rate =
-                (drainNow * 3600.0) / elapsed;
-
-        // 🔴 HARD FILTER
-        if (rate >= 10 && rate <= 8000) {
-            drainPerHour = rate;
-        }
-
-    } else {
-
-        // 🔴 FALLBACK → current (converted properly)
-float currentFallback = lab14Current();
-
-if (!Float.isNaN(currentFallback) &&
-    Math.abs(currentFallback) >= 50f &&
-    Math.abs(currentFallback) <= 8000f) {
-
-    drainPerHour = Math.abs(currentFallback);
-}
+if (isLab14BMode || isLab14GamaMode) {
+    // Live rate comes from THIS 14B / 14Γ session, never from Lab14A's startMah.
+    Lab14DischargeTrace trace = lab14DurationTrace;
+    if (trace != null && elapsed >= 20) {
+        Lab14DischargeTrace.Result live = trace.evaluate(elapsed * 1000L);
+        if (live.valid) drainPerHour = live.rateMahPerHour;
     }
-}
-
-    // ----------------------------------------------------
-// 🔴 COLLECT AVERAGE (FIXED - STABLE)
-// ----------------------------------------------------
-if (!Double.isNaN(drainPerHour) && drainPerHour > 0) {
-
-    // 🔴 HARD FILTER (same as engine)
-    if (drainPerHour >= 10 && drainPerHour <= 5000) {
-
-        // 🔴 OPTIONAL: ignore early unstable phase
-        if (elapsed >= 10) {
-
-            rateSum += drainPerHour;
-            rateSamples++;
-        }
+} else {
+    // Existing Lab14A real-time rate, for load / thermal feedback only.
+    long drainNow = 0L;
+    if (!lab14ChargeSamples.isEmpty() && startMah > 0) {
+        long last = lab14ChargeSamples.get(lab14ChargeSamples.size() - 1);
+        long diff = startMah - last;
+        if (diff > 0 && diff < 10000) drainNow = diff;
+    }
+    if (elapsed >= 10 && drainNow > 0) {
+        double rate = (drainNow * 3600.0) / elapsed;
+        if (rate >= 10d && rate <= 8000d) drainPerHour = rate;
+    }
+    if (Double.isNaN(drainPerHour) && elapsed >= 10) {
+        float currentFallback = lab14Current();
+        if (!Float.isNaN(currentFallback) && Math.abs(currentFallback) >= 50f
+                && Math.abs(currentFallback) <= 8000f)
+            drainPerHour = Math.abs(currentFallback);
     }
 }
 
@@ -22115,6 +22078,10 @@ synchronized (lab14Lock) {
         }
 
 startMah[0] = snap0.chargeNowMah;
+final Lab14DischargeTrace durationTrace = new Lab14DischargeTrace();
+lab14DurationTrace = durationTrace;
+durationTrace.addSample(SystemClock.elapsedRealtime(),
+        snap0.chargeNowMah, snap0.currentMa, snap0.charging);
 
 // ------------------------------------------------
 // 🔴 BASELINE CAPACITY (DYNAMIC, NO HARDCODE)
@@ -22513,6 +22480,7 @@ usageHandler.post(usageLoop);
 new Handler(Looper.getMainLooper()).postDelayed(() -> {
 
     try {
+        if (mySessionId != lab14SessionId || lab14Cancelled) return;
 
         stopFastStressSafe();
 
@@ -22595,67 +22563,27 @@ if (!Float.isNaN(endVolt[0])) {
 }
 
 // ------------------------------------------------
-// REAL DRAIN + AUTO SWITCH
-// ------------------------------------------------
-long drain = -1L;
-
-boolean hasChargeCounter =
-        startMah[0] > 0 && endMah[0] > 0;
-
-double liveCurrentMa = lab14Current();
-
-boolean fakeCounter = false;
-
-if (hasChargeCounter) {
-
-    drain = Math.max(0L, startMah[0] - endMah[0]);
-
-    // 🔴 πιο safe fake detection
-    if (drain < 1 && Math.abs(liveCurrentMa) > 150) {
-        fakeCounter = true;
-    }
-}
-
-// ------------------------------------------------
-// RESULTS INIT
-// ------------------------------------------------
-float perHour = Float.NaN;
-
-// 🔴 keep only if still needed elsewhere
+// FULL TEST DRAIN: use all timestamped observations from this run.
+// A few late samples are NOT sufficient to score a five-minute test.
+endMah[0] = snapEnd.chargeNowMah;
+durationTrace.addSample(SystemClock.elapsedRealtime(),
+        snapEnd.chargeNowMah, snapEnd.currentMa, snapEnd.charging);
+Lab14DischargeTrace.Result durationEvidence = durationTrace.evaluate(300000L);
+float perHour = durationEvidence.valid
+        ? (float) durationEvidence.rateMahPerHour : Float.NaN;
 float estimatedHours = Float.NaN;
-
-// ------------------------------------------------
-// 🔴 PRIMARY → AVERAGE RATE (REAL DATA)
-// ------------------------------------------------
-if (rateSamples >= 5) { // 🔴 όχι απλά >0
-
-    perHour = (float) (rateSum / rateSamples);
-
+boolean fakeCounter = durationEvidence.valid
+        && "CURRENT_INTEGRATION".equals(durationEvidence.source);
+if (durationEvidence.valid) {
+    logInfo(String.format(Locale.US,
+            gr ? "Κάλυψη μέτρησης: charge %.0f%% / ρεύμα %.0f%% (%s)"
+               : "Measurement coverage: charge %.0f%% / current %.0f%% (%s)",
+            durationEvidence.counterCoveragePct,
+            durationEvidence.currentCoveragePct, durationEvidence.source));
 } else {
-
-    // ------------------------------------------------
-    // 🔴 FALLBACK → OLD LOGIC
-    // ------------------------------------------------
-    if (baselineMah[0] > 0) {
-
-        if (drain > 0 && !fakeCounter) {
-
-            perHour = (drain / 5f) * 60f;
-
-        } else if (!Double.isNaN(liveCurrentMa) && Math.abs(liveCurrentMa) >= 50d) {
-
-            perHour = (float) Math.abs(liveCurrentMa);
-        }
-    }
-}
-
-// ------------------------------------------------
-// 🔴 SANITY CLAMP (CRITICAL)
-// ------------------------------------------------
-if (!Float.isNaN(perHour) &&
-        (Float.isInfinite(perHour) || perHour <= 0f || perHour > 20000f)) {
-    // Invalid or implausible rate: UNKNOWN, never fabricate 50 or 5000 mAh/h.
-    perHour = Float.NaN;
+    logWarn(gr
+            ? "Ανεπαρκής ή ασυνεπής συνεχής μέτρηση — κατανάλωση Μ/Δ (" + durationEvidence.reason + ")"
+            : "Insufficient or inconsistent continuous measurement — consumption N/A (" + durationEvidence.reason + ")");
 }
 
 // --------------------------------------
@@ -22782,8 +22710,8 @@ logLine();
 if (fakeCounter) {
 
     logWarn(gr
-        ? "Ο αισθητήρας charge counter φαίνεται μη αξιόπιστος — γίνεται χρήση εκτίμησης βάσει ρεύματος"
-        : "Charge counter appears unreliable — switched to current-based estimation");
+        ? "Ο μετρητής charge counter δεν είχε επαρκή συνεχή δεδομένα — χρήση χρονοσταθμισμένης μέτρησης ρεύματος"
+        : "Charge counter coverage insufficient — using time-weighted current measurements");
 }
 
 // 🔴 SAFE OUTPUT
@@ -24027,6 +23955,18 @@ statusText.setText(
                     }
                 }
 
+                // One battery observation per second throughout 14B / 14Γ.
+                // UI refresh can remain 200 ms; hardware polling need not.
+                Lab14DischargeTrace trace = lab14DurationTrace;
+                if (trace != null && trace.shouldSample(now)) {
+                    try {
+                        iDoctorEngine.BatterySnapshot sample =
+                                iDoctorEngine.get(ManualTestsActivity.this).readBatterySnapshotLab();
+                        if (sample != null)
+                            trace.addSample(now, sample.chargeNowMah,
+                                    sample.currentMa, sample.charging);
+                    } catch (Throwable ignored) {}
+                }
                 updateLab14LiveStats();
 
                 if (elapsed >= durationSec) {
