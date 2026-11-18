@@ -987,7 +987,6 @@ private boolean oldKeepScreenOn = false;
                                 ? "Επαγγελματική διάγνωση μπαταρίας\n\n" +
                                   "Το LAB 14A πραγματοποιεί προηγμένο stress test και αξιολογεί:\n\n" +
                                   "✓ Πτώση τάσης υπό φορτίο (Voltage Sag)\n" +
-                                  "✓ Πειραματικός δείκτης μεταβολής τάσης (όχι ESR)\n" +
                                   "✓ Ανάκαμψη τάσης μετά από φορτίο\n" +
                                   "✓ Ικανότητα παροχής ισχύος\n" +
                                   "✓ Θερμική συμπεριφορά υπό καταπόνηση\n" +
@@ -998,7 +997,6 @@ private boolean oldKeepScreenOn = false;
                                 : "Professional battery diagnostics\n\n" +
                                   "LAB 14A performs an advanced stress test and evaluates:\n\n" +
                                   "✓ Voltage sag under load\n" +
-                                  "✓ Experimental voltage-response proxy (not ESR)\n" +
                                   "✓ Voltage recovery after load\n" +
                                   "✓ Power delivery capability\n" +
                                   "✓ Thermal behavior under stress\n" +
@@ -14286,81 +14284,23 @@ boolean sagValid =
         finalSag < 1.0f;
 
 
+// Emit a single assessed sag result here, not in the early progress report.
 if (!sagValid) {
-
-    logLabelWarnValue(
-            gr ? "Πτώση τάσης υπό φορτίο"
-               : "Voltage sag under load",
-            gr ? "Μη μετρήσιμη"
-               : "Not measurable"
-    );
-
+    logLabelValue(gr ? "Πτώση τάσης υπό φορτίο" : "Voltage sag under load",
+            gr ? "Μη μετρήσιμη" : "Not measurable");
 } else {
-
-    // =================================================
-    // 🔴 SINGLE SAG CLASSIFIER — USER-FRIENDLY FINAL
-    // =================================================
-    // Keep the same user-visible label across:
-    // - quick stress output
-    // - stress result
-    // - final result
-    // Small sag gets the benefit of the doubt so we do not
-    // alarm users for a healthy low-voltage-drop battery.
-    if (finalSag < 0.045f) {
-        labelSafe = "Excellent";
-    }
-    else if (finalSag < 0.080f) {
-        labelSafe = "Normal";
-    }
-    else if (finalSag < 0.120f) {
-        labelSafe = "Weak";
-    }
-    else {
-        labelSafe = "Critical";
-    }
-
+    if (finalSag < 0.045f) labelSafe = "Excellent";
+    else if (finalSag < 0.080f) labelSafe = "Normal";
+    else if (finalSag < 0.120f) labelSafe = "Weak";
+    else labelSafe = "Critical";
     res.label = labelSafe;
     lab14LastLabel = labelSafe;
-
-    String sagText = String.format(
-            Locale.US,
-            "%.3f V (%s)",
-            finalSag,
-            lab14DisplayStressClass(labelSafe, gr)
-    );
-
-
-    if ("Critical".equals(labelSafe)) {
-
-        logLabelWarnValue(
-                gr ? "Πτώση τάσης υπό φορτίο (πειραματική)" : "Voltage sag (experimental)",
-                sagText
-        );
-
-    } else if ("Weak".equals(labelSafe)) {
-
-        logLabelWarnValue(
-                gr ? "Πτώση τάσης υπό φορτίο"
-                   : "Voltage sag under load",
-                sagText
-        );
-
-    } else if ("Normal".equals(labelSafe)) {
-
-        logLabelValue(
-                gr ? "Πτώση τάσης υπό φορτίο"
-                   : "Voltage sag under load",
-                sagText
-        );
-
-    } else {
-
-        // Excellent
-        logLabelValue(
-                gr ? "Πτώση τάσης υπό φορτίο (πειραματική)" : "Voltage sag (experimental)",
-                sagText
-        );
-    }
+    String sagText = String.format(Locale.US, "%.3f V (%s)",
+            finalSag, lab14DisplayStressClass(labelSafe, gr));
+    if ("Critical".equals(labelSafe) || "Weak".equals(labelSafe))
+        logLabelWarnValue(gr ? "Πτώση τάσης υπό φορτίο" : "Voltage sag under load", sagText);
+    else
+        logLabelOkValue(gr ? "Πτώση τάσης υπό φορτίο" : "Voltage sag under load", sagText);
 }
 
 // =====================================================
@@ -14455,29 +14395,6 @@ if (rValid) {
         );
     }
 
-} else {   // ✅ αυτό έλειπε
-
-    if (!Float.isNaN(finalSag)) {
-
-        // Hypothetical 2 A denominator; never report as measured ESR.
-        float rEst = finalSag * 1000f / 2.0f;
-
-        logLabelValue(
-            gr ? "Πειραματικός δείκτης ΔV/2A" : "Experimental ΔV/2A proxy",
-            String.format(
-               Locale.US,
-               gr ? "~%.0f mΩ (υπόθεση 2 A, όχι ESR)" : "~%.0f mΩ (assumed 2 A, not ESR)",
-               rEst
-            )
-        );
-
-    } else {
-
-        logLabelValue(
-            gr ? "Δυναμικός δείκτης αντίστασης" : "Dynamic resistance proxy",
-            "N/A"
-        );
-    }
 }
 
 // =====================================================
@@ -15955,12 +15872,8 @@ if (!hasReliableSag) {
     res.label = "Insufficient electrical data";
     lab14LastLabel = res.label;
 
-    logLabelWarnValue(
-            gr ? "Πτώση τάσης υπό φορτίο"
-               : "Voltage sag under load",
-            gr ? "Μη μετρήσιμο voltage sag"
-               : "No measurable voltage sag"
-    );
+    // Report unavailable voltage sag once in the result section.
+
 
 } else {
 
@@ -15992,35 +15905,8 @@ if (!hasReliableSag) {
 
     lab14LastLabel = res.label;
 
-    String sagText = String.format(
-            Locale.US,
-            "%.3f V (%s)",
-            finalSag,
-            lab14DisplayStressClass(sagLabel, gr)
-    );
-
-    if ("Critical".equals(sagLabel)) {
-
-        logLabelWarnValue(
-                gr ? "Πτώση τάσης υπό φορτίο (πειραματική)" : "Voltage sag (experimental)",
-                sagText
-        );
-
-    } else if ("Weak".equals(sagLabel)) {
-
-        logLabelWarnValue(
-                gr ? "Πτώση τάσης υπό φορτίο"
-                   : "Voltage sag under load",
-                sagText
-        );
-
-    } else {
-
-        logLabelValue(
-                gr ? "Πτώση τάσης υπό φορτίο (πειραματική)" : "Voltage sag (experimental)",
-                sagText
-        );
-    }
+    // Keep classification for later calculations; emit sag only in
+    // lab14LogStressResult(), with the correct per-value color.
 }
 
 // ----------------------------------------------------
