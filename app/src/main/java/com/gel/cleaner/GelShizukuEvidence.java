@@ -47,9 +47,11 @@ public final class GelShizukuEvidence {
     /** UFS health descriptor bytes: not measured NAND throughput or an exact
      * remaining lifespan. 1-10 are lifetime-used deciles; 11 means >100%.
      * EOL 1 normal, 2 warning, 3 urgent; 0 unknown. */
-    public static final class UfsWear {
+    public static final class StorageWear {
+        public final String technology; // UFS or EMMC from kernel evidence
         public final int lifetimeA, lifetimeB, preEol;
-        private UfsWear(int a, int b, int e) {
+        private StorageWear(String type, int a, int b, int e) {
+            technology = type;
             lifetimeA = a;
             lifetimeB = b;
             preEol = e;
@@ -67,8 +69,8 @@ public final class GelShizukuEvidence {
         }
     }
 
-    public static UfsWear parseUfs(String wire) {
-        if (wire == null || !wire.matches("UFS\\|[0-9]{1,3}\\|[0-9]{1,3}\\|[0-9]{1,3}"))
+    public static StorageWear parseStorageWear(String wire) {
+        if (wire == null || !wire.matches("(?:UFS|EMMC)\\|[0-9]{1,3}\\|[0-9]{1,3}\\|[0-9]{1,3}"))
             return null;
         String[] parts = wire.split("\\|");
         try {
@@ -77,7 +79,7 @@ public final class GelShizukuEvidence {
             int e = Integer.parseInt(parts[3]);
             if (a < 0 || a > 11 || b < 0 || b > 11 || e < 0 || e > 3
                     || (a == 0 && b == 0 && e == 0)) return null;
-            return new UfsWear(a, b, e);
+            return new StorageWear(parts[0], a, b, e);
         } catch (RuntimeException invalid) {
             return null;
         }
