@@ -2,6 +2,8 @@ package com.gel.cleaner;
 
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Handler;
@@ -24,6 +26,9 @@ public final class GelShizukuDiagnosticSession {
     public interface EvidenceCallback { void onEvidence(String wire); }
 
     private static final int REQUEST_CODE = 14325;
+    private static final String CONSENT_PREFS = "gel_shizuku_consent";
+    private static final String APPROVED_KEY = "approved_readonly_diagnostics";
+    private final SharedPreferences consent;
     private final Activity activity;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
@@ -34,6 +39,13 @@ public final class GelShizukuDiagnosticSession {
     private volatile boolean userRequested;
     private volatile boolean bound;
     private volatile boolean closed;
+
+    /** Rebind when Shizuku finishes attaching after the Activity opens.
+     * Never launch a system permission dialog merely because a binder arrived. */
+    private final Shizuku.OnBinderReceivedListener binderReceived = () -> {
+        if (closed || !userRequested || !hasRememberedConsent()) return;
+        bindIfAlreadyPermitted();
+    };
 
     private final Shizuku.OnBinderDeadListener binderDead = () -> {
         remote = null;
@@ -46,13 +58,23 @@ public final class GelShizukuDiagnosticSession {
             (code, result) -> {
                 if (code != REQUEST_CODE || !userRequested || closed) return;
                 if (result == PackageManager.PERMISSION_GRANTED) bindIfPermitted();
-                else report("DENIED");
+                else {
+                    consent.edit().putBoolean(APPROVED_KEY, false).apply();
+                    userRequested = false;
+                    report("DENIED");
+                }
             };
 
     private final ServiceConnection connection = new ServiceConnection() {
         @Override public void onServiceConnected(ComponentName name, IBinder binder) {
             if (closed || !userRequested) return;
             remote = IGelShizukuReadOnly.Stub.asInterface(binder);
+            if (!isReady()) {
+                remote = null;
+                bound = false;
+                report("PERMISSION_UNAVAILABLE");
+                return;
+            }
             report("READY");
             // Cache only the small battery-capacity record; no background
             // crash or personal-log harvesting.
@@ -71,6 +93,7 @@ public final class GelShizukuDiagnosticSession {
     public GelShizukuDiagnosticSession(Activity activity, StatusListener listener) {
         this.activity = activity;
         this.listener = listener;
+        this.consent = activity.getSharedPreferences(CONSENT_PREFS, Context.MODE_PRIVATE);
         args = new Shizuku.UserServiceArgs(
                 new ComponentName(activity, GelShizukuReadOnlyService.class))
                 .tag("gel-idoctor-readonly-diagnostics-v1")
@@ -79,10 +102,14 @@ public final class GelShizukuDiagnosticSession {
                 .daemon(false);
         Shizuku.addBinderDeadListener(binderDead);
         Shizuku.addRequestPermissionResultListener(permissionResult);
+        Shizuku.addBinderReceivedListenerSticky(binderReceived);
     }
 
+    /** Local consent records a conscious tap on GEL's YES control.
+     * Shizuku's own permission is always checked independently. */
     public void requestFromUser() {
         if (closed) return;
+        consent.edit().putBoolean(APPROVED_KEY, true).apply();
         userRequested = true;
         try {
             if (!Shizuku.pingBinder()) {
@@ -111,6 +138,47 @@ public final class GelShizukuDiagnosticSession {
             Shizuku.requestPermission(REQUEST_CODE);
         } catch (RuntimeException failure) {
             report("SHIZUKU_NOT_RUNNING");
+        }
+    }
+
+    public boolean hasRememberedConsent() {
+        return consent.getBoolean(APPROVED_KEY, false);
+    }
+
+    /** Open an already-approved session after screen recreation.
+     * This method MUST NOT call requestPermission or bypass Shizuku's grant. */
+    public void restoreApprovedSession() {
+        if (closed || !hasRememberedConsent()) return;
+        userRequested = true;
+        if (!Shizuku.pingBinder()) {
+            report("SHIZUKU_NOT_RUNNING");
+            return; // binderReceived will retry if the server becomes ready
+        }
+        bindIfAlreadyPermitted();
+    }
+
+    private void bindIfAlreadyPermitted() {
+        if (closed || !userRequested || !hasRememberedConsent()) return;
+        try {
+            if (!Shizuku.pingBinder()) {
+                report("SHIZUKU_NOT_RUNNING");
+                return;
+            }
+            if (Shizuku.isPreV11() || Shizuku.getVersion() < 13) {
+                report("OUTDATED_SHIZUKU");
+                return;
+            }
+            if (Shizuku.getUid() != 2000) {
+                report("ADB_SHELL_ONLY");
+                return;
+            }
+            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                report("PERMISSION_UNAVAILABLE");
+                return;
+            }
+            bindIfPermitted(); // grant verified; never requests new permission
+        } catch (RuntimeException failure) {
+            report("SERVICE_UNAVAILABLE");
         }
     }
 
@@ -176,7 +244,15 @@ public final class GelShizukuDiagnosticSession {
         });
     }
 
+    /** Explicit STOP is opt-out; ordinary Activity close is NOT a revocation. */
     public void stop() {
+        endSession(true);
+    }
+
+    private void endSession(boolean forgetLocalConsent) {
+        if (forgetLocalConsent) {
+            consent.edit().putBoolean(APPROVED_KEY, false).apply();
+        }
         userRequested = false;
         remote = null;
         cachedCapacity = null;
@@ -191,10 +267,11 @@ public final class GelShizukuDiagnosticSession {
 
     public void close() {
         if (closed) return;
-        stop();
+        endSession(false); // preserve explicit approval for next screen visit
         closed = true;
         try {
             Shizuku.removeBinderDeadListener(binderDead);
+            Shizuku.removeBinderReceivedListener(binderReceived);
             Shizuku.removeRequestPermissionResultListener(permissionResult);
         } catch (RuntimeException ignored) { }
         worker.shutdownNow();
