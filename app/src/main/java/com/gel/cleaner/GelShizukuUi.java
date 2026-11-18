@@ -266,7 +266,7 @@ public final class GelShizukuUi {
                       + "that Android normally restricts for ordinary apps. "
                       + "This will let me analyze the tests you run in greater "
                       + "depth. If you agree, continue by installing Shizuku "
-                      + "and follow its setup instructions.", false);
+                      + "and follow its setup instructions.", false, 0xFF39FF14);
             guideText(panel, gr
                     ? "Θα σε καθοδηγήσω μέσα στο iDoctor. Το Android θα ανοίξει "
                       + "προσωρινά τις δικές του οθόνες για εγκατάσταση και "
@@ -364,9 +364,15 @@ public final class GelShizukuUi {
         }
 
         private void guideText(LinearLayout panel, String value, boolean title) {
+            guideText(panel, value, title, Color.WHITE);
+        }
+
+        /** Only the optional Shizuku introduction is neon green.
+         * Titles and step-by-step instructions remain legible white. */
+        private void guideText(LinearLayout panel, String value, boolean title, int textColor) {
             TextView t = new TextView(activity);
             t.setText(value);
-            t.setTextColor(Color.WHITE);
+            t.setTextColor(textColor);
             t.setTextSize(title ? 19f : 14f);
             if (title) t.setTypeface(null, Typeface.BOLD);
             t.setPadding(0, dp(7), 0, dp(7));
