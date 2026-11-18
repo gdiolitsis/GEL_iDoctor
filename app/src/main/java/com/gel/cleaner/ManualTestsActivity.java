@@ -28037,6 +28037,33 @@ if (corruptionScore >= 60) {
             );
         }
 
+        // App-cache I/O sample (not an indication of NAND wear or controller health).
+        appendHtml("<br>");
+        logInfo(gr ? "Δοκιμή εγγραφής/ανάγνωσης αρχείου (4 KB)"
+                   : "File write/read check (4 KB)");
+        long storageProbeLatency = storageLatencyProbe();
+        if (storageProbeLatency < 0) {
+            logLabelWarnValue(gr ? "Δοκιμή αποθήκευσης" : "Storage test",
+                    gr ? "Η δοκιμή αρχείου δεν ολοκληρώθηκε. Επαναλάβετε τον έλεγχο."
+                       : "The file test did not complete. Retry the check.");
+        } else {
+            logLabelOkValue(gr ? "Δοκιμή αποθήκευσης" : "Storage test",
+                    gr ? "Επιτυχής εγγραφή και ανάγνωση αρχείου 4 KB."
+                       : "Successfully wrote and read a 4 KB file.");
+            logLabelOkValue(gr ? "Έλεγχος δεδομένων" : "Data verification",
+                    gr ? "Τα δεδομένα που διαβάστηκαν ταιριάζουν ακριβώς."
+                       : "The read-back data matched exactly.");
+            logLabelOkValue(gr ? "Χρόνος δοκιμής" : "Test duration",
+                    storageProbeLatency == 0
+                        ? (gr ? "Λιγότερο από 1 ms" : "Less than 1 ms")
+                        : storageProbeLatency + " ms");
+        }
+        logLabelValue(gr ? "Όριο ελέγχου" : "Test scope",
+                gr ? "Ελέγχθηκε μόνο αρχείο προσωρινής μνήμης. "
+                     + "Δεν μετρήθηκε φθορά NAND ή υγεία ελεγκτή."
+                   : "Only an app-cache file was tested. "
+                     + "NAND wear and controller health were not measured.");
+
         appendHtml("<br>");
         logOk(gr ? "Το Lab 18 ολοκληρώθηκε (απογραφή διαθέσιμου αποθηκευτικού χώρου)."
                  : "Lab 18 finished (available-storage inventory).");
@@ -28295,14 +28322,15 @@ private void lab20UptimeHints() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 20 — Χρόνος Λειτουργίας Συστήματος & Συμπεριφορά Επανεκκινήσεων"
-            : "LAB 20 — System Uptime & Reboot Behaviour");
+            ? "LAB 20 — Χρόνος Λειτουργίας Συστήματος"
+            : "LAB 20 — System Uptime");
     logLine();
 
     try {
 
         long upMs = SystemClock.elapsedRealtime();
-        uptimeCaptured = upMs >= 0L;
+        if (upMs < 0L) throw new IllegalStateException("Uptime unavailable");
+        uptimeCaptured = true;
         String upStr = formatUptime(upMs);
 
         logInfo(gr ? "Χρόνος λειτουργίας συστήματος:" : "System uptime:");
@@ -28324,15 +28352,11 @@ private void lab20UptimeHints() {
 
         if (veryRecentReboot) {
 
-            logInfo(gr ? "Πρόσφατη εκκίνηση συσκευής — όχι ένδειξη βλάβης."
-                       : "Device booted recently — not evidence of a fault.");
-            logInfo(gr ? "Καταγράφηκε πρόσφατη εκκίνηση της συσκευής."
-                       : "The phone was started recently.");
+            // Uptime proves a recent start, never its cause or prior frequency.
             logLabelValue(
-                    gr ? "Σημείωση" : "Note",
-                    gr
-                            ? "Οι διαγνώσεις είναι έγκυρες αλλά όχι πλήρως αντιπροσωπευτικές ακόμη"
-                            : "Diagnostics are valid but not fully representative yet"
+                    gr ? "Ερμηνεία" : "Interpretation",
+                    gr ? "Λιγότερες από 2 ώρες από την τελευταία εκκίνηση. Δεν προσδιορίζεται η αιτία της."
+                       : "Less than 2 hours since the last boot. Its cause is not known."
             );
 
         } else if (veryLongUptime) {
@@ -28393,13 +28417,8 @@ private void lab20UptimeHints() {
             // /proc/vmstat 'oom_kill' is a counter, not a causal analysis
             // or a direct Android app-management diagnosis.
 
-            // Root access alone does not provide reboot history. A short
-            // uptime proves only that the device booted recently.
-            logLabelInfoValue(
-                    gr ? "Ιστορικό επανεκκινήσεων" : "Reboot history",
-                    gr ? "Δεν συλλέχθηκε επαληθευμένο ιστορικό επανεκκινήσεων"
-                       : "Verified reboot event history was not collected"
-            );
+            // Root access does not itself provide reboot-event history.
+            // The limitation is reported once for all devices below.
 
             if (hasObservedOomKills) {
 
@@ -28441,32 +28460,20 @@ private void lab20UptimeHints() {
     }
 
 // ----------------------------------------------------
-// SUMMARY (Structured / Color-coded)
+// Reboot-history coverage: cannot be inferred from elapsedRealtime()
 // ----------------------------------------------------
 appendHtml("<br>");
-logInfo(gr ? "Σύνοψη επανεκκινήσεων" : "Reboot summary");
+logInfo(gr ? "Διαθεσιμότητα ιστορικού επανεκκινήσεων"
+           : "Reboot-history availability");
 logLine();
-
-// No historical reboot-event series is collected by this Lab.
-// Never translate "no evidence" into a NORMAL verdict.
-RebootHistoryEvidence.Verdict rebootVerdict =
-        RebootHistoryEvidence.classify(-1, 0L);
-if (rebootVerdict == RebootHistoryEvidence.Verdict.INSUFFICIENT_DATA) {
-    // Informational blue value, *not* a successful reboot-history test.
-    logLabelInfoValue(
-            gr ? "Ιστορικό επανεκκινήσεων" : "Reboot history",
-            gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ ΙΣΤΟΡΙΚΟ" : "HISTORY UNAVAILABLE"
-    );
-} else {
-    // Reserved for future verified, timestamped reboot histories.
-    logLabelWarnValue(
-            "REBOOT_PATTERN",
-            rebootVerdict == RebootHistoryEvidence.Verdict.REPEATED_OBSERVED
-                    ? (gr ? "ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΕΣ" : "REPEATED")
-                    : (gr ? "ΔΕΝ ΕΠΑΛΗΘΕΥΤΗΚΑΝ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΕΣ" : "NO REPEATED EVENTS OBSERVED")
-    );
-}
-GELServiceLog.info("SUMMARY: REBOOT_PATTERN=" + rebootVerdict.name());
+// Uptime, including when measured with root, is NOT a series of reboot events.
+logLabelInfoValue(
+        gr ? "Ιστορικό επανεκκινήσεων" : "Reboot history",
+        gr ? "ΜΗ ΔΙΑΘΕΣΙΜΟ ΙΣΤΟΡΙΚΟ — ο χρόνος λειτουργίας δεν αποκαλύπτει "
+             + "προηγούμενες επανεκκινήσεις ή την αιτία τους"
+           : "HISTORY UNAVAILABLE — uptime does not reveal earlier reboots or their causes"
+);
+GELServiceLog.info("SUMMARY: REBOOT_PATTERN=INSUFFICIENT_DATA");
 
     appendHtml("<br>");
     if (uptimeCaptured) {
@@ -30179,26 +30186,6 @@ private void lab25CrashHistory() {
                     + "αναφορά σφαλμάτων Android (.zip ή .txt). Η ανάλυση γίνεται τοπικά."
                : "Use the separate button to select your Android bugreport "
                     + "(.zip or .txt). Analysis stays on-device.");
-
-    appendHtml("<br>");
-    logInfo(gr ? "3. Ανεξάρτητη δοκιμή αρχείου (όχι διάγνωση crash)"
-               : "3. Independent file test (not crash diagnosis)");
-    long latency = storageLatencyProbe();
-    if (latency < 0) {
-        logLabelWarnValue(gr ? "Δοκιμή αποθήκευσης" : "Storage test",
-                gr ? "Η δοκιμή δεν ολοκληρώθηκε επιτυχώς. Επαναλάβετε τον έλεγχο."
-                   : "The test did not complete successfully. Run the check again.");
-    } else {
-        logLabelOkValue(gr ? "Δοκιμή αποθήκευσης" : "Storage test",
-                gr ? "Επιτυχής εγγραφή και ανάγνωση αρχείου 4 KB."
-                   : "Successfully wrote and read a 4 KB file.");
-        logLabelOkValue(gr ? "Έλεγχος δεδομένων" : "Data verification",
-                gr ? "Τα δεδομένα που διαβάστηκαν ταιριάζουν ακριβώς."
-                   : "The data read back matched exactly.");
-        logLabelOkValue(gr ? "Χρόνος δοκιμής" : "Test duration",
-                latency == 0 ? (gr ? "Λιγότερο από 1 ms" : "Less than 1 ms")
-                             : latency + " ms");
-    }
 
     // Mark completed even if Android restricted history; coverage remains explicitly LIMITED.
     // A pre-purchase check must not treat execution as a clean-device certificate.
