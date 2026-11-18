@@ -61,8 +61,8 @@ public final class GelShizukuUi {
         }
 
         private void setNormalText() {
-            action.setText(gr ? "Περισσότερες πληροφορίες για τη συσκευή (προαιρετικό)"
-                    : "More device information (optional)");
+            action.setText(gr ? "Προηγμένος έλεγχος μέσω SHIZUKU"
+                    : "Advanced diagnostics via SHIZUKU");
         }
 
         private void onStatus(String status) {
@@ -93,8 +93,7 @@ public final class GelShizukuUi {
                 if (setupStatus != null) setupStatus.setText(gr
                         ? "Το Shizuku δεν έχει ξεκινήσει ακόμη. Ακολούθησε τα βήματα παρακάτω."
                         : "Shizuku has not started. Follow the steps below.");
-                action.setText(gr ? "Οδηγός Shizuku — έναρξη"
-                        : "Shizuku not running — tap to reconnect");
+                setNormalText(); // The guide explains setup; the button describes its purpose.
                 sink.onEvent("Shizuku", gr
                         ? "Εγκατάστησε/ξεκίνησε την εφαρμογή Shizuku. "
                           + "Σε Android 11+ χρησιμοποιείται η σύζευξη Ασύρματου debugging."
@@ -255,12 +254,25 @@ public final class GelShizukuUi {
             guideText(panel, gr ? "Βοήθεια για βαθύτερο έλεγχο"
                     : "Help with deeper diagnostics", true);
             guideText(panel, gr
-                    ? "Θα σε καθοδηγήσω βήμα προς βήμα. Οι οδηγίες ανοίγουν μέσα "
-                      + "στο iDoctor. Για την εγκατάσταση και τη σύνδεση, "
-                      + "το Android πρέπει να ανοίξει προσωρινά δικές του οθόνες. "
-                      + "Με το Πίσω επιστρέφεις εδώ."
-                    : "Follow this guide inside iDoctor. Installation and pairing "
-                      + "require Android's own installer and settings screens. "
+                    ? "Με την έγκρισή σου και την εξουσιοδότηση στο Shizuku, "
+                      + "θα πάρουμε περισσότερες πληροφορίες για το κινητό σου, "
+                      + "που το Android, λόγω περιορισμών πρόσβασης, δεν δίνει "
+                      + "σε μια απλή εφαρμογή. Έτσι θα μπορώ να κάνω "
+                      + "βαθύτερη ανάλυση στα εργαστήρια που θα εκτελέσεις. "
+                      + "Αν συμφωνείς, συνέχισε εγκαθιστώντας το Shizuku "
+                      + "και ακολούθησε τις οδηγίες ρύθμισής του."
+                    : "With your consent and authorization through Shizuku, "
+                      + "we can access more information about your phone "
+                      + "that Android normally restricts for ordinary apps. "
+                      + "This will let me analyze the tests you run in greater "
+                      + "depth. If you agree, continue by installing Shizuku "
+                      + "and follow its setup instructions.", false);
+            guideText(panel, gr
+                    ? "Θα σε καθοδηγήσω μέσα στο iDoctor. Το Android θα ανοίξει "
+                      + "προσωρινά τις δικές του οθόνες για εγκατάσταση και "
+                      + "εγκρίσεις. Με το Πίσω επιστρέφεις εδώ."
+                    : "I'll guide you inside iDoctor. Android will briefly "
+                      + "open its own screens for installation and permissions. "
                       + "Press Back to return here.", false);
 
             guideText(panel, gr
