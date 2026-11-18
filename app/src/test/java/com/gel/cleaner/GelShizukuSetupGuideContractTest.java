@@ -63,6 +63,32 @@ public final class GelShizukuSetupGuideContractTest {
         assertTrue(ui.contains("Android 10 ή παλιότερο"));
     }
 
+    @Test public void friendlyIntroMakesAdvancedModeUnderstandableInBothLanguages() throws Exception {
+        String ui = read("app/src/main/java/com/gel/cleaner/GelShizukuUi.java");
+        assertTrue(ui.contains("Προηγμένος έλεγχος μέσω SHIZUKU"));
+        assertTrue(ui.contains("Advanced diagnostics via SHIZUKU"));
+        assertTrue(ui.contains("Με την έγκρισή σου και την εξουσιοδότηση στο Shizuku"));
+        assertTrue(ui.contains("που το Android, λόγω περιορισμών πρόσβασης, δεν δίνει"));
+        assertTrue(ui.contains("βαθύτερη ανάλυση στα εργαστήρια που θα εκτελέσεις"));
+        assertTrue(ui.contains("follow its setup instructions"));
+        assertTrue(ui.contains("Android will briefly"));
+        assertTrue(ui.contains("Με το Πίσω επιστρέφεις εδώ"));
+        // Only the introduction uses neon green; title and instructions stay white.
+        assertTrue(ui.contains("+ \"and follow its setup instructions.\", false, 0xFF39FF14)"));
+        assertTrue(ui.contains("guideText(panel, value, title, Color.WHITE)"));
+        assertTrue(ui.contains("t.setTextColor(textColor)"));
+        assertTrue(ui.contains("guideText(panel, gr ? \"Βοήθεια για βαθύτερο έλεγχο\""));
+        assertTrue(ui.contains(": \"Help with deeper diagnostics\", true)"));
+        assertTrue(ui.contains("bg.setColor(Color.BLACK)"));
+        assertTrue(ui.contains("bg.setStroke(dp(2), 0xFFFFD700)"));
+        assertFalse(ui.contains("Οδηγός Shizuku — έναρξη"));
+        // Keep real permission, privacy disclosure and opting out intact.
+        assertTrue(ui.contains("σε κάμερα, μικρόφωνο ή τοποθεσία μπορεί να φανούν"));
+        assertTrue(ui.contains("session.requestFromUser()"));
+        assertTrue(ui.contains("ΣΥΝΕΧΕΙΑ ΧΩΡΙΣ SHIZUKU"));
+        assertTrue(ui.contains("Shizuku ενεργό — πάτησε για τερματισμό"));
+    }
+
     @Test public void connectingStillRequiresRealShizukuPermissionAndAdbIdentity() throws Exception {
         String session = read("app/src/main/java/com/gel/cleaner/GelShizukuDiagnosticSession.java");
         assertTrue(session.contains("Shizuku.getUid() != 2000"));

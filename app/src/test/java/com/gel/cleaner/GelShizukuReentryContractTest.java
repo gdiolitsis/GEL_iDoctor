@@ -31,7 +31,7 @@ public final class GelShizukuReentryContractTest {
                 ui.indexOf("private void showConsent()"));
         assertFalse(entry.contains("showConsent();")); // only a user tap may offer consent
         assertTrue(ui.contains("Shizuku ενεργό — πάτησε για τερματισμό"));
-        assertTrue(ui.contains("Οδηγός Shizuku — έναρξη"));
+        assertTrue(ui.contains("Προηγμένος έλεγχος μέσω SHIZUKU"));
         assertTrue(ui.contains("Shizuku — απαιτείται νέα έγκριση"));
     }
 
