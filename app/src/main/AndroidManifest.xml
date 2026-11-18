@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Shizuku app-request permission: handled by Shizuku, not a regular Android runtime grant. -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23"/>
+
     <!-- ============================================================
          STORAGE / FILE SYSTEM
          ============================================================ -->
@@ -110,6 +113,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:theme="@style/Theme.GEL.DarkGold">
+
+        <!-- Official Shizuku broker. Protected from other ordinary apps. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <activity
             android:name=".OptimizerDiagnosticActivity"

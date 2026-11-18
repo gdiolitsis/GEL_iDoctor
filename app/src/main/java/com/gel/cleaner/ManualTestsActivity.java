@@ -1230,7 +1230,9 @@ private static class SecuritySnapshot {
 // ============================================================  
 private ScrollView scroll;  
 private TextView txtLog;  
-private Handler ui;  
+private Handler ui;
+// Per-screen optional Shizuku authorization, never a new numbered Lab.
+private GelShizukuUi.Widget gelShizukuUi;  
 
 // ============================================================  
 // SECTION STATE TRACKING (AUTO-CLOSE GROUPS)  
@@ -1437,6 +1439,12 @@ logScroll.post(() -> setLogPanelState(0));
     sub.setGravity(Gravity.CENTER_HORIZONTAL);
     sub.setPadding(0, 0, 0, dp(12));
     labsContainer.addView(sub);
+
+    gelShizukuUi = new GelShizukuUi.Widget(
+            this, labsContainer, gr, (label, detail, verifiedOk) -> {
+                if (verifiedOk) logLabelOkValue(label, detail);
+                else logLabelValue(label, detail);
+            });
 
     lab14DotsView = new TextView(this);
     lab14DotsView.setText("•");
@@ -1674,6 +1682,18 @@ logScroll.post(() -> setLogPanelState(0));
         );
 
         serviceLogInit = true;
+    }
+
+    // Entry-point consent: only on a fresh, ordinary visit to Android Labs.
+    // Never interrupt a user who intentionally shared a report for Lab 25;
+    // never repeat after returning from Shizuku/Android settings or a recreation.
+    boolean sharedBugreportEntry = getIntent() != null
+            && Lab25SharedReportActivity.ACTION_IMPORT_LAB25.equals(getIntent().getAction());
+    if (savedInstanceState == null && !sharedBugreportEntry) {
+        labsScroll.post(() -> {
+            if (!isFinishing() && !isDestroyed() && gelShizukuUi != null)
+                gelShizukuUi.offerOnEntry();
+        });
     }
 }  // onCreate ENDS HERE
 
@@ -2460,6 +2480,11 @@ protected void onDestroy() {
     // Capture any final diagnostics before the local service log is cleared.
     GELRemoteDiagnosticsSync.flushNow(this);
     GELRemoteDiagnosticsSync.stop(this);
+    // Ending the Lab screen revokes GEL's enhanced diagnostic session.
+    if (gelShizukuUi != null) {
+        gelShizukuUi.close();
+        gelShizukuUi = null;
+    }
 
     GELServiceLog.clear();
 
@@ -13917,6 +13942,26 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
         }
     }
 
+    // Reported full-charge gauge data may replace a charge_now/SOC
+    // extrapolation. Normal Android full capacity remains the first choice.
+    GelShizukuEvidence.Capacity gauge14A = gelShizukuUi == null
+            ? null : gelShizukuUi.getCapacity();
+    if (gauge14A != null && start.chargeFullMah <= 0 &&
+            gauge14A.fullMah > 1000) {
+        baselineFullMah = gauge14A.fullMah;
+        lab14HasReportedCapacity = true;
+        logLabelOkValue(gr ? "Χωρητικότητα ελεγκτή μέσω Shizuku"
+                : "Fuel-gauge capacity via Shizuku",
+                baselineFullMah + " mAh — ADB Shell / " + gauge14A.fullSource);
+    } else if (gauge14A != null && start.chargeFullMah <= 0 &&
+            start.chargeDesignMah <= 0 && gauge14A.designMah > 1000) {
+        baselineFullMah = gauge14A.designMah;
+        lab14HasReportedCapacity = true;
+        logLabelValue(gr ? "Ονομαστική χωρητικότητα Shizuku"
+                : "Nominal design capacity via Shizuku",
+                baselineFullMah + " mAh — design, not measured full capacity");
+    }
+
     boolean rooted = idoctor.isDeviceRooted();
     Float cpuTempStart = readCpuTempSafe();
     Float gpuTempStart = readGpuTempSafe();
@@ -22120,6 +22165,21 @@ if (snap0.chargeFullMah > 1000) {
     }
 }
 
+// Real fuel-gauge reading from this explicitly authorized ADB session.
+// Do not call nominal design capacity a measurement of today's health.
+GelShizukuEvidence.Capacity gauge14BG = gelShizukuUi == null
+        ? null : gelShizukuUi.getCapacity();
+if (gauge14BG != null && snap0.chargeFullMah <= 1000) {
+    if (gauge14BG.fullMah > 1000) {
+        lab14bBaselineMah = gauge14BG.fullMah;
+        capacityProvenance[0] = "SHIZUKU_GAUGE_FULL";
+    } else if (snap0.chargeDesignMah <= 1000 &&
+               gauge14BG.designMah > 1000) {
+        lab14bBaselineMah = gauge14BG.designMah;
+        capacityProvenance[0] = "SHIZUKU_DESIGN_NOMINAL";
+    }
+}
+
 // ------------------------------------------------
 // 🔴 VALIDATION (NO HARDCODE DEFAULT)
 // ------------------------------------------------
@@ -22138,6 +22198,11 @@ baselineMah[0] = lab14bBaselineMah;
 if (baselineMah[0] > 0L) {
     String referenceSource = "ANDROID_FULL_REPORTED".equals(capacityProvenance[0])
             ? (gr ? "αναφορά πλήρους φόρτισης Android" : "Android full-charge report")
+            : "SHIZUKU_GAUGE_FULL".equals(capacityProvenance[0])
+            ? (gr ? "ελεγκτής BMS μέσω Shizuku (ADB Shell)" : "BMS gauge via Shizuku (ADB shell)")
+            : "SHIZUKU_DESIGN_NOMINAL".equals(capacityProvenance[0])
+            ? (gr ? "ονομαστική χωρητικότητα Shizuku (όχι SoH)"
+                  : "design capacity via Shizuku (not SoH)")
             : "DESIGN_NOMINAL".equals(capacityProvenance[0])
             ? (gr ? "ονομαστική χωρητικότητα σχεδίασης" : "nominal design capacity")
             : (gr ? "charge_now / ποσοστό φόρτισης" : "charge_now / charge level");
@@ -25911,6 +25976,52 @@ lab15Dialog = null;
 // LAB 16 — Thermal Snapshot
 // FINAL — COMPACT — GEL LOCKED
 // ============================================================
+/**
+ * Supplemental-only shell metadata; never substitutes for the normal Lab's
+ * actual measurements, and never runs without a live user-approved session.
+ */
+private void gelShizukuSupplement(int op) {
+    if (gelShizukuUi == null || !gelShizukuUi.isReady()) return;
+    final boolean gr = AppLang.isGreek(this);
+    gelShizukuUi.readAsync(op, wire -> {
+        if (isFinishing() || isDestroyed()) return;
+        if (op == GelShizukuEvidence.THERMAL) {
+            int status = GelShizukuEvidence.parseThermalStatus(wire);
+            if (status < 0) {
+                logLabelValue(gr ? "Θερμικό καθεστώς Shizuku" : "Shizuku thermal state",
+                        gr ? "Μ/Δ — δεν εκτέθηκε από το Android" : "N/A — not exposed");
+            } else if (status >= 2) {
+                logLabelWarnValue(gr ? "Θερμικό καθεστώς Android (Shizuku)"
+                        : "Android thermal state (Shizuku)",
+                        status + " / 6 — " + (gr ? "κατάσταση, όχι θερμοκρασία αισθητήρα"
+                                                : "status, not a sensor temperature"));
+            } else {
+                logLabelOkValue(gr ? "Θερμικό καθεστώς Android (Shizuku)"
+                        : "Android thermal state (Shizuku)",
+                        status + " / 6");
+            }
+        } else if (op == GelShizukuEvidence.MEMORY) {
+            if (wire != null && wire.matches("MEMORY\\|[0-9]{1,15}\\|[0-9]{1,15}")) {
+                String[] f = wire.split("\\|");
+                logLabelValue(gr ? "Συνολική / Ελεύθερη RAM (Shizuku)"
+                                 : "Total / Free RAM (Shizuku)",
+                        f[1] + " / " + f[2] + " kB — aggregate Android report");
+            } else {
+                logLabelValue(gr ? "Συγκεντρωτική RAM (Shizuku)"
+                                 : "Aggregate RAM (Shizuku)", gr ? "Μ/Δ" : "N/A");
+            }
+        } else if (op == GelShizukuEvidence.BOOT) {
+            String reason = GelShizukuEvidence.parseBootReason(wire);
+            logLabelValue(gr ? "Λόγος εκκίνησης (Shizuku)"
+                    : "Boot reason (Shizuku)",
+                    reason == null ? (gr ? "Μ/Δ" : "N/A") : reason);
+            if (reason != null)
+                logInfo(gr ? "Η αιτία εκκίνησης είναι μεταδεδομένο, όχι επιβεβαιωμένο ιστορικό βλαβών."
+                           : "Boot reason metadata is not proof of failure history.");
+        }
+    });
+}
+
 private void lab16ThermalSnapshot() {
 
     final boolean gr = AppLang.isGreek(this);
@@ -25923,6 +26034,7 @@ private void lab16ThermalSnapshot() {
             ? "LAB 16 — Θερμικό Στιγμιότυπο"
             : "LAB 16 — Thermal Snapshot");
     logLine();
+    gelShizukuSupplement(GelShizukuEvidence.THERMAL);
 
     List<ThermalEntry> internal     = buildThermalInternal();
     List<ThermalEntry> peripherals  = buildThermalPeripheralsCritical();
@@ -27896,6 +28008,7 @@ private void lab19RamSnapshot() {
             ? "LAB 19 — Ζωντανό Στιγμιότυπο Υγείας RAM"
             : "LAB 19 — Live RAM Health Snapshot");
     logLine();
+    gelShizukuSupplement(GelShizukuEvidence.MEMORY);
 
     try {
 
@@ -28126,6 +28239,7 @@ private void lab20UptimeHints() {
             ? "LAB 20 — Χρόνος Λειτουργίας Συστήματος"
             : "LAB 20 — System Uptime");
     logLine();
+    gelShizukuSupplement(GelShizukuEvidence.BOOT);
 
     try {
 
@@ -29993,6 +30107,29 @@ private void lab25CrashHistory() {
     // Keep existing machine-readable coverage evidence unchanged.
     GELServiceLog.info("SUMMARY: CRASH_ORIGIN=UNCLEAR; HISTORY_COVERAGE="
             + (coverage.complete() ? "AVAILABLE_RECORDS_ONLY" : "UNAVAILABLE_OR_PARTIAL"));
+    // Separate, optional Shizuku ADB crash-buffer sample (NOT complete history).
+    if (gelShizukuUi != null && gelShizukuUi.isReady()) {
+        gelShizukuUi.readAsync(GelShizukuEvidence.CRASH, wire -> {
+            if (isFinishing() || isDestroyed()) return;
+            CriticalSystemCrashEvidence.Summary shell =
+                    CriticalSystemCrashEvidence.fromShizukuCrashBuffer(wire);
+            logInfo(gr ? "Πρόσθετη πηγή: Shizuku / ADB crash buffer"
+                       : "Supplementary source: Shizuku / ADB crash buffer");
+            if (shell == null) {
+                logLabelValue(gr ? "Πρόσβαση" : "Access",
+                        gr ? "Μ/Δ — μη προσβάσιμη πηγή Shell"
+                           : "N/A — shell source unavailable");
+            } else if (shell.events.isEmpty()) {
+                logLabelValue(gr ? "Καταγραφές" : "Records",
+                        gr ? "Δεν βρέθηκε κρίσιμο συμβάν στο προσβάσιμο απόσπασμα. "
+                                + "Δεν πιστοποιείται πλήρες ιστορικό."
+                           : "No critical incident in accessible sample; not full history.");
+            } else {
+                lab25ShowCriticalEvidence(shell, gr);
+                lab25SaveBuyerEvidence(shell, Lab25BuyerEvidence.SHIZUKU_BUFFER, true);
+            }
+        });
+    }
     appendHtml("<br>");
     logOk(gr ? "Το Lab 25 ολοκληρώθηκε — παρουσιάστηκαν μόνο τεκμηριωμένα κρίσιμα ευρήματα."
              : "Lab 25 completed — only evidenced critical findings were presented.");

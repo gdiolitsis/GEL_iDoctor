@@ -220,6 +220,25 @@ public final class CriticalSystemCrashEvidence {
                 : new Event(role, process, type, Long.toString(timestamp), "dropbox");
     }
 
+    /**
+     * Only already-recognized, process-attributed critical events from a
+     * Shizuku ADB crash-buffer probe. A restricted buffer is NOT a complete
+     * Android crash history. No raw system logs cross the Binder boundary.
+     */
+    public static Summary fromShizukuCrashBuffer(String wire) {
+        GelShizukuEvidence.CrashScan scan = GelShizukuEvidence.parseCrash(wire);
+        if (!scan.read) return null;
+        List<Event> observed = new ArrayList<>();
+        for (GelShizukuEvidence.CrashEvent event : scan.events) {
+            String role = criticalRole(event.process, Collections.emptySet());
+            if (role == null) continue;
+            observed.add(new Event(role, event.process, event.type, event.when,
+                    "Shizuku ADB crash buffer"));
+        }
+        return new Summary(unique(observed), true,
+                "Shizuku ADB crash buffer — sampled history only");
+    }
+
     public static Summary fromEvents(List<Event> events, String source) {
         return new Summary(unique(events), true, source);
     }

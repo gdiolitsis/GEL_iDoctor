@@ -68,6 +68,8 @@ buildTypes {
         }
     }
 
+    buildFeatures { aidl = true }
+
     testOptions { unitTests.includeAndroidResources = true }
 
     compileOptions {
@@ -94,6 +96,10 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
+
+    // Optional, user-authorized read-only shell diagnostics (never required for normal Labs).
+    implementation 'dev.rikka.shizuku:api:13.1.5'
+    implementation 'dev.rikka.shizuku:provider:13.1.5'
 
     // -------------------------------------------------
     // QR / BARCODE
