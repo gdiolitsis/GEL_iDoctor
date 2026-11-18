@@ -30,7 +30,7 @@ public final class GelShizukuSetupGuideContractTest {
         assertTrue(screen.contains("webView.getSettings().setAllowFileAccess(false)"));
         assertTrue(screen.contains("webView.getSettings().setAllowContentAccess(false)"));
         assertTrue(screen.contains("shizuku.rikka.app\".equalsIgnoreCase(uri.getHost())"));
-        assertTrue(screen.contains("if (!\"https\".equalsIgnoreCase(uri.getScheme())) return true"));
+        assertTrue(screen.contains("uri != null && \"https\".equalsIgnoreCase(uri.getScheme())"));
         assertTrue(screen.contains("startActivity(new Intent(Intent.ACTION_VIEW, uri)"));
         assertTrue(screen.contains("https://github.com/RikkaApps/Shizuku/releases/latest"));
         assertTrue(screen.contains("isTrustedApkLink(uri)"));
