@@ -6437,7 +6437,9 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
             String toneCountValue = measured == 0
                     ? (gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΑΝ" : "NOT_MEASURED")
                     : confirmed + "/4";
-            if (measured > 0 && confirmed == 4) logLabelOkValue(toneCountLabel, toneCountValue);
+            final boolean allFourTonesIndicated = measured == tones.length
+                    && confirmed == tones.length;
+            if (allFourTonesIndicated) logLabelOkValue(toneCountLabel, toneCountValue);
             else logLabelValue(toneCountLabel, toneCountValue);
             if (confirmed != 4) {
                 logWarn(gr
@@ -6471,115 +6473,76 @@ MicDiagnosticEngine.Result r =
         MicDiagnosticEngine.run(this);
 
 if (r == null) {
-    
-appendHtml("<br>");
-    logLabelErrorValue(
-            gr ? "Μικρόφωνο" : "Mic",
-            gr ? "Δεν καταγράφηκαν δεδομένα" : "No data captured"
-    );
+    // The optional measurement AFTER playback cannot revoke the measured
+    // acoustic indications gathered DURING each of the four tones.
+    appendHtml("<br>");
+    logLabelValue(gr ? "Πρόσθετη μέτρηση μικροφώνου" : "Additional microphone reading",
+            gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — δεν επηρεάζει την προηγούμενη καταγραφή τόνων"
+               : "NOT MEASURED — does not override the earlier tone observations");
+    if (allFourTonesIndicated) {
+        logLabelOkValue(gr ? "Έξοδος ηχείου" : "Speaker output",
+                gr ? "Καταγράφηκε ακουστική ένδειξη και στους 4 τόνους κατά την αναπαραγωγή"
+                   : "Acoustic indication recorded during all 4 tones");
+    }
     return;
 }
 
 int rms  = (int) r.rms;
 int peak = (int) r.peak;
 
-logLabelOkValue("Mic RMS",  String.valueOf(rms));
+logLabelOkValue("Mic RMS", String.valueOf(rms));
 logLabelOkValue("Mic Peak", String.valueOf(peak));
 
 String conf = (r.confidence == null)
         ? ""
         : r.confidence.trim().toUpperCase(Locale.US);
 
-// ----------------------------------------------------
-// CONFIDENCE (QUALITY, NOT EXISTENCE)
-// ----------------------------------------------------
-if (conf.contains("LOW") || conf.contains("WEAK")
-        || conf.contains("FAIL") || conf.contains("NONE")) {
-
-    logLabelWarnValue(
-            gr ? "Ποιότητα" : "Confidence",
-            r.confidence
-    );
-
+// The confidence belongs ONLY to the optional post-playback microphone
+// capture, not to the earlier four tone-window RMS comparisons.
+boolean secondaryLowConfidence = conf.contains("LOW") || conf.contains("WEAK")
+        || conf.contains("FAIL") || conf.contains("NONE");
+if (secondaryLowConfidence) {
+    logLabelWarnValue(gr ? "Ποιότητα πρόσθετης μέτρησης" : "Additional reading confidence",
+            r.confidence == null ? (gr ? "Μ/Δ" : "N/A") : r.confidence);
 } else {
-
-    logLabelOkValue(
-            gr ? "Ποιότητα" : "Confidence",
-            r.confidence
-    );
+    logLabelOkValue(gr ? "Ποιότητα πρόσθετης μέτρησης" : "Additional reading confidence",
+            r.confidence == null ? (gr ? "Μ/Δ" : "N/A") : r.confidence);
 }
 
-// ----------------------------------------------------
-// HARD GATE — ABSOLUTE SILENCE ONLY
-// ----------------------------------------------------
-// Threshold 20 applies to microphone RMS in this engine's raw units.
-// This capture occurs AFTER the tones: it cannot verify individual tones.
+appendHtml("<br>");
+if (allFourTonesIndicated) {
+    logLabelOkValue(gr ? "Έξοδος ηχείου" : "Speaker output",
+            gr ? "4/4 ακουστικές ενδείξεις κατά την αναπαραγωγή — καταγράφηκε αύξηση RMS, "
+                 + "όχι επιβεβαίωση των ακριβών συχνοτήτων"
+               : "4/4 acoustic indications during playback — RMS increase recorded, "
+                 + "not verification of the exact frequencies");
+} else {
+    String playbackSummary = measured == 0
+            ? (gr ? "Δεν καταγράφηκε ταυτόχρονη μέτρηση τόνων"
+                  : "No concurrent tone readings were recorded")
+            : (gr ? "Ακουστικές ενδείξεις κατά την αναπαραγωγή: "
+                  : "Acoustic indications during playback: ")
+                    + confirmed + "/" + tones.length;
+    logLabelValue(gr ? "Έξοδος ηχείου" : "Speaker output", playbackSummary);
+}
+
+// This later RMS is not a tone-specific test: a value <= 20 does NOT
+// establish speaker failure, and a value > 20 cannot upgrade 0–3/4 to 4/4.
 if (rms <= 20) {
-
-appendHtml("<br>");
-    logLabelErrorValue(
-            gr ? "Έξοδος Ηχείου" : "Speaker output",
-            gr ? "Δεν επιβεβαιώθηκε σήμα πάνω από το όριο RMS 20"
-               : "Signal above RMS threshold 20 was not confirmed"
-    );
-
-    logLabelWarnValue(
-            gr ? "Πιθανή αιτία" : "Possible cause",
-            gr
-                    ? "Χαμηλή μέτρηση μικροφώνου μετά τους τόνους — δεν τεκμηριώνεται βλάβη ηχείου"
-                    : "Low microphone reading after tones — speaker failure is not established"
-    );
-
-    logLabelOkValue(
-            gr ? "Σύσταση" : "Recommended",
-            gr
-                    ? "Επανεκτέλεσε το LAB 1 για έλεγχο διαδρομής ήχου"
-                    : "Re-run LAB 1 to verify speaker operation and routing"
-    );
-
-    appendHtml("<br>");
-    logLine();
-    return;
-}
-
-// ----------------------------------------------------
-// OUTPUT CONFIRMED (EVEN WITH LOW CONFIDENCE)
-// ----------------------------------------------------
-if (conf.contains("LOW") || conf.contains("WEAK")) {
-
-appendHtml("<br>");
-    logLabelOkValue(
-            gr ? "Έξοδος Ηχείου" : "Speaker output",
-            gr
-                    ? "RMS πάνω από 20 μετά την αναπαραγωγή, με χαμηλή αξιοπιστία — οι τόνοι δεν επιβεβαιώθηκαν."
-                    : "RMS above 20 after playback, LOW confidence — tones not verified"
-    );
-
-    logLabelWarnValue(
-            gr ? "Σημείωση" : "Note",
-            gr
-                    ? "Η ένδειξη LOW αφορά την αξιοπιστία της πρόσθετης μέτρησης μικροφώνου μετά την αναπαραγωγή. "
-                      + "Πιθανοί παράγοντες είναι ακύρωση θορύβου, DSP και η θέση του μικροφώνου."
-                    : "LOW describes the confidence of the microphone reading after playback. "
-                      + "Noise cancellation, DSP and microphone placement can affect it."
-    );
-
+    logLabelValue(gr ? "Πρόσθετη μέτρηση μικροφώνου" : "Additional microphone reading",
+            gr ? "RMS έως 20 μετά τους τόνους — δεν αναιρεί τις ενδείξεις κατά την αναπαραγωγή"
+               : "RMS at or below 20 after tones — does not override playback evidence");
 } else {
-
-appendHtml("<br>");
-    logLabelOkValue(
-            gr ? "Έξοδος Ηχείου" : "Speaker output",
-            gr
-                    ? "RMS πάνω από 20 μετά την αναπαραγωγή (όχι επιβεβαίωση τόνων)"
-                    : "RMS above 20 after playback (not tone verification)"
-    );
-
-    logLabelOkValue(
-            gr ? "Σημείωση" : "Note",
-            gr
-                    ? "Οι τέσσερις τόνοι ζητήθηκαν, αλλά η μεταγενέστερη μέτρηση δεν πιστοποιεί κάθε συχνότητα."
-                    : "Four tones were requested, but the later measurement cannot verify each frequency."
-    );
+    logLabelValue(gr ? "Πρόσθετη μέτρηση μικροφώνου" : "Additional microphone reading",
+            gr ? "RMS πάνω από 20 μετά τους τόνους — δεν προσδιορίζει ποιος τόνος ακούστηκε"
+               : "RMS above 20 after tones — cannot identify individual tones");
+}
+if (secondaryLowConfidence) {
+    logLabelWarnValue(gr ? "Σημείωση πρόσθετης μέτρησης" : "Additional reading note",
+            gr ? "Η ένδειξη LOW αφορά μόνο τη μεταγενέστερη μέτρηση μικροφώνου. "
+                 + "Ακύρωση θορύβου, DSP ή θέση μικροφώνου μπορεί να την επηρεάζουν."
+               : "LOW applies only to the later microphone reading. "
+                 + "Noise cancellation, DSP or microphone placement may affect it.");
 }
 
 } catch (Throwable t) {
@@ -10856,7 +10819,10 @@ private void lab9SensorsCheck() {
             if (name.contains("pickup"))
                 hasPickup = true;
 
-            if (name.contains("touch") && name.contains("large"))
+            // The Redmi reports name="Touch Sensor" with
+            // vendor="Xiaomi Large Area Detect". Check BOTH fields:
+            // this is sensor inventory evidence, not a touch-function test.
+            if (Lab9SensorInventoryEvidence.isLargeAreaTouch(name, vendor))
                 hasLargeTouch = true;
 
             if (name.contains("game") && name.contains("rotation"))
@@ -10922,7 +10888,8 @@ private void lab9SensorsCheck() {
         if (hasLargeTouch)
             logLabelOkValue(
                     gr ? "Large area touch" : "Large Area Touch",
-                    gr ? "Βρέθηκε καταχώριση με ονομασία Large Touch" : "Large Touch entry reported by Android"
+                    gr ? "Βρέθηκε καταχώριση Touch/Large Area (όνομα ή κατασκευαστής)"
+                       : "Touch/Large Area entry reported (name or vendor)"
             );
         else
             logLabelValue(

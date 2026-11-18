@@ -25,7 +25,8 @@ public final class Lab9SensorInventoryOnlyContractTest {
         String s = lab9();
         assertTrue(s.contains("Βρέθηκε καταχώριση με ονομασία SAR/RF"));
         assertTrue(s.contains("Βρέθηκε καταχώριση με ονομασία Pickup"));
-        assertTrue(s.contains("Βρέθηκε καταχώριση με ονομασία Large Touch"));
+        assertTrue(s.contains("Βρέθηκε καταχώριση Touch/Large Area (όνομα ή κατασκευαστής)"));
+        assertTrue(s.contains("Lab9SensorInventoryEvidence.isLargeAreaTouch(name, vendor)"));
         assertTrue(s.contains("Βρέθηκε καταχώριση με ονομασία Game Rotation"));
         assertTrue(s.contains("Καταγράφηκαν οι αισθητήρες που δηλώνει το Android."));
     }
