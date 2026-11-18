@@ -187,15 +187,44 @@ public final class GelShizukuReadOnlyService extends IGelShizukuReadOnly.Stub {
             int e = readUfsByte(new File(health, "eol_info"));
             if (a > 0 || b > 0 || e > 0) return "UFS|" + a + "|" + b + "|" + e;
         }
-        return "UNAVAILABLE|UFS_HEALTH_NOT_EXPOSED_TO_SHELL";
+        // AOSP also exposes eMMC EXT_CSD wear under fixed mmc card nodes.
+        return emmcWear();
+    }
+
+    /** Two eMMC lifetime bytes and the pre-EOL byte from kernel sysfs.
+     * Read only known boot-card candidates, not raw block devices. */
+    private static String emmcWear() {
+        String[] cards = {
+                "/sys/bus/mmc/devices/mmc0:0001",
+                "/sys/bus/mmc/devices/mmc1:0001"
+        };
+        for (String card : cards) {
+            try {
+                String type = firstLine(card + "/type", 16);
+                if (!"MMC".equalsIgnoreCase(type)) continue;
+                String[] pair = firstLine(card + "/life_time", 48).split("\\s+");
+                if (pair.length != 2) continue;
+                int a = parseHexByte(pair[0]);
+                int b = parseHexByte(pair[1]);
+                int e = readUfsByte(new File(card, "pre_eol_info"));
+                if ((a > 0 || b > 0) && a <= 11 && b <= 11 && e >= 1 && e <= 3)
+                    return "EMMC|" + a + "|" + b + "|" + e;
+            } catch (IOException | RuntimeException ignored) { }
+        }
+        return "UNAVAILABLE|STORAGE_WEAR_NOT_EXPOSED_TO_SHELL";
+    }
+
+    private static int parseHexByte(String value) {
+        if (value == null || !value.matches("(?i)(?:0x)?[0-9a-f]{1,2}")) return 0;
+        try {
+            int parsed = Integer.parseInt(value.replaceFirst("(?i)^0x", ""), 16);
+            return parsed > 0 && parsed <= 255 ? parsed : 0;
+        } catch (RuntimeException invalid) { return 0; }
     }
 
     private static int readUfsByte(File f) {
         try {
-            String value = firstLine(f.getPath(), 16);
-            if (!value.matches("(?i)(?:0x)?[0-9a-f]{1,2}")) return 0;
-            int result = Integer.parseInt(value.replaceFirst("(?i)^0x", ""), 16);
-            return result > 0 && result <= 0xff ? result : 0;
+            return parseHexByte(firstLine(f.getPath(), 16));
         } catch (IOException | RuntimeException ignored) {
             return 0;
         }
