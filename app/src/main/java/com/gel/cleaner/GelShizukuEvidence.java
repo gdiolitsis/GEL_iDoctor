@@ -16,6 +16,9 @@ public final class GelShizukuEvidence {
     public static final int THERMAL = 3;
     public static final int MEMORY = 4;
     public static final int BOOT = 5;
+    public static final int UFS = 6;
+    public static final int LOW_MEMORY = 7;
+    public static final int APP_OPS = 8;
 
     public static final class Capacity {
         public final long fullMah;     // fuel gauge's full-charge estimate
@@ -38,6 +41,87 @@ public final class GelShizukuEvidence {
             // An out-of-range gauge estimate is not a valid health certificate.
             return pct >= 20d && pct <= 120d ? (int) Math.round(pct) : -1;
         }
+    }
+
+
+    /** UFS health descriptor bytes: not measured NAND throughput or an exact
+     * remaining lifespan. 1-10 are lifetime-used deciles; 11 means >100%.
+     * EOL 1 normal, 2 warning, 3 urgent; 0 unknown. */
+    public static final class UfsWear {
+        public final int lifetimeA, lifetimeB, preEol;
+        private UfsWear(int a, int b, int e) {
+            lifetimeA = a;
+            lifetimeB = b;
+            preEol = e;
+        }
+        public boolean hasEol() { return preEol >= 1 && preEol <= 3; }
+        public boolean hasLifetime() { return lifetimeA > 0 || lifetimeB > 0; }
+        public boolean hasWearAlert() {
+            return preEol >= 2 || lifetimeA >= 10 || lifetimeB >= 10;
+        }
+        public static String lifetimeInterval(int level) {
+            if (level == 0) return "unknown";
+            if (level == 11) return "over 100% of estimated endurance used";
+            return ((level - 1) * 10) + "-" + (level * 10)
+                    + "% of estimated endurance used";
+        }
+    }
+
+    public static UfsWear parseUfs(String wire) {
+        if (wire == null || !wire.matches("UFS\\|[0-9]{1,3}\\|[0-9]{1,3}\\|[0-9]{1,3}"))
+            return null;
+        String[] parts = wire.split("\\|");
+        try {
+            int a = Integer.parseInt(parts[1]);
+            int b = Integer.parseInt(parts[2]);
+            int e = Integer.parseInt(parts[3]);
+            if (a < 0 || a > 11 || b < 0 || b > 11 || e < 0 || e > 3
+                    || (a == 0 && b == 0 && e == 0)) return null;
+            return new UfsWear(a, b, e);
+        } catch (RuntimeException invalid) {
+            return null;
+        }
+    }
+
+    /** Count of explicit LMK tags in the latest limited events-log sample.
+     * Zero is NOT proof of no previous memory-driven process terminations. */
+    public static int parseLmkCount(String wire) {
+        if (wire == null || !wire.matches("LMK\\|[0-9]{1,3}")) return -1;
+        try {
+            int count = Integer.parseInt(wire.substring(4));
+            return count <= 350 ? count : -1;
+        } catch (NumberFormatException invalid) {
+            return -1;
+        }
+    }
+
+    public static final class AppOpAccess {
+        public final String packageName, operation, timestamp;
+        private AppOpAccess(String pkg, String op, String at) {
+            packageName = pkg;
+            operation = op;
+            timestamp = at;
+        }
+    }
+
+    /** A sampled AppOps *Access* timestamp (not a grant, reject or malware
+     * finding). Only explicit, validated operation+package+timestamp rows. */
+    public static List<AppOpAccess> parseAppOps(String wire) {
+        if (wire == null) return Collections.emptyList();
+        String[] lines = wire.split("\\n", -1);
+        if (lines.length < 2 || !"APPOPS|SAMPLED".equals(lines[0]))
+            return Collections.emptyList();
+        List<AppOpAccess> accesses = new ArrayList<>();
+        for (int i = 1; i < lines.length && i <= 20; i++) {
+            String[] f = lines[i].split("\\|", -1);
+            if (f.length != 3
+                    || !f[0].matches("[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+")
+                    || !f[1].matches("CAMERA|RECORD_AUDIO|FINE_LOCATION|COARSE_LOCATION")
+                    || !f[2].matches("[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}"))
+                continue;
+            accesses.add(new AppOpAccess(f[0], f[1], f[2]));
+        }
+        return Collections.unmodifiableList(accesses);
     }
 
     public static Capacity parseCapacity(String wire) {
