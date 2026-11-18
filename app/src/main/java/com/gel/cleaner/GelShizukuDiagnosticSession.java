@@ -154,7 +154,7 @@ public final class GelShizukuDiagnosticSession {
             return;
         }
         if (operation < GelShizukuEvidence.CAPACITY ||
-                operation > GelShizukuEvidence.BOOT) {
+                operation > GelShizukuEvidence.APP_OPS) {
             main.post(() -> { if (!closed) callback.onEvidence("UNAVAILABLE|UNKNOWN_OPERATION"); });
             return;
         }
