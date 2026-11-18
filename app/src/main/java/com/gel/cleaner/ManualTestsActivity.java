@@ -1683,6 +1683,18 @@ logScroll.post(() -> setLogPanelState(0));
 
         serviceLogInit = true;
     }
+
+    // Entry-point consent: only on a fresh, ordinary visit to Android Labs.
+    // Never interrupt a user who intentionally shared a report for Lab 25;
+    // never repeat after returning from Shizuku/Android settings or a recreation.
+    boolean sharedBugreportEntry = getIntent() != null
+            && Lab25SharedReportActivity.ACTION_IMPORT_LAB25.equals(getIntent().getAction());
+    if (savedInstanceState == null && !sharedBugreportEntry) {
+        labsScroll.post(() -> {
+            if (!isFinishing() && !isDestroyed() && gelShizukuUi != null)
+                gelShizukuUi.offerOnEntry();
+        });
+    }
 }  // onCreate ENDS HERE
 
 @Override

@@ -28,6 +28,9 @@ public final class GelShizukuUi {
         private final Button action;
         private final GelShizukuDiagnosticSession session;
         private final EventSink sink;
+        // This Activity entry offers enhanced diagnostics at most once.
+        // Reopening the manual control remains possible after a decline.
+        private boolean entryOfferShown;
 
         public Widget(Activity activity, LinearLayout container, boolean gr, EventSink sink) {
             this.activity = activity;
@@ -88,6 +91,14 @@ public final class GelShizukuUi {
                         ? "Μη διαθέσιμη συμβατή υπηρεσία. Χρήση κανονικών Android APIs."
                         : "Compatible service unavailable; Android APIs remain usable.", false);
             }
+        }
+
+        /** Automatically offer once when the owner opens the Labs screen. */
+        public void offerOnEntry() {
+            if (entryOfferShown) return;
+            entryOfferShown = true;
+            if (activity.isFinishing() || activity.isDestroyed() || session.isReady()) return;
+            showConsent();
         }
 
         private void showConsent() {

@@ -39,6 +39,9 @@ public final class GelShizukuIntegrationContractTest {
         assertTrue(session.contains(".daemon(false)"));
         assertTrue(session.contains("Shizuku.unbindUserService(args, connection, true)"));
         assertTrue(ui.contains("session.requestFromUser()"));
+        assertTrue(ui.contains("public void offerOnEntry()"));
+        assertTrue(ui.contains("if (entryOfferShown) return;"));
+        assertTrue(ui.contains("showConsent();"));
         assertTrue(ui.contains("NORMAL LABS"));
         assertTrue(ui.contains("Shizuku"));
         assertFalse(ui.contains("su -c"));
@@ -63,6 +66,9 @@ public final class GelShizukuIntegrationContractTest {
         String activity = read("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
         assertTrue(activity.contains("29. Τελική Τεχνική Αναφορά"));
         assertTrue(activity.contains("new GelShizukuUi.Widget("));
+        assertTrue(activity.contains("if (savedInstanceState == null && !sharedBugreportEntry)"));
+        assertTrue(activity.contains("gelShizukuUi.offerOnEntry();"));
+        assertTrue(activity.contains("labsScroll.post(() -> {"));
         assertTrue(activity.contains("gelShizukuUi.close()"));
         assertTrue(activity.contains("gelShizukuUi.getCapacity()"));
         assertTrue(activity.contains("SHIZUKU_GAUGE_FULL"));
