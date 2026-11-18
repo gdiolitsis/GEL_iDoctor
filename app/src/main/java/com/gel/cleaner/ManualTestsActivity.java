@@ -26048,7 +26048,7 @@ private void gelShizukuSupplement(int op) {
         } else if (op == GelShizukuEvidence.LOW_MEMORY) {
             int observed = GelShizukuEvidence.parseLmkCount(wire);
             if (observed > 0) {
-                logLabelWarnValue(gr ? "Καταγεγραμμένοι τερματισμοί λόγω πίεσης RAM"
+                logLabelValue(gr ? "Καταγεγραμμένοι τερματισμοί λόγω πίεσης RAM"
                                       : "Observed memory-pressure process kills",
                         observed + (gr ? " συμβάντα σε περιορισμένο δείγμα Android events"
                                        : " events in bounded Android events sample"));
