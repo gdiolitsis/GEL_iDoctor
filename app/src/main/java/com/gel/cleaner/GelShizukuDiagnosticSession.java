@@ -28,7 +28,9 @@ public final class GelShizukuDiagnosticSession {
     private static final int REQUEST_CODE = 14325;
     private static final String CONSENT_PREFS = "gel_shizuku_consent";
     private static final String APPROVED_KEY = "approved_readonly_diagnostics";
-    private final SharedPreferences consent;
+    // Initialized once in the constructor before any Shizuku callback is registered.
+    // Non-final because the permission callback is declared as a field initializer.
+    private SharedPreferences consent;
     private final Activity activity;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
