@@ -43,7 +43,10 @@ public final class GelShizukuIntegrationContractTest {
         assertTrue(ui.contains("public void offerOnEntry()"));
         assertTrue(ui.contains("if (entryOfferShown) return;"));
         assertTrue(ui.contains("showConsent();"));
-        assertTrue(ui.contains("NORMAL LABS"));
+        // A user declining an optional Shizuku service must keep normal Labs.
+        // The consent UI was made human-friendly in #172 (NO, not NORMAL LABS).
+        assertTrue(ui.contains("cancel.setText(gr ? \"ΟΧΙ\" : \"NO\")"));
+        assertTrue(ui.contains("cancel.setOnClickListener(v -> dialog.dismiss())"));
         assertTrue(ui.contains("Shizuku"));
         assertFalse(ui.contains("su -c"));
     }
