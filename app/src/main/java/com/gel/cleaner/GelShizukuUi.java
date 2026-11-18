@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.provider.Settings;
 import android.os.Build;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.ScrollView;
 import android.app.AlertDialog;
 import android.graphics.Color;
@@ -295,12 +296,18 @@ public final class GelShizukuUi {
                           + "Έπειτα στις Επιλογές προγραμματιστή ενεργοποίησε "
                           + "τον εντοπισμό σφαλμάτων USB και τον Ασύρματο "
                           + "εντοπισμό σφαλμάτων. Κάνε σύζευξη με κωδικό μέσω "
+                          + "του Shizuku. Άνοιξε την ίδια τη ρύθμιση "
+                          + "«Ασύρματος εντοπισμός σφαλμάτων» (όχι μόνο τον "
+                          + "διακόπτη), διάλεξε «Σύζευξη συσκευής με κωδικό» "
+                          + "και πληκτρολόγησε τον 6ψήφιο κωδικό στην ειδοποίηση "
                           + "του Shizuku."
                         : "2. Connect to Wi-Fi. If Developer options are hidden, "
                           + "they are usually unlocked by tapping Build number "
                           + "seven times in About phone. In Developer options, "
-                          + "enable USB debugging and Wireless debugging, "
-                          + "then pair with the code through Shizuku.", false);
+                          + "enable USB debugging and Wireless debugging. "
+                          + "Open the Wireless debugging settings page (not just "
+                          + "the switch), tap Pair device with pairing code, "
+                          + "then enter the six-digit code in Shizuku's notification.", false);
             } else {
                 guideText(panel, gr
                         ? "2. Σε Android 10 ή παλιότερο, η έναρξη Shizuku χωρίς "
@@ -308,6 +315,10 @@ public final class GelShizukuUi {
                           + "παρακάμψει αυτόν τον περιορισμό."
                         : "2. On Android 10 or older, non-root Shizuku startup "
                           + "requires a computer. iDoctor cannot bypass this.", false);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                    && isXiaomiFamilyDevice()) {
+                addXiaomiPairingHelp(panel);
             }
             guideButton(panel, gr ? "ΑΝΟΙΓΜΑ ΡΥΘΜΙΣΕΩΝ ANDROID"
                     : "OPEN ANDROID SETTINGS", () -> openDeveloperSettings());
@@ -361,6 +372,81 @@ public final class GelShizukuUi {
             if (setupDialog.getWindow() != null)
                 setupDialog.getWindow().setBackgroundDrawable(
                         new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        /** Family-specific help is shown only on Xiaomi/Redmi/POCO devices;
+         * the Android build identity is used solely for local presentation. */
+        private boolean isXiaomiFamilyDevice() {
+            String maker = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER;
+            String brand = Build.BRAND == null ? "" : Build.BRAND;
+            return "xiaomi".equalsIgnoreCase(maker)
+                    || "xiaomi".equalsIgnoreCase(brand)
+                    || "redmi".equalsIgnoreCase(maker)
+                    || "redmi".equalsIgnoreCase(brand)
+                    || "poco".equalsIgnoreCase(maker)
+                    || "poco".equalsIgnoreCase(brand);
+        }
+
+        /** Conditional troubleshooting, collapsed by default so normal
+         * setup stays concise. No background setting is changed by GEL. */
+        private void addXiaomiPairingHelp(LinearLayout panel) {
+            guideText(panel, gr
+                    ? "Xiaomi / Redmi / POCO: ειδική βοήθεια για MIUI / HyperOS"
+                    : "Xiaomi / Redmi / POCO: MIUI / HyperOS pairing help", false);
+
+            TextView help = new TextView(activity);
+            help.setTextColor(Color.WHITE);
+            help.setTextSize(14f);
+            help.setPadding(0, dp(8), 0, dp(10));
+            help.setText(gr
+                    ? "Αν η σύζευξη δεν προχωρά:\n\n"
+                      + "• Επίτρεψε στο Shizuku ειδοποιήσεις και πρόσβαση "
+                      + "στο τοπικό δίκτυο, εφόσον ζητηθούν.\n\n"
+                      + "• Αν γράφει «Αναζήτηση υπηρεσίας σύζευξης» ή "
+                      + "αποσυνδέεται, επίτρεψε στο Shizuku λειτουργία στο "
+                      + "παρασκήνιο και, αν χρειάζεται, επίλεξε «Χωρίς "
+                      + "περιορισμούς» στη διαχείριση μπαταρίας του.\n\n"
+                      + "• Αν δεν μπορείς να εισαγάγεις τον κωδικό στην "
+                      + "ειδοποίηση, δοκίμασε Ρυθμίσεις → Ειδοποιήσεις → "
+                      + "Πίνακας ειδοποιήσεων → Στυλ Android, εφόσον υπάρχει.\n\n"
+                      + "• ΜΟΝΟ αν το Shizuku αναφέρει περιορισμένη άδεια "
+                      + "ADB, έλεγξε στις Επιλογές προγραμματιστή την ξεχωριστή "
+                      + "ρύθμιση «USB debugging (Security options)».\n\n"
+                      + "Οι ονομασίες των ρυθμίσεων διαφέρουν ανά έκδοση "
+                      + "MIUI / HyperOS. Το iDoctor δεν αλλάζει καμία ρύθμιση."
+                    : "If pairing is not working:\n\n"
+                      + "• Allow Shizuku notifications and local-network "
+                      + "access if prompted.\n\n"
+                      + "• If stuck on 'Searching for pairing service' or "
+                      + "disconnecting, allow Shizuku to run in the background "
+                      + "and, if necessary, set its battery mode to Unrestricted.\n\n"
+                      + "• If you cannot enter the code in the notification, "
+                      + "try Settings → Notifications → Notification shade → "
+                      + "Android style, if available.\n\n"
+                      + "• ONLY if Shizuku reports limited ADB permission, "
+                      + "check the separate 'USB debugging (Security options)' "
+                      + "setting in Developer options.\n\n"
+                      + "Names vary by MIUI / HyperOS version. "
+                      + "iDoctor does not change any setting.");
+            help.setVisibility(View.GONE);
+
+            Button toggle = new GelButton(activity);
+            toggle.setAllCaps(false);
+            toggle.setText(gr ? "ΔΕΣ ΛΥΣΕΙΣ ΣΥΖΕΥΞΗΣ" : "PAIRING TROUBLESHOOTING");
+            toggle.setTextColor(Color.WHITE);
+            toggle.setBackgroundResource(R.drawable.gel_btn_outline_selector);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(52));
+            lp.topMargin = dp(6);
+            panel.addView(toggle, lp);
+            panel.addView(help);
+            toggle.setOnClickListener(v -> {
+                boolean expand = help.getVisibility() != View.VISIBLE;
+                help.setVisibility(expand ? View.VISIBLE : View.GONE);
+                toggle.setText(expand
+                        ? (gr ? "ΑΠΟΚΡΥΨΗ ΟΔΗΓΙΩΝ" : "HIDE TROUBLESHOOTING")
+                        : (gr ? "ΔΕΣ ΛΥΣΕΙΣ ΣΥΖΕΥΞΗΣ" : "PAIRING TROUBLESHOOTING"));
+            });
         }
 
         private void guideText(LinearLayout panel, String value, boolean title) {
