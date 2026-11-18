@@ -158,7 +158,8 @@ public final class GelShizukuUi {
             Button cancel = new com.gel.cleaner.GelButton(activity);
             cancel.setText(gr ? "ΟΧΙ" : "NO");
             cancel.setTextColor(Color.WHITE);
-            cancel.setBackgroundColor(0xFFBB2222);
+            // Declining an optional capability is neutral, not an error.
+            cancel.setBackgroundColor(0xFF444444);
             Button allow = new com.gel.cleaner.GelButton(activity);
             allow.setText(gr ? "ΝΑΙ, ΕΓΚΡΙΝΩ" : "YES, ALLOW");
             allow.setTextColor(Color.BLACK);
