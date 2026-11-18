@@ -78,10 +78,10 @@ public final class GelShizukuEvidenceTest {
 
     @Test public void sensitiveAppOpsMustContainAttributedAccessTimestamps() {
         java.util.List<GelShizukuEvidence.AppOpAccess> observed =
-                GelShizukuEvidence.parseAppOps("APPOPS|SAMPLED\\n"
-                + "com.example.camera|CAMERA|2026-11-18 13:20:00\\n"
-                + "com.example.audio|RECORD_AUDIO|2026-11-18 13:22:15\\n"
-                + "com.fake|CAMERA|../private\\n"
+                GelShizukuEvidence.parseAppOps("APPOPS|SAMPLED\n"
+                + "com.example.camera|CAMERA|2026-11-18 13:20:00\n"
+                + "com.example.audio|RECORD_AUDIO|2026-11-18 13:22:15\n"
+                + "com.fake|CAMERA|../private\n"
                 + "com.fake|SMS|2026-11-18 13:22:15");
         assertEquals(2, observed.size());
         assertEquals("com.example.camera", observed.get(0).packageName);
