@@ -48,24 +48,31 @@ public final class GelShizukuEvidenceTest {
     }
 
     @Test public void realUfsLifetimeBandsDoNotBecomeExactSoH() {
-        GelShizukuEvidence.UfsWear w = GelShizukuEvidence.parseUfs("UFS|1|5|1");
+        GelShizukuEvidence.StorageWear w = GelShizukuEvidence.parseStorageWear("UFS|1|5|1");
         assertNotNull(w);
         assertFalse(w.hasWearAlert());
+        assertEquals("UFS", w.technology);
         assertEquals("0-10% of estimated endurance used",
-                GelShizukuEvidence.UfsWear.lifetimeInterval(w.lifetimeA));
+                GelShizukuEvidence.StorageWear.lifetimeInterval(w.lifetimeA));
         assertEquals("40-50% of estimated endurance used",
-                GelShizukuEvidence.UfsWear.lifetimeInterval(w.lifetimeB));
+                GelShizukuEvidence.StorageWear.lifetimeInterval(w.lifetimeB));
         assertEquals("over 100% of estimated endurance used",
-                GelShizukuEvidence.UfsWear.lifetimeInterval(11));
+                GelShizukuEvidence.StorageWear.lifetimeInterval(11));
     }
 
     @Test public void ufsEolWarningAndReservedBytesAreGuarded() {
-        assertTrue(GelShizukuEvidence.parseUfs("UFS|4|7|2").hasWearAlert());
-        assertTrue(GelShizukuEvidence.parseUfs("UFS|10|0|1").hasWearAlert());
-        assertNull(GelShizukuEvidence.parseUfs("UFS|0|0|0"));
-        assertNull(GelShizukuEvidence.parseUfs("UFS|255|0|1"));
-        assertNull(GelShizukuEvidence.parseUfs("UFS|2|0|99"));
-        assertNull(GelShizukuEvidence.parseUfs("UNAVAILABLE|UFS_HEALTH_NOT_EXPOSED_TO_SHELL"));
+        assertTrue(GelShizukuEvidence.parseStorageWear("UFS|4|7|2").hasWearAlert());
+        GelShizukuEvidence.StorageWear emmc =
+                GelShizukuEvidence.parseStorageWear("EMMC|2|4|1");
+        assertNotNull(emmc);
+        assertEquals("EMMC", emmc.technology);
+        assertFalse(emmc.hasWearAlert());
+        assertTrue(GelShizukuEvidence.parseStorageWear("EMMC|8|9|3").hasWearAlert());
+        assertTrue(GelShizukuEvidence.parseStorageWear("UFS|10|0|1").hasWearAlert());
+        assertNull(GelShizukuEvidence.parseStorageWear("UFS|0|0|0"));
+        assertNull(GelShizukuEvidence.parseStorageWear("UFS|255|0|1"));
+        assertNull(GelShizukuEvidence.parseStorageWear("UFS|2|0|99"));
+        assertNull(GelShizukuEvidence.parseStorageWear("UNAVAILABLE|UFS_HEALTH_NOT_EXPOSED_TO_SHELL"));
     }
 
     @Test public void onlyExplicitMemoryKillEventCountsAreAccepted() {
