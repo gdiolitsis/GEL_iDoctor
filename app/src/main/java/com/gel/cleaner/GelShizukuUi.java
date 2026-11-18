@@ -52,8 +52,8 @@ public final class GelShizukuUi {
         }
 
         private void setNormalText() {
-            action.setText(gr ? "Διευρυμένος έλεγχος Shizuku — ΠΡΟΑΙΡΕΤΙΚΟ"
-                    : "Enhanced diagnostics with Shizuku — OPTIONAL");
+            action.setText(gr ? "Περισσότερες πληροφορίες για τη συσκευή (προαιρετικό)"
+                    : "More device information (optional)");
         }
 
         private void onStatus(String status) {
@@ -112,42 +112,55 @@ public final class GelShizukuUi {
             panel.setBackground(back);
 
             TextView title = new TextView(activity);
-            title.setText(gr ? "GEL — Εξουσιοδότηση Shizuku"
-                    : "GEL — Shizuku authorization");
+            title.setText(gr ? "GEL — Πιο βαθύς έλεγχος"
+                    : "GEL — Deeper device check");
             title.setTextColor(Color.WHITE);
             title.setTextSize(18f);
             title.setTypeface(null, Typeface.BOLD);
             panel.addView(title);
 
+            // Clear, human-first choice. Advanced technical names do not belong
+            // in the main question; an accessible privacy disclosure remains visible.
+            TextView question = new TextView(activity);
+            question.setText(gr
+                    ? "Με εξουσιοδοτείς να ζητήσω από το Android περισσότερες πληροφορίες "
+                      + "που δεν μου δίνει χωρίς τη συγκατάθεσή σου;"
+                    : "May I ask Android for more information about your device "
+                      + "that I cannot access without your permission?");
+            question.setTextColor(Color.WHITE);
+            question.setTextSize(18f);
+            question.setTypeface(null, Typeface.BOLD);
+            question.setPadding(0, dp(14), 0, dp(10));
+            panel.addView(question);
+
             TextView body = new TextView(activity);
             body.setText(gr
-                    ? "Προαιρετική, μόνο για ανάγνωση, πρόσβαση ADB Shell σε χωρητικότητα "
-                      + "μπαταρίας, UFS/NAND, κρίσιμα σφάλματα, θερμική κατάσταση, "
-                      + "πίεση RAM, λόγο εκκίνησης και χρόνους AppOps. "
-                      + "Οι διαθέσιμοι χρόνοι και τα ονόματα εφαρμογών ενδέχεται "
-                      + "να εμφανίζονται στα logs/PDF της διάγνωσης. "
-                      + "Χωρίς root, αλλαγές συστήματος ή πλήρη καταγραφή logs. "
-                      + "Απαιτείται και ξεχωριστή έγκριση από το Shizuku. "
-                      + "Τα 29 Labs λειτουργούν κανονικά χωρίς αυτό."
-                    : "Optional read-only ADB Shell access to battery capacity, "
-                      + "UFS/NAND wear indicators, critical crashes, thermal state, "
-                      + "RAM-pressure events, boot reason and AppOps access times. "
-                      + "App names and access times may appear in diagnostic "
-                      + "logs/PDF exports. No root, system changes or full-log capture. "
-                      + "Shizuku requests separate permission. All 29 Labs work without it.");
+                    ? "Είναι προαιρετικό. Μπορώ να ελέγξω πιο αναλυτικά την μπαταρία, "
+                      + "τη μνήμη, την αποθήκευση και πιθανά σφάλματα. "
+                      + "Ονόματα εφαρμογών και καταγεγραμμένοι χρόνοι πρόσβασης "
+                      + "σε κάμερα, μικρόφωνο ή τοποθεσία μπορεί να φανούν "
+                      + "στην αναφορά. Δεν αλλάζω ρυθμίσεις ή αρχεία. "
+                      + "Θα χρειαστεί και έγκριση από την εφαρμογή Shizuku. "
+                      + "Αν πεις όχι, όλα τα εργαστήρια συνεχίζουν κανονικά."
+                    : "This is optional. I can check your battery, memory, storage "
+                      + "and possible system errors in more detail. App names and "
+                      + "recorded times of camera, microphone or location access "
+                      + "may appear in the report. I won't change settings or files. "
+                      + "The Shizuku app will also ask for permission. "
+                      + "If you decline, all tests still work normally.");
             body.setTextColor(Color.WHITE);
             body.setTextSize(14f);
-            body.setPadding(0, dp(14), 0, dp(14));
+            body.setPadding(0, 0, 0, dp(14));
             panel.addView(body);
 
             LinearLayout actions = new LinearLayout(activity);
             actions.setOrientation(LinearLayout.HORIZONTAL);
             Button cancel = new com.gel.cleaner.GelButton(activity);
-            cancel.setText(gr ? "ΧΩΡΙΣ SHIZUKU" : "NORMAL LABS");
+            cancel.setText(gr ? "ΟΧΙ" : "NO");
             cancel.setTextColor(Color.WHITE);
             cancel.setBackgroundColor(0xFFBB2222);
             Button allow = new com.gel.cleaner.GelButton(activity);
-            allow.setText(gr ? "ΕΓΚΡΙΣΗ" : "AUTHORIZE");
+            allow.setText(gr ? "ΝΑΙ, ΕΓΚΡΙΝΩ" : "YES, ALLOW");
             allow.setTextColor(Color.BLACK);
             allow.setBackgroundColor(0xFF39FF14);
             actions.addView(cancel, new LinearLayout.LayoutParams(0, dp(60), 1));
