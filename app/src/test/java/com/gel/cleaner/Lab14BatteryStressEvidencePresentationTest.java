@@ -33,12 +33,15 @@ public final class Lab14BatteryStressEvidencePresentationTest {
         assertTrue(s.contains("baselineFullMah"));
     }
 
-    @Test public void twoAmpExperimentalResistanceProxyIsRetainedAndNeverCalledMeasuredEsr() throws Exception {
+    @Test public void hypotheticalTwoAmpResistanceProxyIsNotReported() throws Exception {
         String s = source();
         String lab = section(s, "private void lab14LogStressResult(", "private void lab14LogFinalScore(");
-        assertTrue(lab.contains("Πειραματικός δείκτης ΔV/2A"));
-        assertTrue(lab.contains("float rEst = finalSag * 1000f / 2.0f;"));
-        assertTrue(lab.contains("υπόθεση 2 A, όχι ESR"));
+        assertFalse(lab.contains("Πειραματικός δείκτης ΔV/2A"));
+        assertFalse(lab.contains("Experimental ΔV/2A proxy"));
+        assertFalse(lab.contains("float rEst = finalSag * 1000f / 2.0f;"));
+        assertFalse(lab.contains("υπόθεση 2 A, όχι ESR"));
+        assertTrue(lab.contains("if (rValid)")); // preserve actual evidence-based branch
+        assertFalse(s.contains("Experimental voltage-response proxy (not ESR)"));
     }
 
     @Test public void calculatedPowerIsDisplayedInMilliwattsWithoutBatteryHealthGrade() throws Exception {
@@ -56,7 +59,7 @@ public final class Lab14BatteryStressEvidencePresentationTest {
         String s = source();
         assertTrue(s.contains("labelSafe = \"Critical\";"));
         assertTrue(s.contains("lab14DisplayStressClass(labelSafe, gr)"));
-        assertTrue(s.contains("lab14DisplayStressClass(sagLabel, gr)"));
+        assertTrue(s.contains("lab14DisplayStressClass(labelSafe, gr)"));
         assertTrue(s.contains("lab14DisplayStressClass(lbl, gr)"));
         assertTrue(s.contains("Αυξημένη πτώση τάσης — επανέλεγχος"));
         assertTrue(s.contains("Αυξημένη πτώση τάσης υπό φορτίο — απαιτείται επανέλεγχος"));
