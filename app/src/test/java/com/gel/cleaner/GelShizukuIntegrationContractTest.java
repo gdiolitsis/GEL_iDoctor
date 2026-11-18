@@ -47,7 +47,7 @@ public final class GelShizukuIntegrationContractTest {
     @Test public void callerCannotSendCommandsOrPathsToPrivilegedService() throws Exception {
         String service = read("app/src/main/java/com/gel/cleaner/GelShizukuReadOnlyService.java");
         String aidl = read("app/src/main/aidl/com/gel/cleaner/IGelShizukuReadOnly.aidl");
-        assertTrue(aidl.contains("String probe(int operationId);"));
+        assertTrue(aidl.contains("String probe(int operationId) = 1;"));
         assertFalse(aidl.contains("String command"));
         assertTrue(service.contains("Process.myUid() != SHELL_UID"));
         assertTrue(service.contains("case GelShizukuEvidence.CAPACITY:"));
