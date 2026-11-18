@@ -46,4 +46,47 @@ public final class GelShizukuEvidenceTest {
         assertEquals("watchdog", GelShizukuEvidence.parseBootReason("BOOT|watchdog"));
         assertNull(GelShizukuEvidence.parseBootReason("BOOT|../../private"));
     }
+
+    @Test public void realUfsLifetimeBandsDoNotBecomeExactSoH() {
+        GelShizukuEvidence.UfsWear w = GelShizukuEvidence.parseUfs("UFS|1|5|1");
+        assertNotNull(w);
+        assertFalse(w.hasWearAlert());
+        assertEquals("0-10% of estimated endurance used",
+                GelShizukuEvidence.UfsWear.lifetimeInterval(w.lifetimeA));
+        assertEquals("40-50% of estimated endurance used",
+                GelShizukuEvidence.UfsWear.lifetimeInterval(w.lifetimeB));
+        assertEquals("over 100% of estimated endurance used",
+                GelShizukuEvidence.UfsWear.lifetimeInterval(11));
+    }
+
+    @Test public void ufsEolWarningAndReservedBytesAreGuarded() {
+        assertTrue(GelShizukuEvidence.parseUfs("UFS|4|7|2").hasWearAlert());
+        assertTrue(GelShizukuEvidence.parseUfs("UFS|10|0|1").hasWearAlert());
+        assertNull(GelShizukuEvidence.parseUfs("UFS|0|0|0"));
+        assertNull(GelShizukuEvidence.parseUfs("UFS|255|0|1"));
+        assertNull(GelShizukuEvidence.parseUfs("UFS|2|0|99"));
+        assertNull(GelShizukuEvidence.parseUfs("UNAVAILABLE|UFS_HEALTH_NOT_EXPOSED_TO_SHELL"));
+    }
+
+    @Test public void onlyExplicitMemoryKillEventCountsAreAccepted() {
+        assertEquals(3, GelShizukuEvidence.parseLmkCount("LMK|3"));
+        assertEquals(0, GelShizukuEvidence.parseLmkCount("LMK|0"));
+        assertEquals(-1, GelShizukuEvidence.parseLmkCount("UNAVAILABLE|LOG_RESTRICTED"));
+        assertEquals(-1, GelShizukuEvidence.parseLmkCount("LMK|999"));
+        assertEquals(-1, GelShizukuEvidence.parseLmkCount("LMK|-1"));
+    }
+
+    @Test public void sensitiveAppOpsMustContainAttributedAccessTimestamps() {
+        java.util.List<GelShizukuEvidence.AppOpAccess> observed =
+                GelShizukuEvidence.parseAppOps("APPOPS|SAMPLED\\n"
+                + "com.example.camera|CAMERA|2026-11-18 13:20:00\\n"
+                + "com.example.audio|RECORD_AUDIO|2026-11-18 13:22:15\\n"
+                + "com.fake|CAMERA|../private\\n"
+                + "com.fake|SMS|2026-11-18 13:22:15");
+        assertEquals(2, observed.size());
+        assertEquals("com.example.camera", observed.get(0).packageName);
+        assertEquals("CAMERA", observed.get(0).operation);
+        assertTrue(GelShizukuEvidence.parseAppOps("UNAVAILABLE|APPOPS_RESTRICTED").isEmpty());
+    }
+
 }
