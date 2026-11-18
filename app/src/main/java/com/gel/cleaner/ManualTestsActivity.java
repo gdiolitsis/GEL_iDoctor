@@ -486,6 +486,7 @@ final float[] batterySOH = {Float.NaN};
 
     private final int REQ_LAB6_TOUCH = 6006;
     private final int REQ_LAB6_COLOR = 6007;
+    private final int REQ_LAB6_PINCH = 6008;
     private final int REQ_LAB13_BT_CONNECT = 1313;
 
     private AlertDialog lab14RunningDialog;
@@ -33752,14 +33753,106 @@ if (requestCode == REQ_LAB6_TOUCH) {
         return;
     }
 
-    // Keep the original independent visual-inspection stage available.
+    // Preserve the existing 96-target stage unchanged.
+    // A separate optional, real two-pointer check follows before color PRO.
     appendHtml("<br>");
-    logLabelValue(
-            gr ? "Επόμενο βήμα" : "Next step",
+    logLabelValue(gr ? "Επόμενο βήμα" : "Next step",
+            gr ? "Δύο δάχτυλα — μεγέθυνση και σμίκρυνση"
+               : "Two-finger zoom in and zoom out");
+    logLine();
+    startActivityForResult(new Intent(this, PinchZoomTestActivity.class),
+            REQ_LAB6_PINCH);
+    return;
+}
+
+// ============================================================
+// LAB 6 — TWO-FINGER PINCH-TO-ZOOM (OPTIONAL, EVIDENCE-BASED)
+// ============================================================
+if (requestCode == REQ_LAB6_PINCH) {
+    appendHtml("<br>");
+    logLine();
+    logInfo(gr ? "LAB 6 — Έλεγχος ζουμ με δύο δάχτυλα"
+               : "LAB 6 — Two-finger pinch-to-zoom verification");
+    logLine();
+
+    // EXIT / Android Back stops the Lab, exactly as with the touch grid.
+    // Neither a cancel nor missing evidence may be interpreted as failure.
+    if (resultCode == RESULT_CANCELED) {
+        logLabelValue(gr ? "Ζουμ δύο δαχτύλων" : "Pinch-to-zoom",
+                gr ? "Διακόπηκε — χωρίς συμπέρασμα λειτουργίας"
+                   : "Canceled — no functional verdict");
+        enableSingleExportButton();
+        return;
+    }
+
+    boolean pinchData = data != null
+            && data.hasExtra(PinchZoomTestActivity.EXTRA_DUAL_TOUCH)
+            && data.hasExtra(PinchZoomTestActivity.EXTRA_ZOOM_IN)
+            && data.hasExtra(PinchZoomTestActivity.EXTRA_ZOOM_OUT);
+    boolean dual = pinchData && data.getBooleanExtra(
+            PinchZoomTestActivity.EXTRA_DUAL_TOUCH, false);
+    boolean zoomIn = pinchData && data.getBooleanExtra(
+            PinchZoomTestActivity.EXTRA_ZOOM_IN, false);
+    boolean zoomOut = pinchData && data.getBooleanExtra(
+            PinchZoomTestActivity.EXTRA_ZOOM_OUT, false);
+    boolean pinchConsistent = pinchData && (!zoomIn && !zoomOut || dual);
+    boolean completed = pinchConsistent && dual && zoomIn && zoomOut
+            && resultCode == RESULT_OK;
+    boolean skipped = pinchConsistent && resultCode == RESULT_FIRST_USER;
+
+    if (!completed && !skipped) {
+        logLabelValue(gr ? "Ζουμ δύο δαχτύλων" : "Pinch-to-zoom",
+                gr ? "Μη έγκυρο ή ελλιπές αποτέλεσμα — ΑΓΝΩΣΤΟ"
+                   : "Missing or inconsistent evidence — UNKNOWN");
+        enableSingleExportButton();
+        return;
+    }
+
+    if (dual) {
+        logLabelOkValue(gr ? "Δύο ταυτόχρονες επαφές" : "Two simultaneous touches",
+                gr ? "Καταγράφηκαν δύο ξεχωριστά σημεία αφής"
+                   : "Two distinct touch pointers were recorded");
+    } else {
+        logLabelValue(gr ? "Δύο ταυτόχρονες επαφές" : "Two simultaneous touches",
+                gr ? "Δεν επαληθεύτηκαν" : "Not verified");
+    }
+
+    if (zoomIn) {
+        logLabelOkValue(gr ? "Μεγέθυνση" : "Zoom in",
+                gr ? "Επαληθεύτηκε αύξηση απόστασης δύο δαχτύλων"
+                   : "Two-finger separation increase verified");
+    } else {
+        logLabelValue(gr ? "Μεγέθυνση" : "Zoom in",
+                gr ? "Δεν επαληθεύτηκε" : "Not verified");
+    }
+    if (zoomOut) {
+        logLabelOkValue(gr ? "Σμίκρυνση" : "Zoom out",
+                gr ? "Επαληθεύτηκε μείωση απόστασης δύο δαχτύλων"
+                   : "Two-finger separation decrease verified");
+    } else {
+        logLabelValue(gr ? "Σμίκρυνση" : "Zoom out",
+                gr ? "Δεν επαληθεύτηκε" : "Not verified");
+    }
+
+    if (completed) {
+        logLabelOkValue(gr ? "Αποτέλεσμα pinch-to-zoom" : "Pinch-to-zoom result",
+                gr ? "PASS — μεγέθυνση και σμίκρυνση επαληθεύτηκαν"
+                   : "PASS — both zoom directions verified");
+    } else {
+        logLabelValue(gr ? "Αποτέλεσμα pinch-to-zoom" : "Pinch-to-zoom result",
+                gr ? "Μερικός ή παραλειφθείς έλεγχος — χωρίς συνολικό PASS"
+                   : "Partial or skipped test — no overall PASS");
+    }
+    logInfo(gr ? "Η δοκιμή επαληθεύει συμβάντα δύο δαχτύλων στην εφαρμογή μας, "
+               + "όχι τη λειτουργία ζουμ κάθε άλλης εφαρμογής."
+               : "This verifies dual-pointer gestures inside GEL, not zoom behavior in every third-party app.");
+
+    // Keep the independent color/uniformity stage, also after a deliberate SKIP.
+    appendHtml("<br>");
+    logLabelValue(gr ? "Επόμενο βήμα" : "Next step",
             gr ? "LAB 6 PRO — Χρώμα & Ομοιομορφία Οθόνης"
                : "LAB 6 PRO — Display Color & Uniformity");
     logLine();
-
     startActivityForResult(
             new Intent(this, DisplayProTestActivity.class),
             REQ_LAB6_COLOR);

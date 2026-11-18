@@ -325,6 +325,13 @@
             android:theme="@style/Theme.GEL.DarkGold"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
 
+        <!-- LAB 6 optional two-finger pinch verification, portrait to protect gesture state. -->
+        <activity
+            android:name=".PinchZoomTestActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.GEL.DarkGold"/>
+
         <activity
             android:name=".DisplayProTestActivity"
             android:exported="false"
