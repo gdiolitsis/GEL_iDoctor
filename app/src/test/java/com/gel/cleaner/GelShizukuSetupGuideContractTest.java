@@ -23,15 +23,27 @@ public final class GelShizukuSetupGuideContractTest {
 
     @Test public void officialHelpRemainsInAppAndNeverRunsSilentInstaller() throws Exception {
         String screen = read("app/src/main/java/com/gel/cleaner/ShizukuOfficialHelpActivity.java");
-        assertTrue(screen.contains("HOME + (download ? \"/download/\" : \"/guide/setup/\")"));
+        assertTrue(screen.contains("isDownloadMode ? GITHUB_RELEASES : HOME + \"/guide/setup/\""));
         assertTrue(screen.contains("https://shizuku.rikka.app"));
         assertTrue(screen.contains("extends GELAutoActivityHook"));
         assertTrue(screen.contains("webView.getSettings().setJavaScriptEnabled(false)"));
         assertTrue(screen.contains("webView.getSettings().setAllowFileAccess(false)"));
         assertTrue(screen.contains("webView.getSettings().setAllowContentAccess(false)"));
         assertTrue(screen.contains("shizuku.rikka.app\".equalsIgnoreCase(uri.getHost())"));
-        assertTrue(screen.contains("if (!\"https\".equalsIgnoreCase(uri.getScheme())) return true"));
+        assertTrue(screen.contains("uri != null && \"https\".equalsIgnoreCase(uri.getScheme())"));
         assertTrue(screen.contains("startActivity(new Intent(Intent.ACTION_VIEW, uri)"));
+        assertTrue(screen.contains("https://github.com/RikkaApps/Shizuku/releases/latest"));
+        assertTrue(screen.contains("isTrustedApkLink(uri)"));
+        assertTrue(screen.contains("showDownloadConfirmation(uri)"));
+        assertTrue(screen.contains("bg.setColor(Color.BLACK)"));
+        assertTrue(screen.contains("bg.setStroke(dp(2), 0xFFFFD700)"));
+        assertTrue(screen.contains("message.setTextColor(Color.WHITE)"));
+        assertTrue(screen.contains("cancel.setBackgroundColor(0xFF444444)"));
+        assertTrue(screen.contains("open.setTextColor(Color.BLACK)"));
+        assertTrue(screen.contains("open.setBackgroundColor(0xFF39FF14)"));
+        assertFalse(screen.contains("new AlertDialog.Builder(this)"));
+        assertFalse(screen.contains("apt.izzysoft.de"));
+        assertFalse(screen.contains("coolapk.com"));
         assertFalse(screen.contains("PackageInstaller.Session"));
         assertFalse(screen.contains("REQUEST_INSTALL_PACKAGES"));
     }
@@ -39,7 +51,7 @@ public final class GelShizukuSetupGuideContractTest {
     @Test public void humanFirstGuideOffersAllManualStepsAndCanContinueNormally() throws Exception {
         String ui = read("app/src/main/java/com/gel/cleaner/GelShizukuUi.java");
         assertTrue(ui.contains("showSetupGuide()"));
-        assertTrue(ui.contains("shizuku.rikka.app/download/"));
+        assertTrue(ui.contains("github.com/RikkaApps/Shizuku/releases/latest"));
         assertTrue(ui.contains("shizuku.rikka.app/guide/setup/"));
         assertTrue(ui.contains("Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS"));
         assertTrue(ui.contains("getLaunchIntentForPackage("));

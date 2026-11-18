@@ -264,12 +264,15 @@ public final class GelShizukuUi {
                       + "Press Back to return here.", false);
 
             guideText(panel, gr
-                    ? "1. Εγκατάστησε το Shizuku μόνο από την επίσημη σελίδα, "
-                      + "αν δεν το έχεις ήδη. Δεν απαιτείται Google Play."
-                    : "1. If needed, install Shizuku from its official website. "
+                    ? "1. Αν δεν έχεις Shizuku, κατέβασέ το από την επίσημη "
+                      + "έκδοση GitHub του δημιουργού. Διάλεξε το αρχείο .apk "
+                      + "στην ενότητα Assets. Δεν χρειάζεται Google Play."
+                    : "1. If Shizuku is not installed, use the developer's "
+                      + "official GitHub release. In Assets, select the .apk. "
                       + "Google Play is not required.", false);
-            guideText(panel, "shizuku.rikka.app/download/", false);
-            guideButton(panel, gr ? "ΕΠΙΣΗΜΗ ΣΕΛΙΔΑ ΛΗΨΗΣ" : "OFFICIAL DOWNLOAD",
+            guideText(panel, "github.com/RikkaApps/Shizuku/releases/latest", false);
+            guideButton(panel, gr ? "ΕΠΙΣΗΜΗ ΛΗΨΗ ΑΠΟ GITHUB"
+                    : "OFFICIAL GITHUB DOWNLOAD",
                     () -> openOfficialHelp(true));
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -403,8 +406,8 @@ public final class GelShizukuUi {
             } catch (RuntimeException ignored) { }
             if (setupStatus != null)
                 setupStatus.setText(gr
-                        ? "Δεν βρέθηκε το Shizuku. Δες πρώτα την επίσημη σελίδα λήψης."
-                        : "Shizuku was not found. Open the official download page first.");
+                        ? "Δεν βρέθηκε το Shizuku. Χρησιμοποίησε την επίσημη λήψη από GitHub."
+                        : "Shizuku not found. Use the official GitHub download.");
         }
 
         public boolean isReady() { return session.isReady(); }
