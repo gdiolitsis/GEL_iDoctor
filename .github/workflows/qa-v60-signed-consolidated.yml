@@ -1,4 +1,4 @@
-name: v60 Signed 29-lab consolidated QA
+name: v61 Signed source-built QA (existing trigger)
 on:
   pull_request:
     paths:
@@ -14,8 +14,8 @@ concurrency:
 jobs:
   build-candidate:
     # Owner requested one consolidated signed QA APK to test accumulated changes.
-    # Restricted to the consolidated v60 candidate PR branch; never publish or merge to main.
-    if: ${{ github.head_ref == 'qa/v60-consolidated-29labs-20261118' && github.event.pull_request.head.repo.full_name == github.repository }}
+    # Restricted to this v61 QA candidate PR only; never publish or merge to main.
+    if: ${{ github.head_ref == 'qa/v61-signed-candidate-20261118' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
@@ -49,7 +49,7 @@ jobs:
           fi
           echo "MATCHES_INSTALLED_V53_CERTIFICATE=YES"
 
-      - name: Build, align, sign and verify one v60 QA release APK
+      - name: Build, align, sign and verify one v61 QA release APK
         env:
           GH_TOKEN: ${{ github.token }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -63,7 +63,7 @@ jobs:
           attempt=1
           while true; do
             log="$RUNNER_TEMP/gel-gradle-qa-$attempt.log"
-            if ./gradlew -PgelQaVersionCode=60 -PgelQaVersionName=5.3-QA7 \
+            if ./gradlew -PgelQaVersionCode=61 -PgelQaVersionName=5.3-QA8 \
               :app:testDebugUnitTest :app:assembleRelease --no-daemon --console=plain 2>&1 | tee "$log"; then break; fi
             if [ "$attempt" -ge 3 ] || ! grep -Eqi '(status code 429|HTTP 429|Too Many Requests)' "$log"; then
               echo "Gradle failed; will not sign candidate" >&2
@@ -77,32 +77,32 @@ jobs:
           test -s "$unsigned"
           out="$RUNNER_TEMP/candidate-apk"
           mkdir -p "$out"
-          "$tools/zipalign" -f 4 "$unsigned" "$out/gel-v60-aligned.apk"
+          "$tools/zipalign" -f 4 "$unsigned" "$out/gel-v61-aligned.apk"
           "$tools/apksigner" sign \
             --ks "$RUNNER_TEMP/gel-qa-signing.jks" \
             --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEY_ALIAS_PASSWORD \
             --ks-key-alias "$KEY_ALIAS" \
-            --out "$out/GEL_iDoctor_v60_signed_QA.apk" "$out/gel-v60-aligned.apk"
-          "$tools/apksigner" verify --verbose "$out/GEL_iDoctor_v60_signed_QA.apk"
-          "$tools/zipalign" -c -v 4 "$out/GEL_iDoctor_v60_signed_QA.apk"
+            --out "$out/GEL_iDoctor_v61_signed_QA.apk" "$out/gel-v61-aligned.apk"
+          "$tools/apksigner" verify --verbose "$out/GEL_iDoctor_v61_signed_QA.apk"
+          "$tools/zipalign" -c -v 4 "$out/GEL_iDoctor_v61_signed_QA.apk"
           expected='73b2c36144a1c814c92fea0ee71a6be408c2f111db20bddea24f95ad958b0964'
-          actual="$("$tools/apksigner" verify --print-certs "$out/GEL_iDoctor_v60_signed_QA.apk" \
+          actual="$("$tools/apksigner" verify --print-certs "$out/GEL_iDoctor_v61_signed_QA.apk" \
             | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}')"
           if [ -z "$actual" ] || [ "$actual" != "$expected" ]; then
             echo "SIGNED_APK_CERTIFICATE_MISMATCH_OR_UNREADABLE" >&2
             exit 1
           fi
           echo "SIGNED_APK_CERTIFICATE=PASS"
-          "$tools/aapt2" dump badging "$out/GEL_iDoctor_v60_signed_QA.apk" > "$out/APK_BADGING.txt"
-          grep -F "package: name='com.gel.iDoctor' versionCode='60' versionName='5.3-QA7'" "$out/APK_BADGING.txt"
-          (cd "$out" && sha256sum GEL_iDoctor_v60_signed_QA.apk > SHA256SUMS)
+          "$tools/aapt2" dump badging "$out/GEL_iDoctor_v61_signed_QA.apk" > "$out/APK_BADGING.txt"
+          grep -F "package: name='com.gel.iDoctor' versionCode='61' versionName='5.3-QA8'" "$out/APK_BADGING.txt"
+          (cd "$out" && sha256sum GEL_iDoctor_v61_signed_QA.apk > SHA256SUMS)
           git rev-parse HEAD > "$out/SOURCE_COMMIT"
           printf '%s\n' "$actual" > "$out/SIGNER_CERT_SHA256"
-          rm -f "$out/gel-v60-aligned.apk" "$RUNNER_TEMP/gel-qa-signing.jks"
+          rm -f "$out/gel-v61-aligned.apk" "$RUNNER_TEMP/gel-qa-signing.jks"
           echo "SIGNED_QA_UPDATE_WITH_INSTALLED_CERTIFICATE=PASS"
       - uses: actions/upload-artifact@v6
         with:
-          name: gel-v60-signed-source-qa-apk
+          name: gel-v61-signed-source-qa-apk
           path: ${{ runner.temp }}/candidate-apk
           retention-days: 7
   emulator:
@@ -125,14 +125,14 @@ jobs:
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
       - uses: actions/download-artifact@v4
         with:
-          name: gel-v60-signed-source-qa-apk
+          name: gel-v61-signed-source-qa-apk
           path: ${{ runner.temp }}/candidate-apk
       - name: Verify exact downloaded candidate
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/candidate-apk"
           sha256sum --check SHA256SUMS
-          test -s GEL_iDoctor_v60_signed_QA.apk
+          test -s GEL_iDoctor_v61_signed_QA.apk
       - name: Check selectors and explore candidate UI
         env:
           AUDIT_SCOPE: full
@@ -143,11 +143,11 @@ jobs:
           set -euo pipefail
           python3 tools/ci/test_ui_audit_selectors.py
           bash tools/ci/full_ui_audit.sh \
-            "$RUNNER_TEMP/candidate-apk/GEL_iDoctor_v60_signed_QA.apk" \
+            "$RUNNER_TEMP/candidate-apk/GEL_iDoctor_v61_signed_QA.apk" \
             "${{ matrix.api }}" "${{ matrix.language }}"
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: GEL-v60-signed-candidate-QA-api${{ matrix.api }}-${{ matrix.language }}
+          name: GEL-v61-signed-candidate-QA-api${{ matrix.api }}-${{ matrix.language }}
           path: ${{ runner.temp }}/full-ui-audit
           retention-days: 14
