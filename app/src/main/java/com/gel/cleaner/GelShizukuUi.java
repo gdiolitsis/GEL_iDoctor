@@ -47,6 +47,7 @@ public final class GelShizukuUi {
             session = new GelShizukuDiagnosticSession(activity, this::onStatus);
             action.setOnClickListener(v -> {
                 if (session.isReady()) session.stop();
+                else if (session.hasRememberedConsent()) session.requestFromUser();
                 else showConsent();
             });
         }
@@ -64,29 +65,52 @@ public final class GelShizukuUi {
                 sink.onEvent("Shizuku (ADB Shell)",
                         gr ? "Εγκεκριμένη συνεδρία μόνο για ανάγνωση"
                            : "Authorized read-only session", true);
-            } else if ("NORMAL_MODE".equals(status) || "DISCONNECTED".equals(status)) {
+            } else if ("NORMAL_MODE".equals(status)) {
                 setNormalText();
-                if ("DISCONNECTED".equals(status))
-                    sink.onEvent("Shizuku", gr
-                            ? "Η συνεδρία διεκόπη. Τα εργαστήρια λειτουργούν κανονικά."
-                            : "Disconnected. Standard Labs are unaffected.", false);
+            } else if ("CONNECTING".equals(status)) {
+                action.setText(gr ? "Shizuku — γίνεται σύνδεση…"
+                        : "Shizuku — connecting…");
+            } else if ("AWAITING_SHIZUKU_PERMISSION".equals(status)) {
+                action.setText(gr ? "Shizuku — αναμονή έγκρισης…"
+                        : "Shizuku — awaiting permission…");
+            } else if ("DISCONNECTED".equals(status)) {
+                action.setText(gr ? "Shizuku αποσυνδέθηκε — πάτησε για επανασύνδεση"
+                        : "Shizuku disconnected — tap to reconnect");
+                sink.onEvent("Shizuku", gr
+                        ? "Η συνεδρία διεκόπη. Τα εργαστήρια λειτουργούν κανονικά."
+                        : "Disconnected. Standard Labs are unaffected.", false);
             } else if ("SHIZUKU_NOT_RUNNING".equals(status)) {
+                action.setText(gr ? "Shizuku ανενεργό — πάτησε για επανασύνδεση"
+                        : "Shizuku not running — tap to reconnect");
                 sink.onEvent("Shizuku", gr
                         ? "Εγκατάστησε/ξεκίνησε την εφαρμογή Shizuku. "
                           + "Σε Android 11+ χρησιμοποιείται η σύζευξη Ασύρματου debugging."
                         : "Install and start Shizuku first; Android 11+ supports "
                           + "wireless-debugging pairing.", false);
             } else if ("ADB_SHELL_ONLY".equals(status)) {
+                action.setText(gr ? "Shizuku — απαιτείται λειτουργία ADB"
+                        : "Shizuku — ADB mode required");
                 sink.onEvent("Shizuku", gr
                         ? "Υποστηρίζεται μόνο ADB Shell, όχι λειτουργία root."
                         : "ADB Shell mode only; root mode is not accepted.", false);
             } else if ("DENIED".equals(status) ||
                     "PERMISSION_DENIED_PERMANENTLY".equals(status)) {
+                action.setText(gr ? "Shizuku — δεν εγκρίθηκε η πρόσβαση"
+                        : "Shizuku — permission denied");
                 sink.onEvent("Shizuku", gr
                         ? "Δεν εγκρίθηκε πρόσβαση. Συνεχίζουμε με τα κανονικά Labs."
                         : "Permission not granted; normal Labs continue.", false);
+            } else if ("PERMISSION_UNAVAILABLE".equals(status)) {
+                action.setText(gr ? "Shizuku — απαιτείται νέα έγκριση"
+                        : "Shizuku — permission needed");
+                sink.onEvent("Shizuku", gr
+                        ? "Η προηγούμενη άδεια δεν είναι πλέον διαθέσιμη. "
+                          + "Πάτησε για νέα έγκριση."
+                        : "Permission is no longer available. Tap to authorize again.", false);
             } else if ("SERVICE_UNAVAILABLE".equals(status) ||
                     "OUTDATED_SHIZUKU".equals(status)) {
+                action.setText(gr ? "Shizuku — υπηρεσία μη διαθέσιμη"
+                        : "Shizuku — service unavailable");
                 sink.onEvent("Shizuku", gr
                         ? "Μη διαθέσιμη συμβατή υπηρεσία. Χρήση κανονικών Android APIs."
                         : "Compatible service unavailable; Android APIs remain usable.", false);
@@ -98,7 +122,11 @@ public final class GelShizukuUi {
             if (entryOfferShown) return;
             entryOfferShown = true;
             if (activity.isFinishing() || activity.isDestroyed() || session.isReady()) return;
-            showConsent();
+            if (session.hasRememberedConsent()) {
+                session.restoreApprovedSession();
+            } else {
+                showConsent();
+            }
         }
 
         private void showConsent() {
