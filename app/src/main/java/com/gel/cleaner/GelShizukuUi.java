@@ -272,13 +272,16 @@ public final class GelShizukuUi {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 guideText(panel, gr
-                        ? "2. Συνδέσου σε Wi-Fi και άνοιξε τις Επιλογές "
-                          + "προγραμματιστή → Ασύρματος εντοπισμός σφαλμάτων. "
-                          + "Ενεργοποίησέ τον και, αν ζητηθεί, κάνε σύζευξη "
-                          + "με κωδικό μέσω της εφαρμογής Shizuku."
-                        : "2. Connect to Wi-Fi. In Developer options, turn on "
-                          + "Wireless debugging and pair using the code in Shizuku "
-                          + "if requested.", false);
+                        ? "2. Συνδέσου σε Wi-Fi. Αν δεν εμφανίζονται οι Επιλογές "
+                          + "προγραμματιστή, συνήθως ενεργοποιούνται πατώντας "
+                          + "7 φορές τον Αριθμό κατασκευής στις πληροφορίες συσκευής. "
+                          + "Έπειτα άνοιξε: Επιλογές προγραμματιστή → "
+                          + "Ασύρματος εντοπισμός σφαλμάτων, ενεργοποίησέ τον "
+                          + "και κάνε σύζευξη με κωδικό μέσω του Shizuku."
+                        : "2. Connect to Wi-Fi. If Developer options are hidden, "
+                          + "they are usually unlocked by tapping Build number "
+                          + "seven times in About phone. Then enable Wireless "
+                          + "debugging and pair with the code through Shizuku.", false);
             } else {
                 guideText(panel, gr
                         ? "2. Σε Android 10 ή παλιότερο, η έναρξη Shizuku χωρίς "
