@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
  */
 public final class GelShizukuReadOnlyService extends IGelShizukuReadOnly.Stub {
     private static final int SHELL_UID = 2000;
-    private static final int MAX_OUTPUT = 96 * 1024;
+    private static final int MAX_OUTPUT = 384 * 1024;
 
     public GelShizukuReadOnlyService() { }
 
@@ -43,6 +43,12 @@ public final class GelShizukuReadOnlyService extends IGelShizukuReadOnly.Stub {
                     return memorySummary();
                 case GelShizukuEvidence.BOOT:
                     return bootMetadata();
+                case GelShizukuEvidence.UFS:
+                    return ufsWear();
+                case GelShizukuEvidence.LOW_MEMORY:
+                    return lowMemoryEvents();
+                case GelShizukuEvidence.APP_OPS:
+                    return privacyAppOps();
                 default:
                     return "UNAVAILABLE|UNKNOWN_OPERATION";
             }
@@ -156,6 +162,96 @@ public final class GelShizukuReadOnlyService extends IGelShizukuReadOnly.Stub {
         return reason.isEmpty() ? "UNAVAILABLE|BOOT_REASON_UNKNOWN" : "BOOT|" + reason;
     }
 
+    /**
+     * Read only the well-defined UFS health descriptor nodes exposed by the
+     * kernel. The service discovers platform UFS devices locally: callers can
+     * supply neither paths nor device names. No health descriptor => unknown.
+     */
+    private static String ufsWear() {
+        java.util.ArrayList<File> candidates = new java.util.ArrayList<>();
+        candidates.add(new File("/dev/sys/block/bootdevice/health_descriptor"));
+        File root = new File("/sys/bus/platform/devices");
+        try {
+            File[] devices = root.listFiles();
+            if (devices != null && devices.length <= 2048) {
+                for (File device : devices) {
+                    String name = device.getName().toLowerCase(java.util.Locale.US);
+                    if (name.contains("ufs") && name.matches("[a-z0-9._:-]{1,96}"))
+                        candidates.add(new File(device, "health_descriptor"));
+                }
+            }
+        } catch (SecurityException ignored) { }
+        for (File health : candidates) {
+            int a = readUfsByte(new File(health, "life_time_estimation_a"));
+            int b = readUfsByte(new File(health, "life_time_estimation_b"));
+            int e = readUfsByte(new File(health, "eol_info"));
+            if (a > 0 || b > 0 || e > 0) return "UFS|" + a + "|" + b + "|" + e;
+        }
+        return "UNAVAILABLE|UFS_HEALTH_NOT_EXPOSED_TO_SHELL";
+    }
+
+    private static int readUfsByte(File f) {
+        try {
+            String value = firstLine(f.getPath(), 16);
+            if (!value.matches("(?i)(?:0x)?[0-9a-f]{1,2}")) return 0;
+            int result = Integer.parseInt(value.replaceFirst("(?i)^0x", ""), 16);
+            return result > 0 && result <= 0xff ? result : 0;
+        } catch (IOException | RuntimeException ignored) {
+            return 0;
+        }
+    }
+
+    /** Only explicit LMK event tags. Generic app restarts are NOT memory kills. */
+    private static String lowMemoryEvents() throws IOException {
+        String raw = fixedCommand("/system/bin/logcat", "-d", "-b", "events", "-t", "350");
+        if (raw == null || raw.isEmpty()) return "UNAVAILABLE|MEMORY_EVENTS_INACCESSIBLE";
+        int count = 0;
+        for (String line : raw.split("\\n")) {
+            if (line.matches("(?i)^.{0,170}\\b(?:lmk_kill|am_kill_for_memory)\\b.{0,500}$"))
+                count++;
+        }
+        // A bounded rolling events buffer, never the complete device history.
+        return "LMK|" + Math.min(350, count);
+    }
+
+    /**
+     * Optional bounded AppOps sample. Only rows with an explicit Access time
+     * leave the shell process; no raw dump, rejected ops, location values or
+     * attribution/proxy data are returned. Absence is never proof of no access.
+     */
+    private static String privacyAppOps() throws IOException {
+        String raw = fixedCommand("/system/bin/dumpsys", "appops");
+        if (raw == null) return "UNAVAILABLE|APPOPS_RESTRICTED_OR_TOO_LARGE";
+        Pattern pkgPattern = Pattern.compile("^\\s*Package ([A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+):\\s*$");
+        Pattern opPattern = Pattern.compile("^\\s*(CAMERA|RECORD_AUDIO|FINE_LOCATION|COARSE_LOCATION)\\s*(?:\\([^)]*\\))?\\s*:\\s*$");
+        Pattern accessPattern = Pattern.compile("(?i)\\bAccess:\\s*\\[[^\\]]{1,32}\\]\\s*(\\d{4}-\\d\\d-\\d\\d[ T]\\d\\d:\\d\\d:\\d\\d)");
+        java.util.LinkedHashMap<String,String> records = new java.util.LinkedHashMap<>();
+        String pkg = null, op = null;
+        for (String line : raw.split("\\n")) {
+            Matcher pm = pkgPattern.matcher(line);
+            if (pm.matches()) { pkg = pm.group(1); op = null; continue; }
+            if (line.startsWith("Uid ") || line.startsWith("  Uid ")) { pkg = null; op = null; }
+            Matcher om = opPattern.matcher(line);
+            if (om.matches()) { op = pkg == null ? null : om.group(1); continue; }
+            if (pkg == null || op == null) continue;
+            Matcher am = accessPattern.matcher(line);
+            if (am.find()) {
+                String key = pkg + "|" + op;
+                String time = am.group(1).replace('T', ' ');
+                String prior = records.get(key);
+                if (prior == null || time.compareTo(prior) > 0) records.put(key, time);
+            }
+        }
+        if (records.isEmpty()) return "UNAVAILABLE|APPOPS_ACCESS_TIMES_NOT_EXPOSED";
+        StringBuilder result = new StringBuilder("APPOPS|SAMPLED");
+        int emitted = 0;
+        for (java.util.Map.Entry<String,String> item : records.entrySet()) {
+            if (emitted++ >= 20) break;
+            result.append('\\n').append(item.getKey()).append('|').append(item.getValue());
+        }
+        return result.toString();
+    }
+
     private static String numberOnly(String raw) {
         return raw.replace(",", "");
     }
@@ -169,34 +265,52 @@ public final class GelShizukuReadOnlyService extends IGelShizukuReadOnly.Stub {
         }
     }
 
+    /**
+     * Drain stdout while the command executes. Waiting before reading could
+     * deadlock when dumpsys/logcat fills the OS pipe. Always bounded by time
+     * and bytes; no arbitrary shell, redirection or caller-supplied arguments.
+     */
     private static String fixedCommand(String... immutableArgs) throws IOException {
         if (immutableArgs == null || immutableArgs.length < 1) return null;
         ProcessBuilder builder = new ProcessBuilder(immutableArgs);
         builder.redirectErrorStream(true);
         java.lang.Process process = builder.start();
-        try {
-            // A blocked or excessive diagnostic query is unavailable, not clean.
-            if (!process.waitFor(3000, TimeUnit.MILLISECONDS)) {
-                process.destroyForcibly();
-                return null;
-            }
-            if (process.exitValue() != 0) return null;
-            try (InputStream input = process.getInputStream();
-                 ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        java.util.concurrent.atomic.AtomicBoolean overflow =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        java.util.concurrent.atomic.AtomicBoolean readFailed =
+                new java.util.concurrent.atomic.AtomicBoolean(false);
+        Thread drainer = new Thread(() -> {
+            try (InputStream input = process.getInputStream()) {
                 byte[] chunk = new byte[2048];
                 int n;
-                while ((n = input.read(chunk)) >= 0) {
-                    if (buffer.size() + n > MAX_OUTPUT) return null;
-                    if (n > 0) buffer.write(chunk, 0, n);
+                while ((n = input.read(chunk)) != -1) {
+                    synchronized (buffer) {
+                        if (buffer.size() + n > MAX_OUTPUT) overflow.set(true);
+                        else if (!overflow.get()) buffer.write(chunk, 0, n);
+                    }
                 }
+            } catch (IOException error) {
+                readFailed.set(true);
+            }
+        }, "gel-shell-readonly-drain");
+        drainer.setDaemon(true);
+        drainer.start();
+        try {
+            if (!process.waitFor(4000, TimeUnit.MILLISECONDS)) return null;
+            drainer.join(750);
+            if (drainer.isAlive() || process.exitValue() != 0
+                    || overflow.get() || readFailed.get()) return null;
+            synchronized (buffer) {
                 return buffer.toString(StandardCharsets.UTF_8.name());
             }
         } catch (InterruptedException interrupted) {
-            process.destroyForcibly();
             Thread.currentThread().interrupt();
             return null;
         } finally {
-            process.destroy();
+            process.destroyForcibly();
+            if (drainer.isAlive()) drainer.interrupt();
         }
     }
+
 }
