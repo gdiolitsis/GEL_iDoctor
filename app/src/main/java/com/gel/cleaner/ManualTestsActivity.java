@@ -1618,12 +1618,6 @@ logScroll.post(() -> setLogPanelState(0));
                : "25. Critical Android crash evidence",
             this::lab25CrashHistory));
 
-    // Optional evidence review. The ordinary lab never forces a report picker.
-    body7.addView(makeTestButton(
-            gr ? "↳ Προαιρετικά: Ανάλυση αναφοράς Android"
-               : "↳ Optional: Analyze Android bugreport",
-            this::lab25ChooseBugReport));
-
     body7.addView(makeTestButton(
             gr ? "26. Απογραφή εφαρμογών και στοιχεία χρήσης"
                : "26. App inventory and usage information",
@@ -29974,11 +29968,6 @@ private void lab25CrashHistory() {
                     + "Το άδειο ιστορικό δεν είναι πιστοποιητικό υγείας."
                : "An isolated Launcher/System UI crash is not proof of hardware failure. "
                     + "An empty history is not a health certificate.");
-    logLabelValue(gr ? "Προαιρετική ανάλυση" : "Optional analysis",
-            gr ? "Με το ξεχωριστό κουμπί μπορείτε να επιλέξετε δική σας "
-                    + "αναφορά σφαλμάτων Android (.zip ή .txt). Η ανάλυση γίνεται τοπικά."
-               : "Use the separate button to select your Android bugreport "
-                    + "(.zip or .txt). Analysis stays on-device.");
 
     // Mark completed even if Android restricted history; coverage remains explicitly LIMITED.
     // A pre-purchase check must not treat execution as a clean-device certificate.
