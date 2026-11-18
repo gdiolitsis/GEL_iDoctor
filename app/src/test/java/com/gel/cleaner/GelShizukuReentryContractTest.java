@@ -25,7 +25,7 @@ public final class GelShizukuReentryContractTest {
         assertTrue(ui.contains("session.restoreApprovedSession()"));
         assertTrue(ui.contains("else showConsent()"));
         assertTrue(ui.contains("Shizuku ενεργό — πάτησε για τερματισμό"));
-        assertTrue(ui.contains("Shizuku ανενεργό — πάτησε για επανασύνδεση"));
+        assertTrue(ui.contains("Οδηγός Shizuku — έναρξη"));
         assertTrue(ui.contains("Shizuku — απαιτείται νέα έγκριση"));
     }
 
