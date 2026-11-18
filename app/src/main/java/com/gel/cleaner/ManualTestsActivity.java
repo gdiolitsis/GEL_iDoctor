@@ -26018,10 +26018,11 @@ private void gelShizukuSupplement(int op) {
                                  : "Aggregate RAM (Shizuku)", gr ? "Μ/Δ" : "N/A");
             }
         } else if (op == GelShizukuEvidence.UFS) {
-            GelShizukuEvidence.UfsWear wear = GelShizukuEvidence.parseUfs(wire);
+            GelShizukuEvidence.StorageWear wear = GelShizukuEvidence.parseStorageWear(wire);
             if (wear == null) return; // no unsupported NAND health claim
-            logInfo(gr ? "Πραγματικά στοιχεία UFS από τον ελεγκτή"
-                       : "Reported UFS controller health descriptors");
+            logInfo((gr ? "Αναφερόμενες ενδείξεις φθοράς ελεγκτή " :
+                            "Reported storage-controller wear: ") +
+                    ("EMMC".equals(wear.technology) ? "eMMC" : "UFS"));
             if (wear.hasEol()) {
                 String result = wear.preEol == 1
                         ? (gr ? "Κανονική ένδειξη Pre-EOL" : "Normal Pre-EOL indication")
@@ -26029,18 +26030,18 @@ private void gelShizukuSupplement(int op) {
                         ? (gr ? "Προειδοποίηση ορίου ζωής" : "Lifetime threshold warning")
                         : (gr ? "Επείγουσα ένδειξη ορίου ζωής" : "Urgent end-of-life indicator");
                 if (wear.preEol >= 2)
-                    logLabelWarnValue("UFS Pre-EOL", result + " (" + wear.preEol + ")");
+                    logLabelWarnValue(wear.technology + " Pre-EOL", result + " (" + wear.preEol + ")");
                 else
                     logLabelOkValue("UFS Pre-EOL", result + " (" + wear.preEol + ")");
             }
             if (wear.lifetimeA > 0) {
-                String interval = GelShizukuEvidence.UfsWear.lifetimeInterval(wear.lifetimeA);
-                if (wear.lifetimeA >= 10) logLabelWarnValue("UFS Lifetime A", interval);
+                String interval = GelShizukuEvidence.StorageWear.lifetimeInterval(wear.lifetimeA);
+                if (wear.lifetimeA >= 10) logLabelWarnValue(wear.technology + " Lifetime A", interval);
                 else logLabelOkValue("UFS Lifetime A", interval);
             }
             if (wear.lifetimeB > 0) {
-                String interval = GelShizukuEvidence.UfsWear.lifetimeInterval(wear.lifetimeB);
-                if (wear.lifetimeB >= 10) logLabelWarnValue("UFS Lifetime B", interval);
+                String interval = GelShizukuEvidence.StorageWear.lifetimeInterval(wear.lifetimeB);
+                if (wear.lifetimeB >= 10) logLabelWarnValue(wear.technology + " Lifetime B", interval);
                 else logLabelOkValue("UFS Lifetime B", interval);
             }
             logInfo(gr ? "Ενδείξεις κατηγοριών φθοράς του ελεγκτή, όχι ακριβές ποσοστό υγείας ή ανεξάρτητη πιστοποίηση NAND."
