@@ -22,16 +22,20 @@ public final class Lab20RebootHistoryColorContractTest {
         assertTrue(s.contains("logLabel(label, value, \"#87CEFA\", GelDiagnosticSeverity.Level.NEUTRAL);"));
     }
 
-    @Test public void bothHistoryPathsUseInfoColorOnly() throws Exception {
+    @Test public void unavailableRebootHistoryIsOnlyReportedOnceAndNeverInferred() throws Exception {
         String s = source();
         int a = s.indexOf("private void lab20UptimeHints()");
         int b = s.indexOf("// LAB 21 —", a);
         assertTrue(a >= 0 && b > a);
         String lab = s.substring(a,b);
-        assertEquals(2, lab.split("logLabelInfoValue\\(", -1).length - 1);
+        assertEquals(1, lab.split("logLabelInfoValue\\(", -1).length - 1);
         assertTrue(lab.contains("ΜΗ ΔΙΑΘΕΣΙΜΟ ΙΣΤΟΡΙΚΟ"));
-        assertTrue(lab.contains("Δεν συλλέχθηκε επαληθευμένο ιστορικό επανεκκινήσεων"));
-        assertTrue(lab.contains("RebootHistoryEvidence.classify(-1, 0L)"));
+        assertTrue(lab.contains("HISTORY UNAVAILABLE"));
+        assertTrue(lab.contains("SUMMARY: REBOOT_PATTERN=INSUFFICIENT_DATA"));
         assertTrue(lab.contains("logLabelOkValue(\"Uptime\", upStr);"));
+        assertTrue(lab.contains("LAB 20 — Χρόνος Λειτουργίας Συστήματος"));
+        assertFalse(lab.contains("RebootHistoryEvidence.classify("));
+        assertFalse(lab.contains("REBOOT_PATTERN\","));
+        assertFalse(lab.contains("Συμπεριφορά Επανεκκινήσεων"));
     }
 }

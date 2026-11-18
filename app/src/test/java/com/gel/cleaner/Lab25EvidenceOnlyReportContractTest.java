@@ -73,12 +73,24 @@ public final class Lab25EvidenceOnlyReportContractTest {
         assertFalse(automatic.contains("startActivityForResult("));
     }
 
-    @Test public void preservedFileReadbackMustActuallyBeVerified() throws Exception {
+    @Test public void fileReadbackBelongsToLab18AndNotToCrashHistory() throws Exception {
         String s = source();
-        assertTrue(s.contains("long latency = storageLatencyProbe();"));
+        int start18 = s.indexOf("private void lab18StorageSnapshot()");
+        int end18 = s.indexOf("private void lab19RamSnapshot()", start18);
+        int start25 = s.indexOf("private void lab25CrashHistory()");
+        int end25 = s.indexOf("private java.util.Set<String> lab25DefaultRoles()", start25);
+        assertTrue(start18 >= 0 && end18 > start18);
+        assertTrue(start25 >= 0 && end25 > start25);
+        String storage = s.substring(start18, end18);
+        String critical = s.substring(start25, end25);
+        assertTrue(storage.contains("long storageProbeLatency = storageLatencyProbe();"));
+        assertTrue(storage.contains("Επιτυχής εγγραφή και ανάγνωση αρχείου 4 KB."));
+        assertTrue(storage.contains("Τα δεδομένα που διαβάστηκαν ταιριάζουν ακριβώς."));
+        assertTrue(storage.contains("Δεν μετρήθηκε φθορά NAND ή υγεία ελεγκτή."));
+        assertFalse(critical.contains("storageLatencyProbe()"));
+        assertFalse(critical.contains("Ανεξάρτητη δοκιμή αρχείου"));
+        assertFalse(critical.contains("Δοκιμή αποθήκευσης"));
         assertTrue(s.contains("StorageIoEvidencePolicy.readbackMatches(data, readBack, received)"));
-        assertTrue(s.contains("Τα δεδομένα που διαβάστηκαν ταιριάζουν ακριβώς."));
-        assertTrue(s.contains("3. Ανεξάρτητη δοκιμή αρχείου (όχι διάγνωση crash)"));
-        assertTrue(s.contains("SUMMARY: CRASH_ORIGIN=UNCLEAR; HISTORY_COVERAGE="));
+        assertTrue(critical.contains("SUMMARY: CRASH_ORIGIN=UNCLEAR; HISTORY_COVERAGE="));
     }
 }
