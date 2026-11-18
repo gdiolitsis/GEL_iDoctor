@@ -23,7 +23,11 @@ public final class GelShizukuReentryContractTest {
         String ui = source("GelShizukuUi.java");
         assertTrue(ui.contains("if (session.hasRememberedConsent())"));
         assertTrue(ui.contains("session.restoreApprovedSession()"));
-        assertTrue(ui.contains("else showConsent()"));
+        assertTrue(ui.contains("if (session.hasRememberedConsent())"));
+        assertTrue(ui.contains("session.restoreApprovedSession()"));
+        // First-time ordinary Labs do not interrupt users with a Shizuku popup.
+        assertTrue(ui.contains("setNormalText();"));
+        assertTrue(ui.contains("else showConsent();") == false);
         assertTrue(ui.contains("Shizuku ενεργό — πάτησε για τερματισμό"));
         assertTrue(ui.contains("Οδηγός Shizuku — έναρξη"));
         assertTrue(ui.contains("Shizuku — απαιτείται νέα έγκριση"));
