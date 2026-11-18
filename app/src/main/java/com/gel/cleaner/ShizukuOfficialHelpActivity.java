@@ -118,8 +118,8 @@ public final class ShizukuOfficialHelpActivity extends GELAutoActivityHook {
         if (isDownloadMode) {
             Button browser = new GelButton(this);
             browser.setAllCaps(false);
-            browser.setText(gr ? "ΑΝΟΙΓΜΑ ΕΠΙΣΗΜΟΥ GITHUB ΣΤΟΝ ΠΕΡΙΗΓΗΤΗ"
-                    : "OPEN OFFICIAL GITHUB IN BROWSER");
+            browser.setText(gr ? "ΑΝΟΙΓΜΑ ΣΤΟΝ ΠΕΡΙΗΓΗΤΗ"
+                    : "OPEN IN BROWSER");
             browser.setTextColor(Color.WHITE);
             browser.setBackgroundResource(R.drawable.gel_btn_outline_selector);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
