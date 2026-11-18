@@ -142,10 +142,12 @@ public final class GelShizukuUi {
             if (entryOfferShown) return;
             entryOfferShown = true;
             if (activity.isFinishing() || activity.isDestroyed() || session.isReady()) return;
+            // Do not interrupt ordinary users with advanced setup dialogs.
+            // The manual optional button is always available for first opt-in.
             if (session.hasRememberedConsent()) {
                 session.restoreApprovedSession();
             } else {
-                showConsent();
+                setNormalText();
             }
         }
 
@@ -275,13 +277,15 @@ public final class GelShizukuUi {
                         ? "2. Συνδέσου σε Wi-Fi. Αν δεν εμφανίζονται οι Επιλογές "
                           + "προγραμματιστή, συνήθως ενεργοποιούνται πατώντας "
                           + "7 φορές τον Αριθμό κατασκευής στις πληροφορίες συσκευής. "
-                          + "Έπειτα άνοιξε: Επιλογές προγραμματιστή → "
-                          + "Ασύρματος εντοπισμός σφαλμάτων, ενεργοποίησέ τον "
-                          + "και κάνε σύζευξη με κωδικό μέσω του Shizuku."
+                          + "Έπειτα στις Επιλογές προγραμματιστή ενεργοποίησε "
+                          + "τον εντοπισμό σφαλμάτων USB και τον Ασύρματο "
+                          + "εντοπισμό σφαλμάτων. Κάνε σύζευξη με κωδικό μέσω "
+                          + "του Shizuku."
                         : "2. Connect to Wi-Fi. If Developer options are hidden, "
                           + "they are usually unlocked by tapping Build number "
-                          + "seven times in About phone. Then enable Wireless "
-                          + "debugging and pair with the code through Shizuku.", false);
+                          + "seven times in About phone. In Developer options, "
+                          + "enable USB debugging and Wireless debugging, "
+                          + "then pair with the code through Shizuku.", false);
             } else {
                 guideText(panel, gr
                         ? "2. Σε Android 10 ή παλιότερο, η έναρξη Shizuku χωρίς "
