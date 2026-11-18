@@ -247,7 +247,7 @@ public final class GelShizukuReadOnlyService extends IGelShizukuReadOnly.Stub {
         int emitted = 0;
         for (java.util.Map.Entry<String,String> item : records.entrySet()) {
             if (emitted++ >= 20) break;
-            result.append('\\n').append(item.getKey()).append('|').append(item.getValue());
+            result.append('\n').append(item.getKey()).append('|').append(item.getValue());
         }
         return result.toString();
     }
