@@ -54,6 +54,39 @@ public final class Lab14DischargeTraceTest {
         assertTrue(r.currentCoveragePct < 70d);
     }
 
+    @Test public void firstFourMinutesCannotCertifyFiveMinuteTest() {
+        Lab14DischargeTrace t = new Lab14DischargeTrace();
+        for (int i = 0; i <= 240; i++)
+            t.addSample(i * 1000L, 4000 - i / 3, -1200f, false);
+        Lab14DischargeTrace.Result r = t.evaluate(300000L);
+        assertFalse("An 80%-length trace must not count as the full test", r.valid);
+        assertEquals("INCOMPLETE_DURATION", r.reason);
+    }
+
+    @Test public void coverageBelowNinetyPercentCannotPass() {
+        Lab14DischargeTrace t = new Lab14DischargeTrace();
+        // Keep both endpoints but miss a long middle interval: timestamps
+        // alone must not convert unmeasured time into valid battery evidence.
+        for (int i = 0; i <= 300; i++)
+            if (i < 130 || i > 170)
+                t.addSample(i * 1000L, 4000 - i / 3, -1200f, false);
+        Lab14DischargeTrace.Result r = t.evaluate(300000L);
+        assertFalse(r.valid);
+        assertTrue(r.currentCoveragePct < 90d);
+        assertTrue(r.counterCoveragePct < 90d);
+    }
+
+    @Test public void nearCompleteTraceAllowsBriefMissedPoll() {
+        Lab14DischargeTrace t = new Lab14DischargeTrace();
+        for (int i = 0; i <= 300; i++) {
+            if (i == 151) continue;
+            t.addSample(i * 1000L, 4000 - i / 3, -1200f, false);
+        }
+        Lab14DischargeTrace.Result r = t.evaluate(300000L);
+        assertTrue(r.reason, r.valid);
+        assertTrue(r.counterCoveragePct >= 90d);
+    }
+
     @Test public void chargerInsertionInvalidatesDischargeEvidence() {
         Lab14DischargeTrace t = new Lab14DischargeTrace();
         for (int i = 0; i <= 300; i++)
