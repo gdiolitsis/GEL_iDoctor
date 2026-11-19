@@ -395,6 +395,7 @@ private boolean gr;
 private long startMah;
 // Each 14A, 14B and 14Γ run gets its own timed discharge evidence.
 private volatile Lab14DischargeTrace lab14ATrace;
+private volatile long lab14ATraceStartMs = -1L;
 private volatile Lab14DischargeTrace lab14DurationTrace;
 private long baselineFullMah;
 private volatile boolean lab14HasReportedCapacity;
@@ -13883,7 +13884,9 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
     // 🔴 BASE VALUES
     startMah = start.chargeNowMah;
     lab14ATrace = new Lab14DischargeTrace();
-    lab14ATrace.addSample(SystemClock.elapsedRealtime(), start.chargeNowMah, start.currentMa, start.charging);
+    lab14ATraceStartMs = SystemClock.elapsedRealtime();
+    lab14ATrace.addSample(lab14ATraceStartMs,
+            start.chargeNowMah, start.currentMa, start.charging);
     cycles = start.cycleCount;
 
     Float tStart0 = idoctor.getBatteryTempUnified();
@@ -16042,8 +16045,10 @@ if (invalidStructure) {
 
 // 🔴 END CHARGE (PRIMARY)
 final long endMah = snapEnd.chargeNowMah;
+// Include warm-up AND main load, from the actual first to last test observation.
+final long lab14ATraceEndMs = SystemClock.elapsedRealtime();
 if (lab14ATrace != null) {
-    lab14ATrace.addSample(SystemClock.elapsedRealtime(),
+    lab14ATrace.addSample(lab14ATraceEndMs,
             snapEnd.chargeNowMah, snapEnd.currentMa, snapEnd.charging);
 }
 
@@ -16226,13 +16231,18 @@ if (samplingValid && lab14DeltaMah > 0 && dtMs > 0) {
 
 // FULL-DURATION DISCHARGE EVIDENCE — never choose the maximum of
 // unrelated rates or certify a run from sparse / contradictory samples.
+// The main-stress clock (t0) is reset after the 45-second warm-up.
+// Never compare a whole-run trace against only that shorter interval.
+long lab14ATraceTotalMs = lab14ATraceStartMs >= 0
+        && lab14ATraceEndMs > lab14ATraceStartMs
+        ? lab14ATraceEndMs - lab14ATraceStartMs : 0L;
 Lab14DischargeTrace.Result trace14A = lab14ATrace == null
         ? Lab14DischargeTrace.Result.unavailable("NO_SESSION")
-        : lab14ATrace.evaluate(dtMs);
+        : lab14ATrace.evaluate(lab14ATraceTotalMs);
 double bestRate = trace14A.valid ? trace14A.rateMahPerHour : 0d;
 if (bestRate > 0d && bestRate <= 20000d) {
     mahPerHour = bestRate;
-    drainMah = Math.round((float) (bestRate * dtMs / 3600000.0));
+    drainMah = Math.round((float) (bestRate * lab14ATraceTotalMs / 3600000.0));
     validDrain = drainMah > 0;
 } else {
     mahPerHour = 0d;
@@ -30106,26 +30116,6 @@ private String lab25ReadDropBoxHeader(DropBoxManager.Entry entry) {
     } catch (IOException | RuntimeException ex) { return ""; }
 }
 
-private void lab25ChooseBugReport() {
-    final boolean gr = AppLang.isGreek(this);
-    logLabelValue(gr ? "Ιδιωτικότητα" : "Privacy",
-            gr ? "Επιλέξτε μόνο δική σας αναφορά Android. "
-                    + "Το αρχείο αναλύεται τοπικά και δεν αποθηκεύονται πλήρη logs."
-               : "Choose only your own Android report. Analyzed locally, without storing full logs.");
-    try {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("*/*");
-        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[] {
-                "application/zip", "application/x-zip-compressed",
-                "application/octet-stream", "text/plain"});
-        startActivityForResult(intent, 25025);
-    } catch (RuntimeException ex) {
-        logLabelValue(gr ? "Επιλογέας αρχείων" : "File picker",
-                gr ? "Δεν ήταν διαθέσιμος." : "Unavailable.");
-    }
-}
-
 private void lab25ReadBugReport(Uri uri) {
     final boolean gr = AppLang.isGreek(this);
     final java.util.Set<String> roles = lab25DefaultRoles();
@@ -33479,12 +33469,6 @@ short[] buffer = new short[samples];
 @Override
 protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
-
-    if (requestCode == 25025) {
-        if (resultCode == RESULT_OK && data != null && data.getData() != null)
-            lab25ReadBugReport(data.getData());
-        return;
-    }
 
     // Returning from an empty dialer is not proof a call was placed.
     if (requestCode == REQ_LAB12_DIALER) {
