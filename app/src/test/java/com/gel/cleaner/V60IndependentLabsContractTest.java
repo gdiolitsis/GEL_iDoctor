@@ -43,5 +43,15 @@ public final class V60IndependentLabsContractTest {
         assertTrue(manifest.contains(".Lab25SharedReportActivity"));
         assertTrue(parser.contains("selected Android bugreport ZIP"));
         assertTrue(parser.contains("selected text report"));
+        // The old ZIP/TXT picker below Lab 25 must stay removed.
+        assertFalse(screen.contains("lab25ChooseBugReport()"));
+        assertFalse(screen.contains("requestCode == 25025"));
+        assertFalse(screen.contains("Intent.ACTION_OPEN_DOCUMENT"));
+        // A user-initiated Android Sharesheet import is still supported.
+        assertTrue(screen.contains("Lab25SharedReportActivity.ACTION_IMPORT_LAB25"));
+        assertTrue(screen.contains("lab25ReadBugReport(sharedReport)"));
+        // Lab14A includes its warm-up in the actual measured session duration.
+        assertTrue(screen.contains("lab14ATrace.evaluate(lab14ATraceTotalMs)"));
+        assertTrue(screen.contains("bestRate * lab14ATraceTotalMs"));
     }
 }
