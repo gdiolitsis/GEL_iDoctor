@@ -41,12 +41,12 @@ public final class Lab14BValueColorsAndCapacityContractTest {
         assertTrue(s.contains("logLabelOkValue(\"End Temp\", String.valueOf(endTemp[0]))"));
         assertTrue(s.contains("logLabelOkValue(\"Start Volt\", String.valueOf(startVolt[0]))"));
         assertTrue(s.contains("logLabelOkValue(\"End Volt\", String.valueOf(endVolt[0]))"));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Διορθωμένη κατανάλωση\""));
+        assertTrue(s.contains("logLabelOkValue(gr ? \"Φόρτιση (έναρξη / λήξη)\""));
         assertTrue(s.contains("logLabelOkValue(\n            gr ? \"Κατανάλωση\""));
         assertTrue(s.contains("logLabelOkValue(gr ? \"Άνοδος θερμοκρασίας\""));
         assertTrue(s.contains("logLabelWarnValue(gr ? \"Άνοδος θερμοκρασίας\""));
         assertTrue(s.contains("logLabelOkValue(\n            gr ? \"Μεταβολή τάσης (+πτώση/-άνοδος)\""));
-        assertTrue(s.contains("logLabelValue(gr ? \"Διορθωμένη κατανάλωση\""));
+        assertFalse(s.contains("logLabelOkValue(gr ? \"Διορθωμένη κατανάλωση\""));
         assertTrue(s.contains("gr ? \"Μ/Δ\" : \"N/A\""));
     }
     @Test public void enduranceAndRemainingTimeAreColoredOnlyWhenCalculated() throws Exception {
@@ -114,7 +114,7 @@ public final class Lab14BValueColorsAndCapacityContractTest {
         for (String measured : new String[] {
                 "Επίπεδο μπαταρίας", "Χωρητικότητα αναφοράς (14B/Γ)",
                 "Start Temp", "End Temp", "Start Volt", "End Volt",
-                "Διορθωμένη κατανάλωση", "Κατανάλωση",
+                "Φόρτιση (έναρξη / λήξη)", "Κατανάλωση",
                 "Άνοδος θερμοκρασίας", "Μεταβολή τάσης (+πτώση/-άνοδος)",
                 "Εκτιμώμενη διάρκεια στο 100% (μοντέλο)", "Μπαταρία" }) {
             assertTrue("Missing GAMMA data field: " + measured,
@@ -123,7 +123,7 @@ public final class Lab14BValueColorsAndCapacityContractTest {
         for (String colored : new String[] {
                 "logLabelOkValue(\"Start Temp\"", "logLabelOkValue(\"End Temp\"",
                 "logLabelOkValue(\"Start Volt\"", "logLabelOkValue(\"End Volt\"",
-                "logLabelOkValue(gr ? \"Διορθωμένη κατανάλωση\"",
+                "logLabelOkValue(gr ? \"Φόρτιση (έναρξη / λήξη)\"",
                 "logLabelOkValue(gr ? \"Άνοδος θερμοκρασίας\"",
                 "logLabelOkValue(gr ? \"Εκτιμώμενη διάρκεια στο 100% (μοντέλο)\"",
                 "logLabelOkValue(gr ? \"Μπαταρία\"",
