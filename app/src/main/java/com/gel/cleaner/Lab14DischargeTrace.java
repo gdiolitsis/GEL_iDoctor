@@ -4,6 +4,8 @@ package com.gel.cleaner;
  * Battery evidence from a complete, timestamped discharge session.
  * Reads are periodic (typically 1 Hz): Android cannot promise a hardware
  * update at every instant. Missing intervals do not count as measured time.
+ * A valid result requires near-end-to-end evidence and >=90% sampled coverage;
+ * merely seeing a few late points can never certify a complete test.
  * No Android dependencies: independently testable.
  */
 public final class Lab14DischargeTrace {
@@ -92,15 +94,15 @@ public final class Lab14DischargeTrace {
         double currentPct = 100d * Math.min(1d, currentCoveredMs / (double) requiredMs);
         if (chargingObserved) return new Result(false, Double.NaN,
                 "NONE", counterPct, currentPct, "CHARGING_DURING_TEST");
-        if (lastMs - firstMs < requiredMs * 0.80d)
+        if (lastMs - firstMs < requiredMs * 0.95d)
             return new Result(false, Double.NaN,
                 "NONE", counterPct, currentPct, "INCOMPLETE_DURATION");
 
         int minimumSamples = Math.max(12, (int) (requiredMs / 10000L));
         double counterRate = Double.NaN;
         if (!counterUnstable && counterSamples >= minimumSamples &&
-                counterPct >= 70d && firstChargeMs >= 0 &&
-                lastChargeMs - firstChargeMs >= requiredMs * 0.80d &&
+                counterPct >= 90d && firstChargeMs >= 0 &&
+                lastChargeMs - firstChargeMs >= requiredMs * 0.95d &&
                 firstChargeMah > lastChargeMah) {
             counterRate = (firstChargeMah - lastChargeMah) * 3600000d
                     / (lastChargeMs - firstChargeMs);
@@ -108,7 +110,7 @@ public final class Lab14DischargeTrace {
         }
 
         double currentRate = Double.NaN;
-        if (currentSamples >= minimumSamples && currentPct >= 70d && currentCoveredMs > 0) {
+        if (currentSamples >= minimumSamples && currentPct >= 90d && currentCoveredMs > 0) {
             currentRate = currentMaMs / currentCoveredMs; // mA = mAh/hour
             if (currentRate < 50d || currentRate > 12000d) currentRate = Double.NaN;
         }
