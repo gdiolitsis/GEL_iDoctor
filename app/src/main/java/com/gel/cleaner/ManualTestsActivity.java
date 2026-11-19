@@ -16249,15 +16249,24 @@ if (bestRate > 0d && bestRate <= 20000d) {
     drainMah = 0;
     validDrain = false;
 }
+// Log the real start/end fuel-gauge readings, never an invented full capacity.
+logLabelOkValue(gr ? "Φόρτιση 14A (έναρξη / λήξη)" : "14A charge (start / end)",
+        startMah + " / " + endMah + " mAh");
 if (!trace14A.valid) {
-    logInfo(gr
-            ? "Κατανάλωση 14A: Μ/Δ — ανεπαρκής ή ασυνεπής χρονική κάλυψη (" + trace14A.reason + ")"
-            : "14A consumption: N/A — insufficient or inconsistent time coverage (" + trace14A.reason + ")");
+    logLabelValue(gr ? "Κατανάλωση 14A" : "14A consumption",
+            (gr ? "Μ/Δ — μη έγκυρη διαφορά αρχής–τέλους (" : "N/A — unverified start/end evidence (")
+                    + trace14A.reason + ")");
 } else {
-    logInfo(String.format(Locale.US,
-            gr ? "14A: Συνεχής καταγραφή %s, κάλυψη charge %.0f%% / ρεύματος %.0f%%"
-               : "14A: continuous %s trace, charge %.0f%% / current %.0f%% coverage",
-            trace14A.source, trace14A.counterCoveragePct, trace14A.currentCoveragePct));
+    logLabelOkValue(gr ? "Μετρημένη κατανάλωση 14A" : "14A measured discharge",
+            drainMah + " mAh");
+    logInfo(gr ? ("Πηγή 14A: " + trace14A.source
+                    + " — τα ενδιάμεσα δείγματα ελέγχουν την αξιοπιστία, δεν απαιτούνται για την τελική διαφορά.")
+               : ("14A source: " + trace14A.source
+                    + " — intermediate samples validate the counter; not required for endpoint delta."));
+    if ("COUNTER_CURRENT_DISAGREEMENT".equals(trace14A.reason)) {
+        logWarn(gr ? "Ασυμφωνία στιγμιαίου ρεύματος και μετρητή mAh — η κατανάλωση βασίζεται στις ενδείξεις αρχής–τέλους."
+                   : "Current sensor differs from charge counter — reported discharge uses measured start/end charge.");
+    }
 }
 
 // ----------------------------------------------------
@@ -22582,8 +22591,8 @@ if (!Float.isNaN(endVolt[0])) {
 }
 
 // ------------------------------------------------
-// FULL TEST DRAIN: use all timestamped observations from this run.
-// A few late samples are NOT sufficient to score a five-minute test.
+// LAB14B and LAB14Γ: measure actual beginning/end mAh over the entire
+// completed five-minute profile. Intermediate polls only validate this delta.
 endMah[0] = snapEnd.chargeNowMah;
 durationTrace.addSample(SystemClock.elapsedRealtime(),
         snapEnd.chargeNowMah, snapEnd.currentMa, snapEnd.charging);
@@ -22593,68 +22602,24 @@ float perHour = durationEvidence.valid
 float estimatedHours = Float.NaN;
 boolean fakeCounter = durationEvidence.valid
         && "CURRENT_INTEGRATION".equals(durationEvidence.source);
+logLabelOkValue(gr ? "Φόρτιση (έναρξη / λήξη)" : "Charge (start / end)",
+        startMah[0] + " / " + endMah[0] + " mAh");
 if (durationEvidence.valid) {
-    logInfo(String.format(Locale.US,
-            gr ? "Κάλυψη μέτρησης: charge %.0f%% / ρεύμα %.0f%% (%s)"
-               : "Measurement coverage: charge %.0f%% / current %.0f%% (%s)",
-            durationEvidence.counterCoveragePct,
-            durationEvidence.currentCoveragePct, durationEvidence.source));
+    logInfo(gr ? "Πηγή κατανάλωσης: " + durationEvidence.source
+               : "Consumption source: " + durationEvidence.source);
+    if ("COUNTER_CURRENT_DISAGREEMENT".equals(durationEvidence.reason)) {
+        logWarn(gr ? "Ασυμφωνία με το στιγμιαίο ρεύμα — χρησιμοποιήθηκαν τα πραγματικά mAh αρχής–τέλους."
+                   : "Instantaneous current disagrees — measured start/end charge remains authoritative.");
+    }
 } else {
-    logWarn(gr
-            ? "Ανεπαρκής ή ασυνεπής συνεχής μέτρηση — κατανάλωση Μ/Δ (" + durationEvidence.reason + ")"
-            : "Insufficient or inconsistent continuous measurement — consumption N/A (" + durationEvidence.reason + ")");
+    logWarn(gr ? "Μη έγκυρη διαφορά αρχής–τέλους — κατανάλωση Μ/Δ (" + durationEvidence.reason + ")"
+               : "Invalid start/end evidence — consumption N/A (" + durationEvidence.reason + ")");
 }
 
-// --------------------------------------
-// SPIKES CORRECTION 
-// --------------------------------------
+// Load spikes are part of the actual discharge measured by the battery gauge.
+// Keep spike diagnostics but NEVER deduct a synthetic correction from measured
+// mAh or distort the 14B / 14Γ endurance projection.
 float correctedPerHour = perHour;
-
-if (lab14SpikeMah > 0.8f && !Float.isNaN(perHour)) {
-
-    float multiplier = 15f;
-    float capPct = 0.25f;
-
-    if (lab14SpikeCount >= 5 ||
-        lab14MaxSpikeExcess > 700f) {
-
-        multiplier = 30f;
-        capPct = 0.40f;
-    }
-
-    float spikePerHour =
-            lab14SpikeMah * multiplier;
-
-    float cap =
-        (!Float.isNaN(perHour))
-        ? perHour * capPct
-        : 0f;
-
-    spikePerHour =
-            Math.min(spikePerHour, cap);
-
-    correctedPerHour =
-            perHour - spikePerHour;
-
-    float minAllowed =
-            perHour * 0.55f;
-
-    if (correctedPerHour < minAllowed) {
-        correctedPerHour = minAllowed;
-    }
-
-    if (correctedPerHour < 50f) {
-        correctedPerHour = perHour;
-    }
-}
-
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
-    logLabelOkValue(gr ? "Διορθωμένη κατανάλωση" : "Corrected consumption",
-            String.format(Locale.US, "%.0f mAh/h", correctedPerHour));
-} else {
-    logLabelValue(gr ? "Διορθωμένη κατανάλωση" : "Corrected consumption",
-            gr ? "Μ/Δ" : "N/A");
-}
 
 // ------------------------------------------------
 // FINAL ESTIMATION (NO REDECLARATION)
