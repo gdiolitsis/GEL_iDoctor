@@ -103,7 +103,9 @@ public final class Lab17CombinedEvidenceMatrixTest {
         Lab17CombinedConclusion.Decision d = decide("Critical",
                 false,true,true,true,true,true,true,true,true,true);
         assertEquals(Lab17CombinedConclusion.Tone.CAUTION, d.tone);
-        assertTrue(d.message.contains("κρίσιμη"));
+        assertTrue(d.message.contains("αυξημένη πτώση τάσης"));
+        assertFalse("One stress trial is not a confirmed critical system failure",
+                d.message.contains("χαρακτηρίστηκε κρίσιμη"));
         assertTrue(d.message.contains("ηλεκτρική"));
         assertTrue(d.message.contains("στάθμης"));
         assertTrue(d.message.contains("14Α"));
