@@ -15107,6 +15107,11 @@ private void lab14LogSave(
                     .putBoolean("lab14_stress_thermal_warning",
                             (Float.isFinite(thermalRiseC) && thermalRiseC >= 6.5f)
                             || (Float.isFinite(batteryPeakC) && batteryPeakC >= 45f))
+                    // Keep the temperature change and absolute peak separate.
+                    .putFloat("lab14_stress_thermal_rise_c",
+                            Float.isFinite(thermalRiseC) ? thermalRiseC : Float.NaN)
+                    .putFloat("lab14_stress_peak_battery_c",
+                            Float.isFinite(batteryPeakC) ? batteryPeakC : Float.NaN)
                     .putLong("lab14_last_ts", System.currentTimeMillis())
                     // A completed stress run is evidence of execution, never measured SoH.
                     .putLong("lab14_valid_stress_ts",
@@ -26272,6 +26277,10 @@ private void lab17RunAuto() {
     // evidence satisfies the newer human-readable conclusion requirements.
     final boolean lab14ThermalRiseValid =
             lab14Records.getBoolean("lab14_thermal_rise_valid", false);
+    final float lab14StressThermalRiseC = lab14Records.getFloat(
+            "lab14_stress_thermal_rise_c", Float.NaN);
+    final float lab14StressPeakBatteryC = lab14Records.getFloat(
+            "lab14_stress_peak_battery_c", Float.NaN);
             
 // ------------------------------------------------------------
 // 🔴 MULTIPLIERS (LOCAL SAFE)
@@ -26708,9 +26717,26 @@ final boolean fresh16 =
                        : "An additional electrical finding requires follow-up");
         }
         if (lab14StressThermalWarning) {
+            String thermalDetail;
+            if (Float.isFinite(lab14StressPeakBatteryC)
+                    && lab14StressPeakBatteryC >= 45f) {
+                thermalDetail = String.format(Locale.US,
+                        gr ? "Αυξημένη απόλυτη θερμοκρασία μπαταρίας κατά την καταπόνηση: %.1f°C"
+                           : "Elevated absolute battery temperature under stress: %.1f°C",
+                        lab14StressPeakBatteryC);
+            } else if (Float.isFinite(lab14StressThermalRiseC)
+                    && lab14StressThermalRiseC >= 6.5f) {
+                thermalDetail = String.format(Locale.US,
+                        gr ? "Μεγάλη άνοδος κατά την καταπόνηση: +%.1f°C — δεν αποδεικνύει από μόνη της υπερθέρμανση"
+                           : "Large temperature rise under stress: +%.1f°C — not itself proof of overheating",
+                        lab14StressThermalRiseC);
+            } else {
+                thermalDetail = gr
+                        ? "Παλαιό θερμικό εύρημα 14Α: δεν διακρίνεται άνοδος από απόλυτη θερμοκρασία"
+                        : "Legacy 14A thermal flag: rise and absolute temperature cannot be distinguished";
+            }
             logLabelWarnValue(gr ? "Θερμική απόκριση Lab 14A" : "Lab 14A thermal response",
-                    gr ? "Αυξημένη θερμική ένδειξη κατά την καταπόνηση"
-                       : "Elevated thermal response during the stress trial");
+                    thermalDetail);
         }
 
         // LAB 15: combine its FINAL diagnostic outcome, not its questionnaire.
@@ -26892,6 +26918,36 @@ final boolean fresh16 =
             logLabelOkValue(gr ? "Αποτέλεσμα" : "Result", conclusionText);
         } else {
             logLabelValue(gr ? "Αποτέλεσμα" : "Result", conclusionText);
+        }
+        // A battery sag label alone is not proof of whole-system malfunction.
+        // Use independent Lab 15/16 observations for the actual system verdict.
+        boolean lab17ChargingCoverage = chargeRateAvailable
+                && !chargeEvaluation.unknownChargerWithSlowRate;
+        boolean lab17ThermalCoverage = lab16HasEvidence && lab16DetailedAvailable
+                && lab16ThermalProfile.hasChipReading();
+        Lab17SystemImpactVerdict.Decision systemConclusion =
+                Lab17SystemImpactVerdict.evaluate(
+                        gr, lab14StressClass,
+                        lab14CollapseObserved || lab14GaugeDiscrepancy
+                                || lab14StressProxyFlag || lab14ElectricalWarning,
+                        chargeConcern, lab17ChargingCoverage,
+                        thermalConcern, lab17ThermalCoverage,
+                        lab16OsThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE,
+                        lab16OsThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE,
+                        Float.isFinite(lab14StressPeakBatteryC)
+                                && lab14StressPeakBatteryC >= 45f,
+                        Float.isFinite(lab14StressThermalRiseC)
+                                && lab14StressThermalRiseC >= 6.5f,
+                        completeCoverage);
+        appendHtml("<br>");
+        logInfo(gr ? "Συμπέρασμα για τη λειτουργία του συστήματος"
+                   : "System operation conclusion");
+        if (systemConclusion.tone == Lab17SystemImpactVerdict.Tone.CAUTION) {
+            logLabelWarnValue(gr ? "Σύστημα" : "System", systemConclusion.message);
+        } else if (systemConclusion.tone == Lab17SystemImpactVerdict.Tone.POSITIVE) {
+            logLabelOkValue(gr ? "Σύστημα" : "System", systemConclusion.message);
+        } else {
+            logLabelValue(gr ? "Σύστημα" : "System", systemConclusion.message);
         }
         // All charger-specific recommendations are already in Lab 15.
         // Lab 17 is the system-level synthesis, not a second charger lab.
