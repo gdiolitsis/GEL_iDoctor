@@ -28,7 +28,7 @@ public final class Lab17SystemImpactVerdictTest {
         assertTrue(d.message.contains("το 16 φυσιολογικές ενδείξεις"));
         assertTrue(d.message.contains("Δεν τεκμηριώθηκε ότι η πτώση τάσης επηρεάζει"));
         assertTrue(d.message.contains("μεγάλη άνοδος θερμοκρασίας"));
-        assertFalse(d.message.contains("βλάβη όλου του συστήματος."));
+        assertTrue(d.message.contains("όχι διάγνωση βλάβης όλου του συστήματος"));
     }
 
     @Test public void possibleOrdinaryBatteryAgeingWithoutObservedSystemImpact() {
