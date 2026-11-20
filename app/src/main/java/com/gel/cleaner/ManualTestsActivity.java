@@ -26938,7 +26938,7 @@ final boolean fresh16 =
                                 && lab14StressPeakBatteryC >= 45f,
                         Float.isFinite(lab14StressThermalRiseC)
                                 && lab14StressThermalRiseC >= 6.5f,
-                        completeCoverage);
+                        completeCoverage && !lab14Unstable);
         appendHtml("<br>");
         logInfo(gr ? "Συμπέρασμα για τη λειτουργία του συστήματος"
                    : "System operation conclusion");
