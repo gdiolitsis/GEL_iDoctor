@@ -14543,24 +14543,21 @@ if (tempValid) {
 
         deltaTemp = dt;
 
+        // Classify the CHANGE, never imply the absolute battery temperature
+        // was high solely because it rose by several degrees.
         String tempLabel;
-
         if (deltaTemp < 2.5f) {
-            tempLabel = "Normal";
+            tempLabel = gr ? "μικρή μεταβολή" : "small change";
         } else if (deltaTemp < 6.5f) {
-            tempLabel = "Warm";
+            tempLabel = gr ? "αισθητή άνοδος" : "noticeable rise";
         } else {
-            tempLabel = "High";
+            tempLabel = gr ? "μεγάλη άνοδος" : "large rise";
         }
 
         String tempTextLocal = String.format(
-                Locale.US,
-                "%.1f°C (%s)",
-                deltaTemp,
-                tempLabel
-        );
+                Locale.US, "%+.1f°C (%s)", deltaTemp, tempLabel);
 
-        if ("High".equals(tempLabel)) {
+        if (deltaTemp >= 6.5f) {
 
             logLabelWarnValue(
                     gr ? "Θερμική μεταβολή"
@@ -14568,7 +14565,7 @@ if (tempValid) {
                     tempTextLocal
             );
 
-        } else if ("Warm".equals(tempLabel)) {
+        } else if (deltaTemp >= 2.5f) {
 
             logLabelValue(
                     gr ? "Θερμική μεταβολή"
@@ -14603,6 +14600,23 @@ if (tempValid) {
             gr ? "Μη διαθέσιμη"
                : "N/A"
     );
+}
+
+// Absolute battery temperature is independent of the rise above.
+// A +9°C change with a 35°C peak must never be called "high temperature".
+if (Float.isFinite(lab14TempPeak) && lab14TempPeak > 0f &&
+        lab14TempPeak <= 80f) {
+    String peakText = String.format(Locale.US, "%.1f°C", lab14TempPeak);
+    if (lab14TempPeak >= 45f) {
+        logLabelWarnValue(gr ? "Μέγιστη θερμοκρασία μπαταρίας"
+                             : "Peak battery temperature", peakText);
+    } else {
+        logLabelOkValue(gr ? "Μέγιστη θερμοκρασία μπαταρίας"
+                           : "Peak battery temperature", peakText);
+    }
+} else {
+    logLabelValue(gr ? "Μέγιστη θερμοκρασία μπαταρίας"
+                     : "Peak battery temperature", gr ? "Μ/Δ" : "N/A");
 }
 
 // =====================================================
@@ -14797,8 +14811,8 @@ if (lab14_systemLimited[0]) {
 } else if ("Critical".equals(labelSafe)) {
 
     recommendation = gr
-            ? "Αυξημένη πτώση τάσης υπό φορτίο — συνιστάται τεχνικός έλεγχος και επανάληψη με συγκρίσιμες συνθήκες. Δεν αποδεικνύεται ανάγκη αντικατάστασης."
-            : "Increased load-voltage sag — technician assessment and repeated comparable testing are recommended. Replacement is not established.";
+            ? "Αυξημένη πτώση τάσης υπό φορτίο σε αυτή τη δοκιμή. Επαναλάβετε σε συγκρίσιμες συνθήκες· ζητήστε τεχνική εκτίμηση αν το εύρημα επιμένει ή υπάρχουν συμπτώματα. Δεν τεκμηριώνεται ανάγκη αντικατάστασης."
+            : "Increased load-voltage sag in this trial. Repeat under comparable conditions; seek assessment if the finding persists or symptoms occur. Replacement is not established.";
 
 // 🔴 PRIORITY 3 — WEAK
 } else if ("Weak".equals(labelSafe)) {
