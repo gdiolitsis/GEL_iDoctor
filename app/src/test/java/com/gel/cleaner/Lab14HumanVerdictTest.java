@@ -44,6 +44,49 @@ public final class Lab14HumanVerdictTest {
                         false, false, false, false, 3f, 46f).tone);
     }
 
+    @Test public void largeRiseAtNormalAbsoluteTemperatureIsNotCalledOverheating() {
+        Lab14HumanVerdict.Decision d = Lab14HumanVerdict.evaluate(
+                true, "Normal", true, false, false, false, false, false, 9f, 35f);
+        assertEquals(Lab14HumanVerdict.Tone.CAUTION, d.tone);
+        assertTrue(d.message.contains("μεγάλη άνοδος"));
+        assertTrue(d.message.contains("όχι όμως υψηλή απόλυτη θερμοκρασία"));
+        assertFalse(d.message.contains("τεχνική εκτίμηση πριν"));
+    }
+
+    @Test public void highPeakTemperatureIsSeparateFromRise() {
+        Lab14HumanVerdict.Decision d = Lab14HumanVerdict.evaluate(
+                true, "Normal", true, false, false, false, false, false, 2f, 46f);
+        assertEquals(Lab14HumanVerdict.Tone.CAUTION, d.tone);
+        assertTrue(d.message.contains("μέγιστη θερμοκρασία"));
+        assertTrue(d.message.contains("αυξημένη"));
+        assertFalse(d.message.contains("μεγάλη άνοδος"));
+    }
+
+    @Test public void trulyHighAbsoluteTemperatureRetainsStrongPrecaution() {
+        Lab14HumanVerdict.Decision d = Lab14HumanVerdict.evaluate(
+                true, "Normal", true, false, false, false, false, false, 3f, 52f);
+        assertEquals(Lab14HumanVerdict.Tone.CAUTION, d.tone);
+        assertTrue(d.message.contains("Άφησε τη συσκευή να κρυώσει"));
+        assertTrue(d.message.contains("διέκοψε τη χρήση"));
+    }
+
+    @Test public void severeVoltageSagAloneRequestsRetestBeforeConditionalReferral() {
+        Lab14HumanVerdict.Decision d = Lab14HumanVerdict.evaluate(
+                true, "Critical", true, false, false, false, false, false, 9f, 35f);
+        assertEquals(Lab14HumanVerdict.Tone.CAUTION, d.tone);
+        assertTrue(d.message.contains("Επανάλαβε σε συγκρίσιμες συνθήκες"));
+        assertTrue(d.message.contains("αν το εύρημα επιμένει ή εμφανίζονται συμπτώματα"));
+        assertFalse(d.message.contains("τεχνική εκτίμηση πριν"));
+    }
+
+    @Test public void englishReportDoesNotConflateRiseWithHighPeak() {
+        Lab14HumanVerdict.Decision d = Lab14HumanVerdict.evaluate(
+                false, "Normal", true, false, false, false, false, false, 9f, 35f);
+        assertEquals(Lab14HumanVerdict.Tone.CAUTION, d.tone);
+        assertTrue(d.message.contains("large temperature rise"));
+        assertTrue(d.message.contains("absolute battery temperature was not high"));
+    }
+
     @Test public void unknownThermalOrIncompleteEvidenceIsNeutral() {
         assertEquals(Lab14HumanVerdict.Tone.NEUTRAL,
                 Lab14HumanVerdict.evaluate(true, "Weak", true, false,
