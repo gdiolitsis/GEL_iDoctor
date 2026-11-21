@@ -10,7 +10,7 @@ Status: **Chapter-title index complete for the 30 official iPhone Repair Manuals
 5. **Post-repair checks:** from Apple's separate, conditional `Repair Assistant` documentation. Use only after an eligible repair, subject to actual model, OS and part support.
 
 ## Data structures and guardrails
-- Source index: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv` (model manuals and Apple symptom/diagnostic pages, 53 source records).
+- Source index: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv` (model manuals and Apple symptom/diagnostic pages, 54 source records).
 - New per-manual chapter index: `app/src/main/assets/iphone_apple_manual_chapters_v1.tsv` (**983** indexed chapter/part titles; 407 repair/preparation procedure headings).
 - Parser: `AppleIPhoneManualChapters.java`. Validates master-manual identity and official URL, preserves chapter phase, original heading, Greek summary heading, and whether the link reaches the manual contents or a specifically verified chapter.
 - Exact model selection: `AppleOfficialServiceGuidance.modelManual()` only. Directory-only manuals are browsable in the corpus but never automatically attached to a guessed hardware ID.
@@ -122,3 +122,11 @@ This index is a verified navigation taxonomy, **not a copy of full manual instru
 5. Periodically re-open Apple pages for changes; Apple-authored procedures may change without a stable versioned URL.
 
 These short stages are **navigation and interpretation**, not a copy of the full illustrated model repair manual. Critical numeric screw torque, adhesive temperatures and drawings remain exclusively at the source URL, and may vary by region/model.
+
+## Phase II implementation status (2026-11-21)
+
+- **93 directly linked chapters** sourced from Apple's own contents navigation for iPhone 14 Pro, iPhone 15 Pro Max and iPhone 17. Link discovery is distinct from manual-text review; the rest retain their own official table-of-contents links.
+- **56 original Greek/English procedural stage notes across 9 individually reviewed chapters** (physical repairs and Apple's diagnostic workflows), stored in `iphone_apple_service_steps_v1.tsv`. Read with `AppleIPhoneServiceSteps.java`; notes cannot be assigned to an unrelated manual or to a non-direct source.
+- **New optional Lab 4 navigation:** select audited Apple chapter after recognizing an exact supported hardware model, or explicitly select the commercial device model for reference when the exact ID is not established. The dark dialog shows reviewed stage summaries and opens the manufacturer's illustrated procedure. This is **not** a recommendation to replace the part named in a panic log.
+- **Source-corrected Apple Diagnostics:** the distinct on-device iOS 18+ and secondary-browser iOS 17+ routes from official Apple Support 101965 are now independently indexed. The device's actual OS, tests and results cannot be inferred from imported panic logs.
+- **53 is superseded by 54 official-source records** because the Apple Diagnostics modes reference is now additionally indexed. Historical independent repair counts remain unchanged.
