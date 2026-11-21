@@ -366,7 +366,7 @@ DIRECTORY_18_PRO_0329	DIRECTORY_18_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας
 DIRECTORY_18_PRO_0329_DISPLAY	DIRECTORY_18_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0330	DIRECTORY_18_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0331	DIRECTORY_18_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
-DIRECTORY_18_PRO_0332	DIRECTORY_18_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Vibration or haptic feedback issues	https://support.apple.com/el-gr/127388	MANUAL_CONTENTS
+DIRECTORY_18_PRO_0332	DIRECTORY_18_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Vibration or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0333	DIRECTORY_18_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0334	DIRECTORY_18_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0335	DIRECTORY_18_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/127390	DIRECT_CHAPTER
@@ -1006,7 +1006,7 @@ DIRECTORY_18_PRO_MAX_0914	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητ
 DIRECTORY_18_PRO_MAX_0914_DISPLAY	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0915	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0916	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
-DIRECTORY_18_PRO_MAX_0917	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Vibration or haptic feedback issues	https://support.apple.com/en-la/127626	MANUAL_CONTENTS
+DIRECTORY_18_PRO_MAX_0917	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Vibration or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0918	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0919	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0920	DIRECTORY_18_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/127628	DIRECT_CHAPTER
