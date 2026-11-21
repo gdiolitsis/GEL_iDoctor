@@ -139,7 +139,7 @@ The complete list below is part of the offline TSV catalog. Each URL is an Apple
 | iPhone Air | https://support.apple.com/en-us/123052 | Directory-only |
 | iPhone 17e | https://support.apple.com/en-us/125956 | Directory-only |
 | iPhone 18 Pro | https://support.apple.com/el-gr/127388 | Directory-only |
-| iPhone 18 Pro Max | https://support.apple.com/en-us/127626 | Directory-only |
+| iPhone 18 Pro Max | https://support.apple.com/en-la/127626 | Directory-only |
 | iPhone Duo | https://support.apple.com/en-us/127682 | Directory-only |
 
 **Count:** 30 repair manuals (12 matched to previously verified internal hardware IDs, 18 directory-only) + 23 independent Apple symptom/diagnostic/support records = **53 official source records**. There is no full-text manual duplication in the APK.
