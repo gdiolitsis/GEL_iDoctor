@@ -5,7 +5,7 @@ Research date: 2026-11-21. Source authority: **Apple Support only**.
 **These Apple publications are not an Apple list mapping panic-full, SMC, MIC2, PRS0, watchdog or I2C codes to confirmed replacement parts.** They offer symptoms, diagnostics, safe repair procedures and post-repair checks. GEL uses them as **independent procedural references**, never as additional successful-repair cases. Do not label any forum fix "Apple-confirmed" based on these manuals.
 
 ## Source files and integration
-- Offline catalog: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv`. **39 curated Apple-source records:** 12 exact-model repair-manual mappings, 23 symptom/diagnostic/recovery/power service references, and 4 model manuals indexed without unverified hardware identifiers. The iPhone-only symptom pages cover audio, display, camera, Face ID, Touch ID, thermal symptoms, liquid connector alerts, recovery/restore, cellular service and calls, as well as power and charging.
+- Offline catalog: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv`. **53 curated Apple-source records:** 12 exact-model repair-manual mappings, 23 symptom/diagnostic/recovery/power service references, and 18 model manuals indexed without unverified hardware identifiers. The iPhone-only symptom pages cover audio, display, camera, Face ID, Touch ID, thermal symptoms, liquid connector alerts, recovery/restore, cellular service and calls, as well as power and charging.
 - Parser: `AppleOfficialServiceGuidance.java`. Requires `support.apple.com` source URLs, model-matching for manuals, and applicability for diagnostics. It does **not** accept or interpret panic codes.
 - iPhone Lab 4: **official-first** presentation for all imported panic logs: exact-model Apple manual where indexed, unexpected restart instructions, supported Apple diagnostics, and a bounded number of symptom-only pages relevant to literal GEL clues. Only afterward are independent model+clue repair attempts shown, retaining successes, failures and source URLs. Topic selection is independent of forum repair actions and never a claim that Apple diagnoses the indicated component.
 - iPhone Lab 8: concise case-count and event summary pointing back to Lab 4 for the Apple-first source references and individual reported outcomes, avoiding duplicate recommendations.
@@ -67,7 +67,7 @@ Do not assign an `iPhone##,#` identifier or apply a Pro guide to another variati
 
 ## Coverage expansion — 2026-11-21
 
-### Newly indexed official Apple procedures (22 new records)
+### Previously indexed official Apple procedures (22 new records in earlier expansion)
 - No power / black display: https://support.apple.com/en-us/116940
 - Wired charging user troubleshooting: https://support.apple.com/en-us/108805
 - Microphones: https://support.apple.com/en-us/101600
@@ -89,7 +89,7 @@ Do not assign an `iPhone##,#` identifier or apply a Pro guide to another variati
 - Directory-only manuals: iPhone 16, iPhone 17.
 
 ### What 'all official publications' means operationally
-This is a **curated, useful first tranche, not an exhaustive mirror or archive of all Apple articles**. Apple updates manuals, diagnostics eligibility and service pathways; many articles are about unrelated end-user features. To expand safely, register each new official page with a stable source ID, exact URL, symptom/model scope, short independently authored bilingual explanation, review date and any OS/part restrictions. Never copy whole copyrighted manuals into the APK. The original official Apple URL is always authoritative.
+This is a **curated iPhone service corpus, not an exhaustive mirror of all Apple support articles**. It now includes the 30 distinct iPhone Repair Manuals listed in Apple's current iPhone model directory, but does not claim to cover every archived manual or user-guide topic. Apple updates manuals, diagnostics eligibility and service pathways; many articles are about unrelated end-user features. To expand safely, register each new official page with a stable source ID, exact URL, symptom/model scope, short independently authored bilingual explanation, review date and any OS/part restrictions. Never copy whole copyrighted manuals into the APK. The original official Apple URL is always authoritative.
 
 The standalone iPhone 17/18 manual references are directory-only until model identifiers are independently checked; a model number cannot be invented to make a source appear as a matched repair procedure. Specific SMC/MIC/PRS0 codes are GEL clues: no Apple-published proof of code-to-part equivalence was identified in this indexed material.
 
@@ -100,3 +100,57 @@ The standalone iPhone 17/18 manual references are directory-only until model ide
 - Existing local offline catalog remains usable without internet; source links open by tap with connectivity.
 - Fail CI if core official guidance topic coverage or source integrity regresses.
 - Recheck all source URLs and applicability periodically; a domain prefix check alone is not a guarantee that an article has not been edited or withdrawn.
+
+## Complete current iPhone Repair Manual index — 2026-11-21
+
+Official master directory: https://support.apple.com/en-us/docs/iphone
+
+The Apple iPhone product directory currently lists 30 models/variants with dedicated **Repair Manual** links in the iPhone 12-to-iPhone 18 Pro / Duo family. Older model pages (for example, the SE 2nd generation) may have an *iPhone User Guide* but no dedicated Apple Repair Manual. **Do not invent a Repair Manual for an older device.**
+
+The complete list below is part of the offline TSV catalog. Each URL is an Apple-owned Repair Manual link, not a copied manual. The linked Apple page remains the source of truth for diagrams, procedures, safety warnings, eligibility and revisions.
+
+| iPhone model | Apple Repair Manual | Lookup status |
+|---|---|---|
+| iPhone 12 | https://support.apple.com/en-us/100464 | Exact hardware ID indexed |
+| iPhone 12 mini | https://support.apple.com/en-us/100452 | Directory-only |
+| iPhone 12 Pro | https://support.apple.com/en-us/100476 | Directory-only |
+| iPhone 12 Pro Max | https://support.apple.com/en-gb/101538 | Exact hardware ID indexed |
+| iPhone 13 | https://support.apple.com/en-us/100402 | Exact hardware ID indexed |
+| iPhone 13 mini | https://support.apple.com/en-us/100384 | Directory-only |
+| iPhone 13 Pro | https://support.apple.com/en-us/100416 | Directory-only |
+| iPhone 13 Pro Max | https://support.apple.com/en-us/100430 | Exact hardware ID indexed |
+| iPhone SE (3rd generation) | https://support.apple.com/en-us/101527 | Exact hardware ID indexed |
+| iPhone 14 | https://support.apple.com/en-us/100308 | Exact hardware ID indexed |
+| iPhone 14 Plus | https://support.apple.com/en-us/100322 | Exact hardware ID indexed |
+| iPhone 14 Pro | https://support.apple.com/en-us/100370 | Exact hardware ID indexed |
+| iPhone 14 Pro Max | https://support.apple.com/en-la/100357 | Exact hardware ID indexed |
+| iPhone 15 | https://support.apple.com/en-us/104900 | Exact hardware ID indexed |
+| iPhone 15 Plus | https://support.apple.com/en-us/104858 | Directory-only |
+| iPhone 15 Pro | https://support.apple.com/en-ie/104872 | Exact hardware ID indexed |
+| iPhone 15 Pro Max | https://support.apple.com/en-us/104917 | Directory-only |
+| iPhone 16 | https://support.apple.com/en-us/120652 | Directory-only |
+| iPhone 16 Plus | https://support.apple.com/en-us/120662 | Directory-only |
+| iPhone 16 Pro | https://support.apple.com/en-us/120803 | Exact hardware ID indexed |
+| iPhone 16 Pro Max | https://support.apple.com/en-us/120819 | Directory-only |
+| iPhone 16e | https://support.apple.com/en-us/121720 | Directory-only |
+| iPhone 17 | https://support.apple.com/en-us/123029 | Directory-only |
+| iPhone 17 Pro | https://support.apple.com/en-us/124262 | Directory-only |
+| iPhone 17 Pro Max | https://support.apple.com/en-us/124278 | Directory-only |
+| iPhone Air | https://support.apple.com/en-us/123052 | Directory-only |
+| iPhone 17e | https://support.apple.com/en-us/125956 | Directory-only |
+| iPhone 18 Pro | https://support.apple.com/el-gr/127388 | Directory-only |
+| iPhone 18 Pro Max | https://support.apple.com/en-us/127626 | Directory-only |
+| iPhone Duo | https://support.apple.com/en-us/127682 | Directory-only |
+
+**Count:** 30 repair manuals (12 matched to previously verified internal hardware IDs, 18 directory-only) + 23 independent Apple symptom/diagnostic/support records = **53 official source records**. There is no full-text manual duplication in the APK.
+
+**Do not elevate a directory-only manual to an exact-model match without verified device hardware identifiers.** A raw panic log that lacks the model identifier should receive only the applicable generic Apple troubleshooting procedure, not a guessed variant's manual.
+
+### Procedure structure to index in later refinements
+Official manuals usually separate Safety, Quick Checks, Diagnostics, Battery/Charging/Power, Camera, Display/Touch, Mechanical/Sensors, Sound, Parts/Tools and Repair Procedures. The scope differs by model: for example, the iPhone Duo adds hinge and dual-battery topics while other iPhones do not. Our next layer should index **official chapters by manual and symptom**, recording source link, device/OS applicability, review date and original short summaries rather than bundling full copyrighted chapter text. This layer is not yet complete.
+
+### Important limitations
+- The index is complete **for the 30 dedicated Repair Manual links currently shown in the Apple iPhone model directory**, not for every Apple support publication or revision ever released.
+- A page linked through Apple's own product directory is authoritative for its official provenance. Every URL should still be rechecked periodically for redirects, revision changes and accessibility.
+- Existing Apple authoring is never proof of GEL panic-code-to-part mapping; the international case database remains a separate trust category.
+- No automatic live Apple Support scraping occurs on the user device.
