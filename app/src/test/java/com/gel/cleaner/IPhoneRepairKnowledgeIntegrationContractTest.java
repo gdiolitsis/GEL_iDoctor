@@ -43,9 +43,9 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(evidence.contains("caseRecord.localizedNote(gr)"));
         assertTrue(evidence.contains("caseRecord.sourceUrl"));
         assertTrue(evidence.contains("not independently verified repairs"));
-        assertTrue(evidence.contains("AppleOfficialServiceGuidance.topicMightBeUsefulForAction("));
-        assertTrue(evidence.contains("relatedApple.sourceUrl"));
-        assertTrue(evidence.contains("μόνο αν υπάρχει σχετικό σύμπτωμα"));
+        assertTrue(lab4.contains("AppleOfficialServiceGuidance.topicMightBeUsefulForAction("));
+        assertTrue(lab4.contains("logOfficialApplePanicGuidance(model, gr, appleTopicsByModel.get(model))"));
+        assertTrue(src.contains("μόνο αν υπάρχει σχετικό σύμπτωμα"));
         assertFalse(evidence.contains("Apple-certified repair"));
     }
 
@@ -83,19 +83,18 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
                 "private java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> readPanicRepairHistory()");
         assertTrue(officialHelper.contains("getAssets().open(AppleOfficialServiceGuidance.ASSET)"));
         assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.modelManual(docs, model)"));
-        assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.forTopic(docs, model, \"UNEXPECTED_RESTART\")"));
+        assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.genericForTopic(docs, \"UNEXPECTED_RESTART\")"));
         assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.forTopic(docs, model, \"APPLE_DIAGNOSTICS\")"));
         assertTrue(officialHelper.contains("η Apple δεν αποδίδει εδώ κάποιον συγκεκριμένο panic code"));
         String lab4 = region(source, "private void runImpactLab()",
                 "private int countSupportedPanicBlocks(");
         assertTrue(lab4.contains("documentedAppleModels.add(observed.modelIdentifier)"));
-        assertTrue(lab4.contains("logOfficialApplePanicGuidance(observed.modelIdentifier, gr)"));
+        assertTrue(lab4.contains("logOfficialApplePanicGuidance(model, gr, appleTopicsByModel.get(model))"));
         assertTrue(lab4.contains("logApplePanicEvidence(block, gr,"));
         String lab8 = region(source, "private void runFinalServiceRecommendationLab()",
                 "private void runDemoDiagnostics()");
-        assertTrue(lab8.contains("if (!someHardwareModelUnknown && observedHardwareModels.size() == 1)"));
-        assertTrue(lab8.contains("AppleOfficialServiceGuidance.modelManual(readAppleOfficialGuidance()"));
-        assertTrue(lab8.contains("manual.sourceUrl"));
+        assertFalse(lab8.contains("AppleOfficialServiceGuidance.modelManual("));
+        assertTrue(lab8.contains("Δείτε το Lab 4: πρώτα η επίσημη Apple"));
         assertFalse(lab8.contains("Apple confirmed panic code"));
     }
 
@@ -122,20 +121,37 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
                 "private void parseAndCacheSignature(");
         assertTrue(history.contains("logLabelInfoValue(gr ? \"Εργασία και έκβαση:\""));
         assertTrue(history.contains("logLabelInfoValue(gr ? \"Πηγή περιστατικού:\""));
-        assertTrue(history.contains("relatedApple.sourceUrl"));
+        assertFalse(history.contains("relatedApple.sourceUrl"));
         assertTrue(history.contains("caseRecord.localizedOutcome(gr)"));
         assertFalse(history.contains("logLabelOkValue(gr ? \"Εργασία και έκβαση:\""));
 
         String lab8 = region(source, "private void runFinalServiceRecommendationLab()",
                 "private void runDemoDiagnostics()");
         assertTrue(lab8.contains("logLabelInfoValue(gr ? \"Σχετικές δημοσιευμένες επισκευές:\""));
-        assertTrue(lab8.contains("AppleOfficialServiceGuidance.forTopic(officialDocs,"));
-        assertTrue(lab8.contains("identifiedModel, \"UNEXPECTED_RESTART\""));
-        assertTrue(lab8.contains("identifiedModel, \"APPLE_DIAGNOSTICS\""));
-        assertTrue(lab8.contains("identifiedModel, \"POST_REPAIR\""));
-        assertTrue(lab8.contains("if (!someHardwareModelUnknown && observedHardwareModels.size() == 1)"));
-        assertTrue(lab8.contains("Μετά από επιλέξιμη επισκευή:"));
+        assertFalse(lab8.contains("AppleOfficialServiceGuidance.forTopic(officialDocs,"));
+        assertTrue(lab8.contains("Δείτε το Lab 4: πρώτα η επίσημη Apple"));
         assertFalse(lab8.contains("Apple-certified panic repair"));
+    }
+
+    @Test public void officialAppleAlwaysPrecedesIndependentRepairsAcrossAllImportedFiles() throws Exception {
+        String src = code("IPhoneLabsActivity.java");
+        String lab4 = region(src, "private void runImpactLab()",
+                "private int countSupportedPanicBlocks(");
+        int official = lab4.indexOf("1. ΕΠΙΣΗΜΕΣ ΟΔΗΓΙΕΣ APPLE");
+        int renderApple = lab4.indexOf("logOfficialApplePanicGuidance(model, gr,");
+        int community = lab4.indexOf("2. ΔΙΕΘΝΗΣ ΕΜΠΕΙΡΙΑ ΕΠΙΣΚΕΥΩΝ");
+        int renderHistory = lab4.indexOf("logApplePanicEvidence(block, gr,");
+        assertTrue("Apple section must be first", official >= 0);
+        assertTrue("Apple references must be displayed before any case histories",
+                official < renderApple && renderApple < community && community < renderHistory);
+        assertTrue(lab4.contains("documentedAppleModels.add(observed.modelIdentifier)"));
+        assertTrue(lab4.contains("appleTopicsByModel.get(model)"));
+        assertTrue(lab4.contains("Independent reports for the same model and clue"));
+        String evidence = region(src, "private void logApplePanicEvidence(",
+                "private void parseAndCacheSignature(");
+        assertFalse("Official instructions should never be hidden inside a forum history block",
+                evidence.contains("AppleOfficialServiceGuidance.forTopic("));
+        assertTrue(evidence.contains("No source-linked matching case is currently indexed"));
     }
 
     @Test public void cannotConflateSyntheticFixturesWithSuccessfulRepairRecords() throws Exception {
