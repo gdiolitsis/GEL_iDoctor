@@ -55,7 +55,7 @@ public final class AppleIPhoneServiceStepsTest {
                 "DIRECTORY_15_PRO_MAX_0689").size());
         assertEquals(6, AppleIPhoneServiceSteps.forChapter(steps,
                 "DIRECTORY_15_PRO_MAX_0691").size());
-        assertEquals(7, AppleIPhoneServiceSteps.forChapter(steps,
+        assertEquals(6, AppleIPhoneServiceSteps.forChapter(steps,
                 "MANUAL_14_PRO_0144").size());
     }
 
@@ -120,7 +120,7 @@ public final class AppleIPhoneServiceStepsTest {
     public void cannotAttachStepsToUnlinkedManualContents() throws Exception {
         AppleIPhoneServiceSteps.parse(raw(
                 "FAKE\tDIRECTORY_DUO_0950\t1\tSCOPE\tΠεδίο\tScope\t"
-                + "https://support.apple.com/en-us/127682\t2026-11-21\n"), chapters());
+                + "https://support.apple.com/en-gb/101538\t2026-11-21\n"), chapters());
     }
     @Test(expected=java.io.IOException.class)
     public void cannotSkipNumberedStages() throws Exception {
