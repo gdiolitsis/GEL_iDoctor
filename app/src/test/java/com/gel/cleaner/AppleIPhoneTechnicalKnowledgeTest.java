@@ -44,7 +44,8 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
         Set<String> urls = new HashSet<>();
         for (AppleIPhoneTechnicalKnowledge.Finding fact : all) {
             assertTrue(fact.sourceUrl.startsWith("https://support.apple.com/en-us/"));
-            assertEquals("2026-11-21", fact.reviewedOn);
+            assertTrue("Explicit source review date", fact.reviewedOn.equals("2026-11-21")
+                    || fact.reviewedOn.equals("2026-11-22"));
             assertFalse(fact.greek.trim().isEmpty());
             assertFalse(fact.english.trim().isEmpty());
             urls.add(fact.sourceUrl);
@@ -100,8 +101,16 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
         }
         assertNotNull(display);
         assertNotNull(battery);
-        assertEquals(0, AppleIPhoneTechnicalKnowledge.forChapter(notes(), display).size());
-        assertEquals(6, AppleIPhoneTechnicalKnowledge.forChapter(notes(), battery).size());
+        List<AppleIPhoneTechnicalKnowledge.Finding> displayFacts =
+                AppleIPhoneTechnicalKnowledge.forChapter(notes(), display);
+        List<AppleIPhoneTechnicalKnowledge.Finding> restartFacts =
+                AppleIPhoneTechnicalKnowledge.forChapter(notes(), battery);
+        assertEquals(8, displayFacts.size());
+        assertEquals(6, restartFacts.size());
+        assertTrue(displayFacts.stream().allMatch(f -> f.topic.equals("DISPLAY")
+                && f.sourceUrl.equals("https://support.apple.com/en-us/101966")));
+        assertTrue(restartFacts.stream().allMatch(f -> f.topic.equals("RESTART")
+                && f.sourceUrl.equals("https://support.apple.com/en-us/101969")));
     }
 
     @Test public void threeNewOfficialArticlesAreBoundToRealObservedTopics() throws Exception {
