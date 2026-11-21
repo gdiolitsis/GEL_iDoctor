@@ -5,10 +5,10 @@ Research date: 2026-11-21. Source authority: **Apple Support only**.
 **These Apple publications are not an Apple list mapping panic-full, SMC, MIC2, PRS0, watchdog or I2C codes to confirmed replacement parts.** They offer symptoms, diagnostics, safe repair procedures and post-repair checks. GEL uses them as **independent procedural references**, never as additional successful-repair cases. Do not label any forum fix "Apple-confirmed" based on these manuals.
 
 ## Source files and integration
-- Offline catalog: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv`. **17 curated Apple-source records:** 9 exact-model repair-manual mappings, 6 service/diagnostic pathways, and 2 newer-model manuals indexed without unverified hardware identifiers, including model-limited diagnostics and post-repair completion.
+- Offline catalog: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv`. **39 curated Apple-source records:** 12 exact-model repair-manual mappings, 23 symptom/diagnostic/recovery/power service references, and 4 model manuals indexed without unverified hardware identifiers. The iPhone-only symptom pages cover audio, display, camera, Face ID, Touch ID, thermal symptoms, liquid connector alerts, recovery/restore, cellular service and calls, as well as power and charging.
 - Parser: `AppleOfficialServiceGuidance.java`. Requires `support.apple.com` source URLs, model-matching for manuals, and applicability for diagnostics. It does **not** accept or interpret panic codes.
-- iPhone Lab 4: per-model official manual, general restart troubleshooting and only eligible Apple diagnostics are displayed, each explicitly not tied to a panic code. Full real-world reported repair attempts appear separately, with their failures and original links.
-- iPhone Lab 8: present the compact Apple service sequence for the **single confirmed model across all eligible imported files**: official unexpected-restart checks (only if current symptoms exist), eligible Apple Diagnostics, exact-model repair manual, and conditional Repair Assistant after relevant part work. With ambiguous/multiple devices, do not guess a manual. The separately curated repair outcomes remain source-matched.
+- iPhone Lab 4: **official-first** presentation for all imported panic logs: exact-model Apple manual where indexed, unexpected restart instructions, supported Apple diagnostics, and a bounded number of symptom-only pages relevant to literal GEL clues. Only afterward are independent model+clue repair attempts shown, retaining successes, failures and source URLs. Topic selection is independent of forum repair actions and never a claim that Apple diagnoses the indicated component.
+- iPhone Lab 8: concise case-count and event summary pointing back to Lab 4 for the Apple-first source references and individual reported outcomes, avoiding duplicate recommendations.
 - Curated official and third-party evidence URLs in Labs 4 and 8 are **tap-to-open** via the user's browser, not automatically fetched. The service report retains plain source URLs; HTML logs keep neutral blue information values while GEL-derived clue IDs remain white.
 - Lab 7 continues evaluating recurring panic *clues* independently; it does not treat Apple support instructions as a finding.
 - The independent historic outcomes catalog remains `iphone_panic_repair_knowledge_v1.tsv`, with **26 repair attempts**, 13 first-hand/shop-reported successes, 11 failures, 1 partial/recurrent, 1 unresolved. No additional "success" rows are created from Apple manuals.
@@ -36,8 +36,11 @@ The current Apple publication (5 November 2026) lists eligible battery, display 
 Source: https://support.apple.com/en-us/120579.
 
 ## Exact-model manuals (source index)
+- iPhone 12 (`iPhone13,2`): https://support.apple.com/en-us/100464
 - iPhone 12 Pro Max (hardware `iPhone13,4`): https://support.apple.com/en-gb/101538
+- iPhone 13 (`iPhone14,5`): https://support.apple.com/en-us/100402
 - iPhone 13 Pro Max (`iPhone14,3`): https://support.apple.com/en-us/100430
+- iPhone SE (3rd generation, `iPhone14,6`): https://support.apple.com/en-us/101527
 - iPhone 14 (`iPhone14,7`): https://support.apple.com/en-us/100308
 - iPhone 14 Plus (`iPhone14,8`): https://support.apple.com/en-us/100322
 - iPhone 14 Pro (`iPhone15,2`): https://support.apple.com/en-us/100370
@@ -47,6 +50,8 @@ Source: https://support.apple.com/en-us/120579.
 - iPhone 16 Pro (`iPhone17,1`): https://support.apple.com/en-us/120803
 
 ### Newer manuals verified but not given an unverified hardware identifier
+- iPhone 16 (source index only): https://support.apple.com/en-us/120652
+- iPhone 17 (source index only): https://support.apple.com/en-us/123029
 - iPhone 17 Pro (source index only): https://support.apple.com/en-us/124262
 - iPhone 18 Pro (Greek manual, source index only): https://support.apple.com/el-gr/127388
 
@@ -59,3 +64,39 @@ Do not assign an `iPhone##,#` identifier or apply a Pro guide to another variati
 4. English and Greek UI must always label Apple guidance separately from third-party reports.
 5. No silent internet access by GEL iDoctor; manuals are **links**, not full copyrighted text copied into app assets.
 6. Missing model/manual is a coverage limit, not a fault or authenticity concern.
+
+## Coverage expansion — 2026-11-21
+
+### Newly indexed official Apple procedures (22 new records)
+- No power / black display: https://support.apple.com/en-us/116940
+- Wired charging user troubleshooting: https://support.apple.com/en-us/108805
+- Microphones: https://support.apple.com/en-us/101600
+- Speaker/receiver: https://support.apple.com/en-us/118432
+- Camera/flash: https://support.apple.com/en-us/102514
+- Face ID / TrueDepth symptoms: https://support.apple.com/en-us/118243
+- Touch / intermittent touchscreen: https://support.apple.com/en-us/102567
+- Temperature management: https://support.apple.com/en-us/118431
+- Liquid connector detection: https://support.apple.com/en-us/102643
+- Recovery after iOS update / restore problems: https://support.apple.com/en-us/118106
+- Restore screen: https://support.apple.com/en-us/108969
+- Update/restore error codes: https://support.apple.com/en-us/109057
+- SOS / No Service / Searching: https://support.apple.com/en-us/120000
+- Cellular calls fail: https://support.apple.com/en-us/118427
+- Touch ID: https://support.apple.com/en-us/101612
+- Recovery on eligible iOS 27 systems (index only until OS eligibility is confirmed): https://support.apple.com/en-us/128061
+- General power/charging/restart troubleshooting hub: https://support.apple.com/en-us/101969
+- Exact-model manuals: iPhone 12, iPhone 13, iPhone SE (3rd generation).
+- Directory-only manuals: iPhone 16, iPhone 17.
+
+### What 'all official publications' means operationally
+This is a **curated, useful first tranche, not an exhaustive mirror or archive of all Apple articles**. Apple updates manuals, diagnostics eligibility and service pathways; many articles are about unrelated end-user features. To expand safely, register each new official page with a stable source ID, exact URL, symptom/model scope, short independently authored bilingual explanation, review date and any OS/part restrictions. Never copy whole copyrighted manuals into the APK. The original official Apple URL is always authoritative.
+
+The standalone iPhone 17/18 manual references are directory-only until model identifiers are independently checked; a model number cannot be invented to make a source appear as a matched repair procedure. Specific SMC/MIC/PRS0 codes are GEL clues: no Apple-published proof of code-to-part equivalence was identified in this indexed material.
+
+### Review / regression requirements
+- Preserve official Apple first, forum repairs second in Lab 4, even for multiple ZIP incidents.
+- A newly discovered independent repair must not change which source is displayed as an Apple recommendation.
+- Unknown models can get only generic conditional procedures, not arbitrary exact-model manuals or unsupported diagnostics.
+- Existing local offline catalog remains usable without internet; source links open by tap with connectivity.
+- Fail CI if core official guidance topic coverage or source integrity regresses.
+- Recheck all source URLs and applicability periodically; a domain prefix check alone is not a guarantee that an article has not been edited or withdrawn.
