@@ -353,10 +353,10 @@ root.addView(makeLabButton(
 
 // 5) Impact (guard)
 root.addView(makeLabButton(
-        gr ? "LAB 4 - Ανάλυση Επιπτώσεων"
-           : "LAB 4 - Impact Analysis",
-        gr ? "Κατηγορίες ενδείξεων ανά log, όχι διάγνωση εξαρτήματος"
-           : "Subsystem clues per log, not component diagnosis",
+        gr ? "LAB 4 - Επίσημη Apple & Εμπειρία Επισκευών"
+           : "LAB 4 - Apple Guidance & Repair Evidence",
+        gr ? "Πρώτα επίσημες οδηγίες Apple, μετά δημοσιευμένες επισκευές"
+           : "Official Apple guidance first, then published repair outcomes",
         true,
         v -> runImpactLab()
 ));
@@ -1761,7 +1761,7 @@ private void runStabilityLab() {
 }
 
 // ============================================================
-// LAB 4 — INCIDENT-SCOPED SUBSYSTEM CLUES (NO COMPONENT DIAGNOSIS)
+// LAB 4 — APPLE FIRST, THEN INDEPENDENT REPAIR EXPERIENCE
 // ============================================================
 private void runImpactLab() {
     if (!guardPanicLog()) return;
@@ -1769,15 +1769,63 @@ private void runImpactLab() {
     final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
-    logInfo(gr ? "LAB 4 — Ανάλυση Επιπτώσεων" : "LAB 4 — Impact Analysis");
+    logInfo(gr ? "LAB 4 — Επίσημη Apple & Εμπειρία Επισκευών"
+               : "LAB 4 — Apple Guidance & Repair Evidence");
     logLine();
 
-    logInfo(gr
-            ? "Καταγεγραμμένες κατηγορίες ανά panic log· δεν πραγματοποιήθηκε φυσικός έλεγχος εξαρτημάτων."
-            : "Recorded keyword categories per panic file; no physical component test was performed.");
-
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
-    java.util.Set<String> documentedAppleModels = new java.util.HashSet<>();
+    // Apple recommendations are model/symptom scoped, NOT panic-code fixes.
+    // Collect the relevant model-specific documentation before printing any
+    // GEL repair clue or independent repair attempt (including in ZIP batches).
+    java.util.Set<String> documentedAppleModels = new java.util.LinkedHashSet<>();
+    java.util.Map<String, java.util.Set<String>> appleTopicsByModel =
+            new java.util.LinkedHashMap<>();
+    java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> repairHistory =
+            readPanicRepairHistory();
+    int incidentCount = 0;
+    for (String block : blocks) {
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
+        incidentCount++;
+        ApplePanicHardwareHints.Assessment observed =
+                ApplePanicHardwareHints.examineOne(block);
+        documentedAppleModels.add(observed.modelIdentifier);
+        java.util.Set<String> topics = appleTopicsByModel.get(observed.modelIdentifier);
+        if (topics == null) {
+            topics = new java.util.LinkedHashSet<>();
+            appleTopicsByModel.put(observed.modelIdentifier, topics);
+        }
+        // A relevant forum action only suggests which official symptom page
+        // might be useful IF that symptom exists. It cannot establish the
+        // user's symptom or imply Apple endorsed the forum's repair.
+        for (ApplePanicHardwareHints.Finding finding : observed.findings) {
+            for (IPhonePanicRepairKnowledgeBase.RepairCase historic :
+                    IPhonePanicRepairKnowledgeBase.lookup(repairHistory,
+                            observed.modelIdentifier, finding.code)) {
+                for (String topic : new String[]{
+                        "WIRED_CHARGING", "WIRELESS_CHARGING", "BATTERY_POWER"}) {
+                    if (AppleOfficialServiceGuidance.topicMightBeUsefulForAction(
+                            historic.actionKey, topic)) topics.add(topic);
+                }
+            }
+        }
+    }
+
+    logInfo(gr ? "1. ΕΠΙΣΗΜΕΣ ΟΔΗΓΙΕΣ APPLE"
+               : "1. OFFICIAL APPLE GUIDANCE");
+    logLabelValue(gr ? "Πώς επιλέγονται οι οδηγίες:" : "How guidance is selected:",
+            gr ? "Από το πραγματικό μοντέλο και τα συμπτώματα, όχι από υποτιθέμενη επίσημη αντιστοίχιση panic code σε εξάρτημα."
+               : "By the identified model and actual symptoms, not an unverified Apple panic-code-to-part mapping.");
+    for (String model : documentedAppleModels) {
+        logOfficialApplePanicGuidance(model, gr, appleTopicsByModel.get(model));
+    }
+
+    appendHtml("<br>");
+    logInfo(gr ? "2. ΔΙΕΘΝΗΣ ΕΜΠΕΙΡΙΑ ΕΠΙΣΚΕΥΩΝ"
+               : "2. PUBLISHED INTERNATIONAL REPAIR EXPERIENCE");
+    logLabelValue(gr ? "Τι ακολουθεί:" : "What follows:",
+            gr ? "Ανεξάρτητες δημοσιευμένες περιπτώσεις για το ίδιο μοντέλο και την ίδια ένδειξη. Μπορεί να περιγράφουν διαφορετικές παρεμβάσεις από τα γενικά βήματα της Apple, όχι όμως επίσημα αντικρουόμενη οδηγία."
+               : "Independent reports for the same model and clue. Their actions may differ from generic Apple steps, but that does not establish a conflicting official recommendation.");
+
     int incident = 0;
     for (String block : blocks) {
         if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
@@ -1785,7 +1833,6 @@ private void runImpactLab() {
         resetSignatureCache();
         parseAndCacheSignature(block);
         String heading = gr ? "Συμβάν " + incident : "Incident " + incident;
-        // Do not hide a recurring code in a later, independent file.
         java.util.Set<String> shownCodes = new java.util.LinkedHashSet<>();
         ApplePanicEvidencePolicy.RecordMetadata meta =
                 ApplePanicEvidencePolicy.describeOne(block);
@@ -1801,7 +1848,6 @@ private void runImpactLab() {
             logLabelValue(heading + (gr ? " — υπογραφή panic:" : " — panic signature:"),
                     meta.signatureKey);
         }
-        // Domain is an observed *category of terms*, NOT a identified faulty part.
         if ("Unknown".equalsIgnoreCase(sigDomain)) {
             logLabelValue(heading + " — " + (gr ? "περιοχή:" : "area:"),
                     gr ? "Δεν προέκυψε κατηγορία όρων σε αυτό το αρχείο."
@@ -1810,30 +1856,26 @@ private void runImpactLab() {
             logLabelValue(heading + " — " + (gr ? "κατηγορία ενδείξεων:" : "keyword category:"),
                     IPhonePanicHumanizer.domain(sigDomain, gr));
         }
-
-        // Keep complete model-scoped technical hints in this specialist lab,
-        // but never combine keywords from separate panic records.
+        // Source-linked attempts are reported only AFTER the entire Apple
+        // section, never interleaved ahead of official documentation.
         logApplePanicEvidence(block, gr,
                 heading + (gr ? " — τεχνική ένδειξη" : " — technical clue"), shownCodes);
-        // Apple has published model manuals and symptom-based steps, not a
-        // certified mapping from these panic clues to replacement parts.
-        ApplePanicHardwareHints.Assessment observed = ApplePanicHardwareHints.examineOne(block);
-        if (documentedAppleModels.add(observed.modelIdentifier)) {
-            logOfficialApplePanicGuidance(observed.modelIdentifier, gr);
-        }
     }
-
-    // One safety boundary is enough; individual GEL clues remain visible above.
+    if (incidentCount == 0) {
+        logLabelValue(gr ? "Αποτελέσματα:" : "Results:",
+                gr ? "Δεν εισήχθη αναγνωρίσιμη καταγραφή panic."
+                   : "No eligible panic record was imported.");
+    }
     logLabelValue(gr ? "Εξάρτημα:" : "Component:",
-            gr
-                    ? "Δεν ταυτοποιήθηκε συγκεκριμένο ελαττωματικό εξάρτημα από τα αρχεία."
-                    : "The imported files did not identify a specific defective component.");
+            gr ? "Δεν ταυτοποιήθηκε συγκεκριμένο ελαττωματικό εξάρτημα από τα αρχεία."
+               : "The imported files did not identify a specific defective component.");
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 4 ολοκληρώθηκε." : "Lab 4 finished.");
     logLine();
 }
 
+// ============================================================
 // ============================================================
 // LAB 5 — PANIC FREQUENCY ANALYZER (Multi-File Correlation)
 // ============================================================
@@ -2170,8 +2212,6 @@ private void runFinalServiceRecommendationLab() {
     java.util.Map<String, Integer> crashCount = new java.util.TreeMap<>();
     java.util.Map<String, Integer> domainCount = new java.util.TreeMap<>();
     java.util.Set<String> uniqueTechnicalCodes = new java.util.LinkedHashSet<>();
-    java.util.Set<String> observedHardwareModels = new java.util.LinkedHashSet<>();
-    boolean someHardwareModelUnknown = false;
     // Source cases are de-duplicated across multiple imported panic files.
     java.util.Map<String, IPhonePanicRepairKnowledgeBase.RepairCase> relatedRepairAttempts =
             new java.util.LinkedHashMap<>();
@@ -2205,11 +2245,6 @@ private void runFinalServiceRecommendationLab() {
         // GEL clue IDs derived by rules from individual imported records,
         // not necessarily literal Apple diagnostic codes or hardware faults.
         ApplePanicHardwareHints.Assessment hints = ApplePanicHardwareHints.examineOne(block);
-        if (!"Unknown".equalsIgnoreCase(hints.modelIdentifier)) {
-            observedHardwareModels.add(hints.modelIdentifier);
-        } else {
-            someHardwareModelUnknown = true;
-        }
         for (ApplePanicHardwareHints.Finding finding : hints.findings) {
             uniqueTechnicalCodes.add(finding.code);
             // Exact model AND exact clue, within this one panic block.
@@ -2267,43 +2302,12 @@ private void runFinalServiceRecommendationLab() {
                    : "Lab 4 lists the actions, failures and original sources. "
                         + "A matching clue does not identify the fault on this specific iPhone.");
     }
-    // Single-model official service path. Apple guidance is symptom-based;
-    // the panic code alone never authorizes a replacement.
-    if (!someHardwareModelUnknown && observedHardwareModels.size() == 1) {
-        String identifiedModel = observedHardwareModels.iterator().next();
-        java.util.List<AppleOfficialServiceGuidance.Guidance> officialDocs =
-                readAppleOfficialGuidance();
-        AppleOfficialServiceGuidance.Guidance restart =
-                AppleOfficialServiceGuidance.forTopic(officialDocs,
-                        identifiedModel, "UNEXPECTED_RESTART");
-        AppleOfficialServiceGuidance.Guidance manual =
-                AppleOfficialServiceGuidance.modelManual(readAppleOfficialGuidance(),
-                        identifiedModel);
-        AppleOfficialServiceGuidance.Guidance diagnostics =
-                AppleOfficialServiceGuidance.forTopic(officialDocs,
-                        identifiedModel, "APPLE_DIAGNOSTICS");
-        AppleOfficialServiceGuidance.Guidance completion =
-                AppleOfficialServiceGuidance.forTopic(officialDocs,
-                        identifiedModel, "POST_REPAIR");
-        if (restart != null) {
-            logLabelInfoValue(gr ? "Apple — πρώτος έλεγχος, αν υπάρχουν επανεκκινήσεις:" :
-                    "Apple — first check if restarts are occurring:",
-                    restart.title(gr) + " — " + restart.sourceUrl);
-        }
-        if (manual != null) {
-            logLabelInfoValue(gr ? "Επίσημο εγχειρίδιο Apple:" : "Official Apple manual:",
-                    manual.title(gr) + " — " + manual.sourceUrl);
-        }
-        if (diagnostics != null) {
-            logLabelInfoValue(gr ? "Apple Diagnostics — εφόσον υποστηρίζονται:" :
-                    "Apple Diagnostics — where supported:",
-                    diagnostics.title(gr) + " — " + diagnostics.sourceUrl);
-        }
-        if (completion != null) {
-            logLabelInfoValue(gr ? "Μετά από επιλέξιμη επισκευή:" : "After an eligible part repair:",
-                    completion.title(gr) + " — " + completion.sourceUrl);
-        }
-    }
+    // Official Apple procedures and independently reported actions are shown
+    // together in Lab 4, in the correct order, without duplicating them here.
+    logLabelValue(gr ? "Οδηγίες Apple και ιστορικό επισκευών:"
+                    : "Apple guidance and repair history:",
+            gr ? "Δείτε το Lab 4: πρώτα η επίσημη Apple, μετά οι πηγές των πραγματικών περιστατικών."
+               : "See Lab 4: official Apple guidance first, then sourced repair experiences.");
     if (demoMode) {
         logInfo(gr
                 ? "Αυτό το συμπέρασμα αφορά μόνο τα δοκιμαστικά DEMO αρχεία, όχι πραγματική συσκευή."
@@ -2508,32 +2512,60 @@ private java.util.List<AppleOfficialServiceGuidance.Guidance> readAppleOfficialG
     return appleGuideCache;
 }
 
-private void logOfficialApplePanicGuidance(String model, boolean gr) {
-    if (model == null || "Unknown".equalsIgnoreCase(model)) return;
+private void logOfficialApplePanicGuidance(String model, boolean gr,
+        java.util.Set<String> suggestedTopics) {
     java.util.List<AppleOfficialServiceGuidance.Guidance> docs = readAppleOfficialGuidance();
-    if (docs.isEmpty()) return;
-
-    AppleOfficialServiceGuidance.Guidance manual =
-            AppleOfficialServiceGuidance.modelManual(docs, model);
-    AppleOfficialServiceGuidance.Guidance restart =
-            AppleOfficialServiceGuidance.forTopic(docs, model, "UNEXPECTED_RESTART");
-    AppleOfficialServiceGuidance.Guidance diagnostics =
-            AppleOfficialServiceGuidance.forTopic(docs, model, "APPLE_DIAGNOSTICS");
-
-    logLabelValue(gr ? "Επίσημες πηγές Apple:" : "Official Apple documentation:",
-            gr ? "Οδηγίες ελέγχου ανά σύμπτωμα — η Apple δεν αποδίδει εδώ κάποιον συγκεκριμένο panic code σε εξάρτημα."
-               : "Symptom-based guidance, not an Apple mapping of this panic code to a failed part.");
-    if (manual != null) {
-        logLabelInfoValue(gr ? "Εγχειρίδιο μοντέλου:" : "Model repair manual:",
-                manual.title(gr) + " — " + manual.sourceUrl);
+    final boolean modelKnown = model != null && !model.trim().isEmpty()
+            && !"Unknown".equalsIgnoreCase(model);
+    logLabelValue(gr ? "Μοντέλο iPhone:" : "iPhone model:",
+            modelKnown ? model : (gr ? "Δεν αναγνωρίστηκε από το αρχείο."
+                                   : "Not identified from the imported log."));
+    if (docs.isEmpty()) {
+        logLabelValue(gr ? "Επίσημη τεκμηρίωση:" : "Official documentation:",
+                gr ? "Δεν είναι διαθέσιμη η ενσωματωμένη βάση οδηγιών Apple. Δεν εικάζουμε επισκευή."
+                   : "The bundled Apple documentation is unavailable. No repair is inferred.");
+        return;
     }
+    AppleOfficialServiceGuidance.Guidance manual = modelKnown
+            ? AppleOfficialServiceGuidance.modelManual(docs, model) : null;
+    AppleOfficialServiceGuidance.Guidance restart =
+            AppleOfficialServiceGuidance.genericForTopic(docs, "UNEXPECTED_RESTART");
+    AppleOfficialServiceGuidance.Guidance diagnostics = modelKnown
+            ? AppleOfficialServiceGuidance.forTopic(docs, model, "APPLE_DIAGNOSTICS") : null;
+
+    logLabelValue(gr ? "Σχέση με κωδικούς panic:" : "Panic-code applicability:",
+            gr ? "Η καταχωρισμένη επίσημη τεκμηρίωση δεν αποδίδει τους αναγνωρισμένους panic codes σε συγκεκριμένα ανταλλακτικά. Οι παρακάτω διαδικασίες εφαρμόζονται μόνο στα αντίστοιχα συμπτώματα."
+               : "The indexed official documentation does not map these GEL-recognized panic clues to replacement parts. The following procedures apply only to corresponding symptoms.");
     if (restart != null) {
-        logLabelInfoValue(gr ? "Επίσημος έλεγχος επανεκκίνησης:" : "Apple restart troubleshooting:",
+        logLabelInfoValue(gr ? "Apple — αν υπάρχουν απρόσμενες επανεκκινήσεις:"
+                : "Apple — if unexpected restarts occur:",
                 restart.advice(gr) + " — " + restart.sourceUrl);
     }
+    if (manual != null) {
+        logLabelInfoValue(gr ? "Επίσημο εγχειρίδιο μοντέλου:" : "Official model repair manual:",
+                manual.title(gr) + " — " + manual.advice(gr) + " — " + manual.sourceUrl);
+    } else {
+        logLabelValue(gr ? "Εγχειρίδιο για το συγκεκριμένο μοντέλο:"
+                : "Manual for this exact model:",
+                gr ? "Δεν έχει καταχωριστεί επαληθευμένη αντιστοίχιση στη βάση μας."
+                   : "No verified exact-model manual is indexed in our catalog.");
+    }
     if (diagnostics != null) {
-        logLabelInfoValue(gr ? "Διαγνωστικά Apple:" : "Apple diagnostics:",
+        logLabelInfoValue(gr ? "Apple Diagnostics — εφόσον υποστηρίζονται:"
+                : "Apple Diagnostics — where supported:",
                 diagnostics.advice(gr) + " — " + diagnostics.sourceUrl);
+    }
+    if (suggestedTopics != null) {
+        for (String topic : suggestedTopics) {
+            AppleOfficialServiceGuidance.Guidance relatedApple =
+                    AppleOfficialServiceGuidance.genericForTopic(docs, topic);
+            if (relatedApple != null) {
+                logLabelInfoValue(gr ? "Apple — μόνο αν υπάρχει σχετικό σύμπτωμα:"
+                        : "Apple — only if this symptom exists:",
+                        relatedApple.title(gr) + " — " + relatedApple.advice(gr)
+                                + " — " + relatedApple.sourceUrl);
+            }
+        }
     }
 }
 
@@ -2578,6 +2610,12 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
         java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> matchingReports =
                 IPhonePanicRepairKnowledgeBase.lookup(repairHistory,
                         findings.modelIdentifier, finding.code);
+        if (matchingReports.isEmpty()) {
+            logLabelValue(gr ? "Διεθνές ιστορικό για μοντέλο / κωδικό:"
+                    : "International history for model / code:",
+                    gr ? "Δεν έχει καταχωριστεί τεκμηριωμένη αντίστοιχη περίπτωση στη βάση μας."
+                       : "No source-linked matching case is currently indexed.");
+        }
         if (!matchingReports.isEmpty()) {
             IPhonePanicRepairKnowledgeBase.MatchSummary repairEvidence =
                     IPhonePanicRepairKnowledgeBase.summarize(matchingReports);
@@ -2603,30 +2641,9 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
                         gr ? "Προβλήθηκαν οι 8 πρώτες καταχωρίσεις της διαθέσιμης βάσης."
                            : "Only the first eight catalog entries are displayed.");
             }
-            // Contextual Apple symptom guides: the topic comes from a
-            // *documented historical repair attempt*, not an Apple interpretation
-            // of this panic code. Show only as a conditional verification path.
-            for (String topic : new String[]{"WIRED_CHARGING", "WIRELESS_CHARGING", "BATTERY_POWER"}) {
-                boolean contextExists = false;
-                for (IPhonePanicRepairKnowledgeBase.RepairCase historic : matchingReports) {
-                    if (AppleOfficialServiceGuidance.topicMightBeUsefulForAction(
-                            historic.actionKey, topic)) {
-                        contextExists = true;
-                        break;
-                    }
-                }
-                if (!contextExists) continue;
-                AppleOfficialServiceGuidance.Guidance relatedApple =
-                        AppleOfficialServiceGuidance.forTopic(readAppleOfficialGuidance(),
-                                findings.modelIdentifier, topic);
-                if (relatedApple != null) {
-                    logLabelInfoValue(gr ? "Οδηγίες Apple — μόνο αν υπάρχει σχετικό σύμπτωμα:" :
-                            "Apple guidance — only if this symptom is present:",
-                            relatedApple.title(gr) + " — " + relatedApple.advice(gr)
-                                    + " — " + relatedApple.sourceUrl);
-                }
-            }
         }
+    }
+    if (rendered > 0 && alreadyShown == null) {        }
     }
     if (rendered > 0 && alreadyShown == null) {
         logInfo(gr
