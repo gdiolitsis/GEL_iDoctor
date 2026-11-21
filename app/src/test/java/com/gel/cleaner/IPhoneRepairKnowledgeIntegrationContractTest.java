@@ -189,7 +189,7 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         String rules = code("AppleIPhoneConditionalServiceRules.java");
         assertTrue(rules.contains("if (!externallyVerifiedResult"));
         assertTrue(rules.contains("model.applies(rule.hardwareId)"));
-        assertTrue(rules.contains("rule.requiredResult == observedResult"));
+        assertTrue(rules.contains("row.requiredResult == observedResult"));
     }
 
 }
