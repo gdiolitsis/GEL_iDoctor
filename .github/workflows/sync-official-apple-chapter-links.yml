@@ -1,0 +1,43 @@
+name: Audit and sync official Apple iPhone Repair Manual chapter links
+
+on:
+  pull_request:
+    paths:
+      - 'tools/iphone/sync_apple_repair_manual_urls.py'
+      - '.github/workflows/sync-official-apple-chapter-links.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apple-toc-audit:
+    # The automated branch write is restricted to our own review PR; never
+    # execute user-controlled remote code or accept unrelated forks/branches.
+    if: ${{ github.head_ref == 'research/iphone-panic-repair-knowledge-20261121' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 32
+    steps:
+      - name: Checkout current PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+      - name: Verify each named chapter against Apple's official model table of contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/iphone/sync_apple_repair_manual_urls.py --write
+      - name: Commit ONLY official source-verified TSV and audit report to review branch
+        shell: bash
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/assets/iphone_apple_manual_chapters_v1.tsv
+          git add docs/qa/IPHONE_APPLE_MANUAL_LINK_AUDIT_2026-11-21.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Index source-verified Apple Repair Manual direct chapter URLs"
+            git push origin "HEAD:${BRANCH}"
+          fi
