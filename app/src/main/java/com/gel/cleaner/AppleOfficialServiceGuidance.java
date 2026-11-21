@@ -115,6 +115,20 @@ public final class AppleOfficialServiceGuidance {
     }
 
     /**
+     * Wildcard-only official symptom guidance. May be displayed even when an
+     * imported panic log has no verified model identifier, but NEVER treated
+     * as a code-to-part or exact-model repair recommendation.
+     */
+    public static Guidance genericForTopic(List<Guidance> all, String category) {
+        if (all == null || category == null) return null;
+        for (Guidance row : all) {
+            if ("*".equals(row.models)
+                    && row.category.equals(category.toUpperCase(Locale.ROOT))) return row;
+        }
+        return null;
+    }
+
+    /**
      * A suggested topic is editorial triage, not an assertion the user has
      * that symptom or Apple's interpretation of the imported panic code.
      */
