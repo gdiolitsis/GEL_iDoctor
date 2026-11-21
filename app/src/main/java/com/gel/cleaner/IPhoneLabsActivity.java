@@ -171,6 +171,7 @@ private boolean looksCorruptedPanic(String text) {
     private java.util.List<AppleOfficialServiceGuidance.Guidance> appleGuideCache = null;
     // Exact source-verified Apple repair-manual sections; same offline scope.
     private java.util.List<AppleIPhoneManualChapters.Chapter> appleManualChapterCache = null;
+    private java.util.List<AppleIPhoneServiceSteps.Step> appleServiceStepCache = null;
     private boolean panicLogLoaded = false;
     private String  panicLogName   = null;
     private String  panicLogText   = null;
@@ -361,6 +362,16 @@ root.addView(makeLabButton(
            : "Official Apple guidance first, then published repair outcomes",
         true,
         v -> runImpactLab()
+));
+
+// Optional drill-down belonging to Lab 4: no new numbered lab.
+root.addView(makeLabButton(
+        gr ? "APPLE — Αναλυτικά επιβεβαιωμένα βήματα"
+           : "APPLE — Verified procedure steps",
+        gr ? "Προαιρετική επιλογή επίσημου κεφαλαίου και άνοιγμα της πηγής Apple"
+           : "Optional official chapter selection and original Apple source",
+        true,
+        v -> showAppleServiceStepPicker()
 ));
 
 // 6) Frequency
@@ -2513,6 +2524,141 @@ private java.util.List<AppleIPhoneManualChapters.Chapter> readAppleManualChapter
         appleManualChapterCache = java.util.Collections.emptyList();
     }
     return appleManualChapterCache;
+}
+
+private java.util.List<AppleIPhoneServiceSteps.Step> readAppleServiceSteps() {
+    if (appleServiceStepCache != null) return appleServiceStepCache;
+    try {
+        appleServiceStepCache = AppleIPhoneServiceSteps.parse(
+                getAssets().open(AppleIPhoneServiceSteps.ASSET), readAppleManualChapters());
+    } catch (java.io.IOException ignored) {
+        // Never silently generate unverified instructions on failure.
+        appleServiceStepCache = java.util.Collections.emptyList();
+    }
+    return appleServiceStepCache;
+}
+
+private void showAppleServiceStepPicker() {
+    if (!guardPanicLog()) return;
+    final boolean gr = AppLang.isGreek(this);
+    final java.util.List<AppleIPhoneServiceSteps.Step> stages = readAppleServiceSteps();
+    if (stages.isEmpty()) {
+        new AlertDialog.Builder(this, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
+                .setTitle(gr ? "Επίσημες διαδικασίες Apple" : "Official Apple procedures")
+                .setMessage(gr ? "Δεν υπάρχουν διαθέσιμα επαληθευμένα αναλυτικά βήματα."
+                               : "No source-reviewed procedural steps are available.")
+                .setPositiveButton(gr ? "Κλείσιμο" : "Close", null).show();
+        return;
+    }
+
+    // Only exact, verified hardware-model identifiers trigger auto-selection.
+    java.util.Set<String> hardwareModels = new java.util.LinkedHashSet<>();
+    boolean unknown = false;
+    for (String block : panicLogText.split("(?m)^===== ZIP FILE:")) {
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
+        String model = ApplePanicHardwareHints.examineOne(block).modelIdentifier;
+        if ("Unknown".equalsIgnoreCase(model)) unknown = true;
+        else hardwareModels.add(model);
+    }
+    java.util.List<AppleIPhoneManualChapters.Chapter> matches =
+            java.util.Collections.emptyList();
+    if (!unknown && hardwareModels.size() == 1) {
+        matches = AppleIPhoneServiceSteps.reviewedForExactModel(stages,
+                readAppleManualChapters(), readAppleOfficialGuidance(),
+                hardwareModels.iterator().next());
+    }
+    if (!matches.isEmpty()) {
+        showAppleServiceChapterPicker(matches, stages, gr);
+        return;
+    }
+
+    // Explicit device selection is allowed, but never inferred from panic
+    // keywords when hardware ID is absent or uncatalogued.
+    java.util.Map<String, AppleOfficialServiceGuidance.Guidance> choices =
+            new java.util.LinkedHashMap<>();
+    java.util.Set<String> auditedManuals = new java.util.HashSet<>();
+    for (AppleIPhoneServiceSteps.Step step : stages) {
+        for (AppleIPhoneManualChapters.Chapter chapter : readAppleManualChapters()) {
+            if (chapter.id.equals(step.chapterId)) auditedManuals.add(chapter.manualId);
+        }
+    }
+    for (AppleOfficialServiceGuidance.Guidance manual : readAppleOfficialGuidance()) {
+        if (auditedManuals.contains(manual.id)) choices.put(manual.id, manual);
+    }
+    if (choices.isEmpty()) return;
+    final java.util.List<AppleOfficialServiceGuidance.Guidance> selectedModels =
+            new java.util.ArrayList<>(choices.values());
+    String[] labels = new String[selectedModels.size()];
+    for (int i = 0; i < labels.length; i++) labels[i] = selectedModels.get(i).title(gr);
+    new AlertDialog.Builder(this, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
+            .setTitle(gr ? "Επιλογή ακριβούς μοντέλου Apple"
+                         : "Choose the exact Apple device model")
+            .setMessage(gr
+                    ? "Μόνο για ανάγνωση επίσημων κεφαλαίων. Επαληθεύστε το μοντέλο ανεξάρτητα από το panic log· δεν αποτελεί διάγνωση."
+                    : "Official reference browsing only. Verify the actual device model independently of the panic log; this is not a diagnosis.")
+            .setItems(labels, (dialog, which) -> {
+                String manualId = selectedModels.get(which).id;
+                java.util.List<AppleIPhoneManualChapters.Chapter> local =
+                        AppleIPhoneManualChapters.forManualId(readAppleManualChapters(), manualId);
+                java.util.Set<String> auditedIds = new java.util.HashSet<>();
+                for (AppleIPhoneServiceSteps.Step step : stages) auditedIds.add(step.chapterId);
+                java.util.List<AppleIPhoneManualChapters.Chapter> eligible =
+                        new java.util.ArrayList<>();
+                for (AppleIPhoneManualChapters.Chapter chapter : local)
+                    if (auditedIds.contains(chapter.id)) eligible.add(chapter);
+                showAppleServiceChapterPicker(eligible, stages, gr);
+            })
+            .setNegativeButton(gr ? "Άκυρο" : "Cancel", null).show();
+}
+
+private void showAppleServiceChapterPicker(
+        java.util.List<AppleIPhoneManualChapters.Chapter> chapters,
+        java.util.List<AppleIPhoneServiceSteps.Step> stages, boolean gr) {
+    if (chapters == null || chapters.isEmpty()) return;
+    String[] labels = new String[chapters.size()];
+    for (int i = 0; i < labels.length; i++) {
+        AppleIPhoneManualChapters.Chapter ch = chapters.get(i);
+        labels[i] = ch.title(gr) + " — " + ch.phase.name();
+    }
+    new AlertDialog.Builder(this, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
+            .setTitle(gr ? "Επιβεβαιωμένα κεφάλαια Apple" : "Source-reviewed Apple chapters")
+            .setMessage(gr ? "Η επιλογή κεφαλαίου δεν αποτελεί σύσταση αντικατάστασης ανταλλακτικού."
+                           : "Selecting a chapter is not a component replacement recommendation.")
+            .setItems(labels, (dialog, which) ->
+                    showAppleServiceStepDetails(chapters.get(which), stages, gr))
+            .setNegativeButton(gr ? "Άκυρο" : "Cancel", null).show();
+}
+
+private void showAppleServiceStepDetails(AppleIPhoneManualChapters.Chapter chapter,
+        java.util.List<AppleIPhoneServiceSteps.Step> all, boolean gr) {
+    java.util.List<AppleIPhoneServiceSteps.Step> seq =
+            AppleIPhoneServiceSteps.forChapter(all, chapter.id);
+    if (seq.isEmpty()) return;
+    StringBuilder message = new StringBuilder();
+    message.append(gr
+            ? "Σύντομη απόδοση επιβεβαιωμένων σταδίων από την Apple. ΟΧΙ πλήρες εγχειρίδιο, ούτε διάγνωση panic code. Για φυσική επισκευή απαιτείται κατάλληλος τεχνικός και το πλήρες εικονογραφημένο εγχειρίδιο."
+            : "Short independently authored summaries of reviewed Apple steps. NOT the complete manual or a panic-code diagnosis. Physical repairs require a qualified technician and the full illustrated manual.");
+    for (AppleIPhoneServiceSteps.Step step : seq) {
+        message.append("\n\n").append(step.order).append(". ")
+                .append(step.stage.name()).append(": ").append(step.text(gr));
+    }
+    message.append("\n\n").append(gr ? "Επίσημη πηγή: " : "Official source: ")
+            .append(chapter.sourceUrl);
+    new AlertDialog.Builder(this, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
+            .setTitle(chapter.title(gr))
+            .setMessage(message.toString())
+            .setPositiveButton(gr ? "Άνοιγμα πλήρους οδηγίας Apple" : "Open full Apple procedure",
+                    (dialog, which) -> {
+                        Intent intent = new Intent(Intent.ACTION_VIEW,
+                                Uri.parse(chapter.sourceUrl));
+                        try { startActivity(intent); }
+                        catch (android.content.ActivityNotFoundException ex) {
+                            Toast.makeText(this,
+                                    gr ? "Δεν βρέθηκε εφαρμογή περιήγησης." : "No browser available.",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    })
+            .setNegativeButton(gr ? "Κλείσιμο" : "Close", null).show();
 }
 
 private String appleProcedureTopicLabel(String topic, boolean gr) {
