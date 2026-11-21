@@ -59,6 +59,19 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(lab8.contains("if (demoMode)"));
     }
 
+    @Test public void recurrenceLabUsesTheSameModelCodeAndRealPerBlockClues() throws Exception {
+        String lab7 = region(code("IPhoneLabsActivity.java"),
+                "private void runRecurringDomainLab()",
+                "private void runFinalServiceRecommendationLab()");
+        assertTrue(lab7.contains("ApplePanicHardwareHints.examineOne(block)"));
+        assertTrue(lab7.contains("seenInThisBlock.add(exactKey)"));
+        assertTrue(lab7.contains("clue.getValue() < 2"));
+        assertTrue(lab7.contains("IPhonePanicRepairKnowledgeBase.lookup(readPanicRepairHistory(), model, code)"));
+        assertTrue(lab7.contains("IPhonePanicRepairKnowledgeBase.summarize(history)"));
+        assertTrue(lab7.contains("Δείτε το Lab 4."));
+        assertFalse(lab7.contains("replaceConfirmedFaultyComponent"));
+    }
+
     @Test public void cannotConflateSyntheticFixturesWithSuccessfulRepairRecords() throws Exception {
         String main = code("IPhoneLabsActivity.java");
         String demo = region(main, "private void runDemoDiagnostics()", "// GUARD");
