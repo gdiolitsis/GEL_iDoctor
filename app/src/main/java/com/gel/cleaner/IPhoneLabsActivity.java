@@ -172,6 +172,9 @@ private boolean looksCorruptedPanic(String text) {
     // Exact source-verified Apple repair-manual sections; same offline scope.
     private java.util.List<AppleIPhoneManualChapters.Chapter> appleManualChapterCache = null;
     private java.util.List<AppleIPhoneServiceSteps.Step> appleServiceStepCache = null;
+    // Source-reviewed technical triage points are different from chapter
+    // links and different from full physical service instructions.
+    private java.util.List<AppleIPhoneTechnicalKnowledge.Finding> appleTechnicalFactsCache = null;
     private boolean panicLogLoaded = false;
     private String  panicLogName   = null;
     private String  panicLogText   = null;
@@ -2526,6 +2529,41 @@ private java.util.List<AppleIPhoneManualChapters.Chapter> readAppleManualChapter
     return appleManualChapterCache;
 }
 
+private java.util.List<AppleIPhoneTechnicalKnowledge.Finding> readAppleTechnicalFacts() {
+    if (appleTechnicalFactsCache != null) return appleTechnicalFactsCache;
+    try {
+        appleTechnicalFactsCache = AppleIPhoneTechnicalKnowledge.parse(
+                getAssets().open(AppleIPhoneTechnicalKnowledge.ASSET),
+                readAppleManualChapters());
+    } catch (java.io.IOException ignored) {
+        // Never fabricate clinical/technical facts if a source is missing or invalid.
+        appleTechnicalFactsCache = java.util.Collections.emptyList();
+    }
+    return appleTechnicalFactsCache;
+}
+
+/** Concise symptom-only Apple notes, never a diagnosed panic-to-part match. */
+private void logSourceReviewedAppleFacts(
+        AppleIPhoneManualChapters.Chapter chapter, boolean gr, int maxFacts) {
+    java.util.List<AppleIPhoneTechnicalKnowledge.Finding> facts =
+            AppleIPhoneTechnicalKnowledge.forChapter(readAppleTechnicalFacts(), chapter);
+    if (facts.isEmpty()) return;
+    int shown = 0;
+    for (AppleIPhoneTechnicalKnowledge.Finding fact : facts) {
+        if (shown >= maxFacts) break;
+        String kind = fact.kind.name();
+        final String prefix;
+        if (fact.risk == AppleIPhoneTechnicalKnowledge.Risk.DATA_LOSS)
+            prefix = gr ? "Απώλεια δεδομένων — " : "Data loss — ";
+        else if (fact.risk == AppleIPhoneTechnicalKnowledge.Risk.TECHNICIAN_ONLY)
+            prefix = gr ? "Μόνο εξειδικευμένος τεχνικός — " : "Qualified technician only — ";
+        else prefix = "";
+        logLabelValue((gr ? "Apple — " : "Apple — ") + kind + ":",
+                prefix + fact.description(gr));
+        shown++;
+    }
+}
+
 private java.util.List<AppleIPhoneServiceSteps.Step> readAppleServiceSteps() {
     if (appleServiceStepCache != null) return appleServiceStepCache;
     try {
@@ -2710,11 +2748,24 @@ private void logAppleOfficialManualOutline(String model,
         logLabelValue(gr ? "Apple — ασφάλεια πριν από επέμβαση:"
                          : "Apple — safety before any disassembly:",
                 android.text.TextUtils.join(" • ", labels));
+        // Only show the two most important source-reviewed battery
+        // precautions here. Full official warning remains at the Apple URL.
+        for (AppleIPhoneManualChapters.Chapter row : safety) {
+            if ("BATTERY".equals(row.topic))
+                logSourceReviewedAppleFacts(row, gr, 2);
+        }
     }
     logLabelValue(gr ? "Apple — πρώτοι έλεγχοι:"
                      : "Apple — preliminary checks:",
             gr ? "Δείτε το κεφάλαιο Quick Checks πριν από οποιαδήποτε επισκευή."
                : "Review the Quick Checks chapter before any repair.");
+    for (AppleIPhoneManualChapters.Chapter row : sections) {
+        if (row.phase == AppleIPhoneManualChapters.Phase.CHECK
+                && "GENERAL".equals(row.topic)) {
+            logSourceReviewedAppleFacts(row, gr, 3);
+            break;
+        }
+    }
     java.util.List<AppleIPhoneManualChapters.Chapter> troubleshooting =
             AppleIPhoneManualChapters.troubleshootingForTopics(sections, suggestedTopics);
     if (!troubleshooting.isEmpty()) {
@@ -2728,6 +2779,9 @@ private void logAppleOfficialManualOutline(String model,
                         ? (gr ? "Απευθείας επίσημη ενότητα — " : "Direct official chapter — ")
                         : (gr ? "Πίνακας περιεχομένων Apple — " : "Apple manual contents — "))
                     + row.sourceUrl);
+            // A shared Apple article contains multiple symptom sections.
+            // Match the reviewed note by BOTH topic and chapter URL.
+            logSourceReviewedAppleFacts(row, gr, 5);
         }
     }
     java.util.List<AppleIPhoneManualChapters.Chapter> procedures =
