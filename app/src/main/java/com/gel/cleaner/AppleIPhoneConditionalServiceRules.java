@@ -122,7 +122,7 @@ public final class AppleIPhoneConditionalServiceRules {
                 if (!ids.add(rule.id))
                     throw new IOException("Duplicate Apple rule id: " + rule.id);
                 AppleOfficialServiceGuidance.Guidance model = verified.get(rule.manualId);
-                if (model == null || !model.appliesTo(rule.hardwareId))
+                if (model == null || !model.applies(rule.hardwareId))
                     throw new IOException("Model is not an exact manufacturer hardware match");
                 if (!rule.sourceUrl.matches(
                         "https://support\\.apple\\.com/[a-z]{2}(?:-[a-z]{2})?/[0-9]{5,7}"))
