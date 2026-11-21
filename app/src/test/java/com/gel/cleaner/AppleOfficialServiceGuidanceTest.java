@@ -23,7 +23,7 @@ public final class AppleOfficialServiceGuidanceTest {
 
     @Test public void officialDocsAreSourcedAndNoApplePanicMappingIsClaimed() throws Exception {
         List<AppleOfficialServiceGuidance.Guidance> entries = docs();
-        assertTrue(entries.size() >= 17);
+        assertTrue("All 39 curated official-source entries must remain indexed", entries.size() >= 39);
         for (AppleOfficialServiceGuidance.Guidance e : entries) {
             assertTrue(e.sourceUrl.startsWith("https://support.apple.com/"));
             assertFalse(e.advice(true).isEmpty());
@@ -99,6 +99,42 @@ public final class AppleOfficialServiceGuidanceTest {
                 AppleOfficialServiceGuidance.genericForTopic(entries, "MODEL_MANUAL"));
         assertNull("Diagnostics require checked model eligibility",
                 AppleOfficialServiceGuidance.genericForTopic(entries, "APPLE_DIAGNOSTICS"));
+    }
+
+    @Test public void officialSourceExpansionCoversKeyIphoneRepairSymptoms() throws Exception {
+        List<AppleOfficialServiceGuidance.Guidance> entries = docs();
+        for (String topic : new String[]{"MICROPHONE", "SPEAKER", "CAMERA", "FACE_ID",
+                "DISPLAY_TOUCH", "THERMAL", "CELLULAR_SERVICE", "CELLULAR_CALLS",
+                "SOFTWARE_RECOVERY", "POWER_NO_BOOT", "TOUCH_ID", "LIQUID_CONNECTOR"}) {
+            assertFalse("Missing official Apple source for " + topic,
+                    AppleOfficialServiceGuidance.genericForTopicAll(entries, topic).isEmpty());
+        }
+        assertTrue("Wired charging should have a symptom hub AND basic user guidance",
+                AppleOfficialServiceGuidance.genericForTopicAll(entries,
+                        "WIRED_CHARGING").size() >= 2);
+        assertEquals("iPhone 12 Repair Manual",
+                AppleOfficialServiceGuidance.modelManual(entries, "iPhone13,2").title(false));
+        assertEquals("iPhone 13 Repair Manual",
+                AppleOfficialServiceGuidance.modelManual(entries, "iPhone14,5").title(false));
+        assertEquals("iPhone SE 3rd generation Repair Manual",
+                AppleOfficialServiceGuidance.modelManual(entries, "iPhone14,6").title(false));
+    }
+
+    @Test public void panicClueTopicSelectionIsConditionalNotManufacturerPartDiagnosis() throws Exception {
+        assertTrue(AppleOfficialServiceGuidance.conditionalTopicsForClue("MIC2")
+                .contains("MICROPHONE"));
+        assertTrue(AppleOfficialServiceGuidance.conditionalTopicsForClue("THERMAL_SHUTDOWN")
+                .contains("THERMAL"));
+        assertTrue(AppleOfficialServiceGuidance.conditionalTopicsForClue("BASEBAND_FAULT")
+                .contains("CELLULAR_SERVICE"));
+        assertTrue(AppleOfficialServiceGuidance.conditionalTopicsForClue("DISPLAY_CONTROLLER")
+                .contains("DISPLAY_TOUCH"));
+        assertTrue(AppleOfficialServiceGuidance.conditionalTopicsForClue("STORAGE_CONTROLLER")
+                .contains("SOFTWARE_RECOVERY"));
+        assertTrue("Numeric SMC codes are not an Apple-official part diagnosis",
+                AppleOfficialServiceGuidance.conditionalTopicsForClue("SMC 0x80000").isEmpty());
+        assertTrue("No generic replacement recommendations without a clue",
+                AppleOfficialServiceGuidance.conditionalTopicsForClue("UNKNOWN").isEmpty());
     }
 
     @Test(expected=IOException.class)
