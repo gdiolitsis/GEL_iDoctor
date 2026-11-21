@@ -1748,18 +1748,19 @@ private void runStabilityLab() {
     logLabelOkValue(gr ? "Καταγραφές που εξετάστηκαν:" : "Eligible records reviewed:",
             String.valueOf(total));
 
+    // LAB 2 already names the event categories; LAB 3 documents the
+    // historical record timeline without repeating the same diagnosis.
     int incident = 0;
     for (String block : blocks) {
         if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
         incident++;
         resetSignatureCache();
         parseAndCacheSignature(block);
-        String label = gr ? "Συμβάν " + incident + " — τύπος:" : "Incident " + incident + " — type:";
-        if ("Unknown / Generic".equalsIgnoreCase(sigCrashType)
-                || "Unknown".equalsIgnoreCase(sigCrashType)) {
-            logLabelValue(label, IPhonePanicHumanizer.event(sigCrashType, gr));
-        } else {
-            logLabelWarnValue(label, IPhonePanicHumanizer.event(sigCrashType, gr));
+        ApplePanicEvidencePolicy.RecordMetadata meta =
+                ApplePanicEvidencePolicy.describeOne(block);
+        if (!meta.timestamp.isEmpty()) {
+            logLabelValue(gr ? "Συμβάν " + incident + " — ημερομηνία:" :
+                    "Incident " + incident + " — recorded date:", meta.timestamp);
         }
     }
 
@@ -1803,7 +1804,6 @@ private void runImpactLab() {
             : "Recorded keyword categories per panic file; no physical component test was performed.");
 
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
-    java.util.Set<String> shownCodes = new java.util.LinkedHashSet<>();
     int incident = 0;
     for (String block : blocks) {
         if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
@@ -1811,6 +1811,22 @@ private void runImpactLab() {
         resetSignatureCache();
         parseAndCacheSignature(block);
         String heading = gr ? "Συμβάν " + incident : "Incident " + incident;
+        // Do not hide a recurring code in a later, independent file.
+        java.util.Set<String> shownCodes = new java.util.LinkedHashSet<>();
+        ApplePanicEvidencePolicy.RecordMetadata meta =
+                ApplePanicEvidencePolicy.describeOne(block);
+        if (!meta.osVersion.isEmpty()) {
+            logLabelValue(heading + (gr ? " — έκδοση iOS:" : " — iOS version:"),
+                    meta.osVersion);
+        }
+        if (!meta.process.isEmpty()) {
+            logLabelValue(heading + (gr ? " — διεργασία:" : " — process:"),
+                    meta.process);
+        }
+        if (!meta.signatureKey.isEmpty()) {
+            logLabelValue(heading + (gr ? " — υπογραφή panic:" : " — panic signature:"),
+                    meta.signatureKey);
+        }
         // Domain is an observed *category of terms*, NOT a identified faulty part.
         if ("Unknown".equalsIgnoreCase(sigDomain)) {
             logLabelValue(heading + " — " + (gr ? "περιοχή:" : "area:"),
@@ -1827,19 +1843,11 @@ private void runImpactLab() {
                 heading + (gr ? " — τεχνική ένδειξη" : " — technical clue"), shownCodes);
     }
 
-    logInfo(gr
-            ? "Οι τεχνικές ενδείξεις προκύπτουν από κανόνες GEL για κάθε αρχείο· δεν είναι πιστοποιημένοι κωδικοί βλάβης Apple."
-            : "Technical clues are GEL rules applied to each file, not Apple-certified hardware fault codes.");
-
+    // One safety boundary is enough; individual GEL clues remain visible above.
     logLabelValue(gr ? "Εξάρτημα:" : "Component:",
             gr
                     ? "Δεν ταυτοποιήθηκε συγκεκριμένο ελαττωματικό εξάρτημα από τα αρχεία."
                     : "The imported files did not identify a specific defective component.");
-    if (incident > 1) {
-        logInfo(gr
-                ? "Οι ενδείξεις Watchdog, Thermal ή άλλων κατηγοριών δεν συνδυάζονται μεταξύ διαφορετικών αρχείων."
-                : "Watchdog, thermal or other clues from separate files are not combined into one cause.");
-    }
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 4 ολοκληρώθηκε." : "Lab 4 finished.");
@@ -1992,7 +2000,10 @@ private void runRecurringDomainLab() {
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
     java.util.Map<String, Integer> domainCount = new java.util.HashMap<>();
-
+    java.util.Map<String, Integer> signatureCount = new java.util.LinkedHashMap<>();
+    java.util.List<Long> datedRecords = new java.util.ArrayList<>();
+    int recordsWithDates = 0;
+    int recordsWithSignatures = 0;
     int total = 0;
 
     for (String block : blocks) {
@@ -2007,6 +2018,15 @@ private void runRecurringDomainLab() {
 
         String key = normalizeDomain(sigDomain);
         domainCount.put(key, domainCount.getOrDefault(key, 0) + 1);
+        ApplePanicEvidencePolicy.RecordMetadata meta =
+                ApplePanicEvidencePolicy.describeOne(block);
+        if (!meta.signatureKey.isEmpty()) {
+            signatureCount.put(meta.signatureKey,
+                    signatureCount.getOrDefault(meta.signatureKey, 0) + 1);
+            recordsWithSignatures++;
+        }
+        if (!meta.timestamp.isEmpty()) recordsWithDates++;
+        if (meta.timestampEpochMillis >= 0L) datedRecords.add(meta.timestampEpochMillis);
     }
 
     if (total <= 1) {
@@ -2050,6 +2070,34 @@ private void runRecurringDomainLab() {
         logInfo(gr
                 ? "Δεν υπάρχει επαναλαμβανόμενη κατηγορία: κάθε κατηγορία εμφανίστηκε μόνο μία φορά."
                 : "No repeated category: each keyword category occurred only once.");
+    }
+
+    // Historical timing is comparable only when ALL entries have absolute
+    // timestamps with explicit UTC offsets. Never invent a date for a file.
+    if (datedRecords.size() == total) {
+        java.util.Collections.sort(datedRecords);
+        long elapsed = datedRecords.get(datedRecords.size() - 1) - datedRecords.get(0);
+        logLabelValue(gr ? "Χρονική απόσταση καταγραφών:" : "Time span between records:",
+                String.format(Locale.US, "%.1f", elapsed / 3600000d)
+                + (gr ? " ώρες" : " hours"));
+    } else if (recordsWithDates > 0) {
+        logLabelValue(gr ? "Χρονολογική κάλυψη:" : "Date coverage:",
+                recordsWithDates + "/" + total
+                        + (gr ? " αρχεία περιλαμβάνουν ημερομηνία· σύγκριση χρόνου μόνο με πλήρη στοιχεία."
+                              : " records have a date; chronological comparison requires complete timestamps."));
+    }
+    int repeatedSignatures = 0;
+    for (java.util.Map.Entry<String, Integer> sig : signatureCount.entrySet()) {
+        if (sig.getValue() > 1) {
+            repeatedSignatures++;
+            logLabelValue(gr ? "Επαναλαμβανόμενη υπογραφή panic:" : "Recurring panic signature:",
+                    sig.getKey() + " (" + sig.getValue() + "/" + total + ")");
+        }
+    }
+    if (recordsWithSignatures > 1 && repeatedSignatures == 0) {
+        logLabelValue(gr ? "Υπογραφές panic:" : "Panic signatures:",
+                gr ? "Οι καταγεγραμμένες υπογραφές είναι διαφορετικές."
+                   : "The observed panic signatures are distinct.");
     }
 
     // -------------------------------
