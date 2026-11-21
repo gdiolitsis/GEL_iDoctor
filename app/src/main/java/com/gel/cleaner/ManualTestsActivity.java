@@ -32752,20 +32752,21 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                 } else {
                     // Unknown does not mean the Android reader returned nothing.
                     // Preserve partial GPU/SoC/camera/network observations in white.
+                    // A missing automatic reading is not a suspicious finding.
+                    // Present the OEM specification and any observed measurement,
+                    // then an actionable instruction where available.
                     String partialObservation =
                             specRow.observed == null || specRow.observed.trim().isEmpty()
-                                    ? (gr ? "Δεν επαληθεύτηκε" : "Not verified")
-                                    : observation + (gr
-                                            ? " — Δεν τεκμηριώθηκε πλήρης συμφωνία"
-                                            : " — Full match not established");
-                    logLabelValue(rowName,
-                            partialObservation + " (" + expected + specRow.expected + ")");
+                                    ? (gr ? "Σύμφωνα με τον κατασκευαστή: "
+                                          : "Manufacturer specification: ") + specRow.expected
+                                    : observation + " (" + expected + specRow.expected + ")";
+                    logLabelValue(rowName, partialObservation);
                 }
                 // Explain non-verification without alleging a missing OEM feature.
                 // Battery wear/remaining charge is distinct from factory design mAh.
                 String explanation = gr ? specRow.noteGreek : specRow.noteEnglish;
                 if (explanation != null && !explanation.trim().isEmpty()) {
-                    logLabelValue(gr ? "Ερμηνεία" : "Interpretation", explanation);
+                    logLabelValue(gr ? "Οδηγία / εξήγηση" : "Guidance / explanation", explanation);
                 }
             }
             // Each result class keeps its own value color after the colon.
@@ -32785,12 +32786,14 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                 logLabelOkValue(gr ? "Αποκλίσεις προδιαγραφών" : "Specification deviations",
                         "0");
             }
-            logLabelValue(gr ? "Μη επαληθευμένα χαρακτηριστικά" : "Unverified specifications",
+            logLabelValue(gr ? "Χαρακτηριστικά χωρίς αυτόματη σύγκριση" : "Characteristics without automatic comparison",
                     String.valueOf(factory.unknowns));
             if (factory.unknowns > 0) {
-                logLabelValue(gr ? "Ερμηνεία μη επαληθευμένων" : "Meaning of unverified",
-                        gr ? "Μη επαληθευμένο δεν σημαίνει απόν, ελαττωματικό ή μη γνήσιο εξάρτημα."
-                           : "Unverified does not mean missing, defective, or non-genuine hardware.");
+                logLabelValue(gr ? "Τρόπος ελέγχου" : "How to check",
+                        gr ? "Το εργαστήριο παρουσιάζει όσα μπορεί να ελέγξει αυτόματα. "
+                                + "Για τα υπόλοιπα ακολουθήστε τις σχετικές οδηγίες, όπου υπάρχει δυνατότητα."
+                           : "The lab shows what it can check automatically. "
+                                + "For the remaining characteristics, follow the applicable manual-check guidance.");
             }
             if (factory.deviations > 0) {
                 logLabelErrorValue(gr ? "Συμπέρασμα" : "Conclusion",
