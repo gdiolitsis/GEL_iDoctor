@@ -43,6 +43,10 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(evidence.contains("caseRecord.localizedNote(gr)"));
         assertTrue(evidence.contains("caseRecord.sourceUrl"));
         assertTrue(evidence.contains("not independently verified repairs"));
+        assertTrue(evidence.contains("AppleOfficialServiceGuidance.topicMightBeUsefulForAction("));
+        assertTrue(evidence.contains("relatedApple.sourceUrl"));
+        assertTrue(evidence.contains("μόνο αν υπάρχει σχετικό σύμπτωμα"));
+        assertFalse(evidence.contains("Apple-certified repair"));
     }
 
     @Test public void finalLabReportsSourceCoverageButNeverInfersAComponent() throws Exception {
