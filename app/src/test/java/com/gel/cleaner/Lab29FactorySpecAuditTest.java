@@ -180,4 +180,52 @@ public class Lab29FactorySpecAuditTest {
         assertFalse(Lab29FactorySpecAudit.evaluate(
                 new Lab29FactorySpecAudit.Measurements()).supportedModel);
     }
+
+    @Test public void batteryReportedFullChargeIsNotMistakenForFactoryDesign() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.batteryDesignMah = -1L;
+        m.batteryChargeFullMah = 4500L;
+        m.batteryChargeNowMah = 2550L;
+        m.batteryLevelPercent = 57;
+        Lab29FactorySpecAudit.Row r = row(Lab29FactorySpecAudit.evaluate(m),
+                "Factory battery capacity");
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN, r.verdict);
+        assertTrue(r.observed.contains("4500 mAh"));
+        assertTrue(r.observed.contains("full-charge counter"));
+        assertTrue(r.noteGreek.contains("90%"));
+        assertTrue(r.noteGreek.contains("δεν")); // no counterfeiting verdict
+    }
+
+    @Test public void batteryRemainingMahDividedBySocIsExplicitlyOnlyAnEstimate() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.batteryChargeNowMah = 2250L;
+        m.batteryLevelPercent = 50;
+        Lab29FactorySpecAudit.Row r = row(Lab29FactorySpecAudit.evaluate(m),
+                "Factory battery capacity");
+        assertTrue(r.observed.contains("4500 mAh"));
+        assertTrue(r.observed.contains("percentage estimate"));
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN, r.verdict);
+        m.batteryLevelPercent = 5; // too low for extrapolation
+        assertTrue(row(Lab29FactorySpecAudit.evaluate(m), "Factory battery capacity")
+                .observed.isEmpty());
+        m.batteryLevelPercent = 50;
+        m.batteryChargeNowMah = 0L; // no physical reading
+        assertTrue(row(Lab29FactorySpecAudit.evaluate(m), "Factory battery capacity")
+                .observed.isEmpty());
+    }
+
+    @Test public void usbAudioJackAndFmUnknownNeverMeanAbsent() {
+        Lab29FactorySpecAudit.Report r = Lab29FactorySpecAudit.evaluate(sample());
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(r, "USB connector").verdict);
+        assertTrue(row(r, "USB connector").noteGreek.contains("δεν σημαίνει"));
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(r, "3.5 mm jack").verdict);
+        assertTrue(row(r, "3.5 mm jack").noteEnglish.contains("not mean absent"));
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(r, "FM radio").verdict);
+        assertTrue(row(r, "FM radio").noteEnglish.contains("does not prove"));
+        assertEquals(0, r.deviations);
+    }
+
 }
