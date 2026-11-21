@@ -23,7 +23,7 @@ public final class AppleOfficialServiceGuidanceTest {
 
     @Test public void officialDocsAreSourcedAndNoApplePanicMappingIsClaimed() throws Exception {
         List<AppleOfficialServiceGuidance.Guidance> entries = docs();
-        assertTrue("Official Apple catalog must retain 53 entries", entries.size() >= 53);
+        assertTrue("Official Apple catalog must retain 54 entries", entries.size() >= 54);
         for (AppleOfficialServiceGuidance.Guidance e : entries) {
             assertTrue(e.sourceUrl.startsWith("https://support.apple.com/"));
             assertFalse(e.advice(true).isEmpty());
@@ -169,6 +169,21 @@ public final class AppleOfficialServiceGuidanceTest {
                 AppleOfficialServiceGuidance.conditionalTopicsForClue("SMC 0x80000").isEmpty());
         assertTrue("No generic replacement recommendations without a clue",
                 AppleOfficialServiceGuidance.conditionalTopicsForClue("UNKNOWN").isEmpty());
+    }
+
+    @Test public void repairsDiagnosticsModesMustNotBeConfusedWithOlderRestrictions() throws Exception {
+        List<AppleOfficialServiceGuidance.Guidance> rows = docs();
+        AppleOfficialServiceGuidance.Guidance modern =
+                AppleOfficialServiceGuidance.forTopic(rows, "iPhone13,2", "APPLE_DIAGNOSTICS_REPAIR");
+        assertNotNull("iPhone 12 may use Apple diagnostics with supported iOS", modern);
+        assertTrue(modern.advice(false).contains("iOS 18+"));
+        assertTrue(modern.advice(false).contains("iOS 17+"));
+        assertNotNull(AppleOfficialServiceGuidance.forTopic(rows,
+                "iPhone15,2", "APPLE_DIAGNOSTICS_REPAIR"));
+        assertNull(AppleOfficialServiceGuidance.forTopic(rows,
+                "iPhone12,1", "APPLE_DIAGNOSTICS_REPAIR"));
+        assertNull(AppleOfficialServiceGuidance.forTopic(rows,
+                "Unknown", "APPLE_DIAGNOSTICS_REPAIR"));
     }
 
     @Test(expected=IOException.class)
