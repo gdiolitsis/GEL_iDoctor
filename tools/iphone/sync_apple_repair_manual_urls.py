@@ -217,7 +217,20 @@ def main():
                     candidates.discard(None)
                     candidates.discard(official_article(src_url, src_url))
                     if len(candidates) == 1:
-                        combined_references[ref_parent[0]] = next(iter(candidates))
+                        # Newer models link a combined internal/parts/exploded
+                        # view, plus separate Screws and Tools chapters.
+                        descendants = []
+                        for leaf in ("Screws", "Tools"):
+                            leaf_urls = {official_article(u, actual)
+                                         for u in parser.anchors.get(canonical(leaf), ())}
+                            leaf_urls.discard(None)
+                            leaf_urls.discard(official_article(src_url, src_url))
+                            if len(leaf_urls) != 1:
+                                break
+                            descendants.append(next(iter(leaf_urls)))
+                        if len(descendants) == 2:
+                            combined_references[ref_parent[0]] = (
+                                next(iter(candidates)), descendants[0], descendants[1])
 
             headings_matched = 0
             updated = 0
@@ -325,15 +338,25 @@ def main():
             rows.append(child)
         revised[index] = "\n".join("\t".join(row) for row in rows) + "\n"
 
-    # Newer manuals replace the four legacy references with one official
-    # combined "Internal View, Orderable Parts, and Exploded View" article.
-    for parent_id, official_url in combined_references.items():
+    # Newer manuals combine internal view / parts / exploded view, but
+    # link separate screws and tools. Preserve these THREE real Apple pages.
+    for parent_id, links in combined_references.items():
         index, fields = chapter_lines[parent_id]
         base = fields[:]
         base[4] = "Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα"
         base[5] = "Internal View, Orderable Parts, and Exploded View"
-        base[6], base[7] = official_url, "DIRECT_CHAPTER"
-        revised[index] = "\t".join(base) + "\n"
+        base[6], base[7] = links[0], "DIRECT_CHAPTER"
+        rows = [base]
+        for suffix, greek, english, url in [
+            ("SCREWS", "Βίδες", "Screws", links[1]),
+            ("TOOLS", "Εργαλεία", "Tools", links[2]),
+        ]:
+            child = fields[:]
+            child[0] = parent_id + "_" + suffix
+            child[4], child[5] = greek, english
+            child[6], child[7] = url, "DIRECT_CHAPTER"
+            rows.append(child)
+        revised[index] = "\n".join("\t".join(row) for row in rows) + "\n"
 
     for chapter_id, (other_url, area) in sensor_splits.items():
         index, fields = chapter_lines[chapter_id]
