@@ -2383,6 +2383,16 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
         java.util.Set<String> alreadyShown) {
     ApplePanicHardwareHints.Assessment findings =
             ApplePanicHardwareHints.examineOne(block);
+    // Offline published repair history only. Never send customer logs or
+    // identifiers to third parties and never infer that a replacement is required.
+    java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> repairHistory =
+            java.util.Collections.emptyList();
+    try {
+        repairHistory = IPhonePanicRepairKnowledgeBase.parse(
+                getAssets().open(IPhonePanicRepairKnowledgeBase.ASSET));
+    } catch (java.io.IOException ignored) {
+        // No repair history is safer than a guessed recommendation.
+    }
     int rendered = 0;
     for (ApplePanicHardwareHints.Finding finding : findings.findings) {
         String key = findings.modelIdentifier + "|" + finding.code;
@@ -2402,6 +2412,27 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
                 finding.area(gr));
         logLabelValue(gr ? "Ασφαλές επόμενο βήμα:" : "Safe next check:",
                 finding.action(gr));
+
+        java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> matchingReports =
+                IPhonePanicRepairKnowledgeBase.lookup(repairHistory,
+                        findings.modelIdentifier, finding.code);
+        if (!matchingReports.isEmpty()) {
+            logLabelValue(gr ? "Δημοσιευμένες περιπτώσεις επισκευής:" :
+                    "Published repair outcomes:",
+                    gr ? "Μαρτυρίες τεχνικών/ιδιοκτητών — όχι πιστοποίηση ή οδηγία αλλαγής εξαρτήματος."
+                       : "Owner/technician reports; not a verified diagnosis or replacement instruction.");
+            int shownReports = 0;
+            for (IPhonePanicRepairKnowledgeBase.RepairCase caseRecord : matchingReports) {
+                if (shownReports++ >= 8) break;
+                logLabelValue(gr ? "Εργασία και έκβαση:" : "Attempt and outcome:",
+                        caseRecord.localizedOutcome(gr) + " — "
+                                + caseRecord.localizedAction(gr));
+                logLabelValue(gr ? "Τι αναφέρθηκε:" : "Reported detail:",
+                        caseRecord.localizedNote(gr));
+                logLabelValue(gr ? "Πηγή περιστατικού:" : "Case source:",
+                        caseRecord.sourceUrl);
+            }
+        }
     }
     if (rendered > 0 && alreadyShown == null) {
         logInfo(gr
