@@ -17,17 +17,17 @@ A panic **signature/code**, a **model-specific hardware-path mapping**, a **prop
 - **Actual repair-attempt reports**: linked per attempt and original thread in `app/src/main/assets/iphone_panic_repair_knowledge_v1.tsv`.
 
 ## 2. Curated source-linked outcome sample
-Current checkpoint: **24 separate repair attempts**, sourced from public case reports.
+Current checkpoint: **26 separate repair attempts**, sourced from public case reports.
 
 | Reported outcome | Attempts |
 | --- | ---: |
-| First-hand or shop-reported resolution | 12 |
-| First-hand or shop-reported failure | 10 |
+| First-hand or shop-reported resolution | 13 |
+| First-hand or shop-reported failure | 11 |
 | Partial improvement / recurring identical panic | 1 |
 | Outcome unresolved or follow-up inadequate | 1 |
-| **Total** | **24** |
+| **Total** | **26** |
 
-These attempts cover **10 distinct indexed code/signature keys** and **13 model identifiers** (including two identifiers for XS Max). **24 attempts are not 24 independent devices:** several attempts belong to one owner or workshop incident, as grouped by `incident_id`. **No population-level repair success rate may be computed** from these selected, often self-reported internet cases.
+These attempts cover **10 distinct indexed code/signature keys**, **13 model identifiers**, and **21 grouped source incidents** (including two identifiers for XS Max). **26 attempts are not 26 independent devices:** several attempts belong to one owner or workshop incident, as grouped by `incident_id`. **No population-level repair success rate may be computed** from these selected, often self-reported internet cases.
 
 ## 3. Notable observed repairs (reported, not independently certified)
 - iPhone 11, `MIC2`: power-button flex replacement, or reseating a loose connector; another owner reported success with a different charging-port flex. Outcomes and chronology remain case-specific. https://www.ifixit.com/Answers/View/730301/ ; https://www.ifixit.com/Answers/View/805260/ ; https://www.ifixit.com/Answers/View/645543/
@@ -55,8 +55,10 @@ These attempts cover **10 distinct indexed code/signature keys** and **13 model 
 6. **Failure recording:** initial failed attempt and later successful attempt on one handset must remain linked to one `incident_id`.
 7. **No success percentages** without representative denominators, validated post-repair logs and independent follow-up.
 
+- iPhone 11, `MIC2`: in another contributor's first-hand follow-up, two charging-port attempts failed before an original flash/power flex was installed and restarts reportedly stopped; this is **one incident with two different outcomes**. https://www.ifixit.com/Answers/View/645543/
+
 ## 6. Implementation and limits
-The new offline `IPhonePanicRepairKnowledgeBase` is a provenance-preserving research aid. iPhone Lab 4 may display exact-model and exact-code matched historic case reports, outcome types and links, **not an automatic component replacement instruction**. The existing 49 source-inspired synthetic panic fixtures are separate QA artifacts, **not 49 proven repairs**. No customer panic log is uploaded or automatically harvested. If exact code/model is unknown, the application retains the neutral GEL hardware clue, not a fabricated repair.
+The new offline `IPhonePanicRepairKnowledgeBase` is a provenance-preserving research aid. iPhone Labs 4, 7 and 8 may display exact-model and exact-code matched historic case reports or narrowly scoped summaries, outcome types and links, **not an automatic component replacement instruction**. The existing 49 source-inspired synthetic panic fixtures are separate QA artifacts, **not 49 proven repairs**. No customer panic log is uploaded or automatically harvested. If exact code/model is unknown, the application retains the neutral GEL hardware clue, not a fabricated repair.
 
 ## 7. Research expansion priorities
 Next evidence-collection cycles should cover more independent cases and systems: iPhone X–12 `mic1/mic2/prs0/TG0B/TG0V`; 13–16 family SMC arrays in both decimal and hex; AOP, audio, GPU/DCP, NAND, baseband and charging-path events. Each report requires (1) actual model, (2) raw excerpted condition rather than whole private log, (3) repair performed, (4) previous failed attempts, (5) post-repair reboot observation and follow-up window, (6) original publication link/date. Unknowns and conflicts must be included, not inferred away.
