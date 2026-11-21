@@ -1,70 +1,95 @@
-# GEL iDoctor — Apple technical troubleshooting knowledge, Phase III
+# GEL iDoctor — Apple iPhone technical knowledge, Phase III
 
-**Reviewed on 2026-11-21.** Keep official Apple service knowledge, independent repair outcomes and GEL panic-log interpretation as **three separate types of evidence**. This document records the exact state of the current implementation rather than implying that 1,074 separate service procedures have been read.
+**Latest audit: 2026-11-22.** A 1,074-item link catalog is not the same as individually reading 1,074 Apple repair chapters. This file separates those dimensions and identifies exactly which first-party content was reviewed.
 
-## Reliable denominators
+## Verified coverage
 
-| Coverage unit | Current count | What it means |
+| Metric | Count | Meaning |
 |---|---:|---|
-| Official source-linked model chapter records | **1,074** | Each has its own real Apple article URL |
-| Distinct Apple support article URLs in those records | **447** | Many different iPhone models and symptom sections share one Apple article |
-| Actual article bodies inspected and summarized as technical findings in Phase III | **5** | Source-verified original bilingual technical triage notes |
-| Curated Phase III bilingual technical findings | **42** | Symptoms, checks, diagnostics, safety, eligible escalation, verification |
-| Chapter entries to which those 42 findings are applicable by exact URL+phase+topic | **190** | **Reuse of source-reviewed article sections**, not 190 article bodies individually studied |
-| Earlier individually studied stage-summary chapters | **10** | 62 bilingual short stage summaries, especially physical repairs |
-| Official source articles with the 10 earlier stage-summary chapters | **8** | A review-type distinction, not a count to simply add to the 5 articles |
+| Official iPhone Repair Manuals indexed | **30** | Apple's current model-manual directory in our catalog |
+| Direct Apple chapter links | **1,074 / 1,074** | Link/table-of-contents completeness; not full article-text review |
+| Distinct source article URLs | **447** | Manufacturer articles are shared by model manuals and by symptom |
+| First-party articles with source-reviewed technical notes | **8** | Separately opened/read official text |
+| Original bilingual technical findings | **100** | Each has source URL, exact scope, category, risk, kind, and review date |
+| Chapter rows to which those reviewed findings apply | **459** | Identical source URL **plus exact topic and phase**; not 459 independently read texts |
+| Individually source-reviewed stage-summary chapters | **10** | Existing 62 bilingual short stage descriptions, with model-specific prerequisites |
+| Distinct article URLs with physical/diagnostic stage summaries | **8** | Review status is separate from the newer technical-note track |
 
-**Do not report 190 or 1,074 as "full repair procedures reviewed."** The 190 reusable chapter mappings are source- and topic-validated. No manufacturer panic-to-defective-part interpretation is inferred.
+These are distinct denominators. One official generic article about mechanical issues links to 153 separate manual-topic rows; a source-reviewed fact for that article must **not** become a claim that 153 physical procedures were independently verified.
 
-## New implementation
+## Evidence model and safeguards
 
-- `app/src/main/assets/iphone_apple_technical_findings_v1.tsv`: 42 concise, original, Greek/English technical findings. Each row contains exact Apple URL, phase, topic, action-kind, risk class, written summary and review date.
-- `app/src/main/java/com/gel/cleaner/AppleIPhoneTechnicalKnowledge.java`: strict parser. Rejects duplicate IDs, unofficial URLs, unrecognized stage/risk flags and facts not actually linked by that `source_url + phase + topic` in the master manual chapter index.
-- `app/src/test/java/com/gel/cleaner/AppleIPhoneTechnicalKnowledgeTest.java`: assertions for 42 facts, 190 matching chapter records, 447 URL corpus, exact iPhone13 Pro Max and iPhone 15 model isolation, empty results for unknown hardware IDs, and no wrong-topic spillover on shared Apple articles.
-- `IPhoneLabsActivity.java`: the real Lab 4 source display now includes a limited number of source-reviewed safety notes, quick checks and conditional troubleshooting findings *before* independently published repairs. Extra warnings are visible only when contextually appropriate; `DATA_LOSS` and `TECHNICIAN_ONLY` must not be rendered as confirmed device failures.
-- `docs/qa/APPLE_IPHONE_TECHNICAL_REVIEW_QUEUE_2026-11-21.tsv`: complete **447-article editorial queue**, sorted by relevance and repeated use across manuals. Status `DIRECT_LINK_ONLY` means **no** claim that the full article was studied. The inventory's `model_manuals` count is how many indexed manuals reuse the article.
+- **First-party source**: manufacturer page and exact title URL from `iphone_apple_manual_chapters_v1.tsv`.
+- **A reviewed factual summary**: `iphone_apple_technical_findings_v1.tsv`, with `fact_id`, `source_url`, `phase`, `topic`, `kind`, `risk`, Greek text, English text, and review date.
+- **Matching engine**: `AppleIPhoneTechnicalKnowledge.java` rejects records not supported by a matching published URL + topic + chapter phase; an exact internal hardware ID must be verified for automatic model-specific display.
+- **What is not an outcome**: neither the presence of an Apple troubleshooting chapter nor a GEL panic code establishes the result of Apple MRI/Audio/Multi-Touch diagnostics, a failed sensor, or a required part replacement.
+- **Safety**: technician-only steps and battery/laser hazards remain labeled; restore/erase procedures carry a data-loss caution; the full illustrated Apple manual is required for physical repairs.
+- **Independent repair evidence**: forum case histories and their successes/failures remain separate from manufacturer's instructions in Lab 4.
 
-## Five first-party article bodies reviewed in this tranche
+## Source-reviewed Phase III articles (eight)
 
-| Apple source and section | Current structured knowledge | Source |
-|---|---|---|
-| iPhone Troubleshooting Quick Checks | Non-invasive device and accessory checks, restart/update, ***restore-data-loss warning*** | https://support.apple.com/en-us/101964 |
-| iPhone Battery Safety | Trained technician and workspace requirement, damaged-cell prohibition, discharge/unknown-level stop, thermal-emergency warning | https://support.apple.com/en-us/100299 |
-| Apple Diagnostics for Self Service Repair | Eligible hardware, on-device iOS 18+, secondary-browser iOS 17+, Wi-Fi/console requirements, real test-result provenance and serial-number privacy | https://support.apple.com/en-us/101965 |
-| iPhone Troubleshooting Battery, Charging, and Power Issues | Issue-specific findings for **six existing chapter topic scopes**: unexpected restart; legacy combined battery/power/charging; battery; no power; wired charging; wireless charging. Hardware examination always downstream from non-invasive checks and eligibility | https://support.apple.com/en-us/101969 |
-| iPhone 15 Pro Max TrueDepth Camera | IR laser hazard, display/top-speaker disassembly prerequisite and Repair Assistant required after eligible replacement | https://support.apple.com/en-us/104926 |
+| Official source | Applicable chapter headings | Structured findings | Manufacturer link |
+|---|---|---:|---|
+| Troubleshooting Quick Checks | Initial device checks | 4 | https://support.apple.com/en-us/101964 |
+| Battery Safety | Lithium-ion battery cautions | 4 | https://support.apple.com/en-us/100299 |
+| Apple Diagnostics for Self Service Repair | Hardware/OS eligibility, actual test execution, privacy | 5 | https://support.apple.com/en-us/101965 |
+| Battery, Charging and Power Troubleshooting | Unexpected restarts, combined battery/power, battery, no power, wired and wireless charging | 26 | https://support.apple.com/en-us/101969 |
+| iPhone 15 Pro Max TrueDepth Camera procedure | Laser warning, prerequisites, after-repair activation | 3 | https://support.apple.com/en-us/104926 |
+| Display Issues | Display/image, Multi-Touch/Haptic Touch, display-related sensors | 19 | https://support.apple.com/en-us/101966 |
+| Sound Issues | Speaker, ringer, microphone tests and part eligibility warnings | 9 | https://support.apple.com/en-us/101968 |
+| Mechanical Issues | Button/switch, physical-SIM tray, alerts, vibration/haptic, Touch ID, mechanical sensor chapters | 30 | https://support.apple.com/en-us/101970 |
+| **Total** | | **100** | |
 
-### Example — what a watchdog log can legitimately yield
+### New display and touch knowledge (source 101966)
 
-On the **verified exact model** iPhone 13 Pro Max (`iPhone14,3`), a related *unexpected restart* chapter gets the source-reviewed Apple facts bound to `https://support.apple.com/en-us/101969` topic `RESTART`:
+1. Apple distinguishes black/blank image, no power, flicker, pixel anomalies, brightness issues and missing True Tone; the cause must be isolated by actual checks.
+2. Remove obstructing case or protector and clean with device powered down, disconnected and appropriate cloth.
+3. If an image appears only after charging, investigate the charging path; if the device remains off, investigate power separately. MRI and Display Pixel Anomalies diagnostics are available only when supported.
+4. For Multi-Touch, distinguish unresponsive regions from erratic response; perform the Apple Multi-Touch suite when eligible.
+5. A proximity sensor test during an actual call covers and uncovers the top of the screen. Compass interference can be environmental or magnetic.
+6. Apple lists replacements only **after** the specific diagnostic failure and by exact model. A panic log does not establish an Ambient Light, Proximity, Compass or Barometer MRI failure.
 
-1. Distinguish unexpected restart, loop, frozen touch and full no-power situations.
-2. Check whether failures affect all preinstalled apps; isolate app/software issues before hardware.
-3. For apparent non-response check whether time continues (possible Multi-Touch issue).
-4. Run MRI if this actual model/iOS/device state is eligible, not simply because a panic file was imported.
-5. Account for *data loss* before following any erase/restore workflow.
-6. Verify real symptom recurrence and overall function after any legitimate repair.
+### New speaker and microphone knowledge (source 101968)
 
-These findings do **not** claim that the user has taken those steps, that an Apple diagnostic result exists or that a logic board/port/sensor should be replaced from an SMC or watchdog code.
+1. Separate upper/lower speaker complaints, ringer, audio from calls, recording and specific microphone paths.
+2. Check volume, Ring/Silent versus Action Button, obstructing cases and safe dry-brush cleaning of protective meshes.
+3. Perform MRI and the proper Audio diagnostic suite when available. A live call from another phone can help test whether speech is clear on speakerphone.
+4. The original Apple table distinguishes Receiver, Speaker, Bottom Mic left/right, Front Mic and Rear Mic tests and has **different eligible replacements for different models**.
+5. Do not generalize a replacement (e.g. a microphone module versus a full-unit service path) from a failure on another iPhone or a panic-code keyword.
+6. After any repair verify actual speaker, ringer and microphone function in the original failing use case.
 
-### Important model-specific exceptions
+### New buttons, SIM, alerts, sensors and haptics knowledge (source 101970)
 
-- The general Apple battery/charging support article includes different *later* hardware escalation paths for different model families. Phase III deliberately **does not reproduce a generic "replace logic board" instruction** that could incorrectly transfer from iPhone 17/18 to iPhone 12/13/14.
-- TrueDepth and lithium-ion battery procedures are not ordinary consumer repair suggestions. Physical work requires the complete illustrated source, supported parts and a qualified technician.
-- `AppleIPhoneTechnicalKnowledge.forChapter` binds by both actual direct Apple URL and its **topic and phase**. An article about display and touch cannot pick up power or restart facts merely because it is published by Apple.
-- For directory-only models with no verified internal hardware identifier, selecting an article for reading is possible through the existing explicit model-picker; the app never infers exact model from an imported panic string.
+1. Persistent heat alert after the phone returns to a 0–35 °C normal environment is different from an occasional legitimate temperature warning. If a phone overheated, switch it off and allow safe cooling before continuing.
+2. Distinguish physical button damage and accidental pressing from absent haptic feedback; remove case, clean and test with dry fingers, then use supported MRI.
+3. **Physical SIM tray** instructions are strictly limited to phones that truly have one. Some iPhone 14 and later US models are eSIM-only.
+4. A SIM alert may concern carrier account/authorization, PIN, wrong-sized tray or damaged tray; it does not prove baseband hardware failure.
+5. For vibration, Apple checks ringing and silent call scenarios before escalation to physical inspection.
+6. Touch ID advice is only applicable to devices actually equipped with a Home/Touch ID mechanism. Failure to read only certain fingers is not automatically a service issue.
+7. Sensor symptoms and MRI outcomes vary; an ordinary compass/proximity observation must not be presented as an Apple service-test failure.
 
-## Next editorial priorities
+## Integration in iPhone Lab 4
 
-The highest-reuse unreviewed official articles from the 447-source queue are currently:
+`IPhoneLabsActivity.java` now uses `readAppleTechnicalFacts()` and `logSourceReviewedAppleFacts()`:
 
-- **Buttons, SIM, Taptic and mechanical issues** — https://support.apple.com/en-us/101970
-- **Display, Multi-Touch and sensors** — https://support.apple.com/en-us/101966
-- **Speakers, microphone and audio** — https://support.apple.com/en-us/101968
-- **Camera, LiDAR, TrueDepth and Face ID** — https://support.apple.com/en-us/101967 (an earlier source-reviewed short triage exists for iPhone 14 Pro within the stage-summary corpus; this article still needs a full topic-by-topic Phase III review)
+- The **official manufacturer section appears before independently reported repairs**, preserving provenance.
+- Before physical work, a small source-reviewed safety and Quick Checks summary is shown.
+- A matched official symptom topic includes a limited number of relevant technical facts (rather than all 100 notes). The exact-model official chapter URL remains beside the summary.
+- `DATA_LOSS` and `TECHNICIAN_ONLY` notes retain their caution text and do not become red error verdicts.
+- Generic article 101970 may support multiple different chapters; notes are selected by **source URL + phase + topic**, not by article alone.
 
-Subsequently process the **model-specific repair procedures** one by one, storing precise model/variant, removed prerequisites, warnings, tools, part-specific Repair Assistant conditions, and real post-repair checks. Do **not** generate replacement instructions by extrapolating from a neighboring iPhone model.
+## Editorial status for all 447 distinct articles
 
-## Still needed before shipping
+See `docs/qa/APPLE_IPHONE_TECHNICAL_REVIEW_QUEUE_2026-11-21.tsv`, updated **2026-11-22**:
 
-A successful JVM/Android CI proves source-code and data contracts, not real-device usability. Verify Greek and English rendering, log size, clickable manufacturer URLs, overview/PDF color and link preservation, demo 1+2 behavior, source order and manual browsing on actual devices before merging PR #181 or building a production APK.
+- Eight manufacturer article bodies now have source-reviewed technical findings.
+- Ten model-specific chapters have older, source-reviewed stage summaries.
+- **433 distinct manufacturer articles have neither of these two reviewed-detail statuses**, so their chapter links remain direct authoritative navigation only.
+
+The next most relevant unreviewed generic topic source is **camera/TrueDepth/Face ID**, Apple https://support.apple.com/en-us/101967. This article could not be retrieved through the source-verification interface during this tranche (HTTP 429). **No new knowledge is attributed to its unseen text**; pre-existing inspected camera-specific material remains separately recorded in its original stage-summary asset.
+
+Continue with official model-specific battery/display/camera/speaker/sensor service chapters only after inspecting each article and its conditions. Do not copy full copyrighted manuals into the APK.
+
+## Validation boundaries
+
+The JVM/Android CI verifies Java compilation and unit constraints, including 100 fact records, 459 matching chapters and non-leakage between topics on shared Apple pages. It is **not** an on-device UI or HTML/PDF export test; those are still required before merging the draft PR.
