@@ -27,6 +27,7 @@ public final class IPhonePanicRepairKnowledgeBase {
     public enum Outcome {
         SELF_REPORTED_SUCCESS,
         SELF_REPORTED_FAILURE,
+        PARTIAL_OR_RECURRING,
         UNRESOLVED
     }
 
@@ -84,6 +85,9 @@ public final class IPhonePanicRepairKnowledgeBase {
                     return greek ? "Αναφέρθηκε επιτυχία" : "Success reported";
                 case SELF_REPORTED_FAILURE:
                     return greek ? "Αναφέρθηκε αποτυχία" : "Failure reported";
+                case PARTIAL_OR_RECURRING:
+                    return greek ? "Μερική βελτίωση / επανεμφάνιση panic"
+                            : "Partial improvement / panic recurred";
                 default:
                     return greek ? "Άγνωστη τελική έκβαση" : "Outcome unresolved";
             }
