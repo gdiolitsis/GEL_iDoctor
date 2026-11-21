@@ -6466,67 +6466,16 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                           + "An increase in audio level was recorded.");
             }
 
-// ----------------------------------------------------
-// MIC FEEDBACK ANALYSIS
-// ----------------------------------------------------
-
-// SAFE AUDIO NORMALIZE BEFORE MIC CAPTURE (NO EXTRA HELPERS)
-if (am != null) {
-    try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-    try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-    try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
-    try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
-    try { am.setSpeakerphoneOn(true); } catch (Throwable ignore) {}
-}
-SystemClock.sleep(250);
-
-MicDiagnosticEngine.Result r =
-        MicDiagnosticEngine.run(this);
-
-if (r == null) {
-    // The optional measurement AFTER playback cannot revoke the measured
-    // acoustic indications gathered DURING each of the four tones.
-    appendHtml("<br>");
-    logLabelValue(gr ? "Πρόσθετη μέτρηση μικροφώνου" : "Additional microphone reading",
-            gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — δεν επηρεάζει την προηγούμενη καταγραφή τόνων"
-               : "NOT MEASURED — does not override the earlier tone observations");
-    if (allFourTonesIndicated) {
-        logLabelOkValue(gr ? "Έξοδος ηχείου" : "Speaker output",
-                gr ? "Καταγράφηκε ακουστική ένδειξη και στους 4 τόνους κατά την αναπαραγωγή"
-                   : "Acoustic indication recorded during all 4 tones");
-    }
-    return;
-}
-
-int rms  = (int) r.rms;
-int peak = (int) r.peak;
-
-logLabelOkValue("Mic RMS", String.valueOf(rms));
-logLabelOkValue("Mic Peak", String.valueOf(peak));
-
-String conf = (r.confidence == null)
-        ? ""
-        : r.confidence.trim().toUpperCase(Locale.US);
-
-// The confidence belongs ONLY to the optional post-playback microphone
-// capture, not to the earlier four tone-window RMS comparisons.
-boolean secondaryLowConfidence = conf.contains("LOW") || conf.contains("WEAK")
-        || conf.contains("FAIL") || conf.contains("NONE");
-if (secondaryLowConfidence) {
-    logLabelWarnValue(gr ? "Ποιότητα πρόσθετης μέτρησης" : "Additional reading confidence",
-            r.confidence == null ? (gr ? "Μ/Δ" : "N/A") : r.confidence);
-} else {
-    logLabelOkValue(gr ? "Ποιότητα πρόσθετης μέτρησης" : "Additional reading confidence",
-            r.confidence == null ? (gr ? "Μ/Δ" : "N/A") : r.confidence);
-}
-
+// Four-tone evidence was measured DURING playback. Do not perform a
+// second microphone capture AFTER the tones: it cannot attribute sound to
+// any specific tone and may confuse users without adding diagnostic value.
 appendHtml("<br>");
 if (allFourTonesIndicated) {
     logLabelOkValue(gr ? "Έξοδος ηχείου" : "Speaker output",
             gr ? "4/4 ακουστικές ενδείξεις κατά την αναπαραγωγή — καταγράφηκε αύξηση RMS, "
-                 + "όχι επιβεβαίωση των ακριβών συχνοτήτων"
+                  + "όχι επαλήθευση των ακριβών συχνοτήτων"
                : "4/4 acoustic indications during playback — RMS increase recorded, "
-                 + "not verification of the exact frequencies");
+                  + "not verification of exact frequencies");
 } else {
     String playbackSummary = measured == 0
             ? (gr ? "Δεν καταγράφηκε ταυτόχρονη μέτρηση τόνων"
@@ -6535,25 +6484,6 @@ if (allFourTonesIndicated) {
                   : "Acoustic indications during playback: ")
                     + confirmed + "/" + tones.length;
     logLabelValue(gr ? "Έξοδος ηχείου" : "Speaker output", playbackSummary);
-}
-
-// This later RMS is not a tone-specific test: a value <= 20 does NOT
-// establish speaker failure, and a value > 20 cannot upgrade 0–3/4 to 4/4.
-if (rms <= 20) {
-    logLabelValue(gr ? "Πρόσθετη μέτρηση μικροφώνου" : "Additional microphone reading",
-            gr ? "RMS έως 20 μετά τους τόνους — δεν αναιρεί τις ενδείξεις κατά την αναπαραγωγή"
-               : "RMS at or below 20 after tones — does not override playback evidence");
-} else {
-    logLabelValue(gr ? "Πρόσθετη μέτρηση μικροφώνου" : "Additional microphone reading",
-            gr ? "RMS πάνω από 20 μετά τους τόνους — δεν προσδιορίζει ποιος τόνος ακούστηκε"
-               : "RMS above 20 after tones — cannot identify individual tones");
-}
-if (secondaryLowConfidence) {
-    logLabelWarnValue(gr ? "Σημείωση πρόσθετης μέτρησης" : "Additional reading note",
-            gr ? "Η ένδειξη LOW αφορά μόνο τη μεταγενέστερη μέτρηση μικροφώνου. "
-                 + "Ακύρωση θορύβου, DSP ή θέση μικροφώνου μπορεί να την επηρεάζουν."
-               : "LOW applies only to the later microphone reading. "
-                 + "Noise cancellation, DSP or microphone placement may affect it.");
 }
 
 } catch (Throwable t) {
