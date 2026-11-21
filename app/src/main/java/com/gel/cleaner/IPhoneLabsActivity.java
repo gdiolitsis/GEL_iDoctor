@@ -2559,6 +2559,21 @@ private void logAppleOfficialManualOutline(String model,
                    : "No verified chapter index is loaded for this exact model.");
         return;
     }
+    // Apple lists mandatory safety/preparation chapters before any
+    // disassembly; show them before the repair-procedure inventory.
+    java.util.List<AppleIPhoneManualChapters.Chapter> safety =
+            AppleIPhoneManualChapters.phase(sections, AppleIPhoneManualChapters.Phase.SAFETY);
+    if (!safety.isEmpty()) {
+        java.util.List<String> labels = new java.util.ArrayList<>();
+        for (AppleIPhoneManualChapters.Chapter item : safety) labels.add(item.title(gr));
+        logLabelValue(gr ? "Apple — ασφάλεια πριν από επέμβαση:"
+                         : "Apple — safety before any disassembly:",
+                android.text.TextUtils.join(" • ", labels));
+    }
+    logLabelValue(gr ? "Apple — πρώτοι έλεγχοι:"
+                     : "Apple — preliminary checks:",
+            gr ? "Δείτε το κεφάλαιο Quick Checks πριν από οποιαδήποτε επισκευή."
+               : "Review the Quick Checks chapter before any repair.");
     java.util.List<AppleIPhoneManualChapters.Chapter> troubleshooting =
             AppleIPhoneManualChapters.troubleshootingForTopics(sections, suggestedTopics);
     if (!troubleshooting.isEmpty()) {
