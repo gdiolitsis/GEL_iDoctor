@@ -106,6 +106,17 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(formatter.contains("<font color='#87CEFA'>"));
         assertTrue(formatter.contains("GELServiceLog.iPhoneInfoValue(l, v, \"#87CEFA\")"));
         assertTrue(formatter.contains("if (!demoMode)"));
+        assertTrue(formatter.contains("linkifyEvidenceSources(v)"));
+        assertTrue(source.contains("LinkMovementMethod.getInstance()"));
+        assertTrue(source.contains("txtLog.setLinksClickable(true)"));
+        assertTrue(source.contains("txtLog.setClickable(true)"));
+        String links = region(source, "private String linkifyEvidenceSources(",
+                "private void logLabelInfoValue(");
+        assertTrue(links.contains("support"));
+        assertTrue(links.contains("ifixit"));
+        assertTrue(links.contains("nopowerfix"));
+        assertTrue(links.contains("html.append(\"<a href='\""));
+        assertTrue(links.contains("escape(text.substring(previous, links.start()))"));
 
         String history = region(source, "private void logApplePanicEvidence(",
                 "private void parseAndCacheSignature(");
