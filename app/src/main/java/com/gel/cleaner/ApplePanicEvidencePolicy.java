@@ -92,6 +92,97 @@ public final class ApplePanicEvidencePolicy {
                 : "Correlate the exact signature, dates, recurrence and real symptoms with a technician. A panic log alone does not justify component repair or replacement.";
     }
 
+
+    /**
+     * Field-level evidence from ONE structurally eligible panic record.
+     * These fields are historical log metadata, never live iPhone measurements.
+     * In particular, a date is comparable only with an explicit UTC offset.
+     */
+    public static final class RecordMetadata {
+        public final String timestamp;
+        public final long timestampEpochMillis;
+        public final String osVersion;
+        public final String process;
+        public final String modelIdentifier;
+        public final String signatureKey;
+
+        RecordMetadata(String timestamp, long epoch, String osVersion,
+                       String process, String modelIdentifier, String signatureKey) {
+            this.timestamp = timestamp;
+            this.timestampEpochMillis = epoch;
+            this.osVersion = osVersion;
+            this.process = process;
+            this.modelIdentifier = modelIdentifier;
+            this.signatureKey = signatureKey;
+        }
+    }
+
+    public static RecordMetadata describeOne(String block) {
+        if (!hasPanicEvidence(block)) {
+            return new RecordMetadata("", -1L, "", "", "", "");
+        }
+        String stamp = firstMatch(block,
+                "(?i)[\"']?timestamp[\"']?\\s*:\\s*[\"']([^\"'\\r\\n]{10,45})[\"']",
+                "(?im)^\\s*Date/Time\\s*:\\s*([^\\r\\n]{10,45})");
+        long epoch = parseExplicitTimestamp(stamp);
+        String os = firstMatch(block,
+                "(?i)[\"']?os_version[\"']?\\s*:\\s*[\"']([^\"'\\r\\n]{3,100})[\"']",
+                "(?im)^\\s*OS version\\s*:\\s*([^\\r\\n]{3,100})");
+        String process = firstMatch(block,
+                "(?im)^\\s*Panicked task\\s*:\\s*([^\\r\\n]{1,100})",
+                "(?i)[\"']?process[\"']?\\s*:\\s*[\"']([^\"'\\r\\n]{1,100})[\"']");
+        String model = firstMatch(block,
+                "(?i)\\b(iPhone\\d{1,2},\\d{1,2})\\b");
+        // Only the actual panicString or panic(cpu...) line is a signature.
+        // Never include unrelated JSON fields or concatenate other events.
+        String panic = firstMatch(block,
+                "(?i)[\"']?panicString[\"']?\\s*:\\s*[\"']([^\"'\\r\\n]{8,500})[\"']",
+                "(?im)^\\s*(panic\\s*\\(cpu[^\\r\\n]{8,500})");
+        String signature = normalizePanicSignature(panic);
+        return new RecordMetadata(stamp, epoch, os, process, model, signature);
+    }
+
+    private static String normalizePanicSignature(String panic) {
+        if (panic == null || panic.trim().isEmpty()) return "";
+        // Omit CPU index, caller address and stack addresses that vary by run.
+        String value = panic.replaceFirst("(?i)^.*?\\):\\s*", "");
+        if (value.equals(panic)) value = panic;
+        value = value.replace("\\n", " ").replace("\\r", " ");
+        value = value.replaceAll("(?i)0x[0-9a-f]{7,}", "[address]");
+        value = value.replaceAll("\\s+", " ").trim().toLowerCase(Locale.ROOT);
+        return value.length() > 160 ? value.substring(0, 160) : value;
+    }
+
+    private static String firstMatch(String text, String... regexes) {
+        if (text == null) return "";
+        for (String pattern : regexes) {
+            java.util.regex.Matcher m = Pattern.compile(pattern).matcher(text);
+            if (m.find()) return m.group(1).trim();
+        }
+        return "";
+    }
+
+    private static long parseExplicitTimestamp(String value) {
+        if (value == null || value.trim().isEmpty()) return -1L;
+        // Do not compare timezone-less timestamps or fabricate chronology.
+        String[] formats = {"yyyy-MM-dd HH:mm:ss.SS Z",
+                            "yyyy-MM-dd HH:mm:ss.SSS Z",
+                            "yyyy-MM-dd HH:mm:ss Z"};
+        for (String format : formats) {
+            try {
+                java.text.SimpleDateFormat parser =
+                        new java.text.SimpleDateFormat(format, Locale.US);
+                parser.setLenient(false);
+                java.text.ParsePosition pos = new java.text.ParsePosition(0);
+                java.util.Date d = parser.parse(value.trim(), pos);
+                if (d != null && pos.getIndex() == value.trim().length()) {
+                    return d.getTime();
+                }
+            } catch (RuntimeException ignored) { }
+        }
+        return -1L;
+    }
+
     public static String limitation(boolean gr) {
         return gr
                 ? "Μόνο εισαγόμενα αρχεία: δεν μετρήθηκε η συσκευή, δεν επαληθεύτηκε η αιτία ή η κατάσταση του hardware."
