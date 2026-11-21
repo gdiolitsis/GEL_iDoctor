@@ -86,7 +86,7 @@ public final class Lab27ValueAfterColonColorsContractTest {
         assertTrue(factory.contains("logLabelOkValue(gr ? \"Συμφωνίες προδιαγραφών\""));
         assertTrue(factory.contains("logLabelErrorValue(gr ? \"Αποκλίσεις προδιαγραφών\""));
         assertTrue(factory.contains("logLabelOkValue(gr ? \"Αποκλίσεις προδιαγραφών\""));
-        assertTrue(factory.contains("logLabelValue(gr ? \"Μη επαληθευμένα χαρακτηριστικά\""));
+        assertTrue(factory.contains("logLabelValue(gr ? \"Χαρακτηριστικά χωρίς αυτόματη σύγκριση\""));
         assertTrue(factory.contains("logLabelValue(gr ? \"Πηγή κατασκευαστή\""));
     }
 }
