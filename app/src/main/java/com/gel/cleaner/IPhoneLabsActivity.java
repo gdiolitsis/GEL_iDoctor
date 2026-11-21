@@ -2102,7 +2102,7 @@ private void runRecurringDomainLab() {
         if (!history.isEmpty()) {
             IPhonePanicRepairKnowledgeBase.MatchSummary counts =
                     IPhonePanicRepairKnowledgeBase.summarize(history);
-            logLabelValue(gr ? "Επαναλαμβανόμενη τεχνική ένδειξη:" : "Repeated technical clue:",
+            logLabelInfoValue(gr ? "Επαναλαμβανόμενη τεχνική ένδειξη:" : "Repeated technical clue:",
                     code + " (" + clue.getValue() + "/" + total + ") — "
                             + counts.display(gr));
             logLabelValue(gr ? "Αναλυτικές πηγές:" : "Detailed sources:",
@@ -2256,7 +2256,7 @@ private void runFinalServiceRecommendationLab() {
     if (!relatedRepairAttempts.isEmpty()) {
         IPhonePanicRepairKnowledgeBase.MatchSummary related =
                 IPhonePanicRepairKnowledgeBase.summarize(relatedRepairAttempts.values());
-        logLabelValue(gr ? "Σχετικές δημοσιευμένες επισκευές:" : "Related published repair attempts:",
+        logLabelInfoValue(gr ? "Σχετικές δημοσιευμένες επισκευές:" : "Related published repair attempts:",
                 related.display(gr));
         logLabelValue(gr ? "Πού βρίσκονται οι περιπτώσεις:" : "Where to read the cases:",
                 gr ? "Στο Lab 4 εμφανίζονται οι συγκεκριμένες εργασίες, οι αποτυχίες και οι πηγές. "
@@ -2264,14 +2264,41 @@ private void runFinalServiceRecommendationLab() {
                    : "Lab 4 lists the actions, failures and original sources. "
                         + "A matching clue does not identify the fault on this specific iPhone.");
     }
+    // Single-model official service path. Apple guidance is symptom-based;
+    // the panic code alone never authorizes a replacement.
     if (!someHardwareModelUnknown && observedHardwareModels.size() == 1) {
         String identifiedModel = observedHardwareModels.iterator().next();
+        java.util.List<AppleOfficialServiceGuidance.Guidance> officialDocs =
+                readAppleOfficialGuidance();
+        AppleOfficialServiceGuidance.Guidance restart =
+                AppleOfficialServiceGuidance.forTopic(officialDocs,
+                        identifiedModel, "UNEXPECTED_RESTART");
         AppleOfficialServiceGuidance.Guidance manual =
                 AppleOfficialServiceGuidance.modelManual(readAppleOfficialGuidance(),
                         identifiedModel);
+        AppleOfficialServiceGuidance.Guidance diagnostics =
+                AppleOfficialServiceGuidance.forTopic(officialDocs,
+                        identifiedModel, "APPLE_DIAGNOSTICS");
+        AppleOfficialServiceGuidance.Guidance completion =
+                AppleOfficialServiceGuidance.forTopic(officialDocs,
+                        identifiedModel, "POST_REPAIR");
+        if (restart != null) {
+            logLabelInfoValue(gr ? "Apple — πρώτος έλεγχος, αν υπάρχουν επανεκκινήσεις:" :
+                    "Apple — first check if restarts are occurring:",
+                    restart.title(gr) + " — " + restart.sourceUrl);
+        }
         if (manual != null) {
-            logLabelValue(gr ? "Επίσημο εγχειρίδιο Apple:" : "Official Apple manual:",
+            logLabelInfoValue(gr ? "Επίσημο εγχειρίδιο Apple:" : "Official Apple manual:",
                     manual.title(gr) + " — " + manual.sourceUrl);
+        }
+        if (diagnostics != null) {
+            logLabelInfoValue(gr ? "Apple Diagnostics — εφόσον υποστηρίζονται:" :
+                    "Apple Diagnostics — where supported:",
+                    diagnostics.title(gr) + " — " + diagnostics.sourceUrl);
+        }
+        if (completion != null) {
+            logLabelInfoValue(gr ? "Μετά από επιλέξιμη επισκευή:" : "After an eligible part repair:",
+                    completion.title(gr) + " — " + completion.sourceUrl);
         }
     }
     if (demoMode) {
@@ -2494,15 +2521,15 @@ private void logOfficialApplePanicGuidance(String model, boolean gr) {
             gr ? "Οδηγίες ελέγχου ανά σύμπτωμα — η Apple δεν αποδίδει εδώ κάποιον συγκεκριμένο panic code σε εξάρτημα."
                : "Symptom-based guidance, not an Apple mapping of this panic code to a failed part.");
     if (manual != null) {
-        logLabelValue(gr ? "Εγχειρίδιο μοντέλου:" : "Model repair manual:",
+        logLabelInfoValue(gr ? "Εγχειρίδιο μοντέλου:" : "Model repair manual:",
                 manual.title(gr) + " — " + manual.sourceUrl);
     }
     if (restart != null) {
-        logLabelValue(gr ? "Επίσημος έλεγχος επανεκκίνησης:" : "Apple restart troubleshooting:",
+        logLabelInfoValue(gr ? "Επίσημος έλεγχος επανεκκίνησης:" : "Apple restart troubleshooting:",
                 restart.advice(gr) + " — " + restart.sourceUrl);
     }
     if (diagnostics != null) {
-        logLabelValue(gr ? "Διαγνωστικά Apple:" : "Apple diagnostics:",
+        logLabelInfoValue(gr ? "Διαγνωστικά Apple:" : "Apple diagnostics:",
                 diagnostics.advice(gr) + " — " + diagnostics.sourceUrl);
     }
 }
@@ -2535,7 +2562,7 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
                     : "Additional findings omitted from the short display.");
             break;
         }
-        logLabelValue(heading + (gr ? " — ένδειξη GEL:" : " — GEL clue:"), finding.code);
+        logLabelInfoValue(heading + (gr ? " — ένδειξη GEL:" : " — GEL clue:"), finding.code);
         if (!"Unknown".equals(findings.modelIdentifier)) {
             logLabelValue(gr ? "Κωδικός συσκευής:" : "Device identifier:",
                     findings.modelIdentifier);
@@ -2551,7 +2578,7 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
         if (!matchingReports.isEmpty()) {
             IPhonePanicRepairKnowledgeBase.MatchSummary repairEvidence =
                     IPhonePanicRepairKnowledgeBase.summarize(matchingReports);
-            logLabelValue(gr ? "Ιστορικό επισκευών για μοντέλο / κωδικό:" :
+            logLabelInfoValue(gr ? "Ιστορικό επισκευών για μοντέλο / κωδικό:" :
                     "Repair history for exact model / clue:",
                     repairEvidence.display(gr));
             logLabelValue(gr ? "Προέλευση πληροφοριών:" : "Evidence limitation:",
@@ -2560,12 +2587,12 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
             int shownReports = 0;
             for (IPhonePanicRepairKnowledgeBase.RepairCase caseRecord : matchingReports) {
                 if (shownReports++ >= 8) break;
-                logLabelValue(gr ? "Εργασία και έκβαση:" : "Attempt and outcome:",
+                logLabelInfoValue(gr ? "Εργασία και έκβαση:" : "Attempt and outcome:",
                         caseRecord.localizedOutcome(gr) + " — "
                                 + caseRecord.localizedAction(gr));
                 logLabelValue(gr ? "Τι αναφέρθηκε:" : "Reported detail:",
                         caseRecord.localizedNote(gr));
-                logLabelValue(gr ? "Πηγή περιστατικού:" : "Case source:",
+                logLabelInfoValue(gr ? "Πηγή περιστατικού:" : "Case source:",
                         caseRecord.sourceUrl);
             }
             if (matchingReports.size() > 8) {
@@ -2590,7 +2617,7 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
                         AppleOfficialServiceGuidance.forTopic(readAppleOfficialGuidance(),
                                 findings.modelIdentifier, topic);
                 if (relatedApple != null) {
-                    logLabelValue(gr ? "Οδηγίες Apple — μόνο αν υπάρχει σχετικό σύμπτωμα:" :
+                    logLabelInfoValue(gr ? "Οδηγίες Apple — μόνο αν υπάρχει σχετικό σύμπτωμα:" :
                             "Apple guidance — only if this symptom is present:",
                             relatedApple.title(gr) + " — " + relatedApple.advice(gr)
                                     + " — " + relatedApple.sourceUrl);
@@ -2871,6 +2898,16 @@ private void logLabelValue(String label, String value) {
     appendHtml("<font color='#FFFFFF'>" + escape(l) + "</font> " +
             "<font color='#FFFFFF'>" + escape(v) + "</font>");
     if (!demoMode) GELServiceLog.iPhoneInfoValue(l, v, "#FFFFFF");
+}
+
+// A factual recorded code, third-party repair report or official source link
+// is information, NOT proof of a healthy device or a successful repair.
+private void logLabelInfoValue(String label, String value) {
+    String l = safe(label);
+    String v = safe(value);
+    appendHtml("<font color='#FFFFFF'>" + escape(l) + "</font> "
+            + "<font color='#87CEFA'>" + escape(v) + "</font>");
+    if (!demoMode) GELServiceLog.iPhoneInfoValue(l, v, "#87CEFA");
 }
 
 private void logLabelOkValue(String label, String value) {
