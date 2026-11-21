@@ -43,7 +43,8 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(evidence.contains("caseRecord.localizedNote(gr)"));
         assertTrue(evidence.contains("caseRecord.sourceUrl"));
         assertTrue(evidence.contains("not independently verified repairs"));
-        assertTrue(lab4.contains("AppleOfficialServiceGuidance.topicMightBeUsefulForAction("));
+        assertTrue(lab4.contains("AppleOfficialServiceGuidance.conditionalTopicsForClue(finding.code)"));
+        assertFalse(lab4.contains("AppleOfficialServiceGuidance.topicMightBeUsefulForAction("));
         assertTrue(lab4.contains("logOfficialApplePanicGuidance(model, gr, appleTopicsByModel.get(model))"));
         assertTrue(src.contains("μόνο αν υπάρχει σχετικό σύμπτωμα"));
         assertFalse(evidence.contains("Apple-certified repair"));
@@ -147,6 +148,11 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(lab4.contains("documentedAppleModels.add(observed.modelIdentifier)"));
         assertTrue(lab4.contains("appleTopicsByModel.get(model)"));
         assertTrue(lab4.contains("Independent reports for the same model and clue"));
+        assertFalse("Forum actions must not decide what Apple officially recommends",
+                lab4.contains("historic.actionKey"));
+        assertTrue("Show all source-linked conditional official procedures for applicable topics",
+                src.contains("AppleOfficialServiceGuidance.genericForTopicAll(docs, topic)"));
+
         String evidence = region(src, "private void logApplePanicEvidence(",
                 "private void parseAndCacheSignature(");
         assertFalse("Official instructions should never be hidden inside a forum history block",
