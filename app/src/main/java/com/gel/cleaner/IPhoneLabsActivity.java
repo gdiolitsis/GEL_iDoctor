@@ -2577,31 +2577,31 @@ private void logAppleOfficialManualOutline(String model,
     java.util.List<AppleIPhoneManualChapters.Chapter> troubleshooting =
             AppleIPhoneManualChapters.troubleshootingForTopics(sections, suggestedTopics);
     if (!troubleshooting.isEmpty()) {
-        java.util.List<String> names = new java.util.ArrayList<>();
-        for (AppleIPhoneManualChapters.Chapter row : troubleshooting)
-            names.add(row.title(gr));
         logLabelValue(gr ? "Apple — σχετικές ενότητες διάγνωσης (υπό όρους):"
                          : "Apple — conditional troubleshooting chapters:",
-                android.text.TextUtils.join(" • ", names));
-    }
-    java.util.Map<String, java.util.List<String>> procedures = new java.util.LinkedHashMap<>();
-    for (AppleIPhoneManualChapters.Chapter row : sections) {
-        if (row.phase != AppleIPhoneManualChapters.Phase.PROCEDURE) continue;
-        java.util.List<String> names = procedures.get(row.topic);
-        if (names == null) {
-            names = new java.util.ArrayList<>();
-            procedures.put(row.topic, names);
+                gr ? "Επίσημα κεφάλαια βάσει συμπτώματος, όχι αποδεδειγμένης βλάβης."
+                   : "Official symptom chapters, not verified component faults.");
+        for (AppleIPhoneManualChapters.Chapter row : troubleshooting) {
+            logLabelInfoValue(row.title(gr) + ":",
+                    (row.linkScope == AppleIPhoneManualChapters.LinkScope.DIRECT_CHAPTER
+                        ? (gr ? "Απευθείας επίσημη ενότητα — " : "Direct official chapter — ")
+                        : (gr ? "Πίνακας περιεχομένων Apple — " : "Apple manual contents — "))
+                    + row.sourceUrl);
         }
-        names.add(row.title(gr));
     }
+    java.util.List<AppleIPhoneManualChapters.Chapter> procedures =
+            AppleIPhoneManualChapters.phase(sections, AppleIPhoneManualChapters.Phase.PROCEDURE);
     if (!procedures.isEmpty()) {
         logLabelValue(gr ? "Διαδικασίες που περιλαμβάνει το εγχειρίδιο:"
                          : "Procedures listed in this model manual:",
                 gr ? "Κατάλογος διαθέσιμων κεφαλαίων, ΟΧΙ προτεινόμενες αντικαταστάσεις."
                    : "A chapter inventory, NOT recommended part replacements.");
-        for (java.util.Map.Entry<String, java.util.List<String>> e : procedures.entrySet()) {
-            logLabelValue(appleProcedureTopicLabel(e.getKey(), gr) + ":",
-                    android.text.TextUtils.join(", ", e.getValue()));
+        for (AppleIPhoneManualChapters.Chapter row : procedures) {
+            logLabelInfoValue(appleProcedureTopicLabel(row.topic, gr) + " — " + row.title(gr) + ":",
+                    (row.linkScope == AppleIPhoneManualChapters.LinkScope.DIRECT_CHAPTER
+                        ? (gr ? "Απευθείας επίσημη διαδικασία — " : "Direct official procedure — ")
+                        : (gr ? "Πίνακας περιεχομένων Apple — " : "Apple manual contents — "))
+                    + row.sourceUrl);
         }
     }
 }
