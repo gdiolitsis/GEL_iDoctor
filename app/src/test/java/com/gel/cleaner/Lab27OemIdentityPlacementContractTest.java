@@ -69,7 +69,7 @@ public final class Lab27OemIdentityPlacementContractTest {
                 "private void lab30CombineFindings()", "private void lab31FinalSummary()");
         assertTrue(certification.contains("String partialObservation ="));
         assertTrue(certification.contains("specRow.observed.trim().isEmpty()"));
-        assertTrue(certification.contains("Δεν τεκμηριώθηκε πλήρης συμφωνία"));
+        assertTrue(certification.contains("Σύμφωνα με τον κατασκευαστή"));
         assertTrue(certification.contains("logLabelValue(rowName,"));
     }
 
