@@ -101,6 +101,17 @@ The standalone iPhone 17/18 manual references are directory-only until model ide
 - Fail CI if core official guidance topic coverage or source integrity regresses.
 - Recheck all source URLs and applicability periodically; a domain prefix check alone is not a guarantee that an article has not been edited or withdrawn.
 
+## Per-manual chapter taxonomy — 2026-11-21
+
+A structured offline index now contains **983 Apple Repair Manual contents entries** for the 30 model manuals: 60 safety, 30 quick checks, 30 diagnostics, 426 symptom-troubleshooting headings, 30 reference/tool views and 407 repair/preparation procedure headings.
+
+- Asset: `app/src/main/assets/iphone_apple_manual_chapters_v1.tsv`.
+- Parser: `AppleIPhoneManualChapters.java` (strict source/manual matching, phase classification and exact-model-only auto lookup).
+- iPhone Lab 4: conditionally lists relevant official troubleshooting headings, and separately lists all repair procedure chapter titles for the identified exact model **without recommending a replacement**. A relevant, eligible post-repair Apple workflow is cited separately.
+- Full taxonomy and audit matrix: `docs/qa/IPHONE_APPLE_MANUAL_CHAPTER_TAXONOMY_2026-11-21.md`.
+
+The new chapter catalog is navigational **metadata**, not a downloaded/copyrighted copy of Apple's manuals, and its master manual URL is not falsely called a chapter deep link. Individual direct chapter URLs are recorded only when they have separately been verified. The original manufacturer page remains authoritative.
+
 ## Complete current iPhone Repair Manual index — 2026-11-21
 
 Official master directory: https://support.apple.com/en-us/docs/iphone
