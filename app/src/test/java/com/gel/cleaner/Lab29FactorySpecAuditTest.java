@@ -193,7 +193,7 @@ public class Lab29FactorySpecAuditTest {
         assertTrue(r.observed.contains("4500 mAh"));
         assertTrue(r.observed.contains("full-charge counter"));
         assertTrue(r.noteGreek.contains("90%"));
-        assertTrue(r.noteGreek.contains("δεν")); // no counterfeiting verdict
+        assertTrue(r.noteGreek.contains("Δεν αποτελεί μέτρηση πιστοποίησης")); // no counterfeit claim
     }
 
     @Test public void batteryRemainingMahDividedBySocIsExplicitlyOnlyAnEstimate() {
