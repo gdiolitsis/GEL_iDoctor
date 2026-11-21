@@ -31,6 +31,9 @@ REPORT = ROOT / "docs/qa/IPHONE_APPLE_MANUAL_LINK_AUDIT_2026-11-21.md"
 def canonical(text):
     """Only compare actual headings after whitespace/NBSP/case normalization."""
     text = unicodedata.normalize("NFKC", text or "")
+    # Some older Apple TOC links start with invisible U+FEFF/zero-width
+    # characters (e.g. iPhone 12 Camera / Speaker); they are not names.
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Cf")
     return " ".join(text.split()).casefold()
 
 def official_article(url, origin):
