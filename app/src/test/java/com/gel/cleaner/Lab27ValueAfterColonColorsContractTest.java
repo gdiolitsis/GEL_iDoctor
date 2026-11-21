@@ -27,7 +27,8 @@ public final class Lab27ValueAfterColonColorsContractTest {
         assertTrue(renderer.contains("\"<font color='\" + color + \"'>\" + escape(value) + \"</font>\""));
         assertTrue(renderer.contains("GELServiceLog.addStyledValue("));
         assertTrue(src.contains("logLabel(label, value, \"#39FF14\")")); // confirmed match
-        assertTrue(src.contains("logLabel(label, value, \"#E6E6E6\")")); // unknown/neutral
+        assertTrue(src.contains("logLabel(label, value, \"#E6E6E6\")")); // unavailable and explanatory values
+        assertTrue(src.contains("logLabel(label, value, \"#87CEFA\", GelDiagnosticSeverity.Level.NEUTRAL)")); // observed informational values
         assertTrue(src.contains("logLabel(label, value, \"#FFD700\"")); // warning
         assertTrue(src.contains("logLabel(label, value, \"#FF5555\"")); // deviation
     }
@@ -82,11 +83,37 @@ public final class Lab27ValueAfterColonColorsContractTest {
         String factory = src.substring(start, end);
         assertTrue(factory.contains("logLabelOkValue(rowName, observation"));
         assertTrue(factory.contains("logLabelErrorValue(rowName, observation"));
-        assertTrue(factory.contains("logLabelValue(rowName,"));
+        assertTrue(factory.contains("logLabelInfoValue(rowName,"));
         assertTrue(factory.contains("logLabelOkValue(gr ? \"Συμφωνίες προδιαγραφών\""));
         assertTrue(factory.contains("logLabelErrorValue(gr ? \"Αποκλίσεις προδιαγραφών\""));
         assertTrue(factory.contains("logLabelOkValue(gr ? \"Αποκλίσεις προδιαγραφών\""));
-        assertTrue(factory.contains("logLabelValue(gr ? \"Μη επαληθευμένα χαρακτηριστικά\""));
-        assertTrue(factory.contains("logLabelValue(gr ? \"Πηγή κατασκευαστή\""));
+        assertTrue(factory.contains("logLabelInfoValue(gr ? \"Χαρακτηριστικά χωρίς αυτόματη σύγκριση\""));
+        assertTrue(factory.contains("logLabelInfoValue(gr ? \"Πηγή κατασκευαστή\""));
+    }
+
+    @Test public void measuredLab27ValuesHaveInformationalColorsNotFalseGreenWarnings() throws Exception {
+        String src = activity();
+        int start = src.indexOf("private void lab30CombineFindings()");
+        int end = src.indexOf("private void lab31FinalSummary()", start);
+        assertTrue(start >= 0 && end > start);
+        String lab = src.substring(start, end);
+        assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Κατάσταση\" : \"Status\", batteryScore, batteryFlag, gr);"));
+        assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Κατάσταση\" : \"Status\", securityScore, securityFlag, gr);"));
+        assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Απόδοση\" : \"Performance\", performanceScore, \"⚪\", gr);"));
+        assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Ασφάλεια\" : \"Security\", securityScore, securityFlag, gr);"));
+        assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Ιδιωτικότητα\" : \"Privacy\", privacyScore, privacyFlag, gr);"));
+        assertTrue(lab.contains("logLabelInfoValue(gr ? \"Μετρήσεις\" : \"Counts\""));
+        assertTrue(lab.contains("logLabelInfoValue(gr ? \"Ενημέρωση ασφαλείας\" : \"Patch level\""));
+        assertTrue(lab.contains("logLabelInfoValue(\n        gr ? \"Χρόνος διάγνωσης\""));
+        assertTrue(lab.contains("logLabelInfoValue(\n        gr ? \"ID διάγνωσης\""));
+        assertTrue(lab.contains("logLabelInfoValue(gr ? \"Στοιχεία\" : \"State\", batteryReadings)"));
+        // A computed numerical index is not verified component health.
+        assertTrue(lab.contains("private void lab27LogScoreValue(String label, int score, String flag, boolean gr)"));
+        assertTrue(lab.contains("logLabelInfoValue(label, flag + \" (\" + score + \")\")"));
+        assertTrue(lab.contains("logLabelValue(label, gr ? \"ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ\""));
+        // Unknown/limits remain neutral; verified agreement remains green.
+        assertTrue(lab.contains("logLabelValue(gr ? \"Οδηγία / εξήγηση\""));
+        assertTrue(lab.contains("logLabelOkValue(rowName, observation"));
+        assertTrue(lab.contains("logLabelErrorValue(rowName, observation"));
     }
 }

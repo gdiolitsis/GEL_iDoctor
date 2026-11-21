@@ -97,4 +97,39 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         assertTrue(text.contains("thermal shutdown"));
         assertTrue(text.contains("DEMO finished: no simulated results were stored"));
     }
+
+    @Test public void lab4ExplainsObservedFieldsAndDoesNotHideAReappearingCode() throws Exception {
+        String lab = section("private void runImpactLab() {",
+                "private int countSupportedPanicBlocks(");
+        assertTrue(lab.contains("ApplePanicEvidencePolicy.describeOne(block)"));
+        assertTrue(lab.contains("meta.osVersion"));
+        assertTrue(lab.contains("meta.process"));
+        assertTrue(lab.contains("meta.signatureKey"));
+        assertTrue(lab.contains("— υπογραφή panic:"));
+        assertTrue(lab.contains("shownCodes = new java.util.LinkedHashSet<>()"));
+        assertTrue(lab.contains("logApplePanicEvidence(block, gr,"));
+    }
+
+    @Test public void lab7UsesOnlyActualRecordDatesAndSeparateSignatures() throws Exception {
+        String lab = section("private void runRecurringDomainLab() {",
+                "private void runFinalServiceRecommendationLab() {");
+        assertTrue(lab.contains("ApplePanicEvidencePolicy.describeOne(block)"));
+        assertTrue(lab.contains("meta.timestampEpochMillis >= 0L"));
+        assertTrue(lab.contains("datedRecords.size() == total"));
+        assertTrue(lab.contains("signatureCount.getOrDefault(meta.signatureKey, 0)"));
+        assertTrue(lab.contains("Επαναλαμβανόμενη υπογραφή panic:"));
+        assertTrue(lab.contains("Οι καταγεγραμμένες υπογραφές είναι διαφορετικές."));
+        assertFalse(lab.contains("System uptime in nanoseconds"));
+    }
+
+    @Test public void lab8DoesNotRepeatDomainAndRecurrenceDetailsFromLabs6And7() throws Exception {
+        String lab = section("private void runFinalServiceRecommendationLab() {",
+                "private void runDemoDiagnostics() {");
+        assertTrue(lab.contains("IPhonePanicServiceSummary.interpret("));
+        assertTrue(lab.contains("human.whatWeFound"));
+        assertTrue(lab.contains("human.whatItMeans"));
+        assertFalse(lab.contains("for (java.util.Map.Entry<String, Integer> e : domainCount.entrySet())"));
+        assertFalse(lab.contains("logLabelValue(gr ? \"Επανάληψη στο δείγμα:\""));
+        assertTrue(lab.contains("if (demoMode)"));
+    }
 }

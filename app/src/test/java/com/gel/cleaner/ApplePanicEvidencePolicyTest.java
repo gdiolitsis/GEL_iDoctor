@@ -104,4 +104,47 @@ public class ApplePanicEvidencePolicyTest {
         assertEquals("IMPORTED_PANIC_LOG_OBSERVED",ApplePanicEvidencePolicy.evidenceClass(true));
         assertEquals("UNVERIFIED_OR_UNSUPPORTED",ApplePanicEvidencePolicy.evidenceClass(false));
     }
+
+    @Test public void metadataKeepsMissingDatesUnknownAndReadsExplicitDemoFields() {
+        String watchdog = "panic(cpu 2 caller 0xfffffff01a2c3d44): Kernel panic: watchdog timeout\n"
+                + "OS version: iPhone OS 17.1.2 (21B101)\n"
+                + "Panicked task: watchdogd\nHardware model: iPhone14,3";
+        ApplePanicEvidencePolicy.RecordMetadata first =
+                ApplePanicEvidencePolicy.describeOne(watchdog);
+        assertEquals(-1L, first.timestampEpochMillis);
+        assertEquals("", first.timestamp);
+        assertEquals("watchdogd", first.process);
+        assertEquals("iPhone14,3", first.modelIdentifier);
+        assertEquals("iPhone OS 17.1.2 (21B101)", first.osVersion);
+        assertEquals("kernel panic: watchdog timeout", first.signatureKey);
+
+        String thermal = "{\"bug_type\":\"210\","
+                + "\"timestamp\":\"2026-01-13 11:42:03.00 +0200\","
+                + "\"os_version\":\"iPhone OS 17.1.2 (21B101)\"}\n"
+                + "{\"deviceModel\":\"iPhone14,3\",\"process\":\"kernel\"}\n"
+                + "{\"panicString\":\"panic(cpu 0 caller 0xfffffff01b22aa90): thermal shutdown\"}";
+        ApplePanicEvidencePolicy.RecordMetadata second =
+                ApplePanicEvidencePolicy.describeOne(thermal);
+        assertTrue(second.timestampEpochMillis > 0L);
+        assertEquals("2026-01-13 11:42:03.00 +0200", second.timestamp);
+        assertEquals("kernel", second.process);
+        assertEquals("thermal shutdown", second.signatureKey);
+        assertNotEquals(first.signatureKey, second.signatureKey);
+    }
+
+    @Test public void timestampWithoutOffsetCannotImplyAnOrder() {
+        String record = "panic(cpu 0 caller 0xabcdef): kernel panic\n"
+                + "Date/Time: 2026-01-13 11:42:03\n";
+        ApplePanicEvidencePolicy.RecordMetadata m =
+                ApplePanicEvidencePolicy.describeOne(record);
+        assertEquals("2026-01-13 11:42:03", m.timestamp);
+        assertEquals(-1L, m.timestampEpochMillis);
+    }
+
+    @Test public void absentPanicDoesNotGenerateFakeMetadata() {
+        ApplePanicEvidencePolicy.RecordMetadata m =
+                ApplePanicEvidencePolicy.describeOne("timestamp: 2026-01-13 11:42:03.00 +0200");
+        assertEquals(-1L, m.timestampEpochMillis);
+        assertEquals("", m.signatureKey);
+    }
 }

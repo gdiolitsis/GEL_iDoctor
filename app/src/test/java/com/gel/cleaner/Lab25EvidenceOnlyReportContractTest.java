@@ -68,12 +68,14 @@ public final class Lab25EvidenceOnlyReportContractTest {
         assertFalse(s.contains("↳ Optional: Analyze Android bugreport"));
         assertFalse(s.contains("Με το ξεχωριστό κουμπί μπορείτε να επιλέξετε δική σας"));
         assertFalse(s.contains("Use the separate button to select your Android bugreport"));
-        // Preserve the local parser but remove its public entrypoint; do not
-        // imply the automatic Android API can read arbitrary exported files.
-        assertTrue(s.contains("private void lab25ChooseBugReport()"));
-        assertTrue(s.contains("Intent.ACTION_OPEN_DOCUMENT"));
+        // No hidden picker entrypoint or stale onActivityResult route.
+        // Preserve only the explicitly shared Android bugreport parser.
+        assertFalse(s.contains("private void lab25ChooseBugReport()"));
+        assertFalse(s.contains("Intent.ACTION_OPEN_DOCUMENT"));
         assertTrue(s.contains("CriticalSystemCrashEvidence.parseUserReport(input, roles)"));
-        assertTrue(s.contains("if (requestCode == 25025)"));
+        assertFalse(s.contains("if (requestCode == 25025)"));
+        assertTrue(s.contains("Lab25SharedReportActivity.ACTION_IMPORT_LAB25"));
+        assertTrue(s.contains("lab25ReadBugReport(sharedReport)"));
         String automatic = lab().substring(0, lab().indexOf("private java.util.Set<String> lab25DefaultRoles()"));
         assertFalse(automatic.contains("startActivityForResult("));
     }

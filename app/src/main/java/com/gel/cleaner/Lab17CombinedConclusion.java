@@ -53,7 +53,7 @@ public final class Lab17CombinedConclusion {
             if (gr) {
                 if (directBatteryConcern) {
                     if ("Critical".equals(stressClass)) {
-                        msg.append("Η απόκριση της μπαταρίας στο φορτίο χαρακτηρίστηκε κρίσιμη και χρειάζεται επανέλεγχο. ");
+                        msg.append("Η μπαταρία παρουσίασε αυξημένη πτώση τάσης στο συγκεκριμένο φορτίο και χρειάζεται επανέλεγχο· δεν αποδεικνύεται από αυτό πρόβλημα του συστήματος. ");
                     } else if (corroboratedVoltageFlag) {
                         msg.append("Η απόκριση της μπαταρίας στην καταπόνηση χρειάζεται επανέλεγχο: καταγράφηκε συνδυασμένη ηλεκτρική ένδειξη. ");
                     }
@@ -71,7 +71,7 @@ public final class Lab17CombinedConclusion {
                 }
                 if (chargingConcern) msg.append("Η φόρτιση παρουσιάζει εύρημα που χρειάζεται επανέλεγχο. ");
                 if (stressThermalConcern) {
-                    msg.append("Κατά το 14Α καταγράφηκε αυξημένη θερμική απόκριση υπό φορτίο. ");
+                    msg.append("Κατά το 14Α καταγράφηκε θερμική μεταβολή υπό φορτίο, η οποία δεν αποδεικνύει από μόνη της υπερθέρμανση ή δυσλειτουργία του συστήματος. ");
                 }
                 if (thermalConcern) msg.append("Το 16 κατέγραψε θερμικό εύρημα που χρειάζεται επανέλεγχο. ");
                 if (!anyThermalConcern && !chargingConcern && directBatteryConcern) {
@@ -87,7 +87,7 @@ public final class Lab17CombinedConclusion {
             } else {
                 if (directBatteryConcern) {
                     if ("Critical".equals(stressClass)) {
-                        msg.append("The battery's response under load was critical and requires follow-up. ");
+                        msg.append("The battery showed elevated voltage sag under the tested load and warrants follow-up; this alone does not establish system malfunction. ");
                     } else if (corroboratedVoltageFlag) {
                         msg.append("The battery's stress response requires follow-up after corroborated electrical findings. ");
                     }
@@ -103,7 +103,7 @@ public final class Lab17CombinedConclusion {
                 }
                 if (chargingConcern) msg.append("Charging has a finding that needs follow-up. ");
                 if (stressThermalConcern) {
-                    msg.append("Lab 14A recorded elevated temperature response under load. ");
+                    msg.append("Lab 14A recorded a temperature change under load, which alone does not establish overheating or system malfunction. ");
                 }
                 if (thermalConcern) msg.append("Lab 16 recorded a thermal finding needing follow-up. ");
                 if (!anyThermalConcern && !chargingConcern && directBatteryConcern) {

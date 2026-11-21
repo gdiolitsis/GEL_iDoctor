@@ -119,7 +119,7 @@ public class Lab29FactorySpecAuditTest {
         assertEquals(0, r.deviations);
         assertTrue(r.unknowns > 0);
         assertTrue(r.officialSource.startsWith("https://www.mi.com/"));
-        assertTrue(r.conclusion(true).contains("συγκρίσιμα"));
+        assertTrue(r.conclusion(true).contains("χαρακτηριστικά που μπόρεσε να συγκρίνει"));
         assertFalse(r.conclusion(true).contains("πιστοποιείται"));
     }
 
@@ -179,5 +179,65 @@ public class Lab29FactorySpecAuditTest {
     @Test public void noOemProfileWhenNoModelIsAvailable() {
         assertFalse(Lab29FactorySpecAudit.evaluate(
                 new Lab29FactorySpecAudit.Measurements()).supportedModel);
+    }
+
+    @Test public void batteryReportedFullChargeIsNotMistakenForFactoryDesign() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.batteryDesignMah = -1L;
+        m.batteryChargeFullMah = 4500L;
+        m.batteryChargeNowMah = 2550L;
+        m.batteryLevelPercent = 57;
+        Lab29FactorySpecAudit.Row r = row(Lab29FactorySpecAudit.evaluate(m),
+                "Factory battery capacity");
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN, r.verdict);
+        assertTrue(r.observed.contains("4500 mAh"));
+        assertTrue(r.observed.contains("full-charge counter"));
+        assertTrue(r.noteGreek.contains("90%"));
+        assertTrue(r.noteGreek.contains("Δεν αποτελεί μέτρηση πιστοποίησης")); // no counterfeit claim
+    }
+
+    @Test public void batteryRemainingMahDividedBySocIsExplicitlyOnlyAnEstimate() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.batteryChargeNowMah = 2250L;
+        m.batteryLevelPercent = 50;
+        Lab29FactorySpecAudit.Row r = row(Lab29FactorySpecAudit.evaluate(m),
+                "Factory battery capacity");
+        assertTrue(r.observed.contains("4500 mAh"));
+        assertTrue(r.observed.contains("percentage estimate"));
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN, r.verdict);
+        m.batteryLevelPercent = 5; // too low for extrapolation
+        assertTrue(row(Lab29FactorySpecAudit.evaluate(m), "Factory battery capacity")
+                .observed.isEmpty());
+        m.batteryLevelPercent = 50;
+        m.batteryChargeNowMah = 0L; // no physical reading
+        assertTrue(row(Lab29FactorySpecAudit.evaluate(m), "Factory battery capacity")
+                .observed.isEmpty());
+    }
+
+    @Test public void usbAudioJackAndFmUnknownNeverMeanAbsent() {
+        Lab29FactorySpecAudit.Report r = Lab29FactorySpecAudit.evaluate(sample());
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(r, "USB connector").verdict);
+        assertTrue(row(r, "USB connector").noteGreek.contains("Το εργαστήριο δεν μπορεί να ελέγξει"));
+        assertTrue(row(r, "USB connector").noteGreek.contains("Ελέγξτε αν η συσκευή διαθέτει θύρα USB-C"));
+        assertTrue(row(r, "USB connector").noteEnglish.contains("cannot inspect"));
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(r, "3.5 mm jack").verdict);
+        assertTrue(row(r, "3.5 mm jack").noteEnglish.contains("Check whether the device has a 3.5 mm socket"));
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
+                row(r, "FM radio").verdict);
+        assertTrue(row(r, "FM radio").noteEnglish.contains("try receiving a station"));
+        assertEquals(0, r.deviations);
+    }
+
+
+    @Test public void cameraUnknownAsksForModeCheckWithoutClaimingSensorMismatch() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.maxRearJpegPixels = 9_400_000L;
+        Lab29FactorySpecAudit.Row c = row(Lab29FactorySpecAudit.evaluate(m), "Main camera resolution");
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN, c.verdict);
+        assertTrue(c.noteGreek.contains("Ελέγξτε αν η εφαρμογή"));
+        assertTrue(c.noteEnglish.contains("50 MP mode"));
+        assertFalse(c.noteGreek.contains("μη αυθεντικ"));
     }
 }

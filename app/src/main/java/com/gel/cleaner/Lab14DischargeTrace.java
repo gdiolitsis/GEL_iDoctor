@@ -2,8 +2,11 @@ package com.gel.cleaner;
 
 /**
  * Battery evidence from a complete, timestamped discharge session.
- * Reads are periodic (typically 1 Hz): Android cannot promise a hardware
- * update at every instant. Missing intervals do not count as measured time.
+ * Primary evidence is the initial and final CHARGE_COUNTER readings,
+ * timestamped across the whole completed test. Intermediate polling is optional
+ * consistency evidence; gaps never invalidate otherwise valid endpoints.
+ * Time-weighted CURRENT_NOW is only a fallback when sufficient current samples
+ * really cover the session. Never select the largest of competing estimates.
  * No Android dependencies: independently testable.
  */
 public final class Lab14DischargeTrace {
@@ -92,41 +95,50 @@ public final class Lab14DischargeTrace {
         double currentPct = 100d * Math.min(1d, currentCoveredMs / (double) requiredMs);
         if (chargingObserved) return new Result(false, Double.NaN,
                 "NONE", counterPct, currentPct, "CHARGING_DURING_TEST");
-        if (lastMs - firstMs < requiredMs * 0.80d)
+        if (lastMs - firstMs < requiredMs * 0.95d)
             return new Result(false, Double.NaN,
                 "NONE", counterPct, currentPct, "INCOMPLETE_DURATION");
 
-        int minimumSamples = Math.max(12, (int) (requiredMs / 10000L));
+        // The hardware charge counter measures state of charge (mAh).
+        // Start/end readings describe the entire run even with no intermediate polls.
+        // Only accept the same run, plausible monotonic discharge, and near-full timing.
         double counterRate = Double.NaN;
-        if (!counterUnstable && counterSamples >= minimumSamples &&
-                counterPct >= 70d && firstChargeMs >= 0 &&
-                lastChargeMs - firstChargeMs >= requiredMs * 0.80d &&
-                firstChargeMah > lastChargeMah) {
+        if (!counterUnstable && firstChargeMs >= 0L && lastChargeMs > firstChargeMs
+                && lastChargeMs - firstChargeMs >= requiredMs * 0.95d
+                && firstChargeMah > lastChargeMah) {
             counterRate = (firstChargeMah - lastChargeMah) * 3600000d
                     / (lastChargeMs - firstChargeMs);
             if (counterRate < 10d || counterRate > 12000d) counterRate = Double.NaN;
         }
 
+        // Optional fallback: integrate independently observed current only if its
+        // measured time coverage is genuinely high (not extrapolated across gaps).
+        int minimumSamples = Math.max(12, (int) (requiredMs / 10000L));
         double currentRate = Double.NaN;
-        if (currentSamples >= minimumSamples && currentPct >= 70d && currentCoveredMs > 0) {
-            currentRate = currentMaMs / currentCoveredMs; // mA = mAh/hour
+        if (currentSamples >= minimumSamples && currentPct >= 90d && currentCoveredMs > 0L) {
+            currentRate = currentMaMs / currentCoveredMs;
             if (currentRate < 50d || currentRate > 12000d) currentRate = Double.NaN;
         }
-        if (!Double.isNaN(counterRate) && !Double.isNaN(currentRate)) {
-            double ratio = Math.max(counterRate, currentRate)
-                    / Math.min(counterRate, currentRate);
-            if (ratio > 2.5d)
-                return new Result(false, Double.NaN, "NONE",
-                        counterPct, currentPct, "COUNTER_CURRENT_CONFLICT");
-        }
-        if (!Double.isNaN(counterRate))
+
+        if (!Double.isNaN(counterRate)) {
+            // Large conflict warns of a bad instantaneous current sensor.
+            // Never override a coherent start/end charge counter with current estimates.
+            String reason = "OK";
+            if (!Double.isNaN(currentRate)) {
+                double ratio = Math.max(counterRate, currentRate)
+                        / Math.min(counterRate, currentRate);
+                if (ratio > 2.5d) reason = "COUNTER_CURRENT_DISAGREEMENT";
+            }
             return new Result(true, counterRate, "CHARGE_COUNTER",
-                    counterPct, currentPct, "OK");
+                    counterPct, currentPct, reason);
+        }
+
         if (!Double.isNaN(currentRate))
             return new Result(true, currentRate, "CURRENT_INTEGRATION",
                     counterPct, currentPct, "OK_CURRENT_ONLY");
+
         return new Result(false, Double.NaN, "NONE", counterPct, currentPct,
-                counterUnstable ? "UNSTABLE_COUNTER" : "INSUFFICIENT_COVERAGE");
+                counterUnstable ? "UNSTABLE_COUNTER" : "INSUFFICIENT_DATA");
     }
 
     public static final class Result {

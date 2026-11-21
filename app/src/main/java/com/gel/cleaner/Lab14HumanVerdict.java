@@ -40,18 +40,40 @@ public final class Lab14HumanVerdict {
 
         if (!fullValidRun || systemLimited || !knownClass) {
             return new Decision(Tone.NEUTRAL, greek
-                    ? "Τα διαθέσιμα στοιχεία δεν επαρκούν για να κρίνουμε αν η μπαταρία μπορεί να συνεχίσει να χρησιμοποιείται χωρίς πρόσθετο έλεγχο. Επανάλαβε τη δοκιμή σε συγκρίσιμες συνθήκες."
-                    : "The available readings do not establish whether the battery can continue in use without further assessment. Repeat the test under comparable conditions.");
+                    ? "Τα διαθέσιμα στοιχεία δεν επαρκούν για συμπέρασμα από αυτή τη δοκιμή. Επανάλαβέ τη σε συγκρίσιμες συνθήκες. Δεν τεκμηριώνεται από αυτό ανάγκη επισκευής ή αντικατάστασης."
+                    : "This trial did not provide enough evidence for a conclusion. Repeat under comparable conditions; it does not establish a need for repair or replacement.");
         }
 
-        boolean elevatedThermal = (Float.isFinite(thermalRiseC) && thermalRiseC >= 6.5f) ||
-                (Float.isFinite(batteryPeakC) && batteryPeakC >= 45f);
+        // A large TEMPERATURE RISE is not the same as a HIGH ABSOLUTE
+        // battery temperature. Both deserve a separate user-facing verdict.
+        // 45°C is a conservative caution threshold, not proof of damage.
+        boolean highAbsoluteTemp = Float.isFinite(batteryPeakC) && batteryPeakC >= 45f;
+        boolean veryHighAbsoluteTemp = Float.isFinite(batteryPeakC) && batteryPeakC >= 50f;
+        boolean largeTempRise = Float.isFinite(thermalRiseC) && thermalRiseC >= 6.5f;
+
+        if (veryHighAbsoluteTemp) {
+            return new Decision(Tone.CAUTION, greek
+                    ? "Η μέγιστη θερμοκρασία της μπαταρίας ήταν υψηλή κατά τη δοκιμή. Άφησε τη συσκευή να κρυώσει πριν από νέα καταπόνηση. Αν παραμένει ασυνήθιστα θερμή ή επαναλαμβάνεται το εύρημα, ζήτησε τεχνικό έλεγχο. Σε διόγκωση, ασυνήθιστη οσμή ή έντονη υπερθέρμανση, διέκοψε τη χρήση."
+                    : "Battery temperature reached a high absolute value during this test. Let the device cool before further stress. Seek assessment if it remains unusually hot or the finding recurs. Stop use if there is swelling, unusual smell or severe overheating.");
+        }
+
+        if (highAbsoluteTemp) {
+            return new Decision(Tone.CAUTION, greek
+                    ? "Η μέγιστη θερμοκρασία της μπαταρίας ήταν αυξημένη. Η μέτρηση δεν αποδεικνύει φθορά, αλλά συνιστάται ψύξη και επανάληψη σε συγκρίσιμες συνθήκες. Ζήτησε τεχνικό έλεγχο αν επανεμφανιστεί ή υπάρχουν συμπτώματα."
+                    : "Peak battery temperature was elevated. This does not establish wear; allow cooling and retest under comparable conditions. Seek technical assessment if it recurs or symptoms occur.");
+        }
 
         if ("Critical".equals(stressClass) || voltageDropFlag || swellingProxyFlag ||
-                gaugeDiscrepancyFlag || electricalBehaviourFlag || elevatedThermal) {
+                gaugeDiscrepancyFlag || electricalBehaviourFlag) {
             return new Decision(Tone.CAUTION, greek
-                    ? "Η μπαταρία σου εμφάνισε ενδείξεις που χρειάζονται επανέλεγχο. Δεν αποδεικνύεται ανάγκη αντικατάστασης, αλλά συνιστάται τεχνική εκτίμηση πριν βασιστείς σε αυτή τη δοκιμή για τη συνέχιση χρήσης. Αν εμφανιστεί υπερθέρμανση, διόγκωση, ασυνήθιστη οσμή ή ξαφνικό σβήσιμο, σταμάτησε τη χρήση και ζήτησε έλεγχο."
-                    : "Your battery showed findings that require verification. Replacement is not established, but technical assessment is recommended before relying on this test to continue use. Stop using the device and seek inspection if overheating, swelling, unusual smell or unexpected shutdowns occur.");
+                    ? "Καταγράφηκαν ενδείξεις αυξημένης πτώσης τάσης ή ηλεκτρικής ασυνέπειας υπό φορτίο. Μία δοκιμή δεν αποδεικνύει βλάβη ή ανάγκη αντικατάστασης. Επανάλαβε σε συγκρίσιμες συνθήκες και ζήτησε τεχνική εκτίμηση αν το εύρημα επιμένει ή εμφανίζονται συμπτώματα. Αν υπάρχει πραγματική διόγκωση, ασυνήθιστη οσμή ή έντονη υπερθέρμανση, σταμάτησε τη χρήση."
+                    : "Increased voltage sag or electrical inconsistency was recorded under load. One test does not establish damage or a replacement need. Repeat under comparable conditions; seek assessment if the finding persists or symptoms occur. Stop use if there is actual swelling, unusual smell or severe overheating.");
+        }
+
+        if (largeTempRise) {
+            return new Decision(Tone.CAUTION, greek
+                    ? "Καταγράφηκε μεγάλη άνοδος θερμοκρασίας κατά την καταπόνηση, όχι όμως υψηλή απόλυτη θερμοκρασία μπαταρίας. Η άνοδος από μόνη της δεν αποδεικνύει υπερθέρμανση ή βλάβη. Επανέλαβε σε συγκρίσιμες συνθήκες και έλεγξε αν επαναλαμβάνεται."
+                    : "A large temperature rise was recorded under stress, but the absolute battery temperature was not high. A rise alone does not establish overheating or damage. Repeat under comparable conditions and check whether it recurs.");
         }
 
         if (!Float.isFinite(thermalRiseC) || thermalRiseC < -2f || thermalRiseC > 20f) {

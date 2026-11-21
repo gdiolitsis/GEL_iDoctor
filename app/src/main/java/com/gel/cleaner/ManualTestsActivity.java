@@ -395,6 +395,7 @@ private boolean gr;
 private long startMah;
 // Each 14A, 14B and 14Γ run gets its own timed discharge evidence.
 private volatile Lab14DischargeTrace lab14ATrace;
+private volatile long lab14ATraceStartMs = -1L;
 private volatile Lab14DischargeTrace lab14DurationTrace;
 private long baselineFullMah;
 private volatile boolean lab14HasReportedCapacity;
@@ -486,6 +487,7 @@ final float[] batterySOH = {Float.NaN};
 
     private final int REQ_LAB6_TOUCH = 6006;
     private final int REQ_LAB6_COLOR = 6007;
+    private final int REQ_LAB6_PINCH = 6008;
     private final int REQ_LAB13_BT_CONNECT = 1313;
 
     private AlertDialog lab14RunningDialog;
@@ -6464,67 +6466,16 @@ tg = new ToneGenerator(AudioManager.STREAM_MUSIC, 90);
                           + "An increase in audio level was recorded.");
             }
 
-// ----------------------------------------------------
-// MIC FEEDBACK ANALYSIS
-// ----------------------------------------------------
-
-// SAFE AUDIO NORMALIZE BEFORE MIC CAPTURE (NO EXTRA HELPERS)
-if (am != null) {
-    try { am.stopBluetoothSco(); } catch (Throwable ignore) {}
-    try { am.setBluetoothScoOn(false); } catch (Throwable ignore) {}
-    try { am.setMicrophoneMute(false); } catch (Throwable ignore) {}
-    try { am.setMode(AudioManager.MODE_NORMAL); } catch (Throwable ignore) {}
-    try { am.setSpeakerphoneOn(true); } catch (Throwable ignore) {}
-}
-SystemClock.sleep(250);
-
-MicDiagnosticEngine.Result r =
-        MicDiagnosticEngine.run(this);
-
-if (r == null) {
-    // The optional measurement AFTER playback cannot revoke the measured
-    // acoustic indications gathered DURING each of the four tones.
-    appendHtml("<br>");
-    logLabelValue(gr ? "Πρόσθετη μέτρηση μικροφώνου" : "Additional microphone reading",
-            gr ? "ΔΕΝ ΜΕΤΡΗΘΗΚΕ — δεν επηρεάζει την προηγούμενη καταγραφή τόνων"
-               : "NOT MEASURED — does not override the earlier tone observations");
-    if (allFourTonesIndicated) {
-        logLabelOkValue(gr ? "Έξοδος ηχείου" : "Speaker output",
-                gr ? "Καταγράφηκε ακουστική ένδειξη και στους 4 τόνους κατά την αναπαραγωγή"
-                   : "Acoustic indication recorded during all 4 tones");
-    }
-    return;
-}
-
-int rms  = (int) r.rms;
-int peak = (int) r.peak;
-
-logLabelOkValue("Mic RMS", String.valueOf(rms));
-logLabelOkValue("Mic Peak", String.valueOf(peak));
-
-String conf = (r.confidence == null)
-        ? ""
-        : r.confidence.trim().toUpperCase(Locale.US);
-
-// The confidence belongs ONLY to the optional post-playback microphone
-// capture, not to the earlier four tone-window RMS comparisons.
-boolean secondaryLowConfidence = conf.contains("LOW") || conf.contains("WEAK")
-        || conf.contains("FAIL") || conf.contains("NONE");
-if (secondaryLowConfidence) {
-    logLabelWarnValue(gr ? "Ποιότητα πρόσθετης μέτρησης" : "Additional reading confidence",
-            r.confidence == null ? (gr ? "Μ/Δ" : "N/A") : r.confidence);
-} else {
-    logLabelOkValue(gr ? "Ποιότητα πρόσθετης μέτρησης" : "Additional reading confidence",
-            r.confidence == null ? (gr ? "Μ/Δ" : "N/A") : r.confidence);
-}
-
+// Four-tone evidence was measured DURING playback. Do not perform a
+// second microphone capture AFTER the tones: it cannot attribute sound to
+// any specific tone and may confuse users without adding diagnostic value.
 appendHtml("<br>");
 if (allFourTonesIndicated) {
     logLabelOkValue(gr ? "Έξοδος ηχείου" : "Speaker output",
             gr ? "4/4 ακουστικές ενδείξεις κατά την αναπαραγωγή — καταγράφηκε αύξηση RMS, "
-                 + "όχι επιβεβαίωση των ακριβών συχνοτήτων"
+                  + "όχι επαλήθευση των ακριβών συχνοτήτων"
                : "4/4 acoustic indications during playback — RMS increase recorded, "
-                 + "not verification of the exact frequencies");
+                  + "not verification of exact frequencies");
 } else {
     String playbackSummary = measured == 0
             ? (gr ? "Δεν καταγράφηκε ταυτόχρονη μέτρηση τόνων"
@@ -6533,25 +6484,6 @@ if (allFourTonesIndicated) {
                   : "Acoustic indications during playback: ")
                     + confirmed + "/" + tones.length;
     logLabelValue(gr ? "Έξοδος ηχείου" : "Speaker output", playbackSummary);
-}
-
-// This later RMS is not a tone-specific test: a value <= 20 does NOT
-// establish speaker failure, and a value > 20 cannot upgrade 0–3/4 to 4/4.
-if (rms <= 20) {
-    logLabelValue(gr ? "Πρόσθετη μέτρηση μικροφώνου" : "Additional microphone reading",
-            gr ? "RMS έως 20 μετά τους τόνους — δεν αναιρεί τις ενδείξεις κατά την αναπαραγωγή"
-               : "RMS at or below 20 after tones — does not override playback evidence");
-} else {
-    logLabelValue(gr ? "Πρόσθετη μέτρηση μικροφώνου" : "Additional microphone reading",
-            gr ? "RMS πάνω από 20 μετά τους τόνους — δεν προσδιορίζει ποιος τόνος ακούστηκε"
-               : "RMS above 20 after tones — cannot identify individual tones");
-}
-if (secondaryLowConfidence) {
-    logLabelWarnValue(gr ? "Σημείωση πρόσθετης μέτρησης" : "Additional reading note",
-            gr ? "Η ένδειξη LOW αφορά μόνο τη μεταγενέστερη μέτρηση μικροφώνου. "
-                 + "Ακύρωση θορύβου, DSP ή θέση μικροφώνου μπορεί να την επηρεάζουν."
-               : "LOW applies only to the later microphone reading. "
-                 + "Noise cancellation, DSP or microphone placement may affect it.");
 }
 
 } catch (Throwable t) {
@@ -13882,7 +13814,9 @@ if (!isLab14BMode && lab14OptimalThreads <= 0) {
     // 🔴 BASE VALUES
     startMah = start.chargeNowMah;
     lab14ATrace = new Lab14DischargeTrace();
-    lab14ATrace.addSample(SystemClock.elapsedRealtime(), start.chargeNowMah, start.currentMa, start.charging);
+    lab14ATraceStartMs = SystemClock.elapsedRealtime();
+    lab14ATrace.addSample(lab14ATraceStartMs,
+            start.chargeNowMah, start.currentMa, start.charging);
     cycles = start.cycleCount;
 
     Float tStart0 = idoctor.getBatteryTempUnified();
@@ -14539,24 +14473,21 @@ if (tempValid) {
 
         deltaTemp = dt;
 
+        // Classify the CHANGE, never imply the absolute battery temperature
+        // was high solely because it rose by several degrees.
         String tempLabel;
-
         if (deltaTemp < 2.5f) {
-            tempLabel = "Normal";
+            tempLabel = gr ? "μικρή μεταβολή" : "small change";
         } else if (deltaTemp < 6.5f) {
-            tempLabel = "Warm";
+            tempLabel = gr ? "αισθητή άνοδος" : "noticeable rise";
         } else {
-            tempLabel = "High";
+            tempLabel = gr ? "μεγάλη άνοδος" : "large rise";
         }
 
         String tempTextLocal = String.format(
-                Locale.US,
-                "%.1f°C (%s)",
-                deltaTemp,
-                tempLabel
-        );
+                Locale.US, "%+.1f°C (%s)", deltaTemp, tempLabel);
 
-        if ("High".equals(tempLabel)) {
+        if (deltaTemp >= 6.5f) {
 
             logLabelWarnValue(
                     gr ? "Θερμική μεταβολή"
@@ -14564,7 +14495,7 @@ if (tempValid) {
                     tempTextLocal
             );
 
-        } else if ("Warm".equals(tempLabel)) {
+        } else if (deltaTemp >= 2.5f) {
 
             logLabelValue(
                     gr ? "Θερμική μεταβολή"
@@ -14599,6 +14530,23 @@ if (tempValid) {
             gr ? "Μη διαθέσιμη"
                : "N/A"
     );
+}
+
+// Absolute battery temperature is independent of the rise above.
+// A +9°C change with a 35°C peak must never be called "high temperature".
+if (Float.isFinite(lab14TempPeak) && lab14TempPeak > 0f &&
+        lab14TempPeak <= 80f) {
+    String peakText = String.format(Locale.US, "%.1f°C", lab14TempPeak);
+    if (lab14TempPeak >= 45f) {
+        logLabelWarnValue(gr ? "Μέγιστη θερμοκρασία μπαταρίας"
+                             : "Peak battery temperature", peakText);
+    } else {
+        logLabelOkValue(gr ? "Μέγιστη θερμοκρασία μπαταρίας"
+                           : "Peak battery temperature", peakText);
+    }
+} else {
+    logLabelValue(gr ? "Μέγιστη θερμοκρασία μπαταρίας"
+                     : "Peak battery temperature", gr ? "Μ/Δ" : "N/A");
 }
 
 // =====================================================
@@ -14793,8 +14741,8 @@ if (lab14_systemLimited[0]) {
 } else if ("Critical".equals(labelSafe)) {
 
     recommendation = gr
-            ? "Αυξημένη πτώση τάσης υπό φορτίο — συνιστάται τεχνικός έλεγχος και επανάληψη με συγκρίσιμες συνθήκες. Δεν αποδεικνύεται ανάγκη αντικατάστασης."
-            : "Increased load-voltage sag — technician assessment and repeated comparable testing are recommended. Replacement is not established.";
+            ? "Αυξημένη πτώση τάσης υπό φορτίο σε αυτή τη δοκιμή. Επαναλάβετε σε συγκρίσιμες συνθήκες· ζητήστε τεχνική εκτίμηση αν το εύρημα επιμένει ή υπάρχουν συμπτώματα. Δεν τεκμηριώνεται ανάγκη αντικατάστασης."
+            : "Increased load-voltage sag in this trial. Repeat under comparable conditions; seek assessment if the finding persists or symptoms occur. Replacement is not established.";
 
 // 🔴 PRIORITY 3 — WEAK
 } else if ("Weak".equals(labelSafe)) {
@@ -15089,6 +15037,11 @@ private void lab14LogSave(
                     .putBoolean("lab14_stress_thermal_warning",
                             (Float.isFinite(thermalRiseC) && thermalRiseC >= 6.5f)
                             || (Float.isFinite(batteryPeakC) && batteryPeakC >= 45f))
+                    // Keep the temperature change and absolute peak separate.
+                    .putFloat("lab14_stress_thermal_rise_c",
+                            Float.isFinite(thermalRiseC) ? thermalRiseC : Float.NaN)
+                    .putFloat("lab14_stress_peak_battery_c",
+                            Float.isFinite(batteryPeakC) ? batteryPeakC : Float.NaN)
                     .putLong("lab14_last_ts", System.currentTimeMillis())
                     // A completed stress run is evidence of execution, never measured SoH.
                     .putLong("lab14_valid_stress_ts",
@@ -16041,8 +15994,10 @@ if (invalidStructure) {
 
 // 🔴 END CHARGE (PRIMARY)
 final long endMah = snapEnd.chargeNowMah;
+// Include warm-up AND main load, from the actual first to last test observation.
+final long lab14ATraceEndMs = SystemClock.elapsedRealtime();
 if (lab14ATrace != null) {
-    lab14ATrace.addSample(SystemClock.elapsedRealtime(),
+    lab14ATrace.addSample(lab14ATraceEndMs,
             snapEnd.chargeNowMah, snapEnd.currentMa, snapEnd.charging);
 }
 
@@ -16225,28 +16180,42 @@ if (samplingValid && lab14DeltaMah > 0 && dtMs > 0) {
 
 // FULL-DURATION DISCHARGE EVIDENCE — never choose the maximum of
 // unrelated rates or certify a run from sparse / contradictory samples.
+// The main-stress clock (t0) is reset after the 45-second warm-up.
+// Never compare a whole-run trace against only that shorter interval.
+long lab14ATraceTotalMs = lab14ATraceStartMs >= 0
+        && lab14ATraceEndMs > lab14ATraceStartMs
+        ? lab14ATraceEndMs - lab14ATraceStartMs : 0L;
 Lab14DischargeTrace.Result trace14A = lab14ATrace == null
         ? Lab14DischargeTrace.Result.unavailable("NO_SESSION")
-        : lab14ATrace.evaluate(dtMs);
+        : lab14ATrace.evaluate(lab14ATraceTotalMs);
 double bestRate = trace14A.valid ? trace14A.rateMahPerHour : 0d;
 if (bestRate > 0d && bestRate <= 20000d) {
     mahPerHour = bestRate;
-    drainMah = Math.round((float) (bestRate * dtMs / 3600000.0));
+    drainMah = Math.round((float) (bestRate * lab14ATraceTotalMs / 3600000.0));
     validDrain = drainMah > 0;
 } else {
     mahPerHour = 0d;
     drainMah = 0;
     validDrain = false;
 }
+// Log the real start/end fuel-gauge readings, never an invented full capacity.
+logLabelOkValue(gr ? "Φόρτιση 14A (έναρξη / λήξη)" : "14A charge (start / end)",
+        startMah + " / " + endMah + " mAh");
 if (!trace14A.valid) {
-    logInfo(gr
-            ? "Κατανάλωση 14A: Μ/Δ — ανεπαρκής ή ασυνεπής χρονική κάλυψη (" + trace14A.reason + ")"
-            : "14A consumption: N/A — insufficient or inconsistent time coverage (" + trace14A.reason + ")");
+    logLabelValue(gr ? "Κατανάλωση 14A" : "14A consumption",
+            (gr ? "Μ/Δ — μη έγκυρη διαφορά αρχής–τέλους (" : "N/A — unverified start/end evidence (")
+                    + trace14A.reason + ")");
 } else {
-    logInfo(String.format(Locale.US,
-            gr ? "14A: Συνεχής καταγραφή %s, κάλυψη charge %.0f%% / ρεύματος %.0f%%"
-               : "14A: continuous %s trace, charge %.0f%% / current %.0f%% coverage",
-            trace14A.source, trace14A.counterCoveragePct, trace14A.currentCoveragePct));
+    logLabelOkValue(gr ? "Μετρημένη κατανάλωση 14A" : "14A measured discharge",
+            drainMah + " mAh");
+    logInfo(gr ? ("Πηγή 14A: " + trace14A.source
+                    + " — τα ενδιάμεσα δείγματα ελέγχουν την αξιοπιστία, δεν απαιτούνται για την τελική διαφορά.")
+               : ("14A source: " + trace14A.source
+                    + " — intermediate samples validate the counter; not required for endpoint delta."));
+    if ("COUNTER_CURRENT_DISAGREEMENT".equals(trace14A.reason)) {
+        logWarn(gr ? "Ασυμφωνία στιγμιαίου ρεύματος και μετρητή mAh — η κατανάλωση βασίζεται στις ενδείξεις αρχής–τέλους."
+                   : "Current sensor differs from charge counter — reported discharge uses measured start/end charge.");
+    }
 }
 
 // ----------------------------------------------------
@@ -22571,8 +22540,8 @@ if (!Float.isNaN(endVolt[0])) {
 }
 
 // ------------------------------------------------
-// FULL TEST DRAIN: use all timestamped observations from this run.
-// A few late samples are NOT sufficient to score a five-minute test.
+// LAB14B and LAB14Γ: measure actual beginning/end mAh over the entire
+// completed five-minute profile. Intermediate polls only validate this delta.
 endMah[0] = snapEnd.chargeNowMah;
 durationTrace.addSample(SystemClock.elapsedRealtime(),
         snapEnd.chargeNowMah, snapEnd.currentMa, snapEnd.charging);
@@ -22582,68 +22551,24 @@ float perHour = durationEvidence.valid
 float estimatedHours = Float.NaN;
 boolean fakeCounter = durationEvidence.valid
         && "CURRENT_INTEGRATION".equals(durationEvidence.source);
+logLabelOkValue(gr ? "Φόρτιση (έναρξη / λήξη)" : "Charge (start / end)",
+        startMah[0] + " / " + endMah[0] + " mAh");
 if (durationEvidence.valid) {
-    logInfo(String.format(Locale.US,
-            gr ? "Κάλυψη μέτρησης: charge %.0f%% / ρεύμα %.0f%% (%s)"
-               : "Measurement coverage: charge %.0f%% / current %.0f%% (%s)",
-            durationEvidence.counterCoveragePct,
-            durationEvidence.currentCoveragePct, durationEvidence.source));
+    logInfo(gr ? "Πηγή κατανάλωσης: " + durationEvidence.source
+               : "Consumption source: " + durationEvidence.source);
+    if ("COUNTER_CURRENT_DISAGREEMENT".equals(durationEvidence.reason)) {
+        logWarn(gr ? "Ασυμφωνία με το στιγμιαίο ρεύμα — χρησιμοποιήθηκαν τα πραγματικά mAh αρχής–τέλους."
+                   : "Instantaneous current disagrees — measured start/end charge remains authoritative.");
+    }
 } else {
-    logWarn(gr
-            ? "Ανεπαρκής ή ασυνεπής συνεχής μέτρηση — κατανάλωση Μ/Δ (" + durationEvidence.reason + ")"
-            : "Insufficient or inconsistent continuous measurement — consumption N/A (" + durationEvidence.reason + ")");
+    logWarn(gr ? "Μη έγκυρη διαφορά αρχής–τέλους — κατανάλωση Μ/Δ (" + durationEvidence.reason + ")"
+               : "Invalid start/end evidence — consumption N/A (" + durationEvidence.reason + ")");
 }
 
-// --------------------------------------
-// SPIKES CORRECTION 
-// --------------------------------------
+// Load spikes are part of the actual discharge measured by the battery gauge.
+// Keep spike diagnostics but NEVER deduct a synthetic correction from measured
+// mAh or distort the 14B / 14Γ endurance projection.
 float correctedPerHour = perHour;
-
-if (lab14SpikeMah > 0.8f && !Float.isNaN(perHour)) {
-
-    float multiplier = 15f;
-    float capPct = 0.25f;
-
-    if (lab14SpikeCount >= 5 ||
-        lab14MaxSpikeExcess > 700f) {
-
-        multiplier = 30f;
-        capPct = 0.40f;
-    }
-
-    float spikePerHour =
-            lab14SpikeMah * multiplier;
-
-    float cap =
-        (!Float.isNaN(perHour))
-        ? perHour * capPct
-        : 0f;
-
-    spikePerHour =
-            Math.min(spikePerHour, cap);
-
-    correctedPerHour =
-            perHour - spikePerHour;
-
-    float minAllowed =
-            perHour * 0.55f;
-
-    if (correctedPerHour < minAllowed) {
-        correctedPerHour = minAllowed;
-    }
-
-    if (correctedPerHour < 50f) {
-        correctedPerHour = perHour;
-    }
-}
-
-if (!Float.isNaN(correctedPerHour) && correctedPerHour > 0f) {
-    logLabelOkValue(gr ? "Διορθωμένη κατανάλωση" : "Corrected consumption",
-            String.format(Locale.US, "%.0f mAh/h", correctedPerHour));
-} else {
-    logLabelValue(gr ? "Διορθωμένη κατανάλωση" : "Corrected consumption",
-            gr ? "Μ/Δ" : "N/A");
-}
 
 // ------------------------------------------------
 // FINAL ESTIMATION (NO REDECLARATION)
@@ -26282,6 +26207,10 @@ private void lab17RunAuto() {
     // evidence satisfies the newer human-readable conclusion requirements.
     final boolean lab14ThermalRiseValid =
             lab14Records.getBoolean("lab14_thermal_rise_valid", false);
+    final float lab14StressThermalRiseC = lab14Records.getFloat(
+            "lab14_stress_thermal_rise_c", Float.NaN);
+    final float lab14StressPeakBatteryC = lab14Records.getFloat(
+            "lab14_stress_peak_battery_c", Float.NaN);
             
 // ------------------------------------------------------------
 // 🔴 MULTIPLIERS (LOCAL SAFE)
@@ -26718,9 +26647,26 @@ final boolean fresh16 =
                        : "An additional electrical finding requires follow-up");
         }
         if (lab14StressThermalWarning) {
+            String thermalDetail;
+            if (Float.isFinite(lab14StressPeakBatteryC)
+                    && lab14StressPeakBatteryC >= 45f) {
+                thermalDetail = String.format(Locale.US,
+                        gr ? "Αυξημένη απόλυτη θερμοκρασία μπαταρίας κατά την καταπόνηση: %.1f°C"
+                           : "Elevated absolute battery temperature under stress: %.1f°C",
+                        lab14StressPeakBatteryC);
+            } else if (Float.isFinite(lab14StressThermalRiseC)
+                    && lab14StressThermalRiseC >= 6.5f) {
+                thermalDetail = String.format(Locale.US,
+                        gr ? "Μεγάλη άνοδος κατά την καταπόνηση: +%.1f°C — δεν αποδεικνύει από μόνη της υπερθέρμανση"
+                           : "Large temperature rise under stress: +%.1f°C — not itself proof of overheating",
+                        lab14StressThermalRiseC);
+            } else {
+                thermalDetail = gr
+                        ? "Παλαιό θερμικό εύρημα 14Α: δεν διακρίνεται άνοδος από απόλυτη θερμοκρασία"
+                        : "Legacy 14A thermal flag: rise and absolute temperature cannot be distinguished";
+            }
             logLabelWarnValue(gr ? "Θερμική απόκριση Lab 14A" : "Lab 14A thermal response",
-                    gr ? "Αυξημένη θερμική ένδειξη κατά την καταπόνηση"
-                       : "Elevated thermal response during the stress trial");
+                    thermalDetail);
         }
 
         // LAB 15: combine its FINAL diagnostic outcome, not its questionnaire.
@@ -26902,6 +26848,36 @@ final boolean fresh16 =
             logLabelOkValue(gr ? "Αποτέλεσμα" : "Result", conclusionText);
         } else {
             logLabelValue(gr ? "Αποτέλεσμα" : "Result", conclusionText);
+        }
+        // A battery sag label alone is not proof of whole-system malfunction.
+        // Use independent Lab 15/16 observations for the actual system verdict.
+        boolean lab17ChargingCoverage = chargeRateAvailable
+                && !chargeEvaluation.unknownChargerWithSlowRate;
+        boolean lab17ThermalCoverage = lab16HasEvidence && lab16DetailedAvailable
+                && lab16ThermalProfile.hasChipReading();
+        Lab17SystemImpactVerdict.Decision systemConclusion =
+                Lab17SystemImpactVerdict.evaluate(
+                        gr, lab14StressClass,
+                        lab14CollapseObserved || lab14GaugeDiscrepancy
+                                || lab14StressProxyFlag || lab14ElectricalWarning,
+                        chargeConcern, lab17ChargingCoverage,
+                        thermalConcern, lab17ThermalCoverage,
+                        lab16OsThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE,
+                        lab16OsThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE,
+                        Float.isFinite(lab14StressPeakBatteryC)
+                                && lab14StressPeakBatteryC >= 45f,
+                        Float.isFinite(lab14StressThermalRiseC)
+                                && lab14StressThermalRiseC >= 6.5f,
+                        completeCoverage && !lab14Unstable);
+        appendHtml("<br>");
+        logInfo(gr ? "Συμπέρασμα για τη λειτουργία του συστήματος"
+                   : "System operation conclusion");
+        if (systemConclusion.tone == Lab17SystemImpactVerdict.Tone.CAUTION) {
+            logLabelWarnValue(gr ? "Σύστημα" : "System", systemConclusion.message);
+        } else if (systemConclusion.tone == Lab17SystemImpactVerdict.Tone.POSITIVE) {
+            logLabelOkValue(gr ? "Σύστημα" : "System", systemConclusion.message);
+        } else {
+            logLabelValue(gr ? "Σύστημα" : "System", systemConclusion.message);
         }
         // All charger-specific recommendations are already in Lab 15.
         // Lab 17 is the system-level synthesis, not a second charger lab.
@@ -30105,26 +30081,6 @@ private String lab25ReadDropBoxHeader(DropBoxManager.Entry entry) {
     } catch (IOException | RuntimeException ex) { return ""; }
 }
 
-private void lab25ChooseBugReport() {
-    final boolean gr = AppLang.isGreek(this);
-    logLabelValue(gr ? "Ιδιωτικότητα" : "Privacy",
-            gr ? "Επιλέξτε μόνο δική σας αναφορά Android. "
-                    + "Το αρχείο αναλύεται τοπικά και δεν αποθηκεύονται πλήρη logs."
-               : "Choose only your own Android report. Analyzed locally, without storing full logs.");
-    try {
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("*/*");
-        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[] {
-                "application/zip", "application/x-zip-compressed",
-                "application/octet-stream", "text/plain"});
-        startActivityForResult(intent, 25025);
-    } catch (RuntimeException ex) {
-        logLabelValue(gr ? "Επιλογέας αρχείων" : "File picker",
-                gr ? "Δεν ήταν διαθέσιμος." : "Unavailable.");
-    }
-}
-
 private void lab25ReadBugReport(Uri uri) {
     final boolean gr = AppLang.isGreek(this);
     final java.util.Set<String> roles = lab25DefaultRoles();
@@ -31464,9 +31420,12 @@ String thermalFlag = thermalScore < 0 ? "⚪" : "⚪";
 // 2) BATTERY HEALTH (light auto inference — FIXED)
 // ------------------------------------------------------------
 boolean charging = isChargingNow();
+// Lab 27 must read the CURRENT battery level independently of Lab 14.
+// The Lab 14 member batteryPercent defaults to 0 until that lab executes.
+final int lab27BatteryPercent = getBatteryPercentSafe();
 
-int batteryScore = Lab30ScoreEvidence.hasBatteryReadings(batTemp, (float) batteryPercent)
-        ? scoreBattery(batTemp, (float) batteryPercent, charging) : -1;
+int batteryScore = Lab30ScoreEvidence.hasBatteryReadings(batTemp, (float) lab27BatteryPercent)
+        ? scoreBattery(batTemp, (float) lab27BatteryPercent, charging) : -1;
 
 String batteryFlag = batteryScore < 0 ? "⚪" : "⚪";
 
@@ -32128,12 +32087,7 @@ appendHtml("<br>");
 logInfo(gr ? "Θερμικά" : "Thermals");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        thermalScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : thermalFlag + " (" + thermalScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", thermalScore, thermalFlag, gr);
 
 if (zones == null || zones.isEmpty()) {
 
@@ -32189,30 +32143,25 @@ appendHtml("<br>");
 logInfo(gr ? "Μπαταρία" : "Battery");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        batteryScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : batteryFlag + " (" + batteryScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", batteryScore, batteryFlag, gr);
 
-logLabelValue(
-        gr ? "Στοιχεία" : "State",
-        (gr ? "Επίπεδο=" : "Level=") +
-        (batteryPercent >= 0 ? fmt1((float) batteryPercent) + "%" : (gr ? "Άγνωστο" : "Unknown")) +
-        " | Temp=" + fmt1(batTemp) + "°C" +
+String batteryReadings = (gr ? "Επίπεδο=" : "Level=") +
+        (lab27BatteryPercent >= 0 ? fmt1((float) lab27BatteryPercent) + "%" : (gr ? "Άγνωστο" : "Unknown")) +
+        " | Temp=" + (Lab16ThermalCorrelation.plausible(batTemp)
+                ? fmt1(batTemp) + "°C" : (gr ? "Άγνωστη" : "Unknown")) +
         " | " + (gr ? "Φόρτιση=" : "Charging=") +
-        (charging ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No"))
-);
+        (charging ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No"));
+if (lab27BatteryPercent >= 0 || Lab16ThermalCorrelation.plausible(batTemp)) {
+    logLabelInfoValue(gr ? "Στοιχεία" : "State", batteryReadings);
+} else {
+    logLabelValue(gr ? "Στοιχεία" : "State", batteryReadings);
+}
 
 appendHtml("<br>");
 logInfo(gr ? "Αποθήκευση" : "Storage");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        storageFlag + " (" + storageScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", storageScore, storageFlag, gr);
 
 if (st.totalBytes > 0) {
     String storageUsage = (gr ? "Ελεύθερο=" : "Free=")
@@ -32234,26 +32183,23 @@ appendHtml("<br>");
 logInfo(gr ? "Αποτύπωμα Εφαρμογών" : "Apps footprint");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        appsFlag + " (" + appsScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", appsScore, appsFlag, gr);
 
-logLabelValue(
-        gr ? "Μετρήσεις" : "Counts",
-        "User=" + ap.userApps +
-        " | System=" + ap.systemApps +
-        " | Total=" + ap.totalApps
-);
+if (ap.totalApps > 0 && ap.userApps >= 0 && ap.systemApps >= 0) {
+    logLabelInfoValue(gr ? "Μετρήσεις" : "Counts",
+            "User=" + ap.userApps + " | System=" + ap.systemApps
+                    + " | Total=" + ap.totalApps);
+} else {
+    logLabelValue(gr ? "Μετρήσεις" : "Counts",
+            gr ? "Δεν υπάρχουν αξιόπιστες καταμετρήσεις εφαρμογών"
+               : "No reliable app counts available");
+}
 
 appendHtml("<br>");
 logInfo("RAM");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        ramFlag + " (" + ramScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", ramScore, ramFlag, gr);
 
 if (rm.totalBytes > 0)
     logLabelOkValue(gr ? "Ελεύθερη" : "Free",
@@ -32266,10 +32212,7 @@ appendHtml("<br>");
 logInfo(gr ? "Σταθερότητα / Χρόνος λειτουργίας" : "Stability / Uptime");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        stabilityFlag + " (" + stabilityScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", stabilityScore, stabilityFlag, gr);
 
 if (upMs > 0)
     logLabelOkValue(gr ? "Χρόνος λειτουργίας" : "Uptime", formatUptime(upMs));
@@ -32286,10 +32229,7 @@ appendHtml("<br>");
 logInfo(gr ? "Ασφάλεια" : "Security");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        securityFlag + " (" + securityScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", securityScore, securityFlag, gr);
 
 if (sec.lockSecure) {
     logLabelOkValue(gr ? "Κλείδωμα συσκευής" : "Secure lock",
@@ -32299,14 +32239,14 @@ if (sec.lockSecure) {
             gr ? "Δεν υπάρχει ασφαλές κλείδωμα" : "No secure screen lock");
 }
 
-logLabelValue(
-        gr ? "Ενημέρωση ασφαλείας" : "Patch level",
-        sec.securityPatch == null
-                ? (gr ? "Άγνωστο" : "Unknown")
-                : sec.securityPatch
-);
+if (sec.securityPatch != null && !sec.securityPatch.trim().isEmpty()) {
+    logLabelInfoValue(gr ? "Ενημέρωση ασφαλείας" : "Patch level", sec.securityPatch);
+} else {
+    logLabelValue(gr ? "Ενημέρωση ασφαλείας" : "Patch level",
+            gr ? "Άγνωστο" : "Unknown");
+}
 
-logLabelValue(
+logLabelInfoValue(
         "ADB / Dev",
         "USB=" + sec.adbUsbOn +
         " | Wi-Fi=" + sec.adbWifiOn +
@@ -32323,21 +32263,28 @@ appendHtml("<br>");
 logInfo(gr ? "Ιδιωτικότητα" : "Privacy");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        privacyScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — ελλιπής απογραφή αδειών"
-                      : "INSUFFICIENT DATA — incomplete permissions sample")
-                : privacyFlag + " (" + privacyScore + ")"
-);
+if (privacyScore < 0) {
+    // Keep the explicit missing-coverage explanation from the original report.
+    logLabelValue(gr ? "Κατάσταση" : "Status",
+            gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — ελλιπής απογραφή αδειών"
+               : "INSUFFICIENT DATA — incomplete permissions sample");
+} else {
+    lab27LogScoreValue(gr ? "Κατάσταση" : "Status", privacyScore, privacyFlag, gr);
+}
 
-logLabelValue(
-        gr ? "Χορηγημένες άδειες στο ορατό δείγμα" : "Granted permissions in visible sample",
+String visiblePermissionCounts =
         "Location=" + pr.userAppsWithLocation +
         " | Mic=" + pr.userAppsWithMic +
         " | Camera=" + pr.userAppsWithCamera +
-        " | SMS=" + pr.userAppsWithSms
-);
+        " | SMS=" + pr.userAppsWithSms;
+if (pr.totalUserAppsChecked > 0) {
+    // Permission counts are facts, not proof of abuse or elevated risk.
+    logLabelInfoValue(gr ? "Χορηγημένες άδειες στο ορατό δείγμα" : "Granted permissions in visible sample",
+            visiblePermissionCounts);
+} else {
+    logLabelValue(gr ? "Χορηγημένες άδειες στο ορατό δείγμα" : "Granted permissions in visible sample",
+            gr ? "Δεν υπάρχει επαρκές δείγμα" : "Insufficient sample");
+}
 
 // ------------------------------------------------------------
 // FINAL VERDICT
@@ -32397,11 +32344,11 @@ if (snapshotGrade == null) {
                 deviceHealthScore + "/100"
         );
     } else {
-        logLabelValue(
+        logLabelInfoValue(
                 gr ? "Βαθμολογία συσκευής" : "Device grade",
                 snapshotGrade
         );
-        logLabelValue(
+        logLabelInfoValue(
                 gr ? "Συνολικός δείκτης" : "Overall index",
                 deviceHealthScore + "/100"
         );
@@ -32423,25 +32370,11 @@ logLabelValue(
            : "The index describes the available snapshot; it does not certify component health or measure battery wear."
 );
 
-logLabelValue(
-        gr ? "Απόδοση" : "Performance",
-        performanceScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : "⚪" + " (" + performanceScore + ")"
-);
+lab27LogScoreValue(gr ? "Απόδοση" : "Performance", performanceScore, "⚪", gr);
 
-logLabelValue(
-        gr ? "Ασφάλεια" : "Security",
-        securityFlag
-                + " (" + securityScore + ")"
-);
+lab27LogScoreValue(gr ? "Ασφάλεια" : "Security", securityScore, securityFlag, gr);
 
-logLabelValue(
-        gr ? "Ιδιωτικότητα" : "Privacy",
-        privacyScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : privacyFlag + " (" + privacyScore + ")"
-);
+lab27LogScoreValue(gr ? "Ιδιωτικότητα" : "Privacy", privacyScore, privacyFlag, gr);
 
 String verdict = gr
         ? "Η σύνοψη παρουσιάζει τα διαθέσιμα αποτελέσματα των εργαστηρίων."
@@ -32541,7 +32474,7 @@ else if (runCount >= 3)
 else
     reliabilityIndex = 50;
 
-logLabelValue(
+logLabelInfoValue(
         gr ? "Πλήθος επαναλήψεων (όχι αξιοπιστία διάγνωσης)"
            : "Run count (not diagnostic reliability)",
         (reliabilityIndex >= 80
@@ -32660,7 +32593,7 @@ String ts = new java.text.SimpleDateFormat(
         java.util.Locale.US
 ).format(new java.util.Date());
 
-logLabelValue(
+logLabelInfoValue(
         gr ? "Χρόνος διάγνωσης"
            : "Diagnostic timestamp",
         ts
@@ -32701,7 +32634,7 @@ try {
 
 }
 
-logLabelValue(
+logLabelInfoValue(
         gr ? "ID διάγνωσης"
            : "Diagnostic ID",
         reportId
@@ -32753,6 +32686,17 @@ private void lab27LogThermalValue(String label, Float celsius, int sector) {
     }
 }
 
+// Lab 27 numerical section indices are informational scores, not verified
+// hardware-health diagnoses. Keep green for verified positive findings only.
+// The same styled-value helper records colors for service logs/PDF exports.
+private void lab27LogScoreValue(String label, int score, String flag, boolean gr) {
+    if (score < 0) {
+        logLabelValue(label, gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA");
+    } else {
+        logLabelInfoValue(label, flag + " (" + score + ")");
+    }
+}
+
 private void lab27DisplayFactorySpecs(boolean gr) {
     // Compare Android-reported specifications to published OEM profile.
     // No claim of cryptographic authenticity, genuine replacement parts,
@@ -32770,7 +32714,7 @@ private void lab27DisplayFactorySpecs(boolean gr) {
         if (factory.supportedModel) {
             logLabelOkValue(gr ? "Εργοστασιακό μοντέλο αναφοράς" : "OEM reference model",
                     factory.modelName);
-            logLabelValue(gr ? "Πηγή κατασκευαστή" : "Manufacturer source",
+            logLabelInfoValue(gr ? "Πηγή κατασκευαστή" : "Manufacturer source",
                     factory.officialSource);
             for (Lab29FactorySpecAudit.Row specRow : factory.rows) {
                 String rowName = gr ? specRow.greek : specRow.english;
@@ -32790,14 +32734,21 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                 } else {
                     // Unknown does not mean the Android reader returned nothing.
                     // Preserve partial GPU/SoC/camera/network observations in white.
+                    // A missing automatic reading is not a suspicious finding.
+                    // Present the OEM specification and any observed measurement,
+                    // then an actionable instruction where available.
                     String partialObservation =
                             specRow.observed == null || specRow.observed.trim().isEmpty()
-                                    ? (gr ? "Δεν επαληθεύτηκε" : "Not verified")
-                                    : observation + (gr
-                                            ? " — Δεν τεκμηριώθηκε πλήρης συμφωνία"
-                                            : " — Full match not established");
-                    logLabelValue(rowName,
-                            partialObservation + " (" + expected + specRow.expected + ")");
+                                    ? (gr ? "Σύμφωνα με τον κατασκευαστή: "
+                                          : "Manufacturer specification: ") + specRow.expected
+                                    : observation + " (" + expected + specRow.expected + ")";
+                    logLabelInfoValue(rowName, partialObservation);
+                }
+                // Explain non-verification without alleging a missing OEM feature.
+                // Battery wear/remaining charge is distinct from factory design mAh.
+                String explanation = gr ? specRow.noteGreek : specRow.noteEnglish;
+                if (explanation != null && !explanation.trim().isEmpty()) {
+                    logLabelValue(gr ? "Οδηγία / εξήγηση" : "Guidance / explanation", explanation);
                 }
             }
             // Each result class keeps its own value color after the colon.
@@ -32817,8 +32768,15 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                 logLabelOkValue(gr ? "Αποκλίσεις προδιαγραφών" : "Specification deviations",
                         "0");
             }
-            logLabelValue(gr ? "Μη επαληθευμένα χαρακτηριστικά" : "Unverified specifications",
+            logLabelInfoValue(gr ? "Χαρακτηριστικά χωρίς αυτόματη σύγκριση" : "Characteristics without automatic comparison",
                     String.valueOf(factory.unknowns));
+            if (factory.unknowns > 0) {
+                logLabelValue(gr ? "Τρόπος ελέγχου" : "How to check",
+                        gr ? "Το εργαστήριο παρουσιάζει όσα μπορεί να ελέγξει αυτόματα. "
+                                + "Για τα υπόλοιπα ακολουθήστε τις σχετικές οδηγίες, όπου υπάρχει δυνατότητα."
+                           : "The lab shows what it can check automatically. "
+                                + "For the remaining characteristics, follow the applicable manual-check guidance.");
+            }
             if (factory.deviations > 0) {
                 logLabelErrorValue(gr ? "Συμπέρασμα" : "Conclusion",
                         factory.conclusion(gr));
@@ -33479,12 +33437,6 @@ short[] buffer = new short[samples];
 protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
 
-    if (requestCode == 25025) {
-        if (resultCode == RESULT_OK && data != null && data.getData() != null)
-            lab25ReadBugReport(data.getData());
-        return;
-    }
-
     // Returning from an empty dialer is not proof a call was placed.
     if (requestCode == REQ_LAB12_DIALER) {
         if (lab12DialerPending) {
@@ -33551,14 +33503,106 @@ if (requestCode == REQ_LAB6_TOUCH) {
         return;
     }
 
-    // Keep the original independent visual-inspection stage available.
+    // Preserve the existing 96-target stage unchanged.
+    // A separate optional, real two-pointer check follows before color PRO.
     appendHtml("<br>");
-    logLabelValue(
-            gr ? "Επόμενο βήμα" : "Next step",
+    logLabelValue(gr ? "Επόμενο βήμα" : "Next step",
+            gr ? "Δύο δάχτυλα — μεγέθυνση και σμίκρυνση"
+               : "Two-finger zoom in and zoom out");
+    logLine();
+    startActivityForResult(new Intent(this, PinchZoomTestActivity.class),
+            REQ_LAB6_PINCH);
+    return;
+}
+
+// ============================================================
+// LAB 6 — TWO-FINGER PINCH-TO-ZOOM (OPTIONAL, EVIDENCE-BASED)
+// ============================================================
+if (requestCode == REQ_LAB6_PINCH) {
+    appendHtml("<br>");
+    logLine();
+    logInfo(gr ? "LAB 6 — Έλεγχος ζουμ με δύο δάχτυλα"
+               : "LAB 6 — Two-finger pinch-to-zoom verification");
+    logLine();
+
+    // EXIT / Android Back stops the Lab, exactly as with the touch grid.
+    // Neither a cancel nor missing evidence may be interpreted as failure.
+    if (resultCode == RESULT_CANCELED) {
+        logLabelValue(gr ? "Ζουμ δύο δαχτύλων" : "Pinch-to-zoom",
+                gr ? "Διακόπηκε — χωρίς συμπέρασμα λειτουργίας"
+                   : "Canceled — no functional verdict");
+        enableSingleExportButton();
+        return;
+    }
+
+    boolean pinchData = data != null
+            && data.hasExtra(PinchZoomTestActivity.EXTRA_DUAL_TOUCH)
+            && data.hasExtra(PinchZoomTestActivity.EXTRA_ZOOM_IN)
+            && data.hasExtra(PinchZoomTestActivity.EXTRA_ZOOM_OUT);
+    boolean dual = pinchData && data.getBooleanExtra(
+            PinchZoomTestActivity.EXTRA_DUAL_TOUCH, false);
+    boolean zoomIn = pinchData && data.getBooleanExtra(
+            PinchZoomTestActivity.EXTRA_ZOOM_IN, false);
+    boolean zoomOut = pinchData && data.getBooleanExtra(
+            PinchZoomTestActivity.EXTRA_ZOOM_OUT, false);
+    boolean pinchConsistent = pinchData && (!zoomIn && !zoomOut || dual);
+    boolean completed = pinchConsistent && dual && zoomIn && zoomOut
+            && resultCode == RESULT_OK;
+    boolean skipped = pinchConsistent && resultCode == RESULT_FIRST_USER;
+
+    if (!completed && !skipped) {
+        logLabelValue(gr ? "Ζουμ δύο δαχτύλων" : "Pinch-to-zoom",
+                gr ? "Μη έγκυρο ή ελλιπές αποτέλεσμα — ΑΓΝΩΣΤΟ"
+                   : "Missing or inconsistent evidence — UNKNOWN");
+        enableSingleExportButton();
+        return;
+    }
+
+    if (dual) {
+        logLabelOkValue(gr ? "Δύο ταυτόχρονες επαφές" : "Two simultaneous touches",
+                gr ? "Καταγράφηκαν δύο ξεχωριστά σημεία αφής"
+                   : "Two distinct touch pointers were recorded");
+    } else {
+        logLabelValue(gr ? "Δύο ταυτόχρονες επαφές" : "Two simultaneous touches",
+                gr ? "Δεν επαληθεύτηκαν" : "Not verified");
+    }
+
+    if (zoomIn) {
+        logLabelOkValue(gr ? "Μεγέθυνση" : "Zoom in",
+                gr ? "Επαληθεύτηκε αύξηση απόστασης δύο δαχτύλων"
+                   : "Two-finger separation increase verified");
+    } else {
+        logLabelValue(gr ? "Μεγέθυνση" : "Zoom in",
+                gr ? "Δεν επαληθεύτηκε" : "Not verified");
+    }
+    if (zoomOut) {
+        logLabelOkValue(gr ? "Σμίκρυνση" : "Zoom out",
+                gr ? "Επαληθεύτηκε μείωση απόστασης δύο δαχτύλων"
+                   : "Two-finger separation decrease verified");
+    } else {
+        logLabelValue(gr ? "Σμίκρυνση" : "Zoom out",
+                gr ? "Δεν επαληθεύτηκε" : "Not verified");
+    }
+
+    if (completed) {
+        logLabelOkValue(gr ? "Αποτέλεσμα pinch-to-zoom" : "Pinch-to-zoom result",
+                gr ? "PASS — μεγέθυνση και σμίκρυνση επαληθεύτηκαν"
+                   : "PASS — both zoom directions verified");
+    } else {
+        logLabelValue(gr ? "Αποτέλεσμα pinch-to-zoom" : "Pinch-to-zoom result",
+                gr ? "Μερικός ή παραλειφθείς έλεγχος — χωρίς συνολικό PASS"
+                   : "Partial or skipped test — no overall PASS");
+    }
+    logInfo(gr ? "Η δοκιμή επαληθεύει συμβάντα δύο δαχτύλων στην εφαρμογή μας, "
+               + "όχι τη λειτουργία ζουμ κάθε άλλης εφαρμογής."
+               : "This verifies dual-pointer gestures inside GEL, not zoom behavior in every third-party app.");
+
+    // Keep the independent color/uniformity stage, also after a deliberate SKIP.
+    appendHtml("<br>");
+    logLabelValue(gr ? "Επόμενο βήμα" : "Next step",
             gr ? "LAB 6 PRO — Χρώμα & Ομοιομορφία Οθόνης"
                : "LAB 6 PRO — Display Color & Uniformity");
     logLine();
-
     startActivityForResult(
             new Intent(this, DisplayProTestActivity.class),
             REQ_LAB6_COLOR);

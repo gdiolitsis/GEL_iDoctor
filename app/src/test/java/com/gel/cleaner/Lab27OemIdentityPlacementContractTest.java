@@ -57,7 +57,10 @@ public final class Lab27OemIdentityPlacementContractTest {
         assertTrue(audit.contains("engine.readConnectivitySnapshot()"));
         assertTrue(audit.contains("s.wifi24GHzSupported"));
         assertTrue(audit.contains("s.wifi5GHzSupported"));
-        assertTrue(audit.contains("engine.readBatterySnapshot().chargeDesignMah"));
+        assertTrue(audit.contains("engine.readBatterySnapshot()"));
+        assertTrue(audit.contains("m.batteryChargeNowMah = battery.chargeNowMah"));
+        assertTrue(audit.contains("m.batteryChargeFullMah = battery.chargeFullMah"));
+        assertTrue(audit.contains("m.batteryLevelPercent"));
         assertTrue(audit.contains("s.nfcSupported"));
     }
 
@@ -66,8 +69,8 @@ public final class Lab27OemIdentityPlacementContractTest {
                 "private void lab30CombineFindings()", "private void lab31FinalSummary()");
         assertTrue(certification.contains("String partialObservation ="));
         assertTrue(certification.contains("specRow.observed.trim().isEmpty()"));
-        assertTrue(certification.contains("Δεν τεκμηριώθηκε πλήρης συμφωνία"));
-        assertTrue(certification.contains("logLabelValue(rowName,"));
+        assertTrue(certification.contains("Σύμφωνα με τον κατασκευαστή"));
+        assertTrue(certification.contains("logLabelInfoValue(rowName,"));
     }
 
     @Test public void usedDeviceCheckKeepsBuyerControlsWithoutRepeatingOemTable() throws Exception {
