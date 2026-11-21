@@ -99,6 +99,34 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertFalse(lab8.contains("Apple confirmed panic code"));
     }
 
+    @Test public void officialGuidanceAndForumHistoryUseNeutralColoredServiceLogValues() throws Exception {
+        String source = code("IPhoneLabsActivity.java");
+        String formatter = region(source, "private void logLabelInfoValue(",
+                "private void logLabelOkValue(");
+        assertTrue(formatter.contains("<font color='#87CEFA'>"));
+        assertTrue(formatter.contains("GELServiceLog.iPhoneInfoValue(l, v, \"#87CEFA\")"));
+        assertTrue(formatter.contains("if (!demoMode)"));
+
+        String history = region(source, "private void logApplePanicEvidence(",
+                "private void parseAndCacheSignature(");
+        assertTrue(history.contains("logLabelInfoValue(gr ? \"Εργασία και έκβαση:\""));
+        assertTrue(history.contains("logLabelInfoValue(gr ? \"Πηγή περιστατικού:\""));
+        assertTrue(history.contains("relatedApple.sourceUrl"));
+        assertTrue(history.contains("caseRecord.localizedOutcome(gr)"));
+        assertFalse(history.contains("logLabelOkValue(gr ? \"Εργασία και έκβαση:\""));
+
+        String lab8 = region(source, "private void runFinalServiceRecommendationLab()",
+                "private void runDemoDiagnostics()");
+        assertTrue(lab8.contains("logLabelInfoValue(gr ? \"Σχετικές δημοσιευμένες επισκευές:\""));
+        assertTrue(lab8.contains("AppleOfficialServiceGuidance.forTopic(officialDocs,"));
+        assertTrue(lab8.contains("identifiedModel, \"UNEXPECTED_RESTART\""));
+        assertTrue(lab8.contains("identifiedModel, \"APPLE_DIAGNOSTICS\""));
+        assertTrue(lab8.contains("identifiedModel, \"POST_REPAIR\""));
+        assertTrue(lab8.contains("if (!someHardwareModelUnknown && observedHardwareModels.size() == 1)"));
+        assertTrue(lab8.contains("Μετά από επιλέξιμη επισκευή:"));
+        assertFalse(lab8.contains("Apple-certified panic repair"));
+    }
+
     @Test public void cannotConflateSyntheticFixturesWithSuccessfulRepairRecords() throws Exception {
         String main = code("IPhoneLabsActivity.java");
         String demo = region(main, "private void runDemoDiagnostics()", "// GUARD");
