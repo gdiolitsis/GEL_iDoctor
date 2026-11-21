@@ -142,6 +142,62 @@ public final class IPhonePanicRepairKnowledgeBase {
         return Collections.unmodifiableList(matches);
     }
 
+    /**
+     * Summarizes DISTINCT sourced attempts, not a repair success rate.
+     * Repeated imported panic logs cannot multiply the same case.
+     */
+    public static final class MatchSummary {
+        public final int attempts;
+        public final int caseThreads;
+        public final int reportedSuccesses;
+        public final int reportedFailures;
+        public final int partialOrRecurring;
+        public final int unresolved;
+
+        MatchSummary(int attempts, int caseThreads, int successes, int failures,
+                     int partial, int unresolved) {
+            this.attempts = attempts;
+            this.caseThreads = caseThreads;
+            this.reportedSuccesses = successes;
+            this.reportedFailures = failures;
+            this.partialOrRecurring = partial;
+            this.unresolved = unresolved;
+        }
+
+        public String display(boolean greek) {
+            if (greek) {
+                return attempts + " δημοσιευμένες προσπάθειες σε " + caseThreads
+                        + " περιστατικά: " + reportedSuccesses + " αναφερόμενες επιτυχίες, "
+                        + reportedFailures + " αποτυχίες, " + partialOrRecurring
+                        + " μερικές αποκαταστάσεις και " + unresolved
+                        + " χωρίς τελικό αποτέλεσμα.";
+            }
+            return attempts + " published repair attempts in " + caseThreads
+                    + " case threads: " + reportedSuccesses + " reported successes, "
+                    + reportedFailures + " failures, " + partialOrRecurring
+                    + " partial recoveries and " + unresolved + " unresolved.";
+        }
+    }
+
+    public static MatchSummary summarize(Iterable<RepairCase> matches) {
+        if (matches == null) return new MatchSummary(0, 0, 0, 0, 0, 0);
+        Set<String> attemptIds = new HashSet<>();
+        Set<String> incidentIds = new HashSet<>();
+        int success = 0, failed = 0, partial = 0, unresolved = 0;
+        for (RepairCase item : matches) {
+            if (item == null || !attemptIds.add(item.id)) continue;
+            incidentIds.add(item.incidentId);
+            switch (item.outcome) {
+                case SELF_REPORTED_SUCCESS: success++; break;
+                case SELF_REPORTED_FAILURE: failed++; break;
+                case PARTIAL_OR_RECURRING: partial++; break;
+                default: unresolved++; break;
+            }
+        }
+        return new MatchSummary(attemptIds.size(), incidentIds.size(),
+                success, failed, partial, unresolved);
+    }
+
     /** SMC entries use hex irrespective of decimal/hex input formatting. */
     public static String canonicalCode(String raw) {
         if (raw == null) return "";
