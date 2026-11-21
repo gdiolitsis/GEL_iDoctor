@@ -23,7 +23,7 @@ public final class AppleOfficialServiceGuidanceTest {
 
     @Test public void officialDocsAreSourcedAndNoApplePanicMappingIsClaimed() throws Exception {
         List<AppleOfficialServiceGuidance.Guidance> entries = docs();
-        assertTrue(entries.size() >= 15);
+        assertTrue(entries.size() >= 17);
         for (AppleOfficialServiceGuidance.Guidance e : entries) {
             assertTrue(e.sourceUrl.startsWith("https://support.apple.com/"));
             assertFalse(e.advice(true).isEmpty());
@@ -44,6 +44,9 @@ public final class AppleOfficialServiceGuidanceTest {
         assertNull("Do not claim an indexed Apple repair manual for older models not curated",
                 AppleOfficialServiceGuidance.modelManual(entries, "iPhone12,1"));
         assertNull(AppleOfficialServiceGuidance.modelManual(entries, "iPhone19,9"));
+        assertNull("Never auto-select the iPhone 18 Pro directory manual via made-up ID",
+                AppleOfficialServiceGuidance.modelManual(entries, "-"));
+        assertNull(AppleOfficialServiceGuidance.forTopic(entries, "-", "MODEL_MANUAL_DIRECTORY"));
         assertNull(AppleOfficialServiceGuidance.modelManual(entries, "Unknown"));
     }
 
