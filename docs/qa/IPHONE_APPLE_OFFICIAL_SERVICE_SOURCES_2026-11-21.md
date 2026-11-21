@@ -5,7 +5,7 @@ Research date: 2026-11-21. Source authority: **Apple Support only**.
 **These Apple publications are not an Apple list mapping panic-full, SMC, MIC2, PRS0, watchdog or I2C codes to confirmed replacement parts.** They offer symptoms, diagnostics, safe repair procedures and post-repair checks. GEL uses them as **independent procedural references**, never as additional successful-repair cases. Do not label any forum fix "Apple-confirmed" based on these manuals.
 
 ## Source files and integration
-- Offline catalog: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv`. **15 curated Apple-source records:** 9 exact-model repair-manual mappings and 6 service/diagnostic pathways, including model-limited diagnostics and post-repair completion.
+- Offline catalog: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv`. **17 curated Apple-source records:** 9 exact-model repair-manual mappings, 6 service/diagnostic pathways, and 2 newer-model manuals indexed without unverified hardware identifiers, including model-limited diagnostics and post-repair completion.
 - Parser: `AppleOfficialServiceGuidance.java`. Requires `support.apple.com` source URLs, model-matching for manuals, and applicability for diagnostics. It does **not** accept or interpret panic codes.
 - iPhone Lab 4: per-model official manual, general restart troubleshooting and only eligible Apple diagnostics are displayed, each explicitly not tied to a panic code. Full real-world reported repair attempts appear separately, with their failures and original links.
 - iPhone Lab 8: show a manual only when the imported eligible log set yields **one** recognized device identifier. With ambiguous/multiple devices, do not guess a manual. The separately curated repair outcomes remain source-matched.
