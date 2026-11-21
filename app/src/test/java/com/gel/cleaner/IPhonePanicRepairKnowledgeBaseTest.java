@@ -89,6 +89,12 @@ public final class IPhonePanicRepairKnowledgeBaseTest {
                 "SMC 0x400000").isEmpty());
         assertTrue(IPhonePanicRepairKnowledgeBase.lookup(all, "iPhone19,9",
                 "MIC2").isEmpty());
+        assertTrue("generic I2C must never prompt a specific display swap",
+                IPhonePanicRepairKnowledgeBase.lookup(all, "iPhone11,6",
+                        "I2C_COMMUNICATION").isEmpty());
+        assertFalse("only explicit I2C3 clock-line signature has the historical report",
+                IPhonePanicRepairKnowledgeBase.lookup(all, "iPhone11,6",
+                        "I2C3_SCL_STUCK_LOW").isEmpty());
     }
 
     @Test public void noFalseSensorOrRepairClaimWithUnknownInputs() throws Exception {
