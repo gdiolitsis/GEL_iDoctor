@@ -59,6 +59,21 @@ public final class AppleOfficialServiceGuidanceTest {
         assertNull(AppleOfficialServiceGuidance.forTopic(entries, "Unknown", "UNEXPECTED_RESTART"));
     }
 
+    @Test public void repairAssistantIsModelAndPartConditionalNotPanicProof() throws Exception {
+        List<AppleOfficialServiceGuidance.Guidance> entries = docs();
+        AppleOfficialServiceGuidance.Guidance olderSupported =
+                AppleOfficialServiceGuidance.forTopic(entries, "iPhone13,4", "POST_REPAIR");
+        assertNotNull("iPhone 12 eligible battery/display/camera work may use Repair Assistant",
+                olderSupported);
+        assertTrue(olderSupported.advice(true).contains("εξαρτάται από μοντέλο και εξάρτημα"));
+        assertNotNull(AppleOfficialServiceGuidance.forTopic(entries, "iPhone15,2", "POST_REPAIR"));
+        assertNotNull(AppleOfficialServiceGuidance.forTopic(entries, "iPhone17,1", "POST_REPAIR"));
+        assertNull(AppleOfficialServiceGuidance.forTopic(entries, "iPhone12,1", "POST_REPAIR"));
+        assertNull(AppleOfficialServiceGuidance.forTopic(entries, "Unknown", "POST_REPAIR"));
+        assertEquals("https://support.apple.com/en-us/120579", olderSupported.sourceUrl);
+        assertEquals("2026-11-05", olderSupported.publishedDate);
+    }
+
     @Test public void appleRestartIsNotAnEndorsedMic2ToFlexRecommendation() throws Exception {
         List<AppleOfficialServiceGuidance.Guidance> entries = docs();
         AppleOfficialServiceGuidance.Guidance r =
