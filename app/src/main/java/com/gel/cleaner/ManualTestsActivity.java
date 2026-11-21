@@ -32263,7 +32263,14 @@ appendHtml("<br>");
 logInfo(gr ? "Ιδιωτικότητα" : "Privacy");
 logLine();
 
-lab27LogScoreValue(gr ? "Κατάσταση" : "Status", privacyScore, privacyFlag, gr);
+if (privacyScore < 0) {
+    // Keep the explicit missing-coverage explanation from the original report.
+    logLabelValue(gr ? "Κατάσταση" : "Status",
+            gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — ελλιπής απογραφή αδειών"
+               : "INSUFFICIENT DATA — incomplete permissions sample");
+} else {
+    lab27LogScoreValue(gr ? "Κατάσταση" : "Status", privacyScore, privacyFlag, gr);
+}
 
 String visiblePermissionCounts =
         "Location=" + pr.userAppsWithLocation +
