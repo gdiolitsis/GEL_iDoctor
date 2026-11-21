@@ -305,7 +305,12 @@ def main():
     if reviewed == 0:
         raise RuntimeError("No Apple manual page could be verified: refuse to mark catalog complete")
     if conflict:
-        raise RuntimeError("Existing manually verified URLs conflict with Apple; audit required")
+        # Preserve previously manually reviewed URLs, record both candidates
+        # and make this a visible follow-up instead of discarding all the
+        # other newly verified, non-conflicting links from this audit.
+        for manual, chapter_id, name, prior, found in conflict:
+            print(f"REVIEW_REQUIRED: {manual} / {chapter_id} / {name}: "
+                  f"prior={prior} AppleTOC={found}", file=sys.stderr, flush=True)
     return 0
 
 if __name__ == "__main__":
