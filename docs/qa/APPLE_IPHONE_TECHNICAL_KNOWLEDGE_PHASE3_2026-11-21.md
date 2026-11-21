@@ -90,6 +90,19 @@ The next most relevant unreviewed generic topic source is **camera/TrueDepth/Fac
 
 Continue with official model-specific battery/display/camera/speaker/sensor service chapters only after inspecting each article and its conditions. Do not copy full copyrighted manuals into the APK.
 
+## Supplemental Apple conditional test-to-part knowledge — 2026-11-22
+
+A separate manufacturer evidence layer now stores **101 explicitly conditional test-result-to-service rules**, covering the 12 iPhone models whose internal hardware IDs have already been independently verified in the catalog. Source tables: [Display Issues](https://support.apple.com/en-us/101966), [Sound Issues](https://support.apple.com/en-us/101968) and [Mechanical Issues](https://support.apple.com/en-us/101970).
+
+- **33** source-linked sensor MRI failure rules.
+- **63** source-linked AST 2 audio/microphone failure rules.
+- **3** persistent button/switch issue rules after Apple checks.
+- **2** persistent-temperature-alert rules after Apple checks.
+
+**These 101 are not part of the 100 factual summaries or the 62 existing short repair-stage descriptions, and none is an observed failure in a real device.** A model- and test-specific repair path is available *only* through the guarded `AppleIPhoneConditionalServiceRules.forVerifiedObservedResult(..., externallyVerifiedResult=true)` lookup after the exact Apple test was actually run and its outcome documented. The existing Lab 4 panic-log code does not call this engine.
+
+Full model/result matrix and evidence conditions: `docs/qa/APPLE_IPHONE_CONDITIONAL_DIAGNOSTIC_SERVICE_RULES_2026-11-22.md`. This is an important manufacturer-specific evidence advance: the *same failed test* can imply different service paths by model. It never means that a panic log diagnosed the part.
+
 ## Validation boundaries
 
 The JVM/Android CI verifies Java compilation and unit constraints, including 100 fact records, 459 matching chapters and non-leakage between topics on shared Apple pages. It is **not** an on-device UI or HTML/PDF export test; those are still required before merging the draft PR.
