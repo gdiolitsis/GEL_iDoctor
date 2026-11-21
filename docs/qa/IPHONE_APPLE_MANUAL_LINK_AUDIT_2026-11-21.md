@@ -6,13 +6,15 @@ The script compares exact normalized English section headings and refuses
 conflicting URL IDs. Existing manually checked links remain untouched.
 
 - Manuals fetched and parsed: **30 / 30 attempted**
-- Newly discovered model/chapter matches: **12**
-- All direct chapter links: **950 / 983**
-- Remaining links to manual contents: **33**
+- Newly discovered model/chapter matches: **0**
+- Newly expanded reference groupings: **17**
+- Additional official Display/Mechanical sensor chapters: **14**
+- All direct chapter links: **1032 / 1048**
+- Remaining links to manual contents: **16**
 - Manual fetch failures: **0**
-- Conflicts requiring manual verification: **2**
+- Conflicts requiring manual verification: **0**
 - Entries with no unique named direct link: **33**
-- Duplicate names disambiguated by neighboring Apple TOC order: **14**
+- Duplicate names disambiguated by neighboring Apple TOC order: **0**
 
 | Official Apple model manual | Expected catalog entries | Named anchors matched | Newly linked |
 |---|---:|---:|---:|
@@ -24,32 +26,28 @@ conflicting URL IDs. Existing manually checked links remain untouched.
 | [iPhone 14 Pro Max Repair Manual](https://support.apple.com/en-la/100357) | 30 | 29 | 0 |
 | [iPhone 15 Repair Manual](https://support.apple.com/en-us/104900) | 33 | 32 | 0 |
 | [iPhone 15 Pro Repair Manual](https://support.apple.com/en-ie/104872) | 30 | 29 | 0 |
-| [iPhone 16 Pro Repair Manual](https://support.apple.com/en-us/120803) | 34 | 33 | 1 |
-| [iPhone 17 Pro Repair Manual](https://support.apple.com/en-us/124262) | 36 | 35 | 1 |
-| [iPhone 18 Pro Repair Manual](https://support.apple.com/el-gr/127388) | 42 | 40 | 1 |
+| [iPhone 16 Pro Repair Manual](https://support.apple.com/en-us/120803) | 34 | 33 | 0 |
+| [iPhone 17 Pro Repair Manual](https://support.apple.com/en-us/124262) | 36 | 35 | 0 |
+| [iPhone 18 Pro Repair Manual](https://support.apple.com/el-gr/127388) | 42 | 40 | 0 |
 | [iPhone 12 Repair Manual](https://support.apple.com/en-us/100464) | 29 | 28 | 0 |
 | [iPhone 13 Repair Manual](https://support.apple.com/en-us/100402) | 31 | 30 | 0 |
 | [iPhone SE 3rd generation Repair Manual](https://support.apple.com/en-us/101527) | 26 | 25 | 0 |
-| [iPhone 16 Repair Manual](https://support.apple.com/en-us/120652) | 34 | 33 | 1 |
+| [iPhone 16 Repair Manual](https://support.apple.com/en-us/120652) | 34 | 33 | 0 |
 | [iPhone 17 Repair Manual](https://support.apple.com/en-us/123029) | 36 | 35 | 0 |
 | [iPhone 12 mini Repair Manual](https://support.apple.com/en-us/100452) | 28 | 27 | 0 |
 | [iPhone 12 Pro Repair Manual](https://support.apple.com/en-us/100476) | 29 | 28 | 0 |
 | [iPhone 13 mini Repair Manual](https://support.apple.com/en-us/100384) | 30 | 29 | 0 |
 | [iPhone 13 Pro Repair Manual](https://support.apple.com/en-us/100416) | 31 | 30 | 0 |
-| [iPhone 15 Plus Repair Manual](https://support.apple.com/en-us/104858) | 33 | 32 | 1 |
+| [iPhone 15 Plus Repair Manual](https://support.apple.com/en-us/104858) | 33 | 32 | 0 |
 | [iPhone 15 Pro Max Repair Manual](https://support.apple.com/en-us/104917) | 30 | 29 | 0 |
-| [iPhone 16 Plus Repair Manual](https://support.apple.com/en-us/120662) | 34 | 33 | 1 |
-| [iPhone 16 Pro Max Repair Manual](https://support.apple.com/en-us/120819) | 34 | 33 | 1 |
-| [iPhone 17 Pro Max Repair Manual](https://support.apple.com/en-us/124278) | 36 | 35 | 1 |
-| [iPhone Air Repair Manual](https://support.apple.com/en-us/123052) | 35 | 34 | 1 |
-| [iPhone 17e Repair Manual](https://support.apple.com/en-us/125956) | 33 | 32 | 1 |
-| [iPhone 16e Repair Manual](https://support.apple.com/en-us/121720) | 34 | 33 | 1 |
-| [iPhone 18 Pro Max Repair Manual](https://support.apple.com/en-la/127626) | 42 | 40 | 1 |
+| [iPhone 16 Plus Repair Manual](https://support.apple.com/en-us/120662) | 34 | 33 | 0 |
+| [iPhone 16 Pro Max Repair Manual](https://support.apple.com/en-us/120819) | 34 | 33 | 0 |
+| [iPhone 17 Pro Max Repair Manual](https://support.apple.com/en-us/124278) | 36 | 35 | 0 |
+| [iPhone Air Repair Manual](https://support.apple.com/en-us/123052) | 35 | 34 | 0 |
+| [iPhone 17e Repair Manual](https://support.apple.com/en-us/125956) | 33 | 32 | 0 |
+| [iPhone 16e Repair Manual](https://support.apple.com/en-us/121720) | 34 | 33 | 0 |
+| [iPhone 18 Pro Max Repair Manual](https://support.apple.com/en-la/127626) | 42 | 40 | 0 |
 | [iPhone Duo Repair Manual](https://support.apple.com/en-us/127682) | 41 | 40 | 0 |
-
-## Existing link conflicts — NOT auto-replaced
-- MANUAL_15 / Ambient light sensor, proximity sensor, or compass issues: prior https://support.apple.com/en-us/101966; source TOC https://support.apple.com/en-us/101970
-- DIRECTORY_17 / Ambient light sensor, proximity sensor, or compass issues: prior https://support.apple.com/en-us/101966; source TOC https://support.apple.com/en-us/101970
 
 ## Named headings without a unique direct article URL
 - MANUAL_12_PRO_MAX: Views, Parts, and Tools — not linked
