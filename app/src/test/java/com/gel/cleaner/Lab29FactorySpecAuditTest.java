@@ -218,7 +218,9 @@ public class Lab29FactorySpecAuditTest {
         Lab29FactorySpecAudit.Report r = Lab29FactorySpecAudit.evaluate(sample());
         assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
                 row(r, "USB connector").verdict);
+        assertTrue(row(r, "USB connector").noteGreek.contains("Το Lab 27 δεν έχει τη δυνατότητα να ελέγξει"));
         assertTrue(row(r, "USB connector").noteGreek.contains("δεν σημαίνει"));
+        assertTrue(row(r, "USB connector").noteEnglish.contains("cannot inspect"));
         assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
                 row(r, "3.5 mm jack").verdict);
         assertTrue(row(r, "3.5 mm jack").noteEnglish.contains("not mean absent"));
