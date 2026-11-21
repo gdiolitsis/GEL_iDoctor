@@ -110,6 +110,19 @@ public final class ApplePanicHardwareHints {
             return new Assessment(model, out);
         }
 
+        // A named audio driver panic does not prove failure of that chip.
+        // A published 11 Pro Max bench case was resolved by a sensor flex on
+        // the shared bus. Preserve both the literal clue and that uncertainty.
+        if (low.contains("applecs42l77audio")
+                && (low.contains("unknown sample rate")
+                    || low.contains("_enablehalogen")
+                    || low.contains("pdmout"))) {
+            out.add(general("AUDIO_CODEC_CS42L77",
+                    "Το panic αναφέρει τον οδηγό AppleCS42L77Audio, όχι απαραίτητα χαλασμένο audio codec.",
+                    "AppleCS42L77Audio driver is named, but this is not proof the audio IC failed.",
+                    "Έλεγχος κοινών γραμμών επικοινωνίας και εμπρόσθιων καλωδιοταινιών πριν εξεταστεί αντικατάσταση IC.",
+                    "Check shared bus communication and front sensor flex before any audio IC replacement."));
+        }
         if (low.contains("aop panic") || low.contains("aop nmi power")) {
             out.add(general("AOP_PANIC",
                     "Συμβάν συνεπεξεργαστή AOP (αισθητήρες/χαμηλή κατανάλωση), όχι διάγνωση εξαρτήματος.",
