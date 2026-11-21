@@ -45,6 +45,9 @@ The legacy `app/src/test/resources/iphone_panic_corpus.tsv` contains 49 **recons
 9. iPhone XS Max `PRS0` / later I2C3 signal, multiple charging-port attempts did not resolve loop; a later *different* I2C clue was followed by a reported display replacement success. **Do not attribute the screen repair to PRS0.**
    https://www.ifixit.com/Answers/View/941226/
 
+## Worldwide survey checkpoint (21 November 2026)
+The baseline seed has now expanded to **24 source-linked repair attempts** (12 self-reported successes, 10 self-reported failures, one partial/recurrent case, one unresolved case), spanning 10 indexed signature/code keys and 13 model identifiers. These are not independent phones or proof of repair probability. The global scope, additional linked sources, source conflicts and methodology are documented separately in [the world survey](IPHONE_WORLD_PANIC_REPAIR_SURVEY_2026-11-21.md). **The 49 reconstructed QA fixtures are still distinct from the outcome database.**
+
 ## Quality rules
 1. **Success needs explicit first-hand post-repair feedback** in the cited thread; a selected/accepted answer is not enough.
 2. **Failure is evidence too**. Keep unsuccessful swaps, changed signatures, partial recovery and unresolved cases.
