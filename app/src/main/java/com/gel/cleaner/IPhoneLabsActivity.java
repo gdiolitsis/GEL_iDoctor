@@ -169,6 +169,8 @@ private boolean looksCorruptedPanic(String text) {
     private java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> repairCaseCache = null;
     // Apple-authored symptom workflows are kept separate from repair outcomes.
     private java.util.List<AppleOfficialServiceGuidance.Guidance> appleGuideCache = null;
+    // Exact source-verified Apple repair-manual sections; same offline scope.
+    private java.util.List<AppleIPhoneManualChapters.Chapter> appleManualChapterCache = null;
     private boolean panicLogLoaded = false;
     private String  panicLogName   = null;
     private String  panicLogText   = null;
@@ -2501,6 +2503,94 @@ private java.util.List<AppleOfficialServiceGuidance.Guidance> readAppleOfficialG
     return appleGuideCache;
 }
 
+private java.util.List<AppleIPhoneManualChapters.Chapter> readAppleManualChapters() {
+    if (appleManualChapterCache != null) return appleManualChapterCache;
+    try {
+        appleManualChapterCache = AppleIPhoneManualChapters.parse(
+                getAssets().open(AppleIPhoneManualChapters.ASSET), readAppleOfficialGuidance());
+    } catch (java.io.IOException ignored) {
+        // Missing/corrupt source data can never silently create a replacement recommendation.
+        appleManualChapterCache = java.util.Collections.emptyList();
+    }
+    return appleManualChapterCache;
+}
+
+private String appleProcedureTopicLabel(String topic, boolean gr) {
+    if (!gr) {
+        switch (topic) {
+            case "BATTERY": return "Battery";
+            case "DISPLAY": return "Display and glass";
+            case "CAMERA": return "Cameras";
+            case "SOUND": return "Audio";
+            case "WIRED_CHARGING": return "Charging connector";
+            case "HAPTIC": return "Haptics";
+            case "BUTTONS": return "Buttons";
+            case "BOARD": return "Logic board";
+            case "SIM": return "SIM tray";
+            default: return "Other / preparation";
+        }
+    }
+    switch (topic) {
+        case "BATTERY": return "Μπαταρία";
+        case "DISPLAY": return "Οθόνη και γυαλί";
+        case "CAMERA": return "Κάμερες";
+        case "SOUND": return "Ήχος";
+        case "WIRED_CHARGING": return "Σύνδεση φόρτισης";
+        case "HAPTIC": return "Δόνηση";
+        case "BUTTONS": return "Πλήκτρα";
+        case "BOARD": return "Κεντρική πλακέτα";
+        case "SIM": return "Υποδοχή SIM";
+        default: return "Λοιπές εργασίες / προετοιμασία";
+    }
+}
+
+/**
+ * A manual's chapter inventory is factual source navigation, never a
+ * recommendation to perform surgery inferred from panic-code keywords.
+ */
+private void logAppleOfficialManualOutline(String model,
+        java.util.List<AppleOfficialServiceGuidance.Guidance> docs,
+        java.util.Set<String> suggestedTopics, boolean gr) {
+    java.util.List<AppleIPhoneManualChapters.Chapter> sections =
+            AppleIPhoneManualChapters.forExactModel(readAppleManualChapters(), docs, model);
+    if (sections.isEmpty()) {
+        logLabelValue(gr ? "Ενότητες εγχειριδίου:" : "Manual sections:",
+                gr ? "Δεν έχει φορτωθεί επαληθευμένος πίνακας περιεχομένων για αυτό το μοντέλο."
+                   : "No verified chapter index is loaded for this exact model.");
+        return;
+    }
+    java.util.List<AppleIPhoneManualChapters.Chapter> troubleshooting =
+            AppleIPhoneManualChapters.troubleshootingForTopics(sections, suggestedTopics);
+    if (!troubleshooting.isEmpty()) {
+        java.util.List<String> names = new java.util.ArrayList<>();
+        for (AppleIPhoneManualChapters.Chapter row : troubleshooting)
+            names.add(row.title(gr));
+        logLabelValue(gr ? "Apple — σχετικές ενότητες διάγνωσης (υπό όρους):"
+                         : "Apple — conditional troubleshooting chapters:",
+                android.text.TextUtils.join(" • ", names));
+    }
+    java.util.Map<String, java.util.List<String>> procedures = new java.util.LinkedHashMap<>();
+    for (AppleIPhoneManualChapters.Chapter row : sections) {
+        if (row.phase != AppleIPhoneManualChapters.Phase.PROCEDURE) continue;
+        java.util.List<String> names = procedures.get(row.topic);
+        if (names == null) {
+            names = new java.util.ArrayList<>();
+            procedures.put(row.topic, names);
+        }
+        names.add(row.title(gr));
+    }
+    if (!procedures.isEmpty()) {
+        logLabelValue(gr ? "Διαδικασίες που περιλαμβάνει το εγχειρίδιο:"
+                         : "Procedures listed in this model manual:",
+                gr ? "Κατάλογος διαθέσιμων κεφαλαίων, ΟΧΙ προτεινόμενες αντικαταστάσεις."
+                   : "A chapter inventory, NOT recommended part replacements.");
+        for (java.util.Map.Entry<String, java.util.List<String>> e : procedures.entrySet()) {
+            logLabelValue(appleProcedureTopicLabel(e.getKey(), gr) + ":",
+                    android.text.TextUtils.join(", ", e.getValue()));
+        }
+    }
+}
+
 private void logOfficialApplePanicGuidance(String model, boolean gr,
         java.util.Set<String> suggestedTopics) {
     java.util.List<AppleOfficialServiceGuidance.Guidance> docs = readAppleOfficialGuidance();
@@ -2533,6 +2623,9 @@ private void logOfficialApplePanicGuidance(String model, boolean gr,
     if (manual != null) {
         logLabelInfoValue(gr ? "Επίσημο εγχειρίδιο μοντέλου:" : "Official model repair manual:",
                 manual.title(gr) + " — " + manual.advice(gr) + " — " + manual.sourceUrl);
+        // Real table-of-contents entries, separately grouped as diagnostic
+        // chapters and existing repair procedures. No automatic repair advice.
+        logAppleOfficialManualOutline(model, docs, suggestedTopics, gr);
     } else {
         logLabelValue(gr ? "Εγχειρίδιο για το συγκεκριμένο μοντέλο:"
                 : "Manual for this exact model:",
@@ -2555,6 +2648,15 @@ private void logOfficialApplePanicGuidance(String model, boolean gr,
         logLabelInfoValue(gr ? "Apple Diagnostics — εφόσον υποστηρίζονται:"
                 : "Apple Diagnostics — where supported:",
                 diagnostics.advice(gr) + " — " + diagnostics.sourceUrl);
+    }
+    // Distinct from repair itself: only applicable if a supported part was
+    // actually repaired, not proof of resolution of the original panic.
+    AppleOfficialServiceGuidance.Guidance postRepair = modelKnown
+            ? AppleOfficialServiceGuidance.forTopic(docs, model, "POST_REPAIR") : null;
+    if (postRepair != null) {
+        logLabelInfoValue(gr ? "Apple — μόνο μετά από επιλέξιμη επισκευή:"
+                : "Apple — only after an eligible part repair:",
+                postRepair.advice(gr) + " — " + postRepair.sourceUrl);
     }
     if (suggestedTopics != null) {
         int shown = 0;
