@@ -28,14 +28,23 @@ public final class Lab29FactorySpecAudit {
         public final String expected;
         public final String observed;
         public final Verdict verdict;
+        public final String noteGreek;
+        public final String noteEnglish;
 
         Row(String greek, String english, String expected, String observed,
             Verdict verdict) {
+            this(greek, english, expected, observed, verdict, "", "");
+        }
+
+        Row(String greek, String english, String expected, String observed,
+            Verdict verdict, String noteGreek, String noteEnglish) {
             this.greek = greek;
             this.english = english;
             this.expected = expected;
             this.observed = observed;
             this.verdict = verdict;
+            this.noteGreek = noteGreek;
+            this.noteEnglish = noteEnglish;
         }
     }
 
@@ -77,8 +86,10 @@ public final class Lab29FactorySpecAudit {
                     : deviations + " reported specification deviations need independent review before purchase.";
             return greek
                     ? "Τα " + matches + " από τα " + matches
-                        + " συγκρίσιμα χαρακτηριστικά συμφωνούν με τις δημοσιευμένες προδιαγραφές του μοντέλου. Τα υπόλοιπα δεν επαληθεύτηκαν."
-                    : "All " + matches + " comparable characteristics agree with the published model specifications. Other characteristics were not verified.";
+                        + " συγκρίσιμα χαρακτηριστικά συμφωνούν με τις δημοσιευμένες προδιαγραφές του μοντέλου. "
+                        + unknowns + " επιπλέον χαρακτηριστικά δεν επαληθεύτηκαν και ΔΕΝ θεωρούνται αποκλίσεις."
+                    : "All " + matches + " comparable characteristics agree with the published model specifications. "
+                        + unknowns + " other characteristics were not verified and are NOT treated as deviations.";
         }
     }
 
@@ -91,6 +102,9 @@ public final class Lab29FactorySpecAudit {
         public int cores = -1, widthPx = -1, heightPx = -1, ramMb = -1;
         public long maxRearJpegPixels = -1L, maxFrontJpegPixels = -1L;
         public long batteryDesignMah = -1L;
+        public long batteryChargeNowMah = -1L;
+        public long batteryChargeFullMah = -1L;
+        public int batteryLevelPercent = -1;
         public int wifiFrequencyMhz = -1;
         public Boolean wifi24GHzSupported = null, wifi5GHzSupported = null;
         public boolean nfcSupported, fmFeatureReported;
@@ -134,7 +148,15 @@ public final class Lab29FactorySpecAudit {
         try {
             // Design capacity comes from the device's telemetry, never from
             // the model's published reference profile (no circular match).
-            m.batteryDesignMah = engine.readBatterySnapshot().chargeDesignMah;
+            iDoctorEngine.BatterySnapshot battery = engine.readBatterySnapshot();
+            m.batteryDesignMah = battery.chargeDesignMah;
+            m.batteryChargeNowMah = battery.chargeNowMah;
+            m.batteryChargeFullMah = battery.chargeFullMah;
+            if (battery.level >= 0 && battery.scale > 0) {
+                m.batteryLevelPercent = (int) Math.round(100d * battery.level / battery.scale);
+            } else if (battery.level >= 0 && battery.level <= 100) {
+                m.batteryLevelPercent = battery.level;
+            }
         } catch (Throwable ignored) { }
         try {
             iDoctorEngine.MemorySnapshot s = engine.readMemorySnapshot();
@@ -334,20 +356,68 @@ public final class Lab29FactorySpecAudit {
         add(rows, "NFC (αγορά)", "NFC (market dependent)", "Ανάλογα την περιοχή",
                 m.nfcSupported ? "NFC adapter reported" : "",
                 m.nfcSupported ? Verdict.MATCH : Verdict.UNKNOWN);
-        // Only reported hardware design capacity, not runtime battery health,
-        // can support a cautious consistency check with nominal 5000 mAh.
-        add(rows, "Μπαταρία", "Factory battery capacity", "5000 mAh (typ.)",
-                m.batteryDesignMah > 0
-                    ? m.batteryDesignMah + " mAh (reported design capacity)" : "",
+        // OEM design capacity and estimated TODAY's full-charge capacity are
+        // different quantities. An aged original cell can be below 5000 mAh.
+        // Android chargeFull is a reported estimate, not a physical lab assay.
+        // Otherwise use chargeNow / SOC only when both are available and plausible.
+        long estimatedFull = -1L;
+        String estimateSource = "";
+        if (m.batteryChargeFullMah >= 1500L && m.batteryChargeFullMah <= 9000L) {
+            estimatedFull = m.batteryChargeFullMah;
+            estimateSource = "Android full-charge counter";
+        } else if (m.batteryChargeNowMah > 0L
+                && m.batteryLevelPercent >= 20 && m.batteryLevelPercent <= 90) {
+            long extrapolated = Math.round(100d * m.batteryChargeNowMah / m.batteryLevelPercent);
+            if (extrapolated >= 1500L && extrapolated <= 9000L
+                    && m.batteryChargeNowMah <= extrapolated) {
+                estimatedFull = extrapolated;
+                estimateSource = "charge counter / charge percentage estimate";
+            }
+        }
+        String batteryObserved = m.batteryDesignMah > 0
+                ? m.batteryDesignMah + " mAh (Android reported design capacity)" : "";
+        if (estimatedFull > 0L) {
+            if (!batteryObserved.isEmpty()) batteryObserved += " | ";
+            batteryObserved += estimatedFull + " mAh (" + estimateSource + ")";
+        }
+        String batteryNoteGr = estimatedFull > 0L
+                ? "Η τρέχουσα χωρητικότητα πλήρους φόρτισης αναφέρεται/εκτιμάται σε "
+                    + estimatedFull + " mAh (~" + Math.round(estimatedFull * 100d / 5000d)
+                    + "% της εργοστασιακής τιμής 5.000 mAh). Διαφορά μπορεί να σχετίζεται "
+                    + "με φυσιολογική φθορά, βαθμονόμηση ή αβεβαιότητα τηλεμετρίας. "
+                    + "Δεν αποτελεί μέτρηση πιστοποίησης ούτε απόδειξη μη αυθεντικής μπαταρίας."
+                : "Δεν υπάρχει αξιόπιστη τρέχουσα εκτίμηση πλήρους φόρτισης από Android. "
+                    + "Αυτό δεν αποδεικνύει απόκλιση ούτε απουσία αυθεντικής μπαταρίας.";
+        String batteryNoteEn = estimatedFull > 0L
+                ? "Current full-charge capacity is reported/estimated at " + estimatedFull
+                    + " mAh (~" + Math.round(estimatedFull * 100d / 5000d)
+                    + "% of the published 5000 mAh typical rating). Differences may reflect "
+                    + "normal ageing, calibration or telemetry uncertainty. This is not a "
+                    + "certified capacity test and does not prove a non-genuine battery."
+                : "No reliable current full-charge estimate is exposed by Android. "
+                    + "This does not establish a deviation or a non-genuine battery.";
+        rows.add(new Row("Μπαταρία", "Factory battery capacity", "5000 mAh (typ.)",
+                batteryObserved,
                 m.batteryDesignMah >= 4700L && m.batteryDesignMah <= 5300L
-                    ? Verdict.MATCH : Verdict.UNKNOWN);
-        add(rows, "Θύρα USB", "USB connector", "USB-C",
-                "", Verdict.UNKNOWN);
-        add(rows, "Υποδοχή 3.5 mm", "3.5 mm jack", "Ναι / Yes",
-                "", Verdict.UNKNOWN);
-        add(rows, "FM", "FM radio", "Ναι / Yes",
+                    ? Verdict.MATCH : Verdict.UNKNOWN,
+                batteryNoteGr, batteryNoteEn));
+        rows.add(new Row("Θύρα USB", "USB connector", "USB-C",
+                "", Verdict.UNKNOWN,
+                "Το Android δεν επαλήθευσε τον φυσικό τύπο της θύρας. Δεν σημαίνει ότι λείπει η USB-C.",
+                "Android did not verify the physical connector type. This does not mean USB-C is absent."));
+        rows.add(new Row("Υποδοχή 3.5 mm", "3.5 mm jack", "Ναι / Yes",
+                "", Verdict.UNKNOWN,
+                "Δεν έγινε φυσική επιθεώρηση της υποδοχής· η μη επαλήθευση δεν σημαίνει απουσία.",
+                "The audio jack was not physically inspected; unverified does not mean absent."));
+        rows.add(new Row("FM", "FM radio", "Ναι / Yes",
                 m.fmFeatureReported ? "Android FM feature declared" : "",
-                m.fmFeatureReported ? Verdict.MATCH : Verdict.UNKNOWN);
+                m.fmFeatureReported ? Verdict.MATCH : Verdict.UNKNOWN,
+                m.fmFeatureReported
+                    ? "Δηλώθηκε δυνατότητα FM από Android· δεν δοκιμάστηκε πραγματική λήψη σταθμού."
+                    : "Η μη αναφορά FM από Android δεν αποδεικνύει ότι λείπει το ραδιόφωνο.",
+                m.fmFeatureReported
+                    ? "Android declares FM support; actual radio reception was not tested."
+                    : "Android not reporting FM does not prove the radio is absent."));
 
         return new Report(model, source, rows, true);
     }
