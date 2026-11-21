@@ -89,7 +89,7 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(lab4.contains("logApplePanicEvidence(block, gr,"));
         String lab8 = region(source, "private void runFinalServiceRecommendationLab()",
                 "private void runDemoDiagnostics()");
-        assertTrue(lab8.contains("if (observedHardwareModels.size() == 1)"));
+        assertTrue(lab8.contains("if (!someHardwareModelUnknown && observedHardwareModels.size() == 1)"));
         assertTrue(lab8.contains("AppleOfficialServiceGuidance.modelManual(readAppleOfficialGuidance()"));
         assertTrue(lab8.contains("manual.sourceUrl"));
         assertFalse(lab8.contains("Apple confirmed panic code"));
