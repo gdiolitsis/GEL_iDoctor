@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import static org.junit.Assert.*;
 
-/** Prioritize during-tone acoustic evidence over an optional later mic sample. */
+/** During-tone acoustic evidence is the only Lab 2 diagnostic input. */
 public final class Lab2AcousticEvidencePriorityContractTest {
     private static String lab2() throws Exception {
         Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
@@ -20,28 +20,31 @@ public final class Lab2AcousticEvidencePriorityContractTest {
         return all.substring(a, b);
     }
 
-    @Test public void fourLiveIndicationsHavePriorityOverLowLaterConfidence() throws Exception {
+    @Test public void fourToneObservationsAreIndependentAndReportedCorrectly() throws Exception {
         String code = lab2();
         assertTrue(code.contains("measured == tones.length"));
         assertTrue(code.contains("confirmed == tones.length"));
         assertTrue(code.contains("if (allFourTonesIndicated)"));
         assertTrue(code.contains("4/4 ακουστικές ενδείξεις κατά την αναπαραγωγή"));
-        assertTrue(code.contains("LOW applies only to the later microphone reading"));
-        assertTrue(code.contains("not verification of the exact frequencies"));
+        assertTrue(code.contains("not verification of exact frequencies"));
+        assertTrue(code.contains("toneRms > noiseRms * 1.5"));
         assertFalse(code.contains("οι τόνοι δεν επιβεβαιώθηκαν"));
         assertFalse(code.contains("LOW confidence — tones not verified"));
     }
 
-    @Test public void laterMicMayNotInventFrequencyProofOrSpeakerFailure() throws Exception {
+    @Test public void noPostPlaybackMicrophoneReadingCanInventToneProofOrFailure()
+            throws Exception {
         String code = lab2();
-        assertTrue(code.contains("if (r == null)"));
-        assertTrue(code.contains("if (rms <= 20)"));
-        assertTrue(code.contains("does not override playback evidence"));
-        assertTrue(code.contains("cannot identify individual tones"));
         assertTrue(code.contains("Ακουστικές ενδείξεις κατά την αναπαραγωγή: "));
-        assertFalse(code.contains("Signal above RMS threshold 20 was not confirmed"));
-        assertFalse(code.contains("RMS above 20 after playback, LOW confidence — tones not verified"));
-        assertTrue(code.contains("logLabelValue(gr ? \"Πρόσθετη μέτρηση μικροφώνου\""));
         assertTrue(code.contains("logLabelOkValue(gr ? \"Έξοδος ηχείου\""));
+        assertTrue(code.contains("toneRms > 20.0"));
+        assertFalse(code.contains("MicDiagnosticEngine.run(this)"));
+        assertFalse(code.contains("if (rms <= 20)"));
+        assertFalse(code.contains("Additional microphone reading"));
+        assertFalse(code.contains("Πρόσθετη μέτρηση μικροφώνου"));
+        assertFalse(code.contains("Ποιότητα πρόσθετης μέτρησης"));
+        assertFalse(code.contains("Mic RMS"));
+        assertFalse(code.contains("Mic Peak"));
+        assertFalse(code.contains("RMS above 20 after playback, LOW confidence — tones not verified"));
     }
 }
