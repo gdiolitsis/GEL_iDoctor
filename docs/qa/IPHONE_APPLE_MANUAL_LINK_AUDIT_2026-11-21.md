@@ -6,7 +6,7 @@ The script compares exact normalized English section headings and refuses
 conflicting URL IDs. Existing manually checked links remain untouched.
 
 - Manuals fetched and parsed: **30 / 30 attempted**
-- Newly discovered model/chapter matches: **2**
+- Newly discovered model/chapter matches: **0**
 - Legacy four-chapter reference groupings expanded: **0**
 - Newer combined reference chapters linked: **0**
 - Additional official Display/Mechanical sensor chapters: **0**
@@ -29,7 +29,7 @@ conflicting URL IDs. Existing manually checked links remain untouched.
 | [iPhone 15 Pro Repair Manual](https://support.apple.com/en-ie/104872) | 33 | 33 | 0 |
 | [iPhone 16 Pro Repair Manual](https://support.apple.com/en-us/120803) | 37 | 36 | 0 |
 | [iPhone 17 Pro Repair Manual](https://support.apple.com/en-us/124262) | 39 | 38 | 0 |
-| [iPhone 18 Pro Repair Manual](https://support.apple.com/el-gr/127388) | 45 | 44 | 1 |
+| [iPhone 18 Pro Repair Manual](https://support.apple.com/el-gr/127388) | 45 | 44 | 0 |
 | [iPhone 12 Repair Manual](https://support.apple.com/en-us/100464) | 32 | 32 | 0 |
 | [iPhone 13 Repair Manual](https://support.apple.com/en-us/100402) | 34 | 34 | 0 |
 | [iPhone SE 3rd generation Repair Manual](https://support.apple.com/en-us/101527) | 29 | 29 | 0 |
@@ -47,7 +47,7 @@ conflicting URL IDs. Existing manually checked links remain untouched.
 | [iPhone Air Repair Manual](https://support.apple.com/en-us/123052) | 38 | 37 | 0 |
 | [iPhone 17e Repair Manual](https://support.apple.com/en-us/125956) | 36 | 35 | 0 |
 | [iPhone 16e Repair Manual](https://support.apple.com/en-us/121720) | 37 | 36 | 0 |
-| [iPhone 18 Pro Max Repair Manual](https://support.apple.com/en-la/127626) | 45 | 44 | 1 |
+| [iPhone 18 Pro Max Repair Manual](https://support.apple.com/en-la/127626) | 45 | 44 | 0 |
 | [iPhone Duo Repair Manual](https://support.apple.com/en-us/127682) | 43 | 43 | 0 |
 
 ## Interpretation
