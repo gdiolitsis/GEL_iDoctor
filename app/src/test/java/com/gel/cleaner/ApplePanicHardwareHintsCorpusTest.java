@@ -113,6 +113,24 @@ public final class ApplePanicHardwareHintsCorpusTest {
         assertEquals("MIC2", one(known).code);
     }
 
+    @Test public void explicitI2c3ClockFailureHasSpecificClueButGenericI2cDoesNot() {
+        String precise = "{\"product\":\"iPhone11,6\",\"panicString\":"
+                + "\"panic(cpu 0): i2c3::_checkBusStatus SCL is stuck low; bus error\"}";
+        ApplePanicHardwareHints.Assessment found =
+                ApplePanicHardwareHints.examineOne(precise);
+        boolean specific = false;
+        for (ApplePanicHardwareHints.Finding f : found.findings) {
+            if ("I2C3_SCL_STUCK_LOW".equals(f.code)) specific = true;
+        }
+        assertTrue(specific);
+        String broad = "{\"product\":\"iPhone11,6\",\"panicString\":"
+                + "\"panic(cpu 0): i2c3 bus error\"}";
+        for (ApplePanicHardwareHints.Finding f :
+                ApplePanicHardwareHints.examineOne(broad).findings) {
+            assertNotEquals("I2C3_SCL_STUCK_LOW", f.code);
+        }
+    }
+
     private static String panic(String model, String code) {
         return "{\"product\":\"" + model + "\",\"panicString\":\"panic(cpu 1): "
                 + "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "
