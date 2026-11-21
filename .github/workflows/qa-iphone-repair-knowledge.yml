@@ -7,6 +7,7 @@ on:
       - 'app/src/main/java/com/gel/cleaner/IPhonePanicRepairKnowledgeBase.java'
       - 'app/src/main/java/com/gel/cleaner/IPhoneLabsActivity.java'
       - 'app/src/test/java/com/gel/cleaner/IPhonePanicRepairKnowledgeBaseTest.java'
+      - 'app/src/test/java/com/gel/cleaner/IPhoneRepairKnowledgeIntegrationContractTest.java'
       - 'docs/qa/IPHONE_PANIC_REPAIR_KNOWLEDGE_BASE_2026-11-21.md'
       - '.github/workflows/qa-iphone-repair-knowledge.yml'
 
