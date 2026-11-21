@@ -57,7 +57,10 @@ public final class Lab27OemIdentityPlacementContractTest {
         assertTrue(audit.contains("engine.readConnectivitySnapshot()"));
         assertTrue(audit.contains("s.wifi24GHzSupported"));
         assertTrue(audit.contains("s.wifi5GHzSupported"));
-        assertTrue(audit.contains("engine.readBatterySnapshot().chargeDesignMah"));
+        assertTrue(audit.contains("engine.readBatterySnapshot()"));
+        assertTrue(audit.contains("m.batteryChargeNowMah = battery.chargeNowMah"));
+        assertTrue(audit.contains("m.batteryChargeFullMah = battery.chargeFullMah"));
+        assertTrue(audit.contains("m.batteryLevelPercent"));
         assertTrue(audit.contains("s.nfcSupported"));
     }
 
