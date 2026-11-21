@@ -48,6 +48,11 @@ The legacy `app/src/test/resources/iphone_panic_corpus.tsv` contains 49 **recons
 ## Worldwide survey checkpoint (21 November 2026)
 The initial research seed has now expanded to **26 source-linked repair attempts** (13 self-reported successes, 11 self-reported failures, one partial/recurrent case, one unresolved case), spanning 10 indexed signature/code keys, 13 model identifiers and 21 grouped incidents. These are not independent phones or proof of repair probability. The global scope, additional linked sources, source conflicts and methodology are documented separately in [the world survey](IPHONE_WORLD_PANIC_REPAIR_SURVEY_2026-11-21.md). **The 49 reconstructed QA fixtures are still distinct from the outcome database.**
 
+## Separate, official Apple support layer (added 2026-11-21)
+The genuine Apple source index is intentionally **not a panic-code repair mapping**. It lives in `app/src/main/assets/iphone_apple_official_guidance_v1.tsv` (15 direct Apple support entries: 9 model-specific manuals, plus symptom workflows, Recovery Assistant diagnostics, and eligible post-repair assistance). Model-manual lookup is exact; older models without a verified manual retain only general official troubleshooting. Lab 4 shows this separately from published technician repair outcomes, and Lab 8 links a model-specific manual only if all eligible imported records have one known model identifier. It never adds an "Apple-confirmed successful fix" to the counted repair cases.
+
+Technical design, checked URLs and scope limitations: [Apple official service documentation](IPHONE_APPLE_OFFICIAL_SERVICE_SOURCES_2026-11-21.md).
+
 ## Quality rules
 1. **Success needs explicit first-hand post-repair feedback** in the cited thread; a selected/accepted answer is not enough.
 2. **Failure is evidence too**. Keep unsuccessful swaps, changed signatures, partial recovery and unresolved cases.
