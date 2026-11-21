@@ -2643,8 +2643,6 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
             }
         }
     }
-    if (rendered > 0 && alreadyShown == null) {        }
-    }
     if (rendered > 0 && alreadyShown == null) {
         logInfo(gr
                 ? "Οι ενδείξεις αποδίδονται από κανόνες GEL βάσει των αρχείων, όχι από πιστοποίηση βλάβης ή επισκευής."
