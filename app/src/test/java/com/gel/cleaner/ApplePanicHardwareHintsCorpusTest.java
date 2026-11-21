@@ -113,6 +113,46 @@ public final class ApplePanicHardwareHintsCorpusTest {
         assertEquals("MIC2", one(known).code);
     }
 
+    @Test public void explicitI2c3ClockFailureHasSpecificClueButGenericI2cDoesNot() {
+        String precise = "{\"product\":\"iPhone11,6\",\"panicString\":"
+                + "\"panic(cpu 0): i2c3::_checkBusStatus SCL is stuck low; bus error\"}";
+        ApplePanicHardwareHints.Assessment found =
+                ApplePanicHardwareHints.examineOne(precise);
+        boolean specific = false;
+        for (ApplePanicHardwareHints.Finding f : found.findings) {
+            if ("I2C3_SCL_STUCK_LOW".equals(f.code)) specific = true;
+        }
+        assertTrue(specific);
+        String broad = "{\"product\":\"iPhone11,6\",\"panicString\":"
+                + "\"panic(cpu 0): i2c3 bus error\"}";
+        for (ApplePanicHardwareHints.Finding f :
+                ApplePanicHardwareHints.examineOne(broad).findings) {
+            assertNotEquals("I2C3_SCL_STUCK_LOW", f.code);
+        }
+    }
+
+    @Test public void cs42l77IsADriverClueNotProofOfAudioIcFailure() {
+        String realClue = "{\"product\":\"iPhone12,5\",\"panicString\":"
+                + "\"panic(cpu 0): _enableHalogen:4104 Unknown sample rate on DAC @AppleCS42L77Audio.cpp\"}";
+        ApplePanicHardwareHints.Assessment parsed =
+                ApplePanicHardwareHints.examineOne(realClue);
+        boolean found = false;
+        for (ApplePanicHardwareHints.Finding item : parsed.findings) {
+            if ("AUDIO_CODEC_CS42L77".equals(item.code)) {
+                found = true;
+                assertTrue(item.areaGreek.contains("όχι απαραίτητα"));
+                assertTrue(item.checkEnglish.contains("front sensor flex"));
+            }
+        }
+        assertTrue(found);
+        String mereDriverMetadata = "{\"product\":\"iPhone12,5\",\"panicString\":"
+                + "\"panic(cpu 0): unrelated kernel error; AppleCS42L77Audio loaded\"}";
+        for (ApplePanicHardwareHints.Finding item :
+                ApplePanicHardwareHints.examineOne(mereDriverMetadata).findings) {
+            assertNotEquals("AUDIO_CODEC_CS42L77", item.code);
+        }
+    }
+
     private static String panic(String model, String code) {
         return "{\"product\":\"" + model + "\",\"panicString\":\"panic(cpu 1): "
                 + "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "

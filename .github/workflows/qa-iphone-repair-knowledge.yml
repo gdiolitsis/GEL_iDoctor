@@ -1,0 +1,53 @@
+name: iPhone repair knowledge base integrity QA
+
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/assets/iphone_panic_repair_knowledge_v1.tsv'
+      - 'app/src/main/assets/iphone_apple_official_guidance_v1.tsv'
+      - 'app/src/main/assets/iphone_apple_manual_chapters_v1.tsv'
+      - 'app/src/main/assets/iphone_apple_service_steps_v1.tsv'
+      - 'app/src/main/assets/iphone_apple_technical_findings_v1.tsv'
+      - 'app/src/main/java/com/gel/cleaner/AppleIPhoneTechnicalKnowledge.java'
+      - 'app/src/test/java/com/gel/cleaner/AppleIPhoneTechnicalKnowledgeTest.java'
+      - 'app/src/main/java/com/gel/cleaner/AppleIPhoneServiceSteps.java'
+      - 'app/src/test/java/com/gel/cleaner/AppleIPhoneServiceStepsTest.java'
+      - 'app/src/main/java/com/gel/cleaner/AppleIPhoneManualChapters.java'
+      - 'app/src/test/java/com/gel/cleaner/AppleIPhoneManualChaptersTest.java'
+      - 'docs/qa/IPHONE_APPLE_MANUAL_CHAPTER_TAXONOMY_2026-11-21.md'
+      - 'app/src/main/java/com/gel/cleaner/AppleOfficialServiceGuidance.java'
+      - 'app/src/test/java/com/gel/cleaner/AppleOfficialServiceGuidanceTest.java'
+      - 'docs/qa/IPHONE_APPLE_OFFICIAL_SERVICE_SOURCES_2026-11-21.md'
+      - 'docs/qa/IPHONE_WORLD_PANIC_REPAIR_SURVEY_2026-11-21.md'
+      - 'app/src/main/java/com/gel/cleaner/IPhonePanicRepairKnowledgeBase.java'
+      - 'app/src/main/java/com/gel/cleaner/IPhoneLabsActivity.java'
+      - 'app/src/test/java/com/gel/cleaner/IPhonePanicRepairKnowledgeBaseTest.java'
+      - 'app/src/test/java/com/gel/cleaner/IPhoneRepairKnowledgeIntegrationContractTest.java'
+      - 'docs/qa/IPHONE_PANIC_REPAIR_KNOWLEDGE_BASE_2026-11-21.md'
+      - '.github/workflows/qa-iphone-repair-knowledge.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  repair-case-provenance:
+    if: ${{ github.head_ref == 'research/iphone-panic-repair-knowledge-20261121' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Compile Android and run full unit suite including repair provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          ./gradlew :app:compileDebugJavaWithJavac :app:testDebugUnitTest --no-daemon --console=plain

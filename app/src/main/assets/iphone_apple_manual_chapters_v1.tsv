@@ -1,0 +1,1079 @@
+# Offline independently authored topical index of the official Apple model-manual Contents (2026-11-21).
+# A listed repair procedure is not a recommendation to replace a part for a GEL-recognized panic code.
+# Every URL opens the model's official manual; it is not automatically a direct chapter deep link.
+# Do not show directory-only manual sections as exact-model matches without verified hardware ID.
+entry_id	manual_id	phase	topic	section_gr	section_en	source_url	link_scope
+MANUAL_12_PRO_MAX_0001	MANUAL_12_PRO_MAX	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0002	MANUAL_12_PRO_MAX	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0003	MANUAL_12_PRO_MAX	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0004	MANUAL_12_PRO_MAX	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0005	MANUAL_12_PRO_MAX	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0006	MANUAL_12_PRO_MAX	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0007	MANUAL_12_PRO_MAX	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0008	MANUAL_12_PRO_MAX	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0009	MANUAL_12_PRO_MAX	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0010	MANUAL_12_PRO_MAX	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0011	MANUAL_12_PRO_MAX	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0012	MANUAL_12_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0013	MANUAL_12_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0014	MANUAL_12_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0015	MANUAL_12_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0016	MANUAL_12_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0017	MANUAL_12_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0018	MANUAL_12_PRO_MAX	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0019	MANUAL_12_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/101539	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0019_PARTS	MANUAL_12_PRO_MAX	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/101540	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0019_SCREWS	MANUAL_12_PRO_MAX	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/101541	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0019_TOOLS	MANUAL_12_PRO_MAX	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/101542	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0020	MANUAL_12_PRO_MAX	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0021	MANUAL_12_PRO_MAX	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0022	MANUAL_12_PRO_MAX	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/101543	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0023	MANUAL_12_PRO_MAX	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0024	MANUAL_12_PRO_MAX	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/101544	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0025	MANUAL_12_PRO_MAX	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/101545	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0026	MANUAL_12_PRO_MAX	PROCEDURE	SOUND	Ηχείο	Speaker	https://support.apple.com/en-us/101546	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0027	MANUAL_12_PRO_MAX	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/101547	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0028	MANUAL_12_PRO_MAX	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/101548	DIRECT_CHAPTER
+MANUAL_12_PRO_MAX_0029	MANUAL_12_PRO_MAX	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/101549	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0030	MANUAL_13_PRO_MAX	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0031	MANUAL_13_PRO_MAX	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0032	MANUAL_13_PRO_MAX	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0033	MANUAL_13_PRO_MAX	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0034	MANUAL_13_PRO_MAX	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0035	MANUAL_13_PRO_MAX	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0036	MANUAL_13_PRO_MAX	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0037	MANUAL_13_PRO_MAX	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0038	MANUAL_13_PRO_MAX	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0039	MANUAL_13_PRO_MAX	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0040	MANUAL_13_PRO_MAX	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0041	MANUAL_13_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0042	MANUAL_13_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0043	MANUAL_13_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0044	MANUAL_13_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0045	MANUAL_13_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0046	MANUAL_13_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0047	MANUAL_13_PRO_MAX	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0048	MANUAL_13_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100431	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0048_PARTS	MANUAL_13_PRO_MAX	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100432	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0048_SCREWS	MANUAL_13_PRO_MAX	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100433	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0048_TOOLS	MANUAL_13_PRO_MAX	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100434	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0049	MANUAL_13_PRO_MAX	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0050	MANUAL_13_PRO_MAX	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0051	MANUAL_13_PRO_MAX	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100435	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0052	MANUAL_13_PRO_MAX	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0053	MANUAL_13_PRO_MAX	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100436	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0054	MANUAL_13_PRO_MAX	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/100437	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0055	MANUAL_13_PRO_MAX	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100438	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0056	MANUAL_13_PRO_MAX	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100439	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0057	MANUAL_13_PRO_MAX	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100440	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0058	MANUAL_13_PRO_MAX	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/100441	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0059	MANUAL_13_PRO_MAX	PROCEDURE	SOUND	Πάνω ηχείο (έκδοση κεραίας mmWave)	Top Speaker (mmWave Antenna)	https://support.apple.com/en-us/100442	DIRECT_CHAPTER
+MANUAL_13_PRO_MAX_0060	MANUAL_13_PRO_MAX	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100443	DIRECT_CHAPTER
+MANUAL_14_0061	MANUAL_14	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_14_0062	MANUAL_14	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+MANUAL_14_0063	MANUAL_14	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_14_0064	MANUAL_14	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_14_0065	MANUAL_14	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_0066	MANUAL_14	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_0067	MANUAL_14	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_0068	MANUAL_14	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_14_0069	MANUAL_14	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_14_0070	MANUAL_14	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_0071	MANUAL_14	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_0072	MANUAL_14	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_0073	MANUAL_14	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_0074	MANUAL_14	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_0075	MANUAL_14	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_0076	MANUAL_14	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_0077	MANUAL_14	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_14_0078	MANUAL_14	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_0079	MANUAL_14	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100309	DIRECT_CHAPTER
+MANUAL_14_0079_PARTS	MANUAL_14	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100310	DIRECT_CHAPTER
+MANUAL_14_0079_SCREWS	MANUAL_14	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100311	DIRECT_CHAPTER
+MANUAL_14_0079_TOOLS	MANUAL_14	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100312	DIRECT_CHAPTER
+MANUAL_14_0080	MANUAL_14	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_14_0081	MANUAL_14	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_14_0082	MANUAL_14	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100313	DIRECT_CHAPTER
+MANUAL_14_0083	MANUAL_14	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+MANUAL_14_0084	MANUAL_14	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/100314	DIRECT_CHAPTER
+MANUAL_14_0085	MANUAL_14	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100315	DIRECT_CHAPTER
+MANUAL_14_0086	MANUAL_14	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100316	DIRECT_CHAPTER
+MANUAL_14_0087	MANUAL_14	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100317	DIRECT_CHAPTER
+MANUAL_14_0088	MANUAL_14	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100318	DIRECT_CHAPTER
+MANUAL_14_0089	MANUAL_14	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100319	DIRECT_CHAPTER
+MANUAL_14_0090	MANUAL_14	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/100320	DIRECT_CHAPTER
+MANUAL_14_0091	MANUAL_14	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/100321	DIRECT_CHAPTER
+MANUAL_14_PLUS_0092	MANUAL_14_PLUS	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_14_PLUS_0093	MANUAL_14_PLUS	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+MANUAL_14_PLUS_0094	MANUAL_14_PLUS	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_14_PLUS_0095	MANUAL_14_PLUS	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_14_PLUS_0096	MANUAL_14_PLUS	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_PLUS_0097	MANUAL_14_PLUS	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_PLUS_0098	MANUAL_14_PLUS	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_PLUS_0099	MANUAL_14_PLUS	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_14_PLUS_0100	MANUAL_14_PLUS	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_14_PLUS_0101	MANUAL_14_PLUS	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_PLUS_0102	MANUAL_14_PLUS	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_PLUS_0103	MANUAL_14_PLUS	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_PLUS_0104	MANUAL_14_PLUS	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PLUS_0105	MANUAL_14_PLUS	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PLUS_0106	MANUAL_14_PLUS	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PLUS_0107	MANUAL_14_PLUS	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PLUS_0108	MANUAL_14_PLUS	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_14_PLUS_0109	MANUAL_14_PLUS	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PLUS_0110	MANUAL_14_PLUS	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100323	DIRECT_CHAPTER
+MANUAL_14_PLUS_0110_PARTS	MANUAL_14_PLUS	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100324	DIRECT_CHAPTER
+MANUAL_14_PLUS_0110_SCREWS	MANUAL_14_PLUS	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100325	DIRECT_CHAPTER
+MANUAL_14_PLUS_0110_TOOLS	MANUAL_14_PLUS	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100326	DIRECT_CHAPTER
+MANUAL_14_PLUS_0111	MANUAL_14_PLUS	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_14_PLUS_0112	MANUAL_14_PLUS	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_14_PLUS_0113	MANUAL_14_PLUS	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100327	DIRECT_CHAPTER
+MANUAL_14_PLUS_0114	MANUAL_14_PLUS	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+MANUAL_14_PLUS_0115	MANUAL_14_PLUS	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/100328	DIRECT_CHAPTER
+MANUAL_14_PLUS_0116	MANUAL_14_PLUS	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100329	DIRECT_CHAPTER
+MANUAL_14_PLUS_0117	MANUAL_14_PLUS	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100330	DIRECT_CHAPTER
+MANUAL_14_PLUS_0118	MANUAL_14_PLUS	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100331	DIRECT_CHAPTER
+MANUAL_14_PLUS_0119	MANUAL_14_PLUS	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100332	DIRECT_CHAPTER
+MANUAL_14_PLUS_0120	MANUAL_14_PLUS	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100346	DIRECT_CHAPTER
+MANUAL_14_PLUS_0121	MANUAL_14_PLUS	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/100347	DIRECT_CHAPTER
+MANUAL_14_PLUS_0122	MANUAL_14_PLUS	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/100348	DIRECT_CHAPTER
+MANUAL_14_PRO_0123	MANUAL_14_PRO	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_14_PRO_0124	MANUAL_14_PRO	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+MANUAL_14_PRO_0125	MANUAL_14_PRO	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_14_PRO_0126	MANUAL_14_PRO	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_14_PRO_0127	MANUAL_14_PRO	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_PRO_0128	MANUAL_14_PRO	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_PRO_0129	MANUAL_14_PRO	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_PRO_0130	MANUAL_14_PRO	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_14_PRO_0131	MANUAL_14_PRO	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_14_PRO_0132	MANUAL_14_PRO	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_PRO_0133	MANUAL_14_PRO	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_PRO_0134	MANUAL_14_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_PRO_0135	MANUAL_14_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PRO_0136	MANUAL_14_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PRO_0137	MANUAL_14_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PRO_0138	MANUAL_14_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PRO_0139	MANUAL_14_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_14_PRO_0140	MANUAL_14_PRO	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PRO_0141	MANUAL_14_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100371	DIRECT_CHAPTER
+MANUAL_14_PRO_0141_PARTS	MANUAL_14_PRO	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100372	DIRECT_CHAPTER
+MANUAL_14_PRO_0141_SCREWS	MANUAL_14_PRO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100373	DIRECT_CHAPTER
+MANUAL_14_PRO_0141_TOOLS	MANUAL_14_PRO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100374	DIRECT_CHAPTER
+MANUAL_14_PRO_0142	MANUAL_14_PRO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_14_PRO_0143	MANUAL_14_PRO	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_14_PRO_0144	MANUAL_14_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100375	DIRECT_CHAPTER
+MANUAL_14_PRO_0145	MANUAL_14_PRO	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+MANUAL_14_PRO_0146	MANUAL_14_PRO	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100376	DIRECT_CHAPTER
+MANUAL_14_PRO_0147	MANUAL_14_PRO	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100377	DIRECT_CHAPTER
+MANUAL_14_PRO_0148	MANUAL_14_PRO	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/100378	DIRECT_CHAPTER
+MANUAL_14_PRO_0149	MANUAL_14_PRO	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100380	DIRECT_CHAPTER
+MANUAL_14_PRO_0150	MANUAL_14_PRO	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100381	DIRECT_CHAPTER
+MANUAL_14_PRO_0151	MANUAL_14_PRO	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/100382	DIRECT_CHAPTER
+MANUAL_14_PRO_0152	MANUAL_14_PRO	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100383	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0153	MANUAL_14_PRO_MAX	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0154	MANUAL_14_PRO_MAX	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0155	MANUAL_14_PRO_MAX	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0156	MANUAL_14_PRO_MAX	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0157	MANUAL_14_PRO_MAX	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0158	MANUAL_14_PRO_MAX	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0159	MANUAL_14_PRO_MAX	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0160	MANUAL_14_PRO_MAX	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0161	MANUAL_14_PRO_MAX	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0162	MANUAL_14_PRO_MAX	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0163	MANUAL_14_PRO_MAX	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0164	MANUAL_14_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0165	MANUAL_14_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0166	MANUAL_14_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0167	MANUAL_14_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0168	MANUAL_14_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0169	MANUAL_14_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0170	MANUAL_14_PRO_MAX	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0171	MANUAL_14_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100358	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0171_PARTS	MANUAL_14_PRO_MAX	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100359	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0171_SCREWS	MANUAL_14_PRO_MAX	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100360	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0171_TOOLS	MANUAL_14_PRO_MAX	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100361	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0172	MANUAL_14_PRO_MAX	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0173	MANUAL_14_PRO_MAX	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0174	MANUAL_14_PRO_MAX	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100362	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0175	MANUAL_14_PRO_MAX	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0176	MANUAL_14_PRO_MAX	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100363	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0177	MANUAL_14_PRO_MAX	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100364	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0178	MANUAL_14_PRO_MAX	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/100365	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0179	MANUAL_14_PRO_MAX	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100366	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0180	MANUAL_14_PRO_MAX	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100367	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0181	MANUAL_14_PRO_MAX	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/100368	DIRECT_CHAPTER
+MANUAL_14_PRO_MAX_0182	MANUAL_14_PRO_MAX	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100369	DIRECT_CHAPTER
+MANUAL_15_0183	MANUAL_15	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_15_0184	MANUAL_15	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+MANUAL_15_0185	MANUAL_15	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_15_0186	MANUAL_15	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_15_0187	MANUAL_15	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_15_0188	MANUAL_15	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_15_0189	MANUAL_15	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_15_0190	MANUAL_15	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_15_0191	MANUAL_15	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_15_0192	MANUAL_15	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_15_0193	MANUAL_15	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_15_0194	MANUAL_15	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_15_0194_MECHANICAL	MANUAL_15	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (μηχανικά)	Ambient light sensor, proximity sensor, or compass issues (Mechanical)	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_0195	MANUAL_15	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_0196	MANUAL_15	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_0197	MANUAL_15	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_0198	MANUAL_15	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_0199	MANUAL_15	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_15_0200	MANUAL_15	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_0201	MANUAL_15	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/104901	DIRECT_CHAPTER
+MANUAL_15_0201_PARTS	MANUAL_15	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/104902	DIRECT_CHAPTER
+MANUAL_15_0201_SCREWS	MANUAL_15	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/104903	DIRECT_CHAPTER
+MANUAL_15_0201_TOOLS	MANUAL_15	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/104904	DIRECT_CHAPTER
+MANUAL_15_0202	MANUAL_15	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_15_0203	MANUAL_15	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_15_0204	MANUAL_15	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+MANUAL_15_0205	MANUAL_15	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/120014	DIRECT_CHAPTER
+MANUAL_15_0206	MANUAL_15	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/104906	DIRECT_CHAPTER
+MANUAL_15_0207	MANUAL_15	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/104907	DIRECT_CHAPTER
+MANUAL_15_0208	MANUAL_15	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/104908	DIRECT_CHAPTER
+MANUAL_15_0209	MANUAL_15	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/104909	DIRECT_CHAPTER
+MANUAL_15_0210	MANUAL_15	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/104910	DIRECT_CHAPTER
+MANUAL_15_0211	MANUAL_15	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/104911	DIRECT_CHAPTER
+MANUAL_15_0212	MANUAL_15	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/104912	DIRECT_CHAPTER
+MANUAL_15_0213	MANUAL_15	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/104913	DIRECT_CHAPTER
+MANUAL_15_0214	MANUAL_15	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/122386	DIRECT_CHAPTER
+MANUAL_15_0215	MANUAL_15	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/120605	DIRECT_CHAPTER
+MANUAL_15_PRO_0216	MANUAL_15_PRO	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_15_PRO_0217	MANUAL_15_PRO	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+MANUAL_15_PRO_0218	MANUAL_15_PRO	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_15_PRO_0219	MANUAL_15_PRO	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_15_PRO_0220	MANUAL_15_PRO	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_15_PRO_0221	MANUAL_15_PRO	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_15_PRO_0222	MANUAL_15_PRO	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_15_PRO_0223	MANUAL_15_PRO	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_15_PRO_0224	MANUAL_15_PRO	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_15_PRO_0225	MANUAL_15_PRO	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_15_PRO_0226	MANUAL_15_PRO	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_15_PRO_0227	MANUAL_15_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_15_PRO_0228	MANUAL_15_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_PRO_0229	MANUAL_15_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_PRO_0230	MANUAL_15_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_PRO_0231	MANUAL_15_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_PRO_0232	MANUAL_15_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_15_PRO_0233	MANUAL_15_PRO	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_PRO_0234	MANUAL_15_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/104873	DIRECT_CHAPTER
+MANUAL_15_PRO_0234_PARTS	MANUAL_15_PRO	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/104874	DIRECT_CHAPTER
+MANUAL_15_PRO_0234_SCREWS	MANUAL_15_PRO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/104875	DIRECT_CHAPTER
+MANUAL_15_PRO_0234_TOOLS	MANUAL_15_PRO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/104876	DIRECT_CHAPTER
+MANUAL_15_PRO_0235	MANUAL_15_PRO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_15_PRO_0236	MANUAL_15_PRO	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_15_PRO_0237	MANUAL_15_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+MANUAL_15_PRO_0238	MANUAL_15_PRO	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/104877	DIRECT_CHAPTER
+MANUAL_15_PRO_0239	MANUAL_15_PRO	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/104878	DIRECT_CHAPTER
+MANUAL_15_PRO_0240	MANUAL_15_PRO	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/104879	DIRECT_CHAPTER
+MANUAL_15_PRO_0241	MANUAL_15_PRO	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/104880	DIRECT_CHAPTER
+MANUAL_15_PRO_0242	MANUAL_15_PRO	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/104881	DIRECT_CHAPTER
+MANUAL_15_PRO_0243	MANUAL_15_PRO	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/104882	DIRECT_CHAPTER
+MANUAL_15_PRO_0244	MANUAL_15_PRO	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/104885	DIRECT_CHAPTER
+MANUAL_15_PRO_0245	MANUAL_15_PRO	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/104886	DIRECT_CHAPTER
+MANUAL_16_PRO_0246	MANUAL_16_PRO	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_16_PRO_0247	MANUAL_16_PRO	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+MANUAL_16_PRO_0248	MANUAL_16_PRO	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_16_PRO_0249	MANUAL_16_PRO	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_16_PRO_0250	MANUAL_16_PRO	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_16_PRO_0251	MANUAL_16_PRO	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_16_PRO_0252	MANUAL_16_PRO	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_16_PRO_0253	MANUAL_16_PRO	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_16_PRO_0254	MANUAL_16_PRO	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_16_PRO_0255	MANUAL_16_PRO	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_16_PRO_0256	MANUAL_16_PRO	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_16_PRO_0257	MANUAL_16_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_16_PRO_0257_DISPLAY	MANUAL_16_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_16_PRO_0258	MANUAL_16_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_16_PRO_0259	MANUAL_16_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_16_PRO_0260	MANUAL_16_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_16_PRO_0261	MANUAL_16_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_16_PRO_0262	MANUAL_16_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_16_PRO_0263	MANUAL_16_PRO	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_16_PRO_0264	MANUAL_16_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/120805	DIRECT_CHAPTER
+MANUAL_16_PRO_0264_SCREWS	MANUAL_16_PRO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/120806	DIRECT_CHAPTER
+MANUAL_16_PRO_0264_TOOLS	MANUAL_16_PRO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/120986	DIRECT_CHAPTER
+MANUAL_16_PRO_0265	MANUAL_16_PRO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_16_PRO_0266	MANUAL_16_PRO	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_16_PRO_0267	MANUAL_16_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+MANUAL_16_PRO_0268	MANUAL_16_PRO	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+MANUAL_16_PRO_0269	MANUAL_16_PRO	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/120807	DIRECT_CHAPTER
+MANUAL_16_PRO_0270	MANUAL_16_PRO	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/120808	DIRECT_CHAPTER
+MANUAL_16_PRO_0271	MANUAL_16_PRO	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/120809	DIRECT_CHAPTER
+MANUAL_16_PRO_0272	MANUAL_16_PRO	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/120810	DIRECT_CHAPTER
+MANUAL_16_PRO_0273	MANUAL_16_PRO	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/120811	DIRECT_CHAPTER
+MANUAL_16_PRO_0274	MANUAL_16_PRO	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/120812	DIRECT_CHAPTER
+MANUAL_16_PRO_0275	MANUAL_16_PRO	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/120813	DIRECT_CHAPTER
+MANUAL_16_PRO_0276	MANUAL_16_PRO	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/120814	DIRECT_CHAPTER
+MANUAL_16_PRO_0277	MANUAL_16_PRO	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/120815	DIRECT_CHAPTER
+MANUAL_16_PRO_0278	MANUAL_16_PRO	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/120817	DIRECT_CHAPTER
+MANUAL_16_PRO_0279	MANUAL_16_PRO	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/120816	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0280	DIRECTORY_17_PRO	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0281	DIRECTORY_17_PRO	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0282	DIRECTORY_17_PRO	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0283	DIRECTORY_17_PRO	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0284	DIRECTORY_17_PRO	TROUBLESHOOT	BATTERY	Μπαταρία	Battery issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0285	DIRECTORY_17_PRO	TROUBLESHOOT	POWER	Τροφοδοσία	Power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0286	DIRECTORY_17_PRO	TROUBLESHOOT	WIRED_CHARGING	Ενσύρματη φόρτιση	Wired charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0287	DIRECTORY_17_PRO	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0288	DIRECTORY_17_PRO	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0289	DIRECTORY_17_PRO	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0290	DIRECTORY_17_PRO	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0291	DIRECTORY_17_PRO	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0292	DIRECTORY_17_PRO	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0293	DIRECTORY_17_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0293_DISPLAY	DIRECTORY_17_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0294	DIRECTORY_17_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0295	DIRECTORY_17_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0296	DIRECTORY_17_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0297	DIRECTORY_17_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0298	DIRECTORY_17_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0299	DIRECTORY_17_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/124248	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0299_SCREWS	DIRECTORY_17_PRO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/124249	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0299_TOOLS	DIRECTORY_17_PRO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/124250	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0300	DIRECTORY_17_PRO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0301	DIRECTORY_17_PRO	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0302	DIRECTORY_17_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0303	DIRECTORY_17_PRO	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0304	DIRECTORY_17_PRO	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/123365	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0305	DIRECTORY_17_PRO	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/123366	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0306	DIRECTORY_17_PRO	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/123367	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0307	DIRECTORY_17_PRO	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/123368	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0308	DIRECTORY_17_PRO	PROCEDURE	CAMERA	Μπροστινή κάμερα	Front Camera	https://support.apple.com/en-us/123369	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0309	DIRECTORY_17_PRO	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/123370	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0310	DIRECTORY_17_PRO	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/123371	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0311	DIRECTORY_17_PRO	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/123372	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0312	DIRECTORY_17_PRO	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/123373	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0313	DIRECTORY_17_PRO	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/123374	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0314	DIRECTORY_17_PRO	PROCEDURE	BOARD	Κεντρική πλακέτα	Logic Board	https://support.apple.com/en-us/123375	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0315	DIRECTORY_17_PRO	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/123376	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0316	DIRECTORY_18_PRO	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0317	DIRECTORY_18_PRO	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0318	DIRECTORY_18_PRO	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0319	DIRECTORY_18_PRO	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0320	DIRECTORY_18_PRO	TROUBLESHOOT	BATTERY	Μπαταρία	Battery issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0321	DIRECTORY_18_PRO	TROUBLESHOOT	POWER	Τροφοδοσία	Power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0322	DIRECTORY_18_PRO	TROUBLESHOOT	WIRED_CHARGING	Ενσύρματη φόρτιση	Wired charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0323	DIRECTORY_18_PRO	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0324	DIRECTORY_18_PRO	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0325	DIRECTORY_18_PRO	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0326	DIRECTORY_18_PRO	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0327	DIRECTORY_18_PRO	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0328	DIRECTORY_18_PRO	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0329	DIRECTORY_18_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0329_DISPLAY	DIRECTORY_18_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0330	DIRECTORY_18_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0331	DIRECTORY_18_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0332	DIRECTORY_18_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Vibration or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0333	DIRECTORY_18_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0334	DIRECTORY_18_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0335	DIRECTORY_18_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/127390	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0335_SCREWS	DIRECTORY_18_PRO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/127391	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0335_TOOLS	DIRECTORY_18_PRO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/127392	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0336	DIRECTORY_18_PRO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0337	DIRECTORY_18_PRO	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0338	DIRECTORY_18_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0339	DIRECTORY_18_PRO	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0340	DIRECTORY_18_PRO	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/127396	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0341	DIRECTORY_18_PRO	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/127397	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0342	DIRECTORY_18_PRO	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/127398	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0343	DIRECTORY_18_PRO	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/127399	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0344	DIRECTORY_18_PRO	PROCEDURE	CAMERA	Μπροστινή κάμερα	Front Camera	https://support.apple.com/en-us/127400	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0345	DIRECTORY_18_PRO	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/127401	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0346	DIRECTORY_18_PRO	PROCEDURE	SOUND	Κάτω ηχείο (eSIM)	Bottom Speaker (eSIM)	https://support.apple.com/en-us/127402	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0347	DIRECTORY_18_PRO	PROCEDURE	SOUND	Κάτω ηχείο (pSIM)	Bottom Speaker (pSIM)	https://support.apple.com/en-us/127403	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0348	DIRECTORY_18_PRO	PROCEDURE	HAPTIC	Μηχανισμός δόνησης (eSIM)	Taptic Engine (eSIM)	https://support.apple.com/en-us/127404	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0349	DIRECTORY_18_PRO	PROCEDURE	HAPTIC	Μηχανισμός δόνησης (pSIM)	Taptic Engine (pSIM)	https://support.apple.com/en-us/127405	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0350	DIRECTORY_18_PRO	PROCEDURE	SOUND	Κύριο μικρόφωνο (eSIM)	Main Microphone (eSIM)	https://support.apple.com/en-us/127406	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0351	DIRECTORY_18_PRO	PROCEDURE	SOUND	Κύριο μικρόφωνο (pSIM)	Main Microphone (pSIM)	https://support.apple.com/en-us/127407	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0352	DIRECTORY_18_PRO	PROCEDURE	WIRED_CHARGING	Θύρα USB-C (eSIM)	USB-C Connector (eSIM)	https://support.apple.com/en-us/127408	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0353	DIRECTORY_18_PRO	PROCEDURE	WIRED_CHARGING	Θύρα USB-C (pSIM)	USB-C Connector (pSIM)	https://support.apple.com/en-us/127409	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0354	DIRECTORY_18_PRO	PROCEDURE	BOARD	Κεντρική πλακέτα (mmWave)	Logic Board (mmWave Antenna)	https://support.apple.com/en-us/127410	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0355	DIRECTORY_18_PRO	PROCEDURE	BOARD	Κεντρική πλακέτα (χωρίς mmWave)	Logic Board (without mmWave Antenna)	https://support.apple.com/en-us/127411	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0356	DIRECTORY_18_PRO	PROCEDURE	SIM	Πλαίσιο (eSIM)	Enclosure (eSIM)	https://support.apple.com/en-us/127412	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0357	DIRECTORY_18_PRO	PROCEDURE	SIM	Πλαίσιο (pSIM)	Enclosure (pSIM)	https://support.apple.com/en-us/127413	DIRECT_CHAPTER
+MANUAL_12_0358	MANUAL_12	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_12_0359	MANUAL_12	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+MANUAL_12_0360	MANUAL_12	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_12_0361	MANUAL_12	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_12_0362	MANUAL_12	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_12_0363	MANUAL_12	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_12_0364	MANUAL_12	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_12_0365	MANUAL_12	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_12_0366	MANUAL_12	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_12_0367	MANUAL_12	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_12_0368	MANUAL_12	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_12_0369	MANUAL_12	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_12_0370	MANUAL_12	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_12_0371	MANUAL_12	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_12_0372	MANUAL_12	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_12_0373	MANUAL_12	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_12_0374	MANUAL_12	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_12_0375	MANUAL_12	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_12_0376	MANUAL_12	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100465	DIRECT_CHAPTER
+MANUAL_12_0376_PARTS	MANUAL_12	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100466	DIRECT_CHAPTER
+MANUAL_12_0376_SCREWS	MANUAL_12	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100467	DIRECT_CHAPTER
+MANUAL_12_0376_TOOLS	MANUAL_12	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100468	DIRECT_CHAPTER
+MANUAL_12_0377	MANUAL_12	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_12_0378	MANUAL_12	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_12_0379	MANUAL_12	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100469	DIRECT_CHAPTER
+MANUAL_12_0380	MANUAL_12	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+MANUAL_12_0381	MANUAL_12	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100470	DIRECT_CHAPTER
+MANUAL_12_0382	MANUAL_12	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100471	DIRECT_CHAPTER
+MANUAL_12_0383	MANUAL_12	PROCEDURE	SOUND	Ηχείο	Speaker	https://support.apple.com/en-us/100472	DIRECT_CHAPTER
+MANUAL_12_0384	MANUAL_12	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100473	DIRECT_CHAPTER
+MANUAL_12_0385	MANUAL_12	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100474	DIRECT_CHAPTER
+MANUAL_12_0386	MANUAL_12	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100475	DIRECT_CHAPTER
+MANUAL_13_0387	MANUAL_13	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_13_0388	MANUAL_13	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+MANUAL_13_0389	MANUAL_13	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_13_0390	MANUAL_13	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_13_0391	MANUAL_13	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_13_0392	MANUAL_13	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_13_0393	MANUAL_13	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_13_0394	MANUAL_13	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_13_0395	MANUAL_13	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_13_0396	MANUAL_13	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_13_0397	MANUAL_13	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_13_0398	MANUAL_13	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_13_0399	MANUAL_13	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_13_0400	MANUAL_13	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_13_0401	MANUAL_13	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_13_0402	MANUAL_13	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_13_0403	MANUAL_13	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_13_0404	MANUAL_13	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_13_0405	MANUAL_13	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100403	DIRECT_CHAPTER
+MANUAL_13_0405_PARTS	MANUAL_13	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100404	DIRECT_CHAPTER
+MANUAL_13_0405_SCREWS	MANUAL_13	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100405	DIRECT_CHAPTER
+MANUAL_13_0405_TOOLS	MANUAL_13	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100406	DIRECT_CHAPTER
+MANUAL_13_0406	MANUAL_13	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_13_0407	MANUAL_13	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_13_0408	MANUAL_13	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100407	DIRECT_CHAPTER
+MANUAL_13_0409	MANUAL_13	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+MANUAL_13_0410	MANUAL_13	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100408	DIRECT_CHAPTER
+MANUAL_13_0411	MANUAL_13	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/100409	DIRECT_CHAPTER
+MANUAL_13_0412	MANUAL_13	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100410	DIRECT_CHAPTER
+MANUAL_13_0413	MANUAL_13	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100411	DIRECT_CHAPTER
+MANUAL_13_0414	MANUAL_13	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100412	DIRECT_CHAPTER
+MANUAL_13_0415	MANUAL_13	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/100413	DIRECT_CHAPTER
+MANUAL_13_0416	MANUAL_13	PROCEDURE	SOUND	Πάνω ηχείο (έκδοση κεραίας mmWave)	Top Speaker (mmWave Antenna)	https://support.apple.com/en-us/100414	DIRECT_CHAPTER
+MANUAL_13_0417	MANUAL_13	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100415	DIRECT_CHAPTER
+MANUAL_SE3_0418	MANUAL_SE3	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_SE3_0419	MANUAL_SE3	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100304	DIRECT_CHAPTER
+MANUAL_SE3_0420	MANUAL_SE3	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_SE3_0421	MANUAL_SE3	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_SE3_0422	MANUAL_SE3	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_SE3_0423	MANUAL_SE3	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_SE3_0424	MANUAL_SE3	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_SE3_0425	MANUAL_SE3	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_SE3_0426	MANUAL_SE3	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_SE3_0427	MANUAL_SE3	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_SE3_0428	MANUAL_SE3	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_SE3_0429	MANUAL_SE3	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_SE3_0430	MANUAL_SE3	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_SE3_0431	MANUAL_SE3	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_SE3_0432	MANUAL_SE3	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_SE3_0433	MANUAL_SE3	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_SE3_0434	MANUAL_SE3	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+MANUAL_SE3_0435	MANUAL_SE3	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_SE3_0436	MANUAL_SE3	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/101528	DIRECT_CHAPTER
+MANUAL_SE3_0436_PARTS	MANUAL_SE3	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/101529	DIRECT_CHAPTER
+MANUAL_SE3_0436_SCREWS	MANUAL_SE3	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/101530	DIRECT_CHAPTER
+MANUAL_SE3_0436_TOOLS	MANUAL_SE3	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/101531	DIRECT_CHAPTER
+MANUAL_SE3_0437	MANUAL_SE3	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_SE3_0438	MANUAL_SE3	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/101532	DIRECT_CHAPTER
+MANUAL_SE3_0439	MANUAL_SE3	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/101533	DIRECT_CHAPTER
+MANUAL_SE3_0440	MANUAL_SE3	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/101534	DIRECT_CHAPTER
+MANUAL_SE3_0441	MANUAL_SE3	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/101535	DIRECT_CHAPTER
+MANUAL_SE3_0442	MANUAL_SE3	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/101536	DIRECT_CHAPTER
+MANUAL_SE3_0443	MANUAL_SE3	PROCEDURE	SOUND	Ηχείο	Speaker	https://support.apple.com/en-us/101537	DIRECT_CHAPTER
+DIRECTORY_16_0444	DIRECTORY_16	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_16_0445	DIRECTORY_16	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_16_0446	DIRECTORY_16	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_16_0447	DIRECTORY_16	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_16_0448	DIRECTORY_16	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16_0449	DIRECTORY_16	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16_0450	DIRECTORY_16	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16_0451	DIRECTORY_16	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_16_0452	DIRECTORY_16	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_16_0453	DIRECTORY_16	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16_0454	DIRECTORY_16	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16_0455	DIRECTORY_16	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_0455_DISPLAY	DIRECTORY_16	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16_0456	DIRECTORY_16	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_0457	DIRECTORY_16	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_0458	DIRECTORY_16	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_0459	DIRECTORY_16	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_0460	DIRECTORY_16	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_16_0461	DIRECTORY_16	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_0462	DIRECTORY_16	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/120648	DIRECT_CHAPTER
+DIRECTORY_16_0462_SCREWS	DIRECTORY_16	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/120649	DIRECT_CHAPTER
+DIRECTORY_16_0462_TOOLS	DIRECTORY_16	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/120983	DIRECT_CHAPTER
+DIRECTORY_16_0463	DIRECTORY_16	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_16_0464	DIRECTORY_16	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_16_0465	DIRECTORY_16	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_16_0466	DIRECTORY_16	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_16_0467	DIRECTORY_16	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/120638	DIRECT_CHAPTER
+DIRECTORY_16_0468	DIRECTORY_16	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/120639	DIRECT_CHAPTER
+DIRECTORY_16_0469	DIRECTORY_16	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/120640	DIRECT_CHAPTER
+DIRECTORY_16_0470	DIRECTORY_16	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/120641	DIRECT_CHAPTER
+DIRECTORY_16_0471	DIRECTORY_16	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/120642	DIRECT_CHAPTER
+DIRECTORY_16_0472	DIRECTORY_16	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/120643	DIRECT_CHAPTER
+DIRECTORY_16_0473	DIRECTORY_16	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/120644	DIRECT_CHAPTER
+DIRECTORY_16_0474	DIRECTORY_16	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/120645	DIRECT_CHAPTER
+DIRECTORY_16_0475	DIRECTORY_16	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/120646	DIRECT_CHAPTER
+DIRECTORY_16_0476	DIRECTORY_16	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/120654	DIRECT_CHAPTER
+DIRECTORY_16_0477	DIRECTORY_16	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/120655	DIRECT_CHAPTER
+DIRECTORY_17_0478	DIRECTORY_17	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_17_0479	DIRECTORY_17	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_17_0480	DIRECTORY_17	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_17_0481	DIRECTORY_17	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_17_0482	DIRECTORY_17	TROUBLESHOOT	BATTERY	Μπαταρία	Battery issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_0483	DIRECTORY_17	TROUBLESHOOT	POWER	Τροφοδοσία	Power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_0484	DIRECTORY_17	TROUBLESHOOT	WIRED_CHARGING	Ενσύρματη φόρτιση	Wired charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_0485	DIRECTORY_17	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_0486	DIRECTORY_17	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_0487	DIRECTORY_17	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_17_0488	DIRECTORY_17	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_17_0489	DIRECTORY_17	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17_0490	DIRECTORY_17	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17_0491	DIRECTORY_17	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17_0491_MECHANICAL	DIRECTORY_17	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (μηχανικά)	Ambient light sensor, proximity sensor, or compass issues (Mechanical)	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_0492	DIRECTORY_17	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_0493	DIRECTORY_17	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_0494	DIRECTORY_17	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_0495	DIRECTORY_17	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_0496	DIRECTORY_17	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_17_0497	DIRECTORY_17	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/123034	DIRECT_CHAPTER
+DIRECTORY_17_0497_SCREWS	DIRECTORY_17	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/123037	DIRECT_CHAPTER
+DIRECTORY_17_0497_TOOLS	DIRECTORY_17	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/123036	DIRECT_CHAPTER
+DIRECTORY_17_0498	DIRECTORY_17	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_17_0499	DIRECTORY_17	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_17_0500	DIRECTORY_17	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_17_0501	DIRECTORY_17	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_17_0502	DIRECTORY_17	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/123038	DIRECT_CHAPTER
+DIRECTORY_17_0503	DIRECTORY_17	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/123039	DIRECT_CHAPTER
+DIRECTORY_17_0504	DIRECTORY_17	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/123040	DIRECT_CHAPTER
+DIRECTORY_17_0505	DIRECTORY_17	PROCEDURE	CAMERA	Μπροστινή κάμερα	Front Camera	https://support.apple.com/en-us/123041	DIRECT_CHAPTER
+DIRECTORY_17_0506	DIRECTORY_17	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/123044	DIRECT_CHAPTER
+DIRECTORY_17_0507	DIRECTORY_17	PROCEDURE	BOARD	Κεντρική πλακέτα	Logic Board	https://support.apple.com/en-us/123042	DIRECT_CHAPTER
+DIRECTORY_17_0508	DIRECTORY_17	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/123045	DIRECT_CHAPTER
+DIRECTORY_17_0509	DIRECTORY_17	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/123046	DIRECT_CHAPTER
+DIRECTORY_17_0510	DIRECTORY_17	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/123047	DIRECT_CHAPTER
+DIRECTORY_17_0511	DIRECTORY_17	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/123048	DIRECT_CHAPTER
+DIRECTORY_17_0512	DIRECTORY_17	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/123049	DIRECT_CHAPTER
+DIRECTORY_17_0513	DIRECTORY_17	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/123050	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0514	DIRECTORY_12_MINI	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0515	DIRECTORY_12_MINI	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0516	DIRECTORY_12_MINI	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0517	DIRECTORY_12_MINI	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0518	DIRECTORY_12_MINI	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0519	DIRECTORY_12_MINI	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0520	DIRECTORY_12_MINI	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0521	DIRECTORY_12_MINI	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0522	DIRECTORY_12_MINI	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0523	DIRECTORY_12_MINI	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0524	DIRECTORY_12_MINI	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0525	DIRECTORY_12_MINI	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0526	DIRECTORY_12_MINI	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0527	DIRECTORY_12_MINI	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0528	DIRECTORY_12_MINI	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0529	DIRECTORY_12_MINI	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0530	DIRECTORY_12_MINI	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0531	DIRECTORY_12_MINI	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0532	DIRECTORY_12_MINI	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100453	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0532_PARTS	DIRECTORY_12_MINI	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100454	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0532_SCREWS	DIRECTORY_12_MINI	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100455	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0532_TOOLS	DIRECTORY_12_MINI	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100456	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0533	DIRECTORY_12_MINI	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0534	DIRECTORY_12_MINI	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0535	DIRECTORY_12_MINI	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100457	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0536	DIRECTORY_12_MINI	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100458	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0537	DIRECTORY_12_MINI	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100459	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0538	DIRECTORY_12_MINI	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100460	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0539	DIRECTORY_12_MINI	PROCEDURE	SOUND	Ηχείο	Speaker	https://support.apple.com/en-us/100461	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0540	DIRECTORY_12_MINI	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100462	DIRECT_CHAPTER
+DIRECTORY_12_MINI_0541	DIRECTORY_12_MINI	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100463	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0542	DIRECTORY_12_PRO	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0543	DIRECTORY_12_PRO	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0544	DIRECTORY_12_PRO	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0545	DIRECTORY_12_PRO	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0546	DIRECTORY_12_PRO	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0547	DIRECTORY_12_PRO	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0548	DIRECTORY_12_PRO	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0549	DIRECTORY_12_PRO	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0550	DIRECTORY_12_PRO	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0551	DIRECTORY_12_PRO	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0552	DIRECTORY_12_PRO	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0553	DIRECTORY_12_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0554	DIRECTORY_12_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0555	DIRECTORY_12_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0556	DIRECTORY_12_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0557	DIRECTORY_12_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0558	DIRECTORY_12_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0559	DIRECTORY_12_PRO	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0560	DIRECTORY_12_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100477	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0560_PARTS	DIRECTORY_12_PRO	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100478	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0560_SCREWS	DIRECTORY_12_PRO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100479	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0560_TOOLS	DIRECTORY_12_PRO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100480	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0561	DIRECTORY_12_PRO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0562	DIRECTORY_12_PRO	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0563	DIRECTORY_12_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100481	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0564	DIRECTORY_12_PRO	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0565	DIRECTORY_12_PRO	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100482	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0566	DIRECTORY_12_PRO	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100483	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0567	DIRECTORY_12_PRO	PROCEDURE	SOUND	Ηχείο	Speaker	https://support.apple.com/en-us/100484	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0568	DIRECTORY_12_PRO	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100485	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0569	DIRECTORY_12_PRO	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100486	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0570	DIRECTORY_12_PRO	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100487	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0571	DIRECTORY_13_MINI	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0572	DIRECTORY_13_MINI	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0573	DIRECTORY_13_MINI	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0574	DIRECTORY_13_MINI	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0575	DIRECTORY_13_MINI	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0576	DIRECTORY_13_MINI	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0577	DIRECTORY_13_MINI	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0578	DIRECTORY_13_MINI	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0579	DIRECTORY_13_MINI	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0580	DIRECTORY_13_MINI	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0581	DIRECTORY_13_MINI	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0582	DIRECTORY_13_MINI	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0583	DIRECTORY_13_MINI	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0584	DIRECTORY_13_MINI	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0585	DIRECTORY_13_MINI	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0586	DIRECTORY_13_MINI	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0587	DIRECTORY_13_MINI	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0588	DIRECTORY_13_MINI	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0589	DIRECTORY_13_MINI	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100385	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0589_PARTS	DIRECTORY_13_MINI	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100386	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0589_SCREWS	DIRECTORY_13_MINI	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100387	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0589_TOOLS	DIRECTORY_13_MINI	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100388	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0590	DIRECTORY_13_MINI	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0591	DIRECTORY_13_MINI	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0592	DIRECTORY_13_MINI	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100389	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0593	DIRECTORY_13_MINI	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100390	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0594	DIRECTORY_13_MINI	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/100391	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0595	DIRECTORY_13_MINI	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100392	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0596	DIRECTORY_13_MINI	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100393	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0597	DIRECTORY_13_MINI	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100394	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0598	DIRECTORY_13_MINI	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/100395	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0599	DIRECTORY_13_MINI	PROCEDURE	SOUND	Πάνω ηχείο (έκδοση κεραίας mmWave)	Top Speaker (mmWave Antenna)	https://support.apple.com/en-us/100396	DIRECT_CHAPTER
+DIRECTORY_13_MINI_0600	DIRECTORY_13_MINI	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100397	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0601	DIRECTORY_13_PRO	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0602	DIRECTORY_13_PRO	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/100298	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0603	DIRECTORY_13_PRO	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0604	DIRECTORY_13_PRO	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0605	DIRECTORY_13_PRO	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0606	DIRECTORY_13_PRO	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0607	DIRECTORY_13_PRO	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0608	DIRECTORY_13_PRO	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0609	DIRECTORY_13_PRO	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0610	DIRECTORY_13_PRO	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0611	DIRECTORY_13_PRO	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0612	DIRECTORY_13_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0613	DIRECTORY_13_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0614	DIRECTORY_13_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0615	DIRECTORY_13_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0616	DIRECTORY_13_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0617	DIRECTORY_13_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0618	DIRECTORY_13_PRO	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0619	DIRECTORY_13_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/100417	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0619_PARTS	DIRECTORY_13_PRO	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/100418	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0619_SCREWS	DIRECTORY_13_PRO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/100419	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0619_TOOLS	DIRECTORY_13_PRO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/100420	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0620	DIRECTORY_13_PRO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0621	DIRECTORY_13_PRO	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0622	DIRECTORY_13_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100421	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0623	DIRECTORY_13_PRO	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0624	DIRECTORY_13_PRO	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100422	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0625	DIRECTORY_13_PRO	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/100423	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0626	DIRECTORY_13_PRO	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100424	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0627	DIRECTORY_13_PRO	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100425	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0628	DIRECTORY_13_PRO	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100426	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0629	DIRECTORY_13_PRO	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/100427	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0630	DIRECTORY_13_PRO	PROCEDURE	SOUND	Πάνω ηχείο (έκδοση κεραίας mmWave)	Top Speaker (mmWave Antenna)	https://support.apple.com/en-us/100428	DIRECT_CHAPTER
+DIRECTORY_13_PRO_0631	DIRECTORY_13_PRO	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100429	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0632	DIRECTORY_15_PLUS	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0633	DIRECTORY_15_PLUS	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0634	DIRECTORY_15_PLUS	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0635	DIRECTORY_15_PLUS	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0636	DIRECTORY_15_PLUS	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0637	DIRECTORY_15_PLUS	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0638	DIRECTORY_15_PLUS	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0639	DIRECTORY_15_PLUS	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0640	DIRECTORY_15_PLUS	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0641	DIRECTORY_15_PLUS	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0642	DIRECTORY_15_PLUS	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0643	DIRECTORY_15_PLUS	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0643_DISPLAY	DIRECTORY_15_PLUS	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0644	DIRECTORY_15_PLUS	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0645	DIRECTORY_15_PLUS	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0646	DIRECTORY_15_PLUS	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0647	DIRECTORY_15_PLUS	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0648	DIRECTORY_15_PLUS	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0649	DIRECTORY_15_PLUS	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0650	DIRECTORY_15_PLUS	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/104859	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0650_PARTS	DIRECTORY_15_PLUS	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/104860	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0650_SCREWS	DIRECTORY_15_PLUS	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/104861	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0650_TOOLS	DIRECTORY_15_PLUS	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/104862	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0651	DIRECTORY_15_PLUS	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0652	DIRECTORY_15_PLUS	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0653	DIRECTORY_15_PLUS	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0654	DIRECTORY_15_PLUS	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/104863	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0655	DIRECTORY_15_PLUS	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/104864	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0656	DIRECTORY_15_PLUS	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/104865	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0657	DIRECTORY_15_PLUS	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/104866	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0658	DIRECTORY_15_PLUS	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/104867	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0659	DIRECTORY_15_PLUS	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/104868	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0660	DIRECTORY_15_PLUS	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/104869	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0661	DIRECTORY_15_PLUS	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/104870	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0662	DIRECTORY_15_PLUS	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/104871	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0663	DIRECTORY_15_PLUS	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/122385	DIRECT_CHAPTER
+DIRECTORY_15_PLUS_0664	DIRECTORY_15_PLUS	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/120605	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0665	DIRECTORY_15_PRO_MAX	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0666	DIRECTORY_15_PRO_MAX	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0667	DIRECTORY_15_PRO_MAX	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0668	DIRECTORY_15_PRO_MAX	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0669	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0670	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0671	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0672	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0673	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0674	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0675	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0676	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0677	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0678	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0679	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0680	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0681	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0682	DIRECTORY_15_PRO_MAX	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0683	DIRECTORY_15_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη	Internal View	https://support.apple.com/en-us/104918	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0683_PARTS	DIRECTORY_15_PRO_MAX	REFERENCE	GENERAL	Παραγγέλσιμα ανταλλακτικά	Orderable Parts	https://support.apple.com/en-us/104919	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0683_SCREWS	DIRECTORY_15_PRO_MAX	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/104920	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0683_TOOLS	DIRECTORY_15_PRO_MAX	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/104921	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0684	DIRECTORY_15_PRO_MAX	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0685	DIRECTORY_15_PRO_MAX	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0686	DIRECTORY_15_PRO_MAX	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0687	DIRECTORY_15_PRO_MAX	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/104922	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0688	DIRECTORY_15_PRO_MAX	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/104923	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0689	DIRECTORY_15_PRO_MAX	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/104924	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0690	DIRECTORY_15_PRO_MAX	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/104925	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0691	DIRECTORY_15_PRO_MAX	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/104926	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0692	DIRECTORY_15_PRO_MAX	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/104927	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0693	DIRECTORY_15_PRO_MAX	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/104928	DIRECT_CHAPTER
+DIRECTORY_15_PRO_MAX_0694	DIRECTORY_15_PRO_MAX	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/104929	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0695	DIRECTORY_16_PLUS	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0696	DIRECTORY_16_PLUS	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0697	DIRECTORY_16_PLUS	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0698	DIRECTORY_16_PLUS	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0699	DIRECTORY_16_PLUS	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0700	DIRECTORY_16_PLUS	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0701	DIRECTORY_16_PLUS	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0702	DIRECTORY_16_PLUS	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0703	DIRECTORY_16_PLUS	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0704	DIRECTORY_16_PLUS	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0705	DIRECTORY_16_PLUS	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0706	DIRECTORY_16_PLUS	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0706_DISPLAY	DIRECTORY_16_PLUS	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0707	DIRECTORY_16_PLUS	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0708	DIRECTORY_16_PLUS	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0709	DIRECTORY_16_PLUS	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0710	DIRECTORY_16_PLUS	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0711	DIRECTORY_16_PLUS	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0712	DIRECTORY_16_PLUS	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0713	DIRECTORY_16_PLUS	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/120665	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0713_SCREWS	DIRECTORY_16_PLUS	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/120666	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0713_TOOLS	DIRECTORY_16_PLUS	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/120985	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0714	DIRECTORY_16_PLUS	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0715	DIRECTORY_16_PLUS	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0716	DIRECTORY_16_PLUS	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0717	DIRECTORY_16_PLUS	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0718	DIRECTORY_16_PLUS	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/120667	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0719	DIRECTORY_16_PLUS	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/120668	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0720	DIRECTORY_16_PLUS	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/120670	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0721	DIRECTORY_16_PLUS	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/120669	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0722	DIRECTORY_16_PLUS	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/120671	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0723	DIRECTORY_16_PLUS	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/120672	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0724	DIRECTORY_16_PLUS	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/120673	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0725	DIRECTORY_16_PLUS	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/120674	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0726	DIRECTORY_16_PLUS	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/120675	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0727	DIRECTORY_16_PLUS	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/120677	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0728	DIRECTORY_16_PLUS	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/120676	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0729	DIRECTORY_16_PRO_MAX	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0730	DIRECTORY_16_PRO_MAX	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0731	DIRECTORY_16_PRO_MAX	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0732	DIRECTORY_16_PRO_MAX	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0733	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0734	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0735	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0736	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0737	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0738	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0739	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0740	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0740_DISPLAY	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0741	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0742	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0743	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0744	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0745	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0746	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0747	DIRECTORY_16_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/120821	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0747_SCREWS	DIRECTORY_16_PRO_MAX	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/120822	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0747_TOOLS	DIRECTORY_16_PRO_MAX	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/120988	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0748	DIRECTORY_16_PRO_MAX	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0749	DIRECTORY_16_PRO_MAX	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0750	DIRECTORY_16_PRO_MAX	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0751	DIRECTORY_16_PRO_MAX	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0752	DIRECTORY_16_PRO_MAX	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/120823	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0753	DIRECTORY_16_PRO_MAX	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/120824	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0754	DIRECTORY_16_PRO_MAX	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/120825	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0755	DIRECTORY_16_PRO_MAX	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/120826	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0756	DIRECTORY_16_PRO_MAX	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/120828	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0757	DIRECTORY_16_PRO_MAX	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/120829	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0758	DIRECTORY_16_PRO_MAX	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/120830	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0759	DIRECTORY_16_PRO_MAX	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/120831	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0760	DIRECTORY_16_PRO_MAX	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/120832	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0761	DIRECTORY_16_PRO_MAX	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/120834	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0762	DIRECTORY_16_PRO_MAX	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/120833	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0763	DIRECTORY_17_PRO_MAX	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0764	DIRECTORY_17_PRO_MAX	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0765	DIRECTORY_17_PRO_MAX	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0766	DIRECTORY_17_PRO_MAX	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0767	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	BATTERY	Μπαταρία	Battery issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0768	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	POWER	Τροφοδοσία	Power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0769	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	WIRED_CHARGING	Ενσύρματη φόρτιση	Wired charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0770	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0771	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0772	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0773	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0774	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0775	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0776	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0776_DISPLAY	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0777	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0778	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0779	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0780	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0781	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0782	DIRECTORY_17_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/124264	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0782_SCREWS	DIRECTORY_17_PRO_MAX	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/124272	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0782_TOOLS	DIRECTORY_17_PRO_MAX	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/124276	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0783	DIRECTORY_17_PRO_MAX	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0784	DIRECTORY_17_PRO_MAX	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0785	DIRECTORY_17_PRO_MAX	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0786	DIRECTORY_17_PRO_MAX	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0787	DIRECTORY_17_PRO_MAX	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/123385	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0788	DIRECTORY_17_PRO_MAX	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/123386	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0789	DIRECTORY_17_PRO_MAX	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/123387	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0790	DIRECTORY_17_PRO_MAX	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/123388	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0791	DIRECTORY_17_PRO_MAX	PROCEDURE	CAMERA	Μπροστινή κάμερα	Front Camera	https://support.apple.com/en-us/123389	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0792	DIRECTORY_17_PRO_MAX	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/123390	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0793	DIRECTORY_17_PRO_MAX	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/123391	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0794	DIRECTORY_17_PRO_MAX	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/123392	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0795	DIRECTORY_17_PRO_MAX	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/123393	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0796	DIRECTORY_17_PRO_MAX	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/123394	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0797	DIRECTORY_17_PRO_MAX	PROCEDURE	BOARD	Κεντρική πλακέτα	Logic Board	https://support.apple.com/en-us/123395	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0798	DIRECTORY_17_PRO_MAX	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/123396	DIRECT_CHAPTER
+DIRECTORY_AIR_0799	DIRECTORY_AIR	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_AIR_0800	DIRECTORY_AIR	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_AIR_0801	DIRECTORY_AIR	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_AIR_0802	DIRECTORY_AIR	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_AIR_0803	DIRECTORY_AIR	TROUBLESHOOT	BATTERY	Μπαταρία	Battery issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_AIR_0804	DIRECTORY_AIR	TROUBLESHOOT	POWER	Τροφοδοσία	Power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_AIR_0805	DIRECTORY_AIR	TROUBLESHOOT	WIRED_CHARGING	Ενσύρματη φόρτιση	Wired charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_AIR_0806	DIRECTORY_AIR	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_AIR_0807	DIRECTORY_AIR	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_AIR_0808	DIRECTORY_AIR	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_AIR_0809	DIRECTORY_AIR	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_AIR_0810	DIRECTORY_AIR	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_AIR_0811	DIRECTORY_AIR	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_AIR_0812	DIRECTORY_AIR	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_AIR_0812_DISPLAY	DIRECTORY_AIR	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_AIR_0813	DIRECTORY_AIR	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_AIR_0814	DIRECTORY_AIR	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_AIR_0815	DIRECTORY_AIR	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_AIR_0816	DIRECTORY_AIR	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_AIR_0817	DIRECTORY_AIR	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_AIR_0818	DIRECTORY_AIR	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/123054	DIRECT_CHAPTER
+DIRECTORY_AIR_0818_SCREWS	DIRECTORY_AIR	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/123055	DIRECT_CHAPTER
+DIRECTORY_AIR_0818_TOOLS	DIRECTORY_AIR	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/123056	DIRECT_CHAPTER
+DIRECTORY_AIR_0819	DIRECTORY_AIR	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_AIR_0820	DIRECTORY_AIR	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_AIR_0821	DIRECTORY_AIR	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_AIR_0822	DIRECTORY_AIR	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/123057	DIRECT_CHAPTER
+DIRECTORY_AIR_0823	DIRECTORY_AIR	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/123058	DIRECT_CHAPTER
+DIRECTORY_AIR_0824	DIRECTORY_AIR	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/123059	DIRECT_CHAPTER
+DIRECTORY_AIR_0825	DIRECTORY_AIR	PROCEDURE	CAMERA	Μπροστινή κάμερα	Front Camera	https://support.apple.com/en-us/123060	DIRECT_CHAPTER
+DIRECTORY_AIR_0826	DIRECTORY_AIR	PROCEDURE	BOARD	Κεντρική πλακέτα	Logic Board	https://support.apple.com/en-us/123061	DIRECT_CHAPTER
+DIRECTORY_AIR_0827	DIRECTORY_AIR	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/123062	DIRECT_CHAPTER
+DIRECTORY_AIR_0828	DIRECTORY_AIR	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/123063	DIRECT_CHAPTER
+DIRECTORY_AIR_0829	DIRECTORY_AIR	PROCEDURE	SOUND	Βοηθητικό μικρόφωνο	Auxiliary Microphone	https://support.apple.com/en-us/123065	DIRECT_CHAPTER
+DIRECTORY_AIR_0830	DIRECTORY_AIR	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/123064	DIRECT_CHAPTER
+DIRECTORY_AIR_0831	DIRECTORY_AIR	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/123066	DIRECT_CHAPTER
+DIRECTORY_AIR_0832	DIRECTORY_AIR	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/123067	DIRECT_CHAPTER
+DIRECTORY_AIR_0833	DIRECTORY_AIR	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/123068	DIRECT_CHAPTER
+DIRECTORY_17E_0834	DIRECTORY_17E	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_17E_0835	DIRECTORY_17E	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_17E_0836	DIRECTORY_17E	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_17E_0837	DIRECTORY_17E	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_17E_0838	DIRECTORY_17E	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17E_0839	DIRECTORY_17E	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17E_0840	DIRECTORY_17E	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_17E_0841	DIRECTORY_17E	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_17E_0842	DIRECTORY_17E	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_17E_0843	DIRECTORY_17E	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17E_0844	DIRECTORY_17E	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17E_0845	DIRECTORY_17E	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17E_0845_DISPLAY	DIRECTORY_17E	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_17E_0846	DIRECTORY_17E	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17E_0847	DIRECTORY_17E	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17E_0848	DIRECTORY_17E	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17E_0849	DIRECTORY_17E	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17E_0850	DIRECTORY_17E	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_17E_0851	DIRECTORY_17E	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_17E_0852	DIRECTORY_17E	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/125954	DIRECT_CHAPTER
+DIRECTORY_17E_0852_SCREWS	DIRECTORY_17E	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/125957	DIRECT_CHAPTER
+DIRECTORY_17E_0852_TOOLS	DIRECTORY_17E	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/125960	DIRECT_CHAPTER
+DIRECTORY_17E_0853	DIRECTORY_17E	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_17E_0854	DIRECTORY_17E	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_17E_0855	DIRECTORY_17E	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_17E_0856	DIRECTORY_17E	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/125946	DIRECT_CHAPTER
+DIRECTORY_17E_0857	DIRECTORY_17E	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/125947	DIRECT_CHAPTER
+DIRECTORY_17E_0858	DIRECTORY_17E	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/125948	DIRECT_CHAPTER
+DIRECTORY_17E_0859	DIRECTORY_17E	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/125949	DIRECT_CHAPTER
+DIRECTORY_17E_0860	DIRECTORY_17E	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/125962	DIRECT_CHAPTER
+DIRECTORY_17E_0861	DIRECTORY_17E	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/125950	DIRECT_CHAPTER
+DIRECTORY_17E_0862	DIRECTORY_17E	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/125951	DIRECT_CHAPTER
+DIRECTORY_17E_0863	DIRECTORY_17E	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/125952	DIRECT_CHAPTER
+DIRECTORY_17E_0864	DIRECTORY_17E	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/125953	DIRECT_CHAPTER
+DIRECTORY_17E_0865	DIRECTORY_17E	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/125966	DIRECT_CHAPTER
+DIRECTORY_17E_0866	DIRECTORY_17E	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/125958	DIRECT_CHAPTER
+DIRECTORY_16E_0867	DIRECTORY_16E	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_16E_0868	DIRECTORY_16E	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_16E_0869	DIRECTORY_16E	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_16E_0870	DIRECTORY_16E	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_16E_0871	DIRECTORY_16E	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16E_0872	DIRECTORY_16E	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16E_0873	DIRECTORY_16E	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_16E_0874	DIRECTORY_16E	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_16E_0875	DIRECTORY_16E	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_16E_0876	DIRECTORY_16E	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16E_0877	DIRECTORY_16E	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16E_0878	DIRECTORY_16E	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16E_0878_DISPLAY	DIRECTORY_16E	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_16E_0879	DIRECTORY_16E	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16E_0880	DIRECTORY_16E	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16E_0881	DIRECTORY_16E	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16E_0882	DIRECTORY_16E	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16E_0883	DIRECTORY_16E	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_16E_0884	DIRECTORY_16E	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_16E_0885	DIRECTORY_16E	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/121718	DIRECT_CHAPTER
+DIRECTORY_16E_0885_SCREWS	DIRECTORY_16E	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/121724	DIRECT_CHAPTER
+DIRECTORY_16E_0885_TOOLS	DIRECTORY_16E	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/122060	DIRECT_CHAPTER
+DIRECTORY_16E_0886	DIRECTORY_16E	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_16E_0887	DIRECTORY_16E	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_16E_0888	DIRECTORY_16E	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_16E_0889	DIRECTORY_16E	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_16E_0890	DIRECTORY_16E	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/121676	DIRECT_CHAPTER
+DIRECTORY_16E_0891	DIRECTORY_16E	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/121677	DIRECT_CHAPTER
+DIRECTORY_16E_0892	DIRECTORY_16E	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/121680	DIRECT_CHAPTER
+DIRECTORY_16E_0893	DIRECTORY_16E	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/121682	DIRECT_CHAPTER
+DIRECTORY_16E_0894	DIRECTORY_16E	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/120642	DIRECT_CHAPTER
+DIRECTORY_16E_0895	DIRECTORY_16E	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/121696	DIRECT_CHAPTER
+DIRECTORY_16E_0896	DIRECTORY_16E	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/121700	DIRECT_CHAPTER
+DIRECTORY_16E_0897	DIRECTORY_16E	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/121711	DIRECT_CHAPTER
+DIRECTORY_16E_0898	DIRECTORY_16E	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/121713	DIRECT_CHAPTER
+DIRECTORY_16E_0899	DIRECTORY_16E	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/121667	DIRECT_CHAPTER
+DIRECTORY_16E_0900	DIRECTORY_16E	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/122018	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0901	DIRECTORY_18_PRO_MAX	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0902	DIRECTORY_18_PRO_MAX	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0903	DIRECTORY_18_PRO_MAX	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0904	DIRECTORY_18_PRO_MAX	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0905	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	BATTERY	Μπαταρία	Battery issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0906	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	POWER	Τροφοδοσία	Power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0907	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	WIRED_CHARGING	Ενσύρματη φόρτιση	Wired charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0908	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0909	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0910	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0911	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0912	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0913	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0914	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0914_DISPLAY	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα (οθόνη)	Ambient light sensor, proximity sensor, or compass issues (Display)	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0915	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0916	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0917	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Vibration or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0918	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0919	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0920	DIRECTORY_18_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/127628	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0920_SCREWS	DIRECTORY_18_PRO_MAX	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/127629	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0920_TOOLS	DIRECTORY_18_PRO_MAX	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/127630	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0921	DIRECTORY_18_PRO_MAX	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0922	DIRECTORY_18_PRO_MAX	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0923	DIRECTORY_18_PRO_MAX	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0924	DIRECTORY_18_PRO_MAX	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0925	DIRECTORY_18_PRO_MAX	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/127631	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0926	DIRECTORY_18_PRO_MAX	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/127632	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0927	DIRECTORY_18_PRO_MAX	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/127633	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0928	DIRECTORY_18_PRO_MAX	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/127634	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0929	DIRECTORY_18_PRO_MAX	PROCEDURE	CAMERA	Μπροστινή κάμερα	Front Camera	https://support.apple.com/en-us/127635	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0930	DIRECTORY_18_PRO_MAX	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/127636	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0931	DIRECTORY_18_PRO_MAX	PROCEDURE	SOUND	Κάτω ηχείο (eSIM)	Bottom Speaker (eSIM)	https://support.apple.com/en-us/127637	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0932	DIRECTORY_18_PRO_MAX	PROCEDURE	SOUND	Κάτω ηχείο (pSIM)	Bottom Speaker (pSIM)	https://support.apple.com/en-us/127638	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0933	DIRECTORY_18_PRO_MAX	PROCEDURE	HAPTIC	Μηχανισμός δόνησης (eSIM)	Taptic Engine (eSIM)	https://support.apple.com/en-us/127639	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0934	DIRECTORY_18_PRO_MAX	PROCEDURE	HAPTIC	Μηχανισμός δόνησης (pSIM)	Taptic Engine (pSIM)	https://support.apple.com/en-us/127640	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0935	DIRECTORY_18_PRO_MAX	PROCEDURE	SOUND	Κύριο μικρόφωνο (eSIM)	Main Microphone (eSIM)	https://support.apple.com/en-us/127641	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0936	DIRECTORY_18_PRO_MAX	PROCEDURE	SOUND	Κύριο μικρόφωνο (pSIM)	Main Microphone (pSIM)	https://support.apple.com/en-us/127642	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0937	DIRECTORY_18_PRO_MAX	PROCEDURE	WIRED_CHARGING	Θύρα USB-C (eSIM)	USB-C Connector (eSIM)	https://support.apple.com/en-us/127643	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0938	DIRECTORY_18_PRO_MAX	PROCEDURE	WIRED_CHARGING	Θύρα USB-C (pSIM)	USB-C Connector (pSIM)	https://support.apple.com/en-us/127644	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0939	DIRECTORY_18_PRO_MAX	PROCEDURE	BOARD	Κεντρική πλακέτα (mmWave)	Logic Board (mmWave Antenna)	https://support.apple.com/en-us/127645	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0940	DIRECTORY_18_PRO_MAX	PROCEDURE	BOARD	Κεντρική πλακέτα (χωρίς mmWave)	Logic Board (without mmWave Antenna)	https://support.apple.com/en-us/127646	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0941	DIRECTORY_18_PRO_MAX	PROCEDURE	SIM	Πλαίσιο (eSIM)	Enclosure (eSIM)	https://support.apple.com/en-us/127647	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0942	DIRECTORY_18_PRO_MAX	PROCEDURE	SIM	Πλαίσιο (pSIM)	Enclosure (pSIM)	https://support.apple.com/en-us/127648	DIRECT_CHAPTER
+DIRECTORY_DUO_0943	DIRECTORY_DUO	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+DIRECTORY_DUO_0944	DIRECTORY_DUO	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+DIRECTORY_DUO_0945	DIRECTORY_DUO	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+DIRECTORY_DUO_0946	DIRECTORY_DUO	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+DIRECTORY_DUO_0947	DIRECTORY_DUO	TROUBLESHOOT	SOUND	Προβλήματα ήχου	Sound Issues	https://support.apple.com/en-us/148315	DIRECT_CHAPTER
+DIRECTORY_DUO_0948	DIRECTORY_DUO	TROUBLESHOOT	BATTERY_POWER	Μπαταρίες, φόρτιση και τροφοδοσία	Battery, Charging, and Power Issues	https://support.apple.com/en-us/148316	DIRECT_CHAPTER
+DIRECTORY_DUO_0949	DIRECTORY_DUO	TROUBLESHOOT	WIRELESS	Bluetooth ή Wi-Fi	Bluetooth or Wi-Fi Issues	https://support.apple.com/en-us/148317	DIRECT_CHAPTER
+DIRECTORY_DUO_0950	DIRECTORY_DUO	TROUBLESHOOT	BUTTONS	Πλήκτρα	Button Issues	https://support.apple.com/en-us/148318	DIRECT_CHAPTER
+DIRECTORY_DUO_0951	DIRECTORY_DUO	TROUBLESHOOT	CAMERA	Κάμερες	Camera Issues	https://support.apple.com/en-us/148319	DIRECT_CHAPTER
+DIRECTORY_DUO_0952	DIRECTORY_DUO	TROUBLESHOOT	CELLULAR	Κυψελωτό δίκτυο	Cellular Issues	https://support.apple.com/en-us/148320	DIRECT_CHAPTER
+DIRECTORY_DUO_0953	DIRECTORY_DUO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert Message Issues	https://support.apple.com/en-us/148321	DIRECT_CHAPTER
+DIRECTORY_DUO_0954	DIRECTORY_DUO	TROUBLESHOOT	DISPLAY	Οθόνη και Multi-Touch	Display and Multi-Touch Issues	https://support.apple.com/en-us/148322	DIRECT_CHAPTER
+DIRECTORY_DUO_0955	DIRECTORY_DUO	TROUBLESHOOT	HINGE	Μηχανισμός αναδίπλωσης	Hinge Issues	https://support.apple.com/en-us/148323	DIRECT_CHAPTER
+DIRECTORY_DUO_0956	DIRECTORY_DUO	TROUBLESHOOT	SENSORS	Αισθητήρες	Sensor Issues	https://support.apple.com/en-us/148324	DIRECT_CHAPTER
+DIRECTORY_DUO_0957	DIRECTORY_DUO	TROUBLESHOOT	RESTART	Πάγωμα, εκκίνηση ή τερματισμός	Freeze, Startup, and Shutdown Issues	https://support.apple.com/en-us/148325	DIRECT_CHAPTER
+DIRECTORY_DUO_0958	DIRECTORY_DUO	TROUBLESHOOT	TOUCH_ID	Touch ID	Touch ID Issues	https://support.apple.com/en-us/148326	DIRECT_CHAPTER
+DIRECTORY_DUO_0959	DIRECTORY_DUO	TROUBLESHOOT	HAPTIC	Taptic Engine και απτική ανάδραση	Taptic Engine and Haptic Feedback Issues	https://support.apple.com/en-us/148327	DIRECT_CHAPTER
+DIRECTORY_DUO_0960	DIRECTORY_DUO	TROUBLESHOOT	PENCIL	Apple Pencil	Apple Pencil Issues	https://support.apple.com/en-us/125776	DIRECT_CHAPTER
+DIRECTORY_DUO_0961	DIRECTORY_DUO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/127676	DIRECT_CHAPTER
+DIRECTORY_DUO_0961_SCREWS	DIRECTORY_DUO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/127678	DIRECT_CHAPTER
+DIRECTORY_DUO_0961_TOOLS	DIRECTORY_DUO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/127677	DIRECT_CHAPTER
+DIRECTORY_DUO_0962	DIRECTORY_DUO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+DIRECTORY_DUO_0963	DIRECTORY_DUO	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/127659	DIRECT_CHAPTER
+DIRECTORY_DUO_0964	DIRECTORY_DUO	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/127660	DIRECT_CHAPTER
+DIRECTORY_DUO_0965	DIRECTORY_DUO	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/127661	DIRECT_CHAPTER
+DIRECTORY_DUO_0966	DIRECTORY_DUO	PROCEDURE	CAMERA	Κάμερα FaceTime	FaceTime Camera	https://support.apple.com/en-us/127663	DIRECT_CHAPTER
+DIRECTORY_DUO_0967	DIRECTORY_DUO	PROCEDURE	BATTERY	Μπαταρία 1	Battery 1	https://support.apple.com/en-us/127657	DIRECT_CHAPTER
+DIRECTORY_DUO_0968	DIRECTORY_DUO	PROCEDURE	BOARD	Κεντρική πλακέτα	Logic Board	https://support.apple.com/en-us/127665	DIRECT_CHAPTER
+DIRECTORY_DUO_0969	DIRECTORY_DUO	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/127669	DIRECT_CHAPTER
+DIRECTORY_DUO_0970	DIRECTORY_DUO	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/127668	DIRECT_CHAPTER
+DIRECTORY_DUO_0971	DIRECTORY_DUO	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/127670	DIRECT_CHAPTER
+DIRECTORY_DUO_0972	DIRECTORY_DUO	PROCEDURE	DISPLAY	Εξωτερική οθόνη	Outer Display	https://support.apple.com/en-us/127671	DIRECT_CHAPTER
+DIRECTORY_DUO_0973	DIRECTORY_DUO	PROCEDURE	DISPLAY	Προστατευτικό στρώμα	Cover Layer	https://support.apple.com/en-us/127672	DIRECT_CHAPTER
+DIRECTORY_DUO_0974	DIRECTORY_DUO	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/127662	DIRECT_CHAPTER
+DIRECTORY_DUO_0975	DIRECTORY_DUO	PROCEDURE	CAMERA	Εξωτερική μπροστινή κάμερα	Outer Front Camera	https://support.apple.com/en-us/127664	DIRECT_CHAPTER
+DIRECTORY_DUO_0976	DIRECTORY_DUO	PROCEDURE	BATTERY	Μπαταρία 2	Battery 2	https://support.apple.com/en-us/127667	DIRECT_CHAPTER
+DIRECTORY_DUO_0977	DIRECTORY_DUO	PROCEDURE	WIRED_CHARGING	Πλακέτα εισόδου/εξόδου	Input/Output Board	https://support.apple.com/en-us/127666	DIRECT_CHAPTER
+DIRECTORY_DUO_0978	DIRECTORY_DUO	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/127674	DIRECT_CHAPTER
+DIRECTORY_DUO_0979	DIRECTORY_DUO	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/127862	DIRECT_CHAPTER
+DIRECTORY_DUO_0980	DIRECTORY_DUO	PROCEDURE	DISPLAY	Εσωτερική οθόνη	Inner Display	https://support.apple.com/en-us/127871	DIRECT_CHAPTER
+DIRECTORY_DUO_0981	DIRECTORY_DUO	PROCEDURE	DISPLAY	Μονάδα εσωτερικής οθόνης	Inner Display Assembly	https://support.apple.com/en-us/127673	DIRECT_CHAPTER
+DIRECTORY_DUO_0982	DIRECTORY_DUO	PROCEDURE	BUTTONS	Πλήκτρα έντασης	Volume Buttons	https://support.apple.com/en-us/127863	DIRECT_CHAPTER
+DIRECTORY_DUO_0983	DIRECTORY_DUO	PROCEDURE	CAMERA	Πλήκτρα Touch ID/χειρισμού κάμερας	Touch ID/Camera Control Buttons	https://support.apple.com/en-us/127870	DIRECT_CHAPTER

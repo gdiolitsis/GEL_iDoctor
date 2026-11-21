@@ -110,12 +110,36 @@ public final class ApplePanicHardwareHints {
             return new Assessment(model, out);
         }
 
+        // A named audio driver panic does not prove failure of that chip.
+        // A published 11 Pro Max bench case was resolved by a sensor flex on
+        // the shared bus. Preserve both the literal clue and that uncertainty.
+        if (low.contains("applecs42l77audio")
+                && (low.contains("unknown sample rate")
+                    || low.contains("_enablehalogen")
+                    || low.contains("pdmout"))) {
+            out.add(general("AUDIO_CODEC_CS42L77",
+                    "Το panic αναφέρει τον οδηγό AppleCS42L77Audio, όχι απαραίτητα χαλασμένο audio codec.",
+                    "AppleCS42L77Audio driver is named, but this is not proof the audio IC failed.",
+                    "Έλεγχος κοινών γραμμών επικοινωνίας και εμπρόσθιων καλωδιοταινιών πριν εξεταστεί αντικατάσταση IC.",
+                    "Check shared bus communication and front sensor flex before any audio IC replacement."));
+        }
         if (low.contains("aop panic") || low.contains("aop nmi power")) {
             out.add(general("AOP_PANIC",
                     "Συμβάν συνεπεξεργαστή AOP (αισθητήρες/χαμηλή κατανάλωση), όχι διάγνωση εξαρτήματος.",
                     "Always-on processor event (sensors / low power), not a part diagnosis.",
                     "Έλεγξε τις υπόλοιπες γραμμές του panic και πραγματικά συμπτώματα.",
                     "Inspect the rest of the panic and actual symptoms."));
+        }
+        // Distinguish an explicit I2C3 clock-line failure from generic I2C
+        // messages. A published display-replacement success was for this
+        // exact signature on one XS Max, not for all I2C faults.
+        if (Pattern.compile("(?i)\\bi2c3::_checkbusstatus\\b.{0,80}\\bscl\\s+is\\s+stuck\\s+low\\b")
+                .matcher(log).find()) {
+            out.add(general("I2C3_SCL_STUCK_LOW",
+                    "Το αρχείο αναφέρει συγκεκριμένη αστοχία επικοινωνίας στο I2C3 (SCL stuck low).",
+                    "Explicit I2C3 bus clock line stuck-low observation.",
+                    "Απαιτείται έλεγχος του συγκεκριμένου διαύλου και των συνδέσεών του· δεν ταυτοποιείται αυτόματα εξάρτημα.",
+                    "Inspect that bus and its connectors; do not assume any particular faulty component."));
         }
         if (Pattern.compile("(?i)\\bi2c[0-9]?\\b|\\bi²c\\b").matcher(log).find()
                 && (low.contains("failure") || low.contains("timeout")
