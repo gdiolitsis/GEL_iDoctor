@@ -180,7 +180,7 @@ public final class IPhonePanicRepairKnowledgeBaseTest {
         assertTrue(summary.reportedSuccesses > 0);
         assertTrue(summary.reportedFailures > 0);
         assertTrue(summary.display(true).contains("δημοσιευμένες προσπάθειες"));
-        assertTrue(summary.display(false).contains("notAword") == false);
+        assertTrue(summary.display(false).contains("published repair attempts"));
     }
 
     @Test public void newMic2RepairAndEarlierFailedAttemptBelongToOneIncident() throws Exception {
