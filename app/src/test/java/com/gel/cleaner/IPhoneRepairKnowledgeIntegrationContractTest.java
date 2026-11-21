@@ -46,6 +46,12 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(lab4.contains("AppleOfficialServiceGuidance.conditionalTopicsForClue(finding.code)"));
         assertFalse(lab4.contains("AppleOfficialServiceGuidance.topicMightBeUsefulForAction("));
         assertTrue(lab4.contains("logOfficialApplePanicGuidance(model, gr, appleTopicsByModel.get(model))"));
+        assertTrue(src.contains("AppleIPhoneManualChapters.forExactModel(readAppleManualChapters(), docs, model)"));
+        assertTrue(src.contains("AppleIPhoneManualChapters.troubleshootingForTopics(sections, suggestedTopics)"));
+        assertTrue(src.contains("AppleIPhoneManualChapters.Phase.PROCEDURE"));
+        assertTrue(src.contains("Κατάλογος διαθέσιμων κεφαλαίων, ΟΧΙ προτεινόμενες αντικαταστάσεις."));
+        assertTrue(src.contains("Apple — μόνο μετά από επιλέξιμη επισκευή:"));
+
         assertTrue(src.contains("μόνο αν υπάρχει σχετικό σύμπτωμα"));
         assertFalse(evidence.contains("Apple-certified repair"));
     }
