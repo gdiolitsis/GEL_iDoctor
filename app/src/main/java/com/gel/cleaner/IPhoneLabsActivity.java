@@ -1969,6 +1969,8 @@ private void runRecurringDomainLab() {
 
     java.util.Map<String, Integer> domainCount = new java.util.HashMap<>();
     java.util.Map<String, Integer> signatureCount = new java.util.LinkedHashMap<>();
+    // Exact same model + GEL clue per independent imported panic record.
+    java.util.Map<String, Integer> historicClueCount = new java.util.LinkedHashMap<>();
     java.util.List<Long> datedRecords = new java.util.ArrayList<>();
     int recordsWithDates = 0;
     int recordsWithSignatures = 0;
@@ -1995,6 +1997,15 @@ private void runRecurringDomainLab() {
         }
         if (!meta.timestamp.isEmpty()) recordsWithDates++;
         if (meta.timestampEpochMillis >= 0L) datedRecords.add(meta.timestampEpochMillis);
+        ApplePanicHardwareHints.Assessment one = ApplePanicHardwareHints.examineOne(block);
+        java.util.Set<String> seenInThisBlock = new java.util.HashSet<>();
+        for (ApplePanicHardwareHints.Finding clue : one.findings) {
+            String exactKey = one.modelIdentifier + "|" + clue.code;
+            if (seenInThisBlock.add(exactKey)) {
+                historicClueCount.put(exactKey,
+                        historicClueCount.getOrDefault(exactKey, 0) + 1);
+            }
+        }
     }
 
     if (total <= 1) {
@@ -2066,6 +2077,29 @@ private void runRecurringDomainLab() {
         logLabelValue(gr ? "Υπογραφές panic:" : "Panic signatures:",
                 gr ? "Οι καταγεγραμμένες υπογραφές είναι διαφορετικές."
                    : "The observed panic signatures are distinct.");
+    }
+
+    // When a *specific* observed clue recurs across panic files, LAB 7 can
+    // point to historical repair reports; LAB 4 retains the actual case list.
+    // A category-only repeat is never sufficient for a component suggestion.
+    for (java.util.Map.Entry<String, Integer> clue : historicClueCount.entrySet()) {
+        if (clue.getValue() < 2) continue;
+        int separator = clue.getKey().indexOf('|');
+        if (separator <= 0) continue;
+        String model = clue.getKey().substring(0, separator);
+        String code = clue.getKey().substring(separator + 1);
+        java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> history =
+                IPhonePanicRepairKnowledgeBase.lookup(readPanicRepairHistory(), model, code);
+        if (!history.isEmpty()) {
+            IPhonePanicRepairKnowledgeBase.MatchSummary counts =
+                    IPhonePanicRepairKnowledgeBase.summarize(history);
+            logLabelValue(gr ? "Επαναλαμβανόμενη τεχνική ένδειξη:" : "Repeated technical clue:",
+                    code + " (" + clue.getValue() + "/" + total + ") — "
+                            + counts.display(gr));
+            logLabelValue(gr ? "Αναλυτικές πηγές:" : "Detailed sources:",
+                    gr ? "Δείτε το Lab 4. Η επανάληψη καταγραφών δεν αποδεικνύει κοινή βλάβη."
+                       : "See Lab 4. Repeated logs do not establish a common physical fault.");
+        }
     }
 
     // -------------------------------
