@@ -79,9 +79,46 @@ Status: **Chapter-title index complete for the 30 official iPhone Repair Manuals
 - iPhone Duo has its own Hinge Issues, Apple Pencil, Cellular, dual-battery, dual-display and input/output board entries; these must never appear as device-specific findings on conventional iPhones.
 
 ## Remaining research, not silently implied complete
-1. Collect and validate **individual Apple chapter URLs** for every chapter beyond its manual's verified table of contents. Except for the single independently inspected `iPhone 15 Pro Max Back Glass` chapter, links intentionally take the reader to the correct manual's contents.
+1. Collect and validate **individual Apple chapter URLs** for every remaining chapter beyond its verified table of contents. **93 direct chapter URLs** are now backed by explicit Apple manual links for iPhone 14 Pro, iPhone 15 Pro Max, and iPhone 17; **890** entries still safely open their own model manual's contents.
 2. Validate service part eligibility, regional variants and iOS requirements before the app presents any model-specific post-repair workflow as usable.
 3. Track updates/withdrawals and record source review dates per chapter; validate all new URLs against Apple's current published pages.
 4. QA the Lab 4 UI and exported HTML/PDF in Greek and English with several logs and model-mismatch tests.
 
 This index is a verified navigation taxonomy, **not a copy of full manual instructions** or a guarantee that Apple fixes exist for every panic code.
+
+## Direct chapter + source-reviewed step layer — 2026-11-21
+
+### Newly implemented
+- **93 / 983** chapter entries now point to their actual chapter pages rather than only a general manual Contents page. These were extracted from the clickable official Apple manual Contents of iPhone 14 Pro (exact hardware ID `iPhone15,2`), iPhone 15 Pro Max and iPhone 17. This is link evidence, not proof that the individual chapter text has been fully audited.
+- Asset `iphone_apple_service_steps_v1.tsv`: **56 bilingual original short-stage summaries across 9 individually read official chapters**. No source-uncited or generated generic replacement steps are allowed. The full official page remains mandatory for physical service.
+- Parser `AppleIPhoneServiceSteps.java` cross-checks every row against a `DIRECT_CHAPTER` record, the exact chapter URL, stage type, contiguous order, review date, and essential safety/preparation/removal/reassembly/verification stages for physical procedures. An unreviewed chapter can still have an authoritative direct link, but **cannot** falsely acquire a step-by-step summary.
+- iPhone Lab 4 now prints **individual official chapter links** (or explicit Contents-only fallback) for diagnostic topics and all repair procedure headings. Users can optionally select `APPLE — Αναλυτικά επιβεβαιωμένα βήματα` to read concise source-reviewed stages in a dark dialog and open the full official Apple page in their browser. It is not a ninth lab and never silently authorizes a hardware repair.
+- Automatic step-card selection only for a verified hardware-model ID. Directory-only manual variants require explicit user model selection. Links are never matched from a guessed model based on SMC/MIC/PRS0 clues.
+
+### Source-reviewed step chapter samples
+| Model / official chapter | Apple page | Summary stages |
+|---|---|---:|
+| iPhone 14 Pro — SIM Tray (only physical-SIM variants; no US iPhone 14 SIM tray) | https://support.apple.com/en-us/100375 | 6 |
+| iPhone 14 Pro — Apple Diagnostics for Self Service Repair | https://support.apple.com/en-us/101965 | 6 |
+| iPhone 14 Pro — Camera or LiDAR troubleshooting | https://support.apple.com/en-us/101967 | 7 |
+| iPhone 14 Pro — TrueDepth/Face ID troubleshooting | https://support.apple.com/en-us/101967 | 7 |
+| iPhone 15 Pro Max — camera removal/reassembly | https://support.apple.com/en-us/104924 | 6 |
+| iPhone 15 Pro Max — TrueDepth camera removal/reassembly | https://support.apple.com/en-us/104926 | 6 |
+| iPhone 15 Pro Max — back glass removal/reassembly | https://support.apple.com/en-us/104929 | 6 |
+| iPhone 15 Pro Max — Apple Diagnostics for Self Service Repair | https://support.apple.com/en-us/101965 | 6 |
+| iPhone 17 — back glass removal/reassembly | https://support.apple.com/en-us/123038 | 6 |
+
+### Model-specific safety rules from Apple that must remain visible
+- TrueDepth camera includes infrared laser components. The iPhone 15 Pro Max manual warns not to disassemble the TrueDepth assembly and states that Repair Assistant **is required** after replacement to enable security functions.
+- The iPhone 15 Pro Max back-glass chapter includes model-specific broken-glass preparation/sanding, heating/adhesive and flex-cable protection, and repair verification; stop for damaged battery. Repair Assistant may be recommended after completing the work.
+- The iPhone 14 Pro SIM tray page explicitly states that US-purchased iPhone 14 models do not have physical SIM trays.
+- Apple's current direct diagnostics and browser console modes have distinct requirements. The online secondary-device workflow requires an eligible model, iOS 17+ and Wi-Fi; the on-device workflow requires eligible iPhone 12+ and iOS 18+. A serial number may be entered on Apple's own diagnostic website but GEL neither requests nor uploads it.
+
+### Remaining significant work
+1. **890 entries** still need direct chapter URLs; most also require a read of the actual procedure, not only a title. Until checked, they remain `MANUAL_CONTENTS`.
+2. **974 chapter entries** still lack source-reviewed stage summaries; some are tool, safety or reference sections where staged repair instructions may not apply. Do not mechanically generate steps for them.
+3. Add explicit, reliable model-ID binding to the 18 directory-only manuals before any model-specific automatic presentation. Explicit user navigation remains possible.
+4. Verify user interaction, tap-to-open links, Greek/English rendering and HTML/PDF export with real panic logs before shipping.
+5. Periodically re-open Apple pages for changes; Apple-authored procedures may change without a stable versioned URL.
+
+These short stages are **navigation and interpretation**, not a copy of the full illustrated model repair manual. Critical numeric screw torque, adhesive temperatures and drawings remain exclusively at the source URL, and may vary by region/model.
