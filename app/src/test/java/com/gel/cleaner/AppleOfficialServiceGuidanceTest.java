@@ -88,6 +88,19 @@ public final class AppleOfficialServiceGuidanceTest {
                 "WIRED_CHARGING"));
     }
 
+    @Test public void genericSymptomGuideCanBeReadWithoutMakingUpAnIphoneModel() throws Exception {
+        List<AppleOfficialServiceGuidance.Guidance> entries = docs();
+        AppleOfficialServiceGuidance.Guidance restart =
+                AppleOfficialServiceGuidance.genericForTopic(entries, "UNEXPECTED_RESTART");
+        assertNotNull(restart);
+        assertEquals("*", restart.models);
+        assertTrue(restart.sourceUrl.startsWith("https://support.apple.com/"));
+        assertNull("Model manuals must never be returned from the generic workflow",
+                AppleOfficialServiceGuidance.genericForTopic(entries, "MODEL_MANUAL"));
+        assertNull("Diagnostics require checked model eligibility",
+                AppleOfficialServiceGuidance.genericForTopic(entries, "APPLE_DIAGNOSTICS"));
+    }
+
     @Test(expected=IOException.class)
     public void rejectNonAppleSourcesPassingThemselvesOffAsOfficial() throws Exception {
         String line = "FAKE\tiPhone15,2\tMODEL_MANUAL\tΟδηγίες\tManual"
