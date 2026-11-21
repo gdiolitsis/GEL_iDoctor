@@ -39,7 +39,7 @@ public final class AppleIPhoneServiceStepsTest {
 
     @Test public void auditedSummariesIncludeRealSourceAndDistinctStages() throws Exception {
         List<AppleIPhoneServiceSteps.Step> steps = audited();
-        assertEquals(56, steps.size());
+        assertEquals(62, steps.size());
         Set<String> chapters = new HashSet<>();
         for (AppleIPhoneServiceSteps.Step s : steps) {
             chapters.add(s.chapterId);
@@ -50,7 +50,7 @@ public final class AppleIPhoneServiceStepsTest {
             assertFalse("Step outlines are not replace-part recommendations", 
                     s.english.contains("Apple-certified panic repair"));
         }
-        assertEquals(9, chapters.size());
+        assertEquals(10, chapters.size());
         assertEquals(6, AppleIPhoneServiceSteps.forChapter(steps,
                 "DIRECTORY_15_PRO_MAX_0689").size());
         assertEquals(6, AppleIPhoneServiceSteps.forChapter(steps,
@@ -73,6 +73,20 @@ public final class AppleIPhoneServiceStepsTest {
         // Directory-only iPhone 15 Pro Max must not be guessed from its neighbor's ID.
         assertTrue(AppleIPhoneServiceSteps.reviewedForExactModel(
                 audited(), chapters(), official(), "iPhone16,2").isEmpty());
+    }
+
+    @Test public void exactIphone15NowLinksBatteryProcedureAndReviewedStages() throws Exception {
+        List<AppleIPhoneManualChapters.Chapter> exact =
+                AppleIPhoneServiceSteps.reviewedForExactModel(
+                        audited(), chapters(), official(), "iPhone15,4");
+        assertEquals(1, exact.size());
+        assertEquals("MANUAL_15_0207", exact.get(0).id);
+        assertEquals("https://support.apple.com/en-us/104907", exact.get(0).sourceUrl);
+        List<AppleIPhoneServiceSteps.Step> steps =
+                AppleIPhoneServiceSteps.forChapter(audited(), exact.get(0).id);
+        assertEquals(6, steps.size());
+        assertEquals(AppleIPhoneServiceSteps.Stage.SAFETY, steps.get(1).stage);
+        assertEquals(AppleIPhoneServiceSteps.Stage.VERIFY, steps.get(5).stage);
     }
 
     @Test public void infraredLaserAndRepairAssistantRestrictionsSurviveTranslation() throws Exception {
@@ -98,7 +112,7 @@ public final class AppleIPhoneServiceStepsTest {
         for (AppleIPhoneManualChapters.Chapter chapter : all) {
             if (chapter.linkScope == AppleIPhoneManualChapters.LinkScope.DIRECT_CHAPTER) direct++;
         }
-        assertEquals(93, direct);
+        assertEquals(124, direct);
         assertEquals("https://support.apple.com/en-us/100381",
                 all.stream().filter(x -> x.manualId.equals("MANUAL_14_PRO")
                         && x.titleEnglish.equals("Battery")).findFirst().get().sourceUrl);
