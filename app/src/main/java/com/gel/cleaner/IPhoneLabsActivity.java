@@ -164,6 +164,9 @@ private boolean looksCorruptedPanic(String text) {
     // ============================================================
     // UI-only simulation: do not emit demo observations to real service reports.
     private boolean demoMode = false;
+    // Local bundled public repair history is read once per Activity instance;
+    // never downloaded and never modified using imported customer panic data.
+    private java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> repairCaseCache = null;
     private boolean panicLogLoaded = false;
     private String  panicLogName   = null;
     private String  panicLogText   = null;
@@ -2121,6 +2124,11 @@ private void runFinalServiceRecommendationLab() {
     java.util.Map<String, Integer> crashCount = new java.util.TreeMap<>();
     java.util.Map<String, Integer> domainCount = new java.util.TreeMap<>();
     java.util.Set<String> uniqueTechnicalCodes = new java.util.LinkedHashSet<>();
+    // Source cases are de-duplicated across multiple imported panic files.
+    java.util.Map<String, IPhonePanicRepairKnowledgeBase.RepairCase> relatedRepairAttempts =
+            new java.util.LinkedHashMap<>();
+    java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> repairHistory =
+            readPanicRepairHistory();
     int total = 0;
     boolean watchdogObserved = false;
     boolean thermalObserved = false;
@@ -2151,6 +2159,12 @@ private void runFinalServiceRecommendationLab() {
         ApplePanicHardwareHints.Assessment hints = ApplePanicHardwareHints.examineOne(block);
         for (ApplePanicHardwareHints.Finding finding : hints.findings) {
             uniqueTechnicalCodes.add(finding.code);
+            // Exact model AND exact clue, within this one panic block.
+            for (IPhonePanicRepairKnowledgeBase.RepairCase historic :
+                    IPhonePanicRepairKnowledgeBase.lookup(repairHistory,
+                            hints.modelIdentifier, finding.code)) {
+                relatedRepairAttempts.put(historic.id, historic);
+            }
         }
     }
 
@@ -2186,6 +2200,20 @@ private void runFinalServiceRecommendationLab() {
             human.repairAdvice);
     logLabelValue(gr ? "Πότε χρειάζεται τεχνικός:" : "When to seek service:",
             human.whenToSeekHelp);
+
+    // Historical repair experiences are contextual evidence, not a diagnosis
+    // or proof that a particular part on this device needs replacement.
+    if (!relatedRepairAttempts.isEmpty()) {
+        IPhonePanicRepairKnowledgeBase.MatchSummary related =
+                IPhonePanicRepairKnowledgeBase.summarize(relatedRepairAttempts.values());
+        logLabelValue(gr ? "Σχετικές δημοσιευμένες επισκευές:" : "Related published repair attempts:",
+                related.display(gr));
+        logLabelValue(gr ? "Πού βρίσκονται οι περιπτώσεις:" : "Where to read the cases:",
+                gr ? "Στο Lab 4 εμφανίζονται οι συγκεκριμένες εργασίες, οι αποτυχίες και οι πηγές. "
+                        + "Η ομοιότητα κωδικού δεν αποδεικνύει την αιτία στη συγκεκριμένη συσκευή."
+                   : "Lab 4 lists the actions, failures and original sources. "
+                        + "A matching clue does not identify the fault on this specific iPhone.");
+    }
     if (demoMode) {
         logInfo(gr
                 ? "Αυτό το συμπέρασμα αφορά μόνο τα δοκιμαστικά DEMO αρχεία, όχι πραγματική συσκευή."
@@ -2379,20 +2407,24 @@ private String sigKeyEvidence = "";
  * A repeated code is shown once per summary and is never counted as a
  * confirmed failure or as a measured repair probability.
  */
+private java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> readPanicRepairHistory() {
+    if (repairCaseCache != null) return repairCaseCache;
+    try {
+        repairCaseCache = IPhonePanicRepairKnowledgeBase.parse(
+                getAssets().open(IPhonePanicRepairKnowledgeBase.ASSET));
+    } catch (java.io.IOException ignored) {
+        repairCaseCache = java.util.Collections.emptyList();
+    }
+    return repairCaseCache;
+}
+
 private void logApplePanicEvidence(String block, boolean gr, String heading,
         java.util.Set<String> alreadyShown) {
     ApplePanicHardwareHints.Assessment findings =
             ApplePanicHardwareHints.examineOne(block);
-    // Offline published repair history only. Never send customer logs or
-    // identifiers to third parties and never infer that a replacement is required.
+    // This catalog reports historical cases, not a diagnosis of this iPhone.
     java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> repairHistory =
-            java.util.Collections.emptyList();
-    try {
-        repairHistory = IPhonePanicRepairKnowledgeBase.parse(
-                getAssets().open(IPhonePanicRepairKnowledgeBase.ASSET));
-    } catch (java.io.IOException ignored) {
-        // No repair history is safer than a guessed recommendation.
-    }
+            readPanicRepairHistory();
     int rendered = 0;
     for (ApplePanicHardwareHints.Finding finding : findings.findings) {
         String key = findings.modelIdentifier + "|" + finding.code;
@@ -2417,10 +2449,14 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
                 IPhonePanicRepairKnowledgeBase.lookup(repairHistory,
                         findings.modelIdentifier, finding.code);
         if (!matchingReports.isEmpty()) {
-            logLabelValue(gr ? "Δημοσιευμένες περιπτώσεις επισκευής:" :
-                    "Published repair outcomes:",
-                    gr ? "Μαρτυρίες τεχνικών/ιδιοκτητών — όχι πιστοποίηση ή οδηγία αλλαγής εξαρτήματος."
-                       : "Owner/technician reports; not a verified diagnosis or replacement instruction.");
+            IPhonePanicRepairKnowledgeBase.MatchSummary repairEvidence =
+                    IPhonePanicRepairKnowledgeBase.summarize(matchingReports);
+            logLabelValue(gr ? "Ιστορικό επισκευών για μοντέλο / κωδικό:" :
+                    "Repair history for exact model / clue:",
+                    repairEvidence.display(gr));
+            logLabelValue(gr ? "Προέλευση πληροφοριών:" : "Evidence limitation:",
+                    gr ? "Δημοσιευμένες μαρτυρίες, όχι ανεξάρτητα πιστοποιημένες επισκευές ή οδηγία αντικατάστασης."
+                       : "Published first-hand reports, not independently verified repairs or a part replacement instruction.");
             int shownReports = 0;
             for (IPhonePanicRepairKnowledgeBase.RepairCase caseRecord : matchingReports) {
                 if (shownReports++ >= 8) break;
@@ -2431,6 +2467,11 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
                         caseRecord.localizedNote(gr));
                 logLabelValue(gr ? "Πηγή περιστατικού:" : "Case source:",
                         caseRecord.sourceUrl);
+            }
+            if (matchingReports.size() > 8) {
+                logLabelValue(gr ? "Περισσότερες περιπτώσεις:" : "Additional cases:",
+                        gr ? "Προβλήθηκαν οι 8 πρώτες καταχωρίσεις της διαθέσιμης βάσης."
+                           : "Only the first eight catalog entries are displayed.");
             }
         }
     }
