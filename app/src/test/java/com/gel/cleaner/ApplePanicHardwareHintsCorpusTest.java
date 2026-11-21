@@ -131,6 +131,28 @@ public final class ApplePanicHardwareHintsCorpusTest {
         }
     }
 
+    @Test public void cs42l77IsADriverClueNotProofOfAudioIcFailure() {
+        String realClue = "{\"product\":\"iPhone12,5\",\"panicString\":"
+                + "\"panic(cpu 0): _enableHalogen:4104 Unknown sample rate on DAC @AppleCS42L77Audio.cpp\"}";
+        ApplePanicHardwareHints.Assessment parsed =
+                ApplePanicHardwareHints.examineOne(realClue);
+        boolean found = false;
+        for (ApplePanicHardwareHints.Finding item : parsed.findings) {
+            if ("AUDIO_CODEC_CS42L77".equals(item.code)) {
+                found = true;
+                assertTrue(item.areaGreek.contains("όχι απαραίτητα"));
+                assertTrue(item.checkEnglish.contains("front sensor flex"));
+            }
+        }
+        assertTrue(found);
+        String mereDriverMetadata = "{\"product\":\"iPhone12,5\",\"panicString\":"
+                + "\"panic(cpu 0): unrelated kernel error; AppleCS42L77Audio loaded\"}";
+        for (ApplePanicHardwareHints.Finding item :
+                ApplePanicHardwareHints.examineOne(mereDriverMetadata).findings) {
+            assertNotEquals("AUDIO_CODEC_CS42L77", item.code);
+        }
+    }
+
     private static String panic(String model, String code) {
         return "{\"product\":\"" + model + "\",\"panicString\":\"panic(cpu 1): "
                 + "SMC PANIC - ASSERTION FAILED; SMC BSC failure; "
