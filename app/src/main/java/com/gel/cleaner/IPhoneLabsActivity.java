@@ -2565,7 +2565,7 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
                     : "Additional findings omitted from the short display.");
             break;
         }
-        logLabelInfoValue(heading + (gr ? " — ένδειξη GEL:" : " — GEL clue:"), finding.code);
+        logLabelValue(heading + (gr ? " — ένδειξη GEL:" : " — GEL clue:"), finding.code);
         if (!"Unknown".equals(findings.modelIdentifier)) {
             logLabelValue(gr ? "Κωδικός συσκευής:" : "Device identifier:",
                     findings.modelIdentifier);
