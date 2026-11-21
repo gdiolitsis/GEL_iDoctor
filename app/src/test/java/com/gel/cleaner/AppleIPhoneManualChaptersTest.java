@@ -43,8 +43,8 @@ public final class AppleIPhoneManualChaptersTest {
     @Test public void everyOfficialIphoneRepairManualHasSourceLinkedRealChapters() throws Exception {
         List<AppleOfficialServiceGuidance.Guidance> docs = official();
         List<AppleIPhoneManualChapters.Chapter> items = chapters();
-        assertTrue("Preserve original 983 headings and newly verified subchapters", items.size() >= 983);
-        int proc = 0;
+        assertEquals("30 original model contents fully expanded into source-linked actual chapters", 1074, items.size());
+        int proc = 0, direct = 0, refCount = 0, symptoms = 0;
         for (AppleIPhoneManualChapters.Chapter row : items) {
             assertTrue(row.sourceUrl.startsWith("https://support.apple.com/"));
             assertTrue("No full copyrighted manual text is embedded", row.titleEnglish.length() < 96);
@@ -52,8 +52,16 @@ public final class AppleIPhoneManualChaptersTest {
             assertFalse("Manufacturer repair recommendation may not be inferred from panic code",
                     row.titleEnglish.contains("GEL PANIC"));
             if (row.phase == AppleIPhoneManualChapters.Phase.PROCEDURE) proc++;
+            if (row.linkScope == AppleIPhoneManualChapters.LinkScope.DIRECT_CHAPTER) direct++;
+            if (row.phase == AppleIPhoneManualChapters.Phase.REFERENCE) refCount++;
+            if (row.phase == AppleIPhoneManualChapters.Phase.TROUBLESHOOT) symptoms++;
+            assertTrue("Chapter URL must use an Apple Support numeric article ID",
+                    row.sourceUrl.matches("https://support\\.apple\\.com/[a-z]{2}(?:-[a-z]{2})?/[0-9]{5,7}"));
         }
         assertEquals(407, proc);
+        assertEquals(1074, direct);
+        assertEquals("Actual reference subchapters, not 30 invented umbrella links", 107, refCount);
+        assertEquals("Both Apple display/mechanical sensor chapters are retained", 440, symptoms);
         int count = 0;
         for (AppleOfficialServiceGuidance.Guidance manual : docs) {
             if (!"MODEL_MANUAL".equals(manual.category)
@@ -72,6 +80,44 @@ public final class AppleIPhoneManualChaptersTest {
                     x.phase == AppleIPhoneManualChapters.Phase.PROCEDURE));
         }
         assertEquals("All thirty manufacturer model manuals", 30, count);
+    }
+
+    @Test public void olderAndNewerModelsKeepTheirDifferentOfficialReferenceStructure() throws Exception {
+        List<AppleIPhoneManualChapters.Chapter> all = chapters();
+        List<AppleIPhoneManualChapters.Chapter> iphone15 =
+                AppleIPhoneManualChapters.forManualId(all, "MANUAL_15");
+        assertTrue(includes(iphone15, AppleIPhoneManualChapters.Phase.REFERENCE, "Internal View"));
+        assertTrue(includes(iphone15, AppleIPhoneManualChapters.Phase.REFERENCE, "Orderable Parts"));
+        assertTrue(includes(iphone15, AppleIPhoneManualChapters.Phase.REFERENCE, "Screws"));
+        assertTrue(includes(iphone15, AppleIPhoneManualChapters.Phase.REFERENCE, "Tools"));
+        List<AppleIPhoneManualChapters.Chapter> iphone17 =
+                AppleIPhoneManualChapters.forManualId(all, "DIRECTORY_17");
+        assertTrue(includes(iphone17, AppleIPhoneManualChapters.Phase.REFERENCE,
+                "Internal View, Orderable Parts, and Exploded View"));
+        assertTrue(includes(iphone17, AppleIPhoneManualChapters.Phase.REFERENCE, "Screws"));
+        assertTrue(includes(iphone17, AppleIPhoneManualChapters.Phase.REFERENCE, "Tools"));
+
+        int apple15DisplayMechanical = 0;
+        java.util.Set<String> sourceIds = new java.util.HashSet<>();
+        for (AppleIPhoneManualChapters.Chapter item : iphone15) {
+            if (item.phase == AppleIPhoneManualChapters.Phase.TROUBLESHOOT
+                    && item.titleEnglish.startsWith(
+                        "Ambient light sensor, proximity sensor, or compass issues")) {
+                apple15DisplayMechanical++;
+                sourceIds.add(item.sourceUrl);
+            }
+        }
+        assertEquals("Two distinct official Apple chapters share a heading", 2,
+                apple15DisplayMechanical);
+        assertTrue(sourceIds.contains("https://support.apple.com/en-us/101966"));
+        assertTrue(sourceIds.contains("https://support.apple.com/en-us/101970"));
+
+        assertTrue(includes(AppleIPhoneManualChapters.forManualId(all, "DIRECTORY_18_PRO"),
+                AppleIPhoneManualChapters.Phase.TROUBLESHOOT,
+                "Vibration or haptic feedback issues"));
+        assertTrue(includes(AppleIPhoneManualChapters.forManualId(all, "DIRECTORY_18_PRO_MAX"),
+                AppleIPhoneManualChapters.Phase.TROUBLESHOOT,
+                "Vibration or haptic feedback issues"));
     }
 
     @Test public void noNeighborModelManualOrDirectoryEntryBecomesAnExactMatch() throws Exception {
