@@ -119,7 +119,7 @@ public class Lab29FactorySpecAuditTest {
         assertEquals(0, r.deviations);
         assertTrue(r.unknowns > 0);
         assertTrue(r.officialSource.startsWith("https://www.mi.com/"));
-        assertTrue(r.conclusion(true).contains("συγκρίσιμα"));
+        assertTrue(r.conclusion(true).contains("χαρακτηριστικά που μπόρεσε να συγκρίνει"));
         assertFalse(r.conclusion(true).contains("πιστοποιείται"));
     }
 
@@ -218,16 +218,26 @@ public class Lab29FactorySpecAuditTest {
         Lab29FactorySpecAudit.Report r = Lab29FactorySpecAudit.evaluate(sample());
         assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
                 row(r, "USB connector").verdict);
-        assertTrue(row(r, "USB connector").noteGreek.contains("Το Lab 27 δεν έχει τη δυνατότητα να ελέγξει"));
-        assertTrue(row(r, "USB connector").noteGreek.contains("δεν σημαίνει"));
+        assertTrue(row(r, "USB connector").noteGreek.contains("Το εργαστήριο δεν μπορεί να ελέγξει"));
+        assertTrue(row(r, "USB connector").noteGreek.contains("Ελέγξτε αν η συσκευή διαθέτει θύρα USB-C"));
         assertTrue(row(r, "USB connector").noteEnglish.contains("cannot inspect"));
         assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
                 row(r, "3.5 mm jack").verdict);
-        assertTrue(row(r, "3.5 mm jack").noteEnglish.contains("not mean absent"));
+        assertTrue(row(r, "3.5 mm jack").noteEnglish.contains("Check whether the device has a 3.5 mm socket"));
         assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN,
                 row(r, "FM radio").verdict);
-        assertTrue(row(r, "FM radio").noteEnglish.contains("does not prove"));
+        assertTrue(row(r, "FM radio").noteEnglish.contains("try receiving a station"));
         assertEquals(0, r.deviations);
     }
 
+
+    @Test public void cameraUnknownAsksForModeCheckWithoutClaimingSensorMismatch() {
+        Lab29FactorySpecAudit.Measurements m = sample();
+        m.maxRearJpegPixels = 9_400_000L;
+        Lab29FactorySpecAudit.Row c = row(Lab29FactorySpecAudit.evaluate(m), "Main camera resolution");
+        assertEquals(Lab29FactorySpecAudit.Verdict.UNKNOWN, c.verdict);
+        assertTrue(c.noteGreek.contains("Ελέγξτε αν η εφαρμογή"));
+        assertTrue(c.noteEnglish.contains("50 MP mode"));
+        assertFalse(c.noteGreek.contains("μη αυθεντικ"));
+    }
 }
