@@ -2767,6 +2767,9 @@ private void logOfficialApplePanicGuidance(String model, boolean gr,
             AppleOfficialServiceGuidance.genericForTopic(docs, "UNEXPECTED_RESTART");
     AppleOfficialServiceGuidance.Guidance diagnostics = modelKnown
             ? AppleOfficialServiceGuidance.forTopic(docs, model, "APPLE_DIAGNOSTICS") : null;
+    AppleOfficialServiceGuidance.Guidance repairDiagnostics = modelKnown
+            ? AppleOfficialServiceGuidance.forTopic(docs, model,
+                    "APPLE_DIAGNOSTICS_REPAIR") : null;
 
     logLabelValue(gr ? "Σχέση με κωδικούς panic:" : "Panic-code applicability:",
             gr ? "Η καταχωρισμένη επίσημη τεκμηρίωση δεν αποδίδει τους αναγνωρισμένους panic codes σε συγκεκριμένα ανταλλακτικά. Οι παρακάτω διαδικασίες εφαρμόζονται μόνο στα αντίστοιχα συμπτώματα."
@@ -2799,6 +2802,11 @@ private void logOfficialApplePanicGuidance(String model, boolean gr,
             logLabelInfoValue(gr ? "Γενική τεχνική βάση Apple:" : "Apple troubleshooting index:",
                     hub.title(gr) + " — " + hub.sourceUrl);
         }
+    }
+    if (repairDiagnostics != null) {
+        logLabelInfoValue(gr ? "Apple Diagnostics for Repair — ανάλογα με iOS:"
+                : "Apple Diagnostics for Repair — OS-specific:",
+                repairDiagnostics.advice(gr) + " — " + repairDiagnostics.sourceUrl);
     }
     if (diagnostics != null) {
         logLabelInfoValue(gr ? "Apple Diagnostics — εφόσον υποστηρίζονται:"
