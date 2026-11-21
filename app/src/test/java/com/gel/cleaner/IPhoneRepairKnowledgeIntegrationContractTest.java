@@ -72,6 +72,29 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertFalse(lab7.contains("replaceConfirmedFaultyComponent"));
     }
 
+    @Test public void appleDocumentationIsSeparateFromRealRepairOutcomes() throws Exception {
+        String source = code("IPhoneLabsActivity.java");
+        String officialHelper = region(source,
+                "private java.util.List<AppleOfficialServiceGuidance.Guidance> readAppleOfficialGuidance()",
+                "private java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> readPanicRepairHistory()");
+        assertTrue(officialHelper.contains("getAssets().open(AppleOfficialServiceGuidance.ASSET)"));
+        assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.modelManual(docs, model)"));
+        assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.forTopic(docs, model, \"UNEXPECTED_RESTART\")"));
+        assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.forTopic(docs, model, \"APPLE_DIAGNOSTICS\")"));
+        assertTrue(officialHelper.contains("η Apple δεν αποδίδει εδώ κάποιον συγκεκριμένο panic code"));
+        String lab4 = region(source, "private void runImpactLab()",
+                "private int countSupportedPanicBlocks(");
+        assertTrue(lab4.contains("documentedAppleModels.add(observed.modelIdentifier)"));
+        assertTrue(lab4.contains("logOfficialApplePanicGuidance(observed.modelIdentifier, gr)"));
+        assertTrue(lab4.contains("logApplePanicEvidence(block, gr,"));
+        String lab8 = region(source, "private void runFinalServiceRecommendationLab()",
+                "private void runDemoDiagnostics()");
+        assertTrue(lab8.contains("if (observedHardwareModels.size() == 1)"));
+        assertTrue(lab8.contains("AppleOfficialServiceGuidance.modelManual(readAppleOfficialGuidance()"));
+        assertTrue(lab8.contains("manual.sourceUrl"));
+        assertFalse(lab8.contains("Apple confirmed panic code"));
+    }
+
     @Test public void cannotConflateSyntheticFixturesWithSuccessfulRepairRecords() throws Exception {
         String main = code("IPhoneLabsActivity.java");
         String demo = region(main, "private void runDemoDiagnostics()", "// GUARD");
