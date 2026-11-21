@@ -2591,11 +2591,8 @@ private void showAppleServiceStepPicker() {
     String[] labels = new String[selectedModels.size()];
     for (int i = 0; i < labels.length; i++) labels[i] = selectedModels.get(i).title(gr);
     new AlertDialog.Builder(this, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
-            .setTitle(gr ? "Επιλογή ακριβούς μοντέλου Apple"
-                         : "Choose the exact Apple device model")
-            .setMessage(gr
-                    ? "Μόνο για ανάγνωση επίσημων κεφαλαίων. Επαληθεύστε το μοντέλο ανεξάρτητα από το panic log· δεν αποτελεί διάγνωση."
-                    : "Official reference browsing only. Verify the actual device model independently of the panic log; this is not a diagnosis.")
+            .setTitle(gr ? "Επιλογή μοντέλου μόνο για ανάγνωση"
+                         : "Choose model for reference only")
             .setItems(labels, (dialog, which) -> {
                 String manualId = selectedModels.get(which).id;
                 java.util.List<AppleIPhoneManualChapters.Chapter> local =
@@ -2621,9 +2618,7 @@ private void showAppleServiceChapterPicker(
         labels[i] = ch.title(gr) + " — " + ch.phase.name();
     }
     new AlertDialog.Builder(this, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
-            .setTitle(gr ? "Επιβεβαιωμένα κεφάλαια Apple" : "Source-reviewed Apple chapters")
-            .setMessage(gr ? "Η επιλογή κεφαλαίου δεν αποτελεί σύσταση αντικατάστασης ανταλλακτικού."
-                           : "Selecting a chapter is not a component replacement recommendation.")
+            .setTitle(gr ? "Κεφάλαια Apple — όχι σύσταση αλλαγής" : "Apple chapters — not repair advice")
             .setItems(labels, (dialog, which) ->
                     showAppleServiceStepDetails(chapters.get(which), stages, gr))
             .setNegativeButton(gr ? "Άκυρο" : "Cancel", null).show();
