@@ -32087,12 +32087,7 @@ appendHtml("<br>");
 logInfo(gr ? "Θερμικά" : "Thermals");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        thermalScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : thermalFlag + " (" + thermalScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", thermalScore, thermalFlag, gr);
 
 if (zones == null || zones.isEmpty()) {
 
@@ -32148,30 +32143,25 @@ appendHtml("<br>");
 logInfo(gr ? "Μπαταρία" : "Battery");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        batteryScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : batteryFlag + " (" + batteryScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", batteryScore, batteryFlag, gr);
 
-logLabelValue(
-        gr ? "Στοιχεία" : "State",
-        (gr ? "Επίπεδο=" : "Level=") +
+String batteryReadings = (gr ? "Επίπεδο=" : "Level=") +
         (lab27BatteryPercent >= 0 ? fmt1((float) lab27BatteryPercent) + "%" : (gr ? "Άγνωστο" : "Unknown")) +
-        " | Temp=" + fmt1(batTemp) + "°C" +
+        " | Temp=" + (Lab16ThermalCorrelation.plausible(batTemp)
+                ? fmt1(batTemp) + "°C" : (gr ? "Άγνωστη" : "Unknown")) +
         " | " + (gr ? "Φόρτιση=" : "Charging=") +
-        (charging ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No"))
-);
+        (charging ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No"));
+if (lab27BatteryPercent >= 0 || Lab16ThermalCorrelation.plausible(batTemp)) {
+    logLabelInfoValue(gr ? "Στοιχεία" : "State", batteryReadings);
+} else {
+    logLabelValue(gr ? "Στοιχεία" : "State", batteryReadings);
+}
 
 appendHtml("<br>");
 logInfo(gr ? "Αποθήκευση" : "Storage");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        storageFlag + " (" + storageScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", storageScore, storageFlag, gr);
 
 if (st.totalBytes > 0) {
     String storageUsage = (gr ? "Ελεύθερο=" : "Free=")
@@ -32193,13 +32183,10 @@ appendHtml("<br>");
 logInfo(gr ? "Αποτύπωμα Εφαρμογών" : "Apps footprint");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        appsFlag + " (" + appsScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", appsScore, appsFlag, gr);
 
 if (ap.totalApps > 0 && ap.userApps >= 0 && ap.systemApps >= 0) {
-    logLabelOkValue(gr ? "Μετρήσεις" : "Counts",
+    logLabelInfoValue(gr ? "Μετρήσεις" : "Counts",
             "User=" + ap.userApps + " | System=" + ap.systemApps
                     + " | Total=" + ap.totalApps);
 } else {
@@ -32212,10 +32199,7 @@ appendHtml("<br>");
 logInfo("RAM");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        ramFlag + " (" + ramScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", ramScore, ramFlag, gr);
 
 if (rm.totalBytes > 0)
     logLabelOkValue(gr ? "Ελεύθερη" : "Free",
@@ -32228,10 +32212,7 @@ appendHtml("<br>");
 logInfo(gr ? "Σταθερότητα / Χρόνος λειτουργίας" : "Stability / Uptime");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        stabilityFlag + " (" + stabilityScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", stabilityScore, stabilityFlag, gr);
 
 if (upMs > 0)
     logLabelOkValue(gr ? "Χρόνος λειτουργίας" : "Uptime", formatUptime(upMs));
@@ -32248,10 +32229,7 @@ appendHtml("<br>");
 logInfo(gr ? "Ασφάλεια" : "Security");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        securityFlag + " (" + securityScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", securityScore, securityFlag, gr);
 
 if (sec.lockSecure) {
     logLabelOkValue(gr ? "Κλείδωμα συσκευής" : "Secure lock",
@@ -32261,14 +32239,14 @@ if (sec.lockSecure) {
             gr ? "Δεν υπάρχει ασφαλές κλείδωμα" : "No secure screen lock");
 }
 
-logLabelValue(
-        gr ? "Ενημέρωση ασφαλείας" : "Patch level",
-        sec.securityPatch == null
-                ? (gr ? "Άγνωστο" : "Unknown")
-                : sec.securityPatch
-);
+if (sec.securityPatch != null && !sec.securityPatch.trim().isEmpty()) {
+    logLabelInfoValue(gr ? "Ενημέρωση ασφαλείας" : "Patch level", sec.securityPatch);
+} else {
+    logLabelValue(gr ? "Ενημέρωση ασφαλείας" : "Patch level",
+            gr ? "Άγνωστο" : "Unknown");
+}
 
-logLabelValue(
+logLabelInfoValue(
         "ADB / Dev",
         "USB=" + sec.adbUsbOn +
         " | Wi-Fi=" + sec.adbWifiOn +
@@ -32285,21 +32263,21 @@ appendHtml("<br>");
 logInfo(gr ? "Ιδιωτικότητα" : "Privacy");
 logLine();
 
-logLabelValue(
-        gr ? "Κατάσταση" : "Status",
-        privacyScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ — ελλιπής απογραφή αδειών"
-                      : "INSUFFICIENT DATA — incomplete permissions sample")
-                : privacyFlag + " (" + privacyScore + ")"
-);
+lab27LogScoreValue(gr ? "Κατάσταση" : "Status", privacyScore, privacyFlag, gr);
 
-logLabelValue(
-        gr ? "Χορηγημένες άδειες στο ορατό δείγμα" : "Granted permissions in visible sample",
+String visiblePermissionCounts =
         "Location=" + pr.userAppsWithLocation +
         " | Mic=" + pr.userAppsWithMic +
         " | Camera=" + pr.userAppsWithCamera +
-        " | SMS=" + pr.userAppsWithSms
-);
+        " | SMS=" + pr.userAppsWithSms;
+if (pr.totalUserAppsChecked > 0) {
+    // Permission counts are facts, not proof of abuse or elevated risk.
+    logLabelInfoValue(gr ? "Χορηγημένες άδειες στο ορατό δείγμα" : "Granted permissions in visible sample",
+            visiblePermissionCounts);
+} else {
+    logLabelValue(gr ? "Χορηγημένες άδειες στο ορατό δείγμα" : "Granted permissions in visible sample",
+            gr ? "Δεν υπάρχει επαρκές δείγμα" : "Insufficient sample");
+}
 
 // ------------------------------------------------------------
 // FINAL VERDICT
@@ -32359,11 +32337,11 @@ if (snapshotGrade == null) {
                 deviceHealthScore + "/100"
         );
     } else {
-        logLabelValue(
+        logLabelInfoValue(
                 gr ? "Βαθμολογία συσκευής" : "Device grade",
                 snapshotGrade
         );
-        logLabelValue(
+        logLabelInfoValue(
                 gr ? "Συνολικός δείκτης" : "Overall index",
                 deviceHealthScore + "/100"
         );
@@ -32385,25 +32363,11 @@ logLabelValue(
            : "The index describes the available snapshot; it does not certify component health or measure battery wear."
 );
 
-logLabelValue(
-        gr ? "Απόδοση" : "Performance",
-        performanceScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : "⚪" + " (" + performanceScore + ")"
-);
+lab27LogScoreValue(gr ? "Απόδοση" : "Performance", performanceScore, "⚪", gr);
 
-logLabelValue(
-        gr ? "Ασφάλεια" : "Security",
-        securityFlag
-                + " (" + securityScore + ")"
-);
+lab27LogScoreValue(gr ? "Ασφάλεια" : "Security", securityScore, securityFlag, gr);
 
-logLabelValue(
-        gr ? "Ιδιωτικότητα" : "Privacy",
-        privacyScore < 0
-                ? (gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA")
-                : privacyFlag + " (" + privacyScore + ")"
-);
+lab27LogScoreValue(gr ? "Ιδιωτικότητα" : "Privacy", privacyScore, privacyFlag, gr);
 
 String verdict = gr
         ? "Η σύνοψη παρουσιάζει τα διαθέσιμα αποτελέσματα των εργαστηρίων."
@@ -32503,7 +32467,7 @@ else if (runCount >= 3)
 else
     reliabilityIndex = 50;
 
-logLabelValue(
+logLabelInfoValue(
         gr ? "Πλήθος επαναλήψεων (όχι αξιοπιστία διάγνωσης)"
            : "Run count (not diagnostic reliability)",
         (reliabilityIndex >= 80
@@ -32622,7 +32586,7 @@ String ts = new java.text.SimpleDateFormat(
         java.util.Locale.US
 ).format(new java.util.Date());
 
-logLabelValue(
+logLabelInfoValue(
         gr ? "Χρόνος διάγνωσης"
            : "Diagnostic timestamp",
         ts
@@ -32663,7 +32627,7 @@ try {
 
 }
 
-logLabelValue(
+logLabelInfoValue(
         gr ? "ID διάγνωσης"
            : "Diagnostic ID",
         reportId
@@ -32715,6 +32679,17 @@ private void lab27LogThermalValue(String label, Float celsius, int sector) {
     }
 }
 
+// Lab 27 numerical section indices are informational scores, not verified
+// hardware-health diagnoses. Keep green for verified positive findings only.
+// The same styled-value helper records colors for service logs/PDF exports.
+private void lab27LogScoreValue(String label, int score, String flag, boolean gr) {
+    if (score < 0) {
+        logLabelValue(label, gr ? "ΑΝΕΠΑΡΚΗ ΔΕΔΟΜΕΝΑ" : "INSUFFICIENT DATA");
+    } else {
+        logLabelInfoValue(label, flag + " (" + score + ")");
+    }
+}
+
 private void lab27DisplayFactorySpecs(boolean gr) {
     // Compare Android-reported specifications to published OEM profile.
     // No claim of cryptographic authenticity, genuine replacement parts,
@@ -32732,7 +32707,7 @@ private void lab27DisplayFactorySpecs(boolean gr) {
         if (factory.supportedModel) {
             logLabelOkValue(gr ? "Εργοστασιακό μοντέλο αναφοράς" : "OEM reference model",
                     factory.modelName);
-            logLabelValue(gr ? "Πηγή κατασκευαστή" : "Manufacturer source",
+            logLabelInfoValue(gr ? "Πηγή κατασκευαστή" : "Manufacturer source",
                     factory.officialSource);
             for (Lab29FactorySpecAudit.Row specRow : factory.rows) {
                 String rowName = gr ? specRow.greek : specRow.english;
@@ -32760,7 +32735,7 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                                     ? (gr ? "Σύμφωνα με τον κατασκευαστή: "
                                           : "Manufacturer specification: ") + specRow.expected
                                     : observation + " (" + expected + specRow.expected + ")";
-                    logLabelValue(rowName, partialObservation);
+                    logLabelInfoValue(rowName, partialObservation);
                 }
                 // Explain non-verification without alleging a missing OEM feature.
                 // Battery wear/remaining charge is distinct from factory design mAh.
@@ -32786,7 +32761,7 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                 logLabelOkValue(gr ? "Αποκλίσεις προδιαγραφών" : "Specification deviations",
                         "0");
             }
-            logLabelValue(gr ? "Χαρακτηριστικά χωρίς αυτόματη σύγκριση" : "Characteristics without automatic comparison",
+            logLabelInfoValue(gr ? "Χαρακτηριστικά χωρίς αυτόματη σύγκριση" : "Characteristics without automatic comparison",
                     String.valueOf(factory.unknowns));
             if (factory.unknowns > 0) {
                 logLabelValue(gr ? "Τρόπος ελέγχου" : "How to check",
