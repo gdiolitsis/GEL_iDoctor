@@ -179,4 +179,17 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(kb.contains("if (!panicCode.equals(canonicalCode(code))) return false;"));
         assertTrue(kb.contains("identifier.trim().equalsIgnoreCase(model.trim())"));
     }
+    @Test public void conditionalManufacturerPartsNeverFireFromPanicOnlyLab4Flow() throws Exception {
+        String activity = code("IPhoneLabsActivity.java");
+        String lab4 = region(activity, "private void runImpactLab()",
+                "private int countSupportedPanicBlocks(");
+        assertFalse("Imported panic logs must not trigger Apple part replacement rules",
+                activity.contains("AppleIPhoneConditionalServiceRules.forVerifiedObservedResult("));
+        assertFalse(lab4.contains("AppleIPhoneConditionalServiceRules"));
+        String rules = code("AppleIPhoneConditionalServiceRules.java");
+        assertTrue(rules.contains("if (!externallyVerifiedResult"));
+        assertTrue(rules.contains("model.applies(rule.hardwareId)"));
+        assertTrue(rules.contains("rule.requiredResult == observedResult"));
+    }
+
 }
