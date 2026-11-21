@@ -1780,8 +1780,6 @@ private void runImpactLab() {
     java.util.Set<String> documentedAppleModels = new java.util.LinkedHashSet<>();
     java.util.Map<String, java.util.Set<String>> appleTopicsByModel =
             new java.util.LinkedHashMap<>();
-    java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> repairHistory =
-            readPanicRepairHistory();
     int incidentCount = 0;
     for (String block : blocks) {
         if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
@@ -1794,19 +1792,10 @@ private void runImpactLab() {
             topics = new java.util.LinkedHashSet<>();
             appleTopicsByModel.put(observed.modelIdentifier, topics);
         }
-        // A relevant forum action only suggests which official symptom page
-        // might be useful IF that symptom exists. It cannot establish the
-        // user's symptom or imply Apple endorsed the forum's repair.
+        // Suggest only conditional symptom pages from the actual panic clue
+        // type, never from a forum repair attempt or guessed failed part.
         for (ApplePanicHardwareHints.Finding finding : observed.findings) {
-            for (IPhonePanicRepairKnowledgeBase.RepairCase historic :
-                    IPhonePanicRepairKnowledgeBase.lookup(repairHistory,
-                            observed.modelIdentifier, finding.code)) {
-                for (String topic : new String[]{
-                        "WIRED_CHARGING", "WIRELESS_CHARGING", "BATTERY_POWER"}) {
-                    if (AppleOfficialServiceGuidance.topicMightBeUsefulForAction(
-                            historic.actionKey, topic)) topics.add(topic);
-                }
-            }
+            topics.addAll(AppleOfficialServiceGuidance.conditionalTopicsForClue(finding.code));
         }
     }
 
@@ -2549,6 +2538,12 @@ private void logOfficialApplePanicGuidance(String model, boolean gr,
                 : "Manual for this exact model:",
                 gr ? "Δεν έχει καταχωριστεί επαληθευμένη αντιστοίχιση στη βάση μας."
                    : "No verified exact-model manual is indexed in our catalog.");
+        AppleOfficialServiceGuidance.Guidance hub =
+                AppleOfficialServiceGuidance.genericForTopic(docs, "TROUBLESHOOTING_HUB");
+        if (hub != null) {
+            logLabelInfoValue(gr ? "Γενική τεχνική βάση Apple:" : "Apple troubleshooting index:",
+                    hub.title(gr) + " — " + hub.sourceUrl);
+        }
     }
     if (diagnostics != null) {
         logLabelInfoValue(gr ? "Apple Diagnostics — εφόσον υποστηρίζονται:"
@@ -2556,15 +2551,19 @@ private void logOfficialApplePanicGuidance(String model, boolean gr,
                 diagnostics.advice(gr) + " — " + diagnostics.sourceUrl);
     }
     if (suggestedTopics != null) {
+        int shown = 0;
+        // Relevant Apple symptom guidance appears FIRST. Never display an
+        // unsupported directive to replace the part named by a panic clue.
         for (String topic : suggestedTopics) {
-            AppleOfficialServiceGuidance.Guidance relatedApple =
-                    AppleOfficialServiceGuidance.genericForTopic(docs, topic);
-            if (relatedApple != null) {
+            for (AppleOfficialServiceGuidance.Guidance relatedApple :
+                    AppleOfficialServiceGuidance.genericForTopicAll(docs, topic)) {
+                if (shown++ >= 8) break;
                 logLabelInfoValue(gr ? "Apple — μόνο αν υπάρχει σχετικό σύμπτωμα:"
                         : "Apple — only if this symptom exists:",
                         relatedApple.title(gr) + " — " + relatedApple.advice(gr)
                                 + " — " + relatedApple.sourceUrl);
             }
+            if (shown >= 8) break;
         }
     }
 }
