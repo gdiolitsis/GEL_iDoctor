@@ -1,4 +1,7 @@
 # GEL iDoctor — Apple official iPhone service documentation
+
+**CURRENT LINK-COVERAGE RESULT — 2026-11-21:** 30/30 live Apple iPhone Repair Manuals were checked; the normalized chapter index has **1,074/1,074 direct official Apple chapter URLs, zero Contents-only placeholders and zero unresolved source conflicts**. The older numerical descriptions below are historical progress checkpoints. The authoritative current per-model reference matrix and remaining procedure-step limitations are in [IPHONE_APPLE_MANUAL_CHAPTER_TAXONOMY_2026-11-21.md](IPHONE_APPLE_MANUAL_CHAPTER_TAXONOMY_2026-11-21.md). This is source-link completeness, **not** a claim that all 1,074 article bodies were individually reviewed or copied into the APK.
+
 Research date: 2026-11-21. Source authority: **Apple Support only**.
 
 ## Non-negotiable evidence boundary
