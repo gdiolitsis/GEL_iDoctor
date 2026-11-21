@@ -104,8 +104,8 @@ public final class Lab27ValueAfterColonColorsContractTest {
         assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Ιδιωτικότητα\" : \"Privacy\", privacyScore, privacyFlag, gr);"));
         assertTrue(lab.contains("logLabelInfoValue(gr ? \"Μετρήσεις\" : \"Counts\""));
         assertTrue(lab.contains("logLabelInfoValue(gr ? \"Ενημέρωση ασφαλείας\" : \"Patch level\""));
-        assertTrue(lab.contains("logLabelInfoValue(gr ? \"Χρόνος διάγνωσης\""));
-        assertTrue(lab.contains("logLabelInfoValue(gr ? \"ID διάγνωσης\""));
+        assertTrue(lab.contains("logLabelInfoValue(\\n        gr ? \"Χρόνος διάγνωσης\""));
+        assertTrue(lab.contains("logLabelInfoValue(\\n        gr ? \"ID διάγνωσης\""));
         assertTrue(lab.contains("logLabelInfoValue(gr ? \"Στοιχεία\" : \"State\", batteryReadings)"));
         // A computed numerical index is not verified component health.
         assertTrue(lab.contains("private void lab27LogScoreValue(String label, int score, String flag, boolean gr)"));
