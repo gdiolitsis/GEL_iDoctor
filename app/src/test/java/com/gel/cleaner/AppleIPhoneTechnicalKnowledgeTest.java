@@ -39,8 +39,8 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
 
     @Test public void allReviewedNotesHaveRealMatchingAppleArticleAndRiskAndDate() throws Exception {
         List<AppleIPhoneTechnicalKnowledge.Finding> all = notes();
-        assertEquals(100, all.size());
-        assertEquals(459, AppleIPhoneTechnicalKnowledge.chapterCoverage(all, chapters()));
+        assertEquals(108, all.size());
+        assertEquals(517, AppleIPhoneTechnicalKnowledge.chapterCoverage(all, chapters()));
         Set<String> urls = new HashSet<>();
         for (AppleIPhoneTechnicalKnowledge.Finding fact : all) {
             assertTrue(fact.sourceUrl.startsWith("https://support.apple.com/en-us/"));
@@ -50,7 +50,7 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
             assertFalse(fact.english.trim().isEmpty());
             urls.add(fact.sourceUrl);
         }
-        assertEquals("Only eight source-reviewed Apple articles, not all chapter texts", 8, urls.size());
+        assertEquals("Nine source-reviewed Apple articles, not all chapter texts", 9, urls.size());
         assertEquals("Chapter catalog coverage is separate from full procedure review", 1074,
                 chapters().size());
     }
@@ -165,8 +165,27 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
         assertEquals(button.sourceUrl, sim.sourceUrl);
         assertEquals(6, AppleIPhoneTechnicalKnowledge.forChapter(all, button).size());
         assertEquals(5, AppleIPhoneTechnicalKnowledge.forChapter(all, sim).size());
-        assertEquals("Camera article body has not yet been reviewed in this phase",
-                0, AppleIPhoneTechnicalKnowledge.forChapter(all, camera).size());
+        assertEquals("Four source-linked camera checks have now been reviewed",
+                4, AppleIPhoneTechnicalKnowledge.forChapter(all, camera).size());
+    }
+
+    @Test public void cameraAndFaceIdUseOnlyOfficialCameraArticleAndExactSymptoms() throws Exception {
+        List<AppleIPhoneTechnicalKnowledge.Finding> camera =
+                AppleIPhoneTechnicalKnowledge.forExactModel(notes(), chapters(), official(),
+                        "iPhone14,3", AppleIPhoneManualChapters.Phase.TROUBLESHOOT, "CAMERA");
+        List<AppleIPhoneTechnicalKnowledge.Finding> face =
+                AppleIPhoneTechnicalKnowledge.forExactModel(notes(), chapters(), official(),
+                        "iPhone14,3", AppleIPhoneManualChapters.Phase.TROUBLESHOOT, "FACE_ID");
+        assertEquals(4, camera.size());
+        assertEquals(4, face.size());
+        assertTrue(camera.stream().allMatch(x ->
+                x.sourceUrl.equals("https://support.apple.com/en-us/101967")));
+        assertTrue(face.stream().allMatch(x ->
+                x.sourceUrl.equals("https://support.apple.com/en-us/101967")));
+        assertTrue(face.stream().anyMatch(x ->
+                x.risk == AppleIPhoneTechnicalKnowledge.Risk.TECHNICIAN_ONLY));
+        assertTrue(AppleIPhoneTechnicalKnowledge.forExactModel(notes(), chapters(), official(),
+                "Unknown", AppleIPhoneManualChapters.Phase.TROUBLESHOOT, "FACE_ID").isEmpty());
     }
 
     @Test(expected=java.io.IOException.class)
