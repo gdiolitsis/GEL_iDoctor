@@ -11,7 +11,7 @@ The legacy `app/src/test/resources/iphone_panic_corpus.tsv` contains 49 **recons
 - `app/src/main/assets/iphone_panic_repair_knowledge_v1.tsv`: offline, sourced historical repair cases (one row per repair **attempt**, not one row per device).
 - `app/src/main/java/com/gel/cleaner/IPhonePanicRepairKnowledgeBase.java`: strict UTF-8 parser, normalized code matching and exact-device lookup.
 - `app/src/test/java/com/gel/cleaner/IPhonePanicRepairKnowledgeBaseTest.java`: source integrity, mixed outcomes, model isolation and unknown-code negative controls.
-- `IPhoneLabsActivity.java` / **iPhone LAB 4**: matching published outcomes are shown beneath the GEL technical clue, with actions, outcomes and source URLs in both languages. No live lookup or panic upload is performed.
+- `IPhoneLabsActivity.java` / **iPhone LAB 4**: matching published outcomes are shown beneath the GEL technical clue, with actions, outcomes and source URLs in both languages. **Lab 7** displays a concise literature pointer only for an exact-model clue repeating in multiple files; **Lab 8** includes a deduplicated summary of published repair attempts and points back to Lab 4. All three share one in-memory, offline catalog and never infer a repair instruction. No live lookup or panic upload is performed.
 
 ## Entry fields
 `case_id`, `incident_id`, `models`, `panic_code`, `action_key`, `outcome`,
@@ -46,7 +46,7 @@ The legacy `app/src/test/resources/iphone_panic_corpus.tsv` contains 49 **recons
    https://www.ifixit.com/Answers/View/941226/
 
 ## Worldwide survey checkpoint (21 November 2026)
-The baseline seed has now expanded to **24 source-linked repair attempts** (12 self-reported successes, 10 self-reported failures, one partial/recurrent case, one unresolved case), spanning 10 indexed signature/code keys and 13 model identifiers. These are not independent phones or proof of repair probability. The global scope, additional linked sources, source conflicts and methodology are documented separately in [the world survey](IPHONE_WORLD_PANIC_REPAIR_SURVEY_2026-11-21.md). **The 49 reconstructed QA fixtures are still distinct from the outcome database.**
+The initial research seed has now expanded to **26 source-linked repair attempts** (13 self-reported successes, 11 self-reported failures, one partial/recurrent case, one unresolved case), spanning 10 indexed signature/code keys, 13 model identifiers and 21 grouped incidents. These are not independent phones or proof of repair probability. The global scope, additional linked sources, source conflicts and methodology are documented separately in [the world survey](IPHONE_WORLD_PANIC_REPAIR_SURVEY_2026-11-21.md). **The 49 reconstructed QA fixtures are still distinct from the outcome database.**
 
 ## Quality rules
 1. **Success needs explicit first-hand post-repair feedback** in the cited thread; a selected/accepted answer is not enough.
