@@ -5,6 +5,10 @@ on:
     paths:
       - 'app/src/main/assets/iphone_panic_repair_knowledge_v1.tsv'
       - 'app/src/main/assets/iphone_apple_official_guidance_v1.tsv'
+      - 'app/src/main/assets/iphone_apple_manual_chapters_v1.tsv'
+      - 'app/src/main/java/com/gel/cleaner/AppleIPhoneManualChapters.java'
+      - 'app/src/test/java/com/gel/cleaner/AppleIPhoneManualChaptersTest.java'
+      - 'docs/qa/IPHONE_APPLE_MANUAL_CHAPTER_TAXONOMY_2026-11-21.md'
       - 'app/src/main/java/com/gel/cleaner/AppleOfficialServiceGuidance.java'
       - 'app/src/test/java/com/gel/cleaner/AppleOfficialServiceGuidanceTest.java'
       - 'docs/qa/IPHONE_APPLE_OFFICIAL_SERVICE_SOURCES_2026-11-21.md'
