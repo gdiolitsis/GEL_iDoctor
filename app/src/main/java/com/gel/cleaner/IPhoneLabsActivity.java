@@ -1550,25 +1550,9 @@ logLabelValue(
 
 // Parser rule weight does not represent measured device-fault severity.
 
-// Confidence
-if ("High".equalsIgnoreCase(r.confidence)) {
-    logLabelValue(
-            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
-    );
-}
-else if ("Medium".equalsIgnoreCase(r.confidence)) {
-    logLabelValue(
-            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
-    );
-}
-else {
-    logLabelValue(
-            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
-    );
-}
+// Pattern confidence is not calibrated to a physical failure probability.
+logLabelValue(gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+        IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr));
 
 logLabelValue(
         gr ? "Επόμενο τεχνικό βήμα:" : "Next technician step:",
@@ -1677,28 +1661,9 @@ logLabelWarnValue(
                 : "Possible subsystem involvement, not a confirmed fault."
 );
 
-// Confidence
-if ("High".equalsIgnoreCase(sigConfidence)) {
-
-    logLabelWarnValue(
-            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
-    );
-}
-else if ("Medium".equalsIgnoreCase(sigConfidence)) {
-
-    logLabelWarnValue(
-            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
-    );
-}
-else {
-
-    logLabelWarnValue(
-            gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
-            IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr)
-    );
-}
+// A matched term is a log observation, never a measured failure probability.
+logLabelValue(gr ? "Βεβαιότητα αιτίας:" : "Root cause certainty:",
+        IPhonePanicHumanizer.certainty(ApplePanicEvidencePolicy.patternConfidence(), gr));
 
 // Evidence
 if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
@@ -2232,7 +2197,8 @@ private void runFinalServiceRecommendationLab() {
     logLabelOkValue(gr ? "Αρχεία συμβάντων που αναλύθηκαν:"
                        : "Incident files reviewed:", String.valueOf(total));
 
-    // A recorded interruption warrants caution, never a green health verdict.
+    // Compact index of the incident categories: Lab 2 already describes
+    // each incident and Lab 6/7 already tabulate domains and recurrence.
     for (java.util.Map.Entry<String, Integer> e : crashCount.entrySet()) {
         String observedType = IPhonePanicHumanizer.event(e.getKey(), gr)
                 + " — " + e.getValue();
@@ -2240,26 +2206,15 @@ private void runFinalServiceRecommendationLab() {
                 || "Unknown / Generic".equalsIgnoreCase(e.getKey())) {
             logLabelValue(gr ? "Είδος συμβάντος στο αρχείο:" : "Recorded event type:",
                     observedType);
+            // Unknown classifications deserve a brief explanation; for
+            // identified events the plain-language summary above is enough.
+            logLabelValue(gr ? "Τι σημαίνει:" : "What it means:",
+                    IPhonePanicHumanizer.meaning(e.getKey(), gr));
         } else {
             logLabelWarnValue(gr ? "Είδος συμβάντος στο αρχείο:" : "Recorded event type:",
                     observedType);
         }
-        logLabelValue(gr ? "Τι σημαίνει:" : "What it means:",
-                IPhonePanicHumanizer.meaning(e.getKey(), gr));
     }
-
-    // Identified keyword categories are not damaged physical components.
-    for (java.util.Map.Entry<String, Integer> e : domainCount.entrySet()) {
-        logLabelValue(gr ? "Κατηγορία ενδείξεων:" : "Observed keyword category:",
-                IPhonePanicHumanizer.domain(e.getKey(), gr) + " — " + e.getValue());
-    }
-
-    logLabelValue(gr ? "Επανάληψη στο δείγμα:" : "Recurrence in sample:",
-            repeatedCategory
-                    ? (gr ? "Υπάρχει κοινή κατηγορία όρων σε διαφορετικά αρχεία· όχι αποδεδειγμένη επανάληψη βλάβης."
-                          : "A keyword category appears in multiple records, not a confirmed recurring fault.")
-                    : (gr ? "Δεν επαναλήφθηκε η ίδια γνωστή κατηγορία ενδείξεων στα εισαγόμενα αρχεία."
-                          : "No known keyword category recurred in the imported files."));
 
     if (!uniqueTechnicalCodes.isEmpty()) {
         logLabelValue(gr ? "Ενδείξεις που αναγνώρισε το GEL:" : "GEL-recognized clues:",
