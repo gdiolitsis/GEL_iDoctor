@@ -5,7 +5,7 @@ Research date: 2026-11-21. Source authority: **Apple Support only**.
 **These Apple publications are not an Apple list mapping panic-full, SMC, MIC2, PRS0, watchdog or I2C codes to confirmed replacement parts.** They offer symptoms, diagnostics, safe repair procedures and post-repair checks. GEL uses them as **independent procedural references**, never as additional successful-repair cases. Do not label any forum fix "Apple-confirmed" based on these manuals.
 
 ## Source files and integration
-- Offline catalog: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv`. **53 curated Apple-source records:** 12 exact-model repair-manual mappings, 23 symptom/diagnostic/recovery/power service references, and 18 model manuals indexed without unverified hardware identifiers. The iPhone-only symptom pages cover audio, display, camera, Face ID, Touch ID, thermal symptoms, liquid connector alerts, recovery/restore, cellular service and calls, as well as power and charging.
+- Offline catalog: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv`. **54 curated Apple-source records:** 12 exact-model repair-manual mappings, 24 symptom/diagnostic/recovery/power service references, and 18 model manuals indexed without unverified hardware identifiers. The iPhone-only symptom pages cover audio, display, camera, Face ID, Touch ID, thermal symptoms, liquid connector alerts, recovery/restore, cellular service and calls, as well as power and charging.
 - Parser: `AppleOfficialServiceGuidance.java`. Requires `support.apple.com` source URLs, model-matching for manuals, and applicability for diagnostics. It does **not** accept or interpret panic codes.
 - iPhone Lab 4: **official-first** presentation for all imported panic logs: exact-model Apple manual where indexed, unexpected restart instructions, supported Apple diagnostics, and a bounded number of symptom-only pages relevant to literal GEL clues. Only afterward are independent model+clue repair attempts shown, retaining successes, failures and source URLs. Topic selection is independent of forum repair actions and never a claim that Apple diagnoses the indicated component.
 - iPhone Lab 8: concise case-count and event summary pointing back to Lab 4 for the Apple-first source references and individual reported outcomes, avoiding duplicate recommendations.
@@ -153,7 +153,7 @@ The complete list below is part of the offline TSV catalog. Each URL is an Apple
 | iPhone 18 Pro Max | https://support.apple.com/en-la/127626 | Directory-only |
 | iPhone Duo | https://support.apple.com/en-us/127682 | Directory-only |
 
-**Count:** 30 repair manuals (12 matched to previously verified internal hardware IDs, 18 directory-only) + 23 independent Apple symptom/diagnostic/support records = **53 official source records**. There is no full-text manual duplication in the APK.
+**Count:** 30 repair manuals (12 matched to previously verified internal hardware IDs, 18 directory-only) + 24 independent Apple symptom/diagnostic/support records = **54 official source records**. There is no full-text manual duplication in the APK.
 
 **Do not elevate a directory-only manual to an exact-model match without verified device hardware identifiers.** A raw panic log that lacks the model identifier should receive only the applicable generic Apple troubleshooting procedure, not a guessed variant's manual.
 
@@ -165,3 +165,9 @@ Official manuals usually separate Safety, Quick Checks, Diagnostics, Battery/Cha
 - A page linked through Apple's own product directory is authoritative for its official provenance. Every URL should still be rechecked periodically for redirects, revision changes and accessibility.
 - Existing Apple authoring is never proof of GEL panic-code-to-part mapping; the international case database remains a separate trust category.
 - No automatic live Apple Support scraping occurs on the user device.
+
+## Source-verified Apple Diagnostics Repair eligibility (2026-11-21)
+
+The current official Apple Diagnostics for Self Service Repair / Repair document is [Apple Support 101965](https://support.apple.com/en-us/101965). It distinguishes (a) *on-device* diagnostics for eligible iPhone 12+ with iOS **18 or later** and Wi-Fi, from (b) *secondary-device browser* diagnostics for eligible iPhone 12+ with iOS **17 or later** and Wi-Fi plus a separate internet-enabled console. This source is indexed separately under `APPLE_DIAGNOSTICS_REPAIR` for exact verified iPhone 12+ hardware IDs, because the previous article `APPLE_DIAGNOSTICS` has a narrower eligibility scope and must not be substituted as the sole Apple reference.
+
+GEL does not run these Apple tests from Android, store the Apple serial number, claim a measured result, or suggest that reading a panic log is equivalent to Apple hardware diagnostics.
