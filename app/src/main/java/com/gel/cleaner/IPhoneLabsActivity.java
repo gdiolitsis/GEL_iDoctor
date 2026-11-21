@@ -2916,7 +2916,7 @@ private String linkifyEvidenceSources(String text) {
     while (links.find()) {
         html.append(escape(text.substring(previous, links.start())));
         String url = links.group();
-        html.append("<a href=\\\"").append(escape(url)).append("\\">")
+        html.append("<a href='").append(escape(url)).append("'>")
                 .append(escape(url)).append("</a>");
         previous = links.end();
     }
