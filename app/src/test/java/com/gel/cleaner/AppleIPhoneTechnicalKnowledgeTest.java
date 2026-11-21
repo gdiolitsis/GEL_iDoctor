@@ -39,8 +39,8 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
 
     @Test public void allReviewedNotesHaveRealMatchingAppleArticleAndRiskAndDate() throws Exception {
         List<AppleIPhoneTechnicalKnowledge.Finding> all = notes();
-        assertEquals(42, all.size());
-        assertEquals(190, AppleIPhoneTechnicalKnowledge.chapterCoverage(all, chapters()));
+        assertEquals(100, all.size());
+        assertEquals(459, AppleIPhoneTechnicalKnowledge.chapterCoverage(all, chapters()));
         Set<String> urls = new HashSet<>();
         for (AppleIPhoneTechnicalKnowledge.Finding fact : all) {
             assertTrue(fact.sourceUrl.startsWith("https://support.apple.com/en-us/"));
@@ -49,7 +49,7 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
             assertFalse(fact.english.trim().isEmpty());
             urls.add(fact.sourceUrl);
         }
-        assertEquals("Only five source-reviewed Apple articles, not all chapter texts", 5, urls.size());
+        assertEquals("Only eight source-reviewed Apple articles, not all chapter texts", 8, urls.size());
         assertEquals("Chapter catalog coverage is separate from full procedure review", 1074,
                 chapters().size());
     }
@@ -102,6 +102,62 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
         assertNotNull(battery);
         assertEquals(0, AppleIPhoneTechnicalKnowledge.forChapter(notes(), display).size());
         assertEquals(6, AppleIPhoneTechnicalKnowledge.forChapter(notes(), battery).size());
+    }
+
+    @Test public void threeNewOfficialArticlesAreBoundToRealObservedTopics() throws Exception {
+        List<AppleIPhoneTechnicalKnowledge.Finding> all = notes();
+        List<AppleOfficialServiceGuidance.Guidance> docs = official();
+        List<AppleIPhoneManualChapters.Chapter> chapters = chapters();
+        String model = "iPhone14,3"; // iPhone 13 Pro Max has a verified exact ID.
+        for (String topic : new String[] {"DISPLAY", "TOUCH", "SENSORS"}) {
+            List<AppleIPhoneTechnicalKnowledge.Finding> found =
+                    AppleIPhoneTechnicalKnowledge.forExactModel(all, chapters, docs,
+                            model, AppleIPhoneManualChapters.Phase.TROUBLESHOOT, topic);
+            assertFalse("Apple display/touch/sensors source applies to " + topic, found.isEmpty());
+            assertTrue(found.stream().anyMatch(f ->
+                    f.sourceUrl.equals("https://support.apple.com/en-us/101966")));
+        }
+        List<AppleIPhoneTechnicalKnowledge.Finding> audio =
+                AppleIPhoneTechnicalKnowledge.forExactModel(all, chapters, docs,
+                        model, AppleIPhoneManualChapters.Phase.TROUBLESHOOT, "SOUND");
+        assertEquals(9, audio.size());
+        assertTrue(audio.stream().anyMatch(f -> f.english.contains("Audio diagnostic")));
+        assertTrue(audio.stream().anyMatch(f ->
+                f.risk == AppleIPhoneTechnicalKnowledge.Risk.TECHNICIAN_ONLY));
+        List<AppleIPhoneTechnicalKnowledge.Finding> physicalSim =
+                AppleIPhoneTechnicalKnowledge.forExactModel(all, chapters, docs,
+                        model, AppleIPhoneManualChapters.Phase.TROUBLESHOOT, "SIM");
+        assertEquals(5, physicalSim.size());
+        assertTrue(physicalSim.stream().anyMatch(f ->
+                f.english.contains("only to iPhones with a physical SIM tray")));
+        List<AppleIPhoneTechnicalKnowledge.Finding> alerts =
+                AppleIPhoneTechnicalKnowledge.forExactModel(all, chapters, docs,
+                        model, AppleIPhoneManualChapters.Phase.TROUBLESHOOT, "ALERTS");
+        assertEquals(5, alerts.size());
+        assertTrue(alerts.stream().anyMatch(f -> f.english.contains("0–35")));
+    }
+
+    @Test public void appleDiagnosticNotesDoNotCrossUnrelatedTopicsOnSharedArticles() throws Exception {
+        List<AppleIPhoneTechnicalKnowledge.Finding> all = notes();
+        List<AppleIPhoneManualChapters.Chapter> chapters = chapters();
+        AppleIPhoneManualChapters.Chapter button = null, sim = null, camera = null;
+        for (AppleIPhoneManualChapters.Chapter ch : chapters) {
+            if (!"MANUAL_14_PRO".equals(ch.manualId)) continue;
+            if (ch.topic.equals("BUTTONS") && ch.phase
+                    == AppleIPhoneManualChapters.Phase.TROUBLESHOOT) button = ch;
+            if (ch.topic.equals("SIM") && ch.phase
+                    == AppleIPhoneManualChapters.Phase.TROUBLESHOOT) sim = ch;
+            if (ch.topic.equals("CAMERA") && ch.phase
+                    == AppleIPhoneManualChapters.Phase.TROUBLESHOOT) camera = ch;
+        }
+        assertNotNull(button);
+        assertNotNull(sim);
+        assertNotNull(camera);
+        assertEquals(button.sourceUrl, sim.sourceUrl);
+        assertEquals(6, AppleIPhoneTechnicalKnowledge.forChapter(all, button).size());
+        assertEquals(5, AppleIPhoneTechnicalKnowledge.forChapter(all, sim).size());
+        assertEquals("Camera article body has not yet been reviewed in this phase",
+                0, AppleIPhoneTechnicalKnowledge.forChapter(all, camera).size());
     }
 
     @Test(expected=java.io.IOException.class)
