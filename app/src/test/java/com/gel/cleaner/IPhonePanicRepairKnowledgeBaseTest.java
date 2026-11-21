@@ -28,7 +28,7 @@ public final class IPhonePanicRepairKnowledgeBaseTest {
 
     @Test public void initialCatalogHasBothActualReportedSuccessesAndFailures() throws Exception {
         List<IPhonePanicRepairKnowledgeBase.RepairCase> records = catalog();
-        assertTrue("seed must grow by case-level verified curation", records.size() >= 24);
+        assertTrue("seed must grow by case-level verified curation", records.size() >= 26);
         int success = 0, failed = 0, partial = 0, unresolved = 0;
         Set<String> unique = new HashSet<>();
         for (IPhonePanicRepairKnowledgeBase.RepairCase item : records) {
@@ -165,4 +165,48 @@ public final class IPhonePanicRepairKnowledgeBaseTest {
         }
         assertEquals(2, failed);
     }
+
+    @Test public void historySummaryDeduplicatesOneAttemptAcrossRepeatedImportedLogs() throws Exception {
+        List<IPhonePanicRepairKnowledgeBase.RepairCase> matches =
+                IPhonePanicRepairKnowledgeBase.lookup(catalog(), "iPhone12,1", "MIC2");
+        java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> duplicated =
+                new java.util.ArrayList<>(matches);
+        duplicated.addAll(matches); // repeated logs from the same phone
+        IPhonePanicRepairKnowledgeBase.MatchSummary summary =
+                IPhonePanicRepairKnowledgeBase.summarize(duplicated);
+        assertEquals(matches.size(), summary.attempts);
+        assertTrue("one incident may have failed and successful swaps",
+                summary.caseThreads < summary.attempts);
+        assertTrue(summary.reportedSuccesses > 0);
+        assertTrue(summary.reportedFailures > 0);
+        assertTrue(summary.display(true).contains("δημοσιευμένες προσπάθειες"));
+        assertTrue(summary.display(false).contains("notAword") == false);
+    }
+
+    @Test public void newMic2RepairAndEarlierFailedAttemptBelongToOneIncident() throws Exception {
+        List<IPhonePanicRepairKnowledgeBase.RepairCase> matches =
+                IPhonePanicRepairKnowledgeBase.lookup(catalog(), "iPhone12,1", "mic2");
+        int together = 0;
+        boolean failed = false, success = false;
+        for (IPhonePanicRepairKnowledgeBase.RepairCase item : matches) {
+            if ("thread-645543-comment-syed".equals(item.incidentId)) {
+                together++;
+                failed |= item.outcome == IPhonePanicRepairKnowledgeBase.Outcome.SELF_REPORTED_FAILURE;
+                success |= item.outcome == IPhonePanicRepairKnowledgeBase.Outcome.SELF_REPORTED_SUCCESS;
+            }
+        }
+        assertEquals(2, together);
+        assertTrue(failed);
+        assertTrue(success);
+    }
+
+    @Test public void wrongModelAndUnknownCodeNeverInheritPublishedSuccess() throws Exception {
+        List<IPhonePanicRepairKnowledgeBase.RepairCase> all = catalog();
+        assertFalse(IPhonePanicRepairKnowledgeBase.lookup(all, "iPhone15,2", "SMC 262144").isEmpty());
+        assertTrue(IPhonePanicRepairKnowledgeBase.lookup(all, "iPhone14,3", "SMC 262144").isEmpty());
+        assertTrue(IPhonePanicRepairKnowledgeBase.lookup(all, "iPhone15,2", "WATCHDOG_NO_MISSING_SENSOR").isEmpty());
+        assertEquals(0, IPhonePanicRepairKnowledgeBase.summarize(
+                IPhonePanicRepairKnowledgeBase.lookup(all, "iPhone19,9", "MIC2")).attempts);
+    }
+
 }
