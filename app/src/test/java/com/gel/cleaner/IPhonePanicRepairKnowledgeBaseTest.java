@@ -28,8 +28,8 @@ public final class IPhonePanicRepairKnowledgeBaseTest {
 
     @Test public void initialCatalogHasBothActualReportedSuccessesAndFailures() throws Exception {
         List<IPhonePanicRepairKnowledgeBase.RepairCase> records = catalog();
-        assertTrue("seed must grow by case-level verified curation", records.size() >= 13);
-        int success = 0, failed = 0;
+        assertTrue("seed must grow by case-level verified curation", records.size() >= 24);
+        int success = 0, failed = 0, partial = 0, unresolved = 0;
         Set<String> unique = new HashSet<>();
         for (IPhonePanicRepairKnowledgeBase.RepairCase item : records) {
             assertTrue(unique.add(item.id));
@@ -45,9 +45,15 @@ public final class IPhonePanicRepairKnowledgeBaseTest {
                 success++;
             if (item.outcome == IPhonePanicRepairKnowledgeBase.Outcome.SELF_REPORTED_FAILURE)
                 failed++;
+            if (item.outcome == IPhonePanicRepairKnowledgeBase.Outcome.PARTIAL_OR_RECURRING)
+                partial++;
+            if (item.outcome == IPhonePanicRepairKnowledgeBase.Outcome.UNRESOLVED)
+                unresolved++;
         }
         assertTrue(success >= 5);
-        assertTrue(failed >= 4);
+        assertTrue(failed >= 8);
+        assertTrue(partial >= 1);
+        assertTrue(unresolved >= 1);
     }
 
     @Test public void sameMic2CanHaveDifferentReportedSuccessfulFixes() throws Exception {
@@ -124,5 +130,39 @@ public final class IPhonePanicRepairKnowledgeBaseTest {
                 + "\tunknown\t\tενέργεια\taction\tαποτέλεσμα\tresult\n";
         IPhonePanicRepairKnowledgeBase.parse(new ByteArrayInputStream(
                 row.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test public void publishedBenchAudioCodecPanicDoesNotRequireCodecReplacement() throws Exception {
+        List<IPhonePanicRepairKnowledgeBase.RepairCase> xs =
+                IPhonePanicRepairKnowledgeBase.lookup(catalog(), "iPhone12,5",
+                        "AUDIO_CODEC_CS42L77");
+        assertEquals(1, xs.size());
+        assertEquals("REPLACE_FRONT_SENSOR_FLEX", xs.get(0).actionKey);
+        assertTrue(xs.get(0).noteEnglish.contains("without replacing"));
+        assertTrue(IPhonePanicRepairKnowledgeBase.lookup(catalog(), "iPhone12,3",
+                "AUDIO_CODEC_CS42L77").isEmpty());
+    }
+
+    @Test public void intermittentPanicAfterBatteryChangeIsNotACertifiedSuccess() throws Exception {
+        List<IPhonePanicRepairKnowledgeBase.RepairCase> xs =
+                IPhonePanicRepairKnowledgeBase.lookup(catalog(), "iPhone16,1", "SMC 161");
+        assertEquals(1, xs.size());
+        assertEquals(IPhonePanicRepairKnowledgeBase.Outcome.PARTIAL_OR_RECURRING,
+                xs.get(0).outcome);
+        assertTrue(xs.get(0).localizedOutcome(true).contains("επανεμφάνιση"));
+    }
+
+    @Test public void sameModelRepeatedFailuresRemainSeparateAndNotIndependentDevices() throws Exception {
+        List<IPhonePanicRepairKnowledgeBase.RepairCase> xs =
+                IPhonePanicRepairKnowledgeBase.lookup(catalog(), "iPhone12,5", "MIC2");
+        int failed = 0;
+        for (IPhonePanicRepairKnowledgeBase.RepairCase item : xs) {
+            if (item.incidentId.equals("thread-770966-owner")) {
+                assertEquals(IPhonePanicRepairKnowledgeBase.Outcome.SELF_REPORTED_FAILURE,
+                        item.outcome);
+                failed++;
+            }
+        }
+        assertEquals(2, failed);
     }
 }
