@@ -403,8 +403,8 @@ public final class Lab29FactorySpecAudit {
                 batteryNoteGr, batteryNoteEn));
         rows.add(new Row("Θύρα USB", "USB connector", "USB-C",
                 "", Verdict.UNKNOWN,
-                "Το Android δεν επαλήθευσε τον φυσικό τύπο της θύρας. Δεν σημαίνει ότι λείπει η USB-C.",
-                "Android did not verify the physical connector type. This does not mean USB-C is absent."));
+                "Το Lab 27 δεν έχει τη δυνατότητα να ελέγξει τον φυσικό τύπο της θύρας USB. Η προδιαγραφή USB-C δεν επαληθεύτηκε, αλλά αυτό δεν σημαίνει ότι η θύρα λείπει ή είναι διαφορετικού τύπου.",
+                "Lab 27 cannot inspect the physical USB connector type. The published USB-C specification was not verified; this does not mean the port is missing or of another type."));
         rows.add(new Row("Υποδοχή 3.5 mm", "3.5 mm jack", "Ναι / Yes",
                 "", Verdict.UNKNOWN,
                 "Δεν έγινε φυσική επιθεώρηση της υποδοχής· η μη επαλήθευση δεν σημαίνει απουσία.",
