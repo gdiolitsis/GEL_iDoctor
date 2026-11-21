@@ -54,8 +54,8 @@ public final class Lab27GradePresentationContractTest {
         String lab = lab27();
         assertTrue(lab.contains("specRow.noteGreek"));
         assertTrue(lab.contains("specRow.noteEnglish"));
-        assertTrue(lab.contains("Ερμηνεία μη επαληθευμένων"));
-        assertTrue(lab.contains("Μη επαληθευμένο δεν σημαίνει απόν"));
-        assertTrue(lab.contains("logLabelValue(gr ? \"Ερμηνεία\" : \"Interpretation\", explanation)"));
+        assertTrue(lab.contains("Χαρακτηριστικά χωρίς αυτόματη σύγκριση"));
+        assertTrue(lab.contains("Το εργαστήριο παρουσιάζει όσα μπορεί να ελέγξει αυτόματα"));
+        assertTrue(lab.contains("logLabelValue(gr ? \"Οδηγία / εξήγηση\" : \"Guidance / explanation\", explanation)"));
     }
 }
