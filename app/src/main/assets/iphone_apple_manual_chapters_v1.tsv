@@ -384,8 +384,8 @@ MANUAL_12_0378	MANUAL_12	PROCEDURE	GENERAL	Βίντεο επισκευής	Repai
 MANUAL_12_0379	MANUAL_12	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100469	DIRECT_CHAPTER
 MANUAL_12_0380	MANUAL_12	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
 MANUAL_12_0381	MANUAL_12	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100470	DIRECT_CHAPTER
-MANUAL_12_0382	MANUAL_12	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100464	MANUAL_CONTENTS
-MANUAL_12_0383	MANUAL_12	PROCEDURE	SOUND	Ηχείο	Speaker	https://support.apple.com/en-us/100464	MANUAL_CONTENTS
+MANUAL_12_0382	MANUAL_12	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100471	DIRECT_CHAPTER
+MANUAL_12_0383	MANUAL_12	PROCEDURE	SOUND	Ηχείο	Speaker	https://support.apple.com/en-us/100472	DIRECT_CHAPTER
 MANUAL_12_0384	MANUAL_12	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100473	DIRECT_CHAPTER
 MANUAL_12_0385	MANUAL_12	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100474	DIRECT_CHAPTER
 MANUAL_12_0386	MANUAL_12	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100475	DIRECT_CHAPTER
@@ -568,9 +568,9 @@ DIRECTORY_12_PRO_0562	DIRECTORY_12_PRO	PROCEDURE	GENERAL	Βίντεο επισκ
 DIRECTORY_12_PRO_0563	DIRECTORY_12_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/100481	DIRECT_CHAPTER
 DIRECTORY_12_PRO_0564	DIRECTORY_12_PRO	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
 DIRECTORY_12_PRO_0565	DIRECTORY_12_PRO	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/100482	DIRECT_CHAPTER
-DIRECTORY_12_PRO_0566	DIRECTORY_12_PRO	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100476	MANUAL_CONTENTS
-DIRECTORY_12_PRO_0567	DIRECTORY_12_PRO	PROCEDURE	SOUND	Ηχείο	Speaker	https://support.apple.com/en-us/100476	MANUAL_CONTENTS
-DIRECTORY_12_PRO_0568	DIRECTORY_12_PRO	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100476	MANUAL_CONTENTS
+DIRECTORY_12_PRO_0566	DIRECTORY_12_PRO	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/100483	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0567	DIRECTORY_12_PRO	PROCEDURE	SOUND	Ηχείο	Speaker	https://support.apple.com/en-us/100484	DIRECT_CHAPTER
+DIRECTORY_12_PRO_0568	DIRECTORY_12_PRO	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/100485	DIRECT_CHAPTER
 DIRECTORY_12_PRO_0569	DIRECTORY_12_PRO	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/100486	DIRECT_CHAPTER
 DIRECTORY_12_PRO_0570	DIRECTORY_12_PRO	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/100487	DIRECT_CHAPTER
 DIRECTORY_13_MINI_0571	DIRECTORY_13_MINI	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
