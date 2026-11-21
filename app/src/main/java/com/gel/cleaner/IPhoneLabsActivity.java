@@ -412,11 +412,14 @@ txtLog = new TextView(this);
 txtLog.setTextSize(13f);
 txtLog.setTextColor(0xFFEEEEEE);
 txtLog.setPadding(0, dp(16), 0, dp(8));
-txtLog.setMovementMethod(new ScrollingMovementMethod());
+// LinkMovementMethod retains ScrollingMovementMethod behavior and opens only
+// explicitly linked official/support evidence URLs when the user taps them.
+txtLog.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+txtLog.setLinksClickable(true);
 txtLog.setText(Html.fromHtml("<b>" + getString(R.string.manual_log_title) + "</b><br>"));
 
-// disable press behaviour
-txtLog.setClickable(false);
+// No decorative button/tap behavior; only explicit source links are active.
+txtLog.setClickable(true);
 txtLog.setFocusable(false);
 txtLog.setLongClickable(false);
 txtLog.setSoundEffectsEnabled(false);
@@ -2900,13 +2903,34 @@ private void logLabelValue(String label, String value) {
     if (!demoMode) GELServiceLog.iPhoneInfoValue(l, v, "#FFFFFF");
 }
 
+// Only known, curated published evidence domains are made tappable; text is
+// HTML-escaped first. URLs are not fetched by the app: user interaction opens
+// the browser, while original source URLs remain in exported service logs.
+private String linkifyEvidenceSources(String text) {
+    if (text == null || text.isEmpty()) return "";
+    java.util.regex.Matcher links = java.util.regex.Pattern.compile(
+            "https://(?:support\\.apple\\.com|www\\.ifixit\\.com|forum\\.nopowerfix\\.com)/[A-Za-z0-9._~/%?=&+#-]+")
+            .matcher(text);
+    StringBuilder html = new StringBuilder();
+    int previous = 0;
+    while (links.find()) {
+        html.append(escape(text.substring(previous, links.start())));
+        String url = links.group();
+        html.append("<a href=\\\"").append(escape(url)).append("\\">")
+                .append(escape(url)).append("</a>");
+        previous = links.end();
+    }
+    html.append(escape(text.substring(previous)));
+    return html.toString();
+}
+
 // A factual recorded code, third-party repair report or official source link
 // is information, NOT proof of a healthy device or a successful repair.
 private void logLabelInfoValue(String label, String value) {
     String l = safe(label);
     String v = safe(value);
     appendHtml("<font color='#FFFFFF'>" + escape(l) + "</font> "
-            + "<font color='#87CEFA'>" + escape(v) + "</font>");
+            + "<font color='#87CEFA'>" + linkifyEvidenceSources(v) + "</font>");
     if (!demoMode) GELServiceLog.iPhoneInfoValue(l, v, "#87CEFA");
 }
 
