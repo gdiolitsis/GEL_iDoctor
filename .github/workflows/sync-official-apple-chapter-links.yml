@@ -10,6 +10,12 @@ on:
 permissions:
   contents: write
 
+# A PR can trigger two synchronizations close together (e.g. when both
+# the source TSV and workflow change). Only the newest run may commit.
+concurrency:
+  group: apple-manual-link-sync-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   apple-toc-audit:
     # The automated branch write is restricted to our own review PR; never
