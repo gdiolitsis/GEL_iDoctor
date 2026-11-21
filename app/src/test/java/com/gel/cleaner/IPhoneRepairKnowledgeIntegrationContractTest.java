@@ -85,7 +85,7 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.modelManual(docs, model)"));
         assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.genericForTopic(docs, \"UNEXPECTED_RESTART\")"));
         assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.forTopic(docs, model, \"APPLE_DIAGNOSTICS\")"));
-        assertTrue(officialHelper.contains("η Apple δεν αποδίδει εδώ κάποιον συγκεκριμένο panic code"));
+        assertTrue(officialHelper.contains("Η καταχωρισμένη επίσημη τεκμηρίωση δεν αποδίδει"));
         String lab4 = region(source, "private void runImpactLab()",
                 "private int countSupportedPanicBlocks(");
         assertTrue(lab4.contains("documentedAppleModels.add(observed.modelIdentifier)"));
