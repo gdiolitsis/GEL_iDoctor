@@ -31420,9 +31420,12 @@ String thermalFlag = thermalScore < 0 ? "⚪" : "⚪";
 // 2) BATTERY HEALTH (light auto inference — FIXED)
 // ------------------------------------------------------------
 boolean charging = isChargingNow();
+// Lab 27 must read the CURRENT battery level independently of Lab 14.
+// The Lab 14 member batteryPercent defaults to 0 until that lab executes.
+final int lab27BatteryPercent = getBatteryPercentSafe();
 
-int batteryScore = Lab30ScoreEvidence.hasBatteryReadings(batTemp, (float) batteryPercent)
-        ? scoreBattery(batTemp, (float) batteryPercent, charging) : -1;
+int batteryScore = Lab30ScoreEvidence.hasBatteryReadings(batTemp, (float) lab27BatteryPercent)
+        ? scoreBattery(batTemp, (float) lab27BatteryPercent, charging) : -1;
 
 String batteryFlag = batteryScore < 0 ? "⚪" : "⚪";
 
@@ -32155,7 +32158,7 @@ logLabelValue(
 logLabelValue(
         gr ? "Στοιχεία" : "State",
         (gr ? "Επίπεδο=" : "Level=") +
-        (batteryPercent >= 0 ? fmt1((float) batteryPercent) + "%" : (gr ? "Άγνωστο" : "Unknown")) +
+        (lab27BatteryPercent >= 0 ? fmt1((float) lab27BatteryPercent) + "%" : (gr ? "Άγνωστο" : "Unknown")) +
         " | Temp=" + fmt1(batTemp) + "°C" +
         " | " + (gr ? "Φόρτιση=" : "Charging=") +
         (charging ? (gr ? "Ναι" : "Yes") : (gr ? "Όχι" : "No"))
@@ -32195,12 +32198,15 @@ logLabelValue(
         appsFlag + " (" + appsScore + ")"
 );
 
-logLabelValue(
-        gr ? "Μετρήσεις" : "Counts",
-        "User=" + ap.userApps +
-        " | System=" + ap.systemApps +
-        " | Total=" + ap.totalApps
-);
+if (ap.totalApps > 0 && ap.userApps >= 0 && ap.systemApps >= 0) {
+    logLabelOkValue(gr ? "Μετρήσεις" : "Counts",
+            "User=" + ap.userApps + " | System=" + ap.systemApps
+                    + " | Total=" + ap.totalApps);
+} else {
+    logLabelValue(gr ? "Μετρήσεις" : "Counts",
+            gr ? "Δεν υπάρχουν αξιόπιστες καταμετρήσεις εφαρμογών"
+               : "No reliable app counts available");
+}
 
 appendHtml("<br>");
 logInfo("RAM");
@@ -32755,6 +32761,12 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                     logLabelValue(rowName,
                             partialObservation + " (" + expected + specRow.expected + ")");
                 }
+                // Explain non-verification without alleging a missing OEM feature.
+                // Battery wear/remaining charge is distinct from factory design mAh.
+                String explanation = gr ? specRow.noteGreek : specRow.noteEnglish;
+                if (explanation != null && !explanation.trim().isEmpty()) {
+                    logLabelValue(gr ? "Ερμηνεία" : "Interpretation", explanation);
+                }
             }
             // Each result class keeps its own value color after the colon.
             // Green = measured agreement, red = observed deviation,
@@ -32775,6 +32787,11 @@ private void lab27DisplayFactorySpecs(boolean gr) {
             }
             logLabelValue(gr ? "Μη επαληθευμένα χαρακτηριστικά" : "Unverified specifications",
                     String.valueOf(factory.unknowns));
+            if (factory.unknowns > 0) {
+                logLabelValue(gr ? "Ερμηνεία μη επαληθευμένων" : "Meaning of unverified",
+                        gr ? "Μη επαληθευμένο δεν σημαίνει απόν, ελαττωματικό ή μη γνήσιο εξάρτημα."
+                           : "Unverified does not mean missing, defective, or non-genuine hardware.");
+            }
             if (factory.deviations > 0) {
                 logLabelErrorValue(gr ? "Συμπέρασμα" : "Conclusion",
                         factory.conclusion(gr));
