@@ -170,6 +170,7 @@ def main():
     page_stats = []
     order_resolutions = 0
     reference_splits = {}
+    combined_references = {}
     sensor_splits = {}
     for manual_id, source in pages:
         title = source["title"]
@@ -204,6 +205,19 @@ def main():
                     links.append(next(iter(addresses)))
                 if len(links) == 4:
                     reference_splits[ref_parent[0]] = links
+                else:
+                    # Current iPhone manuals frequently combine these into
+                    # ONE directly linked Apple chapter instead of four.
+                    new_names = ("Internal View, Orderable Parts, and Exploded View",
+                                 "Internal View, Orderable Parts and Exploded View")
+                    candidates = set()
+                    for label in new_names:
+                        candidates.update(official_article(u, actual)
+                                          for u in parser.anchors.get(canonical(label), ()))
+                    candidates.discard(None)
+                    candidates.discard(official_article(src_url, src_url))
+                    if len(candidates) == 1:
+                        combined_references[ref_parent[0]] = next(iter(candidates))
 
             headings_matched = 0
             updated = 0
@@ -231,9 +245,11 @@ def main():
                                        if fields[7] == "DIRECT_CHAPTER" else "101966")
                         if existing_id in a:
                             extra_id = "101970" if existing_id == "101966" else "101966"
-                            sensor_splits[chapter_id] = (
-                                a[extra_id],
-                                "MECHANICAL" if extra_id == "101970" else "DISPLAY")
+                            if (chapter_id + "_MECHANICAL" not in chapter_lines
+                                    and chapter_id + "_DISPLAY" not in chapter_lines):
+                                sensor_splits[chapter_id] = (
+                                    a[extra_id],
+                                    "MECHANICAL" if extra_id == "101970" else "DISPLAY")
                             targets = {a[existing_id]}
                 if len(targets) > 1:
                     # Resolve only if a unique direct Apple URL is positioned
@@ -309,6 +325,16 @@ def main():
             rows.append(child)
         revised[index] = "\n".join("\t".join(row) for row in rows) + "\n"
 
+    # Newer manuals replace the four legacy references with one official
+    # combined "Internal View, Orderable Parts, and Exploded View" article.
+    for parent_id, official_url in combined_references.items():
+        index, fields = chapter_lines[parent_id]
+        base = fields[:]
+        base[4] = "Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα"
+        base[5] = "Internal View, Orderable Parts, and Exploded View"
+        base[6], base[7] = official_url, "DIRECT_CHAPTER"
+        revised[index] = "\t".join(base) + "\n"
+
     for chapter_id, (other_url, area) in sensor_splits.items():
         index, fields = chapter_lines[chapter_id]
         # Include a distinct Apple chapter for the other section. The
@@ -349,7 +375,8 @@ def main():
         "",
         f"- Manuals fetched and parsed: **{reviewed} / {len(pages)} attempted**",
         f"- Newly discovered model/chapter matches: **{len(updates)}**",
-        f"- Newly expanded reference groupings: **{len(reference_splits)}**",
+        f"- Legacy four-chapter reference groupings expanded: **{len(reference_splits)}**",
+        f"- Newer combined reference chapters linked: **{len(combined_references)}**",
         f"- Additional official Display/Mechanical sensor chapters: **{len(sensor_splits)}**",
         f"- All direct chapter links: **{direct} / {len(all_rows)}**",
         f"- Remaining links to manual contents: **{pending}**",
@@ -384,7 +411,8 @@ def main():
                 ""]
 
     print(f"SUMMARY: fetched={reviewed}/{len(pages)} new={len(updates)} "
-          f"refs={len(reference_splits)} dualSensors={len(sensor_splits)} "
+          f"refs={len(reference_splits)} combinedRefs={len(combined_references)} "
+          f"dualSensors={len(sensor_splits)} "
           f"direct={direct}/{len(all_rows)} pending={pending} conflicts={len(conflict)} "
           f"fetch_failures={len(failures)}", flush=True)
     if args.write:
