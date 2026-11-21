@@ -55,6 +55,7 @@ class AppleLinkParser(HTMLParser):
         self.nested = []
         self.texts = []
         self.anchors = collections.defaultdict(set)
+        self.anchor_order = []  # actual HTML anchor order for TOC neighbor checks
     def handle_starttag(self, tag, attrs):
         if self.url is not None and tag != "a":
             self.nested.append(tag)
@@ -72,11 +73,37 @@ class AppleLinkParser(HTMLParser):
             name = canonical(" ".join(self.texts))
             if name:
                 self.anchors[name].add(self.url)
+                self.anchor_order.append((name, self.url))
             self.url = None
             self.texts = []
             self.nested = []
         elif self.url is not None and self.nested:
             self.nested.pop()
+
+def uniquely_located_in_contents(parser, title, before, after, origin):
+    """For duplicates, require correct placement between two adjacent TOC headings.
+
+    The order of headings in an Apple manual is independently documented in
+    our per-model index. A second same-name link elsewhere on the page is not
+    sufficient. This conservative rule only returns a URL when the sequence
+    makes one candidate unambiguous; otherwise it leaves MANUAL_CONTENTS.
+    """
+    key = canonical(title)
+    b = canonical(before)
+    a = canonical(after)
+    matches = []
+    for pos, (name, href) in enumerate(parser.anchor_order):
+        if name != key:
+            continue
+        if not any(n == b for n, _ in parser.anchor_order[max(0, pos-3):pos]):
+            continue
+        if not any(n == a for n, _ in parser.anchor_order[pos+1:pos+13]):
+            continue
+        url = official_article(href, origin)
+        if url:
+            matches.append(url)
+    urls = set(matches)
+    return next(iter(urls)) if len(urls) == 1 else None
 
 def fetch(url):
     # Public official pages can rate-limit repeated requests. Pause/back off.
@@ -141,6 +168,7 @@ def main():
     no_exact = []
     conflict = []
     page_stats = []
+    order_resolutions = 0
     for manual_id, source in pages:
         title = source["title"]
         src_url = source["url"]
@@ -168,6 +196,20 @@ def main():
                 }
                 targets.discard(None)
                 targets.discard(official_article(src_url, src_url))
+                if len(targets) > 1:
+                    # Resolve only if a unique direct Apple URL is positioned
+                    # exactly where the catalog's neighboring TOC headings are.
+                    sibling_rows = [row for _, row in chapter_lines.values()
+                                    if row[1] == manual_id]
+                    at = next((i for i, row in enumerate(sibling_rows)
+                               if row[0] == chapter_id), -1)
+                    if 0 < at < len(sibling_rows) - 1:
+                        ordered = uniquely_located_in_contents(
+                            parser, title_en, sibling_rows[at - 1][5],
+                            sibling_rows[at + 1][5], actual)
+                        if ordered is not None and ordered in targets:
+                            targets = {ordered}
+                            order_resolutions += 1
                 if len(targets) == 1:
                     official_url = next(iter(targets))
                     headings_matched += 1
@@ -227,6 +269,7 @@ def main():
         f"- Manual fetch failures: **{len(failures)}**",
         f"- Conflicts requiring manual verification: **{len(conflict)}**",
         f"- Entries with no unique named direct link: **{len(no_exact)}**",
+        f"- Duplicate names disambiguated by neighboring Apple TOC order: **{order_resolutions}**",
         "",
         "| Official Apple model manual | Expected catalog entries | Named anchors matched | Newly linked |",
         "|---|---:|---:|---:|",
