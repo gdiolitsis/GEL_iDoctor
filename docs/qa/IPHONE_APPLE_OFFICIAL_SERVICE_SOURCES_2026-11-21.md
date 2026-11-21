@@ -8,7 +8,8 @@ Research date: 2026-11-21. Source authority: **Apple Support only**.
 - Offline catalog: `app/src/main/assets/iphone_apple_official_guidance_v1.tsv`. **17 curated Apple-source records:** 9 exact-model repair-manual mappings, 6 service/diagnostic pathways, and 2 newer-model manuals indexed without unverified hardware identifiers, including model-limited diagnostics and post-repair completion.
 - Parser: `AppleOfficialServiceGuidance.java`. Requires `support.apple.com` source URLs, model-matching for manuals, and applicability for diagnostics. It does **not** accept or interpret panic codes.
 - iPhone Lab 4: per-model official manual, general restart troubleshooting and only eligible Apple diagnostics are displayed, each explicitly not tied to a panic code. Full real-world reported repair attempts appear separately, with their failures and original links.
-- iPhone Lab 8: show a manual only when the imported eligible log set yields **one** recognized device identifier. With ambiguous/multiple devices, do not guess a manual. The separately curated repair outcomes remain source-matched.
+- iPhone Lab 8: present the compact Apple service sequence for the **single confirmed model across all eligible imported files**: official unexpected-restart checks (only if current symptoms exist), eligible Apple Diagnostics, exact-model repair manual, and conditional Repair Assistant after relevant part work. With ambiguous/multiple devices, do not guess a manual. The separately curated repair outcomes remain source-matched.
+- Curated official and third-party evidence URLs in Labs 4 and 8 are **tap-to-open** via the user's browser, not automatically fetched. The service report retains plain source URLs; HTML logs keep neutral blue information values while GEL-derived clue IDs remain white.
 - Lab 7 continues evaluating recurring panic *clues* independently; it does not treat Apple support instructions as a finding.
 - The independent historic outcomes catalog remains `iphone_panic_repair_knowledge_v1.tsv`, with **26 repair attempts**, 13 first-hand/shop-reported successes, 11 failures, 1 partial/recurrent, 1 unresolved. No additional "success" rows are created from Apple manuals.
 
@@ -31,7 +32,7 @@ Apple's 2026 Recovery Assistant diagnostics-mode article lists **iPhone 14 model
 Source: https://support.apple.com/en-us/101944.
 
 ### 5. Repair Assistant / calibration
-Apple's repair-completion process is conditional on device model, part, iOS, and eligibility. Do not equate running it with proof that any panic has been fixed.
+The current Apple publication (5 November 2026) lists eligible battery, display and camera repair/calibration pathways for supported iPhone 12/13/14/15/16 models, among others. The actual eligible part, iOS version and calibration requirements matter. GEL lists the process **only as an optional post-repair step**, never as evidence that a panic has been fixed.
 Source: https://support.apple.com/en-us/120579.
 
 ## Exact-model manuals (source index)
