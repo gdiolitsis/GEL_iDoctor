@@ -292,7 +292,9 @@ MANUAL_16_PRO_0260	MANUAL_16_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτικ�
 MANUAL_16_PRO_0261	MANUAL_16_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 MANUAL_16_PRO_0262	MANUAL_16_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
 MANUAL_16_PRO_0263	MANUAL_16_PRO	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
-MANUAL_16_PRO_0264	MANUAL_16_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/120803	MANUAL_CONTENTS
+MANUAL_16_PRO_0264	MANUAL_16_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/120805	DIRECT_CHAPTER
+MANUAL_16_PRO_0264_SCREWS	MANUAL_16_PRO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/120806	DIRECT_CHAPTER
+MANUAL_16_PRO_0264_TOOLS	MANUAL_16_PRO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/120986	DIRECT_CHAPTER
 MANUAL_16_PRO_0265	MANUAL_16_PRO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 MANUAL_16_PRO_0266	MANUAL_16_PRO	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 MANUAL_16_PRO_0267	MANUAL_16_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
@@ -328,7 +330,9 @@ DIRECTORY_17_PRO_0295	DIRECTORY_17_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card 
 DIRECTORY_17_PRO_0296	DIRECTORY_17_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_PRO_0297	DIRECTORY_17_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_PRO_0298	DIRECTORY_17_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
-DIRECTORY_17_PRO_0299	DIRECTORY_17_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/124262	MANUAL_CONTENTS
+DIRECTORY_17_PRO_0299	DIRECTORY_17_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/124248	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0299_SCREWS	DIRECTORY_17_PRO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/124249	DIRECT_CHAPTER
+DIRECTORY_17_PRO_0299_TOOLS	DIRECTORY_17_PRO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/124250	DIRECT_CHAPTER
 DIRECTORY_17_PRO_0300	DIRECTORY_17_PRO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_17_PRO_0301	DIRECTORY_17_PRO	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 DIRECTORY_17_PRO_0302	DIRECTORY_17_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
@@ -365,7 +369,9 @@ DIRECTORY_18_PRO_0331	DIRECTORY_18_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card 
 DIRECTORY_18_PRO_0332	DIRECTORY_18_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/el-gr/127388	MANUAL_CONTENTS
 DIRECTORY_18_PRO_0333	DIRECTORY_18_PRO	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0334	DIRECTORY_18_PRO	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
-DIRECTORY_18_PRO_0335	DIRECTORY_18_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/el-gr/127388	MANUAL_CONTENTS
+DIRECTORY_18_PRO_0335	DIRECTORY_18_PRO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/127390	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0335_SCREWS	DIRECTORY_18_PRO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/127391	DIRECT_CHAPTER
+DIRECTORY_18_PRO_0335_TOOLS	DIRECTORY_18_PRO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/127392	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0336	DIRECTORY_18_PRO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0337	DIRECTORY_18_PRO	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0338	DIRECTORY_18_PRO	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
@@ -502,7 +508,9 @@ DIRECTORY_16_0458	DIRECTORY_16	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική 
 DIRECTORY_16_0459	DIRECTORY_16	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_0460	DIRECTORY_16	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
 DIRECTORY_16_0461	DIRECTORY_16	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
-DIRECTORY_16_0462	DIRECTORY_16	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/120652	MANUAL_CONTENTS
+DIRECTORY_16_0462	DIRECTORY_16	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/120648	DIRECT_CHAPTER
+DIRECTORY_16_0462_SCREWS	DIRECTORY_16	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/120649	DIRECT_CHAPTER
+DIRECTORY_16_0462_TOOLS	DIRECTORY_16	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/120983	DIRECT_CHAPTER
 DIRECTORY_16_0463	DIRECTORY_16	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_16_0464	DIRECTORY_16	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 DIRECTORY_16_0465	DIRECTORY_16	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
@@ -538,7 +546,9 @@ DIRECTORY_17_0493	DIRECTORY_17	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	h
 DIRECTORY_17_0494	DIRECTORY_17	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_0495	DIRECTORY_17	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_0496	DIRECTORY_17	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
-DIRECTORY_17_0497	DIRECTORY_17	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/123029	MANUAL_CONTENTS
+DIRECTORY_17_0497	DIRECTORY_17	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/123034	DIRECT_CHAPTER
+DIRECTORY_17_0497_SCREWS	DIRECTORY_17	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/123037	DIRECT_CHAPTER
+DIRECTORY_17_0497_TOOLS	DIRECTORY_17	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/123036	DIRECT_CHAPTER
 DIRECTORY_17_0498	DIRECTORY_17	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_17_0499	DIRECTORY_17	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 DIRECTORY_17_0500	DIRECTORY_17	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
@@ -774,7 +784,9 @@ DIRECTORY_16_PLUS_0709	DIRECTORY_16_PLUS	TROUBLESHOOT	HAPTIC	Δόνηση ή α�
 DIRECTORY_16_PLUS_0710	DIRECTORY_16_PLUS	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_PLUS_0711	DIRECTORY_16_PLUS	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
 DIRECTORY_16_PLUS_0712	DIRECTORY_16_PLUS	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
-DIRECTORY_16_PLUS_0713	DIRECTORY_16_PLUS	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/120662	MANUAL_CONTENTS
+DIRECTORY_16_PLUS_0713	DIRECTORY_16_PLUS	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/120665	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0713_SCREWS	DIRECTORY_16_PLUS	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/120666	DIRECT_CHAPTER
+DIRECTORY_16_PLUS_0713_TOOLS	DIRECTORY_16_PLUS	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/120985	DIRECT_CHAPTER
 DIRECTORY_16_PLUS_0714	DIRECTORY_16_PLUS	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_16_PLUS_0715	DIRECTORY_16_PLUS	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 DIRECTORY_16_PLUS_0716	DIRECTORY_16_PLUS	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
@@ -809,7 +821,9 @@ DIRECTORY_16_PRO_MAX_0743	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση 
 DIRECTORY_16_PRO_MAX_0744	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_PRO_MAX_0745	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
 DIRECTORY_16_PRO_MAX_0746	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
-DIRECTORY_16_PRO_MAX_0747	DIRECTORY_16_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/120819	MANUAL_CONTENTS
+DIRECTORY_16_PRO_MAX_0747	DIRECTORY_16_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/120821	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0747_SCREWS	DIRECTORY_16_PRO_MAX	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/120822	DIRECT_CHAPTER
+DIRECTORY_16_PRO_MAX_0747_TOOLS	DIRECTORY_16_PRO_MAX	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/120988	DIRECT_CHAPTER
 DIRECTORY_16_PRO_MAX_0748	DIRECTORY_16_PRO_MAX	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_16_PRO_MAX_0749	DIRECTORY_16_PRO_MAX	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 DIRECTORY_16_PRO_MAX_0750	DIRECTORY_16_PRO_MAX	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
@@ -845,7 +859,9 @@ DIRECTORY_17_PRO_MAX_0778	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	S
 DIRECTORY_17_PRO_MAX_0779	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_PRO_MAX_0780	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_PRO_MAX_0781	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
-DIRECTORY_17_PRO_MAX_0782	DIRECTORY_17_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/124278	MANUAL_CONTENTS
+DIRECTORY_17_PRO_MAX_0782	DIRECTORY_17_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/124264	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0782_SCREWS	DIRECTORY_17_PRO_MAX	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/124272	DIRECT_CHAPTER
+DIRECTORY_17_PRO_MAX_0782_TOOLS	DIRECTORY_17_PRO_MAX	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/124276	DIRECT_CHAPTER
 DIRECTORY_17_PRO_MAX_0783	DIRECTORY_17_PRO_MAX	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_17_PRO_MAX_0784	DIRECTORY_17_PRO_MAX	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 DIRECTORY_17_PRO_MAX_0785	DIRECTORY_17_PRO_MAX	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
@@ -882,7 +898,9 @@ DIRECTORY_AIR_0814	DIRECTORY_AIR	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues
 DIRECTORY_AIR_0815	DIRECTORY_AIR	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_AIR_0816	DIRECTORY_AIR	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_AIR_0817	DIRECTORY_AIR	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
-DIRECTORY_AIR_0818	DIRECTORY_AIR	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/123052	MANUAL_CONTENTS
+DIRECTORY_AIR_0818	DIRECTORY_AIR	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/123054	DIRECT_CHAPTER
+DIRECTORY_AIR_0818_SCREWS	DIRECTORY_AIR	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/123055	DIRECT_CHAPTER
+DIRECTORY_AIR_0818_TOOLS	DIRECTORY_AIR	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/123056	DIRECT_CHAPTER
 DIRECTORY_AIR_0819	DIRECTORY_AIR	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_AIR_0820	DIRECTORY_AIR	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 DIRECTORY_AIR_0821	DIRECTORY_AIR	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
@@ -917,7 +935,9 @@ DIRECTORY_17E_0848	DIRECTORY_17E	TROUBLESHOOT	HAPTIC	Δόνηση ή απτικ�
 DIRECTORY_17E_0849	DIRECTORY_17E	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17E_0850	DIRECTORY_17E	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
 DIRECTORY_17E_0851	DIRECTORY_17E	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
-DIRECTORY_17E_0852	DIRECTORY_17E	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/125956	MANUAL_CONTENTS
+DIRECTORY_17E_0852	DIRECTORY_17E	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/125954	DIRECT_CHAPTER
+DIRECTORY_17E_0852_SCREWS	DIRECTORY_17E	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/125957	DIRECT_CHAPTER
+DIRECTORY_17E_0852_TOOLS	DIRECTORY_17E	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/125960	DIRECT_CHAPTER
 DIRECTORY_17E_0853	DIRECTORY_17E	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_17E_0854	DIRECTORY_17E	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
 DIRECTORY_17E_0855	DIRECTORY_17E	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/119969	DIRECT_CHAPTER
@@ -951,7 +971,9 @@ DIRECTORY_16E_0881	DIRECTORY_16E	TROUBLESHOOT	HAPTIC	Δόνηση ή απτικ�
 DIRECTORY_16E_0882	DIRECTORY_16E	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16E_0883	DIRECTORY_16E	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
 DIRECTORY_16E_0884	DIRECTORY_16E	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
-DIRECTORY_16E_0885	DIRECTORY_16E	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/121720	MANUAL_CONTENTS
+DIRECTORY_16E_0885	DIRECTORY_16E	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/121718	DIRECT_CHAPTER
+DIRECTORY_16E_0885_SCREWS	DIRECTORY_16E	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/121724	DIRECT_CHAPTER
+DIRECTORY_16E_0885_TOOLS	DIRECTORY_16E	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/122060	DIRECT_CHAPTER
 DIRECTORY_16E_0886	DIRECTORY_16E	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_16E_0887	DIRECTORY_16E	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 DIRECTORY_16E_0888	DIRECTORY_16E	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
@@ -987,7 +1009,9 @@ DIRECTORY_18_PRO_MAX_0916	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	S
 DIRECTORY_18_PRO_MAX_0917	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-la/127626	MANUAL_CONTENTS
 DIRECTORY_18_PRO_MAX_0918	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0919	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
-DIRECTORY_18_PRO_MAX_0920	DIRECTORY_18_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-la/127626	MANUAL_CONTENTS
+DIRECTORY_18_PRO_MAX_0920	DIRECTORY_18_PRO_MAX	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/127628	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0920_SCREWS	DIRECTORY_18_PRO_MAX	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/127629	DIRECT_CHAPTER
+DIRECTORY_18_PRO_MAX_0920_TOOLS	DIRECTORY_18_PRO_MAX	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/127630	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0921	DIRECTORY_18_PRO_MAX	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0922	DIRECTORY_18_PRO_MAX	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0923	DIRECTORY_18_PRO_MAX	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
@@ -1028,7 +1052,9 @@ DIRECTORY_DUO_0957	DIRECTORY_DUO	TROUBLESHOOT	RESTART	Πάγωμα, εκκίνη
 DIRECTORY_DUO_0958	DIRECTORY_DUO	TROUBLESHOOT	TOUCH_ID	Touch ID	Touch ID Issues	https://support.apple.com/en-us/148326	DIRECT_CHAPTER
 DIRECTORY_DUO_0959	DIRECTORY_DUO	TROUBLESHOOT	HAPTIC	Taptic Engine και απτική ανάδραση	Taptic Engine and Haptic Feedback Issues	https://support.apple.com/en-us/148327	DIRECT_CHAPTER
 DIRECTORY_DUO_0960	DIRECTORY_DUO	TROUBLESHOOT	PENCIL	Apple Pencil	Apple Pencil Issues	https://support.apple.com/en-us/125776	DIRECT_CHAPTER
-DIRECTORY_DUO_0961	DIRECTORY_DUO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/127682	MANUAL_CONTENTS
+DIRECTORY_DUO_0961	DIRECTORY_DUO	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και ανάπτυγμα	Internal View, Orderable Parts, and Exploded View	https://support.apple.com/en-us/127676	DIRECT_CHAPTER
+DIRECTORY_DUO_0961_SCREWS	DIRECTORY_DUO	REFERENCE	GENERAL	Βίδες	Screws	https://support.apple.com/en-us/127678	DIRECT_CHAPTER
+DIRECTORY_DUO_0961_TOOLS	DIRECTORY_DUO	REFERENCE	GENERAL	Εργαλεία	Tools	https://support.apple.com/en-us/127677	DIRECT_CHAPTER
 DIRECTORY_DUO_0962	DIRECTORY_DUO	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
 DIRECTORY_DUO_0963	DIRECTORY_DUO	PROCEDURE	GENERAL	Οδηγίες συσκευής θέρμανσης/αφαίρεσης οθόνης	Heated Display Removal Fixture Operating Manual	https://support.apple.com/en-us/127659	DIRECT_CHAPTER
 DIRECTORY_DUO_0964	DIRECTORY_DUO	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/127660	DIRECT_CHAPTER
