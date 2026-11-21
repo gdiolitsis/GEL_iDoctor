@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'tools/iphone/sync_apple_repair_manual_urls.py'
+      - 'app/src/main/assets/iphone_apple_manual_chapters_v1.tsv'
       - '.github/workflows/sync-official-apple-chapter-links.yml'
 
 permissions:
