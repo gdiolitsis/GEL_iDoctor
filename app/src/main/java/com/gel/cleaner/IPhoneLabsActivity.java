@@ -2573,6 +2573,29 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
                         gr ? "Προβλήθηκαν οι 8 πρώτες καταχωρίσεις της διαθέσιμης βάσης."
                            : "Only the first eight catalog entries are displayed.");
             }
+            // Contextual Apple symptom guides: the topic comes from a
+            // *documented historical repair attempt*, not an Apple interpretation
+            // of this panic code. Show only as a conditional verification path.
+            for (String topic : new String[]{"WIRED_CHARGING", "WIRELESS_CHARGING", "BATTERY_POWER"}) {
+                boolean contextExists = false;
+                for (IPhonePanicRepairKnowledgeBase.RepairCase historic : matchingReports) {
+                    if (AppleOfficialServiceGuidance.topicMightBeUsefulForAction(
+                            historic.actionKey, topic)) {
+                        contextExists = true;
+                        break;
+                    }
+                }
+                if (!contextExists) continue;
+                AppleOfficialServiceGuidance.Guidance relatedApple =
+                        AppleOfficialServiceGuidance.forTopic(readAppleOfficialGuidance(),
+                                findings.modelIdentifier, topic);
+                if (relatedApple != null) {
+                    logLabelValue(gr ? "Οδηγίες Apple — μόνο αν υπάρχει σχετικό σύμπτωμα:" :
+                            "Apple guidance — only if this symptom is present:",
+                            relatedApple.title(gr) + " — " + relatedApple.advice(gr)
+                                    + " — " + relatedApple.sourceUrl);
+                }
+            }
         }
     }
     if (rendered > 0 && alreadyShown == null) {
