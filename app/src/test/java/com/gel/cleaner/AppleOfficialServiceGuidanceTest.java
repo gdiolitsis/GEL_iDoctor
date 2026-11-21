@@ -23,7 +23,7 @@ public final class AppleOfficialServiceGuidanceTest {
 
     @Test public void officialDocsAreSourcedAndNoApplePanicMappingIsClaimed() throws Exception {
         List<AppleOfficialServiceGuidance.Guidance> entries = docs();
-        assertTrue("All 39 curated official-source entries must remain indexed", entries.size() >= 39);
+        assertTrue("Official Apple catalog must retain 53 entries", entries.size() >= 53);
         for (AppleOfficialServiceGuidance.Guidance e : entries) {
             assertTrue(e.sourceUrl.startsWith("https://support.apple.com/"));
             assertFalse(e.advice(true).isEmpty());
@@ -118,6 +118,40 @@ public final class AppleOfficialServiceGuidanceTest {
                 AppleOfficialServiceGuidance.modelManual(entries, "iPhone14,5").title(false));
         assertEquals("iPhone SE 3rd generation Repair Manual",
                 AppleOfficialServiceGuidance.modelManual(entries, "iPhone14,6").title(false));
+    }
+
+    @Test public void allThirtyCurrentlyListedIphoneRepairManualsAreIndexedWithoutInventedIdentifiers() throws Exception {
+        List<AppleOfficialServiceGuidance.Guidance> entries = docs();
+        int exact = 0, directory = 0;
+        java.util.Set<String> names = new java.util.HashSet<>();
+        for (AppleOfficialServiceGuidance.Guidance item : entries) {
+            if ("MODEL_MANUAL".equals(item.category)
+                    || "MODEL_MANUAL_DIRECTORY".equals(item.category)) {
+                assertTrue("Duplicated iPhone Repair Manual", names.add(item.titleEnglish));
+                assertTrue("Every manual must link directly to Apple",
+                        item.sourceUrl.startsWith("https://support.apple.com/"));
+                if ("MODEL_MANUAL".equals(item.category)) {
+                    exact++;
+                    assertFalse("*".equals(item.models));
+                    assertFalse("-".equals(item.models));
+                } else {
+                    directory++;
+                    assertEquals("No unverified model-code mapping for directory manuals",
+                            "-", item.models);
+                }
+            }
+        }
+        assertEquals("30 official iPhone repair manuals in Apple model directory", 30, names.size());
+        assertEquals(12, exact);
+        assertEquals(18, directory);
+        for (String title : new String[]{"iPhone 12 mini Repair Manual",
+                "iPhone 13 Pro Repair Manual", "iPhone 15 Pro Max Repair Manual",
+                "iPhone 16 Pro Max Repair Manual", "iPhone 17e Repair Manual",
+                "iPhone 18 Pro Max Repair Manual", "iPhone Duo Repair Manual"}) {
+            assertTrue("Missing model manual: " + title, names.contains(title));
+        }
+        assertNull("Directory-only iPhone Duo manual cannot be assigned to a fabricated model",
+                AppleOfficialServiceGuidance.modelManual(entries, "iPhone99,9"));
     }
 
     @Test public void panicClueTopicSelectionIsConditionalNotManufacturerPartDiagnosis() throws Exception {
