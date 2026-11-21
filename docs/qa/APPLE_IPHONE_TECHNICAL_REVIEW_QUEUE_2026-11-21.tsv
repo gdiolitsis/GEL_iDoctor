@@ -1,15 +1,15 @@
-# Official Apple iPhone article review queue, generated from actual linked master sources on 2026-11-21
-# DIRECT_LINK_ONLY means official chapter URL is known but no audited detailed summary is claimed.
+# Current Apple original manual article review queue, refreshed 2026-11-22
+# DIRECT_LINK_ONLY is NOT an article-body review; duplicate model manual TOC references reuse source audits.
 source_url	chapter_links	model_manuals	phases	topics	technical_facts	reviewed_stage_chapters	review_status	priority
+https://support.apple.com/en-us/101970	153	29	TROUBLESHOOT	ALERTS;BUTTONS;HAPTIC;SENSORS;SIM;TOUCH_ID	30	0	SOURCE_SECTION_SUMMARY_REVIEWED	0
 https://support.apple.com/en-us/101969	99	29	TROUBLESHOOT	BATTERY;BATTERY_POWER;POWER;RESTART;WIRED_CHARGING;WIRELESS_CHARGING	26	0	SOURCE_SECTION_SUMMARY_REVIEWED	0
+https://support.apple.com/en-us/101966	87	29	TROUBLESHOOT	DISPLAY;SENSORS;TOUCH	19	0	SOURCE_SECTION_SUMMARY_REVIEWED	0
 https://support.apple.com/en-us/100299	30	30	SAFETY	BATTERY	4	0	SOURCE_SECTION_SUMMARY_REVIEWED	0
 https://support.apple.com/en-us/101964	30	30	CHECK	GENERAL	4	0	SOURCE_SECTION_SUMMARY_REVIEWED	0
 https://support.apple.com/en-us/101965	30	30	DIAGNOSTICS	GENERAL	5	2	SOURCE_SECTION_SUMMARY_REVIEWED	0
+https://support.apple.com/en-us/101968	29	29	TROUBLESHOOT	SOUND	9	0	SOURCE_SECTION_SUMMARY_REVIEWED	0
 https://support.apple.com/en-us/104926	1	1	PROCEDURE	CAMERA	3	1	SOURCE_SECTION_SUMMARY_REVIEWED	0
-https://support.apple.com/en-us/101970	153	29	TROUBLESHOOT	ALERTS;BUTTONS;HAPTIC;SENSORS;SIM;TOUCH_ID	0	0	DIRECT_LINK_ONLY	1
-https://support.apple.com/en-us/101966	87	29	TROUBLESHOOT	DISPLAY;SENSORS;TOUCH	0	0	DIRECT_LINK_ONLY	1
 https://support.apple.com/en-us/101967	58	29	TROUBLESHOOT	CAMERA;FACE_ID	0	2	PROCEDURE_STAGE_SUMMARY_REVIEWED	1
-https://support.apple.com/en-us/101968	29	29	TROUBLESHOOT	SOUND	0	0	DIRECT_LINK_ONLY	1
 https://support.apple.com/en-us/125776	1	1	TROUBLESHOOT	PENCIL	0	0	DIRECT_LINK_ONLY	1
 https://support.apple.com/en-us/148315	1	1	TROUBLESHOOT	SOUND	0	0	DIRECT_LINK_ONLY	1
 https://support.apple.com/en-us/148316	1	1	TROUBLESHOOT	BATTERY_POWER	0	0	DIRECT_LINK_ONLY	1
