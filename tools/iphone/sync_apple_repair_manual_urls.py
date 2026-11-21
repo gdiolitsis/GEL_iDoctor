@@ -156,8 +156,8 @@ def main():
         fields = line.rstrip("\r\n").split("\t")
         if len(fields) == 8 and fields[0] != "entry_id":
             chapter_lines[fields[0]] = (index, fields)
-    if len(chapter_lines) != 983:
-        raise ValueError("Existing chapter index unexpectedly changed; audit the baseline")
+    if len(chapter_lines) < 983 or len(chapter_lines) > 1200:
+        raise ValueError("Apple chapter index size unexpectedly changed; audit the baseline")
 
     pages = list(sources.items())
     if args.limit > 0:
@@ -169,6 +169,8 @@ def main():
     conflict = []
     page_stats = []
     order_resolutions = 0
+    reference_splits = {}
+    sensor_splits = {}
     for manual_id, source in pages:
         title = source["title"]
         src_url = source["url"]
@@ -182,6 +184,27 @@ def main():
             parser.feed(html)
             if len(parser.anchors) < 15:
                 raise ValueError("No usable chapter TOC anchors on returned page")
+            # The legacy umbrella "Views, Parts, and Tools" has no single
+            # Apple URL. Replace it with four real source-linked reference
+            # chapters, preserving the original ID for Internal View.
+            ref_parent = next(((id, index, fields) for id, (index, fields)
+                               in chapter_lines.items()
+                               if fields[1] == manual_id and fields[2] == "REFERENCE"
+                               and fields[5] == "Views, Parts, and Tools"), None)
+            if ref_parent:
+                names = ("Internal View", "Orderable Parts", "Screws", "Tools")
+                links = []
+                for label in names:
+                    addresses = {official_article(u, actual)
+                                 for u in parser.anchors.get(canonical(label), ())}
+                    addresses.discard(None)
+                    addresses.discard(official_article(src_url, src_url))
+                    if len(addresses) != 1:
+                        break
+                    links.append(next(iter(addresses)))
+                if len(links) == 4:
+                    reference_splits[ref_parent[0]] = links
+
             headings_matched = 0
             updated = 0
             total = 0
@@ -196,6 +219,22 @@ def main():
                 }
                 targets.discard(None)
                 targets.discard(official_article(src_url, src_url))
+                # Apple repeats exactly this sensor heading in TWO actual
+                # troubleshooting sections (Display and Mechanical), linking
+                # to two different official articles. Both must be retained
+                # instead of choosing one and dropping the other.
+                if title_en == "Ambient light sensor, proximity sensor, or compass issues":
+                    a = {urlsplit(u).path.rstrip("/").split("/")[-1]: u
+                         for u in targets}
+                    if set(a) == {"101966", "101970"}:
+                        existing_id = (urlsplit(fields[6]).path.rstrip("/").split("/")[-1]
+                                       if fields[7] == "DIRECT_CHAPTER" else "101966")
+                        if existing_id in a:
+                            extra_id = "101970" if existing_id == "101966" else "101966"
+                            sensor_splits[chapter_id] = (
+                                a[extra_id],
+                                "MECHANICAL" if extra_id == "101970" else "DISPLAY")
+                            targets = {a[existing_id]}
                 if len(targets) > 1:
                     # Resolve only if a unique direct Apple URL is positioned
                     # exactly where the catalog's neighboring TOC headings are.
@@ -247,11 +286,57 @@ def main():
         fields[7] = "DIRECT_CHAPTER"
         revised[index] = "\t".join(fields) + "\n"
 
-    all_rows = [line.strip("\r\n").split("\t") for line in revised]
+    # Expand actual reference subchapters in-place without inventing a link
+    # for the old (non-clickable) grouping heading.
+    for parent_id, urls in reference_splits.items():
+        index, fields = chapter_lines[parent_id]
+        base = fields[:]
+        base[4] = "Εσωτερική διάταξη"
+        base[5] = "Internal View"
+        base[6] = urls[0]
+        base[7] = "DIRECT_CHAPTER"
+        translations = [
+            ("PARTS", "Παραγγέλσιμα ανταλλακτικά", "Orderable Parts"),
+            ("SCREWS", "Βίδες", "Screws"),
+            ("TOOLS", "Εργαλεία", "Tools"),
+        ]
+        rows = [base]
+        for (suffix, gr, en), url in zip(translations, urls[1:]):
+            child = fields[:]
+            child[0] = parent_id + "_" + suffix
+            child[4], child[5] = gr, en
+            child[6], child[7] = url, "DIRECT_CHAPTER"
+            rows.append(child)
+        revised[index] = "\n".join("\t".join(row) for row in rows) + "\n"
+
+    for chapter_id, (other_url, area) in sensor_splits.items():
+        index, fields = chapter_lines[chapter_id]
+        # Include a distinct Apple chapter for the other section. The
+        # original remains as-is and never changes its already-reviewed URL.
+        if fields[7] not in ("MANUAL_CONTENTS", "DIRECT_CHAPTER"):
+            raise AssertionError("Unexpected sensor link scope")
+        if fields[7] == "MANUAL_CONTENTS" and chapter_id not in updates:
+            continue
+        source_line = revised[index].rstrip("\n").split("\t")
+        if len(source_line) != 8:
+            raise AssertionError("Sensor row changed unexpectedly")
+        companion = source_line[:]
+        companion[0] = chapter_id + "_" + area
+        companion[4] += " (μηχανικά)" if area == "MECHANICAL" else " (οθόνη)"
+        companion[5] += " (Mechanical)" if area == "MECHANICAL" else " (Display)"
+        companion[6], companion[7] = other_url, "DIRECT_CHAPTER"
+        if companion[6] == source_line[6]:
+            raise AssertionError("Duplicate sensor article instead of a second section")
+        revised[index] = "\t".join(source_line) + "\n" + "\t".join(companion) + "\n"
+
+    all_rows = [line.strip("\r\n").split("\t")
+                for line in "".join(revised).splitlines()]
     all_rows = [row for row in all_rows if len(row) == 8 and row[0] != "entry_id"]
+    if len(set(row[0] for row in all_rows)) != len(all_rows):
+        raise AssertionError("Duplicate Apple chapter ID after TOC expansion")
     direct = sum(row[7] == "DIRECT_CHAPTER" for row in all_rows)
     pending = sum(row[7] == "MANUAL_CONTENTS" for row in all_rows)
-    if direct + pending != 983:
+    if direct + pending != len(all_rows) or len(all_rows) < 983:
         raise AssertionError("Missing or extra chapter rows after source audit")
 
     summary = [
@@ -264,7 +349,9 @@ def main():
         "",
         f"- Manuals fetched and parsed: **{reviewed} / {len(pages)} attempted**",
         f"- Newly discovered model/chapter matches: **{len(updates)}**",
-        f"- All direct chapter links: **{direct} / 983**",
+        f"- Newly expanded reference groupings: **{len(reference_splits)}**",
+        f"- Additional official Display/Mechanical sensor chapters: **{len(sensor_splits)}**",
+        f"- All direct chapter links: **{direct} / {len(all_rows)}**",
         f"- Remaining links to manual contents: **{pending}**",
         f"- Manual fetch failures: **{len(failures)}**",
         f"- Conflicts requiring manual verification: **{len(conflict)}**",
@@ -297,7 +384,8 @@ def main():
                 ""]
 
     print(f"SUMMARY: fetched={reviewed}/{len(pages)} new={len(updates)} "
-          f"direct={direct} pending={pending} conflicts={len(conflict)} "
+          f"refs={len(reference_splits)} dualSensors={len(sensor_splits)} "
+          f"direct={direct}/{len(all_rows)} pending={pending} conflicts={len(conflict)} "
           f"fetch_failures={len(failures)}", flush=True)
     if args.write:
         CHAPTERS.write_text("".join(revised), encoding="utf-8")
