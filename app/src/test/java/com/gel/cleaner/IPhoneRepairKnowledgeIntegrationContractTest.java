@@ -87,6 +87,8 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.genericForTopic(docs, \"UNEXPECTED_RESTART\")"));
         assertTrue(officialHelper.contains("AppleOfficialServiceGuidance.forTopic(docs, model, \"APPLE_DIAGNOSTICS\")"));
         assertTrue(officialHelper.contains("Η καταχωρισμένη επίσημη τεκμηρίωση δεν αποδίδει"));
+        assertTrue("Unknown-model fallback must point to the actual official Apple catalog",
+                officialHelper.contains("https://support.apple.com/en-us/docs/iphone"));
         String lab4 = region(source, "private void runImpactLab()",
                 "private int countSupportedPanicBlocks(");
         assertTrue(lab4.contains("documentedAppleModels.add(observed.modelIdentifier)"));
