@@ -259,7 +259,7 @@ MANUAL_16_PRO_0253	MANUAL_16_PRO	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camer
 MANUAL_16_PRO_0254	MANUAL_16_PRO	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 MANUAL_16_PRO_0255	MANUAL_16_PRO	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 MANUAL_16_PRO_0256	MANUAL_16_PRO	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-MANUAL_16_PRO_0257	MANUAL_16_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/120803	MANUAL_CONTENTS
+MANUAL_16_PRO_0257	MANUAL_16_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 MANUAL_16_PRO_0258	MANUAL_16_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 MANUAL_16_PRO_0259	MANUAL_16_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 MANUAL_16_PRO_0260	MANUAL_16_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
@@ -295,7 +295,7 @@ DIRECTORY_17_PRO_0289	DIRECTORY_17_PRO	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR
 DIRECTORY_17_PRO_0290	DIRECTORY_17_PRO	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_17_PRO_0291	DIRECTORY_17_PRO	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_17_PRO_0292	DIRECTORY_17_PRO	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_17_PRO_0293	DIRECTORY_17_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/124262	MANUAL_CONTENTS
+DIRECTORY_17_PRO_0293	DIRECTORY_17_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_PRO_0294	DIRECTORY_17_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_PRO_0295	DIRECTORY_17_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_PRO_0296	DIRECTORY_17_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
@@ -331,7 +331,7 @@ DIRECTORY_18_PRO_0325	DIRECTORY_18_PRO	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR
 DIRECTORY_18_PRO_0326	DIRECTORY_18_PRO	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0327	DIRECTORY_18_PRO	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0328	DIRECTORY_18_PRO	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_18_PRO_0329	DIRECTORY_18_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/el-gr/127388	MANUAL_CONTENTS
+DIRECTORY_18_PRO_0329	DIRECTORY_18_PRO	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0330	DIRECTORY_18_PRO	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0331	DIRECTORY_18_PRO	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_0332	DIRECTORY_18_PRO	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/el-gr/127388	MANUAL_CONTENTS
@@ -457,7 +457,7 @@ DIRECTORY_16_0451	DIRECTORY_16	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera 
 DIRECTORY_16_0452	DIRECTORY_16	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_16_0453	DIRECTORY_16	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_16_0454	DIRECTORY_16	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_16_0455	DIRECTORY_16	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/120652	MANUAL_CONTENTS
+DIRECTORY_16_0455	DIRECTORY_16	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_0456	DIRECTORY_16	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_0457	DIRECTORY_16	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_0458	DIRECTORY_16	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
@@ -645,7 +645,7 @@ DIRECTORY_15_PLUS_0639	DIRECTORY_15_PLUS	TROUBLESHOOT	CAMERA	Κάμερα ή LiD
 DIRECTORY_15_PLUS_0640	DIRECTORY_15_PLUS	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_15_PLUS_0641	DIRECTORY_15_PLUS	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_15_PLUS_0642	DIRECTORY_15_PLUS	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_15_PLUS_0643	DIRECTORY_15_PLUS	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/104858	MANUAL_CONTENTS
+DIRECTORY_15_PLUS_0643	DIRECTORY_15_PLUS	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_15_PLUS_0644	DIRECTORY_15_PLUS	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_15_PLUS_0645	DIRECTORY_15_PLUS	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_15_PLUS_0646	DIRECTORY_15_PLUS	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
@@ -708,7 +708,7 @@ DIRECTORY_16_PLUS_0702	DIRECTORY_16_PLUS	TROUBLESHOOT	CAMERA	Κάμερα ή LiD
 DIRECTORY_16_PLUS_0703	DIRECTORY_16_PLUS	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_16_PLUS_0704	DIRECTORY_16_PLUS	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_16_PLUS_0705	DIRECTORY_16_PLUS	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_16_PLUS_0706	DIRECTORY_16_PLUS	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/120662	MANUAL_CONTENTS
+DIRECTORY_16_PLUS_0706	DIRECTORY_16_PLUS	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_PLUS_0707	DIRECTORY_16_PLUS	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_PLUS_0708	DIRECTORY_16_PLUS	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_PLUS_0709	DIRECTORY_16_PLUS	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
@@ -742,7 +742,7 @@ DIRECTORY_16_PRO_MAX_0736	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	CAMERA	Κάμερα 
 DIRECTORY_16_PRO_MAX_0737	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_16_PRO_MAX_0738	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_16_PRO_MAX_0739	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_16_PRO_MAX_0740	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/120819	MANUAL_CONTENTS
+DIRECTORY_16_PRO_MAX_0740	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_PRO_MAX_0741	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_PRO_MAX_0742	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16_PRO_MAX_0743	DIRECTORY_16_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
@@ -778,7 +778,7 @@ DIRECTORY_17_PRO_MAX_0772	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	CAMERA	Κάμερα 
 DIRECTORY_17_PRO_MAX_0773	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_17_PRO_MAX_0774	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_17_PRO_MAX_0775	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_17_PRO_MAX_0776	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/124278	MANUAL_CONTENTS
+DIRECTORY_17_PRO_MAX_0776	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_PRO_MAX_0777	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_PRO_MAX_0778	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17_PRO_MAX_0779	DIRECTORY_17_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
@@ -814,7 +814,7 @@ DIRECTORY_AIR_0808	DIRECTORY_AIR	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camer
 DIRECTORY_AIR_0809	DIRECTORY_AIR	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_AIR_0810	DIRECTORY_AIR	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_AIR_0811	DIRECTORY_AIR	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_AIR_0812	DIRECTORY_AIR	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/123052	MANUAL_CONTENTS
+DIRECTORY_AIR_0812	DIRECTORY_AIR	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_AIR_0813	DIRECTORY_AIR	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_AIR_0814	DIRECTORY_AIR	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_AIR_0815	DIRECTORY_AIR	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
@@ -847,7 +847,7 @@ DIRECTORY_17E_0841	DIRECTORY_17E	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camer
 DIRECTORY_17E_0842	DIRECTORY_17E	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_17E_0843	DIRECTORY_17E	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_17E_0844	DIRECTORY_17E	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_17E_0845	DIRECTORY_17E	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/125956	MANUAL_CONTENTS
+DIRECTORY_17E_0845	DIRECTORY_17E	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17E_0846	DIRECTORY_17E	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17E_0847	DIRECTORY_17E	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_17E_0848	DIRECTORY_17E	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
@@ -880,7 +880,7 @@ DIRECTORY_16E_0874	DIRECTORY_16E	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camer
 DIRECTORY_16E_0875	DIRECTORY_16E	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_16E_0876	DIRECTORY_16E	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_16E_0877	DIRECTORY_16E	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_16E_0878	DIRECTORY_16E	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/121720	MANUAL_CONTENTS
+DIRECTORY_16E_0878	DIRECTORY_16E	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16E_0879	DIRECTORY_16E	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16E_0880	DIRECTORY_16E	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_16E_0881	DIRECTORY_16E	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
@@ -916,7 +916,7 @@ DIRECTORY_18_PRO_MAX_0910	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	CAMERA	Κάμερα 
 DIRECTORY_18_PRO_MAX_0911	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	FACE_ID	Μπροστινή κάμερα ή Face ID	Front camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0912	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0913	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
-DIRECTORY_18_PRO_MAX_0914	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-la/127626	MANUAL_CONTENTS
+DIRECTORY_18_PRO_MAX_0914	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0915	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0916	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
 DIRECTORY_18_PRO_MAX_0917	DIRECTORY_18_PRO_MAX	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-la/127626	MANUAL_CONTENTS
