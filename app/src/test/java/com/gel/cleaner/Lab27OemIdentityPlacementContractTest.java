@@ -70,7 +70,7 @@ public final class Lab27OemIdentityPlacementContractTest {
         assertTrue(certification.contains("String partialObservation ="));
         assertTrue(certification.contains("specRow.observed.trim().isEmpty()"));
         assertTrue(certification.contains("Σύμφωνα με τον κατασκευαστή"));
-        assertTrue(certification.contains("logLabelValue(rowName,"));
+        assertTrue(certification.contains("logLabelInfoValue(rowName,"));
     }
 
     @Test public void usedDeviceCheckKeepsBuyerControlsWithoutRepeatingOemTable() throws Exception {
