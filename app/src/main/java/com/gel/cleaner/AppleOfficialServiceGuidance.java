@@ -53,6 +53,7 @@ public final class AppleOfficialServiceGuidance {
         boolean applies(String model) {
             if (model == null || model.trim().isEmpty()
                     || "unknown".equalsIgnoreCase(model.trim())) return false;
+            if ("-".equals(models)) return false; // directory-only: identifier not verified
             if ("*".equals(models)) return true; // generic Apple symptom guides
             for (String identifier : models.split(";")) {
                 if (identifier.trim().equalsIgnoreCase(model.trim())) return true;
