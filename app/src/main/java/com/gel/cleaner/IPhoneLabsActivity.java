@@ -167,6 +167,8 @@ private boolean looksCorruptedPanic(String text) {
     // Local bundled public repair history is read once per Activity instance;
     // never downloaded and never modified using imported customer panic data.
     private java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> repairCaseCache = null;
+    // Apple-authored symptom workflows are kept separate from repair outcomes.
+    private java.util.List<AppleOfficialServiceGuidance.Guidance> appleGuideCache = null;
     private boolean panicLogLoaded = false;
     private String  panicLogName   = null;
     private String  panicLogText   = null;
@@ -1772,6 +1774,7 @@ private void runImpactLab() {
             : "Recorded keyword categories per panic file; no physical component test was performed.");
 
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
+    java.util.Set<String> documentedAppleModels = new java.util.HashSet<>();
     int incident = 0;
     for (String block : blocks) {
         if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
@@ -1809,6 +1812,12 @@ private void runImpactLab() {
         // but never combine keywords from separate panic records.
         logApplePanicEvidence(block, gr,
                 heading + (gr ? " — τεχνική ένδειξη" : " — technical clue"), shownCodes);
+        // Apple has published model manuals and symptom-based steps, not a
+        // certified mapping from these panic clues to replacement parts.
+        ApplePanicHardwareHints.Assessment observed = ApplePanicHardwareHints.examineOne(block);
+        if (documentedAppleModels.add(observed.modelIdentifier)) {
+            logOfficialApplePanicGuidance(observed.modelIdentifier, gr);
+        }
     }
 
     // One safety boundary is enough; individual GEL clues remain visible above.
@@ -2158,6 +2167,7 @@ private void runFinalServiceRecommendationLab() {
     java.util.Map<String, Integer> crashCount = new java.util.TreeMap<>();
     java.util.Map<String, Integer> domainCount = new java.util.TreeMap<>();
     java.util.Set<String> uniqueTechnicalCodes = new java.util.LinkedHashSet<>();
+    java.util.Set<String> observedHardwareModels = new java.util.LinkedHashSet<>();
     // Source cases are de-duplicated across multiple imported panic files.
     java.util.Map<String, IPhonePanicRepairKnowledgeBase.RepairCase> relatedRepairAttempts =
             new java.util.LinkedHashMap<>();
@@ -2191,6 +2201,9 @@ private void runFinalServiceRecommendationLab() {
         // GEL clue IDs derived by rules from individual imported records,
         // not necessarily literal Apple diagnostic codes or hardware faults.
         ApplePanicHardwareHints.Assessment hints = ApplePanicHardwareHints.examineOne(block);
+        if (!"Unknown".equalsIgnoreCase(hints.modelIdentifier)) {
+            observedHardwareModels.add(hints.modelIdentifier);
+        }
         for (ApplePanicHardwareHints.Finding finding : hints.findings) {
             uniqueTechnicalCodes.add(finding.code);
             // Exact model AND exact clue, within this one panic block.
@@ -2247,6 +2260,16 @@ private void runFinalServiceRecommendationLab() {
                         + "Η ομοιότητα κωδικού δεν αποδεικνύει την αιτία στη συγκεκριμένη συσκευή."
                    : "Lab 4 lists the actions, failures and original sources. "
                         + "A matching clue does not identify the fault on this specific iPhone.");
+    }
+    if (observedHardwareModels.size() == 1) {
+        String identifiedModel = observedHardwareModels.iterator().next();
+        AppleOfficialServiceGuidance.Guidance manual =
+                AppleOfficialServiceGuidance.modelManual(readAppleOfficialGuidance(),
+                        identifiedModel);
+        if (manual != null) {
+            logLabelValue(gr ? "Επίσημο εγχειρίδιο Apple:" : "Official Apple manual:",
+                    manual.title(gr) + " — " + manual.sourceUrl);
+        }
     }
     if (demoMode) {
         logInfo(gr
@@ -2441,6 +2464,46 @@ private String sigKeyEvidence = "";
  * A repeated code is shown once per summary and is never counted as a
  * confirmed failure or as a measured repair probability.
  */
+private java.util.List<AppleOfficialServiceGuidance.Guidance> readAppleOfficialGuidance() {
+    if (appleGuideCache != null) return appleGuideCache;
+    try {
+        appleGuideCache = AppleOfficialServiceGuidance.parse(
+                getAssets().open(AppleOfficialServiceGuidance.ASSET));
+    } catch (java.io.IOException ignored) {
+        appleGuideCache = java.util.Collections.emptyList();
+    }
+    return appleGuideCache;
+}
+
+private void logOfficialApplePanicGuidance(String model, boolean gr) {
+    if (model == null || "Unknown".equalsIgnoreCase(model)) return;
+    java.util.List<AppleOfficialServiceGuidance.Guidance> docs = readAppleOfficialGuidance();
+    if (docs.isEmpty()) return;
+
+    AppleOfficialServiceGuidance.Guidance manual =
+            AppleOfficialServiceGuidance.modelManual(docs, model);
+    AppleOfficialServiceGuidance.Guidance restart =
+            AppleOfficialServiceGuidance.forTopic(docs, model, "UNEXPECTED_RESTART");
+    AppleOfficialServiceGuidance.Guidance diagnostics =
+            AppleOfficialServiceGuidance.forTopic(docs, model, "APPLE_DIAGNOSTICS");
+
+    logLabelValue(gr ? "Επίσημες πηγές Apple:" : "Official Apple documentation:",
+            gr ? "Οδηγίες ελέγχου ανά σύμπτωμα — η Apple δεν αποδίδει εδώ κάποιον συγκεκριμένο panic code σε εξάρτημα."
+               : "Symptom-based guidance, not an Apple mapping of this panic code to a failed part.");
+    if (manual != null) {
+        logLabelValue(gr ? "Εγχειρίδιο μοντέλου:" : "Model repair manual:",
+                manual.title(gr) + " — " + manual.sourceUrl);
+    }
+    if (restart != null) {
+        logLabelValue(gr ? "Επίσημος έλεγχος επανεκκίνησης:" : "Apple restart troubleshooting:",
+                restart.advice(gr) + " — " + restart.sourceUrl);
+    }
+    if (diagnostics != null) {
+        logLabelValue(gr ? "Διαγνωστικά Apple:" : "Apple diagnostics:",
+                diagnostics.advice(gr) + " — " + diagnostics.sourceUrl);
+    }
+}
+
 private java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> readPanicRepairHistory() {
     if (repairCaseCache != null) return repairCaseCache;
     try {
