@@ -128,6 +128,42 @@ public final class AppleOfficialServiceGuidance {
         return null;
     }
 
+    /** All generic official pages for one documented symptom topic, in catalog order. */
+    public static List<Guidance> genericForTopicAll(List<Guidance> all, String category) {
+        if (all == null || category == null) return Collections.emptyList();
+        List<Guidance> matching = new ArrayList<>();
+        for (Guidance row : all) {
+            if ("*".equals(row.models)
+                    && category.equalsIgnoreCase(row.category)) matching.add(row);
+        }
+        return Collections.unmodifiableList(matching);
+    }
+
+    /**
+     * Conditionally relevant Apple documentation based on literal GEL clue
+     * categories. This is NOT an Apple interpretation of an SMC/panic code,
+     * and does NOT assert that the end-user actually experienced the symptom.
+     */
+    public static List<String> conditionalTopicsForClue(String code) {
+        if (code == null) return Collections.emptyList();
+        String k = code.trim().toUpperCase(Locale.ROOT);
+        List<String> topics = new ArrayList<>();
+        if (k.equals("MIC1") || k.equals("MIC2") || k.startsWith("AUDIO_CODEC_")) {
+            topics.add("MICROPHONE");
+            if (k.startsWith("AUDIO_CODEC_")) topics.add("SPEAKER");
+        } else if (k.equals("THERMAL_SHUTDOWN")) {
+            topics.add("THERMAL");
+        } else if (k.equals("BASEBAND_FAULT")) {
+            topics.add("CELLULAR_SERVICE");
+            topics.add("CELLULAR_CALLS");
+        } else if (k.equals("DISPLAY_CONTROLLER")) {
+            topics.add("DISPLAY_TOUCH");
+        } else if (k.equals("STORAGE_CONTROLLER")) {
+            topics.add("SOFTWARE_RECOVERY");
+        }
+        return Collections.unmodifiableList(topics);
+    }
+
     /**
      * A suggested topic is editorial triage, not an assertion the user has
      * that symptom or Apple's interpretation of the imported panic code.
