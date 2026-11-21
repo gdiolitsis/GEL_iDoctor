@@ -40,4 +40,22 @@ public final class Lab27GradePresentationContractTest {
         assertTrue(lab.contains("όχι πιστοποίηση hardware") || lab.contains("όχι πιστοποίηση."));
         assertTrue(lab.contains("όχι πιστοποίηση εξαρτημάτων ή μέτρηση φθοράς μπαταρίας"));
     }
+
+    @Test public void lab27ReadsLiveBatteryPercentageAndNeverUsesStaleLab14Member() throws Exception {
+        String lab = lab27();
+        assertTrue(lab.contains("final int lab27BatteryPercent = getBatteryPercentSafe();"));
+        assertTrue(lab.contains("Lab30ScoreEvidence.hasBatteryReadings(batTemp, (float) lab27BatteryPercent)"));
+        assertTrue(lab.contains("scoreBattery(batTemp, (float) lab27BatteryPercent, charging)"));
+        assertTrue(lab.contains("(lab27BatteryPercent >= 0 ? fmt1((float) lab27BatteryPercent)"));
+        assertFalse(lab.contains("(batteryPercent >= 0 ? fmt1((float) batteryPercent)"));
+    }
+
+    @Test public void unknownOemAttributesHaveNeutralBilingualInterpretation() throws Exception {
+        String lab = lab27();
+        assertTrue(lab.contains("specRow.noteGreek"));
+        assertTrue(lab.contains("specRow.noteEnglish"));
+        assertTrue(lab.contains("Ερμηνεία μη επαληθευμένων"));
+        assertTrue(lab.contains("Μη επαληθευμένο δεν σημαίνει απόν"));
+        assertTrue(lab.contains("logLabelValue(gr ? \"Ερμηνεία\" : \"Interpretation\", explanation)"));
+    }
 }
