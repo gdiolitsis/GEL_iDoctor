@@ -185,39 +185,39 @@ MANUAL_14_PRO_MAX_0179	MANUAL_14_PRO_MAX	PROCEDURE	HAPTIC	Μηχανισμός �
 MANUAL_14_PRO_MAX_0180	MANUAL_14_PRO_MAX	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-la/100357	MANUAL_CONTENTS
 MANUAL_14_PRO_MAX_0181	MANUAL_14_PRO_MAX	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-la/100357	MANUAL_CONTENTS
 MANUAL_14_PRO_MAX_0182	MANUAL_14_PRO_MAX	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-la/100357	MANUAL_CONTENTS
-MANUAL_15_0183	MANUAL_15	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0184	MANUAL_15	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0185	MANUAL_15	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0186	MANUAL_15	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0187	MANUAL_15	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0188	MANUAL_15	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0189	MANUAL_15	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0190	MANUAL_15	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0191	MANUAL_15	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0192	MANUAL_15	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0193	MANUAL_15	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0194	MANUAL_15	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0195	MANUAL_15	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0196	MANUAL_15	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0197	MANUAL_15	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0198	MANUAL_15	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0199	MANUAL_15	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
+MANUAL_15_0183	MANUAL_15	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-us/100299	DIRECT_CHAPTER
+MANUAL_15_0184	MANUAL_15	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-us/104942	DIRECT_CHAPTER
+MANUAL_15_0185	MANUAL_15	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-us/101964	DIRECT_CHAPTER
+MANUAL_15_0186	MANUAL_15	DIAGNOSTICS	GENERAL	Apple Diagnostics (μόνο σε υποστηριζόμενη συσκευή)	Apple Diagnostics for Self Service Repair	https://support.apple.com/en-us/101965	DIRECT_CHAPTER
+MANUAL_15_0187	MANUAL_15	TROUBLESHOOT	BATTERY_POWER	Μπαταρία, ενσύρματη φόρτιση και τροφοδοσία	Battery, wired charging, and power issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_15_0188	MANUAL_15	TROUBLESHOOT	WIRELESS_CHARGING	Ασύρματη φόρτιση	Wireless charging issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_15_0189	MANUAL_15	TROUBLESHOOT	RESTART	Απρόσμενο πάγωμα, επανεκκίνηση ή τερματισμός	Unexpected freeze, restart, or shutdown issues	https://support.apple.com/en-us/101969	DIRECT_CHAPTER
+MANUAL_15_0190	MANUAL_15	TROUBLESHOOT	CAMERA	Κάμερα ή LiDAR	Camera or LiDAR issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_15_0191	MANUAL_15	TROUBLESHOOT	FACE_ID	Κάμερα TrueDepth ή Face ID	TrueDepth camera or Face ID issues	https://support.apple.com/en-us/101967	DIRECT_CHAPTER
+MANUAL_15_0192	MANUAL_15	TROUBLESHOOT	DISPLAY	Οθόνη και εικόνα	Display and image issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_15_0193	MANUAL_15	TROUBLESHOOT	TOUCH	Multi-Touch ή Haptic Touch	Multi-Touch or Haptic Touch issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_15_0194	MANUAL_15	TROUBLESHOOT	SENSORS	Αισθητήρας φωτός, εγγύτητας ή πυξίδα	Ambient light sensor, proximity sensor, or compass issues	https://support.apple.com/en-us/101966	DIRECT_CHAPTER
+MANUAL_15_0195	MANUAL_15	TROUBLESHOOT	BUTTONS	Πλήκτρα ή διακόπτες	Button or switch issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_0196	MANUAL_15	TROUBLESHOOT	SIM	Κάρτα SIM	SIM card issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_0197	MANUAL_15	TROUBLESHOOT	HAPTIC	Δόνηση ή απτική ανάδραση	Taptic Engine or haptic feedback issues	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_0198	MANUAL_15	TROUBLESHOOT	ALERTS	Μηνύματα προειδοποιήσεων	Alert messages	https://support.apple.com/en-us/101970	DIRECT_CHAPTER
+MANUAL_15_0199	MANUAL_15	TROUBLESHOOT	SOUND	Ηχείο, κουδούνισμα ή μικρόφωνο	Speaker, ringer sound, or microphone issues	https://support.apple.com/en-us/101968	DIRECT_CHAPTER
 MANUAL_15_0200	MANUAL_15	TROUBLESHOOT	TOUCH_ID	Κουμπί αφετηρίας ή Touch ID (μόνο όπου υπάρχει)	Home button or Touch ID issues	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
 MANUAL_15_0201	MANUAL_15	REFERENCE	GENERAL	Εσωτερική διάταξη, ανταλλακτικά και εργαλεία	Views, Parts, and Tools	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0202	MANUAL_15	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0203	MANUAL_15	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0204	MANUAL_15	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0205	MANUAL_15	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0206	MANUAL_15	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0207	MANUAL_15	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0208	MANUAL_15	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0209	MANUAL_15	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0210	MANUAL_15	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0211	MANUAL_15	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0212	MANUAL_15	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0213	MANUAL_15	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0214	MANUAL_15	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
-MANUAL_15_0215	MANUAL_15	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/104900	MANUAL_CONTENTS
+MANUAL_15_0202	MANUAL_15	PROCEDURE	GENERAL	Πρώτα βήματα	First Steps	https://support.apple.com/en-us/100300	DIRECT_CHAPTER
+MANUAL_15_0203	MANUAL_15	PROCEDURE	GENERAL	Βίντεο επισκευής	Repair Videos	https://support.apple.com/en-us/122308	DIRECT_CHAPTER
+MANUAL_15_0204	MANUAL_15	PROCEDURE	SIM	Υποδοχή SIM	SIM Tray	https://support.apple.com/en-us/104039	DIRECT_CHAPTER
+MANUAL_15_0205	MANUAL_15	PROCEDURE	DISPLAY	Πίσω γυαλί	Back Glass	https://support.apple.com/en-us/120014	DIRECT_CHAPTER
+MANUAL_15_0206	MANUAL_15	PROCEDURE	CAMERA	Κάμερα	Camera	https://support.apple.com/en-us/104906	DIRECT_CHAPTER
+MANUAL_15_0207	MANUAL_15	PROCEDURE	BATTERY	Μπαταρία	Battery	https://support.apple.com/en-us/104907	DIRECT_CHAPTER
+MANUAL_15_0208	MANUAL_15	PROCEDURE	CAMERA	Κάμερα TrueDepth	TrueDepth Camera	https://support.apple.com/en-us/104908	DIRECT_CHAPTER
+MANUAL_15_0209	MANUAL_15	PROCEDURE	SOUND	Πάνω ηχείο	Top Speaker	https://support.apple.com/en-us/104909	DIRECT_CHAPTER
+MANUAL_15_0210	MANUAL_15	PROCEDURE	HAPTIC	Μηχανισμός δόνησης	Taptic Engine	https://support.apple.com/en-us/104910	DIRECT_CHAPTER
+MANUAL_15_0211	MANUAL_15	PROCEDURE	SOUND	Κάτω ηχείο	Bottom Speaker	https://support.apple.com/en-us/104911	DIRECT_CHAPTER
+MANUAL_15_0212	MANUAL_15	PROCEDURE	SOUND	Κύριο μικρόφωνο	Main Microphone	https://support.apple.com/en-us/104912	DIRECT_CHAPTER
+MANUAL_15_0213	MANUAL_15	PROCEDURE	DISPLAY	Οθόνη	Display	https://support.apple.com/en-us/104913	DIRECT_CHAPTER
+MANUAL_15_0214	MANUAL_15	PROCEDURE	WIRED_CHARGING	Θύρα USB-C	USB-C Connector	https://support.apple.com/en-us/122386	DIRECT_CHAPTER
+MANUAL_15_0215	MANUAL_15	PROCEDURE	GENERAL	Πλαίσιο/περίβλημα	Enclosure	https://support.apple.com/en-us/120605	DIRECT_CHAPTER
 MANUAL_15_PRO_0216	MANUAL_15_PRO	SAFETY	BATTERY	Ασφάλεια μπαταρίας	Battery Safety	https://support.apple.com/en-ie/104872	MANUAL_CONTENTS
 MANUAL_15_PRO_0217	MANUAL_15_PRO	SAFETY	GLASS	Ασφάλεια σπασμένου γυαλιού	Broken Glass Safety	https://support.apple.com/en-ie/104872	MANUAL_CONTENTS
 MANUAL_15_PRO_0218	MANUAL_15_PRO	CHECK	GENERAL	Γρήγοροι αρχικοί έλεγχοι	Quick Checks	https://support.apple.com/en-ie/104872	MANUAL_CONTENTS
