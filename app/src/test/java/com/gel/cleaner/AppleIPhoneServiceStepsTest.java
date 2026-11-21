@@ -113,7 +113,7 @@ public final class AppleIPhoneServiceStepsTest {
             if (chapter.linkScope == AppleIPhoneManualChapters.LinkScope.DIRECT_CHAPTER) direct++;
         }
         assertTrue("Previously reviewed 124 links must remain available", direct >= 124);
-        assertTrue("Direct links cannot outnumber catalog sections", direct <= 983);
+        assertTrue("Direct links cannot outnumber catalog sections", direct <= chapters().size());
         assertEquals("https://support.apple.com/en-us/100381",
                 all.stream().filter(x -> x.manualId.equals("MANUAL_14_PRO")
                         && x.titleEnglish.equals("Battery")).findFirst().get().sourceUrl);
