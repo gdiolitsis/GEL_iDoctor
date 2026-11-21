@@ -2168,6 +2168,7 @@ private void runFinalServiceRecommendationLab() {
     java.util.Map<String, Integer> domainCount = new java.util.TreeMap<>();
     java.util.Set<String> uniqueTechnicalCodes = new java.util.LinkedHashSet<>();
     java.util.Set<String> observedHardwareModels = new java.util.LinkedHashSet<>();
+    boolean someHardwareModelUnknown = false;
     // Source cases are de-duplicated across multiple imported panic files.
     java.util.Map<String, IPhonePanicRepairKnowledgeBase.RepairCase> relatedRepairAttempts =
             new java.util.LinkedHashMap<>();
@@ -2203,6 +2204,8 @@ private void runFinalServiceRecommendationLab() {
         ApplePanicHardwareHints.Assessment hints = ApplePanicHardwareHints.examineOne(block);
         if (!"Unknown".equalsIgnoreCase(hints.modelIdentifier)) {
             observedHardwareModels.add(hints.modelIdentifier);
+        } else {
+            someHardwareModelUnknown = true;
         }
         for (ApplePanicHardwareHints.Finding finding : hints.findings) {
             uniqueTechnicalCodes.add(finding.code);
@@ -2261,7 +2264,7 @@ private void runFinalServiceRecommendationLab() {
                    : "Lab 4 lists the actions, failures and original sources. "
                         + "A matching clue does not identify the fault on this specific iPhone.");
     }
-    if (observedHardwareModels.size() == 1) {
+    if (!someHardwareModelUnknown && observedHardwareModels.size() == 1) {
         String identifiedModel = observedHardwareModels.iterator().next();
         AppleOfficialServiceGuidance.Guidance manual =
                 AppleOfficialServiceGuidance.modelManual(readAppleOfficialGuidance(),
