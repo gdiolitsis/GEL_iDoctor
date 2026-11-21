@@ -2538,6 +2538,12 @@ private void logOfficialApplePanicGuidance(String model, boolean gr,
                 : "Manual for this exact model:",
                 gr ? "Δεν έχει καταχωριστεί επαληθευμένη αντιστοίχιση στη βάση μας."
                    : "No verified exact-model manual is indexed in our catalog.");
+        // Directory-only manuals are intentionally NOT guessed from the raw
+        // hardware identifier. Let the person select their commercial model
+        // on Apple's authoritative official iPhone manual index.
+        logLabelInfoValue(gr ? "Όλα τα επίσημα εγχειρίδια iPhone:"
+                : "All official iPhone Repair Manuals:",
+                "https://support.apple.com/en-us/docs/iphone");
         AppleOfficialServiceGuidance.Guidance hub =
                 AppleOfficialServiceGuidance.genericForTopic(docs, "TROUBLESHOOTING_HUB");
         if (hub != null) {
