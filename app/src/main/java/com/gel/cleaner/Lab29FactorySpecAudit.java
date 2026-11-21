@@ -86,10 +86,10 @@ public final class Lab29FactorySpecAudit {
                     : deviations + " reported specification deviations need independent review before purchase.";
             return greek
                     ? "Τα " + matches + " από τα " + matches
-                        + " συγκρίσιμα χαρακτηριστικά συμφωνούν με τις δημοσιευμένες προδιαγραφές του μοντέλου. "
-                        + unknowns + " επιπλέον χαρακτηριστικά δεν επαληθεύτηκαν και ΔΕΝ θεωρούνται αποκλίσεις."
-                    : "All " + matches + " comparable characteristics agree with the published model specifications. "
-                        + unknowns + " other characteristics were not verified and are NOT treated as deviations.";
+                        + " χαρακτηριστικά που μπόρεσε να συγκρίνει το εργαστήριο συμφωνούν με τις εργοστασιακές προδιαγραφές. "
+                        + "Για τα υπόλοιπα δεν υπάρχει διαθέσιμη αυτόματη σύγκριση."
+                    : "All " + matches + " characteristics automatically compared by the lab agree with the factory specifications. "
+                        + "Automatic comparison is not available for the others.";
         }
     }
 
@@ -311,10 +311,15 @@ public final class Lab29FactorySpecAudit {
                 "Ναι / Yes", m.rearFlash);
         // Camera2 reports JPEG OUTPUT modes. A 12.5 MP binned JPEG does not
         // disprove a genuine 50 MP sensor; output sizes don't certify the sensor.
-        add(rows, "Κύρια κάμερα", "Main camera resolution", "50 MP",
+        rows.add(new Row("Κύρια κάμερα", "Main camera resolution", "50 MP",
                 jpegObservation(m.maxRearJpegPixels),
                 withinJpegMp(m.maxRearJpegPixels, 48d, 52.5d)
-                        ? Verdict.MATCH : Verdict.UNKNOWN);
+                        ? Verdict.MATCH : Verdict.UNKNOWN,
+                "Το εργαστήριο καταγράφει τη μέγιστη διαθέσιμη ανάλυση JPEG, όχι "
+                    + "την ονομαστική ανάλυση του αισθητήρα. Ελέγξτε αν η εφαρμογή "
+                    + "κάμερας προσφέρει λειτουργία 50 MP.",
+                "The lab reads the maximum exposed JPEG output size, not the "
+                    + "sensor's nominal resolution. Check whether the camera app offers a 50 MP mode."));
         add(rows, "Κάμερα βάθους", "Depth camera resolution", "2 MP",
                 "", Verdict.UNKNOWN); // Camera2 does not label a lens as "depth 2 MP".
         add(rows, "Selfie", "Selfie camera resolution", "5 MP",
@@ -403,21 +408,23 @@ public final class Lab29FactorySpecAudit {
                 batteryNoteGr, batteryNoteEn));
         rows.add(new Row("Θύρα USB", "USB connector", "USB-C",
                 "", Verdict.UNKNOWN,
-                "Το Lab 27 δεν έχει τη δυνατότητα να ελέγξει τον φυσικό τύπο της θύρας USB. Η προδιαγραφή USB-C δεν επαληθεύτηκε, αλλά αυτό δεν σημαίνει ότι η θύρα λείπει ή είναι διαφορετικού τύπου.",
-                "Lab 27 cannot inspect the physical USB connector type. The published USB-C specification was not verified; this does not mean the port is missing or of another type."));
+                "Το εργαστήριο δεν μπορεί να ελέγξει τον φυσικό τύπο της θύρας USB. "
+                    + "Ελέγξτε αν η συσκευή διαθέτει θύρα USB-C, σύμφωνα με τις εργοστασιακές προδιαγραφές.",
+                "The lab cannot inspect the physical USB connector. "
+                    + "Check whether the device has a USB-C port, as specified by the manufacturer."));
         rows.add(new Row("Υποδοχή 3.5 mm", "3.5 mm jack", "Ναι / Yes",
                 "", Verdict.UNKNOWN,
-                "Δεν έγινε φυσική επιθεώρηση της υποδοχής· η μη επαλήθευση δεν σημαίνει απουσία.",
-                "The audio jack was not physically inspected; unverified does not mean absent."));
+                "Το εργαστήριο δεν μπορεί να επιθεωρήσει την υποδοχή ακουστικών. "
+                    + "Ελέγξτε αν υπάρχει υποδοχή 3,5 mm, σύμφωνα με τις προδιαγραφές.",
+                "The lab cannot physically inspect the headphone jack. "
+                    + "Check whether the device has a 3.5 mm socket as specified."));
         rows.add(new Row("FM", "FM radio", "Ναι / Yes",
                 m.fmFeatureReported ? "Android FM feature declared" : "",
                 m.fmFeatureReported ? Verdict.MATCH : Verdict.UNKNOWN,
-                m.fmFeatureReported
-                    ? "Δηλώθηκε δυνατότητα FM από Android· δεν δοκιμάστηκε πραγματική λήψη σταθμού."
-                    : "Η μη αναφορά FM από Android δεν αποδεικνύει ότι λείπει το ραδιόφωνο.",
-                m.fmFeatureReported
-                    ? "Android declares FM support; actual radio reception was not tested."
-                    : "Android not reporting FM does not prove the radio is absent."));
+                "Το εργαστήριο δεν μπορεί να δοκιμάσει τη λήψη ραδιοφώνου FM. "
+                    + "Εφόσον υπάρχει διαθέσιμη εφαρμογή Ραδιόφωνο, δοκιμάστε τη λήψη ενός σταθμού.",
+                "The lab cannot test FM radio reception. "
+                    + "If a Radio app is available, try receiving a station."));
 
         return new Report(model, source, rows, true);
     }
@@ -448,7 +455,7 @@ public final class Lab29FactorySpecAudit {
 
     private static String jpegObservation(long pixels) {
         return pixels > 0L
-                ? String.format(Locale.US, "%.1f MP (max JPEG output; sensor unverified)",
+                ? String.format(Locale.US, "%.1f MP (max JPEG output / μέγιστο JPEG)",
                         pixels / 1_000_000d)
                 : "";
     }
