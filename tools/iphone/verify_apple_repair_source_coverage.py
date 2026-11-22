@@ -74,9 +74,47 @@ def main():
         assert len(r) == 8 and r[1] in stage_by_id
         assert r[6] == stage_by_id[r[1]]
     assert len({r[1] for r in stages}) == 10
+    # All physical/procedure article headings were machine-inspected on
+    # Apple's website, but this is not a 315-page human safety review.
+    procedure_asset = ASSET / "iphone_apple_procedure_requirements_v1.tsv"
+    procedure_source = QA / "APPLE_PROCEDURE_REQUIREMENTS_AUDIT_2026-11-22.tsv"
+    assert procedure_asset.read_bytes() == procedure_source.read_bytes(), (
+        "Bundled Apple requirements must equal the audited first-party output")
+    procedures = rows(procedure_asset, "source_url")
+    refs = Counter(r[6] for r in chapters if r[2] == "PROCEDURE")
+    per_model = defaultdict(set)
+    for row in chapters:
+        if row[2] == "PROCEDURE": per_model[row[6]].add(row[1])
+    assert len(procedures) == 315 and sum(refs.values()) == 407
+    assert {r[0] for r in procedures} == set(refs)
+    assert len({r[0] for r in procedures}) == 315
+    modalities = {"REQUIRED_TEXT", "RECOMMENDED_TEXT",
+                  "MENTIONED_ONLY", "NOT_MENTIONED"}
+    for row in procedures:
+        assert len(row) == 15 and support_link(row[0])
+        assert int(row[1]) == refs[row[0]]
+        assert int(row[2]) == len(per_model[row[0]])
+        assert row[3] == "SOURCE_METADATA_EXTRACTED"
+        assert row[4].strip()
+        assert row[12] in modalities
+        assert row[13] == "AUTOMATED_LABELS_ONLY_NOT_FULL_SERVICE_REVIEW"
+        assert all(f in ("true", "false") for f in row[9:12])
+        assert row[14], "Source-check date required"
+        assert int(row[7]) == (len(row[5].split(" | ")) if row[5] else 0)
+        assert int(row[8]) == (len(row[6].split(" | ")) if row[6] else 0)
+    by_url = {row[0]: row for row in procedures}
+    assert by_url["https://support.apple.com/en-us/100381"][5] == (
+        "Display | Bottom speaker | Taptic Engine")
+    assert by_url["https://support.apple.com/en-us/104907"][5] == (
+        "Back glass | Camera (Optional)")
+    assert by_url["https://support.apple.com/en-us/100381"][12] == "RECOMMENDED_TEXT"
+    assert by_url["https://support.apple.com/en-us/104907"][12] == "RECOMMENDED_TEXT"
+    assert by_url["https://support.apple.com/en-us/104926"][12] == "REQUIRED_TEXT"
+
     print("PASS: 30 manuals, 1074 model chapter entries, 447 Apple article")
     print("structures, 120 unique curated notes from 12 sources, 520")
-    print("topic-bounded chapter matches and 62 stage records / 10 chapters")
+    print("topic-bounded chapter matches, 62 stage records / 10 chapters,")
+    print("and 315 source-derived procedure prerequisite/tool records covering all 407 procedures")
     print("No auto-derived hardware faults or copied repair text.")
 
 if __name__ == "__main__":
