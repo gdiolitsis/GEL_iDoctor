@@ -65,7 +65,7 @@ public final class Lab27CertificationGateTest {
         assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 0, 0, false, "A+"));
         assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 27, 1, false, "A+"));
         assertTrue(Lab27CertificationGate.eligible(18, 18, true, true, 27, 0, false, "A+"));
-        assertEquals(2, Lab27CertificationGate.SCHEMA);
+        assertEquals(3, Lab27CertificationGate.SCHEMA);
     }
 
     @Test public void physicalPortsRequireTestOrExplicitAbsence() {
