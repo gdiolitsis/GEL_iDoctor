@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
  * OEM matches do not establish that replacement parts are genuine.
  */
 final class Lab27CertificationGate {
-    static final int SCHEMA = 6; // OEM-led variable visual questions; previously persisted fixed-six answers invalid.
+    static final int SCHEMA = 7; // OEM-sourced FM app declaration joins dynamic visual questions, invalidate older attestations.
     static final long MAX_AGE_MS = 7L * 24L * 60L * 60L * 1000L;
 
     static final List<String> REQUIRED = Collections.unmodifiableList(Arrays.asList(
@@ -110,6 +110,14 @@ final class Lab27CertificationGate {
     /** Only features expressly documented by this exact-model OEM get a question. */
     static boolean shouldAsk(Presence expected) {
         return expected == Presence.PRESENT || expected == Presence.ABSENT;
+    }
+
+    /** FM app visibility is NOT a test of an FM receiver or reception quality. */
+    static boolean fmAppQuestionComplete(Presence expected,
+            boolean appPresent, boolean appAbsent) {
+        return shouldAsk(expected)
+                ? (appPresent != appAbsent)
+                : (!appPresent && !appAbsent);
     }
 
     /** Unknown OEM information means NOT ASKED, never presumed absent. */
