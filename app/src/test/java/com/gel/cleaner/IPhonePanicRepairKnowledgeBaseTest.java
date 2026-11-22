@@ -132,6 +132,26 @@ public final class IPhonePanicRepairKnowledgeBaseTest {
                 row.getBytes(StandardCharsets.UTF_8)));
     }
 
+    @Test(expected=IOException.class)
+    public void rejectSpoofedForumSourceEvenWithHttps() throws Exception {
+        String row = "fake\\tinc\\tiPhone12,1\\tMIC2\\tREPLACE_POWER_FLEX\\tSELF_REPORTED_SUCCESS"
+                + "\\tunknown\\thttps://www.ifixit.com.evil.example/Answers/View/730301/"
+                + "\\tενέργεια\\taction\\tαποτέλεσμα\\tresult\\n";
+        IPhonePanicRepairKnowledgeBase.parse(new ByteArrayInputStream(
+                row.replace("\\\\t", "\\t").replace("\\\\n", "\\n")
+                        .getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test(expected=IOException.class)
+    public void rejectModelFamilyOrGuessedIdRatherThanExactAppleIdentifier() throws Exception {
+        String row = "fake\\tinc\\tiPhone 14 Pro\\tMIC2\\tREPLACE_POWER_FLEX\\tSELF_REPORTED_SUCCESS"
+                + "\\tunknown\\thttps://www.ifixit.com/Answers/View/730301/"
+                + "\\tενέργεια\\taction\\tαποτέλεσμα\\tresult\\n";
+        IPhonePanicRepairKnowledgeBase.parse(new ByteArrayInputStream(
+                row.replace("\\\\t", "\\t").replace("\\\\n", "\\n")
+                        .getBytes(StandardCharsets.UTF_8)));
+    }
+
     @Test public void publishedBenchAudioCodecPanicDoesNotRequireCodecReplacement() throws Exception {
         List<IPhonePanicRepairKnowledgeBase.RepairCase> xs =
                 IPhonePanicRepairKnowledgeBase.lookup(catalog(), "iPhone12,5",
