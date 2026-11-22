@@ -31199,25 +31199,37 @@ private String lab27UserOemSource = "";
 private void lab27ShowPrerequisiteDialog(boolean gr, String explanation) {
     runOnUiThread(() -> {
         if (isFinishing() || isDestroyed()) return;
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(0xFF101010);
+
         TextView content = new TextView(this);
         content.setText(explanation);
-        content.setTextColor(Color.WHITE);
+        content.setTextColor(0xFF39FF14); // GEL neon green, body only; title stays white.
         content.setTextSize(16f);
         content.setPadding(dp(20), dp(22), dp(20), dp(22));
         content.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);
         content.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+        root.addView(content);
+
+        // Reuse the existing GEL EXIT style: bright red, white text, gold border.
+        Button exit = lab29DialogButton(gr ? "ΕΞΟΔΟΣ" : "EXIT", true);
+        LinearLayout.LayoutParams exitParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        exitParams.setMargins(dp(20), 0, dp(20), dp(16));
+        root.addView(exit, exitParams);
+
         AlertDialog dialog = new AlertDialog.Builder(this,
                 android.R.style.Theme_Material_Dialog_NoActionBar)
                 .setTitle(gr ? "LAB 27 — Προϋποθέσεις Πιστοποίησης"
                              : "LAB 27 — Certification prerequisites")
-                .setView(content)
-                .setPositiveButton(gr ? "ΕΞΟΔΟΣ" : "EXIT", (d, w) -> {})
+                .setView(root)
                 .create();
+        exit.setOnClickListener(v -> dialog.dismiss());
         dialog.setOnShowListener(d -> {
             if (dialog.getWindow() != null) {
                 dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xFF101010));
             }
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(0xFFFFD700);
         });
         dialog.show();
     });
