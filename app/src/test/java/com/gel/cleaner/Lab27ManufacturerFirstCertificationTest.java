@@ -50,6 +50,9 @@ public final class Lab27ManufacturerFirstCertificationTest {
         assertEquals(Lab27CertificationGate.Presence.PRESENT, p.headset);
         assertEquals(Lab27CertificationGate.Presence.PRESENT, p.simTray);
         assertEquals(Lab27CertificationGate.Presence.UNKNOWN, p.esim);
+        // Xiaomi's sourced Redmi 12 5G OEM sheet explicitly lists FM radio.
+        assertEquals(Lab27CertificationGate.Presence.PRESENT, p.fm);
+        assertTrue(Lab27CertificationGate.shouldAsk(p.fm));
         assertTrue(Lab27CertificationGate.physicalMatchesOem(p.usb, p.headset,
                 p.simTray, true, false, true, false, true, false));
         assertFalse(Lab27CertificationGate.physicalMatchesOem(p.usb, p.headset,
