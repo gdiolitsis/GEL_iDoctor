@@ -30387,9 +30387,24 @@ private boolean lab28HasFreshLab25Evidence() {
 // Lab25 timestamps are consulted solely to reject a stale certification.
 private boolean lab28HasFreshCertificationEvidence() {
     SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+    Lab29FactorySpecAudit.Report oem = Lab29FactorySpecAudit.capture(this);
+    Lab29FactorySpecAudit.PhysicalProfile currentPorts =
+            Lab29FactorySpecAudit.physicalProfile(oem);
+    if (!currentPorts.complete()
+            || !currentPorts.sourceUrl.equals(p.getString("lab27_cert_oem_source", "")))
+        return false;
     if (p.getInt("lab27_cert_schema", 0) != Lab27CertificationGate.SCHEMA
             || !p.getBoolean("lab27_cert_physical_confirmed", false)
             || !Lab27CertificationGate.physicalChecksComplete(
+                    currentPorts.usb, currentPorts.headset, currentPorts.simTray,
+                    p.getBoolean("lab27_cert_usb", false),
+                    p.getBoolean("lab27_cert_usb_absent", false),
+                    p.getBoolean("lab27_cert_headphones", false),
+                    p.getBoolean("lab27_cert_headphones_absent", false),
+                    p.getBoolean("lab27_cert_sim", false),
+                    p.getBoolean("lab27_cert_sim_absent", false))
+            || !Lab27CertificationGate.physicalMatchesOem(
+                    currentPorts.usb, currentPorts.headset, currentPorts.simTray,
                     p.getBoolean("lab27_cert_usb", false),
                     p.getBoolean("lab27_cert_usb_absent", false),
                     p.getBoolean("lab27_cert_headphones", false),
@@ -31450,6 +31465,11 @@ private boolean lab27OemReady(SharedPreferences p, Lab29FactorySpecAudit.Report 
 }
 
 /** The questions depend on the OEM specification, not Android SIM/eSIM discovery. */
+private static boolean lab27Checked(CheckBox check) {
+    return check != null && check.isChecked();
+}
+
+/** Creates OEM-led questions only for ports that the exact-model OEM documents. */
 private void lab27PromptPhysicalConfirmation(final boolean gr,
         final Lab29FactorySpecAudit.Report factory) {
     runOnUiThread(() -> {
@@ -31458,29 +31478,29 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
                 Lab29FactorySpecAudit.physicalProfile(factory);
         if (!profile.complete()) {
             lab27ShowPrerequisiteDialog(gr, gr
-                    ? "Λείπει τεκμηριωμένη εργοστασιακή προδιαγραφή για φυσική θύρα/υποδοχή. Δεν εκδίδεται πιστοποιητικό."
-                    : "A sourced OEM physical-port specification is missing. No certificate is issued.");
+                    ? "Δεν υπάρχει τεκμηριωμένη φυσική προδιαγραφή αυτού του μοντέλου. Δεν εκδίδεται πιστοποιητικό."
+                    : "No documented physical-port specification for this exact model. No certificate issued.");
             return;
         }
 
-        // Exactly six visual answers: PRESENT / ABSENT for each of three ports.
-        // No charging, wired headset audio, SIM calls or eSIM activation tests
-        // in this popup. Functional tests belong to the individual labs.
-        final String[] physical = gr ? new String[] {
-            "Θύρα USB-C: υπάρχει.",
-            "Θύρα USB-C: δεν υπάρχει.",
-            "Υποδοχή 3,5 mm: υπάρχει.",
-            "Υποδοχή 3,5 mm: δεν υπάρχει.",
-            "Φυσική θήκη SIM: υπάρχει.",
-            "Φυσική θήκη SIM: δεν υπάρχει."
-        } : new String[] {
-            "USB-C port: present.",
-            "USB-C port: absent.",
-            "3.5 mm jack: present.",
-            "3.5 mm jack: absent.",
-            "Physical SIM tray: present.",
-            "Physical SIM tray: absent."
+        // Only explicit manufacturer-sourced physical presence/absence qualifies.
+        // An omitted or unknown OEM attribute creates NO question.
+        final Lab27CertificationGate.Presence[] oemPorts = {
+                profile.usb, profile.headset, profile.simTray
         };
+        final String[] oemKeys = {"USB connector", "3.5 mm jack", "SIM tray"};
+        final String[] portNames = new String[oemPorts.length];
+        for (Lab29FactorySpecAudit.Row row : factory.rows) {
+            for (int i = 0; i < oemKeys.length; i++) {
+                if (!oemKeys[i].equals(row.english)) continue;
+                // Names come from the OEM-specific comparison row, not a
+                // hard-coded, unconditional list of questions.
+                portNames[i] = gr ? row.greek : row.english;
+                if (i == 0) portNames[i] = gr ? "Θύρα " + row.expected : row.expected + " port";
+                if (i == 2) portNames[i] = gr ? "Φυσική " + row.greek.toLowerCase(java.util.Locale.ROOT)
+                                             : "Physical " + row.english.toLowerCase(java.util.Locale.ROOT);
+            }
+        }
 
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -31499,18 +31519,19 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
         title.setTypeface(null, Typeface.BOLD);
         content.addView(title);
 
+        StringBuilder specsText = new StringBuilder();
+        specsText.append(gr ? "Εργοστασιακό μοντέλο: " : "OEM model: ").append(profile.modelName);
+        for (int i = 0; i < oemPorts.length; i++) {
+            if (!Lab27CertificationGate.shouldAsk(oemPorts[i])) continue;
+            specsText.append("\n").append(portNames[i] == null ? oemKeys[i] : portNames[i])
+                    .append(": ").append(oemPorts[i] == Lab27CertificationGate.Presence.PRESENT
+                            ? (gr ? "ΠΡΟΒΛΕΠΕΤΑΙ" : "PRESENT IN OEM SPEC")
+                            : (gr ? "ΔΕΝ ΠΡΟΒΛΕΠΕΤΑΙ" : "EXPLICITLY ABSENT IN OEM SPEC"));
+        }
+        specsText.append("\n").append(gr ? "Επίσημη πηγή: " : "Official source: ")
+                .append(profile.sourceUrl);
         TextView specs = new TextView(this);
-        String present = gr ? "ΠΡΟΒΛΕΠΕΤΑΙ" : "REQUIRED";
-        String absent = gr ? "ΔΕΝ ΠΡΟΒΛΕΠΕΤΑΙ" : "NOT SPECIFIED";
-        specs.setText((gr ? "Εργοστασιακό μοντέλο: " : "OEM model: ") + profile.modelName
-                + "\nUSB-C: " + present
-                + "\n3.5 mm: " + (profile.headset == Lab27CertificationGate.Presence.PRESENT
-                        ? present : absent)
-                + "\n" + (gr ? "Φυσική θήκη SIM: " : "Physical SIM tray: ")
-                + (profile.simTray == Lab27CertificationGate.Presence.PRESENT
-                        ? present : absent)
-                + "\n" + (gr ? "Επίσημη πηγή: " : "Official source: ")
-                + profile.sourceUrl);
+        specs.setText(specsText.toString());
         specs.setTextColor(0xFF87CEFA);
         specs.setTextSize(13f);
         specs.setPadding(0, dp(10), 0, dp(10));
@@ -31520,53 +31541,55 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
 
         TextView note = new TextView(this);
         note.setText(gr
-                ? "Επίλεξε για κάθε υποδοχή αν υπάρχει ή δεν υπάρχει στη φυσική συσκευή. " +
-                  "Η φόρτιση εξετάζεται στο Lab 15 και η SIM/eSIM στο Lab 12. " +
-                  "Δεν απαιτούνται ενσύρματα ακουστικά. Οι δηλώσεις συγκρίνονται με τις OEM προδιαγραφές."
-                : "For each port, choose whether it is physically present or absent. " +
-                  "Charging is checked in Lab 15 and SIM/eSIM in Lab 12. " +
-                  "Wired headphones are not required. Your declarations are compared with OEM specifications.");
+                ? "Οι παρακάτω ερωτήσεις προκύπτουν αποκλειστικά από τεκμηριωμένες εργοστασιακές προδιαγραφές. Επίλεξε μόνο αν υπάρχει ή δεν υπάρχει η φυσική υποδοχή. Η φόρτιση εξετάζεται στο Lab 15 και η SIM/eSIM στο Lab 12. Δεν απαιτούνται ενσύρματα ακουστικά."
+                : "The questions below come exclusively from documented OEM specifications. Report only physical presence or absence. Charging is checked in Lab 15 and SIM/eSIM in Lab 12. Wired headphones are not required.");
         note.setTextColor(Color.WHITE);
         note.setTextSize(14f);
         content.addView(note);
 
-        CheckBox[] checks = new CheckBox[physical.length];
-        for (int i = 0; i < physical.length; i++) {
-            CheckBox check = new CheckBox(this);
-            check.setText(physical[i]);
-            check.setTextColor(Color.WHITE);
-            check.setTextSize(15f);
-            check.setButtonTintList(ColorStateList.valueOf(0xFF39FF14));
-            check.setPadding(0, dp(4), 0, dp(4));
-            content.addView(check);
-            checks[i] = check;
+        final CheckBox[] checks = new CheckBox[oemPorts.length * 2];
+        for (int portIndex = 0; portIndex < oemPorts.length; portIndex++) {
+            if (!Lab27CertificationGate.shouldAsk(oemPorts[portIndex])) continue;
+            if (portNames[portIndex] == null || portNames[portIndex].trim().isEmpty()) continue;
+            for (int answer = 0; answer < 2; answer++) {
+                final int choice = portIndex * 2 + answer;
+                CheckBox check = new CheckBox(this);
+                check.setText(portNames[portIndex] + ": "
+                        + (answer == 0 ? (gr ? "υπάρχει." : "present.")
+                                       : (gr ? "δεν υπάρχει." : "absent.")));
+                check.setTextColor(Color.WHITE);
+                check.setTextSize(15f);
+                check.setButtonTintList(ColorStateList.valueOf(0xFF39FF14));
+                check.setPadding(0, dp(4), 0, dp(4));
+                checks[choice] = check;
+                content.addView(check);
+            }
         }
 
-        // Each adjacent pair is exclusive (USB 0/1, headset 2/3, SIM 4/5).
         final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(content)
                 .setNegativeButton(gr ? "ΕΚΚΡΕΜΕΙ" : "PENDING", (d, w) -> {})
                 .setPositiveButton(gr ? "ΕΠΙΒΕΒΑΙΩΣΗ" : "CONFIRM", (d, w) -> {
                     boolean complete = Lab27CertificationGate.physicalChecksComplete(
-                            checks[0].isChecked(), checks[1].isChecked(),
-                            checks[2].isChecked(), checks[3].isChecked(),
-                            checks[4].isChecked(), checks[5].isChecked());
+                            profile.usb, profile.headset, profile.simTray,
+                            lab27Checked(checks[0]), lab27Checked(checks[1]),
+                            lab27Checked(checks[2]), lab27Checked(checks[3]),
+                            lab27Checked(checks[4]), lab27Checked(checks[5]));
                     if (!complete) {
                         lab27ShowPrerequisiteDialog(gr, gr
-                                ? "Χρειάζεται μία απάντηση για καθεμία από τις τρεις φυσικές υποδοχές."
-                                : "Choose one answer for each of the three physical ports.");
+                                ? "Χρειάζεται μία απάντηση για κάθε υποδοχή που περιγράφεται ρητά στις εργοστασιακές προδιαγραφές."
+                                : "One answer is required for each OEM-documented physical port.");
                         return;
                     }
 
-                    // Always record all six-answer results, including an OEM
-                    // mismatch. The report describes them accurately; only
-                    // the certification gate can withhold certification.
-                    lab27UserUsb = checks[0].isChecked();
-                    lab27UserUsbAbsent = checks[1].isChecked();
-                    lab27UserJack = checks[2].isChecked();
-                    lab27UserJackAbsent = checks[3].isChecked();
-                    lab27UserSim = checks[4].isChecked();
-                    lab27UserSimAbsent = checks[5].isChecked();
+                    // Save only questions actually asked; unknown OEM fields stay
+                    // false/false and are excluded from visual conclusions.
+                    lab27UserUsb = lab27Checked(checks[0]);
+                    lab27UserUsbAbsent = lab27Checked(checks[1]);
+                    lab27UserJack = lab27Checked(checks[2]);
+                    lab27UserJackAbsent = lab27Checked(checks[3]);
+                    lab27UserSim = lab27Checked(checks[4]);
+                    lab27UserSimAbsent = lab27Checked(checks[5]);
                     lab27UserOemSource = profile.sourceUrl;
                     lab27UserPreflightAuthorized = true;
                     lab30CombineFindings();
@@ -31579,13 +31602,16 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
             Runnable toggle = () -> dialog.getButton(AlertDialog.BUTTON_POSITIVE)
                     .setEnabled(Lab27CertificationGate.physicalChecksComplete(
-                            checks[0].isChecked(), checks[1].isChecked(),
-                            checks[2].isChecked(), checks[3].isChecked(),
-                            checks[4].isChecked(), checks[5].isChecked()));
+                            profile.usb, profile.headset, profile.simTray,
+                            lab27Checked(checks[0]), lab27Checked(checks[1]),
+                            lab27Checked(checks[2]), lab27Checked(checks[3]),
+                            lab27Checked(checks[4]), lab27Checked(checks[5])));
             for (int i = 0; i < checks.length; i++) {
+                if (checks[i] == null) continue;
                 final int index = i;
                 checks[i].setOnCheckedChangeListener((button, checked) -> {
-                    if (checked) checks[index ^ 1].setChecked(false);
+                    if (checked && checks[index ^ 1] != null)
+                        checks[index ^ 1].setChecked(false);
                     toggle.run();
                 });
             }
@@ -31652,6 +31678,7 @@ Lab29FactorySpecAudit.PhysicalProfile currentPorts =
 if (!lab27OemReady(p, currentFactory)
         || !lab27UserOemSource.equals(currentPorts.sourceUrl)
         || !Lab27CertificationGate.physicalChecksComplete(
+                currentPorts.usb, currentPorts.headset, currentPorts.simTray,
                 lab27UserUsb, lab27UserUsbAbsent,
                 lab27UserJack, lab27UserJackAbsent,
                 lab27UserSim, lab27UserSimAbsent)) {
