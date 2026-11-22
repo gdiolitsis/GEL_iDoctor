@@ -17,8 +17,8 @@ public final class IPhonePanicServiceSummaryTest {
         assertTrue(r.whatWeFound.contains("Watchdog"));
         assertTrue(r.whatWeFound.contains("Thermal"));
         assertTrue(r.whatItMeans.contains("Δεν εντοπίστηκε επανάληψη"));
-        assertTrue(r.repairAdvice.contains("δεν προκύπτει λόγος επισκευής μόνο από αυτά τα logs"));
-        assertTrue(r.repairAdvice.contains("δεν έχει μετρηθεί"));
+        assertTrue(r.repairAdvice.contains("τα logs από μόνα τους δεν απαιτούν επισκευή"));
+        assertTrue(r.repairAdvice.contains("Δεν προκύπτει τεκμηριωμένη ανάγκη"));
         assertTrue(r.whenToSeekHelp.contains("επανεκκινήσεις"));
         assertTrue(r.whenToSeekHelp.contains("διακόπτεις χρήση και φόρτιση"));
         assertFalse(r.repeatedClueNeedsReview);
@@ -27,16 +27,16 @@ public final class IPhonePanicServiceSummaryTest {
     @Test public void repeatedDomainIsReviewedNotDiagnosedAsDamaged() {
         IPhonePanicServiceSummary.Result r = result(true,2,2,0,true,true);
         assertTrue(r.whatItMeans.contains("ίδια κατηγορία"));
-        assertTrue(r.whatItMeans.contains("δεν αποδεικνύει επαναλαμβανόμενη βλάβη"));
+        assertTrue(r.whatItMeans.contains("συσχετίστε την με τα συμπτώματα"));
         assertTrue(r.repeatedClueNeedsReview);
-        assertTrue(r.repairAdvice.contains("δεν τεκμηριώνουν χαλασμένο εξάρτημα"));
+        assertTrue(r.repairAdvice.contains("Δεν προκύπτει τεκμηριωμένη ανάγκη"));
         assertFalse(r.repairAdvice.contains("υγιές iPhone"));
     }
 
     @Test public void singleFileCannotSupportRecurrenceConclusion() {
         IPhonePanicServiceSummary.Result r = result(true,1,1,0,false,true);
         assertTrue(r.whatWeFound.contains("ένα εισαγόμενο"));
-        assertTrue(r.whatItMeans.contains("Με ένα μόνο αρχείο"));
+        assertTrue(r.whatItMeans.contains("Μία καταγραφή"));
         assertFalse(r.whatItMeans.contains("Δεν εντοπίστηκε επανάληψη"));
         assertFalse(r.repeatedClueNeedsReview);
     }
@@ -44,7 +44,7 @@ public final class IPhonePanicServiceSummaryTest {
     @Test public void unidentifiedDomainsDoNotCreateFalseReassurance() {
         IPhonePanicServiceSummary.Result r = result(true,2,0,0,false,false);
         assertTrue(r.whatWeFound.contains("Δεν αναγνωρίστηκε"));
-        assertTrue(r.whatItMeans.contains("δεν προσδιορίστηκαν επαρκώς"));
+        assertTrue(r.whatItMeans.contains("Δεν ήταν δυνατή η ομαδοποίηση"));
         assertFalse(r.whatItMeans.contains("Δεν εντοπίστηκε επανάληψη"));
     }
 
@@ -52,8 +52,8 @@ public final class IPhonePanicServiceSummaryTest {
         IPhonePanicServiceSummary.Result r = result(false,2,1,1,false,true);
         assertTrue(r.whatWeFound.contains("Watchdog"));
         assertTrue(r.whatWeFound.contains("Thermal"));
-        assertTrue(r.whatItMeans.contains("historical events"));
-        assertTrue(r.repairAdvice.contains("present operating condition was not measured"));
+        assertTrue(r.whatItMeans.contains("No known clue category repeated"));
+        assertTrue(r.repairAdvice.contains("These logs do not establish a need for part replacement"));
         assertTrue(r.repairAdvice.contains("logs alone do not justify a repair"));
         assertTrue(r.whenToSeekHelp.contains("uncomfortably hot"));
     }
