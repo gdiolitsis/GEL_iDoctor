@@ -56,13 +56,23 @@ public final class Lab27CertificationGateTest {
                 Lab27CertificationGate.pending(applicable, timestamps, passed, now));
     }
 
-    @Test public void confirmationIsMandatoryEvenWithAllMeasurementsAndMatches() {
-        assertFalse(Lab27CertificationGate.eligible(18, 18, false, true, 27, 0, false, "A+"));
-        assertFalse(Lab27CertificationGate.eligible(17, 18, true, true, 27, 0, false, "A+"));
-        assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 27, 1, false, "A+"));
-        assertFalse(Lab27CertificationGate.eligible(18, 18, true, false, 0, 0, false, "A+"));
-        assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 27, 0, true, "A+"));
-        assertTrue(Lab27CertificationGate.eligible(18, 18, true, true, 27, 0, false, "A+"));
+    @Test public void certificateIsForFunctionalityNotPartsProvenance() {
+        assertFalse(Lab27CertificationGate.eligible(18, 18, false, false));
+        assertFalse(Lab27CertificationGate.eligible(17, 18, true, false));
+        assertFalse(Lab27CertificationGate.eligible(18, 18, true, true));
+        // Model catalog availability, matches and parts provenance are not prerequisites.
+        assertTrue(Lab27CertificationGate.eligible(18, 18, true, false));
+        assertEquals(2, Lab27CertificationGate.SCHEMA);
+    }
+
+    @Test public void physicalPortsRequireTestOrExplicitAbsence() {
+        assertTrue(Lab27CertificationGate.physicalChecksComplete(true, true, false, true, false));
+        assertTrue(Lab27CertificationGate.physicalChecksComplete(true, false, true, false, true));
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(false, true, false, true, false));
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(true, false, false, true, false));
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(true, true, true, true, false));
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(true, true, false, false, false));
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(true, true, false, true, true));
     }
 
     @Test public void unsupportedHardwareIsMarkedNotApplicableRatherThanPassed() {
