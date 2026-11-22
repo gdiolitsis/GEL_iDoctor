@@ -73,8 +73,11 @@ buildTypes {
         // Robolectric downloads SDK jars at test runtime, outside Gradle's dependency cache.
         // Prefer Maven Central's canonical endpoint to avoid intermittent repo1 404s.
         unitTests.all {
-            systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
-            systemProperty 'robolectric.dependency.repo.id', 'maven-central-apache'
+            // Robolectric Android-all runtime jars are large and Maven Central
+            // can return 404/429 at runtime. Google's established Maven Central
+            // mirror provides the same published artifacts without disabling tests.
+            systemProperty 'robolectric.dependency.repo.url', 'https://maven-central.storage-download.googleapis.com/maven2/'
+            systemProperty 'robolectric.dependency.repo.id', 'google-maven-central-mirror'
         }
     }
 

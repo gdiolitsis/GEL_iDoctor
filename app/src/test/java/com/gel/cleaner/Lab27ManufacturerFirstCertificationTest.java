@@ -71,9 +71,10 @@ public final class Lab27ManufacturerFirstCertificationTest {
     }
 
     @Test public void manufacturerControlsEsimQuestionNeverAndroidFeatureFlags() throws Exception {
-        String src = new String(Files.readAllBytes(
-                Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java")),
-                StandardCharsets.UTF_8);
+        Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
+        if (!Files.isRegularFile(p))
+            p = Paths.get("src/main/java/com/gel/cleaner/ManualTestsActivity.java");
+        String src = new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
         int a = src.indexOf("private void lab27PromptPhysicalConfirmation(");
         int b = src.indexOf("private void lab30CombineFindings()", a);
         assertTrue(a >= 0 && b > a);

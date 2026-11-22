@@ -26,8 +26,8 @@ public final class DeviceInfoPeripheralsEsimEvidenceContractTest {
 
     @Test public void bothLocalAndRemoteModemPanelsHaveEsimEvidence() throws Exception {
         String s = source();
-        assertEquals(2, s.split("appendEsimModemStatus(this, data);", -1).length - 1);
-        assertEquals(2, s.split("private String buildModemInfo()", -1).length - 1);
+        assertEquals(2, s.split(java.util.regex.Pattern.quote("appendEsimModemStatus(this, data);"), -1).length - 1);
+        assertEquals(2, s.split(java.util.regex.Pattern.quote("private String buildModemInfo()"), -1).length - 1);
         assertTrue(s.contains("import android.telephony.euicc.EuiccManager;"));
     }
 

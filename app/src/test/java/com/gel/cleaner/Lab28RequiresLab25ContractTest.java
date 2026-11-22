@@ -21,9 +21,11 @@ public final class Lab28RequiresLab25ContractTest {
     @Test public void lab27ProThenLab25ThenSourceBoundTechnicalSnapshot() throws Exception {
         String s=source(), m=section(s,"private void lab30CombineFindings()","private void lab31FinalSummary()");
         int pro=m.indexOf("requireGelPro("), pre=m.indexOf("if (!lab29RequireLab25Evidence()) return;");
-        int find=m.indexOf("lab29DisplayLab25Findings(p, gr);");
         int save=m.indexOf("lab29SaveTechnicalAssessmentFromLab25(p);");
-        assertTrue(pro>=0&&pre>pro&&find>pre&&save>find);
+        // Buyer-facing crash history is not duplicated in Lab 27, but its
+        // source-bound prerequisite and technical checkpoint are retained.
+        assertTrue(pro>=0&&pre>pro&&save>pre);
+        assertFalse(m.contains("lab29DisplayLab25Findings(p, gr);"));
         assertTrue(m.contains("Το Lab 27 ολοκληρώθηκε"));
     }
     @Test public void lab28ProThenCertificateGateAlsoAfterConnectivity() throws Exception {
