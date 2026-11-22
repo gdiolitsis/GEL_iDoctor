@@ -123,10 +123,12 @@ public final class Lab29FactorySpecAudit {
         }
 
         public boolean complete() {
+            // A physical attribute not explicitly described by the OEM is
+            // omitted from the popup, never inferred absent or required.
             return sourceUrl != null && !sourceUrl.isEmpty()
-                    && usb == Lab27CertificationGate.Presence.PRESENT
-                    && headset != Lab27CertificationGate.Presence.UNKNOWN
-                    && simTray != Lab27CertificationGate.Presence.UNKNOWN;
+                    && (Lab27CertificationGate.shouldAsk(usb)
+                        || Lab27CertificationGate.shouldAsk(headset)
+                        || Lab27CertificationGate.shouldAsk(simTray));
         }
     }
 
