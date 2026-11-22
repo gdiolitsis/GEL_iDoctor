@@ -17337,7 +17337,7 @@ if (hasSag &&
                 ? "Μικρή πτώση τάσης κατά τη δοκιμή"
                 : "Small voltage drop during the test";
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Έμμεση απόκριση τάσης"
                    : "Indirect voltage response",
                 siText
@@ -17349,7 +17349,7 @@ if (hasSag &&
                 ? "Μέτρια πτώση τάσης κατά τη δοκιμή"
                 : "Moderate voltage drop during the test";
 
-        logLabelValue(
+        logLabelOkValue(
                 gr ? "Έμμεση απόκριση τάσης"
                    : "Indirect voltage response",
                 siText
@@ -17405,7 +17405,7 @@ if (!hasSag || !validDrain || lab14_systemLimited[0]) {
 
 } else {
 
-    logLabelValue(
+    logLabelOkValue(
             gr ? "Συμπεριφορά μπαταρίας"
                : "Battery behaviour",
             gr
