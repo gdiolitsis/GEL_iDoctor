@@ -32995,6 +32995,34 @@ private void lab27DisplayFactorySpecs(boolean gr) {
             int mismatchedByUser = 0;
             int unknownsResolvedByUser = 0;
             for (Lab29FactorySpecAudit.Row specRow : factory.rows) {
+                if ("FM radio".equals(specRow.english)
+                        && Lab27CertificationGate.shouldAsk(manualPorts.fm)
+                        && (lab27UserFmAppPresent != lab27UserFmAppAbsent)) {
+                    // An installed FM app is user-observed software evidence,
+                    // NOT a test of tuner hardware or station reception.
+                    String declared = gr
+                            ? "Σύμφωνα με τη δήλωση χρήστη "
+                                + (lab27UserFmAppPresent
+                                    ? "υπάρχει εφαρμογή ραδιοφώνου FM."
+                                    : "δεν υπάρχει εφαρμογή ραδιοφώνου FM.")
+                            : "According to the user declaration, an FM radio app "
+                                + (lab27UserFmAppPresent ? "is installed." : "is not installed.");
+                    String assessment = gr
+                            ? (lab27UserFmAppPresent
+                                    ? " Εργοστασιακή υποστήριξη FM αναφέρεται· η λήψη σταθμού δεν ελέγχθηκε."
+                                    : " Η απουσία εφαρμογής δεν αποδεικνύει απουσία δέκτη FM.")
+                            : (lab27UserFmAppPresent
+                                    ? " OEM lists FM support; station reception has not been tested."
+                                    : " Missing software does not establish absent FM hardware.");
+                    String value = declared + assessment
+                            + " (" + (gr ? "Προδιαγραφή: " : "OEM: ") + specRow.expected + ")";
+                    if (lab27UserFmAppPresent) {
+                        logLabelOkValue(gr ? specRow.greek : specRow.english, value);
+                    } else {
+                        logLabelValue(gr ? specRow.greek : specRow.english, value);
+                    }
+                    continue; // App presence is not a measured FM reception verdict.
+                }
                 boolean portUsb = "USB connector".equals(specRow.english);
                 boolean portJack = "3.5 mm jack".equals(specRow.english);
                 boolean portSim = "SIM tray".equals(specRow.english);
