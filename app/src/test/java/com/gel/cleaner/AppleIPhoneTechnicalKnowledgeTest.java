@@ -39,8 +39,8 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
 
     @Test public void allReviewedNotesHaveRealMatchingAppleArticleAndRiskAndDate() throws Exception {
         List<AppleIPhoneTechnicalKnowledge.Finding> all = notes();
-        assertEquals(108, all.size());
-        assertEquals(517, AppleIPhoneTechnicalKnowledge.chapterCoverage(all, chapters()));
+        assertEquals(120, all.size());
+        assertEquals(520, AppleIPhoneTechnicalKnowledge.chapterCoverage(all, chapters()));
         Set<String> urls = new HashSet<>();
         for (AppleIPhoneTechnicalKnowledge.Finding fact : all) {
             assertTrue(fact.sourceUrl.startsWith("https://support.apple.com/en-us/"));
@@ -50,7 +50,7 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
             assertFalse(fact.english.trim().isEmpty());
             urls.add(fact.sourceUrl);
         }
-        assertEquals("Nine source-reviewed Apple articles, not all chapter texts", 9, urls.size());
+        assertEquals("Twelve individually read Apple article sources, not the whole corpus", 12, urls.size());
         assertEquals("Chapter catalog coverage is separate from full procedure review", 1074,
                 chapters().size());
     }
@@ -186,6 +186,41 @@ public final class AppleIPhoneTechnicalKnowledgeTest {
                 x.risk == AppleIPhoneTechnicalKnowledge.Risk.TECHNICIAN_ONLY));
         assertTrue(AppleIPhoneTechnicalKnowledge.forExactModel(notes(), chapters(), official(),
                 "Unknown", AppleIPhoneManualChapters.Phase.TROUBLESHOOT, "FACE_ID").isEmpty());
+    }
+
+    @Test public void exactModelBatteryChaptersKeepDistinctPrerequisites() throws Exception {
+        List<AppleIPhoneTechnicalKnowledge.Finding> pro =
+                AppleIPhoneTechnicalKnowledge.forExactModel(notes(), chapters(), official(),
+                        "iPhone15,2", AppleIPhoneManualChapters.Phase.PROCEDURE, "BATTERY");
+        List<AppleIPhoneTechnicalKnowledge.Finding> iphone15 =
+                AppleIPhoneTechnicalKnowledge.forExactModel(notes(), chapters(), official(),
+                        "iPhone15,4", AppleIPhoneManualChapters.Phase.PROCEDURE, "BATTERY");
+        assertEquals(4, pro.size());
+        assertEquals(4, iphone15.size());
+        assertTrue(pro.stream().allMatch(x ->
+                x.sourceUrl.equals("https://support.apple.com/en-us/100381")));
+        assertTrue(iphone15.stream().allMatch(x ->
+                x.sourceUrl.equals("https://support.apple.com/en-us/104907")));
+        assertTrue(pro.stream().anyMatch(x -> x.english.contains("bottom speaker")));
+        assertFalse(pro.stream().anyMatch(x -> x.english.contains("camera removal is listed as optional")));
+        assertTrue(iphone15.stream().anyMatch(x -> x.english.contains("camera removal is listed as optional")));
+        assertTrue(pro.stream().anyMatch(x -> x.kind ==
+                AppleIPhoneTechnicalKnowledge.Kind.ESCALATION));
+    }
+
+    @Test public void directoryOnlyBackGlassWarningsAreBrowsableButNeverAutoAssigned() throws Exception {
+        List<AppleIPhoneManualChapters.Chapter> all = chapters();
+        AppleIPhoneManualChapters.Chapter glass = null;
+        for (AppleIPhoneManualChapters.Chapter ch : all) {
+            if (ch.manualId.equals("DIRECTORY_15_PRO_MAX")
+                    && ch.sourceUrl.equals("https://support.apple.com/en-us/104929")) {
+                glass = ch; break;
+            }
+        }
+        assertNotNull(glass);
+        assertEquals(4, AppleIPhoneTechnicalKnowledge.forChapter(notes(), glass).size());
+        assertTrue(AppleIPhoneTechnicalKnowledge.forExactModel(notes(), all, official(),
+                "iPhone16,2", AppleIPhoneManualChapters.Phase.PROCEDURE, "DISPLAY").isEmpty());
     }
 
     @Test(expected=java.io.IOException.class)
