@@ -31,7 +31,7 @@ public final class IPhoneHumanReadableReportContractTest {
         assertTrue(text.contains("human.whatItMeans"));
         assertTrue(text.contains("human.repairAdvice"));
         assertTrue(text.contains("Πότε χρειάζεται τεχνικός:"));
-        assertTrue(text.contains("IPhonePanicHumanizer.meaning(e.getKey(), gr)"));
+        assertTrue(text.contains("uniqueTechnicalCodes.add(finding.code)"));
     }
 
     @Test public void incidentLabelsAreProducedFromObservedTypesNotInventedHealth() throws Exception {
@@ -39,7 +39,7 @@ public final class IPhoneHumanReadableReportContractTest {
         assertTrue(s.contains("IPhonePanicHumanizer.event(sigCrashType, gr)"));
         assertTrue(s.contains("IPhonePanicHumanizer.domain(sigDomain, gr)"));
         assertTrue(s.contains("Συμβάν \" + incidentNumber + \" — με απλά λόγια:"));
-        assertTrue(s.contains("Τα συμβάντα εξετάστηκαν χωριστά"));
+        assertTrue(s.contains("ApplePanicEvidencePolicy.hasPanicEvidence(block)"));
     }
 
     @Test public void demoInputContainsTwoSeparatePanicRecords() throws Exception {
