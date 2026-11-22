@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import static org.junit.Assert.*;
 
-/** Lab 17 only: the 14A/15/16 prerequisite window is 12h, not 2h. */
+/** Lab 17: one 12-hour window for mandatory and auxiliary evidence, no two-hour exception. */
 public final class Lab17TwelveHourPrerequisiteContractTest {
     private static String source() throws Exception {
         Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
@@ -44,11 +44,13 @@ public final class Lab17TwelveHourPrerequisiteContractTest {
         assertFalse(s.contains("results required within last 2 hours"));
     }
 
-    @Test public void unrelatedAuxiliaryFreshnessIsNotSilentlyChanged() throws Exception {
+    @Test public void auxiliaryEvidenceUsesSameTwelveHourWindow() throws Exception {
         String s = lab17();
-        assertTrue(s.contains("final long OPTIONAL_EVIDENCE_WINDOW_MS = 2L * 60L * 60L * 1000L;"));
-        assertTrue(s.contains("has14b && ts14b <= now && (now - ts14b) <= OPTIONAL_EVIDENCE_WINDOW_MS;"));
-        assertTrue(s.contains("(hvLastTs - hvFirstTs) <= OPTIONAL_EVIDENCE_WINDOW_MS;"));
+        assertFalse(s.contains("OPTIONAL_EVIDENCE_WINDOW_MS"));
+        assertTrue(s.contains("has14b && ts14b <= now && (now - ts14b) <= WINDOW_MS;"));
+        assertTrue(s.contains("hvLastTs <= now &&"));
+        assertTrue(s.contains("(now - hvFirstTs) <= WINDOW_MS;"));
+        assertFalse(s.contains("final long WINDOW_MS = 2L * 60L * 60L * 1000L;"));
     }
 
     @Test public void twelveHoursIncludesExactBoundaryButExcludesOlderResults() {
