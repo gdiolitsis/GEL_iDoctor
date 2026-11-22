@@ -31052,54 +31052,134 @@ private java.util.List<String> lab27PendingBasicLabs(SharedPreferences p,
             System.currentTimeMillis());
 }
 
-/** Called only after every required lab and the manufacturer comparison. */
-private void lab27PromptPhysicalConfirmation(final boolean gr, final String grade,
-        final int score, final String model, final int matched) {
+// One-shot in-memory attestation: never certify or reuse a previous installation's answer.
+private boolean lab27UserPreflightAuthorized = false;
+private boolean lab27UserUsb, lab27UserJack, lab27UserJackAbsent;
+private boolean lab27UserSim, lab27UserSimAbsent, lab27UserEsim;
+private String lab27UserOemSource = "";
+
+private void lab27ShowPrerequisiteDialog(boolean gr, String explanation) {
     runOnUiThread(() -> {
         if (isFinishing() || isDestroyed()) return;
-        // Each optional socket needs an explicit tested/absent selection.
-        // Do not infer hardware presence from a generic Android feature flag.
-        final String[] physical = gr
-                ? new String[] {
-                    "Θύρα φόρτισης/USB: συνέδεσα συμβατό καλώδιο και έλεγξα τη λειτουργία.",
-                    "Υποδοχή 3,5 mm: σύνδεσα ακουστικά και έλεγξα τον ήχο.",
-                    "Δεν υπάρχει υποδοχή 3,5 mm σε αυτή τη συσκευή.",
-                    "Θήκη SIM: έλεγξα τη φυσική υποδοχή και την εφαρμογή της.",
-                    "Δεν υπάρχει φυσική θήκη SIM σε αυτή τη συσκευή."}
-                : new String[] {
-                    "Charging/USB port: I connected a compatible cable and tested operation.",
-                    "3.5 mm jack: I plugged in headphones and checked the audio.",
-                    "This device has no 3.5 mm headphone jack.",
-                    "SIM tray: I checked the physical slot and seating.",
-                    "This device has no physical SIM tray."};
+        TextView content = new TextView(this);
+        content.setText(explanation);
+        content.setTextColor(Color.WHITE);
+        content.setTextSize(16f);
+        content.setPadding(dp(20), dp(22), dp(20), dp(22));
+        content.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);
+        content.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+        AlertDialog dialog = new AlertDialog.Builder(this,
+                android.R.style.Theme_Material_Dialog_NoActionBar)
+                .setTitle(gr ? "LAB 27 — Προϋποθέσεις Πιστοποίησης"
+                             : "LAB 27 — Certification prerequisites")
+                .setView(content)
+                .setPositiveButton(gr ? "ΕΞΟΔΟΣ" : "EXIT", (d, w) -> {})
+                .create();
+        dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xFF101010));
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(0xFFFFD700);
+        });
+        dialog.show();
+    });
+}
 
-        // Matching GEL dialogs are dark with a gold outline. No white on white.
+/** OEM reference is authoritative for which physical questions are asked. */
+private boolean lab27OemReady(SharedPreferences p, Lab29FactorySpecAudit.Report factory) {
+    if (factory == null) return false;
+    Lab29FactorySpecAudit.PhysicalProfile physical =
+            Lab29FactorySpecAudit.physicalProfile(factory);
+    String history = p.getString("lab25_obs_level", "");
+    return physical.complete() && factory.supportedModel
+            && factory.matches > 0 && factory.deviations == 0
+            && !Lab25BuyerEvidence.SERIOUS.equals(history)
+            && !Lab25BuyerEvidence.REPEATED.equals(history)
+            && !Lab25BuyerEvidence.STRONG.equals(history);
+}
+
+/** The questions depend on the OEM specification, not Android SIM/eSIM discovery. */
+private void lab27PromptPhysicalConfirmation(final boolean gr,
+        final Lab29FactorySpecAudit.Report factory) {
+    runOnUiThread(() -> {
+        if (isFinishing() || isDestroyed()) return;
+        final Lab29FactorySpecAudit.PhysicalProfile profile =
+                Lab29FactorySpecAudit.physicalProfile(factory);
+        if (!profile.complete()) {
+            lab27ShowPrerequisiteDialog(gr, gr
+                    ? "Λείπει τεκμηριωμένη εργοστασιακή προδιαγραφή για φυσική θύρα/υποδοχή. Δεν εκδίδεται πιστοποιητικό."
+                    : "A sourced OEM physical-port specification is missing. No certificate is issued.");
+            return;
+        }
+
+        final boolean esimExpected =
+                profile.esim == Lab27CertificationGate.Presence.PRESENT;
+        final String esimQuestion = profile.esimVoiceCallsSupported
+                ? (gr ? "eSIM: ενεργοποίησα eSIM και δοκίμασα επιτυχή εξερχόμενη και εισερχόμενη τηλεφωνική κλήση."
+                      : "eSIM: I activated eSIM and tested both outgoing and incoming voice calls.")
+                : (gr ? "eSIM: ενεργοποίησα eSIM και επιβεβαίωσα σύνδεση δεδομένων, όπως προβλέπει το μοντέλο."
+                      : "eSIM: I activated eSIM and verified the OEM-supported data connection.");
+
+        final String[] physical = gr ? new String[] {
+            "Θύρα USB-C: υπάρχει και δοκίμασα επιτυχή φόρτιση με καλώδιο.",
+            "Υποδοχή 3,5 mm: υπάρχει και δοκίμασα ήχο με ακουστικά.",
+            "Δεν υπάρχει φυσική υποδοχή 3,5 mm.",
+            "Φυσική θήκη SIM: υπάρχει και την επιθεώρησα.",
+            "Δεν υπάρχει φυσική θήκη SIM.",
+            esimQuestion
+        } : new String[] {
+            "USB-C: present; I tested charging with a cable.",
+            "3.5 mm jack: present; I tested audio through wired headphones.",
+            "No physical 3.5 mm headphone jack.",
+            "Physical SIM tray: present; I visually inspected it.",
+            "No physical SIM tray.",
+            esimQuestion
+        };
+
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(20), dp(16), dp(20), dp(16));
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(0xFF101010);
-        background.setCornerRadius(dp(14));
-        background.setStroke(dp(2), 0xFFFFD700);
-        content.setBackground(background);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xFF101010);
+        bg.setCornerRadius(dp(14));
+        bg.setStroke(dp(2), 0xFFFFD700);
+        content.setBackground(bg);
 
         TextView title = new TextView(this);
-        title.setText(gr ? "GEL Certification — Έλεγχος θυρών/υποδοχών"
-                         : "GEL Certification — Port/socket checks");
+        title.setText(gr ? "GEL Certification — Έλεγχος σύμφωνα με τον κατασκευαστή"
+                         : "GEL Certification — OEM-defined checks");
         title.setTextColor(Color.WHITE);
         title.setTextSize(18f);
         title.setTypeface(null, Typeface.BOLD);
-        title.setPadding(0, 0, 0, dp(10));
         content.addView(title);
 
-        TextView explanation = new TextView(this);
-        explanation.setText(gr
-                ? "Έλεγξε τις θύρες που υπάρχουν στη συσκευή. Για υποδοχή ακουστικών ή θήκη SIM που δεν υπάρχει, δήλωσε ρητά την απουσία της. Χωρίς πραγματικό έλεγχο ή δήλωση απουσίας, η πιστοποίηση εκκρεμεί."
-                : "Test the sockets actually present. If the headphone jack or SIM tray is absent, explicitly confirm its absence. Unchecked or unanswered items keep certification pending.");
-        explanation.setTextColor(0xFFE6E6E6);
-        explanation.setTextSize(14f);
-        explanation.setPadding(0, 0, 0, dp(8));
-        content.addView(explanation);
+        TextView specs = new TextView(this);
+        String present = gr ? "ΠΡΟΒΛΕΠΕΤΑΙ" : "REQUIRED";
+        String absent = gr ? "ΔΕΝ ΠΡΟΒΛΕΠΕΤΑΙ" : "NOT SPECIFIED";
+        specs.setText((gr ? "Εργοστασιακό μοντέλο: " : "OEM model: ") + profile.modelName
+                + "\nUSB-C: " + present
+                + "\n3.5 mm: " + (profile.headset == Lab27CertificationGate.Presence.PRESENT
+                        ? present : absent)
+                + "\n" + (gr ? "Φυσική θήκη SIM: " : "Physical SIM tray: ")
+                + (profile.simTray == Lab27CertificationGate.Presence.PRESENT
+                        ? present : absent)
+                + (esimExpected ? "\neSIM: " + present : "")
+                + "\n" + (gr ? "Επίσημη πηγή: " : "Official source: ")
+                + profile.sourceUrl);
+        specs.setTextColor(0xFF87CEFA);
+        specs.setTextSize(13f);
+        specs.setPadding(0, dp(10), 0, dp(10));
+        specs.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);
+        specs.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+        content.addView(specs);
+
+        TextView note = new TextView(this);
+        note.setText(gr
+                ? "Δήλωσε τι βλέπεις στη φυσική συσκευή. Η eSIM δεν αποδεικνύει ότι απουσιάζει η εργοστασιακή θήκη SIM. Επίλεξε μόνο όσους ελέγχους πραγματοποίησες."
+                : "Report what you actually see on the physical device. eSIM does not prove the OEM SIM tray is absent. Confirm only checks you personally performed.");
+        note.setTextColor(Color.WHITE);
+        note.setTextSize(14f);
+        content.addView(note);
 
         CheckBox[] checks = new CheckBox[physical.length];
         for (int i = 0; i < physical.length; i++) {
@@ -31107,90 +31187,80 @@ private void lab27PromptPhysicalConfirmation(final boolean gr, final String grad
             check.setText(physical[i]);
             check.setTextColor(Color.WHITE);
             check.setTextSize(15f);
-            check.setPadding(0, dp(5), 0, dp(5));
             check.setButtonTintList(ColorStateList.valueOf(0xFF39FF14));
+            check.setPadding(0, dp(4), 0, dp(4));
+            if (i == 5 && !esimExpected) check.setVisibility(View.GONE);
             content.addView(check);
             checks[i] = check;
         }
 
-        AlertDialog dialog = new AlertDialog.Builder(this)
+        final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(content)
-                .setNegativeButton(gr ? "ΕΚΚΡΕΜΕΙ" : "PENDING", (d, w) ->
-                        logLabelValue("GEL Device Certification",
-                                gr ? "Εκκρεμεί φυσική επιβεβαίωση χρήστη."
-                                   : "Pending user physical checks."))
+                .setNegativeButton(gr ? "ΕΚΚΡΕΜΕΙ" : "PENDING",
+                        (d, w) -> {})
                 .setPositiveButton(gr ? "ΕΠΙΒΕΒΑΙΩΣΗ" : "CONFIRM", (d, w) -> {
-                    boolean verified = Lab27CertificationGate.physicalChecksComplete(
+                    boolean basic = Lab27CertificationGate.physicalChecksComplete(
                             checks[0].isChecked(), checks[1].isChecked(),
                             checks[2].isChecked(), checks[3].isChecked(),
                             checks[4].isChecked());
-                    SharedPreferences current = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
-                    java.util.List<String> applicable = lab27ApplicableBasicLabs();
-                    java.util.List<String> missing = lab27PendingBasicLabs(current, applicable);
-                    Lab29FactorySpecAudit.Report factory = Lab29FactorySpecAudit.capture(this);
-                    boolean serious = Lab25BuyerEvidence.SERIOUS.equals(
-                            current.getString("lab25_obs_level", ""))
-                            || Lab25BuyerEvidence.REPEATED.equals(
-                            current.getString("lab25_obs_level", ""))
-                            || Lab25BuyerEvidence.STRONG.equals(
-                            current.getString("lab25_obs_level", ""));
-                    boolean eligible = Lab27CertificationGate.eligible(
-                            applicable.size() - missing.size(), applicable.size(),
-                            verified, factory.supportedModel && model.equals(Build.MODEL),
-                            factory.matches, factory.deviations, serious, grade)
-                            && lab28HasFreshLab25Evidence();
-                    if (!eligible) {
-                        logLabelWarnValue("GEL Device Certification",
-                                gr ? "Οι προϋποθέσεις δεν καλύπτονται πλέον. Επανέλεγχος."
-                                   : "Certification prerequisites are no longer satisfied.");
+                    boolean oemMatch = Lab27CertificationGate.physicalMatchesOem(
+                            profile.usb, profile.headset, profile.simTray,
+                            checks[0].isChecked(), checks[1].isChecked(),
+                            checks[2].isChecked(), checks[3].isChecked(),
+                            checks[4].isChecked());
+                    boolean esimMatch = !esimExpected || checks[5].isChecked();
+                    if (!basic || !oemMatch || !esimMatch) {
+                        String detail = gr
+                                ? "Η επιβεβαίωση δεν συμφωνεί με τις εργοστασιακές προδιαγραφές ή δεν ολοκληρώθηκαν όλοι οι έλεγχοι. Δεν εκδίδεται πιστοποιητικό.\n\n"
+                                : "Your answers conflict with the exact manufacturer's specifications or an applicable check was not completed. No certificate can be issued.\n\n";
+                        if (profile.headset == Lab27CertificationGate.Presence.PRESENT
+                                && checks[2].isChecked()) {
+                            detail += gr ? "Η υποδοχή 3,5 mm προβλέπεται, αλλά δήλωσες ότι απουσιάζει.\n"
+                                         : "OEM specifies a 3.5 mm jack, but you reported it missing.\n";
+                        }
+                        if (profile.simTray == Lab27CertificationGate.Presence.PRESENT
+                                && checks[4].isChecked()) {
+                            detail += gr ? "Ο κατασκευαστής προβλέπει φυσική θήκη SIM. Η eSIM δεν αναιρεί αυτή την προδιαγραφή.\n"
+                                         : "OEM requires a physical SIM tray; eSIM does not override this specification.\n";
+                        }
+                        detail += profile.sourceUrl;
+                        getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
+                                .remove("lab27_cert_schema").apply();
+                        lab27ShowPrerequisiteDialog(gr, detail);
                         return;
                     }
-                    current.edit().putInt("lab27_cert_schema", Lab27CertificationGate.SCHEMA)
-                            .putLong("lab27_cert_wall_ms", System.currentTimeMillis())
-                            .putString("lab27_cert_model", Build.MODEL)
-                            .putString("lab27_cert_grade", grade)
-                            .putInt("lab27_cert_score", score)
-                            .putInt("lab27_cert_oem_matches", factory.matches)
-                            .putBoolean("lab27_cert_usb", checks[0].isChecked())
-                            .putBoolean("lab27_cert_headphones", checks[1].isChecked())
-                            .putBoolean("lab27_cert_headphones_absent", checks[2].isChecked())
-                            .putBoolean("lab27_cert_sim", checks[3].isChecked())
-                            .putBoolean("lab27_cert_sim_absent", checks[4].isChecked())
-                            .putBoolean("lab27_cert_physical_confirmed", verified)
-                            .apply();
-                    logLabelOkValue("GEL Device Certification",
-                            (gr ? "Πιστοποιήθηκε καλή λειτουργία στους ελέγχους GEL: "
-                                : "Successful tested GEL functionality certified: ")
-                                    + grade + " — " + applicable.size()
-                                    + "/" + applicable.size()
-                                    + (gr ? " εργαστήρια, " : " labs, ")
-                                    + factory.matches
-                                    + (gr ? " συμφωνίες προδιαγραφών OEM, φυσικοί έλεγχοι επιβεβαιωμένοι."
-                                          : " matching OEM specifications, physical checks confirmed."));
-                    logLabelValue(gr ? "Όριο πιστοποίησης" : "Certification scope",
-                            gr ? "Δεν αξιολογείται η γνησιότητα εξαρτημάτων."
-                               : "Parts authenticity is not assessed.");
+
+                    // One-shot permission to run the lab; no grade was calculated
+                    // before explicit, manufacturer-specific user confirmation.
+                    lab27UserUsb = checks[0].isChecked();
+                    lab27UserJack = checks[1].isChecked();
+                    lab27UserJackAbsent = checks[2].isChecked();
+                    lab27UserSim = checks[3].isChecked();
+                    lab27UserSimAbsent = checks[4].isChecked();
+                    lab27UserEsim = esimExpected && checks[5].isChecked();
+                    lab27UserOemSource = profile.sourceUrl;
+                    lab27UserPreflightAuthorized = true;
+                    lab30CombineFindings();
                 }).create();
+
         dialog.setOnShowListener(d -> {
-            if (dialog.getWindow() != null) {
+            if (dialog.getWindow() != null)
                 dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(0xFFFFD700);
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
-            Runnable toggle = () -> {
-                boolean complete = Lab27CertificationGate.physicalChecksComplete(
-                        checks[0].isChecked(), checks[1].isChecked(),
-                        checks[2].isChecked(), checks[3].isChecked(),
-                        checks[4].isChecked());
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(complete);
-            };
+            Runnable toggle = () -> dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    .setEnabled(Lab27CertificationGate.physicalChecksComplete(
+                            checks[0].isChecked(), checks[1].isChecked(),
+                            checks[2].isChecked(), checks[3].isChecked(),
+                            checks[4].isChecked())
+                            && (!esimExpected || checks[5].isChecked()));
             for (int i = 0; i < checks.length; i++) {
-                final int choice = i;
+                final int index = i;
                 checks[i].setOnCheckedChangeListener((button, checked) -> {
-                    if (checked && choice == 1) checks[2].setChecked(false);
-                    if (checked && choice == 2) checks[1].setChecked(false);
-                    if (checked && choice == 3) checks[4].setChecked(false);
-                    if (checked && choice == 4) checks[3].setChecked(false);
+                    if (checked && index == 1) checks[2].setChecked(false);
+                    if (checked && index == 2) checks[1].setChecked(false);
+                    if (checked && index == 3) checks[4].setChecked(false);
+                    if (checked && index == 4) checks[3].setChecked(false);
                     toggle.run();
                 });
             }
@@ -31210,12 +31280,68 @@ if (!requireGelPro(
     return;
 }
 
+// Never calculate a measurement grade before all certification prerequisites
+// and the user's OEM-specific physical checks are complete.
+if (!lab27UserPreflightAuthorized) {
+    SharedPreferences before = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+    java.util.List<String> applicable = lab27ApplicableBasicLabs();
+    java.util.List<String> missing = lab27PendingBasicLabs(before, applicable);
+    if (!missing.isEmpty()) {
+        lab27ShowPrerequisiteDialog(grGate,
+                (grGate ? "Ολοκληρώθηκαν " : "Completed ")
+                + (applicable.size() - missing.size()) + "/" + applicable.size()
+                + (grGate ? " απαραίτητα εργαστήρια.\nΕκκρεμούν: "
+                          : " required labs.\nPending: ")
+                + android.text.TextUtils.join(", ", missing)
+                + (grGate ? "\n\nΕκτέλεσε πρώτα τα παραπάνω εργαστήρια. Η βαθμολογία και η πιστοποίηση δεν υπολογίζονται ακόμη."
+                          : "\n\nRun these labs first. Neither the grade nor certification is calculated yet."));
+        return;
+    }
+    if (!lab29RequireLab25Evidence()) return;
+    Lab29FactorySpecAudit.Report factory = Lab29FactorySpecAudit.capture(this);
+    if (!lab27OemReady(before, factory)) {
+        lab27ShowPrerequisiteDialog(grGate, (grGate
+                ? "Εκκρεμεί πιστοποίηση: δεν υπάρχει πλήρες τεκμηριωμένο εργοστασιακό προφίλ φυσικών θυρών, εντοπίστηκε διαφορά προδιαγραφών ή κρίσιμο ιστορικό στο Lab 25.\n"
+                : "Certification blocked: the exact-model OEM physical-port profile is incomplete, a specification deviates, or Lab 25 records serious history.\n")
+                + (factory == null ? "" : factory.officialSource));
+        return;
+    }
+    lab27PromptPhysicalConfirmation(grGate, factory);
+    return;
+}
+// This authorization is valid for exactly one report build.
+lab27UserPreflightAuthorized = false;
+
+// Revalidate prerequisite freshness and manufacturer profile at execution.
+SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+if (!lab27PendingBasicLabs(p, lab27ApplicableBasicLabs()).isEmpty()
+        || !lab28HasFreshLab25Evidence()) {
+    lab27ShowPrerequisiteDialog(grGate, grGate
+            ? "Οι απαιτούμενες μετρήσεις έληξαν ή άλλαξαν. Επανέλαβε τον προέλεγχο."
+            : "Required measurements expired or changed. Repeat the preflight.");
+    return;
+}
+Lab29FactorySpecAudit.Report currentFactory = Lab29FactorySpecAudit.capture(this);
+Lab29FactorySpecAudit.PhysicalProfile currentPorts =
+        Lab29FactorySpecAudit.physicalProfile(currentFactory);
+if (!lab27OemReady(p, currentFactory)
+        || !lab27UserOemSource.equals(currentPorts.sourceUrl)
+        || !Lab27CertificationGate.physicalMatchesOem(
+                currentPorts.usb, currentPorts.headset, currentPorts.simTray,
+                lab27UserUsb, lab27UserJack, lab27UserJackAbsent,
+                lab27UserSim, lab27UserSimAbsent)
+        || (currentPorts.esim == Lab27CertificationGate.Presence.PRESENT
+            && !lab27UserEsim)) {
+    lab27ShowPrerequisiteDialog(grGate, grGate
+            ? "Οι δηλώσεις φυσικών υποδοχών δεν συμφωνούν με τις τεκμηριωμένες εργοστασιακές προδιαγραφές."
+            : "The attested physical ports do not match the sourced OEM specifications.");
+    return;
+}
+
 // The technical certification consumes the latest genuine Lab25 diagnostic,
 // not a previously reported buyer assessment or a duplicated log reference.
 if (!lab29RequireLab25Evidence()) return;
 
-SharedPreferences p =
-        getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
         
 boolean silentCorruptionRisk =
         false /* Unsupported legacy hardware-cause flag: lab27_silent_corruption_risk */;
@@ -32587,45 +32713,68 @@ lab27DisplayFactorySpecs(gr);
 // Snapshot is finalized only after the report has been assembled.
 lab29SaveTechnicalAssessmentFromLab25(p);
 
-// An A+ measurements grade is NOT a device certification until 18 applicable
-// labs have passed and physical connections are explicitly checked by the user.
+// This section runs only after all applicable labs, documented OEM
+// specifications, and manufacturer-directed physical user checks passed.
 appendHtml("<br>");
 logInfo("GEL Device Certification");
 java.util.List<String> applicableBasic = lab27ApplicableBasicLabs();
 java.util.List<String> pendingBasic = lab27PendingBasicLabs(p, applicableBasic);
+Lab29FactorySpecAudit.Report certFactory = Lab29FactorySpecAudit.capture(this);
+Lab29FactorySpecAudit.PhysicalProfile certPorts =
+        Lab29FactorySpecAudit.physicalProfile(certFactory);
+boolean physicalVerified = Lab27CertificationGate.physicalMatchesOem(
+        certPorts.usb, certPorts.headset, certPorts.simTray,
+        lab27UserUsb, lab27UserJack, lab27UserJackAbsent,
+        lab27UserSim, lab27UserSimAbsent)
+        && (certPorts.esim != Lab27CertificationGate.Presence.PRESENT
+            || lab27UserEsim);
+boolean eligibleCert = pendingBasic.isEmpty() && lab28HasFreshLab25Evidence()
+        && lab27OemReady(p, certFactory)
+        && lab27UserOemSource.equals(certPorts.sourceUrl)
+        && Lab27CertificationGate.eligible(
+                applicableBasic.size() - pendingBasic.size(), applicableBasic.size(),
+                physicalVerified, certFactory.supportedModel,
+                certFactory.matches, certFactory.deviations, false, snapshotGrade);
 logLabelValue(gr ? "Υποχρεωτικά εργαστήρια" : "Required basic labs",
         (applicableBasic.size() - pendingBasic.size()) + "/" + applicableBasic.size());
-if (!pendingBasic.isEmpty()) {
-    logLabelValue(gr ? "Εκκρεμείς / προς επανέλεγχο" : "Pending / review required",
-            android.text.TextUtils.join(", ", pendingBasic));
-    logLabelValue("GEL Device Certification",
-            gr ? "ΕΚΚΡΕΜΕΙ — ολοκλήρωσε πρώτα τα παραπάνω εργαστήρια."
-               : "PENDING — complete the above labs first.");
+if (!eligibleCert) {
+    p.edit().remove("lab27_cert_schema").apply();
+    logLabelWarnValue("GEL Device Certification",
+            gr ? "ΕΚΚΡΕΜΕΙ — απαιτείται επανέλεγχος των εργαστηρίων ή των προδιαγραφών."
+               : "PENDING — lab or manufacturer specifications require review.");
+    logInfo(gr ? "Το Lab 27 δεν εξέδωσε πιστοποιητικό."
+               : "Lab 27 did not issue certification.");
 } else {
-    Lab29FactorySpecAudit.Report certFactory = Lab29FactorySpecAudit.capture(this);
-    boolean problematicHistory = Lab25BuyerEvidence.SERIOUS.equals(
-            p.getString("lab25_obs_level", ""))
-            || Lab25BuyerEvidence.REPEATED.equals(p.getString("lab25_obs_level", ""))
-            || Lab25BuyerEvidence.STRONG.equals(p.getString("lab25_obs_level", ""));
-    boolean preEligible = Lab27CertificationGate.eligible(
-            applicableBasic.size(), applicableBasic.size(), true,
-            certFactory.supportedModel, certFactory.matches, certFactory.deviations,
-            problematicHistory, snapshotGrade);
-    if (!preEligible) {
-        logLabelValue("GEL Device Certification",
-                gr ? "ΕΚΚΡΕΜΕΙ — απαιτείται επανέλεγχος αποτελεσμάτων ή προδιαγραφών."
-                   : "PENDING — review diagnostic results or OEM comparisons.");
-    } else {
-        logLabelValue("GEL Device Certification",
-                gr ? "ΕΚΚΡΕΜΕΙ — απαιτείται φυσική επιβεβαίωση θυρών/υποδοχών."
-                   : "PENDING — physical ports and sockets must be confirmed.");
-        lab27PromptPhysicalConfirmation(gr, snapshotGrade, deviceHealthScore,
-                Build.MODEL, certFactory.matches);
-    }
+    p.edit().putInt("lab27_cert_schema", Lab27CertificationGate.SCHEMA)
+            .putLong("lab27_cert_wall_ms", System.currentTimeMillis())
+            .putString("lab27_cert_model", Build.MODEL)
+            .putString("lab27_cert_grade", snapshotGrade)
+            .putInt("lab27_cert_score", deviceHealthScore)
+            .putInt("lab27_cert_oem_matches", certFactory.matches)
+            .putBoolean("lab27_cert_usb", lab27UserUsb)
+            .putBoolean("lab27_cert_headphones", lab27UserJack)
+            .putBoolean("lab27_cert_headphones_absent", lab27UserJackAbsent)
+            .putBoolean("lab27_cert_sim", lab27UserSim)
+            .putBoolean("lab27_cert_sim_absent", lab27UserSimAbsent)
+            .putBoolean("lab27_cert_esim", lab27UserEsim)
+            .putString("lab27_cert_oem_source", certPorts.sourceUrl)
+            .putBoolean("lab27_cert_physical_confirmed", true)
+            .apply();
+    logLabelOkValue("GEL Device Certification",
+            (gr ? "Πιστοποιήθηκε η λειτουργία στους ελεγμένους τομείς: "
+                : "Tested functionality certified: ")
+            + snapshotGrade + " — " + applicableBasic.size()
+            + "/" + applicableBasic.size()
+            + (gr ? " εργαστήρια, " : " labs, ")
+            + certFactory.matches
+            + (gr ? " εργοστασιακές συμφωνίες, επιβεβαιωμένοι φυσικοί έλεγχοι."
+                  : " OEM specification matches, user-confirmed physical checks."));
+    logLabelValue(gr ? "Όριο πιστοποίησης" : "Certification scope",
+            gr ? "Δεν πιστοποιείται η γνησιότητα ανταλλακτικών."
+               : "Parts authenticity is not certified.");
+    logOk(gr ? "Το Lab 27 ολοκληρώθηκε — εκδόθηκε GEL Device Certification."
+             : "Lab 27 finished — GEL Device Certification issued.");
 }
-
-logOk(gr ? "Το Lab 27 ολοκληρώθηκε (σύνταξη πληροφοριακής σύνοψης)."
-         : "Lab 27 finished (evidence summary compiled).");
 logLine();
 }
 
