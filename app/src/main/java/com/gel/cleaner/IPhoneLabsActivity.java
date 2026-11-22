@@ -3034,6 +3034,9 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
                     : "International history for model / code:",
                     gr ? "Δεν έχει καταχωριστεί τεκμηριωμένη αντίστοιχη περίπτωση στη βάση μας."
                        : "No source-linked matching case is currently indexed.");
+            logLabelValue(gr ? "Αξιολόγηση τεκμηρίωσης:" : "Evidence assessment:",
+                    IPhonePanicRepairEvidenceReview.assessExact(repairHistory,
+                            findings.modelIdentifier, finding.code).display(gr));
         }
         if (!matchingReports.isEmpty()) {
             IPhonePanicRepairKnowledgeBase.MatchSummary repairEvidence =
@@ -3041,6 +3044,33 @@ private void logApplePanicEvidence(String block, boolean gr, String heading,
             logLabelInfoValue(gr ? "Ιστορικό επισκευών για μοντέλο / κωδικό:" :
                     "Repair history for exact model / clue:",
                     repairEvidence.display(gr));
+            // A sequence of repairs on the SAME phone is one incident,
+            // not independent corroboration of each attempted replacement.
+            IPhonePanicRepairEvidenceReview.Assessment reviewedHistory =
+                    IPhonePanicRepairEvidenceReview.assessExact(repairHistory,
+                            findings.modelIdentifier, finding.code);
+            logLabelValue(gr ? "Αξιολόγηση τεκμηρίωσης:" : "Evidence assessment:",
+                    reviewedHistory.display(gr));
+            logLabelValue(gr ? "Ανεξάρτητες μαρτυρίες (όχι επιτυχία διάγνωσης):"
+                             : "Distinct published incidents (not confirmed diagnosis):",
+                    reviewedHistory.independentEvidence(gr));
+            int shownActions = 0;
+            for (IPhonePanicRepairEvidenceReview.ActionHistory action : reviewedHistory.actions) {
+                if (shownActions++ >= 5) break;
+                String actionLabel = action.actionKey;
+                for (IPhonePanicRepairKnowledgeBase.RepairCase report : matchingReports) {
+                    if (action.actionKey.equals(report.actionKey)) {
+                        actionLabel = report.localizedAction(gr);
+                        break;
+                    }
+                }
+                logLabelValue(actionLabel + ":", action.display(gr));
+            }
+            if (reviewedHistory.actions.size() > 5) {
+                logLabelValue(gr ? "Πρόσθετες εργασίες:" : "Additional repair actions:",
+                        gr ? "Η σύντομη προβολή δείχνει μόνο πέντε. Δείτε τα επιμέρους περιστατικά."
+                           : "Only five are shown here. See the individual case entries.");
+            }
             logLabelValue(gr ? "Προέλευση πληροφοριών:" : "Evidence limitation:",
                     gr ? "Δημοσιευμένες μαρτυρίες, όχι ανεξάρτητα πιστοποιημένες επισκευές ή οδηγία αντικατάστασης."
                        : "Published first-hand reports, not independently verified repairs or a part replacement instruction.");
