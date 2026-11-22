@@ -1,0 +1,45 @@
+name: Apple iPhone model repair prerequisites and tools source metadata audit
+
+on:
+  pull_request:
+    paths:
+      - 'tools/iphone/extract_apple_procedure_requirements.py'
+      - '.github/workflows/audit-iphone-apple-procedure-requirements.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: iphone-apple-procedure-requirements-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  official-procedure-metadata:
+    if: ${{ github.head_ref == 'research/iphone-panic-repair-knowledge-20261121' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 52
+    steps:
+      - name: Checkout draft research branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+      - name: Inspect official Apple part prerequisites and tools without copying repair text
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/iphone/extract_apple_procedure_requirements.py --write --max-pages 315 --delay 1.45
+      - name: Record exact first-party source metadata and any unverified articles
+        shell: bash
+        env:
+          TARGET: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/qa/APPLE_PROCEDURE_REQUIREMENTS_AUDIT_2026-11-22.tsv
+          git add docs/qa/APPLE_PROCEDURE_REQUIREMENTS_AUDIT_2026-11-22.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Index original Apple model-part prerequisites and tool metadata with evidence scope"
+            git push origin "HEAD:${TARGET}"
+          fi
