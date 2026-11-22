@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -118,11 +120,18 @@ public final class IPhonePanicRepairKnowledgeBase {
                         || c[2].trim().isEmpty() || c[3].trim().isEmpty()
                         || c[8].trim().isEmpty() || c[9].trim().isEmpty()
                         || c[10].trim().isEmpty() || c[11].trim().isEmpty()
-                        || !c[7].startsWith("https://")) {
+                        || !isAcceptedPublishedRepairSource(c[7])
+                        || !c[4].matches("[A-Z][A-Z0-9_]{2,80}")
+                        || !c[6].matches("(?:unknown|[0-9]{4}-[0-9]{2}-[0-9]{2})")
+                        || canonicalCode(c[3]).isEmpty()) {
                     throw new IOException("Incomplete repair evidence on line " + lineNumber);
                 }
                 if (!ids.add(c[0])) {
                     throw new IOException("Duplicate repair case id on line " + lineNumber);
+                }
+                for (String model : c[2].split(";", -1)) {
+                    if (!model.trim().matches("(?i)iPhone[0-9]{1,2},[0-9]{1,2}"))
+                        throw new IOException("Invalid exact iPhone model ID at line " + lineNumber);
                 }
                 try {
                     cases.add(new RepairCase(c));
@@ -132,6 +141,30 @@ public final class IPhonePanicRepairKnowledgeBase {
             }
         }
         return Collections.unmodifiableList(cases);
+    }
+
+    /**
+     * The public case catalog is manually curated. Accept only exact approved
+     * original repair-case domains and HTTPS; never accept spoofed subdomains
+     * such as ifixit.com.evil.example or an arbitrary pasted source URL.
+     * A new provider requires a deliberate source review and code change.
+     */
+    private static boolean isAcceptedPublishedRepairSource(String value) {
+        try {
+            URI uri = new URI(value);
+            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null
+                    || uri.getUserInfo() != null || uri.getFragment() != null)
+                return false;
+            String host = uri.getHost().toLowerCase(Locale.ROOT);
+            boolean ifixit = ("www.ifixit.com".equals(host) || "ifixit.com".equals(host))
+                    && uri.getPath() != null
+                    && uri.getPath().matches("/Answers/View/[0-9]+/?");
+            boolean nopowerfix = "forum.nopowerfix.com".equals(host)
+                    && uri.getPath() != null && uri.getPath().startsWith("/t/");
+            return ifixit || nopowerfix;
+        } catch (URISyntaxException ex) {
+            return false;
+        }
     }
 
     /** Do not fall back to codes from other models, even from the same generation. */
