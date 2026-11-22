@@ -104,16 +104,22 @@ public final class Lab29FactorySpecAudit {
         public final Lab27CertificationGate.Presence usb;
         public final Lab27CertificationGate.Presence headset;
         public final Lab27CertificationGate.Presence simTray;
+        public final Lab27CertificationGate.Presence esim;
+        public final boolean esimVoiceCallsSupported;
 
         PhysicalProfile(String modelName, String sourceUrl,
                 Lab27CertificationGate.Presence usb,
                 Lab27CertificationGate.Presence headset,
-                Lab27CertificationGate.Presence simTray) {
+                Lab27CertificationGate.Presence simTray,
+                Lab27CertificationGate.Presence esim,
+                boolean esimVoiceCallsSupported) {
             this.modelName = modelName;
             this.sourceUrl = sourceUrl;
             this.usb = usb;
             this.headset = headset;
             this.simTray = simTray;
+            this.esim = esim;
+            this.esimVoiceCallsSupported = esimVoiceCallsSupported;
         }
 
         public boolean complete() {
@@ -128,12 +134,18 @@ public final class Lab29FactorySpecAudit {
         if (report == null || !report.supportedModel || report.officialSource.isEmpty())
             return new PhysicalProfile("", "", Lab27CertificationGate.Presence.UNKNOWN,
                     Lab27CertificationGate.Presence.UNKNOWN,
-                    Lab27CertificationGate.Presence.UNKNOWN);
+                    Lab27CertificationGate.Presence.UNKNOWN,
+                    Lab27CertificationGate.Presence.UNKNOWN, false);
+        Lab27CertificationGate.Presence esim =
+                exactPresence(report.rows, "eSIM", "Ναι / Yes");
+        boolean voice = "Ναι / Yes".equals(exactExpected(
+                report.rows, "eSIM voice calls"));
         return new PhysicalProfile(report.modelName, report.officialSource,
                 exactPresence(report.rows, "USB connector", "USB-C"),
                 exactPresence(report.rows, "3.5 mm jack", "Ναι / Yes"),
                 exactPresence(report.rows, "SIM tray",
-                        "SIM1 + Hybrid (SIM or MicroSD)"));
+                        "SIM1 + Hybrid (SIM or MicroSD)"),
+                esim, voice);
     }
 
     private static Lab27CertificationGate.Presence exactPresence(
@@ -147,6 +159,13 @@ public final class Lab29FactorySpecAudit {
             break;
         }
         return Lab27CertificationGate.Presence.UNKNOWN;
+    }
+
+    private static String exactExpected(List<Row> rows, String label) {
+        for (Row row : rows) {
+            if (label.equals(row.english)) return row.expected;
+        }
+        return "";
     }
 
     /** Test-friendly container. All values originate from the common iDoctorEngine. */
