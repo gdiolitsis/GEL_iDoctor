@@ -45,9 +45,11 @@ public final class Lab27CertificationGateTest {
         }
         assertTrue(Lab27CertificationGate.pending(applicable, timestamps, passed, now).isEmpty());
         passed.put("3", false);
+        assertTrue(Lab27CertificationGate.pending(applicable, timestamps, passed, now).isEmpty());
         assertEquals(Arrays.asList("3"),
-                Lab27CertificationGate.pending(applicable, timestamps, passed, now));
+                Lab27CertificationGate.withFindings(applicable, timestamps, passed, now));
         passed.put("3", true);
+        assertTrue(Lab27CertificationGate.withFindings(applicable, timestamps, passed, now).isEmpty());
         timestamps.put("15", now - Lab27CertificationGate.MAX_AGE_MS - 1L);
         assertEquals(Arrays.asList("15"),
                 Lab27CertificationGate.pending(applicable, timestamps, passed, now));

@@ -12,8 +12,9 @@ import java.util.regex.Pattern;
 
 /**
  * GEL Device Certification: completion is not equivalent to passing.
- * A current, warning-free recorded run is required for every applicable
- * basic lab. Human-verified physical connections are a separate gate.
+ * A completed run counts as executed even with adverse findings; those
+ * findings downgrade certification instead of pretending the lab never ran.
+ * Human-verified physical connections are a separate gate.
  * The certificate concerns tested functionality, NOT parts authenticity.
  * OEM specification comparison stays a required technical cross-check.
  * OEM matches do not establish that replacement parts are genuine.
@@ -68,10 +69,21 @@ final class Lab27CertificationGate {
         List<String> missing = new ArrayList<>();
         for (String id : applicable) {
             Long time = times.get(id);
-            if (time == null || !fresh(time, nowWallMs)
-                    || !Boolean.TRUE.equals(passed.get(id))) missing.add(id);
+            if (time == null || !fresh(time, nowWallMs)) missing.add(id);
         }
         return missing;
+    }
+
+    /** Negative completed-lab results are findings, not missing runs. */
+    static List<String> withFindings(List<String> applicable, java.util.Map<String, Long> times,
+                                     java.util.Map<String, Boolean> passed, long nowWallMs) {
+        List<String> findings = new ArrayList<>();
+        for (String id : applicable) {
+            Long time = times.get(id);
+            if (time != null && fresh(time, nowWallMs)
+                    && Boolean.FALSE.equals(passed.get(id))) findings.add(id);
+        }
+        return findings;
     }
 
     /** All three evidence pillars remain required: tests, physical checks, and OEM. */
