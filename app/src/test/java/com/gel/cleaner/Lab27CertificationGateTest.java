@@ -67,7 +67,7 @@ public final class Lab27CertificationGateTest {
         assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 0, 0, false, "A+"));
         assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 27, 1, false, "A+"));
         assertTrue(Lab27CertificationGate.eligible(18, 18, true, true, 27, 0, false, "A+"));
-        assertEquals(6, Lab27CertificationGate.SCHEMA);
+        assertEquals(7, Lab27CertificationGate.SCHEMA);
     }
 
     @Test public void physicalPortsRequireExactlyOneVisualAnswerPerPair() {
@@ -133,6 +133,20 @@ public final class Lab27CertificationGateTest {
                 unknown, unknown, unknown, false, false, false, false, false, false));
         assertFalse(Lab27CertificationGate.physicalMatchesOem(
                 unknown, unknown, unknown, false, false, false, false, false, false));
+    }
+
+    @Test public void fmAppEvidenceIsRequiredOnlyWhenManufacturerListsFm() {
+        Lab27CertificationGate.Presence yes = Lab27CertificationGate.Presence.PRESENT;
+        Lab27CertificationGate.Presence no = Lab27CertificationGate.Presence.ABSENT;
+        Lab27CertificationGate.Presence unknown = Lab27CertificationGate.Presence.UNKNOWN;
+        assertTrue(Lab27CertificationGate.fmAppQuestionComplete(yes, true, false));
+        assertTrue(Lab27CertificationGate.fmAppQuestionComplete(yes, false, true));
+        assertFalse(Lab27CertificationGate.fmAppQuestionComplete(yes, false, false));
+        assertFalse(Lab27CertificationGate.fmAppQuestionComplete(yes, true, true));
+        assertTrue(Lab27CertificationGate.fmAppQuestionComplete(no, false, true));
+        assertTrue(Lab27CertificationGate.fmAppQuestionComplete(unknown, false, false));
+        assertFalse(Lab27CertificationGate.fmAppQuestionComplete(unknown, true, false));
+        // The presence/absence of an APP is not a proven FM tuner verdict.
     }
 
     @Test public void unsupportedHardwareIsMarkedNotApplicableRatherThanPassed() {
