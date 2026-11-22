@@ -70,7 +70,7 @@ public final class Lab27ManufacturerFirstCertificationTest {
                 p.simTray, true, false, true, false, true, false));
     }
 
-    @Test public void popupContainsOnlyThreeManufacturerPhysicalPortQuestions() throws Exception {
+    @Test public void popupIsManufacturerDirectedAndNeverAsksUnknownAttributes() throws Exception {
         Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
         if (!Files.isRegularFile(p))
             p = Paths.get("src/main/java/com/gel/cleaner/ManualTestsActivity.java");
@@ -78,17 +78,35 @@ public final class Lab27ManufacturerFirstCertificationTest {
         int a = src.indexOf("private void lab27PromptPhysicalConfirmation(");
         int b = src.indexOf("private void lab30CombineFindings()", a);
         assertTrue(a >= 0 && b > a);
-        String q = src.substring(a, b);
-        assertTrue(q.contains("final String[] physical"));
-        assertTrue(q.contains("Θύρα USB-C: υπάρχει."));
-        assertTrue(q.contains("Θύρα USB-C: δεν υπάρχει."));
-        assertTrue(q.contains("Υποδοχή 3,5 mm: υπάρχει."));
-        assertTrue(q.contains("Υποδοχή 3,5 mm: δεν υπάρχει."));
-        assertTrue(q.contains("Φυσική θήκη SIM: υπάρχει."));
-        assertTrue(q.contains("Φυσική θήκη SIM: δεν υπάρχει."));
-        assertFalse(q.contains("esimQuestion"));
-        assertFalse(q.contains("lab27UserEsim"));
-        assertFalse(q.contains("FEATURE_TELEPHONY"));
-        assertFalse(q.contains("hasSystemFeature"));
+        String popup = src.substring(a, b);
+        assertTrue(popup.contains("Lab29FactorySpecAudit.physicalProfile(factory)"));
+        assertTrue(popup.contains("if (!Lab27CertificationGate.shouldAsk(oemPorts[portIndex])) continue;"));
+        assertTrue(popup.contains("for (Lab29FactorySpecAudit.Row row : factory.rows)"));
+        assertTrue(popup.contains("portNames[i] = gr ? row.greek : row.english"));
+        assertFalse(popup.contains("final String[] physical = gr ? new String[]"));
+        assertFalse(popup.contains("esimQuestion"));
+        assertFalse(popup.contains("lab27UserEsim"));
+        assertFalse(popup.contains("FEATURE_TELEPHONY"));
+        assertFalse(popup.contains("hasSystemFeature"));
     }
+
+    @Test public void incompleteOemProfileStillKeepsExplicitKnownPorts() {
+        Lab29FactorySpecAudit.PhysicalProfile partial =
+                new Lab29FactorySpecAudit.PhysicalProfile("Example", "https://oem.example/spec",
+                        Lab27CertificationGate.Presence.PRESENT,
+                        Lab27CertificationGate.Presence.UNKNOWN,
+                        Lab27CertificationGate.Presence.UNKNOWN,
+                        Lab27CertificationGate.Presence.UNKNOWN, false);
+        assertTrue(partial.complete());
+        assertFalse(Lab27CertificationGate.shouldAsk(partial.headset));
+        assertTrue(Lab27CertificationGate.shouldAsk(partial.usb));
+        Lab29FactorySpecAudit.PhysicalProfile none =
+                new Lab29FactorySpecAudit.PhysicalProfile("Example", "https://oem.example/spec",
+                        Lab27CertificationGate.Presence.UNKNOWN,
+                        Lab27CertificationGate.Presence.UNKNOWN,
+                        Lab27CertificationGate.Presence.UNKNOWN,
+                        Lab27CertificationGate.Presence.UNKNOWN, false);
+        assertFalse(none.complete());
+    }
+
 }
