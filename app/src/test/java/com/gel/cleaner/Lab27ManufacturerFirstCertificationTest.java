@@ -67,7 +67,7 @@ public final class Lab27ManufacturerFirstCertificationTest {
                 Lab29FactorySpecAudit.physicalProfile(Lab29FactorySpecAudit.evaluate(m));
         assertFalse(p.complete());
         assertFalse(Lab27CertificationGate.physicalMatchesOem(p.usb, p.headset,
-                p.simTray, true, true, false, true, false));
+                p.simTray, true, false, true, false, true, false));
     }
 
     @Test public void popupContainsOnlyThreeManufacturerPhysicalPortQuestions() throws Exception {
