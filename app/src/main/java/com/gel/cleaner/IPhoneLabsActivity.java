@@ -2364,14 +2364,13 @@ private void logSourceReviewedAppleFacts(
     int shown = 0;
     for (AppleIPhoneTechnicalKnowledge.Finding fact : facts) {
         if (shown >= maxFacts) break;
-        String kind = fact.kind.name();
         final String prefix;
         if (fact.risk == AppleIPhoneTechnicalKnowledge.Risk.DATA_LOSS)
             prefix = gr ? "Απώλεια δεδομένων — " : "Data loss — ";
         else if (fact.risk == AppleIPhoneTechnicalKnowledge.Risk.TECHNICIAN_ONLY)
             prefix = gr ? "Μόνο εξειδικευμένος τεχνικός — " : "Qualified technician only — ";
         else prefix = "";
-        logLabelValue((gr ? "Apple — " : "Apple — ") + kind + ":",
+        logLabelValue(gr ? "Apple — σχετικό βήμα:" : "Apple — relevant step:",
                 prefix + fact.description(gr));
         shown++;
     }
