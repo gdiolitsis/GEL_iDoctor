@@ -74,7 +74,7 @@ jobs:
             log="$RUNNER_TEMP/gel-gradle-qa-$attempt.log"
             if ./gradlew -PgelQaVersionCode=66 -PgelQaVersionName=5.3-QA13 \
               :app:testDebugUnitTest :app:assembleRelease --no-daemon --console=plain 2>&1 | tee "$log"; then break; fi
-            if [ "$attempt" -ge 3 ] || ! grep -Eqi '(status code 429|HTTP 429|Too Many Requests)' "$log"; then
+            if [ "$attempt" -ge 3 ] || ! grep -Eqi '(status code 429|HTTP 429|Too Many Requests|MavenArtifactFetcher|FileNotFoundException)' "$log"; then
               echo "Gradle failed; will not sign candidate" >&2
               exit 1
             fi
