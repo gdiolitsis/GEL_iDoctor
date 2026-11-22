@@ -7076,8 +7076,16 @@ applyNeonValues(findViewById(R.id.txtNfcContent), nfc);
             }
 
             if (valueStart < lineEnd) {
+                // "NO", "Not declared", "Disabled" and "0 eSIM" are neutral,
+                // never affirmative eSIM capability. Other sections are unchanged.
+                String field = text.substring(start, colon).trim();
+                String value = text.substring(valueStart, lineEnd).trim();
+                int rowColor = ModemEsimPresentationPolicy.isEsimField(field)
+                        ? (ModemEsimPresentationPolicy.isPositiveEvidence(field, value)
+                            ? neon : Color.WHITE)
+                        : neon;
                 ssb.setSpan(
-                        new ForegroundColorSpan(neon),
+                        new ForegroundColorSpan(rowColor),
                         valueStart,
                         lineEnd,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE

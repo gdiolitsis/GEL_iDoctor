@@ -12000,7 +12000,10 @@ private void lab12ReportSharedModemInventory(boolean gr) {
                     && value.startsWith("0 in Android-visible"));
         boolean weakSignal = "Signal Strength".equals(label)
                 && (value.startsWith("0/4") || value.startsWith("1/4"));
-        if (unknown || neutralContext) {
+        // Same neutral/green eSIM evidence policy as Device Info Peripherals.
+        boolean nonPositiveEsim = ModemEsimPresentationPolicy.isEsimField(label)
+                && !ModemEsimPresentationPolicy.isPositiveEvidence(label, value);
+        if (unknown || neutralContext || nonPositiveEsim) {
             logLabelValue(label, value);
         } else if (weakSignal) {
             logLabelWarnValue(label, value);
