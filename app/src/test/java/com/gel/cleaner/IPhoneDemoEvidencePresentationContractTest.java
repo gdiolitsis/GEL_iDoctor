@@ -40,7 +40,7 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         assertTrue(lab.contains("for (String block : blocks)"));
         assertTrue(lab.contains("parseAndCacheSignature(block)"));
         assertFalse(lab.contains("parseAndCacheSignature(panicLogText)"));
-        assertTrue(lab.contains("IPhonePanicHumanizer.event(sigCrashType, gr)"));
+        assertTrue(lab.contains("panicEventExact(block, sigCrashType, gr)"));
         assertTrue(lab.contains("AppleOfficialServiceGuidance.conditionalTopicsForClue(finding.code)"));
         assertTrue(lab.contains("logOfficialApplePanicGuidance(model, gr, appleTopicsByModel.get(model))"));
         assertTrue(lab.contains("logApplePanicEvidence(block, gr,"));
