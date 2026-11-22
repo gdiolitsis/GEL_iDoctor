@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
  * OEM matches do not establish that replacement parts are genuine.
  */
 final class Lab27CertificationGate {
-    static final int SCHEMA = 4; // Require new visual port-presence declarations; reject legacy cable/audio attestations.
+    static final int SCHEMA = 5; // New six-answer visual evidence; reject earlier USB-yes-only and eSIM attestation schemas.
     static final long MAX_AGE_MS = 7L * 24L * 60L * 60L * 1000L;
 
     static final List<String> REQUIRED = Collections.unmodifiableList(Arrays.asList(
@@ -96,10 +96,10 @@ final class Lab27CertificationGate {
     }
 
     /** Physical absence must be explicitly acknowledged, not presumed. */
-    static boolean physicalChecksComplete(boolean usbPortVisuallyPresent,
+    static boolean physicalChecksComplete(boolean usbVisuallyPresent, boolean usbVisuallyAbsent,
             boolean jackVisuallyPresent, boolean jackVisuallyAbsent,
             boolean simTrayVisuallyPresent, boolean simTrayVisuallyAbsent) {
-        return usbPortVisuallyPresent
+        return (usbVisuallyPresent != usbVisuallyAbsent)
                 && (jackVisuallyPresent != jackVisuallyAbsent)
                 && (simTrayVisuallyPresent != simTrayVisuallyAbsent);
     }
@@ -118,10 +118,10 @@ final class Lab27CertificationGate {
     }
 
     static boolean physicalMatchesOem(Presence expectedUsb, Presence expectedHeadset,
-            Presence expectedSim, boolean usbVisuallyPresent,
+            Presence expectedSim, boolean usbVisuallyPresent, boolean usbVisuallyAbsent,
             boolean jackVisuallyPresent, boolean jackVisuallyAbsent,
             boolean simTrayVisuallyPresent, boolean simTrayVisuallyAbsent) {
-        return expectedUsb == Presence.PRESENT && usbVisuallyPresent
+        return matchesOem(expectedUsb, usbVisuallyPresent, usbVisuallyAbsent)
                 && matchesOem(expectedHeadset, jackVisuallyPresent, jackVisuallyAbsent)
                 && matchesOem(expectedSim, simTrayVisuallyPresent, simTrayVisuallyAbsent);
     }
