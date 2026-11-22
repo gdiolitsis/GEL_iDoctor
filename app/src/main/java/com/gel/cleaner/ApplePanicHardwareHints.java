@@ -259,6 +259,7 @@ public final class ApplePanicHardwareHints {
         boolean thirteen = any(id, "iphone14,2", "iphone14,3", "iphone14,4", "iphone14,5");
         boolean fourteen = any(id, "iphone14,7", "iphone14,8");
         boolean fourteenPro = any(id, "iphone15,2", "iphone15,3");
+        boolean fifteen = "iphone15,4".equals(id); // exact-model iPhone 15, not Pro or Plus
         boolean fifteenPro = any(id, "iphone16,1", "iphone16,2");
         boolean sixteenPro = any(id, "iphone17,1", "iphone17,2");
 
@@ -281,6 +282,13 @@ public final class ApplePanicHardwareHints {
             else if (code == 0x80000L) { gr="εμπρόσθιοι αισθητήρες"; en="front sensors"; }
             else if (code == 0x100000L) { gr="καλωδιοταινία κουμπιού ενεργοποίησης"; en="power-button flex"; }
             else if (code == 0xC0000L) { gr="θύρα φόρτισης και εμπρόσθιοι αισθητήρες"; en="charging port and front sensors"; }
+        } else if (fifteen) {
+            // Community SMC sensor-table associations (iFixit, exact iPhone 15),
+            // not Apple diagnostics and not independent repair verification.
+            if (code == 0xA1L) { gr="επικοινωνία μπαταρίας"; en="battery communication"; }
+            else if (code == 0x80000L) { gr="συγκρότημα θύρας φόρτισης"; en="charge port assembly"; }
+            else if (code == 0x100000L) { gr="εμπρόσθιοι αισθητήρες"; en="front sensor assembly"; }
+            else if (code == 0x200000L) { gr="πηνίο ασύρματης φόρτισης"; en="wireless charging coil"; }
         } else if (fifteenPro) {
             if (code == 0x400000L) { gr="ασύρματη φόρτιση"; en="wireless charging"; }
             // A controlled experiment and published tables disagree for other 15 Pro
