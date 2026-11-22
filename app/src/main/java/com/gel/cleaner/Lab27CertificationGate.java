@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * OEM matches do not establish that replacement parts are genuine.
  */
 final class Lab27CertificationGate {
-    static final int SCHEMA = 2; // Invalidate old certificates lacking physical-absence evidence.
+    static final int SCHEMA = 3; // Invalidate old certificates lacking OEM-driven physical evidence.
     static final long MAX_AGE_MS = 7L * 24L * 60L * 60L * 1000L;
 
     static final List<String> REQUIRED = Collections.unmodifiableList(Arrays.asList(
@@ -90,6 +90,28 @@ final class Lab27CertificationGate {
         return chargingPortTested
                 && (wiredHeadsetTested != wiredHeadsetAbsent)
                 && (simTrayTested != simTrayAbsent);
+    }
+
+    /** Manufacturer-sourced physical structure, independent of Android SIM/eSIM flags. */
+    enum Presence { PRESENT, ABSENT, UNKNOWN }
+
+    /** A checked absence is valid ONLY if the exact OEM profile says absent. */
+    private static boolean matchesOem(Presence expected,
+            boolean confirmedPresent, boolean confirmedAbsent) {
+        if (expected == Presence.PRESENT)
+            return confirmedPresent && !confirmedAbsent;
+        if (expected == Presence.ABSENT)
+            return confirmedAbsent && !confirmedPresent;
+        return false;
+    }
+
+    static boolean physicalMatchesOem(Presence expectedUsb, Presence expectedHeadset,
+            Presence expectedSim, boolean usbConnected,
+            boolean headsetTested, boolean headsetAbsent,
+            boolean simTrayInspected, boolean simTrayAbsent) {
+        return expectedUsb == Presence.PRESENT && usbConnected
+                && matchesOem(expectedHeadset, headsetTested, headsetAbsent)
+                && matchesOem(expectedSim, simTrayInspected, simTrayAbsent);
     }
 
     static Set<String> applicable(boolean telephony, boolean bluetooth, boolean cameras,
