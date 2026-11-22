@@ -30621,6 +30621,36 @@ logLabelValue(
     // Buyer sees the Certification verdict, not raw Lab25 data.
     lab28ShowCertificationResult(gr);
 
+    // Read the recent Lab 27 grade, NEVER guess other sellers' GEL grades.
+    String lab28Grade = p.getString("lab27_cert_grade", "");
+    int lab28Findings = p.getInt("lab27_cert_functional_findings", 0);
+    boolean lab28CameraFailure = p.getBoolean("lab27_cert_camera_failure", false);
+    Lab28MarketResearch.SaleCondition buyerCondition =
+            Lab28MarketResearch.conditionForGrade(
+                    lab28Grade, lab28Findings, lab28CameraFailure);
+    appendHtml("<br>");
+    logInfo(gr ? "Έρευνα αγοράς — παρόμοια λειτουργική κατάσταση"
+               : "Market research — comparable functional condition");
+    if (!lab28Grade.isEmpty()) {
+        logLabelOkValue(gr ? "Βαθμός GEL Lab 27" : "GEL Lab 27 grade",
+                gr && "D".equals(lab28Grade) ? "Δ" : lab28Grade);
+    } else {
+        logLabelValue(gr ? "Βαθμός GEL Lab 27" : "GEL Lab 27 grade",
+                gr ? "Μη διαθέσιμος" : "Unavailable");
+    }
+    if (buyerCondition == Lab28MarketResearch.SaleCondition.CLAIMED_DEFECTIVE) {
+        logLabelWarnValue(gr ? "Αντίστοιχη κατηγορία αγοράς" : "Comparable market condition",
+                gr ? "Αγγελίες με δηλωμένη δυσλειτουργία (όχι εγγυημένα ίδιο εύρημα)"
+                   : "Seller-disclosed functional faults (not necessarily the same fault)");
+    } else {
+        logLabelValue(gr ? "Αντίστοιχη κατηγορία αγοράς" : "Comparable market condition",
+                gr ? "Αγγελίες συσκευών που δηλώνονται λειτουργικές"
+                   : "Listings described by sellers as working");
+    }
+    logLabelValue(gr ? "Πηγές τιμών" : "Price sources",
+            gr ? "Το eBay ανοίγει σε πραγματικό χρόνο στον browser. Δεν επινοούμε τιμές, δεν αποθηκεύουμε IMEI και δεν ταυτίζουμε περιγραφές πωλητών με βαθμούς GEL."
+               : "Real eBay search opens in your browser. No invented prices, IMEI storage or false GEL-grade matches.");
+
     // ============================================================
     // BATTERY
     // ============================================================
@@ -30916,8 +30946,8 @@ logLabelValue(
     appendHtml("<br>");
     logInfo(gr ? "Καταγράφηκαν τα προσβάσιμα χαρακτηριστικά του Android."
                : "Accessible Android device characteristics were recorded.");
-    logOk(gr ? "Το Lab 28 ολοκληρώθηκε — αξιολόγηση Lab 27 και οδηγίες ελέγχου IMEI."
-             : "Lab 28 completed — Lab 27 assessment and IMEI-check guidance.");
+    logOk(gr ? "Το Lab 28 ολοκληρώθηκε — αξιολόγηση Lab 27, οδηγίες IMEI και έρευνα αγγελιών eBay."
+             : "Lab 28 completed — Lab 27 grade, IMEI guidance and eBay listing research.");
     logLine();
     showLab29ExternalGuidanceDialog(gr);
 }
@@ -30971,6 +31001,12 @@ private void showLab29ExternalGuidanceDialog(boolean gr) {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
         openParams.topMargin = dp(12);
         root.addView(open, openParams);
+        Button market = lab29DialogButton(gr
+                ? "ΕΡΕΥΝΑ ΑΓΟΡΑΣ ΣΤΟ eBay" : "RESEARCH EBAY LISTINGS", false);
+        LinearLayout.LayoutParams marketParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        marketParams.topMargin = dp(12);
+        root.addView(market, marketParams);
         Button close = lab29DialogButton(gr ? "ΕΞΟΔΟΣ" : "EXIT", true);
         LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
@@ -30992,11 +31028,116 @@ private void showLab29ExternalGuidanceDialog(boolean gr) {
             }
             dialog.dismiss();
         });
+        market.setOnClickListener(v -> {
+            dialog.dismiss();
+            showLab28MarketResearchDialog(gr);
+        });
         close.setOnClickListener(v -> dialog.dismiss());
         dialog.show();
         if (dialog.getWindow() != null)
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
     });
+}
+
+/** Opens genuine live marketplace searches, prioritizing similar FUNCTIONAL condition. */
+private void showLab28MarketResearchDialog(boolean gr) {
+    if (!lab28HasFreshCertificationEvidence()) {
+        showLab28RequiresCertificationDialog(gr);
+        return;
+    }
+    SharedPreferences cert = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+    Lab29FactorySpecAudit.Report official = Lab29FactorySpecAudit.capture(this);
+    Lab28MarketResearch.Model model = Lab28MarketResearch.identify(
+            Build.MANUFACTURER, Build.MODEL,
+            official.supportedModel ? official.modelName : "");
+    String grade = cert.getString("lab27_cert_grade", "");
+    int findings = cert.getInt("lab27_cert_functional_findings", 0);
+    boolean cameraFault = cert.getBoolean("lab27_cert_camera_failure", false);
+    Lab28MarketResearch.SaleCondition condition =
+            Lab28MarketResearch.conditionForGrade(grade, findings, cameraFault);
+    boolean prioritizeFaultListings =
+            condition == Lab28MarketResearch.SaleCondition.CLAIMED_DEFECTIVE;
+
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(18), dp(16), dp(18), dp(16));
+    GradientDrawable background = new GradientDrawable();
+    background.setColor(0xFF101010);
+    background.setCornerRadius(dp(12));
+    background.setStroke(dp(3), 0xFFFFD700);
+    root.setBackground(background);
+
+    TextView title = new TextView(this);
+    title.setText(gr ? "LAB 28 — Έρευνα αγοράς" : "LAB 28 — Market research");
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(17f);
+    title.setTypeface(null, Typeface.BOLD);
+    title.setGravity(Gravity.CENTER);
+    root.addView(title);
+
+    String visibleGrade = gr && "D".equals(grade) ? "Δ" : grade;
+    TextView guide = new TextView(this);
+    guide.setText((gr ? "Συσκευή: " : "Device: ") + model.name + "\n"
+            + (gr ? "Βαθμός GEL Lab 27: " : "GEL Lab 27 grade: ") + visibleGrade + "\n\n"
+            + (prioritizeFaultListings
+                ? (gr ? "Προτεραιότητα: συσκευές που δηλώνονται με βλάβη."
+                      : "Priority: devices described as faulty by their sellers.")
+                : (gr ? "Προτεραιότητα: συσκευές που δηλώνονται λειτουργικές."
+                      : "Priority: devices described as working by their sellers."))
+            + (gr
+                ? "\n\nΣυγκρίνουμε παρόμοια λειτουργική κατάσταση, όχι απαραίτητα ίδια RAM, αποθήκευση ή κωδικό έκδοσης. Οι διαφορές αυτές επηρεάζουν την τιμή."
+                : "\n\nCompare similar functional condition, not necessarily identical RAM, storage or regional SKU. Those differences can affect the asking price.")
+            + (gr
+                ? "\n\nΟι τιμές προέρχονται από πραγματικές αγγελίες eBay που ανοίγουν στον browser. Δηλώσεις πωλητών δεν αποτελούν GEL Certification."
+                : "\n\nPrices come from real eBay listings opened in the browser. Seller claims are not GEL Certification."));
+    guide.setTextColor(0xFF39FF14);
+    guide.setTextSize(14f);
+    guide.setPadding(0, dp(12), 0, dp(12));
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(guide);
+    root.addView(scroll, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            Math.min(dp(240), getResources().getDisplayMetrics().heightPixels / 3)));
+
+    Button primary = lab29DialogButton(prioritizeFaultListings
+            ? (gr ? "ΑΓΓΕΛΙΕΣ ΜΕ ΒΛΑΒΗ" : "FAULTY DEVICE LISTINGS")
+            : (gr ? "ΑΓΓΕΛΙΕΣ ΛΕΙΤΟΥΡΓΙΚΩΝ" : "WORKING DEVICE LISTINGS"), false);
+    Button secondary = lab29DialogButton(prioritizeFaultListings
+            ? (gr ? "ΑΓΓΕΛΙΕΣ ΛΕΙΤΟΥΡΓΙΚΩΝ" : "WORKING DEVICE LISTINGS")
+            : (gr ? "ΑΓΓΕΛΙΕΣ ΜΕ ΒΛΑΒΗ" : "FAULTY DEVICE LISTINGS"), false);
+    Button exit = lab29DialogButton(gr ? "ΕΞΟΔΟΣ" : "EXIT", true);
+    for (Button button : new Button[]{primary, secondary, exit}) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+        lp.topMargin = dp(9);
+        root.addView(button, lp);
+    }
+    AlertDialog popup = new AlertDialog.Builder(
+            this, android.R.style.Theme_Material_Dialog_NoActionBar)
+            .setView(root).create();
+    primary.setOnClickListener(v -> lab28OpenEbayMarketSearch(
+            model, prioritizeFaultListings, gr));
+    secondary.setOnClickListener(v -> lab28OpenEbayMarketSearch(
+            model, !prioritizeFaultListings, gr));
+    exit.setOnClickListener(v -> popup.dismiss());
+    if (isFinishing() || isDestroyed()) return;
+    popup.show();
+    if (popup.getWindow() != null)
+        popup.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+}
+
+private void lab28OpenEbayMarketSearch(Lab28MarketResearch.Model model,
+                                      boolean faulty, boolean gr) {
+    try {
+        // Only the non-unique marketed model family and broad condition are sent.
+        // Never include IMEI, serial, fingerprint, GEL scores or private test data.
+        startActivity(new Intent(Intent.ACTION_VIEW,
+                Uri.parse(Lab28MarketResearch.browseSearchUrl(model, faulty))));
+    } catch (Throwable error) {
+        Toast.makeText(this,
+                gr ? "Δεν είναι διαθέσιμος browser" : "No browser available",
+                Toast.LENGTH_SHORT).show();
+    }
 }
 
 // Only an external provider displays the result; GEL records no IMEI answers.
