@@ -117,6 +117,21 @@ A separate manufacturer evidence layer now stores **101 explicitly conditional t
 
 Full model/result matrix and evidence conditions: `docs/qa/APPLE_IPHONE_CONDITIONAL_DIAGNOSTIC_SERVICE_RULES_2026-11-22.md`. This is an important manufacturer-specific evidence advance: the *same failed test* can imply different service paths by model. It never means that a panic log diagnosed the part.
 
+## Official 315-article procedure metadata, now included in the Lab 4 APK assets
+
+**Verified on 2026-11-22:** A separate public-Apple source audit fetched **315/315 distinct service/preparation article HTML pages** (mapped to **407/407 chapter rows**) without retrieval errors. This is *metadata extraction*, not full technician review of their illustrated instructions.
+
+- `tools/iphone/extract_apple_procedure_requirements.py` audits exact first-party service pages and extracts **source-named prerequisite parts, source-named tools and textual references to Repair Assistant**. It never copies the repair article body, makes hardware diagnoses, or asserts that a missing extracted list means no prerequisite exists.
+- `docs/qa/APPLE_PROCEDURE_REQUIREMENTS_AUDIT_2026-11-22.tsv` and associated Markdown report retain explicit provenance `AUTOMATED_LABELS_ONLY_NOT_FULL_SERVICE_REVIEW`: **303** articles with named tool lists, **99** with named prior-removal part lists.
+- `app/src/main/assets/iphone_apple_procedure_requirements_v1.tsv` embeds the **exact 315 audited source records** for offline reference.
+- `AppleIPhoneProcedureRequirements.java` strictly validates every record against all original 407 direct-chapter references and their model manual IDs. No adjacent model inherits a different URL. The data is still **not** a 315-item expert-reviewed repair plan.
+- The existing optional `APPLE — Πηγές, εργαλεία και ελεγμένα στάδια` navigator within iPhone Lab 4 now browses **all 407 source-linked procedures**, displaying *verified original article URL and source-extracted labels* in Greek/English. The ten independently reviewed procedure chapters retain their **62 original curated bilingual stage summaries**, visibly distinguished as reviewed; other chapters are clearly marked **source/tools only**.
+- Keyword classification found **47** manufacturer article mentions in the "required" class, **89** in "recommended" and **179** without a detected mention. The unattended keyword algorithm can misread context; the UI always labels these as **automatic wording requiring confirmation in the full Apple source**. Individually reviewed technical notes for iPhone14Pro Battery, iPhone15 Battery, iPhone15ProMax Back Glass and TrueDepth preserve their personally source-reviewed separate distinction between **recommended** and **required**.
+- Source-validated anchor examples: iPhone 14 Pro Battery requires prior removal of Display, Bottom speaker, Taptic Engine; iPhone 15 Battery requires Back glass with Camera optional; iPhone 15 Pro Max TrueDepth requires Display and Top speaker. Only Apple Diagnostics results actually performed may justify any conditional repair path, never a panic log.
+- A separate `tools/iphone/verify_apple_repair_source_coverage.py` verifies the **447 article structure audit**, source-extracted procedure metadata, 120 human-curated facts, 62 staged summaries and exact model chapter relationships without external network calls.
+
+**Remaining editorial limitation:** All 447 source article *structures* and all 315 procedure article *tool/prerequisite metadata* were checked. Complete expert reading and bilingual reconstruction of **all physical removal/reassembly instructions** has NOT been done; it would require individual source review and appropriate safety checks. Original Apple full illustrated articles are available from the directly linked Lab 4 sources. Real Android device and HTML/PDF exports have not yet been validated.
+
 ## Validation boundaries
 
 The JVM/Android CI verifies Java compilation and unit constraints, including 120 fact records, 520 matching chapters and non-leakage between topics on shared Apple pages. It is **not** an on-device UI or HTML/PDF export test; those are still required before merging the draft PR.
