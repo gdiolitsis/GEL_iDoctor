@@ -1479,6 +1479,37 @@ logLabelWarnValue(
 }
 }
 
+/**
+ * Visual and evidence-level boundary for one actual imported panic entry.
+ * Gold denotes section identity only, never a fault severity or repair verdict.
+ */
+private void logPanicIncidentHeader(int number, String eventType, boolean gr) {
+    String heading = (gr ? "ΣΥΜΒΑΝ " : "INCIDENT ") + number + " — " + safe(eventType);
+    appendHtml("<br>");
+    logLine();
+    appendHtml("<font color='#FFD700'><b>" + escape(heading) + "</b></font>");
+    if (!demoMode) GELServiceLog.logInfo(heading);
+}
+
+private String panicEventExact(String block, String type, boolean gr) {
+    if ("Thermal Shutdown / Throttle".equals(type) && block != null
+            && block.toLowerCase(Locale.US).contains("thermal shutdown")) {
+        return gr ? "Θερμική διακοπή λειτουργίας (Thermal Shutdown)"
+                  : "Thermal shutdown";
+    }
+    return IPhonePanicHumanizer.event(type, gr);
+}
+
+private String panicEventMeaningExact(String block, String type, boolean gr) {
+    if ("Thermal Shutdown / Throttle".equals(type) && block != null
+            && block.toLowerCase(Locale.US).contains("thermal shutdown")) {
+        return gr
+                ? "Το panic log καταγράφει θερμική διακοπή λειτουργίας (Thermal Shutdown). Δεν μετρήθηκε θερμοκρασία ούτε επιβεβαιώθηκε αιτία ή ελαττωματικό εξάρτημα."
+                : "The panic log records a thermal shutdown. No device temperature, root cause or defective part has been verified.";
+    }
+    return IPhonePanicHumanizer.meaning(type, gr);
+}
+
 // ============================================================
 // LAB 1 — PANIC LOG ANALYZER (Initial Screening)
 // ============================================================
@@ -1486,85 +1517,63 @@ private void runPanicLogAnalyzer() {
     if (!guardPanicLog()) return;
 
     boolean gr = AppLang.isGreek(this);
-
     appendHtml("<br>");
     logLine();
-    logInfo(gr 
-            ? "LAB 1 — Ανάλυση Panic Logs"
-            : "LAB 1 — Panic Log Analyzer");
+    logInfo(gr ? "LAB 1 — Ανάλυση Panic Logs" : "LAB 1 — Panic Log Analyzer");
     logLine();
+    logInfo(gr ? "Αναγνώριση υπογραφής panic log." : "Panic signature recognition.");
 
-    logInfo(gr ? "Αναγνώριση υπογραφής panic log."
-               : "Panic signature recognition.");
+    // Never turn independent files into a single primary/secondary GEL diagnosis.
+    String[] separatePanicBlocks = panicLogText.split("(?m)^===== ZIP FILE:");
+    int importedEvents = countSupportedPanicBlocks(separatePanicBlocks);
+    if (importedEvents > 1)
+        logInfo(gr ? "Εισήχθησαν " + importedEvents + " διαφορετικά συμβάντα."
+                   : importedEvents + " distinct incidents were imported.");
 
-    int importedEvents = countSupportedPanicBlocks(panicLogText.split("(?m)^===== ZIP FILE:"));
-    if (importedEvents > 1) {
-        logInfo(gr
-                ? "Εισήχθησαν " + importedEvents + " διαφορετικά συμβάντα."
-                : importedEvents + " distinct incidents were imported.");
+    int incidentNumber = 0;
+    for (String block : separatePanicBlocks) {
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
+        incidentNumber++;
+        resetSignatureCache();
+        parseAndCacheSignature(block);
+        logPanicIncidentHeader(incidentNumber, panicEventExact(block, sigCrashType, gr), gr);
+        IPSPanicParser.Result r = IPSPanicParser.analyze(this, block);
+        if (r == null) {
+            logLabelValue(gr ? "Ανάλυση κανόνων GEL:" : "GEL rule analysis:",
+                    gr ? "Δεν εντοπίστηκε γνωστή υπογραφή σε αυτό το συμβάν."
+                       : "No known GEL pattern matched this incident.");
+            continue;
+        }
+
+        logLabelOkValue(gr ? "Ανάλυση κανόνων:" : "GEL rule analysis:",
+                gr ? "Ολοκληρώθηκε η αντιστοίχιση μοτίβου GEL."
+                   : "GEL pattern matching completed.");
+        // A GEL ID is a local pattern identifier, not an official Apple error code.
+        logLabelInfoValue(gr ? "Αναγνωριστικό κανόνα GEL (όχι Apple):"
+                             : "GEL rule identifier (not Apple):", safe(r.patternId));
+        if (r.secondary != null) {
+            for (com.gel.cleaner.IPSPanicParser.Result other : r.secondary) {
+                if (other != null && other.patternId != null)
+                    logLabelInfoValue(gr ? "Επιπλέον κανόνας GEL στο ίδιο συμβάν:"
+                                         : "Another GEL rule in this incident:", safe(other.patternId));
+            }
+        }
+        logLabelValue(gr ? "Πιθανό Domain:" : "Domain (hint):",
+                IPhonePanicHumanizer.domain(r.domain, gr));
+        logLabelValue(gr ? "Υπόθεση κανόνα:" : "Rule-based cause hypothesis:",
+                IPhonePanicHumanizer.possibleCause(r.cause, gr));
+        logLabelWarnValue(gr ? "Επόμενο τεχνικό βήμα:" : "Next technician step:",
+                ApplePanicEvidencePolicy.recommendation(gr));
     }
-    IPSPanicParser.Result r = IPSPanicParser.analyze(this, panicLogText);
 
-    if (r == null) {
-
-        logWarn(gr
-        ? "Δεν εντοπίστηκε γνωστή υπογραφή panic."
-        : "No known panic signature matched.");
-
-logLabelValue(
-        gr ? "Αρχείο που αναλύθηκε:" : "File analyzed:",
-        safe(panicLogName)
-);
-
-        appendHtml("<br>");
-        logOk(gr ? "Το Lab 1 ολοκληρώθηκε." : "Lab 1 finished.");
-        logLine();
-        return;
+    if (incidentNumber == 0) {
+        logWarn(gr ? "Δεν εντοπίστηκαν αναγνωρίσιμα panic logs."
+                   : "No eligible panic records were found.");
+    } else {
+        logLabelOkValue(gr ? "Επόμενο βήμα:" : "Next step:",
+                gr ? "Κάθε υπογραφή θα ερμηνευθεί ξεχωριστά στο LAB 2."
+                   : "Each incident signature will be interpreted separately in LAB 2.");
     }
-
-    logLabelOkValue(
-            gr ? "Ανάλυση κανόνων:" : "GEL rule analysis:",
-            gr ? "Ολοκληρώθηκε η αντιστοίχιση μοτίβου GEL."
-               : "GEL pattern matching completed.");
-    logLabelValue(
-            gr ? "Αναγνωριστικό κανόνα GEL:" : "GEL rule identifier:",
-            safe(r.patternId)
-);
-if (r.secondary != null) {
-    for (com.gel.cleaner.IPSPanicParser.Result other : r.secondary) {
-        if (other != null && other.patternId != null)
-            logLabelValue(gr ? "Πρόσθετος κανόνας GEL:" : "Additional GEL rule:",
-                    safe(other.patternId));
-    }
-}
-
-logLabelValue(
-        gr ? "Πιθανό Domain:" : "Domain (hint):",
-        IPhonePanicHumanizer.domain(r.domain, gr)
-);
-
-logLabelValue(
-        gr ? "Υπόθεση κανόνα:" : "Rule-based cause hypothesis:",
-        IPhonePanicHumanizer.possibleCause(r.cause, gr)
-);
-
-// Parser rule weight does not represent measured device-fault severity.
-
-// Pattern confidence is not calibrated to a physical failure probability.
-
-
-logLabelValue(
-        gr ? "Επόμενο τεχνικό βήμα:" : "Next technician step:",
-        ApplePanicEvidencePolicy.recommendation(gr)
-);
-
-logLabelOkValue(
-        gr ? "Επόμενο βήμα:" : "Next step:",
-        gr
-                ? "Η υπογραφή θα ερμηνευθεί αναλυτικά στο LAB 2."
-                : "The extracted signature will be interpreted in detail in LAB 2."
-);
-
     appendHtml("<br>");
     logOk(gr ? "Το Lab 1 ολοκληρώθηκε." : "Lab 1 finished.");
     logLine();
@@ -1594,13 +1603,15 @@ private void runPanicSignatureParser() {
         for (String block : separatePanicBlocks) {
             if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
             incidentNumber++;
+            resetSignatureCache();
             parseAndCacheSignature(block);
+            logPanicIncidentHeader(incidentNumber, panicEventExact(block, sigCrashType, gr), gr);
             logLabelWarnValue(
                     gr ? "Συμβάν " + incidentNumber + " — τύπος:" : "Incident " + incidentNumber + " — type:",
-                    IPhonePanicHumanizer.event(sigCrashType, gr));
+                    panicEventExact(block, sigCrashType, gr));
             logLabelValue(
                     gr ? "Συμβάν " + incidentNumber + " — με απλά λόγια:" : "Incident " + incidentNumber + " — in plain language:",
-                    IPhonePanicHumanizer.meaning(sigCrashType, gr));
+                    panicEventMeaningExact(block, sigCrashType, gr));
 
         }
         appendHtml("<br>");
@@ -1609,6 +1620,7 @@ private void runPanicSignatureParser() {
         return;
     }
     parseAndCacheSignature(panicLogText);
+    logPanicIncidentHeader(1, panicEventExact(panicLogText, sigCrashType, gr), gr);
 
     logLabelOkValue(
         gr ? "Αρχείο:" : "File:",
@@ -1617,7 +1629,7 @@ private void runPanicSignatureParser() {
 
 // One observed event type from this file.
 logLabelWarnValue(gr ? "Τύπος στο αρχείο:" : "Imported crash type:",
-        IPhonePanicHumanizer.event(sigCrashType, gr));
+        panicEventExact(panicLogText, sigCrashType, gr));
 
 // Subsystem hint
 logLabelWarnValue(
@@ -1747,8 +1759,9 @@ private void runImpactLab() {
         resetSignatureCache();
         parseAndCacheSignature(block);
         String heading = gr ? "Συμβάν " + incident : "Incident " + incident;
-        logLabelValue(heading + (gr ? " — τύπος:" : " — type:"),
-                IPhonePanicHumanizer.event(sigCrashType, gr));
+        logPanicIncidentHeader(incident, panicEventExact(block, sigCrashType, gr), gr);
+        logLabelWarnValue(heading + (gr ? " — τύπος:" : " — type:"),
+                panicEventExact(block, sigCrashType, gr));
         // Each attempt must match this incident's exact hardware identifier
         // and normalized clue, retaining failures and original source URLs.
         logApplePanicEvidence(block, gr, heading, new java.util.LinkedHashSet<>());
@@ -2131,7 +2144,7 @@ private void runFinalServiceRecommendationLab() {
     appendHtml("<br>");
     logInfo(gr ? "Συνολικό συμπέρασμα — με απλά λόγια"
                : "Overall conclusion — in plain language");
-    logLabelValue(gr ? "Τι βρήκαμε:" : "What we found:", human.whatWeFound);
+    logLabelWarnValue(gr ? "Τι βρήκαμε:" : "What we found:", human.whatWeFound);
     if (human.repeatedClueNeedsReview) {
         logLabelWarnValue(gr ? "Τι σημαίνει για εσένα:" : "What it means for you:",
                 human.whatItMeans);
@@ -2141,8 +2154,23 @@ private void runFinalServiceRecommendationLab() {
     }
     logLabelValue(gr ? "Χρειάζεται επισκευή;" : "Is a repair needed?",
             human.repairAdvice);
-    logLabelValue(gr ? "Πότε χρειάζεται τεχνικός:" : "When to seek service:",
+    logLabelWarnValue(gr ? "Πότε χρειάζεται τεχνικός:" : "When to seek service:",
             human.whenToSeekHelp);
+
+    // Distinguish historical incidents visually before the combined service advice.
+    // No components, repair outcomes or Apple diagnostic codes are merged across logs.
+    int incidentNumber = 0;
+    for (String block : blocks) {
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
+        incidentNumber++;
+        resetSignatureCache();
+        parseAndCacheSignature(block);
+        logPanicIncidentHeader(incidentNumber, panicEventExact(block, sigCrashType, gr), gr);
+        logLabelWarnValue(gr ? "Καταγεγραμμένος τύπος:" : "Recorded incident:",
+                panicEventExact(block, sigCrashType, gr));
+        logLabelValue(gr ? "Ερμηνεία αρχείου:" : "Log interpretation:",
+                panicEventMeaningExact(block, sigCrashType, gr));
+    }
 
     // Historical repair experiences are contextual evidence, not a diagnosis
     // or proof that a particular part on this device needs replacement.
@@ -2165,17 +2193,17 @@ private void runFinalServiceRecommendationLab() {
     }
 
     // One actionable service path, grounded only in event types actually observed.
-    logLabelValue(gr ? "Προτεινόμενος έλεγχος:" : "Next technical check:",
+    logLabelWarnValue(gr ? "Προτεινόμενος έλεγχος:" : "Next technical check:",
             gr
                     ? "Συσχετίστε ημερομηνίες, έκδοση iOS, νέα panic logs και πραγματικά συμπτώματα."
                     : "Correlate incident dates, iOS version, further panic logs and observed symptoms.");
     if (watchdogObserved) {
-        logLabelValue(gr ? "Για τα Watchdog:" : "For watchdog records:",
+        logLabelWarnValue(gr ? "Για τα Watchdog:" : "For watchdog records:",
                 gr ? "Ελέγξτε αν υπήρξαν μη αποκρίσεις ή επανεκκινήσεις στις αντίστοιχες ημερομηνίες."
                    : "Check for unresponsive behavior or restarts on the recorded dates.");
     }
     if (thermalObserved) {
-        logLabelValue(gr ? "Για το Thermal:" : "For thermal records:",
+        logLabelWarnValue(gr ? "Για το Thermal:" : "For thermal records:",
                 gr ? "Ελέγξτε τις συνθήκες χρήσης και τυχόν πραγματικά θερμικά συμπτώματα· θερμοκρασία δεν μετρήθηκε."
                    : "Review usage conditions and real thermal symptoms; no temperature was measured.");
     }
