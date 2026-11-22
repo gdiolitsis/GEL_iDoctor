@@ -14,9 +14,11 @@ import java.util.regex.Pattern;
  * GEL Device Certification: completion is not equivalent to passing.
  * A current, warning-free recorded run is required for every applicable
  * basic lab. Human-verified physical connections are a separate gate.
+ * The certificate concerns tested functionality, NOT parts authenticity.
+ * OEM specification comparison is reference evidence, not a certification gate.
  */
 final class Lab27CertificationGate {
-    static final int SCHEMA = 1;
+    static final int SCHEMA = 2; // Invalidate old certificates lacking physical-absence evidence.
     static final long MAX_AGE_MS = 7L * 24L * 60L * 60L * 1000L;
 
     static final List<String> REQUIRED = Collections.unmodifiableList(Arrays.asList(
@@ -71,12 +73,20 @@ final class Lab27CertificationGate {
         return missing;
     }
 
+    /** Functionality gate: pass actual mandatory tests and human physical checks. */
     static boolean eligible(int successful, int applicable, boolean physicalConfirmed,
-                            boolean oemProfileKnown, int oemMatches, int oemDeviations,
-                            boolean criticalHistory, String grade) {
-        return applicable > 0 && successful == applicable && physicalConfirmed
-                && oemProfileKnown && oemMatches > 0 && oemDeviations == 0
-                && !criticalHistory && grade != null && !grade.isEmpty();
+                            boolean criticalHistory) {
+        return applicable > 0 && successful == applicable
+                && physicalConfirmed && !criticalHistory;
+    }
+
+    /** Physical absence must be explicitly acknowledged, not presumed. */
+    static boolean physicalChecksComplete(boolean chargingPortTested,
+            boolean wiredHeadsetTested, boolean wiredHeadsetAbsent,
+            boolean simTrayTested, boolean simTrayAbsent) {
+        return chargingPortTested
+                && (wiredHeadsetTested != wiredHeadsetAbsent)
+                && (simTrayTested != simTrayAbsent);
     }
 
     static Set<String> applicable(boolean telephony, boolean bluetooth, boolean cameras,
