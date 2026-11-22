@@ -235,9 +235,9 @@ public final class IPhonePanicRepairEvidenceReview {
         Status status;
         if (successIncidents == 0 && failureIncidents == 0)
             status = Status.UNRESOLVED_OR_PARTIAL_ONLY;
-        else if (successIncidents == 0 && !recurring && allOnlyReportedFailures(incidents))
+        else if (successIncidents == 0 && allOnlyReportedFailures(incidents))
             status = Status.ONLY_REPORTED_FAILURES;
-        else if (mixed || recurring || (successIncidents > 0 && failureIncidents > 0))
+        else if (successIncidents == 0 || mixed || recurring || failureIncidents > 0)
             status = Status.MIXED_OR_RECURRING_OUTCOMES;
         else if (successIncidents == 1)
             status = Status.ONE_SELF_REPORTED_SUCCESS;
