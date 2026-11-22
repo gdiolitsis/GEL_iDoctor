@@ -32505,8 +32505,8 @@ if (lab27RemainingBasic.isEmpty()) {
 }
 logLabelValue(
         gr ? "Βάση βαθμολογίας" : "Rating basis",
-        gr ? "Επιτυχής εκτέλεση των απαιτούμενων εργαστηρίων, σύγκριση με τις εργοστασιακές προδιαγραφές και επιβεβαίωση των φυσικών θυρών/υποδοχών από τον χρήστη."
-           : "Successful required labs, manufacturer specification checks and user-confirmed physical ports/connectors."
+        gr ? "Ο αριθμητικός δείκτης χρησιμοποιεί τρέχουσες μετρήσεις θερμοκρασίας, μπαταρίας, ελεύθερου χώρου, RAM και χρόνου λειτουργίας. Η πιστοποίηση προϋποθέτει επιτυχή εργαστήρια, συμφωνία προδιαγραφών και επιβεβαίωση φυσικών υποδοχών."
+           : "The numerical index uses current thermal, battery, available-storage, RAM and uptime readings. Certification separately requires passing labs, OEM specification matches and user-confirmed physical connectors."
 );
 
 lab27LogScoreValue(gr ? "Απόδοση" : "Performance", performanceScore, "⚪", gr);
