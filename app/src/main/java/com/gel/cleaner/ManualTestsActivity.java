@@ -30403,6 +30403,10 @@ private boolean lab28HasFreshCertificationEvidence() {
                     p.getBoolean("lab27_cert_headphones_absent", false),
                     p.getBoolean("lab27_cert_sim", false),
                     p.getBoolean("lab27_cert_sim_absent", false))
+            || !Lab27CertificationGate.fmAppQuestionComplete(
+                    currentPorts.fm,
+                    p.getBoolean("lab27_cert_fm_app_present", false),
+                    p.getBoolean("lab27_cert_fm_app_absent", false))
             || !Lab27CertificationGate.physicalMatchesOem(
                     currentPorts.usb, currentPorts.headset, currentPorts.simTray,
                     p.getBoolean("lab27_cert_usb", false),
@@ -31410,6 +31414,7 @@ private boolean lab27HasCameraFunctionalFailure(SharedPreferences p) {
 private boolean lab27UserPreflightAuthorized = false;
 private boolean lab27UserUsb, lab27UserUsbAbsent, lab27UserJack, lab27UserJackAbsent;
 private boolean lab27UserSim, lab27UserSimAbsent;
+private boolean lab27UserFmAppPresent, lab27UserFmAppAbsent;
 private String lab27UserOemSource = "";
 
 private void lab27ShowPrerequisiteDialog(boolean gr, String explanation) {
@@ -31486,9 +31491,9 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
         // Only explicit manufacturer-sourced physical presence/absence qualifies.
         // An omitted or unknown OEM attribute creates NO question.
         final Lab27CertificationGate.Presence[] oemPorts = {
-                profile.usb, profile.headset, profile.simTray
+                profile.usb, profile.headset, profile.simTray, profile.fm
         };
-        final String[] oemKeys = {"USB connector", "3.5 mm jack", "SIM tray"};
+        final String[] oemKeys = {"USB connector", "3.5 mm jack", "SIM tray", "FM radio"};
         final String[] portNames = new String[oemPorts.length];
         for (Lab29FactorySpecAudit.Row row : factory.rows) {
             for (int i = 0; i < oemKeys.length; i++) {
@@ -31502,6 +31507,9 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
                         ? "Φυσική " + row.greek.substring(0, 1).toLowerCase(java.util.Locale.ROOT)
                                 + row.greek.substring(1)
                         : "Physical " + row.english.toLowerCase(java.util.Locale.ROOT);
+                if (i == 3) portNames[i] = gr
+                        ? "Εφαρμογή ραδιοφώνου " + row.greek
+                        : row.english + " app";
             }
         }
 
@@ -31544,8 +31552,8 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
 
         TextView note = new TextView(this);
         note.setText(gr
-                ? "Οι παρακάτω ερωτήσεις προκύπτουν αποκλειστικά από τεκμηριωμένες εργοστασιακές προδιαγραφές. Επίλεξε μόνο αν υπάρχει ή δεν υπάρχει η φυσική υποδοχή. Η φόρτιση εξετάζεται στο Lab 15 και η SIM/eSIM στο Lab 12. Δεν απαιτούνται ενσύρματα ακουστικά."
-                : "The questions below come exclusively from documented OEM specifications. Report only physical presence or absence. Charging is checked in Lab 15 and SIM/eSIM in Lab 12. Wired headphones are not required.");
+                ? "Οι ερωτήσεις προκύπτουν μόνο από τεκμηριωμένες εργοστασιακές προδιαγραφές. Δήλωσε την παρουσία φυσικών υποδοχών και, αν ο OEM αναφέρει FM, την παρουσία εφαρμογής ραδιοφώνου FM. Η εφαρμογή δεν αποδεικνύει λήψη ραδιοφωνικού σταθμού. Η φόρτιση εξετάζεται στο Lab 15 και η SIM/eSIM στο Lab 12."
+                : "Questions are shown only for documented OEM capabilities. Report physical ports and, if the OEM lists FM radio, whether an FM radio app is installed. An app does not prove FM reception. Charging is checked in Lab 15 and SIM/eSIM in Lab 12.");
         note.setTextColor(Color.WHITE);
         note.setTextSize(14f);
         content.addView(note);
@@ -31577,7 +31585,9 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
                             profile.usb, profile.headset, profile.simTray,
                             lab27Checked(checks[0]), lab27Checked(checks[1]),
                             lab27Checked(checks[2]), lab27Checked(checks[3]),
-                            lab27Checked(checks[4]), lab27Checked(checks[5]));
+                            lab27Checked(checks[4]), lab27Checked(checks[5]))
+                            && Lab27CertificationGate.fmAppQuestionComplete(
+                            profile.fm, lab27Checked(checks[6]), lab27Checked(checks[7]));
                     if (!complete) {
                         lab27ShowPrerequisiteDialog(gr, gr
                                 ? "Χρειάζεται μία απάντηση για κάθε υποδοχή που περιγράφεται ρητά στις εργοστασιακές προδιαγραφές."
@@ -31593,6 +31603,8 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
                     lab27UserJackAbsent = lab27Checked(checks[3]);
                     lab27UserSim = lab27Checked(checks[4]);
                     lab27UserSimAbsent = lab27Checked(checks[5]);
+                    lab27UserFmAppPresent = lab27Checked(checks[6]);
+                    lab27UserFmAppAbsent = lab27Checked(checks[7]);
                     lab27UserOemSource = profile.sourceUrl;
                     lab27UserPreflightAuthorized = true;
                     lab30CombineFindings();
@@ -31608,7 +31620,9 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
                             profile.usb, profile.headset, profile.simTray,
                             lab27Checked(checks[0]), lab27Checked(checks[1]),
                             lab27Checked(checks[2]), lab27Checked(checks[3]),
-                            lab27Checked(checks[4]), lab27Checked(checks[5])));
+                            lab27Checked(checks[4]), lab27Checked(checks[5]))
+                            && Lab27CertificationGate.fmAppQuestionComplete(
+                            profile.fm, lab27Checked(checks[6]), lab27Checked(checks[7])));
             for (int i = 0; i < checks.length; i++) {
                 if (checks[i] == null) continue;
                 final int index = i;
@@ -31684,7 +31698,9 @@ if (!lab27OemReady(p, currentFactory)
                 currentPorts.usb, currentPorts.headset, currentPorts.simTray,
                 lab27UserUsb, lab27UserUsbAbsent,
                 lab27UserJack, lab27UserJackAbsent,
-                lab27UserSim, lab27UserSimAbsent)) {
+                lab27UserSim, lab27UserSimAbsent)
+        || !Lab27CertificationGate.fmAppQuestionComplete(
+                currentPorts.fm, lab27UserFmAppPresent, lab27UserFmAppAbsent)) {
     lab27ShowPrerequisiteDialog(grGate, grGate
             ? "Οι οπτικές δηλώσεις φυσικών υποδοχών δεν είναι πλήρεις ή άλλαξε το εργοστασιακό προφίλ."
             : "Visual declarations are incomplete or the OEM profile has changed.");
@@ -32885,6 +32901,8 @@ if (!eligibleCert) {
             .putBoolean("lab27_cert_headphones_absent", lab27UserJackAbsent)
             .putBoolean("lab27_cert_sim", lab27UserSim)
             .putBoolean("lab27_cert_sim_absent", lab27UserSimAbsent)
+            .putBoolean("lab27_cert_fm_app_present", lab27UserFmAppPresent)
+            .putBoolean("lab27_cert_fm_app_absent", lab27UserFmAppAbsent)
             .remove("lab27_cert_esim") // eSIM evidence belongs to Lab 12, not visual port checks.
             .putString("lab27_cert_oem_source", certPorts.sourceUrl)
             .putBoolean("lab27_cert_physical_confirmed", true)
