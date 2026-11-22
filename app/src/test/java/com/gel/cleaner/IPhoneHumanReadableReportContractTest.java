@@ -36,7 +36,7 @@ public final class IPhoneHumanReadableReportContractTest {
 
     @Test public void incidentLabelsAreProducedFromObservedTypesNotInventedHealth() throws Exception {
         String s = source();
-        assertTrue(s.contains("IPhonePanicHumanizer.event(sigCrashType, gr)"));
+        assertTrue(s.contains("panicEventExact(block, sigCrashType, gr)"));
         assertTrue(s.contains("IPhonePanicHumanizer.domain(sigDomain, gr)"));
         assertTrue(s.contains("Συμβάν \" + incidentNumber + \" — με απλά λόγια:"));
         assertTrue(s.contains("ApplePanicEvidencePolicy.hasPanicEvidence(block)"));
