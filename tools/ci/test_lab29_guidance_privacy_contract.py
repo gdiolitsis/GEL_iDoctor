@@ -60,7 +60,8 @@ assert src.count("private void lab29DeviceAuthenticity()") == 1
 assert src.count("private void lab30CombineFindings()") == 1
 assert src.count("private void lab31FinalSummary()") == 1
 assert "27. Καταγραφές λειτουργίας και μετρήσεις" not in src
-assert "lab29DisplayLab25Findings(p, gr);" in lab30
+# Lab 27 deliberately avoids repeating Lab 25 history in its current-function report.
+assert "lab29DisplayLab25Findings(p, gr);" not in lab30
 assert "lab29SaveTechnicalAssessmentFromLab25(p);" in lab30
 # Lab 29 (previously Lab 31) is the technician-only WARNING / ERROR index.
 # Android model identity is now supplied by Lab 27; repeating that metadata
