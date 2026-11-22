@@ -30521,6 +30521,14 @@ private void lab28ShowCertificationResult(boolean gr) {
     logLabelOkValue(gr ? "Εκτέλεση τεχνικού ελέγχου" : "Technical check",
             gr ? "Ολοκληρώθηκε στην παρούσα εκκίνηση"
                : "Completed during this device boot");
+    if (p.getBoolean("lab27_cert_camera_failure", false)) {
+        logLabelWarnValue(gr ? "Λειτουργία κάμερας" : "Camera functionality",
+                gr ? "ΑΠΟΤΥΧΙΑ ΕΙΚΟΝΑΣ ΣΕ ΤΟΥΛΑΧΙΣΤΟΝ ΜΙΑ ΚΑΜΕΡΑ — βαθμός Δ."
+                   : "LIVE PREVIEW FAILURE IN AT LEAST ONE CAMERA — grade D.");
+        logLabelValue(gr ? "Ενδεικτική διαπραγμάτευση" : "Illustrative price negotiation",
+                gr ? "Μην πληρώνεις τιμή πλήρως λειτουργικής συσκευής. Το 50% της αντίστοιχης τιμής μπορεί να είναι αρχική προσφορά μετά από εκτίμηση επισκευής, όχι πιστοποιημένη αγοραία αξία."
+                   : "Do not pay the fully working-device price. An opening offer at 50% may be considered after assessing repair costs; it is not a certified market valuation.");
+    }
     if (Lab29TechnicalAssessment.STRONG_INSTABILITY.equals(level)) {
         logLabelWarnValue(gr ? "Τεχνικό συμπέρασμα" : "Technical conclusion",
                 gr ? "ΙΣΧΥΡΕΣ ΕΝΔΕΙΞΕΙΣ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΗΣ ΑΣΤΑΘΕΙΑΣ. "
@@ -32526,7 +32534,7 @@ if (snapshotGrade == null) {
     if (deviceHealthScore >= 85) {
         logLabelOkValue(
                 gr ? "Βαθμολογία συσκευής" : "Device grade",
-                snapshotGrade
+                displayedGrade
         );
         logLabelOkValue(
                 gr ? "Συνολικός δείκτης" : "Overall index",
@@ -32535,7 +32543,7 @@ if (snapshotGrade == null) {
     } else {
         logLabelInfoValue(
                 gr ? "Βαθμολογία συσκευής" : "Device grade",
-                snapshotGrade
+                displayedGrade
         );
         logLabelInfoValue(
                 gr ? "Συνολικός δείκτης" : "Overall index",
@@ -32545,7 +32553,7 @@ if (snapshotGrade == null) {
 }
 java.util.List<String> lab27CheckedBasic = lab27ApplicableBasicLabs();
 java.util.List<String> lab27RemainingBasic = lab27PendingBasicLabs(p, lab27CheckedBasic);
-if (lab27RemainingBasic.isEmpty()) {
+if (lab27RemainingBasic.isEmpty() && lab27EvidenceFindings.isEmpty()) {
     logLabelOkValue(
             gr ? "Κατάσταση συσκευής" : "Device functional status",
             gr ? "Καλή λειτουργία στους ελεγμένους τομείς: "
@@ -32557,13 +32565,28 @@ if (lab27RemainingBasic.isEmpty()) {
 } else {
     logLabelWarnValue(
             gr ? "Κατάσταση συσκευής" : "Device functional status",
-            gr ? "Εκκρεμούν απαραίτητα εργαστήρια: " + android.text.TextUtils.join(", ", lab27RemainingBasic)
-               : "Required labs still pending: " + android.text.TextUtils.join(", ", lab27RemainingBasic));
+            gr ? (lab27RemainingBasic.isEmpty()
+                    ? "Ολοκληρώθηκαν με ευρήματα: "
+                      + android.text.TextUtils.join(", ", lab27EvidenceFindings)
+                    : "Δεν ολοκληρώθηκαν: " + android.text.TextUtils.join(", ", lab27RemainingBasic))
+               : (lab27RemainingBasic.isEmpty()
+                    ? "Completed with findings: "
+                      + android.text.TextUtils.join(", ", lab27EvidenceFindings)
+                    : "Not completed: " + android.text.TextUtils.join(", ", lab27RemainingBasic)));
+}
+if (confirmedCameraFunctionFailure) {
+    logLabelErrorValue(gr ? "Σοβαρή δυσλειτουργία Lab 8" : "Serious Lab 8 functional failure",
+            gr ? "Τουλάχιστον μία κάμερα απέτυχε στον έλεγχο ζωντανής εικόνας σύμφωνα με τον χρήστη. Μέγιστος βαθμός Δ (49/100). Δεν ταυτοποιείται το αίτιο."
+               : "At least one camera failed the user-observed live preview check. Maximum grade D (49/100). The underlying cause is not identified.");
+}
+if (!lab27EvidenceFindings.isEmpty()) {
+    logLabelWarnValue(gr ? "Εργαστήρια με ευρήματα" : "Labs with findings",
+            android.text.TextUtils.join(", ", lab27EvidenceFindings));
 }
 logLabelValue(
         gr ? "Βάση βαθμολογίας" : "Rating basis",
-        gr ? "Ο αριθμητικός δείκτης χρησιμοποιεί τρέχουσες μετρήσεις θερμοκρασίας, μπαταρίας, ελεύθερου χώρου, RAM και χρόνου λειτουργίας. Η πιστοποίηση προϋποθέτει επιτυχή εργαστήρια, συμφωνία προδιαγραφών και επιβεβαίωση φυσικών υποδοχών."
-           : "The numerical index uses current thermal, battery, available-storage, RAM and uptime readings. Certification separately requires passing labs, OEM specification matches and user-confirmed physical connectors."
+        gr ? "Η βαθμολογία ξεκινά από τις μετρήσεις και υποβαθμίζεται από δυσλειτουργίες σε ολοκληρωμένα εργαστήρια. Η πιστοποίηση απαιτεί εκτελεσμένους ελέγχους, σύγκριση προδιαγραφών και επιβεβαίωση φυσικών υποδοχών."
+           : "The grade starts from measured values and is downgraded for functional failures in completed labs. Certification requires completed labs, OEM comparison and user-confirmed physical connectors."
 );
 
 lab27LogScoreValue(gr ? "Απόδοση" : "Performance", performanceScore, "⚪", gr);
@@ -32697,6 +32720,8 @@ if (!eligibleCert) {
             .putString("lab27_cert_model", Build.MODEL)
             .putString("lab27_cert_grade", snapshotGrade)
             .putInt("lab27_cert_score", deviceHealthScore)
+            .putBoolean("lab27_cert_camera_failure", confirmedCameraFunctionFailure)
+            .putInt("lab27_cert_functional_findings", lab27EvidenceFindings.size())
             .putInt("lab27_cert_oem_matches", certFactory.matches)
             .putBoolean("lab27_cert_usb", lab27UserUsb)
             .putBoolean("lab27_cert_headphones", lab27UserJack)
@@ -32707,15 +32732,25 @@ if (!eligibleCert) {
             .putString("lab27_cert_oem_source", certPorts.sourceUrl)
             .putBoolean("lab27_cert_physical_confirmed", true)
             .apply();
-    logLabelOkValue("GEL Device Certification",
-            (gr ? "Πιστοποιήθηκε η λειτουργία στους ελεγμένους τομείς: "
-                : "Tested functionality certified: ")
-            + snapshotGrade + " — " + applicableBasic.size()
-            + "/" + applicableBasic.size()
-            + (gr ? " εργαστήρια, " : " labs, ")
-            + certFactory.matches
-            + (gr ? " εργοστασιακές συμφωνίες, επιβεβαιωμένοι φυσικοί έλεγχοι."
-                  : " OEM specification matches, user-confirmed physical checks."));
+    if (confirmedCameraFunctionFailure || !lab27EvidenceFindings.isEmpty()) {
+        logLabelWarnValue("GEL Device Certification",
+                (gr ? "ΠΙΣΤΟΠΟΙΗΣΗ ΜΕ ΠΕΡΙΟΡΙΣΜΟΥΣ — βαθμός "
+                    : "CERTIFIED WITH FUNCTIONAL LIMITATIONS — grade ")
+                + displayedGrade + " — " + applicableBasic.size()
+                + "/" + applicableBasic.size()
+                + (gr ? " εκτελεσμένα εργαστήρια· τα προβλήματα καταγράφονται."
+                      : " completed labs; functional failures are disclosed."));
+    } else {
+        logLabelOkValue("GEL Device Certification",
+                (gr ? "Πιστοποιήθηκε η καλή λειτουργία στους ελεγμένους τομείς: "
+                    : "Tested functionality certified as working: ")
+                + displayedGrade + " — " + applicableBasic.size()
+                + "/" + applicableBasic.size()
+                + (gr ? " εργαστήρια, " : " labs, ")
+                + certFactory.matches
+                + (gr ? " εργοστασιακές συμφωνίες, επιβεβαιωμένοι φυσικοί έλεγχοι."
+                      : " OEM specification matches, user-confirmed physical checks."));
+    }
     logLabelValue(gr ? "Όριο πιστοποίησης" : "Certification scope",
             gr ? "Δεν πιστοποιείται η γνησιότητα ανταλλακτικών."
                : "Parts authenticity is not certified.");
