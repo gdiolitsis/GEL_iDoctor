@@ -31116,10 +31116,10 @@ private void showLab28MarketResearchDialog(boolean gr) {
             ViewGroup.LayoutParams.MATCH_PARENT,
             Math.min(dp(260), getResources().getDisplayMetrics().heightPixels * 2 / 5)));
 
-    Button europe = lab29DialogButton(gr ? "eBay ΕΥΡΩΠΗ — ΑΓΓΕΛΙΕΣ & ΦΩΤΟΓΡΑΦΙΕΣ"
-                                        : "EBAY EUROPE — LISTINGS & PHOTOS", false);
-    Button uk = lab29DialogButton(gr ? "eBay UK — ΑΓΓΕΛΙΕΣ & ΦΩΤΟΓΡΑΦΙΕΣ"
-                                    : "EBAY UK — LISTINGS & PHOTOS", false);
+    Button europe = lab29DialogButton(gr ? "eBay ΓΕΡΜΑΝΙΑ — ΦΩΤΟΓΡΑΦΙΕΣ"
+                                        : "EBAY GERMANY — PHOTOS", false);
+    Button uk = lab29DialogButton(gr ? "eBay UK — ΦΩΤΟΓΡΑΦΙΕΣ"
+                                    : "EBAY UK — PHOTOS", false);
     Button exit = lab29DialogButton(gr ? "ΕΞΟΔΟΣ" : "EXIT", true);
     for (Button button : new Button[]{europe, uk, exit}) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
