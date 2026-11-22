@@ -25859,7 +25859,7 @@ private void lab16ThermalSnapshot() {
 
 // ============================================================
 // LAB 17 — GEL Auto Battery Reliability Evaluation
-// INTELLIGENCE EDITION • STRICT FRESHNESS (<= 2 HOURS)
+// INTELLIGENCE EDITION • STRICT FRESHNESS (<= 12 HOURS)
 // ============================================================
 private void lab17RunAuto() {
 
@@ -25867,8 +25867,10 @@ private void lab17RunAuto() {
 
     final String PREF = "GEL_DIAG";
 
-    // STRICT WINDOW: 2 hours
-    final long WINDOW_MS = 2L * 60L * 60L * 1000L;
+    // LAB 17 prerequisites: accept Lab 14A, Lab 15 and Lab 16 from the last 12 hours.
+    final long WINDOW_MS = 12L * 60L * 60L * 1000L;
+    // Preserve the former 2-hour scope for optional 14B/high-variability clues.
+    final long OPTIONAL_EVIDENCE_WINDOW_MS = 2L * 60L * 60L * 1000L;
     final long now = System.currentTimeMillis();
 
     // ------------------------------------------------------------
@@ -26098,7 +26100,7 @@ final boolean fresh14 =
         has14 && ts14 <= now && (now - ts14) <= WINDOW_MS;
 
 final boolean fresh14b =
-        has14b && ts14b <= now && (now - ts14b) <= WINDOW_MS;
+        has14b && ts14b <= now && (now - ts14b) <= OPTIONAL_EVIDENCE_WINDOW_MS;
 
 final boolean fresh15 =
         has15 && ts15 <= now && (now - ts15) <= WINDOW_MS;
@@ -26117,7 +26119,7 @@ final boolean fresh16 =
             hvPending &&
             hvFirstTs > 0L &&
             hvLastTs > hvFirstTs &&
-            (hvLastTs - hvFirstTs) <= WINDOW_MS;
+            (hvLastTs - hvFirstTs) <= OPTIONAL_EVIDENCE_WINDOW_MS;
 
     // ------------------------------------------------------------
     // PRECHECK — SMART POPUP (STRICT)
@@ -26128,8 +26130,8 @@ final boolean fresh16 =
 
         msg.append(
                 gr
-                        ? "Κατάσταση (απαιτούνται αποτελέσματα τελευταίων 2 ωρών):<br><br>"
-                        : "Status (results required within last 2 hours):<br><br>"
+                        ? "Κατάσταση (απαιτούνται αποτελέσματα τελευταίων 12 ωρών):<br><br>"
+                        : "Status (results required within last 12 hours):<br><br>"
         );
 
         // --------------------------------------------------------
@@ -26242,10 +26244,10 @@ final boolean fresh16 =
             msg.append(
                     gr
                             ? "Για έγκυρο αποτέλεσμα, απαιτείται εκτέλεση των<br>"
-                              + "LAB 14A + LAB 15 + LAB 16 μαζί.<br><br>"
+                              + "LAB 14A + LAB 15 + LAB 16 μέσα στις τελευταίες 12 ώρες.<br><br>"
                               + "Αιτία: απουσία ή/και λήξη αποτελεσμάτων."
                             : "To generate a valid result, run<br>"
-                              + "LAB 14A + LAB 15 + LAB 16 together.<br><br>"
+                              + "LAB 14A + LAB 15 + LAB 16 within the last 12 hours.<br><br>"
                               + "Reason: missing and/or expired results."
             );
         }
