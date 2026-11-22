@@ -31496,9 +31496,12 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
                 // Names come from the OEM-specific comparison row, not a
                 // hard-coded, unconditional list of questions.
                 portNames[i] = gr ? row.greek : row.english;
-                if (i == 0) portNames[i] = gr ? "Θύρα " + row.expected : row.expected + " port";
-                if (i == 2) portNames[i] = gr ? "Φυσική " + row.greek.toLowerCase(java.util.Locale.ROOT)
-                                             : "Physical " + row.english.toLowerCase(java.util.Locale.ROOT);
+                if (i == 0 && "USB-C".equals(row.expected))
+                    portNames[i] = gr ? "Θύρα USB-C" : "USB-C port";
+                if (i == 2) portNames[i] = gr
+                        ? "Φυσική " + row.greek.substring(0, 1).toLowerCase(java.util.Locale.ROOT)
+                                + row.greek.substring(1)
+                        : "Physical " + row.english.toLowerCase(java.util.Locale.ROOT);
             }
         }
 
