@@ -23,23 +23,21 @@ public final class Lab27VisualPresenceContractTest {
         return text.substring(start, end);
     }
 
-    @Test public void popupProvidesExactlySixExclusivePresentAbsentChoices() throws Exception {
+    @Test public void popupIsGeneratedOnlyFromDocumentedOemPorts() throws Exception {
         String popup = section(activity(), "private void lab27PromptPhysicalConfirmation(",
                 "private void lab30CombineFindings()");
-        for (String choice : new String[] {
-                "Θύρα USB-C: υπάρχει.", "Θύρα USB-C: δεν υπάρχει.",
-                "Υποδοχή 3,5 mm: υπάρχει.", "Υποδοχή 3,5 mm: δεν υπάρχει.",
-                "Φυσική θήκη SIM: υπάρχει.", "Φυσική θήκη SIM: δεν υπάρχει.",
-                "USB-C port: present.", "USB-C port: absent.",
-                "3.5 mm jack: present.", "3.5 mm jack: absent.",
-                "Physical SIM tray: present.", "Physical SIM tray: absent."
-        }) assertTrue("Missing visual answer: " + choice, popup.contains(choice));
+        assertTrue(popup.contains("Lab29FactorySpecAudit.physicalProfile(factory)"));
+        assertTrue(popup.contains("final Lab27CertificationGate.Presence[] oemPorts"));
+        assertTrue(popup.contains("for (Lab29FactorySpecAudit.Row row : factory.rows)"));
+        assertTrue(popup.contains("portNames[i] = gr ? row.greek : row.english"));
+        assertTrue(popup.contains("if (!Lab27CertificationGate.shouldAsk(oemPorts[portIndex])) continue;"));
+        assertTrue(popup.contains("CheckBox[] checks = new CheckBox[oemPorts.length * 2]"));
+        assertTrue(popup.contains("check.setText(portNames[portIndex] + \": \""));
         assertTrue(popup.contains("checks[index ^ 1].setChecked(false)"));
-        assertTrue(popup.contains("Lab27CertificationGate.physicalChecksComplete("));
-        assertTrue(popup.contains("lab27UserUsbAbsent = checks[1].isChecked()"));
+        assertTrue(popup.contains("lab27Checked(checks[0])"));
+        assertTrue(popup.contains("lab27UserUsbAbsent = lab27Checked(checks[1])"));
         assertTrue(popup.contains("lab27UserPreflightAuthorized = true;"));
-        assertFalse(popup.contains("δοκίμασα επιτυχή φόρτιση με καλώδιο"));
-        assertFalse(popup.contains("δοκίμασα ήχο με ακουστικά"));
+        assertFalse(popup.contains("final String[] physical = gr ? new String[]"));
         assertFalse(popup.contains("esimQuestion"));
         assertFalse(popup.contains("lab27UserEsim"));
         assertTrue(popup.contains("Η φόρτιση εξετάζεται στο Lab 15"));
@@ -65,22 +63,17 @@ public final class Lab27VisualPresenceContractTest {
         assertTrue(report.contains("continue; // Do not show obsolete"));
     }
 
-    @Test public void oldCertificatesCannotBypassSixVisualAnswers() {
-        assertEquals(5, Lab27CertificationGate.SCHEMA);
+    @Test public void oldCertificatesCannotBypassOemSelectedVisualAnswers() {
+        assertEquals(6, Lab27CertificationGate.SCHEMA);
+        Lab27CertificationGate.Presence yes = Lab27CertificationGate.Presence.PRESENT;
+        Lab27CertificationGate.Presence missing = Lab27CertificationGate.Presence.UNKNOWN;
+        // This model's OEM does not describe any headphone jack.
         assertTrue(Lab27CertificationGate.physicalChecksComplete(
-                true, false, true, false, true, false));
-        assertTrue(Lab27CertificationGate.physicalChecksComplete(
-                false, true, false, true, false, true));
+                yes, missing, yes, true, false, false, false, true, false));
         assertTrue(Lab27CertificationGate.physicalMatchesOem(
-                Lab27CertificationGate.Presence.PRESENT,
-                Lab27CertificationGate.Presence.PRESENT,
-                Lab27CertificationGate.Presence.PRESENT,
-                true, false, true, false, true, false));
-        assertFalse(Lab27CertificationGate.physicalMatchesOem(
-                Lab27CertificationGate.Presence.PRESENT,
-                Lab27CertificationGate.Presence.PRESENT,
-                Lab27CertificationGate.Presence.PRESENT,
-                false, true, true, false, true, false));
+                yes, missing, yes, true, false, false, false, true, false));
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(
+                yes, missing, yes, true, false, false, true, true, false));
     }
 
     @Test public void anyOemMismatchStillReachesTheReportButNeverPositiveCertification() throws Exception {
