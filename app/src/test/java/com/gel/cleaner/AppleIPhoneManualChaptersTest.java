@@ -137,6 +137,37 @@ public final class AppleIPhoneManualChaptersTest {
                 AppleIPhoneManualChapters.forExactModel(items, docs, "iPhone99,9").isEmpty());
     }
 
+    @Test public void automaticBiometricGuidanceMustMatchActualModelFeatures() throws Exception {
+        List<AppleIPhoneManualChapters.Chapter> all = chapters();
+        List<AppleOfficialServiceGuidance.Guidance> docs = official();
+        // Apple links common troubleshooting articles in some model tables
+        // even when those articles refer to a different biometric feature.
+        // Preserve the catalog link, never attach it as an exact-model verdict.
+        assertTrue(includes(AppleIPhoneManualChapters.forManualId(all, "MANUAL_13_PRO_MAX"),
+                AppleIPhoneManualChapters.Phase.TROUBLESHOOT,
+                "Home button or Touch ID issues"));
+        assertTrue(includes(AppleIPhoneManualChapters.forManualId(all, "MANUAL_SE3"),
+                AppleIPhoneManualChapters.Phase.TROUBLESHOOT,
+                "TrueDepth camera or Face ID issues"));
+
+        List<AppleIPhoneManualChapters.Chapter> faceIdIphone =
+                AppleIPhoneManualChapters.forExactModel(all, docs, "iPhone14,3");
+        assertTrue(includes(faceIdIphone, AppleIPhoneManualChapters.Phase.TROUBLESHOOT,
+                "TrueDepth camera or Face ID issues"));
+        assertFalse(includes(faceIdIphone, AppleIPhoneManualChapters.Phase.TROUBLESHOOT,
+                "Home button or Touch ID issues"));
+
+        List<AppleIPhoneManualChapters.Chapter> se3 =
+                AppleIPhoneManualChapters.forExactModel(all, docs, "iPhone14,6");
+        assertTrue(includes(se3, AppleIPhoneManualChapters.Phase.TROUBLESHOOT,
+                "Home button or Touch ID issues"));
+        assertFalse(includes(se3, AppleIPhoneManualChapters.Phase.TROUBLESHOOT,
+                "TrueDepth camera or Face ID issues"));
+        assertFalse(includes(AppleIPhoneManualChapters.forExactModel(all, docs,
+                "iPhone15,2"), AppleIPhoneManualChapters.Phase.TROUBLESHOOT,
+                "Home button or Touch ID issues"));
+    }
+
     @Test public void specificDeviceVariationsAreNotCopiedToOtherIphones() throws Exception {
         List<AppleIPhoneManualChapters.Chapter> items = chapters();
         List<AppleIPhoneManualChapters.Chapter> duo =
