@@ -1956,28 +1956,38 @@ btnTxt.setOnClickListener(v -> beginReportExport(false));
                         continue;
                     }
 
-                    if (y > PAGE_HEIGHT - 60) {
-                        drawPageFooter(canvas, pageNum);
-                        pdf.finishPage(page);
+                    // Width-measured, LOSSLESS PDF wrapping. Apple source URLs
+                    // must not run beyond the page edge or disappear when long.
+                    // Keep the source-matched value-color boundary after wrap.
+                    int sourceValueAt = printColor != null && printValue != null
+                            && !printValue.isEmpty() && sub.endsWith(printValue)
+                            ? sub.length() - printValue.length() : -1;
+                    java.util.List<GELPdfMeasuredLineWrap.Fragment> fragments =
+                            GELPdfMeasuredLineWrap.split(sub,
+                                    PAGE_WIDTH - 2f * marginX - 18f,
+                                    piece -> textPaint.measureText(piece));
+                    for (GELPdfMeasuredLineWrap.Fragment fragment : fragments) {
+                        if (y > PAGE_HEIGHT - 60) {
+                            drawPageFooter(canvas, pageNum);
+                            pdf.finishPage(page);
 
-                        page = startPage(pdf, ++pageNum);
-                        canvas = page.getCanvas();
-                        canvas.drawColor(Color.WHITE);
-
-                        y = drawReportHeader(
-                                canvas,
-                                marginX,
-                                40,
-                                titlePaint,
-                                subtitlePaint,
-                                textPaint,
-                                false
-                        );
+                            page = startPage(pdf, ++pageNum);
+                            canvas = page.getCanvas();
+                            canvas.drawColor(Color.WHITE);
+                            y = drawReportHeader(
+                                    canvas, marginX, 40,
+                                    titlePaint, subtitlePaint, textPaint, false);
+                        }
+                        String coloredSuffix = sourceValueAt >= 0
+                                && fragment.end > sourceValueAt
+                                ? fragment.text.substring(Math.max(0,
+                                        sourceValueAt - fragment.start))
+                                : null;
+                        drawLineWithColoredEmoji(canvas, fragment.text, marginX,
+                                y, textPaint, emojiPaint, coloredSuffix,
+                                coloredSuffix == null ? null : printColor);
+                        y += lineHeight;
                     }
-
-                    drawLineWithColoredEmoji(canvas, sub, marginX, y, textPaint, emojiPaint,
-                            printValue, printColor);
-                    y += lineHeight;
                 }
             }
 
