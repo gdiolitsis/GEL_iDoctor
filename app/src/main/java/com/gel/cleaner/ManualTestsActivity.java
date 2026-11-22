@@ -30237,6 +30237,9 @@ private boolean lab28HasFreshCertificationEvidence() {
     SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
     if (p.getInt("lab27_cert_schema", 0) != Lab27CertificationGate.SCHEMA
             || !p.getBoolean("lab27_cert_physical_confirmed", false)
+            || !p.getBoolean("lab27_cert_usb", false)
+            || !p.getBoolean("lab27_cert_headphones", false)
+            || !p.getBoolean("lab27_cert_sim", false)
             || !Build.MODEL.equals(p.getString("lab27_cert_model", ""))
             || !Lab27CertificationGate.fresh(
                     p.getLong("lab27_cert_wall_ms", 0L), System.currentTimeMillis())
@@ -31059,30 +31062,60 @@ private void lab27PromptPhysicalConfirmation(final boolean gr, final String grad
                     "USB-C: I checked the port with a real connection/charging.",
                     "3.5 mm jack: I connected headphones and checked audio.",
                     "SIM tray: I checked the physical slot and seating."};
-        final boolean[] marked = new boolean[physical.length];
-        AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(gr ? "GEL Certification — Υποχρεωτικός φυσικός έλεγχος"
-                             : "GEL Certification — Required physical checks")
-                .setMultiChoiceItems(physical, null, (d, which, checked) -> {
-                    marked[which] = checked;
-                    boolean all = true;
-                    for (boolean ok : marked) all &= ok;
-                    AlertDialog open = (AlertDialog) d;
-                    if (open.getButton(AlertDialog.BUTTON_POSITIVE) != null)
-                        open.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(all);
-                })
-                .setNegativeButton(gr ? "ΕΚΚΡΕΜΕΙ" : "PENDING", (d, w) -> {
-                    logLabelValue("GEL Device Certification",
-                            gr ? "Εκκρεμεί φυσική επιβεβαίωση χρήστη."
-                               : "Pending user physical checks.");
-                })
+
+        // Matching GEL dialogs are dark with a gold outline. No white on white.
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(20), dp(16), dp(20), dp(16));
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(0xFF101010);
+        background.setCornerRadius(dp(14));
+        background.setStroke(dp(2), 0xFFFFD700);
+        content.setBackground(background);
+
+        TextView title = new TextView(this);
+        title.setText(gr ? "GEL Certification — Έλεγχος θυρών/υποδοχών"
+                         : "GEL Certification — Port/socket checks");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(18f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setPadding(0, 0, 0, dp(10));
+        content.addView(title);
+
+        TextView explanation = new TextView(this);
+        explanation.setText(gr
+                ? "Επιβεβαίωσε μόνο όσα έλεγξες πράγματι. Όσα δεν ελέγχθηκαν κρατούν την πιστοποίηση σε εκκρεμότητα."
+                : "Confirm only checks actually performed. Any unchecked item keeps certification pending.");
+        explanation.setTextColor(0xFFE6E6E6);
+        explanation.setTextSize(14f);
+        explanation.setPadding(0, 0, 0, dp(8));
+        content.addView(explanation);
+
+        CheckBox[] checks = new CheckBox[physical.length];
+        for (int i = 0; i < physical.length; i++) {
+            CheckBox check = new CheckBox(this);
+            check.setText(physical[i]);
+            check.setTextColor(Color.WHITE);
+            check.setTextSize(15f);
+            check.setPadding(0, dp(5), 0, dp(5));
+            check.setButtonTintList(ColorStateList.valueOf(0xFF39FF14));
+            content.addView(check);
+            checks[i] = check;
+        }
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(content)
+                .setNegativeButton(gr ? "ΕΚΚΡΕΜΕΙ" : "PENDING", (d, w) ->
+                        logLabelValue("GEL Device Certification",
+                                gr ? "Εκκρεμεί φυσική επιβεβαίωση χρήστη."
+                                   : "Pending user physical checks."))
                 .setPositiveButton(gr ? "ΕΠΙΒΕΒΑΙΩΣΗ" : "CONFIRM", (d, w) -> {
+                    boolean verified = true;
+                    for (CheckBox check : checks) verified &= check.isChecked();
                     SharedPreferences current = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
                     java.util.List<String> applicable = lab27ApplicableBasicLabs();
                     java.util.List<String> missing = lab27PendingBasicLabs(current, applicable);
                     Lab29FactorySpecAudit.Report factory = Lab29FactorySpecAudit.capture(this);
-                    boolean verified = true;
-                    for (boolean check : marked) verified &= check;
                     boolean serious = Lab25BuyerEvidence.SERIOUS.equals(
                             current.getString("lab25_obs_level", ""))
                             || Lab25BuyerEvidence.REPEATED.equals(
@@ -31096,8 +31129,8 @@ private void lab27PromptPhysicalConfirmation(final boolean gr, final String grad
                             && lab28HasFreshLab25Evidence();
                     if (!eligible) {
                         logLabelWarnValue("GEL Device Certification",
-                                gr ? "Ανανεώθηκαν οι έλεγχοι· εκτέλεσε τα εκκρεμή εργαστήρια."
-                                   : "Evidence changed; complete the pending checks.");
+                                gr ? "Οι προϋποθέσεις δεν καλύπτονται πλέον. Επανέλεγχος."
+                                   : "Certification prerequisites are no longer satisfied.");
                         return;
                     }
                     current.edit().putInt("lab27_cert_schema", Lab27CertificationGate.SCHEMA)
@@ -31105,7 +31138,10 @@ private void lab27PromptPhysicalConfirmation(final boolean gr, final String grad
                             .putString("lab27_cert_model", Build.MODEL)
                             .putString("lab27_cert_grade", grade)
                             .putInt("lab27_cert_score", score)
-                            .putInt("lab27_cert_oem_matches", matched)
+                            .putInt("lab27_cert_oem_matches", factory.matches)
+                            .putBoolean("lab27_cert_usb", checks[0].isChecked())
+                            .putBoolean("lab27_cert_headphones", checks[1].isChecked())
+                            .putBoolean("lab27_cert_sim", checks[2].isChecked())
                             .putBoolean("lab27_cert_physical_confirmed", true)
                             .apply();
                     logLabelOkValue("GEL Device Certification",
@@ -31116,9 +31152,19 @@ private void lab27PromptPhysicalConfirmation(final boolean gr, final String grad
                                           : " labs, physical checks confirmed."));
                 }).create();
         dialog.setOnShowListener(d -> {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.BLACK);
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(0xFFFFD700);
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
+            Runnable toggle = () -> {
+                boolean all = true;
+                for (CheckBox check : checks) all &= check.isChecked();
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(all);
+            };
+            for (CheckBox check : checks)
+                check.setOnCheckedChangeListener((button, checked) -> toggle.run());
+            toggle.run();
         });
         dialog.show();
     });
