@@ -41,7 +41,7 @@ public final class Lab27GradePresentationContractTest {
         assertTrue(lab.contains("Το Lab 27 ολοκληρώθηκε"));
         assertTrue(lab.contains("Το Certification αξιολογείται ξεχωριστά."));
         assertTrue(lab.contains("lab27PromptPhysicalConfirmation(grGate, factory);"));
-        assertTrue(lab.contains("Επιτυχής εκτέλεση των απαιτούμενων εργαστηρίων"));
+        assertTrue(lab.contains("Ο αριθμητικός δείκτης χρησιμοποιεί"));
         assertFalse(lab.contains("Όριο βαθμολογίας"));
         assertFalse(lab.contains("Τελικό Συμπέρασμα"));
     }
