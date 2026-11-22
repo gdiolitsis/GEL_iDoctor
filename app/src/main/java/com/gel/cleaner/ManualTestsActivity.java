@@ -32547,7 +32547,7 @@ logLabelValue(
 );
 
 appendHtml("<br>");
-logInfo(gr ? "Συντάχθηκε πληροφοριακή αναφορά GEL — όχι πιστοποίηση." : "GEL evidence report compiled — no hardware certification.");
+logInfo(gr ? "Συντάχθηκε αναφορά μετρήσεων GEL. Το Certification αξιολογείται ξεχωριστά." : "GEL measurement report compiled. Certification is evaluated separately.");
 logLine();
 
 appendHtml("<br>");
