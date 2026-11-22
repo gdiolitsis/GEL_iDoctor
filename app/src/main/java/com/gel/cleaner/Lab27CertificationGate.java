@@ -15,7 +15,8 @@ import java.util.regex.Pattern;
  * A current, warning-free recorded run is required for every applicable
  * basic lab. Human-verified physical connections are a separate gate.
  * The certificate concerns tested functionality, NOT parts authenticity.
- * OEM specification comparison is reference evidence, not a certification gate.
+ * OEM specification comparison stays a required technical cross-check.
+ * OEM matches do not establish that replacement parts are genuine.
  */
 final class Lab27CertificationGate {
     static final int SCHEMA = 2; // Invalidate old certificates lacking physical-absence evidence.
@@ -73,11 +74,13 @@ final class Lab27CertificationGate {
         return missing;
     }
 
-    /** Functionality gate: pass actual mandatory tests and human physical checks. */
+    /** All three evidence pillars remain required: tests, physical checks, and OEM. */
     static boolean eligible(int successful, int applicable, boolean physicalConfirmed,
-                            boolean criticalHistory) {
-        return applicable > 0 && successful == applicable
-                && physicalConfirmed && !criticalHistory;
+                            boolean oemProfileKnown, int oemMatches, int oemDeviations,
+                            boolean criticalHistory, String grade) {
+        return applicable > 0 && successful == applicable && physicalConfirmed
+                && oemProfileKnown && oemMatches > 0 && oemDeviations == 0
+                && !criticalHistory && grade != null && !grade.isEmpty();
     }
 
     /** Physical absence must be explicitly acknowledged, not presumed. */
