@@ -34,12 +34,16 @@ public final class Lab27GradePresentationContractTest {
     @Test public void lab25ProvenanceAndFinalSnapshotContractRemainIntact() throws Exception {
         String lab = lab27();
         assertTrue(lab.contains("if (!lab29RequireLab25Evidence()) return;"));
-        assertTrue(lab.contains("lab29DisplayLab25Findings(p, gr);"));
+        assertFalse(lab.contains("lab29DisplayLab25Findings(p, gr);"));
+        assertFalse(lab.contains("Στατιστικά χρήσης εφαρμογών"));
+        assertTrue(lab.contains("Κατάσταση συσκευής"));
         assertTrue(lab.contains("lab29SaveTechnicalAssessmentFromLab25(p);"));
         assertTrue(lab.contains("Το Lab 27 ολοκληρώθηκε"));
         assertTrue(lab.contains("Το Certification αξιολογείται ξεχωριστά."));
         assertTrue(lab.contains("lab27PromptPhysicalConfirmation(grGate, factory);"));
-        assertTrue(lab.contains("όχι πιστοποίηση εξαρτημάτων ή μέτρηση φθοράς μπαταρίας"));
+        assertTrue(lab.contains("Επιτυχής εκτέλεση των απαιτούμενων εργαστηρίων"));
+        assertFalse(lab.contains("Όριο βαθμολογίας"));
+        assertFalse(lab.contains("Τελικό Συμπέρασμα"));
     }
 
     @Test public void lab27ReadsLiveBatteryPercentageAndNeverUsesStaleLab14Member() throws Exception {

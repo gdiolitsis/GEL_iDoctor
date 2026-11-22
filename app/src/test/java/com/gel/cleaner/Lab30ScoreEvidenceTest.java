@@ -59,6 +59,16 @@ public class Lab30ScoreEvidenceTest {
         assertEquals("A+", Lab30ScoreEvidence.gradeForMeasuredSnapshot(100));
     }
 
+    @Test public void certificationPerformanceIgnoresAppInventory() {
+        assertEquals(100, Lab30ScoreEvidence.functionalPerformanceScore(100,100,100));
+        assertEquals(-1, Lab30ScoreEvidence.functionalPerformanceScore(-1,100,100));
+        assertEquals(-1, Lab30ScoreEvidence.functionalPerformanceScore(100,-1,100));
+        assertEquals(-1, Lab30ScoreEvidence.functionalPerformanceScore(100,100,-1));
+        assertEquals(0, Lab30ScoreEvidence.functionalPerformanceScore(0,0,0));
+        // 15% app weighting from the historical score is deliberately excluded.
+        assertEquals(82, Lab30ScoreEvidence.functionalPerformanceScore(100,100,0));
+    }
+
     @Test public void missingCoreEvidenceBlocksCombinedScores() {
         assertEquals(-1, Lab30ScoreEvidence.performanceScore(100,100,100,-1));
         assertEquals(-1, Lab30ScoreEvidence.deviceHealthScore(-1,100,100,100));

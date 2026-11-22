@@ -61,6 +61,17 @@ public final class Lab30ScoreEvidence {
         return "D";
     }
 
+    /**
+     * Certification-facing performance: storage, RAM and thermal observations only.
+     * App counts and usage access are unrelated to tested hardware functionality.
+     * Reweight the verified original components without inventing an app score.
+     */
+    public static int functionalPerformanceScore(int storage, int ram, int thermal) {
+        if (storage < 0 || ram < 0 || thermal < 0) return -1;
+        return Math.round(storage * (7f / 17f)
+                + ram * (7f / 17f) + thermal * (3f / 17f));
+    }
+
     public static int performanceScore(int storage, int ram, int apps, int thermal) {
         if (storage < 0 || ram < 0 || apps < 0 || thermal < 0) return -1;
         return Math.round(storage * 0.35f + ram * 0.35f
