@@ -62,36 +62,29 @@ public final class Lab14BValueColorsAndCapacityContractTest {
         assertTrue(s.contains("logLabelValue(labelHeavy, na)"));
         assertTrue(s.contains("logLabelOkValue(gr ? \"Μπαταρία\""));
     }
-    @Test public void poorOmegaPerformanceIsAmberAndNotBatteryHealthVerdict() throws Exception {
+    @Test public void lab14BShowsMeasurementsWithoutSyntheticBatteryPerformanceVerdict() throws Exception {
         String s = section(source(),
                 "private boolean checkLab14BConditions() {",
                 "// LAB 14B — PRE TEST ADVISORY");
-        assertTrue(s.contains("if (omega < 0.85f)"));
-        assertTrue(s.contains("logLabelWarnValue(gr ? \"Δείκτης απόδοσης μπαταρίας Ω\""));
-        assertTrue(s.contains("logLabelWarnValue(gr ? \"Σχετική απόδοση\""));
-        assertTrue(s.contains("logLabelWarnValue(gr ? \"Συμπέρασμα\""));
-        assertTrue(s.contains("logLabelOkValue(gr ? \"Εκτιμώμενος ρυθμός κατανάλωσης\""));
-        assertTrue(s.contains("String referenceSource")); // capacity origin explanatory only
-        assertTrue(s.contains("Πειραματικός δείκτης κατανάλωσης Ω — όχι αξιολόγηση υγείας μπαταρίας"));
-        assertTrue(s.contains("float referencePerHour = 500f;"));
-        assertTrue(s.contains("float omega ="));
-    }
-    @Test public void potentialFactorsAreRemovedButProFollowUpAndOmegaScaleRemain() throws Exception {
-        String s = section(source(),
-                "private boolean checkLab14BConditions() {",
-                "// LAB 14B — PRE TEST ADVISORY");
-        assertFalse(s.contains("Πιθανοί παράγοντες (όχι αιτιώδης διάγνωση)"));
-        assertFalse(s.contains("Possible factors (not a causal diagnosis)"));
-        assertFalse(s.contains("boolean batteryIssue = false;"));
-        assertFalse(s.contains("boolean systemIssue = false;"));
-        assertTrue(s.contains("logInfo(proPrompt);"));
-        assertTrue(s.contains("Συνιστάται εκτέλεση Lab 14A Pro"));
-        assertTrue(s.contains("Συνιστάται πλήρης διάγνωση μέσω Lab 14A Pro"));
-        assertTrue(s.contains("Recommended: run Lab 14A Pro"));
-        assertTrue(s.contains("Recommended: full diagnosis via Lab 14A Pro"));
-        assertFalse(s.contains("LAB14 Pro"));
-        assertTrue(s.contains("Πειραματική κλίμακα Ω (μη βαθμονομημένη)"));
-        assertTrue(s.contains("logLabelWarnValue(gr ? \"Συμπέρασμα\""));
+        // A five-minute drain rate is measured; the old Ω comparison used a
+        // generic 500 mAh/h reference and is not a device-health criterion.
+        assertFalse(s.contains("Πειραματικός δείκτης κατανάλωσης Ω"));
+        assertFalse(s.contains("Δείκτης απόδοσης μπαταρίας Ω"));
+        assertFalse(s.contains("Ερμηνεία μοντέλου Ω"));
+        assertFalse(s.contains("Πειραματική κλίμακα Ω"));
+        assertFalse(s.contains("float referencePerHour = 500f;"));
+        assertFalse(s.contains("Σχετική απόδοση"));
+        assertFalse(s.contains("Συνιστάται εκτέλεση Lab 14A Pro"));
+        assertFalse(s.contains("Συνιστάται πλήρης διάγνωση μέσω Lab 14A Pro"));
+        assertTrue(s.contains("logLabelOkValue(\n            gr ? \"Κατανάλωση\""));
+        assertTrue(s.contains("logLabelOkValue(gr ? \"Εκτιμώμενη διάρκεια στο 100% (μοντέλο)\""));
+        assertTrue(s.contains("logLabelOkValue(labelLight,"));
+        assertTrue(s.contains("logLabelOkValue(labelNormal,"));
+        assertTrue(s.contains("logLabelOkValue(labelHeavy,"));
+        assertTrue(s.contains("promptRestoreNormalMode();"));
+        assertTrue(s.contains("lab14b_consumption_per_hour"));
+        assertTrue(s.contains("lab14b_estimated_hours"));
+        assertTrue(s.contains("lab14b_ts"));
     }
 
     @Test public void gammaColorContractCoversAllAvailableValues() throws Exception {
