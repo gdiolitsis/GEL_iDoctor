@@ -978,14 +978,14 @@ private boolean oldKeepScreenOn = false;
                                   "✓ Διαχωρισμός μετρήσεων, προειδοποιήσεων και μη διαθέσιμων στοιχείων.\n" +
                                   "✓ Σύνοψη τεχνικών ευρημάτων με την πηγή τους.\n" +
                                   "✓ Διαβίβαση τεκμηριωμένου συμπεράσματος στο Lab 28.\n\n" +
-                                  "Η σύνοψη δεν πιστοποιεί απουσία βλάβης, γνησιότητα εξαρτημάτων ή μελλοντική σταθερότητα."
+                                  "Η πιστοποίηση αφορά την καλή λειτουργία στους ελέγχους που πραγματοποιήθηκαν. Η σύγκριση με τις εργοστασιακές προδιαγραφές παραμένει υποχρεωτική· δεν πιστοποιεί γνησιότητα εξαρτημάτων ή μελλοντική σταθερότητα."
                                 : "GEL Device Certification — technical evidence summary\n\n" +
                                   "LAB 27 combines available GEL Labs observations with actual critical Android incidents from Lab 25.\n\n" +
                                   "✓ Require a recent Lab 25 execution.\n" +
                                   "✓ Distinguish observed results, cautions and unavailable evidence.\n" +
                                   "✓ Summarize technical findings and provenance.\n" +
                                   "✓ Hand off a source-bound assessment to Lab 28.\n\n" +
-                                  "This summary does not certify freedom from faults, authentic parts or future stability."
+                                  "Certification covers successful operation in the tests actually performed. OEM factory-specification comparison remains mandatory; it does not certify genuine parts or future reliability."
                 );
 
             } else {
@@ -30237,9 +30237,12 @@ private boolean lab28HasFreshCertificationEvidence() {
     SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
     if (p.getInt("lab27_cert_schema", 0) != Lab27CertificationGate.SCHEMA
             || !p.getBoolean("lab27_cert_physical_confirmed", false)
-            || !p.getBoolean("lab27_cert_usb", false)
-            || !p.getBoolean("lab27_cert_headphones", false)
-            || !p.getBoolean("lab27_cert_sim", false)
+            || !Lab27CertificationGate.physicalChecksComplete(
+                    p.getBoolean("lab27_cert_usb", false),
+                    p.getBoolean("lab27_cert_headphones", false),
+                    p.getBoolean("lab27_cert_headphones_absent", false),
+                    p.getBoolean("lab27_cert_sim", false),
+                    p.getBoolean("lab27_cert_sim_absent", false))
             || !Build.MODEL.equals(p.getString("lab27_cert_model", ""))
             || !Lab27CertificationGate.fresh(
                     p.getLong("lab27_cert_wall_ms", 0L), System.currentTimeMillis())
@@ -31053,15 +31056,21 @@ private void lab27PromptPhysicalConfirmation(final boolean gr, final String grad
         final int score, final String model, final int matched) {
     runOnUiThread(() -> {
         if (isFinishing() || isDestroyed()) return;
+        // Each optional socket needs an explicit tested/absent selection.
+        // Do not infer hardware presence from a generic Android feature flag.
         final String[] physical = gr
                 ? new String[] {
-                    "USB-C: έλεγξα τη θύρα με πραγματική σύνδεση/φόρτιση.",
+                    "Θύρα φόρτισης/USB: συνέδεσα συμβατό καλώδιο και έλεγξα τη λειτουργία.",
                     "Υποδοχή 3,5 mm: σύνδεσα ακουστικά και έλεγξα τον ήχο.",
-                    "Θήκη SIM: επιθεώρησα τη φυσική υποδοχή και τη σωστή εφαρμογή της."}
+                    "Δεν υπάρχει υποδοχή 3,5 mm σε αυτή τη συσκευή.",
+                    "Θήκη SIM: έλεγξα τη φυσική υποδοχή και την εφαρμογή της.",
+                    "Δεν υπάρχει φυσική θήκη SIM σε αυτή τη συσκευή."}
                 : new String[] {
-                    "USB-C: I checked the port with a real connection/charging.",
-                    "3.5 mm jack: I connected headphones and checked audio.",
-                    "SIM tray: I checked the physical slot and seating."};
+                    "Charging/USB port: I connected a compatible cable and tested operation.",
+                    "3.5 mm jack: I plugged in headphones and checked the audio.",
+                    "This device has no 3.5 mm headphone jack.",
+                    "SIM tray: I checked the physical slot and seating.",
+                    "This device has no physical SIM tray."};
 
         // Matching GEL dialogs are dark with a gold outline. No white on white.
         LinearLayout content = new LinearLayout(this);
@@ -31084,8 +31093,8 @@ private void lab27PromptPhysicalConfirmation(final boolean gr, final String grad
 
         TextView explanation = new TextView(this);
         explanation.setText(gr
-                ? "Επιβεβαίωσε μόνο όσα έλεγξες πράγματι. Όσα δεν ελέγχθηκαν κρατούν την πιστοποίηση σε εκκρεμότητα."
-                : "Confirm only checks actually performed. Any unchecked item keeps certification pending.");
+                ? "Έλεγξε τις θύρες που υπάρχουν στη συσκευή. Για υποδοχή ακουστικών ή θήκη SIM που δεν υπάρχει, δήλωσε ρητά την απουσία της. Χωρίς πραγματικό έλεγχο ή δήλωση απουσίας, η πιστοποίηση εκκρεμεί."
+                : "Test the sockets actually present. If the headphone jack or SIM tray is absent, explicitly confirm its absence. Unchecked or unanswered items keep certification pending.");
         explanation.setTextColor(0xFFE6E6E6);
         explanation.setTextSize(14f);
         explanation.setPadding(0, 0, 0, dp(8));
@@ -31110,8 +31119,10 @@ private void lab27PromptPhysicalConfirmation(final boolean gr, final String grad
                                 gr ? "Εκκρεμεί φυσική επιβεβαίωση χρήστη."
                                    : "Pending user physical checks."))
                 .setPositiveButton(gr ? "ΕΠΙΒΕΒΑΙΩΣΗ" : "CONFIRM", (d, w) -> {
-                    boolean verified = true;
-                    for (CheckBox check : checks) verified &= check.isChecked();
+                    boolean verified = Lab27CertificationGate.physicalChecksComplete(
+                            checks[0].isChecked(), checks[1].isChecked(),
+                            checks[2].isChecked(), checks[3].isChecked(),
+                            checks[4].isChecked());
                     SharedPreferences current = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
                     java.util.List<String> applicable = lab27ApplicableBasicLabs();
                     java.util.List<String> missing = lab27PendingBasicLabs(current, applicable);
@@ -31141,15 +31152,23 @@ private void lab27PromptPhysicalConfirmation(final boolean gr, final String grad
                             .putInt("lab27_cert_oem_matches", factory.matches)
                             .putBoolean("lab27_cert_usb", checks[0].isChecked())
                             .putBoolean("lab27_cert_headphones", checks[1].isChecked())
-                            .putBoolean("lab27_cert_sim", checks[2].isChecked())
-                            .putBoolean("lab27_cert_physical_confirmed", true)
+                            .putBoolean("lab27_cert_headphones_absent", checks[2].isChecked())
+                            .putBoolean("lab27_cert_sim", checks[3].isChecked())
+                            .putBoolean("lab27_cert_sim_absent", checks[4].isChecked())
+                            .putBoolean("lab27_cert_physical_confirmed", verified)
                             .apply();
                     logLabelOkValue("GEL Device Certification",
-                            (gr ? "Εκδόθηκε GEL " : "GEL issued: ")
+                            (gr ? "Πιστοποιήθηκε καλή λειτουργία στους ελέγχους GEL: "
+                                : "Successful tested GEL functionality certified: ")
                                     + grade + " — " + applicable.size()
                                     + "/" + applicable.size()
-                                    + (gr ? " εργαστήρια, φυσικός έλεγχος επιβεβαιωμένος."
-                                          : " labs, physical checks confirmed."));
+                                    + (gr ? " εργαστήρια, " : " labs, ")
+                                    + factory.matches
+                                    + (gr ? " συμφωνίες προδιαγραφών OEM, φυσικοί έλεγχοι επιβεβαιωμένοι."
+                                          : " matching OEM specifications, physical checks confirmed."));
+                    logLabelValue(gr ? "Όριο πιστοποίησης" : "Certification scope",
+                            gr ? "Δεν αξιολογείται η γνησιότητα εξαρτημάτων."
+                               : "Parts authenticity is not assessed.");
                 }).create();
         dialog.setOnShowListener(d -> {
             if (dialog.getWindow() != null) {
@@ -31158,12 +31177,22 @@ private void lab27PromptPhysicalConfirmation(final boolean gr, final String grad
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(0xFFFFD700);
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
             Runnable toggle = () -> {
-                boolean all = true;
-                for (CheckBox check : checks) all &= check.isChecked();
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(all);
+                boolean complete = Lab27CertificationGate.physicalChecksComplete(
+                        checks[0].isChecked(), checks[1].isChecked(),
+                        checks[2].isChecked(), checks[3].isChecked(),
+                        checks[4].isChecked());
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(complete);
             };
-            for (CheckBox check : checks)
-                check.setOnCheckedChangeListener((button, checked) -> toggle.run());
+            for (int i = 0; i < checks.length; i++) {
+                final int choice = i;
+                checks[i].setOnCheckedChangeListener((button, checked) -> {
+                    if (checked && choice == 1) checks[2].setChecked(false);
+                    if (checked && choice == 2) checks[1].setChecked(false);
+                    if (checked && choice == 3) checks[4].setChecked(false);
+                    if (checked && choice == 4) checks[3].setChecked(false);
+                    toggle.run();
+                });
+            }
             toggle.run();
         });
         dialog.show();
