@@ -30391,6 +30391,7 @@ private boolean lab28HasFreshCertificationEvidence() {
             || !p.getBoolean("lab27_cert_physical_confirmed", false)
             || !Lab27CertificationGate.physicalChecksComplete(
                     p.getBoolean("lab27_cert_usb", false),
+                    p.getBoolean("lab27_cert_usb_absent", false),
                     p.getBoolean("lab27_cert_headphones", false),
                     p.getBoolean("lab27_cert_headphones_absent", false),
                     p.getBoolean("lab27_cert_sim", false),
@@ -31392,8 +31393,8 @@ private boolean lab27HasCameraFunctionalFailure(SharedPreferences p) {
 
 // One-shot in-memory attestation: never certify or reuse a previous installation's answer.
 private boolean lab27UserPreflightAuthorized = false;
-private boolean lab27UserUsb, lab27UserJack, lab27UserJackAbsent;
-private boolean lab27UserSim, lab27UserSimAbsent, lab27UserEsim;
+private boolean lab27UserUsb, lab27UserUsbAbsent, lab27UserJack, lab27UserJackAbsent;
+private boolean lab27UserSim, lab27UserSimAbsent;
 private String lab27UserOemSource = "";
 
 private void lab27ShowPrerequisiteDialog(boolean gr, String explanation) {
@@ -31462,30 +31463,23 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
             return;
         }
 
-        final boolean esimExpected =
-                profile.esim == Lab27CertificationGate.Presence.PRESENT;
-        final String esimQuestion = profile.esimVoiceCallsSupported
-                ? (gr ? "eSIM: ενεργοποίησα eSIM και δοκίμασα επιτυχή εξερχόμενη και εισερχόμενη τηλεφωνική κλήση."
-                      : "eSIM: I activated eSIM and tested both outgoing and incoming voice calls.")
-                : (gr ? "eSIM: ενεργοποίησα eSIM και επιβεβαίωσα σύνδεση δεδομένων, όπως προβλέπει το μοντέλο."
-                      : "eSIM: I activated eSIM and verified the OEM-supported data connection.");
-
-        // Manufacturer-specific physical PRESENCE only. Function was assessed in
-        // the relevant labs; do not demand a second USB or wired-audio test.
+        // Exactly six visual answers: PRESENT / ABSENT for each of three ports.
+        // No charging, wired headset audio, SIM calls or eSIM activation tests
+        // in this popup. Functional tests belong to the individual labs.
         final String[] physical = gr ? new String[] {
-            "Θύρα USB-C: υπάρχει (οπτική επιβεβαίωση).",
-            "Υποδοχή 3,5 mm: υπάρχει (οπτική επιβεβαίωση).",
-            "Δεν υπάρχει φυσική υποδοχή 3,5 mm (οπτική επιβεβαίωση).",
-            "Φυσική θήκη SIM: υπάρχει (οπτική επιβεβαίωση).",
-            "Δεν υπάρχει φυσική θήκη SIM (οπτική επιβεβαίωση).",
-            esimQuestion
+            "Θύρα USB-C: υπάρχει.",
+            "Θύρα USB-C: δεν υπάρχει.",
+            "Υποδοχή 3,5 mm: υπάρχει.",
+            "Υποδοχή 3,5 mm: δεν υπάρχει.",
+            "Φυσική θήκη SIM: υπάρχει.",
+            "Φυσική θήκη SIM: δεν υπάρχει."
         } : new String[] {
-            "USB-C port is physically present (visual confirmation).",
-            "3.5 mm jack is physically present (visual confirmation).",
-            "No physical 3.5 mm jack (visual confirmation).",
-            "Physical SIM tray is present (visual confirmation).",
-            "No physical SIM tray (visual confirmation).",
-            esimQuestion
+            "USB-C port: present.",
+            "USB-C port: absent.",
+            "3.5 mm jack: present.",
+            "3.5 mm jack: absent.",
+            "Physical SIM tray: present.",
+            "Physical SIM tray: absent."
         };
 
         LinearLayout content = new LinearLayout(this);
@@ -31515,7 +31509,6 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
                 + "\n" + (gr ? "Φυσική θήκη SIM: " : "Physical SIM tray: ")
                 + (profile.simTray == Lab27CertificationGate.Presence.PRESENT
                         ? present : absent)
-                + (esimExpected ? "\neSIM: " + present : "")
                 + "\n" + (gr ? "Επίσημη πηγή: " : "Official source: ")
                 + profile.sourceUrl);
         specs.setTextColor(0xFF87CEFA);
@@ -31527,8 +31520,12 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
 
         TextView note = new TextView(this);
         note.setText(gr
-                ? "Επιβεβαίωσε οπτικά μόνο την ύπαρξη USB-C, υποδοχής 3,5 mm και φυσικής θήκης SIM. Το Lab 15 αξιολογεί ήδη τη φόρτιση, όχι όμως τον τύπο της θύρας. Δεν απαιτούνται ενσύρματα ακουστικά: η λειτουργία ήχου εξετάζεται χωριστά. Το Lab 12 καταγράφει στοιχεία SIM/eSIM, όχι την ύπαρξη φυσικής θήκης. Η eSIM δεν αναιρεί την εργοστασιακή θήκη SIM."
-                : "Visually confirm only the USB-C port, 3.5 mm jack and physical SIM tray. Lab 15 evaluates charging, not USB connector shape. Wired headphones are not required: audio function is checked separately. Lab 12 reports SIM/eSIM evidence, not physical-tray presence. eSIM does not override the OEM physical SIM tray.");
+                ? "Επίλεξε για κάθε υποδοχή αν υπάρχει ή δεν υπάρχει στη φυσική συσκευή. " +
+                  "Η φόρτιση εξετάζεται στο Lab 15 και η SIM/eSIM στο Lab 12. " +
+                  "Δεν απαιτούνται ενσύρματα ακουστικά. Οι δηλώσεις συγκρίνονται με τις OEM προδιαγραφές."
+                : "For each port, choose whether it is physically present or absent. " +
+                  "Charging is checked in Lab 15 and SIM/eSIM in Lab 12. " +
+                  "Wired headphones are not required. Your declarations are compared with OEM specifications.");
         note.setTextColor(Color.WHITE);
         note.setTextSize(14f);
         content.addView(note);
@@ -31541,76 +31538,35 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
             check.setTextSize(15f);
             check.setButtonTintList(ColorStateList.valueOf(0xFF39FF14));
             check.setPadding(0, dp(4), 0, dp(4));
-            if (i == 5 && !esimExpected) check.setVisibility(View.GONE);
             content.addView(check);
             checks[i] = check;
         }
 
+        // Each adjacent pair is exclusive (USB 0/1, headset 2/3, SIM 4/5).
         final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(content)
-                .setNegativeButton(gr ? "ΕΚΚΡΕΜΕΙ" : "PENDING",
-                        (d, w) -> {})
+                .setNegativeButton(gr ? "ΕΚΚΡΕΜΕΙ" : "PENDING", (d, w) -> {})
                 .setPositiveButton(gr ? "ΕΠΙΒΕΒΑΙΩΣΗ" : "CONFIRM", (d, w) -> {
-                    boolean basic = Lab27CertificationGate.physicalChecksComplete(
+                    boolean complete = Lab27CertificationGate.physicalChecksComplete(
                             checks[0].isChecked(), checks[1].isChecked(),
                             checks[2].isChecked(), checks[3].isChecked(),
-                            checks[4].isChecked());
-                    boolean oemMatch = Lab27CertificationGate.physicalMatchesOem(
-                            profile.usb, profile.headset, profile.simTray,
-                            checks[0].isChecked(), checks[1].isChecked(),
-                            checks[2].isChecked(), checks[3].isChecked(),
-                            checks[4].isChecked());
-                    boolean esimMatch = !esimExpected || checks[5].isChecked();
-                    if (!basic || !oemMatch || !esimMatch) {
-                        String detail = gr
-                                ? "Η επιβεβαίωση δεν συμφωνεί με τις εργοστασιακές προδιαγραφές ή δεν ολοκληρώθηκαν όλοι οι έλεγχοι. Δεν εκδίδεται πιστοποιητικό.\n\n"
-                                : "Your answers conflict with the exact manufacturer's specifications or an applicable check was not completed. No certificate can be issued.\n\n";
-                        if (profile.headset == Lab27CertificationGate.Presence.PRESENT
-                                && checks[2].isChecked()) {
-                            detail += gr ? "Η υποδοχή 3,5 mm προβλέπεται, αλλά δήλωσες ότι απουσιάζει.\n"
-                                         : "OEM specifies a 3.5 mm jack, but you reported it missing.\n";
-                        }
-                        if (profile.simTray == Lab27CertificationGate.Presence.PRESENT
-                                && checks[4].isChecked()) {
-                            detail += gr ? "Ο κατασκευαστής προβλέπει φυσική θήκη SIM. Η eSIM δεν αναιρεί αυτή την προδιαγραφή.\n"
-                                         : "OEM requires a physical SIM tray; eSIM does not override this specification.\n";
-                        }
-                        detail += profile.sourceUrl;
-                        // A user-reported OEM mismatch is a real, sourced
-                        // discrepancy in the comparison, not a proven failure
-                        // of the interface's electrical/audio function.
-                        if (basic && !oemMatch) {
-                            if ((profile.headset == Lab27CertificationGate.Presence.PRESENT
-                                    && checks[2].isChecked())
-                                    || (profile.headset == Lab27CertificationGate.Presence.ABSENT
-                                    && checks[1].isChecked())) {
-                                logLabelErrorValue(gr ? "Υποδοχή 3,5 mm" : "3.5 mm jack",
-                                        gr ? "Σύμφωνα με τη δήλωση χρήστη: ΔΕΝ ΣΥΜΦΩΝΕΙ"
-                                           : "According to user declaration: DOES NOT MATCH");
-                            }
-                            if ((profile.simTray == Lab27CertificationGate.Presence.PRESENT
-                                    && checks[4].isChecked())
-                                    || (profile.simTray == Lab27CertificationGate.Presence.ABSENT
-                                    && checks[3].isChecked())) {
-                                logLabelErrorValue(gr ? "Φυσική θήκη SIM" : "Physical SIM tray",
-                                        gr ? "Σύμφωνα με τη δήλωση χρήστη: ΔΕΝ ΣΥΜΦΩΝΕΙ"
-                                           : "According to user declaration: DOES NOT MATCH");
-                            }
-                        }
-                        getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
-                                .remove("lab27_cert_schema").apply();
-                        lab27ShowPrerequisiteDialog(gr, detail);
+                            checks[4].isChecked(), checks[5].isChecked());
+                    if (!complete) {
+                        lab27ShowPrerequisiteDialog(gr, gr
+                                ? "Χρειάζεται μία απάντηση για καθεμία από τις τρεις φυσικές υποδοχές."
+                                : "Choose one answer for each of the three physical ports.");
                         return;
                     }
 
-                    // One-shot permission to run the lab; no grade was calculated
-                    // before explicit, manufacturer-specific user confirmation.
+                    // Always record all six-answer results, including an OEM
+                    // mismatch. The report describes them accurately; only
+                    // the certification gate can withhold certification.
                     lab27UserUsb = checks[0].isChecked();
-                    lab27UserJack = checks[1].isChecked();
-                    lab27UserJackAbsent = checks[2].isChecked();
-                    lab27UserSim = checks[3].isChecked();
-                    lab27UserSimAbsent = checks[4].isChecked();
-                    lab27UserEsim = esimExpected && checks[5].isChecked();
+                    lab27UserUsbAbsent = checks[1].isChecked();
+                    lab27UserJack = checks[2].isChecked();
+                    lab27UserJackAbsent = checks[3].isChecked();
+                    lab27UserSim = checks[4].isChecked();
+                    lab27UserSimAbsent = checks[5].isChecked();
                     lab27UserOemSource = profile.sourceUrl;
                     lab27UserPreflightAuthorized = true;
                     lab30CombineFindings();
@@ -31625,15 +31581,11 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
                     .setEnabled(Lab27CertificationGate.physicalChecksComplete(
                             checks[0].isChecked(), checks[1].isChecked(),
                             checks[2].isChecked(), checks[3].isChecked(),
-                            checks[4].isChecked())
-                            && (!esimExpected || checks[5].isChecked()));
+                            checks[4].isChecked(), checks[5].isChecked()));
             for (int i = 0; i < checks.length; i++) {
                 final int index = i;
                 checks[i].setOnCheckedChangeListener((button, checked) -> {
-                    if (checked && index == 1) checks[2].setChecked(false);
-                    if (checked && index == 2) checks[1].setChecked(false);
-                    if (checked && index == 3) checks[4].setChecked(false);
-                    if (checked && index == 4) checks[3].setChecked(false);
+                    if (checked) checks[index ^ 1].setChecked(false);
                     toggle.run();
                 });
             }
@@ -31699,15 +31651,13 @@ Lab29FactorySpecAudit.PhysicalProfile currentPorts =
         Lab29FactorySpecAudit.physicalProfile(currentFactory);
 if (!lab27OemReady(p, currentFactory)
         || !lab27UserOemSource.equals(currentPorts.sourceUrl)
-        || !Lab27CertificationGate.physicalMatchesOem(
-                currentPorts.usb, currentPorts.headset, currentPorts.simTray,
-                lab27UserUsb, lab27UserJack, lab27UserJackAbsent,
-                lab27UserSim, lab27UserSimAbsent)
-        || (currentPorts.esim == Lab27CertificationGate.Presence.PRESENT
-            && !lab27UserEsim)) {
+        || !Lab27CertificationGate.physicalChecksComplete(
+                lab27UserUsb, lab27UserUsbAbsent,
+                lab27UserJack, lab27UserJackAbsent,
+                lab27UserSim, lab27UserSimAbsent)) {
     lab27ShowPrerequisiteDialog(grGate, grGate
-            ? "Οι δηλώσεις φυσικών υποδοχών δεν συμφωνούν με τις τεκμηριωμένες εργοστασιακές προδιαγραφές."
-            : "The attested physical ports do not match the sourced OEM specifications.");
+            ? "Οι οπτικές δηλώσεις φυσικών υποδοχών δεν είναι πλήρεις ή άλλαξε το εργοστασιακό προφίλ."
+            : "Visual declarations are incomplete or the OEM profile has changed.");
     return;
 }
 
@@ -32871,10 +32821,9 @@ Lab29FactorySpecAudit.PhysicalProfile certPorts =
         Lab29FactorySpecAudit.physicalProfile(certFactory);
 boolean physicalVerified = Lab27CertificationGate.physicalMatchesOem(
         certPorts.usb, certPorts.headset, certPorts.simTray,
-        lab27UserUsb, lab27UserJack, lab27UserJackAbsent,
-        lab27UserSim, lab27UserSimAbsent)
-        && (certPorts.esim != Lab27CertificationGate.Presence.PRESENT
-            || lab27UserEsim);
+        lab27UserUsb, lab27UserUsbAbsent,
+        lab27UserJack, lab27UserJackAbsent,
+        lab27UserSim, lab27UserSimAbsent);
 boolean eligibleCert = pendingBasic.isEmpty() && lab28HasFreshLab25Evidence()
         && lab27OemReady(p, certFactory)
         && lab27UserOemSource.equals(certPorts.sourceUrl)
@@ -32901,11 +32850,12 @@ if (!eligibleCert) {
             .putInt("lab27_cert_functional_findings", lab27EvidenceFindings.size())
             .putInt("lab27_cert_oem_matches", certFactory.matches)
             .putBoolean("lab27_cert_usb", lab27UserUsb)
+            .putBoolean("lab27_cert_usb_absent", lab27UserUsbAbsent)
             .putBoolean("lab27_cert_headphones", lab27UserJack)
             .putBoolean("lab27_cert_headphones_absent", lab27UserJackAbsent)
             .putBoolean("lab27_cert_sim", lab27UserSim)
             .putBoolean("lab27_cert_sim_absent", lab27UserSimAbsent)
-            .putBoolean("lab27_cert_esim", lab27UserEsim)
+            .remove("lab27_cert_esim") // eSIM evidence belongs to Lab 12, not visual port checks.
             .putString("lab27_cert_oem_source", certPorts.sourceUrl)
             .putBoolean("lab27_cert_physical_confirmed", true)
             .apply();
@@ -32988,51 +32938,52 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                     factory.modelName);
             logLabelInfoValue(gr ? "Πηγή κατασκευαστή" : "Manufacturer source",
                     factory.officialSource);
-            // Visual declarations supplement UNKNOWN Android-only observations.
-            // The factory.matches statistic stays strictly automatic: neither
-            // presence nor cosmetic inspections become sensor measurements.
+            // Each of the three physical OEM fields displays the user's
+            // explicit PRESENT / ABSENT statement, separate from automation.
+            // Mismatches are recorded, never silently discarded.
             Lab29FactorySpecAudit.PhysicalProfile manualPorts =
                     Lab29FactorySpecAudit.physicalProfile(factory);
             int verifiedByUser = 0;
             int mismatchedByUser = 0;
+            int unknownsResolvedByUser = 0;
             for (Lab29FactorySpecAudit.Row specRow : factory.rows) {
-                if (specRow.verdict == Lab29FactorySpecAudit.Verdict.UNKNOWN) {
-                    boolean portUsb = "USB connector".equals(specRow.english);
-                    boolean portJack = "3.5 mm jack".equals(specRow.english);
-                    boolean portSim = "SIM tray".equals(specRow.english);
-                    if (portUsb || portJack || portSim) {
-                        Lab27CertificationGate.Presence expectedPort = portUsb
-                                ? manualPorts.usb : (portJack ? manualPorts.headset : manualPorts.simTray);
-                        boolean declaredPresent = portUsb ? lab27UserUsb
-                                : (portJack ? lab27UserJack : lab27UserSim);
-                        boolean declaredAbsent = portUsb ? false
-                                : (portJack ? lab27UserJackAbsent : lab27UserSimAbsent);
-                        boolean hasDeclaration = portUsb ? declaredPresent
-                                : (declaredPresent != declaredAbsent);
-                        if (hasDeclaration && expectedPort != Lab27CertificationGate.Presence.UNKNOWN) {
-                            boolean agrees = expectedPort == Lab27CertificationGate.Presence.PRESENT
-                                    ? declaredPresent : declaredAbsent;
-                            String declaration = gr
-                                    ? "Σύμφωνα με τη δήλωση χρήστη: "
-                                        + (agrees ? "ΣΥΜΦΩΝΕΙ" : "ΔΕΝ ΣΥΜΦΩΝΕΙ")
-                                    : "According to user declaration: "
-                                        + (agrees ? "MATCHES" : "DOES NOT MATCH");
-                            String value = declaration + " ("
-                                    + (gr ? "Προδιαγραφή: " : "OEM: ")
-                                    + specRow.expected + ")";
-                            String rowName = gr ? specRow.greek : specRow.english;
-                            if (agrees) {
-                                verifiedByUser++;
-                                logLabelOkValue(rowName, value);
-                            } else {
-                                mismatchedByUser++;
-                                logLabelErrorValue(rowName, value);
-                            }
-                            continue; // Do not also say this port is unverified.
+                boolean portUsb = "USB connector".equals(specRow.english);
+                boolean portJack = "3.5 mm jack".equals(specRow.english);
+                boolean portSim = "SIM tray".equals(specRow.english);
+                if (portUsb || portJack || portSim) {
+                    Lab27CertificationGate.Presence expectedPort = portUsb
+                            ? manualPorts.usb : (portJack ? manualPorts.headset : manualPorts.simTray);
+                    boolean declaredPresent = portUsb ? lab27UserUsb
+                            : (portJack ? lab27UserJack : lab27UserSim);
+                    boolean declaredAbsent = portUsb ? lab27UserUsbAbsent
+                            : (portJack ? lab27UserJackAbsent : lab27UserSimAbsent);
+                    if (declaredPresent != declaredAbsent
+                            && expectedPort != Lab27CertificationGate.Presence.UNKNOWN) {
+                        boolean agrees = expectedPort == Lab27CertificationGate.Presence.PRESENT
+                                ? declaredPresent : declaredAbsent;
+                        String declaration = gr
+                                ? "Σύμφωνα με τη δήλωση χρήστη "
+                                    + (declaredPresent ? "υπάρχει" : "δεν υπάρχει")
+                                    + ". — " + (agrees ? "ΣΥΜΦΩΝΕΙ" : "ΔΕΝ ΣΥΜΦΩΝΕΙ")
+                                : "According to the user declaration, "
+                                    + (declaredPresent ? "present" : "absent")
+                                    + ". — " + (agrees ? "MATCHES" : "DOES NOT MATCH");
+                        String value = declaration + " ("
+                                + (gr ? "Προδιαγραφή: " : "OEM: ")
+                                + specRow.expected + ")";
+                        String rowName = gr ? specRow.greek : specRow.english;
+                        if (specRow.verdict == Lab29FactorySpecAudit.Verdict.UNKNOWN)
+                            unknownsResolvedByUser++;
+                        if (agrees) {
+                            verifiedByUser++;
+                            logLabelOkValue(rowName, value);
+                        } else {
+                            mismatchedByUser++;
+                            logLabelErrorValue(rowName, value);
                         }
+                        continue; // Do not show obsolete "cannot inspect" guidance.
                     }
                 }
-                String rowName = gr ? specRow.greek : specRow.english;
                 String observation = specRow.observed == null || specRow.observed.isEmpty()
                         ? (gr ? "Δεν διατίθεται αξιόπιστη μέτρηση"
                               : "No reliable reading available")
@@ -33095,7 +33046,7 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                                       : "Mismatches by user declaration",
                         String.valueOf(mismatchedByUser));
             }
-            int unresolved = Math.max(0, factory.unknowns - verifiedByUser - mismatchedByUser);
+            int unresolved = Math.max(0, factory.unknowns - unknownsResolvedByUser);
             logLabelInfoValue(gr ? "Χαρακτηριστικά χωρίς διαθέσιμη σύγκριση"
                                  : "Characteristics with no available comparison",
                     String.valueOf(unresolved));
