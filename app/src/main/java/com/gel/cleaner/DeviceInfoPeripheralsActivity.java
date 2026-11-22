@@ -140,6 +140,7 @@ import android.telephony.SignalStrength;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.telephony.euicc.EuiccManager;
 
 // ============================================================
 // ANDROIDX
@@ -3071,6 +3072,8 @@ private static final class RemoteCollector extends android.content.ContextWrappe
     // ------------------------------------------------------------
     // ADVANCED MODEM TABLES
     // ------------------------------------------------------------
+    appendEsimModemStatus(this, data);
+
     data.put("Advanced",
             isRooted
                     ? "Advanced modem tables are available on this device."
@@ -6402,12 +6405,94 @@ try {
 // ------------------------------------------------------------
 // ADVANCED MODEM TABLES
 // ------------------------------------------------------------
+appendEsimModemStatus(this, data);
+
 data.put("Advanced",
         isRooted
                 ? "Advanced modem tables are available on this device."
                 : "Advanced modem tables require root access.");
                 
                 return buildSection("Telephony / Modem", data);
+}
+
+/**
+ * Evidence only: distinguishes declared eUICC capability, current eSIM
+ * availability and the type of visible active subscriptions. Slot 1/2 are
+ * logical Android indexes, never proof of a removable SIM tray.
+ * No EID, ICCID, IMEI, phone number or eSIM provisioning is accessed.
+ */
+private static void appendEsimModemStatus(Context context, Map<String, String> data) {
+    final String unknown = "Unknown / unavailable from Android";
+    data.put("eSIM hardware capability", unknown);
+    data.put("eSIM service available", unknown);
+    data.put("Active eSIM profiles", unknown);
+    data.put("Active subscription types", unknown);
+    data.put("SIM slot interpretation", "Android logical slot; not physical tray verification");
+
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+        data.put("eSIM hardware capability", "Not available from Android API < 28");
+        data.put("eSIM service available", "Not available from Android API < 28");
+        data.put("Active eSIM profiles", "Not available from Android API < 28");
+        data.put("Active subscription types", "Not available from Android API < 28");
+        return;
+    }
+
+    boolean reportedEuiccFeature = false;
+    try {
+        reportedEuiccFeature = context.getPackageManager().hasSystemFeature(
+                PackageManager.FEATURE_TELEPHONY_EUICC);
+        data.put("eSIM hardware capability", reportedEuiccFeature
+                ? "Supported (Android eUICC feature declared)"
+                : "Not declared by Android (not proof of physical absence)");
+    } catch (Throwable ignored) {
+        data.put("eSIM hardware capability", unknown);
+    }
+
+    try {
+        EuiccManager euicc = (EuiccManager) context.getSystemService(Context.EUICC_SERVICE);
+        data.put("eSIM service available", euicc == null
+                ? "Unavailable / not reported"
+                : euicc.isEnabled()
+                    ? "Enabled (does not imply an active eSIM plan)"
+                    : "Disabled / unavailable (not proof of hardware absence)");
+    } catch (Throwable ignored) {
+        data.put("eSIM service available", unknown);
+    }
+
+    if (androidx.core.content.ContextCompat.checkSelfPermission(context,
+            Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+        data.put("Active eSIM profiles", "Unknown — phone-state permission not granted");
+        data.put("Active subscription types", "Unknown — phone-state permission not granted");
+        return;
+    }
+
+    try {
+        SubscriptionManager subscriptions = (SubscriptionManager) context.getSystemService(
+                Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+        if (subscriptions == null) return;
+        // Unlike the legacy modem display, do not fall back to available
+        // (possibly inactive) subscriptions or SIM-state guesses.
+        List<SubscriptionInfo> active = subscriptions.getActiveSubscriptionInfoList();
+        if (active == null) return;
+        int embedded = 0;
+        int nonEmbedded = 0;
+        for (SubscriptionInfo subscription : active) {
+            if (subscription == null) continue;
+            if (subscription.isEmbedded()) embedded++;
+            else nonEmbedded++;
+        }
+        data.put("Active eSIM profiles", embedded > 0
+                ? embedded + " active eSIM subscription(s) reported"
+                : "0 in Android-visible active subscriptions");
+        data.put("Active subscription types",
+                embedded + " eSIM / " + nonEmbedded
+                + " non-eSIM (not physical-tray verification)");
+    } catch (SecurityException denied) {
+        data.put("Active eSIM profiles", "Unknown — subscription access denied");
+        data.put("Active subscription types", "Unknown — subscription access denied");
+    } catch (Throwable ignored) {
+        // Missing/filtered subscription access is UNKNOWN, not "no eSIM".
+    }
 }
 
 // ============================================================================
