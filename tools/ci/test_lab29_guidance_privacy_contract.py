@@ -13,7 +13,7 @@ def section(start, end):
 
 guidance = section(
     "private void showLab29ExternalGuidanceDialog(boolean gr)",
-    "// Only an external provider displays the result; GEL records no IMEI answers."
+    "/** eBay presents its own current listings, photos, prices and seller descriptions."
 )
 lab30 = section("private void lab30CombineFindings()", "private void lab31FinalSummary()")
 lab31 = section("private void lab31FinalSummary()", "private void enableSingleExportButton()")
