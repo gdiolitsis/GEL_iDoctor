@@ -35,10 +35,8 @@ public final class Lab28MarketResearch {
             return new Model(name, code, storage, ram);
         }
         public String query() {
-            String q = name.isEmpty() ? code : name;
-            if (storageGb > 0) q += " " + storageGb + "GB";
-            if (ramGb > 0) q += " " + ramGb + "GB RAM";
-            return q.trim();
+            // Find comparable models even when regional SKU, RAM or storage differ.
+            return (name.isEmpty() ? code : name).trim();
         }
     }
 
@@ -73,7 +71,7 @@ public final class Lab28MarketResearch {
     }
 
     public static String browseSearchUrl(Model model, boolean nonWorking) {
-        String query = model.query() + (nonWorking ? " defekt camera" : "");
+        String query = model.query() + (nonWorking ? " defekt kamera" : " gebraucht");
         // Search does not contain GEL grade, IMEI, serial or personal identifiers.
         try {
             return "https://www.ebay.de/sch/i.html?_nkw="
@@ -115,39 +113,42 @@ public final class Lab28MarketResearch {
         }
     }
 
-    /** Seller title is a weak claim; verify model, capacity and listing URL only. */
+    /**
+     * Keep a comparable device in the same recognizable model family.
+     * Regional SKU, memory capacity and colour can differ: record them as
+     * commercial differences, not functional exclusions. Seller descriptions
+     * cannot establish a GEL score or the actual working state.
+     */
     public static boolean titleMatches(Model model, String listingTitle) {
-        if (model == null || model.storageGb <= 0 || listingTitle == null) return false;
-        String t = listingTitle.toLowerCase(Locale.ROOT);
+        if (model == null || listingTitle == null) return false;
+        String title = listingTitle.toLowerCase(Locale.ROOT);
         if ("23076rn8dy".equalsIgnoreCase(model.code)) {
-            if (!t.matches("(?s).*\\bredmi\\s+12\\s+5g\\b.*")
-                    && !t.contains("23076rn8dy")) return false;
-            if (t.matches("(?s).*\\bredmi\\s+note\\b.*")
-                    || t.matches("(?s).*\\bredmi\\s+12\\s+(?:4g|c|pro)\\b.*")
-                    || t.matches("(?s).*\\b23076rn(?!8dy)[a-z0-9]+\\b.*")) return false;
-        } else {
-            String n = model.name.toLowerCase(Locale.ROOT);
-            if (n.length() < 7 || !t.contains(n)) return false;
+            if (!title.matches("(?s).*\\bredmi\\s+12\\s+5g\\b.*")
+                    && !title.contains("23076rn8dy")
+                    && !title.contains("23076rn4bi")) return false;
+            // Different product families are not fair model-price comparables.
+            if (title.matches("(?s).*\\bredmi\\s+note\\b.*")
+                    || title.matches("(?s).*\\bredmi\\s+12\\s+(?:4g|c|pro)\\b.*")) return false;
+            return true;
         }
-        java.util.regex.Matcher storage = java.util.regex.Pattern.compile(
-                "\\b(32|64|128|256|512|1024)\\s*(?:gb|gbyte)\\b",
-                java.util.regex.Pattern.CASE_INSENSITIVE).matcher(t);
-        boolean found = false;
-        while (storage.find()) {
-            if (Integer.parseInt(storage.group(1)) != model.storageGb) return false;
-            found = true;
-        }
-        if (!found) return false;
-        if (model.ramGb > 0) {
-            java.util.regex.Matcher ram = java.util.regex.Pattern.compile(
-                    "\\b(2|3|4|6|8|12|16)\\s*gb\\s*ram\\b|\\bram\\s*(2|3|4|6|8|12|16)\\s*gb\\b",
-                    java.util.regex.Pattern.CASE_INSENSITIVE).matcher(t);
-            while (ram.find()) {
-                int gb = Integer.parseInt(ram.group(1) == null ? ram.group(2) : ram.group(1));
-                if (gb != model.ramGb) return false;
-            }
-        }
-        return true;
+        String name = model.name.toLowerCase(Locale.ROOT).trim();
+        return name.length() >= 7 && title.contains(name);
+    }
+
+    /**
+     * A known functional fault is matched first against seller-disclosed fault
+     * listings. A lower performance score with no observed functional failure
+     * does NOT by itself establish broken hardware.
+     */
+    public static SaleCondition conditionForGrade(String grade,
+                                                  int findings, boolean confirmedCameraFault) {
+        String g = safe(grade).toUpperCase(Locale.ROOT);
+        if (g.isEmpty()) return SaleCondition.UNKNOWN;
+        if (confirmedCameraFault || findings > 0) return SaleCondition.CLAIMED_DEFECTIVE;
+        if ("A+".equals(g) || "A".equals(g) || "B".equals(g)
+                || "C".equals(g) || "D".equals(g) || "Δ".equals(g))
+            return SaleCondition.CLAIMED_WORKING;
+        return SaleCondition.UNKNOWN;
     }
 
     public static boolean validComparable(Model model, Listing listing, SaleCondition condition) {
@@ -206,9 +207,9 @@ public final class Lab28MarketResearch {
     }
 
     /**
-     * Prices of USED, working-claimed devices and defect-claimed devices are
-     * NOT GEL A+/A/B/C/D grades. A listing cannot be matched to another user's
-     * GEL grade without an independently verifiable GEL report.
+     * Comparable means similar FUNCTIONAL condition as described by seller,
+     * NOT the same board/SKU/RAM/storage. Such seller claims are weaker than
+     * GEL lab evidence and never prove matching GEL A+/A/B/C/D grades.
      */
     public static String describeGradeComparison(String localGrade,
             Summary working, Summary defective, boolean greek) {

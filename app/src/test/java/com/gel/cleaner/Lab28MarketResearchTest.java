@@ -21,21 +21,33 @@ public final class Lab28MarketResearchTest {
         String b=Lab28MarketResearch.browseSearchUrl(model,true);
         assertTrue(a.startsWith("https://www.ebay.de/sch/i.html?_nkw="));
         assertTrue(a.contains("Redmi+12+5G"));
-        assertTrue(a.contains("128GB"));
-        assertTrue(b.contains("defekt+camera"));
+        assertFalse(a.contains("128GB")); // Variant is not a hard search constraint.
+        assertTrue(b.contains("defekt+kamera"));
         assertFalse(a.toLowerCase().contains("imei"));
         assertFalse(a.contains("A%2B"));
     }
 
-    @Test public void modelGuardExcludesConfusingSkusAndCapacities() {
+    @Test public void modelFamilyMattersMoreThanRegionalSkuAndMemory() {
         assertTrue(Lab28MarketResearch.titleMatches(model,"Redmi 12 5G 128GB 4GB RAM"));
+        assertTrue(Lab28MarketResearch.titleMatches(model,"Redmi 12 5G 256GB 8GB RAM"));
+        assertTrue(Lab28MarketResearch.titleMatches(model,"Redmi 12 5G 23076RN4BI 128GB"));
+        assertTrue(Lab28MarketResearch.titleMatches(model.withCapacity(0,0),"Redmi 12 5G 128GB"));
         assertFalse(Lab28MarketResearch.titleMatches(model,"Redmi Note 12 5G 128GB"));
         assertFalse(Lab28MarketResearch.titleMatches(model,"Redmi 12 4G 128GB"));
-        assertFalse(Lab28MarketResearch.titleMatches(model,"Redmi 12 5G 256GB"));
-        assertFalse(Lab28MarketResearch.titleMatches(model,"Redmi 12 5G 128GB / 256GB"));
-        assertFalse(Lab28MarketResearch.titleMatches(model,"Redmi 12 5G 128GB 8GB RAM"));
-        assertFalse(Lab28MarketResearch.titleMatches(model,"Redmi 12 5G 23076RN4BI 128GB"));
-        assertFalse(Lab28MarketResearch.titleMatches(model.withCapacity(0,0),"Redmi 12 5G 128GB"));
+        assertFalse(Lab28MarketResearch.titleMatches(model,"Redmi 12C 128GB"));
+    }
+
+    @Test public void functionalConditionNotGradeIdentityDrivesComparables() {
+        assertEquals(Lab28MarketResearch.SaleCondition.CLAIMED_WORKING,
+                Lab28MarketResearch.conditionForGrade("A+", 0, false));
+        assertEquals(Lab28MarketResearch.SaleCondition.CLAIMED_WORKING,
+                Lab28MarketResearch.conditionForGrade("B", 0, false));
+        assertEquals(Lab28MarketResearch.SaleCondition.CLAIMED_DEFECTIVE,
+                Lab28MarketResearch.conditionForGrade("D", 1, true));
+        assertEquals(Lab28MarketResearch.SaleCondition.CLAIMED_DEFECTIVE,
+                Lab28MarketResearch.conditionForGrade("A", 1, false));
+        assertEquals(Lab28MarketResearch.SaleCondition.UNKNOWN,
+                Lab28MarketResearch.conditionForGrade("", 0, false));
     }
 
     @Test public void onlyGenuineHttpsEbayItemUrlsPass() {
