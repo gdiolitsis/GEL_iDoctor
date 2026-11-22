@@ -63,11 +63,11 @@ public final class AppleIPhoneProcedureRequirements {
         public String assistantLabel(boolean greek) {
             switch (assistant) {
                 case REQUIRED_TEXT:
-                    return greek ? "Απαιτείται, σύμφωνα με την πηγή" :
-                            "Required, as stated in the source";
+                    return greek ? "Αυτόματα εντοπίστηκε «απαιτείται» — ελέγξτε την πλήρη πηγή" :
+                            "Automated required wording — verify in full Apple source";
                 case RECOMMENDED_TEXT:
-                    return greek ? "Συνιστάται, σύμφωνα με την πηγή" :
-                            "Recommended, as stated in the source";
+                    return greek ? "Αυτόματα εντοπίστηκε «συνιστάται» — ελέγξτε την πλήρη πηγή" :
+                            "Automated recommended wording — verify in full Apple source";
                 case MENTIONED_ONLY:
                     return greek ? "Αναφέρεται — ελέγξτε την επίσημη διαδικασία" :
                             "Mentioned — read the official procedure";
