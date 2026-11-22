@@ -15,7 +15,8 @@ jobs:
   build-candidate:
     # QA v66 builds the consolidated 29 Android Labs, iPhone Apple-first repair knowledge and PDF fixes without Shizuku.
     # Restricted to the isolated v66 QA PR branch; never publish or merge to main.
-    if: ${{ github.head_ref == 'research/iphone-panic-repair-knowledge-20261121' && github.event.pull_request.head.repo.full_name == github.repository }}
+    # Owner pause: keep this signed build disabled until manual QA of all labs is complete.
+    if: ${{ false }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
