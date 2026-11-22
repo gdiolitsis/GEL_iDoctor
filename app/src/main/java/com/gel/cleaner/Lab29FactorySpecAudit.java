@@ -105,6 +105,7 @@ public final class Lab29FactorySpecAudit {
         public final Lab27CertificationGate.Presence headset;
         public final Lab27CertificationGate.Presence simTray;
         public final Lab27CertificationGate.Presence esim;
+        public final Lab27CertificationGate.Presence fm;
         public final boolean esimVoiceCallsSupported;
 
         PhysicalProfile(String modelName, String sourceUrl,
@@ -113,12 +114,23 @@ public final class Lab29FactorySpecAudit {
                 Lab27CertificationGate.Presence simTray,
                 Lab27CertificationGate.Presence esim,
                 boolean esimVoiceCallsSupported) {
+            this(modelName, sourceUrl, usb, headset, simTray, esim,
+                    esimVoiceCallsSupported, Lab27CertificationGate.Presence.UNKNOWN);
+        }
+
+        PhysicalProfile(String modelName, String sourceUrl,
+                Lab27CertificationGate.Presence usb,
+                Lab27CertificationGate.Presence headset,
+                Lab27CertificationGate.Presence simTray,
+                Lab27CertificationGate.Presence esim,
+                boolean esimVoiceCallsSupported, Lab27CertificationGate.Presence fm) {
             this.modelName = modelName;
             this.sourceUrl = sourceUrl;
             this.usb = usb;
             this.headset = headset;
             this.simTray = simTray;
             this.esim = esim;
+            this.fm = fm;
             this.esimVoiceCallsSupported = esimVoiceCallsSupported;
         }
 
@@ -147,7 +159,8 @@ public final class Lab29FactorySpecAudit {
                 exactPresence(report.rows, "3.5 mm jack", "Ναι / Yes"),
                 exactPresence(report.rows, "SIM tray",
                         "SIM1 + Hybrid (SIM or MicroSD)"),
-                esim, voice);
+                esim, voice,
+                exactPresence(report.rows, "FM radio", "Ναι / Yes"));
     }
 
     private static Lab27CertificationGate.Presence exactPresence(
