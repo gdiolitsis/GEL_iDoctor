@@ -25867,10 +25867,8 @@ private void lab17RunAuto() {
 
     final String PREF = "GEL_DIAG";
 
-    // LAB 17 prerequisites: accept Lab 14A, Lab 15 and Lab 16 from the last 12 hours.
+    // LAB 17: one 12-hour evidence window for Labs 14A, 14B, 15, 16 and variability checks.
     final long WINDOW_MS = 12L * 60L * 60L * 1000L;
-    // Preserve the former 2-hour scope for optional 14B/high-variability clues.
-    final long OPTIONAL_EVIDENCE_WINDOW_MS = 2L * 60L * 60L * 1000L;
     final long now = System.currentTimeMillis();
 
     // ------------------------------------------------------------
@@ -26100,7 +26098,7 @@ final boolean fresh14 =
         has14 && ts14 <= now && (now - ts14) <= WINDOW_MS;
 
 final boolean fresh14b =
-        has14b && ts14b <= now && (now - ts14b) <= OPTIONAL_EVIDENCE_WINDOW_MS;
+        has14b && ts14b <= now && (now - ts14b) <= WINDOW_MS;
 
 final boolean fresh15 =
         has15 && ts15 <= now && (now - ts15) <= WINDOW_MS;
@@ -26119,7 +26117,8 @@ final boolean fresh16 =
             hvPending &&
             hvFirstTs > 0L &&
             hvLastTs > hvFirstTs &&
-            (hvLastTs - hvFirstTs) <= OPTIONAL_EVIDENCE_WINDOW_MS;
+            hvLastTs <= now &&
+            (now - hvFirstTs) <= WINDOW_MS;
 
     // ------------------------------------------------------------
     // PRECHECK — SMART POPUP (STRICT)
