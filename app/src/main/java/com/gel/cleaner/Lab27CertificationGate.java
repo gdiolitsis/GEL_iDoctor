@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
  * OEM matches do not establish that replacement parts are genuine.
  */
 final class Lab27CertificationGate {
-    static final int SCHEMA = 3; // Invalidate old certificates lacking OEM-driven physical evidence.
+    static final int SCHEMA = 4; // Require new visual port-presence declarations; reject legacy cable/audio attestations.
     static final long MAX_AGE_MS = 7L * 24L * 60L * 60L * 1000L;
 
     static final List<String> REQUIRED = Collections.unmodifiableList(Arrays.asList(
@@ -96,12 +96,12 @@ final class Lab27CertificationGate {
     }
 
     /** Physical absence must be explicitly acknowledged, not presumed. */
-    static boolean physicalChecksComplete(boolean chargingPortTested,
-            boolean wiredHeadsetTested, boolean wiredHeadsetAbsent,
-            boolean simTrayTested, boolean simTrayAbsent) {
-        return chargingPortTested
-                && (wiredHeadsetTested != wiredHeadsetAbsent)
-                && (simTrayTested != simTrayAbsent);
+    static boolean physicalChecksComplete(boolean usbPortVisuallyPresent,
+            boolean jackVisuallyPresent, boolean jackVisuallyAbsent,
+            boolean simTrayVisuallyPresent, boolean simTrayVisuallyAbsent) {
+        return usbPortVisuallyPresent
+                && (jackVisuallyPresent != jackVisuallyAbsent)
+                && (simTrayVisuallyPresent != simTrayVisuallyAbsent);
     }
 
     /** Manufacturer-sourced physical structure, independent of Android SIM/eSIM flags. */
@@ -118,12 +118,12 @@ final class Lab27CertificationGate {
     }
 
     static boolean physicalMatchesOem(Presence expectedUsb, Presence expectedHeadset,
-            Presence expectedSim, boolean usbConnected,
-            boolean headsetTested, boolean headsetAbsent,
-            boolean simTrayInspected, boolean simTrayAbsent) {
-        return expectedUsb == Presence.PRESENT && usbConnected
-                && matchesOem(expectedHeadset, headsetTested, headsetAbsent)
-                && matchesOem(expectedSim, simTrayInspected, simTrayAbsent);
+            Presence expectedSim, boolean usbVisuallyPresent,
+            boolean jackVisuallyPresent, boolean jackVisuallyAbsent,
+            boolean simTrayVisuallyPresent, boolean simTrayVisuallyAbsent) {
+        return expectedUsb == Presence.PRESENT && usbVisuallyPresent
+                && matchesOem(expectedHeadset, jackVisuallyPresent, jackVisuallyAbsent)
+                && matchesOem(expectedSim, simTrayVisuallyPresent, simTrayVisuallyAbsent);
     }
 
     static Set<String> applicable(boolean telephony, boolean bluetooth, boolean cameras,
