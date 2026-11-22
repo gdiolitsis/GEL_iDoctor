@@ -235,6 +235,8 @@ import javax.microedition.khronos.egl.EGLConfig;
 
 public class ManualTestsActivity extends GELAutoActivityHook {
 	private AlertDialog progressDialog;
+    private String lab27ActiveBasicLab = null;
+    private boolean lab27ActiveBasicLabWarning = false;
 	
 	private enum DrainMode {
 
@@ -3750,6 +3752,10 @@ private void logLabel(String label, String value, String color) {
 // Explicit typed severity survives PDF/plain-log export for Lab 30.
 private void logLabel(String label, String value, String color,
                       GelDiagnosticSeverity.Level severity) {
+    if (severity == GelDiagnosticSeverity.Level.WARNING
+            || severity == GelDiagnosticSeverity.Level.ERROR) {
+        lab27ObserveBasicLabWarning();
+    }
     appendHtml(
             escape(label) + ": " +
             "<font color='" + color + "'>" + escape(value) + "</font>"
@@ -3761,6 +3767,7 @@ private void logLabel(String label, String value, String color,
 // ---------------- SIMPLE ----------------
 private void logInfo(String msg) {
     if (msg == null) return;
+    lab27ObserveBasicLabHeading(msg);
 
     appendHtml("• " + escape(msg));
     GELServiceLog.add("ℹ " + msg);
@@ -3771,6 +3778,7 @@ private void logInfo(String msg) {
 
 private void logOk(String msg) {
     if (msg == null) return;
+    lab27RecordBasicLabCompletion(msg);
 
     appendHtml("<font color='#39FF14'>✔ " + escape(msg) + "</font>");
     GELServiceLog.add("✔ " + msg);
@@ -3781,6 +3789,7 @@ private void logOk(String msg) {
 
 private void logWarn(String msg) {
     if (msg == null) return;
+    lab27ObserveBasicLabWarning();
 
     appendHtml("<font color='#FFD966'>⚠ " + escape(msg) + "</font>");
     GELServiceLog.add("⚠ " + msg);
@@ -3791,6 +3800,7 @@ private void logWarn(String msg) {
 
 private void logError(String msg) {
     if (msg == null) return;
+    lab27ObserveBasicLabWarning();
 
     appendHtml("<font color='#FF5555'>✖ " + escape(msg) + "</font>");
     GELServiceLog.add("✖ " + msg);
@@ -30225,6 +30235,13 @@ private boolean lab28HasFreshLab25Evidence() {
 // Lab25 timestamps are consulted solely to reject a stale certification.
 private boolean lab28HasFreshCertificationEvidence() {
     SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+    if (p.getInt("lab27_cert_schema", 0) != Lab27CertificationGate.SCHEMA
+            || !p.getBoolean("lab27_cert_physical_confirmed", false)
+            || !Build.MODEL.equals(p.getString("lab27_cert_model", ""))
+            || !Lab27CertificationGate.fresh(
+                    p.getLong("lab27_cert_wall_ms", 0L), System.currentTimeMillis())
+            || !lab27PendingBasicLabs(p, lab27ApplicableBasicLabs()).isEmpty())
+        return false;
     return Lab29TechnicalAssessment.isCurrent(
             p.getInt("lab29_technical_schema", 0),
             p.getLong("lab29_technical_wall_ms", 0L),
@@ -30965,6 +30982,146 @@ private void lab29SaveTechnicalAssessmentFromLab25(SharedPreferences p) {
             .putString("lab29_technical_history_coverage",
                     p.getString("lab25_obs_coverage", Lab25BuyerEvidence.LIMITED))
             .apply();
+}
+
+
+// ------------------------------------------------------------
+// LAB 27: source-linked required executions (no guessed success).
+// Record when a real lab emits its own completion line. A yellow/red
+// result marks that execution "review required", never "passed".
+// ------------------------------------------------------------
+private synchronized void lab27ObserveBasicLabHeading(String header) {
+    String id = Lab27CertificationGate.labFromHeader(header);
+    if (id != null) {
+        if (!id.equals(lab27ActiveBasicLab)) {
+            lab27ActiveBasicLab = id;
+            lab27ActiveBasicLabWarning = false;
+        }
+    }
+}
+
+private synchronized void lab27ObserveBasicLabWarning() {
+    if (lab27ActiveBasicLab == null) return;
+    lab27ActiveBasicLabWarning = true;
+    getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
+            .putBoolean("lab27_required_ok_" + lab27ActiveBasicLab, false)
+            .remove("lab27_cert_schema").apply();
+}
+
+private synchronized void lab27RecordBasicLabCompletion(String msg) {
+    String id = Lab27CertificationGate.completedLab(msg);
+    if (id == null || !id.equals(lab27ActiveBasicLab)) return;
+    getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
+            .putLong("lab27_required_wall_" + id, System.currentTimeMillis())
+            .putString("lab27_required_device_" + id, Build.FINGERPRINT)
+            .putBoolean("lab27_required_ok_" + id, !lab27ActiveBasicLabWarning)
+            .remove("lab27_cert_schema")
+            .apply();
+    lab27ActiveBasicLab = null;
+    lab27ActiveBasicLabWarning = false;
+}
+
+private java.util.List<String> lab27ApplicableBasicLabs() {
+    PackageManager pm = getPackageManager();
+    java.util.Set<String> applicable = Lab27CertificationGate.applicable(
+            pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY),
+            pm.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH),
+            pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY),
+            pm.hasSystemFeature(PackageManager.FEATURE_MICROPHONE));
+    return new java.util.ArrayList<>(applicable);
+}
+
+private java.util.List<String> lab27PendingBasicLabs(SharedPreferences p,
+        java.util.List<String> applicable) {
+    java.util.Map<String, Long> runs = new java.util.HashMap<>();
+    java.util.Map<String, Boolean> passed = new java.util.HashMap<>();
+    for (String id : applicable) {
+        if (!Build.FINGERPRINT.equals(
+                p.getString("lab27_required_device_" + id, ""))) continue;
+        runs.put(id, p.getLong("lab27_required_wall_" + id, 0L));
+        passed.put(id, p.getBoolean("lab27_required_ok_" + id, false));
+    }
+    return Lab27CertificationGate.pending(applicable, runs, passed,
+            System.currentTimeMillis());
+}
+
+/** Called only after every required lab and the manufacturer comparison. */
+private void lab27PromptPhysicalConfirmation(final boolean gr, final String grade,
+        final int score, final String model, final int matched) {
+    runOnUiThread(() -> {
+        if (isFinishing() || isDestroyed()) return;
+        final String[] physical = gr
+                ? new String[] {
+                    "USB-C: έλεγξα τη θύρα με πραγματική σύνδεση/φόρτιση.",
+                    "Υποδοχή 3,5 mm: σύνδεσα ακουστικά και έλεγξα τον ήχο.",
+                    "Θήκη SIM: επιθεώρησα τη φυσική υποδοχή και τη σωστή εφαρμογή της."}
+                : new String[] {
+                    "USB-C: I checked the port with a real connection/charging.",
+                    "3.5 mm jack: I connected headphones and checked audio.",
+                    "SIM tray: I checked the physical slot and seating."};
+        final boolean[] marked = new boolean[physical.length];
+        AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(gr ? "GEL Certification — Υποχρεωτικός φυσικός έλεγχος"
+                             : "GEL Certification — Required physical checks")
+                .setMultiChoiceItems(physical, null, (d, which, checked) -> {
+                    marked[which] = checked;
+                    boolean all = true;
+                    for (boolean ok : marked) all &= ok;
+                    AlertDialog open = (AlertDialog) d;
+                    if (open.getButton(AlertDialog.BUTTON_POSITIVE) != null)
+                        open.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(all);
+                })
+                .setNegativeButton(gr ? "ΕΚΚΡΕΜΕΙ" : "PENDING", (d, w) -> {
+                    logLabelValue("GEL Device Certification",
+                            gr ? "Εκκρεμεί φυσική επιβεβαίωση χρήστη."
+                               : "Pending user physical checks.");
+                })
+                .setPositiveButton(gr ? "ΕΠΙΒΕΒΑΙΩΣΗ" : "CONFIRM", (d, w) -> {
+                    SharedPreferences current = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+                    java.util.List<String> applicable = lab27ApplicableBasicLabs();
+                    java.util.List<String> missing = lab27PendingBasicLabs(current, applicable);
+                    Lab29FactorySpecAudit.Report factory = Lab29FactorySpecAudit.capture(this);
+                    boolean verified = true;
+                    for (boolean check : marked) verified &= check;
+                    boolean serious = Lab25BuyerEvidence.SERIOUS.equals(
+                            current.getString("lab25_obs_level", ""))
+                            || Lab25BuyerEvidence.REPEATED.equals(
+                            current.getString("lab25_obs_level", ""))
+                            || Lab25BuyerEvidence.STRONG.equals(
+                            current.getString("lab25_obs_level", ""));
+                    boolean eligible = Lab27CertificationGate.eligible(
+                            applicable.size() - missing.size(), applicable.size(),
+                            verified, factory.supportedModel && model.equals(Build.MODEL),
+                            factory.matches, factory.deviations, serious, grade)
+                            && lab28HasFreshLab25Evidence();
+                    if (!eligible) {
+                        logLabelWarnValue("GEL Device Certification",
+                                gr ? "Ανανεώθηκαν οι έλεγχοι· εκτέλεσε τα εκκρεμή εργαστήρια."
+                                   : "Evidence changed; complete the pending checks.");
+                        return;
+                    }
+                    current.edit().putInt("lab27_cert_schema", Lab27CertificationGate.SCHEMA)
+                            .putLong("lab27_cert_wall_ms", System.currentTimeMillis())
+                            .putString("lab27_cert_model", Build.MODEL)
+                            .putString("lab27_cert_grade", grade)
+                            .putInt("lab27_cert_score", score)
+                            .putInt("lab27_cert_oem_matches", matched)
+                            .putBoolean("lab27_cert_physical_confirmed", true)
+                            .apply();
+                    logLabelOkValue("GEL Device Certification",
+                            (gr ? "Εκδόθηκε GEL " : "GEL issued: ")
+                                    + grade + " — " + applicable.size()
+                                    + "/" + applicable.size()
+                                    + (gr ? " εργαστήρια, φυσικός έλεγχος επιβεβαιωμένος."
+                                          : " labs, physical checks confirmed."));
+                }).create();
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Color.BLACK);
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Color.WHITE);
+        });
+        dialog.show();
+    });
 }
 
 private void lab30CombineFindings() {
@@ -32353,6 +32510,43 @@ lab27DisplayFactorySpecs(gr);
 
 // Snapshot is finalized only after the report has been assembled.
 lab29SaveTechnicalAssessmentFromLab25(p);
+
+// An A+ measurements grade is NOT a device certification until 18 applicable
+// labs have passed and physical connections are explicitly checked by the user.
+appendHtml("<br>");
+logInfo("GEL Device Certification");
+java.util.List<String> applicableBasic = lab27ApplicableBasicLabs();
+java.util.List<String> pendingBasic = lab27PendingBasicLabs(p, applicableBasic);
+logLabelValue(gr ? "Υποχρεωτικά εργαστήρια" : "Required basic labs",
+        (applicableBasic.size() - pendingBasic.size()) + "/" + applicableBasic.size());
+if (!pendingBasic.isEmpty()) {
+    logLabelValue(gr ? "Εκκρεμείς / προς επανέλεγχο" : "Pending / review required",
+            android.text.TextUtils.join(", ", pendingBasic));
+    logLabelValue("GEL Device Certification",
+            gr ? "ΕΚΚΡΕΜΕΙ — ολοκλήρωσε πρώτα τα παραπάνω εργαστήρια."
+               : "PENDING — complete the above labs first.");
+} else {
+    Lab29FactorySpecAudit.Report certFactory = Lab29FactorySpecAudit.capture(this);
+    boolean problematicHistory = Lab25BuyerEvidence.SERIOUS.equals(
+            p.getString("lab25_obs_level", ""))
+            || Lab25BuyerEvidence.REPEATED.equals(p.getString("lab25_obs_level", ""))
+            || Lab25BuyerEvidence.STRONG.equals(p.getString("lab25_obs_level", ""));
+    boolean preEligible = Lab27CertificationGate.eligible(
+            applicableBasic.size(), applicableBasic.size(), true,
+            certFactory.supportedModel, certFactory.matches, certFactory.deviations,
+            problematicHistory, snapshotGrade);
+    if (!preEligible) {
+        logLabelValue("GEL Device Certification",
+                gr ? "ΕΚΚΡΕΜΕΙ — απαιτείται επανέλεγχος αποτελεσμάτων ή προδιαγραφών."
+                   : "PENDING — review diagnostic results or OEM comparisons.");
+    } else {
+        logLabelValue("GEL Device Certification",
+                gr ? "ΕΚΚΡΕΜΕΙ — απαιτείται φυσική επιβεβαίωση θυρών/υποδοχών."
+                   : "PENDING — physical ports and sockets must be confirmed.");
+        lab27PromptPhysicalConfirmation(gr, snapshotGrade, deviceHealthScore,
+                Build.MODEL, certFactory.matches);
+    }
+}
 
 logOk(gr ? "Το Lab 27 ολοκληρώθηκε (σύνταξη πληροφοριακής σύνοψης)."
          : "Lab 27 finished (evidence summary compiled).");
