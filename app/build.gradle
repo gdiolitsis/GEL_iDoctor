@@ -68,7 +68,15 @@ buildTypes {
         }
     }
 
-    testOptions { unitTests.includeAndroidResources = true }
+    testOptions {
+        unitTests.includeAndroidResources = true
+        // Robolectric downloads SDK jars at test runtime, outside Gradle's dependency cache.
+        // Prefer Maven Central's canonical endpoint to avoid intermittent repo1 404s.
+        unitTests.all {
+            systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
+            systemProperty 'robolectric.dependency.repo.id', 'maven-central-apache'
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
