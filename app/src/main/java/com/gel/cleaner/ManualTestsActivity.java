@@ -139,6 +139,8 @@ import android.os.VibratorManager;
 import android.provider.Settings;
 import android.provider.MediaStore;
 import android.telephony.ServiceState;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.Html;
 import android.text.SpannableStringBuilder;
@@ -11954,6 +11956,70 @@ private void showLab11MobileDataPreparation() {
     speakOnce(message);
 }
 
+/**
+ * LAB 12 — Android-visible active subscription type, with no SIM identifiers.
+ * 'SIM Slot 1' names a logical modem slot; it is not physical tray proof.
+ */
+private void lab12ReportActiveSubscriptionTypes(boolean gr) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+        logLabelValue(gr ? "Τύπος SIM/eSIM" : "SIM/eSIM type",
+                gr ? "Άγνωστος — απαιτείται Android 9 ή νεότερο"
+                   : "Unknown — Android 9 or later is required");
+        return;
+    }
+    if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+            != PackageManager.PERMISSION_GRANTED) {
+        logLabelValue(gr ? "Τύπος SIM/eSIM" : "SIM/eSIM type",
+                gr ? "Άγνωστος — δεν δόθηκε άδεια τηλεφωνικής κατάστασης"
+                   : "Unknown — phone-state permission is not granted");
+        return;
+    }
+    try {
+        SubscriptionManager manager = (SubscriptionManager) getSystemService(
+                Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+        java.util.List<SubscriptionInfo> subscriptions =
+                manager == null ? null : manager.getActiveSubscriptionInfoList();
+        if (subscriptions == null || subscriptions.isEmpty()) {
+            logLabelValue(gr ? "Τύπος SIM/eSIM" : "SIM/eSIM type",
+                    gr ? "Δεν εμφανίζονται στοιχεία ενεργής συνδρομής"
+                       : "No active subscription information visible");
+            return;
+        }
+        int observed = 0;
+        for (SubscriptionInfo subscription : subscriptions) {
+            if (subscription == null) continue;
+            observed++;
+            int slot = subscription.getSimSlotIndex();
+            String label = slot >= 0
+                    ? (gr ? "Λογικό SIM Slot " : "Logical SIM Slot ") + (slot + 1)
+                    : (gr ? "Συνδρομή " : "Subscription ") + observed;
+            String kind = subscription.isEmbedded()
+                    ? (gr ? "eSIM — ενεργή συνδρομή (κατά Android)"
+                          : "eSIM — active subscription (Android reported)")
+                    : (gr ? "Φυσική SIM — ενεργή μη ενσωματωμένη συνδρομή (κατά Android)"
+                          : "Physical SIM — active non-embedded subscription (Android reported)");
+            logLabelOkValue(label, kind);
+        }
+        if (observed == 0) {
+            logLabelValue(gr ? "Τύπος SIM/eSIM" : "SIM/eSIM type",
+                    gr ? "Άγνωστος — δεν υπάρχουν ορατές εγγραφές"
+                       : "Unknown — no visible subscription records");
+            return;
+        }
+        logLabelValue(gr ? "Διευκρίνιση Slot" : "Slot clarification",
+                gr ? "Το slot δηλώνει λογική αντιστοίχιση Android, όχι επιθεώρηση της φυσικής θήκης SIM."
+                   : "A logical Android slot does not prove a physical SIM tray.");
+    } catch (SecurityException denied) {
+        logLabelValue(gr ? "Τύπος SIM/eSIM" : "SIM/eSIM type",
+                gr ? "Άγνωστος — η πρόσβαση στις συνδρομές απαγορεύτηκε"
+                   : "Unknown — subscription access denied");
+    } catch (Throwable unavailable) {
+        logLabelValue(gr ? "Τύπος SIM/eSIM" : "SIM/eSIM type",
+                gr ? "Άγνωστος — στοιχεία συνδρομής μη διαθέσιμα"
+                   : "Unknown — subscription information unavailable");
+    }
+}
+
 // ============================================================
 // LAB 12 — Call Function Interpretation (Laboratory)
 // ============================================================
@@ -11972,6 +12038,11 @@ private void lab12CallFunctionInterpretation() {
     logLine();
 
     TelephonySnapshot s = getTelephonySnapshot();
+
+    // Show the Android-declared type of every ACTIVE subscription (SIM/eSIM).
+    // Logical SIM slots do not confirm a physical tray. The optional real
+    // call is deliberately separate and initiated only by the user.
+    lab12ReportActiveSubscriptionTypes(gr);
 
     // ------------------------------------------------------------
     // Airplane mode (context only)
