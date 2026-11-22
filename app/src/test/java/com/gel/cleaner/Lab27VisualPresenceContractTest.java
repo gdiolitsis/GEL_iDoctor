@@ -23,24 +23,27 @@ public final class Lab27VisualPresenceContractTest {
         return text.substring(start, end);
     }
 
-    @Test public void physicalPopupRequiresOnlyVisiblePorts() throws Exception {
+    @Test public void popupProvidesExactlySixExclusivePresentAbsentChoices() throws Exception {
         String popup = section(activity(), "private void lab27PromptPhysicalConfirmation(",
                 "private void lab30CombineFindings()");
-        assertTrue(popup.contains("Θύρα USB-C: υπάρχει (οπτική επιβεβαίωση)."));
-        assertTrue(popup.contains("Υποδοχή 3,5 mm: υπάρχει (οπτική επιβεβαίωση)."));
-        assertTrue(popup.contains("Φυσική θήκη SIM: υπάρχει (οπτική επιβεβαίωση)."));
-        assertTrue(popup.contains("USB-C port is physically present (visual confirmation)."));
-        assertTrue(popup.contains("3.5 mm jack is physically present (visual confirmation)."));
-        assertTrue(popup.contains("Physical SIM tray is present (visual confirmation)."));
+        for (String choice : new String[] {
+                "Θύρα USB-C: υπάρχει.", "Θύρα USB-C: δεν υπάρχει.",
+                "Υποδοχή 3,5 mm: υπάρχει.", "Υποδοχή 3,5 mm: δεν υπάρχει.",
+                "Φυσική θήκη SIM: υπάρχει.", "Φυσική θήκη SIM: δεν υπάρχει.",
+                "USB-C port: present.", "USB-C port: absent.",
+                "3.5 mm jack: present.", "3.5 mm jack: absent.",
+                "Physical SIM tray: present.", "Physical SIM tray: absent."
+        }) assertTrue("Missing visual answer: " + choice, popup.contains(choice));
+        assertTrue(popup.contains("checks[index ^ 1].setChecked(false)"));
+        assertTrue(popup.contains("Lab27CertificationGate.physicalChecksComplete("));
+        assertTrue(popup.contains("lab27UserUsbAbsent = checks[1].isChecked()"));
+        assertTrue(popup.contains("lab27UserPreflightAuthorized = true;"));
         assertFalse(popup.contains("δοκίμασα επιτυχή φόρτιση με καλώδιο"));
         assertFalse(popup.contains("δοκίμασα ήχο με ακουστικά"));
-        assertFalse(popup.contains("I tested audio through wired headphones"));
-        assertTrue(popup.contains("Το Lab 15 αξιολογεί ήδη τη φόρτιση"));
-        assertTrue(popup.contains("Δεν απαιτούνται ενσύρματα ακουστικά"));
-        assertTrue(popup.contains("Το Lab 12 καταγράφει στοιχεία SIM/eSIM"));
-        assertTrue(popup.contains("Lab27CertificationGate.physicalChecksComplete("));
-        assertTrue(popup.contains("Lab27CertificationGate.physicalMatchesOem("));
-        assertTrue(popup.contains("lab27UserPreflightAuthorized = true;"));
+        assertFalse(popup.contains("esimQuestion"));
+        assertFalse(popup.contains("lab27UserEsim"));
+        assertTrue(popup.contains("Η φόρτιση εξετάζεται στο Lab 15"));
+        assertTrue(popup.contains("SIM/eSIM στο Lab 12"));
     }
 
     @Test public void factoryReportDistinguishesAutomaticAndHumanEvidence() throws Exception {
@@ -49,31 +52,49 @@ public final class Lab27VisualPresenceContractTest {
         assertTrue(report.contains("\"USB connector\".equals(specRow.english)"));
         assertTrue(report.contains("\"3.5 mm jack\".equals(specRow.english)"));
         assertTrue(report.contains("\"SIM tray\".equals(specRow.english)"));
-        assertTrue(report.contains("specRow.verdict == Lab29FactorySpecAudit.Verdict.UNKNOWN"));
-        assertTrue(report.contains("Σύμφωνα με τη δήλωση χρήστη: "));
-        assertTrue(report.contains("According to user declaration: "));
+        assertTrue(report.contains("Σύμφωνα με τη δήλωση χρήστη "));
+        assertTrue(report.contains("declaredPresent ? \"υπάρχει\" : \"δεν υπάρχει\""));
+        assertTrue(report.contains("According to the user declaration, "));
         assertTrue(report.contains("verifiedByUser++"));
         assertTrue(report.contains("mismatchedByUser++"));
-        assertTrue(report.contains("factory.unknowns - verifiedByUser - mismatchedByUser"));
+        assertTrue(report.contains("unknownsResolvedByUser++"));
+        assertTrue(report.contains("factory.unknowns - unknownsResolvedByUser"));
         assertTrue(report.contains("Χαρακτηριστικά χωρίς διαθέσιμη σύγκριση"));
         assertTrue(report.contains("logLabelOkValue(rowName, value)"));
         assertTrue(report.contains("logLabelErrorValue(rowName, value)"));
-        assertTrue(report.contains("continue; // Do not also say this port is unverified."));
+        assertTrue(report.contains("continue; // Do not show obsolete"));
     }
 
-    @Test public void oldCertificatesCannotBypassVisualDeclaration() {
-        assertEquals(4, Lab27CertificationGate.SCHEMA);
+    @Test public void oldCertificatesCannotBypassSixVisualAnswers() {
+        assertEquals(5, Lab27CertificationGate.SCHEMA);
         assertTrue(Lab27CertificationGate.physicalChecksComplete(
-                true, true, false, true, false));
+                true, false, true, false, true, false));
+        assertTrue(Lab27CertificationGate.physicalChecksComplete(
+                false, true, false, true, false, true));
         assertTrue(Lab27CertificationGate.physicalMatchesOem(
                 Lab27CertificationGate.Presence.PRESENT,
                 Lab27CertificationGate.Presence.PRESENT,
                 Lab27CertificationGate.Presence.PRESENT,
-                true, true, false, true, false));
+                true, false, true, false, true, false));
         assertFalse(Lab27CertificationGate.physicalMatchesOem(
                 Lab27CertificationGate.Presence.PRESENT,
                 Lab27CertificationGate.Presence.PRESENT,
                 Lab27CertificationGate.Presence.PRESENT,
-                true, false, true, true, false));
+                false, true, true, false, true, false));
+    }
+
+    @Test public void anyOemMismatchStillReachesTheReportButNeverPositiveCertification() throws Exception {
+        String src = activity();
+        String popup = section(src, "private void lab27PromptPhysicalConfirmation(",
+                "private void lab30CombineFindings()");
+        String report = section(src, "private void lab30CombineFindings()",
+                "private boolean lab27ThermalIsElevated(");
+        assertFalse(popup.contains("if (!basic || !oemMatch"));
+        assertTrue(popup.contains("lab30CombineFindings();"));
+        assertTrue(report.contains("lab27UserOemSource.equals(currentPorts.sourceUrl)"));
+        assertTrue(report.contains("Lab27CertificationGate.physicalChecksComplete("));
+        assertTrue(report.contains("boolean physicalVerified = Lab27CertificationGate.physicalMatchesOem("));
+        assertTrue(report.contains("physicalVerified, certFactory.supportedModel"));
+        assertTrue(report.contains("if (!eligibleCert)"));
     }
 }
