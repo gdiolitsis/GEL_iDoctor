@@ -8036,7 +8036,7 @@ private void lab5Vibration() {
                         nm.getCurrentInterruptionFilter()
                                 != NotificationManager.INTERRUPTION_FILTER_ALL) {
 
-                    logLabelWarnValue(
+                    logLabelValue(
                             gr ? "Ρύθμιση" : "Setting",
                             gr
                                     ? "Ενεργή λειτουργία Μην Ενοχλείτε."
@@ -8056,7 +8056,7 @@ private void lab5Vibration() {
 
                 if (pm != null && pm.isPowerSaveMode()) {
 
-                    logLabelWarnValue(
+                    logLabelValue(
                             gr ? "Ρύθμιση" : "Setting",
                             gr
                                     ? "Ενεργή λειτουργία εξοικονόμησης ενέργειας μπαταρίας."
@@ -8077,7 +8077,7 @@ private void lab5Vibration() {
                 if (am != null &&
                         am.getRingerMode() == AudioManager.RINGER_MODE_SILENT) {
 
-                    logLabelWarnValue(
+                    logLabelValue(
                             gr ? "Ρύθμιση" : "Setting",
                             gr
                                     ? "Η συσκευή βρίσκεται σε αθόρυβη λειτουργία."
@@ -8098,7 +8098,7 @@ private void lab5Vibration() {
                 );
 
                 if (haptic == 0) {
-                    logLabelWarnValue(
+                    logLabelValue(
                             gr ? "Ρύθμιση" : "Setting",
                             gr
                                     ? "Η απτική ανάδραση είναι απενεργοποιημένη."
@@ -8117,7 +8117,7 @@ private void lab5Vibration() {
                 );
 
                 if (vibrate == 0) {
-                    logLabelWarnValue(
+                    logLabelValue(
                             gr ? "Ρύθμιση" : "Setting",
                             gr
                                     ? "Η δόνηση κατά την κλήση είναι απενεργοποιημένη."
@@ -9060,7 +9060,7 @@ private void lab8CameraHardwareCheck() {
                       + "to this application."
     );
 
-    logWarn(
+    logInfo(
             gr
                     ? "Ορισμένοι κατασκευαστές μπορεί να μην εκθέτουν ξεχωριστά "
                       + "βοηθητικούς φακούς, όπως macro, depth ή telephoto. "
@@ -9284,7 +9284,7 @@ private void lab8RunNextCamera(
                           + "Android Camera2 were tested."
         );
 
-        logWarn(
+        logInfo(
                 gr
                         ? "Η απογραφή αφορά τις κάμερες που εμφανίζει "
                           + "το Android στην εφαρμογή."
@@ -9350,10 +9350,19 @@ private void lab8RunNextCamera(
         // ====================================================
         // FINAL VERDICT
         // ====================================================
+        boolean completedCameraSurvey = overall.total > 0
+                && overall.previewOkCount + overall.previewFailCount == overall.total;
+        // User-confirmed live-preview failure: tested functionality failed.
+        // This does NOT prove which hardware part caused the symptom.
+        if (completedCameraSurvey) {
+            getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
+                    .putBoolean("lab27_camera_preview_failed", overall.previewFailCount > 0)
+                    .putLong("lab27_camera_wall", System.currentTimeMillis())
+                    .putString("lab27_camera_device", Build.FINGERPRINT)
+                    .remove("lab27_cert_schema").apply();
+        }
         boolean cameraSubsystemOk =
-                overall.total > 0 &&
-                overall.previewFailCount == 0 &&
-                overall.previewOkCount == overall.total;
+                completedCameraSurvey && overall.previewFailCount == 0;
 
         if (cameraSubsystemOk) {
 
@@ -12822,9 +12831,11 @@ private void runLab13BluetoothCheckCore() {
                   + "External device connection stability was not verified.");
 
         appendHtml("<br>");
-        // Only system inventory completed. The skipped external-device test remains untested.
-        logOk(gr ? "Το Lab 13 ολοκλήρωσε την καταγραφή των διαθέσιμων στοιχείων Bluetooth (χωρίς δοκιμή εξωτερικής σύνδεσης)."
-                 : "Lab 13 finished collecting available Bluetooth evidence (external connection not tested).");
+        // This is a completed BASIC Bluetooth check with limited external-link
+        // coverage, not a failed radio and not an unexecuted lab.
+        lab27ObserveBasicLabWarning();
+        logOk(gr ? "Το Lab 13 ολοκληρώθηκε (βασικός έλεγχος Bluetooth· δεν ελέγχθηκε εξωτερική σύνδεση)."
+                 : "Lab 13 completed (basic Bluetooth test; external connection not tested).");
         logLine();
         enableSingleExportButton();
         return;
@@ -13332,7 +13343,9 @@ private void lab13FinishAndReport(boolean adapterStable) {
                    : "NOT TESTED — no connection observed");
 
         appendHtml("<br>");
-        logInfo(gr ? "Το Lab 13 κατέγραψε τα διαθέσιμα στοιχεία." : "Lab 13 recorded available evidence.");
+        lab27ObserveBasicLabWarning();
+        logOk(gr ? "Το Lab 13 ολοκληρώθηκε με περιορισμένη κάλυψη (χωρίς εξωτερική σύνδεση)."
+                 : "Lab 13 completed with limited coverage (no external connection).");
         logLine();
         return;
     }
@@ -31190,6 +31203,31 @@ private java.util.List<String> lab27PendingBasicLabs(SharedPreferences p,
             System.currentTimeMillis());
 }
 
+/** Completed labs with an actual diagnostic finding (not unexecuted labs). */
+private java.util.List<String> lab27BasicLabsWithFindings(SharedPreferences p,
+        java.util.List<String> applicable) {
+    java.util.Map<String, Long> runs = new java.util.HashMap<>();
+    java.util.Map<String, Boolean> passed = new java.util.HashMap<>();
+    for (String id : applicable) {
+        if (!Build.FINGERPRINT.equals(
+                p.getString("lab27_required_device_" + id, ""))) continue;
+        runs.put(id, p.getLong("lab27_required_wall_" + id, 0L));
+        passed.put(id, p.getBoolean("lab27_required_ok_" + id, false));
+    }
+    return Lab27CertificationGate.withFindings(applicable, runs, passed,
+            System.currentTimeMillis());
+}
+
+/** Lab8 user actually answered NO for a camera, after testing each visible camera. */
+private boolean lab27HasCameraFunctionalFailure(SharedPreferences p) {
+    return p.getBoolean("lab27_camera_preview_failed", false)
+            && Build.FINGERPRINT.equals(p.getString("lab27_camera_device", ""))
+            && Lab27CertificationGate.fresh(
+                    p.getLong("lab27_camera_wall", 0L), System.currentTimeMillis())
+            && lab27PendingBasicLabs(p,
+                    java.util.Collections.singletonList("8")).isEmpty();
+}
+
 // One-shot in-memory attestation: never certify or reuse a previous installation's answer.
 private boolean lab27UserPreflightAuthorized = false;
 private boolean lab27UserUsb, lab27UserJack, lab27UserJackAbsent;
@@ -32228,12 +32266,16 @@ else {
 // ------------------------------------------------------------
 int performanceScore = Lab30ScoreEvidence.functionalPerformanceScore(
         storageScore, ramScore, thermalScore);
-int deviceHealthScore = Lab30ScoreEvidence.deviceHealthScore(
+int measuredDeviceHealthScore = Lab30ScoreEvidence.deviceHealthScore(
         thermalScore, batteryScore, performanceScore, stabilityScore);
-
-// Restore the old A+–D presentation using the existing evidence-gated
-// numeric snapshot, rather than the unverified legacy hardware-risk flags.
+java.util.List<String> lab27EvidenceFindings =
+        lab27BasicLabsWithFindings(p, lab27ApplicableBasicLabs());
+boolean confirmedCameraFunctionFailure = lab27HasCameraFunctionalFailure(p);
+int deviceHealthScore = Lab27FunctionGradePolicy.apply(measuredDeviceHealthScore,
+        confirmedCameraFunctionFailure, lab27EvidenceFindings.size());
+// The reported grade now reflects tested functional faults as well as readings.
 final String snapshotGrade = Lab30ScoreEvidence.gradeForMeasuredSnapshot(deviceHealthScore);
+final String displayedGrade = gr && "D".equals(snapshotGrade) ? "Δ" : snapshotGrade;
 
 // ------------------------------------------------------------
 // PRINT DETAILS
