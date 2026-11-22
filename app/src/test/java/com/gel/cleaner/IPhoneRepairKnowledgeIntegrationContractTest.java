@@ -39,6 +39,14 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(evidence.contains("IPhonePanicRepairKnowledgeBase.lookup(repairHistory,"));
         assertTrue(evidence.contains("findings.modelIdentifier, finding.code"));
         assertTrue(evidence.contains("IPhonePanicRepairKnowledgeBase.summarize(matchingReports)"));
+        assertTrue("Exact-model and code are required before historical repair review",
+                evidence.contains("IPhonePanicRepairEvidenceReview.assessExact(repairHistory,"));
+        assertTrue("Historical repair outcomes must remain neutral rather than verified faults",
+                evidence.contains("reviewedHistory.display(gr)"));
+        assertTrue("Count independent devices, not successive swaps on one phone",
+                evidence.contains("reviewedHistory.independentEvidence(gr)"));
+        assertTrue("Do not rank replaceable parts from unverified forum outcomes",
+                evidence.contains("action.display(gr)"));
         assertTrue(evidence.contains("caseRecord.localizedOutcome(gr)"));
         assertTrue(evidence.contains("caseRecord.localizedNote(gr)"));
         assertTrue(evidence.contains("caseRecord.sourceUrl"));
