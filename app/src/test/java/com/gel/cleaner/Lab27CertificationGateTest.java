@@ -56,12 +56,15 @@ public final class Lab27CertificationGateTest {
                 Lab27CertificationGate.pending(applicable, timestamps, passed, now));
     }
 
-    @Test public void certificateIsForFunctionalityNotPartsProvenance() {
-        assertFalse(Lab27CertificationGate.eligible(18, 18, false, false));
-        assertFalse(Lab27CertificationGate.eligible(17, 18, true, false));
-        assertFalse(Lab27CertificationGate.eligible(18, 18, true, true));
-        // Model catalog availability, matches and parts provenance are not prerequisites.
-        assertTrue(Lab27CertificationGate.eligible(18, 18, true, false));
+    @Test public void functionalCertificationStillRequiresFactorySpecificationComparison() {
+        // OEM specifications are an indispensable cross-check, NEVER parts authenticity.
+        assertFalse(Lab27CertificationGate.eligible(18, 18, false, true, 27, 0, false, "A+"));
+        assertFalse(Lab27CertificationGate.eligible(17, 18, true, true, 27, 0, false, "A+"));
+        assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 27, 0, true, "A+"));
+        assertFalse(Lab27CertificationGate.eligible(18, 18, true, false, 0, 0, false, "A+"));
+        assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 0, 0, false, "A+"));
+        assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 27, 1, false, "A+"));
+        assertTrue(Lab27CertificationGate.eligible(18, 18, true, true, 27, 0, false, "A+"));
         assertEquals(2, Lab27CertificationGate.SCHEMA);
     }
 
