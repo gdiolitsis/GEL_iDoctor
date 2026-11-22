@@ -11957,6 +11957,69 @@ private void showLab11MobileDataPreparation() {
 }
 
 /**
+ * Shared Telephony / Modem snapshot: read the SAME Android-visible fields
+ * supplied by DeviceInfoPeripheralsActivity's remote MODEM collector.
+ * Values are logged individually to preserve GEL green/neutral colors.
+ * Advanced/root-only tables are not Lab 12 evidence.
+ */
+private void lab12ReportSharedModemInventory(boolean gr) {
+    logLine();
+    logInfo(gr ? "Telephony / Modem — στοιχεία Android (Περιφερειακά)"
+               : "Telephony / Modem — Android data (Peripherals)");
+    logLine();
+    final String snapshot = DeviceInfoPeripheralsActivity.collectRemoteSection(this, "MODEM");
+    if (snapshot == null || !snapshot.contains("Telephony / Modem:")) {
+        logLabelValue(gr ? "Στοιχεία τηλεφωνίας" : "Telephony inventory",
+                gr ? "Άγνωστα — δεν διατίθενται στοιχεία Android"
+                   : "Unknown — Android inventory unavailable");
+        return;
+    }
+    int rows = 0;
+    for (String raw : snapshot.split("\\r?\\n")) {
+        String line = raw.trim();
+        int delimiter = line.indexOf(" : ");
+        if (delimiter <= 0) continue;
+        String label = line.substring(0, delimiter).trim();
+        String value = line.substring(delimiter + 3).trim();
+        // The root requirement is unrelated to the Lab 12 passive inventory.
+        if (label.isEmpty() || value.isEmpty() || "Advanced".equals(label)) continue;
+
+        String normalized = value.toLowerCase(Locale.US);
+        boolean unknown = normalized.startsWith("unknown")
+                || normalized.startsWith("n/a")
+                || normalized.startsWith("not available")
+                || normalized.startsWith("unavailable")
+                || normalized.startsWith("not declared")
+                || normalized.startsWith("disabled")
+                || normalized.contains("permission not granted")
+                || normalized.contains("access denied");
+        boolean neutralContext = "SIM slot interpretation".equals(label)
+                || ("5G (NR) Active".equals(label) && "No".equals(value))
+                || ("Roaming".equals(label) && "Yes".equals(value))
+                || ("Active eSIM profiles".equals(label)
+                    && value.startsWith("0 in Android-visible"));
+        boolean weakSignal = "Signal Strength".equals(label)
+                && (value.startsWith("0/4") || value.startsWith("1/4"));
+        if (unknown || neutralContext) {
+            logLabelValue(label, value);
+        } else if (weakSignal) {
+            logLabelWarnValue(label, value);
+        } else {
+            logLabelOkValue(label, value);
+        }
+        rows++;
+    }
+    if (rows == 0) {
+        logLabelValue(gr ? "Στοιχεία τηλεφωνίας" : "Telephony inventory",
+                gr ? "Άγνωστα — δεν υπάρχουν αναγνώσιμες τιμές"
+                   : "Unknown — no readable values");
+    }
+    logLabelValue(gr ? "Ερμηνεία" : "Interpretation",
+            gr ? "Τα στοιχεία προέρχονται από το Android. Δεν πιστοποιούν πραγματική κλήση ή φυσική θήκη SIM."
+               : "Android-reported data; not proof of real-call operation or a physical SIM tray.");
+}
+
+/**
  * LAB 12 — Android-visible active subscription type, with no SIM identifiers.
  * 'SIM Slot 1' names a logical modem slot; it is not physical tray proof.
  */
@@ -12042,6 +12105,7 @@ private void lab12CallFunctionInterpretation() {
     // Show the Android-declared type of every ACTIVE subscription (SIM/eSIM).
     // Logical SIM slots do not confirm a physical tray. The optional real
     // call is deliberately separate and initiated only by the user.
+    lab12ReportSharedModemInventory(gr);
     lab12ReportActiveSubscriptionTypes(gr);
 
     // ------------------------------------------------------------
