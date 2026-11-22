@@ -9,6 +9,9 @@ pluginManagement {
 dependencyResolutionManagement {
     repositories {
         google()
+        // Prefer Google Cloud's Maven Central mirror to avoid GitHub runner 429s.
+        // Official Maven Central remains as fallback; no dependencies are disabled.
+        maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }
         mavenCentral()
     }
 }
