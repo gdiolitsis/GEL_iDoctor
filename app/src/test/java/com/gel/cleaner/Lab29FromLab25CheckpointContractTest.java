@@ -15,7 +15,8 @@ public final class Lab29FromLab25CheckpointContractTest {
     @Test public void certificationConsumesLab25AndPersistsOnlyBoundedAssessment() throws Exception {
         String s=source(),cert=s.substring(s.indexOf("private void lab30CombineFindings()"),s.indexOf("private void lab31FinalSummary()"));
         assertTrue(cert.contains("if (!lab29RequireLab25Evidence()) return;"));
-        assertTrue(cert.contains("lab29DisplayLab25Findings(p, gr);"));
+        // Lab 25 remains a mandatory evidence gate but buyer-focused history is not duplicated in Lab 27.
+        assertFalse(cert.contains("lab29DisplayLab25Findings(p, gr);"));
         assertTrue(cert.contains("lab29SaveTechnicalAssessmentFromLab25(p);"));
         String writer=s.substring(s.indexOf("private void lab29SaveTechnicalAssessmentFromLab25("),s.indexOf("private void lab30CombineFindings()"));
         assertTrue(writer.contains("lab29_technical_source25_wall_ms"));
