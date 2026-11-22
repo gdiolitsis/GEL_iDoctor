@@ -74,36 +74,32 @@ public final class IPhonePanicServiceSummary {
             }
         }
 
+        // Report the actual recurrence observation only. The imported-log
+        // scope and per-file provenance already appear in the earlier labs.
         final String meaning;
         if (greek) {
-            String repetition = totalFiles == 1
-                    ? "Με ένα μόνο αρχείο δεν μπορεί να ελεγχθεί αν το φαινόμενο επαναλήφθηκε."
+            meaning = totalFiles == 1
+                    ? "Μία καταγραφή· για έλεγχο επανάληψης χρειάζονται περισσότερα αρχεία."
                     : repeatedKnownDomain
-                    ? "Εμφανίζεται ξανά η ίδια κατηγορία τεχνικών ενδείξεων στα αρχεία και αξίζει περαιτέρω έλεγχο. Αυτό δεν αποδεικνύει επαναλαμβανόμενη βλάβη στην ίδια συσκευή."
+                    ? "Η ίδια κατηγορία ενδείξεων επαναλαμβάνεται· συσχετίστε την με τα συμπτώματα."
                     : hasKnownDomain
-                    ? "Δεν εντοπίστηκε επανάληψη της ίδιας γνωστής κατηγορίας στα αρχεία που εξετάστηκαν."
-                    : "Οι κατηγορίες των ενδείξεων δεν προσδιορίστηκαν επαρκώς ώστε να κριθεί αν επαναλαμβάνονται.";
-            meaning = "Πρόκειται για ιστορικά συμβάντα που αναφέρουν τα αρχεία, όχι για ζωντανό έλεγχο του iPhone. "
-                    + repetition;
+                    ? "Δεν εντοπίστηκε επανάληψη γνωστής κατηγορίας στα αρχεία."
+                    : "Δεν ήταν δυνατή η ομαδοποίηση των ενδείξεων.";
         } else {
-            String repetition = totalFiles == 1
-                    ? "A single record cannot establish whether an event recurred."
+            meaning = totalFiles == 1
+                    ? "One record; more files are needed to assess recurrence."
                     : repeatedKnownDomain
-                    ? "The same technical clue category appears in multiple records and merits follow-up; this does not prove a recurring fault on the same phone."
+                    ? "The same clue category recurs; compare it with actual symptoms."
                     : hasKnownDomain
-                    ? "No known clue category repeated among the records reviewed."
-                    : "The clue categories are not sufficiently identified to assess recurrence.";
-            meaning = "These are historical events described by the files, not a live iPhone diagnostic. "
-                    + repetition;
+                    ? "No known clue category repeated in these records."
+                    : "The clues could not be grouped into known categories.";
         }
 
         final String repair = greek
-                ? "Τα συγκεκριμένα αρχεία δεν τεκμηριώνουν χαλασμένο εξάρτημα ή ανάγκη άμεσης αντικατάστασής του. "
-                  + "Αν το iPhone λειτουργεί κανονικά, δεν προκύπτει λόγος επισκευής μόνο από αυτά τα logs. "
-                  + "Η σημερινή λειτουργική κατάσταση της συσκευής δεν έχει μετρηθεί."
-                : "These files do not establish a defective part or an immediate need to replace one. "
-                  + "If the iPhone currently works normally, these logs alone do not justify a repair. "
-                  + "Its present operating condition was not measured.";
+                ? "Δεν προκύπτει τεκμηριωμένη ανάγκη αντικατάστασης εξαρτήματος από αυτά τα logs. "
+                  + "Αν το iPhone λειτουργεί κανονικά, τα logs από μόνα τους δεν απαιτούν επισκευή."
+                : "These logs do not establish a need for part replacement. "
+                  + "If the iPhone works normally, the logs alone do not justify a repair.";
 
         String help = greek
                 ? "Αν συνεχίζονται επανεκκινήσεις, κολλήματα ή υπερθέρμανση, συσχέτισε τις ημερομηνίες των logs "
