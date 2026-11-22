@@ -9,9 +9,9 @@
 | Official iPhone Repair Manuals indexed | **30** | Apple's current model-manual directory in our catalog |
 | Direct Apple chapter links | **1,074 / 1,074** | Link/table-of-contents completeness; not full article-text review |
 | Distinct source article URLs | **447** | Manufacturer articles are shared by model manuals and by symptom |
-| First-party articles with source-reviewed technical notes | **9** | Separately opened/read official text |
-| Original bilingual technical findings | **108** | Each has source URL, exact scope, category, risk, kind, and review date |
-| Chapter rows to which those reviewed findings apply | **517** | Identical source URL **plus exact topic and phase**; not 459 independently read texts |
+| First-party articles with source-reviewed technical notes | **12** | Separately opened/read official text |
+| Original bilingual technical findings | **120** | Each has source URL, exact scope, category, risk, kind, and review date |
+| Chapter rows to which those reviewed findings apply | **520** | Identical source URL **plus exact topic and phase**; not 520 individually studied articles |
 | Individually source-reviewed stage-summary chapters | **10** | Existing 62 bilingual short stage descriptions, with model-specific prerequisites |
 | Distinct article URLs with physical/diagnostic stage summaries | **8** | Review status is separate from the newer technical-note track |
 
@@ -26,7 +26,7 @@ These are distinct denominators. One official generic article about mechanical i
 - **Safety**: technician-only steps and battery/laser hazards remain labeled; restore/erase procedures carry a data-loss caution; the full illustrated Apple manual is required for physical repairs.
 - **Independent repair evidence**: forum case histories and their successes/failures remain separate from manufacturer's instructions in Lab 4.
 
-## Source-reviewed Phase III articles (nine)
+## Source-reviewed Phase III articles (twelve)
 
 | Official source | Applicable chapter headings | Structured findings | Manufacturer link |
 |---|---|---:|---|
@@ -39,7 +39,10 @@ These are distinct denominators. One official generic article about mechanical i
 | Sound Issues | Speaker, ringer, microphone tests and part eligibility warnings | 9 | https://support.apple.com/en-us/101968 |
 | Mechanical Issues | Button/switch, physical-SIM tray, alerts, vibration/haptic, Touch ID, mechanical sensor chapters | 30 | https://support.apple.com/en-us/101970 |
 | Camera Issues | Rear camera/LiDAR and front camera/Face ID symptom checks and eligible diagnostics | 8 | https://support.apple.com/en-us/101967 |
-| **Total** | | **108** | |
+| iPhone 14 Pro Battery | Required display/bottom-speaker/Taptic removal, adhesive-strip stop rule, optional service completion | 4 | https://support.apple.com/en-us/100381 |
+| iPhone 15 Battery | Back-glass access, camera optional, mmWave variant caution, failed-removal stop rule, reassembly checks | 4 | https://support.apple.com/en-us/104907 |
+| iPhone 15 Pro Max Back Glass | Sanding and glass safety requirements, heated-removal equipment, damaged-battery stop rule and post-repair checks | 4 | https://support.apple.com/en-us/104929 |
+| **Total** | | **120** | |
 
 ### New display and touch knowledge (source 101966)
 
@@ -75,17 +78,27 @@ These are distinct denominators. One official generic article about mechanical i
 
 - The **official manufacturer section appears before independently reported repairs**, preserving provenance.
 - Before physical work, a small source-reviewed safety and Quick Checks summary is shown.
-- A matched official symptom topic includes a limited number of relevant technical facts (rather than all 108 notes). The exact-model official chapter URL remains beside the summary.
+- A matched official symptom topic includes a limited number of relevant technical facts (rather than all 120 notes). The exact-model official chapter URL remains beside the summary.
 - `DATA_LOSS` and `TECHNICIAN_ONLY` notes retain their caution text and do not become red error verdicts.
 - Generic article 101970 may support multiple different chapters; notes are selected by **source URL + phase + topic**, not by article alone.
+
+## November 22 model-specific service review and complete structural index
+
+- All **447 of 447** unique manufacturer article pages were independently fetched and their **document structure** inspected successfully. The original **1,074** chapter links all map to one of those articles. See `docs/qa/APPLE_SOURCE_ARTICLE_STRUCTURE_AUDIT_2026-11-22.md` for the raw automated structural audit.
+- Structure extraction records headings, safety/tools/removal/reassembly/diagnostics and post-repair mentions. It is explicitly **not** detailed manufacturer instruction review or automatic certification.
+- The iPhone 14 Pro battery article requires prior display, lower speaker and Taptic Engine removal; a failed three-strip adhesive removal leads to a **stop-repair** rule.
+- The iPhone 15 battery procedure instead begins from back-glass removal, with camera removal **optional** and an mmWave variant-specific precaution.
+- The iPhone 15 Pro Max back-glass chapter includes broken-glass and sanding safety, specialist heated tools, and a **stop-repair** rule if the battery is physically damaged.
+- In those particular battery/back-glass chapters, `Repair Assistant` is **recommended**, not mandatory. The separately reviewed TrueDepth iPhone 15 Pro Max procedure requires it for enabling security features. Never collapse those distinct conditions into one generic instruction.
+- The raw Apple manual index includes cross-model shared troubleshooting headings. Automatic exact-model reporting now filters **Touch ID** from verified Face ID iPhones and **Face ID** from the verified Touch ID iPhone SE (3rd generation); explicit source inventory browsing still retains those official links.
 
 ## Editorial status for all 447 distinct articles
 
 See `docs/qa/APPLE_IPHONE_TECHNICAL_REVIEW_QUEUE_2026-11-21.tsv`, updated **2026-11-22**:
 
-- Nine manufacturer article bodies now have source-reviewed technical findings.
+- Twelve manufacturer article bodies now have source-reviewed technical findings.
 - Ten model-specific chapters have older, source-reviewed stage summaries.
-- **433 distinct manufacturer articles have neither of these two reviewed-detail statuses**, so their chapter links remain direct authoritative navigation only.
+- **432 distinct manufacturer articles have neither of these two reviewed-detail statuses**, so their chapter links remain direct authoritative navigation only.
 
 The official [Camera Issues](https://support.apple.com/en-us/101967) article was successfully inspected on 2026-11-22 after an earlier temporary retrieval error. Eight new concise topic-scoped Greek/English findings cover rear camera/LiDAR and front camera/Face ID checks. Its model-specific replacement tables have **not** been converted into unconditional panic-based service recommendations.
 
@@ -100,10 +113,10 @@ A separate manufacturer evidence layer now stores **101 explicitly conditional t
 - **3** persistent button/switch issue rules after Apple checks.
 - **2** persistent-temperature-alert rules after Apple checks.
 
-**These 101 are not part of the 108 factual summaries or the 62 existing short repair-stage descriptions, and none is an observed failure in a real device.** A model- and test-specific repair path is available *only* through the guarded `AppleIPhoneConditionalServiceRules.forVerifiedObservedResult(..., externallyVerifiedResult=true)` lookup after the exact Apple test was actually run and its outcome documented. The existing Lab 4 panic-log code does not call this engine.
+**These 101 are not part of the 120 factual summaries or the 62 existing short repair-stage descriptions, and none is an observed failure in a real device.** A model- and test-specific repair path is available *only* through the guarded `AppleIPhoneConditionalServiceRules.forVerifiedObservedResult(..., externallyVerifiedResult=true)` lookup after the exact Apple test was actually run and its outcome documented. The existing Lab 4 panic-log code does not call this engine.
 
 Full model/result matrix and evidence conditions: `docs/qa/APPLE_IPHONE_CONDITIONAL_DIAGNOSTIC_SERVICE_RULES_2026-11-22.md`. This is an important manufacturer-specific evidence advance: the *same failed test* can imply different service paths by model. It never means that a panic log diagnosed the part.
 
 ## Validation boundaries
 
-The JVM/Android CI verifies Java compilation and unit constraints, including 108 fact records, 517 matching chapters and non-leakage between topics on shared Apple pages. It is **not** an on-device UI or HTML/PDF export test; those are still required before merging the draft PR.
+The JVM/Android CI verifies Java compilation and unit constraints, including 120 fact records, 520 matching chapters and non-leakage between topics on shared Apple pages. It is **not** an on-device UI or HTML/PDF export test; those are still required before merging the draft PR.
