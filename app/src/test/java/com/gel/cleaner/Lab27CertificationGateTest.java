@@ -67,7 +67,7 @@ public final class Lab27CertificationGateTest {
         assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 0, 0, false, "A+"));
         assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 27, 1, false, "A+"));
         assertTrue(Lab27CertificationGate.eligible(18, 18, true, true, 27, 0, false, "A+"));
-        assertEquals(5, Lab27CertificationGate.SCHEMA);
+        assertEquals(6, Lab27CertificationGate.SCHEMA);
     }
 
     @Test public void physicalPortsRequireExactlyOneVisualAnswerPerPair() {
@@ -102,6 +102,37 @@ public final class Lab27CertificationGateTest {
                 Lab27CertificationGate.Presence.ABSENT,
                 Lab27CertificationGate.Presence.PRESENT,
                 true, false, false, true, true, false));
+    }
+
+    @Test public void onlyExplicitOemPortsRequireVisualAnswers() {
+        Lab27CertificationGate.Presence yes = Lab27CertificationGate.Presence.PRESENT;
+        Lab27CertificationGate.Presence no = Lab27CertificationGate.Presence.ABSENT;
+        Lab27CertificationGate.Presence unknown = Lab27CertificationGate.Presence.UNKNOWN;
+        assertTrue(Lab27CertificationGate.shouldAsk(yes));
+        assertTrue(Lab27CertificationGate.shouldAsk(no));
+        assertFalse(Lab27CertificationGate.shouldAsk(unknown));
+        // OEM specifies USB-C and a physical SIM tray but mentions no 3.5mm jack.
+        // User must answer only USB and SIM. Headphone answer stays unanswered.
+        assertTrue(Lab27CertificationGate.physicalChecksComplete(
+                yes, unknown, yes, true, false, false, false, true, false));
+        assertTrue(Lab27CertificationGate.physicalMatchesOem(
+                yes, unknown, yes, true, false, false, false, true, false));
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(
+                yes, unknown, yes, true, false, true, false, true, false));
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(
+                yes, unknown, yes, false, false, false, false, true, false));
+        // A sourced OEM "not present" is different from no OEM information.
+        assertTrue(Lab27CertificationGate.physicalChecksComplete(
+                yes, no, yes, true, false, false, true, true, false));
+        assertTrue(Lab27CertificationGate.physicalMatchesOem(
+                yes, no, yes, true, false, false, true, true, false));
+        assertFalse(Lab27CertificationGate.physicalMatchesOem(
+                yes, no, yes, true, false, true, false, true, false));
+        // No documented port: cannot silently certify with no questions.
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(
+                unknown, unknown, unknown, false, false, false, false, false, false));
+        assertFalse(Lab27CertificationGate.physicalMatchesOem(
+                unknown, unknown, unknown, false, false, false, false, false, false));
     }
 
     @Test public void unsupportedHardwareIsMarkedNotApplicableRatherThanPassed() {
