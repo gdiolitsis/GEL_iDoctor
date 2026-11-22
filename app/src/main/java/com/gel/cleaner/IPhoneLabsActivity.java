@@ -500,6 +500,11 @@ setContentView(mainScroll);
 scroll = mainScroll;
 
 UIHelpers.applyPressEffectRecursive(root);
+// The recursive button press effect must NOT scale the evidence log TextView.
+// Its LinkMovementMethod still handles taps on explicitly linked Apple/repair URLs.
+txtLog.setOnTouchListener(null);
+txtLog.setScaleX(1f);
+txtLog.setScaleY(1f);
 
 // popup AFTER layout ready
 root.post(() -> {
