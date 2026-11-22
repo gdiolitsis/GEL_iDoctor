@@ -16,7 +16,7 @@ jobs:
     # QA v70 builds all 29 labs, Apple-first iPhone evidence, OEM comparison and functional certification (not parts originality).
     # Restricted to the new consolidated v70 QA branch; never publish/merge.
     # User-requested isolated QA candidate; only its exact head branch may sign.
-    if: ${{ github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'qa/v70-esim-evidence-colors-20261122' }}
+    if: ${{ github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'qa/v70-manufacturer-visual-presence-20261122' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
