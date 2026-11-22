@@ -93,6 +93,62 @@ public final class Lab29FactorySpecAudit {
         }
     }
 
+    /**
+     * Physical ports are read exclusively from an exact-model, sourced OEM
+     * specification. Android telephony features and an active eSIM are NOT
+     * evidence that a physical SIM tray does or does not exist.
+     */
+    public static final class PhysicalProfile {
+        public final String modelName;
+        public final String sourceUrl;
+        public final Lab27CertificationGate.Presence usb;
+        public final Lab27CertificationGate.Presence headset;
+        public final Lab27CertificationGate.Presence simTray;
+
+        PhysicalProfile(String modelName, String sourceUrl,
+                Lab27CertificationGate.Presence usb,
+                Lab27CertificationGate.Presence headset,
+                Lab27CertificationGate.Presence simTray) {
+            this.modelName = modelName;
+            this.sourceUrl = sourceUrl;
+            this.usb = usb;
+            this.headset = headset;
+            this.simTray = simTray;
+        }
+
+        public boolean complete() {
+            return sourceUrl != null && !sourceUrl.isEmpty()
+                    && usb == Lab27CertificationGate.Presence.PRESENT
+                    && headset != Lab27CertificationGate.Presence.UNKNOWN
+                    && simTray != Lab27CertificationGate.Presence.UNKNOWN;
+        }
+    }
+
+    public static PhysicalProfile physicalProfile(Report report) {
+        if (report == null || !report.supportedModel || report.officialSource.isEmpty())
+            return new PhysicalProfile("", "", Lab27CertificationGate.Presence.UNKNOWN,
+                    Lab27CertificationGate.Presence.UNKNOWN,
+                    Lab27CertificationGate.Presence.UNKNOWN);
+        return new PhysicalProfile(report.modelName, report.officialSource,
+                exactPresence(report.rows, "USB connector", "USB-C"),
+                exactPresence(report.rows, "3.5 mm jack", "Ναι / Yes"),
+                exactPresence(report.rows, "SIM tray",
+                        "SIM1 + Hybrid (SIM or MicroSD)"));
+    }
+
+    private static Lab27CertificationGate.Presence exactPresence(
+            List<Row> rows, String label, String presentExpected) {
+        for (Row row : rows) {
+            if (!label.equals(row.english)) continue;
+            if (presentExpected.equals(row.expected))
+                return Lab27CertificationGate.Presence.PRESENT;
+            if ("Όχι / No".equals(row.expected))
+                return Lab27CertificationGate.Presence.ABSENT;
+            break;
+        }
+        return Lab27CertificationGate.Presence.UNKNOWN;
+    }
+
     /** Test-friendly container. All values originate from the common iDoctorEngine. */
     public static final class Measurements {
         public String manufacturer, model, abi;
@@ -418,6 +474,17 @@ public final class Lab29FactorySpecAudit {
                     + "Ελέγξτε αν υπάρχει υποδοχή 3,5 mm, σύμφωνα με τις προδιαγραφές.",
                 "The lab cannot physically inspect the headphone jack. "
                     + "Check whether the device has a 3.5 mm socket as specified."));
+        // Exact OEM model sheet: SIM1 + Hybrid (SIM or microSD), a real
+        // physical tray, irrespective of active subscriptions or eSIM.
+        // https://www.mi.com/global/product/redmi-12-5g/specs/
+        rows.add(new Row("Θήκη SIM", "SIM tray", "SIM1 + Hybrid (SIM or MicroSD)",
+                "", Verdict.UNKNOWN,
+                "Η Xiaomi τεκμηριώνει φυσική θήκη SIM1 + υβριδική SIM/microSD. "
+                    + "Ελέγξτε οπτικά τη θήκη. Η χρήση eSIM δεν αποδεικνύει "
+                    + "ότι λείπει η εργοστασιακή θήκη SIM.",
+                "Xiaomi documents a physical SIM1 + hybrid SIM/microSD tray. "
+                    + "Inspect the physical tray. eSIM use cannot establish "
+                    + "absence of the OEM physical SIM slot."));
         rows.add(new Row("FM", "FM radio", "Ναι / Yes",
                 m.fmFeatureReported ? "Android FM feature declared" : "",
                 m.fmFeatureReported ? Verdict.MATCH : Verdict.UNKNOWN,
