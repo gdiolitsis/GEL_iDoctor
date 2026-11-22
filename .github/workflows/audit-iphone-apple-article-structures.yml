@@ -1,0 +1,45 @@
+name: Apple iPhone source article structural audit (never a repair verdict)
+
+on:
+  pull_request:
+    paths:
+      - 'tools/iphone/audit_apple_repair_article_structures.py'
+      - '.github/workflows/audit-iphone-apple-article-structures.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: iphone-apple-source-audit-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  inspect-apple-articles:
+    if: ${{ github.head_ref == 'research/iphone-panic-repair-knowledge-20261121' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout review branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+      - name: Carefully check distinct official Apple article structures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/iphone/audit_apple_repair_article_structures.py --write --max-pages 447 --delay 1.45
+      - name: Save source audit, retaining explicit missing and rate-limited statuses
+        shell: bash
+        env:
+          TARGET: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/qa/APPLE_SOURCE_ARTICLE_STRUCTURE_AUDIT_2026-11-22.tsv
+          git add docs/qa/APPLE_SOURCE_ARTICLE_STRUCTURE_AUDIT_2026-11-22.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Record independently fetched Apple article structure without claiming technical step review"
+            git push origin "HEAD:${TARGET}"
+          fi
