@@ -67,17 +67,41 @@ public final class Lab27CertificationGateTest {
         assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 0, 0, false, "A+"));
         assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 27, 1, false, "A+"));
         assertTrue(Lab27CertificationGate.eligible(18, 18, true, true, 27, 0, false, "A+"));
-        assertEquals(4, Lab27CertificationGate.SCHEMA);
+        assertEquals(5, Lab27CertificationGate.SCHEMA);
     }
 
-    @Test public void physicalPortsRequireVisualConfirmationOrExplicitAbsence() {
-        assertTrue(Lab27CertificationGate.physicalChecksComplete(true, true, false, true, false));
-        assertTrue(Lab27CertificationGate.physicalChecksComplete(true, false, true, false, true));
-        assertFalse(Lab27CertificationGate.physicalChecksComplete(false, true, false, true, false));
-        assertFalse(Lab27CertificationGate.physicalChecksComplete(true, false, false, true, false));
-        assertFalse(Lab27CertificationGate.physicalChecksComplete(true, true, true, true, false));
-        assertFalse(Lab27CertificationGate.physicalChecksComplete(true, true, false, false, false));
-        assertFalse(Lab27CertificationGate.physicalChecksComplete(true, true, false, true, true));
+    @Test public void physicalPortsRequireExactlyOneVisualAnswerPerPair() {
+        assertTrue(Lab27CertificationGate.physicalChecksComplete(
+                true, false, true, false, true, false));
+        assertTrue(Lab27CertificationGate.physicalChecksComplete(
+                false, true, false, true, false, true));
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(
+                false, false, true, false, true, false)); // USB unanswered
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(
+                true, true, true, false, true, false)); // USB contradictory
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(
+                true, false, false, false, true, false)); // jack unanswered
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(
+                true, false, true, true, true, false)); // jack contradictory
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(
+                true, false, true, false, false, false)); // SIM unanswered
+        assertFalse(Lab27CertificationGate.physicalChecksComplete(
+                true, false, true, false, true, true)); // SIM contradictory
+    }
+
+    @Test public void completeVisualDeclarationDoesNotImplyOemAgreement() {
+        assertTrue(Lab27CertificationGate.physicalChecksComplete(
+                false, true, true, false, true, false));
+        assertFalse(Lab27CertificationGate.physicalMatchesOem(
+                Lab27CertificationGate.Presence.PRESENT,
+                Lab27CertificationGate.Presence.PRESENT,
+                Lab27CertificationGate.Presence.PRESENT,
+                false, true, true, false, true, false));
+        assertTrue(Lab27CertificationGate.physicalMatchesOem(
+                Lab27CertificationGate.Presence.PRESENT,
+                Lab27CertificationGate.Presence.ABSENT,
+                Lab27CertificationGate.Presence.PRESENT,
+                true, false, false, true, true, false));
     }
 
     @Test public void unsupportedHardwareIsMarkedNotApplicableRatherThanPassed() {
