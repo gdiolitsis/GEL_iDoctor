@@ -105,7 +105,9 @@ public final class GELServiceLogPdfColorTest {
         String src = new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
         assertTrue(src.contains("pdfValuePrintColor(matchedRow.valueColor)"));
         assertTrue(src.contains("cleanLine.equals(matchedRow.text.trim())"));
-        assertTrue(src.contains("printValue, printColor"));
+        assertTrue(src.contains("GELPdfMeasuredLineWrap.split(sub,"));
+        assertTrue(src.contains("drawLineWithColoredEmoji(canvas, fragment.text"));
+        assertTrue(src.contains("coloredSuffix == null ? null : printColor"));
         assertTrue(src.contains("rest.endsWith(valueText)"));
         assertTrue(src.contains("canvas.drawText(valueText, dx + textPaint.measureText(label), y, valuePaint)"));
         assertTrue(src.contains("if (\"#39FF14\".equalsIgnoreCase(screenColor)) return 0xFF0B7729"));
@@ -135,7 +137,7 @@ public final class GELServiceLogPdfColorTest {
         assertTrue(src.contains("line.equals(pdfRow.text.trim())"));
         assertTrue(src.contains("pdfValueCssClass(pdfRow.valueColor)"));
         assertTrue(src.contains("escapeHtml(parts[0].trim())"));
-        assertTrue(src.contains("escapeHtml(parts.length > 1 ? parts[1].trim() : \"\")"));
+        assertTrue(src.contains("GELReportSourceLinks.escapeAndLinkify(parts.length > 1 ? parts[1].trim() : \"\")"));
         assertTrue(src.contains(".value-ok{color:#0b7729"));
         assertTrue(src.contains(".value-warn{color:#855700"));
         assertTrue(src.contains(".value-err{color:#aa1630"));
@@ -143,7 +145,7 @@ public final class GELServiceLogPdfColorTest {
         assertTrue(src.contains("if (valueCss != null && line.contains(\":\"))"));
         assertTrue(src.contains("pdfRow.valueStart >= 0"));
         assertTrue(src.contains("escapeHtml(line.substring(0, pdfRow.valueStart))"));
-        assertTrue(src.contains("escapeHtml(line.substring(pdfRow.valueStart))"));
+        assertTrue(src.contains("GELReportSourceLinks.escapeAndLinkify(line.substring(pdfRow.valueStart))"));
         assertTrue(src.contains("|| \"#FFFFFF\".equalsIgnoreCase(screenColor)"));
     }
 }
