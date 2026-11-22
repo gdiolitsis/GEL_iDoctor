@@ -32984,6 +32984,7 @@ private void lab27DisplayFactorySpecs(boolean gr) {
                         continue; // Do not show obsolete "cannot inspect" guidance.
                     }
                 }
+                String rowName = gr ? specRow.greek : specRow.english;
                 String observation = specRow.observed == null || specRow.observed.isEmpty()
                         ? (gr ? "Δεν διατίθεται αξιόπιστη μέτρηση"
                               : "No reliable reading available")
