@@ -31,6 +31,12 @@ public final class Lab27VisualPresenceContractTest {
         assertTrue(popup.contains("for (Lab29FactorySpecAudit.Row row : factory.rows)"));
         assertTrue(popup.contains("portNames[i] = gr ? row.greek : row.english"));
         assertTrue(popup.contains("if (!Lab27CertificationGate.shouldAsk(oemPorts[portIndex])) continue;"));
+        assertTrue(popup.contains("profile.usb, profile.headset, profile.simTray, profile.fm"));
+        assertTrue(popup.contains("\"FM radio\""));
+        assertTrue(popup.contains("Εφαρμογή ραδιοφώνου "));
+        assertTrue(popup.contains("Lab27CertificationGate.fmAppQuestionComplete("));
+        assertTrue(popup.contains("lab27UserFmAppPresent = lab27Checked(checks[6])"));
+        assertTrue(popup.contains("lab27UserFmAppAbsent = lab27Checked(checks[7])"));
         assertTrue(popup.contains("CheckBox[] checks = new CheckBox[oemPorts.length * 2]"));
         assertTrue(popup.contains("check.setText(portNames[portIndex] + \": \""));
         assertTrue(popup.contains("checks[index ^ 1].setChecked(false)"));
@@ -61,10 +67,16 @@ public final class Lab27VisualPresenceContractTest {
         assertTrue(report.contains("logLabelOkValue(rowName, value)"));
         assertTrue(report.contains("logLabelErrorValue(rowName, value)"));
         assertTrue(report.contains("continue; // Do not show obsolete"));
+        assertTrue(report.contains("\"FM radio\".equals(specRow.english)"));
+        assertTrue(report.contains("Σύμφωνα με τη δήλωση χρήστη "));
+        assertTrue(report.contains("υπάρχει εφαρμογή ραδιοφώνου FM."));
+        assertTrue(report.contains("δεν υπάρχει εφαρμογή ραδιοφώνου FM."));
+        assertTrue(report.contains("Η απουσία εφαρμογής δεν αποδεικνύει απουσία δέκτη FM."));
+        assertTrue(report.contains("App presence is not a measured FM reception verdict."));
     }
 
     @Test public void oldCertificatesCannotBypassOemSelectedVisualAnswers() {
-        assertEquals(6, Lab27CertificationGate.SCHEMA);
+        assertEquals(7, Lab27CertificationGate.SCHEMA);
         Lab27CertificationGate.Presence yes = Lab27CertificationGate.Presence.PRESENT;
         Lab27CertificationGate.Presence missing = Lab27CertificationGate.Presence.UNKNOWN;
         // This model's OEM does not describe any headphone jack.
