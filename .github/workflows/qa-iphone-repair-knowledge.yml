@@ -30,6 +30,8 @@ on:
       - 'docs/qa/IPHONE_APPLE_OFFICIAL_SERVICE_SOURCES_2026-11-21.md'
       - 'docs/qa/IPHONE_WORLD_PANIC_REPAIR_SURVEY_2026-11-21.md'
       - 'app/src/main/java/com/gel/cleaner/IPhonePanicRepairKnowledgeBase.java'
+      - 'app/src/main/java/com/gel/cleaner/IPhonePanicRepairEvidenceReview.java'
+      - 'app/src/test/java/com/gel/cleaner/IPhonePanicRepairEvidenceReviewTest.java'
       - 'app/src/main/java/com/gel/cleaner/IPhoneLabsActivity.java'
       - 'app/src/test/java/com/gel/cleaner/IPhonePanicRepairKnowledgeBaseTest.java'
       - 'app/src/test/java/com/gel/cleaner/IPhoneRepairKnowledgeIntegrationContractTest.java'
