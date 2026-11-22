@@ -33,13 +33,15 @@ public final class IPhoneEvidenceClarityContractTest {
         assertTrue(lab.contains("GEL pattern matching completed."));
         assertTrue(lab.contains("logLabelOkValue("));
         assertFalse(lab.contains("Βεβαιότητα αιτίας:"));
-        assertTrue(lab.contains("Αναγνωριστικό κανόνα GEL:"));
-        assertTrue(lab.contains("Πρόσθετος κανόνας GEL:"));
+        assertTrue(lab.contains("Αναγνωριστικό κανόνα GEL (όχι Apple):"));
+        assertTrue(lab.contains("Επιπλέον κανόνας GEL στο ίδιο συμβάν:"));
         assertFalse(lab.contains("\"Pattern ID:\""));
         assertFalse(lab.contains("Βάρος κανόνα"));
         assertFalse(lab.contains("Rule weight (not device severity)"));
         assertFalse(lab.contains("Το log είναι έγκυρο"));
-        assertTrue(lab.contains("IPSPanicParser.analyze(this, panicLogText)"));
+        assertTrue(lab.contains("IPSPanicParser.analyze(this, block)"));
+        assertFalse(lab.contains("IPSPanicParser.analyze(this, panicLogText)"));
+        assertTrue(lab.contains("logPanicIncidentHeader(incidentNumber,"));
     }
     @Test public void lab2IsEventOverviewAndLab4StillHasIndependentExpertEvidence() throws Exception {
         String src = source();
@@ -48,11 +50,11 @@ public final class IPhoneEvidenceClarityContractTest {
         assertTrue(lab2.contains("parseAndCacheSignature(block)"));
         assertTrue(lab2.contains("Συμβάν \" + incidentNumber + \" — τύπος:"));
         assertTrue(lab2.contains("Συμβάν \" + incidentNumber + \" — με απλά λόγια:"));
-        assertTrue(lab2.contains("IPhonePanicHumanizer.meaning(sigCrashType, gr)"));
+        assertTrue(lab2.contains("panicEventMeaningExact(block, sigCrashType, gr)"));
         assertFalse(lab2.contains("Βεβαιότητα αιτίας:"));
         assertFalse(lab2.contains("logApplePanicEvidence("));
         assertTrue(lab4.contains("parseAndCacheSignature(block)"));
-        assertTrue(lab4.contains("IPhonePanicHumanizer.event(sigCrashType, gr)"));
+        assertTrue(lab4.contains("panicEventExact(block, sigCrashType, gr)"));
         assertTrue(lab4.contains("logApplePanicEvidence(block, gr,"));
         assertFalse(lab4.contains("logLabelOkValue(gr ? \"Εξάρτημα:\""));
         assertTrue(lab4.contains("Το Lab 4 ολοκληρώθηκε."));
