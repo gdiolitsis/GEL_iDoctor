@@ -2378,7 +2378,7 @@ private String buildHtmlReport(String report) {
         String valueCss = pdfRow != null && line.equals(pdfRow.text.trim())
                 ? pdfValueCssClass(pdfRow.valueColor) : null;
 
-        String escaped = escapeHtml(line);
+        String escaped = GELReportSourceLinks.escapeAndLinkify(line);
 
         if (valueCss != null && pdfRow != null
                 && pdfRow.valueStart >= 0 && pdfRow.valueStart < line.length()) {
@@ -2389,7 +2389,7 @@ private String buildHtmlReport(String report) {
                     .append("</span><span class='")
                     .append(valueCss)
                     .append("'>")
-                    .append(escapeHtml(line.substring(pdfRow.valueStart)))
+                    .append(GELReportSourceLinks.escapeAndLinkify(line.substring(pdfRow.valueStart)))
                     .append("</span></div>");
         }
         else if (valueCss != null && line.contains(":")) {
@@ -2400,7 +2400,7 @@ private String buildHtmlReport(String report) {
                     .append(":</span> <span class='")
                     .append(valueCss)
                     .append("'>")
-                    .append(escapeHtml(parts.length > 1 ? parts[1].trim() : ""))
+                    .append(GELReportSourceLinks.escapeAndLinkify(parts.length > 1 ? parts[1].trim() : ""))
                     .append("</span></div>");
         }
         else if (line.startsWith("✔")) {
@@ -2420,7 +2420,7 @@ private String buildHtmlReport(String report) {
             String[] parts = line.split(":", 2);
 
             String label = escapeHtml(parts[0].trim());
-            String value = parts.length > 1 ? escapeHtml(parts[1].trim()) : "";
+            String value = parts.length > 1 ? GELReportSourceLinks.escapeAndLinkify(parts[1].trim()) : "";
 
             body.append("<div class='row'><span class='label'>")
                     .append(label)
@@ -2515,6 +2515,7 @@ private String buildHtmlReport(String report) {
             + ".value-warn{color:#855700;font-weight:700;}"
             + ".value-err{color:#aa1630;font-weight:700;}"
             + ".value-info{color:#176293;font-weight:700;}"
+            + ".source-link{color:inherit;text-decoration:underline;overflow-wrap:anywhere;word-break:break-word;}"
             + ".space{height:10px;}"
 
             // SECTIONS
