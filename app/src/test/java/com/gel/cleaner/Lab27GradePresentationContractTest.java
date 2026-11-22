@@ -38,7 +38,7 @@ public final class Lab27GradePresentationContractTest {
         assertTrue(lab.contains("lab29SaveTechnicalAssessmentFromLab25(p);"));
         assertTrue(lab.contains("Το Lab 27 ολοκληρώθηκε"));
         assertTrue(lab.contains("Το Certification αξιολογείται ξεχωριστά."));
-        assertTrue(lab.contains("lab27PromptPhysicalConfirmation(gr, snapshotGrade, deviceHealthScore,"));
+        assertTrue(lab.contains("lab27PromptPhysicalConfirmation(grGate, factory);"));
         assertTrue(lab.contains("όχι πιστοποίηση εξαρτημάτων ή μέτρηση φθοράς μπαταρίας"));
     }
 
