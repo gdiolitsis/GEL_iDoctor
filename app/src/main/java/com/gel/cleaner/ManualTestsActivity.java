@@ -31580,14 +31580,18 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
                         // discrepancy in the comparison, not a proven failure
                         // of the interface's electrical/audio function.
                         if (basic && !oemMatch) {
-                            if (profile.headset == Lab27CertificationGate.Presence.PRESENT
-                                    && checks[2].isChecked()) {
+                            if ((profile.headset == Lab27CertificationGate.Presence.PRESENT
+                                    && checks[2].isChecked())
+                                    || (profile.headset == Lab27CertificationGate.Presence.ABSENT
+                                    && checks[1].isChecked())) {
                                 logLabelErrorValue(gr ? "Υποδοχή 3,5 mm" : "3.5 mm jack",
                                         gr ? "Σύμφωνα με τη δήλωση χρήστη: ΔΕΝ ΣΥΜΦΩΝΕΙ"
                                            : "According to user declaration: DOES NOT MATCH");
                             }
-                            if (profile.simTray == Lab27CertificationGate.Presence.PRESENT
-                                    && checks[4].isChecked()) {
+                            if ((profile.simTray == Lab27CertificationGate.Presence.PRESENT
+                                    && checks[4].isChecked())
+                                    || (profile.simTray == Lab27CertificationGate.Presence.ABSENT
+                                    && checks[3].isChecked())) {
                                 logLabelErrorValue(gr ? "Φυσική θήκη SIM" : "Physical SIM tray",
                                         gr ? "Σύμφωνα με τη δήλωση χρήστη: ΔΕΝ ΣΥΜΦΩΝΕΙ"
                                            : "According to user declaration: DOES NOT MATCH");
