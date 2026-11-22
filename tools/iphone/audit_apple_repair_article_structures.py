@@ -114,8 +114,8 @@ def parse(url, info, html):
     reader = Headings()
     reader.feed(html)
     title = next((name for tag, name in reader.headings if tag == "h1"), "")
-    if not title or not title.casefold().startswith("iphone"):
-        raise RuntimeError("NOT_IPHONE_ARTICLE")
+    if not title:
+        raise RuntimeError("NO_APPLE_ARTICLE_HEADING")
     names = [name for tag, name in reader.headings if tag in ("h2", "h3")]
     low = " ".join(names).casefold()
     body = " ".join(reader.text).casefold()
