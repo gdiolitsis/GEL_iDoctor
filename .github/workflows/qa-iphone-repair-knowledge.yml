@@ -40,6 +40,7 @@ on:
       - 'app/src/test/java/com/gel/cleaner/GELReportSourceLinksTest.java'
       - 'app/src/main/java/com/gel/cleaner/GELPdfMeasuredLineWrap.java'
       - 'app/src/test/java/com/gel/cleaner/GELPdfMeasuredLineWrapTest.java'
+      - 'app/src/test/java/com/gel/cleaner/IPhoneAppleSourceReportExportContractTest.java'
       - 'app/src/main/java/com/gel/cleaner/ServiceReportActivity.java'
       - 'app/src/test/java/com/gel/cleaner/IPhonePanicRepairKnowledgeBaseTest.java'
       - 'app/src/test/java/com/gel/cleaner/IPhoneRepairKnowledgeIntegrationContractTest.java'
