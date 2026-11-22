@@ -35,8 +35,11 @@ public final class Lab27FunctionalFaultCertificationContractTest {
         assertTrue(s.contains("Μέγιστος βαθμός Δ (49/100)"));
         assertTrue(s.contains("ΠΙΣΤΟΠΟΙΗΣΗ ΜΕ ΠΕΡΙΟΡΙΣΜΟΥΣ"));
         assertTrue(s.contains(".putBoolean(\"lab27_cert_camera_failure\", confirmedCameraFunctionFailure)"));
-        assertTrue(s.contains("Το 50% της αντίστοιχης τιμής μπορεί να είναι αρχική προσφορά"));
-        assertTrue(s.contains("όχι πιστοποιημένη αγοραία αξία"));
+        // Lab 28 reports diagnostics and lets buyers judge market listings themselves.
+        assertTrue(s.contains("ΑΓΓΕΛΙΕΣ & ΦΩΤΟΓΡΑΦΙΕΣ eBay"));
+        assertTrue(s.contains("Εσύ αποφασίζεις"));
+        assertFalse(s.contains("Μην πληρώνεις τιμή πλήρως λειτουργικής συσκευής"));
+        assertFalse(s.contains("Το 50% της αντίστοιχης τιμής"));
     }
 
     @Test public void incompleteTestsRemainBlockedAndNoAutomaticSellingPrice() throws Exception {
