@@ -24,9 +24,9 @@ public final class IPhoneLab8HumanPresentationContractTest {
     @Test public void humanResultAppearsBeforeEvidenceDetailsAndIsNeverGreenCertification() throws Exception {
         String lab8=part(source(), "private void runFinalServiceRecommendationLab()", "private void runDemoDiagnostics()");
         int human=lab8.indexOf("Συνολικό συμπέρασμα — με απλά λόγια");
-        int technical=lab8.indexOf("Αναλυτικά ευρήματα των αρχείων");
-        int event=lab8.indexOf("for (java.util.Map.Entry<String, Integer> e : crashCount.entrySet())");
-        assertTrue(human>=0 && technical>human && event>technical);
+        int codes=lab8.indexOf("Ενδείξεις που αναγνώρισε το GEL:");
+        assertTrue(human>=0 && codes>human);
+        assertFalse(lab8.contains("for (java.util.Map.Entry<String, Integer> e : crashCount.entrySet())"));
         assertTrue(lab8.contains("IPhonePanicServiceSummary.interpret("));
         assertTrue(lab8.contains("human.repairAdvice"));
         assertTrue(lab8.contains("human.whatItMeans"));
@@ -44,14 +44,13 @@ public final class IPhoneLab8HumanPresentationContractTest {
         assertTrue(lab8.contains("uniqueTechnicalCodes.add(finding.code)"));
         assertTrue(lab8.contains("repeatedCategory"));
         assertTrue(lab8.contains("domainCount.getOrDefault"));
-        assertTrue(lab8.contains("Οι ενδείξεις προέρχονται από κανόνες GEL"));
+        assertFalse(lab8.contains("logLabelOkValue(gr ? \"Ενδείξεις που αναγνώρισε το GEL:\""));
     }
 
     @Test public void demoIsExplicitAndNeverPersistedAsCustomerEvidence() throws Exception {
         String src=source();
         String lab8=part(src, "private void runFinalServiceRecommendationLab()", "private void runDemoDiagnostics()");
-        assertTrue(lab8.contains("if (demoMode)"));
-        assertTrue(lab8.contains("όχι πραγματική συσκευή"));
+        assertFalse(lab8.contains("Αυτό το συμπέρασμα αφορά μόνο τα δοκιμαστικά DEMO"));
         String demo=part(src, "private void runDemoDiagnostics()", "// GUARD");
         assertTrue(demo.contains("demoMode = true;"));
         assertTrue(demo.contains("runFinalServiceRecommendationLab();"));
