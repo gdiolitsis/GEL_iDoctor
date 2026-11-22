@@ -53,12 +53,12 @@ public final class IPhonePanicRepairEvidenceReview {
 
         public String display(boolean greek) {
             if (greek)
-                return actionKey + ": " + incidents + " περιστατικά, "
+                return incidents + " περιστατικά, "
                         + successOnlyIncidents + " μόνο αναφερόμενες επιτυχίες, "
                         + failureOnlyIncidents + " μόνο αναφερόμενες αποτυχίες, "
                         + mixedIncidents + " αντικρουόμενες εκβάσεις, "
                         + partialOrUnresolvedIncidents + " ατελή αποτελέσματα.";
-            return actionKey + ": " + incidents + " incidents, "
+            return incidents + " incidents, "
                     + successOnlyIncidents + " success reports only, "
                     + failureOnlyIncidents + " failure reports only, "
                     + mixedIncidents + " conflicting outcomes, "
@@ -235,7 +235,7 @@ public final class IPhonePanicRepairEvidenceReview {
         Status status;
         if (successIncidents == 0 && failureIncidents == 0)
             status = Status.UNRESOLVED_OR_PARTIAL_ONLY;
-        else if (successIncidents == 0 && !recurring)
+        else if (successIncidents == 0 && !recurring && allOnlyReportedFailures(incidents))
             status = Status.ONLY_REPORTED_FAILURES;
         else if (mixed || recurring || (successIncidents > 0 && failureIncidents > 0))
             status = Status.MIXED_OR_RECURRING_OUTCOMES;
@@ -246,6 +246,13 @@ public final class IPhonePanicRepairEvidenceReview {
 
         return new Assessment(status, incidents.size(), ids.size(),
                 successIncidents, failureIncidents, mixed || recurring, actions);
+    }
+
+    private static boolean allOnlyReportedFailures(Map<String, Incident> incidents) {
+        for (Incident i : incidents.values()) {
+            if (!i.failure || i.success || i.partial || i.unresolved) return false;
+        }
+        return true;
     }
 
     public static Assessment assessExact(
