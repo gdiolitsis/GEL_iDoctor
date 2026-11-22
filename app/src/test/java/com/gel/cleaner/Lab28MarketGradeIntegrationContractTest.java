@@ -18,7 +18,7 @@ public final class Lab28MarketGradeIntegrationContractTest {
     @Test public void gradeIsReadOnlyContextNotAnEbayFilter() throws Exception {
         String s = readActivity();
         int a = s.indexOf("private void runLab29DeviceAuthenticity()");
-        int b = s.indexOf("private void lab29RequireLab25Evidence()", a);
+        int b = s.indexOf("private boolean lab29RequireLab25Evidence()", a);
         assertTrue(a >= 0 && b > a);
         String lab = s.substring(a,b);
         assertTrue(lab.contains("lab28RequireCertification()"));
