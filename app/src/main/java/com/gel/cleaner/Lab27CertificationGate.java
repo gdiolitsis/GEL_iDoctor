@@ -107,21 +107,47 @@ final class Lab27CertificationGate {
     /** Manufacturer-sourced physical structure, independent of Android SIM/eSIM flags. */
     enum Presence { PRESENT, ABSENT, UNKNOWN }
 
-    /** A checked absence is valid ONLY if the exact OEM profile says absent. */
+    /** Only features expressly documented by this exact-model OEM get a question. */
+    static boolean shouldAsk(Presence expected) {
+        return expected == Presence.PRESENT || expected == Presence.ABSENT;
+    }
+
+    /** Unknown OEM information means NOT ASKED, never presumed absent. */
+    private static boolean answeredIfSpecified(Presence expected,
+            boolean declaredPresent, boolean declaredAbsent) {
+        return shouldAsk(expected)
+                ? (declaredPresent != declaredAbsent)
+                : (!declaredPresent && !declaredAbsent);
+    }
+
+    static boolean physicalChecksComplete(Presence usb, Presence headset, Presence sim,
+            boolean usbPresent, boolean usbAbsent, boolean jackPresent, boolean jackAbsent,
+            boolean simPresent, boolean simAbsent) {
+        return (shouldAsk(usb) || shouldAsk(headset) || shouldAsk(sim))
+                && answeredIfSpecified(usb, usbPresent, usbAbsent)
+                && answeredIfSpecified(headset, jackPresent, jackAbsent)
+                && answeredIfSpecified(sim, simPresent, simAbsent);
+    }
+
+    /** OEM presence and absence are equally supported; unknown is skipped. */
     private static boolean matchesOem(Presence expected,
             boolean confirmedPresent, boolean confirmedAbsent) {
         if (expected == Presence.PRESENT)
             return confirmedPresent && !confirmedAbsent;
         if (expected == Presence.ABSENT)
             return confirmedAbsent && !confirmedPresent;
-        return false;
+        return !confirmedPresent && !confirmedAbsent;
     }
 
     static boolean physicalMatchesOem(Presence expectedUsb, Presence expectedHeadset,
             Presence expectedSim, boolean usbVisuallyPresent, boolean usbVisuallyAbsent,
             boolean jackVisuallyPresent, boolean jackVisuallyAbsent,
             boolean simTrayVisuallyPresent, boolean simTrayVisuallyAbsent) {
-        return matchesOem(expectedUsb, usbVisuallyPresent, usbVisuallyAbsent)
+        return (shouldAsk(expectedUsb) || shouldAsk(expectedHeadset) || shouldAsk(expectedSim))
+                && physicalChecksComplete(expectedUsb, expectedHeadset, expectedSim,
+                    usbVisuallyPresent, usbVisuallyAbsent, jackVisuallyPresent,
+                    jackVisuallyAbsent, simTrayVisuallyPresent, simTrayVisuallyAbsent)
+                && matchesOem(expectedUsb, usbVisuallyPresent, usbVisuallyAbsent)
                 && matchesOem(expectedHeadset, jackVisuallyPresent, jackVisuallyAbsent)
                 && matchesOem(expectedSim, simTrayVisuallyPresent, simTrayVisuallyAbsent);
     }
