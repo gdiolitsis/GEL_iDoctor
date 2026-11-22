@@ -124,7 +124,20 @@ public final class AppleIPhoneManualChapters {
         AppleOfficialServiceGuidance.Guidance manual =
                 AppleOfficialServiceGuidance.modelManual(guides, model);
         if (manual == null) return Collections.emptyList();
-        return forManualId(all, manual.id);
+        // Apple sometimes includes shared, cross-model troubleshooting links
+        // in a specific manual's TOC. The raw 1,074 source links must stay
+        // intact for catalog browsing, but exact-device diagnosis must never
+        // suggest a biometric feature absent from the verified device.
+        // Every currently auto-matchable MODEL_MANUAL is either the SE3
+        // (Home button + Touch ID) or a Face ID iPhone 12-16 series model.
+        List<Chapter> relevant = new ArrayList<>();
+        boolean touchIdPhone = "MANUAL_SE3".equals(manual.id);
+        for (Chapter chapter : forManualId(all, manual.id)) {
+            if (touchIdPhone && "FACE_ID".equals(chapter.topic)) continue;
+            if (!touchIdPhone && "TOUCH_ID".equals(chapter.topic)) continue;
+            relevant.add(chapter);
+        }
+        return Collections.unmodifiableList(relevant);
     }
 
     public static List<Chapter> phase(List<Chapter> source, Phase phase) {
