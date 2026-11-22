@@ -51,13 +51,13 @@ public final class Lab27ManufacturerFirstCertificationTest {
         assertEquals(Lab27CertificationGate.Presence.PRESENT, p.simTray);
         assertEquals(Lab27CertificationGate.Presence.UNKNOWN, p.esim);
         assertTrue(Lab27CertificationGate.physicalMatchesOem(p.usb, p.headset,
-                p.simTray, true, true, false, true, false));
+                p.simTray, true, false, true, false, true, false));
         assertFalse(Lab27CertificationGate.physicalMatchesOem(p.usb, p.headset,
-                p.simTray, true, true, false, false, true));
+                p.simTray, true, false, true, false, false, true));
         assertFalse(Lab27CertificationGate.physicalMatchesOem(p.usb, p.headset,
-                p.simTray, true, false, true, true, false));
+                p.simTray, true, false, false, true, true, false));
         assertFalse(Lab27CertificationGate.physicalMatchesOem(p.usb, p.headset,
-                p.simTray, false, true, false, true, false));
+                p.simTray, false, true, true, false, true, false));
     }
 
     @Test public void noOemModelMeansNoPhysicalCertification() {
@@ -70,7 +70,7 @@ public final class Lab27ManufacturerFirstCertificationTest {
                 p.simTray, true, true, false, true, false));
     }
 
-    @Test public void manufacturerControlsEsimQuestionNeverAndroidFeatureFlags() throws Exception {
+    @Test public void popupContainsOnlyThreeManufacturerPhysicalPortQuestions() throws Exception {
         Path p = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
         if (!Files.isRegularFile(p))
             p = Paths.get("src/main/java/com/gel/cleaner/ManualTestsActivity.java");
@@ -79,11 +79,15 @@ public final class Lab27ManufacturerFirstCertificationTest {
         int b = src.indexOf("private void lab30CombineFindings()", a);
         assertTrue(a >= 0 && b > a);
         String q = src.substring(a, b);
-        assertTrue(q.contains("profile.esim == Lab27CertificationGate.Presence.PRESENT"));
-        assertTrue(q.contains("profile.esimVoiceCallsSupported"));
-        assertTrue(q.contains("εξερχόμενη και εισερχόμενη τηλεφωνική κλήση"));
-        assertTrue(q.contains("σύνδεση δεδομένων"));
-        assertTrue(q.contains("i == 5 && !esimExpected"));
+        assertTrue(q.contains("final String[] physical"));
+        assertTrue(q.contains("Θύρα USB-C: υπάρχει."));
+        assertTrue(q.contains("Θύρα USB-C: δεν υπάρχει."));
+        assertTrue(q.contains("Υποδοχή 3,5 mm: υπάρχει."));
+        assertTrue(q.contains("Υποδοχή 3,5 mm: δεν υπάρχει."));
+        assertTrue(q.contains("Φυσική θήκη SIM: υπάρχει."));
+        assertTrue(q.contains("Φυσική θήκη SIM: δεν υπάρχει."));
+        assertFalse(q.contains("esimQuestion"));
+        assertFalse(q.contains("lab27UserEsim"));
         assertFalse(q.contains("FEATURE_TELEPHONY"));
         assertFalse(q.contains("hasSystemFeature"));
     }
