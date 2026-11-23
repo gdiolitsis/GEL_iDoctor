@@ -2372,10 +2372,9 @@ show(R.id.btnPhoneInfoInternal);
 show(R.id.btnPhoneInfoPeripherals);
 show(R.id.btnDiagnostics);
 show(R.id.btnAppleDeviceDeclaration);
-// The documentation picker is iPhone-model specific; never invent iPad sources.
-if ("iphone".equalsIgnoreCase(getSharedPreferences(PREFS, MODE_PRIVATE)
-        .getString("apple_type", ""))) show(R.id.btnAppleTroubleshooting);
-else hide(R.id.btnAppleTroubleshooting);
+// Keep the button visible even before a model is declared. The picker
+// itself explains how to select an iPhone before opening any Apple guide.
+show(R.id.btnAppleTroubleshooting);
 show(R.id.appleInfoPanel);
 show(R.id.btnAppleInfoContinue);
 
@@ -2969,8 +2968,8 @@ String rawModel = models[position];
 String normalizedModel = normalizeAppleModel(rawModel);
 
 saveAppleDevice(type, normalizedModel);
-if ("iphone".equalsIgnoreCase(type)) show(R.id.btnAppleTroubleshooting);
-else hide(R.id.btnAppleTroubleshooting);
+// The bibliography button stays visible in Apple mode before/after selection.
+show(R.id.btnAppleTroubleshooting);
 
 TextView btn = findViewById(R.id.btnAppleDeviceDeclaration);
 if (btn != null) {
@@ -3045,8 +3044,8 @@ private void showAppleTroubleshootingLibrary() {
     String model = prefs.getString("apple_model", "");
     if (!"iphone".equalsIgnoreCase(family) || model == null || model.trim().isEmpty()) {
         showAppleReferenceNotice(gr
-                ? "Επίλεξε πρώτα το μοντέλο iPhone από τη Δήλωση Συσκευής Apple."
-                : "First select your iPhone model in Apple Device Declaration.");
+                ? "Επίλεξε πρώτα μοντέλο συσκευής από το αρχικό μενού, πατώντας «Δήλωση Συσκευής Apple» και επιλέγοντας iPhone."
+                : "First select your device model from the main menu: tap Apple Device Declaration and choose an iPhone.");
         return;
     }
 
