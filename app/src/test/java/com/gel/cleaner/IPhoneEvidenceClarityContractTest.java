@@ -43,9 +43,9 @@ public final class IPhoneEvidenceClarityContractTest {
         assertFalse(lab.contains("IPSPanicParser.analyze(this, panicLogText)"));
         assertTrue(lab.contains("logPanicIncidentHeader(incidentNumber,"));
     }
-    @Test public void lab2IsEventOverviewAndLab4StillHasIndependentExpertEvidence() throws Exception {
+    @Test public void lab2IsEventOverviewAndLab3HasIndependentExpertEvidence() throws Exception {
         String src = source();
-        String lab2 = between(src, "private void runPanicSignatureParser()", "private void runStabilityLab()");
+        String lab2 = between(src, "private void runPanicSignatureParser()", "private void runImpactLab()");
         String lab4 = between(src, "private void runImpactLab()", "private int countSupportedPanicBlocks(");
         assertTrue(lab2.contains("parseAndCacheSignature(block)"));
         assertTrue(lab2.contains("Συμβάν \" + incidentNumber + \" — τύπος:"));
@@ -57,7 +57,7 @@ public final class IPhoneEvidenceClarityContractTest {
         assertTrue(lab4.contains("panicEventExact(block, sigCrashType, gr)"));
         assertTrue(lab4.contains("logApplePanicEvidence(block, gr,"));
         assertFalse(lab4.contains("logLabelOkValue(gr ? \"Εξάρτημα:\""));
-        assertTrue(lab4.contains("Το Lab 4 ολοκληρώθηκε."));
+        assertTrue(lab4.contains("Το Lab 3 ολοκληρώθηκε."));
     }
     @Test public void gelDerivedCodesAreWhiteNotReportedAsExactAppleCodes() throws Exception {
         String src = source();
@@ -73,6 +73,6 @@ public final class IPhoneEvidenceClarityContractTest {
         assertFalse(lab8.contains("Ακριβείς τεχνικοί κωδικοί:"));
         assertFalse(lab8.contains("logLabelOkValue(gr ? \"Ενδείξεις που αναγνώρισε το GEL:\""));
         assertTrue(lab8.contains("if (human.repeatedClueNeedsReview)"));
-        assertTrue(lab8.contains("Το Lab 8 ολοκληρώθηκε."));
+        assertTrue(lab8.contains("Το Lab 6 ολοκληρώθηκε."));
     }
 }
