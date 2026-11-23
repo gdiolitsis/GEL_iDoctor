@@ -179,6 +179,12 @@
             android:exported="false"
             android:theme="@style/Theme.GEL.DarkGold" />
 
+        <!-- Apple manual pages stay inside iDoctor; back returns to Apple MainActivity. -->
+        <activity
+            android:name=".AppleSupportViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.GEL.DarkGold" />
+
         <!-- ZXing supplies a landscape-only default. Let the scanner follow
              the device/window orientation, including large Android 16 screens.
              ScanOptions already disables the library's runtime orientation lock. -->
