@@ -22,11 +22,13 @@ public final class Lab12SharedModemSnapshotContractTest {
         assertTrue(method >= 0 && end > method);
         String block = src.substring(method, end);
         assertTrue(block.contains("DeviceInfoPeripheralsActivity.collectRemoteSection(this, \"MODEM\")"));
-        assertTrue(block.contains("logLabelOkValue(label, value)"));
-        assertTrue(block.contains("logLabelValue(label, value)"));
-        assertTrue(block.contains("logLabelWarnValue(label, value)"));
+        assertTrue(block.contains("logLabelOkValue(displayLabel, displayValue)"));
+        assertTrue(block.contains("logLabelValue(displayLabel, displayValue)"));
+        assertTrue(block.contains("logLabelWarnValue(displayLabel, displayValue)"));
         assertTrue(block.contains("\"Advanced\".equals(label)"));
-        assertTrue(block.contains("unknown") && block.contains("SIM slot interpretation"));
+        assertTrue(block.contains("unknown") && block.contains("if (\"SIM slot interpretation\".equals(label)) continue;"));
+        assertFalse(block.contains("logLabelValue(gr ? \"Ερμηνεία\""));
+        assertTrue(block.contains("Lab12EsimGreekFormatter.label(label)"));
         assertFalse(block.contains("getIccId("));
         assertFalse(block.contains("getEid("));
         assertFalse(block.contains("getPhoneNumber("));
