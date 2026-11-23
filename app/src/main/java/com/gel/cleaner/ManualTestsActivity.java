@@ -10884,10 +10884,7 @@ private void lab9SensorsCheck() {
                     : "Sensor inventory interrupted — retry: ") + String.valueOf(e.getMessage()));
     } finally {
         appendHtml("<br>");
-        if (inventoryFinished) {
-            logOk(gr ? "Το Lab 9 ολοκληρώθηκε (απογραφή αισθητήρων)."
-                     : "Lab 9 finished (sensor inventory).");
-        } else {
+        if (!inventoryFinished) {
             logInfo(gr ? "Το Lab 9 δεν ολοκληρώθηκε — η απογραφή αισθητήρων έμεινε ελλιπής."
                        : "Lab 9 incomplete — sensor inventory not finished.");
         }
@@ -10943,17 +10940,32 @@ private void showLab9LiveChecksPrompt() {
 
     AlertDialog dialog = new AlertDialog.Builder(this,
             android.R.style.Theme_Material_Dialog_NoActionBar).setView(root).create();
+    final boolean[] startedLiveChecks = {false};
     start.setOnClickListener(v -> {
+        startedLiveChecks[0] = true;
         dialog.dismiss();
         startActivityForResult(
                 new Intent(this, EssentialHardwareChecksActivity.class), REQ_LAB9_ESSENTIALS);
     });
     exit.setOnClickListener(v -> dialog.dismiss());
+    // Skipping the optional check (or dismissing its prompt) finishes Lab 9 here.
+    dialog.setOnDismissListener(ignored -> {
+        if (!startedLiveChecks[0]) lab9LogCompletedAtEnd();
+    });
     dialog.setOnShowListener(ignored -> {
         if (dialog.getWindow() != null)
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xFF101010));
     });
     dialog.show();
+}
+
+private void lab9LogCompletedAtEnd() {
+    final boolean gr = AppLang.isGreek(this);
+    appendHtml("<br>");
+    logOk(gr ? "Το Lab 9 ολοκληρώθηκε."
+             : "Lab 9 completed.");
+    logLine();
+    enableSingleExportButton();
 }
 
 /* ============================================================
@@ -33605,8 +33617,8 @@ if (requestCode == REQ_LAB9_ESSENTIALS) {
                     gr ? "Δεν εκτελέστηκαν πρόσθετες δοκιμές"
                        : "No additional checks were performed");
     }
-    logLine();
-    enableSingleExportButton();
+    // Completion belongs after the optional functional findings, not the inventory.
+    lab9LogCompletedAtEnd();
     return;
 }
 
