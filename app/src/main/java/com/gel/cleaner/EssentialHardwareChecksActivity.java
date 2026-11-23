@@ -103,10 +103,13 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
         label(body, greek ? "LAB 9 — Πραγματικοί έλεγχοι" : "LAB 9 — Live checks",
                 21, Color.WHITE, true);
         label(body, greek
-                ? "Προαιρετικές δοκιμές. Πράσινο μόνο για πραγματική επιβεβαίωση. "
-                  + "Απουσία αποτελέσματος δεν σημαίνει βλάβη."
-                : "Optional checks. Green means actual evidence. "
-                  + "No result is not proof of hardware failure.",
+                ? "Για πιστοποίηση Lab 27 απαιτούνται οι λειτουργικοί έλεγχοι που "
+                  + "υποστηρίζει η συσκευή: GPS, αισθητήρες και πλήκτρα έντασης. "
+                  + "NFC και Power δεν συμμετέχουν στη βαθμολογία. "
+                  + "Η απουσία απόκρισης χρειάζεται επανέλεγχο, δεν αποδεικνύει βλάβη."
+                : "Lab 27 certification requires supported live GPS, sensor and "
+                  + "volume-button checks. NFC and Power are not graded. "
+                  + "Missing a response requires retesting, not a hardware fault verdict.",
                 14, Color.WHITE, false);
 
         addGroup(body, greek ? "Έλεγχος γυροσκοπίου, πυξίδας και αισθητήρα φωτός"
