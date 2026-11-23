@@ -68,6 +68,7 @@ public final class AppleTroubleshootingLibraryTest {
             }
             if ("WIRED_CHARGING".equals(link.topic)) {
                 assertTrue(link.modelIndexed);
+                assertTrue(link.greek.contains("Αργή φόρτιση"));
                 wired = true;
             }
             if ("THERMAL".equals(link.topic)) {
@@ -84,6 +85,18 @@ public final class AppleTroubleshootingLibraryTest {
         assertTrue("Apple wired charging chapter missing", wired);
         assertTrue("General thermal reference missing", thermal);
         assertTrue("General Wi-Fi reference missing", wifi);
+        java.util.Set<String> categories = new java.util.HashSet<>();
+        for (AppleTroubleshootingLibrary.TopicLink link : links) {
+            // Multiple distinct model chapters may share a heading; the
+            // generic fallback must never duplicate a model-specific topic.
+            if (!link.modelIndexed) {
+                for (AppleTroubleshootingLibrary.TopicLink modelTopic : links) {
+                    assertFalse("Generic guide duplicates model chapter",
+                            modelTopic.modelIndexed && modelTopic.topic.equals(link.topic));
+                }
+            }
+            categories.add(link.topic);
+        }
     }
 
     @Test public void onlyExactHttpsAppleSupportHostIsAllowed() {
@@ -114,6 +127,8 @@ public final class AppleTroubleshootingLibraryTest {
         assertTrue(main.contains("bind(R.id.btnAppleTroubleshooting,"));
         assertTrue("Button must be shown before model selection",
                 main.contains("show(R.id.btnAppleTroubleshooting);"));
+        assertTrue("Missing model popup must be titled Select Device",
+                main.contains("Επιλογή συσκευής"));
         assertTrue("Missing selection must show explicit guidance",
                 main.contains("Επίλεξε πρώτα μοντέλο συσκευής από το αρχικό μενού"));
         assertTrue("Model guard must prevent navigation without selection",
