@@ -1,6 +1,8 @@
 package com.gel.cleaner;
 
 import android.content.Intent;
+import android.graphics.drawable.ColorDrawable;
+import androidx.appcompat.app.AlertDialog;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -40,11 +42,7 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
         String url = getIntent() == null ? null
                 : getIntent().getStringExtra(EXTRA_SOURCE_URL);
         if (!AppleTroubleshootingLibrary.isOfficialUrl(url)) {
-            Toast.makeText(this, AppLang.isGreek(this)
-                            ? "Μη επαληθευμένη διεύθυνση Apple."
-                            : "Unverified Apple source URL.",
-                    Toast.LENGTH_LONG).show();
-            finish();
+            showInvalidSourceDialog();
             return;
         }
 
@@ -66,15 +64,16 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
         root.addView(title);
 
         Button back = new Button(this);
-        back.setText(gr ? "← ΠΙΣΩ ΣΤΟ iPHONE" : "← BACK TO IPHONE");
+        back.setText(gr ? "← ΕΞΟΔΟΣ / ΠΙΣΩ ΣΤΟ iPHONE"
+                        : "← EXIT / BACK TO IPHONE");
         back.setAllCaps(false);
-        back.setTextColor(0xFF00FF9C);
-        back.setTextSize(16f);
+        back.setTextColor(Color.WHITE);
+        back.setTextSize(14f);
         back.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xFF111111);
+        bg.setColor(0xFFB71C1C);
         bg.setCornerRadius(dp(10));
-        bg.setStroke(dp(2), 0xFFFFD700);
+        bg.setStroke(dp(2), 0xFFFF5252);
         back.setBackground(bg);
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(54));
@@ -90,6 +89,16 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
         source.setGravity(Gravity.CENTER);
         source.setPadding(dp(2), dp(3), dp(2), dp(5));
         root.addView(source);
+
+        // All loading/navigation warnings stay inside the GEL screen;
+        // no light OEM Toast or external browser.
+        TextView status = new TextView(this);
+        status.setTextColor(0xFFFF7777);
+        status.setTextSize(14f);
+        status.setGravity(Gravity.CENTER);
+        status.setVisibility(View.GONE);
+        status.setPadding(dp(8), dp(6), dp(8), dp(8));
+        root.addView(status);
 
         ProgressBar progress = new ProgressBar(this, null,
                 android.R.attr.progressBarStyleHorizontal);
@@ -125,20 +134,20 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
                 String next = request.getUrl() == null
                         ? null : request.getUrl().toString();
                 if (AppleTroubleshootingLibrary.isOfficialUrl(next)) return false;
-                Toast.makeText(AppleSupportViewerActivity.this,
-                        gr ? "Μόνο επίσημοι σύνδεσμοι support.apple.com ανοίγουν εδώ."
-                           : "Only official support.apple.com links open here.",
-                        Toast.LENGTH_LONG).show();
+                status.setText(gr
+                        ? "Μόνο επίσημοι σύνδεσμοι support.apple.com ανοίγουν εδώ."
+                        : "Only official support.apple.com links open here.");
+                status.setVisibility(View.VISIBLE);
                 return true; // No external browser, intent or untrusted host.
             }
 
             @Override public void onReceivedError(WebView view,
                     WebResourceRequest request, WebResourceError error) {
                 if (request != null && request.isForMainFrame()) {
-                    Toast.makeText(AppleSupportViewerActivity.this,
-                            gr ? "Δεν φορτώθηκε η σελίδα Apple. Έλεγξε τη σύνδεση."
-                               : "Apple page did not load. Check your connection.",
-                            Toast.LENGTH_LONG).show();
+                    status.setText(gr
+                            ? "Δεν φορτώθηκε η σελίδα Apple. Έλεγξε τη σύνδεση."
+                            : "Apple page did not load. Check your connection.");
+                    status.setVisibility(View.VISIBLE);
                 }
             }
         });
@@ -153,6 +162,48 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
             @Override public void handleOnBackPressed() { returnToAppleHome(); }
         });
         webView.loadUrl(url);
+    }
+
+    private void showInvalidSourceDialog() {
+        boolean gr = AppLang.isGreek(this);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(16), dp(16), dp(16), dp(16));
+        GradientDrawable panel = new GradientDrawable();
+        panel.setColor(0xFF080808);
+        panel.setCornerRadius(dp(12));
+        panel.setStroke(dp(2), 0xFFFFD700);
+        box.setBackground(panel);
+
+        TextView message = new TextView(this);
+        message.setText(gr ? "Ο σύνδεσμος δεν είναι επαληθευμένη πηγή Apple."
+                           : "The link is not a verified Apple source.");
+        message.setTextColor(Color.WHITE);
+        message.setTextSize(16f);
+        message.setPadding(dp(8), dp(8), dp(8), dp(14));
+        box.addView(message);
+
+        Button exit = new Button(this);
+        exit.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
+        exit.setAllCaps(false);
+        exit.setTextColor(Color.WHITE);
+        exit.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        GradientDrawable red = new GradientDrawable();
+        red.setColor(0xFFB71C1C);
+        red.setCornerRadius(dp(10));
+        red.setStroke(dp(2), 0xFFFF5252);
+        exit.setBackground(red);
+        box.addView(exit, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(54)));
+
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(box).create();
+        exit.setOnClickListener(v -> { dialog.dismiss(); finish(); });
+        dialog.setOnCancelListener(ignored -> finish());
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+        GelButtonLayout.fitDialog(dialog);
     }
 
     private void returnToAppleHome() {
