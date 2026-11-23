@@ -30535,57 +30535,31 @@ private void lab25SaveBuyerEvidence(CriticalSystemCrashEvidence.Summary report,
 }
 
 private void lab28ShowCertificationResult(boolean gr) {
-    SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
-    String level = p.getString("lab29_technical_level", "");
-    String coverage = p.getString("lab29_technical_history_coverage", "");
+    // Lab 28 consumes the actual CURRENT Lab 27 certification, never its raw labs.
+    SharedPreferences cert = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
+    String grade = cert.getString("lab27_cert_grade", "");
+    boolean confirmedFault = cert.getBoolean("lab27_cert_camera_failure", false)
+            || cert.getInt("lab27_cert_functional_findings", 0) > 0;
+    String shownGrade = gr && "D".equals(grade) ? "Δ" : grade;
+
     appendHtml("<br>");
-    logInfo(gr ? "GEL Device Certification — Τεχνικό συμπέρασμα Lab 27"
-               : "GEL Device Certification — Lab 27 technical conclusion");
-    logLabelOkValue(gr ? "Εκτέλεση τεχνικού ελέγχου" : "Technical check",
-            gr ? "Ολοκληρώθηκε στην παρούσα εκκίνηση"
-               : "Completed during this device boot");
-    if (p.getBoolean("lab27_cert_camera_failure", false)) {
-        logLabelWarnValue(gr ? "Λειτουργία κάμερας" : "Camera functionality",
-                gr ? "Η ζωντανή εικόνα απέτυχε σε τουλάχιστον μία κάμερα — βαθμός Δ."
-                   : "Live preview failed in at least one camera — grade D.");
+    logInfo(gr ? "GEL Device Certification — αποτέλεσμα Lab 27"
+               : "GEL Device Certification — Lab 27 result");
+    if (!Lab28BuyerSummary.validGrade(grade)) {
+        logLabelWarnValue(gr ? "Πιστοποίηση" : "Certification",
+                gr ? "Μη διαθέσιμη — επανάλαβε το Lab 27."
+                   : "Unavailable — repeat Lab 27.");
+        return;
     }
-    if (Lab29TechnicalAssessment.STRONG_INSTABILITY.equals(level)) {
-        logLabelWarnValue(gr ? "Τεχνικό συμπέρασμα" : "Technical conclusion",
-                gr ? "ΙΣΧΥΡΕΣ ΕΝΔΕΙΞΕΙΣ ΕΠΑΝΑΛΑΜΒΑΝΟΜΕΝΗΣ ΑΣΤΑΘΕΙΑΣ. "
-                     + "Η τεχνική αξιολόγηση συστήνει περαιτέρω έλεγχο πριν από αγορά."
-                   : "STRONG INDICATIONS OF REPEATED INSTABILITY. "
-                     + "Further checks before purchase are recommended.");
-    } else if (Lab29TechnicalAssessment.REVIEW_REQUIRED.equals(level)) {
-        logLabelWarnValue(gr ? "Τεχνικό συμπέρασμα" : "Technical conclusion",
-                gr ? "Η τεχνική αξιολόγηση κατέγραψε σοβαρά ή επαναλαμβανόμενα "
-                     + "σφάλματα κρίσιμων υπηρεσιών Android."
-                   : "The assessment recorded serious or recurrent "
-                     + "critical Android failures.");
-    } else if (Lab29TechnicalAssessment.ISOLATED_EVENT.equals(level)) {
-        logLabelValue(gr ? "Τεχνικό συμπέρασμα" : "Technical conclusion",
-                gr ? "Μεμονωμένο καταγεγραμμένο σφάλμα χωρίς τεκμηριωμένη επανάληψη."
-                   : "An isolated recorded fault without evidenced recurrence.");
-    } else if (Lab29TechnicalAssessment.LIMITED_CRASH_HISTORY.equals(level)) {
-        logLabelValue(gr ? "Τεχνικό συμπέρασμα" : "Technical conclusion",
-                gr ? "Ο τεχνικός έλεγχος ολοκληρώθηκε· το ιστορικό σφαλμάτων "
-                     + "ήταν περιορισμένο."
-                   : "Technical check completed; available crash history was limited.");
+    if (confirmedFault) {
+        logLabelErrorValue(gr ? "Βαθμός πιστοποίησης" : "Certification grade", shownGrade);
+    } else if ("A+".equals(grade) || "A".equals(grade) || "B".equals(grade)) {
+        logLabelOkValue(gr ? "Βαθμός πιστοποίησης" : "Certification grade", shownGrade);
     } else {
-        logLabelOkValue(gr ? "Σταθερότητα Android" : "Android stability",
-                gr ? "Δεν εντοπίστηκαν κρίσιμα σφάλματα στα στοιχεία που εξετάστηκαν."
-                   : "No critical Android faults found in the examined evidence.");
+        logLabelInfoValue(gr ? "Βαθμός πιστοποίησης" : "Certification grade", shownGrade);
     }
-    if (Lab25BuyerEvidence.LIMITED.equals(coverage)
-            && !Lab29TechnicalAssessment.LIMITED_CRASH_HISTORY.equals(level)) {
-        logLabelValue(gr ? "Διαθέσιμο ιστορικό" : "Available crash history",
-                gr ? "Μερική κάλυψη καταγραφών." : "Partial log coverage.");
-    }
-    // Never invent the result of an external IMEI/FRP/ownership check.
-    logLabelValue(gr ? "Έλεγχος μεταβίβασης" : "Transfer checks",
-            gr ? "IMEI, κυριότητα και ενεργοποίηση μετά από επαναφορά "
-                 + "αξιολογούνται ξεχωριστά."
-               : "IMEI status, ownership and activation after reset "
-                 + "are assessed separately.");
+    logLabelValue(gr ? "Με απλά λόγια" : "In plain language",
+            Lab28BuyerSummary.explain(grade, confirmedFault, gr));
 }
 
 private void lab29DeviceAuthenticity() {
@@ -30594,388 +30568,67 @@ private void lab29DeviceAuthenticity() {
             : "LAB 28 — Used-device pre-purchase check")) {
         return;
     }
-    // PRO access alone does not satisfy the Device Certification prerequisite.
+    // Lab 27 is mandatory. Network access is needed only when the buyer
+    // actively opens the external IMEI service or marketplace.
     if (!lab28RequireCertification()) return;
-    // Only warn when the connection is not validated; an offline OEM profile
-    // can still be compared without pretending that a live lookup took place.
-    Lab29ConnectivityGate.runOrPrompt(this, this::runLab29DeviceAuthenticity);
+    runLab29DeviceAuthenticity();
 }
 
 private void runLab29DeviceAuthenticity() {
-
-    // Recheck after any deferred connectivity callback, not just on the button click.
+    // Do not trust a previous, expired or different-device certificate.
     if (!lab28RequireCertification()) return;
     final boolean gr = AppLang.isGreek(this);
-
-    SharedPreferences p =
-            getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
-
-    boolean lab14CollapseRisk =
-            p.getBoolean("lab14_collapse_risk", false);
-
-    boolean lab14SwellingSuspected =
-        p.getBoolean("lab14_physical_swelling_confirmed", false);
+    SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 
     appendHtml("<br>");
-    logLine();
-    logInfo(gr
-            ? "LAB 28 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής"
-            : "LAB 28 — Used-device pre-purchase check");
-    logInfo(gr
-        ? "SAFE MODE — εμφανίζονται μόνο δηλωμένες παρατηρήσεις Android, όχι πιστοποίηση υλικού"
-        : "SAFE MODE — Android-exposed observations only, not component certification");
-    logLine();
+    logInfo(gr ? "LAB 28 — Προέλεγχος αγοράς μεταχειρισμένης συσκευής"
+               : "LAB 28 — Used-device pre-purchase check");
 
-    appendHtml("<br>");
-
-logLabelValue(
-        gr ? "Έλεγχος γνησιότητας OEM" : "OEM authenticity verification",
-        gr ? "Δεν παρέχεται από δημόσια Android APIs· το root δεν πιστοποιεί ανταλλακτικά."
-           : "Unavailable through public Android APIs; root access does not certify parts.");
-
-    // Manufacturer and model are Android-reported metadata, not an OEM authentication.
-    logLabelValue(gr ? "Κατασκευαστής / Μοντέλο" : "Manufacturer / Model",
-            Build.MANUFACTURER + " / " + Build.MODEL);
-    // Android platform observations do not authenticate OEM replacement parts.
-
-    // Buyer sees the Certification verdict, not raw Lab25 data.
+    // Do not repeat battery, camera, screen, sensors, system fingerprint,
+    // OEM, crash history or other measurements already evaluated in Lab 27.
     lab28ShowCertificationResult(gr);
 
-    // Report this device's own verified functional evidence. The marketplace
-    // query does NOT rank, filter, price or recommend listings using this grade.
-    String lab28Grade = p.getString("lab27_cert_grade", "");
-    int lab28Findings = p.getInt("lab27_cert_functional_findings", 0);
-    boolean lab28CameraFailure = p.getBoolean("lab27_cert_camera_failure", false);
     appendHtml("<br>");
-    logInfo(gr ? "Αγγελίες αγοράς — φωτογραφίες και ζητούμενες τιμές"
-               : "Market listings — photos and asking prices");
-    if (!lab28Grade.isEmpty()) {
-        String shownGrade = gr && "D".equals(lab28Grade) ? "Δ" : lab28Grade;
-        if (lab28Findings > 0 || lab28CameraFailure
-                || "C".equals(lab28Grade) || "D".equals(lab28Grade)) {
-            logLabelWarnValue(gr ? "Βαθμός GEL Lab 27" : "GEL Lab 27 grade", shownGrade);
-        } else if ("A+".equals(lab28Grade) || "A".equals(lab28Grade)) {
-            logLabelOkValue(gr ? "Βαθμός GEL Lab 27" : "GEL Lab 27 grade", shownGrade);
-        } else {
-            logLabelValue(gr ? "Βαθμός GEL Lab 27" : "GEL Lab 27 grade", shownGrade);
-        }
-    } else {
-        logLabelValue(gr ? "Βαθμός GEL Lab 27" : "GEL Lab 27 grade",
-                gr ? "Μη διαθέσιμος" : "Unavailable");
-    }
-    if (lab28Findings > 0) {
-        logLabelWarnValue(gr ? "Λειτουργικά ευρήματα" : "Functional findings",
-                String.valueOf(lab28Findings));
-    }
-    logLabelValue(gr ? "Εξωτερική κατάσταση" : "Cosmetic condition",
-            gr ? "Ο χρήστης συγκρίνει μόνος του τις φωτογραφίες: οθόνη, ρωγμές, πίσω όψη και πλαίσιο."
-               : "Compare listing photos yourself: display, cracks, back and frame.");
-    logLabelValue(gr ? "Επιλογή αγοραστή" : "Buyer choice",
-            gr ? "Παρουσιάζουμε δημόσιες αγγελίες· καμία αυτόματη επιλογή, βαθμολόγηση ή πρόταση αγοράς."
-               : "Public listings only; no automatic selection, seller ranking or purchase recommendation.");
+    logInfo(gr ? "Έλεγχος που απομένει πριν από την αγορά"
+               : "Remaining pre-purchase check");
+    logLabelInfoValue(gr ? "IMEI — έλεγχος παρόχων" : "IMEI — carrier restrictions",
+            gr ? "Έλεγξε όλα τα IMEI σε ανεξάρτητη υπηρεσία ή στον αρμόδιο πάροχο "
+                 + "για τυχόν φραγή ή περιορισμό, π.χ. μετά από δήλωση κλοπής. "
+                 + "Το GEL δεν επαληθεύει αυτόματα την κατάσταση IMEI."
+               : "Check all IMEIs with an independent service or relevant carrier "
+                 + "for any block or restriction, for example after a theft report. "
+                 + "GEL cannot verify IMEI status automatically.");
 
-    // ============================================================
-    // BATTERY
-    // ============================================================
+    // No IMEI number, result, provider verdict, ownership or transfer state
+    // is inferred, requested by GEL, or persisted. Mark only that the guide ran.
+    p.edit()
+            .remove("lab29_authenticity_score")
+            .remove("lab29_instability_score")
+            .remove("lab29_instability_pattern")
+            .remove("lab29_precheck_schema")
+            .remove("lab29_precheck_status")
+            .remove("lab29_precheck_user_reported")
+            .remove("lab29_precheck_ts")
+            .remove("lab29_precheck_elapsed_ms")
+            .remove("lab29_precheck_imei_status")
+            .remove("lab29_precheck_official_source")
+            .remove("lab29_precheck_identifiers")
+            .remove("lab29_precheck_documents")
+            .remove("lab29_precheck_transfer")
+            .putInt("lab29_obs_schema", 1)
+            .putLong("lab29_obs_elapsed_ms", SystemClock.elapsedRealtime())
+            .putString("lab29_obs_manufacturer", Build.MANUFACTURER)
+            .putString("lab29_obs_model", Build.MODEL)
+            .putString("lab29_obs_device", Build.DEVICE)
+            .putLong("lab29_ts", System.currentTimeMillis())
+            .apply();
 
-    appendHtml("<br>");
-    logInfo(gr ? "Έλεγχος μπαταρίας" : "Battery check");
-    logLine();
-
-    int batteryLevel = getBatteryPercentSafe();
-    float voltage = getBatteryVoltageFiltered();
-
-    boolean levelObserved = batteryLevel >= 0 && batteryLevel <= 100;
-    boolean voltageObserved = Float.isFinite(voltage) && voltage > 0f;
-    if (levelObserved) {
-        logLabelOkValue(
-                gr ? "Στάθμη μπαταρίας" : "Battery level",
-                batteryLevel + "%"
-        );
-    } else {
-        logLabelValue(
-                gr ? "Στάθμη μπαταρίας" : "Battery level",
-                gr ? "Μη διαθέσιμη" : "Unavailable"
-        );
-    }
-    if (voltageObserved) {
-        logLabelOkValue(
-                gr ? "Αναφερόμενη τάση" : "Reported voltage",
-                String.format(Locale.US, "%.2f V", voltage)
-        );
-    } else {
-        logLabelValue(
-                gr ? "Αναφερόμενη τάση" : "Reported voltage",
-                gr ? "Μη διαθέσιμη" : "Unavailable"
-        );
-    }
-    logLabelValue(
-            gr ? "Όριο μέτρησης" : "Measurement limitation",
-            gr ? "Η στάθμη και η τάση δεν πιστοποιούν υγεία, γνησιότητα, φυσική βλάβη ή χωρητικότητα μπαταρίας"
-               : "Level and voltage do not establish battery health, authenticity, failure or capacity"
-    );
-
-    // ============================================================
-    // DISPLAY
-    // ============================================================
-
-    appendHtml("<br>");
-    logInfo(gr ? "Έλεγχος οθόνης" : "Display check");
-    logLine();
-
-    Display display = getWindowManager().getDefaultDisplay();
-
-    float refreshRate = Float.NaN; // Never invent a 60 Hz reading if the display is unavailable.
-
-    if (display != null)
-        refreshRate = display.getRefreshRate();
-
-    if (Float.isNaN(refreshRate) || refreshRate <= 0f) {
-        logLabelValue(gr ? "Οθόνη" : "Display",
-                gr ? "Δεν υπάρχει έγκυρη μέτρηση ρυθμού ανανέωσης."
-                   : "Display refresh rate unavailable.");
-    } else if (refreshRate < 30f) {
-
-        logLabelValue(
-                gr ? "Οθόνη" : "Display",
-                gr
-                        ? "Ασυνήθιστος ρυθμός ανανέωσης"
-                        : "Unusual refresh rate"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Οθόνη" : "Display",
-                String.format(Locale.US,
-                        gr
-                                ? "Ρυθμός: %.1f Hz"
-                                : "Rate: %.1f Hz",
-                        refreshRate)
-        );
-    }
-
-    // ============================================================
-    // CAMERA
-    // ============================================================
-
-    appendHtml("<br>");
-    logInfo(gr ? "Έλεγχος κάμερας" : "Camera check");
-    logLine();
-
-    boolean cameraAvailable =
-            getPackageManager().hasSystemFeature(
-                    PackageManager.FEATURE_CAMERA_ANY);
-
-    if (!cameraAvailable) {
-
-        logLabelValue(
-                gr ? "Κάμερα" : "Camera",
-                gr
-                        ? "Δεν εντοπίστηκε"
-                        : "Not detected"
-        );
-
-    } else {
-
-        logLabelOkValue(
-                gr ? "Κάμερα" : "Camera",
-                gr
-                        ? "Εντοπίστηκε"
-                        : "Detected"
-        );
-    }
-
-    // ============================================================
-    // SENSORS (SAFE)
-    // ============================================================
-
-    appendHtml("<br>");
-    logInfo(gr ? "Έλεγχος αισθητήρων" : "Sensor check");
-    logLine();
-
-    try {
-
-        SensorManager sm =
-                (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-
-        if (sm != null) {
-
-            Sensor proximity =
-                    sm.getDefaultSensor(Sensor.TYPE_PROXIMITY);
-
-            Sensor light =
-                    sm.getDefaultSensor(Sensor.TYPE_LIGHT);
-
-            Sensor accel =
-                    sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-
-            boolean missing = false;
-
-            if (proximity == null) {
-                missing = true;
-                logLabelValue(
-                        "Proximity",
-                        gr ? "Δεν εντοπίστηκε"
-                                : "Not detected"
-                );
-            }
-
-            if (light == null) {
-                missing = true;
-                logLabelValue(
-                        "Light",
-                        gr ? "Δεν εντοπίστηκε"
-                                : "Not detected"
-                );
-            }
-
-            if (accel == null) {
-                missing = true;
-                logLabelValue(
-                        "Accelerometer",
-                        gr ? "Δεν εντοπίστηκε"
-                                : "Not detected"
-                );
-            }
-
-            if (!missing) {
-
-                logLabelOkValue(
-                        gr ? "Αισθητήρες"
-                                : "Sensors",
-                        gr
-                                ? "Βασικοί αισθητήρες διαθέσιμοι"
-                                : "Core sensors available"
-                );
-            }
-        }
-
-    } catch (Throwable ignore) {}
-
-    // ============================================================
-    // FINGERPRINT
-    // ============================================================
-
-    appendHtml("<br>");
-    logInfo(gr ? "Ταυτότητα συστήματος" : "System identity");
-    logLine();
-
-    String fingerprint = Build.FINGERPRINT;
-    String board = Build.BOARD;
-    String hardware = Build.HARDWARE;
-
-    if (fingerprint == null
-            || fingerprint.length() < 10
-            || fingerprint.contains("unknown")) {
-
-        logLabelValue(
-                gr ? "Fingerprint"
-                        : "Fingerprint",
-                gr
-                        ? "Ασυνήθιστη τιμή"
-                        : "Unusual value"
-        );
-
-    } else {
-
-        logLabelValue(
-                "Fingerprint",
-                fingerprint
-        );
-    }
-
-    logLabelValue(
-            "Board",
-            board
-    );
-
-    logLabelValue(
-            "Hardware",
-            hardware
-    );
-
-    // ============================================================
-    // LEGACY CROSS-LAB HINTS — NO COMPOSITE HARDWARE SCORE
-    // ============================================================
-    // These old preference booleans were not timestamped/provenanced as
-    // independent device-wide measurements. Never promote them to a diagnosis.
-    boolean legacyHints = lab14CollapseRisk || lab14SwellingSuspected
-            || p.getBoolean("lab28_sensor_flaps", false)
-            || p.getBoolean("lab28_radio_instability", false)
-            || p.getBoolean("lab28_thermal_spike", false)
-            || p.getBoolean("lab28_reboot_pattern", false)
-            || p.getBoolean("lab28_instability_pattern", false);
-    if (legacyHints) {
-        logLabelValue(gr ? "Παλαιότερες ενδείξεις" : "Legacy symptom flags",
-                gr ? "Υπάρχουν μη πιστοποιημένες ενδείξεις· απαιτείται έλεγχος προέλευσης, χρόνου και πραγματικού συμβάντος."
-                   : "Unverified prior flags exist; event, source and timestamp require confirmation.");
-    }
-
-    appendHtml("<br>");
-
-    // ============================================================
-    // FINAL
-    // ============================================================
-
-    appendHtml("<br>");
-    logLine();
-
-// ============================================================
-// SAVE LAB 28 COVERAGE — invalidate historical numerical conclusions
-// ============================================================
-p.edit()
-        .remove("lab29_authenticity_score")
-        .remove("lab29_instability_score")
-        .remove("lab29_instability_pattern")
-        .putBoolean("lab29_provenance_unverified", true)
-        .putInt("lab29_obs_schema", 1)
-        .putLong("lab29_obs_elapsed_ms", SystemClock.elapsedRealtime())
-        .putString("lab29_obs_manufacturer", Build.MANUFACTURER)
-        .putString("lab29_obs_model", Build.MODEL)
-        .putString("lab29_obs_device", Build.DEVICE)
-        // Clear any legacy buyer-check fields without storing new answers.
-        .remove("lab29_precheck_schema")
-        .remove("lab29_precheck_status")
-        .remove("lab29_precheck_user_reported")
-        .remove("lab29_precheck_ts")
-        .remove("lab29_precheck_elapsed_ms")
-        .remove("lab29_precheck_imei_status")
-        .remove("lab29_precheck_official_source")
-        .remove("lab29_precheck_identifiers")
-        .remove("lab29_precheck_documents")
-        .remove("lab29_precheck_transfer")
-        .putLong("lab29_ts", System.currentTimeMillis())
-        .apply();
-
-logLabelValue(
-        gr ? "Γνησιότητα ανταλλακτικών" : "Replacement part authenticity",
-        gr ? "ΔΕΝ ΕΠΑΛΗΘΕΥΕΤΑΙ από ενδείξεις Android. Απαιτείται τεκμηρίωση OEM ή φυσική επιθεώρηση."
-           : "NOT VERIFIABLE from Android readings. OEM documentation or physical inspection required."
-);
-logLabelValue(
-        gr ? "Εύρος ελέγχου" : "Assessment scope",
-        gr ? "Διατίθενται μόνο παρατηρήσεις hardware και ενδείξεις αστάθειας."
-           : "Hardware observations and instability indicators only."
-);
-
-    // OEM comparison moved to Lab 27; used-device checks remain here.
-    logLabelValue(
-            gr ? "Τεχνική ταυτοποίηση μοντέλου" : "Model identity assessment",
-            gr ? "Η σύγκριση εργοστασιακών προδιαγραφών περιλαμβάνεται στο Lab 27."
-               : "The OEM specification comparison is included in Lab 27."
-    );
-
-    appendHtml("<br>");
-    logInfo(gr ? "Καταγράφηκαν τα προσβάσιμα χαρακτηριστικά του Android."
-               : "Accessible Android device characteristics were recorded.");
-    logOk(gr ? "Το Lab 28 ολοκληρώθηκε — βαθμός Lab 27, οδηγίες IMEI και προβολή αγγελιών eBay."
-             : "Lab 28 completed — Lab 27 grade, IMEI guidance and eBay listing viewing.");
+    logOk(gr ? "Το Lab 28 ολοκληρώθηκε — πιστοποίηση Lab 27 και οδηγίες ελέγχου IMEI."
+             : "Lab 28 completed — Lab 27 certification and IMEI-check guidance.");
     logLine();
     showLab29ExternalGuidanceDialog(gr);
 }
 
-// ============================================================
 private void showLab29ExternalGuidanceDialog(boolean gr) {
     runOnUiThread(() -> {
         final LinearLayout root = new LinearLayout(this);
@@ -31071,15 +30724,10 @@ private void showLab28MarketResearchDialog(boolean gr) {
         showLab28RequiresCertificationDialog(gr);
         return;
     }
-    SharedPreferences cert = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
     Lab29FactorySpecAudit.Report official = Lab29FactorySpecAudit.capture(this);
     Lab28MarketResearch.Model model = Lab28MarketResearch.identify(
             Build.MANUFACTURER, Build.MODEL,
             official.supportedModel ? official.modelName : "");
-    String grade = cert.getString("lab27_cert_grade", "");
-    int findings = cert.getInt("lab27_cert_functional_findings", 0);
-    boolean cameraFault = cert.getBoolean("lab27_cert_camera_failure", false);
-
     LinearLayout root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setPadding(dp(18), dp(16), dp(18), dp(16));
@@ -31098,38 +30746,22 @@ private void showLab28MarketResearchDialog(boolean gr) {
     title.setGravity(Gravity.CENTER);
     root.addView(title);
 
-    String shownGrade = gr && "D".equals(grade) ? "Δ" : grade;
     TextView guide = new TextView(this);
-    guide.setText((gr ? "Συσκευή: " : "Device: ") + model.name + "\n"
-            + (gr ? "Βαθμός GEL Lab 27: " : "GEL Lab 27 grade: ") + shownGrade
-            + (findings > 0
-                ? (gr ? "\nΛειτουργικά ευρήματα: " : "\nFunctional findings: ") + findings
-                : "")
-            + (cameraFault
-                ? (gr ? "\nΑποτυχία ελέγχου ζωντανής εικόνας κάμερας."
-                      : "\nCamera live preview check failed.")
-                : "")
+    guide.setText((gr ? "Συσκευή: " : "Device: ") + model.name
             + (gr
-                ? "\n\nΔες τις πραγματικές φωτογραφίες των αγγελιών στο eBay. "
-                  + "Μπορεί δύο κινητά να λειτουργούν εξίσου καλά, αλλά το ένα "
-                  + "να έχει ραγισμένη οθόνη ή φθαρμένο πλαίσιο. "
-                  + "Εσύ αποφασίζεις πόσο επηρεάζει αυτό την αξία."
-                : "\n\nBrowse the actual eBay listing photos. Two phones may work "
-                  + "equally well even if one has a cracked screen or worn frame. "
-                  + "Only you decide how that affects value.")
+                ? "\\n\\nΔες τις πραγματικές φωτογραφίες των αγγελιών στο eBay. "
+                  + "Δύο συσκευές μπορεί να λειτουργούν εξίσου καλά, αλλά η μία "
+                  + "να έχει ραγισμένη οθόνη. Εσύ αποφασίζεις την αξία."
+                : "\\n\\nView the actual eBay listing photos. Two devices may work "
+                  + "equally well while one has a cracked screen. The choice is yours.")
             + (gr
-                ? "\n\nΗ αναζήτηση είναι ανοικτή: χωρίς φίλτρα GEL για βλάβες, "
-                  + "βαθμούς, RAM ή εξωτερική εμφάνιση. "
-                  + "Προβάλλονται οι τιμές και οι φωτογραφίες όπως δημοσιεύονται "
-                  + "στην αγορά. Δεν προτείνουμε αγορά."
-                : "\n\nSearch is unfiltered by GEL for faults, grades, RAM "
-                  + "or cosmetic condition. Prices and photos appear as published "
-                  + "on the marketplace. No purchase recommendation.")
+                ? "\\n\\nΑνοικτή αναζήτηση, χωρίς φίλτρα GEL για βλάβες, "
+                  + "βαθμούς ή εμφάνιση. Δεν προτείνουμε αγορά."
+                : "\\n\\nOpen search with no GEL filters for faults, grades "
+                  + "or appearance. We do not recommend purchases.")
             + (gr
-                ? "\n\nΟι αγγελίες είναι δηλώσεις πωλητών, όχι επαληθευμένα "
-                  + "GEL Certifications ή ολοκληρωμένες πωλήσεις."
-                : "\n\nListings are seller claims, not verified GEL "
-                  + "Certifications or completed sales."));
+                ? "\\nΟι αγγελίες είναι δηλώσεις πωλητών, όχι πιστοποιήσεις GEL."
+                : "\\nListings are seller claims, not GEL certifications."));
     guide.setTextColor(0xFF39FF14);
     guide.setTextSize(14f);
     guide.setPadding(0, dp(12), 0, dp(12));
