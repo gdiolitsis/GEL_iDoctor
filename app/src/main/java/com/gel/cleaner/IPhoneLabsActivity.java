@@ -2391,17 +2391,7 @@ private void showAppleServiceStepDetails(AppleIPhoneManualChapters.Chapter chapt
             .setTitle(chapter.title(gr))
             .setMessage(message.toString())
             .setPositiveButton(gr ? "Άνοιγμα πλήρους οδηγίας Apple" : "Open full Apple procedure",
-                    (dialog, which) -> {
-                        Intent intent = new Intent(Intent.ACTION_VIEW,
-                                Uri.parse(chapter.sourceUrl));
-                        try { startActivity(intent); }
-                        catch (android.content.ActivityNotFoundException ex) {
-                            Toast.makeText(this,
-                                    gr ? "Δεν βρέθηκε εφαρμογή περιήγησης." :
-                                         "No browser available.",
-                                    Toast.LENGTH_SHORT).show();
-                        }
-                    })
+                    (dialog, which) -> openAppleSourceInApp(chapter.sourceUrl))
             .setNegativeButton(gr ? "Κλείσιμο" : "Close", null).show();
 }
 
@@ -2794,9 +2784,38 @@ private void appendHtml(String html) {
     ui.post(() -> {
         CharSequence cur = txtLog.getText();
         CharSequence add = Html.fromHtml(html + "<br>");
-        txtLog.setText(TextUtils.concat(cur, add));
+        // The report keeps its verified link text, but Apple support articles
+        // now open in GEL's embedded viewer instead of an external browser.
+        // Independent repair-community links keep their existing behavior.
+        android.text.SpannableStringBuilder internal =
+                new android.text.SpannableStringBuilder(add);
+        android.text.style.URLSpan[] links = internal.getSpans(
+                0, internal.length(), android.text.style.URLSpan.class);
+        for (android.text.style.URLSpan link : links) {
+            final String url = link.getURL();
+            if (!AppleTroubleshootingLibrary.isOfficialUrl(url)) continue;
+            int begin = internal.getSpanStart(link);
+            int end = internal.getSpanEnd(link);
+            if (begin < 0 || end <= begin) continue;
+            internal.removeSpan(link);
+            internal.setSpan(new android.text.style.ClickableSpan() {
+                @Override public void onClick(View clicked) {
+                    openAppleSourceInApp(url);
+                }
+            }, begin, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        txtLog.setText(TextUtils.concat(cur, internal));
         scroll.post(() -> scroll.fullScroll(ScrollView.FOCUS_DOWN));
     });
+}
+
+private void openAppleSourceInApp(String url) {
+    if (!AppleTroubleshootingLibrary.isOfficialUrl(url)) return;
+    Intent guide = new Intent(this, AppleSupportViewerActivity.class);
+    guide.putExtra(AppleSupportViewerActivity.EXTRA_SOURCE_URL, url);
+    // A panic log may describe a *different* iPhone than the one selected
+    // on the main screen. Never attribute that source to a saved model.
+    startActivity(guide);
 }
 
 private void logInfo(String msg) {
