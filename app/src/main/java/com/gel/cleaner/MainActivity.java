@@ -3186,9 +3186,9 @@ private void showAppleTroubleshootingSymptoms(String model,
             false, () -> {
                 String query = description.getText().toString().trim();
                 if (query.isEmpty()) {
-                    description.setError(gr
-                            ? "Περιέγραψε πρώτα το πρόβλημα."
-                            : "Please describe the problem.");
+                    showAppleReferenceNotice(gr ? "Περιγραφή προβλήματος" : "Problem description",
+                            gr ? "Περιέγραψε πρώτα τι παρουσίασε το κινητό σου."
+                               : "Please describe what happened to your phone.");
                     return;
                 }
                 java.util.List<AppleSymptomSearch.Hit> hits =
@@ -3245,15 +3245,17 @@ private void showAppleSymptomSearchResults(String model, String query,
         shell.addView(heading);
     }
 
-    ScrollView scroll = new ScrollView(this);
     LinearLayout results = new LinearLayout(this);
     results.setOrientation(LinearLayout.VERTICAL);
-    scroll.addView(results, new ScrollView.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT));
-    shell.addView(scroll, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            Math.min(dp(420), (int) (getResources().getDisplayMetrics().heightPixels * 0.44f))));
+    if (!hits.isEmpty()) {
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(results, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        shell.addView(scroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Math.min(dp(420), (int) (getResources().getDisplayMetrics().heightPixels * 0.44f))));
+    }
 
     final AlertDialog dialog = new AlertDialog.Builder(this).setView(shell).create();
 
