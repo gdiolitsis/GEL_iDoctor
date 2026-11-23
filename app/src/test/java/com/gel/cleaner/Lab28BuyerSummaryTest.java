@@ -8,10 +8,10 @@ public final class Lab28BuyerSummaryTest {
     @Test public void interpretsBWithoutDeclaringFaultOrDowngradingIt() {
         String greek = Lab28BuyerSummary.explain("B", false, true);
         assertTrue(greek.contains("καλή"));
-        assertTrue(greek.contains("δεν αποδεικνύει βλάβη"));
+        assertTrue(greek.contains("δεν αποδεικνύει από μόνο του βλάβη"));
         String english = Lab28BuyerSummary.explain("B", false, false);
         assertTrue(english.contains("good"));
-        assertTrue(english.contains("does not establish a malfunction"));
+        assertTrue(english.contains("does not prove a defective component"));
     }
 
     @Test public void respondsToConfirmedFaultWithoutInventingOne() {
