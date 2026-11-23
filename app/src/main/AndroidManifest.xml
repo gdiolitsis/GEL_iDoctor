@@ -52,6 +52,9 @@
         android:name="android.permission.NEARBY_WIFI_DEVICES"
         android:usesPermissionFlags="neverForLocation"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <!-- Optional user-initiated NFC tag discovery in Lab 9 (no tag payload read). -->
+    <uses-permission android:name="android.permission.NFC"/>
+    <uses-feature android:name="android.hardware.nfc" android:required="false"/>
 
     <!-- ============================================================
          BLUETOOTH
@@ -312,6 +315,13 @@
             android:exported="false"
             android:theme="@style/Theme.GEL.DarkGold"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"/>
+
+        <!-- Lab 9 additional user-initiated functional checks. Never run in background. -->
+        <activity
+            android:name=".EssentialHardwareChecksActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.GEL.DarkGold"/>
 
         <!-- LAB 6 optional two-finger pinch verification, portrait to protect gesture state. -->
         <activity
