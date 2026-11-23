@@ -43,7 +43,8 @@ public final class Lab12SimEsimSubscriptionContractTest {
         assertTrue(reader.contains("subscription.isEmbedded()"));
         assertTrue(reader.contains("eSIM — ενεργή συνδρομή"));
         assertTrue(reader.contains("Φυσική SIM — ενεργή μη ενσωματωμένη συνδρομή"));
-        assertTrue(reader.contains("λογική αντιστοίχιση Android"));
+        assertFalse(reader.contains("Διευκρίνιση Slot"));
+        assertFalse(reader.contains("Slot clarification"));
         assertFalse(reader.contains("getAvailableSubscriptionInfoList"));
         assertFalse(reader.contains("getIccId("));
         assertFalse(reader.contains("getEid("));
