@@ -22,9 +22,11 @@ public final class Lab28MarketGradeIntegrationContractTest {
         assertTrue(a >= 0 && b > a);
         String lab = s.substring(a,b);
         assertTrue(lab.contains("lab28RequireCertification()"));
-        assertTrue(lab.contains("lab27_cert_grade"));
-        assertTrue(lab.contains("lab27_cert_functional_findings"));
-        assertTrue(lab.contains("lab27_cert_camera_failure"));
+        assertTrue(lab.contains("lab28ShowCertificationResult(gr);"));
+        assertTrue(s.contains("Lab28BuyerSummary.explain(grade, confirmedFault, gr)"));
+        assertTrue(s.contains("lab27_cert_grade"));
+        assertTrue(s.contains("lab27_cert_functional_findings"));
+        assertTrue(s.contains("lab27_cert_camera_failure"));
         assertTrue(lab.contains("showLab28MarketResearchDialog(gr)"));
         assertFalse(lab.contains("conditionForGrade("));
         assertFalse(lab.contains("Μην πληρώνεις"));
