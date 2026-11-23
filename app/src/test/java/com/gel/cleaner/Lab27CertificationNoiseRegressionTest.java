@@ -44,7 +44,7 @@ public final class Lab27CertificationNoiseRegressionTest {
         assertFalse(lab.contains("logInfo(gr ? \"Ιδιωτικότητα\" : \"Privacy\")"));
         assertFalse(lab.contains("Lab30ScoreEvidence.deviceHealthScore("));
         assertTrue(lab.contains("Lab27FunctionGradePolicy.apply(lab27GradeDrivers)"));
-        assertTrue(lab.contains("confirmedCameraFunctionFailure);"));
+        assertTrue(lab.contains("Lab27GradeDrivers.fromOperationalSnapshot(confirmedCameraFunctionFailure,"));
         assertFalse(lab.contains("confirmedCameraFunctionFailure, lab27EvidenceFindings.size()"));
         assertTrue(lab.contains("if (!lab27GradeDrivers.isEmpty())"));
         assertTrue(lab.contains(".putInt(\"lab27_cert_functional_findings\", confirmedFunctionalFailures)"));
