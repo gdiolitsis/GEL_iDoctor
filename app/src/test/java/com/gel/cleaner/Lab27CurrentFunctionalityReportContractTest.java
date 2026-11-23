@@ -27,7 +27,7 @@ public final class Lab27CurrentFunctionalityReportContractTest {
         assertTrue(s.contains("lab27PendingBasicLabs(p, lab27CheckedBasic)"));
         assertTrue(s.contains("lab27RemainingBasic.isEmpty()"));
         assertTrue(s.contains("Καλή λειτουργία στους ελεγμένους τομείς"));
-        assertTrue(s.contains("Η πιστοποίηση βαθμολογεί αποκλειστικά"));
+        assertTrue(s.contains("Ο βαθμός βασίζεται σε επιβεβαιωμένες λειτουργικές αστοχίες"));
         assertTrue(s.contains("logLabelOkValue(\n            gr ? \"Κατάσταση συσκευής\""));
     }
 
