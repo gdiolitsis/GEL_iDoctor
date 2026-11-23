@@ -9,7 +9,7 @@ import static org.junit.Assert.*;
 
 /**
  * User-approved separation: Lab 27 compares reported OEM model specifications;
- * Lab 28 is the used-device buyer check (IMEI, transfer and ownership).
+ * Lab 28 displays the certified grade and an external IMEI carrier-block check.
  */
 public final class Lab27OemIdentityPlacementContractTest {
     private static String source() throws Exception {
@@ -83,7 +83,9 @@ public final class Lab27OemIdentityPlacementContractTest {
         assertTrue(buyer.contains("if (!lab28RequireCertification()) return;"));
         assertTrue(buyer.contains("lab28ShowCertificationResult(gr);"));
         assertTrue(buyer.contains("showLab29ExternalGuidanceDialog(gr);"));
-        assertTrue(buyer.contains("Η σύγκριση εργοστασιακών προδιαγραφών περιλαμβάνεται στο Lab 27."));
+        assertFalse(buyer.contains("Η σύγκριση εργοστασιακών προδιαγραφών περιλαμβάνεται στο Lab 27."));
+        assertTrue(buyer.contains("IMEI — έλεγχος παρόχων"));
+        assertFalse(buyer.contains("getBatteryVoltageFiltered("));
         assertTrue(buyer.contains("Το Lab 28 ολοκληρώθηκε"));
     }
 }
