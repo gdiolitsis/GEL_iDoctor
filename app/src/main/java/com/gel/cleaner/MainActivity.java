@@ -3230,13 +3230,14 @@ private void openAppleOfficialLink(String url) {
                 : "This link is not verified as an official Apple source.");
         return;
     }
-    try {
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-    } catch (android.content.ActivityNotFoundException ex) {
-        showAppleReferenceNotice(AppLang.isGreek(this)
-                ? "Δεν βρέθηκε εφαρμογή για το άνοιγμα του συνδέσμου."
-                : "No app can open this link.");
-    }
+
+    // Never leave GEL iDoctor: links use our non-exported Apple WebView
+    // and a single back returns to the preserved Apple home screen.
+    Intent viewer = new Intent(this, AppleSupportViewerActivity.class);
+    viewer.putExtra(AppleSupportViewerActivity.EXTRA_SOURCE_URL, url);
+    viewer.putExtra(AppleSupportViewerActivity.EXTRA_MODEL,
+            getSharedPreferences(PREFS, MODE_PRIVATE).getString("apple_model", ""));
+    startActivity(viewer);
 }
 
 // =========================================================
