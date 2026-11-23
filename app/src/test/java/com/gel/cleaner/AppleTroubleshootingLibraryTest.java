@@ -182,6 +182,20 @@ public final class AppleTroubleshootingLibraryTest {
                 viewer.contains("← RETURN TO APPLE HOME"));
         assertTrue("Return label centered on red bar",
                 viewer.contains("back.setGravity(Gravity.CENTER)"));
+        assertTrue("Respect user-selected font size in SP",
+                viewer.contains("back.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16f)"));
+        assertTrue("Allow multiple lines for narrow displays and large text",
+                viewer.contains("back.setSingleLine(false)"));
+        assertTrue("Do not horizontally scroll long return labels",
+                viewer.contains("back.setHorizontallyScrolling(false)"));
+        assertTrue("Never cut text with an ellipsis",
+                viewer.contains("back.setEllipsize(null)"));
+        assertTrue("Adaptive return-bar height rather than a fixed size",
+                viewer.contains("ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT"));
+        assertTrue("Minimum accessible touch target remains available",
+                viewer.contains("back.setMinHeight(dp(54))"));
+        assertFalse("Do not shrink user font choices with auto sizing",
+                viewer.contains("back.setAutoSizeTextType"));
         assertTrue("Return label has content description",
                 viewer.contains("back.setContentDescription(returnLabel)"));
         assertTrue("Button retains one-tap navigation to Apple home",
