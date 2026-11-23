@@ -194,6 +194,22 @@ final class Lab27GradeDrivers {
         return Collections.unmodifiableList(new ArrayList<>(joined));
     }
 
+    /** Ensure certified Lab 9 grade drivers still match the stored source snapshot. */
+    static boolean lab9FailureDriversMatch(String encoded, List<String> failures) {
+        if (failures == null) return false;
+        try {
+            java.util.Set<Driver> expected = EnumSet.noneOf(Driver.class);
+            expected.addAll(withLab9ReportedFailures(
+                    Collections.<Driver>emptyList(), failures));
+            java.util.Set<Driver> present = EnumSet.noneOf(Driver.class);
+            for (Driver driver : decode(encoded))
+                if (driver.isLab9UserReportedFailure()) present.add(driver);
+            return present.equals(expected);
+        } catch (IllegalArgumentException badEvidence) {
+            return false;
+        }
+    }
+
     static int confirmedFailures(List<Driver> drivers) {
         int count = 0;
         for (Driver driver : drivers) if (driver.isConfirmedFailure()) count++;
