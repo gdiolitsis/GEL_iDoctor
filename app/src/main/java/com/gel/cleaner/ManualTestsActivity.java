@@ -30657,13 +30657,13 @@ private void showLab29ExternalGuidanceDialog(boolean gr) {
         ScrollView scroll = new ScrollView(this);
         TextView instructions = new TextView(this);
         instructions.setText(gr
-                ? "1. Πληκτρολόγησε *#06# στην εφαρμογή κλήσεων και σημείωσε όλα τα IMEI.\\n"
-                  + "2. Έλεγξε κάθε IMEI στην εξωτερική υπηρεσία ή απευθείας στον πάροχο για τυχόν φραγή.\\n"
-                  + "3. Διάβασε την απάντηση του φορέα. Το GEL δεν λαμβάνει ούτε αποθηκεύει IMEI ή αποτελέσματα.\\n\\n"
+                ? "1. Πληκτρολόγησε *#06# στην εφαρμογή κλήσεων και σημείωσε όλα τα IMEI.\n"
+                  + "2. Έλεγξε κάθε IMEI στην εξωτερική υπηρεσία ή απευθείας στον πάροχο για τυχόν φραγή.\n"
+                  + "3. Διάβασε την απάντηση του φορέα. Το GEL δεν λαμβάνει ούτε αποθηκεύει IMEI ή αποτελέσματα.\n\n"
                   + "Η εξωτερική υπηρεσία μπορεί να χρεώνει και δεν εγγυάται έλεγχο όλων των παρόχων."
-                : "1. Enter *#06# in the dialer and note every IMEI.\\n"
-                  + "2. Check each IMEI with the external service or directly with a carrier for restrictions.\\n"
-                  + "3. Read the provider's response. GEL never receives or stores an IMEI or result.\\n\\n"
+                : "1. Enter *#06# in the dialer and note every IMEI.\n"
+                  + "2. Check each IMEI with the external service or directly with a carrier for restrictions.\n"
+                  + "3. Read the provider's response. GEL never receives or stores an IMEI or result.\n\n"
                   + "The external service may charge and may not cover all carriers.");
         instructions.setTextColor(0xFF39FF14); // Neon green for Lab 28 instructions.
         instructions.setTextSize(14f);
