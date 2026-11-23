@@ -8,7 +8,7 @@ import java.nio.file.Paths;
 
 import static org.junit.Assert.*;
 
-/** Lab 9 is a sensor enumeration, not a sensor-performance test. */
+/** Inventory of Lab 9 is enumeration; optional live checks complete separately. */
 public final class Lab9SensorInventoryOnlyContractTest {
     private static String lab9() throws Exception {
         Path path = Paths.get("app/src/main/java/com/gel/cleaner/ManualTestsActivity.java");
@@ -56,6 +56,8 @@ public final class Lab9SensorInventoryOnlyContractTest {
         assertTrue(s.contains("logLabelOkValue(\n                gr ? \"Αποτέλεσμα απογραφής\""));
         assertTrue(s.contains("Δεν βρέθηκε καταχώριση ALS κατά όνομα"));
         assertTrue(s.contains("Δεν βρέθηκε σχετική καταχώριση"));
-        assertTrue(s.contains("Το Lab 9 ολοκληρώθηκε (απογραφή αισθητήρων)."));
+        assertTrue(s.contains("Το Lab 9 ολοκληρώθηκε."));
+        assertTrue(s.contains("lab9LogCompletedAtEnd()"));
+        assertFalse(s.contains("Το Lab 9 ολοκληρώθηκε (απογραφή αισθητήρων)."));
     }
 }
