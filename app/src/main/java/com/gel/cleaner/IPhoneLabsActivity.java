@@ -360,15 +360,8 @@ root.addView(makeLabButton(
         v -> runImpactLab()
 ));
 
-// Optional drill-down belongs to Lab 3; it is NOT a seventh numbered Lab.
-root.addView(makeLabButton(
-        gr ? "APPLE — Πηγές, εργαλεία και ελεγμένα στάδια"
-           : "APPLE — Sources, tools and reviewed stages",
-        gr ? "315 επίσημες πηγές διαδικασιών, με σαφή διάκριση των μελετημένων βημάτων"
-           : "315 official procedure sources, with reviewed steps clearly distinguished",
-        true,
-        v -> showAppleServiceStepPicker()
-));
+// Official Apple troubleshooting browsing has moved to the selected-iPhone main screen.
+// Apple reference data and the existing technical knowledge base remain available.
 
 // 5) Crash-type frequency AND keyword-domain frequency — LAB 4
 root.addView(makeLabButton(
