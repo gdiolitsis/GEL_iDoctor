@@ -3,26 +3,23 @@ package com.gel.cleaner;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+/** Only documented functional failure evidence changes the certificate. */
 public final class Lab27FunctionGradePolicyTest {
-    @Test public void confirmedCameraFailureCapsAPlusAtD() {
-        assertEquals(49, Lab27FunctionGradePolicy.apply(100, true));
+    @Test public void confirmedCameraFailureReceivesD() {
+        assertEquals(49, Lab27FunctionGradePolicy.apply(true));
         assertEquals("D", Lab30ScoreEvidence.gradeForMeasuredSnapshot(
-                Lab27FunctionGradePolicy.apply(98, true)));
-        assertEquals(35, Lab27FunctionGradePolicy.apply(35, true));
+                Lab27FunctionGradePolicy.apply(true)));
     }
 
-    @Test public void observationsAloneCannotCapTheFunctionalGrade() {
-        // The caller must pass only confirmed functional failures. Informational
-        // warnings in Labs 5, 8 and 14A are not fault evidence.
-        assertEquals(100, Lab27FunctionGradePolicy.apply(100, false));
+    @Test public void noConfirmedFunctionalFailureReceivesAPlus() {
+        assertEquals(100, Lab27FunctionGradePolicy.apply(false));
         assertEquals("A+", Lab30ScoreEvidence.gradeForMeasuredSnapshot(
-                Lab27FunctionGradePolicy.apply(100, false)));
-        assertEquals(92, Lab27FunctionGradePolicy.apply(92, false));
-        assertEquals(84, Lab27FunctionGradePolicy.apply(84, false));
+                Lab27FunctionGradePolicy.apply(false)));
     }
 
-    @Test public void missingMeasurementsNeverProduceAPlus() {
-        assertEquals(-1, Lab27FunctionGradePolicy.apply(-1, true));
-        assertEquals(-1, Lab27FunctionGradePolicy.apply(101, false));
+    @Test public void scorerCannotAcceptTemporaryBatteryRamStorageOrUptimeInputs() {
+        // The policy deliberately has only one boolean parameter.
+        assertEquals(1, Lab27FunctionGradePolicy.class.getDeclaredMethods()[0]
+                .getParameterCount());
     }
 }
