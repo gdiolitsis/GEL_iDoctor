@@ -2390,6 +2390,7 @@ if (library instanceof TextView) {
     ((TextView) library).setText(AppLang.isGreek(this)
             ? "ΒΙΒΛΙΟΓΡΑΦΙΑ TROUBLESHOOTING ΤΗΣ APPLE ΓΙΑ ΤΟ ΚΙΝΗΤΟ ΣΟΥ"
             : "APPLE TROUBLESHOOTING GUIDES FOR YOUR IPHONE");
+    ((TextView) library).setTextColor(0xFFFFD700);
 }
 }
 
@@ -3148,7 +3149,8 @@ private void showAppleTroubleshootingSymptoms(String model,
     description.setSingleLine(false);
     description.setMinLines(2);
     description.setMaxLines(5);
-    description.setMaxLength(400);
+    description.setFilters(new android.text.InputFilter[]{
+            new android.text.InputFilter.LengthFilter(400)});
     description.setPadding(dp(13), dp(12), dp(13), dp(12));
     GradientDrawable inputBorder = new GradientDrawable();
     inputBorder.setColor(0xFF101010);
