@@ -23,7 +23,7 @@ public final class Lab27CertificationNoiseRegressionTest {
 
     @Test public void staleHiddenSectionsDoNotEmitStandaloneLogSeparators() throws Exception {
         String lab = report();
-        int heading = lab.indexOf("LAB 27 — Αυτόματη Σύνοψη Μετρήσεων");
+        int heading = lab.indexOf("Lab27 - Certification καλής λειτουργίας");
         int breakdown = lab.indexOf("Αυτόματη Ανάλυση");
         assertTrue(heading >= 0 && breakdown > heading);
         String introduction = lab.substring(heading, breakdown);
