@@ -3112,6 +3112,14 @@ private void showAppleTroubleshootingSymptoms(String model,
         AppleOfficialServiceGuidance.Guidance manual,
         java.util.List<AppleIPhoneManualChapters.Chapter> chapters,
         java.util.List<AppleOfficialServiceGuidance.Guidance> guides) {
+    showAppleTroubleshootingSymptoms(model, manual, chapters, guides, "");
+}
+
+private void showAppleTroubleshootingSymptoms(String model,
+        AppleOfficialServiceGuidance.Guidance manual,
+        java.util.List<AppleIPhoneManualChapters.Chapter> chapters,
+        java.util.List<AppleOfficialServiceGuidance.Guidance> guides,
+        String previousDescription) {
     final boolean gr = AppLang.isGreek(this);
     final java.util.List<AppleSymptomSearch.Terms> vocabulary;
     try (java.io.InputStream stream = getAssets().open(AppleSymptomSearch.ASSET)) {
@@ -3147,6 +3155,7 @@ private void showAppleTroubleshootingSymptoms(String model,
             | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
             | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
     description.setSingleLine(false);
+    if (previousDescription != null) description.setText(previousDescription);
     description.setMinLines(2);
     description.setMaxLines(5);
     description.setFilters(new android.text.InputFilter[]{
@@ -3268,7 +3277,7 @@ private void showAppleSymptomSearchResults(String model, String query,
             });
     addAppleReferenceAction(shell, gr ? "ΑΛΛΗ ΠΕΡΙΓΡΑΦΗ" : "EDIT DESCRIPTION", false, () -> {
         dialog.dismiss();
-        showAppleTroubleshootingSymptoms(model, manual, chapters, guides);
+        showAppleTroubleshootingSymptoms(model, manual, chapters, guides, query);
     });
     addAppleReferenceAction(shell, gr ? "ΕΞΟΔΟΣ" : "EXIT", true, dialog::dismiss);
     showAppleReferenceDialog(dialog);
