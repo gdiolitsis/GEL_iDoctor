@@ -156,6 +156,11 @@ if (item.getItemId() == 1002) {
 private static final String PREFS = "gel_prefs";
 private static final String KEY_PLATFORM = "platform_mode";
 
+// A persisted Apple model from an older search is NOT an active declaration.
+// On this MainActivity screen a model is valid only after the user selects it.
+// This mirrors the Apple declaration button: a blank button means no model.
+private boolean appleModelDeclaredOnCurrentScreen = false;
+
 // =========================================================
 // Monthly PRO plans are selected through GelProPurchaseDialog.
 
@@ -2813,6 +2818,12 @@ ipadBtn.setOnClickListener(v -> {
 //  MODEL PICKER - GEL STYLE (FINAL)
 // =========================================================
 private void showAppleModelPicker(String type) {
+    showAppleModelPicker(type, false);
+}
+
+// If the bibliography was opened without a declaration, require the user to
+// select the iPhone *now*, then continue to the two bibliography options.
+private void showAppleModelPicker(String type, boolean continueToBibliography) {
 
 String[] models = "iphone".equals(type)
 ? new String[]{
@@ -2920,7 +2931,17 @@ bg.setStroke(dp(3), 0xFFFFD700);
 root.setBackground(bg);
 
 TextView title = new TextView(this);
-title.setText(AppLang.isGreek(this) ? "Επιλέξτε μοντέλο Apple" : "Select Apple Model");
+title.setText(continueToBibliography
+        ? (AppLang.isGreek(this)
+                ? "Για ποιο μοντέλο iPhone κάνεις την αναζήτηση;"
+                : "Which iPhone model are you searching for?")
+        : (AppLang.isGreek(this)
+                ? "Επιλέξτε μοντέλο Apple"
+                : "Select Apple model"));
+title.setTextSize(18f);
+title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+title.setGravity(Gravity.CENTER);
+title.setPadding(dp(4), dp(4), dp(4), dp(12));
 title.setTextColor(Color.WHITE);
 
 root.addView(title);
@@ -2948,10 +2969,15 @@ return tv;
 };
 
 list.setAdapter(adapter);
-root.addView(list);
+// Long model catalog scrolls within the GEL popup without hiding Exit.
+root.addView(list, new LinearLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        Math.min(dp(530), (int) (getResources().getDisplayMetrics().heightPixels * 0.66f))));
 b.setView(root);
 
 AlertDialog d = b.create();
+addAppleReferenceAction(root, AppLang.isGreek(this) ? "ΕΞΟΔΟΣ" : "EXIT",
+        true, d::dismiss);
 if (d.getWindow() != null)
 d.getWindow().setBackgroundDrawable(
 new ColorDrawable(Color.TRANSPARENT));
@@ -2969,6 +2995,7 @@ String rawModel = models[position];
 String normalizedModel = normalizeAppleModel(rawModel);
 
 saveAppleDevice(type, normalizedModel);
+appleModelDeclaredOnCurrentScreen = true;
 // The bibliography button stays visible in Apple mode before/after selection.
 show(R.id.btnAppleTroubleshooting);
 
@@ -2985,6 +3012,7 @@ Toast.LENGTH_SHORT
 ).show();
 
 d.dismiss();
+if (continueToBibliography) showAppleTroubleshootingLibrary();
 });
 }
 
@@ -3043,10 +3071,12 @@ private void showAppleTroubleshootingLibrary() {
     SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
     String family = prefs.getString("apple_type", "");
     String model = prefs.getString("apple_model", "");
-    if (!"iphone".equalsIgnoreCase(family) || model == null || model.trim().isEmpty()) {
-        showAppleReferenceNotice(gr ? "Επιλογή συσκευής" : "Select device",
-                gr ? "Επίλεξε πρώτα μοντέλο συσκευής από το αρχικό μενού, πατώντας «Δήλωση Συσκευής Apple» και επιλέγοντας iPhone."
-                   : "First select your device model from the main menu: tap Apple Device Declaration and choose an iPhone.");
+    // Never take an old SharedPreferences value as consent to use that model.
+    // A fresh MainActivity displays the neutral declaration button, so it must
+    // ask for a model even if apple_type/apple_model remain from earlier work.
+    if (!appleModelDeclaredOnCurrentScreen || !"iphone".equalsIgnoreCase(family)
+            || model == null || model.trim().isEmpty()) {
+        showAppleModelPicker("iphone", true);
         return;
     }
 
