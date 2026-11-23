@@ -492,6 +492,7 @@ final float[] batterySOH = {Float.NaN};
     private final int REQ_LAB6_TOUCH = 6006;
     private final int REQ_LAB6_COLOR = 6007;
     private final int REQ_LAB6_PINCH = 6008;
+    private final int REQ_LAB9_ESSENTIALS = 9001;
     private final int REQ_LAB13_BT_CONNECT = 1313;
 
     private AlertDialog lab14RunningDialog;
@@ -10892,7 +10893,67 @@ private void lab9SensorsCheck() {
         }
         logLine();
         enableSingleExportButton();
+        if (inventoryFinished) runOnUiThread(this::showLab9LiveChecksPrompt);
     }
+}
+
+/**
+ * Add real, optional sensor/GPS/NFC/physical-key measurements to Lab 9 without
+ * expanding the 29 numbered labs or altering Lab 27/28 certification.
+ */
+private void showLab9LiveChecksPrompt() {
+    final boolean gr = AppLang.isGreek(this);
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(20), dp(20), dp(20), dp(20));
+    GradientDrawable border = new GradientDrawable();
+    border.setColor(0xFF101010);
+    border.setCornerRadius(dp(14));
+    border.setStroke(dp(3), 0xFFFFD700);
+    root.setBackground(border);
+
+    TextView title = new TextView(this);
+    title.setText(gr ? "LAB 9 — Προαιρετικός πραγματικός έλεγχος"
+                     : "LAB 9 — Optional live hardware checks");
+    title.setTextColor(Color.WHITE);
+    title.setTextSize(18f);
+    title.setTypeface(null, Typeface.BOLD);
+    title.setGravity(Gravity.CENTER);
+    root.addView(title);
+    TextView message = new TextView(this);
+    message.setText(gr
+            ? "Έλεγξε πραγματικές μεταβολές αισθητήρων, GPS, NFC και φυσικά πλήκτρα. "
+              + "Δεν χρειάζεται να εκτελέσεις δοκιμές για εξαρτήματα που δεν διαθέτει "
+              + "η συσκευή. Έλλειψη αποτελέσματος δεν σημαίνει βλάβη."
+            : "Test actual sensor changes, GPS, NFC and physical buttons. "
+              + "Skip hardware your model does not support. Missing evidence is not a fault.");
+    message.setTextColor(Color.WHITE);
+    message.setTextSize(15f);
+    message.setPadding(0, dp(16), 0, dp(16));
+    root.addView(message);
+
+    Button start = lab29DialogButton(gr ? "ΕΝΑΡΞΗ ΕΛΕΓΧΩΝ" : "START CHECKS", false);
+    Button exit = lab29DialogButton(gr ? "ΟΛΟΚΛΗΡΩΣΗ LAB 9" : "FINISH LAB 9", true);
+    root.addView(start, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(52)));
+    LinearLayout.LayoutParams exitLp = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
+    exitLp.topMargin = dp(12);
+    root.addView(exit, exitLp);
+
+    AlertDialog dialog = new AlertDialog.Builder(this,
+            android.R.style.Theme_Material_Dialog_NoActionBar).setView(root).create();
+    start.setOnClickListener(v -> {
+        dialog.dismiss();
+        startActivityForResult(
+                new Intent(this, EssentialHardwareChecksActivity.class), REQ_LAB9_ESSENTIALS);
+    });
+    exit.setOnClickListener(v -> dialog.dismiss());
+    dialog.setOnShowListener(ignored -> {
+        if (dialog.getWindow() != null)
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xFF101010));
+    });
+    dialog.show();
 }
 
 /* ============================================================
@@ -33469,6 +33530,82 @@ protected void onActivityResult(int requestCode, int resultCode, @Nullable Inten
 // ============================================================
 
 final boolean gr = AppLang.isGreek(this);
+
+if (requestCode == REQ_LAB9_ESSENTIALS) {
+    appendHtml("<br>");
+    logLine();
+    logInfo(gr ? "LAB 9 — Πραγματικοί λειτουργικοί έλεγχοι"
+               : "LAB 9 — Actual hardware response checks");
+    logLine();
+    if (resultCode != RESULT_OK || data == null) {
+        logLabelValue(gr ? "Αποτέλεσμα" : "Result",
+                gr ? "Η προαιρετική διαδικασία διακόπηκε — χωρίς συμπέρασμα"
+                   : "Optional check ended without a result");
+    } else {
+        String[] names = {gr ? "GPS" : "GPS",
+                gr ? "NFC" : "NFC", "Volume +", "Volume −",
+                gr ? "Power (δήλωση χρήστη)" : "Power (user report)",
+                gr ? "Γυροσκόπιο" : "Gyroscope",
+                gr ? "Μαγνητόμετρο" : "Magnetometer",
+                gr ? "Αισθητήρας φωτός" : "Ambient light"};
+        String[] keys = {
+                EssentialHardwareChecksActivity.EXTRA_GPS,
+                EssentialHardwareChecksActivity.EXTRA_NFC,
+                EssentialHardwareChecksActivity.EXTRA_VOLUME_UP,
+                EssentialHardwareChecksActivity.EXTRA_VOLUME_DOWN,
+                EssentialHardwareChecksActivity.EXTRA_POWER,
+                EssentialHardwareChecksActivity.EXTRA_GYRO,
+                EssentialHardwareChecksActivity.EXTRA_MAGNET,
+                EssentialHardwareChecksActivity.EXTRA_LIGHT};
+        int reported = 0;
+        for (int i = 0; i < keys.length; i++) {
+            if (!data.hasExtra(keys[i])) continue;
+            String status = data.getStringExtra(keys[i]);
+            if (EssentialHardwareChecksActivity.NOT_TESTED.equals(status)) continue;
+            reported++;
+            String value;
+            if (EssentialHardwareChecksActivity.VERIFIED.equals(status)) {
+                if (keys[i].equals(EssentialHardwareChecksActivity.EXTRA_GPS)
+                        && data.hasExtra(EssentialHardwareChecksActivity.EXTRA_GPS_ACCURACY)) {
+                    float accuracy = data.getFloatExtra(
+                            EssentialHardwareChecksActivity.EXTRA_GPS_ACCURACY, Float.NaN);
+                    value = Float.isFinite(accuracy)
+                            ? (gr ? "Νέο GPS fix · ακρίβεια ±" : "Fresh GPS fix · accuracy ±")
+                                + String.format(java.util.Locale.US, "%.0f m", accuracy)
+                            : (gr ? "Πραγματική απόκριση καταγράφηκε" : "Actual response recorded");
+                } else {
+                    value = gr ? "Πραγματική απόκριση καταγράφηκε"
+                               : "Actual response recorded";
+                }
+                logLabelOkValue(names[i], value);
+            } else if (EssentialHardwareChecksActivity.USER_CONFIRMED.equals(status)) {
+                logLabelOkValue(names[i], gr ? "Επιβεβαιώθηκε από τον χρήστη"
+                                               : "Confirmed by the user");
+            } else {
+                if (EssentialHardwareChecksActivity.UNSUPPORTED.equals(status))
+                    value = gr ? "Δεν υποστηρίζεται — χωρίς δοκιμή"
+                               : "Not supported — not tested";
+                else if (EssentialHardwareChecksActivity.DISABLED.equals(status))
+                    value = gr ? "Απενεργοποιημένο — χωρίς δοκιμή"
+                               : "Disabled — not tested";
+                else if (EssentialHardwareChecksActivity.PERMISSION_DENIED.equals(status))
+                    value = gr ? "Δεν δόθηκε άδεια — χωρίς δοκιμή"
+                               : "Permission not granted — not tested";
+                else
+                    value = gr ? "Δεν επαληθεύτηκε στη δοκιμή — δεν αποδεικνύει βλάβη"
+                               : "Not verified in this run — no fault inferred";
+                logLabelValue(names[i], value);
+            }
+        }
+        if (reported == 0)
+            logLabelValue(gr ? "Έλεγχοι" : "Checks",
+                    gr ? "Δεν εκτελέστηκαν πρόσθετες δοκιμές"
+                       : "No additional checks were performed");
+    }
+    logLine();
+    enableSingleExportButton();
+    return;
+}
 
 if (requestCode == REQ_LAB6_TOUCH) {
 
