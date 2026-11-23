@@ -119,7 +119,19 @@ public final class AppleTroubleshootingLibraryTest {
         assertTrue("Model guard must prevent navigation without selection",
                 main.contains("if (!\"iphone\".equalsIgnoreCase(family) || model == null || model.trim().isEmpty())"));
 
-        assertTrue(main.contains("startActivity(viewer)"));
+        String appleDialogs = main.substring(
+                main.indexOf("private void showAppleTroubleshootingLibrary()"),
+                main.indexOf("// BROWSER PICKER - DYNAMIC"));
+        assertTrue("GEL black/gold background", appleDialogs.contains("background.setColor(0xFF080808)"));
+        assertTrue("GEL gold panel border", appleDialogs.contains("background.setStroke(dp(2), 0xFFFFD700)"));
+        assertTrue("GEL green choices", appleDialogs.contains("0xFF00FF9C"));
+        assertTrue("GEL exit must be red", appleDialogs.contains("0xFFB71C1C"));
+        assertTrue("GEL exit must have white text", appleDialogs.contains("exit ? Color.WHITE"));
+        assertTrue("Apple library must have GEL EXIT", appleDialogs.contains("\"ΕΞΟΔΟΣ\""));
+        assertTrue("Long symptom list should scroll", appleDialogs.contains("ScrollView scroll"));
+        assertFalse("No OEM default positive button", appleDialogs.contains(".setPositiveButton("));
+        assertFalse("No OEM default negative button", appleDialogs.contains(".setNegativeButton("));
+                assertTrue(main.contains("startActivity(viewer)"));
         assertTrue(main.contains("AppleSupportViewerActivity.EXTRA_SOURCE_URL"));
         assertTrue(viewer.contains("new OnBackPressedCallback(true)"));
         assertTrue(viewer.contains("Intent.FLAG_ACTIVITY_CLEAR_TOP"));
