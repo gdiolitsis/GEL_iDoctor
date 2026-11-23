@@ -39,12 +39,12 @@ final class Lab28BuyerSummary {
                           + "functional performance in the tested areas.";
             case "B":
                 return greek
-                        ? "Οι απαιτούμενοι έλεγχοι ολοκληρώθηκαν. Η συνολική λειτουργική "
-                          + "εικόνα είναι καλή, αλλά όχι άριστη. Ο βαθμός Β από μόνος "
-                          + "του δεν αποδεικνύει βλάβη."
-                        : "Required tests were completed. Overall functional performance "
-                          + "is good, though not excellent. Grade B alone does not "
-                          + "establish a malfunction.";
+                        ? "Οι απαιτούμενοι έλεγχοι ολοκληρώθηκαν με καλή συνολική εικόνα, "
+                          + "αλλά καταγράφηκε σημαντικό εύρημα που χρειάζεται επανέλεγχο. "
+                          + "Το εύρημα δεν αποδεικνύει από μόνο του βλάβη εξαρτήματος."
+                        : "Required checks were completed with generally good results, "
+                          + "but a significant finding needs recheck. The observation "
+                          + "alone does not prove a defective component.";
             case "C":
                 return greek
                         ? "Οι απαιτούμενοι έλεγχοι ολοκληρώθηκαν, αλλά η βαθμολογία "
