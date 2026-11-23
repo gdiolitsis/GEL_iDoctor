@@ -29,10 +29,11 @@ android {
         minSdk = 26
         targetSdk = 36
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
-        // QA-only Gradle overrides; defaults remain unchanged for release/main.
-        // A higher QA versionCode allows a signed in-place update of installed v53.
-        versionCode = (project.findProperty('gelQaVersionCode') ?: '53').toString().toInteger()
-        versionName = (project.findProperty('gelQaVersionName') ?: '5.3').toString()
+        // v77 is now the mainline baseline. Optional QA overrides are
+        // available for future candidate builds without changing mainline defaults.
+        // Keep the code above previously installed v53–v76 for in-place updates.
+        versionCode = (project.findProperty('gelQaVersionCode') ?: '77').toString().toInteger()
+        versionName = (project.findProperty('gelQaVersionName') ?: '5.3-QA24').toString()
 
 // ✅ SINGLE SOURCE OF ABI TRUTH
         ndk {
