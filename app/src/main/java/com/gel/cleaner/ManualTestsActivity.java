@@ -30404,12 +30404,15 @@ private boolean lab28HasFreshCertificationEvidence() {
         return false;
     String certifiedGrade = p.getString("lab27_cert_grade", "");
     int certifiedScore = p.getInt("lab27_cert_score", -1);
+    String driverCodes = p.getString("lab27_cert_grade_drivers", null);
     if (!Lab28BuyerSummary.validGrade(certifiedGrade)
             || !certifiedGrade.equals(Lab30ScoreEvidence.gradeForMeasuredSnapshot(certifiedScore))
             || !Lab27GradeDrivers.validEvidence(
-                    p.getString("lab27_cert_grade_drivers", null), certifiedScore,
+                    driverCodes, certifiedScore,
                     p.getBoolean("lab27_cert_camera_failure", false),
-                    p.getInt("lab27_cert_functional_findings", -1)))
+                    p.getInt("lab27_cert_functional_findings", -1))
+            || p.getInt("lab27_cert_grade_driver_count", -1)
+                    != Lab27GradeDrivers.countDrivers(driverCodes))
         return false;
     if (p.getInt("lab27_cert_schema", 0) != Lab27CertificationGate.SCHEMA
             || !p.getBoolean("lab27_cert_physical_confirmed", false)
@@ -30596,12 +30599,18 @@ private void lab28ShowCertificationResult(boolean gr) {
                 logLabelErrorValue(gr ? "Επιβεβαιωμένη δυσλειτουργία" : "Confirmed functional failure",
                         driver.observation(gr));
             } else {
-                logLabelInfoValue(gr ? "Παράγοντας βαθμολογίας" : "Grade factor",
+                logLabelWarnValue(gr ? "Σημαντικό εύρημα" : "Significant finding",
                         driver.observation(gr));
             }
             logLabelValue(gr ? "Προτεινόμενος επανέλεγχος" : "Suggested recheck",
                     driver.recommendedCheck(gr));
         }
+    }
+    if ("SLOW_REVIEW".equals(cert.getString("lab27_cert_charge_advisory", ""))) {
+        logLabelInfoValue(gr ? "Επιπλέον έλεγχος (χωρίς επίδραση στον βαθμό)"
+                             : "Additional check (not graded)",
+                gr ? "Ο καθαρός ρυθμός φόρτισης με δηλωμένο ταχυφορτιστή ήταν χαμηλός. Επανάλαβε το Lab 15 με άλλο συμβατό φορτιστή/καλώδιο. Αυτό μόνο του δεν αποδεικνύει βλάβη."
+                   : "Net charging rate was low with a reported fast charger. Repeat Lab 15 with another compatible charger/cable. This alone does not prove a device fault.");
     }
 }
 
@@ -31326,7 +31335,8 @@ private boolean lab27HasFreshOperationalEvidence(SharedPreferences p) {
                     p.getInt("lab16_cert_evidence_schema", 0),
                     p.getLong("lab16_last_ts", 0L),
                     p.getLong("lab16_cert_evidence_elapsed_ms", -1L),
-                    nowWall, nowElapsed);
+                    nowWall, nowElapsed)
+            && p.getBoolean("lab16_evidence_available", false);
 }
 
 private void lab30CombineFindings() {
@@ -32401,8 +32411,8 @@ if (!lab27EvidenceFindings.isEmpty()) {
 }
 logLabelValue(
         gr ? "Βάση βαθμολογίας" : "Rating basis",
-        gr ? "Η πιστοποίηση βαθμολογεί αποκλειστικά επιβεβαιωμένες λειτουργικές αποτυχίες. Η στάθμη φόρτισης, η ελεύθερη RAM/αποθήκευση, ο χρόνος λειτουργίας, οι προσωρινές θερμοκρασίες και οι πληροφορίες ασφαλείας δεν αφαιρούν βαθμούς. Τα υποχρεωτικά εργαστήρια και οι έλεγχοι OEM/χρήστη εξακολουθούν να απαιτούνται."
-           : "Certification scores only confirmed functional failures. Battery charge, free RAM/storage, uptime, transient temperatures and security observations never reduce the grade. All required labs and OEM/user checks remain mandatory."
+        gr ? "Ο βαθμός βασίζεται σε επιβεβαιωμένες λειτουργικές αστοχίες, πολύ υψηλές θερμοκρασίες ή σοβαρό θερμικό περιορισμό του Android, καθώς και σε τεκμηριωμένα προβλήματα φόρτισης του Lab 15. Απλώς αυξημένες θερμοκρασίες, στάθμη φόρτισης, διαθέσιμη μνήμη/χώρος και χρόνος λειτουργίας δεν αφαιρούν βαθμούς. Οι ενδείξεις δεν αποδεικνύουν από μόνες τους βλάβη ανταλλακτικού."
+           : "The grade considers verified functional failures, very high thermal-zone readings or Android severe thermal protection, and documented Lab 15 charging concerns. Mildly elevated temperatures, charge percentage, free memory/storage and uptime do not deduct points. These findings do not by themselves prove a defective component."
 );
 
 // Context-only measurement; omitted from functional certification grade.
@@ -32553,8 +32563,8 @@ if (!eligibleCert) {
                     : "CERTIFIED WITH FUNCTIONAL LIMITATIONS — grade ")
                 + displayedGrade + " — " + applicableBasic.size()
                 + "/" + applicableBasic.size()
-                + (gr ? " εκτελεσμένα εργαστήρια· τα προβλήματα καταγράφονται."
-                      : " completed labs; functional failures are disclosed."));
+                + (gr ? " εκτελεσμένα εργαστήρια· τα σοβαρά ευρήματα καταγράφονται."
+                      : " completed labs; significant findings are disclosed."));
     } else {
         logLabelOkValue("GEL Device Certification",
                 (gr ? "Πιστοποιήθηκε η καλή λειτουργία στους ελεγμένους τομείς: "
