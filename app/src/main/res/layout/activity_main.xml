@@ -360,7 +360,7 @@
                 android:layout_height="wrap_content"
                 android:minHeight="74dp"
                 android:text="ΒΙΒΛΙΟΓΡΑΦΙΑ TROUBLESHOOTING ΤΗΣ APPLE ΓΙΑ ΤΟ ΚΙΝΗΤΟ ΣΟΥ"
-                android:textColor="#00FFBF"
+                android:textColor="#FFD700"
                 android:textStyle="bold"
                 android:textSize="18sp"
                 android:textAllCaps="false"
