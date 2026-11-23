@@ -34,19 +34,21 @@ public final class IPhonePdfFinalPolishContractTest {
         String all=part(i,"private void runAllAppleDiagnostics()","private void disablePanicGuideForever()");
         assertTrue(all.contains("if (comparableLogs >= 2)"));
         assertTrue(all.contains("Η ανάλυση του διαθέσιμου panic log ολοκληρώθηκε."));
-        assertTrue(all.contains("Τα συγκριτικά Labs 5–7 δεν εκτελέστηκαν"));
+        assertTrue(all.contains("Τα συγκριτικά Labs 4–5 δεν εκτελέστηκαν"));
         assertTrue(all.contains("Ο πλήρης έλεγχος ολοκληρώθηκε."));
         assertTrue(all.contains("runFinalServiceRecommendationLab();"));
     }
 
-    @Test public void labsFiveToSevenExplicitlyReportInsufficientSample() throws Exception {
+    @Test public void labsFourAndFiveExplicitlyReportInsufficientSample() throws Exception {
         String i=source("IPhoneLabsActivity.java");
-        assertTrue(part(i,"private void runPanicFrequencyLab()","private void runPanicClusteringLab()")
-                .contains("Το Lab 5 δεν εκτελέστηκε:"));
-        assertTrue(part(i,"private void runPanicClusteringLab()","private void runRecurringDomainLab()")
-                .contains("Το Lab 6 δεν εκτελέστηκε:"));
-        assertTrue(part(i,"private void runRecurringDomainLab()","private void runFinalServiceRecommendationLab()")
-                .contains("Το Lab 7 δεν εκτελέστηκε:"));
+        String combined=part(i,"private void runPanicFrequencyLab()","private void runRecurringDomainLab()");
+        assertTrue(combined.contains("Το Lab 4 δεν εκτελέστηκε:"));
+        assertTrue(combined.contains("countSupportedPanicBlocks(blocks) <= 1"));
+        assertTrue(combined.contains("crashCount.put(type,"));
+        assertTrue(combined.contains("domainCount.put(domain,"));
+        String recurring=part(i,"private void runRecurringDomainLab()",
+                "private void runFinalServiceRecommendationLab()");
+        assertTrue(recurring.contains("Το Lab 5 δεν εκτελέστηκε:"));
         assertTrue(i.contains("DEMO finished: no simulated results were stored"));
     }
 
