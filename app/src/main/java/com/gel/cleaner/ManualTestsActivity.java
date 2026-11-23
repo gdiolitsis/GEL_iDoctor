@@ -30563,6 +30563,14 @@ private boolean lab28HasFreshCertificationEvidence() {
     String certifiedGrade = p.getString("lab27_cert_grade", "");
     int certifiedScore = p.getInt("lab27_cert_score", -1);
     String driverCodes = p.getString("lab27_cert_grade_drivers", null);
+    // Reject certification if its exact Lab 9 evidence was replaced/retested.
+    Lab9CertificationEvidence.Assessment currentLab9 = lab27Lab9Assessment(p);
+    if (currentLab9 == null || !currentLab9.complete()
+            || p.getLong("lab27_cert_lab9_source_wall", -1L)
+                    != p.getLong("lab9_cert_wall_ms", 0L)
+            || !Lab27GradeDrivers.lab9FailureDriversMatch(driverCodes,
+                    currentLab9.reportedFailures))
+        return false;
     if (!Lab28BuyerSummary.validGrade(certifiedGrade)
             || !certifiedGrade.equals(Lab30ScoreEvidence.gradeForMeasuredSnapshot(certifiedScore))
             || !Lab27GradeDrivers.validEvidence(
@@ -31224,8 +31232,13 @@ private java.util.List<String> lab27PendingBasicLabs(SharedPreferences p,
         runs.put(id, p.getLong("lab27_required_wall_" + id, 0L));
         passed.put(id, p.getBoolean("lab27_required_ok_" + id, false));
     }
-    return Lab27CertificationGate.pending(applicable, runs, passed,
+    java.util.List<String> pending = Lab27CertificationGate.pending(applicable, runs, passed,
             System.currentTimeMillis());
+    // Source-bound Lab 9 live checks (not inventory alone) are required.
+    if (applicable.contains("9") && !pending.contains("9")
+            && !lab27HasCompleteLab9Evidence(p))
+        pending.add("9");
+    return pending;
 }
 
 /** Completed labs with an actual diagnostic finding (not unexecuted labs). */
@@ -31520,6 +31533,7 @@ if (!lab27UserPreflightAuthorized) {
                 + (grGate ? " απαραίτητα εργαστήρια.\nΕκκρεμούν: "
                           : " required labs.\nPending: ")
                 + android.text.TextUtils.join(", ", missing)
+                + (missing.contains("9") ? "\n" + lab27Lab9MissingDetail(before, grGate) : "")
                 + (grGate ? "\n\nΕκτέλεσε πρώτα τα παραπάνω εργαστήρια. Η βαθμολογία και η πιστοποίηση δεν υπολογίζονται ακόμη."
                           : "\n\nRun these labs first. Neither the grade nor certification is calculated yet."));
         return;
@@ -32304,11 +32318,18 @@ float[] lab27SectorTemps = {
         p.getFloat("lab16_temp_pmic", Float.NaN),
         p.getFloat("lab16_temp_surface", Float.NaN)
 };
+Lab9CertificationEvidence.Assessment lab9FunctionalEvidence = lab27Lab9Assessment(p);
+if (lab9FunctionalEvidence == null || !lab9FunctionalEvidence.complete()) {
+    lab27ShowPrerequisiteDialog(gr, lab27Lab9MissingDetail(p, gr));
+    return;
+}
 java.util.List<Lab27GradeDrivers.Driver> lab27GradeDrivers =
-        Lab27GradeDrivers.fromOperationalSnapshot(confirmedCameraFunctionFailure,
-                p.getInt("lab16_os_thermal_status", -1), lab27SectorTemps,
-                p.getBoolean("lab15_overtemp_observed", false),
-                p.getBoolean("lab15_flap_observed", false));
+        Lab27GradeDrivers.withLab9ReportedFailures(
+            Lab27GradeDrivers.fromOperationalSnapshot(confirmedCameraFunctionFailure,
+                    p.getInt("lab16_os_thermal_status", -1), lab27SectorTemps,
+                    p.getBoolean("lab15_overtemp_observed", false),
+                    p.getBoolean("lab15_flap_observed", false)),
+            lab9FunctionalEvidence.reportedFailures);
 int deviceHealthScore = Lab27FunctionGradePolicy.apply(lab27GradeDrivers);
 int confirmedFunctionalFailures = Lab27GradeDrivers.confirmedFailures(lab27GradeDrivers);
 String lab27GradeDriverCodes = Lab27GradeDrivers.encode(lab27GradeDrivers);
@@ -32544,7 +32565,11 @@ if (lab27RemainingBasic.isEmpty() && lab27GradeDrivers.isEmpty()) {
 if (!lab27GradeDrivers.isEmpty() && (deviceHealthScore < 92 || confirmedCameraFunctionFailure)) {
     logInfo(gr ? "Παράγοντες της βαθμολογίας" : "Factors behind the grade");
     for (Lab27GradeDrivers.Driver driver : lab27GradeDrivers) {
-        if (driver.isConfirmedFailure()) {
+        if (driver.isLab9UserReportedFailure()) {
+            logLabelErrorValue(gr ? "Δηλωμένη δυσλειτουργία Lab 9"
+                                  : "Lab 9 user-reported functional issue",
+                    driver.observation(gr));
+        } else if (driver.isConfirmedFailure()) {
             logLabelErrorValue(gr ? "Επιβεβαιωμένη δυσλειτουργία" : "Confirmed functional failure",
                     driver.observation(gr));
         } else {
@@ -32696,6 +32721,7 @@ if (!eligibleCert) {
             .putLong("lab27_cert_wall_ms", System.currentTimeMillis())
             .putString("lab27_cert_model", Build.MODEL)
             .putString("lab27_cert_grade", snapshotGrade)
+            .putLong("lab27_cert_lab9_source_wall", p.getLong("lab9_cert_wall_ms", 0L))
             .putInt("lab27_cert_score", deviceHealthScore)
             .putString("lab27_cert_grade_drivers", lab27GradeDriverCodes)
             .putInt("lab27_cert_grade_driver_count", lab27GradeDrivers.size())
