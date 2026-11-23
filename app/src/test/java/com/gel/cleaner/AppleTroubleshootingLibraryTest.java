@@ -174,6 +174,20 @@ public final class AppleTroubleshootingLibraryTest {
         assertTrue(viewer.contains("isOfficialUrl(next)"));
         assertTrue("Embedded page exit is red", viewer.contains("bg.setColor(0xFFB71C1C)"));
         assertTrue("Embedded page exit uses white text", viewer.contains("back.setTextColor(Color.WHITE)"));
+        assertTrue("Return bar must use independent TextView, not OEM Button",
+                viewer.contains("TextView back = new TextView(this)"));
+        assertTrue("Explicit Greek return label must be visible",
+                viewer.contains("← ΕΠΙΣΤΡΟΦΗ ΣΤΗΝ ΑΡΧΙΚΗ APPLE"));
+        assertTrue("Explicit English return label must be available",
+                viewer.contains("← RETURN TO APPLE HOME"));
+        assertTrue("Return label centered on red bar",
+                viewer.contains("back.setGravity(Gravity.CENTER)"));
+        assertTrue("Return label has content description",
+                viewer.contains("back.setContentDescription(returnLabel)"));
+        assertTrue("Button retains one-tap navigation to Apple home",
+                viewer.contains("back.setOnClickListener(v -> returnToAppleHome())"));
+        assertFalse("No OEM-styled Button for the return bar",
+                viewer.contains("Button back = new Button(this)"));
         assertTrue("Viewer errors stay inside GEL", viewer.contains("status.setVisibility(View.VISIBLE)"));
         assertTrue("Invalid link dialog remains GEL styled", viewer.contains("showInvalidSourceDialog()"));
         assertFalse("Viewer must not use OEM Toast popups", viewer.contains("Toast.makeText("));
