@@ -28,10 +28,33 @@ final class Lab27GradeDrivers {
         THERMAL_HIGH_PMIC,
         THERMAL_HIGH_SURFACE,
         CHARGING_OVERHEAT,
-        CHARGING_DISCONNECT;
+        CHARGING_DISCONNECT,
+        LAB9_USER_REPORTED_GPS_FAILURE,
+        LAB9_USER_REPORTED_VOLUME_UP_FAILURE,
+        LAB9_USER_REPORTED_VOLUME_DOWN_FAILURE,
+        LAB9_USER_REPORTED_GYRO_FAILURE,
+        LAB9_USER_REPORTED_MAGNET_FAILURE,
+        LAB9_USER_REPORTED_LIGHT_FAILURE;
 
         boolean isConfirmedFailure() {
-            return this == CAMERA || this == THERMAL_OS_SEVERE;
+            return this == CAMERA || this == THERMAL_OS_SEVERE
+                    || isLab9UserReportedFailure();
+        }
+
+        boolean isLab9UserReportedFailure() {
+            return name().startsWith("LAB9_USER_REPORTED_");
+        }
+
+        String lab9EvidenceKey() {
+            switch (this) {
+                case LAB9_USER_REPORTED_GPS_FAILURE: return Lab9CertificationEvidence.GPS;
+                case LAB9_USER_REPORTED_VOLUME_UP_FAILURE: return Lab9CertificationEvidence.VOLUME_UP;
+                case LAB9_USER_REPORTED_VOLUME_DOWN_FAILURE: return Lab9CertificationEvidence.VOLUME_DOWN;
+                case LAB9_USER_REPORTED_GYRO_FAILURE: return Lab9CertificationEvidence.GYRO;
+                case LAB9_USER_REPORTED_MAGNET_FAILURE: return Lab9CertificationEvidence.MAGNET;
+                case LAB9_USER_REPORTED_LIGHT_FAILURE: return Lab9CertificationEvidence.LIGHT;
+                default: return null;
+            }
         }
 
         boolean isHighTemperatureReading() {
@@ -39,6 +62,13 @@ final class Lab27GradeDrivers {
         }
 
         String observation(boolean gr) {
+            if (isLab9UserReportedFailure()) {
+                return (gr ? "Lab 9: Ο χρήστης ανέφερε δυσλειτουργία στον έλεγχο "
+                           : "Lab 9: User reported a functional failure in ")
+                        + Lab9CertificationEvidence.displayName(lab9EvidenceKey(), gr)
+                        + (gr ? ". Χρειάζεται επανέλεγχος· δεν έχει αποδειχθεί ελαττωματικό εξάρτημα."
+                              : ". Retest required; this does not prove a defective component.");
+            }
             switch (this) {
                 case CAMERA:
                     return gr ? "Lab 8: Επιβεβαιωμένη αποτυχία ζωντανής εικόνας κάμερας."
@@ -63,6 +93,12 @@ final class Lab27GradeDrivers {
         }
 
         String recommendedCheck(boolean gr) {
+            if (isLab9UserReportedFailure()) {
+                return (gr ? "Επανάλαβε το Lab 9 για " : "Repeat Lab 9 for ")
+                        + Lab9CertificationEvidence.displayName(lab9EvidenceKey(), gr)
+                        + (gr ? ". Αν δεν ανταποκριθεί μετά από σωστή διαδικασία, ζήτησε τεχνικό έλεγχο."
+                              : ". If it still fails after a guided retest, seek service.");
+            }
             switch (this) {
                 case CAMERA:
                     return gr ? "Επανάλαβε το Lab 8 με ζωντανή εικόνα από κάθε κάμερα."
@@ -129,6 +165,33 @@ final class Lab27GradeDrivers {
         if (chargingOverheat) values.add(Driver.CHARGING_OVERHEAT);
         if (chargingDisconnect) values.add(Driver.CHARGING_DISCONNECT);
         return Collections.unmodifiableList(new ArrayList<>(values));
+    }
+
+    static List<Driver> withLab9ReportedFailures(List<Driver> operational,
+            List<String> userReportedFailures) {
+        if (operational == null || userReportedFailures == null)
+            throw new IllegalArgumentException("Missing functional evidence");
+        EnumSet<Driver> joined = EnumSet.noneOf(Driver.class);
+        joined.addAll(operational);
+        for (String key : userReportedFailures) {
+            Driver value;
+            if (Lab9CertificationEvidence.GPS.equals(key))
+                value = Driver.LAB9_USER_REPORTED_GPS_FAILURE;
+            else if (Lab9CertificationEvidence.VOLUME_UP.equals(key))
+                value = Driver.LAB9_USER_REPORTED_VOLUME_UP_FAILURE;
+            else if (Lab9CertificationEvidence.VOLUME_DOWN.equals(key))
+                value = Driver.LAB9_USER_REPORTED_VOLUME_DOWN_FAILURE;
+            else if (Lab9CertificationEvidence.GYRO.equals(key))
+                value = Driver.LAB9_USER_REPORTED_GYRO_FAILURE;
+            else if (Lab9CertificationEvidence.MAGNET.equals(key))
+                value = Driver.LAB9_USER_REPORTED_MAGNET_FAILURE;
+            else if (Lab9CertificationEvidence.LIGHT.equals(key))
+                value = Driver.LAB9_USER_REPORTED_LIGHT_FAILURE;
+            else
+                throw new IllegalArgumentException("Unrecognized Lab 9 graded input");
+            joined.add(value);
+        }
+        return Collections.unmodifiableList(new ArrayList<>(joined));
     }
 
     static int confirmedFailures(List<Driver> drivers) {
