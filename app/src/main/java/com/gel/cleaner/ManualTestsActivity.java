@@ -31506,8 +31506,8 @@ boolean thermalRunawayRisk =
     // Full lab/OEM/user evidence is validated before this report can be built.
     appendHtml("<br>");
     logInfo(gr
-            ? "LAB 27 — Αυτόματη Σύνοψη Μετρήσεων"
-            : "LAB 27 — Automatic Measurements Summary");
+            ? "Lab27 - Certification καλής λειτουργίας"
+            : "Lab27 - Functional Certification");
     logLine();
 
     // Lab 25 crash history and app usage access are not presented as current functional measurements.
