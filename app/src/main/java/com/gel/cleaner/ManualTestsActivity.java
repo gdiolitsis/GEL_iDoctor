@@ -32591,10 +32591,6 @@ logInfo(gr
 
 logLine();
 
-appendHtml("<br>");
-/* Uncalibrated diagnosis header not displayed */;
-logLine();
-
 /* Internal heuristic index omitted from measured-results report */;
 
 String deviceClass;
