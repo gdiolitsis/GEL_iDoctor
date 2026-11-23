@@ -1,0 +1,127 @@
+name: Promotion preflight — signed v77 mainline baseline
+on:
+  push:
+    branches: [promote/v77-to-main-20261123]
+    paths:
+      - 'app/**'
+      - 'tools/**'
+      - 'gradle.properties'
+      - '.github/workflows/promotion-v77-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v77-promotion-preflight-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-main:
+    # Preflight a signed mainline-default build before moving main; signed artifact is QA only.
+    if: ${{ github.ref == 'refs/heads/promote/v77-to-main-20261123' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Check update keystore certificate matches installed v53 (fail closed)
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" && test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/gel-qa-signing.jks"
+          test -s "$RUNNER_TEMP/gel-qa-signing.jks"
+          expected='73b2c36144a1c814c92fea0ee71a6be408c2f111db20bddea24f95ad958b0964'
+          actual="$(keytool -list -v -keystore "$RUNNER_TEMP/gel-qa-signing.jks" \
+            -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" \
+            | awk '/SHA256:/ {print $2; exit}' | tr -d ':\r ' | tr '[:upper:]' '[:lower:]')"
+          if [ "$actual" != "$expected" ]; then
+            echo "SIGNING_CERT_MISMATCH: cannot update current v53 with this key; aborting" >&2
+            exit 1
+          fi
+          echo "MATCHES_INSTALLED_V53_CERTIFICATE=YES"
+
+      - name: Enforce no Shizuku before signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RinE 'Shizuku|moe\\.shizuku' app/src/main app/build.gradle; then
+            echo "Unexpected Shizuku runtime source in no-Shizuku QA build" >&2
+            exit 1
+          fi
+      - name: Build, align, sign and verify one mainline release APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS_PASSWORD: ${{ secrets.KEY_ALIAS_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/iphone/verify_apple_repair_source_coverage.py
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          attempt=1
+          while true; do
+            log="$RUNNER_TEMP/gel-gradle-qa-$attempt.log"
+            if ./gradlew :app:testDebugUnitTest :app:assembleRelease --no-daemon --console=plain 2>&1 | tee "$log"; then break; fi
+            if [ "$attempt" -ge 3 ] || ! grep -Eqi '(status code 429|HTTP 429|Too Many Requests|MavenArtifactFetcher|FileNotFoundException)' "$log"; then
+              echo "Gradle failed; will not sign candidate" >&2
+              exit 1
+            fi
+            sleep $((attempt * 30))
+            attempt=$((attempt + 1))
+          done
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          unsigned='app/build/outputs/apk/release/app-release-unsigned.apk'
+          test -s "$unsigned"
+          out="$RUNNER_TEMP/candidate-apk"
+          mkdir -p "$out"
+          "$tools/zipalign" -f 4 "$unsigned" "$out/gel-main-aligned.apk"
+          "$tools/apksigner" sign \
+            --ks "$RUNNER_TEMP/gel-qa-signing.jks" \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEY_ALIAS_PASSWORD \
+            --ks-key-alias "$KEY_ALIAS" \
+            --out "$out/GEL_iDoctor_main_signed_QA.apk" "$out/gel-main-aligned.apk"
+          "$tools/apksigner" verify --verbose "$out/GEL_iDoctor_main_signed_QA.apk"
+          "$tools/zipalign" -c -v 4 "$out/GEL_iDoctor_main_signed_QA.apk"
+          expected='73b2c36144a1c814c92fea0ee71a6be408c2f111db20bddea24f95ad958b0964'
+          actual="$("$tools/apksigner" verify --print-certs "$out/GEL_iDoctor_main_signed_QA.apk" \
+            | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}')"
+          if [ -z "$actual" ] || [ "$actual" != "$expected" ]; then
+            echo "SIGNED_APK_CERTIFICATE_MISMATCH_OR_UNREADABLE" >&2
+            exit 1
+          fi
+          echo "SIGNED_APK_CERTIFICATE=PASS"
+          "$tools/aapt2" dump badging "$out/GEL_iDoctor_main_signed_QA.apk" > "$out/APK_BADGING.txt"
+          package_line="$(head -n 1 "$out/APK_BADGING.txt")"
+          echo "APK_BADGING_PACKAGE_LINE: $package_line"
+          [[ "$package_line" == package:* ]] || { echo "INVALID_BADGING"; exit 1; }
+          [[ "$package_line" == *"name='com.gel.iDoctor'"* ]] || { echo "INVALID_APK_PACKAGE"; exit 1; }
+          [[ "$package_line" =~ versionCode=\'([0-9]+)\' ]] || { echo "MISSING_VERSION_CODE"; exit 1; }
+          code="${BASH_REMATCH[1]}"
+          if [ "$code" -lt 77 ]; then echo "NON_MONOTONIC_VERSION_CODE: $code"; exit 1; fi
+          [[ "$package_line" =~ versionName=\'([^\']+)\' ]] || { echo "MISSING_VERSION_NAME"; exit 1; }
+          version_name="${BASH_REMATCH[1]}"
+          echo "MAIN_PACKAGE_VERSION: $code $version_name"
+          echo "APK_PACKAGE_VERSION=PASS"
+          (cd "$out" && sha256sum GEL_iDoctor_main_signed_QA.apk > SHA256SUMS)
+          git rev-parse HEAD > "$out/SOURCE_COMMIT"
+          printf '%s\n' "$actual" > "$out/SIGNER_CERT_SHA256"
+          rm -f "$out/gel-main-aligned.apk" "$RUNNER_TEMP/gel-qa-signing.jks"
+          echo "SIGNED_QA_UPDATE_WITH_INSTALLED_CERTIFICATE=PASS"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: gel-v77-promotion-preflight-signed-apk
+          path: ${{ runner.temp }}/candidate-apk
+          retention-days: 7
