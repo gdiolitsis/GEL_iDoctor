@@ -24,18 +24,19 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         return source.substring(a, b);
     }
 
-    @Test public void lab3ReviewsDatesWithoutADeviceHealthScore() throws Exception {
-        String lab = section("private void runStabilityLab() {", "private void runImpactLab() {");
-        assertTrue(lab.contains("countSupportedPanicBlocks(blocks)"));
-        assertTrue(lab.contains("for (String block : blocks)"));
+    @Test public void lab1PreservesPerIncidentDatesWithoutADeviceHealthScore() throws Exception {
+        String lab = section("private void runPanicLogAnalyzer() {", "private void runPanicSignatureParser() {");
+        assertTrue(lab.contains("countSupportedPanicBlocks(separatePanicBlocks)"));
+        assertTrue(lab.contains("for (String block : separatePanicBlocks)"));
         assertTrue(lab.contains("ApplePanicEvidencePolicy.describeOne(block)"));
-        assertTrue(lab.contains("meta.timestamp"));
+        assertTrue(lab.contains("meta.timestamp.isEmpty()"));
+        assertTrue(lab.contains("No reliable timestamp supplied in this record"));
         assertFalse(lab.contains("parseAndCacheSignature(panicLogText)"));
         assertFalse(lab.contains("logLabelOkValue(gr ? \"Υγεία συσκευής:\""));
-        assertTrue(lab.contains("Το Lab 3 ολοκληρώθηκε."));
+        assertTrue(lab.contains("Το Lab 1 ολοκληρώθηκε."));
     }
 
-    @Test public void lab4RendersActualPerIncidentCodeAndOfficialTopics() throws Exception {
+    @Test public void lab3RendersActualPerIncidentCodeAndOfficialTopics() throws Exception {
         String lab = section("private void runImpactLab() {", "private int countSupportedPanicBlocks(");
         assertTrue(lab.contains("for (String block : blocks)"));
         assertTrue(lab.contains("parseAndCacheSignature(block)"));
@@ -45,7 +46,7 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         assertTrue(lab.contains("logOfficialApplePanicGuidance(model, gr, appleTopicsByModel.get(model))"));
         assertTrue(lab.contains("logApplePanicEvidence(block, gr,"));
         assertFalse(lab.contains("logLabelOkValue(gr ? \"Εξάρτημα:\""));
-        assertTrue(lab.contains("Το Lab 4 ολοκληρώθηκε."));
+        assertTrue(lab.contains("Το Lab 3 ολοκληρώθηκε."));
     }
 
     @Test public void finalServiceReportRemainsHumanFirstAndPerRecord() throws Exception {
@@ -63,24 +64,22 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         assertTrue(lab.contains("Πότε χρειάζεται τεχνικός:"));
         assertTrue(lab.contains("Για τα Watchdog:"));
         assertTrue(lab.contains("Για το Thermal:"));
-        assertTrue(lab.contains("Το Lab 8 ολοκληρώθηκε."));
+        assertTrue(lab.contains("Το Lab 6 ολοκληρώθηκε."));
     }
 
     @Test public void incidentsAndGelCodesAreNotPaintedAsGreenDeviceHealth() throws Exception {
         String lab2 = section("private void runPanicSignatureParser() {",
-                "private void runStabilityLab() {");
-        String lab5 = section("private void runPanicFrequencyLab() {",
-                "private void runPanicClusteringLab() {");
-        String lab6 = section("private void runPanicClusteringLab() {",
+                "private void runImpactLab() {");
+        String combinedLab4 = section("private void runPanicFrequencyLab() {",
                 "private void runRecurringDomainLab() {");
-        String lab8 = section("private void runFinalServiceRecommendationLab() {",
+        String finalLab6 = section("private void runFinalServiceRecommendationLab() {",
                 "private void runDemoDiagnostics() {");
         assertTrue(lab2.contains("logLabelWarnValue("));
-        assertTrue(lab5.contains("logLabelWarnValue(gr ? \"Καταγεγραμμένος τύπος:\""));
-        assertTrue(lab6.contains("logLabelValue(gr ? \"Κατηγορία όρων:\""));
-        assertTrue(lab8.contains("if (human.repeatedClueNeedsReview)"));
-        assertTrue(lab8.contains("uniqueTechnicalCodes.add(finding.code)"));
-        assertFalse(lab8.contains("logLabelOkValue(gr ? \"Ενδείξεις που αναγνώρισε το GEL:\""));
+        assertTrue(combinedLab4.contains("logLabelWarnValue(gr ? \"Καταγεγραμμένος τύπος:\""));
+        assertTrue(combinedLab4.contains("logLabelValue(gr ? \"Κατηγορία όρων:\""));
+        assertTrue(finalLab6.contains("if (human.repeatedClueNeedsReview)"));
+        assertTrue(finalLab6.contains("uniqueTechnicalCodes.add(finding.code)"));
+        assertFalse(finalLab6.contains("logLabelOkValue(gr ? \"Ενδείξεις που αναγνώρισε το GEL:\""));
     }
 
     @Test public void demoContainsTwoIndependentFixturesAndNeverPersistsThem() throws Exception {
@@ -95,7 +94,7 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         assertTrue(demo.contains("demoMode = false"));
     }
 
-    @Test public void lab4DoesNotHideRepeatedCodesOrUnrelatedRepairs() throws Exception {
+    @Test public void lab3DoesNotHideRepeatedCodesOrUnrelatedRepairs() throws Exception {
         String lab = section("private void runImpactLab() {", "private int countSupportedPanicBlocks(");
         String evidence = section("private void logApplePanicEvidence(",
                 "private void parseAndCacheSignature(");
@@ -107,7 +106,7 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         assertTrue(evidence.contains("caseRecord.sourceUrl"));
     }
 
-    @Test public void lab7UsesOnlyActualDatesAndPerRecordSignatures() throws Exception {
+    @Test public void lab5UsesOnlyActualDatesAndPerRecordSignatures() throws Exception {
         String lab = section("private void runRecurringDomainLab() {",
                 "private void runFinalServiceRecommendationLab() {");
         assertTrue(lab.contains("ApplePanicEvidencePolicy.describeOne(block)"));
@@ -119,7 +118,7 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         assertFalse(lab.contains("System uptime in nanoseconds"));
     }
 
-    @Test public void lab8DoesNotRepeatDetailedCountsFromLabsFiveThroughSeven() throws Exception {
+    @Test public void lab6DoesNotRepeatDetailedCountsFromLabsFourAndFive() throws Exception {
         String lab = section("private void runFinalServiceRecommendationLab() {",
                 "private void runDemoDiagnostics() {");
         assertTrue(lab.contains("IPhonePanicServiceSummary.interpret("));
