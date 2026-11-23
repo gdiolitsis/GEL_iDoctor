@@ -24845,6 +24845,8 @@ p.edit().remove("lab15_charge_score")
         .remove("lab15_overtemp_observed")
         .remove("lab15_charger_type")
         .remove("lab15_diagnostic_outcome_v1")
+        .remove("lab15_cert_evidence_schema")
+        .remove("lab15_cert_evidence_elapsed_ms")
         .apply();
 
 lab15Running  = true;
@@ -25670,6 +25672,8 @@ try {
             .putBoolean("lab15_system_limited", lab15_systemLimited)
             .putBoolean("lab15_flap_observed", lab15FlapUnstable)
             .putBoolean("lab15_overtemp_observed", lab15OverTempDuringCharge)
+            .putInt("lab15_cert_evidence_schema", Lab27GradeDrivers.EVIDENCE_SCHEMA)
+            .putLong("lab15_cert_evidence_elapsed_ms", SystemClock.elapsedRealtime())
             .putLong("lab15_ts", System.currentTimeMillis())
             .apply();
 } catch (Throwable ignore) {}
@@ -25987,6 +25991,8 @@ private void lab16ThermalSnapshot() {
                 .putBoolean("lab16_thermal_warning",
                         danger || hiddenRisk || sectorSummary.elevatedCount > 0
                                 || osThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE)
+                .putInt("lab16_cert_evidence_schema", Lab27GradeDrivers.EVIDENCE_SCHEMA)
+                .putLong("lab16_cert_evidence_elapsed_ms", SystemClock.elapsedRealtime())
                 .putLong("lab16_last_ts", System.currentTimeMillis())
                 .apply();
     } catch (Throwable ignore) {}
@@ -31308,6 +31314,21 @@ private void lab27PromptPhysicalConfirmation(final boolean gr,
     });
 }
 
+private boolean lab27HasFreshOperationalEvidence(SharedPreferences p) {
+    long nowWall = System.currentTimeMillis();
+    long nowElapsed = SystemClock.elapsedRealtime();
+    return Lab27GradeDrivers.freshEvidence(
+                    p.getInt("lab15_cert_evidence_schema", 0),
+                    p.getLong("lab15_ts", 0L),
+                    p.getLong("lab15_cert_evidence_elapsed_ms", -1L),
+                    nowWall, nowElapsed)
+            && Lab27GradeDrivers.freshEvidence(
+                    p.getInt("lab16_cert_evidence_schema", 0),
+                    p.getLong("lab16_last_ts", 0L),
+                    p.getLong("lab16_cert_evidence_elapsed_ms", -1L),
+                    nowWall, nowElapsed);
+}
+
 private void lab30CombineFindings() {
 
 final boolean grGate = AppLang.isGreek(this);
@@ -31336,6 +31357,12 @@ if (!lab27UserPreflightAuthorized) {
         return;
     }
     if (!lab29RequireLab25Evidence()) return;
+    if (!lab27HasFreshOperationalEvidence(before)) {
+        lab27ShowPrerequisiteDialog(grGate, grGate
+                ? "Για τη νέα πιστοποίηση απαιτούνται πρόσφατα, ολοκληρωμένα Labs 15 και 16 στην παρούσα εκκίνηση. Επανέλαβέ τα."
+                : "Certification requires fresh, completed Labs 15 and 16 in this device boot. Rerun both.");
+        return;
+    }
     Lab29FactorySpecAudit.Report factory = Lab29FactorySpecAudit.capture(this);
     if (!lab27OemReady(before, factory)) {
         lab27ShowPrerequisiteDialog(grGate, (grGate
@@ -31353,7 +31380,8 @@ lab27UserPreflightAuthorized = false;
 // Revalidate prerequisite freshness and manufacturer profile at execution.
 SharedPreferences p = getSharedPreferences("GEL_DIAG", MODE_PRIVATE);
 if (!lab27PendingBasicLabs(p, lab27ApplicableBasicLabs()).isEmpty()
-        || !lab28HasFreshLab25Evidence()) {
+        || !lab28HasFreshLab25Evidence()
+        || !lab27HasFreshOperationalEvidence(p)) {
     lab27ShowPrerequisiteDialog(grGate, grGate
             ? "Οι απαιτούμενες μετρήσεις έληξαν ή άλλαξαν. Επανέλαβε τον προέλεγχο."
             : "Required measurements expired or changed. Repeat the preflight.");
@@ -32099,12 +32127,26 @@ else {
 java.util.List<String> lab27EvidenceFindings =
         lab27BasicLabsWithFindings(p, lab27ApplicableBasicLabs());
 boolean confirmedCameraFunctionFailure = lab27HasCameraFunctionalFailure(p);
-int deviceHealthScore = Lab27FunctionGradePolicy.apply(confirmedCameraFunctionFailure);
-int confirmedFunctionalFailures = confirmedCameraFunctionFailure ? 1 : 0;
+// Only completed Lab15/Lab16 results, never battery percentage, memory or uptime.
+float[] lab27SectorTemps = {
+        p.getFloat("lab16_temp_battery", Float.NaN),
+        p.getFloat("lab16_temp_cpu", Float.NaN),
+        p.getFloat("lab16_temp_gpu", Float.NaN),
+        p.getFloat("lab16_temp_charger", Float.NaN),
+        p.getFloat("lab16_temp_pmic", Float.NaN),
+        p.getFloat("lab16_temp_surface", Float.NaN)
+};
 java.util.List<Lab27GradeDrivers.Driver> lab27GradeDrivers =
-        Lab27GradeDrivers.fromConfirmedFailures(confirmedCameraFunctionFailure);
+        Lab27GradeDrivers.fromOperationalSnapshot(confirmedCameraFunctionFailure,
+                p.getInt("lab16_os_thermal_status", -1), lab27SectorTemps,
+                p.getBoolean("lab15_overtemp_observed", false),
+                p.getBoolean("lab15_flap_observed", false));
+int deviceHealthScore = Lab27FunctionGradePolicy.apply(lab27GradeDrivers);
+int confirmedFunctionalFailures = Lab27GradeDrivers.confirmedFailures(lab27GradeDrivers);
 String lab27GradeDriverCodes = Lab27GradeDrivers.encode(lab27GradeDrivers);
-// Reasons are tied to confirmed functional failure evidence, not score heuristics.
+String lab27ChargeAdvisory =
+        "SLOW_REVIEW".equals(p.getString("lab15_diagnostic_outcome_v1", ""))
+                ? "SLOW_REVIEW" : "";
 final String snapshotGrade = Lab30ScoreEvidence.gradeForMeasuredSnapshot(deviceHealthScore);
 final String displayedGrade = gr && "D".equals(snapshotGrade) ? "Δ" : snapshotGrade;
 
@@ -32310,7 +32352,7 @@ if (snapshotGrade == null) {
 }
 java.util.List<String> lab27CheckedBasic = lab27ApplicableBasicLabs();
 java.util.List<String> lab27RemainingBasic = lab27PendingBasicLabs(p, lab27CheckedBasic);
-if (lab27RemainingBasic.isEmpty() && confirmedFunctionalFailures == 0) {
+if (lab27RemainingBasic.isEmpty() && lab27GradeDrivers.isEmpty()) {
     logLabelOkValue(
             gr ? "Κατάσταση συσκευής" : "Device functional status",
             gr ? "Καλή λειτουργία στους ελεγμένους τομείς: "
@@ -32321,8 +32363,11 @@ if (lab27RemainingBasic.isEmpty() && confirmedFunctionalFailures == 0) {
                     + " required labs completed.");
 } else if (lab27RemainingBasic.isEmpty()) {
     logLabelWarnValue(gr ? "Κατάσταση συσκευής" : "Device functional status",
-            gr ? "Επιβεβαιωμένη αποτυχία ζωντανής εικόνας κάμερας στο Lab 8."
-               : "Confirmed camera live-preview failure in Lab 8.");
+            confirmedFunctionalFailures > 0
+            ? (gr ? "Καταγράφηκε επιβεβαιωμένος λειτουργικός περιορισμός. Δες τις αιτίες παρακάτω."
+                  : "A confirmed functional limitation was recorded. See the reasons below.")
+            : (gr ? "Σοβαρό θερμικό ή φορτιστικό εύρημα απαιτεί επανέλεγχο· δεν αποδείχθηκε η αιτία."
+                  : "Significant thermal or charging evidence needs recheck; the cause is unverified."));
 } else {
     logLabelWarnValue(gr ? "Κατάσταση συσκευής" : "Device functional status",
             (gr ? "Δεν ολοκληρώθηκαν: " : "Not completed: ")
@@ -32335,9 +32380,15 @@ if (!lab27GradeDrivers.isEmpty() && (deviceHealthScore < 92 || confirmedCameraFu
             logLabelErrorValue(gr ? "Επιβεβαιωμένη δυσλειτουργία" : "Confirmed functional failure",
                     driver.observation(gr));
         } else {
-            logLabelInfoValue(gr ? "Παράγοντας" : "Factor", driver.observation(gr));
+            logLabelWarnValue(gr ? "Σοβαρό εύρημα" : "Significant observation", driver.observation(gr));
         }
     }
+}
+if (!lab27ChargeAdvisory.isEmpty()) {
+    logLabelInfoValue(gr ? "Παρατήρηση φόρτισης (εκτός βαθμολογίας)"
+                         : "Charging note (not graded)",
+            gr ? "Η χαμηλή καθαρή αύξηση φόρτισης με δηλωμένο ταχυφορτιστή χρειάζεται επανέλεγχο στο Lab 15 με αξιόπιστο συμβατό φορτιστή/καλώδιο. Δεν αποδεικνύει βλάβη της συσκευής."
+               : "Low net charge gain with a reported fast charger warrants repeating Lab 15 with a compatible charger/cable. It does not prove a phone fault.");
 }
 if (confirmedCameraFunctionFailure) {
     logLabelErrorValue(gr ? "Σοβαρή δυσλειτουργία Lab 8" : "Serious Lab 8 functional failure",
@@ -32479,6 +32530,8 @@ if (!eligibleCert) {
             .putString("lab27_cert_grade", snapshotGrade)
             .putInt("lab27_cert_score", deviceHealthScore)
             .putString("lab27_cert_grade_drivers", lab27GradeDriverCodes)
+            .putInt("lab27_cert_grade_driver_count", lab27GradeDrivers.size())
+            .putString("lab27_cert_charge_advisory", lab27ChargeAdvisory)
             .putBoolean("lab27_cert_camera_failure", confirmedCameraFunctionFailure)
             .putInt("lab27_cert_functional_findings", confirmedFunctionalFailures)
             .putInt("lab27_cert_oem_matches", certFactory.matches)
@@ -32494,7 +32547,7 @@ if (!eligibleCert) {
             .putString("lab27_cert_oem_source", certPorts.sourceUrl)
             .putBoolean("lab27_cert_physical_confirmed", true)
             .apply();
-    if (confirmedFunctionalFailures > 0) {
+    if (!lab27GradeDrivers.isEmpty()) {
         logLabelWarnValue("GEL Device Certification",
                 (gr ? "ΠΙΣΤΟΠΟΙΗΣΗ ΜΕ ΠΕΡΙΟΡΙΣΜΟΥΣ — βαθμός "
                     : "CERTIFIED WITH FUNCTIONAL LIMITATIONS — grade ")
