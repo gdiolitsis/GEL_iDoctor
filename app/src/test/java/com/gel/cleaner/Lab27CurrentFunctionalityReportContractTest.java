@@ -27,7 +27,7 @@ public final class Lab27CurrentFunctionalityReportContractTest {
         assertTrue(s.contains("lab27PendingBasicLabs(p, lab27CheckedBasic)"));
         assertTrue(s.contains("lab27RemainingBasic.isEmpty()"));
         assertTrue(s.contains("Καλή λειτουργία στους ελεγμένους τομείς"));
-        assertTrue(s.contains("Η βαθμολογία ξεκινά από τις μετρήσεις"));
+        assertTrue(s.contains("Η πιστοποίηση βαθμολογεί αποκλειστικά"));
         assertTrue(s.contains("logLabelOkValue(\n            gr ? \"Κατάσταση συσκευής\""));
     }
 
@@ -50,7 +50,8 @@ public final class Lab27CurrentFunctionalityReportContractTest {
 
     @Test public void gradeExcludesAppCountsButKeepsTimestampReportIdAndCertification() throws Exception {
         String s = report();
-        assertTrue(s.contains("Lab30ScoreEvidence.functionalPerformanceScore("));
+        assertFalse(s.contains("Lab30ScoreEvidence.functionalPerformanceScore("));
+        assertTrue(s.contains("Lab27FunctionGradePolicy.apply(confirmedCameraFunctionFailure)"));
         assertFalse(s.contains("Lab30ScoreEvidence.performanceScore("));
         assertTrue(s.contains("Lab30ScoreEvidence.gradeForMeasuredSnapshot(deviceHealthScore)"));
         assertTrue(s.contains("Χρόνος διάγνωσης"));
