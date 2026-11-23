@@ -16,7 +16,7 @@ jobs:
     # Consolidates PRs #188–#194 via #194 ancestry; physical device QA required before replacing main v53.
     # Restricted to final QA branch; fail closed, do not publish or merge to main.
     # Only this exact PR branch and expected parent may sign.
-    if: ${{ github.event.pull_request.base.ref == 'release/v74-final-candidate-for-main-20261123' && github.event.pull_request.head.ref == 'qa/apple-troubleshooting-home-20261123' }}
+    if: ${{ github.event.pull_request.base.ref == 'release/v73-final-candidate-for-main-20261123' && github.event.pull_request.head.ref == 'qa/apple-troubleshooting-home-20261123' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
