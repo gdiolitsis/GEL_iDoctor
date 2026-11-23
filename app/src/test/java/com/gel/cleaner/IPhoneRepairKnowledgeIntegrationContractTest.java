@@ -72,7 +72,7 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(lab8.contains("relatedRepairAttempts.put(historic.id, historic)"));
         assertTrue(lab8.contains("IPhonePanicRepairKnowledgeBase.summarize(relatedRepairAttempts.values())"));
         assertTrue(lab8.contains("if (!relatedRepairAttempts.isEmpty())"));
-        assertTrue(lab8.contains("Οδηγίες και πηγές στο Lab 4."));
+        assertTrue(lab8.contains("Οδηγίες και πηγές στο Lab 3."));
         assertFalse(lab8.contains("recommendedHardwareReplacement"));
         assertFalse(lab8.contains("successProbability"));
         assertFalse("No second verbose disclaimer for the same DEMO",
@@ -88,7 +88,7 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(lab7.contains("clue.getValue() < 2"));
         assertTrue(lab7.contains("IPhonePanicRepairKnowledgeBase.lookup(readPanicRepairHistory(), model, code)"));
         assertTrue(lab7.contains("IPhonePanicRepairKnowledgeBase.summarize(history)"));
-        assertTrue(lab7.contains("Πηγές στο Lab 4."));
+        assertTrue(lab7.contains("Πηγές στο Lab 3."));
         assertFalse(lab7.contains("replaceConfirmedFaultyComponent"));
     }
 
@@ -116,7 +116,7 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         String lab8 = region(source, "private void runFinalServiceRecommendationLab()",
                 "private void runDemoDiagnostics()");
         assertFalse(lab8.contains("AppleOfficialServiceGuidance.modelManual("));
-        assertTrue(lab8.contains("Οδηγίες και πηγές στο Lab 4."));
+        assertTrue(lab8.contains("Οδηγίες και πηγές στο Lab 3."));
         assertFalse(lab8.contains("Apple confirmed panic code"));
     }
 
@@ -148,7 +148,7 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         String lab8 = region(source, "private void runFinalServiceRecommendationLab()",
                 "private void runDemoDiagnostics()");
         assertTrue(lab8.contains("logLabelInfoValue(gr ? \"Σχετικές δημοσιευμένες επισκευές:\""));
-        assertTrue(lab8.contains("Οδηγίες και πηγές στο Lab 4."));
+        assertTrue(lab8.contains("Οδηγίες και πηγές στο Lab 3."));
         assertFalse(lab8.contains("Apple-certified panic repair"));
     }
 
@@ -186,7 +186,7 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertTrue(kb.contains("if (!panicCode.equals(canonicalCode(code))) return false;"));
         assertTrue(kb.contains("identifier.trim().equalsIgnoreCase(model.trim())"));
     }
-    @Test public void conditionalManufacturerPartsNeverFireFromPanicOnlyLab4Flow() throws Exception {
+    @Test public void conditionalManufacturerPartsNeverFireFromPanicOnlyLab3Flow() throws Exception {
         String activity = code("IPhoneLabsActivity.java");
         String lab4 = region(activity, "private void runImpactLab()",
                 "private int countSupportedPanicBlocks(");
