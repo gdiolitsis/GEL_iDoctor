@@ -170,6 +170,14 @@ final class Lab27GradeDrivers {
         return Collections.unmodifiableList(new ArrayList<>(drivers));
     }
 
+    static int countDrivers(String encoded) {
+        try {
+            return decode(encoded).size();
+        } catch (IllegalArgumentException invalid) {
+            return -1;
+        }
+    }
+
     static boolean validEvidence(String encoded, int score,
                                  boolean cameraFailure, int confirmedFailureCount) {
         try {
