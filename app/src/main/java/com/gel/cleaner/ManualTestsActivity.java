@@ -30649,8 +30649,8 @@ private void runLab29DeviceAuthenticity() {
     lab28ShowCertificationResult(gr);
 
     appendHtml("<br>");
-    logInfo(gr ? "Έλεγχος που απομένει πριν από την αγορά"
-               : "Remaining pre-purchase check");
+    logInfo(gr ? "Επιπλέον έλεγχος πριν από την αγορά"
+               : "Additional pre-purchase check");
     logLabelInfoValue(gr ? "IMEI — έλεγχος παρόχων" : "IMEI — carrier restrictions",
             gr ? "Έλεγξε όλα τα IMEI σε ανεξάρτητη υπηρεσία ή στον αρμόδιο πάροχο "
                  + "για τυχόν φραγή ή περιορισμό, π.χ. μετά από δήλωση κλοπής. "
