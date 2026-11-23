@@ -25185,7 +25185,15 @@ if (chargingNow) {
         return;
     }
 
-    // real disconnect
+    // An interruption lasting 2–10 seconds is observed, not automatically
+    // assigned to the phone (cable, adapter or port may be involved).
+    // If charging resumes, finish the monitored test and preserve this finding.
+    // Do not treat sub-2s USB renegotiation as a defect.
+    if (unplugMs >= 2000 && unplugMs < 10000) {
+        lab15FlapUnstable = true;
+    }
+
+    // Long interruptions prevent a completed/certifiable 3-minute test.
     if (unplugMs >= 10000) {
 
         lab15FlapUnstable = true;
