@@ -138,6 +138,11 @@ public final class AppleTroubleshootingLibraryTest {
         assertTrue(viewer.contains("returnToAppleHome();"));
         assertTrue(viewer.contains("new WebView(this)"));
         assertTrue(viewer.contains("isOfficialUrl(next)"));
+        assertTrue("Embedded page exit is red", viewer.contains("bg.setColor(0xFFB71C1C)"));
+        assertTrue("Embedded page exit uses white text", viewer.contains("back.setTextColor(Color.WHITE)"));
+        assertTrue("Viewer errors stay inside GEL", viewer.contains("status.setVisibility(View.VISIBLE)"));
+        assertTrue("Invalid link dialog remains GEL styled", viewer.contains("showInvalidSourceDialog()"));
+        assertFalse("Viewer must not use OEM Toast popups", viewer.contains("Toast.makeText("));
         assertTrue(manifest.contains("android:name=\".AppleSupportViewerActivity\""));
         assertTrue(labs.contains("openAppleSourceInApp(url)"));
         assertFalse(labs.contains("315 επίσημες πηγές διαδικασιών"));
