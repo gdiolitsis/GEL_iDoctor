@@ -29,11 +29,11 @@ android {
         minSdk = 26
         targetSdk = 36
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
-        // v77 is now the mainline baseline. Optional QA overrides are
-        // available for future candidate builds without changing mainline defaults.
+        // v78 is the temporary mainline baseline for in-place upgrade from v77.
+        // Optional QA overrides remain available for future candidate builds.
         // Keep the code above previously installed v53–v76 for in-place updates.
-        versionCode = (project.findProperty('gelQaVersionCode') ?: '77').toString().toInteger()
-        versionName = (project.findProperty('gelQaVersionName') ?: '5.3-QA24').toString()
+        versionCode = (project.findProperty('gelQaVersionCode') ?: '78').toString().toInteger()
+        versionName = (project.findProperty('gelQaVersionName') ?: '5.3-v78').toString()
 
 // ✅ SINGLE SOURCE OF ABI TRUTH
         ndk {
