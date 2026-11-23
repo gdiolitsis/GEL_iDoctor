@@ -3085,9 +3085,7 @@ private void showAppleTroubleshootingLibrary() {
     box.addView(instructions);
 
     final AlertDialog dialog = new AlertDialog.Builder(this)
-            .setView(box)
-            .setNegativeButton(gr ? "Κλείσιμο" : "Close", null)
-            .create();
+            .setView(box).create();
 
     addAppleReferenceOption(box, gr
             ? "1. Γενικό επίσημο εγχειρίδιο Apple για το " + model
@@ -3104,6 +3102,8 @@ private void showAppleTroubleshootingLibrary() {
                 showAppleTroubleshootingSymptoms(model, manual, chapters, guides);
             });
 
+    addAppleReferenceAction(box, gr ? "ΕΞΟΔΟΣ" : "EXIT", true,
+            dialog::dismiss);
     showAppleReferenceDialog(dialog);
 }
 
@@ -3121,7 +3121,9 @@ private void showAppleTroubleshootingSymptoms(String model,
         return;
     }
 
-    LinearLayout box = newAppleReferenceBox(gr
+    // Keep the title, question and navigation controls visible while the
+    // long symptom inventory scrolls independently.
+    LinearLayout shell = newAppleReferenceBox(gr
             ? "Ποιο πρόβλημα έχει το " + model + ";"
             : "What issue does your " + model + " have?");
     TextView question = new TextView(this);
@@ -3131,28 +3133,33 @@ private void showAppleTroubleshootingSymptoms(String model,
     question.setTextColor(Color.WHITE);
     question.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
     question.setPadding(dp(5), dp(4), dp(5), dp(12));
-    box.addView(question);
+    shell.addView(question);
 
     ScrollView scroll = new ScrollView(this);
     scroll.setFillViewport(false);
     scroll.setVerticalScrollBarEnabled(true);
-    scroll.addView(box);
-    scroll.setLayoutParams(new ViewGroup.LayoutParams(
+    LinearLayout options = new LinearLayout(this);
+    options.setOrientation(LinearLayout.VERTICAL);
+    scroll.addView(options, new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    shell.addView(scroll, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            Math.min(dp(560), (int) (getResources().getDisplayMetrics().heightPixels * 0.70f))));
+            Math.min(dp(420), (int) (getResources().getDisplayMetrics().heightPixels * 0.48f))));
 
     final AlertDialog dialog = new AlertDialog.Builder(this)
-            .setView(scroll)
-            .setNegativeButton(gr ? "Πίσω" : "Back",
-                    (d, which) -> showAppleTroubleshootingLibrary())
-            .create();
+            .setView(shell).create();
 
     for (AppleTroubleshootingLibrary.TopicLink item : links) {
-        addAppleReferenceOption(box, item.label(gr), () -> {
+        addAppleReferenceOption(options, item.label(gr), () -> {
             dialog.dismiss();
             openAppleOfficialLink(item.url);
         });
     }
+    addAppleReferenceAction(shell, gr ? "ΠΙΣΩ" : "BACK", false, () -> {
+        dialog.dismiss();
+        showAppleTroubleshootingLibrary();
+    });
+    addAppleReferenceAction(shell, gr ? "ΕΞΟΔΟΣ" : "EXIT", true, dialog::dismiss);
     showAppleReferenceDialog(dialog);
 }
 
@@ -3178,10 +3185,15 @@ private LinearLayout newAppleReferenceBox(String heading) {
 }
 
 private void addAppleReferenceOption(LinearLayout box, String label, Runnable action) {
+    addAppleReferenceAction(box, label, false, action);
+}
+
+private void addAppleReferenceAction(LinearLayout box, String label,
+        boolean exit, Runnable action) {
     TextView option = new TextView(this);
     option.setText(label);
     option.setContentDescription(label);
-    option.setTextColor(0xFF00FF9C);
+    option.setTextColor(exit ? Color.WHITE : 0xFF00FF9C);
     option.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
     option.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
     option.setGravity(Gravity.CENTER_VERTICAL);
@@ -3190,9 +3202,9 @@ private void addAppleReferenceOption(LinearLayout box, String label, Runnable ac
     option.setClickable(true);
     option.setFocusable(true);
     GradientDrawable stroke = new GradientDrawable();
-    stroke.setColor(0xFF101010);
+    stroke.setColor(exit ? 0xFFB71C1C : 0xFF101010);
     stroke.setCornerRadius(dp(9));
-    stroke.setStroke(dp(2), 0xFFFFD700);
+    stroke.setStroke(dp(2), exit ? 0xFFFF5252 : 0xFFFFD700);
     option.setBackground(stroke);
     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -3218,8 +3230,10 @@ private void showAppleReferenceNotice(String message) {
     text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
     text.setPadding(dp(5), dp(8), dp(5), dp(12));
     box.addView(text);
-    showAppleReferenceDialog(new AlertDialog.Builder(this).setView(box)
-            .setPositiveButton(gr ? "Εντάξει" : "OK", null).create());
+    final AlertDialog dialog = new AlertDialog.Builder(this).setView(box).create();
+    addAppleReferenceAction(box, gr ? "ΕΞΟΔΟΣ" : "EXIT", true,
+            dialog::dismiss);
+    showAppleReferenceDialog(dialog);
 }
 
 private void openAppleOfficialLink(String url) {
