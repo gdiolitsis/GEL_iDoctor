@@ -127,12 +127,22 @@ public final class AppleTroubleshootingLibraryTest {
         assertTrue(main.contains("bind(R.id.btnAppleTroubleshooting,"));
         assertTrue("Button must be shown before model selection",
                 main.contains("show(R.id.btnAppleTroubleshooting);"));
-        assertTrue("Missing model popup must be titled Select Device",
-                main.contains("Επιλογή συσκευής"));
-        assertTrue("Missing selection must show explicit guidance",
-                main.contains("Επίλεξε πρώτα μοντέλο συσκευής από το αρχικό μενού"));
-        assertTrue("Model guard must prevent navigation without selection",
-                main.contains("if (!\"iphone\".equalsIgnoreCase(family) || model == null || model.trim().isEmpty())"));
+        assertTrue("A new main screen must not inherit a prior declaration",
+                main.contains("appleModelDeclaredOnCurrentScreen = false"));
+        assertTrue("A model becomes current only after explicit picker selection",
+                main.contains("appleModelDeclaredOnCurrentScreen = true"));
+        assertTrue("Saved model cannot bypass fresh-declaration requirement",
+                main.contains("if (!appleModelDeclaredOnCurrentScreen || !\"iphone\".equalsIgnoreCase(family)"));
+        assertTrue("Open model picker when declaration is blank",
+                main.contains("showAppleModelPicker(\"iphone\", true)"));
+        assertTrue("Ask explicitly which model is being searched",
+                main.contains("Για ποιο μοντέλο iPhone κάνεις την αναζήτηση;"));
+        assertTrue("Continue to manual selector after a new model is chosen",
+                main.contains("if (continueToBibliography) showAppleTroubleshootingLibrary()"));
+        assertTrue("Cancelled model picker never starts Apple bibliography",
+                main.contains("addAppleReferenceAction(root, AppLang.isGreek(this) ? \"ΕΞΟΔΟΣ\" : \"EXIT\","));
+        assertTrue("The previous stored model is never silently reused",
+                main.contains("Never take an old SharedPreferences value as consent"));
 
         String appleDialogs = main.substring(
                 main.indexOf("private void showAppleTroubleshootingLibrary()"),
