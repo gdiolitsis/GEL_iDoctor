@@ -143,6 +143,15 @@ public final class AppleTroubleshootingLibraryTest {
                 main.contains("addAppleReferenceAction(root, AppLang.isGreek(this) ? \"ΕΞΟΔΟΣ\" : \"EXIT\","));
         assertTrue("The previous stored model is never silently reused",
                 main.contains("Never take an old SharedPreferences value as consent"));
+        String modelPicker = main.substring(
+                main.indexOf("private void showAppleModelPicker(String type, boolean continueToBibliography)"),
+                main.indexOf("private String normalizeAppleModel("));
+        assertFalse("Do not use OEM Toast during GEL model selection",
+                modelPicker.contains("Toast.makeText("));
+        assertTrue("Model picker is scrollable and keeps its red Exit visible",
+                modelPicker.contains("Math.min(dp(530)"));
+        assertTrue("The declaration label reflects the new selection",
+                modelPicker.contains("btn.setText(\"🍎 \" + type.toUpperCase(Locale.US)"));
 
         String appleDialogs = main.substring(
                 main.indexOf("private void showAppleTroubleshootingLibrary()"),
