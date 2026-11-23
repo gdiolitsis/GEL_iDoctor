@@ -104,7 +104,14 @@ jobs:
           fi
           echo "SIGNED_APK_CERTIFICATE=PASS"
           "$tools/aapt2" dump badging "$out/GEL_iDoctor_v71_signed_QA.apk" > "$out/APK_BADGING.txt"
-          grep -F "package: name='com.gel.iDoctor' versionCode='71' versionName='5.3-QA18'" "$out/APK_BADGING.txt"
+          echo "APK_BADGING_PACKAGE_LINE:"
+          head -n 1 "$out/APK_BADGING.txt"
+          package_line="$(head -n 1 "$out/APK_BADGING.txt")"
+          [[ "$package_line" == package:* ]] || { echo "INVALID_BADGING: no package metadata"; exit 1; }
+          [[ "$package_line" == *"name='com.gel.iDoctor'"* ]] || { echo "INVALID_APK_PACKAGE"; exit 1; }
+          [[ "$package_line" == *"versionCode='71'"* ]] || { echo "INVALID_APK_VERSION_CODE"; exit 1; }
+          [[ "$package_line" == *"versionName='5.3-QA18'"* ]] || { echo "INVALID_APK_VERSION_NAME"; exit 1; }
+          echo "APK_PACKAGE_VERSION=PASS"
           (cd "$out" && sha256sum GEL_iDoctor_v71_signed_QA.apk > SHA256SUMS)
           git rev-parse HEAD > "$out/SOURCE_COMMIT"
           printf '%s\n' "$actual" > "$out/SIGNER_CERT_SHA256"
