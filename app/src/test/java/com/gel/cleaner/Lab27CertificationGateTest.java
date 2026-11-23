@@ -10,13 +10,25 @@ import static org.junit.Assert.*;
 
 /** Rules must fail closed for omitted, stale, warned or unconfirmed evidence. */
 public final class Lab27CertificationGateTest {
-    @Test public void exactlyNineteenRequiredBasicLabs() {
-        assertEquals(19, Lab27CertificationGate.REQUIRED.size());
+    @Test public void exactlyEighteenRequiredBasicLabs() {
+        assertEquals(18, Lab27CertificationGate.REQUIRED.size());
         assertTrue(Lab27CertificationGate.REQUIRED.contains("9"));
         assertTrue(Lab27CertificationGate.REQUIRED.contains("14A"));
         assertTrue(Lab27CertificationGate.REQUIRED.contains("25"));
         assertFalse(Lab27CertificationGate.REQUIRED.contains("14B"));
+        assertFalse(Lab27CertificationGate.REQUIRED.contains("19"));
         assertFalse(Lab27CertificationGate.REQUIRED.contains("28"));
+    }
+
+    @Test public void compactPrerequisiteNoticePreservesExactPendingLabs() {
+        assertEquals("1–14Α, 15, 16, 18, 25",
+                Lab27CertificationGate.compactPending(Lab27CertificationGate.REQUIRED, true));
+        assertEquals("1–14A, 15, 16, 18, 25",
+                Lab27CertificationGate.compactPending(Lab27CertificationGate.REQUIRED, false));
+        assertEquals("2, 14Α, 25",
+                Lab27CertificationGate.compactPending(Arrays.asList("2", "14A", "25"), true));
+        assertEquals("",
+                Lab27CertificationGate.compactPending(Arrays.<String>asList(), true));
     }
 
     @Test public void onlyActualPositiveCompletionMessagesAreCounted() {
@@ -153,7 +165,7 @@ public final class Lab27CertificationGateTest {
 
     @Test public void unsupportedHardwareIsMarkedNotApplicableRatherThanPassed() {
         Set<String> full = Lab27CertificationGate.applicable(true, true, true, true);
-        assertEquals(19, full.size());
+        assertEquals(18, full.size());
         Set<String> tablet = Lab27CertificationGate.applicable(false, false, true, true);
         assertFalse(tablet.contains("11"));
         assertFalse(tablet.contains("12"));
