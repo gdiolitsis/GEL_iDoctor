@@ -209,8 +209,9 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
         stopGps();
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    GPS_PERMISSION);
+            // Android 12+ ignores fine-only requests on some releases.
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION}, GPS_PERMISSION);
             return;
         }
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
