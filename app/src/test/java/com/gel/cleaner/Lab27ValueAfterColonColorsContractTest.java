@@ -98,13 +98,13 @@ public final class Lab27ValueAfterColonColorsContractTest {
         assertTrue(start >= 0 && end > start);
         String lab = src.substring(start, end);
         assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Κατάσταση\" : \"Status\", batteryScore, batteryFlag, gr);"));
-        assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Κατάσταση\" : \"Status\", securityScore, securityFlag, gr);"));
+        assertFalse(lab.contains("lab27LogScoreValue(gr ? \"Κατάσταση\" : \"Status\", securityScore, securityFlag, gr);"));
         assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Απόδοση\" : \"Performance\", performanceScore, \"⚪\", gr);"));
-        assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Ασφάλεια\" : \"Security\", securityScore, securityFlag, gr);"));
-        assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Ιδιωτικότητα\" : \"Privacy\", privacyScore, privacyFlag, gr);"));
+        assertFalse(lab.contains("lab27LogScoreValue(gr ? \"Ασφάλεια\" : \"Security\", securityScore, securityFlag, gr);"));
+        assertFalse(lab.contains("lab27LogScoreValue(gr ? \"Ιδιωτικότητα\" : \"Privacy\", privacyScore, privacyFlag, gr);"));
         assertFalse(lab.contains("logInfo(gr ? \"Αποτύπωμα Εφαρμογών\""));
         assertTrue(lab.contains("logLabelOkValue(\n            gr ? \"Κατάσταση συσκευής\""));
-        assertTrue(lab.contains("logLabelInfoValue(gr ? \"Ενημέρωση ασφαλείας\" : \"Patch level\""));
+        assertFalse(lab.contains("logLabelInfoValue(gr ? \"Ενημέρωση ασφαλείας\" : \"Patch level\""));
         assertTrue(lab.contains("logLabelInfoValue(\n        gr ? \"Χρόνος διάγνωσης\""));
         assertTrue(lab.contains("logLabelInfoValue(\n        gr ? \"ID διάγνωσης\""));
         assertTrue(lab.contains("logLabelInfoValue(gr ? \"Στοιχεία\" : \"State\", batteryReadings)"));
