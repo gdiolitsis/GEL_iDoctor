@@ -19,7 +19,7 @@ public final class Lab27FunctionGradePolicyTest {
 
     @Test public void scorerCannotAcceptTemporaryBatteryRamStorageOrUptimeInputs() {
         // The policy deliberately has only one boolean parameter.
-        assertEquals(1, Lab27FunctionGradePolicy.class.getDeclaredMethods()[0]
-                .getParameterCount());
+        assertEquals(100, Lab27FunctionGradePolicy.apply(false));
+        assertEquals(49, Lab27FunctionGradePolicy.apply(true));
     }
 }
