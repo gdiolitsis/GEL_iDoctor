@@ -97,9 +97,9 @@ public final class Lab27ValueAfterColonColorsContractTest {
         int end = src.indexOf("private void lab31FinalSummary()", start);
         assertTrue(start >= 0 && end > start);
         String lab = src.substring(start, end);
-        assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Κατάσταση\" : \"Status\", batteryScore, batteryFlag, gr);"));
+        assertFalse(lab.contains("lab27LogScoreValue(gr ? \"Κατάσταση\" : \"Status\", batteryScore, batteryFlag, gr);"));
         assertFalse(lab.contains("lab27LogScoreValue(gr ? \"Κατάσταση\" : \"Status\", securityScore, securityFlag, gr);"));
-        assertTrue(lab.contains("lab27LogScoreValue(gr ? \"Απόδοση\" : \"Performance\", performanceScore, \"⚪\", gr);"));
+        assertFalse(lab.contains("lab27LogScoreValue(gr ? \"Απόδοση\" : \"Performance\", performanceScore, \"⚪\", gr);"));
         assertFalse(lab.contains("lab27LogScoreValue(gr ? \"Ασφάλεια\" : \"Security\", securityScore, securityFlag, gr);"));
         assertFalse(lab.contains("lab27LogScoreValue(gr ? \"Ιδιωτικότητα\" : \"Privacy\", privacyScore, privacyFlag, gr);"));
         assertFalse(lab.contains("logInfo(gr ? \"Αποτύπωμα Εφαρμογών\""));
