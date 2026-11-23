@@ -16,10 +16,10 @@ public final class Lab28BuyerSummaryTest {
 
     @Test public void respondsToConfirmedFaultWithoutInventingOne() {
         String limited = Lab28BuyerSummary.explain("D", true, true);
-        assertTrue(limited.contains("επιβεβαιωμένη δυσλειτουργία"));
+        assertTrue(limited.contains("επιβεβαιωμένο λειτουργικό περιορισμό"));
         assertTrue(limited.contains("Lab 27"));
         String lowScore = Lab28BuyerSummary.explain("D", false, true);
-        assertFalse(lowScore.contains("επιβεβαιωμένη δυσλειτουργία"));
+        assertFalse(lowScore.contains("επιβεβαιωμένο λειτουργικό περιορισμό"));
         assertTrue(lowScore.contains("χαμηλή"));
     }
 
