@@ -67,11 +67,11 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         String src = code("IPhoneLabsActivity.java");
         String lab8 = region(src, "private void runFinalServiceRecommendationLab()",
                 "private void runDemoDiagnostics()");
-        assertTrue(lab8.contains("IPhonePanicRepairKnowledgeBase.lookup(repairHistory,"));
-        assertTrue(lab8.contains("hints.modelIdentifier, finding.code"));
-        assertTrue(lab8.contains("relatedRepairAttempts.put(historic.id, historic)"));
-        assertTrue(lab8.contains("IPhonePanicRepairKnowledgeBase.summarize(relatedRepairAttempts.values())"));
-        assertTrue(lab8.contains("if (!relatedRepairAttempts.isEmpty())"));
+        assertFalse(lab8.contains("IPhonePanicRepairKnowledgeBase.lookup(repairHistory,"));
+        assertFalse(lab8.contains("hints.modelIdentifier, finding.code"));
+        assertFalse(lab8.contains("relatedRepairAttempts.put(historic.id, historic)"));
+        assertFalse(lab8.contains("IPhonePanicRepairKnowledgeBase.summarize(relatedRepairAttempts.values())"));
+        assertFalse(lab8.contains("if (!relatedRepairAttempts.isEmpty())"));
         assertTrue(lab8.contains("Οδηγίες και πηγές στο Lab 3."));
         assertFalse(lab8.contains("recommendedHardwareReplacement"));
         assertFalse(lab8.contains("successProbability"));
@@ -147,7 +147,7 @@ public final class IPhoneRepairKnowledgeIntegrationContractTest {
         assertFalse(history.contains("logLabelOkValue(gr ? \"Επισκευή / αποτέλεσμα:\""));
         String lab8 = region(source, "private void runFinalServiceRecommendationLab()",
                 "private void runDemoDiagnostics()");
-        assertTrue(lab8.contains("logLabelInfoValue(gr ? \"Σχετικές δημοσιευμένες επισκευές:\""));
+        assertFalse(lab8.contains("logLabelInfoValue(gr ? \"Σχετικές δημοσιευμένες επισκευές:\""));
         assertTrue(lab8.contains("Οδηγίες και πηγές στο Lab 3."));
         assertFalse(lab8.contains("Apple-certified panic repair"));
     }
