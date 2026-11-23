@@ -36,7 +36,10 @@ public final class ModemEsimColorIntegrationContractTest {
         assertTrue(s.contains("ModemEsimPresentationPolicy.isEsimField(label)"));
         assertTrue(s.contains("!ModemEsimPresentationPolicy.isPositiveEvidence(label, value)"));
         assertTrue(s.contains("unknown || neutralContext || nonPositiveEsim"));
-        assertTrue(s.contains("logLabelValue(label, value)"));
-        assertTrue(s.contains("logLabelOkValue(label, value)"));
+        assertTrue(s.contains("Lab12EsimGreekFormatter.label(label)"));
+        assertTrue(s.contains("Lab12EsimGreekFormatter.value(value)"));
+        assertTrue(s.contains("logLabelWarnValue(displayLabel, displayValue)"));
+        assertTrue(s.contains("logLabelValue(displayLabel, displayValue)"));
+        assertTrue(s.contains("logLabelOkValue(displayLabel, displayValue)"));
     }
 }
