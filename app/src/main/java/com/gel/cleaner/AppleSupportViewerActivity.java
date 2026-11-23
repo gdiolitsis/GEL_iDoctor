@@ -17,7 +17,6 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -63,20 +62,31 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
         title.setPadding(dp(4), dp(8), dp(4), dp(6));
         root.addView(title);
 
-        Button back = new Button(this);
-        back.setText(gr ? "← ΕΞΟΔΟΣ / ΠΙΣΩ ΣΤΟ iPHONE"
-                        : "← EXIT / BACK TO IPHONE");
-        back.setAllCaps(false);
+        // An OEM-themed Button may draw the red surface but suppress its text.
+        // Use an explicit GEL TextView action so its white label is visible
+        // independently of manufacturer button/text-appearance themes.
+        TextView back = new TextView(this);
+        final String returnLabel = gr
+                ? "← ΕΠΙΣΤΡΟΦΗ ΣΤΗΝ ΑΡΧΙΚΗ APPLE"
+                : "← RETURN TO APPLE HOME";
+        back.setText(returnLabel);
+        back.setContentDescription(returnLabel);
         back.setTextColor(Color.WHITE);
-        back.setTextSize(14f);
+        back.setTextSize(16f);
         back.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        back.setGravity(Gravity.CENTER);
+        back.setIncludeFontPadding(true);
+        back.setPadding(dp(10), dp(6), dp(10), dp(6));
+        back.setMinHeight(dp(54));
+        back.setClickable(true);
+        back.setFocusable(true);
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(0xFFB71C1C);
         bg.setCornerRadius(dp(10));
         bg.setStroke(dp(2), 0xFFFF5252);
         back.setBackground(bg);
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(54));
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         buttonParams.setMargins(dp(6), 0, dp(6), dp(6));
         root.addView(back, buttonParams);
         back.setOnClickListener(v -> returnToAppleHome());
@@ -183,18 +193,25 @@ public final class AppleSupportViewerActivity extends GELAutoActivityHook {
         message.setPadding(dp(8), dp(8), dp(8), dp(14));
         box.addView(message);
 
-        Button exit = new Button(this);
+        TextView exit = new TextView(this);
         exit.setText(gr ? "ΕΞΟΔΟΣ" : "EXIT");
-        exit.setAllCaps(false);
+        exit.setContentDescription(gr ? "ΕΞΟΔΟΣ" : "EXIT");
         exit.setTextColor(Color.WHITE);
+        exit.setTextSize(16f);
+        exit.setGravity(Gravity.CENTER);
         exit.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        exit.setPadding(dp(10), dp(8), dp(10), dp(8));
+        exit.setMinHeight(dp(54));
+        exit.setClickable(true);
+        exit.setFocusable(true);
         GradientDrawable red = new GradientDrawable();
         red.setColor(0xFFB71C1C);
         red.setCornerRadius(dp(10));
         red.setStroke(dp(2), 0xFFFF5252);
         exit.setBackground(red);
         box.addView(exit, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(54)));
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
 
         AlertDialog dialog = new AlertDialog.Builder(this).setView(box).create();
         exit.setOnClickListener(v -> { dialog.dismiss(); finish(); });
