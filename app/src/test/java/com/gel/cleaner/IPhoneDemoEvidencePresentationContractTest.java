@@ -41,7 +41,7 @@ public final class IPhoneDemoEvidencePresentationContractTest {
         assertTrue(lab.contains("for (String block : blocks)"));
         assertTrue(lab.contains("parseAndCacheSignature(block)"));
         assertFalse(lab.contains("parseAndCacheSignature(panicLogText)"));
-        assertTrue(lab.contains("panicEventExact(block, sigCrashType, gr)"));
+        assertTrue(lab.contains("logPanicIncidentHeader(incident, \"\", gr)"));
         assertTrue(lab.contains("AppleOfficialServiceGuidance.conditionalTopicsForClue(finding.code)"));
         assertTrue(lab.contains("logOfficialApplePanicGuidance(model, gr, appleTopicsByModel.get(model))"));
         assertTrue(lab.contains("logApplePanicEvidence(block, gr,"));
@@ -54,7 +54,7 @@ public final class IPhoneDemoEvidencePresentationContractTest {
                 "private void runDemoDiagnostics() {");
         assertTrue(lab.contains("for (String block : blocks)"));
         assertTrue(lab.contains("parseAndCacheSignature(block)"));
-        assertTrue(lab.contains("ApplePanicHardwareHints.examineOne(block)"));
+        assertFalse(lab.contains("ApplePanicHardwareHints.examineOne(block)"));
         assertFalse(lab.contains("logApplePanicEvidence(block, gr"));
         assertFalse(lab.contains("likelyHardware"));
         assertFalse(lab.contains("likelySoftware"));
@@ -74,11 +74,11 @@ public final class IPhoneDemoEvidencePresentationContractTest {
                 "private void runRecurringDomainLab() {");
         String finalLab6 = section("private void runFinalServiceRecommendationLab() {",
                 "private void runDemoDiagnostics() {");
-        assertTrue(lab2.contains("logLabelWarnValue("));
+        assertTrue(lab2.contains("logLabelValue(gr ? \"Ερμηνεία υπογραφής:\""));
         assertTrue(combinedLab4.contains("logLabelWarnValue(gr ? \"Καταγεγραμμένος τύπος:\""));
         assertTrue(combinedLab4.contains("logLabelValue(gr ? \"Κατηγορία όρων:\""));
         assertTrue(finalLab6.contains("if (human.repeatedClueNeedsReview)"));
-        assertTrue(finalLab6.contains("uniqueTechnicalCodes.add(finding.code)"));
+        assertFalse(finalLab6.contains("uniqueTechnicalCodes.add(finding.code)"));
         assertFalse(finalLab6.contains("logLabelOkValue(gr ? \"Ενδείξεις που αναγνώρισε το GEL:\""));
     }
 
