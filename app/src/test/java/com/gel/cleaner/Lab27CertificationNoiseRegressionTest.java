@@ -31,7 +31,7 @@ public final class Lab27CertificationNoiseRegressionTest {
         assertFalse(introduction.contains("Uncalibrated diagnosis header not displayed"));
 
         int summary = lab.indexOf("ΣΥΝΟΨΗ ΜΕΤΡΗΣΕΩΝ ΣΥΣΚΕΥΗΣ");
-        int grade = lab.indexOf("Βαθμολογία συσκευής — διαθέσιμες μετρήσεις", summary);
+        int grade = lab.indexOf("Βαθμολογία καλής λειτουργίας", summary);
         assertTrue(summary >= 0 && grade > summary);
         assertEquals(1, count(lab.substring(summary, grade), "logLine();"));
     }
@@ -42,7 +42,8 @@ public final class Lab27CertificationNoiseRegressionTest {
         assertFalse(lab.contains("readPrivacySnapshot()"));
         assertFalse(lab.contains("logInfo(gr ? \"Ασφάλεια\" : \"Security\")"));
         assertFalse(lab.contains("logInfo(gr ? \"Ιδιωτικότητα\" : \"Privacy\")"));
-        assertTrue(lab.contains("Lab30ScoreEvidence.deviceHealthScore("));
+        assertFalse(lab.contains("Lab30ScoreEvidence.deviceHealthScore("));
+        assertTrue(lab.contains("Lab27FunctionGradePolicy.apply(confirmedCameraFunctionFailure)"));
         assertTrue(lab.contains("confirmedCameraFunctionFailure);"));
         assertFalse(lab.contains("confirmedCameraFunctionFailure, lab27EvidenceFindings.size()"));
         assertTrue(lab.contains("if (confirmedFunctionalFailures > 0)"));
