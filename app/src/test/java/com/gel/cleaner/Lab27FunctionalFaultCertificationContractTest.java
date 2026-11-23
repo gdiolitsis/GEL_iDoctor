@@ -29,11 +29,15 @@ public final class Lab27FunctionalFaultCertificationContractTest {
         String s = source();
         assertTrue(s.contains("lab27BasicLabsWithFindings("));
         assertTrue(s.contains("Lab27FunctionGradePolicy.apply(measuredDeviceHealthScore,"));
-        assertTrue(s.contains("confirmedCameraFunctionFailure, lab27EvidenceFindings.size()"));
+        assertTrue(s.contains("confirmedCameraFunctionFailure)"));
         assertTrue(s.contains("gr && \"D\".equals(snapshotGrade) ? \"Δ\""));
-        assertTrue(s.contains("if (lab27RemainingBasic.isEmpty() && lab27EvidenceFindings.isEmpty())"));
+        assertTrue(s.contains("if (lab27RemainingBasic.isEmpty() && confirmedFunctionalFailures == 0)"));
         assertTrue(s.contains("Μέγιστος βαθμός Δ (49/100)"));
         assertTrue(s.contains("ΠΙΣΤΟΠΟΙΗΣΗ ΜΕ ΠΕΡΙΟΡΙΣΜΟΥΣ"));
+        assertTrue(s.contains("if (confirmedFunctionalFailures > 0)"));
+        assertTrue(s.contains(".putInt(\"lab27_cert_functional_findings\", confirmedFunctionalFailures)"));
+        assertTrue(s.contains("Εργαστήρια με παρατηρήσεις"));
+        assertFalse(s.contains("confirmedCameraFunctionFailure, lab27EvidenceFindings.size()"));
         assertTrue(s.contains(".putBoolean(\"lab27_cert_camera_failure\", confirmedCameraFunctionFailure)"));
         // Lab 28 reports diagnostics and lets buyers judge market listings themselves.
         assertTrue(s.contains("ΑΓΓΕΛΙΕΣ & ΦΩΤΟΓΡΑΦΙΕΣ eBay"));
