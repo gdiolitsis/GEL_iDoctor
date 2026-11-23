@@ -11973,7 +11973,7 @@ private void showLab11MobileDataPreparation() {
  */
 private void lab12ReportSharedModemInventory(boolean gr) {
     logLine();
-    logInfo(gr ? "Telephony / Modem — στοιχεία Android (Περιφερειακά)"
+    logInfo(gr ? "Τηλεφωνία / Μόντεμ — στοιχεία Android (Περιφερειακά)"
                : "Telephony / Modem — Android data (Peripherals)");
     logLine();
     final String snapshot = DeviceInfoPeripheralsActivity.collectRemoteSection(this, "MODEM");
@@ -11992,7 +11992,17 @@ private void lab12ReportSharedModemInventory(boolean gr) {
         String value = line.substring(delimiter + 3).trim();
         // The root requirement is unrelated to the Lab 12 passive inventory.
         if (label.isEmpty() || value.isEmpty() || "Advanced".equals(label)) continue;
+        // Redundant with the separately reported SIM subscription type.
+        // The raw MODEM collector remains unchanged for other screens.
+        if ("SIM slot interpretation".equals(label)) continue;
 
+        // Keep the original Android text for color/evidence decisions.
+        // Only the final Lab12 log text is localized.
+        final boolean esimRow = ModemEsimPresentationPolicy.isEsimField(label);
+        final String displayLabel = gr && esimRow
+                ? Lab12EsimGreekFormatter.label(label) : label;
+        final String displayValue = gr && esimRow
+                ? Lab12EsimGreekFormatter.value(value) : value;
         String normalized = value.toLowerCase(Locale.US);
         boolean unknown = normalized.startsWith("unknown")
                 || normalized.startsWith("n/a")
@@ -12002,22 +12012,21 @@ private void lab12ReportSharedModemInventory(boolean gr) {
                 || normalized.startsWith("disabled")
                 || normalized.contains("permission not granted")
                 || normalized.contains("access denied");
-        boolean neutralContext = "SIM slot interpretation".equals(label)
-                || ("5G (NR) Active".equals(label) && "No".equals(value))
+        boolean neutralContext = ("5G (NR) Active".equals(label) && "No".equals(value))
                 || ("Roaming".equals(label) && "Yes".equals(value))
                 || ("Active eSIM profiles".equals(label)
                     && value.startsWith("0 in Android-visible"));
         boolean weakSignal = "Signal Strength".equals(label)
                 && (value.startsWith("0/4") || value.startsWith("1/4"));
         // Same neutral/green eSIM evidence policy as Device Info Peripherals.
-        boolean nonPositiveEsim = ModemEsimPresentationPolicy.isEsimField(label)
+        boolean nonPositiveEsim = esimRow
                 && !ModemEsimPresentationPolicy.isPositiveEvidence(label, value);
         if (unknown || neutralContext || nonPositiveEsim) {
-            logLabelValue(label, value);
+            logLabelValue(displayLabel, displayValue);
         } else if (weakSignal) {
-            logLabelWarnValue(label, value);
+            logLabelWarnValue(displayLabel, displayValue);
         } else {
-            logLabelOkValue(label, value);
+            logLabelOkValue(displayLabel, displayValue);
         }
         rows++;
     }
@@ -12026,9 +12035,6 @@ private void lab12ReportSharedModemInventory(boolean gr) {
                 gr ? "Άγνωστα — δεν υπάρχουν αναγνώσιμες τιμές"
                    : "Unknown — no readable values");
     }
-    logLabelValue(gr ? "Ερμηνεία" : "Interpretation",
-            gr ? "Τα στοιχεία προέρχονται από το Android. Δεν πιστοποιούν πραγματική κλήση ή φυσική θήκη SIM."
-               : "Android-reported data; not proof of real-call operation or a physical SIM tray.");
 }
 
 /**
@@ -12081,9 +12087,6 @@ private void lab12ReportActiveSubscriptionTypes(boolean gr) {
                        : "Unknown — no visible subscription records");
             return;
         }
-        logLabelValue(gr ? "Διευκρίνιση Slot" : "Slot clarification",
-                gr ? "Το slot δηλώνει λογική αντιστοίχιση Android, όχι επιθεώρηση της φυσικής θήκης SIM."
-                   : "A logical Android slot does not prove a physical SIM tray.");
     } catch (SecurityException denied) {
         logLabelValue(gr ? "Τύπος SIM/eSIM" : "SIM/eSIM type",
                 gr ? "Άγνωστος — η πρόσβαση στις συνδρομές απαγορεύτηκε"
