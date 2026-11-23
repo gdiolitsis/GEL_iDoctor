@@ -1804,8 +1804,8 @@ private void runRecurringDomainLab() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 5 — Ανίχνευση Επαναλαμβανόμενου Domain"
-            : "LAB 5 — Recurring Domain Detection");
+            ? "LAB 5 — Ανίχνευση Επαναλαμβανόμενων Σφαλμάτων"
+            : "LAB 5 — Recurring Panic Evidence");
     logLine();
 
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
