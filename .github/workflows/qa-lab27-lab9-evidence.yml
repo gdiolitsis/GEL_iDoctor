@@ -1,0 +1,40 @@
+name: Lab 9 to Lab 27 live evidence validation
+
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/gel/cleaner/ManualTestsActivity.java'
+      - 'app/src/main/java/com/gel/cleaner/Lab9CertificationEvidence.java'
+      - 'app/src/main/java/com/gel/cleaner/EssentialHardwareChecksActivity.java'
+      - 'app/src/main/java/com/gel/cleaner/Lab27*'
+      - 'app/src/test/java/com/gel/cleaner/Lab9*'
+      - 'app/src/test/java/com/gel/cleaner/Lab27*'
+      - '.github/workflows/qa-lab27-lab9-evidence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  compile-and-test:
+    if: ${{ github.event.pull_request.head.ref == 'qa/lab27-include-lab9-functional-evidence-20261123' && github.event.pull_request.base.ref == 'qa/iphone-six-labs-20261123' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Compile and execute all existing and new regression unit tests; no APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          ./gradlew :app:compileDebugJavaWithJavac :app:testDebugUnitTest --no-daemon --console=plain
