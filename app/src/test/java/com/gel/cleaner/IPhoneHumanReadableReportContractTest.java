@@ -31,14 +31,14 @@ public final class IPhoneHumanReadableReportContractTest {
         assertTrue(text.contains("human.whatItMeans"));
         assertTrue(text.contains("human.repairAdvice"));
         assertTrue(text.contains("Πότε χρειάζεται τεχνικός:"));
-        assertTrue(text.contains("uniqueTechnicalCodes.add(finding.code)"));
+        assertFalse(text.contains("uniqueTechnicalCodes.add(finding.code)"));
     }
 
     @Test public void incidentLabelsAreProducedFromObservedTypesNotInventedHealth() throws Exception {
         String s = source();
-        assertTrue(s.contains("panicEventExact(block, sigCrashType, gr)"));
-        assertTrue(s.contains("IPhonePanicHumanizer.domain(sigDomain, gr)"));
-        assertTrue(s.contains("Συμβάν \" + incidentNumber + \" — με απλά λόγια:"));
+        assertTrue(s.contains("panicEventMeaningExact(block, sigCrashType, gr)"));
+        assertTrue(s.contains("logPanicIncidentHeader(incidentNumber, \"\", gr)"));
+        assertTrue(s.contains("Ερμηνεία υπογραφής:"));
         assertTrue(s.contains("ApplePanicEvidencePolicy.hasPanicEvidence(block)"));
     }
 
