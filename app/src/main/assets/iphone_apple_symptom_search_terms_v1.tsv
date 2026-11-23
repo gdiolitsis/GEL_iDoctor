@@ -1,0 +1,33 @@
+# GEL search vocabulary (NOT Apple-authored, not diagnostic advice). User-typed symptoms are matched ONLY to independently indexed Apple URLs.
+# These entries are search aliases, not fixed questions, diagnoses, or invented Apple pages.
+topic	greek_aliases	english_aliases
+BATTERY_POWER	μπαταρία;αυτονομία;αδειάζει γρήγορα;χαμηλή απόδοση μπαταρίας	battery;battery drain;battery life;power
+BATTERY	μπαταρία;αυτονομία;αδειάζει;δεν κρατάει	battery;drain;battery life
+POWER	δεν ανάβει;δεν ανοίγει;τροφοδοσία;δεν ξεκινά	no power;won't turn on;power
+POWER_NO_BOOT	δεν ανάβει;δεν ανοίγει;δεν ξεκινά;μαύρη οθόνη	won't turn on;black screen;not powering on
+WIRED_CHARGING	αργή φόρτιση;φορτίζει αργά;δεν φορτίζει;δεν παίρνει ρεύμα;θύρα φόρτισης;καλώδιο;υποδοχή usb	charge;charging;slow charge;won't charge;cable;charging port;usb
+WIRELESS_CHARGING	ασύρματη φόρτιση;δεν φορτίζει ασύρματα;magsafe;φορτιστής qi	wireless charging;magsafe;qi charging
+RESTART	επανεκκίνηση;κάνει επανεκκίνηση;σβήνει μόνο του;κλείνει μόνο του;κολλάει;παγώνει;watchdog;panic	restart;reboot;shuts down;freezes;watchdog;panic
+UNEXPECTED_RESTART	επανεκκίνηση;σβήνει μόνο του;κλείνει μόνο του;watchdog;panic	restart;reboot;shuts down;watchdog;panic
+CAMERA	κάμερα;φωτογραφία;βίντεο;φλας;φακός	camera;photo;video;flash;lens
+FACE_ID	face id;αναγνώριση προσώπου;μπροστινή κάμερα;true depth	face id;face recognition;truedepth
+DISPLAY	οθόνη;εικόνα;γραμμές οθόνης;δεν δείχνει εικόνα;φωτεινότητα	screen;display;image;screen lines
+TOUCH	αφή;δεν πιάνει η αφή;δεν αποκρίνεται η οθόνη;δεν πατιέται;αφής	touch;touchscreen;screen unresponsive
+DISPLAY_TOUCH	αφή;δεν πιάνει η αφή;δεν αποκρίνεται η οθόνη;αφής	touch;touchscreen;unresponsive
+SENSORS	αισθητήρες;αισθητήρας;εγγύτητας;πυξίδα;φωτεινότητας	sensor;proximity;compass;ambient light
+BUTTONS	κουμπί;πλήκτρο;κουμπί έντασης;κουμπί power	button;power button;volume switch
+SIM	κάρτα sim;esim;υποδοχή sim;δεν διαβάζει sim	sim;esim;sim card
+HAPTIC	δόνηση;δεν δονείται;απτική ανάδραση;δονήσεις	vibration;haptic;taptic
+ALERTS	ειδοποίηση;προειδοποίηση;μήνυμα σφάλματος	alert;warning message
+SOUND	ήχος;ηχείο;μικρόφωνο;ακουστικό;δεν ακούγεται	sound;speaker;microphone;earpiece;audio
+MICROPHONE	μικρόφωνο;δεν με ακούνε;ηχογράφηση;ακούγομαι χαμηλά	microphone;recording;caller cannot hear
+SPEAKER	ηχείο;ακουστικό;δεν ακούω;χαμηλός ήχος;παραμορφωμένος ήχος	speaker;earpiece;low volume;distorted audio
+TOUCH_ID	touch id;δακτυλικό αποτύπωμα;αναγνώριση αποτυπώματος	touch id;fingerprint
+THERMAL	υπερθέρμανση;υψηλή θερμοκρασία;ζεσταίνεται;καίει;θερμοκρασία	overheating;hot;temperature;thermal
+WIFI	wifi;wi fi;ίντερνετ;ασύρματο δίκτυο;χάνει σύνδεση;αποσυνδέσεις;δεν συνδέεται στο wifi	wifi;wi fi;internet disconnect;wireless network;connection drops
+CELLULAR	σήμα κινητής;κυψελωτό δίκτυο;χωρίς σήμα;4g;5g;lte	cellular;mobile signal;network;lte
+CELLULAR_SERVICE	χωρίς υπηρεσία;sos;δεν έχει σήμα;δεν πιάνει δίκτυο	sos;no service;no signal
+CELLULAR_CALLS	δεν κάνει κλήσεις;πέφτουν οι κλήσεις;δεν μπορώ να καλέσω	cannot call;calls fail;dropped calls
+LIQUID_CONNECTOR	υγρασία;νερό;βράχηκε;υγρό στη θύρα	liquid;water;moisture;wet connector
+SOFTWARE_RECOVERY	ενημέρωση;επαναφορά;κολλημένο στο μήλο;recovery;restore;σφάλμα ενημέρωσης	software update;restore;recovery;update failed
+IOS27_RECOVERY	ios 27;ανάκτηση ios 27	ios 27 recovery
