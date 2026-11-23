@@ -350,27 +350,17 @@ root.addView(makeLabButton(
         v -> runPanicSignatureParser()
 ));
 
-// 4) Stability (guard)
+// 4) Apple official guidance and source-linked international repair history — LAB 3
 root.addView(makeLabButton(
-        gr ? "LAB 3 - Αξιολόγηση Ιστορικού Συμβάντων"
-           : "LAB 3 - Incident History Review",
-        gr ? "Εξέταση καταγεγραμμένων συμβάντων, όχι μέτρηση σταθερότητας"
-           : "Review recorded incidents, not a live stability measurement",
-        true,
-        v -> runStabilityLab()
-));
-
-// 5) Impact (guard)
-root.addView(makeLabButton(
-        gr ? "LAB 4 - Επίσημη Apple & Εμπειρία Επισκευών"
-           : "LAB 4 - Apple Guidance & Repair Evidence",
+        gr ? "LAB 3 - Επίσημη Apple & Εμπειρία Επισκευών"
+           : "LAB 3 - Apple Guidance & Repair Evidence",
         gr ? "Πρώτα επίσημες οδηγίες Apple, μετά δημοσιευμένες επισκευές"
            : "Official Apple guidance first, then published repair outcomes",
         true,
         v -> runImpactLab()
 ));
 
-// Optional drill-down belonging to Lab 4: no new numbered lab.
+// Optional drill-down belongs to Lab 3; it is NOT a seventh numbered Lab.
 root.addView(makeLabButton(
         gr ? "APPLE — Πηγές, εργαλεία και ελεγμένα στάδια"
            : "APPLE — Sources, tools and reviewed stages",
@@ -380,40 +370,30 @@ root.addView(makeLabButton(
         v -> showAppleServiceStepPicker()
 ));
 
-// 6) Frequency
+// 5) Crash-type frequency AND keyword-domain frequency — LAB 4
 root.addView(makeLabButton(
-        gr ? "LAB 5 - Ανάλυση Συχνότητας Panic"
-           : "LAB 5 - Panic Frequency Analyzer",
-        gr ? "Συχνότητα επαναλαμβανόμενων crash types"
-           : "Repeated crash type frequency",
+        gr ? "LAB 4 - Συχνότητα και Κατηγορίες Panic"
+           : "LAB 4 - Panic Frequency & Categories",
+        gr ? "Πλήθος συμβάντων ανά τύπο και κατηγορία"
+           : "Incident counts by crash type and keyword category",
         true,
         v -> runPanicFrequencyLab()
 ));
 
-// 7) Clustering
+// 6) Recurrent exact signatures and evidence — LAB 5
 root.addView(makeLabButton(
-        gr ? "LAB 6 - Ομαδοποίηση Domain Panic"
-           : "LAB 6 - Panic Domain Clustering",
-        gr ? "Εντοπισμός επαναλαμβανόμενου hardware domain"
-           : "Detect recurring hardware domain",
-        true,
-        v -> runPanicClusteringLab()
-));
-
-// 8) Recurring Domain
-root.addView(makeLabButton(
-        gr ? "LAB 7 - Επαναλαμβανόμενο Domain"
-           : "LAB 7 - Recurring Domain Detection",
-        gr ? "Ανίχνευση κυρίαρχου hardware pattern"
-           : "Detect dominant hardware crash pattern",
+        gr ? "LAB 5 - Ανίχνευση Επαναλαμβανόμενων Σφαλμάτων"
+           : "LAB 5 - Recurring Panic Evidence",
+        gr ? "Επανάληψη υπογραφών, τεχνικών ενδείξεων και χρονολογική κάλυψη"
+           : "Repeated signatures, exact clues and date coverage",
         true,
         v -> runRecurringDomainLab()
 ));
 
-// 9) FINAL Service Recommendation
+// 7) Final service recommendation — LAB 6
 root.addView(makeLabButton(
-        gr ? "LAB 8 - Τελική Σύσταση Service"
-           : "LAB 8 - Final Service Recommendation",
+        gr ? "LAB 6 - Τελική Σύσταση Service"
+           : "LAB 6 - Final Service Recommendation",
         gr ? "Σύντομο τεχνικό συμπέρασμα και επόμενοι έλεγχοι"
            : "Concise evidence summary and next checks",
         true,
@@ -643,16 +623,10 @@ try {
     runPanicSignatureParser();
     SystemClock.sleep(100);
 
-    runStabilityLab();
-    SystemClock.sleep(100);
-
     runImpactLab();
     SystemClock.sleep(100);
 
     runPanicFrequencyLab();
-    SystemClock.sleep(100);
-
-    runPanicClusteringLab();
     SystemClock.sleep(100);
 
     runRecurringDomainLab();
@@ -671,8 +645,8 @@ try {
                 ? "Η ανάλυση του διαθέσιμου panic log ολοκληρώθηκε."
                 : "Available panic log analysis completed.");
         logInfo(AppLang.isGreek(this)
-                ? "Τα συγκριτικά Labs 5–7 δεν εκτελέστηκαν: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs."
-                : "Comparative Labs 5–7 were not executed: at least two eligible panic logs are required.");
+                ? "Τα συγκριτικά Labs 4–5 δεν εκτελέστηκαν: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs."
+                : "Comparative Labs 4–5 were not executed: at least two eligible panic logs are required.");
     }
 
 } catch (Throwable t) {
@@ -1542,6 +1516,16 @@ private void runPanicLogAnalyzer() {
         resetSignatureCache();
         parseAndCacheSignature(block);
         logPanicIncidentHeader(incidentNumber, panicEventExact(block, sigCrashType, gr), gr);
+        // Preserve each individual panic timestamp after removing the old
+        // standalone history Lab. Unknown timestamps remain explicitly unknown.
+        ApplePanicEvidencePolicy.RecordMetadata meta =
+                ApplePanicEvidencePolicy.describeOne(block);
+        logLabelValue(gr ? "Συμβάν " + incidentNumber + " — ημερομηνία:"
+                         : "Incident " + incidentNumber + " — recorded date:",
+                meta.timestamp.isEmpty()
+                        ? (gr ? "Δεν αναφέρεται αξιόπιστη ημερομηνία στο αρχείο"
+                              : "No reliable timestamp supplied in this record")
+                        : meta.timestamp);
         IPSPanicParser.Result r = IPSPanicParser.analyze(this, block);
         if (r == null) {
             logLabelValue(gr ? "Ανάλυση κανόνων GEL:" : "GEL rule analysis:",
@@ -1651,10 +1635,10 @@ if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
     );
 }
 
-// Per-file sensor/SMC clue detail remains in specialist Lab 4.
+// Per-file sensor/SMC clue detail remains in specialist Lab 3.
 logLabelValue(gr ? "Εξειδικευμένη ανάλυση:" : "Detailed analysis:",
-        gr ? "Οι τεχνικές ενδείξεις ανά αρχείο παρουσιάζονται στο LAB 4."
-           : "Per-file technical clues are presented in LAB 4.");
+        gr ? "Οι τεχνικές ενδείξεις ανά αρχείο παρουσιάζονται στο LAB 3."
+           : "Per-file technical clues are presented in LAB 3.");
 
     appendHtml("<br>");
     logOk(gr ? "Το Lab 2 ολοκληρώθηκε." : "Lab 2 finished.");
@@ -1662,57 +1646,15 @@ logLabelValue(gr ? "Εξειδικευμένη ανάλυση:" : "Detailed anal
 }
 
 // ============================================================
-// LAB 3 — INCIDENT HISTORY REVIEW (NOT A LIVE STABILITY MEASUREMENT)
-// ============================================================
-private void runStabilityLab() {
-    if (!guardPanicLog()) return;
-
-    final boolean gr = AppLang.isGreek(this);
-    appendHtml("<br>");
-    logLine();
-    logInfo(gr
-            ? "LAB 3 — Αξιολόγηση Ιστορικού Συμβάντων"
-            : "LAB 3 — Incident History Review");
-    logLine();
-
-    // Distinct imported records must remain distinct: do not classify their
-    // combined text as one physical-device instability result.
-    String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
-    int total = countSupportedPanicBlocks(blocks);
-    logLabelOkValue(gr ? "Καταγραφές που εξετάστηκαν:" : "Eligible records reviewed:",
-            String.valueOf(total));
-
-    // LAB 2 already names the event categories; LAB 3 documents the
-    // historical record timeline without repeating the same diagnosis.
-    int incident = 0;
-    for (String block : blocks) {
-        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
-        incident++;
-        resetSignatureCache();
-        parseAndCacheSignature(block);
-        ApplePanicEvidencePolicy.RecordMetadata meta =
-                ApplePanicEvidencePolicy.describeOne(block);
-        if (!meta.timestamp.isEmpty()) {
-            logLabelValue(gr ? "Συμβάν " + incident + " — ημερομηνία:" :
-                    "Incident " + incident + " — recorded date:", meta.timestamp);
-        }
-    }
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 3 ολοκληρώθηκε." : "Lab 3 finished.");
-    logLine();
-}
-
-// ============================================================
-// LAB 4 — APPLE FIRST, THEN INDEPENDENT REPAIR EXPERIENCE
+// LAB 3 — APPLE FIRST, THEN INDEPENDENT REPAIR EXPERIENCE
 // ============================================================
 private void runImpactLab() {
     if (!guardPanicLog()) return;
     final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
-    logInfo(gr ? "LAB 4 — Επίσημη Apple & Εμπειρία Επισκευών"
-               : "LAB 4 — Apple Guidance & Repair Evidence");
+    logInfo(gr ? "LAB 3 — Επίσημη Apple & Εμπειρία Επισκευών"
+               : "LAB 3 — Apple Guidance & Repair Evidence");
     logLine();
 
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
@@ -1776,141 +1718,83 @@ private void runImpactLab() {
                 gr ? "Δεν αναγνωρίστηκε καταγραφή panic." : "No panic record was recognized.");
     }
     appendHtml("<br>");
+    logOk(gr ? "Το Lab 3 ολοκληρώθηκε." : "Lab 3 finished.");
+    logLine();
+}
+
+// ============================================================
+// ============================================================
+// LAB 4 — FREQUENCY OF CRASH TYPES AND KEYWORD DOMAINS
+// The two counts represent different classifications of the same records.
+// Presence/repetition of a keyword is not an independently proven hardware defect.
+// ============================================================
+private void runPanicFrequencyLab() {
+    if (!guardPanicLog()) return;
+
+    final boolean gr = AppLang.isGreek(this);
+    appendHtml("<br>");
+    logLine();
+    logInfo(gr ? "LAB 4 — Συχνότητα και Κατηγορίες Panic"
+               : "LAB 4 — Panic Frequency & Categories");
+    logLine();
+
+    String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
+    if (countSupportedPanicBlocks(blocks) <= 1) {
+        logInfo(gr
+                ? "Το Lab 4 δεν εκτελέστηκε: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs για σύγκριση."
+                : "Lab 4 not executed: at least two eligible panic logs are needed for comparison.");
+        logLine();
+        return;
+    }
+
+    java.util.Map<String, Integer> crashCount = new java.util.LinkedHashMap<>();
+    java.util.Map<String, Integer> domainCount = new java.util.LinkedHashMap<>();
+
+    for (String block : blocks) {
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
+        resetSignatureCache();
+        parseAndCacheSignature(block);
+
+        // One vote per eligible imported record, not per repeated keyword.
+        String type = sigCrashType == null ? "Unknown" : sigCrashType;
+        crashCount.put(type, crashCount.getOrDefault(type, 0) + 1);
+        String domain = normalizeDomain(sigDomain);
+        domainCount.put(domain, domainCount.getOrDefault(domain, 0) + 1);
+    }
+
+    logInfo(gr ? "Πλήθος τύπων στα εισαγόμενα αρχεία:"
+               : "Imported crash-type counts:");
+    for (java.util.Map.Entry<String, Integer> entry : crashCount.entrySet()) {
+        String type = IPhonePanicHumanizer.event(entry.getKey(), gr);
+        String value = type + ": " + entry.getValue();
+        if ("Unknown".equalsIgnoreCase(entry.getKey())
+                || "Unknown / Generic".equalsIgnoreCase(entry.getKey())) {
+            logInfo(value);
+        } else {
+            logLabelWarnValue(gr ? "Καταγεγραμμένος τύπος:" : "Observed type:", value);
+        }
+    }
+
+    appendHtml("<br>");
+    logInfo(gr ? "Πλήθος κατηγοριών όρων (όχι αποδεδειγμένες βλάβες):"
+               : "Keyword-category counts (not proven hardware failures):");
+    for (java.util.Map.Entry<String, Integer> entry : domainCount.entrySet()) {
+        String value = IPhonePanicHumanizer.domain(entry.getKey(), gr)
+                + ": " + entry.getValue();
+        if ("Unknown".equalsIgnoreCase(entry.getKey())) {
+            logInfo(value);
+        } else {
+            logLabelValue(gr ? "Κατηγορία όρων:" : "Keyword category:", value);
+        }
+    }
+
+    appendHtml("<br>");
     logOk(gr ? "Το Lab 4 ολοκληρώθηκε." : "Lab 4 finished.");
     logLine();
 }
 
 // ============================================================
-// ============================================================
-// LAB 5 — PANIC FREQUENCY ANALYZER (Multi-File Correlation)
-// ============================================================
-private int countSupportedPanicBlocks(String[] blocks) {
-    int valid = 0;
-    if (blocks != null) {
-        for (String block : blocks)
-            if (ApplePanicEvidencePolicy.hasPanicEvidence(block)) valid++;
-    }
-    return valid;
-}
-
-private void runPanicFrequencyLab() {
-    if (!guardPanicLog()) return;
-
-    boolean gr = AppLang.isGreek(this);
-
-    appendHtml("<br>");
-    logLine();
-    logInfo(gr
-            ? "LAB 5 — Ανάλυση Συχνότητας Panic"
-            : "LAB 5 — Panic Frequency Analyzer");
-    logLine();
-
-    String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
-
-    if (countSupportedPanicBlocks(blocks) <= 1) {
-        logInfo(gr
-                ? "Το Lab 5 δεν εκτελέστηκε: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs για σύγκριση."
-                : "Lab 5 not executed: at least two eligible panic logs are needed for comparison.");
-        logLine();
-        return;
-    }
-
-java.util.Map<String, Integer> crashCount = new java.util.HashMap<>();
-
-for (String block : blocks) {
-
-    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
-        continue;
-
-    resetSignatureCache();
-    parseAndCacheSignature(block);
-
-        String key = sigCrashType;
-        crashCount.put(key, crashCount.getOrDefault(key, 0) + 1);
-    }
-
-    logInfo(gr ? "Πλήθος τύπων στα εισαγόμενα αρχεία:" : "Imported crash-type counts:");
-
-for (String k : crashCount.keySet()) {
-
-    if ("Unknown".equalsIgnoreCase(k) || "Unknown / Generic".equalsIgnoreCase(k)) {
-        logInfo(IPhonePanicHumanizer.event(k, gr) + ": " + crashCount.get(k));
-    } else {
-        logLabelWarnValue(gr ? "Καταγεγραμμένος τύπος:" : "Observed type:",
-                IPhonePanicHumanizer.event(k, gr) + ": " + crashCount.get(k));
-    }
-
-}
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 5 ολοκληρώθηκε." : "Lab 5 finished.");
-    logLine();
-}
-
-// ============================================================
-// LAB 6 — PANIC DOMAIN CLUSTERING
-// ============================================================
-private void runPanicClusteringLab() {
-    if (!guardPanicLog()) return;
-
-    boolean gr = AppLang.isGreek(this);
-
-    appendHtml("<br>");
-    logLine();
-    logInfo(gr
-            ? "LAB 6 — Ομαδοποίηση Domain Panic"
-            : "LAB 6 — Panic Domain Clustering");
-    logLine();
-
-String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
-
-if (countSupportedPanicBlocks(blocks) <= 1) {
-    logInfo(gr
-            ? "Το Lab 6 δεν εκτελέστηκε: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs για ομαδοποίηση."
-            : "Lab 6 not executed: at least two eligible panic logs are needed for clustering.");
-    logLine();
-    return;
-}
-
-java.util.Map<String, Integer> domainCount = new java.util.HashMap<>();
-
-for (String block : blocks) {
-
-    if (!ApplePanicEvidencePolicy.hasPanicEvidence(block))
-        continue;
-
-    resetSignatureCache();
-    parseAndCacheSignature(block);
-
-    String key = normalizeDomain(sigDomain);
-
-    domainCount.put(key, domainCount.getOrDefault(key, 0) + 1);
-}
-
-    logInfo(gr ? "Πλήθος κατηγοριών όρων (όχι βλάβες):"
-               : "Keyword-category counts (not hardware failures):");
-
-for (String k : domainCount.keySet()) {
-
-    int count = domainCount.get(k);
-
-    // The same keyword category in two imported records is not a
-    // confirmed hardware fault or a positive measured device-health result.
-    if ("Unknown".equalsIgnoreCase(k)) {
-        logInfo(IPhonePanicHumanizer.domain(k, gr) + ": " + count);
-    } else {
-        logLabelValue(gr ? "Κατηγορία όρων:" : "Keyword category:",
-                IPhonePanicHumanizer.domain(k, gr) + ": " + count);
-    }
-}
-
-    appendHtml("<br>");
-    logOk(gr ? "Το Lab 6 ολοκληρώθηκε." : "Lab 6 finished.");
-    logLine();
-}
-
-// ============================================================
-// LAB 7 — RECURRING DOMAIN DETECTION (Pattern Scoring)
+// LAB 5 — RECURRING DOMAIN DETECTION (Pattern Scoring)
 // ============================================================
 private void runRecurringDomainLab() {
     if (!guardPanicLog()) return;
@@ -1920,8 +1804,8 @@ private void runRecurringDomainLab() {
     appendHtml("<br>");
     logLine();
     logInfo(gr
-            ? "LAB 7 — Ανίχνευση Επαναλαμβανόμενου Domain"
-            : "LAB 7 — Recurring Domain Detection");
+            ? "LAB 5 — Ανίχνευση Επαναλαμβανόμενου Domain"
+            : "LAB 5 — Recurring Domain Detection");
     logLine();
 
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
@@ -1969,8 +1853,8 @@ private void runRecurringDomainLab() {
 
     if (total <= 1) {
         logInfo(gr
-                ? "Το Lab 7 δεν εκτελέστηκε: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs για έλεγχο επανάληψης."
-                : "Lab 7 not executed: at least two eligible panic logs are needed to check repetition.");
+                ? "Το Lab 5 δεν εκτελέστηκε: απαιτούνται τουλάχιστον δύο αναγνωρισμένα panic logs για έλεγχο επανάληψης."
+                : "Lab 5 not executed: at least two eligible panic logs are needed to check repetition.");
         logLine();
         return;
     }
@@ -2038,8 +1922,8 @@ private void runRecurringDomainLab() {
                    : "The observed panic signatures are distinct.");
     }
 
-    // When a *specific* observed clue recurs across panic files, LAB 7 can
-    // point to historical repair reports; LAB 4 retains the actual case list.
+    // When a *specific* observed clue recurs across panic files, LAB 5 can
+    // point to historical repair reports; LAB 3 retains the actual case list.
     // A category-only repeat is never sufficient for a component suggestion.
     for (java.util.Map.Entry<String, Integer> clue : historicClueCount.entrySet()) {
         if (clue.getValue() < 2) continue;
@@ -2056,18 +1940,18 @@ private void runRecurringDomainLab() {
                     code + " (" + clue.getValue() + "/" + total + ") — "
                             + counts.display(gr));
             logLabelValue(gr ? "Αναλυτικές πηγές:" : "Detailed sources:",
-                    gr ? "Πηγές στο Lab 4."
-                       : "Sources in Lab 4.");
+                    gr ? "Πηγές στο Lab 3."
+                       : "Sources in Lab 3.");
         }
     }
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 7 ολοκληρώθηκε." : "Lab 7 finished.");
+    logOk(gr ? "Το Lab 5 ολοκληρώθηκε." : "Lab 5 finished.");
     logLine();
 }
 
 // ============================================================
-// LAB 8 — FINAL SERVICE SUMMARY (EVIDENCE ONLY; CONCISE)
+// LAB 6 — FINAL SERVICE SUMMARY (EVIDENCE ONLY; CONCISE)
 // ============================================================
 private void runFinalServiceRecommendationLab() {
     if (!guardPanicLog()) return;
@@ -2075,8 +1959,8 @@ private void runFinalServiceRecommendationLab() {
     final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
-    logInfo(gr ? "LAB 8 — Τελική Σύσταση Service"
-               : "LAB 8 — Final Service Recommendation");
+    logInfo(gr ? "LAB 6 — Τελική Σύσταση Service"
+               : "LAB 6 — Final Service Recommendation");
     logLine();
 
     // Every file contributes at most one incident. Unlike a combined scan,
@@ -2133,7 +2017,7 @@ private void runFinalServiceRecommendationLab() {
         logInfo(gr ? "Δεν βρέθηκαν αναγνωρίσιμα panic logs."
                    : "No eligible panic logs were found.");
         appendHtml("<br>");
-        logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+        logOk(gr ? "Το Lab 6 ολοκληρώθηκε." : "Lab 6 finished.");
         logLine();
         return;
     }
@@ -2186,11 +2070,11 @@ private void runFinalServiceRecommendationLab() {
                 related.display(gr));
     }
     // Official Apple procedures and independently reported actions are shown
-    // together in Lab 4, in the correct order, without duplicating them here.
+    // together in Lab 3, in the correct order, without duplicating them here.
     logLabelValue(gr ? "Οδηγίες Apple και ιστορικό επισκευών:"
                     : "Apple guidance and repair history:",
-            gr ? "Οδηγίες και πηγές στο Lab 4."
-               : "Guidance and sources in Lab 4.");
+            gr ? "Οδηγίες και πηγές στο Lab 3."
+               : "Guidance and sources in Lab 3.");
     if (!uniqueTechnicalCodes.isEmpty()) {
         logLabelValue(gr ? "Ενδείξεις που αναγνώρισε το GEL:" : "GEL-recognized clues:",
                 android.text.TextUtils.join(", ", uniqueTechnicalCodes));
@@ -2214,7 +2098,7 @@ private void runFinalServiceRecommendationLab() {
     }
 
     appendHtml("<br>");
-    logOk(gr ? "Το Lab 8 ολοκληρώθηκε." : "Lab 8 finished.");
+    logOk(gr ? "Το Lab 6 ολοκληρώθηκε." : "Lab 6 finished.");
     logLine();
 }
 
@@ -2250,10 +2134,8 @@ private void runDemoDiagnostics() {
 
         runPanicLogAnalyzer();
         runPanicSignatureParser();
-        runStabilityLab();
         runImpactLab();
         runPanicFrequencyLab();
-        runPanicClusteringLab();
         runRecurringDomainLab();
         runFinalServiceRecommendationLab();
         logWarn(gr
