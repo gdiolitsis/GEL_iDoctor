@@ -30396,6 +30396,11 @@ private boolean lab28HasFreshCertificationEvidence() {
     if (!currentPorts.complete()
             || !currentPorts.sourceUrl.equals(p.getString("lab27_cert_oem_source", "")))
         return false;
+    String certifiedGrade = p.getString("lab27_cert_grade", "");
+    int certifiedScore = p.getInt("lab27_cert_score", -1);
+    if (!Lab28BuyerSummary.validGrade(certifiedGrade)
+            || !certifiedGrade.equals(Lab30ScoreEvidence.gradeForMeasuredSnapshot(certifiedScore)))
+        return false;
     if (p.getInt("lab27_cert_schema", 0) != Lab27CertificationGate.SCHEMA
             || !p.getBoolean("lab27_cert_physical_confirmed", false)
             || !Lab27CertificationGate.physicalChecksComplete(
@@ -30652,16 +30657,14 @@ private void showLab29ExternalGuidanceDialog(boolean gr) {
         ScrollView scroll = new ScrollView(this);
         TextView instructions = new TextView(this);
         instructions.setText(gr
-                ? "1. Άνοιξε την εφαρμογή κλήσεων και πληκτρολόγησε *#06#.\n"
-                  + "2. Σημείωσε ή αντέγραψε όλα τα IMEI της συσκευής.\n"
-                  + "3. Άνοιξε την εξωτερική υπηρεσία και συμπλήρωσε εκεί το IMEI και όσα στοιχεία ζητήσει.\n"
-                  + "4. Ολοκλήρωσε την πληρωμή απευθείας στην ιστοσελίδα, εφόσον επιθυμείς τον έλεγχο.\n"
-                  + "5. Δες την αναφορά σου στην ιστοσελίδα. Δεν χρειάζεται να μας τη στείλεις ή να καταχωρίσεις αποτέλεσμα."
-                : "1. Open the phone dialer and enter *#06#.\n"
-                  + "2. Note or copy all IMEI numbers shown by the device.\n"
-                  + "3. Open the external checking service; enter the IMEI and any required details there.\n"
-                  + "4. If you choose to proceed, pay the provider directly on its website.\n"
-                  + "5. Read your report on the provider's website. No result needs to be shared with this app.");
+                ? "1. Πληκτρολόγησε *#06# στην εφαρμογή κλήσεων και σημείωσε όλα τα IMEI.\\n"
+                  + "2. Έλεγξε κάθε IMEI στην εξωτερική υπηρεσία ή απευθείας στον πάροχο για τυχόν φραγή.\\n"
+                  + "3. Διάβασε την απάντηση του φορέα. Το GEL δεν λαμβάνει ούτε αποθηκεύει IMEI ή αποτελέσματα.\\n\\n"
+                  + "Η εξωτερική υπηρεσία μπορεί να χρεώνει και δεν εγγυάται έλεγχο όλων των παρόχων."
+                : "1. Enter *#06# in the dialer and note every IMEI.\\n"
+                  + "2. Check each IMEI with the external service or directly with a carrier for restrictions.\\n"
+                  + "3. Read the provider's response. GEL never receives or stores an IMEI or result.\\n\\n"
+                  + "The external service may charge and may not cover all carriers.");
         instructions.setTextColor(0xFF39FF14); // Neon green for Lab 28 instructions.
         instructions.setTextSize(14f);
         instructions.setPadding(0, dp(14), 0, dp(14));
@@ -30749,19 +30752,19 @@ private void showLab28MarketResearchDialog(boolean gr) {
     TextView guide = new TextView(this);
     guide.setText((gr ? "Συσκευή: " : "Device: ") + model.name
             + (gr
-                ? "\\n\\nΔες τις πραγματικές φωτογραφίες των αγγελιών στο eBay. "
+                ? "\n\nΔες τις πραγματικές φωτογραφίες των αγγελιών στο eBay. "
                   + "Δύο συσκευές μπορεί να λειτουργούν εξίσου καλά, αλλά η μία "
                   + "να έχει ραγισμένη οθόνη. Εσύ αποφασίζεις την αξία."
-                : "\\n\\nView the actual eBay listing photos. Two devices may work "
+                : "\n\nView the actual eBay listing photos. Two devices may work "
                   + "equally well while one has a cracked screen. The choice is yours.")
             + (gr
-                ? "\\n\\nΑνοικτή αναζήτηση, χωρίς φίλτρα GEL για βλάβες, "
+                ? "\n\nΑνοικτή αναζήτηση, χωρίς φίλτρα GEL για βλάβες, "
                   + "βαθμούς ή εμφάνιση. Δεν προτείνουμε αγορά."
-                : "\\n\\nOpen search with no GEL filters for faults, grades "
+                : "\n\nOpen search with no GEL filters for faults, grades "
                   + "or appearance. We do not recommend purchases.")
             + (gr
-                ? "\\nΟι αγγελίες είναι δηλώσεις πωλητών, όχι πιστοποιήσεις GEL."
-                : "\\nListings are seller claims, not GEL certifications."));
+                ? "\nΟι αγγελίες είναι δηλώσεις πωλητών, όχι πιστοποιήσεις GEL."
+                : "\nListings are seller claims, not GEL certifications."));
     guide.setTextColor(0xFF39FF14);
     guide.setTextSize(14f);
     guide.setPadding(0, dp(12), 0, dp(12));
