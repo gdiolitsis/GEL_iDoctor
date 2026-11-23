@@ -22,6 +22,8 @@ public final class Lab27GradePresentationContractTest {
     @Test public void gradeIsRestoredFromMeasuredSnapshotNotLegacyHardwareRisk() throws Exception {
         String lab = lab27();
         assertTrue(lab.contains("final String snapshotGrade = Lab30ScoreEvidence.gradeForMeasuredSnapshot(deviceHealthScore);"));
+        assertTrue(lab.contains("Βαθμολογία καλής λειτουργίας"));
+        assertFalse(lab.contains("Βαθμολογία συσκευής — διαθέσιμες μετρήσεις"));
         assertTrue(lab.contains("if (snapshotGrade == null)"));
         assertTrue(lab.contains("gr ? \"Βαθμολογία συσκευής\" : \"Device grade\""));
         assertTrue(lab.contains("gr ? \"Συνολικός δείκτης\" : \"Overall index\""));
