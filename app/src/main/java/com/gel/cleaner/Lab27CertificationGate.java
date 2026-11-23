@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
  * OEM matches do not establish that replacement parts are genuine.
  */
 final class Lab27CertificationGate {
-    static final int SCHEMA = 7; // OEM-sourced FM app declaration joins dynamic visual questions, invalidate older attestations.
+    static final int SCHEMA = 8; // Regrade on verified functional faults only; invalidate legacy warning-capped certificates.
     static final long MAX_AGE_MS = 7L * 24L * 60L * 60L * 1000L;
 
     static final List<String> REQUIRED = Collections.unmodifiableList(Arrays.asList(
