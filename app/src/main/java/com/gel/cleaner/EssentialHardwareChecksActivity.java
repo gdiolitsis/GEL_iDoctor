@@ -92,8 +92,8 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
         scroll.setBackgroundColor(0xFF101010);
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        int m = dp(16);
-        body.setPadding(m, dp(22), m, dp(24));
+        int m = uiDp(16);
+        body.setPadding(m, uiDp(22), m, uiDp(24));
         scroll.addView(body);
 
         label(body, greek ? "LAB 9 — Πραγματικοί έλεγχοι" : "LAB 9 — Live checks",
@@ -410,7 +410,7 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
         t.setText(value);
         t.setTextColor(color);
         t.setTextSize(sp);
-        t.setPadding(0, dp(7), 0, dp(7));
+        t.setPadding(0, uiDp(7), 0, uiDp(7));
         if (bold) t.setTypeface(null, Typeface.BOLD);
         parent.addView(t);
         return t;
@@ -425,19 +425,19 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
         b.setTextColor(exit ? Color.WHITE : Color.BLACK);
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(exit ? 0xFFE60000 : 0xFF39FF14);
-        bg.setCornerRadius(dp(11));
-        bg.setStroke(dp(2), 0xFFFFD700);
+        bg.setCornerRadius(uiDp(11));
+        bg.setStroke(uiDp(2), 0xFFFFD700);
         b.setBackground(bg);
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        p.topMargin = dp(12);
-        p.bottomMargin = dp(14);
+        p.topMargin = uiDp(12);
+        p.bottomMargin = uiDp(14);
         parent.addView(b, p);
         b.setOnClickListener(v -> action.run());
     }
 
-    private int dp(int v) {
+    private int uiDp(int v) {
         return Math.round(v * getResources().getDisplayMetrics().density);
     }
 }
