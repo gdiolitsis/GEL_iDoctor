@@ -28,7 +28,7 @@ public final class Lab27FunctionalFaultCertificationContractTest {
     @Test public void completedFaultyLabIsNotMissingButReducesReportedGrade() throws Exception {
         String s = source();
         assertTrue(s.contains("lab27BasicLabsWithFindings("));
-        assertTrue(s.contains("Lab27FunctionGradePolicy.apply(measuredDeviceHealthScore,"));
+        assertTrue(s.contains("Lab27FunctionGradePolicy.apply(confirmedCameraFunctionFailure)"));
         assertTrue(s.contains("confirmedCameraFunctionFailure)"));
         assertTrue(s.contains("gr && \"D\".equals(snapshotGrade) ? \"Δ\""));
         assertTrue(s.contains("if (lab27RemainingBasic.isEmpty() && confirmedFunctionalFailures == 0)"));
