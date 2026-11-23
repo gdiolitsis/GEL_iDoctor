@@ -170,6 +170,6 @@ public final class Lab27CertificationGateTest {
         assertFalse(tablet.contains("11"));
         assertFalse(tablet.contains("12"));
         assertFalse(tablet.contains("13"));
-        assertEquals(16, tablet.size());
+        assertEquals(15, tablet.size()); // 18 required minus telephony 11/12 and Bluetooth 13.
     }
 }
