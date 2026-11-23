@@ -344,8 +344,8 @@ root.addView(makeLabButton(
 root.addView(makeLabButton(
         gr ? "LAB 2 - Ανάλυση Υπογραφής Panic"
            : "LAB 2 - Panic Signature Parser",
-        gr ? "Τύπος Crash • Domain • Βεβαιότητα • Τεκμηρίωση"
-           : "Crash Type • Domain • Confidence • Evidence",
+        gr ? "Ερμηνεία • Υπογραφή αρχείου • Τεκμήρια"
+           : "Interpretation • Recorded Signature • Evidence",
         true,
         v -> runPanicSignatureParser()
 ));
@@ -374,8 +374,8 @@ root.addView(makeLabButton(
 root.addView(makeLabButton(
         gr ? "LAB 4 - Συχνότητα και Κατηγορίες Panic"
            : "LAB 4 - Panic Frequency & Categories",
-        gr ? "Πλήθος συμβάντων ανά τύπο και κατηγορία"
-           : "Incident counts by crash type and keyword category",
+        gr ? "Συγκριτικό πλήθος ανά τύπο και κατηγορία"
+           : "Comparative counts by type and keyword category",
         true,
         v -> runPanicFrequencyLab()
 ));
@@ -384,8 +384,8 @@ root.addView(makeLabButton(
 root.addView(makeLabButton(
         gr ? "LAB 5 - Ανίχνευση Επαναλαμβανόμενων Σφαλμάτων"
            : "LAB 5 - Recurring Panic Evidence",
-        gr ? "Επανάληψη υπογραφών, τεχνικών ενδείξεων και χρονολογική κάλυψη"
-           : "Repeated signatures, exact clues and date coverage",
+        gr ? "Μόνο επαναλαμβανόμενες υπογραφές, ενδείξεις και χρονολογία"
+           : "Only recurring signatures, clues and date coverage",
         true,
         v -> runRecurringDomainLab()
 ));
@@ -1463,7 +1463,9 @@ logLabelWarnValue(
  * Gold denotes section identity only, never a fault severity or repair verdict.
  */
 private void logPanicIncidentHeader(int number, String eventType, boolean gr) {
-    String heading = (gr ? "ΣΥΜΒΑΝ " : "INCIDENT ") + number + " — " + safe(eventType);
+    String heading = (gr ? "ΣΥΜΒΑΝ " : "INCIDENT ") + number;
+    if (eventType != null && !eventType.trim().isEmpty())
+        heading += " — " + safe(eventType);
     appendHtml("<br>");
     logLine();
     appendHtml("<font color='#FFD700'><b>" + escape(heading) + "</b></font>");
@@ -1551,8 +1553,7 @@ private void runPanicLogAnalyzer() {
                 IPhonePanicHumanizer.domain(r.domain, gr));
         logLabelValue(gr ? "Υπόθεση κανόνα:" : "Rule-based cause hypothesis:",
                 IPhonePanicHumanizer.possibleCause(r.cause, gr));
-        logLabelWarnValue(gr ? "Επόμενο τεχνικό βήμα:" : "Next technician step:",
-                ApplePanicEvidencePolicy.recommendation(gr));
+        // The technician action is presented once in final Lab 6, not per file.
     }
 
     if (incidentNumber == 0) {
@@ -1574,72 +1575,43 @@ private void runPanicLogAnalyzer() {
 private void runPanicSignatureParser() {
     if (!guardPanicLog()) return;
 
-    boolean gr = AppLang.isGreek(this);
-
+    final boolean gr = AppLang.isGreek(this);
     appendHtml("<br>");
     logLine();
-    logInfo(gr
-            ? "LAB 2 — Ανάλυση Υπογραφής Panic"
-            : "LAB 2 — Panic Signature Parser");
+    logInfo(gr ? "LAB 2 — Ανάλυση Υπογραφής Panic"
+               : "LAB 2 — Panic Signature Parser");
     logLine();
 
+    // Interpret each imported record once. Lab 1 already identified its
+    // event category, GEL rule and timestamp; do not print those again.
+    String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
+    int incidentNumber = 0;
+    for (String block : blocks) {
+        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
+        incidentNumber++;
+        resetSignatureCache();
+        parseAndCacheSignature(block);
+        logPanicIncidentHeader(incidentNumber, "", gr);
+        logLabelValue(gr ? "Ερμηνεία υπογραφής:" : "Signature interpretation:",
+                panicEventMeaningExact(block, sigCrashType, gr));
 
-
-    // Treat each imported incident independently, never as a composite crash.
-    String[] separatePanicBlocks = panicLogText.split("(?m)^===== ZIP FILE:");
-    if (countSupportedPanicBlocks(separatePanicBlocks) > 1) {
-        int incidentNumber = 0;
-        for (String block : separatePanicBlocks) {
-            if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
-            incidentNumber++;
-            resetSignatureCache();
-            parseAndCacheSignature(block);
-            logPanicIncidentHeader(incidentNumber, panicEventExact(block, sigCrashType, gr), gr);
-            logLabelWarnValue(
-                    gr ? "Συμβάν " + incidentNumber + " — τύπος:" : "Incident " + incidentNumber + " — type:",
-                    panicEventExact(block, sigCrashType, gr));
-            logLabelValue(
-                    gr ? "Συμβάν " + incidentNumber + " — με απλά λόγια:" : "Incident " + incidentNumber + " — in plain language:",
-                    panicEventMeaningExact(block, sigCrashType, gr));
-
+        // A signature is extracted from this exact file; do not substitute
+        // a generic GEL rule identifier or infer a broken component.
+        ApplePanicEvidencePolicy.RecordMetadata meta =
+                ApplePanicEvidencePolicy.describeOne(block);
+        if (!meta.signatureKey.isEmpty()) {
+            logLabelInfoValue(gr ? "Υπογραφή αρχείου:" : "Recorded signature:",
+                    meta.signatureKey);
         }
-        appendHtml("<br>");
-        logOk(gr ? "Το Lab 2 ολοκληρώθηκε." : "Lab 2 finished.");
-        logLine();
-        return;
+        if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
+            logLabelValue(gr ? "Στοιχεία που εντοπίστηκαν:" : "Observed evidence tokens:",
+                    IPhonePanicHumanizer.evidence(sigKeyEvidence, gr));
+        }
     }
-    parseAndCacheSignature(panicLogText);
-    logPanicIncidentHeader(1, panicEventExact(panicLogText, sigCrashType, gr), gr);
-
-    logLabelOkValue(
-        gr ? "Αρχείο:" : "File:",
-        safe(panicLogName)
-);
-
-// One observed event type from this file.
-logLabelWarnValue(gr ? "Τύπος στο αρχείο:" : "Imported crash type:",
-        panicEventExact(panicLogText, sigCrashType, gr));
-
-// Subsystem hint
-logLabelWarnValue(
-        gr ? "Πιθανό Υποσύστημα:" : "Subsystem Hint:",
-        IPhonePanicHumanizer.domain(sigDomain, gr)
-);
-
-// Evidence
-if (sigKeyEvidence != null && !sigKeyEvidence.trim().isEmpty()) {
-
-    logLabelOkValue(
-            gr ? "Βασικά Στοιχεία:" : "Key Evidence Found:",
-            IPhonePanicHumanizer.evidence(sigKeyEvidence, gr)
-    );
-}
-
-// Per-file sensor/SMC clue detail remains in specialist Lab 3.
-logLabelValue(gr ? "Εξειδικευμένη ανάλυση:" : "Detailed analysis:",
-        gr ? "Οι τεχνικές ενδείξεις ανά αρχείο παρουσιάζονται στο LAB 3."
-           : "Per-file technical clues are presented in LAB 3.");
-
+    if (incidentNumber == 0) {
+        logInfo(gr ? "Δεν υπάρχουν αναγνωρίσιμες υπογραφές panic."
+                   : "No eligible panic signatures were found.");
+    }
     appendHtml("<br>");
     logOk(gr ? "Το Lab 2 ολοκληρώθηκε." : "Lab 2 finished.");
     logLine();
@@ -1706,9 +1678,8 @@ private void runImpactLab() {
         resetSignatureCache();
         parseAndCacheSignature(block);
         String heading = gr ? "Συμβάν " + incident : "Incident " + incident;
-        logPanicIncidentHeader(incident, panicEventExact(block, sigCrashType, gr), gr);
-        logLabelWarnValue(heading + (gr ? " — τύπος:" : " — type:"),
-                panicEventExact(block, sigCrashType, gr));
+        // Record number provides provenance; its category was already shown in Lab 1.
+        logPanicIncidentHeader(incident, "", gr);
         // Each attempt must match this incident's exact hardware identifier
         // and normalized clue, retaining failures and original source URLs.
         logApplePanicEvidence(block, gr, heading, new java.util.LinkedHashSet<>());
@@ -1822,7 +1793,6 @@ private void runRecurringDomainLab() {
 
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
 
-    java.util.Map<String, Integer> domainCount = new java.util.HashMap<>();
     java.util.Map<String, Integer> signatureCount = new java.util.LinkedHashMap<>();
     // Exact same model + GEL clue per independent imported panic record.
     java.util.Map<String, Integer> historicClueCount = new java.util.LinkedHashMap<>();
@@ -1841,8 +1811,6 @@ private void runRecurringDomainLab() {
 
         total++;
 
-        String key = normalizeDomain(sigDomain);
-        domainCount.put(key, domainCount.getOrDefault(key, 0) + 1);
         ApplePanicEvidencePolicy.RecordMetadata meta =
                 ApplePanicEvidencePolicy.describeOne(block);
         if (!meta.signatureKey.isEmpty()) {
@@ -1871,41 +1839,8 @@ private void runRecurringDomainLab() {
         return;
     }
 
-    // Βρες dominant
-    String dominant = null;
-    int max = 0;
-
-    for (String d : domainCount.keySet()) {
-        int c = domainCount.get(d);
-        if (c > max) {
-            max = c;
-            dominant = d;
-        }
-    }
-
-    double ratio = (double) max / (double) total;
-    int percent = (int) (ratio * 100);
-
-    logLabelOkValue(
-            gr ? "Συνολικά logs:" : "Total logs:",
-            String.valueOf(total)
-    );
-
-    if (max >= 2) {
-        logLabelValue(
-                gr ? "Επαναλαμβανόμενη κατηγορία:" : "Repeated keyword category:",
-                IPhonePanicHumanizer.domain(dominant, gr) + " (" + max + "/" + total + ")"
-        );
-        logLabelOkValue(
-                gr ? "Μερίδιο στο εισαγόμενο δείγμα:" : "Share in imported sample:",
-                percent + "%"
-        );
-    } else {
-        logInfo(gr
-                ? "Δεν υπάρχει επαναλαμβανόμενη κατηγορία: κάθε κατηγορία εμφανίστηκε μόνο μία φορά."
-                : "No repeated category: each keyword category occurred only once.");
-    }
-
+    // Lab 4 already counted generic categories. This Lab adds only stronger
+    // recurrence evidence: exact signatures, per-model clues and chronology.
     // Historical timing is comparable only when ALL entries have absolute
     // timestamps with explicit UTC offsets. Never invent a date for a file.
     if (datedRecords.size() == total) {
@@ -1978,14 +1913,7 @@ private void runFinalServiceRecommendationLab() {
     // Every file contributes at most one incident. Unlike a combined scan,
     // this cannot synthesize a watchdog+thermal failure across separate logs.
     String[] blocks = panicLogText.split("(?m)^===== ZIP FILE:");
-    java.util.Map<String, Integer> crashCount = new java.util.TreeMap<>();
     java.util.Map<String, Integer> domainCount = new java.util.TreeMap<>();
-    java.util.Set<String> uniqueTechnicalCodes = new java.util.LinkedHashSet<>();
-    // Source cases are de-duplicated across multiple imported panic files.
-    java.util.Map<String, IPhonePanicRepairKnowledgeBase.RepairCase> relatedRepairAttempts =
-            new java.util.LinkedHashMap<>();
-    java.util.List<IPhonePanicRepairKnowledgeBase.RepairCase> repairHistory =
-            readPanicRepairHistory();
     int total = 0;
     boolean watchdogObserved = false;
     boolean thermalObserved = false;
@@ -1997,7 +1925,6 @@ private void runFinalServiceRecommendationLab() {
         resetSignatureCache();
         parseAndCacheSignature(block);
         total++;
-        crashCount.put(sigCrashType, crashCount.getOrDefault(sigCrashType, 0) + 1);
         String domain = normalizeDomain(sigDomain);
         if (!"Unknown".equalsIgnoreCase(domain)) {
             domainCount.put(domain, domainCount.getOrDefault(domain, 0) + 1);
@@ -2011,18 +1938,7 @@ private void runFinalServiceRecommendationLab() {
         if (isWatchdog) watchdogFiles++;
         if (isThermal) thermalFiles++;
 
-        // GEL clue IDs derived by rules from individual imported records,
-        // not necessarily literal Apple diagnostic codes or hardware faults.
-        ApplePanicHardwareHints.Assessment hints = ApplePanicHardwareHints.examineOne(block);
-        for (ApplePanicHardwareHints.Finding finding : hints.findings) {
-            uniqueTechnicalCodes.add(finding.code);
-            // Exact model AND exact clue, within this one panic block.
-            for (IPhonePanicRepairKnowledgeBase.RepairCase historic :
-                    IPhonePanicRepairKnowledgeBase.lookup(repairHistory,
-                            hints.modelIdentifier, finding.code)) {
-                relatedRepairAttempts.put(historic.id, historic);
-            }
-        }
+
     }
 
     if (total == 0) {
@@ -2058,40 +1974,12 @@ private void runFinalServiceRecommendationLab() {
     logLabelWarnValue(gr ? "Πότε χρειάζεται τεχνικός:" : "When to seek service:",
             human.whenToSeekHelp);
 
-    // Distinguish historical incidents visually before the combined service advice.
-    // No components, repair outcomes or Apple diagnostic codes are merged across logs.
-    int incidentNumber = 0;
-    for (String block : blocks) {
-        if (!ApplePanicEvidencePolicy.hasPanicEvidence(block)) continue;
-        incidentNumber++;
-        resetSignatureCache();
-        parseAndCacheSignature(block);
-        logPanicIncidentHeader(incidentNumber, panicEventExact(block, sigCrashType, gr), gr);
-        logLabelWarnValue(gr ? "Καταγεγραμμένος τύπος:" : "Recorded incident:",
-                panicEventExact(block, sigCrashType, gr));
-        logLabelValue(gr ? "Ερμηνεία αρχείου:" : "Log interpretation:",
-                panicEventMeaningExact(block, sigCrashType, gr));
-    }
-
-    // Historical repair experiences are contextual evidence, not a diagnosis
-    // or proof that a particular part on this device needs replacement.
-    if (!relatedRepairAttempts.isEmpty()) {
-        IPhonePanicRepairKnowledgeBase.MatchSummary related =
-                IPhonePanicRepairKnowledgeBase.summarize(relatedRepairAttempts.values());
-        logLabelInfoValue(gr ? "Σχετικές δημοσιευμένες επισκευές:" : "Related published repair attempts:",
-                related.display(gr));
-    }
-    // Official Apple procedures and independently reported actions are shown
-    // together in Lab 3, in the correct order, without duplicating them here.
+    // Lab 6 synthesizes the earlier findings; detailed per-incident categories,
+    // GEL codes, Apple procedures and repair cases remain in Labs 1–3.
     logLabelValue(gr ? "Οδηγίες Apple και ιστορικό επισκευών:"
                     : "Apple guidance and repair history:",
             gr ? "Οδηγίες και πηγές στο Lab 3."
                : "Guidance and sources in Lab 3.");
-    if (!uniqueTechnicalCodes.isEmpty()) {
-        logLabelValue(gr ? "Ενδείξεις που αναγνώρισε το GEL:" : "GEL-recognized clues:",
-                android.text.TextUtils.join(", ", uniqueTechnicalCodes));
-
-    }
 
     // One actionable service path, grounded only in event types actually observed.
     logLabelWarnValue(gr ? "Προτεινόμενος έλεγχος:" : "Next technical check:",
