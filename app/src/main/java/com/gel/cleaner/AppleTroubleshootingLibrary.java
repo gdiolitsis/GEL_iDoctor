@@ -99,6 +99,9 @@ public final class AppleTroubleshootingLibrary {
                 // Watchdog is a GEL classification; Apple documents the symptom.
                 gr = "Πάγωμα / απρόσμενη επανεκκίνηση (Watchdog)";
                 en = "Freeze / unexpected restart (Watchdog)";
+            } else if ("WIRED_CHARGING".equals(chapter.topic)) {
+                gr = "Αργή φόρτιση / πρόβλημα ενσύρματης φόρτισης";
+                en = "Slow charging / wired charging issues";
             }
             output.add(new TopicLink(chapter.topic, gr, en, chapter.sourceUrl, true));
         }
@@ -115,6 +118,11 @@ public final class AppleTroubleshootingLibrary {
             List<AppleOfficialServiceGuidance.Guidance> guides, String category,
             String greek, String english) {
         if (guides == null) return;
+        // Never repeat a generic article when this specific model already
+        // has an indexed chapter for the same symptom.
+        for (TopicLink existing : result) {
+            if (category.equals(existing.topic)) return;
+        }
         for (AppleOfficialServiceGuidance.Guidance guide : guides) {
             if (category.equals(guide.category) && "*".equals(guide.models)
                     && isOfficialUrl(guide.sourceUrl)) {
