@@ -106,8 +106,22 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
                   + "No result is not proof of hardware failure.",
                 14, Color.WHITE, false);
 
-        addGroup(body, greek ? "Αισθητήρες — κίνησε το κινητό, άλλαξε φωτισμό"
-                        : "Sensors — rotate the phone and change the light");
+        addGroup(body, greek ? "Έλεγχος γυροσκοπίου, πυξίδας και αισθητήρα φωτός"
+                        : "Gyroscope, compass and light sensor check");
+        label(body, greek
+                ? "Πάτησε «ΕΝΑΡΞΗ ΕΛΕΓΧΟΥ ΑΙΣΘΗΤΗΡΩΝ» και ακολούθησε τα βήματα:\n\n"
+                  + "1. Περίστρεψε το κινητό προς διαφορετικές κατευθύνσεις για να ελέγξω "
+                  + "το γυροσκόπιο και την πυξίδα.\n\n"
+                  + "2. Στρέψε το κινητό προς ένα πιο φωτεινό ή πιο σκιερό σημείο "
+                  + "για να μετρήσω τον αισθητήρα φωτός.\n\n"
+                  + "Δεν χρειάζεται να αλλάξεις τη φωτεινότητα της οθόνης."
+                : "Tap TEST LIVE SENSORS, then follow these steps:\n\n"
+                  + "1. Rotate the phone in different directions so I can test "
+                  + "the gyroscope and compass.\n\n"
+                  + "2. Point the phone towards a brighter or shadier area "
+                  + "to measure the ambient light sensor.\n\n"
+                  + "You do not need to change the screen brightness.",
+                14, Color.WHITE, false);
         addState(body, EXTRA_GYRO, greek ? "Γυροσκόπιο" : "Gyroscope");
         addState(body, EXTRA_MAGNET, greek ? "Μαγνητόμετρο / Πυξίδα" : "Magnetometer / Compass");
         addState(body, EXTRA_LIGHT, greek ? "Αισθητήρας φωτός" : "Ambient light");
