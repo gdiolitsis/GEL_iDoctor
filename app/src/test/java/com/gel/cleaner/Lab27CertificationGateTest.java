@@ -11,7 +11,8 @@ import static org.junit.Assert.*;
 /** Rules must fail closed for omitted, stale, warned or unconfirmed evidence. */
 public final class Lab27CertificationGateTest {
     @Test public void exactlyEighteenRequiredBasicLabs() {
-        assertEquals(18, Lab27CertificationGate.REQUIRED.size());
+        assertEquals(19, Lab27CertificationGate.REQUIRED.size());
+        assertTrue(Lab27CertificationGate.REQUIRED.contains("9"));
         assertTrue(Lab27CertificationGate.REQUIRED.contains("14A"));
         assertTrue(Lab27CertificationGate.REQUIRED.contains("25"));
         assertFalse(Lab27CertificationGate.REQUIRED.contains("14B"));
@@ -60,14 +61,14 @@ public final class Lab27CertificationGateTest {
 
     @Test public void functionalCertificationStillRequiresFactorySpecificationComparison() {
         // OEM specifications are an indispensable cross-check, NEVER parts authenticity.
-        assertFalse(Lab27CertificationGate.eligible(18, 18, false, true, 27, 0, false, "A+"));
-        assertFalse(Lab27CertificationGate.eligible(17, 18, true, true, 27, 0, false, "A+"));
-        assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 27, 0, true, "A+"));
-        assertFalse(Lab27CertificationGate.eligible(18, 18, true, false, 0, 0, false, "A+"));
-        assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 0, 0, false, "A+"));
-        assertFalse(Lab27CertificationGate.eligible(18, 18, true, true, 27, 1, false, "A+"));
-        assertTrue(Lab27CertificationGate.eligible(18, 18, true, true, 27, 0, false, "A+"));
-        assertEquals(11, Lab27CertificationGate.SCHEMA);
+        assertFalse(Lab27CertificationGate.eligible(19, 19, false, true, 27, 0, false, "A+"));
+        assertFalse(Lab27CertificationGate.eligible(18, 19, true, true, 27, 0, false, "A+"));
+        assertFalse(Lab27CertificationGate.eligible(19, 19, true, true, 27, 0, true, "A+"));
+        assertFalse(Lab27CertificationGate.eligible(19, 19, true, false, 0, 0, false, "A+"));
+        assertFalse(Lab27CertificationGate.eligible(19, 19, true, true, 0, 0, false, "A+"));
+        assertFalse(Lab27CertificationGate.eligible(19, 19, true, true, 27, 1, false, "A+"));
+        assertTrue(Lab27CertificationGate.eligible(19, 19, true, true, 27, 0, false, "A+"));
+        assertEquals(12, Lab27CertificationGate.SCHEMA);
     }
 
     @Test public void physicalPortsRequireExactlyOneVisualAnswerPerPair() {
@@ -151,7 +152,7 @@ public final class Lab27CertificationGateTest {
 
     @Test public void unsupportedHardwareIsMarkedNotApplicableRatherThanPassed() {
         Set<String> full = Lab27CertificationGate.applicable(true, true, true, true);
-        assertEquals(18, full.size());
+        assertEquals(19, full.size());
         Set<String> tablet = Lab27CertificationGate.applicable(false, false, true, true);
         assertFalse(tablet.contains("11"));
         assertFalse(tablet.contains("12"));
