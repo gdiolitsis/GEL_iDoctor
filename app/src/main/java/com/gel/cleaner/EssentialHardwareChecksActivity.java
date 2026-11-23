@@ -138,10 +138,16 @@ public final class EssentialHardwareChecksActivity extends GELAutoActivityHook
         action(body, greek ? "ΕΝΑΡΞΗ NFC" : "SCAN NFC TAG", () -> startNfc(), false);
 
         addGroup(body, greek ? "Φυσικά πλήκτρα" : "Physical buttons");
+        label(body, greek
+                ? "Πάτησε «ΕΛΕΓΧΟΣ ΠΛΗΚΤΡΩΝ ΕΝΤΑΣΗΣ». "
+                  + "Κατόπιν πάτησε διαδοχικά τα φυσικά πλήκτρα + και − της συσκευής."
+                : "Tap VOLUME BUTTON TEST first. "
+                  + "Then press the phone's physical + and − volume buttons one after the other.",
+                14, 0xFFFFD700, false);
         addState(body, EXTRA_VOLUME_UP, "Volume +");
         addState(body, EXTRA_VOLUME_DOWN, "Volume −");
-        action(body, greek ? "ΠΑΤΗΣΕ ΤΑ ΔΥΟ ΠΛΗΚΤΡΑ ΕΝΤΑΣΗΣ"
-                        : "PRESS BOTH VOLUME KEYS",
+        action(body, greek ? "ΕΛΕΓΧΟΣ ΠΛΗΚΤΡΩΝ ΕΝΤΑΣΗΣ"
+                        : "VOLUME BUTTON TEST",
                 () -> startVolume(), false);
         addState(body, EXTRA_POWER, greek ? "Power (επιβεβαίωση χρήστη)"
                 : "Power (user confirmation)");
