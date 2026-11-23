@@ -1,0 +1,42 @@
+name: Apple troubleshooting inside GEL — model, sources and Back QA
+
+on:
+  pull_request:
+    paths:
+      - 'app/src/main/java/com/gel/cleaner/AppleTroubleshootingLibrary.java'
+      - 'app/src/main/java/com/gel/cleaner/AppleSupportViewerActivity.java'
+      - 'app/src/main/java/com/gel/cleaner/MainActivity.java'
+      - 'app/src/main/java/com/gel/cleaner/IPhoneLabsActivity.java'
+      - 'app/src/main/assets/iphone_apple_official_guidance_v1.tsv'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/src/main/res/layout/activity_main.xml'
+      - 'app/src/test/java/com/gel/cleaner/AppleTroubleshootingLibraryTest.java'
+      - '.github/workflows/qa-apple-troubleshooting.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  compile-and-unit-test:
+    if: ${{ github.event.pull_request.head.ref == 'qa/apple-troubleshooting-home-20261123' && github.event.pull_request.base.ref == 'release/v73-final-candidate-for-main-20261123' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+      - name: Compile Android app and test all contracts; no APK or main change
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          bash tools/webrtc/fetch_promoted_webrtc.sh --production-only
+          ./gradlew :app:compileDebugJavaWithJavac :app:testDebugUnitTest --no-daemon --console=plain
