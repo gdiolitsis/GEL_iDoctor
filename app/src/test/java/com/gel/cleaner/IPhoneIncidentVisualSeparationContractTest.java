@@ -43,7 +43,7 @@ public final class IPhoneIncidentVisualSeparationContractTest {
         assertTrue(helper.contains("Το panic log καταγράφει θερμική διακοπή λειτουργίας (Thermal Shutdown)."));
         assertTrue(helper.contains("IPhonePanicHumanizer.event(type, gr)")); // other event types preserved
         String lab2 = part("private void runPanicSignatureParser() {",
-                "private void runStabilityLab() {");
+                "private void runImpactLab() {");
         assertTrue(lab2.contains("panicEventExact(block, sigCrashType, gr)"));
         assertTrue(lab2.contains("panicEventMeaningExact(block, sigCrashType, gr)"));
     }
@@ -55,7 +55,7 @@ public final class IPhoneIncidentVisualSeparationContractTest {
         assertTrue(s.contains("GELServiceLog.logInfo(heading)")); // PDF/text provenance
         assertTrue(part("private void runPanicLogAnalyzer() {", "private void runPanicSignatureParser() {")
                 .contains("logPanicIncidentHeader("));
-        assertTrue(part("private void runPanicSignatureParser() {", "private void runStabilityLab() {")
+        assertTrue(part("private void runPanicSignatureParser() {", "private void runImpactLab() {")
                 .contains("logPanicIncidentHeader("));
         assertTrue(part("private void runImpactLab() {", "private int countSupportedPanicBlocks(")
                 .contains("logPanicIncidentHeader("));
@@ -63,7 +63,7 @@ public final class IPhoneIncidentVisualSeparationContractTest {
                 .contains("logPanicIncidentHeader("));
     }
 
-    @Test public void lab8AdviceIsYellowNotUnverifiedGreenOrFailureRed() throws Exception {
+    @Test public void lab6AdviceIsYellowNotUnverifiedGreenOrFailureRed() throws Exception {
         String lab = part("private void runFinalServiceRecommendationLab() {",
                 "private void runDemoDiagnostics() {");
         assertTrue(lab.contains("logLabelWarnValue(gr ? \"Προτεινόμενος έλεγχος:\""));
