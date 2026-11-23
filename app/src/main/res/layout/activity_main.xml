@@ -352,6 +352,27 @@
             </LinearLayout>
 
             <!-- ================================================= -->
+            <!-- APPLE-MODEL TROUBLESHOOTING LIBRARY (ABOVE DIAGNOSTICS) -->
+            <!-- ================================================= -->
+            <com.gel.cleaner.GelButton
+                android:id="@+id/btnAppleTroubleshooting"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="74dp"
+                android:text="ΒΙΒΛΙΟΓΡΑΦΙΑ TROUBLESHOOTING ΤΗΣ APPLE ΓΙΑ ΤΟ ΚΙΝΗΤΟ ΣΟΥ"
+                android:textColor="#00FFBF"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:textAllCaps="false"
+                android:gravity="center"
+                android:maxLines="3"
+                android:padding="10dp"
+                android:background="@drawable/gel_btn_outline_selector"
+                android:visibility="gone"
+                android:layout_marginTop="14dp"
+                android:layout_marginBottom="10dp"/>
+
+            <!-- ================================================= -->
             <!-- DIAGNOSIS -->
             <!-- ================================================= -->
             <com.gel.cleaner.GelButton
