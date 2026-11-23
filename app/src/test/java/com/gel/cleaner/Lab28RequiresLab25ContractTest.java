@@ -32,7 +32,8 @@ public final class Lab28RequiresLab25ContractTest {
         String s=source();
         String entry=section(s,"private void lab29DeviceAuthenticity()","private void runLab29DeviceAuthenticity()");
         int pro=entry.indexOf("requireGelPro("),pre=entry.indexOf("if (!lab28RequireCertification()) return;");
-        assertTrue(pro>=0&&pre>pro&&entry.indexOf("Lab29ConnectivityGate.runOrPrompt(")>pre);
+        assertTrue(pro>=0 && pre>pro && entry.indexOf("runLab29DeviceAuthenticity();")>pre);
+        assertFalse(entry.contains("Lab29ConnectivityGate.runOrPrompt("));
         String buyer=section(s,"private void runLab29DeviceAuthenticity()","private void showLab29ExternalGuidanceDialog(boolean gr)");
         assertTrue(buyer.contains("if (!lab28RequireCertification()) return;"));
         assertTrue(buyer.contains("lab28ShowCertificationResult(gr);"));
