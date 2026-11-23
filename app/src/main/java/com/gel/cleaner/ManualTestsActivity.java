@@ -32094,24 +32094,17 @@ else {
 // ------------------------------------------------------------
 // 10) FINAL SCORES
 // ------------------------------------------------------------
-int performanceScore = Lab30ScoreEvidence.functionalPerformanceScore(
-        storageScore, ramScore, thermalScore);
-int measuredDeviceHealthScore = Lab30ScoreEvidence.deviceHealthScore(
-        thermalScore, batteryScore, performanceScore, stabilityScore);
+// Contextual readings are still documented above, but NEVER change the
+// Device Certification letter grade. This score is function-evidence only.
 java.util.List<String> lab27EvidenceFindings =
         lab27BasicLabsWithFindings(p, lab27ApplicableBasicLabs());
 boolean confirmedCameraFunctionFailure = lab27HasCameraFunctionalFailure(p);
-int deviceHealthScore = Lab27FunctionGradePolicy.apply(measuredDeviceHealthScore,
-        confirmedCameraFunctionFailure);
+int deviceHealthScore = Lab27FunctionGradePolicy.apply(confirmedCameraFunctionFailure);
 int confirmedFunctionalFailures = confirmedCameraFunctionFailure ? 1 : 0;
 java.util.List<Lab27GradeDrivers.Driver> lab27GradeDrivers =
-        Lab27GradeDrivers.fromSnapshot(
-                maxThermal, avgThermal, batTemp, lab27BatteryPercent, charging,
-                st.pctFree, st.totalBytes, rm.pctFree, upMs,
-                confirmedCameraFunctionFailure);
+        Lab27GradeDrivers.fromConfirmedFailures(confirmedCameraFunctionFailure);
 String lab27GradeDriverCodes = Lab27GradeDrivers.encode(lab27GradeDrivers);
-// Reasons are generated from the exact evidence used in this Lab 27 run.
-// The reported grade reflects tested functional faults as well as readings.
+// Reasons are tied to confirmed functional failure evidence, not score heuristics.
 final String snapshotGrade = Lab30ScoreEvidence.gradeForMeasuredSnapshot(deviceHealthScore);
 final String displayedGrade = gr && "D".equals(snapshotGrade) ? "Δ" : snapshotGrade;
 
@@ -32128,7 +32121,7 @@ appendHtml("<br>");
 logInfo(gr ? "Θερμικά" : "Thermals");
 logLine();
 
-lab27LogScoreValue(gr ? "Κατάσταση" : "Status", thermalScore, thermalFlag, gr);
+// Context-only measurement; omitted from functional certification grade.
 
 if (zones == null || zones.isEmpty()) {
 
@@ -32184,7 +32177,7 @@ appendHtml("<br>");
 logInfo(gr ? "Μπαταρία" : "Battery");
 logLine();
 
-lab27LogScoreValue(gr ? "Κατάσταση" : "Status", batteryScore, batteryFlag, gr);
+// Context-only measurement; omitted from functional certification grade.
 
 String batteryReadings = (gr ? "Επίπεδο=" : "Level=") +
         (lab27BatteryPercent >= 0 ? fmt1((float) lab27BatteryPercent) + "%" : (gr ? "Άγνωστο" : "Unknown")) +
@@ -32202,7 +32195,7 @@ appendHtml("<br>");
 logInfo(gr ? "Αποθήκευση" : "Storage");
 logLine();
 
-lab27LogScoreValue(gr ? "Κατάσταση" : "Status", storageScore, storageFlag, gr);
+// Context-only measurement; omitted from functional certification grade.
 
 if (st.totalBytes > 0) {
     String storageUsage = (gr ? "Ελεύθερο=" : "Free=")
@@ -32226,7 +32219,7 @@ appendHtml("<br>");
 logInfo("RAM");
 logLine();
 
-lab27LogScoreValue(gr ? "Κατάσταση" : "Status", ramScore, ramFlag, gr);
+// Context-only measurement; omitted from functional certification grade.
 
 if (rm.totalBytes > 0)
     logLabelOkValue(gr ? "Ελεύθερη" : "Free",
@@ -32239,7 +32232,7 @@ appendHtml("<br>");
 logInfo(gr ? "Σταθερότητα / Χρόνος λειτουργίας" : "Stability / Uptime");
 logLine();
 
-lab27LogScoreValue(gr ? "Κατάσταση" : "Status", stabilityScore, stabilityFlag, gr);
+// Context-only measurement; omitted from functional certification grade.
 
 if (upMs > 0)
     logLabelOkValue(gr ? "Χρόνος λειτουργίας" : "Uptime", formatUptime(upMs));
@@ -32280,12 +32273,11 @@ else
 
 /* Internal heuristic index omitted from measured-results report */;
 
-// The original Lab30 had both a letter grade and a 0–100 assessment.
-// Show both again, while being explicit about what the numbers measure.
-// No measured thermal/battery/performance/uptime coverage => no grade.
+// Grade reflects proven operational failures in required completed tests;
+// charge, RAM, free space, uptime and other transient readings cannot lower it.
 appendHtml("<br>");
-logInfo(gr ? "Βαθμολογία συσκευής — διαθέσιμες μετρήσεις"
-           : "Device grade — available measurements");
+logInfo(gr ? "Βαθμολογία καλής λειτουργίας"
+           : "Tested functionality grade");
 if (snapshotGrade == null) {
     logLabelValue(
             gr ? "Βαθμολογία συσκευής" : "Device grade",
@@ -32358,11 +32350,11 @@ if (!lab27EvidenceFindings.isEmpty()) {
 }
 logLabelValue(
         gr ? "Βάση βαθμολογίας" : "Rating basis",
-        gr ? "Η βαθμολογία ξεκινά από τις μετρήσεις και υποβαθμίζεται μόνο από τεκμηριωμένες λειτουργικές αποτυχίες. Απλές παρατηρήσεις, ενημερώσεις ασφαλείας και άδειες εφαρμογών δεν αφαιρούν βαθμούς. Απαιτούνται επίσης όλα τα βασικά εργαστήρια και οι έλεγχοι OEM/χρήστη."
-           : "The grade starts from measurements and is reduced only by documented functional failures. Informational observations, security patches and app grants do not subtract points. All required labs and OEM/user checks remain mandatory."
+        gr ? "Η πιστοποίηση βαθμολογεί αποκλειστικά επιβεβαιωμένες λειτουργικές αποτυχίες. Η στάθμη φόρτισης, η ελεύθερη RAM/αποθήκευση, ο χρόνος λειτουργίας, οι προσωρινές θερμοκρασίες και οι πληροφορίες ασφαλείας δεν αφαιρούν βαθμούς. Τα υποχρεωτικά εργαστήρια και οι έλεγχοι OEM/χρήστη εξακολουθούν να απαιτούνται."
+           : "Certification scores only confirmed functional failures. Battery charge, free RAM/storage, uptime, transient temperatures and security observations never reduce the grade. All required labs and OEM/user checks remain mandatory."
 );
 
-lab27LogScoreValue(gr ? "Απόδοση" : "Performance", performanceScore, "⚪", gr);
+// Context-only measurement; omitted from functional certification grade.
 
 // Current operation is summarized in the measured functional status and certification gate above.
 // No unsupported hardware trends, run-count confidence labels or duplicate final verdict.
@@ -32397,9 +32389,8 @@ String reportSource =
         Build.MANUFACTURER +
         Build.MODEL +
         ts +
-        hardwareRiskScore +
         deviceHealthScore +
-        performanceScore;
+        lab27GradeDriverCodes;
 
 String reportId;
 
