@@ -31532,7 +31532,7 @@ if (!lab27UserPreflightAuthorized) {
                 + (applicable.size() - missing.size()) + "/" + applicable.size()
                 + (grGate ? " απαραίτητα εργαστήρια.\nΕκκρεμούν: "
                           : " required labs.\nPending: ")
-                + android.text.TextUtils.join(", ", missing)
+                + Lab27CertificationGate.compactPending(missing, grGate)
                 + (missing.contains("9") ? "\n" + lab27Lab9MissingDetail(before, grGate) : "")
                 + (grGate ? "\n\nΕκτέλεσε πρώτα τα παραπάνω εργαστήρια. Η βαθμολογία και η πιστοποίηση δεν υπολογίζονται ακόμη."
                           : "\n\nRun these labs first. Neither the grade nor certification is calculated yet."));
