@@ -3111,53 +3111,162 @@ private void showAppleTroubleshootingSymptoms(String model,
         AppleOfficialServiceGuidance.Guidance manual,
         java.util.List<AppleIPhoneManualChapters.Chapter> chapters,
         java.util.List<AppleOfficialServiceGuidance.Guidance> guides) {
-    boolean gr = AppLang.isGreek(this);
-    java.util.List<AppleTroubleshootingLibrary.TopicLink> links =
-            AppleTroubleshootingLibrary.topics(manual, chapters, guides);
-    if (links.isEmpty()) {
+    final boolean gr = AppLang.isGreek(this);
+    final java.util.List<AppleSymptomSearch.Terms> vocabulary;
+    try (java.io.InputStream stream = getAssets().open(AppleSymptomSearch.ASSET)) {
+        vocabulary = AppleSymptomSearch.readTerms(stream);
+    } catch (java.io.IOException e) {
         showAppleReferenceNotice(gr
-                ? "Δεν υπάρχουν επαληθευμένα κεφάλαια troubleshooting για αυτό το μοντέλο."
-                : "No verified troubleshooting chapters are indexed for this model.");
+                ? "Δεν ήταν δυνατή η φόρτωση του ευρετηρίου αναζήτησης Apple."
+                : "The Apple troubleshooting search index could not be loaded.");
         return;
     }
 
-    // Keep the title, question and navigation controls visible while the
-    // long symptom inventory scrolls independently.
+    // The user writes their own observation. No hardcoded list of problems,
+    // predetermined questions, or guesses based on another phone's manual.
     LinearLayout shell = newAppleReferenceBox(gr
-            ? "Ποιο πρόβλημα έχει το " + model + ";"
-            : "What issue does your " + model + " have?");
+            ? "Τι παρουσίασε το " + model + ";"
+            : "What happened to your " + model + "?");
+
     TextView question = new TextView(this);
     question.setText(gr
-            ? "Για ποιο επιμέρους πρόβλημα θέλεις να σου δείξω τον οδηγό της Apple;"
-            : "Which specific problem should the Apple guide cover?");
+            ? "Περιέγραψε με δικά σου λόγια τι πρόβλημα παρουσίασε το κινητό σου."
+            : "Describe in your own words what happened to your phone.");
     question.setTextColor(Color.WHITE);
-    question.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-    question.setPadding(dp(5), dp(4), dp(5), dp(12));
+    question.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+    question.setPadding(dp(4), dp(4), dp(4), dp(12));
     shell.addView(question);
 
-    ScrollView scroll = new ScrollView(this);
-    scroll.setFillViewport(false);
-    scroll.setVerticalScrollBarEnabled(true);
-    LinearLayout options = new LinearLayout(this);
-    options.setOrientation(LinearLayout.VERTICAL);
-    scroll.addView(options, new ScrollView.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-    shell.addView(scroll, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            Math.min(dp(420), (int) (getResources().getDisplayMetrics().heightPixels * 0.48f))));
+    final EditText description = new EditText(this);
+    description.setHint(gr ? "Γράψε εδώ το πρόβλημα..." : "Describe the problem here...");
+    description.setTextColor(Color.WHITE);
+    description.setHintTextColor(0xFFAAAAAA);
+    description.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+    description.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+            | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+    description.setSingleLine(false);
+    description.setMinLines(2);
+    description.setMaxLines(5);
+    description.setMaxLength(400);
+    description.setPadding(dp(13), dp(12), dp(13), dp(12));
+    GradientDrawable inputBorder = new GradientDrawable();
+    inputBorder.setColor(0xFF101010);
+    inputBorder.setCornerRadius(dp(9));
+    inputBorder.setStroke(dp(2), 0xFFFFD700);
+    description.setBackground(inputBorder);
+    LinearLayout.LayoutParams inputSize = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    inputSize.setMargins(dp(2), dp(2), dp(2), dp(12));
+    shell.addView(description, inputSize);
 
-    final AlertDialog dialog = new AlertDialog.Builder(this)
-            .setView(shell).create();
+    TextView scope = new TextView(this);
+    scope.setText(gr
+            ? "Αναζήτηση στα καταχωρισμένα κεφάλαια Apple του συγκεκριμένου μοντέλου. Όταν χρειάζεται, οι γενικές οδηγίες Apple επισημαίνονται χωριστά."
+            : "Search the selected model's indexed Apple chapters. General Apple guidance is clearly identified when applicable.");
+    scope.setTextColor(0xFFDDDDDD);
+    scope.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+    scope.setPadding(dp(5), dp(2), dp(5), dp(12));
+    shell.addView(scope);
 
-    for (AppleTroubleshootingLibrary.TopicLink item : links) {
-        addAppleReferenceOption(options, item.label(gr), () -> {
-            dialog.dismiss();
-            openAppleOfficialLink(item.url);
-        });
-    }
+    final AlertDialog dialog = new AlertDialog.Builder(this).setView(shell).create();
+
+    addAppleReferenceAction(shell, gr ? "ΑΝΑΖΗΤΗΣΗ ΣΤΗΝ APPLE" : "SEARCH APPLE GUIDES",
+            false, () -> {
+                String query = description.getText().toString().trim();
+                if (query.isEmpty()) {
+                    description.setError(gr
+                            ? "Περιέγραψε πρώτα το πρόβλημα."
+                            : "Please describe the problem.");
+                    return;
+                }
+                java.util.List<AppleSymptomSearch.Hit> hits =
+                        AppleSymptomSearch.search(query, manual, chapters, guides, vocabulary);
+                dialog.dismiss();
+                showAppleSymptomSearchResults(model, query, manual,
+                        chapters, guides, hits);
+            });
+
     addAppleReferenceAction(shell, gr ? "ΠΙΣΩ" : "BACK", false, () -> {
         dialog.dismiss();
         showAppleTroubleshootingLibrary();
+    });
+    addAppleReferenceAction(shell, gr ? "ΕΞΟΔΟΣ" : "EXIT", true, dialog::dismiss);
+    showAppleReferenceDialog(dialog);
+}
+
+private void showAppleSymptomSearchResults(String model, String query,
+        AppleOfficialServiceGuidance.Guidance manual,
+        java.util.List<AppleIPhoneManualChapters.Chapter> chapters,
+        java.util.List<AppleOfficialServiceGuidance.Guidance> guides,
+        java.util.List<AppleSymptomSearch.Hit> hits) {
+    final boolean gr = AppLang.isGreek(this);
+    LinearLayout shell = newAppleReferenceBox(gr
+            ? "Οδηγοί Apple — " + model
+            : "Apple guides — " + model);
+
+    TextView context = new TextView(this);
+    context.setText(gr
+            ? "Αναζήτηση για: " + query
+            : "Search for: " + query);
+    context.setTextColor(Color.WHITE);
+    context.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+    context.setPadding(dp(4), dp(2), dp(4), dp(12));
+    shell.addView(context);
+
+    if (hits.isEmpty()) {
+        TextView notFound = new TextView(this);
+        notFound.setText(gr
+                ? "Δεν βρέθηκε αρκετά σχετικό κεφάλαιο στις καταχωρισμένες πηγές Apple. Δεν θα προτείνουμε άσχετη διαδικασία. Δοκίμασε πιο συγκεκριμένη περιγραφή ή άνοιξε το πλήρες εγχειρίδιο."
+                : "No sufficiently relevant chapter was found in the indexed Apple sources. We will not guess. Describe the symptom more specifically or open the complete manual.");
+        notFound.setTextColor(Color.WHITE);
+        notFound.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        notFound.setPadding(dp(4), dp(4), dp(4), dp(12));
+        shell.addView(notFound);
+    } else {
+        TextView heading = new TextView(this);
+        heading.setText(gr
+                ? "Σχετικές επίσημες παραπομπές (όχι διάγνωση βλάβης):"
+                : "Related official references (not a fault diagnosis):");
+        heading.setTextColor(Color.WHITE);
+        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        heading.setPadding(dp(4), dp(2), dp(4), dp(8));
+        shell.addView(heading);
+    }
+
+    ScrollView scroll = new ScrollView(this);
+    LinearLayout results = new LinearLayout(this);
+    results.setOrientation(LinearLayout.VERTICAL);
+    scroll.addView(results, new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT));
+    shell.addView(scroll, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            Math.min(dp(420), (int) (getResources().getDisplayMetrics().heightPixels * 0.44f))));
+
+    final AlertDialog dialog = new AlertDialog.Builder(this).setView(shell).create();
+
+    for (AppleSymptomSearch.Hit hit : hits) {
+        String coverage = hit.modelIndexed
+                ? (hit.directChapter
+                    ? (gr ? "Ενότητα καταχωρισμένη για " : "Chapter indexed for ") + model
+                    : (gr ? "Ενότητα στον πίνακα περιεχομένων του " : "Chapter listed in the manual for ") + model)
+                : (gr ? "Γενικός οδηγός Apple — όχι ειδικά για το μοντέλο"
+                      : "General Apple guide — not model-specific");
+        addAppleReferenceOption(results, hit.title(gr) + "\n" + coverage, () -> {
+            dialog.dismiss();
+            openAppleOfficialLink(hit.url);
+        });
+    }
+
+    addAppleReferenceAction(shell, gr ? "ΠΛΗΡΕΣ ΕΓΧΕΙΡΙΔΙΟ APPLE" : "FULL APPLE MANUAL",
+            false, () -> {
+                dialog.dismiss();
+                openAppleOfficialLink(manual.sourceUrl);
+            });
+    addAppleReferenceAction(shell, gr ? "ΑΛΛΗ ΠΕΡΙΓΡΑΦΗ" : "EDIT DESCRIPTION", false, () -> {
+        dialog.dismiss();
+        showAppleTroubleshootingSymptoms(model, manual, chapters, guides);
     });
     addAppleReferenceAction(shell, gr ? "ΕΞΟΔΟΣ" : "EXIT", true, dialog::dismiss);
     showAppleReferenceDialog(dialog);
