@@ -22,35 +22,35 @@ public final class IPhoneLab8HumanPresentationContractTest {
     }
 
     @Test public void humanResultAppearsBeforeEvidenceDetailsAndIsNeverGreenCertification() throws Exception {
-        String lab8=part(source(), "private void runFinalServiceRecommendationLab()", "private void runDemoDiagnostics()");
-        int human=lab8.indexOf("Συνολικό συμπέρασμα — με απλά λόγια");
-        int codes=lab8.indexOf("Ενδείξεις που αναγνώρισε το GEL:");
+        String lab6=part(source(), "private void runFinalServiceRecommendationLab()", "private void runDemoDiagnostics()");
+        int human=lab6.indexOf("Συνολικό συμπέρασμα — με απλά λόγια");
+        int codes=lab6.indexOf("Ενδείξεις που αναγνώρισε το GEL:");
         assertTrue(human>=0 && codes>human);
-        assertFalse(lab8.contains("for (java.util.Map.Entry<String, Integer> e : crashCount.entrySet())"));
-        assertTrue(lab8.contains("IPhonePanicServiceSummary.interpret("));
-        assertTrue(lab8.contains("human.repairAdvice"));
-        assertTrue(lab8.contains("human.whatItMeans"));
-        assertTrue(lab8.contains("human.whenToSeekHelp"));
-        assertTrue(lab8.contains("logLabelValue(gr ? \"Χρειάζεται επισκευή;\""));
-        assertTrue(lab8.contains("if (human.repeatedClueNeedsReview)"));
-        assertFalse(lab8.contains("logLabelOkValue(gr ? \"Χρειάζεται επισκευή;\""));
+        assertFalse(lab6.contains("for (java.util.Map.Entry<String, Integer> e : crashCount.entrySet())"));
+        assertTrue(lab6.contains("IPhonePanicServiceSummary.interpret("));
+        assertTrue(lab6.contains("human.repairAdvice"));
+        assertTrue(lab6.contains("human.whatItMeans"));
+        assertTrue(lab6.contains("human.whenToSeekHelp"));
+        assertTrue(lab6.contains("logLabelValue(gr ? \"Χρειάζεται επισκευή;\""));
+        assertTrue(lab6.contains("if (human.repeatedClueNeedsReview)"));
+        assertFalse(lab6.contains("logLabelOkValue(gr ? \"Χρειάζεται επισκευή;\""));
     }
 
     @Test public void noHardwareDiagnosisInventedByMergingTwoRecords() throws Exception {
-        String lab8=part(source(), "private void runFinalServiceRecommendationLab()", "private void runDemoDiagnostics()");
-        assertTrue(lab8.contains("ApplePanicEvidencePolicy.hasPanicEvidence(block)"));
-        assertTrue(lab8.contains("parseAndCacheSignature(block)"));
-        assertTrue(lab8.contains("ApplePanicHardwareHints.examineOne(block)"));
-        assertTrue(lab8.contains("uniqueTechnicalCodes.add(finding.code)"));
-        assertTrue(lab8.contains("repeatedCategory"));
-        assertTrue(lab8.contains("domainCount.getOrDefault"));
-        assertFalse(lab8.contains("logLabelOkValue(gr ? \"Ενδείξεις που αναγνώρισε το GEL:\""));
+        String lab6=part(source(), "private void runFinalServiceRecommendationLab()", "private void runDemoDiagnostics()");
+        assertTrue(lab6.contains("ApplePanicEvidencePolicy.hasPanicEvidence(block)"));
+        assertTrue(lab6.contains("parseAndCacheSignature(block)"));
+        assertTrue(lab6.contains("ApplePanicHardwareHints.examineOne(block)"));
+        assertTrue(lab6.contains("uniqueTechnicalCodes.add(finding.code)"));
+        assertTrue(lab6.contains("repeatedCategory"));
+        assertTrue(lab6.contains("domainCount.getOrDefault"));
+        assertFalse(lab6.contains("logLabelOkValue(gr ? \"Ενδείξεις που αναγνώρισε το GEL:\""));
     }
 
     @Test public void demoIsExplicitAndNeverPersistedAsCustomerEvidence() throws Exception {
         String src=source();
-        String lab8=part(src, "private void runFinalServiceRecommendationLab()", "private void runDemoDiagnostics()");
-        assertFalse(lab8.contains("Αυτό το συμπέρασμα αφορά μόνο τα δοκιμαστικά DEMO"));
+        String lab6=part(src, "private void runFinalServiceRecommendationLab()", "private void runDemoDiagnostics()");
+        assertFalse(lab6.contains("Αυτό το συμπέρασμα αφορά μόνο τα δοκιμαστικά DEMO"));
         String demo=part(src, "private void runDemoDiagnostics()", "// GUARD");
         assertTrue(demo.contains("demoMode = true;"));
         assertTrue(demo.contains("runFinalServiceRecommendationLab();"));
@@ -58,13 +58,18 @@ public final class IPhoneLab8HumanPresentationContractTest {
         assertTrue(demo.contains("demoMode = false;"));
     }
 
-    @Test public void oneLogComparisonLabsStayUnchanged() throws Exception {
+    @Test public void oneLogCombinedAndRecurrenceLabsRequireMultipleRecords() throws Exception {
         String src=source();
-        assertTrue(part(src, "private void runPanicFrequencyLab()", "private void runPanicClusteringLab()")
-                .contains("Το Lab 5 δεν εκτελέστηκε:"));
-        assertTrue(part(src, "private void runPanicClusteringLab()", "private void runRecurringDomainLab()")
-                .contains("Το Lab 6 δεν εκτελέστηκε:"));
-        assertTrue(part(src, "private void runRecurringDomainLab()", "private void runFinalServiceRecommendationLab()")
-                .contains("Το Lab 7 δεν εκτελέστηκε:"));
+        String combined=part(src, "private void runPanicFrequencyLab()",
+                "private void runRecurringDomainLab()");
+        assertTrue(combined.contains("Το Lab 4 δεν εκτελέστηκε:"));
+        assertTrue(combined.contains("countSupportedPanicBlocks(blocks) <= 1"));
+        String repeated=part(src, "private void runRecurringDomainLab()",
+                "private void runFinalServiceRecommendationLab()");
+        assertTrue(repeated.contains("Το Lab 5 δεν εκτελέστηκε:"));
+        assertTrue(repeated.contains("total <= 1"));
+        assertFalse(src.contains("private void runPanicClusteringLab()"));
+        assertFalse(src.contains("private void runStabilityLab()"));
     }
+
 }
