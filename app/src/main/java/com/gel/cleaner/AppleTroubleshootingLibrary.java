@@ -37,8 +37,17 @@ public final class AppleTroubleshootingLibrary {
     }
 
     public static boolean isOfficialUrl(String url) {
-        return url != null && url.startsWith("https://support.apple.com/")
-                && !url.contains(" ") && !url.contains("\\");
+        if (url == null || url.contains("\\") || url.matches("(?s).*\\s+.*"))
+            return false;
+        try {
+            java.net.URI uri = new java.net.URI(url);
+            return "https".equalsIgnoreCase(uri.getScheme())
+                    && "support.apple.com".equalsIgnoreCase(uri.getHost())
+                    && uri.getUserInfo() == null
+                    && uri.getPort() == -1;
+        } catch (java.net.URISyntaxException exception) {
+            return false;
+        }
     }
 
     /**
