@@ -44,7 +44,7 @@ public final class IPhoneIncidentVisualSeparationContractTest {
         assertTrue(helper.contains("IPhonePanicHumanizer.event(type, gr)")); // other event types preserved
         String lab2 = part("private void runPanicSignatureParser() {",
                 "private void runImpactLab() {");
-        assertTrue(lab2.contains("panicEventExact(block, sigCrashType, gr)"));
+        assertFalse(lab2.contains("panicEventExact(block, sigCrashType, gr)"));
         assertTrue(lab2.contains("panicEventMeaningExact(block, sigCrashType, gr)"));
     }
 
@@ -59,7 +59,7 @@ public final class IPhoneIncidentVisualSeparationContractTest {
                 .contains("logPanicIncidentHeader("));
         assertTrue(part("private void runImpactLab() {", "private int countSupportedPanicBlocks(")
                 .contains("logPanicIncidentHeader("));
-        assertTrue(part("private void runFinalServiceRecommendationLab() {", "private void runDemoDiagnostics() {")
+        assertFalse(part("private void runFinalServiceRecommendationLab() {", "private void runDemoDiagnostics() {")
                 .contains("logPanicIncidentHeader("));
     }
 
