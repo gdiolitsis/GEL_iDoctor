@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   compile-and-unit-test:
-    if: ${{ github.event.pull_request.head.ref == 'qa/iphone-six-labs-20261123' && github.event.pull_request.base.ref == 'qa/v72-essential-hardware-checks-20261123' }}
+    if: ${{ (github.event.pull_request.head.ref == 'qa/iphone-six-labs-20261123' && github.event.pull_request.base.ref == 'qa/v72-essential-hardware-checks-20261123') || (github.event.pull_request.head.ref == 'qa/iphone-six-labs-dedup-20261123' && github.event.pull_request.base.ref == 'qa/lab27-compact-prerequisites-20261123') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
