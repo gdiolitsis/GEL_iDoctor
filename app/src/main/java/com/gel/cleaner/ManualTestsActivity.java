@@ -10689,6 +10689,14 @@ private String lab8_1VideoStabToString(int[] modes) {
 LAB 9 — Sensors Check (LABEL / VALUE MODE)
 ============================================================ */
 private void lab9SensorsCheck() {
+    // A new run must never reuse older responses for certification.
+    SharedPreferences.Editor reset = getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
+            .remove("lab9_cert_schema").remove("lab9_cert_wall_ms")
+            .remove("lab9_cert_elapsed_ms").remove("lab9_cert_device")
+            .remove("lab27_cert_schema");
+    for (String key : Lab9CertificationEvidence.GRADED)
+        reset.remove("lab9_cert_status_" + key);
+    reset.apply();
 
     final boolean gr = AppLang.isGreek(this);
     boolean inventoryFinished = false;
@@ -10910,8 +10918,8 @@ private void showLab9LiveChecksPrompt() {
     root.setBackground(border);
 
     TextView title = new TextView(this);
-    title.setText(gr ? "LAB 9 — Προαιρετικός πραγματικός έλεγχος"
-                     : "LAB 9 — Optional live hardware checks");
+    title.setText(gr ? "LAB 9 — Πραγματικοί έλεγχοι λειτουργίας"
+                     : "LAB 9 — Live functionality checks");
     title.setTextColor(Color.WHITE);
     title.setTextSize(18f);
     title.setTypeface(null, Typeface.BOLD);
@@ -10919,11 +10927,12 @@ private void showLab9LiveChecksPrompt() {
     root.addView(title);
     TextView message = new TextView(this);
     message.setText(gr
-            ? "Έλεγξε πραγματικές μεταβολές αισθητήρων, GPS, NFC και φυσικά πλήκτρα. "
-              + "Δεν χρειάζεται να εκτελέσεις δοκιμές για εξαρτήματα που δεν διαθέτει "
-              + "η συσκευή. Έλλειψη αποτελέσματος δεν σημαίνει βλάβη."
-            : "Test actual sensor changes, GPS, NFC and physical buttons. "
-              + "Skip hardware your model does not support. Missing evidence is not a fault.");
+            ? "Για την πιστοποίηση Lab 27 απαιτούνται οι πραγματικές αποκρίσεις GPS, "
+              + "γυροσκοπίου, πυξίδας, φωτός και πλήκτρων έντασης, εφόσον υποστηρίζονται. "
+              + "NFC και Power δεν βαθμολογούνται. Χωρίς απόκριση απαιτείται επανέλεγχος."
+            : "Lab 27 certification requires actual GPS, gyroscope, compass, light "
+              + "and volume-button responses, where supported. NFC and Power are not graded. "
+              + "Missing response requires retesting, not an automatic fault.");
     message.setTextColor(Color.WHITE);
     message.setTextSize(15f);
     message.setPadding(0, dp(16), 0, dp(16));
@@ -10957,6 +10966,74 @@ private void showLab9LiveChecksPrompt() {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xFF101010));
     });
     dialog.show();
+}
+
+/** Source-bound Lab 9 result: six graded live responses, never NFC or Power. */
+private void lab9StoreFunctionalEvidence(Intent data) {
+    java.util.Map<String,String> source = new java.util.LinkedHashMap<>();
+    for (String key : Lab9CertificationEvidence.GRADED)
+        source.put(key, data.getStringExtra(key));
+    java.util.Map<String,String> sanitized = Lab9CertificationEvidence.capture(source);
+    SharedPreferences.Editor editor = getSharedPreferences("GEL_DIAG", MODE_PRIVATE).edit()
+            .putInt("lab9_cert_schema", Lab9CertificationEvidence.SCHEMA)
+            .putLong("lab9_cert_wall_ms", System.currentTimeMillis())
+            .putLong("lab9_cert_elapsed_ms", SystemClock.elapsedRealtime())
+            .putString("lab9_cert_device", Build.FINGERPRINT)
+            .remove("lab27_cert_schema");
+    for (java.util.Map.Entry<String,String> item : sanitized.entrySet())
+        editor.putString("lab9_cert_status_" + item.getKey(), item.getValue());
+    editor.apply();
+}
+
+/** Actual supported hardware, independent of Android service log text. */
+private java.util.Set<String> lab27SupportedLab9Checks() {
+    SensorManager sensors = (SensorManager) getSystemService(SENSOR_SERVICE);
+    // Unavailable SensorManager cannot justify skipping required sensors.
+    boolean gyro = sensors == null || sensors.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null;
+    boolean magnetic = sensors == null || sensors.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null;
+    boolean light = sensors == null || sensors.getDefaultSensor(Sensor.TYPE_LIGHT) != null;
+    return Lab9CertificationEvidence.supported(
+            getPackageManager().hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS),
+            gyro, magnetic, light);
+}
+
+/** Fresh source from current handset/boot and current completed Lab 9. */
+private Lab9CertificationEvidence.Assessment lab27Lab9Assessment(SharedPreferences prefs) {
+    long recorded = prefs.getLong("lab9_cert_wall_ms", 0L);
+    long finished = prefs.getLong("lab27_required_wall_9", 0L);
+    if (!Lab9CertificationEvidence.fresh(
+                prefs.getInt("lab9_cert_schema", 0), recorded,
+                prefs.getLong("lab9_cert_elapsed_ms", -1L),
+                System.currentTimeMillis(), SystemClock.elapsedRealtime(),
+                prefs.getString("lab9_cert_device", ""), Build.FINGERPRINT)
+            || !Build.FINGERPRINT.equals(prefs.getString("lab27_required_device_9", ""))
+            || !Lab27CertificationGate.fresh(finished, System.currentTimeMillis())
+            || finished < recorded || finished - recorded > 120000L)
+        return null;
+    java.util.Map<String,String> values = new java.util.LinkedHashMap<>();
+    for (String key : Lab9CertificationEvidence.GRADED)
+        values.put(key, prefs.getString("lab9_cert_status_" + key, "NOT_TESTED"));
+    return Lab9CertificationEvidence.evaluate(values, lab27SupportedLab9Checks());
+}
+
+private boolean lab27HasCompleteLab9Evidence(SharedPreferences prefs) {
+    Lab9CertificationEvidence.Assessment result = lab27Lab9Assessment(prefs);
+    return result != null && result.complete();
+}
+
+private String lab27Lab9MissingDetail(SharedPreferences prefs, boolean greek) {
+    Lab9CertificationEvidence.Assessment result = lab27Lab9Assessment(prefs);
+    if (result == null)
+        return greek
+                ? "Lab 9: απαιτείται νέα ολοκληρωμένη πραγματική δοκιμή. NFC/Power εξαιρούνται."
+                : "Lab 9: fresh complete live checks required. NFC/Power excluded.";
+    java.util.List<String> missing = new java.util.ArrayList<>();
+    for (String key : result.pending)
+        missing.add(Lab9CertificationEvidence.displayName(key, greek));
+    return (greek ? "Lab 9 — επανέλεγχος: " : "Lab 9 — retest: ")
+            + android.text.TextUtils.join(", ", missing)
+            + (greek ? ". Δεν θεωρούνται αυτόματα βλάβες. NFC/Power εξαιρούνται."
+                     : ". No automatic failure is inferred. NFC/Power excluded.");
 }
 
 private void lab9LogCompletedAtEnd() {
@@ -33544,6 +33621,8 @@ protected void onActivityResult(int requestCode, int resultCode, @Nullable Inten
 final boolean gr = AppLang.isGreek(this);
 
 if (requestCode == REQ_LAB9_ESSENTIALS) {
+    if (resultCode == RESULT_OK && data != null)
+        lab9StoreFunctionalEvidence(data);
     appendHtml("<br>");
     logLine();
     logInfo(gr ? "LAB 9 — Πραγματικοί λειτουργικοί έλεγχοι"
