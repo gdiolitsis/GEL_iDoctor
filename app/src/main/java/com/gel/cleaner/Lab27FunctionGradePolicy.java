@@ -1,19 +1,18 @@
 package com.gel.cleaner;
 
 /**
- * Grade cap for completed functional tests. This is a diagnostic policy,
- * not a determination of the price of a used device or of parts authenticity.
+ * Lab 27 device-function grading uses measured health values and verified
+ * functional failures only. The warning colors or informational findings
+ * in completed labs do not prove a malfunction and never cap a grade.
+ * This is neither a parts-authenticity nor used-device valuation policy.
  */
 final class Lab27FunctionGradePolicy {
     static final int CAMERA_FAILURE_CAP = 49; // D band (<55)
-    static final int OTHER_FINDINGS_CAP = 84; // B band (<85)
     private Lab27FunctionGradePolicy() {}
 
-    static int apply(int measuredScore, boolean userConfirmedCameraFailure,
-                     int completedLabsWithFindings) {
+    static int apply(int measuredScore, boolean userConfirmedCameraFailure) {
         if (measuredScore < 0 || measuredScore > 100) return -1;
-        if (userConfirmedCameraFailure) return Math.min(measuredScore, CAMERA_FAILURE_CAP);
-        if (completedLabsWithFindings > 0) return Math.min(measuredScore, OTHER_FINDINGS_CAP);
-        return measuredScore;
+        return userConfirmedCameraFailure
+                ? Math.min(measuredScore, CAMERA_FAILURE_CAP) : measuredScore;
     }
 }
