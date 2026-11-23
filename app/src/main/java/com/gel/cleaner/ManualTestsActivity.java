@@ -30399,7 +30399,11 @@ private boolean lab28HasFreshCertificationEvidence() {
     String certifiedGrade = p.getString("lab27_cert_grade", "");
     int certifiedScore = p.getInt("lab27_cert_score", -1);
     if (!Lab28BuyerSummary.validGrade(certifiedGrade)
-            || !certifiedGrade.equals(Lab30ScoreEvidence.gradeForMeasuredSnapshot(certifiedScore)))
+            || !certifiedGrade.equals(Lab30ScoreEvidence.gradeForMeasuredSnapshot(certifiedScore))
+            || !Lab27GradeDrivers.validEvidence(
+                    p.getString("lab27_cert_grade_drivers", null), certifiedScore,
+                    p.getBoolean("lab27_cert_camera_failure", false),
+                    p.getInt("lab27_cert_functional_findings", -1)))
         return false;
     if (p.getInt("lab27_cert_schema", 0) != Lab27CertificationGate.SCHEMA
             || !p.getBoolean("lab27_cert_physical_confirmed", false)
@@ -30565,6 +30569,34 @@ private void lab28ShowCertificationResult(boolean gr) {
     }
     logLabelValue(gr ? "Με απλά λόγια" : "In plain language",
             Lab28BuyerSummary.explain(grade, confirmedFault, gr));
+
+    // Show exactly the reasons serialized by the current Lab 27 certificate.
+    // No new Android measurements, replay of other labs, or inferred damage.
+    java.util.List<Lab27GradeDrivers.Driver> drivers;
+    try {
+        drivers = Lab27GradeDrivers.decode(
+                cert.getString("lab27_cert_grade_drivers", ""));
+    } catch (IllegalArgumentException invalid) {
+        logLabelWarnValue(gr ? "Αιτίες βαθμολογίας" : "Grade factors",
+                gr ? "Μη διαθέσιμες — επανάλαβε το Lab 27."
+                   : "Unavailable — rerun Lab 27.");
+        return;
+    }
+
+    if (!drivers.isEmpty() && (!"A+".equals(grade) || confirmedFault)) {
+        logInfo(gr ? "Τι επηρέασε τη βαθμολογία" : "What affected the grade");
+        for (Lab27GradeDrivers.Driver driver : drivers) {
+            if (driver.isConfirmedFailure()) {
+                logLabelErrorValue(gr ? "Επιβεβαιωμένη δυσλειτουργία" : "Confirmed functional failure",
+                        driver.observation(gr));
+            } else {
+                logLabelInfoValue(gr ? "Παράγοντας βαθμολογίας" : "Grade factor",
+                        driver.observation(gr));
+            }
+            logLabelValue(gr ? "Προτεινόμενος επανέλεγχος" : "Suggested recheck",
+                    driver.recommendedCheck(gr));
+        }
+    }
 }
 
 private void lab29DeviceAuthenticity() {
@@ -32072,7 +32104,14 @@ boolean confirmedCameraFunctionFailure = lab27HasCameraFunctionalFailure(p);
 int deviceHealthScore = Lab27FunctionGradePolicy.apply(measuredDeviceHealthScore,
         confirmedCameraFunctionFailure);
 int confirmedFunctionalFailures = confirmedCameraFunctionFailure ? 1 : 0;
-// The reported grade now reflects tested functional faults as well as readings.
+java.util.List<Lab27GradeDrivers.Driver> lab27GradeDrivers =
+        Lab27GradeDrivers.fromSnapshot(
+                maxThermal, avgThermal, batTemp, lab27BatteryPercent, charging,
+                st.pctFree, st.totalBytes, rm.pctFree, upMs,
+                confirmedCameraFunctionFailure);
+String lab27GradeDriverCodes = Lab27GradeDrivers.encode(lab27GradeDrivers);
+// Reasons are generated from the exact evidence used in this Lab 27 run.
+// The reported grade reflects tested functional faults as well as readings.
 final String snapshotGrade = Lab30ScoreEvidence.gradeForMeasuredSnapshot(deviceHealthScore);
 final String displayedGrade = gr && "D".equals(snapshotGrade) ? "Δ" : snapshotGrade;
 
@@ -32297,6 +32336,17 @@ if (lab27RemainingBasic.isEmpty() && confirmedFunctionalFailures == 0) {
             (gr ? "Δεν ολοκληρώθηκαν: " : "Not completed: ")
                     + android.text.TextUtils.join(", ", lab27RemainingBasic));
 }
+if (!lab27GradeDrivers.isEmpty() && (deviceHealthScore < 92 || confirmedCameraFunctionFailure)) {
+    logInfo(gr ? "Παράγοντες της βαθμολογίας" : "Factors behind the grade");
+    for (Lab27GradeDrivers.Driver driver : lab27GradeDrivers) {
+        if (driver.isConfirmedFailure()) {
+            logLabelErrorValue(gr ? "Επιβεβαιωμένη δυσλειτουργία" : "Confirmed functional failure",
+                    driver.observation(gr));
+        } else {
+            logLabelInfoValue(gr ? "Παράγοντας" : "Factor", driver.observation(gr));
+        }
+    }
+}
 if (confirmedCameraFunctionFailure) {
     logLabelErrorValue(gr ? "Σοβαρή δυσλειτουργία Lab 8" : "Serious Lab 8 functional failure",
             gr ? "Τουλάχιστον μία κάμερα απέτυχε στον έλεγχο ζωντανής εικόνας σύμφωνα με τον χρήστη. Μέγιστος βαθμός Δ (49/100). Δεν ταυτοποιείται το αίτιο."
@@ -32437,6 +32487,7 @@ if (!eligibleCert) {
             .putString("lab27_cert_model", Build.MODEL)
             .putString("lab27_cert_grade", snapshotGrade)
             .putInt("lab27_cert_score", deviceHealthScore)
+            .putString("lab27_cert_grade_drivers", lab27GradeDriverCodes)
             .putBoolean("lab27_cert_camera_failure", confirmedCameraFunctionFailure)
             .putInt("lab27_cert_functional_findings", confirmedFunctionalFailures)
             .putInt("lab27_cert_oem_matches", certFactory.matches)
