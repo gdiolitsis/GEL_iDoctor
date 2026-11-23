@@ -33581,6 +33581,9 @@ if (requestCode == REQ_LAB9_ESSENTIALS) {
             } else if (EssentialHardwareChecksActivity.USER_CONFIRMED.equals(status)) {
                 logLabelOkValue(names[i], gr ? "Επιβεβαιώθηκε από τον χρήστη"
                                                : "Confirmed by the user");
+            } else if (EssentialHardwareChecksActivity.USER_FAILED.equals(status)) {
+                logLabelErrorValue(names[i], gr ? "Ο χρήστης επιβεβαίωσε ότι δεν λειτούργησε"
+                                                  : "User confirmed it did not work");
             } else {
                 if (EssentialHardwareChecksActivity.UNSUPPORTED.equals(status))
                     value = gr ? "Δεν υποστηρίζεται — χωρίς δοκιμή"
