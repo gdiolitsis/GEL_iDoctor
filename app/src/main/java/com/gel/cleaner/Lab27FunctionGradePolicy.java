@@ -14,6 +14,7 @@ import java.util.List;
  */
 final class Lab27FunctionGradePolicy {
     static final int CAMERA_FAILURE_CAP = 49;       // D
+    static final int LAB9_REPORTED_FAILURE_CAP = 49; // D: user-confirmed functional failure
     static final int SEVERE_THERMAL_CAP = 49;        // D: OS already protecting
     static final int HIGH_THERMAL_CAP = 65;          // C: serious reading, recheck
     static final int CHARGING_CONCERN_CAP = 80;      // B: observed charging concern
@@ -37,6 +38,10 @@ final class Lab27FunctionGradePolicy {
                     score = Math.min(score, CHARGING_CONCERN_CAP);
                     break;
                 default:
+                    if (reason.isLab9UserReportedFailure()) {
+                        score = Math.min(score, LAB9_REPORTED_FAILURE_CAP);
+                        break;
+                    }
                     if (reason.isHighTemperatureReading())
                         score = Math.min(score, HIGH_THERMAL_CAP);
                     else return -1;
