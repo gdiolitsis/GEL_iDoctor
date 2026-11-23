@@ -13,14 +13,14 @@ import java.util.regex.Pattern;
 /**
  * GEL Device Certification: completion is not equivalent to passing.
  * A completed run counts as executed even with adverse findings; those
- * confirmed functional failures may downgrade certification; informational\n * observations do not automatically lower its score.
+ * confirmed functional failures and severe operational concerns can lower it;\n * routine contextual readings do not change the grade.
  * Human-verified physical connections are a separate gate.
  * The certificate concerns tested functionality, NOT parts authenticity.
  * OEM specification comparison stays a required technical cross-check.
  * OEM matches do not establish that replacement parts are genuine.
  */
 final class Lab27CertificationGate {
-    static final int SCHEMA = 10; // Grade no longer includes temporary readings; old certificates must be rerun.
+    static final int SCHEMA = 11; // New source-bound Lab15/Lab16 operational evidence required.
     static final long MAX_AGE_MS = 7L * 24L * 60L * 60L * 1000L;
 
     static final List<String> REQUIRED = Collections.unmodifiableList(Arrays.asList(
