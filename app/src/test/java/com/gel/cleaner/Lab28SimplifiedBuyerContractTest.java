@@ -49,6 +49,10 @@ public final class Lab28SimplifiedBuyerContractTest {
                 "private void lab29DeviceAuthenticity()");
         assertTrue(summary.contains("cert.getString(\"lab27_cert_grade\", \"\")"));
         assertTrue(summary.contains("Lab28BuyerSummary.explain(grade, confirmedFault, gr)"));
+        assertTrue(summary.contains("Lab27GradeDrivers.decode("));
+        assertTrue(summary.contains("driver.observation(gr)"));
+        assertTrue(summary.contains("driver.recommendedCheck(gr)"));
+        assertTrue(summary.contains("driver.isConfirmedFailure()"));
         assertTrue(summary.contains("Βαθμός πιστοποίησης"));
         assertFalse(summary.contains("scoreThermals"));
         assertFalse(summary.contains("scoreBattery"));
@@ -62,6 +66,8 @@ public final class Lab28SimplifiedBuyerContractTest {
         assertTrue(gate.contains("Lab27CertificationGate.SCHEMA"));
         assertTrue(gate.contains("Lab27CertificationGate.fresh("));
         assertTrue(gate.contains("Lab28BuyerSummary.validGrade(certifiedGrade)"));
+        assertTrue(gate.contains("Lab27GradeDrivers.validEvidence("));
+        assertTrue(gate.contains("lab27_cert_grade_drivers"));
         assertTrue(gate.contains("Lab29TechnicalAssessment.isCurrent("));
         String entry = section(source, "private void lab29DeviceAuthenticity()",
                 "private void runLab29DeviceAuthenticity()");
