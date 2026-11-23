@@ -28,6 +28,10 @@ public final class Lab27ThermalChargingCertificationContractTest {
                 "private void lab16ThermalSnapshot()");
         assertTrue(lab.contains(".putBoolean(\"lab15_overtemp_observed\", lab15OverTempDuringCharge)"));
         assertTrue(lab.contains(".putBoolean(\"lab15_flap_observed\", lab15FlapUnstable)"));
+        assertTrue(lab.contains("if (unplugMs < 2000) {"));
+        assertTrue(lab.contains("if (unplugMs >= 2000 && unplugMs < 10000) {"));
+        assertTrue(lab.contains("lab15FlapUnstable = true;"));
+        assertTrue(lab.contains("if (unplugMs >= 10000) {"));
         assertTrue(lab.contains(".putInt(\"lab15_cert_evidence_schema\", Lab27GradeDrivers.EVIDENCE_SCHEMA)"));
         assertTrue(lab.contains(".putLong(\"lab15_cert_evidence_elapsed_ms\", SystemClock.elapsedRealtime())"));
         assertTrue(lab.contains(".remove(\"lab15_cert_evidence_schema\")"));
